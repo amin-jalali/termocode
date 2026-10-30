@@ -7,6 +7,7 @@ import type { BufSnap } from "../../../../webproto/proto";
 import { selection } from "../lib/edit";
 import { file } from "../lib/file";
 import { route } from "../lib/router";
+import { fileOfTab } from "../lib/difftab";
 import { activeFile, cursorAt } from "../lib/workbench";
 import { diags, toggleProblems } from "../lib/lsp";
 import { link, status, store } from "../session";
@@ -33,7 +34,7 @@ const EOLS: Readonly<Record<string, string>> = { unix: "LF", dos: "CRLF", mac: "
 
 function FileFacts() {
   const f = file.value;
-  if (route.value.tab === "more" || !f || f.path !== activeFile.value || f.kind !== "open" || f.buf === undefined) return null;
+  if (route.value.tab === "more" || !f || f.path !== fileOfTab(activeFile.value ?? "") || f.kind !== "open" || f.buf === undefined) return null;
   const d = store.topic("buf:" + f.buf).value?.data as BufSnap | undefined;
   if (!d || !Array.isArray(d.lines)) return null;
   const sel = selection.value;

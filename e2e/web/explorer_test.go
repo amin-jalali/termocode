@@ -74,7 +74,8 @@ func TestExplorerOutlineJumps(t *testing.T) {
 }
 
 // TIMELINE lists the commits that changed the open file; a click opens
-// that commit's change of the file in a read-only editor tab.
+// that commit's change of the file in a read-only diff editor tab
+// (its parent on the left).
 func TestExplorerTimelineOpensDiffTab(t *testing.T) {
 	p, c := openFiles(t, Desktop)
 	openBufAs(t, p, c, 2, "src/a.go", nil, "package a")
@@ -92,26 +93,13 @@ func TestExplorerTimelineOpensDiffTab(t *testing.T) {
 	p.WaitJS(`[...` + timeline + `.querySelectorAll(".ex-commit")].map((e) => e.innerText.replace(/\s+/g, " ").trim()).join("|") === "fix the box Ann · 3h|first Bo · 1d"`)
 
 	p.TapJS(timeline + `.querySelector('.ex-commit[data-hash="abc1234"]')`)
-	s := reqSkipping(t, c, "git.show")
-	var g webproto.GitShowArgs
-	if err := json.Unmarshal(s.Args, &g); err != nil || g.Hash != "abc1234" || g.Path != "src/a.go" {
-		t.Fatalf("git.show args %s", s.Args)
+	answerGitText(t, c, "src/a.go", map[string]string{"abc1234^": "package a\n", "abc1234": "package a\ntype Box struct{}\n"}, 0, nil)
+	p.WaitJS(diffDoc + `?.querySelector(".editor.modified .line-insert, .editor.modified .char-insert")`)
+	if got := Eval[string](p, `document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent ?? ""`); got != "a.go (abc1234^ ↔ abc1234)" {
+		t.Errorf("the tab is %q, want a.go (abc1234^ ↔ abc1234)", got)
 	}
-	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: s.ID, Data: raw(map[string]any{
-		"commit": map[string]any{"hash": "abc1234", "subject": "fix the box", "author": "Ann", "when": when},
-		"rows": []map[string]any{
-			{"k": "file", "text": "src/a.go"}, {"k": "hunk", "text": "@@ -1 +1,2 @@"},
-			{"k": "ctx", "text": "package a", "old": 1, "new": 1}, {"k": "add", "text": "type Box struct{}", "new": 2},
-		},
-		"from": 0, "added": 1, "removed": 0,
-	})})
-	const tl = `document.querySelector('[data-view="timeline"]')`
-	p.WaitJS(tl + `?.querySelector(".drow-add")?.textContent.includes("type Box struct{}")`)
-	if got := Eval[string](p, `document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent ?? ""`); got != "a.go (abc1234)" {
-		t.Errorf("the tab is %q, want a.go (abc1234)", got)
-	}
-	if !Eval[bool](p, tl+`.innerText.includes("fix the box") && `+tl+`.innerText.includes("View only")`) {
-		t.Error("the diff tab does not show its commit or that it is read-only")
+	if !Eval[bool](p, diffView+`.innerText.includes("View only")`) {
+		t.Error("the diff tab does not say it is read-only")
 	}
 	// The file's own tab is still there; back to it, the editor shows the file.
 	p.TapJS(`document.querySelector('.ed-tab-open[data-path="src/a.go"]')`)

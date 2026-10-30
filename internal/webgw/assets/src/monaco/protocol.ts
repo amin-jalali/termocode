@@ -37,10 +37,26 @@ export interface FrameMarker {
 /** LspKind is what the frame asks the page about a position. */
 export type LspKind = "hover" | "complete" | "definition";
 
+/** FrameDiff makes the editor a side-by-side diff: original is the older
+ * text (read only, on the left); the frame's own text is the newer one. */
+export interface FrameDiff {
+  original: string;
+  /** inline: one column with the removed rows over the added ones. */
+  inline?: boolean;
+  /** collapse: unchanged regions fold away (a click opens them). */
+  collapse?: boolean;
+}
+
 export type ToFrame =
   /** init: path is the file's workspace path (a definition there stays
-   * in this editor). */
-  | ({ t: "init"; doc: string; label: string; path?: string } & FrameOpts)
+   * in this editor); diff makes it a diff editor. */
+  | ({ t: "init"; doc: string; label: string; path?: string; diff?: FrameDiff } & FrameOpts)
+  /** original: the diff's older text changed (git read it again). */
+  | { t: "original"; text: string }
+  /** diffView: switch side by side / inline, fold unchanged regions. */
+  | { t: "diffView"; inline?: boolean; collapse?: boolean }
+  /** diffGo: to the next (1) or previous (-1) change. */
+  | { t: "diffGo"; dir: 1 | -1 }
   | ({ t: "opts" } & FrameOpts)
   /** remote: the laptop's text. seen is the newest frame version the
    * page had; a frame that changed since keeps its text and sends it. */
@@ -75,6 +91,8 @@ export type FromFrame =
    * (typing, paste, undo), not the page. */
   | { t: "text"; text: string; v: number; user: boolean; canUndo: boolean; canRedo: boolean }
   | { t: "viewport"; first: number; last: number }
+  /** diff: the diff editor counted its changes (after each change). */
+  | { t: "diff"; changes: number; added: number; removed: number }
   | { t: "cursor"; line: number; col: number }
   | { t: "save" }
   /** menu: a right click at (x, y) in the frame; sel is the selected text. */

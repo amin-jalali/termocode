@@ -213,9 +213,10 @@ func TestGitSwipeStages(t *testing.T) {
 }
 
 // Tapping a row opens its diff: rows with the hunk header; "Stage this
-// part" sends the exact header; more rows come page by page.
+// part" sends the exact header; more rows come page by page. (The
+// desktop opens a diff editor tab instead: diffeditor_test.go.)
 func TestGitDiffSheet(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-open')`)

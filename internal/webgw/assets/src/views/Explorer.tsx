@@ -10,47 +10,19 @@ import { signal } from "@preact/signals";
 import { useEffect, useState } from "preact/hooks";
 import type { BufSymbol, BufSymbols, GitFileLog } from "../../../../webproto/proto";
 import { activeDesk } from "../lib/deskeditor";
+import { diffTab, fileOfTab } from "../lib/difftab";
 import { file } from "../lib/file";
 import { activeFile, showFile } from "../lib/workbench";
 import { OfflineError, ReqError } from "../net/link";
 import { link, live, store } from "../session";
-import { age, readDiff, readGit, type DiffPage } from "../state/git";
+import { age, readGit } from "../state/git";
 import { t } from "../strings";
-import { Button } from "../ui/Button";
 import { errText } from "../ui/CardSheet";
 import { Cod } from "../ui/icons";
-import { DiffRow } from "../ui/rows";
 import { SkeletonRows } from "../ui/Skeleton";
 
-/** TIMELINE_TAB starts the editor tab of a commit's change of a file:
- * TIMELINE_TAB + hash + ":" + path. */
-const TIMELINE_TAB = "@timeline:";
 /** SYMBOLS_MS: the outline asks again this long after the file changed. */
 const SYMBOLS_MS = 700;
-
-/** isTimeline: the editor tab is a commit's change of a file. */
-export function isTimeline(tab: string): boolean {
-  return tab.startsWith(TIMELINE_TAB);
-}
-
-/** timelineOf reads a timeline tab (null: not one). */
-export function timelineOf(tab: string): { hash: string; path: string } | null {
-  if (!isTimeline(tab)) return null;
-  const rest = tab.slice(TIMELINE_TAB.length);
-  const i = rest.indexOf(":");
-  if (i < 4 || !/^[0-9a-f]+$/.test(rest.slice(0, i)) || i === rest.length - 1) return null;
-  return { hash: rest.slice(0, i), path: rest.slice(i + 1) };
-}
-
-function baseName(path: string): string {
-  return path.slice(path.lastIndexOf("/") + 1);
-}
-
-/** tabName is an editor tab's name: the file's, and the commit's for a timeline tab. */
-export function tabName(tab: string): string {
-  const tl = timelineOf(tab);
-  return tl ? `${baseName(tl.path)} (${tl.hash})` : baseName(tab);
-}
 
 /** outlineOpen and timelineOpen: the sections are open (closed at first). */
 export const outlineOpen = signal(false);
@@ -99,7 +71,7 @@ function Section({ id, title, open, onToggle, children }: { id: string; title: s
 function realFile(): string | null {
   const a = activeFile.value;
   if (!a) return null;
-  return timelineOf(a)?.path ?? (isTimeline(a) ? null : a);
+  return fileOfTab(a);
 }
 
 function Note({ children }: { children: ComponentChildren }) {
@@ -200,7 +172,7 @@ function Timeline() {
     <div class="ex-list" role="list" aria-label={t("timeline.title")}>
       {log.map((c) => (
         <div role="listitem" key={c.hash}>
-          <button type="button" class="ex-row ex-commit" data-hash={c.hash} title={`${c.hash} ${c.subject}`} onClick={() => showFile(TIMELINE_TAB + c.hash + ":" + path)}>
+          <button type="button" class="ex-row ex-commit" data-hash={c.hash} title={`${c.hash} ${c.subject}`} onClick={() => showFile(diffTab("commit", path, c.hash))}>
             <Cod name="git-commit" />
             <span class="ex-name trunc" dir="auto">
               {c.subject}
@@ -226,78 +198,5 @@ export function ExplorerSections() {
         <Timeline />
       </Section>
     </div>
-  );
-}
-
-/** TimelineDiff is a timeline tab: one commit's change of one file,
- * read-only, in pages. */
-export function TimelineDiff({ tab }: { tab: string }) {
-  const tl = timelineOf(tab);
-  const [page, setPage] = useState<DiffPage | null>(null);
-  const [err, setErr] = useState("");
-  const [more, setMore] = useState(false);
-  const on = live.value;
-  useEffect(() => {
-    if (!tl || !on) return;
-    let stop = false;
-    link.request("git.show", { hash: tl.hash, path: tl.path }).then(
-      (r) => !stop && setPage(readDiff(r)),
-      (e: unknown) => !stop && setErr(failText(e)),
-    );
-    return () => {
-      stop = true;
-    };
-  }, [tab, on]);
-  if (!tl) return null;
-  const c = page?.commit;
-  const loadMore = () => {
-    if (!page || !page.next || more) return;
-    setMore(true);
-    link
-      .request("git.show", { hash: tl.hash, path: tl.path, from: page.next })
-      .then(
-        (r) => {
-          const p = readDiff(r);
-          setPage({ ...page, rows: [...page.rows, ...p.rows], next: p.next });
-        },
-        (e: unknown) => setErr(failText(e)),
-      )
-      .finally(() => setMore(false));
-  };
-  return (
-    <section class="view tl-diff" data-view="timeline" aria-labelledby="vh-timeline">
-      <header class="tl-head">
-        <h1 class="tl-title" id="vh-timeline">
-          <span dir="ltr">{tl.path}</span> <span class="tl-hash" dir="ltr">{tl.hash}</span>
-        </h1>
-        {c && (
-          <p class="tl-meta" dir="auto">
-            {c.subject} · {c.author} · {age(c.when, Date.now())}
-          </p>
-        )}
-        <span class="chip">{t("viewonly")}</span>
-      </header>
-      <div class="tl-body">
-        {err ? (
-          <Note>{err}</Note>
-        ) : !page ? (
-          <SkeletonRows rows={8} />
-        ) : page.rows.length === 0 ? (
-          <Note>{t(page.binary ? "timeline.binary" : "timeline.empty")}</Note>
-        ) : (
-          <div class="diff-rows">
-            {page.rows.map((r, i) => (
-              <DiffRow key={i} kind={r.k === "file" ? "hunk" : r.k} a={r.old || undefined} b={r.new || undefined} text={r.text} />
-            ))}
-          </div>
-        )}
-        {page && page.next > 0 && (
-          <Button wide onClick={loadMore} disabled={more}>
-            {t("git.more_rows")}
-          </Button>
-        )}
-        {page && page.truncated && page.next === 0 && <Note>{t("git.long")}</Note>}
-      </div>
-    </section>
   );
 }

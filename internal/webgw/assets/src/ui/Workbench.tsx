@@ -40,7 +40,9 @@ import type { Tab } from "../state/route";
 import { t } from "../strings";
 import { ChatView, GitView, MoreView } from "../views/views";
 import { DeskTerm } from "../views/DeskTerm";
-import { ExplorerSections, isTimeline, tabName, TimelineDiff } from "../views/Explorer";
+import { ExplorerSections } from "../views/Explorer";
+import { DiffView } from "../views/DiffView";
+import { diffOf, fileOfTab, tabName } from "../lib/difftab";
 import { FileView } from "../views/FileView";
 import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
@@ -180,7 +182,7 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
                 showFile(path);
               }}
             >
-              <FileIcon path={path} />
+              <FileIcon path={fileOfTab(path) ?? path} />
               <span class="ed-tab-name" dir="auto">{name}</span>
             </button>
             <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={`${t("wb.close_tab", { name })} (${modKey()}+W)`} onClick={() => closeTab(path, group)}>
@@ -288,7 +290,7 @@ function Welcome() {
  * the welcome. */
 function EditorBody({ more, file, slot }: { more: boolean; file: string | null; slot: string }) {
   if (more) return <MoreView />;
-  if (file && isTimeline(file)) return <TimelineDiff key={file} tab={file} />;
+  if (file && diffOf(file)) return <DiffView key={file} tab={file} slot={slot} />;
   if (file) return <FileView key={file} path={file} slot={slot} />;
   return <Welcome />;
 }

@@ -637,6 +637,16 @@ export const S = {
   "act.scm": "Source Control",
   "act.run": "Tasks and AI runs",
   "act.device": "This device",
+  "dv.tab_wt": "{name} (Working Tree)",
+  "dv.tab_idx": "{name} (Index)",
+  "dv.tab_commit": "{name} ({hash}^ ↔ {hash})",
+  "dv.prev": "Previous Change",
+  "dv.next": "Next Change",
+  "dv.inline": "Inline View",
+  "dv.collapse": "Collapse Unchanged Regions",
+  "dv.open_file": "Open File",
+  "dv.binary": "A binary file: no text to compare.",
+  "dv.cut": "Only the start of this file is shown: it is too long.",
 } as const;
 
 export type StringKey = keyof typeof S;

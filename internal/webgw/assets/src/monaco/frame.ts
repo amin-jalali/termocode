@@ -12,6 +12,7 @@ import { dict } from "../state/dict";
 import { History } from "../editor/history";
 import { diff } from "../lib/textdiff";
 import type { LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
+import type { HlRow } from "../editor/api";
 import { md } from "./mdtext";
 import type { FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
 import "./frame.css";
@@ -49,6 +50,8 @@ interface Word {
 interface Model {
   uri: Uri;
   getValue(): string;
+  setValue(v: string): void;
+  getLinesContent(): string[];
   getWordUntilPosition(p: Pos): Word;
   getWordAtPosition(p: Pos): Word | null;
   setEOL(eol: number): void;
@@ -95,8 +98,36 @@ interface Editor {
   getAction(id: string): { isSupported(): boolean; run(): Promise<void> } | null;
   getContainerDomNode(): HTMLElement;
 }
+interface LineChange {
+  originalStartLineNumber: number;
+  originalEndLineNumber: number;
+  modifiedStartLineNumber: number;
+  modifiedEndLineNumber: number;
+}
+interface DiffEditor {
+  getModifiedEditor(): Editor;
+  getOriginalEditor(): Editor;
+  setModel(m: { original: Model; modified: Model }): void;
+  updateOptions(o: Record<string, unknown>): void;
+  goToDiff(target: "next" | "previous"): void;
+  getLineChanges(): LineChange[] | null;
+  onDidUpdateDiff(cb: () => void): void;
+}
+/** The editor's own diff computer (the code its worker runs), called here:
+ * the frame runs no worker. */
+interface LinesDiff {
+  changes: unknown[];
+  moves: unknown[];
+  hitTimeout: boolean;
+}
+interface DiffHost {
+  linesDiffComputers: { getDefault(): { computeDiff(a: string[], b: string[], o: { ignoreTrimWhitespace: boolean; maxComputationTimeMs: number; computeMoves: boolean }): LinesDiff } };
+}
 interface EditorNS {
   create(el: HTMLElement, o: Record<string, unknown>): Editor;
+  createDiffEditor(el: HTMLElement, o: Record<string, unknown>, services?: Record<string, object>): DiffEditor;
+  getModel(uri: Uri): Model | null;
+  createModel(text: string, lang?: string): Model;
   defineTheme(name: string, data: { base: string; inherit: boolean; rules: unknown[]; colors: Record<string, string> }): void;
   setTheme(name: string): void;
 }
@@ -137,11 +168,12 @@ interface Api {
   };
   languages: Languages;
   Uri: { from(c: { scheme: string; path: string }): Uri };
-  KeyMod: { CtrlCmd: number; Shift: number };
-  KeyCode: { KeyZ: number; KeyY: number; KeyS: number; F12: number };
+  KeyMod: { CtrlCmd: number; Shift: number; Alt: number };
+  KeyCode: { KeyZ: number; KeyY: number; KeyS: number; F12: number; F7: number; F5: number };
 }
 
-const api = (globalThis as unknown as { termocodeModule: (n: string) => Api }).termocodeModule("vs/editor-BdtEMBbM");
+const mod = (globalThis as unknown as { termocodeModule: (n: string) => unknown }).termocodeModule;
+const api = mod("vs/editor-BdtEMBbM") as Api;
 
 /** The page is the frame's parent, on the same origin. */
 function post(m: FromFrame): void {
@@ -160,6 +192,69 @@ let flashDecos: Collection | null = null;
 let gutterDecos: Collection | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | undefined;
 let readOnly = false;
+/** The diff editor (a diff tab), its older side and that side's colours. */
+let diffEd: DiffEditor | null = null;
+let origModel: Model | null = null;
+let origDecos: Collection | null = null;
+let lastHl: readonly HlRow[] = [];
+
+/** workerless stands in for the editor's worker service (the frame runs
+ * no worker, its policy says worker-src 'none'): the diff editor's diff
+ * is computed here, with the editor's own algorithm (the code its worker
+ * would run). Everything else the service offers answers "nothing". */
+const workerless: object = new Proxy(
+  {
+    computeDiff(a: Uri, b: Uri, o: { ignoreTrimWhitespace: boolean; maxComputationTimeMs: number; computeMoves: boolean }) {
+      const ma = api.editor.getModel(a), mb = api.editor.getModel(b);
+      if (!ma || !mb) return Promise.resolve(null);
+      const host = mod("vs/editorWorkerHost-B_VpI68A") as DiffHost;
+      const r = host.linesDiffComputers.getDefault().computeDiff(ma.getLinesContent(), mb.getLinesContent(), {
+        ignoreTrimWhitespace: o.ignoreTrimWhitespace,
+        maxComputationTimeMs: o.maxComputationTimeMs,
+        computeMoves: o.computeMoves,
+      });
+      return Promise.resolve({ identical: r.changes.length === 0, quitEarly: r.hitTimeout, changes: r.changes, moves: r.moves });
+    },
+  },
+  {
+    get(target, k) {
+      if (k === "computeDiff") return Reflect.get(target, k);
+      if (typeof k === "string" && k.startsWith("can")) return () => false;
+      return () => Object.assign(Promise.resolve(null), { dispose() {} });
+    },
+  },
+);
+
+/** origHl colours the older side: a row whose text the newer side has
+ * coloured gets the same colours (the hub colours the open buffer only). */
+function origHl(): void {
+  if (!origDecos || !origModel) return;
+  const byText = new Map<string, HlRow["segs"]>();
+  for (const r of lastHl) if (!byText.has(r.text)) byText.set(r.text, r.segs);
+  const out: Decoration[] = [];
+  const n = origModel.getLineCount();
+  for (let i = 1; i <= n; i++) {
+    const segs = byText.get(origModel.getLineContent(i));
+    if (!segs) continue;
+    for (const g of segs) if (g.cls && g.to > g.from) out.push({ range: oneLineAt(i, g.from + 1, g.to + 1), options: { inlineClassName: "hl-" + g.cls } });
+  }
+  origDecos.set(out);
+}
+
+function oneLineAt(line: number, a: number, b: number): IRange {
+  return { startLineNumber: line, startColumn: a, endLineNumber: line, endColumn: b };
+}
+
+/** diffCount tells the page how many changes the diff has. */
+function diffCount(): void {
+  const ch = diffEd?.getLineChanges() ?? [];
+  let added = 0, removed = 0;
+  for (const c of ch) {
+    if (c.modifiedEndLineNumber > 0) added += c.modifiedEndLineNumber - c.modifiedStartLineNumber + 1;
+    if (c.originalEndLineNumber > 0) removed += c.originalEndLineNumber - c.originalStartLineNumber + 1;
+  }
+  post({ t: "diff", changes: ch.length, added, removed });
+}
 
 /** MENU_SEL_MAX caps the selected text a right click hands the page. */
 const MENU_SEL_MAX = 1 << 20;
@@ -459,12 +554,13 @@ function setOpts(o: FrameOpts): void {
 }
 
 function init(m: Extract<ToFrame, { t: "init" }>): void {
-  setOpts(m);
+  // The editor's services start with the first editor: the diff editor
+  // brings its own worker service, so the theme waits until after it.
+  if (!m.diff) setOpts(m);
   const box = document.getElementById("editor");
   if (!box || ed) return;
   cur = Text.of(m.doc.split("\n"));
-  ed = api.editor.create(box, {
-    value: m.doc,
+  const opts = {
     language: "plaintext",
     theme: "termocode",
     readOnly: m.readOnly === true,
@@ -495,8 +591,34 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     suggestOnTriggerCharacters: m.lsp === true,
     gotoLocation: { multiple: "goto" },
     definitionLinkOpensInPeek: false,
-  });
+  };
+  if (m.diff) {
+    // A diff tab: the older text on the left (read only), this text on
+    // the right; the right side is the editor every message below drives.
+    diffEd = api.editor.createDiffEditor(box, {
+      ...opts,
+      minimap: { enabled: false },
+      originalEditable: false,
+      renderSideBySide: m.diff.inline !== true,
+      useInlineViewWhenSpaceIsLimited: true,
+      enableSplitViewResizing: true,
+      renderOverviewRuler: true,
+      ignoreTrimWhitespace: true,
+      renderMarginRevertIcon: false,
+      renderIndicators: true,
+      hideUnchangedRegions: { enabled: m.diff.collapse !== false },
+    }, { editorWorkerService: workerless });
+    origModel = api.editor.createModel(m.diff.original, "plaintext");
+    origModel.setEOL(0);
+    const modModel = api.editor.createModel(m.doc, "plaintext");
+    diffEd.setModel({ original: origModel, modified: modModel });
+    ed = diffEd.getModifiedEditor();
+    origDecos = diffEd.getOriginalEditor().createDecorationsCollection();
+    diffEd.onDidUpdateDiff(diffCount);
+    for (const side of [ed, diffEd.getOriginalEditor()]) side.getContainerDomNode().addEventListener("contextmenu", (e) => e.preventDefault(), true);
+  } else ed = api.editor.create(box, { ...opts, value: m.doc });
   readOnly = m.readOnly === true;
+  if (m.diff) setOpts(m);
   ed.getContainerDomNode().addEventListener("contextmenu", onMenu, true);
   model = ed.getModel();
   model?.setEOL(0);
@@ -523,6 +645,15 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   ed.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyZ, () => undoRedo(true));
   ed.addCommand(KeyMod.CtrlCmd | KeyCode.KeyY, () => undoRedo(true));
   ed.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => post({ t: "save" }));
+  if (diffEd) {
+    const d = diffEd;
+    for (const side of [ed, d.getOriginalEditor()]) {
+      side.addCommand(KeyCode.F7, () => d.goToDiff("next"));
+      side.addCommand(KeyMod.Shift | KeyCode.F7, () => d.goToDiff("previous"));
+      side.addCommand(KeyMod.Alt | KeyCode.F5, () => d.goToDiff("next"));
+      side.addCommand(KeyMod.Shift | KeyMod.Alt | KeyCode.F5, () => d.goToDiff("previous"));
+    }
+  }
   myPath = m.path ?? "";
   lspOn = m.lsp === true;
   if (lspOn) {
@@ -586,8 +717,27 @@ function onMessage(e: MessageEvent): void {
         }
       }
       hlDecos.set(out);
+      lastHl = m.rows;
+      origHl();
       return;
     }
+    case "original":
+      if (origModel && origModel.getValue() !== m.text) {
+        origModel.setValue(m.text);
+        origHl();
+      }
+      return;
+    case "diffView": {
+      const u = dict<unknown>();
+      if (m.inline !== undefined) u.renderSideBySide = !m.inline;
+      if (m.collapse !== undefined) u.hideUnchangedRegions = { enabled: m.collapse };
+      diffEd?.updateOptions(u);
+      return;
+    }
+    case "diffGo":
+      diffEd?.goToDiff(m.dir > 0 ? "next" : "previous");
+      ed?.focus();
+      return;
     case "gutter":
       gutterDecos?.set(
         m.marks.map((g) => ({

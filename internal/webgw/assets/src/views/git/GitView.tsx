@@ -5,7 +5,10 @@
 // #/git?show=<hash>.
 import { h, Fragment } from "preact";
 import { useEffect, useState } from "preact/hooks";
+import { diffTab } from "../../lib/difftab";
+import { layout } from "../../lib/layout";
 import { go, route } from "../../lib/router";
+import { showFile } from "../../lib/workbench";
 import { toast } from "../../lib/toasts";
 import { link, live, store } from "../../session";
 import { age, groupFiles, readGit, splitPath, type GitFile, type Side } from "../../state/git";
@@ -67,7 +70,18 @@ export function GitView() {
   const sheetFile = diffPath ? g.files.find((f) => f.path === diffPath) ?? null : null;
   const staged = r.query.side === "staged";
   const close = () => go({ tab: "git", rest: "", query: {} });
-  const open = (f: GitFile, side: Side) => go({ tab: "git", rest: f.path, query: side === "staged" ? { side: "staged" } : {} });
+  const desk = layout.value === "desktop";
+  // The desktop opens a change as a diff editor tab (a new or conflicted
+  // file as the file itself); the phone opens the diff sheet.
+  const open = (f: GitFile, side: Side) =>
+    desk
+      ? showFile(side === "untracked" || side === "conflicts" ? f.path : diffTab(side === "staged" ? "idx" : "wt", f.path), true)
+      : go({ tab: "git", rest: f.path, query: side === "staged" ? { side: "staged" } : {} });
+
+  // A link to a change (#/git/<path>) on the desktop: its diff editor tab.
+  useEffect(() => {
+    if (desk && diffPath) showFile(diffTab(staged ? "idx" : "wt", diffPath));
+  }, [desk, diffPath, staged]);
 
   let body;
   if (!st) {
@@ -159,7 +173,7 @@ export function GitView() {
       }
     >
       <div class={`git${st?.stale ? " is-stale" : ""}`}>{body}</div>
-      {diffPath && (
+      {diffPath && !desk && (
         <DiffSheet
           file={sheetFile}
           path={diffPath}

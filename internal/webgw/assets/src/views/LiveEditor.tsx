@@ -97,13 +97,24 @@ export interface DeskOpts {
   insertSpaces: boolean;
 }
 
-export function LiveEditor({ path, buf, desk, slot = "g0" }: { path: string; buf: number; desk?: DeskOpts; slot?: string }) {
+/** LiveDiff makes the desktop editor a diff editor: original is the
+ * older side (null while git reads it). */
+export interface LiveDiff {
+  original: string | null;
+  inline: boolean;
+  collapse: boolean;
+  onCount(changes: number, added: number, removed: number): void;
+}
+
+export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: string; buf: number; desk?: DeskOpts; slot?: string; diff?: LiveDiff }) {
   const topic = "buf:" + buf;
   const ts = store.topic(topic).value;
   const snap = readBuf(ts?.data);
   const host = useRef<HTMLDivElement | null>(null);
   const ed = useRef<EditorHandle | null>(null);
   const [ready, setReady] = useState(false);
+  const diffRef = useRef(diff);
+  diffRef.current = diff;
 
   useEffect(() => {
     let dead = false;
@@ -125,6 +136,8 @@ export function LiveEditor({ path, buf, desk, slot = "g0" }: { path: string; buf
               onLsp: (kind, line, col) => ask(kind, buf, line, col),
               onRefs: (line, col) => findRefs(path, buf, line, col, wordAt(peek()?.lines[line] ?? "", col)),
               onOpen: (to, line, col) => goTo(to, line, col),
+              diff: diff ? { original: diff.original ?? "", inline: diff.inline, collapse: diff.collapse } : undefined,
+              onDiff: (n, a, r) => diffRef.current?.onCount(n, a, r),
             }),
         })
       : loadEditor();
@@ -181,7 +194,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0" }: { path: string; buf
   // Git change marks (desktop): the file's unstaged diff on disk, asked
   // again when the laptop saves or git's list changes.
   const gitData = desk ? (store.topic("git").value?.data as GitSnap | undefined) : undefined;
-  const changed = gitData?.files?.find((f) => f.path === path && (f.unstaged || f.untracked));
+  const changed = diff ? undefined : gitData?.files?.find((f) => f.path === path && (f.unstaged || f.untracked));
   const saved = snap ? !snap.dirty : false;
   useEffect(() => {
     const h = ed.current as DeskHandle | null;
@@ -212,6 +225,14 @@ export function LiveEditor({ path, buf, desk, slot = "g0" }: { path: string; buf
     revealAt.value = null;
     h.reveal(at.line + 1, at.col + 1);
   }, [ready, at]);
+  // A diff editor: the older side and the view follow the tab.
+  const orig = diff?.original ?? null;
+  useEffect(() => {
+    if (ready && orig !== null) (ed.current as DeskHandle | null)?.original(orig);
+  }, [ready, orig]);
+  useEffect(() => {
+    if (ready && diff) (ed.current as DeskHandle | null)?.diffView({ inline: diff.inline, collapse: diff.collapse });
+  }, [ready, diff?.inline, diff?.collapse]);
   // The desktop editor's settings follow the view.
   useEffect(() => (ed.current as DeskHandle | null)?.opts?.({ wrap: desk?.wrap, readOnly: desk?.readOnly }), [desk?.wrap, desk?.readOnly, ready]);
   // Colours: rows whose text still matches.

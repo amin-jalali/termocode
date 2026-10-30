@@ -18,9 +18,8 @@
 .ex-name { flex: 0 1 auto; min-width: 0; }
 .ex-detail { flex: 1 1 0; min-width: 0; color: var(--muted); font-size: 0.75rem; }
 .ex-note { margin: var(--s1) var(--s3); color: var(--muted); font-size: 0.75rem; }
-.tl-diff { display: flex; flex-direction: column; min-height: 0; height: 100%; }
-.tl-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); border-bottom: 1px solid var(--wb-panel-border); }
-.tl-title { margin: 0; font-size: 0.875rem; font-weight: 600; }
-.tl-hash { color: var(--muted); font-family: var(--font-mono); font-weight: 400; }
-.tl-meta { flex: 1 1 100%; margin: 0; color: var(--muted); font-size: 0.8125rem; }
-.tl-body { flex: 1; min-height: 0; overflow: auto; padding: var(--s2) 0; }
+
+/* A diff editor tab (views/DiffView.tsx): the editor fills the tab. */
+.diff-host { position: relative; display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.diff-host > .live, .diff-host > .editor-host { flex: 1 1 auto; min-height: 0; }
+.tb.is-on { background: var(--wb-toolbar-hover); color: var(--wb-tab-active-fg); }
