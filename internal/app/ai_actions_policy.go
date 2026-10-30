@@ -447,13 +447,14 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"mcp-serve-status":      aiNever(aiNoPicker),
 	"mcp-serve-copy-config": aiNever(aiNoAIConfig + " (the config is for the user to paste into an agent)"),
 	// The web panel gives shell access from a browser (web_tui.go).
-	"web-start":     aiNever(aiNoWeb),
-	"web-stop":      aiNever(aiNoWeb),
-	"web-copy-link": aiNever(aiNoWeb + " (the link logs a browser in)"),
-	"web-pair":      aiNever(aiNoWeb + " (pairing lets another device in)"),
-	"web-devices":   aiNever(aiNoWeb + " (who may come in)"),
-	"web-totp":      aiNever(aiNoWeb + " (a second factor of the web sign-in)"),
-	"web-share":     aiNever(aiNoWeb + " (lets another person watch)"),
+	"web-start":       aiNever(aiNoWeb),
+	"web-start-panel": aiNever(aiNoWeb),
+	"web-stop":        aiNever(aiNoWeb),
+	"web-copy-link":   aiNever(aiNoWeb + " (the link logs a browser in)"),
+	"web-pair":        aiNever(aiNoWeb + " (pairing lets another device in)"),
+	"web-devices":     aiNever(aiNoWeb + " (who may come in)"),
+	"web-totp":        aiNever(aiNoWeb + " (a second factor of the web sign-in)"),
+	"web-share":       aiNever(aiNoWeb + " (lets another person watch)"),
 	// Itermoc (itermoc_actions.go): the user's screen for profiles, models,
 	// services and outside agents. The AI opens it with the typed tool
 	// ai_view_open (ai_itermoc_tools.go); as palette commands they are the user's.
