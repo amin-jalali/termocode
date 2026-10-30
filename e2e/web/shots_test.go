@@ -83,8 +83,8 @@ func shotHub(t *testing.T, c *HubConn) {
 		"cards": map[string]any{"cards": []any{}},
 		"chats": map[string]any{"chats": []any{}},
 		"tree": webproto.TreeSnap{Roots: []webproto.TreeRoot{{Path: "", Label: "termocode"}}, Dirs: map[string]webproto.TreeDir{
-			"": {Entries: []webproto.TreeEntry{{Name: "cmd", Dir: true}, {Name: "internal", Dir: true}, {Name: "docs", Dir: true}, {Name: "go.mod"}, {Name: "README.md", Git: "M"}, {Name: "Makefile"}}},
-			"cmd": {Entries: []webproto.TreeEntry{{Name: "covreport", Dir: true}, {Name: "termocode", Dir: true}}},
+			"":              {Entries: []webproto.TreeEntry{{Name: "cmd", Dir: true}, {Name: "internal", Dir: true}, {Name: "docs", Dir: true}, {Name: "go.mod"}, {Name: "README.md", Git: "M"}, {Name: "Makefile"}}},
+			"cmd":           {Entries: []webproto.TreeEntry{{Name: "covreport", Dir: true}, {Name: "termocode", Dir: true}}},
 			"cmd/covreport": {Entries: []webproto.TreeEntry{{Name: "filter.go", Git: "M"}, {Name: "filter_test.go"}, {Name: "main.go"}}},
 		}},
 		"bufs":  map[string]any{"bufs": []any{map[string]any{"buf": 2, "path": "cmd/covreport/filter.go", "dirty": false, "active": true}, map[string]any{"buf": 4, "path": "README.md", "dirty": true, "active": false}}},
