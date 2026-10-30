@@ -33,14 +33,14 @@ func sshArgv(args []string, remote, dir, reconnected string, webPort int) []stri
 	return append(argv, "--", strings.Join(cmd, " "))
 }
 
-// sshForwardArgv is the ssh command line of the web forward of
+// SSHForwardArgv is the ssh command line of the web forward of
 // `termocode ssh --web` (WEB-29): the user's own arguments (keys, jump
 // hosts, port), no command (-N) and no terminal (-T); BatchMode because
 // it has no terminal to ask a password on; ControlPath=none because a
 // stale shared master cannot forward; and one forward from 127.0.0.1:port
 // on this computer to the far gateway's unix socket, so the far host
 // opens no TCP port at all.
-func sshForwardArgv(args []string, port int, sock string) []string {
+func SSHForwardArgv(args []string, port int, sock string) []string {
 	argv := []string{"-N", "-T", "-o", "ExitOnForwardFailure=yes", "-o", "ControlPath=none", "-o", "BatchMode=yes"}
 	if !hasSSHOption(args, "ServerAlive") {
 		argv = append(argv, "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3")
