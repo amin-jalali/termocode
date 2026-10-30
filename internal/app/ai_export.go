@@ -182,11 +182,9 @@ func (m *Model) onAISaveAsPath(value string) tea.Cmd {
 	}
 	if err == nil {
 		m.aiS().savePath = abs
-		m.confirm = confirm.New("Overwrite?", aiRel(root)(abs)+" already exists. Replace it with the code block?",
-			[]confirm.Button{
-				{ID: "overwrite", Title: "Overwrite", Style: confirm.StyleDestructive},
-				{ID: "cancel", Title: "Cancel"},
-			})
+		m.confirm = confirm.Risky("Overwrite?", aiRel(root)(abs)+" already exists. Replace it with the code block?",
+			confirm.Button{ID: "cancel", Title: "Cancel"},
+			confirm.Button{ID: "overwrite", Title: "Overwrite", Style: confirm.StyleDestructive})
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
 		m.confirmKind = confirmKindAISaveOverwrite
