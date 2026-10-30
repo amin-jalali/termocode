@@ -29,7 +29,7 @@ const picked = signal<string | null>(null);
 export const resultsOf = signal("");
 
 const ICON: Readonly<Record<string, string>> = { passed: "pass", failed: "error", skipped: "circle-slash", running: "loading", pending: "circle-outline" };
-const STATE: Readonly<Record<string, StringKey>> = { passed: "test.passed", failed: "test.failed", skipped: "test.skipped", running: "test.running", pending: "test.pending" };
+const STATE: Readonly<Record<string, StringKey>> = { passed: "test.passed", failed: "test.failed", skipped: "test.skipped", running: "mcpv.running", pending: "test.pending" };
 
 /** TestIcon is a test's state as the TESTING view draws it. */
 export function TestIcon({ state }: { state: string }) {
@@ -135,7 +135,7 @@ export function TestingView() {
         <IconBtn icon="run-all" act="run-all" label={t("test.run_all")} onClick={() => ask("tests.run", {})} off={!s || s.items.length === 0} />
       )}
       <IconBtn icon="run-errors" act="run-failed" label={t("test.run_failed")} onClick={() => ask("tests.run", { failed: true })} off={running || !c || c.failed === 0} />
-      <IconBtn icon="collapse-all" act="collapse" label={t("test.collapse")} onClick={() => (folded.value = new Set(s?.items.filter((x) => x.kind !== "case").map((x) => x.id)))} />
+      <IconBtn icon="collapse-all" act="collapse" label={t("sv.collapse")} onClick={() => (folded.value = new Set(s?.items.filter((x) => x.kind !== "case").map((x) => x.id)))} />
     </span>
   );
   return (

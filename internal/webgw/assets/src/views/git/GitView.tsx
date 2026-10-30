@@ -200,11 +200,11 @@ export function GitView() {
               class="tb tb-icon"
               data-act="more"
               aria-haspopup="menu"
-              aria-label={t("gx.more")}
-              title={t("gx.more")}
+              aria-label={t("scm.more_actions")}
+              title={t("scm.more_actions")}
               onClick={(e) => {
                 const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                openMenu(r.left, r.bottom, t("gx.more"), gitMoreMenu(g.repo, canAct, g.op, setAction));
+                openMenu(r.left, r.bottom, t("scm.more_actions"), gitMoreMenu(g.repo, canAct, g.op, setAction));
               }}
             >
               <Cod name="ellipsis" />
