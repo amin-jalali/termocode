@@ -72,6 +72,9 @@ func webToastsOf(tm toast.Model) []webproto.Toast {
 	live := tm.Live()
 	out := make([]webproto.Toast, 0, len(live))
 	for _, t := range live {
+		if t.Private { // a one-time link stays on the laptop
+			continue
+		}
 		out = append(out, webproto.Toast{ID: t.ID, Severity: webSeverity(t.Severity), Title: t.Title, Detail: t.Detail})
 	}
 	return out

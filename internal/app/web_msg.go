@@ -46,6 +46,8 @@ func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return waitWeb(msg.hub), true
 	case webPanelUpMsg, webPanelFailMsg, webPanelExitMsg:
 		return m.handleWebPanelMsg(msg)
+	case webLinkCopyMsg:
+		return m.webCopyLink(msg.link), true
 	case webHelloMsg:
 		msg.hub.live[msg.conn] = true
 		m.onWebHello(msg)
