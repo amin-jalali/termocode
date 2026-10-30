@@ -41,7 +41,7 @@ func TestSearchStreams(t *testing.T) {
 			p.TapJS(ButtonByText("Case"))
 			p.Tap(".search-input")
 			p.Do(chromedp.SendKeys(".search-input", "needle"+kb.Enter))
-			r := expectReq(t, c, webproto.OpSearchRun, `{"query":"needle","regex":true,"case":true}`)
+			r := expectOp(t, c, webproto.OpSearchRun, `{"query":"needle","regex":true,"case":true}`)
 			if loc := Eval[string](p, "location.hash"); loc != "#/more/search?q=needle" {
 				t.Errorf("route %q", loc)
 			}
@@ -65,7 +65,7 @@ func TestSearchStreams(t *testing.T) {
 			p.WaitJS(`document.querySelector(".search-count").textContent === "2 files · 3 matches · 0.4 s"`)
 
 			p.TapJS(`document.querySelectorAll(".search-hit")[1]`)
-			reply(t, c, expectReq(t, c, webproto.OpSearchOpen, `{"path":"src/a.go","line":9}`), nil)
+			reply(t, c, expectOp(t, c, webproto.OpSearchOpen, `{"path":"src/a.go","line":9}`), nil)
 			p.WaitJS(`location.hash === "#/files/src/a.go?line=9"`)
 		})
 	}
@@ -76,9 +76,9 @@ func TestSearchStopAndNotes(t *testing.T) {
 	p, c := openSearch(t, Phone)
 	p.Tap(".search-input")
 	p.Do(chromedp.SendKeys(".search-input", "x"+kb.Enter))
-	r := expectReq(t, c, webproto.OpSearchRun, `{"query":"x"}`)
+	r := expectOp(t, c, webproto.OpSearchRun, `{"query":"x"}`)
 	p.TapJS(ButtonByText("Stop"))
-	reply(t, c, expectReq(t, c, webproto.OpSearchStop, `{}`), nil)
+	reply(t, c, expectOp(t, c, webproto.OpSearchStop, `{}`), nil)
 	reply(t, c, r, webproto.SearchSummary{Stopped: "stopped", Truncated: true})
 	p.WaitJS(ButtonByText("Search"))
 
@@ -91,7 +91,7 @@ func TestSearchStopAndNotes(t *testing.T) {
 		{webproto.SearchSummary{}, "No matches."},
 	} {
 		p.TapJS(ButtonByText("Search"))
-		r := expectReq(t, c, webproto.OpSearchRun, `{"query":"x"}`)
+		r := expectOp(t, c, webproto.OpSearchRun, `{"query":"x"}`)
 		reply(t, c, r, tc.sum)
 		p.WaitJS(`document.querySelector(".search-note")?.textContent === "` + tc.note + `"`)
 	}
