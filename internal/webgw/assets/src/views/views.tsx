@@ -72,8 +72,8 @@ export function MoreView() {
             {t("more.this_phone")}
           </h2>
           <div class="field">
-            <span class="field-label">{t("more.theme")}</span>
-            <Segmented<Theme> label={t("more.theme")} value={p.theme} choices={themes} onChange={(v) => setPref("theme", v)} />
+            <span class="field-label">{t("theme")}</span>
+            <Segmented<Theme> label={t("theme")} value={p.theme} choices={themes} onChange={(v) => setPref("theme", v)} />
           </div>
           <div class="field">
             <span class="field-label">{t("more.dir")}</span>
