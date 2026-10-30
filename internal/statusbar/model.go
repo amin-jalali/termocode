@@ -66,6 +66,11 @@ type State struct {
 	// chip "⇄ ready" shows instead.
 	Agents      int
 	AgentsReady bool
+	// WebOn: the web panel runs (ADR 0020); WebBrowsers is how many
+	// browsers are connected. The chip "◉ web on" / "◉ web connected"
+	// sits right before the agents chip (WebChipSpan; a click stops it).
+	WebOn       bool
+	WebBrowsers int
 	// CI chip "CI ✓" / "CI ✗ 2" / "CI …" right after the branch: the
 	// GitHub runs of the branch's newest pushed commit (G-CI, CIChipSpan
 	// for the click). CIOff hides it. CIFailed counts the failed runs.
@@ -473,6 +478,9 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	}
 	diagEnd := len(parts)
 	parts = append(parts, renderExtParts(s.Ext)...) // Group I
+	if chip := renderWebChip(s); chip != "" {
+		parts = append(parts, chip)
+	}
 	if chip := renderAgentsChip(s); chip != "" {
 		parts = append(parts, chip)
 	}
@@ -740,6 +748,43 @@ func (m Model) AgentsChipSpan(s State) (x0, x1 int, ok bool) {
 	}
 	end := 1 + l.leftW + l.gapL + l.centerW
 	for _, later := range []string{renderTestsChip(s), renderDatabaseChip(s), renderServicesChip(s)} {
+		if later != "" {
+			end -= lipgloss.Width(later) + 2
+		}
+	}
+	return end - lipgloss.Width(chip), end, true
+}
+
+// renderWebChip is "◉ web on" (dim) while the web panel runs with no
+// browser, "◉ web connected" (or "◉ web 2 connected") with browsers, else
+// nothing.
+func renderWebChip(s State) string {
+	if !s.WebOn {
+		return ""
+	}
+	g := theme.GlyphWeb.String()
+	switch {
+	case s.WebBrowsers <= 0:
+		return barFg(theme.TextDim).Render(g + " web on")
+	case s.WebBrowsers == 1:
+		return barFg(theme.DiagWarning).Render(g + " web connected")
+	}
+	return barFg(theme.DiagWarning).Render(fmt.Sprintf("%s web %d connected", g, s.WebBrowsers))
+}
+
+// WebChipSpan returns the [x0, x1) cell range of the web chip: it sits
+// right before the agents, services, database and test chips.
+func (m Model) WebChipSpan(s State) (x0, x1 int, ok bool) {
+	chip := renderWebChip(s)
+	if m.w <= 0 || chip == "" || s.Err != "" {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	if l.centerW == 0 {
+		return 0, 0, false
+	}
+	end := 1 + l.leftW + l.gapL + l.centerW
+	for _, later := range []string{renderTestsChip(s), renderDatabaseChip(s), renderServicesChip(s), renderAgentsChip(s)} {
 		if later != "" {
 			end -= lipgloss.Width(later) + 2
 		}
