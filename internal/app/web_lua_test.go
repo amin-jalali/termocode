@@ -53,8 +53,8 @@ func TestNoDynamicLuaInWeb(t *testing.T) {
 				return true
 			}
 			pos := fset.Position(call.Pos())
-			if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "spawn" {
-				return true // spawn.Command starts a process (the gateway), it is not nvim's
+			if pkg, ok := sel.X.(*ast.Ident); ok && (pkg.Name == "spawn" || pkg.Name == "os") {
+				return true // spawn.Command starts a process (the gateway) and os.OpenFile opens a file; neither is nvim's
 			}
 			if never[sel.Sel.Name] {
 				t.Errorf("%s: web code calls %s", pos, sel.Sel.Name)
