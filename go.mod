@@ -1,6 +1,6 @@
 module github.com/amin-jalali/termocode
 
-go 1.26.2
+go 1.26.10
 
 require (
 	filippo.io/age v1.3.1
