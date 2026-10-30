@@ -229,6 +229,14 @@ export interface RenameArgs {
   name: string;
 }
 
+export interface GitCheckoutArgs {
+  branch: string;
+}
+
+export interface GitStashArgs {
+  message?: string;
+}
+
 export interface StatusSnap {
   root: string;
   workspace_label: string;
@@ -782,6 +790,15 @@ export interface TreeChanged {
   path: string;
 }
 
+export interface GitBranches {
+  current: string;
+  branches: string[];
+  more?: number;
+  stashes: number;
+  upstream: boolean;
+  remote?: boolean;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -829,6 +846,12 @@ export interface OpArgs {
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
   "tree.delete": ItemArgs;
+  "git.branches": EmptyArgs;
+  "git.push": EmptyArgs;
+  "git.pull": EmptyArgs;
+  "git.checkout": GitCheckoutArgs;
+  "git.stash": GitStashArgs;
+  "git.stash_pop": EmptyArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -884,4 +907,10 @@ export interface OpResult {
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;
   "tree.delete": AskRef;
+  "git.branches": GitBranches;
+  "git.push": AskRef;
+  "git.pull": AskRef;
+  "git.checkout": AskRef;
+  "git.stash": AskRef;
+  "git.stash_pop": AskRef;
 }
