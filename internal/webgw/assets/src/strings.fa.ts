@@ -955,7 +955,7 @@ export const FA: Record<StringKey, string> = {
   "ai.gone": "این پیشنهاد هوش مصنوعی دیگر نیست.",
   "ai.secret": "این فایل شاید رمز داشته باشد. آن را روی لپ‌تاپ ببینید.",
   "ai.nes_hint": "Tab برای پذیرفتن · Esc برای بستن",
-  "ai.wt_title": "worktreeهای عامل‌ها",
+  "ai.wt_title": "نسخه‌های کاری عامل‌ها",
   "ai.wt_left": "باقی‌مانده",
   "ai.wt_merge": "ادغام در فایل‌های شما",
   "ai.wt_discard": "دور ریختن کار عامل",
