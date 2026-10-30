@@ -33,7 +33,7 @@ func sameState(a, b *State) bool {
 		a.ShowTests == b.ShowTests && a.TestsRunning == b.TestsRunning &&
 		a.TestsPassed == b.TestsPassed && a.TestsFailed == b.TestsFailed &&
 		a.ShowServices == b.ShowServices && a.ServicesUp == b.ServicesUp &&
-		a.ServicesTotal == b.ServicesTotal && a.ServicesBad == b.ServicesBad && a.ServicesStale == b.ServicesStale && a.Agents == b.Agents && a.AgentsReady == b.AgentsReady && a.CI == b.CI && a.CIFailed == b.CIFailed &&
+		a.ServicesTotal == b.ServicesTotal && a.ServicesBad == b.ServicesBad && a.ServicesStale == b.ServicesStale && a.Agents == b.Agents && a.AgentsReady == b.AgentsReady && a.WebOn == b.WebOn && a.WebBrowsers == b.WebBrowsers && a.CI == b.CI && a.CIFailed == b.CIFailed &&
 		a.ShowDatabase == b.ShowDatabase && a.DatabaseName == b.DatabaseName && a.DatabaseProd == b.DatabaseProd &&
 		slices.Equal(a.Ext, b.Ext) && a.AI == b.AI && a.AIState == b.AIState &&
 		a.Update == b.Update
