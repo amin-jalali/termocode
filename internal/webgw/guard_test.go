@@ -127,3 +127,62 @@ func TestDNSRebindingRequestRejected(t *testing.T) {
 		t.Fatal("rebinding request reached the handler")
 	}
 }
+
+func TestOriginExact(t *testing.T) {
+	p := strconv.Itoa(testPort)
+	host := "127.0.0.1:" + p
+	same := "http://" + host
+	upgrade := func(r *http.Request) {
+		r.Header.Set("Connection", "Upgrade")
+		r.Header.Set("Upgrade", "websocket")
+	}
+	for _, tc := range []struct {
+		name    string
+		method  string
+		origin  []string // nil: no Origin header
+		prep    func(*http.Request)
+		allowed bool
+	}{
+		{"GET without Origin", http.MethodGet, nil, nil, true},
+		{"GET same origin", http.MethodGet, []string{same}, nil, true},
+		{"GET evil origin", http.MethodGet, []string{"http://evil.com"}, nil, false},
+		{"POST same origin", http.MethodPost, []string{same}, nil, true},
+		{"POST without Origin", http.MethodPost, nil, nil, false},
+		{"POST empty Origin", http.MethodPost, []string{""}, nil, false},
+		{"POST null", http.MethodPost, []string{"null"}, nil, false},
+		{"POST evil", http.MethodPost, []string{"http://evil.com"}, nil, false},
+		{"POST other port", http.MethodPost, []string{"http://127.0.0.1:" + strconv.Itoa(testPort+1)}, nil, false},
+		{"POST https", http.MethodPost, []string{"https://" + host}, nil, false},
+		{"POST trailing slash", http.MethodPost, []string{same + "/"}, nil, false},
+		{"POST upper case", http.MethodPost, []string{"HTTP://" + host}, nil, false},
+		{"POST other allowed host", http.MethodPost, []string{"http://localhost:" + p}, nil, false},
+		{"POST two Origins", http.MethodPost, []string{same, same}, nil, false},
+		{"upgrade same origin", http.MethodGet, []string{same}, upgrade, true},
+		{"upgrade without Origin", http.MethodGet, nil, upgrade, false},
+		{"upgrade evil", http.MethodGet, []string{"http://evil.com"}, upgrade, false},
+		{"upgrade mixed case, no Origin", http.MethodGet, nil, func(r *http.Request) {
+			r.Header.Set("Upgrade", "WebSocket")
+		}, false},
+		{"upgrade with other token list, no Origin", http.MethodGet, nil, func(r *http.Request) {
+			r.Header.Set("Upgrade", "h2c, websocket")
+		}, false},
+	} {
+		r := httptest.NewRequest(tc.method, "/", strings.NewReader(""))
+		r.Host = host
+		for _, o := range tc.origin {
+			r.Header.Add("Origin", o)
+		}
+		if tc.prep != nil {
+			tc.prep(r)
+		}
+		w, next := serveGuard(t, r)
+		if tc.allowed {
+			if w.Code != http.StatusOK || next.hits != 1 {
+				t.Errorf("%s: code %d hits %d, want 200 and a hit", tc.name, w.Code, next.hits)
+			}
+		} else if w.Code != http.StatusForbidden || next.hits != 0 {
+			t.Errorf("%s: code %d hits %d, want 403 and no hit", tc.name, w.Code, next.hits)
+		}
+		checkHeaders(t, w.Header(), tc.name)
+	}
+}
