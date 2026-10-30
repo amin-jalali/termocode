@@ -57,6 +57,7 @@ export const S = {
   // Offline and connection
   "offline.lost": "Connection lost. Trying again in {s} s…",
   "offline.trying": "Connection lost. Trying again now…",
+  "offline.lost_sr": "Connection lost. Trying again.",
   "offline.try": "Try now",
   "offline.back": "Reconnected after {s} s.",
   "offline.input": "Offline",

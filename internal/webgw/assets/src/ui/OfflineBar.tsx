@@ -53,11 +53,14 @@ export function limitText(limit: "idle" | "max", m: Meta | null): string {
 
 export type BarKind = "lost" | "back" | "final";
 
-/** Bar is one line under the strip: amber lost, green back, red final. */
-export function Bar({ kind, text, sub, action }: { kind: BarKind; text: string; sub?: string; action?: ComponentChildren }) {
+/** Bar is one line under the strip: amber lost, green back, red final.
+ * spoken, when given, is what a screen reader hears instead of text
+ * (a countdown would be read again every second). */
+export function Bar({ kind, text, sub, action, spoken }: { kind: BarKind; text: string; sub?: string; action?: ComponentChildren; spoken?: string }) {
   return (
     <div class={`bar bar-${kind}`} role={kind === "final" ? "alert" : "status"}>
-      <span class="bar-text">
+      {spoken && <span class="sr-only">{spoken}</span>}
+      <span class="bar-text" aria-hidden={spoken ? "true" : undefined}>
         {text}
         {sub && <span class="bar-sub"> {sub}</span>}
       </span>
@@ -105,6 +108,7 @@ export function OfflineBar() {
       <Bar
         kind="lost"
         text={s > 0 ? t("offline.lost", { s }) : t("offline.trying")}
+        spoken={t("offline.lost_sr")}
         action={
           <Button small onClick={() => link.tryNow()}>
             {t("offline.try")}

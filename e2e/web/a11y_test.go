@@ -130,3 +130,22 @@ func TestTermReadLastRows(t *testing.T) {
 		t.Error("the read rows are not in a status region")
 	}
 }
+
+// The lost-connection bar counts down on screen, but a screen reader
+// hears it once: its status text does not change every second.
+func TestOfflineBarSpeaksOnce(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	c := p.Login("c-1")
+	s.Hub.Refuse(true)
+	c.Drop()
+	p.WaitJS(`document.querySelector(".bar-lost")`)
+	spoken := `[...document.querySelectorAll('.bar-lost [role="status"], .bar-lost[role="status"]')].map((e) => [...e.childNodes].filter((n) => !(n.nodeType === 1 && n.getAttribute("aria-hidden") === "true")).map((n) => n.textContent).join("")).join("|")`
+	first := Eval[string](p, spoken)
+	if first == "" || strings.ContainsAny(first, "0123456789") {
+		t.Errorf("the bar's spoken text %q changes with the countdown", first)
+	}
+	if !Eval[bool](p, `/\d/.test(document.querySelector(".bar-lost").textContent)`) {
+		t.Error("the countdown is not on screen")
+	}
+}
