@@ -3,6 +3,7 @@
 package web
 
 import (
+	"fmt"
 	"maps"
 	"testing"
 	"time"
@@ -12,6 +13,16 @@ import (
 
 // chatTopic is a view topic the page shows with its stale state.
 const chatTopic = `document.querySelector('[data-view="chat"] .topic')`
+
+// chatData is a small open chat whose title carries n; chatRename is the
+// chat delta that renames it to n.
+func chatData(n int) map[string]any {
+	return map[string]any{"id": "c-1", "title": fmt.Sprint("chat ", n), "busy": false, "messages": []any{}}
+}
+
+func chatRename(n int) map[string]any {
+	return map[string]any{"op": "state", "title": fmt.Sprint("chat ", n)}
+}
 
 // reconnect cuts the link and returns the page's next connection and the
 // hello it sent; the reply is meta for conn.
@@ -35,8 +46,8 @@ func TestStoreAppliesDeltasInOrderAndResumesWithSeqs(t *testing.T) {
 			c.Send(t, Delta("status", 2, statusData("a", 1)))
 			c.Send(t, Delta("status", 3, statusData("b", 2)))
 			c.Send(t, Delta("status", 4, statusData("feat/last", 4)))
-			c.Send(t, Snap("chat", 9, map[string]any{"n": 1}))
-			c.Send(t, Delta("chat", 10, map[string]any{"n": 2}))
+			c.Send(t, Snap("chat", 9, chatData(1)))
+			c.Send(t, Delta("chat", 10, chatRename(2)))
 			p.WaitJS(`document.querySelector(".strip .branch")?.textContent.includes("feat/last")`)
 			p.WaitJS(chatTopic + ` && !` + chatTopic + `.classList.contains("is-stale")`)
 
@@ -60,17 +71,17 @@ func TestStoreGapAsksForResyncAndWaitsForSnap(t *testing.T) {
 			s := StartServer(t)
 			p := NewPage(t, s, vp)
 			c := p.Login("c-1")
-			c.Send(t, Snap("chat", 1, map[string]any{"n": 1}))
+			c.Send(t, Snap("chat", 1, chatData(1)))
 			p.WaitJS(chatTopic)
-			c.Send(t, Delta("chat", 3, map[string]any{"n": 3})) // 2 was lost
+			c.Send(t, Delta("chat", 3, chatRename(3))) // 2 was lost
 			c.WaitSub(t, "chat")
 			p.WaitJS(chatTopic + `.classList.contains("is-stale")`)
 
-			c.Send(t, Delta("chat", 2, map[string]any{"n": 2})) // fits the old seq: still not trusted
-			c.Quiet(t, 500*time.Millisecond)                    // and no second sub
+			c.Send(t, Delta("chat", 2, chatRename(2))) // fits the old seq: still not trusted
+			c.Quiet(t, 500*time.Millisecond)           // and no second sub
 			p.Holds(chatTopic+`.classList.contains("is-stale")`, 200*time.Millisecond)
 
-			c.Send(t, Snap("chat", 7, map[string]any{"n": 7}))
+			c.Send(t, Snap("chat", 7, chatData(7)))
 			p.WaitJS(`!` + chatTopic + `.classList.contains("is-stale")`)
 		})
 	}
@@ -82,9 +93,9 @@ func TestStoreBrokenTopicLeftOutOfResume(t *testing.T) {
 	s := StartServer(t)
 	p := NewPage(t, s, Phone)
 	c := p.Login("c-1")
-	c.Send(t, Snap("chat", 1, map[string]any{"n": 1}))
+	c.Send(t, Snap("chat", 1, chatData(1)))
 	p.WaitJS(chatTopic)
-	c.Send(t, Delta("chat", 5, map[string]any{"n": 5}))
+	c.Send(t, Delta("chat", 5, chatRename(5)))
 	c.WaitSub(t, "chat")
 
 	c2, hello := reconnect(t, p, c, "c-1")
@@ -106,11 +117,11 @@ func TestStoreResyncFromHub(t *testing.T) {
 	s := StartServer(t)
 	p := NewPage(t, s, Desktop)
 	c := p.Login("c-1")
-	c.Send(t, Snap("chat", 1, map[string]any{"n": 1}))
+	c.Send(t, Snap("chat", 1, chatData(1)))
 	p.WaitJS(chatTopic)
 	c.Send(t, Resync("chat"))
 	c.WaitSub(t, "chat")
 	p.WaitJS(chatTopic + `.classList.contains("is-stale")`)
-	c.Send(t, Snap("chat", 2, map[string]any{"n": 2}))
+	c.Send(t, Snap("chat", 2, chatData(2)))
 	p.WaitJS(`!` + chatTopic + `.classList.contains("is-stale")`)
 }

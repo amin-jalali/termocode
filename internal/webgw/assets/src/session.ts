@@ -5,8 +5,10 @@ import { Link } from "./net/link";
 import { readStatus } from "./state/status";
 import { readTheme } from "./state/theme";
 import { Store } from "./state/store";
+import { registerTopicReducers } from "./state/topics";
 
 export const store = new Store();
+registerTopicReducers(store);
 
 function wsURL(): string {
   return (location.protocol === "https:" ? "wss:" : "ws:") + "//" + location.host + "/ws";
