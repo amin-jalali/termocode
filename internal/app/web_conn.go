@@ -16,8 +16,10 @@ import (
 // queue with a deadline, so a stalled gateway never blocks the UI.
 
 // webWriteTimeout: a write that stalls this long closes the connection
-// (the gateway then closes the WebSocket with 4008).
-const webWriteTimeout = 5 * time.Second
+// (the gateway then closes the WebSocket with 4008). Tests shorten it.
+var webWriteTimeout atomic.Int64
+
+func init() { webWriteTimeout.Store(int64(5 * time.Second)) }
 
 // webConn is one hub connection.
 type webConn struct {
@@ -159,7 +161,7 @@ func (c *webConn) writeLoop() {
 		if !ok {
 			return
 		}
-		_ = c.nc.SetWriteDeadline(time.Now().Add(webWriteTimeout))
+		_ = c.nc.SetWriteDeadline(time.Now().Add(time.Duration(webWriteTimeout.Load())))
 		for _, f := range frames {
 			_, _ = bw.Write(f)
 			_ = bw.WriteByte('\n')
