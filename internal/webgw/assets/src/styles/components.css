@@ -1,6 +1,9 @@
 /* Cards, sheets, chips, rows, waiting. */
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* For screen readers and keyboards: hidden until it has the focus. */
+.sr-focus:not(:focus) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sr-focus:focus { display: block; min-height: var(--tap); margin: var(--s1) 0; padding: 0 var(--s3); color: var(--blue); }
 
 /* The TUI's lit hairline under float titles: focus blue into lavender
    into the plain hairline. */
