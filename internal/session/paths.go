@@ -13,6 +13,10 @@ import (
 // bytes on macOS, 108 on Linux, including the final NUL).
 const maxSocketPath = 100
 
+// longestSocketName is the longest socket file name in the session dir
+// (the web gateway's HTTP socket); Dir keeps it inside sun_path.
+const longestSocketName = "/0123456789abcdef.webhttp.sock"
+
 // Dir returns the folder that holds the session sockets, creating it with
 // mode 0700: $XDG_RUNTIME_DIR/termocode, else
 // $XDG_CACHE_HOME/termocode/sessions (~/.cache/termocode/sessions). A path
@@ -32,8 +36,7 @@ func Dir() (string, error) {
 		}
 		dir = filepath.Join(cache, "termocode", "sessions")
 	}
-	if len(dir)+len("/0123456789abcdef.mcp.sock") > maxSocketPath { // the longest socket name
-
+	if len(dir)+len(longestSocketName) > maxSocketPath {
 		dir = filepath.Join(os.TempDir(), fmt.Sprintf("termocode-%d", os.Getuid()))
 	}
 	if err := ensurePrivateDir(dir); err != nil {
@@ -87,6 +90,11 @@ type Paths struct {
 	// MCPSocket is where the UI serves MCP to outside agents (M1); the
 	// `termocode mcp` relay connects to it.
 	MCPSocket string
+	// WebSocket is the web hub in the UI process (ADR 0020); the web
+	// gateway opens one connection per browser plus a control connection.
+	WebSocket string
+	// WebHTTPSocket is where the web gateway serves HTTP in SSH mode.
+	WebHTTPSocket string
 }
 
 // PathsFor returns the session files for a workspace folder.
@@ -110,5 +118,8 @@ func PathsFor(workspace string) (Paths, error) {
 		Log:       base + ".log",
 		Caps:      base + ".caps.json",
 		MCPSocket: base + ".mcp.sock",
+
+		WebSocket:     base + ".web.sock",
+		WebHTTPSocket: base + ".webhttp.sock",
 	}, nil
 }
