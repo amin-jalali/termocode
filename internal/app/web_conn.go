@@ -34,6 +34,8 @@ type webConn struct {
 
 	out        *webQueue
 	writerDone chan struct{}
+
+	hello bool // reader goroutine only: hello was seen
 }
 
 func newWebConn(h *webHub, nc net.Conn) *webConn {
@@ -62,10 +64,70 @@ func (c *webConn) run(br *bufio.Reader) {
 	}
 }
 
-// dispatch handles one line; false ends the connection.
+// dispatch handles one line on the reader goroutine; false ends the
+// connection. Nothing here touches the Model: what needs it goes to
+// Update as a message.
 func (c *webConn) dispatch(line []byte) bool {
-	_, err := webproto.DecodeClient(line)
-	return err == nil
+	msg, err := webproto.DecodeClient(line)
+	if err != nil {
+		return c.protocolError("That message is not valid.")
+	}
+	if c.role == webproto.RoleCtl { // the gateway's control connection
+		switch msg := msg.(type) {
+		case *webproto.Req:
+			return c.request(msg)
+		case *webproto.Ping:
+			return c.send(&webproto.Pong{T: webproto.KindPong, N: msg.N})
+		case *webproto.Bye:
+			return false
+		}
+		return c.protocolError("The control connection does not take that message.")
+	}
+	if h, ok := msg.(*webproto.Hello); ok {
+		if c.hello {
+			return c.protocolError("hello was already sent.")
+		}
+		if h.V != webproto.Version {
+			return c.protocolError("This page does not match this termocode. Reload it.")
+		}
+		c.hello = true
+		// The token stays in the gateway's hands: it is not kept here.
+		return c.hub.send(c.ctx, webHelloMsg{hub: c.hub, conn: c, resume: h.Resume}) == nil
+	}
+	if !c.hello {
+		return c.protocolError("Say hello first.")
+	}
+	switch msg := msg.(type) {
+	case *webproto.Ping:
+		return c.send(&webproto.Pong{T: webproto.KindPong, N: msg.N})
+	case *webproto.Bye:
+		return false
+	case *webproto.Req:
+		return c.request(msg)
+	}
+	return c.send(&webproto.ErrMsg{T: webproto.KindErr, Code: webproto.CodeNotFound, Msg: "This is not available yet."})
+}
+
+// request handles one request.
+func (c *webConn) request(r *webproto.Req) bool {
+	return c.send(&webproto.ErrMsg{T: webproto.KindErr, ID: r.ID, Code: webproto.CodeNotFound, Msg: "This is not available yet."})
+}
+
+// send queues one message; false once the connection is closing.
+func (c *webConn) send(m webproto.Msg) bool {
+	b, err := webproto.Encode(m)
+	if err != nil {
+		recordError("[web] encode " + m.Type() + ": " + err.Error())
+		return false
+	}
+	return c.out.push(b)
+}
+
+// protocolError sends one err line and ends the connection (the writer
+// flushes it first).
+func (c *webConn) protocolError(msg string) bool {
+	c.send(&webproto.ErrMsg{T: webproto.KindErr, Code: webproto.CodeBadRequest, Msg: msg})
+	return false
 }
 
 // writeLoop writes queued frames, one line each, until the queue closes.
