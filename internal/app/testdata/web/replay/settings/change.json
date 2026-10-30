@@ -1,0 +1,89 @@
+{
+  "topic": "settings",
+  "snap0": {
+    "items": [
+      {
+        "default": "vscode-dark-plus",
+        "description": "Color theme ID. Same as Preferences: Color Theme.",
+        "group": "Appearance",
+        "key": "theme",
+        "type": "string",
+        "value": "one-dark"
+      },
+      {
+        "default": "false",
+        "description": "Soft-wrap long lines in the editor.",
+        "group": "Editor",
+        "key": "word_wrap",
+        "type": "bool",
+        "value": "false"
+      },
+      {
+        "default": "4",
+        "description": "Indent width in spaces (1-16). Sets tabstop and shiftwidth.",
+        "group": "Editor",
+        "key": "tab_size",
+        "type": "int",
+        "value": "4"
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "items": [
+        {
+          "default": "vscode-dark-plus",
+          "description": "Color theme ID. Same as Preferences: Color Theme.",
+          "group": "Appearance",
+          "key": "theme",
+          "type": "string",
+          "value": "one-dark"
+        },
+        {
+          "default": "false",
+          "description": "Soft-wrap long lines in the editor.",
+          "group": "Editor",
+          "key": "word_wrap",
+          "type": "bool",
+          "value": "true"
+        },
+        {
+          "default": "4",
+          "description": "Indent width in spaces (1-16). Sets tabstop and shiftwidth.",
+          "group": "Editor",
+          "key": "tab_size",
+          "type": "int",
+          "value": "2"
+        }
+      ]
+    }
+  ],
+  "snapn": {
+    "items": [
+      {
+        "key": "theme",
+        "group": "Appearance",
+        "type": "string",
+        "value": "one-dark",
+        "default": "vscode-dark-plus",
+        "description": "Color theme ID. Same as Preferences: Color Theme."
+      },
+      {
+        "key": "word_wrap",
+        "group": "Editor",
+        "type": "bool",
+        "value": "true",
+        "default": "false",
+        "description": "Soft-wrap long lines in the editor."
+      },
+      {
+        "key": "tab_size",
+        "group": "Editor",
+        "type": "int",
+        "value": "2",
+        "default": "4",
+        "description": "Indent width in spaces (1-16). Sets tabstop and shiftwidth."
+      }
+    ]
+  }
+}
