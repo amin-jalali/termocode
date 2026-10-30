@@ -308,7 +308,10 @@ func TestWithNoteNilCaps(t *testing.T) {
 
 func shortRuntime(t *testing.T) string {
 	t.Helper()
-	rt, err := os.MkdirTemp("", "tcs")
+	// /tmp, not $TMPDIR: under macOS's long $TMPDIR the session dir plus
+	// the longest socket name passes maxSocketPath, Dir falls back to the
+	// shared $TMPDIR/termocode-<uid>, and the test no longer controls it.
+	rt, err := os.MkdirTemp("/tmp", "tcs")
 	if err != nil {
 		t.Fatal(err)
 	}
