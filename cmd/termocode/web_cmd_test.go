@@ -240,3 +240,15 @@ func TestWebGatewayTailnetMode(t *testing.T) {
 		t.Error("plain mode is tailnet")
 	}
 }
+
+// Spec (WEB-31): in tailnet mode `termocode web start` names the tailnet
+// URL, not 127.0.0.1.
+func TestWebStartNamesTheTailnetURL(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	fakeWebHub(t, ws, `{"t":"res","id":1,"data":{"port":41237,"url":"https://box.tail1234.ts.net/"}}`)
+	code, out, errs := runWebT(t, "start", "--yes", "--dir", ws)
+	if code != 0 || !strings.Contains(out, "https://box.tail1234.ts.net/") || strings.Contains(out, "127.0.0.1") {
+		t.Fatalf("exit %d out %q err %q", code, out, errs)
+	}
+}

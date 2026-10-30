@@ -109,9 +109,14 @@ func runWebIn(args []string, out, errw io.Writer, cwd string) int {
 		return webExitOK
 	}
 	var r struct {
-		Port int `json:"port"`
+		Port int    `json:"port"`
+		URL  string `json:"url"`
 	}
 	_ = json.Unmarshal(res, &r)
+	if strings.HasPrefix(r.URL, "https://") {
+		fmt.Fprintf(out, "The web panel is open at %s for your tailnet devices (the link opened in a browser on this computer).\n", cleanLine(r.URL))
+		return webExitOK
+	}
 	fmt.Fprintf(out, "The web panel is open at http://127.0.0.1:%d/ (the link opened in a browser on this computer).\n", r.Port)
 	return webExitOK
 }
