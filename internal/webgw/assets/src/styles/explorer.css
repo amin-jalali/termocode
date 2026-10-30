@@ -1,0 +1,26 @@
+/* The explorer's OUTLINE and TIMELINE (views/Explorer.tsx). */
+.ex-stack > .view { flex: 1 1 auto; min-height: 120px; }
+.ex-stack { overflow: hidden; }
+.ex-stack > .view .view-body { overflow-y: auto; }
+.ex-sections { flex: none; display: flex; flex-direction: column; max-height: 60%; min-height: 0; }
+.ex-section { display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--wb-panel-border); }
+.ex-section.is-open { flex: 1 1 0; }
+.ex-head { margin: 0; font-size: inherit; }
+.ex-toggle { display: flex; align-items: center; gap: 2px; width: 100%; height: 24px; padding: 0 var(--s1); border: 0; background: none; color: var(--wb-panel-title); font: inherit; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
+.ex-toggle:hover { background: var(--wb-toolbar-hover); }
+.ex-body { flex: 1; min-height: 60px; overflow-y: auto; padding-bottom: var(--s1); }
+.ex-list { display: flex; flex-direction: column; }
+.ex-row { display: flex; align-items: center; gap: 6px; width: 100%; height: 24px; padding: 0 var(--s2) 0 calc(var(--s3) + var(--d, 0) * 12px); border: 0; background: none; color: var(--text); font: inherit; font-size: 0.8125rem; text-align: start; cursor: pointer; }
+.ex-row:hover { background: var(--wb-toolbar-hover); }
+.ex-row:focus-visible { outline: 1px solid var(--wb-focus, var(--blue)); outline-offset: -1px; }
+.ex-row.depth-1 { --d: 1; } .ex-row.depth-2 { --d: 2; } .ex-row.depth-3 { --d: 3; } .ex-row.depth-4 { --d: 4; }
+.ex-row.depth-5 { --d: 5; } .ex-row.depth-6 { --d: 6; } .ex-row.depth-7 { --d: 7; } .ex-row.depth-8 { --d: 8; }
+.ex-name { flex: 0 1 auto; min-width: 0; }
+.ex-detail { flex: 1 1 0; min-width: 0; color: var(--muted); font-size: 0.75rem; }
+.ex-note { margin: var(--s1) var(--s3); color: var(--muted); font-size: 0.75rem; }
+.tl-diff { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.tl-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); border-bottom: 1px solid var(--wb-panel-border); }
+.tl-title { margin: 0; font-size: 0.875rem; font-weight: 600; }
+.tl-hash { color: var(--muted); font-family: var(--font-mono); font-weight: 400; }
+.tl-meta { flex: 1 1 100%; margin: 0; color: var(--muted); font-size: 0.8125rem; }
+.tl-body { flex: 1; min-height: 0; overflow: auto; padding: var(--s2) 0; }
