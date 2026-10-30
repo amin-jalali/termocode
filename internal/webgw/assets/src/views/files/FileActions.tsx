@@ -18,6 +18,8 @@ export interface Target {
   /** path is the workspace path ("" for the workspace folder). */
   path: string;
   dir: boolean;
+  /** start skips the menu (a context menu chose the action). */
+  start?: "new-file" | "new-dir" | "rename" | "delete";
 }
 
 type Step = { s: "menu" } | { s: "new"; dir: boolean } | { s: "rename" } | { s: "delete" } | { s: "download" } | { s: "upload" };
@@ -77,7 +79,9 @@ function NameForm({ label, start, verb, onSend, onCancel }: { label: string; sta
 }
 
 export function FileActions({ target, onDone }: { target: Target; onDone: () => void }) {
-  const [step, setStep] = useState<Step>({ s: "menu" });
+  const first: Step =
+    target.start === "new-file" ? { s: "new", dir: false } : target.start === "new-dir" ? { s: "new", dir: true } : target.start === "rename" ? { s: "rename" } : target.start === "delete" ? { s: "delete" } : { s: "menu" };
+  const [step, setStep] = useState<Step>(first);
   const where = target.path || t("files.ws_root");
   const run = (op: string, args: Record<string, string>, done: (path: string) => void) => {
     link.request(op, args).then((r) => {

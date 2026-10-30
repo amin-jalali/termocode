@@ -8,7 +8,10 @@ import { useEffect, useState } from "preact/hooks";
 import type { BufItem, TreeDir, TreeEntry } from "../../../../webproto/proto";
 import { go, route } from "../lib/router";
 import { layout } from "../lib/layout";
-import { keep, showFile } from "../lib/workbench";
+import { keep, showFile, splitEditor } from "../lib/workbench";
+import { absPath, copyText } from "../lib/clip";
+import { onMenu, type MenuItems } from "../ui/ContextMenu";
+import { showOnLaptop } from "./FileView";
 import { expanded, failed, hideDots, reconcile, retry, toggle } from "../lib/tree";
 import { link, listOf, live, store } from "../session";
 import { own } from "../state/dict";
@@ -27,6 +30,38 @@ const acting = signal<Target | null>(null);
 /** canEdit: a controller may change files; a viewer reads only. */
 function canEdit(): boolean {
   return link.meta.value?.role !== "viewer";
+}
+
+/** parentOf is the folder a path is in ("" for the workspace folder). */
+function parentOf(path: string): string {
+  const i = path.lastIndexOf("/");
+  return i < 0 ? "" : path.slice(0, i);
+}
+
+/** treeMenu is a tree row's context menu (desktop). A viewer may only
+ * open and copy. */
+function treeMenu(path: string, dir: boolean): MenuItems {
+  const edit = canEdit();
+  const here = dir ? path : parentOf(path);
+  const items: (MenuItems[number])[] = [];
+  if (!dir) items.push({ label: t("menu.open_side"), run: () => splitEditor(path, "right") }, null);
+  if (edit)
+    items.push(
+      { label: t("menu.new_file"), run: () => (acting.value = { path: here, dir: true, start: "new-file" }) },
+      { label: t("menu.new_dir"), run: () => (acting.value = { path: here, dir: true, start: "new-dir" }) },
+      null,
+    );
+  items.push({ label: t("menu.copy_path"), run: () => copyText(absPath(path)) }, { label: t("menu.copy_rel"), run: () => copyText(path) });
+  if (edit) {
+    items.push(
+      null,
+      { label: t("menu.reveal"), run: () => showOnLaptop(path) },
+      null,
+      { label: t("menu.rename"), run: () => (acting.value = { path, dir, start: "rename" }) },
+      { label: t("files.delete"), run: () => (acting.value = { path, dir, start: "delete" }) },
+    );
+  }
+  return items;
 }
 
 /** join is a workspace path under dir. */
@@ -110,7 +145,7 @@ function Folder({ path, depth, tree }: { path: string; depth: number; tree: Tree
         const open = e.dir && expanded.value.has(p);
         return (
           <Fragment key={e.name}>
-            <div class="tree-line">
+            <div class="tree-line" onContextMenu={layout.value === "desktop" ? onMenu(e.name, () => treeMenu(p, e.dir)) : undefined}>
               <TreeRow
                 depth={depth}
                 dir={e.dir}
