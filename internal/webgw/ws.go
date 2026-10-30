@@ -273,6 +273,8 @@ type wsConn struct {
 	code   webproto.CloseCode // why it ended (set once, in close)
 
 	hubErr bool // hub reader only: the hub sent an error for the connection
+
+	lastID uint64 // browser reader only: the last request id
 }
 
 // serve runs one connection until it ends.
@@ -438,6 +440,12 @@ func (c *wsConn) fromBrowser() {
 				c.activity()
 			}
 		case *webproto.Req:
+			switch c.checkReq(m) {
+			case reqClosed:
+				return
+			case reqAnswered:
+				continue
+			}
 			c.activity()
 		}
 		if !c.toHub(b) {

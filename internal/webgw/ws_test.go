@@ -277,8 +277,14 @@ func helloMsg(tok string) string {
 // after the open line and the hello reached the hub.
 func (r *wsRig) connect() (*websocket.Conn, *hubPeer) {
 	r.t.Helper()
+	return r.connectWith(r.token())
+}
+
+// connectWith is connect with a given token.
+func (r *wsRig) connectWith(tok string) (*websocket.Conn, *hubPeer) {
+	r.t.Helper()
 	c := r.mustDial()
-	writeText(r.t, c, helloMsg(r.token()))
+	writeText(r.t, c, helloMsg(tok))
 	p := r.hub.next()
 	if open := p.line(r.t); open["t"] != "open" {
 		r.t.Fatalf("first hub line %v", open)
