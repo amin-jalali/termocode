@@ -6,9 +6,9 @@ import "testing"
 // could be the start of a registered secret, so a stream holds them back
 // until it knows; text that cannot start one holds nothing.
 func TestSecretTailHold(t *testing.T) {
+	isolateSecrets(t)
 	sec := "zq" + "tailhold-secret-91"
 	RegisterSecret(sec)
-	t.Cleanup(func() { secretsMu.Lock(); delete(secrets, sec); secretsMu.Unlock() })
 	cases := []struct {
 		in   string
 		want int
@@ -27,4 +27,21 @@ func TestSecretTailHold(t *testing.T) {
 			t.Errorf("SecretTailHold(%q) = %d, want %d", c.in, got, c.want)
 		}
 	}
+}
+
+// isolateSecrets gives the test an empty secret registry and puts the
+// shared one back after it: other tests in the package register secrets
+// (any of them may start with a letter the cases end on), and the
+// expected holds count only this test's secret.
+func isolateSecrets(t *testing.T) {
+	t.Helper()
+	secretsMu.Lock()
+	saved, savedList := secrets, secretsByLen
+	secrets, secretsByLen = map[string]bool{}, nil
+	secretsMu.Unlock()
+	t.Cleanup(func() {
+		secretsMu.Lock()
+		secrets, secretsByLen = saved, savedList
+		secretsMu.Unlock()
+	})
 }
