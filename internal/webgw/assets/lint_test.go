@@ -147,7 +147,7 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 		if filepath.Ext(e.Path) != ".js" && filepath.Ext(e.Path) != ".css" {
 			continue
 		}
-		b, err := fs.ReadFile(FS(), e.Path)
+		b, err := os.ReadFile(e.Path) // the committed files, the kit included
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -172,7 +172,7 @@ func TestPagesHaveNoInlineCodeOrStyle(t *testing.T) {
 		if filepath.Ext(e.Path) != ".html" {
 			continue
 		}
-		b, err := fs.ReadFile(FS(), e.Path)
+		b, err := os.ReadFile(e.Path) // the committed files, the kit included
 		if err != nil {
 			t.Fatal(err)
 		}
