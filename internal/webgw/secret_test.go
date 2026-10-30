@@ -51,10 +51,11 @@ func TestLaunchSecretSingleUse(t *testing.T) {
 	}
 }
 
-// TestLaunchSecretExpires: valid for LaunchSecretTTL (60 s), then never.
+// TestLaunchSecretExpires: valid for LaunchSecretTTL (5 minutes: time to
+// paste the link by hand when no browser opens), then never.
 func TestLaunchSecretExpires(t *testing.T) {
-	if LaunchSecretTTL != 60*time.Second {
-		t.Fatalf("TTL %v, want 60s", LaunchSecretTTL)
+	if LaunchSecretTTL != 5*time.Minute {
+		t.Fatalf("TTL %v, want 5m", LaunchSecretTTL)
 	}
 	plain, s := newSecret(t)
 	if err := s.Redeem(plain, t0.Add(LaunchSecretTTL)); !errors.Is(err, ErrSecretExpired) {
