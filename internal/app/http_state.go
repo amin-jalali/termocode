@@ -210,6 +210,7 @@ type httpState struct {
 	saveBody    []byte
 	copyRun     *httpRun
 	importInto  string // .http file the next curl import appends to
+	bufCache    *httpBufCache
 }
 
 type httpLens struct {

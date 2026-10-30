@@ -727,3 +727,20 @@ func TestHTTPLuaLoadsOnce(t *testing.T) {
 		t.Fatal("a send loaded the HTTP Lua again")
 	}
 }
+
+// PERF-8: a send reuses the parsed buffer only while it is unchanged:
+// an edit right before the send (inside the lens debounce) is sent.
+func TestHTTPSendSeesEditBeforeRefresh(t *testing.T) {
+	api := newHTTPAPI(t, false)
+	d := httpDriver(t, api.srv.URL, 170, 40, "")
+	httpCursor(d, 5)
+	d.Key("alt+ctrl+r")
+	waitPage(d, `"name": "Ada Lovelace"`)
+	open(d, "api/users.http")
+	lua(d, `vim.api.nvim_buf_set_lines(0, 4, 5, false, { 'GET {{host}}/old' }); vim.api.nvim_win_set_cursor(0, { 5, 0 }); return ''`)
+	d.Key("alt+ctrl+r")
+	if !d.WaitFor(func() bool { return api.hits["/old"].Load() == 1 }, 5*time.Second) {
+		t.Fatalf("the edited request was not sent: /old hits %d, /users/42 hits %d", api.hits["/old"].Load(), api.hits["/users/42"].Load())
+	}
+	waitPage(d, "1 redirect")
+}

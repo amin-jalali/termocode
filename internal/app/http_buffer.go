@@ -76,6 +76,65 @@ return vim.json.encode({ name = vim.api.nvim_buf_get_name(b), lines = vim.api.nv
 	return res.Name, res.Lines, true
 }
 
+// httpBufCache is the last .http buffer read and parsed, by its
+// changedtick: a send and the lens refreshes around it read the buffer
+// once, not three times. nvim never reuses a buffer number, and any
+// change bumps the tick, so a stale entry is never used.
+type httpBufCache struct {
+	buf   int
+	tick  int64
+	name  string
+	lines []string
+	f     httpclient.File
+}
+
+// httpBufParsed reads and parses a buffer (0 = current), from the cache
+// when its changedtick did not move. cursor is the current window's
+// cursor line.
+func (m *Model) httpBufParsed(buf int) (c *httpBufCache, cursor int, ok bool) {
+	if m.nvim == nil {
+		return nil, 0, false
+	}
+	s := m.httpS()
+	kb, kt := -1, int64(-1)
+	if s.bufCache != nil {
+		kb, kt = s.bufCache.buf, s.bufCache.tick
+	}
+	var raw string
+	err := m.nvim.ExecLuaResult(`local b, kb, kt = ...
+if b == 0 then b = vim.api.nvim_get_current_buf() end
+if not vim.api.nvim_buf_is_valid(b) then return '' end
+local t = vim.api.nvim_buf_get_changedtick(b)
+local out = { buf = b, tick = t, name = vim.api.nvim_buf_get_name(b), cursor = vim.api.nvim_win_get_cursor(0)[1] }
+if not (b == kb and t == kt) then out.lines = vim.api.nvim_buf_get_lines(b, 0, -1, false) end
+return vim.json.encode(out)`, &raw, buf, kb, kt)
+	if err != nil || raw == "" {
+		return nil, 0, false
+	}
+	var res struct {
+		Buf    int       `json:"buf"`
+		Tick   int64     `json:"tick"`
+		Name   string    `json:"name"`
+		Cursor int       `json:"cursor"`
+		Lines  *[]string `json:"lines"`
+	}
+	if json.Unmarshal([]byte(raw), &res) != nil {
+		return nil, 0, false
+	}
+	if res.Lines == nil {
+		if s.bufCache == nil || s.bufCache.buf != res.Buf || s.bufCache.tick != res.Tick {
+			return nil, 0, false
+		}
+		return s.bufCache, res.Cursor, true
+	}
+	c = &httpBufCache{buf: res.Buf, tick: res.Tick, name: res.Name, lines: *res.Lines}
+	if isHTTPPath(c.name) {
+		c.f = httpclient.Parse(strings.Join(c.lines, "\n"))
+		s.bufCache = c
+	}
+	return c, res.Cursor, true
+}
+
 // httpSendKeyLabel is the lens' key ("Ctrl+Alt+R", or the user's own).
 func (m *Model) httpSendKeyLabel() string {
 	keys := m.keys.KeysFor(keymap.ActionHTTPSend)
@@ -185,12 +244,12 @@ func (m *Model) httpRefreshBuf(buf int) string {
 	if m.nvim == nil {
 		return ""
 	}
-	name, lines, ok := m.httpBufText(buf)
-	if !ok || !isHTTPPath(name) {
+	c, _, ok := m.httpBufParsed(buf)
+	if !ok || !isHTTPPath(c.name) {
 		return ""
 	}
+	name, lines, f, buf := c.name, c.lines, c.f, c.buf
 	m.ensureHTTPLua()
-	f := httpclient.Parse(strings.Join(lines, "\n"))
 	rv := httpResolver(name, f.Vars, "")
 	s := m.httpS()
 	rows := httpBufRows(f, lines, rv.Known, func(r *httpclient.Request) [][]string {
@@ -198,11 +257,6 @@ func (m *Model) httpRefreshBuf(buf int) string {
 		sending := s.running != nil && s.running.file == name && s.running.label == label
 		return m.httpLensChunks(name, label, rv.Env, sending)
 	})
-	if buf == 0 {
-		if b, err := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_get_current_buf())`); err == nil {
-			fmt.Sscan(b, &buf)
-		}
-	}
 	// Completion names: file variables, then the environment's (names
 	// only; values never reach the menu).
 	seen := map[string]bool{}
@@ -251,19 +305,18 @@ return table.concat(out, ' ')`, &raw, file); err != nil {
 // httpRequestFromBuffer parses a buffer and returns the request at the
 // 1-based line (0 = the cursor line of the current window).
 func (m *Model) httpRequestFromBuffer(buf, line int) (file string, f httpclient.File, req *httpclient.Request, err error) {
-	name, lines, ok := m.httpBufText(buf)
+	c, cursor, ok := m.httpBufParsed(buf)
 	if !ok {
 		return "", f, nil, fmt.Errorf("no editor")
 	}
+	name := c.name
 	if !isHTTPPath(name) {
 		return name, f, nil, fmt.Errorf("not an .http file")
 	}
-	if line <= 0 && m.nvim != nil {
-		if s, e := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_win_get_cursor(0)[1])`); e == nil {
-			fmt.Sscan(s, &line)
-		}
+	if line <= 0 {
+		line = cursor
 	}
-	f = httpclient.Parse(strings.Join(lines, "\n"))
+	f = c.f
 	req = f.AtLine(line)
 	if req == nil {
 		return name, f, nil, fmt.Errorf("no request in %s", filepath.Base(name))
