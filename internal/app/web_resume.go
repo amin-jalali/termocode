@@ -20,8 +20,8 @@ import (
 // Resume limits.
 const (
 	webResumeFor = 60 * time.Second
-	webRingLen   = 64        // deltas kept per topic
-	webRingBytes = 256 << 10 // bytes of delta data kept per topic
+	webRingLen   = 64       // deltas kept per topic
+	webRingBytes = 64 << 10 // bytes of delta data kept per topic
 	webMarksLen  = webRingLen
 )
 
