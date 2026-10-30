@@ -10,6 +10,7 @@ import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
 import { RunsView } from "./more/RunsView";
 import { SettingsView } from "./more/SettingsView";
+import { AgentsView } from "./AgentsView";
 import { MCPView } from "./more/MCPView";
 import { ContainersView } from "./more/ContainersView";
 import { DBView } from "./more/DBView";
@@ -41,6 +42,7 @@ export function MoreView() {
   if (sub === "runs") return <RunsView />;
   if (sub === "settings") return <SettingsView />;
   if (sub === "mcp") return <MCPView />;
+  if (sub === "agents") return <AgentsView />;
   if (sub === "containers") return <ContainersView />;
   if (sub === "db" || sub.startsWith("db/")) return <DBView rest={sub} />;
   if (sub === "testing") return <TestingView />;

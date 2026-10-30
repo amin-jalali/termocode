@@ -35,7 +35,6 @@
 .cod-circle-filled::before { content: "\ea71"; }
 .cod-circle-large-outline::before { content: "\ebb5"; }
 .cod-circle-outline::before { content: "\eabc"; }
-.cod-circle-slash::before { content: "\eabd"; }
 .cod-clear-all::before { content: "\eabf"; }
 .cod-close-all::before { content: "\eac1"; }
 .cod-close::before { content: "\ea76"; }
@@ -176,3 +175,4 @@
 .cod-watch::before { content: "\eb7c"; }
 .cod-whole-word::before { content: "\eb7e"; }
 .cod-word-wrap::before { content: "\eb80"; }
+.cod-worktree::before { content: "\ec7e"; }

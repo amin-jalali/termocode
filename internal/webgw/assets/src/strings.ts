@@ -962,8 +962,20 @@ export const S = {
   "ai.gone": "This AI suggestion is gone.",
   "ai.secret": "This file may hold secrets. Look at it on the laptop.",
   "ai.nes_hint": "Tab to accept · Esc to dismiss",
+  "ai.wt_title": "Agent Worktrees",
+  "ai.wt_left": "left over",
+  "ai.wt_merge": "Merge into Your Files",
+  "ai.wt_discard": "Discard the Agent's Work",
+  "ai.wt_no_files": "No changed files.",
+  "ai.wt_cut": "More files: see them on the laptop.",
+  "ai.wt_norepo": "Agent worktrees need a git repository with a commit.",
+  "ai.wt_body_off": "Agent worktrees are off on the laptop: steps work in your files.",
+  "ai.wt_none": "No agent worktrees.",
+  "ai.wt_body_merge": "Write the files the agent changed on {branch} into your files? If you changed one of them too, nothing is written and the laptop asks you.",
+  "ai.wt_body_discard": "Remove the agent's worktree and its branch {branch}? Your files do not change. This cannot be undone.",
   "quick.ask_go": "Enter to ask the AI",
   "quick.ask_type": "Type what should change.",
+  "cmd.agents": "View: Show Agent Worktrees",
 } as const;
 
 export type StringKey = keyof typeof S;

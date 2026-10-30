@@ -61,6 +61,7 @@ export function commands(): Command[] {
     { id: "aiFix", label: "ai.fix", when: hasFile, run: () => activeDesk.peek()?.aiAct("fix") },
     { id: "aiEdit", label: "ai.edit", keys: `${mod}+I`, when: hasFile, run: () => activeDesk.peek()?.aiAct("edit") },
     { id: "aiDoc", label: "ai.doc", when: hasFile, run: () => activeDesk.peek()?.aiAct("doc") },
+    { id: "agents", label: "cmd.agents", run: () => (setPanes({ side: true }), go({ tab: "more", rest: "agents", query: {} })) },
     { id: "showOnLaptop", label: "cmd.show_on_laptop", when: hasFile, run: () => { const f = activeFile.peek(); if (f) showOnLaptop(f); } },
     { id: "sidebar", label: "cmd.toggle_side", keys: `${mod}+B`, run: () => setPanes({ side: !panes.peek().side }) },
     { id: "panel", label: "cmd.toggle_panel", keys: `${mod}+J`, run: () => setPanes({ panel: !panes.peek().panel }) },
