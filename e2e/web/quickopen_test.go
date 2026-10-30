@@ -46,7 +46,7 @@ func TestQuickOpenFindsAFileByItsName(t *testing.T) {
 	expectReq(t, c, "buf.open")
 	// Esc closes without doing anything.
 	wbKey(p, "p", true, false)
-	p.WaitJS(`document.querySelector(".quick")`)
+	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box")`)
 	p.Key(kb.Escape)
 	p.WaitJS(`!document.querySelector(".quick")`)
 }
@@ -54,7 +54,7 @@ func TestQuickOpenFindsAFileByItsName(t *testing.T) {
 func TestCommandListRunsACommand(t *testing.T) {
 	p, _ := openFiles(t, Desktop)
 	wbKey(p, "P", true, true)
-	p.WaitJS(`document.querySelector(".quick .quick-box")?.value === ">"`)
+	p.WaitJS(`document.querySelector(".quick .quick-box")?.value === ">" && document.activeElement === document.querySelector(".quick .quick-box")`)
 	p.Key("toggle side")
 	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === "View: Toggle Side Bar"`)
 	if got := p.Text(".quick-row.is-on .quick-keys"); got != "Ctrl+B" && got != "⌘+B" {
@@ -68,7 +68,7 @@ func TestGoToLineMovesTheCursor(t *testing.T) {
 	p, c := openFiles(t, Desktop)
 	openDesk(t, p, c, 2, "a.txt", "one", "two", "three", "four")
 	wbKey(p, "g", true, false)
-	p.WaitJS(`document.querySelector(".quick .quick-box")?.value === ":"`)
+	p.WaitJS(`document.querySelector(".quick .quick-box")?.value === ":" && document.activeElement === document.querySelector(".quick .quick-box")`)
 	p.Key("3")
 	p.WaitJS(`document.querySelector(".quick-row.is-on")?.textContent === "Go to line 3"`)
 	p.Key("\r")

@@ -1,6 +1,7 @@
 // Line icons for the tab bar and the strip, drawn as SVG elements (no
 // icon font, no markup strings). 24-unit grid, 1.75 stroke, currentColor.
 import { h, type ComponentChildren } from "preact";
+import { fileIcon } from "../lib/fileicon";
 
 function Icon({ children, size = 22 }: { children: ComponentChildren; size?: number }) {
   return (
@@ -168,4 +169,14 @@ export const IconRows = () => (
  * 24 px (the activity bar). */
 export function Cod({ name, big }: { name: string; big?: boolean }) {
   return <span class={`cod cod-${name}${big ? " cod-24" : ""}`} aria-hidden="true" />;
+}
+
+/** FileIcon is a file's or folder's icon in the workbench (the TUI's). */
+export function FileIcon({ path, dir, open }: { path: string; dir?: boolean; open?: boolean }) {
+  const ic = fileIcon(path, dir, open);
+  return (
+    <span class={`ficon fi-${ic.color}`} aria-hidden="true">
+      {ic.glyph}
+    </span>
+  );
 }
