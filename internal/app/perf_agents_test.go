@@ -18,6 +18,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/debounce"
+	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/perfbudget"
 )
 
@@ -417,4 +418,68 @@ func BenchmarkRunsViewRedraw200(b *testing.B) {
 	for b.Loop() {
 		perfRunsRedraw(m)
 	}
+}
+
+// perfUndoTurn makes an AI turn that wrote n files (some open in
+// tabs) and returns how long "AI: Undo Last Turn" took to put them
+// back.
+func perfUndoTurn(t *testing.T, m *Model, dir string, n, round int) time.Duration {
+	t.Helper()
+	s := m.ai
+	s.conv = ai.NewConversation()
+	s.conv.Messages = []ai.StoredMessage{{Role: ai.StoredUser, Text: "change them"}, {Role: ai.StoredAssistant, Text: "done"}}
+	s.restore = nil
+	s.turnMsg, s.streaming = 0, true
+	for i := 0; i < n; i++ {
+		rel := fmt.Sprintf("d%d/f%03d.txt", i%10, i)
+		if _, _, err := m.aiWriteFile(filepath.Join(dir, rel), rel, fmt.Sprintf("new %d round %d\n", i, round)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	m.aiRestoreTurnDone()
+	s.streaming = false
+	t0 := time.Now()
+	_ = m.aiUndoTurn(-1)
+	dt := time.Since(t0)
+	for i := 0; i < n; i += 37 {
+		rel := fmt.Sprintf("d%d/f%03d.txt", i%10, i)
+		if b, _ := os.ReadFile(filepath.Join(dir, rel)); string(b) != fmt.Sprintf("old %d\n", i) {
+			t.Fatalf("%s not restored: %q", rel, b)
+		}
+	}
+	return dt
+}
+
+// Perf guard: undo an AI turn that wrote 300 files, 5 of them open in
+// tabs (real nvim).
+func TestPerfAIUndoTurn300(t *testing.T) {
+	perfbudget.Require(t)
+	mm := aiTestModel(t)
+	m := &mm
+	dir, _ := filepath.EvalSymlinks(t.TempDir())
+	t.Chdir(dir)
+	for i := 0; i < 300; i++ {
+		p := filepath.Join(dir, fmt.Sprintf("d%d/f%03d.txt", i%10, i))
+		_ = os.MkdirAll(filepath.Dir(p), 0o755)
+		if err := os.WriteFile(p, []byte(fmt.Sprintf("old %d\n", i)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c := aiTestNvim(t, m)
+	if err := c.ExecLua(fileReloadLua); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 5; i++ {
+		var ok string
+		if err := c.ExecLuaResult(`vim.cmd.edit(...) return "ok"`, &ok, filepath.Join(dir, fmt.Sprintf("d%d/f%03d.txt", i%10, i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	m.explorer = explorer.New()
+	var ds []time.Duration
+	for r := 0; r < 3; r++ {
+		ds = append(ds, perfUndoTurn(t, m, dir, 300, r))
+	}
+	t.Logf("undo 300 files: median %v, all %v", perfMedian(ds), ds)
+	perfbudget.Check(t, "ai_undo_turn_300_files", perfMs(perfMedian(ds)))
 }

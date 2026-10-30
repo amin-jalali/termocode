@@ -78,3 +78,4 @@ ai_tool_calls_20           25   ms   # a turn that reads 20 files at once, media
 runs_view_open_200         25   ms   # open Runs with 200 stored runs (50 chats), median of 9; local 8.0 ms (floor)
 runs_view_reopen_200       25   ms   # show Runs again / another chat opened, state kept; local 5.0 ms before the chat file cache (floor)
 runs_view_redraw_200       25   ms   # draw the Runs list again after a run event; local 1.3 ms (floor)
+ai_undo_turn_300_files    280   ms   # AI: Undo Last Turn of a turn that wrote 300 files, 5 open in tabs (real nvim), median of 3; local 140 ms
