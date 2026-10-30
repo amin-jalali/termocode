@@ -5,6 +5,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -283,8 +284,9 @@ func TestWebCLIOpenNeedsTheLaptop(t *testing.T) {
 	r.pumpUntil("the gateway gone", func() bool { return r.m.webPanel == nil })
 }
 
-// Spec (E11): with web_panel off nothing starts and the hub does not
-// listen; turning it on starts the hub, off stops it.
+// Spec (E11, web-easy): the hub runs with no setting at all (a private
+// socket, so `termocode web` reaches this termocode); "web_panel": "off"
+// stops it and nothing starts; removing "off" starts it again.
 func TestWebPanelOffToastAndHubFollowsSetting(t *testing.T) {
 	m := aiTestModel(t)
 	t.Setenv("XDG_RUNTIME_DIR", webTestDir(t))
@@ -293,22 +295,45 @@ func TestWebPanelOffToastAndHubFollowsSetting(t *testing.T) {
 	old := webGatewayStart
 	t.Cleanup(func() { webGatewayStart = old })
 	webGatewayStart = func(*webHub, []string) (*webGatewayProc, error) { calls++; return nil, io.EOF }
-	m.startWebPanel(true, false)
-	if calls != 0 || m.web != nil {
-		t.Fatal("started with web_panel off")
-	}
-	if v := strings.Join(m.toast.View(200, 10), "\n"); !strings.Contains(v, "web_panel") {
-		t.Fatalf("toast %q", v)
-	}
-	writeUserConfig(t, `{"web_panel":"on"}`)
 	m.syncWebHub()
 	if m.web == nil {
-		t.Fatal("hub not started with web_panel on")
+		t.Fatal("hub not started without a setting")
 	}
 	writeUserConfig(t, `{"web_panel":"off"}`)
 	m.syncWebHub()
 	if m.web != nil {
 		t.Fatal("hub still runs with web_panel off")
+	}
+	m.startWebPanel(true, false)
+	if calls != 0 || m.web != nil {
+		t.Fatal("started with web_panel off")
+	}
+	if v := strings.Join(m.toast.View(200, 10), "\n"); !strings.Contains(v, `"web_panel": "off"`) {
+		t.Fatalf("toast %q", v)
+	}
+	writeUserConfig(t, `{}`)
+	m.syncWebHub()
+	if m.web == nil {
+		t.Fatal("hub not started again without off")
+	}
+}
+
+// Spec (web-easy): SSH mode (the far side of `termocode ssh --web`) still
+// needs "web_panel": "on" on that computer; without it nothing starts and
+// the far side says how to turn it on.
+func TestWebSSHModeNeedsExplicitOn(t *testing.T) {
+	r := newWebPanelRig(t)
+	writeUserConfig(t, `{}`)
+	ctl := r.dial(`{"t":"ctl"}`)
+	res := r.ctlRes(ctl, `{"t":"req","id":1,"op":"web.open","args":{"yes":true,"ssh_port":41237}}`, 1)
+	if res["t"] != "err" || !strings.Contains(fmt.Sprint(res["msg"]), `"web_panel": "on"`) {
+		t.Fatalf("res %v", res)
+	}
+	r.mu.Lock()
+	n := len(r.args)
+	r.mu.Unlock()
+	if n != 0 || r.m.webPanel != nil {
+		t.Fatalf("%d gateways started", n)
 	}
 }
 

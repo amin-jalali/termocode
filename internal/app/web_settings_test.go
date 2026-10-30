@@ -21,23 +21,29 @@ func writeUserConfig(t *testing.T, body string) {
 	}
 }
 
-// Spec (old 5.1): web_panel is off by default; bad values are the
-// default and a problem line (ADR 0005).
+// Spec (web-easy, ADR 0005): the web panel on this computer needs no
+// setting (web_panel unset is on for 127.0.0.1); "off" turns it off; only
+// "on" is Explicit (SSH mode and a script's --yes need it). Bad values are
+// the default and a problem line.
 func TestWebSettingsDefaultsAndBadValues(t *testing.T) {
 	withConfigDir(t)
 	c := webSettings()
-	if c.On || c.Port != 0 || c.IdleMinutes != 15 || c.MaxHours != 12 || !c.OpenBrowser || c.MaxViewers != 4 || len(c.Problems) != 0 {
+	if !c.On || c.Explicit || c.Tailnet || c.Port != 0 || c.IdleMinutes != 15 || c.MaxHours != 12 || !c.OpenBrowser || c.MaxViewers != 4 || len(c.Problems) != 0 {
 		t.Fatalf("defaults %+v", c)
 	}
 	writeUserConfig(t, `{"web_panel":"yes","web_port":80,"web_idle_minutes":0,"web_max_hours":99,"web_max_viewers":9,"web_open_browser":false}`)
 	c = webSettings()
-	if c.On || c.Port != 0 || c.IdleMinutes != 15 || c.MaxHours != 12 || c.MaxViewers != 4 || c.OpenBrowser || len(c.Problems) != 5 {
+	if !c.On || c.Explicit || c.Port != 0 || c.IdleMinutes != 15 || c.MaxHours != 12 || c.MaxViewers != 4 || c.OpenBrowser || len(c.Problems) != 5 {
 		t.Fatalf("bad values %+v", c)
 	}
 	writeUserConfig(t, `{"web_panel":"on","web_port":41237,"web_idle_minutes":30,"web_max_hours":2,"web_max_viewers":1}`)
 	c = webSettings()
-	if !c.On || c.Port != 41237 || c.IdleMinutes != 30 || c.MaxHours != 2 || c.MaxViewers != 1 || len(c.Problems) != 0 {
+	if !c.On || !c.Explicit || c.Port != 41237 || c.IdleMinutes != 30 || c.MaxHours != 2 || c.MaxViewers != 1 || len(c.Problems) != 0 {
 		t.Fatalf("good values %+v", c)
+	}
+	writeUserConfig(t, `{"web_panel":"off"}`)
+	if c = webSettings(); c.On || c.Explicit || len(c.Problems) != 0 {
+		t.Fatalf("off %+v", c)
 	}
 }
 
@@ -63,8 +69,9 @@ func TestAISettingsNeverWeb(t *testing.T) {
 	}
 }
 
-// Spec (WEB-10): a project's own config files can never turn the web
-// panel on: only the user's config.json counts.
+// Spec (WEB-10): a project's own config files can never change the web
+// panel (turn it on for SSH, open it to the tailnet, change limits): only
+// the user's config.json counts.
 func TestProjectConfigCannotEnableWeb(t *testing.T) {
 	withConfigDir(t)
 	root := t.TempDir()
@@ -72,10 +79,10 @@ func TestProjectConfigCannotEnableWeb(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"config.json", "settings.json"} {
-		_ = os.WriteFile(filepath.Join(root, ".termocode", name), []byte(`{"web_panel":"on","web_max_viewers":8}`), 0o644)
+		_ = os.WriteFile(filepath.Join(root, ".termocode", name), []byte(`{"web_panel":"on","web_listen":"tailnet","web_max_viewers":8}`), 0o644)
 	}
 	t.Chdir(root)
-	if c := webSettings(); c.On || c.MaxViewers != 4 {
+	if c := webSettings(); c.Explicit || c.Tailnet || c.MaxViewers != 4 {
 		t.Fatalf("project config changed the web settings: %+v", c)
 	}
 }
