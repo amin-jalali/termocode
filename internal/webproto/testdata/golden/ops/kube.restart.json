@@ -1,0 +1,1 @@
+{"t":"req","id":61,"op":"kube.restart","args":{"context":"kind-dev","namespace":"shop","kind":"deployment","name":"api"}}

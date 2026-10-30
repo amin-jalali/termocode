@@ -1,0 +1,1 @@
+{"t":"req","id":61,"op":"kube.describe","args":{"context":"kind-dev","namespace":"shop","kind":"pod","name":"api-7d9f-x2"}}

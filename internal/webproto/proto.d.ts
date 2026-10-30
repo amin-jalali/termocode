@@ -300,6 +300,26 @@ export interface GitTextArgs {
   rev: string;
 }
 
+export interface KubeScopeArgs {
+  context?: string;
+  namespace?: string;
+}
+
+export interface KubeLogsArgs {
+  context?: string;
+  namespace?: string;
+  pod: string;
+  container?: string;
+  lines?: number;
+}
+
+export interface KubeObjectArgs {
+  context?: string;
+  namespace?: string;
+  kind: "pod" | "deployment" | "service" | "job";
+  name: string;
+}
+
 export interface ServiceLogsArgs {
   name: string;
   lines?: number;
@@ -1249,6 +1269,67 @@ export interface BufSymbol {
   depth: number;
 }
 
+export interface KubeContexts {
+  contexts: string[];
+  current?: string;
+  context?: string;
+  namespace?: string;
+}
+
+export interface KubeNamespaces {
+  namespaces: string[];
+}
+
+export interface KubeList {
+  context: string;
+  namespace: string;
+  pods: KubePod[];
+  deployments: KubeDeployment[];
+  services: KubeService[];
+  jobs: KubeJob[];
+  errors?: Record<string, string>;
+  more?: number;
+}
+
+export interface KubePod {
+  name: string;
+  ready: string;
+  status: string;
+  restarts: number;
+  created?: number;
+  containers: string[];
+}
+
+export interface KubeDeployment {
+  name: string;
+  ready: string;
+  updated: number;
+  available: number;
+  created?: number;
+}
+
+export interface KubeService {
+  name: string;
+  type: string;
+  cluster_ip?: string;
+  ports?: string;
+  created?: number;
+}
+
+export interface KubeJob {
+  name: string;
+  status: string;
+  completions: string;
+  failed?: number;
+  created?: number;
+}
+
+export interface KubeText {
+  lines: string[];
+  redacted?: number;
+  truncated?: boolean;
+}
+
 export interface ServiceLogs {
   name: string;
   lines: string[];
@@ -1449,6 +1530,12 @@ export interface OpArgs {
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
+  "kube.contexts": EmptyArgs;
+  "kube.namespaces": KubeScopeArgs;
+  "kube.list": KubeScopeArgs;
+  "kube.logs": KubeLogsArgs;
+  "kube.describe": KubeObjectArgs;
+  "kube.restart": KubeObjectArgs;
   "services.refresh": EmptyArgs;
   "services.logs": ServiceLogsArgs;
   "services.start": ServiceArgs;
@@ -1554,6 +1641,12 @@ export interface OpResult {
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
+  "kube.contexts": KubeContexts;
+  "kube.namespaces": KubeNamespaces;
+  "kube.list": KubeList;
+  "kube.logs": KubeText;
+  "kube.describe": KubeText;
+  "kube.restart": AskRef;
   "services.logs": ServiceLogs;
   "services.start": ServiceDone;
   "services.restart": ServiceDone;
