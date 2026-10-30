@@ -80,7 +80,7 @@ func tourAll(p *Page) {
 	p.GoTab("more")
 	p.Tap(`.more .field:nth-of-type(1) .seg-item:nth-child(3)`) // light
 	p.WaitJS(`document.documentElement.dataset.theme === "light"`)
-	p.Tap(`.more .field:nth-of-type(2) .seg-item:nth-child(3)`) // right to left
+	p.Tap(`.more .field:nth-of-type(3) .seg-item:nth-child(3)`) // right to left
 	p.WaitJS(`document.documentElement.dir === "rtl"`)
 	p.GoTab("chat")
 }

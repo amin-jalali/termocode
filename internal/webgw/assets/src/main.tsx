@@ -14,6 +14,7 @@ import { goTab } from "./lib/router";
 import { link, status } from "./session";
 import { TABS } from "./state/route";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
+import { lang } from "./strings";
 
 const RTL_LANGS = /^(fa|ar|he|ur|ps|ckb|dv|yi|sd|ug)\b/i;
 
@@ -46,9 +47,18 @@ effect(() => {
   else html.dataset.theme = theme;
 });
 
+// The UI language: Persian when chosen, or on "auto" when the browser
+// asks for Persian first; English otherwise (WEB-UX-5).
+effect(() => {
+  const p = prefs.value.lang;
+  const l = p === "auto" ? (/^fa\b/i.test(navigator.language) ? "fa" : "en") : p;
+  lang.value = l;
+  html.lang = l;
+});
+
 effect(() => {
   const d = prefs.value.dir;
-  html.dir = d === "auto" ? (RTL_LANGS.test(navigator.language) ? "rtl" : "ltr") : d;
+  html.dir = d === "auto" ? (lang.value === "fa" || RTL_LANGS.test(navigator.language) ? "rtl" : "ltr") : d;
 });
 
 effect(() => {

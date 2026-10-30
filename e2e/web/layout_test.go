@@ -65,13 +65,17 @@ func (p *Page) bigTargets(where string) {
 	}
 }
 
-// Every tab fits a 320 px phone and a 390 px phone with no sideways
-// scroll, and every primary control is at least 44x44 px.
+// Every tab fits a 320 px phone (also in Persian) and a 390 px phone
+// with no sideways scroll, and every primary control is at least 44x44 px.
 func TestNoSidewaysScrollAndBigTargets(t *testing.T) {
-	for _, vp := range []Viewport{Phone320, Phone, Desktop} {
-		t.Run(vp.Name, func(t *testing.T) {
+	for _, tc := range []struct {
+		vp   Viewport
+		lang string
+	}{{Phone320, "en-US"}, {Phone, "en-US"}, {Desktop, "en-US"}, {Phone320, "fa-IR"}} {
+		vp := tc.vp
+		t.Run(vp.Name+"/"+tc.lang, func(t *testing.T) {
 			s := StartServer(t)
-			p := NewPage(t, s, vp)
+			p := NewPageLang(t, s, vp, tc.lang)
 			p.Open()
 			p.noOverflow("connect")
 			p.bigTargets("connect")
@@ -85,8 +89,9 @@ func TestNoSidewaysScrollAndBigTargets(t *testing.T) {
 	}
 }
 
-// At 200 % font size (and in Persian, right to left) nothing sticks out,
-// the tab bar still shows five labelled tabs, and the view ends above it.
+// At 200 % font size, in English and in Persian (right to left), nothing
+// sticks out, the tab bar still shows five labelled tabs, and the view
+// ends above it.
 func TestBigFontStillFits(t *testing.T) {
 	for _, vp := range []Viewport{Phone320, Phone} {
 		for _, dir := range []string{"ltr", "rtl"} {
@@ -96,8 +101,8 @@ func TestBigFontStillFits(t *testing.T) {
 				p.Login("c-1")
 				if dir == "rtl" {
 					p.GoTab("more")
-					p.Tap(`.more .field:nth-of-type(2) .seg-item:nth-child(3)`)
-					p.WaitJS(`document.documentElement.dir === "rtl"`)
+					p.Tap(`.more .field:nth-of-type(2) .seg-item:nth-child(3)`) // فارسی
+					p.WaitJS(`document.documentElement.lang === "fa" && document.documentElement.dir === "rtl"`)
 				}
 				Eval[bool](p, `(document.documentElement.style.fontSize = "200%", true)`)
 				for _, tab := range []string{"chat", "files", "term", "git", "more"} {

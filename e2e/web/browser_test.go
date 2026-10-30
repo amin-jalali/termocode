@@ -86,6 +86,13 @@ type Page struct {
 // starts recording. Chrome is stopped when the test ends.
 func NewPage(t *testing.T, s *Server, vp Viewport) *Page {
 	t.Helper()
+	return NewPageLang(t, s, vp, "en-US")
+}
+
+// NewPageLang is NewPage with a browser language (navigator.language),
+// e.g. "fa-IR".
+func NewPageLang(t *testing.T, s *Server, vp Viewport, lang string) *Page {
+	t.Helper()
 	exe := chromePath()
 	if exe == "" {
 		if os.Getenv(requireEnv) == "require" {
@@ -101,7 +108,8 @@ func NewPage(t *testing.T, s *Server, vp Viewport) *Page {
 		chromedp.Flag("disable-background-networking", true),
 		chromedp.Flag("disable-component-update", true),
 		chromedp.Flag("disable-sync", true),
-		chromedp.Flag("lang", "en-US"),
+		chromedp.Flag("lang", lang),
+		chromedp.Flag("accept-lang", lang),
 	)
 	if os.Getenv("CI") != "" {
 		// Hosted runners do not allow Chrome's user-namespace sandbox. The

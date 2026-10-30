@@ -2,7 +2,7 @@
 // tasks (chat WEB-14, tree WEB-16, files WEB-18, terminal WEB-20, git
 // WEB-23); until then each shows its loading and empty states.
 import { h } from "preact";
-import { prefs, setPref, type Direction, type Theme } from "../lib/prefs";
+import { prefs, setPref, type Direction, type Language, type Theme } from "../lib/prefs";
 import { t } from "../strings";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
@@ -50,20 +50,24 @@ export function GitView() {
   );
 }
 
-const themes = [
-  { value: "system", label: t("more.theme.system") },
-  { value: "dark", label: t("more.theme.dark") },
-  { value: "light", label: t("more.theme.light") },
-] as const;
-
-const dirs = [
-  { value: "auto", label: t("more.dir.auto") },
-  { value: "ltr", label: t("more.dir.ltr") },
-  { value: "rtl", label: t("more.dir.rtl") },
-] as const;
-
 export function MoreView() {
   const p = prefs.value;
+  // Built on each draw, so a language change shows at once.
+  const themes = [
+    { value: "system", label: t("more.theme.system") },
+    { value: "dark", label: t("more.theme.dark") },
+    { value: "light", label: t("more.theme.light") },
+  ] as const;
+  const dirs = [
+    { value: "auto", label: t("more.dir.auto") },
+    { value: "ltr", label: t("more.dir.ltr") },
+    { value: "rtl", label: t("more.dir.rtl") },
+  ] as const;
+  const langs = [
+    { value: "auto", label: t("more.dir.auto") },
+    { value: "en", label: t("more.lang.en") },
+    { value: "fa", label: t("more.lang.fa") },
+  ] as const;
   return (
     <View tab="more" title={t("tab.more")}>
       <div class="more">
@@ -74,6 +78,10 @@ export function MoreView() {
           <div class="field">
             <span class="field-label">{t("theme")}</span>
             <Segmented<Theme> label={t("theme")} value={p.theme} choices={themes} onChange={(v) => setPref("theme", v)} />
+          </div>
+          <div class="field">
+            <span class="field-label">{t("more.lang")}</span>
+            <Segmented<Language> label={t("more.lang")} value={p.lang} choices={langs} onChange={(v) => setPref("lang", v)} />
           </div>
           <div class="field">
             <span class="field-label">{t("more.dir")}</span>
