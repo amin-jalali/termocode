@@ -21,7 +21,10 @@ import (
 // chat is one switched delta with all of it.
 //
 // Secrets: every chat string passes the registered-secret redaction
-// before it is cut into nodes or chunks.
+// before it is cut into nodes or chunks. A streaming answer holds back an
+// end that could be the start of a secret (ai.SecretTailHold), so a
+// secret never leaves in two pieces; the held bytes go out with the next
+// chunk or when the answer ends.
 
 func init() {
 	webTopics["chat"] = webTopicDef{snapshot: webChatSnapshot, apply: webApplyChat}
@@ -184,10 +187,11 @@ func webChatKey(sm *ai.StoredMessage) string {
 	return b.String()
 }
 
-// webChatVisible is how much of a streaming answer may go out now, cut
-// at a character and at the message cap (trunc: the cap cut it).
+// webChatVisible is how much of a streaming answer may go out now: all of
+// it but an end that could start a secret, cut at a character and at
+// the message cap (trunc: the cap cut it).
 func webChatVisible(text string) (end int, trunc bool) {
-	end = len(text)
+	end = len(text) - ai.SecretTailHold(text)
 	if end > webproto.MaxChatMsgText {
 		end, trunc = webproto.MaxChatMsgText, true
 	}
