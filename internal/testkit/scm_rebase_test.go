@@ -380,7 +380,8 @@ func TestSCMFixupFromPalette(t *testing.T) {
 		t.Fatalf("no toast:%s", dump(d))
 	}
 	d.Palette("git-fixup")
-	if !until(d, func() bool { return strings.Contains(text(d), "Fixup the staged changes into which commit?") }) {
+	// The picker cuts its long title to one row: match its start.
+	if !until(d, func() bool { return strings.Contains(text(d), "Fixup the staged changes into") }) {
 		t.Fatalf("no picker:%s", dump(d))
 	}
 	d.Type("c3")
