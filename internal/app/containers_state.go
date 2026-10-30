@@ -344,24 +344,29 @@ func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 	st.containerPreference = preferred
 	sessionContext := st.sessionContext
 	return func() tea.Msg {
-		e := containers.Detect(ctx, containers.DetectOptions{Preferred: preferred, Context: sessionContext, Exec: servicesExec, Dir: dir, Android: runtime.GOOS == "android"})
+		e := containers.Locate(containers.DetectOptions{Preferred: preferred, Context: sessionContext, Exec: servicesExec, Dir: dir, Android: runtime.GOOS == "android"})
 		msg := containerHostMsg{gen: gen, engine: e, section: "detect", errs: map[string]string{}}
-		// Contexts are files, not daemon answers: list them even when
-		// the engine does not answer, so a broken remote context can be
-		// switched away from. The engine answers: the contexts and the
-		// open sections are listed at the same time (one engine call's
-		// wait instead of one per section).
+		if e.Binary == "" {
+			return msg
+		}
+		// The contexts (files, not daemon answers: listed even when the
+		// engine does not answer, so a broken remote context can be
+		// switched away from) and the open sections are listed at the
+		// same time, and while the version call finds out whether the
+		// daemon answers: one engine call's wait instead of one per
+		// call. A daemon that does not answer drops the section lists.
 		jobs := []string{}
 		if e.Kind == "docker" || e.Kind == "podman" {
 			jobs = append(jobs, "contexts")
 		}
-		if e.Reachable {
-			for _, s := range load {
-				if s != "contexts" {
-					jobs = append(jobs, s)
-				}
+		for _, s := range load {
+			if s != "contexts" {
+				jobs = append(jobs, s)
 			}
 		}
+		listCtx, cancelLists := context.WithCancel(ctx)
+		defer cancelLists()
+		le := e // the lists' copy: Probe changes e
 		errs := make([]error, len(jobs))
 		var wg sync.WaitGroup
 		for i, s := range jobs {
@@ -370,20 +375,31 @@ func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 				defer wg.Done()
 				switch s {
 				case "containers":
-					msg.containers, errs[i] = e.ListContainers(ctx)
+					msg.containers, errs[i] = le.ListContainers(listCtx)
 				case "images":
-					msg.images, errs[i] = e.ListImages(ctx)
+					msg.images, errs[i] = le.ListImages(listCtx)
 				case "networks":
-					msg.networks, errs[i] = e.ListNetworks(ctx)
+					msg.networks, errs[i] = le.ListNetworks(listCtx)
 				case "volumes":
-					msg.volumes, errs[i] = e.ListVolumes(ctx)
+					msg.volumes, errs[i] = le.ListVolumes(listCtx)
 				case "contexts":
-					msg.contexts, errs[i] = e.ListContexts(ctx)
+					msg.contexts, errs[i] = le.ListContexts(ctx)
 				}
 			}()
 		}
+		e.Probe(ctx)
+		if !e.Reachable {
+			cancelLists()
+		}
 		wg.Wait()
+		msg.engine = e
+		if !e.Reachable {
+			msg.containers, msg.images, msg.networks, msg.volumes = nil, nil, nil, nil
+		}
 		for i, s := range jobs {
+			if s != "contexts" && !e.Reachable {
+				continue
+			}
 			if errs[i] != nil {
 				msg.errs[s] = errs[i].Error()
 			}

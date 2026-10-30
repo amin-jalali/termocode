@@ -116,24 +116,30 @@ func TestStatsRetargetSkipsUnchangedState(t *testing.T) {
 	}
 }
 
-// gateExec runs the fake engine, but `context ls` waits until `ps` has
-// started: it answers only when the two run at the same time.
+// gateExec runs the fake engine, but the call starting with `wait`
+// waits until a call starting with `after` has started: it answers only
+// when the two run at the same time.
 type gateExec struct {
 	services.Exec
-	psStarted chan struct{}
-	once      sync.Once
+	wait, after string
+	started     chan struct{}
+	once        sync.Once
+}
+
+func newGateExec(wait, after string) *gateExec {
+	return &gateExec{Exec: services.SpawnExec{}, wait: wait, after: after, started: make(chan struct{})}
 }
 
 func (g *gateExec) Capture(ctx context.Context, dir string, argv ...string) (string, string, int, error) {
 	args := strings.Join(argv[1:], " ")
-	if strings.HasPrefix(args, "ps ") {
-		g.once.Do(func() { close(g.psStarted) })
+	if strings.HasPrefix(args, g.after) {
+		g.once.Do(func() { close(g.started) })
 	}
-	if strings.HasPrefix(args, "context ls") {
+	if strings.HasPrefix(args, g.wait) {
 		select {
-		case <-g.psStarted:
+		case <-g.started:
 		case <-time.After(5 * time.Second):
-			return "", "context ls ran before ps started", 1, nil
+			return "", g.wait + " ran before " + g.after + " started", 1, nil
 		}
 	}
 	return g.Exec.Capture(ctx, dir, argv...)
@@ -148,7 +154,7 @@ func TestContainersDetectListsInParallel(t *testing.T) {
 	t.Setenv("DOCKER_CONTEXT", "")
 	hostFake(t)
 	old := servicesExec
-	servicesExec = &gateExec{Exec: services.SpawnExec{}, psStarted: make(chan struct{})}
+	servicesExec = newGateExec("context ls", "ps ")
 	defer func() { servicesExec = old }()
 	st := svcTestState()
 	st.root = t.TempDir()
@@ -198,5 +204,54 @@ func TestContainerEventBurstIsOneMessage(t *testing.T) {
 	}
 	if msg = waitContainerEvent(context.Background(), ch, 7)().(containerEventMsg); !msg.closed {
 		t.Fatal("the closed stream was not reported")
+	}
+}
+
+// PERF-5: the open sections are listed while the engine's version call
+// runs (the answers are kept only when the engine answers).
+func TestContainersDetectListsWhileProbing(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("DOCKER_CONTEXT", "")
+	hostFake(t)
+	old := servicesExec
+	servicesExec = newGateExec("version", "ps ")
+	defer func() { servicesExec = old }()
+	st := svcTestState()
+	st.root = t.TempDir()
+	st.sections = map[string]bool{}
+	st.visible = true
+	st.collapsed[hostSection("containers")] = false
+	m := svcTestModel(st, 100, 80)
+	msg := m.containersDetect()().(containerHostMsg)
+	if !msg.engine.Reachable || len(msg.containers) == 0 || len(msg.errs) != 0 {
+		t.Fatalf("engine %+v, %d containers, errs %v", msg.engine.Problem, len(msg.containers), msg.errs)
+	}
+}
+
+// The daemon does not answer: what was listed meanwhile is dropped, as
+// before only the contexts (files) are kept, and the sections are not
+// marked loaded.
+func TestContainersDetectDropsListsOfADownEngine(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("DOCKER_CONTEXT", "")
+	f := hostFake(t)
+	f.Set(t, "version.json", "")
+	st := svcTestState()
+	st.root = t.TempDir()
+	st.sections = map[string]bool{}
+	st.visible = true
+	st.collapsed[hostSection("containers")] = false
+	m := svcTestModel(st, 100, 80)
+	msg := m.containersDetect()().(containerHostMsg)
+	if msg.engine.Reachable {
+		t.Fatal("an engine without a version answered")
+	}
+	if len(msg.containers) != 0 || slices.Contains(msg.loaded, "containers") || msg.errs["containers"] != "" {
+		t.Errorf("a down engine's list was kept: %d containers, loaded %v, errs %v", len(msg.containers), msg.loaded, msg.errs)
+	}
+	if len(msg.contexts) != 2 || !slices.Contains(msg.loaded, "contexts") {
+		t.Errorf("contexts %v loaded %v", msg.contexts, msg.loaded)
 	}
 }
