@@ -1,0 +1,61 @@
+{
+  "topic": "buf:2",
+  "snap0": {
+    "buf": 2,
+    "dirty": false,
+    "ft": "text",
+    "lines": [
+      "alpha",
+      "beta",
+      "gamma"
+    ],
+    "path": "notes.txt",
+    "readonly": false,
+    "tick": 2
+  },
+  "deltas": [
+    {
+      "first": 1,
+      "kind": "lines",
+      "last": 2,
+      "lines": [
+        "BETA",
+        "beta 2"
+      ],
+      "tick": 3
+    },
+    {
+      "kind": "dirty",
+      "on": true
+    },
+    {
+      "first": 0,
+      "kind": "lines",
+      "last": 1,
+      "lines": [
+        "ALPHA"
+      ],
+      "tick": 4
+    },
+    {
+      "first": 3,
+      "kind": "lines",
+      "last": 4,
+      "lines": [],
+      "tick": 5
+    }
+  ],
+  "snapn": {
+    "buf": 2,
+    "path": "notes.txt",
+    "tick": 5,
+    "lines": [
+      "ALPHA",
+      "BETA",
+      "beta 2"
+    ],
+    "dirty": true,
+    "ft": "text",
+    "readonly": false
+  }
+}
