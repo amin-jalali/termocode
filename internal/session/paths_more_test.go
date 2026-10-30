@@ -12,7 +12,9 @@ import (
 )
 
 func TestDirWithoutRuntimeDir(t *testing.T) {
-	home, err := os.MkdirTemp("", "tch")
+	// A short folder: macOS's long $TMPDIR would push the socket path
+	// past the limit and Dir would fall back to the temp dir.
+	home, err := os.MkdirTemp("/tmp", "tch")
 	if err != nil {
 		t.Fatal(err)
 	}

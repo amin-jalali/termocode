@@ -27,7 +27,14 @@ func TestCwdOfDeletedFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 	ws := Cwd()
-	if ws.Root != "" || ws.Kind != workspace.KindLocal || ws.Host == nil {
+	if ws.Kind != workspace.KindLocal || ws.Host == nil {
+		t.Fatalf("Cwd = %+v", ws)
+	}
+	// Linux cannot name a deleted cwd; macOS still gives its old path.
+	if runtime.GOOS != "linux" {
+		return
+	}
+	if ws.Root != "" {
 		t.Fatalf("Cwd = %+v", ws)
 	}
 	if _, err := New("sub"); err == nil {
