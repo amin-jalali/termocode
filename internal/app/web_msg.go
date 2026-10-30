@@ -35,6 +35,8 @@ type webHelloMsg struct {
 // handleWebMsg routes the hub messages. ok=false: not ours.
 func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
+	case webCallMsg:
+		return m.onWebCall(msg), true
 	case webHelloMsg:
 		m.onWebHello(msg)
 		return waitWeb(msg.hub), true
