@@ -410,7 +410,7 @@ func (m *Model) webGitDiscard(call *webCall) *webAsk {
 						m.toast, t = m.toast.PushDetail(toast.Info, "Discarded changes", webAuditPaths(paths))
 					}
 					if m.nvim != nil {
-						_ = m.nvim.Command("silent! checktime")
+						_ = m.nvim.ExecLua(webLuaCheckTime)
 					}
 					return tea.Batch(m.pollGitCmd(), t)
 				})
@@ -418,6 +418,11 @@ func (m *Model) webGitDiscard(call *webCall) *webAsk {
 		},
 	}
 }
+
+// webLuaCheckTime reloads buffers whose files a web git op changed on
+// disk. Web code sends nvim only constant Lua chunks (never a command
+// line), so the reload is a chunk too.
+const webLuaCheckTime = `pcall(vim.cmd, 'silent! checktime')`
 
 // webGitInside: path's folder, with every link followed, is inside root
 // (a new file is deleted by path; a linked folder must not lead out).
