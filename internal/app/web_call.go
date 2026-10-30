@@ -112,6 +112,10 @@ func (c *webConn) request(r *webproto.Req) bool {
 func (m *Model) onWebCall(msg webCallMsg) tea.Cmd {
 	next := waitWeb(msg.hub)
 	call := msg.call
+	if call.ctx.Err() != nil { // the connection or the hub is gone: do not run
+		call.fail(webproto.CodeGone, "The connection ended.")
+		return next
+	}
 	fn := msg.hub.ops[call.op]
 	if fn == nil {
 		call.fail(webproto.CodeNotFound, "This is not available yet.")

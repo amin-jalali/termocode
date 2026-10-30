@@ -3,6 +3,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -158,5 +159,63 @@ func TestCallAnswersOnce(t *testing.T) {
 	c.send(`{"t":"ping","n":"x"}`)
 	if got := r.nextMsg(c); got["t"] != "pong" {
 		t.Fatalf("a second answer went out: %v", got)
+	}
+}
+
+// Spec (WEB-6): a request whose connection is gone before Update takes it
+// does not run; a running slow request sees its context end when the
+// connection ends, and every context ends when the hub stops.
+func TestCallCtxCancelled(t *testing.T) {
+	r := newWebRig(t, nil)
+	ran := 0
+	slow := make(chan context.Context, 1)
+	r.hub.ops = map[string]webOpFunc{
+		webproto.OpChatOpen: func(m *Model, call *webCall) tea.Cmd { ran++; call.reply(nil); return nil },
+		webproto.OpChatPin: func(m *Model, call *webCall) tea.Cmd {
+			call.later()
+			slow <- call.ctx
+			return nil
+		},
+	}
+	c, _ := r.webHello(webTestOpen)
+	c.send(`{"t":"req","id":1,"op":"chat.open","args":{"id":"x"}}`)
+	deadline := time.Now().Add(10 * time.Second)
+	for len(r.hub.ch) == 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("the call never reached Update")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	_ = c.c.Close()
+	for r.hub.conns() != 0 { // the hub saw the close (no Update needed)
+		if time.Now().After(deadline) {
+			t.Fatal("the connection was not dropped")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	r.m.handleWebMsg(<-r.hub.ch)
+	if ran != 0 {
+		t.Fatal("a call of a closed connection ran")
+	}
+
+	c2, _ := r.webHello(`{"t":"open","conn":"c-2","role":"controller","device":"d"}`)
+	c2.send(`{"t":"req","id":1,"op":"chat.pin","args":{"on":true}}`)
+	var ctx context.Context
+	r.pumpUntil("the slow call", func() bool {
+		select {
+		case ctx = <-slow:
+			return true
+		default:
+			return false
+		}
+	})
+	if ctx.Err() != nil {
+		t.Fatal("context ended too early")
+	}
+	r.hub.stop()
+	select {
+	case <-ctx.Done():
+	case <-time.After(10 * time.Second):
+		t.Fatal("the slow call's context did not end with the hub")
 	}
 }
