@@ -16,7 +16,7 @@ func TestCardsDataGenerated(t *testing.T) {
 		`  "cards": { snap: CardsSnap; delta: CardsDelta };`,
 		`  "answered": Answered;`,
 		`  kind: "tool" | "mcp" | "plan" | "review" | "trust";`,
-		`  k: "ctx" | "add" | "del";`,
+		`  k: "ctx" | "add" | "del" | "hunk" | "file";`,
 		`  needs_laptop?: boolean;`,
 	} {
 		if !strings.Contains(ts, want) {

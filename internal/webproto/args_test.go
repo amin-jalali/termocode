@@ -43,6 +43,14 @@ func TestArgsRules(t *testing.T) {
 		{OpGitShow, `{"hash":"abc"}`},
 		{OpGitCommit, `{"message":"  \n "}`},
 		{OpGitCommit, `{"message":"` + long(16*1024+1) + `"}`},
+		{OpGitCommit, `{"message":"\nbody only"}`},
+		{OpGitCommit, `{"message":"fix\u0000"}`},
+		{OpGitDiff, `{"path":"a.go","from":-1}`},
+		{OpGitShow, `{"hash":"27e9ea18","from":-1}`},
+		{OpGitStageHunk, `{"path":"a.go","hunk":"not a header"}`},
+		{OpGitStageHunk, `{"path":"../a.go","hunk":"@@ -1 +1 @@"}`},
+		{OpGitUnstageHunk, `{"path":"a.go","hunk":"@@ -1 +1 @@` + long(1024) + `"}`},
+		{OpGitUnstageHunk, `{"path":"a.go","hunk":"@@ -1 +1 @@\nx"}`},
 		{OpSearchRun, `{"query":""}`},
 		{OpSearchRun, `{"query":"` + long(1025) + `"}`},
 		{OpSearchRun, `{"query":"a","include":"` + long(513) + `"}`},
@@ -67,9 +75,16 @@ func TestArgsRules(t *testing.T) {
 		{OpTermSend, `{"buf":7,"text":"\u0003"}`},
 		{OpGitShow, `{"hash":"27e9ea18"}`},
 		{OpGitCommit, `{"message":"fix: one line"}`},
+		{OpGitCommit, `{"message":"fix: one line\n\n\tbody with a tab"}`},
+		{OpGitDiff, `{"path":"a.go","from":2000}`},
+		{OpGitStageHunk, `{"path":"a.go","hunk":"@@ -1,2 +1,3 @@ func main() {"}`},
 		{OpSearchRun, `{"query":"TODO","regex":true,"max":500}`},
 		{OpSearchOpen, `{"path":"a.go","line":1}`},
 		{OpCardsAnswer, `{"id":"card-9","choice":"deny"}`},
+	}
+	// No amend from the web: the field does not exist.
+	if _, err := DecodeArgs(OpGitCommit, json.RawMessage(`{"message":"fix","amend":true}`)); err == nil {
+		t.Error("git.commit with amend decoded")
 	}
 	for _, c := range good {
 		if _, err := DecodeArgs(c.op, json.RawMessage(c.args)); err != nil {
