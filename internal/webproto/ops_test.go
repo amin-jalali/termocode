@@ -114,6 +114,41 @@ func TestEveryOpHasPolicyRow(t *testing.T) {
 	}
 }
 
+func TestRolesAndCaps(t *testing.T) {
+	viewer := map[string]bool{}
+	for _, op := range CapsFor(RoleViewer) {
+		viewer[op] = true
+	}
+	ctrl := map[string]bool{}
+	for _, op := range CapsFor(RoleController) {
+		ctrl[op] = true
+	}
+	for _, p := range Ops() {
+		wantV := p.Role == RoleViewer
+		wantC := p.Role == RoleViewer || p.Role == RoleController
+		if viewer[p.Op] != wantV || Allowed(RoleViewer, p.Op) != wantV {
+			t.Errorf("%s: viewer allowed = %v, want %v", p.Op, viewer[p.Op], wantV)
+		}
+		if ctrl[p.Op] != wantC || Allowed(RoleController, p.Op) != wantC {
+			t.Errorf("%s: controller allowed = %v, want %v", p.Op, ctrl[p.Op], wantC)
+		}
+		if Allowed(Role("admin"), p.Op) || Allowed(RoleCtl, p.Op) && p.Role != RoleCtl {
+			t.Errorf("%s: allowed for a wrong role", p.Op)
+		}
+	}
+	if Allowed(RoleController, "nope.op") {
+		t.Error("unknown op allowed")
+	}
+	for _, op := range []string{OpWebOpen, OpWebStop} {
+		if ctrl[op] || viewer[op] {
+			t.Errorf("%s offered to a browser", op)
+		}
+	}
+	if len(CapsFor(Role("admin"))) != 0 {
+		t.Error("unknown role has caps")
+	}
+}
+
 func TestLaptopCardOps(t *testing.T) {
 	want := map[string]bool{OpTermClose: true, OpGitDiscard: true, OpWebOpen: true}
 	for _, p := range Ops() {

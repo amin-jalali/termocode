@@ -180,6 +180,40 @@ func DecodeArgs(op string, raw json.RawMessage) (any, error) {
 	return a, nil
 }
 
+// Allowed reports whether a connection with role may call op. A
+// controller may do what a viewer may; control ops are for the control
+// connection only.
+func Allowed(role Role, op string) bool {
+	p, ok := Lookup(op)
+	if !ok {
+		return false
+	}
+	switch role {
+	case RoleViewer:
+		return p.Role == RoleViewer
+	case RoleController:
+		return p.Role == RoleViewer || p.Role == RoleController
+	case RoleCtl:
+		return p.Role == RoleCtl
+	}
+	return false
+}
+
+// CapsFor lists the browser ops a role may call, in table order; it is
+// what meta.caps carries.
+func CapsFor(role Role) []string {
+	if role != RoleViewer && role != RoleController {
+		return nil
+	}
+	var out []string
+	for _, p := range opTable {
+		if Allowed(role, p.Op) {
+			out = append(out, p.Op)
+		}
+	}
+	return out
+}
+
 // Ops returns a copy of the op table, in table order.
 func Ops() []Policy { return append([]Policy(nil), opTable...) }
 
