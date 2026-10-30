@@ -446,6 +446,10 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 	}
 	var out []aiLine
 	s := m.ai
+	if s != nil {
+		// About as long as the last build: no regrowing a long transcript.
+		out = make([]aiLine, 0, len(s.transcript.lines)+64)
+	}
 	if s != nil && s.conv.ForkedFrom != nil { // G-FORK: "Forked from <title> at message N"
 		out = append(out, aiLine{})
 		for _, l := range wrapPlain(s.conv.ForkNote(), inner) {
