@@ -48,7 +48,7 @@ func TestWebStartTailnetUsesTheTailnetURL(t *testing.T) {
 	}
 	r.m.startWebPanel(false, true)
 	r.pumpUntil("the panel up", func() bool { return r.m.webPanel != nil && r.m.webPanel.up })
-	if !slices.Contains(got, "--tailnet") || slices.Contains(got, "--port") {
+	if !slices.Contains(got, "--tailnet") || slices.Contains(got, "--port") || !slices.Contains(got, "--devices") {
 		t.Fatalf("args %q", got)
 	}
 	select {

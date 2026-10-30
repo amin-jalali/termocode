@@ -252,3 +252,14 @@ func TestWebStartNamesTheTailnetURL(t *testing.T) {
 		t.Fatalf("exit %d out %q err %q", code, out, errs)
 	}
 }
+
+// Spec (WEB-32): --devices names the paired-device folder (pairing on).
+func TestWebGatewayDevicesDir(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	var errb bytes.Buffer
+	cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/cfg/web"}, &errb)
+	if !ok || cfg.DevicesDir != "/cfg/web" {
+		t.Fatalf("ok %v devices %q: %s", ok, cfg.DevicesDir, errb.String())
+	}
+}
