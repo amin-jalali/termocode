@@ -1,9 +1,9 @@
 // The app shell (web UX 4): strip on top, bars under it, the view, the
 // attention pill and the tab bar at the bottom on phones; a rail and
-// columns on tablets and desktops, with the chat always on the right on
-// a desktop (like the TUI's editor + AI chat).
+// columns on tablets; the workbench on desktops (ui/Workbench.tsx: the
+// TUI's layout with editor tabs, panels and a status bar).
 import { h } from "preact";
-import { effect, signal } from "@preact/signals";
+import { effect } from "@preact/signals";
 import { bell } from "./lib/attention";
 import { layout } from "./lib/layout";
 import { route } from "./lib/router";
@@ -19,15 +19,11 @@ import { OfflineBar } from "./ui/OfflineBar";
 import { Strip } from "./ui/Strip";
 import { Toasts } from "./ui/Toasts";
 import { ViewerBar } from "./ui/ViewerBar";
+import { StatusBar, Workbench } from "./ui/Workbench";
 import { ChatView, FilesView, GitView, MoreView, TermView } from "./views/views";
 
-/** lastPrimary is the last tab other than Chat: the desktop's middle column. */
-export const lastPrimary = signal<Exclude<Tab, "chat">>("files");
-
 effect(() => {
-  const tab = route.value.tab;
-  if (tab !== "chat") lastPrimary.value = tab;
-  if (tab === "term") bell.value = false; // the bell was seen
+  if (route.value.tab === "term") bell.value = false; // the bell was seen
 });
 
 /** skipToMain moves focus to the view without touching the hash route. */
@@ -54,7 +50,28 @@ function ViewFor({ tab }: { tab: Tab }) {
 export function App() {
   const r = route.value;
   const l = layout.value;
-  const primary: Tab = l === "desktop" && r.tab === "chat" ? lastPrimary.value : r.tab;
+  if (l === "desktop") {
+    // The desktop is the workbench: the TUI's layout, the status bar at
+    // the bottom as on the laptop.
+    return (
+      <div class="shell layout-desktop">
+        <a class="skip" href="#main" onClick={skipToMain}>
+          {t("a11y.skip")}
+        </a>
+        <div class="bars">
+          <OfflineBar />
+          <ViewerBar />
+        </div>
+        <Workbench />
+        <AttentionPill />
+        <FirstRunHint />
+        <StatusBar />
+        {r.card && <CardSheet key={r.card} id={r.card} />}
+        {linkAsk.value && <LinkSheet href={linkAsk.value} />}
+        <Toasts />
+      </div>
+    );
+  }
   return (
     <div class={`shell layout-${l}`}>
       <a class="skip" href="#main" onClick={skipToMain}>
@@ -69,13 +86,8 @@ export function App() {
       <div class="body">
         {l !== "phone" && <Nav variant="rail" active={r.tab} />}
         <main class="main" id="main" tabIndex={-1}>
-          <ViewFor tab={primary} />
+          <ViewFor tab={r.tab} />
         </main>
-        {l === "desktop" && (
-          <aside class={`chatcol${r.tab === "chat" ? " is-focus" : ""}`} aria-label={t("tab.chat")}>
-            <ChatView />
-          </aside>
-        )}
       </div>
       <AttentionPill />
       {l === "phone" && <Nav variant="tabs" active={r.tab} />}

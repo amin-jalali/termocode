@@ -7,6 +7,9 @@ import { Fragment, h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { usePinch } from "../lib/rowfont";
 import type { BufSnap } from "../../../../webproto/proto";
+import { layout } from "../lib/layout";
+import { modKey } from "../lib/platform";
+import { IconLaptop, IconPencil, IconRedo, IconRows, IconSave, IconUndo, IconWrap } from "../ui/icons";
 import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
 import { closePath, file, openPath, type FileState } from "../lib/file";
 import { dropHl, hl, rowSegs, wantHl } from "../lib/hl";
@@ -81,6 +84,28 @@ function topRow(sc: HTMLElement | null): { a: number; b: number } {
     }
   }
   return { a: 0, b: 0 };
+}
+
+/** Crumbs is the folder path as a breadcrumb: cmd › covreport. */
+function Crumbs({ dir }: { dir: string }) {
+  const parts = dir.split("/");
+  return (
+    <span class="trunc file-path crumbs" title={dir}>
+      {parts.map((p, i) => (
+        <Fragment key={i}>
+          {i > 0 && (
+            <span class="crumb-sep" aria-hidden="true">
+              ›
+            </span>
+          )}
+          <span class="crumb">{p}</span>
+        </Fragment>
+      ))}
+      <span class="crumb-sep" aria-hidden="true">
+        ›
+      </span>
+    </span>
+  );
 }
 
 function showOnLaptop(path: string): void {
@@ -244,12 +269,13 @@ export function FileView({ path }: { path: string }) {
   const isEditing = canEdit && editing.value === path && st.kind === "open";
   const phase = liveStatus.value.phase;
   const sync = session.value;
+  const desk = layout.value === "desktop";
   return (
     <View
       tab="files"
       title={baseName(path)}
-      sub={dir ? <span class="trunc file-path">{dir}</span> : undefined}
-      back={{ label: t("tab.files"), onClick: () => go({ tab: "files", rest: "", query: {} }) }}
+      sub={dir ? <Crumbs dir={dir} /> : undefined}
+      back={desk ? undefined : { label: t("tab.files"), onClick: () => go({ tab: "files", rest: "", query: {} }) }}
       bodyRef={body}
       bodyClass={isEditing ? "is-editing" : undefined}
       actions={
@@ -258,13 +284,13 @@ export function FileView({ path }: { path: string }) {
             <Chip tone={phase === "conflict" || phase === "error" || phase === "gone" ? "amber" : phase === "waiting" ? "amber" : undefined} dot={phase === "sending" ? "busy" : undefined}>
               {phase === "sending" ? t("live.sending") : phase === "waiting" ? t("live.waiting") : phase === "synced" ? t("live.synced") : t("file.not_saved")}
             </Chip>
-            <Button kind="quiet" small onClick={() => sync?.undoEd()}>
+            <Button kind="quiet" small icon={<IconUndo />} iconOnly={desk} title={`${t("undo")} (${modKey()}+Z)`} onClick={() => sync?.undoEd()}>
               {t("undo")}
             </Button>
-            <Button kind="quiet" small onClick={() => sync?.redoEd()}>
+            <Button kind="quiet" small icon={<IconRedo />} iconOnly={desk} title={`${t("live.redo")} (${modKey()}+Shift+Z)`} onClick={() => sync?.redoEd()}>
               {t("live.redo")}
             </Button>
-            <Button kind="neutral" small needsLink onClick={saveLive}>
+            <Button kind="neutral" small needsLink icon={<IconSave />} title={`${t("file.save")} (${modKey()}+S)`} onClick={saveLive}>
               {t("file.save")}
             </Button>
             <Button kind="primary" small onClick={doneLive}>
@@ -278,41 +304,44 @@ export function FileView({ path }: { path: string }) {
               {t("file.not_saved")}
             </Chip>
           )}
-          <Chip
-            on={wrap}
+          <Button
+            kind="quiet"
+            small
+            icon={<IconWrap />}
+            iconOnly={desk}
+            pressed={wrap}
+            title={t("term.wrap")}
             onClick={() => {
               wrapOn.value = !wrap;
               setWrap(!wrap);
             }}
           >
             {t("term.wrap")}
-          </Chip>
+          </Button>
+          {canEdit && (buf.dirty || own.tick > 0) && (
+            <Button kind="quiet" small needsLink icon={<IconUndo />} iconOnly={desk} title={`${t("undo")} (${modKey()}+Z)`} onClick={() => undo(buf.buf).then((why) => why !== null && toast("warn", why))}>
+              {t("undo")}
+            </Button>
+          )}
+          {controller && (
+            <Button kind="quiet" small needsLink icon={<IconLaptop />} iconOnly={desk} title={t("laptop.show")} onClick={() => showOnLaptop(path)}>
+              {t("laptop.show")}
+            </Button>
+          )}
+          {st.kind === "open" && buf && !canEdit && <Chip>{t("viewonly")}</Chip>}
+          {canEdit && selection.value && (
+            <Button kind="neutral" small needsLink icon={<IconRows />} onClick={editLines}>
+              {t("file.edit_lines")}
+            </Button>
+          )}
           {canEdit && buf.dirty && (
-            <Button kind="primary" small needsLink onClick={() => save(buf.buf).then((ok) => ok && toast("ok", t("file.saved")))}>
+            <Button kind="neutral" small needsLink icon={<IconSave />} title={`${t("file.save")} (${modKey()}+S)`} onClick={() => save(buf.buf).then((ok) => ok && toast("ok", t("file.saved")))}>
               {t("file.save")}
             </Button>
           )}
           {canEdit && (
-            <Button kind="quiet" small needsLink onClick={() => undo(buf.buf).then((why) => why !== null && toast("warn", why))}>
-              {t("undo")}
-            </Button>
-          )}
-          {canEdit && selection.value && (
-            <Button kind="neutral" small needsLink onClick={editLines}>
-              {t("file.edit_lines")}
-            </Button>
-          )}
-          {canEdit && (
-            <Button kind="neutral" small needsLink onClick={() => (editing.value = path)}>
+            <Button kind="primary" small needsLink icon={<IconPencil />} title={t("file.edit")} onClick={() => (editing.value = path)}>
               {t("file.edit")}
-            </Button>
-          )}
-          {st.kind === "open" && buf && !canEdit && (
-            <Chip>{t("viewonly")}</Chip>
-          )}
-          {controller && (
-            <Button kind="quiet" small needsLink onClick={() => showOnLaptop(path)}>
-              {t("laptop.show")}
             </Button>
           )}
         </>
