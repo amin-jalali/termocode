@@ -102,7 +102,6 @@ func answerHl(t *testing.T, c *HubConn, r *webproto.Req, path string, lines []st
 	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(res)})
 }
 
-
 // diffSide is the text one side of the diff editor shows.
 func diffSide(p *Page, side string) string {
 	return Eval[string](p, `[...`+diffDoc+`.querySelectorAll(".editor.`+side+` .view-lines .view-line")].sort((a, b) => a.offsetTop - b.offsetTop).map((l) => l.textContent.replace(/\u00a0/g, " ")).join("\n")`)
