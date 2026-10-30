@@ -466,6 +466,7 @@ func runTUI() {
 	// CSI sequences and reads cursor-position reports; doing this after
 	// tea.NewProgram would race with Bubble Tea's own input reader.
 	// Honours TERMOCODE_ICON_MODE (manual override) and NO_COLOR.
+	app.WarmSecretStore() // the AI state needs it; opened while we probe
 	kittyKeys, syncOutput := probeTerminal()
 
 	font := applyFontDelta(fontDelta())
