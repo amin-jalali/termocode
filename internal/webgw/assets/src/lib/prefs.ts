@@ -129,7 +129,7 @@ export function loadLayout(): unknown {
 }
 
 /** saveLayout stores the layout; a blocked storage keeps it for this page. */
-export function saveLayout(v: Record<string, number | boolean>): void {
+export function saveLayout(v: Record<string, number | boolean | string>): void {
   try {
     localStorage.setItem(LAYOUT_KEY, JSON.stringify(v));
   } catch {

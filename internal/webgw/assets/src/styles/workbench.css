@@ -303,7 +303,7 @@
 }
 .wb { display: flex; min-height: 0; min-width: 0; }
 .wb-center { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.wb-editor { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: var(--wb-editor-bg); }
+.wb-editor { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--wb-editor-bg); }
 .ed-groups { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: row; }
 .ed-groups.split-down { flex-direction: column; }
 .ed-group { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
@@ -452,11 +452,16 @@ html.is-resizing-y, html.is-resizing-y * { cursor: ns-resize !important; user-se
 .layout-desktop .chat-list-btn, .layout-desktop .chat-new, .layout-desktop .chat-follow { color: var(--wb-side-fg); }
 
 /* ---- Editor: tabs ---- */
+/* The tab bar: the tabs, then the active editor's actions at its end. */
+.ed-tabbar { display: flex; flex: none; height: 35px; background: var(--wb-tabs-bg); }
+.ed-actions { display: flex; flex: none; align-items: center; padding: 0 8px 0 4px; }
+.ed-actions:empty { display: none; }
+.ed-actions .view-actions { display: flex; align-items: center; gap: 2px; }
 .ed-tabs {
   display: flex;
-  flex: none;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 35px;
-  background: var(--wb-tabs-bg);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
@@ -499,8 +504,6 @@ html.is-resizing-y, html.is-resizing-y * { cursor: ns-resize !important; user-se
 .ed-tab.is-dirty .ed-tab-x .cod-close { opacity: 0; }
 .ed-tab.is-dirty:hover .ed-tab-x .cod-circle-filled { display: none; }
 .ed-tab.is-dirty:hover .ed-tab-x .cod-close { opacity: 1; }
-.wb-side-show { position: absolute; top: 6px; inset-inline-start: 6px; z-index: 2; }
-.wb-side-show ~ .ed-groups > .ed-group:first-child > .ed-tabs { padding-inline-start: 34px; }
 
 /* ---- Editor: the file (breadcrumbs, rows, gutter) ---- */
 .wb-editor .view-head {
@@ -579,6 +582,14 @@ kbd {
   border-top: 1px solid var(--wb-panel-border);
 }
 .wb-panel-head { display: flex; align-items: center; padding-inline-start: var(--s2); }
+.wb-panel-view-actions { margin-inline-start: auto; display: flex; align-items: center; }
+.wb-panel-view-actions:not(:empty) + .wb-panel-actions { margin-inline-start: 2px; }
+.wb-panel-actions { margin-inline-start: auto; display: flex; align-items: center; gap: 2px; padding-inline-end: 8px; }
+/* The panel right of the editor, or filling the editor area. */
+.wb.is-panel-right .wb-center { flex-direction: row; }
+.wb.is-panel-right .wb-panel { width: var(--panel-w); max-width: calc(100% - 220px); height: auto; border-top: 0; border-inline-start: 1px solid var(--wb-panel-border); }
+.wb.is-panel-max .wb-editor, .wb.is-panel-max .wb-center > .sash { display: none; }
+.wb.is-panel-max .wb-panel { flex: 1 1 auto; width: auto; height: auto; border-top: 0; border-inline-start: 0; }
 .wb-panel-title {
   display: inline-flex;
   align-items: center;
@@ -589,7 +600,7 @@ kbd {
   line-height: 27px;
 }
 .wb-panel .view { min-height: 0; }
-.wb-panel .view-head { position: absolute; top: 6px; inset-inline-end: 34px; z-index: 4; height: 22px; min-height: 22px; padding: 0; border: 0; background: transparent; }
+.wb-panel .view-head { position: absolute; top: 6px; inset-inline-end: 84px; z-index: 4; height: 22px; min-height: 22px; padding: 0; border: 0; background: transparent; }
 .wb-panel .view-head .view-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .wb-panel .view-actions { gap: 2px; }
 .wb-panel .head-btn, .wb-panel .view-actions .btn { min-width: 22px; width: 22px; padding: 0; }
@@ -850,7 +861,6 @@ kbd {
 .layout-desktop .statusbar .star { display: none; }
 
 /* ---- Panel header: tabs on the left, actions on the right ---- */
-.wb-panel-actions { margin-inline-start: auto; display: flex; gap: 2px; }
 .wb-panel-actions .tb { color: var(--wb-panel-title); }
 .wb-panel .term-chips { inset-inline-end: 110px; }
 .wb-panel .view-head { inset-inline-end: 40px; }
@@ -946,7 +956,6 @@ kbd {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.wb-panel-head .wb-panel-actions { margin-inline-start: auto; }
 
 .sev { display: inline-flex; flex: none; }
 .sev-1 { color: #f14c4c; }

@@ -29,6 +29,7 @@ import { AskLaptop } from "../ui/AskLaptop";
 import { Button } from "../ui/Button";
 import { errText } from "../ui/CardSheet";
 import { Cod } from "../ui/icons";
+import { Portal } from "../ui/Portal";
 import { Sheet } from "../ui/Sheet";
 import { SkeletonRows } from "../ui/Skeleton";
 import { RowMenu, type MenuItem } from "../ui/RowMenu";
@@ -481,6 +482,7 @@ export function DeskTerm() {
 
   return (
     <section class="view dterm" data-view="term" aria-label={t("tab.term")}>
+      <Portal into="panel-view-actions">
       <div class="dterm-actions" role="toolbar" aria-label={t("tab.term")}>
         {ring && <span class="bell-dot" role="status" aria-label={t("term.bell")} />}
         {focus !== null && (
@@ -501,7 +503,9 @@ export function DeskTerm() {
             </button>
           </>
         )}
+        {!controller && st?.data !== undefined && <span class="chip dterm-viewonly">{t("viewonly")}</span>}
       </div>
+      </Portal>
       {!st?.data ? (
         <SkeletonRows rows={6} />
       ) : terms.length === 0 ? (
@@ -523,7 +527,6 @@ export function DeskTerm() {
           {(terms.length > 1 || shown.length > 1) && <List terms={terms} shown={shown} focus={focus} onKill={setKill} />}
         </div>
       )}
-      {!controller && st?.data !== undefined && <span class="chip dterm-viewonly">{t("viewonly")}</span>}
       {about && focus !== null && (
         <About
           buf={focus}

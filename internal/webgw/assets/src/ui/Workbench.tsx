@@ -22,7 +22,9 @@ import {
   laptopBufs,
   MAX_GROUPS,
   moveTab,
+  PANE_DEFAULTS,
   PANEL_MIN,
+  PANEL_W_MIN,
   panes,
   quick,
   setPanes,
@@ -48,7 +50,7 @@ import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
 import { asking, closeActive, cycleTab, focusSecond } from "../lib/commands";
 import { AskLaptop } from "./AskLaptop";
-import { ContextMenu, onMenu, type MenuItems } from "./ContextMenu";
+import { ContextMenu, onMenu, openMenu, type MenuItems } from "./ContextMenu";
 import { absPath, copyText } from "../lib/clip";
 import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, activityOf, sideActivity, type Activity } from "./ActivityBar";
@@ -66,7 +68,7 @@ import { StatusBar } from "./StatusBar";
 /** Sash is a drag handle between two panes. It reports the new size from
  * the size at the start plus the pointer's move (dir -1: the pane is on
  * the other side of the handle). */
-function Sash({ axis, size, min, max, dir, label, onSize }: { axis: "x" | "y"; size: number; min: number; max: number; dir: 1 | -1; label: string; onSize: (n: number) => void }) {
+function Sash({ axis, size, min, max, dir, label, def, onSize }: { axis: "x" | "y"; size: number; min: number; max: number; dir: 1 | -1; label: string; def: number; onSize: (n: number) => void }) {
   const start = useRef<{ at: number; size: number } | null>(null);
   const clamp = (n: number) => Math.round(Math.min(max, Math.max(min, n)));
   return (
@@ -94,6 +96,7 @@ function Sash({ axis, size, min, max, dir, label, onSize }: { axis: "x" | "y"; s
         start.current = null;
         document.documentElement.classList.remove("is-resizing-x", "is-resizing-y");
       }}
+      onDblClick={() => onSize(clamp(def))}
       onKeyDown={(e) => {
         const step = e.shiftKey ? 48 : 16;
         const grow = axis === "x" ? (e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0) : e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0;
@@ -139,6 +142,7 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
   };
   if (tabs.length === 0) return null;
   return (
+    <div class="ed-tabbar">
     <div class="ed-tabs" role="tablist" aria-label={t("wb.tabs")} data-group={group} onDragOver={(e) => over(e, tabs.length)} onDrop={(e) => land(e, tabs.length)}>
       {tabs.map((path, i) => {
         const b = bufs.find((x) => x.path === path);
@@ -192,6 +196,8 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
           </div>
         );
       })}
+    </div>
+      <div class="ed-actions" id={"ed-actions-" + slotOf(group)} />
     </div>
   );
 }
@@ -315,12 +321,45 @@ function PanelTabs() {
   );
 }
 
+/** panelMenu: where the panel sits and its size (the head's … and right click). */
+function panelMenu(): MenuItems {
+  const p = panes.peek();
+  return [
+    p.panelPos === "right"
+      ? { label: t("wb.panel_down"), run: () => setPanes({ panelPos: "bottom" }) }
+      : { label: t("wb.panel_right"), run: () => setPanes({ panelPos: "right" }) },
+    { label: t(p.panelMax ? "wb.panel_restore" : "wb.panel_max"), run: () => setPanes({ panelMax: !p.panelMax }) },
+    null,
+    { label: t("wb.panel_hide"), keys: `${modKey()}+J`, run: () => setPanes({ panel: false }) },
+  ];
+}
+
 function PanelHead({ children }: { children: ComponentChildren }) {
+  const p = panes.value;
+  const max = p.panelMax;
+  const right = p.panelPos === "right";
   return (
-    <div class="wb-panel-head">
+    <div class="wb-panel-head" onContextMenu={onMenu(t("wb.panel_more"), panelMenu)}>
       {children}
+      <span class="wb-panel-view-actions" id="panel-view-actions" />
       <span class="wb-panel-actions">
-        <button type="button" class="tb tb-icon" aria-label={t("wb.panel_hide")} title={`${t("wb.panel_hide")} (${modKey()}+J)`} onClick={() => setPanes({ panel: false })}>
+        <button
+          type="button"
+          class="tb tb-icon"
+          data-act="panel-more"
+          aria-label={t("wb.panel_more")}
+          title={t("wb.panel_more")}
+          onClick={(e) => {
+            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            openMenu(r.left, r.bottom, t("wb.panel_more"), panelMenu());
+          }}
+        >
+          <Cod name="ellipsis" />
+        </button>
+        <button type="button" class="tb tb-icon" data-act="panel-max" aria-pressed={max ? "true" : "false"} aria-label={t(max ? "wb.panel_restore" : "wb.panel_max")} title={t(max ? "wb.panel_restore" : "wb.panel_max")} onClick={() => setPanes({ panelMax: !max })}>
+          <Cod name={right ? (max ? "chevron-right" : "chevron-left") : max ? "chevron-down" : "chevron-up"} />
+        </button>
+        <button type="button" class="tb tb-icon" data-act="panel-hide" aria-label={t("wb.panel_hide")} title={`${t("wb.panel_hide")} (${modKey()}+J)`} onClick={() => setPanes({ panel: false })}>
           <Cod name="close" />
         </button>
       </span>
@@ -433,21 +472,19 @@ export function Workbench() {
   if (routeSide && routeSide !== lastSide.peek()) lastSide.value = routeSide;
   const side = routeSide ?? lastSide.peek();
   return (
-    <div class="wb" style={{ "--side-w": p.sideW + "px", "--panel-h": p.panelH + "px", "--chat-w": p.chatW + "px" }}>
+    <div
+      class={`wb${p.panel && p.panelMax ? " is-panel-max" : ""}${p.panelPos === "right" ? " is-panel-right" : ""}`}
+      style={{ "--side-w": p.sideW + "px", "--panel-h": p.panelH + "px", "--panel-w": p.panelW + "px", "--chat-w": p.chatW + "px" }}
+    >
       <ActivityBar />
       {p.side && (
         <aside class="wb-side" data-side={side} aria-label={t(sideLabel(side))}>
           <SideView id={side} />
         </aside>
       )}
-      {p.side && <Sash axis="x" size={p.sideW} min={SIDE_MIN} max={SIDE_MAX} dir={1} label={t("wb.resize_side")} onSize={(n) => setPanes({ sideW: n })} />}
+      {p.side && <Sash axis="x" size={p.sideW} min={SIDE_MIN} max={SIDE_MAX} dir={1} label={t("wb.resize_side")} def={PANE_DEFAULTS.sideW} onSize={(n) => setPanes({ sideW: n })} />}
       <div class="wb-center">
         <div class="wb-editor">
-          {!p.side && (
-            <button type="button" class="tb tb-icon wb-side-show" aria-label={t("wb.side_show")} title={`${t("wb.side_show")} (${modKey()}+B)`} onClick={() => setPanes({ side: true })}>
-              <Cod name="layout-sidebar-left" />
-            </button>
-          )}
           {quick.value && <QuickInput key={quick.value.mode} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
           <ContextMenu />
@@ -472,7 +509,11 @@ export function Workbench() {
         </div>
         {p.panel && (
           <>
-            <Sash axis="y" size={p.panelH} min={PANEL_MIN} max={Math.max(PANEL_MIN, innerHeight - 200)} dir={-1} label={t("wb.resize_panel")} onSize={(n) => setPanes({ panelH: n })} />
+            {p.panelPos === "right" ? (
+              <Sash axis="x" size={p.panelW} min={PANEL_W_MIN} max={Math.max(PANEL_W_MIN, innerWidth - 600)} dir={-1} label={t("wb.resize_panel")} def={PANE_DEFAULTS.panelW} onSize={(n) => setPanes({ panelW: n })} />
+            ) : (
+              <Sash axis="y" size={p.panelH} min={PANEL_MIN} max={Math.max(PANEL_MIN, innerHeight - 200)} dir={-1} label={t("wb.resize_panel")} def={PANE_DEFAULTS.panelH} onSize={(n) => setPanes({ panelH: n })} />
+            )}
             <section class="wb-panel" aria-label={t(panelTab.value === "problems" ? "wb.problems" : "tab.term")}>
               <PanelHead>
                 <PanelTabs />
@@ -484,7 +525,7 @@ export function Workbench() {
       </div>
       {p.chat && (
         <>
-          <Sash axis="x" size={p.chatW} min={CHAT_MIN} max={CHAT_MAX} dir={-1} label={t("wb.resize_chat")} onSize={(n) => setPanes({ chatW: n })} />
+          <Sash axis="x" size={p.chatW} min={CHAT_MIN} max={CHAT_MAX} dir={-1} label={t("wb.resize_chat")} def={PANE_DEFAULTS.chatW} onSize={(n) => setPanes({ chatW: n })} />
           <aside class={`chatcol${r.tab === "chat" ? " is-focus" : ""}`} aria-label={t("tab.chat")}>
             <ChatView />
           </aside>

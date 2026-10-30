@@ -21,15 +21,25 @@ export interface Panes {
   /** chat: the chat column shows; chatW is its width in px. */
   chat: boolean;
   chatW: number;
+  /** panelMax: the panel fills the editor area (the editor hides). */
+  panelMax: boolean;
+  /** panelPos: the panel sits under the editor or right of it (panelW wide). */
+  panelPos: PanelPos;
+  panelW: number;
 }
+
+export type PanelPos = "bottom" | "right";
 
 export const SIDE_MIN = 180;
 export const SIDE_MAX = 560;
 export const PANEL_MIN = 120;
 export const CHAT_MIN = 300;
 export const CHAT_MAX = 720;
+export const PANEL_W_MIN = 220;
 
-const DEFAULTS: Panes = { side: true, sideW: 264, panel: false, panelH: 260, chat: true, chatW: 400 };
+/** PANE_DEFAULTS: the sizes a double click on a sash goes back to. */
+export const PANE_DEFAULTS: Panes = { side: true, sideW: 264, panel: false, panelH: 260, chat: true, chatW: 400, panelMax: false, panelPos: "bottom", panelW: 480 };
+const DEFAULTS = PANE_DEFAULTS;
 
 function num(v: unknown, lo: number, hi: number, def: number): number {
   return typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : def;
@@ -46,6 +56,9 @@ export function readPanes(raw: unknown): Panes {
     panelH: num(v.panelH, PANEL_MIN, 2000, DEFAULTS.panelH),
     chat: v.chat !== false,
     chatW: num(v.chatW, CHAT_MIN, CHAT_MAX, DEFAULTS.chatW),
+    panelMax: v.panelMax === true,
+    panelPos: v.panelPos === "right" ? "right" : "bottom",
+    panelW: num(v.panelW, PANEL_W_MIN, 2000, DEFAULTS.panelW),
   };
 }
 

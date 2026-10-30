@@ -157,16 +157,7 @@ func TestShots(t *testing.T) {
 				shotHub(t, c)
 				shot := func(name, hash, ready string) {
 					Eval[bool](p, `(location.hash = `+jsq(hash)+`, true)`)
-					p.WaitJS(ready + ` && document.fonts.status === "loaded"`)
-					ctx, cancel := context.WithTimeout(p.Ctx, 10*time.Second)
-					defer cancel()
-					png, err := chromedp.Run(ctx, chromedp.CaptureScreenshot())
-					if err != nil {
-						t.Fatal(err)
-					}
-					if err := os.WriteFile(filepath.Join(dir, vp.Name+"-"+scheme+"-"+name+".png"), png, 0o644); err != nil {
-						t.Fatal(err)
-					}
+					snap(t, p, filepath.Join(dir, vp.Name+"-"+scheme+"-"+name+".png"), ready)
 				}
 				fileReady := `document.querySelector('.crow .hl-k')`
 				if !vp.Mobile {
@@ -183,4 +174,65 @@ func TestShots(t *testing.T) {
 			})
 		}
 	}
+}
+
+// snap waits for ready (and the fonts) and writes a screenshot to file.
+func snap(t *testing.T, p *Page, file, ready string) {
+	t.Helper()
+	p.WaitJS(ready + ` && document.fonts.status === "loaded"`)
+	ctx, cancel := context.WithTimeout(p.Ctx, 10*time.Second)
+	defer cancel()
+	png, err := chromedp.Run(ctx, chromedp.CaptureScreenshot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, png, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The workbench's layout at the common laptop screen sizes, in its
+// states: the panel shown, maximized and on the right, the side bar
+// hidden (WEB_SHOTS_DIR as TestShots).
+func TestLayoutShots(t *testing.T) {
+	dir := os.Getenv(shotsEnv)
+	if dir == "" {
+		t.Skip("set " + shotsEnv + " to write screenshots")
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, vp := range []Viewport{{Name: "1280", W: 1280, H: 800, Scale: 1}, {Name: "1440", W: 1440, H: 900, Scale: 1}, {Name: "1920", W: 1920, H: 1080, Scale: 1}} {
+		t.Run(vp.Name, func(t *testing.T) {
+			s := StartServer(t)
+			p := NewPage(t, s, vp)
+			p.Media(map[string]string{"prefers-reduced-motion": "reduce", "prefers-color-scheme": "dark"})
+			c := p.Login("c-shot")
+			shotHub(t, c)
+			name := func(n string) string { return filepath.Join(dir, "layout-"+vp.Name+"-"+n+".png") }
+			fileReady := `document.querySelector(".desk-editor")?.contentDocument?.querySelector(".view-line .hl-k")`
+			Eval[bool](p, `(location.hash = "#/files/cmd/covreport/filter.go", true)`)
+			snap(t, p, name("editor"), fileReady)
+			Eval[bool](p, `(location.hash = "#/term", true)`)
+			snap(t, p, name("panel"), fileReady+` && document.querySelector(".wb-panel .trow")`)
+			layoutKey(p, "b")
+			snap(t, p, name("noside"), `!document.querySelector(".wb-side")`)
+			layoutKey(p, "b")
+			p.TapJS(`document.querySelector('.wb-panel [data-act="panel-max"]')`)
+			snap(t, p, name("panelmax"), `document.querySelector(".wb.is-panel-max")`)
+			p.TapJS(`document.querySelector('.wb-panel [data-act="panel-max"]')`)
+			p.TapJS(`document.querySelector('.wb-panel [data-act="panel-more"]')`)
+			p.TapJS(`[...document.querySelectorAll(".ctx-menu button, [role=menuitem]")].find((b) => b.textContent.includes("Move Panel Right"))`)
+			snap(t, p, name("panelright"), `document.querySelector(".wb.is-panel-right")`)
+			Eval[bool](p, `(location.hash = "#/git/cmd/covreport/filter.go", true)`)
+			diffDoc := `document.querySelector('[data-view="diff"] .desk-editor')?.contentDocument`
+			snap(t, p, name("diff"), diffDoc+`?.querySelector(".editor.modified .char-insert")`)
+		})
+	}
+}
+
+// layoutKey presses Ctrl/Cmd and k on the page.
+func layoutKey(p *Page, k string) {
+	p.T.Helper()
+	Eval[bool](p, `(dispatchEvent(new KeyboardEvent("keydown", { key: `+jsq(k)+`, ctrlKey: true, bubbles: true })), true)`)
 }
