@@ -6,6 +6,7 @@
 import { signal } from "@preact/signals";
 import { OfflineError, ReqError } from "../net/link";
 import { link } from "../session";
+import { has } from "../state/dict";
 import { under } from "../state/files";
 import { t } from "../strings";
 import { toast } from "./toasts";
@@ -111,7 +112,7 @@ export function reconcile(dirs: Readonly<Record<string, unknown>>, stale: boolea
     tries.clear();
   }
   for (const p of ["", ...expanded.peek()]) {
-    if (p in dirs) {
+    if (has(dirs, p)) {
       seen.add(p);
       asked.delete(p);
       continue;

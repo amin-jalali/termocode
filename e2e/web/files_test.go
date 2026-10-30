@@ -225,3 +225,35 @@ func TestFilesTreeListsAgainAfterReconnect(t *testing.T) {
 		t.Errorf("listed again %v, want the root and src", got)
 	}
 }
+
+// Names are data, never object keys (T49): folders named __proto__,
+// constructor and prototype list, open and close like any other folder,
+// and no listing leaks into the prototype of every object on the page.
+func TestFilesTreeNamesThatLookLikeObjectKeys(t *testing.T) {
+	p, c := openFiles(t, Phone)
+	c.Send(t, Snap("tree", 1, treeSnap(false)))
+	expectList(t, c, "tree.list", "")
+	names := []string{"__proto__", "constructor", "prototype", "hasOwnProperty", "toString"}
+	var root []map[string]any
+	for _, n := range names {
+		root = append(root, entry(n, true))
+	}
+	c.Send(t, Delta("tree", 2, dirDelta("", false, root...)))
+	seq := uint64(3)
+	for _, n := range names {
+		p.WaitJS(treeRow(n))
+		p.TapJS(treeRow(n))
+		expectList(t, c, "tree.list", n)
+		c.Send(t, Delta("tree", seq, dirDelta(n, false, entry("in-"+n+".txt", false))))
+		seq++
+		p.WaitJS(treeRow(n+"/in-"+n+".txt") + `?.classList.contains("depth-1")`)
+	}
+	if got := Eval[string](p, `(() => { const o = {}; return [o.entries, o.truncated, Object.getPrototypeOf(o) === Object.prototype, Object.keys(Object.prototype).length].join(",") })()`); got != ",,true,0" {
+		t.Errorf("Object.prototype was changed: %s", got)
+	}
+	p.TapJS(treeRow("constructor"))
+	expectList(t, c, "tree.unlist", "constructor")
+	p.WaitJS(`!` + treeRow("constructor/in-constructor.txt"))
+	c.Send(t, Delta("tree", seq, map[string]any{"kind": "remove", "path": "__proto__"}))
+	p.WaitJS(treeRow("__proto__") + `.getAttribute("aria-expanded") === "false"`)
+}
