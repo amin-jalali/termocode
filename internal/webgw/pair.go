@@ -217,7 +217,7 @@ func (p *Pairing) start(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = p.cfg.Audit.Log(Event{Kind: EvPairStart, Device: pp.name, Summary: tailnetUser(r)})
 	crash.Go("web gateway: a pairing card", func() { p.ask(pp) })
-	writeJSON(w, http.StatusOK, map[string]any{"pair_id": pp.id, "code": pp.code,
+	writeJSON(w, http.StatusOK, map[string]any{"pair_id": pp.id, "code": pp.code, "guest": pp.guest,
 		"ttl_s": int(pp.until.Sub(now) / time.Second)})
 }
 
