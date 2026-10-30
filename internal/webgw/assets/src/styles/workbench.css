@@ -870,6 +870,7 @@ kbd {
 .wb-side .commit-box .btn { min-height: 26px; height: 26px; border-radius: 2px; background: var(--wb-button-bg); color: var(--wb-button-fg); border: 0; font-size: var(--fs-ui); font-weight: 400; }
 .wb-side .commit-box .btn:hover { background: var(--wb-button-hover); }
 .wb-side .git-group .group-title { height: 22px; padding: 0 8px 0 20px; }
+.wb-side .git-group .group-title .git-n { margin-inline-start: 4px; }
 .wb-side .git-row { min-height: 22px; background: transparent; }
 .wb-side .git-open { min-height: 22px; gap: 6px; padding: 0 8px 0 20px; }
 .wb-side .git-open:hover { background: var(--wb-list-hover); }
