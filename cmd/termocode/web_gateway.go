@@ -63,8 +63,9 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	viewers := fs.Int("viewers", webgw.DefaultMaxViewers, "browsers at once")
 	port := fs.Int("port", 0, "port (0: random)")
 	sshPort := fs.Int("ssh-port", 0, "SSH mode: serve on the folder's unix socket for this forwarded port")
+	tailnet := fs.Bool("tailnet", false, "tailnet mode: tailscale serve in front of 127.0.0.1")
 	if err := fs.Parse(args); err != nil || *dir == "" || *audit == "" || fs.NArg() != 0 ||
-		(*sshPort != 0 && (*port != 0 || *sshPort < 1024 || *sshPort > 65535)) {
+		(*sshPort != 0 && (*port != 0 || *sshPort < 1024 || *sshPort > 65535 || *tailnet)) {
 		fmt.Fprintln(errw, "termocode: the web gateway is started by termocode itself")
 		return webgw.RunConfig{}, false
 	}
@@ -84,6 +85,9 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	}
 	if *sshPort != 0 {
 		cfg.UnixPath, cfg.PortHint = paths.WebHTTPSocket, *sshPort
+	}
+	if *tailnet {
+		cfg.Tailnet = &webgw.TailnetConfig{}
 	}
 	return cfg, true
 }
