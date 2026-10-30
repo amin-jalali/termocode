@@ -131,3 +131,32 @@ func TestDBOps(t *testing.T) {
 		t.Error("a negative page accepted")
 	}
 }
+
+// Spec (WEB-49): transfers are controller ops; replacing a file with an
+// upload waits for the laptop; a chunk is valid base64 of at most
+// TransferChunk bytes (decoded on the wire, before the hub); sizes and
+// offsets stay under MaxTransfer; an upload id is short hex.
+func TestTransferOps(t *testing.T) {
+	for _, op := range []string{OpFileDownload, OpFileUploadBegin, OpFileUploadChunk, OpFileUploadSave, OpFileUploadReplace, OpFileUploadCancel} {
+		p, _ := Lookup(op)
+		if p.Role != RoleController || p.LaptopCard != (op == OpFileUploadReplace) {
+			t.Errorf("%s: %+v", op, p)
+		}
+	}
+	a, err := DecodeArgs(OpFileUploadChunk, []byte(`{"id":"0a1b","off":0,"data":"aGVsbG8="}`))
+	if err != nil || string(a.(*UploadChunkArgs).Bytes()) != "hello" {
+		t.Fatalf("chunk %v %v", a, err)
+	}
+	big := strings.Repeat("A", (TransferChunk+3)/3*4+4)
+	for _, bad := range []string{`{"id":"0a1b","off":0,"data":"!!"}`, `{"id":"0a1b","off":0,"data":""}`, `{"id":"XYZ","off":0,"data":"aGk="}`,
+		`{"id":"0a1b","off":-1,"data":"aGk="}`, `{"id":"0a1b","off":0,"data":"` + big + `"}`} {
+		if _, err := DecodeArgs(OpFileUploadChunk, []byte(bad)); err == nil {
+			t.Errorf("%.80s accepted", bad)
+		}
+	}
+	for _, bad := range []string{`{"path":"a/","size":1}`, `{"path":"x","size":-1}`, `{"path":"x","size":268435457}`, `{"path":"../x","size":1}`} {
+		if _, err := DecodeArgs(OpFileUploadBegin, []byte(bad)); err == nil {
+			t.Errorf("%s accepted", bad)
+		}
+	}
+}
