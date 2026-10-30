@@ -1931,6 +1931,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.revealDatabasesView(true)
 	case keymap.ActionToggleAutoSave:
 		return m, m.toggleAutoSave()
+	case keymap.ActionWebStop: // web_panel.go: the kill switch
+		return m, m.stopWebPanel()
 	case keymap.ActionNextHunk:
 		return m, m.gotoNextHunk()
 	case keymap.ActionPrevHunk:

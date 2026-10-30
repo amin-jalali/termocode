@@ -234,16 +234,20 @@ func TestWebSecretNeverInArgvOrEnv(t *testing.T) {
 }
 
 // Spec (T52): `termocode web` without --yes never starts the panel by
-// itself; with --yes it does and gets the port.
+// itself (the laptop's card decides); with --yes it does and gets the
+// port; web.stop stops it.
 func TestWebCLIOpenNeedsTheLaptop(t *testing.T) {
 	r := newWebPanelRig(t)
 	ctl := r.dial(`{"t":"ctl"}`)
 	ctl.send(`{"t":"req","id":1,"op":"web.open"}`)
-	if m := r.nextMsg(ctl); m["t"] != "err" || m["code"] != "forbidden" {
-		t.Fatalf("got %v", m)
-	}
+	r.pumpUntil("the start card", func() bool { return r.m.confirmOpen })
 	if r.m.webPanel != nil {
 		t.Fatal("the panel started without the laptop")
+	}
+	r.m.confirmOpen = false
+	r.m.answerWebStart("") // Esc
+	if m := r.nextMsg(ctl); m["t"] != "err" || m["code"] != "forbidden" {
+		t.Fatalf("got %v", m)
 	}
 	ctl.send(`{"t":"req","id":2,"op":"web.open","args":{"yes":true}}`)
 	var res map[string]any
