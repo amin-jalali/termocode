@@ -25,6 +25,8 @@ func CSP(site Site) string {
 		"connect-src " + strings.Join(connect, " "),
 		"img-src 'self' data: blob:",
 		"font-src 'self'",
+		// The desktop editor runs in a frame of this site (FrameCSP).
+		"frame-src 'self'",
 	}
 	if site.Installable() {
 		parts = append(parts, "manifest-src 'self'")
@@ -36,6 +38,35 @@ func CSP(site Site) string {
 		"require-trusted-types-for 'script'",
 		"trusted-types 'none'",
 	), "; ")
+}
+
+// FramePath is the desktop editor's frame (cmd/webbuild's monaco.html).
+const FramePath = "/assets/monaco.html"
+
+// FrameCSP is the policy of the desktop editor's frame. The vendored
+// editor writes its own style rules and builds its rows as HTML, so the
+// frame allows inline styles and names the editor's Trusted Types
+// policies. Everything else stays shut: only this site's scripts (with
+// their SRI hashes), no network at all (the frame never holds the link
+// or a token; it talks to the page by messages only), fonts and images
+// from data: URLs (the editor's icon font), and only this site may frame
+// it. The page itself keeps CSP.
+func FrameCSP() string {
+	return strings.Join([]string{
+		"default-src 'none'",
+		"script-src 'self'",
+		"style-src 'self' 'unsafe-inline'",
+		"font-src data:",
+		"img-src data:",
+		"connect-src 'none'",
+		"worker-src 'none'",
+		"frame-src 'none'",
+		"frame-ancestors 'self'",
+		"base-uri 'none'",
+		"form-action 'none'",
+		"require-trusted-types-for 'script'",
+		"trusted-types editorViewLayer standaloneColorizer tokenizeToString domLineBreaksComputer richScreenReaderContent diffReview diffEditorWidget defaultWorkerFactory dompurify 'allow-duplicates'",
+	}, "; ")
 }
 
 // setSecurityHeaders writes the fixed security headers every response

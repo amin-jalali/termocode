@@ -30,7 +30,7 @@ func hlRes(id uint64, tick int, first, last int, spans ...[]int) *webproto.Res {
 }
 
 func TestFileSyntaxColours(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openFiles(t, vp)
 			openBuf(t, p, c, 2, "a.lua", `local s = "hi"`, "-- note", "return s")
@@ -106,7 +106,7 @@ func noPaint(t *testing.T, c *HubConn, op string, d time.Duration) {
 // Code is painted in the laptop theme's own syntax colours (Syntax*), as
 // the TUI's editor paints it: control words apart from other keywords.
 func TestFileSyntaxUsesThemeSyntaxColours(t *testing.T) {
-	p, c := openFiles(t, Desktop)
+	p, c := openFiles(t, Tablet)
 	openBuf(t, p, c, 2, "a.go", "if x { return f(1) }")
 	r, _ := expectHl(t, c)
 	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"tick": 3, "first": 0, "last": 1,

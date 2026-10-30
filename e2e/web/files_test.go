@@ -23,7 +23,7 @@ func openFiles(t *testing.T, vp Viewport) (*Page, *HubConn) {
 	p := NewPage(t, s, vp)
 	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
 	c := p.Login("c-1")
-	if vp.Mobile {
+	if vp.W < 1200 { // the desktop shows the tree from the start
 		p.GoTab("files")
 		c.Subs(t, "tree", "bufs")
 	}

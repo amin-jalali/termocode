@@ -46,6 +46,9 @@ func run(dir string, check bool) error {
 			stale++
 			continue
 		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return err
+		}
 		if err := os.WriteFile(path, out[n], 0o644); err != nil {
 			return err
 		}

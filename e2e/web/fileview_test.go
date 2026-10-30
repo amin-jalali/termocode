@@ -46,7 +46,7 @@ func codeRow(i int) string {
 }
 
 func TestFileViewShowsLinesLive(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openFiles(t, vp)
 			openBuf(t, p, c, 2, "src/a.go", "package main", `// <script>window.__x=1</script>`, "s := \"سلام دنیا\" // greet", "func main() {}")
@@ -78,13 +78,8 @@ func TestFileViewShowsLinesLive(t *testing.T) {
 			c.Send(t, Delta("buf:2", 4, map[string]any{"kind": "gone"}))
 			p.WaitJS(filesView + `.querySelector(".file-note")?.innerText.includes("This file was closed on the laptop.")`)
 
-			// Back to the tree (the phone's back button, the desktop's tab
-			// close): the page stops following and drops its reference.
-			if vp.Mobile {
-				p.TapJS(filesView + `.querySelector(".head-back")`)
-			} else {
-				p.TapJS(`document.querySelector(".ed-tab.is-on .ed-tab-x")`)
-			}
+			// Back to the tree: the page stops following and drops its reference.
+			p.TapJS(filesView + `.querySelector(".head-back")`)
 			var unsub, closed bool
 			for !unsub || !closed {
 				switch m := c.Next(t).(type) {
@@ -133,7 +128,7 @@ func TestFileViewBigBinarySecret(t *testing.T) {
 // A long file draws only the rows near the screen; scrolling to the end
 // draws the last line and a line chip tells where the reader is.
 func TestFileViewVirtualizesLongFiles(t *testing.T) {
-	p, c := openFiles(t, Desktop)
+	p, c := openFiles(t, Tablet)
 	lines := make([]string, 5000)
 	for i := range lines {
 		lines[i] = fmt.Sprintf("line %d of the long file", i+1)
@@ -150,7 +145,7 @@ func TestFileViewVirtualizesLongFiles(t *testing.T) {
 // A tab is as wide as the laptop's editor draws it (the buffer's
 // tabstop), and every level of indent is the same width.
 func TestFileViewTabsUseTheBufferTabstop(t *testing.T) {
-	p, c := openFiles(t, Desktop)
+	p, c := openFiles(t, Tablet)
 	r := goFile(t, p, c, "t.go")
 	lines := []string{"x", "\tx", "\t\tx", "\t\t\tx"}
 	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"buf": 2, "path": "t.go", "tick": 3, "lines": len(lines), "dirty": false, "ft": "go", "readonly": false})})

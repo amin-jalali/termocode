@@ -41,3 +41,29 @@ func TestPerfGuardBundleSize(t *testing.T) {
 		}
 	}
 }
+
+// budgetDesktopEditor is the desktop editor's frame (the workbench), gzipped.
+// It loads only on a desktop (1200 px and wider), the first time a file
+// opens there; a phone never loads it. About 0.9 MiB today.
+const budgetDesktopEditor = 1100 << 10
+
+func TestPerfGuardDesktopEditorSize(t *testing.T) {
+	total := 0
+	for _, name := range []string{"monaco.html", "monaco-amd.js", "monaco-frame.js", "monaco-frame.css", "monaco/editor.js", "monaco/editor-host.js", "monaco/editor.css"} {
+		total += gzSize(t, name)
+	}
+	t.Logf("desktop editor gzipped: %d B", total)
+	if total > budgetDesktopEditor {
+		t.Errorf("the desktop editor is %d B gzipped, budget %d B", total, budgetDesktopEditor)
+	}
+	// The phone's page never names it: only the workbench frames it.
+	for _, name := range []string{"app.js", "index.html"} {
+		b, err := fs.ReadFile(FS(), name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if bytes.Contains(b, []byte("monaco/editor.js")) {
+			t.Errorf("%s loads the desktop editor itself", name)
+		}
+	}
+}

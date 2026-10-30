@@ -50,7 +50,9 @@ var sourceRules = []rule{
 	// No service worker, ever (WEB-35): no code of the page may outlive it
 	// in the browser, so an old or poisoned copy can never run.
 	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`)},
-	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`)},
+	// Messages only between the page and the desktop editor's frame, both
+	// sides checking the other's origin and window (monaco/protocol.ts).
+	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`), allow: map[string]bool{"lib/deskeditor.ts": true, "monaco/frame.ts": true}},
 	// Names from the hub or the URL (folders, topics, query keys) are never
 	// keys of a plain object: "__proto__" would swap its prototype and
 	// "constructor" would read Object's. Tables built from data are a Map
@@ -172,6 +174,14 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			t.Fatal(err)
 		}
 		text := namespaceURL.ReplaceAllString(string(b), "")
+		if strings.HasPrefix(e.Path, "monaco/") {
+			// The vendored desktop editor, byte for byte (vendor.json). Its
+			// help texts name web pages and its worker starter (a text it
+			// never runs here) imports a script; its frame's policy
+			// (webgw.FrameCSP) has no network and no workers, so neither can
+			// load anything. The other rules hold for it too.
+			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
+		}
 		if e.Path == "app.js" { // its one dynamic import: the editor file, a fixed path
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
 		}

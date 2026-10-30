@@ -43,7 +43,7 @@ func longPress(p *Page, el string) {
 }
 
 func TestFileEditSheetSetText(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openFiles(t, vp)
 			openBuf(t, p, c, 2, "notes.txt", "alpha", "beta", "gamma é")
@@ -132,7 +132,7 @@ func TestFileEditConflictKeepsText(t *testing.T) {
 
 // A failed save shows the editor's own words under the header, with Try again.
 func TestFileSaveShowsEditorError(t *testing.T) {
-	p, c := openFiles(t, Desktop)
+	p, c := openFiles(t, Tablet)
 	openBuf(t, p, c, 2, "notes.txt", "alpha")
 	c.Send(t, Delta("buf:2", 2, map[string]any{"kind": "dirty", "on": true}))
 	p.TapJS(`[...` + filesView + `.querySelectorAll(".view-actions .btn")].find((b) => b.textContent === "Save")`)

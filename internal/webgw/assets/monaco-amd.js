@@ -1,0 +1,2 @@
+/* termocode web UI. Includes  (MIT); see /assets/licenses.txt */
+var g=new Map;function c(t,s){if(!s.startsWith("./"))return s;let o=t.lastIndexOf("/");return(o<0?"":t.slice(0,o+1))+s.slice(2)}function e(t){let s=g.get(t);if(!s)throw new Error("editor frame: module "+t+" is not loaded");return s}function u(t,s,o){let i={},l=Object.assign(n=>e(c(t,n)),{toUrl:n=>n}),a=s.map(n=>n==="exports"?i:n==="require"?l:e(c(t,n))),r=o(...a);g.set(t,typeof r=="object"&&r!==null?r:i)}Object.assign(u,{amd:{}});Object.assign(globalThis,{define:u,termocodeModule:e});

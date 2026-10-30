@@ -666,3 +666,9 @@ kbd {
 /* ---- Chat in the side column ---- */
 .layout-desktop .chatcol .msg { font-size: var(--fs-ui); line-height: 1.5; }
 .layout-desktop .chatcol .msg-user .bubble { border-radius: 4px; background: var(--wb-input-bg); }
+
+/* ---- The desktop editor (a frame of its own) ---- */
+.wb-editor .view-body.is-editing { padding: 0; }
+.desk-host { position: relative; flex: 1 1 auto; min-height: 0; }
+.desk-editor { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--wb-editor-bg); }
+.wb-editor .live-conflict { background: var(--wb-side-bg); }

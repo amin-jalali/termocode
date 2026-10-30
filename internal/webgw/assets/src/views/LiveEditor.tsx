@@ -6,9 +6,10 @@
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { BufSnap } from "../../../../webproto/proto";
-import type { EditorHandle } from "../editor/api";
+import type { EditorHandle, EditorModule } from "../editor/api";
 import { startEdit } from "../lib/edit";
 import { hl, hlRows, wantHl } from "../lib/hl";
+import { mountDesk, type DeskHandle } from "../lib/deskeditor";
 import { loadEditor } from "../lib/lazy";
 import { editing, liveStatus, LiveSync, session } from "../lib/live";
 import { toast } from "../lib/toasts";
@@ -86,7 +87,15 @@ function Conflict({ base, laptop, sync }: { base: string; laptop: string; sync: 
   );
 }
 
-export function LiveEditor({ path, buf }: { path: string; buf: number }) {
+/** DeskOpts: the desktop's editor (lib/deskeditor.ts) and its settings. */
+export interface DeskOpts {
+  readOnly: boolean;
+  wrap: boolean;
+  tabSize: number;
+  insertSpaces: boolean;
+}
+
+export function LiveEditor({ path, buf, desk }: { path: string; buf: number; desk?: DeskOpts }) {
   const topic = "buf:" + buf;
   const ts = store.topic(topic).value;
   const snap = readBuf(ts?.data);
@@ -97,7 +106,11 @@ export function LiveEditor({ path, buf }: { path: string; buf: number }) {
   useEffect(() => {
     let dead = false;
     const peek = () => readBuf(store.topic(topic).peek()?.data);
-    loadEditor().then(
+    const d = desk;
+    const load: Promise<EditorModule> = d
+      ? Promise.resolve({ mount: (el, host) => mountDesk(el, { ...host, ...d, onDone: () => undefined }) })
+      : loadEditor();
+    load.then(
       (mod) => {
         const first = peek();
         if (dead || !host.current || !first) return;
@@ -141,6 +154,8 @@ export function LiveEditor({ path, buf }: { path: string; buf: number }) {
   useEffect(() => {
     if (snap) session.peek()?.store(snap, isGone(ts?.data));
   }, [snap, ready]);
+  // The desktop editor's settings follow the view.
+  useEffect(() => (ed.current as DeskHandle | null)?.opts?.({ wrap: desk?.wrap, readOnly: desk?.readOnly }), [desk?.wrap, desk?.readOnly, ready]);
   // Colours: rows whose text still matches.
   const h0 = hl.value;
   useEffect(() => ed.current?.setHl(hlRows(h0, buf)), [h0, ready]);
@@ -165,8 +180,8 @@ export function LiveEditor({ path, buf }: { path: string; buf: number }) {
           <span dir="auto">{t("live.not_sent", { msg: st.note ?? "" })}</span>
         </p>
       )}
-      {!ready && <div class="empty">{t("live.loading")}</div>}
-      <div ref={host} class="editor-host" />
+      {!ready && !desk && <div class="empty">{t("live.loading")}</div>}
+      <div ref={host} class={desk ? "editor-host desk-host" : "editor-host"} />
     </div>
   );
 }

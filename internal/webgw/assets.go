@@ -82,6 +82,8 @@ func Assets() http.Handler {
 			routes["/"] = asset{b, ctype}
 		case e.Path == "kit.html":
 			routes["/dev/kit"] = asset{b, ctype}
+		case "/assets/"+e.Path == FramePath:
+			routes[FramePath] = asset{b, ctype}
 		case strings.HasSuffix(e.Path, ".html"), e.Path == "manifest.webmanifest":
 			// No other pages; the manifest is Manifest()'s.
 		default:
@@ -98,6 +100,11 @@ func Assets() http.Handler {
 			w.Header().Set("Allow", http.MethodGet)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
+		}
+		if r.URL.Path == FramePath {
+			// The desktop editor's frame: its own policy, framed by the page only.
+			w.Header().Set("Content-Security-Policy", FrameCSP())
+			w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 		}
 		w.Header().Set("Content-Type", a.ctype)
 		_, _ = w.Write(a.body)
