@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -245,6 +247,69 @@ func TestRowFontButtons(t *testing.T) {
 			if !Eval[bool](p, `JSON.parse(localStorage.getItem("termocode.prefs.v1")).rowPx === 0`) {
 				t.Error("reset did not go back to the default size")
 			}
+		})
+	}
+}
+
+// stubCopy makes the page's clipboard writes land in window.__copied
+// (the test cannot read the real clipboard).
+func (p *Page) stubCopy() {
+	p.T.Helper()
+	Eval[bool](p, `(navigator.clipboard.writeText = (s) => { window.__copied = s; return Promise.resolve(); }, true)`)
+}
+
+// press holds a finger on the element until cond is true, then lifts it.
+func (p *Page) press(el, cond string) {
+	p.T.Helper()
+	pt := Eval[struct{ X, Y float64 }](p, `(() => { const r = (`+el+`).getBoundingClientRect(); return {X: r.left + 8, Y: r.top + r.height / 2}; })()`)
+	id := 1.0
+	touch := func(kind input.DispatchTouchEventType, tp []*input.TouchPoint) chromedp.Action[chromedp.Void] {
+		return chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
+			_, err := cdp.Call(ctx, t, input.DispatchTouchEvent, input.DispatchTouchEventParams{Type: kind, TouchPoints: tp})
+			return err
+		})
+	}
+	p.Do(touch(input.DispatchTouchEventTypeTouchStart, []*input.TouchPoint{{X: pt.X, Y: pt.Y, ID: &id}}))
+	p.WaitJS(cond)
+	p.Do(touch(input.DispatchTouchEventTypeTouchEnd, []*input.TouchPoint{}))
+}
+
+const rowMenu = `document.querySelector(".row-menu")`
+
+// A long press on a terminal row (a right click on the desktop) opens a
+// menu: copy the row, copy all rows, paste. A tap does not open it, and
+// Esc closes it.
+func TestTermRowMenu(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, _ := openShell(t, vp)
+			p.stubCopy()
+			row := `[...document.querySelectorAll('[data-view="term"] .trow')].find((r) => r.textContent === "a b c")`
+			p.TapJS(row)
+			p.Holds(`!`+rowMenu, 600*time.Millisecond)
+			open := func() {
+				if vp.Mobile {
+					p.press(row, rowMenu)
+				} else {
+					pt := Eval[struct{ X, Y float64 }](p, `(() => { const r = (`+row+`).getBoundingClientRect(); return {X: r.left + 8, Y: r.top + r.height / 2}; })()`)
+					p.Do(chromedp.MouseClickXY(pt.X, pt.Y, chromedp.ButtonRight))
+					p.WaitJS(rowMenu)
+				}
+			}
+			open()
+			p.WaitJS(rowMenu + `.contains(document.activeElement)`) // focus moves into the menu
+			p.TapJS(ButtonByText("Copy this row"))
+			p.WaitJS(`window.__copied === "a b c" && !` + rowMenu)
+			open()
+			p.TapJS(ButtonByText("Copy all rows"))
+			p.WaitJS(`window.__copied === "$ ls\na b c"`)
+			open()
+			p.WaitJS(rowMenu + `.contains(document.activeElement)`)
+			p.Key(kb.Escape)
+			p.WaitJS(`!` + rowMenu)
+			open()
+			p.TapJS(ButtonByText("Paste…"))
+			p.WaitJS(`document.querySelector(".paste") && !` + rowMenu)
 		})
 	}
 }

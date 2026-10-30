@@ -155,3 +155,12 @@
 /* The sign-in code (WEB-48): big digits, one field over the button. */
 .signin-code { display: flex; flex-direction: column; gap: var(--s3); }
 .signin-code-input { font-family: var(--font-mono); font-size: 1.5rem; letter-spacing: 0.3em; text-align: center; min-height: 3rem; }
+
+/* ---- Row menu (long press, right click) ---- */
+.row-menu { display: flex; flex-direction: column; padding: 0 var(--s4) var(--s3); }
+.row-menu-title { padding: var(--s2) 0 var(--s3); font-family: var(--font-mono); font-size: var(--fs-hint); font-weight: 400; color: var(--muted); unicode-bidi: isolate; }
+.row-menu-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.row-menu-list li { border-bottom: 1px solid var(--border); }
+.row-menu-item { display: flex; align-items: center; width: 100%; min-height: var(--tap); padding: 0 var(--s2); text-align: start; font-weight: 550; }
+.row-menu-item:hover { background: var(--bg-hover); }
+.row-menu-cancel { justify-content: center; margin-top: var(--s2); color: var(--muted); }
