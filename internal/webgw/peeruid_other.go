@@ -7,3 +7,6 @@ import "net"
 // checkTCPPeer has no table of socket owners to read on this system; the
 // launch secret and the token are the lock (see peeruid_linux.go).
 func checkTCPPeer(net.Conn) error { return nil }
+
+// peerCheck has nothing to check on this system either.
+func peerCheck(bool) func(net.Conn) error { return checkTCPPeer }

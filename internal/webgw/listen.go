@@ -31,6 +31,9 @@ type ListenConfig struct {
 	Host string
 	// Port is 0 for a random free port, else 1024..65535.
 	Port int
+	// Tailnet lets tailscaled (root) connect too: Tailscale Serve proxies
+	// from it (WEB-31). The address is still 127.0.0.1 only.
+	Tailnet bool
 }
 
 // Listen opens the gateway's listener and returns the site a browser
@@ -57,7 +60,7 @@ func Listen(cfg ListenConfig) (net.Listener, Site, error) {
 		_ = ln.Close()
 		return nil, Site{}, ErrNotLoopback
 	}
-	return &peerListener{Listener: ln, check: checkTCPPeer}, LoopbackSite(addr.Port), nil
+	return &peerListener{Listener: ln, check: peerCheck(cfg.Tailnet)}, LoopbackSite(addr.Port), nil
 }
 
 // ErrSocketBusy: another process answers on the socket path.
