@@ -52,9 +52,14 @@ func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 }
 
 // onWebHello sends meta: who the browser is, what it may do and how the
-// laptop looks.
+// laptop looks; then it continues the topics of a resumed connection.
 func (m *Model) onWebHello(msg webHelloMsg) {
 	c := msg.conn
+	defer func() {
+		if msg.resume != nil {
+			m.webResume(msg.hub, c, msg.resume)
+		}
+	}()
 	c.send(&webproto.Meta{
 		T: webproto.KindMeta, V: webproto.Version,
 		Conn: c.id, Role: c.role, Device: c.device,
