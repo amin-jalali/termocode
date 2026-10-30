@@ -102,16 +102,24 @@ func TestLinkWebPort(t *testing.T) {
 }
 
 func TestSSHCommandArgs(t *testing.T) {
-	dir, rest, err := sshCommandArgs([]string{"--dir", "/srv/app", "-p", "2222", "me@box"})
-	if err != nil || dir != "/srv/app" || strings.Join(rest, " ") != "-p 2222 me@box" {
-		t.Errorf("got %q %q %v", dir, rest, err)
+	c, err := sshCommandArgs([]string{"--dir", "/srv/app", "-p", "2222", "me@box"})
+	if err != nil || c.dir != "/srv/app" || c.web || strings.Join(c.args, " ") != "-p 2222 me@box" {
+		t.Errorf("got %+v %v", c, err)
 	}
-	dir, rest, err = sshCommandArgs([]string{"--dir=~/code", "box"})
-	if err != nil || dir != "~/code" || strings.Join(rest, " ") != "box" {
-		t.Errorf("got %q %q %v", dir, rest, err)
+	c, err = sshCommandArgs([]string{"--dir=~/code", "box"})
+	if err != nil || c.dir != "~/code" || strings.Join(c.args, " ") != "box" {
+		t.Errorf("got %+v %v", c, err)
 	}
-	if _, _, err := sshCommandArgs([]string{"--dir", "x"}); err == nil {
+	if _, err := sshCommandArgs([]string{"--dir", "x"}); err == nil {
 		t.Error("no destination, no error")
+	}
+	// --web (WEB-29) in any order with --dir, before the ssh arguments.
+	c, err = sshCommandArgs([]string{"--web", "--dir", "/w", "-p", "22", "box"})
+	if err != nil || !c.web || c.dir != "/w" || strings.Join(c.args, " ") != "-p 22 box" {
+		t.Errorf("web: %+v %v", c, err)
+	}
+	if _, err := sshCommandArgs([]string{"--web"}); err == nil {
+		t.Error("--web with no destination, no error")
 	}
 }
 

@@ -192,7 +192,7 @@ func TestCovCoreRunSessionsAndKill(t *testing.T) {
 func TestCovCoreRunSSHErrors(t *testing.T) {
 	covMainEnv(t)
 	r := covCall(t, []string{"ssh"}, nil)
-	if r.code != 2 || !strings.Contains(r.stderr, "usage: termocode ssh [--dir DIR] [ssh options] destination") {
+	if r.code != 2 || !strings.Contains(r.stderr, "usage: termocode ssh [--dir DIR] [--web] [ssh options] destination") {
 		t.Errorf("ssh without host: %+v", r)
 	}
 	r = covCall(t, []string{"ssh", "--dir", "/x"}, nil)
