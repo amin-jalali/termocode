@@ -331,11 +331,12 @@ func TestDatabasesCompareSchemasSQLite(t *testing.T) {
 		return n >= 2
 	})
 	tm.Palette("Databases: Compare Schemas")
-	tm.WaitText("SOURCE (the one to copy)", uiTimeout)
+	// The picker cuts a long title to its row (c19d2855): wait for its start.
+	tm.WaitText("Compare schemas 1/2 · SOURCE", uiTimeout)
 	tm.Type("model")
 	tm.settle()
 	tm.Send(KeyEnter)
-	tm.WaitText("TARGET (to change)", uiTimeout)
+	tm.WaitText("Compare schemas 2/2 · TARGET", uiTimeout)
 	tm.Type("live")
 	tm.settle()
 	tm.Send(KeyEnter)
