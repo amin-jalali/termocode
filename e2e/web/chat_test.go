@@ -91,13 +91,13 @@ func TestChatMarkdownNoRawHTML(t *testing.T) {
 				t.Error("the raw HTML text is not shown as text")
 			}
 			for js, what := range map[string]string{
-				v + `.querySelector('[role="heading"]')?.textContent === "Plan"`:                     "heading",
-				v + `.querySelector(".md em")?.textContent === "soft"`:                                "emphasis",
-				v + `.querySelector(".md code.md-code")?.textContent === "go test"`:                   "inline code",
-				v + `.querySelector(".md ol")?.getAttribute("start") === "3"`:                         "ordered list start",
-				v + `.querySelector(".md blockquote")?.textContent === "quoted"`:                      "quote",
+				v + `.querySelector('[role="heading"]')?.textContent === "Plan"`:                                    "heading",
+				v + `.querySelector(".md em")?.textContent === "soft"`:                                              "emphasis",
+				v + `.querySelector(".md code.md-code")?.textContent === "go test"`:                                 "inline code",
+				v + `.querySelector(".md ol")?.getAttribute("start") === "3"`:                                       "ordered list start",
+				v + `.querySelector(".md blockquote")?.textContent === "quoted"`:                                    "quote",
 				v + `.querySelectorAll(".md th").length === 2 && ` + v + `.querySelectorAll(".md td").length === 2`: "table",
-				v + `.querySelector(".md hr") !== null`:                                               "rule",
+				v + `.querySelector(".md hr") !== null`:                                                             "rule",
 			} {
 				if !Eval[bool](p, js) {
 					t.Errorf("%s is not drawn", what)
@@ -159,4 +159,35 @@ func TestChatCodeBlockCopy(t *testing.T) {
 	p.TapJS(chatView + `.querySelector(".codeblock .cb-copy")`)
 	p.WaitJS(`window.__copied === "go test ./...\n"`)
 	p.WaitJS(`(` + toastsJS + `).includes("Copied")`)
+}
+
+// An answer streams in by append deltas with a cursor, the view stays at
+// the end while the reader is there, and the finished message replaces
+// the plain text with its markdown. Offline the cursor freezes with a
+// "paused" tag.
+func TestChatStreamsOnPhone(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			long := strings.Repeat("line\n", 80)
+			p, c := openChat(t, vp, chatWith(true, userMsg(0, long), map[string]any{"i": 1, "role": "assistant", "streaming": true}))
+			const ai = `document.querySelector('[data-view="chat"] .msg-ai')`
+			p.WaitJS(ai + `?.querySelector(".cursor")`)
+			c.Send(t, Delta("chat", 2, map[string]any{"op": "append", "i": 1, "text": "Hello "}))
+			c.Send(t, Delta("chat", 3, map[string]any{"op": "append", "i": 1, "text": "**world**"}))
+			p.WaitJS(ai + `.querySelector(".msg-text").textContent.startsWith("Hello **world**")`)
+			const body = `document.querySelector('[data-view="chat"] .view-body')`
+			p.WaitJS(body + `.scrollHeight - ` + body + `.scrollTop - ` + body + `.clientHeight < 80`)
+
+			c.Drop()
+			p.WaitJS(ai + `.querySelector(".cursor.is-paused") && ` + ai + `.innerText.includes("paused")`)
+			c2 := p.S.Hub.Accept(t)
+			c2.Handshake(t, "c-1")
+			p.WaitJS(`!` + ai + `.querySelector(".cursor.is-paused")`)
+
+			done := aiMsg(1, md("doc", md("p", mdText("Hello "), md("strong", mdText("world")))))
+			c2.Send(t, Delta("chat", 4, map[string]any{"op": "message", "msg": done}))
+			c2.Send(t, Delta("chat", 5, map[string]any{"op": "state", "busy": false}))
+			p.WaitJS(ai + `.querySelector(".md strong")?.textContent === "world" && !` + ai + `.querySelector(".cursor")`)
+		})
+	}
 }
