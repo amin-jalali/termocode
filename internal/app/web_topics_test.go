@@ -253,3 +253,47 @@ func TestPublishNeverBlocks(t *testing.T) {
 		t.Fatalf("after resync: %.200s", line)
 	}
 }
+
+// Spec (WEB-7): a gateway that stops reading for longer than the write
+// timeout is closed (it then closes the browser with 4008); the editor
+// and the other connections go on.
+func TestSlowGatewayIsClosed(t *testing.T) {
+	old := webWriteTimeout.Swap(int64(100 * time.Millisecond))
+	t.Cleanup(func() { webWriteTimeout.Store(old) })
+	r := newWebRig(t, nil)
+	n, log := 0, ""
+	webTestTopics(r, &n, &log)
+	nc, err := net.Dial("unix", r.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+	if _, err := nc.Write([]byte(webTestOpen + "\n" + `{"t":"hello","v":2,"token":"x"}` + "\n" + `{"t":"sub","topics":["status"]}` + "\n")); err != nil {
+		t.Fatal(err)
+	}
+	other, _ := r.webHello(`{"t":"open","conn":"c-2","role":"controller","device":"d"}`)
+	r.pumpUntil("the subscription", func() bool { return len(r.hub.live) == 2 && webTestSubs(r.hub) == 1 })
+	pad := strings.Repeat("p", 64<<10)
+	for i := 0; r.hub.conns() == 2; i++ {
+		r.m.webPublish("status", map[string]any{"n": i, "pad": pad})
+		r.pumpUntil("a moment", func() bool { return true })
+		if i > 100000 {
+			t.Fatal("the stalled connection was never closed")
+		}
+	}
+	other.send(`{"t":"ping","n":"still"}`)
+	if p := r.nextMsg(other); p["t"] != "pong" {
+		t.Fatalf("other connection: %v", p)
+	}
+}
+
+// webTestSubs counts live connections with a subscription.
+func webTestSubs(h *webHub) int {
+	n := 0
+	for c := range h.live {
+		if len(c.subs) > 0 {
+			n++
+		}
+	}
+	return n
+}
