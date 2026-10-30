@@ -272,7 +272,10 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     contextmenu: false, // the page draws it (onMenu)
     fixedOverflowWidgets: true,
     ariaLabel: m.label,
-    unicodeHighlight: { ambiguousCharacters: false },
+    // The frame runs no worker (its policy says worker-src 'none'): the
+    // features that would start the editor's worker stay off.
+    unicodeHighlight: { ambiguousCharacters: false, invisibleCharacters: false, nonBasicASCII: false },
+    colorDecorators: false,
     links: false,
     quickSuggestions: false,
     wordBasedSuggestions: "off",
