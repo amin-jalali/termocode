@@ -11,6 +11,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
+	"github.com/amin-jalali/termocode/internal/webhl"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -68,8 +69,37 @@ func answerGitText(t *testing.T, c *HubConn, path string, texts map[string]strin
 			want--
 		case "buf.close":
 			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
+		case "buf.hl":
+			answerHl(t, c, r, path, lines)
 		}
 	}
+}
+
+// serveHlUntil answers buf.hl requests until js is true.
+func serveHlUntil(t *testing.T, p *Page, c *HubConn, path string, lines []string, js string) {
+	t.Helper()
+	end := time.Now().Add(wait)
+	for !Eval[bool](p, "!!("+js+")") {
+		if time.Now().After(end) {
+			t.Fatalf("waited %s for %s", wait, js)
+		}
+		select {
+		case m := <-c.in:
+			if r, ok := m.(*webproto.Req); ok && r.Op == "buf.hl" {
+				answerHl(t, c, r, path, lines)
+			}
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+}
+
+// answerHl colours lines as the hub's own lexer does.
+func answerHl(t *testing.T, c *HubConn, r *webproto.Req, path string, lines []string) {
+	t.Helper()
+	var a webproto.HlArgs
+	_ = json.Unmarshal(r.Args, &a)
+	res, _ := webhl.Chroma(path, "go", lines, 3, a.First, a.Last, webproto.MaxHlSpans)
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(res)})
 }
 
 
@@ -97,6 +127,9 @@ func TestDiffEditorWorkingTree(t *testing.T) {
 	if got := diffSide(p, "original"); !strings.Contains(got, "return 1") || strings.Contains(got, "return 2") {
 		t.Errorf("the left side shows %q", got)
 	}
+	// Both sides have the code's colours (the left one borrows them for
+	// the rows the two sides share).
+	serveHlUntil(t, p, c, "src/a.go", cur, diffDoc+`.querySelector(".editor.modified .view-line .hl-k") && `+diffDoc+`.querySelector(".editor.original .view-line .hl-k")`)
 	// Unchanged regions fold: "// six" is far from the change.
 	if strings.Contains(diffSide(p, "modified"), "// six") {
 		t.Error("the unchanged rows are not folded")
