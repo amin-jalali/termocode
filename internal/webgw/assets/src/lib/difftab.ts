@@ -7,6 +7,7 @@
 //   "@review:" + card + ":" + path     the AI's change a review card asks about
 import { t } from "../strings";
 import { vtabName, vtabOf } from "./vtabs";
+import { gitTabName, gitTabOf } from "./gittab";
 
 const WT = "@diff:wt:";
 const IDX = "@diff:idx:";
@@ -67,6 +68,8 @@ function baseName(path: string): string {
 export function tabName(tab: string): string {
   const v = vtabOf(tab);
   if (v) return vtabName(v);
+  const g = gitTabOf(tab);
+  if (g) return gitTabName(g);
   const d = diffOf(tab);
   if (!d) return baseName(tab);
   const name = baseName(d.path);

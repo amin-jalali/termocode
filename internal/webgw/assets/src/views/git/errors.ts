@@ -9,3 +9,10 @@ export function gitFailed(e: unknown): void {
   else if (e instanceof ReqError) toast("error", e.message);
   else toast("error", t("err.internal"));
 }
+
+/** gitErrText is the same words for a view to show in place. */
+export function gitErrText(e: unknown): string {
+  if (e instanceof OfflineError) return t("offline.input");
+  if (e instanceof ReqError) return e.message;
+  return t("err.internal");
+}

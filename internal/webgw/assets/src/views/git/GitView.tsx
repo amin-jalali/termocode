@@ -6,6 +6,7 @@
 import { h, Fragment } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { diffTab } from "../../lib/difftab";
+import { GRAPH_TAB } from "../../lib/gittab";
 import { layout } from "../../lib/layout";
 import { go, route } from "../../lib/router";
 import { showFile } from "../../lib/workbench";
@@ -14,6 +15,7 @@ import { link, live, store } from "../../session";
 import { age, groupFiles, readGit, splitPath, type GitFile, type Side } from "../../state/git";
 import { Progress, SkeletonRows } from "../../ui/Skeleton";
 import { t, type StringKey } from "../../strings";
+import { Cod } from "../../ui/icons";
 import { View } from "../View";
 import { CommitBox } from "./CommitBox";
 import { DiffSheet } from "./DiffSheet";
@@ -163,13 +165,18 @@ export function GitView() {
       title={t("tab.git")}
       sub={sub}
       actions={
-        !viewer &&
-        g.repo &&
-        !g.op && (
-          <button type="button" class="head-remote" aria-label={t("git.remote")} onClick={() => setRemote(true)}>
-            ⇅
-          </button>
-        )
+        <>
+          {desk && g.repo && (
+            <button type="button" class="tb tb-icon" data-act="graph" aria-label={t("gg.open")} title={t("gg.open")} onClick={() => showFile(GRAPH_TAB)}>
+              <Cod name="git-commit" />
+            </button>
+          )}
+          {!viewer && g.repo && !g.op && (
+            <button type="button" class="head-remote" aria-label={t("git.remote")} onClick={() => setRemote(true)}>
+              ⇅
+            </button>
+          )}
+        </>
       }
     >
       <div class={`git${st?.stale ? " is-stale" : ""}`}>{body}</div>

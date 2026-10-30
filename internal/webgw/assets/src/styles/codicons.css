@@ -83,6 +83,8 @@
 .cod-git-commit::before { content: "\eafc"; }
 .cod-git-compare::before { content: "\eafd"; }
 .cod-globe::before { content: "\eb01"; }
+.cod-git-merge::before { content: "\eafe"; }
+.cod-git-pull-request::before { content: "\ea64"; }
 .cod-go-to-file::before { content: "\ea94"; }
 .cod-group-by-ref-type::before { content: "\eb97"; }
 .cod-history::before { content: "\ea82"; }
@@ -102,6 +104,7 @@
 .cod-lightbulb::before { content: "\ea61"; }
 .cod-link-external::before { content: "\eb14"; }
 .cod-list-flat::before { content: "\eb84"; }
+.cod-list-ordered::before { content: "\eb16"; }
 .cod-list-tree::before { content: "\eb86"; }
 .cod-loading::before { content: "\eb19"; }
 .cod-lock::before { content: "\ea75"; }
@@ -153,6 +156,7 @@
 .cod-symbol-property::before { content: "\eb65"; }
 .cod-symbol-struct::before { content: "\ea91"; }
 .cod-symbol-variable::before { content: "\ea88"; }
+.cod-tag::before { content: "\ea66"; }
 .cod-sync-ignored::before { content: "\eb9f"; }
 .cod-sync::before { content: "\ea77"; }
 .cod-table::before { content: "\ebb7"; }
