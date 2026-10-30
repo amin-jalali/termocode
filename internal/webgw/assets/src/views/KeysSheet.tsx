@@ -86,7 +86,7 @@ export function KeysSheet({ keys, onClose }: { keys: Record<KeyId, Label>; onClo
             {t("keys.default")}
           </Button>
           <Button kind="primary" onClick={onClose}>
-            {t("keys.done")}
+            {t("done")}
           </Button>
         </div>
       </section>
