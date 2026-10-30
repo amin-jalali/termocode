@@ -1264,6 +1264,21 @@
       "phase": "v2"
     },
     {
+      "op": "git.graph",
+      "args": "GitGraphArgs",
+      "result": "GitGraph",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "git.file_log",
       "args": "GitFileLogArgs",
       "result": "GitFileLog",
@@ -4101,6 +4116,126 @@
       ],
       "additionalProperties": false
     },
+    "GitGraph": {
+      "type": "object",
+      "properties": {
+        "more": {
+          "type": "boolean"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/defs/GitGraphRow"
+          },
+          "type": "array"
+        },
+        "skip": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "skip",
+        "rows"
+      ],
+      "additionalProperties": true
+    },
+    "GitGraphArgs": {
+      "type": "object",
+      "properties": {
+        "head": {
+          "type": "boolean"
+        },
+        "skip": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "GitGraphEdge": {
+      "type": "object",
+      "properties": {
+        "c": {
+          "type": "integer"
+        },
+        "f": {
+          "type": "integer"
+        },
+        "t": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "f",
+        "t",
+        "c"
+      ],
+      "additionalProperties": true
+    },
+    "GitGraphRow": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "col": {
+          "type": "integer"
+        },
+        "color": {
+          "type": "integer"
+        },
+        "down": {
+          "items": {
+            "$ref": "#/defs/GitGraphEdge"
+          },
+          "type": "array"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "head": {
+          "type": "boolean"
+        },
+        "parents": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "refs": {
+          "items": {
+            "$ref": "#/defs/GitRef"
+          },
+          "type": "array"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "unpushed": {
+          "type": "boolean"
+        },
+        "up": {
+          "items": {
+            "$ref": "#/defs/GitGraphEdge"
+          },
+          "type": "array"
+        },
+        "when": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "parents",
+        "subject",
+        "author",
+        "when",
+        "col",
+        "color",
+        "up",
+        "down"
+      ],
+      "additionalProperties": true
+    },
     "GitHunkArgs": {
       "type": "object",
       "properties": {
@@ -4116,6 +4251,26 @@
         "hunk"
       ],
       "additionalProperties": false
+    },
+    "GitRef": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "local",
+            "remote",
+            "tag"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "additionalProperties": true
     },
     "GitShowArgs": {
       "type": "object",
