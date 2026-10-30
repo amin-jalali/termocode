@@ -37,6 +37,9 @@ func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case webCallMsg:
 		return m.onWebCall(msg), true
+	case webSubMsg:
+		m.onWebSub(msg)
+		return waitWeb(msg.hub), true
 	case webHelloMsg:
 		m.onWebHello(msg)
 		return waitWeb(msg.hub), true
