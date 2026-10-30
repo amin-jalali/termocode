@@ -24,7 +24,7 @@ export const SUBPROTOCOL = "termocode.v2";
 
 export const TOPIC_NAMES = [
   "status", "toasts", "chats", "chat", "cards", "tree", "bufs", "buf", "terms", "term",
-  "git", "tasks", "runs", "db", "containers", "mcp", "settings", "diagnostics", "tests", "debug", "services",
+  "git", "tasks", "runs", "db", "containers", "mcp", "settings", "diagnostics", "tests", "debug", "services", "ai",
 ] as const;
 
 export const KEYED_TOPICS = ["buf", "term"] as const;

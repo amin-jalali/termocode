@@ -18,6 +18,7 @@ import { gutterMarks } from "../lib/gutter";
 import { BpAsk, onGlyph, useRunGutter } from "../lib/rungutter";
 import { blameOn, blameRows } from "../lib/blame";
 import { ask, diagSnap, fileMarkers, findRefs, goTo, revealAt, wordAt } from "../lib/lsp";
+import { aiAsk, aiSnap } from "../lib/ai";
 import { isGone } from "../state/files";
 import { t } from "../strings";
 import { Button } from "../ui/Button";
@@ -117,6 +118,12 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
   const [ready, setReady] = useState(false);
   const diffRef = useRef(diff);
   diffRef.current = diff;
+  // The laptop's AI helps typing in a file this page may edit (its own
+  // ai_inline / ai_next_edit settings).
+  const snapAI = desk ? aiSnap() : null;
+  const aiOpts = desk && !desk.readOnly && snapAI?.configured ? { inline: snapAI.inline, nes: snapAI.nextEdit, hint: t("ai.nes_hint") } : { inline: false, nes: false };
+  const aiRef = useRef(aiOpts);
+  aiRef.current = aiOpts;
 
   useEffect(() => {
     let dead = false;
@@ -138,6 +145,8 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               onLsp: (kind, line, col) => ask(kind, buf, line, col),
               onRefs: (line, col) => findRefs(path, buf, line, col, wordAt(peek()?.lines[line] ?? "", col)),
               onOpen: (to, line, col) => goTo(to, line, col),
+              ai: aiRef.current,
+              onAI: (kind, line, col, manual) => aiAsk(kind, buf, line, col, manual),
               diff: diff ? { original: diff.original ?? "", inline: diff.inline, collapse: diff.collapse } : undefined,
               onDiff: (n, a, r) => diffRef.current?.onCount(n, a, r),
               onGlyph: diff ? undefined : (line, menu, x, y) => onGlyph(path, line, menu, x, y),
@@ -263,6 +272,10 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
   useEffect(() => {
     if (ready && diff) (ed.current as DeskHandle | null)?.diffView({ inline: diff.inline, collapse: diff.collapse });
   }, [ready, diff?.inline, diff?.collapse]);
+  // Ghost text and next edits follow the laptop's settings.
+  useEffect(() => {
+    if (desk && ready) (ed.current as DeskHandle | null)?.opts({ ai: aiRef.current });
+  }, [ready, aiOpts.inline, aiOpts.nes]);
   // The desktop editor's settings follow the view.
   useEffect(() => (ed.current as DeskHandle | null)?.opts?.({ wrap: desk?.wrap, readOnly: desk?.readOnly }), [desk?.wrap, desk?.readOnly, ready]);
   // Colours: rows whose text still matches.

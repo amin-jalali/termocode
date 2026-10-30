@@ -938,4 +938,6 @@ export const FA: Record<StringKey, string> = {
   "cmd.git_blame": "گیت: روشن/خاموش کردن نویسنده خط‌ها",
   "cmd.git_amend": "گیت: اصلاح کامیت آخر…",
   "cmd.git_clone": "گیت: کلون مخزن…",
+  // The laptop's AI in the editor, agent worktrees, profile and model (WEBP-3)
+  "ai.nes_hint": "Tab برای پذیرفتن · Esc برای بستن",
 };

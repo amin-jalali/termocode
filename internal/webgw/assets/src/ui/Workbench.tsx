@@ -475,8 +475,9 @@ function LaptopCommand({ id, name }: { id: string; name: string }) {
 
 
 export function Workbench() {
-  // The editor tabs (open buffers) and the git marks of the open file.
-  useEffect(() => link.subscribe("bufs", "git", "diagnostics"), []);
+  // The editor tabs (open buffers), the git marks of the open file, and
+  // the laptop's AI (the editor's ghost text, the chat's picker).
+  useEffect(() => link.subscribe("bufs", "git", "diagnostics", "ai"), []);
   // The workbench's keys (lib/commands.ts lists them with their names).
   useEffect(() => {
     addEventListener("keydown", workbenchKeys);

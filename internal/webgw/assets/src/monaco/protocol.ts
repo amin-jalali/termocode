@@ -22,6 +22,10 @@ export interface FrameOpts {
   /** lang: the editor colours the text itself ("sql": a query editor,
    * where Ctrl/Cmd+Enter runs the query). */
   lang?: "sql";
+  /** ai: ask the page for ghost text and next edit suggestions (the
+   * laptop's ai_inline and ai_next_edit; a file the user may edit);
+   * hint is the next edit's key hint in the page's words. */
+  ai?: { inline: boolean; nes: boolean; hint?: string };
 }
 
 /** FrameMarker is one diagnostic for the editor's squiggles: rows and
@@ -57,6 +61,23 @@ export interface FrameBlame {
 /** LspKind is what the frame asks the page about a position. */
 export type LspKind = "hover" | "complete" | "definition";
 
+/** AiKind is what the frame asks the laptop's AI: ghost text at the
+ * caret, the next edit after a pause, or "seed" (the editor opened: the
+ * laptop keeps the text to compare the next edit with). */
+export type AiKind = "complete" | "next_edit" | "seed";
+
+/** AiAct is one of the editor's AI actions. */
+export type AiAct = "explain" | "fix" | "edit" | "doc";
+
+/** AiAt is where an AI action works: the selected rows start…end
+ * (0-based, end not included; start === end: no selection) and the
+ * caret's row. */
+export interface AiAt {
+  start: number;
+  end: number;
+  line: number;
+}
+
 /** FrameDiff makes the editor a side-by-side diff: original is the older
  * text (read only, on the left); the frame's own text is the newer one. */
 export interface FrameDiff {
@@ -65,6 +86,9 @@ export interface FrameDiff {
   inline?: boolean;
   /** collapse: unchanged regions fold away (a click opens them). */
   collapse?: boolean;
+  /** revert: each change has an arrow in the gutter that takes it back
+   * (an AI suggestion: reject one change, keep the others). */
+  revert?: boolean;
 }
 
 /** GlyphKind is what the editor's glyph margin shows on a row: a
@@ -120,6 +144,9 @@ export type ToFrame =
   /** glyphs: the glyph margin's marks (all of them, each time) and the
    * row the debugger stopped on (0: none). */
   | { t: "glyphs"; items: FrameGlyph[]; stop: number }
+  /** aiAct: run an AI action on the selection (the frame answers with
+   * its own aiAct, which names the rows). */
+  | { t: "aiAct"; kind: AiAct }
   /** lspRes answers the frame's lsp question id (data null: nothing). */
   | { t: "lspRes"; id: number; data: unknown };
 
@@ -141,9 +168,14 @@ export type FromFrame =
   | { t: "cursor"; line: number; col: number }
   | { t: "save" }
   /** menu: a right click at (x, y) in the frame; sel is the selected text. */
-  | { t: "menu"; x: number; y: number; sel: string; readOnly: boolean; can: MenuCan }
+  | { t: "menu"; x: number; y: number; sel: string; readOnly: boolean; can: MenuCan; at: AiAt }
   /** lsp asks about a position: line 0-based, col in UTF-16 units. */
   | { t: "lsp"; id: number; kind: LspKind; line: number; col: number }
+  /** ai asks the laptop's AI (answered with lspRes): line 0-based, col
+   * in UTF-16 units; manual: the user asked (Alt+\). */
+  | { t: "ai"; id: number; kind: AiKind; line: number; col: number; manual?: boolean }
+  /** aiAct: the user ran an AI action from the keyboard (Ctrl/Cmd+I: Edit). */
+  | { t: "aiAct"; kind: AiAct; at: AiAt }
   /** refs: the user asked for the references at a position (0-based). */
   | { t: "refs"; line: number; col: number }
   /** open: go to another file (a definition there), 0-based. */

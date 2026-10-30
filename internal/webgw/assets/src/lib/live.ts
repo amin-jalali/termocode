@@ -62,6 +62,11 @@ export class LiveSync {
     this.latest = snap;
   }
 
+  /** textNow is the editor's text now. */
+  textNow(): string {
+    return this.ed.text();
+  }
+
   /** dirty: the editor holds text the laptop does not have yet. */
   dirty(): boolean {
     return this.ed.text() !== this.known.text;
