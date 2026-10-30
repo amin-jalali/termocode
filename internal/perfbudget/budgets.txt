@@ -91,3 +91,11 @@ http_5mb_answer_first_lines 125   ms   # 5 MB JSON, send to the first page lines
 http_5mb_answer_all_lines   560   ms   # same, all 840 000 lines in nvim; local 279 (was 490)
 http_history_open_1000       40   ms   # History… with 1 000 entries to the picker; local 19.8 (was 28)
 http_send_all_200           270   ms   # 200 sends in a row, Go path + history; local 135 (was 2 964)
+
+# Web UI (WEB-27, web design 5.5): internal/app/web_perf_guard_test.go and
+# internal/webgw/perf_guard_test.go. Measured 2026-10-30 like above.
+web_hub_call_p99            20   ms   # a request on the UI goroutine, real nvim, 4 browsers, 320 calls; local 0.08-0.29 ms (design budget T41)
+web_publish_worst           25   ms   # worst of 5 000 1 KiB publishes to a gateway that stopped reading; local 0.08-0.22 ms (floor)
+web_chat_append_overhead    80   B    # wire bytes of a streamed token beyond its text, worst of 50; local 77 (design budget)
+web_term_key_bytes         180   B    # wire bytes per key typed into a real shell (the row's delta), median of 24; local 121 (the ~100 B envelope dominates a short row)
+web_gateway_conn_kib       350   KiB  # heap per browser after hello, 4 open, both ends in one process; local 174
