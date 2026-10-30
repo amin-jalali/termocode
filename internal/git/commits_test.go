@@ -155,3 +155,45 @@ func TestInitials(t *testing.T) {
 		}
 	}
 }
+
+// Spec (web Git Graph, all branches): CommitsAll lists the commits of
+// every branch and tag, not only HEAD's, each child before its parents.
+func TestCommitsAllBranches(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.commitN(t, "init")
+	r.git(t, "checkout", "-q", "-b", "side")
+	r.commitN(t, "on side")
+	r.git(t, "checkout", "-q", "main")
+	r.write(t, "g.txt", "g\n")
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "on main")
+
+	head, _, err := Commits(r.dir, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	all, more, err := CommitsAll(r.dir, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(head) != 2 || len(all) != 3 || more {
+		t.Fatalf("HEAD has %d commits, all %d (more=%v); want 2 and 3", len(head), len(all), more)
+	}
+	if all[len(all)-1].Subject != "init" {
+		t.Errorf("the root is not last: %+v", all)
+	}
+	seen := map[string]bool{}
+	for _, c := range all {
+		if c.Subject == "on side" && (len(c.Refs) != 1 || c.Refs[0].Name != "side") {
+			t.Errorf("side's tip refs %+v", c.Refs)
+		}
+		seen[c.Subject] = true
+	}
+	if !seen["on side"] || !seen["on main"] {
+		t.Errorf("missing a branch: %v", seen)
+	}
+	page, more, err := CommitsAll(r.dir, 1, 1)
+	if err != nil || len(page) != 1 || !more {
+		t.Errorf("skip 1, limit 1: %d commits, more=%v, err %v", len(page), more, err)
+	}
+}
