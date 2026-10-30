@@ -157,7 +157,7 @@ func TestStatusThemeFollowsLaptop(t *testing.T) {
 	c := webTestSub(t, &m, "status")
 	var s webproto.StatusSnap
 	webTestData(t, webTestNow(t, c)[0], &s)
-	if s.Theme.ID != "dark" || len(s.Theme.Colors) != len(webThemeFields) || s.Theme.Colors["AIAccent"] != theme.Hex(theme.AIAccent) {
+	if s.Theme.Name != "dark" || s.Theme.Light || len(s.Theme.Colors) != len(webThemeFields) || s.Theme.Colors["AIAccent"] != theme.Hex(theme.AIAccent) {
 		t.Fatalf("theme %+v", s.Theme)
 	}
 	old := theme.AIAccent

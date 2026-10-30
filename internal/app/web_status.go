@@ -91,7 +91,7 @@ func webStatusSame(a, b webproto.StatusSnap) bool {
 	return a.Root == b.Root && a.Workspace == b.Workspace && a.Branch == b.Branch &&
 		a.Ahead == b.Ahead && a.Behind == b.Behind && a.DirtyFiles == b.DirtyFiles &&
 		a.AI == b.AI && a.Terminals == b.Terminals && a.Runs == b.Runs && a.Web == b.Web &&
-		a.Theme.ID == b.Theme.ID && len(a.Theme.Colors) == len(b.Theme.Colors) && webSameMap(a.Theme.Colors, b.Theme.Colors)
+		a.Theme.Name == b.Theme.Name && a.Theme.Light == b.Theme.Light && len(a.Theme.Colors) == len(b.Theme.Colors) && webSameMap(a.Theme.Colors, b.Theme.Colors)
 }
 
 func webSameMap(a, b map[string]string) bool {
@@ -201,13 +201,13 @@ func (p *webStatusPub) themeOf(id string) webproto.StatusTheme {
 	for i, f := range webThemeFields {
 		key[i] = *f.c
 	}
-	if p.theme.Colors != nil && p.themeKey == key && p.theme.ID == id {
+	if p.theme.Colors != nil && p.themeKey == key && p.theme.Name == id {
 		return p.theme
 	}
 	colors := make(map[string]string, len(webThemeFields))
 	for _, f := range webThemeFields {
 		colors[f.name] = theme.Hex(*f.c)
 	}
-	p.theme, p.themeKey = webproto.StatusTheme{ID: id, Colors: colors}, key
+	p.theme, p.themeKey = webproto.StatusTheme{Name: id, Light: theme.IsLight(), Colors: colors}, key
 	return p.theme
 }
