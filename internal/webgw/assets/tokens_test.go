@@ -44,6 +44,10 @@ func readTokens(t *testing.T) (dark, light, sys map[string]string) {
 	return tokenBlock(t, css, "tokens:dark"), tokenBlock(t, css, "tokens:light"), tokenBlock(t, css, "tokens:system-light")
 }
 
+// synTokens are the code colours of the file view (theme Syntax*).
+var synTokens = []string{"--syn-kw", "--syn-ctl", "--syn-fn", "--syn-var", "--syn-ty", "--syn-str",
+	"--syn-num", "--syn-cmt", "--syn-rx", "--syn-cst", "--syn-op"}
+
 // designTokens are the colour tokens of web UX 7.1; every one must exist.
 var designTokens = []string{
 	"--bg", "--bg-2", "--bg-panel", "--bg-float", "--bg-hover", "--sel", "--strip", "--on-strip",
@@ -53,7 +57,7 @@ var designTokens = []string{
 
 func TestWebTokensBothThemes(t *testing.T) {
 	dark, light, sys := readTokens(t)
-	for _, k := range designTokens {
+	for _, k := range append(append([]string{}, designTokens...), synTokens...) {
 		if dark[k] == "" || light[k] == "" {
 			t.Errorf("%s: dark %q light %q; both themes need it", k, dark[k], light[k])
 		}
@@ -122,6 +126,8 @@ func TestWebTokensContrast(t *testing.T) {
 		{[]string{"--on-ai"}, []string{"--ai"}, 4.5},
 		{[]string{"--ai-on-strip"}, []string{"--strip"}, 4.5},
 		{[]string{"--dim", "--focus"}, surfaces, 3},
+		// Code colours (the laptop theme's Syntax*) on the rows code sits on.
+		{synTokens, append(rows, "--bg-2"), 4.5},
 	}
 	for name, th := range map[string]map[string]string{"dark": dark, "light": light} {
 		for _, r := range rules {
