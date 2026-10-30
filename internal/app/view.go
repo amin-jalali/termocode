@@ -2335,7 +2335,8 @@ func (m Model) statusState() statusbar.State {
 	m.fillUpdateStatus(&st)            // G-UPD: ⬆ v0.2.0
 	st.Agents = m.mcpServeAgentCount() // ⇄ n agents: outside agents on the MCP server
 	st.AgentsReady = m.mcpServe != nil // ⇄ ready: it listens, nobody is connected
-	if m.webPanel != nil && m.webPanel.up { // ◉ web on / connected (web_tui.go)
+	// ◉ web on / web connected (web_tui.go)
+	if m.webPanel != nil && m.webPanel.up {
 		st.WebOn = true
 		if m.web != nil {
 			st.WebBrowsers = len(m.web.live)
