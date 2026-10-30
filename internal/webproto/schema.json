@@ -202,14 +202,18 @@
       "keyed": false,
       "phase": "v1",
       "snap": "TasksSnap",
-      "delta": "TasksSnap"
+      "deltas": [
+        "TasksSnap"
+      ]
     },
     {
       "name": "runs",
       "keyed": false,
       "phase": "v1",
       "snap": "RunsSnap",
-      "delta": "RunsSnap"
+      "deltas": [
+        "RunsSnap"
+      ]
     },
     {
       "name": "db",
