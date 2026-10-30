@@ -104,6 +104,48 @@ func TestTokenMaxLifetime(t *testing.T) {
 	}
 }
 
+// TestTokenCap: at most MaxSessions live tokens; expired ones are swept
+// before a new one is refused.
+func TestTokenCap(t *testing.T) {
+	ts := NewTokens(DefaultIdle, DefaultMax)
+	for i := 0; i < MaxSessions; i++ {
+		if _, _, err := ts.Issue("d", RoleControl, t0); err != nil {
+			t.Fatalf("token %d: %v", i, err)
+		}
+	}
+	if _, _, err := ts.Issue("d", RoleControl, t0); !errors.Is(err, ErrTooManySessions) {
+		t.Fatalf("over the cap: %v, want ErrTooManySessions", err)
+	}
+	// All idle past the limit: the next Issue sweeps them and succeeds.
+	if _, _, err := ts.Issue("d", RoleControl, t0.Add(DefaultIdle)); err != nil {
+		t.Fatalf("after expiry: %v", err)
+	}
+	if n := ts.Len(); n != 1 {
+		t.Fatalf("Len = %d after the sweep, want 1", n)
+	}
+}
+
+// TestRevokeAll: the kill switch drops every token at once.
+func TestRevokeAll(t *testing.T) {
+	ts := NewTokens(DefaultIdle, DefaultMax)
+	var toks []string
+	for i := 0; i < 3; i++ {
+		tok, _, err := ts.Issue("d", RoleControl, t0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		toks = append(toks, tok)
+	}
+	if n := ts.RevokeAll(); n != 3 {
+		t.Fatalf("RevokeAll = %d, want 3", n)
+	}
+	for _, tok := range toks {
+		if _, err := ts.Check(tok, t0); !errors.Is(err, ErrTokenUnknown) {
+			t.Fatalf("revoked token: %v", err)
+		}
+	}
+}
+
 func TestTokenKeepsNoPlainText(t *testing.T) {
 	ts := NewTokens(DefaultIdle, DefaultMax)
 	tok, _, err := ts.Issue("d", RoleControl, t0)
