@@ -16,4 +16,4 @@ UI parts: internal/activity internal/anim internal/cellwidth internal/clipring i
 Editor and files: internal/editor internal/nvim internal/explorer internal/search internal/mdview internal/recents internal/tasks internal/tests internal/lspinstall internal/ext internal/extproc internal/migrate internal/cfgfile internal/jsonc internal/shellint
 App shell: internal/app internal/crash cmd/termocode internal/setup internal/spawn
 
-exclude: internal/testkit/... internal/mcp/mcptest internal/services/servicestest internal/kube/kubetest internal/containerhost/fakedocker internal/secrets/secretstest internal/dbclient/dbtest internal/extproc/extproctest internal/keytest internal/devtools/... cmd/docgen cmd/recordgifs cmd/covreport
+exclude: internal/testkit/... internal/perfbudget cmd/failedtests internal/mcp/mcptest internal/services/servicestest internal/kube/kubetest internal/containerhost/fakedocker internal/secrets/secretstest internal/dbclient/dbtest internal/extproc/extproctest internal/keytest internal/devtools/... cmd/docgen cmd/recordgifs cmd/covreport
