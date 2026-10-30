@@ -242,29 +242,39 @@ func NextEditAllowed(path string, lines, size int) (ok bool, why string) {
 	if path == "" {
 		return false, "no file"
 	}
-	p := strings.ToLower(strings.ReplaceAll(path, `\`, "/"))
-	name := baseName(p)
-	switch {
-	case name == ".env" || strings.HasPrefix(name, ".env.") || strings.HasSuffix(name, ".env"):
+	if IsSecretFileName(path) {
 		return false, "secret file"
-	case secretNames[name] || strings.HasPrefix(name, "id_rsa") || strings.HasPrefix(name, "id_ed25519") ||
-		strings.HasPrefix(name, "id_ecdsa") || strings.HasPrefix(name, "id_dsa"):
-		return false, "secret file"
-	case strings.Contains(p, "/.ssh/") || strings.Contains(p, "/.gnupg/") || strings.Contains(p, "/.aws/"):
-		return false, "secret file"
-	}
-	for _, x := range secretExts {
-		if strings.HasSuffix(name, x) {
-			return false, "secret file"
-		}
-	}
-	for _, w := range secretNameWords {
-		if strings.Contains(name, w) {
-			return false, "secret file"
-		}
 	}
 	if lines > NextEditMaxBufLines || size > NextEditMaxBufBytes {
 		return false, "file too big"
 	}
 	return true, ""
+}
+
+// IsSecretFileName reports whether path names a file that may hold
+// secrets (.env files, keys, credentials): such files never leave the
+// laptop for the AI or the web UI.
+func IsSecretFileName(path string) bool {
+	p := strings.ToLower(strings.ReplaceAll(path, `\`, "/"))
+	name := baseName(p)
+	switch {
+	case name == ".env" || strings.HasPrefix(name, ".env.") || strings.HasSuffix(name, ".env"):
+		return true
+	case secretNames[name] || strings.HasPrefix(name, "id_rsa") || strings.HasPrefix(name, "id_ed25519") ||
+		strings.HasPrefix(name, "id_ecdsa") || strings.HasPrefix(name, "id_dsa"):
+		return true
+	case strings.Contains(p, "/.ssh/") || strings.Contains(p, "/.gnupg/") || strings.Contains(p, "/.aws/"):
+		return true
+	}
+	for _, x := range secretExts {
+		if strings.HasSuffix(name, x) {
+			return true
+		}
+	}
+	for _, w := range secretNameWords {
+		if strings.Contains(name, w) {
+			return true
+		}
+	}
+	return false
 }

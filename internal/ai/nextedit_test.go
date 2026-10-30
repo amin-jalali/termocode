@@ -163,3 +163,19 @@ func TestNextEditAllowed(t *testing.T) {
 		t.Error("too many bytes")
 	}
 }
+
+// IsSecretFileName is the one rule for "this file may hold secrets"; the
+// web UI reuses it to refuse sending such a file's text.
+func TestIsSecretFileName(t *testing.T) {
+	for _, p := range []string{"/w/.env", "/w/.env.local", "/w/prod.env", "/w/deploy/key.pem", "/home/u/.ssh/config",
+		"/w/.npmrc", "/w/id_ed25519", "/w/db_password.txt", `C:\w\Secrets.json`} {
+		if !IsSecretFileName(p) {
+			t.Errorf("%s: not a secret file", p)
+		}
+	}
+	for _, p := range []string{"/w/main.go", "/w/README.md", "/w/env.go", "/w/environment/x.go"} {
+		if IsSecretFileName(p) {
+			t.Errorf("%s: called a secret file", p)
+		}
+	}
+}
