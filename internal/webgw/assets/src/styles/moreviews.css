@@ -54,3 +54,25 @@
 .ctr-actions .btn { min-height: var(--tap); }
 .ctr-logs { display: flex; flex-direction: column; gap: var(--s2); }
 .ctr-note { color: var(--amber); font-size: var(--fs-hint); }
+
+.db-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+.db-conn, .db-table { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); min-height: var(--tap); padding: var(--s2) var(--s3); text-align: start; }
+.db-conn + .db-conn, .db-table + .db-table { border-top: 1px solid var(--border); }
+.db-conn:hover, .db-table:hover { background: var(--bg-hover); }
+.db-conn:disabled { cursor: default; opacity: 0.75; }
+.db-name { font-weight: 600; overflow-wrap: anywhere; }
+.db-table .db-name { font-family: var(--font-mono); font-weight: 400; }
+.db-meta { color: var(--text-2); font-family: var(--font-mono); font-size: var(--fs-hint); }
+.db-chips { display: flex; gap: var(--s1); }
+.db-chip { border: 1px solid var(--border); border-radius: var(--r-pill); padding: 0 var(--s2); font-size: var(--fs-hint); color: var(--text-2); }
+.db-chip.is-prod { border-color: var(--red); color: var(--red); }
+.db-note { flex-basis: 100%; color: var(--amber); font-size: var(--fs-hint); }
+.dbv-body, .db-result, .db-query { display: flex; flex-direction: column; gap: var(--s2); }
+.db-sql { width: 100%; min-height: 5rem; padding: var(--s2); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-chip); font-family: var(--font-mono); font-size: var(--fs-row); resize: vertical; }
+.db-sql:focus { border-color: var(--focus); outline: none; }
+.db-grid-box { overflow: auto; max-height: 60dvh; border: 1px solid var(--border); border-radius: var(--r-card); }
+.db-grid { border-collapse: collapse; font-family: var(--font-mono); font-size: var(--fs-hint); }
+.db-grid th, .db-grid td { padding: var(--s1) var(--s2); border-bottom: 1px solid var(--border); text-align: start; white-space: pre; max-width: 24rem; overflow: hidden; text-overflow: ellipsis; unicode-bidi: isolate; }
+.db-grid th { position: sticky; top: 0; background: var(--bg-panel); font-weight: 600; }
+.db-grid td.is-null { color: var(--dim); font-style: italic; }
+.db-grid td.is-masked { color: var(--amber); }
