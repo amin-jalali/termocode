@@ -67,7 +67,7 @@ func TestStoreGapAsksForResyncAndWaitsForSnap(t *testing.T) {
 			p.WaitJS(chatTopic + `.classList.contains("is-stale")`)
 
 			c.Send(t, Delta("chat", 2, map[string]any{"n": 2})) // fits the old seq: still not trusted
-			c.Quiet(t, 500*time.Millisecond)                      // and no second sub
+			c.Quiet(t, 500*time.Millisecond)                    // and no second sub
 			p.Holds(chatTopic+`.classList.contains("is-stale")`, 200*time.Millisecond)
 
 			c.Send(t, Snap("chat", 7, map[string]any{"n": 7}))
