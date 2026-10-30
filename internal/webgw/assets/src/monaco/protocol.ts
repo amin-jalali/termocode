@@ -16,6 +16,19 @@ export interface FrameOpts {
   dark?: boolean;
 }
 
+/** FrameMarker is one diagnostic for the editor's squiggles: rows and
+ * columns 1-based in the editor's units (UTF-16), the end excluded. */
+export interface FrameMarker {
+  line: number;
+  col: number;
+  endLine: number;
+  endCol: number;
+  sev: number;
+  message: string;
+  source?: string;
+  code?: string;
+}
+
 export type ToFrame =
   | ({ t: "init"; doc: string; label: string } & FrameOpts)
   | ({ t: "opts" } & FrameOpts)
@@ -30,10 +43,12 @@ export type ToFrame =
   | { t: "undo" }
   | { t: "redo" }
   | { t: "focus" }
-  | { t: "reveal"; line: number }
+  | { t: "reveal"; line: number; col?: number }
   /** edit: a context menu choice. cut drops the selection (the page put
    * it on the clipboard); def, refs and format run the editor's own action. */
-  | { t: "edit"; op: "cut" | "def" | "refs" | "format" };
+  | { t: "edit"; op: "cut" | "def" | "refs" | "format" }
+  /** markers: the file's diagnostics (all of them, each time). */
+  | { t: "markers"; items: FrameMarker[] };
 
 /** MenuCan says which of the editor's actions work here now. */
 export interface MenuCan {

@@ -11,7 +11,7 @@ import { ChangeSet, Text } from "@codemirror/state";
 import { dict } from "../state/dict";
 import { History } from "../editor/history";
 import { diff } from "../lib/textdiff";
-import type { FrameOpts, FromFrame, MenuCan, ToFrame } from "./protocol";
+import type { FrameMarker, FrameOpts, FromFrame, MenuCan, ToFrame } from "./protocol";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -66,6 +66,7 @@ interface Editor {
   focus(): void;
   layout(): void;
   revealLineInCenter(line: number): void;
+  revealPositionInCenter(p: Pos): void;
   setPosition(p: Pos): void;
   getVisibleRanges(): IRange[];
   createDecorationsCollection(d?: Decoration[]): Collection;
@@ -83,8 +84,18 @@ interface EditorNS {
   defineTheme(name: string, data: { base: string; inherit: boolean; rules: unknown[]; colors: Record<string, string> }): void;
   setTheme(name: string): void;
 }
+interface MarkerData {
+  severity: number;
+  message: string;
+  source?: string;
+  code?: string;
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
+}
 interface Api {
-  editor: EditorNS;
+  editor: EditorNS & { setModelMarkers(m: Model, owner: string, markers: MarkerData[]): void };
   KeyMod: { CtrlCmd: number; Shift: number };
   KeyCode: { KeyZ: number; KeyY: number; KeyS: number };
 }
@@ -141,6 +152,28 @@ function menuEdit(m: Extract<ToFrame, { t: "edit" }>): void {
   ed.executeEdits("menu", (ed.getSelections() ?? []).map((range) => ({ range, text: "", forceMoveMarkers: true })));
   ed.pushUndoStop();
   ed.focus();
+}
+
+/** SEV maps a diagnostic's severity (1 error … 4 hint) to the editor's. */
+const SEV: Readonly<Record<number, number>> = { 1: 8, 2: 4, 3: 2, 4: 1 };
+
+/** markers paints the file's diagnostics (squiggles, ruler, hover). */
+function markers(items: readonly FrameMarker[]): void {
+  if (!model) return;
+  api.editor.setModelMarkers(
+    model,
+    "termocode",
+    items.map((d) => ({
+      severity: SEV[d.sev] ?? 8,
+      message: d.message,
+      source: d.source || undefined,
+      code: d.code || undefined,
+      startLineNumber: d.line,
+      startColumn: d.col,
+      endLineNumber: d.endLine,
+      endColumn: d.endCol,
+    })),
+  );
 }
 
 function sendText(user: boolean): void {
@@ -212,7 +245,7 @@ function workbenchKey(e: KeyboardEvent): boolean {
   const mod = e.ctrlKey || e.metaKey;
   if (!mod) return false;
   const k = e.key.toLowerCase();
-  if (e.shiftKey) return k === "p" || k === "e" || k === "g" || k === "f";
+  if (e.shiftKey) return k === "p" || k === "e" || k === "g" || k === "f" || k === "m";
   return ["p", "b", "j", "w", "`", "tab", "k", ",", "\\", "1", "2"].includes(k) || (e.ctrlKey && k === "pagedown") || (e.ctrlKey && k === "pageup");
 }
 
@@ -384,10 +417,15 @@ function onMessage(e: MessageEvent): void {
     case "edit":
       menuEdit(m);
       return;
-    case "reveal":
-      ed?.revealLineInCenter(m.line);
-      ed?.setPosition({ lineNumber: m.line, column: 1 });
+    case "reveal": {
+      const at = { lineNumber: m.line, column: m.col ?? 1 };
+      ed?.setPosition(at);
+      ed?.revealPositionInCenter(at);
       ed?.focus();
+      return;
+    }
+    case "markers":
+      markers(m.items);
       return;
   }
 }

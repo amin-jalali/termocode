@@ -8,6 +8,7 @@ import { selection } from "../lib/edit";
 import { file } from "../lib/file";
 import { route } from "../lib/router";
 import { activeFile, cursorAt } from "../lib/workbench";
+import { diags, toggleProblems } from "../lib/lsp";
 import { link, status, store } from "../session";
 import { t } from "../strings";
 import { Cod } from "./icons";
@@ -54,6 +55,23 @@ function FileFacts() {
   );
 }
 
+/** ProblemCounts are the workspace's problems (to fix, warnings); a
+ * click shows the PROBLEMS panel. */
+function ProblemCounts() {
+  const d = diags();
+  const e = d?.errors ?? 0;
+  const w = d?.warnings ?? 0;
+  const label = t("sb.problems", { e, w });
+  return (
+    <button type="button" class="strip-item sb-problems" title={label} aria-label={label} onClick={toggleProblems}>
+      <Cod name="error" />
+      <span class="sb-n">{e}</span>
+      <Cod name="warning" />
+      <span class="sb-n">{w}</span>
+    </button>
+  );
+}
+
 export function StatusBar() {
   const s = status.value;
   const online = link.state.value === "online";
@@ -74,6 +92,7 @@ export function StatusBar() {
         </span>
       )}
       {s.dirty > 0 && <span class="strip-item dirty" title={t("sb.changed", { n: s.dirty })}>● {s.dirty}</span>}
+      <ProblemCounts />
       <span class={`strip-item ai ai-${ai}`}>
         <Cod name="sparkle" />
         <span>{t(ai === "waiting" ? "strip.ai_waiting" : ai === "working" ? "strip.ai_working" : "strip.ai_idle")}</span>

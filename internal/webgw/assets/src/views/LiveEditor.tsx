@@ -15,6 +15,7 @@ import { editing, liveStatus, LiveSync, session, setSync, syncs } from "../lib/l
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
+import { diagSnap, fileMarkers, revealAt } from "../lib/lsp";
 import { isGone } from "../state/files";
 import { t } from "../strings";
 import { Button } from "../ui/Button";
@@ -182,6 +183,19 @@ export function LiveEditor({ path, buf, desk, slot = "g0" }: { path: string; buf
     }, 300);
     return () => clearTimeout(timer);
   }, [ready, !!changed, changed?.x, changed?.y, saved, snap?.tick, gitData]);
+  // Problems: the file's diagnostics as squiggles (desktop).
+  const fileDiags = desk ? diagSnap(store.topic("diagnostics").value?.data)?.files.find((f) => f.path === path) : undefined;
+  useEffect(() => {
+    if (desk && ready) (ed.current as DeskHandle | null)?.markers(fileMarkers(fileDiags));
+  }, [ready, fileDiags]);
+  // A place to show in this file (a problem, a definition, a reference).
+  const at = revealAt.value;
+  useEffect(() => {
+    const h = ed.current as DeskHandle | null;
+    if (!desk || !ready || !h || !at || at.path !== path) return;
+    revealAt.value = null;
+    h.reveal(at.line + 1, at.col + 1);
+  }, [ready, at]);
   // The desktop editor's settings follow the view.
   useEffect(() => (ed.current as DeskHandle | null)?.opts?.({ wrap: desk?.wrap, readOnly: desk?.readOnly }), [desk?.wrap, desk?.readOnly, ready]);
   // Colours: rows whose text still matches.

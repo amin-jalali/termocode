@@ -56,6 +56,8 @@ import { RunsView } from "../views/more/RunsView";
 import { SearchView } from "../views/more/SearchView";
 import { TasksView } from "../views/more/TasksView";
 import { QuickInput } from "./QuickInput";
+import { diags, panelTab, toggleProblems, type PanelTab } from "../lib/lsp";
+import { ProblemsView } from "../views/ProblemsView";
 import { StatusBar } from "./StatusBar";
 
 /** Sash is a drag handle between two panes. It reports the new size from
@@ -290,12 +292,30 @@ function EditorBody({ more, file, slot }: { more: boolean; file: string | null; 
   return <Welcome />;
 }
 
+/** PanelTabs are the bottom panel's tabs: PROBLEMS (with its count) and
+ * TERMINAL, as the laptop's editor has them. */
+function PanelTabs() {
+  const on = panelTab.value;
+  const s = diags();
+  const n = s ? s.errors + s.warnings + s.infos + s.hints : 0;
+  const tab = (id: PanelTab, label: string, extra?: ComponentChildren) => (
+    <button type="button" class={`wb-panel-title${on === id ? " is-on" : ""}`} role="tab" aria-selected={on === id ? "true" : "false"} data-panel={id} onClick={() => (panelTab.value = id)}>
+      {label}
+      {extra}
+    </button>
+  );
+  return (
+    <span class="wb-panel-tabs" role="tablist">
+      {tab("problems", t("wb.problems"), n > 0 ? <span class="wb-panel-badge">{n}</span> : null)}
+      {tab("terminal", t("wb.terminal"))}
+    </span>
+  );
+}
+
 function PanelHead({ children }: { children: ComponentChildren }) {
   return (
     <div class="wb-panel-head">
-      <span class="wb-panel-title">
-        {children}
-      </span>
+      {children}
       <span class="wb-panel-actions">
         <button type="button" class="tb tb-icon" aria-label={t("wb.panel_hide")} title={`${t("wb.panel_hide")} (${modKey()}+J)`} onClick={() => setPanes({ panel: false })}>
           <Cod name="close" />
@@ -325,6 +345,7 @@ function workbenchKeys(e: KeyboardEvent): void {
     const x = ACTIVITIES.find((a) => a.id === id);
     if (x) return run(() => (setPanes({ side: true }), go(x.to())));
   }
+  if (mod && e.shiftKey && !e.altKey && k === "m") return run(toggleProblems);
   if (mod && !e.shiftKey && !e.altKey && k === ",") return run(() => go({ tab: "more", rest: "settings", query: {} }));
   if (!mod || e.altKey || e.shiftKey) return;
   if (k === "\\") return run(() => splitEditor(activeFile.peek(), "right"));
@@ -380,7 +401,7 @@ const lastSide = signal<Activity>("files");
 
 export function Workbench() {
   // The editor tabs (open buffers) and the git marks of the open file.
-  useEffect(() => link.subscribe("bufs", "git"), []);
+  useEffect(() => link.subscribe("bufs", "git", "diagnostics"), []);
   // The workbench's keys (lib/commands.ts lists them with their names).
   useEffect(() => {
     addEventListener("keydown", workbenchKeys);
@@ -448,9 +469,11 @@ export function Workbench() {
         {p.panel && (
           <>
             <Sash axis="y" size={p.panelH} min={PANEL_MIN} max={Math.max(PANEL_MIN, innerHeight - 200)} dir={-1} label={t("wb.resize_panel")} onSize={(n) => setPanes({ panelH: n })} />
-            <section class="wb-panel" aria-label={t("tab.term")}>
-              <PanelHead>{t("wb.terminal")}</PanelHead>
-              <DeskTerm />
+            <section class="wb-panel" aria-label={t(panelTab.value === "problems" ? "wb.problems" : "tab.term")}>
+              <PanelHead>
+                <PanelTabs />
+              </PanelHead>
+              {panelTab.value === "problems" ? <ProblemsView /> : <DeskTerm />}
             </section>
           </>
         )}

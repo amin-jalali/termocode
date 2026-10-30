@@ -106,7 +106,7 @@ func TestWorkbenchLayoutTabsAndStatusBar(t *testing.T) {
 	Eval[bool](p, `(document.dispatchEvent(new KeyboardEvent("keydown", {key: "b", ctrlKey: true, bubbles: true})), true)`)
 	p.WaitJS(`document.querySelector(".wb-side")`)
 	Eval[bool](p, `(document.dispatchEvent(new KeyboardEvent("keydown", {key: "j", ctrlKey: true, bubbles: true})), true)`)
-	p.WaitJS(`document.querySelector(".wb-panel .wb-panel-title")?.textContent === "Terminal" && document.querySelector('.wb-panel [data-view="term"]')`)
+	p.WaitJS(`document.querySelector(".wb-panel .wb-panel-title.is-on")?.textContent === "Terminal" && document.querySelector('.wb-panel [data-view="term"]')`)
 
 	// Closing the active tab shows its neighbour; the laptop keeps its buffer.
 	p.TapJS(`document.querySelector(".ed-tab.is-on .ed-tab-x")`)

@@ -82,3 +82,5 @@
 .cod-tasklist::before { content: "\eb67"; }
 .cod-debug-alt::before { content: "\eb91"; }
 .cod-link-external::before { content: "\eb14"; }
+.cod-info::before { content: "\ea74"; }
+.cod-lightbulb::before { content: "\ea61"; }
