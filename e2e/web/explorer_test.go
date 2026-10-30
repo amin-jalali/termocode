@@ -60,6 +60,12 @@ func TestExplorerOutlineJumps(t *testing.T) {
 	if !Eval[bool](p, outline+`.innerText.includes("Guessed from the code")`) {
 		t.Error("a guessed outline does not say so")
 	}
+	// Open under the tree, with room for its rows, above TIMELINE.
+	p.TapJS(timeline + `.querySelector(".ex-toggle")`)
+	geo := Eval[[]float64](p, `[`+outline+`, `+timeline+`, document.querySelector(".ex-stack > .view")].flatMap((e) => { const r = e.getBoundingClientRect(); return [r.top, r.bottom]; })`)
+	if geo[1]-geo[0] < 3*24 || geo[1] > geo[2] || geo[5] > geo[0] {
+		t.Errorf("tree %v, outline %v, timeline %v: the sections overlap or have no room", geo[4:6], geo[0:2], geo[2:4])
+	}
 	p.TapJS(outline + `.querySelector('.ex-row[data-line="7"]')`)
 	p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent === "Ln 7, Col 1"`)
 	if len(p.Problems()) > 0 {
