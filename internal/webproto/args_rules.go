@@ -199,11 +199,11 @@ func (a *GitCommitArgs) validate(int) error {
 }
 
 func (a *SearchRunArgs) validate(int) error {
-	if a.Query == "" || len(a.Query) > MaxSearchQuery {
+	if a.Query == "" || len(a.Query) > MaxSearchQuery || hasControl(strings.ReplaceAll(a.Query, "\t", "")) {
 		return invalid("query is %d bytes", len(a.Query))
 	}
 	if len(a.Include) > MaxSearchGlob || len(a.Exclude) > MaxSearchGlob ||
-		hasControl(a.Include) || hasControl(a.Exclude) {
+		hasControl(a.Include) || hasControl(a.Exclude) || !insideGlobs(a.Include) || !insideGlobs(a.Exclude) {
 		return invalid("bad include or exclude")
 	}
 	if a.Max < 0 || a.Max > MaxSearchHits {
@@ -231,4 +231,21 @@ func (a *KeyArgs) validate(int) error {
 		return invalid("bad run key")
 	}
 	return nil
+}
+
+// insideGlobs: every comma-separated glob stays inside the workspace: not
+// absolute and no ".." part ("!" only negates).
+func insideGlobs(list string) bool {
+	for _, g := range strings.Split(list, ",") {
+		g = strings.TrimPrefix(strings.TrimSpace(g), "!")
+		if strings.HasPrefix(g, "/") || strings.HasPrefix(g, "\\") {
+			return false
+		}
+		for _, part := range strings.FieldsFunc(g, func(r rune) bool { return r == '/' || r == '\\' }) {
+			if part == ".." {
+				return false
+			}
+		}
+	}
+	return true
 }

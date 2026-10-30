@@ -159,6 +159,9 @@ export interface SearchRunArgs {
   max?: number;
 }
 
+export interface EmptyArgs {
+}
+
 export interface SearchOpenArgs {
   path: string;
   line: number;
@@ -167,9 +170,6 @@ export interface SearchOpenArgs {
 export interface ChatSendArgs {
   text: string;
   chat_id?: string;
-}
-
-export interface EmptyArgs {
 }
 
 export interface CardsAnswerArgs {
@@ -586,6 +586,26 @@ export interface Attention {
   id?: string;
 }
 
+export interface SearchBatch {
+  id: number;
+  results: SearchHit[];
+}
+
+export interface SearchHit {
+  path: string;
+  line: number;
+  col: number;
+  text: string;
+  marks?: SearchMark[];
+  before?: string[];
+  after?: string[];
+}
+
+export interface SearchMark {
+  s: number;
+  e: number;
+}
+
 export interface TreeListRes {
   path: string;
   entries: TreeEntry[];
@@ -636,6 +656,14 @@ export interface GitCommitInfo {
   when: number;
 }
 
+export interface SearchSummary {
+  files: number;
+  matches: number;
+  truncated?: boolean;
+  ms: number;
+  stopped?: "stopped" | "replaced" | "timeout" | "limit";
+}
+
 export interface ChatRef {
   id: string;
 }
@@ -673,6 +701,7 @@ export interface OpArgs {
   "git.diff": GitDiffArgs;
   "git.show": GitShowArgs;
   "search.run": SearchRunArgs;
+  "search.stop": EmptyArgs;
   "search.open": SearchOpenArgs;
   "chat.send": ChatSendArgs;
   "chat.stop": EmptyArgs;
@@ -722,6 +751,7 @@ export interface TopicData {
 export interface EventData {
   "answered": Answered;
   "attention": Attention;
+  "search.batch": SearchBatch;
 }
 
 // The data of a res message, by op (ops not listed answer without data).
@@ -734,6 +764,7 @@ export interface OpResult {
   "term.history": TermHistoryRes;
   "git.diff": GitDiff;
   "git.show": GitDiff;
+  "search.run": SearchSummary;
   "chat.send": ChatRef;
   "chat.new": ChatRef;
   "buf.set_text": EditRes;
