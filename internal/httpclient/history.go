@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -368,6 +369,7 @@ func (c *histFile) sync(path string, parse bool) error {
 	c.lines = 0
 	c.endsNL = len(b) == 0 || b[len(b)-1] == '\n'
 	c.parsed, c.list = parse, nil
+	var lines [][]byte
 	for len(b) > 0 {
 		var line []byte
 		if i := bytes.IndexByte(b, '\n'); i >= 0 {
@@ -375,20 +377,44 @@ func (c *histFile) sync(path string, parse bool) error {
 		} else {
 			line, b = b, nil
 		}
-		line = bytes.TrimSpace(line)
-		if len(line) == 0 {
-			continue
-		}
-		c.lines++
-		if !parse {
-			continue
-		}
-		var e Entry
-		if json.Unmarshal(line, &e) == nil {
-			c.list = append(c.list, e)
+		if line = bytes.TrimSpace(line); len(line) > 0 {
+			lines = append(lines, line)
 		}
 	}
+	c.lines = len(lines)
+	if parse {
+		c.list = decodeEntries(lines)
+	}
 	return nil
+}
+
+// decodeEntries decodes JSON lines (a bad line is skipped), on several
+// cores when there are many: the first history open of a session reads
+// the whole file.
+func decodeEntries(lines [][]byte) []Entry {
+	out := make([]Entry, len(lines))
+	ok := make([]bool, len(lines))
+	workers := min(runtime.GOMAXPROCS(0), len(lines)/128+1)
+	var wg sync.WaitGroup
+	for w := range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := w; i < len(lines); i += workers {
+				ok[i] = json.Unmarshal(lines[i], &out[i]) == nil
+			}
+		}()
+	}
+	wg.Wait()
+	n := 0
+	for i := range out {
+		if ok[i] {
+			out[n] = out[i]
+			n++
+		}
+	}
+	clear(out[n:])
+	return out[:n]
 }
 
 // write rewrites the file with list (atomic, 0600) and remembers it.

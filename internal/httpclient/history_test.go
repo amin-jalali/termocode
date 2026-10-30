@@ -1,6 +1,7 @@
 package httpclient
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -256,5 +257,44 @@ func BenchmarkHistoryList1000(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
 		_, _ = s.List()
+	}
+}
+
+// The first List of a session (nothing cached): read and decode.
+func BenchmarkHistoryListCold1000(b *testing.B) {
+	s := &Store{Path: filepath.Join(b.TempDir(), "history.jsonl"), Max: 1000}
+	for i := 0; i < 1000; i++ {
+		_ = s.Append(Entry{Method: "GET", URL: "http://x/", Body: strings.Repeat("x", 900), Headers: []Header{{"Accept", "a"}}, RespHeaders: []Header{{"content-type", "application/json"}, {"date", "now"}}})
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		histMu.Lock()
+		delete(histFiles, s.Path)
+		histMu.Unlock()
+		_, _ = s.List()
+	}
+}
+
+// A long file decodes on several cores: order kept, bad lines skipped.
+func TestHistoryDecodeManyKeepsOrder(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "history.jsonl")
+	var sb strings.Builder
+	for i := 0; i < 1500; i++ {
+		if i%97 == 0 {
+			sb.WriteString("{not json\n")
+		}
+		fmt.Fprintf(&sb, `{"id":"%d","method":"GET","url":"http://x/%d"}`+"\n", i, i)
+	}
+	if err := os.WriteFile(p, []byte(sb.String()), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	l, err := (&Store{Path: p, Max: 2000}).List()
+	if err != nil || len(l) != 1500 {
+		t.Fatalf("%d entries, %v", len(l), err)
+	}
+	for i, e := range l {
+		if want := strconv.Itoa(1499 - i); e.ID != want {
+			t.Fatalf("entry %d: id %s, want %s", i, e.ID, want)
+		}
 	}
 }
