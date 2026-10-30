@@ -23,6 +23,11 @@ func TestBackButtonWalksTheTabs(t *testing.T) {
 			label := map[string]string{"chat": "Chat", "files": "Files", "git": "Git"}
 			current := func(tab string) {
 				t.Helper()
+				if vp.W >= 1200 {
+					// The desktop's activity bar: icons, the item by its view.
+					p.WaitJS(`location.hash === "#/` + tab + `" && document.querySelector('nav .nav-item[aria-current="page"]')?.dataset.act === "` + tab + `"`)
+					return
+				}
 				p.WaitJS(`location.hash === "#/` + tab + `" && document.querySelector('nav .nav-item[aria-current="page"]')?.textContent.includes("` + label[tab] + `")`)
 			}
 			p.Do(chromedp.NavigateBack())
