@@ -3,6 +3,7 @@
 package web
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/chromedp/chromedp/kb"
@@ -57,5 +58,40 @@ func TestCardSheetFitsTheThumb(t *testing.T) {
 				t.Errorf("at 200 %% Deny sits below Allow once (tops %v)", order)
 			}
 		})
+	}
+}
+
+// In a right-to-left page, code, terminal and diff rows, card commands
+// and the where-line stay left to right and isolated, so a Persian word
+// inside cannot reorder them; file names follow their own text (dir=auto).
+func TestRowsStayLTRInsideRTL(t *testing.T) {
+	p := openKit(t, Phone)
+	Eval[bool](p, `(document.documentElement.dir = "rtl", document.documentElement.lang = "fa", true)`)
+	bad := Eval[[]string](p, `(() => {
+		const out = [];
+		const rows = document.querySelectorAll(".crow, .trow, .drow, .card-subject, .card-where, .strip");
+		if (rows.length < 10) out.push("only " + rows.length + " rows found");
+		for (const el of rows) {
+			const cs = getComputedStyle(el);
+			if (cs.direction !== "ltr") out.push(el.className + " runs " + cs.direction);
+			if (!["isolate", "isolate-override", "plaintext"].includes(cs.unicodeBidi)) out.push(el.className + " bidi " + cs.unicodeBidi);
+		}
+		for (const el of document.querySelectorAll(".tree-name, .toast-title, div.card-body")) {
+			if (el.getAttribute("dir") !== "auto") out.push(el.className + " has no dir=auto");
+		}
+		return out.slice(0, 12);
+	})()`)
+	if len(bad) > 0 {
+		t.Errorf("bidi isolation broken:\n  %s", strings.Join(bad, "\n  "))
+	}
+	// A Persian word inside a code row does not move the row's start.
+	order := Eval[bool](p, `(() => {
+		const row = document.querySelector(".crow");
+		const n = row.querySelector(".crow-n").getBoundingClientRect();
+		const txt = row.querySelector(".crow-text").getBoundingClientRect();
+		return n.left < txt.left;
+	})()`)
+	if !order {
+		t.Error("in RTL the line number is not left of the code")
 	}
 }
