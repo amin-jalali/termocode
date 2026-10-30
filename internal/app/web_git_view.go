@@ -135,6 +135,10 @@ func (m *Model) webGitAmend(call *webCall) *webAsk {
 	}
 	head := m.gitCommits[0]
 	staged, _ := m.gitFileCounts()
+	if staged == 0 && msg == "" {
+		call.fail(webproto.CodeConflict, "Nothing to change: stage files or type a new message.")
+		return nil
+	}
 	body := "Replace the last commit " + head.Hash + " \"" + webName(head.Subject) + "\" with a new one"
 	switch staged {
 	case 0:

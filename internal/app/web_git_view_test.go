@@ -148,3 +148,15 @@ func TestGitAmendNeedsLaptopCard(t *testing.T) {
 		t.Errorf("%s commits, want 1 (replaced, not added)", n)
 	}
 }
+
+// Spec (amend): an amend that would change nothing (nothing staged, no
+// new message) is refused before any card.
+func TestGitAmendNothingToChange(t *testing.T) {
+	m := aiTestModel(t)
+	webTestHub(t, &m)
+	webTestRepo(t, &m)
+	c := webTestSub(t, &m)
+	if got := webTestErr(webTestCallBg(t, &m, c, webproto.OpGitAmend, `{}`)); got != string(webproto.CodeConflict) || m.confirmOpen {
+		t.Errorf("amend with nothing to change: %q, card open %v", got, m.confirmOpen)
+	}
+}
