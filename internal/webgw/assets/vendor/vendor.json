@@ -1,5 +1,5 @@
 {
-  "$comment": "Browser libraries, copied byte for byte from their npm tarballs. Never edit a file here; to update, replace the folder and its row (tarball integrity from the registry, sha384 of each file). cmd/webbuild resolves the bare imports below to these files and nothing else.",
+  "$comment": "Browser libraries, copied byte for byte from their npm tarballs (the .d.ts files keep their tarball paths so relative imports resolve; only tsc reads them). Never edit a file here; to update, replace the folder and its row (tarball integrity from the registry, sha384 of each file). cmd/webbuild resolves the bare imports below to these files and nothing else.",
   "packages": [
     {
       "name": "preact",
@@ -15,7 +15,12 @@
       "files": {
         "LICENSE": "sha384-xMn7eKwbmbh7PQrJ/p7EPGNYY7Ayr/2qEForngAvQzJ4zPfmwvAZRLmQUXkAYJ1W",
         "hooks.module.js": "sha384-NB1WUh14K2Oh7NhjB2RliXB085nezUjZ+FNbCEGNeb972g+I4CjKRx+u3vbZh227",
-        "preact.module.js": "sha384-/+qYo5nYND9OqrXEuD1TAQve92IcrX0NRO0UL3OhOo4n0PKMsi5hsMdezdy76IvB"
+        "hooks/src/index.d.ts": "sha384-r41boiBfpALgzN0FzuHfxNLGOQsP0iRS94m14QGeHwZ7uCMVow7hsAvrufKNwOaW",
+        "jsx-runtime/src/index.d.ts": "sha384-BlCdKPo8jy15nZHonDVf6/vCr5pM3R7Gc/iXgAG4RRV/oDCFMmbTjWpfBF5kShMz",
+        "preact.module.js": "sha384-/+qYo5nYND9OqrXEuD1TAQve92IcrX0NRO0UL3OhOo4n0PKMsi5hsMdezdy76IvB",
+        "src/dom.d.ts": "sha384-9bNI3DVbpiRwCKItzXDZXW0hg5vmyoR4/tCM9UjdjrWwfGpavcKzLLGm6BaJIn1b",
+        "src/index.d.ts": "sha384-SX3Vk9j6wi0XmQ9gwg0vVw387raUrRe0aNEZg63hUnFlalH9WoSCrKTHMRNJMQN6",
+        "src/jsx.d.ts": "sha384-VyS6lCkjfDORe2PB/X1x/bkh1NyFRKnRVoibX3JEeOiQ/SODrlQ4Yoz531lDk6+O"
       }
     },
     {
@@ -30,6 +35,7 @@
       },
       "files": {
         "LICENSE": "sha384-LuA/O5Wq5fr3WuqoS5CvPTOKDAaHZrp6ZauNoM9pJo0A5CGHEXeI2B1tVV+npmO4",
+        "dist/signals.d.ts": "sha384-oFQG667U1jz5VpvSnq/EorjhqnjKUDkzSiFmQCrh+MbPLddBvMRey/aSG5OFfIbF",
         "signals.module.js": "sha384-WR3csfZ49vImBNHsQmb6P/lszHw/vq1VioiTxFjWFDDRmJ3bk9f4fVKhiCS0SbwX"
       }
     },
@@ -45,6 +51,7 @@
       },
       "files": {
         "LICENSE": "sha384-LuA/O5Wq5fr3WuqoS5CvPTOKDAaHZrp6ZauNoM9pJo0A5CGHEXeI2B1tVV+npmO4",
+        "dist/signals-core.d.ts": "sha384-aeYACEOEg0Q6AHcFHvCrBbH+5ntT7CJYgzRHJ8EdQDFlOjp1fGEbIXDPA7CRIO+W",
         "signals-core.module.js": "sha384-G4zs+40X/+Yju/CgNVULs6u1RU9oQrC5yOkIQnMdwj94YrvHIaSMmtxvWlIkiByV"
       }
     }

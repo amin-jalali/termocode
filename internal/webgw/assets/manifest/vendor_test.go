@@ -105,3 +105,36 @@ func TestSRI(t *testing.T) {
 		t.Fatalf("SRI(\"\") = %s, want %s", got, want)
 	}
 }
+
+func TestVendorRefusesAnUnlistedNestedFile(t *testing.T) {
+	dir := copyVendor(t)
+	nested := filepath.Join(dir, "preact@10.29.8", "src")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "extra.d.ts"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyVendor(dir); err == nil || !strings.Contains(err.Error(), "src/extra.d.ts") {
+		t.Fatalf("err = %v, want an unlisted nested file error", err)
+	}
+}
+
+func TestVendorShipsTypeDeclarations(t *testing.T) {
+	pkgs, err := LoadVendor(realVendor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]string{
+		"preact":               {"src/index.d.ts", "src/jsx.d.ts", "src/dom.d.ts", "hooks/src/index.d.ts", "jsx-runtime/src/index.d.ts"},
+		"@preact/signals":      {"dist/signals.d.ts"},
+		"@preact/signals-core": {"dist/signals-core.d.ts"},
+	}
+	for _, p := range pkgs {
+		for _, f := range want[p.Name] {
+			if _, ok := p.Files[f]; !ok {
+				t.Errorf("%s: no type declaration %s", p.Name, f)
+			}
+		}
+	}
+}

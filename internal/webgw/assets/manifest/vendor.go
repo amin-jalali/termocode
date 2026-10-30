@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -87,7 +88,7 @@ func VerifyVendor(dir string) ([]Package, error) {
 			seen["import:"+spec] = true
 		}
 		for _, file := range sortedKeys(p.Files) {
-			b, err := os.ReadFile(filepath.Join(dir, p.Dir, file))
+			b, err := os.ReadFile(filepath.Join(dir, p.Dir, filepath.FromSlash(file)))
 			if err != nil {
 				return nil, fmt.Errorf("vendor: %s/%s: %w", p.Dir, file, err)
 			}
@@ -95,13 +96,21 @@ func VerifyVendor(dir string) ([]Package, error) {
 				return nil, fmt.Errorf("vendor: %s/%s has %s, want %s", p.Dir, file, got, p.Files[file])
 			}
 		}
-		entries, err := os.ReadDir(filepath.Join(dir, p.Dir))
+		var onDisk []string
+		err := filepath.WalkDir(filepath.Join(dir, p.Dir), func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			rel, _ := filepath.Rel(filepath.Join(dir, p.Dir), path)
+			onDisk = append(onDisk, filepath.ToSlash(rel))
+			return nil
+		})
 		if err != nil {
 			return nil, err
 		}
-		for _, e := range entries {
-			if _, ok := p.Files[e.Name()]; !ok {
-				return nil, fmt.Errorf("vendor: %s/%s is not listed in %s", p.Dir, e.Name(), VendorFile)
+		for _, name := range onDisk {
+			if _, ok := p.Files[name]; !ok {
+				return nil, fmt.Errorf("vendor: %s/%s is not listed in %s", p.Dir, name, VendorFile)
 			}
 		}
 		seen["dir:"+p.Dir] = true
