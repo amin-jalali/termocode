@@ -268,7 +268,7 @@ export function FileView({ path }: { path: string }) {
               {t("file.save")}
             </Button>
             <Button kind="primary" small onClick={doneLive}>
-              {t("live.done")}
+              {t("done")}
             </Button>
           </>
         ) : (
