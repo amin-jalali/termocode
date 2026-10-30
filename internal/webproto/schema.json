@@ -191,7 +191,11 @@
     {
       "name": "git",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "GitSnap",
+      "deltas": [
+        "GitSnap"
+      ]
     },
     {
       "name": "tasks",
@@ -367,6 +371,7 @@
     {
       "op": "git.diff",
       "args": "GitDiffArgs",
+      "result": "GitDiff",
       "role": "viewer",
       "rate": {
         "n": 20,
@@ -380,6 +385,7 @@
     {
       "op": "git.show",
       "args": "GitShowArgs",
+      "result": "GitDiff",
       "role": "viewer",
       "rate": {
         "n": 20,
@@ -633,8 +639,35 @@
       "phase": "v1"
     },
     {
+      "op": "git.stage_hunk",
+      "args": "GitHunkArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v1"
+    },
+    {
+      "op": "git.unstage_hunk",
+      "args": "GitHunkArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v1"
+    },
+    {
       "op": "git.commit",
       "args": "GitCommitArgs",
+      "result": "GitCommitted",
       "role": "controller",
       "rate": {
         "n": 2,
@@ -648,6 +681,7 @@
     {
       "op": "git.discard",
       "args": "PathsArgs",
+      "result": "AskRef",
       "role": "controller",
       "rate": {
         "n": 1,
@@ -763,6 +797,18 @@
       },
       "required": [
         "id"
+      ],
+      "additionalProperties": true
+    },
+    "AskRef": {
+      "type": "object",
+      "properties": {
+        "card": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "card"
       ],
       "additionalProperties": true
     },
@@ -1472,7 +1518,9 @@
           "enum": [
             "ctx",
             "add",
-            "del"
+            "del",
+            "hunk",
+            "file"
           ]
         },
         "new": {
@@ -1580,6 +1628,53 @@
       ],
       "additionalProperties": true
     },
+    "GitBranch": {
+      "type": "object",
+      "properties": {
+        "ahead": {
+          "type": "integer"
+        },
+        "behind": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "ahead",
+        "behind"
+      ],
+      "additionalProperties": true
+    },
+    "GitCommit": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "unpushed": {
+          "type": "boolean"
+        },
+        "when": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "subject",
+        "author",
+        "when"
+      ],
+      "additionalProperties": true
+    },
     "GitCommitArgs": {
       "type": "object",
       "properties": {
@@ -1592,9 +1687,100 @@
       ],
       "additionalProperties": false
     },
+    "GitCommitInfo": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "when": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "subject",
+        "author",
+        "when"
+      ],
+      "additionalProperties": true
+    },
+    "GitCommitted": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "integer"
+        },
+        "hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "hash",
+        "files"
+      ],
+      "additionalProperties": true
+    },
+    "GitDiff": {
+      "type": "object",
+      "properties": {
+        "added": {
+          "type": "integer"
+        },
+        "binary": {
+          "type": "boolean"
+        },
+        "commit": {
+          "$ref": "#/defs/GitCommitInfo"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "next": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "removed": {
+          "type": "integer"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/defs/DiffRow"
+          },
+          "type": "array"
+        },
+        "staged": {
+          "type": "boolean"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "rows",
+        "from",
+        "added",
+        "removed"
+      ],
+      "additionalProperties": true
+    },
     "GitDiffArgs": {
       "type": "object",
       "properties": {
+        "from": {
+          "type": "integer"
+        },
         "path": {
           "type": "string"
         },
@@ -1607,9 +1793,60 @@
       ],
       "additionalProperties": false
     },
+    "GitFile": {
+      "type": "object",
+      "properties": {
+        "conflict": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "staged": {
+          "type": "boolean"
+        },
+        "unstaged": {
+          "type": "boolean"
+        },
+        "untracked": {
+          "type": "boolean"
+        },
+        "x": {
+          "type": "string"
+        },
+        "y": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "x",
+        "y"
+      ],
+      "additionalProperties": true
+    },
+    "GitHunkArgs": {
+      "type": "object",
+      "properties": {
+        "hunk": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "hunk"
+      ],
+      "additionalProperties": false
+    },
     "GitShowArgs": {
       "type": "object",
       "properties": {
+        "from": {
+          "type": "integer"
+        },
         "hash": {
           "type": "string"
         }
@@ -1618,6 +1855,45 @@
         "hash"
       ],
       "additionalProperties": false
+    },
+    "GitSnap": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "$ref": "#/defs/GitBranch"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/defs/GitFile"
+          },
+          "type": "array"
+        },
+        "log": {
+          "items": {
+            "$ref": "#/defs/GitCommit"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "op": {
+          "enum": [
+            "rebase",
+            "merge"
+          ]
+        },
+        "repo": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "repo",
+        "branch",
+        "files",
+        "log"
+      ],
+      "additionalProperties": true
     },
     "GoneDelta": {
       "type": "object",

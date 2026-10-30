@@ -1,0 +1,1 @@
+{"t":"req","id":29,"op":"git.stage_hunk","args":{"path":"src/main.go","hunk":"@@ -10,3 +10,4 @@ func main() {"}}

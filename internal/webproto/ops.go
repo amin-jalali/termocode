@@ -71,6 +71,8 @@ const (
 	OpGitShow          = "git.show"
 	OpGitStage         = "git.stage"
 	OpGitUnstage       = "git.unstage"
+	OpGitStageHunk     = "git.stage_hunk"
+	OpGitUnstageHunk   = "git.unstage_hunk"
 	OpGitCommit        = "git.commit"
 	OpGitDiscard       = "git.discard"
 	OpSearchRun        = "search.run"
@@ -134,6 +136,8 @@ var opTable = []Policy{
 	// Git.
 	{Op: OpGitStage, New: newOf[PathsArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 16 * kib, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpGitUnstage, New: newOf[PathsArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 16 * kib, Audit: AuditYes, Phase: PhaseV1},
+	{Op: OpGitStageHunk, New: newOf[GitHunkArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 8 * kib, Audit: AuditYes, Phase: PhaseV1},
+	{Op: OpGitUnstageHunk, New: newOf[GitHunkArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 8 * kib, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpGitCommit, New: newOf[GitCommitArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 40 * kib, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpGitDiscard, New: newOf[PathsArgs](), Role: RoleController, Rate: Rate{N: 1, Per: 5 * time.Second}, MaxBytes: 16 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV1},
 

@@ -154,13 +154,26 @@ func (a *CardsAnswerArgs) validate(int) error {
 }
 
 func (a *GitDiffArgs) validate(int) error {
+	if !validPath(a.Path, false) || a.From < 0 {
+		return invalid("bad path or page")
+	}
+	return nil
+}
+
+func (a *GitHunkArgs) validate(int) error {
 	if !validPath(a.Path, false) {
 		return invalid("bad path")
+	}
+	if !strings.HasPrefix(a.Hunk, "@@ ") || len(a.Hunk) > MaxHunkHeader || hasControl(a.Hunk) {
+		return invalid("bad hunk header")
 	}
 	return nil
 }
 
 func (a *GitShowArgs) validate(int) error {
+	if a.From < 0 {
+		return invalid("bad page")
+	}
 	if len(a.Hash) < 4 || len(a.Hash) > 64 {
 		return invalid("bad commit hash")
 	}
@@ -172,9 +185,15 @@ func (a *GitShowArgs) validate(int) error {
 	return nil
 }
 
+// A commit message: at most MaxCommitMsg bytes, a first line that is not
+// blank, no control characters but line breaks and tabs.
 func (a *GitCommitArgs) validate(int) error {
-	if strings.TrimSpace(a.Message) == "" || len(a.Message) > MaxCommitMsg {
+	subject, _, _ := strings.Cut(a.Message, "\n")
+	if strings.TrimSpace(subject) == "" || len(a.Message) > MaxCommitMsg {
 		return invalid("bad commit message")
+	}
+	if hasControl(strings.NewReplacer("\n", "", "\t", "").Replace(a.Message)) {
+		return invalid("control characters in the commit message")
 	}
 	return nil
 }

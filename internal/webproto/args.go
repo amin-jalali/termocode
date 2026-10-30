@@ -81,14 +81,24 @@ type TermSendArgs struct {
 type GitDiffArgs struct {
 	Path   string `json:"path"`
 	Staged bool   `json:"staged,omitempty"`
+	From   int    `json:"from,omitempty"` // the first row of the page (GitDiff.Next)
 }
 
 // GitShowArgs asks for one commit.
 type GitShowArgs struct {
 	Hash string `json:"hash"`
+	From int    `json:"from,omitempty"`
 }
 
-// GitCommitArgs commits what is staged.
+// GitHunkArgs names one hunk of a file's diff by its exact header line
+// (a "hunk" row's text): if the diff changed and has no such hunk now,
+// nothing happens.
+type GitHunkArgs struct {
+	Path string `json:"path"`
+	Hunk string `json:"hunk"`
+}
+
+// GitCommitArgs commits what is staged. There is no amend from the web.
 type GitCommitArgs struct {
 	Message string `json:"message"`
 }

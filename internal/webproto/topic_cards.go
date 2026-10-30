@@ -70,7 +70,7 @@ type CardDiff struct {
 
 // DiffRow is one row of a diff.
 type DiffRow struct {
-	K    string `json:"k" enum:"ctx|add|del"`
+	K    string `json:"k" enum:"ctx|add|del|hunk|file"` // hunk and file rows come in git diffs only
 	Text string `json:"text"`
 	Old  int    `json:"old,omitempty"` // 1-based line in the old text
 	New  int    `json:"new,omitempty"` // 1-based line in the new text

@@ -141,10 +141,12 @@ export interface TermHistoryArgs {
 export interface GitDiffArgs {
   path: string;
   staged?: boolean;
+  from?: number;
 }
 
 export interface GitShowArgs {
   hash: string;
+  from?: number;
 }
 
 export interface SearchRunArgs {
@@ -199,6 +201,11 @@ export interface TermSendArgs {
 
 export interface PathsArgs {
   paths: string[];
+}
+
+export interface GitHunkArgs {
+  path: string;
+  hunk: string;
 }
 
 export interface GitCommitArgs {
@@ -386,7 +393,7 @@ export interface CardDiff {
 }
 
 export interface DiffRow {
-  k: "ctx" | "add" | "del";
+  k: "ctx" | "add" | "del" | "hunk" | "file";
   text: string;
   old?: number;
   new?: number;
@@ -534,6 +541,39 @@ export interface TermModeDelta {
   height: number;
 }
 
+export interface GitSnap {
+  repo: boolean;
+  branch: GitBranch;
+  op?: "rebase" | "merge";
+  files: GitFile[];
+  more?: number;
+  log: GitCommit[];
+}
+
+export interface GitBranch {
+  name: string;
+  ahead: number;
+  behind: number;
+}
+
+export interface GitFile {
+  path: string;
+  x: string;
+  y: string;
+  staged?: boolean;
+  unstaged?: boolean;
+  untracked?: boolean;
+  conflict?: boolean;
+}
+
+export interface GitCommit {
+  hash: string;
+  subject: string;
+  author: string;
+  when: number;
+  unpushed?: boolean;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -573,6 +613,27 @@ export interface TermHistoryRes {
   more: boolean;
 }
 
+export interface GitDiff {
+  path?: string;
+  staged?: boolean;
+  commit?: GitCommitInfo;
+  rows: DiffRow[];
+  from: number;
+  next?: number;
+  added: number;
+  removed: number;
+  binary?: boolean;
+  truncated?: boolean;
+}
+
+export interface GitCommitInfo {
+  hash: string;
+  subject: string;
+  body?: string;
+  author: string;
+  when: number;
+}
+
 export interface ChatRef {
   id: string;
 }
@@ -584,6 +645,15 @@ export interface EditRes {
 
 export interface TermNewRes {
   buf: number;
+}
+
+export interface GitCommitted {
+  hash: string;
+  files: number;
+}
+
+export interface AskRef {
+  card: string;
 }
 
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
@@ -618,6 +688,8 @@ export interface OpArgs {
   "term.close": BufArgs;
   "git.stage": PathsArgs;
   "git.unstage": PathsArgs;
+  "git.stage_hunk": GitHunkArgs;
+  "git.unstage_hunk": GitHunkArgs;
   "git.commit": GitCommitArgs;
   "git.discard": PathsArgs;
   "tasks.run": LabelArgs;
@@ -641,6 +713,7 @@ export interface TopicData {
   "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta };
   "terms": { snap: TermsSnap; delta: TermsSnap };
   "term": { snap: TermSnap; delta: LinesDelta | TickDelta | TermResetDelta | TermModeDelta | GoneDelta };
+  "git": { snap: GitSnap; delta: GitSnap };
 }
 
 // The data of an ev message, by kind.
@@ -657,10 +730,14 @@ export interface OpResult {
   "buf.open": BufOpenRes;
   "buf.head": BufHeadRes;
   "term.history": TermHistoryRes;
+  "git.diff": GitDiff;
+  "git.show": GitDiff;
   "chat.send": ChatRef;
   "chat.new": ChatRef;
   "buf.set_text": EditRes;
   "buf.save": EditRes;
   "buf.undo": EditRes;
   "term.new": TermNewRes;
+  "git.commit": GitCommitted;
+  "git.discard": AskRef;
 }
