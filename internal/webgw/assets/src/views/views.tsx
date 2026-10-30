@@ -3,9 +3,11 @@
 // WEB-23); until then each shows its loading and empty states.
 import { h } from "preact";
 import { prefs, setPref, type Direction, type Language, type Theme } from "../lib/prefs";
+import { go, route } from "../lib/router";
 import { t } from "../strings";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
+import { SearchView } from "./more/SearchView";
 import { View } from "./View";
 
 export { ChatView } from "./Chat";
@@ -29,6 +31,8 @@ export function TermView() {
 export { GitView } from "./git/GitView";
 
 export function MoreView() {
+  const sub = route.value.tab === "more" ? route.value.rest : "";
+  if (sub === "search") return <SearchView />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -49,6 +53,11 @@ export function MoreView() {
   return (
     <View tab="more" title={t("tab.more")}>
       <div class="more">
+        <nav class="more-links" aria-label={t("tab.more")}>
+          <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "search", query: {} })}>
+            {t("more.search")}
+          </button>
+        </nav>
         <section class="group" aria-labelledby="g-phone">
           <h2 class="group-title" id="g-phone">
             {t("more.this_phone")}

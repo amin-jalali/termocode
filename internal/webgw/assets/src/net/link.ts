@@ -135,9 +135,15 @@ export class Link {
 
   /** request sends one op; it fails at once while the link is down. */
   request(op: string, args: unknown = {}): Promise<unknown> {
-    if (this.state.peek() !== "online" || !this.ws) return Promise.reject(new OfflineError());
+    return this.requestWithID(op, args).result;
+  }
+
+  /** requestWithID is request that also says the request's id (0 when
+   * offline), for ops whose events carry it (search.batch). */
+  requestWithID(op: string, args: unknown = {}): { id: number; result: Promise<unknown> } {
+    if (this.state.peek() !== "online" || !this.ws) return { id: 0, result: Promise.reject(new OfflineError()) };
     const id = ++this.reqID;
-    return new Promise((resolve, reject) => {
+    const result = new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new ReqError("busy", "no answer"));
@@ -145,6 +151,7 @@ export class Link {
       this.pending.set(id, { resolve, reject, timer });
       this.send({ t: "req", id, op, args });
     });
+    return { id, result };
   }
 
   /** stop says bye and closes for good (the page is closing). */
