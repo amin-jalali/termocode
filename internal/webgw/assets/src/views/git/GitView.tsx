@@ -1,9 +1,10 @@
 // The Git tab (WEB-23, web UX 3.5, 5.7): the laptop's changed files in
 // groups (Conflicts, Staged, Changes, Untracked), a diff sheet per file,
-// stage and unstage by button or swipe with Undo, the commit box. Routes: #/git, #/git/<path>?side=staged,
+// stage and unstage by button or swipe with Undo, the commit box, and
+// discard through the laptop. Routes: #/git, #/git/<path>?side=staged,
 // #/git?show=<hash>.
 import { h, Fragment } from "preact";
-import { useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { go, route } from "../../lib/router";
 import { toast } from "../../lib/toasts";
 import { link, live, store } from "../../session";
@@ -13,6 +14,7 @@ import { t, type StringKey } from "../../strings";
 import { View } from "../View";
 import { CommitBox } from "./CommitBox";
 import { DiffSheet } from "./DiffSheet";
+import { DiscardFlow } from "./DiscardFlow";
 import { gitFailed } from "./errors";
 import { GitRow } from "./GitRow";
 import { ShowSheet } from "./ShowSheet";
@@ -46,6 +48,7 @@ export function GitView() {
   const r = route.value;
   const viewer = link.meta.value?.role === "viewer";
   const canAct = !viewer && live.value;
+  const [discard, setDiscard] = useState<string[] | null>(null);
 
   const branch = g.branch.name;
   const sub = g.repo && (
@@ -150,9 +153,11 @@ export function GitView() {
           onSide={(s) => go({ tab: "git", rest: diffPath, query: s ? { side: "staged" } : {} }, true)}
           onClose={close}
           onStage={(stage) => stageFile(diffPath, stage)}
+          onDiscard={() => setDiscard([diffPath])}
         />
       )}
       {showHash && <ShowSheet hash={showHash} onClose={close} />}
+      {discard && <DiscardFlow paths={discard} onDone={() => setDiscard(null)} />}
     </View>
   );
 }

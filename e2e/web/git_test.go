@@ -238,6 +238,49 @@ func TestGitDiffSheet(t *testing.T) {
 	}
 }
 
+// Discard asks the laptop: an in-page question first (Cancel first and
+// focused, the action arms), then the waiting state until the answered
+// event; Cancel there cancels the laptop's card.
+func TestDiscardWaitsForLaptop(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openGit(t, vp, gitSnap())
+			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-open')`)
+			reply(t, c, expectReq(t, c, webproto.OpGitDiff, ""), webproto.GitDiff{Path: "src/a.go", Rows: []webproto.DiffRow{}})
+			p.TapJS(ButtonByText("Discard changes…"))
+			p.WaitJS(`document.querySelector(".discard") && document.activeElement === document.querySelector(".discard .choices button")`)
+			if txt := p.Text(".discard-text"); txt != "Discard changes in src/a.go? This cannot be undone." {
+				t.Errorf("question %q", txt)
+			}
+			p.Key(kb.Enter) // the focused button is Cancel
+			p.WaitJS(`!document.querySelector(".discard")`)
+			c.Quiet(t, 200*time.Millisecond)
+
+			p.TapJS(ButtonByText("Discard changes…"))
+			p.WaitJS(`document.querySelector(".discard .arm.is-armed")`)
+			p.TapJS(ButtonByText("Ask the laptop"))
+			r := expectReq(t, c, webproto.OpGitDiscard, `{"paths":["src/a.go"]}`)
+			reply(t, c, r, webproto.AskRef{Card: "card-7"})
+			p.WaitJS(`document.querySelector(".waiting-title")?.textContent === "Waiting for the laptop…"`)
+			p.TapJS(`document.querySelector(".waiting button")`)
+			cr := expectReq(t, c, webproto.OpCardsAnswer, `{"id":"card-7","choice":"cancel"}`)
+			reply(t, c, cr, nil)
+			c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "card-7", By: "phone", Choice: "cancel"})})
+			p.WaitJS(`!document.querySelector(".waiting")`)
+			p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("Cancelled. Nothing changed.")`)
+
+			// Confirmed on the laptop.
+			p.TapJS(ButtonByText("Discard changes…"))
+			p.WaitJS(`document.querySelector(".discard .arm.is-armed")`)
+			p.TapJS(ButtonByText("Ask the laptop"))
+			reply(t, c, expectReq(t, c, webproto.OpGitDiscard, ""), webproto.AskRef{Card: "card-8"})
+			p.WaitJS(`document.querySelector(".waiting")`)
+			c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "card-8", By: "laptop", Choice: "confirm"})})
+			p.WaitJS(`!document.querySelector(".waiting") && document.querySelector(".toasts")?.textContent.includes("Done on the laptop.")`)
+		})
+	}
+}
+
 // A viewer reads only: no stage buttons and no commit box. Offline,
 // actions say Offline.
 func TestGitViewerReadsOnly(t *testing.T) {
