@@ -19,13 +19,15 @@ export interface Prefs {
   rowPx: number;
   /** wakeLock: keep the screen on while a run streams (opt-in). */
   wakeLock: boolean;
+  /** notify: OS notifications with fixed texts (opt-in, WEB-37). */
+  notify: boolean;
 }
 
 /** ROW_MIN and ROW_MAX bound rowPx (WEB-36). */
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, rowPx: 0, wakeLock: false };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, rowPx: 0, wakeLock: false, notify: false };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -47,6 +49,7 @@ function load(): Prefs {
       firstRunDone: v.firstRunDone === true,
       rowPx: rowSize(v.rowPx),
       wakeLock: v.wakeLock === true,
+      notify: v.notify === true,
     };
   } catch {
     return defaults;

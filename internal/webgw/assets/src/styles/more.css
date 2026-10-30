@@ -52,3 +52,4 @@
 .run-why { color: var(--amber); font-size: 0.875rem; }
 .run .choices { padding-top: var(--s2); }
 .run .btn, .task-line .btn { min-height: var(--tap); }
+.notify { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); }
