@@ -17,13 +17,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 const (
@@ -93,7 +94,7 @@ func Dir() (string, error) {
 }
 
 // tokenRe matches the usual key shapes (sk-…, ghp_…, Bearer …, key=…).
-var tokenRe = regexp.MustCompile(`(?i)(sk-[A-Za-z0-9_\-]{8,}|gh[pousr]_[A-Za-z0-9]{8,}|xox[abpr]-[A-Za-z0-9\-]{8,}|AKIA[A-Z0-9]{12,}|bearer\s+[A-Za-z0-9._\-]{8,}|((key|token|secret|password|passwd)\s*[=:]\s*)[^\s"']{4,})`)
+var tokenRe = lazyre.New(`(?i)(sk-[A-Za-z0-9_\-]{8,}|gh[pousr]_[A-Za-z0-9]{8,}|xox[abpr]-[A-Za-z0-9\-]{8,}|AKIA[A-Z0-9]{12,}|bearer\s+[A-Za-z0-9._\-]{8,}|((key|token|secret|password|passwd)\s*[=:]\s*)[^\s"']{4,})`)
 
 // clean masks secrets, environment values and the home folder in s.
 func clean(s string) string {

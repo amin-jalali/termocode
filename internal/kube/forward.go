@@ -3,13 +3,13 @@ package kube
 import (
 	"bufio"
 	"context"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/crash"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Forward is one running `kubectl port-forward`. It lives until Stop (or
@@ -25,7 +25,7 @@ type Forward struct {
 	done   chan struct{}
 }
 
-var forwardingRe = regexp.MustCompile(`Forwarding from 127\.0\.0\.1:(\d+) ->`)
+var forwardingRe = lazyre.New(`Forwarding from 127\.0\.0\.1:(\d+) ->`)
 
 // PortForward starts `kubectl port-forward pod/<pod> :<remote>`: kubectl
 // picks a free local port, read from its first line. It waits up to the

@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,6 +10,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/kube"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ── AI tools for the Kubernetes view (G-K8S) ─────────────────────────────
@@ -24,7 +24,7 @@ import (
 const aiKubeMaxLines = 1000
 
 // aiKubeNameRe is a Kubernetes object or namespace name (DNS subdomain).
-var aiKubeNameRe = regexp.MustCompile(`^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$`)
+var aiKubeNameRe = lazyre.New(`^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$`)
 
 func aiKubeValidName(what, s string) error {
 	if len(s) > 253 || !aiKubeNameRe.MatchString(s) {
