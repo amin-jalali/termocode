@@ -21,36 +21,11 @@ import type {
   ToastsDelta,
   ToastsSnap,
 } from "../../../../webproto/proto";
+import { arr, bad, int, obj, str } from "./delta";
 import type { Reducer, Store } from "./store";
 
 /** MAX_CHATS is webproto.MaxChats: the chats topic keeps the newest 200. */
 export const MAX_CHATS = 200;
-
-export class DeltaError extends Error {}
-
-function bad(why: string): never {
-  throw new DeltaError(why);
-}
-
-function obj(v: unknown, what: string): Record<string, unknown> {
-  if (typeof v !== "object" || v === null || Array.isArray(v)) bad(what + " is not an object");
-  return v as Record<string, unknown>;
-}
-
-function arr<T>(v: unknown, what: string): T[] {
-  if (v === undefined || v === null) return [];
-  if (!Array.isArray(v)) bad(what + " is not a list");
-  return v as T[];
-}
-
-function str(v: unknown): string {
-  return typeof v === "string" ? v : "";
-}
-
-function int(v: unknown, what: string): number {
-  if (typeof v !== "number" || !Number.isInteger(v)) bad(what + " is not a whole number");
-  return v;
-}
 
 /** upsert replaces the item with the same id in place, or appends it. */
 function upsert<T extends { id: unknown }>(list: readonly T[], item: T): T[] {
