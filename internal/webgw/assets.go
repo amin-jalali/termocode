@@ -26,6 +26,10 @@ type asset struct {
 	ctype string
 }
 
+// KitEnabled reports whether this build serves the component kit at
+// /dev/kit (go build -tags webdev).
+const KitEnabled = assets.KitEnabled
+
 // Assets serves the embedded browser UI: the page at "/" and each built
 // file listed in assets.lock at /assets/<name>. Nothing else is served:
 // no directory listing, no sources, not the lock. Only GET. The page's
@@ -37,7 +41,14 @@ func Assets() http.Handler {
 		if e.Path == manifest.LockFile {
 			continue
 		}
-		b, err := fs.ReadFile(assets.FS(), e.Path)
+		src := assets.FS()
+		if assets.IsKitFile(e.Path) {
+			if !assets.KitEnabled {
+				continue // the kit is served by dev builds only
+			}
+			src = assets.KitFS()
+		}
+		b, err := fs.ReadFile(src, e.Path)
 		ctype, ok := assetTypes[path.Ext(e.Path)]
 		if err != nil || !ok {
 			continue
@@ -45,8 +56,10 @@ func Assets() http.Handler {
 		switch {
 		case e.Path == "index.html":
 			routes["/"] = asset{b, ctype}
+		case e.Path == "kit.html":
+			routes["/dev/kit"] = asset{b, ctype}
 		case strings.HasSuffix(e.Path, ".html"):
-			// Other pages (the dev kit) are routed by their own builds.
+			// No other pages.
 		default:
 			routes["/assets/"+e.Path] = asset{b, ctype}
 		}

@@ -87,7 +87,7 @@ func TestAssetsServeEveryLockedFileButTheLock(t *testing.T) {
 	h := Assets()
 	for _, e := range assets.Lock() {
 		want := http.StatusOK
-		if e.Path == manifest.LockFile || strings.HasSuffix(e.Path, ".html") {
+		if e.Path == manifest.LockFile || strings.HasSuffix(e.Path, ".html") || assets.IsKitFile(e.Path) && !KitEnabled {
 			continue // the page is served at /, the lock is not served
 		}
 		path := "/assets/" + e.Path
@@ -99,5 +99,18 @@ func TestAssetsServeEveryLockedFileButTheLock(t *testing.T) {
 	}
 	if _, err := fs.Stat(assets.FS(), manifest.LockFile); err != nil {
 		t.Fatal("lock not embedded")
+	}
+}
+
+func TestKitIsServedOnlyByDevBuilds(t *testing.T) {
+	h := Assets()
+	want := http.StatusNotFound
+	if KitEnabled {
+		want = http.StatusOK
+	}
+	for _, path := range []string{"/dev/kit", "/assets/kit.js", "/assets/kit.css"} {
+		if res := getAsset(t, h, http.MethodGet, path); res.StatusCode != want {
+			t.Errorf("GET %s = %d, want %d (KitEnabled=%v)", path, res.StatusCode, want, KitEnabled)
+		}
 	}
 }

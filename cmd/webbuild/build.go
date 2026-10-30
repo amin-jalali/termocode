@@ -26,6 +26,10 @@ type page struct {
 
 var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html"}
 
+// kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
+// it fresh, but only a webdev build embeds and serves it.
+var kitPage = page{Name: "kit", Entry: "kit/main.tsx", Template: "kit/kit.html", HTML: "kit.html"}
+
 // Build bundles the sources under dir/src with the vendored libraries of
 // dir/vendor and returns every output file by its name in dir, the lock
 // included. Nothing is written. Bare imports resolve only to vendored
@@ -44,7 +48,12 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyStatic(filepath.Join(abs, "src", "static"), out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{appPage} {
+	for _, p := range []page{appPage, kitPage} {
+		if p.Name == "kit" {
+			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
+				continue // a folder without the kit (test fixtures)
+			}
+		}
 		if err := buildPage(abs, vendorDir, pkgs, p, out); err != nil {
 			return nil, err
 		}
