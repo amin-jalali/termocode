@@ -11,6 +11,7 @@ import type { TermItem, TermNewRes } from "../../../../webproto/proto";
 import { rang } from "../lib/attention";
 import { go, route } from "../lib/router";
 import { dropOlder, loadingOlder, loadOlder, older, stitch } from "../lib/term";
+import { colorsOn, dropColors, paintLine, termColors, wantColors } from "../lib/termcolors";
 import { toast } from "../lib/toasts";
 import { ReqError } from "../net/link";
 import { link, store } from "../session";
@@ -43,6 +44,12 @@ function setAsRows(buf: number, on: boolean): void {
   if (on) next.add(buf);
   else next.delete(buf);
   asRows.value = next;
+}
+
+/** pageBackground is this page's background colour (for readable colours). */
+function pageBackground(): string {
+  const v = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim().toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(v) ? v : "#1e1e1e";
 }
 
 /** showOnLaptop shows the shell's tab on the laptop. */
@@ -93,7 +100,17 @@ function About({ buf, cols, screen, onClose }: { buf: number; cols: number; scre
           <Chip on={screen && !asRows.value.has(buf)} onClick={() => setAsRows(buf, !asRows.peek().has(buf))}>
             {t("term.screen")}
           </Chip>
+          <Chip
+            on={colorsOn.value}
+            onClick={() => {
+              colorsOn.value = !colorsOn.peek();
+              if (!colorsOn.peek()) dropColors();
+            }}
+          >
+            {t("term.colors")}
+          </Chip>
         </div>
+        <p class="group-text term-colors-note">{t("term.colors_note")}</p>
         <div class="edit-actions">
           <Button kind="neutral" onClick={onClose}>
             {t("close")}
@@ -150,6 +167,7 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
 
   useEffect(() => {
     dropOlder();
+    dropColors();
     prev.current = null;
     stick.current = true;
     setPinned(true);
@@ -182,6 +200,17 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
     } else if (stick.current) el.scrollTop = el.scrollHeight;
   });
 
+  // Colours of the rows on the laptop's screen, once output settles.
+  const on = colorsOn.value;
+  useEffect(() => {
+    if (!snap || !on || (snap.screen && !asRows.peek().has(buf))) return;
+    wantColors(buf, snap.tick, snap.first, () => {
+      const s = readTerm(store.topic(topic).peek()?.data);
+      return s && { first: s.first, rows: s.rows, tick: s.tick };
+    });
+  }, [snap?.tick, on]);
+  useEffect(() => () => dropColors(), []);
+
   if (!snap) {
     const r = link.refused.value.get(topic);
     if (r) return <Refused topic={topic}>{r.msg}</Refused>;
@@ -190,7 +219,10 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
   const o = older.value;
   const joined = o && o.buf === buf && o.first + o.rows.length === snap.first;
   const first = joined ? o.first : snap.first;
-  const lines = reflow(joined ? [...o.rows, ...snap.rows] : snap.rows, first, snap.cols);
+  const all = joined ? [...o.rows, ...snap.rows] : snap.rows;
+  const lines = reflow(all, first, snap.cols);
+  const colors = on ? termColors.value : null;
+  const pageBg = colors ? pageBackground() : "";
   const more = joined ? o.more : snap.more;
   const gone = isGone(ts?.data);
   const screen = snap.screen && !asRows.value.has(buf);
@@ -220,8 +252,12 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
         <Screen buf={buf} rows={snap.rows} cols={snap.cols} height={snap.height} />
       ) : (
         <div class={`term-rows${wrapRows.value ? "" : " is-nowrap"}`} role="log" aria-label={item?.title || t("tab.term")}>
-          {lines.map((l) => (
-            <TermRow key={l.row} text={l.text} />
+          {lines.map((l, i) => (
+            <TermRow
+              key={l.row}
+              text={l.text}
+              segs={colors ? paintLine(colors, buf, l.row, all.slice(l.row - first, (lines[i + 1]?.row ?? first + all.length) - first), pageBg) : null}
+            />
           ))}
         </div>
       )}
