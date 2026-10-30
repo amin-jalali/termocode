@@ -1,11 +1,16 @@
 // The desktop editor's language features (workbench): the laptop's
 // language servers through the hub, never one in the browser. Problems
 // come from the diagnostics topic (squiggles in the editor, the PROBLEMS
-// panel, the counts in the status bar).
+// panel, the counts in the status bar); hover, completion and go to
+// definition are asked by the editor's frame (lib/deskeditor.ts) and
+// answered here with the lsp.* reads. A read is asked at the changedtick
+// the page's text is known at: unsent typing goes out first.
 import { effect, signal } from "@preact/signals";
 import type { DiagFile, DiagSnap } from "../../../../webproto/proto";
-import type { FrameMarker } from "../monaco/protocol";
-import { store } from "../session";
+import type { FrameMarker, LspKind } from "../monaco/protocol";
+import { ReqError } from "../net/link";
+import { link, store } from "../session";
+import { session } from "./live";
 import { route } from "./router";
 import { panes, setPanes, showFile } from "./workbench";
 
@@ -64,4 +69,42 @@ export const revealAt = signal<{ path: string; line: number; col: number } | nul
 export function goTo(path: string, line: number, col: number): void {
   revealAt.value = { path, line, col };
   showFile(path);
+}
+
+/** noServer remembers buffers whose file has no language server, for a
+ * while, so typing does not ask again and again. */
+const noServer = new Map<number, number>();
+const NO_SERVER_MS = 30_000;
+
+/** settledTick sends what is unsent and gives the tick the page's text
+ * is known at (null: unsent text, a conflict, or no live editor). */
+async function settledTick(buf: number): Promise<number | null> {
+  const s = session.peek();
+  if (!s || s.buf !== buf) return null;
+  await s.flush();
+  if (session.peek() !== s) return null;
+  return s.settled();
+}
+
+/** ask runs lsp.<kind> for buffer buf at a 0-based line and UTF-16
+ * column, at the tick the page's text is known at. A changed buffer is
+ * asked once more after a moment (the laptop's change on its way). */
+export async function ask(kind: LspKind, buf: number, line: number, col: number): Promise<unknown> {
+  const until = noServer.get(buf);
+  if (until !== undefined && Date.now() < until) return null;
+  for (let tries = 0; tries < 2; tries++) {
+    const tick = await settledTick(buf);
+    if (tick === null) return null;
+    try {
+      return await link.request("lsp." + kind, { buf, tick, line, col });
+    } catch (e) {
+      if (e instanceof ReqError && e.code === "conflict" && tries === 0) {
+        await new Promise((r) => setTimeout(r, 200));
+        continue;
+      }
+      if (e instanceof ReqError && e.code === "not_found") noServer.set(buf, Date.now() + NO_SERVER_MS);
+      return null;
+    }
+  }
+  return null;
 }
