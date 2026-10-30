@@ -27,3 +27,28 @@
 .search-n { color: var(--dim); text-align: right; font-variant-numeric: tabular-nums; }
 .search-text { white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: isolate; }
 .search-text mark { background: var(--sel); color: var(--text); border-radius: 2px; }
+
+.tasks, .runs { display: flex; flex-direction: column; gap: var(--s2); padding: 0 var(--s4); }
+.task, .run { border: 1px solid var(--border); border-radius: var(--r-card); background: var(--bg-panel); }
+.task-line { display: flex; align-items: center; gap: var(--s2); padding-inline-end: var(--s2); }
+.task-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s3); min-height: var(--tap); padding: var(--s2) var(--s3); text-align: start; }
+.task-open:disabled { cursor: default; }
+.task-name { display: flex; flex-direction: column; min-width: 0; }
+.task-label { font-weight: 600; overflow-wrap: anywhere; unicode-bidi: isolate; }
+.task-meta { color: var(--dim); font-size: var(--fs-hint); font-family: var(--font-mono); }
+.task-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; flex: none; background: var(--border); }
+.task-dot.st-running { background: var(--blue); animation: breathe var(--t-pulse) ease-in-out infinite; }
+.task-dot.st-ok { background: var(--green); }
+.task-dot.st-failed { background: var(--red); }
+.task-tail { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) var(--s3) var(--s3); border-top: 1px solid var(--border); }
+.task-rows { max-height: 40dvh; overflow: auto; background: var(--bg); border-radius: var(--r-chip); padding: var(--s2); }
+.tasks-free { color: var(--muted); font-size: 0.875rem; padding: var(--s2) 0; }
+.row-ask { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) var(--s3) var(--s3); }
+.row-ask-text { font-weight: 600; }
+.run { display: flex; flex-direction: column; gap: var(--s1); padding: var(--s3); }
+.run.needs-you { border-color: var(--amber); }
+.run-title { font-weight: 600; overflow-wrap: anywhere; }
+.run-meta { color: var(--text-2); font-size: var(--fs-hint); font-family: var(--font-mono); }
+.run-why { color: var(--amber); font-size: 0.875rem; }
+.run .choices { padding-top: var(--s2); }
+.run .btn, .task-line .btn { min-height: var(--tap); }
