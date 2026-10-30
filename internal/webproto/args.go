@@ -90,6 +90,7 @@ type GitDiffArgs struct {
 type GitShowArgs struct {
 	Hash string `json:"hash"`
 	From int    `json:"from,omitempty"`
+	Path string `json:"path,omitempty"` // only this file of the commit (the timeline)
 }
 
 // GitHunkArgs names one hunk of a file's diff by its exact header line

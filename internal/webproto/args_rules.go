@@ -185,6 +185,9 @@ func (a *GitShowArgs) validate(int) error {
 	if len(a.Hash) < 4 || len(a.Hash) > 64 {
 		return invalid("bad commit hash")
 	}
+	if !validPath(a.Path, true) {
+		return invalid("bad path")
+	}
 	for _, c := range a.Hash {
 		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
 			return invalid("bad commit hash")
