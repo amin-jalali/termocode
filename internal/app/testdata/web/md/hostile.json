@@ -1,0 +1,64 @@
+{
+  "k": "doc",
+  "c": [
+    {
+      "k": "p",
+      "c": [
+        {
+          "k": "text",
+          "text": "Hi there \u003cimg src=x\u003e"
+        }
+      ]
+    },
+    {
+      "k": "p",
+      "c": [
+        {
+          "k": "text",
+          "text": "click data rel ftp user"
+        }
+      ]
+    },
+    {
+      "k": "p",
+      "c": [
+        {
+          "k": "text",
+          "text": "tracker"
+        }
+      ]
+    },
+    {
+      "k": "p",
+      "c": [
+        {
+          "k": "link",
+          "c": [
+            {
+              "k": "text",
+              "text": "https://ok.example/path"
+            }
+          ],
+          "href": "https://ok.example/path"
+        },
+        {
+          "k": "text",
+          "text": " and mailto:a@b.c"
+        }
+      ]
+    },
+    {
+      "k": "p",
+      "c": [
+        {
+          "k": "text",
+          "text": "Bidi reversed text and a bell  and an escape [31mred[0m."
+        }
+      ]
+    },
+    {
+      "k": "codeblock",
+      "text": "x"
+    }
+  ]
+}
