@@ -41,6 +41,7 @@ A fast, full-featured IDE that runs entirely in your terminal. Code, debug, test
 - **A full IDE, in your terminal** — explorer, tabs, command palette (`F1`), multi-cursor, an integrated terminal with tabs, project-wide search, tasks and a Problems panel. Mouse works everywhere.
 - **AI agents in your workflow** — agents create files, edit code and run commands inside the IDE. You review and approve each change, hunk by hunk. Chat, ghost-text completion and Explain / Fix / Edit. Hosted providers or a local model.
 - **Disconnect, keep working** — lose your SSH connection and the editor, terminals, running jobs and AI agents keep going. Run `termocode` again in the same folder to get everything back. On by default over SSH; turn on `persistent_session` to get the same when you close a local terminal.
+- **A second screen in the browser** *(experimental)* — open the same session in a browser tab, on this computer or from a server with `termocode ssh --web`: chat with the AI and answer its cards, read files, type in terminals, stage and commit. One-time links and no open network port.
 - **MCP** — local and remote MCP servers, and a *Connect a service* wizard for GitHub, GitLab, Linear, Notion, Sentry, Slack, ClickUp and Atlassian.
 - **Git** — stage hunks, commit, sync, stash, blame, a commit graph, a merge-conflict resolver and clone.
 - **Debug and test** — breakpoints, watch, call stack and a Debug Console for Go, Python and Node; a test explorer for Go, pytest, Rust, Jest and Vitest.
