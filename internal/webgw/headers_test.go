@@ -35,6 +35,23 @@ func TestCSPExact(t *testing.T) {
 	}
 }
 
+// An https site (the tailnet) may be installed: its policy lets the page
+// read its own manifest; a loopback site's origin changes every start, so
+// it has none (WEB-35).
+func TestCSPManifestSrcOnlyOnHTTPS(t *testing.T) {
+	if csp := CSP(LoopbackSite(41237)); strings.Contains(csp, "manifest-src") {
+		t.Errorf("loopback CSP allows a manifest: %s", csp)
+	}
+	site := Site{Scheme: "https", Hosts: []string{"box.tail1234.ts.net"}}
+	csp := CSP(site)
+	if !strings.Contains(csp, "; manifest-src 'self';") {
+		t.Errorf("https CSP has no manifest-src 'self': %s", csp)
+	}
+	if !site.Installable() || LoopbackSite(1).Installable() {
+		t.Error("Installable: want true for https only")
+	}
+}
+
 // TestCSPHasNoUnsafeOrWildcard: no 'unsafe-*', no bare scheme and no
 // wildcard source ever reaches the policy.
 func TestCSPHasNoUnsafeOrWildcard(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 
 // CSP is the Content-Security-Policy for site: only our own scripts,
 // styles, fonts and images; no inline code, no frames, no forms, no base
-// URL. Trusted Types are required with no policy allowed, so even a bug
+// URL; an installable (https) site may read its own manifest. Trusted Types are required with no policy allowed, so even a bug
 // cannot hand a string to an HTML or script sink (never-do 20); the page
 // builds DOM from text nodes only. connect-src names the WebSocket origins in full as well as 'self',
 // because older engines do not count ws:// as 'self'.
@@ -18,19 +18,24 @@ func CSP(site Site) string {
 	for _, h := range site.Hosts {
 		connect = append(connect, site.wsScheme()+"://"+h)
 	}
-	return strings.Join([]string{
+	parts := []string{
 		"default-src 'none'",
 		"script-src 'self'",
 		"style-src 'self'",
 		"connect-src " + strings.Join(connect, " "),
 		"img-src 'self' data: blob:",
 		"font-src 'self'",
+	}
+	if site.Installable() {
+		parts = append(parts, "manifest-src 'self'")
+	}
+	return strings.Join(append(parts,
 		"frame-ancestors 'none'",
 		"base-uri 'none'",
 		"form-action 'none'",
 		"require-trusted-types-for 'script'",
 		"trusted-types 'none'",
-	}, "; ")
+	), "; ")
 }
 
 // setSecurityHeaders writes the fixed security headers every response

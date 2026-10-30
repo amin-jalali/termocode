@@ -36,6 +36,11 @@ func (s Site) hasHost(host string) bool {
 	return false
 }
 
+// Installable reports whether the page may be installed as an app
+// (WEB-35): only on an https site, whose origin stays the same between
+// starts (the tailnet). A loopback origin changes every start.
+func (s Site) Installable() bool { return s.Scheme == "https" }
+
 // wsScheme is the WebSocket scheme that matches the page's scheme.
 func (s Site) wsScheme() string {
 	if s.Scheme == "https" {
