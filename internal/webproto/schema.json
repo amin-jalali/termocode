@@ -91,12 +91,16 @@
     {
       "name": "status",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "StatusSnap",
+      "delta": "StatusSnap"
     },
     {
       "name": "toasts",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "ToastsSnap",
+      "delta": "ToastsDelta"
     },
     {
       "name": "chats",
@@ -174,6 +178,9 @@
       "phase": "v2"
     }
   ],
+  "events": {
+    "attention": "Attention"
+  },
   "messages": {
     "client": {
       "bye": "Bye",
@@ -685,6 +692,27 @@
     }
   ],
   "defs": {
+    "Attention": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "card",
+            "run_done",
+            "run_failed",
+            "task_done",
+            "bell"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": true
+    },
     "BufArgs": {
       "type": "object",
       "properties": {
@@ -1352,6 +1380,150 @@
       ],
       "additionalProperties": true
     },
+    "StatusAI": {
+      "type": "object",
+      "properties": {
+        "busy": {
+          "type": "boolean"
+        },
+        "cards_waiting": {
+          "type": "integer"
+        },
+        "label": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "off",
+            "setup",
+            "idle",
+            "busy"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "label",
+        "busy",
+        "cards_waiting"
+      ],
+      "additionalProperties": true
+    },
+    "StatusRuns": {
+      "type": "object",
+      "properties": {
+        "live": {
+          "type": "integer"
+        },
+        "needs_you": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "live",
+        "needs_you"
+      ],
+      "additionalProperties": true
+    },
+    "StatusSnap": {
+      "type": "object",
+      "properties": {
+        "ahead": {
+          "type": "integer"
+        },
+        "ai": {
+          "$ref": "#/defs/StatusAI"
+        },
+        "behind": {
+          "type": "integer"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "dirty_files": {
+          "type": "integer"
+        },
+        "root": {
+          "type": "string"
+        },
+        "runs": {
+          "$ref": "#/defs/StatusRuns"
+        },
+        "terminals": {
+          "$ref": "#/defs/StatusTerms"
+        },
+        "theme": {
+          "$ref": "#/defs/StatusTheme"
+        },
+        "web": {
+          "$ref": "#/defs/StatusWeb"
+        },
+        "workspace_label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "root",
+        "workspace_label",
+        "branch",
+        "ahead",
+        "behind",
+        "dirty_files",
+        "ai",
+        "terminals",
+        "runs",
+        "web",
+        "theme"
+      ],
+      "additionalProperties": true
+    },
+    "StatusTerms": {
+      "type": "object",
+      "properties": {
+        "busy": {
+          "type": "integer"
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "count",
+        "busy"
+      ],
+      "additionalProperties": true
+    },
+    "StatusTheme": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "colors"
+      ],
+      "additionalProperties": true
+    },
+    "StatusWeb": {
+      "type": "object",
+      "properties": {
+        "clients": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "clients"
+      ],
+      "additionalProperties": true
+    },
     "Sub": {
       "type": "object",
       "properties": {
@@ -1402,6 +1574,69 @@
         "text"
       ],
       "additionalProperties": false
+    },
+    "Toast": {
+      "type": "object",
+      "properties": {
+        "detail": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "severity",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "ToastsDelta": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "op": {
+          "enum": [
+            "push",
+            "dismiss"
+          ]
+        },
+        "toast": {
+          "$ref": "#/defs/Toast"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "additionalProperties": true
+    },
+    "ToastsSnap": {
+      "type": "object",
+      "properties": {
+        "toasts": {
+          "items": {
+            "$ref": "#/defs/Toast"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "toasts"
+      ],
+      "additionalProperties": true
     },
     "Unsub": {
       "type": "object",
