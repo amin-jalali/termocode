@@ -611,6 +611,36 @@
       "phase": "v1"
     },
     {
+      "op": "file.image",
+      "args": "PathArgs",
+      "result": "ImageRes",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "live": 2,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.image",
+      "args": "ChatImageArgs",
+      "result": "ImageRes",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 2,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "term.send",
       "args": "TermSendArgs",
       "role": "controller",
@@ -1268,6 +1298,22 @@
       },
       "required": [
         "i"
+      ],
+      "additionalProperties": false
+    },
+    "ChatImageArgs": {
+      "type": "object",
+      "properties": {
+        "i": {
+          "type": "integer"
+        },
+        "n": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "i",
+        "n"
       ],
       "additionalProperties": false
     },
@@ -2066,6 +2112,26 @@
         "last",
         "groups",
         "spans"
+      ],
+      "additionalProperties": true
+    },
+    "ImageRes": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "mime": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mime",
+        "size",
+        "data"
       ],
       "additionalProperties": true
     },

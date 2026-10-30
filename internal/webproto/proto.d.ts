@@ -204,6 +204,11 @@ export interface Pos {
   col: number;
 }
 
+export interface ChatImageArgs {
+  i: number;
+  n: number;
+}
+
 export interface TermSendArgs {
   buf: number;
   text: string;
@@ -756,6 +761,12 @@ export interface EditRes {
   dirty: boolean;
 }
 
+export interface ImageRes {
+  mime: string;
+  size: number;
+  data: string;
+}
+
 export interface TermNewRes {
   buf: number;
 }
@@ -802,6 +813,8 @@ export interface OpArgs {
   "buf.save": BufArgs;
   "buf.undo": BufArgs;
   "buf.close": BufArgs;
+  "file.image": PathArgs;
+  "chat.image": ChatImageArgs;
   "term.send": TermSendArgs;
   "term.interrupt": BufArgs;
   "term.new": EmptyArgs;
@@ -865,6 +878,8 @@ export interface OpResult {
   "buf.set_text": EditRes;
   "buf.save": EditRes;
   "buf.undo": EditRes;
+  "file.image": ImageRes;
+  "chat.image": ImageRes;
   "term.new": TermNewRes;
   "git.commit": GitCommitted;
   "git.discard": AskRef;
