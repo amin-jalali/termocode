@@ -38,7 +38,9 @@
   unicode-bidi: isolate;
   tab-size: 4;
 }
-.card-body { color: var(--text-2); }
+.card-body { color: var(--text-2); min-width: 0; }
+.card-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.card-diff { margin-top: var(--s2); max-height: 40dvh; overflow: auto; border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); }
 .card-where { font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--muted); unicode-bidi: isolate; }
 .card-foot { margin-top: var(--s1); }
 .choices { display: flex; flex-wrap: wrap; gap: var(--s2); }

@@ -41,6 +41,7 @@ export const FA: Record<StringKey, string> = {
   "laptop.shown": "روی لپ‌تاپ نشان داده شد",
   "answered.laptop": "روی لپ‌تاپ پاسخ داده شد.",
   "answered.phone": "روی گوشی پاسخ داده شد",
+  "answered.other": "روی {name} پاسخ داده شد.",
   "cancel": "لغو",
   "close": "بستن",
   "send": "فرستادن",

@@ -43,6 +43,7 @@ export const S = {
   "laptop.shown": "Shown on the laptop",
   "answered.laptop": "Answered on the laptop.",
   "answered.phone": "Answered on phone",
+  "answered.other": "Answered on {name}.",
   "cancel": "Cancel",
   "close": "Close",
   "send": "Send",
