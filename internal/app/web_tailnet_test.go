@@ -70,3 +70,28 @@ func TestWebStartCardTailnet(t *testing.T) {
 		t.Fatalf("body:\n%s", body)
 	}
 }
+
+// Spec (WEB-31): web.open's answer carries the tailnet URL, so the CLI
+// can name it.
+func TestWebCtlReplyHasTailnetURL(t *testing.T) {
+	r := newWebRig(t, nil)
+	r.m.webPanel = &webPanelState{up: true, port: 41237, url: "https://box.tail1234.ts.net/"}
+	c := r.dial(`{"t":"ctl"}`)
+	if _, err := c.c.Write([]byte(`{"t":"req","id":1,"op":"web.open","args":{"yes":true}}` + "\n")); err != nil {
+		t.Fatal(err)
+	}
+	var res map[string]any
+	r.pumpUntil("the answer", func() bool {
+		select {
+		case l := <-c.lines:
+			if strings.Contains(l, `"res"`) {
+				res = map[string]any{"line": l}
+			}
+		default:
+		}
+		return res != nil
+	})
+	if l := res["line"].(string); !strings.Contains(l, `"url":"https://box.tail1234.ts.net/"`) || !strings.Contains(l, `"port":41237`) {
+		t.Fatalf("answer %s", l)
+	}
+}
