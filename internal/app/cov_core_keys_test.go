@@ -178,7 +178,7 @@ func TestCovCoreKeysTerminalCopy(t *testing.T) {
 // Save on a file that cannot be written says so.
 func TestCovCoreKeysSaveFails(t *testing.T) {
 	withConfigDir(t)
-	m := New()
+	m := covNew(t)
 	m, _ = m.update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m.editor.SetMeta(filepath.Join(t.TempDir(), "x.go"), true, "go")
 	m, _ = covPress(t, m, keymap.ActionSave)

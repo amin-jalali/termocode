@@ -31,7 +31,7 @@ func covNvimModel(t *testing.T, w, h int) Model {
 	if err := c.Attach(w, h); err != nil {
 		t.Fatalf("Attach: %v", err)
 	}
-	m := New()
+	m := covNew(t)
 	m.nvim = c
 	m.editor = editor.New(c)
 	m, _ = m.update(tea.WindowSizeMsg{Width: w, Height: h})

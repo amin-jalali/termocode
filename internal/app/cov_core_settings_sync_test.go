@@ -35,7 +35,7 @@ func covSyncModel(t *testing.T) (Model, string) {
 			t.Fatal(err)
 		}
 	}
-	m := New()
+	m := covNew(t)
 	m.w, m.h = 120, 40
 	t.Cleanup(func() { theme.ApplyTheme("vscode-dark-plus") })
 	return m, dir

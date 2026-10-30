@@ -14,7 +14,7 @@ import (
 func TestCovCoreSettingSaveFails(t *testing.T) {
 	root := withConfigDir(t)
 	t.Cleanup(func() { theme.ApplyTheme("vscode-dark-plus") })
-	m := New()
+	m := covNew(t)
 	m.w, m.h = 100, 30
 	// A file where the termocode config folder must go.
 	_ = os.RemoveAll(filepath.Join(root, "termocode"))
@@ -72,7 +72,7 @@ func TestCovCoreSettingsPath(t *testing.T) {
 // Bad values are refused with a short reason.
 func TestCovCoreSettingBadValues(t *testing.T) {
 	withConfigDir(t)
-	m := New()
+	m := covNew(t)
 	m.w, m.h = 100, 30
 	for id, want := range map[string]string{
 		"setting-font-delta":         "font_delta: not an integer",
