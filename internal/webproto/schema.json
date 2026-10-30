@@ -1294,6 +1294,21 @@
       "phase": "v2"
     },
     {
+      "op": "ai.action",
+      "args": "AIActionArgs",
+      "result": "AIAction",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 4096,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.file_log",
       "args": "GitFileLogArgs",
       "result": "GitFileLog",
@@ -2167,6 +2182,90 @@
     }
   ],
   "defs": {
+    "AIAction": {
+      "type": "object",
+      "properties": {
+        "chat": {
+          "type": "boolean"
+        },
+        "chatId": {
+          "type": "string"
+        },
+        "end": {
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "explain",
+            "fix",
+            "edit",
+            "doc"
+          ]
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "none": {
+          "type": "boolean"
+        },
+        "start": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "start",
+        "end",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "AIActionArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "end": {
+          "type": "integer"
+        },
+        "instruction": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "explain",
+            "fix",
+            "edit",
+            "doc"
+          ]
+        },
+        "line": {
+          "type": "integer"
+        },
+        "start": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "kind",
+        "start",
+        "end",
+        "line"
+      ],
+      "additionalProperties": false
+    },
     "AICompleteArgs": {
       "type": "object",
       "properties": {

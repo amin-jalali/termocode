@@ -1,6 +1,9 @@
 package webproto
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // Spec (WEBP-3): ghost text and next edit suggestions are controller ops
 // (they spend the user's tokens), counted in the audit, never a laptop
@@ -36,6 +39,39 @@ func TestAICompletionOps(t *testing.T) {
 			if _, err := DecodeArgs(op, []byte(b)); err == nil {
 				t.Errorf("%s %s accepted", op, b)
 			}
+		}
+	}
+}
+
+// Spec (WEBP-3): ai.action (Explain, Fix, Edit, Doc) is a controller op,
+// audited, one at a time; Edit needs a one-line instruction, the others
+// take none; a range ends after it starts.
+func TestAIActionOp(t *testing.T) {
+	p, ok := Lookup(OpAIAction)
+	if !ok || p.Role != RoleController || p.LaptopCard || p.Audit != AuditYes || p.Live != 1 {
+		t.Fatalf("ai.action: %+v", p)
+	}
+	for _, b := range []string{
+		`{"buf":3,"tick":5,"kind":"explain","start":2,"end":2,"line":2}`,
+		`{"buf":3,"tick":5,"kind":"fix","start":0,"end":4,"line":1}`,
+		`{"buf":3,"tick":5,"kind":"doc","start":7,"end":7,"line":7}`,
+		`{"buf":3,"tick":5,"kind":"edit","start":1,"end":3,"line":1,"instruction":"use a map"}`,
+	} {
+		if _, err := DecodeArgs(OpAIAction, []byte(b)); err != nil {
+			t.Errorf("%s: %v", b, err)
+		}
+	}
+	for _, b := range []string{
+		`{"buf":3,"tick":5,"kind":"run","start":0,"end":0,"line":0}`,
+		`{"buf":3,"tick":5,"kind":"fix","start":4,"end":2,"line":0}`,
+		`{"buf":3,"tick":5,"kind":"edit","start":0,"end":1,"line":0}`,
+		`{"buf":3,"tick":5,"kind":"edit","start":0,"end":1,"line":0,"instruction":"  "}`,
+		`{"buf":3,"tick":5,"kind":"edit","start":0,"end":1,"line":0,"instruction":"a\nb"}`,
+		`{"buf":3,"tick":5,"kind":"explain","start":0,"end":1,"line":0,"instruction":"why"}`,
+		`{"buf":3,"tick":5,"kind":"edit","start":0,"end":1,"line":0,"instruction":"` + strings.Repeat("a", MaxAIInstruction+1) + `"}`,
+	} {
+		if _, err := DecodeArgs(OpAIAction, []byte(b)); err == nil {
+			t.Errorf("%.80s accepted", b)
 		}
 	}
 }
