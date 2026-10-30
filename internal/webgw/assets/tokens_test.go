@@ -118,6 +118,8 @@ func TestWebTokensContrast(t *testing.T) {
 		{[]string{"--git-mod", "--git-add", "--git-del", "--git-conf"}, rows, 4.5},
 		{[]string{"--on-strip"}, []string{"--strip"}, 4.5},
 		{[]string{"--text"}, []string{"--sel"}, 4.5},
+		{[]string{"--on-ai"}, []string{"--ai"}, 4.5},
+		{[]string{"--ai-on-strip"}, []string{"--strip"}, 4.5},
 		{[]string{"--dim", "--focus"}, surfaces, 3},
 	}
 	for name, th := range map[string]map[string]string{"dark": dark, "light": light} {

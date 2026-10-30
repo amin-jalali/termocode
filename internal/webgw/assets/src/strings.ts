@@ -20,6 +20,7 @@ export const S = {
   "tab.git": "Git",
   "tab.more": "More",
   "tabs.label": "Views",
+  "a11y.skip": "Skip to content",
   "pill.cards.one": "{n} approval waiting",
   "pill.cards.other": "{n} approvals waiting",
   "pill.review": "Review",
