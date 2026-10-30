@@ -40,6 +40,10 @@ type webBuf struct {
 	readonly bool
 	created  bool            // the web loaded it: unload it when let go, if untouched
 	refs     map[string]bool // connection ids that opened it
+
+	// Terminals (web_term.go): the laptop's size and the screen-mode guess.
+	cols, height int
+	scr          webScreen
 }
 
 // webLuaBuf is what webLuaAttach / webLuaOpen return.
@@ -58,6 +62,8 @@ type webLuaBuf struct {
 	First    int      `msgpack:"first"`
 	Lines    []string `msgpack:"lines"`
 	Created  bool     `msgpack:"created"`
+	WinW     int      `msgpack:"winw"`
+	WinH     int      `msgpack:"winh"`
 }
 
 // webBufEvent is one attach callback.
@@ -221,7 +227,7 @@ func (m *Model) webBufAttached(n int, term bool) (*webBuf, error) {
 	}
 	tail := 0
 	if term {
-		tail = webTermRows
+		tail = webproto.MaxTermRows
 	}
 	var info webLuaBuf
 	if err := m.nvim.ExecLuaResult(webLuaAttach, &info, n, tail); err != nil {
@@ -243,7 +249,7 @@ func (m *Model) webBufAttached(n int, term bool) (*webBuf, error) {
 		}
 		b.path = rel
 	} else {
-		b.cap = webTermRows
+		b.cap = webproto.MaxTermRows
 	}
 	b.load(info)
 	f.bufs[n] = b
@@ -274,6 +280,10 @@ func webErrSecret() error {
 func (b *webBuf) load(info webLuaBuf) {
 	b.first, b.rows, b.tick, b.seq = info.First, webNonNil(info.Lines), info.Tick, info.Seq
 	b.dirty, b.ft, b.readonly = info.Dirty, info.Ft, info.Readonly
+	if info.WinH > 0 { // shown in a window on the laptop: its size
+		b.cols, b.height = info.WinW, info.WinH
+	}
+	b.scr.total = b.first + len(b.rows)
 }
 
 // webBufApply folds one buf delta into a snapshot (the browser store
@@ -391,7 +401,7 @@ func (m *Model) webBufResync(b *webBuf) {
 	}
 	tail := 0
 	if b.term {
-		tail = webTermRows
+		tail = webproto.MaxTermRows
 	}
 	var info webLuaBuf
 	if err := m.nvim.ExecLuaResult(webLuaAttach, &info, b.buf, tail); err != nil || info.Err != "" {
@@ -725,6 +735,3 @@ func webHeadLines(data []byte, max int) ([]string, bool) {
 	}
 	return out, len(data) > 0
 }
-
-// webTermRows is the tail of a terminal the web keeps and sends.
-const webTermRows = 2000

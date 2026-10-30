@@ -1,0 +1,82 @@
+{
+  "topic": "term:5",
+  "snap0": {
+    "buf": 5,
+    "cols": 80,
+    "first": 0,
+    "height": 4,
+    "more": false,
+    "rows": [
+      "$ "
+    ],
+    "screen": false,
+    "tick": 3
+  },
+  "deltas": [
+    {
+      "first": 0,
+      "kind": "lines",
+      "last": 1,
+      "lines": [
+        "$ top"
+      ],
+      "tick": 4
+    },
+    {
+      "first": 1,
+      "kind": "lines",
+      "last": 1,
+      "lines": [
+        "",
+        "",
+        ""
+      ],
+      "tick": 5
+    },
+    {
+      "first": 0,
+      "kind": "lines",
+      "last": 4,
+      "lines": [
+        "load 2",
+        "cpu 4%",
+        "mem 2G",
+        "q quit"
+      ],
+      "tick": 7
+    },
+    {
+      "cols": 80,
+      "height": 4,
+      "kind": "mode",
+      "screen": true
+    },
+    {
+      "first": 0,
+      "kind": "reset",
+      "more": false,
+      "rows": [
+        "load 2",
+        "cpu 4%",
+        "mem 2G",
+        "q quit"
+      ],
+      "tick": 7
+    }
+  ],
+  "snapn": {
+    "buf": 5,
+    "first": 0,
+    "rows": [
+      "load 2",
+      "cpu 4%",
+      "mem 2G",
+      "q quit"
+    ],
+    "more": false,
+    "tick": 7,
+    "screen": true,
+    "cols": 80,
+    "height": 4
+  }
+}

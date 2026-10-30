@@ -1,0 +1,92 @@
+{
+  "topic": "terms",
+  "snap0": {
+    "terms": [
+      {
+        "active": true,
+        "buf": 3,
+        "busy": false,
+        "cwd": "",
+        "exited": false,
+        "title": "zsh"
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "terms": [
+        {
+          "active": true,
+          "buf": 3,
+          "busy": true,
+          "cwd": "",
+          "exited": false,
+          "last_cmd": "go test ./...",
+          "title": "zsh"
+        }
+      ]
+    },
+    {
+      "terms": [
+        {
+          "active": false,
+          "buf": 3,
+          "busy": true,
+          "cwd": "",
+          "exited": false,
+          "last_cmd": "go test ./...",
+          "title": "zsh"
+        },
+        {
+          "active": true,
+          "buf": 9,
+          "busy": false,
+          "cwd": "elsewhere",
+          "exited": false,
+          "task": "build",
+          "title": "build"
+        },
+        {
+          "active": false,
+          "buf": 11,
+          "busy": false,
+          "cwd": "src",
+          "exited": false,
+          "pane_of": 9,
+          "title": "build"
+        }
+      ]
+    }
+  ],
+  "snapn": {
+    "terms": [
+      {
+        "buf": 3,
+        "title": "zsh",
+        "cwd": "",
+        "busy": true,
+        "last_cmd": "go test ./...",
+        "exited": false,
+        "active": false
+      },
+      {
+        "buf": 9,
+        "title": "build",
+        "cwd": "elsewhere",
+        "busy": false,
+        "exited": false,
+        "task": "build",
+        "active": true
+      },
+      {
+        "buf": 11,
+        "title": "build",
+        "cwd": "src",
+        "busy": false,
+        "exited": false,
+        "pane_of": 9,
+        "active": false
+      }
+    ]
+  }
+}

@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -23,7 +25,9 @@ type webFiles struct {
 	early   map[int][]webBufEvent // callbacks that came before their buf.open answered
 	earlyN  int
 
-	bufsList *webproto.BufsSnap // the bufs list as last sent
+	bufsList  *webproto.BufsSnap  // the bufs list as last sent
+	termsList *webproto.TermsSnap // the terms list as last sent
+	typedAt   time.Time           // keys from a browser reached a shell (the status chip's mark)
 }
 
 // files returns the hub's file state, making it on first use.
@@ -59,6 +63,7 @@ func (m *Model) webTrackFiles() tea.Cmd {
 	f := h.filesState()
 	cmd := m.webTrackTree(h, f)
 	m.webTrackBufs(h, f)
+	m.webTrackTerms(h, f)
 	m.webReleaseBufs(h, f)
 	return cmd
 }

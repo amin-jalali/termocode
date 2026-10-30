@@ -22,8 +22,8 @@ package app
 
 const webLuaPrelude = `
 local W = _G.termocode_web
-if not W or W.v ~= 1 then
-  W = { v = 1, bufs = (W and W.bufs) or {} }
+if not W or W.v ~= 2 then
+  W = { v = 2, bufs = (W and W.bufs) or {} }
   _G.termocode_web = W
   local api = vim.api
   local function notify(...)
@@ -33,7 +33,13 @@ if not W or W.v ~= 1 then
     local bo = vim.bo[b]
     return { buf = b, tick = api.nvim_buf_get_changedtick(b), dirty = bo.modified,
       ft = bo.filetype, readonly = bo.readonly or not bo.modifiable,
-      name = api.nvim_buf_get_name(b), bt = bo.buftype, count = api.nvim_buf_line_count(b) }
+      name = api.nvim_buf_get_name(b), bt = bo.buftype, count = api.nvim_buf_line_count(b),
+      winw = -1, winh = -1 }
+  end
+  function W.size(i)
+    local w = vim.fn.bufwinid(i.buf)
+    if w ~= -1 then i.winw, i.winh = api.nvim_win_get_width(w), api.nvim_win_get_height(w) end
+    return i
   end
   function W.attach(b, tail)
     if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
@@ -67,7 +73,7 @@ if not W or W.v ~= 1 then
         end,
       })
     end
-    local i = W.info(b)
+    local i = W.size(W.info(b))
     i.seq = st.seq
     i.first = 0
     if tail > 0 and i.count > tail then i.first = i.count - tail end
@@ -128,3 +134,14 @@ const webLuaDetach = webLuaPrelude + `
 local list = ...
 W.detach(list)
 return true`
+
+// webLuaRows reads rows [from, to) of a terminal buffer (term.history),
+// clamped to the buffer.
+const webLuaRows = webLuaPrelude + `
+local b, from, to = ...
+local api = vim.api
+if not api.nvim_buf_is_valid(b) or vim.bo[b].buftype ~= 'terminal' then return { err = 'gone' } end
+local n = api.nvim_buf_line_count(b)
+if to > n then to = n end
+if from > to then from = to end
+return { first = from, lines = api.nvim_buf_get_lines(b, from, to, false) }`
