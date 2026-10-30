@@ -7,6 +7,7 @@
 import { Fragment, h } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { TermItem, TermNewRes } from "../../../../webproto/proto";
+import { rang } from "../lib/attention";
 import { go, route } from "../lib/router";
 import { dropOlder, loadingOlder, loadOlder, older, stitch } from "../lib/term";
 import { toast } from "../lib/toasts";
@@ -21,10 +22,13 @@ import { Chip } from "../ui/Chip";
 import { TermRow } from "../ui/rows";
 import { SkeletonRows } from "../ui/Skeleton";
 import { Refused, TopicBody } from "./Placeholder";
+import { TermInput } from "./TermInput";
 import { View } from "./View";
 
 /** NEAR_BOTTOM_PX: closer than this to the end, new output keeps the view at the end. */
 const NEAR_BOTTOM_PX = 48;
+/** RING_MS is how long the bell dot shows after a shell rang. */
+const RING_MS = 3000;
 
 /** newTerm starts a shell on the laptop and shows it here. */
 export function newTerm(): void {
@@ -184,18 +188,42 @@ export function TermView() {
     return () => link.unsubscribe(topic);
   }, [buf]);
   const controller = link.meta.value?.role === "controller";
+  const [ring, setRing] = useState(false);
+  const bells = rang.value;
+  useEffect(() => {
+    if (bells === 0) return;
+    setRing(true);
+    const timer = setTimeout(() => setRing(false), RING_MS);
+    return () => clearTimeout(timer);
+  }, [bells]);
+  const ts = buf === undefined ? undefined : store.topic("term:" + buf).value;
+  const ended = isGone(ts?.data) || item?.exited === true;
+  let foot;
+  if (ts && buf !== undefined) {
+    foot = controller ? (
+      <TermInput buf={buf} ended={ended} />
+    ) : (
+      <div class="composer">
+        <p class="composer-note">{t("viewonly")}</p>
+      </div>
+    );
+  }
   return (
     <View
       tab="term"
       title={t("tab.term")}
       bodyRef={body}
       bodyClass="term-body"
+      foot={foot}
       actions={
-        controller && terms.length > 0 ? (
-          <Button kind="quiet" small needsLink label={t("term.new")} onClick={newTerm}>
-            +
-          </Button>
-        ) : undefined
+        <>
+          {ring && <span class="bell-dot" role="status" aria-label={t("term.bell")} />}
+          {controller && terms.length > 0 && (
+            <Button kind="quiet" small needsLink label={t("term.new")} onClick={newTerm}>
+              +
+            </Button>
+          )}
+        </>
       }
     >
       <TopicBody

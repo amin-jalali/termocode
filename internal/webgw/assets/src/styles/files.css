@@ -63,3 +63,15 @@
 .term-ended { margin-top: var(--s3); }
 .term-follow { position: sticky; bottom: var(--s3); display: flex; justify-content: flex-end; pointer-events: none; }
 .term-follow .chip { pointer-events: auto; background: var(--bg-panel); }
+.bell-dot { align-self: center; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--amber); }
+
+/* Terminal input and key bar */
+.term-line { font-family: var(--font-mono); font-size: var(--fs-row); unicode-bidi: isolate; }
+.keybar { display: flex; gap: var(--s1); margin-top: var(--s2); overflow-x: auto; scrollbar-width: none; }
+.key { flex: none; min-width: var(--tap); min-height: var(--tap); padding: 0 var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); color: var(--text); font-family: var(--font-mono); font-size: var(--fs-row); }
+.key:hover { background: var(--bg-hover); }
+.key.is-on { border-color: var(--ai); color: var(--ai); }
+.key.is-locked { border-color: var(--ai); color: var(--ai); box-shadow: inset 0 -3px 0 var(--ai); }
+.key-int { color: var(--red); }
+.key[aria-disabled="true"] { opacity: 0.45; }
+.keybar-off { flex: none; align-self: center; }
