@@ -465,6 +465,20 @@
       "phase": "v1"
     },
     {
+      "op": "term.colors",
+      "args": "BufArgs",
+      "result": "TermColorsRes",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "buf.hl",
       "args": "HlArgs",
       "result": "HlRes",
@@ -3200,6 +3214,39 @@
       ],
       "additionalProperties": true
     },
+    "TermColorsRes": {
+      "type": "object",
+      "properties": {
+        "shown": {
+          "type": "boolean"
+        },
+        "spans": {
+          "items": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "styles": {
+          "items": {
+            "$ref": "#/defs/TermStyle"
+          },
+          "type": "array"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tick",
+        "shown",
+        "styles",
+        "spans"
+      ],
+      "additionalProperties": true
+    },
     "TermHistoryArgs": {
       "type": "object",
       "properties": {
@@ -3404,6 +3451,31 @@
         "cols",
         "height"
       ],
+      "additionalProperties": true
+    },
+    "TermStyle": {
+      "type": "object",
+      "properties": {
+        "b": {
+          "type": "boolean"
+        },
+        "bg": {
+          "type": "string"
+        },
+        "fg": {
+          "type": "string"
+        },
+        "i": {
+          "type": "boolean"
+        },
+        "s": {
+          "type": "boolean"
+        },
+        "u": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
       "additionalProperties": true
     },
     "TermsSnap": {

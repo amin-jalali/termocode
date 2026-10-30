@@ -71,6 +71,7 @@ const (
 	OpTermNew          = "term.new"
 	OpTermShowOnLaptop = "term.show_on_laptop"
 	OpTermClose        = "term.close"
+	OpTermColors       = "term.colors"
 	OpGitDiff          = "git.diff"
 	OpGitShow          = "git.show"
 	OpGitStage         = "git.stage"
@@ -125,6 +126,7 @@ var opTable = []Policy{
 	{Op: OpTasksTail, New: newOf[LabelArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
 	{Op: OpSearchStop, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
 	{Op: OpSearchOpen, New: newOf[SearchOpenArgs](), Role: RoleViewer, Rate: perSec(20), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV1},
+	{Op: OpTermColors, New: newOf[BufArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpBufHl, New: newOf[HlArgs](), Role: RoleViewer, Rate: perSec(10), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 
 	// Chat and cards.
