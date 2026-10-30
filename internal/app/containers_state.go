@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/services"
 )
 
@@ -371,7 +372,7 @@ func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 		var wg sync.WaitGroup
 		for i, s := range jobs {
 			wg.Add(1)
-			go func() {
+			crash.Go("listing a containers section", func() {
 				defer wg.Done()
 				switch s {
 				case "containers":
@@ -385,7 +386,7 @@ func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 				case "contexts":
 					msg.contexts, errs[i] = le.ListContexts(ctx)
 				}
-			}()
+			})
 		}
 		e.Probe(ctx)
 		if !e.Reachable {
