@@ -22,6 +22,7 @@ import { errText } from "../ui/CardSheet";
 import { Chip } from "../ui/Chip";
 import { Cod } from "../ui/icons";
 import { Crumbs } from "./FileView";
+import { AIDiff } from "./AIDiff";
 import { LiveEditor } from "./LiveEditor";
 import { View } from "./View";
 
@@ -151,7 +152,14 @@ function ReviewSide({ d, slot }: { d: DiffTab; slot: string }) {
   return <StaticDiff d={d} left={{ text: old.join("\n"), binary: false, cut: false }} right={{ text: next.join("\n"), binary: false, cut: false }} slot={slot} onCount={() => undefined} />;
 }
 
+/** DiffView is a diff tab: git's (here) or the AI's (views/AIDiff.tsx). */
 export function DiffView({ tab, slot = "g0" }: { tab: string; slot?: string }) {
+  const d = diffOf(tab);
+  if (d && (d.kind === "ai" || d.kind === "agent")) return <AIDiff d={d} slot={slot} />;
+  return <GitDiff tab={tab} slot={slot} />;
+}
+
+function GitDiff({ tab, slot }: { tab: string; slot: string }) {
   const d = diffOf(tab);
   const git = store.topic("git").value;
   const gs = git?.data as GitSnap | undefined;

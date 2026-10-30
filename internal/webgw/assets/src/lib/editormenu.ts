@@ -5,7 +5,7 @@
 // actions when it has them (Format shows only then). The page never reads
 // the clipboard (web design 3.4): Paste gives the editor the keyboard and
 // says which keys paste.
-import type { FromFrame, ToFrame } from "../monaco/protocol";
+import type { AiAct, AiAt, FromFrame, ToFrame } from "../monaco/protocol";
 import { t } from "../strings";
 import { openMenu, type MenuItems } from "../ui/ContextMenu";
 import { modKey } from "./platform";
@@ -14,7 +14,7 @@ import { quick } from "./workbench";
 
 type MenuMsg = Extract<FromFrame, { t: "menu" }>;
 /** editorMenu opens the menu of a right click at (x, y) on the page. */
-export function editorMenu(x: number, y: number, m: MenuMsg, edit: (e: ToFrame) => void): void {
+export function editorMenu(x: number, y: number, m: MenuMsg, edit: (e: ToFrame) => void, ai?: (kind: AiAct, at: AiAt) => void): void {
   const mod = modKey();
   const fail = () => toast("warn", t("copy.failed"));
   const write = (then?: () => void) => {
@@ -41,6 +41,17 @@ export function editorMenu(x: number, y: number, m: MenuMsg, edit: (e: ToFrame) 
     },
   ];
   if (m.can.format) items.push(null, { label: t("menu.format"), keys: "Shift+Alt+F", run: () => edit({ t: "edit", op: "format" }) });
+  // The laptop's AI actions (the laptop's editor has the same four).
+  if (ai) {
+    const run = (kind: AiAct) => () => ai(kind, m.at);
+    items.push(
+      null,
+      { label: t("ai.explain"), run: run("explain") },
+      { label: t("ai.fix"), disabled: m.readOnly, run: run("fix") },
+      { label: t("ai.edit"), keys: `${mod}+I`, disabled: m.readOnly, run: run("edit") },
+      { label: t("ai.doc"), disabled: m.readOnly, run: run("doc") },
+    );
+  }
   items.push(null, { label: t("menu.palette"), keys: `${mod}+Shift+P`, run: () => (quick.value = { mode: "commands" }) });
   openMenu(x, y, t("menu.editor"), items);
 }

@@ -8,3 +8,4 @@ import "./styles/explorer.css";
 import "./styles/panes.css";
 import "./styles/run.css";
 import "./styles/gitviews.css";
+import "./styles/ai.css";

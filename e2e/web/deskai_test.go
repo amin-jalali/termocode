@@ -16,7 +16,8 @@ import (
 
 // The laptop's AI in the desktop editor (WEBP-3): ghost text and next
 // edit suggestions asked of the hub at the tick the page's text is known
-// at. The fake hub plays the laptop.
+// at, the editor's Explain / Fix / Edit / Doc and the AI's suggestion as
+// a diff tab to accept or reject. The fake hub plays the laptop.
 
 // aiFixture is the ai topic: AI set up with ghost text and next edits as
 // given.
@@ -190,4 +191,116 @@ func TestDeskAINextEdit(t *testing.T) {
 		t.Errorf("Tab sent %+v", a)
 	}
 	p.WaitJS(`!` + deskDoc + `.querySelector(".tc-nes") && ` + deskDoc + `.querySelector(".view-lines").textContent.replace(/\u00a0/g, " ").includes("return newName")`)
+}
+
+// aiNext reads the page's next request, which must be op: subs, unsubs
+// and paint requests on the way are skipped, a buf.close answered.
+func aiNext(t *testing.T, c *HubConn, op string) *webproto.Req {
+	t.Helper()
+	for {
+		switch m := c.Next(t).(type) {
+		case *webproto.Sub, *webproto.Unsub:
+		case *webproto.Req:
+			if paintOps[m.Op] {
+				continue
+			}
+			if m.Op == "buf.close" {
+				c.Send(t, &webproto.Res{T: webproto.KindRes, ID: m.ID})
+				continue
+			}
+			if m.Op != op {
+				t.Fatalf("page sent %s; want %s", show(m), op)
+			}
+			return m
+		default:
+			t.Fatalf("page sent %s; want %s", show(m), op)
+		}
+	}
+}
+
+// expectAIAction reads the page's next ai.action (other requests fail).
+func expectAIAction(t *testing.T, c *HubConn) (*webproto.Req, webproto.AIActionArgs) {
+	t.Helper()
+	r := aiNext(t, c, "ai.action")
+	var a webproto.AIActionArgs
+	if err := json.Unmarshal(r.Args, &a); err != nil {
+		t.Fatal(err)
+	}
+	return r, a
+}
+
+// Edit with AI (Ctrl/Cmd+I) asks what to change, then shows the AI's
+// lines as a diff tab: the file on the left, the suggestion on the right
+// with an arrow per change. Accept writes it in one edit at the tick it
+// was asked at, and the file's tab comes back.
+func TestDeskAIEditAccept(t *testing.T) {
+	p, c, _ := openAIDesk(t, false, false, "calc.go", "package calc", "", "func Add(a, b int) int {", "    return a - b", "}")
+	deskCaret(p, 3, 1)
+	p.Do(chromedp.KeyEvent("i", modKey()))
+	p.WaitJS(`document.querySelector(".quick-box")?.placeholder === "Edit with AI: what should change?"`)
+	p.Do(chromedp.KeyEvent("use plus"))
+	p.Do(chromedp.KeyEvent(kb.Enter))
+	r, a := expectAIAction(t, c)
+	if a.Buf != 2 || a.Tick != 3 || a.Kind != "edit" || a.Instruction != "use plus" || a.Start != 3 || a.End != 3 || a.Line != 3 {
+		t.Fatalf("ai.action %+v", a)
+	}
+	reply(t, c, r, webproto.AIAction{Kind: "edit", Title: "AI edit: use plus", Start: 3, End: 4, Lines: []string{"    return a + b"}})
+	p.WaitJS(`document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "calc.go (AI Suggestion)"`)
+	view := `document.querySelector('[data-view="ai-diff"]')`
+	doc := view + `.querySelector(".desk-editor").contentDocument`
+	p.WaitJS(doc + `?.querySelector(".editor.modified .char-insert, .editor.modified .line-insert")`)
+	if got := Eval[bool](p, doc+`.querySelector(".editor.original .view-lines").textContent.replace(/\u00a0/g, " ").includes("return a - b")`); !got {
+		t.Error("the left side is not the file")
+	}
+	p.TapJS(view + `.querySelector('[data-act="accept"]')`)
+	r2 := aiNext(t, c, "buf.set_text")
+	var set webproto.SetTextArgs
+	if err := json.Unmarshal(r2.Args, &set); err != nil {
+		t.Fatal(err)
+	}
+	if set.Buf != 2 || set.Tick != 3 || strings.Join(set.Lines, "\n") != "+" {
+		t.Errorf("accept sent %+v", set)
+	}
+	reply(t, c, r2, webproto.EditRes{Tick: 4})
+	// The file's tab comes back (its editor opens the buffer again).
+	answerOpen(t, p, c, 2, "calc.go", "package calc", "", "func Add(a, b int) int {", "    return a + b", "}")
+	p.WaitJS(`document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "calc.go" && !document.querySelector('[data-view="ai-diff"]')`)
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
+
+// The editor's menu has the AI's actions when the laptop has AI. Doc
+// shows its suggestion; Reject drops it and sends nothing. Explain asks
+// in the laptop's chat, which comes into view.
+func TestDeskAIMenuDocRejectAndExplain(t *testing.T) {
+	p, c, _ := openAIDesk(t, false, false, "calc.go", "package calc", "func Add(a, b int) int { return a + b }")
+	deskCaret(p, 1, 0)
+	editorRightClick(p)
+	if got := menuLabels(p); !strings.Contains(got, "Paste|Explain with AI|Fix with AI|Edit with AI…|Generate Doc Comment with AI|Command Palette…") {
+		t.Errorf("editor menu %q", got)
+	}
+	menuPick(p, "Generate Doc Comment with AI")
+	r, a := expectAIAction(t, c)
+	if a.Kind != "doc" || a.Line != 1 || a.Start != 1 || a.End != 1 || a.Instruction != "" {
+		t.Fatalf("doc %+v", a)
+	}
+	reply(t, c, r, webproto.AIAction{Kind: "doc", Title: "AI doc comment", Start: 1, End: 2, Lines: []string{"// Add adds.", "func Add(a, b int) int { return a + b }"}})
+	view := `document.querySelector('[data-view="ai-diff"]')`
+	p.WaitJS(view + `?.querySelector(".desk-editor")`)
+	p.TapJS(view + `.querySelector('[data-act="reject"]')`)
+	answerOpen(t, p, c, 2, "calc.go", "package calc", "func Add(a, b int) int { return a + b }") // nothing else: no edit
+	p.WaitJS(`!document.querySelector('[data-view="ai-diff"]') && document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "calc.go"`)
+	noReq(t, c, 400*time.Millisecond)
+	deskCaret(p, 1, 0)
+
+	Eval[bool](p, `(document.dispatchEvent(new KeyboardEvent("keydown", {key: "b", ctrlKey: true, bubbles: true})), true)`) // the side bar away: room
+	editorRightClick(p)
+	menuPick(p, "Explain with AI")
+	r, a = expectAIAction(t, c)
+	if a.Kind != "explain" {
+		t.Fatalf("explain %+v", a)
+	}
+	reply(t, c, r, webproto.AIAction{Kind: "explain", Chat: true, ChatID: "c-1", Lines: []string{}})
+	p.WaitJS(`document.querySelector(".chatcol")`)
 }
