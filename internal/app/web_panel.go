@@ -250,11 +250,38 @@ func (m *Model) webDeliverLink(open, copyLink bool) tea.Cmd {
 		return m.webToast(toast.Info, "Link copied. "+webLinkLife+where)
 	case open:
 		if err := m.webOpenLink(link); err != nil {
-			return m.webToast(toast.Warn, "Could not open a browser. Use Web: Copy Link.")
+			return m.webNoBrowser(link)
 		}
 		return m.webToast(toast.Info, "Web panel is on. The link opened in your browser."+where)
 	}
 	return m.webToast(toast.Info, "Web panel is on. Use Web: Copy Link to open it."+where)
+}
+
+// webLinkCopyMsg is a click on the toast with the link (webNoBrowser).
+type webLinkCopyMsg struct{ link string }
+
+// webLinkToastLife is how long the toast with the link stays.
+const webLinkToastLife = 60 * time.Second
+
+// webNoBrowser is the way on when no browser opens: the link is copied
+// at once and shown in a private toast (this screen only: never in the
+// error log or the browsers' toasts); a click copies it again.
+func (m *Model) webNoBrowser(link string) tea.Cmd {
+	title := "Could not open a browser. The link is copied: paste it in a browser."
+	if writeSystemClipboard(link) == clipFailed {
+		title = "Could not open a browser. Open this link in a browser (click to copy):"
+	}
+	var c tea.Cmd
+	m.toast, c = m.toast.PushPrivate(toast.Warn, title, link, webLinkCopyMsg{link: link}, webLinkToastLife)
+	return c
+}
+
+// webCopyLink copies the link again (a click on its toast).
+func (m *Model) webCopyLink(link string) tea.Cmd {
+	if writeSystemClipboard(link) == clipFailed {
+		return m.webToast(toast.Warn, "Could not copy the link.")
+	}
+	return m.webToast(toast.Info, "Link copied. "+webLinkLife)
 }
 
 // webOpenLink writes the 0600 redirect page and opens its path (never the
