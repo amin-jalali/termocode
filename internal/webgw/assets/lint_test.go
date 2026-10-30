@@ -58,6 +58,28 @@ func lintSource(rel, text string) []string {
 	return bad
 }
 
+// lintSVG keeps static icons inert: no script, no handlers, no links,
+// no foreign content; the svg namespace is the only URL.
+func lintSVG(text string) string {
+	text = strings.Replace(text, `xmlns="http://www.w3.org/2000/svg"`, "", 1)
+	for _, r := range []*regexp.Regexp{
+		regexp.MustCompile(`(?i)<script|<foreignObject|<use\b|<image\b|\bon[a-z]+\s*=|href|(?:https?|data|javascript):|@import|url\(`),
+	} {
+		if m := r.FindString(text); m != "" {
+			return "svg has " + m
+		}
+	}
+	return ""
+}
+
+func TestLintSVG(t *testing.T) {
+	for _, bad := range []string{`<svg><script>x</script></svg>`, `<svg onload="x()"/>`, `<svg><use href="#a"/></svg>`, `<svg><image href="data:x"/></svg>`} {
+		if lintSVG(bad) == "" {
+			t.Errorf("lintSVG passed %q", bad)
+		}
+	}
+}
+
 func TestLintCatchesEachRule(t *testing.T) {
 	for _, bad := range []string{
 		`el.innerHTML = x`, `<div dangerouslySetInnerHTML={{__html: x}} />`, `eval("1")`,
@@ -84,6 +106,15 @@ func TestSourcesFollowTheBrowserRules(t *testing.T) {
 		}
 		switch filepath.Ext(path) {
 		case ".ts", ".tsx", ".css", ".html":
+		case ".svg":
+			b, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			if bad := lintSVG(string(b)); bad != "" {
+				t.Errorf("%s: %s", path, bad)
+			}
+			return nil
 		default:
 			t.Errorf("%s: unexpected file kind in src", path)
 			return nil
