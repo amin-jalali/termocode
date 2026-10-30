@@ -27,8 +27,8 @@ palette_open_all           30   ms   # F1 to palette with every command, median 
 explorer_5k_files          25   ms   # click a folder of 5 000 files to its rows shown; local 5.3 ms (floor)
 
 # search (internal/search/perf_test.go): built-in walker, no rg on PATH
-search_20k_first_result   210   ms   # Find in Files, 20k files, 200 hits: to the first results; local 104 ms
-search_20k_done          2700   ms   # same search to the end; local 1.32 s
+search_20k_first_result    25   ms   # Find in Files, 20k files, 200 hits: to the first results; local 0.6 ms (floor; was 104)
+search_20k_done           128   ms   # same search to the end; local 64 ms (was 1.32 s)
 
 # git (internal/app/git_perf_test.go)
 git_refresh_20k           103   ms   # Source Control refresh after a git action, 20k files, 2k changes; local 51 ms
