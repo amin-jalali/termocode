@@ -9,6 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/explorer"
+	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -93,4 +95,89 @@ func (m *Model) webTreeNew(call *webCall, dir bool) tea.Cmd {
 	m.explorer.Reload()
 	call.reply(webproto.TreeChanged{Path: rel})
 	return tea.Batch(m.webTreeRefresh(), fetchGitCmd())
+}
+
+func init() {
+	webOps[webproto.OpTreeRename] = (*Model).webTreeRename
+}
+
+// webTreeRename gives a file or folder a new name in its folder, through
+// the explorer's rename plan (no name is replaced; a swap is staged), off
+// the UI thread. The laptop gets the explorer's own "Undo" toast.
+func (m *Model) webTreeRename(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.RenameArgs)
+	rel := webCleanRel(a.Path)
+	if !m.webFileOpsLocal(call) {
+		return nil
+	}
+	old, err := m.webResolve(rel)
+	if err != nil {
+		webFailErr(call, err, "")
+		return nil
+	}
+	if rel == "" || m.webIsRoot(old) {
+		call.fail(webproto.CodeForbidden, "A workspace folder cannot be renamed here.")
+		return nil
+	}
+	plan := explorer.CheckRename([]string{old}, []string{a.Name})
+	if len(plan.Conflicts) > 0 {
+		call.fail(webproto.CodeConflict, "That name exists already.")
+		return nil
+	}
+	if len(plan.Changes) == 0 {
+		call.reply(webproto.TreeChanged{Path: rel})
+		return nil
+	}
+	newRel := path.Join(path.Dir(rel), a.Name)
+	device := webName(call.conn.device)
+	call.later()
+	return func() tea.Msg {
+		err := explorer.ApplyRename(plan.Changes, nil)
+		var stamp string
+		if err == nil {
+			stamp, _ = explorer.RenameStamp(plan.Changes[0].New)
+		}
+		return applyMsg(func(m *Model) tea.Cmd {
+			summary := rel + " → " + a.Name
+			if err != nil {
+				m.webAuditOp(call, summary, "failed")
+				m.explorer.Reload()
+				webFailErr(call, err, "Could not rename it:")
+				return nil
+			}
+			c := plan.Changes[0]
+			m.followRename(c.Old, c.New)
+			moveGitIndex(renameMoves(plan.Changes)...)
+			m.webAuditOp(call, summary, "ok")
+			call.reply(webproto.TreeChanged{Path: newRel})
+			// The explorer's own undo: the laptop's toast puts the old name back
+			// while nothing changed since.
+			st := &m.bulkRename
+			st.serial++
+			st.undo = []explorer.Rename{{Old: c.New, New: c.Old}}
+			st.stamps = map[string]string{c.New: stamp}
+			st.bufferStamp = m.renameBufferStamp(st.undo)
+			m.explorer.Reload()
+			if device == "" {
+				device = "web"
+			}
+			var t tea.Cmd
+			m.toast, t = m.toast.PushClick(toast.Info, "Renamed on "+device+" · Undo", filepath.Base(c.Old)+" → "+filepath.Base(c.New), undoExplorerRenameMsg{st.serial})
+			return tea.Batch(t, m.webTreeRefresh(), m.refreshSearchResults(), fetchGitCmd())
+		})
+	}
+}
+
+// webIsRoot reports whether abs is one of the workspace's root folders.
+func (m *Model) webIsRoot(abs string) bool {
+	root, err := m.rootDir()
+	if err == nil && filepath.Clean(abs) == filepath.Clean(root) {
+		return true
+	}
+	for _, r := range m.explorer.Roots() {
+		if filepath.Clean(abs) == filepath.Clean(r) {
+			return true
+		}
+	}
+	return false
 }

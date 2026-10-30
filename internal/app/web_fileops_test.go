@@ -64,3 +64,46 @@ func TestTreeNewFileAndFolder(t *testing.T) {
 		t.Errorf("audit:\n%s", a)
 	}
 }
+
+// Spec (WEB-41): tree.rename gives a file a new name in its folder (off
+// the UI thread); an existing name is never replaced; the workspace
+// folder cannot be renamed; the laptop gets the explorer's Undo toast,
+// which puts the old name back; the audit line names both.
+func TestTreeRename(t *testing.T) {
+	r := newWebFilesRig(t)
+	r.m.output = newOutputStore()
+	r.write("src/a.go", "package a\n")
+	r.write("src/b.go", "package b\n")
+	if f := r.call(webproto.OpTreeRename, &webproto.RenameArgs{Path: "src/a.go", Name: "b.go"}); webErrCode(f) != "conflict" {
+		t.Fatalf("over b.go: %v", f)
+	}
+	f := r.call(webproto.OpTreeRename, &webproto.RenameArgs{Path: "src/a.go", Name: "c.go"})
+	var ch webproto.TreeChanged
+	webTestData(t, f, &ch)
+	if f["t"] != "res" || ch.Path != "src/c.go" {
+		t.Fatalf("rename: %v", f)
+	}
+	if _, err := os.Stat(filepath.Join(r.root, "src", "c.go")); err != nil {
+		t.Fatal("c.go missing")
+	}
+	if b, _ := os.ReadFile(filepath.Join(r.root, "src", "b.go")); string(b) != "package b\n" {
+		t.Fatalf("b.go changed: %q", b)
+	}
+	if !strings.Contains(webTestToasts(*r.m), "Renamed on web · Undo") {
+		t.Errorf("toasts: %s", webTestToasts(*r.m))
+	}
+	if a := webTestAudit(r.m); !strings.Contains(a, "tree.rename  src/a.go → c.go  by=web:") {
+		t.Errorf("audit:\n%s", a)
+	}
+	webDrain(t, r.m, r.m.undoBulkRename(r.m.bulkRename.serial))
+	if _, err := os.Stat(filepath.Join(r.root, "src", "a.go")); err != nil {
+		t.Fatal("the laptop's undo did not bring a.go back")
+	}
+	r.write("dir/x.txt", "x")
+	if f := r.call(webproto.OpTreeRename, &webproto.RenameArgs{Path: "dir", Name: "dir2"}); f["t"] != "res" {
+		t.Fatalf("folder rename: %v", f)
+	}
+	if _, err := os.Stat(filepath.Join(r.root, "dir2", "x.txt")); err != nil {
+		t.Fatal("folder not renamed")
+	}
+}
