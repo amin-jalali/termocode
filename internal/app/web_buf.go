@@ -100,6 +100,7 @@ func init() {
 	})
 	registerNotifyHandler("termocode_web_dirty", func(m *Model, a []any) tea.Cmd {
 		m.webBufDirty(notifyArgInt(a, 0), notifyArgBool(a, 1))
+		m.webBufTick(notifyArgInt(a, 0), notifyArgInt(a, 2))
 		return nil
 	})
 	registerNotifyHandler("termocode_web_gone", func(m *Model, a []any) tea.Cmd {
@@ -435,6 +436,20 @@ func (m *Model) webBufDirty(n int, on bool) {
 	if !b.term {
 		m.webPublish(b.topic(), webproto.DirtyDelta{Kind: "dirty", On: on})
 	}
+}
+
+// webBufTick: the changedtick moved without an attach callback (nvim
+// bumps it when a write clears 'modified').
+func (m *Model) webBufTick(n, tick int) {
+	if m.web == nil || m.web.files == nil {
+		return
+	}
+	b := m.web.files.bufs[n]
+	if b == nil || tick <= b.tick {
+		return
+	}
+	b.tick = tick
+	m.webPublish(b.topic(), webproto.TickDelta{Kind: "tick", Tick: tick})
 }
 
 // webBufGone: the buffer was unloaded or deleted on the laptop.

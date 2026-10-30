@@ -17,7 +17,7 @@ package app
 //	termocode_web_lines  buf, seq, tick, first, last, lines, modified
 //	termocode_web_tick   buf, seq, tick, modified
 //	termocode_web_reset  buf, seq, tick, lines      (reloaded from disk)
-//	termocode_web_dirty  buf, modified
+//	termocode_web_dirty  buf, modified, tick           (a write moves the tick too)
 //	termocode_web_gone   buf                        (unloaded or deleted)
 
 const webLuaPrelude = `
@@ -92,7 +92,9 @@ if not W or W.v ~= 2 then
   end
   api.nvim_create_augroup('TermocodeWeb', { clear = true })
   api.nvim_create_autocmd({ 'BufModifiedSet', 'BufWritePost' }, { group = 'TermocodeWeb', callback = function(ev)
-    if W.bufs[ev.buf] then notify('termocode_web_dirty', ev.buf, vim.bo[ev.buf].modified) end
+    if W.bufs[ev.buf] then
+      notify('termocode_web_dirty', ev.buf, vim.bo[ev.buf].modified, api.nvim_buf_get_changedtick(ev.buf))
+    end
   end })
 end
 `
