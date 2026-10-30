@@ -181,3 +181,48 @@ func (m *Model) webIsRoot(abs string) bool {
 	}
 	return false
 }
+
+func init() {
+	webAskOps[webproto.OpTreeDelete] = (*Model).webTreeDelete
+}
+
+// webTreeDelete asks the laptop to delete a file or a folder with all it
+// holds. Nothing happens until the laptop confirms; the path is resolved
+// again then, so a link put in its place meanwhile cannot lead out.
+func (m *Model) webTreeDelete(call *webCall) *webAsk {
+	rel := webCleanRel(call.args.(*webproto.ItemArgs).Path)
+	if !m.webFileOpsLocal(call) {
+		return nil
+	}
+	abs, err := m.webResolve(rel)
+	if err != nil {
+		webFailErr(call, err, "")
+		return nil
+	}
+	if rel == "" || m.webIsRoot(abs) {
+		call.fail(webproto.CodeForbidden, "A workspace folder cannot be deleted here.")
+		return nil
+	}
+	fi, err := os.Lstat(abs)
+	if err != nil {
+		call.fail(webproto.CodeNotFound, "That file or folder does not exist.")
+		return nil
+	}
+	body := "Delete " + rel + "? This cannot be undone."
+	if fi.IsDir() {
+		body = "Delete the folder " + rel + " and everything in it? This cannot be undone."
+	}
+	return &webAsk{
+		summary: rel,
+		title:   "Delete?",
+		body:    body,
+		action:  "Delete",
+		run: func(m *Model) tea.Cmd {
+			again, err := m.webResolve(rel)
+			if err != nil || again != abs || m.webIsRoot(again) {
+				return m.pushToastDetail(toast.Warn, "Nothing was deleted", rel+" changed or is gone.")
+			}
+			return tea.Batch(m.runBulkDelete([]string{abs}), m.webTreeRefresh(), fetchGitCmd())
+		},
+	}
+}
