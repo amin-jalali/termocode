@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -306,5 +307,32 @@ func TestGatewayUnixMode(t *testing.T) {
 	}
 	if _, err := os.Lstat(sock); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("the socket is left after the stop: %v", err)
+	}
+}
+
+// An installable (https) site serves the app manifest; a loopback site
+// does not (WEB-35). /auth, /ws and the page are routed the same on both.
+func TestSiteMuxManifestOnlyWhenInstallable(t *testing.T) {
+	mark := func(name string) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(name)) })
+	}
+	for _, tc := range []struct {
+		site Site
+		want int
+	}{{LoopbackSite(41237), http.StatusNotFound}, {Site{Scheme: "https", Hosts: []string{"box.tail1234.ts.net"}}, http.StatusOK}} {
+		mux := siteMux(tc.site, mark("auth"), mark("ws"), Assets())
+		if got := getAsset(t, mux, http.MethodGet, ManifestPath).StatusCode; got != tc.want {
+			t.Errorf("%s: GET %s = %d, want %d", tc.site.Scheme, ManifestPath, got, tc.want)
+		}
+		for path, want := range map[string]string{"/auth": "auth", "/ws": "ws"} {
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+			if rec.Body.String() != want {
+				t.Errorf("%s: %s went to %q", tc.site.Scheme, path, rec.Body.String())
+			}
+		}
+		if got := getAsset(t, mux, http.MethodGet, "/").StatusCode; got != http.StatusOK {
+			t.Errorf("%s: GET / = %d", tc.site.Scheme, got)
+		}
 	}
 }
