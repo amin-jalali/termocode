@@ -255,6 +255,15 @@
       "deltas": [
         "DiagSnap"
       ]
+    },
+    {
+      "name": "tests",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "TestsSnap",
+      "deltas": [
+        "TestsSnap"
+      ]
     }
   ],
   "events": {
@@ -1036,6 +1045,72 @@
       "live": 1,
       "laptop_card": false,
       "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "tests.output",
+      "args": "TestIDArgs",
+      "result": "TestOutput",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "tests.refresh",
+      "args": "EmptyArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "tests.run",
+      "args": "TestRunArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "tests.debug",
+      "args": "TestIDArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "tests.stop",
+      "args": "EmptyArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
       "phase": "v2"
     },
     {
@@ -5183,6 +5258,189 @@
       },
       "required": [
         "terms"
+      ],
+      "additionalProperties": true
+    },
+    "TestCounts": {
+      "type": "object",
+      "properties": {
+        "failed": {
+          "type": "integer"
+        },
+        "passed": {
+          "type": "integer"
+        },
+        "running": {
+          "type": "integer"
+        },
+        "skipped": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total",
+        "passed",
+        "failed",
+        "skipped",
+        "running"
+      ],
+      "additionalProperties": true
+    },
+    "TestIDArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "TestItem": {
+      "type": "object",
+      "properties": {
+        "debug": {
+          "type": "boolean"
+        },
+        "fail_line": {
+          "type": "integer"
+        },
+        "fail_path": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "package",
+            "file",
+            "case"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "ms": {
+          "type": "integer"
+        },
+        "parent": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "pending",
+            "running",
+            "passed",
+            "failed",
+            "skipped"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "label",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "TestOutput": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "TestRunArgs": {
+      "type": "object",
+      "properties": {
+        "failed": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "TestsSnap": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "counts": {
+          "$ref": "#/defs/TestCounts"
+        },
+        "elapsed_ms": {
+          "type": "integer"
+        },
+        "error": {
+          "type": "string"
+        },
+        "framework": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/TestItem"
+          },
+          "type": "array"
+        },
+        "live": {
+          "type": "boolean"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "run_error": {
+          "type": "string"
+        },
+        "started": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "idle",
+            "discovering",
+            "running"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "counts",
+        "items"
       ],
       "additionalProperties": true
     },

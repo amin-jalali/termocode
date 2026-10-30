@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests";
 
 export interface Bye {
   t: "bye";
@@ -241,6 +241,15 @@ export interface LspPosArgs {
   tick: number;
   line: number;
   col: number;
+}
+
+export interface TestIDArgs {
+  id: string;
+}
+
+export interface TestRunArgs {
+  id?: string;
+  failed?: boolean;
 }
 
 export interface GitFileLogArgs {
@@ -772,6 +781,43 @@ export interface Diag {
   code?: string;
 }
 
+export interface TestsSnap {
+  framework?: string;
+  state: "idle" | "discovering" | "running";
+  error?: string;
+  run_error?: string;
+  counts: TestCounts;
+  command?: string;
+  started?: number;
+  elapsed_ms?: number;
+  live?: boolean;
+  items: TestItem[];
+  more?: number;
+}
+
+export interface TestCounts {
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  running: number;
+}
+
+export interface TestItem {
+  id: string;
+  kind: "package" | "file" | "case";
+  parent?: string;
+  label: string;
+  path?: string;
+  line?: number;
+  state: "pending" | "running" | "passed" | "failed" | "skipped";
+  ms?: number;
+  message?: string;
+  fail_path?: string;
+  fail_line?: number;
+  debug?: boolean;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -985,6 +1031,12 @@ export interface LspLoc {
   text?: string;
 }
 
+export interface TestOutput {
+  id?: string;
+  lines: string[];
+  truncated?: boolean;
+}
+
 export interface GitFileLog {
   path: string;
   log: GitCommit[];
@@ -1185,6 +1237,11 @@ export interface OpArgs {
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
   "lsp.references": LspPosArgs;
+  "tests.output": TestIDArgs;
+  "tests.refresh": EmptyArgs;
+  "tests.run": TestRunArgs;
+  "tests.debug": TestIDArgs;
+  "tests.stop": EmptyArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -1240,6 +1297,7 @@ export interface TopicData {
   "mcp": { snap: MCPSnap; delta: MCPSnap };
   "settings": { snap: SettingsSnap; delta: SettingsSnap };
   "diagnostics": { snap: DiagSnap; delta: DiagSnap };
+  "tests": { snap: TestsSnap; delta: TestsSnap };
 }
 
 // The data of an ev message, by kind.
@@ -1280,6 +1338,7 @@ export interface OpResult {
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;
   "lsp.references": LspLocations;
+  "tests.output": TestOutput;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
