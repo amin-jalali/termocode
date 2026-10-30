@@ -64,6 +64,7 @@ type webHub struct {
 	search webSearches                // the running searches by connection (web_search.go; own lock)
 	tasks  webTasksPub                // Update only: what the tasks topic sent (web_tasks.go)
 	runs   webRunsPub                 // Update only: what the runs topic sent (web_runs.go)
+	more   webMorePub                 // Update only: the v2 More views (web_more.go)
 
 	ln    net.Listener
 	peer  func(net.Conn) error
