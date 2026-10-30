@@ -1,0 +1,1 @@
+{"t":"req","id":28,"op":"git.discard","args":{"paths":["tmp.txt"]}}

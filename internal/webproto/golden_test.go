@@ -2,6 +2,7 @@ package webproto
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
@@ -69,10 +70,52 @@ func TestGoldensRoundTrip(t *testing.T) {
 	}
 }
 
-// TestGoldensCoverEveryTypeAndOp fails when a message kind has no fixture,
-// or a fixture names no kind.
+// TestOpGoldensRoundTrip decodes every ops/<op>.json request, decodes its
+// args into the op's type, and encodes both again to the same bytes.
+func TestOpGoldensRoundTrip(t *testing.T) {
+	for name, b := range readGoldens(t, "ops") {
+		m, err := DecodeClient(b)
+		if err != nil {
+			t.Errorf("ops/%s: decode: %v", name, err)
+			continue
+		}
+		req, ok := m.(*Req)
+		if !ok || req.Op != name {
+			t.Errorf("ops/%s: not a req for its op: %#v", name, m)
+			continue
+		}
+		args, err := DecodeArgs(req.Op, req.Args)
+		if err != nil {
+			t.Errorf("ops/%s: args: %v", name, err)
+			continue
+		}
+		raw, err := json.Marshal(args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Args = raw
+		out, err := Encode(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(out, b) {
+			t.Errorf("ops/%s: round trip differs\n got %s\nwant %s", name, out, b)
+		}
+	}
+}
+
+// TestGoldensCoverEveryTypeAndOp fails when a message kind or an op has no
+// fixture, or a fixture names no kind or op.
 func TestGoldensCoverEveryTypeAndOp(t *testing.T) {
-	for _, g := range goldenDirs() {
+	dirs := goldenDirs()
+	dirs = append(dirs, goldenDir{dir: "ops", names: func() []string {
+		var out []string
+		for _, p := range Ops() {
+			out = append(out, p.Op)
+		}
+		return out
+	}})
+	for _, g := range dirs {
 		have := readGoldens(t, g.dir)
 		want := map[string]bool{}
 		for _, k := range g.names() {

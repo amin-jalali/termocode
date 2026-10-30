@@ -1,0 +1,1 @@
+{"t":"req","id":25,"op":"git.stage","args":{"paths":["src/main.go","README.md"]}}

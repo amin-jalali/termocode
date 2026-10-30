@@ -1,0 +1,1 @@
+{"t":"req","id":13,"op":"buf.set_text","args":{"buf":12,"tick":41,"start":{"row":3,"col":0},"end":{"row":3,"col":6},"lines":["x := 2"]}}

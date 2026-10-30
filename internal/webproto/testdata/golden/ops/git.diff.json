@@ -1,0 +1,1 @@
+{"t":"req","id":23,"op":"git.diff","args":{"path":"src/main.go","staged":true}}
