@@ -1,0 +1,1 @@
+{"t":"req","id":61,"op":"kube.list","args":{"context":"kind-dev","namespace":"shop"}}

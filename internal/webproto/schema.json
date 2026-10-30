@@ -1306,6 +1306,95 @@
       "phase": "v2"
     },
     {
+      "op": "kube.contexts",
+      "args": "EmptyArgs",
+      "result": "KubeContexts",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "kube.namespaces",
+      "args": "KubeScopeArgs",
+      "result": "KubeNamespaces",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "kube.list",
+      "args": "KubeScopeArgs",
+      "result": "KubeList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "kube.logs",
+      "args": "KubeLogsArgs",
+      "result": "KubeText",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 2048,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "kube.describe",
+      "args": "KubeObjectArgs",
+      "result": "KubeText",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 2048,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "kube.restart",
+      "args": "KubeObjectArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 2048,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "services.refresh",
       "args": "EmptyArgs",
       "role": "viewer",
@@ -4303,6 +4392,295 @@
         "key"
       ],
       "additionalProperties": false
+    },
+    "KubeContexts": {
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "string"
+        },
+        "contexts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "current": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "contexts"
+      ],
+      "additionalProperties": true
+    },
+    "KubeDeployment": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "integer"
+        },
+        "created": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "string"
+        },
+        "updated": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "ready",
+        "updated",
+        "available"
+      ],
+      "additionalProperties": true
+    },
+    "KubeJob": {
+      "type": "object",
+      "properties": {
+        "completions": {
+          "type": "string"
+        },
+        "created": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "status",
+        "completions"
+      ],
+      "additionalProperties": true
+    },
+    "KubeList": {
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "string"
+        },
+        "deployments": {
+          "items": {
+            "$ref": "#/defs/KubeDeployment"
+          },
+          "type": "array"
+        },
+        "errors": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "jobs": {
+          "items": {
+            "$ref": "#/defs/KubeJob"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "pods": {
+          "items": {
+            "$ref": "#/defs/KubePod"
+          },
+          "type": "array"
+        },
+        "services": {
+          "items": {
+            "$ref": "#/defs/KubeService"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "context",
+        "namespace",
+        "pods",
+        "deployments",
+        "services",
+        "jobs"
+      ],
+      "additionalProperties": true
+    },
+    "KubeLogsArgs": {
+      "type": "object",
+      "properties": {
+        "container": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "integer"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "pod": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pod"
+      ],
+      "additionalProperties": false
+    },
+    "KubeNamespaces": {
+      "type": "object",
+      "properties": {
+        "namespaces": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "namespaces"
+      ],
+      "additionalProperties": true
+    },
+    "KubeObjectArgs": {
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "pod",
+            "deployment",
+            "service",
+            "job"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "KubePod": {
+      "type": "object",
+      "properties": {
+        "containers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "created": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "string"
+        },
+        "restarts": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "ready",
+        "status",
+        "restarts",
+        "containers"
+      ],
+      "additionalProperties": true
+    },
+    "KubeScopeArgs": {
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "KubeService": {
+      "type": "object",
+      "properties": {
+        "cluster_ip": {
+          "type": "string"
+        },
+        "created": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ports": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "additionalProperties": true
+    },
+    "KubeText": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "redacted": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "lines"
+      ],
+      "additionalProperties": true
     },
     "LabelArgs": {
       "type": "object",
