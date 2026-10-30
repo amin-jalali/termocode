@@ -103,7 +103,7 @@ func TestServerLimitsExact(t *testing.T) {
 	if DefaultLimits != want {
 		t.Fatalf("DefaultLimits = %+v, want %+v", DefaultLimits, want)
 	}
-	srv := NewServer(testSite, okServer().Handler, DefaultLimits)
+	srv := NewServer(testSite, okServer().Handler, DefaultLimits, nil)
 	if srv.ReadHeaderTimeout != want.ReadHeaderTimeout || srv.ReadTimeout != want.ReadTimeout ||
 		srv.WriteTimeout != want.WriteTimeout || srv.IdleTimeout != want.IdleTimeout ||
 		srv.MaxHeaderBytes != want.MaxHeaderBytes {
@@ -116,7 +116,7 @@ func TestServerLimitsExact(t *testing.T) {
 
 // TestServerGuards: NewServer puts the guard in front of the handler.
 func TestServerGuards(t *testing.T) {
-	addr := startServer(t, NewServer(testSite, okServer().Handler, DefaultLimits), nil)
+	addr := startServer(t, NewServer(testSite, okServer().Handler, DefaultLimits, nil), nil)
 	out, err := rawGet(addr, 10*time.Second) // Host: x is not ours
 	if err != nil || !strings.Contains(out, "421") {
 		t.Fatalf("got %q %v, want 421", out, err)
@@ -128,7 +128,7 @@ func TestServerGuards(t *testing.T) {
 func TestSlowHeadersClosed(t *testing.T) {
 	l := DefaultLimits
 	l.ReadHeaderTimeout = 200 * time.Millisecond
-	addr := startServer(t, NewServer(testSite, okServer().Handler, l), nil)
+	addr := startServer(t, NewServer(testSite, okServer().Handler, l, nil), nil)
 	c, err := net.Dial("tcp", addr)
 	if err != nil {
 		t.Fatal(err)
@@ -150,7 +150,7 @@ func TestSlowHeadersClosed(t *testing.T) {
 // TestBigHeaderRefused: headers over MaxHeaderBytes (plus net/http's fixed
 // 4 KiB slack) get 431, and the handler never runs.
 func TestBigHeaderRefused(t *testing.T) {
-	addr := startServer(t, NewServer(testSite, okServer().Handler, DefaultLimits), nil)
+	addr := startServer(t, NewServer(testSite, okServer().Handler, DefaultLimits, nil), nil)
 	c, err := net.Dial("tcp", addr)
 	if err != nil {
 		t.Fatal(err)
@@ -166,7 +166,7 @@ func TestBigHeaderRefused(t *testing.T) {
 	}
 }
 
-// TestConnCapCountsCloseOnce:closing a connection twice frees one slot,
+// TestConnCapCountsCloseOnce: closing a connection twice frees one slot,
 // not two.
 func TestConnCapCountsCloseOnce(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
