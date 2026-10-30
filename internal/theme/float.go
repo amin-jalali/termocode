@@ -1,11 +1,14 @@
 package theme
 
 import (
-	"github.com/charmbracelet/x/ansi"
 	"strings"
+	"sync"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/termenv"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // Floating chrome (modals, pickers, prompts, confirms, menus, toasts)
@@ -63,6 +66,9 @@ func Float() FloatColors {
 // width-2 cells wide.
 func FloatBox(content string, width int) string {
 	c := Float()
+	if out, ok := floatBoxFast(content, width, c); ok {
+		return out
+	}
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(c.Border).
@@ -70,6 +76,68 @@ func FloatBox(content string, width int) string {
 		Background(c.Bg).
 		Width(width - 2).
 		Render(content)
+}
+
+// floatBoxFast is FloatBox for rows that already fit (no wrapping):
+// the same bytes lipgloss writes, without its layout pass. ok is false
+// for anything else (a row too wide, tabs, a colour profile where the
+// styles do not render as prefix + text + reset).
+func floatBoxFast(content string, width int, c FloatColors) (string, bool) {
+	inner := width - 2
+	if inner <= 0 || strings.ContainsAny(content, "\t\r") {
+		return "", false
+	}
+	edge, fill := floatBoxStyles(c)
+	if edge.pre == "" || fill.pre == "" {
+		return "", false
+	}
+	lines := strings.Split(content, "\n")
+	var b strings.Builder
+	b.Grow(len(content) + len(lines)*(2*len(edge.pre)+len(fill.pre)+32) + 2*width*3)
+	b.WriteString(edge.Render("╭" + strings.Repeat("─", inner) + "╮"))
+	side := edge.Render("│")
+	for _, l := range lines {
+		w := ansi.StringWidth(l)
+		if w > inner {
+			return "", false
+		}
+		b.WriteByte('\n')
+		b.WriteString(side)
+		b.WriteString(fill.pre)
+		b.WriteString(l)
+		b.WriteString(fastReset)
+		if w < inner {
+			b.WriteString(fill.pre)
+			b.WriteString(strings.Repeat(" ", inner-w))
+			b.WriteString(fastReset)
+		}
+		b.WriteString(side)
+	}
+	b.WriteByte('\n')
+	b.WriteString(edge.Render("╰" + strings.Repeat("─", inner) + "╯"))
+	return b.String(), true
+}
+
+// floatBoxMemo keeps the two styles of the card frame for the last
+// colours and profile.
+var floatBoxMemo struct {
+	sync.Mutex
+	border, bg lipgloss.Color
+	prof       termenv.Profile
+	edge, fill Fast
+}
+
+func floatBoxStyles(c FloatColors) (edge, fill Fast) {
+	prof := lipgloss.ColorProfile()
+	m := &floatBoxMemo
+	m.Lock()
+	defer m.Unlock()
+	if m.edge.pre == "" || m.border != c.Border || m.bg != c.Bg || m.prof != prof {
+		m.border, m.bg, m.prof = c.Border, c.Bg, prof
+		m.edge = NewFast(lipgloss.NewStyle().Foreground(c.Border).Background(c.Bg))
+		m.fill = NewFast(lipgloss.NewStyle().Background(c.Bg))
+	}
+	return m.edge, m.fill
 }
 
 // Keycap renders a key hint chip (" ⌃P " on a raised background).
