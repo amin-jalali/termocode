@@ -1,0 +1,71 @@
+{
+  "topic": "chat",
+  "snap0": {
+    "busy": true,
+    "id": "c-1",
+    "messages": [
+      {
+        "i": 0,
+        "md": {
+          "c": [
+            {
+              "c": [
+                {
+                  "k": "text",
+                  "text": "hi"
+                }
+              ],
+              "k": "p"
+            }
+          ],
+          "k": "doc"
+        },
+        "role": "user"
+      },
+      {
+        "i": 1,
+        "role": "assistant",
+        "streaming": true
+      }
+    ],
+    "title": "Fix the build"
+  },
+  "deltas": [
+    {
+      "i": 1,
+      "op": "append",
+      "text": "Hello **world**"
+    }
+  ],
+  "snapn": {
+    "id": "c-1",
+    "title": "Fix the build",
+    "busy": true,
+    "messages": [
+      {
+        "i": 0,
+        "role": "user",
+        "md": {
+          "k": "doc",
+          "c": [
+            {
+              "k": "p",
+              "c": [
+                {
+                  "k": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "i": 1,
+        "role": "assistant",
+        "text": "Hello **world**",
+        "streaming": true
+      }
+    ]
+  }
+}
