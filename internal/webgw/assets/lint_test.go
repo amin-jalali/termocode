@@ -162,3 +162,47 @@ func TestPagesHaveNoInlineCodeOrStyle(t *testing.T) {
 		}
 	}
 }
+
+// esbuild drops type-only imports without reading them and does not type
+// check, so a wrong path would pass the build silently. Every relative
+// import must name a real file; leaving src/ is allowed only for the
+// generated protocol types, and only as a type import.
+func TestRelativeImportsResolve(t *testing.T) {
+	imp := regexp.MustCompile(`(?m)^\s*(import\s+type\b)?[^"'\n]*?\bfrom\s+["'](\.[^"']+)["']|^\s*import\s+["'](\.[^"']+)["']`)
+	srcAbs, _ := filepath.Abs("src")
+	protoAbs, _ := filepath.Abs("../../webproto/proto")
+	err := filepath.WalkDir("src", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || (filepath.Ext(path) != ".ts" && filepath.Ext(path) != ".tsx") {
+			return err
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		// Multi-line import lists: join each import statement onto one line.
+		text := regexp.MustCompile(`(?s)import\s*(type\s*)?\{[^}]*\}`).ReplaceAllStringFunc(string(b), func(s string) string {
+			return strings.Join(strings.Fields(s), " ")
+		})
+		for _, m := range imp.FindAllStringSubmatch(text, -1) {
+			spec := m[2] + m[3]
+			target, _ := filepath.Abs(filepath.Join(filepath.Dir(path), spec))
+			found := false
+			for _, ext := range []string{"", ".ts", ".tsx", ".d.ts"} {
+				if st, err := os.Stat(target + ext); err == nil && !st.IsDir() {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("%s: import %q names no file", path, spec)
+			}
+			inside := strings.HasPrefix(target, srcAbs+string(filepath.Separator))
+			if !inside && (target != protoAbs || m[1] == "") {
+				t.Errorf("%s: import %q leaves src/ (only `import type` of webproto/proto may)", path, spec)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
