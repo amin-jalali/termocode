@@ -72,6 +72,8 @@ type Model struct {
 	// actionKey/actionLabel: one extra row key shown in the footer
 	// ("→", "details"); only "→" (Right) is supported.
 	actionKey, actionLabel string
+	// fc keeps the last filter's work for the next key (filter_cache.go).
+	fc filterCache
 }
 
 // SetRowAction adds a footer hint and a key that acts on the highlighted
@@ -249,16 +251,8 @@ func (m *Model) refilter() {
 	// headers re-appear before each surviving item from their group so the
 	// section labels still bracket the filtered list. Headers whose group
 	// has no survivors stay hidden.
-	titles := make([]string, 0, len(m.items))
-	indexMap := make([]int, 0, len(m.items)) // titles[k] → m.items[indexMap[k]]
-	for i, it := range m.items {
-		if it.Header {
-			continue
-		}
-		titles = append(titles, it.Title)
-		indexMap = append(indexMap, i)
-	}
-	hits := bestFirst(m.input, fuzzy.Find(m.input, titles), titles)
+	titles, indexMap, raw := m.fc.find(m.items, m.input) // titles[k] → m.items[indexMap[k]]
+	hits := bestFirst(m.input, raw, titles)
 	if !m.hasGroups() {
 		// Flat list: best match first, so Enter runs what was typed.
 		m.matches = make(fuzzy.Matches, len(hits))
