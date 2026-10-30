@@ -206,3 +206,27 @@ func TestRelativeImportsResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// The store and the guard are pure logic: no DOM, no timers, no network.
+// That keeps them replayable against the Go goldens in any JS engine
+// (TestStoreReplayMatchesGo) and keeps time and I/O in one place (net/).
+func TestStoreAndGuardArePure(t *testing.T) {
+	impure := regexp.MustCompile(`\b(window|document|navigator|location|history|localStorage|sessionStorage|WebSocket|fetch|setTimeout|setInterval|requestAnimationFrame|Date\.now|performance|Math\.random)\b`)
+	for _, dir := range []string{"src/state", "src/proto"} {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range entries {
+			b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Comments may name these words.
+			code := regexp.MustCompile(`(?m)//.*$|(?s)/\*.*?\*/`).ReplaceAllString(string(b), "")
+			if m := impure.FindString(code); m != "" {
+				t.Errorf("%s/%s uses %s; keep state and proto pure", dir, e.Name(), m)
+			}
+		}
+	}
+}
