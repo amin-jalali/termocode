@@ -32,6 +32,9 @@ type Server struct {
 	Devices     *webdevices.Store
 	Asks        chan webproto.PairAskArgs
 	PairAnswers chan string
+	// Login is the passkey sign-in; with RequireTOTP set the right
+	// sign-in code is 246810.
+	Login *webgw.Login
 }
 
 // StartServer listens on a free loopback port and serves until the test ends.
@@ -70,7 +73,14 @@ func StartServer(t *testing.T) *Server {
 		}})
 	mux := http.NewServeMux()
 	mux.Handle("/pair/", s.Pairing)
-	mux.Handle("/login/", webgw.NewLogin(webgw.LoginConfig{Tokens: tokens, Passkeys: pk}))
+	s.Login = webgw.NewLogin(webgw.LoginConfig{Tokens: tokens, Passkeys: pk,
+		CheckTOTP: func(_ context.Context, _, code string) error {
+			if code != "246810" {
+				return errors.New("wrong code")
+			}
+			return nil
+		}})
+	mux.Handle("/login/", s.Login)
 	mux.Handle("/auth", s.auth)
 	mux.Handle("/ws", s.Hub)
 	mux.Handle("/", webgw.Assets())
