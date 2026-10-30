@@ -16,6 +16,7 @@ import { DBView } from "./more/DBView";
 import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
 import { TestingView } from "./run/TestingView";
+import { DebugView } from "./run/DebugView";
 import { View } from "./View";
 import { FileView } from "./FileView";
 import { TreeView } from "./Files";
@@ -41,6 +42,7 @@ export function MoreView() {
   if (sub === "containers") return <ContainersView />;
   if (sub === "db" || sub.startsWith("db/")) return <DBView rest={sub} />;
   if (sub === "testing") return <TestingView />;
+  if (sub === "debug") return <DebugView />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -82,6 +84,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" data-sub="mcp" onClick={() => go({ tab: "more", rest: "mcp", query: {} })}>
             {t("more.mcp")}
+          </button>
+          <button type="button" class="more-link" data-sub="debug" onClick={() => go({ tab: "more", rest: "debug", query: {} })}>
+            {t("act.run")}
           </button>
           <button type="button" class="more-link" data-sub="testing" onClick={() => go({ tab: "more", rest: "testing", query: {} })}>
             {t("act.testing")}

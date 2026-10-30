@@ -267,9 +267,6 @@ func TestShots(t *testing.T) {
 					shot("diff", "#/git/cmd/covreport/filter.go", diffDoc+`?.querySelector(".editor.modified .char-insert") && `+diffDoc+`.querySelector(".editor.modified .view-line .hl-kc")`)
 				}
 				for _, rs := range runShots(vp) {
-					if rs.prep != "" {
-						Eval[bool](p, `(`+rs.prep+`, true)`)
-					}
 					shot(rs.name, rs.hash, rs.ready)
 				}
 			})
