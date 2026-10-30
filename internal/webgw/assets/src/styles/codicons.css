@@ -87,6 +87,7 @@
 .cod-git-pull-request::before { content: "\ea64"; }
 .cod-go-to-file::before { content: "\ea94"; }
 .cod-group-by-ref-type::before { content: "\eb97"; }
+.cod-gripper::before { content: "\eb04"; }
 .cod-history::before { content: "\ea82"; }
 .cod-info::before { content: "\ea74"; }
 .cod-insert::before { content: "\ec11"; }
