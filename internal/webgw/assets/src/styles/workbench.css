@@ -304,7 +304,22 @@
 .wb { display: flex; min-height: 0; min-width: 0; }
 .wb-center { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .wb-editor { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: var(--wb-editor-bg); }
-.wb-editor > .main { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.ed-groups { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: row; }
+.ed-groups.split-down { flex-direction: column; }
+.ed-group { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.ed-groups.is-split > .ed-group + .ed-group { border-inline-start: 1px solid var(--wb-panel-border); }
+.ed-groups.split-down > .ed-group + .ed-group { border-inline-start: 0; border-top: 1px solid var(--wb-panel-border); }
+.ed-groups.is-split > .ed-group:not(.is-focus) .ed-tab.is-on { color: var(--wb-tab-fg); }
+.ed-group > .main { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.ed-tab.is-preview .ed-tab-name { font-style: italic; }
+.ed-tab.is-drop-before { box-shadow: inset 2px 0 0 var(--wb-focus); }
+.ed-tab.is-drop-after { box-shadow: inset -2px 0 0 var(--wb-focus); }
+.ed-drop { position: absolute; inset: 35px 0 0 0; z-index: 5; }
+.ed-drop-mark { position: absolute; inset: 0; pointer-events: none; background: color-mix(in srgb, var(--wb-focus) 18%, transparent); opacity: 0; transition: inset 0.1s, opacity 0.1s; }
+.ed-drop.zone-center .ed-drop-mark { opacity: 1; }
+.ed-drop.zone-right .ed-drop-mark { opacity: 1; inset: 0 0 0 50%; }
+.ed-drop.zone-down .ed-drop-mark { opacity: 1; inset: 50% 0 0 0; }
+@media (prefers-reduced-motion: reduce) { .ed-drop-mark { transition: none; } }
 html.is-resizing-x, html.is-resizing-x * { cursor: ew-resize !important; user-select: none; }
 html.is-resizing-y, html.is-resizing-y * { cursor: ns-resize !important; user-select: none; }
 
@@ -485,7 +500,7 @@ html.is-resizing-y, html.is-resizing-y * { cursor: ns-resize !important; user-se
 .ed-tab.is-dirty:hover .ed-tab-x .cod-circle-filled { display: none; }
 .ed-tab.is-dirty:hover .ed-tab-x .cod-close { opacity: 1; }
 .wb-side-show { position: absolute; top: 6px; inset-inline-start: 6px; z-index: 2; }
-.wb-side-show + .ed-tabs { padding-inline-start: 34px; }
+.wb-side-show ~ .ed-groups > .ed-group:first-child > .ed-tabs { padding-inline-start: 34px; }
 
 /* ---- Editor: the file (breadcrumbs, rows, gutter) ---- */
 .wb-editor .view-head {

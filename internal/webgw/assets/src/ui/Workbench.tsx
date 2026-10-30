@@ -5,7 +5,7 @@
 // terminal) and resize by dragging their edges (or with arrow keys on
 // the focused edge).
 import { Fragment, h, type ComponentChildren } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { BufItem } from "../../../../webproto/proto";
 import { modKey } from "../lib/platform";
 import { go, route } from "../lib/router";
@@ -13,9 +13,14 @@ import {
   activeFile,
   CHAT_MAX,
   CHAT_MIN,
-  closed,
   closeTab,
-  opened,
+  focusedGroup,
+  focusGroup,
+  groups,
+  keep,
+  laptopBufs,
+  MAX_GROUPS,
+  moveTab,
   PANEL_MIN,
   panes,
   quick,
@@ -23,7 +28,10 @@ import {
   showFile,
   SIDE_MAX,
   SIDE_MIN,
-  tabsOf,
+  slotOf,
+  splitDir,
+  splitEditor,
+  tabsIn,
   wordWrap,
 } from "../lib/workbench";
 import { link, listOf, store } from "../session";
@@ -35,7 +43,7 @@ import { ExplorerSections, isTimeline, tabName, TimelineDiff } from "../views/Ex
 import { FileView } from "../views/FileView";
 import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
-import { asking, closeActive, cycleTab, tabsNow } from "../lib/commands";
+import { asking, closeActive, cycleTab, focusSecond } from "../lib/commands";
 import { AskLaptop } from "./AskLaptop";
 import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, activityOf, sideActivity, type Activity } from "./ActivityBar";
@@ -89,29 +97,140 @@ function Sash({ axis, size, min, max, dir, label, onSize }: { axis: "x" | "y"; s
   );
 }
 
-/** EditorTabs: one tab per open file (this page's and the laptop's). */
-function EditorTabs({ tabs, bufs }: { tabs: readonly string[]; bufs: readonly BufItem[] }) {
-  const cur = route.value.tab === "more" ? null : activeFile.value;
+/** dragTab is the editor tab being dragged (its group), or null. */
+const dragTab = signal<{ path: string; from: number } | null>(null);
+/** dropAt marks where a dragged tab would land in a tab bar. */
+const dropAt = signal<{ group: number; index: number } | null>(null);
+
+function endDrag(): void {
+  dragTab.value = null;
+  dropAt.value = null;
+}
+
+/** EditorTabs: one tab per open file of group g (this page's and, in
+ * the first group, the laptop's). A tab drags to another place, to the
+ * other group, or to the editor's side (a split); a double click keeps a
+ * preview tab. */
+function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly string[]; bufs: readonly BufItem[] }) {
+  const gr = groups.value[group];
+  const cur = route.value.tab === "more" && group === focusedGroup.value ? null : (gr?.active ?? null);
+  const drop = dropAt.value;
+  const over = (e: DragEvent, index: number) => {
+    if (!dragTab.peek()) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    if (drop?.group !== group || drop.index !== index) dropAt.value = { group, index };
+  };
+  const land = (e: DragEvent, index: number) => {
+    const d = dragTab.peek();
+    if (!d) return;
+    e.preventDefault();
+    e.stopPropagation();
+    endDrag();
+    moveTab(d.path, d.from, group, index);
+  };
   if (tabs.length === 0) return null;
   return (
-    <div class="ed-tabs" role="tablist" aria-label={t("wb.tabs")}>
-      {tabs.map((path) => {
+    <div class="ed-tabs" role="tablist" aria-label={t("wb.tabs")} data-group={group} onDragOver={(e) => over(e, tabs.length)} onDrop={(e) => land(e, tabs.length)}>
+      {tabs.map((path, i) => {
         const b = bufs.find((x) => x.path === path);
         const on = path === cur;
         const name = tabName(path);
+        const pv = gr?.preview === path;
+        const mark = drop?.group === group && drop.index === i ? " is-drop-before" : drop?.group === group && drop.index === i + 1 && i === tabs.length - 1 ? " is-drop-after" : "";
         return (
-          <div key={path} class={`ed-tab${on ? " is-on" : ""}${b?.dirty ? " is-dirty" : ""}`} title={path} onAuxClick={(e) => e.button === 1 && closeTab(path, tabs)}>
-            <button type="button" class="ed-tab-open" role="tab" aria-selected={on ? "true" : "false"} data-path={path} onClick={() => showFile(path)}>
+          <div
+            key={path}
+            class={`ed-tab${on ? " is-on" : ""}${b?.dirty ? " is-dirty" : ""}${pv ? " is-preview" : ""}${mark}`}
+            title={path}
+            data-path={path}
+            draggable
+            onDragStart={(e) => {
+              dragTab.value = { path, from: group };
+              if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", path);
+              }
+            }}
+            onDragEnd={endDrag}
+            onDragOver={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              over(e, e.clientX > r.left + r.width / 2 ? i + 1 : i);
+              e.stopPropagation();
+            }}
+            onDrop={(e) => land(e, drop?.group === group ? drop.index : i)}
+            onAuxClick={(e) => e.button === 1 && closeTab(path, group)}
+            onDblClick={() => keep(path, group)}
+          >
+            <button
+              type="button"
+              class="ed-tab-open"
+              role="tab"
+              aria-selected={on ? "true" : "false"}
+              data-path={path}
+              onClick={() => {
+                if (group !== focusedGroup.peek()) focusedGroup.value = group;
+                showFile(path);
+              }}
+            >
               <FileIcon path={path} />
               <span class="ed-tab-name" dir="auto">{name}</span>
             </button>
-            <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={`${t("wb.close_tab", { name })} (${modKey()}+W)`} onClick={() => closeTab(path, tabs)}>
+            <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={`${t("wb.close_tab", { name })} (${modKey()}+W)`} onClick={() => closeTab(path, group)}>
               <Cod name="circle-filled" />
               <Cod name="close" />
             </button>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+type Zone = "center" | "right" | "down";
+
+/** DropZone covers a group's body while a tab drags (the editor's frame
+ * would take the events): the middle moves the tab into this group, the
+ * right or bottom edge splits the editor (one group only). */
+function DropZone({ group, canSplit }: { group: number; canSplit: boolean }) {
+  const [zone, setZone] = useState<Zone | null>(null);
+  const zoneOf = (e: DragEvent): Zone => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    if (!canSplit) return "center";
+    if (e.clientX > r.left + (r.width * 2) / 3) return "right";
+    if (e.clientY > r.top + (r.height * 2) / 3) return "down";
+    return "center";
+  };
+  return (
+    <div
+      class={`ed-drop${zone ? " zone-" + zone : ""}`}
+      data-group={group}
+      onDragOver={(e) => {
+        e.preventDefault();
+        const z = zoneOf(e);
+        if (z !== zone) setZone(z);
+      }}
+      onDragLeave={() => setZone(null)}
+      onDrop={(e) => {
+        e.preventDefault();
+        const d = dragTab.peek();
+        const z = zoneOf(e);
+        endDrag();
+        setZone(null);
+        if (!d) return;
+        if (z === "center") {
+          if (d.from !== group) moveTab(d.path, d.from, group, tabsIn(group).length);
+          return;
+        }
+        // To the side: the tab moves into a new group; the only tab of
+        // its group is shown in both.
+        if (tabsIn(d.from).length > 1) {
+          splitDir.value = z;
+          moveTab(d.path, d.from, groups.peek().length, 0);
+        } else splitEditor(d.path, z);
+      }}
+    >
+      <span class="ed-drop-mark" aria-hidden="true" />
     </div>
   );
 }
@@ -139,10 +258,10 @@ function Welcome() {
 
 /** EditorBody is what the editor area shows: More, the active file or
  * the welcome. */
-function EditorBody({ more, file }: { more: boolean; file: string | null }) {
+function EditorBody({ more, file, slot }: { more: boolean; file: string | null; slot: string }) {
   if (more) return <MoreView />;
   if (file && isTimeline(file)) return <TimelineDiff key={file} tab={file} />;
-  if (file) return <FileView key={file} path={file} />;
+  if (file) return <FileView key={file} path={file} slot={slot} />;
   return <Welcome />;
 }
 
@@ -183,6 +302,9 @@ function workbenchKeys(e: KeyboardEvent): void {
   }
   if (mod && !e.shiftKey && !e.altKey && k === ",") return run(() => go({ tab: "more", rest: "settings", query: {} }));
   if (!mod || e.altKey || e.shiftKey) return;
+  if (k === "\\") return run(() => splitEditor(activeFile.peek(), "right"));
+  if (k === "1") return run(() => focusGroup(0));
+  if (k === "2") return run(focusSecond);
   if (k === "p") return run(() => (quick.value = { mode: "files" }));
   if (k === "b") return run(() => setPanes({ side: !panes.peek().side }));
   if (k === "j" || k === "`") return run(() => setPanes({ panel: !panes.peek().panel }));
@@ -242,9 +364,22 @@ export function Workbench() {
   const r = route.value;
   const p = panes.value;
   const bufs = listOf<BufItem>(store.topic("bufs").value?.data, "bufs").filter((b) => typeof b.path === "string" && b.path);
-  const tabs = tabsOf(opened.value, bufs, closed.value);
-  tabsNow.list = tabs;
-  const file = activeFile.value;
+  useEffect(() => {
+    laptopBufs.value = bufs;
+  }, [store.topic("bufs").value?.data]);
+  // The editor's frame took the focus: its group is the focused one.
+  useEffect(() => {
+    const onBlur = () =>
+      setTimeout(() => {
+        const g = document.activeElement?.closest<HTMLElement>(".ed-group")?.dataset.group;
+        if (g !== undefined && Number(g) !== focusedGroup.peek()) focusGroup(Number(g));
+      }, 0);
+    addEventListener("blur", onBlur);
+    return () => removeEventListener("blur", onBlur);
+  }, []);
+  const all = groups.value;
+  const fg = focusedGroup.value;
+  const dragging = dragTab.value !== null;
   const routeSide = sideActivity(r) ? activityOf(r) : null;
   if (routeSide && routeSide !== lastSide.peek()) lastSide.value = routeSide;
   const side = routeSide ?? lastSide.peek();
@@ -264,12 +399,25 @@ export function Workbench() {
               <Cod name="layout-sidebar-left" />
             </button>
           )}
-          <EditorTabs tabs={tabs} bufs={bufs} />
           {quick.value && <QuickInput key={quick.value.mode} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
-          <main class="main" id="main" tabIndex={-1}>
-            <EditorBody more={r.tab === "more" && !routeSide} file={file} />
-          </main>
+          <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
+            {all.map((g, i) => (
+              <section
+                key={i}
+                class={`ed-group${i === fg && all.length > 1 ? " is-focus" : ""}`}
+                data-group={i}
+                aria-label={all.length > 1 ? t("wb.group", { n: i + 1 }) : undefined}
+                onPointerDownCapture={() => i !== focusedGroup.peek() && focusGroup(i)}
+              >
+                <EditorTabs group={i} tabs={tabsIn(i, all)} bufs={bufs} />
+                <main class="main" id={i === 0 ? "main" : undefined} tabIndex={-1}>
+                  <EditorBody more={i === fg && r.tab === "more" && !routeSide} file={g.active} slot={slotOf(i)} />
+                </main>
+                {dragging && <DropZone group={i} canSplit={all.length < MAX_GROUPS} />}
+              </section>
+            ))}
+          </div>
         </div>
         {p.panel && (
           <>

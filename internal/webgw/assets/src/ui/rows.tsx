@@ -81,6 +81,7 @@ export function TreeRow({
   dim,
   path,
   onClick,
+  onDblClick,
 }: {
   depth?: number;
   dir?: boolean;
@@ -94,6 +95,7 @@ export function TreeRow({
   /** path is the workspace path the row stands for. */
   path?: string;
   onClick?: () => void;
+  onDblClick?: () => void;
 }) {
   // The desktop workbench: the laptop editor's twisties and file icons.
   const desk = layout.value === "desktop";
@@ -104,6 +106,7 @@ export function TreeRow({
       aria-expanded={dir ? (open ? "true" : "false") : undefined}
       data-path={path}
       onClick={onClick}
+      onDblClick={onDblClick}
     >
       <span class={`chev${open ? " is-open" : ""}`} aria-hidden="true">{dir ? (desk ? <Cod name={open ? "chevron-down" : "chevron-right"} /> : "›") : ""}</span>
       {desk ? (
