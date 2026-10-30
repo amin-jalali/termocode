@@ -2,7 +2,11 @@
 
 package webgw
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+	"time"
+)
 
 // MaxBodyBytes caps every request body. The largest real body is the
 // /auth JSON (well under 1 KiB); the WebSocket has its own read limit.
@@ -12,10 +16,19 @@ const MaxBodyBytes = 4 << 10
 // headers, then refuses anything not meant for this one site before the
 // next handler sees it.
 type guard struct {
-	site Site
-	csp  string
-	next http.Handler
+	site    Site
+	csp     string
+	next    http.Handler
+	audit   *Audit
+	blocked *Bucket // limits blocked-request audit lines
 }
+
+// blockedAuditBurst blocked requests are logged at once, then
+// blockedAuditPerSecond: a flood cannot rotate the real events away.
+const (
+	blockedAuditBurst     = 20
+	blockedAuditPerSecond = 2
+)
 
 // Guard wraps next with the request checks of the gateway:
 //   - Host must be one of site.Hosts exactly, else 421 (DNS rebinding, T1).
@@ -28,12 +41,20 @@ type guard struct {
 //
 // Every response, refusals included, carries the security headers.
 func Guard(site Site, next http.Handler) http.Handler {
-	return &guard{site: site, csp: CSP(site), next: next}
+	return GuardWithAudit(site, next, nil)
+}
+
+// GuardWithAudit is Guard that also writes each refused Host or Origin to
+// audit (host_blocked, origin_blocked), rate-limited.
+func GuardWithAudit(site Site, next http.Handler, audit *Audit) http.Handler {
+	return &guard{site: site, csp: CSP(site), next: next, audit: audit,
+		blocked: NewBucket(blockedAuditPerSecond, blockedAuditBurst)}
 }
 
 func (g *guard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	setSecurityHeaders(w.Header(), g.csp, g.site)
 	if !g.site.hasHost(r.Host) || (r.URL.Host != "" && r.URL.Host != r.Host) {
+		g.logBlocked(EvHostBlocked, http.StatusMisdirectedRequest, "host "+r.Host)
 		refuse(w, http.StatusMisdirectedRequest, "wrong host")
 		return
 	}
@@ -43,6 +64,7 @@ func (g *guard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !g.originOK(r) {
+		g.logBlocked(EvOriginBlocked, http.StatusForbidden, "origin "+strings.Join(r.Header.Values("Origin"), ","))
 		refuse(w, http.StatusForbidden, "wrong origin")
 		return
 	}
@@ -52,6 +74,15 @@ func (g *guard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 	g.next.ServeHTTP(w, r)
+}
+
+// logBlocked writes a refusal to the audit log while the rate allows.
+// The summary names the other site (cleaned by the log); it is not secret.
+func (g *guard) logBlocked(kind EventKind, code int, summary string) {
+	if g.audit == nil || !g.blocked.Allow(time.Now()) {
+		return
+	}
+	_ = g.audit.Log(Event{Kind: kind, Code: code, Summary: summary})
 }
 
 // originOK: an Origin header, when sent, must be exactly this request's own
