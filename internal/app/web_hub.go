@@ -53,6 +53,7 @@ type webHub struct {
 	gseq   uint64                     // Update only: publishes so far (web_resume.go)
 	rings  map[string]*webRing        // Update only: recent deltas per topic
 	resume map[string]*webResumeEntry // Update only: dropped connections by id
+	shell  webShellState              // Update only: what status, toasts and attention sent (web_after.go)
 
 	ln    net.Listener
 	peer  func(net.Conn) error

@@ -69,6 +69,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if pc := m.explorer.SchedulePreview(); pc != nil {
 		cmd = tea.Batch(cmd, pc)
 	}
+	if wc := m.webAfterUpdate(msg); wc != nil { // what changed goes to the web views (web_after.go)
+		cmd = tea.Batch(cmd, wc)
+	}
 	return m, m.gateUpdate(msg, cmd)
 }
 
