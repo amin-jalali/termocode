@@ -1,0 +1,69 @@
+/* Base: reset, type, focus, motion and accessibility rules. */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 100%;
+  line-height: var(--lh-body);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-body);
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+h1, h2, h3, p { margin: 0; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+button[aria-disabled="true"] { cursor: default; }
+code, kbd, samp, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.icon { display: block; flex: none; }
+.trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* 2.2 Focus Appearance: a 2 px ring with a 2 px gap on everything. */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+/* The UI text is English: in an RTL page each line still reads in its
+   own direction, so "1 approval waiting" keeps its order (web UX P7). */
+:is(p, h1, h2, .bar-text, .hint-text, .attention-text, .toast-title, .toast-detail, .field-label, .nav-label, .seg-item, .btn) {
+  unicode-bidi: plaintext;
+}
+
+.link { color: var(--blue); text-underline-offset: 3px; }
+.link:hover { text-decoration-thickness: 2px; }
+
+.skip {
+  position: fixed; left: var(--s2); top: var(--s2); z-index: var(--z-connect);
+  padding: var(--s2) var(--s3); background: var(--bg-float); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--r-chip);
+  transform: translateY(-200%);
+}
+.skip:focus { transform: none; }
+
+/* The ✦ marks every AI thing and nothing else. */
+.star { color: var(--ai); font-family: var(--font-mono); line-height: 1; }
+
+@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pulse-bg { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0s !important; scroll-behavior: auto !important; }
+}
+
+@media (forced-colors: active) {
+  .strip, .tabbar, .rail, .bar, .toast, .attention, .btn { border: 1px solid CanvasText; }
+  .nav-item.is-active { outline: 2px solid Highlight; }
+}
