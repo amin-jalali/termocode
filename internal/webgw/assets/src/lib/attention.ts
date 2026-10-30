@@ -12,6 +12,8 @@ export const NOTICE_MS = 60000;
 export const notice = signal<NoticeKind | null>(null);
 /** bell is true after a terminal rang, until the Term tab opens. */
 export const bell = signal(false);
+/** rang counts the bells, so an open terminal view can show each one. */
+export const rang = signal(0);
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -20,6 +22,7 @@ export function onAttention(data: unknown): void {
   const kind = typeof data === "object" && data !== null ? (data as Record<string, unknown>).kind : undefined;
   if (kind === "bell") {
     bell.value = true;
+    rang.value++;
     return;
   }
   if (kind !== "run_done" && kind !== "run_failed" && kind !== "task_done") return;

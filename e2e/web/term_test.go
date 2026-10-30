@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -152,4 +153,146 @@ func TestTermNoneNewAndEnded(t *testing.T) {
 	c.WaitSub(t, "term:12")
 	c.Send(t, Snap("term:12", 1, termSnap(12, 0, 80, "$ exit")))
 	p.WaitJS(termView + `.querySelector(".term-ended")?.innerText.includes("This terminal ended.")`)
+}
+
+// expectSend reads a term.send to shell 3 and answers it; it returns the text.
+func expectSend(t *testing.T, c *HubConn) string {
+	t.Helper()
+	r := expectReq(t, c, "term.send")
+	var a webproto.TermSendArgs
+	if err := json.Unmarshal(r.Args, &a); err != nil || a.Buf != 3 {
+		t.Fatalf("term.send args %s", r.Args)
+	}
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
+	return a.Text
+}
+
+func tapKey(p *Page, label string) {
+	p.T.Helper()
+	p.TapJS(`[...` + termView + `.closest(".view").querySelectorAll(".keybar .key")].find((k) => k.textContent === ` + jsq(label) + `)`)
+}
+
+const termLine = `document.querySelector('[data-view="term"] .term-line')`
+
+// The command line sends a line with Enter (or Send); the key bar sends
+// Esc and arrows; Ctrl and Alt are sticky for one key, locked on a second
+// tap; ^C is term.interrupt; every key is at least 44 px.
+func TestTermTypeKeysAndInterrupt(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openTerm(t, vp)
+			showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
+			p.TapJS(termLine)
+			p.Key("echo hi")
+			p.WaitJS(termLine + `.value === "echo hi"`)
+			if vp.Mobile {
+				p.TapJS(`document.querySelector('[data-view="term"] .term-input .send .btn')`)
+			} else {
+				p.Key("\r")
+			}
+			if got := expectSend(t, c); got != "echo hi\r" {
+				t.Fatalf("sent %q, want the line and Enter", got)
+			}
+			p.WaitJS(termLine + `.value === ""`)
+
+			small := Eval[[]float64](p, `[...document.querySelectorAll('[data-view="term"] .keybar .key')].map((k) => Math.min(k.getBoundingClientRect().width, k.getBoundingClientRect().height)).filter((s) => s < 44)`)
+			if len(small) > 0 {
+				t.Errorf("keys smaller than 44 px: %v", small)
+			}
+			for _, k := range []struct{ key, want string }{{"Esc", "\x1b"}, {"↑", "\x1b[A"}, {"Tab", "\t"}} {
+				tapKey(p, k.key)
+				if got := expectSend(t, c); got != k.want {
+					t.Errorf("%s sent %q, want %q", k.key, got, k.want)
+				}
+			}
+			// Ctrl for one key.
+			tapKey(p, "Ctrl")
+			p.TapJS(termLine)
+			p.Key("c")
+			if got := expectSend(t, c); got != "\x03" {
+				t.Errorf("Ctrl then c sent %q", got)
+			}
+			if Eval[string](p, termLine+`.value`) != "" {
+				t.Error("the Ctrl key's letter went into the line")
+			}
+			p.Key("x")
+			p.WaitJS(termLine + `.value === "x"`)
+			setInput(p, termLine, "")
+			// Ctrl locked: every letter is a control key until Ctrl is tapped again.
+			tapKey(p, "Ctrl")
+			tapKey(p, "Ctrl")
+			p.WaitJS(`document.querySelector('[data-view="term"] .key.is-locked')`)
+			p.TapJS(termLine)
+			p.Key("a")
+			p.Key("b")
+			if a, b := expectSend(t, c), expectSend(t, c); a != "\x01" || b != "\x02" {
+				t.Errorf("locked Ctrl sent %q %q", a, b)
+			}
+			tapKey(p, "Ctrl")
+			// Alt with an arrow.
+			tapKey(p, "Alt")
+			tapKey(p, "←")
+			if got := expectSend(t, c); got != "\x1b[1;3D" {
+				t.Errorf("Alt ← sent %q", got)
+			}
+			tapKey(p, "^C")
+			r := expectReq(t, c, "term.interrupt")
+			var a webproto.BufArgs
+			if err := json.Unmarshal(r.Args, &a); err != nil || a.Buf != 3 {
+				t.Errorf("term.interrupt args %s", r.Args)
+			}
+		})
+	}
+}
+
+// Paste opens a sheet (the page never reads the clipboard): a short paste
+// sends as it is; a big one asks first how many lines it sends.
+func TestTermPasteSheet(t *testing.T) {
+	p, c := openTerm(t, Phone)
+	showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
+	tapKey(p, "Paste")
+	const sheet = `document.querySelector(".sheet .paste")`
+	p.WaitJS(sheet + `?.innerText.includes("Paste here, then Send")`)
+	setInput(p, sheet+`.querySelector("textarea")`, "ls\npwd")
+	p.TapJS(sheet + `.querySelector(".paste-send .btn")`)
+	if got := expectSend(t, c); got != "ls\npwd" {
+		t.Fatalf("pasted %q", got)
+	}
+	p.WaitJS(`!` + sheet)
+
+	tapKey(p, "Paste")
+	big := strings.Repeat(strings.Repeat("x", 49)+"\n", 39) + "end"
+	setInput(p, sheet+`.querySelector("textarea")`, big)
+	p.TapJS(sheet + `.querySelector(".paste-send .btn")`)
+	p.WaitJS(sheet + `.querySelector(".paste-ask")?.textContent === "Send 40 lines?"`)
+	noReq(t, c, 300*time.Millisecond)
+	p.TapJS(sheet + `.querySelector(".paste-send .btn")`)
+	if got := expectSend(t, c); got != big {
+		t.Fatalf("big paste sent %d bytes, want %d", len(got), len(big))
+	}
+}
+
+// Offline every key locks and says so; nothing typed then is sent later.
+func TestTermOfflineKeysDropped(t *testing.T) {
+	p, c := openTerm(t, Phone)
+	showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
+	c.Drop()
+	p.WaitJS(`document.querySelector('[data-view="term"] .keybar-off')?.textContent === "Offline"`)
+	if got := Eval[string](p, `document.querySelector('[data-view="term"] .keybar .key').getAttribute("aria-disabled")`); got != "true" {
+		t.Errorf("offline key aria-disabled %q", got)
+	}
+	tapKey(p, "Esc")
+	tapKey(p, "^C")
+	c2 := p.S.Hub.Accept(t)
+	c2.Handshake(t, "c-1")
+	p.WaitJS(`!document.querySelector('[data-view="term"] .keybar-off')`)
+	noReq(t, c2, 500*time.Millisecond)
+}
+
+// A bell from the laptop shows a dot in the open terminal view.
+func TestTermBellDot(t *testing.T) {
+	p, c := openTerm(t, Desktop)
+	showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
+	c.Send(t, attention("bell", ""))
+	p.WaitJS(termView + `.querySelector(".bell-dot")?.getAttribute("aria-label") === "A shell rang"`)
 }
