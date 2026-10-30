@@ -214,6 +214,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	if cmd, ok := m.handleHTTPMsg(msg); ok { // HTTP client (http_state.go)
 		return m, cmd
 	}
+	if cmd, ok := m.handleWebMsg(msg); ok { // the web hub (web_hub.go)
+		return m, cmd
+	}
 	// Overlay control messages always handled regardless of state.
 	switch msg := msg.(type) {
 	case DevActionMsg:

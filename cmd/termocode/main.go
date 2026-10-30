@@ -427,6 +427,7 @@ func runTUI() {
 			app.StopExtensions() // N6b: no extension process outlives us
 			app.StopMCP()        // MCP servers too
 			app.StopMCPServer()  // and our own MCP socket
+			app.StopWebHub()     // and the web hub socket
 			fmt.Fprintf(os.Stderr, "termocode panic: %v\n", r)
 			os.Exit(1)
 		}
@@ -477,6 +478,7 @@ func runTUI() {
 		app.StopExtensions() // N6b
 		app.StopMCP()
 		app.StopMCPServer()
+		app.StopWebHub()
 		_, _ = os.Stdout.WriteString("\x1b]111\x07" + font.Restore() + rtlLeave) // os.Exit skips the defer
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -488,6 +490,7 @@ func runTUI() {
 	app.StopExtensions()
 	app.StopMCP()       // MCP servers (and their children)
 	app.StopMCPServer() // our own MCP socket (termocode as a server)
+	app.StopWebHub()    // the web hub socket (the web side)
 }
 
 // rtlEscapes drops the BDSM request on the Linux console, which has no
