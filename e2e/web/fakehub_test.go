@@ -301,6 +301,12 @@ func Meta(conn string) *webproto.Meta {
 // gateway's tokens, answers with meta for conn and returns the hello.
 func (c *HubConn) Handshake(t *testing.T, conn string) *webproto.Hello {
 	t.Helper()
+	return c.HandshakeMeta(t, Meta(conn))
+}
+
+// HandshakeMeta is Handshake that answers with meta as given.
+func (c *HubConn) HandshakeMeta(t *testing.T, meta *webproto.Meta) *webproto.Hello {
+	t.Helper()
 	hello := Expect[*webproto.Hello](t, c)
 	if hello.V != 2 {
 		t.Fatalf("hello.v = %d, want 2", hello.V)
@@ -308,7 +314,7 @@ func (c *HubConn) Handshake(t *testing.T, conn string) *webproto.Hello {
 	if _, err := c.hub.tokens.Check(hello.Token, time.Now()); err != nil {
 		t.Fatalf("hello carries a token the gateway did not issue: %v", err)
 	}
-	c.Send(t, Meta(conn))
+	c.Send(t, meta)
 	return hello
 }
 

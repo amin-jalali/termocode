@@ -304,7 +304,9 @@ export const S = {
   "e.link_expired": "This link has expired or was already used. In termocode, run Web: Start Panel for a new one.",
   "e.no_link": "Open this page from termocode on the laptop: run Web: Start Panel.",
   "e.stopped": "The web session was stopped.",
-  "e.idle": "The web session stopped after 15 minutes without typing.",
+  "e.idle.one": "The web session stopped after {n} minute without use.",
+  "e.idle.other": "The web session stopped after {n} minutes without use.",
+  "e.idle_any": "The web session stopped after a time without use.",
   "e.max": "The web session stopped after 12 hours.",
   "e.still_running": "Your work is still running on the laptop.",
   "e.ended": "This termocode session has ended.",
@@ -354,7 +356,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   });
 }
 
-type Plural = "pill.cards" | "edit.sent" | "git.commit";
+type Plural = "pill.cards" | "edit.sent" | "git.commit" | "e.idle";
 
 /** tn picks the .one or .other form of a plural key by n. */
 export function tn(key: Plural, n: number, vars?: Record<string, string | number>): string {

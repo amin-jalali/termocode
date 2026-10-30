@@ -15,7 +15,7 @@ import "../styles/components.css";
 import "./kit.css";
 import { toast } from "../lib/toasts";
 import type { StatusView } from "../state/status";
-import { t, type StringKey } from "../strings";
+import { t, tn, type StringKey } from "../strings";
 import { AttentionView } from "../ui/AttentionPill";
 import { Button } from "../ui/Button";
 import { Card, type CardKind, type CardState } from "../ui/Card";
@@ -345,7 +345,7 @@ function Kit() {
                 <Bar kind="lost" text={t("offline.lost", { s: 4 })} action={<Button small>{t("offline.try")}</Button>} />
                 <Bar kind="lost" text={t("offline.trying")} action={<Button small>{t("offline.try")}</Button>} />
                 <Bar kind="back" text={t("offline.back", { s: 42 })} />
-                <Bar kind="final" text={t("e.idle")} sub={t("e.still_running")} />
+                <Bar kind="final" text={tn("e.idle", 15)} sub={t("e.still_running")} />
                 <Bar kind="final" text={t("e.version")} action={<Button small>{t("e.reload")}</Button>} />
                 <Bar kind="final" text={t("e.link_expired")} />
                 <div class="hint" role="note">

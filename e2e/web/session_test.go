@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/chromedp/chromedp"
+
+	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // statusData is a status topic value as the hub sends it (web design 2.1).
@@ -50,9 +52,21 @@ func (p *Page) Login(conn string) *HubConn {
 // LoginHere is Login on a page that already shows the connect screen.
 func (p *Page) LoginHere(conn string) *HubConn {
 	p.T.Helper()
+	return p.loginMeta(Meta(conn))
+}
+
+// LoginMeta is Login with the hub's meta as given (limits, role).
+func (p *Page) LoginMeta(meta *webproto.Meta) *HubConn {
+	p.T.Helper()
+	p.Open()
+	return p.loginMeta(meta)
+}
+
+func (p *Page) loginMeta(meta *webproto.Meta) *HubConn {
+	p.T.Helper()
 	p.Tap(".connect-foot button")
 	c := p.S.Hub.Accept(p.T)
-	c.Handshake(p.T, conn)
+	c.HandshakeMeta(p.T, meta)
 	c.Subs(p.T, p.firstTopics()...)
 	c.Send(p.T, Snap("status", 1, statusData("main", 0)))
 	c.Send(p.T, Snap("toasts", 1, map[string]any{"toasts": []any{}}))

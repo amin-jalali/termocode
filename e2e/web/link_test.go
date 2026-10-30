@@ -3,6 +3,7 @@
 package web
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -130,4 +131,30 @@ func TestNewTabNeedsLink(t *testing.T) {
 		t.Errorf("connect line %q", got)
 	}
 	s.Hub.NoConn(t, 500*time.Millisecond)
+}
+
+// The idle text says the panel's own idle limit from meta (the laptop's
+// web_idle_minutes), never a fixed number; without one it stays general.
+func TestLinkIdleCloseSaysTheRealLimit(t *testing.T) {
+	for _, tc := range []struct {
+		idleS     int
+		want, not string
+	}{
+		{1800, "after 30 minutes without use", "15"},
+		{60, "after 1 minute without use", "15"},
+		{0, "stopped after a time without use", "minutes"},
+	} {
+		t.Run(strconv.Itoa(tc.idleS), func(t *testing.T) {
+			s := StartServer(t)
+			p := NewPage(t, s, Phone)
+			meta := Meta("c-1")
+			meta.IdleS = tc.idleS
+			c := p.LoginMeta(meta)
+			c.Close(t, webproto.CloseIdle)
+			p.WaitJS(`document.querySelector(".bar-final")`)
+			if got := p.Text(".bar-final"); !strings.Contains(got, tc.want) || strings.Contains(got, tc.not) {
+				t.Errorf("final bar %q, want %q and no %q", got, tc.want, tc.not)
+			}
+		})
+	}
 }
