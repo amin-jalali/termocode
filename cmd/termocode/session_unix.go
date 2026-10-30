@@ -191,7 +191,7 @@ func terminalChange(c *session.ClientCaps) app.TerminalChangedMsg {
 // cmdSSH runs `termocode ssh`: the editor of a far machine in this
 // terminal, in its persistent session.
 func cmdSSH(args []string) int {
-	dir, sshArgs, err := sshCommandArgs(args)
+	c, err := sshCommandArgs(args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "termocode:", err)
 		return 2
@@ -201,7 +201,7 @@ func cmdSSH(args []string) int {
 		return 1
 	}
 	interval, dead := linkTiming(os.Getenv(envLinkTiming))
-	return session.RunSSH(session.SSHOpts{Args: sshArgs, Dir: dir, In: os.Stdin, Out: os.Stdout,
+	return session.RunSSH(session.SSHOpts{Args: c.args, Dir: c.dir, In: os.Stdin, Out: os.Stdout,
 		Reconnect: app.ConfigAutoReconnect(), Interval: interval, Dead: dead})
 }
 

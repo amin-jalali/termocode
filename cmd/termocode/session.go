@@ -130,24 +130,37 @@ func linkWebPort(args []string) (rest []string, port int) {
 	return rest, port
 }
 
-// sshCommandArgs splits `termocode ssh [--dir DIR] [ssh args] destination`
-// into the far folder and the arguments for ssh.
-func sshCommandArgs(args []string) (dir string, sshArgs []string, err error) {
+// sshCommand is `termocode ssh [--dir DIR] [--web] [ssh args] destination`.
+type sshCommand struct {
+	dir  string   // the far folder ("" = the login folder)
+	web  bool     // --web: the web panel through this ssh (WEB-29)
+	args []string // the arguments for ssh, destination last
+}
+
+// sshCommandArgs splits the arguments of `termocode ssh` into its own
+// flags and the arguments for ssh.
+func sshCommandArgs(args []string) (sshCommand, error) {
+	var c sshCommand
 	for len(args) > 0 {
 		if v, ok := strings.CutPrefix(args[0], "--dir="); ok {
-			dir, args = v, args[1:]
+			c.dir, args = v, args[1:]
 			continue
 		}
 		if args[0] == "--dir" && len(args) > 1 {
-			dir, args = args[1], args[2:]
+			c.dir, args = args[1], args[2:]
+			continue
+		}
+		if args[0] == "--web" {
+			c.web, args = true, args[1:]
 			continue
 		}
 		break
 	}
 	if len(args) == 0 {
-		return "", nil, errors.New("usage: termocode ssh [--dir DIR] [ssh options] destination")
+		return c, errors.New("usage: termocode ssh [--dir DIR] [--web] [ssh options] destination")
 	}
-	return dir, args, nil
+	c.args = args
+	return c, nil
 }
 
 // envLinkTiming sets the heartbeat of termocode ssh, "interval,dead"
