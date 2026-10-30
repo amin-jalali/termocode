@@ -11,12 +11,14 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/coder/websocket"
 
 	"github.com/amin-jalali/termocode/internal/crash"
+	"github.com/amin-jalali/termocode/internal/webdevices"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -70,6 +72,9 @@ type WSConfig struct {
 	// ThrottleMax: held back by the rate limits this long in one go, a
 	// connection is closed with 1008.
 	ThrottleMax time.Duration
+	// Devices are the paired devices (nil: none). A paired device's
+	// hello is refused with 4003 once it is no longer in the store.
+	Devices *webdevices.Store
 }
 
 // Defaults of WSConfig.
@@ -386,6 +391,12 @@ func (c *wsConn) hello() bool {
 		c.close(code)
 		return false
 	}
+	if !c.s.deviceOK(sess.Device) {
+		_ = c.s.cfg.Audit.Log(Event{Kind: EvAuthFail, Code: int(webproto.CloseDeviceRevoked), Device: sess.Device, Why: "revoked"})
+		c.s.cfg.Tokens.RevokeDevice(sess.Device)
+		c.close(webproto.CloseDeviceRevoked)
+		return false
+	}
 	c.sess, c.token = sess, h.Token
 	if c.id, err = connID(); err != nil {
 		c.close(closeInternal)
@@ -406,6 +417,37 @@ func (c *wsConn) hello() bool {
 	c.ws.SetReadLimit(webproto.MaxFrame)
 	c.activity()
 	return true
+}
+
+// deviceOK: a session of a paired device ("dev-…") needs that device in
+// the store, not marked for re-pairing. A launch-link session ("loc-…")
+// has no device record.
+func (s *WS) deviceOK(device string) bool {
+	if !strings.HasPrefix(device, "dev-") {
+		return true
+	}
+	if s.cfg.Devices == nil {
+		return false
+	}
+	d, ok, err := s.cfg.Devices.Get(device)
+	return err == nil && ok && !d.NeedsRepair
+}
+
+// CloseDevice closes every live connection of device with code and
+// says how many.
+func (s *WS) CloseDevice(device string, code webproto.CloseCode) int {
+	s.mu.Lock()
+	var conns []*wsConn
+	for c := range s.conns {
+		if c.sess.Device == device {
+			conns = append(conns, c)
+		}
+	}
+	s.mu.Unlock()
+	for _, c := range conns {
+		crash.Go("web gateway: closing a device", func() { c.close(code) })
+	}
+	return len(conns)
 }
 
 // helloVersion reads "v" of a hello the strict decoder refused (a newer

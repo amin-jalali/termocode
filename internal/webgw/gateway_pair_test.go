@@ -81,6 +81,22 @@ func (r *gwRig) pairPhone(role string) string {
 	return m["token"].(string)
 }
 
+// dialWS opens a WebSocket to the gateway without saying hello.
+func (r *gwRig) dialWS() *websocket.Conn {
+	r.t.Helper()
+	h := http.Header{}
+	h.Set("Origin", "http://127.0.0.1:"+strconv.Itoa(r.port))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, _, err := websocket.Dial(ctx, "ws://127.0.0.1:"+strconv.Itoa(r.port)+"/ws",
+		&websocket.DialOptions{HTTPHeader: h, Subprotocols: []string{Subprotocol}})
+	if err != nil {
+		r.t.Fatal(err)
+	}
+	r.t.Cleanup(func() { _ = c.CloseNow() })
+	return c
+}
+
 // connectToken opens the WebSocket with tok and returns the hub's open line.
 func (r *gwRig) connectToken(tok string) (*websocket.Conn, *hubPeer, map[string]any) {
 	r.t.Helper()
@@ -127,5 +143,52 @@ func TestGatewayPairsAPhone(t *testing.T) {
 		if !strings.Contains(a, ev) {
 			t.Errorf("audit has no %s", ev)
 		}
+	}
+}
+
+// Spec (WEB-32, T30): removing a device on the laptop closes its live
+// WebSocket with 4003 at once, drops its tokens, and a reconnect with
+// the old token is refused; other browsers stay.
+func TestRevokeDropsTokensAndConns(t *testing.T) {
+	r := pairedGateway(t)
+	tok := r.pairPhone(webdevices.RoleControl)
+	c, _, open := r.connectToken(tok)
+	other, _ := r.browser() // the laptop's own tab
+	otherAlive := other.CloseRead(context.Background())
+	dev := open["device"].(string)
+	if _, _, err := webdevices.Open(r.cfg.DevicesDir).Remove(dev); err != nil {
+		t.Fatal(err)
+	}
+	r.ctl.send(t, `{"t":"ev","kind":"revoke","data":{"device":"`+dev+`"}}`)
+	if got := closeCode(t, c); got != websocket.StatusCode(4003) {
+		t.Fatalf("revoked browser closed with %d, want 4003", got)
+	}
+	again := r.dialWS()
+	writeText(t, again, helloMsg(tok))
+	if got := closeCode(t, again); got != websocket.StatusCode(4001) {
+		t.Fatalf("the revoked token got %d, want 4001", got)
+	}
+	if otherAlive.Err() != nil {
+		t.Fatal("the other browser was closed too")
+	}
+	if !strings.Contains(auditText(t, r.cfg.AuditPath), `"ev":"revoke"`) {
+		t.Error("no revoke in the audit")
+	}
+}
+
+// A paired device removed while the gateway did not hear it (no event):
+// its next hello is refused with 4003 all the same (the store is the
+// truth, checked on every hello).
+func TestRemovedDeviceRefusedAtHello(t *testing.T) {
+	r := pairedGateway(t)
+	tok := r.pairPhone(webdevices.RoleViewer)
+	ds, _ := webdevices.Open(r.cfg.DevicesDir).List()
+	if _, _, err := webdevices.Open(r.cfg.DevicesDir).Remove(ds[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	c := r.dialWS()
+	writeText(t, c, helloMsg(tok))
+	if got := closeCode(t, c); got != websocket.StatusCode(4003) {
+		t.Fatalf("closed with %d, want 4003", got)
 	}
 }
