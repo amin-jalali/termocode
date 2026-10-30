@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -364,4 +366,52 @@ func (m *Model) webCtlOpen(call *webCall) tea.Cmd {
 func (m *Model) webAskStart(call *webCall) tea.Cmd {
 	call.later()
 	return m.openWebStartCard(call)
+}
+
+// webTail keeps the last max bytes written to it (a child's stderr).
+type webTail struct {
+	mu  sync.Mutex
+	max int
+	b   []byte
+}
+
+func (w *webTail) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.b = append(w.b, p...)
+	if over := len(w.b) - w.max; over > 0 {
+		w.b = append(w.b[:0], w.b[over:]...)
+	}
+	return len(p), nil
+}
+
+func (w *webTail) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return string(w.b)
+}
+
+// webGatewayReason turns the gateway's stderr into the reason the
+// laptop shows: its last line without the program's prefix, cleaned and
+// short. A busy port gets a hint.
+func webGatewayReason(stderr string) string {
+	var last string
+	for _, l := range strings.Split(stderr, "\n") {
+		if l = strings.TrimSpace(l); l != "" {
+			last = l
+		}
+	}
+	last = strings.TrimPrefix(last, "termocode web gateway: ")
+	last = strings.TrimPrefix(last, "termocode: ")
+	last = webName(last)
+	if r := []rune(last); len(r) > webAuditMax {
+		last = string(r[:webAuditMax-1]) + "…"
+	}
+	if last == "" {
+		return "the gateway did not start (see termocode web status)"
+	}
+	if strings.Contains(last, "the port is busy") {
+		last += ". Pick another web_port in config.json, or 0 for any free port"
+	}
+	return last
 }
