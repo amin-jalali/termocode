@@ -137,8 +137,8 @@ var opTable = []Policy{
 	{Op: OpBufClose, New: newOf[BufArgs](), Role: RoleController, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
 
 	// Images (v2): bytes for the page to show, never a URL.
-	{Op: OpFileImage, New: newOf[PathArgs](), Role: RoleController, Rate: perSec(4), MaxBytes: 8 * kib, Live: 2, Audit: AuditNo, Phase: PhaseV2},
-	{Op: OpChatImage, New: newOf[ChatImageArgs](), Role: RoleController, Rate: perSec(4), MaxBytes: 1 * kib, Live: 2, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpFileImage, New: newOf[PathArgs](), Role: RoleController, Rate: perSec(4), MaxBytes: 8 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpChatImage, New: newOf[ChatImageArgs](), Role: RoleController, Rate: perSec(4), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 
 	// Terminals.
 	{Op: OpTermSend, New: newOf[TermSendArgs](), Role: RoleController, Rate: perSec(100), MaxBytes: 136 * kib, BytesPerSec: 1 * mib, Audit: AuditCounted, Phase: PhaseV1},
