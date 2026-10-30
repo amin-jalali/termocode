@@ -61,6 +61,8 @@ type WSConfig struct {
 	WriteWait time.Duration
 	// HubWait bounds one write to the hub.
 	HubWait time.Duration
+	// MaxViewers caps the browsers connected at once (web_max_viewers).
+	MaxViewers int
 	// ThrottleMax: held back by the rate limits this long in one go, a
 	// connection is closed with 1008.
 	ThrottleMax time.Duration
@@ -71,6 +73,8 @@ const (
 	DefaultHelloWait = 5 * time.Second
 	DefaultWriteWait = 5 * time.Second
 	DefaultHubWait   = 15 * time.Second
+	// DefaultMaxViewers: the owner's limit of browsers at once.
+	DefaultMaxViewers = 4
 )
 
 // closeInternal (1011) is for a fault inside the gateway. It is not in
@@ -105,6 +109,9 @@ func NewWS(cfg WSConfig) *WS {
 	}
 	if cfg.HubWait <= 0 {
 		cfg.HubWait = DefaultHubWait
+	}
+	if cfg.MaxViewers <= 0 {
+		cfg.MaxViewers = DefaultMaxViewers
 	}
 	if cfg.ThrottleMax <= 0 {
 		cfg.ThrottleMax = DefaultThrottleMax
@@ -346,15 +353,19 @@ func (c *wsConn) hello() bool {
 		c.close(closeInternal)
 		return false
 	}
+	if code, ok := c.s.add(c); !ok {
+		c.close(code)
+		return false
+	}
+	// Fail closed: a connection the audit log cannot record is not let in.
+	if err := c.s.cfg.Audit.Log(Event{Kind: EvConnect, Conn: c.id, Device: c.sess.Device}); err != nil {
+		c.close(closeInternal)
+		return false
+	}
 	if !c.openHub(h) {
 		return false
 	}
 	c.ws.SetReadLimit(webproto.MaxFrame)
-	if !c.s.add(c) {
-		c.close(webproto.CloseStopped)
-		return false
-	}
-	_ = c.s.cfg.Audit.Log(Event{Kind: EvConnect, Conn: c.id, Device: c.sess.Device})
 	c.activity()
 	return true
 }
@@ -406,15 +417,19 @@ func hubRole(r Role) webproto.Role {
 	return webproto.RoleViewer
 }
 
-// add registers a connection past hello; false once the gateway stops.
-func (s *WS) add(c *wsConn) bool {
+// add registers a connection past hello, or says why not: the gateway
+// stops (4009) or MaxViewers browsers are connected already (4005).
+func (s *WS) add(c *wsConn) (webproto.CloseCode, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.stopped {
-		return false
+	switch {
+	case s.stopped:
+		return webproto.CloseStopped, false
+	case len(s.conns) >= s.cfg.MaxViewers:
+		return webproto.CloseTooManyViewers, false
 	}
 	s.conns[c] = struct{}{}
-	return true
+	return 0, true
 }
 
 // fromBrowser reads browser messages until the connection ends.
