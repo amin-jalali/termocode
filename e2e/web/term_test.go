@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/chromedp/kb"
+
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -62,7 +64,7 @@ func termTexts(p *Page) []string {
 // phone's; rows stay LTR; the view follows new output until the reader
 // scrolls up, then Follow brings it back; a chip picks another shell.
 func TestTermRowsReflowFollowAndPick(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range []Viewport{Phone} { // the desktop's panel: deskterm_test.go
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openTerm(t, vp)
 			showTerm(t, p, c, termSnap(3, 0, 10, "$ echo", "aaaaaaaaaa", "bbb", "done"),
@@ -146,7 +148,6 @@ func TestTermNoneNewAndEnded(t *testing.T) {
 	p.TapJS(`[...` + termView + `.querySelectorAll(".btn")].find((b) => b.textContent === "Open one")`)
 	r := expectReq(t, c, "term.new")
 	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"buf": 12})})
-	p.WaitJS(`location.hash === "#/term/12"`)
 	ended := termItem(12, "zsh", false, true)
 	ended["exited"] = true
 	c.Send(t, Delta("terms", 2, termsSnap(ended)))
@@ -178,7 +179,7 @@ const termLine = `document.querySelector('[data-view="term"] .term-line')`
 // Esc and arrows; Ctrl and Alt are sticky for one key, locked on a second
 // tap; ^C is term.interrupt; every key is at least 44 px.
 func TestTermTypeKeysAndInterrupt(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range []Viewport{Phone} { // the desktop types into the shell: deskterm_test.go
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openTerm(t, vp)
 			showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
@@ -319,7 +320,12 @@ func TestTermScreenModeGrid(t *testing.T) {
 			if Eval[bool](p, `document.documentElement.scrollWidth > document.documentElement.clientWidth`) {
 				t.Error("the 100-column grid makes the page scroll sideways")
 			}
-			tapKey(p, "Esc")
+			if vp.Mobile {
+				tapKey(p, "Esc")
+			} else {
+				p.WaitJS(`document.activeElement === document.querySelector('[data-view="term"] .dterm-input')`)
+				p.Key(kb.Escape)
+			}
 			if got := expectSend(t, c); got != "\x1b" {
 				t.Errorf("a key in screen mode sent %q", got)
 			}

@@ -29,7 +29,8 @@ import {
 import { link, listOf, store } from "../session";
 import type { Tab } from "../state/route";
 import { t } from "../strings";
-import { ChatView, GitView, MoreView, TermView } from "../views/views";
+import { ChatView, GitView, MoreView } from "../views/views";
+import { DeskTerm } from "../views/DeskTerm";
 import { FileView } from "../views/FileView";
 import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
@@ -265,7 +266,7 @@ export function Workbench() {
             <Sash axis="y" size={p.panelH} min={PANEL_MIN} max={Math.max(PANEL_MIN, innerHeight - 200)} dir={-1} label={t("wb.resize_panel")} onSize={(n) => setPanes({ panelH: n })} />
             <section class="wb-panel" aria-label={t("tab.term")}>
               <PanelHead>{t("wb.terminal")}</PanelHead>
-              <TermView />
+              <DeskTerm />
             </section>
           </>
         )}

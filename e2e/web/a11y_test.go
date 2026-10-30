@@ -86,11 +86,13 @@ func TestAxeEveryView(t *testing.T) {
 				p.WaitJS(`document.querySelector(".term-about")`)
 				p.axe(src, "term about sheet")
 				p.Key(kb.Escape)
-				p.TapJS(`document.querySelector('[data-view="term"] .keybar .key-edit')`)
-				p.WaitJS(`document.querySelector(".keys-edit")`)
-				p.axe(src, "key bar editor")
-				p.TapJS(ButtonByText("Done"))
-				p.WaitJS(`!document.querySelector(".keys-edit")`)
+				if vp.Mobile { // the desktop has no key bar
+					p.TapJS(`document.querySelector('[data-view="term"] .keybar .key-edit')`)
+					p.WaitJS(`document.querySelector(".keys-edit")`)
+					p.axe(src, "key bar editor")
+					p.TapJS(ButtonByText("Done"))
+					p.WaitJS(`!document.querySelector(".keys-edit")`)
+				}
 				for _, tab := range []string{"files", "git", "more"} {
 					p.GoTab(tab)
 					p.axe(src, tab)
@@ -277,7 +279,12 @@ func TestAxeViewsWithContent(t *testing.T) {
 				p.axe(src, "row menu")
 				p.Key(kb.Escape)
 				p.WaitJS(`!document.querySelector(".row-menu")`)
-				p.TapJS(`document.querySelector('[data-view="term"] .key-paste')`)
+				if vp.Mobile {
+					p.TapJS(`document.querySelector('[data-view="term"] .key-paste')`)
+				} else { // the desktop's row menu
+					Eval[bool](p, `(document.querySelector('[data-view="term"] .trow').dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true})), true)`)
+					p.TapJS(`[...document.querySelectorAll(".row-menu-item")].find((b) => b.textContent.endsWith("…"))`) // Paste…
+				}
 				p.WaitJS(`document.querySelector(".paste")`)
 				p.axe(src, "paste sheet")
 				p.Key(kb.Escape)
