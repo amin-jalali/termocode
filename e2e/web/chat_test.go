@@ -211,7 +211,7 @@ func typeDraft(p *Page, text string) {
 // expectReq reads the next request, which must be op; it returns it.
 func expectReq(t *testing.T, c *HubConn, op string) *webproto.Req {
 	t.Helper()
-	r := nextReq(t, c)
+	r := nextReqOr(t, c, op)
 	if r.Op != op {
 		t.Fatalf("page sent %s; want %s", show(r), op)
 	}
@@ -347,6 +347,9 @@ func noReq(t *testing.T, c *HubConn, d time.Duration) {
 	for {
 		select {
 		case m := <-c.in:
+			if r, ok := m.(*webproto.Req); ok && paintOps[r.Op] {
+				continue
+			}
 			if _, ok := m.(*webproto.Sub); !ok {
 				t.Fatalf("page sent %s; want no request", show(m))
 			}
