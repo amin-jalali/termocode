@@ -119,7 +119,7 @@
 .field-label { font-size: 0.875rem; color: var(--text-2); }
 
 .seg { display: inline-flex; flex-wrap: wrap; align-self: flex-start; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--bg-panel); padding: 2px; gap: 2px; }
-.seg-item { min-height: 2.5rem; padding: 0 var(--s4); border-radius: 8px; font-size: 0.875rem; color: var(--text-2); }
+.seg-item { min-height: var(--tap); padding: 0 var(--s4); border-radius: 8px; font-size: 0.875rem; color: var(--text-2); }
 .seg-item:hover { background: var(--bg-hover); }
 .seg-item.is-on { background: var(--sel); color: var(--text); font-weight: 600; }
 
