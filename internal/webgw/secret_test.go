@@ -83,7 +83,42 @@ func TestLaunchSecretWrongRefused(t *testing.T) {
 	}
 }
 
-// TestLaunchSecretErrorsHoldNoValue: an error names the rule, never the
+// TestLaunchSecretBurnsAfter5: the fifth wrong try burns the secret
+// (ErrSecretBurned, once, for the audit log); after that even the right
+// secret is refused with ErrSecretClosed (T13).
+func TestLaunchSecretBurnsAfter5(t *testing.T) {
+	if MaxBadTries != 5 {
+		t.Fatalf("MaxBadTries = %d, want 5", MaxBadTries)
+	}
+	plain, s := newSecret(t)
+	for i := 1; i < MaxBadTries; i++ {
+		if err := s.Redeem("wrong", t0); !errors.Is(err, ErrSecretWrong) {
+			t.Fatalf("try %d: %v", i, err)
+		}
+	}
+	if err := s.Redeem("wrong", t0); !errors.Is(err, ErrSecretBurned) {
+		t.Fatalf("try %d: %v, want ErrSecretBurned", MaxBadTries, err)
+	}
+	for _, guess := range []string{"wrong", plain} {
+		if err := s.Redeem(guess, t0); !errors.Is(err, ErrSecretClosed) {
+			t.Fatalf("after burn, %v, want ErrSecretClosed", err)
+		}
+	}
+}
+
+// TestLaunchSecretFourWrongThenRight: fewer than five wrong tries do not
+// lock the owner out.
+func TestLaunchSecretFourWrongThenRight(t *testing.T) {
+	plain, s := newSecret(t)
+	for i := 1; i < MaxBadTries; i++ {
+		_ = s.Redeem("wrong", t0)
+	}
+	if err := s.Redeem(plain, t0); err != nil {
+		t.Fatalf("right secret after %d wrong: %v", MaxBadTries-1, err)
+	}
+}
+
+// TestLaunchSecretErrorsHoldNoValue:an error names the rule, never the
 // value tried or the real one (T8).
 func TestLaunchSecretErrorsHoldNoValue(t *testing.T) {
 	plain, s := newSecret(t)
