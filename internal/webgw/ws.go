@@ -536,16 +536,13 @@ func (c *wsConn) fromHub() {
 		case head.T == webproto.KindRes || head.T == webproto.KindErr:
 			c.gate.answered(head.ID)
 		}
-		wctx, cancel := context.WithTimeout(c.ctx, c.s.cfg.WriteWait)
-		err = c.ws.Write(wctx, websocket.MessageText, line)
-		late := wctx.Err() != nil && c.ctx.Err() == nil
-		cancel()
+		// A timer, not a write deadline: it records 4008 before the
+		// stuck write breaks the link (a frame cannot pass a full socket).
+		slow := time.AfterFunc(c.s.cfg.WriteWait, func() { c.end(webproto.CloseSlowClient, false) })
+		err = c.ws.Write(c.ctx, websocket.MessageText, line)
+		slow.Stop()
 		if err != nil {
-			if late {
-				c.close(webproto.CloseSlowClient)
-			} else {
-				c.close(webproto.CloseNormal)
-			}
+			c.close(webproto.CloseNormal) // no-op when it was closed first
 			return
 		}
 		if head.T == webproto.KindBye {
@@ -600,7 +597,11 @@ func (c *wsConn) protoError(why string, code webproto.CloseCode) {
 
 // close ends the connection once: the close frame with code, the hub
 // connection, the context. Safe from any goroutine.
-func (c *wsConn) close(code webproto.CloseCode) {
+func (c *wsConn) close(code webproto.CloseCode) { c.end(code, true) }
+
+// end is close; handshake=false drops the link without a close frame
+// (for a browser that does not read).
+func (c *wsConn) end(code webproto.CloseCode, handshake bool) {
 	c.once.Do(func() {
 		c.code = code
 		close(c.closed)
@@ -613,7 +614,11 @@ func (c *wsConn) close(code webproto.CloseCode) {
 		c.s.mu.Unlock()
 		// The close frame first: a cancelled read would drop the link
 		// without one, and the page needs the code.
-		_ = c.ws.Close(websocket.StatusCode(code), code.Reason())
+		if handshake {
+			_ = c.ws.Close(websocket.StatusCode(code), code.Reason())
+		} else {
+			_ = c.ws.CloseNow()
+		}
 		c.cancel()
 		if live {
 			_ = c.s.cfg.Audit.Log(Event{Kind: EvDisconnect, Conn: c.id, Device: c.sess.Device, Code: int(code)})

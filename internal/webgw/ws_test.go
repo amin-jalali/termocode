@@ -625,3 +625,29 @@ func TestAuditFailureFailsClosed(t *testing.T) {
 	}
 	r.hub.none()
 }
+
+// Spec (1.5, T18): a browser that stops reading is dropped after
+// WriteWait (4008); the hub connection closes with it and the session
+// is not held up.
+func TestSlowBrowserClosed4008(t *testing.T) {
+	r := newWSRig(t, DefaultLimits, func(c *WSConfig) { c.WriteWait = 200 * time.Millisecond })
+	_, p := r.connect() // the browser never reads again
+	line := []byte(`{"t":"delta","topic":"status","seq":1,"data":"` + strings.Repeat("z", 1<<20) + `"}` + "\n")
+	go func() {
+		for i := 0; i < 256; i++ {
+			if _, err := p.nc.Write(line); err != nil {
+				return
+			}
+		}
+	}()
+	p.eof(t)
+	defer func() {
+		if t.Failed() {
+			t.Log(auditText(t, r.alog))
+		}
+	}()
+	waitFor(t, "disconnect 4008 logged", func() bool {
+		return strings.Contains(auditText(t, r.alog), `"ev":"disconnect"`) &&
+			strings.Contains(auditText(t, r.alog), `"code":4008`)
+	})
+}
