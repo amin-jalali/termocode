@@ -105,12 +105,12 @@ func (m *Model) promptCloseBufferIfDirty(id int) bool {
 	if !ok || !buf.Modified {
 		return false
 	}
-	name := filepath.Base(buf.Path)
+	name := "[unnamed]" // filepath.Base("") would say "."
+	if buf.Path != "" {
+		name = filepath.Base(buf.Path)
+	}
 	if t := m.databaseConsoleTitle(buf.Path); t != "" {
 		name = t // "SQL console · local-pg", not the hash of its file name
-	}
-	if name == "" {
-		name = "[unnamed]"
 	}
 	m.confirm = confirm.New(
 		"Save changes?",
