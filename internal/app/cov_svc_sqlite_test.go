@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/testkit"
 )
@@ -139,7 +140,9 @@ func TestCovSvcSQLiteEditSubmit(t *testing.T) {
 	d.Key("w")
 	covSvcWaitFrame(t, d, "UPDATE")
 	d.Key("right", "right", "enter")
-	if !d.WaitFor(func() bool { return covSvcSQLiteCount(t, d, "plan = 'team'") == 1 && covSvcSQLiteCount(t, d, "id = 3") == 0 }, 5*time.Second) {
+	if !d.WaitFor(func() bool {
+		return covSvcSQLiteCount(t, d, "plan = 'team'") == 1 && covSvcSQLiteCount(t, d, "id = 3") == 0
+	}, 5*time.Second) {
 		t.Fatalf("submit did not reach the file:\n%s", ansi.Strip(d.Frame()))
 	}
 }
@@ -162,4 +165,75 @@ func covSvcSQLiteCount(t *testing.T, d *testkit.Driver, where string) int {
 		return 0
 	}
 	return -1
+}
+
+// covSvcSQLiteTree opens the Databases view with the cursor on users.
+func covSvcSQLiteTree(t *testing.T, d *testkit.Driver) {
+	t.Helper()
+	d.Key("f1")
+	d.Type("Databases: Focus")
+	d.Key("enter")
+	covSvcWaitFrame(t, d, "DATABASES")
+	d.Key("enter", "down", "enter")
+	covSvcWaitFrame(t, d, "Tables")
+	covSvcWaitFrame(t, d, "users")
+	d.Key("down", "down")
+}
+
+// Table commands from the tree: count, describe, DDL, SELECT in the
+// console, copy the name.
+func TestCovSvcSQLiteTableCommands(t *testing.T) {
+	d := covSvcSQLite(t, "-- @conn app\nSELECT 1;\n")
+	t.Cleanup(app.SetClipboardSink(func(string) {}))
+	covSvcSQLiteTree(t, d)
+	d.Key("#")
+	covSvcWaitFrame(t, d, "3 rows")
+	d.Key("y")
+	covSvcWaitFrame(t, d, "Copied")
+	d.Key("d")
+	dbWaitPage(t, d, "email")
+	d.Palette("db-ddl")
+	covSvcWaitFrame(t, d, "CREATE TABLE users")
+	d.Palette("db-count-rows")
+	d.Palette("db-select")
+	if !d.WaitFor(func() bool { return strings.Contains(dbLua(t, d, `return table.concat(vim.api.nvim_buf_get_lines(0,0,-1,false),'\n')`), "SELECT") }, 4*time.Second) {
+		t.Fatalf("no SELECT in the console:\n%s", ansi.Strip(d.Frame()))
+	}
+}
+
+// The data view: sort, filter, next page keys, pin, rerun, and an
+// export into a folder that does not exist.
+func TestCovSvcSQLiteDataView(t *testing.T) {
+	d := covSvcSQLite(t, "-- @conn app\nSELECT 1;\n")
+	t.Cleanup(app.SetClipboardSink(func(string) {}))
+	covSvcSQLiteTree(t, d)
+	d.Key("o")
+	dbWaitPage(t, d, "ann@example.com")
+	cursorTo(t, d, "email")
+	d.Key("o")
+	covSvcWaitFrame(t, d, "sort")
+	d.Key("esc")
+	d.Key("f")
+	covSvcWaitFrame(t, d, "WHERE")
+	d.Type("id > 1")
+	d.Key("enter")
+	if !d.WaitFor(func() bool { return !strings.Contains(dbText(t, d), "ann@example.com") }, 4*time.Second) {
+		t.Fatalf("filter kept ann:\n%s", dbText(t, d))
+	}
+	d.Key("c")
+	d.Key("C")
+	d.Key("p")
+	d.Key("r")
+	dbWaitPage(t, d, "bob@example.com")
+	d.Key("S")
+	covSvcWaitFrame(t, d, "Markdown table")
+	d.Key("enter")
+	covSvcWaitFrame(t, d, "File (in the workspace")
+	d.Key("ctrl+u")
+	for i := 0; i < 60; i++ {
+		d.Key("backspace")
+	}
+	d.Type("missing-dir/x.csv")
+	d.Key("enter")
+	covSvcWaitFrame(t, d, "Export failed")
 }
