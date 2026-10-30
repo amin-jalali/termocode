@@ -46,6 +46,7 @@ const (
 // and the device a card is about.
 type webAccessState struct {
 	link      string // the open pairing link (for Copy link), "" when none
+	guest     bool   // the open link is a share (WEB-50)
 	pairCall  *webCall
 	pairArgs  webproto.PairAskArgs
 	grantCall *webCall
