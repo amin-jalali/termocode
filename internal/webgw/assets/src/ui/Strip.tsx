@@ -34,8 +34,8 @@ function ThemeToggle() {
     <button
       class="strip-btn"
       type="button"
-      aria-label={t("strip.theme")}
-      title={t("strip.theme")}
+      aria-label={t("theme")}
+      title={t("theme")}
       onClick={() => setPref("theme", dark ? "light" : "dark")}
     >
       {dark ? <IconSun /> : <IconMoon />}
