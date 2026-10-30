@@ -152,3 +152,48 @@ func TestDeskMCP(t *testing.T) {
 	p.TapJS(side + `.querySelector('.tr[data-agent="agent-x"]')`)
 	p.WaitJS(`document.querySelector('[data-view="mcp-agent"] h1')?.textContent === "agent-x" && document.querySelectorAll('[data-view="mcp-agent"] tbody tr').length === 2`)
 }
+
+// Settings on the desktop: the settings editor's look (groups on the
+// left, "Group: Title", description, the value in its control), every
+// laptop setting read only (disabled controls, a lock), a changed one
+// marked with its default; the search box filters.
+func TestDeskSettingsEditor(t *testing.T) {
+	p, c := deskLogin(t, nil)
+	Eval[bool](p, `(location.hash = "#/more/settings", true)`)
+	c.WaitSub(t, "settings")
+	c.Send(t, Snap("settings", 1, webproto.SettingsSnap{Items: []webproto.SettingItem{
+		{Key: "theme", Group: "Appearance", Type: "enum", Value: "one-dark", Default: "vscode-dark-plus", Description: "Color theme ID."},
+		{Key: "tab_size", Group: "Editor", Type: "int", Value: "4", Default: "4", Description: "Spaces per tab."},
+		{Key: "word_wrap", Group: "Editor", Type: "bool", Value: "true", Default: "false", Description: "Wrap <b>long</b> lines."},
+	}}))
+	const page = `document.querySelector('.wb-editor [data-view="settings"]')`
+	p.WaitJS(page + `?.querySelectorAll(".set-item").length === 3`)
+	if got := Eval[string](p, `[...`+page+`.querySelectorAll(".setp-toc-row")].map((b) => b.textContent).join(",")`); got != "Appearance1,Editor2" {
+		t.Errorf("groups %q", got)
+	}
+	if got := Eval[string](p, page+`.querySelector('.set-item[data-key="tab_size"] .set-title').textContent`); got != "Editor: Tab Size" {
+		t.Errorf("title %q", got)
+	}
+	if !Eval[bool](p, page+`.querySelector('.set-item[data-key="theme"]').classList.contains("is-changed") && !`+page+`.querySelector('.set-item[data-key="tab_size"]').classList.contains("is-changed")`) {
+		t.Error("the changed mark is wrong")
+	}
+	if got := Eval[string](p, page+`.querySelector('.set-item[data-key="theme"] .set-mod').textContent`); got != "default vscode-dark-plus" {
+		t.Errorf("default %q", got)
+	}
+	if n := Eval[int](p, page+`.querySelectorAll(".set-list input:not(:disabled), .setp-list input:not(:disabled), .setp-list select:not(:disabled), .setp-list b").length`); n != 0 {
+		t.Fatalf("%d controls that change a setting, or HTML", n)
+	}
+	setInput(p, page+`.querySelector('.setp-search input')`, "wrap")
+	p.WaitJS(page + `.querySelectorAll(".set-item").length === 1 && ` + page + `.querySelector(".setp-found").textContent === "1 settings found"`)
+}
+
+// This device: its own settings change this browser at once.
+func TestDeskDeviceSettings(t *testing.T) {
+	p, _ := deskLogin(t, nil)
+	Eval[bool](p, `(location.hash = "#/more", true)`)
+	p.pickPref(1, "3") // light
+	p.WaitJS(`document.documentElement.dataset.theme === "light"`)
+	if !Eval[bool](p, `!!document.querySelector('.wb-editor [data-view="more"] .set-item[data-key="lang"] select')`) {
+		t.Error("no language setting")
+	}
+}

@@ -110,7 +110,7 @@ func setScheme(p *Page, scheme string) {
 	p.T.Helper()
 	p.GoTab("more")
 	n := map[string]string{"dark": "2", "light": "3"}[scheme]
-	p.Tap(`.more .field:nth-of-type(1) .seg-item:nth-child(` + n + `)`)
+	p.pickPref(1, n)
 	p.WaitJS(`document.documentElement.dataset.theme === "` + scheme + `"`)
 }
 
