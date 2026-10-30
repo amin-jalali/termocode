@@ -602,6 +602,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | View: Toggle Zen Mode | `zen-mode` | `Alt+Z` | `Alt+Z` |
 | View: Unfold All | `unfold-all` |   | `zR` |
 
+## Web
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Web: Copy Link | `web-copy-link` |   |   |
+| Web: Start Panel | `web-start` |   |   |
+| Web: Stop Panel | `web-stop` |   |   |
+
 ## Workspace
 
 | Title | ID | Key | Hint |
