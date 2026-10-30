@@ -36,3 +36,41 @@ export function readSettings(data: unknown): { group: string; items: SettingView
   }
   return out;
 }
+
+export interface MCPAgentView {
+  name: string;
+  since: number;
+  calls: number;
+  asked: number;
+}
+
+export interface MCPView {
+  mode: string;
+  listening: boolean;
+  why: string;
+  agents: MCPAgentView[];
+  calls: string[];
+}
+
+const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+
+/** readMCP reads the mcp topic. */
+export function readMCP(data: unknown): MCPView {
+  const d = obj(data);
+  return {
+    mode: str(d.mode),
+    listening: d.listening === true,
+    why: str(d.why),
+    agents: list(d.agents)
+      .map(obj)
+      .map((a) => ({ name: str(a.name), since: num(a.since), calls: num(a.calls), asked: num(a.asked) })),
+    calls: list(d.calls).map(str).filter((s) => s !== ""),
+  };
+}
+
+/** hhmm writes a Unix ms time as the local "09:41". */
+export function hhmm(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
