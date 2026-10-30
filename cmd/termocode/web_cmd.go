@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/webgw"
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -146,7 +147,7 @@ func webCtlCall(sock, op, args string) (data json.RawMessage, code, msg string, 
 		return nil, "", "", err
 	}
 	defer nc.Close()
-	go func() { <-ctx.Done(); _ = nc.Close() }()
+	crash.Go("termocode web: the deadline", func() { <-ctx.Done(); _ = nc.Close() })
 	req := `{"t":"ctl"}` + "\n" + `{"t":"req","id":1,"op":` + strconv.Quote(op)
 	if args != "" {
 		req += `,"args":` + args

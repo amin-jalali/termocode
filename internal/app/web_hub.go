@@ -13,6 +13,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -92,7 +93,7 @@ func (h *webHub) serve(ln net.Listener, peer func(net.Conn) error, onErr func(er
 	h.ln, h.peer, h.onErr = ln, peer, onErr
 	h.mu.Unlock()
 	h.wg.Add(1)
-	go h.accept(ln)
+	crash.Go("web: the hub listener", func() { h.accept(ln) })
 }
 
 // stop closes the listener (a unix listener removes its socket file) and
@@ -190,7 +191,7 @@ func (h *webHub) accept(ln net.Listener) {
 		h.all[nc] = nil
 		h.wg.Add(1)
 		h.mu.Unlock()
-		go h.handle(nc)
+		crash.Go("web: a hub connection", func() { h.handle(nc) })
 	}
 }
 

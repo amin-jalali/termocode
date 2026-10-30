@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/webgw"
@@ -61,7 +62,7 @@ func startWebGatewayProcess(h *webHub, args []string) (*webGatewayProc, error) {
 			}
 		},
 	}
-	go func() {
+	crash.Go("web: the gateway handoff", func() {
 		defer pr.Close()
 		_ = pr.SetReadDeadline(time.Now().Add(webHandoffWait))
 		var hand struct {
@@ -72,11 +73,11 @@ func startWebGatewayProcess(h *webHub, args []string) (*webGatewayProc, error) {
 			return
 		}
 		_ = h.send(h.ctx, webPanelUpMsg{hub: h, proc: proc, port: hand.Port})
-	}()
-	go func() {
+	})
+	crash.Go("web: the gateway process", func() {
 		_ = cmd.Wait()
 		close(done)
 		_ = h.send(h.ctx, webPanelExitMsg{hub: h, proc: proc})
-	}()
+	})
 	return proc, nil
 }
