@@ -291,6 +291,11 @@ export interface TestIDArgs {
   id: string;
 }
 
+export interface GitGraphArgs {
+  skip?: number;
+  head?: boolean;
+}
+
 export interface GitFileLogArgs {
   path: string;
 }
@@ -1239,6 +1244,38 @@ export interface TestOutput {
   truncated?: boolean;
 }
 
+export interface GitGraph {
+  skip: number;
+  rows: GitGraphRow[];
+  more?: boolean;
+}
+
+export interface GitGraphRow {
+  hash: string;
+  parents: string[];
+  subject: string;
+  author: string;
+  when: number;
+  refs?: GitRef[];
+  head?: boolean;
+  unpushed?: boolean;
+  col: number;
+  color: number;
+  up: GitGraphEdge[];
+  down: GitGraphEdge[];
+}
+
+export interface GitRef {
+  name: string;
+  kind: "local" | "remote" | "tag";
+}
+
+export interface GitGraphEdge {
+  f: number;
+  t: number;
+  c: number;
+}
+
 export interface GitFileLog {
   path: string;
   log: GitCommit[];
@@ -1527,6 +1564,7 @@ export interface OpArgs {
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "git.graph": GitGraphArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -1638,6 +1676,7 @@ export interface OpResult {
   "lsp.definition": LspLocations;
   "lsp.references": LspLocations;
   "tests.output": TestOutput;
+  "git.graph": GitGraph;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
