@@ -232,3 +232,23 @@ func TestBufGapResets(t *testing.T) {
 	}
 	_ = os.Remove(filepath.Join(r.root, "a.txt"))
 }
+
+// Spec: the buf snapshot carries the buffer's layout as the laptop's
+// editor has it: tab width, spaces for tabs, encoding and line ends, so
+// the page draws a tab as wide as the laptop does.
+func TestBufSnapCarriesLayout(t *testing.T) {
+	r := newWebFilesRig(t)
+	r.withNvim()
+	r.write("m.go", "package m\n\nfunc f() {\n\treturn\n}\n")
+	r.write("p.txt", "x = 1\r\ny = 2\r\n")
+	for _, c := range []struct{ file, eol string }{{"m.go", "unix"}, {"p.txt", "dos"}} {
+		res := webBufOpen(t, r, r.c, c.file)
+		snap, err := webBufSnapshot(r.m, strconv.Itoa(res.Buf))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s := snap.(webproto.BufSnap); s.Tabstop <= 0 || s.Eol != c.eol {
+			t.Errorf("%s: ts %d eol %q, want a tab width and %s line ends", c.file, s.Tabstop, s.Eol, c.eol)
+		}
+	}
+}
