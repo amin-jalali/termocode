@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -112,8 +113,10 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 	return nil
 }
 
-// copyStatic copies the files of src/static (icons) to the output as they
-// are. Only SVG is allowed, and the lint test keeps it free of scripts.
+// copyStatic copies the files of src/static (icons, the app manifest) to
+// the output as they are. Only SVG and the manifest are allowed; the lint
+// test keeps the SVG free of scripts, and the manifest must be JSON that
+// names no other site.
 func copyStatic(dir string, out map[string][]byte) error {
 	entries, err := os.ReadDir(dir)
 	if errors.Is(err, os.ErrNotExist) {
@@ -123,14 +126,32 @@ func copyStatic(dir string, out map[string][]byte) error {
 		return err
 	}
 	for _, e := range entries {
-		if e.IsDir() || filepath.Ext(e.Name()) != ".svg" {
-			return fmt.Errorf("webbuild: src/static/%s: only .svg files may be static", e.Name())
+		ext := filepath.Ext(e.Name())
+		if e.IsDir() || (ext != ".svg" && e.Name() != "manifest.webmanifest") {
+			return fmt.Errorf("webbuild: src/static/%s: only .svg files and manifest.webmanifest may be static", e.Name())
 		}
 		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
 		if err != nil {
 			return err
 		}
+		if ext == ".webmanifest" {
+			if err := checkManifest(b); err != nil {
+				return fmt.Errorf("webbuild: src/static/%s: %w", e.Name(), err)
+			}
+		}
 		out[e.Name()] = b
+	}
+	return nil
+}
+
+// checkManifest accepts JSON only, with no URL that leaves the site.
+func checkManifest(b []byte) error {
+	var v any
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	if regexp.MustCompile(`(?i)[a-z][a-z0-9+.-]*://|"//`).Match(b) {
+		return errors.New("names another site")
 	}
 	return nil
 }
