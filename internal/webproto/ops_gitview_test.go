@@ -41,3 +41,11 @@ func TestGitGraphOp(t *testing.T) {
 		[]string{`{}`, `{"skip":200}`, `{"skip":0,"head":true}`})
 	checkRow(t, OpGitGraph, RoleViewer, false, AuditNo)
 }
+
+// Spec (blame): git.blame says who last changed each line of one
+// workspace file; a v2 read for viewers, not audited.
+func TestGitBlameOp(t *testing.T) {
+	checkArgs(t, OpGitBlame, []string{`{"path":""}`, `{"path":"../x"}`, `{"path":"dir/"}`, `{"path":"/etc/passwd"}`},
+		[]string{`{"path":"src/a.go"}`})
+	checkRow(t, OpGitBlame, RoleViewer, false, AuditNo)
+}

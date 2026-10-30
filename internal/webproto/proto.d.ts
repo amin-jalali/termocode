@@ -296,6 +296,10 @@ export interface GitGraphArgs {
   head?: boolean;
 }
 
+export interface GitBlameArgs {
+  path: string;
+}
+
 export interface GitFileLogArgs {
   path: string;
 }
@@ -1276,6 +1280,21 @@ export interface GitGraphEdge {
   c: number;
 }
 
+export interface GitBlame {
+  path: string;
+  commits: GitBlameCommit[];
+  lines: number[];
+  cut?: boolean;
+}
+
+export interface GitBlameCommit {
+  hash?: string;
+  author?: string;
+  subject?: string;
+  when?: number;
+  uncommitted?: boolean;
+}
+
 export interface GitFileLog {
   path: string;
   log: GitCommit[];
@@ -1565,6 +1584,7 @@ export interface OpArgs {
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
   "git.graph": GitGraphArgs;
+  "git.blame": GitBlameArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -1677,6 +1697,7 @@ export interface OpResult {
   "lsp.references": LspLocations;
   "tests.output": TestOutput;
   "git.graph": GitGraph;
+  "git.blame": GitBlame;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
