@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -9,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -28,6 +30,7 @@ func init() {
 	webOps[webproto.OpTermInterrupt] = webOpTermInterrupt
 	webOps[webproto.OpTermNew] = webOpTermNew
 	webOps[webproto.OpTermShowOnLaptop] = webOpTermShow
+	webOps[webproto.OpTermClose] = webOpTermClose
 	webTermReset = func(m *Model, b *webBuf) {
 		m.webPublish(b.topic(), webproto.TermResetDelta{Kind: "reset", First: b.first, Rows: webNonNil(b.rows), More: b.first > 0, Tick: b.tick})
 	}
@@ -282,4 +285,72 @@ func webOpTermShow(m *Model, call *webCall) tea.Cmd {
 	}
 	call.reply(nil)
 	return nil
+}
+
+// webOpTermClose asks the laptop to close a shell (web design 3.2): a
+// program running in it stops, so nothing happens until the laptop
+// confirms its Risky card.
+func webOpTermClose(m *Model, call *webCall) tea.Cmd {
+	buf := call.args.(*webproto.BufArgs).Buf
+	n, ok := m.webTermNumber(buf)
+	if !ok || m.nvim == nil {
+		webFail(call, webErrNoTerm())
+		return nil
+	}
+	what := "terminal " + strconv.Itoa(n)
+	m.webAskOpen(call, &webAsk{
+		summary: what,
+		title:   "Close this shell?",
+		body:    "Close " + what + "? Anything running in it stops.",
+		action:  "Close",
+		run: func(m *Model) tea.Cmd {
+			var t tea.Cmd
+			if err := m.webTermCloseNow(buf); err != nil {
+				m.toast, t = m.toast.Push(toast.Warn, "That shell was already closed.")
+			}
+			return t
+		},
+	})
+	return nil
+}
+
+// webTermNumber is the 1-based number of the tab that holds shell buf,
+// as the laptop's tab bar counts it.
+func (m *Model) webTermNumber(buf int) (int, bool) {
+	tab, ok := m.webTermTab(buf)
+	if !ok {
+		return 0, false
+	}
+	tabs, _, _ := m.aiTermTabs()
+	for i, t := range tabs {
+		if t.BufID == tab {
+			return i + 1, true
+		}
+	}
+	return 0, false
+}
+
+// webTermCloseNow closes shell buf on the laptop: its pane, or its tab
+// when it is the tab's only pane. The laptop's focus stays where it was.
+func (m *Model) webTermCloseNow(buf int) error {
+	tab, ok := m.webTermTab(buf)
+	if !ok || m.nvim == nil {
+		return errors.New("that shell is closed")
+	}
+	restore := m.aiTermKeepFocus()
+	defer restore()
+	if _, err := m.aiTermShow(tab); err != nil {
+		return err
+	}
+	t := m.activeTerminalTab()
+	if t == nil {
+		return errors.New("that shell is closed")
+	}
+	for i := 0; i < t.paneCount(); i++ {
+		if t.paneBuf(i) == buf {
+			m.closeTerminalPane(i)
+			return nil
+		}
+	}
+	return errors.New("that shell is closed")
 }
