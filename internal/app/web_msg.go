@@ -40,7 +40,11 @@ func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case webSubMsg:
 		m.onWebSub(msg)
 		return waitWeb(msg.hub), true
+	case webGoneMsg:
+		m.onWebGone(msg)
+		return waitWeb(msg.hub), true
 	case webHelloMsg:
+		msg.hub.live[msg.conn] = true
 		m.onWebHello(msg)
 		return waitWeb(msg.hub), true
 	}

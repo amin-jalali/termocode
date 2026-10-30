@@ -159,3 +159,63 @@ func webSnapshot(m *Model, def webTopicDef, key string) (snap any, err error) {
 	}()
 	return def.snapshot(m, key)
 }
+
+// webPublish sends one delta of topic to every connection subscribed to
+// it. Update only. It never blocks: a connection that cannot take it
+// turns the topic stale and gets a resync (web_queue.go). Without a hub
+// it does nothing.
+func (m *Model) webPublish(topic string, delta any) {
+	if m.web != nil {
+		m.web.publish(topic, delta)
+	}
+}
+
+// publish is webPublish on the hub (Update only).
+func (h *webHub) publish(topic string, delta any) {
+	var subs []*webConn
+	for c := range h.live {
+		if c.subs[topic] != nil {
+			subs = append(subs, c)
+		}
+	}
+	if len(subs) == 0 {
+		return
+	}
+	data, err := webData(delta)
+	if err != nil {
+		recordError("[web] publish " + topic + ": " + err.Error())
+		return
+	}
+	encodeMerged := func(merged any, seq uint64) ([]byte, error) {
+		d, err := webData(merged)
+		if err != nil {
+			return nil, err
+		}
+		return webproto.Encode(&webproto.Delta{T: webproto.KindDelta, Topic: topic, Seq: seq, Data: d})
+	}
+	for _, c := range subs {
+		sub := c.subs[topic]
+		if c.out.mergeDelta(topic, delta, encodeMerged) {
+			continue
+		}
+		frame, err := webproto.Encode(&webproto.Delta{T: webproto.KindDelta, Topic: topic, Seq: sub.seq + 1, Data: data})
+		if err != nil {
+			recordError("[web] publish " + topic + ": " + err.Error())
+			return
+		}
+		if c.out.pushTopic(topic, sub.seq+1, delta, frame) == webQueued {
+			sub.seq++
+		}
+	}
+}
+
+// webGoneMsg: a connection ended; Update forgets it.
+type webGoneMsg struct {
+	hub  *webHub
+	conn *webConn
+}
+
+// onWebGone forgets a connection's subscriptions.
+func (m *Model) onWebGone(msg webGoneMsg) {
+	delete(msg.hub.live, msg.conn)
+}

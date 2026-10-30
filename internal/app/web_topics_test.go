@@ -119,3 +119,46 @@ func join(s []string) string {
 	}
 	return out
 }
+
+// Spec (WEB-7): webPublish (on Update) sends a delta to every connection
+// subscribed to the topic, with the next seq of that connection; others
+// get nothing; a gone connection is forgotten. Without a hub it is a
+// no-op.
+func TestPublishSeq(t *testing.T) {
+	var none Model
+	none.webPublish("status", map[string]int{"n": 1}) // no hub: nothing
+
+	r := newWebRig(t, nil)
+	n, log := 1, ""
+	webTestTopics(r, &n, &log)
+	a, _ := r.webHello(webTestOpen)
+	b, _ := r.webHello(`{"t":"open","conn":"c-2","role":"controller","device":"d"}`)
+	a.send(`{"t":"sub","topics":["status"]}`)
+	r.nextMsg(a)
+	r.m.webPublish("status", map[string]int{"n": 2})
+	b.send(`{"t":"sub","topics":["status","buf:1"]}`)
+	r.nextMsg(b)
+	r.nextMsg(b)
+	r.m.webPublish("status", map[string]int{"n": 3})
+	r.m.webPublish("tree", map[string]int{"x": 1}) // nobody listens
+
+	for _, tc := range []struct {
+		c    *webClient
+		seqs []float64
+		ns   []float64
+	}{{a, []float64{2, 3}, []float64{2, 3}}, {b, []float64{2}, []float64{3}}} {
+		for i := range tc.seqs {
+			d := r.nextMsg(tc.c)
+			data, _ := d["data"].(map[string]any)
+			if d["t"] != "delta" || d["topic"] != "status" || d["seq"] != tc.seqs[i] || data["n"] != tc.ns[i] {
+				t.Fatalf("delta %d: %v", i, d)
+			}
+		}
+	}
+	_ = b.c.Close()
+	r.pumpUntil("b gone", func() bool { return len(r.hub.live) == 1 })
+	r.m.webPublish("status", map[string]int{"n": 4})
+	if d := r.nextMsg(a); d["seq"] != float64(4) {
+		t.Fatalf("after b left: %v", d)
+	}
+}

@@ -48,6 +48,7 @@ type webHub struct {
 	cancel context.CancelFunc
 	ops    map[string]webOpFunc   // Update only (tests swap it)
 	topics map[string]webTopicDef // Update only (tests swap it)
+	live   map[*webConn]bool      // Update only: browsers that said hello
 
 	ln    net.Listener
 	peer  func(net.Conn) error
@@ -65,7 +66,7 @@ func newWebHub() *webHub {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &webHub{
 		ch: make(chan tea.Msg, 64), done: make(chan struct{}), ctx: ctx, cancel: cancel, ops: webOps, topics: webTopics,
-		all: map[net.Conn]*webConn{}, byID: map[string]*webConn{},
+		all: map[net.Conn]*webConn{}, byID: map[string]*webConn{}, live: map[*webConn]bool{},
 	}
 }
 
@@ -210,6 +211,9 @@ func (h *webHub) handle(nc net.Conn) {
 		return
 	}
 	c.run(br)
+	if c.role != webproto.RoleCtl { // Update forgets it (and keeps its topics for a resume)
+		_ = h.send(h.ctx, webGoneMsg{hub: h, conn: c})
+	}
 }
 
 // admit registers a connection after its first line.
