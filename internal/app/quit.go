@@ -31,6 +31,7 @@ func (m *Model) quitNow() tea.Cmd {
 		return c
 	}
 	m.stopMCPServe() // outside agents get EOF; waiting cards are a no
+	m.stopWebHub()   // the web gateway gets EOF (web_run.go)
 	m.removeAgentMCPFiles()
 	m.observeTerminals() // what each shell runs now, before the shells end
 	if m.nvim != nil {

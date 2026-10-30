@@ -1298,6 +1298,7 @@ func (m *Model) Close() error {
 	m.databasesClose(false) // database sessions are idle unless the view is visible
 	m.dropImageTemp()       // an HTTP image preview's temp copy (U16)
 	m.stopMCPServe()        // the MCP socket and its clients (mcp_serve_run.go)
+	m.stopWebHub()          // the web hub socket and its connections (web_run.go)
 	if m.nvim == nil {
 		return nil
 	}
