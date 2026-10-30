@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync/atomic"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -116,6 +117,23 @@ func (m *Model) onWebCall(msg webCallMsg) tea.Cmd {
 		call.fail(webproto.CodeNotFound, "This is not available yet.")
 		return next
 	}
-	cmd := fn(m, call)
+	cmd := m.webRunOp(fn, call)
+	if !call.deferred && !call.answered.Load() {
+		recordError("[web] " + call.op + " gave no answer")
+		call.fail(webproto.CodeInternal, "Something went wrong.")
+	}
 	return tea.Batch(cmd, next)
+}
+
+// webRunOp runs a handler; a panic is err internal for that request (a
+// browser must not crash the editor).
+func (m *Model) webRunOp(fn webOpFunc, call *webCall) (cmd tea.Cmd) {
+	defer func() {
+		if r := recover(); r != nil {
+			recordError(fmt.Sprintf("[web] %s panic: %v", call.op, r))
+			call.fail(webproto.CodeInternal, "Something went wrong.")
+			cmd = nil
+		}
+	}()
+	return fn(m, call)
 }
