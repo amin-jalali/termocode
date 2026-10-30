@@ -99,3 +99,27 @@ func TestAttachNoLinkNoHello(t *testing.T) {
 		t.Errorf("input %q", got)
 	}
 }
+
+// TestAttachLinkAnnounces: a --link client writes what comes on Announce
+// (the web hand-off) to its output as it is, between the UI's frames.
+func TestAttachLinkAnnounces(t *testing.T) {
+	s := newFakeServer(t, func(c *net.UnixConn) {
+		for {
+			typ, p, err := readFrame(c)
+			if err != nil {
+				return
+			}
+			if typ == frameInput && strings.Contains(string(p), "q") {
+				_ = writeFrame(c, frameExit, encodeCode(0))
+			}
+		}
+	})
+	announce := make(chan string, 1)
+	keys, out, code := attachWith(t, s, AttachOpts{Link: true, Announce: announce})
+	waitFor(t, "the link hello", func() bool { return strings.HasPrefix(readOut(out), linkHello) })
+	apc := WebHandoffAPC(WebHandoff{Port: 41237, Sock: "/s.sock", Secret: "abc"})
+	announce <- apc
+	waitFor(t, "the hand-off", func() bool { return strings.Contains(readOut(out), apc) })
+	_, _ = keys.WriteString("q")
+	waitCode(t, code)
+}

@@ -104,6 +104,10 @@ type AttachOpts struct {
 	// Link: this client runs at the far end of `termocode ssh`; it
 	// announces itself and answers its heartbeat (link.go).
 	Link bool
+	// Announce (Link only) carries in-band strings for the local
+	// `termocode ssh`, e.g. the web hand-off; each is written to the
+	// output whole, as it comes.
+	Announce <-chan string
 }
 
 // errOffline is a send while the client has no connection.
@@ -252,8 +256,18 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 		retry = time.After(0)
 	}
 
+	var announce <-chan string
+	if o.Link {
+		announce = o.Announce
+	}
 	for {
 		select {
+		case a, ok := <-announce:
+			if !ok {
+				announce = nil
+				continue
+			}
+			_, _ = out.WriteString(a)
 		case <-inDone:
 			// No more keys (the terminal is gone): leave, the session stays.
 			return 0
