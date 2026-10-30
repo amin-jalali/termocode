@@ -288,9 +288,11 @@ type wsConn struct {
 	sess  Sess
 	token string // to re-check the session's idle and max time; never logged
 
-	hub   net.Conn
-	hubMu sync.Mutex // one writer to the hub at a time
-	hubW  *bufio.Writer
+	hubSetMu sync.Mutex // guards hub and ended between hello and close
+	hub      net.Conn
+	ended    bool
+	hubMu    sync.Mutex // one writer to the hub at a time
+	hubW     *bufio.Writer
 
 	once   sync.Once
 	closed chan struct{}
@@ -427,8 +429,15 @@ func (c *wsConn) openHub(h *webproto.Hello) bool {
 		c.close(webproto.CloseHubGone)
 		return false
 	}
-	c.hub = hub
 	c.hubW = bufio.NewWriterSize(hub, 64<<10)
+	c.hubSetMu.Lock()
+	c.hub = hub
+	gone := c.ended
+	c.hubSetMu.Unlock()
+	if gone { // closed while dialling (CloseAll)
+		_ = hub.Close()
+		return false
+	}
 	open, err1 := webproto.Encode(&webproto.Open{T: webproto.KindOpen, Conn: c.id,
 		Role: hubRole(c.sess.Role), Device: c.sess.Device, Name: h.DeviceName})
 	hello := *h
@@ -638,9 +647,12 @@ func (c *wsConn) end(code webproto.CloseCode, handshake bool) {
 	c.once.Do(func() {
 		c.code = code
 		close(c.closed)
+		c.hubSetMu.Lock()
+		c.ended = true
 		if c.hub != nil {
 			_ = c.hub.Close()
 		}
+		c.hubSetMu.Unlock()
 		c.s.mu.Lock()
 		_, live := c.s.conns[c]
 		delete(c.s.conns, c)
