@@ -183,3 +183,57 @@ func TestMotionAndContrastPreferences(t *testing.T) {
 		t.Error("forced colours: no focus ring")
 	}
 }
+
+// The Tab key walks the page the way it reads: "Skip to content" first,
+// then the strip, the rail (desktop), the view, the chat column (desktop)
+// and the tab bar (phone); inside each, top to bottom and left to right.
+// The skip link moves the focus into the view.
+func TestFocusOrderFollowsTheScreen(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			s := StartServer(t)
+			p := NewPage(t, s, vp)
+			p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+			p.Login("c-1")
+			p.GoTab("more")
+			if !Eval[bool](p, `document.querySelector("a[href], button, input, textarea, select, [tabindex]:not([tabindex='-1'])") === document.querySelector(".skip")`) {
+				t.Error("the skip link is not the first stop")
+			}
+			Eval[bool](p, `(document.querySelector(".skip").focus(), true)`)
+			type stop struct {
+				Name      string
+				Top, Left float64
+				Region    int
+			}
+			var stops []stop
+			for i := range 40 {
+				if i > 0 {
+					p.Key("\t")
+				}
+				stops = append(stops, Eval[stop](p, `(() => { const e = document.activeElement; const r = e.getBoundingClientRect();
+					const region = e === document.body || e === document.documentElement ? 8 : e.closest(".skip") ? 0 : e.closest(".strip, .bars") ? 1 : e.closest("nav.rail") ? 2 : e.closest("main") ? 3 : e.closest(".chatcol") ? 4 : e.closest(".pill-wrap") ? 5 : e.closest("nav.tabbar") ? 6 : 9;
+					return {Name: (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 20), Top: r.top, Left: r.left, Region: region}; })()`))
+			}
+			for i := 1; i < len(stops); i++ {
+				a, b := stops[i-1], stops[i]
+				if b.Region == 0 || b.Region == 8 {
+					break // round the page and back to the start
+				}
+				if b.Region < a.Region || b.Region == 9 {
+					t.Errorf("Tab goes from %q (region %d) back to %q (region %d)", a.Name, a.Region, b.Name, b.Region)
+					continue
+				}
+				if b.Region != a.Region {
+					continue
+				}
+				sameRow := b.Top < a.Top+4 && b.Top > a.Top-4
+				if b.Top < a.Top-4 || (sameRow && b.Left < a.Left-1) {
+					t.Errorf("Tab goes back up: %q (%.0f,%.0f) then %q (%.0f,%.0f)", a.Name, a.Left, a.Top, b.Name, b.Left, b.Top)
+				}
+			}
+			Eval[bool](p, `(document.querySelector(".skip").focus(), true)`)
+			p.Key("\r")
+			p.WaitJS(`document.activeElement === document.getElementById("main")`)
+		})
+	}
+}
