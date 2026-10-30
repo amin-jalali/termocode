@@ -61,6 +61,9 @@ type WSConfig struct {
 	WriteWait time.Duration
 	// HubWait bounds one write to the hub.
 	HubWait time.Duration
+	// ThrottleMax: held back by the rate limits this long in one go, a
+	// connection is closed with 1008.
+	ThrottleMax time.Duration
 }
 
 // Defaults of WSConfig.
@@ -102,6 +105,9 @@ func NewWS(cfg WSConfig) *WS {
 	}
 	if cfg.HubWait <= 0 {
 		cfg.HubWait = DefaultHubWait
+	}
+	if cfg.ThrottleMax <= 0 {
+		cfg.ThrottleMax = DefaultThrottleMax
 	}
 	return &WS{cfg: cfg, conns: map[*wsConn]struct{}{}}
 }
@@ -166,7 +172,7 @@ func (s *WS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	c := &wsConn{s: s, ws: ws, ctx: ctx, cancel: cancel, closed: make(chan struct{})}
+	c := &wsConn{s: s, ws: ws, ctx: ctx, cancel: cancel, closed: make(chan struct{}), gate: newGate()}
 	c.serve()
 }
 
@@ -275,6 +281,7 @@ type wsConn struct {
 	hubErr bool // hub reader only: the hub sent an error for the connection
 
 	lastID uint64 // browser reader only: the last request id
+	gate   *gate
 }
 
 // serve runs one connection until it ends.
@@ -436,6 +443,9 @@ func (c *wsConn) fromBrowser() {
 			c.close(webproto.CloseNormal)
 			return
 		case *webproto.Ping:
+			if !c.throttle("", 0) {
+				return
+			}
 			if m.Here {
 				c.activity()
 			}
@@ -446,7 +456,14 @@ func (c *wsConn) fromBrowser() {
 			case reqAnswered:
 				continue
 			}
+			if !c.throttle(m.Op, len(m.Args)) || !c.sendSlot(m.ID) {
+				return
+			}
 			c.activity()
+		default:
+			if !c.throttle("", 0) {
+				return
+			}
 		}
 		if !c.toHub(b) {
 			c.close(webproto.CloseHubGone)
@@ -498,8 +515,11 @@ func (c *wsConn) fromHub() {
 			c.close(closeInternal)
 			return
 		}
-		if head.T == webproto.KindErr && head.ID == 0 {
+		switch {
+		case head.T == webproto.KindErr && head.ID == 0:
 			c.hubErr = true // the hub closes this connection next
+		case head.T == webproto.KindRes || head.T == webproto.KindErr:
+			c.gate.answered(head.ID)
 		}
 		wctx, cancel := context.WithTimeout(c.ctx, c.s.cfg.WriteWait)
 		err = c.ws.Write(wctx, websocket.MessageText, line)
