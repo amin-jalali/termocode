@@ -718,6 +718,8 @@ kbd {
 .quick-label { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
 .quick-detail { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0.7; font-size: 0.75rem; }
 .quick-keys { margin-inline-start: auto; flex: none; }
+.quick-tag { flex: none; margin-inline-start: auto; opacity: 0.7; font-size: 0.75rem; }
+.quick-keys + .quick-tag { margin-inline-start: 6px; }
 .quick mark { background: none; color: var(--wb-highlight, #2aaaff); font-weight: 700; }
 .quick-row.is-on mark { color: inherit; }
 .quick-empty { padding: 2px 6px; opacity: 0.7; }

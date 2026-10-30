@@ -35,7 +35,8 @@ import { ExplorerSections, isTimeline, tabName, TimelineDiff } from "../views/Ex
 import { FileView } from "../views/FileView";
 import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
-import { closeActive, cycleTab, tabsNow } from "../lib/commands";
+import { asking, closeActive, cycleTab, tabsNow } from "../lib/commands";
+import { AskLaptop } from "./AskLaptop";
 import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, activityOf, sideActivity, type Activity } from "./ActivityBar";
 import type { StringKey } from "../strings";
@@ -221,6 +222,12 @@ function sideLabel(id: Activity): StringKey {
   return [...ACTIVITIES, ...ACTIVITIES_BOTTOM].find((x) => x.id === id)?.label ?? "act.explorer";
 }
 
+/** LaptopCommand asks before a risky laptop command runs: here first
+ * (Cancel first), then a card on the laptop. */
+function LaptopCommand({ id, name }: { id: string; name: string }) {
+  return <AskLaptop label={name} text={t("cmd.ask_text", { name })} send={() => link.request("palette.ask", { id })} onDone={() => (asking.value = null)} />;
+}
+
 /** lastSide is the side bar's view while the route shows another area. */
 const lastSide = signal<Activity>("files");
 
@@ -259,6 +266,7 @@ export function Workbench() {
           )}
           <EditorTabs tabs={tabs} bufs={bufs} />
           {quick.value && <QuickInput key={quick.value.mode} />}
+          {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
           <main class="main" id="main" tabIndex={-1}>
             <EditorBody more={r.tab === "more" && !routeSide} file={file} />
           </main>

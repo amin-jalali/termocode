@@ -1,20 +1,32 @@
 // The workbench's commands (Ctrl/Cmd+Shift+P): what the page can do, by
 // name, with its keys. Each runs here or asks the laptop through the
-// same ops as the buttons do; nothing new reaches the laptop.
+// same ops as the buttons do. Beside them, the laptop palette's commands
+// the laptop offers to the web (palette.list: its own allow-list); one
+// runs there by id, and a risky one only after a laptop card. The
+// commands used last come first (kept per browser).
+import { signal } from "@preact/signals";
+import type { PaletteItem, PaletteList } from "../../../../webproto/proto";
+import { link } from "../session";
 import type { StringKey } from "../strings";
+import { t } from "../strings";
+import { toast } from "./toasts";
 import { activeDesk } from "./deskeditor";
 import { saveLive } from "../views/LiveEditor";
 import { newChat } from "../views/Chat";
 import { newTerm } from "../views/Term";
 import { showOnLaptop } from "../views/FileView";
 import { modKey } from "./platform";
-import { setPref } from "./prefs";
+import { loadRecentCmds, saveRecentCmds, setPref } from "./prefs";
 import { go, route } from "./router";
 import { activeFile, closeTab, panes, quick, setPanes, wordWrap } from "./workbench";
 
 export interface Command {
   id: string;
-  label: StringKey;
+  /** label names a page command; text names a laptop command (its own title). */
+  label?: StringKey;
+  text?: string;
+  /** laptop: it runs on the laptop (ask: after a laptop card). */
+  laptop?: { ask: boolean };
   /** keys is the shortcut shown beside it ("Ctrl+B"). */
   keys?: string;
   /** when: shown only when it can run now. */
@@ -56,6 +68,72 @@ export function commands(): Command[] {
     { id: "themeLight", label: "cmd.theme_light", run: () => setPref("theme", "light") },
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
   ];
+}
+
+/** cmdTitle is a command's name as the list shows it. */
+export function cmdTitle(c: Command): string {
+  return c.text ?? (c.label ? t(c.label) : c.id);
+}
+
+/** laptopCmds are the laptop's commands for this page (null: not asked yet). */
+export const laptopCmds = signal<PaletteItem[] | null>(null);
+let laptopAt = 0;
+const LAPTOP_TTL_MS = 30_000;
+
+/** asking is the laptop command waiting for the in-page question (AskLaptop). */
+export const asking = signal<PaletteItem | null>(null);
+
+/** loadLaptopCmds asks the laptop for its commands (a controller only:
+ * a viewer could not run them), at most once per LAPTOP_TTL_MS. */
+export function loadLaptopCmds(): void {
+  if (link.meta.peek()?.role !== "controller") {
+    laptopCmds.value = [];
+    return;
+  }
+  if (laptopCmds.peek() && Date.now() - laptopAt < LAPTOP_TTL_MS) return;
+  laptopAt = Date.now();
+  link.request("palette.list").then(
+    (data) => (laptopCmds.value = (data as PaletteList).items ?? []),
+    () => {
+      laptopAt = 0;
+      if (!laptopCmds.peek()) laptopCmds.value = [];
+    },
+  );
+}
+
+/** laptopCommand is one laptop command as a palette entry. */
+function laptopCommand(it: PaletteItem): Command {
+  return {
+    id: "laptop:" + it.id,
+    text: it.title,
+    keys: it.keys,
+    laptop: { ask: it.ask === true },
+    run: () => {
+      if (it.ask) {
+        asking.value = it;
+        return;
+      }
+      link.request("palette.run", { id: it.id }).then(
+        () => toast("ok", t("cmd.ran_laptop", { name: it.title })),
+        (e: unknown) => toast("warn", e instanceof Error ? e.message : t("cmd.failed")),
+      );
+    },
+  };
+}
+
+/** allCommands is the page's commands, then the laptop's. */
+export function allCommands(): Command[] {
+  return [...commands(), ...(laptopCmds.value ?? []).map(laptopCommand)];
+}
+
+/** recentCmds are the ids of the commands run last, newest first (per browser). */
+export const recentCmds = signal<string[]>(loadRecentCmds());
+
+/** noteRun puts id first in the recently used commands. */
+export function noteRun(id: string): void {
+  const next = [id, ...recentCmds.peek().filter((x) => x !== id)].slice(0, 20);
+  recentCmds.value = next;
+  saveRecentCmds(next);
 }
 
 /** closeActive closes the active editor tab. */

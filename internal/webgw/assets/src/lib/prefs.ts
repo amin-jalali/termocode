@@ -136,3 +136,27 @@ export function saveLayout(v: Record<string, number | boolean>): void {
     // Storage is full or blocked: the sizes last for this page.
   }
 }
+
+// The commands this browser ran last (the command palette's "recently
+// used"): command ids only, newest first, validated on read.
+const CMDS_KEY = "termocode.cmds.v1";
+const CMDS_MAX = 20;
+
+/** loadRecentCmds reads the stored command ids ([] when none or unreadable). */
+export function loadRecentCmds(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(CMDS_KEY) ?? "[]") as unknown;
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && /^[a-zA-Z0-9:-]{1,80}$/.test(x)).slice(0, CMDS_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** saveRecentCmds stores the command ids (at most CMDS_MAX). */
+export function saveRecentCmds(ids: readonly string[]): void {
+  try {
+    localStorage.setItem(CMDS_KEY, JSON.stringify(ids.slice(0, CMDS_MAX)));
+  } catch {
+    // Storage is blocked: the order holds for this page.
+  }
+}
