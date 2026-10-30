@@ -127,7 +127,50 @@ func TestAuditAppendsJSONL(t *testing.T) {
 	}
 }
 
-// TestAuditNilIsQuiet: code with no audit log configured just runs.
+// TestAuditRotates: past the size cap the log moves to .1 (and .1 to .2);
+// two old files are kept, all 0600, none over the cap (T37).
+func TestAuditRotates(t *testing.T) {
+	if AuditMaxBytes != 5<<20 || AuditKeep != 2 {
+		t.Fatalf("AuditMaxBytes %d AuditKeep %d, want 5 MiB and 2", AuditMaxBytes, AuditKeep)
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.jsonl")
+	a := openAudit(t, path)
+	a.max = 400
+	for i := 0; i < 40; i++ {
+		if err := a.Log(Event{Kind: EvOp, Op: "tree.list", Code: i}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	last := -1
+	for _, p := range []string{path + ".2", path + ".1", path} {
+		fi, err := os.Stat(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fi.Mode().Perm() != 0o600 || fi.Size() > 400 || fi.Size() == 0 {
+			t.Fatalf("%s: mode %v size %d", filepath.Base(p), fi.Mode().Perm(), fi.Size())
+		}
+		for _, e := range readAudit(t, p) {
+			if e.Code <= last {
+				t.Fatalf("%s: event %d after %d", filepath.Base(p), e.Code, last)
+			}
+			last = e.Code
+		}
+	}
+	if last != 39 {
+		t.Fatalf("newest event %d, want 39", last)
+	}
+	if _, err := os.Stat(path + ".3"); !os.IsNotExist(err) {
+		t.Fatalf("a third old file exists: %v", err)
+	}
+	entries, _ := os.ReadDir(dir)
+	if len(entries) != 3 {
+		t.Fatalf("%d files in the log folder, want 3", len(entries))
+	}
+}
+
+// TestAuditNilIsQuiet:code with no audit log configured just runs.
 func TestAuditNilIsQuiet(t *testing.T) {
 	var a *Audit
 	if err := a.Log(Event{Kind: EvStart}); err != nil {
