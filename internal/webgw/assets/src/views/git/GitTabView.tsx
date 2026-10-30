@@ -6,6 +6,7 @@ import { gitTabIcon, gitTabOf } from "../../lib/gittab";
 import { Cod, FileIcon } from "../../ui/icons";
 import { GraphView } from "./GraphView";
 import { MergeEditor } from "./MergeEditor";
+import { PRDetailView, PRListView } from "./PRViews";
 import { RebaseView } from "./RebaseView";
 
 export function GitTabView({ tab, slot }: { tab: string; slot?: string }) {
@@ -17,6 +18,10 @@ export function GitTabView({ tab, slot }: { tab: string; slot?: string }) {
       return <RebaseView hash={g.hash} />;
     case "merge":
       return <MergeEditor path={g.path} slot={slot} />;
+    case "prs":
+      return <PRListView />;
+    case "pr":
+      return <PRDetailView n={g.n} />;
   }
   return null;
 }

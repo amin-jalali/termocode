@@ -79,3 +79,10 @@
 .gr-banner-note { color: var(--muted); font-size: 0.8125rem; }
 .gr-banner-acts { display: flex; flex-wrap: wrap; gap: var(--s1); }
 .layout-desktop .gr-banner-acts .btn { min-height: 24px; padding: 0 8px; font-size: 0.8125rem; }
+
+/* Commit (Amend) and Clone Repository (views/git/GitMore.tsx). */
+.gx-form { display: flex; flex-direction: column; gap: var(--s2); }
+.gx-title { margin: 0; font-size: 1rem; }
+.gx-label { display: flex; flex-direction: column; gap: var(--s1); font-size: 0.875rem; }
+.gx-input { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); font: inherit; }
+.gx-clone { margin-top: var(--s2); }
