@@ -78,8 +78,13 @@ func TestFileViewShowsLinesLive(t *testing.T) {
 			c.Send(t, Delta("buf:2", 4, map[string]any{"kind": "gone"}))
 			p.WaitJS(filesView + `.querySelector(".file-note")?.innerText.includes("This file was closed on the laptop.")`)
 
-			// Back to the tree: the page stops following and drops its reference.
-			p.TapJS(filesView + `.querySelector(".head-back")`)
+			// Back to the tree (the phone's back button, the desktop's tab
+			// close): the page stops following and drops its reference.
+			if vp.Mobile {
+				p.TapJS(filesView + `.querySelector(".head-back")`)
+			} else {
+				p.TapJS(`document.querySelector(".ed-tab.is-on .ed-tab-x")`)
+			}
 			var unsub, closed bool
 			for !unsub || !closed {
 				switch m := c.Next(t).(type) {

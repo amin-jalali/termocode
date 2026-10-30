@@ -12,6 +12,7 @@ export function View({
   actions,
   back,
   bodyClass,
+  name,
 }: {
   tab: Tab;
   title: string;
@@ -25,16 +26,20 @@ export function View({
   /** back draws a back button before the title, labelled with where it goes. */
   back?: { label: string; onClick: () => void };
   bodyClass?: string;
+  /** name replaces tab in data-view and the title's id: the desktop shows
+   * the tree beside a file, and data-view names the route's own view. */
+  name?: string;
 }) {
+  const id = name ?? tab;
   return (
-    <section class="view" data-view={tab} aria-labelledby={`vh-${tab}`}>
+    <section class="view" data-view={id} aria-labelledby={`vh-${id}`}>
       <header class="view-head">
         {back && (
           <button type="button" class="head-back" aria-label={back.label} onClick={back.onClick}>
             <span aria-hidden="true">‹</span>
           </button>
         )}
-        <h1 class="view-title" id={`vh-${tab}`}>
+        <h1 class="view-title" id={`vh-${id}`}>
           {title}
         </h1>
         {sub && <div class="view-sub">{sub}</div>}

@@ -112,3 +112,27 @@ export function saveDraft(chat: string, text: string, now: number): void {
     // Storage is full or blocked: the draft still lives in memory.
   }
 }
+
+// Layout conveniences of this browser (the desktop workbench's panel
+// sizes): plain numbers and flags under a fixed key, read through a
+// validator, never a secret.
+const LAYOUT_KEY = "termocode.workbench.v1";
+
+/** loadLayout reads the stored layout (null: none or unreadable). */
+export function loadLayout(): unknown {
+  try {
+    const raw = localStorage.getItem(LAYOUT_KEY);
+    return raw ? (JSON.parse(raw) as unknown) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** saveLayout stores the layout; a blocked storage keeps it for this page. */
+export function saveLayout(v: Record<string, number | boolean>): void {
+  try {
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(v));
+  } catch {
+    // Storage is full or blocked: the sizes last for this page.
+  }
+}

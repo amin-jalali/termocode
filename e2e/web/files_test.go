@@ -121,8 +121,14 @@ func TestFilesTreeOpensFoldersAndFiles(t *testing.T) {
 			if !Eval[bool](p, treeRow("vendor")+`.classList.contains("is-dim")`) {
 				t.Error("an ignored folder is not dim")
 			}
-			if h := Eval[float64](p, treeRow("README.md")+`.getBoundingClientRect().height`); h < 44 {
-				t.Errorf("tree rows are %.0f px tall, want at least 44", h)
+			// Thumb-sized rows on a phone; the laptop editor's dense 22 px
+			// rows on a desktop (a mouse).
+			want := 44.0
+			if !vp.Mobile {
+				want = 22
+			}
+			if h := Eval[float64](p, treeRow("README.md")+`.getBoundingClientRect().height`); h < want-0.5 {
+				t.Errorf("tree rows are %.0f px tall, want at least %.0f", h, want)
 			}
 
 			p.TapJS(treeRow("src"))
