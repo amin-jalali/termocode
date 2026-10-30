@@ -1,0 +1,160 @@
+{
+  "topic": "tests",
+  "snap0": {
+    "counts": {
+      "failed": 0,
+      "passed": 0,
+      "running": 0,
+      "skipped": 0,
+      "total": 2
+    },
+    "framework": "go test",
+    "items": [
+      {
+        "id": "p:pkg",
+        "kind": "package",
+        "label": "pkg",
+        "state": "pending"
+      },
+      {
+        "id": "f:pkg/a_test.go",
+        "kind": "file",
+        "label": "a_test.go",
+        "parent": "p:pkg",
+        "path": "pkg/a_test.go",
+        "state": "pending"
+      },
+      {
+        "debug": true,
+        "id": "c:pkg/a_test.go::TestA",
+        "kind": "case",
+        "label": "TestA",
+        "line": 3,
+        "parent": "f:pkg/a_test.go",
+        "path": "pkg/a_test.go",
+        "state": "pending"
+      },
+      {
+        "debug": true,
+        "id": "c:pkg/a_test.go::TestB",
+        "kind": "case",
+        "label": "TestB",
+        "line": 5,
+        "parent": "f:pkg/a_test.go",
+        "path": "pkg/a_test.go",
+        "state": "pending"
+      }
+    ],
+    "state": "idle"
+  },
+  "deltas": [
+    {
+      "command": "go test -json ./...",
+      "counts": {
+        "failed": 1,
+        "passed": 1,
+        "running": 0,
+        "skipped": 0,
+        "total": 2
+      },
+      "elapsed_ms": 40,
+      "framework": "go test",
+      "items": [
+        {
+          "id": "p:pkg",
+          "kind": "package",
+          "label": "pkg",
+          "state": "failed"
+        },
+        {
+          "id": "f:pkg/a_test.go",
+          "kind": "file",
+          "label": "a_test.go",
+          "parent": "p:pkg",
+          "path": "pkg/a_test.go",
+          "state": "failed"
+        },
+        {
+          "debug": true,
+          "id": "c:pkg/a_test.go::TestA",
+          "kind": "case",
+          "label": "TestA",
+          "line": 3,
+          "ms": 12,
+          "parent": "f:pkg/a_test.go",
+          "path": "pkg/a_test.go",
+          "state": "passed"
+        },
+        {
+          "debug": true,
+          "fail_line": 5,
+          "fail_path": "pkg/a_test.go",
+          "id": "c:pkg/a_test.go::TestB",
+          "kind": "case",
+          "label": "TestB",
+          "line": 5,
+          "message": "a_test.go:5: want 2, got 3",
+          "parent": "f:pkg/a_test.go",
+          "path": "pkg/a_test.go",
+          "state": "failed"
+        }
+      ],
+      "started": 1700000000000,
+      "state": "idle"
+    }
+  ],
+  "snapn": {
+    "framework": "go test",
+    "state": "idle",
+    "counts": {
+      "total": 2,
+      "passed": 1,
+      "failed": 1,
+      "skipped": 0,
+      "running": 0
+    },
+    "command": "go test -json ./...",
+    "started": 1700000000000,
+    "elapsed_ms": 40,
+    "items": [
+      {
+        "id": "p:pkg",
+        "kind": "package",
+        "label": "pkg",
+        "state": "failed"
+      },
+      {
+        "id": "f:pkg/a_test.go",
+        "kind": "file",
+        "parent": "p:pkg",
+        "label": "a_test.go",
+        "path": "pkg/a_test.go",
+        "state": "failed"
+      },
+      {
+        "id": "c:pkg/a_test.go::TestA",
+        "kind": "case",
+        "parent": "f:pkg/a_test.go",
+        "label": "TestA",
+        "path": "pkg/a_test.go",
+        "line": 3,
+        "state": "passed",
+        "ms": 12,
+        "debug": true
+      },
+      {
+        "id": "c:pkg/a_test.go::TestB",
+        "kind": "case",
+        "parent": "f:pkg/a_test.go",
+        "label": "TestB",
+        "path": "pkg/a_test.go",
+        "line": 5,
+        "state": "failed",
+        "message": "a_test.go:5: want 2, got 3",
+        "fail_path": "pkg/a_test.go",
+        "fail_line": 5,
+        "debug": true
+      }
+    ]
+  }
+}
