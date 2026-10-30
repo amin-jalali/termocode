@@ -6,13 +6,13 @@
 # are never measured. Every shipped package must be listed once; a test
 # fails when a new package is in neither list.
 
-AI and agents: internal/ai internal/addai internal/agentdag internal/agentrun internal/agents internal/aimemory internal/clilogin internal/clistep
+AI and agents: internal/ai internal/netmsg internal/addai internal/agentdag internal/agentrun internal/agents internal/aimemory internal/clilogin internal/clistep
 Git: internal/git internal/ghci internal/diffview internal/mergeview internal/rebaseview internal/textdiff
 Containers and remote: internal/containers internal/containerhost internal/kube internal/services internal/workspace/...
 MCP and secrets: internal/mcp/... internal/secrets internal/connectcard
 Session/transfer/update: internal/session internal/transfer internal/update internal/fetch
 Database and HTTP: internal/dbclient internal/httpclient
-UI parts: internal/activity internal/anim internal/clipring internal/clock internal/confirm internal/darkbg internal/debounce internal/findbar internal/grid internal/help internal/importview internal/keyhint internal/keymap internal/layout internal/menu internal/nerdterm internal/picker internal/preview internal/profileform internal/prompt internal/replacebar internal/rtl internal/statusbar internal/tabbar internal/termcaps internal/termfont internal/termimg internal/theme internal/toast
+UI parts: internal/activity internal/anim internal/cellwidth internal/clipring internal/clock internal/confirm internal/darkbg internal/debounce internal/findbar internal/grid internal/help internal/importview internal/keyhint internal/keymap internal/layout internal/menu internal/nerdterm internal/picker internal/preview internal/profileform internal/prompt internal/replacebar internal/rtl internal/statusbar internal/tabbar internal/termcaps internal/termfont internal/termimg internal/theme internal/toast
 Editor and files: internal/editor internal/nvim internal/explorer internal/search internal/mdview internal/recents internal/tasks internal/tests internal/lspinstall internal/ext internal/extproc internal/migrate internal/cfgfile internal/jsonc internal/shellint
 App shell: internal/app internal/crash cmd/termocode internal/setup internal/spawn
 
