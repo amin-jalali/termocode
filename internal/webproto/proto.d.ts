@@ -171,6 +171,10 @@ export interface SearchOpenArgs {
   line: number;
 }
 
+export interface BufArgs {
+  buf: number;
+}
+
 export interface HlArgs {
   buf: number;
   first: number;
@@ -198,10 +202,6 @@ export interface SetTextArgs {
 export interface Pos {
   row: number;
   col: number;
-}
-
-export interface BufArgs {
-  buf: number;
 }
 
 export interface TermSendArgs {
@@ -725,6 +725,22 @@ export interface TaskTail {
   code?: number;
 }
 
+export interface TermColorsRes {
+  tick: number;
+  shown: boolean;
+  styles: TermStyle[];
+  spans: number[][];
+}
+
+export interface TermStyle {
+  fg?: string;
+  bg?: string;
+  b?: boolean;
+  i?: boolean;
+  u?: boolean;
+  s?: boolean;
+}
+
 export interface HlRes {
   tick: number;
   first: number;
@@ -783,6 +799,7 @@ export interface OpArgs {
   "tasks.tail": LabelArgs;
   "search.stop": EmptyArgs;
   "search.open": SearchOpenArgs;
+  "term.colors": BufArgs;
   "buf.hl": HlArgs;
   "chat.send": ChatSendArgs;
   "chat.stop": EmptyArgs;
@@ -851,6 +868,7 @@ export interface OpResult {
   "git.show": GitDiff;
   "search.run": SearchSummary;
   "tasks.tail": TaskTail;
+  "term.colors": TermColorsRes;
   "buf.hl": HlRes;
   "chat.send": ChatRef;
   "chat.new": ChatRef;
