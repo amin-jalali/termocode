@@ -78,6 +78,11 @@ func TestPolicyTableEnforcedInGateway(t *testing.T) {
 		if p.LaptopCard && (p.Role == webproto.RoleViewer || p.Audit != webproto.AuditYes || p.Rate.Per/time.Duration(p.Rate.N) < time.Second) {
 			t.Errorf("%s: a laptop-card row must be a controller op, audited, at most 1/s: %+v", p.Op, p)
 		}
+		if p.Gateway { // answered by the gateway itself, never forwarded (WEB-34)
+			wantErr(t, viewer.c, float64(viewer.req(t, p.Op, args)), webproto.CodeNotFound) // no Control in this rig
+			noHubLine(t, viewer.p)
+			continue
+		}
 		// Role.
 		switch p.Role {
 		case webproto.RoleViewer:
