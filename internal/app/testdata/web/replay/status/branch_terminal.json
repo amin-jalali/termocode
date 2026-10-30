@@ -1,0 +1,164 @@
+{
+  "topic": "status",
+  "snap0": {
+    "ahead": 0,
+    "ai": {
+      "busy": false,
+      "cards_waiting": 0,
+      "label": "AI",
+      "state": "setup"
+    },
+    "behind": 0,
+    "branch": "",
+    "dirty_files": 0,
+    "root": "/work/demo",
+    "runs": {
+      "live": 0,
+      "needs_you": 0
+    },
+    "terminals": {
+      "busy": 0,
+      "count": 0
+    },
+    "theme": {
+      "colors": {
+        "AIAccent": "#bb86fc",
+        "AccentAmber": "#d7af00",
+        "AccentBlue": "#00afff",
+        "AccentGreen": "#5fd787",
+        "AccentRedCoral": "#ff5f5f",
+        "BgEditor": "#1c1c1c",
+        "BgFloat": "#303030",
+        "BgHover": "#262626",
+        "BgPanel": "#121212",
+        "BgSelection": "#005f87",
+        "BgSidebar": "#303030",
+        "BgStatusBar": "#0087d7",
+        "BorderDefault": "#444444",
+        "BorderFocus": "#0087d7",
+        "GitAdded": "#5fd787",
+        "GitConflict": "#5f5fd7",
+        "GitDeleted": "#d75f5f",
+        "GitModified": "#d7af87",
+        "OnAccent": "#ffffff",
+        "TextDim": "#6c6c6c",
+        "TextMuted": "#878787",
+        "TextPrimary": "#d0d0d0",
+        "TextSecondary": "#bcbcbc"
+      },
+      "id": "dark"
+    },
+    "web": {
+      "clients": 1
+    },
+    "workspace_label": "demo"
+  },
+  "deltas": [
+    {
+      "ahead": 1,
+      "ai": {
+        "busy": false,
+        "cards_waiting": 0,
+        "label": "AI",
+        "state": "setup"
+      },
+      "behind": 0,
+      "branch": "main",
+      "dirty_files": 1,
+      "root": "/work/demo",
+      "runs": {
+        "live": 0,
+        "needs_you": 0
+      },
+      "terminals": {
+        "busy": 1,
+        "count": 1
+      },
+      "theme": {
+        "colors": {
+          "AIAccent": "#bb86fc",
+          "AccentAmber": "#d7af00",
+          "AccentBlue": "#00afff",
+          "AccentGreen": "#5fd787",
+          "AccentRedCoral": "#ff5f5f",
+          "BgEditor": "#1c1c1c",
+          "BgFloat": "#303030",
+          "BgHover": "#262626",
+          "BgPanel": "#121212",
+          "BgSelection": "#005f87",
+          "BgSidebar": "#303030",
+          "BgStatusBar": "#0087d7",
+          "BorderDefault": "#444444",
+          "BorderFocus": "#0087d7",
+          "GitAdded": "#5fd787",
+          "GitConflict": "#5f5fd7",
+          "GitDeleted": "#d75f5f",
+          "GitModified": "#d7af87",
+          "OnAccent": "#ffffff",
+          "TextDim": "#6c6c6c",
+          "TextMuted": "#878787",
+          "TextPrimary": "#d0d0d0",
+          "TextSecondary": "#bcbcbc"
+        },
+        "id": "dark"
+      },
+      "web": {
+        "clients": 1
+      },
+      "workspace_label": "demo"
+    }
+  ],
+  "snapn": {
+    "root": "/work/demo",
+    "workspace_label": "demo",
+    "branch": "main",
+    "ahead": 1,
+    "behind": 0,
+    "dirty_files": 1,
+    "ai": {
+      "state": "setup",
+      "label": "AI",
+      "busy": false,
+      "cards_waiting": 0
+    },
+    "terminals": {
+      "count": 1,
+      "busy": 1
+    },
+    "runs": {
+      "live": 0,
+      "needs_you": 0
+    },
+    "web": {
+      "clients": 1
+    },
+    "theme": {
+      "id": "dark",
+      "colors": {
+        "AIAccent": "#bb86fc",
+        "AccentAmber": "#d7af00",
+        "AccentBlue": "#00afff",
+        "AccentGreen": "#5fd787",
+        "AccentRedCoral": "#ff5f5f",
+        "BgEditor": "#1c1c1c",
+        "BgFloat": "#303030",
+        "BgHover": "#262626",
+        "BgPanel": "#121212",
+        "BgSelection": "#005f87",
+        "BgSidebar": "#303030",
+        "BgStatusBar": "#0087d7",
+        "BorderDefault": "#444444",
+        "BorderFocus": "#0087d7",
+        "GitAdded": "#5fd787",
+        "GitConflict": "#5f5fd7",
+        "GitDeleted": "#d75f5f",
+        "GitModified": "#d7af87",
+        "OnAccent": "#ffffff",
+        "TextDim": "#6c6c6c",
+        "TextMuted": "#878787",
+        "TextPrimary": "#d0d0d0",
+        "TextSecondary": "#bcbcbc"
+      }
+    }
+  }
+}
