@@ -324,6 +324,7 @@ var actionNames = map[Action]string{
 	ActionGitCIFix:        "GitCIFix",
 	ActionContextHelp:     "ContextHelp",
 	ActionLayoutOpen:      "LayoutOpen",
+	ActionWebStop:         "WebStop",
 	// Docs: these had default keys but no name, so keymap.json could not
 	// rebind them.
 	ActionShowBufferInfo:        "ShowBufferInfo",
