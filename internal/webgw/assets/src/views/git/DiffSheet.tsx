@@ -1,8 +1,8 @@
 // The diff sheet (web UX 3.5): one side of a file's change as rows, with
 // hunk headers that stick while their rows scroll. A long diff comes in
 // pages ("Show more rows"); past 512 KiB it says so. At the bottom:
-// Stage or Unstage (no confirm: it is undone as easily). A hunk can be
-// staged alone.
+// Stage or Unstage (no confirm: it is undone as easily), and Discard…
+// in danger text, which asks the laptop. A hunk can be staged alone.
 import { h, Fragment } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { link, live } from "../../session";
@@ -25,6 +25,7 @@ export function DiffSheet({
   onSide,
   onClose,
   onStage,
+  onDiscard,
 }: {
   /** file is the git entry now, or null when the file has no change any more. */
   file: GitFile | null;
@@ -34,6 +35,7 @@ export function DiffSheet({
   onSide: (staged: boolean) => void;
   onClose: () => void;
   onStage: (stage: boolean) => void;
+  onDiscard: () => void;
 }) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [more, setMore] = useState(false);
@@ -138,6 +140,11 @@ export function DiffSheet({
             <Button kind="primary" needsLink onClick={() => onStage(!staged)}>
               {staged ? t("git.unstage") : t("git.stage")}
             </Button>
+            {(file.unstaged || file.untracked) && !staged && (
+              <Button kind="danger" needsLink onClick={onDiscard}>
+                {t("git.discard")}
+              </Button>
+            )}
           </footer>
         )}
       </div>
