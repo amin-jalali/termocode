@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/search"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -112,13 +113,17 @@ func (m *Model) webSearchRun(call *webCall) tea.Cmd {
 	h := m.web
 	h.search.start(call.conn, run)
 	call.later()
-	go func() {
+	crash.GoWith("web search", func() {
 		defer h.search.done(call.conn, run)
 		defer cancel(nil)
 		defer stopTimer()
 		s := webSearcher{call: call, root: root, max: max, files: map[string]bool{}, start: time.Now()}
 		s.run(ctx, cancel, a.Query, opts)
-	}()
+	}, func() {
+		cancel(nil)
+		h.search.done(call.conn, run)
+		call.fail(webproto.CodeInternal, "Something went wrong.")
+	})
 	return nil
 }
 
