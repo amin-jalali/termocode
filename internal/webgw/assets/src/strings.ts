@@ -159,6 +159,8 @@ export const S = {
   // Terminal
   "term.busy": "busy",
   "term.ended": "This terminal ended (exit {code}).",
+  "term.ended_now": "This terminal ended.",
+  "term.gone": "This terminal was closed on the laptop.",
   "term.new": "Open a new one",
   "term.none": "No terminal is open on the laptop.",
   "term.open_one": "Open one",

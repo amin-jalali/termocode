@@ -48,3 +48,18 @@
 .edit-diff { max-height: 12rem; overflow: auto; border: 1px solid var(--border); border-radius: var(--r-chip); }
 .edit-actions { display: flex; gap: var(--s2); justify-content: flex-end; }
 .edit-actions .btn { min-width: 6rem; }
+
+/* Terminal */
+.term-body { padding-top: 0; }
+.term-chips { position: sticky; top: 0; z-index: 2; display: flex; gap: var(--s2); margin: 0 calc(-1 * var(--gutter)) var(--s2); padding: var(--s2) var(--gutter); overflow-x: auto; background: var(--bg); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+.term-chip { flex: none; }
+.term-chip .chip { gap: var(--s2); max-width: 14rem; }
+.term-chip-title { min-width: 0; }
+.term-chip-n { color: var(--dim); }
+.term-rows { margin-inline: calc(-1 * var(--gutter)); padding-block: var(--s2); background: var(--bg-panel); min-height: 50vh; }
+.term-rows .trow { grid-template-columns: minmax(0, 1fr); }
+.term-rows .wrap-mark { display: none; }
+.term-older { display: block; width: 100%; min-height: var(--tap); color: var(--blue); font-size: var(--fs-hint); }
+.term-ended { margin-top: var(--s3); }
+.term-follow { position: sticky; bottom: var(--s3); display: flex; justify-content: flex-end; pointer-events: none; }
+.term-follow .chip { pointer-events: auto; background: var(--bg-panel); }
