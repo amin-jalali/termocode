@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -86,35 +87,45 @@ func loadFilesIn(roots []string) []picker.Item {
 		".vscode":      true,
 		".cache":       true,
 	}
-	seen := make(map[string]bool, 256)
+	// WalkDir (no lstat per file) and paths cut from the walk's own
+	// absolute path: listing 50 000 files took twice as long with Walk,
+	// Abs and Rel on each one. A file can only show up twice when roots
+	// overlap, so the seen set is kept only with more than one root.
+	var seen map[string]bool
+	if len(roots) > 1 {
+		seen = make(map[string]bool, 256)
+	}
 	var items []picker.Item
 	for i, root := range roots {
 		abs, err := filepath.Abs(root)
 		if err != nil {
 			continue
 		}
-		_ = filepath.Walk(abs, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info == nil {
+		prefix := abs
+		if !strings.HasSuffix(prefix, string(filepath.Separator)) {
+			prefix += string(filepath.Separator)
+		}
+		base := filepath.Base(abs)
+		_ = filepath.WalkDir(abs, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d == nil {
 				return nil
 			}
-			if info.IsDir() {
-				name := info.Name()
+			if d.IsDir() {
+				name := d.Name()
 				if path != abs && (skipDirs[name] || (strings.HasPrefix(name, ".") && name != ".")) {
 					return filepath.SkipDir
 				}
 				return nil
 			}
-			absPath, errAbs := filepath.Abs(path)
-			if errAbs != nil {
-				absPath = path
-			}
-			if seen[absPath] {
+			rel, ok := strings.CutPrefix(path, prefix)
+			if !ok {
 				return nil
 			}
-			seen[absPath] = true
-			rel, errRel := filepath.Rel(abs, path)
-			if errRel != nil {
-				return nil
+			if seen != nil {
+				if seen[path] {
+					return nil
+				}
+				seen[path] = true
 			}
 			// Primary root (i==0): keep ID/Title cwd-relative so existing
 			// behaviour (e.g. :edit <relpath>) is preserved. Extra roots:
@@ -123,8 +134,7 @@ func loadFilesIn(roots []string) []picker.Item {
 			if i == 0 {
 				items = append(items, picker.Item{ID: rel, Title: rel, File: true})
 			} else {
-				title := filepath.Join(filepath.Base(abs), rel)
-				items = append(items, picker.Item{ID: absPath, Title: title, File: true})
+				items = append(items, picker.Item{ID: path, Title: filepath.Join(base, rel), File: true})
 			}
 			return nil
 		})
