@@ -2,17 +2,16 @@
 // facts as the phone's strip (pill, branch, changes, AI, web, link), then
 // the open file's facts as the laptop's editor has them (line, indent,
 // encoding, line ends, language) and the layout buttons.
-import { Fragment, h, type ComponentChildren } from "preact";
+import { Fragment, h } from "preact";
 import type { BufSnap } from "../../../../webproto/proto";
 import { selection } from "../lib/edit";
 import { file } from "../lib/file";
-import { modKey } from "../lib/platform";
 import { route } from "../lib/router";
-import { activeFile, cursorAt, panes, setPanes } from "../lib/workbench";
+import { activeFile, cursorAt } from "../lib/workbench";
 import { link, status, store } from "../session";
 import { t } from "../strings";
-import { IconBranch, IconChatSide, IconPanel, IconSidebar } from "./icons";
-import { Comet, rttLevel, ThemeToggle } from "./Strip";
+import { Cod } from "./icons";
+import { Comet, rttLevel } from "./Strip";
 
 // Filetypes as people name them; others show as nvim names them.
 const LANGS: ReadonlyMap<string, string> = new Map([
@@ -55,14 +54,6 @@ function FileFacts() {
   );
 }
 
-function Toggle({ on, label, keys, onClick, children }: { on: boolean; label: string; keys?: string; onClick: () => void; children: ComponentChildren }) {
-  return (
-    <button type="button" class={`strip-btn${on ? " is-on" : ""}`} aria-pressed={on ? "true" : "false"} aria-label={label} title={keys ? `${label} (${keys})` : label} onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
 export function StatusBar() {
   const s = status.value;
   const online = link.state.value === "online";
@@ -70,20 +61,21 @@ export function StatusBar() {
   const level = online ? rttLevel(rtt) : "none";
   const ai = s.cardsWaiting > 0 ? "waiting" : s.aiBusy ? "working" : "idle";
   const tint = s.aiBusy ? "ai" : s.dirty > 0 ? "dirty" : "calm";
-  const p = panes.value;
-  const mod = modKey();
   return (
     <footer class="strip statusbar" dir="ltr">
-      <span class={`brand tint-${tint}`}>termocode</span>
+      <span class={`brand sb-remote tint-${tint}`} title={s.workspace}>
+        <Cod name="remote" />
+        <span>termocode</span>
+      </span>
       {s.branch && (
         <span class="strip-item branch" title={s.branch}>
-          <IconBranch />
+          <Cod name="git-branch" />
           <span class="trunc">{s.branch}</span>
         </span>
       )}
       {s.dirty > 0 && <span class="strip-item dirty" title={t("sb.changed", { n: s.dirty })}>● {s.dirty}</span>}
       <span class={`strip-item ai ai-${ai}`}>
-        <span class="star" aria-hidden="true">✦</span>
+        <Cod name="sparkle" />
         <span>{t(ai === "waiting" ? "strip.ai_waiting" : ai === "working" ? "strip.ai_working" : "strip.ai_idle")}</span>
         {ai === "working" && <Comet />}
       </span>
@@ -101,18 +93,6 @@ export function StatusBar() {
         aria-label={rtt !== null && online ? t("rtt.label", { ms: rtt }) : t("offline.input")}
         title={rtt !== null && online ? t("rtt.label", { ms: rtt }) : t("offline.input")}
       />
-      <span class="sb-toggles">
-        <Toggle on={p.side} label={t("wb.toggle_side")} keys={`${mod}+B`} onClick={() => setPanes({ side: !p.side })}>
-          <IconSidebar />
-        </Toggle>
-        <Toggle on={p.panel} label={t("wb.toggle_panel")} keys={`${mod}+J`} onClick={() => setPanes({ panel: !p.panel })}>
-          <IconPanel />
-        </Toggle>
-        <Toggle on={p.chat} label={t("wb.toggle_chat")} onClick={() => setPanes({ chat: !p.chat })}>
-          <IconChatSide />
-        </Toggle>
-        <ThemeToggle />
-      </span>
     </footer>
   );
 }

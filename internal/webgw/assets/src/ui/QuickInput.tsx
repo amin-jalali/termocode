@@ -9,7 +9,7 @@ import { rank, type Hit } from "../lib/fuzzy";
 import { quick, showFile } from "../lib/workbench";
 import { link } from "../session";
 import { t } from "../strings";
-import { IconFileSmall } from "./icons";
+import { FileIcon } from "./icons";
 
 const MAX_ROWS = 50;
 
@@ -165,7 +165,7 @@ export function QuickInput() {
               }}
               onMouseMove={() => i !== cur && setSel(i)}
             >
-              {r.file && <IconFileSmall />}
+              {r.file && <FileIcon path={r.key} />}
               <span class="quick-label" dir="auto">
                 <Marked text={r.label} at={r.at} />
               </span>

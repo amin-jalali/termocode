@@ -32,7 +32,7 @@ import { t } from "../strings";
 import { ChatView, GitView, MoreView, TermView } from "../views/views";
 import { FileView } from "../views/FileView";
 import { TreeView } from "../views/Files";
-import { IconChevronDown, IconClose, IconFileSmall, IconSidebar } from "./icons";
+import { Cod, FileIcon } from "./icons";
 import { closeActive, cycleTab, tabsNow } from "../lib/commands";
 import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, activityOf, sideActivity, type Activity } from "./ActivityBar";
@@ -104,12 +104,12 @@ function EditorTabs({ tabs, bufs }: { tabs: readonly string[]; bufs: readonly Bu
         return (
           <div key={path} class={`ed-tab${on ? " is-on" : ""}${b?.dirty ? " is-dirty" : ""}`} title={path} onAuxClick={(e) => e.button === 1 && closeTab(path, tabs)}>
             <button type="button" class="ed-tab-open" role="tab" aria-selected={on ? "true" : "false"} data-path={path} onClick={() => showFile(path)}>
-              <IconFileSmall />
+              <FileIcon path={path} />
               <span class="ed-tab-name" dir="auto">{name}</span>
             </button>
-            <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={t("wb.close_tab", { name })} onClick={() => closeTab(path, tabs)}>
-              <span class="ed-tab-dot" aria-hidden="true">●</span>
-              <IconClose />
+            <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={`${t("wb.close_tab", { name })} (${modKey()}+W)`} onClick={() => closeTab(path, tabs)}>
+              <Cod name="circle-filled" />
+              <Cod name="close" />
             </button>
           </div>
         );
@@ -150,10 +150,14 @@ function EditorBody({ more, file }: { more: boolean; file: string | null }) {
 function PanelHead({ children }: { children: ComponentChildren }) {
   return (
     <div class="wb-panel-head">
-      <span class="wb-panel-title">{children}</span>
-      <button type="button" class="tb tb-icon" aria-label={t("wb.panel_hide")} title={`${t("wb.panel_hide")} (${modKey()}+J)`} onClick={() => setPanes({ panel: false })}>
-        <IconChevronDown />
-      </button>
+      <span class="wb-panel-title" role="tab" aria-selected="true">
+        {children}
+      </span>
+      <span class="wb-panel-actions">
+        <button type="button" class="tb tb-icon" aria-label={t("wb.panel_hide")} title={`${t("wb.panel_hide")} (${modKey()}+J)`} onClick={() => setPanes({ panel: false })}>
+          <Cod name="close" />
+        </button>
+      </span>
     </div>
   );
 }
@@ -246,7 +250,7 @@ export function Workbench() {
         <div class="wb-editor">
           {!p.side && (
             <button type="button" class="tb tb-icon wb-side-show" aria-label={t("wb.side_show")} title={`${t("wb.side_show")} (${modKey()}+B)`} onClick={() => setPanes({ side: true })}>
-              <IconSidebar />
+              <Cod name="layout-sidebar-left" />
             </button>
           )}
           <EditorTabs tabs={tabs} bufs={bufs} />

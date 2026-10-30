@@ -5,6 +5,8 @@
 import { h } from "preact";
 import type { Seg } from "../lib/hl";
 import type { TermSeg } from "../lib/termcolors";
+import { layout } from "../lib/layout";
+import { Cod, FileIcon } from "./icons";
 
 export function TermRow({ text, cont, segs }: { text: string; cont?: boolean; segs?: TermSeg[] | null }) {
   return (
@@ -93,6 +95,8 @@ export function TreeRow({
   path?: string;
   onClick?: () => void;
 }) {
+  // The desktop workbench: the laptop editor's twisties and file icons.
+  const desk = layout.value === "desktop";
   return (
     <button
       type="button"
@@ -101,8 +105,12 @@ export function TreeRow({
       data-path={path}
       onClick={onClick}
     >
-      <span class={`chev${open ? " is-open" : ""}`} aria-hidden="true">{dir ? "›" : ""}</span>
-      <span class={`tree-icon${dir ? " is-dir" : ""}`}>{dir ? <FolderGlyph open={open} /> : <FileGlyph />}</span>
+      <span class={`chev${open ? " is-open" : ""}`} aria-hidden="true">{dir ? (desk ? <Cod name={open ? "chevron-down" : "chevron-right"} /> : "›") : ""}</span>
+      {desk ? (
+        dir ? null : <FileIcon path={name} />
+      ) : (
+        <span class={`tree-icon${dir ? " is-dir" : ""}`}>{dir ? <FolderGlyph open={open} /> : <FileGlyph />}</span>
+      )}
       <span class="tree-name" dir="auto">{name}</span>
       {dirty && <span class="dirty-dot" aria-hidden="true">●</span>}
       {git && <span class={`git-badge ${badgeClass[git]}`}>{git}</span>}

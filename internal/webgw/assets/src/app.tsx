@@ -19,6 +19,7 @@ import { OfflineBar } from "./ui/OfflineBar";
 import { Strip } from "./ui/Strip";
 import { Toasts } from "./ui/Toasts";
 import { ViewerBar } from "./ui/ViewerBar";
+import { TitleBar } from "./ui/TitleBar";
 import { StatusBar, Workbench } from "./ui/Workbench";
 import { ChatView, FilesView, GitView, MoreView, TermView } from "./views/views";
 
@@ -58,6 +59,7 @@ export function App() {
         <a class="skip" href="#main" onClick={skipToMain}>
           {t("a11y.skip")}
         </a>
+        <TitleBar />
         <div class="bars">
           <OfflineBar />
           <ViewerBar />
