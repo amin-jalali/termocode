@@ -15,6 +15,8 @@ type guard struct {
 
 // Guard wraps next with the request checks of the gateway:
 //   - Host must be one of site.Hosts exactly, else 421 (DNS rebinding, T1).
+//   - An Origin header must be this exact origin; POST and upgrades must
+//     send one. Else 403 (cross-site WebSocket and CSRF, T2, T3).
 //
 // Every response, refusals included, carries the security headers.
 func Guard(site Site, next http.Handler) http.Handler {
@@ -27,7 +29,32 @@ func (g *guard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusMisdirectedRequest, "wrong host")
 		return
 	}
+	if !g.originOK(r) {
+		refuse(w, http.StatusForbidden, "wrong origin")
+		return
+	}
 	g.next.ServeHTTP(w, r)
+}
+
+// originOK: an Origin header, when sent, must be exactly this request's own
+// origin (scheme + the allowed Host it came on). A POST or a WebSocket
+// upgrade must send one: those are what another site would forge (T2, T3).
+func (g *guard) originOK(r *http.Request) bool {
+	origins := r.Header.Values("Origin")
+	switch len(origins) {
+	case 0:
+		return r.Method != http.MethodPost && !isUpgrade(r)
+	case 1:
+		return origins[0] == g.site.Scheme+"://"+r.Host
+	default:
+		return false
+	}
+}
+
+// isUpgrade reports a request that asks to switch protocols in any way
+// (an Upgrade header with any value): all of them need an exact Origin.
+func isUpgrade(r *http.Request) bool {
+	return len(r.Header.Values("Upgrade")) > 0
 }
 
 // refuse ends a request with a short plain-text error. The text names the
