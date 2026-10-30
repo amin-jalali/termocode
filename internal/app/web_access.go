@@ -34,8 +34,13 @@ const (
 	pickerKindWebDevices   pickerKindEnum  = 2600
 )
 
-// webPairTTL is how long a pairing link works (webgw.PairTTL).
-const webPairTTL = 120 * time.Second
+// webPairTTL is how long a pairing link works (webgw.PairTTL); a share
+// link (sent by message to another person) gets webShareTTL
+// (webgw.ShareTTL).
+const (
+	webPairTTL  = 120 * time.Second
+	webShareTTL = 10 * time.Minute
+)
 
 // webAccessState is the open pairing link, the waiting pairing question
 // and the device a card is about.
@@ -58,6 +63,7 @@ func webAccessPaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "web-pair", Title: "Web: Pair a Device…"},
 		{ID: "web-devices", Title: "Web: Devices…"},
+		{ID: "web-share", Title: "Web: Share as Viewer…"},
 		{ID: "web-totp", Title: "Web: Set Up Sign-in Code…"},
 	}
 }
@@ -69,6 +75,8 @@ func (m *Model) dispatchWebAccessPalette(id string) (tea.Cmd, bool) {
 		return m.openWebPair(false), true
 	case "web-devices":
 		return m.openWebDevices(), true
+	case "web-share":
+		return m.openWebPair(true), true
 	case "web-totp":
 		return m.openWebTotpSetup(), true
 	}
@@ -96,15 +104,26 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 		return m.webToast(toast.Errr, "No pairing link: no random numbers")
 	}
 	ttl := webPairTTL
+	if guest {
+		ttl = webShareTTL
+	}
 	data, _ := json.Marshal(map[string]any{"sha256": hex.EncodeToString(digest[:]), "ttl_s": int(ttl / time.Second), "guest": guest})
 	for _, c := range m.web.ctlConns() {
 		c.send(&webproto.Event{T: webproto.KindEv, Kind: "pair", Data: data})
 	}
 	acc := m.webAccess()
-	acc.link = st.url + "#p=" + plain
+	acc.link, acc.guest = st.url+"#p="+plain, guest
+	title := "Pair a phone or tablet"
 	body := "Scan this code with the phone's camera. It works once, for 2 minutes.\n" +
 		"The phone then shows a 6-digit code; you check it here."
-	m.confirm = confirm.New("Pair a phone or tablet", body, []confirm.Button{
+	if guest {
+		title = "Share as a viewer"
+		body = "Send this link to the person you share with (Copy link). It works once, for 10 minutes.\n" +
+			"They can only watch: no typing, no answers, no changes.\n" +
+			"They need this computer shared to them on Tailscale. When they open the link,\n" +
+			"they read you a 6-digit code; you check it here and let them in."
+	}
+	m.confirm = confirm.New(title, body, []confirm.Button{
 		{ID: "close", Title: "Close"},
 		{ID: "copy", Title: "Copy link"},
 	}).WithPicture(webQRLines(acc.link))
@@ -162,6 +181,9 @@ func (m *Model) answerWebPairQR(id string) tea.Cmd {
 		m.confirmOpen = true
 		if writeSystemClipboard(link) == clipFailed {
 			return m.webToast(toast.Warn, "Could not copy the link. Scan the code instead.")
+		}
+		if acc.guest {
+			return m.webToast(toast.Info, "Link copied. It works once, for 10 minutes.")
 		}
 		return m.webToast(toast.Info, "Link copied. It works once, for 2 minutes.")
 	}
