@@ -1,0 +1,164 @@
+{
+  "topic": "ai",
+  "snap0": {
+    "configured": true,
+    "inline": true,
+    "model": "claude-test-1",
+    "models": [
+      "claude-test-1",
+      "claude-opus-5-5",
+      "claude-sonnet-5-5",
+      "claude-haiku-4-5"
+    ],
+    "nextEdit": true,
+    "profile": "default",
+    "profiles": [
+      {
+        "hint": "one step (main model: claude-opus-5-5)",
+        "name": "default",
+        "source": "builtin",
+        "trust": "use"
+      },
+      {
+        "hint": "Reviewer (claude-opus-5-5) → Fixer (claude-opus-5-5)",
+        "name": "review",
+        "source": "builtin",
+        "trust": "use"
+      },
+      {
+        "hint": "Answer (claude-opus-5-5)",
+        "name": "fast",
+        "source": "builtin",
+        "trust": "use"
+      },
+      {
+        "hint": "Answer (qwen2.5-coder:7b)",
+        "name": "local-only",
+        "source": "builtin",
+        "trust": "use"
+      },
+      {
+        "hint": "planner decides the steps (up to 12 agents, 6 waves)",
+        "name": "plan",
+        "source": "builtin",
+        "trust": "use"
+      },
+      {
+        "hint": "plan → verify, fix until done (up to 3 rounds)",
+        "name": "until-done",
+        "source": "builtin",
+        "trust": "use"
+      }
+    ],
+    "provider": "Anthropic (API key)",
+    "worktrees": true
+  },
+  "deltas": [
+    {
+      "configured": true,
+      "inline": false,
+      "model": "claude-test-1",
+      "models": [
+        "claude-test-1",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "claude-haiku-4-5"
+      ],
+      "nextEdit": false,
+      "profile": "review",
+      "profiles": [
+        {
+          "hint": "one step (main model: claude-opus-5-5)",
+          "name": "default",
+          "source": "builtin",
+          "trust": "use"
+        },
+        {
+          "hint": "Reviewer (claude-opus-5-5) → Fixer (claude-opus-5-5)",
+          "name": "review",
+          "source": "builtin",
+          "trust": "use"
+        },
+        {
+          "hint": "Answer (claude-opus-5-5)",
+          "name": "fast",
+          "source": "builtin",
+          "trust": "use"
+        },
+        {
+          "hint": "Answer (qwen2.5-coder:7b)",
+          "name": "local-only",
+          "source": "builtin",
+          "trust": "use"
+        },
+        {
+          "hint": "planner decides the steps (up to 12 agents, 6 waves)",
+          "name": "plan",
+          "source": "builtin",
+          "trust": "use"
+        },
+        {
+          "hint": "plan → verify, fix until done (up to 3 rounds)",
+          "name": "until-done",
+          "source": "builtin",
+          "trust": "use"
+        }
+      ],
+      "provider": "Anthropic (API key)",
+      "worktrees": true
+    }
+  ],
+  "snapn": {
+    "configured": true,
+    "provider": "Anthropic (API key)",
+    "model": "claude-test-1",
+    "models": [
+      "claude-test-1",
+      "claude-opus-5-5",
+      "claude-sonnet-5-5",
+      "claude-haiku-4-5"
+    ],
+    "profile": "review",
+    "profiles": [
+      {
+        "name": "default",
+        "source": "builtin",
+        "trust": "use",
+        "hint": "one step (main model: claude-opus-5-5)"
+      },
+      {
+        "name": "review",
+        "source": "builtin",
+        "trust": "use",
+        "hint": "Reviewer (claude-opus-5-5) → Fixer (claude-opus-5-5)"
+      },
+      {
+        "name": "fast",
+        "source": "builtin",
+        "trust": "use",
+        "hint": "Answer (claude-opus-5-5)"
+      },
+      {
+        "name": "local-only",
+        "source": "builtin",
+        "trust": "use",
+        "hint": "Answer (qwen2.5-coder:7b)"
+      },
+      {
+        "name": "plan",
+        "source": "builtin",
+        "trust": "use",
+        "hint": "planner decides the steps (up to 12 agents, 6 waves)"
+      },
+      {
+        "name": "until-done",
+        "source": "builtin",
+        "trust": "use",
+        "hint": "plan → verify, fix until done (up to 3 rounds)"
+      }
+    ],
+    "inline": false,
+    "nextEdit": false,
+    "worktrees": true
+  }
+}

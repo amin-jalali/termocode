@@ -282,6 +282,15 @@
       "deltas": [
         "ServicesSnap"
       ]
+    },
+    {
+      "name": "ai",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "AISnap",
+      "deltas": [
+        "AISnap"
+      ]
     }
   ],
   "events": {
@@ -2237,6 +2246,34 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "ai.use_profile",
+      "args": "AIUseArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.use_model",
+      "args": "AIUseArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -2443,6 +2480,97 @@
         "buf",
         "tick",
         "line"
+      ],
+      "additionalProperties": false
+    },
+    "AIProfile": {
+      "type": "object",
+      "properties": {
+        "hint": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "builtin",
+            "user",
+            "project"
+          ]
+        },
+        "trust": {
+          "enum": [
+            "use",
+            "ask",
+            "refused"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "trust"
+      ],
+      "additionalProperties": true
+    },
+    "AISnap": {
+      "type": "object",
+      "properties": {
+        "configured": {
+          "type": "boolean"
+        },
+        "inline": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "models": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "nextEdit": {
+          "type": "boolean"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "profiles": {
+          "items": {
+            "$ref": "#/defs/AIProfile"
+          },
+          "type": "array"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "worktrees": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "configured",
+        "models",
+        "profile",
+        "profiles",
+        "inline",
+        "nextEdit",
+        "worktrees"
+      ],
+      "additionalProperties": true
+    },
+    "AIUseArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
       ],
       "additionalProperties": false
     },

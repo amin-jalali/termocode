@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai";
 
 export interface Bye {
   t: "bye";
@@ -494,6 +494,10 @@ export interface PRReviewArgs {
   number: number;
   kind: "approve" | "request_changes" | "comment";
   body?: string;
+}
+
+export interface AIUseArgs {
+  name: string;
 }
 
 export interface StatusSnap {
@@ -1108,6 +1112,25 @@ export interface ServicePort {
   target?: number;
   proto?: string;
   open?: "yes" | "no";
+}
+
+export interface AISnap {
+  configured: boolean;
+  provider?: string;
+  model?: string;
+  models: string[];
+  profile: string;
+  profiles: AIProfile[];
+  inline: boolean;
+  nextEdit: boolean;
+  worktrees: boolean;
+}
+
+export interface AIProfile {
+  name: string;
+  source: "builtin" | "user" | "project";
+  trust: "use" | "ask" | "refused";
+  hint?: string;
 }
 
 export interface Answered {
@@ -1919,6 +1942,8 @@ export interface OpArgs {
   "pr.merge": PRMergeArgs;
   "pr.review": PRReviewArgs;
   "pr.checkout": PRNumberArgs;
+  "ai.use_profile": AIUseArgs;
+  "ai.use_model": AIUseArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -1944,6 +1969,7 @@ export interface TopicData {
   "tests": { snap: TestsSnap; delta: TestsSnap };
   "debug": { snap: DebugSnap; delta: DebugSnap };
   "services": { snap: ServicesSnap; delta: ServicesSnap };
+  "ai": { snap: AISnap; delta: AISnap };
 }
 
 // The data of an ev message, by kind.
@@ -2051,4 +2077,6 @@ export interface OpResult {
   "pr.merge": AskRef;
   "pr.review": AskRef;
   "pr.checkout": AskRef;
+  "ai.use_profile": AskRef;
+  "ai.use_model": AskRef;
 }
