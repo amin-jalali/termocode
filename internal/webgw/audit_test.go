@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func openAudit(t *testing.T, path string) *Audit {
@@ -265,6 +266,20 @@ func TestGuardAuditsBlocked(t *testing.T) {
 	}
 	if n := len(readAudit(t, path)); n > 2+blockedAuditBurst+5 {
 		t.Fatalf("%d lines after a flood, want at most about %d", n, 2+blockedAuditBurst)
+	}
+}
+
+// TestServerAudits: the server's guard writes to the audit log it gets.
+func TestServerAudits(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "a.jsonl")
+	a := openAudit(t, path)
+	addr := startServer(t, NewServer(testSite, okServer().Handler, DefaultLimits, a), nil)
+	if _, err := rawGet(addr, 10*time.Second); err != nil { // Host: x
+		t.Fatal(err)
+	}
+	evs := readAudit(t, path)
+	if len(evs) != 1 || evs[0].Kind != EvHostBlocked {
+		t.Fatalf("events %+v", evs)
 	}
 }
 
