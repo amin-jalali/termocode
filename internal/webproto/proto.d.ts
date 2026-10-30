@@ -267,6 +267,26 @@ export interface DBSQLArgs {
   sql: string;
 }
 
+export interface DownloadArgs {
+  path: string;
+  from?: number;
+}
+
+export interface UploadBeginArgs {
+  path: string;
+  size: number;
+}
+
+export interface UploadChunkArgs {
+  id: string;
+  off: number;
+  data: string;
+}
+
+export interface UploadArgs {
+  id: string;
+}
+
 export interface ContainerLogsArgs {
   id: string;
   lines?: number;
@@ -917,6 +937,25 @@ export interface DBCell {
   c?: boolean;
 }
 
+export interface FileChunk {
+  path: string;
+  size: number;
+  from: number;
+  data: string;
+  next?: number;
+  mtime: number;
+}
+
+export interface UploadStarted {
+  id: string;
+  chunk: number;
+  exists?: boolean;
+}
+
+export interface UploadProgress {
+  got: number;
+}
+
 export interface ContainersList {
   engine: string;
   context?: string;
@@ -1011,6 +1050,12 @@ export interface OpArgs {
   "db.rows": DBRowsArgs;
   "db.query": DBSQLArgs;
   "db.exec": DBSQLArgs;
+  "file.download": DownloadArgs;
+  "file.upload_begin": UploadBeginArgs;
+  "file.upload_chunk": UploadChunkArgs;
+  "file.upload_save": UploadArgs;
+  "file.upload_replace": UploadArgs;
+  "file.upload_cancel": UploadArgs;
   "containers.list": EmptyArgs;
   "containers.logs": ContainerLogsArgs;
   "containers.start": ContainerArgs;
@@ -1088,6 +1133,11 @@ export interface OpResult {
   "db.rows": DBRows;
   "db.query": DBRows;
   "db.exec": AskRef;
+  "file.download": FileChunk;
+  "file.upload_begin": UploadStarted;
+  "file.upload_chunk": UploadProgress;
+  "file.upload_save": TreeChanged;
+  "file.upload_replace": AskRef;
   "containers.list": ContainersList;
   "containers.logs": ContainerLogs;
   "containers.start": ContainerDone;

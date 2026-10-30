@@ -1171,6 +1171,92 @@
       "phase": "v2"
     },
     {
+      "op": "file.download",
+      "args": "DownloadArgs",
+      "result": "FileChunk",
+      "role": "controller",
+      "rate": {
+        "n": 40,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "counted",
+      "phase": "v2"
+    },
+    {
+      "op": "file.upload_begin",
+      "args": "UploadBeginArgs",
+      "result": "UploadStarted",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "file.upload_chunk",
+      "args": "UploadChunkArgs",
+      "result": "UploadProgress",
+      "role": "controller",
+      "rate": {
+        "n": 40,
+        "per_ms": 1000
+      },
+      "max_bytes": 701098,
+      "bytes_per_sec": 33554432,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "counted",
+      "phase": "v2"
+    },
+    {
+      "op": "file.upload_save",
+      "args": "UploadArgs",
+      "result": "TreeChanged",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "file.upload_replace",
+      "args": "UploadArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "file.upload_cancel",
+      "args": "UploadArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "containers.list",
       "args": "EmptyArgs",
       "result": "ContainersList",
@@ -2403,6 +2489,21 @@
       ],
       "additionalProperties": true
     },
+    "DownloadArgs": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
     "EditRes": {
       "type": "object",
       "properties": {
@@ -2473,6 +2574,37 @@
       "required": [
         "t",
         "kind"
+      ],
+      "additionalProperties": true
+    },
+    "FileChunk": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "mtime": {
+          "type": "integer"
+        },
+        "next": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "size",
+        "from",
+        "data",
+        "mtime"
       ],
       "additionalProperties": true
     },
@@ -4689,6 +4821,85 @@
         "topics"
       ],
       "additionalProperties": false
+    },
+    "UploadArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "UploadBeginArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "size"
+      ],
+      "additionalProperties": false
+    },
+    "UploadChunkArgs": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "off": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "off",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "UploadProgress": {
+      "type": "object",
+      "properties": {
+        "got": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "got"
+      ],
+      "additionalProperties": true
+    },
+    "UploadStarted": {
+      "type": "object",
+      "properties": {
+        "chunk": {
+          "type": "integer"
+        },
+        "exists": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "chunk"
+      ],
+      "additionalProperties": true
     },
     "WebOpenArgs": {
       "type": "object",
