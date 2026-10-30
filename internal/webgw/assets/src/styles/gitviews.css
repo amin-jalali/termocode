@@ -94,3 +94,29 @@
 .gr-sum { color: var(--wb-breadcrumb); }
 .gr-bad { color: var(--git-del); }
 .gr-gap { flex: 1 1 auto; }
+
+/* ---- Merge editor ---- */
+.layout-desktop { --wb-mg-current: rgba(64, 200, 174, 0.2); --wb-mg-incoming: rgba(64, 166, 255, 0.2); --wb-mg-current-bar: #40c8ae; --wb-mg-incoming-bar: #40a6ff; }
+.gm-body { display: flex; flex-direction: column; overflow: hidden; }
+.gm { display: grid; grid-template-rows: minmax(120px, 45%) minmax(160px, 1fr); flex: 1 1 auto; min-height: 0; }
+.gm-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; border-bottom: 1px solid var(--wb-section-border); }
+.gm-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.gm-incoming { border-inline-end: 1px solid var(--wb-section-border); }
+.gm-head { display: flex; align-items: center; gap: 6px; flex: none; height: 26px; padding: 0 8px; background: var(--wb-side-bg); border-bottom: 1px solid var(--wb-section-border); font-size: 0.75rem; }
+.gm-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--wb-panel-title); }
+.gm-incoming .gm-title { color: var(--wb-mg-incoming-bar); } .gm-current .gm-title { color: var(--wb-mg-current-bar); }
+.gm-label { color: var(--wb-breadcrumb); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm-gap { flex: 1 1 auto; }
+.gm-act { height: 20px; padding: 0 6px; border: 0; border-radius: 2px; background: none; color: var(--blue); font: inherit; font-size: 0.75rem; cursor: pointer; }
+.gm-act:hover:not(:disabled) { background: var(--wb-toolbar-hover); text-decoration: underline; }
+.gm-act:disabled { color: var(--wb-breadcrumb); opacity: 0.6; cursor: default; }
+.gm-act:focus-visible { outline: 1px solid var(--wb-focus); }
+.gm-host { flex: 1 1 auto; min-height: 0; }
+.gm-left { color: var(--amber); } .gm-left.is-done { color: var(--git-add); }
+.gm-foot { display: flex; align-items: center; gap: 8px; flex: none; min-height: 36px; padding: 4px 12px; border-top: 1px solid var(--wb-section-border); background: var(--wb-side-bg); }
+.gm-bad { color: var(--git-del); font-size: 0.75rem; }
+.gm-ask { display: inline-flex; align-items: center; gap: 8px; }
+.gm-ask-text { font-size: var(--fs-ui); }
+.gm-whole, .gm-err { display: flex; flex-direction: column; gap: 10px; max-width: 720px; padding: 16px 20px; color: var(--wb-editor-fg); }
+.gm-whole p { margin: 0; }
+.gm-whole-acts { display: flex; gap: 8px; }

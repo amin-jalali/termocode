@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type FrameDiff, type FrameGlyph, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
@@ -80,6 +80,8 @@ export interface DeskHost extends EditorHost {
 export interface DeskHandle extends EditorHandle {
   opts(o: FrameOpts): void;
   gutter(marks: Mark[]): void;
+  /** lines colours whole rows (the merge editor's conflicts). */
+  lines(items: FrameLines[]): void;
   /** reveal shows a 1-based line (and column) with the cursor there. */
   reveal(line: number, col?: number): void;
   markers(items: FrameMarker[]): void;
@@ -233,6 +235,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     gutter(marks) {
       send({ t: "gutter", marks });
+    },
+    lines(items) {
+      send({ t: "lines", items });
     },
     reveal(line, col) {
       send({ t: "reveal", line, col });

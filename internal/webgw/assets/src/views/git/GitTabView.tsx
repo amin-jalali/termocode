@@ -5,15 +5,18 @@ import { fileOfTab } from "../../lib/difftab";
 import { gitTabIcon, gitTabOf } from "../../lib/gittab";
 import { Cod, FileIcon } from "../../ui/icons";
 import { GraphView } from "./GraphView";
+import { MergeEditor } from "./MergeEditor";
 import { RebaseView } from "./RebaseView";
 
-export function GitTabView({ tab }: { tab: string; slot?: string }) {
+export function GitTabView({ tab, slot }: { tab: string; slot?: string }) {
   const g = gitTabOf(tab);
   switch (g?.kind) {
     case "graph":
       return <GraphView />;
     case "rebase":
       return <RebaseView hash={g.hash} />;
+    case "merge":
+      return <MergeEditor path={g.path} slot={slot} />;
   }
   return null;
 }

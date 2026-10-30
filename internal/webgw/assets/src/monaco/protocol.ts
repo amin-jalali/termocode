@@ -37,6 +37,13 @@ export interface FrameMarker {
   code?: string;
 }
 
+/** FrameLines colours rows [from, to] (1-based) of the editor. */
+export interface FrameLines {
+  from: number;
+  to: number;
+  kind: "current" | "incoming" | "marker";
+}
+
 /** LspKind is what the frame asks the page about a position. */
 export type LspKind = "hover" | "complete" | "definition";
 
@@ -84,6 +91,9 @@ export type ToFrame =
   | { t: "hl"; rows: HlRow[] }
   /** gutter: git change marks, rows [from, to] 1-based. */
   | { t: "gutter"; marks: { from: number; to: number; kind: "add" | "mod" | "del" }[] }
+  /** lines: whole rows [from, to] (1-based) in a colour of the merge
+   * editor: the current or incoming side of a conflict, or its markers. */
+  | { t: "lines"; items: FrameLines[] }
   | { t: "undo" }
   | { t: "redo" }
   | { t: "focus" }
