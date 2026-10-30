@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"net"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -40,11 +39,13 @@ type webConn struct {
 	lastID uint64 // reader goroutine only: the last request id
 
 	inflight atomic.Int32 // requests sent to Update and not answered yet
+
+	subs map[string]*webSub // Update only: live subscriptions by topic
 }
 
 func newWebConn(h *webHub, nc net.Conn) *webConn {
 	ctx, cancel := context.WithCancel(h.ctx)
-	return &webConn{hub: h, nc: nc, ctx: ctx, cancel: cancel, out: newWebQueue(), writerDone: make(chan struct{})}
+	return &webConn{hub: h, nc: nc, ctx: ctx, cancel: cancel, out: newWebQueue(), writerDone: make(chan struct{}), subs: map[string]*webSub{}}
 }
 
 // run serves the connection until EOF, an error or a protocol error. The
@@ -108,18 +109,38 @@ func (c *webConn) dispatch(line []byte) bool {
 		return false
 	case *webproto.Req:
 		return c.request(msg)
+	case *webproto.Sub:
+		return c.hub.send(c.ctx, webSubMsg{hub: c.hub, conn: c, topics: msg.Topics}) == nil
+	case *webproto.Unsub:
+		return c.hub.send(c.ctx, webSubMsg{hub: c.hub, conn: c, topics: msg.Topics, unsub: true}) == nil
 	}
-	return c.send(&webproto.ErrMsg{T: webproto.KindErr, Code: webproto.CodeNotFound, Msg: "This is not available yet."})
+	return c.protocolError("That message is not valid here.")
 }
 
-// send queues one message; false once the connection is closing.
+// send queues one message not tied to a topic; false once the
+// connection is closing. Such messages pass the soft caps (an answer is
+// never dropped); a queue over its hard cap closes the connection.
 func (c *webConn) send(m webproto.Msg) bool {
 	b, err := webproto.Encode(m)
 	if err != nil {
 		recordError("[web] encode " + m.Type() + ": " + err.Error())
 		return false
 	}
-	return c.out.push(b)
+	switch c.out.push(b) {
+	case webQueued:
+		return true
+	case webFull:
+		c.tooSlow()
+	}
+	return false
+}
+
+// tooSlow closes a connection whose gateway does not keep up; the
+// gateway closes the browser with 4008.
+func (c *webConn) tooSlow() {
+	recordError("[web] connection " + c.id + " too slow: closed")
+	c.out.close()
+	_ = c.nc.Close()
 }
 
 // protocolError sends one err line and ends the connection (the writer
@@ -149,62 +170,4 @@ func (c *webConn) writeLoop() {
 			return
 		}
 	}
-}
-
-// webQueue is a connection's outbound queue. push never blocks.
-type webQueue struct {
-	mu     sync.Mutex
-	items  [][]byte
-	closed bool
-	wake   chan struct{} // 1 slot: "something changed"
-}
-
-func newWebQueue() *webQueue { return &webQueue{wake: make(chan struct{}, 1)} }
-
-func (q *webQueue) signal() {
-	select {
-	case q.wake <- struct{}{}:
-	default:
-	}
-}
-
-// push adds one frame; false once the queue is closed.
-func (q *webQueue) push(frame []byte) bool {
-	q.mu.Lock()
-	if q.closed {
-		q.mu.Unlock()
-		return false
-	}
-	q.items = append(q.items, frame)
-	q.mu.Unlock()
-	q.signal()
-	return true
-}
-
-// take waits for frames and returns all of them; ok=false once the queue
-// is closed and empty.
-func (q *webQueue) take() ([][]byte, bool) {
-	for {
-		q.mu.Lock()
-		if len(q.items) > 0 {
-			items := q.items
-			q.items = nil
-			q.mu.Unlock()
-			return items, true
-		}
-		closed := q.closed
-		q.mu.Unlock()
-		if closed {
-			return nil, false
-		}
-		<-q.wake
-	}
-}
-
-// close stops new frames; take still returns what is queued.
-func (q *webQueue) close() {
-	q.mu.Lock()
-	q.closed = true
-	q.mu.Unlock()
-	q.signal()
 }

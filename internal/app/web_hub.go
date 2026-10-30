@@ -46,7 +46,8 @@ type webHub struct {
 	once   sync.Once
 	ctx    context.Context // ends when the hub stops; every call's ctx comes from it
 	cancel context.CancelFunc
-	ops    map[string]webOpFunc // Update only (tests swap it)
+	ops    map[string]webOpFunc   // Update only (tests swap it)
+	topics map[string]webTopicDef // Update only (tests swap it)
 
 	ln    net.Listener
 	peer  func(net.Conn) error
@@ -63,7 +64,7 @@ type webHub struct {
 func newWebHub() *webHub {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &webHub{
-		ch: make(chan tea.Msg, 64), done: make(chan struct{}), ctx: ctx, cancel: cancel, ops: webOps,
+		ch: make(chan tea.Msg, 64), done: make(chan struct{}), ctx: ctx, cancel: cancel, ops: webOps, topics: webTopics,
 		all: map[net.Conn]*webConn{}, byID: map[string]*webConn{},
 	}
 }
