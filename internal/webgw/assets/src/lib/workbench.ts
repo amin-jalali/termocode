@@ -62,6 +62,9 @@ export function setPanes(p: Partial<Panes>): void {
 export const opened = signal<string[]>([]);
 /** closed are the laptop's open files the user closed here (their tab hides). */
 export const closed = signal<ReadonlySet<string>>(new Set());
+/** cursorAt is the desktop editor's cursor (1-based), for the status bar. */
+export const cursorAt = signal<{ line: number; col: number } | null>(null);
+
 /** activeFile is the file the editor shows (null: none). */
 export const activeFile = signal<string | null>(null);
 

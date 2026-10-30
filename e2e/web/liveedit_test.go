@@ -72,7 +72,7 @@ func okEdit(t *testing.T, c *HubConn, r *webproto.Req, tick int) {
 }
 
 func TestLiveEditorTwoWaySync(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openFiles(t, vp)
 			openBuf(t, p, c, 2, "notes.txt", "alpha", "beta é")
@@ -161,7 +161,7 @@ func TestLiveEditorConflictFromHub(t *testing.T) {
 // stays; Use the laptop's text shows the laptop's, and Undo brings the
 // user's back (and sends it).
 func TestLiveEditorConflictKeepsUnsentText(t *testing.T) {
-	p, c := openFiles(t, Desktop)
+	p, c := openFiles(t, Tablet)
 	openBuf(t, p, c, 2, "notes.txt", "alpha", "beta")
 	openEditor(t, p)
 	typeAtStart(p, "Y")
@@ -193,7 +193,7 @@ func TestLiveEditorConflictKeepsUnsentText(t *testing.T) {
 // line's ends, as on every other system. The page is told it runs on a
 // Mac before the editor loads, so this checks the Mac keys on any CI.
 func TestLiveEditorMacMoveKeys(t *testing.T) {
-	p, c := openFiles(t, Desktop)
+	p, c := openFiles(t, Tablet)
 	openBuf(t, p, c, 2, "notes.txt", "alpha", "beta")
 	Eval[bool](p, `(Object.defineProperty(navigator, "platform", { get: () => "MacIntel" }), true)`)
 	openEditor(t, p)
@@ -238,7 +238,7 @@ func TestLiveEditorFallsBackToTheSheet(t *testing.T) {
 // On a touch screen the editor's text is at least 16 px, so focusing it
 // does not zoom the page; with a mouse it keeps the code size.
 func TestLiveEditorTouchFontSize(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openFiles(t, vp)
 			openBuf(t, p, c, 2, "notes.txt", "alpha")

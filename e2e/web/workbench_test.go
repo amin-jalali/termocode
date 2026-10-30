@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -28,7 +29,7 @@ func openBufAs(t *testing.T, p *Page, c *HubConn, buf int, path string, extra ma
 		snap[k] = v
 	}
 	c.Send(t, Snap(topic, 1, snap))
-	p.WaitJS(filesView + `.querySelector(".crow")`)
+	p.WaitJS(filesView + `.querySelector(".crow, .desk-editor")`)
 }
 
 // nextOpen reads the page's messages until a buf.open; a buf.close of
@@ -78,9 +79,12 @@ func TestWorkbenchLayoutTabsAndStatusBar(t *testing.T) {
 	if Eval[bool](p, filesView+`.querySelector(".head-back") !== null`) {
 		t.Error("the desktop file view has a phone back button")
 	}
-	// Tapping a row is the current line.
-	p.TapJS(codeRow(2))
-	p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent === "Ln 3, Col 1"`)
+	// The editor's cursor is the status bar's line and column.
+	p.WaitJS(deskDoc + `?.querySelector(".view-lines .view-line")`)
+	deskFocus(p)
+	p.Do(chromedp.KeyEvent(kb.Home, modKey()))
+	p.Do(chromedp.KeyEvent(kb.ArrowDown + kb.ArrowDown + kb.ArrowRight))
+	p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent === "Ln 3, Col 2"`)
 
 	// A second file: two tabs; the first one comes back with a click.
 	openBufAs(t, p, c, 4, "b.go", nil, "package b")

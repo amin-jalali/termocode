@@ -164,7 +164,11 @@ func TestShots(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				shot("file", "#/files/cmd/covreport/filter.go", `document.querySelector('.crow .hl-k')`)
+				fileReady := `document.querySelector('.crow .hl-k')`
+				if !vp.Mobile {
+					fileReady = `document.querySelector(".desk-editor")?.contentDocument?.querySelector(".view-line .hl-k")`
+				}
+				shot("file", "#/files/cmd/covreport/filter.go", fileReady)
 				shot("chat", "#/chat", `document.querySelector('[data-view="chat"] .msg')`)
 				shot("term", "#/term", `document.querySelector('[data-view="term"] .trow')`)
 				shot("git", "#/git", `document.querySelector('.git-row-wrap')`)

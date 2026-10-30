@@ -266,10 +266,13 @@ export function FileView({ path }: { path: string }) {
     const s = selection.peek() ?? topRow(body.current);
     startEdit(path, buf, s.a, s.b);
   };
-  const isEditing = canEdit && editing.value === path && st.kind === "open";
+  const desk = layout.value === "desktop";
+  // The desktop's editor is always live: the laptop's buffer, editable
+  // when this page may change it (a viewer or a read-only buffer reads).
+  const deskLive = desk && st.kind === "open" && !!buf;
+  const isEditing = (canEdit && editing.value === path && st.kind === "open") || deskLive;
   const phase = liveStatus.value.phase;
   const sync = session.value;
-  const desk = layout.value === "desktop";
   return (
     <View
       tab="files"
@@ -279,7 +282,55 @@ export function FileView({ path }: { path: string }) {
       bodyRef={body}
       bodyClass={isEditing ? "is-editing" : undefined}
       actions={
-        isEditing ? (
+        deskLive ? (
+          <>
+            {canEdit && phase !== "synced" && (
+              <Chip tone={phase === "sending" ? undefined : "amber"} dot={phase === "sending" ? "busy" : undefined}>
+                {phase === "sending" ? t("live.sending") : phase === "waiting" ? t("live.waiting") : t("file.not_saved")}
+              </Chip>
+            )}
+            {canEdit && buf.dirty && phase === "synced" && (
+              <Chip tone="amber" dot="busy">
+                {t("file.not_saved")}
+              </Chip>
+            )}
+            {!canEdit && <Chip>{t("viewonly")}</Chip>}
+            <Button
+              kind="quiet"
+              small
+              icon={<IconWrap />}
+              iconOnly
+              pressed={wrap}
+              title={`${t("term.wrap")} (Alt+Z)`}
+              onClick={() => {
+                wrapOn.value = !wrap;
+                setWrap(!wrap);
+              }}
+            >
+              {t("term.wrap")}
+            </Button>
+            {canEdit && (
+              <Button kind="quiet" small icon={<IconUndo />} iconOnly title={`${t("undo")} (${modKey()}+Z)`} onClick={() => sync?.undoEd()}>
+                {t("undo")}
+              </Button>
+            )}
+            {canEdit && (
+              <Button kind="quiet" small icon={<IconRedo />} iconOnly title={`${t("live.redo")} (${modKey()}+Shift+Z)`} onClick={() => sync?.redoEd()}>
+                {t("live.redo")}
+              </Button>
+            )}
+            {controller && (
+              <Button kind="quiet" small needsLink icon={<IconLaptop />} iconOnly title={t("laptop.show")} onClick={() => showOnLaptop(path)}>
+                {t("laptop.show")}
+              </Button>
+            )}
+            {canEdit && (
+              <Button kind="quiet" small needsLink icon={<IconSave />} iconOnly title={`${t("file.save")} (${modKey()}+S)`} onClick={saveLive}>
+                {t("file.save")}
+              </Button>
+            )}
+          </>
+        ) : isEditing ? (
           <>
             <Chip tone={phase === "conflict" || phase === "error" || phase === "gone" ? "amber" : phase === "waiting" ? "amber" : undefined} dot={phase === "sending" ? "busy" : undefined}>
               {phase === "sending" ? t("live.sending") : phase === "waiting" ? t("live.waiting") : phase === "synced" ? t("live.synced") : t("file.not_saved")}
@@ -348,7 +399,13 @@ export function FileView({ path }: { path: string }) {
         )
       }
     >
-      {isEditing && buf ? <LiveEditor path={path} buf={buf.buf} /> : <Body st={st} scroller={body} wrap={wrap} canEdit={canEdit} />}
+      {deskLive && buf ? (
+        <LiveEditor key={buf.buf} path={path} buf={buf.buf} desk={{ readOnly: !canEdit, wrap, tabSize: buf.ts ?? 0, insertSpaces: buf.et === true }} />
+      ) : isEditing && buf ? (
+        <LiveEditor path={path} buf={buf.buf} />
+      ) : (
+        <Body st={st} scroller={body} wrap={wrap} canEdit={canEdit} />
+      )}
     </View>
   );
 }

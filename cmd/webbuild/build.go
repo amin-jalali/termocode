@@ -32,6 +32,15 @@ var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML:
 // dynamic import, only when the user starts editing.
 var editorChunk = page{Name: "editor", Entry: "editor/main.ts"}
 
+// monacoAMD and monacoFrame are the desktop editor (web workbench): the
+// vendored editor runs in a frame of its own (monaco.html, with its own
+// CSP); monaco-amd.js is the small module registry its plain scripts
+// define themselves in, monaco-frame.js the glue that talks to the page.
+var (
+	monacoAMD   = page{Name: "monaco-amd", Entry: "monaco/amd.ts"}
+	monacoFrame = page{Name: "monaco-frame", Entry: "monaco/frame.ts", Template: "monaco/frame.html", HTML: "monaco.html"}
+)
+
 // chunkPaths are the only dynamic imports a page may make.
 var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true}
 
@@ -60,7 +69,10 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyFonts(filepath.Join(abs, "fonts"), out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{appPage, editorChunk, kitPage} {
+	if err := copyServed(vendorDir, pkgs, out); err != nil {
+		return nil, err
+	}
+	for _, p := range []page{appPage, editorChunk, monacoAMD, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)
@@ -133,6 +145,24 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 		return fmt.Errorf("webbuild: %s: %w", p.Template, err)
 	}
 	out[p.HTML] = []byte(html)
+	return nil
+}
+
+// copyServed copies the vendored files a package serves as they are
+// (vendor.json "serve") to the output under their served names.
+func copyServed(vendorDir string, pkgs []manifest.Package, out map[string][]byte) error {
+	for _, p := range pkgs {
+		for name, file := range p.Serve {
+			b, err := os.ReadFile(filepath.Join(vendorDir, p.Dir, filepath.FromSlash(file)))
+			if err != nil {
+				return err
+			}
+			if _, dup := out[name]; dup {
+				return fmt.Errorf("webbuild: two outputs named %s", name)
+			}
+			out[name] = b
+		}
+	}
 	return nil
 }
 
@@ -227,7 +257,7 @@ func copyFonts(dir string, out map[string][]byte) error {
 	return nil
 }
 
-var sriMark = regexp.MustCompile(`\{\{sri ([a-z0-9._-]+)\}\}`)
+var sriMark = regexp.MustCompile(`\{\{sri ([a-z0-9][a-z0-9/._-]*)\}\}`)
 
 // fillSRI replaces each {{sri name}} with the SRI value of the built file.
 func fillSRI(tpl string, out map[string][]byte) (string, error) {
@@ -328,6 +358,14 @@ func licenses(vendorDir string, pkgs []manifest.Package) []byte {
 		fmt.Fprintf(&b, "\n==== %s %s (%s) ====\n%s\n\n%s", p.Name, p.Version, p.License, p.Tarball, text)
 		if !strings.HasSuffix(string(text), "\n") {
 			b.WriteString("\n")
+		}
+		// A package that bundles others ships their notices too.
+		if _, ok := p.Files["ThirdPartyNotices.txt"]; ok {
+			notes, _ := os.ReadFile(filepath.Join(vendorDir, p.Dir, "ThirdPartyNotices.txt"))
+			fmt.Fprintf(&b, "\n---- third-party notices of %s ----\n%s", p.Name, notes)
+			if !strings.HasSuffix(string(notes), "\n") {
+				b.WriteString("\n")
+			}
 		}
 	}
 	return []byte(b.String())
