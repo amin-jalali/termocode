@@ -41,6 +41,9 @@ func Build(dir string) (map[string][]byte, error) {
 		return nil, err
 	}
 	out := map[string][]byte{"licenses.txt": licenses(vendorDir, pkgs)}
+	if err := copyStatic(filepath.Join(abs, "src", "static"), out); err != nil {
+		return nil, err
+	}
 	for _, p := range []page{appPage} {
 		if err := buildPage(abs, vendorDir, pkgs, p, out); err != nil {
 			return nil, err
@@ -97,6 +100,29 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 		return fmt.Errorf("webbuild: %s: %w", p.Template, err)
 	}
 	out[p.HTML] = []byte(html)
+	return nil
+}
+
+// copyStatic copies the files of src/static (icons) to the output as they
+// are. Only SVG is allowed, and the lint test keeps it free of scripts.
+func copyStatic(dir string, out map[string][]byte) error {
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".svg" {
+			return fmt.Errorf("webbuild: src/static/%s: only .svg files may be static", e.Name())
+		}
+		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			return err
+		}
+		out[e.Name()] = b
+	}
 	return nil
 }
 
