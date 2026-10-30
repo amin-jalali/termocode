@@ -426,7 +426,7 @@ func (m *Model) webUploadReplace(call *webCall) *webAsk {
 						return m.pushToastDetail(toast.Errr, "Upload not saved", fileOpFailText(err))
 					}
 					if m.nvim != nil {
-						_ = m.nvim.Command("silent! checktime")
+						_ = m.nvim.ExecLua(webLuaCheckTime)
 					}
 					m.explorer.Reload()
 					return tea.Batch(m.pushToastDetail(toast.Info, "Replaced "+filepath.Base(u.abs), webSizeText(u.size)+" from the web"),
