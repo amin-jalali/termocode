@@ -163,3 +163,28 @@ func itoa(i int) string {
 	b, _ := json.Marshal(i)
 	return string(b)
 }
+
+// Spec (WEB-29): --ssh-port N is SSH mode: the gateway serves on the
+// folder's own webhttp socket (never a path from argv) and answers to
+// 127.0.0.1:N; it cannot be mixed with --port, and N must be a user port.
+func TestWebGatewaySSHMode(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	p, _ := session.PathsFor(ws)
+	var errb bytes.Buffer
+	cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--ssh-port", "41237"}, &errb)
+	if !ok || cfg.UnixPath != p.WebHTTPSocket || cfg.PortHint != 41237 || cfg.Port != 0 {
+		t.Fatalf("ok %v cfg unix %q hint %d port %d: %s", ok, cfg.UnixPath, cfg.PortHint, cfg.Port, errb.String())
+	}
+	for _, bad := range [][]string{
+		{"--dir", ws, "--audit", "/a.jsonl", "--ssh-port", "80"},
+		{"--dir", ws, "--audit", "/a.jsonl", "--ssh-port", "41237", "--port", "41000"},
+	} {
+		if _, ok := webGatewayConfig(bad, &errb); ok {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+	if cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl"}, &errb); !ok || cfg.UnixPath != "" {
+		t.Errorf("plain mode: ok %v unix %q", ok, cfg.UnixPath)
+	}
+}
