@@ -47,10 +47,16 @@ func openGit(t *testing.T, vp Viewport, snap webproto.GitSnap) (*Page, *HubConn)
 }
 
 // expectOp reads the page's messages until a req for op (subs and
-// unsubs on the way are fine) and checks its args.
+// unsubs on the way are fine) and checks its args. It gives up after
+// wait: a page that sends subs and unsubs without end must fail the
+// test, not hang the suite (macOS CI, 2026-10-30: 15 minutes).
 func expectOp(t *testing.T, c *HubConn, op, args string) *webproto.Req {
 	t.Helper()
+	end := time.Now().Add(wait)
 	for {
+		if time.Now().After(end) {
+			t.Fatalf("no %s request within %s (only subs and unsubs)", op, wait)
+		}
 		m := c.Next(t)
 		switch v := m.(type) {
 		case *webproto.Sub, *webproto.Unsub:
