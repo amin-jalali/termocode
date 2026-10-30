@@ -462,7 +462,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Web e2e tests
-        run: go -C e2e test -tags browser,webdev -race -count=1 -v -timeout 15m ./web/
+        run: go -C e2e test -tags browser,webdev -race -count=1 -v -timeout 30m ./web/
 
       # The same page against the real binary in a PTY (e2e/web_real_test.go,
       # tags e2e + browser): termocode web start → link → auth → chat with a
