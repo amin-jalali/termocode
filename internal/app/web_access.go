@@ -30,6 +30,7 @@ const (
 	confirmKindWebPairAsk  confirmKindEnum = 2602 // pair this device? (SAS code)
 	confirmKindWebDevice   confirmKindEnum = 2603 // one paired device
 	confirmKindWebDeviceRm confirmKindEnum = 2604 // remove it?
+	confirmKindWebGrant    confirmKindEnum = 2605 // give a viewer control? (WEB-34)
 	pickerKindWebDevices   pickerKindEnum  = 2600
 )
 
@@ -39,10 +40,11 @@ const webPairTTL = 120 * time.Second
 // webAccessState is the open pairing link, the waiting pairing question
 // and the device a card is about.
 type webAccessState struct {
-	link     string // the open pairing link (for Copy link), "" when none
-	pairCall *webCall
-	pairArgs webproto.PairAskArgs
-	device   string
+	link      string // the open pairing link (for Copy link), "" when none
+	pairCall  *webCall
+	pairArgs  webproto.PairAskArgs
+	grantCall *webCall
+	device    string
 }
 
 func (m *Model) webAccess() *webAccessState {
@@ -330,7 +332,13 @@ func (m *Model) openWebDeviceCard(id string) tea.Cmd {
 	m.webAccess().device = id
 	body := fmt.Sprintf("Role: %s\nPaired: %s\n%s", d.Role, d.Created.Local().Format("2 Jan 2006 15:04"),
 		webDeviceHint(d, m.webLiveDevices()[id], time.Now()))
-	buttons := []confirm.Button{{ID: "close", Title: "Close"}, {ID: "remove", Title: "Remove device", Style: confirm.StyleDestructive}}
+	buttons := []confirm.Button{{ID: "close", Title: "Close"}}
+	if d.Role == webdevices.RoleControl {
+		buttons = append(buttons, confirm.Button{ID: "viewer", Title: "Make viewer"})
+	} else if !d.Guest {
+		body += "\nTo give it control, tap Ask for control on that device."
+	}
+	buttons = append(buttons, confirm.Button{ID: "remove", Title: "Remove device", Style: confirm.StyleDestructive})
 	m.confirm = confirm.New(d.Name, body, buttons)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
@@ -341,6 +349,9 @@ func (m *Model) openWebDeviceCard(id string) tea.Cmd {
 // answerWebDevice acts on the device card.
 func (m *Model) answerWebDevice(id string) tea.Cmd {
 	acc := m.webAccess()
+	if id == "viewer" {
+		return m.webMakeViewer(acc.device)
+	}
 	if id != "remove" {
 		acc.device = ""
 		return nil
@@ -391,6 +402,73 @@ func (m *Model) webRevokeDevice(dev string) {
 	}
 }
 
+// webMakeViewer takes control back from a device (no card: it is the
+// safe direction). The gateway closes its links with 4013 and they come
+// back as a viewer.
+func (m *Model) webMakeViewer(dev string) tea.Cmd {
+	m.webAccess().device = ""
+	dir, _ := webDevicesDir()
+	var name string
+	ok, err := webdevices.Open(dir).Change(dev, func(d *webdevices.Device) { d.Role, name = webdevices.RoleViewer, d.Name })
+	if err != nil || !ok {
+		return m.webToast(toast.Warn, "That device is not paired any more.")
+	}
+	if m.web != nil {
+		data, _ := json.Marshal(map[string]string{"device": dev, "role": webdevices.RoleViewer})
+		for _, c := range m.web.ctlConns() {
+			c.send(&webproto.Event{T: webproto.KindEv, Kind: "role", Data: data})
+		}
+	}
+	return m.webToast(toast.Info, name+" can only watch now.")
+}
+
+// The gateway's control question (a control op): a Risky card.
+func init() {
+	webOps[webproto.OpWebGrantAsk] = func(m *Model, call *webCall) tea.Cmd { return m.webGrantAsk(call) }
+}
+
+// webGrantAsk shows "Give control?" for a viewer that confirmed with its
+// passkey; busy while another card is open.
+func (m *Model) webGrantAsk(call *webCall) tea.Cmd {
+	args, _ := call.args.(*webproto.GrantAskArgs)
+	acc := m.webAccess()
+	if args == nil || acc.grantCall != nil || m.confirmOpen {
+		call.fail(webproto.CodeBusy, "The laptop is busy with another question. Try again in a moment.")
+		return nil
+	}
+	acc.grantCall = call
+	call.later()
+	name := webdevices.CleanName(args.Name)
+	body := name + " asks for control. It confirmed with its passkey just now.\n\n" +
+		"With control it can type and run any command as you.\nYou can take it back any time in Web: Devices…"
+	m.confirm = confirm.Risky("Give control to "+name+"?", body,
+		confirm.Button{ID: "not-now", Title: "Not now"},
+		confirm.Button{ID: "give", Title: "Give control", Style: confirm.StyleDestructive})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindWebGrant
+	return nil
+}
+
+// answerWebGrant sends the owner's answer; anything but give is Not now.
+func (m *Model) answerWebGrant(id string) tea.Cmd {
+	acc := m.webAccess()
+	call := acc.grantCall
+	acc.grantCall = nil
+	if call == nil {
+		return nil
+	}
+	if id != "give" {
+		call.fail(webproto.CodeForbidden, "Not given: the answer on the laptop was Not now.")
+		return nil
+	}
+	if call.ctx.Err() != nil {
+		return m.webToast(toast.Warn, "That request ended before you answered.")
+	}
+	call.reply(nil)
+	return nil
+}
+
 // handleWebAccessConfirm routes the access cards. ok=false: not ours.
 func (m *Model) handleWebAccessConfirm(id string) (tea.Cmd, bool) {
 	switch m.confirmKind {
@@ -402,6 +480,8 @@ func (m *Model) handleWebAccessConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWebDevice(id), true
 	case confirmKindWebDeviceRm:
 		return m.answerWebDeviceRemove(id), true
+	case confirmKindWebGrant:
+		return m.answerWebGrant(id), true
 	}
 	return m.handleWebTotpConfirm(id)
 }

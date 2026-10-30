@@ -79,6 +79,8 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"answerWebDeviceRemove":    {"web_access.go"},
 		"openWebPair":              {"web_access.go"},
 		"webRevokeDevice":          {"web_access.go"},
+		"answerWebGrant":           {"web_access.go"},
+		"webMakeViewer":            {"web_access.go"},
 		"dispatchWebAccessPalette": {"palette.go"},
 		"openWebTotpSetup":         {"web_access.go"},
 		"webTotpNew":               {"webtotp_setup.go"},
