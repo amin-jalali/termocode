@@ -38,3 +38,12 @@ git_refresh_20k            47   ms   # Source Control refresh after a git action
 # quick open (internal/app/quick_open_perf_test.go)
 quick_open_50k_list        78   ms   # Go to file, 50k files: list them; local 39 ms (was 111)
 quick_open_50k_key         25   ms   # filter the 50k list after a typed key (median key); local 1.7 ms (floor; was 18.9)
+
+# testkit (internal/testkit/perf_ui_test.go). Before = feat/stab-perf.
+palette_filter_key         25   ms   # one letter in the palette search, median of 12; local 4.4 ms, was 11.2 (floor)
+commit_picker_open         25   ms   # Git: Show Log on 300 commits, git log included; local 10.4 ms, was 22.3 (floor)
+commit_picker_filter_key   25   ms   # one letter in that picker, median of 12; local 5.6 ms, was 15.1 (floor)
+profile_picker_open        25   ms   # AI profile picker, median of 5; local 5.4 ms, was 12.5 (floor)
+ai_chat_stream_token       25   ms   # token to frame at the end of a 500-message chat; local 4.0 ms, was 15.0 (floor)
+db_grid_page_100k          25   ms   # ] in a 100 000-row result (real nvim); local 3.8 ms, was 9.9 (floor)
+scm_graph_refresh_5k       25   ms   # outside commit + Git: Refresh to the GRAPH row, 5 000 commits; local 7.8 ms, was 16.4 (floor)
