@@ -3,6 +3,7 @@
 // reorder the row (web UX P7); a soft-wrapped row shows ↳ on its
 // continuation lines.
 import { h } from "preact";
+import type { Seg } from "../lib/hl";
 
 export function TermRow({ text, cont }: { text: string; cont?: boolean }) {
   return (
@@ -13,12 +14,12 @@ export function TermRow({ text, cont }: { text: string; cont?: boolean }) {
   );
 }
 
-export function CodeRow({ i, n, text, cont, flash, sel }: { i?: number; n?: number; text: string; cont?: boolean; flash?: boolean; sel?: boolean }) {
+export function CodeRow({ i, n, text, cont, flash, sel, segs }: { i?: number; n?: number; text: string; cont?: boolean; flash?: boolean; sel?: boolean; segs?: Seg[] | null }) {
   return (
     <div class={`crow${flash ? " is-flash" : ""}${sel ? " is-sel" : ""}`} dir="ltr" data-i={i}>
       <span class="crow-n" aria-hidden="true">{cont ? "" : n}</span>
       <span class="wrap-mark" aria-hidden="true">{cont ? "↳" : ""}</span>
-      <span class="crow-text">{text}</span>
+      <span class="crow-text">{segs ? segs.map((g, k) => (g.cls ? <span key={k} class={"hl-" + g.cls}>{g.text}</span> : g.text)) : text}</span>
     </div>
   );
 }
