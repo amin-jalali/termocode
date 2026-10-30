@@ -5,8 +5,15 @@
   grid-template-columns: minmax(0, 1fr); /* never wider than the screen (P2) */
   container: page / inline-size;
   height: 100dvh;
+  height: var(--vvh, 100dvh); /* lib/viewport.ts: the part above the keyboard */
   overflow: hidden;
 }
+/* Browsers that only shrink the visual viewport for the keyboard may also
+   scroll it; the shell follows. While the keyboard is up on a phone the
+   tab bar and the pill hide, so the focused input is never covered. */
+html[data-kb="up"] .shell { transform: translateY(var(--vvtop, 0px)); }
+html[data-kb="up"] .layout-phone .tabbar,
+html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
 
 /* ---- Strip ---- */
 .strip {
