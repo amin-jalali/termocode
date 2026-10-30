@@ -80,6 +80,7 @@ const (
 	OpSearchStop       = "search.stop"
 	OpTasksRun         = "tasks.run"
 	OpTasksTerminate   = "tasks.terminate"
+	OpTasksTail        = "tasks.tail"
 	OpRunsStop         = "runs.stop"
 	OpRunsPause        = "runs.pause"
 	OpRunsResume       = "runs.resume"
@@ -112,6 +113,7 @@ var opTable = []Policy{
 	{Op: OpGitDiff, New: newOf[GitDiffArgs](), Role: RoleViewer, Rate: perSec(20), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV1},
 	{Op: OpGitShow, New: newOf[GitShowArgs](), Role: RoleViewer, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
 	{Op: OpSearchRun, New: newOf[SearchRunArgs](), Role: RoleViewer, Rate: perSec(20), MaxBytes: 8 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV1},
+	{Op: OpTasksTail, New: newOf[LabelArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
 	{Op: OpSearchStop, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(20), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV1},
 	{Op: OpSearchOpen, New: newOf[SearchOpenArgs](), Role: RoleViewer, Rate: perSec(20), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV1},
 

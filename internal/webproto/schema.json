@@ -200,12 +200,16 @@
     {
       "name": "tasks",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "TasksSnap",
+      "delta": "TasksSnap"
     },
     {
       "name": "runs",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "RunsSnap",
+      "delta": "RunsSnap"
     },
     {
       "name": "db",
@@ -410,6 +414,20 @@
       "live": 1,
       "laptop_card": false,
       "audit": "yes",
+      "phase": "v1"
+    },
+    {
+      "op": "tasks.tail",
+      "args": "LabelArgs",
+      "result": "TaskTail",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
       "phase": "v1"
     },
     {
@@ -710,6 +728,7 @@
     {
       "op": "tasks.run",
       "args": "LabelArgs",
+      "result": "TaskStarted",
       "role": "controller",
       "rate": {
         "n": 1,
@@ -2360,6 +2379,93 @@
       ],
       "additionalProperties": true
     },
+    "RunItem": {
+      "type": "object",
+      "properties": {
+        "can": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "chat": {
+          "type": "string"
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "elapsed_ms": {
+          "type": "integer"
+        },
+        "key": {
+          "type": "string"
+        },
+        "live": {
+          "type": "boolean"
+        },
+        "needs_you": {
+          "type": "boolean"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "started": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "stalled",
+            "pausing",
+            "paused",
+            "resumable",
+            "done",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "step": {
+          "type": "integer"
+        },
+        "step_title": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "why": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "title",
+        "state",
+        "step",
+        "steps",
+        "started",
+        "elapsed_ms"
+      ],
+      "additionalProperties": true
+    },
+    "RunsSnap": {
+      "type": "object",
+      "properties": {
+        "runs": {
+          "items": {
+            "$ref": "#/defs/RunItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "runs"
+      ],
+      "additionalProperties": true
+    },
     "SearchBatch": {
       "type": "object",
       "properties": {
@@ -2767,6 +2873,119 @@
         "topics"
       ],
       "additionalProperties": false
+    },
+    "TaskItem": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": "boolean"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "last": {
+          "$ref": "#/defs/TaskLast"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "source"
+      ],
+      "additionalProperties": true
+    },
+    "TaskLast": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "code": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "ok",
+            "failed"
+          ]
+        },
+        "when": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "state",
+        "when",
+        "buf"
+      ],
+      "additionalProperties": true
+    },
+    "TaskStarted": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf"
+      ],
+      "additionalProperties": true
+    },
+    "TaskTail": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "code": {
+          "type": "integer"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "buf",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "TasksSnap": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "tasks": {
+          "items": {
+            "$ref": "#/defs/TaskItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "tasks"
+      ],
+      "additionalProperties": true
     },
     "TermHistoryArgs": {
       "type": "object",
