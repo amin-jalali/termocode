@@ -942,6 +942,8 @@ export const S = {
   "cmd.git_blame": "Git: Toggle Line Blame",
   "cmd.git_amend": "Git: Commit (Amend)…",
   "cmd.git_clone": "Git: Clone Repository…",
+  // The laptop's AI in the editor, agent worktrees, profile and model (WEBP-3)
+  "ai.nes_hint": "Tab to accept · Esc to dismiss",
 } as const;
 
 export type StringKey = keyof typeof S;

@@ -62,3 +62,9 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--wb-edi
 
 /* Blame at the end of the cursor's line (as a faded note). */
 .tc-blame { color: var(--wb-line-num, #858585); opacity: 0.75; font-style: italic; }
+/* The next edit suggestion: the rows it would change are marked, the new
+   text shows under them in the editor's font, with its key hint. */
+.tc-nes-old { background: color-mix(in srgb, var(--git-del, #f14c4c) 18%, transparent); }
+.tc-nes { box-sizing: border-box; box-shadow: inset 2px 0 0 var(--git-add, #487e02); background: color-mix(in srgb, var(--git-add, #487e02) 16%, transparent); white-space: pre; color: var(--wb-editor-fg, #d4d4d4); }
+.tc-nes-row { overflow: hidden; }
+.tc-nes-hint { padding-left: 8px; color: var(--wb-line-num, #858585); font-family: system-ui, sans-serif; font-size: 11px; }

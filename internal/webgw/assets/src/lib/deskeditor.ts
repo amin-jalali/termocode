@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type AiKind, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
@@ -65,6 +65,10 @@ export interface DeskHost extends EditorHost {
   onLsp?(kind: LspKind, line: number, col: number): Promise<unknown>;
   onRefs?(line: number, col: number): void;
   onOpen?(path: string, line: number, col: number): void;
+  /** ai: the laptop's AI helps typing (ghost text, next edits); onAI
+   * asks it. */
+  ai?: FrameOpts["ai"];
+  onAI?(kind: AiKind, line: number, col: number, manual: boolean): Promise<unknown>;
   /** diff makes it a diff editor (the older text on the left); onDiff
    * hears its change count. */
   diff?: FrameDiff;
@@ -140,7 +144,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "ready": {
         ready = true;
         const c = frameColors(parent);
-        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, lsp: host.lsp, refsLabel: host.refsLabel, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
+        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.
@@ -181,6 +185,13 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         const answer = (data: unknown) => send({ t: "lspRes", id, data });
         if (!host.onLsp) return answer(null);
         host.onLsp(m.kind, m.line, m.col).then(answer, () => answer(null));
+        return;
+      }
+      case "ai": {
+        const id = m.id;
+        const answer = (data: unknown) => send({ t: "lspRes", id, data });
+        if (!host.onAI) return answer(null);
+        host.onAI(m.kind, m.line, m.col, m.manual === true).then(answer, () => answer(null));
         return;
       }
       case "refs":

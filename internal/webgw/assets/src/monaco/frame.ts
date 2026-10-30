@@ -11,10 +11,10 @@ import { ChangeSet, Text } from "@codemirror/state";
 import { dict } from "../state/dict";
 import { History } from "../editor/history";
 import { diff } from "../lib/textdiff";
-import type { LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
+import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
-import type { FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
+import type { AiAt, AiKind, FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -117,7 +117,9 @@ interface Editor {
   onDidScrollChange(cb: () => void): void;
   onDidLayoutChange(cb: () => void): void;
   onKeyDown(cb: (e: KeyEvent) => void): void;
-  addCommand(keys: number, run: () => void): unknown;
+  addCommand(keys: number, run: () => void, when?: string): unknown;
+  createContextKey(key: string, def: boolean): { set(v: boolean): void };
+  changeViewZones(cb: (a: { addZone(z: { afterLineNumber: number; heightInLines: number; domNode: HTMLElement }): string; removeZone(id: string): void }) => void): void;
   getSelections(): IRange[] | null;
   getAction(id: string): { isSupported(): boolean; run(): Promise<void> } | null;
   getContainerDomNode(): HTMLElement;
@@ -180,9 +182,15 @@ interface Suggestion {
   range: IRange;
   additionalTextEdits?: { range: IRange; text: string }[];
 }
+interface InlineItem {
+  insertText: string;
+  range: IRange;
+  additionalTextEdits?: { range: IRange; text: string }[];
+}
 interface Languages {
   register(l: { id: string }): void;
   setMonarchTokensProvider(id: string, def: unknown): unknown;
+  registerInlineCompletionsProvider(sel: string, p: { provideInlineCompletions(m: Model, p: Pos, c: { triggerKind: number }, t: Token): Promise<{ items: InlineItem[] }>; freeInlineCompletions(): void; disposeInlineCompletions(): void }): unknown;
   registerHoverProvider(sel: string, p: { provideHover(m: Model, p: Pos, t: Token): Promise<{ contents: { value: string; isTrusted: boolean; supportHtml: boolean }[]; range?: IRange } | null> }): unknown;
   registerCompletionItemProvider(sel: string, p: { triggerCharacters: string[]; provideCompletionItems(m: Model, p: Pos, c: unknown, t: Token): Promise<{ suggestions: Suggestion[]; incomplete?: boolean }> }): unknown;
   registerDefinitionProvider(sel: string, p: { provideDefinition(m: Model, p: Pos, t: Token): Promise<{ uri: Uri; range: IRange }[] | null> }): unknown;
@@ -195,7 +203,7 @@ interface Api {
   languages: Languages;
   Uri: { from(c: { scheme: string; path: string }): Uri };
   KeyMod: { CtrlCmd: number; Shift: number; Alt: number };
-  KeyCode: { KeyZ: number; KeyY: number; KeyS: number; F12: number; F7: number; F5: number };
+  KeyCode: { KeyZ: number; KeyY: number; KeyS: number; KeyI: number; F12: number; F7: number; F5: number; Tab: number; Escape: number };
 }
 
 const mod = (globalThis as unknown as { termocodeModule: (n: string) => unknown }).termocodeModule;
@@ -341,7 +349,7 @@ function onMenu(e: MouseEvent): void {
     return;
   }
   const sel = (ed?.getSelections() ?? []).map((r) => model?.getValueInRange(r) ?? "").join("\n");
-  post({ t: "menu", x: e.clientX, y: e.clientY, sel: sel.length > MENU_SEL_MAX ? "" : sel, readOnly, can: can() });
+  post({ t: "menu", x: e.clientX, y: e.clientY, sel: sel.length > MENU_SEL_MAX ? "" : sel, readOnly, can: can(), at: aiAt() });
 }
 
 /** menuEdit runs a context menu choice. */
@@ -413,6 +421,12 @@ const asks = new Map<number, (d: unknown) => void>();
 const COMPLETE_MS = 80;
 /** ASK_MS: a question the page does not answer in time gets nothing. */
 const ASK_MS = 10_000;
+/** AI_ASK_MS: the laptop's model may take longer (its own cap is 15 s). */
+const AI_ASK_MS = 20_000;
+/** GHOST_MS: ghost text asks once typing pauses this long (the laptop's
+ * debounce); NES_MS: the next edit after this pause. */
+const GHOST_MS = 300;
+const NES_MS = 400;
 const OPEN_SCHEME = "termocode-file";
 
 /** SEV maps a diagnostic's severity (1 error … 4 hint) to the editor's. */
@@ -433,6 +447,24 @@ function ask(kind: LspKind, p: Pos): Promise<unknown> {
       resolve(d);
     });
     post({ t: "lsp", id, kind, line: p.lineNumber - 1, col: p.column - 1 });
+  });
+}
+
+/** askAI asks the laptop's AI through the page (the same answer path as
+ * ask); null: nothing. */
+function askAI(kind: AiKind, p: Pos, manual = false): Promise<unknown> {
+  const id = ++nextAsk;
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      asks.delete(id);
+      resolve(null);
+    }, AI_ASK_MS);
+    asks.set(id, (d) => {
+      clearTimeout(timer);
+      asks.delete(id);
+      resolve(d);
+    });
+    post({ t: "ai", id, kind, line: p.lineNumber - 1, col: p.column - 1, manual: manual || undefined });
   });
 }
 
@@ -483,6 +515,7 @@ function startLsp(): void {
       await sleep(COMPLETE_MS);
       if (tk.isCancellationRequested) return none;
       const d = (await ask("complete", p)) as LspCompletion | null;
+      if (!tk.isCancellationRequested && !d?.items?.length) setTimeout(ghostAgain, 0);
       if (tk.isCancellationRequested || !d || !Array.isArray(d.items)) return none;
       const w = m.getWordUntilPosition(p);
       const def = oneLine(p.lineNumber, w.startColumn, p.column);
@@ -527,6 +560,137 @@ function startLsp(): void {
     },
   });
 }
+
+// The laptop's AI (WEBP-3): ghost text while typing (Tab takes it, Esc
+// drops it, Alt+\ asks now) and the next edit suggestion after a pause:
+// the rows it would change are marked and the new text shows under them
+// (Tab takes it, Esc drops it). The page asks the laptop; the frame only
+// shows the answer when the text is still the one asked about.
+let aiOn = { inline: false, nes: false };
+let aiReady = false;
+let nes: { start: number; end: number; lines: string[]; zone: string } | null = null;
+let nesDecos: Collection | null = null;
+let nesKey: { set(v: boolean): void } | null = null;
+let nesTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** aiAt is the selection's rows (a selection that ends at the start of
+ * a row does not take that row) and the caret's row, 0-based. */
+function aiAt(): AiAt {
+  const p = ed?.getPosition();
+  const line = p ? p.lineNumber - 1 : 0;
+  const r = ed?.getSelections()?.[0];
+  if (!r || (r.startLineNumber === r.endLineNumber && r.startColumn === r.endColumn)) return { start: line, end: line, line };
+  let end = r.endLineNumber;
+  if (r.endColumn === 1 && end > r.startLineNumber) end--;
+  return { start: r.startLineNumber - 1, end, line };
+}
+
+/** startAI registers the ghost text provider once (it serves this
+ * frame's model, and only while the laptop's ai_inline is on, unless the
+ * user asks). */
+function startAI(): void {
+  if (aiReady) return;
+  aiReady = true;
+  api.languages.registerInlineCompletionsProvider("*", {
+    async provideInlineCompletions(m, p, c, tk) {
+      const none = { items: [] };
+      const manual = c.triggerKind === 1;
+      if (m !== model || readOnly || diffEd || (!aiOn.inline && !manual)) return none;
+      if (!manual) {
+        await sleep(GHOST_MS);
+        if (tk.isCancellationRequested) return none;
+      }
+      const d = (await askAI("complete", p, manual)) as AICompletion | null;
+      if (tk.isCancellationRequested || !d || d.none || d.line !== p.lineNumber - 1 || d.to !== p.column - 1 || !d.text) return none;
+      const item: InlineItem = { insertText: d.text, range: oneLine(p.lineNumber, d.from + 1, d.to + 1) };
+      if (d.imports?.length) item.additionalTextEdits = [{ range: oneLine((d.importAt ?? 0) + 1, 1, 1), text: d.imports.join("\n") + "\n" }];
+      return { items: [item] };
+    },
+    freeInlineCompletions() {},
+    disposeInlineCompletions() {},
+  });
+}
+
+/** ghostAgain asks for ghost text again (still as typing does): while
+ * the language server's list was being asked for, the editor held its
+ * own ghost text request back, and an empty list does not resume it. */
+function ghostAgain(): void {
+  if (!aiOn.inline || !ed || readOnly || diffEd) return;
+  const c = (ed as unknown as { getContribution(id: string): { model?: { get(): { trigger(): unknown } | undefined } } | null }).getContribution("editor.contrib.inlineCompletionsController");
+  void c?.model?.get()?.trigger();
+}
+
+/** nesClear takes the shown next edit away. */
+function nesClear(): void {
+  if (!nes) return;
+  const id = nes.zone;
+  ed?.changeViewZones((a) => a.removeZone(id));
+  nesDecos?.clear();
+  nesKey?.set(false);
+  nes = null;
+}
+
+/** nesShow shows a next edit when its rows still hold the text the model
+ * saw. */
+function nesShow(d: AINextEdit): void {
+  if (!ed || !model || d.none || d.end < d.start || d.end >= model.getLineCount()) return;
+  for (let i = d.start; i <= d.end; i++) if (model.getLineContent(i + 1) !== d.old[i - d.start]) return;
+  nesClear();
+  const box = document.createElement("div");
+  box.className = "tc-nes";
+  // The new rows in the editor's own font and row height.
+  const row0 = document.querySelector<HTMLElement>(".view-lines .view-line");
+  if (row0) {
+    const cs = getComputedStyle(row0);
+    Object.assign(box.style, { fontFamily: cs.fontFamily, fontSize: cs.fontSize, lineHeight: row0.offsetHeight + "px", tabSize: String(tabWidth) });
+  }
+  for (const l of d.lines) {
+    const row = document.createElement("div");
+    row.className = "tc-nes-row";
+    row.textContent = l || "\u00a0";
+    box.append(row);
+  }
+  const hint = document.createElement("div");
+  hint.className = "tc-nes-hint";
+  hint.textContent = nesHint;
+  box.append(hint);
+  let zone = "";
+  ed.changeViewZones((a) => (zone = a.addZone({ afterLineNumber: d.end + 1, heightInLines: d.lines.length + 1, domNode: box })));
+  nesDecos?.set([{ range: { startLineNumber: d.start + 1, startColumn: 1, endLineNumber: d.end + 1, endColumn: 1 }, options: { isWholeLine: true, className: "tc-nes-old" } }]);
+  nes = { start: d.start, end: d.end, lines: d.lines, zone };
+  nesKey?.set(true);
+}
+
+/** nesTake writes the shown next edit (one undo step). */
+function nesTake(): void {
+  if (!ed || !model || !nes) return;
+  const { start, end, lines } = nes;
+  nesClear();
+  const range = { startLineNumber: start + 1, startColumn: 1, endLineNumber: end + 1, endColumn: model.getLineMaxColumn(end + 1) };
+  ed.pushUndoStop();
+  ed.executeEdits("next-edit", [{ range, text: lines.join("\n"), forceMoveMarkers: true }]);
+  ed.pushUndoStop();
+  ed.setPosition({ lineNumber: start + lines.length, column: 1 });
+}
+
+/** nesLater asks for the next edit once typing pauses. */
+function nesLater(): void {
+  clearTimeout(nesTimer);
+  if (!aiOn.nes || readOnly || diffEd) return;
+  const at = v;
+  nesTimer = setTimeout(() => {
+    const p = ed?.getPosition();
+    if (!p) return;
+    void askAI("next_edit", p).then((d) => {
+      if (d && v === at) nesShow(d as AINextEdit);
+    });
+  }, NES_MS);
+}
+
+/** nesHint is the next edit's key hint (the page's words); tabWidth the
+ * editor's tab size (the new rows line up with the text). */
+let nesHint = "Tab";
+let tabWidth = 4;
 
 function sendText(user: boolean): void {
   post({ t: "text", text: cur.toString(), v, user, canUndo: hist.canUndo(), canRedo: hist.canRedo() });
@@ -666,9 +830,27 @@ function setOpts(o: FrameOpts): void {
     readOnly = o.readOnly;
   }
   if (o.wrap !== undefined) u.wordWrap = o.wrap ? "on" : "off";
-  if (o.tabSize !== undefined && o.tabSize > 0) u.tabSize = o.tabSize;
+  if (o.tabSize !== undefined && o.tabSize > 0) u.tabSize = tabWidth = o.tabSize;
   if (o.insertSpaces !== undefined) u.insertSpaces = o.insertSpaces;
+  if (o.ai) setAI(o.ai);
   ed.updateOptions(u);
+}
+
+/** setAI follows the laptop's AI settings; next edits start from the
+ * text as it is when they are turned on. */
+function setAI(o: NonNullable<FrameOpts["ai"]>): void {
+  const wasNes = aiOn.nes;
+  aiOn = { inline: o.inline, nes: o.nes };
+  if (o.hint) nesHint = o.hint;
+  if (!aiReady) return;
+  if (!o.nes) {
+    clearTimeout(nesTimer);
+    nesClear();
+  }
+  if (o.nes && !wasNes && !readOnly && !diffEd) {
+    const p = ed?.getPosition();
+    if (p) void askAI("seed", p);
+  }
 }
 
 function init(m: Extract<ToFrame, { t: "init" }>): void {
@@ -683,7 +865,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     theme: "termocode",
     readOnly: m.readOnly === true,
     wordWrap: m.wrap ? "on" : "off",
-    tabSize: m.tabSize && m.tabSize > 0 ? m.tabSize : 4,
+    tabSize: (tabWidth = m.tabSize && m.tabSize > 0 ? m.tabSize : 4),
     insertSpaces: m.insertSpaces === true,
     detectIndentation: false,
     automaticLayout: true,
@@ -729,9 +911,9 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
       enableSplitViewResizing: true,
       renderOverviewRuler: true,
       ignoreTrimWhitespace: true,
-      renderMarginRevertIcon: false,
       renderIndicators: true,
       hideUnchangedRegions: { enabled: m.diff.collapse !== false },
+      renderMarginRevertIcon: m.diff.revert === true,
     }, { editorWorkerService: workerless });
     origModel = api.editor.createModel(m.diff.original, "plaintext");
     origModel.setEOL(0);
@@ -760,6 +942,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     const cs = ChangeSet.of(specs, cur.length);
     const before = cur;
     cur = cs.apply(cur);
+    nesClear();
     if (applying === "remote") {
       hist.remote(cs);
       flash(cs);
@@ -769,6 +952,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     if (applying === null) hist.user(cs, before, Date.now());
     else if (applying === "replace") hist.user(cs, before, Date.now(), false);
     sendText(true);
+    if (applying === null) nesLater(); // after the user's own edit only
   });
   const { KeyMod, KeyCode } = api;
   ed.addCommand(KeyMod.CtrlCmd | KeyCode.KeyZ, () => undoRedo(false));
@@ -796,6 +980,18 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
       contextMenuOrder: 1.5,
       run: caretRefs,
     });
+  }
+  if (m.ai && !m.diff && !readOnly) {
+    aiOn = { inline: m.ai.inline, nes: m.ai.nes };
+    if (m.ai.hint) nesHint = m.ai.hint;
+    startAI();
+    ed.updateOptions({ inlineSuggest: { enabled: true, showToolbar: "onHover" } });
+    nesDecos = ed.createDecorationsCollection();
+    nesKey = ed.createContextKey("tcNes", false);
+    ed.addCommand(KeyCode.Tab, nesTake, "tcNes && !inlineSuggestionVisible && !suggestWidgetVisible");
+    ed.addCommand(KeyCode.Escape, nesClear, "tcNes");
+    ed.addCommand(KeyMod.CtrlCmd | KeyCode.KeyI, () => post({ t: "aiAct", kind: "edit", at: aiAt() }));
+    if (aiOn.nes) void askAI("seed", { lineNumber: 1, column: 1 });
   }
   ed.onKeyDown((e) => {
     const b = e.browserEvent;
@@ -928,6 +1124,9 @@ function onMessage(e: MessageEvent): void {
     case "lspRes":
       asks.get(m.id)?.(m.data);
       return;
+    case "aiAct":
+      if (ed && !diffEd) post({ t: "aiAct", kind: m.kind, at: aiAt() });
+      return;
   }
 }
 
@@ -966,4 +1165,10 @@ function watchGlyphs(e: Editor): void {
 }
 
 addEventListener("message", onMessage);
+// A newer ghost text request cancels the editor's older one; the editor
+// rejects the old promise with "Canceled", which is not an error.
+addEventListener("unhandledrejection", (e) => {
+  const r: unknown = e.reason;
+  if (r instanceof Error && r.name === "Canceled") e.preventDefault();
+});
 post({ t: "ready" });
