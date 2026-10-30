@@ -6,7 +6,9 @@ import (
 	"errors"
 	"net"
 	"os"
+	"strings"
 	"testing"
+	"time"
 )
 
 // Spec (WEB-6): nothing listens by default: a new Model has no hub and no
@@ -64,3 +66,23 @@ func TestWebHubStartStop(t *testing.T) {
 	StopWebHub() // nothing left: a no-op
 }
 
+// Spec (WEB-6): the real Update routes hub messages (and re-arms the wait).
+func TestWebMsgRoutedByUpdate(t *testing.T) {
+	r := newWebRig(t, nil)
+	c := r.dial(webTestOpen)
+	c.send(`{"t":"hello","v":2,"token":"x"}`)
+	msg := <-r.hub.ch
+	next, cmd := r.m.Update(msg)
+	if cmd == nil {
+		t.Fatal("no wait re-armed")
+	}
+	*r.m = next.(Model)
+	select {
+	case line, ok := <-c.lines:
+		if !ok || !strings.Contains(line, `"t":"meta"`) {
+			t.Fatalf("got %q", line)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Update did not answer the hello")
+	}
+}
