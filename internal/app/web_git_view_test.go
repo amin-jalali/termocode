@@ -108,3 +108,43 @@ func TestGitBlameLines(t *testing.T) {
 		}
 	}
 }
+
+// Spec (amend): git.amend waits for a laptop card that names the last
+// commit and says when it is on the remote already; nothing changes
+// before the laptop says yes; then the commit is replaced with the
+// staged changes and the new message (or keeps its own).
+func TestGitAmendNeedsLaptopCard(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	webTestHub(t, &m)
+	dir, _, run := webTestRemoteRepo(t, &m)
+	webTestWrite(t, dir, "b.txt", "b\n")
+	run("add", "b.txt")
+	webTestGitLoad(&m)
+	c := webTestSub(t, &m)
+
+	var ref webproto.AskRef
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitAmend, `{"message":"first, amended"}`), &ref)
+	if ref.Card == "" || !m.confirmOpen || m.confirmKind != confirmKindWebAsk || m.confirm.SafeID() != "cancel" {
+		t.Fatalf("no laptop card: %+v", ref)
+	}
+	v := m.confirm.View()
+	for _, want := range []string{"first", "force-push", "1 staged"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("card has no %q:\n%s", want, v)
+		}
+	}
+	if s := strings.TrimSpace(run("log", "-1", "--format=%s")); s != "first" {
+		t.Fatalf("changed before the laptop said so: %q", s)
+	}
+	webTestLaptopConfirmRemote(t, &m)
+	if s := strings.TrimSpace(run("log", "-1", "--format=%s")); s != "first, amended" {
+		t.Errorf("subject after amend %q", s)
+	}
+	if files := run("show", "--name-only", "--format=", "HEAD"); !strings.Contains(files, "b.txt") {
+		t.Errorf("the staged file is not in the amended commit: %q", files)
+	}
+	if n := strings.TrimSpace(run("rev-list", "--count", "HEAD")); n != "1" {
+		t.Errorf("%s commits, want 1 (replaced, not added)", n)
+	}
+}

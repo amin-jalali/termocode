@@ -353,6 +353,10 @@ export interface GitResolveSideArgs {
   side: "ours" | "theirs";
 }
 
+export interface GitAmendArgs {
+  message?: string;
+}
+
 export interface ItemArgs {
   path: string;
 }
@@ -1648,6 +1652,7 @@ export interface OpArgs {
   "git.conflict": GitConflictArgs;
   "git.resolve": GitResolveArgs;
   "git.resolve_side": GitResolveSideArgs;
+  "git.amend": GitAmendArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -1763,6 +1768,7 @@ export interface OpResult {
   "git.conflict": GitConflict;
   "git.resolve": GitResolved;
   "git.resolve_side": AskRef;
+  "git.amend": AskRef;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;

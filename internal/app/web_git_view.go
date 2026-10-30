@@ -1,6 +1,9 @@
 package app
 
 import (
+	"strconv"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
@@ -17,6 +20,7 @@ import (
 func init() {
 	webOps[webproto.OpGitGraph] = (*Model).webGitGraph
 	webOps[webproto.OpGitBlame] = (*Model).webGitBlame
+	webAskOps[webproto.OpGitAmend] = (*Model).webGitAmend
 }
 
 var gitRefKinds = map[git.RefKind]string{git.RefLocal: "local", git.RefRemote: "remote", git.RefTag: "tag"}
@@ -109,4 +113,60 @@ func (m *Model) webGitBlame(call *webCall) tea.Cmd {
 		call.reply(out)
 		return nil
 	}
+}
+
+// webGitAmend replaces the last commit after a laptop card, as the
+// laptop's Commit (Amend) does. A commit already on the upstream is
+// named in the card: the branch would need a force push (never done for
+// the web).
+func (m *Model) webGitAmend(call *webCall) *webAsk {
+	msg := call.args.(*webproto.GitAmendArgs).Message
+	root, ok := m.webGitRoot(call)
+	if !ok {
+		return nil
+	}
+	if op := m.webGitBuild().Op; op == "merge" {
+		call.fail(webproto.CodeConflict, "A merge is in progress on the laptop. Finish it there.")
+		return nil
+	}
+	if len(m.gitCommits) == 0 {
+		call.fail(webproto.CodeConflict, "There is no commit to amend yet.")
+		return nil
+	}
+	head := m.gitCommits[0]
+	staged, _ := m.gitFileCounts()
+	body := "Replace the last commit " + head.Hash + " \"" + webName(head.Subject) + "\" with a new one"
+	switch staged {
+	case 0:
+		body += " (no staged changes)"
+	case 1:
+		body += " with the 1 staged file"
+	default:
+		body += " with the " + strconv.Itoa(staged) + " staged files"
+	}
+	if msg == "" {
+		body += "? It keeps its message."
+	} else {
+		subject, _, _ := strings.Cut(msg, "\n")
+		body += "? New message: \"" + webName(subject) + "\"."
+	}
+	if m.webHeadPushed(root) {
+		body += " This commit is on the remote already: you would need to force-push. termocode never force-pushes for you."
+	}
+	return &webAsk{summary: head.Hash, title: "Amend the last commit?", body: body, action: "Amend",
+		run: webGitLaptopRun(func(m *Model) tea.Cmd {
+			return m.gitRemoteOp("Amending…", func(cwd string) gitRemoteDoneMsg {
+				return gitRemoteDoneMsg{failTitle: "Amend failed", okText: "Amended the last commit", err: git.CommitWith(cwd, msg, true, false), reload: true}
+			})
+		})}
+}
+
+// webHeadPushed says whether HEAD's commit is on the branch's upstream
+// already: HEAD is not marked unpushed and an upstream exists (one quick
+// git rev-parse; the op is rate-limited to one call in 5 s).
+func (m *Model) webHeadPushed(root string) bool {
+	if len(m.gitCommits) == 0 || m.gitCommits[0].Unpushed || pushBranch(m.gitBranch) == "" {
+		return false
+	}
+	return git.HasUpstream(root)
 }
