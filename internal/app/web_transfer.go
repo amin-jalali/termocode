@@ -32,9 +32,9 @@ import (
 // card. A container workspace keeps transfers on the laptop.
 
 const (
-	webMaxUploads      = 2  // staged uploads per connection
-	webMaxUploadsTotal = 4  // staged uploads on the hub
-	webUploadIDBytes   = 8  // hex: 16 characters
+	webMaxUploads      = 2 // staged uploads per connection
+	webMaxUploadsTotal = 4 // staged uploads on the hub
+	webUploadIDBytes   = 8 // hex: 16 characters
 )
 
 func init() {
