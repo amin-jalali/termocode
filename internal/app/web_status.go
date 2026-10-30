@@ -160,7 +160,7 @@ func (m *Model) webCardsWaiting() int {
 }
 
 // webThemeFields are the palette fields the page maps to its tokens (web
-// UX 7.1).
+// UX 7.1), the Syntax* ones for the file view's code colours.
 var webThemeFields = []struct {
 	name string
 	c    *theme.Color256
@@ -175,10 +175,16 @@ var webThemeFields = []struct {
 	{"AccentAmber", &theme.AccentAmber}, {"AccentRedCoral", &theme.AccentRedCoral},
 	{"GitModified", &theme.GitModified}, {"GitAdded", &theme.GitAdded},
 	{"GitDeleted", &theme.GitDeleted}, {"GitConflict", &theme.GitConflict},
+	{"SyntaxKeyword", &theme.SyntaxKeyword}, {"SyntaxControl", &theme.SyntaxControl},
+	{"SyntaxFunction", &theme.SyntaxFunction}, {"SyntaxVariable", &theme.SyntaxVariable},
+	{"SyntaxType", &theme.SyntaxType}, {"SyntaxString", &theme.SyntaxString},
+	{"SyntaxNumber", &theme.SyntaxNumber}, {"SyntaxComment", &theme.SyntaxComment},
+	{"SyntaxRegex", &theme.SyntaxRegex}, {"SyntaxConstant", &theme.SyntaxConstant},
+	{"SyntaxOperator", &theme.SyntaxOperator},
 }
 
 // webThemeKey is the palette of webThemeFields, to see a change cheaply.
-type webThemeKey [23]theme.Color256
+type webThemeKey [34]theme.Color256
 
 // themeOf returns the status theme, rebuilding the colors only when the
 // palette changed (a theme switch or a user color).

@@ -38,7 +38,8 @@ func TestStatusReplayGolden(t *testing.T) {
 // colors (the default theme's) for one test, whatever ran before it.
 func webTestPinPalette(t *testing.T) {
 	t.Helper()
-	pinned := []theme.Color256{234, 236, 233, 236, 235, 24, 32, 231, 252, 250, 102, 242, 238, 32, 141, 39, 78, 178, 203, 180, 78, 167, 62}
+	pinned := []theme.Color256{234, 236, 233, 236, 235, 24, 32, 231, 252, 250, 102, 242, 238, 32, 141, 39, 78, 178, 203, 180, 78, 167, 62,
+		74, 175, 187, 153, 79, 174, 151, 65, 167, 75, 252}
 	old := make([]theme.Color256, len(webThemeFields))
 	for i, f := range webThemeFields {
 		old[i], *f.c = *f.c, pinned[i]
