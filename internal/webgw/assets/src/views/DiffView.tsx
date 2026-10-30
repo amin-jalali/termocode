@@ -20,6 +20,7 @@ import { t } from "../strings";
 import { errText } from "../ui/CardSheet";
 import { Chip } from "../ui/Chip";
 import { Cod } from "../ui/icons";
+import { Crumbs } from "./FileView";
 import { LiveEditor } from "./LiveEditor";
 import { View } from "./View";
 
@@ -144,7 +145,8 @@ export function DiffView({ tab, slot = "g0" }: { tab: string; slot?: string }) {
   const name = d.path.slice(d.path.lastIndexOf("/") + 1);
   const go = (dir: 1 | -1) => desks.peek().get(slot)?.diffGo(dir);
   const mod = modKey();
-  const leftSide = left.side;
+  // The live buffer has no last line end; git's text has one.
+  const leftSide = left.side && d.kind === "wt" && !deleted ? { ...left.side, text: left.side.text.replace(/\n$/, "") } : left.side;
   const rightSide: Side | null = deleted ? { text: "", binary: false, cut: false } : right.side;
   const binary = leftSide?.binary || rightSide?.binary;
   const cut = leftSide?.cut || rightSide?.cut;
@@ -155,11 +157,7 @@ export function DiffView({ tab, slot = "g0" }: { tab: string; slot?: string }) {
       tab="files"
       name="diff"
       title={name}
-      sub={
-        <span class="trunc file-path crumbs" dir="ltr" title={d.path}>
-          {d.path}
-        </span>
-      }
+      sub={d.path.includes("/") ? <Crumbs dir={d.path.slice(0, d.path.lastIndexOf("/"))} file={d.path} /> : undefined}
       bodyClass="is-editing"
       actions={
         <>
