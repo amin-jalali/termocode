@@ -2,6 +2,7 @@
 // only the choices below, validated on read. Storage may be missing or
 // throw (private mode); the page then runs on the defaults.
 import { effect, signal } from "@preact/signals";
+import { readKeys, type KeyId } from "./keys";
 import { looksSecret } from "./secretish";
 
 const KEY = "termocode.prefs.v1";
@@ -21,13 +22,15 @@ export interface Prefs {
   wakeLock: boolean;
   /** notify: OS notifications with fixed texts (opt-in, WEB-37). */
   notify: boolean;
+  /** keys is the terminal key bar, as names from lib/keys.ts; [] is the default bar. */
+  keys: KeyId[];
 }
 
 /** ROW_MIN and ROW_MAX bound rowPx (WEB-36). */
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, rowPx: 0, wakeLock: false, notify: false };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [] };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -50,6 +53,7 @@ function load(): Prefs {
       rowPx: rowSize(v.rowPx),
       wakeLock: v.wakeLock === true,
       notify: v.notify === true,
+      keys: readKeys(v.keys),
     };
   } catch {
     return defaults;
