@@ -187,9 +187,11 @@ func TestMotionAndContrastPreferences(t *testing.T) {
 }
 
 // The Tab key walks the page the way it reads: "Skip to content" first,
-// then the strip, the rail (desktop), the view, the chat column (desktop)
+// then the title bar (desktop) or the strip, the activity bar, the side
+// bar, the editor, the panel, the chat column (desktop), the status bar
 // and the tab bar (phone); inside each, top to bottom and left to right.
-// The skip link moves the focus into the view.
+// A sash goes with the pane it resizes. The skip link moves the focus
+// into the view.
 func TestFocusOrderFollowsTheScreen(t *testing.T) {
 	for _, vp := range Both {
 		t.Run(vp.Name, func(t *testing.T) {
@@ -206,6 +208,7 @@ func TestFocusOrderFollowsTheScreen(t *testing.T) {
 				Name      string
 				Top, Left float64
 				Region    int
+				Sash      bool
 			}
 			var stops []stop
 			for i := range 40 {
@@ -217,20 +220,22 @@ func TestFocusOrderFollowsTheScreen(t *testing.T) {
 				stops = append(stops, Eval[stop](p, `(() => { const e = document.activeElement; const r = e.getBoundingClientRect();
 					let top = r.top + scrollY, left = r.left + scrollX;
 					for (let x = e.parentElement; x; x = x.parentElement) { top += x.scrollTop; left += x.scrollLeft; }
-					const region = e === document.body || e === document.documentElement ? 8 : e.closest(".skip") ? 0 : e.closest(".strip, .bars") ? 1 : e.closest("nav.rail") ? 2 : e.closest("main") ? 3 : e.closest(".chatcol") ? 4 : e.closest(".pill-wrap") ? 5 : e.closest("nav.tabbar") ? 6 : 9;
-					return {Name: (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 20), Top: top, Left: left, Region: region}; })()`))
+					const sash = !e.classList.contains("sash") ? null : e.previousElementSibling?.matches(".wb-side") ? e.previousElementSibling : e.nextElementSibling;
+					const at = sash ?? e;
+					const region = e === document.body || e === document.documentElement ? 99 : at.closest(".skip") ? 0 : at.closest(".titlebar, .strip, .bars") ? 1 : at.closest("nav.rail") ? 2 : at.closest(".wb-side") ? 3 : at.closest("main, .wb-editor") ? 4 : at.closest(".wb-panel") ? 5 : at.closest(".chatcol") ? 6 : at.closest(".statusbar") ? 7 : at.closest(".pill-wrap") ? 8 : at.closest("nav.tabbar") ? 9 : 98;
+					return {Name: (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 20), Top: top, Left: left, Region: region, Sash: !!sash}; })()`))
 			}
 			for i := 1; i < len(stops); i++ {
 				a, b := stops[i-1], stops[i]
-				if b.Region == 0 || b.Region == 8 {
+				if b.Region == 0 || b.Region == 99 {
 					break // round the page and back to the start
 				}
-				if b.Region < a.Region || b.Region == 9 {
+				if b.Region < a.Region || b.Region == 98 {
 					t.Errorf("Tab goes from %q (region %d) back to %q (region %d)", a.Name, a.Region, b.Name, b.Region)
 					continue
 				}
-				if b.Region != a.Region {
-					continue
+				if b.Region != a.Region || a.Sash || b.Sash {
+					continue // a sash is a pane's whole edge: only its region counts
 				}
 				sameRow := b.Top < a.Top+4 && b.Top > a.Top-4
 				if b.Top < a.Top-4 || (sameRow && b.Left < a.Left-1) {
