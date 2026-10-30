@@ -14,14 +14,17 @@ import (
 
 // The web panel on the laptop (WEB-10): the palette commands, the start
 // card, the status chip and its click. The AI can reach none of it
-// (aiNever on every id and setting): only the user opens this door.
+// (aiNever on every id and setting): only the user opens this door. The
+// user's own palette command opens the browser in one step; the card is
+// for a `termocode web` that no person typed (a script, a hidden run).
 
 // confirmKindWebStart is the start card.
 const confirmKindWebStart confirmKindEnum = 2600
 
 func webPaletteItems() []picker.Item {
 	return []picker.Item{
-		{ID: "web-start", Title: "Web: Start Panel"},
+		{ID: "web-start", Title: "Web: Open in Browser", Lead: "web"},
+		{ID: "web-start-panel", Title: "Web: Start Panel"}, // the old name, same command
 		{ID: "web-stop", Title: "Web: Stop Panel"},
 		{ID: "web-copy-link", Title: "Web: Copy Link"},
 	}
@@ -30,8 +33,8 @@ func webPaletteItems() []picker.Item {
 // dispatchWebPalette runs the web panel's palette ids.
 func (m *Model) dispatchWebPalette(id string) (tea.Cmd, bool) {
 	switch id {
-	case "web-start":
-		return m.openWebStartCard(nil), true
+	case "web-start", "web-start-panel":
+		return m.webOpenNow(), true
 	case "web-stop":
 		return m.stopWebPanel(), true
 	case "web-copy-link":
@@ -41,6 +44,22 @@ func (m *Model) dispatchWebPalette(id string) (tea.Cmd, bool) {
 		return m.webNewLink(false, true), true
 	}
 	return nil, false
+}
+
+// webOpenNow is the user's Web: Open in Browser: start the panel and
+// open it in the browser, no card; a running panel opens a new one-time
+// link.
+func (m *Model) webOpenNow() tea.Cmd {
+	if !webSettings().On {
+		return m.webToast(toast.Warn, webOffText)
+	}
+	if st := m.webPanel; st != nil {
+		if st.up {
+			return m.webNewLink(true, false)
+		}
+		return m.webToast(toast.Info, "The web panel is starting.")
+	}
+	return m.startWebPanel(true, false)
 }
 
 // webStartBody is the start card's text (old plan 5.2).
