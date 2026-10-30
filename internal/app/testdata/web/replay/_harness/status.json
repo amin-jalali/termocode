@@ -1,0 +1,23 @@
+{
+  "topic": "status",
+  "snap0": {
+    "log": "",
+    "n": 0
+  },
+  "deltas": [
+    {
+      "n": 1
+    },
+    {
+      "append": "build ok",
+      "id": "log"
+    },
+    {
+      "n": 2
+    }
+  ],
+  "snapn": {
+    "log": "build ok",
+    "n": 2
+  }
+}
