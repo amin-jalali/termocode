@@ -9,8 +9,9 @@ import (
 // a terminal (-t), quick dead-link checks by ssh itself unless the user
 // set their own, the user's arguments (destination included), then the
 // far side's `termocode --link [folder]`. reconnected (may be empty) is
-// the --reconnected value of a reconnect.
-func sshArgv(args []string, remote, dir, reconnected string) []string {
+// the --reconnected value of a reconnect; webPort (0: none) is the local
+// port of `termocode ssh --web`, which the far side's web panel answers to.
+func sshArgv(args []string, remote, dir, reconnected string, webPort int) []string {
 	argv := []string{"-t"}
 	if !hasSSHOption(args, "ServerAlive") {
 		argv = append(argv, "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3")
@@ -20,6 +21,9 @@ func sshArgv(args []string, remote, dir, reconnected string) []string {
 	}
 	argv = append(argv, args...)
 	cmd := []string{remote, "--link"}
+	if webPort > 0 {
+		cmd = append(cmd, "--web="+strconv.Itoa(webPort))
+	}
 	if reconnected != "" {
 		cmd = append(cmd, "--reconnected="+reconnected)
 	}

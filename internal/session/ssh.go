@@ -208,7 +208,7 @@ func (t *sshTerm) size() (cols, rows int) {
 // attempt runs one ssh connection until ssh exits.
 func (t *sshTerm) attempt(reconnected string) sshAttempt {
 	cols, rows := t.size()
-	cmd := spawn.Command(t.o.SSH, sshArgv(t.o.Args, t.o.Remote, t.o.Dir, reconnected)...)
+	cmd := spawn.Command(t.o.SSH, sshArgv(t.o.Args, t.o.Remote, t.o.Dir, reconnected, 0)...)
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "termocode: %s: %v\r\n", t.o.SSH, err)
