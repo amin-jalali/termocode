@@ -8,7 +8,7 @@ import type { StringKey } from "./strings";
 export const FA: Record<StringKey, string> = {
   // Shell and connect
   "connect.title": "termocode",
-  "connect.once": "این پیوند فقط یک بار و تا ۶۰ ثانیه کار می‌کند.",
+  "connect.once": "این پیوند فقط یک بار و تا ۵ دقیقه کار می‌کند.",
   "connect.open": "باز کردن فضای کار",
   "connect.opening": "در حال باز کردن…",
   "connect.sas": "این کد را روی لپ‌تاپ بررسی کنید: {code}",
