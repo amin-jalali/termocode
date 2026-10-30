@@ -112,6 +112,7 @@ if not ok then
   H.ai_state    = H.ai_status
   H.ai_eval     = function() return enc({ error = 'nvim-dap not installed' }) end
   H.set_bp      = function() return 'the debugger (nvim-dap) is not downloaded yet' end
+  H.loaded_sources = function() return enc({ error = 'nvim-dap not installed' }) end
   return
 end
 
@@ -648,10 +649,28 @@ function H.ai_eval(expr, timeout)
   return enc(out)
 end
 
--- set_bp(path, line, cond, log): a breakpoint in any file. A file that is
--- not open is loaded as a hidden (unlisted) buffer, so a live session
--- hears about it and the persisted copy is written like a UI toggle.
-function H.set_bp(path, line, cond, log)
+-- loaded_sources(timeout_ms): the scripts the session loaded (the web's
+-- LOADED SCRIPTS), when the adapter lists them.
+function H.loaded_sources(timeout)
+  local s = dap.session()
+  if not s then return enc({ error = 'No active debug session' }) end
+  if not (s.capabilities and s.capabilities.supportsLoadedSourcesRequest) then
+    return enc({ unsupported = true })
+  end
+  local r, err = sync(function(cb) s:request('loadedSources', vim.empty_dict(), cb) end, timeout or 3000)
+  if err then return enc({ error = err }) end
+  local out = {}
+  for _, src in ipairs((r and r.sources) or {}) do
+    table.insert(out, { name = src.name or '', path = src.path or '' })
+  end
+  return enc({ sources = out })
+end
+
+-- set_bp(path, line, cond, log, hit): a breakpoint in any file. A file
+-- that is not open is loaded as a hidden (unlisted) buffer, so a live
+-- session hears about it and the persisted copy is written like a UI
+-- toggle.
+function H.set_bp(path, line, cond, log, hit)
   local buf = vim.fn.bufnr(path)
   local fresh = buf < 1
   if fresh then buf = vim.fn.bufadd(path) end
@@ -665,7 +684,7 @@ function H.set_bp(path, line, cond, log)
   if type(line) ~= 'number' or line < 1 or line > n then
     return string.format('line %s is outside the file (it has %d lines)', tostring(line), n)
   end
-  bpmod.set({ condition = nonempty(cond), log_message = nonempty(log) }, buf, line)
+  bpmod.set({ condition = nonempty(cond), log_message = nonempty(log), hit_condition = nonempty(hit) }, buf, line)
   push_to_sessions(buf)
   return ''
 end

@@ -1,0 +1,104 @@
+{
+  "topic": "debug",
+  "snap0": {
+    "active": false,
+    "available": false,
+    "breakpoints": [],
+    "children": [],
+    "configs": [
+      {
+        "debug": true,
+        "name": "Debug main",
+        "source": "launch.json",
+        "type": "delve"
+      },
+      {
+        "name": "Serve",
+        "source": "launch.json",
+        "type": "shell"
+      }
+    ],
+    "console": [],
+    "frames": [],
+    "open": [],
+    "scopes": [],
+    "selected": "Debug main",
+    "stopped": false,
+    "threads": [],
+    "watches": []
+  },
+  "deltas": [
+    {
+      "active": false,
+      "available": true,
+      "breakpoints": [],
+      "children": [],
+      "configs": [
+        {
+          "debug": true,
+          "name": "Debug main",
+          "source": "launch.json",
+          "type": "delve"
+        },
+        {
+          "name": "Serve",
+          "source": "launch.json",
+          "type": "shell"
+        }
+      ],
+      "console": [
+        {
+          "cat": "stdout",
+          "text": "1"
+        },
+        {
+          "cat": "console",
+          "text": "── session ended ──"
+        }
+      ],
+      "frames": [],
+      "open": [],
+      "scopes": [],
+      "selected": "Debug main",
+      "stopped": false,
+      "threads": [],
+      "watches": []
+    }
+  ],
+  "snapn": {
+    "available": true,
+    "active": false,
+    "stopped": false,
+    "threads": [],
+    "frames": [],
+    "scopes": [],
+    "children": [],
+    "open": [],
+    "watches": [],
+    "breakpoints": [],
+    "configs": [
+      {
+        "name": "Debug main",
+        "type": "delve",
+        "debug": true,
+        "source": "launch.json"
+      },
+      {
+        "name": "Serve",
+        "type": "shell",
+        "source": "launch.json"
+      }
+    ],
+    "selected": "Debug main",
+    "console": [
+      {
+        "cat": "stdout",
+        "text": "1"
+      },
+      {
+        "cat": "console",
+        "text": "── session ended ──"
+      }
+    ]
+  }
+}

@@ -194,9 +194,9 @@ func TestTestsDebugAndStop(t *testing.T) {
 	webTestTestsTree(t, &m)
 	webTestFakeTestRuns(t)
 	var got []launchConfig
-	old := webDebugTest
-	webDebugTest = func(m *Model, cfg launchConfig) (tea.Cmd, error) { got = append(got, cfg); return nil, nil }
-	t.Cleanup(func() { webDebugTest = old })
+	old := webDebugStartCfg
+	webDebugStartCfg = func(m *Model, cfg launchConfig) (tea.Cmd, error) { got = append(got, cfg); return nil, nil }
+	t.Cleanup(func() { webDebugStartCfg = old })
 	c := webTestSub(t, &m)
 	if f, _ := webTestCall(t, &m, c, webproto.OpTestsDebug, `{"id":"f:pkg/a_test.go"}`); webTestErr(f) != "bad_request" {
 		t.Fatalf("debug a file: %v", f)
