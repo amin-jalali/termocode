@@ -283,7 +283,11 @@ func webRealWalk(t *testing.T, vp webViewport) {
 	row := wFiles + `.querySelector('.tree-row[data-path="README.md"]')`
 	p.tapJS(row)
 	p.waitJS(`location.hash === "#/files/README.md"`)
-	p.waitJS(wFiles + `.querySelector('.crow[data-i="0"]')?.innerText.includes("# demo")`)
+	if vp.Mobile {
+		p.waitJS(wFiles + `.querySelector('.crow[data-i="0"]')?.innerText.includes("# demo")`)
+	} else { // the workbench's editor, in its own frame
+		p.waitJS(wFiles + `.querySelector(".desk-editor")?.contentDocument?.querySelector(".view-lines")?.textContent.replace(/\u00a0/g, " ").includes("# demo")`)
+	}
 
 	// Terminal: open one on the laptop and run a command from the page.
 	p.goTab("term")

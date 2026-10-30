@@ -8,7 +8,7 @@ import { selection } from "../lib/edit";
 import { file } from "../lib/file";
 import { modKey } from "../lib/platform";
 import { route } from "../lib/router";
-import { activeFile, panes, setPanes } from "../lib/workbench";
+import { activeFile, cursorAt, panes, setPanes } from "../lib/workbench";
 import { link, status, store } from "../session";
 import { t } from "../strings";
 import { IconBranch, IconChatSide, IconPanel, IconSidebar } from "./icons";
@@ -37,12 +37,14 @@ function FileFacts() {
   const d = store.topic("buf:" + f.buf).value?.data as BufSnap | undefined;
   if (!d || !Array.isArray(d.lines)) return null;
   const sel = selection.value;
-  const line = sel ? sel.a + 1 : 1;
+  const at = cursorAt.value;
+  const line = at ? at.line : sel ? sel.a + 1 : 1;
+  const col = at ? at.col : 1;
   const ts = d.ts ?? 0;
   return (
     <>
       <span class="strip-item sb-pos" title={t("sb.line_of", { n: line, m: d.lines.length })}>
-        {t("sb.pos", { n: line, c: 1 })}
+        {t("sb.pos", { n: line, c: col })}
       </span>
       {ts > 0 && <span class="strip-item sb-indent">{t(d.et ? "sb.spaces" : "sb.tabs", { n: ts })}</span>}
       <span class="strip-item sb-enc">{(d.enc || "utf-8").toUpperCase()}</span>

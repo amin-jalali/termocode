@@ -34,7 +34,7 @@ func (p *Page) Open() string {
 // the shell's, the chat view's and, on a desktop, the files column's.
 func (p *Page) firstTopics() []string {
 	ts := []string{"status", "toasts", "chat", "cards", "chats"}
-	if !p.VP.Mobile {
+	if p.VP.W >= 1200 { // the workbench's side bar and editor tabs
 		ts = append(ts, "tree", "bufs")
 	}
 	return ts

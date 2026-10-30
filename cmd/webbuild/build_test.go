@@ -273,3 +273,27 @@ func TestBuildRefusesAnyOtherDynamicImport(t *testing.T) {
 		t.Fatalf("err = %v, want a refusal naming other.js", err)
 	}
 }
+
+// The desktop editor: the vendored files a package serves are copied as
+// they are, its frame page gets the SRI values of files in folders too,
+// and licenses.txt carries the package's third-party notices.
+func TestBuildServesVendoredFilesAndTheFrame(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := os.ReadFile(filepath.Join(realAssets, "vendor", "monaco-editor@0.57.0", "min", "vs", "editor-BdtEMBbM.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(out["monaco/editor.js"], want) {
+		t.Error("monaco/editor.js is not the vendored file byte for byte")
+	}
+	html := string(out["monaco.html"])
+	if !strings.Contains(html, `src="/assets/monaco/editor.js" integrity="`+manifest.SRI(want)+`"`) {
+		t.Errorf("the frame does not pin the editor's bytes:\n%s", html)
+	}
+	if !strings.Contains(string(out["licenses.txt"]), "third-party notices of monaco-editor") {
+		t.Error("licenses.txt has no third-party notices of the desktop editor")
+	}
+}

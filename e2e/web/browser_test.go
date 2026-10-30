@@ -45,6 +45,12 @@ var (
 	Desktop = Viewport{Name: "desktop", W: 1280, H: 800, Scale: 1}
 	// Both runs a check on the phone and on the desktop.
 	Both = []Viewport{Phone, Desktop}
+	// Tablet is a window under the desktop workbench's width, with a mouse:
+	// the file view shows numbered rows there, as on a phone.
+	Tablet = Viewport{Name: "tablet", W: 1024, H: 768, Scale: 1}
+	// RowViews are the screens whose file view is the numbered rows (the
+	// desktop has the workbench editor, deskeditor_test.go).
+	RowViews = []Viewport{Phone, Tablet}
 )
 
 // chromePath finds Chrome or Chromium; CHROME_PATH wins.

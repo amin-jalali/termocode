@@ -163,3 +163,51 @@ func TestManifestServedOnlyByManifest(t *testing.T) {
 		t.Errorf("GET /sw.js = %d", res.StatusCode)
 	}
 }
+
+// The desktop editor's frame has its own policy: inline styles and the
+// editor's Trusted Types policies, nothing else more; no network at all;
+// only this site may frame it. Its scripts and styles carry SRI values
+// the served bytes match.
+func TestFrameServedWithItsOwnPolicy(t *testing.T) {
+	h := Guard(LoopbackSite(41237), Assets())
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, FramePath, nil)
+	req.Host = "127.0.0.1:41237"
+	h.ServeHTTP(rec, req)
+	res := rec.Result()
+	body, _ := io.ReadAll(res.Body)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("GET %s = %d", FramePath, res.StatusCode)
+	}
+	csp := res.Header.Get("Content-Security-Policy")
+	if csp != FrameCSP() || res.Header.Get("X-Frame-Options") != "SAMEORIGIN" {
+		t.Fatalf("frame headers: CSP %q, X-Frame-Options %q", csp, res.Header.Get("X-Frame-Options"))
+	}
+	for _, want := range []string{"connect-src 'none'", "worker-src 'none'", "frame-ancestors 'self'", "script-src 'self';", "require-trusted-types-for 'script'"} {
+		if !strings.Contains(csp, want) {
+			t.Errorf("frame CSP has no %q: %s", want, csp)
+		}
+	}
+	if strings.Count(csp, "unsafe") != 1 || !strings.Contains(csp, "style-src 'self' 'unsafe-inline'") || strings.Contains(csp, "*") {
+		t.Errorf("frame CSP opens more than inline styles: %s", csp)
+	}
+	refs := regexp.MustCompile(`(?:src|href)="(/assets/[^"]+)" integrity="([^"]+)"`).FindAllStringSubmatch(string(body), -1)
+	if len(refs) != 6 {
+		t.Fatalf("frame has %d SRI references, want 6:\n%s", len(refs), body)
+	}
+	for _, r := range refs {
+		sub := getAsset(t, Assets(), http.MethodGet, r[1])
+		b, _ := io.ReadAll(sub.Body)
+		if sub.StatusCode != http.StatusOK || manifest.SRI(b) != r[2] {
+			t.Errorf("GET %s = %d or its bytes do not match the frame's integrity", r[1], sub.StatusCode)
+		}
+	}
+	// The page itself keeps its strict policy and may frame only this site.
+	page := httptest.NewRecorder()
+	preq := httptest.NewRequest(http.MethodGet, "/", nil)
+	preq.Host = "127.0.0.1:41237"
+	h.ServeHTTP(page, preq)
+	if got := page.Result().Header.Get("Content-Security-Policy"); got != CSP(LoopbackSite(41237)) || page.Result().Header.Get("X-Frame-Options") != "DENY" {
+		t.Errorf("the page's headers changed: %q", got)
+	}
+}
