@@ -1,0 +1,66 @@
+{
+  "topic": "tasks",
+  "snap0": {
+    "tasks": [
+      {
+        "default": true,
+        "detail": "go build ./...",
+        "group": "build",
+        "label": "build",
+        "source": "tasks.json"
+      },
+      {
+        "detail": "go test ./...",
+        "group": "test",
+        "label": "test",
+        "source": "tasks.json"
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "tasks": [
+        {
+          "default": true,
+          "detail": "go build ./...",
+          "group": "build",
+          "label": "build",
+          "last": {
+            "buf": 41,
+            "state": "ok",
+            "when": 1700000000000
+          },
+          "source": "tasks.json"
+        },
+        {
+          "detail": "go test ./...",
+          "group": "test",
+          "label": "test",
+          "source": "tasks.json"
+        }
+      ]
+    }
+  ],
+  "snapn": {
+    "tasks": [
+      {
+        "label": "build",
+        "group": "build",
+        "default": true,
+        "source": "tasks.json",
+        "detail": "go build ./...",
+        "last": {
+          "state": "ok",
+          "when": 1700000000000,
+          "buf": 41
+        }
+      },
+      {
+        "label": "test",
+        "group": "test",
+        "source": "tasks.json",
+        "detail": "go test ./..."
+      }
+    ]
+  }
+}
