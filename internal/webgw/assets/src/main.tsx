@@ -13,6 +13,7 @@ import "./styles/git.css";
 import "./styles/more.css";
 import "./styles/files.css";
 import "./styles/hl.css";
+import "./styles/media.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { goTab } from "./lib/router";

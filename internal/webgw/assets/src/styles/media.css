@@ -1,0 +1,8 @@
+/* Images (WEB-57): drawn from blob: URLs the page made from the hub's bytes. */
+.img-preview { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s4); }
+.blob-img { display: block; max-width: 100%; max-height: 70vh; height: auto; object-fit: contain; border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-2); }
+.msg-img { flex-basis: 100%; }
+.msg-img .blob-img { max-height: 40vh; }
+.img-wait, .img-err { color: var(--muted); font-size: var(--fs-hint); }
+.msg-img-chip { cursor: pointer; }
+.msg-img-chip.is-on { border-color: var(--focus); }

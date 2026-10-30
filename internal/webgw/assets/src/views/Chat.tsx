@@ -13,6 +13,7 @@ import { ReqError } from "../net/link";
 import { link, live, store } from "../session";
 import { isStub, readChat } from "../state/chat";
 import { t } from "../strings";
+import { BlobImg } from "../ui/BlobImg";
 import { Md } from "../ui/Markdown";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
 import { errText } from "../ui/CardSheet";
@@ -47,18 +48,32 @@ function MsgText({ text, streaming }: { text?: string; streaming?: boolean }) {
   );
 }
 
-/** Extras: the attached image names and the rules file the turn used. */
-function Extras({ m }: { m: ChatMsg }) {
+/** Extras: the attached images and the rules file the turn used. In the
+ * laptop's own chat a controller can tap an image to see it here. */
+function Extras({ m, canFetch }: { m: ChatMsg; canFetch: boolean }) {
   const imgs = m.images ?? [];
+  const [open, setOpen] = useState<number | null>(null);
   if (imgs.length === 0 && !m.rules) return null;
+  const canSee = canFetch && link.meta.value?.role === "controller";
   return (
     <div class="msg-extras" dir="ltr">
-      {imgs.map((name, i) => (
-        <span key={i} class="chip">
-          🖼 {name}
-        </span>
-      ))}
+      {imgs.map((name, i) =>
+        canSee ? (
+          <button key={i} type="button" class={`chip msg-img-chip${open === i ? " is-on" : ""}`} aria-expanded={open === i ? "true" : "false"} onClick={() => setOpen(open === i ? null : i)}>
+            🖼 {name}
+          </button>
+        ) : (
+          <span key={i} class="chip">
+            🖼 {name}
+          </span>
+        ),
+      )}
       {m.rules && <span class="chip">{t("chat.rules", { name: m.rules })}</span>}
+      {open !== null && imgs[open] !== undefined && (
+        <div class="msg-img">
+          <BlobImg op="chat.image" args={{ i: m.i, n: open }} alt={t("img.alt", { name: imgs[open] })} />
+        </div>
+      )}
     </div>
   );
 }
@@ -106,7 +121,7 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
             {m.md ? <Md doc={m.md} /> : <MsgText text={m.text} />}
             {rest}
           </div>
-          <Extras m={m} />
+          <Extras m={m} canFetch={canFetch} />
         </div>
       );
     case "tool":
@@ -135,7 +150,7 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
             {rest}
           </div>
           <Run m={m} />
-          <Extras m={m} />
+          <Extras m={m} canFetch={canFetch} />
         </div>
       );
   }

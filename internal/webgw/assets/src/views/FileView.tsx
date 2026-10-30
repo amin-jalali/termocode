@@ -9,6 +9,8 @@ import type { BufSnap } from "../../../../webproto/proto";
 import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
 import { closePath, file, openPath, type FileState } from "../lib/file";
 import { dropHl, hl, rowSegs, wantHl } from "../lib/hl";
+import { IMAGE_EXT } from "../lib/image";
+import { BlobImg } from "../ui/BlobImg";
 import { editing, liveStatus, session } from "../lib/live";
 import { go } from "../lib/router";
 import { toast } from "../lib/toasts";
@@ -178,6 +180,13 @@ function Body({ st, scroller, wrap, canEdit }: { st: FileState; scroller: { curr
       );
     case "binary":
     case "secret":
+      if (st.kind === "binary" && IMAGE_EXT.test(st.path) && link.meta.value?.role === "controller")
+        return (
+          <div class="img-preview">
+            <BlobImg op="file.image" args={{ path: st.path }} alt={t("img.alt", { name: baseName(st.path) })} />
+            {st.size !== undefined && <span class="file-meta">{bytes(st.size)}</span>}
+          </div>
+        );
       return (
         <div class="empty">
           <div class="empty-state">
