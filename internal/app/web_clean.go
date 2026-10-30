@@ -1,8 +1,12 @@
 package app
 
 import (
+	"bytes"
+	"encoding/json"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/amin-jalali/termocode/internal/ai"
 )
 
 // What the hub cleans out of every string before it leaves for the page
@@ -88,4 +92,80 @@ func webDropRune(r rune, size int, name bool) bool {
 		return true
 	}
 	return false
+}
+
+// webData marshals v for the page (WEB-7, T43): every string in it,
+// values and keys, passes the registered-secret redaction and webClean.
+// Snapshot and delta types are hand-written structs with no secret
+// fields; this is the second line. The result is compact JSON without
+// HTML escaping; numbers keep their exact text.
+func webData(v any) (json.RawMessage, error) {
+	b, err := webMarshal(v)
+	if err != nil {
+		return nil, err
+	}
+	// Fast path: no escapes in the JSON means every string's bytes are
+	// its text, so redacting the whole document is the same as redacting
+	// each string; a change (or any escape) takes the careful path.
+	if !webJSONHasEscapes(b) {
+		s := string(b)
+		if ai.RedactSecrets(s) == s {
+			return b, nil
+		}
+	}
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	var tree any
+	if err := dec.Decode(&tree); err != nil {
+		return nil, err
+	}
+	return webMarshal(webCleanTree(tree))
+}
+
+// webText is webClean plus the registered-secret redaction, for the text
+// fields of hub messages (an err's msg).
+func webText(s string) string { return webClean(ai.RedactSecrets(s)) }
+
+func webMarshal(v any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
+}
+
+// webJSONHasEscapes reports a backslash escape, DEL or a C1 control
+// (encoding/json writes those raw) anywhere in b.
+func webJSONHasEscapes(b []byte) bool {
+	for i := 0; i < len(b); i++ {
+		switch c := b[i]; {
+		case c == '\\' || c == 0x7f:
+			return true
+		case c == 0xc2 && i+1 < len(b) && b[i+1] >= 0x80 && b[i+1] <= 0x9f:
+			return true
+		}
+	}
+	return false
+}
+
+// webCleanTree cleans every string of a decoded JSON value.
+func webCleanTree(v any) any {
+	switch v := v.(type) {
+	case string:
+		return webText(v)
+	case []any:
+		for i := range v {
+			v[i] = webCleanTree(v[i])
+		}
+		return v
+	case map[string]any:
+		out := make(map[string]any, len(v))
+		for k, x := range v {
+			out[webText(k)] = webCleanTree(x)
+		}
+		return out
+	}
+	return v
 }

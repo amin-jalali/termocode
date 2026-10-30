@@ -66,7 +66,7 @@ func (c *webCall) later() { c.deferred = true }
 func (c *webCall) reply(data any) {
 	var raw json.RawMessage
 	if data != nil {
-		b, err := json.Marshal(data)
+		b, err := webData(data)
 		if err != nil {
 			recordError("[web] " + c.op + ": reply: " + err.Error())
 			c.fail(webproto.CodeInternal, "Something went wrong.")
@@ -80,7 +80,7 @@ func (c *webCall) reply(data any) {
 // fail answers with err. msg is short English for the user: never a
 // path or a secret. Only the first answer counts.
 func (c *webCall) fail(code webproto.ErrCode, msg string) {
-	c.answer(&webproto.ErrMsg{T: webproto.KindErr, ID: c.id, Code: code, Msg: msg})
+	c.answer(&webproto.ErrMsg{T: webproto.KindErr, ID: c.id, Code: code, Msg: webText(msg)})
 }
 
 func (c *webCall) answer(m webproto.Msg) {
