@@ -11,6 +11,8 @@ import type { Tab } from "./state/route";
 import { t } from "./strings";
 import { AttentionPill } from "./ui/AttentionPill";
 import { CardSheet } from "./ui/CardSheet";
+import { LinkSheet } from "./ui/LinkSheet";
+import { linkAsk } from "./lib/links";
 import { FirstRunHint } from "./ui/FirstRunHint";
 import { Nav } from "./ui/Nav";
 import { OfflineBar } from "./ui/OfflineBar";
@@ -76,6 +78,7 @@ export function App() {
       <AttentionPill />
       {l === "phone" && <Nav variant="tabs" active={r.tab} />}
       {r.card && <CardSheet key={r.card} id={r.card} />}
+      {linkAsk.value && <LinkSheet href={linkAsk.value} />}
       <Toasts />
     </div>
   );

@@ -73,6 +73,13 @@ export const FA: Record<StringKey, string> = {
   "chat.retry_laptop": "تلاش دوباره روی لپ‌تاپ",
   "chat.steps": "{n} گام · {tok} توکن · {time}",
   "chat.paused": "مکث",
+  "chat.ai": "هوش مصنوعی",
+  "copy": "کپی",
+  "copied": "کپی شد",
+  "copy.failed": "کپی نشد. متن را خودتان انتخاب کنید.",
+  "link.title": "این پیوند باز شود؟",
+  "link.body": "در یک زبانه‌ی تازه، بیرون از termocode باز می‌شود.",
+  "link.open": "باز کن",
 
   // Cards
   "card.tool.title": "یک فرمان اجرا شود؟",

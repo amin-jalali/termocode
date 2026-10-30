@@ -75,6 +75,13 @@ export const S = {
   "chat.retry_laptop": "Retry on laptop",
   "chat.steps": "{n} steps · {tok} tok · {time}",
   "chat.paused": "paused",
+  "chat.ai": "AI",
+  "copy": "Copy",
+  "copied": "Copied",
+  "copy.failed": "Could not copy. Select the text instead.",
+  "link.title": "Open this link?",
+  "link.body": "It opens in a new tab, outside termocode.",
+  "link.open": "Open",
 
   // Cards
   "card.tool.title": "Run a command?",
