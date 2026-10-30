@@ -1539,6 +1539,20 @@
       "phase": "v2"
     },
     {
+      "op": "git.amend",
+      "args": "GitAmendArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 40960,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "tree.new_file",
       "args": "ItemArgs",
       "result": "TreeChanged",
@@ -3904,6 +3918,16 @@
         "paths"
       ],
       "additionalProperties": true
+    },
+    "GitAmendArgs": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     },
     "GitBlame": {
       "type": "object",

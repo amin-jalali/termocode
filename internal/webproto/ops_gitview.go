@@ -20,6 +20,8 @@ const (
 	OpGitConflict    = "git.conflict"
 	OpGitResolve     = "git.resolve"
 	OpGitResolveSide = "git.resolve_side"
+
+	OpGitAmend = "git.amend"
 )
 
 // Graph limits.
@@ -165,6 +167,12 @@ type GitResolved struct {
 	Left int    `json:"left"` // conflicted files left after this one
 }
 
+// GitAmendArgs replaces the last commit with one that also has the
+// staged changes. An empty Message keeps the commit's own.
+type GitAmendArgs struct {
+	Message string `json:"message,omitempty"`
+}
+
 var opGitViewRows = []Policy{
 	{Op: OpGitGraph, New: newOf[GitGraphArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpGitBlame, New: newOf[GitBlameArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
@@ -174,6 +182,8 @@ var opGitViewRows = []Policy{
 	// version keeps a changed file from being overwritten.
 	{Op: OpGitResolve, New: newOf[GitResolveArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * mib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpGitResolveSide, New: newOf[GitResolveSideArgs](), Role: RoleController, Rate: slow, MaxBytes: 8 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	// Rewrites history: the laptop says yes.
+	{Op: OpGitAmend, New: newOf[GitAmendArgs](), Role: RoleController, Rate: slow, MaxBytes: 40 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 }
 
 func (a *GitGraphArgs) validate(int) error {
@@ -220,6 +230,13 @@ func (a *GitResolveSideArgs) validate(int) error {
 	return nil
 }
 
+func (a *GitAmendArgs) validate(n int) error {
+	if a.Message == "" {
+		return nil
+	}
+	return (&GitCommitArgs{Message: a.Message}).validate(n)
+}
+
 // The rows join the table before any init() runs (as ops_more.go's).
 var _ = func() bool { opTable = append(opTable, opGitViewRows...); return true }()
 
@@ -229,4 +246,5 @@ func init() {
 	registerResult(OpGitConflict, GitConflict{})
 	registerResult(OpGitResolve, GitResolved{})
 	registerResult(OpGitResolveSide, AskRef{})
+	registerResult(OpGitAmend, AskRef{})
 }

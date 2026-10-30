@@ -68,3 +68,12 @@ func TestGitConflictOps(t *testing.T) {
 	checkArgs(t, OpGitResolveSide, []string{`{"path":"a.go","side":"base"}`, `{"path":"a.go","side":""}`}, []string{`{"path":"a.go","side":"ours"}`, `{"path":"a.go","side":"theirs"}`})
 	checkRow(t, OpGitResolveSide, RoleController, true, AuditYes)
 }
+
+// Spec (amend): git.amend replaces the last commit (with the staged
+// changes, and a new message or the old one); it rewrites history, so it
+// waits for a laptop card.
+func TestGitAmendOp(t *testing.T) {
+	checkArgs(t, OpGitAmend, []string{`{"message":"   "}`, `{"message":"\n body only"}`, `{"message":"a\u0007b"}`},
+		[]string{`{}`, `{"message":"fix: the subject\n\nthe body"}`})
+	checkRow(t, OpGitAmend, RoleController, true, AuditYes)
+}
