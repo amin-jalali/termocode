@@ -3,10 +3,14 @@
 package app
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"net"
 	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -160,5 +164,92 @@ func TestPublishSeq(t *testing.T) {
 	r.m.webPublish("status", map[string]int{"n": 4})
 	if d := r.nextMsg(a); d["seq"] != float64(4) {
 		t.Fatalf("after b left: %v", d)
+	}
+}
+
+// Spec (WEB-7, T41): publish never waits for a browser. A gateway that
+// stops reading fills its queue; every publish still returns at once, the
+// topic turns stale, and when the gateway reads again it gets the queued
+// deltas in order, one resync, and a fresh snap after it subscribes again.
+func TestPublishNeverBlocks(t *testing.T) {
+	r := newWebRig(t, nil)
+	n, log := 0, ""
+	webTestTopics(r, &n, &log)
+	nc, err := net.Dial("unix", r.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+	if _, err := nc.Write([]byte(webTestOpen + "\n" + `{"t":"hello","v":2,"token":"x"}` + "\n" + `{"t":"sub","topics":["status"]}` + "\n")); err != nil {
+		t.Fatal(err)
+	}
+	var hc *webConn
+	r.pumpUntil("the subscription", func() bool {
+		r.hub.mu.Lock()
+		hc = r.hub.byID["c-1"]
+		r.hub.mu.Unlock()
+		return hc != nil && hc.subs["status"] != nil
+	})
+	pad := strings.Repeat("p", 1024)
+	start := time.Now()
+	var worst time.Duration
+	for i := 1; i <= 5000; i++ {
+		n = i
+		t0 := time.Now()
+		r.m.webPublish("status", map[string]any{"n": i, "pad": pad})
+		if d := time.Since(t0); d > worst {
+			worst = d
+		}
+	}
+	if !hc.out.isStale("status") {
+		t.Fatal("the topic never turned stale")
+	}
+	if total := time.Since(start); total > 20*time.Second || worst > time.Second { // loose for slow CI
+		t.Fatalf("publish waited: total %s, worst %s", total, worst)
+	}
+	// The gateway reads again.
+	br := bufio.NewReader(nc)
+	last := uint64(0)
+	for {
+		_ = nc.SetReadDeadline(time.Now().Add(10 * time.Second))
+		line, err := br.ReadString('\n')
+		if err != nil {
+			t.Fatalf("read: %v (last seq %d)", err, last)
+		}
+		var m struct {
+			T   string `json:"t"`
+			Seq uint64 `json:"seq"`
+		}
+		_ = json.Unmarshal([]byte(line), &m)
+		if m.T == "resync" {
+			break
+		}
+		if m.T == "meta" {
+			continue
+		}
+		if m.Seq != last+1 {
+			t.Fatalf("seq %d after %d", m.Seq, last)
+		}
+		last = m.Seq
+	}
+	if _, err := nc.Write([]byte(`{"t":"sub","topics":["status"]}` + "\n")); err != nil {
+		t.Fatal(err)
+	}
+	got := make(chan string, 1)
+	go func() {
+		line, _ := br.ReadString('\n')
+		got <- line
+	}()
+	var line string
+	r.pumpUntil("the new snap", func() bool {
+		select {
+		case line = <-got:
+			return true
+		default:
+			return false
+		}
+	})
+	if !strings.Contains(line, `"t":"snap"`) || !strings.Contains(line, `"n":5000`) || !strings.Contains(line, fmt.Sprintf(`"seq":%d`, last+1)) {
+		t.Fatalf("after resync: %.200s", line)
 	}
 }
