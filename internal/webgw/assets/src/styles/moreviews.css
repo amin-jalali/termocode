@@ -19,3 +19,19 @@
 .mcp-list > li + li { border-top: 1px solid var(--border); }
 .mcp-name { font-weight: 600; overflow-wrap: anywhere; }
 .mcp-meta, .mcp-call { font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--text-2); overflow-wrap: anywhere; }
+
+/* Sheets that wait for the laptop, and the file actions. */
+.ask { display: flex; flex-direction: column; gap: var(--s3); padding: var(--s2); }
+.ask-text { font-weight: 600; overflow-wrap: anywhere; }
+.ask-note { color: var(--muted); font-size: 0.875rem; }
+.file-actions { display: flex; flex-direction: column; gap: var(--s3); padding: var(--s2); }
+.file-actions-path { font-family: var(--font-mono); font-size: var(--fs-row); color: var(--text-2); overflow-wrap: anywhere; unicode-bidi: isolate; }
+.file-menu { display: flex; flex-direction: column; gap: var(--s2); }
+.file-menu > .btn { min-height: var(--tap); }
+.name-form { display: flex; flex-direction: column; gap: var(--s2); }
+.name-bad { color: var(--red); font-size: 0.875rem; }
+.tree-line { display: flex; align-items: stretch; }
+.tree-line > .tree-row { flex: 1; min-width: 0; }
+.tree-more { flex: none; min-width: var(--tap); min-height: var(--tap); color: var(--dim); font-size: 1.1rem; }
+.tree-more:hover { color: var(--text); background: var(--bg-hover); }
+.head-new { min-width: var(--tap); min-height: var(--tap); font-size: 1.25rem; color: var(--blue); }
