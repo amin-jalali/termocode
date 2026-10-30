@@ -120,7 +120,9 @@ func TestTabsDragToReorderAndToTheSide(t *testing.T) {
 func TestTreeClickOpensAPreviewTab(t *testing.T) {
 	p, c := openTree(t, Desktop)
 	c.Send(t, Delta("tree", 3, dirDelta("", false, entry("a.go", false), entry("b.go", false), entry("c.go", false))))
-	side := func(path string) string { return `document.querySelector('.wb-side .tree-row[data-path=` + jsq(path) + `]')` }
+	side := func(path string) string {
+		return `document.querySelector('.wb-side .tree-row[data-path=` + jsq(path) + `]')`
+	}
 	p.WaitJS(side("c.go"))
 	open := func(path string, buf int) {
 		t.Helper()
