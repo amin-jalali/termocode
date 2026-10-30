@@ -3,8 +3,10 @@
 package web
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -131,4 +133,50 @@ func TestTreeContextMenuViewer(t *testing.T) {
 	if got := menuLabels(p); got != "Open to the Side|Copy Path|Copy Relative Path" {
 		t.Errorf("viewer menu %q", got)
 	}
+}
+
+// editorRightClick opens the desktop editor's context menu (a right
+// click in its frame).
+func editorRightClick(p *Page) {
+	p.T.Helper()
+	Eval[bool](p, `(() => { const el = `+deskDoc+`.querySelector(".view-lines"); const r = el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2, clientX: r.left + 20, clientY: r.top + 5 })); return true; })()`)
+	p.WaitJS(`document.querySelector(".ctx-menu .ctx-item") && document.activeElement?.classList.contains("ctx-item")`)
+}
+
+// The editor's menu: Go to Definition and Find All References (off while
+// the editor has no source for them), Cut, Copy, Paste, the command list;
+// Format only when the editor can format. The page never reads the
+// clipboard: Paste gives the editor the keys and says which ones paste.
+func TestEditorContextMenu(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	fakeClipboard(p, "")
+	openDesk(t, p, c, 2, "a.txt", "hello world")
+	deskFocus(p)
+	p.Do(chromedp.KeyEvent("a", modKey()))
+	editorRightClick(p)
+	if got := menuLabels(p); got != "Go to Definition|Find All References|Cut|Copy|Paste|Command Palette…" {
+		t.Errorf("editor menu %q", got)
+	}
+	if got := Eval[string](p, `[...document.querySelectorAll(".ctx-menu .ctx-item")].filter((b) => b.disabled).map((b) => b.textContent).join("|")`); got != "Go to DefinitionF12|Find All ReferencesShift+F12" {
+		t.Errorf("off items %q", got)
+	}
+	menuPick(p, "Copy")
+	p.WaitJS(`window.__clip === "hello world"`)
+
+	editorRightClick(p)
+	menuPick(p, "Cut")
+	p.WaitJS(`window.__clip === "hello world"`)
+	r, a := expectSetText(t, c)
+	if strings.Join(a.Lines, "\n") != "" {
+		t.Errorf("cut sent %+v", a)
+	}
+	reply(t, c, r, webproto.EditRes{Tick: 4})
+
+	editorRightClick(p)
+	menuPick(p, "Paste")
+	p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("to paste here.")`)
+
+	editorRightClick(p)
+	menuPick(p, "Command Palette…")
+	p.WaitJS(`document.querySelector(".quick .quick-box")?.value === ">"`)
 }

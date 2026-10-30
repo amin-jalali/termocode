@@ -11,7 +11,7 @@ import { ChangeSet, Text } from "@codemirror/state";
 import { dict } from "../state/dict";
 import { History } from "../editor/history";
 import { diff } from "../lib/textdiff";
-import type { FrameOpts, FromFrame, ToFrame } from "./protocol";
+import type { FrameOpts, FromFrame, MenuCan, ToFrame } from "./protocol";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -41,6 +41,7 @@ interface Model {
   getPositionAt(offset: number): Pos;
   getLineCount(): number;
   getLineContent(line: number): string;
+  getValueInRange(r: IRange): string;
   applyEdits(ops: EditOp[]): void;
   onDidChangeContent(cb: (e: { changes: Change[] }) => void): void;
 }
@@ -73,6 +74,9 @@ interface Editor {
   onDidLayoutChange(cb: () => void): void;
   onKeyDown(cb: (e: KeyEvent) => void): void;
   addCommand(keys: number, run: () => void): unknown;
+  getSelections(): IRange[] | null;
+  getAction(id: string): { isSupported(): boolean; run(): Promise<void> } | null;
+  getContainerDomNode(): HTMLElement;
 }
 interface EditorNS {
   create(el: HTMLElement, o: Record<string, unknown>): Editor;
@@ -103,6 +107,41 @@ let hlDecos: Collection | null = null;
 let flashDecos: Collection | null = null;
 let gutterDecos: Collection | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | undefined;
+let readOnly = false;
+
+/** MENU_SEL_MAX caps the selected text a right click hands the page. */
+const MENU_SEL_MAX = 1 << 20;
+
+/** ACTIONS are the editor's own actions the context menu may run. */
+const ACTIONS = { def: "editor.action.revealDefinition", refs: "editor.action.goToReferences", format: "editor.action.formatDocument" } as const;
+
+function can(): MenuCan {
+  const ok = (id: string) => ed?.getAction(id)?.isSupported() === true;
+  return { def: ok(ACTIONS.def), refs: ok(ACTIONS.refs), format: !readOnly && ok(ACTIONS.format) };
+}
+
+/** onMenu: the page draws the context menu (the editor's own is off). */
+function onMenu(e: MouseEvent): void {
+  e.preventDefault();
+  e.stopPropagation();
+  const sel = (ed?.getSelections() ?? []).map((r) => model?.getValueInRange(r) ?? "").join("\n");
+  post({ t: "menu", x: e.clientX, y: e.clientY, sel: sel.length > MENU_SEL_MAX ? "" : sel, readOnly, can: can() });
+}
+
+/** menuEdit runs a context menu choice. */
+function menuEdit(m: Extract<ToFrame, { t: "edit" }>): void {
+  if (!ed) return;
+  if (m.op === "def" || m.op === "refs" || m.op === "format") {
+    ed.focus();
+    void ed.getAction(ACTIONS[m.op])?.run();
+    return;
+  }
+  if (readOnly) return;
+  ed.pushUndoStop();
+  ed.executeEdits("menu", (ed.getSelections() ?? []).map((range) => ({ range, text: "", forceMoveMarkers: true })));
+  ed.pushUndoStop();
+  ed.focus();
+}
 
 function sendText(user: boolean): void {
   post({ t: "text", text: cur.toString(), v, user, canUndo: hist.canUndo(), canRedo: hist.canRedo() });
@@ -202,7 +241,10 @@ function setOpts(o: FrameOpts): void {
   }
   if (!ed) return;
   const u = dict<unknown>();
-  if (o.readOnly !== undefined) u.readOnly = o.readOnly;
+  if (o.readOnly !== undefined) {
+    u.readOnly = o.readOnly;
+    readOnly = o.readOnly;
+  }
   if (o.wrap !== undefined) u.wordWrap = o.wrap ? "on" : "off";
   if (o.tabSize !== undefined && o.tabSize > 0) u.tabSize = o.tabSize;
   if (o.insertSpaces !== undefined) u.insertSpaces = o.insertSpaces;
@@ -227,7 +269,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     minimap: { enabled: true },
     scrollBeyondLastLine: true,
     renderLineHighlight: "line",
-    contextmenu: true,
+    contextmenu: false, // the page draws it (onMenu)
     fixedOverflowWidgets: true,
     ariaLabel: m.label,
     unicodeHighlight: { ambiguousCharacters: false },
@@ -240,6 +282,8 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     bracketPairColorization: { enabled: true },
     guides: { indentation: true, bracketPairs: false },
   });
+  readOnly = m.readOnly === true;
+  ed.getContainerDomNode().addEventListener("contextmenu", onMenu, true);
   model = ed.getModel();
   model?.setEOL(0);
   hlDecos = ed.createDecorationsCollection();
@@ -333,6 +377,9 @@ function onMessage(e: MessageEvent): void {
       return;
     case "focus":
       ed?.focus();
+      return;
+    case "edit":
+      menuEdit(m);
       return;
     case "reveal":
       ed?.revealLineInCenter(m.line);

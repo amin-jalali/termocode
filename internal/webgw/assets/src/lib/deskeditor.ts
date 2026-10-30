@@ -10,6 +10,7 @@ import { FRAME_PATH, type FrameOpts, type FromFrame, type ToFrame } from "../mon
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
+import { editorMenu } from "./editormenu";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -134,6 +135,11 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "save":
         host.onSave();
         return;
+      case "menu": {
+        const r = frame.getBoundingClientRect();
+        editorMenu(r.left + m.x, r.top + m.y, m, send);
+        return;
+      }
       case "key":
         // The workbench's keys work while the editor has the focus.
         dispatchEvent(new KeyboardEvent("keydown", { key: m.key, code: m.code, ctrlKey: m.ctrl, metaKey: m.meta, shiftKey: m.shift, altKey: m.alt, bubbles: true, cancelable: true }));

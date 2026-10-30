@@ -30,7 +30,17 @@ export type ToFrame =
   | { t: "undo" }
   | { t: "redo" }
   | { t: "focus" }
-  | { t: "reveal"; line: number };
+  | { t: "reveal"; line: number }
+  /** edit: a context menu choice. cut drops the selection (the page put
+   * it on the clipboard); def, refs and format run the editor's own action. */
+  | { t: "edit"; op: "cut" | "def" | "refs" | "format" };
+
+/** MenuCan says which of the editor's actions work here now. */
+export interface MenuCan {
+  def: boolean;
+  refs: boolean;
+  format: boolean;
+}
 
 export type FromFrame =
   | { t: "ready" }
@@ -40,6 +50,8 @@ export type FromFrame =
   | { t: "viewport"; first: number; last: number }
   | { t: "cursor"; line: number; col: number }
   | { t: "save" }
+  /** menu: a right click at (x, y) in the frame; sel is the selected text. */
+  | { t: "menu"; x: number; y: number; sel: string; readOnly: boolean; can: MenuCan }
   /** key: a workbench key pressed in the editor (Ctrl/Cmd+P, +B, +J …). */
   | { t: "key"; key: string; code: string; ctrl: boolean; meta: boolean; shift: boolean; alt: boolean };
 
