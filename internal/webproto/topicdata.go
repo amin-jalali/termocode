@@ -26,8 +26,9 @@ type TopicData struct {
 }
 
 var (
-	topicData = map[string]TopicData{}
-	eventData = map[string]reflect.Type{}
+	topicData  = map[string]TopicData{}
+	eventData  = map[string]reflect.Type{}
+	resultData = map[string]reflect.Type{}
 )
 
 // registerTopic records the data types of a known topic: zero values of
@@ -49,6 +50,24 @@ func registerEvent(kind string, data any) {
 		panic("webproto: event registered twice: " + kind)
 	}
 	eventData[kind] = structType(data)
+}
+
+// registerResult records the data type of an op's res.
+func registerResult(op string, data any) {
+	if _, ok := Lookup(op); !ok {
+		panic("webproto: result for unknown op " + op)
+	}
+	if _, dup := resultData[op]; dup {
+		panic("webproto: result registered twice: " + op)
+	}
+	resultData[op] = structType(data)
+}
+
+// ResultOf returns the data type of an op's res (false: the res has no
+// data).
+func ResultOf(op string) (reflect.Type, bool) {
+	t, ok := resultData[op]
+	return t, ok
 }
 
 func structType(v any) reflect.Type {
