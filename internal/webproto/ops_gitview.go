@@ -27,6 +27,8 @@ const (
 	OpGitRebase      = "git.rebase"
 	OpGitRebaseState = "git.rebase_state"
 	OpGitRebaseCtl   = "git.rebase_ctl"
+
+	OpGitClone = "git.clone"
 )
 
 // Graph limits.
@@ -236,6 +238,15 @@ type GitRebaseCtlArgs struct {
 	Do string `json:"do" enum:"continue|skip|abort"`
 }
 
+// MaxCloneURL caps a clone URL.
+const MaxCloneURL = 2048
+
+// GitCloneArgs clones a remote repository next to (or into) the open
+// folder, as the laptop's Git: Clone does; the laptop then opens it.
+type GitCloneArgs struct {
+	URL string `json:"url"`
+}
+
 var opGitViewRows = []Policy{
 	{Op: OpGitGraph, New: newOf[GitGraphArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpGitBlame, New: newOf[GitBlameArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
@@ -251,6 +262,7 @@ var opGitViewRows = []Policy{
 	{Op: OpGitRebaseState, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpGitRebase, New: newOf[GitRebaseArgs](), Role: RoleController, Rate: slow, MaxBytes: 256 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpGitRebaseCtl, New: newOf[GitRebaseCtlArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpGitClone, New: newOf[GitCloneArgs](), Role: RoleController, Rate: slow, MaxBytes: 4 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 }
 
 func (a *GitGraphArgs) validate(int) error {
@@ -350,6 +362,72 @@ func (a *GitRebaseCtlArgs) validate(int) error {
 	return nil
 }
 
+// cloneHost: a host name (letters, digits, dots, dashes; not starting
+// with a dash) with an optional port.
+func cloneHost(h string) bool {
+	h, port, _ := strings.Cut(h, ":")
+	if h == "" || h[0] == '-' || len(h) > 253 || strings.Trim(port, "0123456789") != "" {
+		return false
+	}
+	for _, c := range h {
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '-') {
+			return false
+		}
+	}
+	return true
+}
+
+// clonePath: a repository path with at least one name in it.
+func clonePath(p string) bool {
+	p = strings.Trim(p, "/")
+	return p != "" && !strings.HasPrefix(p, "-") && strings.Trim(p, "./") != ""
+}
+
+func cloneUser(u string) bool {
+	if u == "" || u[0] == '-' {
+		return false
+	}
+	for _, c := range u {
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '-' || c == '_') {
+			return false
+		}
+	}
+	return true
+}
+
+func (a *GitCloneArgs) validate(int) error {
+	u := a.URL
+	if u == "" || len(u) > MaxCloneURL || hasControl(u) || strings.ContainsAny(u, " \t\\") {
+		return invalid("bad url")
+	}
+	switch {
+	case strings.HasPrefix(u, "https://"):
+		host, path, _ := strings.Cut(strings.TrimPrefix(u, "https://"), "/")
+		if strings.Contains(host, "@") || !cloneHost(host) || !clonePath(path) {
+			return invalid("bad url")
+		}
+	case strings.HasPrefix(u, "ssh://"):
+		rest := strings.TrimPrefix(u, "ssh://")
+		host, path, _ := strings.Cut(rest, "/")
+		if user, h, ok := strings.Cut(host, "@"); ok {
+			if !cloneUser(user) {
+				return invalid("bad url")
+			}
+			host = h
+		}
+		if !cloneHost(host) || !clonePath(path) {
+			return invalid("bad url")
+		}
+	default: // scp-like: user@host:path
+		user, rest, ok := strings.Cut(u, "@")
+		host, path, ok2 := strings.Cut(rest, ":")
+		if !ok || !ok2 || !cloneUser(user) || strings.Contains(host, ":") || !cloneHost(host) || !clonePath(path) {
+			return invalid("bad url")
+		}
+	}
+	return nil
+}
+
 // The rows join the table before any init() runs (as ops_more.go's).
 var _ = func() bool { opTable = append(opTable, opGitViewRows...); return true }()
 
@@ -364,4 +442,5 @@ func init() {
 	registerResult(OpGitRebaseState, GitRebaseState{})
 	registerResult(OpGitRebase, AskRef{})
 	registerResult(OpGitRebaseCtl, AskRef{})
+	registerResult(OpGitClone, AskRef{})
 }
