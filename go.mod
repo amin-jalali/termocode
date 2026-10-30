@@ -19,7 +19,7 @@ require (
 	github.com/muesli/termenv v0.16.0
 	github.com/neovim/go-client v1.2.1
 	github.com/sahilm/fuzzy v0.1.1
-	github.com/yuin/goldmark v1.7.13
+	github.com/yuin/goldmark v1.7.17
 	github.com/zalando/go-keyring v0.2.6
 	golang.design/x/clipboard v0.7.1
 	golang.org/x/crypto v0.56.0
