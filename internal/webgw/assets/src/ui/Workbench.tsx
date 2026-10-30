@@ -56,6 +56,7 @@ import { RunsView } from "../views/more/RunsView";
 import { SearchView } from "../views/more/SearchView";
 import { TasksView } from "../views/more/TasksView";
 import { QuickInput } from "./QuickInput";
+import { RefsPeek } from "./RefsPeek";
 import { diags, panelTab, toggleProblems, type PanelTab } from "../lib/lsp";
 import { ProblemsView } from "../views/ProblemsView";
 import { StatusBar } from "./StatusBar";
@@ -465,6 +466,7 @@ export function Workbench() {
               </section>
             ))}
           </div>
+          <RefsPeek />
         </div>
         {p.panel && (
           <>

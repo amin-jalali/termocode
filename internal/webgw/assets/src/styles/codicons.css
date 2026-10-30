@@ -84,3 +84,4 @@
 .cod-link-external::before { content: "\eb14"; }
 .cod-info::before { content: "\ea74"; }
 .cod-lightbulb::before { content: "\ea61"; }
+.cod-references::before { content: "\eb36"; }

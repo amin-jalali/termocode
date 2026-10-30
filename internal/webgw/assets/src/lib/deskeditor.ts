@@ -57,11 +57,13 @@ export interface DeskHost extends EditorHost {
   insertSpaces: boolean;
   /** path is the file's workspace path. */
   path?: string;
-  /** lsp: the editor asks for hover, completion and definitions
-   * (onLsp); a definition elsewhere opens there (onOpen). Positions are
-   * 0-based, columns in UTF-16 units. */
+  /** lsp: the editor asks for hover, completion, definitions (onLsp)
+   * and references (onRefs); a definition elsewhere opens there (onOpen).
+   * Positions are 0-based, columns in UTF-16 units. */
   lsp?: boolean;
+  refsLabel?: string;
   onLsp?(kind: LspKind, line: number, col: number): Promise<unknown>;
+  onRefs?(line: number, col: number): void;
   onOpen?(path: string, line: number, col: number): void;
 }
 
@@ -117,7 +119,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "ready": {
         ready = true;
         const c = frameColors(parent);
-        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, lsp: host.lsp, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
+        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, lsp: host.lsp, refsLabel: host.refsLabel, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.
@@ -157,6 +159,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         host.onLsp(m.kind, m.line, m.col).then(answer, () => answer(null));
         return;
       }
+      case "refs":
+        host.onRefs?.(m.line, m.col);
+        return;
       case "open":
         host.onOpen?.(m.path, m.line, m.col);
         return;
