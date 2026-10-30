@@ -42,3 +42,35 @@ func (b *Bucket) Allow(now time.Time) bool {
 	b.tat = tat.Add(b.interval)
 	return true
 }
+
+// AllowN takes n requests (or n bytes) from the bucket at once, or says
+// no and takes nothing.
+func (b *Bucket) AllowN(now time.Time, n int) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	tat := b.tat
+	if tat.Before(now) {
+		tat = now
+	}
+	next := tat.Add(b.interval * time.Duration(n))
+	if next.Sub(now) > b.tolerance+b.interval {
+		return false
+	}
+	b.tat = next
+	return true
+}
+
+// NextN is how long from now until AllowN(n) would pass (0: now).
+func (b *Bucket) NextN(now time.Time, n int) time.Duration {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	tat := b.tat
+	if tat.Before(now) {
+		tat = now
+	}
+	wait := tat.Add(b.interval*time.Duration(n)).Sub(now) - b.tolerance - b.interval
+	if wait < 0 {
+		return 0
+	}
+	return wait
+}

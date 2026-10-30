@@ -51,3 +51,26 @@ func TestBucketClockBackwards(t *testing.T) {
 		t.Fatal("no refill after 1 s")
 	}
 }
+
+// AllowN takes n at once or nothing; NextN says when it would pass.
+func TestBucketAllowNAndNextN(t *testing.T) {
+	b := NewBucket(100, 100) // 100 bytes per second, 100 at once
+	if b.NextN(t0, 100) != 0 || !b.AllowN(t0, 100) {
+		t.Fatal("a full burst refused")
+	}
+	if b.AllowN(t0, 1) {
+		t.Fatal("over the burst allowed")
+	}
+	if got := b.NextN(t0, 50); got != 500*time.Millisecond {
+		t.Fatalf("NextN(50) = %v, want 500ms", got)
+	}
+	if b.AllowN(t0.Add(499*time.Millisecond), 50) {
+		t.Fatal("allowed before NextN")
+	}
+	if !b.AllowN(t0.Add(500*time.Millisecond), 50) {
+		t.Fatal("refused at NextN")
+	}
+	if b.AllowN(t0.Add(time.Hour), 101) {
+		t.Fatal("more than the burst at once")
+	}
+}
