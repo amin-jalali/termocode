@@ -89,11 +89,13 @@ type CommitHead struct {
 }
 
 // ShowCapped returns a commit's head and its diff (as DiffFile: no
-// external diff programs or filters, at most max bytes of output).
-func ShowCapped(dir, rev string, max int) (head CommitHead, diff string, cut bool, err error) {
+// external diff programs or filters, at most max bytes of output). With
+// paths, the diff has only those files.
+func ShowCapped(dir, rev string, max int, paths ...string) (head CommitHead, diff string, cut bool, err error) {
 	const sep = "\x1f"
-	out, cut, err := runCapped(dir, max, false, "-c", "core.quotepath=off", "show", "--no-color", "--no-ext-diff", "--no-textconv",
-		"--format=%h"+sep+"%an"+sep+"%ct"+sep+"%s"+sep+"%b\x1e", rev, "--")
+	args := []string{"-c", "core.quotepath=off", "show", "--no-color", "--no-ext-diff", "--no-textconv",
+		"--format=%h" + sep + "%an" + sep + "%ct" + sep + "%s" + sep + "%b\x1e", rev, "--"}
+	out, cut, err := runCapped(dir, max, false, append(args, paths...)...)
 	if err != nil {
 		return CommitHead{}, "", false, err
 	}

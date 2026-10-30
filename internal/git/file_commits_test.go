@@ -43,3 +43,22 @@ func TestFileCommitsFollowRenames(t *testing.T) {
 	}
 
 }
+
+// ShowCapped with a path shows only that file of the commit.
+func TestShowCappedOneFile(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "a.txt", "one\n")
+	r.write(t, "other.txt", "x\n")
+	r.git(t, "add", "a.txt", "other.txt")
+	r.git(t, "commit", "-q", "-m", "first")
+	r.write(t, "a.txt", "one\ntwo\n")
+	r.write(t, "other.txt", "z\n")
+	r.git(t, "commit", "-q", "-am", "both")
+	head, diff, _, err := ShowCapped(r.dir, "HEAD", 1<<20, "a.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if head.Subject != "both" || !strings.Contains(diff, "+two") || strings.Contains(diff, "other.txt") {
+		t.Errorf("one file's show %+v %q", head, diff)
+	}
+}
