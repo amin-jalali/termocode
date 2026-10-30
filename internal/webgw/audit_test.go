@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -406,6 +407,60 @@ func TestNoSecretInLogsOrAudit(t *testing.T) {
 	for _, s := range []string{plain, fresh, tok.Token, plain[:16], fresh[:16], tok.Token[:16]} {
 		if bytes.Contains(raw, []byte(s)) {
 			t.Fatalf("audit log holds a secret part %.6q…", s)
+		}
+	}
+}
+
+// TestAuditEventsComplete: every event kind declared in audit.go is in
+// AllEventKinds once, and each one round-trips through the log with all
+// of its fields (T37).
+func TestAuditEventsComplete(t *testing.T) {
+	src, err := os.ReadFile("audit.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	declared := regexp.MustCompile(`(?m)^\s+(Ev[A-Za-z]+)\s+EventKind = "([a-z_]+)"`).FindAllStringSubmatch(string(src), -1)
+	listed := map[EventKind]int{}
+	for _, k := range AllEventKinds {
+		listed[k]++
+	}
+	if len(declared) != len(AllEventKinds) || len(listed) != len(AllEventKinds) {
+		t.Fatalf("%d kinds declared, %d listed, %d distinct", len(declared), len(AllEventKinds), len(listed))
+	}
+	for _, d := range declared {
+		if listed[EventKind(d[2])] != 1 {
+			t.Errorf("%s (%q) is not in AllEventKinds once", d[1], d[2])
+		}
+	}
+	for _, need := range []EventKind{EvStart, EvStop, EvAuthOK, EvAuthFail, EvSecretBurned,
+		EvConnect, EvDisconnect, EvProtoError, EvOriginBlocked, EvHostBlocked,
+		EvIdleStop, EvMaxStop, EvKillSwitch, EvOp} {
+		if listed[need] != 1 {
+			t.Errorf("design event %q missing", need)
+		}
+	}
+
+	path := filepath.Join(t.TempDir(), "a.jsonl")
+	a := openAudit(t, path)
+	ok := false
+	var want []Event
+	for i, k := range AllEventKinds {
+		e := Event{T: t0.Add(time.Duration(i) * time.Second), Kind: k, Conn: "s-0a0b0c0d",
+			Device: "loc-1a2b", Op: "git.stage", OK: &ok, Code: 4000 + i, Why: "rule", Summary: "src/a.go"}
+		want = append(want, e)
+		if err := a.Log(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got := readAudit(t, path)
+	if len(got) != len(want) {
+		t.Fatalf("%d lines, want %d", len(got), len(want))
+	}
+	for i := range want {
+		g, w := got[i], want[i]
+		if !g.T.Equal(w.T) || g.Kind != w.Kind || g.Conn != w.Conn || g.Device != w.Device ||
+			g.Op != w.Op || g.OK == nil || *g.OK != *w.OK || g.Code != w.Code || g.Why != w.Why || g.Summary != w.Summary {
+			t.Errorf("line %d: got %+v, want %+v", i, g, w)
 		}
 	}
 }
