@@ -16,6 +16,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -150,16 +151,16 @@ func (s *WS) CloseAll(code webproto.CloseCode, wait time.Duration) {
 	var wg sync.WaitGroup
 	for _, c := range conns {
 		wg.Add(1)
-		go func() {
+		crash.Go("web gateway: closing a link", func() {
 			defer wg.Done()
 			c.close(code)
-		}()
+		})
 	}
 	done := make(chan struct{})
-	go func() {
+	crash.Go("web gateway: waiting for the links", func() {
 		wg.Wait()
 		close(done)
-	}()
+	})
 	select {
 	case <-done:
 	case <-time.After(wait):
@@ -310,8 +311,10 @@ func (c *wsConn) serve() {
 	if !c.hello() {
 		return
 	}
-	go c.fromHub()
-	go c.keepalive()
+	// A panic in either ends this link (the page reconnects); the
+	// gateway keeps serving the others.
+	crash.GoWith("web gateway: hub to page", c.fromHub, func() { c.close(webproto.CloseHubGone) })
+	crash.GoWith("web gateway: keepalive", c.keepalive, func() { c.close(webproto.CloseHubGone) })
 	c.fromBrowser()
 }
 
@@ -533,7 +536,7 @@ func (c *wsConn) fromBrowser() {
 // max time ends with 4002.
 func (c *wsConn) activity() {
 	if _, err := c.s.cfg.Tokens.Check(c.token, c.s.cfg.Now()); err != nil {
-		go c.close(webproto.CloseTokenExpired)
+		crash.Go("web gateway: an expired session", func() { c.close(webproto.CloseTokenExpired) })
 		return
 	}
 	if c.s.cfg.Activity != nil {

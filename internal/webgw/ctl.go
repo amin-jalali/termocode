@@ -11,6 +11,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -53,7 +54,8 @@ func DialCtl(ctx context.Context, dial func(context.Context) (net.Conn, error), 
 		return nil, err
 	}
 	c := &Ctl{nc: nc, onLink: onLink, done: make(chan struct{})}
-	go c.read()
+	// A panic in the reader ends the link like a lost hub.
+	crash.GoWith("web gateway: the control link", c.read, func() { c.finish(webproto.CloseHubGone) })
 	return c, nil
 }
 
