@@ -264,6 +264,15 @@
       "deltas": [
         "TestsSnap"
       ]
+    },
+    {
+      "name": "debug",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "DebugSnap",
+      "deltas": [
+        "DebugSnap"
+      ]
     }
   ],
   "events": {
@@ -988,6 +997,138 @@
       "max_bytes": 1024,
       "laptop_card": false,
       "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.expand",
+      "args": "DebugExpandArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 20,
+        "per_ms": 1000
+      },
+      "max_bytes": 4096,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.sources",
+      "args": "EmptyArgs",
+      "result": "DebugSources",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.start",
+      "args": "DebugConfigArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.run",
+      "args": "DebugConfigArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.select",
+      "args": "DebugConfigArgs",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.control",
+      "args": "DebugControlArgs",
+      "role": "controller",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "counted",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.bp",
+      "args": "DebugBpArgs",
+      "role": "controller",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 16384,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.watch",
+      "args": "DebugWatchArgs",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.eval",
+      "args": "DebugEvalArgs",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "debug.frame",
+      "args": "DebugFrameArgs",
+      "role": "controller",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
       "phase": "v2"
     },
     {
@@ -2733,6 +2874,499 @@
         "tables"
       ],
       "additionalProperties": true
+    },
+    "DebugBpArgs": {
+      "type": "object",
+      "properties": {
+        "condition": {
+          "type": "string"
+        },
+        "hit": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "log": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "toggle",
+            "set",
+            "remove",
+            "clear"
+          ]
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "additionalProperties": false
+    },
+    "DebugBreakpoint": {
+      "type": "object",
+      "properties": {
+        "condition": {
+          "type": "string"
+        },
+        "hit": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "log": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "verified": {
+          "enum": [
+            "yes",
+            "no"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "line"
+      ],
+      "additionalProperties": true
+    },
+    "DebugChildren": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "vars": {
+          "items": {
+            "$ref": "#/defs/DebugVar"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "key",
+        "vars"
+      ],
+      "additionalProperties": true
+    },
+    "DebugConfig": {
+      "type": "object",
+      "properties": {
+        "debug": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "DebugConfigArgs": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "DebugControlArgs": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "enum": [
+            "continue",
+            "pause",
+            "step_over",
+            "step_into",
+            "step_out",
+            "restart",
+            "stop"
+          ]
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "additionalProperties": false
+    },
+    "DebugEvalArgs": {
+      "type": "object",
+      "properties": {
+        "expr": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "DebugExpandArgs": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "open": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "key",
+        "open"
+      ],
+      "additionalProperties": false
+    },
+    "DebugFrame": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "file": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "outside": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "line"
+      ],
+      "additionalProperties": true
+    },
+    "DebugFrameArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "DebugLine": {
+      "type": "object",
+      "properties": {
+        "cat": {
+          "enum": [
+            "stdout",
+            "stderr",
+            "console",
+            "important",
+            "input",
+            "result"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cat",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "DebugScope": {
+      "type": "object",
+      "properties": {
+        "expensive": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "loaded": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "vars": {
+          "items": {
+            "$ref": "#/defs/DebugVar"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "key",
+        "name",
+        "vars"
+      ],
+      "additionalProperties": true
+    },
+    "DebugSnap": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "breakpoints": {
+          "items": {
+            "$ref": "#/defs/DebugBreakpoint"
+          },
+          "type": "array"
+        },
+        "children": {
+          "items": {
+            "$ref": "#/defs/DebugChildren"
+          },
+          "type": "array"
+        },
+        "config_error": {
+          "type": "string"
+        },
+        "configs": {
+          "items": {
+            "$ref": "#/defs/DebugConfig"
+          },
+          "type": "array"
+        },
+        "console": {
+          "items": {
+            "$ref": "#/defs/DebugLine"
+          },
+          "type": "array"
+        },
+        "console_cut": {
+          "type": "boolean"
+        },
+        "frame": {
+          "type": "integer"
+        },
+        "frames": {
+          "items": {
+            "$ref": "#/defs/DebugFrame"
+          },
+          "type": "array"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "open": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/defs/DebugScope"
+          },
+          "type": "array"
+        },
+        "selected": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "stopped": {
+          "type": "boolean"
+        },
+        "thread": {
+          "type": "integer"
+        },
+        "threads": {
+          "items": {
+            "$ref": "#/defs/DebugThread"
+          },
+          "type": "array"
+        },
+        "watches": {
+          "items": {
+            "$ref": "#/defs/DebugWatch"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "available",
+        "active",
+        "stopped",
+        "threads",
+        "frames",
+        "scopes",
+        "children",
+        "open",
+        "watches",
+        "breakpoints",
+        "configs",
+        "console"
+      ],
+      "additionalProperties": true
+    },
+    "DebugSource": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "outside": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "DebugSources": {
+      "type": "object",
+      "properties": {
+        "more": {
+          "type": "integer"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/defs/DebugSource"
+          },
+          "type": "array"
+        },
+        "unsupported": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "sources"
+      ],
+      "additionalProperties": true
+    },
+    "DebugThread": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "stopped": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "DebugVar": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "integer"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "additionalProperties": true
+    },
+    "DebugWatch": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "boolean"
+        },
+        "expr": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "integer"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "expr"
+      ],
+      "additionalProperties": true
+    },
+    "DebugWatchArgs": {
+      "type": "object",
+      "properties": {
+        "expr": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "add",
+            "remove"
+          ]
+        }
+      },
+      "required": [
+        "op",
+        "expr"
+      ],
+      "additionalProperties": false
     },
     "Delta": {
       "type": "object",

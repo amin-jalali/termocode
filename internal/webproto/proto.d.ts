@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug";
 
 export interface Bye {
   t: "bye";
@@ -234,6 +234,41 @@ export interface KeyArgs {
 
 export interface ControlAskArgs {
   credential: string;
+}
+
+export interface DebugExpandArgs {
+  key: string;
+  open: boolean;
+}
+
+export interface DebugConfigArgs {
+  config?: string;
+}
+
+export interface DebugControlArgs {
+  op: "continue" | "pause" | "step_over" | "step_into" | "step_out" | "restart" | "stop";
+}
+
+export interface DebugBpArgs {
+  op: "toggle" | "set" | "remove" | "clear";
+  path?: string;
+  line?: number;
+  condition?: string;
+  hit?: string;
+  log?: string;
+}
+
+export interface DebugWatchArgs {
+  op: "add" | "remove";
+  expr: string;
+}
+
+export interface DebugEvalArgs {
+  expr: string;
+}
+
+export interface DebugFrameArgs {
+  id: number;
 }
 
 export interface LspPosArgs {
@@ -822,6 +857,96 @@ export interface TestItem {
   debug?: boolean;
 }
 
+export interface DebugSnap {
+  available: boolean;
+  active: boolean;
+  stopped: boolean;
+  name?: string;
+  status?: string;
+  thread?: number;
+  frame?: number;
+  threads: DebugThread[];
+  frames: DebugFrame[];
+  scopes: DebugScope[];
+  children: DebugChildren[];
+  open: string[];
+  watches: DebugWatch[];
+  breakpoints: DebugBreakpoint[];
+  configs: DebugConfig[];
+  selected?: string;
+  config_error?: string;
+  hint?: string;
+  console: DebugLine[];
+  console_cut?: boolean;
+  more?: number;
+}
+
+export interface DebugThread {
+  id: number;
+  name: string;
+  stopped?: boolean;
+}
+
+export interface DebugFrame {
+  id: number;
+  name: string;
+  path?: string;
+  file?: string;
+  outside?: boolean;
+  line: number;
+  col?: number;
+}
+
+export interface DebugScope {
+  key: string;
+  name: string;
+  expensive?: boolean;
+  loaded?: boolean;
+  vars: DebugVar[];
+}
+
+export interface DebugVar {
+  name: string;
+  value: string;
+  type?: string;
+  ref?: number;
+}
+
+export interface DebugChildren {
+  key: string;
+  vars: DebugVar[];
+  error?: string;
+}
+
+export interface DebugWatch {
+  expr: string;
+  value?: string;
+  error?: boolean;
+  ref?: number;
+}
+
+export interface DebugBreakpoint {
+  path: string;
+  line: number;
+  text?: string;
+  condition?: string;
+  hit?: string;
+  log?: string;
+  verified?: "yes" | "no";
+}
+
+export interface DebugConfig {
+  name: string;
+  type?: string;
+  debug?: boolean;
+  source?: string;
+}
+
+export interface DebugLine {
+  cat: "stdout" | "stderr" | "console" | "important" | "input" | "result";
+  text: string;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -984,6 +1109,18 @@ export interface TaskStarted {
 
 export interface ControlChallenge {
   options: unknown;
+}
+
+export interface DebugSources {
+  sources: DebugSource[];
+  unsupported?: boolean;
+  more?: number;
+}
+
+export interface DebugSource {
+  name: string;
+  path?: string;
+  outside?: boolean;
 }
 
 export interface LspHover {
@@ -1237,6 +1374,16 @@ export interface OpArgs {
   "runs.resume": KeyArgs;
   "control.challenge": EmptyArgs;
   "control.ask": ControlAskArgs;
+  "debug.expand": DebugExpandArgs;
+  "debug.sources": EmptyArgs;
+  "debug.start": DebugConfigArgs;
+  "debug.run": DebugConfigArgs;
+  "debug.select": DebugConfigArgs;
+  "debug.control": DebugControlArgs;
+  "debug.bp": DebugBpArgs;
+  "debug.watch": DebugWatchArgs;
+  "debug.eval": DebugEvalArgs;
+  "debug.frame": DebugFrameArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
@@ -1302,6 +1449,7 @@ export interface TopicData {
   "settings": { snap: SettingsSnap; delta: SettingsSnap };
   "diagnostics": { snap: DiagSnap; delta: DiagSnap };
   "tests": { snap: TestsSnap; delta: TestsSnap };
+  "debug": { snap: DebugSnap; delta: DebugSnap };
 }
 
 // The data of an ev message, by kind.
@@ -1338,6 +1486,7 @@ export interface OpResult {
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
+  "debug.sources": DebugSources;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;
