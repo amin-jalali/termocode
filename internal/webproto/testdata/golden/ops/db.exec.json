@@ -1,0 +1,1 @@
+{"t":"req","id":71,"op":"db.exec","args":{"conn":"local","sql":"update users set n = 1 where id = 7"}}
