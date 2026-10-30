@@ -9,7 +9,8 @@ import (
 )
 
 // Syntax colours of the file view (WEB-38, web-ui-design §2.4): nvim's
-// own tree-sitter captures for the rows the page shows. One fixed Lua
+// own tree-sitter captures for the rows the page shows (when nvim has no
+// parser for the file, the hub's own lexer: web_hl_chroma.go). One fixed Lua
 // chunk parses the asked range (injections too: code in Markdown) and
 // walks each tree's highlights query; captures that span rows are cut
 // per row, and columns go out in UTF-16 units of the row, what the
@@ -22,18 +23,22 @@ func init() {
 // webHlMaxSpans caps the spans of one answer (a test lowers it).
 var webHlMaxSpans = webproto.MaxHlSpans
 
+// webHlNoParser makes the chunk act as an nvim with no parsers (tests).
+var webHlNoParser = false
+
 // webLuaHl answers {tick, first, last, groups, spans, none, cut} for rows
 // [first, last) of buffer b. Groups that never colour (spell, conceal and
 // the query's private "_" captures) are left out.
 const webLuaHl = webLuaPrelude + `
-local b, first, last, maxspans = ...
+local b, first, last, maxspans, nots = ...
 local api = vim.api
 if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
 local n = api.nvim_buf_line_count(b)
 if last > n then last = n end
 if first > last then first = last end
 local out = { tick = api.nvim_buf_get_changedtick(b), first = first, last = last }
-local ok, parser = pcall(vim.treesitter.get_parser, b, nil, { error = false })
+local ok, parser = false, nil
+if not nots then ok, parser = pcall(vim.treesitter.get_parser, b, nil, { error = false }) end
 if not ok or not parser then out.none = true return out end
 if first == last then return out end
 pcall(function() parser:parse({ first, last }) end)
@@ -106,11 +111,14 @@ func webOpBufHl(m *Model, call *webCall) tea.Cmd {
 		call.fail(webproto.CodeNotFound, "Open the file first.")
 		return nil
 	}
-	client, n, maxSpans := m.nvim, b.buf, webHlMaxSpans
+	client, n, maxSpans, noTS := m.nvim, b.buf, webHlMaxSpans, webHlNoParser
+	// The mirror as it is now (its slices are never changed in place):
+	// the fallback colours it when nvim has no parser for the file.
+	path, ft, rows, tick := b.path, b.ft, b.rows, b.tick
 	call.later()
 	return func() tea.Msg {
 		var res webLuaHlRes
-		if err := client.ExecLuaResult(webLuaHl, &res, n, a.First, a.Last, maxSpans); err != nil {
+		if err := client.ExecLuaResult(webLuaHl, &res, n, a.First, a.Last, maxSpans, noTS); err != nil {
 			recordError("[web] buf.hl: " + err.Error())
 			call.fail(webproto.CodeInternal, "The colours could not be read.")
 			return nil
@@ -118,6 +126,12 @@ func webOpBufHl(m *Model, call *webCall) tea.Cmd {
 		if res.Err != "" {
 			call.fail(webproto.CodeGone, "This file was closed on the laptop.")
 			return nil
+		}
+		if res.None {
+			if own, ok := webHlChroma(path, ft, rows, tick, a.First, a.Last, maxSpans); ok {
+				call.reply(own)
+				return nil
+			}
 		}
 		call.reply(webHlClean(res))
 		return nil
