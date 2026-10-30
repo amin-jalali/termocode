@@ -29,13 +29,13 @@ func webSettings() webConfig {
 	s := loadSettings()
 	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4}
 	switch strings.ToLower(strings.TrimSpace(s.WebPanel)) {
-	case "":
+	case "", "auto":
 	case "off":
 		c.On = false
 	case "on":
 		c.Explicit = true
 	default:
-		c.Problems = append(c.Problems, fmt.Sprintf("web_panel %q: use \"on\" or \"off\"", s.WebPanel))
+		c.Problems = append(c.Problems, fmt.Sprintf("web_panel %q: use \"auto\", \"on\" or \"off\"", s.WebPanel))
 	}
 	switch strings.ToLower(strings.TrimSpace(s.WebListen)) {
 	case "", "loopback":
