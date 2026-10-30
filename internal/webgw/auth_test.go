@@ -257,6 +257,37 @@ func TestGlobalRate429(t *testing.T) {
 	}
 }
 
+// TestAuthBurnsSecretAfter5: five wrong secrets over HTTP close the link;
+// the right one is refused after that (T13).
+func TestAuthBurnsSecretAfter5(t *testing.T) {
+	a, _, _, plain := newAuth(t)
+	for i := 0; i < MaxBadTries; i++ {
+		if w := do(a, authReq(secretBody("wrong"))); w.Code != http.StatusUnauthorized {
+			t.Fatalf("wrong try %d: code %d", i, w.Code)
+		}
+	}
+	if w := do(a, authReq(secretBody(plain))); w.Code != http.StatusUnauthorized {
+		t.Fatalf("right secret after the burn: code %d", w.Code)
+	}
+}
+
+// TestBodyLimit4KiB: a body over 4 KiB never reaches the decoder.
+func TestBodyLimit4KiB(t *testing.T) {
+	a, _, _, plain := newAuth(t)
+	big := `{"secret":"` + plain + `","pad":"` + strings.Repeat("a", MaxBodyBytes) + `"}`
+	if w := do(a, authReq(big)); w.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("big body: code %d", w.Code)
+	}
+	r := authReq(big)
+	r.ContentLength = -1 // undeclared length: cut at the cap while reading
+	if w := do(a, r); w.Code != http.StatusBadRequest {
+		t.Fatalf("big chunked body: code %d", w.Code)
+	}
+	if w := do(a, authReq(secretBody(plain))); w.Code != http.StatusOK {
+		t.Fatalf("the big bodies used up the secret: code %d", w.Code)
+	}
+}
+
 func TestAuthOnlyPost(t *testing.T) {
 	a, _, _, _ := newAuth(t)
 	r := httptest.NewRequest(http.MethodGet, "/auth", nil)
