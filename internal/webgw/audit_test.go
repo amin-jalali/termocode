@@ -283,6 +283,133 @@ func TestServerAudits(t *testing.T) {
 	}
 }
 
+// newAuditedAuth is an Auth on a fake clock that logs to a temp audit file.
+func newAuditedAuth(t *testing.T) (*Auth, *Tokens, *fakeClock, string, string) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "a.jsonl")
+	clk := &fakeClock{now: t0}
+	audit, err := OpenAudit(path, clk.Now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = audit.Close() })
+	ts := NewTokens(DefaultIdle, DefaultMax)
+	a := NewAuth(ts, clk.Now, audit)
+	plain, err := a.NewSecret()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return a, ts, clk, plain, path
+}
+
+func kinds(evs []Event) string {
+	var s []string
+	for _, e := range evs {
+		k := string(e.Kind)
+		if e.Why != "" {
+			k += ":" + e.Why
+		}
+		s = append(s, k)
+	}
+	return strings.Join(s, " ")
+}
+
+// TestAuthAudited: every /auth outcome leaves a line (T37): the good one
+// names the new session, failures name the rule, a burn is its own event.
+func TestAuthAudited(t *testing.T) {
+	a, ts, _, plain, path := newAuditedAuth(t)
+	do(a, authReq(secretBody("wrong")))
+	ok := do(a, authReq(secretBody(plain)))
+	do(a, authReq(secretBody(plain)))
+	r := authReq(secretBody(plain))
+	r.Header.Set("Content-Type", "text/plain")
+	do(a, r)
+	do(a, authReq(`{}`))
+	r = authReq(secretBody(plain))
+	r.URL.RawQuery = "s=x"
+	do(a, r)
+
+	fresh, err := a.NewSecret()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < MaxBadTries; i++ {
+		do(a, authReq(secretBody("wrong")))
+	}
+	do(a, authReq(secretBody(fresh)))
+
+	evs := readAudit(t, path)
+	want := "auth_fail:wrong auth_ok auth_fail:used auth_fail:need_json auth_fail:bad_request auth_fail:no_query " +
+		"auth_fail:wrong auth_fail:wrong auth_fail:wrong auth_fail:wrong auth_fail:wrong secret_burned auth_fail:closed"
+	if got := kinds(evs); got != want {
+		t.Fatalf("events\n got %s\nwant %s", got, want)
+	}
+	var tok struct{ Token string }
+	if err := json.Unmarshal(ok.Body.Bytes(), &tok); err != nil {
+		t.Fatal(err)
+	}
+	sess, err := ts.Check(tok.Token, t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evs[1].Conn != sess.ID || evs[1].Device != sess.Device || evs[1].Code != 200 {
+		t.Fatalf("auth_ok %+v, session %+v", evs[1], sess)
+	}
+	if evs[0].Code != 401 || evs[3].Code != 415 {
+		t.Fatalf("codes %d %d", evs[0].Code, evs[3].Code)
+	}
+}
+
+// TestAuthRateLimitAudited: a 429 is logged, and a flood of them is
+// rate-limited in the log too.
+func TestAuthRateLimitAudited(t *testing.T) {
+	a, _, _, _, path := newAuditedAuth(t)
+	for i := 0; i < AuthRatePerSecond+200; i++ {
+		do(a, authReq(`{}`))
+	}
+	evs := readAudit(t, path)
+	limited := 0
+	for _, e := range evs {
+		if e.Kind == EvRateLimited {
+			limited++
+		}
+	}
+	if limited == 0 || len(evs) > 2*blockedAuditBurst+5 {
+		t.Fatalf("%d rate_limited lines, %d in all", limited, len(evs))
+	}
+}
+
+// TestNoSecretInLogsOrAudit: after a full auth flow (wrong tries, a good
+// one, replays, a burn) neither the launch secrets nor the token appear
+// anywhere in the audit files (T8).
+func TestNoSecretInLogsOrAudit(t *testing.T) {
+	a, _, _, plain, path := newAuditedAuth(t)
+	do(a, authReq(secretBody(plain+"x")))
+	ok := do(a, authReq(secretBody(plain)))
+	do(a, authReq(secretBody(plain)))
+	fresh, err := a.NewSecret()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i <= MaxBadTries; i++ {
+		do(a, authReq(secretBody(fresh[:42]+"Z")))
+	}
+	do(a, authReq(secretBody(fresh)))
+	var tok struct{ Token string }
+	if err := json.Unmarshal(ok.Body.Bytes(), &tok); err != nil || tok.Token == "" {
+		t.Fatalf("no token: %v", err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []string{plain, fresh, tok.Token, plain[:16], fresh[:16], tok.Token[:16]} {
+		if bytes.Contains(raw, []byte(s)) {
+			t.Fatalf("audit log holds a secret part %.6q…", s)
+		}
+	}
+}
+
 // TestAuditNilIsQuiet: code with no audit log configured just runs.
 func TestAuditNilIsQuiet(t *testing.T) {
 	var a *Audit
