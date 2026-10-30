@@ -62,10 +62,10 @@ termocode.
 | Tab | What it does |
 |---|---|
 | **Chat** | Read and write in the AI chat. Answers stream in. Answer the AI's cards. |
-| **Files** | Browse the workspace, read files, change lines and send them. |
+| **Files** | Browse the workspace, read files, change lines and send them. Each row's **⋯** makes a new file or folder, renames, deletes, downloads a file or uploads into a folder. |
 | **Term** | Watch the terminals and type into them, with a key bar for Esc, Ctrl, Alt and arrows. |
-| **Git** | See changes and diffs, stage and unstage, commit. |
-| **More** | Search, tasks, runs, the theme, text direction and language. |
+| **Git** | See changes and diffs, stage and unstage, commit. The **⇅** button pushes, pulls, stashes and switches branch. |
+| **More** | Search, tasks, runs, databases, containers, the MCP server, settings (read only), the theme, text direction and language. |
 
 On a phone the tabs are at the bottom. On a wider screen the files and
 the chat sit side by side.
@@ -121,8 +121,14 @@ In simple words:
   and has the focus. `Enter` and `Esc` never do the risky thing, and
   the risky button works only after a short moment on screen. The page
   never offers "Always allow".
-- **Big things need the laptop.** Discarding changes or closing a
-  terminal asks on the laptop first.
+- **Big things need the laptop.** Discarding changes, closing a
+  terminal, deleting a file, replacing a file with an upload, push,
+  pull, stash, switching branch, stopping or removing a container and
+  any SQL that may change data ask on the laptop first.
+- **Passwords stay on the laptop.** Git signs in on the laptop. The
+  database view shows no host, user or password, and it hides values of
+  columns such as `password` or `token`. Files that look like they hold
+  secrets (such as `.env` or keys) are never downloaded.
 - **The AI cannot open the door.** The AI can never start the panel or
   change its settings.
 - **A record.** termocode keeps an audit log of web starts, stops and
@@ -135,7 +141,9 @@ In simple words:
 - Long files open read-only (the first 2 000 lines). Files that look like
   they hold secrets (such as `.env`) open only on the laptop.
 - Search stops at 500 matches or 10 seconds.
-- No file upload or download from the page yet.
+- An upload or a download is at most **256 MB**.
+- Container logs show the last **64 KiB**; database results show at
+  most 1 000 rows.
 - No access from another computer on your network yet, other than
   through SSH.
 
