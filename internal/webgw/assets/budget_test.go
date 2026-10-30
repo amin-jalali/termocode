@@ -14,6 +14,9 @@ const (
 	budgetCSS   = 20 << 10
 	budgetHTML  = 4 << 10
 	budgetTotal = 150 << 10
+	// budgetDesk is the desktop workbench's stylesheet (desk.css), which
+	// only screens 1200 px and wider wait for.
+	budgetDesk = 24 << 10
 )
 
 func gzSize(t *testing.T, name string) int {
@@ -35,7 +38,7 @@ func TestPerfGuardBundleSize(t *testing.T) {
 	for _, c := range []struct {
 		name      string
 		got, want int
-	}{{"app.js", js, budgetJS}, {"app.css", css, budgetCSS}, {"index.html", html, budgetHTML}, {"page total", js + css + html, budgetTotal}} {
+	}{{"desk.css", gzSize(t, "desk.css"), budgetDesk}, {"app.js", js, budgetJS}, {"app.css", css, budgetCSS}, {"index.html", html, budgetHTML}, {"page total", js + css + html, budgetTotal}} {
 		if c.got > c.want {
 			t.Errorf("%s is %d B gzipped, budget %d B", c.name, c.got, c.want)
 		}

@@ -36,13 +36,19 @@ func TestBuildWritesThePageFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"index.html", "app.js", "app.css", "licenses.txt", "icon.svg", "kit.html", "kit.js", "kit.css", manifest.LockFile} {
+	if _, ok := out["desk.js"]; ok {
+		t.Error("the desktop stylesheet's entry left a desk.js")
+	}
+	if !strings.Contains(string(out["index.html"]), `href="/assets/desk.css" media="(min-width: 1200px)"`) {
+		t.Errorf("index.html does not link desk.css for wide screens only:\n%s", out["index.html"])
+	}
+	for _, name := range []string{"index.html", "app.js", "app.css", "desk.css", "licenses.txt", "icon.svg", "kit.html", "kit.js", "kit.css", manifest.LockFile} {
 		if len(out[name]) == 0 {
 			t.Errorf("build wrote no %s", name)
 		}
 	}
 	html := string(out["index.html"])
-	for _, f := range []string{"app.js", "app.css"} {
+	for _, f := range []string{"app.js", "app.css", "desk.css"} {
 		if !strings.Contains(html, `integrity="`+manifest.SRI(out[f])+`"`) {
 			t.Errorf("index.html has no SRI for %s:\n%s", f, html)
 		}
@@ -115,7 +121,7 @@ func fixture(t *testing.T, mainTSX string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	files := map[string]string{"main.tsx": `import "./x.css";` + mainTSX, "x.css": "p{margin:0}", "index.html": string(tpl)}
+	files := map[string]string{"main.tsx": `import "./x.css";` + mainTSX, "x.css": "p{margin:0}", "desk.ts": `import "./y.css";`, "y.css": "b{margin:0}", "index.html": string(tpl)}
 	for name, body := range files {
 		if err := os.WriteFile(filepath.Join(src, name), []byte(body), 0o644); err != nil {
 			t.Fatal(err)
