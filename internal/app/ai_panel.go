@@ -308,29 +308,6 @@ func unsafeScreenRune(r rune) bool {
 		(r >= 0x202a && r <= 0x202e) || (r >= 0x2066 && r <= 0x2069)
 }
 
-// aiWrapCode hard-wraps a code line, keeping its indentation.
-func aiWrapCode(s string, w int) []string {
-	if w < 1 {
-		w = 1
-	}
-	if runewidth.StringWidth(s) <= w {
-		return []string{s}
-	}
-	var out []string
-	for runewidth.StringWidth(s) > w {
-		head := runewidth.Truncate(s, w, "")
-		if head == "" {
-			break
-		}
-		out = append(out, head)
-		s = s[len(head):]
-	}
-	if s != "" {
-		out = append(out, s)
-	}
-	return out
-}
-
 // aiTranscriptCache keeps the last transcript (aiTranscript) and its
 // drawn rows between frames. The key is everything the transcript reads:
 // width, theme / icons / colour profile, provider state, streaming,
@@ -826,19 +803,6 @@ func aiInputHints(s *aiState) []string {
 		return []string{"Enter send · Shift+Enter newline", "Enter send"}
 	}
 	return []string{"Alt+A chat · F6 focus", "F6 focus"}
-}
-
-// aiFooterLine is the key hint shown inside the input box's bottom border.
-func (m Model) aiFooterLine(width int) aiLine {
-	s := m.ai
-	hint := "Enter send · Shift+Enter newline"
-	switch {
-	case s != nil && s.streaming:
-		hint = "■ generating — Ctrl+C stop"
-	case s != nil && !s.focused:
-		hint = "Alt+A chat · F6 focus"
-	}
-	return aiLine{text: hint, style: aiStyle(theme.Fg(theme.TextDim))}
 }
 
 // aiInputWrapped wraps the input into rows and returns the row / column
