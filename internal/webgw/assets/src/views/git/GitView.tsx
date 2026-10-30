@@ -6,7 +6,7 @@
 import { h, Fragment } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { diffTab } from "../../lib/difftab";
-import { GRAPH_TAB } from "../../lib/gittab";
+import { GRAPH_TAB, mergeTab } from "../../lib/gittab";
 import { layout } from "../../lib/layout";
 import { go, route } from "../../lib/router";
 import { showFile } from "../../lib/workbench";
@@ -78,7 +78,7 @@ export function GitView() {
   // file as the file itself); the phone opens the diff sheet.
   const open = (f: GitFile, side: Side) =>
     desk
-      ? showFile(side === "untracked" || side === "conflicts" ? f.path : diffTab(side === "staged" ? "idx" : "wt", f.path), true)
+      ? showFile(side === "conflicts" ? mergeTab(f.path) : side === "untracked" ? f.path : diffTab(side === "staged" ? "idx" : "wt", f.path), true)
       : go({ tab: "git", rest: f.path, query: side === "staged" ? { side: "staged" } : {} });
 
   // A link to a change (#/git/<path>) on the desktop: its diff editor tab.

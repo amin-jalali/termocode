@@ -213,6 +213,7 @@ let applying: "remote" | "undo" | "replace" | null = null;
 let hlDecos: Collection | null = null;
 let flashDecos: Collection | null = null;
 let gutterDecos: Collection | null = null;
+let lineDecos: Collection | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | undefined;
 let readOnly = false;
 /** The diff editor (a diff tab), its older side and that side's colours. */
@@ -709,6 +710,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   glyphDecos = ed.createDecorationsCollection();
   hintDecos = ed.createDecorationsCollection();
   if (!m.diff) watchGlyphs(ed);
+  lineDecos = ed.createDecorationsCollection();
   model?.onDidChangeContent((e) => {
     const specs: { from: number; to: number; insert: string }[] = e.changes.map((c) => ({ from: c.rangeOffset, to: c.rangeOffset + c.rangeLength, insert: c.text }));
     const cs = ChangeSet.of(specs, cur.length);
@@ -835,6 +837,14 @@ function onMessage(e: MessageEvent): void {
         m.marks.map((g) => ({
           range: { startLineNumber: g.from, startColumn: 1, endLineNumber: g.to, endColumn: 1 },
           options: { isWholeLine: true, linesDecorationsClassName: "tc-gm tc-gm-" + g.kind },
+        })),
+      );
+      return;
+    case "lines":
+      lineDecos?.set(
+        m.items.map((x) => ({
+          range: { startLineNumber: x.from, startColumn: 1, endLineNumber: x.to, endColumn: 1 },
+          options: { isWholeLine: true, className: "tc-mg tc-mg-" + x.kind, linesDecorationsClassName: "tc-mgg tc-mgg-" + x.kind },
         })),
       );
       return;
