@@ -16,7 +16,7 @@
 # Measured 2026-10-30, Linux, 20 cores throttled to GOMAXPROCS=4, no -race.
 
 # e2e (real binary in a PTY, e2e/perf_test.go)
-startup_first_frame       120   ms   # median of 3 starts; local 42 ms (worst 66)
+startup_first_frame        30   ms   # median of 5 starts, 1 ms polling; local 15 ms (PERF-1; was 39-41)
 session_idle_rss          300   MB   # client + server + UI + nvim, notes.txt open; local 147 MB
 
 # testkit (in-process app, internal/testkit/perf_budget_test.go)
