@@ -53,6 +53,24 @@ func NewLaunchSecret(now time.Time) (plain string, s *LaunchSecret, err error) {
 	return plain, &LaunchSecret{hash: sha256.Sum256([]byte(plain)), exp: now.Add(LaunchSecretTTL)}, nil
 }
 
+// NewLinkSecret makes a launch secret for a process that does not run the
+// gateway (the UI): plain goes into the link it opens, digest goes to the
+// gateway, which never sees plain.
+func NewLinkSecret() (plain string, digest [sha256.Size]byte, err error) {
+	plain, err = randomToken()
+	if err != nil {
+		return "", digest, err
+	}
+	return plain, sha256.Sum256([]byte(plain)), nil
+}
+
+// LaunchSecretFromDigest is the gateway's side of NewLinkSecret: a fresh
+// one-time secret known only by its digest, expiring LaunchSecretTTL
+// after now.
+func LaunchSecretFromDigest(digest [sha256.Size]byte, now time.Time) *LaunchSecret {
+	return &LaunchSecret{hash: digest, exp: now.Add(LaunchSecretTTL)}
+}
+
 // Redeem uses the secret up if plain is right, unused and not expired at
 // now. The MaxBadTries-th wrong try burns it (ErrSecretBurned, once);
 // after that every try is ErrSecretClosed. The check compares SHA-256 digests in constant time, so the time it
