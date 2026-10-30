@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type FrameOpts, type FromFrame, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type FrameMarker, type FrameOpts, type FromFrame, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
@@ -61,7 +61,9 @@ export interface DeskHost extends EditorHost {
 export interface DeskHandle extends EditorHandle {
   opts(o: FrameOpts): void;
   gutter(marks: Mark[]): void;
-  reveal(line: number): void;
+  /** reveal shows a 1-based line (and column) with the cursor there. */
+  reveal(line: number, col?: number): void;
+  markers(items: FrameMarker[]): void;
 }
 
 /** desks are the desktop editors on screen, by editor group slot. */
@@ -184,8 +186,11 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     gutter(marks) {
       send({ t: "gutter", marks });
     },
-    reveal(line) {
-      send({ t: "reveal", line });
+    reveal(line, col) {
+      send({ t: "reveal", line, col });
+    },
+    markers(items) {
+      send({ t: "markers", items });
     },
     destroy() {
       removeEventListener("message", onMessage);

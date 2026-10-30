@@ -17,6 +17,7 @@ import { newTerm } from "../views/Term";
 import { showOnLaptop } from "../views/FileView";
 import { modKey } from "./platform";
 import { loadRecentCmds, saveRecentCmds, setPref } from "./prefs";
+import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
 
@@ -57,6 +58,7 @@ export function commands(): Command[] {
     { id: "showOnLaptop", label: "cmd.show_on_laptop", when: hasFile, run: () => { const f = activeFile.peek(); if (f) showOnLaptop(f); } },
     { id: "sidebar", label: "cmd.toggle_side", keys: `${mod}+B`, run: () => setPanes({ side: !panes.peek().side }) },
     { id: "panel", label: "cmd.toggle_panel", keys: `${mod}+J`, run: () => setPanes({ panel: !panes.peek().panel }) },
+    { id: "problems", label: "cmd.problems", keys: `${mod}+Shift+M`, run: toggleProblems },
     { id: "chatPanel", label: "cmd.toggle_chat", run: () => setPanes({ chat: !panes.peek().chat }) },
     { id: "explorer", label: "cmd.explorer", run: () => (setPanes({ side: true }), go({ tab: "files", rest: activeFile.peek() ?? "", query: {} })) },
     { id: "scm", label: "cmd.scm", run: () => (setPanes({ side: true }), go({ tab: "git", rest: "", query: {} })) },
