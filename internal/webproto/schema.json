@@ -1553,6 +1553,63 @@
       "phase": "v2"
     },
     {
+      "op": "git.rebase_plan",
+      "args": "GitRebasePlanArgs",
+      "result": "GitRebasePlan",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.rebase_state",
+      "args": "EmptyArgs",
+      "result": "GitRebaseState",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.rebase",
+      "args": "GitRebaseArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 262144,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.rebase_ctl",
+      "args": "GitRebaseCtlArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "tree.new_file",
       "args": "ItemArgs",
       "result": "TreeChanged",
@@ -4498,6 +4555,153 @@
       "required": [
         "path",
         "hunk"
+      ],
+      "additionalProperties": false
+    },
+    "GitRebaseArgs": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/defs/GitRebaseStep"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "base",
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "GitRebaseCtlArgs": {
+      "type": "object",
+      "properties": {
+        "do": {
+          "enum": [
+            "continue",
+            "skip",
+            "abort"
+          ]
+        }
+      },
+      "required": [
+        "do"
+      ],
+      "additionalProperties": false
+    },
+    "GitRebasePlan": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "pushed": {
+          "type": "integer"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/defs/GitRebaseStep"
+          },
+          "type": "array"
+        },
+        "upstream": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "base",
+        "branch",
+        "steps"
+      ],
+      "additionalProperties": true
+    },
+    "GitRebasePlanArgs": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from"
+      ],
+      "additionalProperties": false
+    },
+    "GitRebaseState": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "conflicts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "inProgress": {
+          "type": "boolean"
+        },
+        "step": {
+          "type": "integer"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "inProgress"
+      ],
+      "additionalProperties": true
+    },
+    "GitRebaseStep": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "pick",
+            "reword",
+            "edit",
+            "squash",
+            "fixup",
+            "drop"
+          ]
+        },
+        "body": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "hash",
+        "action"
       ],
       "additionalProperties": false
     },

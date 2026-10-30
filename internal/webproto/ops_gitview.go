@@ -22,6 +22,11 @@ const (
 	OpGitResolveSide = "git.resolve_side"
 
 	OpGitAmend = "git.amend"
+
+	OpGitRebasePlan  = "git.rebase_plan"
+	OpGitRebase      = "git.rebase"
+	OpGitRebaseState = "git.rebase_state"
+	OpGitRebaseCtl   = "git.rebase_ctl"
 )
 
 // Graph limits.
@@ -173,6 +178,64 @@ type GitAmendArgs struct {
 	Message string `json:"message,omitempty"`
 }
 
+// MaxRebaseSteps caps the commits of one interactive rebase from the web.
+const MaxRebaseSteps = 300
+
+// GitRebasePlanArgs starts an interactive rebase at commit From: it and
+// every newer commit of HEAD are listed.
+type GitRebasePlanArgs struct {
+	From string `json:"from"`
+}
+
+// GitRebasePlan is the result of git.rebase_plan: the commits from Base
+// (not included; "" : from the root) to HEAD, oldest first, all picks.
+// Pushed of them are on Upstream already (rewriting them means a force
+// push); Dirty: there are uncommitted changes (the rebase stashes them).
+type GitRebasePlan struct {
+	Base     string          `json:"base"` // full hash
+	Branch   string          `json:"branch"`
+	Steps    []GitRebaseStep `json:"steps"`
+	Upstream string          `json:"upstream,omitempty"`
+	Pushed   int             `json:"pushed,omitempty"`
+	Dirty    bool            `json:"dirty,omitempty"`
+}
+
+// GitRebaseStep is one row of an interactive rebase: its commit, what to
+// do with it, and a reword's new message.
+type GitRebaseStep struct {
+	Hash    string `json:"hash"`
+	Action  string `json:"action" enum:"pick|reword|edit|squash|fixup|drop"`
+	Message string `json:"message,omitempty"`
+	Subject string `json:"subject,omitempty"` // git.rebase_plan only
+	Body    string `json:"body,omitempty"`    // git.rebase_plan only
+}
+
+// GitRebaseArgs runs the rows of the last git.rebase_plan in this order
+// with these actions, onto Base (as the plan gave it).
+type GitRebaseArgs struct {
+	Base  string          `json:"base"`
+	Steps []GitRebaseStep `json:"steps"`
+}
+
+// GitRebaseState is the result of git.rebase_state: where a stopped
+// rebase is (InProgress false: none).
+type GitRebaseState struct {
+	InProgress bool     `json:"inProgress"`
+	Step       int      `json:"step,omitempty"`
+	Total      int      `json:"total,omitempty"`
+	Action     string   `json:"action,omitempty"`
+	Hash       string   `json:"hash,omitempty"`
+	Subject    string   `json:"subject,omitempty"`
+	Branch     string   `json:"branch,omitempty"`
+	Conflicts  []string `json:"conflicts,omitempty"`
+}
+
+// GitRebaseCtlArgs goes on with a stopped rebase, skips its commit or
+// puts the branch back as it was.
+type GitRebaseCtlArgs struct {
+	Do string `json:"do" enum:"continue|skip|abort"`
+}
+
 var opGitViewRows = []Policy{
 	{Op: OpGitGraph, New: newOf[GitGraphArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpGitBlame, New: newOf[GitBlameArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
@@ -184,6 +247,10 @@ var opGitViewRows = []Policy{
 	{Op: OpGitResolveSide, New: newOf[GitResolveSideArgs](), Role: RoleController, Rate: slow, MaxBytes: 8 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	// Rewrites history: the laptop says yes.
 	{Op: OpGitAmend, New: newOf[GitAmendArgs](), Role: RoleController, Rate: slow, MaxBytes: 40 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpGitRebasePlan, New: newOf[GitRebasePlanArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpGitRebaseState, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpGitRebase, New: newOf[GitRebaseArgs](), Role: RoleController, Rate: slow, MaxBytes: 256 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpGitRebaseCtl, New: newOf[GitRebaseCtlArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 }
 
 func (a *GitGraphArgs) validate(int) error {
@@ -237,6 +304,52 @@ func (a *GitAmendArgs) validate(n int) error {
 	return (&GitCommitArgs{Message: a.Message}).validate(n)
 }
 
+// validHash: 4 to 64 lowercase hex digits.
+func validHash(h string) bool {
+	return len(h) >= 4 && len(h) <= 64 && strings.Trim(h, "0123456789abcdef") == ""
+}
+
+func (a *GitRebasePlanArgs) validate(int) error {
+	if !validHash(a.From) {
+		return invalid("bad commit")
+	}
+	return nil
+}
+
+var rebaseActions = map[string]bool{"pick": true, "reword": true, "edit": true, "squash": true, "fixup": true, "drop": true}
+
+func (a *GitRebaseArgs) validate(n int) error {
+	if a.Base != "" && !validHash(a.Base) {
+		return invalid("bad base")
+	}
+	if len(a.Steps) == 0 || len(a.Steps) > MaxRebaseSteps {
+		return invalid("%d steps", len(a.Steps))
+	}
+	for _, s := range a.Steps {
+		if !validHash(s.Hash) || !rebaseActions[s.Action] || s.Subject != "" || s.Body != "" {
+			return invalid("bad step")
+		}
+		if s.Message != "" && s.Action != "reword" {
+			return invalid("a message on a %s step", s.Action)
+		}
+		if s.Message != "" {
+			if err := (&GitCommitArgs{Message: s.Message}).validate(n); err != nil {
+				return err
+			}
+		} else if s.Action == "reword" {
+			return invalid("a reword without a message")
+		}
+	}
+	return nil
+}
+
+func (a *GitRebaseCtlArgs) validate(int) error {
+	if a.Do != "continue" && a.Do != "skip" && a.Do != "abort" {
+		return invalid("bad do")
+	}
+	return nil
+}
+
 // The rows join the table before any init() runs (as ops_more.go's).
 var _ = func() bool { opTable = append(opTable, opGitViewRows...); return true }()
 
@@ -247,4 +360,8 @@ func init() {
 	registerResult(OpGitResolve, GitResolved{})
 	registerResult(OpGitResolveSide, AskRef{})
 	registerResult(OpGitAmend, AskRef{})
+	registerResult(OpGitRebasePlan, GitRebasePlan{})
+	registerResult(OpGitRebaseState, GitRebaseState{})
+	registerResult(OpGitRebase, AskRef{})
+	registerResult(OpGitRebaseCtl, AskRef{})
 }

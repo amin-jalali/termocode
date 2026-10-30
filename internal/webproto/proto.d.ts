@@ -357,6 +357,27 @@ export interface GitAmendArgs {
   message?: string;
 }
 
+export interface GitRebasePlanArgs {
+  from: string;
+}
+
+export interface GitRebaseArgs {
+  base: string;
+  steps: GitRebaseStep[];
+}
+
+export interface GitRebaseStep {
+  hash: string;
+  action: "pick" | "reword" | "edit" | "squash" | "fixup" | "drop";
+  message?: string;
+  subject?: string;
+  body?: string;
+}
+
+export interface GitRebaseCtlArgs {
+  do: "continue" | "skip" | "abort";
+}
+
 export interface ItemArgs {
   path: string;
 }
@@ -1448,6 +1469,26 @@ export interface GitResolved {
   left: number;
 }
 
+export interface GitRebasePlan {
+  base: string;
+  branch: string;
+  steps: GitRebaseStep[];
+  upstream?: string;
+  pushed?: number;
+  dirty?: boolean;
+}
+
+export interface GitRebaseState {
+  inProgress: boolean;
+  step?: number;
+  total?: number;
+  action?: string;
+  hash?: string;
+  subject?: string;
+  branch?: string;
+  conflicts?: string[];
+}
+
 export interface TreeChanged {
   path: string;
 }
@@ -1653,6 +1694,10 @@ export interface OpArgs {
   "git.resolve": GitResolveArgs;
   "git.resolve_side": GitResolveSideArgs;
   "git.amend": GitAmendArgs;
+  "git.rebase_plan": GitRebasePlanArgs;
+  "git.rebase_state": EmptyArgs;
+  "git.rebase": GitRebaseArgs;
+  "git.rebase_ctl": GitRebaseCtlArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -1769,6 +1814,10 @@ export interface OpResult {
   "git.resolve": GitResolved;
   "git.resolve_side": AskRef;
   "git.amend": AskRef;
+  "git.rebase_plan": GitRebasePlan;
+  "git.rebase_state": GitRebaseState;
+  "git.rebase": AskRef;
+  "git.rebase_ctl": AskRef;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;
