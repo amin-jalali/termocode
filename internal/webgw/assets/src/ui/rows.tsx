@@ -4,12 +4,13 @@
 // continuation lines.
 import { h } from "preact";
 import type { Seg } from "../lib/hl";
+import type { TermSeg } from "../lib/termcolors";
 
-export function TermRow({ text, cont }: { text: string; cont?: boolean }) {
+export function TermRow({ text, cont, segs }: { text: string; cont?: boolean; segs?: TermSeg[] | null }) {
   return (
     <div class={`trow${cont ? " is-cont" : ""}`} dir="ltr">
       <span class="wrap-mark" aria-hidden="true">{cont ? "↳" : ""}</span>
-      <span class="trow-text">{text}</span>
+      <span class="trow-text">{segs ? segs.map((g, k) => (g.look ? <span key={k} class="tc" style={g.look}>{g.text}</span> : g.text)) : text}</span>
     </div>
   );
 }

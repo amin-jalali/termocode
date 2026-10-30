@@ -217,6 +217,8 @@ export const S = {
   "term.info": "This shell has one width: the laptop's ({cols} columns). Long rows wrap here. Turn wrap off to scroll sideways instead.",
   "term.wrap": "Wrap",
   "term.screen": "Screen mode",
+  "term.colors": "Colours",
+  "term.colors_note": "Colours show for the rows on the laptop's screen, best effort.",
   "term.rows": "Rows",
   "term.font": "Font size",
   "term.screen_banner": "This program draws its own screen. You see the laptop's size ({cols}×{rows}).",
