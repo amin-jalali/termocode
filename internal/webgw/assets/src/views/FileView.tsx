@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { BufSnap } from "../../../../webproto/proto";
 import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
 import { closePath, file, openPath, type FileState } from "../lib/file";
+import { dropHl, hl, rowSegs, wantHl } from "../lib/hl";
 import { go } from "../lib/router";
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
@@ -148,6 +149,8 @@ function OpenBody({ st, scroller, wrap, canEdit }: { st: FileState; scroller: { 
           sel={canEdit && !gone ? selection.value : null}
           onTap={canEdit && !gone ? tapRow : undefined}
           onLong={canEdit && !gone ? (i) => startEdit(st.path, buf, i, i) : undefined}
+          segs={(i, text) => rowSegs(hl.value, buf.buf, i, text)}
+          onWin={(a, b) => !gone && wantHl(buf.buf, buf.tick, a, b, () => readBuf(store.topic(topic).peek()?.data)?.lines ?? [], () => readBuf(store.topic(topic).peek()?.data)?.tick ?? -1)}
         />
       )}
       {canEdit && !gone && draft.value && <EditSheet buf={buf} />}
@@ -207,6 +210,7 @@ export function FileView({ path }: { path: string }) {
     return () => {
       closePath(path);
       draft.value = null;
+      dropHl();
     };
   }, [path]);
   const st = file.value?.path === path ? file.value : { path, kind: "loading" as const };

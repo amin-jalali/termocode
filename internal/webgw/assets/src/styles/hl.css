@@ -1,0 +1,20 @@
+/* Syntax colours (WEB-38): nvim's capture groups mapped to theme tokens,
+   so a laptop theme (and its contrast rules) colours the code too. */
+.hl-k { color: var(--ai); }
+.hl-s { color: var(--green); }
+.hl-e { color: var(--amber); }
+.hl-c { color: var(--muted); font-style: italic; }
+.hl-n { color: var(--amber); }
+.hl-f { color: var(--blue); }
+.hl-t { color: var(--git-conf); }
+.hl-g { color: var(--red); }
+.hl-o { color: var(--text-2); }
+.hl-h { color: var(--blue); font-weight: 700; }
+.hl-b { font-weight: 700; }
+.hl-i { font-style: italic; }
+.hl-x { text-decoration: line-through; }
+.hl-u { color: var(--blue); text-decoration: underline; }
+.hl-r { color: var(--red); text-decoration: underline wavy; }
+.hl-da { color: var(--git-add); }
+.hl-dd { color: var(--git-del); }
+.hl-dm { color: var(--git-mod); }

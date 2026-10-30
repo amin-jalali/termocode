@@ -5,6 +5,7 @@
 // a "line N of M" chip shows while scrolling.
 import { h } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import type { Seg } from "../lib/hl";
 import { t } from "../strings";
 import { CodeRow } from "./rows";
 
@@ -30,12 +31,16 @@ export interface LinesProps {
   /** onTap and onLong take a tap and a long press (450 ms) on a row. */
   onTap?: (i: number) => void;
   onLong?: (i: number) => void;
+  /** segs gives a row's syntax colours (null: plain). */
+  segs?: (i: number, text: string) => Seg[] | null;
+  /** onWin hears which rows [first, last) are drawn (all of a small file). */
+  onWin?: (first: number, last: number) => void;
 }
 
 const LONG_MS = 450;
 const MOVE_PX = 10;
 
-export function Lines({ lines, scroller, wrap, flash, sel, onTap, onLong }: LinesProps) {
+export function Lines({ lines, scroller, wrap, flash, sel, onTap, onLong, segs, onWin }: LinesProps) {
   const n = lines.length;
   const blocks = Math.ceil(n / BLOCK);
   const virtual = n > VIRTUAL_FROM;
@@ -104,6 +109,10 @@ export function Lines({ lines, scroller, wrap, flash, sel, onTap, onLong }: Line
 
   useEffect(() => heights.current.clear(), [wrap]);
 
+  const first = virtual ? win[0] * BLOCK : 0;
+  const last = virtual ? Math.min(n, (win[1] + 1) * BLOCK) : n;
+  useEffect(() => onWin?.(first, last), [first, last, lines]);
+
   // Measure the drawn blocks, so their spacers keep the same height later.
   useLayoutEffect(() => {
     const el = box.current;
@@ -150,7 +159,7 @@ export function Lines({ lines, scroller, wrap, flash, sel, onTap, onLong }: Line
   const row = (i: number) => {
     const f = flash && i >= flash.a && i <= flash.b;
     const on = sel && i >= sel.a && i <= sel.b;
-    return <CodeRow key={f ? `f${flash!.id}-${i}` : i} i={i} n={i + 1} text={lines[i]} flash={!!f} sel={!!on} />;
+    return <CodeRow key={f ? `f${flash!.id}-${i}` : i} i={i} n={i + 1} text={lines[i]} flash={!!f} sel={!!on} segs={segs?.(i, lines[i])} />;
   };
   const out = [];
   for (let k = 0; k < blocks; k++) {
