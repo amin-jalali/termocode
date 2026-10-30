@@ -369,4 +369,8 @@ func TestDeskAgentWorktrees(t *testing.T) {
 	p.WaitJS(`document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "a.go (Agent)"`)
 	doc := `document.querySelector('[data-view="ai-diff"] .desk-editor').contentDocument`
 	p.WaitJS(doc + `?.querySelector(".editor.modified .char-insert, .editor.modified .line-insert")`)
+	// The file opens beside the view: the side bar keeps the agents.
+	if !Eval[bool](p, `!!document.querySelector(".wb-side .agent-wt") && !!document.querySelector('nav.act-bar .act-item.is-active[data-act="agents"]')`) {
+		t.Error("opening an agent's file left the agents view in the side bar")
+	}
 }
