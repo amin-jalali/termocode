@@ -718,6 +718,9 @@ export const S = {
   "dev.viewers": "Browsers open now",
   "dev.viewer": "Read only",
   "dev.controller": "Read and change",
+  "chat.insert": "Insert into the Editor",
+  "chat.agent": "The agent profile and model of this chat",
+  "chat.default_profile": "default",
 } as const;
 
 export type StringKey = keyof typeof S;

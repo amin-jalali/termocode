@@ -508,3 +508,30 @@ func TestChatRunSteps(t *testing.T) {
 		t.Error("the failed step's error is not shown")
 	}
 }
+
+// On the desktop the chat looks like the laptop editor's: icon buttons
+// for the chat list and a new chat, the agent's profile and model under
+// the input, Send as an icon; a code block's Insert into the Editor puts
+// its text at the editor's cursor as the user's own edit.
+func TestDeskChatLookAndInsert(t *testing.T) {
+	block := md("codeblock")
+	block["text"], block["lang"] = "x := 1\n", "go"
+	chat := chatWith(false, aiMsg(0, md("doc", block)))
+	chat["profile"], chat["model"] = "coder", "fast-1"
+	p, c := openChat(t, Desktop, chat)
+	if !Eval[bool](p, `!!document.querySelector('.chatcol .chat-new .cod-add') && !!document.querySelector('.chatcol .chat-list-btn .cod-history')`) {
+		t.Error("the chat's head buttons are not icons")
+	}
+	if got := Eval[string](p, `document.querySelector(".chatcol .chat-chip")?.textContent.trim() ?? ""`); got != "coder · fast-1" {
+		t.Errorf("agent chip %q", got)
+	}
+	if !Eval[bool](p, `!!document.querySelector('.chatcol .composer-tools .send .cod-send')`) {
+		t.Error("Send is not the send icon")
+	}
+	openDesk(t, p, c, 2, "a.go", "package a")
+	p.TapJS(`document.querySelector(".chatcol .codeblock .cb-insert")`)
+	_, a := expectSetText(t, c)
+	if a.Buf != 2 || strings.Join(a.Lines, "|") != "x := 1" || a.Start != (webproto.Pos{}) {
+		t.Fatalf("insert %+v", a)
+	}
+}

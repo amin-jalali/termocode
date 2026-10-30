@@ -84,6 +84,8 @@ export interface DeskHandle extends EditorHandle {
   original(text: string): void;
   diffView(o: { inline?: boolean; collapse?: boolean }): void;
   diffGo(dir: 1 | -1): void;
+  /** insert puts text at the cursor as the user's edit. */
+  insert(text: string): void;
 }
 
 /** desks are the desktop editors on screen, by editor group slot. */
@@ -236,6 +238,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     diffGo(dir) {
       send({ t: "diffGo", dir });
+    },
+    insert(text) {
+      send({ t: "insert", text });
     },
     destroy() {
       removeEventListener("message", onMessage);

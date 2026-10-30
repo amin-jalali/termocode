@@ -12,11 +12,13 @@ import { OfflineError, ReqError } from "../net/link";
 import { link, live } from "../session";
 import { t, type StringKey } from "../strings";
 import { Button } from "../ui/Button";
+import { Cod } from "../ui/icons";
 import { errText } from "../ui/CardSheet";
 
 const MAX_ROWS_PX = 160;
 
-export function Composer({ chat, busy }: { chat: string; busy: boolean }) {
+export function Composer({ chat, busy, profile = "", model = "" }: { chat: string; busy: boolean; profile?: string; model?: string }) {
+  const desk = layout.value === "desktop";
   const text = getDraft(chat);
   const [note, setNote] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -71,6 +73,7 @@ export function Composer({ chat, busy }: { chat: string; busy: boolean }) {
           {note}
         </p>
       )}
+      <div class={desk ? "composer-frame" : "composer-plain"}>
       <div class="composer-row">
         <textarea
           ref={box}
@@ -87,17 +90,38 @@ export function Composer({ chat, busy }: { chat: string; busy: boolean }) {
           onKeyDown={onKeyDown}
           onKeyPress={onKeyPress}
         />
-        <span class={busy ? "stop" : "send"}>
-          {busy ? (
-            <Button kind="neutral" needsLink onClick={stop}>
-              {t("stop")}
-            </Button>
-          ) : (
-            <Button kind="primary" needsLink disabled={sending || !text.trim()} onClick={send}>
-              {t("send")}
-            </Button>
-          )}
-        </span>
+        {!desk && (
+          <span class={busy ? "stop" : "send"}>
+            {busy ? (
+              <Button kind="neutral" needsLink onClick={stop}>
+                {t("stop")}
+              </Button>
+            ) : (
+              <Button kind="primary" needsLink disabled={sending || !text.trim()} onClick={send}>
+                {t("send")}
+              </Button>
+            )}
+          </span>
+        )}
+      </div>
+      {desk && (
+        <div class="composer-tools">
+          <span class="chat-chip" title={t("chat.agent")}>
+            <Cod name="sparkle" /> {[profile || t("chat.default_profile"), model].filter(Boolean).join(" · ")}
+          </span>
+          <span class={busy ? "stop" : "send"}>
+            {busy ? (
+              <Button kind="quiet" needsLink icon={<Cod name="debug-stop" />} iconOnly title={t("stop")} onClick={stop}>
+                {t("stop")}
+              </Button>
+            ) : (
+              <Button kind="quiet" needsLink icon={<Cod name="send" />} iconOnly title={`${t("send")} (Enter)`} disabled={sending || !text.trim()} onClick={send}>
+                {t("send")}
+              </Button>
+            )}
+          </span>
+        </div>
+      )}
       </div>
       <div class="composer-hint" aria-hidden="true">
         {t("chat.hint")}
