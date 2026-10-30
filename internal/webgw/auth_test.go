@@ -234,6 +234,29 @@ func TestSecretInQueryRefused(t *testing.T) {
 	}
 }
 
+// TestGlobalRate429: /auth takes AuthRatePerSecond requests per second in
+// all; more get 429 before the body is read, so they cannot try secrets
+// (T13).
+func TestGlobalRate429(t *testing.T) {
+	if AuthRatePerSecond != 20 {
+		t.Fatalf("AuthRatePerSecond = %d, want 20", AuthRatePerSecond)
+	}
+	a, _, clk, plain := newAuth(t)
+	for i := 0; i < AuthRatePerSecond; i++ {
+		if w := do(a, authReq(`{}`)); w.Code != http.StatusBadRequest {
+			t.Fatalf("request %d: code %d", i, w.Code)
+		}
+	}
+	w := do(a, authReq(secretBody(plain)))
+	if w.Code != http.StatusTooManyRequests || w.Header().Get("Retry-After") != "1" {
+		t.Fatalf("over the rate: code %d Retry-After %q", w.Code, w.Header().Get("Retry-After"))
+	}
+	clk.Add(time.Second)
+	if w := do(a, authReq(secretBody(plain))); w.Code != http.StatusOK {
+		t.Fatalf("after a second: code %d (was the secret used while limited?)", w.Code)
+	}
+}
+
 func TestAuthOnlyPost(t *testing.T) {
 	a, _, _, _ := newAuth(t)
 	r := httptest.NewRequest(http.MethodGet, "/auth", nil)
