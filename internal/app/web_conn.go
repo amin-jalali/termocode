@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -54,7 +55,8 @@ func newWebConn(h *webHub, nc net.Conn) *webConn {
 // writer flushes what is queued (bounded by its deadline) before the
 // connection is closed.
 func (c *webConn) run(br *bufio.Reader) {
-	go c.writeLoop()
+	// A panic in the writer closes the link, so the reader below ends too.
+	crash.GoWith("web: a hub connection writer", c.writeLoop, func() { _ = c.nc.Close() })
 	defer func() {
 		c.cancel()
 		c.out.close()

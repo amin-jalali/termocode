@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -85,14 +86,14 @@ func (m *Model) webChatOpen(call *webCall) tea.Cmd {
 	}
 	call.later()
 	store := s.store
-	go func() {
+	crash.GoWith("web: reading a stored chat", func() {
 		c, err := store.Load(id)
 		if err != nil || c.ID != id {
 			call.fail(webproto.CodeNotFound, "That chat is gone.")
 			return
 		}
 		call.reply(webStoredChat(&c))
-	}()
+	}, func() { call.fail(webproto.CodeInternal, "Something went wrong.") })
 	return nil
 }
 
@@ -131,10 +132,11 @@ func (m *Model) webChatGetMessage(call *webCall) tea.Cmd {
 		sm.Run = &r
 	}
 	call.later()
-	go func() { // a big message's markdown takes longer than the call budget
+	// A big message's markdown takes longer than the call budget.
+	crash.GoWith("web: a full chat message", func() {
 		cm, _ := webChatMsgMax(i, &sm, webproto.MaxChatMsgFull)
 		call.reply(cm)
-	}()
+	}, func() { call.fail(webproto.CodeInternal, "Something went wrong.") })
 	return nil
 }
 
