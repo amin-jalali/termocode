@@ -256,3 +256,49 @@ func insideGlobs(list string) bool {
 	}
 	return true
 }
+
+func digits(s string, n int) bool {
+	if len(s) != n {
+		return false
+	}
+	for i := 0; i < n; i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func lowerHex(s string, n int) bool {
+	if len(s) != n {
+		return false
+	}
+	for i := 0; i < n; i++ {
+		c := s[i]
+		if !('0' <= c && c <= '9' || 'a' <= c && c <= 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+func (a *PairAskArgs) validate(int) error {
+	if !lowerHex(a.PairID, 32) || !digits(a.Code, 6) || !validName(a.Name, MaxDeviceName) {
+		return invalid("bad pairing")
+	}
+	return nil
+}
+
+func (a *GrantAskArgs) validate(int) error {
+	if !validName(a.Device, MaxID) || !validName(a.Name, MaxDeviceName) {
+		return invalid("bad grant")
+	}
+	return nil
+}
+
+func (a *TotpCheckArgs) validate(int) error {
+	if !digits(a.Code, 6) || (a.Device != "" && !validName(a.Device, MaxID)) {
+		return invalid("bad code")
+	}
+	return nil
+}

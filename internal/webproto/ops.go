@@ -86,6 +86,9 @@ const (
 	OpRunsResume       = "runs.resume"
 	OpWebOpen          = "web.open"
 	OpWebStop          = "web.stop"
+	OpWebPairAsk       = "web.pair_ask"
+	OpWebGrantAsk      = "web.grant_ask"
+	OpWebTotpCheck     = "web.totp_check"
 )
 
 const (
@@ -155,6 +158,12 @@ var opTable = []Policy{
 	// Control connection only (same user, never a browser).
 	{Op: OpWebOpen, New: newOf[WebOpenArgs](), Role: RoleCtl, Rate: perSec(1), MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpWebStop, New: newOf[EmptyArgs](), Role: RoleCtl, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
+	// The gateway's questions to the laptop (v2): pair a device (QR + SAS
+	// code), give a viewer control, check a TOTP code against the secret
+	// store. The answer is the owner's or the UI's, never the browser's.
+	{Op: OpWebPairAsk, New: newOf[PairAskArgs](), Role: RoleCtl, Rate: perSec(1), MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpWebGrantAsk, New: newOf[GrantAskArgs](), Role: RoleCtl, Rate: perSec(1), MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpWebTotpCheck, New: newOf[TotpCheckArgs](), Role: RoleCtl, Rate: perSec(2), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
 }
 
 // ErrUnknownOp is returned for an op with no policy row.
