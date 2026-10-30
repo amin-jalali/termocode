@@ -3,6 +3,7 @@
 package app
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -147,5 +148,24 @@ func TestWebChipFollowsAndClickStops(t *testing.T) {
 	r.pumpUntil("the gateway gone", func() bool { return m.webPanel == nil })
 	if strings.Contains(chip(), "web") {
 		t.Fatalf("chip after stop: %q", chip())
+	}
+}
+
+// Spec (3.3, WEB-10): no tool of the AI and no tool termocode offers
+// outside agents starts, stops or talks to the web panel.
+func TestMCPToolsListHasNoWeb(t *testing.T) {
+	m := aiTestModel(t)
+	root := t.TempDir()
+	var call aiIDECaller = func(context.Context, aiIDEFunc) (string, error) { return "", nil }
+	all := m.aiChatTools(root, call)
+	for _, tl := range append(all, mcpServeTools(all, root, call)...) {
+		if strings.Contains(strings.ToLower(tl.Name), "web") {
+			t.Errorf("tool %q reaches the web panel", tl.Name)
+		}
+	}
+	for _, r := range mcpServeAllowList {
+		if strings.Contains(r.name, "web") {
+			t.Errorf("outside agents may call %q", r.name)
+		}
 	}
 }
