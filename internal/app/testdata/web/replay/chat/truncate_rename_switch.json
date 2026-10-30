@@ -1,0 +1,109 @@
+{
+  "topic": "chat",
+  "snap0": {
+    "busy": false,
+    "id": "c-1",
+    "messages": [
+      {
+        "i": 0,
+        "md": {
+          "c": [
+            {
+              "c": [
+                {
+                  "k": "text",
+                  "text": "a"
+                }
+              ],
+              "k": "p"
+            }
+          ],
+          "k": "doc"
+        },
+        "role": "user"
+      },
+      {
+        "i": 1,
+        "md": {
+          "c": [
+            {
+              "c": [
+                {
+                  "k": "text",
+                  "text": "b"
+                }
+              ],
+              "k": "p"
+            }
+          ],
+          "k": "doc"
+        },
+        "role": "assistant"
+      }
+    ],
+    "title": "Fix the build"
+  },
+  "deltas": [
+    {
+      "n": 1,
+      "op": "truncate"
+    },
+    {
+      "op": "state",
+      "title": "Renamed"
+    },
+    {
+      "chat": {
+        "busy": false,
+        "id": "c-2",
+        "messages": [
+          {
+            "i": 0,
+            "md": {
+              "c": [
+                {
+                  "c": [
+                    {
+                      "k": "text",
+                      "text": "x"
+                    }
+                  ],
+                  "k": "p"
+                }
+              ],
+              "k": "doc"
+            },
+            "role": "user"
+          }
+        ],
+        "title": "Other"
+      },
+      "op": "switched"
+    }
+  ],
+  "snapn": {
+    "id": "c-2",
+    "title": "Other",
+    "busy": false,
+    "messages": [
+      {
+        "i": 0,
+        "role": "user",
+        "md": {
+          "k": "doc",
+          "c": [
+            {
+              "k": "p",
+              "c": [
+                {
+                  "k": "text",
+                  "text": "x"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
