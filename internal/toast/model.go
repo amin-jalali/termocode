@@ -72,6 +72,18 @@ func New() Model { return Model{} }
 // width, so a no-toast View() doesn't pay an RPC round-trip.
 func (m Model) Empty() bool { return len(m.toasts) == 0 }
 
+// Live returns the toasts on show, oldest first (copies; a toast already
+// sliding out is left out). The web side mirrors them (WEB-12).
+func (m Model) Live() []Toast {
+	out := make([]Toast, 0, len(m.toasts))
+	for _, t := range m.toasts {
+		if !t.leaving {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
 // OnPush is an optional package-level hook fired every time a toast is
 // enqueued. The app uses it to mirror error / warning toasts into the
 // global error log, so the full text survives even after the toast
