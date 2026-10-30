@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,7 @@ func init() {
 	webOps[webproto.OpGitStageHunk] = (*Model).webGitStageHunk
 	webOps[webproto.OpGitUnstageHunk] = (*Model).webGitUnstageHunk
 	webOps[webproto.OpGitCommit] = (*Model).webGitCommit
+	webOps[webproto.OpGitDiscard] = (*Model).webGitDiscard
 }
 
 // webGitRoot is the workspace folder when it is a git repository.
@@ -363,4 +365,71 @@ func (m *Model) webGitCommit(call *webCall) tea.Cmd {
 			return tea.Batch(m.pollGitCmd(), t)
 		})
 	}
+}
+
+// webGitDiscard asks the laptop to discard the work-tree changes of paths
+// (a new file is deleted). Nothing happens until the laptop confirms.
+func (m *Model) webGitDiscard(call *webCall) tea.Cmd {
+	paths := call.args.(*webproto.PathsArgs).Paths
+	root, ok := m.webGitRoot(call)
+	if !ok || !m.webGitPick(call, root, paths, false) {
+		return nil
+	}
+	for _, p := range paths {
+		if !webGitInside(root, p) {
+			call.fail(webproto.CodeForbidden, "That path leaves the workspace.")
+			return nil
+		}
+	}
+	what := paths[0]
+	if len(paths) > 1 {
+		what = strconv.Itoa(len(paths)) + " files: " + webAuditPaths(paths)
+	}
+	m.webAskOpen(call, &webAsk{
+		summary: webAuditPaths(paths),
+		title:   "Discard changes?",
+		body:    "Discard changes in " + what + "? This cannot be undone.",
+		action:  "Discard",
+		run: func(m *Model) tea.Cmd {
+			return func() tea.Msg {
+				var err error
+				for _, p := range paths {
+					if !webGitInside(root, p) {
+						err = errors.New(p + " leaves the workspace")
+						break
+					}
+					if err = git.Discard(root, p); err != nil {
+						break
+					}
+				}
+				return applyMsg(func(m *Model) tea.Cmd {
+					var t tea.Cmd
+					if err != nil {
+						m.toast, t = m.toast.PushDetail(toast.Errr, "Discard failed", err.Error())
+					} else {
+						m.toast, t = m.toast.PushDetail(toast.Info, "Discarded changes", webAuditPaths(paths))
+					}
+					if m.nvim != nil {
+						_ = m.nvim.Command("silent! checktime")
+					}
+					return tea.Batch(m.pollGitCmd(), t)
+				})
+			}
+		},
+	})
+	return nil
+}
+
+// webGitInside: path's folder, with every link followed, is inside root
+// (a new file is deleted by path; a linked folder must not lead out).
+func webGitInside(root, path string) bool {
+	r, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return false
+	}
+	dir, err := filepath.EvalSymlinks(filepath.Dir(filepath.Join(root, strings.TrimSuffix(path, "/"))))
+	if err != nil {
+		return false
+	}
+	return dir == r || strings.HasPrefix(dir, r+string(filepath.Separator))
 }

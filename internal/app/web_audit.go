@@ -16,7 +16,11 @@ const webAuditMax = 200
 
 // webAuditOp writes one audit line for a write op of call.
 func (m *Model) webAuditOp(call *webCall, summary, result string) {
-	device := call.conn.device
+	m.webAuditLine(call.op, summary, call.conn.device, result)
+}
+
+// webAuditLine writes one audit line for op, asked by device.
+func (m *Model) webAuditLine(op, summary, device, result string) {
 	if device == "" {
 		device = "web"
 	}
@@ -24,7 +28,7 @@ func (m *Model) webAuditOp(call *webCall, summary, result string) {
 	if r := []rune(summary); len(r) > webAuditMax {
 		summary = string(r[:webAuditMax-1]) + "…"
 	}
-	line := webNow().Format("15:04:05") + "  " + call.op
+	line := webNow().Format("15:04:05") + "  " + op
 	if summary != "" {
 		line += "  " + summary
 	}
