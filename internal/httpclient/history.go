@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // DefaultHistoryMax is the http_history_max default.
@@ -398,12 +400,12 @@ func decodeEntries(lines [][]byte) []Entry {
 	var wg sync.WaitGroup
 	for w := range workers {
 		wg.Add(1)
-		go func() {
+		crash.Go("reading HTTP history", func() {
 			defer wg.Done()
 			for i := w; i < len(lines); i += workers {
 				ok[i] = json.Unmarshal(lines[i], &out[i]) == nil
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	n := 0

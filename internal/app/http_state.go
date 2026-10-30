@@ -450,10 +450,10 @@ func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
 		// History and the page layout (pretty print, lines) side by
 		// side, both off the UI loop.
 		recorded := make(chan struct{})
-		go func() {
+		crash.Go("recording HTTP history", func() {
+			defer close(recorded) // also after a panic, so the answer still shows
 			httpRecordHistory(&snap)
-			close(recorded)
-		}()
+		})
 		var body *httpBody
 		if !resp.IsBinary && len(resp.Body) > 0 {
 			body = layoutHTTPBody(resp)
