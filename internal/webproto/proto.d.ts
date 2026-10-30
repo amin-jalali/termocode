@@ -147,6 +147,7 @@ export interface GitDiffArgs {
 export interface GitShowArgs {
   hash: string;
   from?: number;
+  path?: string;
 }
 
 export interface SearchRunArgs {
@@ -233,6 +234,10 @@ export interface KeyArgs {
 
 export interface ControlAskArgs {
   credential: string;
+}
+
+export interface GitFileLogArgs {
+  path: string;
 }
 
 export interface ItemArgs {
@@ -890,6 +895,11 @@ export interface ControlChallenge {
   options: unknown;
 }
 
+export interface GitFileLog {
+  path: string;
+  log: GitCommit[];
+}
+
 export interface TreeChanged {
   path: string;
 }
@@ -1045,6 +1055,7 @@ export interface OpArgs {
   "runs.resume": KeyArgs;
   "control.challenge": EmptyArgs;
   "control.ask": ControlAskArgs;
+  "git.file_log": GitFileLogArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -1129,6 +1140,7 @@ export interface OpResult {
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
+  "git.file_log": GitFileLog;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;

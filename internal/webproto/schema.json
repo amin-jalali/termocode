@@ -973,6 +973,20 @@
       "phase": "v2"
     },
     {
+      "op": "git.file_log",
+      "args": "GitFileLogArgs",
+      "result": "GitFileLog",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "tree.new_file",
       "args": "ItemArgs",
       "result": "TreeChanged",
@@ -2892,6 +2906,37 @@
       ],
       "additionalProperties": true
     },
+    "GitFileLog": {
+      "type": "object",
+      "properties": {
+        "log": {
+          "items": {
+            "$ref": "#/defs/GitCommit"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "log"
+      ],
+      "additionalProperties": true
+    },
+    "GitFileLogArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
     "GitHunkArgs": {
       "type": "object",
       "properties": {
@@ -2915,6 +2960,9 @@
           "type": "integer"
         },
         "hash": {
+          "type": "string"
+        },
+        "path": {
           "type": "string"
         }
       },
