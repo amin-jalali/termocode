@@ -7,11 +7,13 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 
 	"github.com/amin-jalali/termocode/internal/webhl"
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -125,6 +127,8 @@ func shotHub(t *testing.T, c *HubConn) {
 	for _, tp := range []string{"chat", "cards", "chats", "tree", "bufs", "git"} { // asked for at login (git: on a desktop)
 		c.Send(t, Snap(tp, 1, snaps[tp]))
 	}
+	tick := 3
+	tailRow := slices.Index(lines, "	tail := \"\"")
 	go func() {
 		for {
 			var m webproto.Msg
@@ -206,6 +210,29 @@ func shotHub(t *testing.T, c *HubConn) {
 				case "git.show":
 					data = webproto.GitDiff{Commit: &webproto.GitCommitInfo{Hash: "cccc333", Subject: "Feature work", Body: "Why it changed.", Author: "Bob"},
 						Rows: []webproto.DiffRow{{K: "file", Text: "src/a.go"}, {K: "add", Text: "x"}, {K: "del", Text: "z"}, {K: "file", Text: "README.md"}, {K: "add", Text: "y"}}}
+				case "buf.set_text":
+					tick++
+					data = webproto.EditRes{Tick: tick, Dirty: true}
+				case "ai.next_edit":
+					var a webproto.AINextEditArgs
+					_ = json.Unmarshal(v.Args, &a)
+					data = webproto.AINextEdit{None: true, Old: []string{}, Lines: []string{}}
+					if !a.Seed && tailRow > 0 {
+						data = webproto.AINextEdit{Start: tailRow, End: tailRow, Old: []string{lines[tailRow]}, Lines: []string{"\ttail := \"\" // the line ends without a newline"}}
+					}
+				case "ai.complete":
+					data = webproto.AICompletion{None: true}
+				case "ai.action":
+					data = webproto.AIAction{Kind: "doc", Title: "AI doc comment", Start: 0, End: 1, Lines: []string{"// Command covreport shortens the package list of coverage lines.", "package main"}}
+				case "ai.worktrees":
+					data = webproto.AIWorktrees{Items: []webproto.AIWorktree{
+						{ID: "r1-left", Branch: "termocode/agent-r1-left", Owner: "Add a test", Files: []webproto.AIWorktreeChange{{Path: "cmd/covreport/filter.go", Status: "M"}, {Path: "cmd/covreport/filter_test.go", Status: "A"}}},
+						{ID: "r1-right", Branch: "termocode/agent-r1-right", Owner: "Docs", Files: []webproto.AIWorktreeChange{{Path: "README.md", Status: "M"}}},
+						{ID: "r1-join", Branch: "termocode/agent-r1-join", Running: true, Files: []webproto.AIWorktreeChange{}},
+					}}
+				case "ai.worktree_text":
+					after := strings.Replace(shotFile, "\tif i < 0 {", "\tif i < 0 || line == \"\" {", 1)
+					data = webproto.AIWorktreeText{ID: "r1-left", Path: "cmd/covreport/filter.go", Before: shotFile, After: after}
 				case "buf.hl":
 					var a webproto.HlArgs
 					_ = json.Unmarshal(v.Args, &a)
@@ -242,6 +269,9 @@ func TestShots(t *testing.T) {
 				p.Media(map[string]string{"prefers-reduced-motion": "reduce", "prefers-color-scheme": scheme})
 				c := p.Login("c-shot")
 				shotHub(t, c)
+				if !vp.Mobile { // the workbench asked for the AI at login
+					c.Send(t, Snap("ai", 1, aiFixture(true, true)))
+				}
 				shot := func(name, hash, ready string) {
 					Eval[bool](p, `(location.hash = `+jsq(hash)+`, true)`)
 					snap(t, p, filepath.Join(dir, vp.Name+"-"+scheme+"-"+name+".png"), ready)
@@ -295,6 +325,23 @@ func TestShots(t *testing.T) {
 					shot("pr", "#/files/@git:pr:14", `document.querySelector('[data-view="pr"] .pr-md')`)
 					shot("merge", "#/files/@git:merge:src/a.go", `(() => { const f = [...document.querySelectorAll('[data-view="merge"] .desk-editor')].map((e) => e.contentDocument); return f.length === 3 && f.every((d) => d && d.querySelector(".tc-mg-current, .tc-mg-incoming")); })()`)
 				}
+				if vp.Mobile {
+					return
+				}
+				// The laptop's AI (WEBP-3): agent worktrees, an agent's change,
+				// the next edit suggestion and an AI suggestion to accept.
+				shot("agents", "#/more/agents", `document.querySelectorAll('.agent-file').length === 3`)
+				shot("agentdiff", "#/files/@agent:r1-left:cmd/covreport/filter.go", `document.querySelector('[data-view="ai-diff"] .desk-editor')?.contentDocument?.querySelector(".editor.modified .line-insert, .editor.modified .char-insert")`)
+				Eval[bool](p, `(location.hash = "#/files/cmd/covreport/filter.go", true)`)
+				p.WaitJS(fileReady)
+				deskCaret(p, 3, 6)
+				p.Do(chromedp.KeyEvent(" "))
+				shot("nes", "#/files/cmd/covreport/filter.go", `document.querySelector(".desk-editor")?.contentDocument?.querySelector(".tc-nes")`)
+				p.Do(chromedp.KeyEvent(kb.Escape))
+				editorRightClick(p)
+				menuPick(p, "Generate Doc Comment with AI")
+				p.WaitJS(`document.querySelector('[data-view="ai-diff"]')`)
+				shot("aidiff", Eval[string](p, `location.hash`), `document.querySelector('[data-view="ai-diff"] .desk-editor')?.contentDocument?.querySelector(".editor.modified .line-insert, .editor.modified .char-insert")`)
 			})
 		}
 	}
