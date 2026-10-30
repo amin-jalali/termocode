@@ -169,12 +169,24 @@
     {
       "name": "terms",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "TermsSnap",
+      "deltas": [
+        "TermsSnap"
+      ]
     },
     {
       "name": "term",
       "keyed": true,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "TermSnap",
+      "deltas": [
+        "LinesDelta",
+        "TickDelta",
+        "TermResetDelta",
+        "TermModeDelta",
+        "GoneDelta"
+      ]
     },
     {
       "name": "git",
@@ -341,6 +353,7 @@
     {
       "op": "term.history",
       "args": "TermHistoryArgs",
+      "result": "TermHistoryRes",
       "role": "viewer",
       "rate": {
         "n": 20,
@@ -553,6 +566,7 @@
     {
       "op": "term.new",
       "args": "EmptyArgs",
+      "result": "TermNewRes",
       "role": "controller",
       "rate": {
         "n": 100,
@@ -2344,6 +2358,137 @@
       ],
       "additionalProperties": false
     },
+    "TermHistoryRes": {
+      "type": "object",
+      "properties": {
+        "first": {
+          "type": "integer"
+        },
+        "more": {
+          "type": "boolean"
+        },
+        "rows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "first",
+        "rows",
+        "more"
+      ],
+      "additionalProperties": true
+    },
+    "TermItem": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "buf": {
+          "type": "integer"
+        },
+        "busy": {
+          "type": "boolean"
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "exited": {
+          "type": "boolean"
+        },
+        "last_cmd": {
+          "type": "string"
+        },
+        "pane_of": {
+          "type": "integer"
+        },
+        "task": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "buf",
+        "title",
+        "cwd",
+        "busy",
+        "exited",
+        "active"
+      ],
+      "additionalProperties": true
+    },
+    "TermModeDelta": {
+      "type": "object",
+      "properties": {
+        "cols": {
+          "type": "integer"
+        },
+        "height": {
+          "type": "integer"
+        },
+        "kind": {
+          "const": "mode"
+        },
+        "screen": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "screen",
+        "cols",
+        "height"
+      ],
+      "additionalProperties": true
+    },
+    "TermNewRes": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf"
+      ],
+      "additionalProperties": true
+    },
+    "TermResetDelta": {
+      "type": "object",
+      "properties": {
+        "first": {
+          "type": "integer"
+        },
+        "kind": {
+          "const": "reset"
+        },
+        "more": {
+          "type": "boolean"
+        },
+        "rows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "first",
+        "rows",
+        "more",
+        "tick"
+      ],
+      "additionalProperties": true
+    },
     "TermSendArgs": {
       "type": "object",
       "properties": {
@@ -2359,6 +2504,64 @@
         "text"
       ],
       "additionalProperties": false
+    },
+    "TermSnap": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "cols": {
+          "type": "integer"
+        },
+        "first": {
+          "type": "integer"
+        },
+        "height": {
+          "type": "integer"
+        },
+        "more": {
+          "type": "boolean"
+        },
+        "rows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "screen": {
+          "type": "boolean"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "first",
+        "rows",
+        "more",
+        "tick",
+        "screen",
+        "cols",
+        "height"
+      ],
+      "additionalProperties": true
+    },
+    "TermsSnap": {
+      "type": "object",
+      "properties": {
+        "terms": {
+          "items": {
+            "$ref": "#/defs/TermItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "terms"
+      ],
+      "additionalProperties": true
     },
     "TickDelta": {
       "type": "object",

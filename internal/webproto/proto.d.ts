@@ -492,6 +492,48 @@ export interface GoneDelta {
   kind: "gone";
 }
 
+export interface TermsSnap {
+  terms: TermItem[];
+}
+
+export interface TermItem {
+  buf: number;
+  title: string;
+  cwd: string;
+  busy: boolean;
+  last_cmd?: string;
+  exited: boolean;
+  pane_of?: number;
+  task?: string;
+  active: boolean;
+}
+
+export interface TermSnap {
+  buf: number;
+  first: number;
+  rows: string[];
+  more: boolean;
+  tick: number;
+  screen: boolean;
+  cols: number;
+  height: number;
+}
+
+export interface TermResetDelta {
+  kind: "reset";
+  first: number;
+  rows: string[];
+  more: boolean;
+  tick: number;
+}
+
+export interface TermModeDelta {
+  kind: "mode";
+  screen: boolean;
+  cols: number;
+  height: number;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -525,8 +567,18 @@ export interface BufHeadRes {
   size: number;
 }
 
+export interface TermHistoryRes {
+  first: number;
+  rows: string[];
+  more: boolean;
+}
+
 export interface ChatRef {
   id: string;
+}
+
+export interface TermNewRes {
+  buf: number;
 }
 
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
@@ -582,6 +634,8 @@ export interface TopicData {
   "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta };
   "bufs": { snap: BufsSnap; delta: BufsSnap };
   "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta };
+  "terms": { snap: TermsSnap; delta: TermsSnap };
+  "term": { snap: TermSnap; delta: LinesDelta | TickDelta | TermResetDelta | TermModeDelta | GoneDelta };
 }
 
 // The data of an ev message, by kind.
@@ -597,6 +651,8 @@ export interface OpResult {
   "tree.list": TreeListRes;
   "buf.open": BufOpenRes;
   "buf.head": BufHeadRes;
+  "term.history": TermHistoryRes;
   "chat.send": ChatRef;
   "chat.new": ChatRef;
+  "term.new": TermNewRes;
 }
