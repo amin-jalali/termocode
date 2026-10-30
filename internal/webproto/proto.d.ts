@@ -900,6 +900,22 @@ export interface GitFileLog {
   log: GitCommit[];
 }
 
+export interface BufSymbols {
+  buf: number;
+  source: "lsp" | "syntax" | "none";
+  symbols: BufSymbol[];
+  cut?: boolean;
+}
+
+export interface BufSymbol {
+  name: string;
+  detail?: string;
+  kind: number;
+  line: number;
+  col: number;
+  depth: number;
+}
+
 export interface TreeChanged {
   path: string;
 }
@@ -1056,6 +1072,7 @@ export interface OpArgs {
   "control.challenge": EmptyArgs;
   "control.ask": ControlAskArgs;
   "git.file_log": GitFileLogArgs;
+  "buf.symbols": BufArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -1141,6 +1158,7 @@ export interface OpResult {
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
   "git.file_log": GitFileLog;
+  "buf.symbols": BufSymbols;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;

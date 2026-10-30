@@ -987,6 +987,20 @@
       "phase": "v2"
     },
     {
+      "op": "buf.symbols",
+      "args": "BufArgs",
+      "result": "BufSymbols",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "tree.new_file",
       "args": "ItemArgs",
       "result": "TreeChanged",
@@ -1571,6 +1585,67 @@
         "dirty",
         "ft",
         "readonly"
+      ],
+      "additionalProperties": true
+    },
+    "BufSymbol": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "depth": {
+          "type": "integer"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "line",
+        "col",
+        "depth"
+      ],
+      "additionalProperties": true
+    },
+    "BufSymbols": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "cut": {
+          "type": "boolean"
+        },
+        "source": {
+          "enum": [
+            "lsp",
+            "syntax",
+            "none"
+          ]
+        },
+        "symbols": {
+          "items": {
+            "$ref": "#/defs/BufSymbol"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "buf",
+        "source",
+        "symbols"
       ],
       "additionalProperties": true
     },

@@ -1,13 +1,40 @@
 package webproto
 
-// The ops of the desktop workbench's explorer sections: the TIMELINE
-// (the commits of one file). They join the op table below; every rule of
+// The ops of the desktop workbench's explorer sections: the OUTLINE (the
+// symbols of the open file) and the TIMELINE (the commits of one file). They join the op table below; every rule of
 // ops.go holds for them.
 
 // Explorer op names.
 const (
 	OpGitFileLog = "git.file_log"
+	OpBufSymbols = "buf.symbols"
 )
+
+// BufSymbols is the result of buf.symbols: the symbols of a buffer the
+// page opened, as a flat list in file order (Depth nests them). Source
+// says who found them: the language server ("lsp"), the hub's own lexer
+// ("syntax", a guess from declarations) or nobody ("none").
+type BufSymbols struct {
+	Buf     int         `json:"buf"`
+	Source  string      `json:"source" enum:"lsp|syntax|none"`
+	Symbols []BufSymbol `json:"symbols"`
+	Cut     bool        `json:"cut,omitempty"` // more than MaxSymbols: the rest is left out
+}
+
+// BufSymbol is one symbol: its name, the language server's kind (LSP
+// SymbolKind: 5 class, 6 method, 12 function, …), where its name starts
+// (1-based line, 1-based UTF-16 column) and how deep it nests.
+type BufSymbol struct {
+	Name   string `json:"name"`
+	Detail string `json:"detail,omitempty"`
+	Kind   int    `json:"kind"`
+	Line   int    `json:"line"`
+	Col    int    `json:"col"`
+	Depth  int    `json:"depth"`
+}
+
+// MaxSymbols caps the symbols of one buf.symbols.
+const MaxSymbols = 2000
 
 // GitFileLogArgs names the file whose commits the timeline lists.
 type GitFileLogArgs struct {
@@ -26,6 +53,7 @@ const MaxFileLog = 50
 
 var opIDERows = []Policy{
 	{Op: OpGitFileLog, New: newOf[GitFileLogArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpBufSymbols, New: newOf[BufArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 }
 
 func (a *GitFileLogArgs) validate(int) error {
@@ -40,4 +68,5 @@ var _ = func() bool { opTable = append(opTable, opIDERows...); return true }()
 
 func init() {
 	registerResult(OpGitFileLog, GitFileLog{})
+	registerResult(OpBufSymbols, BufSymbols{})
 }
