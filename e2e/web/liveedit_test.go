@@ -4,6 +4,7 @@ package web
 
 import (
 	"context"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -48,11 +49,20 @@ func slicesHas(list []string, part string) bool {
 	return false
 }
 
+// modKey is the editor's Mod key on this system: Cmd on a Mac, Ctrl
+// elsewhere (Mod-Home / Mod-End go to the text's start / end).
+func modKey() chromedp.KeyOption {
+	if runtime.GOOS == "darwin" {
+		return chromedp.KeyModifiers(chromedp.ModifierMeta)
+	}
+	return chromedp.KeyModifiers(chromedp.ModifierCtrl)
+}
+
 // typeAtStart puts the caret at the start of the text and types s.
 func typeAtStart(p *Page, s string) {
 	p.T.Helper()
 	Eval[bool](p, `(`+cmContent+`.focus(), true)`)
-	p.Do(chromedp.KeyEvent(kb.Home, chromedp.KeyModifiers(chromedp.ModifierCtrl)))
+	p.Do(chromedp.KeyEvent(kb.Home, modKey()))
 	p.Do(chromedp.KeyEvent(s))
 }
 
@@ -91,7 +101,7 @@ func TestLiveEditorTwoWaySync(t *testing.T) {
 			p.WaitJS(cmHost + `.shadowRoot.querySelector(".cm-line.cm-laptop")?.textContent === "beta é laptop"`)
 			// Typing after a multi-byte row counts bytes for nvim.
 			Eval[bool](p, `(`+cmContent+`.focus(), true)`)
-			p.Do(chromedp.KeyEvent(kb.End, chromedp.KeyModifiers(chromedp.ModifierCtrl)))
+			p.Do(chromedp.KeyEvent(kb.End, modKey()))
 			p.Do(chromedp.KeyEvent("!"))
 			r, a = expectSetText(t, c)
 			if a.Tick != 5 || a.Start != (webproto.Pos{Row: 1, Col: 14}) || a.End != a.Start || strings.Join(a.Lines, "|") != "!" {
@@ -202,6 +212,8 @@ func TestLiveEditorMacMoveKeys(t *testing.T) {
 		{kb.End, nil, "42alpha35\nbeta1"},
 		{kb.Home, nil, "642alpha35\nbeta1"},
 		{kb.ArrowDown, []chromedp.KeyOption{shiftCmd}, "67"},
+		{kb.Home, []chromedp.KeyOption{cmd}, "867"},
+		{kb.End, []chromedp.KeyOption{cmd}, "8679"},
 	}
 	for i, st := range steps {
 		p.Do(chromedp.KeyEvent(st.key, st.mods...))
