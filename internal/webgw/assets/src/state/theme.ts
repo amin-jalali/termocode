@@ -38,7 +38,21 @@ export const TOKEN_FIELDS: Readonly<Record<string, string>> = {
   "--git-add": "GitAdded",
   "--git-del": "GitDeleted",
   "--git-conf": "GitConflict",
+  "--syn-kw": "SyntaxKeyword",
+  "--syn-ctl": "SyntaxControl",
+  "--syn-fn": "SyntaxFunction",
+  "--syn-var": "SyntaxVariable",
+  "--syn-ty": "SyntaxType",
+  "--syn-str": "SyntaxString",
+  "--syn-num": "SyntaxNumber",
+  "--syn-cmt": "SyntaxComment",
+  "--syn-rx": "SyntaxRegex",
+  "--syn-cst": "SyntaxConstant",
+  "--syn-op": "SyntaxOperator",
 };
+
+/** SYN_TOKENS are the code colours (theme Syntax*) of the file view. */
+const SYN_TOKENS = Object.keys(TOKEN_FIELDS).filter((k) => k.startsWith("--syn-"));
 
 /** THEME_TOKENS are every token this module may set (main.tsx clears them). */
 export const THEME_TOKENS: readonly string[] = [...Object.keys(TOKEN_FIELDS), "--on-ai", "--ai-on-strip"];
@@ -187,6 +201,13 @@ export function themeTokens(th: LaptopTheme, scheme: "dark" | "light"): Record<s
   out["--git-add"] ??= out["--green"];
   out["--git-del"] ??= out["--red"];
   out["--git-conf"] ??= out["--blue"];
+  // A theme with no code colours borrows the accents (as before).
+  const synFrom: Record<string, string> = {
+    "--syn-kw": "--ai", "--syn-ctl": "--ai", "--syn-fn": "--blue", "--syn-var": "--text", "--syn-ty": "--git-conf",
+    "--syn-str": "--green", "--syn-num": "--amber", "--syn-cmt": "--muted", "--syn-rx": "--red", "--syn-cst": "--amber",
+    "--syn-op": "--text-2",
+  };
+  for (const tok of SYN_TOKENS) out[tok] ??= out[synFrom[tok]];
 
   // The rules of TestWebTokensContrast, enforced.
   const v = (toks: string[]) => toks.map((x) => out[x]);
@@ -195,6 +216,7 @@ export function themeTokens(th: LaptopTheme, scheme: "dark" | "light"): Record<s
   }
   for (const tok of ["--git-mod", "--git-add", "--git-del", "--git-conf"]) out[tok] = readable(out[tok], v(ROWS), 4.5);
   for (const tok of ["--dim", "--focus"]) out[tok] = readable(out[tok], v(SURFACES), 3);
+  for (const tok of SYN_TOKENS) out[tok] = readable(out[tok], v([...ROWS, "--bg-2"]), 4.5);
   // Backgrounds under one fixed text move instead of the text.
   out["--sel"] = readable(out["--sel"], [out["--text"]], 4.5);
   out["--strip"] = readable(out["--strip"], [out["--on-strip"]], 4.5);

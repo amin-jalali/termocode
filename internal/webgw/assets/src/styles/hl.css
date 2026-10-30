@@ -1,14 +1,18 @@
-/* Syntax colours (WEB-38): nvim's capture groups mapped to theme tokens,
-   so a laptop theme (and its contrast rules) colours the code too. */
-.hl-k { color: var(--ai); }
-.hl-s { color: var(--green); }
+/* Syntax colours (WEB-38): capture groups mapped to the laptop theme's
+   Syntax* colours (--syn-*), as the TUI's editor maps them. */
+.hl-k { color: var(--syn-kw); }
+.hl-kc { color: var(--syn-ctl); }
+.hl-s { color: var(--syn-str); }
 .hl-e { color: var(--amber); }
-.hl-c { color: var(--muted); font-style: italic; }
-.hl-n { color: var(--amber); }
-.hl-f { color: var(--blue); }
-.hl-t { color: var(--git-conf); }
-.hl-g { color: var(--red); }
-.hl-o { color: var(--text-2); }
+.hl-rx { color: var(--syn-rx); }
+.hl-c { color: var(--syn-cmt); font-style: italic; }
+.hl-n { color: var(--syn-num); }
+.hl-cn { color: var(--syn-cst); }
+.hl-f { color: var(--syn-fn); }
+.hl-t { color: var(--syn-ty); }
+.hl-v { color: var(--syn-var); }
+.hl-g { color: var(--syn-kw); }
+.hl-o { color: var(--syn-op); }
 .hl-h { color: var(--blue); font-weight: 700; }
 .hl-b { font-weight: 700; }
 .hl-i { font-style: italic; }
