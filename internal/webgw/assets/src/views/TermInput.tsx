@@ -14,6 +14,9 @@ import { t, type StringKey } from "../strings";
 import { Button } from "../ui/Button";
 import { errText } from "../ui/CardSheet";
 import { Sheet } from "../ui/Sheet";
+import { barKeys, type KeyId } from "../lib/keys";
+import { prefs } from "../lib/prefs";
+import { KeysSheet } from "./KeysSheet";
 
 /** A modifier: 0 off, 1 for the next key, 2 locked. */
 type Mod = 0 | 1 | 2;
@@ -69,7 +72,7 @@ function sendText(buf: number, text: string): Promise<boolean> {
   );
 }
 
-interface Key {
+export interface Key {
   label: StringKey;
   aria?: StringKey;
   cls?: string;
@@ -77,16 +80,17 @@ interface Key {
   mod?: typeof ctrl;
 }
 
-const KEYS: Key[] = [
-  { label: "key.esc", press: (b) => send(b, "\x1b") },
-  { label: "key.tab", press: (b) => send(b, "\t") },
-  { label: "key.ctrl", aria: "key.ctrl.label", press: () => (ctrl.value = nextMod(ctrl.peek())), mod: ctrl },
-  { label: "key.alt", aria: "key.alt.label", press: () => (alt.value = nextMod(alt.peek())), mod: alt },
-  { label: "key.left", press: (b) => sendArrow(b, "D") },
-  { label: "key.down", press: (b) => sendArrow(b, "B") },
-  { label: "key.up", press: (b) => sendArrow(b, "A") },
-  { label: "key.right", press: (b) => sendArrow(b, "C") },
-  {
+/** KEYS: what each key of lib/keys.ts shows and sends. */
+export const KEYS: Record<KeyId, Key> = {
+  esc: { label: "key.esc", press: (b) => send(b, "\x1b") },
+  tab: { label: "key.tab", press: (b) => send(b, "\t") },
+  ctrl: { label: "key.ctrl", aria: "key.ctrl.label", press: () => (ctrl.value = nextMod(ctrl.peek())), mod: ctrl },
+  alt: { label: "key.alt", aria: "key.alt.label", press: () => (alt.value = nextMod(alt.peek())), mod: alt },
+  left: { label: "key.left", press: (b) => sendArrow(b, "D") },
+  down: { label: "key.down", press: (b) => sendArrow(b, "B") },
+  up: { label: "key.up", press: (b) => sendArrow(b, "A") },
+  right: { label: "key.right", press: (b) => sendArrow(b, "C") },
+  int: {
     label: "key.interrupt",
     aria: "key.interrupt.label",
     cls: "key-int",
@@ -96,7 +100,22 @@ const KEYS: Key[] = [
       });
     },
   },
-];
+  home: { label: "key.home", press: (b) => sendArrow(b, "H") },
+  end: { label: "key.end", press: (b) => sendArrow(b, "F") },
+  pgup: { label: "key.pgup", press: (b) => send(b, "\x1b[5~") },
+  pgdn: { label: "key.pgdn", press: (b) => send(b, "\x1b[6~") },
+  del: { label: "key.del", press: (b) => send(b, "\x1b[3~") },
+  ctrl_a: { label: "key.ctrl_a", aria: "key.ctrl_a.label", press: (b) => send(b, "\x01") },
+  ctrl_d: { label: "key.ctrl_d", aria: "key.ctrl_d.label", press: (b) => send(b, "\x04") },
+  ctrl_e: { label: "key.ctrl_e", aria: "key.ctrl_e.label", press: (b) => send(b, "\x05") },
+  ctrl_l: { label: "key.ctrl_l", aria: "key.ctrl_l.label", press: (b) => send(b, "\x0c") },
+  ctrl_r: { label: "key.ctrl_r", aria: "key.ctrl_r.label", press: (b) => send(b, "\x12") },
+  ctrl_z: { label: "key.ctrl_z", aria: "key.ctrl_z.label", press: (b) => send(b, "\x1a") },
+  pipe: { label: "key.pipe", press: (b) => send(b, "|") },
+  tilde: { label: "key.tilde", press: (b) => send(b, "~") },
+  slash: { label: "key.slash", press: (b) => send(b, "/") },
+  dash: { label: "key.dash", press: (b) => send(b, "-") },
+};
 
 function send(buf: number, raw: string): void {
   const text = alt.peek() ? "\x1b" + raw : raw;
@@ -174,6 +193,7 @@ function PasteSheet({ buf, onClose }: { buf: number; onClose: () => void }) {
 
 export function TermInput({ buf, ended }: { buf: number; ended: boolean }) {
   const [line, setLine] = useState("");
+  const [editing, setEditing] = useState(false);
   const off = !live.value || ended;
   const submit = () => {
     if (off) return;
@@ -221,11 +241,12 @@ export function TermInput({ buf, ended }: { buf: number; ended: boolean }) {
       </div>
       <div class="keybar" role="toolbar" aria-label={t("tab.term")}>
         {!live.value && <span class="chip keybar-off">{t("offline.input")}</span>}
-        {KEYS.map((k) => {
+        {barKeys(prefs.value.keys).map((id) => {
+          const k = KEYS[id];
           const m = k.mod?.value ?? 0;
           return (
             <button
-              key={k.label}
+              key={id}
               type="button"
               class={`key${k.cls ? " " + k.cls : ""}${m === 1 ? " is-on" : ""}${m === 2 ? " is-locked" : ""}`}
               aria-label={k.aria ? t(k.aria) : undefined}
@@ -239,11 +260,15 @@ export function TermInput({ buf, ended }: { buf: number; ended: boolean }) {
             </button>
           );
         })}
+        <button type="button" class="key key-edit" aria-label={t("key.edit.label")} onClick={() => setEditing(true)}>
+          {t("key.edit")}
+        </button>
         <button type="button" class="key key-paste" aria-disabled={off ? "true" : undefined} onClick={() => !off && (pasting.value = true)}>
           {t("key.paste")}
         </button>
       </div>
       {pasting.value && !off && <PasteSheet buf={buf} onClose={() => (pasting.value = false)} />}
+      {editing && <KeysSheet keys={KEYS} onClose={() => setEditing(false)} />}
     </div>
   );
 }
