@@ -49,6 +49,18 @@ const (
 	OpDBExec   = "db.exec"
 )
 
+// File transfer op names (WEB-49). Bytes travel base64 in chunks inside
+// the JSON frames; every chunk is one request, so the rate and size rules
+// of the table hold for them.
+const (
+	OpFileDownload      = "file.download"
+	OpFileUploadBegin   = "file.upload_begin"
+	OpFileUploadChunk   = "file.upload_chunk"
+	OpFileUploadSave    = "file.upload_save"
+	OpFileUploadReplace = "file.upload_replace"
+	OpFileUploadCancel  = "file.upload_cancel"
+)
+
 // slow is the rate of an op that waits for the laptop.
 var slow = Rate{N: 1, Per: 5 * time.Second}
 
@@ -74,6 +86,14 @@ var opMoreRows = []Policy{
 	{Op: OpDBRows, New: newOf[DBRowsArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 2 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpDBQuery, New: newOf[DBSQLArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 72 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDBExec, New: newOf[DBSQLArgs](), Role: RoleController, Rate: slow, MaxBytes: 72 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+
+	// File transfer: controller only; replacing a file waits for the laptop.
+	{Op: OpFileDownload, New: newOf[DownloadArgs](), Role: RoleController, Rate: perSec(40), MaxBytes: 8 * kib, Live: 1, Audit: AuditCounted, Phase: PhaseV2},
+	{Op: OpFileUploadBegin, New: newOf[UploadBeginArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 8 * kib, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpFileUploadChunk, New: newOf[UploadChunkArgs](), Role: RoleController, Rate: perSec(40), MaxBytes: TransferChunk*4/3 + 2*kib, BytesPerSec: 32 * mib, Live: 1, Audit: AuditCounted, Phase: PhaseV2},
+	{Op: OpFileUploadSave, New: newOf[UploadArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpFileUploadReplace, New: newOf[UploadArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpFileUploadCancel, New: newOf[UploadArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 
 	// Containers.
 	{Op: OpContainersList, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},

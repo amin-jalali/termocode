@@ -1,6 +1,9 @@
 package webproto
 
-import "strings"
+import (
+	"encoding/base64"
+	"strings"
+)
 
 // Args of the v2 view ops (WEB-41 … WEB-49) and their wire rules. The
 // hub still resolves every path inside the workspace.
@@ -159,6 +162,91 @@ func (a *DBSQLArgs) validate(int) error {
 	}
 	if strings.TrimSpace(a.SQL) == "" || len(a.SQL) > MaxDBSQL || strings.ContainsRune(a.SQL, 0) {
 		return invalid("bad SQL")
+	}
+	return nil
+}
+
+// Transfer limits (WEB-49).
+const (
+	MaxTransfer   = 256 << 20 // bytes of one file up or down
+	TransferChunk = 512 << 10 // bytes of one chunk (before base64)
+	MaxUploadID   = 32
+)
+
+// DownloadArgs asks for one chunk of a file, from a byte offset.
+type DownloadArgs struct {
+	Path string `json:"path"`
+	From int64  `json:"from,omitempty"`
+}
+
+// UploadBeginArgs starts an upload of Size bytes to Path.
+type UploadBeginArgs struct {
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+}
+
+// UploadChunkArgs is the next chunk of an upload: Data (base64) holds
+// the bytes from Off, which must be what the hub has so far.
+type UploadChunkArgs struct {
+	ID   string `json:"id"`
+	Off  int64  `json:"off"`
+	Data string `json:"data"`
+
+	bytes []byte // Data decoded (validate)
+}
+
+// Bytes is the decoded chunk.
+func (a *UploadChunkArgs) Bytes() []byte { return a.bytes }
+
+// UploadArgs names an upload.
+type UploadArgs struct {
+	ID string `json:"id"`
+}
+
+func validUploadID(id string) bool {
+	if len(id) == 0 || len(id) > MaxUploadID {
+		return false
+	}
+	for _, r := range id {
+		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+func (a *DownloadArgs) validate(int) error {
+	if !validPath(a.Path, false) || a.From < 0 || a.From > MaxTransfer {
+		return invalid("bad path or offset")
+	}
+	return nil
+}
+
+func (a *UploadBeginArgs) validate(int) error {
+	if !validPath(a.Path, false) || !validFileName(a.Path[strings.LastIndexByte(a.Path, '/')+1:]) {
+		return invalid("bad path")
+	}
+	if a.Size < 0 || a.Size > MaxTransfer {
+		return invalid("bad size")
+	}
+	return nil
+}
+
+func (a *UploadChunkArgs) validate(int) error {
+	if !validUploadID(a.ID) || a.Off < 0 || a.Off > MaxTransfer {
+		return invalid("bad upload or offset")
+	}
+	b, err := base64.StdEncoding.DecodeString(a.Data)
+	if err != nil || len(b) == 0 || len(b) > TransferChunk {
+		return invalid("bad chunk")
+	}
+	a.bytes = b
+	return nil
+}
+
+func (a *UploadArgs) validate(int) error {
+	if !validUploadID(a.ID) {
+		return invalid("bad upload")
 	}
 	return nil
 }

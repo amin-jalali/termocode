@@ -65,6 +65,7 @@ type webHub struct {
 	tasks  webTasksPub                // Update only: what the tasks topic sent (web_tasks.go)
 	runs   webRunsPub                 // Update only: what the runs topic sent (web_runs.go)
 	more   webMorePub                 // Update only: the v2 More views (web_more.go)
+	ups    webUploads                 // staged uploads (web_transfer.go; own lock)
 
 	ln    net.Listener
 	peer  func(net.Conn) error
@@ -119,6 +120,7 @@ func (h *webHub) stop() {
 		}
 		h.mu.Unlock()
 		h.wg.Wait()
+		h.ups.dropAll()
 	})
 }
 
