@@ -205,3 +205,25 @@ func BenchmarkHTTPPageBuildBinary5MB(b *testing.B) {
 		buildHTTPPage(run, httpViewBody, false, false)
 	}
 }
+
+// HTTP: History… with 1 000 entries: list them and build the picker.
+func BenchmarkHTTPHistoryOpen1000(b *testing.B) {
+	newHTTPBenchWS(b, 1)
+	m := &Model{w: 140, h: 40}
+	b.ReportAllocs()
+	for b.Loop() {
+		m.openHTTPHistory()
+	}
+}
+
+// The send goroutine's layout of a 5 MB JSON body (pretty print and
+// lines), done once per answer.
+func BenchmarkHTTPBodyLayout5MB(b *testing.B) {
+	body := big5MB()
+	resp := &httpclient.Response{Status: 200, Body: body, Size: int64(len(body)), IsJSON: true}
+	b.SetBytes(int64(len(body)))
+	b.ReportAllocs()
+	for b.Loop() {
+		layoutHTTPBody(resp)
+	}
+}
