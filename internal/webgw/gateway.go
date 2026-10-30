@@ -64,6 +64,9 @@ type RunConfig struct {
 	// DevicesDir, when set, holds the paired devices (WEB-32) and turns
 	// on the pairing endpoints.
 	DevicesDir string
+	// RequireTOTP asks a paired device for a one-time code after its
+	// passkey (WEB-48); the UI checks it (web.totp_check).
+	RequireTOTP bool
 	// Tailnet, when set, is tailnet mode (WEB-31): still 127.0.0.1 only,
 	// reached from the user's tailnet through tailscale serve on
 	// https://<machine>.<tailnet>.ts.net/; Funnel is refused.
@@ -168,7 +171,15 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) {
 				return askPair(ctx, ctlRef.Load(), a)
 			}})
-		login = NewLogin(LoginConfig{Tokens: tokens, Passkeys: pk, Audit: audit, Now: now})
+		login = NewLogin(LoginConfig{Tokens: tokens, Passkeys: pk, Audit: audit, Now: now, RequireTOTP: cfg.RequireTOTP,
+			CheckTOTP: func(ctx context.Context, device, code string) error {
+				c := ctlRef.Load()
+				if c == nil {
+					return ErrCtlGone
+				}
+				_, err := c.Call(ctx, webproto.OpWebTotpCheck, webproto.TotpCheckArgs{Code: code, Device: device})
+				return err
+			}})
 	}
 	ctl, err := DialCtlWith(ctx, cfg.Dial, CtlHandlers{Link: func(d [sha256.Size]byte) {
 		auth.SetSecretDigest(d)
