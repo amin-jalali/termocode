@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -248,5 +250,93 @@ func TestWebAINextEditFollowsTheLaptop(t *testing.T) {
 	}
 	if n := len(f.requests()); n != 0 {
 		t.Fatalf("%d requests reached the model", n)
+	}
+}
+
+func webAIActionRes(t *testing.T, f map[string]any) webproto.AIAction {
+	t.Helper()
+	var out webproto.AIAction
+	webResData(t, f, &out)
+	return out
+}
+
+// Spec (WEBP-3): Fix, Edit and Doc ask the laptop's chat model with the
+// laptop's edit prompt and answer with the rows to replace and the new
+// lines; nothing in the buffer changes. Fix takes the laptop's problems
+// on the caret's row (no problem: not_found) and the lines around it;
+// Doc the caret's row; Edit the selection and the user's instruction. An
+// answer equal to the text is "no change".
+func TestWebAIActionProposes(t *testing.T) {
+	rows := []string{"package main", "", "func add(a, b int) int {", "\treturn a - b", "}"}
+	r, f := webAIRig(t, "calc/add.go", rows...)
+	act := func(args webproto.AIActionArgs) map[string]any {
+		args.Buf, args.Tick = 2, 7
+		return r.call(webproto.OpAIAction, &args)
+	}
+	f.reply = "```go\n// add returns the sum of a and b.\nfunc add(a, b int) int {\n```"
+	out := webAIActionRes(t, act(webproto.AIActionArgs{Kind: "doc", Start: 2, End: 2, Line: 2}))
+	if out.None || out.Start != 2 || out.End != 3 || len(out.Lines) != 2 || out.Lines[0] != "// add returns the sum of a and b." || out.Title != "AI doc comment" {
+		t.Fatalf("doc: %+v", out)
+	}
+	req := f.requests()[0]
+	if req.Model != "big-1" || !strings.Contains(req.Messages[1].Content, "Range to replace (lines 3-3)") || !strings.Contains(req.Messages[1].Content, "doc comment") {
+		t.Errorf("doc request: %s %q", req.Model, req.Messages[1].Content)
+	}
+
+	if code := webErrCode(act(webproto.AIActionArgs{Kind: "fix", Start: 3, End: 3, Line: 3})); code != "not_found" {
+		t.Errorf("fix with no problem: %s", code)
+	}
+	r.m.problems = &problemsPanel{items: []nvim.Diagnostic{{Path: filepath.Join(r.root, "calc", "add.go"), Line: 4, Col: 2, Severity: 1, Message: "wrong operator"}}}
+	f.reply = "```go\nfunc add(a, b int) int {\n\treturn a + b\n}\n```"
+	out = webAIActionRes(t, act(webproto.AIActionArgs{Kind: "fix", Start: 3, End: 3, Line: 3}))
+	if out.None || out.Start != 0 || out.End != 5 || strings.Join(out.Lines, "|") != "func add(a, b int) int {|\treturn a + b|}" {
+		t.Fatalf("fix: %+v", out)
+	}
+	if c := f.requests()[1].Messages[1].Content; !strings.Contains(c, "line 4: [error] wrong operator") {
+		t.Errorf("fix prompt: %q", c)
+	}
+
+	f.reply = "```go\n\treturn a - b\n```"
+	out = webAIActionRes(t, act(webproto.AIActionArgs{Kind: "edit", Start: 3, End: 4, Line: 3, Instruction: "keep it"}))
+	if !out.None || out.Title != "AI edit: keep it" {
+		t.Fatalf("no change: %+v", out)
+	}
+	if c := f.requests()[2].Messages[1].Content; !strings.Contains(c, "Instruction: keep it") {
+		t.Errorf("edit prompt: %q", c)
+	}
+	if got := r.h.filesState().bufs[2].rows; strings.Join(got, "\n") != strings.Join(rows, "\n") {
+		t.Fatalf("the buffer changed: %q", got)
+	}
+}
+
+// Spec (WEBP-3): Explain puts the selection (or the lines around the
+// caret) into the laptop's open chat as an attachment and asks there; the
+// page is told which chat to show. Not while the AI answers; never for a
+// file that may hold secrets; AI not set up is a conflict.
+func TestWebAIActionExplainAsksInTheChat(t *testing.T) {
+	r, f := webAIRig(t, "calc/add.go", "package main", "func add(a, b int) int {", "\treturn a + b", "}")
+	f.reply = "It adds."
+	out := webAIActionRes(t, r.call(webproto.OpAIAction, &webproto.AIActionArgs{Buf: 2, Tick: 7, Kind: "explain", Start: 1, End: 3, Line: 1}))
+	s := r.m.aiS()
+	if !out.Chat || out.ChatID != s.conv.ID {
+		t.Fatalf("explain: %+v (chat %q)", out, s.conv.ID)
+	}
+	if n := len(s.conv.Messages); n == 0 || s.conv.Messages[0].Text != "Explain this code." {
+		t.Fatalf("chat: %+v", s.conv.Messages)
+	}
+	if !s.streaming {
+		t.Fatal("the chat does not answer")
+	}
+	if code := webErrCode(r.call(webproto.OpAIAction, &webproto.AIActionArgs{Buf: 2, Tick: 7, Kind: "explain", Start: 1, End: 1, Line: 1})); code != "busy" {
+		t.Errorf("while answering: %s", code)
+	}
+	s.streaming = false
+	r.h.filesState().bufs[2].path = "id_rsa.pem"
+	if code := webErrCode(r.call(webproto.OpAIAction, &webproto.AIActionArgs{Buf: 2, Tick: 7, Kind: "doc", Start: 1, End: 1, Line: 1})); code != "forbidden" {
+		t.Errorf("secret file: %s", code)
+	}
+	s.provider = nil
+	if code := webErrCode(r.call(webproto.OpAIAction, &webproto.AIActionArgs{Buf: 2, Tick: 7, Kind: "doc", Start: 1, End: 1, Line: 1})); code != "conflict" {
+		t.Errorf("not set up: %s", code)
 	}
 }

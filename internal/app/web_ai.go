@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"time"
 	"unicode/utf16"
 	"unicode/utf8"
 
@@ -24,6 +26,7 @@ import (
 func init() {
 	webOps[webproto.OpAIComplete] = (*Model).webAIComplete
 	webOps[webproto.OpAINextEdit] = (*Model).webAINextEdit
+	webOps[webproto.OpAIAction] = (*Model).webAIAction
 }
 
 // webAICalls is the page's AI calls in flight (Update only).
@@ -301,4 +304,114 @@ func (m *Model) webAINextEdit(call *webCall) tea.Cmd {
 		call.reply(webproto.AINextEdit{Start: ne.Start, End: ne.End, Old: in.Lines[ne.Start : ne.End+1], Lines: ne.Lines})
 		return run.end(call)
 	}
+}
+
+// webAIActionTimeout caps one Fix, Edit or Doc request (as the laptop's).
+const webAIActionTimeout = 3 * time.Minute
+
+// webAIAction is ai.action: the editor's Explain, Fix, Edit and Doc on
+// the page's selection or caret, with the laptop's prompts. Explain asks
+// in the laptop's open chat (the page shows the chat); the others answer
+// with the lines to replace: nothing changes before the user accepts.
+func (m *Model) webAIAction(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.AIActionArgs)
+	b, ok := m.webAIBuf(call, a.Buf, a.Tick)
+	if !ok {
+		return nil
+	}
+	s := m.aiS()
+	switch {
+	case !m.aiConfigured():
+		call.fail(webproto.CodeConflict, "AI is not set up on the laptop.")
+		return nil
+	case ai.IsSecretFileName(b.path):
+		webFail(call, webErrSecret())
+		return nil
+	case a.End > len(b.rows) || a.Line >= max(len(b.rows), 1):
+		call.fail(webproto.CodeBadRequest, "That place is not in the file.")
+		return nil
+	}
+	full := append([]string(nil), b.rows...)
+	if len(full) == 0 {
+		full = []string{""}
+	}
+	t := aiRangeTarget{buf: b.buf, path: b.path, ft: b.ft, start: a.Start, end: a.End, cursor: a.Line, full: full, hadSelection: a.End > a.Start}
+	if !t.hadSelection {
+		t.start, t.end = a.Line, a.Line+1
+	}
+	var title, instr string
+	switch a.Kind {
+	case webproto.AIExplain:
+		if s.streaming {
+			call.fail(webproto.CodeBusy, "The AI is still answering. Stop it or wait.")
+			return nil
+		}
+		att, q := aiExplainAsk(t)
+		s.attachments = append(s.attachments, att)
+		cmd := m.sendAIChat(q)
+		call.reply(webproto.AIAction{Kind: a.Kind, Chat: true, ChatID: s.conv.ID, Lines: []string{}})
+		return cmd
+	case webproto.AIFix:
+		diags := m.webAIDiagnostics(b.path, a.Line)
+		if len(diags) == 0 {
+			call.fail(webproto.CodeNotFound, "No problem on this line.")
+			return nil
+		}
+		t, instr = aiFixAsk(t, diags)
+		title = "AI fix"
+	case webproto.AIEdit:
+		instr = strings.TrimSpace(a.Instruction)
+		title = "AI edit: " + instr
+	case webproto.AIDoc:
+		t.start, t.end = t.cursor, t.cursor+1
+		instr, title = aiDocInstruction, "AI doc comment"
+	}
+	prov, req := s.provider, aiEditRequest(t, s.cfg.Model, instr)
+	call.later()
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(call.ctx, webAIActionTimeout)
+		defer cancel()
+		text, last := ai.Collect(prov.Stream(ctx, req))
+		if last.Err != nil {
+			if ctx.Err() == nil {
+				recordError("[web] ai.action: " + ai.Redact(last.Err.Error()))
+			}
+			call.fail(webproto.CodeBusy, "The AI request failed. Try again.")
+			return nil
+		}
+		out := webproto.AIAction{Kind: a.Kind, Title: title, Start: t.start, End: t.end, Lines: []string{}}
+		repl, ok := aiEditAnswer(text)
+		if !ok || equalLines(t.full[t.start:t.end], repl) {
+			out.None = true
+			call.reply(out)
+			return nil
+		}
+		out.Lines = repl
+		call.reply(out)
+		return nil
+	}
+}
+
+// webAIDiagnostics are the laptop's problems on row (zero-based) of the
+// workspace file rel, as Fix with AI words them.
+func (m *Model) webAIDiagnostics(rel string, row int) []string {
+	if m.problems == nil {
+		return nil
+	}
+	names := []string{"error", "warning", "info", "hint"}
+	var out []string
+	for _, d := range m.problems.items {
+		if d.Line-1 != row {
+			continue
+		}
+		if r, ok := m.webRel(d.Path); !ok || r != rel {
+			continue
+		}
+		sev := "?"
+		if d.Severity >= 1 && d.Severity <= len(names) {
+			sev = names[d.Severity-1]
+		}
+		out = append(out, fmt.Sprintf("line %d: [%s] %s", d.Line, sev, d.Message))
+	}
+	return out
 }
