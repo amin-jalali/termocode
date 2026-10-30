@@ -33,6 +33,7 @@
 .cod-circle-filled::before { content: "\ea71"; }
 .cod-circle-large-outline::before { content: "\ebb5"; }
 .cod-circle-outline::before { content: "\eabc"; }
+.cod-circle-slash::before { content: "\eabd"; }
 .cod-clear-all::before { content: "\eabf"; }
 .cod-close-all::before { content: "\eac1"; }
 .cod-close::before { content: "\ea76"; }
@@ -42,6 +43,7 @@
 .cod-database::before { content: "\eace"; }
 .cod-debug-alt::before { content: "\eb91"; }
 .cod-debug-console::before { content: "\eb9b"; }
+.cod-debug-continue::before { content: "\eacf"; }
 .cod-debug-pause::before { content: "\ead1"; }
 .cod-debug-restart::before { content: "\ead2"; }
 .cod-debug-start::before { content: "\ead3"; }
@@ -104,6 +106,7 @@
 .cod-replace-all::before { content: "\eb3c"; }
 .cod-replace::before { content: "\eb3d"; }
 .cod-run-all::before { content: "\eb9e"; }
+.cod-run::before { content: "\eb2c"; }
 .cod-save::before { content: "\eb4b"; }
 .cod-search::before { content: "\ea6d"; }
 .cod-send::before { content: "\ec0f"; }
@@ -129,6 +132,7 @@
 .cod-table::before { content: "\ebb7"; }
 .cod-tasklist::before { content: "\eb67"; }
 .cod-terminal::before { content: "\ea85"; }
+.cod-tools::before { content: "\eb6d"; }
 .cod-trash::before { content: "\ea81"; }
 .cod-vm::before { content: "\ea7a"; }
 .cod-warning::before { content: "\ea6c"; }

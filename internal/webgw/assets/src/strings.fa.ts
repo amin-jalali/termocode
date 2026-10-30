@@ -682,4 +682,6 @@ export const FA: Record<StringKey, string> = {
   "scm.nothing_staged": "اول تغییرها را برای ثبت آماده کنید.",
   "sb.branch": "{branch} (رفتن به شاخه، دریافت، ارسال…)",
   "sb.sync": "همگام‌سازی: {behind} برای دریافت، {ahead} برای ارسال",
+  "rv.output": "نمایش خروجی",
+  "rv.run_task": "اجرای کار",
 };

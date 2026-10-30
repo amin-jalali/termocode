@@ -685,6 +685,8 @@ export const S = {
   "scm.nothing_staged": "Stage the changes to commit first.",
   "sb.branch": "{branch} (Checkout Branch, Pull, Push…)",
   "sb.sync": "Synchronize Changes: {behind} to pull, {ahead} to push",
+  "rv.output": "Show Output",
+  "rv.run_task": "Run Task",
 } as const;
 
 export type StringKey = keyof typeof S;

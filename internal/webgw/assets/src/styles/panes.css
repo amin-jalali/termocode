@@ -222,3 +222,8 @@
 .tr-label.is-del { text-decoration: line-through; }
 .layout-desktop .statusbar button.strip-item { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
 .layout-desktop .statusbar .sb-sync { gap: 3px; }
+
+/* ---- Tasks and AI runs ---- */
+.tr-age { color: var(--wb-desc); font-size: 0.9em; }
+.rv-why { padding-inline-start: 46px; }
+.pv-btn.is-danger { background: #c72e0f; }

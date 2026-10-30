@@ -307,7 +307,7 @@ export function DeskSCM() {
 
   return (
     <PaneView
-      id="scm"
+      id="git"
       title={t("act.scm")}
       actions={
         g.repo &&

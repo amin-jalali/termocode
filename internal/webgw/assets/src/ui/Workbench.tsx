@@ -56,10 +56,9 @@ import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, activityOf, sideActivity, type Activity } from "./ActivityBar";
 import type { StringKey } from "../strings";
 import { MCPView } from "../views/more/MCPView";
-import { RunsView } from "../views/more/RunsView";
 import { DeskSearch } from "../views/desk/DeskSearch";
+import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
-import { TasksView } from "../views/more/TasksView";
 import { QuickInput } from "./QuickInput";
 import { RefsPeek } from "./RefsPeek";
 import { diags, panelTab, toggleProblems, type PanelTab } from "../lib/lsp";
@@ -410,12 +409,7 @@ function SideView({ id }: { id: Activity }) {
     case "search":
       return <DeskSearch />;
     case "run":
-      return (
-        <div class="side-stack">
-          <TasksView />
-          <RunsView />
-        </div>
-      );
+      return <DeskRun />;
     case "mcp":
       return <MCPView />;
     default:
