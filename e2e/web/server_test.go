@@ -4,7 +4,14 @@ package web
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"errors"
+	"math/big"
 	"net"
 	"net/http"
 	"testing"
@@ -43,9 +50,25 @@ type Server struct {
 // StartServer listens on a free loopback port and serves until the test ends.
 func StartServer(t *testing.T) *Server {
 	t.Helper()
+	return startServer(t, false)
+}
+
+// StartServerTLS is StartServer over https with a throwaway certificate,
+// as an installable (tailnet) site; the page's Chrome skips the check.
+func StartServerTLS(t *testing.T) *Server {
+	t.Helper()
+	return startServer(t, true)
+}
+
+func startServer(t *testing.T, https bool) *Server {
+	t.Helper()
 	ln, site, err := webgw.Listen(webgw.ListenConfig{})
 	if err != nil {
 		t.Fatalf("listen: %v", err)
+	}
+	if https {
+		ln = tls.NewListener(ln, &tls.Config{Certificates: []tls.Certificate{selfSigned(t)}, MinVersion: tls.VersionTLS12})
+		site.Scheme = "https"
 	}
 	tokens := webgw.NewTokens(15*time.Minute, 12*time.Hour)
 	s := &Server{
@@ -87,6 +110,9 @@ func StartServer(t *testing.T) *Server {
 	mux.Handle("/login/", s.Login)
 	mux.Handle("/auth", s.auth)
 	mux.Handle("/ws", s.Hub)
+	if site.Installable() {
+		mux.Handle(webgw.ManifestPath, webgw.Manifest())
+	}
 	mux.Handle("/", webgw.Assets())
 	s.srv = webgw.NewServer(site, mux, webgw.DefaultLimits, nil)
 	done := make(chan struct{})
@@ -119,3 +145,26 @@ func (s *Server) LaunchURL(t *testing.T) (url, secret string) {
 
 // Path is the page URL with a hash route, without a secret.
 func (s *Server) Path(hash string) string { return s.Base + "/" + hash }
+
+// selfSigned makes a certificate for 127.0.0.1 that lives for one test.
+func selfSigned(t *testing.T) tls.Certificate {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "127.0.0.1"},
+		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1)},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
+}
