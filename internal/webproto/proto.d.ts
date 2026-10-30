@@ -306,6 +306,16 @@ export interface AINextEditArgs {
   seed?: boolean;
 }
 
+export interface AIActionArgs {
+  buf: number;
+  tick: number;
+  kind: "explain" | "fix" | "edit" | "doc";
+  start: number;
+  end: number;
+  line: number;
+  instruction?: string;
+}
+
 export interface GitFileLogArgs {
   path: string;
 }
@@ -1341,6 +1351,17 @@ export interface AINextEdit {
   lines: string[];
 }
 
+export interface AIAction {
+  kind: "explain" | "fix" | "edit" | "doc";
+  chat?: boolean;
+  chatId?: string;
+  none?: boolean;
+  title?: string;
+  start: number;
+  end: number;
+  lines: string[];
+}
+
 export interface GitFileLog {
   path: string;
   log: GitCommit[];
@@ -1793,6 +1814,7 @@ export interface OpArgs {
   "tests.stop": EmptyArgs;
   "ai.complete": AICompleteArgs;
   "ai.next_edit": AINextEditArgs;
+  "ai.action": AIActionArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -1923,6 +1945,7 @@ export interface OpResult {
   "tests.output": TestOutput;
   "ai.complete": AICompletion;
   "ai.next_edit": AINextEdit;
+  "ai.action": AIAction;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;

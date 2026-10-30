@@ -1,5 +1,10 @@
 package webproto
 
+import (
+	"strings"
+	"time"
+)
+
 // The AI ops of the desktop editor (WEBP-3): ghost text and the next edit
 // suggestion. The laptop does the work with its own provider, model,
 // prompts and suggestion policy (the same code as its own editor); the
@@ -14,6 +19,71 @@ const (
 	OpAIComplete = "ai.complete"
 	OpAINextEdit = "ai.next_edit"
 )
+
+// OpAIAction is the editor's AI actions (Explain, Fix, Edit, Doc), as the
+// laptop's editor has them: Explain asks in the laptop's open chat; the
+// others answer with the lines to replace, which the page shows as a
+// diff to accept or reject (nothing changes before the user accepts).
+const OpAIAction = "ai.action"
+
+// AI action kinds.
+const (
+	AIExplain = "explain"
+	AIFix     = "fix"
+	AIEdit    = "edit"
+	AIDoc     = "doc"
+)
+
+// MaxAIInstruction caps an Edit instruction.
+const MaxAIInstruction = 2 << 10
+
+// AIActionArgs runs one AI action on buffer Buf as the page has it at
+// changedtick Tick: the selected rows Start…End (zero-based, End not
+// included; Start == End: no selection) and the caret's row Line.
+// Instruction is Edit's (what to change).
+type AIActionArgs struct {
+	Buf         int    `json:"buf"`
+	Tick        int    `json:"tick"`
+	Kind        string `json:"kind" enum:"explain|fix|edit|doc"`
+	Start       int    `json:"start"`
+	End         int    `json:"end"`
+	Line        int    `json:"line"`
+	Instruction string `json:"instruction,omitempty"`
+}
+
+func (a *AIActionArgs) validate(int) error {
+	if !validBuf(a.Buf) || a.Tick < 0 || a.Tick > MaxLspRow || a.Start < 0 || a.End < a.Start || a.End > MaxLspRow || a.Line < 0 || a.Line > MaxLspRow {
+		return invalid("bad range")
+	}
+	switch a.Kind {
+	case AIExplain, AIFix, AIDoc:
+		if a.Instruction != "" {
+			return invalid("an instruction is only for edit")
+		}
+	case AIEdit:
+		if strings.TrimSpace(a.Instruction) == "" || len(a.Instruction) > MaxAIInstruction || hasControl(a.Instruction) {
+			return invalid("bad instruction")
+		}
+	default:
+		return invalid("bad kind")
+	}
+	return nil
+}
+
+// AIAction is the result of ai.action. Explain: Chat (the question went
+// to the laptop's open chat, ChatID). The others: replace rows
+// Start…End (zero-based, End not included) with Lines; None: the AI
+// suggests no change. Title names the change ("AI fix").
+type AIAction struct {
+	Kind   string   `json:"kind" enum:"explain|fix|edit|doc"`
+	Chat   bool     `json:"chat,omitempty"`
+	ChatID string   `json:"chatId,omitempty"`
+	None   bool     `json:"none,omitempty"`
+	Title  string   `json:"title,omitempty"`
+	Start  int      `json:"start"`
+	End    int      `json:"end"`
+	Lines  []string `json:"lines"`
+}
 
 // Limits of the AI completion answers.
 const (
@@ -88,6 +158,7 @@ type AINextEdit struct {
 var opAIRows = []Policy{
 	{Op: OpAIComplete, New: newOf[AICompleteArgs](), Role: RoleController, Rate: perSec(5), MaxBytes: 1 * kib, Live: 2, Audit: AuditCounted, Phase: PhaseV2},
 	{Op: OpAINextEdit, New: newOf[AINextEditArgs](), Role: RoleController, Rate: perSec(5), MaxBytes: 1 * kib, Live: 2, Audit: AuditCounted, Phase: PhaseV2},
+	{Op: OpAIAction, New: newOf[AIActionArgs](), Role: RoleController, Rate: Rate{N: 1, Per: 2 * time.Second}, MaxBytes: 4 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
 }
 
 var _ = func() bool { opTable = append(opTable, opAIRows...); return true }()
@@ -95,4 +166,5 @@ var _ = func() bool { opTable = append(opTable, opAIRows...); return true }()
 func init() {
 	registerResult(OpAIComplete, AICompletion{})
 	registerResult(OpAINextEdit, AINextEdit{})
+	registerResult(OpAIAction, AIAction{})
 }
