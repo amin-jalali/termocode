@@ -237,7 +237,11 @@
     {
       "name": "settings",
       "keyed": false,
-      "phase": "v2"
+      "phase": "v2",
+      "snap": "SettingsSnap",
+      "deltas": [
+        "SettingsSnap"
+      ]
     }
   ],
   "events": {
@@ -2977,6 +2981,58 @@
         "lines"
       ],
       "additionalProperties": false
+    },
+    "SettingItem": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "bool",
+            "int",
+            "number",
+            "enum",
+            "string"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "group",
+        "type",
+        "value",
+        "default"
+      ],
+      "additionalProperties": true
+    },
+    "SettingsSnap": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/SettingItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
     },
     "Snap": {
       "type": "object",
