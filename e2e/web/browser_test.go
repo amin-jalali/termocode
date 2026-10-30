@@ -329,12 +329,32 @@ func (p *Page) Tap(sel string) {
 func (p *Page) TapJS(el string) {
 	p.T.Helper()
 	p.WaitJS(el)
-	pt := Eval[struct{ X, Y float64 }](p, `(() => {
+	// The point is read only once the target has stood still, in view,
+	// for a few frames: a view still scrolling (a smooth scroll, slow on
+	// the macOS runner) would carry it away from a point read at once.
+	ctx, cancel := context.WithTimeout(p.Ctx, wait)
+	defer cancel()
+	pt, err := chromedp.Run(ctx, chromedp.Evaluate[struct{ X, Y float64 }](`new Promise((done) => {
 		const el = `+el+`;
 		el.scrollIntoView({block: "center", inline: "center"});
-		const r = el.getBoundingClientRect();
-		return {X: r.left + r.width / 2, Y: r.top + r.height / 2};
-	})()`)
+		let last = "", still = 0;
+		const look = () => {
+			const r = el.getBoundingClientRect(), at = [r.left, r.top, r.width, r.height].join();
+			still = at === last ? still + 1 : 0;
+			last = at;
+			if (still >= 3) {
+				const x = r.left + r.width / 2, y = r.top + r.height / 2;
+				if (x >= 0 && y >= 0 && x <= innerWidth && y <= innerHeight) return done({X: x, Y: y});
+				el.scrollIntoView({block: "center", inline: "center"});
+				still = 0;
+			}
+			requestAnimationFrame(look);
+		};
+		requestAnimationFrame(look);
+	})`, chromedp.EvalAwaitPromise))
+	if err != nil {
+		p.T.Fatalf("%s: tap %s: the target did not stand still in view within %s: %v", p.VP.Name, short(el), wait, err)
+	}
 	if p.VP.Mobile {
 		p.Do(chromedp.TapXY(pt.X, pt.Y))
 	} else {
