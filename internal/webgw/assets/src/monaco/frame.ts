@@ -164,12 +164,38 @@ let readOnly = false;
 /** MENU_SEL_MAX caps the selected text a right click hands the page. */
 const MENU_SEL_MAX = 1 << 20;
 
-/** ACTIONS are the editor's own actions the context menu may run. */
-const ACTIONS = { def: "editor.action.revealDefinition", refs: "editor.action.goToReferences", format: "editor.action.formatDocument" } as const;
+/** FORMAT is the editor's own action the context menu may run. */
+const FORMAT = "editor.action.formatDocument";
 
+/** can: Go to Definition and Find All References work while the editor
+ * asks the laptop's language servers; Format when the editor can format. */
 function can(): MenuCan {
-  const ok = (id: string) => ed?.getAction(id)?.isSupported() === true;
-  return { def: ok(ACTIONS.def), refs: ok(ACTIONS.refs), format: !readOnly && ok(ACTIONS.format) };
+  return { def: lspOn, refs: lspOn, format: !readOnly && ed?.getAction(FORMAT)?.isSupported() === true };
+}
+
+/** caretRefs: the page's references list for the word at the caret. */
+function caretRefs(): void {
+  const p = ed?.getPosition();
+  if (p) post({ t: "refs", line: p.lineNumber - 1, col: p.column - 1 });
+}
+
+/** goDef: the menu's Go to Definition, the same lsp.definition read as
+ * F12: a place in this file gets the caret, one in another file opens
+ * there (the page opens its tab). */
+async function goDef(): Promise<void> {
+  const p = ed?.getPosition();
+  if (!p || !lspOn) return;
+  const d = (await ask("definition", p)) as LspLocations | null;
+  const l = d && Array.isArray(d.locs) ? d.locs.find((x) => !x.outside && x.path) : undefined;
+  if (!l?.path || !ed) return;
+  if (l.path !== myPath) {
+    post({ t: "open", path: l.path, line: l.line, col: l.col });
+    return;
+  }
+  const at = { lineNumber: l.line + 1, column: l.col + 1 };
+  ed.setPosition(at);
+  ed.revealPositionInCenter(at);
+  ed.focus();
 }
 
 /** onMenu: the page draws the context menu (the editor's own is off). */
@@ -185,7 +211,9 @@ function menuEdit(m: Extract<ToFrame, { t: "edit" }>): void {
   if (!ed) return;
   if (m.op === "def" || m.op === "refs" || m.op === "format") {
     ed.focus();
-    void ed.getAction(ACTIONS[m.op])?.run();
+    if (m.op === "def") void goDef();
+    else if (m.op === "refs") caretRefs();
+    else void ed.getAction(FORMAT)?.run();
     return;
   }
   if (readOnly) return;
@@ -505,10 +533,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
       keybindings: [KeyMod.Shift | KeyCode.F12],
       contextMenuGroupId: "navigation",
       contextMenuOrder: 1.5,
-      run: () => {
-        const p = ed?.getPosition();
-        if (p) post({ t: "refs", line: p.lineNumber - 1, col: p.column - 1 });
-      },
+      run: caretRefs,
     });
   }
   ed.onKeyDown((e) => {

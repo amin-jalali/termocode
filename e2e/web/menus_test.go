@@ -143,8 +143,8 @@ func editorRightClick(p *Page) {
 	p.WaitJS(`document.querySelector(".ctx-menu .ctx-item") && document.activeElement?.classList.contains("ctx-item")`)
 }
 
-// The editor's menu: Go to Definition and Find All References (off while
-// the editor has no source for them), Cut, Copy, Paste, the command list;
+// The editor's menu: Go to Definition and Find All References (they ask
+// the laptop's language servers), Cut, Copy, Paste, the command list;
 // Format only when the editor can format. The page never reads the
 // clipboard: Paste gives the editor the keys and says which ones paste.
 func TestEditorContextMenu(t *testing.T) {
@@ -157,7 +157,7 @@ func TestEditorContextMenu(t *testing.T) {
 	if got := menuLabels(p); got != "Go to Definition|Find All References|Cut|Copy|Paste|Command Palette…" {
 		t.Errorf("editor menu %q", got)
 	}
-	if got := Eval[string](p, `[...document.querySelectorAll(".ctx-menu .ctx-item")].filter((b) => b.disabled).map((b) => b.textContent).join("|")`); got != "Go to DefinitionF12|Find All ReferencesShift+F12" {
+	if got := Eval[string](p, `[...document.querySelectorAll(".ctx-menu .ctx-item")].filter((b) => b.disabled).map((b) => b.textContent).join("|")`); got != "" {
 		t.Errorf("off items %q", got)
 	}
 	menuPick(p, "Copy")
@@ -179,4 +179,43 @@ func TestEditorContextMenu(t *testing.T) {
 	editorRightClick(p)
 	menuPick(p, "Command Palette…")
 	p.WaitJS(`document.querySelector(".quick .quick-box")?.value === ">"`)
+}
+
+// The editor menu's Go to Definition and Find All References use the
+// laptop's language servers: the same lsp.definition and lsp.references
+// reads as F12 and Shift+F12, at the caret.
+func TestEditorMenuDefinitionAndReferences(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.go", "package a", "x foo()")
+	deskCaret(p, 1, 3)
+	editorRightClick(p)
+	menuPick(p, "Find All References")
+	r := expectReq(t, c, "lsp.references")
+	if a := lspArgs(t, r); a.Buf != 2 || a.Line != 1 || a.Col != 3 {
+		t.Fatalf("references args %+v", a)
+	}
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(webproto.LspLocations{Locs: []webproto.LspLoc{
+		{Path: "a.go", Line: 1, Col: 2, EndLine: 1, EndCol: 5, Text: "x foo()"},
+	}})})
+	p.WaitJS(`document.querySelector(".refs-peek .refs-title")?.textContent === "References to foo" && document.querySelectorAll(".refs-peek .refs-row").length === 1`)
+	Eval[bool](p, `(document.querySelector(".refs-peek .refs-row").focus(), true)`)
+	p.Key(kb.Escape)
+	p.WaitJS(`!document.querySelector(".refs-peek")`)
+
+	deskCaret(p, 1, 3)
+	editorRightClick(p)
+	menuPick(p, "Go to Definition")
+	r = expectReq(t, c, "lsp.definition")
+	if a := lspArgs(t, r); a.Buf != 2 || a.Line != 1 || a.Col != 3 {
+		t.Fatalf("definition args %+v", a)
+	}
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(webproto.LspLocations{Locs: []webproto.LspLoc{
+		{Path: "b.go", Line: 2, Col: 5, EndLine: 2, EndCol: 8, Text: "func foo() int { return 1 }"},
+	}})})
+	p.WaitJS(`location.hash === "#/files/b.go"`)
+	answerOpen(t, p, c, 3, "b.go", "package a", "", "func foo() int { return 1 }")
+	p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent === "Ln 3, Col 6"`)
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
 }

@@ -21,8 +21,8 @@ licenses.txt sha384-PyGBZsvIL5I0VNvkfuJ+/VqulKvnnrwuB2LXm8NoRWlD5ppcn+IgZBbkNMsu
 manifest.webmanifest sha384-qjNU0Xp9lZOqlzINposbupMidCLCs3E42jt7va9KMYlF9pwoBpOh8VZq76FMMpD8 472
 monaco-amd.js sha384-p3ekm3WciOvaEyEvUUWxqPPOpdyKdGY7mcJmGv02jrGcDGLRbchsK24YIi9IrUon 556
 monaco-frame.css sha384-pIn+bsgGMpEY3MvG3lj+TzyrqqnJvl1xI8AkzPRoesGmmNPy546VQjfflYDU4mpu 1441
-monaco-frame.js sha384-u+JF08pb0Ej3lCh0/MfoMQW0vclk5lXjlt9sySvQTTSdHcIeizLLKnqnSb8MFZjH 61435
-monaco.html sha384-KjDiX1gRpVuRrrWCBm8G8nXYCbtvOqGTwSfM+lZn44EBxBoJFf4Fe9+3C1TfuWf2 1174
+monaco-frame.js sha384-+R+f/kom58sDnWZvOuWAQ4xevq/Cx4MdgSNsBanmxxlgqrhQxYqM+qVeoCbCHyUH 61709
+monaco.html sha384-LV6XB++KO4aQXFoqdssAteIbkYdv3d/6THeRp2NDgPcNYoFXzbvUs6iqFhG5uXSG 1174
 monaco/editor-contrib.js sha384-zovZc9/8c8IF6IlccJXAp+iG87TnOpWjJGqruAwc0mBMA0kLUjvfwMuUk2v7/oC6 1294483
 monaco/editor-host.js sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf 361750
 monaco/editor.css sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4 390829
