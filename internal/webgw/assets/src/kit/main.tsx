@@ -15,7 +15,7 @@ import "../styles/components.css";
 import "./kit.css";
 import { toast } from "../lib/toasts";
 import type { StatusView } from "../state/status";
-import { t } from "../strings";
+import { t, type StringKey } from "../strings";
 import { AttentionView } from "../ui/AttentionPill";
 import { Button } from "../ui/Button";
 import { Card, type CardKind, type CardState } from "../ui/Card";
@@ -174,27 +174,46 @@ function CardDemo({ kind, state, id }: { kind: CardKind; state: CardState; id: s
   );
 }
 
+/** answerToast is what the kit says after each answer, per kind. */
+const answerToast: Record<CardKind, { safe: StringKey; risky: StringKey }> = {
+  tool: { safe: "toast.denied", risky: "toast.allowed" },
+  mcp: { safe: "toast.denied", risky: "toast.allowed" },
+  plan: { safe: "toast.denied", risky: "toast.allowed" },
+  review: { safe: "toast.rejected", risky: "toast.accepted" },
+  trust: { safe: "card.later", risky: "laptop.shown" },
+};
+
+const sheetKinds: CardKind[] = ["tool", "review", "plan", "mcp", "trust"];
+
+/** SheetDemo opens a real card dialog of each kind in a sheet: a fresh
+ * card each time, so its arming starts over (the e2e card pack drives it). */
 function SheetDemo() {
-  const [open, setOpen] = useState<"" | "card" | "wait">("");
+  const [open, setOpen] = useState<"" | CardKind | "wait">("");
+  const close = (msg: StringKey) => {
+    setOpen("");
+    toast("info", t(msg));
+  };
   return (
-    <div class="kit-row">
-      <Button kind="ai" onClick={() => setOpen("card")}>
-        Open a card sheet
-      </Button>
+    <div class="kit-row wrap">
+      {sheetKinds.map((k) => (
+        <Button key={k} kind={k === "tool" ? "ai" : "neutral"} onClick={() => setOpen(k)}>
+          {`Open a ${k} card`}
+        </Button>
+      ))}
       <Button onClick={() => setOpen("wait")}>Open Waiting for the laptop</Button>
-      {open === "card" && (
-        <Sheet onLater={() => (setOpen(""), toast("info", t("card.later")))}>
+      {open !== "" && open !== "wait" && (
+        <Sheet onLater={() => close("card.later")}>
           <Card
-            id="sheet"
-            kind="tool"
-            subject={subjects.tool}
-            where="terminal 2 · ~/termocode"
-            onAnswer={(c) => {
-              setOpen("");
-              toast(c === "safe" ? "info" : "ok", c === "safe" ? t("toast.denied") : t("toast.allowed"));
-            }}
-            onLater={() => (setOpen(""), toast("info", t("card.later")))}
-          />
+            id={`sheet-${open}`}
+            kind={open}
+            subject={subjects[open]}
+            where={open === "tool" ? "terminal 2 · ~/termocode" : undefined}
+            onAnswer={(c) => close(answerToast[open][c])}
+            onLater={() => close("card.later")}
+            onLaptop={() => close("laptop.shown")}
+          >
+            {cardBody(open)}
+          </Card>
         </Sheet>
       )}
       {open === "wait" && (
