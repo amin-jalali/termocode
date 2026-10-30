@@ -146,13 +146,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	last.Store(time.Now().UnixNano())
 	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now,
 		MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) }})
-	mux := http.NewServeMux()
-	mux.Handle("/auth", auth)
-	mux.Handle("/ws", ws)
-	if cfg.Assets != nil {
-		mux.Handle("/", cfg.Assets)
-	}
-	srv := NewServer(site, mux, DefaultLimits, audit)
+	srv := NewServer(site, siteMux(site, auth, ws, cfg.Assets), DefaultLimits, audit)
 	crash.Go("web gateway: the server", func() { _ = srv.Serve(LimitConns(ln, DefaultLimits.MaxConns)) })
 	defer func() { _ = srv.Close() }()
 
@@ -276,4 +270,20 @@ func ReadStatus(path string) (Status, error) {
 		return st, err
 	}
 	return st, json.Unmarshal(b, &st)
+}
+
+// siteMux routes the gateway's paths: /auth, /ws, the page (assets may
+// be nil: then only /auth and /ws exist) and, on an installable site,
+// the app manifest (WEB-35).
+func siteMux(site Site, auth, ws, assets http.Handler) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.Handle("/auth", auth)
+	mux.Handle("/ws", ws)
+	if site.Installable() {
+		mux.Handle(ManifestPath, Manifest())
+	}
+	if assets != nil {
+		mux.Handle("/", assets)
+	}
+	return mux
 }
