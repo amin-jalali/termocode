@@ -104,6 +104,26 @@ func (h *webHub) report(err error) {
 	}
 }
 
+// send delivers msg to Update unless the hub stopped or ctx ended.
+func (h *webHub) send(ctx context.Context, msg tea.Msg) error {
+	select {
+	case h.ch <- msg:
+		return nil
+	case <-h.done:
+		return errWebHubStopped
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// browsers is how many browser connections are open (not the control
+// connection).
+func (h *webHub) browsers() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return len(h.byID)
+}
+
 // conns is how many connections are open now (also those still before
 // their first line).
 func (h *webHub) conns() int {
