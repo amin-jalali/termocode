@@ -95,6 +95,13 @@ type Paths struct {
 	WebSocket string
 	// WebHTTPSocket is where the web gateway serves HTTP in SSH mode.
 	WebHTTPSocket string
+	// WebStatus is the running web gateway's status file (0600).
+	WebStatus string
+	// WebLock is held by the running web gateway (one per workspace).
+	WebLock string
+	// WebOpen is the short-lived 0600 page that sends the browser to the
+	// one-time link, so the link is never in a program's argv.
+	WebOpen string
 }
 
 // PathsFor returns the session files for a workspace folder.
@@ -121,5 +128,8 @@ func PathsFor(workspace string) (Paths, error) {
 
 		WebSocket:     base + ".web.sock",
 		WebHTTPSocket: base + ".webhttp.sock",
+		WebStatus:     base + ".web.json",
+		WebLock:       base + ".web.lock",
+		WebOpen:       base + ".web-open.html",
 	}, nil
 }
