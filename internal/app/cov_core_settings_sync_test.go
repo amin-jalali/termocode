@@ -156,7 +156,13 @@ func TestCovCoreSettingsImportChoices(t *testing.T) {
 
 func TestCovCoreSettingsImportErrors(t *testing.T) {
 	m, _ := covSyncModel(t)
-	tmp := t.TempDir()
+	// A short folder: the toast cuts a long path (macOS's $TMPDIR) and
+	// with it the reason at its end.
+	tmp, err := os.MkdirTemp("/tmp", "tci")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(tmp) })
 	write := func(name, body string) string {
 		p := filepath.Join(tmp, name)
 		_ = os.WriteFile(p, []byte(body), 0o644)
