@@ -170,19 +170,26 @@ func (m *Model) aiExplain() tea.Cmd {
 	if !ok {
 		return m.aiInfo("Open a file first")
 	}
+	s := m.aiS()
+	att, q := aiExplainAsk(t)
+	s.attachments = append(s.attachments, att)
+	m.openAIPanel(true)
+	return m.sendAIChat(q)
+}
+
+// aiExplainAsk is Explain's attachment (the selection, or ±10 lines
+// around the cursor: a single line explains little) and question.
+func aiExplainAsk(t aiRangeTarget) (aiAttachment, string) {
 	start, end := t.start, t.end
-	if !t.hadSelection { // a single line explains little: take ±10 lines
+	if !t.hadSelection {
 		start, end = maxInt(t.cursor-10, 0), minInt(t.cursor+11, len(t.full))
 	}
-	s := m.aiS()
 	label := fmt.Sprintf("%s:%d-%d", filepath.Base(t.path), start+1, end)
-	s.attachments = append(s.attachments, aiAttachment{Label: label, Text: strings.Join(t.full[start:end], "\n")})
-	m.openAIPanel(true)
 	q := "Explain this code."
 	if !t.hadSelection {
 		q = fmt.Sprintf("Explain the code around line %d.", t.cursor+1)
 	}
-	return m.sendAIChat(q)
+	return aiAttachment{Label: label, Text: strings.Join(t.full[start:end], "\n")}, q
 }
 
 func minInt(a, b int) int {
@@ -205,11 +212,17 @@ func (m *Model) aiFixDiagnostic() tea.Cmd {
 	if len(diags) == 0 {
 		return m.aiInfo("No diagnostic on this line")
 	}
+	t, instr := aiFixAsk(t, diags)
+	return m.runAIEdit(t, "fix", "AI fix", instr)
+}
+
+// aiFixAsk is Fix's range (the selection, or the lines around the
+// cursor) and instruction.
+func aiFixAsk(t aiRangeTarget, diags []string) (aiRangeTarget, string) {
 	if !t.hadSelection {
 		t.start, t.end = maxInt(t.cursor-4, 0), minInt(t.cursor+5, len(t.full))
 	}
-	instr := "Fix these problems:\n" + strings.Join(diags, "\n")
-	return m.runAIEdit(t, "fix", "AI fix", instr)
+	return t, "Fix these problems:\n" + strings.Join(diags, "\n")
 }
 
 // aiEditSelection asks for an instruction, then proposes the edit.
@@ -254,10 +267,13 @@ func (m *Model) aiDocComment() tea.Cmd {
 		return m.aiInfo("Open a file first")
 	}
 	t.start, t.end = t.cursor, minInt(t.cursor+1, len(t.full))
-	instr := "Write a doc comment for the declaration on the first line, following the language's conventions. " +
-		"Return the doc comment followed by the original line(s) unchanged."
-	return m.runAIEdit(t, "doc", "AI doc comment", instr)
+	return m.runAIEdit(t, "doc", "AI doc comment", aiDocInstruction)
 }
+
+// aiDocInstruction is Doc Comment's instruction (the range is the
+// cursor's line).
+const aiDocInstruction = "Write a doc comment for the declaration on the first line, following the language's conventions. " +
+	"Return the doc comment followed by the original line(s) unchanged."
 
 const aiEditSystemPrompt = "You are a precise code editor. You get a file and a line range from it. " +
 	"Return ONLY the replacement text for that line range — complete lines, same indentation style — " +
@@ -275,6 +291,27 @@ func aiEditPrompt(t aiRangeTarget, instruction string) string {
 	return b.String()
 }
 
+// aiEditRequest is the one-shot request of a range edit.
+func aiEditRequest(t aiRangeTarget, model, instruction string) ai.Request {
+	return ai.Request{Model: model, Messages: []ai.Message{
+		{Role: ai.RoleSystem, Content: aiEditSystemPrompt},
+		{Role: ai.RoleUser, Content: aiEditPrompt(t, instruction)},
+	}}
+}
+
+// aiEditAnswer is the replacement lines of an edit answer (its first
+// code block, else all of it); false: no code.
+func aiEditAnswer(text string) ([]string, bool) {
+	code, ok := ai.FirstCodeBlock(text)
+	if !ok {
+		code = strings.TrimSpace(text)
+	}
+	if strings.TrimSpace(code) == "" {
+		return nil, false
+	}
+	return strings.Split(code, "\n"), true
+}
+
 // runAIEdit sends a one-shot edit request.
 func (m *Model) runAIEdit(t aiRangeTarget, kind, title, instruction string) tea.Cmd {
 	s := m.aiS()
@@ -286,11 +323,7 @@ func (m *Model) runAIEdit(t aiRangeTarget, kind, title, instruction string) tea.
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	s.actionCancel = cancel
 	s.actionBusy = kind
-	prov, model := s.provider, s.cfg.Model
-	req := ai.Request{Model: model, Messages: []ai.Message{
-		{Role: ai.RoleSystem, Content: aiEditSystemPrompt},
-		{Role: ai.RoleUser, Content: aiEditPrompt(t, instruction)},
-	}}
+	prov, req := s.provider, aiEditRequest(t, s.cfg.Model, instruction)
 	return tea.Batch(m.aiInfo("✦ AI is working… (AI: Stop Generating to cancel)"), func() tea.Msg {
 		defer cancel()
 		text, last := ai.Collect(prov.Stream(ctx, req))
@@ -312,14 +345,11 @@ func (m *Model) onAIActionResult(msg aiActionResultMsg) tea.Cmd {
 		}
 		return m.aiToastErr("AI request failed", msg.err)
 	}
-	code, ok := ai.FirstCodeBlock(msg.text)
+	repl, ok := aiEditAnswer(msg.text)
 	if !ok {
-		code = strings.TrimSpace(msg.text)
-	}
-	if strings.TrimSpace(code) == "" {
 		return m.aiInfo("AI returned no code")
 	}
-	return m.openAIProposal(aiProposal{target: msg.target, repl: strings.Split(code, "\n"), title: msg.title})
+	return m.openAIProposal(aiProposal{target: msg.target, repl: repl, title: msg.title})
 }
 
 // proposeWholeFile proposes code as the full content of the current file.
