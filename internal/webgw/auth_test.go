@@ -156,6 +156,67 @@ func TestNoCookiesEver(t *testing.T) {
 	}
 }
 
+// TestAuthNeedsJSONAndOrigin: a simple cross-site form cannot send
+// application/json, and the guard wants the exact Origin (T3). Neither
+// refusal uses up a try of the secret.
+func TestAuthNeedsJSONAndOrigin(t *testing.T) {
+	a, _, _, plain := newAuth(t)
+	for _, ct := range []string{"", "text/plain", "application/x-www-form-urlencoded",
+		"multipart/form-data; boundary=x", "application/json-patch+json", "application/jsonx", "json"} {
+		r := authReq(secretBody(plain))
+		if ct == "" {
+			r.Header.Del("Content-Type")
+		} else {
+			r.Header.Set("Content-Type", ct)
+		}
+		if w := do(a, r); w.Code != http.StatusUnsupportedMediaType {
+			t.Errorf("Content-Type %q: code %d, want 415", ct, w.Code)
+		}
+	}
+	noOrigin := authReq(secretBody(plain))
+	noOrigin.Header.Del("Origin")
+	if w := do(a, noOrigin); w.Code != http.StatusForbidden {
+		t.Errorf("no Origin: code %d, want 403", w.Code)
+	}
+	ok := authReq(secretBody(plain))
+	ok.Header.Set("Content-Type", "application/json; charset=utf-8")
+	if w := do(a, ok); w.Code != http.StatusOK {
+		t.Fatalf("the refused requests used up the secret: code %d", w.Code)
+	}
+}
+
+// TestFormPostRejected: the secret sent as a form is refused and stays
+// unused.
+func TestFormPostRejected(t *testing.T) {
+	a, _, _, plain := newAuth(t)
+	r := authReq("secret=" + plain)
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if w := do(a, r); w.Code != http.StatusUnsupportedMediaType {
+		t.Fatalf("form post: code %d", w.Code)
+	}
+	if w := do(a, authReq(secretBody(plain))); w.Code != http.StatusOK {
+		t.Fatalf("secret used by the form: code %d", w.Code)
+	}
+}
+
+// TestAuthStrictJSON: exactly one object with exactly one string field.
+func TestAuthStrictJSON(t *testing.T) {
+	a, _, _, plain := newAuth(t)
+	for _, body := range []string{
+		``, `{}`, `[]`, `null`, `"x"`, `{"secret":1}`, `{"secret":null}`,
+		`{"secret":"x","extra":1}`, `{"secret":"` + plain + `"} {}`,
+		`{"secret":"` + plain + `"}x`, `{"secret":"` + plain + `"`,
+		`{"token":"x"}`,
+	} {
+		if w := do(a, authReq(body)); w.Code != http.StatusBadRequest {
+			t.Errorf("body %q: code %d, want 400", body, w.Code)
+		}
+	}
+	if w := do(a, authReq(" "+secretBody(plain)+"\n")); w.Code != http.StatusOK {
+		t.Fatalf("good body after bad ones: code %d", w.Code)
+	}
+}
+
 func TestAuthOnlyPost(t *testing.T) {
 	a, _, _, _ := newAuth(t)
 	r := httptest.NewRequest(http.MethodGet, "/auth", nil)
