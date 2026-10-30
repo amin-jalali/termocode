@@ -19,6 +19,7 @@ import { modKey } from "./platform";
 import { loadRecentCmds, saveRecentCmds, setPref } from "./prefs";
 import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
+import { openSide } from "../ui/ActivityBar";
 import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
 
 export interface Command {
@@ -63,8 +64,8 @@ export function commands(): Command[] {
     { id: "panelMax", label: "cmd.panel_max", run: () => setPanes({ panel: true, panelMax: !panes.peek().panelMax }) },
     { id: "problems", label: "cmd.problems", keys: `${mod}+Shift+M`, run: toggleProblems },
     { id: "chatPanel", label: "cmd.toggle_chat", run: () => setPanes({ chat: !panes.peek().chat }) },
-    { id: "explorer", label: "cmd.explorer", run: () => (setPanes({ side: true }), go({ tab: "files", rest: activeFile.peek() ?? "", query: {} })) },
-    { id: "scm", label: "cmd.scm", run: () => (setPanes({ side: true }), go({ tab: "git", rest: "", query: {} })) },
+    { id: "explorer", label: "cmd.explorer", run: () => openSide("files") },
+    { id: "scm", label: "cmd.scm", run: () => openSide("git") },
     { id: "search", label: "cmd.search", run: () => go({ tab: "more", rest: "search", query: {} }) },
     { id: "tasks", label: "cmd.tasks", run: () => go({ tab: "more", rest: "tasks", query: {} }) },
     { id: "runs", label: "cmd.runs", run: () => go({ tab: "more", rest: "runs", query: {} }) },

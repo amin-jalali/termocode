@@ -687,6 +687,23 @@ export const S = {
   "sb.sync": "Synchronize Changes: {behind} to pull, {ahead} to push",
   "rv.output": "Show Output",
   "rv.run_task": "Run Task",
+  "dbv.query_tab": "Query: {conn}",
+  "dbv.new_query": "New Query",
+  "dbv.more": "{n} more tables are on the laptop.",
+  "dbv.readonly_note": "Tables open read only. A change asks the laptop.",
+  "dbv.results": "Results",
+  "dbv.row": "Row",
+  "dbv.resize": "Resize {col}",
+  "dbv.page": "Rows {a}–{b}",
+  "dbv.no_results": "Run the query ({keys}) to see its rows here.",
+  "mcpv.running": "Running",
+  "mcpv.connected": "Connected since {time}",
+  "mcpv.gone": "Not connected now.",
+  "mcpv.counts": "{calls} calls, {asked} asked you first",
+  "mcpv.time": "Time",
+  "mcpv.tool": "Tool",
+  "mcpv.outcome": "What happened",
+  "wb.output_none": "Choose Logs on a container to see its output here.",
 } as const;
 
 export type StringKey = keyof typeof S;

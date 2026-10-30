@@ -154,7 +154,7 @@ func waitSubSkipping(t *testing.T, c *HubConn, topic string) {
 
 // Every view is an item of the desktop's activity bar, with its icon,
 // a tooltip with the keys, and a badge; side views open in the side bar,
-// the big tables in the editor area.
+// Settings and This device in the editor area.
 func TestWorkbenchActivityBar(t *testing.T) {
 	p, c := openFiles(t, Desktop)
 	ids := Eval[[]string](p, `[...document.querySelectorAll("nav.act-bar .act-item")].map((e) => e.dataset.act)`)
@@ -169,9 +169,12 @@ func TestWorkbenchActivityBar(t *testing.T) {
 	// Search opens in the side bar.
 	p.Tap(`.act-item[data-act="search"]`)
 	p.WaitJS(`document.querySelector('.wb-side[data-side="search"] .view') && location.hash.startsWith("#/more/search")`)
-	// Databases open in the editor area; the side bar keeps Search.
+	// Databases open in the side bar too (a tree); Settings opens in the
+	// editor area and the side bar keeps Databases.
 	p.Tap(`.act-item[data-act="db"]`)
-	p.WaitJS(`document.querySelector('.wb-editor [data-view="more"]') && document.querySelector('.wb-side[data-side="search"]')`)
+	p.WaitJS(`document.querySelector('.wb-side[data-side="db"] [data-view="db"]') && location.hash === "#/more/db"`)
+	p.Tap(`.act-item[data-act="settings"]`)
+	p.WaitJS(`location.hash === "#/more/settings" && document.querySelector('.wb-editor .view') && document.querySelector('.wb-side[data-side="db"]') && document.querySelector('.act-item[data-act="settings"][aria-current="page"]')`)
 	// A second click on the active side item hides the side bar.
 	p.Tap(`.act-item[data-act="files"]`)
 	p.WaitJS(`document.querySelector('.wb-side[data-side="files"]')`)

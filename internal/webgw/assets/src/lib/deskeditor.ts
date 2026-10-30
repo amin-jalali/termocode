@@ -68,6 +68,8 @@ export interface DeskHost extends EditorHost {
   /** diff makes it a diff editor (the older text on the left); onDiff
    * hears its change count. */
   diff?: FrameDiff;
+  /** lang: "sql" for a query editor (the frame colours it). */
+  lang?: "sql";
   onDiff?(changes: number, added: number, removed: number): void;
 }
 
@@ -127,7 +129,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "ready": {
         ready = true;
         const c = frameColors(parent);
-        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lsp: host.lsp, refsLabel: host.refsLabel, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
+        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, lsp: host.lsp, refsLabel: host.refsLabel, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.

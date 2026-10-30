@@ -5,6 +5,7 @@
 // editor area, where their tables have room. Badges: git changes, cards
 // waiting for an answer, runs that are live or need you.
 import { h } from "preact";
+import { signal } from "@preact/signals";
 import { modKey } from "../lib/platform";
 import { go, route } from "../lib/router";
 import { activeFile, panes, setPanes } from "../lib/workbench";
@@ -32,8 +33,8 @@ export const ACTIVITIES: readonly Item[] = [
   { id: "search", label: "more.search", icon: "search", keys: "Shift+F", side: true, to: () => more("search") },
   { id: "git", label: "act.scm", icon: "source-control", keys: "Shift+G", side: true, to: () => ({ tab: "git", rest: "", query: {} }) },
   { id: "run", label: "act.run", icon: "debug-alt", side: true, to: () => more("tasks") },
-  { id: "db", label: "more.db", icon: "database", side: false, to: () => more("db") },
-  { id: "containers", label: "more.containers", icon: "package", side: false, to: () => more("containers") },
+  { id: "db", label: "more.db", icon: "database", side: true, to: () => more("db") },
+  { id: "containers", label: "more.containers", icon: "package", side: true, to: () => more("containers") },
   { id: "mcp", label: "more.mcp", icon: "plug", side: true, to: () => more("mcp") },
   { id: "chat", label: "tab.chat", icon: "comment-discussion", side: false, to: () => ({ tab: "chat", rest: "", query: {} }) },
 ];
@@ -73,6 +74,37 @@ export function sideActivity(r: Route): boolean {
   return [...ACTIVITIES, ...ACTIVITIES_BOTTOM].some((x) => x.id === a && x.side);
 }
 
+/** sideView is the view the side bar shows. A side view's route shows it
+ * (#/git, #/more/search …); a file's own route (#/files/<path>, a tab
+ * opened from any view) leaves the side bar as it is, as on the laptop's
+ * editor. */
+export const sideView = signal<Activity>("files");
+
+/** routeSide is the side view a route asks for (null: it leaves it). */
+export function routeSide(r: Route): Activity | null {
+  if (r.tab === "files" && r.rest) return null;
+  return sideActivity(r) ? activityOf(r) : null;
+}
+
+/** openSide shows a side view (its activity bar item, a key, a command). */
+export function openSide(id: Activity): void {
+  const x = [...ACTIVITIES, ...ACTIVITIES_BOTTOM].find((a) => a.id === id);
+  if (!x) return;
+  if (x.side) {
+    setPanes({ side: true });
+    sideView.value = id;
+  }
+  go(x.to());
+}
+
+/** shownActivity is the item the activity bar marks: the side bar's view,
+ * or the editor area's page (Settings, This device, the chat). */
+function shownActivity(r: Route): Activity | null {
+  const a = activityOf(r);
+  if (a && !sideActivity(r)) return a;
+  return panes.value.side ? sideView.value : a;
+}
+
 function badge(id: Activity): { n: number; tone: "count" | "dot" } | null {
   const s = status.value;
   if (id === "git" && s.dirty > 0) return { n: s.dirty, tone: "count" };
@@ -83,13 +115,12 @@ function badge(id: Activity): { n: number; tone: "count" | "dot" } | null {
 }
 
 function tap(x: Item): void {
-  const cur = activityOf(route.peek());
-  if (x.side && cur === x.id && panes.peek().side) {
+  // A second click on the side bar's own view hides the side bar.
+  if (x.side && sideView.peek() === x.id && panes.peek().side && activityOf(route.peek()) === x.id) {
     setPanes({ side: false });
     return;
   }
-  if (x.side) setPanes({ side: true });
-  go(x.to());
+  openSide(x.id);
 }
 
 function ActItem({ x, cur }: { x: Item; cur: Activity | null }) {
@@ -114,7 +145,7 @@ function ActItem({ x, cur }: { x: Item; cur: Activity | null }) {
 }
 
 export function ActivityBar() {
-  const cur = activityOf(route.value);
+  const cur = shownActivity(route.value);
   return (
     <nav class="rail act-bar" aria-label={t("tabs.label")}>
       {ACTIVITIES.map((x) => (

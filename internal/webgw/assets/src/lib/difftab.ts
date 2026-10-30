@@ -6,6 +6,7 @@
 //   "@timeline:" + hash + ":" + path   a commit against its parent
 //   "@review:" + card + ":" + path     the AI's change a review card asks about
 import { t } from "../strings";
+import { vtabName, vtabOf } from "./vtabs";
 
 const WT = "@diff:wt:";
 const IDX = "@diff:idx:";
@@ -45,9 +46,10 @@ export function diffOf(tab: string): DiffTab | null {
   return { kind: "commit", path: rest.slice(i + 1), hash: rest.slice(0, i) };
 }
 
-/** isVirtual: the tab is not a file of its own (a diff, or a broken name). */
+/** isVirtual: the tab is not a file of its own (a diff, a table, a
+ * query, details: every name that starts with "@"). */
 export function isVirtual(tab: string): boolean {
-  return tab.startsWith("@diff:") || tab.startsWith(TIMELINE) || tab.startsWith(REVIEW);
+  return tab.startsWith("@");
 }
 
 /** fileOfTab is the workspace file a tab is about (null: none). */
@@ -63,6 +65,8 @@ function baseName(path: string): string {
 
 /** tabName is an editor tab's name: the file's; a diff says which sides. */
 export function tabName(tab: string): string {
+  const v = vtabOf(tab);
+  if (v) return vtabName(v);
   const d = diffOf(tab);
   if (!d) return baseName(tab);
   const name = baseName(d.path);

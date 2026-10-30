@@ -31,7 +31,7 @@ func openMoreSub(t *testing.T, vp Viewport, sub, topic string) (*Page, *HubConn)
 // Settings list the laptop's values by group, read only: a changed value
 // shows its default, there is no field and no button that changes one.
 func TestSettingsReadOnly(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openMoreSub(t, vp, "settings", "settings")
 			c.Send(t, Snap("settings", 1, webproto.SettingsSnap{Items: []webproto.SettingItem{
@@ -68,7 +68,7 @@ func TestSettingsReadOnly(t *testing.T) {
 // MCP shows the server's state, the agents and their last calls; there
 // is no button at all; not listening says why.
 func TestMCPStatusReadOnly(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openMoreSub(t, vp, "mcp", "mcp")
 			c.Send(t, Snap("mcp", 1, webproto.MCPSnap{Mode: "auto", Listening: true,
@@ -126,7 +126,7 @@ func ctrSel(id string) string { return `document.querySelector('.ctr[data-id="` 
 // Containers: the list, a log tail as text, restart asked in the card,
 // stop through the laptop; a stopped one offers start and remove.
 func TestContainersView(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openContainers(t, vp, nil)
 			if m := p.Text(`.ctr[data-id="9f3c2e1a1234"] .ctr-meta`); !strings.Contains(m, "ghcr.io/acme/api:1.4 · shop · Up 2 hours") {
@@ -209,7 +209,7 @@ func openDB(t *testing.T, vp Viewport, meta *webproto.Meta) (*Page, *HubConn) {
 // laptop), tables, rows with NULL and masked cells as text; a read query
 // asks in the page; a write asks the laptop.
 func TestDBView(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openDB(t, vp, nil)
 			if !Eval[bool](p, `document.querySelector('.db-conn[data-conn="cache"]').disabled`) {
