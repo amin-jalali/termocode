@@ -5,12 +5,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/webhl"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // Syntax colours of the file view (WEB-38, web-ui-design §2.4): nvim's
 // own tree-sitter captures for the rows the page shows (when nvim has no
-// parser for the file, the hub's own lexer: web_hl_chroma.go). One fixed Lua
+// parser for the file, the hub's own lexer: internal/webhl). One fixed Lua
 // chunk parses the asked range (injections too: code in Markdown) and
 // walks each tree's highlights query; captures that span rows are cut
 // per row, and columns go out in UTF-16 units of the row, what the
@@ -128,7 +129,7 @@ func webOpBufHl(m *Model, call *webCall) tea.Cmd {
 			return nil
 		}
 		if res.None {
-			if own, ok := webHlChroma(path, ft, rows, tick, a.First, a.Last, maxSpans); ok {
+			if own, ok := webhl.Chroma(path, ft, rows, tick, a.First, a.Last, maxSpans); ok {
 				call.reply(own)
 				return nil
 			}
