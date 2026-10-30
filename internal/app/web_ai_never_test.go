@@ -71,6 +71,15 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"openWebStartCard":    {"web_panel.go", "web_tui.go"},
 		"webCtlOpen":          {"web_panel.go", "web_tui.go"},
 		"dispatchWebPalette":  {"palette.go"}, // the AI's execute_action is refused before it (aiNever)
+		// Pairing and devices (web_access.go): the owner's buttons only.
+		"handleWebAccessConfirm":   {"ai_config_ui.go"},
+		"handleWebAccessPicker":    {"ai_config_ui.go"},
+		"answerWebPairAsk":         {"web_access.go"},
+		"answerWebPairQR":          {"web_access.go"},
+		"answerWebDeviceRemove":    {"web_access.go"},
+		"openWebPair":              {"web_access.go"},
+		"webRevokeDevice":          {"web_access.go"},
+		"dispatchWebAccessPalette": {"palette.go"},
 	}
 	fset := token.NewFileSet()
 	files, _ := filepath.Glob("*.go")

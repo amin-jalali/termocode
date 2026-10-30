@@ -391,6 +391,7 @@ func paletteItems() []picker.Item {
 	items = append(items, secretsPaletteItems()...)   // secret store (secrets_ui.go)
 	items = append(items, mcpServePaletteItems()...)  // termocode as an MCP server (mcp_serve_status.go)
 	items = append(items, webPaletteItems()...)       // the web panel (web_tui.go)
+	items = append(items, webAccessPaletteItems()...) // pairing and devices (web_access.go)
 	items = append(items, itermocPaletteItems()...)   // the Itermoc view (itermoc_actions.go)
 	items = append(items, ciPaletteItems()...)        // G-CI (ci_card.go)
 	items = append(items, layoutPaletteItems()...)    // G-LAY (layout_palette.go)
@@ -805,6 +806,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchMCPServePalette(id); ok { // mcp_serve_status.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchWebAccessPalette(id); ok { // web_access.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchWebPalette(id); ok { // web_tui.go
