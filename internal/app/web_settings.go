@@ -68,3 +68,7 @@ func webSettings() webConfig {
 	}
 	return c
 }
+
+// WebPanelExplicitOn reports whether the user's config.json says
+// "web_panel": "on" (a script's `termocode web --yes` needs it).
+func WebPanelExplicitOn() bool { return webSettings().Explicit }

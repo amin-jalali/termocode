@@ -16,6 +16,9 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/term"
+
+	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/webgw"
@@ -23,18 +26,23 @@ import (
 )
 
 // `termocode web` (WEB-9) asks the termocode UI of a folder to open or
-// stop the web panel. It never starts the gateway itself: the UI does,
-// after the user said yes on the laptop's start card (or --yes, from the
-// same user), so a command in some script cannot open a door silently.
+// stop the web panel. It never starts the gateway itself: the UI does.
+// Typed in a terminal it opens the browser at once; from a script or a
+// hidden run (no terminal) the laptop's start card asks first, so a
+// command in some script cannot open a door silently. A script's --yes
+// skips the card only when config.json says "web_panel": "on".
 
 const webUsage = `Usage: termocode web [start|stop|status] [--yes] [--dir <folder>]
 
-  start    open the web panel of the termocode running in the folder
-           (the laptop asks first; --yes skips the question)
+  start    open the web panel of the termocode running in the folder in
+           a browser (the default). Typed in a terminal it opens at once;
+           from a script the laptop asks first (--yes skips the question
+           when config.json says "web_panel": "on")
   stop     stop the web panel; every browser is disconnected
   status   say whether the web panel runs, and where
 
-The web panel must be turned on in config.json: "web_panel": "on".
+The web panel listens only on this computer (127.0.0.1). To turn it off,
+set "web_panel": "off" in config.json.
 `
 
 // Exit codes of `termocode web`.
@@ -45,8 +53,17 @@ const (
 )
 
 // webOffText is what the CLI says when no hub answers (E11).
-const webOffText = "termocode: no termocode with the web panel turned on runs in this folder.\n" +
-	"Start termocode here, and turn the panel on in config.json: \"web_panel\": \"on\"\n"
+const webOffText = "termocode: no termocode runs in this folder, or its web panel is turned off.\n" +
+	"Start termocode here first, then run termocode web again.\n"
+
+// webScriptYesText: --yes without a terminal and without "on".
+const webScriptYesText = `--yes from a script works only with "web_panel": "on" in config.json.`
+
+// webTyped reports whether a person typed the command: stdin and stdout
+// are a terminal. Tests swap it.
+var webTyped = func() bool {
+	return term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
+}
 
 func runWeb(args []string) int {
 	cwd, _ := os.Getwd()
@@ -90,10 +107,18 @@ func runWebIn(args []string, out, errw io.Writer, cwd string) int {
 	op, a := webproto.OpWebStop, ""
 	if cmd == "start" {
 		op = webproto.OpWebOpen
-		if yes {
-			a = `{"yes":true}`
+		now := webTyped()
+		if !now && yes {
+			if now = app.WebPanelExplicitOn(); !now {
+				fmt.Fprintln(out, webScriptYesText)
+			}
 		}
-		fmt.Fprintln(out, "Asking termocode to open the web panel. Answer on the laptop…")
+		if now {
+			a = `{"yes":true}`
+			fmt.Fprintln(out, "Opening the web panel in a browser…")
+		} else {
+			fmt.Fprintln(out, "Asking termocode to open the web panel. Answer on the laptop…")
+		}
 	}
 	res, code, msg, err := webCtlCall(paths.WebSocket, op, a)
 	if err != nil {

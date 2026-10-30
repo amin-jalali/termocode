@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -59,10 +60,75 @@ func runWebT(t *testing.T, args ...string) (int, string, string) {
 	return 0, "", ""
 }
 
-// Spec (T52, WEB-9): `termocode web start` only asks the UI over the hub
-// socket (web.open on a control connection); --yes is passed on.
-func TestWebStartAsksTheUI(t *testing.T) {
+// webCLIEnv is a temp config folder with config.json body, and whether
+// the command runs typed in a terminal.
+func webCLIEnv(t *testing.T, config string, typed bool) {
+	t.Helper()
 	sessionEnv(t)
+	cfg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfg)
+	if err := os.MkdirAll(filepath.Join(cfg, "termocode"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfg, "termocode", "config.json"), []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	old := webTyped
+	t.Cleanup(func() { webTyped = old })
+	webTyped = func() bool { return typed }
+}
+
+// webOpenReq is the web.open request the fake hub got.
+func webOpenReq(t *testing.T, got chan []string) (yes bool) {
+	t.Helper()
+	lines := <-got
+	var req struct {
+		T, Op string
+		Args  map[string]bool
+	}
+	if err := json.Unmarshal([]byte(lines[1]), &req); err != nil || req.T != "req" || req.Op != "web.open" {
+		t.Fatalf("request %q", lines[1])
+	}
+	return req.Args["yes"]
+}
+
+// Spec (web-easy): `termocode web` typed in a terminal opens the browser
+// at once (yes, no card on the laptop), with no setting; the output does
+// not ask to answer on the laptop.
+func TestWebStartTypedOpensAtOnce(t *testing.T) {
+	webCLIEnv(t, `{}`, true)
+	ws := shortTemp(t)
+	got := fakeWebHub(t, ws, `{"t":"res","id":1,"data":{"port":41237}}`)
+	code, out, errs := runWebT(t, "--dir", ws)
+	if code != 0 || !strings.Contains(out, "http://127.0.0.1:41237/") || strings.Contains(out, "Answer on the laptop") {
+		t.Fatalf("exit %d out %q err %q", code, out, errs)
+	}
+	if !webOpenReq(t, got) {
+		t.Fatal("typed in a terminal, but the laptop is asked")
+	}
+}
+
+// Spec (web-easy): with no terminal (a script, a hidden AI run) the
+// laptop always asks, even with --yes, unless config.json says
+// "web_panel": "on".
+func TestWebStartScriptYesNeedsOn(t *testing.T) {
+	webCLIEnv(t, `{}`, false)
+	ws := shortTemp(t)
+	got := fakeWebHub(t, ws, `{"t":"res","id":1,"data":{"port":41237}}`)
+	code, out, errs := runWebT(t, "--yes", "--dir", ws)
+	if code != 0 || !strings.Contains(out, "Answer on the laptop") || !strings.Contains(out, `"web_panel": "on"`) {
+		t.Fatalf("exit %d out %q err %q", code, out, errs)
+	}
+	if webOpenReq(t, got) {
+		t.Fatal("a script skipped the laptop's card")
+	}
+}
+
+// Spec (T52, WEB-9): `termocode web start` only asks the UI over the hub
+// socket (web.open on a control connection); a script's --yes is passed
+// on when config.json says "web_panel": "on".
+func TestWebStartAsksTheUI(t *testing.T) {
+	webCLIEnv(t, `{"web_panel":"on"}`, false)
 	ws := shortTemp(t)
 	got := fakeWebHub(t, ws, `{"t":"res","id":1,"data":{"port":41237}}`)
 	code, out, errs := runWebT(t, "start", "--yes", "--dir", ws)
@@ -111,7 +177,7 @@ func TestWebSubcommandOffExits2(t *testing.T) {
 	sessionEnv(t)
 	ws := shortTemp(t)
 	code, _, errs := runWebT(t, "start", "--dir", ws)
-	if code != 2 || !strings.Contains(errs, `"web_panel": "on"`) {
+	if code != 2 || !strings.Contains(errs, "Start termocode here") {
 		t.Fatalf("exit %d err %q", code, errs)
 	}
 	if code, out, _ := runWebT(t, "status", "--dir", ws); code != 1 || !strings.Contains(out, "off") {
