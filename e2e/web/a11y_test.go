@@ -210,9 +210,13 @@ func TestFocusOrderFollowsTheScreen(t *testing.T) {
 				if i > 0 {
 					p.Key("\t")
 				}
+				// Positions are in page terms: a stop that scrolls its view
+				// into sight must not look like a step back up.
 				stops = append(stops, Eval[stop](p, `(() => { const e = document.activeElement; const r = e.getBoundingClientRect();
+					let top = r.top + scrollY, left = r.left + scrollX;
+					for (let x = e.parentElement; x; x = x.parentElement) { top += x.scrollTop; left += x.scrollLeft; }
 					const region = e === document.body || e === document.documentElement ? 8 : e.closest(".skip") ? 0 : e.closest(".strip, .bars") ? 1 : e.closest("nav.rail") ? 2 : e.closest("main") ? 3 : e.closest(".chatcol") ? 4 : e.closest(".pill-wrap") ? 5 : e.closest("nav.tabbar") ? 6 : 9;
-					return {Name: (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 20), Top: r.top, Left: r.left, Region: region}; })()`))
+					return {Name: (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 20), Top: top, Left: left, Region: region}; })()`))
 			}
 			for i := 1; i < len(stops); i++ {
 				a, b := stops[i-1], stops[i]
