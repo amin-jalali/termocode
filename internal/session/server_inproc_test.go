@@ -277,10 +277,11 @@ func TestTakeoverHoldExpires(t *testing.T) {
 	second, _ := served(t, s)
 	start := time.Now()
 	hello2(t, second, &ClientCaps{})
-	out := collect(second).until(t, "painted-2")
-	if strings.Contains(out, "painted-1") {
-		t.Fatalf("output from before the hold ended: %q", out)
-	}
+	// The first paint the second client sees must come after the hold.
+	// Usually it is painted-2 (painted-1 was dropped during the hold); on
+	// a slow machine (macOS CI) the attach's signal and the hold's merge
+	// and the only paint is painted-1, still after the hold.
+	collect(second).until(t, "painted-")
 	if time.Since(start) < holdTimeout {
 		t.Fatal("output before the hold timed out")
 	}
