@@ -647,6 +647,10 @@ export const S = {
   "dv.open_file": "Open File",
   "dv.binary": "A binary file: no text to compare.",
   "dv.cut": "Only the start of this file is shown: it is too long.",
+  "dv.tab_review": "{name} (AI Change)",
+  "dv.review": "Review…",
+  "dv.changed": "The file changed since then. Read the change on the laptop.",
+  "card.open_diff": "Open Changes",
 } as const;
 
 export type StringKey = keyof typeof S;

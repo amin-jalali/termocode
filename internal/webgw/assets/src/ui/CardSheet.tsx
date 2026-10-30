@@ -7,7 +7,10 @@
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Card as CardData } from "../../../../webproto/proto";
+import { diffTab } from "../lib/difftab";
+import { layout } from "../lib/layout";
 import { go, route } from "../lib/router";
+import { showFile } from "../lib/workbench";
 import { toast } from "../lib/toasts";
 import { OfflineError, ReqError } from "../net/link";
 import { answeredBy, cards, link, live, store, waiting } from "../session";
@@ -129,6 +132,18 @@ export function CardSheet({ id }: { id: string }) {
       >
         {shown.body && <p class="card-text">{shown.body}</p>}
         {shown.diff && state !== "long" && <CardDiff c={shown} />}
+        {shown.kind === "review" && shown.diff && !shown.diff.truncated && shown.file && layout.value === "desktop" && !shown.id.includes(":") && (
+          <button
+            type="button"
+            class="link card-open-diff"
+            onClick={() => {
+              pushed = false;
+              showFile(diffTab("review", shown.file ?? "", shown.id));
+            }}
+          >
+            {t("card.open_diff")}
+          </button>
+        )}
       </Card>
     </Sheet>
   );
