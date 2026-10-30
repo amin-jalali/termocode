@@ -142,13 +142,12 @@ func (m *Model) onWebCall(msg webCallMsg) tea.Cmd {
 		call.fail(webproto.CodeGone, "The connection ended.")
 		return next
 	}
-	fn := msg.hub.ops[call.op]
-	if fn == nil {
+	start := webNow()
+	cmd, found := m.webRunCall(msg.hub, call)
+	if !found {
 		call.fail(webproto.CodeNotFound, "This is not available yet.")
 		return next
 	}
-	start := webNow()
-	cmd := m.webRunOp(fn, call)
 	if d := webNow().Sub(start); d > webCallBudget {
 		webSlowCall(call.op, d)
 	}
@@ -157,6 +156,29 @@ func (m *Model) onWebCall(msg webCallMsg) tea.Cmd {
 		call.fail(webproto.CodeInternal, "Something went wrong.")
 	}
 	return tea.Batch(cmd, next)
+}
+
+// webRunCall runs the handler of call's op; found=false: it has none.
+// An op whose row says LaptopCard runs only through its card builder,
+// for a browser (the control connection is the same user's CLI).
+func (m *Model) webRunCall(h *webHub, call *webCall) (cmd tea.Cmd, found bool) {
+	if p, _ := webproto.Lookup(call.op); p.LaptopCard && call.conn.role != webproto.RoleCtl {
+		ask := webAskOps[call.op]
+		if ask == nil {
+			return nil, false
+		}
+		return m.webRunOp(func(m *Model, call *webCall) tea.Cmd {
+			if a := ask(m, call); a != nil {
+				m.webAskOpen(call, a)
+			}
+			return nil
+		}, call), true
+	}
+	fn := h.ops[call.op]
+	if fn == nil {
+		return nil, false
+	}
+	return m.webRunOp(fn, call), true
 }
 
 // webRunOp runs a handler; a panic is err internal for that request (a

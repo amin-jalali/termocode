@@ -91,11 +91,11 @@ func (r *webFilesRig) callOn(c *webConn, op string, args any) map[string]any {
 	r.id++
 	c.inflight.Add(1)
 	call := &webCall{ctx: c.ctx, conn: c, id: r.id, op: op, args: args}
-	fn := r.h.ops[op]
-	if fn == nil {
+	cmd, found := r.m.webRunCall(r.h, call)
+	if !found {
 		r.t.Fatalf("no handler for %s", op)
 	}
-	webDrain(r.t, r.m, r.m.webRunOp(fn, call))
+	webDrain(r.t, r.m, cmd)
 	var answer map[string]any
 	for _, f := range r.takeOn(c) {
 		if id, ok := f["id"].(float64); ok && uint64(id) == r.id && answer == nil {
