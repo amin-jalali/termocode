@@ -335,3 +335,19 @@ func (c *HubConn) Subs(t *testing.T, want ...string) []string {
 		got = append(got, sub.Topics...)
 	}
 }
+
+// WaitSub reads messages until a sub that names topic; anything but a
+// sub on the way fails the test.
+func (c *HubConn) WaitSub(t *testing.T, topic string) {
+	t.Helper()
+	for {
+		m := c.Next(t)
+		sub, ok := m.(*webproto.Sub)
+		if !ok {
+			t.Fatalf("page sent %s while a sub for %s was expected", show(m), topic)
+		}
+		if slices.Contains(sub.Topics, topic) {
+			return
+		}
+	}
+}
