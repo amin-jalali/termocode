@@ -1,6 +1,7 @@
 package app
 
 import (
+	"sort"
 	"strings"
 	"sync"
 
@@ -30,6 +31,7 @@ type debugConsole struct {
 	mu      sync.Mutex
 	lines   []debugConsoleLine
 	partial map[string]string // category → unterminated tail
+	seq     uint64            // bumps on every change (the web's fingerprint)
 	scroll  int               // rows above the tail
 	viewH   int
 
@@ -58,6 +60,7 @@ func (c *debugConsole) AppendOutput(category, text string) {
 	if c.partial == nil {
 		c.partial = map[string]string{}
 	}
+	c.seq++
 	text = c.partial[category] + strings.ReplaceAll(text, "\r\n", "\n")
 	parts := strings.Split(text, "\n")
 	c.partial[category] = parts[len(parts)-1]
@@ -99,6 +102,41 @@ func (c *debugConsole) Clear() {
 	c.lines = nil
 	c.partial = map[string]string{}
 	c.scroll = 0
+	c.seq++
+}
+
+// Seq changes whenever the console does.
+func (c *debugConsole) Seq() uint64 {
+	if c == nil {
+		return 0
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.seq
+}
+
+// Tail is the newest n lines (pending partials last, as Lines has
+// them); cut says older lines exist.
+func (c *debugConsole) Tail(n int) (out []debugConsoleLine, cut bool) {
+	if c == nil {
+		return nil, false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var parts []debugConsoleLine
+	for cat, p := range c.partial {
+		if p != "" {
+			parts = append(parts, debugConsoleLine{Category: cat, Text: sanitizeOutputLine(p)})
+		}
+	}
+	sort.Slice(parts, func(i, j int) bool { return parts[i].Category < parts[j].Category })
+	keep := max(n-len(parts), 0)
+	from := max(len(c.lines)-keep, 0)
+	out = append(append(out, c.lines[from:]...), parts...)
+	if len(out) > n {
+		out = out[len(out)-n:]
+	}
+	return out, from > 0 || len(c.lines)+len(parts) > n
 }
 
 func (c *debugConsole) Scroll(delta int) {
