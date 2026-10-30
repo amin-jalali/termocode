@@ -12,7 +12,8 @@ import (
 
 // webConfig is the web settings, checked.
 type webConfig struct {
-	On          bool // web_panel: "on"
+	On          bool // not "web_panel": "off": the panel on 127.0.0.1 needs no setting
+	Explicit    bool // "web_panel": "on": SSH mode and a script's --yes need it
 	Port        int  // 0: random
 	IdleMinutes int
 	MaxHours    int
@@ -26,11 +27,13 @@ type webConfig struct {
 // webSettings reads and checks the web settings from config.json.
 func webSettings() webConfig {
 	s := loadSettings()
-	c := webConfig{IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4}
+	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4}
 	switch strings.ToLower(strings.TrimSpace(s.WebPanel)) {
-	case "", "off":
+	case "":
+	case "off":
+		c.On = false
 	case "on":
-		c.On = true
+		c.Explicit = true
 	default:
 		c.Problems = append(c.Problems, fmt.Sprintf("web_panel %q: use \"on\" or \"off\"", s.WebPanel))
 	}

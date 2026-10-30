@@ -107,8 +107,11 @@ func (m *Model) webToast(level toast.Severity, title string) tea.Cmd {
 	return c
 }
 
-// webOffText is E11.
-const webOffText = `The web panel is off. Turn it on in config.json: "web_panel": "on"`
+// webOffText is E11: the user turned the panel off.
+const webOffText = `The web panel is turned off in config.json ("web_panel": "off"). Remove that line to use it.`
+
+// webSSHOffText: SSH mode needs the panel turned on on this computer.
+const webSSHOffText = `The web panel over SSH needs "web_panel": "on" in config.json on this computer.`
 
 // startWebPanel starts the gateway (open: open the link in a browser;
 // copy: copy it). Only the user's own act calls it: the start card,
@@ -122,6 +125,9 @@ func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 	cfg := webSettings()
 	if !cfg.On {
 		return m.webToast(toast.Warn, webOffText)
+	}
+	if sshPort > 0 && !cfg.Explicit {
+		return m.webToast(toast.Warn, webSSHOffText)
 	}
 	var cmds []tea.Cmd
 	if m.web == nil {
@@ -404,6 +410,14 @@ func (m *Model) webCtlOpen(call *webCall) tea.Cmd {
 	}
 	if args == nil || !args.Yes {
 		return m.webAskStart(call)
+	}
+	if cfg := webSettings(); !cfg.On || (sshPort > 0 && !cfg.Explicit) {
+		msg := webOffText
+		if cfg.On {
+			msg = webSSHOffText
+		}
+		call.fail(webproto.CodeForbidden, msg)
+		return nil
 	}
 	cmd := m.startWebPanelOn(true, false, sshPort)
 	if m.webPanel == nil {
