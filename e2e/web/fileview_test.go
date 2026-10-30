@@ -141,3 +141,42 @@ func TestFileViewVirtualizesLongFiles(t *testing.T) {
 	p.WaitJS(`(() => { const b = ` + filesView + `.querySelector(".view-body"); b.scrollTop += 400; return ` + filesView + `.querySelector(".line-chip")?.textContent.includes("of 5000") === true; })()`)
 	p.WaitJS(`(() => { const b = ` + filesView + `.querySelector(".view-body"); b.scrollTop = b.scrollHeight; return ` + codeRow(4999) + ` !== null; })()`)
 }
+
+// A tab is as wide as the laptop's editor draws it (the buffer's
+// tabstop), and every level of indent is the same width.
+func TestFileViewTabsUseTheBufferTabstop(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	r := goFile(t, p, c, "t.go")
+	lines := []string{"x", "\tx", "\t\tx", "\t\t\tx"}
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"buf": 2, "path": "t.go", "tick": 3, "lines": len(lines), "dirty": false, "ft": "go", "readonly": false})})
+	c.WaitSub(t, "buf:2")
+	snap := bufSnap(2, "t.go", lines...)
+	snap["ts"] = 3
+	c.Send(t, Snap("buf:2", 1, snap))
+	p.WaitJS(codeRow(3))
+	// The left edge of the x on each row, and the width of one x.
+	got := Eval[[]float64](p, `(() => {
+		const out = [];
+		let w = 0;
+		for (let i = 0; i < 4; i++) {
+			const el = `+filesView+`.querySelector('.crow[data-i="' + i + '"] .crow-text');
+			const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+			let n, seen = 0;
+			const at = el.textContent.indexOf("x"), r = document.createRange();
+			while ((n = walker.nextNode())) {
+				if (at < seen + n.length) { r.setStart(n, at - seen); r.setEnd(n, at - seen + 1); break; }
+				seen += n.length;
+			}
+			const b = r.getBoundingClientRect();
+			out.push(b.left);
+			w = b.width;
+		}
+		return [...out.map((x) => x - out[0]), w];
+	})()`)
+	ch := got[4]
+	for i, x := range got[:4] {
+		if want := float64(3*i) * ch; x < want-1 || x > want+1 {
+			t.Errorf("row %d: x starts %.1fpx in, want %d tabs of 3 = %.1fpx (all %v)", i, x, i, want, got)
+		}
+	}
+}
