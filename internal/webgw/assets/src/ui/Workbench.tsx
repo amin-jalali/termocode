@@ -57,7 +57,7 @@ import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, activityOf, sideActivity, t
 import type { StringKey } from "../strings";
 import { MCPView } from "../views/more/MCPView";
 import { RunsView } from "../views/more/RunsView";
-import { SearchView } from "../views/more/SearchView";
+import { DeskSearch } from "../views/desk/DeskSearch";
 import { TasksView } from "../views/more/TasksView";
 import { QuickInput } from "./QuickInput";
 import { RefsPeek } from "./RefsPeek";
@@ -407,7 +407,7 @@ function SideView({ id }: { id: Activity }) {
     case "git":
       return <GitView />;
     case "search":
-      return <SearchView />;
+      return <DeskSearch />;
     case "run":
       return (
         <div class="side-stack">

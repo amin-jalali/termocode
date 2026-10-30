@@ -5,3 +5,4 @@ import "./styles/codicons.css";
 import "./styles/workbench.css";
 import "./styles/deskterm.css";
 import "./styles/explorer.css";
+import "./styles/panes.css";

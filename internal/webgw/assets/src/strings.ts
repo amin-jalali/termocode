@@ -658,6 +658,18 @@ export const S = {
   "cmd.panel_right": "View: Move Panel Right",
   "cmd.panel_down": "View: Move Panel Down",
   "cmd.panel_max": "View: Toggle Maximized Panel",
+  "sv.dismiss": "Dismiss",
+  "sv.clear": "Clear Search Results",
+  "sv.collapse": "Collapse All",
+  "sv.expand": "Expand All",
+  "sv.case": "Match Case",
+  "sv.word": "Match Whole Word",
+  "sv.regex": "Use Regular Expression",
+  "sv.details": "Toggle Search Details",
+  "sv.count": "{n} results in {files} files",
+  "sv.count_file": "{n} results in 1 file",
+  "sv.count_one": "1 result in 1 file",
+  "sv.results": "Search results",
 } as const;
 
 export type StringKey = keyof typeof S;
