@@ -18,6 +18,9 @@ const FINAL_CODES: ReadonlySet<number> = new Set([
   1000, 1003, 1008, 1009, 4001, 4002, 4003, 4004, 4005, 4006, 4007, 4009, 4010, 4011, 4012,
 ]);
 
+/** ROLE_CHANGED is the close code of a role change: reconnect at once. */
+const ROLE_CHANGED = 4013;
+
 export const PING_EVERY_MS = 5000;
 export const DEAD_AFTER_MS = 15000;
 const HELLO_TIMEOUT_MS = 10000;
@@ -362,7 +365,9 @@ export class Link {
       this.finish(code);
       return;
     }
-    const delay = backoff(this.attempt++, this.random());
+    // 4013: the laptop changed this device's role (WEB-34). Nothing is
+    // wrong with the link: connect again at once and take the new role.
+    const delay = code === ROLE_CHANGED ? 0 : backoff(this.attempt++, this.random());
     batch(() => {
       if (this.state.peek() === "online") this.deps.store.markAllStale();
       if (this.downSince.peek() === null) this.downSince.value = this.now();

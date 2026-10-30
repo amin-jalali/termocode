@@ -75,6 +75,10 @@
     {
       "code": 4012,
       "reason": "termocode went away"
+    },
+    {
+      "code": 4013,
+      "reason": "role changed"
     }
   ],
   "err_codes": [
@@ -794,6 +798,33 @@
       "laptop_card": false,
       "audit": "yes",
       "phase": "v1"
+    },
+    {
+      "op": "control.challenge",
+      "args": "EmptyArgs",
+      "result": "ControlChallenge",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "control.ask",
+      "args": "ControlAskArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 16384,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
     },
     {
       "op": "web.open",
@@ -1554,6 +1585,28 @@
       },
       "required": [
         "chats"
+      ],
+      "additionalProperties": true
+    },
+    "ControlAskArgs": {
+      "type": "object",
+      "properties": {
+        "credential": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "credential"
+      ],
+      "additionalProperties": false
+    },
+    "ControlChallenge": {
+      "type": "object",
+      "properties": {
+        "options": {}
+      },
+      "required": [
+        "options"
       ],
       "additionalProperties": true
     },
@@ -2723,7 +2776,8 @@
             4009,
             4010,
             4011,
-            4012
+            4012,
+            4013
           ]
         },
         "t": {

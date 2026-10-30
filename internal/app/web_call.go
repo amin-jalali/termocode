@@ -113,7 +113,7 @@ func (c *webConn) request(r *webproto.Req) bool {
 	if !ok {
 		return refuse(webproto.CodeBadRequest, "Unknown action.")
 	}
-	if !webproto.Allowed(c.role, r.Op) {
+	if !webproto.Allowed(c.role, r.Op) || p.Gateway { // the gateway answers those itself
 		return refuse(webproto.CodeForbidden, "You may not do that from here.")
 	}
 	args, err := webproto.DecodeArgs(r.Op, r.Args)

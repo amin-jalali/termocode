@@ -88,6 +88,14 @@ func TestPolicyTableEnforcedInHub(t *testing.T) {
 				t.Errorf("%s from %s: %s, want forbidden", p.Op, o.role, got)
 			}
 		}
+		if p.Gateway { // the gateway answers it; the hub refuses it from anyone (WEB-34)
+			for _, o := range []*webConn{viewer, ctrl, ctl} {
+				if got := webPolicyReq(t, o, p.Op, args); got != string(webproto.CodeForbidden) {
+					t.Errorf("gateway op %s reached the hub from %s: %s", p.Op, o.role, got)
+				}
+			}
+			continue
+		}
 		big := json.RawMessage(`{"x":"` + strings.Repeat("a", p.MaxBytes) + `"}`)
 		if got := webPolicyReq(t, owner, p.Op, big); got != string(webproto.CodeLimit) {
 			t.Errorf("%s with %d bytes: %s, want limit", p.Op, len(big), got)
