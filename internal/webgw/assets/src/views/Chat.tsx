@@ -23,7 +23,7 @@ import { Run } from "./Run";
 import { View } from "./View";
 
 /** newChat asks the laptop for an empty chat; refused while the AI answers. */
-function newChat(): void {
+export function newChat(): void {
   link.request("chat.new").catch((e: unknown) => {
     if (e instanceof ReqError) toast("warn", e.code === "busy" ? t("chat.new_busy") : errText(e));
   });

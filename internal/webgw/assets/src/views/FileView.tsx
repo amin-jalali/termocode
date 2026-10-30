@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { usePinch } from "../lib/rowfont";
 import type { BufSnap } from "../../../../webproto/proto";
 import { layout } from "../lib/layout";
+import { wordWrap } from "../lib/workbench";
 import { modKey } from "../lib/platform";
 import { IconLaptop, IconPencil, IconRedo, IconRows, IconSave, IconUndo, IconWrap } from "../ui/icons";
 import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
@@ -35,8 +36,6 @@ const UPDATED_MS = 2000;
 /** MAX_FLASH: a bigger change (a reload) does not flash row by row. */
 const MAX_FLASH = 200;
 
-/** wrap is on by default; turning it off scrolls long rows sideways. */
-const wrapOn = { value: true };
 
 function baseName(path: string): string {
   const i = path.lastIndexOf("/");
@@ -108,7 +107,7 @@ function Crumbs({ dir }: { dir: string }) {
   );
 }
 
-function showOnLaptop(path: string): void {
+export function showOnLaptop(path: string): void {
   link.request("tree.reveal_on_laptop", { path }).then(
     () => toast("ok", t("laptop.shown")),
     (e: unknown) => toast("warn", errText(e)),
@@ -240,7 +239,7 @@ function Body({ st, scroller, wrap, canEdit }: { st: FileState; scroller: { curr
 export function FileView({ path }: { path: string }) {
   const body = useRef<HTMLDivElement | null>(null);
   usePinch(body);
-  const [wrap, setWrap] = useState(wrapOn.value);
+  const wrap = wordWrap.value;
   useEffect(() => {
     openPath(path);
     selection.value = null;
@@ -302,10 +301,7 @@ export function FileView({ path }: { path: string }) {
               iconOnly
               pressed={wrap}
               title={`${t("term.wrap")} (Alt+Z)`}
-              onClick={() => {
-                wrapOn.value = !wrap;
-                setWrap(!wrap);
-              }}
+              onClick={() => (wordWrap.value = !wrap)}
             >
               {t("term.wrap")}
             </Button>
@@ -362,10 +358,7 @@ export function FileView({ path }: { path: string }) {
             iconOnly={desk}
             pressed={wrap}
             title={t("term.wrap")}
-            onClick={() => {
-              wrapOn.value = !wrap;
-              setWrap(!wrap);
-            }}
+            onClick={() => (wordWrap.value = !wrap)}
           >
             {t("term.wrap")}
           </Button>

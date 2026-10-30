@@ -4,6 +4,7 @@
 // way. The frame gets the text and colours by message and sends back what
 // the user typed; the page keeps a copy of the frame's text, so text() is
 // at hand at once.
+import { signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
 import { FRAME_PATH, type FrameOpts, type FromFrame, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
@@ -57,6 +58,9 @@ export interface DeskHandle extends EditorHandle {
   opts(o: FrameOpts): void;
   reveal(line: number): void;
 }
+
+/** activeDesk is the desktop editor on screen (Go to line reveals in it). */
+export const activeDesk = signal<DeskHandle | null>(null);
 
 /** mountDesk puts the frame in parent and returns its handle. */
 export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
