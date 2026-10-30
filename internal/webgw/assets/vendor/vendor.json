@@ -1,0 +1,52 @@
+{
+  "$comment": "Browser libraries, copied byte for byte from their npm tarballs. Never edit a file here; to update, replace the folder and its row (tarball integrity from the registry, sha384 of each file). cmd/webbuild resolves the bare imports below to these files and nothing else.",
+  "packages": [
+    {
+      "name": "preact",
+      "version": "10.29.8",
+      "dir": "preact@10.29.8",
+      "tarball": "https://registry.npmjs.org/preact/-/preact-10.29.8.tgz",
+      "integrity": "sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==",
+      "license": "MIT",
+      "imports": {
+        "preact": "preact.module.js",
+        "preact/hooks": "hooks.module.js"
+      },
+      "files": {
+        "LICENSE": "sha384-xMn7eKwbmbh7PQrJ/p7EPGNYY7Ayr/2qEForngAvQzJ4zPfmwvAZRLmQUXkAYJ1W",
+        "hooks.module.js": "sha384-NB1WUh14K2Oh7NhjB2RliXB085nezUjZ+FNbCEGNeb972g+I4CjKRx+u3vbZh227",
+        "preact.module.js": "sha384-/+qYo5nYND9OqrXEuD1TAQve92IcrX0NRO0UL3OhOo4n0PKMsi5hsMdezdy76IvB"
+      }
+    },
+    {
+      "name": "@preact/signals",
+      "version": "2.11.3",
+      "dir": "preact-signals@2.11.3",
+      "tarball": "https://registry.npmjs.org/@preact/signals/-/signals-2.11.3.tgz",
+      "integrity": "sha512-mttwFM98G/JiriTgMwU+UWygL6sfVmYEiNcPSKkUnv4PxPpZhmP2ugGC4qi360+ZIHyQ8NY05bfJT3b4RUIGlw==",
+      "license": "MIT",
+      "imports": {
+        "@preact/signals": "signals.module.js"
+      },
+      "files": {
+        "LICENSE": "sha384-LuA/O5Wq5fr3WuqoS5CvPTOKDAaHZrp6ZauNoM9pJo0A5CGHEXeI2B1tVV+npmO4",
+        "signals.module.js": "sha384-WR3csfZ49vImBNHsQmb6P/lszHw/vq1VioiTxFjWFDDRmJ3bk9f4fVKhiCS0SbwX"
+      }
+    },
+    {
+      "name": "@preact/signals-core",
+      "version": "1.14.4",
+      "dir": "preact-signals-core@1.14.4",
+      "tarball": "https://registry.npmjs.org/@preact/signals-core/-/signals-core-1.14.4.tgz",
+      "integrity": "sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA==",
+      "license": "MIT",
+      "imports": {
+        "@preact/signals-core": "signals-core.module.js"
+      },
+      "files": {
+        "LICENSE": "sha384-LuA/O5Wq5fr3WuqoS5CvPTOKDAaHZrp6ZauNoM9pJo0A5CGHEXeI2B1tVV+npmO4",
+        "signals-core.module.js": "sha384-G4zs+40X/+Yju/CgNVULs6u1RU9oQrC5yOkIQnMdwj94YrvHIaSMmtxvWlIkiByV"
+      }
+    }
+  ]
+}
