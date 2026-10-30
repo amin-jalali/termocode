@@ -225,3 +225,43 @@ func TestGatewayPasskeyLogin(t *testing.T) {
 		t.Error("no login_ok in the audit")
 	}
 }
+
+// Spec (T2, T3, WEB-32/33): another site cannot drive pairing or a
+// sign-in from the user's browser: every /pair and /login request needs
+// this exact origin (403 and audited otherwise), and a form post is not
+// JSON (415).
+func TestPairAndLoginRefuseOtherOrigins(t *testing.T) {
+	r := pairedGateway(t)
+	base := "http://127.0.0.1:" + strconv.Itoa(r.port)
+	for _, path := range []string{"/pair/start", "/pair/wait", "/pair/finish", "/login/start", "/login/finish", "/login/totp"} {
+		for _, origin := range []string{"https://evil.example", "null", "http://127.0.0.1:1", ""} {
+			req, _ := http.NewRequest(http.MethodPost, base+path, strings.NewReader(`{}`))
+			req.Header.Set("Content-Type", "application/json")
+			if origin != "" {
+				req.Header.Set("Origin", origin)
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp.Body.Close()
+			if resp.StatusCode != http.StatusForbidden {
+				t.Errorf("%s from %q: %d, want 403", path, origin, resp.StatusCode)
+			}
+		}
+		req, _ := http.NewRequest(http.MethodPost, base+path, strings.NewReader(`p=x`))
+		req.Header.Set("Origin", base)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusUnsupportedMediaType {
+			t.Errorf("%s form post: %d, want 415", path, resp.StatusCode)
+		}
+	}
+	if !strings.Contains(auditText(t, r.cfg.AuditPath), `"ev":"origin_blocked"`) {
+		t.Error("blocked origins are not audited")
+	}
+}
