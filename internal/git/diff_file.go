@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os/exec"
+	"strings"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -68,4 +69,69 @@ func DiffFile(dir, path string, staged, untracked bool, max int) (out string, cu
 		}
 	}
 	return string(buf), false, nil
+}
+
+// ErrHunkGone: the hunk header asked for is not in the file's diff now
+// (the file or the index changed since the diff was read).
+var ErrHunkGone = errors.New("that change is not in the diff any more")
+
+// StageHunkHeader stages the one hunk of path's unstaged diff whose
+// header line ("@@ -a,b +c,d @@ …") is exactly header. The exact header is
+// the precondition: a diff read earlier that no longer matches stages
+// nothing (ErrHunkGone) instead of another change.
+func StageHunkHeader(dir, path, header string) error {
+	return applyHunkHeader(dir, path, header, false)
+}
+
+// UnstageHunkHeader takes the one hunk of path's staged diff whose header
+// is exactly header out of the index; the work tree keeps it.
+func UnstageHunkHeader(dir, path, header string) error {
+	return applyHunkHeader(dir, path, header, true)
+}
+
+func applyHunkHeader(dir, path, header string, staged bool) error {
+	const maxHunkDiff = 8 << 20
+	diff, cut, err := DiffFile(dir, path, staged, false, maxHunkDiff)
+	if err != nil {
+		return err
+	}
+	patch, ok := extractHunkBy(diff, func(h string) bool { return h == header })
+	if !ok {
+		if cut {
+			return errors.New("the diff is too big to pick one change from")
+		}
+		return ErrHunkGone
+	}
+	args := []string{"apply", "--cached"}
+	if staged {
+		args = append(args, "--reverse")
+	}
+	return runStdin(dir, patch, "git", append(args, "-")...)
+}
+
+// extractHunkBy returns a one-hunk patch (the file header and the first
+// hunk whose header line match accepts).
+func extractHunkBy(diff string, match func(header string) bool) (string, bool) {
+	lines := strings.Split(diff, "\n")
+	i := 0
+	for i < len(lines) && !strings.HasPrefix(lines[i], "@@") {
+		i++
+	}
+	head := lines[:i]
+	for i < len(lines) {
+		start := i
+		i++
+		for i < len(lines) && !strings.HasPrefix(lines[i], "@@") {
+			i++
+		}
+		if match(lines[start]) {
+			var b strings.Builder
+			for _, l := range append(append([]string(nil), head...), lines[start:i]...) {
+				b.WriteString(l)
+				b.WriteByte('\n')
+			}
+			return strings.TrimSuffix(b.String(), "\n\n") + "\n", true
+		}
+	}
+	return "", false
 }

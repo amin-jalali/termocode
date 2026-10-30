@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,5 +75,56 @@ func TestDiffFileNoExternalDiff(t *testing.T) {
 	}
 	if _, err := os.Stat(mark); err == nil {
 		t.Fatal("the external diff program ran")
+	}
+}
+
+// A hunk is staged and unstaged by its exact header; a header that is no
+// longer in the diff (the file changed meanwhile) is ErrHunkGone and
+// changes nothing.
+func TestHunkByHeader(t *testing.T) {
+	r := newGitTestRepo(t)
+	var base strings.Builder
+	for i := 1; i <= 30; i++ {
+		base.WriteString("line " + string(rune('a'+i%26)) + "\n")
+	}
+	r.write(t, "a.txt", base.String())
+	r.git(t, "add", "a.txt")
+	r.git(t, "commit", "-q", "-m", "init")
+	lines := strings.SplitAfter(base.String(), "\n")
+	lines[2], lines[24] = "CHANGED_A\n", "CHANGED_B\n"
+	r.write(t, "a.txt", strings.Join(lines, ""))
+
+	work, _, _ := DiffFile(r.dir, "a.txt", false, false, 1<<20)
+	var headers []string
+	for _, l := range strings.Split(work, "\n") {
+		if strings.HasPrefix(l, "@@") {
+			headers = append(headers, l)
+		}
+	}
+	if len(headers) != 2 {
+		t.Fatalf("hunks %q, want 2", headers)
+	}
+	if err := StageHunkHeader(r.dir, "a.txt", "@@ -1,1 +1,1 @@"); !errors.Is(err, ErrHunkGone) {
+		t.Fatalf("a header not in the diff: %v, want ErrHunkGone", err)
+	}
+	if err := StageHunkHeader(r.dir, "a.txt", headers[1]); err != nil {
+		t.Fatal(err)
+	}
+	staged := r.git(t, "diff", "--cached", "--no-color", "--", "a.txt")
+	if !strings.Contains(staged, "CHANGED_B") || strings.Contains(staged, "CHANGED_A") {
+		t.Fatalf("staged should hold only hunk B:\n%s", staged)
+	}
+	sh, _, _ := DiffFile(r.dir, "a.txt", true, false, 1<<20)
+	var sHeader string
+	for _, l := range strings.Split(sh, "\n") {
+		if strings.HasPrefix(l, "@@") {
+			sHeader = l
+		}
+	}
+	if err := UnstageHunkHeader(r.dir, "a.txt", sHeader); err != nil {
+		t.Fatal(err)
+	}
+	if s := r.git(t, "diff", "--cached", "--no-color", "--", "a.txt"); strings.TrimSpace(s) != "" {
+		t.Fatalf("index should be clean after unstage:\n%s", s)
 	}
 }
