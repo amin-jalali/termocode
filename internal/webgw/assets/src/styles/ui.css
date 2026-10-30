@@ -148,3 +148,7 @@
 .connect-line.is-error { color: var(--text); background: var(--bg-float); border: 1px solid var(--border); border-inline-start: 3px solid var(--red); border-radius: var(--r-card); padding: var(--s3) var(--s4); text-align: start; }
 .connect-foot { padding: var(--gutter) var(--gutter) calc(var(--gutter) + env(safe-area-inset-bottom)); width: 100%; max-width: 30rem; justify-self: center; }
 .connect-foot .btn { min-height: 3rem; font-size: 1rem; }
+/* Pairing (WEB-32): the 6-digit code the laptop's card shows too. */
+.pair-code { font-family: var(--font-mono); font-size: 2.5rem; line-height: 3rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text); unicode-bidi: isolate; direction: ltr; }
+.pair-wait { color: var(--muted); font-size: var(--fs-body); animation: breathe var(--t-pulse) ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .pair-wait { animation: none; } }
