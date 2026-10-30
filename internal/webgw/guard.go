@@ -12,6 +12,18 @@ import (
 // /auth JSON (well under 1 KiB); the WebSocket has its own read limit.
 const MaxBodyBytes = 4 << 10
 
+// MaxPasskeyBodyBytes caps the two requests that carry a passkey answer
+// (an RSA key or a long credential id can pass 4 KiB).
+const MaxPasskeyBodyBytes = 16 << 10
+
+// bodyCap is the body cap of a request path.
+func bodyCap(path string) int64 {
+	if path == "/pair/finish" || path == "/login/finish" {
+		return MaxPasskeyBodyBytes
+	}
+	return MaxBodyBytes
+}
+
 // guard is the first handler of every request. It writes the security
 // headers, then refuses anything not meant for this one site before the
 // next handler sees it.
@@ -68,11 +80,12 @@ func (g *guard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusForbidden, "wrong origin")
 		return
 	}
-	if r.ContentLength > MaxBodyBytes {
+	limit := bodyCap(r.URL.Path)
+	if r.ContentLength > limit {
 		refuse(w, http.StatusRequestEntityTooLarge, "body too large")
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	g.next.ServeHTTP(w, r)
 }
 

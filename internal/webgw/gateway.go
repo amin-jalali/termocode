@@ -157,12 +157,18 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	var pairing *Pairing
 	var devices *webdevices.Store
 	var wsRef atomic.Pointer[WS]
+	var login *Login
 	if cfg.DevicesDir != "" {
 		devices = webdevices.Open(cfg.DevicesDir)
-		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: devices, Audit: audit, Now: now,
+		pk, err := NewPasskeys(site, devices, now)
+		if err != nil {
+			return 0, fmt.Errorf("passkeys: %w", err)
+		}
+		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: devices, Audit: audit, Now: now, Passkeys: pk,
 			Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) {
 				return askPair(ctx, ctlRef.Load(), a)
 			}})
+		login = NewLogin(LoginConfig{Tokens: tokens, Passkeys: pk, Audit: audit, Now: now})
 	}
 	ctl, err := DialCtlWith(ctx, cfg.Dial, CtlHandlers{Link: func(d [sha256.Size]byte) {
 		auth.SetSecretDigest(d)
@@ -193,6 +199,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	mux.Handle("/ws", ws)
 	if pairing != nil {
 		mux.Handle("/pair/", pairing)
+		mux.Handle("/login/", login)
 	}
 	if cfg.Assets != nil {
 		mux.Handle("/", cfg.Assets)
