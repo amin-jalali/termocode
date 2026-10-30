@@ -14,11 +14,12 @@ import (
 
 // assetTypes are the only kinds of file the gateway serves.
 var assetTypes = map[string]string{
-	".html": "text/html; charset=utf-8",
-	".js":   "text/javascript; charset=utf-8",
-	".css":  "text/css; charset=utf-8",
-	".txt":  "text/plain; charset=utf-8",
-	".svg":  "image/svg+xml",
+	".html":  "text/html; charset=utf-8",
+	".js":    "text/javascript; charset=utf-8",
+	".css":   "text/css; charset=utf-8",
+	".txt":   "text/plain; charset=utf-8",
+	".svg":   "image/svg+xml",
+	".woff2": "font/woff2",
 }
 
 // ManifestPath is where an installable site serves its app manifest.
