@@ -1,6 +1,6 @@
 /* The laptop's AI on the desktop (WEBP-3): the AI diff tab's Accept and
-   Reject and the agent worktrees side view. Workbench tokens only (Dark+ /
-   Light+). */
+   Reject, the chat header's profile and model picker, and the agent
+   worktrees side view. Workbench tokens only (Dark+ / Light+). */
 
 /* Accept / Reject: the workbench's primary and secondary buttons. */
 .ai-btn {
@@ -23,6 +23,31 @@
 .ai-btn:disabled { opacity: 0.5; cursor: default; }
 .ai-btn:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: 1px; }
 .ai-note { margin: 0; }
+
+/* The chat header's pickers: small, quiet, the name cut when narrow; the
+   chat's title gives way to them. */
+.chatcol .view-sub { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.chatcol .view-actions { flex: none; }
+.ai-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 8.5rem;
+  height: 22px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--wb-side-fg);
+  font: inherit;
+  font-size: 0.75rem;
+  text-transform: none;
+  cursor: pointer;
+}
+.ai-pick:hover { background: var(--wb-toolbar-hover); }
+.ai-pick:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: -1px; }
+.ai-pick .cod { font-size: 14px; }
+.ai-pick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Agent worktrees: rows of 22 px as the side bar's other lists. */
 .agent-list, .agent-files { margin: 0; padding: 0; list-style: none; }

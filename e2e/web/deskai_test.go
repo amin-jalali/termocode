@@ -17,7 +17,8 @@ import (
 // The laptop's AI in the desktop editor (WEBP-3): ghost text and next
 // edit suggestions asked of the hub at the tick the page's text is known
 // at, the editor's Explain / Fix / Edit / Doc, the AI's suggestion as a
-// diff tab to accept or reject and the agent worktrees side view. The fake hub plays the laptop.
+// diff tab to accept or reject, the agent worktrees side view and the
+// chat's profile and model picker. The fake hub plays the laptop.
 
 // aiFixture is the ai topic: AI set up with ghost text and next edits as
 // given.
@@ -303,6 +304,35 @@ func TestDeskAIMenuDocRejectAndExplain(t *testing.T) {
 	}
 	reply(t, c, r, webproto.AIAction{Kind: "explain", Chat: true, ChatID: "c-1", Lines: []string{}})
 	p.WaitJS(`document.querySelector(".chatcol")`)
+}
+
+// The chat's header shows the laptop's profile and model; picking
+// another asks here first (Cancel first), then the laptop.
+func TestDeskAIPicker(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	c.Send(t, Snap("ai", 1, aiFixture(true, true)))
+	pick := `document.querySelector('.ai-pick[data-pick="profile"]')`
+	p.WaitJS(pick + `?.textContent.includes("default") && document.querySelector('.ai-pick[data-pick="model"]')?.textContent.includes("claude-sonnet-4-5")`)
+	p.TapJS(pick)
+	p.WaitJS(`document.querySelector(".ctx-menu .ctx-item")`)
+	if got := menuLabels(p); got != "default|review|repo" {
+		t.Errorf("profiles %q", got)
+	}
+	if got := Eval[string](p, `[...document.querySelectorAll(".ctx-menu .ctx-item")].filter((b) => b.disabled).map((b) => b.querySelector(".ctx-label").textContent).join("|")`); got != "default|repo" {
+		t.Errorf("off: %q (the one in use and the untrusted one)", got)
+	}
+	menuPick(p, "review")
+	p.WaitJS(`document.querySelector(".ask-text")?.textContent === "Use profile review for the next chat messages?"`)
+	p.WaitJS(`document.activeElement?.textContent === "Cancel"`) // the safe choice first and focused
+	noReq(t, c, 300*time.Millisecond)
+	p.WaitJS(`document.querySelector(".ask .btn-danger.is-armed")`) // it arms after 600 ms (web UX 3.9)
+	p.TapJS(`document.querySelector(".ask .btn-danger")`)
+	r := expectReq(t, c, "ai.use_profile")
+	if string(r.Args) != `{"name":"review"}` {
+		t.Errorf("args %s", r.Args)
+	}
+	reply(t, c, r, webproto.AskRef{Card: "k1"})
+	p.WaitJS(`document.querySelector(".waiting, .wait")`)
 }
 
 // The agent worktrees view lists each worktree with its branch, owner
