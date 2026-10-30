@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -170,7 +171,64 @@ func TestAuditRotates(t *testing.T) {
 	}
 }
 
-// TestAuditNilIsQuiet:code with no audit log configured just runs.
+// TestNoSecretInAuditSummary: the summary is built from policy (a path, a
+// label, a count), but the log cleans it again: any long token-like run is
+// masked, control and bidi characters go, and it is capped (T8).
+func TestNoSecretInAuditSummary(t *testing.T) {
+	launch, _, err := NewLaunchSecret(t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secrets := []string{
+		launch,
+		"sk-" + "test" + "-0123456789abcdefghijklmnopqrstuvwxyz",
+		"ghp_" + "0123456789abcdefABCDEF0123456789abcd",
+		strings.Repeat("0123456789abcdef", 4),
+		"QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo0123456789+/==",
+	}
+	path := filepath.Join(t.TempDir(), "a.jsonl")
+	a := openAudit(t, path)
+	for _, s := range secrets {
+		for _, ev := range []Event{
+			{Kind: EvOp, Op: "buf.save", Summary: "saved src/main.go with " + s},
+			{Kind: EvOp, Op: "term.send", Summary: s},
+			{Kind: EvAuthFail, Why: "wrong " + s, Conn: s, Device: s, Op: s},
+		} {
+			if err := a.Log(ev); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range secrets {
+		if bytes.Contains(raw, []byte(s)) || bytes.Contains(raw, []byte(s[:24])) {
+			t.Errorf("audit log holds %.12q…", s)
+		}
+	}
+	if !bytes.Contains(raw, []byte("saved src/main.go with ")) {
+		t.Error("the readable part of the summary was lost")
+	}
+}
+
+func TestAuditSummaryCleaned(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"src/internal/webgw/listen_unix_test.go", "src/internal/webgw/listen_unix_test.go"},
+		{"3 files", "3 files"},
+		{"a\x1b[31mred\x07\r\nb", "a[31mredb"},
+		{"x‮evil⁦y", "xevily"},
+		{"bad \xff utf8", "bad � utf8"},
+		{strings.Repeat("ab ", 100), strings.Repeat("ab ", 66) + "a…"},
+	} {
+		if got := cleanAuditText(tc.in); got != tc.want {
+			t.Errorf("clean(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+// TestAuditNilIsQuiet: code with no audit log configured just runs.
 func TestAuditNilIsQuiet(t *testing.T) {
 	var a *Audit
 	if err := a.Log(Event{Kind: EvStart}); err != nil {

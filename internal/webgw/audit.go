@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
+	"unicode"
 )
 
 // EventKind names what happened. The set is closed: every kind is listed
@@ -115,13 +117,17 @@ func (a *Audit) open() error {
 	return nil
 }
 
-// Log appends e as one JSON line. A zero e.T is set to now.
+// Log appends e as one JSON line. A zero e.T is set to now. Every text
+// field passes cleanAuditText first.
 func (a *Audit) Log(e Event) error {
 	if a == nil {
 		return nil
 	}
 	if e.T.IsZero() {
 		e.T = a.now()
+	}
+	for _, f := range []*string{&e.Conn, &e.Device, &e.Op, &e.Why, &e.Summary} {
+		*f = cleanAuditText(*f)
 	}
 	line, err := json.Marshal(e)
 	if err != nil {
@@ -163,6 +169,65 @@ func (a *Audit) rotate() error {
 		return err
 	}
 	return a.open()
+}
+
+// Audit text limits: a run of maskRunLen or more token characters looks
+// like a key or token and is masked; a field is at most maxAuditText runes.
+const (
+	maskRunLen   = 24
+	maxAuditText = 200
+)
+
+// cleanAuditText makes one text field safe for the log, even if a caller
+// passed something it should not have: invalid UTF-8 is replaced; control
+// and bidi characters are dropped; any long token-like run (keys, tokens,
+// hex digests) becomes "[masked]"; the result is capped.
+func cleanAuditText(s string) string {
+	s = strings.ToValidUTF8(s, "�")
+	var out []rune
+	var run []rune
+	flush := func() {
+		if len(run) >= maskRunLen {
+			out = append(out, []rune("[masked]")...)
+		} else {
+			out = append(out, run...)
+		}
+		run = run[:0]
+	}
+	for _, r := range s {
+		switch {
+		case unicode.IsControl(r) || isBidiControl(r):
+			continue
+		case isTokenRune(r):
+			run = append(run, r)
+		default:
+			flush()
+			out = append(out, r)
+		}
+	}
+	flush()
+	if len(out) > maxAuditText {
+		out = append(out[:maxAuditText-1], '…')
+	}
+	return string(out)
+}
+
+// isTokenRune: the characters keys and tokens are made of (base64, base64url,
+// hex, and the dashes of prefixed keys). Not '/' or '.', so paths stay.
+func isTokenRune(r rune) bool {
+	return r < 0x80 && (unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '-' || r == '+' || r == '=')
+}
+
+// isBidiControl: marks, embeddings, overrides and isolates that can make
+// a log line read differently from what it holds.
+func isBidiControl(r rune) bool {
+	switch {
+	case r == 0x061C, r == 0x200E, r == 0x200F:
+		return true
+	case r >= 0x202A && r <= 0x202E, r >= 0x2066 && r <= 0x2069:
+		return true
+	}
+	return false
 }
 
 // Close closes the log.
