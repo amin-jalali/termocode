@@ -208,6 +208,7 @@ You can give these a key in `keymap.json` (see below), or run them from the comm
 | `SplitHorizontal` | View | Split the editor down. |
 | `ToggleAutoSave` | File | Turn auto save on or off. |
 | `ToggleHidden` | Panels | Show or hide hidden files in the explorer. |
+| `WebStop` | View | Stop the web panel: every browser is disconnected at once (Web: Stop Panel). No default key. |
 
 ## Editor keys (Neovim)
 
