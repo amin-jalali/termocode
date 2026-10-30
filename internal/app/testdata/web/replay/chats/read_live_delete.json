@@ -1,0 +1,76 @@
+{
+  "topic": "chats",
+  "snap0": {
+    "chats": [
+      {
+        "id": "c-1",
+        "msgs": 1,
+        "open": true,
+        "title": "Fix the build",
+        "updated": 3000
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "chat": {
+        "id": "c-mid",
+        "msgs": 1,
+        "title": "Mid chat",
+        "updated": 2000
+      },
+      "op": "upsert"
+    },
+    {
+      "chat": {
+        "id": "c-old",
+        "msgs": 1,
+        "title": "Old chat",
+        "updated": 1000
+      },
+      "op": "upsert"
+    },
+    {
+      "chat": {
+        "id": "c-1",
+        "live": true,
+        "msgs": 1,
+        "open": true,
+        "title": "Fix the build",
+        "updated": 3000
+      },
+      "op": "upsert"
+    },
+    {
+      "chat": {
+        "id": "c-1",
+        "msgs": 1,
+        "open": true,
+        "title": "Fix the build",
+        "updated": 4000
+      },
+      "op": "upsert"
+    },
+    {
+      "id": "c-old",
+      "op": "remove"
+    }
+  ],
+  "snapn": {
+    "chats": [
+      {
+        "id": "c-1",
+        "title": "Fix the build",
+        "updated": 4000,
+        "msgs": 1,
+        "open": true
+      },
+      {
+        "id": "c-mid",
+        "title": "Mid chat",
+        "updated": 2000,
+        "msgs": 1
+      }
+    ]
+  }
+}

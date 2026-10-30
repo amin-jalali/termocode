@@ -55,6 +55,7 @@ type webHub struct {
 	resume map[string]*webResumeEntry // Update only: dropped connections by id
 	shell  webShellState              // Update only: what status, toasts and attention sent (web_after.go)
 	chat   webChatPub                 // Update only: what the chat topic sent (web_chat.go)
+	chats  webChatsPub                // Update only: the chat list (web_chats.go)
 
 	ln    net.Listener
 	peer  func(net.Conn) error
