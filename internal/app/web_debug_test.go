@@ -61,7 +61,10 @@ func webTestFakeDebug(t *testing.T) *webTestDebugLog {
 	t.Helper()
 	l := &webTestDebugLog{}
 	oldStart, oldRun, oldStep, oldBp, oldAsk := webDebugStartCfg, webDebugRunCmd, webDebugStep, webDebugSetBp, webDebugAsk
-	webDebugStartCfg = func(m *Model, cfg launchConfig) (tea.Cmd, error) { l.starts = append(l.starts, cfg.Name); return nil, nil }
+	webDebugStartCfg = func(m *Model, cfg launchConfig) (tea.Cmd, error) {
+		l.starts = append(l.starts, cfg.Name)
+		return nil, nil
+	}
 	webDebugRunCmd = func(m *Model, cwd, cmdline string) { l.runs = append(l.runs, cmdline) }
 	webDebugStep = func(m *Model, op string) tea.Cmd { l.steps = append(l.steps, op); return nil }
 	webDebugSetBp = func(m *Model, abs string, line int, cond, hit, logMsg string) error {
