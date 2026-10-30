@@ -5,6 +5,7 @@
 # How to update a budget:
 #   1. Measure on your machine, throttled like a CI box:
 #        GOMAXPROCS=4 TERMOCODE_PERF=1 go test -count=1 -run Perf -v ./internal/testkit/
+#        GOMAXPROCS=4 TERMOCODE_PERF=1 go test -count=1 -run '^TestPerf(Search20kFiles|GitRefresh20k|QuickOpen50k)$' -v ./internal/search/ ./internal/app/
 #        GOMAXPROCS=4 TERMOCODE_PERF=1 go -C e2e test -tags e2e -count=1 -run Perf -v ./...
 #      Each guard logs "perf: <name> = <got> (budget …)".
 #   2. Set the limit to about 2x the local number (CI machines are slower)
