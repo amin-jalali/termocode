@@ -11,6 +11,9 @@
 /* Browsers that only shrink the visual viewport for the keyboard may also
    scroll it; the shell follows. While the keyboard is up on a phone the
    tab bar and the pill hide, so the focused input is never covered. */
+/* Without the tab bar (rail layouts) the shell itself keeps above the
+   home bar. */
+.shell.layout-tablet, .shell.layout-desktop { padding-bottom: env(safe-area-inset-bottom); }
 html[data-kb="up"] .shell { transform: translateY(var(--vvtop, 0px)); }
 html[data-kb="up"] .layout-phone .tabbar,
 html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
@@ -94,7 +97,7 @@ html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
 .rtt-none { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85); }
 
 /* ---- Bars under the strip ---- */
-.bars { z-index: var(--z-bar); }
+.bars { z-index: var(--z-bar); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 .bar, .hint {
   display: flex;
   align-items: center;
@@ -114,7 +117,9 @@ html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
 .hint { border-inline-start-color: var(--ai); }
 
 /* ---- Body: rail | main | chat ---- */
-.body { display: flex; min-height: 0; }
+/* Turned sideways, a notch or a rounded corner covers a side: the
+   columns keep out of it (the strip and the tab bar pad themselves). */
+.body { display: flex; min-height: 0; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 .main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .main:focus { outline: none; }
 .chatcol {
@@ -195,7 +200,7 @@ html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
 .rail .nav-label { font-size: 0.6875rem; }
 
 /* ---- Attention pill ---- */
-.pill-wrap { padding: var(--s2) var(--gutter); background: var(--bg); z-index: var(--z-nav); }
+.pill-wrap { padding: var(--s2) calc(var(--gutter) + env(safe-area-inset-right)) var(--s2) calc(var(--gutter) + env(safe-area-inset-left)); background: var(--bg); z-index: var(--z-nav); }
 .layout-phone .pill-wrap { padding-bottom: var(--s2); }
 .attention {
   display: flex;
@@ -215,7 +220,7 @@ html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
 .attention .star { font-size: 1rem; }
 .attention-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attention-go { font-family: var(--font-mono); font-size: var(--fs-row); color: var(--ai); white-space: nowrap; }
-.layout-tablet .pill-wrap, .layout-desktop .pill-wrap { padding-inline-start: calc(var(--rail-w) + var(--gutter)); }
+.layout-tablet .pill-wrap, .layout-desktop .pill-wrap { padding-inline-start: calc(var(--rail-w) + var(--gutter) + max(env(safe-area-inset-left), env(safe-area-inset-right))); }
 .layout-desktop .pill-wrap { max-width: calc(100% - var(--chat-w)); }
 
 /* ---- Toasts ---- */
@@ -225,7 +230,8 @@ html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
   /* Toasts.tsx sets --toast-top (under the middle column's head) and
      --toast-end (the chat column's width on a desktop). */
   top: var(--toast-top, calc(var(--strip-h) + env(safe-area-inset-top) + var(--s2)));
-  inset-inline: var(--gutter);
+  left: calc(var(--gutter) + env(safe-area-inset-left));
+  right: calc(var(--gutter) + env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
   gap: var(--s2);
@@ -258,7 +264,7 @@ html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
   .desk-only { display: inline-flex; }
 }
 .layout-tablet .toasts, .layout-desktop .toasts {
-  inset-inline: auto calc(var(--toast-end, 0px) + var(--gutter));
+  inset-inline: auto calc(var(--toast-end, 0px) + var(--gutter) + max(env(safe-area-inset-left), env(safe-area-inset-right)));
   width: 22rem;
 }
 .att-mark { font-family: var(--font-mono); color: var(--muted); }
