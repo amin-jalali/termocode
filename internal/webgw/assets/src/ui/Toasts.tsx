@@ -20,7 +20,7 @@ export function Toasts() {
             <div class="toast-title" dir="auto">{x.title}</div>
             {x.detail && <div class="toast-detail" dir="auto">{x.detail}</div>}
           </div>
-          <button type="button" class="toast-x" aria-label={t("toast.close")} onClick={() => dismiss(x.id)}>
+          <button type="button" class="toast-x" aria-label={t("close")} onClick={() => dismiss(x.id)}>
             ×
           </button>
         </div>
