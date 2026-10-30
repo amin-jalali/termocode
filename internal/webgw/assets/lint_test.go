@@ -36,6 +36,9 @@ var sourceRules = []rule{
 	{name: "localStorage", re: regexp.MustCompile(`\blocalStorage\b`), allow: map[string]bool{"lib/prefs.ts": true}},
 	// Only the auth module keeps the session token, in sessionStorage.
 	{name: "sessionStorage", re: regexp.MustCompile(`\bsessionStorage\b`), allow: map[string]bool{"net/auth.ts": true}},
+	// Network: only the auth module fetches (POST /auth), only the link opens a socket.
+	{name: "fetch", re: regexp.MustCompile(`\bfetch\s*\(`), allow: map[string]bool{"net/auth.ts": true}},
+	{name: "WebSocket", re: regexp.MustCompile(`\bnew\s+(this\.)?(WebSocket|WS)\b|\bWebSocket\s*\(`), allow: map[string]bool{"net/link.ts": true}},
 	{name: "cookies", re: regexp.MustCompile(`document\.cookie`)},
 	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`)},
 }
@@ -62,6 +65,7 @@ func TestLintCatchesEachRule(t *testing.T) {
 		`a.href = "javascript:void 0"`, `fetch("https://example.com")`, `await import("./x")`,
 		`@import "x.css";`, `localStorage.setItem("t", tok)`, `sessionStorage.x = 1`,
 		`document.cookie = "a=b"`, `window.open("/")`, `new DOMParser()`,
+		`fetch("/x")`, `new WebSocket("/ws")`,
 	} {
 		if len(lintSource("views/x.tsx", bad)) == 0 {
 			t.Errorf("lint passed %q", bad)
