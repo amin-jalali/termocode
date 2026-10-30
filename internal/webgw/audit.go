@@ -37,6 +37,9 @@ const (
 	EvOp            EventKind = "op"             // a browser request (Op, OK, Summary)
 	EvFunnelStop    EventKind = "funnel_stop"    // stopped: the tailnet port became public
 	EvServeGone     EventKind = "serve_gone"     // stopped: tailscale serve ended
+	EvPairStart     EventKind = "pair_start"     // a phone used a pairing link (Device: its name)
+	EvPairOK        EventKind = "pair_ok"        // the owner said yes: a device was paired
+	EvPairFail      EventKind = "pair_fail"      // a pairing was refused (Why: the rule or denied)
 )
 
 // AllEventKinds lists every kind, for tests and docs.
@@ -44,6 +47,7 @@ var AllEventKinds = []EventKind{
 	EvStart, EvStop, EvAuthOK, EvAuthFail, EvSecretBurned, EvRateLimited,
 	EvConnect, EvDisconnect, EvProtoError, EvOriginBlocked, EvHostBlocked,
 	EvIdleStop, EvMaxStop, EvKillSwitch, EvOp, EvFunnelStop, EvServeGone,
+	EvPairStart, EvPairOK, EvPairFail,
 }
 
 // Event is one audit line. It has no field for a secret, a token, a
