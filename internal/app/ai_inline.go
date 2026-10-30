@@ -228,43 +228,71 @@ func (m *Model) onAIInlineResult(msg aiInlineResultMsg) tea.Cmd {
 		}
 		return nil
 	}
-	comp, ok := ai.ParseInlineResponse(msg.raw)
+	show, ok := aiInlineAnswer(msg.snap.inlineCtx(), msg.snap.Filetype, msg.raw, msg.manual, func() []string {
+		if m.nvim == nil {
+			return nil
+		}
+		lines, _ := m.nvim.CurrentBufLines()
+		return lines
+	})
 	if !ok {
-		if msg.manual {
+		if msg.manual && show.why != "" {
 			var c tea.Cmd
-			m.toast, c = m.toast.Push(toast.Info, "AI has no suggestion here")
+			m.toast, c = m.toast.Push(toast.Info, show.why)
 			return c
 		}
-		return nil
-	}
-	text, ok := ai.FilterInlineCompletion(msg.snap.inlineCtx(), comp.InsertText, msg.manual)
-	if !ok {
-		if msg.manual {
-			var c tea.Cmd
-			m.toast, c = m.toast.Push(toast.Info, "AI has no suggestion here")
-			return c
-		}
-		return nil
-	}
-	res := ai.ResolveInlineCompletion(msg.snap.LineBefore, msg.snap.LineAfter, text)
-	if strings.TrimSpace(res.Insert) == "" {
 		return nil
 	}
 	imports := map[string]any{"at": 0, "lines": []string{}}
-	if len(comp.ImportLines) > 0 && m.nvim != nil {
-		if lines, err := m.nvim.CurrentBufLines(); err == nil {
-			at, add := ai.ImportInsertion(lines, msg.snap.Filetype, comp.ImportLines)
-			if len(add) > 0 {
-				imports = map[string]any{"at": at, "lines": add}
-			}
-		}
+	if len(show.imports) > 0 {
+		imports = map[string]any{"at": show.importAt, "lines": show.imports}
 	}
 	s.inlineCache.Reset()
-	if m.aiShowGhost(msg.snap, res.Insert, res.DeleteBefore, imports) && res.DeleteBefore == 0 {
-		s.inlineCache.Remember(msg.snap.Buf, msg.snap.Row, msg.snap.LineBefore, res.Insert)
+	if m.aiShowGhost(msg.snap, show.insert, show.del, imports) && show.del == 0 {
+		s.inlineCache.Remember(msg.snap.Buf, msg.snap.Row, msg.snap.LineBefore, show.insert)
 		s.inlineImp = imports
 	}
 	return nil
+}
+
+// aiInlineShown is what one inline answer shows at the caret: delete del
+// bytes left of it, insert insert, and add the import lines before row
+// importAt. why: a manual request that got nothing says so.
+type aiInlineShown struct {
+	insert   string
+	del      int
+	importAt int
+	imports  []string
+	why      string
+}
+
+// aiNoSuggestion is the answer to a manual request that got nothing.
+const aiNoSuggestion = "AI has no suggestion here"
+
+// aiInlineAnswer turns the model's raw answer into ghost text with the
+// suggestion policy (parse, filter, continuation or rewrite, imports).
+// lines reads the buffer for the imports, only when there are some. The
+// laptop's editor and the web's use it alike.
+func aiInlineAnswer(c ai.InlineContext, ft, raw string, manual bool, lines func() []string) (aiInlineShown, bool) {
+	comp, ok := ai.ParseInlineResponse(raw)
+	if !ok {
+		return aiInlineShown{why: aiNoSuggestion}, false
+	}
+	text, ok := ai.FilterInlineCompletion(c, comp.InsertText, manual)
+	if !ok {
+		return aiInlineShown{why: aiNoSuggestion}, false
+	}
+	res := ai.ResolveInlineCompletion(c.LineBefore, c.LineAfter, text)
+	if strings.TrimSpace(res.Insert) == "" {
+		return aiInlineShown{}, false
+	}
+	out := aiInlineShown{insert: res.Insert, del: res.DeleteBefore}
+	if len(comp.ImportLines) > 0 {
+		if ls := lines(); ls != nil {
+			out.importAt, out.imports = ai.ImportInsertion(ls, ft, comp.ImportLines)
+		}
+	}
+	return out, true
 }
 
 // aiTriggerInline is Alt+\ / palette: ask now, skip the debounce.
