@@ -3486,6 +3486,9 @@
     "WebOpenArgs": {
       "type": "object",
       "properties": {
+        "ssh_port": {
+          "type": "integer"
+        },
         "yes": {
           "type": "boolean"
         }

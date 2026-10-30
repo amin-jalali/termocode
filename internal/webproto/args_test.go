@@ -63,6 +63,9 @@ func TestArgsRules(t *testing.T) {
 		{OpSearchOpen, `{"path":"a.go","line":0}`},
 		{OpTasksRun, `{"label":""}`},
 		{OpRunsStop, `{"key":""}`},
+		{OpWebOpen, `{"yes":true,"ssh_port":80}`},
+		{OpWebOpen, `{"yes":true,"ssh_port":65536}`},
+		{OpWebOpen, `{"ssh_port":41237}`}, // SSH mode is always the user's own command: yes
 	}
 	for _, c := range bad {
 		if _, err := DecodeArgs(c.op, json.RawMessage(c.args)); !errors.Is(err, ErrInvalid) {
@@ -87,6 +90,8 @@ func TestArgsRules(t *testing.T) {
 		{OpSearchStop, `{}`},
 		{OpSearchOpen, `{"path":"a.go","line":1}`},
 		{OpCardsAnswer, `{"id":"card-9","choice":"deny"}`},
+		{OpWebOpen, `{"yes":true,"ssh_port":41237}`},
+		{OpWebOpen, `{}`},
 	}
 	// No amend from the web: the field does not exist.
 	if _, err := DecodeArgs(OpGitCommit, json.RawMessage(`{"message":"fix","amend":true}`)); err == nil {

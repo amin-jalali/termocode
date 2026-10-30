@@ -131,7 +131,12 @@ type KeyArgs struct {
 }
 
 // WebOpenArgs starts the web side from the command line; Yes skips the
-// start card (same user only, on the control connection).
+// start card (same user only, on the control connection). SSHPort (0:
+// off) is `termocode ssh --web` (WEB-29): the gateway serves on a unix
+// socket for the user's ssh forward of 127.0.0.1:SSHPort, and the answer
+// carries the one-time secret for the far side to hand over. It always
+// comes with Yes: the user typed the command themselves.
 type WebOpenArgs struct {
-	Yes bool `json:"yes,omitempty"`
+	Yes     bool `json:"yes,omitempty"`
+	SSHPort int  `json:"ssh_port,omitempty"`
 }
