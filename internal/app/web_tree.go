@@ -51,6 +51,7 @@ func init() {
 	webTopics["tree"] = webTopicDef{snapshot: webTreeSnapshot, apply: webTreeApply}
 	webOps[webproto.OpTreeList] = webOpTreeList
 	webOps[webproto.OpTreeUnlist] = webOpTreeUnlist
+	webOps[webproto.OpTreeRevealLaptop] = webOpTreeReveal
 }
 
 // webFail answers call with err's code (internal for a plain error).
@@ -182,6 +183,25 @@ func webOpTreeUnlist(m *Model, call *webCall) tea.Cmd {
 			m.webTreeDrop(t, rel)
 		}
 	}
+	call.reply(nil)
+	return nil
+}
+
+// webOpTreeReveal shows a file or folder in the laptop's explorer: the
+// sidebar opens if it was closed and the explorer's cursor moves to the
+// path. Keyboard focus stays where the user has it; the browser only
+// points, the laptop user decides what to do next.
+func webOpTreeReveal(m *Model, call *webCall) tea.Cmd {
+	abs, err := m.webResolve(call.args.(*webproto.PathArgs).Path)
+	if err != nil {
+		webFail(call, err)
+		return nil
+	}
+	if !m.showExp {
+		m.showExp = true
+		m.applyLayout()
+	}
+	m.explorer.RevealPath(abs)
 	call.reply(nil)
 	return nil
 }
