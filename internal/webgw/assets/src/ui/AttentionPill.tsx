@@ -1,8 +1,9 @@
 // The attention pill: one line above the tab bar on every tab, the "now"
 // without a Home tab (web UX 4.1). It shows the most urgent thing only.
 import { h } from "preact";
-import { goTab } from "../lib/router";
-import { status } from "../session";
+import { clearNotice, notice } from "../lib/attention";
+import { go, goTab, route } from "../lib/router";
+import { waiting } from "../session";
 import { t, tn } from "../strings";
 
 export type AttentionKind = "cards" | "run_done" | "run_failed" | "task_done" | "waiting_laptop";
@@ -33,8 +34,36 @@ export function AttentionView({ kind, n = 1, onClick }: { kind: AttentionKind; n
   );
 }
 
+/** openCards opens the card sheet on the first card the web may answer
+ * (or the first card at all), over the current tab. */
+export function openCards(): void {
+  const w = waiting.value;
+  const first = w.answer[0] ?? w.laptop[0];
+  if (first) go({ ...route.value, card: first.id });
+  else goTab("chat");
+}
+
+/** AttentionPill shows the most urgent thing only: cards to answer, then
+ * cards that wait for the laptop, then the newest run or task event. */
 export function AttentionPill() {
-  const s = status.value;
-  if (s.cardsWaiting === 0) return null;
-  return <AttentionView kind="cards" n={s.cardsWaiting} onClick={() => goTab("chat")} />;
+  const w = waiting.value;
+  const n = notice.value;
+  if (w.answer.length > 0 || (w.count > 0 && w.laptop.length === 0)) {
+    return <AttentionView kind="cards" n={w.answer.length || w.count} onClick={openCards} />;
+  }
+  if (w.laptop.length !== 0) {
+    return <AttentionView kind="waiting_laptop" n={w.laptop.length} onClick={openCards} />;
+  }
+  if (n) {
+    return (
+      <AttentionView
+        kind={n}
+        onClick={() => {
+          clearNotice();
+          goTab("more");
+        }}
+      />
+    );
+  }
+  return null;
 }

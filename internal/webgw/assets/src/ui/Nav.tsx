@@ -3,7 +3,8 @@
 // badges in reserved space so nothing shifts when they appear.
 import { h, type ComponentType } from "preact";
 import { goTab, route } from "../lib/router";
-import { status } from "../session";
+import { bell } from "../lib/attention";
+import { status, waiting } from "../session";
 import type { Tab } from "../state/route";
 import { t, type StringKey } from "../strings";
 import { IconChat, IconFiles, IconGit, IconMore, IconTerm } from "./icons";
@@ -27,10 +28,12 @@ export type BadgeKind = { kind: "count"; n: number; tone: "ai" | "plain" } | { k
 function badgeFor(tab: Tab): BadgeKind {
   const s = status.value;
   switch (tab) {
-    case "chat":
-      return s.cardsWaiting > 0 ? { kind: "count", n: s.cardsWaiting, tone: "ai" } : null;
+    case "chat": {
+      const n = waiting.value.count;
+      return n > 0 ? { kind: "count", n, tone: "ai" } : null;
+    }
     case "term":
-      return s.termBusy > 0 ? { kind: "dot", tone: "amber" } : null;
+      return s.termBusy > 0 || bell.value ? { kind: "dot", tone: "amber" } : null;
     case "git":
       return s.dirty > 0 ? { kind: "count", n: s.dirty, tone: "plain" } : null;
     case "more":

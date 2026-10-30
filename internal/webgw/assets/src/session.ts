@@ -1,8 +1,10 @@
 // The page's one store and one link to the hub.
 import { computed, effect } from "@preact/signals";
+import { onAttention } from "./lib/attention";
 import { syncLaptopToasts, type LaptopToast } from "./lib/toasts";
 import { token } from "./net/auth";
 import { Link } from "./net/link";
+import { readCards, splitCards } from "./state/cards";
 import { readStatus } from "./state/status";
 import { readTheme } from "./state/theme";
 import { Store } from "./state/store";
@@ -37,3 +39,20 @@ export function listOf<T>(data: unknown, key: string): T[] {
 
 // The laptop's toasts show on the page as they come and go (WEB-12).
 effect(() => syncLaptopToasts(listOf<LaptopToast>(store.topic("toasts").value?.data, "toasts")));
+
+link.onEvent((kind, data) => {
+  if (kind === "attention") onAttention(data);
+});
+
+/** cards is the waiting cards, oldest first. */
+export const cards = computed(() => readCards(store.topic("cards").value?.data));
+
+/** waiting splits the cards into those the web may answer and those that
+ * wait for the laptop; before the cards topic arrives, the status count
+ * stands in for the first. */
+export const waiting = computed(() => {
+  const st = store.topic("cards").value;
+  if (st) return { ...splitCards(cards.value), count: cards.value.length };
+  const n = status.value.cardsWaiting;
+  return { answer: [], laptop: [], count: n };
+});
