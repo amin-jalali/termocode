@@ -171,6 +171,12 @@ export interface SearchOpenArgs {
   line: number;
 }
 
+export interface HlArgs {
+  buf: number;
+  first: number;
+  last: number;
+}
+
 export interface ChatSendArgs {
   text: string;
   chat_id?: string;
@@ -719,6 +725,16 @@ export interface TaskTail {
   code?: number;
 }
 
+export interface HlRes {
+  tick: number;
+  first: number;
+  last: number;
+  groups: string[];
+  spans: number[][];
+  none?: boolean;
+  cut?: boolean;
+}
+
 export interface ChatRef {
   id: string;
 }
@@ -767,6 +783,7 @@ export interface OpArgs {
   "tasks.tail": LabelArgs;
   "search.stop": EmptyArgs;
   "search.open": SearchOpenArgs;
+  "buf.hl": HlArgs;
   "chat.send": ChatSendArgs;
   "chat.stop": EmptyArgs;
   "chat.new": EmptyArgs;
@@ -834,6 +851,7 @@ export interface OpResult {
   "git.show": GitDiff;
   "search.run": SearchSummary;
   "tasks.tail": TaskTail;
+  "buf.hl": HlRes;
   "chat.send": ChatRef;
   "chat.new": ChatRef;
   "buf.set_text": EditRes;
