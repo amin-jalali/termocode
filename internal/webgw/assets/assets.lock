@@ -2,5 +2,6 @@
 # One built file per line: path, sha384 (SRI form), size in bytes.
 app.css sha384-dW9AMXmqeqhbhFZHqqJ8kLM7Z1v2h8hB5xGRl/r1k1jsnPtPEztZUEvl41NtK3LB 18136
 app.js sha384-7BY7ynQRdTDDViI4qlksu7l4e3gwZlf3vhdmqW0ugI0TIIrhJNT+7XBzOd/5Tcif 51066
-index.html sha384-0/cdRwN7nIxW+zmMqro3Opi7VWQdDuJ0/XpWc3Kus6lOchN5z4QoYb5u6szDdtAY 701
+icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
+index.html sha384-Z+EWhDFUmWyN0fKFqm9qV6oXdjriLEr2fCHmRKCk8J5TSIfM4X3YBZUIl3DAmDOh 764
 licenses.txt sha384-Yc3Ynnbygxy3h+WVQ2LKi09qBiCPX99EtCrfQa7m8/58IWbHJC6tthxpPXCm6Rov 3617
