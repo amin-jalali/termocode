@@ -4,6 +4,7 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -401,5 +402,64 @@ func TestChatListOpensAndFollows(t *testing.T) {
 			p.WaitJS(view + `.innerText.includes("laptop moved on") && !` + view + `.querySelector(".chat-pinned")`)
 			p.WaitJS(composer + `?.querySelector("textarea")`)
 		})
+	}
+}
+
+// A long chat arrives with its older messages as stubs. The page draws
+// the newest 60, fetches a stub with chat.get_message when it scrolls
+// into view, draws 60 more with Load older without moving what the
+// reader sees, and Show the rest fetches the whole of a cut message.
+func TestChatLongHistoryPages(t *testing.T) {
+	msgs := []map[string]any{}
+	for i := 0; i < 70; i++ {
+		msgs = append(msgs, map[string]any{"i": i, "role": "user", "truncated": true})
+	}
+	for i := 70; i < 99; i++ {
+		msgs = append(msgs, userMsg(i, fmt.Sprint("m", i)))
+	}
+	msgs = append(msgs, map[string]any{"i": 99, "role": "assistant", "text": "short part", "truncated": true})
+	p, c := openChat(t, Phone, chatWith(false, msgs...))
+	const view = `document.querySelector('[data-view="chat"]')`
+	if n := Eval[int](p, view+`.querySelectorAll(".msg").length`); n != 60 {
+		t.Errorf("drew %d messages, want the newest 60", n)
+	}
+
+	// Show the rest of the cut answer.
+	p.TapJS(view + `.querySelector('.msg[data-i="99"] .msg-rest')`)
+	for {
+		r := expectReq(t, c, "chat.get_message")
+		var a webproto.ChatGetMessageArgs
+		_ = json.Unmarshal(r.Args, &a)
+		m := userMsg(a.I, fmt.Sprint("old ", a.I))
+		if a.I == 99 {
+			m = map[string]any{"i": 99, "role": "assistant", "text": "short part and the long rest"}
+		}
+		c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(m)})
+		if a.I == 99 {
+			break
+		}
+	}
+	p.WaitJS(view + `.querySelector('.msg[data-i="99"]').innerText.includes("the long rest")`)
+
+	// Scroll to the top: the stubs there are fetched.
+	Eval[bool](p, `(document.querySelector('[data-view="chat"] .view-body').scrollTop = 0, true)`)
+	for seen := false; !seen; {
+		r := expectReq(t, c, "chat.get_message")
+		var a webproto.ChatGetMessageArgs
+		_ = json.Unmarshal(r.Args, &a)
+		c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(userMsg(a.I, fmt.Sprint("old ", a.I)))})
+		seen = a.I == 40
+	}
+	p.WaitJS(view + `.querySelector('.msg[data-i="40"]').innerText.includes("old 40")`)
+
+	top := `document.querySelector('.msg[data-i="40"]').getBoundingClientRect().top`
+	before := Eval[float64](p, top)
+	p.TapJS(view + `.querySelector(".chat-older")`)
+	p.WaitJS(view + `.querySelectorAll(".msg").length === 100`)
+	if after := Eval[float64](p, top); after < before-8 || after > before+8 {
+		t.Errorf("Load older moved the reader's place: %.0f → %.0f px", before, after)
+	}
+	if Eval[bool](p, view+`.querySelector(".chat-older") !== null`) {
+		t.Error("Load older is still there with nothing older")
 	}
 }

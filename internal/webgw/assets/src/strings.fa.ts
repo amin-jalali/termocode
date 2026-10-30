@@ -74,6 +74,8 @@ export const FA: Record<StringKey, string> = {
   "chat.steps": "{n} گام · {tok} توکن · {time}",
   "chat.paused": "مکث",
   "chat.ai": "هوش مصنوعی",
+  "chat.older": "پیام‌های قدیمی‌تر",
+  "chat.stub_laptop": "یک پیام قدیمی‌تر. آن را روی لپ‌تاپ بخوانید.",
   "chat.list": "گفتگوها",
   "chat.list_empty": "هنوز گفتگویی نیست.",
   "chat.filter": "پالایش گفتگوها",
