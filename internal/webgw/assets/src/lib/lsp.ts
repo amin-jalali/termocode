@@ -15,8 +15,9 @@ import { session } from "./live";
 import { route } from "./router";
 import { panes, setPanes, showFile } from "./workbench";
 
-/** PanelTab is what the bottom panel shows. */
-export type PanelTab = "problems" | "output" | "terminal";
+/** PanelTab is what the bottom panel shows: "problems", "output", "terminal" or
+ * a registered tab's id (lib/views.ts). */
+export type PanelTab = string;
 export const panelTab = signal<PanelTab>("terminal");
 
 // A terminal route shows the terminal in the panel.

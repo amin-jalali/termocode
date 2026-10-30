@@ -69,6 +69,7 @@ import { RefsPeek } from "./RefsPeek";
 import { diags, panelTab, toggleProblems, type PanelTab } from "../lib/lsp";
 import { ProblemsView } from "../views/ProblemsView";
 import { StatusBar } from "./StatusBar";
+import { panelsAround, panelViews, sideView as registeredSideView, type PanelDef } from "../lib/views";
 
 /** Sash is a drag handle between two panes. It reports the new size from
  * the size at the start plus the pointer's move (dir -1: the pane is on
@@ -327,6 +328,11 @@ function PanelTabs() {
   const on = panelTab.value;
   const s = diags();
   const n = s ? s.errors + s.warnings + s.infos + s.hints : 0;
+  const [before, after] = panelsAround();
+  const extra = (p: PanelDef) => {
+    const b = p.badge?.() ?? 0;
+    return tab(p.id, t(p.label), b > 0 ? <span class="wb-panel-badge">{b}</span> : null);
+  };
   const tab = (id: PanelTab, label: string, extra?: ComponentChildren) => (
     <button type="button" class={`wb-panel-title${on === id ? " is-on" : ""}`} role="tab" aria-selected={on === id ? "true" : "false"} data-panel={id} onClick={() => (panelTab.value = id)}>
       {label}
@@ -337,7 +343,9 @@ function PanelTabs() {
     <span class="wb-panel-tabs" role="tablist">
       {tab("problems", t("wb.problems"), n > 0 ? <span class="wb-panel-badge">{n}</span> : null)}
       {tab("output", t("tasks.output"))}
+      {before.map(extra)}
       {tab("terminal", t("wb.terminal"))}
+      {after.map(extra)}
     </span>
   );
 }
@@ -423,6 +431,8 @@ function workbenchKeys(e: KeyboardEvent): void {
 /** SideView is the side bar's view: the route's when it has one there,
  * else the last one shown (the editor area keeps its own). */
 function SideView({ id }: { id: Activity }) {
+  const reg = registeredSideView(id);
+  if (reg) return <>{reg()}</>;
   switch (id) {
     case "git":
       return <DeskSCM />;
@@ -532,11 +542,11 @@ export function Workbench() {
             ) : (
               <Sash axis="y" size={p.panelH} min={PANEL_MIN} max={Math.max(PANEL_MIN, innerHeight - 200)} dir={-1} label={t("wb.resize_panel")} def={PANE_DEFAULTS.panelH} onSize={(n) => setPanes({ panelH: n })} />
             )}
-            <section class="wb-panel" aria-label={t(panelTab.value === "problems" ? "wb.problems" : panelTab.value === "output" ? "tasks.output" : "tab.term")}>
+            <section class="wb-panel" aria-label={t(panelTab.value === "problems" ? "wb.problems" : panelTab.value === "output" ? "tasks.output" : (panelViews().find((x) => x.id === panelTab.value)?.label ?? "tab.term"))}>
               <PanelHead>
                 <PanelTabs />
               </PanelHead>
-              {panelTab.value === "problems" ? <ProblemsView /> : panelTab.value === "output" ? <OutputView /> : <DeskTerm />}
+              {panelTab.value === "problems" ? <ProblemsView /> : panelTab.value === "output" ? <OutputView /> : (panelViews().find((x) => x.id === panelTab.value)?.view() ?? <DeskTerm />)}
             </section>
           </>
         )}
