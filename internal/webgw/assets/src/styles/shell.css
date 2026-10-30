@@ -260,3 +260,7 @@
 .attention.att-run_done, .attention.att-task_done { border-color: var(--green); }
 .attention.att-run_done .att-mark, .attention.att-task_done .att-mark { color: var(--green); }
 .attention.att-waiting_laptop { border-color: var(--amber); }
+/* The viewer's bar (WEB-34): calm, with the ask button at the end. */
+.viewer-bar { border-inline-start-color: var(--blue); }
+.viewer-bar.is-error { border-inline-start-color: var(--red); }
+.viewer-eye { font-size: 0.875rem; }

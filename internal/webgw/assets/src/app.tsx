@@ -18,6 +18,7 @@ import { Nav } from "./ui/Nav";
 import { OfflineBar } from "./ui/OfflineBar";
 import { Strip } from "./ui/Strip";
 import { Toasts } from "./ui/Toasts";
+import { ViewerBar } from "./ui/ViewerBar";
 import { ChatView, FilesView, GitView, MoreView, TermView } from "./views/views";
 
 /** lastPrimary is the last tab other than Chat: the desktop's middle column. */
@@ -62,6 +63,7 @@ export function App() {
       <Strip />
       <div class="bars">
         <OfflineBar />
+        <ViewerBar />
         <FirstRunHint />
       </div>
       <div class="body">

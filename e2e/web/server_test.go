@@ -35,6 +35,9 @@ type Server struct {
 	// Login is the passkey sign-in; with RequireTOTP set the right
 	// sign-in code is 246810.
 	Login *webgw.Login
+	// Passkeys are the server's passkeys (a test plays the gateway's
+	// control ops with them; the fake hub stands where the gateway is).
+	Passkeys *webgw.Passkeys
 }
 
 // StartServer listens on a free loopback port and serves until the test ends.
@@ -58,6 +61,7 @@ func StartServer(t *testing.T) *Server {
 	if err != nil {
 		t.Fatalf("passkeys: %v", err)
 	}
+	s.Passkeys = pk
 	s.Pairing = webgw.NewPairing(webgw.PairingConfig{Tokens: tokens, Store: s.Devices, Passkeys: pk,
 		Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) {
 			s.Asks <- a
