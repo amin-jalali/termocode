@@ -6,6 +6,8 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -225,6 +227,44 @@ func TestAuditSummaryCleaned(t *testing.T) {
 		if got := cleanAuditText(tc.in); got != tc.want {
 			t.Errorf("clean(%q) = %q, want %q", tc.in, got, tc.want)
 		}
+	}
+}
+
+// TestGuardAuditsBlocked: a refused Host or Origin is written to the log
+// (T1, T2), and a flood of them cannot push the real events out: at most
+// a burst of blocked events per second is kept.
+func TestGuardAuditsBlocked(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "a.jsonl")
+	a := openAudit(t, path)
+	g := GuardWithAudit(testSite, &okHandler{}, a)
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Host = "evil.com:41237"
+	g.ServeHTTP(httptest.NewRecorder(), r)
+	r = httptest.NewRequest(http.MethodPost, "/auth", nil)
+	r.Host = testSite.Hosts[0]
+	r.Header.Set("Origin", "http://evil.com")
+	g.ServeHTTP(httptest.NewRecorder(), r)
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Host = testSite.Hosts[0]
+	g.ServeHTTP(httptest.NewRecorder(), r) // allowed: not logged
+
+	evs := readAudit(t, path)
+	if len(evs) != 2 || evs[0].Kind != EvHostBlocked || evs[0].Code != 421 ||
+		evs[1].Kind != EvOriginBlocked || evs[1].Code != 403 {
+		t.Fatalf("events %+v", evs)
+	}
+	if !strings.Contains(evs[0].Summary, "evil.com") || !strings.Contains(evs[1].Summary, "evil.com") {
+		t.Fatalf("summaries %q %q do not name the other site", evs[0].Summary, evs[1].Summary)
+	}
+
+	for i := 0; i < 200; i++ {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.Host = "evil.com"
+		g.ServeHTTP(httptest.NewRecorder(), r)
+	}
+	if n := len(readAudit(t, path)); n > 2+blockedAuditBurst+5 {
+		t.Fatalf("%d lines after a flood, want at most about %d", n, 2+blockedAuditBurst)
 	}
 }
 
