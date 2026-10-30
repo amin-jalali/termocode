@@ -24,7 +24,7 @@
 .search-path { font-family: var(--font-mono); font-size: var(--fs-row); font-weight: 600; padding: var(--s2) var(--s4); color: var(--text); overflow-wrap: anywhere; unicode-bidi: isolate; }
 .search-hit { display: grid; grid-template-columns: 5ch minmax(0, 1fr); gap: var(--s2); min-height: var(--tap); align-items: center; padding: 0 var(--s4); text-align: start; font-family: var(--font-mono); font-size: var(--fs-row); }
 .search-hit:hover { background: var(--bg-hover); }
-.search-n { color: var(--dim); text-align: right; font-variant-numeric: tabular-nums; }
+.search-n { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .search-text { white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: isolate; }
 .search-text mark { background: var(--sel); color: var(--text); border-radius: 2px; }
 
@@ -35,7 +35,7 @@
 .task-open:disabled { cursor: default; }
 .task-name { display: flex; flex-direction: column; min-width: 0; }
 .task-label { font-weight: 600; overflow-wrap: anywhere; unicode-bidi: isolate; }
-.task-meta { color: var(--dim); font-size: var(--fs-hint); font-family: var(--font-mono); }
+.task-meta { color: var(--muted); font-size: var(--fs-hint); font-family: var(--font-mono); }
 .task-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; flex: none; background: var(--border); }
 .task-dot.st-running { background: var(--blue); animation: breathe var(--t-pulse) ease-in-out infinite; }
 .task-dot.st-ok { background: var(--green); }
