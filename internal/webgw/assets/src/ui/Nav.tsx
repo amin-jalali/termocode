@@ -22,7 +22,7 @@ export const NAV_ITEMS: readonly Item[] = [
   { tab: "more", label: "tab.more", Icon: IconMore },
 ];
 
-type BadgeKind = { kind: "count"; n: number; tone: "ai" | "plain" } | { kind: "dot"; tone: "amber" | "blue" } | null;
+export type BadgeKind = { kind: "count"; n: number; tone: "ai" | "plain" } | { kind: "dot"; tone: "amber" | "blue" } | null;
 
 function badgeFor(tab: Tab): BadgeKind {
   const s = status.value;
@@ -60,11 +60,20 @@ export function onTabTap(tab: Tab): void {
   goTab(tab);
 }
 
-export function Nav({ variant, active }: { variant: "tabs" | "rail"; active: Tab }) {
+export function Nav({
+  variant,
+  active,
+  badges,
+}: {
+  variant: "tabs" | "rail";
+  active: Tab;
+  /** badges overrides the live badges (the kit shows fixed ones). */
+  badges?: Partial<Record<Tab, BadgeKind>>;
+}) {
   return (
     <nav class={variant === "tabs" ? "tabbar" : "rail"} aria-label={t("tabs.label")}>
       {NAV_ITEMS.map(({ tab, label, Icon }) => {
-        const b = badgeFor(tab);
+        const b = badges ? (badges[tab] ?? null) : badgeFor(tab);
         const extra = b && b.kind === "count" ? ` (${b.n})` : "";
         return (
           <button
