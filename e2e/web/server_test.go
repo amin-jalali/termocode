@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/webdevices"
 	"github.com/amin-jalali/termocode/internal/webgw"
+	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // Server is the page's gateway for one test: the real guard, security
@@ -23,6 +25,13 @@ type Server struct {
 	Tokens *webgw.Tokens
 	auth   *webgw.Auth
 	srv    *http.Server
+	// Pairing and passkey sign-in (WEB-32/33) on a store of its own; the
+	// laptop's card is Asks (the test answers on PairAnswers with a role,
+	// or "" for Not now).
+	Pairing     *webgw.Pairing
+	Devices     *webdevices.Store
+	Asks        chan webproto.PairAskArgs
+	PairAnswers chan string
 }
 
 // StartServer listens on a free loopback port and serves until the test ends.
@@ -40,7 +49,28 @@ func StartServer(t *testing.T) *Server {
 		auth:   webgw.NewAuth(tokens, time.Now, nil),
 	}
 	s.Hub = newFakeHub(t, tokens)
+	s.Devices = webdevices.Open(t.TempDir())
+	s.Asks, s.PairAnswers = make(chan webproto.PairAskArgs, 4), make(chan string, 4)
+	pk, err := webgw.NewPasskeys(site, s.Devices, time.Now)
+	if err != nil {
+		t.Fatalf("passkeys: %v", err)
+	}
+	s.Pairing = webgw.NewPairing(webgw.PairingConfig{Tokens: tokens, Store: s.Devices, Passkeys: pk,
+		Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) {
+			s.Asks <- a
+			select {
+			case role := <-s.PairAnswers:
+				if role == "" {
+					return "", errors.New("not now")
+				}
+				return role, nil
+			case <-ctx.Done():
+				return "", ctx.Err()
+			}
+		}})
 	mux := http.NewServeMux()
+	mux.Handle("/pair/", s.Pairing)
+	mux.Handle("/login/", webgw.NewLogin(webgw.LoginConfig{Tokens: tokens, Passkeys: pk}))
 	mux.Handle("/auth", s.auth)
 	mux.Handle("/ws", s.Hub)
 	mux.Handle("/", webgw.Assets())
