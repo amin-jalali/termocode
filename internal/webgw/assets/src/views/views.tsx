@@ -7,6 +7,7 @@ import { go, route } from "../lib/router";
 import { t } from "../strings";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
+import { RunsView } from "./more/RunsView";
 import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
 import { View } from "./View";
@@ -35,6 +36,7 @@ export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
+  if (sub === "runs") return <RunsView />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -61,6 +63,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "tasks", query: {} })}>
             {t("more.tasks")}
+          </button>
+          <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "runs", query: {} })}>
+            {t("more.runs")}
           </button>
         </nav>
         <section class="group" aria-labelledby="g-phone">

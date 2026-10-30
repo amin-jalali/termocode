@@ -95,3 +95,28 @@ func TestTaskRunShowsOutput(t *testing.T) {
 		})
 	}
 }
+
+// Runs show their state, step and time; Stop asks first, Pause and
+// Resume follow what the run allows; a run of another chat offers none.
+func TestRunsStopFromPhone(t *testing.T) {
+	p, c := openMore(t, Phone, 2, "runs")
+	c.Send(t, Snap("runs", 1, webproto.RunsSnap{Runs: []webproto.RunItem{
+		{Key: "c1/r1", Title: "fix the toast flicker", Profile: "review", State: "running", Step: 2, Steps: 3, ElapsedMs: 41000, Live: true, Can: []string{"stop", "pause"}},
+		{Key: "c2/r2", Title: "write release notes", State: "resumable", Why: "stopped at 10:02", NeedsYou: true},
+	}}))
+	p.WaitJS(`document.querySelectorAll(".run").length === 2`)
+	meta := p.Text(`.run[data-key="c1/r1"] .run-meta`)
+	if !strings.Contains(meta, "review · working now · step 2 of 3 · 4") {
+		t.Errorf("meta %q", meta)
+	}
+	if n := Eval[int](p, `document.querySelectorAll('.run[data-key="c2/r2"] .btn').length`); n != 0 {
+		t.Errorf("%d buttons on a run of another chat", n)
+	}
+	p.TapJS(ButtonByText("Stop"))
+	p.WaitJS(`document.activeElement === document.querySelector(".row-ask button")`)
+	p.TapJS(`[...document.querySelectorAll(".row-ask button")].find((b) => b.textContent.trim() === "Stop")`)
+	reply(t, c, expectOp(t, c, webproto.OpRunsStop, `{"key":"c1/r1"}`), nil)
+	p.TapJS(ButtonByText("Pause"))
+	reply(t, c, expectOp(t, c, webproto.OpRunsPause, `{"key":"c1/r1"}`), nil)
+	p.noOverflow("runs")
+}
