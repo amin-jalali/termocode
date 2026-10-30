@@ -45,6 +45,17 @@ type GraphCommit struct {
 // newest first, and says whether more exist. An empty repository is not
 // an error. Commits on HEAD that its upstream lacks are marked Unpushed.
 func Commits(dir string, skip, limit int) ([]GraphCommit, bool, error) {
+	return commitsOf(dir, skip, limit, "HEAD")
+}
+
+// CommitsAll is Commits over every local branch, remote-tracking branch
+// and tag as well as HEAD, newest first (a child always before its
+// parents), for a graph of all branches.
+func CommitsAll(dir string, skip, limit int) ([]GraphCommit, bool, error) {
+	return commitsOf(dir, skip, limit, "--date-order", "--branches", "--remotes", "--tags", "HEAD")
+}
+
+func commitsOf(dir string, skip, limit int, revs ...string) ([]GraphCommit, bool, error) {
 	if limit <= 0 {
 		limit = 200
 	}
@@ -52,8 +63,9 @@ func Commits(dir string, skip, limit int) ([]GraphCommit, bool, error) {
 	// The unpushed set does not depend on the log: read both at once.
 	upc := make(chan map[string]bool, 1)
 	crash.GoWith("reading the unpushed commits", func() { upc <- unpushed(dir) }, func() { upc <- nil })
-	out, err := runOut(dir, "git", "log", "--decorate=full", format,
-		fmt.Sprintf("-n%d", limit+1), fmt.Sprintf("--skip=%d", skip), "HEAD", "--")
+	args := append([]string{"log", "--decorate=full", format,
+		fmt.Sprintf("-n%d", limit+1), fmt.Sprintf("--skip=%d", skip)}, revs...)
+	out, err := runOut(dir, "git", append(args, "--")...)
 	up := <-upc
 	if err != nil {
 		if !hasCommits(dir) {
