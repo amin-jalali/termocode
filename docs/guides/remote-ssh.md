@@ -89,7 +89,7 @@ terminal panel): the session would show inside itself.
 | `termocode sessions` | List the running sessions |
 | `termocode attach [dir]` | Attach to the session of `dir`; error if none runs |
 | `termocode kill [dir]` | End the session of `dir` |
-| `termocode ssh [--dir dir] [ssh options] host` | Open termocode on `host` (in `dir`) over `ssh`; reconnects by itself when the link drops |
+| `termocode ssh [--dir dir] [--web] [ssh options] host` | Open termocode on `host` (in `dir`) over `ssh`; reconnects by itself when the link drops. `--web` also opens its [web panel](web.md) here |
 | `termocode mcp [--dir dir]` | Run as a stdio MCP server for an agent CLI; it relays to the termocode open in `dir` (default: the current folder or the nearest parent). Without a running termocode the tool list answers and calls fail with a clear message |
 | `termocode --no-session` | Run without a session (the old way) |
 
@@ -224,17 +224,10 @@ See [Set up AI](ai-setup.md#which-store-is-used) for the details.
 
 ## The web panel
 
-The web panel shows your files, chats and terminals in a browser tab on
-this computer.
-
-- **Web: Start Panel** opens a card first. It says what the panel can do.
-  Anyone who controls the browser tab can run commands as you.
-- The panel listens only on this computer (127.0.0.1), never on the
-  network. **Web: Copy Link** copies a new one-time link.
-- While the panel runs, the status bar shows a web chip. Click it, or use
-  **Web: Stop Panel**, to stop it. It also stops by itself after some
-  minutes without use.
-- The AI can never start the panel or change its settings.
+The web panel shows the same termocode in a browser tab: chats, files,
+terminals and git. Over SSH, `termocode ssh --web` opens the server's
+panel in your browser here, through your SSH connection; the server opens
+no network port. See [The web panel](web.md).
 
 ## Security
 
