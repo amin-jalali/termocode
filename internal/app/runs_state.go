@@ -59,6 +59,7 @@ type runsState struct {
 	detail            string
 	pageScroll, pageM int // the page's scroll and its last max
 	cache             runsDrawCache
+	chatFiles         ai.ChatListCache // the parsed chat files (runsLoadChats)
 }
 
 // runsDrawCache keeps the drawn sidebar and page between frames.
@@ -114,7 +115,10 @@ func (m *Model) runsLoadChats() {
 		return
 	}
 	st.chats, st.loadedFor = nil, m.ai.conv.ID
-	for _, c := range m.ai.store.List() {
+	// Only the chat files that changed since the last load are read; the
+	// view only reads the chats (marking a run interrupted is the same
+	// change every time).
+	for _, c := range m.ai.store.ListCached(&st.chatFiles) {
 		aiMarkInterrupted(&c) // only the open chat's run can be live
 		st.chats = append(st.chats, c)
 	}
