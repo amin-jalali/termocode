@@ -80,6 +80,11 @@ func (a *Auth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, errorReply("method_not_allowed"))
 		return
 	}
+	if r.URL.RawQuery != "" {
+		// A secret in a URL lands in history and logs (T10).
+		writeJSON(w, http.StatusBadRequest, errorReply("no_query"))
+		return
+	}
 	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
 		writeJSON(w, http.StatusUnsupportedMediaType, errorReply("need_json"))
 		return
