@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -193,10 +194,14 @@ func TestCovCoreSetupRunBareMachine(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d\n%s", code, out)
 	}
+	install := map[string]string{"linux": "Install: sudo apt install neovim", "darwin": "Install: brew install neovim"}[runtime.GOOS]
+	if install == "" {
+		install = "See https://neovim.io/"
+	}
 	for _, w := range []string{
 		"== termocode setup ==",
 		"✗ neovim not found.",
-		"Install: sudo apt install neovim",
+		install,
 		`? terminal: COLORTERM not set (TERM="xterm")`,
 		"✓ Nerd Font already installed",
 		"== language servers ==",
@@ -243,7 +248,17 @@ func TestCovCoreSetupRunReportsInstalledTools(t *testing.T) {
 	}
 }
 
+// covNeedFontInstall skips a test of the font download: termocode
+// installs the Nerd Font by itself on Linux only (setup.go).
+func covNeedFontInstall(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "linux" {
+		t.Skip("the Nerd Font auto-install is Linux only")
+	}
+}
+
 func TestCovCoreSetupRunInstallsFont(t *testing.T) {
+	covNeedFontInstall(t)
 	bin := covSetupEnv(t, false)
 	covTool(t, bin, "fc-cache", `echo "$@" > "$HOME/fc-cache.args"`)
 	fake := &covFakeHTTP{status: http.StatusOK, body: covFontZip(t)}
@@ -303,6 +318,7 @@ func TestCovCoreSetupFontInstallErrors(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			covNeedFontInstall(t)
 			bin := covSetupEnv(t, false)
 			covTool(t, bin, "fc-cache", c.fcCache)
 			covUseHTTP(t, &covFakeHTTP{status: c.status, body: c.body(t)})
@@ -328,6 +344,13 @@ func TestCovCoreInstallNerdFontNilProgress(t *testing.T) {
 	// A stale cached "found" answer must be dropped by the install.
 	writeNerdCache(NerdFontInfo{Found: true, Stamp: fontStamp()})
 	dest, err := InstallNerdFont(context.Background(), nil)
+	if runtime.GOOS != "linux" {
+		// Elsewhere the install only says where to get the font.
+		if err == nil || !strings.Contains(err.Error(), "Linux only") {
+			t.Fatalf("install on %s: %v", runtime.GOOS, err)
+		}
+		return
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
