@@ -284,3 +284,18 @@ func FuzzPairStart(f *testing.F) {
 		}
 	})
 }
+
+// Spec (WEB-50): the page of a share link learns it is a guest pairing,
+// so it tells the person to read the code to whoever shared the link.
+func TestPairStartSaysGuest(t *testing.T) {
+	r := newPairRig(t)
+	r.open(true)
+	code, m := r.post("/pair/start", `{"p":"`+r.plain+`","name":"Sara"}`)
+	if code != http.StatusOK || m["guest"] != true {
+		t.Fatalf("start: %d %v", code, m)
+	}
+	r.open(false)
+	if _, m := r.post("/pair/start", `{"p":"`+r.plain+`","name":"Me"}`); m["guest"] == true {
+		t.Fatal("a plain pairing says guest")
+	}
+}
