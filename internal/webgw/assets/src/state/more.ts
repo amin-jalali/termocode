@@ -74,3 +74,44 @@ export function hhmm(ms: number): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+export interface CtrView {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  status: string;
+  ports: string;
+  project: string;
+  busy: boolean;
+}
+
+export interface ContainersView {
+  engine: string;
+  context: string;
+  containers: CtrView[];
+  more: number;
+}
+
+/** readContainers reads the answer of containers.list. */
+export function readContainers(data: unknown): ContainersView {
+  const d = obj(data);
+  return {
+    engine: str(d.engine),
+    context: str(d.context),
+    more: num(d.more),
+    containers: list(d.containers)
+      .map(obj)
+      .filter((c) => /^[0-9a-f]{12,64}$/.test(str(c.id)))
+      .map((c) => ({
+        id: str(c.id),
+        name: str(c.name),
+        image: str(c.image),
+        state: str(c.state),
+        status: str(c.status),
+        ports: str(c.ports),
+        project: str(c.project),
+        busy: c.busy === true,
+      })),
+  };
+}
