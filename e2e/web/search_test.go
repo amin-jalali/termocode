@@ -34,7 +34,7 @@ func batch(id uint64, hits ...webproto.SearchHit) *webproto.Event {
 // match marked; batches of an older search are ignored; the summary ends
 // it; a hit opens the file at its line.
 func TestSearchStreams(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openSearch(t, vp)
 			p.TapJS(ButtonByText("Regex"))
@@ -96,4 +96,57 @@ func TestSearchStopAndNotes(t *testing.T) {
 		p.WaitJS(`document.querySelector(".search-note")?.textContent === "` + tc.note + `"`)
 	}
 	p.noOverflow("search")
+}
+
+// The desktop's Search view: the toggles sit in the query box and go
+// with the query; the results are a tree by file with counts; a result
+// can be dismissed, the files folded; a match opens the file in the
+// editor; the search stays when another view shows and comes back.
+func TestDeskSearchTree(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-search")
+	Eval[bool](p, `(location.hash = "#/more/search", true)`)
+	const view = `document.querySelector('.wb-side [data-view="search"]')`
+	p.WaitJS(view + `?.querySelector("input") === document.activeElement`)
+	p.TapJS(view + `.querySelector('[data-opt="regex"]')`)
+	p.TapJS(view + `.querySelector('[data-opt="cs"]')`)
+	if !Eval[bool](p, view+`.querySelector('[data-opt="regex"]').getAttribute("aria-pressed") === "true"`) {
+		t.Fatal("the regex toggle is not on")
+	}
+	p.Do(chromedp.SendKeys(`.wb-side [data-view="search"] input`, "needle"+kb.Enter))
+	r := expectOp(t, c, webproto.OpSearchRun, `{"query":"needle","regex":true,"case":true}`)
+	c.Send(t, batch(r.ID,
+		webproto.SearchHit{Path: "src/a.go", Line: 2, Col: 4, Text: "\t// a needle <b>here</b>", Marks: []webproto.SearchMark{{S: 6, E: 12}}},
+		webproto.SearchHit{Path: "src/a.go", Line: 9, Text: "needle again", Marks: []webproto.SearchMark{{S: 0, E: 6}}},
+		webproto.SearchHit{Path: "b.txt", Line: 1, Text: "needle", Marks: []webproto.SearchMark{{S: 0, E: 6}}}))
+	reply(t, c, r, webproto.SearchSummary{Files: 2, Matches: 3, Ms: 412})
+	p.WaitJS(view + `.querySelector(".sv-note")?.textContent === "3 results in 2 files"`)
+	files := `[...` + view + `.querySelectorAll('.tr[data-file]')]`
+	if got := Eval[string](p, files+`.map((e) => e.querySelector(".tr-label").textContent + "|" + e.querySelector(".tr-desc")?.textContent + "|" + e.querySelector(".count").textContent).join(",")`); got != "a.go|src|2,b.txt|undefined|1" {
+		t.Errorf("files %q", got)
+	}
+	if got := Eval[string](p, view+`.querySelector('.tr[data-line="2"] .sr-mark').textContent`); got != "needle" {
+		t.Errorf("mark %q", got)
+	}
+	if Eval[int](p, view+`.querySelectorAll(".sr-line b").length`) != 0 {
+		t.Fatal("a hit's text became HTML")
+	}
+	// Dismiss the second match; fold all; open all.
+	Eval[bool](p, view+`.querySelector('.tr[data-line="9"] [aria-label="Dismiss"]').click() ?? true`) // shown on hover
+	p.WaitJS(view + `.querySelector(".sv-note").textContent === "2 results in 2 files" && !` + view + `.querySelector('.tr[data-line="9"]')`)
+	p.TapJS(view + `.querySelector('[aria-label="Collapse All"]')`)
+	p.WaitJS(view + `.querySelectorAll('.tr[data-line]').length === 0`)
+	p.TapJS(view + `.querySelector('[aria-label="Expand All"]')`)
+	p.WaitJS(view + `.querySelectorAll('.tr[data-line]').length === 2`)
+	// Another view and back: the results are still there.
+	Eval[bool](p, `(location.hash = "#/git", true)`)
+	p.WaitJS(`!` + view)
+	Eval[bool](p, `(location.hash = "#/more/search", true)`)
+	p.WaitJS(view + `?.querySelectorAll('.tr[data-line]').length === 2`)
+	// A match opens its file in the editor.
+	p.TapJS(view + `.querySelector('.tr[data-line="2"]')`)
+	p.WaitJS(`location.hash === "#/files/src/a.go"`)
+	reqSkipping(t, c, "buf.open")
 }
