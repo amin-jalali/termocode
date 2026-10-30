@@ -99,6 +99,7 @@ its name and key.
 - Save the window as a named layout (panels, sizes, splits, terminals) and switch with `Alt+Y`: built-in `debug`, `review` and `focus`, your own, or one the project shares. → [Layouts](guides/workspaces.md#layouts)
 - Over SSH, a dropped connection loses nothing: run `termocode` again to get the same editor, terminals and jobs back. → [Remote and SSH](guides/remote-ssh.md)
 - `termocode ssh host` reconnects by itself after a network change, a Wi-Fi switch or sleep: the screen stays, typing pauses, and a toast says when it is back. → [Remote and SSH](guides/remote-ssh.md#reconnect-by-itself-termocode-ssh)
+- The web panel (experimental): the same session in a browser tab, for chat and cards, files, terminals and git, on this computer or from a server with `termocode ssh --web`. → [The web panel](guides/web.md)
 - Unsaved files survive a crash or a kill: the next start offers to restore them.
 - Download a file or folder to your own computer, or upload into a folder. Locally it is a plain copy (Downloads folder; the desktop file chooser for uploads); over SSH it goes through the terminal (kitty, iTerm2, trzsz; else a ready scp command). → [Remote and SSH](guides/remote-ssh.md#download-and-upload-files)
 
