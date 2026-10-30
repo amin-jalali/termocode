@@ -577,6 +577,11 @@ export interface ChatRef {
   id: string;
 }
 
+export interface EditRes {
+  tick: number;
+  dirty: boolean;
+}
+
 export interface TermNewRes {
   buf: number;
 }
@@ -654,5 +659,8 @@ export interface OpResult {
   "term.history": TermHistoryRes;
   "chat.send": ChatRef;
   "chat.new": ChatRef;
+  "buf.set_text": EditRes;
+  "buf.save": EditRes;
+  "buf.undo": EditRes;
   "term.new": TermNewRes;
 }

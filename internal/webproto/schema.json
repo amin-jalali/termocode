@@ -487,6 +487,7 @@
     {
       "op": "buf.set_text",
       "args": "SetTextArgs",
+      "result": "EditRes",
       "role": "controller",
       "rate": {
         "n": 20,
@@ -500,6 +501,7 @@
     {
       "op": "buf.save",
       "args": "BufArgs",
+      "result": "EditRes",
       "role": "controller",
       "rate": {
         "n": 20,
@@ -513,6 +515,7 @@
     {
       "op": "buf.undo",
       "args": "BufArgs",
+      "result": "EditRes",
       "role": "controller",
       "rate": {
         "n": 20,
@@ -1501,6 +1504,22 @@
       "required": [
         "kind",
         "on"
+      ],
+      "additionalProperties": true
+    },
+    "EditRes": {
+      "type": "object",
+      "properties": {
+        "dirty": {
+          "type": "boolean"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tick",
+        "dirty"
       ],
       "additionalProperties": true
     },
