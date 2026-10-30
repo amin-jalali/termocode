@@ -791,6 +791,9 @@
         "by": {
           "type": "string"
         },
+        "choice": {
+          "type": "string"
+        },
         "id": {
           "type": "string"
         }
@@ -1025,7 +1028,8 @@
             "mcp",
             "plan",
             "review",
-            "trust"
+            "trust",
+            "laptop"
           ]
         },
         "read_only": {

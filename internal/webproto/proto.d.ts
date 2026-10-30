@@ -368,7 +368,7 @@ export interface CardsSnap {
 
 export interface Card {
   id: string;
-  kind: "tool" | "mcp" | "plan" | "review" | "trust";
+  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop";
   title: string;
   body?: string;
   choices: CardChoice[];
@@ -578,6 +578,7 @@ export interface GitCommit {
 export interface Answered {
   id: string;
   by?: string;
+  choice?: string;
 }
 
 export interface Attention {
