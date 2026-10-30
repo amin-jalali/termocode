@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/amin-jalali/termocode/internal/app"
 )
 
@@ -51,7 +53,18 @@ func TestRecentWorkspaceGoneOffersRemove(t *testing.T) {
 		t.Fatalf("no card the second time:\n%s", screen(d))
 	}
 	d.Key("tab", "enter") // Remove from List
-	if !d.WaitFor(func() bool { d.render(); _, _, ok := findIn(d, "older-project", sidebarW, d.W); return !ok }, 3*time.Second) {
+	// The toast names the folder too ("Removed from the list ·
+	// older-project"): look at the rows outside toast cards only.
+	listed := func() bool {
+		for _, line := range strings.Split(screen(d), "\n") {
+			cut := ansi.Cut(line, sidebarW, d.W)
+			if strings.Contains(cut, "older-project") && !strings.Contains(cut, "│") {
+				return true
+			}
+		}
+		return false
+	}
+	if !d.WaitFor(func() bool { d.render(); return !listed() }, 3*time.Second) {
 		t.Errorf("the entry is still listed:\n%s", screen(d))
 	}
 	b, _ := os.ReadFile(filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "workspaces.json"))
