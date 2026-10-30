@@ -2,9 +2,9 @@
 // (Ctrl/Cmd+Shift+P, or ">" in Go to file) and Go to line (":"). One
 // box at the top of the editor area; arrows move, Enter runs, Esc closes.
 import { h, type JSX } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { FilesListRes } from "../../../../webproto/proto";
-import { commands, gotoLine, type Command } from "../lib/commands";
+import { allCommands, cmdTitle, gotoLine, loadLaptopCmds, noteRun, recentCmds, type Command } from "../lib/commands";
 import { rank, type Hit } from "../lib/fuzzy";
 import { quick, showFile } from "../lib/workbench";
 import { link } from "../session";
@@ -45,6 +45,10 @@ interface Row {
   detail?: string;
   detailAt?: number[];
   keys?: string;
+  /** keysTitle says whose keys they are (the laptop's). */
+  keysTitle?: string;
+  /** tag starts a group on the right: "recently used", "other commands". */
+  tag?: string;
   file?: boolean;
   run: () => void;
 }
@@ -64,15 +68,29 @@ function fileRows(q: string, list: readonly string[]): Row[] {
   });
 }
 
+/** commandRows: the commands that match q, the recently used ones first
+ * (newest first), then the rest by how well they match. */
 function commandRows(q: string): Row[] {
-  const list = commands().filter((c) => !c.when || c.when());
-  return rank(q, list, (c: Command) => t(c.label), MAX_ROWS).map(({ item, hit }: { item: Command; hit: Hit }) => ({
+  const list = allCommands().filter((c) => !c.when || c.when());
+  const recent = recentCmds.value;
+  const ranked = rank(q, list, cmdTitle, list.length);
+  const at = (c: Command) => recent.indexOf(c.id);
+  const used = ranked.filter((x) => at(x.item) >= 0).sort((a, b) => at(a.item) - at(b.item));
+  const rest = ranked.filter((x) => at(x.item) < 0);
+  const rows = [...used, ...rest].slice(0, MAX_ROWS).map(({ item, hit }: { item: Command; hit: Hit }, i): Row => ({
     key: item.id,
-    label: t(item.label),
+    label: cmdTitle(item),
     at: hit.at,
+    detail: item.laptop ? t("quick.laptop") : undefined,
     keys: item.keys,
-    run: item.run,
+    keysTitle: item.laptop ? t("quick.laptop_keys") : undefined,
+    tag: used.length && i === 0 ? t("quick.recent") : used.length && i === used.length ? t("quick.other") : undefined,
+    run: () => {
+      noteRun(item.id);
+      item.run();
+    },
   }));
+  return rows;
 }
 
 export function QuickInput() {
@@ -84,9 +102,14 @@ export function QuickInput() {
   const [note, setNote] = useState("");
   const box = useRef<HTMLInputElement | null>(null);
 
+  const wantFiles = !text.startsWith(">") && !text.startsWith(":");
+  const wantCmds = text.startsWith(">");
+  useLayoutEffect(() => box.current?.focus(), []);
   useEffect(() => {
-    box.current?.focus();
-    if (files && Date.now() - files.at < FILES_TTL_MS) return;
+    if (wantCmds) loadLaptopCmds();
+  }, [wantCmds]);
+  useEffect(() => {
+    if (!wantFiles || (files && Date.now() - files.at < FILES_TTL_MS)) return;
     link.request("files.list").then(
       (data) => {
         const res = data as FilesListRes;
@@ -95,7 +118,7 @@ export function QuickInput() {
       },
       (e: unknown) => setNote(e instanceof Error ? e.message : ""),
     );
-  }, []);
+  }, [wantFiles]);
 
   const close = () => (quick.value = null);
   let rows: Row[] = [];
@@ -174,7 +197,12 @@ export function QuickInput() {
                   <Marked text={r.detail} at={r.detailAt ?? []} />
                 </span>
               )}
-              {r.keys && <kbd class="quick-keys">{r.keys}</kbd>}
+              {r.keys && (
+                <kbd class="quick-keys" title={r.keysTitle}>
+                  {r.keys}
+                </kbd>
+              )}
+              {r.tag && <span class="quick-tag">{r.tag}</span>}
             </li>
           ))}
           {!rows.length && (
