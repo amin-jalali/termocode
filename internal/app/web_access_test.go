@@ -275,3 +275,28 @@ func TestWebDeviceMakeViewer(t *testing.T) {
 		}
 	}
 }
+
+// Spec (WEB-50): Web: Share as Viewer… opens a guest pairing link that
+// works once for 10 minutes; the card says the person can only watch and
+// that the code is checked with them; Copy link is there to send it.
+func TestWebShareLink(t *testing.T) {
+	r := newAccessRig(t)
+	r.m.openWebPair(true)
+	ev := r.ctlEvent("pair")
+	if ev["guest"] != true || ev["ttl_s"] != float64(600) {
+		t.Fatalf("share event %v", ev)
+	}
+	view := r.m.confirm.View()
+	for _, want := range []string{"only watch", "10 minutes", "code"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("share card has no %q:\n%s", want, view)
+		}
+	}
+	webAccessSelect(r.m, "copy")
+	if l := <-r.links; !strings.HasPrefix(l, "https://box.tail1234.ts.net/#p=") {
+		t.Fatalf("link %q", l)
+	}
+	if _, ok := r.m.dispatchWebAccessPalette("web-share"); !ok {
+		t.Fatal("no web-share palette id")
+	}
+}
