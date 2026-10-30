@@ -49,6 +49,11 @@ func decodeStrict(b []byte, kinds map[string]func() Msg) (Msg, error) {
 	if err := unmarshalStrict(b, m); err != nil {
 		return nil, err
 	}
+	if v, ok := m.(validator); ok {
+		if err := v.validate(len(b)); err != nil {
+			return nil, err
+		}
+	}
 	return m, nil
 }
 
