@@ -51,11 +51,13 @@ type StatusWeb struct {
 	Clients int `json:"clients"` // browsers connected now
 }
 
-// StatusTheme is the laptop's theme, so the page can match it: Colors maps
-// a theme palette field ("BgEditor", "AIAccent", …) to "#rrggbb". The page
-// maps the fields to its tokens and derives its light variant.
+// StatusTheme is the laptop's theme, so the page can match it: Name is
+// the theme's id ("dark", "one-dark" …), Light says its background is
+// light, Colors maps a theme palette field ("BgEditor", "AIAccent", …) to
+// "#rrggbb". The page maps the fields to its tokens.
 type StatusTheme struct {
-	ID     string            `json:"id"`
+	Name   string            `json:"name"`
+	Light  bool              `json:"light,omitempty"`
 	Colors map[string]string `json:"colors"`
 }
 

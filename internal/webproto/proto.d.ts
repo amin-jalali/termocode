@@ -249,7 +249,8 @@ export interface StatusWeb {
 }
 
 export interface StatusTheme {
-  id: string;
+  name: string;
+  light?: boolean;
   colors: Record<string, string>;
 }
 
