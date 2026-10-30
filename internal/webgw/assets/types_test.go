@@ -114,7 +114,7 @@ var vendorTypes = map[string]map[string]bool{
 	"preact":           {"VNode": true, "ComponentChildren": true, "ComponentType": true, "FunctionComponent": true, "JSX": true, "Ref": true},
 	"preact/hooks":     {"MutableRef": true},
 	"@preact/signals":  {"ReadonlySignal": true, "Signal": true},
-	"@codemirror/view": {"DecorationSet": true},
+	"@codemirror/view": {"DecorationSet": true, "KeyBinding": true},
 }
 
 // resolveTS finds the file a relative import names.

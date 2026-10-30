@@ -10,6 +10,7 @@ import type { EditorHandle, EditorHost, HlRow } from "./api";
 import { diff } from "../lib/textdiff";
 import { History } from "./history";
 import { HL_STYLES } from "./hlstyle";
+import { moveKeys } from "./moves";
 
 /** origin marks transactions that are not the user's typing. */
 const origin = Annotation.define<"remote" | "undo" | "replace">();
@@ -116,6 +117,7 @@ export function mount(parent: HTMLElement, host: EditorHost): EditorHandle {
           { key: "Mod-s", run: () => (host.onSave(), true), preventDefault: true },
           { key: "Escape", run: () => (host.onDone(), true) },
           { key: "Tab", run: indent },
+          ...moveKeys,
         ]),
         EditorView.updateListener.of((u) => {
           for (const tr of u.transactions) record(tr);

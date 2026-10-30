@@ -4,6 +4,7 @@ package web
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -174,6 +175,38 @@ func TestLiveEditorConflictKeepsUnsentText(t *testing.T) {
 	_, a := expectSetText(t, c)
 	if a.Tick != 5 || strings.Join(a.Lines, "|") != "ZYalpha|beta" {
 		t.Fatalf("undo after taking the laptop's text sent %+v", a)
+	}
+}
+
+// The keys a Mac user moves with work in the editor: Cmd+arrows go to the
+// line's and the text's ends (Shift selects), and Home/End go to the
+// line's ends, as on every other system. The page is told it runs on a
+// Mac before the editor loads, so this checks the Mac keys on any CI.
+func TestLiveEditorMacMoveKeys(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openBuf(t, p, c, 2, "notes.txt", "alpha", "beta")
+	Eval[bool](p, `(Object.defineProperty(navigator, "platform", { get: () => "MacIntel" }), true)`)
+	openEditor(t, p)
+	Eval[bool](p, `(`+cmContent+`.focus(), true)`)
+	cmd := chromedp.KeyModifiers(chromedp.ModifierMeta)
+	shiftCmd := chromedp.KeyModifiers(chromedp.ModifierMeta | chromedp.ModifierShift)
+	steps := []struct {
+		key  string
+		mods []chromedp.KeyOption
+		want string
+	}{
+		{kb.ArrowDown, []chromedp.KeyOption{cmd}, "alpha\nbeta1"},
+		{kb.ArrowUp, []chromedp.KeyOption{cmd}, "2alpha\nbeta1"},
+		{kb.ArrowRight, []chromedp.KeyOption{cmd}, "2alpha3\nbeta1"},
+		{kb.ArrowLeft, []chromedp.KeyOption{cmd}, "42alpha3\nbeta1"},
+		{kb.End, nil, "42alpha35\nbeta1"},
+		{kb.Home, nil, "642alpha35\nbeta1"},
+		{kb.ArrowDown, []chromedp.KeyOption{shiftCmd}, "67"},
+	}
+	for i, st := range steps {
+		p.Do(chromedp.KeyEvent(st.key, st.mods...))
+		p.Do(chromedp.KeyEvent(string(rune('1' + i))))
+		p.WaitJS(`[...` + cmHost + `.shadowRoot.querySelectorAll(".cm-line")].map((l) => l.textContent).join("\n") === ` + strconv.Quote(st.want))
 	}
 }
 
