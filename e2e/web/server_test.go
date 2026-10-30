@@ -75,4 +75,3 @@ func (s *Server) LaunchURL(t *testing.T) (url, secret string) {
 
 // Path is the page URL with a hash route, without a secret.
 func (s *Server) Path(hash string) string { return s.Base + "/" + hash }
-
