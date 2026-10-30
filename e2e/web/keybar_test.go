@@ -22,7 +22,7 @@ func keysRow(label string) string {
 }
 
 func TestKeyBarCustomRowPersists(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range []Viewport{Phone} { // the desktop has no key bar: keys go straight in
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openTerm(t, vp)
 			showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))

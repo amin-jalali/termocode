@@ -1,0 +1,36 @@
+/* The desktop's terminal panel (views/DeskTerm.tsx): shells you type
+   into, a list of them on the right, two side by side when split. */
+.dterm { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--wb-panel-bg); }
+.dterm-actions { position: absolute; top: 5px; inset-inline-end: 44px; z-index: 4; display: flex; align-items: center; gap: 2px; height: 22px; }
+.dterm-actions .tb:disabled { opacity: 0.4; cursor: default; }
+.dterm-body { flex: 1; display: flex; min-height: 0; }
+.dterm-panes { flex: 1; display: flex; min-width: 0; min-height: 0; }
+.dterm-pane { position: relative; flex: 1 1 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; outline: none; }
+.dterm-pane + .dterm-pane { border-inline-start: 1px solid var(--wb-panel-border); }
+.dterm-scroll { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 0 var(--s3) var(--s1); cursor: text; }
+.dterm-pane.is-stale .dterm-scroll { opacity: 0.6; }
+.wb-panel .dterm-rows { min-height: 0; margin: 0; padding: 0; background: transparent; user-select: text; }
+.dterm-rows .trow { padding: 0; }
+.dterm-cursor { display: inline-block; width: 1ch; height: 1.15em; vertical-align: text-bottom; outline: 1px solid var(--wb-panel-title); outline-offset: -1px; }
+.dterm-pane.is-focus .dterm-cursor { background: var(--wb-panel-title); }
+@media (prefers-reduced-motion: no-preference) {
+  .dterm-pane.is-focus:focus-within .dterm-cursor { animation: dterm-blink 1.06s step-end infinite; }
+}
+@keyframes dterm-blink { 50% { background: transparent; } }
+.dterm-input { position: absolute; inset-inline-start: 0; bottom: 0; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; opacity: 0; resize: none; overflow: hidden; caret-color: transparent; }
+.dterm .term-screen { padding: 0; background: transparent; }
+.dterm .term-older { min-height: 24px; }
+.dterm-follow { position: absolute; bottom: var(--s2); inset-inline-end: var(--s4); z-index: 2; background: var(--wb-list-active); }
+.dterm-list { flex: none; width: 180px; margin: 0; padding: 2px 0; overflow-y: auto; border-inline-start: 1px solid var(--wb-panel-border); list-style: none; }
+.dterm-tab { display: flex; align-items: center; height: 24px; padding-inline: var(--s2) 2px; color: var(--wb-panel-title-inactive); }
+.dterm-tab.is-shown { color: var(--wb-panel-title); }
+.dterm-tab.is-on { background: var(--wb-list-active); }
+.dterm-tab:hover { background: var(--wb-toolbar-hover); }
+.dterm-tab-open { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; height: 24px; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-size: 0.8125rem; text-align: start; cursor: pointer; }
+.dterm-tab-kill { visibility: hidden; height: 24px; min-width: 24px; }
+.dterm-tab:hover .dterm-tab-kill, .dterm-tab.is-on .dterm-tab-kill, .dterm-tab-kill:focus-visible { visibility: visible; }
+.dterm-none { margin: auto; text-align: center; }
+.dterm-viewonly { position: absolute; top: 6px; inset-inline-end: 120px; z-index: 4; }
+.dterm-paste-text { max-height: 12rem; overflow: auto; margin: 0 0 var(--s3); padding: var(--s2); background: var(--bg-panel); font-family: var(--font-mono); font-size: 0.8125rem; white-space: pre; unicode-bidi: isolate; }
+.dterm .term-screen-box { margin: 0; }
+.dterm-actions .tb { min-width: 24px; height: 24px; }

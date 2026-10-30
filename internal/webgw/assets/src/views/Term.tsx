@@ -72,7 +72,7 @@ function showOnLaptop(buf: number): void {
 
 /** Screen is a full-screen program's screen at the laptop's size: a fixed
  * grid, read-only, that scrolls sideways; keys still work. */
-function Screen({ buf, rows, cols, height }: { buf: number; rows: readonly string[]; cols: number; height: number }) {
+export function Screen({ buf, rows, cols, height }: { buf: number; rows: readonly string[]; cols: number; height: number }) {
   const shown = height > 0 ? rows.slice(-height) : rows;
   return (
     <div class="term-screen-box">
@@ -93,7 +93,7 @@ function Screen({ buf, rows, cols, height }: { buf: number; rows: readonly strin
 }
 
 /** About is the ⓘ sheet: the honest width note and the view's toggles. */
-function About({ buf, cols, screen, onClose }: { buf: number; cols: number; screen: boolean; onClose: () => void }) {
+export function About({ buf, cols, screen, onClose }: { buf: number; cols: number; screen: boolean; onClose: () => void }) {
   return (
     <Sheet onLater={onClose} label={t("term.about")}>
       <section class="edit term-about" role="dialog" aria-modal="true" aria-labelledby="term-about-t">

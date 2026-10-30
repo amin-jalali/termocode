@@ -129,7 +129,7 @@ function sendArrow(buf: number, dir: string): void {
   sendText(buf, text);
 }
 
-function PasteSheet({ buf, onClose }: { buf: number; onClose: () => void }) {
+export function PasteSheet({ buf, onClose }: { buf: number; onClose: () => void }) {
   const [text, setText] = useState("");
   const [ask, setAsk] = useState(false);
   const [note, setNote] = useState<string | null>(null);

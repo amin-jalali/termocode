@@ -62,6 +62,7 @@
 .cod-sync::before { content: "\ea77"; }
 .cod-terminal::before { content: "\ea85"; }
 .cod-trash::before { content: "\ea81"; }
+.cod-split-horizontal::before { content: "\eb56"; }
 .cod-warning::before { content: "\ea6c"; }
 .cod-word-wrap::before { content: "\eb80"; }
 .cod-run-all::before { content: "\eb9e"; }
