@@ -43,6 +43,9 @@ var sourceRules = []rule{
 	// The terminal's paste sheet takes the browser's own paste; the page
 	// never reads the clipboard (web UX 6.3).
 	{name: "clipboard read", re: regexp.MustCompile(`\bclipboard\.read(Text)?\b`)},
+	// OS notifications come only from lib/notify.ts, which shows fixed
+	// texts from a closed list (WEB-37, never-do 14).
+	{name: "notifications", re: regexp.MustCompile(`\bNotification\b|\brequestPermission\b|\bshowNotification\b`), allow: map[string]bool{"lib/notify.ts": true}},
 	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`)},
 	// Names from the hub or the URL (folders, topics, query keys) are never
 	// keys of a plain object: "__proto__" would swap its prototype and
@@ -96,6 +99,7 @@ func TestLintCatchesEachRule(t *testing.T) {
 		`a.href = "javascript:void 0"`, `fetch("https://example.com")`, `await import("./x")`,
 		`@import "x.css";`, `localStorage.setItem("t", tok)`, `sessionStorage.x = 1`,
 		`document.cookie = "a=b"`, `window.open("/")`, `new DOMParser()`,
+		`new Notification("x", {body: msg})`, `Notification.requestPermission()`, `reg.showNotification("x")`,
 		`fetch("/x")`, `new WebSocket("/ws")`, `navigator.clipboard.readText()`,
 		`const dirs: Record<string, TreeDir> = { ...s.dirs };`, `const q: Record<string, string> = {};`,
 		`const o: { [k: string]: number } = {};`, `if (p in dirs) x();`, `return !(t in seqs);`, `for (const k in obj) f(k);`,
