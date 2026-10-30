@@ -22,6 +22,7 @@ import type {
   ToastsSnap,
 } from "../../../../webproto/proto";
 import { arr, bad, int, obj, str } from "./delta";
+import { reduceBuf, reduceTerm, reduceTree } from "./files";
 import type { Reducer, Store } from "./store";
 
 /** MAX_CHATS is webproto.MaxChats: the chats topic keeps the newest 200. */
@@ -145,11 +146,15 @@ export const reduceCards: Reducer = (data, delta) => {
   }
 };
 
-/** registerTopicReducers gives the store the reducer of every list topic
- * (status keeps the default: each delta is the whole value). */
+/** registerTopicReducers gives the store the reducer of every topic
+ * whose delta is not the whole value (status, bufs and terms keep the
+ * default: each delta is the whole new value). */
 export function registerTopicReducers(store: Store): void {
   store.reducer("toasts", reduceToasts);
   store.reducer("chats", reduceChats);
   store.reducer("chat", reduceChat);
   store.reducer("cards", reduceCards);
+  store.reducer("tree", reduceTree);
+  store.reducer("buf", reduceBuf);
+  store.reducer("term", reduceTerm);
 }
