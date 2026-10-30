@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+	"unicode/utf8"
 )
 
 // RoleCtl marks an op that only the gateway's control connection may send.
@@ -168,6 +169,9 @@ func DecodeArgs(op string, raw json.RawMessage) (any, error) {
 	if err := checkKeys(raw); err != nil {
 		return nil, err
 	}
+	if badText(raw) {
+		return nil, invalid("text that is not UTF-8")
+	}
 	a := p.New()
 	if err := unmarshalStrict(raw, a); err != nil {
 		return nil, err
@@ -225,4 +229,60 @@ func Lookup(op string) (Policy, bool) {
 		}
 	}
 	return Policy{}, false
+}
+
+// badText reports raw JSON with invalid UTF-8 or a lone surrogate escape
+// ("\ud800"): the decoder would turn both into U+FFFD silently, and an
+// edit must never change text the user did not type.
+func badText(raw []byte) bool {
+	if !utf8.Valid(raw) {
+		return true
+	}
+	for i := 0; i+5 < len(raw); i++ {
+		if raw[i] != '\\' {
+			continue
+		}
+		if raw[i+1] != 'u' {
+			i++ // an escaped char: skip it (it may be a backslash)
+			continue
+		}
+		r, ok := hex4(raw[i+2 : i+6])
+		switch {
+		case !ok:
+		case r >= 0xd800 && r < 0xdc00: // high: a low one must follow
+			if i+12 > len(raw) {
+				return true
+			}
+			if raw[i+6] != '\\' || raw[i+7] != 'u' {
+				return true
+			}
+			lo, ok := hex4(raw[i+8 : i+12])
+			if !ok || lo < 0xdc00 || lo >= 0xe000 {
+				return true
+			}
+			i += 11
+			continue
+		case r >= 0xdc00 && r < 0xe000:
+			return true
+		}
+		i += 5
+	}
+	return false
+}
+
+func hex4(b []byte) (rune, bool) {
+	var r rune
+	for _, c := range b {
+		switch {
+		case c >= '0' && c <= '9':
+			r = r<<4 | rune(c-'0')
+		case c >= 'a' && c <= 'f':
+			r = r<<4 | rune(c-'a'+10)
+		case c >= 'A' && c <= 'F':
+			r = r<<4 | rune(c-'A'+10)
+		default:
+			return 0, false
+		}
+	}
+	return r, true
 }

@@ -3,6 +3,7 @@ package webproto
 import (
 	"math"
 	"strings"
+	"unicode/utf8"
 )
 
 // Limits of request args. The hub still checks paths with the workspace
@@ -98,6 +99,9 @@ func (a *SetTextArgs) validate(int) error {
 	for _, l := range a.Lines {
 		if strings.ContainsAny(l, "\n\r") {
 			return invalid("a line with a line break")
+		}
+		if !utf8.ValidString(l) {
+			return invalid("a line that is not UTF-8")
 		}
 		n += len(l) + 1
 	}
