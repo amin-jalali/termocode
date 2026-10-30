@@ -150,6 +150,27 @@
         "index.d.ts": "sha384-Cy1p0HM/KpqUojkomOohqdaJxrQjSTEN3mZ1T5RQyITTwhxqrUFSlhTJZT5Aalmy",
         "index.js": "sha384-1cLRGZ765v2w2cWNAbTW6QL/LIGcZsXoCv5mK85ze5/6X/PpExFxU1WvvzqSzr09"
       }
+    },
+    {
+      "name": "monaco-editor",
+      "version": "0.57.0",
+      "dir": "monaco-editor@0.57.0",
+      "tarball": "https://registry.npmjs.org/monaco-editor/-/monaco-editor-0.57.0.tgz",
+      "integrity": "sha512-5BkI9KGoqrNvBGUe15/QlZq3OooZ8WLg1AxTpaqHRCP3HNpzPPZKE2EDz8M7c+VRmCeUw1Brp4cx/PWm3kI/5A==",
+      "license": "MIT",
+      "imports": {},
+      "serve": {
+        "monaco/editor.js": "min/vs/editor-BdtEMBbM.js",
+        "monaco/editor-host.js": "min/vs/editorWorkerHost-B_VpI68A.js",
+        "monaco/editor.css": "min/vs/editor/editor.main.css"
+      },
+      "files": {
+        "LICENSE": "sha384-oNVmg+NhaW5KOy8+Et9KYcGZChzZ3QS7Wf+vioguTcXeUnC8DDEyVAQ5ipxN3T8q",
+        "ThirdPartyNotices.txt": "sha384-cAeA9hUXf6jPC9v2Ik8ts21rTlZsSgGA+wGojRSjdpS+3r1j9nm1hFZDkmlsbhyi",
+        "min/vs/editor-BdtEMBbM.js": "sha384-n5VxbIFjdhl1sERXQHN52h87EGviSdsndgKg9eRxZVuVsFtoxtLJDuY2UxnnGx/r",
+        "min/vs/editor/editor.main.css": "sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4",
+        "min/vs/editorWorkerHost-B_VpI68A.js": "sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf"
+      }
     }
   ]
 }
