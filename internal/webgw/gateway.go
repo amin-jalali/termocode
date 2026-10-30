@@ -41,6 +41,11 @@ type RunConfig struct {
 	LockPath string
 	// Port is 0 for a random free port.
 	Port int
+	// UnixPath, when set, is SSH mode (WEB-29): the gateway serves on this
+	// 0600 unix socket instead of TCP, and answers to 127.0.0.1:PortHint,
+	// the port the user's own ssh forwards to it on their computer.
+	UnixPath string
+	PortHint int
 	// Idle, Max and MaxViewers are the owner's limits (0: the defaults).
 	Idle, Max  time.Duration
 	MaxViewers int
@@ -61,6 +66,7 @@ type Status struct {
 	PID     int       `json:"pid"`
 	Port    int       `json:"port"`
 	URL     string    `json:"url"`
+	Sock    string    `json:"sock,omitempty"` // SSH mode: the unix socket
 	Started time.Time `json:"started"`
 	IdleS   int       `json:"idle_s"`
 	MaxS    int       `json:"max_s"`
@@ -98,11 +104,24 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		return 0, err
 	}
 	defer audit.Close()
-	ln, site, err := Listen(ListenConfig{Port: cfg.Port})
+	var ln net.Listener
+	var site Site
+	port := cfg.Port
+	if cfg.UnixPath != "" {
+		ln, site, err = ListenUnix(cfg.UnixPath, cfg.PortHint)
+		port = cfg.PortHint
+	} else {
+		ln, site, err = Listen(ListenConfig{Port: cfg.Port})
+	}
 	if err != nil {
 		return 0, err
 	}
 	defer ln.Close()
+	if cfg.UnixPath != "" {
+		defer func() { _ = os.Remove(cfg.UnixPath) }()
+	} else {
+		port = ln.Addr().(*net.TCPAddr).Port
+	}
 
 	tokens := NewTokens(cfg.Idle, cfg.Max)
 	auth := NewAuth(tokens, now, audit)
@@ -146,15 +165,18 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	case <-ctx.Done():
 		return 0, ctx.Err()
 	}
-	port := ln.Addr().(*net.TCPAddr).Port
 	started := time.Now()
-	st := Status{PID: os.Getpid(), Port: port, URL: "http://" + site.Hosts[0] + "/", Started: started,
+	st := Status{PID: os.Getpid(), Port: port, URL: "http://" + site.Hosts[0] + "/", Sock: cfg.UnixPath, Started: started,
 		IdleS: int(cfg.Idle / time.Second), MaxS: int(cfg.Max / time.Second)}
 	if err := writeStatus(cfg.StatusPath, st); err != nil {
 		return 0, err
 	}
 	defer func() { _ = os.Remove(cfg.StatusPath) }()
-	if err := audit.Log(Event{Kind: EvStart, Summary: "127.0.0.1:" + strconv.Itoa(port)}); err != nil {
+	where := "127.0.0.1:" + strconv.Itoa(port)
+	if cfg.UnixPath != "" {
+		where += " over ssh"
+	}
+	if err := audit.Log(Event{Kind: EvStart, Summary: where}); err != nil {
 		return 0, err
 	}
 	if cfg.Handoff != nil {
