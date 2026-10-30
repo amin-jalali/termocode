@@ -342,14 +342,16 @@ func TestTerminateWithUI(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("the session did not end")
 	}
-	gotExit := false
-	for len(col.frames) > 0 {
-		if <-col.frames == frameExit {
-			gotExit = true
+	// The session can end before the client's reader has the exit frame
+	// off the socket: wait for it, do not only look at what came so far.
+	deadline := time.After(10 * time.Second)
+	for gotExit := false; !gotExit; {
+		select {
+		case typ := <-col.frames:
+			gotExit = typ == frameExit
+		case <-deadline:
+			t.Fatal("the client got no exit frame")
 		}
-	}
-	if !gotExit {
-		t.Fatal("the client got no exit frame")
 	}
 }
 
