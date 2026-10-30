@@ -13,6 +13,7 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -111,6 +112,35 @@ func TestGitGroupsAndStageWithUndo(t *testing.T) {
 			p.TapJS(ButtonByText("Undo"))
 			reply(t, c, expectReq(t, c, webproto.OpGitUnstage, `{"paths":["src/a.go"]}`), nil)
 			p.WaitJS(`document.querySelector(".toasts .toast-title")?.textContent !== "Staged a.go"`)
+		})
+	}
+}
+
+// The commit box asks inside itself with Cancel first and focused; Enter
+// in the subject commits nothing; Commit sends the message and the toast
+// names the new commit.
+func TestGitCommitBox(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openGit(t, vp, gitSnap())
+			p.Tap(".commit-subject")
+			p.Do(chromedp.SendKeys(".commit-subject", "fix: one line"+kb.Enter))
+			c.Quiet(t, 300*time.Millisecond) // Enter never commits
+			p.TapJS(ButtonByText("Commit 1 file"))
+			p.WaitJS(`document.activeElement === document.querySelector(".commit-ask button")`)
+			if txt := p.Text(".commit-ask-text"); txt != "Commit 1 staged files to main?" {
+				t.Errorf("ask %q", txt)
+			}
+			p.Key(kb.Enter) // Cancel has the focus
+			p.WaitJS(`!document.querySelector(".commit-ask")`)
+			c.Quiet(t, 200*time.Millisecond)
+			p.TapJS(ButtonByText("Commit 1 file"))
+			p.WaitJS(`document.querySelector(".commit-ask")`)
+			p.TapJS(`[...document.querySelectorAll(".commit-ask button")].find((b) => b.textContent.trim() === "Commit")`)
+			r := expectReq(t, c, webproto.OpGitCommit, `{"message":"fix: one line"}`)
+			reply(t, c, r, webproto.GitCommitted{Hash: "9f9f9f9", Files: 1})
+			p.WaitJS(`[...document.querySelectorAll(".toasts .toast-title")].some((e) => e.textContent === "Committed 9f9f9f9 · 1 files")`)
+			p.WaitJS(`document.querySelector(".commit-subject").value === ""`)
 		})
 	}
 }
