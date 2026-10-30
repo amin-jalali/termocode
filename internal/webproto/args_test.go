@@ -156,3 +156,30 @@ func TestArgsGoodUnicodeEscapes(t *testing.T) {
 		}
 	}
 }
+
+// badText finds every way raw JSON can carry text the decoder would turn
+// into U+FFFD, and nothing else.
+func TestBadText(t *testing.T) {
+	for _, tc := range []struct {
+		raw string
+		bad bool
+	}{
+		{`["plain"]`, false},
+		{`["😀"]`, false},           // a surrogate pair
+		{`["😀"]`, false},           // upper-case hex
+		{`["é \"x\" \\u"]`, false}, // escaped quote and backslash
+		{`["\uzzzz"]`, false},      // not hex: the decoder refuses it
+		{`["A"]`, false},
+		{"[\"\xff\"]", true},               // not UTF-8
+		{`["\ud800"]`, true},               // lone high at the end
+		{`["\ud800 and more text"]`, true}, // high, no \u after it
+		{`["\ud800\n0000"]`, true},         // high, another escape after it
+		{`["\ud800A"]`, true},              // high, then not a low one
+		{`["\ud800\uzzzz"]`, true},         // high, then not hex
+		{`["\udc00"]`, true},               // lone low
+	} {
+		if got := badText([]byte(tc.raw)); got != tc.bad {
+			t.Errorf("badText(%s) = %v, want %v", tc.raw, got, tc.bad)
+		}
+	}
+}
