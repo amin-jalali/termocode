@@ -52,7 +52,7 @@ func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 		if msg.resume != nil { // a reconnect: no news for the laptop
 			return waitWeb(msg.hub), true
 		}
-		return tea.Batch(m.webToast(toast.Info, "A web browser connected."), waitWeb(msg.hub)), true
+		return tea.Batch(m.webToast(toast.Info, webConnectText(msg.conn)), waitWeb(msg.hub)), true
 	}
 	return nil, false
 }

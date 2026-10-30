@@ -300,3 +300,23 @@ func TestWebShareLink(t *testing.T) {
 		t.Fatal("no web-share palette id")
 	}
 }
+
+// Spec (old 5.3, never-do 10): the laptop always sees who came in: a
+// paired device by its stored name and role, never a name the browser
+// made up for itself.
+func TestWebConnectToastNamesThePairedDevice(t *testing.T) {
+	r := newAccessRig(t)
+	dir, _ := webDevicesDir()
+	_ = webdevices.Open(dir).Add(webdevices.Device{ID: "dev-1a2b3c4d", Name: "iPad", Role: webdevices.RoleViewer, Created: time.Now()})
+	for _, tc := range []struct{ open, want string }{
+		{`{"t":"open","conn":"c-1","role":"viewer","device":"dev-1a2b3c4d","name":"Evil name"}`, "iPad is watching (view only)."},
+		{`{"t":"open","conn":"c-2","role":"controller","device":"loc-1234","name":"x"}`, "A web browser connected."},
+	} {
+		c := r.dial(tc.open)
+		c.send(`{"t":"hello","v":2}`)
+		r.pumpUntil("the toast", func() bool { return strings.Contains(webTestToasts(*r.m), tc.want) })
+		if strings.Contains(webTestToasts(*r.m), "Evil name") {
+			t.Fatal("the browser's own name reached the laptop")
+		}
+	}
+}
