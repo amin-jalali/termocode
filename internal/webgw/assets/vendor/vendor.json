@@ -171,6 +171,23 @@
         "min/vs/editor/editor.main.css": "sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4",
         "min/vs/editorWorkerHost-B_VpI68A.js": "sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf"
       }
+    },
+    {
+      "name": "@vscode/codicons",
+      "version": "0.0.45",
+      "dir": "vscode-codicons@0.0.45",
+      "tarball": "https://registry.npmjs.org/@vscode/codicons/-/codicons-0.0.45.tgz",
+      "integrity": "sha512-1KAZ7XCMagp5Gdrlr4bbbcAqgcIL623iO1wW6rfcSVGAVUQvR0WP7bQx1SbJ11gmV3fdQTSEFIJQ/5C+HuVasw==",
+      "license": "CC-BY-4.0 (icons), MIT (code)",
+      "imports": {},
+      "serve": {
+        "icons/codicon.ttf": "dist/codicon.ttf"
+      },
+      "files": {
+        "LICENSE": "sha384-ha4Orln/jtBfG5SN3pqQ3Q4g4wJ5D8g7htOzPdaY/X5g95m2LpD5TODdcyqngQYs",
+        "LICENSE-CODE": "sha384-c/xpLeDknFOH3uVphSG27vUjo4SvKvULHq97trS0ElUC26iDGtS14XmwocgWDyfd",
+        "dist/codicon.ttf": "sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N"
+      }
     }
   ]
 }
