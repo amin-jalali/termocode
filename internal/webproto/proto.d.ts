@@ -213,6 +213,68 @@ export interface KeyArgs {
   key: string;
 }
 
+export interface StatusSnap {
+  root: string;
+  workspace_label: string;
+  branch: string;
+  ahead: number;
+  behind: number;
+  dirty_files: number;
+  ai: StatusAI;
+  terminals: StatusTerms;
+  runs: StatusRuns;
+  web: StatusWeb;
+  theme: StatusTheme;
+}
+
+export interface StatusAI {
+  state: "off" | "setup" | "idle" | "busy";
+  label: string;
+  busy: boolean;
+  cards_waiting: number;
+}
+
+export interface StatusTerms {
+  count: number;
+  busy: number;
+}
+
+export interface StatusRuns {
+  live: number;
+  needs_you: number;
+}
+
+export interface StatusWeb {
+  clients: number;
+}
+
+export interface StatusTheme {
+  id: string;
+  colors: Record<string, string>;
+}
+
+export interface ToastsSnap {
+  toasts: Toast[];
+}
+
+export interface Toast {
+  id: number;
+  severity: "info" | "warn" | "error";
+  title: string;
+  detail?: string;
+}
+
+export interface ToastsDelta {
+  op: "push" | "dismiss";
+  toast?: Toast;
+  id?: number;
+}
+
+export interface Attention {
+  kind: "card" | "run_done" | "run_failed" | "task_done" | "bell";
+  id?: string;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -255,3 +317,14 @@ export interface OpArgs {
 }
 
 export type OpName = keyof OpArgs;
+
+// The data of a topic's snap and delta messages, by topic name.
+export interface TopicData {
+  "status": { snap: StatusSnap; delta: StatusSnap };
+  "toasts": { snap: ToastsSnap; delta: ToastsDelta };
+}
+
+// The data of an ev message, by kind.
+export interface EventData {
+  "attention": Attention;
+}
