@@ -98,7 +98,7 @@ func TestExplorerTimelineOpensDiffTab(t *testing.T) {
 	if got := Eval[string](p, `document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent ?? ""`); got != "a.go (abc1234^ ↔ abc1234)" {
 		t.Errorf("the tab is %q, want a.go (abc1234^ ↔ abc1234)", got)
 	}
-	if !Eval[bool](p, diffView+`.innerText.includes("View only")`) {
+	if !Eval[bool](p, `document.querySelector(".ed-actions").innerText.includes("View only")`) {
 		t.Error("the diff tab does not say it is read-only")
 	}
 	// The file's own tab is still there; back to it, the editor shows the file.

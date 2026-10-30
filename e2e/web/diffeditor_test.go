@@ -113,8 +113,8 @@ func diffSide(p *Page, side string) string {
 // right edits the laptop's buffer; F7 goes to the change; Inline View
 // makes one column.
 func TestDiffEditorWorkingTree(t *testing.T) {
-	p, c := openGit(t, Wide, gitSnap())
-	p.TapJS(`document.querySelector('.git-row-wrap[data-path="src/a.go"] .git-open')`)
+	p, c := openDeskSCMAt(t, Wide, nil)
+	p.TapJS(scmRow("changes", "src/a.go"))
 	old := []string{"package a", "", "func A() int {", "\treturn 1", "}", "", "// one", "// two", "// three", "// four", "// five", "// six", "// seven", "// eight", "// end"}
 	cur := append([]string(nil), old...)
 	cur[3] = "\treturn 2"
@@ -147,7 +147,7 @@ func TestDiffEditorWorkingTree(t *testing.T) {
 	p.Do(chromedp.KeyEvent(kb.F7))
 	p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent.startsWith("Ln 4,")`)
 	// Inline View: one column.
-	p.TapJS(diffView + `.querySelector('[data-act="inline"]')`)
+	p.TapJS(`document.querySelector('.ed-actions [data-act="inline"]')`)
 	p.WaitJS(`!` + diffDoc + `.querySelector(".monaco-diff-editor.side-by-side")`)
 	if len(p.Problems()) > 0 {
 		t.Errorf("problems: %v", p.Problems())
@@ -157,15 +157,15 @@ func TestDiffEditorWorkingTree(t *testing.T) {
 // A staged change opens as "name (Index)": HEAD on the left, the index
 // on the right, both from git and read only; no buffer is opened.
 func TestDiffEditorIndexReadOnly(t *testing.T) {
-	p, c := openGit(t, Desktop, gitSnap())
-	p.TapJS(`document.querySelector('.git-row-wrap[data-path="b.go"] .git-open')`)
+	p, c := openDeskSCM(t, nil)
+	p.TapJS(scmRow("staged", "b.go"))
 	answerGitText(t, c, "b.go", map[string]string{"HEAD": "package b\nvar x = 1\n", "index": "package b\nvar x = 2\n"}, 0, nil)
 	p.WaitJS(diffDoc + `?.querySelector(".editor.modified .view-line")`)
 	if got := Eval[string](p, `document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent ?? ""`); got != "b.go (Index)" {
 		t.Errorf("the tab is %q", got)
 	}
 	p.WaitJS(diffDoc + `.querySelector(".editor.modified .char-insert, .editor.modified .line-insert")`)
-	if !Eval[bool](p, diffView+`.innerText.includes("View only")`) {
+	if !Eval[bool](p, `document.querySelector(".ed-actions").innerText.includes("View only")`) {
 		t.Error("a staged diff does not say it is read only")
 	}
 	noReq(t, c, 300*time.Millisecond)
@@ -189,7 +189,7 @@ func TestDiffEditorReviewCard(t *testing.T) {
 	if got := diffSide(p, "original"); got != "package a\nx := 1\ny := 3" {
 		t.Errorf("the file shows %q", got)
 	}
-	p.TapJS(diffView + `.querySelector('[data-act="review"]')`)
+	p.TapJS(`document.querySelector('.ed-actions [data-act="review"]')`)
 	p.WaitJS(dialog + ` && ` + dialog + `.contains(document.activeElement) && document.activeElement.textContent === "Reject"`)
 }
 

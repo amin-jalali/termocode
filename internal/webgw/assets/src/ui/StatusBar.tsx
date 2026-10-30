@@ -13,6 +13,8 @@ import { diags, toggleProblems } from "../lib/lsp";
 import { link, status, store } from "../session";
 import { t } from "../strings";
 import { Cod } from "./icons";
+import { readGit } from "../state/git";
+import { syncMenu } from "../views/desk/DeskSCM";
 import { Comet, rttLevel } from "./Strip";
 
 // Filetypes as people name them; others show as nvim names them.
@@ -73,6 +75,32 @@ function ProblemCounts() {
   );
 }
 
+/** SyncItem is the branch's sync state (↓ behind, ↑ ahead); a click
+ * offers pull and push, which ask the laptop. */
+function SyncItem() {
+  const g = readGit(store.topic("git").value?.data);
+  if (!g.repo || !g.branch.name) return null;
+  const { ahead, behind } = g.branch;
+  return (
+    <button
+      type="button"
+      class="strip-item sb-sync"
+      title={t("sb.sync", { ahead, behind })}
+      onClick={(e) => {
+        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        void syncMenu(r.left, r.top - 4);
+      }}
+    >
+      <Cod name="sync" />
+      {(ahead > 0 || behind > 0) && (
+        <span>
+          {behind}↓ {ahead}↑
+        </span>
+      )}
+    </button>
+  );
+}
+
 export function StatusBar() {
   const s = status.value;
   const online = link.state.value === "online";
@@ -87,11 +115,20 @@ export function StatusBar() {
         <span>termocode</span>
       </span>
       {s.branch && (
-        <span class="strip-item branch" title={s.branch}>
+        <button
+          type="button"
+          class="strip-item branch"
+          title={t("sb.branch", { branch: s.branch })}
+          onClick={(e) => {
+            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            void syncMenu(r.left, r.top - 4);
+          }}
+        >
           <Cod name="git-branch" />
           <span class="trunc">{s.branch}</span>
-        </span>
+        </button>
       )}
+      <SyncItem />
       {s.dirty > 0 && <span class="strip-item dirty" title={t("sb.changed", { n: s.dirty })}>● {s.dirty}</span>}
       <ProblemCounts />
       <span class={`strip-item ai ai-${ai}`}>

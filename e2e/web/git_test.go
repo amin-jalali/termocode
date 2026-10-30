@@ -102,7 +102,7 @@ func rowSel(path string) string {
 // The groups show what git says; Stage on a row stages it, the toast
 // offers Undo, which unstages it again.
 func TestGitGroupsAndStageWithUndo(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			got := Eval[[]string](p, `[...document.querySelectorAll(".git-group .group-title")].map((e) => e.textContent.trim())`)
@@ -126,7 +126,7 @@ func TestGitGroupsAndStageWithUndo(t *testing.T) {
 // in the subject commits nothing; Commit sends the message and the toast
 // names the new commit.
 func TestGitCommitBox(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			p.Tap(".commit-subject")
@@ -249,7 +249,7 @@ func TestGitDiffSheet(t *testing.T) {
 // focused, the action arms), then the waiting state until the answered
 // event; Cancel there cancels the laptop's card.
 func TestDiscardWaitsForLaptop(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-open')`)
@@ -292,7 +292,7 @@ func TestDiscardWaitsForLaptop(t *testing.T) {
 // actions say Offline.
 func TestGitViewerReadsOnly(t *testing.T) {
 	s := StartServer(t)
-	p := NewPage(t, s, Desktop)
+	p := NewPage(t, s, Tablet)
 	p.Open()
 	p.Tap(".connect-foot button")
 	c := s.Hub.Accept(t)

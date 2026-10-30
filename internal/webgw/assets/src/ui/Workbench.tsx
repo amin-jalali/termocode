@@ -58,6 +58,7 @@ import type { StringKey } from "../strings";
 import { MCPView } from "../views/more/MCPView";
 import { RunsView } from "../views/more/RunsView";
 import { DeskSearch } from "../views/desk/DeskSearch";
+import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
 import { TasksView } from "../views/more/TasksView";
 import { QuickInput } from "./QuickInput";
 import { RefsPeek } from "./RefsPeek";
@@ -405,7 +406,7 @@ function workbenchKeys(e: KeyboardEvent): void {
 function SideView({ id }: { id: Activity }) {
   switch (id) {
     case "git":
-      return <GitView />;
+      return <DeskSCM />;
     case "search":
       return <DeskSearch />;
     case "run":
@@ -487,6 +488,7 @@ export function Workbench() {
         <div class="wb-editor">
           {quick.value && <QuickInput key={quick.value.mode} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
+          <RemoteAskHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
             {all.map((g, i) => (

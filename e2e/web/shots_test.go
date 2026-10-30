@@ -229,7 +229,7 @@ func TestShots(t *testing.T) {
 				shot("file", "#/files/cmd/covreport/filter.go", fileReady)
 				shot("chat", "#/chat", `document.querySelector('[data-view="chat"] .msg')`)
 				shot("term", "#/term", `document.querySelector('[data-view="term"] .trow')`)
-				shot("git", "#/git", `document.querySelector('.git-row-wrap')`)
+				shot("git", "#/git", `document.querySelector('.git-row-wrap, .tr[data-group="changes"]')`)
 				if !vp.Mobile {
 					// Every view of the activity bar, with data.
 					has := func(text string) string { return `document.querySelector(".wb").innerText.includes(` + jsq(text) + `)` }
