@@ -130,6 +130,31 @@ type KeyArgs struct {
 	Key string `json:"key"`
 }
 
+// PairAskArgs asks the owner to pair a device (WEB-32): the gateway's
+// pairing id, the name the browser gave, and the 6-digit code it shows,
+// which the owner compares with the phone. Guest is a share with
+// another person (WEB-50): viewer only.
+type PairAskArgs struct {
+	PairID string `json:"pair_id"`
+	Name   string `json:"name"`
+	Code   string `json:"code"`
+	Guest  bool   `json:"guest,omitempty"`
+}
+
+// GrantAskArgs asks the owner to give a viewer device control (WEB-34);
+// the gateway has checked a fresh passkey assertion already.
+type GrantAskArgs struct {
+	Device string `json:"device"`
+	Name   string `json:"name"`
+}
+
+// TotpCheckArgs asks the UI to check a TOTP code against the seed in the
+// secret store (WEB-48); the seed never leaves the UI process.
+type TotpCheckArgs struct {
+	Code   string `json:"code"`
+	Device string `json:"device,omitempty"`
+}
+
 // WebOpenArgs starts the web side from the command line; Yes skips the
 // start card (same user only, on the control connection). SSHPort (0:
 // off) is `termocode ssh --web` (WEB-29): the gateway serves on a unix

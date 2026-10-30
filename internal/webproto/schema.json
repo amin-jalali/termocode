@@ -820,6 +820,45 @@
       "laptop_card": false,
       "audit": "yes",
       "phase": "v1"
+    },
+    {
+      "op": "web.pair_ask",
+      "args": "PairAskArgs",
+      "role": "ctl",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "web.grant_ask",
+      "args": "GrantAskArgs",
+      "role": "ctl",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "web.totp_check",
+      "args": "TotpCheckArgs",
+      "role": "ctl",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -1952,6 +1991,22 @@
       ],
       "additionalProperties": true
     },
+    "GrantAskArgs": {
+      "type": "object",
+      "properties": {
+        "device": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "device",
+        "name"
+      ],
+      "additionalProperties": false
+    },
     "Hello": {
       "type": "object",
       "properties": {
@@ -2199,6 +2254,29 @@
         "conn",
         "role",
         "device"
+      ],
+      "additionalProperties": false
+    },
+    "PairAskArgs": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "guest": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pair_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pair_id",
+        "name",
+        "code"
       ],
       "additionalProperties": false
     },
@@ -3290,6 +3368,21 @@
         "toasts"
       ],
       "additionalProperties": true
+    },
+    "TotpCheckArgs": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "device": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false
     },
     "TreeDir": {
       "type": "object",
