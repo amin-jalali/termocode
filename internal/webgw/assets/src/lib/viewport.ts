@@ -3,7 +3,8 @@
 // page; some browsers shrink the page for it, others only the visual
 // viewport. The shell takes its height from the visual viewport, so the
 // input line always sits right above the keyboard, and while the keyboard
-// is up the tab bar hides (focus not obscured, WCAG 2.4.11).
+// is up the tab bar hides (focus not obscured, WCAG 2.4.11). It also
+// gives the focus back after the page was in the background.
 import { signal } from "@preact/signals";
 
 /** keyboardUp is true while an on-screen keyboard covers the page. */
@@ -44,6 +45,24 @@ function measure(): void {
   keyboardUp.value = up;
 }
 
+// Back from another app, some tablets leave nothing focused although an
+// input had the focus: the input gets it back (the keyboard may reopen,
+// as it does in a native app). Focus the user moved elsewhere stays.
+let lastEdit: HTMLElement | null = null;
+
+function rememberFocus(): void {
+  const a = document.activeElement;
+  lastEdit = a instanceof HTMLElement && editing(a) ? a : null;
+}
+
+function refocus(): void {
+  const el = lastEdit;
+  lastEdit = null;
+  const a = document.activeElement;
+  if (!el || !el.isConnected || (a && a !== document.body && a !== document.documentElement)) return;
+  el.focus({ preventScroll: true });
+}
+
 let started = false;
 
 /** watchViewport starts following the visual viewport (once). */
@@ -57,5 +76,7 @@ export function watchViewport(): void {
   // Focus moves before the keyboard opens and after it closes.
   document.addEventListener("focusin", measure);
   document.addEventListener("focusout", () => requestAnimationFrame(measure));
+  document.addEventListener("visibilitychange", () => (document.hidden ? rememberFocus() : refocus()));
+  addEventListener("pagehide", rememberFocus);
   measure();
 }

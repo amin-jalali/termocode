@@ -381,3 +381,19 @@ func TestWakeLockWhileARunStreams(t *testing.T) {
 	p.TapJS(`[...document.querySelectorAll(".term-about .chip")].find((b) => b.textContent.includes("Keep screen on"))`)
 	p.WaitJS(`window.__held === 0`)
 }
+
+// Back from another app (an iPad drops the focus), the input that had
+// the focus gets it back; focus the user put elsewhere stays there.
+func TestRefocusAfterReturn(t *testing.T) {
+	p, _ := openShell(t, Phone)
+	Eval[bool](p, termLine+`.focus() || true`)
+	p.setHidden(true)
+	Eval[bool](p, termLine+`.blur() || true`)
+	p.setHidden(false)
+	p.WaitJS(`document.activeElement === ` + termLine)
+
+	p.setHidden(true)
+	Eval[bool](p, `document.querySelector('[data-view="term"] .term-info-btn').focus() || true`)
+	p.setHidden(false)
+	p.Holds(`document.activeElement === document.querySelector('[data-view="term"] .term-info-btn')`, 200*time.Millisecond)
+}
