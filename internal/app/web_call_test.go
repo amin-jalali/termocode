@@ -5,6 +5,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -249,4 +250,34 @@ func TestCallBudgetGuard(t *testing.T) {
 	if len(slow) != 1 || slow[0] != "chat.open 25ms" {
 		t.Fatalf("slow calls %v, want [chat.open 25ms]", slow)
 	}
+}
+
+// Spec (WEB-6, T41): the hub allows webMaxInFlight unanswered requests per
+// connection (twice the gateway's 4); one more is err busy at once, and
+// an answer frees a slot.
+func TestCallInFlightCap(t *testing.T) {
+	r := newWebRig(t, nil)
+	var waiting []*webCall
+	r.hub.ops = map[string]webOpFunc{
+		webproto.OpChatPin: func(m *Model, call *webCall) tea.Cmd {
+			call.later()
+			waiting = append(waiting, call)
+			return nil
+		},
+	}
+	c, _ := r.webHello(webTestOpen)
+	for i := 1; i <= webMaxInFlight; i++ {
+		c.send(`{"t":"req","id":` + strconv.Itoa(i) + `,"op":"chat.pin","args":{"on":true}}`)
+	}
+	r.pumpUntil("the calls", func() bool { return len(waiting) == webMaxInFlight })
+	c.send(`{"t":"req","id":100,"op":"chat.pin","args":{"on":true}}`)
+	if got := r.nextMsg(c); got["code"] != "busy" || got["id"] != float64(100) {
+		t.Fatalf("over the cap: %v", got)
+	}
+	waiting[0].reply(nil)
+	if got := r.nextMsg(c); got["t"] != "res" {
+		t.Fatalf("answer: %v", got)
+	}
+	c.send(`{"t":"req","id":101,"op":"chat.pin","args":{"on":true}}`)
+	r.pumpUntil("a freed slot", func() bool { return len(waiting) == webMaxInFlight+1 })
 }

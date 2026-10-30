@@ -26,6 +26,10 @@ import (
 // a tea.Cmd or a goroutine (T41).
 const webCallBudget = 20 * time.Millisecond
 
+// webMaxInFlight caps the unanswered requests of one connection: the
+// gateway allows 4, the hub checks again with 2× headroom.
+const webMaxInFlight = 8
+
 // webNow is the clock of the budget guard; tests swap it.
 var webNow = time.Now
 
@@ -117,7 +121,10 @@ func (c *webConn) request(r *webproto.Req) bool {
 	if err != nil {
 		return refuse(webproto.CodeBadRequest, "That request is not valid.")
 	}
-	c.inflight.Add(1)
+	if c.inflight.Add(1) > webMaxInFlight {
+		c.inflight.Add(-1)
+		return refuse(webproto.CodeBusy, "Too many requests at once. Try again.")
+	}
 	call := &webCall{ctx: c.ctx, conn: c, id: r.ID, op: r.Op, args: args}
 	return c.hub.send(c.ctx, webCallMsg{hub: c.hub, call: call}) == nil
 }
