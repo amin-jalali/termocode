@@ -784,6 +784,7 @@ func (m Model) renderBox() string {
 			rows = append(rows, blank)
 		}
 	default:
+		plainRow, activeRow := newRowStyles(false), newRowStyles(true)
 		start := m.viewTop(available)
 		end := start + available
 		if end > len(m.matches) {
@@ -799,7 +800,11 @@ func (m Model) renderBox() string {
 				rows = append(rows, m.renderHeaderRow(it, innerW))
 				continue
 			}
-			rows = append(rows, m.renderResultRow(match, it, i == m.cursor, innerW))
+			st := &plainRow
+			if i == m.cursor {
+				st = &activeRow
+			}
+			rows = append(rows, m.renderResultRow(match, it, i == m.cursor, innerW, st))
 		}
 		for i := end - start; i < available; i++ {
 			rows = append(rows, blank)
@@ -939,22 +944,38 @@ func (m Model) renderHeaderRow(it Item, w int) string {
 	return left + dividerStyle.Render(strings.Repeat("─", dashes))
 }
 
-// renderResultRow renders one match. The active row is a soft accent bar
-// with a left accent edge; matched characters are highlighted; for file
-// items the type icon leads and the directory part is dimmed. Exactly w
-// cells.
-func (m Model) renderResultRow(match fuzzy.Match, it Item, active bool, w int) string {
+// rowStyles are the styles of result rows, made once per frame: one set
+// for the active row, one for the others.
+type rowStyles struct {
+	bg                                  lipgloss.Color
+	fill, title, dir, hint, match, edge theme.Fast
+}
+
+func newRowStyles(active bool) rowStyles {
 	bg := pmBoxBg
 	titleFg, hintFg, dirFg := pmTextPri, pmHintFg, pmDirFg
 	if active {
 		bg = pmSelBg
 		titleFg, hintFg, dirFg = pmSelFg, pmSelHintFg, pmSelDirFg
 	}
-	fill := lipgloss.NewStyle().Background(bg)
-	titleStyle := lipgloss.NewStyle().Background(bg).Foreground(titleFg).Bold(active)
-	dirStyle := lipgloss.NewStyle().Background(bg).Foreground(dirFg)
-	hintStyle := lipgloss.NewStyle().Background(bg).Foreground(hintFg)
-	matchStyle := lipgloss.NewStyle().Background(bg).Foreground(pmMatchFg).Bold(true)
+	return rowStyles{
+		bg:    bg,
+		fill:  theme.NewFast(lipgloss.NewStyle().Background(bg)),
+		title: theme.NewFast(lipgloss.NewStyle().Background(bg).Foreground(titleFg).Bold(active)),
+		dir:   theme.NewFast(lipgloss.NewStyle().Background(bg).Foreground(dirFg)),
+		hint:  theme.NewFast(lipgloss.NewStyle().Background(bg).Foreground(hintFg)),
+		match: theme.NewFast(lipgloss.NewStyle().Background(bg).Foreground(pmMatchFg).Bold(true)),
+		edge:  theme.NewFast(lipgloss.NewStyle().Background(bg).Foreground(pmIconBlue)),
+	}
+}
+
+// renderResultRow renders one match. The active row is a soft accent bar
+// with a left accent edge; matched characters are highlighted; for file
+// items the type icon leads and the directory part is dimmed. Exactly w
+// cells.
+func (m Model) renderResultRow(match fuzzy.Match, it Item, active bool, w int, st *rowStyles) string {
+	bg := st.bg
+	fill, titleStyle, dirStyle, hintStyle, matchStyle := st.fill, st.title, st.dir, st.hint, st.match
 
 	pos := make(map[int]bool, len(match.MatchedIndexes))
 	for _, i := range match.MatchedIndexes {
@@ -973,7 +994,7 @@ func (m Model) renderResultRow(match fuzzy.Match, it Item, active bool, w int) s
 
 	var sb strings.Builder
 	if active {
-		sb.WriteString(lipgloss.NewStyle().Background(bg).Foreground(pmIconBlue).Render("▌"))
+		sb.WriteString(st.edge.Render("▌"))
 		sb.WriteString(fill.Render(" "))
 	} else {
 		sb.WriteString(fill.Render("  "))
@@ -994,7 +1015,7 @@ func (m Model) renderResultRow(match fuzzy.Match, it Item, active bool, w int) s
 	}
 	// Runs of runes that share a style are rendered at once (one Render
 	// per run, not per rune: a row is a handful of runs).
-	styles := [3]lipgloss.Style{titleStyle, dirStyle, matchStyle}
+	styles := [3]theme.Fast{titleStyle, dirStyle, matchStyle}
 	run, runKind := make([]rune, 0, len(runes)), -1
 	flush := func() {
 		if len(run) > 0 {
