@@ -119,6 +119,10 @@ func shotHub(t *testing.T, c *HubConn) {
 				switch v.Op {
 				case "buf.open":
 					data = map[string]any{"buf": 2, "path": "cmd/covreport/filter.go", "tick": 3, "lines": len(lines), "dirty": false, "ft": "go", "readonly": false}
+				case "git.text":
+					// The index's copy: the file before its two changed rows.
+					old := strings.Replace(strings.Replace(shotFile, `"-coverpkg"`, `"…"`, 1), "\ttail := \"\"\n", "\tvar tail string\n", 1)
+					data = webproto.GitText{Path: "cmd/covreport/filter.go", Rev: "index", Text: old}
 				case "buf.hl":
 					var a webproto.HlArgs
 					_ = json.Unmarshal(v.Args, &a)
@@ -172,6 +176,10 @@ func TestShots(t *testing.T) {
 				shot("chat", "#/chat", `document.querySelector('[data-view="chat"] .msg')`)
 				shot("term", "#/term", `document.querySelector('[data-view="term"] .trow')`)
 				shot("git", "#/git", `document.querySelector('.git-row-wrap')`)
+				if !vp.Mobile {
+					diffDoc := `document.querySelector('[data-view="diff"] .desk-editor')?.contentDocument`
+					shot("diff", "#/git/cmd/covreport/filter.go", diffDoc+`?.querySelector(".editor.modified .char-insert") && `+diffDoc+`.querySelector(".editor.modified .view-line .hl-kc")`)
+				}
 			})
 		}
 	}
