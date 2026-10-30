@@ -61,6 +61,9 @@ type WSConfig struct {
 	WriteWait time.Duration
 	// HubWait bounds one write to the hub.
 	HubWait time.Duration
+	// PingEvery is how often the gateway pings the browser; a pong must
+	// come within PongWait or the link is dead.
+	PingEvery, PongWait time.Duration
 	// MaxViewers caps the browsers connected at once (web_max_viewers).
 	MaxViewers int
 	// ThrottleMax: held back by the rate limits this long in one go, a
@@ -73,6 +76,8 @@ const (
 	DefaultHelloWait = 5 * time.Second
 	DefaultWriteWait = 5 * time.Second
 	DefaultHubWait   = 15 * time.Second
+	DefaultPingEvery = 25 * time.Second
+	DefaultPongWait  = 10 * time.Second
 	// DefaultMaxViewers: the owner's limit of browsers at once.
 	DefaultMaxViewers = 4
 )
@@ -109,6 +114,12 @@ func NewWS(cfg WSConfig) *WS {
 	}
 	if cfg.HubWait <= 0 {
 		cfg.HubWait = DefaultHubWait
+	}
+	if cfg.PingEvery <= 0 {
+		cfg.PingEvery = DefaultPingEvery
+	}
+	if cfg.PongWait <= 0 {
+		cfg.PongWait = DefaultPongWait
 	}
 	if cfg.MaxViewers <= 0 {
 		cfg.MaxViewers = DefaultMaxViewers
@@ -298,7 +309,29 @@ func (c *wsConn) serve() {
 		return
 	}
 	go c.fromHub()
+	go c.keepalive()
 	c.fromBrowser()
+}
+
+// keepalive pings the browser; a link with no pong in time is dropped
+// (1006: the page reconnects by itself).
+func (c *wsConn) keepalive() {
+	t := time.NewTicker(c.s.cfg.PingEvery)
+	defer t.Stop()
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		case <-t.C:
+		}
+		pctx, cancel := context.WithTimeout(c.ctx, c.s.cfg.PongWait)
+		err := c.ws.Ping(pctx)
+		cancel()
+		if err != nil {
+			c.end(webproto.CloseCode(websocket.StatusAbnormalClosure), false)
+			return
+		}
+	}
 }
 
 // hello reads and checks the first message, then opens the hub
