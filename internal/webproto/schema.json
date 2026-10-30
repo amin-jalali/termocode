@@ -119,7 +119,9 @@
     {
       "name": "cards",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "CardsSnap",
+      "delta": "CardsDelta"
     },
     {
       "name": "tree",
@@ -183,6 +185,7 @@
     }
   ],
   "events": {
+    "answered": "Answered",
     "attention": "Attention"
   },
   "messages": {
@@ -700,6 +703,21 @@
     }
   ],
   "defs": {
+    "Answered": {
+      "type": "object",
+      "properties": {
+        "by": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
     "Attention": {
       "type": "object",
       "properties": {
@@ -745,6 +763,103 @@
       ],
       "additionalProperties": false
     },
+    "Card": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "choices": {
+          "items": {
+            "$ref": "#/defs/CardChoice"
+          },
+          "type": "array"
+        },
+        "diff": {
+          "$ref": "#/defs/CardDiff"
+        },
+        "file": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "tool",
+            "mcp",
+            "plan",
+            "review",
+            "trust"
+          ]
+        },
+        "read_only": {
+          "type": "boolean"
+        },
+        "since": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "choices",
+        "since"
+      ],
+      "additionalProperties": true
+    },
+    "CardChoice": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "needs_laptop": {
+          "type": "boolean"
+        },
+        "safe": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "additionalProperties": true
+    },
+    "CardDiff": {
+      "type": "object",
+      "properties": {
+        "added": {
+          "type": "integer"
+        },
+        "removed": {
+          "type": "integer"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/defs/DiffRow"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "rows",
+        "added",
+        "removed"
+      ],
+      "additionalProperties": true
+    },
     "CardsAnswerArgs": {
       "type": "object",
       "properties": {
@@ -760,6 +875,45 @@
         "choice"
       ],
       "additionalProperties": false
+    },
+    "CardsDelta": {
+      "type": "object",
+      "properties": {
+        "by": {
+          "type": "string"
+        },
+        "card": {
+          "$ref": "#/defs/Card"
+        },
+        "id": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "upsert",
+            "remove"
+          ]
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "additionalProperties": true
+    },
+    "CardsSnap": {
+      "type": "object",
+      "properties": {
+        "cards": {
+          "items": {
+            "$ref": "#/defs/Card"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "cards"
+      ],
+      "additionalProperties": true
     },
     "ChatDelta": {
       "type": "object",
@@ -1119,6 +1273,32 @@
         "topic",
         "seq",
         "data"
+      ],
+      "additionalProperties": true
+    },
+    "DiffRow": {
+      "type": "object",
+      "properties": {
+        "k": {
+          "enum": [
+            "ctx",
+            "add",
+            "del"
+          ]
+        },
+        "new": {
+          "type": "integer"
+        },
+        "old": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "k",
+        "text"
       ],
       "additionalProperties": true
     },
