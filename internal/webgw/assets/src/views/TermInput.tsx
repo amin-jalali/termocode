@@ -19,6 +19,8 @@ import { Sheet } from "../ui/Sheet";
 type Mod = 0 | 1 | 2;
 export const ctrl = signal<Mod>(0);
 export const alt = signal<Mod>(0);
+/** pasting is true while the paste sheet is open (the key or a row's menu opens it). */
+export const pasting = signal(false);
 
 /** MAX_PASTE is the most one paste sends (term.send takes 64 KiB). */
 export const MAX_PASTE = 64 << 10;
@@ -172,7 +174,6 @@ function PasteSheet({ buf, onClose }: { buf: number; onClose: () => void }) {
 
 export function TermInput({ buf, ended }: { buf: number; ended: boolean }) {
   const [line, setLine] = useState("");
-  const [paste, setPaste] = useState(false);
   const off = !live.value || ended;
   const submit = () => {
     if (off) return;
@@ -238,11 +239,11 @@ export function TermInput({ buf, ended }: { buf: number; ended: boolean }) {
             </button>
           );
         })}
-        <button type="button" class="key key-paste" aria-disabled={off ? "true" : undefined} onClick={() => !off && setPaste(true)}>
+        <button type="button" class="key key-paste" aria-disabled={off ? "true" : undefined} onClick={() => !off && (pasting.value = true)}>
           {t("key.paste")}
         </button>
       </div>
-      {paste && <PasteSheet buf={buf} onClose={() => setPaste(false)} />}
+      {pasting.value && !off && <PasteSheet buf={buf} onClose={() => (pasting.value = false)} />}
     </div>
   );
 }

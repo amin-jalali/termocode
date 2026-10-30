@@ -9,12 +9,13 @@ import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { TermItem, TermNewRes } from "../../../../webproto/proto";
 import { rang } from "../lib/attention";
+import { useLongPress } from "../lib/longpress";
 import { usePinch } from "../lib/rowfont";
 import { go, route } from "../lib/router";
 import { dropOlder, loadingOlder, loadOlder, older, stitch } from "../lib/term";
 import { toast } from "../lib/toasts";
 import { ReqError } from "../net/link";
-import { link, store } from "../session";
+import { link, live, store } from "../session";
 import { isGone } from "../state/files";
 import { readTerm, readTerms, reflow } from "../state/term";
 import { t } from "../strings";
@@ -23,10 +24,11 @@ import { errText } from "../ui/CardSheet";
 import { Chip } from "../ui/Chip";
 import { FontSize } from "../ui/FontSize";
 import { Sheet } from "../ui/Sheet";
+import { RowMenu, type MenuItem } from "../ui/RowMenu";
 import { TermRow } from "../ui/rows";
 import { SkeletonRows } from "../ui/Skeleton";
 import { Refused, TopicBody } from "./Placeholder";
-import { TermInput } from "./TermInput";
+import { pasting, TermInput } from "./TermInput";
 import { View } from "./View";
 
 /** NEAR_BOTTOM_PX: closer than this to the end, new output keeps the view at the end. */
@@ -142,6 +144,26 @@ function Chips({ terms, cur }: { terms: TermItem[]; cur: number | undefined }) {
   );
 }
 
+/** copy puts text on the clipboard (writing only; the page never reads it). */
+function copy(text: string): void {
+  const fail = () => toast("warn", t("copy.failed"));
+  try {
+    navigator.clipboard.writeText(text).then(() => toast("ok", t("copied")), fail);
+  } catch {
+    fail();
+  }
+}
+
+/** rowMenu is what a long press on a terminal row offers. */
+function rowMenu(row: string, all: string, canPaste: boolean): MenuItem[] {
+  const items: MenuItem[] = [
+    { label: t("term.copy_row"), pick: () => copy(row) },
+    { label: t("term.copy_all"), pick: () => copy(all) },
+  ];
+  if (canPaste) items.push({ label: t("term.paste"), pick: () => (pasting.value = true) });
+  return items;
+}
+
 function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; body: { current: HTMLElement | null } }) {
   const topic = "term:" + buf;
   const ts = store.topic(topic).value;
@@ -150,6 +172,11 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
   const keep = useRef<number | null>(null);
   const stick = useRef(true);
   const [pinned, setPinned] = useState(true);
+  const [menu, setMenu] = useState<string | null>(null);
+  useLongPress(body, (target) => {
+    const row = target.closest(".term-rows .trow");
+    if (row) setMenu(row.querySelector(".trow-text")?.textContent ?? "");
+  });
 
   useEffect(() => {
     dropOlder();
@@ -235,6 +262,13 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
             {t("term.new")}
           </Button>
         </p>
+      )}
+      {menu !== null && (
+        <RowMenu
+          title={menu || t("tab.term")}
+          items={rowMenu(menu, lines.map((l) => l.text).join("\n"), link.meta.value?.role === "controller" && live.value && !gone && !item?.exited)}
+          onClose={() => setMenu(null)}
+        />
       )}
       {!pinned && (
         <span class="term-follow">

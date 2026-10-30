@@ -148,3 +148,12 @@
 .connect-line.is-error { color: var(--text); background: var(--bg-float); border: 1px solid var(--border); border-inline-start: 3px solid var(--red); border-radius: var(--r-card); padding: var(--s3) var(--s4); text-align: start; }
 .connect-foot { padding: var(--gutter) var(--gutter) calc(var(--gutter) + env(safe-area-inset-bottom)); width: 100%; max-width: 30rem; justify-self: center; }
 .connect-foot .btn { min-height: 3rem; font-size: 1rem; }
+
+/* ---- Row menu (long press, right click) ---- */
+.row-menu { display: flex; flex-direction: column; padding: 0 var(--s4) var(--s3); }
+.row-menu-title { padding: var(--s2) 0 var(--s3); font-family: var(--font-mono); font-size: var(--fs-hint); font-weight: 400; color: var(--muted); unicode-bidi: isolate; }
+.row-menu-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.row-menu-list li { border-bottom: 1px solid var(--border); }
+.row-menu-item { display: flex; align-items: center; width: 100%; min-height: var(--tap); padding: 0 var(--s2); text-align: start; font-weight: 550; }
+.row-menu-item:hover { background: var(--bg-hover); }
+.row-menu-cancel { justify-content: center; margin-top: var(--s2); color: var(--muted); }
