@@ -122,7 +122,7 @@ function SetPage({ id, title, groups, search, children, note }: { id: string; ti
             </button>
           ))}
         </nav>
-        <div class="setp-list" ref={list}>
+        <div class="setp-list" ref={list} tabIndex={id === "settings" ? 0 : undefined} aria-label={id === "settings" ? title : undefined}>
           {children}
         </div>
       </div>

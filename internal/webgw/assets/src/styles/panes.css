@@ -9,7 +9,7 @@
   --wb-list-focus-fg: #ffffff;
   --wb-count-bg: #4d4d4d;
   --wb-count-fg: #ffffff;
-  --wb-desc: #a0a0a0;
+  --wb-desc: #ababab;
   --wb-input-border: transparent;
   --wb-option-on-bg: rgba(36, 137, 219, 0.51);
   --wb-option-on-border: #2488db;
@@ -29,14 +29,14 @@
   --wb-button2-hover: #45494e;
   --wb-grid-border: rgba(204, 204, 204, 0.15);
   --wb-header-bg: #252526;
-  --wb-null: rgba(204, 204, 204, 0.45);
+  --wb-null: #8c8c8c;
 }
 :root[data-theme="light"]:not([data-laptop-theme]) .layout-desktop,
 :root[data-theme="light"][data-laptop-theme="vscode-dark-plus"] .layout-desktop {
   --wb-list-focus-fg: #ffffff;
   --wb-count-bg: #c4c4c4;
   --wb-count-fg: #333333;
-  --wb-desc: #6c6c6c;
+  --wb-desc: #616161;
   --wb-input-border: #cecece;
   --wb-option-on-bg: rgba(0, 144, 241, 0.2);
   --wb-option-on-border: #007acc;
@@ -47,8 +47,8 @@
   --wb-git-del: #ad0707;
   --wb-git-conf: #ad0707;
   --wb-ok: #388a34;
-  --wb-err: #e51400;
-  --wb-warn: #bf8803;
+  --wb-err: #c4210d;
+  --wb-warn: #855f00;
   --wb-info: #1a85ff;
   --wb-link: #006ab1;
   --wb-button2-bg: #5f6a79;
@@ -56,14 +56,14 @@
   --wb-button2-hover: #4c5561;
   --wb-grid-border: rgba(97, 97, 97, 0.2);
   --wb-header-bg: #f3f3f3;
-  --wb-null: rgba(97, 97, 97, 0.6);
+  --wb-null: #767676;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]):not([data-laptop-theme]) .layout-desktop,
   :root:not([data-theme])[data-laptop-theme="vscode-dark-plus"] .layout-desktop {
     --wb-count-bg: #c4c4c4;
     --wb-count-fg: #333333;
-    --wb-desc: #6c6c6c;
+    --wb-desc: #616161;
     --wb-input-border: #cecece;
     --wb-option-on-bg: rgba(0, 144, 241, 0.2);
     --wb-option-on-border: #007acc;
@@ -72,15 +72,15 @@
     --wb-git-del: #ad0707;
     --wb-git-conf: #ad0707;
     --wb-ok: #388a34;
-    --wb-err: #e51400;
-    --wb-warn: #bf8803;
+    --wb-err: #c4210d;
+    --wb-warn: #855f00;
     --wb-info: #1a85ff;
     --wb-link: #006ab1;
     --wb-button2-bg: #5f6a79;
     --wb-button2-hover: #4c5561;
     --wb-grid-border: rgba(97, 97, 97, 0.2);
     --wb-header-bg: #f3f3f3;
-    --wb-null: rgba(97, 97, 97, 0.6);
+    --wb-null: #767676;
   }
 }
 :root[data-laptop-theme]:not([data-laptop-theme="vscode-dark-plus"]) .layout-desktop {
@@ -212,7 +212,7 @@
 .sv-note { flex: none; margin: 0; padding: 0 12px 6px 20px; color: var(--wb-desc); line-height: 18px; }
 .sv-note .cod { vertical-align: text-bottom; font-size: 14px; }
 .sr-line { font-size: var(--fs-ui); }
-.sr-mark { background: var(--wb-match-bg); color: inherit; border-radius: 0; outline: 1px solid var(--wb-match-border); outline-offset: -1px; }
+.sr-mark { background: var(--wb-match-bg); color: var(--wb-tab-active-fg); border-radius: 0; outline: 1px solid var(--wb-match-border); outline-offset: -1px; }
 .tr .count { margin-inline-end: 2px; }
 
 /* ---- Source control ---- */
@@ -230,7 +230,7 @@
 
 /* ---- Databases ---- */
 .db-env { padding: 0 4px; border-radius: 2px; color: var(--wb-desc); font-size: 11px; line-height: 16px; }
-.db-env.is-prod { background: rgba(199, 46, 15, 0.25); color: var(--wb-err); }
+.db-env.is-prod { background: #b3260b; color: #ffffff; }
 .ed-tab-cod { display: inline-flex; width: 16px; justify-content: center; }
 .dbv-tab { display: flex; flex-direction: column; min-height: 0; background: var(--wb-editor-bg); color: var(--wb-editor-fg); }
 .dbv-crumbs { display: flex; align-items: center; gap: 4px; flex: none; height: 22px; padding: 0 12px 0 14px; color: var(--wb-breadcrumb); font-size: var(--fs-ui); white-space: nowrap; }
@@ -333,7 +333,7 @@
 .layout-desktop .chatcol .composer-frame .composer-box { min-height: 20px; padding: 0; border: 0; border-radius: 0; background: transparent; outline: none; }
 .layout-desktop .chatcol .composer-frame .composer-box:focus-visible { outline: none; }
 .composer-tools { display: flex; align-items: center; gap: 4px; height: 24px; }
-.chat-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: 4px; color: var(--wb-desc); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: 4px; color: var(--wb-input-fg); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-chip .cod { font-size: 14px; }
 .composer-tools .send, .composer-tools .stop { margin-inline-start: auto; }
 .layout-desktop .chatcol .composer-tools .btn { width: 24px; min-width: 24px; height: 24px; min-height: 24px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--wb-side-fg); }

@@ -148,7 +148,7 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
   if (tabs.length === 0) return null;
   return (
     <div class="ed-tabbar">
-    <div class="ed-tabs" role="tablist" aria-label={t("wb.tabs")} data-group={group} onDragOver={(e) => over(e, tabs.length)} onDrop={(e) => land(e, tabs.length)}>
+    <div class="ed-tabs" role="group" aria-label={t("wb.tabs")} data-group={group} onDragOver={(e) => over(e, tabs.length)} onDrop={(e) => land(e, tabs.length)}>
       {tabs.map((path, i) => {
         const b = bufs.find((x) => x.path === path);
         const on = path === cur;
@@ -183,8 +183,7 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
             <button
               type="button"
               class="ed-tab-open"
-              role="tab"
-              aria-selected={on ? "true" : "false"}
+              aria-current={on ? "true" : undefined}
               data-path={path}
               onClick={() => {
                 if (group !== focusedGroup.peek()) focusedGroup.value = group;

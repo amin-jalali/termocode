@@ -49,7 +49,18 @@ func axeSource(t *testing.T) string {
 
 // axe runs the checker on the page as it is now and fails the test on
 // each violation, named by where.
-func (p *Page) axe(src, where string) {
+func (p *Page) axe(src, where string) { p.T.Helper(); p.axeWith(src, where, "") }
+
+// axeDense is axe for the desktop's dense lists: their rows and icon
+// buttons keep the laptop editor's 22 px (the owner's choice for the
+// desktop, where the pointer is fine and the tree keys reach every
+// row), so the 24 px target size rule is off; every other rule holds.
+func (p *Page) axeDense(src, where string) {
+	p.T.Helper()
+	p.axeWith(src, where, `rules: {"target-size": {enabled: false}},`)
+}
+
+func (p *Page) axeWith(src, where, extra string) {
 	p.T.Helper()
 	if !Eval[bool](p, `typeof window.axe === "object"`) {
 		Eval[bool](p, src+`; true`)
@@ -57,6 +68,7 @@ func (p *Page) axe(src, where string) {
 	Eval[bool](p, `(window.__axe = undefined, axe.run(document, {
 		runOnly: {type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]},
 		resultTypes: ["violations"],
+		`+extra+`
 	}).then((r) => (window.__axe = r.violations.map((v) => v.id + " (" + v.impact + "): " + v.help + " @ " + v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | "))),
 		(e) => (window.__axe = ["axe failed: " + e])), true)`)
 	p.WaitJS(`window.__axe !== undefined`)
@@ -300,5 +312,46 @@ func TestAxeViewsWithContent(t *testing.T) {
 				p.axe(src, "offline")
 			})
 		}
+	}
+}
+
+// axe on every desktop side bar view and editor page with data (the shot
+// hub's): search results, source control, tasks and runs, databases and
+// a table's grid, containers, MCP, settings, this device; dark and light.
+// (Dense lists: see axeDense.)
+func TestAxeDeskPanels(t *testing.T) {
+	src := axeSource(t)
+	for _, theme := range []string{"dark", "light"} {
+		t.Run(theme, func(t *testing.T) {
+			s := StartServer(t)
+			p := NewPage(t, s, Desktop)
+			p.Media(map[string]string{"prefers-reduced-motion": "reduce", "prefers-color-scheme": theme})
+			c := p.Login("c-axe")
+			shotHub(t, c)
+			has := func(text string) string { return `document.querySelector(".wb").innerText.includes(` + jsq(text) + `)` }
+			visit := func(name, hash, ready string) {
+				Eval[bool](p, `(location.hash = `+jsq(hash)+`, true)`)
+				p.WaitJS(ready)
+				p.axeDense(src, name)
+			}
+			Eval[bool](p, `(location.hash = "#/more/search", true)`)
+			p.WaitJS(`document.querySelector(".wb-side input")`)
+			Eval[bool](p, `(() => { const i = document.querySelector(".wb-side input"); i.focus(); i.value = "lineFilter"; i.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`)
+			p.Key("\r")
+			p.WaitJS(has("cover.go"))
+			p.axeDense(src, "search")
+			visit("source control", "#/git", `document.querySelector('.tr[data-group="changes"]')`)
+			visit("tasks and runs", "#/more/tasks", has("fix the toast flicker"))
+			visit("databases", "#/more/db", has("shop (local)"))
+			p.TapJS(`document.querySelector('.wb-side .tr[data-conn="local"]')`)
+			p.WaitJS(has("customers"))
+			p.TapJS(`document.querySelector('.wb-side .tr[data-table="customers"]')`)
+			p.WaitJS(has("ann@example.com"))
+			p.axeDense(src, "table grid")
+			visit("containers", "#/more/containers", has("shop-api-1"))
+			visit("mcp", "#/more/mcp", has("claude-desktop"))
+			visit("settings", "#/more/settings", `document.querySelector(".set-item")`)
+			visit("this device", "#/more", `document.querySelector('.set-item[data-key="theme"]')`)
+		})
 	}
 }
