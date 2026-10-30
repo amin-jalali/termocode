@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/webproto"
 	"github.com/amin-jalali/termocode/internal/workspace"
 )
@@ -20,13 +21,14 @@ import (
 // commands run here, in order.
 
 type webFilesRig struct {
-	t    *testing.T
-	m    *Model
-	h    *webHub
-	c    *webConn
-	root string
-	id   uint64
-	kept map[*webConn][]map[string]any // topic frames read past while looking for an answer
+	t      *testing.T
+	m      *Model
+	h      *webHub
+	c      *webConn
+	root   string
+	id     uint64
+	kept   map[*webConn][]map[string]any // topic frames read past while looking for an answer
+	events chan nvim.NotifyMsg
 }
 
 func newWebFilesRig(t *testing.T) *webFilesRig {
@@ -231,5 +233,62 @@ func webResData(t *testing.T, f map[string]any, v any) {
 	b, _ := json.Marshal(f["data"])
 	if err := json.Unmarshal(b, v); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// withNvim starts a real nvim for the rig (closed at the end of the test)
+// and forwards its notifications to pump.
+func (r *webFilesRig) withNvim() *nvim.Client {
+	r.t.Helper()
+	c := aiTestNvim(r.t, r.m)
+	r.m.subscribeNotify()
+	ch := make(chan nvim.NotifyMsg, 4096)
+	go func() {
+		defer close(ch)
+		for {
+			msg := c.Next()()
+			switch v := msg.(type) {
+			case nil, nvim.ExitedMsg:
+				return
+			case nvim.NotifyMsg:
+				select {
+				case ch <- v:
+				default:
+				}
+			}
+		}
+	}()
+	r.events = ch
+	return c
+}
+
+// pumpUntil hands nvim notifications to the Model (as Update does) until
+// cond holds.
+func (r *webFilesRig) pumpUntil(what string, cond func() bool) {
+	r.t.Helper()
+	deadline := time.After(20 * time.Second)
+	for !cond() {
+		select {
+		case msg, ok := <-r.events:
+			if !ok {
+				r.t.Fatalf("nvim ended while waiting for %s", what)
+			}
+			r.m.dispatchNotify(msg)
+		case <-deadline:
+			r.t.Fatalf("timed out waiting for %s", what)
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+}
+
+// lua runs a test chunk in nvim and decodes its result.
+func (r *webFilesRig) lua(code string, out any, args ...any) {
+	r.t.Helper()
+	if out == nil {
+		var discard any
+		out = &discard
+	}
+	if err := r.m.nvim.ExecLuaResult(code, out, args...); err != nil {
+		r.t.Fatalf("lua: %v", err)
 	}
 }

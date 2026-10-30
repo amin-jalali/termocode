@@ -13,12 +13,17 @@ func init() {
 // webFiles is the hub's state of the tree, the buffers and terminals.
 type webFiles struct {
 	tree webTree
+	bufs map[int]*webBuf // attached buffers (files and terminals) by number
+
+	loading int                   // buf.open calls on their way
+	early   map[int][]webBufEvent // callbacks that came before their buf.open answered
+	earlyN  int
 }
 
 // files returns the hub's file state, making it on first use.
 func (h *webHub) filesState() *webFiles {
 	if h.files == nil {
-		h.files = &webFiles{tree: newWebTree()}
+		h.files = &webFiles{tree: newWebTree(), bufs: map[int]*webBuf{}, early: map[int][]webBufEvent{}}
 	}
 	return h.files
 }
@@ -46,5 +51,7 @@ func (m *Model) webTrackFiles() tea.Cmd {
 		return nil
 	}
 	f := h.filesState()
-	return m.webTrackTree(h, f)
+	cmd := m.webTrackTree(h, f)
+	m.webReleaseBufs(h, f)
+	return cmd
 }
