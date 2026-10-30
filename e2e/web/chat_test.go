@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -280,4 +282,75 @@ func TestChatNewChat(t *testing.T) {
 	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"id": "c-2"})})
 	c.Send(t, Delta("chat", 2, map[string]any{"op": "switched", "chat": map[string]any{"id": "c-2", "title": "New chat", "busy": false, "messages": []any{}}}))
 	p.WaitJS(`document.querySelector('[data-view="chat"] .empty-state')`)
+}
+
+// Offline the composer locks (Send reads Offline and does nothing) but
+// typing goes on; after the reconnect nothing was sent by itself and the
+// draft is all there (web UX P5).
+func TestChatDraftSurvivesOffline(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openChat(t, vp, chatWith(false, userMsg(0, "hi")))
+			typeDraft(p, "half a thought")
+			c.Drop()
+			const send = `[data-view="chat"] .composer .send .btn`
+			p.WaitJS(`document.querySelector(` + jsq(send) + `)?.textContent === "Offline"`)
+			if got := Eval[string](p, `document.querySelector(`+jsq(send)+`).getAttribute("aria-disabled")`); got != "true" {
+				t.Errorf("offline Send aria-disabled = %q", got)
+			}
+			p.Tap(send)
+			p.TapJS(composer + `.querySelector("textarea")`)
+			p.Key(" more")
+			c2 := p.S.Hub.Accept(t)
+			c2.Handshake(t, "c-1")
+			p.WaitJS(`document.querySelector(` + jsq(send) + `)?.textContent === "Send"`)
+			noReq(t, c2, 500*time.Millisecond)
+			if got := Eval[string](p, composer+`.querySelector("textarea").value`); got != "half a thought more" {
+				t.Errorf("after the reconnect the draft is %q", got)
+			}
+		})
+	}
+}
+
+// A draft is kept on this device across a reload, but never one that
+// looks like a secret.
+func TestChatDraftKeptAcrossReloadButNoSecrets(t *testing.T) {
+	for _, tc := range []struct{ draft, want string }{
+		{"check the quit test", "check the quit test"},
+		{"use key sk-" + "test1234567890abcdefXYZ please", ""},
+	} {
+		s := StartServer(t)
+		p := NewPage(t, s, Phone)
+		c := p.Login("c-1")
+		c.Send(t, Snap("chat", 1, chatWith(false, userMsg(0, "hi"))))
+		typeDraft(p, tc.draft)
+		p.Do(chromedp.Reload())
+		c2 := s.Hub.Accept(t)
+		c2.Handshake(t, "c-2")
+		c2.Subs(t, "chat")
+		c2.Send(t, Snap("chat", 1, chatWith(false, userMsg(0, "hi"))))
+		p.WaitJS(composer + `?.querySelector("textarea")`)
+		if got := Eval[string](p, composer+`.querySelector("textarea").value`); got != tc.want {
+			t.Errorf("draft %q after reload is %q, want %q", tc.draft, got, tc.want)
+		}
+		if tc.want == "" && Eval[bool](p, `Object.keys(localStorage).some((k) => (localStorage.getItem(k) || "").includes("sk-"))`) {
+			t.Error("a secret-looking draft is in localStorage")
+		}
+	}
+}
+
+// noReq checks that the page sends nothing but subs for d.
+func noReq(t *testing.T, c *HubConn, d time.Duration) {
+	t.Helper()
+	end := time.After(d)
+	for {
+		select {
+		case m := <-c.in:
+			if _, ok := m.(*webproto.Sub); !ok {
+				t.Fatalf("page sent %s; want no request", show(m))
+			}
+		case <-end:
+			return
+		}
+	}
 }

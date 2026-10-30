@@ -2,6 +2,7 @@
 // only the choices below, validated on read. Storage may be missing or
 // throw (private mode); the page then runs on the defaults.
 import { effect, signal } from "@preact/signals";
+import { looksSecret } from "./secretish";
 
 const KEY = "termocode.prefs.v1";
 
@@ -53,3 +54,40 @@ effect(() => {
     // Storage is full or blocked: the choice still holds for this page.
   }
 });
+
+// The chat draft of this device (WEB-14): the last draft typed, kept so a
+// reload does not lose it. Never a secret: a draft that looks like one is
+// not stored (and an old stored one is removed). Kept for a day.
+const DRAFT_KEY = "termocode.draft.v1";
+const DRAFT_MAX = 8000;
+const DRAFT_DAY_MS = 24 * 60 * 60 * 1000;
+
+export interface StoredDraft {
+  chat: string;
+  text: string;
+}
+
+export function loadDraft(now: number): StoredDraft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof v.chat !== "string" || typeof v.text !== "string" || typeof v.at !== "number") return null;
+    if (now - v.at > DRAFT_DAY_MS || looksSecret(v.text)) {
+      localStorage.removeItem(DRAFT_KEY);
+      return null;
+    }
+    return { chat: v.chat, text: v.text };
+  } catch {
+    return null;
+  }
+}
+
+export function saveDraft(chat: string, text: string, now: number): void {
+  try {
+    if (!text || text.length > DRAFT_MAX || looksSecret(text)) localStorage.removeItem(DRAFT_KEY);
+    else localStorage.setItem(DRAFT_KEY, JSON.stringify({ chat, text, at: now }));
+  } catch {
+    // Storage is full or blocked: the draft still lives in memory.
+  }
+}
