@@ -35,6 +35,25 @@ func runWebGateway(args []string) int {
 }
 
 func runWebGatewayIn(args []string, handoff io.WriteCloser, errw io.Writer) int {
+	cfg, ok := webGatewayConfig(args, errw)
+	if !ok {
+		return 2
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+	if handoff != nil {
+		cfg.Handoff = handoff
+	}
+	if _, err := webgw.Run(ctx, cfg); err != nil {
+		fmt.Fprintf(errw, "termocode web gateway: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+// webGatewayConfig reads the gateway's arguments; ok is false (and why
+// is on errw) when they are not what termocode itself passes.
+func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	fs := flag.NewFlagSet(webGatewayArg, flag.ContinueOnError)
 	fs.SetOutput(errw)
 	dir := fs.String("dir", "", "workspace folder")
@@ -45,16 +64,14 @@ func runWebGatewayIn(args []string, handoff io.WriteCloser, errw io.Writer) int 
 	port := fs.Int("port", 0, "port (0: random)")
 	if err := fs.Parse(args); err != nil || *dir == "" || *audit == "" || fs.NArg() != 0 {
 		fmt.Fprintln(errw, "termocode: the web gateway is started by termocode itself")
-		return 2
+		return webgw.RunConfig{}, false
 	}
 	paths, err := session.PathsFor(*dir)
 	if err != nil {
 		fmt.Fprintf(errw, "termocode web gateway: %v\n", err)
-		return 1
+		return webgw.RunConfig{}, false
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
-	cfg := webgw.RunConfig{
+	return webgw.RunConfig{
 		Dial: func(ctx context.Context) (net.Conn, error) {
 			var d net.Dialer
 			return d.DialContext(ctx, "unix", paths.WebSocket)
@@ -62,13 +79,5 @@ func runWebGatewayIn(args []string, handoff io.WriteCloser, errw io.Writer) int 
 		AuditPath: *audit, StatusPath: paths.WebStatus, LockPath: paths.WebLock,
 		Port: *port, Idle: time.Duration(*idle) * time.Minute, Max: time.Duration(*maxH) * time.Hour,
 		MaxViewers: *viewers, Assets: webAssets(),
-	}
-	if handoff != nil {
-		cfg.Handoff = handoff
-	}
-	if _, err := webgw.Run(ctx, cfg); err != nil {
-		fmt.Fprintf(errw, "termocode web gateway: %v\n", err)
-		return 1
-	}
-	return 0
+	}, true
 }
