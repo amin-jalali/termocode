@@ -198,6 +198,8 @@ type Model struct {
 	// gitCommitGroups[i] is the GRAPH group (Today, Yesterday, …) of
 	// gitCommits[i], worked out when the commits arrive.
 	gitCommitGroups []string
+	// gitRowMemo keeps drawn GRAPH rows of gitCommits (git_panel.go).
+	gitRowMemo *gitCommitRowMemo
 	// gitGraphMore: older commits exist past the loaded ones.
 	gitGraphMore bool
 	// gitGraphShown is how many commits GRAPH shows (0 = the default);

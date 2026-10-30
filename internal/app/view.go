@@ -1566,8 +1566,7 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		}
 		return renderGitFile(m.gitFiles[r.fileIndex], active, focused, w)
 	case gitRowCommit:
-		c := m.gitCommits[r.ci]
-		return renderGitGraphCommitMark(c, m.gitCompareMarkOf(c.FullHash), active, focused, w)
+		return m.gitRowMemo.commitRow(m.gitCommits, r.ci, m.gitCompareMarkOf(m.gitCommits[r.ci].FullHash), active, focused, w)
 	case gitRowGroup:
 		return renderGitGroupRow(r.group, r.groupN, m.gitGroupFolded[r.group], active, focused, w)
 	case gitRowMore:

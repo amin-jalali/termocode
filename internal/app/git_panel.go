@@ -1,7 +1,9 @@
 package app
 
 import (
+	"github.com/amin-jalali/termocode/internal/theme"
 	"slices"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -212,6 +214,7 @@ func (m Model) appendGraphRows(rows []gitPanelRow) []gitPanelRow {
 // setGitCommits stores a new history and its date groups.
 func (m *Model) setGitCommits(cs []git.GraphCommit, more bool) {
 	m.gitCommits, m.gitGraphMore = cs, more
+	m.gitRowMemo = &gitCommitRowMemo{} // rows of the old commits go with them
 	groups := make([]string, len(cs))
 	for i, c := range cs {
 		groups[i] = git.GroupLabel(c.Committed)
@@ -425,4 +428,47 @@ func (m *Model) gitCopyCommit(ci int, message bool) tea.Cmd {
 	var cmd tea.Cmd
 	m.toast, cmd = m.toast.Push(toast.Info, "Copied "+what)
 	return cmd
+}
+
+// gitCommitRowMemo keeps drawn GRAPH commit rows between frames (a
+// frame draws the visible rows; most stay as they were). It belongs to
+// one commit list: setGitCommits starts a new one. A row is reused only
+// for the same row state, width, theme and age label.
+type gitCommitRowMemo struct {
+	mu   sync.Mutex
+	rows map[gitCommitRowKey]string
+}
+
+type gitCommitRowKey struct {
+	ci              int
+	mark, age       string
+	active, focused bool
+	w               int
+	rk              theme.RenderKey
+}
+
+// gitCommitRowMemoMax bounds the memo (rows of a long scroll).
+const gitCommitRowMemoMax = 2048
+
+// commitRow is renderGitGraphCommitMark for commit ci, remembered.
+func (c *gitCommitRowMemo) commitRow(cs []git.GraphCommit, ci int, mark string, active, focused bool, w int) string {
+	commit := cs[ci]
+	if c == nil {
+		return renderGitGraphCommitMark(commit, mark, active, focused, w)
+	}
+	k := gitCommitRowKey{ci: ci, mark: mark, age: git.CompactAge(commit.Committed), active: active, focused: focused, w: w, rk: theme.CurrentRenderKey()}
+	c.mu.Lock()
+	out, ok := c.rows[k]
+	c.mu.Unlock()
+	if ok {
+		return out
+	}
+	out = renderGitGraphCommitMark(commit, mark, active, focused, w)
+	c.mu.Lock()
+	if c.rows == nil || len(c.rows) >= gitCommitRowMemoMax {
+		c.rows = map[gitCommitRowKey]string{}
+	}
+	c.rows[k] = out
+	c.mu.Unlock()
+	return out
 }
