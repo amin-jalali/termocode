@@ -56,7 +56,7 @@
 .term-chip .chip { gap: var(--s2); max-width: 14rem; }
 .term-chip-title { min-width: 0; }
 .term-chip-n { color: var(--dim); }
-.term-rows { margin-inline: calc(-1 * var(--gutter)); padding-block: var(--s2); background: var(--bg-panel); min-height: 50vh; }
+.term-rows { -webkit-touch-callout: none; margin-inline: calc(-1 * var(--gutter)); padding-block: var(--s2); background: var(--bg-panel); min-height: 50vh; }
 .term-rows .trow { grid-template-columns: minmax(0, 1fr); }
 .term-rows .wrap-mark { display: none; }
 .term-older { display: block; width: 100%; min-height: var(--tap); color: var(--blue); font-size: var(--fs-hint); }
