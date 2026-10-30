@@ -38,3 +38,13 @@
 .lines.is-nowrap .crow-text { white-space: pre; overflow-wrap: normal; }
 .lines-gap { overflow-anchor: none; }
 .line-chip { position: sticky; top: var(--s2); z-index: 2; display: flex; align-items: center; width: max-content; height: 1.75rem; margin: 0 var(--s3) -1.75rem auto; background: var(--bg-panel); }
+
+/* Edit sheet */
+.crow.is-sel { background: var(--sel); }
+.edit { display: flex; flex-direction: column; gap: var(--s3); padding: var(--s3) var(--s4) var(--s4); }
+.edit-title { font-size: var(--fs-body); font-weight: 600; }
+.edit-box { min-height: 12rem; max-height: 50vh; padding: var(--s2) var(--s3); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); color: var(--text); font-family: var(--font-mono); font-size: var(--fs-row); line-height: var(--lh-row); white-space: pre-wrap; overflow-wrap: anywhere; resize: vertical; unicode-bidi: isolate; tab-size: 4; }
+.edit-box:focus-visible { outline: 2px solid var(--focus); outline-offset: -1px; }
+.edit-diff { max-height: 12rem; overflow: auto; border: 1px solid var(--border); border-radius: var(--r-chip); }
+.edit-actions { display: flex; gap: var(--s2); justify-content: flex-end; }
+.edit-actions .btn { min-width: 6rem; }

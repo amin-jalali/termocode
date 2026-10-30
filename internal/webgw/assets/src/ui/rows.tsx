@@ -13,9 +13,9 @@ export function TermRow({ text, cont }: { text: string; cont?: boolean }) {
   );
 }
 
-export function CodeRow({ i, n, text, cont, flash }: { i?: number; n?: number; text: string; cont?: boolean; flash?: boolean }) {
+export function CodeRow({ i, n, text, cont, flash, sel }: { i?: number; n?: number; text: string; cont?: boolean; flash?: boolean; sel?: boolean }) {
   return (
-    <div class={`crow${flash ? " is-flash" : ""}`} dir="ltr" data-i={i}>
+    <div class={`crow${flash ? " is-flash" : ""}${sel ? " is-sel" : ""}`} dir="ltr" data-i={i}>
       <span class="crow-n" aria-hidden="true">{cont ? "" : n}</span>
       <span class="wrap-mark" aria-hidden="true">{cont ? "↳" : ""}</span>
       <span class="crow-text">{text}</span>
