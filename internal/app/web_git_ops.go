@@ -21,6 +21,10 @@ import (
 func init() {
 	webOps[webproto.OpGitDiff] = (*Model).webGitDiff
 	webOps[webproto.OpGitShow] = (*Model).webGitShow
+	webOps[webproto.OpGitStage] = (*Model).webGitStage
+	webOps[webproto.OpGitUnstage] = (*Model).webGitUnstage
+	webOps[webproto.OpGitStageHunk] = (*Model).webGitStageHunk
+	webOps[webproto.OpGitUnstageHunk] = (*Model).webGitUnstageHunk
 }
 
 // webGitRoot is the workspace folder when it is a git repository.
@@ -206,4 +210,94 @@ func webGitPage(p webGitParsed, from int) webproto.GitDiff {
 		d.Next = end
 	}
 	return d
+}
+
+// webGitWrite runs a git write off the UI thread; the answer, the audit
+// line and the laptop's git refresh follow on Update.
+func (m *Model) webGitWrite(call *webCall, summary string, write func() error) tea.Cmd {
+	call.later()
+	return func() tea.Msg {
+		err := write()
+		return applyMsg(func(m *Model) tea.Cmd {
+			switch {
+			case errors.Is(err, git.ErrHunkGone):
+				m.webAuditOp(call, summary, "moved")
+				call.fail(webproto.CodeConflict, "That change moved. Look at the new diff.")
+			case err != nil:
+				m.webAuditOp(call, summary, "failed")
+				webGitFail(call, err)
+			default:
+				m.webAuditOp(call, summary, "ok")
+				call.reply(nil)
+			}
+			return m.pollGitCmd()
+		})
+	}
+}
+
+// webGitPick checks paths for stage (unstaged: false) or unstage: each
+// must be listed, not a conflict, and have a change on the side it
+// leaves.
+func (m *Model) webGitPick(call *webCall, root string, paths []string, unstage bool) bool {
+	for _, p := range paths {
+		f, ok := m.webGitFind(root, p)
+		switch {
+		case !ok:
+			call.fail(webproto.CodeNotFound, "That file has no changes now.")
+			return false
+		case webGitConflict(f.Code):
+			call.fail(webproto.CodeConflict, "This file has a conflict. Resolve it on the laptop.")
+			return false
+		case unstage && !f.Staged():
+			call.fail(webproto.CodeConflict, "That file has nothing staged.")
+			return false
+		case !unstage && !f.Unstaged() && !f.Untracked():
+			call.fail(webproto.CodeConflict, "That file is staged already.")
+			return false
+		}
+	}
+	return true
+}
+
+func (m *Model) webGitStage(call *webCall) tea.Cmd   { return m.webGitStageOp(call, false) }
+func (m *Model) webGitUnstage(call *webCall) tea.Cmd { return m.webGitStageOp(call, true) }
+
+func (m *Model) webGitStageOp(call *webCall, unstage bool) tea.Cmd {
+	paths := call.args.(*webproto.PathsArgs).Paths
+	root, ok := m.webGitRoot(call)
+	if !ok || !m.webGitPick(call, root, paths, unstage) {
+		return nil
+	}
+	op := git.Stage
+	if unstage {
+		op = git.Unstage
+	}
+	return m.webGitWrite(call, webAuditPaths(paths), func() error {
+		for _, p := range paths {
+			if err := op(root, p); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (m *Model) webGitStageHunk(call *webCall) tea.Cmd   { return m.webGitHunkOp(call, false) }
+func (m *Model) webGitUnstageHunk(call *webCall) tea.Cmd { return m.webGitHunkOp(call, true) }
+
+func (m *Model) webGitHunkOp(call *webCall, unstage bool) tea.Cmd {
+	a := call.args.(*webproto.GitHunkArgs)
+	root, ok := m.webGitRoot(call)
+	if !ok || !m.webGitPick(call, root, []string{a.Path}, unstage) {
+		return nil
+	}
+	if f, _ := m.webGitFind(root, a.Path); f.Untracked() {
+		call.fail(webproto.CodeConflict, "A new file is staged whole. Use Stage.")
+		return nil
+	}
+	op := git.StageHunkHeader
+	if unstage {
+		op = git.UnstageHunkHeader
+	}
+	return m.webGitWrite(call, a.Path+" "+a.Hunk, func() error { return op(root, a.Path, a.Hunk) })
 }
