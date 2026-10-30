@@ -49,3 +49,30 @@ func TestFileOpsArgs(t *testing.T) {
 		}
 	}
 }
+
+// Spec (WEB-42): push, pull, checkout and stash wait for a laptop card;
+// the branch list is a read. A branch name that git would read as an
+// option, or that is not a plain ref name, is refused on the wire.
+func TestGitMoreOps(t *testing.T) {
+	for _, op := range []string{OpGitPush, OpGitPull, OpGitCheckout, OpGitStash, OpGitStashPop} {
+		if p, ok := Lookup(op); !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+			t.Errorf("%s: %+v", op, p)
+		}
+	}
+	if p, _ := Lookup(OpGitBranches); p.Role != RoleViewer || p.LaptopCard {
+		t.Errorf("git.branches: %+v", p)
+	}
+	for _, b := range []string{`{"branch":"main"}`, `{"branch":"feat/web-v2"}`} {
+		if _, err := DecodeArgs(OpGitCheckout, []byte(b)); err != nil {
+			t.Errorf("%s: %v", b, err)
+		}
+	}
+	for _, b := range []string{`{"branch":""}`, `{"branch":"-f"}`, `{"branch":"--orphan=x"}`, `{"branch":"a b"}`, `{"branch":"a..b"}`, `{"branch":"x\u0000"}`, `{"branch":"HEAD~1"}`} {
+		if _, err := DecodeArgs(OpGitCheckout, []byte(b)); err == nil {
+			t.Errorf("%s accepted", b)
+		}
+	}
+	if _, err := DecodeArgs(OpGitStash, []byte(`{"message":"wip\u001b[2J"}`)); err == nil {
+		t.Error("a stash message with a control character")
+	}
+}
