@@ -17,7 +17,7 @@ func TestFirstSizedFrameEndsStartup(t *testing.T) {
 	firstFrameOnce, onFirstFrame = &sync.Once{}, func() { calls++ }
 	t.Cleanup(func() { firstFrameOnce, onFirstFrame = oldOnce, oldHook })
 
-	m := New()
+	m := newTestModel(t)
 	_ = m.View()
 	if calls != 0 {
 		t.Fatalf("startup ended on the unsized frame (calls=%d)", calls)
