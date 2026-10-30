@@ -241,6 +241,9 @@ func webResData(t *testing.T, f map[string]any, v any) {
 func (r *webFilesRig) withNvim() *nvim.Client {
 	r.t.Helper()
 	c := aiTestNvim(r.t, r.m)
+	if err := c.ExecLua(fileReloadLua); err != nil { // as the app does at startup
+		r.t.Fatal(err)
+	}
 	r.m.subscribeNotify()
 	ch := make(chan nvim.NotifyMsg, 4096)
 	go func() {
