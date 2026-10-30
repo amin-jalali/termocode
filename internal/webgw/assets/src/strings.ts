@@ -5,6 +5,7 @@
 // strings_test.go lints this file: unique keys and texts, length,
 // banned words, every key the code uses exists.
 import { signal } from "@preact/signals";
+import { has } from "./state/dict";
 import { FA } from "./strings.fa";
 
 export const S = {
@@ -347,7 +348,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   const text: string = (l === "fa" && FA[key]) || S[key];
   if (!vars) return text;
   return text.replace(/\{([a-z_]+)\}/g, (m, name: string) => {
-    if (!(name in vars)) return m;
+    if (!has(vars, name)) return m;
     const v = vars[name];
     return typeof v === "number" ? localDigits(v, l) : v;
   });

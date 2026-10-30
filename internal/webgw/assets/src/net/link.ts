@@ -6,6 +6,7 @@
 import { batch, computed, signal } from "@preact/signals";
 import type { Meta, ServerMsg } from "../../../../webproto/proto";
 import { decodeServerMsg, PROTOCOL_VERSION, ProtoError, SUBPROTOCOL } from "../proto/guard";
+import { has } from "../state/dict";
 import type { Store } from "../state/store";
 import { backoff } from "./backoff";
 
@@ -239,7 +240,7 @@ export class Link {
           this.state.value = "online";
         });
         const seqs = store.seqs();
-        const need = [...this.wanted].filter((t) => !resumed || !(t in seqs));
+        const need = [...this.wanted].filter((t) => !resumed || !has(seqs, t));
         if (need.length) this.sendSub(need);
         clearTimeout(this.freshenTimer);
         this.freshenTimer = setTimeout(() => store.freshen(), FRESHEN_AFTER_MS);
