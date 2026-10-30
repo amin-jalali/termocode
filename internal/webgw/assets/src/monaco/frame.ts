@@ -172,7 +172,7 @@ function workbenchKey(e: KeyboardEvent): boolean {
   const mod = e.ctrlKey || e.metaKey;
   if (!mod) return false;
   const k = e.key.toLowerCase();
-  if (e.shiftKey) return k === "p" || k === "e" || k === "g";
+  if (e.shiftKey) return k === "p" || k === "e" || k === "g" || k === "f";
   return ["p", "b", "j", "w", "`", "tab", "k", ","].includes(k) || (e.ctrlKey && k === "pagedown") || (e.ctrlKey && k === "pageup");
 }
 

@@ -1,0 +1,129 @@
+// The desktop's activity bar (workbench): every view of the page is one
+// item, as on the laptop's editor, not under a "More" list. The items
+// with a side view open it in the side bar (a second click hides the
+// side bar); Databases, Containers, Settings and This device open in the
+// editor area, where their tables have room. Badges: git changes, cards
+// waiting for an answer, runs that are live or need you.
+import { h } from "preact";
+import { modKey } from "../lib/platform";
+import { go, route } from "../lib/router";
+import { activeFile, panes, setPanes } from "../lib/workbench";
+import { status, waiting } from "../session";
+import type { Route } from "../state/route";
+import { t, type StringKey } from "../strings";
+import { Cod } from "./icons";
+
+export type Activity = "files" | "search" | "git" | "run" | "db" | "containers" | "mcp" | "chat" | "device" | "settings";
+
+interface Item {
+  id: Activity;
+  label: StringKey;
+  icon: string;
+  keys?: string;
+  /** side: the view opens in the side bar. */
+  side: boolean;
+  to: () => Route;
+}
+
+const more = (rest: string): Route => ({ tab: "more", rest, query: {} });
+
+export const ACTIVITIES: readonly Item[] = [
+  { id: "files", label: "act.explorer", icon: "files", keys: "Shift+E", side: true, to: () => ({ tab: "files", rest: activeFile.peek() ?? "", query: {} }) },
+  { id: "search", label: "more.search", icon: "search", keys: "Shift+F", side: true, to: () => more("search") },
+  { id: "git", label: "act.scm", icon: "source-control", keys: "Shift+G", side: true, to: () => ({ tab: "git", rest: "", query: {} }) },
+  { id: "run", label: "act.run", icon: "debug-alt", side: true, to: () => more("tasks") },
+  { id: "db", label: "more.db", icon: "database", side: false, to: () => more("db") },
+  { id: "containers", label: "more.containers", icon: "package", side: false, to: () => more("containers") },
+  { id: "mcp", label: "more.mcp", icon: "plug", side: true, to: () => more("mcp") },
+  { id: "chat", label: "tab.chat", icon: "comment-discussion", side: false, to: () => ({ tab: "chat", rest: "", query: {} }) },
+];
+
+export const ACTIVITIES_BOTTOM: readonly Item[] = [
+  { id: "device", label: "act.device", icon: "account", side: false, to: () => more("") },
+  { id: "settings", label: "more.settings", icon: "gear", keys: ",", side: false, to: () => more("settings") },
+];
+
+/** activityOf is the item a route belongs to (null: none, the terminal). */
+export function activityOf(r: Route): Activity | null {
+  switch (r.tab) {
+    case "files":
+      return "files";
+    case "git":
+      return "git";
+    case "chat":
+      return "chat";
+    case "term":
+      return null;
+    case "more": {
+      const sub = r.rest.split("/")[0];
+      if (sub === "search") return "search";
+      if (sub === "tasks" || sub === "runs") return "run";
+      if (sub === "db") return "db";
+      if (sub === "containers") return "containers";
+      if (sub === "mcp") return "mcp";
+      if (sub === "settings") return "settings";
+      return "device";
+    }
+  }
+}
+
+/** sideActivity: the route's view belongs in the side bar. */
+export function sideActivity(r: Route): boolean {
+  const a = activityOf(r);
+  return [...ACTIVITIES, ...ACTIVITIES_BOTTOM].some((x) => x.id === a && x.side);
+}
+
+function badge(id: Activity): { n: number; tone: "count" | "dot" } | null {
+  const s = status.value;
+  if (id === "git" && s.dirty > 0) return { n: s.dirty, tone: "count" };
+  if (id === "chat" && waiting.value.count > 0) return { n: waiting.value.count, tone: "count" };
+  if (id === "run" && s.runsNeedYou > 0) return { n: s.runsNeedYou, tone: "count" };
+  if (id === "run" && s.runsLive > 0) return { n: s.runsLive, tone: "dot" };
+  return null;
+}
+
+function tap(x: Item): void {
+  const cur = activityOf(route.peek());
+  if (x.side && cur === x.id && panes.peek().side) {
+    setPanes({ side: false });
+    return;
+  }
+  if (x.side) setPanes({ side: true });
+  go(x.to());
+}
+
+function ActItem({ x, cur }: { x: Item; cur: Activity | null }) {
+  const b = badge(x.id);
+  const on = cur === x.id;
+  const name = t(x.label);
+  const tip = x.keys ? `${name} (${modKey()}+${x.keys})` : name;
+  return (
+    <button
+      type="button"
+      class={`nav-item act-item${on ? " is-active" : ""}`}
+      data-act={x.id}
+      aria-current={on ? "page" : undefined}
+      aria-label={b && b.tone === "count" ? `${name} (${b.n})` : name}
+      title={tip}
+      onClick={() => tap(x)}
+    >
+      <Cod name={x.icon} big />
+      {b && (b.tone === "count" ? <span class="act-badge">{b.n > 99 ? "99+" : b.n}</span> : <span class="act-badge is-dot" />)}
+    </button>
+  );
+}
+
+export function ActivityBar() {
+  const cur = activityOf(route.value);
+  return (
+    <nav class="rail act-bar" aria-label={t("tabs.label")}>
+      {ACTIVITIES.map((x) => (
+        <ActItem key={x.id} x={x} cur={cur} />
+      ))}
+      <span class="act-gap" />
+      {ACTIVITIES_BOTTOM.map((x) => (
+        <ActItem key={x.id} x={x} cur={cur} />
+      ))}
+    </nav>
+  );
+}

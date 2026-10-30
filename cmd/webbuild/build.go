@@ -359,6 +359,14 @@ func licenses(vendorDir string, pkgs []manifest.Package) []byte {
 		if !strings.HasSuffix(string(text), "\n") {
 			b.WriteString("\n")
 		}
+		// The code licence of a package whose files are under another one.
+		if _, ok := p.Files["LICENSE-CODE"]; ok {
+			code, _ := os.ReadFile(filepath.Join(vendorDir, p.Dir, "LICENSE-CODE"))
+			fmt.Fprintf(&b, "\n---- code licence of %s ----\n%s", p.Name, code)
+			if !strings.HasSuffix(string(code), "\n") {
+				b.WriteString("\n")
+			}
+		}
 		// A package that bundles others ships their notices too.
 		if _, ok := p.Files["ThirdPartyNotices.txt"]; ok {
 			notes, _ := os.ReadFile(filepath.Join(vendorDir, p.Dir, "ThirdPartyNotices.txt"))

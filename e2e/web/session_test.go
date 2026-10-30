@@ -79,7 +79,26 @@ func (p *Page) loginMeta(meta *webproto.Meta) *HubConn {
 // until it is the current tab and its view is on screen.
 func (p *Page) GoTab(tab string) {
 	p.T.Helper()
+	if p.VP.W >= 1200 {
+		p.goActivity(tab)
+		return
+	}
 	i := map[string]int{"chat": 1, "files": 2, "term": 3, "git": 4, "more": 5}[tab]
 	p.Tap(fmt.Sprintf("nav .nav-item:nth-child(%d)", i))
 	p.WaitJS(fmt.Sprintf(`document.querySelector('nav .nav-item:nth-child(%d)[aria-current="page"]') && document.querySelector('[data-view="%s"]')`, i, tab))
+}
+
+// goActivity is GoTab on the desktop workbench: the activity bar's item
+// for the view (More is "This device"; the terminal is the bottom panel,
+// which a terminal route opens).
+func (p *Page) goActivity(tab string) {
+	p.T.Helper()
+	if tab == "term" {
+		Eval[bool](p, `(location.hash = "#/term", true)`)
+		p.WaitJS(`document.querySelector('.wb-panel [data-view="term"]')`)
+		return
+	}
+	act := map[string]string{"chat": "chat", "files": "files", "git": "git", "more": "device"}[tab]
+	p.Tap(fmt.Sprintf(`nav .act-item[data-act="%s"]`, act))
+	p.WaitJS(fmt.Sprintf(`document.querySelector('nav .act-item[data-act="%s"][aria-current="page"]') && document.querySelector('[data-view="%s"]')`, act, tab))
 }

@@ -568,6 +568,10 @@ export const S = {
   "cmd.theme_dark": "Preferences: Dark Theme",
   "cmd.theme_light": "Preferences: Light Theme",
   "cmd.theme_system": "Preferences: Theme of the System",
+  "act.explorer": "Explorer",
+  "act.scm": "Source Control",
+  "act.run": "Tasks and AI runs",
+  "act.device": "This device",
 } as const;
 
 export type StringKey = keyof typeof S;

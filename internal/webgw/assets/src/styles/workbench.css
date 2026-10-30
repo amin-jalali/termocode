@@ -709,3 +709,25 @@ kbd {
 .quick mark { background: none; color: var(--wb-highlight, #2aaaff); font-weight: 700; }
 .quick-row.is-on mark { color: inherit; }
 .quick-empty { padding: 2px 6px; opacity: 0.7; }
+
+/* ---- Activity bar items (codicons, 24 px) and their badges ---- */
+.act-bar { display: flex; flex-direction: column; }
+.act-gap { flex: 1 1 auto; }
+.layout-desktop .act-item { position: relative; }
+.layout-desktop .act-item .cod { color: inherit; }
+.act-badge {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 20px;
+  background: var(--wb-badge-bg);
+  color: var(--wb-badge-fg);
+  font: 600 9px/16px var(--font-sans);
+  text-align: center;
+}
+.act-badge.is-dot { min-width: 8px; width: 8px; height: 8px; padding: 0; top: 28px; left: 28px; }
+.side-stack { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; overflow-y: auto; }
+.side-stack > .view { flex: none; }

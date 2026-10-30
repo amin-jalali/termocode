@@ -34,7 +34,13 @@ import { FileView } from "../views/FileView";
 import { TreeView } from "../views/Files";
 import { IconChevronDown, IconClose, IconFileSmall, IconSidebar } from "./icons";
 import { closeActive, cycleTab, tabsNow } from "../lib/commands";
-import { Nav } from "./Nav";
+import { signal } from "@preact/signals";
+import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, activityOf, sideActivity, type Activity } from "./ActivityBar";
+import type { StringKey } from "../strings";
+import { MCPView } from "../views/more/MCPView";
+import { RunsView } from "../views/more/RunsView";
+import { SearchView } from "../views/more/SearchView";
+import { TasksView } from "../views/more/TasksView";
 import { QuickInput } from "./QuickInput";
 import { StatusBar } from "./StatusBar";
 
@@ -167,6 +173,12 @@ function workbenchKeys(e: KeyboardEvent): void {
   if (e.altKey && !mod && (k === "z" || e.code === "KeyZ")) return run(() => (wordWrap.value = !wordWrap.peek()));
   if (e.ctrlKey && k === "tab") return run(() => cycleTab(e.shiftKey ? -1 : 1));
   if (e.ctrlKey && (k === "pagedown" || k === "pageup")) return run(() => cycleTab(k === "pagedown" ? 1 : -1));
+  if (mod && e.shiftKey && !e.altKey && (k === "e" || k === "f" || k === "g")) {
+    const id = k === "e" ? "files" : k === "f" ? "search" : "git";
+    const x = ACTIVITIES.find((a) => a.id === id);
+    if (x) return run(() => (setPanes({ side: true }), go(x.to())));
+  }
+  if (mod && !e.shiftKey && !e.altKey && k === ",") return run(() => go({ tab: "more", rest: "settings", query: {} }));
   if (!mod || e.altKey || e.shiftKey) return;
   if (k === "p") return run(() => (quick.value = { mode: "files" }));
   if (k === "b") return run(() => setPanes({ side: !panes.peek().side }));
@@ -175,36 +187,35 @@ function workbenchKeys(e: KeyboardEvent): void {
   if (k === "g" && e.ctrlKey && activeFile.peek()) return run(() => (quick.value = { mode: "line" }));
 }
 
-/** railTap: the rail of the workbench opens and closes panels, as an IDE's
- * activity bar does. */
-function railTap(tab: Tab): void {
-  const r = route.peek();
-  const p = panes.peek();
-  switch (tab) {
-    case "files":
-      if (r.tab === "files" && p.side) setPanes({ side: false });
-      else {
-        setPanes({ side: true });
-        go({ tab: "files", rest: activeFile.peek() ?? "", query: {} });
-      }
-      return;
+/** SideView is the side bar's view: the route's when it has one there,
+ * else the last one shown (the editor area keeps its own). */
+function SideView({ id }: { id: Activity }) {
+  switch (id) {
     case "git":
-      if (r.tab === "git" && p.side) setPanes({ side: false });
-      else {
-        setPanes({ side: true });
-        go({ tab: "git", rest: "", query: {} });
-      }
-      return;
-    case "term":
-      if (r.tab === "term" && p.panel) {
-        setPanes({ panel: false });
-        go({ tab: "files", rest: activeFile.peek() ?? "", query: {} });
-      } else go({ tab: "term", rest: "", query: {} });
-      return;
+      return <GitView />;
+    case "search":
+      return <SearchView />;
+    case "run":
+      return (
+        <div class="side-stack">
+          <TasksView />
+          <RunsView />
+        </div>
+      );
+    case "mcp":
+      return <MCPView />;
     default:
-      go({ tab, rest: "", query: {} });
+      return <TreeView />;
   }
 }
+
+/** sideLabel names the side bar's view for screen readers. */
+function sideLabel(id: Activity): StringKey {
+  return [...ACTIVITIES, ...ACTIVITIES_BOTTOM].find((x) => x.id === id)?.label ?? "act.explorer";
+}
+
+/** lastSide is the side bar's view while the route shows another area. */
+const lastSide = signal<Activity>("files");
 
 export function Workbench() {
   useEffect(() => link.subscribe("bufs"), []);
@@ -219,13 +230,15 @@ export function Workbench() {
   const tabs = tabsOf(opened.value, bufs, closed.value);
   tabsNow.list = tabs;
   const file = activeFile.value;
-  const sideGit = r.tab === "git";
+  const routeSide = sideActivity(r) ? activityOf(r) : null;
+  if (routeSide && routeSide !== lastSide.peek()) lastSide.value = routeSide;
+  const side = routeSide ?? lastSide.peek();
   return (
     <div class="wb" style={{ "--side-w": p.sideW + "px", "--panel-h": p.panelH + "px", "--chat-w": p.chatW + "px" }}>
-      <Nav variant="rail" active={r.tab} onTap={railTap} />
+      <ActivityBar />
       {p.side && (
-        <aside class="wb-side" aria-label={sideGit ? t("tab.git") : t("tab.files")}>
-          {sideGit ? <GitView /> : <TreeView />}
+        <aside class="wb-side" data-side={side} aria-label={t(sideLabel(side))}>
+          <SideView id={side} />
         </aside>
       )}
       {p.side && <Sash axis="x" size={p.sideW} min={SIDE_MIN} max={SIDE_MAX} dir={1} label={t("wb.resize_side")} onSize={(n) => setPanes({ sideW: n })} />}
@@ -239,7 +252,7 @@ export function Workbench() {
           <EditorTabs tabs={tabs} bufs={bufs} />
           {quick.value && <QuickInput key={quick.value.mode} />}
           <main class="main" id="main" tabIndex={-1}>
-            <EditorBody more={r.tab === "more"} file={file} />
+            <EditorBody more={r.tab === "more" && !routeSide} file={file} />
           </main>
         </div>
         {p.panel && (
