@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -20,7 +21,26 @@ type relayProc struct {
 	cmd    *exec.Cmd
 	in     io.WriteCloser
 	out    *bufio.Reader
-	stderr *strings.Builder
+	stderr *lockedText
+}
+
+// lockedText is a strings.Builder the process's stderr copier writes
+// while the test reads it.
+type lockedText struct {
+	mu sync.Mutex
+	b  strings.Builder
+}
+
+func (l *lockedText) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+
+func (l *lockedText) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
 }
 
 func startRelay(t *testing.T, home string, args ...string) *relayProc {
@@ -42,7 +62,7 @@ func startRelayEnv(t *testing.T, home string, env []string, args ...string) *rel
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &relayProc{t: t, cmd: cmd, in: in, out: bufio.NewReaderSize(out, 1<<20), stderr: &strings.Builder{}}
+	r := &relayProc{t: t, cmd: cmd, in: in, out: bufio.NewReaderSize(out, 1<<20), stderr: &lockedText{}}
 	cmd.Stderr = r.stderr
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
