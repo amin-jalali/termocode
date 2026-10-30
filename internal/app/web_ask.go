@@ -33,6 +33,7 @@ func init() {
 // webAsk is one request waiting for the laptop.
 type webAsk struct {
 	op      string // the op, for the audit line
+	conn    string // the asking connection, for the gateway's audit
 	summary string // what it acts on (paths), for the audit line
 	device  string // who asked
 	title   string // "Discard changes?"
@@ -54,7 +55,7 @@ func (m *Model) webAskOpen(call *webCall, a *webAsk) {
 		call.fail(webproto.CodeBusy, "Too many questions wait for the laptop.")
 		return
 	}
-	a.op, a.device = call.op, webName(call.conn.device)
+	a.op, a.conn, a.device = call.op, call.conn.id, webName(call.conn.device)
 	if a.device == "" {
 		a.device = "web"
 	}
@@ -127,6 +128,7 @@ func (m *Model) webAskDone(a *webAsk, choice, by string) tea.Cmd {
 	}
 	id, _ := h.cards.id(a)
 	h.cards.decided(id, choice, by)
+	h.webAuditDecided(a, choice, by)
 	where := "on the laptop"
 	if by != "laptop" {
 		where = "on " + by

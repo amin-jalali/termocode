@@ -43,6 +43,8 @@ type webConn struct {
 
 	inflight atomic.Int32 // requests sent to Update and not answered yet
 
+	counts webAuditCounts // counted ops for the gateway's audit (web_audit_note.go)
+
 	subs map[string]*webSub // Update only: live subscriptions by topic
 }
 
