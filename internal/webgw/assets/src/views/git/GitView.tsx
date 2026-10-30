@@ -22,6 +22,7 @@ import { DiffSheet } from "./DiffSheet";
 import { DiscardFlow } from "./DiscardFlow";
 import { gitFailed } from "./errors";
 import { GitRow } from "./GitRow";
+import { RebaseBanner } from "./RebaseBanner";
 import { RemoteSheet } from "./RemoteSheet";
 import { ShowSheet } from "./ShowSheet";
 
@@ -103,10 +104,14 @@ export function GitView() {
     const clean = g.files.length === 0;
     body = (
       <Fragment>
-        {g.op && (
-          <div class="git-op" role="status">
-            {t("git.op", { op: g.op })}
-          </div>
+        {g.op === "rebase" ? (
+          <RebaseBanner seq={st.seq} />
+        ) : (
+          g.op && (
+            <div class="git-op" role="status">
+              {t("git.op", { op: g.op })}
+            </div>
+          )
         )}
         {clean && <p class="git-clean">{t("git.clean")}</p>}
         {sides.map((side) =>

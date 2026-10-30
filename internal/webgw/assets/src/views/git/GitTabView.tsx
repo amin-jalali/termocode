@@ -5,12 +5,15 @@ import { fileOfTab } from "../../lib/difftab";
 import { gitTabIcon, gitTabOf } from "../../lib/gittab";
 import { Cod, FileIcon } from "../../ui/icons";
 import { GraphView } from "./GraphView";
+import { RebaseView } from "./RebaseView";
 
 export function GitTabView({ tab }: { tab: string; slot?: string }) {
   const g = gitTabOf(tab);
   switch (g?.kind) {
     case "graph":
       return <GraphView />;
+    case "rebase":
+      return <RebaseView hash={g.hash} />;
   }
   return null;
 }

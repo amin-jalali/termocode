@@ -58,3 +58,39 @@
 .gg-add { color: var(--git-add); } .gg-del { color: var(--git-del); }
 .gg-wait { margin: 4px 0; color: var(--wb-breadcrumb); font-size: 0.75rem; }
 .gg-more { display: flex; justify-content: center; padding: 8px; }
+
+/* ---- Buttons of the git tabs (the editor's own) ---- */
+.gv-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 26px; padding: 0 12px; border: 1px solid transparent; border-radius: 2px; background: var(--wb-button-bg); color: var(--wb-button-fg); font: inherit; font-size: var(--fs-ui); cursor: pointer; white-space: nowrap; }
+.gv-btn:hover:not(:disabled) { background: var(--wb-button-hover); }
+.gv-btn:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: 2px; }
+.gv-btn:disabled { opacity: 0.5; cursor: default; }
+.gv-btn-sec { border-color: var(--wb-section-border); background: transparent; color: var(--wb-editor-fg); }
+.gv-btn-sec:hover:not(:disabled) { background: var(--wb-list-hover); }
+
+/* ---- Interactive rebase ---- */
+.gr-body { overflow: auto; font-size: var(--fs-ui); }
+.gr { display: flex; flex-direction: column; gap: 8px; max-width: 980px; padding: 12px 20px 16px; color: var(--wb-editor-fg); }
+.gr-help { margin: 0; color: var(--wb-breadcrumb); }
+.gr-warn, .gr-note { display: flex; align-items: flex-start; gap: 6px; margin: 0; padding: 6px 10px; border-inline-start: 3px solid var(--amber); background: color-mix(in srgb, var(--amber) 10%, transparent); }
+.gr-note { border-color: var(--wb-focus); background: color-mix(in srgb, var(--wb-focus) 10%, transparent); }
+.gr-warn .cod { color: var(--amber); } .gr-note .cod { color: var(--wb-focus); }
+.gr-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border: 1px solid var(--wb-section-border); }
+.gr-row { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 2px 8px; border-bottom: 1px solid var(--wb-section-border); background: var(--wb-editor-bg); }
+.gr-row:last-child { border-bottom: 0; }
+.gr-row:hover { background: var(--wb-list-hover); }
+.gr-row:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: -1px; }
+.gr-row.is-drag { opacity: 0.5; }
+.gr-row.is-meld { padding-inline-start: 32px; }
+.gr-grip { flex: none; color: var(--wb-breadcrumb); cursor: grab; }
+.gr-action { flex: none; width: 84px; height: 22px; padding: 0 4px; border: 1px solid var(--wb-section-border); border-radius: 2px; background: var(--wb-input-bg); color: var(--wb-input-fg); font: inherit; font-size: 0.75rem; }
+.gr-hash { flex: none; width: 64px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--wb-breadcrumb); }
+.gr-subject { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gr-msg { flex: 1 1 auto; min-width: 0; margin: 2px 0; padding: 3px 6px; border: 1px solid var(--wb-focus); border-radius: 2px; background: var(--wb-input-bg); color: var(--wb-input-fg); font: inherit; resize: vertical; }
+.gr-drop .gr-subject, .gr-drop .gr-hash { text-decoration: line-through; opacity: 0.6; }
+.gr-reword .gr-action, .gr-edit .gr-action { color: var(--blue); }
+.gr-squash .gr-action, .gr-fixup .gr-action { color: var(--git-mod); }
+.gr-drop .gr-action { color: var(--git-del); }
+.gr-foot { display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+.gr-sum { color: var(--wb-breadcrumb); }
+.gr-bad { color: var(--git-del); }
+.gr-gap { flex: 1 1 auto; }
