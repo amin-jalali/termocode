@@ -970,6 +970,79 @@
       "phase": "v2"
     },
     {
+      "op": "db.conns",
+      "args": "EmptyArgs",
+      "result": "DBConns",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "db.tables",
+      "args": "DBConnArgs",
+      "result": "DBTables",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "db.rows",
+      "args": "DBRowsArgs",
+      "result": "DBRows",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 2048,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "db.query",
+      "args": "DBSQLArgs",
+      "result": "DBRows",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 73728,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.exec",
+      "args": "DBSQLArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 73728,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "containers.list",
       "args": "EmptyArgs",
       "result": "ContainersList",
@@ -1892,6 +1965,210 @@
         "t"
       ],
       "additionalProperties": false
+    },
+    "DBCell": {
+      "type": "object",
+      "properties": {
+        "c": {
+          "type": "boolean"
+        },
+        "m": {
+          "type": "boolean"
+        },
+        "n": {
+          "type": "boolean"
+        },
+        "v": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "DBConn": {
+      "type": "object",
+      "properties": {
+        "database": {
+          "type": "string"
+        },
+        "driver": {
+          "enum": [
+            "postgres",
+            "mysql",
+            "sqlite",
+            "redis",
+            "other"
+          ]
+        },
+        "env": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "problem": {
+          "type": "string"
+        },
+        "readonly": {
+          "type": "boolean"
+        },
+        "sql": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "driver",
+        "sql"
+      ],
+      "additionalProperties": true
+    },
+    "DBConnArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn"
+      ],
+      "additionalProperties": false
+    },
+    "DBConns": {
+      "type": "object",
+      "properties": {
+        "conns": {
+          "items": {
+            "$ref": "#/defs/DBConn"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "conns"
+      ],
+      "additionalProperties": true
+    },
+    "DBRows": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "masked": {
+          "type": "integer"
+        },
+        "ms": {
+          "type": "integer"
+        },
+        "next": {
+          "type": "integer"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "$ref": "#/defs/DBCell"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "columns",
+        "rows",
+        "from",
+        "ms"
+      ],
+      "additionalProperties": true
+    },
+    "DBRowsArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "table"
+      ],
+      "additionalProperties": false
+    },
+    "DBSQLArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "sql": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "sql"
+      ],
+      "additionalProperties": false
+    },
+    "DBTable": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "view": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "DBTables": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "schema": {
+          "type": "string"
+        },
+        "tables": {
+          "items": {
+            "$ref": "#/defs/DBTable"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "conn",
+        "tables"
+      ],
+      "additionalProperties": true
     },
     "Delta": {
       "type": "object",

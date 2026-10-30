@@ -106,3 +106,28 @@ func TestContainerOps(t *testing.T) {
 		t.Error("5000 log lines accepted")
 	}
 }
+
+// Spec (WEB-43): browsing a database is a read; a typed query is a
+// controller op; a write waits for the laptop. SQL is one non-empty text
+// without NUL, capped.
+func TestDBOps(t *testing.T) {
+	for _, op := range []string{OpDBConns, OpDBTables, OpDBRows} {
+		if p, _ := Lookup(op); p.Role != RoleViewer || p.LaptopCard {
+			t.Errorf("%s: %+v", op, p)
+		}
+	}
+	if p, _ := Lookup(OpDBQuery); p.Role != RoleController || p.LaptopCard || p.Audit != AuditYes {
+		t.Errorf("db.query: %+v", p)
+	}
+	if p, _ := Lookup(OpDBExec); p.Role != RoleController || !p.LaptopCard {
+		t.Errorf("db.exec: %+v", p)
+	}
+	for _, a := range []string{`{"conn":"local","sql":""}`, `{"conn":"local","sql":"  "}`, `{"conn":"","sql":"select 1"}`, `{"conn":"local","sql":"select\u0000 1"}`} {
+		if _, err := DecodeArgs(OpDBQuery, []byte(a)); err == nil {
+			t.Errorf("%s accepted", a)
+		}
+	}
+	if _, err := DecodeArgs(OpDBRows, []byte(`{"conn":"local","table":"users","from":-1}`)); err == nil {
+		t.Error("a negative page accepted")
+	}
+}

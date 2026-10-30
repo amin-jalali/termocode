@@ -38,6 +38,17 @@ const (
 	OpContainersRemove  = "containers.remove"
 )
 
+// Database op names (WEB-43). Browsing is a read; a typed read query is
+// a controller op (the page asks first); anything the classifier does not
+// call a read waits for the laptop.
+const (
+	OpDBConns  = "db.conns"
+	OpDBTables = "db.tables"
+	OpDBRows   = "db.rows"
+	OpDBQuery  = "db.query"
+	OpDBExec   = "db.exec"
+)
+
 // slow is the rate of an op that waits for the laptop.
 var slow = Rate{N: 1, Per: 5 * time.Second}
 
@@ -56,6 +67,13 @@ var opMoreRows = []Policy{
 	{Op: OpGitCheckout, New: newOf[GitCheckoutArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpGitStash, New: newOf[GitStashArgs](), Role: RoleController, Rate: slow, MaxBytes: 2 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpGitStashPop, New: newOf[EmptyArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+
+	// Databases.
+	{Op: OpDBConns, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpDBTables, New: newOf[DBConnArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpDBRows, New: newOf[DBRowsArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 2 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpDBQuery, New: newOf[DBSQLArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 72 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpDBExec, New: newOf[DBSQLArgs](), Role: RoleController, Rate: slow, MaxBytes: 72 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 
 	// Containers.
 	{Op: OpContainersList, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},

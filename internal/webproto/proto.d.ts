@@ -237,6 +237,21 @@ export interface GitStashArgs {
   message?: string;
 }
 
+export interface DBConnArgs {
+  conn: string;
+}
+
+export interface DBRowsArgs {
+  conn: string;
+  table: string;
+  from?: number;
+}
+
+export interface DBSQLArgs {
+  conn: string;
+  sql: string;
+}
+
 export interface ContainerLogsArgs {
   id: string;
   lines?: number;
@@ -807,6 +822,50 @@ export interface GitBranches {
   upstream: boolean;
 }
 
+export interface DBConns {
+  conns: DBConn[];
+}
+
+export interface DBConn {
+  id: string;
+  name?: string;
+  driver: "postgres" | "mysql" | "sqlite" | "redis" | "other";
+  database?: string;
+  env?: string;
+  readonly?: boolean;
+  problem?: string;
+  sql: boolean;
+}
+
+export interface DBTables {
+  conn: string;
+  schema?: string;
+  tables: DBTable[];
+  more?: number;
+}
+
+export interface DBTable {
+  name: string;
+  view?: boolean;
+}
+
+export interface DBRows {
+  columns: string[];
+  rows: DBCell[][];
+  from: number;
+  next?: number;
+  truncated?: boolean;
+  masked?: number;
+  ms: number;
+}
+
+export interface DBCell {
+  v?: string;
+  n?: boolean;
+  m?: boolean;
+  c?: boolean;
+}
+
 export interface ContainersList {
   engine: string;
   context?: string;
@@ -890,6 +949,11 @@ export interface OpArgs {
   "git.checkout": GitCheckoutArgs;
   "git.stash": GitStashArgs;
   "git.stash_pop": EmptyArgs;
+  "db.conns": EmptyArgs;
+  "db.tables": DBConnArgs;
+  "db.rows": DBRowsArgs;
+  "db.query": DBSQLArgs;
+  "db.exec": DBSQLArgs;
   "containers.list": EmptyArgs;
   "containers.logs": ContainerLogsArgs;
   "containers.start": ContainerArgs;
@@ -957,6 +1021,11 @@ export interface OpResult {
   "git.checkout": AskRef;
   "git.stash": AskRef;
   "git.stash_pop": AskRef;
+  "db.conns": DBConns;
+  "db.tables": DBTables;
+  "db.rows": DBRows;
+  "db.query": DBRows;
+  "db.exec": AskRef;
   "containers.list": ContainersList;
   "containers.logs": ContainerLogs;
   "containers.start": ContainerDone;
