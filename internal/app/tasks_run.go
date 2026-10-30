@@ -300,16 +300,24 @@ func (m *Model) terminateTask() tea.Cmd {
 		m.toast, c = m.toast.Push(toast.Info, "No task is running")
 		return c
 	}
-	if m.nvim != nil {
-		_ = m.nvim.ExecLua(fmt.Sprintf(`
-			local b = %d
-			if vim.api.nvim_buf_is_loaded(b) then
-				local ok, chan = pcall(function() return vim.bo[b].channel end)
-				if ok and chan and chan > 0 then pcall(vim.fn.jobstop, chan) end
-			end
-		`, target.Buf))
-	}
+	m.stopTaskRun(target)
 	return nil
+}
+
+// stopTaskRunLua stops the job of a terminal buffer.
+const stopTaskRunLua = `
+	local b = ...
+	if vim.api.nvim_buf_is_loaded(b) then
+		local ok, chan = pcall(function() return vim.bo[b].channel end)
+		if ok and chan and chan > 0 then pcall(vim.fn.jobstop, chan) end
+	end
+`
+
+// stopTaskRun stops a running task's job; its exit arrives as usual.
+func (m *Model) stopTaskRun(r *taskRun) {
+	if m.nvim != nil {
+		_ = m.nvim.ExecLuaArgs(stopTaskRunLua, r.Buf)
+	}
 }
 
 // configureTasks opens .termocode/tasks.json, seeding it with the detected
