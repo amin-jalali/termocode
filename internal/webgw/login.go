@@ -3,10 +3,14 @@
 package webgw
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"mime"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/webdevices"
@@ -24,7 +28,29 @@ type Login struct {
 	cfg   LoginConfig
 	limit *Bucket
 	noisy *Bucket
+
+	mu      sync.Mutex
+	tickets map[string]*totpTicket
 }
+
+// With TOTP on (WEB-48), a good passkey gives a ticket instead of a
+// token, and the token comes with the code:
+//
+//	POST /login/totp {ticket, code} → {token, role, device}
+//
+// The laptop checks the code against the seed in its secret store.
+type totpTicket struct {
+	dev   webdevices.Device
+	until time.Time
+	tries int
+}
+
+// TOTP ticket limits.
+const (
+	TOTPTicketTTL = 2 * time.Minute
+	MaxTOTPTries  = 5
+	maxTickets    = 16
+)
 
 // LoginConfig sets up the login endpoints.
 type LoginConfig struct {
@@ -32,6 +58,10 @@ type LoginConfig struct {
 	Passkeys *Passkeys
 	Audit    *Audit
 	Now      func() time.Time
+	// RequireTOTP asks for a one-time code after the passkey; CheckTOTP
+	// asks the laptop to check it for a device (nil error: right).
+	RequireTOTP bool
+	CheckTOTP   func(ctx context.Context, device, code string) error
 }
 
 // loginRatePerSecond caps /login/* requests for the whole gateway.
@@ -43,7 +73,7 @@ func NewLogin(cfg LoginConfig) *Login {
 		cfg.Now = time.Now
 	}
 	return &Login{cfg: cfg, limit: NewBucket(loginRatePerSecond, 2*loginRatePerSecond),
-		noisy: NewBucket(blockedAuditPerSecond, blockedAuditBurst)}
+		noisy: NewBucket(blockedAuditPerSecond, blockedAuditBurst), tickets: map[string]*totpTicket{}}
 }
 
 func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +104,8 @@ func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		l.start(w, r)
 	case "/login/finish":
 		l.finish(w, r)
+	case "/login/totp":
+		l.totp(w, r)
 	default:
 		writeJSON(w, http.StatusNotFound, errorReply("not_found"))
 	}
@@ -119,7 +151,93 @@ func (l *Login) finish(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnauthorized, errorReply(reply))
 		return
 	}
+	if l.cfg.RequireTOTP {
+		tk, err := l.newTicket(d)
+		if err != nil {
+			writeJSON(w, http.StatusServiceUnavailable, errorReply("busy"))
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"totp": true, "ticket": tk})
+		return
+	}
 	l.issue(w, d)
+}
+
+// newTicket keeps a device that passed its passkey until its code comes.
+func (l *Login) newTicket(d webdevices.Device) (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	id := hex.EncodeToString(b)
+	now := l.cfg.Now()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for k, t := range l.tickets {
+		if !now.Before(t.until) {
+			delete(l.tickets, k)
+		}
+	}
+	if len(l.tickets) >= maxTickets {
+		return "", ErrTooManyLogins
+	}
+	l.tickets[id] = &totpTicket{dev: d, until: now.Add(TOTPTicketTTL)}
+	return id, nil
+}
+
+type totpReq struct {
+	Ticket string `json:"ticket"`
+	Code   string `json:"code"`
+}
+
+func (l *Login) totp(w http.ResponseWriter, r *http.Request) {
+	var req totpReq
+	if !decodeStrict(r.Body, &req) || !sixDigits(req.Code) {
+		writeJSON(w, http.StatusBadRequest, errorReply("bad_request"))
+		return
+	}
+	l.mu.Lock()
+	tk := l.tickets[req.Ticket]
+	live := tk != nil && l.cfg.Now().Before(tk.until) && tk.tries < MaxTOTPTries
+	if live {
+		tk.tries++
+	} else {
+		delete(l.tickets, req.Ticket)
+	}
+	l.mu.Unlock()
+	if !live || l.cfg.CheckTOTP == nil {
+		writeJSON(w, http.StatusGone, errorReply("expired"))
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	if err := l.cfg.CheckTOTP(ctx, tk.dev.ID, req.Code); err != nil {
+		_ = l.cfg.Audit.Log(Event{Kind: EvLoginFail, Device: tk.dev.ID, Why: "totp"})
+		writeJSON(w, http.StatusUnauthorized, errorReply("wrong_code"))
+		return
+	}
+	l.mu.Lock()
+	_, still := l.tickets[req.Ticket]
+	delete(l.tickets, req.Ticket) // one use
+	l.mu.Unlock()
+	if !still {
+		writeJSON(w, http.StatusGone, errorReply("expired"))
+		return
+	}
+	l.issue(w, tk.dev)
+}
+
+// sixDigits: exactly six ASCII digits.
+func sixDigits(s string) bool {
+	if len(s) != 6 {
+		return false
+	}
+	for i := 0; i < 6; i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // issue logs a device in: a token with the device's role.
