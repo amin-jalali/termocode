@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -431,8 +432,14 @@ func TestCovAIContainersContextLabel(t *testing.T) {
 		t.Errorf("podman env = %q", got)
 	}
 	t.Setenv("CONTAINER_CONNECTION", "")
-	if got := (aiContainersHost{e: pod}).contextLabel(ctx); got != "local podman" {
-		t.Errorf("podman local = %q", got)
+	// Podman runs locally on Linux only; elsewhere it talks to a
+	// machine, named like a docker context (none current here).
+	wantLocal := "local podman"
+	if runtime.GOOS != "linux" {
+		wantLocal = "context default"
+	}
+	if got := (aiContainersHost{e: pod}).contextLabel(ctx); got != wantLocal {
+		t.Errorf("podman local = %q, want %q", got, wantLocal)
 	}
 	dock := containers.Engine{Kind: "docker", Binary: f.Docker(), X: servicesExec}
 	t.Setenv("DOCKER_CONTEXT", "staging")
