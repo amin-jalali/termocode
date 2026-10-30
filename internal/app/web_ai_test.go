@@ -185,3 +185,68 @@ func TestWebAICompleteNewerCancelsOlder(t *testing.T) {
 		t.Errorf("calls left: %d", len(r.h.ai.inline))
 	}
 }
+
+// Spec (WEBP-3): ai.next_edit keeps the buffer's text at each pause
+// (seed: the editor opened) and, after an edit, asks the laptop's model
+// with the laptop's prompt (the recent edits and the lines around the
+// caret); the answer is the rows to replace (zero-based, End included),
+// their old text and the new lines. No edit since the last pause asks
+// nothing.
+func TestWebAINextEdit(t *testing.T) {
+	r, f := webAIRig(t, "main.go", "package main", "func f() int {", "\toldName := 1", "\treturn oldName", "}")
+	ne := func(line int, seed bool) webproto.AINextEdit {
+		var out webproto.AINextEdit
+		webResData(t, r.call(webproto.OpAINextEdit, &webproto.AINextEditArgs{Buf: 2, Tick: 7, Line: line, Seed: seed}), &out)
+		return out
+	}
+	if out := ne(0, true); !out.None {
+		t.Fatalf("seed: %+v", out)
+	}
+	if out := ne(2, false); !out.None {
+		t.Fatalf("no edit: %+v", out)
+	}
+	if n := len(f.requests()); n != 0 {
+		t.Fatalf("%d requests without an edit", n)
+	}
+	r.h.filesState().bufs[2].rows[2] = "\tnewName := 1"
+	f.reply = `{"start": 4, "end": 4, "lines": ["\treturn newName"]}`
+	out := ne(2, false)
+	if out.None || out.Start != 3 || out.End != 3 || len(out.Old) != 1 || out.Old[0] != "\treturn oldName" || len(out.Lines) != 1 || out.Lines[0] != "\treturn newName" {
+		t.Fatalf("next edit: %+v", out)
+	}
+	reqs := f.requests()
+	if len(reqs) != 1 || reqs[0].Model != "fast-1" {
+		t.Fatalf("requests %+v", reqs)
+	}
+	if user := reqs[0].Messages[len(reqs[0].Messages)-1].Content; !strings.Contains(user, "+\tnewName := 1") || !strings.Contains(user, "-\toldName := 1") {
+		t.Errorf("prompt has no edit: %q", user)
+	}
+}
+
+// Spec (WEBP-3): next edit suggestions follow the laptop's ai_next_edit
+// setting and never read a file that may hold secrets.
+func TestWebAINextEditFollowsTheLaptop(t *testing.T) {
+	r, f := webAIRig(t, "deploy/token.txt", "a", "b")
+	f.reply = `{"start": 1, "end": 1, "lines": ["x"]}`
+	call := func() webproto.AINextEdit {
+		var out webproto.AINextEdit
+		webResData(t, r.call(webproto.OpAINextEdit, &webproto.AINextEditArgs{Buf: 2, Tick: 7, Line: 0}), &out)
+		return out
+	}
+	call()
+	r.h.filesState().bufs[2].rows[0] = "c"
+	if out := call(); !out.None {
+		t.Errorf("secret file: %+v", out)
+	}
+	r.h.filesState().bufs[2].path = "main.go"
+	off := false
+	r.m.aiS().settings.NextEdit = &off
+	call()
+	r.h.filesState().bufs[2].rows[0] = "d"
+	if out := call(); !out.None {
+		t.Errorf("ai_next_edit off: %+v", out)
+	}
+	if n := len(f.requests()); n != 0 {
+		t.Fatalf("%d requests reached the model", n)
+	}
+}
