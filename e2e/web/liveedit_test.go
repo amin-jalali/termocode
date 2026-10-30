@@ -189,3 +189,22 @@ func TestLiveEditorFallsBackToTheSheet(t *testing.T) {
 	p.TapJS(ButtonByText("Edit"))
 	p.WaitJS(`(` + toastsJS + `).includes("The editor did not open. The simple edit sheet works instead.") && ` + editSheet)
 }
+
+// On a touch screen the editor's text is at least 16 px, so focusing it
+// does not zoom the page; with a mouse it keeps the code size.
+func TestLiveEditorTouchFontSize(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openFiles(t, vp)
+			openBuf(t, p, c, 2, "notes.txt", "alpha")
+			openEditor(t, p)
+			px := Eval[float64](p, `parseFloat(getComputedStyle(`+cmContent+`).fontSize)`)
+			if vp.Mobile && px < 16 {
+				t.Errorf("editor text is %v px on a phone, want at least 16", px)
+			}
+			if !vp.Mobile && px >= 16 {
+				t.Errorf("editor text is %v px with a mouse, want the code size", px)
+			}
+		})
+	}
+}
