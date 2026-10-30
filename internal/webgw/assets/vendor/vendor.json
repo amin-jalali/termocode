@@ -54,6 +54,102 @@
         "dist/signals-core.d.ts": "sha384-aeYACEOEg0Q6AHcFHvCrBbH+5ntT7CJYgzRHJ8EdQDFlOjp1fGEbIXDPA7CRIO+W",
         "signals-core.module.js": "sha384-G4zs+40X/+Yju/CgNVULs6u1RU9oQrC5yOkIQnMdwj94YrvHIaSMmtxvWlIkiByV"
       }
+    },
+    {
+      "name": "@codemirror/state",
+      "version": "6.7.6",
+      "dir": "codemirror-state@6.7.6",
+      "tarball": "https://registry.npmjs.org/@codemirror/state/-/state-6.7.6.tgz",
+      "integrity": "sha512-kAz+AncRtKuIknedxT1bq4XwXv4UowhbkHU1myPrtVb/jZtImWuV5BXzv5vK6i3kYACsdiZiQKFQQ5Mq7elW8w==",
+      "license": "MIT",
+      "imports": {
+        "@codemirror/state": "dist/index.js"
+      },
+      "files": {
+        "LICENSE": "sha384-tTNhuolNG/bGMQsfmiWtxtKCVZo4MjraP2gd4qdcU0kZ0IpObSpi7+yqGEpuTSGV",
+        "dist/index.d.ts": "sha384-pRP9q404M9dNw/ZsU9BQWijBjwzlcFaKtU63YYskzKIz3nmla4qRIeK2LDEhV8vV",
+        "dist/index.js": "sha384-KBT5ZqzMbN/F7Ft7ov9c9IQ1UfA6zFbSiZwmDRx7fQj/mhvH7w4rP2DRBbC/ZKdG"
+      }
+    },
+    {
+      "name": "@codemirror/view",
+      "version": "6.43.14",
+      "dir": "codemirror-view@6.43.14",
+      "tarball": "https://registry.npmjs.org/@codemirror/view/-/view-6.43.14.tgz",
+      "integrity": "sha512-hC45YnmJNR1rz42OF57BLoQNFMV12/13drnvibDsR2quNDmldcb4WvYVV81hFQg56i9lcqQMEDqilhX2QDcGQQ==",
+      "license": "MIT",
+      "imports": {
+        "@codemirror/view": "dist/index.js"
+      },
+      "files": {
+        "LICENSE": "sha384-tTNhuolNG/bGMQsfmiWtxtKCVZo4MjraP2gd4qdcU0kZ0IpObSpi7+yqGEpuTSGV",
+        "dist/index.d.ts": "sha384-lyvtWVKt351aA+iLwDCAM7Ym38xiNqWfQLHzyZXzhfzIvRxlhfcx7rNvvmZtA9z7",
+        "dist/index.js": "sha384-xCMesxUDvGXpx7nvHSIfLdGM0SstMoHebLhZVbf1ycWDqMOO9JEoqlc1P0PPkZRA"
+      }
+    },
+    {
+      "name": "@marijn/find-cluster-break",
+      "version": "1.0.4",
+      "dir": "marijn-find-cluster-break@1.0.4",
+      "tarball": "https://registry.npmjs.org/@marijn/find-cluster-break/-/find-cluster-break-1.0.4.tgz",
+      "integrity": "sha512-Wy0V7+SGUjnF9/TkiM1hKVDPj7jKXduPNboMVtHTA8dySMURWqfg/JZ9E2Sq8JgSJmkl7k7Qe9FLeMSrSraWmQ==",
+      "license": "MIT",
+      "imports": {
+        "@marijn/find-cluster-break": "src/index.js"
+      },
+      "files": {
+        "LICENSE": "sha384-NLiloCh3/XD4ihM0S35vjRkmmbQLIR8SAEHdQRuEgJk9vriFNh9oPo2pRQtr/kzE",
+        "src/index.d.ts": "sha384-DvqTkWH57rTAQD+ebEbUmu2PjrZzXZqraUClONbnxt9fDeJFuToEc5OSeP4Gl01j",
+        "src/index.js": "sha384-3qpESVchJPJodISe+BPT1snhn0/XtmMvCPAGUZqPqo61tFgUQufDxHwZQxFrPE6i"
+      }
+    },
+    {
+      "name": "crelt",
+      "version": "1.0.7",
+      "dir": "crelt@1.0.7",
+      "tarball": "https://registry.npmjs.org/crelt/-/crelt-1.0.7.tgz",
+      "integrity": "sha512-aK6BbWfhf4U/wCcLHKPJl/xa6VkVstRaPywWtMKGwuOLc/wZTyQYuoxgvZnNsBvv7Kg3YTBQYYBCggcviQczuA==",
+      "license": "MIT",
+      "imports": {
+        "crelt": "index.js"
+      },
+      "files": {
+        "LICENSE": "sha384-Nse1J0x7d3qwB2Rq1urRkqd60DLMWh7BpUPvfDgW4qJWHmOpLlNGuf5zpv3GCgEd",
+        "index.d.ts": "sha384-tb+otbBmor6QAcaaaf/Anz2FsKtTYasZ6huh/5U6keP9Kxe8iv46du2HnaaXvdyk",
+        "index.js": "sha384-Zv+vWZxpHh0WqinsK/YBypu+VHkIkHuzucxn7FTYhwtEImUKC/p7nxkC9Xt4mUgL"
+      }
+    },
+    {
+      "name": "style-mod",
+      "version": "4.1.4",
+      "dir": "style-mod@4.1.4",
+      "tarball": "https://registry.npmjs.org/style-mod/-/style-mod-4.1.4.tgz",
+      "integrity": "sha512-XXWIQt633/EpAFx8aZDOTjBzrCaGmhvEQlQo6MVPfa2OzO2cWo+4hV9h+6UkHYlXGfy+ODXKUdP7Pthmcu5ATw==",
+      "license": "MIT",
+      "imports": {
+        "style-mod": "src/style-mod.js"
+      },
+      "files": {
+        "LICENSE": "sha384-QyT+53fHlMSIMSvYFrI6lERn+hj7impsM8wkgtBqyAQA9Xw79nV6AUsESycc7vzS",
+        "src/style-mod.d.ts": "sha384-P7q6XGIF48+UzTYrgzn4dIZAr99vwRsy6keCwbv46yetZLaXFWZXKioMhsi0ksqL",
+        "src/style-mod.js": "sha384-rqF4+xzPzekLfSh1VIm1tuCjJJvSSINrnjlJ60lWHH6g0Zdvtb6uTqWzrAo/VF/z"
+      }
+    },
+    {
+      "name": "w3c-keyname",
+      "version": "2.2.8",
+      "dir": "w3c-keyname@2.2.8",
+      "tarball": "https://registry.npmjs.org/w3c-keyname/-/w3c-keyname-2.2.8.tgz",
+      "integrity": "sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==",
+      "license": "MIT",
+      "imports": {
+        "w3c-keyname": "index.js"
+      },
+      "files": {
+        "LICENSE": "sha384-DOK9fl5dDyDCogNNdOXElLVSywsESz6ta6PhNuHtdtG+Mg2Fh+B3FL1JBbNObRWe",
+        "index.d.ts": "sha384-Cy1p0HM/KpqUojkomOohqdaJxrQjSTEN3mZ1T5RQyITTwhxqrUFSlhTJZT5Aalmy",
+        "index.js": "sha384-1cLRGZ765v2w2cWNAbTW6QL/LIGcZsXoCv5mK85ze5/6X/PpExFxU1WvvzqSzr09"
+      }
     }
   ]
 }
