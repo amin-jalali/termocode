@@ -128,6 +128,56 @@ func TestDNSRebindingRequestRejected(t *testing.T) {
 	}
 }
 
+// TestOptions405: only GET and POST are served. OPTIONS gets 405 and no
+// CORS answer, so a preflight from another site always fails.
+func TestOptions405(t *testing.T) {
+	for _, m := range []string{http.MethodOptions, http.MethodPut, http.MethodDelete,
+		http.MethodPatch, http.MethodHead, http.MethodTrace, "PROPFIND", "get"} {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.Method = m
+		r.Host = testSite.Hosts[0]
+		r.Header.Set("Origin", "http://"+testSite.Hosts[0])
+		w, next := serveGuard(t, r)
+		if w.Code != http.StatusMethodNotAllowed || next.hits != 0 {
+			t.Errorf("%s: code %d hits %d, want 405 and no hit", m, w.Code, next.hits)
+		}
+		if got := w.Header().Get("Allow"); got != "GET, POST" {
+			t.Errorf("%s: Allow = %q", m, got)
+		}
+		checkHeaders(t, w.Header(), m)
+	}
+}
+
+// TestNoCORSHeaders: a CORS preflight and a cross-site GET get no
+// Access-Control-* header back (checkHeaders fails on any).
+func TestNoCORSHeaders(t *testing.T) {
+	pre := httptest.NewRequest(http.MethodOptions, "/auth", nil)
+	pre.Host = testSite.Hosts[0]
+	pre.Header.Set("Origin", "http://evil.com")
+	pre.Header.Set("Access-Control-Request-Method", "POST")
+	pre.Header.Set("Access-Control-Request-Headers", "content-type")
+	w, _ := serveGuard(t, pre)
+	checkHeaders(t, w.Header(), "preflight")
+
+	get := httptest.NewRequest(http.MethodGet, "/", nil)
+	get.Host = testSite.Hosts[0]
+	w, _ = serveGuard(t, get)
+	checkHeaders(t, w.Header(), "GET")
+}
+
+// TestHeadersOnEveryResponse: an answer written by the next handler, a 404
+// included, still carries every security header.
+func TestHeadersOnEveryResponse(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/nope", nil)
+	r.Host = testSite.Hosts[0]
+	Guard(testSite, http.NotFoundHandler()).ServeHTTP(w, r)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("code %d", w.Code)
+	}
+	checkHeaders(t, w.Header(), "404")
+}
+
 func TestOriginExact(t *testing.T) {
 	p := strconv.Itoa(testPort)
 	host := "127.0.0.1:" + p
