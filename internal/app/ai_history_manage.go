@@ -82,11 +82,9 @@ func (m *Model) confirmAIHistoryClear() tea.Cmd {
 	if n == 0 {
 		return m.aiInfo("No saved AI chats yet")
 	}
-	m.confirm = confirm.New("Clear chat history?", "Delete all "+itoa(n)+" saved chats? This cannot be undone.",
-		[]confirm.Button{
-			{ID: "clear", Title: "Delete All", Style: confirm.StyleDestructive},
-			{ID: "cancel", Title: "Cancel"},
-		})
+	m.confirm = confirm.Risky("Clear chat history?", "Delete all "+itoa(n)+" saved chats? This cannot be undone.",
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: "clear", Title: "Delete All", Style: confirm.StyleDestructive})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAIHistoryClear
