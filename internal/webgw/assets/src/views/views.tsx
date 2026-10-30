@@ -12,14 +12,12 @@ import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
 import { View } from "./View";
 
+import { TreeView } from "./Files";
+
 export { ChatView } from "./Chat";
 
 export function FilesView() {
-  return (
-    <View tab="files" title={t("tab.files")}>
-      <TopicBody topic="tree" also={["bufs"]} empty={<p>{t("files.no_ws")}</p>} refused={(r) => (r.code === "not_found" ? t("files.no_ws") : r.msg)} />
-    </View>
-  );
+  return <TreeView />;
 }
 
 export function TermView() {
