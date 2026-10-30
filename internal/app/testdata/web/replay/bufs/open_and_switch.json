@@ -1,0 +1,47 @@
+{
+  "topic": "bufs",
+  "snap0": {
+    "bufs": [
+      {
+        "active": true,
+        "buf": 1,
+        "dirty": false,
+        "path": "a.go"
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "bufs": [
+        {
+          "active": false,
+          "buf": 1,
+          "dirty": false,
+          "path": "a.go"
+        },
+        {
+          "active": true,
+          "buf": 7,
+          "dirty": true,
+          "path": "src/b.go"
+        }
+      ]
+    }
+  ],
+  "snapn": {
+    "bufs": [
+      {
+        "buf": 1,
+        "path": "a.go",
+        "dirty": false,
+        "active": false
+      },
+      {
+        "buf": 7,
+        "path": "src/b.go",
+        "dirty": true,
+        "active": true
+      }
+    ]
+  }
+}

@@ -1,6 +1,10 @@
 package app
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/webproto"
+)
 
 // State of the file and terminal views on the hub (WEB-16, WEB-17,
 // WEB-19). It lives on the hub, so it starts empty with every web
@@ -18,6 +22,8 @@ type webFiles struct {
 	loading int                   // buf.open calls on their way
 	early   map[int][]webBufEvent // callbacks that came before their buf.open answered
 	earlyN  int
+
+	bufsList *webproto.BufsSnap // the bufs list as last sent
 }
 
 // files returns the hub's file state, making it on first use.
@@ -52,6 +58,7 @@ func (m *Model) webTrackFiles() tea.Cmd {
 	}
 	f := h.filesState()
 	cmd := m.webTrackTree(h, f)
+	m.webTrackBufs(h, f)
 	m.webReleaseBufs(h, f)
 	return cmd
 }
