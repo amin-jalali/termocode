@@ -11,6 +11,12 @@ on:
 permissions:
   contents: read
 
+# Same queue rule as test.yml: on main a waiting run is replaced by a
+# newer one (a running one finishes); a PR cancels its older run.
+concurrency:
+  group: perf-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   perf:
     name: perf budgets (ubuntu-latest)

@@ -6,11 +6,12 @@ on:
   pull_request:
 
 # A new push to a branch or PR cancels the older run of it, so the queue
-# only holds the newest commit. main is never cancelled: every commit
-# there gets its own group (a group also drops a waiting run when a newer
-# one comes), so each one gets its own result.
+# only holds the newest commit. On main a running job is never cancelled,
+# but a waiting run is replaced by a newer one: commits land one by one
+# after their branch was green, and one run per commit there filled the
+# queue with hundreds of runs. The newest main commit is always tested.
 concurrency:
-  group: test-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  group: test-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # Required checks (CONTRIBUTING.md): keep these job names stable.
