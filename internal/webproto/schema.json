@@ -998,6 +998,20 @@
       "laptop_card": false,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "tree.delete",
+      "args": "ItemArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 8192,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {

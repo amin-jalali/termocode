@@ -6,6 +6,7 @@ func init() {
 	registerResult(OpTreeNewFile, TreeChanged{})
 	registerResult(OpTreeNewDir, TreeChanged{})
 	registerResult(OpTreeRename, TreeChanged{})
+	registerResult(OpTreeDelete, AskRef{})
 }
 
 // TreeChanged answers a file op that ran: the path it made or renamed to.
