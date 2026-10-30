@@ -107,3 +107,53 @@ func TestTreeRename(t *testing.T) {
 		t.Fatal("folder not renamed")
 	}
 }
+
+// Spec (WEB-41, web design 3.2): tree.delete waits for a laptop card
+// (Cancel first, naming the path and the device); nothing is deleted
+// before the laptop says yes; a folder's card says everything in it
+// goes; the web may only cancel; the workspace folder cannot be deleted.
+func TestTreeDeleteNeedsLaptopCard(t *testing.T) {
+	r := newWebFilesRig(t)
+	r.m.output = newOutputStore()
+	r.write("src/a.go", "package a\n")
+	r.write("dir/x.txt", "x")
+	var ref webproto.AskRef
+	webTestData(t, r.call(webproto.OpTreeDelete, &webproto.ItemArgs{Path: "src/a.go"}), &ref)
+	if ref.Card == "" {
+		t.Fatal("no card id")
+	}
+	if _, err := os.Stat(filepath.Join(r.root, "src", "a.go")); err != nil {
+		t.Fatal("deleted before the laptop said so")
+	}
+	if !r.m.confirmOpen || r.m.confirmKind != confirmKindWebAsk || r.m.confirm.SafeID() != "cancel" {
+		t.Fatalf("laptop dialog open=%v kind=%v", r.m.confirmOpen, r.m.confirmKind)
+	}
+	if v := r.m.confirm.View(); !strings.Contains(v, "src/a.go") || !strings.Contains(v, "Requested from") {
+		t.Errorf("card:\n%s", v)
+	}
+	webTestLaptopSelect(t, r.m, "confirm")
+	if _, err := os.Stat(filepath.Join(r.root, "src", "a.go")); err == nil {
+		t.Fatal("not deleted after the laptop's yes")
+	}
+	if a := webTestAudit(r.m); !strings.Contains(a, "tree.delete  src/a.go  by=web:") || !strings.Contains(a, "confirmed on the laptop") {
+		t.Errorf("audit:\n%s", a)
+	}
+
+	webTestData(t, r.call(webproto.OpTreeDelete, &webproto.ItemArgs{Path: "dir"}), &ref)
+	if v := r.m.confirm.View(); !strings.Contains(v, "everything in it") {
+		t.Errorf("folder card:\n%s", v)
+	}
+	if f := r.call(webproto.OpCardsAnswer, &webproto.CardsAnswerArgs{ID: ref.Card, Choice: "confirm"}); webErrCode(f) != "forbidden" {
+		t.Fatalf("the web confirmed: %v", f)
+	}
+	if f := r.call(webproto.OpCardsAnswer, &webproto.CardsAnswerArgs{ID: ref.Card, Choice: "cancel"}); f["t"] != "res" {
+		t.Fatalf("cancel: %v", f)
+	}
+	r.m.webAfterUpdate(nil)
+	if _, err := os.Stat(filepath.Join(r.root, "dir", "x.txt")); err != nil {
+		t.Fatal("cancelled, yet the folder is gone")
+	}
+	if f := r.call(webproto.OpTreeDelete, &webproto.ItemArgs{Path: "./"}); webErrCode(f) != "forbidden" {
+		t.Errorf("the root: %v", f)
+	}
+}

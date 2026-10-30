@@ -828,6 +828,7 @@ export interface OpArgs {
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
+  "tree.delete": ItemArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -882,4 +883,5 @@ export interface OpResult {
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;
+  "tree.delete": AskRef;
 }
