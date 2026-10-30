@@ -357,9 +357,8 @@ func (m *Model) webCtlOpen(call *webCall) tea.Cmd {
 	return cmd
 }
 
-// webAskStart is where the laptop's start card will ask; until then a
-// start from the command line needs --yes.
+// webAskStart shows the laptop's start card for `termocode web`.
 func (m *Model) webAskStart(call *webCall) tea.Cmd {
-	call.fail(webproto.CodeForbidden, "Answer on the laptop: run Web: Start Panel there, or use --yes.")
-	return nil
+	call.later()
+	return m.openWebStartCard(call)
 }

@@ -777,6 +777,8 @@ type Model struct {
 	web *webHub
 	// webPanel is the web gateway the user started (web_panel.go).
 	webPanel *webPanelState
+	// webStartCall is the `termocode web` request the start card answers.
+	webStartCall *webCall
 	// HTTP client for .http files (http_state.go); made on first use.
 	http *httpState
 	// secrets is the secret store's unlock flow (secrets_ui.go); the store
