@@ -128,7 +128,8 @@ func TestComposeLogsFailure(t *testing.T) {
 }
 
 // compose ps on different versions: blank lines, no Service field (only
-// Name), replicas (one up keeps the service up), state from text.
+// Name), replicas (a down replica shows over the healthy ones), state
+// from text.
 func TestParsePSVersions(t *testing.T) {
 	in := "\n" +
 		`{"Name":"legacy-1","Status":"Up 2 minutes (Paused)"}` + "\n\n" +
@@ -144,7 +145,7 @@ func TestParsePSVersions(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]services.State{
-		"legacy-1": services.Paused, "web": services.Running, "db": services.Stopped, "cache": services.Stopped,
+		"legacy-1": services.Paused, "web": services.Exited, "db": services.Stopped, "cache": services.Stopped,
 		"api": services.Unhealthy, "worker": services.Starting,
 	}
 	for name, s := range want {
