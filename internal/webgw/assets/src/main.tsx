@@ -11,7 +11,8 @@ import "./styles/components.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { goTab } from "./lib/router";
-import { link, status } from "./session";
+import { laptopTheme, link, status } from "./session";
+import { THEME_TOKENS, themeTokens } from "./state/theme";
 import { TABS } from "./state/route";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
 import { lang } from "./strings";
@@ -45,6 +46,27 @@ effect(() => {
   const theme = prefs.value.theme;
   if (theme === "system") delete html.dataset.theme;
   else html.dataset.theme = theme;
+});
+
+const lightMQ = matchMedia("(prefers-color-scheme: light)");
+const systemLight = signal(lightMQ.matches);
+lightMQ.addEventListener("change", () => (systemLight.value = lightMQ.matches));
+
+// The laptop's theme, in the scheme this page shows (WEB-UX-8): its
+// tokens go on :root through the CSSOM (no style attribute in the page,
+// so the CSP stays strict) and override the built-in ones; without a
+// theme from the hub the built-in tokens stay.
+effect(() => {
+  const th = laptopTheme.value;
+  const p = prefs.value.theme;
+  const scheme = p === "system" ? (systemLight.value ? "light" : "dark") : p;
+  const tokens = th ? themeTokens(th, scheme) : {};
+  for (const k of THEME_TOKENS) {
+    if (k in tokens) html.style.setProperty(k, tokens[k]);
+    else html.style.removeProperty(k);
+  }
+  if (th && th.name) html.dataset.laptopTheme = th.name;
+  else delete html.dataset.laptopTheme;
 });
 
 // The UI language: Persian when chosen, or on "auto" when the browser
