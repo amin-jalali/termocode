@@ -177,3 +177,5 @@ func TestGitReplayGolden(t *testing.T) {
 	webReplayCheck(t, h.topics["git"], c)
 	webReplayGolden(t, webReplayPath("git", "stage_commit_switch"), c)
 }
+
+func gitFileConflict(path string) git.FileStatus { return git.FileStatus{Code: "UU", Path: path} }

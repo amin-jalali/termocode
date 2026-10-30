@@ -78,7 +78,11 @@ func webTestCallBg(t *testing.T, m *Model, c *webConn, op, args string) map[stri
 	cmd := m.webRunOp(fn, call)
 	if cmd != nil {
 		if am, ok := cmd().(applyMsg); ok {
-			am(m)
+			if next := am(m); next != nil { // the laptop's git refresh
+				if g, ok := next().(GitMsg); ok {
+					m.applyGitSnapshot(g)
+				}
+			}
 		}
 	}
 	for _, f := range webTestNow(t, c) {
@@ -207,4 +211,90 @@ func TestGitShow(t *testing.T) {
 	if got := webTestErr(webTestCallBg(t, &m, c, webproto.OpGitShow, `{"hash":"deadbeef"}`)); got != "not_found" {
 		t.Errorf("unknown commit: %q", got)
 	}
+}
+
+// webTestGitCodes maps path → git status code of the laptop's state.
+func webTestGitCodes(m *Model) map[string]string {
+	out := map[string]string{}
+	for _, f := range m.gitFiles {
+		out[f.Path] = f.Code
+	}
+	return out
+}
+
+// webTestAudit is the Web output channel (what the web did, as the laptop
+// shows it).
+func webTestAudit(m *Model) string { return strings.Join(m.output.Lines(webAuditChannel), "\n") }
+
+// Spec (WEB-23): git.stage and git.unstage take files the Git tab lists,
+// change only the index, refresh the laptop's git state and leave one
+// audit line each; a hunk is staged and unstaged by its header, and a
+// header that moved changes nothing. Unlisted files, conflicts and the
+// wrong side are refused.
+func TestStageUnstageRoundTrip(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	webTestHub(t, &m)
+	dir, run := webTestRepo(t, &m)
+	webTestWrite(t, dir, "a.txt", "ONE\ntwo\n")
+	webTestWrite(t, dir, "new.txt", "fresh\n")
+	webTestGitLoad(&m)
+	c := webTestSub(t, &m)
+
+	if f := webTestCallBg(t, &m, c, webproto.OpGitStage, `{"paths":["a.txt","new.txt"]}`); f["t"] != "res" {
+		t.Fatalf("stage: %v", f)
+	}
+	if got := webTestGitCodes(&m); got["a.txt"] != "M " || got["new.txt"] != "A " {
+		t.Fatalf("after stage the laptop has %v", got)
+	}
+	if !strings.Contains(webTestAudit(&m), "git.stage  a.txt new.txt  by=web:phone  → ok") {
+		t.Errorf("audit:\n%s", webTestAudit(&m))
+	}
+	if f := webTestCallBg(t, &m, c, webproto.OpGitUnstage, `{"paths":["new.txt"]}`); f["t"] != "res" {
+		t.Fatalf("unstage: %v", f)
+	}
+	if got := webTestGitCodes(&m); got["new.txt"] != "??" || got["a.txt"] != "M " {
+		t.Fatalf("after unstage the laptop has %v", got)
+	}
+	body, _ := os.ReadFile(filepath.Join(dir, "a.txt"))
+	if string(body) != "ONE\ntwo\n" {
+		t.Fatalf("the work tree changed: %q", body)
+	}
+
+	// Hunks: unstage a.txt's one hunk by its header, stage it back.
+	var d webproto.GitDiff
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitDiff, `{"path":"a.txt","staged":true}`), &d)
+	hunk := d.Rows[0].Text
+	if f := webTestCallBg(t, &m, c, webproto.OpGitUnstageHunk, `{"path":"a.txt","hunk":"`+hunk+`"}`); f["t"] != "res" {
+		t.Fatalf("unstage hunk: %v", f)
+	}
+	if got := webTestGitCodes(&m)["a.txt"]; got != " M" {
+		t.Fatalf("after unstage hunk: %q", got)
+	}
+	if f := webTestCallBg(t, &m, c, webproto.OpGitStageHunk, `{"path":"a.txt","hunk":"@@ -9,9 +9,9 @@"}`); webTestErr(f) != "conflict" {
+		t.Fatalf("a moved hunk: %v", f)
+	}
+	if got := webTestGitCodes(&m)["a.txt"]; got != " M" {
+		t.Fatalf("a moved hunk changed the index: %q", got)
+	}
+	if f := webTestCallBg(t, &m, c, webproto.OpGitStageHunk, `{"path":"a.txt","hunk":"`+hunk+`"}`); f["t"] != "res" {
+		t.Fatalf("stage hunk: %v", f)
+	}
+	if got := webTestGitCodes(&m)["a.txt"]; got != "M " {
+		t.Fatalf("after stage hunk: %q", got)
+	}
+
+	// Refused: a file with no change, the wrong side, a conflict.
+	m.gitFiles = append(m.gitFiles, gitFileConflict("c.txt"))
+	for _, tc := range []struct{ op, args, code string }{
+		{webproto.OpGitStage, `{"paths":["nothing.txt"]}`, "not_found"},
+		{webproto.OpGitUnstage, `{"paths":["new.txt"]}`, "conflict"},
+		{webproto.OpGitStage, `{"paths":["c.txt"]}`, "conflict"},
+		{webproto.OpGitStageHunk, `{"path":"new.txt","hunk":"@@ -0,0 +1 @@"}`, "conflict"},
+	} {
+		if got := webTestErr(webTestCallBg(t, &m, c, tc.op, tc.args)); got != tc.code {
+			t.Errorf("%s %s: %q, want %s", tc.op, tc.args, got, tc.code)
+		}
+	}
+	_ = run
 }
