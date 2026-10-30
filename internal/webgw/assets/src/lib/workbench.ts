@@ -77,11 +77,12 @@ export const closed = signal<ReadonlySet<string>>(new Set());
  * off on a desktop, as the laptop's editor has it). */
 export const wordWrap = signal<boolean>(!matchMedia("(min-width: 1200px)").matches);
 
-/** QuickMode is what the quick input lists: files, commands, or a line. */
-export type QuickMode = "files" | "commands" | "line";
+/** QuickMode is what the quick input lists: files, commands, a line, or
+ * a question the page asks (ask: its title, and what Enter does). */
+export type QuickMode = "files" | "commands" | "line" | "ask";
 
 /** quick is the open quick input (Go to file, the command list), or null. */
-export const quick = signal<{ mode: QuickMode } | null>(null);
+export const quick = signal<{ mode: QuickMode; ask?: { title: string; run(text: string): void } } | null>(null);
 
 /** cursorAt is the desktop editor's cursor (1-based), for the status bar. */
 export const cursorAt = signal<{ line: number; col: number } | null>(null);

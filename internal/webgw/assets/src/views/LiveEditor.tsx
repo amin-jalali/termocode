@@ -18,7 +18,7 @@ import { gutterMarks } from "../lib/gutter";
 import { BpAsk, onGlyph, useRunGutter } from "../lib/rungutter";
 import { blameOn, blameRows } from "../lib/blame";
 import { ask, diagSnap, fileMarkers, findRefs, goTo, revealAt, wordAt } from "../lib/lsp";
-import { aiAsk, aiSnap } from "../lib/ai";
+import { aiAction, aiAsk, aiSnap } from "../lib/ai";
 import { isGone } from "../state/files";
 import { t } from "../strings";
 import { Button } from "../ui/Button";
@@ -147,6 +147,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               onOpen: (to, line, col) => goTo(to, line, col),
               ai: aiRef.current,
               onAI: (kind, line, col, manual) => aiAsk(kind, buf, line, col, manual),
+              onAIAct: (kind, at) => aiAction(kind, path, buf, at),
               diff: diff ? { original: diff.original ?? "", inline: diff.inline, collapse: diff.collapse } : undefined,
               onDiff: (n, a, r) => diffRef.current?.onCount(n, a, r),
               onGlyph: diff ? undefined : (line, menu, x, y) => onGlyph(path, line, menu, x, y),

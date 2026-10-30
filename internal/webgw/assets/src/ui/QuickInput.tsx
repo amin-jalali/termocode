@@ -102,7 +102,8 @@ export function QuickInput() {
   const [note, setNote] = useState("");
   const box = useRef<HTMLInputElement | null>(null);
 
-  const wantFiles = !text.startsWith(">") && !text.startsWith(":");
+  const ask = q0?.mode === "ask" ? (q0.ask ?? null) : null;
+  const wantFiles = !ask && !text.startsWith(">") && !text.startsWith(":");
   const wantCmds = text.startsWith(">");
   useLayoutEffect(() => box.current?.focus(), []);
   useEffect(() => {
@@ -123,7 +124,11 @@ export function QuickInput() {
   const close = () => (quick.value = null);
   let rows: Row[] = [];
   let placeholder = t("quick.files");
-  if (text.startsWith(">")) {
+  if (ask) {
+    // A question (Edit with AI): Enter sends what was typed.
+    rows = text.trim() ? [{ key: "ask", label: text.trim(), at: [], detail: t("quick.ask_go"), run: () => ask.run(text.trim()) }] : [];
+    placeholder = ask.title;
+  } else if (text.startsWith(">")) {
     rows = commandRows(text.slice(1));
     placeholder = t("quick.commands");
   } else if (text.startsWith(":")) {
@@ -207,7 +212,7 @@ export function QuickInput() {
           ))}
           {!rows.length && (
             <li class="quick-empty" role="presentation">
-              {note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
+              {ask ? t("quick.ask_type") : note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
             </li>
           )}
         </ul>

@@ -1,0 +1,24 @@
+/* The laptop's AI on the desktop (WEBP-3): the AI diff tab's Accept and
+   Reject. Workbench tokens only (Dark+ / Light+). */
+
+/* Accept / Reject: the workbench's primary and secondary buttons. */
+.ai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--fs-ui);
+  cursor: pointer;
+}
+.ai-btn:hover { background: var(--wb-toolbar-hover); }
+.ai-btn.is-primary { background: var(--wb-button-bg); color: var(--wb-button-fg); }
+.ai-btn.is-primary:hover { background: var(--wb-button-hover); }
+.ai-btn:disabled { opacity: 0.5; cursor: default; }
+.ai-btn:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: 1px; }
+.ai-note { margin: 0; }

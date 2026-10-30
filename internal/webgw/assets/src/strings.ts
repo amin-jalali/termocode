@@ -943,7 +943,27 @@ export const S = {
   "cmd.git_amend": "Git: Commit (Amend)…",
   "cmd.git_clone": "Git: Clone Repository…",
   // The laptop's AI in the editor, agent worktrees, profile and model (WEBP-3)
+  "ai.explain": "Explain with AI",
+  "ai.fix": "Fix with AI",
+  "ai.edit": "Edit with AI…",
+  "ai.doc": "Generate Doc Comment with AI",
+  "ai.edit_ask": "Edit with AI: what should change?",
+  "ai.busy": "The AI is still working on the last request.",
+  "ai.unsent": "Your last typing is still on its way. Try again.",
+  "ai.asked_chat": "Asked in the chat.",
+  "ai.no_change": "The AI suggests no change.",
+  "ai.changed": "The file changed since you asked. Ask the AI again.",
+  "ai.applied": "The AI's change is in the file.",
+  "ai.tab": "{name} (AI Suggestion)",
+  "ai.tab_agent": "{name} (Agent)",
+  "ai.accept_tip": "Write the changes into the file (one undo step)",
+  "ai.reject_tip": "Drop the suggestion; the file stays as it is",
+  "ai.body_review": "Check the AI's changes. The arrow beside a change takes it back. Nothing is written until you accept.",
+  "ai.gone": "This AI suggestion is gone.",
+  "ai.secret": "This file may hold secrets. Look at it on the laptop.",
   "ai.nes_hint": "Tab to accept · Esc to dismiss",
+  "quick.ask_go": "Enter to ask the AI",
+  "quick.ask_type": "Type what should change.",
 } as const;
 
 export type StringKey = keyof typeof S;

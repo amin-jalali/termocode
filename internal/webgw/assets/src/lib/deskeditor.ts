@@ -6,11 +6,12 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type AiKind, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
 import { editorMenu } from "./editormenu";
+import { aiSnap } from "./ai";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -66,9 +67,10 @@ export interface DeskHost extends EditorHost {
   onRefs?(line: number, col: number): void;
   onOpen?(path: string, line: number, col: number): void;
   /** ai: the laptop's AI helps typing (ghost text, next edits); onAI
-   * asks it. */
+   * asks it, onAIAct runs an editor action (also from the menu). */
   ai?: FrameOpts["ai"];
   onAI?(kind: AiKind, line: number, col: number, manual: boolean): Promise<unknown>;
+  onAIAct?(kind: AiAct, at: AiAt): void;
   /** diff makes it a diff editor (the older text on the left); onDiff
    * hears its change count. */
   diff?: FrameDiff;
@@ -99,6 +101,8 @@ export interface DeskHandle extends EditorHandle {
   insert(text: string): void;
   /** glyphs sets the glyph margin's marks and the stopped row (0: none). */
   glyphs(items: FrameGlyph[], stop: number): void;
+  /** aiAct runs an AI action on the editor's selection. */
+  aiAct(kind: AiAct): void;
 }
 
 /** desks are the desktop editors on screen, by editor group slot. */
@@ -177,7 +181,8 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         return;
       case "menu": {
         const r = frame.getBoundingClientRect();
-        editorMenu(r.left + m.x, r.top + m.y, m, send);
+        // The AI's actions when the laptop has AI set up.
+        editorMenu(r.left + m.x, r.top + m.y, m, send, aiSnap()?.configured ? host.onAIAct : undefined);
         return;
       }
       case "lsp": {
@@ -194,6 +199,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         host.onAI(m.kind, m.line, m.col, m.manual === true).then(answer, () => answer(null));
         return;
       }
+      case "aiAct":
+        host.onAIAct?.(m.kind, m.at);
+        return;
       case "refs":
         host.onRefs?.(m.line, m.col);
         return;
@@ -275,6 +283,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     glyphs(items, stop) {
       send({ t: "glyphs", items, stop });
+    },
+    aiAct(kind) {
+      send({ t: "aiAct", kind });
     },
     destroy() {
       removeEventListener("message", onMessage);

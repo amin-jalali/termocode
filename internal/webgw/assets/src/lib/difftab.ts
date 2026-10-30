@@ -5,6 +5,8 @@
 //   "@diff:idx:" + path       the index against HEAD (the staged change)
 //   "@timeline:" + hash + ":" + path   a commit against its parent
 //   "@review:" + card + ":" + path     the AI's change a review card asks about
+//   "@ai:" + n + ":" + path    the AI's suggestion n for a file (lib/ai.ts)
+//   "@agent:" + id + ":" + path   a file an agent changed in its worktree
 import { t } from "../strings";
 import { vtabName, vtabOf } from "./vtabs";
 import { gitTabName, gitTabOf } from "./gittab";
@@ -13,14 +15,36 @@ const WT = "@diff:wt:";
 const IDX = "@diff:idx:";
 const TIMELINE = "@timeline:";
 const REVIEW = "@review:";
+const AI = "@ai:";
+const AGENT = "@agent:";
 
-export type DiffKind = "wt" | "idx" | "commit" | "review";
+export type DiffKind = "wt" | "idx" | "commit" | "review" | "ai" | "agent";
 
 export interface DiffTab {
   kind: DiffKind;
   path: string;
-  /** hash: the commit (kind "commit"), or the review card's id. */
+  /** hash: the commit (kind "commit"), the review card's id, the
+   * suggestion's number (kind "ai") or the worktree's id (kind "agent"). */
   hash: string;
+}
+
+/** aiTab names the tab of the AI's suggestion n for path. */
+export function aiTab(n: number, path: string): string {
+  return AI + n + ":" + path;
+}
+
+/** agentTab names the tab of a file agent worktree id changed. */
+export function agentTab(id: string, path: string): string {
+  return AGENT + id + ":" + path;
+}
+
+/** keyed reads "<prefix><key>:<path>" (null: not one). */
+function keyed(tab: string, prefix: string, key: RegExp): { key: string; path: string } | null {
+  if (!tab.startsWith(prefix)) return null;
+  const rest = tab.slice(prefix.length);
+  const i = rest.indexOf(":");
+  if (i < 1 || i === rest.length - 1 || !key.test(rest.slice(0, i))) return null;
+  return { key: rest.slice(0, i), path: rest.slice(i + 1) };
 }
 
 /** diffTab names the tab of path's change. */
@@ -40,6 +64,10 @@ export function diffOf(tab: string): DiffTab | null {
     if (i < 1 || i === rest.length - 1) return null;
     return { kind: "review", path: rest.slice(i + 1), hash: rest.slice(0, i) };
   }
+  const ai = keyed(tab, AI, /^[0-9]+$/);
+  if (ai) return { kind: "ai", path: ai.path, hash: ai.key };
+  const ag = keyed(tab, AGENT, /^[A-Za-z0-9][A-Za-z0-9._-]*$/);
+  if (ag) return { kind: "agent", path: ag.path, hash: ag.key };
   if (!tab.startsWith(TIMELINE)) return null;
   const rest = tab.slice(TIMELINE.length);
   const i = rest.indexOf(":");
@@ -56,7 +84,7 @@ export function isVirtual(tab: string): boolean {
 /** fileOfTab is the workspace file a tab is about (null: none). */
 export function fileOfTab(tab: string): string | null {
   const d = diffOf(tab);
-  if (d) return d.path;
+  if (d) return d.kind === "agent" ? null : d.path; // an agent's file is not the workspace's
   return isVirtual(tab) ? null : tab;
 }
 
@@ -76,11 +104,14 @@ export function tabName(tab: string): string {
   if (d.kind === "wt") return t("dv.tab_wt", { name });
   if (d.kind === "idx") return t("dv.tab_idx", { name });
   if (d.kind === "review") return t("dv.tab_review", { name });
+  if (d.kind === "ai") return t("ai.tab", { name });
+  if (d.kind === "agent") return t("ai.tab_agent", { name });
   return t("dv.tab_commit", { name, hash: d.hash });
 }
 
 /** revs are the git revisions of a diff's two sides ("" : the live file). */
 export function revs(d: DiffTab): { left: string; right: string } {
+  if (d.kind === "ai" || d.kind === "agent") return { left: "", right: "" }; // not git's: views/AIDiff.tsx
   if (d.kind === "wt") return { left: "index", right: "" };
   if (d.kind === "idx") return { left: "HEAD", right: "index" };
   if (d.kind === "review") return { left: "", right: "" };
