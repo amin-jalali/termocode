@@ -51,6 +51,14 @@ func TestTestIDArgs(t *testing.T) {
 			t.Errorf("run %s: %v", a, err)
 		}
 	}
+	for _, a := range []string{`{}`, `{"id":"c:a_test.go::T"}`} {
+		if _, err := DecodeArgs(OpTestsOutput, json.RawMessage(a)); err != nil {
+			t.Errorf("output %s: %v", a, err)
+		}
+	}
+	if _, err := DecodeArgs(OpTestsOutput, json.RawMessage(`{"id":"f:../x"}`)); err == nil {
+		t.Error("output: a path out of the workspace")
+	}
 	if _, err := DecodeArgs(OpTestsRun, json.RawMessage(`{"id":"f:a_test.go","failed":true}`)); err == nil {
 		t.Error("run: an id and failed together")
 	}
