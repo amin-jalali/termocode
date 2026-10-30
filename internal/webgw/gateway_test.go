@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -263,5 +264,47 @@ func TestStatusFileMode0600(t *testing.T) {
 	b, _ := os.ReadFile(r.cfg.StatusPath)
 	if strings.Contains(string(b), r.secret) || strings.Contains(string(b), "#s=") {
 		t.Fatal("secret in the status file")
+	}
+}
+
+// Spec (WEB-29): in SSH mode the gateway serves on a 0600 unix socket and
+// answers to the port the user's ssh forwards on their computer: the
+// hand-off and the status file name that port, and /auth works through
+// the socket with Host and Origin 127.0.0.1:<port>.
+func TestGatewayUnixMode(t *testing.T) {
+	sock := filepath.Join(shortDir(t), "k.webhttp.sock")
+	r := startedGateway(t, func(c *RunConfig) { c.UnixPath, c.PortHint = sock, 41237 })
+	if r.port != 41237 {
+		t.Fatalf("hand-off port %d, want the hint 41237", r.port)
+	}
+	st, err := ReadStatus(r.cfg.StatusPath)
+	if err != nil || st.Port != 41237 || st.URL != "http://127.0.0.1:41237/" || st.Sock != sock {
+		t.Fatalf("status %+v %v", st, err)
+	}
+	if fi, err := os.Lstat(sock); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("socket %v %v", fi, err)
+	}
+	client := &http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+		var d net.Dialer
+		return d.DialContext(ctx, "unix", sock)
+	}}}
+	const origin = "http://127.0.0.1:41237"
+	req, _ := http.NewRequest(http.MethodPost, origin+"/auth", strings.NewReader(`{"secret":"`+r.secret+`"}`))
+	req.Header.Set("Origin", origin)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("auth through the socket: %d", resp.StatusCode)
+	}
+	r.ctl.send(t, `{"t":"bye","code":4009}`)
+	if code := r.wait(); code != webproto.CloseStopped {
+		t.Errorf("code %d", code)
+	}
+	if _, err := os.Lstat(sock); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the socket is left after the stop: %v", err)
 	}
 }
