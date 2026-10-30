@@ -145,3 +145,57 @@ local n = api.nvim_buf_line_count(b)
 if to > n then to = n end
 if from > to then from = to end
 return { first = from, lines = api.nvim_buf_get_lines(b, from, to, false) }`
+
+// webLuaSetText replaces a range of buffer b if its changedtick is still
+// tick: one chunk, so nothing can come in between (nvim runs it at
+// once). Positions are checked here, against the buffer itself: rows in
+// the buffer, columns inside the line and not inside a multi-byte
+// character. An undo break first makes each web edit one undo step.
+const webLuaSetText = webLuaPrelude + `
+local b, tick, sr, sc, er, ec, lines = ...
+local api = vim.api
+if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
+if not vim.bo[b].modifiable or vim.bo[b].readonly then return { err = 'readonly' } end
+local cur = api.nvim_buf_get_changedtick(b)
+if cur ~= tick then return { err = 'conflict', tick = cur } end
+local n = api.nvim_buf_line_count(b)
+if sr >= n or er >= n then return { err = 'range' } end
+local function col_ok(r, c)
+  local l = api.nvim_buf_get_lines(b, r, r + 1, true)[1]
+  if c > #l then return false end
+  local byte = l:byte(c + 1)
+  return not (byte and byte >= 0x80 and byte < 0xC0)
+end
+if not col_ok(sr, sc) or not col_ok(er, ec) then return { err = 'range' } end
+vim.bo[b].undolevels = vim.bo[b].undolevels
+local ok, e = pcall(api.nvim_buf_set_text, b, sr, sc, er, ec, lines)
+if not ok then return { err = 'failed', msg = tostring(e) } end
+return { tick = api.nvim_buf_get_changedtick(b), dirty = vim.bo[b].modified }`
+
+// webLuaSave writes buffer b the way :write on the laptop does (its
+// BufWrite hooks run: format on save, EditorConfig). A file changed on
+// disk since it was read is not overwritten: checktime first, and the
+// laptop's FileChangedShell handler marks it (file_reload_lua.go).
+const webLuaSave = webLuaPrelude + `
+local b = ...
+local api = vim.api
+if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
+if vim.bo[b].buftype ~= '' then return { err = 'special' } end
+pcall(vim.cmd, 'checktime ' .. b)
+local warned = vim.b[b].termocode_disk_warned
+if warned and warned ~= 'deleted' and warned ~= 'mode' then return { err = 'disk' } end
+local ok, e = pcall(api.nvim_buf_call, b, function() vim.cmd('silent write') end)
+if not ok then return { err = 'write', msg = tostring(e) } end
+if vim.bo[b].modified then return { err = 'write', msg = 'The file was not written.' } end
+return { tick = api.nvim_buf_get_changedtick(b), dirty = false }`
+
+// webLuaUndo undoes one step on buffer b.
+const webLuaUndo = webLuaPrelude + `
+local b = ...
+local api = vim.api
+if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
+local before = vim.fn.undotree(b).seq_cur
+local ok, e = pcall(api.nvim_buf_call, b, function() vim.cmd('silent undo') end)
+if not ok then return { err = 'failed', msg = tostring(e) } end
+if vim.fn.undotree(b).seq_cur == before then return { err = 'none' } end
+return { tick = api.nvim_buf_get_changedtick(b), dirty = vim.bo[b].modified }`
