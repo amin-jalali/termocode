@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // Lint of src/strings.ts (web UX 7.4, P6): every user-facing string in
@@ -196,6 +198,9 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 			}
 		}
 		for _, m := range keyLiteral.FindAllStringSubmatch(string(b), -1) {
+			if _, op := webproto.Lookup(m[1]); op {
+				continue // an op name ("chat.send"), not a string key
+			}
 			if spaces[strings.Split(m[1], ".")[0]] && !exists(m[1]) {
 				t.Errorf("%s: %q looks like a string key but is not one", path, m[1])
 			}

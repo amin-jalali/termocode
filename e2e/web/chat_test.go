@@ -3,10 +3,13 @@
 package web
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/chromedp/chromedp/kb"
+
+	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // The chat view (WEB-14, web UX 5.2): the open chat of the chat topic,
@@ -190,4 +193,91 @@ func TestChatStreamsOnPhone(t *testing.T) {
 			p.WaitJS(ai + `.querySelector(".md strong")?.textContent === "world" && !` + ai + `.querySelector(".cursor")`)
 		})
 	}
+}
+
+const composer = `document.querySelector('[data-view="chat"] .composer')`
+
+// typeDraft focuses the composer and types text.
+func typeDraft(p *Page, text string) {
+	p.T.Helper()
+	p.TapJS(composer + `.querySelector("textarea")`)
+	p.Key(text)
+	p.WaitJS(composer + `.querySelector("textarea").value === ` + jsq(text))
+}
+
+// expectReq reads the next request, which must be op; it returns it.
+func expectReq(t *testing.T, c *HubConn, op string) *webproto.Req {
+	t.Helper()
+	r := nextReq(t, c)
+	if r.Op != op {
+		t.Fatalf("page sent %s; want %s", show(r), op)
+	}
+	return r
+}
+
+// Send sends the draft to the chat on the laptop and clears it; while the
+// AI answers, Send becomes Stop. On a desktop Enter sends too.
+func TestChatSendAndStop(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openChat(t, vp, chatWith(false, userMsg(0, "hi")))
+			typeDraft(p, "run the tests")
+			if vp.Mobile {
+				p.TapJS(composer + `.querySelector(".send")`)
+			} else {
+				p.Key(kb.Enter)
+			}
+			r := expectReq(t, c, "chat.send")
+			var a webproto.ChatSendArgs
+			if err := json.Unmarshal(r.Args, &a); err != nil || a.Text != "run the tests" || a.ChatID != "c-1" {
+				t.Fatalf("chat.send args %s", r.Args)
+			}
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"id": "c-1"})})
+			p.WaitJS(composer + `.querySelector("textarea").value === ""`)
+
+			c.Send(t, Delta("chat", 2, map[string]any{"op": "state", "busy": true}))
+			p.WaitJS(composer + `.querySelector(".stop")?.textContent === "Stop"`)
+			p.TapJS(composer + `.querySelector(".stop")`)
+			r = expectReq(t, c, "chat.stop")
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
+			c.Send(t, Delta("chat", 3, map[string]any{"op": "state", "busy": false}))
+			p.WaitJS(composer + `.querySelector(".send")`)
+		})
+	}
+}
+
+// The laptop refuses: another chat is open there (conflict) or the AI is
+// still answering (busy). A calm line says why and the draft stays.
+func TestChatConflictAndBusyKeepTheDraft(t *testing.T) {
+	p, c := openChat(t, Phone, chatWith(false, userMsg(0, "hi")))
+	typeDraft(p, "fix it")
+	for _, tc := range []struct {
+		code webproto.ErrCode
+		want string
+	}{
+		{webproto.CodeConflict, "This chat is not open on the laptop. Open it there first."},
+		{webproto.CodeBusy, "The AI is still answering. Stop it or wait."},
+	} {
+		p.TapJS(composer + `.querySelector(".send")`)
+		r := expectReq(t, c, "chat.send")
+		c.Send(t, &webproto.ErrMsg{T: webproto.KindErr, ID: r.ID, Code: tc.code, Msg: "laptop text"})
+		p.WaitJS(composer + `.querySelector('[role="alert"]')?.textContent === ` + jsq(tc.want))
+		if got := Eval[string](p, composer+`.querySelector("textarea").value`); got != "fix it" {
+			t.Fatalf("after %s the draft is %q", tc.code, got)
+		}
+	}
+}
+
+// New chat asks the laptop; while the AI answers it says to stop first.
+func TestChatNewChat(t *testing.T) {
+	p, c := openChat(t, Desktop, chatWith(true, userMsg(0, "hi")))
+	p.TapJS(`document.querySelector('[data-view="chat"] .chat-new')`)
+	r := expectReq(t, c, "chat.new")
+	c.Send(t, &webproto.ErrMsg{T: webproto.KindErr, ID: r.ID, Code: webproto.CodeBusy, Msg: "laptop text"})
+	p.WaitJS(`(` + toastsJS + `).includes("The AI is answering. Stop it first.")`)
+	p.TapJS(`document.querySelector('[data-view="chat"] .chat-new')`)
+	r = expectReq(t, c, "chat.new")
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"id": "c-2"})})
+	c.Send(t, Delta("chat", 2, map[string]any{"op": "switched", "chat": map[string]any{"id": "c-2", "title": "New chat", "busy": false, "messages": []any{}}}))
+	p.WaitJS(`document.querySelector('[data-view="chat"] .empty-state')`)
 }
