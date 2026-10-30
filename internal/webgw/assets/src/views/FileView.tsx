@@ -86,7 +86,7 @@ function topRow(sc: HTMLElement | null): { a: number; b: number } {
 }
 
 /** Crumbs is the folder path as a breadcrumb: cmd › covreport. */
-function Crumbs({ dir, file }: { dir: string; file: string }) {
+export function Crumbs({ dir, file }: { dir: string; file: string }) {
   const parts = dir.split("/");
   return (
     <span class="trunc file-path crumbs" title={dir}>
