@@ -8,7 +8,8 @@
 .dterm-pane { position: relative; flex: 1 1 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; outline: none; }
 .dterm-pane + .dterm-pane { border-inline-start: 1px solid var(--wb-panel-border); }
 .dterm-scroll { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 0 var(--s3) var(--s1); cursor: text; }
-.dterm-pane.is-stale .dterm-scroll { opacity: 0.6; }
+/* Offline the shell fades a little; its text still reads (contrast). */
+.dterm-pane.is-stale .dterm-scroll { opacity: 0.8; }
 .wb-panel .dterm-rows { min-height: 0; margin: 0; padding: 0; background: transparent; user-select: text; }
 .dterm-rows .trow { padding: 0; }
 .dterm-cursor { display: inline-block; width: 1ch; height: 1.15em; vertical-align: text-bottom; outline: 1px solid var(--wb-panel-title); outline-offset: -1px; }

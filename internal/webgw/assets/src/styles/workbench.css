@@ -126,7 +126,7 @@
   --wb-input-fg: #616161;
   --wb-scroll: rgba(100, 100, 100, 0.4);
   --wb-scroll-hover: rgba(100, 100, 100, 0.7);
-  --wb-breadcrumb: rgba(97, 97, 97, 0.8);
+  --wb-breadcrumb: #616161;
   --wb-button-bg: #007acc;
   --wb-button-hover: #0062a3;
   --wb-button-fg: #ffffff;
@@ -202,7 +202,7 @@
     --wb-input-fg: #616161;
     --wb-scroll: rgba(100, 100, 100, 0.4);
     --wb-scroll-hover: rgba(100, 100, 100, 0.7);
-    --wb-breadcrumb: rgba(97, 97, 97, 0.8);
+    --wb-breadcrumb: #616161;
     --wb-button-bg: #007acc;
     --wb-button-hover: #0062a3;
     --wb-button-fg: #ffffff;
@@ -861,6 +861,12 @@ kbd {
 .wb-side .commit-subject, .wb-side .commit-body { min-height: 26px; padding: 3px 6px; padding-inline-end: 3.5rem; border-radius: 2px; border-color: transparent; background: var(--wb-input-bg); color: var(--wb-input-fg); font-size: var(--fs-ui); }
 .wb-side .commit-subject:focus, .wb-side .commit-body:focus { border-color: var(--wb-focus); }
 .wb-side .commit-more { min-height: 20px; font-size: 0.75rem; }
+/* The count sits on the input's background: the input's own colour keeps
+ * it readable (the dim one fails contrast on the dark input). */
+.wb-side .commit-count:not(.is-warn):not(.is-max) { color: var(--wb-input-fg); }
+/* Offline the list keeps its colours (the status bar and banner say it
+ * is offline); a faded list fails contrast on the side bar. */
+.wb-side .git.is-stale { opacity: 1; }
 .wb-side .commit-box .btn { min-height: 26px; height: 26px; border-radius: 2px; background: var(--wb-button-bg); color: var(--wb-button-fg); border: 0; font-size: var(--fs-ui); font-weight: 400; }
 .wb-side .commit-box .btn:hover { background: var(--wb-button-hover); }
 .wb-side .git-group .group-title { height: 22px; padding: 0 8px 0 20px; }
@@ -869,7 +875,7 @@ kbd {
 .wb-side .git-open:hover { background: var(--wb-list-hover); }
 .wb-side .git-name { flex-direction: row; align-items: baseline; gap: 6px; min-width: 0; white-space: nowrap; }
 .wb-side .git-file { font-weight: 400; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
-.wb-side .git-dir { font-family: var(--font-sans); font-size: 0.75rem; opacity: 0.85; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.wb-side .git-dir { font-family: var(--font-sans); font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .wb-side .git-row .btn { min-height: 22px; height: 22px; padding: 0 6px; border: 0; border-radius: 5px; background: transparent; color: var(--wb-side-fg); font-size: 0.75rem; opacity: 0; }
 .wb-side .git-row-wrap:hover .git-row .btn, .wb-side .git-row .btn:focus-visible { opacity: 1; }
 .wb-side .git-row .btn:hover { background: var(--wb-toolbar-hover); }
