@@ -5,6 +5,9 @@ package web
 import (
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/chromedp/chromedp/kb"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -91,5 +94,92 @@ func TestMCPStatusReadOnly(t *testing.T) {
 			}
 			p.noOverflow("mcp")
 		})
+	}
+}
+
+func ctrList() webproto.ContainersList {
+	return webproto.ContainersList{Engine: "docker", Context: "context default", Containers: []webproto.ContainerItem{
+		{ID: "9f3c2e1a1234", Name: "api-1", Image: "ghcr.io/acme/api:1.4", State: "running", Status: "Up 2 hours", Ports: "0.0.0.0:8081->8080/tcp", Project: "shop"},
+		{ID: "aabbccdd1122", Name: "old", Image: "nginx:1.27", State: "exited", Status: "Exited (1) 3 days ago"},
+	}}
+}
+
+// openContainers opens More › Containers and answers its list.
+func openContainers(t *testing.T, vp Viewport, meta *webproto.Meta) (*Page, *HubConn) {
+	t.Helper()
+	s := StartServer(t)
+	p := NewPage(t, s, vp)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	if meta == nil {
+		meta = Meta("c-ctr")
+	}
+	c := p.LoginMeta(meta)
+	p.GoTab("more")
+	p.TapJS(`document.querySelector('.more-link[data-sub="containers"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+	p.WaitJS(`document.querySelectorAll(".ctr").length === 2`)
+	return p, c
+}
+
+func ctrSel(id string) string { return `document.querySelector('.ctr[data-id="` + id + `"]')` }
+
+// Containers: the list, a log tail as text, restart asked in the card,
+// stop through the laptop; a stopped one offers start and remove.
+func TestContainersView(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openContainers(t, vp, nil)
+			if m := p.Text(`.ctr[data-id="9f3c2e1a1234"] .ctr-meta`); !strings.Contains(m, "ghcr.io/acme/api:1.4 · shop · Up 2 hours") {
+				t.Errorf("meta %q", m)
+			}
+			p.TapJS(ctrSel("9f3c2e1a1234") + `.querySelector(".ctr-line")`)
+			p.TapJS(`[...` + ctrSel("9f3c2e1a1234") + `.querySelectorAll(".btn")].find((b) => b.textContent === "Logs")`)
+			reply(t, c, expectOp(t, c, webproto.OpContainersLogs, `{"id":"9f3c2e1a1234"}`), webproto.ContainerLogs{ID: "9f3c2e1a1234", Lines: []string{"start", "<b>ok</b> [REDACTED]"}, Redacted: 1})
+			p.WaitJS(ctrSel("9f3c2e1a1234") + `.querySelectorAll(".trow").length === 2`)
+			if n := Eval[int](p, `document.querySelectorAll(".ctr-logs b").length`); n != 0 {
+				t.Fatal("log text became HTML")
+			}
+			if !strings.Contains(p.Text(".ctr-note"), "Secret values hidden: 1.") {
+				t.Errorf("note %q", p.Text(".ctr-note"))
+			}
+			if n := Eval[int](p, `[...`+ctrSel("9f3c2e1a1234")+`.querySelectorAll(".btn")].filter((b) => b.textContent === "Start" || b.textContent === "Remove…").length`); n != 0 {
+				t.Error("a running container offers start or remove")
+			}
+			p.TapJS(`[...` + ctrSel("9f3c2e1a1234") + `.querySelectorAll(".btn")].find((b) => b.textContent === "Restart")`)
+			p.WaitJS(`document.activeElement === document.querySelector(".row-ask button")`)
+			p.Key(kb.Enter) // Cancel
+			c.Quiet(t, 200*time.Millisecond)
+			p.TapJS(`[...` + ctrSel("9f3c2e1a1234") + `.querySelectorAll(".btn")].find((b) => b.textContent === "Restart")`)
+			p.TapJS(`[...document.querySelectorAll(".row-ask .btn")].find((b) => b.textContent === "Restart")`)
+			reply(t, c, expectOp(t, c, webproto.OpContainersRestart, `{"id":"9f3c2e1a1234"}`), webproto.ContainerDone{State: "running"})
+			reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+			p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("api-1 is running now.")`)
+
+			p.TapJS(`[...` + ctrSel("9f3c2e1a1234") + `.querySelectorAll(".btn")].find((b) => b.textContent === "Stop…")`)
+			p.WaitJS(`document.querySelector(".ask-text")?.textContent === "Stop api-1? What runs in it ends."`)
+			p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
+			p.TapJS(ButtonByText("Ask the laptop"))
+			reply(t, c, expectOp(t, c, webproto.OpContainersStop, `{"id":"9f3c2e1a1234"}`), webproto.AskRef{Card: "card-11"})
+			c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "card-11", By: "laptop", Choice: "confirm"})})
+			reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+			p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("Done on the laptop.")`)
+
+			p.TapJS(ctrSel("aabbccdd1122") + `.querySelector(".ctr-line")`)
+			if n := Eval[int](p, `[...`+ctrSel("aabbccdd1122")+`.querySelectorAll(".btn")].filter((b) => b.textContent === "Start" || b.textContent === "Remove…").length`); n != 2 {
+				t.Errorf("a stopped container offers %d of start and remove", n)
+			}
+			p.noOverflow("containers")
+		})
+	}
+}
+
+// A viewer reads the list and the logs only.
+func TestContainersViewer(t *testing.T) {
+	m := Meta("c-v")
+	m.Role = webproto.RoleViewer
+	p, _ := openContainers(t, Phone, m)
+	p.TapJS(ctrSel("9f3c2e1a1234") + `.querySelector(".ctr-line")`)
+	if got := Eval[[]string](p, `[...`+ctrSel("9f3c2e1a1234")+`.querySelectorAll(".ctr-actions .btn")].map((b) => b.textContent)`); len(got) != 1 || got[0] != "Logs" {
+		t.Fatalf("viewer buttons %q", got)
 	}
 }
