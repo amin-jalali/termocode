@@ -180,7 +180,10 @@ func (m *Model) webDeliverLink(open, copyLink bool) tea.Cmd {
 	st.plain = "" // used once here; a new link makes a new secret
 	switch {
 	case copyLink:
-		m.writeClipboard(link)
+		// Never in an nvim register: the link would stay there (WEB-F1).
+		if writeSystemClipboard(link) == clipFailed {
+			return m.webToast(toast.Warn, "Could not copy the link. Use Web: Start Panel to open it in a browser.")
+		}
 		return m.webToast(toast.Info, "Link copied. It works once, for 60 seconds.")
 	case open:
 		if err := m.webOpenLink(link); err != nil {
