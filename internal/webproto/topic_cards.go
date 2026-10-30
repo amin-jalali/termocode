@@ -18,6 +18,7 @@ const (
 	CardPlan   = "plan"   // a run waits for its plan to be approved
 	CardReview = "review" // a proposed change to one file
 	CardTrust  = "trust"  // a project profile, rules, skills or MCP server asks for trust (laptop only)
+	CardLaptop = "laptop" // a web request that cannot be undone waits for the laptop (the web may only cancel it)
 )
 
 // Choice ids the web may send.
@@ -27,6 +28,8 @@ const (
 	ChoiceApprove = "approve"
 	ChoiceAccept  = "accept"
 	ChoiceReject  = "reject"
+	ChoiceCancel  = "cancel"  // a laptop card's safe answer
+	ChoiceConfirm = "confirm" // a laptop card's action: the laptop only
 )
 
 // MaxCardDiff caps the text of a review card's diff rows; more is cut and
@@ -42,7 +45,7 @@ type CardsSnap struct {
 // draws it first and focused.
 type Card struct {
 	ID       string       `json:"id"`
-	Kind     string       `json:"kind" enum:"tool|mcp|plan|review|trust"`
+	Kind     string       `json:"kind" enum:"tool|mcp|plan|review|trust|laptop"`
 	Title    string       `json:"title"`
 	Body     string       `json:"body,omitempty"` // plain text
 	Choices  []CardChoice `json:"choices"`
@@ -96,6 +99,7 @@ const EventAnswered = "answered"
 
 // Answered is the data of an answered ev.
 type Answered struct {
-	ID string `json:"id"`
-	By string `json:"by,omitempty"` // "laptop", a device name, or "" (expired)
+	ID     string `json:"id"`
+	By     string `json:"by,omitempty"`     // "laptop", a device name, or "" (expired)
+	Choice string `json:"choice,omitempty"` // a laptop card: "confirm" or "cancel"
 }

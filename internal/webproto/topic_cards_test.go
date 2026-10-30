@@ -15,7 +15,7 @@ func TestCardsDataGenerated(t *testing.T) {
 	for _, want := range []string{
 		`  "cards": { snap: CardsSnap; delta: CardsDelta };`,
 		`  "answered": Answered;`,
-		`  kind: "tool" | "mcp" | "plan" | "review" | "trust";`,
+		`  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop";`,
 		`  k: "ctx" | "add" | "del" | "hunk" | "file";`,
 		`  needs_laptop?: boolean;`,
 	} {
