@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics";
 
 export interface Bye {
   t: "bye";
@@ -234,6 +234,13 @@ export interface KeyArgs {
 
 export interface ControlAskArgs {
   credential: string;
+}
+
+export interface LspPosArgs {
+  buf: number;
+  tick: number;
+  line: number;
+  col: number;
 }
 
 export interface GitFileLogArgs {
@@ -735,6 +742,31 @@ export interface SettingItem {
   description?: string;
 }
 
+export interface DiagSnap {
+  files: DiagFile[];
+  errors: number;
+  warnings: number;
+  infos: number;
+  hints: number;
+  more?: number;
+}
+
+export interface DiagFile {
+  path: string;
+  items: Diag[];
+}
+
+export interface Diag {
+  sev: number;
+  line: number;
+  col: number;
+  endLine: number;
+  endCol: number;
+  message: string;
+  source?: string;
+  code?: string;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -897,6 +929,55 @@ export interface TaskStarted {
 
 export interface ControlChallenge {
   options: unknown;
+}
+
+export interface LspHover {
+  md?: MdNode;
+  none?: boolean;
+}
+
+export interface LspCompletion {
+  items: LspItem[];
+  incomplete?: boolean;
+  cut?: boolean;
+}
+
+export interface LspItem {
+  label: string;
+  kind?: number;
+  detail?: string;
+  doc?: string;
+  insert: string;
+  snippet?: boolean;
+  sort?: string;
+  filter?: string;
+  from: number;
+  to: number;
+  edits?: LspEdit[];
+}
+
+export interface LspEdit {
+  line: number;
+  col: number;
+  endLine: number;
+  endCol: number;
+  text: string;
+}
+
+export interface LspLocations {
+  locs: LspLoc[];
+  cut?: boolean;
+}
+
+export interface LspLoc {
+  path?: string;
+  name?: string;
+  outside?: boolean;
+  line: number;
+  col: number;
+  endLine: number;
+  endCol: number;
+  text?: string;
 }
 
 export interface GitFileLog {
@@ -1086,6 +1167,10 @@ export interface OpArgs {
   "runs.resume": KeyArgs;
   "control.challenge": EmptyArgs;
   "control.ask": ControlAskArgs;
+  "lsp.hover": LspPosArgs;
+  "lsp.complete": LspPosArgs;
+  "lsp.definition": LspPosArgs;
+  "lsp.references": LspPosArgs;
   "git.file_log": GitFileLogArgs;
   "buf.symbols": BufArgs;
   "tree.new_file": ItemArgs;
@@ -1139,6 +1224,7 @@ export interface TopicData {
   "runs": { snap: RunsSnap; delta: RunsSnap };
   "mcp": { snap: MCPSnap; delta: MCPSnap };
   "settings": { snap: SettingsSnap; delta: SettingsSnap };
+  "diagnostics": { snap: DiagSnap; delta: DiagSnap };
 }
 
 // The data of an ev message, by kind.
@@ -1175,6 +1261,10 @@ export interface OpResult {
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
+  "lsp.hover": LspHover;
+  "lsp.complete": LspCompletion;
+  "lsp.definition": LspLocations;
+  "lsp.references": LspLocations;
   "git.file_log": GitFileLog;
   "buf.symbols": BufSymbols;
   "tree.new_file": TreeChanged;
