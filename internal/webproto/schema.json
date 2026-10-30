@@ -93,50 +93,78 @@
       "keyed": false,
       "phase": "v1",
       "snap": "StatusSnap",
-      "delta": "StatusSnap"
+      "deltas": [
+        "StatusSnap"
+      ]
     },
     {
       "name": "toasts",
       "keyed": false,
       "phase": "v1",
       "snap": "ToastsSnap",
-      "delta": "ToastsDelta"
+      "deltas": [
+        "ToastsDelta"
+      ]
     },
     {
       "name": "chats",
       "keyed": false,
       "phase": "v1",
       "snap": "ChatsSnap",
-      "delta": "ChatsDelta"
+      "deltas": [
+        "ChatsDelta"
+      ]
     },
     {
       "name": "chat",
       "keyed": false,
       "phase": "v1",
       "snap": "ChatSnap",
-      "delta": "ChatDelta"
+      "deltas": [
+        "ChatDelta"
+      ]
     },
     {
       "name": "cards",
       "keyed": false,
       "phase": "v1",
       "snap": "CardsSnap",
-      "delta": "CardsDelta"
+      "deltas": [
+        "CardsDelta"
+      ]
     },
     {
       "name": "tree",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "TreeSnap",
+      "deltas": [
+        "TreeDirDelta",
+        "TreeRemoveDelta",
+        "TreeHiddenDelta"
+      ]
     },
     {
       "name": "bufs",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "BufsSnap",
+      "deltas": [
+        "BufsSnap"
+      ]
     },
     {
       "name": "buf",
       "keyed": true,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "BufSnap",
+      "deltas": [
+        "LinesDelta",
+        "TickDelta",
+        "DirtyDelta",
+        "ResetDelta",
+        "GoneDelta"
+      ]
     },
     {
       "name": "terms",
@@ -258,6 +286,7 @@
     {
       "op": "tree.list",
       "args": "PathArgs",
+      "result": "TreeListRes",
       "role": "viewer",
       "rate": {
         "n": 20,
@@ -284,6 +313,7 @@
     {
       "op": "buf.open",
       "args": "PathArgs",
+      "result": "BufOpenRes",
       "role": "viewer",
       "rate": {
         "n": 20,
@@ -297,6 +327,7 @@
     {
       "op": "buf.head",
       "args": "PathArgs",
+      "result": "BufHeadRes",
       "role": "viewer",
       "rate": {
         "n": 20,
@@ -750,6 +781,147 @@
         "buf"
       ],
       "additionalProperties": false
+    },
+    "BufHeadRes": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "lines",
+        "truncated",
+        "size"
+      ],
+      "additionalProperties": true
+    },
+    "BufItem": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "buf": {
+          "type": "integer"
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "buf",
+        "path",
+        "dirty",
+        "active"
+      ],
+      "additionalProperties": true
+    },
+    "BufOpenRes": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "ft": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "readonly": {
+          "type": "boolean"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "path",
+        "tick",
+        "lines",
+        "dirty",
+        "ft",
+        "readonly"
+      ],
+      "additionalProperties": true
+    },
+    "BufSnap": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "ft": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "readonly": {
+          "type": "boolean"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "path",
+        "tick",
+        "lines",
+        "dirty",
+        "ft",
+        "readonly"
+      ],
+      "additionalProperties": true
+    },
+    "BufsSnap": {
+      "type": "object",
+      "properties": {
+        "bufs": {
+          "items": {
+            "$ref": "#/defs/BufItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "bufs"
+      ],
+      "additionalProperties": true
     },
     "Bye": {
       "type": "object",
@@ -1302,6 +1474,22 @@
       ],
       "additionalProperties": true
     },
+    "DirtyDelta": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "dirty"
+        },
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "on"
+      ],
+      "additionalProperties": true
+    },
     "EmptyArgs": {
       "type": "object",
       "properties": {},
@@ -1398,6 +1586,18 @@
       ],
       "additionalProperties": false
     },
+    "GoneDelta": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "gone"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": true
+    },
     "Hello": {
       "type": "object",
       "properties": {
@@ -1447,6 +1647,37 @@
         "label"
       ],
       "additionalProperties": false
+    },
+    "LinesDelta": {
+      "type": "object",
+      "properties": {
+        "first": {
+          "type": "integer"
+        },
+        "kind": {
+          "const": "lines"
+        },
+        "last": {
+          "type": "integer"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "first",
+        "last",
+        "lines",
+        "tick"
+      ],
+      "additionalProperties": true
     },
     "MdNode": {
       "type": "object",
@@ -1732,6 +1963,33 @@
       "required": [
         "t",
         "id"
+      ],
+      "additionalProperties": true
+    },
+    "ResetDelta": {
+      "type": "object",
+      "properties": {
+        "dirty": {
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "reset"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "tick",
+        "lines",
+        "dirty"
       ],
       "additionalProperties": true
     },
@@ -2102,6 +2360,22 @@
       ],
       "additionalProperties": false
     },
+    "TickDelta": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "tick"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "tick"
+      ],
+      "additionalProperties": true
+    },
     "Toast": {
       "type": "object",
       "properties": {
@@ -2162,6 +2436,179 @@
       },
       "required": [
         "toasts"
+      ],
+      "additionalProperties": true
+    },
+    "TreeDir": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/defs/TreeEntry"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": true
+    },
+    "TreeDirDelta": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/defs/TreeEntry"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "const": "dir"
+        },
+        "path": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "path",
+        "entries"
+      ],
+      "additionalProperties": true
+    },
+    "TreeEntry": {
+      "type": "object",
+      "properties": {
+        "dir": {
+          "type": "boolean"
+        },
+        "git": {
+          "type": "string"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "ignored": {
+          "type": "boolean"
+        },
+        "mtime": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "dir",
+        "size",
+        "mtime"
+      ],
+      "additionalProperties": true
+    },
+    "TreeHiddenDelta": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "hidden"
+        },
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "on"
+      ],
+      "additionalProperties": true
+    },
+    "TreeListRes": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/defs/TreeEntry"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "entries"
+      ],
+      "additionalProperties": true
+    },
+    "TreeRemoveDelta": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "remove"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "path"
+      ],
+      "additionalProperties": true
+    },
+    "TreeRoot": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "label"
+      ],
+      "additionalProperties": true
+    },
+    "TreeSnap": {
+      "type": "object",
+      "properties": {
+        "dirs": {
+          "additionalProperties": {
+            "$ref": "#/defs/TreeDir"
+          },
+          "type": "object"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "roots": {
+          "items": {
+            "$ref": "#/defs/TreeRoot"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "roots",
+        "hidden",
+        "dirs"
       ],
       "additionalProperties": true
     },

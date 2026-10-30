@@ -399,6 +399,99 @@ export interface CardsDelta {
   by?: string;
 }
 
+export interface TreeSnap {
+  roots: TreeRoot[];
+  hidden: boolean;
+  dirs: Record<string, TreeDir>;
+}
+
+export interface TreeRoot {
+  path: string;
+  label: string;
+}
+
+export interface TreeDir {
+  entries: TreeEntry[];
+  truncated?: boolean;
+}
+
+export interface TreeEntry {
+  name: string;
+  dir: boolean;
+  size: number;
+  mtime: number;
+  git?: string;
+  hidden?: boolean;
+  ignored?: boolean;
+}
+
+export interface TreeDirDelta {
+  kind: "dir";
+  path: string;
+  entries: TreeEntry[];
+  truncated?: boolean;
+}
+
+export interface TreeRemoveDelta {
+  kind: "remove";
+  path: string;
+}
+
+export interface TreeHiddenDelta {
+  kind: "hidden";
+  on: boolean;
+}
+
+export interface BufsSnap {
+  bufs: BufItem[];
+}
+
+export interface BufItem {
+  buf: number;
+  path: string;
+  dirty: boolean;
+  active: boolean;
+}
+
+export interface BufSnap {
+  buf: number;
+  path: string;
+  tick: number;
+  lines: string[];
+  dirty: boolean;
+  ft: string;
+  readonly: boolean;
+}
+
+export interface LinesDelta {
+  kind: "lines";
+  first: number;
+  last: number;
+  lines: string[];
+  tick: number;
+}
+
+export interface TickDelta {
+  kind: "tick";
+  tick: number;
+}
+
+export interface DirtyDelta {
+  kind: "dirty";
+  on: boolean;
+}
+
+export interface ResetDelta {
+  kind: "reset";
+  tick: number;
+  lines: string[];
+  dirty: boolean;
+}
+
+export interface GoneDelta {
+  kind: "gone";
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -407,6 +500,29 @@ export interface Answered {
 export interface Attention {
   kind: "card" | "run_done" | "run_failed" | "task_done" | "bell";
   id?: string;
+}
+
+export interface TreeListRes {
+  path: string;
+  entries: TreeEntry[];
+  truncated?: boolean;
+}
+
+export interface BufOpenRes {
+  buf: number;
+  path: string;
+  tick: number;
+  lines: number;
+  dirty: boolean;
+  ft: string;
+  readonly: boolean;
+}
+
+export interface BufHeadRes {
+  path: string;
+  lines: string[];
+  truncated: boolean;
+  size: number;
 }
 
 export interface ChatRef {
@@ -463,6 +579,9 @@ export interface TopicData {
   "chats": { snap: ChatsSnap; delta: ChatsDelta };
   "chat": { snap: ChatSnap; delta: ChatDelta };
   "cards": { snap: CardsSnap; delta: CardsDelta };
+  "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta };
+  "bufs": { snap: BufsSnap; delta: BufsSnap };
+  "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta };
 }
 
 // The data of an ev message, by kind.
@@ -475,6 +594,9 @@ export interface EventData {
 export interface OpResult {
   "chat.open": ChatSnap;
   "chat.get_message": ChatMsg;
+  "tree.list": TreeListRes;
+  "buf.open": BufOpenRes;
+  "buf.head": BufHeadRes;
   "chat.send": ChatRef;
   "chat.new": ChatRef;
 }

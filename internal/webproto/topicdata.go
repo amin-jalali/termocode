@@ -3,6 +3,7 @@ package webproto
 import (
 	"reflect"
 	"sort"
+	"strings"
 )
 
 // The data of topics and events. A snap's and a delta's "data" (and an
@@ -11,18 +12,34 @@ import (
 // proto.d.ts (TopicData, EventData) and schema.json, so the browser store
 // knows each shape and can check it before it applies a delta.
 //
+// A view file registers its types from an init(); the generator orders
+// them by the topic and op tables.
+//
 // Shape rules every topic follows:
-//   - a delta is one object; when a topic has several kinds of change its
-//     "op" says which one, and the other fields are set for that op only;
+//   - a delta is one object. When a topic has several kinds of change,
+//     either one delta struct carries an "op" with an enum tag and the
+//     other fields are set for that op only, or the topic registers one
+//     struct per change, each with a Kind field tagged `const:"<kind>"`
+//     (TypeScript then sees a literal type and can narrow on it);
 //   - lists are replaced or edited by id, never by position, except where
 //     a field says otherwise (chat messages carry their index "i");
 //   - a string field with an `enum:"a|b"` tag only ever holds those values.
 
-// TopicData names the types of one topic's snap and delta data.
+// TopicData names the types of one topic's snap and delta data: a delta
+// is one of Deltas.
 type TopicData struct {
-	Topic string
-	Snap  reflect.Type
-	Delta reflect.Type
+	Topic  string
+	Snap   reflect.Type
+	Deltas []reflect.Type
+}
+
+// deltaNames is the delta type names, in registration order, joined.
+func (d TopicData) deltaNames(sep string) string {
+	names := make([]string, len(d.Deltas))
+	for i, t := range d.Deltas {
+		names[i] = t.Name()
+	}
+	return strings.Join(names, sep)
 }
 
 var (
@@ -31,17 +48,24 @@ var (
 	resultData = map[string]reflect.Type{}
 )
 
-// registerTopic records the data types of a known topic: zero values of
-// the snapshot and delta structs. A second registration or an unknown
-// topic is a programming error.
-func registerTopic(topic string, snap, delta any) {
+// registerTopic records the data types of a known topic (init only):
+// zero values of the snapshot struct and of each delta struct. A second
+// registration, an unknown topic or no delta is a programming error.
+func registerTopic(topic string, snap any, deltas ...any) {
 	if _, ok := topicDef(topic); !ok {
 		panic("webproto: data for unknown topic " + topic)
+	}
+	if len(deltas) == 0 {
+		panic("webproto: topic without a delta type: " + topic)
 	}
 	if _, dup := topicData[topic]; dup {
 		panic("webproto: topic data registered twice: " + topic)
 	}
-	topicData[topic] = TopicData{Topic: topic, Snap: structType(snap), Delta: structType(delta)}
+	d := TopicData{Topic: topic, Snap: structType(snap)}
+	for _, x := range deltas {
+		d.Deltas = append(d.Deltas, structType(x))
+	}
+	topicData[topic] = d
 }
 
 // registerEvent records the data type of one ev kind.
