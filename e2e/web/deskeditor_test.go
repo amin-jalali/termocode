@@ -167,3 +167,17 @@ func TestDeskEditorGitGutter(t *testing.T) {
 		t.Errorf("problems: %v", probs)
 	}
 }
+
+// The editor has its features (the vendored editor's contributions):
+// Ctrl/Cmd+F opens its find box, and nothing breaks the frame's policy
+// (it runs no worker).
+func TestDeskEditorFind(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "one two", "two three")
+	deskFocus(p)
+	p.Do(chromedp.KeyEvent("f", modKey()))
+	p.WaitJS(deskDoc + `.querySelector(".find-widget.visible")`)
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}

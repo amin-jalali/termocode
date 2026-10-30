@@ -192,8 +192,8 @@ func TestFrameServedWithItsOwnPolicy(t *testing.T) {
 		t.Errorf("frame CSP opens more than inline styles: %s", csp)
 	}
 	refs := regexp.MustCompile(`(?:src|href)="(/assets/[^"]+)" integrity="([^"]+)"`).FindAllStringSubmatch(string(body), -1)
-	if len(refs) != 6 {
-		t.Fatalf("frame has %d SRI references, want 6:\n%s", len(refs), body)
+	if len(refs) != 7 {
+		t.Fatalf("frame has %d SRI references, want 7:\n%s", len(refs), body)
 	}
 	for _, r := range refs {
 		sub := getAsset(t, Assets(), http.MethodGet, r[1])

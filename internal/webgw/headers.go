@@ -65,7 +65,7 @@ func FrameCSP() string {
 		"base-uri 'none'",
 		"form-action 'none'",
 		"require-trusted-types-for 'script'",
-		"trusted-types editorViewLayer standaloneColorizer tokenizeToString domLineBreaksComputer richScreenReaderContent diffReview diffEditorWidget defaultWorkerFactory dompurify 'allow-duplicates'",
+		"trusted-types editorViewLayer standaloneColorizer tokenizeToString domLineBreaksComputer richScreenReaderContent diffReview diffEditorWidget defaultWorkerFactory dompurify editorGhostText stickyScrollViewLayer 'allow-duplicates'",
 	}, "; ")
 }
 

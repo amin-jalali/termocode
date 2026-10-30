@@ -162,6 +162,7 @@
       "serve": {
         "monaco/editor.js": "min/vs/editor-BdtEMBbM.js",
         "monaco/editor-host.js": "min/vs/editorWorkerHost-B_VpI68A.js",
+        "monaco/editor-contrib.js": "min/vs/toggleHighContrast-DuqAmExZ.js",
         "monaco/editor.css": "min/vs/editor/editor.main.css"
       },
       "files": {
@@ -169,7 +170,8 @@
         "ThirdPartyNotices.txt": "sha384-cAeA9hUXf6jPC9v2Ik8ts21rTlZsSgGA+wGojRSjdpS+3r1j9nm1hFZDkmlsbhyi",
         "min/vs/editor-BdtEMBbM.js": "sha384-n5VxbIFjdhl1sERXQHN52h87EGviSdsndgKg9eRxZVuVsFtoxtLJDuY2UxnnGx/r",
         "min/vs/editor/editor.main.css": "sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4",
-        "min/vs/editorWorkerHost-B_VpI68A.js": "sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf"
+        "min/vs/editorWorkerHost-B_VpI68A.js": "sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf",
+        "min/vs/toggleHighContrast-DuqAmExZ.js": "sha384-zovZc9/8c8IF6IlccJXAp+iG87TnOpWjJGqruAwc0mBMA0kLUjvfwMuUk2v7/oC6"
       }
     },
     {
