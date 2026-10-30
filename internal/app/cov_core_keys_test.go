@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 // covKeyNamed is the key message whose String() is s ("ctrl+s",
@@ -184,5 +185,55 @@ func TestCovCoreKeysSaveFails(t *testing.T) {
 	m, _ = covPress(t, m, keymap.ActionSave)
 	if m.err == "" && !strings.Contains(toastText(m), "Save failed") && !strings.Contains(toastText(m), "Saved") {
 		t.Errorf("save without nvim: err %q toast %q", m.err, toastText(m))
+	}
+}
+
+// Ctrl+F and Ctrl+H start with the selected text.
+func TestCovCoreKeysFindWithSelection(t *testing.T) {
+	for _, a := range []keymap.Action{keymap.ActionFind, keymap.ActionReplaceInFile} {
+		m := covNvimModel(t, 120, 40)
+		covEditorFile(t, &m, "s.txt", "alpha needle beta\n")
+		_ = m.nvim.Input("0wviw")
+		covWaitLua(t, m, `return vim.fn.mode()`, "v")
+		m.focus = FocusEditor
+		m, _ = covPress(t, m, a)
+		if !m.findOpen || m.find.Query() != "needle" {
+			t.Errorf("%s: open %v query %q", keymap.ActionName(a), m.findOpen, m.find.Query())
+		}
+	}
+}
+
+// More keys: hidden files, a comment in visual mode, a key that drops
+// the code action hint, Reveal in the explorer.
+func TestCovCoreKeysMore(t *testing.T) {
+	m := covNvimModel(t, 120, 40)
+	covEditorFile(t, &m, "k.go", "package k\n")
+	m.focus = FocusEditor
+	shown := m.explorer.HiddenShown()
+	m, _ = covPress(t, m, keymap.ActionToggleHidden)
+	if m.explorer.HiddenShown() == shown || !strings.Contains(toastText(m), "Hidden files:") {
+		t.Errorf("hidden files: %v", m.explorer.HiddenShown())
+	}
+	m.editorMode = "V"
+	m, _ = covPress(t, m, keymap.ActionToggleComment)
+	m.editorMode = "n"
+	m.preferredCodeAction = &nvim.CodeAction{Title: "fix"}
+	m, _ = covPress(t, m, keymap.ActionFocusEditor)
+	if m.preferredCodeAction != nil {
+		t.Error("another key kept the code action hint")
+	}
+	m.showExp = false
+	_ = m.dispatchPaletteAction("reveal-file")
+	if !m.showExp {
+		t.Error("reveal did not show the explorer")
+	}
+	var none Model
+	none.pushClosed("/w/closed.go")
+	if none.reopenClosed() != nil {
+		t.Error("reopen without nvim")
+	}
+	_ = none.reopenClosed()
+	if !strings.Contains(toastText(none), "No recently closed editors") {
+		t.Errorf("empty ring:\n%s", toastText(none))
 	}
 }
