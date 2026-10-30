@@ -121,3 +121,25 @@ func TestKeyringSkipReason(t *testing.T) {
 		t.Errorf("ssh allowed: %q", got)
 	}
 }
+
+// TERMOCODE_NO_KEYRING keeps the OS keyring out (the e2e suite sets it:
+// on a macOS runner the login keychain does not answer and every probe
+// waited its full two seconds).
+func TestNoKeyringEnvSkipsTheProbe(t *testing.T) {
+	keyring.MockInit()
+	env := func(k string) string {
+		switch k {
+		case "DBUS_SESSION_BUS_ADDRESS":
+			return "unix:path=/run/user/1/bus"
+		case "TERMOCODE_NO_KEYRING":
+			return "1"
+		}
+		return ""
+	}
+	if ProbeKeyring(env, true) {
+		t.Error("probe ran with TERMOCODE_NO_KEYRING set")
+	}
+	if got := KeyringSkipReason(env, true); got != "turned off (TERMOCODE_NO_KEYRING)" {
+		t.Errorf("reason %q", got)
+	}
+}

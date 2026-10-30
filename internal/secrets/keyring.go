@@ -48,6 +48,11 @@ func (k *keyringBackend) Delete(name string) error {
 	return err
 }
 
+// noKeyringEnv, when set, keeps the OS keyring out entirely (test
+// sandboxes: a keychain that never answers costs each probe its full
+// timeout, and a test must not touch the real one).
+const noKeyringEnv = "TERMOCODE_NO_KEYRING"
+
 // ProbeKeyring checks that the OS keyring can store and retrieve an item.
 // It never waits longer than two seconds and skips noninteractive contexts.
 func ProbeKeyring(getenv func(string) string, overSSH bool) bool {
@@ -55,7 +60,7 @@ func ProbeKeyring(getenv func(string) string, overSSH bool) bool {
 	if getenv == nil {
 		getenv = os.Getenv
 	}
-	if goos == "android" || (goos == "linux" && getenv != nil && getenv("DBUS_SESSION_BUS_ADDRESS") == "") || (!overSSH && getenv != nil && getenv("SSH_CONNECTION") != "") {
+	if goos == "android" || (goos == "linux" && getenv != nil && getenv("DBUS_SESSION_BUS_ADDRESS") == "") || (!overSSH && getenv != nil && getenv("SSH_CONNECTION") != "") || getenv(noKeyringEnv) != "" {
 		return false
 	}
 	return probeKeyringWith(time.Second*2, keyring.Set, keyring.Get, keyring.Delete)
@@ -69,6 +74,8 @@ func KeyringSkipReason(getenv func(string) string, overSSH bool) string {
 		getenv = os.Getenv
 	}
 	switch {
+	case getenv(noKeyringEnv) != "":
+		return "turned off (" + noKeyringEnv + ")"
 	case runtime.GOOS == "android":
 		return "not on Android"
 	case runtime.GOOS == "linux" && getenv("DBUS_SESSION_BUS_ADDRESS") == "":
