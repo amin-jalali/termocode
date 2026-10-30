@@ -33,11 +33,3 @@ func TestWebAfterUpdateRunsPublishers(t *testing.T) {
 		t.Fatalf("errors.log misses the panic: %q", logged)
 	}
 }
-
-func webTestHub(t *testing.T, m *Model) *webHub {
-	t.Helper()
-	h := newWebHub()
-	t.Cleanup(h.stop)
-	m.web = h
-	return h
-}
