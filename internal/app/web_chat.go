@@ -69,12 +69,43 @@ func (m *Model) webChatBuild(p *webChatPub) webproto.ChatSnap {
 	snap.Profile, snap.Model = s.profile, s.cfg.Model
 	p.id, p.title, p.busy = snap.ID, snap.Title, snap.Busy
 	n := len(s.conv.Messages)
+	full := webChatFullFrom(s.conv.Messages)
 	for i := range s.conv.Messages {
 		cm, sent := webChatMsg(i, &s.conv.Messages[i], webChatStreaming(s, i, n))
+		if i < full {
+			cm = webChatStub(cm)
+		}
 		snap.Messages = append(snap.Messages, cm)
 		p.msgs = append(p.msgs, sent)
 	}
 	return snap
+}
+
+// webChatSnapText is the text a whole-chat snap carries at most: older
+// messages beyond it go as stubs (role and index, cut), and the page
+// fetches one with chat.get_message when the user scrolls to it. It keeps
+// a snap frame well under the hub's frame size.
+const webChatSnapText = 256 << 10
+
+// webChatFullFrom is the first message a snap sends whole: the newest
+// messages, as many as fit webChatSnapText.
+func webChatFullFrom(msgs []ai.StoredMessage) int {
+	total := 0
+	for i := len(msgs) - 1; i >= 0; i-- {
+		size := min(len(msgs[i].Text), webproto.MaxChatMsgText)
+		for j := range msgs[i].Steps {
+			size += min(len(msgs[i].Steps[j].Text), webproto.MaxChatMsgText)
+		}
+		if total += size; total > webChatSnapText && i < len(msgs)-1 {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+// webChatStub is a message without its text: only who wrote it.
+func webChatStub(cm webproto.ChatMsg) webproto.ChatMsg {
+	return webproto.ChatMsg{I: cm.I, Role: cm.Role, Truncated: true, Model: cm.Model}
 }
 
 // webChatStreaming reports whether message i of n is the answer the AI
