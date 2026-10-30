@@ -1,6 +1,10 @@
 package webproto
 
-import "time"
+import (
+	"encoding/json"
+	"errors"
+	"time"
+)
 
 // RoleCtl marks an op that only the gateway's control connection may send.
 // It is never the role of a browser.
@@ -142,6 +146,33 @@ var opTable = []Policy{
 	// Control connection only (same user, never a browser).
 	{Op: OpWebOpen, New: newOf[WebOpenArgs](), Role: RoleCtl, Rate: perSec(1), MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpWebStop, New: newOf[EmptyArgs](), Role: RoleCtl, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
+}
+
+// ErrUnknownOp is returned for an op with no policy row.
+var ErrUnknownOp = errors.New("webproto: unknown op")
+
+// DecodeArgs decodes the args of a request strictly into the op's args
+// type: the raw size is capped by the row, an unknown field, a duplicate
+// or case-folded key and trailing data are refused. Missing args are {}.
+func DecodeArgs(op string, raw json.RawMessage) (any, error) {
+	p, ok := Lookup(op)
+	if !ok {
+		return nil, ErrUnknownOp
+	}
+	if len(raw) > p.MaxBytes {
+		return nil, ErrTooBig
+	}
+	if len(raw) == 0 {
+		raw = json.RawMessage(`{}`)
+	}
+	if err := checkKeys(raw); err != nil {
+		return nil, err
+	}
+	a := p.New()
+	if err := unmarshalStrict(raw, a); err != nil {
+		return nil, err
+	}
+	return a, nil
 }
 
 // Ops returns a copy of the op table, in table order.
