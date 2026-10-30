@@ -430,11 +430,21 @@ const (
 // MouseMove sends an SGR "motion, no button" event at 0-based cell (x, y).
 func (tm *Term) MouseMove(x, y int) { tm.Send(fmt.Sprintf("\x1b[<35;%d;%dM", x+1, y+1)) }
 
-// Click sends an SGR left press + release at 0-based cell (x, y).
+// Click sends an SGR left press + release at 0-based cell (x, y). A
+// button that acts on the press (Don't Save) may end termocode before the
+// release; the PTY then refuses it (EIO on macOS), which is fine.
 func (tm *Term) Click(x, y int) {
+	tm.t.Helper()
 	tm.Send(fmt.Sprintf("\x1b[<0;%d;%dM", x+1, y+1))
 	time.Sleep(15 * time.Millisecond)
-	tm.Send(fmt.Sprintf("\x1b[<0;%d;%dm", x+1, y+1))
+	release := fmt.Sprintf("\x1b[<0;%d;%dm", x+1, y+1)
+	if err := tm.write([]byte(release)); err != nil {
+		select {
+		case <-tm.exited:
+		case <-time.After(10 * time.Second):
+			tm.t.Fatalf("send %q: %v (termocode still running)", release, err)
+		}
+	}
 }
 
 // Resize changes the PTY size (the kernel sends SIGWINCH) and the emulator.

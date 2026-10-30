@@ -52,3 +52,22 @@ func TestNewRepoPathHasNoSymlink(t *testing.T) {
 		}
 	})
 }
+
+// A button that acts on the press (Don't Save) can end termocode before
+// Click sends the release. On macOS the PTY then refuses the write (EIO);
+// a closed pipe plays that here. Click must not fail the test for it.
+func TestClickAfterThePressEndedTheApp(t *testing.T) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = w.Close() })
+	tm := &Term{t: t, ptmx: w, exited: make(chan struct{})}
+	go func() {
+		buf := make([]byte, 64)
+		_, _ = r.Read(buf) // the press
+		_ = r.Close()      // the app is gone: no reader for the release
+		close(tm.exited)
+	}()
+	tm.Click(3, 4)
+}
