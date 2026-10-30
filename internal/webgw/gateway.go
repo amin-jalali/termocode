@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -129,7 +130,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		mux.Handle("/", cfg.Assets)
 	}
 	srv := NewServer(site, mux, DefaultLimits, audit)
-	go func() { _ = srv.Serve(LimitConns(ln, DefaultLimits.MaxConns)) }()
+	crash.Go("web gateway: the server", func() { _ = srv.Serve(LimitConns(ln, DefaultLimits.MaxConns)) })
 	defer func() { _ = srv.Close() }()
 
 	select {
