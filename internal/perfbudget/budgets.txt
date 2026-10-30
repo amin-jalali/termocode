@@ -68,16 +68,16 @@ db_tree_filter_key         25   ms   # tree filter key + sidebar frame; local 0.
 
 # AI agents (PERF-7): termocode's own work around a model (a fake one
 # that answers at once). Go tests: internal/git, internal/app.
-agent_worktree_create_5k  280   ms   # worktree of a 5 000-file repo, median of 5; local 139 ms
-agent_worktree_merge_20   650   ms   # merge 20 changed files back, median of 5; local 324 ms
-chat_save_2k_messages      90   ms   # end of a turn: save a 2 000-message chat, 50 chats stored; local 44 ms
+agent_worktree_create_5k  150   ms   # worktree of a 5 000-file repo, median of 5; local 73 ms (139 ms before PERF-7)
+agent_worktree_merge_20   240   ms   # merge 20 changed files back, median of 5; local 120 ms (324 ms before PERF-7)
+chat_save_2k_messages      25   ms   # end of a turn: save a 2 000-message chat, 50 chats stored; local 1.7 ms (44 ms before PERF-7) (floor)
 chat_load_2k_messages      13   ms   # open that chat; local 6.2 ms
 ai_send_to_request         25   ms   # Enter to the request leaving, 2 000-message chat, median of 15; local 0.95 ms (floor)
-ai_turn_3k_tokens          35   ms   # a 3 000-token answer applied and saved, no drawing, median of 7; local 17 ms
-ai_tool_calls_20           25   ms   # a turn that reads 20 files at once, median of 9; local 1.4 ms (floor)
-runs_view_open_200         25   ms   # open Runs with 200 stored runs (50 chats), median of 9; local 8.0 ms (floor)
-runs_view_reopen_200       25   ms   # show Runs again / another chat opened, state kept; local 5.0 ms before the chat file cache (floor)
-runs_view_redraw_200       25   ms   # draw the Runs list again after a run event; local 1.3 ms (floor)
-ai_undo_turn_300_files    280   ms   # AI: Undo Last Turn of a turn that wrote 300 files, 5 open in tabs (real nvim), median of 3; local 140 ms
+ai_turn_3k_tokens          25   ms   # a 3 000-token answer applied and saved, no drawing, median of 7; local 3.5 ms (17 ms before PERF-7) (floor)
+ai_tool_calls_20           25   ms   # a turn that reads 20 files at once, median of 9; local 1.2 ms (1.9 ms before PERF-7) (floor)
+runs_view_open_200         25   ms   # open Runs with 200 stored runs (50 chats), median of 9; local 4.7 ms (8.0 ms before PERF-7) (floor)
+runs_view_reopen_200       25   ms   # show Runs again / another chat opened, state kept; local 1.1 ms (5.0 ms before PERF-7) (floor)
+runs_view_redraw_200       25   ms   # draw the Runs list again after a run event; local 0.6 ms (1.3 ms before PERF-7) (floor)
+ai_undo_turn_300_files     45   ms   # AI: Undo Last Turn of a turn that wrote 300 files, 5 open in tabs (real nvim), median of 3; local 21 ms (140 ms before PERF-7)
 ai_run_start               25   ms   # Enter with the two-step Review profile to the first step's request, median of 9; local 0.8 ms (floor)
-ai_send_to_server          25   ms   # Enter in a 20-message chat to the request at a local OpenAI-compatible server, median of 15; local 1.2 ms (floor)
+ai_send_to_server          25   ms   # Enter in a 20-message chat to the request at a local OpenAI-compatible server, median of 15; local 0.6 ms (1.2 ms before PERF-7) (floor)
