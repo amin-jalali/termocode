@@ -544,6 +544,10 @@ export interface BufSnap {
   dirty: boolean;
   ft: string;
   readonly: boolean;
+  ts?: number;
+  et?: boolean;
+  enc?: string;
+  eol?: string;
 }
 
 export interface LinesDelta {

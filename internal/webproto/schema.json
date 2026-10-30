@@ -1503,6 +1503,15 @@
         "dirty": {
           "type": "boolean"
         },
+        "enc": {
+          "type": "string"
+        },
+        "eol": {
+          "type": "string"
+        },
+        "et": {
+          "type": "boolean"
+        },
         "ft": {
           "type": "string"
         },
@@ -1519,6 +1528,9 @@
           "type": "boolean"
         },
         "tick": {
+          "type": "integer"
+        },
+        "ts": {
           "type": "integer"
         }
       },

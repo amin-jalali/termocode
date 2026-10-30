@@ -38,12 +38,20 @@ type webBuf struct {
 	dirty    bool
 	ft       string
 	readonly bool
+	layout   webBufLayout    // tab width, encoding, line ends
 	created  bool            // the web loaded it: unload it when let go, if untouched
 	refs     map[string]bool // connection ids that opened it
 
 	// Terminals (web_term.go): the laptop's size and the screen-mode guess.
 	cols, height int
 	scr          webScreen
+}
+
+// webBufLayout is how a buffer lays out its text (BufSnap's ts, et, enc, eol).
+type webBufLayout struct {
+	ts       int
+	et       bool
+	enc, eol string
 }
 
 // webLuaBuf is what webLuaAttach / webLuaOpen return.
@@ -55,6 +63,10 @@ type webLuaBuf struct {
 	Dirty    bool     `msgpack:"dirty"`
 	Ft       string   `msgpack:"ft"`
 	Readonly bool     `msgpack:"readonly"`
+	Ts       int      `msgpack:"ts"`
+	Et       bool     `msgpack:"et"`
+	Enc      string   `msgpack:"enc"`
+	Eol      string   `msgpack:"eol"`
 	Name     string   `msgpack:"name"`
 	Bt       string   `msgpack:"bt"`
 	Count    int      `msgpack:"count"`
@@ -200,7 +212,8 @@ func webBufSnapshot(m *Model, key string) (any, error) {
 		return nil, err
 	}
 	return webproto.BufSnap{Buf: b.buf, Path: b.path, Tick: b.tick, Lines: webNonNil(b.rows),
-		Dirty: b.dirty, Ft: b.ft, Readonly: b.readonly}, nil
+		Dirty: b.dirty, Ft: b.ft, Readonly: b.readonly,
+		Tabstop: b.layout.ts, Expandtab: b.layout.et, Enc: b.layout.enc, Eol: b.layout.eol}, nil
 }
 
 func webNonNil(s []string) []string {
@@ -281,6 +294,7 @@ func webErrSecret() error {
 func (b *webBuf) load(info webLuaBuf) {
 	b.first, b.rows, b.tick, b.seq = info.First, webNonNil(info.Lines), info.Tick, info.Seq
 	b.dirty, b.ft, b.readonly = info.Dirty, info.Ft, info.Readonly
+	b.layout = webBufLayout{ts: info.Ts, et: info.Et, enc: info.Enc, eol: info.Eol}
 	if info.WinH > 0 { // shown in a window on the laptop: its size
 		b.cols, b.height = info.WinW, info.WinH
 	}

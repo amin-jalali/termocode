@@ -3,6 +3,8 @@
   "snap0": {
     "buf": 2,
     "dirty": false,
+    "enc": "utf-8",
+    "eol": "unix",
     "ft": "text",
     "lines": [
       "alpha",
@@ -11,7 +13,8 @@
     ],
     "path": "notes.txt",
     "readonly": false,
-    "tick": 2
+    "tick": 2,
+    "ts": 8
   },
   "deltas": [
     {
@@ -56,6 +59,9 @@
     ],
     "dirty": true,
     "ft": "text",
-    "readonly": false
+    "readonly": false,
+    "ts": 8,
+    "enc": "utf-8",
+    "eol": "unix"
   }
 }

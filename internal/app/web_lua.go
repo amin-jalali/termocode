@@ -22,8 +22,8 @@ package app
 
 const webLuaPrelude = `
 local W = _G.termocode_web
-if not W or W.v ~= 2 then
-  W = { v = 2, bufs = (W and W.bufs) or {} }
+if not W or W.v ~= 3 then
+  W = { v = 3, bufs = (W and W.bufs) or {} }
   _G.termocode_web = W
   local api = vim.api
   local function notify(...)
@@ -33,6 +33,7 @@ if not W or W.v ~= 2 then
     local bo = vim.bo[b]
     return { buf = b, tick = api.nvim_buf_get_changedtick(b), dirty = bo.modified,
       ft = bo.filetype, readonly = bo.readonly or not bo.modifiable,
+      ts = bo.tabstop, et = bo.expandtab, enc = bo.fileencoding, eol = bo.fileformat,
       name = api.nvim_buf_get_name(b), bt = bo.buftype, count = api.nvim_buf_line_count(b),
       winw = -1, winh = -1 }
   end
