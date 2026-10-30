@@ -30,13 +30,14 @@ func init() {
 
 // Tests swap these: start a run, start a debug session.
 var (
-	webStartTests = func(m *Model, req testsRunRequest) (tea.Cmd, *testsRunProblem) { return m.tryTestsRequest(req) }
-	webDebugTest  = func(m *Model, cfg launchConfig) (tea.Cmd, error) { return m.tryDebugStartConfig(cfg) }
+	webStartTests    = func(m *Model, req testsRunRequest) (tea.Cmd, *testsRunProblem) { return m.tryTestsRequest(req) }
+	webDebugStartCfg = func(m *Model, cfg launchConfig) (tea.Cmd, error) { return m.tryDebugStartConfig(cfg) }
 )
 
 // webRunPub is what the Run, Test and Debug topics sent last (Update only).
 type webRunPub struct {
 	tests webTestsPub
+	debug webDebugPub
 }
 
 type webTestsPub struct {
@@ -314,7 +315,7 @@ func (m *Model) webTestsDebug(call *webCall) tea.Cmd {
 		call.fail(webproto.CodeConflict, webSentence(err.Error()))
 		return nil
 	}
-	cmd, err := webDebugTest(m, cfg)
+	cmd, err := webDebugStartCfg(m, cfg)
 	if err != nil {
 		m.webAuditOp(call, id, "failed")
 		call.fail(webproto.CodeConflict, webSentence(err.Error()))
