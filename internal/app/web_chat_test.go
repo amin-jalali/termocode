@@ -115,6 +115,54 @@ func TestStreamAppendCoalesced(t *testing.T) {
 	}
 }
 
+// Spec (WEB-13, T43): a registered secret streamed in pieces never leaves
+// the hub, not even its start: the end that could begin a secret waits
+// for the next token, and the whole secret is redacted.
+func TestChatStreamHoldsSecretBack(t *testing.T) {
+	secret := "zx" + "-chat-stream-secret-4417"
+	ai.RegisterSecret(secret)
+	m := webTestChatModel(t, ai.StoredMessage{Role: ai.StoredUser, Text: "key?"}, ai.StoredMessage{Role: ai.StoredAssistant})
+	m.ai.streaming = true
+	webTestHub(t, &m)
+	c := webTestSub(t, &m, "chat")
+	var stream, all strings.Builder // the answer as the page builds it; every frame
+	frames := func() {
+		got := webTestNow(t, c)
+		for _, f := range got {
+			b, _ := json.Marshal(f)
+			all.Write(b)
+		}
+		for _, d := range webTestChatDeltas(t, got) {
+			if d.Op == "append" {
+				stream.WriteString(d.Text)
+			}
+		}
+	}
+	frames() // the snap
+	text := "The key is " + secret + " and that is all."
+	for i := 0; i < len(text); i += 3 {
+		m.ai.conv.Messages[1].Text = text[:min(i+3, len(text))]
+		m.webAfterUpdate(nil)
+		frames()
+	}
+	if strings.Contains(stream.String(), secret[:4]) {
+		t.Fatalf("a piece of the secret left the hub: %q", stream.String())
+	}
+	if !strings.HasPrefix(stream.String(), "The key is [REDACTED] and that") {
+		t.Fatalf("streamed %q", stream.String())
+	}
+	m.ai.streaming = false
+	m.webAfterUpdate(nil)
+	frames()
+	out := all.String()
+	if strings.Contains(out, secret[:4]) {
+		t.Fatalf("a piece of the secret left the hub: %s", out)
+	}
+	if !strings.Contains(out, "[REDACTED]") || !strings.Contains(out, "and that is all.") {
+		t.Fatalf("the answer is missing: %s", out)
+	}
+}
+
 // Spec (WEB-13): the laptop opening another chat is one switched delta
 // with all of it; removed messages are a truncate; a title change is a
 // state delta.
