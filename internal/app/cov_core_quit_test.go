@@ -261,3 +261,41 @@ func TestCovCoreHotExitLeaveWorkspace(t *testing.T) {
 		t.Fatalf("backups after leaving: %+v %v", b, err)
 	}
 }
+
+// Backups that cannot be read are skipped; a backup folder that is a
+// file is an error; no home folder means no hot exit.
+func TestCovCoreHotExitDiskTrouble(t *testing.T) {
+	root := t.TempDir()
+	prev := filepath.Join(root, "previous")
+	_ = os.MkdirAll(filepath.Join(prev, "dir.bak"), 0o700)
+	_ = os.WriteFile(filepath.Join(prev, "notes.txt"), []byte("x"), 0o600)
+	_ = os.WriteFile(filepath.Join(prev, "ok.bak"), []byte("/w/a.go\nline"), 0o600)
+	b, err := collectHotBackups(root, os.Getpid(), pidAlive)
+	if err != nil || len(b) != 1 || b[0].Path != "/w/a.go" {
+		t.Errorf("backups %+v err %v", b, err)
+	}
+	file := filepath.Join(t.TempDir(), "file")
+	_ = os.WriteFile(file, nil, 0o600)
+	if _, err := collectHotBackups(file, 1, pidAlive); err == nil {
+		t.Error("a file as the backup root gave no error")
+	}
+	// A dead run whose files cannot move: previous/ is a file.
+	root2 := t.TempDir()
+	covWriteBackup(t, root2, covDeadPID, "a.bak", "/w/a.go", "x")
+	_ = os.WriteFile(filepath.Join(root2, "previous"), nil, 0o600)
+	if _, err := collectHotBackups(root2, 1, pidAlive); err == nil {
+		t.Error("previous/ as a file gave no error")
+	}
+
+	t.Setenv("XDG_STATE_HOME", "")
+	t.Setenv("HOME", "")
+	if _, err := hotExitRootFor("x"); err == nil {
+		t.Error("a backup root without HOME")
+	}
+	m := covNvimModel(t, 80, 24)
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_STATE_HOME", "")
+	if m.startHotExit() != nil || m.hotExitLive != "" {
+		t.Error("hot exit started without a home folder")
+	}
+}
