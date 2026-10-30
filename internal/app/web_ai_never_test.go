@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -119,5 +120,30 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		if len(bad) > 0 {
 			t.Errorf("%s is reached from %v; only %v may", name, bad, ok)
 		}
+	}
+}
+
+// Spec (web-easy): terminal_send never types a command that opens the
+// web panel into the user's terminal (typed there it would open at once);
+// stop and status pass.
+func TestAITerminalSendRefusesWebPanel(t *testing.T) {
+	reached := false
+	var call aiIDECaller = func(context.Context, aiIDEFunc) (string, error) {
+		reached = true
+		return "", nil
+	}
+	send, ok := ai.FindTool(aiTerminalTools(call), "terminal_send")
+	if !ok {
+		t.Fatal("no terminal_send")
+	}
+	if _, err := send.Run(context.Background(), map[string]any{"text": "termocode web"}); !errors.Is(err, ai.ErrNoWebPanel) {
+		t.Fatalf("err %v", err)
+	}
+	if reached {
+		t.Fatal("the text reached the terminal")
+	}
+	_, _ = send.Run(context.Background(), map[string]any{"text": "termocode web stop"})
+	if !reached {
+		t.Fatal("termocode web stop was refused")
 	}
 }

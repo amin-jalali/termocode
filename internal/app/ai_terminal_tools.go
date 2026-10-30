@@ -658,6 +658,9 @@ func aiTerminalTools(call aiIDECaller) []ai.Tool {
 				if text == "" {
 					return "", errors.New("text is empty")
 				}
+				if ai.StartsWebPanel(text) { // typed in a terminal it would open at once
+					return "", ai.ErrNoWebPanel
+				}
 				tab, newTab := ai.ArgString(a, "tab"), ai.ArgBool(a, "new_tab")
 				return aiTermSend(ctx, call, turn, tab, newTab, text)
 			},
