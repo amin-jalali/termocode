@@ -188,3 +188,37 @@ func TestChatSwitchedAndTruncate(t *testing.T) {
 	webReplayCheck(t, h.topics["chat"], c)
 	webReplayGolden(t, webReplayPath("chat", "truncate_rename_switch"), c)
 }
+
+// Spec (WEB-13): a long chat's snap carries the newest messages whole, as
+// many as fit 256 KiB of text; older ones are stubs (role, index, cut)
+// the page fetches with chat.get_message.
+func TestChatSnapCapsOldMessages(t *testing.T) {
+	big := strings.Repeat("word ", 12<<10) // 60 KiB
+	var msgs []ai.StoredMessage
+	for i := 0; i < 10; i++ {
+		msgs = append(msgs, ai.StoredMessage{Role: ai.StoredAssistant, Text: big})
+	}
+	m := webTestChatModel(t, msgs...)
+	webTestHub(t, &m)
+	c := webTestSub(t, &m, "chat")
+	f := webTestNow(t, c)[0]
+	var s webproto.ChatSnap
+	webTestData(t, f, &s)
+	if len(s.Messages) != 10 {
+		t.Fatalf("messages %d", len(s.Messages))
+	}
+	whole := 0
+	for i, cm := range s.Messages {
+		if cm.MD != nil {
+			whole++
+		} else if !cm.Truncated || cm.I != i || cm.Role != "assistant" {
+			t.Errorf("stub %d: %+v", i, cm)
+		}
+	}
+	if whole != 4 || s.Messages[9].MD == nil || s.Messages[0].MD != nil {
+		t.Fatalf("%d whole messages, want the newest 4", whole)
+	}
+	if b, _ := json.Marshal(f); len(b) > 1<<20 {
+		t.Fatalf("snap frame is %d bytes", len(b))
+	}
+}
