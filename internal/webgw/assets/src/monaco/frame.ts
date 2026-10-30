@@ -13,8 +13,8 @@ import { History } from "../editor/history";
 import { diff } from "../lib/textdiff";
 import type { LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
-import { md } from "./mdtext";
-import type { FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
+import { esc, md } from "./mdtext";
+import type { FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -58,6 +58,7 @@ interface Model {
   getPositionAt(offset: number): Pos;
   getLineCount(): number;
   getLineContent(line: number): string;
+  getLineMaxColumn(line: number): number;
   getValueInRange(r: IRange): string;
   applyEdits(ops: EditOp[]): void;
   onDidChangeContent(cb: (e: { changes: Change[] }) => void): void;
@@ -72,6 +73,8 @@ interface Decoration {
     glyphMarginClassName?: string;
     glyphMarginHoverMessage?: { value: string };
     stickiness?: number;
+    after?: { content: string; inlineClassName?: string };
+    showIfCollapsed?: boolean;
   };
 }
 /** MouseTarget is where a mouse event of the editor landed (type 2:
@@ -363,6 +366,46 @@ function menuEdit(m: Extract<ToFrame, { t: "edit" }>): void {
 let myPath = "";
 let lspOn = false;
 let lspReady = false;
+
+/** Blame: each line's blame (null: off), shown at the cursor's line. */
+let blameRows: (FrameBlame | null)[] | null = null;
+let blameDecos: Collection | null = null;
+let blameHover = false;
+
+/** blameAt is the blame of the cursor's line, if any. */
+function blameAt(line: number): FrameBlame | null {
+  return blameRows?.[line - 1] ?? null;
+}
+
+/** blamePaint puts the cursor line's blame at its end, faded. */
+function blamePaint(): void {
+  if (!blameDecos || !ed || !model) return;
+  const p = ed.getPosition();
+  const b = p ? blameAt(p.lineNumber) : null;
+  if (!p || !b) {
+    blameDecos.clear();
+    return;
+  }
+  const end = model.getLineMaxColumn(p.lineNumber);
+  blameDecos.set([{ range: oneLineAt(p.lineNumber, end, end), options: { showIfCollapsed: true, after: { content: "\u2003" + b.text, inlineClassName: "tc-blame" } } }]);
+}
+
+/** startBlameHover shows the commit when the pointer is on the blame. */
+function startBlameHover(): void {
+  if (blameHover) return;
+  blameHover = true;
+  api.languages.registerHoverProvider("*", {
+    async provideHover(m, p) {
+      if (m !== model || !ed) return null;
+      const cur = ed.getPosition();
+      const b = blameAt(p.lineNumber);
+      const end = m.getLineMaxColumn(p.lineNumber);
+      if (!b || !cur || cur.lineNumber !== p.lineNumber || p.column < end) return null;
+      const head = /^[0-9a-f]{4,64}$/.test(b.hash) ? "`" + b.hash + "` " : "";
+      return { contents: [{ value: `${head}**${esc(b.author)}**, ${esc(b.when)}\n\n${esc(b.subject)}`, isTrusted: false, supportHtml: false }], range: oneLineAt(p.lineNumber, end, end) };
+    },
+  });
+}
 let nextAsk = 0;
 const asks = new Map<number, (d: unknown) => void>();
 
@@ -711,6 +754,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   hintDecos = ed.createDecorationsCollection();
   if (!m.diff) watchGlyphs(ed);
   lineDecos = ed.createDecorationsCollection();
+  blameDecos = ed.createDecorationsCollection();
   model?.onDidChangeContent((e) => {
     const specs: { from: number; to: number; insert: string }[] = e.changes.map((c) => ({ from: c.rangeOffset, to: c.rangeOffset + c.rangeLength, insert: c.text }));
     const cs = ChangeSet.of(specs, cur.length);
@@ -760,7 +804,10 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     e.stopPropagation();
     post({ t: "key", key: b.key, code: b.code, ctrl: b.ctrlKey, meta: b.metaKey, shift: b.shiftKey, alt: b.altKey });
   });
-  ed.onDidChangeCursorPosition((e) => post({ t: "cursor", line: e.position.lineNumber, col: e.position.column }));
+  ed.onDidChangeCursorPosition((e) => {
+    post({ t: "cursor", line: e.position.lineNumber, col: e.position.column });
+    blamePaint();
+  });
   ed.onDidScrollChange(viewport);
   ed.onDidLayoutChange(viewport);
   viewport();
@@ -847,6 +894,11 @@ function onMessage(e: MessageEvent): void {
           options: { isWholeLine: true, className: "tc-mg tc-mg-" + x.kind, linesDecorationsClassName: "tc-mgg tc-mgg-" + x.kind },
         })),
       );
+      return;
+    case "blame":
+      blameRows = m.rows;
+      if (blameRows) startBlameHover();
+      blamePaint();
       return;
     case "undo":
       undoRedo(false);

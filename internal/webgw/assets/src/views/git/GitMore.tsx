@@ -3,6 +3,7 @@
 // history or talk to a remote). The More Actions menu lists them with
 // the commit graph and the pull requests.
 import { h } from "preact";
+import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { GRAPH_TAB, PRS_TAB } from "../../lib/gittab";
 import { showFile } from "../../lib/workbench";
@@ -13,6 +14,10 @@ import type { MenuItems } from "../../ui/ContextMenu";
 import { Sheet } from "../../ui/Sheet";
 
 export type GitAction = "amend" | "clone";
+
+/** gitAction is the flow source control shows (its menu and the
+ * commands start one), or null. */
+export const gitAction = signal<GitAction | null>(null);
 
 interface Spec {
   title: StringKey;

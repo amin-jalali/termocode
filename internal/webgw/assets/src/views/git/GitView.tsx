@@ -23,7 +23,7 @@ import { DiffSheet } from "./DiffSheet";
 import { DiscardFlow } from "./DiscardFlow";
 import { gitFailed } from "./errors";
 import { GitRow } from "./GitRow";
-import { GitActionFlow, gitMoreMenu, type GitAction } from "./GitMore";
+import { GitActionFlow, gitAction, gitMoreMenu, type GitAction } from "./GitMore";
 import { RebaseBanner } from "./RebaseBanner";
 import { RemoteSheet } from "./RemoteSheet";
 import { ShowSheet } from "./ShowSheet";
@@ -59,7 +59,8 @@ export function GitView() {
   const canAct = !viewer && live.value;
   const [discard, setDiscard] = useState<string[] | null>(null);
   const [remote, setRemote] = useState(false);
-  const [action, setAction] = useState<GitAction | null>(null);
+  const action = gitAction.value;
+  const setAction = (a: GitAction | null) => (gitAction.value = a);
 
   const branch = g.branch.name;
   const sub = g.repo && (

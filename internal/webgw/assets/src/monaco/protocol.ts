@@ -44,6 +44,16 @@ export interface FrameLines {
   kind: "current" | "incoming" | "marker";
 }
 
+/** FrameBlame is one line's blame: the short text at the line's end and
+ * what the hover says. */
+export interface FrameBlame {
+  text: string;
+  author: string;
+  when: string;
+  subject: string;
+  hash: string;
+}
+
 /** LspKind is what the frame asks the page about a position. */
 export type LspKind = "hover" | "complete" | "definition";
 
@@ -94,6 +104,10 @@ export type ToFrame =
   /** lines: whole rows [from, to] (1-based) in a colour of the merge
    * editor: the current or incoming side of a conflict, or its markers. */
   | { t: "lines"; items: FrameLines[] }
+  /** blame: who last changed each line (index: line - 1; null: none,
+   * and a null list turns blame off). The cursor's line shows its text
+   * at the end; hovering there shows the commit. */
+  | { t: "blame"; rows: (FrameBlame | null)[] | null }
   | { t: "undo" }
   | { t: "redo" }
   | { t: "focus" }

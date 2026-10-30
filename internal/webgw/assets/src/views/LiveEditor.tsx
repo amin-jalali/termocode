@@ -5,7 +5,7 @@
 // simple edit sheet opens instead.
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { BufSnap, GitDiff, GitSnap } from "../../../../webproto/proto";
+import type { BufSnap, GitBlame, GitDiff, GitSnap } from "../../../../webproto/proto";
 import type { EditorHandle, EditorModule } from "../editor/api";
 import { startEdit } from "../lib/edit";
 import { hl, hlRows, wantHl } from "../lib/hl";
@@ -16,6 +16,7 @@ import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
 import { BpAsk, onGlyph, useRunGutter } from "../lib/rungutter";
+import { blameOn, blameRows } from "../lib/blame";
 import { ask, diagSnap, fileMarkers, findRefs, goTo, revealAt, wordAt } from "../lib/lsp";
 import { isGone } from "../state/files";
 import { t } from "../strings";
@@ -214,6 +215,31 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
     }, 300);
     return () => clearTimeout(timer);
   }, [ready, !!changed, changed?.x, changed?.y, saved, snap?.tick, gitData]);
+  // Blame (desktop): who last changed each line of the saved file, asked
+  // again after a save or a commit; off while the buffer has unsaved
+  // edits (its lines no longer match the file on disk).
+  const head = gitData?.log?.[0]?.hash ?? "";
+  const tracked = gitData?.repo === true && !gitData.files?.some((f) => f.path === path && f.untracked);
+  const blaming = !!desk && !diff && blameOn.value && tracked;
+  useEffect(() => {
+    const h = ed.current as DeskHandle | null;
+    if (!desk || !ready || !h) return;
+    if (!blaming || !saved) {
+      h.blame(null);
+      return;
+    }
+    let stop = false;
+    const timer = setTimeout(() => {
+      link.request("git.blame", { path }).then(
+        (d) => !stop && (ed.current as DeskHandle | null)?.blame(blameRows(d as GitBlame)),
+        () => !stop && (ed.current as DeskHandle | null)?.blame(null),
+      );
+    }, 300);
+    return () => {
+      stop = true;
+      clearTimeout(timer);
+    };
+  }, [ready, blaming, saved, head, changed?.x, changed?.y]);
   // Problems: the file's diagnostics as squiggles (desktop).
   const fileDiags = desk ? diagSnap(store.topic("diagnostics").value?.data)?.files.find((f) => f.path === path) : undefined;
   useEffect(() => {
