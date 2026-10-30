@@ -49,6 +49,12 @@ func (m *Model) writeClipboard(s string) clipVia {
 			vim.fn.setreg('"', s)
 			pcall(vim.fn.setreg, '+', s)`, s)
 	}
+	return writeSystemClipboard(s)
+}
+
+// writeSystemClipboard is writeClipboard without nvim's registers: for
+// text that must not stay in the editor, like a one-time link.
+func writeSystemClipboard(s string) clipVia {
 	if f := clipboardSink.Load(); f != nil {
 		(*f)(s)
 		return clipLocal
