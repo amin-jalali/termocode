@@ -1643,7 +1643,7 @@ export interface PRItem {
 export interface PRView {
   item: PRItem;
   state: "OPEN" | "CLOSED" | "MERGED";
-  body: string;
+  body?: MdNode;
   mergeable?: string;
   files: PRFile[];
   reviews: PRReview[];
@@ -1659,7 +1659,7 @@ export interface PRFile {
 export interface PRReview {
   author: string;
   state?: string;
-  body?: string;
+  body?: MdNode;
   when?: string;
 }
 

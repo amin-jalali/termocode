@@ -6142,7 +6142,7 @@
           "type": "string"
         },
         "body": {
-          "type": "string"
+          "$ref": "#/defs/MdNode"
         },
         "state": {
           "type": "string"
@@ -6183,7 +6183,7 @@
       "type": "object",
       "properties": {
         "body": {
-          "type": "string"
+          "$ref": "#/defs/MdNode"
         },
         "checks": {
           "items": {
@@ -6220,7 +6220,6 @@
       "required": [
         "item",
         "state",
-        "body",
         "files",
         "reviews",
         "checks"

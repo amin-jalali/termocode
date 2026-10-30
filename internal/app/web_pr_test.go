@@ -41,7 +41,7 @@ func TestPRListAndView(t *testing.T) {
 
 	var v webproto.PRView
 	webTestData(t, webTestCallBg(t, m, c, webproto.OpPRView, `{"number":14}`), &v)
-	if v.Item.Number != 14 || v.State != "OPEN" || v.Body == "" || len(v.Files) == 0 || v.Files[0].Path == "" || len(v.Checks) == 0 {
+	if v.Item.Number != 14 || v.State != "OPEN" || v.Body == nil || len(v.Body.C) == 0 || len(v.Files) == 0 || v.Files[0].Path == "" || len(v.Checks) == 0 {
 		t.Errorf("view %+v", v)
 	}
 

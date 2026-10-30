@@ -106,13 +106,13 @@ func (m *Model) webPRView(call *webCall) tea.Cmd {
 			webGHFail(call, err)
 			return nil
 		}
-		out := webproto.PRView{Item: webPRItem(d.PRItem), State: d.State, Body: webClean(d.Body), Mergeable: webName(d.Mergeable),
+		out := webproto.PRView{Item: webPRItem(d.PRItem), State: d.State, Body: webMarkdown(d.Body), Mergeable: webName(d.Mergeable),
 			Files: []webproto.PRFile{}, Reviews: []webproto.PRReview{}, Checks: webPRChecks(d.Checks)}
 		for _, f := range d.Files {
 			out.Files = append(out.Files, webproto.PRFile{Path: webName(f.Path), Add: f.Additions, Del: f.Deletions})
 		}
 		for _, r := range d.Reviews {
-			out.Reviews = append(out.Reviews, webproto.PRReview{Author: webName(r.Author), State: webName(r.State), Body: webClean(r.Body), When: webName(r.When)})
+			out.Reviews = append(out.Reviews, webproto.PRReview{Author: webName(r.Author), State: webName(r.State), Body: webMarkdown(r.Body), When: webName(r.When)})
 		}
 		return func(m *Model) {
 			if m.web != nil {
