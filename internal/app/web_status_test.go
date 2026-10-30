@@ -160,6 +160,10 @@ func TestStatusThemeFollowsLaptop(t *testing.T) {
 	if s.Theme.Name != "dark" || s.Theme.Light || len(s.Theme.Colors) != len(webThemeFields) || s.Theme.Colors["AIAccent"] != theme.Hex(theme.AIAccent) {
 		t.Fatalf("theme %+v", s.Theme)
 	}
+	// The code colours of the file view follow the laptop too.
+	if s.Theme.Colors["SyntaxKeyword"] != theme.Hex(theme.SyntaxKeyword) || s.Theme.Colors["SyntaxComment"] != theme.Hex(theme.SyntaxComment) {
+		t.Fatalf("theme has no syntax colours: %+v", s.Theme.Colors)
+	}
 	old := theme.AIAccent
 	t.Cleanup(func() { theme.AIAccent = old })
 	theme.AIAccent = 33
