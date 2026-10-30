@@ -1,0 +1,77 @@
+{
+  "topic": "cards",
+  "snap0": {
+    "cards": []
+  },
+  "deltas": [
+    {
+      "card": {
+        "body": "Write a.go",
+        "choices": [
+          {
+            "id": "deny",
+            "label": "Deny",
+            "safe": true
+          },
+          {
+            "id": "allow",
+            "label": "Allow once"
+          }
+        ],
+        "id": "card-1",
+        "kind": "tool",
+        "since": 1700000000000,
+        "title": "AI wants to: write_file"
+      },
+      "op": "upsert"
+    },
+    {
+      "card": {
+        "body": "Run task: build\n\nAsked by an outside agent over MCP (tool run_task). The name is the agent's own claim.",
+        "choices": [
+          {
+            "id": "deny",
+            "label": "Deny",
+            "safe": true
+          },
+          {
+            "id": "allow",
+            "label": "Allow once"
+          }
+        ],
+        "id": "card-2",
+        "kind": "mcp",
+        "since": 1700000000000,
+        "title": "codex wants to run task \"build\""
+      },
+      "op": "upsert"
+    },
+    {
+      "by": "laptop",
+      "id": "card-1",
+      "op": "remove"
+    }
+  ],
+  "snapn": {
+    "cards": [
+      {
+        "body": "Run task: build\n\nAsked by an outside agent over MCP (tool run_task). The name is the agent's own claim.",
+        "choices": [
+          {
+            "id": "deny",
+            "label": "Deny",
+            "safe": true
+          },
+          {
+            "id": "allow",
+            "label": "Allow once"
+          }
+        ],
+        "id": "card-2",
+        "kind": "mcp",
+        "since": 1700000000000,
+        "title": "codex wants to run task \"build\""
+      }
+    ]
+  }
+}

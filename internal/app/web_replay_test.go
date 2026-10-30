@@ -44,6 +44,7 @@ func webReplayRecord(t *testing.T, m *Model, h *webHub, topic string, script fun
 			out.Snap0 = b
 		case f["t"] == "delta":
 			out.Deltas = append(out.Deltas, b)
+		case f["t"] == "ev": // events (attention, answered) are not topic data
 		default:
 			t.Fatalf("frame %d: %v", i, f)
 		}
