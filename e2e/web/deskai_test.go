@@ -16,8 +16,8 @@ import (
 
 // The laptop's AI in the desktop editor (WEBP-3): ghost text and next
 // edit suggestions asked of the hub at the tick the page's text is known
-// at, the editor's Explain / Fix / Edit / Doc and the AI's suggestion as
-// a diff tab to accept or reject. The fake hub plays the laptop.
+// at, the editor's Explain / Fix / Edit / Doc, the AI's suggestion as a
+// diff tab to accept or reject and the agent worktrees side view. The fake hub plays the laptop.
 
 // aiFixture is the ai topic: AI set up with ghost text and next edits as
 // given.
@@ -303,4 +303,40 @@ func TestDeskAIMenuDocRejectAndExplain(t *testing.T) {
 	}
 	reply(t, c, r, webproto.AIAction{Kind: "explain", Chat: true, ChatID: "c-1", Lines: []string{}})
 	p.WaitJS(`document.querySelector(".chatcol")`)
+}
+
+// The agent worktrees view lists each worktree with its branch, owner
+// and changed files; a file opens as a read-only diff tab of the agent's
+// change; Merge and Discard ask the laptop.
+func TestDeskAgentWorktrees(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	p.TapJS(`document.querySelector('nav.act-bar .act-item[data-act="agents"]')`)
+	r := expectReq(t, c, "ai.worktrees")
+	reply(t, c, r, webproto.AIWorktrees{Items: []webproto.AIWorktree{
+		{ID: "r1-left", Branch: "termocode/agent-r1-left", Owner: "Left", Files: []webproto.AIWorktreeChange{{Path: "src/a.go", Status: "M"}, {Path: "b.txt", Status: "A"}}},
+		{ID: "r1-right", Branch: "termocode/agent-r1-right", Running: true, Files: []webproto.AIWorktreeChange{}},
+	}})
+	wt := `document.querySelector('.agent-wt[data-id="r1-left"]')`
+	p.WaitJS(wt + `?.querySelectorAll(".agent-file").length === 2`)
+	if got := Eval[string](p, wt+`.querySelector(".agent-head").textContent`); !strings.Contains(got, "termocode/agent-r1-left") || !strings.HasPrefix(got, "Left") {
+		t.Errorf("head %q", got)
+	}
+	if Eval[bool](p, `!!document.querySelector('.agent-wt[data-id="r1-right"] [data-act="merge"]')`) {
+		t.Error("a running worktree offers Merge")
+	}
+	p.TapJS(wt + `.querySelector('[data-act="discard"]')`)
+	p.WaitJS(`document.querySelector(".ask-text")?.textContent.includes("termocode/agent-r1-left")`)
+	noReq(t, c, 300*time.Millisecond)
+	p.TapJS(`[...document.querySelectorAll(".ask .btn")].find((b) => b.textContent === "Cancel")`)
+	p.WaitJS(`!document.querySelector(".ask")`)
+	noReq(t, c, 300*time.Millisecond)
+	p.TapJS(wt + `.querySelector('.agent-file[data-path="src/a.go"]')`)
+	r = expectReq(t, c, "ai.worktree_text")
+	if string(r.Args) != `{"id":"r1-left","path":"src/a.go"}` {
+		t.Errorf("args %s", r.Args)
+	}
+	reply(t, c, r, webproto.AIWorktreeText{ID: "r1-left", Path: "src/a.go", Before: "package a\nvar x = 1\n", After: "package a\nvar x = 2\n"})
+	p.WaitJS(`document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "a.go (Agent)"`)
+	doc := `document.querySelector('[data-view="ai-diff"] .desk-editor').contentDocument`
+	p.WaitJS(doc + `?.querySelector(".editor.modified .char-insert, .editor.modified .line-insert")`)
 }
