@@ -9,3 +9,13 @@
 .kv-value { margin: 0; font-family: var(--font-mono); font-size: var(--fs-row); color: var(--blue); text-align: end; overflow-wrap: anywhere; unicode-bidi: isolate; }
 .kv-def, .kv-desc { grid-column: 1 / -1; margin: 0; color: var(--dim); font-size: var(--fs-hint); }
 .kv-def { font-family: var(--font-mono); }
+
+.mcp-state { display: flex; align-items: center; gap: var(--s2); font-weight: 600; }
+.mcp-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--dim); flex: none; }
+.mcp-state.is-on .mcp-dot { background: var(--green); }
+.mcp-why { color: var(--amber); }
+.mcp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+.mcp-list > li { padding: var(--s2) var(--s3); min-height: var(--tap); display: flex; flex-direction: column; justify-content: center; }
+.mcp-list > li + li { border-top: 1px solid var(--border); }
+.mcp-name { font-weight: 600; overflow-wrap: anywhere; }
+.mcp-meta, .mcp-call { font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--text-2); overflow-wrap: anywhere; }

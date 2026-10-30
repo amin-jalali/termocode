@@ -61,3 +61,35 @@ func TestSettingsReadOnly(t *testing.T) {
 		})
 	}
 }
+
+// MCP shows the server's state, the agents and their last calls; there
+// is no button at all; not listening says why.
+func TestMCPStatusReadOnly(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openMoreSub(t, vp, "mcp", "mcp")
+			c.Send(t, Snap("mcp", 1, webproto.MCPSnap{Mode: "auto", Listening: true,
+				Agents: []webproto.MCPAgent{{Name: "agent-x", Since: 1_700_000_000_000, Calls: 14, Asked: 2}, {Since: 1_700_000_000_000}},
+				Calls:  []string{"12:03 agent-x · read_file · ran without asking"}}))
+			p.WaitJS(`document.querySelectorAll(".mcp-agent").length === 2`)
+			if s := p.Text(".mcp-state"); s != "Listening for outside agents." {
+				t.Errorf("state %q", s)
+			}
+			if m := p.Text(".mcp-agent .mcp-meta"); !strings.Contains(m, "14 calls, 2 asked") {
+				t.Errorf("meta %q", m)
+			}
+			if n := Eval[string](p, `document.querySelectorAll(".mcp-agent .mcp-name")[1].textContent`); n != "(no name yet)" {
+				t.Errorf("unnamed agent %q", n)
+			}
+			if n := Eval[int](p, `document.querySelectorAll(".mcpv button, .mcpv input").length`); n != 0 {
+				t.Fatalf("%d controls on the MCP page", n)
+			}
+			c.Send(t, Delta("mcp", 2, webproto.MCPSnap{Mode: "off", Why: "The MCP server is turned off.", Agents: []webproto.MCPAgent{}, Calls: []string{}}))
+			p.WaitJS(`document.querySelector(".mcp-why")?.textContent === "The MCP server is turned off."`)
+			if s := p.Text(".mcp-state"); s != "Not listening." {
+				t.Errorf("state %q", s)
+			}
+			p.noOverflow("mcp")
+		})
+	}
+}
