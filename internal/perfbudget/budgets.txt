@@ -81,3 +81,13 @@ runs_view_redraw_200       25   ms   # draw the Runs list again after a run even
 ai_undo_turn_300_files     45   ms   # AI: Undo Last Turn of a turn that wrote 300 files, 5 open in tabs (real nvim), median of 3; local 21 ms (140 ms before PERF-7)
 ai_run_start               25   ms   # Enter with the two-step Review profile to the first step's request, median of 9; local 0.8 ms (floor)
 ai_send_to_server          25   ms   # Enter in a 20-message chat to the request at a local OpenAI-compatible server, median of 15; local 0.6 ms (1.2 ms before PERF-7) (floor)
+
+# HTTP client (PERF-8; local httptest server that answers at once, so
+# these are termocode's own numbers). testkit: internal/testkit/perf_http_test.go,
+# app: internal/app/http_perf_guard_test.go. Median of 7 local runs
+# (before PERF-8 -> after).
+http_send_to_page            30   ms   # send key to the answer on the page; local 14.7 (was 35)
+http_5mb_answer_first_lines 125   ms   # 5 MB JSON, send to the first page lines; local 61 (was 156)
+http_5mb_answer_all_lines   560   ms   # same, all 840 000 lines in nvim; local 279 (was 490)
+http_history_open_1000       40   ms   # History… with 1 000 entries to the picker; local 19.8 (was 28)
+http_send_all_200           270   ms   # 200 sends in a row, Go path + history; local 135 (was 2 964)
