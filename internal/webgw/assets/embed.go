@@ -10,7 +10,7 @@ import (
 // files holds only what cmd/webbuild wrote; sources and vendored
 // originals stay out of the binary.
 //
-//go:embed index.html app.js app.css licenses.txt assets.lock
+//go:embed index.html app.js app.css licenses.txt icon.svg assets.lock
 var files embed.FS
 
 // FS returns the built files.

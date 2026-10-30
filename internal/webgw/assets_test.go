@@ -52,6 +52,7 @@ func TestAssetsContentTypes(t *testing.T) {
 		"/assets/app.js":       "text/javascript; charset=utf-8",
 		"/assets/app.css":      "text/css; charset=utf-8",
 		"/assets/licenses.txt": "text/plain; charset=utf-8",
+		"/assets/icon.svg":     "image/svg+xml",
 	} {
 		res := getAsset(t, h, http.MethodGet, path)
 		if res.StatusCode != http.StatusOK || res.Header.Get("Content-Type") != want {
