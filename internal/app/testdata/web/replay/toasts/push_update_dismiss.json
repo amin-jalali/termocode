@@ -1,0 +1,61 @@
+{
+  "topic": "toasts",
+  "snap0": {
+    "toasts": [
+      {
+        "id": 1,
+        "severity": "info",
+        "title": "Saved"
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "op": "push",
+      "toast": {
+        "detail": "10%",
+        "id": 2,
+        "severity": "warn",
+        "title": "Cloning"
+      }
+    },
+    {
+      "id": 1,
+      "op": "dismiss"
+    },
+    {
+      "op": "push",
+      "toast": {
+        "detail": "90%",
+        "id": 2,
+        "severity": "warn",
+        "title": "Cloning"
+      }
+    },
+    {
+      "op": "push",
+      "toast": {
+        "detail": "exit 2",
+        "id": 3,
+        "severity": "error",
+        "title": "Build failed"
+      }
+    }
+  ],
+  "snapn": {
+    "toasts": [
+      {
+        "id": 2,
+        "severity": "warn",
+        "title": "Cloning",
+        "detail": "90%"
+      },
+      {
+        "id": 3,
+        "severity": "error",
+        "title": "Build failed",
+        "detail": "exit 2"
+      }
+    ]
+  }
+}
