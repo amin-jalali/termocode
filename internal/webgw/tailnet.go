@@ -11,7 +11,9 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -195,3 +197,163 @@ func CheckServe(ctx context.Context, run TailscaleRun, host, target string) (our
 	}
 	return ours, nil
 }
+
+// ServeProc is `tailscale serve` running in the foreground for the
+// gateway. Its config lives exactly as long as the process: nothing is
+// left behind in Tailscale when the panel stops.
+type ServeProc interface {
+	Stop()                 // end it; its Serve config goes with it
+	Done() <-chan struct{} // closed once it ended
+	Reason() string        // the last line it printed (after Done)
+}
+
+// ServeStart starts Serve for https://<host>/ → target.
+type ServeStart func(target string) (ServeProc, error)
+
+// TailnetConfig turns on tailnet mode in RunConfig.
+type TailnetConfig struct {
+	Run   TailscaleRun  // nil: Tailscale
+	Start ServeStart    // nil: StartTailscaleServe
+	Every time.Duration // the Funnel check (0: DefaultFunnelCheck)
+	Wait  time.Duration // how long Serve may take to come up (0: DefaultServeWait)
+}
+
+// Tailnet defaults.
+const (
+	DefaultFunnelCheck = time.Minute
+	DefaultServeWait   = 15 * time.Second
+)
+
+// errOperatorHint is added when Tailscale refused a user who is not its
+// operator (Linux).
+const operatorHint = ". Run once: sudo tailscale set --operator=$USER"
+
+// tailnetRun is tailnet mode while the gateway runs.
+type tailnetRun struct {
+	cfg  TailnetConfig
+	host string
+	proc ServeProc
+}
+
+// prepareTailnet checks the machine before anything listens.
+func prepareTailnet(ctx context.Context, cfg TailnetConfig) (*tailnetRun, Site, error) {
+	if cfg.Run == nil {
+		cfg.Run = Tailscale
+	}
+	if cfg.Start == nil {
+		cfg.Start = StartTailscaleServe
+	}
+	if cfg.Every <= 0 {
+		cfg.Every = DefaultFunnelCheck
+	}
+	if cfg.Wait <= 0 {
+		cfg.Wait = DefaultServeWait
+	}
+	info, err := DetectTailnet(ctx, cfg.Run)
+	if err != nil {
+		return nil, Site{}, err
+	}
+	site, err := TailnetSite(info.Host)
+	if err != nil {
+		return nil, Site{}, err
+	}
+	return &tailnetRun{cfg: cfg, host: info.Host}, site, nil
+}
+
+// URL is the panel's address in the tailnet.
+func (t *tailnetRun) URL() string { return "https://" + t.host + "/" }
+
+// serve starts Serve for the gateway on 127.0.0.1:port and waits until
+// Tailscale shows it, refusing Funnel and a busy port first.
+func (t *tailnetRun) serve(ctx context.Context, port int) error {
+	target := "http://127.0.0.1:" + strconv.Itoa(port)
+	ours, err := CheckServe(ctx, t.cfg.Run, t.host, target)
+	if err != nil {
+		return err
+	}
+	if !ours {
+		p, err := t.cfg.Start(target)
+		if err != nil {
+			return serveErr(err.Error())
+		}
+		t.proc = p
+	}
+	deadline := time.NewTimer(t.cfg.Wait)
+	defer deadline.Stop()
+	for {
+		ours, err := CheckServe(ctx, t.cfg.Run, t.host, target)
+		switch {
+		case err != nil && !errors.Is(err, ErrServeUnknown):
+			t.stop()
+			return err
+		case ours:
+			return nil
+		}
+		var done <-chan struct{}
+		if t.proc != nil {
+			done = t.proc.Done()
+		}
+		select {
+		case <-done:
+			return serveErr(t.proc.Reason())
+		case <-deadline.C:
+			t.stop()
+			return errors.New("tailscale serve did not start in time")
+		case <-ctx.Done():
+			t.stop()
+			return ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+}
+
+// serveErr names a failed Serve start, with the operator hint when
+// Tailscale refused this user.
+func serveErr(reason string) error {
+	msg := "tailscale serve did not start: " + cleanAuditText(reason)
+	low := strings.ToLower(reason)
+	if strings.Contains(low, "access denied") || strings.Contains(low, "operator") || strings.Contains(low, "permission") {
+		msg += operatorHint
+	}
+	return errors.New(msg)
+}
+
+func (t *tailnetRun) stop() {
+	if t != nil && t.proc != nil {
+		t.proc.Stop()
+	}
+}
+
+// tailStop is why tailnet mode ends the panel.
+type tailStop struct {
+	kind EventKind
+	why  string
+}
+
+// watch checks for Funnel every cfg.Every and watches Serve; the first
+// reason to stop goes to out. It ends with ctx.
+func (t *tailnetRun) watch(ctx context.Context, out chan<- tailStop) {
+	tick := time.NewTicker(t.cfg.Every)
+	defer tick.Stop()
+	var done <-chan struct{}
+	if t.proc != nil {
+		done = t.proc.Done()
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-done:
+			out <- tailStop{kind: EvServeGone, why: "serve_gone"}
+			return
+		case <-tick.C:
+			if _, err := CheckServe(ctx, t.cfg.Run, t.host, ""); errors.Is(err, ErrFunnel) {
+				out <- tailStop{kind: EvFunnelStop, why: "funnel"}
+				return
+			}
+		}
+	}
+}
+
+// errServeEnded: Serve ended without a word.
+var errServeEnded = errors.New("tailscale serve ended")

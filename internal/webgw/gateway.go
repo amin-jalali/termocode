@@ -58,6 +58,10 @@ type RunConfig struct {
 	LinkWait time.Duration
 	// Now is the clock of tokens and links (nil: time.Now).
 	Now func() time.Time
+	// Tailnet, when set, is tailnet mode (WEB-31): still 127.0.0.1 only,
+	// reached from the user's tailnet through tailscale serve on
+	// https://<machine>.<tailnet>.ts.net/; Funnel is refused.
+	Tailnet *TailnetConfig
 }
 
 // Status is what the gateway writes to its status file. It holds no
@@ -70,6 +74,13 @@ type Status struct {
 	Started time.Time `json:"started"`
 	IdleS   int       `json:"idle_s"`
 	MaxS    int       `json:"max_s"`
+}
+
+// handoff is what the gateway writes on fd 3 once it serves: the port
+// and the address a browser uses (the tailnet URL in tailnet mode).
+type handoff struct {
+	Port int    `json:"port"`
+	URL  string `json:"url"`
 }
 
 // ErrGatewayBusy: another gateway already runs for this workspace.
@@ -104,6 +115,13 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		return 0, err
 	}
 	defer audit.Close()
+	var tn *tailnetRun
+	var tnSite Site
+	if cfg.Tailnet != nil && cfg.UnixPath == "" {
+		if tn, tnSite, err = prepareTailnet(ctx, *cfg.Tailnet); err != nil {
+			return 0, err
+		}
+	}
 	var ln net.Listener
 	var site Site
 	port := cfg.Port
@@ -111,10 +129,13 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		ln, site, err = ListenUnix(cfg.UnixPath, cfg.PortHint)
 		port = cfg.PortHint
 	} else {
-		ln, site, err = Listen(ListenConfig{Port: cfg.Port})
+		ln, site, err = Listen(ListenConfig{Port: cfg.Port, Tailnet: tn != nil})
 	}
 	if err != nil {
 		return 0, err
+	}
+	if tn != nil {
+		site = tnSite
 	}
 	defer ln.Close()
 	if cfg.UnixPath != "" {
@@ -156,6 +177,20 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	crash.Go("web gateway: the server", func() { _ = srv.Serve(LimitConns(ln, DefaultLimits.MaxConns)) })
 	defer func() { _ = srv.Close() }()
 
+	url := "http://" + site.Hosts[0] + "/"
+	where := "127.0.0.1:" + strconv.Itoa(port)
+	tailCh := make(chan tailStop, 1)
+	if tn != nil {
+		if err := tn.serve(ctx, port); err != nil {
+			return 0, err
+		}
+		defer tn.stop()
+		url = tn.URL()
+		where += " via tailscale serve " + url
+		wctx, stopWatch := context.WithCancel(ctx)
+		defer stopWatch()
+		crash.Go("web gateway: the tailnet watch", func() { tn.watch(wctx, tailCh) })
+	}
 	select {
 	case <-linked:
 	case <-ctl.Done():
@@ -166,13 +201,12 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		return 0, ctx.Err()
 	}
 	started := time.Now()
-	st := Status{PID: os.Getpid(), Port: port, URL: "http://" + site.Hosts[0] + "/", Sock: cfg.UnixPath, Started: started,
+	st := Status{PID: os.Getpid(), Port: port, URL: url, Sock: cfg.UnixPath, Started: started,
 		IdleS: int(cfg.Idle / time.Second), MaxS: int(cfg.Max / time.Second)}
 	if err := writeStatus(cfg.StatusPath, st); err != nil {
 		return 0, err
 	}
 	defer func() { _ = os.Remove(cfg.StatusPath) }()
-	where := "127.0.0.1:" + strconv.Itoa(port)
 	if cfg.UnixPath != "" {
 		where += " over ssh"
 	}
@@ -180,13 +214,13 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		return 0, err
 	}
 	if cfg.Handoff != nil {
-		_ = json.NewEncoder(cfg.Handoff).Encode(map[string]int{"port": port})
+		_ = json.NewEncoder(cfg.Handoff).Encode(handoff{Port: port, URL: url})
 		if c, ok := cfg.Handoff.(io.Closer); ok {
 			_ = c.Close()
 		}
 	}
 
-	code, kind, why := waitStop(ctx, ctl, &last, cfg.Idle, started.Add(cfg.Max))
+	code, kind, why := waitStop(ctx, ctl, &last, cfg.Idle, started.Add(cfg.Max), tailCh)
 	if code == webproto.CloseStopped {
 		tokens.RevokeAll()
 	}
@@ -200,7 +234,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 
 // waitStop waits for the first reason to stop. The idle timer is one
 // timer moved forward only when it fires early: no ticking while idle.
-func waitStop(ctx context.Context, ctl *Ctl, last *atomic.Int64, idle time.Duration, maxAt time.Time) (webproto.CloseCode, EventKind, string) {
+func waitStop(ctx context.Context, ctl *Ctl, last *atomic.Int64, idle time.Duration, maxAt time.Time, tail <-chan tailStop) (webproto.CloseCode, EventKind, string) {
 	idleT := time.NewTimer(idle)
 	defer idleT.Stop()
 	maxT := time.NewTimer(time.Until(maxAt))
@@ -216,6 +250,8 @@ func waitStop(ctx context.Context, ctl *Ctl, last *atomic.Int64, idle time.Durat
 			return webproto.CloseStopped, EvKillSwitch, "signal"
 		case <-maxT.C:
 			return webproto.CloseMaxLifetime, EvMaxStop, "max"
+		case ts := <-tail:
+			return webproto.CloseStopped, ts.kind, ts.why
 		case <-idleT.C:
 			since := time.Since(time.Unix(0, last.Load()))
 			if since >= idle {
