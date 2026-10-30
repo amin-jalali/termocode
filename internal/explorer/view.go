@@ -616,8 +616,14 @@ func nodeIsIgnored(n *Node, gs GitStatus) bool {
 			return true
 		}
 	}
-	name := n.Name
-	if n.IsDir {
+	return IgnoredName(n.Name, n.IsDir)
+}
+
+// IgnoredName is the explorer's list of build artefacts and noisy files
+// (node_modules, dist, lock files, minified bundles) drawn dimmed. The
+// web UI's tree marks the same entries.
+func IgnoredName(name string, isDir bool) bool {
+	if isDir {
 		switch name {
 		case "node_modules", ".git", "dist", "build", "target", "out", "vendor", ".next", ".cache":
 			return true
