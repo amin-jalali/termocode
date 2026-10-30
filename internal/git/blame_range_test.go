@@ -21,10 +21,10 @@ func TestBlameRange(t *testing.T) {
 	if len(lines) != 3 {
 		t.Fatalf("got %d lines: %#v", len(lines), lines)
 	}
-	if l := lines[0]; l.Line != 1 || l.Author != "Test" || l.Subject != "first two" || len(l.Hash) != 7 || len(l.Date) != 10 {
+	if l := lines[0]; l.Line != 1 || l.Author != "Test" || l.Subject != "first two" || len(l.Hash) != 7 || len(l.Date) != 10 || l.When < 1e9 {
 		t.Errorf("line 1: %#v", l)
 	}
-	if l := lines[1]; l.Line != 2 || l.Hash != "uncommitted" {
+	if l := lines[1]; l.Line != 2 || l.Hash != "uncommitted" || l.When != 0 {
 		t.Errorf("line 2: %#v", l)
 	}
 	if l := lines[2]; l.Line != 3 || l.Subject != "add gamma" || l.Hash == lines[0].Hash {

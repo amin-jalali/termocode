@@ -15,6 +15,7 @@ type BlameRangeLine struct {
 	Hash    string // short sha, or "uncommitted"
 	Author  string
 	Date    string // author date, YYYY-MM-DD ("" when uncommitted)
+	When    int64  // author date, Unix seconds (0 when uncommitted)
 	Subject string
 }
 
@@ -44,7 +45,10 @@ func BlameRange(dir, path string, start, end int) ([]BlameRangeLine, error) {
 // header per line, commit headers only the first time a sha shows up,
 // then the line itself after a tab.
 func parseBlameRange(s string) []BlameRangeLine {
-	type info struct{ author, date, subject string }
+	type info struct {
+		author, date, subject string
+		when                  int64
+	}
 	commits := map[string]*info{}
 	var out []BlameRangeLine
 	var cur *BlameRangeLine
@@ -56,7 +60,7 @@ func parseBlameRange(s string) []BlameRangeLine {
 				if strings.Trim(sha, "0") == "" {
 					cur.Hash = "uncommitted"
 				} else if c != nil {
-					cur.Author, cur.Date, cur.Subject = c.author, c.date, c.subject
+					cur.Author, cur.Date, cur.Subject, cur.When = c.author, c.date, c.subject, c.when
 				}
 				out = append(out, *cur)
 				cur = nil
@@ -84,7 +88,7 @@ func parseBlameRange(s string) []BlameRangeLine {
 			c.author = strings.TrimPrefix(line, "author ")
 		case strings.HasPrefix(line, "author-time "):
 			if sec, err := strconv.ParseInt(strings.TrimPrefix(line, "author-time "), 10, 64); err == nil {
-				c.date = time.Unix(sec, 0).Format("2006-01-02")
+				c.date, c.when = time.Unix(sec, 0).Format("2006-01-02"), sec
 			}
 		case strings.HasPrefix(line, "summary "):
 			c.subject = strings.TrimPrefix(line, "summary ")
