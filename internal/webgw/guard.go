@@ -4,6 +4,10 @@ package webgw
 
 import "net/http"
 
+// MaxBodyBytes caps every request body. The largest real body is the
+// /auth JSON (well under 1 KiB); the WebSocket has its own read limit.
+const MaxBodyBytes = 4 << 10
+
 // guard is the first handler of every request. It writes the security
 // headers, then refuses anything not meant for this one site before the
 // next handler sees it.
@@ -19,6 +23,8 @@ type guard struct {
 //     preflight answer and never an Access-Control-* header.
 //   - An Origin header must be this exact origin; POST and upgrades must
 //     send one. Else 403 (cross-site WebSocket and CSRF, T2, T3).
+//   - A body is at most MaxBodyBytes: a larger declared one gets 413, an
+//     undeclared one stops with an error at the cap (T17).
 //
 // Every response, refusals included, carries the security headers.
 func Guard(site Site, next http.Handler) http.Handler {
@@ -40,6 +46,11 @@ func (g *guard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusForbidden, "wrong origin")
 		return
 	}
+	if r.ContentLength > MaxBodyBytes {
+		refuse(w, http.StatusRequestEntityTooLarge, "body too large")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 	g.next.ServeHTTP(w, r)
 }
 
