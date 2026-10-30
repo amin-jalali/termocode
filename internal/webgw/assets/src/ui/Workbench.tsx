@@ -31,6 +31,7 @@ import type { Tab } from "../state/route";
 import { t } from "../strings";
 import { ChatView, GitView, MoreView } from "../views/views";
 import { DeskTerm } from "../views/DeskTerm";
+import { ExplorerSections, isTimeline, tabName, TimelineDiff } from "../views/Explorer";
 import { FileView } from "../views/FileView";
 import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
@@ -44,11 +45,6 @@ import { SearchView } from "../views/more/SearchView";
 import { TasksView } from "../views/more/TasksView";
 import { QuickInput } from "./QuickInput";
 import { StatusBar } from "./StatusBar";
-
-function baseName(path: string): string {
-  const i = path.lastIndexOf("/");
-  return i < 0 ? path : path.slice(i + 1);
-}
 
 /** Sash is a drag handle between two panes. It reports the new size from
  * the size at the start plus the pointer's move (dir -1: the pane is on
@@ -101,7 +97,7 @@ function EditorTabs({ tabs, bufs }: { tabs: readonly string[]; bufs: readonly Bu
       {tabs.map((path) => {
         const b = bufs.find((x) => x.path === path);
         const on = path === cur;
-        const name = baseName(path);
+        const name = tabName(path);
         return (
           <div key={path} class={`ed-tab${on ? " is-on" : ""}${b?.dirty ? " is-dirty" : ""}`} title={path} onAuxClick={(e) => e.button === 1 && closeTab(path, tabs)}>
             <button type="button" class="ed-tab-open" role="tab" aria-selected={on ? "true" : "false"} data-path={path} onClick={() => showFile(path)}>
@@ -144,6 +140,7 @@ function Welcome() {
  * the welcome. */
 function EditorBody({ more, file }: { more: boolean; file: string | null }) {
   if (more) return <MoreView />;
+  if (file && isTimeline(file)) return <TimelineDiff key={file} tab={file} />;
   if (file) return <FileView key={file} path={file} />;
   return <Welcome />;
 }
@@ -210,7 +207,12 @@ function SideView({ id }: { id: Activity }) {
     case "mcp":
       return <MCPView />;
     default:
-      return <TreeView />;
+      return (
+        <div class="side-stack ex-stack">
+          <TreeView />
+          <ExplorerSections />
+        </div>
+      );
   }
 }
 

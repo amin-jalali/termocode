@@ -19,6 +19,7 @@ import "./styles/media.css";
 import "./styles/codicons.css";
 import "./styles/workbench.css";
 import "./styles/deskterm.css";
+import "./styles/explorer.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";
