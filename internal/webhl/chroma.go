@@ -1,4 +1,6 @@
-package app
+// Package webhl colours code rows for the web file view when nvim has no
+// tree-sitter parser for the file.
+package webhl
 
 import (
 	"path/filepath"
@@ -124,10 +126,10 @@ func webHlGroupOf(tt chroma.TokenType, v string) string {
 	return ""
 }
 
-// webHlChroma colours rows [first, last) of rows (the buffer at tick)
+// Chroma colours rows [first, last) of rows (the buffer at tick)
 // with chroma. ok is false when no lexer knows the file: the answer is
 // then "none" as before.
-func webHlChroma(path, ft string, rows []string, tick, first, last, maxSpans int) (res webproto.HlRes, ok bool) {
+func Chroma(path, ft string, rows []string, tick, first, last, maxSpans int) (res webproto.HlRes, ok bool) {
 	lx := webHlLexer(path, ft)
 	if lx == nil {
 		return webproto.HlRes{}, false
