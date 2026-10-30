@@ -95,6 +95,29 @@ func shotHub(t *testing.T, c *HubConn) {
 		"git": webproto.GitSnap{Repo: true, Branch: webproto.GitBranch{Name: "main", Ahead: 1},
 			Files: []webproto.GitFile{{Path: "cmd/covreport/filter.go", X: " ", Y: "M", Unstaged: true}, {Path: "README.md", X: "M", Y: " ", Staged: true}, {Path: "notes.txt", X: "?", Y: "?", Untracked: true}},
 			Log:   []webproto.GitCommit{{Hash: "60ed1c8", Subject: "test(e2e): the MCP relay's stderr is read under a lock", Author: "Amin", When: time.Now().Add(-time.Hour).UnixMilli()}}},
+		"tasks": webproto.TasksSnap{Tasks: []webproto.TaskItem{
+			{Label: "build", Group: "build", Default: true, Source: "make", Detail: "make build", Last: &webproto.TaskLast{State: "ok", When: time.Now().Add(-20 * time.Minute).UnixMilli(), Buf: 8}},
+			{Label: "test", Group: "test", Source: "go", Detail: "go test ./...", Last: &webproto.TaskLast{State: "running", When: time.Now().Add(-40 * time.Second).UnixMilli(), Buf: 8}},
+			{Label: "lint", Source: "tasks.json", Detail: "golangci-lint run", Last: &webproto.TaskLast{State: "failed", Code: 1, When: time.Now().Add(-3 * time.Hour).UnixMilli(), Buf: 9}},
+			{Label: "docs", Source: "npm", Detail: "npm run docs"},
+		}},
+		"runs": webproto.RunsSnap{Runs: []webproto.RunItem{
+			{Key: "c1/r1", Title: "fix the toast flicker", Chat: "Fix the build", Profile: "coder", State: "running", Step: 2, Steps: 4, StepTitle: "Run the tests", ElapsedMs: 41000, Live: true, CostUSD: 0.12, Can: []string{"stop", "pause"}},
+			{Key: "c1/r0", Title: "add a test for a line without a newline", Profile: "review", State: "done", Step: 3, Steps: 3, ElapsedMs: 125000, CostUSD: 0.31},
+			{Key: "c2/r4", Title: "rename the cover report flags", Profile: "coder", State: "paused", Why: "Waiting for you to answer a card.", Step: 1, Steps: 5, ElapsedMs: 9000, NeedsYou: true, Can: []string{"resume", "stop"}},
+		}},
+		"mcp": webproto.MCPSnap{Mode: "auto", Listening: true,
+			Agents: []webproto.MCPAgent{{Name: "claude-desktop", Since: time.Now().Add(-25 * time.Minute).UnixMilli(), Calls: 14, Asked: 2}, {Name: "cursor-agent", Since: time.Now().Add(-4 * time.Minute).UnixMilli(), Calls: 3}},
+			Calls: []string{"12:03 claude-desktop · read_file · ran without asking", "12:04 claude-desktop · run_task · asked, you allowed", "12:09 cursor-agent · search · ran without asking"}},
+		"settings": webproto.SettingsSnap{Items: []webproto.SettingItem{
+			{Key: "theme", Group: "Appearance", Type: "enum", Value: "vscode-dark-plus", Default: "vscode-dark-plus", Description: "The colour theme of the editor and the panels."},
+			{Key: "font_size", Group: "Appearance", Type: "int", Value: "14", Default: "13", Description: "The size of the editor's text, in points."},
+			{Key: "tab_size", Group: "Editor", Type: "int", Value: "4", Default: "4", Description: "How many spaces a tab is wide."},
+			{Key: "word_wrap", Group: "Editor", Type: "bool", Value: "false", Default: "false", Description: "Wrap long lines at the window's edge."},
+			{Key: "format_on_save", Group: "Editor", Type: "bool", Value: "true", Default: "false", Description: "Format a file with its language server when it is saved."},
+			{Key: "ai.profile", Group: "AI", Type: "string", Value: "coder", Default: "coder", Description: "The agent profile a new chat starts with."},
+			{Key: "mcp_server", Group: "AI", Type: "enum", Value: "auto", Default: "auto", Description: "Let outside agents use termocode as an MCP server."},
+		}},
 	}
 	for _, tp := range []string{"chat", "cards", "chats", "tree", "bufs", "git"} { // asked for at login (git: on a desktop)
 		c.Send(t, Snap(tp, 1, snaps[tp]))
@@ -123,6 +146,46 @@ func shotHub(t *testing.T, c *HubConn) {
 					// The index's copy: the file before its two changed rows.
 					old := strings.Replace(strings.Replace(shotFile, `"-coverpkg"`, `"…"`, 1), "\ttail := \"\"\n", "\tvar tail string\n", 1)
 					data = webproto.GitText{Path: "cmd/covreport/filter.go", Rev: "index", Text: old}
+				case "search.run":
+					var a struct {
+						Query string `json:"query"`
+					}
+					_ = json.Unmarshal(v.Args, &a)
+					hits := []webproto.SearchHit{}
+					for i, l := range lines {
+						if j := strings.Index(l, a.Query); j >= 0 && a.Query != "" {
+							hits = append(hits, webproto.SearchHit{Path: "cmd/covreport/filter.go", Line: i + 1, Col: j + 1, Text: l, Marks: []webproto.SearchMark{{S: j, E: j + len(a.Query)}}})
+						}
+					}
+					hits = append(hits, webproto.SearchHit{Path: "cmd/covreport/main.go", Line: 12, Col: 5, Text: "\tw := &lineFilter{w: os.Stdout, f: shortenCoverLine}", Marks: []webproto.SearchMark{{S: 30, E: 30 + len(a.Query)}}},
+						webproto.SearchHit{Path: "internal/report/cover.go", Line: 88, Col: 2, Text: "\t// lineFilter keeps the coverage line short", Marks: []webproto.SearchMark{{S: 4, E: 4 + len(a.Query)}}})
+					_ = c.send(&webproto.Event{T: webproto.KindEv, Kind: webproto.EventSearchBatch, Data: raw(webproto.SearchBatch{ID: uint64(v.ID), Results: hits})})
+					data = webproto.SearchSummary{Files: 3, Matches: len(hits), Ms: 412}
+				case "db.conns":
+					data = webproto.DBConns{Conns: []webproto.DBConn{
+						{ID: "local", Name: "shop (local)", Driver: "postgres", Database: "shop", SQL: true},
+						{ID: "prod", Name: "shop (production)", Driver: "postgres", Database: "shop", Env: "production", ReadOnly: true, SQL: true},
+						{ID: "cache", Name: "cache", Driver: "redis"},
+					}}
+				case "db.tables":
+					data = webproto.DBTables{Conn: "local", Schema: "public", Tables: []webproto.DBTable{{Name: "customers"}, {Name: "orders"}, {Name: "order_items"}, {Name: "products"}, {Name: "sales_by_month", View: true}}}
+				case "db.rows", "db.query":
+					cell := func(s string) webproto.DBCell { return webproto.DBCell{V: s} }
+					data = webproto.DBRows{Columns: []string{"id", "email", "name", "total", "api_token", "created_at"}, Ms: 14, Masked: 3, Rows: [][]webproto.DBCell{
+						{cell("1"), cell("ann@example.com"), cell("Ann Lee"), cell("1250.00"), {V: "••••", M: true}, cell("2026-10-01 09:12:44")},
+						{cell("2"), cell("bo@example.com"), cell("Bo Chen"), cell("89.90"), {V: "••••", M: true}, cell("2026-10-02 17:03:10")},
+						{cell("3"), cell("cy@example.com"), {N: true}, cell("0.00"), {N: true}, cell("2026-10-05 11:40:02")},
+						{cell("4"), cell("dee@example.com"), cell("Dee Park"), cell("312.45"), {V: "••••", M: true}, cell("2026-10-09 08:00:00")},
+					}}
+				case "containers.list":
+					data = webproto.ContainersList{Engine: "docker", Context: "default", Containers: []webproto.ContainerItem{
+						{ID: "9f3c2e1a1234", Name: "shop-api-1", Image: "ghcr.io/acme/api:1.4", State: "running", Status: "Up 2 hours (healthy)", Ports: "0.0.0.0:8081->8080/tcp", Project: "shop"},
+						{ID: "9f3c2e1a5678", Name: "shop-db-1", Image: "postgres:17", State: "running", Status: "Up 2 hours", Ports: "5432/tcp", Project: "shop"},
+						{ID: "aabbccdd1122", Name: "old-nginx", Image: "nginx:1.27", State: "exited", Status: "Exited (1) 3 days ago"},
+						{ID: "aabbccdd3344", Name: "redis-cache", Image: "redis:7", State: "paused", Status: "Up 5 days (Paused)"},
+					}}
+				case "tasks.tail":
+					data = webproto.TaskTail{Buf: 8, Lines: []string{"=== RUN   TestShorten", "--- PASS: TestShorten (0.00s)", "ok  \tgithub.com/amin-jalali/termocode/cmd/covreport\t0.412s"}}
 				case "buf.hl":
 					var a webproto.HlArgs
 					_ = json.Unmarshal(v.Args, &a)
@@ -168,6 +231,21 @@ func TestShots(t *testing.T) {
 				shot("term", "#/term", `document.querySelector('[data-view="term"] .trow')`)
 				shot("git", "#/git", `document.querySelector('.git-row-wrap')`)
 				if !vp.Mobile {
+					// Every view of the activity bar, with data.
+					has := func(text string) string { return `document.querySelector(".wb").innerText.includes(` + jsq(text) + `)` }
+					Eval[bool](p, `(location.hash = "#/more/search", true)`)
+					p.WaitJS(`document.querySelector(".wb-side input")`)
+					Eval[bool](p, `(() => { const i = document.querySelector(".wb-side input"); i.focus(); i.value = "lineFilter"; i.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`)
+					p.Key("\r")
+					snap(t, p, filepath.Join(dir, vp.Name+"-"+scheme+"-search.png"), has("cover.go"))
+					shot("run", "#/more/tasks", has("fix the toast flicker")+` && `+has("lint"))
+					shot("db", "#/more/db", has("shop (local)"))
+					shot("db-tables", "#/more/db/local", has("customers"))
+					shot("db-rows", "#/more/db/local/customers", has("ann@example.com"))
+					shot("containers", "#/more/containers", has("shop-api-1"))
+					shot("mcp", "#/more/mcp", has("claude-desktop"))
+					shot("settings", "#/more/settings", has("format_on_save")+` || `+has("Format On Save"))
+					shot("device", "#/more", `document.querySelector('[data-view="more"], [data-view="device"]')`)
 					diffDoc := `document.querySelector('[data-view="diff"] .desk-editor')?.contentDocument`
 					shot("diff", "#/git/cmd/covreport/filter.go", diffDoc+`?.querySelector(".editor.modified .char-insert") && `+diffDoc+`.querySelector(".editor.modified .view-line .hl-kc")`)
 				}
