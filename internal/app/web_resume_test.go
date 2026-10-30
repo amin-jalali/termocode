@@ -71,3 +71,64 @@ func TestResumeWithin60s(t *testing.T) {
 		t.Fatalf("the resume entry was not used up: %v", r.hub.resume)
 	}
 }
+
+// Spec (WEB-7): after 60 s, for an unknown connection, for a topic that
+// was stale, or when more deltas were missed than the ring keeps, resume
+// falls back to a fresh snap of each topic the browser listed.
+func TestResumeAfter60sSnapshots(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		away  time.Duration
+		conn  string
+		extra int // deltas published while away
+	}{
+		{"after 60 s", webResumeFor + time.Second, "c-1", 1},
+		{"unknown connection", time.Second, "c-9", 1},
+		{"ring overflow", time.Second, "c-1", webRingLen + 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, n, now := webResumeRig(t)
+			c1, _ := r.webHello(webTestOpen)
+			c1.send(`{"t":"sub","topics":["status"]}`)
+			r.nextMsg(c1)
+			r.webDropConn(c1)
+			*now = now.Add(tc.away)
+			for i := 1; i <= tc.extra; i++ {
+				*n = i
+				r.m.webPublish("status", map[string]int{"n": i})
+			}
+			c2 := r.dial(`{"t":"open","conn":"c-2","role":"controller","device":"loc-1"}`)
+			c2.send(`{"t":"hello","v":2,"token":"x","resume":{"conn":"` + tc.conn + `","topics":{"status":1}}}`)
+			r.nextMsg(c2) // meta
+			snap := r.nextMsg(c2)
+			data, _ := snap["data"].(map[string]any)
+			if snap["t"] != "snap" || snap["seq"] != float64(1) || data["n"] != float64(tc.extra) {
+				t.Fatalf("want a fresh snap, got %v", snap)
+			}
+			if want := map[bool]int{true: 1, false: 0}[tc.conn != "c-1"]; len(r.hub.resume) != want {
+				t.Fatalf("resume table %v, want %d entries", r.hub.resume, want) // another id's entry stays
+			}
+			if tc.name == "after 60 s" && len(r.hub.rings) != 1 {
+				t.Fatalf("rings %d: only the live topic keeps one", len(r.hub.rings))
+			}
+		})
+	}
+	// A topic that was stale when the connection dropped.
+	r, _, _ := webResumeRig(t)
+	c1, _ := r.webHello(webTestOpen)
+	c1.send(`{"t":"sub","topics":["status"]}`)
+	r.nextMsg(c1)
+	r.hub.mu.Lock()
+	hc := r.hub.byID["c-1"]
+	r.hub.mu.Unlock()
+	hc.out.mu.Lock()
+	hc.out.stale["status"] = true
+	hc.out.mu.Unlock()
+	r.webDropConn(c1)
+	c2 := r.dial(`{"t":"open","conn":"c-2","role":"controller","device":"loc-1"}`)
+	c2.send(`{"t":"hello","v":2,"token":"x","resume":{"conn":"c-1","topics":{"status":1}}}`)
+	r.nextMsg(c2)
+	if snap := r.nextMsg(c2); snap["t"] != "snap" {
+		t.Fatalf("stale topic: %v", snap)
+	}
+}
