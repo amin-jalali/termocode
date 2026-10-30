@@ -67,6 +67,13 @@ export class LiveSync {
     return this.ed.text() !== this.known.text;
   }
 
+  /** settled is the changedtick the page's text is known at: null while
+   * text is unsent or on its way, in a conflict, or when the buffer is gone. */
+  settled(): number | null {
+    if (this.conflict || this.gone || this.flying || this.dirty()) return null;
+    return this.known.tick;
+  }
+
   /** local: the user changed the text. */
   local(): void {
     if (this.conflict || this.gone) return;

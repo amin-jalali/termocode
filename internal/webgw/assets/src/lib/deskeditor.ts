@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type FrameMarker, type FrameOpts, type FromFrame, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
@@ -55,6 +55,14 @@ export interface DeskHost extends EditorHost {
   wrap: boolean;
   tabSize: number;
   insertSpaces: boolean;
+  /** path is the file's workspace path. */
+  path?: string;
+  /** lsp: the editor asks for hover, completion and definitions
+   * (onLsp); a definition elsewhere opens there (onOpen). Positions are
+   * 0-based, columns in UTF-16 units. */
+  lsp?: boolean;
+  onLsp?(kind: LspKind, line: number, col: number): Promise<unknown>;
+  onOpen?(path: string, line: number, col: number): void;
 }
 
 /** DeskHandle is an EditorHandle with the settings the view changes. */
@@ -109,7 +117,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "ready": {
         ready = true;
         const c = frameColors(parent);
-        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
+        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, lsp: host.lsp, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.
@@ -142,6 +150,16 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         editorMenu(r.left + m.x, r.top + m.y, m, send);
         return;
       }
+      case "lsp": {
+        const id = m.id;
+        const answer = (data: unknown) => send({ t: "lspRes", id, data });
+        if (!host.onLsp) return answer(null);
+        host.onLsp(m.kind, m.line, m.col).then(answer, () => answer(null));
+        return;
+      }
+      case "open":
+        host.onOpen?.(m.path, m.line, m.col);
+        return;
       case "key":
         // The workbench's keys work while the editor has the focus.
         dispatchEvent(new KeyboardEvent("keydown", { key: m.key, code: m.code, ctrlKey: m.ctrl, metaKey: m.meta, shiftKey: m.shift, altKey: m.alt, bubbles: true, cancelable: true }));

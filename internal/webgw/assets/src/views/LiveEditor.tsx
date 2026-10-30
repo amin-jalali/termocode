@@ -15,7 +15,7 @@ import { editing, liveStatus, LiveSync, session, setSync, syncs } from "../lib/l
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
-import { diagSnap, fileMarkers, revealAt } from "../lib/lsp";
+import { ask, diagSnap, fileMarkers, goTo, revealAt } from "../lib/lsp";
 import { isGone } from "../state/files";
 import { t } from "../strings";
 import { Button } from "../ui/Button";
@@ -110,7 +110,21 @@ export function LiveEditor({ path, buf, desk, slot = "g0" }: { path: string; buf
     const peek = () => readBuf(store.topic(topic).peek()?.data);
     const d = desk;
     const load: Promise<EditorModule> = d
-      ? Promise.resolve({ mount: (el, host) => mountDesk(el, { ...host, ...d, slot, onDone: () => undefined }) })
+      ? Promise.resolve({
+          mount: (el, host) =>
+            mountDesk(el, {
+              ...host,
+              ...d,
+              slot,
+              onDone: () => undefined,
+              // The laptop's language servers: hover, completion, go to
+              // definition (another file opens in its tab).
+              path,
+              lsp: true,
+              onLsp: (kind, line, col) => ask(kind, buf, line, col),
+              onOpen: (to, line, col) => goTo(to, line, col),
+            }),
+        })
       : loadEditor();
     load.then(
       (mod) => {

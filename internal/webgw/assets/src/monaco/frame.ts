@@ -11,7 +11,9 @@ import { ChangeSet, Text } from "@codemirror/state";
 import { dict } from "../state/dict";
 import { History } from "../editor/history";
 import { diff } from "../lib/textdiff";
-import type { FrameMarker, FrameOpts, FromFrame, MenuCan, ToFrame } from "./protocol";
+import type { LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
+import { md } from "./mdtext";
+import type { FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -35,8 +37,20 @@ interface EditOp {
   text: string;
   forceMoveMarkers?: boolean;
 }
+interface Uri {
+  scheme: string;
+  path: string;
+}
+interface Word {
+  word: string;
+  startColumn: number;
+  endColumn: number;
+}
 interface Model {
+  uri: Uri;
   getValue(): string;
+  getWordUntilPosition(p: Pos): Word;
+  getWordAtPosition(p: Pos): Word | null;
   setEOL(eol: number): void;
   getPositionAt(offset: number): Pos;
   getLineCount(): number;
@@ -84,6 +98,9 @@ interface EditorNS {
   defineTheme(name: string, data: { base: string; inherit: boolean; rules: unknown[]; colors: Record<string, string> }): void;
   setTheme(name: string): void;
 }
+interface Token {
+  isCancellationRequested: boolean;
+}
 interface MarkerData {
   severity: number;
   message: string;
@@ -94,8 +111,30 @@ interface MarkerData {
   endLineNumber: number;
   endColumn: number;
 }
+interface Suggestion {
+  label: string;
+  kind: number;
+  detail?: string;
+  documentation?: string;
+  insertText: string;
+  insertTextRules?: number;
+  sortText?: string;
+  filterText?: string;
+  range: IRange;
+  additionalTextEdits?: { range: IRange; text: string }[];
+}
+interface Languages {
+  registerHoverProvider(sel: string, p: { provideHover(m: Model, p: Pos, t: Token): Promise<{ contents: { value: string; isTrusted: boolean; supportHtml: boolean }[]; range?: IRange } | null> }): unknown;
+  registerCompletionItemProvider(sel: string, p: { triggerCharacters: string[]; provideCompletionItems(m: Model, p: Pos, c: unknown, t: Token): Promise<{ suggestions: Suggestion[]; incomplete?: boolean }> }): unknown;
+  registerDefinitionProvider(sel: string, p: { provideDefinition(m: Model, p: Pos, t: Token): Promise<{ uri: Uri; range: IRange }[] | null> }): unknown;
+}
 interface Api {
-  editor: EditorNS & { setModelMarkers(m: Model, owner: string, markers: MarkerData[]): void };
+  editor: EditorNS & {
+    setModelMarkers(m: Model, owner: string, markers: MarkerData[]): void;
+    registerEditorOpener(o: { openCodeEditor(source: Editor, resource: Uri, sel?: IRange | Pos): boolean }): unknown;
+  };
+  languages: Languages;
+  Uri: { from(c: { scheme: string; path: string }): Uri };
   KeyMod: { CtrlCmd: number; Shift: number };
   KeyCode: { KeyZ: number; KeyY: number; KeyS: number };
 }
@@ -154,8 +193,46 @@ function menuEdit(m: Extract<ToFrame, { t: "edit" }>): void {
   ed.focus();
 }
 
+// Language features: the frame asks the page (which asks the laptop's
+// language servers through the hub) and waits for the answer by id.
+let myPath = "";
+let lspOn = false;
+let lspReady = false;
+let nextAsk = 0;
+const asks = new Map<number, (d: unknown) => void>();
+
+/** COMPLETE_MS: completion asks once typing pauses this long. */
+const COMPLETE_MS = 80;
+/** ASK_MS: a question the page does not answer in time gets nothing. */
+const ASK_MS = 10_000;
+const OPEN_SCHEME = "termocode-file";
+
 /** SEV maps a diagnostic's severity (1 error … 4 hint) to the editor's. */
 const SEV: Readonly<Record<number, number>> = { 1: 8, 2: 4, 3: 2, 4: 1 };
+/** KINDS maps the protocol's CompletionItemKind (index) to the editor's. */
+const KINDS = [18, 18, 0, 1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 15, 17, 27, 19, 20, 21, 23, 16, 14, 6, 10, 11, 24];
+
+function ask(kind: LspKind, p: Pos): Promise<unknown> {
+  const id = ++nextAsk;
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      asks.delete(id);
+      resolve(null);
+    }, ASK_MS);
+    asks.set(id, (d) => {
+      clearTimeout(timer);
+      asks.delete(id);
+      resolve(d);
+    });
+    post({ t: "lsp", id, kind, line: p.lineNumber - 1, col: p.column - 1 });
+  });
+}
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+function oneLine(line: number, a: number, b: number): IRange {
+  return { startLineNumber: line, startColumn: a, endLineNumber: line, endColumn: b };
+}
 
 /** markers paints the file's diagnostics (squiggles, ruler, hover). */
 function markers(items: readonly FrameMarker[]): void {
@@ -174,6 +251,73 @@ function markers(items: readonly FrameMarker[]): void {
       endColumn: d.endCol,
     })),
   );
+}
+
+/** startLsp registers the providers once (they serve this frame's model). */
+function startLsp(): void {
+  if (lspReady) return;
+  lspReady = true;
+  const L = api.languages;
+  L.registerHoverProvider("*", {
+    async provideHover(m, p, tk) {
+      if (!lspOn || m !== model) return null;
+      const d = (await ask("hover", p)) as LspHover | null;
+      if (tk.isCancellationRequested || !d || !d.md) return null;
+      const w = m.getWordAtPosition(p);
+      return { contents: [{ value: md(d.md), isTrusted: false, supportHtml: false }], range: w ? oneLine(p.lineNumber, w.startColumn, w.endColumn) : undefined };
+    },
+  });
+  L.registerCompletionItemProvider("*", {
+    triggerCharacters: ["."],
+    async provideCompletionItems(m, p, _c, tk) {
+      const none = { suggestions: [] };
+      if (!lspOn || m !== model) return none;
+      await sleep(COMPLETE_MS);
+      if (tk.isCancellationRequested) return none;
+      const d = (await ask("complete", p)) as LspCompletion | null;
+      if (tk.isCancellationRequested || !d || !Array.isArray(d.items)) return none;
+      const w = m.getWordUntilPosition(p);
+      const def = oneLine(p.lineNumber, w.startColumn, p.column);
+      return {
+        incomplete: d.incomplete === true,
+        suggestions: d.items.map((it) => ({
+          label: it.label,
+          kind: KINDS[it.kind ?? 1] ?? 18,
+          detail: it.detail || undefined,
+          documentation: it.doc || undefined,
+          insertText: it.insert,
+          insertTextRules: it.snippet ? 4 : undefined,
+          sortText: it.sort || undefined,
+          filterText: it.filter || undefined,
+          range: it.from >= 0 && it.to >= it.from ? oneLine(p.lineNumber, it.from + 1, it.to + 1) : def,
+          additionalTextEdits: it.edits?.map((e) => ({ range: { startLineNumber: e.line + 1, startColumn: e.col + 1, endLineNumber: e.endLine + 1, endColumn: e.endCol + 1 }, text: e.text })),
+        })),
+      };
+    },
+  });
+  L.registerDefinitionProvider("*", {
+    async provideDefinition(m, p, tk) {
+      if (!lspOn || m !== model) return null;
+      const d = (await ask("definition", p)) as LspLocations | null;
+      if (tk.isCancellationRequested || !d || !Array.isArray(d.locs)) return null;
+      const out: { uri: Uri; range: IRange }[] = [];
+      for (const l of d.locs) {
+        if (l.outside || !l.path) continue;
+        const uri = l.path === myPath ? m.uri : api.Uri.from({ scheme: OPEN_SCHEME, path: "/" + l.path });
+        out.push({ uri, range: { startLineNumber: l.line + 1, startColumn: l.col + 1, endLineNumber: l.endLine + 1, endColumn: l.endCol + 1 } });
+      }
+      return out.length ? out : null;
+    },
+  });
+  // A definition in another file opens there: the page opens its tab.
+  api.editor.registerEditorOpener({
+    openCodeEditor(_src, r, sel) {
+      if (r.scheme !== OPEN_SCHEME) return false;
+      const at = sel && "startLineNumber" in sel ? { lineNumber: sel.startLineNumber, column: sel.startColumn } : (sel ?? { lineNumber: 1, column: 1 });
+      post({ t: "open", path: r.path.replace(/^\//, ""), line: at.lineNumber - 1, col: at.column - 1 });
+      return true;
+    },
+  });
 }
 
 function sendText(user: boolean): void {
@@ -310,13 +454,17 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     unicodeHighlight: { ambiguousCharacters: false, invisibleCharacters: false, nonBasicASCII: false },
     colorDecorators: false,
     links: false,
-    quickSuggestions: false,
     wordBasedSuggestions: "off",
     parameterHints: { enabled: false },
-    suggestOnTriggerCharacters: false,
     occurrencesHighlight: "singleFile",
     bracketPairColorization: { enabled: true },
     guides: { indentation: true, bracketPairs: false },
+    // With a language server on the laptop: completion while typing
+    // (asked once typing pauses) and after ".", like the laptop's editor.
+    quickSuggestions: m.lsp ? { other: "on", comments: "off", strings: "off" } : false,
+    suggestOnTriggerCharacters: m.lsp === true,
+    gotoLocation: { multiple: "goto" },
+    definitionLinkOpensInPeek: false,
   });
   readOnly = m.readOnly === true;
   ed.getContainerDomNode().addEventListener("contextmenu", onMenu, true);
@@ -345,6 +493,9 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   ed.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyZ, () => undoRedo(true));
   ed.addCommand(KeyMod.CtrlCmd | KeyCode.KeyY, () => undoRedo(true));
   ed.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => post({ t: "save" }));
+  myPath = m.path ?? "";
+  lspOn = m.lsp === true;
+  if (lspOn) startLsp();
   ed.onKeyDown((e) => {
     const b = e.browserEvent;
     if (!workbenchKey(b)) return;
@@ -426,6 +577,9 @@ function onMessage(e: MessageEvent): void {
     }
     case "markers":
       markers(m.items);
+      return;
+    case "lspRes":
+      asks.get(m.id)?.(m.data);
       return;
   }
 }

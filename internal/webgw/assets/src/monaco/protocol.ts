@@ -14,6 +14,9 @@ export interface FrameOpts {
   /** colors are the workbench's colours by token ("--wb-editor-bg": "#1e1e1e"). */
   colors?: Record<string, string>;
   dark?: boolean;
+  /** lsp: ask the page for hover, completion and definitions (a file
+   * with a language server on the laptop). */
+  lsp?: boolean;
 }
 
 /** FrameMarker is one diagnostic for the editor's squiggles: rows and
@@ -29,8 +32,13 @@ export interface FrameMarker {
   code?: string;
 }
 
+/** LspKind is what the frame asks the page about a position. */
+export type LspKind = "hover" | "complete" | "definition";
+
 export type ToFrame =
-  | ({ t: "init"; doc: string; label: string } & FrameOpts)
+  /** init: path is the file's workspace path (a definition there stays
+   * in this editor). */
+  | ({ t: "init"; doc: string; label: string; path?: string } & FrameOpts)
   | ({ t: "opts" } & FrameOpts)
   /** remote: the laptop's text. seen is the newest frame version the
    * page had; a frame that changed since keeps its text and sends it. */
@@ -48,7 +56,9 @@ export type ToFrame =
    * it on the clipboard); def, refs and format run the editor's own action. */
   | { t: "edit"; op: "cut" | "def" | "refs" | "format" }
   /** markers: the file's diagnostics (all of them, each time). */
-  | { t: "markers"; items: FrameMarker[] };
+  | { t: "markers"; items: FrameMarker[] }
+  /** lspRes answers the frame's lsp question id (data null: nothing). */
+  | { t: "lspRes"; id: number; data: unknown };
 
 /** MenuCan says which of the editor's actions work here now. */
 export interface MenuCan {
@@ -67,6 +77,10 @@ export type FromFrame =
   | { t: "save" }
   /** menu: a right click at (x, y) in the frame; sel is the selected text. */
   | { t: "menu"; x: number; y: number; sel: string; readOnly: boolean; can: MenuCan }
+  /** lsp asks about a position: line 0-based, col in UTF-16 units. */
+  | { t: "lsp"; id: number; kind: LspKind; line: number; col: number }
+  /** open: go to another file (a definition there), 0-based. */
+  | { t: "open"; path: string; line: number; col: number }
   /** key: a workbench key pressed in the editor (Ctrl/Cmd+P, +B, +J …). */
   | { t: "key"; key: string; code: string; ctrl: boolean; meta: boolean; shift: boolean; alt: boolean };
 

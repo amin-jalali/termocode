@@ -77,9 +77,9 @@ func reopenCard(p *Page) {
 }
 
 // paintOps are requests the page sends on its own to colour what it
-// shows (syntax, terminal colours); a test that does not look for one
-// skips it.
-var paintOps = map[string]bool{"buf.hl": true, "term.colors": true}
+// shows (syntax, terminal colours) or for the desktop editor's hover and
+// completion; a test that does not look for one skips it.
+var paintOps = map[string]bool{"buf.hl": true, "term.colors": true, "lsp.hover": true, "lsp.complete": true}
 
 // nextReq returns the page's next request; subs and paint requests on the
 // way are skipped.
