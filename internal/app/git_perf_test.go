@@ -15,6 +15,13 @@ import (
 // bigGitRepo makes a repo with 20 000 committed files (200 folders of
 // 100) and 2 000 changes: 1 500 modified, 500 deleted, 200 new files, and
 // the changes of 10 folders staged.
+//
+// Every file gets an mtime an hour back, like a real work tree that is
+// older than its index. Written "now", the files share a second with
+// the index, git treats them as racily clean and each status reads all
+// 20 000 again (this status takes no index lock, so it never settles
+// that); whether the setup hit that second was luck, and the guard
+// measured 17 or 70 ms on the same code.
 func bigGitRepo(tb testing.TB) string {
 	tb.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
@@ -33,6 +40,16 @@ func bigGitRepo(tb testing.TB) string {
 	run("config", "user.email", "t@e.x")
 	run("config", "user.name", "T")
 	run("config", "commit.gpgsign", "false")
+	old := time.Now().Add(-time.Hour)
+	write := func(p string, data []byte) {
+		tb.Helper()
+		if err := os.WriteFile(p, data, 0o644); err != nil {
+			tb.Fatal(err)
+		}
+		if err := os.Chtimes(p, old, old); err != nil {
+			tb.Fatal(err)
+		}
+	}
 	path := func(d, f int) string {
 		return filepath.Join(dir, fmt.Sprintf("pkg%03d", d), fmt.Sprintf("file%03d.go", f))
 	}
@@ -41,9 +58,7 @@ func bigGitRepo(tb testing.TB) string {
 			tb.Fatal(err)
 		}
 		for f := 0; f < 100; f++ {
-			if err := os.WriteFile(path(d, f), []byte(fmt.Sprintf("package p\n\nfunc F%d() int { return %d }\n", f, f)), 0o644); err != nil {
-				tb.Fatal(err)
-			}
+			write(path(d, f), []byte(fmt.Sprintf("package p\n\nfunc F%d() int { return %d }\n", f, f)))
 		}
 	}
 	run("add", ".")
@@ -54,11 +69,11 @@ func bigGitRepo(tb testing.TB) string {
 			if i%4 == 3 {
 				_ = os.Remove(path(d, f))
 			} else {
-				_ = os.WriteFile(path(d, f), []byte("package p\n// changed\n"), 0o644)
+				write(path(d, f), []byte("package p\n// changed\n"))
 			}
 			i++
 		}
-		_ = os.WriteFile(filepath.Join(dir, fmt.Sprintf("pkg%03d", d), "new.go"), []byte("package p\n"), 0o644)
+		write(filepath.Join(dir, fmt.Sprintf("pkg%03d", d), "new.go"), []byte("package p\n"))
 	}
 	run("add", "pkg00*")
 	return dir
