@@ -5,6 +5,7 @@ import (
 	"context"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -35,7 +36,10 @@ type webConn struct {
 	out        *webQueue
 	writerDone chan struct{}
 
-	hello bool // reader goroutine only: hello was seen
+	hello  bool   // reader goroutine only: hello was seen
+	lastID uint64 // reader goroutine only: the last request id
+
+	inflight atomic.Int32 // requests sent to Update and not answered yet
 }
 
 func newWebConn(h *webHub, nc net.Conn) *webConn {
@@ -106,11 +110,6 @@ func (c *webConn) dispatch(line []byte) bool {
 		return c.request(msg)
 	}
 	return c.send(&webproto.ErrMsg{T: webproto.KindErr, Code: webproto.CodeNotFound, Msg: "This is not available yet."})
-}
-
-// request handles one request.
-func (c *webConn) request(r *webproto.Req) bool {
-	return c.send(&webproto.ErrMsg{T: webproto.KindErr, ID: r.ID, Code: webproto.CodeNotFound, Msg: "This is not available yet."})
 }
 
 // send queues one message; false once the connection is closing.
