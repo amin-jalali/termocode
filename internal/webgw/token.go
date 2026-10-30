@@ -33,6 +33,37 @@ var ErrTokenUnknown = errors.New("unknown session token")
 // forgotten, so the next check is ErrTokenUnknown.
 var ErrTokenExpired = errors.New("the session token expired")
 
+// ErrTooManySessions: MaxSessions tokens are live already.
+var ErrTooManySessions = errors.New("too many web sessions")
+
+// MaxSessions caps the live tokens (one per browser tab).
+const MaxSessions = 16
+
+// Len is the number of tokens kept (expired ones not swept yet included).
+func (t *Tokens) Len() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.byHash)
+}
+
+// RevokeAll drops every token (the kill switch) and says how many.
+func (t *Tokens) RevokeAll() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	n := len(t.byHash)
+	clear(t.byHash)
+	return n
+}
+
+// sweepLocked drops the expired sessions. t.mu is held.
+func (t *Tokens) sweepLocked(now time.Time) {
+	for h, s := range t.byHash {
+		if t.expired(s, now) {
+			delete(t.byHash, h)
+		}
+	}
+}
+
 // Sess is one browser session. It holds no secret: the token itself is
 // known only to the browser (sessionStorage) and as a digest here.
 type Sess struct {
@@ -62,7 +93,8 @@ func NewTokens(idle, max time.Duration) *Tokens {
 }
 
 // Issue makes a new session and returns its token (once; it is not kept)
-// and a copy of the session.
+// and a copy of the session. With MaxSessions live it first sweeps the
+// expired ones, then refuses with ErrTooManySessions.
 func (t *Tokens) Issue(device string, role Role, now time.Time) (string, Sess, error) {
 	tok, err := randomToken()
 	if err != nil {
@@ -74,8 +106,14 @@ func (t *Tokens) Issue(device string, role Role, now time.Time) (string, Sess, e
 	}
 	s := &Sess{ID: "s-" + hex.EncodeToString(id), Device: device, Role: role, Created: now, LastSeen: now}
 	t.mu.Lock()
+	defer t.mu.Unlock()
+	if len(t.byHash) >= MaxSessions {
+		t.sweepLocked(now)
+		if len(t.byHash) >= MaxSessions {
+			return "", Sess{}, ErrTooManySessions
+		}
+	}
 	t.byHash[sha256.Sum256([]byte(tok))] = s
-	t.mu.Unlock()
 	return tok, *s, nil
 }
 
