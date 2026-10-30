@@ -4,6 +4,7 @@ package webgw
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -56,11 +57,19 @@ type Event struct {
 	Summary string    `json:"summary,omitempty"` // short, cleaned
 }
 
+// Rotation: the log moves to <path>.1 before it would pass AuditMaxBytes;
+// AuditKeep old files are kept.
+const (
+	AuditMaxBytes = 5 << 20
+	AuditKeep     = 2
+)
+
 // Audit is the gateway's append-only JSONL log, mode 0600. A nil *Audit
 // logs nothing, so code runs the same with no log configured.
 type Audit struct {
 	path string
 	now  func() time.Time
+	max  int64 // rotate before a write would pass this size
 
 	mu   sync.Mutex
 	f    *os.File
@@ -74,7 +83,7 @@ func OpenAudit(path string, now func() time.Time) (*Audit, error) {
 	if now == nil {
 		now = time.Now
 	}
-	a := &Audit{path: path, now: now}
+	a := &Audit{path: path, now: now, max: AuditMaxBytes}
 	if err := a.open(); err != nil {
 		return nil, err
 	}
@@ -124,9 +133,36 @@ func (a *Audit) Log(e Event) error {
 	if a.f == nil {
 		return os.ErrClosed
 	}
+	if a.size > 0 && a.size+int64(len(line)) > a.max {
+		if err := a.rotate(); err != nil {
+			return err
+		}
+	}
 	n, err := a.f.Write(line)
 	a.size += int64(n)
 	return err
+}
+
+// rotate moves path to path.1 (path.1 to path.2, …), drops the oldest and
+// opens a fresh path. a.mu is held. Renames keep the 0600 mode.
+func (a *Audit) rotate() error {
+	if err := a.f.Close(); err != nil {
+		return err
+	}
+	a.f = nil
+	old := func(i int) string { return fmt.Sprintf("%s.%d", a.path, i) }
+	if err := os.Remove(old(AuditKeep)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	for i := AuditKeep - 1; i >= 1; i-- {
+		if err := os.Rename(old(i), old(i+1)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	if err := os.Rename(a.path, old(1)); err != nil {
+		return err
+	}
+	return a.open()
 }
 
 // Close closes the log.
