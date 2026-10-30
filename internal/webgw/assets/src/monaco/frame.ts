@@ -157,6 +157,8 @@ interface Suggestion {
   additionalTextEdits?: { range: IRange; text: string }[];
 }
 interface Languages {
+  register(l: { id: string }): void;
+  setMonarchTokensProvider(id: string, def: unknown): unknown;
   registerHoverProvider(sel: string, p: { provideHover(m: Model, p: Pos, t: Token): Promise<{ contents: { value: string; isTrusted: boolean; supportHtml: boolean }[]; range?: IRange } | null> }): unknown;
   registerCompletionItemProvider(sel: string, p: { triggerCharacters: string[]; provideCompletionItems(m: Model, p: Pos, c: unknown, t: Token): Promise<{ suggestions: Suggestion[]; incomplete?: boolean }> }): unknown;
   registerDefinitionProvider(sel: string, p: { provideDefinition(m: Model, p: Pos, t: Token): Promise<{ uri: Uri; range: IRange }[] | null> }): unknown;
@@ -508,12 +510,47 @@ function viewport(): void {
   post({ t: "viewport", first: r[0].startLineNumber - 1, last: r[r.length - 1].endLineNumber });
 }
 
+let sqlReady = false;
+/** SQL_WORDS are the words the query editor colours as keywords. */
+const SQL_WORDS =
+  "select from where and or not null is in like between join left right inner outer full cross on as group by order having limit offset distinct union all insert into values update set delete create table view index drop alter add column primary key foreign references default case when then else end exists with asc desc true false count sum avg min max cast returning explain";
+
+/** sqlLang teaches the editor to colour SQL (keywords, strings, numbers, comments). */
+function sqlLang(): void {
+  if (sqlReady) return;
+  sqlReady = true;
+  api.languages.register({ id: "sql" });
+  api.languages.setMonarchTokensProvider("sql", {
+    ignoreCase: true,
+    keywords: SQL_WORDS.split(" "),
+    tokenizer: {
+      root: [
+        [/--.*$/, "comment"],
+        [/\/\*/, "comment", "@comment"],
+        [/'([^']|'')*'/, "string"],
+        [/"([^"]|"")*"/, "identifier"],
+        [/\d+(\.\d+)?/, "number"],
+        [/[a-zA-Z_][\w$]*/, { cases: { "@keywords": "keyword", "@default": "identifier" } }],
+        [/[;,.()]/, "delimiter"],
+        [/[<>=!*+\-/%|]+/, "operator"],
+      ],
+      comment: [
+        [/[^*/]+/, "comment"],
+        [/\*\//, "comment", "@pop"],
+        [/[*/]/, "comment"],
+      ],
+    },
+  });
+}
+let lang = "";
+
 // The workbench keys go to the page; the editor keeps its own (find,
 // go to line, multi-cursor …).
 function workbenchKey(e: KeyboardEvent): boolean {
   const mod = e.ctrlKey || e.metaKey;
   if (!mod) return false;
   const k = e.key.toLowerCase();
+  if (lang === "sql" && k === "enter") return true; // run the query
   if (e.shiftKey) return k === "p" || k === "e" || k === "g" || k === "f" || k === "m";
   return ["p", "b", "j", "w", "`", "tab", "k", ",", "\\", "1", "2"].includes(k) || (e.ctrlKey && k === "pagedown") || (e.ctrlKey && k === "pageup");
 }
@@ -592,6 +629,11 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     gotoLocation: { multiple: "goto" },
     definitionLinkOpensInPeek: false,
   };
+  if (m.lang === "sql") {
+    sqlLang();
+    lang = "sql";
+    opts.language = "sql";
+  }
   if (m.diff) {
     // A diff tab: the older text on the left (read only), this text on
     // the right; the right side is the editor every message below drives.

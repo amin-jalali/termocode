@@ -19,6 +19,9 @@ export interface FrameOpts {
    * "find references" action. */
   lsp?: boolean;
   refsLabel?: string;
+  /** lang: the editor colours the text itself ("sql": a query editor,
+   * where Ctrl/Cmd+Enter runs the query). */
+  lang?: "sql";
 }
 
 /** FrameMarker is one diagnostic for the editor's squiggles: rows and

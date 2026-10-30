@@ -184,6 +184,8 @@ func shotHub(t *testing.T, c *HubConn) {
 						{ID: "aabbccdd1122", Name: "old-nginx", Image: "nginx:1.27", State: "exited", Status: "Exited (1) 3 days ago"},
 						{ID: "aabbccdd3344", Name: "redis-cache", Image: "redis:7", State: "paused", Status: "Up 5 days (Paused)"},
 					}}
+				case "containers.logs":
+					data = webproto.ContainerLogs{ID: "9f3c2e1a1234", Lines: []string{"2026-10-30T09:12:44Z listening on :8080", "2026-10-30T09:12:45Z connected to postgres shop-db-1:5432", "2026-10-30T09:13:02Z GET /api/orders 200 14ms", "2026-10-30T09:13:05Z token=[REDACTED]"}, Redacted: 1}
 				case "tasks.tail":
 					data = webproto.TaskTail{Buf: 8, Lines: []string{"=== RUN   TestShorten", "--- PASS: TestShorten (0.00s)", "ok  \tgithub.com/amin-jalali/termocode/cmd/covreport\t0.412s"}}
 				case "buf.hl":
@@ -240,10 +242,18 @@ func TestShots(t *testing.T) {
 					snap(t, p, filepath.Join(dir, vp.Name+"-"+scheme+"-search.png"), has("cover.go"))
 					shot("run", "#/more/tasks", has("fix the toast flicker")+` && `+has("lint"))
 					shot("db", "#/more/db", has("shop (local)"))
-					shot("db-tables", "#/more/db/local", has("customers"))
-					shot("db-rows", "#/more/db/local/customers", has("ann@example.com"))
+					p.TapJS(`document.querySelector('.wb-side .tr[data-conn="local"]')`)
+					snap(t, p, filepath.Join(dir, vp.Name+"-"+scheme+"-db-tables.png"), has("customers"))
+					p.TapJS(`document.querySelector('.wb-side .tr[data-table="customers"]')`)
+					snap(t, p, filepath.Join(dir, vp.Name+"-"+scheme+"-db-rows.png"), has("ann@example.com"))
+					Eval[bool](p, `(document.querySelector('.wb-side .tr[data-conn="local"] [data-act], .wb-side .tr[data-conn="local"] .act').click(), true)`)
+					snap(t, p, filepath.Join(dir, vp.Name+"-"+scheme+"-db-query.png"), `document.querySelector('[data-view="db-query"] .desk-editor')?.contentDocument?.querySelector(".view-lines")`)
 					shot("containers", "#/more/containers", has("shop-api-1"))
+					p.TapJS(`document.querySelector('.wb-side .tr[data-id="9f3c2e1a1234"]')`)
+					snap(t, p, filepath.Join(dir, vp.Name+"-"+scheme+"-containers-logs.png"), `document.querySelector('.wb-panel [data-view="output"] .outv-line')`)
 					shot("mcp", "#/more/mcp", has("claude-desktop"))
+					p.TapJS(`document.querySelector('.wb-side .tr[data-agent="claude-desktop"]')`)
+					snap(t, p, filepath.Join(dir, vp.Name+"-"+scheme+"-mcp-agent.png"), `document.querySelector('[data-view="mcp-agent"]')`)
 					shot("settings", "#/more/settings", has("format_on_save")+` || `+has("Format On Save"))
 					shot("device", "#/more", `document.querySelector('[data-view="more"], [data-view="device"]')`)
 					diffDoc := `document.querySelector('[data-view="diff"] .desk-editor')?.contentDocument`

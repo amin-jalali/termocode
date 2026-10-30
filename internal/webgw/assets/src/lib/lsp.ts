@@ -16,7 +16,7 @@ import { route } from "./router";
 import { panes, setPanes, showFile } from "./workbench";
 
 /** PanelTab is what the bottom panel shows. */
-export type PanelTab = "problems" | "terminal";
+export type PanelTab = "problems" | "output" | "terminal";
 export const panelTab = signal<PanelTab>("terminal");
 
 // A terminal route shows the terminal in the panel.

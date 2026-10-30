@@ -53,10 +53,14 @@ import { AskLaptop } from "./AskLaptop";
 import { ContextMenu, onMenu, openMenu, type MenuItems } from "./ContextMenu";
 import { absPath, copyText } from "../lib/clip";
 import { signal } from "@preact/signals";
-import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, activityOf, sideActivity, type Activity } from "./ActivityBar";
+import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, openSide, routeSide, sideView, type Activity } from "./ActivityBar";
 import type { StringKey } from "../strings";
-import { MCPView } from "../views/more/MCPView";
 import { DeskSearch } from "../views/desk/DeskSearch";
+import { DeskDB } from "../views/desk/DeskDB";
+import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
+import { DBQueryTab, DBTableTab } from "../views/desk/DBTabs";
+import { DeskMCP, MCPAgentTab } from "../views/desk/DeskMCP";
+import { vtabIcon, vtabOf } from "../lib/vtabs";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
 import { QuickInput } from "./QuickInput";
@@ -186,7 +190,7 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
                 showFile(path);
               }}
             >
-              <FileIcon path={fileOfTab(path) ?? path} />
+              <TabIcon tab={path} />
               <span class="ed-tab-name" dir="auto">{name}</span>
             </button>
             <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={`${t("wb.close_tab", { name })} (${modKey()}+W)`} onClick={() => closeTab(path, group)}>
@@ -200,6 +204,13 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
       <div class="ed-actions" id={"ed-actions-" + slotOf(group)} />
     </div>
   );
+}
+
+/** TabIcon is a tab's icon: the file's, or the codicon of a table, a query … */
+function TabIcon({ tab }: { tab: string }) {
+  const v = vtabOf(tab);
+  if (v) return <span class="ed-tab-cod"><Cod name={vtabIcon(v)} /></span>;
+  return <FileIcon path={fileOfTab(tab) ?? tab} />;
 }
 
 /** tabMenu is an editor tab's context menu. */
@@ -297,6 +308,10 @@ function Welcome() {
 function EditorBody({ more, file, slot }: { more: boolean; file: string | null; slot: string }) {
   if (more) return <MoreView />;
   if (file && diffOf(file)) return <DiffView key={file} tab={file} slot={slot} />;
+  const v = file ? vtabOf(file) : null;
+  if (v?.kind === "db") return <DBTableTab key={file} conn={v.conn} table={v.table} slot={slot} />;
+  if (v?.kind === "sql") return <DBQueryTab key={file} conn={v.conn} slot={slot} />;
+  if (v?.kind === "mcp") return <MCPAgentTab key={file} name={v.name} slot={slot} />;
   if (file) return <FileView key={file} path={file} slot={slot} />;
   return <Welcome />;
 }
@@ -316,6 +331,7 @@ function PanelTabs() {
   return (
     <span class="wb-panel-tabs" role="tablist">
       {tab("problems", t("wb.problems"), n > 0 ? <span class="wb-panel-badge">{n}</span> : null)}
+      {tab("output", t("tasks.output"))}
       {tab("terminal", t("wb.terminal"))}
     </span>
   );
@@ -384,8 +400,7 @@ function workbenchKeys(e: KeyboardEvent): void {
   if (e.ctrlKey && (k === "pagedown" || k === "pageup")) return run(() => cycleTab(k === "pagedown" ? 1 : -1));
   if (mod && e.shiftKey && !e.altKey && (k === "e" || k === "f" || k === "g")) {
     const id = k === "e" ? "files" : k === "f" ? "search" : "git";
-    const x = ACTIVITIES.find((a) => a.id === id);
-    if (x) return run(() => (setPanes({ side: true }), go(x.to())));
+    return run(() => openSide(id));
   }
   if (mod && e.shiftKey && !e.altKey && k === "m") return run(toggleProblems);
   if (mod && !e.shiftKey && !e.altKey && k === ",") return run(() => go({ tab: "more", rest: "settings", query: {} }));
@@ -411,7 +426,11 @@ function SideView({ id }: { id: Activity }) {
     case "run":
       return <DeskRun />;
     case "mcp":
-      return <MCPView />;
+      return <DeskMCP />;
+    case "db":
+      return <DeskDB />;
+    case "containers":
+      return <DeskContainers />;
     default:
       return (
         <div class="side-stack ex-stack">
@@ -433,8 +452,6 @@ function LaptopCommand({ id, name }: { id: string; name: string }) {
   return <AskLaptop label={name} text={t("cmd.ask_text", { name })} send={() => link.request("palette.ask", { id })} onDone={() => (asking.value = null)} />;
 }
 
-/** lastSide is the side bar's view while the route shows another area. */
-const lastSide = signal<Activity>("files");
 
 export function Workbench() {
   // The editor tabs (open buffers) and the git marks of the open file.
@@ -463,9 +480,9 @@ export function Workbench() {
   const all = groups.value;
   const fg = focusedGroup.value;
   const dragging = dragTab.value !== null;
-  const routeSide = sideActivity(r) ? activityOf(r) : null;
-  if (routeSide && routeSide !== lastSide.peek()) lastSide.value = routeSide;
-  const side = routeSide ?? lastSide.peek();
+  const asked = routeSide(r);
+  if (asked && asked !== sideView.peek()) sideView.value = asked;
+  const side = asked ?? sideView.value;
   return (
     <div
       class={`wb${p.panel && p.panelMax ? " is-panel-max" : ""}${p.panelPos === "right" ? " is-panel-right" : ""}`}
@@ -495,7 +512,7 @@ export function Workbench() {
               >
                 <EditorTabs group={i} tabs={tabsIn(i, all)} bufs={bufs} />
                 <main class="main" id={i === 0 ? "main" : undefined} tabIndex={-1}>
-                  <EditorBody more={i === fg && r.tab === "more" && !routeSide} file={g.active} slot={slotOf(i)} />
+                  <EditorBody more={i === fg && r.tab === "more" && !asked} file={g.active} slot={slotOf(i)} />
                 </main>
                 {dragging && <DropZone group={i} canSplit={all.length < MAX_GROUPS} />}
               </section>
@@ -510,11 +527,11 @@ export function Workbench() {
             ) : (
               <Sash axis="y" size={p.panelH} min={PANEL_MIN} max={Math.max(PANEL_MIN, innerHeight - 200)} dir={-1} label={t("wb.resize_panel")} def={PANE_DEFAULTS.panelH} onSize={(n) => setPanes({ panelH: n })} />
             )}
-            <section class="wb-panel" aria-label={t(panelTab.value === "problems" ? "wb.problems" : "tab.term")}>
+            <section class="wb-panel" aria-label={t(panelTab.value === "problems" ? "wb.problems" : panelTab.value === "output" ? "tasks.output" : "tab.term")}>
               <PanelHead>
                 <PanelTabs />
               </PanelHead>
-              {panelTab.value === "problems" ? <ProblemsView /> : <DeskTerm />}
+              {panelTab.value === "problems" ? <ProblemsView /> : panelTab.value === "output" ? <OutputView /> : <DeskTerm />}
             </section>
           </>
         )}

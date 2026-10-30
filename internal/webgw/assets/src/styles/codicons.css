@@ -68,6 +68,7 @@
 .cod-git-commit::before { content: "\eafc"; }
 .cod-git-compare::before { content: "\eafd"; }
 .cod-go-to-file::before { content: "\ea94"; }
+.cod-group-by-ref-type::before { content: "\eb97"; }
 .cod-history::before { content: "\ea82"; }
 .cod-info::before { content: "\ea74"; }
 .cod-insert::before { content: "\ec11"; }
@@ -93,6 +94,7 @@
 .cod-package::before { content: "\eb29"; }
 .cod-pass-filled::before { content: "\ebb3"; }
 .cod-pass::before { content: "\eba4"; }
+.cod-person::before { content: "\ea67"; }
 .cod-play::before { content: "\eb2c"; }
 .cod-plug::before { content: "\eb2d"; }
 .cod-preserve-case::before { content: "\eb2e"; }
@@ -111,7 +113,9 @@
 .cod-search::before { content: "\ea6d"; }
 .cod-send::before { content: "\ec0f"; }
 .cod-server-process::before { content: "\eba2"; }
+.cod-server::before { content: "\eb50"; }
 .cod-settings-gear::before { content: "\eb51"; }
+.cod-shield::before { content: "\eb53"; }
 .cod-source-control::before { content: "\ea68"; }
 .cod-sparkle::before { content: "\ec10"; }
 .cod-split-horizontal::before { content: "\eb56"; }
@@ -134,6 +138,9 @@
 .cod-terminal::before { content: "\ea85"; }
 .cod-tools::before { content: "\eb6d"; }
 .cod-trash::before { content: "\ea81"; }
+.cod-vm-active::before { content: "\eb79"; }
+.cod-vm-outline::before { content: "\eb7a"; }
+.cod-vm-running::before { content: "\eb7b"; }
 .cod-vm::before { content: "\ea7a"; }
 .cod-warning::before { content: "\ea6c"; }
 .cod-whole-word::before { content: "\eb7e"; }
