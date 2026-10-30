@@ -73,3 +73,44 @@ func (a *GitStashArgs) validate(int) error {
 	}
 	return nil
 }
+
+// MaxContainerLogLines caps the lines of one containers.logs.
+const MaxContainerLogLines = 1000
+
+// ContainerArgs names a container by its id (as containers.list gives it).
+type ContainerArgs struct {
+	ID string `json:"id"`
+}
+
+// ContainerLogsArgs asks for the last lines of a container's logs.
+type ContainerLogsArgs struct {
+	ID    string `json:"id"`
+	Lines int    `json:"lines,omitempty"` // 0: 200
+}
+
+// validContainerID is a hex container id of 12 to 64 characters.
+func validContainerID(id string) bool {
+	if len(id) < 12 || len(id) > 64 {
+		return false
+	}
+	for _, r := range id {
+		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+func (a *ContainerArgs) validate(int) error {
+	if !validContainerID(a.ID) {
+		return invalid("bad container id")
+	}
+	return nil
+}
+
+func (a *ContainerLogsArgs) validate(int) error {
+	if !validContainerID(a.ID) || a.Lines < 0 || a.Lines > MaxContainerLogLines {
+		return invalid("bad container id or lines")
+	}
+	return nil
+}
