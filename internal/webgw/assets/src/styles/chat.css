@@ -68,3 +68,17 @@
 .composer-note { margin: 0 0 var(--s2); padding-inline-start: var(--s2); border-inline-start: 2px solid var(--amber); font-size: var(--fs-hint); color: var(--text-2); }
 .composer-hint { margin-top: var(--s1); font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--dim); }
 .layout-phone .composer-hint { display: none; }
+
+/* The chat list and the pinned chat */
+.chat-list { display: flex; flex-direction: column; }
+.chat-filter { min-height: var(--tap); margin-bottom: var(--s2); padding: 0 var(--s3); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); color: var(--text); font: inherit; }
+.chat-row { display: flex; flex-direction: column; align-items: stretch; gap: 2px; min-height: var(--tap); padding: var(--s2) var(--s2); border-bottom: 1px solid var(--border); text-align: start; }
+.chat-row:hover { background: var(--bg-hover); }
+.chat-row.is-current { box-shadow: inset 2px 0 0 var(--ai); }
+.chat-row-title { font-size: var(--fs-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-row-meta { display: flex; align-items: center; gap: var(--s2); font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--muted); unicode-bidi: isolate; }
+.on-laptop { color: var(--blue); }
+.live-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--ai); }
+.chat-pinned { align-self: center; font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--amber); white-space: nowrap; }
+.head-btn.is-on { background: var(--bg-2); }
+.view-head { flex-wrap: wrap; }

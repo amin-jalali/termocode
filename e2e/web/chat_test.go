@@ -354,3 +354,52 @@ func noReq(t *testing.T, c *HubConn, d time.Duration) {
 		}
 	}
 }
+
+// The chat list opens a stored chat to read here: the page pins it (it
+// stops following the laptop's chat), cannot write to it, and Follow
+// goes back to the laptop's chat, whatever it is by then.
+func TestChatListOpensAndFollows(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openChat(t, vp, chatWith(false, userMsg(0, "hi")))
+			c.Send(t, Snap("chats", 1, map[string]any{"chats": []any{
+				map[string]any{"id": "c-1", "title": "Fix the build", "updated": 3000, "msgs": 1, "open": true},
+				map[string]any{"id": "c-2", "title": "Old idea", "updated": 2000, "msgs": 1},
+			}}))
+			const view = `document.querySelector('[data-view="chat"]')`
+			p.TapJS(view + `.querySelector(".chat-list-btn")`)
+			p.WaitJS(view + `.querySelectorAll(".chat-row").length === 2`)
+			if !Eval[bool](p, view+`.querySelector(".chat-row .on-laptop") !== null`) {
+				t.Error("the laptop's chat has no mark")
+			}
+			p.TapJS(`[...` + view + `.querySelectorAll(".chat-row")].find((r) => r.textContent.includes("Old idea"))`)
+			r := expectReq(t, c, "chat.open")
+			if !strings.Contains(string(r.Args), `"c-2"`) {
+				t.Fatalf("chat.open args %s", r.Args)
+			}
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"id": "c-2", "title": "Old idea", "busy": false,
+				"messages": []any{userMsg(0, "old question")}})})
+			r = expectReq(t, c, "chat.pin")
+			if !strings.Contains(string(r.Args), `true`) {
+				t.Fatalf("chat.pin args %s", r.Args)
+			}
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
+			p.WaitJS(view + `.innerText.includes("old question") && ` + view + `.querySelector(".chat-pinned")`)
+			if Eval[bool](p, composer+`?.querySelector("textarea") != null`) {
+				t.Error("a chat not open on the laptop can be written to")
+			}
+
+			c.Send(t, Delta("chat", 2, map[string]any{"op": "switched", "chat": chatWith(false, userMsg(0, "laptop moved on"))}))
+			p.Holds(view+`.innerText.includes("old question")`, 300*time.Millisecond)
+
+			p.TapJS(view + `.querySelector(".chat-follow")`)
+			r = expectReq(t, c, "chat.pin")
+			if !strings.Contains(string(r.Args), `false`) {
+				t.Fatalf("chat.pin args %s", r.Args)
+			}
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
+			p.WaitJS(view + `.innerText.includes("laptop moved on") && !` + view + `.querySelector(".chat-pinned")`)
+			p.WaitJS(composer + `?.querySelector("textarea")`)
+		})
+	}
+}
