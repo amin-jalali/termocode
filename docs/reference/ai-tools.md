@@ -1987,6 +1987,8 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `uppercase` | Edit: Convert to UPPERCASE | confirm (fileWrite) |   |
 | `view-output` | View: Output | auto |   |
 | `web-copy-link` | Web: Copy Link | never | the web panel gives shell access from a browser; only the user changes it, in config.json (the link logs a browser in) |
+| `web-devices` | Web: Devices… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (who may come in) |
+| `web-pair` | Web: Pair a Device… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (pairing lets another device in) |
 | `web-start` | Web: Start Panel | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web-stop` | Web: Stop Panel | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
