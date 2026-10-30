@@ -157,7 +157,7 @@ func notifyArgMap(args []any, i int) map[string]any {
 func init() {
 	registerNotifyHandler("termocode_profiles_saved", func(m *Model, args []any) tea.Cmd {
 		p := notifyArgString(args, 0)
-		return tea.Batch(m.onAIProfilesSaved(p), m.onMCPServeConfigSaved(p), m.onAIPlanSaved(p)) // config.json: mcp_server; G-PLAN
+		return tea.Batch(m.onAIProfilesSaved(p), m.onMCPServeConfigSaved(p), m.onWebConfigSaved(p), m.onAIPlanSaved(p)) // config.json: mcp_server, web_panel; G-PLAN
 	})
 	registerNotifyHandler("termocode_output", func(m *Model, args []any) tea.Cmd {
 		ch := notifyArgString(args, 0)

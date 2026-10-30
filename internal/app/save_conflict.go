@@ -65,7 +65,7 @@ func (m *Model) saveActiveFile() tea.Cmd {
 	} else if p := m.editor.Path(); p != "" {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Saved", saveDetail(p))
 		m.onAIProfilesSaved(p)
-		toastCmd = tea.Batch(toastCmd, m.onMCPServeConfigSaved(p), m.onAIPlanSaved(p)) // mcp_server changed; G-PLAN
+		toastCmd = tea.Batch(toastCmd, m.onMCPServeConfigSaved(p), m.onWebConfigSaved(p), m.onAIPlanSaved(p)) // mcp_server, web_panel changed; G-PLAN
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
 }
