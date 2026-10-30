@@ -82,6 +82,8 @@ interface Editor {
   revealLineInCenter(line: number): void;
   revealPositionInCenter(p: Pos): void;
   setPosition(p: Pos): void;
+  getPosition(): Pos | null;
+  addAction(a: { id: string; label: string; keybindings?: number[]; contextMenuGroupId?: string; contextMenuOrder?: number; run: () => void }): unknown;
   getVisibleRanges(): IRange[];
   createDecorationsCollection(d?: Decoration[]): Collection;
   onDidChangeCursorPosition(cb: (e: { position: Pos }) => void): void;
@@ -136,7 +138,7 @@ interface Api {
   languages: Languages;
   Uri: { from(c: { scheme: string; path: string }): Uri };
   KeyMod: { CtrlCmd: number; Shift: number };
-  KeyCode: { KeyZ: number; KeyY: number; KeyS: number };
+  KeyCode: { KeyZ: number; KeyY: number; KeyS: number; F12: number };
 }
 
 const api = (globalThis as unknown as { termocodeModule: (n: string) => Api }).termocodeModule("vs/editor-BdtEMBbM");
@@ -495,7 +497,20 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   ed.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => post({ t: "save" }));
   myPath = m.path ?? "";
   lspOn = m.lsp === true;
-  if (lspOn) startLsp();
+  if (lspOn) {
+    startLsp();
+    ed.addAction({
+      id: "termocode.references",
+      label: m.refsLabel ?? "References",
+      keybindings: [KeyMod.Shift | KeyCode.F12],
+      contextMenuGroupId: "navigation",
+      contextMenuOrder: 1.5,
+      run: () => {
+        const p = ed?.getPosition();
+        if (p) post({ t: "refs", line: p.lineNumber - 1, col: p.column - 1 });
+      },
+    });
+  }
   ed.onKeyDown((e) => {
     const b = e.browserEvent;
     if (!workbenchKey(b)) return;

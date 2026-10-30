@@ -3,10 +3,11 @@
 // come from the diagnostics topic (squiggles in the editor, the PROBLEMS
 // panel, the counts in the status bar); hover, completion and go to
 // definition are asked by the editor's frame (lib/deskeditor.ts) and
-// answered here with the lsp.* reads. A read is asked at the changedtick
+// answered here with the lsp.* reads; find references fills the
+// references list (ui/RefsPeek.tsx). A read is asked at the changedtick
 // the page's text is known at: unsent typing goes out first.
 import { effect, signal } from "@preact/signals";
-import type { DiagFile, DiagSnap } from "../../../../webproto/proto";
+import type { DiagFile, DiagSnap, LspLocations, LspLoc } from "../../../../webproto/proto";
 import type { FrameMarker, LspKind } from "../monaco/protocol";
 import { ReqError } from "../net/link";
 import { link, store } from "../session";
@@ -89,7 +90,7 @@ async function settledTick(buf: number): Promise<number | null> {
 /** ask runs lsp.<kind> for buffer buf at a 0-based line and UTF-16
  * column, at the tick the page's text is known at. A changed buffer is
  * asked once more after a moment (the laptop's change on its way). */
-export async function ask(kind: LspKind, buf: number, line: number, col: number): Promise<unknown> {
+export async function ask(kind: LspKind | "references", buf: number, line: number, col: number): Promise<unknown> {
   const until = noServer.get(buf);
   if (until !== undefined && Date.now() < until) return null;
   for (let tries = 0; tries < 2; tries++) {
@@ -102,9 +103,49 @@ export async function ask(kind: LspKind, buf: number, line: number, col: number)
         await new Promise((r) => setTimeout(r, 200));
         continue;
       }
-      if (e instanceof ReqError && e.code === "not_found") noServer.set(buf, Date.now() + NO_SERVER_MS);
+      if (e instanceof ReqError && e.code === "not_found" && kind !== "references") noServer.set(buf, Date.now() + NO_SERVER_MS);
+      if (kind === "references") throw e;
       return null;
     }
   }
   return null;
+}
+
+/** Refs is the references list: where it was asked, and its places. */
+export interface Refs {
+  path: string;
+  line: number;
+  word: string;
+  state: "loading" | "done" | "error";
+  locs: LspLoc[];
+  cut?: boolean;
+  note?: string;
+}
+
+export const refs = signal<Refs | null>(null);
+
+/** findRefs fills the references list for a position of buffer buf. */
+export function findRefs(path: string, buf: number, line: number, col: number, word: string): void {
+  const mine: Refs = { path, line, word, state: "loading", locs: [] };
+  refs.value = mine;
+  ask("references", buf, line, col).then(
+    (data) => {
+      if (refs.peek() !== mine) return;
+      const d = data as LspLocations | null;
+      refs.value = { ...mine, state: "done", locs: d && Array.isArray(d.locs) ? d.locs : [], cut: d?.cut };
+    },
+    (e: unknown) => {
+      if (refs.peek() !== mine) return;
+      refs.value = { ...mine, state: "error", note: e instanceof Error ? e.message : "" };
+    },
+  );
+}
+
+/** wordAt is the word around a UTF-16 column of a row (for the list's title). */
+export function wordAt(row: string, col: number): string {
+  const isW = (c: string) => /[\p{L}\p{N}_$]/u.test(c);
+  let a = col, b = col;
+  while (a > 0 && isW(row[a - 1])) a--;
+  while (b < row.length && isW(row[b])) b++;
+  return row.slice(a, b);
 }

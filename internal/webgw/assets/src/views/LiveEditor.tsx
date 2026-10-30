@@ -15,7 +15,7 @@ import { editing, liveStatus, LiveSync, session, setSync, syncs } from "../lib/l
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
-import { ask, diagSnap, fileMarkers, goTo, revealAt } from "../lib/lsp";
+import { ask, diagSnap, fileMarkers, findRefs, goTo, revealAt, wordAt } from "../lib/lsp";
 import { isGone } from "../state/files";
 import { t } from "../strings";
 import { Button } from "../ui/Button";
@@ -118,10 +118,12 @@ export function LiveEditor({ path, buf, desk, slot = "g0" }: { path: string; buf
               slot,
               onDone: () => undefined,
               // The laptop's language servers: hover, completion, go to
-              // definition (another file opens in its tab).
+              // definition (another file opens in its tab), references.
               path,
               lsp: true,
+              refsLabel: t("refs.find"),
               onLsp: (kind, line, col) => ask(kind, buf, line, col),
+              onRefs: (line, col) => findRefs(path, buf, line, col, wordAt(peek()?.lines[line] ?? "", col)),
               onOpen: (to, line, col) => goTo(to, line, col),
             }),
         })

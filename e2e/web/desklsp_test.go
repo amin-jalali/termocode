@@ -20,8 +20,8 @@ import (
 // The desktop editor's language features: the laptop's language servers
 // through the hub (diagnostics topic, lsp.* reads), never one in the
 // browser. Problems show as squiggles, in the PROBLEMS panel and as
-// counts in the status bar; hover, completion and go to definition ask
-// the hub at the tick the page's text is known at.
+// counts in the status bar; hover, completion, go to definition and
+// find references ask the hub at the tick the page's text is known at.
 
 func diagFixture() webproto.DiagSnap {
 	return webproto.DiagSnap{Errors: 1, Warnings: 1, Files: []webproto.DiagFile{{Path: "a.go", Items: []webproto.Diag{
@@ -197,6 +197,43 @@ func TestDeskGoToDefinition(t *testing.T) {
 	p.WaitJS(`location.hash === "#/files/b.go"`)
 	answerOpen(t, p, c, 3, "b.go", "package a", "", "func foo() int { return 1 }")
 	p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent === "Ln 3, Col 6"`)
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
+
+// Shift+F12 asks lsp.references and lists the places by file, the word
+// marked; a place outside the workspace is listed but cannot open; a
+// row opens its file; Esc closes the list.
+func TestDeskFindReferences(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.go", "package a", "x foo()")
+	deskCaret(p, 1, 3)
+	p.Do(chromedp.KeyEvent(kb.F12, chromedp.KeyModifiers(chromedp.ModifierShift)))
+	r := expectReq(t, c, "lsp.references")
+	if a := lspArgs(t, r); a.Line != 1 || a.Col != 3 || a.Tick != 3 {
+		t.Fatalf("references args %+v", a)
+	}
+	p.WaitJS(`document.querySelector(".refs-peek .refs-title")?.textContent === "References to foo"`)
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(webproto.LspLocations{Locs: []webproto.LspLoc{
+		{Name: "lib.go", Outside: true, Line: 9, EndLine: 9},
+		{Path: "a.go", Line: 1, Col: 2, EndLine: 1, EndCol: 5, Text: "x foo()"},
+		{Path: "b.go", Line: 2, Col: 5, EndLine: 2, EndCol: 8, Text: "func foo() int { return 1 }"},
+	}})})
+	p.WaitJS(`document.querySelectorAll(".refs-peek .refs-row").length === 3`)
+	if got := Eval[string](p, `[...document.querySelectorAll(".refs-peek .refs-row mark")].map((m) => m.textContent).join(",")`); got != "foo,foo" {
+		t.Errorf("marks %q", got)
+	}
+	if !Eval[bool](p, `document.querySelector(".refs-peek .refs-row").disabled && document.querySelector(".refs-peek .refs-path").textContent === "Outside the workspace"`) {
+		t.Error("the place outside the workspace is not listed as such")
+	}
+	p.TapJS(`[...document.querySelectorAll(".refs-peek .refs-row")][2]`)
+	p.WaitJS(`location.hash === "#/files/b.go"`)
+	answerOpen(t, p, c, 3, "b.go", "package a", "", "func foo() int { return 1 }")
+	p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent === "Ln 3, Col 6"`)
+	Eval[bool](p, `(document.querySelector(".refs-peek .refs-row:not([disabled])").focus(), true)`)
+	p.Key(kb.Escape)
+	p.WaitJS(`!document.querySelector(".refs-peek")`)
 	if probs := p.Problems(); len(probs) > 0 {
 		t.Errorf("problems (CSP, console): %v", probs)
 	}

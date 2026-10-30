@@ -15,8 +15,10 @@ export interface FrameOpts {
   colors?: Record<string, string>;
   dark?: boolean;
   /** lsp: ask the page for hover, completion and definitions (a file
-   * with a language server on the laptop). */
+   * with a language server on the laptop); refsLabel names the editor's
+   * "find references" action. */
   lsp?: boolean;
+  refsLabel?: string;
 }
 
 /** FrameMarker is one diagnostic for the editor's squiggles: rows and
@@ -79,6 +81,8 @@ export type FromFrame =
   | { t: "menu"; x: number; y: number; sel: string; readOnly: boolean; can: MenuCan }
   /** lsp asks about a position: line 0-based, col in UTF-16 units. */
   | { t: "lsp"; id: number; kind: LspKind; line: number; col: number }
+  /** refs: the user asked for the references at a position (0-based). */
+  | { t: "refs"; line: number; col: number }
   /** open: go to another file (a definition there), 0-based. */
   | { t: "open"; path: string; line: number; col: number }
   /** key: a workbench key pressed in the editor (Ctrl/Cmd+P, +B, +J …). */
