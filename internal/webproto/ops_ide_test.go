@@ -32,3 +32,21 @@ func TestGitFileLogOp(t *testing.T) {
 		t.Errorf("git.show with a bad path: %v", err)
 	}
 }
+
+// Spec (explorer OUTLINE): buf.symbols lists the symbols of a buffer the
+// page opened; a v2 read for viewers, not audited.
+func TestBufSymbolsOp(t *testing.T) {
+	if _, err := DecodeArgs(OpBufSymbols, json.RawMessage(`{"buf":0}`)); !errors.Is(err, ErrInvalid) {
+		t.Errorf("buf 0: %v", err)
+	}
+	if _, err := DecodeArgs(OpBufSymbols, json.RawMessage(`{"buf":3}`)); err != nil {
+		t.Error(err)
+	}
+	p, ok := Lookup(OpBufSymbols)
+	if !ok || p.Role != RoleViewer || p.Phase != PhaseV2 || p.Audit != AuditNo || p.LaptopCard {
+		t.Errorf("buf.symbols row %+v", p)
+	}
+	if _, ok := ResultOf(OpBufSymbols); !ok {
+		t.Error("buf.symbols has no result type")
+	}
+}
