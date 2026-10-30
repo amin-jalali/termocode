@@ -265,6 +265,7 @@ func TestCovCoreHotExitLeaveWorkspace(t *testing.T) {
 // Backups that cannot be read are skipped; a backup folder that is a
 // file is an error; no home folder means no hot exit.
 func TestCovCoreHotExitDiskTrouble(t *testing.T) {
+	m := covNvimModel(t, 80, 24) // before HOME goes: nvim would log into the work folder
 	root := t.TempDir()
 	prev := filepath.Join(root, "previous")
 	_ = os.MkdirAll(filepath.Join(prev, "dir.bak"), 0o700)
@@ -292,9 +293,6 @@ func TestCovCoreHotExitDiskTrouble(t *testing.T) {
 	if _, err := hotExitRootFor("x"); err == nil {
 		t.Error("a backup root without HOME")
 	}
-	m := covNvimModel(t, 80, 24)
-	t.Setenv("HOME", "")
-	t.Setenv("XDG_STATE_HOME", "")
 	if m.startHotExit() != nil || m.hotExitLive != "" {
 		t.Error("hot exit started without a home folder")
 	}
