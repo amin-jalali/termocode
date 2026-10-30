@@ -10,7 +10,10 @@ import (
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
+
+	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // Mobile polish (WEB-36, web UX 6, 8.1).
@@ -151,6 +154,96 @@ func TestSafeAreaInsets(t *testing.T) {
 				if bad := Eval[[]string](p, outsideSafeJS(int(tc.top), int(tc.right), int(tc.bottom), int(tc.left))); len(bad) > 0 {
 					t.Errorf("%s: controls in the safe-area insets:\n  %s", tab, strings.Join(bad, "\n  "))
 				}
+			}
+		})
+	}
+}
+
+// pinch moves two fingers on the element from gap0 to gap1 px apart.
+func (p *Page) pinch(el string, gap0, gap1 float64) {
+	p.T.Helper()
+	c := Eval[struct{ X, Y float64 }](p, `(() => { const r = (`+el+`).getBoundingClientRect(); return {X: r.left + r.width / 2, Y: r.top + Math.min(r.height / 2, 120)}; })()`)
+	id0, id1 := 1.0, 2.0
+	pts := func(gap float64) []*input.TouchPoint {
+		return []*input.TouchPoint{{X: c.X - gap/2, Y: c.Y, ID: &id0}, {X: c.X + gap/2, Y: c.Y, ID: &id1}}
+	}
+	touch := func(kind input.DispatchTouchEventType, tp []*input.TouchPoint) chromedp.Action[chromedp.Void] {
+		return chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
+			_, err := cdp.Call(ctx, t, input.DispatchTouchEvent, input.DispatchTouchEventParams{Type: kind, TouchPoints: tp})
+			return err
+		})
+	}
+	acts := []chromedp.Action[chromedp.Void]{touch(input.DispatchTouchEventTypeTouchStart, pts(gap0))}
+	for i := 1; i <= 8; i++ {
+		acts = append(acts, touch(input.DispatchTouchEventTypeTouchMove, pts(gap0+(gap1-gap0)*float64(i)/8)))
+	}
+	acts = append(acts, touch(input.DispatchTouchEventTypeTouchEnd, []*input.TouchPoint{}))
+	p.Do(acts...)
+}
+
+const rowFontJS = `parseFloat(getComputedStyle(document.querySelector(%q)).fontSize)`
+
+// Two fingers on the terminal's rows or a file's rows change their text
+// size (not the page's zoom); the size stays on this device, within
+// 10 to 24 px, and the same size shows in both views.
+func TestPinchChangesRowFont(t *testing.T) {
+	p, c := openShell(t, Phone)
+	row := `[data-view="term"] .trow`
+	before := Eval[float64](p, fmt.Sprintf(rowFontJS, row))
+	p.pinch(`document.querySelector('[data-view="term"] .term-rows')`, 60, 180)
+	p.WaitJS(fmt.Sprintf(rowFontJS, row) + fmt.Sprintf(" > %f + 4", before))
+	if z := Eval[float64](p, `visualViewport.scale`); z != 1 {
+		t.Errorf("the page zoomed to %v; only the rows should change", z)
+	}
+	big := Eval[float64](p, fmt.Sprintf(rowFontJS, row))
+	if big > 24 {
+		t.Errorf("row font %v px, more than 24", big)
+	}
+	if !Eval[bool](p, `JSON.parse(localStorage.getItem("termocode.prefs.v1")).rowPx === `+fmt.Sprint(big)) {
+		t.Error("the size is not kept in this device's prefs")
+	}
+	p.pinch(`document.querySelector('[data-view="term"] .term-rows')`, 300, 20)
+	p.WaitJS(fmt.Sprintf(rowFontJS, row) + " === 10")
+
+	Eval[bool](p, `(location.hash = "#/files/a.go", true)`)
+	var r *webproto.Req
+	for r == nil {
+		if m, ok := c.Next(t).(*webproto.Req); ok && m.Op == "buf.open" {
+			r = m
+		}
+	}
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"buf": 2, "path": "a.go", "tick": 3, "lines": 2, "dirty": false, "ft": "go", "readonly": false})})
+	c.WaitSub(t, "buf:2")
+	c.Send(t, Snap("buf:2", 1, bufSnap(2, "a.go", "package main", "func main() {}")))
+	p.WaitJS(filesView + `.querySelector(".crow")`)
+	if got := Eval[float64](p, fmt.Sprintf(rowFontJS, `[data-view="files"] .crow`)); got != 10 {
+		t.Errorf("file rows are %v px; want the terminal's 10", got)
+	}
+	p.pinch(filesView+`.querySelector(".lines")`, 50, 100)
+	p.WaitJS(fmt.Sprintf(rowFontJS, `[data-view="files"] .crow`) + " > 12")
+}
+
+// The pinch has a button twin (WCAG 2.5.7) in the terminal's ⓘ sheet:
+// smaller, bigger and the default size, on the phone and the desktop.
+func TestRowFontButtons(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, _ := openShell(t, vp)
+			row := `[data-view="term"] .trow`
+			def := Eval[float64](p, fmt.Sprintf(rowFontJS, row))
+			p.Tap(`[data-view="term"] .term-info-btn`)
+			p.Tap(`.font-size .font-bigger`)
+			p.WaitJS(fmt.Sprintf(rowFontJS, row) + fmt.Sprintf(" === %f + 1", def))
+			if got := p.Text(`.font-size .font-now`); got != fmt.Sprintf("%.0f px", def+1) {
+				t.Errorf("size label %q", got)
+			}
+			p.Tap(`.font-size .font-smaller`)
+			p.Tap(`.font-size .font-smaller`)
+			p.WaitJS(fmt.Sprintf(rowFontJS, row) + fmt.Sprintf(" === %f - 1", def))
+			p.Tap(`.font-size .font-reset`)
+			p.WaitJS(fmt.Sprintf(rowFontJS, row) + fmt.Sprintf(" === %f", def))
+			if !Eval[bool](p, `JSON.parse(localStorage.getItem("termocode.prefs.v1")).rowPx === 0`) {
+				t.Error("reset did not go back to the default size")
 			}
 		})
 	}

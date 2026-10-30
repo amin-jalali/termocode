@@ -15,9 +15,19 @@ export interface Prefs {
   dir: Direction;
   lang: Language;
   firstRunDone: boolean;
+  /** rowPx is the text size of terminal and file rows in px; 0 is the default. */
+  rowPx: number;
 }
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false };
+/** ROW_MIN and ROW_MAX bound rowPx (WEB-36). */
+export const ROW_MIN = 10;
+export const ROW_MAX = 24;
+
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, rowPx: 0 };
+
+function rowSize(v: unknown): number {
+  return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
+}
 
 function pick<T extends string>(v: unknown, allowed: readonly T[], def: T): T {
   return typeof v === "string" && (allowed as readonly string[]).includes(v) ? (v as T) : def;
@@ -33,6 +43,7 @@ function load(): Prefs {
       dir: pick(v.dir, ["auto", "ltr", "rtl"], defaults.dir),
       lang: pick(v.lang, ["auto", "en", "fa"], defaults.lang),
       firstRunDone: v.firstRunDone === true,
+      rowPx: rowSize(v.rowPx),
     };
   } catch {
     return defaults;

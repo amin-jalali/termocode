@@ -223,6 +223,12 @@ export const S = {
   "key.ctrl.label": "Control",
   "key.alt.label": "Alternate",
   "key.interrupt.label": "Interrupt",
+  "font.smaller": "Smaller text",
+  "font.bigger": "Bigger text",
+  "key.font_smaller": "A−",
+  "key.font_bigger": "A+",
+  "font.px": "{n} px",
+  "font.reset": "Default size",
 
   // Git
   "git.staged": "Staged",
