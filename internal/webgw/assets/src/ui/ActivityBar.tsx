@@ -14,7 +14,7 @@ import type { Route } from "../state/route";
 import { t, type StringKey } from "../strings";
 import { Cod } from "./icons";
 
-export type Activity = "files" | "search" | "git" | "run" | "db" | "containers" | "mcp" | "chat" | "device" | "settings";
+export type Activity = "files" | "search" | "git" | "run" | "testing" | "db" | "containers" | "services" | "kube" | "mcp" | "chat" | "device" | "settings";
 
 interface Item {
   id: Activity;
@@ -33,6 +33,7 @@ export const ACTIVITIES: readonly Item[] = [
   { id: "search", label: "more.search", icon: "search", keys: "Shift+F", side: true, to: () => more("search") },
   { id: "git", label: "act.scm", icon: "source-control", keys: "Shift+G", side: true, to: () => ({ tab: "git", rest: "", query: {} }) },
   { id: "run", label: "act.run", icon: "debug-alt", side: true, to: () => more("tasks") },
+  { id: "testing", label: "act.testing", icon: "beaker", side: true, to: () => more("testing") },
   { id: "db", label: "more.db", icon: "database", side: true, to: () => more("db") },
   { id: "containers", label: "more.containers", icon: "package", side: true, to: () => more("containers") },
   { id: "mcp", label: "more.mcp", icon: "plug", side: true, to: () => more("mcp") },
@@ -58,7 +59,10 @@ export function activityOf(r: Route): Activity | null {
     case "more": {
       const sub = r.rest.split("/")[0];
       if (sub === "search") return "search";
-      if (sub === "tasks" || sub === "runs") return "run";
+      if (sub === "tasks" || sub === "runs" || sub === "debug") return "run";
+      if (sub === "testing") return "testing";
+      if (sub === "services") return "services";
+      if (sub === "kube") return "kube";
       if (sub === "db") return "db";
       if (sub === "containers") return "containers";
       if (sub === "mcp") return "mcp";

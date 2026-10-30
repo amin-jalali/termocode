@@ -6,13 +6,15 @@ import { go } from "../../lib/router";
 import { t } from "../../strings";
 import { View } from "../View";
 
-export function SubView({ title, children }: { title: string; children: ComponentChildren }) {
+export function SubView({ title, children, actions, name }: { title: string; children: ComponentChildren; actions?: ComponentChildren; name?: string }) {
   // The desktop has each of them in its activity bar: no way back to a list.
   const desk = layout.value === "desktop";
   return (
     <View
       tab="more"
       title={title}
+      name={name}
+      actions={actions}
       sub={
         desk ? undefined : (
           <button type="button" class="sub-back" onClick={() => go({ tab: "more", rest: "", query: {} })}>
