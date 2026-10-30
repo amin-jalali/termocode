@@ -16,6 +16,16 @@ import { gitBadge, TreeRow } from "../ui/rows";
 import { toast } from "../lib/toasts";
 import { TopicBody } from "./Placeholder";
 import { View } from "./View";
+import { FileActions, type Target } from "./files/FileActions";
+import { signal } from "@preact/signals";
+
+/** acting is the file or folder whose actions sheet is open. */
+const acting = signal<Target | null>(null);
+
+/** canEdit: a controller may change files; a viewer reads only. */
+function canEdit(): boolean {
+  return link.meta.value?.role !== "viewer";
+}
 
 /** join is a workspace path under dir. */
 export function join(dir: string, name: string): string {
@@ -98,16 +108,23 @@ function Folder({ path, depth, tree }: { path: string; depth: number; tree: Tree
         const open = e.dir && expanded.value.has(p);
         return (
           <Fragment key={e.name}>
-            <TreeRow
-              depth={depth}
-              dir={e.dir}
-              open={open}
-              name={e.name}
-              git={gitBadge(e.git)}
-              dim={e.ignored === true}
-              path={p}
-              onClick={() => (e.dir ? toggle(p) : openFile(p))}
-            />
+            <div class="tree-line">
+              <TreeRow
+                depth={depth}
+                dir={e.dir}
+                open={open}
+                name={e.name}
+                git={gitBadge(e.git)}
+                dim={e.ignored === true}
+                path={p}
+                onClick={() => (e.dir ? toggle(p) : openFile(p))}
+              />
+              {canEdit() && (
+                <button type="button" class="tree-more" aria-label={t("files.more", { name: e.name })} onClick={() => (acting.value = { path: p, dir: e.dir })}>
+                  ⋯
+                </button>
+              )}
+            </div>
             {open && <Folder path={p} depth={depth + 1} tree={tree} />}
           </Fragment>
         );
@@ -171,10 +188,31 @@ function DotfilesChip() {
   );
 }
 
+/** NewHere opens the actions of the workspace folder (new file, new folder). */
+function NewHere() {
+  if (!canEdit()) return null;
+  return (
+    <button type="button" class="head-new" aria-label={t("files.new")} onClick={() => (acting.value = { path: "", dir: true })}>
+      +
+    </button>
+  );
+}
+
 export function TreeView() {
   useEffect(() => link.subscribe("tree", "bufs"), []);
+  const a = acting.value;
   return (
-    <View tab="files" title={t("tab.files")} actions={<DotfilesChip />}>
+    <View
+      tab="files"
+      title={t("tab.files")}
+      actions={
+        <>
+          <NewHere />
+          <DotfilesChip />
+        </>
+      }
+    >
+      {a && <FileActions target={a} onDone={() => (acting.value = null)} />}
       <TopicBody topic="tree" empty={<p>{t("files.no_ws")}</p>} refused={(r) => (r.code === "not_found" ? t("files.no_ws") : r.msg)}>
         <Tree />
       </TopicBody>
