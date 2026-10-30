@@ -278,3 +278,7 @@ func (m Model) Cursor() Cursor {
 }
 
 func (m Model) LineCount() int { return m.g.Height }
+
+// RowRuns reads cells [c0, c1) of screen row r of nvim's grid: the text
+// and its styled runs (grid.Grid.RowRuns), for the web terminal view.
+func (m Model) RowRuns(r, c0, c1 int) (string, []grid.Run) { return m.g.RowRuns(r, c0, c1) }
