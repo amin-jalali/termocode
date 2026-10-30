@@ -24,8 +24,11 @@ import (
 // hub socket, and the gateway hands back the port on fd 3.
 const webGatewayArg = "__web-gateway"
 
-// webAssets serves the browser UI's page and files (nil: not built in).
-var webAssets http.Handler
+// webAssets serves the browser UI's page and files; tests may swap it.
+var webAssets = gatewayAssets
+
+// gatewayAssets is the embedded browser UI (index.html, app.js, app.css).
+func gatewayAssets() http.Handler { return webgw.Assets() }
 
 func runWebGateway(args []string) int {
 	return runWebGatewayIn(args, os.NewFile(3, "web-handoff"), os.Stderr)
@@ -58,7 +61,7 @@ func runWebGatewayIn(args []string, handoff io.WriteCloser, errw io.Writer) int 
 		},
 		AuditPath: *audit, StatusPath: paths.WebStatus, LockPath: paths.WebLock,
 		Port: *port, Idle: time.Duration(*idle) * time.Minute, Max: time.Duration(*maxH) * time.Hour,
-		MaxViewers: *viewers, Assets: webAssets,
+		MaxViewers: *viewers, Assets: webAssets(),
 	}
 	if handoff != nil {
 		cfg.Handoff = handoff
