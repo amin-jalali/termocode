@@ -4,6 +4,8 @@ package webgw
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"testing"
 	"time"
 
@@ -25,7 +27,7 @@ func waitCtl(t *testing.T, c *Ctl) webproto.CloseCode {
 // bye 4009 (kill switch) ends it with that code; other lines are ignored.
 func TestCtlByeIsTheKillSwitch(t *testing.T) {
 	hub := newFakeHub(t)
-	c, err := DialCtl(context.Background(), hub.dial)
+	c, err := DialCtl(context.Background(), hub.dial, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +48,7 @@ func TestCtlByeIsTheKillSwitch(t *testing.T) {
 // at all is an error at the start.
 func TestCtlHubGone(t *testing.T) {
 	hub := newFakeHub(t)
-	c, err := DialCtl(context.Background(), hub.dial)
+	c, err := DialCtl(context.Background(), hub.dial, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +58,36 @@ func TestCtlHubGone(t *testing.T) {
 		t.Fatalf("code %d, want 4012", got)
 	}
 	hub.setDown()
-	if _, err := DialCtl(context.Background(), hub.dial); err == nil {
+	if _, err := DialCtl(context.Background(), hub.dial, nil); err == nil {
 		t.Fatal("no error without a hub")
+	}
+}
+
+// Spec (WEB-9): a link event hands the gateway a new secret digest; a
+// bad digest is ignored.
+func TestCtlLinkEvent(t *testing.T) {
+	hub := newFakeHub(t)
+	got := make(chan [sha256.Size]byte, 2)
+	c, err := DialCtl(context.Background(), hub.dial, func(d [sha256.Size]byte) { got <- d })
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	p := hub.next()
+	_, digest, _ := NewLinkSecret()
+	p.send(t, `{"t":"ev","kind":"link","data":{"sha256":"abc"}}`)
+	p.send(t, `{"t":"ev","kind":"link","data":{"sha256":"`+hex.EncodeToString(digest[:])+`"}}`)
+	select {
+	case d := <-got:
+		if d != digest {
+			t.Fatal("wrong digest")
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("no link")
+	}
+	select {
+	case <-got:
+		t.Fatal("bad digest passed")
+	default:
 	}
 }
