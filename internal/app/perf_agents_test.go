@@ -476,8 +476,11 @@ func TestPerfAIUndoTurn300(t *testing.T) {
 		}
 	}
 	m.explorer = explorer.New()
+	// One warm-up turn (first reload and cache fills), then the median of
+	// 9: the CI runner gave 54 and 101 ms for the same code with 3 runs.
+	perfUndoTurn(t, m, dir, 300, 0)
 	var ds []time.Duration
-	for r := 0; r < 3; r++ {
+	for r := 1; r <= 9; r++ {
 		ds = append(ds, perfUndoTurn(t, m, dir, 300, r))
 	}
 	t.Logf("undo 300 files: median %v, all %v", perfMedian(ds), ds)
