@@ -52,14 +52,34 @@ func covSvcSetup(t *testing.T) *covSvcEnv {
 	st.opened, st.sessLoaded, st.root = true, true, root
 	m := &Model{w: 120, h: 40, services: st}
 	e := &covSvcEnv{m: m, f: f, root: root, mu: &sync.Mutex{}}
+	// Commands run in goroutines that may outlive the test. The cleanup
+	// stops new ones and waits for those in flight, so none runs docker
+	// after t.Setenv put the real PATH back.
 	done := make(chan struct{})
-	t.Cleanup(func() { close(done) })
+	var wg sync.WaitGroup
+	var lifeMu sync.Mutex
+	ended := false
+	t.Cleanup(func() {
+		lifeMu.Lock()
+		ended = true
+		close(done)
+		lifeMu.Unlock()
+		wg.Wait()
+	})
 	var run func(tea.Cmd)
 	run = func(c tea.Cmd) {
 		if c == nil {
 			return
 		}
+		lifeMu.Lock()
+		if ended {
+			lifeMu.Unlock()
+			return
+		}
+		wg.Add(1)
+		lifeMu.Unlock()
 		go func() {
+			defer wg.Done()
 			msg := c()
 			select {
 			case <-done:
@@ -294,6 +314,13 @@ func TestCovAIServicesStop(t *testing.T) {
 	cancel()
 	if _, err := aiServicesStop(ctx, e.call, "redis", false); err != errAIChatStopped {
 		t.Errorf("stopped chat: %v", err)
+	}
+	// End the stop that still runs, so the cleanup does not wait for it.
+	if !servicestest.WaitFor(20*time.Second, func() bool { return e.f.PID("stop.child") > 0 }) {
+		t.Fatal("the stop never started its sleep")
+	}
+	if p, err := os.FindProcess(e.f.PID("stop.child")); err == nil {
+		_ = p.Kill()
 	}
 }
 
