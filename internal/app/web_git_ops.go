@@ -108,12 +108,16 @@ func (m *Model) webGitDiff(call *webCall) tea.Cmd {
 func (m *Model) webGitShow(call *webCall) tea.Cmd {
 	a := call.args.(*webproto.GitShowArgs)
 	root, ok := m.webGitRoot(call)
-	if !ok {
+	if !ok || (a.Path != "" && !webGitInWorkspace(call, root, a.Path)) {
 		return nil
+	}
+	var paths []string
+	if a.Path != "" {
+		paths = []string{a.Path}
 	}
 	call.later()
 	return func() tea.Msg {
-		head, out, cut, err := git.ShowCapped(root, a.Hash, webproto.MaxGitDiff)
+		head, out, cut, err := git.ShowCapped(root, a.Hash, webproto.MaxGitDiff, paths...)
 		if err != nil {
 			call.fail(webproto.CodeNotFound, "That commit is not here.")
 			return nil
