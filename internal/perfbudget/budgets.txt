@@ -96,6 +96,6 @@ http_send_all_200           270   ms   # 200 sends in a row, Go path + history; 
 # internal/webgw/perf_guard_test.go. Measured 2026-10-30 like above.
 web_hub_call_p99            20   ms   # a request on the UI goroutine, real nvim, 4 browsers, 320 calls; local 0.08-0.29 ms (design budget T41)
 web_publish_worst           25   ms   # worst of 5 000 1 KiB publishes to a gateway that stopped reading; local 0.08-0.22 ms (floor)
-web_chat_append_overhead    80   B    # wire bytes of a streamed token beyond its text, worst of 50; local 77 (design budget)
+web_chat_append_overhead    88   B    # wire bytes of a streamed token beyond its text, worst of 50, in a long chat (message 1 000, seq past 100 000); local 83. Design 80 B holds for a fresh chat (local 77); the seq and index digits of a long session add 6, and 5 more cover a 7-digit seq and a 10 000-message chat
 web_term_key_bytes         180   B    # wire bytes per key typed into a real shell (the row's delta), median of 24; local 121 (the ~100 B envelope dominates a short row)
 web_gateway_conn_kib       350   KiB  # heap per browser after hello, 4 open, both ends in one process; local 174

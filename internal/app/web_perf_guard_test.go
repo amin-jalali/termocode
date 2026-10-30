@@ -109,18 +109,30 @@ func TestPerfWebPublishNeverBlocks(t *testing.T) {
 }
 
 // web_chat_append_overhead: bytes a streamed chat token costs on the
-// wire beyond its text (the worst of 50 tokens). Design: <= 80 B.
+// wire beyond its text (the worst of 50 tokens), measured in a long chat:
+// the answer is message 1 000 and the connection already took 100 000
+// deltas, so the seq and the message index have the digits a long
+// session really has (a fresh chat would hide up to 7 bytes of them).
+// Design: <= 80 B for a fresh chat; the budget adds those digits.
 func TestPerfWebChatAppendBytes(t *testing.T) {
 	perfbudget.Require(t)
-	m := webTestChatModel(t, ai.StoredMessage{Role: ai.StoredUser, Text: "hi"}, ai.StoredMessage{Role: ai.StoredAssistant})
+	const longChat = 1000
+	msgs := make([]ai.StoredMessage, 0, longChat)
+	for len(msgs) < longChat-1 {
+		msgs = append(msgs, ai.StoredMessage{Role: ai.StoredUser, Text: "q"}, ai.StoredMessage{Role: ai.StoredAssistant, Text: "a"})
+	}
+	msgs = append(msgs[:longChat-1], ai.StoredMessage{Role: ai.StoredAssistant})
+	m := webTestChatModel(t, msgs...)
 	m.ai.streaming = true
 	webTestHub(t, &m)
 	c := webTestSub(t, &m, "chat")
 	webRawFrames(c)
+	c.subs["chat"].seq = 100_000 // as after 100 000 earlier deltas
+	last := len(m.ai.conv.Messages) - 1
 	worst := 0
 	for i := 0; i < 50; i++ {
 		tok := "word" + strconv.Itoa(i) + " "
-		m.ai.conv.Messages[1].Text += tok
+		m.ai.conv.Messages[last].Text += tok
 		m.webAfterUpdate(nil)
 		size := 0
 		for _, f := range webRawFrames(c) {
