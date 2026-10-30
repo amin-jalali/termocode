@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -85,6 +86,14 @@ func TestWebPairShowsQRAndSendsDigest(t *testing.T) {
 	sum := sha256.Sum256([]byte(plain))
 	if !ok || hex.EncodeToString(sum[:]) != ev["sha256"] {
 		t.Fatalf("link %q does not match the digest", link)
+	}
+	// The whole QR code is on the card, every row as drawn (no cut, no
+	// wrap): a cut code does not scan.
+	plainView := ansiStrip(view)
+	for i, row := range webQRLines(link) {
+		if !strings.Contains(plainView, row) {
+			t.Fatalf("QR row %d is not on the card:\n%s", i, plainView)
+		}
 	}
 	if strings.Contains(view, plain) {
 		t.Fatal("the secret is printed as text on the card")
@@ -212,3 +221,7 @@ func webAccessSelect(m *Model, id string) {
 	m.confirmOpen = false
 	_ = m.handleConfirmSelect(id)
 }
+
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+func ansiStrip(s string) string { return ansiRe.ReplaceAllString(s, "") }

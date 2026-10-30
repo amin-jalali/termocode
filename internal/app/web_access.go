@@ -98,27 +98,26 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	acc := m.webAccess()
 	acc.link = st.url + "#p=" + plain
 	body := "Scan this code with the phone's camera. It works once, for 2 minutes.\n" +
-		"The phone then shows a 6-digit code; you check it here.\n\n" +
-		strings.Join(webQRLines(acc.link), "\n")
+		"The phone then shows a 6-digit code; you check it here."
 	m.confirm = confirm.New("Pair a phone or tablet", body, []confirm.Button{
 		{ID: "close", Title: "Close"},
 		{ID: "copy", Title: "Copy link"},
-	}).WithWideText()
+	}).WithPicture(webQRLines(acc.link))
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindWebPairQR
 	return nil
 }
 
-// webQRLines draws text as a QR code with half blocks: light modules are
-// drawn, dark ones are the card's dark background, with a light quiet
-// zone of 4 modules around it.
+// webQRLines draws text as a QR code with half blocks for a card's
+// picture (white on black): light modules are drawn, dark ones are the
+// black background, with a light quiet zone of 2 modules around it.
 func webQRLines(text string) []string {
 	code, err := qr.Encode(text, qr.L)
 	if err != nil {
 		return []string{"(no QR code: the link is too long; use Copy link)"}
 	}
-	const quiet = 4
+	const quiet = 2
 	n := code.Size + 2*quiet
 	light := func(x, y int) bool {
 		x, y = x-quiet, y-quiet
