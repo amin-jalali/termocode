@@ -36,7 +36,7 @@ func openMerge(t *testing.T) (*Page, *HubConn) {
 	snap.Op = "merge"
 	snap.Files = append(snap.Files, webproto.GitFile{Path: "src/c.go", X: "U", Y: "U", Conflict: true})
 	p, c := openGit(t, Desktop, snap)
-	p.TapJS(`document.querySelector('` + rowSel("src/c.go") + ` .git-open')`)
+	p.TapJS(scm + `.querySelector('.tr[data-group="merge"][data-path="src/c.go"]')`)
 	r := waitReq(t, c, "git.conflict")
 	if canonJSON(t, r.Args) != `{"path":"src/c.go"}` {
 		t.Errorf("conflict args %s", r.Args)
@@ -88,7 +88,7 @@ func TestMergeEditorWholeFileAsksLaptop(t *testing.T) {
 	snap := gitSnap()
 	snap.Files = append(snap.Files, webproto.GitFile{Path: "img.png", X: "U", Y: "U", Conflict: true})
 	p, c := openGit(t, Desktop, snap)
-	p.TapJS(`document.querySelector('` + rowSel("img.png") + ` .git-open')`)
+	p.TapJS(scm + `.querySelector('.tr[data-group="merge"][data-path="img.png"]')`)
 	reply(t, c, waitReq(t, c, "git.conflict"), webproto.GitConflict{Path: "img.png", Version: strings.Repeat("cd", 32), Blocks: []webproto.GitConflictPart{},
 		Ours: webproto.GitConflictSide{Present: true, Binary: true}, Theirs: webproto.GitConflictSide{Present: false}})
 	p.WaitJS(mergeView + `?.querySelector(".gm-whole")`)
