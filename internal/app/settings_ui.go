@@ -85,6 +85,7 @@ type settingsConfig struct {
 	WebPanel       string `json:"web_panel,omitempty"`
 	WebPort        *int   `json:"web_port,omitempty"`
 	WebListen      string `json:"web_listen,omitempty"`
+	WebRequireTOTP *bool  `json:"web_require_totp,omitempty"`
 	WebIdleMinutes *int   `json:"web_idle_minutes,omitempty"`
 	WebMaxHours    *int   `json:"web_max_hours,omitempty"`
 	WebOpenBrowser *bool  `json:"web_open_browser,omitempty"`

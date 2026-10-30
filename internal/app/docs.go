@@ -312,6 +312,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "The web panel (experimental): your files, chats and terminals in a web browser, on this computer or over SSH. on: termocode listens on a private socket in the session folder, and Web: Start Panel (or termocode web) can open the panel after you say yes on a card. Anyone who controls the browser tab can run any command as you. off: nothing listens and the commands only explain how to turn it on. Applied when you save config.json."},
 	{Key: "web_listen", Type: "enum", Default: "loopback", Category: "Web (file only)", Choices: []string{"loopback", "tailnet"},
 		Description: "Where the web panel can be reached. loopback: only on this computer (127.0.0.1), or over termocode ssh --web. tailnet: also from your own devices on your Tailscale network, at https://<this computer>.<tailnet>.ts.net/; termocode runs tailscale serve while the panel runs and refuses to start when the port is public (Funnel). Needs Tailscale with HTTPS turned on."},
+	{Key: "web_require_totp", Type: "bool", Default: "false", Category: "Web (file only)",
+		Description: "A paired phone or tablet also types a 6-digit code from an authenticator app after its passkey. Set the code up first with Web: Set Up Sign-in Code… (its key is kept in your secret store, which must be unlocked when a device signs in). The one-time link from this computer does not need it."},
 	{Key: "web_port", Type: "int", Default: "0", Category: "Web (file only)",
 		Description: "The port the web panel listens on, on 127.0.0.1 only. 0: a free port each time. Else 1024..65535."},
 	{Key: "web_idle_minutes", Type: "int", Default: "15", Category: "Web (file only)",

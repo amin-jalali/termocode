@@ -452,6 +452,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"web-copy-link": aiNever(aiNoWeb + " (the link logs a browser in)"),
 	"web-pair":      aiNever(aiNoWeb + " (pairing lets another device in)"),
 	"web-devices":   aiNever(aiNoWeb + " (who may come in)"),
+	"web-totp":      aiNever(aiNoWeb + " (a second factor of the web sign-in)"),
 	// Itermoc (itermoc_actions.go): the user's screen for profiles, models,
 	// services and outside agents. The AI opens it with the typed tool
 	// ai_view_open (ai_itermoc_tools.go); as palette commands they are the user's.
@@ -625,6 +626,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"web_panel":        aiNever(aiNoWeb),
 	"web_port":         aiNever(aiNoWeb),
 	"web_listen":       aiNever(aiNoWeb),
+	"web_require_totp": aiNever(aiNoWeb),
 	"web_idle_minutes": aiNever(aiNoWeb),
 	"web_max_hours":    aiNever(aiNoWeb),
 	"web_open_browser": aiNever(aiNoWeb),

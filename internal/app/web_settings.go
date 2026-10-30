@@ -19,6 +19,7 @@ type webConfig struct {
 	OpenBrowser bool
 	MaxViewers  int
 	Tailnet     bool     // web_listen: "tailnet" (WEB-31)
+	RequireTOTP bool     // web_require_totp (WEB-48)
 	Problems    []string // one line per bad value, for a warning toast
 }
 
@@ -56,6 +57,9 @@ func webSettings() webConfig {
 	intIn("web_idle_minutes", s.WebIdleMinutes, 1, 120, &c.IdleMinutes)
 	intIn("web_max_hours", s.WebMaxHours, 1, 24, &c.MaxHours)
 	intIn("web_max_viewers", s.WebMaxViewers, 1, 8, &c.MaxViewers)
+	if s.WebRequireTOTP != nil {
+		c.RequireTOTP = *s.WebRequireTOTP
+	}
 	if s.WebOpenBrowser != nil {
 		c.OpenBrowser = *s.WebOpenBrowser
 	}

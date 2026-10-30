@@ -56,6 +56,7 @@ func webAccessPaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "web-pair", Title: "Web: Pair a Device…"},
 		{ID: "web-devices", Title: "Web: Devices…"},
+		{ID: "web-totp", Title: "Web: Set Up Sign-in Code…"},
 	}
 }
 
@@ -66,6 +67,8 @@ func (m *Model) dispatchWebAccessPalette(id string) (tea.Cmd, bool) {
 		return m.openWebPair(false), true
 	case "web-devices":
 		return m.openWebDevices(), true
+	case "web-totp":
+		return m.openWebTotpSetup(), true
 	}
 	return nil, false
 }
@@ -400,5 +403,5 @@ func (m *Model) handleWebAccessConfirm(id string) (tea.Cmd, bool) {
 	case confirmKindWebDeviceRm:
 		return m.answerWebDeviceRemove(id), true
 	}
-	return nil, false
+	return m.handleWebTotpConfirm(id)
 }
