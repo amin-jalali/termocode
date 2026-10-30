@@ -46,7 +46,7 @@ interface Model {
 }
 interface Decoration {
   range: IRange;
-  options: { inlineClassName?: string; className?: string; isWholeLine?: boolean };
+  options: { inlineClassName?: string; className?: string; isWholeLine?: boolean; linesDecorationsClassName?: string };
 }
 interface Collection {
   set(d: Decoration[]): void;
@@ -101,6 +101,7 @@ const hist = new History();
 let applying: "remote" | "undo" | "replace" | null = null;
 let hlDecos: Collection | null = null;
 let flashDecos: Collection | null = null;
+let gutterDecos: Collection | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | undefined;
 
 function sendText(user: boolean): void {
@@ -243,6 +244,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   model?.setEOL(0);
   hlDecos = ed.createDecorationsCollection();
   flashDecos = ed.createDecorationsCollection();
+  gutterDecos = ed.createDecorationsCollection();
   model?.onDidChangeContent((e) => {
     const specs: { from: number; to: number; insert: string }[] = e.changes.map((c) => ({ from: c.rangeOffset, to: c.rangeOffset + c.rangeLength, insert: c.text }));
     const cs = ChangeSet.of(specs, cur.length);
@@ -315,6 +317,14 @@ function onMessage(e: MessageEvent): void {
       hlDecos.set(out);
       return;
     }
+    case "gutter":
+      gutterDecos?.set(
+        m.marks.map((g) => ({
+          range: { startLineNumber: g.from, startColumn: 1, endLineNumber: g.to, endColumn: 1 },
+          options: { isWholeLine: true, linesDecorationsClassName: "tc-gm tc-gm-" + g.kind },
+        })),
+      );
+      return;
     case "undo":
       undoRedo(false);
       return;

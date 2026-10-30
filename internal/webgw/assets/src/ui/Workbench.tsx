@@ -222,7 +222,8 @@ function sideLabel(id: Activity): StringKey {
 const lastSide = signal<Activity>("files");
 
 export function Workbench() {
-  useEffect(() => link.subscribe("bufs"), []);
+  // The editor tabs (open buffers) and the git marks of the open file.
+  useEffect(() => link.subscribe("bufs", "git"), []);
   // The workbench's keys (lib/commands.ts lists them with their names).
   useEffect(() => {
     addEventListener("keydown", workbenchKeys);

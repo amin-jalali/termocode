@@ -56,6 +56,9 @@
   --wb-toolbar-hover: rgba(90, 93, 94, 0.31);
   --wb-sel: #264f78;
   --wb-shadow: rgba(0, 0, 0, 0.36);
+  --wb-gm-add: #487e02;
+  --wb-gm-mod: #1b81a8;
+  --wb-gm-del: #f14c4c;
   --bg: #1e1e1e;
   --bg-2: #252526;
   --bg-panel: #1e1e1e;
@@ -130,6 +133,9 @@
   --wb-toolbar-hover: rgba(184, 184, 184, 0.31);
   --wb-sel: #add6ff;
   --wb-shadow: rgba(0, 0, 0, 0.16);
+  --wb-gm-add: #48985d;
+  --wb-gm-mod: #2090d3;
+  --wb-gm-del: #e51400;
   --bg: #ffffff;
   --bg-2: #f3f3f3;
   --bg-panel: #ffffff;
@@ -203,6 +209,9 @@
     --wb-toolbar-hover: rgba(184, 184, 184, 0.31);
     --wb-sel: #add6ff;
     --wb-shadow: rgba(0, 0, 0, 0.16);
+    --wb-gm-add: #48985d;
+    --wb-gm-mod: #2090d3;
+    --wb-gm-del: #e51400;
     --bg: #ffffff;
     --bg-2: #f3f3f3;
     --bg-panel: #ffffff;
@@ -277,6 +286,9 @@
   --wb-toolbar-hover: var(--bg-hover);
   --wb-sel: var(--sel);
   --wb-shadow: rgba(0, 0, 0, 0.36);
+  --wb-gm-add: var(--git-add);
+  --wb-gm-mod: var(--git-mod);
+  --wb-gm-del: var(--git-del);
 }
 
 /* ---- Frame ---- */
@@ -825,3 +837,25 @@ kbd {
 .wb-panel-actions .tb { color: var(--wb-panel-title); }
 .wb-panel .term-chips { inset-inline-end: 110px; }
 .wb-panel .view-head { inset-inline-end: 40px; }
+
+/* ---- Source control in the side bar: the laptop editor's density ---- */
+.wb-side .git { gap: 0; padding-bottom: var(--s2); }
+.wb-side .commit-box { order: -1; position: static; margin: 0 0 var(--s2); padding: 4px 12px 8px 20px; border: 0; border-radius: 0; background: transparent; gap: 6px; }
+.wb-side .commit-subject, .wb-side .commit-body { min-height: 26px; padding: 3px 6px; padding-inline-end: 3.5rem; border-radius: 2px; border-color: transparent; background: var(--wb-input-bg); color: var(--wb-input-fg); font-size: var(--fs-ui); }
+.wb-side .commit-subject:focus, .wb-side .commit-body:focus { border-color: var(--wb-focus); }
+.wb-side .commit-more { min-height: 20px; font-size: 0.75rem; }
+.wb-side .commit-box .btn { min-height: 26px; height: 26px; border-radius: 2px; background: var(--wb-button-bg); color: var(--wb-button-fg); border: 0; font-size: var(--fs-ui); font-weight: 400; }
+.wb-side .commit-box .btn:hover { background: var(--wb-button-hover); }
+.wb-side .git-group .group-title { height: 22px; padding: 0 8px 0 20px; }
+.wb-side .git-row { min-height: 22px; background: transparent; }
+.wb-side .git-open { min-height: 22px; gap: 6px; padding: 0 8px 0 20px; }
+.wb-side .git-open:hover { background: var(--wb-list-hover); }
+.wb-side .git-name { flex-direction: row; align-items: baseline; gap: 6px; min-width: 0; white-space: nowrap; }
+.wb-side .git-file { font-weight: 400; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.wb-side .git-dir { font-family: var(--font-sans); font-size: 0.75rem; opacity: 0.85; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.wb-side .git-row .btn { min-height: 22px; height: 22px; padding: 0 6px; border: 0; border-radius: 5px; background: transparent; color: var(--wb-side-fg); font-size: 0.75rem; opacity: 0; }
+.wb-side .git-row-wrap:hover .git-row .btn, .wb-side .git-row .btn:focus-visible { opacity: 1; }
+.wb-side .git-row .btn:hover { background: var(--wb-toolbar-hover); }
+.wb-side .git-commit { min-height: 22px; padding: 0 8px 0 20px; gap: 8px; }
+.wb-side .git-clean, .wb-side .git-many { padding: 4px 20px; }
+.wb-side .view-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

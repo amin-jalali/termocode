@@ -8,6 +8,7 @@ import { signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
 import { FRAME_PATH, type FrameOpts, type FromFrame, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
+import type { Mark } from "./gutter";
 import { cursorAt, quick } from "./workbench";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
@@ -15,7 +16,7 @@ const COLOR_TOKENS = [
   "--wb-editor-bg", "--wb-editor-fg", "--wb-line-num", "--wb-line-num-active", "--wb-line-hl", "--wb-indent", "--wb-sel",
   "--wb-side-bg", "--wb-focus", "--wb-scroll", "--wb-scroll-hover",
   "--syn-kw", "--syn-ctl", "--syn-fn", "--syn-var", "--syn-ty", "--syn-str", "--syn-num", "--syn-cmt", "--syn-rx", "--syn-cst", "--syn-op",
-  "--amber", "--blue", "--red", "--git-add", "--git-del", "--git-mod",
+  "--amber", "--blue", "--red", "--git-add", "--git-del", "--git-mod", "--wb-gm-add", "--wb-gm-mod", "--wb-gm-del",
 ];
 
 /** hex8 writes a computed colour as #rrggbb or #rrggbbaa. */
@@ -56,6 +57,7 @@ export interface DeskHost extends EditorHost {
 /** DeskHandle is an EditorHandle with the settings the view changes. */
 export interface DeskHandle extends EditorHandle {
   opts(o: FrameOpts): void;
+  gutter(marks: Mark[]): void;
   reveal(line: number): void;
 }
 
@@ -159,6 +161,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     opts(o) {
       send({ t: "opts", ...o });
+    },
+    gutter(marks) {
+      send({ t: "gutter", marks });
     },
     reveal(line) {
       send({ t: "reveal", line });
