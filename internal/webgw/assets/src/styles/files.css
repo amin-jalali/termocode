@@ -31,7 +31,7 @@
 .file-note { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); padding: var(--s2) var(--s3); border-inline-start: 2px solid var(--amber); background: var(--bg-2); color: var(--text-2); font-size: var(--fs-hint); }
 .file-note.is-info { border-color: var(--blue); }
 .file-updated { position: sticky; top: 0; z-index: 1; margin: 0 0 var(--s2); padding: var(--s1) var(--s2); border-radius: var(--r-chip); background: var(--bg-2); color: var(--muted); font-size: var(--fs-hint); text-align: center; }
-.file-meta { font-family: var(--font-mono); color: var(--dim); }
+.file-meta { font-family: var(--font-mono); color: var(--muted); }
 .lines { position: relative; margin-inline: calc(-1 * var(--gutter)); overflow-anchor: auto; }
 .lines.is-nowrap { overflow-x: auto; }
 .lines.is-nowrap .lines-block { width: max-content; min-width: 100%; }
@@ -55,7 +55,7 @@
 .term-chip { flex: none; }
 .term-chip .chip { gap: var(--s2); max-width: 14rem; }
 .term-chip-title { min-width: 0; }
-.term-chip-n { color: var(--dim); }
+.term-chip-n { color: var(--muted); }
 .term-rows { -webkit-touch-callout: none; margin-inline: calc(-1 * var(--gutter)); padding-block: var(--s2); background: var(--bg-panel); min-height: 50vh; }
 .term-rows .trow { grid-template-columns: minmax(0, 1fr); }
 .term-rows .wrap-mark { display: none; }
