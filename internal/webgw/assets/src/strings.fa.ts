@@ -209,6 +209,7 @@ export const FA: Record<StringKey, string> = {
   "term.copy_row": "کپی این خط",
   "term.copy_all": "کپی همهٔ خط‌ها",
   "term.paste": "چسباندن…",
+  "term.keep_on": "صفحه تا پایان اجرا روشن بماند",
   "term.read_last": "خواندن ۲۰ خط آخر",
   "key.esc": "Esc",
   "key.tab": "Tab",
