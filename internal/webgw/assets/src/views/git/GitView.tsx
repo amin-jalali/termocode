@@ -1,6 +1,6 @@
 // The Git tab (WEB-23, web UX 3.5, 5.7): the laptop's changed files in
 // groups (Conflicts, Staged, Changes, Untracked), a diff sheet per file,
-// stage and unstage by button or swipe with Undo. Routes: #/git, #/git/<path>?side=staged,
+// stage and unstage by button or swipe with Undo, the commit box. Routes: #/git, #/git/<path>?side=staged,
 // #/git?show=<hash>.
 import { h, Fragment } from "preact";
 import { useEffect } from "preact/hooks";
@@ -11,6 +11,7 @@ import { age, groupFiles, readGit, splitPath, type GitFile, type Side } from "..
 import { Progress, SkeletonRows } from "../../ui/Skeleton";
 import { t, type StringKey } from "../../strings";
 import { View } from "../View";
+import { CommitBox } from "./CommitBox";
 import { DiffSheet } from "./DiffSheet";
 import { gitFailed } from "./errors";
 import { GitRow } from "./GitRow";
@@ -129,6 +130,9 @@ export function GitView() {
               </button>
             ))}
           </section>
+        )}
+        {!viewer && !g.op && groups.staged.length + groups.changes.length + groups.untracked.length > 0 && (
+          <CommitBox staged={groups.staged.length} branch={branch} />
         )}
       </Fragment>
     );
