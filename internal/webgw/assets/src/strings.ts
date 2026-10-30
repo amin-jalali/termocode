@@ -301,8 +301,8 @@ export const S = {
   "more.licenses": "Licenses",
 
   // Errors (web design E-texts)
-  "e.link_expired": "This link has expired or was already used. In termocode, run Web: Open in Browser again.",
-  "e.no_link": "Open this page from termocode on the laptop: run Web: Open in Browser.",
+  "e.link_expired": "This link has expired or was already used. In termocode, run Web: Start Panel for a new one.",
+  "e.no_link": "Open this page from termocode on the laptop: run Web: Start Panel.",
   "e.stopped": "The web session was stopped.",
   "e.idle": "The web session stopped after 15 minutes without typing.",
   "e.max": "The web session stopped after 12 hours.",

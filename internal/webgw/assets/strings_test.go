@@ -338,3 +338,30 @@ func TestPersianStringsAreCompleteAndKeepPlaceholders(t *testing.T) {
 		}
 	}
 }
+
+// Every "Web: …" command a string tells the user to run is a real
+// palette command of the laptop (internal/app/web_tui.go), in English
+// and Persian alike: a name that does not exist leaves the user stuck.
+func TestStringsNameRealWebCommands(t *testing.T) {
+	b, err := os.ReadFile("../../app/web_tui.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	real := map[string]bool{}
+	for _, m := range regexp.MustCompile(`Title: "(Web: [^"]+)"`).FindAllStringSubmatch(string(b), -1) {
+		real[m[1]] = true
+	}
+	if len(real) == 0 {
+		t.Fatal("no Web: palette commands found in web_tui.go")
+	}
+	named := regexp.MustCompile(`Web: [A-Z]\w*(?: (?:in|on|to|[A-Z]\w*))*`)
+	for _, f := range []struct{ file, name string }{{"src/strings.ts", "S"}, {"src/strings.fa.ts", "FA"}} {
+		for _, e := range parseStrings(t, f.file, f.name) {
+			for _, cmd := range named.FindAllString(e.text, -1) {
+				if !real[cmd] {
+					t.Errorf("%s:%d: %s names %q, not a palette command (have %v)", f.file, e.line, e.key, cmd, real)
+				}
+			}
+		}
+	}
+}
