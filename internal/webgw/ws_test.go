@@ -593,3 +593,35 @@ func TestBrowserByeCloses(t *testing.T) {
 		t.Fatal("no connect in the audit log")
 	}
 }
+
+// Spec (owner limit): at most MaxViewers browsers at once; one more is
+// closed with 4005 before the hub hears of it, and gets in once a seat
+// is free.
+func TestTooManyViewers4005(t *testing.T) {
+	r := newWSRig(t, DefaultLimits, func(c *WSConfig) { c.MaxViewers = 2 })
+	c1, p1 := r.connect()
+	r.connect()
+	c := r.mustDial()
+	writeText(t, c, helloMsg(r.token()))
+	if got := closeCode(t, c); got != websocket.StatusCode(webproto.CloseTooManyViewers) {
+		t.Fatalf("third browser: %d, want 4005", got)
+	}
+	r.hub.none()
+	_ = c1.Close(websocket.StatusNormalClosure, "")
+	p1.eof(t)
+	waitFor(t, "a free seat", func() bool { return r.ws.Count() == 1 })
+	r.connect()
+}
+
+// Spec (owner rule): when the audit log cannot be written, new browsers
+// are refused (1011) and the hub never hears of them.
+func TestAuditFailureFailsClosed(t *testing.T) {
+	r := newWSRig(t, DefaultLimits, nil)
+	_ = r.audit.Close()
+	c := r.mustDial()
+	writeText(t, c, helloMsg(r.token()))
+	if got := closeCode(t, c); got != websocket.StatusInternalError {
+		t.Fatalf("closed with %d, want 1011", got)
+	}
+	r.hub.none()
+}
