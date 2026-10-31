@@ -95,6 +95,9 @@ type Agent struct {
 	// Name is the model's name in the chat's fallback line ("" = the
 	// provider's).
 	Name string
+	// ContextWindow is the model's window in tokens (0: unknown). Tool
+	// results are cut to what still fits (fit.go).
+	ContextWindow int
 	// BeforeCalls (optional) sees every tool call of a step before the
 	// first one runs, so the app can show all the files a step changes
 	// in one review list.
@@ -276,13 +279,19 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 		if a.BeforeCalls != nil {
 			a.BeforeCalls(ctx, calls)
 		}
-		for _, call := range calls {
-			ictx, images := a.withImageSink(ctx)
-			result := a.runTool(ictx, call, emit)
+		results := make([]string, len(calls))
+		images := make([][]Image, len(calls))
+		for i, call := range calls {
+			ictx, imgs := a.withImageSink(ctx)
+			results[i] = a.runTool(ictx, call, emit)
+			images[i] = imgs()
+		}
+		results = fitToolResults(results, a.ContextWindow, promptTokens(last.Usage, msgs)) // OMX-25
+		for i, call := range calls {
 			if a.Native {
-				msgs = append(msgs, Message{Role: RoleTool, ToolCallID: call.ID, ToolName: call.Name, Content: result, Images: images()})
+				msgs = append(msgs, Message{Role: RoleTool, ToolCallID: call.ID, ToolName: call.Name, Content: results[i], Images: images[i]})
 			} else {
-				msgs = append(msgs, Message{Role: RoleUser, Content: "[tool result] " + call.Name + ":\n" + result})
+				msgs = append(msgs, Message{Role: RoleUser, Content: "[tool result] " + call.Name + ":\n" + results[i]})
 			}
 		}
 		if ctx.Err() != nil {
@@ -293,6 +302,19 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
 	emit(Event{Kind: EventDone, Usage: usage})
 	return msgs[start:]
+}
+
+// promptTokens is the size of the last request: the server's count, else
+// a guess from the text (4 chars a token).
+func promptTokens(u *Usage, msgs []Message) int {
+	if u != nil && u.PeakContext > 0 {
+		return u.PeakContext
+	}
+	n := 0
+	for _, m := range msgs {
+		n += len(m.Content) + len(m.Blocks)
+	}
+	return n / 4
 }
 
 // fallBack moves the agent to its next backup model and tells the chat
