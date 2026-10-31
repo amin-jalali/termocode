@@ -35,6 +35,9 @@ type Process struct {
 	shared    bool
 	sharedPid atomic.Int64
 	sessions  atomic.Int64
+
+	// legacy: a remote server on the old HTTP+SSE transport.
+	legacy bool
 }
 
 // Pid is the server's process id (0 for a remote server).

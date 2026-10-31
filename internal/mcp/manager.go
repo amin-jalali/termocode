@@ -126,6 +126,8 @@ type Status struct {
 	// Sessions is how many use it now (this one too).
 	Shared   bool
 	Sessions int
+	// OldTransport: the remote server runs on the old HTTP+SSE transport.
+	OldTransport bool
 	// RetryIn is the wait before the next reconnect (StateReconnecting).
 	RetryIn time.Duration
 	server  Server
@@ -291,6 +293,7 @@ func (m *Manager) Servers() []Status {
 			if st.proc.shared {
 				s.Shared, s.Sessions = true, st.proc.Sessions()
 			}
+			s.OldTransport = st.proc.legacy
 		}
 		out = append(out, s)
 	}

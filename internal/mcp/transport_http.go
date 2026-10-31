@@ -601,6 +601,10 @@ func StartHTTP(ctx context.Context, s Server, ho HTTPOptions, opts Options) (*Pr
 	defer cancel()
 	if err := c.Initialize(ictx); err != nil {
 		p.Close()
+		if legacyFallback(err) {
+			opts.log("the server answered the POST with %v: trying the old transport (HTTP+SSE)", err)
+			return startLegacy(ctx, s, ho, opts)
+		}
 		return nil, err
 	}
 	opts.log("connected to %s", hostOf(s.URL))
