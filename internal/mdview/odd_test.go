@@ -97,3 +97,19 @@ func TestRenderPrependMarkKeepsRowWidth(t *testing.T) {
 		}
 	}
 }
+
+// A wide character in a one-cell view shows as "?" instead of
+// looping for ever looking for a row that can hold it.
+func TestRenderWideRuneInOneCellView(t *testing.T) {
+	for _, rtlOn := range []bool{false, true} {
+		rows := Render("と0も", Options{Width: 1, RTL: rtlOn})
+		for _, r := range rows {
+			if w := ansi.StringWidth(r); w != 1 {
+				t.Fatalf("rtl=%v: row is %d cells: %q", rtlOn, w, r)
+			}
+		}
+		if j := joined(rows); strings.Count(j, "?") != 2 || !strings.Contains(j, "0") {
+			t.Fatalf("rtl=%v: got %q", rtlOn, j)
+		}
+	}
+}
