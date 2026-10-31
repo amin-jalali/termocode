@@ -151,12 +151,9 @@ func AITools(s Server, tools []Tool, call CallFunc, o AdapterOptions) []ai.Tool 
 		if len(desc) > maxDescription {
 			desc = desc[:maxDescription] + "…"
 		}
-		props, _ := t.InputSchema["properties"].(map[string]any)
-		required := schemaRequired(t.InputSchema)
-		schema := t.InputSchema
-		if schema == nil {
-			schema = map[string]any{"type": "object", "properties": map[string]any{}}
-		}
+		schema := ModelSchema(t.InputSchema) // a root anyOf or a non-object root is refused by the APIs
+		props, _ := schema["properties"].(map[string]any)
+		required := schemaRequired(schema)
 		server := s.Name
 		out = append(out, ai.Tool{
 			Name:        WireName(s.Name, t.Name),
