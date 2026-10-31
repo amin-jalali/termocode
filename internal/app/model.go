@@ -101,6 +101,10 @@ const terminalRowsMin = 5
 const terminalRowsDefault = 10
 
 type Model struct {
+	// agentRollSig is the agent roll-up this window wrote last (OMX-35,
+	// ai_agent_rollup.go).
+	agentRollSig string
+
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process
 	// workspace. Read it through m.workspace() / m.rootDir().

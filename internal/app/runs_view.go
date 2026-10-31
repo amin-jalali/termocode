@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -208,6 +209,17 @@ func (m Model) drawRunsList(cv *rcCanvas, w, h int, narrow, focused bool, items 
 		}
 	} else {
 		note("older"+rcEllipsis(), c.dimmer)
+	}
+	if len(st.others) > 0 { // OMX-35: agents in other workspaces
+		ls = append(ls, line{h: 1, draw: func(int) {}})
+		group(theme.GlyphWait.String(), c.dim, "OTHER WORKSPACES", len(st.others))
+		for _, r := range st.others {
+			col := c.dim
+			if _, waiting := r.Counts(); waiting > 0 {
+				col = c.warn // amber: it needs you
+			}
+			note(filepath.Base(r.Workspace)+" · "+r.Line(), col)
+		}
 	}
 	// scroll: the selected line must fit between y=4 and the footer
 	room := foot - y

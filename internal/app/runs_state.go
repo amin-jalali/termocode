@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/agentroll"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/help"
@@ -60,6 +61,9 @@ type runsState struct {
 	pageScroll, pageM int // the page's scroll and its last max
 	cache             runsDrawCache
 	chatFiles         ai.ChatListCache // the parsed chat files (runsLoadChats)
+	// others are the other windows' agent roll-ups (OMX-35), read with
+	// the chats.
+	others []agentroll.Rollup
 }
 
 // runsDrawCache keeps the drawn sidebar and page between frames.
@@ -115,6 +119,7 @@ func (m *Model) runsLoadChats() {
 		return
 	}
 	st.chats, st.loadedFor = nil, m.ai.conv.ID
+	st.others = agentRollupOthers()
 	// Only the chat files that changed since the last load are read; the
 	// view only reads the chats (marking a run interrupted is the same
 	// change every time).

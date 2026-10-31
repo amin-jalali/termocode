@@ -86,6 +86,7 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		return nil
 	}
 	t.AgentState = st
+	m.agentRollupSync() // OMX-35
 	if st == agents.Done {
 		return m.notifyOS("Agent run ended")
 	}
