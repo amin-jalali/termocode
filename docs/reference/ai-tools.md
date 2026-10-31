@@ -21,7 +21,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | --- | --- | --- | --- |
 | [`read_file`](#read_file) | auto | yes | Read a file and return its contents. |
 | [`list_dir`](#list_dir) | auto | yes | List the entries of a directory. |
-| [`search`](#search) | auto | yes | Search the workspace for a literal text pattern (max 50 matches). |
+| [`search`](#search) | auto | yes | Search the workspace for text: a literal pattern, or a regular expression with regex=true; glob limits the files ("*.go", "src/**", "!*_test.go"; comma-separated). |
+| [`glob`](#glob) | auto | yes | Find files by name pattern ("**/*_test.go", "src/*.ts"; comma-separated, a leading ! drops files). |
 | [`git_status`](#git_status) | auto | yes | Show the working-tree status (changed / staged files). |
 | [`git_diff`](#git_diff) | auto | yes | Show the diff of one file vs HEAD, or of all changes when path is empty. |
 | [`git_branch`](#git_branch) | auto | yes | List git branches (current marked with *). |
@@ -161,7 +162,7 @@ List the entries of a directory.
 
 ### search
 
-Search the workspace for a literal text pattern (max 50 matches).
+Search the workspace for text: a literal pattern, or a regular expression with regex=true; glob limits the files ("*.go", "src/**", "!*_test.go"; comma-separated). Max 50 matches.
 
 **Gate:** auto
 
@@ -169,7 +170,22 @@ Search the workspace for a literal text pattern (max 50 matches).
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `query` | string | yes | text to find |
+| `query` | string | yes | text (or regex) to find |
+| `glob` | string |   | file globs to search in, comma-separated; a leading ! drops files (optional) |
+| `regex` | boolean |   | treat query as a regular expression |
+
+### glob
+
+Find files by name pattern ("**/*_test.go", "src/*.ts"; comma-separated, a leading ! drops files). Skips ignored, hidden and dependency folders. Max 200 paths.
+
+**Gate:** auto
+
+**MCP server:** yes
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `pattern` | string | yes | file globs, comma-separated |
+| `path` | string |   | folder to look in, relative to the workspace (default: root) |
 
 ### git_status
 
