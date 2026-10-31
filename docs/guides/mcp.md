@@ -284,6 +284,31 @@ or URL and the names (not the values) of its environment variables.
 **Always allow** is stored per entry; when the entry changes, termocode
 asks again. Servers in your own `mcp.json` do not ask.
 
+### Allow and deny lists (policy)
+
+On a company machine an admin can say which servers may run. termocode
+reads two policy files, and both apply:
+
+- the machine file `/etc/termocode/mcp-policy.json`
+  (`/Library/Application Support/termocode/mcp-policy.json` on macOS,
+  `%ProgramData%\termocode\mcp-policy.json` on Windows), and
+- your own `~/.config/termocode/mcp-policy.json`.
+
+```json
+{
+  "deny":  [{ "command": "curl" }, { "url": "http://*" }],
+  "allow": [{ "name": "notes" }, { "command": "npx" }, { "url": "https://mcp.linear.app/*" }]
+}
+```
+
+A rule has `name`, `command` and / or `url`; `*` matches any text, and
+every key you set must match. `command` is compared with the program, its
+file name and the whole command line. A `deny` rule always wins. When a
+file has an `allow` list, a server must match one of its rules. A blocked
+server stays in **AI: MCP Servers…** as `blocked by policy (<file>)` and
+never starts. If a policy file is not valid JSON, every server is blocked
+until it is fixed, and the MCP log says why.
+
 ## How the sign-in works
 
 For the browser sign-in termocode finds the service's sign-in server by
