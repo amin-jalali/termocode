@@ -58,7 +58,9 @@ func aiDefaultTurnDump(t *testing.T) string {
 	// The env block (OMX-10) names the OS and shell: pinned, so the golden
 	// is the same on every machine.
 	old := aiEnvInfo
-	aiEnvInfo = func() ai.EnvInfo { return ai.EnvInfo{Now: clock.Now(), GOOS: "linux", GOARCH: "amd64", Shell: "/bin/bash"} }
+	aiEnvInfo = func() ai.EnvInfo {
+		return ai.EnvInfo{Now: clock.Now(), GOOS: "linux", GOARCH: "amd64", Shell: "/bin/bash"}
+	}
 	t.Cleanup(func() { aiEnvInfo = old })
 	p := &recordingAIProvider{replies: []ai.Chunk{
 		{Delta: "Let me look.", ToolCalls: []ai.ToolCall{{ID: "c1", Name: "list_dir", Args: map[string]any{"path": "."}}},
