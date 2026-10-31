@@ -132,6 +132,36 @@ The setting is read when termocode starts.
 Chats are saved. Run **AI: Chat History…** to open an old one, and
 **AI: New Chat** to start fresh. The last 50 chats are kept.
 
+### Reasoning level
+
+Some models can think longer before they answer. More thinking gives
+better answers on hard problems, but it is slower and costs more tokens.
+
+- Write **think** in your message for the `high` level, or
+  **ultrathink** for `max`. Only a whole word counts, not text in
+  `code`. A chip above the input shows it before you send, for example
+  `✦ ultrathink · max ×`. Click `×` to send the message at the normal
+  level (your text stays). The raise is for this one message.
+- **AI: Next Reasoning Level** sets the level of this chat:
+  auto (the model's default) → `low` → `medium` → `high` → `xhigh` →
+  `max` → auto. The chat header then shows a `think <level>` chip; click
+  it for the next level.
+- `ai_reasoning` in `config.json` sets the start level of every chat and
+  of the `main` model slot. A model slot can set its own level:
+  `"ai_models": {"deep": {"provider": "anthropic", "reasoning": "high"}}`.
+
+How the level is sent:
+
+| Provider | Sent as |
+|---|---|
+| Claude 4.6 and newer | adaptive thinking with that effort (4.6 has no `xhigh`: `high`) |
+| older Claude models | a thinking budget (2k to 32k tokens) |
+| OpenAI o-series and GPT-5 and newer | `reasoning_effort` (`xhigh` and `max` are `high`) |
+| OpenRouter | `reasoning.effort` |
+| Ollama, LM Studio, a custom URL | nothing |
+
+Ghost text and the `quick` slot never use a level.
+
 ### Fork a chat
 
 A fork is a new chat that starts with the history of the old one, up to
