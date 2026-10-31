@@ -485,7 +485,7 @@ func ConfigFileCatalog() []ConfigFile {
 		{"config", "web/devices.json", "The phones and tablets paired with the web panel (Web: Pair a Device…): name, role, and the passkey's public key and counter. No secret: a public key cannot sign in. File mode 0600 (folder 0700).",
 			"JSON `{\"version\", \"devices\": [{\"id\", \"name\", \"role\", \"guest\", \"cred_id\", \"public_key\", \"sign_count\", \"user_id\", \"rp_id\", \"created\", \"last_seen\"}]}`.",
 			"Use Web: Devices… to remove one. Delete the file to forget every device."},
-		{"config", "ai/credentials.json", "The old plain secret file: AI API keys, Claude OAuth tokens, MCP secrets and MCP sign-ins, not encrypted. File mode 0600 (folder 0700). Used only while secret_store is plain, or until AI: Move Secrets to a Safer Store… moves it to the OS keyring or secrets.age and removes it.",
+		{"config", "ai/credentials.json", "The old plain secret file: AI API keys, Claude OAuth tokens, MCP secrets and MCP sign-ins, not encrypted. File mode 0600 (folder 0700). Used only while secret_store is plain, or until AI: Move Secrets to a Safer Store… moves it to the OS keyring or secrets.age; the file is deleted only after you confirm on a card.",
 			"JSON `{\"keys\": {provider: key}, \"claude_oauth\": {...}, \"mcp_secrets\": {name: value}, \"mcp_oauth\": {server: {issuer, resource, tokens…, account}}, \"mcp_accounts\": {server: account}}`.",
 			"With care. Prefer AI: Configure Provider…. Never exported by Preferences: Export termocode Settings File…."},
 		{"config", "ai/credentials.json.migrated", "Empty marker written after the secrets were moved out of ai/credentials.json. While it exists termocode does not offer the move again.",

@@ -227,13 +227,18 @@ What happens:
 
 1. termocode copies every secret to the new store.
 2. It reads each one back and compares it.
-3. Only then it overwrites `credentials.json` with zeros, deletes it and
-   writes the empty marker `ai/credentials.json.migrated`.
+3. Then it asks on a card: **Keep for now** (first, the default) or
+   **Delete the plain file**. Only on Delete it checks the copy once more,
+   overwrites `credentials.json` with zeros, deletes it and writes the empty
+   marker `ai/credentials.json.migrated`.
 
-A toast says *Secrets moved · credentials.json removed*. If a step fails,
-`credentials.json` stays as it was and termocode keeps using it. If termocode
-stops in the middle, the next start checks the new store and finishes the
-delete without asking (the encrypted file after you unlock it).
+A toast says *Secrets moved · plain file kept*. Until you delete it, the
+plain file stays readable on disk. If a step fails, `credentials.json`
+stays as it was and termocode keeps using it. If you keep the file (or
+termocode stops in the middle), the next start asks again once the new store
+is open (the encrypted file after you unlock it). Esc and Enter keep the
+file. **AI: Move Secrets to a Safer Store…** offers the delete again any
+time.
 
 While the marker exists, termocode does not ask again. Run
 **AI: Move Secrets to a Safer Store…** from `F1` any time the plain file is
