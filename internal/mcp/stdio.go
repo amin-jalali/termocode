@@ -59,7 +59,7 @@ func StartStdio(ctx context.Context, s Server, opts Options) (*Process, error) {
 	}
 	path, err := exec.LookPath(s.Command)
 	if err != nil {
-		return nil, fmt.Errorf("%s not found (install it, or set command to a full path)", s.Command)
+		return nil, &MissingRuntime{Command: s.Command, Hint: RuntimeHint(s.Command)}
 	}
 	cmd := spawn.Command(path, s.Args...)
 	cmd.Dir = s.Cwd
