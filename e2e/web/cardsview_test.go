@@ -193,13 +193,14 @@ func TestCardViewRiskyIgnoredBeforeArming(t *testing.T) {
 		if k.risky == "" {
 			t.Skip("a trust card has no risky answer")
 		}
-		p, c := openCardView(t, vp, k.kind)
+		// Each try gets its own page and hub: a late press was armed and
+		// answers (after the check mark), and that answer must not be
+		// taken for one from the early press.
+		var p *Page
+		var c *HubConn
 		early := false
 		for try := 0; try < 3 && !early; try++ {
-			if try > 0 {
-				p.Key(kb.Escape)
-				reopenCard(p)
-			}
+			p, c = openCardView(t, vp, k.kind)
 			Eval[bool](p, recordPress(riskyBtn))
 			p.TapJS(riskyBtn)
 			early = pressedEarly(p)
