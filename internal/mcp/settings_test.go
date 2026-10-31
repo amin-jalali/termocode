@@ -165,3 +165,22 @@ func TestSaveDisabledTools(t *testing.T) {
 		t.Errorf("an empty map stayed: %s", b)
 	}
 }
+
+// ForgetTrusted removes one saved "Always allow" and keeps the rest.
+func TestForgetTrusted(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	writeFile(t, p, `{"theme":"dark","mcp_trusted":{"a":"h1","b":"h2"}}`)
+	if err := ForgetTrusted(p, "a"); err != nil {
+		t.Fatal(err)
+	}
+	s := LoadSettings(p)
+	if _, ok := s.Trusted["a"]; ok || s.Trusted["b"] != "h2" {
+		t.Errorf("trusted = %v", s.Trusted)
+	}
+	if err := ForgetTrusted(p, "b"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(p); strings.Contains(string(b), "mcp_trusted") || !strings.Contains(string(b), "theme") {
+		t.Errorf("config = %s", b)
+	}
+}
