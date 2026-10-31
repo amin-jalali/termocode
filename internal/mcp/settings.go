@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,19 @@ type Settings struct {
 	Share            bool              // mcp_share (true): one local server process for every session
 	Trusted          map[string]string // mcp_trusted: server name → entry hash ("Always allow")
 	TrustedTools     map[string]string // mcp_trusted_tools: server name → accepted ToolsHash
+	// DisabledTools (mcp_disabled_tools): server name → tool names the
+	// user turned off in Show tools; they are not sent to the model.
+	DisabledTools map[string][]string
+}
+
+// ToolOff reports a tool the user turned off (mcp_disabled_tools).
+func (s Settings) ToolOff(server, tool string) bool {
+	for _, n := range s.DisabledTools[server] {
+		if n == tool {
+			return true
+		}
+	}
+	return false
 }
 
 // Defaults of the mcp_* settings.
@@ -39,22 +53,23 @@ const (
 func LoadSettings(configPath string) Settings {
 	s := Settings{Enabled: true, IdleTimeout: DefaultIdleTimeout, CallTimeout: DefaultCallTimeout,
 		MaxResultKB: DefaultMaxResultKB, TrustAnnotations: true, Share: true, Trusted: map[string]string{},
-		TrustedTools: map[string]string{}}
+		TrustedTools: map[string]string{}, DisabledTools: map[string][]string{}}
 	b, err := os.ReadFile(configPath)
 	if err != nil {
 		return s
 	}
 	var raw struct {
-		Enabled          *bool             `json:"mcp_enabled"`
-		IdleTimeout      string            `json:"mcp_idle_timeout"`
-		CallTimeout      string            `json:"mcp_call_timeout"`
-		MaxResultKB      int               `json:"mcp_max_result_kb"`
-		TrustAnnotations *bool             `json:"mcp_trust_annotations"`
-		OAuthPort        int               `json:"mcp_oauth_port"`
-		GitHubClientID   string            `json:"mcp_github_client_id"`
-		Share            *bool             `json:"mcp_share"`
-		Trusted          map[string]string `json:"mcp_trusted"`
-		TrustedTools     map[string]string `json:"mcp_trusted_tools"`
+		Enabled          *bool               `json:"mcp_enabled"`
+		IdleTimeout      string              `json:"mcp_idle_timeout"`
+		CallTimeout      string              `json:"mcp_call_timeout"`
+		MaxResultKB      int                 `json:"mcp_max_result_kb"`
+		TrustAnnotations *bool               `json:"mcp_trust_annotations"`
+		OAuthPort        int                 `json:"mcp_oauth_port"`
+		GitHubClientID   string              `json:"mcp_github_client_id"`
+		Share            *bool               `json:"mcp_share"`
+		Trusted          map[string]string   `json:"mcp_trusted"`
+		TrustedTools     map[string]string   `json:"mcp_trusted_tools"`
+		DisabledTools    map[string][]string `json:"mcp_disabled_tools"`
 	}
 	if json.Unmarshal(b, &raw) != nil {
 		return s
@@ -88,6 +103,11 @@ func LoadSettings(configPath string) Settings {
 	}
 	for k, v := range raw.TrustedTools {
 		s.TrustedTools[k] = v
+	}
+	for k, v := range raw.DisabledTools {
+		if len(v) > 0 {
+			s.DisabledTools[k] = v
+		}
 	}
 	return s
 }
@@ -157,6 +177,30 @@ func SaveTrusted(configPath, name, hash string) error {
 // ToolsHash) in config.json mcp_trusted_tools.
 func SaveTrustedTools(configPath, name, hash string) error {
 	return saveMapEntry(configPath, "mcp_trusted_tools", name, hash)
+}
+
+// SaveDisabledTools stores the tools turned off for one server in
+// config.json mcp_disabled_tools (sorted; an empty list removes the
+// server, an empty map the key), keeping every other key.
+func SaveDisabledTools(configPath, name string, tools []string) error {
+	list := append([]string(nil), tools...)
+	sort.Strings(list)
+	return updateConfig(configPath, func(merged map[string]any) {
+		m, _ := merged["mcp_disabled_tools"].(map[string]any)
+		if m == nil {
+			m = map[string]any{}
+		}
+		if len(list) == 0 {
+			delete(m, name)
+		} else {
+			m[name] = list
+		}
+		if len(m) == 0 {
+			delete(merged, "mcp_disabled_tools")
+		} else {
+			merged["mcp_disabled_tools"] = m
+		}
+	})
 }
 
 // SaveSetting writes one mcp_* key of config.json (nil removes it, so the
