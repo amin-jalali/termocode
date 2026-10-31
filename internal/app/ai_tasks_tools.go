@@ -545,9 +545,11 @@ func aiTasksTools(root string, call aiIDECaller) []ai.Tool {
 			Name: "tasks_run",
 			Description: "Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). Pass label (see tasks_list), " +
 				"or group \"build\" / \"test\" for the default task of that group. Returns the run id; read the exit code " +
-				"and output with tasks_status(label, wait_ms).",
+				"and output with tasks_status(label, wait_ms). With monitor: true its new output is handed to you in " +
+				"batches while you keep working (after your tool calls), and its exit code when it ends.",
 			Params: map[string]any{
-				"label": str("task label from tasks_list"),
+				"label":   str("task label from tasks_list"),
+				"monitor": boolean("hand me its new output in batches while it runs (default false)"),
 				"group": map[string]any{"type": "string", "enum": []string{tasks.GroupBuild, tasks.GroupTest},
 					"description": "run the default task of this group instead of a label"},
 			},
@@ -570,7 +572,16 @@ func aiTasksTools(root string, call aiIDECaller) []ai.Tool {
 			},
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				label, group := ai.ArgString(a, "label"), ai.ArgString(a, "group")
-				return call(ctx, func(m *Model) (string, tea.Cmd, error) { return m.aiTasksRun(label, group) })
+				monitor, _ := a["monitor"].(bool)
+				return call(ctx, func(m *Model) (string, tea.Cmd, error) {
+					before := m.ensureTasks().lastRun("")
+					out, cmd, err := m.aiTasksRun(label, group)
+					if r := m.ensureTasks().lastRun(""); err == nil && monitor && r != nil && r != before && // OMX-6
+						m.aiStartTaskMonitor(ctx, call, r.Task.Label, r.Buf) {
+						out += "\nMonitor on: its new output comes to you in batches while you work."
+					}
+					return out, cmd, err
+				})
 			},
 		},
 		{
