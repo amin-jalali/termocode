@@ -1682,6 +1682,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-history-delete` | AI: Delete Chat… | never | deletes saved chats; only the user may |
 | `ai-history-rename` | AI: Rename Chat… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-mcp-background` | AI: Move MCP Call to Background (Ctrl+B in the chat) | never | moves the model's own running call; the user decides |
+| `ai-keep-going` | AI: Toggle Keep Going While Todos Are Open | never | AI provider, credentials and approvals stay with the user; extra paid turns are the user's choice |
 | `ai-mcp-config` | Open Config: MCP Servers | never | AI provider, credentials and approvals stay with the user |
 | `ai-mcp-connect` | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | never | AI provider, credentials and approvals stay with the user (signing in to services is the user's) |
 | `ai-mcp-insert` | AI: MCP Prompts and Resources… | never | opens a picker or prompt that only the user can answer; use a typed tool |
