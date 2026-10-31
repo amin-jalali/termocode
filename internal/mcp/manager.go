@@ -432,8 +432,14 @@ func (m *Manager) startStdio(ctx context.Context, exp Server, opts Options) (*Pr
 	m.mu.Unlock()
 	if share != nil {
 		var roots []string
-		if m.opts.Roots != nil {
+		if m.opts.Roots != nil && exp.Share != ShareUser {
 			roots = m.opts.Roots()
+		}
+		if exp.Share == ShareUser && exp.Cwd == "" {
+			// Not the folder of the project that happened to start it.
+			if home, err := os.UserHomeDir(); err == nil {
+				exp.Cwd = home
+			}
 		}
 		p, err := startShared(ctx, share, exp, roots, opts)
 		if !errors.Is(err, errShareUnavailable) {

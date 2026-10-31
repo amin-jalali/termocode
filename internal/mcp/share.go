@@ -39,6 +39,11 @@ const (
 	shareLeave = "termocode/share/leave"
 )
 
+// ShareUser is the "share" value that runs one process of a server for
+// every project of this user (RT-16): the share key leaves out the
+// project roots, and the server runs in the home folder.
+const ShareUser = "user"
+
 // DefaultShareGrace is how long a shared server stays after the last
 // session left.
 const DefaultShareGrace = 30 * time.Second
