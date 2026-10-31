@@ -22,7 +22,8 @@ import (
 // secretPromptKind reports a prompt kind that asks for a secret.
 func secretPromptKind(k promptKindEnum) bool {
 	switch k {
-	case promptKindAIKey, promptKindMCPSecret, promptKindDBPassword, promptKindDBSSHSecret, promptKindRegistryToken:
+	case promptKindAIKey, promptKindMCPSecret, promptKindDBPassword, promptKindDBSSHSecret, promptKindRegistryToken,
+		promptKindMCPBundleSecret:
 		return true
 	}
 	return false
