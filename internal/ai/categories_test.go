@@ -60,3 +60,13 @@ func TestEscalatesSetting(t *testing.T) {
 		t.Fatal("ai_step_escalate")
 	}
 }
+
+// OMX-14: plan review is off unless asked (at most 5 rounds); the plan
+// file is on unless turned off.
+func TestPlanSettings(t *testing.T) {
+	off := false
+	if (Settings{}).PlanReviews() != 0 || (Settings{PlanReviewRounds: 9}).PlanReviews() != 5 || !(Settings{}).PlanFiles() ||
+		(Settings{PlanFile: &off}).PlanFiles() {
+		t.Fatal("plan settings")
+	}
+}
