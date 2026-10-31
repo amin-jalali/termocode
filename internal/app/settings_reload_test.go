@@ -7,9 +7,22 @@ import (
 	"testing"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/anim"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
+// keepDisplayGlobals puts back the display globals a live reload sets
+// (icons, animations, RTL, logo), so later tests see the package defaults.
+func keepDisplayGlobals(t *testing.T) {
+	icons, animOn, rtlWas, logo := theme.CurrentIconMode, anim.Enabled, rtlMode, dashboardLogo
+	t.Cleanup(func() {
+		theme.CurrentIconMode, anim.Enabled, rtlMode, dashboardLogo = icons, animOn, rtlWas, logo
+		invalidateWelcome()
+	})
+}
+
 func TestLiveSettingsReloadAndInvalidJSON(t *testing.T) {
+	keepDisplayGlobals(t)
 	withConfigDir(t)
 	path, _ := settingsConfigPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
@@ -40,6 +53,7 @@ func TestLiveSettingsReloadAndInvalidJSON(t *testing.T) {
 }
 
 func TestLiveSettingsDefersActiveAI(t *testing.T) {
+	keepDisplayGlobals(t)
 	m, _, _, _ := aiSkillsModel(t)
 	path, _ := settingsConfigPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
