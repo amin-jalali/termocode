@@ -461,6 +461,9 @@ func (m *Model) aiBgStepUsage(b *aiBgRun, st *ai.StoredStep, ev agentrun.Event) 
 	st.Usage = st.Usage.Add(&c)
 	kind := b.slots[st.Slot].cfg.Kind
 	if usd, ok := ai.NewPricing(s.settings.Prices).Cost(kind, c); ok {
+		if st.Cost != nil { // a step that ran once more adds up
+			usd += *st.Cost
+		}
 		st.Cost = &usd
 	}
 	model := c.Model
