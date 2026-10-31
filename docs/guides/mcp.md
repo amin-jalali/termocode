@@ -346,10 +346,11 @@ The author is not checked: install bundles only from people you trust.
 | `timeout` | Seconds one tool call may wait (default `mcp_call_timeout`, 60 s). |
 | `startTimeout` | Seconds the start may take (1–600, default 15). Raise it for a package that downloads first. |
 | `share` | `"user"`: one process serves every project (local servers, your own file only). |
+| `sandbox` | Local server: run it in a container or a sandbox tool. See [Run a local server in a sandbox](#run-a-local-server-in-a-sandbox). |
 
 `type` and `transport` are read too, and the top key `servers` works
 like `mcpServers` (when both have a name, `mcpServers` wins). `readOnly`,
-`autoApprove`, `deny`, `timeout`, `startTimeout`, `share`, `oauth` and `auth` are termocode keys: other
+`autoApprove`, `deny`, `timeout`, `startTimeout`, `share`, `sandbox`, `oauth` and `auth` are termocode keys: other
 apps ignore them, so the same file still works there.
 
 A remote URL must use `https://`. Plain `http://` works only for
@@ -636,6 +637,35 @@ How it starts, how to add it by hand, what the agent can and can not do,
   `TMPDIR`, `XDG_*` and the `env` you set: never your AI API keys.
 - Servers can not use your AI model (sampling is refused).
 - Tokens and secrets never show in the log, toasts or `errors.log`.
+
+### Run a local server in a sandbox
+
+A local server is a program from the net. Add `"sandbox"` to its entry
+to keep it away from your files and the network:
+
+```json
+"files": {
+  "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+  "sandbox": true
+}
+```
+
+- `true` picks the best tool found: a container when `image` is set
+  (docker, then podman), else `bwrap` (bubblewrap) on Linux or
+  `sandbox-exec` on macOS.
+- `"sandbox": "container"`, `"bwrap"` or `"sandbox-exec"` picks one.
+- The long form sets more:
+  `{"image": "node:22", "cpus": "1", "memory": "512m", "network": false, "workspace": "ro"}`.
+- By default the network is **off** and the workspace folder is mounted
+  **read-only** (`"workspace": "rw"` lets it write, `"none"` hides it).
+  Under `bwrap` your home folder is hidden.
+- `cpus` and `memory` work only in a container.
+- The row of the server shows its sandbox, for example
+  `sandbox: bwrap · network off · workspace read-only`.
+- If no sandbox tool is installed, the server does **not** start and the
+  row says what to install. It never runs without the sandbox.
+- Secrets in `env` go into the container by name only; their values
+  never show on a command line.
 
 ### One server for all windows
 
