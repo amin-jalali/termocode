@@ -34,6 +34,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Generate Doc Comment | `ai-doc` |   |   |
 | AI: Lock Secrets | `secrets-lock` |   |   |
 | AI: MCP Servers… | `ai-mcp-servers` |   |   |
+| AI: MCP: Browse Catalog… (find and add servers) | `ai-mcp-catalog` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: MCP: Switch Profile… (servers and tools for this chat) | `ai-mcp-profile` |   |   |
 | AI: Memory: Turn On/Off | `ai-memory-toggle` |   |   |
