@@ -184,3 +184,38 @@ func TestBundledSkillsAndOverrides(t *testing.T) {
 		t.Fatal("user override lost")
 	}
 }
+
+// Spec (OMX-11): skills may also be folders with a SKILL.md file, in
+// .claude/skills and .agents/skills of the project (untrusted, part of
+// the project hash) and in extra user folders (the user's own).
+func TestLoadSkillsFolders(t *testing.T) {
+	root, user, home := t.TempDir(), t.TempDir(), t.TempDir()
+	writeSkill(t, filepath.Join(root, ".claude", "skills", "pdf-fill"), "SKILL.md", "---\ndescription: Fill PDF forms\n---\nuse pdftk\n")
+	writeSkill(t, filepath.Join(root, ".agents", "skills", "lint"), "SKILL.md", "---\nname: linter\ndescription: Run the linter\n---\nmake lint\n")
+	writeSkill(t, filepath.Join(root, ".termocode", "skills", "deep"), "SKILL.md", "---\ndescription: Folder skill in the own dir\n---\nbody\n")
+	writeSkill(t, filepath.Join(root, ".claude", "skills", "nofile"), "README.md", "---\ndescription: not a skill\n---\nx\n")
+	writeSkill(t, filepath.Join(home, ".claude", "skills", "mine"), "SKILL.md", "---\ndescription: My own skill\n---\nhi\n")
+	before := LoadSkills(root, user)
+	s := LoadSkills(root, user, filepath.Join(home, ".claude", "skills"))
+	got := map[string]string{}
+	for _, sk := range s.List {
+		if sk.Source != SkillSourceBuiltin {
+			got[sk.Name] = sk.Source
+		}
+	}
+	want := map[string]string{"pdf-fill": SkillSourceProject, "linter": SkillSourceProject, "deep": SkillSourceProject, "mine": SkillSourceUser}
+	for n, src := range want {
+		if got[n] != src {
+			t.Errorf("skill %q: source %q, want %q (all: %v)", n, got[n], src, got)
+		}
+	}
+	if len(got) != len(want) {
+		t.Errorf("skills = %v, want %v", got, want)
+	}
+	if s.ProjectHash == "" || s.ProjectHash != before.ProjectHash {
+		t.Errorf("project hash must cover folder skills and ignore user ones: %q vs %q", s.ProjectHash, before.ProjectHash)
+	}
+	if sk, _ := s.Find("pdf-fill"); sk.Body != "use pdftk" {
+		t.Errorf("body = %q", sk.Body)
+	}
+}

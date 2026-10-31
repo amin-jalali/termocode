@@ -94,17 +94,30 @@ func ValidSkillName(name string) bool { return skillNameRe.MatchString(name) }
 //go:embed builtin_skills/*/SKILL.md
 var bundledSkills embed.FS
 
-// LoadSkills reads the user skills of userDir ("" for none) and the
-// project skills of root. A user skill keeps its name when a project
-// skill has the same one (the user's own file wins over a repository's).
-func LoadSkills(root, userDir string) Skills {
+// ProjectSkillDirs are the project folders read for skills, relative to
+// the workspace root: the own folder first, then the folders other apps
+// use (OMX-11). Each holds *.md files or <name>/SKILL.md folders.
+var ProjectSkillDirs = []string{SkillsDir, ".claude/skills", ".agents/skills"}
+
+// LoadSkills reads the user skills of userDir ("" for none), of the extra
+// user folders, and the project skills of root. A user skill keeps its
+// name when a project skill has the same one (the user's own file wins
+// over a repository's).
+func LoadSkills(root, userDir string, extraUserDirs ...string) Skills {
 	var s Skills
 	seen := map[string]string{} // name → file that has it
 	if userDir != "" {
 		s.load(userDir, userDir, SkillSourceUser, "skills/", seen)
 	}
+	for _, d := range extraUserDirs {
+		if d != "" {
+			s.load(d, d, SkillSourceUser, filepath.Base(filepath.Dir(d))+"/skills/", seen)
+		}
+	}
 	if root != "" {
-		s.load(root, filepath.Join(root, filepath.FromSlash(SkillsDir)), SkillSourceProject, SkillsDir+"/", seen)
+		for _, d := range ProjectSkillDirs {
+			s.load(root, filepath.Join(root, filepath.FromSlash(d)), SkillSourceProject, d+"/", seen)
+		}
 	}
 	entries, _ := bundledSkills.ReadDir("builtin_skills")
 	for _, e := range entries {
@@ -153,11 +166,22 @@ func (s *Skills) load(base, dir, source, label string, seen map[string]string) {
 	}
 	for _, e := range entries {
 		file := e.Name()
-		if e.IsDir() || strings.HasPrefix(file, ".") || !strings.EqualFold(filepath.Ext(file), ".md") {
+		path := filepath.Join(dir, file)
+		if strings.HasPrefix(file, ".") {
+			continue
+		}
+		if e.IsDir() {
+			// A skill folder: <name>/SKILL.md; the folder names the skill.
+			path = filepath.Join(path, "SKILL.md")
+			if _, err := os.Lstat(path); err != nil {
+				continue
+			}
+			file += ".md"
+		} else if !strings.EqualFold(filepath.Ext(file), ".md") {
 			continue
 		}
 		note := func(why string) { s.Notes = append(s.Notes, label+file+": "+why) }
-		text, size, ok := readRulesFile(realBase, filepath.Join(dir, file))
+		text, size, ok := readRulesFile(realBase, path)
 		switch {
 		case !ok:
 			note("empty or unreadable")
@@ -176,7 +200,7 @@ func (s *Skills) load(base, dir, source, label string, seen map[string]string) {
 			continue
 		}
 		seen[name] = label + file
-		s.List = append(s.List, Skill{Name: name, Description: desc, Source: source, Path: filepath.Join(dir, file), Body: body})
+		s.List = append(s.List, Skill{Name: name, Description: desc, Source: source, Path: path, Body: body})
 	}
 }
 
