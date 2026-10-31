@@ -29,6 +29,7 @@ var mcpSettingKeys = map[string]string{
 	"setting-mcp-github-client-id":  "mcp_github_client_id",
 	"setting-mcp-share":             "mcp_share",
 	"setting-mcp-log-level":         "mcp_log_level",
+	"setting-mcp-tool-search":       "mcp_tool_search",
 }
 
 func init() {
@@ -51,6 +52,8 @@ func init() {
 			Desc: "Run each local MCP server once for all your termocode windows with the same server entry and folder, not once per window. It ends when the last window stops using it (mcp_idle_timeout or quit). false: every window runs its own. Remote servers are not affected."},
 		settingsRow{ID: "setting-mcp-log-level", Label: "mcp_log_level", Kind: "string", Default: "info",
 			Desc: "The lowest level the MCP log (Output: MCP) shows: error, warning, info or debug. Every line is kept, so a lower level shows the older lines too."},
+		settingsRow{ID: "setting-mcp-tool-search", Label: "mcp_tool_search", Kind: "string", Default: "auto",
+			Desc: "Send the AI only a search tool instead of every MCP tool's full schema; it loads the tools it needs. auto: only when the MCP tools are big (about 10k tokens). on: always. off: never."},
 	)
 }
 
@@ -104,6 +107,8 @@ func mcpSettingValue(id string) (string, bool) {
 		return strconv.FormatBool(s.Share), true
 	case "setting-mcp-log-level":
 		return s.LogLevel, true
+	case "setting-mcp-tool-search":
+		return s.ToolSearch, true
 	}
 	return "", false
 }
@@ -151,6 +156,12 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 		value = strings.ToLower(value)
 		if !mcp.ValidLogLevel(value) {
 			return bad("error, warning, info or debug")
+		}
+		v = value
+	case "setting-mcp-tool-search":
+		value = strings.ToLower(value)
+		if value != mcp.ToolSearchAuto && value != mcp.ToolSearchOn && value != mcp.ToolSearchOff {
+			return bad("auto, on or off")
 		}
 		v = value
 	case "setting-mcp-github-client-id":

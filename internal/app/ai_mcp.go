@@ -161,7 +161,8 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 				return mgr.ReadResource(ctx, ask, server, uri)
 			},
 		}, opts)...)
-		return withMCPReader(out, opts.Spill)
+		// many tools: one search tool loads them
+		return mcp.DeferTools(withMCPReader(out, opts.Spill), set.ToolSearch)
 	}
 }
 
