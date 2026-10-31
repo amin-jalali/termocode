@@ -81,6 +81,11 @@ func (r *bgRig) send(text string) {
 func (r *bgRig) pump(ok func() bool) {
 	r.t.Helper()
 	deadline := time.After(10 * time.Second)
+	// A provider records its request in its own goroutine after the
+	// last message (the turn's start) went out: without a recheck, a
+	// slow runner checked ok before the request and waited for ever.
+	recheck := time.NewTicker(10 * time.Millisecond)
+	defer recheck.Stop()
 	for !ok() {
 		for _, b := range r.m.ai.bgRuns {
 			known := false
@@ -115,6 +120,8 @@ func (r *bgRig) pump(ok func() bool) {
 				}
 				continue
 			}
+		case <-recheck.C:
+			continue
 		case <-deadline:
 			r.t.Fatal("condition never true")
 		}
