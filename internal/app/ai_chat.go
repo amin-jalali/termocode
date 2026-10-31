@@ -170,7 +170,8 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
-	return append(tools, aiTodoTools(call)...) // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, aiTodoTools(call)...) // OMX-7: the chat's todo list (not in run steps)
+	return append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
 }
 
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:
