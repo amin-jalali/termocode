@@ -113,13 +113,17 @@ func (b *aiBgMail) inbox(k string) func() []ai.Message {
 func aiBgTurnKey(gen uint64) string       { return fmt.Sprintf("turn:%d", gen) }
 func aiBgStepKey(run, node string) string { return "step:" + run + "\x00" + node }
 
-// aiBgCallerKey is the key of who calls a tool: the step of ctx in run
-// parentRun, else the chat turn gen.
-func aiBgCallerKey(ctx context.Context, c aiRunCaller, gen uint64) string {
-	if node, run := agentrun.NodeOf(ctx); node != "" && run == c.parentRun && run != "" {
+// aiMailCtxKey carries a chat turn's mailbox key in its tools' ctx.
+type aiMailCtxKey struct{}
+
+// aiMailKeyOf is the mailbox key of the agent whose tool runs with ctx:
+// its run step, else its chat turn ("": neither, e.g. an outside agent).
+func aiMailKeyOf(ctx context.Context) string {
+	if node, run := agentrun.NodeOf(ctx); node != "" {
 		return aiBgStepKey(run, node)
 	}
-	return aiBgTurnKey(gen)
+	k, _ := ctx.Value(aiMailCtxKey{}).(string)
+	return k
 }
 
 // aiBgEligible reports whether run may run in the background: every

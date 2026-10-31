@@ -387,7 +387,7 @@ func (m *Model) aiToolRunStart(ctx context.Context, c aiRunCaller, r aiRunStartR
 			}
 			s.runInline[id] = r.prof
 		}
-		wait, err := m.aiBgStart(r.prof, run, r.task, by, aiBgCallerKey(ctx, c, s.chatGen))
+		wait, err := m.aiBgStart(r.prof, run, r.task, by, aiMailKeyOf(ctx))
 		if err != nil {
 			delete(s.runInline, id)
 			return "", nil, err
