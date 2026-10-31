@@ -223,3 +223,17 @@ func (m *Manager) ReconnectAll(ctx context.Context) ReconnectResult {
 	sort.Strings(res.Failed)
 	return res
 }
+
+// idempotent: the tool says it is read-only or idempotent (safe to run
+// again after a dropped connection).
+func (m *Manager) idempotent(st *serverState, tool string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, t := range st.tools {
+		if t.Name == tool {
+			a := t.Annotations
+			return t.ReadOnly() || (a != nil && a.IdempotentHint != nil && *a.IdempotentHint)
+		}
+	}
+	return false
+}

@@ -865,6 +865,23 @@ func (m *Manager) Call(ctx context.Context, ask AskTrust, server, tool string, a
 		m.armIdle(st)
 		return res, fmt.Errorf("MCP %s: %w", server, ErrMoreAccess)
 	}
+	if err != nil && st.cfg.Type == TypeHTTP && isConnErr(err) && m.idempotent(st, tool) {
+		// A read-only or idempotent call is safe to run again (TS-11):
+		// one new connection, one more try.
+		m.log(server, "%s: the connection dropped: trying once more (the tool is safe to repeat)", tool)
+		m.mu.Lock()
+		if st.proc == p {
+			st.proc, st.state = nil, StateStopped
+		}
+		m.mu.Unlock()
+		crash.Go("an MCP server stop", func() { p.Close() })
+		if np, nerr := m.ensure(ctx, st, ask); nerr == nil {
+			p = np
+			res, err = p.Client.CallToolTimeout(ctx, tool, args, timeout)
+		} else {
+			return res, nerr // ensure has set the reconnect up
+		}
+	}
 	if err != nil && st.cfg.Type == TypeHTTP && isConnErr(err) {
 		// The network went away under a running connection: drop it and
 		// reconnect later (the call is not run again).
