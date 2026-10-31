@@ -437,6 +437,9 @@ func (m *Model) openMCPServers() tea.Cmd {
 			title += "  " + mcpTokensText(n)
 		}
 		items = append(items, picker.Item{ID: st.Name, Title: title, Hint: mcpUpdateHint(ups, st.Name) + mcpStatusHint(st)})
+		if w, ok := mcpStrictRow(set, st); ok { // mcp_strict.go
+			items = append(items, w)
+		}
 	}
 	m.picker = picker.NewItems(" MCP servers (Enter: actions) ", items)
 	m.picker.SetWidth(mcpServeStatusWidth(m.w))
@@ -735,7 +738,7 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 		if id == mcpAddID {
 			return m.openMCPConnect(), true
 		}
-		return m.openMCPServerActions(id), true
+		return m.openMCPServerActions(mcpServerOfRow(id)), true
 	case pickerKindMCPConnect:
 		return m.onMCPConnectPicked(id), true
 	case pickerKindMCPServer:

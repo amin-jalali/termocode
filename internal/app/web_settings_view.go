@@ -34,7 +34,7 @@ var webSettingsAllow = map[string]bool{
 	"http_timeout": true, "http_max_redirects": true, "http_max_body_mb": true, "http_ai_max_kb": true,
 	"http_tls_insecure": true, "http_cookie_jar": true, "http_history_max": true,
 	"mcp_enabled": true, "mcp_idle_timeout": true, "mcp_call_timeout": true, "mcp_max_result_kb": true,
-	"mcp_trust_annotations": true, "mcp_share": true,
+	"mcp_trust_annotations": true, "mcp_share": true, "mcp_strict": true,
 	"update_check": true,
 }
 

@@ -32,6 +32,7 @@ var mcpSettingKeys = map[string]string{
 	"setting-mcp-tool-search":       "mcp_tool_search",
 	"setting-mcp-catalog-url":       "mcp_catalog_url",
 	"setting-mcp-auto-update":       "mcp_auto_update",
+	"setting-mcp-strict":            "mcp_strict",
 }
 
 func init() {
@@ -60,6 +61,8 @@ func init() {
 			Desc: "Catalog that AI: MCP: Browse Catalog… reads (an MCP Registry API, for example your team's approved list). Empty: the official MCP Registry. Must be https."},
 		settingsRow{ID: "setting-mcp-auto-update", Label: "mcp_auto_update", Kind: "string", Default: "off",
 			Desc: "Servers added from the catalog are pinned to a version. off: check only with AI: MCP: Check for Updates. notify: also check once a day when the MCP servers list opens, and tell. on: the same, and update your own pinned servers (the project file is never changed)."},
+		settingsRow{ID: "setting-mcp-strict", Label: "mcp_strict", Kind: "bool", Default: "false",
+			Desc: "Show a warning row in AI: MCP Servers… under a server whose mcp.json entry has keys termocode does not read (a typo like \"comand\", or another app's key). Keys that start with _ or $ are comments."},
 	)
 }
 
@@ -119,6 +122,8 @@ func mcpSettingValue(id string) (string, bool) {
 		return s.CatalogURL, true
 	case "setting-mcp-auto-update":
 		return s.AutoUpdate, true
+	case "setting-mcp-strict":
+		return strconv.FormatBool(s.Strict), true
 	}
 	return "", false
 }
@@ -138,7 +143,7 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 	}
 	var v any
 	switch id {
-	case "setting-mcp-enabled", "setting-mcp-trust-annotations", "setting-mcp-share":
+	case "setting-mcp-enabled", "setting-mcp-trust-annotations", "setting-mcp-share", "setting-mcp-strict":
 		b, err := parseBoolLoose(value)
 		if err != nil {
 			return bad("true/false")
