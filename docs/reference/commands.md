@@ -23,6 +23,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | `ai-mcp-connect` |   |   |
 | AI: Delete Chat… | `ai-history-delete` |   |   |
 | AI: Discard Proposed Edit | `ai-discard-proposal` |   |   |
+| AI: Doctor | `ai-doctor` |   |   |
 | AI: Edit Model Slots | `ai-models-edit` |   |   |
 | AI: Edit Profiles | `ai-profile-edit` |   |   |
 | AI: Edit Profile… | `ai-profile-form` |   |   |
@@ -407,6 +408,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Help: Build Bug Report… | `help-bug-report` |   |   |
 | Help: Explain This… | `help-context` | `Shift+F1` | `Shift+F1` |
 | Help: Open Documentation | `open-docs` |   |   |
 | Help: Open Guide… | `help-guide` |   |   |
