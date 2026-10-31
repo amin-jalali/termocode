@@ -218,6 +218,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if s.streaming {
 		return m.aiInfo("AI is still answering — Ctrl+C to stop")
 	}
+	if !s.keep.pushing { // OMX-7: a message of the user starts a new keep-going chain
+		s.keep = aiKeepGoingRun{}
+	}
 	prof := s.activeProfile()
 	asked := text
 	// "/done <message>" runs this one message with the until-done
@@ -455,8 +458,10 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredError, Text: ai.Redact(msg.ev.Detail)})
 		recordError("[ai] chat: " + ai.Redact(msg.ev.Detail))
 		m.aiAuditUsage(msg.ev)
+		s.aiKeepGoingUsage(msg.ev.Usage)
 	case ai.EventDone:
 		m.aiAuditUsage(msg.ev)
+		s.aiKeepGoingUsage(msg.ev.Usage)
 	case ai.EventCompacted: // OMX-3
 		s.aiMarkCompacted(msg.ev.Detail)
 	}
@@ -603,9 +608,14 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	}
 	m.aiRestoreTurnDone()
 	m.persistAIState()
-	_, cmd := m.aiSyncIDE("", aiSyncDisk)            // each tool synced already; this catches the rest
-	mem := m.aiMemoryAfterTurn()                     // OM-2: lessons, beside the chat
-	return tea.Batch(cmd, mem, m.aiStartQueuedRun()) // G-API: a run the AI started waits for this turn
+	_, cmd := m.aiSyncIDE("", aiSyncDisk) // each tool synced already; this catches the rest
+	mem := m.aiMemoryAfterTurn()          // OM-2: lessons, beside the chat
+	queued := m.aiStartQueuedRun()        // G-API: a run the AI started waits for this turn
+	var more tea.Cmd
+	if msg.run == nil {
+		more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
+	}
+	return tea.Batch(cmd, mem, queued, more)
 }
 
 // persistAIState stores the open chat id + scroll in session.json.

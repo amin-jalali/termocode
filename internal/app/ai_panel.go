@@ -525,6 +525,9 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			if msg.Context != "" {
 				out = append(out, aiRightChip(aiAttachGlyph()+" "+aiContextLabel(msg.Context), width))
 			}
+			if msg.KeepGoing > 0 { // OMX-7: the keep-going loop sent this
+				out = append(out, aiRightChip(s.aiKeepGoingChip(msg.KeepGoing), width))
+			}
 			if msg.Rules != "" || msg.Lessons > 0 { // OM-1/OM-2: "rules: AGENTS.md (4 KB) · memory: 3 lessons"
 				out = append(out, aiRulesLine(msg.Rules, msg.Lessons, width))
 			}
@@ -549,6 +552,8 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			out = append(out, selPlain(aiCleanText(msg.Text), theme.TextDim, i)...)
 		case ai.StoredError:
 			out = append(out, selPlain("⚠ "+aiCleanText(msg.Text), theme.DiagError, i)...)
+		case ai.StoredNote: // OMX-7
+			out = append(out, selPlain(aiCleanText(msg.Text), theme.TextDim, i)...)
 		}
 		if msg.Memory > 0 { // OM-2: "memory: 2 lessons saved · view"
 			out = append(out, aiMemorySavedLine(msg.Memory, width))
@@ -573,7 +578,7 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 // next one, the width, the theme and the model label of its header.
 type aiSegKey struct {
 	role, text, context, rules, model, runBy, label string
-	lessons, memory, width, summarised              int
+	lessons, memory, width, summarised, keepGoing   int
 	rk                                              theme.RenderKey
 	rtl                                             rtl.Mode
 }
@@ -588,7 +593,7 @@ func (m Model) aiSegKeyFor(i, width int) aiSegKey {
 	s := m.ai
 	msg := &s.conv.Messages[i]
 	k := aiSegKey{role: msg.Role, text: msg.Text, context: msg.Context, rules: msg.Rules, model: msg.Model,
-		lessons: msg.Lessons, memory: msg.Memory, summarised: msg.Summarised, width: width, rk: theme.CurrentRenderKey(), rtl: rtlMode}
+		lessons: msg.Lessons, memory: msg.Memory, summarised: msg.Summarised, keepGoing: msg.KeepGoing, width: width, rk: theme.CurrentRenderKey(), rtl: rtlMode}
 	if i+1 < len(s.conv.Messages) {
 		k.runBy = aiRunByLine(s.conv.Messages[i+1].Run)
 	}
