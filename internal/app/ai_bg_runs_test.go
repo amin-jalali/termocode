@@ -178,6 +178,40 @@ func TestAIBackgroundRunRunsBesideTheTurn(t *testing.T) {
 	}
 }
 
+// OMX-6: agent_run_wait waits for a background run and returns its
+// result (no second note then); agent_run_send steers its running step.
+func TestAIBackgroundRunWaitAndSend(t *testing.T) {
+	r := newBgRig(t)
+	r.send("count the TODOs")
+	r.chat.steps <- toolCall("agent_run_start", map[string]any{"task": "Find the TODOs", "steps": bgSteps})
+	r.pump(func() bool { return len(r.chat.requests()) == 2 })
+	id := r.m.ai.bgRuns[0].id
+	r.pump(func() bool { return len(r.bg.requests()) == 1 }) // the step works
+	r.chat.steps <- toolCall("agent_run_send", map[string]any{"run_id": id, "message": "also count FIXME"})
+	r.pump(func() bool { return len(r.chat.requests()) == 3 })
+	if got := r.chat.requests()[2]; !strings.Contains(got[len(got)-1].Content, "Sent to step step-1") {
+		t.Fatalf("send result %q", got[len(got)-1].Content)
+	}
+	r.chat.steps <- toolCall("agent_run_wait", map[string]any{"run_id": id, "timeout_s": 30})
+	r.bg.steps <- ai.Chunk{Delta: "looking"}
+	r.pump(func() bool { return len(r.bg.requests()) == 2 })
+	if got := r.bg.requests()[1]; !strings.Contains(got[len(got)-1].Content, "also count FIXME") {
+		t.Fatalf("the step did not get the message: %q", got[len(got)-1].Content)
+	}
+	r.bg.steps <- ai.Chunk{Delta: "2 TODOs, 1 FIXME"}
+	r.pump(func() bool { return len(r.chat.requests()) == 4 })
+	wait := r.chat.requests()[3]
+	got := aiToolJSON(t, wait[len(wait)-1].Content)
+	if got["ended"] != true || !strings.Contains(wait[len(wait)-1].Content, "2 TODOs, 1 FIXME") {
+		t.Fatalf("wait result %v", got)
+	}
+	r.chat.steps <- ai.Chunk{Delta: "Done."}
+	r.pump(func() bool { return r.ended })
+	if n := len(r.chat.requests()); n != 4 {
+		t.Fatalf("the turn made %d requests: a note came after the wait", n)
+	}
+}
+
 // OMX-6: a run that may change files still waits for the chat.
 func TestAIBackgroundRunOnlyForReadOnlySteps(t *testing.T) {
 	r := newBgRig(t)

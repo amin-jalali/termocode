@@ -40,7 +40,7 @@ const (
 )
 
 // aiAgentRunToolNames are the tools of this file, in list order.
-var aiAgentRunToolNames = []string{"agent_run_start", "agent_run_status", "agent_run_result", "agent_run_stop"}
+var aiAgentRunToolNames = []string{"agent_run_start", "agent_run_status", "agent_run_result", "agent_run_stop", "agent_run_wait", "agent_run_send"}
 
 // aiAgentRunAllow is the Allow button's title on the cards.
 var aiAgentRunAllow = map[string]string{"agent_run_start": "Start run", "agent_run_stop": "Stop run"}
@@ -512,7 +512,7 @@ func (m *Model) aiAgentRunTools(call aiIDECaller, c aiRunCaller) []ai.Tool {
 				return call(ctx, func(m *Model) (string, tea.Cmd, error) { return m.aiToolRunStart(ctx, c, r) })
 			},
 		},
-	}, append(aiRunReadTools(call), aiRunStopTool(call, sn))...)
+	}, append(append(aiRunReadTools(call), aiRunStopTool(call, sn)), aiRunWaitTools(call)...)...)
 }
 
 // aiAgentRunTool reports a tool of this file.
