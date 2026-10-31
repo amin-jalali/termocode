@@ -59,6 +59,7 @@ const (
 	RunApproved                       // the user approved the plan; the run goes on
 	RunPlanEdited                     // the user's edit changed the plan (Nodes = the steps it added); RunAwaitApproval follows
 	RunPlanKept                       // steps joined an approved run and need no approval (Nodes = them): it goes on without asking
+	NodeStalled                       // the node's model was silent for Options.StallAfter: it was stopped and waits to start once more (Err says so)
 	NodeMessage                       // a message sent to the node (Send) reached its agent (Output = the text), or not (Err = why)
 )
 
@@ -161,6 +162,10 @@ type Options struct {
 	// says what a node may do; nil: agentdag.Writes, no commands.
 	Approval string
 	Acts     func(n agentdag.Node) (writes, exec bool)
+	// StallAfter (OMX-23; 0: off) stops an agent step whose model sent
+	// nothing for this long (a running tool call does not count) and
+	// starts it once more (NodeStalled); a second stall fails it.
+	StallAfter time.Duration
 }
 
 // Handle is a started run.
@@ -212,6 +217,8 @@ type result struct {
 	// the verdict of a loop's verify node (VerdictPass / Fail / Missing)
 	// and its report
 	verdict, report string
+	// stalled: the watchdog stopped the node (OMX-23)
+	stalled bool
 	// limit: a CLI node hit its usage limit (it runs again on Continue)
 	limit *ai.LimitError
 }
@@ -369,6 +376,7 @@ func (h *Handle) loop(runCtx context.Context) {
 	var total *ai.Usage
 	failErr := ""
 	stopErr := "" // the user stopped a step (StopNode)
+	stalls := map[string]int{}
 	verdict := "" // the loop's verdict once verify passed or the rounds ran out
 	spent, budget := 0.0, h.o.Budget
 	var limited *ai.LimitError // a CLI's usage limit paused the run
@@ -468,6 +476,18 @@ func (h *Handle) loop(runCtx context.Context) {
 			}
 		}
 		switch {
+		case res.stalled && nodeCtx.Err() == nil:
+			quiet := StallText(h.o.StallAfter)
+			if stalls[res.id]++; stalls[res.id] > 1 {
+				fail(res.id, "no activity for "+quiet+", twice: stopped", res.usage, res.elapsed)
+				break
+			}
+			h.setState(res.id, func(n *agentdag.Node) { n.State = agentdag.StatePending })
+			h.emit(Event{NodeID: res.id, Kind: NodeStalled, Err: "no activity for " + quiet + ": stopped, it starts once more",
+				Usage: res.usage, Elapsed: res.elapsed})
+		case res.stalled:
+			h.setState(res.id, func(n *agentdag.Node) { n.State = agentdag.StateCancelled })
+			h.emit(Event{NodeID: res.id, Kind: NodeCancelled, Usage: res.usage, Elapsed: res.elapsed})
 		case res.limit != nil && !res.cancelled:
 			// The CLI's usage limit: the node waits (pending) and the run
 			// pauses before anything else starts; Continue runs it again.
@@ -724,9 +744,28 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 			return ask(ctx, t, human)
 		}
 	}
+	parent := ctx
+	var dog *watchdog
+	if h.o.StallAfter > 0 {
+		var stall context.CancelFunc
+		ctx, stall = context.WithCancel(ctx)
+		defer stall()
+		dog = startWatchdog(h.o.StallAfter, stall)
+		defer dog.stop()
+	}
 	var raw []byte // the end of the streamed text, for Tail
 	fail := ""
 	emit := func(e ai.Event) {
+		if dog != nil {
+			switch e.Kind {
+			case ai.EventToolStart:
+				dog.touch(1)
+			case ai.EventToolResult:
+				dog.touch(-1)
+			default:
+				dog.touch(0)
+			}
+		}
 		switch e.Kind {
 		case ai.EventText:
 			raw = appendTail(raw, e.Text)
@@ -785,6 +824,8 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 		}
 	}
 	switch {
+	case dog != nil && dog.fired.Load() && parent.Err() == nil:
+		res.stalled = true
 	case ctx.Err() != nil:
 		res.cancelled = true
 	case fail != "":
