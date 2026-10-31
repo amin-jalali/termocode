@@ -109,13 +109,15 @@ type ManagerOptions struct {
 // Status is one row of the servers list.
 type Status struct {
 	Name, Type, Source string
-	State              string
-	Problem            string
-	Pid                int
-	Tools              int  // known tools (live or cached)
-	Cached             bool // tool list from the disk cache, server not asked yet
-	Trusted            bool
-	SignedIn           bool // an OAuth sign-in is stored (remote servers)
+	// UnknownKeys are entry keys termocode does not read (strict.go).
+	UnknownKeys []string
+	State       string
+	Problem     string
+	Pid         int
+	Tools       int  // known tools (live or cached)
+	Cached      bool // tool list from the disk cache, server not asked yet
+	Trusted     bool
+	SignedIn    bool // an OAuth sign-in is stored (remote servers)
 	// Expired: the stored sign-in has ended and can not be refreshed
 	// (ClickUp has no refresh grant): sign in again.
 	Expired bool
@@ -284,7 +286,7 @@ func (m *Manager) Servers() []Status {
 	out := make([]Status, 0, len(m.servers))
 	for _, st := range m.servers {
 		m.loadCacheLocked(st)
-		s := Status{Name: st.cfg.Name, Type: st.cfg.Type, Source: st.cfg.Source, State: st.state,
+		s := Status{Name: st.cfg.Name, Type: st.cfg.Type, Source: st.cfg.Source, State: st.state, UnknownKeys: st.cfg.UnknownKeys(),
 			Problem: st.problem, Tools: len(st.tools), Cached: st.cached, Trusted: m.trustedLocked(st),
 			ToolsChanged: m.toolsChangedLocked(st) && st.toolsOK != st.toolsHash, server: st.cfg}
 		s.Sandbox = sandboxText(st.cfg)
