@@ -174,6 +174,13 @@ The AI's instructions name each connected service and its access
 - The start page's setup card has an optional **Apps** row once AI is
   set up.
 
+### Docs, code search and browser servers
+
+**AI: Web Tools…** adds a few servers with one pick: library docs, code
+search on GitHub, web search and browser automation (with a `visual-qa`
+skill). The card shows the exact entry it writes to your `mcp.json`;
+**Cancel** is first. See [Web tools](ai-use.md#web-tools).
+
 ## Add a local server
 
 **Local server…** in the Connect wizard adds a program that runs on your

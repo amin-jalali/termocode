@@ -783,6 +783,36 @@ formatter after the AI writes a file:
   blanked) is added to the tool result, so the AI can fix a lint error.
 - Hooks run only after built-in tools, not after MCP tools.
 
+## Web tools
+
+The AI has no web access until you turn it on. Run **AI: Web Tools…**:
+
+- **Web fetch: on/off** gives the AI `web_fetch`. It reads one `http`
+  or `https` page as text (GET only). It never reaches private or local
+  addresses (`localhost`, `10.x`, `192.168.x`, …), reads at most 2 MB,
+  returns at most 20 000 characters and blanks known secrets. It does not
+  use a proxy.
+- **Web search: Brave Search / Tavily / Exa** gives the AI `web_search`
+  with that provider. Picking one without a key asks for it (the text is
+  hidden). The key is kept in your secret store as `web_search_key`; the
+  provider's environment variable (`BRAVE_API_KEY`, `TAVILY_API_KEY`,
+  `EXA_API_KEY`) works too. A search sends the query to the provider.
+- Both only read, so a call runs without a card. Each call is a line in
+  the AI audit log. Page text is data for the AI, not orders.
+
+The same screen can add servers (MCP) for this work. Each shows the exact
+`mcp.json` entry first, with **Cancel** first:
+
+| Row | Server |
+|---|---|
+| Library docs | `https://mcp.context7.com/mcp` |
+| Code search | `https://mcp.grep.app` (public GitHub code) |
+| Web search | `https://mcp.exa.ai/mcp` (no key, rate limited) |
+| Browser automation | `npx -y @playwright/mcp@latest --isolated` (needs Node) and the user skill `visual-qa` |
+
+The `visual-qa` skill tells the AI how to check a page in the browser:
+phone and desktop widths, console errors, the main buttons.
+
 ## Keys at a glance
 
 | Key | Action |
