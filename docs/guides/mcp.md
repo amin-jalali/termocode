@@ -278,6 +278,22 @@ as it is, and a token written in the file becomes a new
 `${secret:NAME}`. Your own sign-in (`auth`) is left out. The message
 names the secrets your teammate sets.
 
+### Let the AI add a server
+
+Paste a server's setup block (or its URL) in the chat and ask the AI to
+add it. The AI never adds a server on its own:
+
+- A card shows the whole entry and what it does ("It runs on this
+  computer: npx …" or "It connects to https://…"). **Deny** has the
+  focus; **Add server** writes it to your `mcp.json`. There is no
+  **Always allow**.
+- Nothing starts at once. The tools reach the AI from the next message.
+- The AI can not add an entry with `${cmd:}`, a literal token,
+  `autoApprove`, `gateway` or `auth`. Add a server with a token through
+  **Import** (it stores the token safely).
+- For a known service (GitHub, Linear …) the AI opens the Connect
+  wizard instead, so you sign in yourself.
+
 ## Find a server in the catalog
 
 **AI: MCP: Browse Catalog…** lists the servers of the official MCP
