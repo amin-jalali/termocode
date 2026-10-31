@@ -193,6 +193,10 @@ type Handle struct {
 	// mail holds the messages Send queued for the running agents
 	// (send.go).
 	mail mailbox
+	// stops are the running nodes' own cancels and stopped the nodes
+	// the user stopped (StopNode); under mu.
+	stops   map[string]context.CancelFunc
+	stopped map[string]bool
 }
 
 type result struct {
@@ -231,7 +235,8 @@ func Start(ctx context.Context, r agentdag.Run, o Options) (*Handle, error) {
 	}
 	n = n.Clone()
 	h := &Handle{o: o, id: n.ID, done: make(chan struct{}), resume: make(chan struct{}, 1), run: n,
-		outputs: map[string]string{}, decide: make(chan decision, 1)}
+		outputs: map[string]string{}, decide: make(chan decision, 1),
+		stops: map[string]context.CancelFunc{}, stopped: map[string]bool{}}
 	if l := n.Loop; l != nil {
 		h.verify, h.fix = strings.TrimSpace(l.Verify), strings.TrimSpace(l.Fix.ID)
 		l.Verify, l.Fix.ID = h.verify, h.fix
@@ -265,6 +270,24 @@ func (h *Handle) index(ls [][]string) {
 // Cancel stops every node; the run then ends with RunCancelled. Safe to
 // call more than once and after the end.
 func (h *Handle) Cancel() { h.cancel() }
+
+// StoppedErr is the error of a step the user stopped (StopNode).
+const StoppedErr = "stopped by the user"
+
+// StopNode stops one running step (OMX-22): it ends as cancelled, the
+// steps that need its answer are blocked, the others go on, and the run
+// ends as failed. It refuses a step that does not run.
+func (h *Handle) StopNode(id string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	stop := h.stops[id]
+	if stop == nil {
+		return errors.New("the step does not run now")
+	}
+	h.stopped[id] = true
+	stop()
+	return nil
+}
 
 // Continue resumes a run that its budget paused; the budget no longer
 // applies to this run. A no-op when the run is not paused.
@@ -345,6 +368,7 @@ func (h *Handle) loop(runCtx context.Context) {
 	running := 0
 	var total *ai.Usage
 	failErr := ""
+	stopErr := "" // the user stopped a step (StopNode)
 	verdict := "" // the loop's verdict once verify passed or the rounds ran out
 	spent, budget := 0.0, h.o.Budget
 	var limited *ai.LimitError // a CLI's usage limit paused the run
@@ -412,9 +436,12 @@ func (h *Handle) loop(runCtx context.Context) {
 					h.setState(id, func(n *agentdag.Node) { n.State = agentdag.StateRunning; n.Attempt++; n.Error = "" })
 					h.emit(Event{NodeID: id, Kind: NodeStart, Round: h.round()})
 					running++
-					nctx := nodeCtx
+					nctx, stop := context.WithCancel(nodeCtx)
+					h.mu.Lock()
+					h.stops[id] = stop
+					h.mu.Unlock()
 					if h.o.Parallel > 1 && h.sharesWave(id) {
-						nctx = context.WithValue(nodeCtx, sharedWaveKey{}, true)
+						nctx = context.WithValue(nctx, sharedWaveKey{}, true)
 					}
 					node := *h.node(id)
 					crash.Go("an agent step", func() { h.runNode(nctx, node, input, results) })
@@ -426,6 +453,14 @@ func (h *Handle) loop(runCtx context.Context) {
 		}
 		res := <-results
 		running--
+		h.mu.Lock()
+		if stop := h.stops[res.id]; stop != nil {
+			stop()
+			delete(h.stops, res.id)
+		}
+		userStop := h.stopped[res.id]
+		delete(h.stopped, res.id)
+		h.mu.Unlock()
 		total = total.Add(res.usage)
 		if res.usage != nil && h.o.Cost != nil {
 			if c, ok := h.o.Cost(*h.node(res.id), *res.usage); ok {
@@ -444,6 +479,20 @@ func (h *Handle) loop(runCtx context.Context) {
 			h.emit(Event{NodeID: res.id, Kind: NodeLimited, Err: msg, ResetAt: res.limit.ResetAt, Usage: res.usage, Elapsed: res.elapsed})
 			limited = res.limit
 			h.pause.Store(true)
+		case res.cancelled && userStop && nodeCtx.Err() == nil:
+			// OMX-22: only this step stops; the steps after it cannot run.
+			h.setState(res.id, func(n *agentdag.Node) { n.State = agentdag.StateCancelled; n.Error = StoppedErr })
+			h.emit(Event{NodeID: res.id, Kind: NodeCancelled, Err: StoppedErr, Usage: res.usage, Elapsed: res.elapsed})
+			if stopErr == "" {
+				stopErr = fmt.Sprintf("step %q: %s", h.title(res.id), StoppedErr)
+			}
+			h.mu.Lock()
+			blocked, ids := agentdag.Block(h.run)
+			h.run = blocked
+			h.mu.Unlock()
+			for _, id := range ids {
+				h.emit(Event{NodeID: id, Kind: NodeBlocked})
+			}
 		case res.cancelled:
 			h.setState(res.id, func(n *agentdag.Node) { n.State = agentdag.StateCancelled })
 			h.emit(Event{NodeID: res.id, Kind: NodeCancelled, Usage: res.usage, Elapsed: res.elapsed})
@@ -494,6 +543,8 @@ func (h *Handle) loop(runCtx context.Context) {
 	switch {
 	case failErr != "":
 		final.Kind, final.Err = RunFailed, failErr
+	case runCtx.Err() == nil && stopErr != "":
+		final.Kind, final.Err = RunFailed, stopErr
 	case runCtx.Err() != nil:
 		final.Kind = RunCancelled
 		if h.denied.Load() {
