@@ -240,9 +240,13 @@ func (m *Model) startAIRunAs(text string, prof ai.Profile, rules ai.Rules, id st
 	if id == "" {
 		id = aiNewRunID()
 	}
+	prof, cats, err := s.aiProfileCategories(prof) // OMX-16
+	if err != nil {
+		return m.aiProfileProblem(prof.Name, err)
+	}
 	run := prof.Run(id)
 	run.CreatedAt = clock.Now()
-	slots, err := s.aiRunPreflight(run, prof.CategorySlots())
+	slots, err := s.aiRunPreflight(run, aiCategorySlots(prof, cats))
 	if err != nil {
 		return m.aiProfileProblem(prof.Name, err)
 	}
@@ -294,6 +298,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	if p, ok := s.runInline[run.ID]; ok { // G-API: the AI's own steps
 		prof = p
 	}
+	prof, cats, _ := s.aiProfileCategories(prof) // OMX-16 (checked when the run started)
+	catSlots, catErr := s.aiResolveCategorySlots(run, aiCategorySlots(prof, cats), slots)
 	by := s.conv.Messages[msgIdx].Run.By
 	budget := aiRunBudget(prof, by)
 	caller := aiRunCaller{parentRun: run.ID, budget: budget}
@@ -313,7 +319,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	}
 	auto := s.settings.AutoApprove
 	maxSteps := s.settings.MaxSteps
-	acts := func(n agentdag.Node) (bool, bool) { return aiNodeActs(tools, n) } // G-PLAN
+	acts := func(n agentdag.Node) (bool, bool) { return aiNodeActs(tools, aiCategoryNode(n, cats)) } // G-PLAN
 	// Step numbers of the profile's steps (read-only below). A planned
 	// node (it has a Prompt) has none: in a resumed run the planned nodes
 	// are in the run from the start, and they keep their own wording.
@@ -378,7 +384,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		User:       user,
 		Outputs:    outputs,
 		Review:     &s.reviewGate,
-		Categories: prof.CategorySlots(),
+		Categories: catSlots,
 		Budget:     budget,
 		Approval:   s.aiRunApproval(),
 		Acts:       acts,
@@ -421,6 +427,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			if sl.p == nil {
 				return nil, nil, fmt.Errorf("model slot %q is not set up", n.Slot)
 			}
+			n = aiCategoryNode(n, cats) // OMX-16: its category may narrow its tools
 			dir, wtTools, err := inWorktree(ctx, n)
 			if err != nil {
 				return nil, nil, err
@@ -440,6 +447,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			case n.ID == fixID:
 				sys = aiFixStepPrompt + aiStepSystem(n.System)
 			}
+			sys += aiCategoryPrompt(n, cats, false)
 			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: ai.SystemPrompt(nodeBase+sys, ts, native)}
 			last := msgs[len(msgs)-1]
 			last.Content = input + wts.othersNote(n.ID)
@@ -452,7 +460,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 			k := aiBgStepKey(run.ID, n.ID) // OMX-6: background runs this step starts hand their answers in
 			mail.openKey(k)
-			return &ai.Agent{Provider: sl.p, Tools: aiWithHooks(dir, ts, m.output), Native: native, AutoApprove: own, MaxSteps: maxSteps,
+			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHooks(dir, ts, m.output), Native: native, AutoApprove: own, MaxSteps: maxSteps,
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
 				Reasoning: reasoning(n.Slot, sl.cfg), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: fallbacks[n.Slot],
 				ContextWindow: windowOf(sl.cfg.Model), Inbox: mail.inbox(k)}, msgs, nil
@@ -465,7 +473,11 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 		},
 	}
-	h, err := agentrun.Start(ctx, run, opts)
+	var h *agentrun.Handle
+	err := catErr // OMX-16: a planner needs its quick and deep slots
+	if err == nil {
+		h, err = agentrun.Start(ctx, run, opts)
+	}
 	if err != nil {
 		cancel()
 		rm := &s.conv.Messages[msgIdx]
@@ -1015,12 +1027,16 @@ func (m *Model) aiRetryRun(i int) tea.Cmd {
 	if !ok {
 		return m.aiInfo("Profile " + rm.Run.Profile + " no longer exists; send the message again")
 	}
+	prof, cats, err := s.aiProfileCategories(prof) // OMX-16
+	if err != nil {
+		return m.aiProfileProblem(prof.Name, err)
+	}
 	run, outputs, err := aiRebuildRun(rm, prof)
 	if err != nil {
 		return m.aiInfo(err.Error())
 	}
 	run.Approved = append([]string(nil), rm.Run.Approved...) // G-PLAN: an approved plan is not asked again
-	slots, err := s.aiRunPreflight(run, prof.CategorySlots())
+	slots, err := s.aiRunPreflight(run, aiCategorySlots(prof, cats))
 	if err != nil {
 		return m.aiProfileProblem(prof.Name, err)
 	}
@@ -1102,6 +1118,11 @@ func aiRebuildRun(rm ai.StoredMessage, prof ai.Profile) (agentdag.Run, map[strin
 			isPlanned[st.ID] = true
 		}
 		cats := prof.CategorySlots()
+		for c, sl := range prof.Categories { // OMX-16: every category of the run
+			if cats[c] == "" {
+				cats[c] = sl
+			}
+		}
 		for _, st := range planned {
 			deps := []string{} // not nil: only the plan's own deps pass their output
 			for _, d := range st.Deps {

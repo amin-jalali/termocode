@@ -128,8 +128,9 @@ func aiMailKeyOf(ctx context.Context) string {
 
 // aiBgEligible reports whether run may run in the background: every
 // step has the read-only or no tools (an allow or deny list only
-// removes more), and none plans, runs a CLI or loops.
-func aiBgEligible(run agentdag.Run) bool {
+// removes more; its category may narrow them), and none plans, runs a
+// CLI or loops.
+func aiBgEligible(run agentdag.Run, cats map[string]ai.Category) bool {
 	if run.Loop != nil || len(run.Nodes) == 0 {
 		return false
 	}
@@ -137,7 +138,7 @@ func aiBgEligible(run agentdag.Run) bool {
 		if n.CLI != "" || n.Plan {
 			return false
 		}
-		if p := n.Tools.Preset; p != agentdag.PresetReadOnly && p != agentdag.PresetNone {
+		if p := aiCategoryNode(n, cats).Tools.Preset; p != agentdag.PresetReadOnly && p != agentdag.PresetNone {
 			return false
 		}
 	}
@@ -239,7 +240,12 @@ func (m *Model) handleAIBgMsg(msg tea.Msg) (tea.Cmd, bool) {
 // task. key is the mailbox key of who started it.
 func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.RunBy, key string) (tea.Cmd, error) {
 	s := m.aiS()
-	slots, err := s.aiRunPreflight(run, prof.CategorySlots())
+	prof, cats, err := s.aiProfileCategories(prof) // OMX-16
+	if err != nil {
+		return nil, err
+	}
+	run = prof.Run(run.ID)
+	slots, err := s.aiRunPreflight(run, aiCategorySlots(prof, cats))
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +304,7 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 	opts := agentrun.Options{
 		Parallel:   s.settings.Parallel(),
 		User:       task,
-		Categories: prof.CategorySlots(),
+		Categories: aiCategorySlots(prof, cats),
 		Budget:     budget,
 		StallAfter: s.settings.StepStall(),
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
@@ -310,14 +316,15 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 			if sl.p == nil {
 				return nil, nil, fmt.Errorf("model slot %q is not set up", n.Slot)
 			}
+			n = aiCategoryNode(n, cats)
 			ts := aiFilterTools(tools, n.Tools)
 			native := sl.p.SupportsTools()
-			sys := ai.SystemPrompt(base+aiStepPrompt(n, index[n.ID], total)+aiBgStepNote, ts, native)
+			sys := ai.SystemPrompt(base+aiStepPrompt(n, index[n.ID], total)+aiCategoryPrompt(n, cats, false)+aiBgStepNote, ts, native)
 			k := aiBgStepKey(run.ID, n.ID)
 			mail.openKey(k)
 			// No Confirm: a background step never asks; a tool that would
 			// ask is declined (its tools are read-only anyway).
-			return &ai.Agent{Provider: sl.p, Tools: ts, Native: native, MaxSteps: maxSteps, Inbox: mail.inbox(k)},
+			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: ts, Native: native, MaxSteps: maxSteps, Inbox: mail.inbox(k)},
 				[]ai.Message{{Role: ai.RoleSystem, Content: sys}, {Role: ai.RoleUser, Content: input}}, nil
 		},
 		Finished: func(_ context.Context, n agentdag.Node) { mail.closeKey(aiBgStepKey(run.ID, n.ID)) },

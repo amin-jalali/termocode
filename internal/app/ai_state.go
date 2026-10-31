@@ -170,6 +170,8 @@ type aiState struct {
 	// ai_bg_runs.go).
 	bgRuns []*aiBgRun
 	bgMail aiBgMail
+	// catErrShown are the ai_categories errors logged already (OMX-16).
+	catErrShown map[string]bool
 	// agents is the AGENTS view of the chat's runs (agents_panel.go).
 	agents aiAgentsState
 	// usageLog is every step and plain chat turn that used a model in
