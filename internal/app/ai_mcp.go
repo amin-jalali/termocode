@@ -403,14 +403,15 @@ func (m *Model) openMCPServers() tea.Cmd {
 	list := mgr.Servers()
 	items := make([]picker.Item, 0, len(list)+1)
 	items = append(items, picker.Item{ID: mcpAddID, Title: "+ Connect a service…", Hint: "GitHub, Linear, GitLab, Slack, Notion …"})
+	ups := mcpKnownUpdates() // mcp_updates.go: from the cached catalog
 	for _, st := range list {
-		items = append(items, picker.Item{ID: st.Name, Title: mcpStatusIcon(st) + " " + st.Name, Hint: mcpStatusHint(st)})
+		items = append(items, picker.Item{ID: st.Name, Title: mcpStatusIcon(st) + " " + st.Name, Hint: mcpUpdateHint(ups, st.Name) + mcpStatusHint(st)})
 	}
 	m.picker = picker.NewItems(" MCP servers (Enter: actions) ", items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindMCPServers
-	return nil
+	return mcpAutoCheck()
 }
 
 // openMCPServerActions is the second picker for one server.
@@ -452,6 +453,7 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 		{ID: "connect", Title: "Connect / Refresh tools", Hint: "start it and list its tools"},
 		{ID: "tools", Title: "Show tools", Hint: fmt.Sprintf("%d tools", st.Tools)},
 	}
+	items = append(items, mcpUpdateItems(name)...) // mcp_updates.go
 	if st.Pid > 0 {
 		hint := fmt.Sprintf("pid %d", st.Pid)
 		if st.Shared && st.Sessions > 1 {
@@ -559,6 +561,9 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 	}
 	if st.Name == "" {
 		return nil
+	}
+	if c, ok := m.onMCPUpdateAction(id, name); ok { // mcp_updates.go
+		return c
 	}
 	switch id {
 	case "connect":

@@ -507,6 +507,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-mcp-connect", "AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry)", ""},
 		{"ai-mcp-servers", "AI: MCP Servers…", ""},
 		{"ai-mcp-catalog", "AI: MCP: Browse Catalog… (find and add servers)", ""},
+		{"ai-mcp-updates", "AI: MCP: Check for Updates (catalog servers)", ""},
 		{"ai-mcp-bundle", "AI: MCP: Install Bundle (.mcpb)…", ""},
 		{"ai-mcp-profile", "AI: MCP: Switch Profile… (servers and tools for this chat)", ""},
 		{"ai-mcp-log", "AI: MCP: Show Log", ""},
@@ -529,7 +530,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat",
-		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle":
+		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates":
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -607,6 +608,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openMCPCatalog(), true
 	case "ai-mcp-bundle":
 		return m.openMCPBundle(), true
+	case "ai-mcp-updates":
+		return tea.Batch(m.aiInfo("Checking the MCP catalog for updates…"), checkMCPUpdates(false)), true
 	case "ai-mcp-log":
 		return m.showMCPLog(), true
 	case "ai-mcp-config":
