@@ -579,6 +579,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_models":           aiNever(aiNoAIConfig),
 	"ai_prompt_cache":     aiNever(aiNoAIConfig),
 	"ai_reasoning":        aiNever(aiNoAIConfig),
+	"ai_fallback":         aiNever(aiNoAIConfig),
 	"ai_parallel_max":     aiNever(aiNoAIConfig),
 	"ai_worktrees":        aiNever(aiNoAIConfig),
 	"ai_plan_approval":    aiNever(aiNoAIConfig + "; the AI never approves its own plan"),

@@ -2008,6 +2008,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
+| `ai_fallback` | never | AI provider, credentials and approvals stay with the user |
 | `ai_inline` | confirm (settings) |   |
 | `ai_inline_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_max_steps` | never | AI provider, credentials and approvals stay with the user |
