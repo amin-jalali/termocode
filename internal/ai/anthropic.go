@@ -148,7 +148,7 @@ func (p *anthropicProvider) run(ctx context.Context, req Request, ch chan<- Chun
 			if err == nil {
 				err = errString("not signed in to Claude")
 			}
-			return Chunk{Done: true, Err: errString(Redact(err.Error()))}
+			return Chunk{Done: true, Err: signInError{errString(Redact(err.Error()))}}
 		}
 		token = t
 	}
