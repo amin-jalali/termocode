@@ -46,6 +46,7 @@ type mcpLocalForm struct {
 	vals  map[string]string // store name → value
 	next  int               // the secret asked now
 	err   string
+	warn  string // the runtime is not installed (DI-18)
 }
 
 func (m *Model) openMCPLocal() tea.Cmd {
@@ -93,6 +94,9 @@ func (m *Model) localCard() (connectcard.Card, bool) {
 			rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: l})
 		}
 		rows = append(rows, connectcard.Row{Kind: connectcard.Blank})
+		if f.warn != "" {
+			rows = append(rows, connectcard.Row{Kind: connectcard.Fail, Text: f.warn + " You can add it now and install it later."})
+		}
 		if f.scope == 1 {
 			rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "termocode asks you to trust a project server before it first starts."})
 		}
@@ -192,7 +196,12 @@ func (m *Model) localNext() tea.Cmd {
 			return m.localFail(spec.Name + " is already in " + path + ": choose another name.")
 		}
 	}
-	f.spec, f.entry, f.path, f.err = spec, entry, path, ""
+	f.spec, f.entry, f.path, f.err, f.warn = spec, entry, path, "", ""
+	if command, _ := entry["command"].(string); command != "" {
+		if err := mcp.CheckRuntime(command); err != nil {
+			f.warn = err.Error()
+		}
+	}
 	m.wiz().step = wizLocalPreview
 	return m.showWizard()
 }

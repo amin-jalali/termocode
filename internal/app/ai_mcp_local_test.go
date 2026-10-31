@@ -127,3 +127,17 @@ func TestMCPLocalServerProjectScopeAndErrors(t *testing.T) {
 		t.Fatal("written to the user file too")
 	}
 }
+
+// Spec (DI-18): the preview says when the runtime is not installed.
+func TestMCPLocalServerPreviewWarnsMissingRuntime(t *testing.T) {
+	m, _ := aiProfileTestModel(t)
+	m.onMCPConnectPicked(mcpConnectLocalID)
+	m.wiz().local.kind = 2 // pip package → uvx
+	m.connect = connectcard.New(m.wizCard())
+	m.connect.SetInputValue("lcmd", "some-mcp")
+	t.Setenv("PATH", t.TempDir())
+	m.onMCPWizButton("local-next")
+	if txt := localCardText(m.wizCard()); !strings.Contains(txt, "uvx not found") || !strings.Contains(txt, "docs.astral.sh/uv") {
+		t.Fatalf("no runtime warning:\n%s", txt)
+	}
+}
