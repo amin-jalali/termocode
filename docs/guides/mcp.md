@@ -296,6 +296,22 @@ offline. Type to search.
 - Your team can keep its own approved list: set `mcp_catalog_url` to a
   server with the same API (https only).
 
+### Versions and updates
+
+A server added from the catalog is pinned to its version (the
+`registry` key in its entry). It does not change by itself.
+
+- **AI: MCP: Check for Updates** asks the catalog what changed since
+  the last look. The servers list then says `update 1.3.0` or
+  `⚠ deprecated` in front of the server.
+- In the server's actions, **Update to 1.3.0…** shows the new command on
+  a card. **Cancel** is first. **Update** moves the pin; your `env`
+  values and other settings stay.
+- `mcp_auto_update`: `off` (default) checks only when you ask. `notify`
+  also checks once a day when you open the MCP servers list. `on` does
+  the same and updates your own pinned servers; a project file is never
+  changed.
+
 ## Install a bundle (.mcpb)
 
 A `.mcpb` file is one server in one file: its code and a manifest.
@@ -659,7 +675,7 @@ serve every project, add `"share": "user"` to the entry in your own
 The MCP section of the Settings modal (**Preferences: Open Settings (UI)**)
 has `mcp_enabled`, `mcp_idle_timeout`, `mcp_call_timeout`,
 `mcp_max_result_kb`, `mcp_trust_annotations`, `mcp_oauth_port`,
-`mcp_share`, `mcp_log_level`, `mcp_tool_search`, `mcp_catalog_url` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
+`mcp_share`, `mcp_log_level`, `mcp_tool_search`, `mcp_catalog_url`, `mcp_auto_update` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
 your build has none). The timeouts apply at once. The AI can not change these settings. They are
 listed in the settings reference.
 

@@ -1712,6 +1712,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai-mcp-reconnect-all` | AI: MCP: Reconnect All Servers | confirm (ide) |   |
 | `ai-mcp-profile` | AI: MCP: Switch Profile… (servers and tools for this chat) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `ai-mcp-updates` | AI: MCP: Check for Updates (catalog servers) | never | AI provider, credentials and approvals stay with the user |
 | `ai-memory` | AI: Memory… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory-toggle` | AI: Memory: Turn On/Off | never | AI provider, credentials and approvals stay with the user |
 | `ai-model-slot-add` | AI: Add Model Slot… | never | a form for the user; keys and config.json stay with the user (the AI shows the AI PROVIDERS section with ai_view_open) |
@@ -2160,6 +2161,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `icons` | confirm (settings) |   |
 | `images` | confirm (settings) |   |
 | `key_hints` | confirm (settings) |   |
+| `mcp_auto_update` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_disabled_tools` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_catalog_url` | never | AI provider, credentials and approvals stay with the user |
