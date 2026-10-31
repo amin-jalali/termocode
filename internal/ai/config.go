@@ -62,6 +62,9 @@ type Settings struct {
 	// PlanApproval is ai_plan_approval (G-PLAN): "ask" (default), "auto"
 	// or "always" (planapproval.go).
 	PlanApproval string `json:"ai_plan_approval,omitempty"`
+	// PromptCache is ai_prompt_cache: "5m" (default), "1h" or "off"
+	// (prompt_cache.go). Edited by hand; SaveSettings leaves it.
+	PromptCache string `json:"ai_prompt_cache,omitempty"`
 }
 
 // CheckUntilDoneRounds checks an ai_until_done_rounds value.
@@ -676,7 +679,7 @@ func Resolve(s Settings, c Credentials, getenv func(string) string) Config {
 			return Config{}
 		}
 	}
-	cfg := Config{Kind: kind, Model: s.Model, BaseURL: s.BaseURL, InlineModel: s.InlineModel}
+	cfg := Config{Kind: kind, Model: s.Model, BaseURL: s.BaseURL, InlineModel: s.InlineModel, PromptCache: promptCacheMode(s.PromptCache)}
 	if kind != KindClaudeOAuth && kind != KindOllama && kind != KindLMStudio {
 		cfg.APIKey = keyFor(kind)
 	}
