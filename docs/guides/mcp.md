@@ -174,6 +174,55 @@ The AI's instructions name each connected service and its access
 - The start page's setup card has an optional **Apps** row once AI is
   set up.
 
+## Add a local server
+
+**Local server…** in the Connect wizard adds a program that runs on your
+computer. Fill in one short form:
+
+- **Runs with**: a command, an npm package (`npx -y …`), a pip package
+  (`uvx …`) or a container image (`docker run -i --rm …`).
+- **Command or package**, then its arguments, for example
+  `@modelcontextprotocol/server-filesystem ~/notes`.
+- **Name**: leave it empty to take one from the package (`filesystem`).
+- **Secret env names**, for example `API_KEY`. You type each value next,
+  in a hidden field. Values go to the secret store; `mcp.json` gets
+  `${secret:<name>_api_key}`.
+- **Save in**: your `mcp.json`, or this project's `.termocode/mcp.json`.
+  termocode asks you to trust a project server before it first starts.
+
+The next screen shows the entry and its file. Nothing is written before
+**Add**.
+
+## Manage servers in the terminal
+
+The same works without the UI, for scripts and dotfiles:
+
+```sh
+termocode mcp add notes -- npx -y @modelcontextprotocol/server-filesystem ~/notes
+termocode mcp add --npm @modelcontextprotocol/server-filesystem -- ~/notes
+termocode mcp add --secret API_KEY --scope project tracker -- tracker-mcp
+termocode mcp add https://mcp.example.com/mcp      # a remote server
+termocode mcp add - < servers.json                 # an mcpServers block
+termocode mcp list            # or: list --json
+termocode mcp get notes
+termocode mcp remove notes
+```
+
+- `--secret NAME` reads the value from a hidden prompt, or one line of
+  stdin per secret. A value is never taken from the command line, and
+  the commands never print one.
+- `--env NAME=VALUE` is for plain values; a value that looks like a token
+  is refused.
+- `--scope project` writes `<dir>/.termocode/mcp.json` (`--dir`, default:
+  the current folder).
+- `remove` also deletes the entry's secrets when no other entry uses them.
+- `termocode mcp add <url|json>` is the terminal install link: give it a
+  server URL or a pasted block. Tokens in a block move to the secret
+  store. Use `-` to read the block from stdin, so tokens stay out of your
+  shell history.
+
+`termocode mcp` alone is still the server for an agent CLI (see below).
+
 ## Add a server by hand
 
 **Paste a config…** in the Connect wizard takes an `mcpServers` block from
