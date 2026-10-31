@@ -236,8 +236,9 @@ func parseEntry(name string, raw json.RawMessage) Server {
 	return s
 }
 
-// Load reads the user and the project file and merges them: a project
-// entry replaces the user entry of the same name, and a disabled project
+// Load reads the user file, the project's .mcp.json and its
+// .termocode/mcp.json, in that order, and merges them: a later entry
+// replaces an earlier one of the same name, and a disabled project
 // entry hides it. Missing files are fine; a broken one is a warning.
 func Load(userPath, projectPath string) ([]Server, []string) {
 	all, warns := LoadAll(userPath, projectPath)
@@ -255,7 +256,12 @@ func Load(userPath, projectPath string) ([]Server, []string) {
 func LoadAll(userPath, projectPath string) ([]Server, []string) {
 	by := map[string]Server{}
 	var warns []string
-	for _, f := range []struct{ path, source string }{{userPath, SourceUser}, {projectPath, SourceProject}} {
+	files := []struct{ path, source string }{{userPath, SourceUser}}
+	if c := CommonProjectPath(projectPath); c != "" {
+		files = append(files, struct{ path, source string }{c, SourceProject})
+	}
+	files = append(files, struct{ path, source string }{projectPath, SourceProject})
+	for _, f := range files {
 		if f.path == "" {
 			continue
 		}
@@ -289,6 +295,26 @@ func UserPath(configDir string) string { return filepath.Join(configDir, "mcp.js
 
 // ProjectPath is the project mcp.json of a workspace root.
 func ProjectPath(root string) string { return filepath.Join(root, ".termocode", "mcp.json") }
+
+// CommonProjectPath is <root>/.mcp.json next to a project file
+// <root>/.termocode/mcp.json ("" for any other path). It is a project
+// source too (untrusted); .termocode/mcp.json wins on a name clash.
+func CommonProjectPath(projectPath string) string {
+	dir := filepath.Dir(projectPath)
+	if projectPath == "" || filepath.Base(projectPath) != "mcp.json" || filepath.Base(dir) != ".termocode" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(dir), ".mcp.json")
+}
+
+// ProjectFileLabel is the short name of a project file for the UI:
+// ".mcp.json" or ".termocode/mcp.json".
+func ProjectFileLabel(path string) string {
+	if filepath.Base(path) == ".mcp.json" {
+		return ".mcp.json"
+	}
+	return ".termocode/mcp.json"
+}
 
 // Hash identifies an entry's exact content (key order does not matter).
 // Trust is stored per hash, so any change to the entry asks again.
