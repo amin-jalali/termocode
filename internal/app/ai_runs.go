@@ -381,6 +381,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		Budget:     budget,
 		Approval:   s.aiRunApproval(),
 		Acts:       acts,
+		StallAfter: s.settings.StepStall(), // OMX-23
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
 			if n.CLI != "" {
 				return 0, false // the subscription: no price, not in the budget
@@ -634,6 +635,11 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 			st.Error = ev.Err
 			st.Notes = append(st.Notes, "■ "+ev.Err)
 		}
+	case agentrun.NodeStalled: // OMX-23: it starts once more
+		s.agentsNodeEnd(ev.RunID, st.ID)
+		st.State = string(agentdag.StatePending)
+		st.Notes = append(st.Notes, "⏱ "+ev.Err)
+		st.ElapsedMs += ev.Elapsed.Milliseconds()
 	case agentrun.NodeMessage: // OMX-22
 		if ev.Err == "" {
 			st.Notes = append(st.Notes, "✉ you: "+aiCardText(ai.Redact(ev.Output), 60))
