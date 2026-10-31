@@ -25,13 +25,15 @@ type fakeProv struct {
 
 	mu    sync.Mutex
 	calls int
+	reqs  [][]ai.Message // every request's messages
 }
 
 func (p *fakeProv) Name() string        { return "fake" }
 func (p *fakeProv) Configured() bool    { return true }
 func (p *fakeProv) SupportsTools() bool { return true }
-func (p *fakeProv) Stream(ctx context.Context, _ ai.Request) <-chan ai.Chunk {
+func (p *fakeProv) Stream(ctx context.Context, req ai.Request) <-chan ai.Chunk {
 	p.mu.Lock()
+	p.reqs = append(p.reqs, req.Messages)
 	r := ai.Chunk{Delta: "ok"}
 	if len(p.replies) > 0 {
 		r = p.replies[min(p.calls, len(p.replies)-1)]
