@@ -329,8 +329,10 @@ The server's marks are hints, so review a new server with **Show tools**.
 Tool results are cleaned, cut at `mcp_max_result_kb` (32 KB) and marked
 as outside data for the model.
 
-**Turn a tool off.** In **Show tools**, each tool is marked `[x]` (on)
-or `[ ]` (off). Press `Space` on a tool to turn it off or on. An off
+**Turn a tool off.** **Show tools** lists each tool with its title, how
+it runs (`runs at once`, `asks`, `always asks`) and `reaches outside`
+when the server says the tool talks to the outside world. Each tool is
+marked `[x]` (on) or `[ ]` (off). Press `Space` on a tool to turn it off or on. An off
 tool is not sent to the AI at all. termocode keeps your choice in
 config.json (`mcp_disabled_tools`), so it stays after a restart. The
 server's **Show tools** row says how many are off, for example
