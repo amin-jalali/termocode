@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
 )
 
 // Spec (MCPX-20): a server that answers server/discover with the
@@ -57,5 +59,27 @@ func TestModernProbeFallsBackToInitialize(t *testing.T) {
 	got := fakeLog(t, log)
 	if !strings.Contains(got, "server/discover\ninitialize\n") {
 		t.Fatalf("want the probe, then the handshake:\n%s", got)
+	}
+}
+
+// Spec (MCPX-20): over HTTP the stateless revision goes in the
+// MCP-Protocol-Version header and in _meta; there is no session.
+func TestModernHTTP(t *testing.T) {
+	f := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{Modern: true, Session: false})
+	p := startHTTP(t, httpServer(f.MCPURL()), HTTPOptions{})
+	if !p.Client.Stateless() || p.Client.ServerInfo().Name != "fake-mcp-modern" {
+		t.Fatalf("stateless %v info %+v", p.Client.Stateless(), p.Client.ServerInfo())
+	}
+	r, err := p.Client.CallTool(context.Background(), "echo", map[string]any{"text": "hi"})
+	if err != nil || r.Text() != "echo: hi" {
+		t.Fatalf("call %q %v", r.Text(), err)
+	}
+	if got := strings.Join(rpcs(f), ","); got != "server/discover,tools/call" {
+		t.Fatalf("rpcs %s", got)
+	}
+	for _, q := range f.Requests() {
+		if q.Header.Get("MCP-Protocol-Version") != StatelessVersion || !strings.Contains(q.Body, `"io.modelcontextprotocol/protocolVersion":"2026-07-28"`) {
+			t.Errorf("%s: header %q body %s", q.RPC, q.Header.Get("MCP-Protocol-Version"), q.Body)
+		}
 	}
 }

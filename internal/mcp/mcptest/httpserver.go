@@ -50,6 +50,10 @@ type HTTPOptions struct {
 	// StepUp returns the scope a tools/call needs when the token lacks
 	// it ("" allowed): the call gets 403 insufficient_scope.
 	StepUp func(token, tool string) string
+	// Modern answers server/discover with the stateless revision; a
+	// stateless request must name it in the MCP-Protocol-Version header
+	// too (400 otherwise).
+	Modern bool
 }
 
 // Recorded is one request the fake got.
@@ -223,6 +227,16 @@ func (s *HTTPServer) serveMCP(w http.ResponseWriter, r *http.Request) {
 	if !m.IsRequest() { // a notification or an answer
 		w.WriteHeader(http.StatusAccepted)
 		return
+	}
+	if s.O.Modern {
+		if m.Method == "server/discover" {
+			writeJSON(w, response(m.ID, DiscoverResult(), nil))
+			return
+		}
+		if v, _ := RequestMeta(m.Params); v != "" && r.Header.Get("MCP-Protocol-Version") != v {
+			http.Error(w, "MCP-Protocol-Version does not match _meta", http.StatusBadRequest)
+			return
+		}
 	}
 	switch m.Method {
 	case "initialize":
