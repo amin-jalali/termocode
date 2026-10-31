@@ -92,6 +92,8 @@ type Content struct {
 	URI      string            `json:"uri,omitempty"`  // resource_link
 	Name     string            `json:"name,omitempty"` // resource_link
 	Resource *ResourceContents `json:"resource,omitempty"`
+	// Annotations: audience and priority (annotations.go).
+	Annotations *ContentAnnotations `json:"annotations,omitempty"`
 }
 
 // ResourceContents is an embedded resource (text or blob).
@@ -110,7 +112,8 @@ type CallResult struct {
 	Meta              map[string]any  `json:"_meta,omitempty"` // kept as sent (spec2026.go)
 }
 
-// Text renders a result for the model: text items as they are, binary
+// Text renders a result for the model: items for the user only are left
+// out, the rest by priority; text items as they are, binary
 // items as a short placeholder, structured content as JSON when there is
 // no text, and "error: …" for isError.
 func (r CallResult) Text() string { return r.render(nil) }
@@ -119,7 +122,8 @@ func (r CallResult) Text() string { return r.render(nil) }
 // image or audio item i (nil: "not shown").
 func (r CallResult) render(media func(i int, c Content) string) string {
 	var parts []string
-	for i, c := range r.Content {
+	for _, i := range r.modelOrder() { // user-only items left out, by priority (annotations.go)
+		c := r.Content[i]
 		switch c.Type {
 		case "text":
 			parts = append(parts, c.Text)
