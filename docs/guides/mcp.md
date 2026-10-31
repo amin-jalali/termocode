@@ -310,8 +310,14 @@ transcript and the AI audit log (Output: AI) show `mcp.<server>.<tool>`.
   MCP tool ask (except the ones in a server's `autoApprove`).
 
 The server's marks are hints, so review a new server with **Show tools**.
-Tool results are cleaned, cut at `mcp_max_result_kb` (32 KB) and marked
-as outside data for the model.
+Tool results are cleaned and marked as outside data for the model.
+
+**Big results.** A result over `mcp_max_result_kb` (32 KB) is not cut
+off. The whole result is saved in a file in your temp folder (only you
+can read it). The AI gets the first 32 KB and the size, and reads the
+rest in parts when it needs it (the `mcp_read_result` tool, read only).
+The **MCP** log says when this happens. A server can set a smaller or
+bigger limit for one tool (its `maxResultSizeChars`, at most 256 KB).
 
 **When a server's tools change.** termocode remembers the tool list of
 each server the first time it sees it. If the list changes later (a
