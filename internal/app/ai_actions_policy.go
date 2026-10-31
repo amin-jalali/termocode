@@ -520,6 +520,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-skills":       aiNever(aiNoPicker),
 	"help-bug-report": aiNever("only the user chooses what to export"),
 	"ai-doctor":       aiNever("a local diagnostic page for the user"),
+	"ai-hooks":        aiNever(aiNoPicker),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
 	// Agent worktrees (G-WT): merging or discarding an agent's work and

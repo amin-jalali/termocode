@@ -253,6 +253,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if sk := aiLoadSkills(aiWorkspaceRoot()); sk.ProjectHash != "" && aiSkillsTrust(sk) == aiTrustAsk {
 		return m.askAISkillsTrust(sk, true, text) // OM-4: a repo's skills are shown first
 	}
+	if hk := aiLoadHooks(aiWorkspaceRoot()); hk.ProjectHash != "" && aiHooksTrust(hk) == aiTrustAsk {
+		return m.askAIHooksTrust(hk, true, text) // OMX-12: a repo's commands are shown first
+	}
 	s.takeTurnKeyword(text) // OMX-5: "think" / "ultrathink" (unless its chip was removed)
 	if out, ok, problem := aiExpandChatCommand(aiWorkspaceRoot(), text); problem != "" {
 		m.ai.input = []rune(asked)
@@ -316,7 +319,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	agent := &ai.Agent{
 		Provider:    slot.p,
-		Tools:       tools,
+		Tools:       aiWithHooks(root, tools, m.output), // OMX-12
 		Native:      native,
 		AutoApprove: auto,
 		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
