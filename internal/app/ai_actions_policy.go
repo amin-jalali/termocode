@@ -521,6 +521,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"help-bug-report": aiNever("only the user chooses what to export"),
 	"ai-doctor":       aiNever("a local diagnostic page for the user"),
 	"ai-hooks":        aiNever(aiNoPicker),
+	// Web tools reach the internet and add servers: the user turns them on.
+	"ai-web-tools": aiNever(aiNoPicker),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
 	// Agent worktrees (G-WT): merging or discarding an agent's work and
@@ -607,6 +609,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_worktrees":        aiNever(aiNoAIConfig),
 	"ai_compact":          aiNever(aiNoAIConfig),
 	"ai_plan_approval":    aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai_web_fetch":        aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
+	"ai_web_search":       aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	// Work until done: the AI never raises its own rounds or budget.
 	"ai_until_done_rounds":     aiNever(aiNoAIConfig),
 	"ai_until_done_budget_usd": aiNever(aiNoAIConfig),
