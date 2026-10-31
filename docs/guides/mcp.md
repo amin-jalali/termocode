@@ -181,6 +181,14 @@ another tool as it is: tokens in it move to your
 secret store and the entries get `${secret:…}` instead. Names that
 already exist are skipped.
 
+**AI: MCP: Import from Other Apps…** (`F1`) looks in the MCP config files
+that other apps keep in your home folder. A card lists each new server:
+its name, what it runs (command or URL) and the file it comes from.
+**Cancel** comes first and has the focus; **Import N** copies them to your
+`mcp.json`, with tokens moved to your secret store as above. The other
+apps' files are only read, never changed. Names you already have are left
+out.
+
 Or run **Open Config: MCP Servers**. It opens
 `~/.config/termocode/mcp.json` (created when missing). Paste servers and
 save:
