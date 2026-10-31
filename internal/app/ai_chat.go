@@ -354,6 +354,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 			aiAddMentioned(ctx, history, mentions, emit)
 		}
 		var ev ai.Event
+		ctx := ai.WithSideUsage(ctx) // a summary before the turn counts in it
 		if history, ev = aiCompactEarly(ctx, history, window, agent.Compact); ev.Kind == ai.EventCompacted {
 			emit(ev)
 		}

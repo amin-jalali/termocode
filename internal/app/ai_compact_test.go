@@ -181,3 +181,33 @@ func aiTestStatusErr(t *testing.T) error {
 	}
 	return err
 }
+
+// The summary request (before the turn, and after a too-long refusal)
+// counts in the turn's token usage.
+func TestAIChatCompactUsageCounts(t *testing.T) {
+	for _, early := range []bool{true, false} {
+		m := aiTestModel(t)
+		s := m.ai
+		sum := &ai.Usage{Model: "quick-1", Input: 300, Output: 30, Requests: 1}
+		quick := &compactFake{replies: []ai.Chunk{{Delta: "short summary", Usage: sum}}}
+		answer := ai.Chunk{Delta: "fixed", Usage: &ai.Usage{Model: "tiny-1", Input: 40, Output: 4, Requests: 1}}
+		main := &compactFake{replies: []ai.Chunk{answer}}
+		s.conv.Messages = []ai.StoredMessage{{Role: ai.StoredUser, Text: "q"}, {Role: ai.StoredAssistant, Text: "long text"}}
+		if early {
+			s.settings.ContextWindows = map[string]int{"tiny-1": 4000}
+			s.conv.Messages[1].Text = strings.Repeat("long ", 4000)
+		} else {
+			main.replies = []ai.Chunk{{Err: aiTestStatusErr(t)}, answer}
+		}
+		s.provider = main
+		s.cfg = ai.Config{Kind: ai.KindOllama, Model: "tiny-1"}
+		s.slotFake = map[string]aiSlot{ai.SlotQuick: {p: quick, cfg: ai.Config{Kind: ai.KindOllama, Model: "quick-1"}}}
+		runAITurn(t, &m, "next")
+		if len(s.usageLog) != 1 {
+			t.Fatalf("early %v: usage log %+v", early, s.usageLog)
+		}
+		if u := s.usageLog[0].U; u.Input != 340 || u.Output != 34 || u.Model != "tiny-1" {
+			t.Errorf("early %v: turn usage %+v", early, u)
+		}
+	}
+}
