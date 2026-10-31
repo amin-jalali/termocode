@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -19,7 +20,7 @@ import (
 // untrusted input: it never gets tools and never passes a confirm card.
 
 // RulesFiles are the rules files, in prompt order, relative to the root.
-var RulesFiles = []string{"AGENTS.md", ".termocode/rules.md"}
+var RulesFiles = []string{"AGENTS.md", "CLAUDE.md", ".termocode/rules.md"}
 
 // RulesMaxBytes caps the rules text that goes into a prompt (~4k tokens).
 const RulesMaxBytes = 16 << 10
@@ -32,11 +33,15 @@ const rulesCutNote = "(cut at 16 KB)"
 
 // Rules is what LoadProjectRules found.
 type Rules struct {
-	Files     []string // the files that had text, relative to the root
-	Text      string   // cleaned and capped; each file under "# <file>" when both exist
+	Files     []string // the files that had text, relative to the root (scoped ones last)
+	Text      string   // cleaned and capped; each file under "# <file>" when there are several
 	Bytes     int      // the files' size on disk
 	Truncated bool     // Text was cut at RulesMaxBytes
-	Hash      string   // sha256 of Text ("" when there is no text)
+	Hash      string   // sha256 of Text and every Scoped rule ("" when there is no text)
+	// Scoped are the rules for some files only (OMX-9): AGENTS.md /
+	// CLAUDE.md below the root and .claude/rules files with globs. They
+	// are added to a read_file result, once per chat (RulesInjector).
+	Scoped []ScopedRule
 }
 
 // LoadProjectRules reads the rules files of root. A missing, empty or
@@ -47,19 +52,34 @@ func LoadProjectRules(root string) Rules {
 	if err != nil {
 		return r
 	}
-	var parts []string
+	var parts, names []string
+	add := func(name, text string, size int) {
+		r.Files = append(r.Files, name)
+		r.Bytes += size
+		parts, names = append(parts, text), append(names, name)
+	}
 	for _, name := range RulesFiles {
 		text, size, ok := readRulesFile(realRoot, filepath.Join(root, filepath.FromSlash(name)))
 		if !ok {
 			continue
 		}
-		r.Files = append(r.Files, name)
-		r.Bytes += size
-		parts = append(parts, text)
+		add(name, text, size)
+	}
+	for _, cr := range loadClaudeRules(root, realRoot) {
+		if len(cr.Globs) == 0 {
+			add(cr.File, cr.Text, cr.size)
+		} else {
+			r.Scoped = append(r.Scoped, cr.ScopedRule)
+			r.Bytes += cr.size
+		}
+	}
+	r.Scoped = append(r.Scoped, loadFolderRules(root, realRoot, &r.Bytes)...)
+	sort.Slice(r.Scoped, func(i, j int) bool { return r.Scoped[i].File < r.Scoped[j].File })
+	for _, sr := range r.Scoped {
+		r.Files = append(r.Files, sr.File)
 	}
 	switch len(parts) {
 	case 0:
-		return r
 	case 1:
 		r.Text = parts[0]
 	default:
@@ -68,20 +88,23 @@ func LoadProjectRules(root string) Rules {
 			if i > 0 {
 				b.WriteString("\n\n")
 			}
-			b.WriteString("# " + r.Files[i] + "\n" + p)
+			b.WriteString("# " + names[i] + "\n" + p)
 		}
 		r.Text = b.String()
 	}
 	if len(r.Text) > RulesMaxBytes {
-		cut := r.Text[:RulesMaxBytes]
-		if i := strings.LastIndexByte(cut, '\n'); i > 0 {
-			cut = cut[:i]
-		}
-		r.Text = strings.TrimRight(cut, " \t\n") + "\n" + rulesCutNote
+		r.Text = cutRules(r.Text, RulesMaxBytes)
 		r.Truncated = true
 	}
-	sum := sha256.Sum256([]byte(r.Text))
-	r.Hash = hex.EncodeToString(sum[:])
+	if r.Text == "" && len(r.Scoped) == 0 {
+		return r
+	}
+	h := sha256.New()
+	h.Write([]byte(r.Text))
+	for _, sr := range r.Scoped {
+		h.Write([]byte("\x00" + sr.File + "\x00" + strings.Join(sr.Globs, ",") + "\x00" + sr.Text))
+	}
+	r.Hash = hex.EncodeToString(h.Sum(nil))
 	return r
 }
 
