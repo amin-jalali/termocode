@@ -69,7 +69,7 @@ func TestCovCoreQuitWithUnsavedFiles(t *testing.T) {
 	if covIsQuit(cmd) {
 		t.Fatal("quit although d.txt was not saved")
 	}
-	if !m.confirmOpen || !strings.Contains(ansiPlain(m.confirm.View()), `"d.txt" has unsaved changes`) {
+	if !m.confirmOpen || !strings.Contains(ansiPlain(m.confirm.View()), "Could not save d.txt") {
 		t.Fatalf("not asked again about d.txt:\n%s", ansiPlain(m.confirm.View()))
 	}
 	for _, p := range paths[:3] {
