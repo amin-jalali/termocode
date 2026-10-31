@@ -127,7 +127,7 @@ func TestWorkbenchResizeKeepsSize(t *testing.T) {
 	Eval[bool](p, `(document.querySelector(".sash-x").focus(), true)`)
 	p.Key(kb.ArrowRight + kb.ArrowRight) // 16 px each
 	p.WaitJS(fmt.Sprintf(`document.querySelector(".wb-side").getBoundingClientRect().width === %v`, before+32))
-	Eval[bool](p, `(location.reload(), true)`)
+	p.Reload()
 	p.WaitJS(fmt.Sprintf(`document.querySelector(".wb-side")?.getBoundingClientRect().width === %v`, before+32))
 }
 

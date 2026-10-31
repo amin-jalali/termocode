@@ -303,6 +303,14 @@ func (p *Page) WaitJS(js string) {
 	}
 }
 
+// Reload reloads the page and waits for the new document: a check right
+// after location.reload() can still run in the old one, or in neither.
+func (p *Page) Reload() {
+	p.T.Helper()
+	Eval[bool](p, `(window.__tcOldDoc = true, location.reload(), true)`)
+	p.WaitJS(`!window.__tcOldDoc && document.readyState === "complete"`)
+}
+
 // Holds checks that the expression stays true for d.
 func (p *Page) Holds(js string, d time.Duration) {
 	p.T.Helper()

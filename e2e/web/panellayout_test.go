@@ -42,11 +42,8 @@ func TestPanelMaximizePositionAndSashReset(t *testing.T) {
 	p.TapJS(`[...document.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.includes("Move Panel Right"))`)
 	p.WaitJS(`(() => { const e = document.querySelector(".wb-editor").getBoundingClientRect(), q = document.querySelector(".wb-panel").getBoundingClientRect(), ch = document.querySelector(".chatcol").getBoundingClientRect(); return q.left >= e.right - 1 && q.right <= ch.left + 1 && q.top <= e.top + 1; })()`)
 	// It stays there after a reload.
-	Eval[bool](p, `(location.reload(), true)`)
-	p.WaitJS(`document.querySelector(".wb.is-panel-right .wb-panel")`)
-	if w := Eval[float64](p, `document.querySelector(".wb-panel").getBoundingClientRect().width`); w < 400 {
-		t.Errorf("the right panel is %v px wide", w)
-	}
+	p.Reload()
+	p.WaitJS(`document.querySelector(".wb.is-panel-right .wb-panel")?.getBoundingClientRect().width >= 400`)
 	if len(p.Problems()) > 0 {
 		t.Errorf("problems: %v", p.Problems())
 	}
