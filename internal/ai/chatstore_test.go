@@ -173,3 +173,18 @@ func TestChatStoreListCached(t *testing.T) {
 	// A file rewritten in place with the same size and time is the one
 	// case it can not see; the store never does that (it renames).
 }
+
+func TestConversationIDHasRandomSuffix(t *testing.T) {
+	seen := make(map[string]bool)
+	for range 1000 {
+		c := NewConversation()
+		_, suffix, ok := strings.Cut(c.ID, "-")
+		if !ok || len(suffix) != 32 || strings.Trim(suffix, "0123456789abcdef") != "" {
+			t.Fatalf("chat id lacks a 128-bit random suffix: %q", c.ID)
+		}
+		if seen[suffix] {
+			t.Fatalf("repeated random suffix: %s", suffix)
+		}
+		seen[suffix] = true
+	}
+}

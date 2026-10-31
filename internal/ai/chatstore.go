@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/crash"
@@ -216,13 +216,13 @@ func DefaultChatStore() ChatStore {
 	return ChatStore{Dir: filepath.Join(d, "ai", "chats")}
 }
 
-var idCounter atomic.Int64
-
 // NewConversation returns an empty, unsaved conversation with a fresh id.
 func NewConversation() Conversation {
 	now := time.Now().UnixMilli()
+	var random [16]byte
+	rand.Read(random[:])
 	return Conversation{
-		ID:          fmt.Sprintf("%d-%d", now, idCounter.Add(1)),
+		ID:          fmt.Sprintf("%d-%x", now, random),
 		Title:       defaultChatTitle,
 		UpdatedAtMs: now,
 	}
