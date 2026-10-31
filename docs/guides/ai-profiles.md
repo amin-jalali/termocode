@@ -231,6 +231,40 @@ To edit the file by hand (the expert path), run **AI: Edit Model Slots**:
 - `model` and `base_url` are optional; the provider's default is used.
 - A slot named `quick` or `local` replaces the built-in one.
 - A bad entry is left out, and the profile toast names it.
+- `reasoning` (optional) sets how hard the slot's model thinks: `low`,
+  `medium`, `high`, `xhigh` or `max` ([Reasoning level](ai-use.md#reasoning-level)).
+- `fallback` (optional) lists backup models, see below.
+
+### Backup models (fallback)
+
+A slot can name up to 4 backup models. When a request fails before any
+text comes back, the turn moves to the next backup:
+
+- the server is busy or down (HTTP 5xx, 529), after 3 retries,
+- a rate or usage limit (HTTP 429), after 3 retries,
+- no credit left (402), a refused key (401, 403) or an expired sign-in,
+  at once.
+
+A bad request (for example a too long chat) does not move: the next
+model would fail the same way. A backup with no key is skipped.
+
+```json
+{
+  "ai_fallback": ["gpt"],
+  "ai_models": {
+    "claude": { "provider": "anthropic", "model": "claude-sonnet-5-5",
+                "fallback": ["openrouter/anthropic/claude-sonnet-5-5", "gpt"] },
+    "gpt":    { "provider": "openai", "model": "gpt-5-mini" }
+  }
+}
+```
+
+`ai_fallback` is the list of the `main` slot. An entry is a slot name or
+`<provider>/<model>`. The chat shows the move, for example
+`↪ main (claude-opus-5-5) failed: the server is busy or down (HTTP 529).
+Now using gpt (gpt-5-mini).` The rest of that turn stays on the backup;
+the next message tries the slot's own model again. The line is for you:
+the model does not see it.
 
 ### Keys
 
