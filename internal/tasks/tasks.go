@@ -19,6 +19,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/jsonc"
 )
 
 // Task groups. A task with no group is plain "run anything".
@@ -91,6 +93,7 @@ func Load(root string) ([]Task, error) {
 // Parse decodes tasks.json content. It accepts {"tasks": [...]} or a bare
 // array. Entries without a label or command are skipped.
 func Parse(data []byte) ([]Task, error) {
+	data = jsonc.Strip(data)
 	var raws []rawTask
 	trimmed := strings.TrimSpace(string(data))
 	if strings.HasPrefix(trimmed, "[") {
