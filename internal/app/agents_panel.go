@@ -70,6 +70,7 @@ type aiAgentsState struct {
 	// the step a message or stop card is about (agents_node_ctl.go).
 	logs   map[string]*strings.Builder
 	target string
+	list   bool // t: the dense task list instead of the cards (agents_list.go)
 }
 
 // aiAgentsKey is everything the drawn rows depend on.
@@ -77,7 +78,7 @@ type aiAgentsKey struct {
 	runGen, msgs, snapGen int
 	conv, runID, sel      string
 	manual, noDetails     bool
-	usage                 bool
+	usage, list           bool
 	usageGen              int
 	width                 int
 	secs                  int64 // the clock second while a node runs (0 when none)
@@ -873,8 +874,12 @@ func (m Model) agentsBuild(width int, now time.Time) aiAgentsCache {
 	}
 	out.head = []string{agRow(runLine, width), agText(statusTok, status, width), divider}
 
-	// Body: the cards, wave by wave.
+	// Body: the cards, wave by wave (or the task list).
 	sel := s.agentsSelected(d)
+	if s.agents.list {
+		s.agentsListBody(&out, d, sel, width, now)
+		return out
+	}
 	inner := width - 2
 	cols := max(1, min(3, (inner+agentsCardGap)/(agentsCardMin+agentsCardGap)))
 	cardW := max(min((inner-(cols-1)*agentsCardGap)/cols, agentsCardMax), 8)
@@ -1042,7 +1047,7 @@ func (m Model) agentsCached(width int) *aiAgentsCache {
 	now := clock.Now()
 	k := aiAgentsKey{runGen: s.runGen, msgs: len(s.conv.Messages), snapGen: s.agents.snapGen, conv: s.conv.ID,
 		runID: s.agents.runID, sel: s.agents.sel, manual: s.agents.manual, noDetails: s.agents.noDetails,
-		usage: s.agents.usage, usageGen: s.usageGen,
+		usage: s.agents.usage, list: s.agents.list, usageGen: s.usageGen,
 		width: width, rk: theme.CurrentRenderKey()}
 	if s.streaming && s.run != nil {
 		k.secs = now.Unix() // running times move once a second
@@ -1307,6 +1312,9 @@ func (m *Model) routeAgentsKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		return m.agentsStopKey(), true
 	case "o":
 		return m.agentsOpenKey(), true
+	case "t": // OMX-36: the dense task list
+		s.agents.list = !s.agents.list
+		s.agents.scroll, s.agents.free = 0, false
 	case "?":
 		return m.openAgentsKeyCard(), true
 	case "esc", "q":
