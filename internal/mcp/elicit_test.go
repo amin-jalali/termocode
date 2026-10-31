@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 )
 
 // MCPX-14: a server's elicitation/create during a tool call reaches the
@@ -56,5 +57,22 @@ func TestElicitFieldSecret(t *testing.T) {
 	}
 	if !(ElicitField{Name: "x", Format: "password"}).Secret() {
 		t.Error("format password not secret")
+	}
+}
+
+// While the user answers, the call's no-answer timeout waits.
+func TestElicitationPausesCallTimeout(t *testing.T) {
+	p := startFake(t, nil, Options{})
+	ctx := WithElicitor(context.Background(), func(ctx context.Context, r ElicitRequest) ElicitResult {
+		select {
+		case <-time.After(600 * time.Millisecond):
+		case <-ctx.Done():
+			return ElicitResult{Action: ElicitCancel}
+		}
+		return ElicitResult{Action: ElicitDecline}
+	})
+	res, err := p.Client.CallToolTimeout(ctx, "ask", nil, 200*time.Millisecond)
+	if err != nil || res.Text() != "decline" {
+		t.Fatalf("%q %v", res.Text(), err)
 	}
 }

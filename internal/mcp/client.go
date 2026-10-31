@@ -80,6 +80,7 @@ type Client struct {
 	// time per server); elicitCtx is that call's ctx (elicit.go).
 	elicit    Elicitor
 	elicitCtx context.Context
+	hold      func(waiting bool) // stops / restarts the call's timeout
 }
 
 // NewClient starts the JSON-RPC connection on r / w (newline framing).
@@ -234,10 +235,18 @@ func (c *Client) CallToolTimeout(ctx context.Context, name string, args map[stri
 		c.progress = map[string]func(){}
 	}
 	c.progress[token] = func() { timer.Reset(timeout) }
+	c.hold = func(waiting bool) { // the user answers a question (elicit.go)
+		if waiting {
+			timer.Stop()
+		} else {
+			timer.Reset(timeout)
+		}
+	}
 	c.mu.Unlock()
 	defer func() {
 		c.mu.Lock()
 		delete(c.progress, token)
+		c.hold = nil
 		c.mu.Unlock()
 	}()
 	res, err := c.callTool(cctx, name, args, map[string]any{"progressToken": token})
