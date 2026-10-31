@@ -147,6 +147,7 @@ type aiState struct {
 	// bgRuns are the AI-started runs that run beside the chat (OMX-6,
 	// ai_bg_runs.go).
 	bgRuns []*aiBgRun
+	bgMail aiBgMail
 	// agents is the AGENTS view of the chat's runs (agents_panel.go).
 	agents aiAgentsState
 	// usageLog is every step and plain chat turn that used a model in
@@ -645,6 +646,9 @@ func (m *Model) aiCancelAll() tea.Cmd {
 	s := m.aiS()
 	stopped := s.streaming || s.actionBusy != ""
 	dropped := m.aiDropQueuedRuns("the user stopped the AI") // G-API: Stop stops what the AI queued too
+	if m.aiBgStopAll() > 0 {                                 // OMX-6: and its background runs
+		stopped = true
+	}
 	if s.chatCancel != nil {
 		s.chatCancel()
 		m.cancelAIReviewTurn()

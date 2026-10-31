@@ -133,13 +133,19 @@ func (m *Model) aiRunSnapshot(c aiRunCaller) aiRunSnap {
 		sn.runs[rm.Run.ID] = "It runs now (profile " + rm.Run.Profile + ") on: " + aiCardText(runsTask(s.conv.Messages, s.runMsg), 80) +
 			"\nStop stops its steps, as Stop in the Runs view does."
 	}
+	for _, b := range s.bgRuns { // OMX-6
+		if !b.done && b.chat == s.conv.ID {
+			sn.runs[b.id] = "It runs in the background (profile " + b.msg.Run.Profile + ") on: " + aiCardText(b.user.Text, 80) +
+				"\nStop stops its steps; what they found so far stays."
+		}
+	}
 	return sn
 }
 
 // aiRunsActive counts the AI-started runs of the open chat that wait or
-// run.
+// run (in the background too).
 func (s *aiState) aiRunsActive() int {
-	n := 0
+	n := s.aiBgActive(s.conv.ID)
 	for _, q := range s.runQueue {
 		if q.chat == s.conv.ID {
 			n++
@@ -343,7 +349,11 @@ func (sn aiRunSnap) describeStart(a map[string]any) string {
 		by += ", from run " + sn.caller.parentRun
 	}
 	b.WriteString(by + ".\n")
-	b.WriteString("It starts here when the current answer or run ends; plan approval still asks before steps that write.")
+	if aiBgEligible(r.prof.Run("card")) {
+		b.WriteString("Its steps only read, so it starts now in the background, beside the chat.")
+	} else {
+		b.WriteString("It starts here when the current answer or run ends; plan approval still asks before steps that write.")
+	}
 	return b.String()
 }
 
@@ -369,6 +379,28 @@ func (m *Model) aiToolRunStart(ctx context.Context, c aiRunCaller, r aiRunStartR
 		}
 	}
 	id := aiNewRunID()
+	if run := r.prof.Run(id); aiBgEligible(run) {
+		// OMX-6: a run that only reads starts now, beside this turn.
+		if r.prof.Name == aiRunInline {
+			if s.runInline == nil {
+				s.runInline = map[string]ai.Profile{}
+			}
+			s.runInline[id] = r.prof
+		}
+		wait, err := m.aiBgStart(r.prof, run, r.task, by, aiBgCallerKey(ctx, c, s.chatGen))
+		if err != nil {
+			delete(s.runInline, id)
+			return "", nil, err
+		}
+		out, err := aiItermocJSON(struct {
+			RunID string `json:"run_id"`
+			State string `json:"state"`
+			Note  string `json:"note"`
+		}{id, "running", "The user allowed it. Its steps only read, so it runs now in the background, beside you: keep " +
+			"working. When it ends, its answer is handed to you here if you still work; agent_run_wait waits for it, " +
+			"agent_run_send sends a running step a message."})
+		return out, wait, err
+	}
 	s.runQueue = append(s.runQueue, aiQueuedRun{id: id, chat: s.conv.ID, prof: r.prof, task: r.task, by: by})
 	s.runGen++
 	out, err := aiItermocJSON(struct {
@@ -451,9 +483,12 @@ func (m *Model) aiAgentRunTools(call aiIDECaller, c aiRunCaller) []ai.Tool {
 			Name:    "agent_run_start",
 			Display: "start an agent run",
 			Description: "Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title " +
-				"and a prompt, as in profile_draft). The user confirms on a card. The run starts in this chat when your current " +
-				"answer (or run) ends, like a message the user sends with that profile, so plan approval and agent worktrees " +
-				"apply; you cannot wait for it in this turn. Returns the run id for agent_run_status and agent_run_result. " +
+				"and a prompt, as in profile_draft). The user confirms on a card. A run whose steps only read (each step has " +
+				"tools \"read-only\" or \"none\"; no plan step, no CLI) starts at once in the background, beside you: keep " +
+				"working; its answer is handed to you in this turn when it ends, agent_run_wait waits for it and agent_run_send " +
+				"steers a step. Start several for research in parallel. A run that may change files starts in this chat when " +
+				"your current answer (or run) ends, like a message the user sends with that profile, so plan approval and " +
+				"agent worktrees apply. Returns the run id for agent_run_status and agent_run_result. " +
 				"At most 3 such runs at once; a run started this way may start one more level, not two.",
 			Params: map[string]any{
 				"task":    str("what the run should do (its first message)"),
@@ -528,6 +563,7 @@ type aiRunFound struct {
 	queued *aiQueuedRun
 	why    string
 	live   bool
+	bg     *aiBgRun // a background run (OMX-6)
 }
 
 func (m *Model) aiRunFind(id string) (aiRunFound, error) {
@@ -541,8 +577,15 @@ func (m *Model) aiRunFind(id string) (aiRunFound, error) {
 			return aiRunFound{queued: q}, nil
 		}
 	}
+	bg := s.aiBgFind(id)
+	if bg != nil && bg.chat == s.conv.ID && !bg.inConv {
+		return aiRunFound{idx: -1, msg: &bg.msg, live: !bg.done, bg: bg}, nil
+	}
 	for i := range s.conv.Messages {
 		if msg := &s.conv.Messages[i]; msg.Run != nil && msg.Run.ID == id {
+			if bg != nil { // its own copy is the truth
+				return aiRunFound{idx: i, msg: &bg.msg, live: !bg.done, bg: bg}, nil
+			}
 			return aiRunFound{idx: i, msg: msg, live: s.run != nil && s.runMsg == i}, nil
 		}
 	}
@@ -602,7 +645,11 @@ func (m *Model) aiRunStatusOf(id string) (aiRunStatusInfo, error) {
 	s := m.aiS()
 	r := f.msg.Run
 	out.State, out.Profile = r.State, r.Profile
-	out.Task = aiRunClip(runsTask(s.conv.Messages, f.idx), 200)
+	if f.bg != nil {
+		out.Task = aiRunClip(f.bg.user.Text, 200)
+	} else {
+		out.Task = aiRunClip(runsTask(s.conv.Messages, f.idx), 200)
+	}
 	if r.By != nil {
 		out.StartedByAI, out.Depth, out.ParentRun = true, r.By.Depth, r.By.ParentRun
 	}
@@ -620,7 +667,11 @@ func (m *Model) aiRunStatusOf(id string) (aiRunStatusInfo, error) {
 	} else if prof, ok := s.profiles.Get(r.Profile); ok {
 		out.BudgetUSD = aiRunBudget(prof, r.By)
 	}
-	if f.live {
+	if f.bg != nil {
+		if f.live {
+			out.Note = "It runs in the background; agent_run_wait waits for it."
+		}
+	} else if f.live {
 		switch {
 		case r.PlanWait:
 			out.WaitingFor = append(out.WaitingFor, "plan approval: the user approves, edits or denies the plan")
@@ -814,6 +865,10 @@ func (m *Model) aiToolRunStop(ctx context.Context, id string) (string, tea.Cmd, 
 	case f.live:
 		if _, run := agentrun.NodeOf(ctx); run == id {
 			return "", nil, errors.New("a step cannot stop its own run; finish your step, or tell the user to press Stop")
+		}
+		if f.bg != nil { // OMX-6
+			f.bg.cancel()
+			return "Run " + id + " is stopping; its steps end now.", nil, nil
 		}
 		if s.chatCancel != nil {
 			s.chatCancel()

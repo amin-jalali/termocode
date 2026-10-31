@@ -224,7 +224,7 @@ func TestAIAgentRunStartInlineSteps(t *testing.T) {
 // the run and step that asked.
 func TestAIAgentRunStartDepth(t *testing.T) {
 	m := aiWriteModel(t)
-	args := map[string]any{"profile": "fast", "task": "x"}
+	args := map[string]any{"profile": "review", "task": "x"}
 	if _, err := m.aiRunSnapshot(aiRunCaller{depth: 2, parentRun: "r2"}).checkStart(args); err == nil ||
 		!strings.Contains(err.Error(), "2 levels") {
 		t.Fatalf("depth 2: %v", err)
@@ -252,7 +252,7 @@ func TestAIAgentRunStartDepth(t *testing.T) {
 // Spec: at most 3 AI-started runs wait or run at once.
 func TestAIAgentRunStartLimit(t *testing.T) {
 	m := aiWriteModel(t)
-	args := map[string]any{"profile": "fast", "task": "x"}
+	args := map[string]any{"profile": "review", "task": "x"}
 	r, err := m.aiRunSnapshot(aiRunCaller{}).checkStart(args)
 	if err != nil {
 		t.Fatal(err)

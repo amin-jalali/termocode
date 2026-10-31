@@ -323,6 +323,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		parallel = s.settings.PlannedParallel()
 	}
 	pricing := ai.NewPricing(s.settings.Prices)
+	mail := &s.bgMail
 
 	ctx, cancel := context.WithCancel(context.Background())
 	send := func(msg tea.Msg) {
@@ -430,10 +431,13 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 					own[c] = true
 				}
 			}
+			k := aiBgStepKey(run.ID, n.ID) // OMX-6: background runs this step starts hand their answers in
+			mail.openKey(k)
 			return &ai.Agent{Provider: sl.p, Tools: ts, Native: native, AutoApprove: own, MaxSteps: maxSteps,
-				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title)}, msgs, nil
+				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title), Inbox: mail.inbox(k)}, msgs, nil
 		},
 		Finished: func(_ context.Context, n agentdag.Node) {
+			mail.closeKey(aiBgStepKey(run.ID, n.ID))
 			if msg, ok := wts.finished(n); ok {
 				msg.gen, msg.ch = gen, ch
 				send(msg)
