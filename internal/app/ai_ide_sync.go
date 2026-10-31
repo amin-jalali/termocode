@@ -68,6 +68,21 @@ func aiSyncTools(tools []ai.Tool, root string, call aiIDECaller) []ai.Tool {
 				content := ai.ArgString(a, "content")
 				return call(ctx, func(m *Model) (string, tea.Cmd, error) { return m.aiWriteFile(abs, rel(abs), content) })
 			}
+		case "edit_file":
+			t.Description += " If the file is open in the editor, its tab shows the new text; a file with unsaved edits is refused."
+			t.Run = func(ctx context.Context, a map[string]any) (string, error) {
+				abs, err := ws.Resolve(ai.ArgString(a, "path"))
+				if err != nil {
+					return "", err
+				}
+				return call(ctx, func(m *Model) (string, tea.Cmd, error) {
+					text, err := ai.EditFileText(abs, rel(abs), a)
+					if err != nil {
+						return "", nil, err
+					}
+					return m.aiWriteFile(abs, rel(abs), text)
+				})
+			}
 		case "delete":
 			t.Description = "Delete a file or directory. Its editor tabs are closed; a file with unsaved edits in the editor is refused."
 			t.Run = func(ctx context.Context, a map[string]any) (string, error) {

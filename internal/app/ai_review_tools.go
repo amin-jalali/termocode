@@ -29,7 +29,7 @@ import (
 // exactly what was written. Accepted text goes through aiWriteFile, so an
 // open tab shows it as one undo step and the IDE follows as before.
 //
-// Reviewed tools: write_file, create_file, format, lsp_rename and
+// Reviewed tools: write_file, create_file, edit_file, format, lsp_rename and
 // lsp_code_actions op=apply (an action that runs a server command can not
 // be previewed: it falls back to the confirm dialog).
 
@@ -110,6 +110,20 @@ func (m *Model) aiReviewTools(tools []ai.Tool, root string, call aiIDECaller) []
 					return "", err
 				}
 				return aiReviewChanges(ctx, call, []aiFileChange{{abs: abs, rel: rel(abs), text: ai.ArgString(a, "content"), create: create}})
+			}
+		case "edit_file":
+			t.Class = ai.ClassReview
+			t.Description += review
+			t.Run = func(ctx context.Context, a map[string]any) (string, error) {
+				abs, err := ws.Resolve(ai.ArgString(a, "path"))
+				if err != nil {
+					return "", err
+				}
+				text, err := ai.EditFileText(abs, rel(abs), a)
+				if err != nil {
+					return "", err
+				}
+				return aiReviewChanges(ctx, call, []aiFileChange{{abs: abs, rel: rel(abs), text: text}})
 			}
 		case "format":
 			t.Class = ai.ClassReview
