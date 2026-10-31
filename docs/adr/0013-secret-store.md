@@ -53,11 +53,12 @@ Alternatives on the table:
   not reach chats, toasts or logs. The AI can not read, set, list or
   unlock secrets, and can not change `secret_store*`.
 - **Migration** from the plain file is one flow: write every secret to
-  the new store, read each one back and compare, only then overwrite the
-  old file with zeros, delete it and write the empty marker
-  `credentials.json.migrated`. A failure before the delete leaves the plain
-  file as it was. A move cut off in the middle is finished on the next
-  start.
+  the new store, read each one back and compare, the old plain file
+  stays. A card asks (Keep for now first, the default); only on Delete
+  the copy is checked again, the file overwritten with zeros, deleted and
+  the empty marker `credentials.json.migrated` written. A failure leaves
+  the plain file as it was. A kept or cut-off move asks again on the next
+  start and from AI: Move Secrets to a Safer Store….
 - **Switch backend** (store screen) follows the same rule between any two
   backends: copy every name (references stay references), read back and
   compare, record the backend in `secrets.json` and `secret_store`, and
