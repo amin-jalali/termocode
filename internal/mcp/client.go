@@ -183,7 +183,11 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 		if err := json.Unmarshal(raw, &res); err != nil {
 			return nil, fmt.Errorf("tools/list: bad answer: %w", err)
 		}
-		all = append(all, res.Tools...)
+		tools, dropped := parseTools(res.Tools)
+		for _, d := range dropped {
+			c.opts.log("tool dropped: %s", d)
+		}
+		all = append(all, tools...)
 		if res.NextCursor == "" {
 			return all, nil
 		}

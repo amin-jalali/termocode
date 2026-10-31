@@ -74,8 +74,8 @@ func (t Tool) Destructive() bool {
 }
 
 type listToolsResult struct {
-	Tools      []Tool `json:"tools"`
-	NextCursor string `json:"nextCursor,omitempty"`
+	Tools      []json.RawMessage `json:"tools"` // parsed one by one (parseTools)
+	NextCursor string            `json:"nextCursor,omitempty"`
 }
 
 // Content is one item of a tools/call result.
