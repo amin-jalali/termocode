@@ -134,6 +134,9 @@ type agentsNode struct {
 // ── Data ───────────────────────────────────────────────────────────────
 
 // agentsRunIdxs are the message indexes of the chat's runs, oldest first.
+// A run that runs in the background beside a chat turn is held out of
+// the chat until the turn ends (ai_bg_runs.go): its index is
+// len(s.conv.Messages) + its place among the held runs (agentsMsg).
 func (s *aiState) agentsRunIdxs() []int {
 	var out []int
 	for i, msg := range s.conv.Messages {
@@ -141,7 +144,18 @@ func (s *aiState) agentsRunIdxs() []int {
 			out = append(out, i)
 		}
 	}
+	for k := range s.agentsHeld() {
+		out = append(out, len(s.conv.Messages)+k)
+	}
 	return out
+}
+
+// agentsMsg is the run message of AGENTS index idx (agentsRunIdxs).
+func (s *aiState) agentsMsg(idx int) *ai.StoredMessage {
+	if idx < len(s.conv.Messages) {
+		return &s.conv.Messages[idx]
+	}
+	return s.agentsHeld()[idx-len(s.conv.Messages)]
 }
 
 func aiRunLive(r *ai.StoredRun) bool {
@@ -159,14 +173,14 @@ func (s *aiState) agentsShown() (idx, nth, of int, ok bool) {
 	found := false
 	if s.agents.runID != "" {
 		for k, i := range runs {
-			if s.conv.Messages[i].Run.ID == s.agents.runID {
+			if s.agentsMsg(i).Run.ID == s.agents.runID {
 				pick, found = k, true
 			}
 		}
 	}
 	if !found {
 		for k := len(runs) - 1; k >= 0; k-- {
-			if aiRunLive(s.conv.Messages[runs[k]].Run) {
+			if aiRunLive(s.agentsMsg(runs[k]).Run) {
 				pick = k
 				break
 			}
@@ -186,7 +200,7 @@ func (s *aiState) agentsData() (agentsRun, bool) {
 
 // agentsDataAt builds the graph of the run of message idx.
 func (s *aiState) agentsDataAt(idx, nth, of int) agentsRun {
-	msg := &s.conv.Messages[idx]
+	msg := s.agentsMsg(idx)
 	d := agentsRun{idx: idx, nth: nth, of: of, msg: msg, live: aiRunLive(msg.Run), byID: map[string]int{}}
 	if msg.Run.State == ai.RunStateInterrupted {
 		d.snap = s.agents.snaps[msg.Run.ID]
@@ -1137,7 +1151,7 @@ func (m *Model) agentsSnapCmd() tea.Cmd {
 	if !ok {
 		return nil
 	}
-	r := s.conv.Messages[idx].Run
+	r := s.agentsMsg(idx).Run
 	if r.State != ai.RunStateInterrupted {
 		return nil
 	}
@@ -1206,7 +1220,7 @@ func (m *Model) agentsSwitchRun(dir int) tea.Cmd {
 		return nil
 	}
 	k := max(min(nth-1+dir, len(runs)-1), 0)
-	s.agents.runID = s.conv.Messages[runs[k]].Run.ID
+	s.agents.runID = s.agentsMsg(runs[k]).Run.ID
 	s.agents.sel, s.agents.manual, s.agents.free, s.agents.scroll = "", false, false, 0
 	return m.agentsSnapCmd()
 }
@@ -1270,11 +1284,11 @@ func (m *Model) routeAgentsKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	case "home":
 		s.agents.scroll, s.agents.free = 0, true
 	case "r": // resume the shown run when termocode stopped it
-		if idx, _, _, ok := s.agentsShown(); ok && s.conv.Messages[idx].Run.State == ai.RunStateInterrupted && s.aiRetryStep(idx) > 0 {
+		if idx, _, _, ok := s.agentsShown(); ok && s.agentsMsg(idx).Run.State == ai.RunStateInterrupted && s.aiRetryStep(idx) > 0 {
 			return m.aiRetryRun(idx), true
 		}
 	case "a": // G-PLAN: the plan card of a run that waits for approval
-		if idx, _, _, ok := s.agentsShown(); ok && s.conv.Messages[idx].Run.PlanWait && idx == s.runMsg {
+		if idx, _, _, ok := s.agentsShown(); ok && s.agentsMsg(idx).Run.PlanWait && idx == s.runMsg {
 			return m.openAIPlanCard(), true
 		}
 		return m.aiInfo("This run does not wait for a plan approval"), true
