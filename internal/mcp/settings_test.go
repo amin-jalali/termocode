@@ -135,3 +135,33 @@ func TestConfigWritersAreSafe(t *testing.T) {
 		})
 	}
 }
+
+// mcp_disabled_tools: the tools turned off in Show tools, per server.
+// SaveDisabledTools keeps other keys; an empty list removes the server.
+func TestSaveDisabledTools(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	writeFile(t, p, `{"theme":"dark","mcp_disabled_tools":{"other":["x"]}}`)
+	if err := SaveDisabledTools(p, "fake", []string{"write_note", "echo"}); err != nil {
+		t.Fatal(err)
+	}
+	s := LoadSettings(p)
+	if got := s.DisabledTools["fake"]; strings.Join(got, ",") != "echo,write_note" {
+		t.Errorf("fake = %v", got)
+	}
+	if !s.ToolOff("fake", "echo") || s.ToolOff("fake", "slow") || !s.ToolOff("other", "x") {
+		t.Errorf("ToolOff wrong: %+v", s.DisabledTools)
+	}
+	if err := SaveDisabledTools(p, "fake", nil); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(p)
+	if strings.Contains(string(b), "fake") || !strings.Contains(string(b), `"theme"`) || !strings.Contains(string(b), `"other"`) {
+		t.Errorf("config = %s", b)
+	}
+	if err := SaveDisabledTools(p, "other", nil); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(p); strings.Contains(string(b), "mcp_disabled_tools") {
+		t.Errorf("an empty map stayed: %s", b)
+	}
+}
