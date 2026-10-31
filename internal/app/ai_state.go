@@ -166,6 +166,9 @@ type aiState struct {
 	runQueue      []aiQueuedRun
 	runInline     map[string]ai.Profile
 	runNotStarted map[string]string
+	// bgRuns are the AI-started runs that run beside the chat (OMX-6,
+	// ai_bg_runs.go).
+	bgRuns []*aiBgRun
 	// agents is the AGENTS view of the chat's runs (agents_panel.go).
 	agents aiAgentsState
 	// usageLog is every step and plain chat turn that used a model in

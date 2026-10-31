@@ -156,7 +156,7 @@ func (s *aiState) aiSlotIsSub(slot string) bool {
 // runUsage is the entries of the run of message idx, from its step
 // cards (what the chat file keeps already).
 func (s *aiState) runUsage(idx int) []aiUsageEntry {
-	msg := s.conv.Messages[idx]
+	msg := *s.agentsMsg(idx)
 	var out []aiUsageEntry
 	for _, st := range msg.Steps {
 		if st.Usage == nil {
@@ -296,7 +296,7 @@ func (m Model) usageBuild(width int) aiAgentsCache {
 	left := "usage"
 	status := "tokens and cost by model and by agent"
 	if haveRun {
-		run := s.conv.Messages[idx].Run
+		run := s.agentsMsg(idx).Run
 		left = "run " + run.ID
 		if run.Profile != "" {
 			left += " · " + run.Profile
@@ -304,7 +304,7 @@ func (m Model) usageBuild(width int) aiAgentsCache {
 		if of > 1 {
 			left += " (" + strconv.Itoa(nth) + "/" + strconv.Itoa(of) + ")"
 		}
-		status = aiRunSummaryText(run, s.conv.Messages[idx].Steps)
+		status = aiRunSummaryText(run, s.agentsMsg(idx).Steps)
 		if aiRunLive(run) {
 			status = "running · " + status
 		}
