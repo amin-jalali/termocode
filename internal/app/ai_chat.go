@@ -283,6 +283,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 	}
 	agent.Inbox = m.aiBgTurnInbox(gen) // OMX-6: background runs hand their answers in
+	ctx = context.WithValue(ctx, aiMailCtxKey{}, aiBgTurnKey(gen))
 	crash.GoWith("the AI chat", func() {
 		defer cancel()
 		if mcpTools != nil {
