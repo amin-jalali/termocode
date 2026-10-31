@@ -155,6 +155,7 @@ func startShared(ctx context.Context, o *ShareOptions, s Server, roots []string,
 		grace = DefaultShareGrace
 	}
 	cfg.GraceMS = grace.Milliseconds()
+	cfg.StartMS = opts.startTimeout().Milliseconds()
 	key := shareKey(salt, cfg)
 	sock := filepath.Join(dir, key+".sock")
 
@@ -194,7 +195,7 @@ func startShared(ctx context.Context, o *ShareOptions, s Server, roots []string,
 		<-p.Client.Done()
 		close(p.done)
 	})
-	ictx, cancel := context.WithTimeout(ctx, initTimeout)
+	ictx, cancel := context.WithTimeout(ctx, opts.startTimeout())
 	defer cancel()
 	if err := p.Client.Initialize(ictx); err != nil {
 		p.Close()
@@ -305,7 +306,7 @@ func spawnBroker(ctx context.Context, o *ShareOptions, sock string, cfg shareCon
 		}
 		_ = cmd.Process.Kill()
 		return fmt.Errorf("%w: the broker did not start", errShareUnavailable)
-	case <-time.After(initTimeout + 5*time.Second):
+	case <-time.After(cfg.startTimeout() + 5*time.Second):
 	case <-ctx.Done():
 	}
 	_ = cmd.Process.Kill()

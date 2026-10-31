@@ -84,6 +84,8 @@ type Server struct {
 	// Share is "user": one process serves every project (RT-16); ""
 	// keeps one per project. Only allowed in the user file.
 	Share string
+	// StartTimeout caps the start (handshake) in seconds; 0: 15 s.
+	StartTimeout int
 
 	Source     string // SourceUser or SourceProject
 	SourcePath string
@@ -125,24 +127,25 @@ type AuthConfig struct {
 // entry is the JSON shape of one server. Claude Desktop's "transport" is
 // an alias of "type".
 type entry struct {
-	Type        string            `json:"type"`
-	Transport   string            `json:"transport"`
-	Command     string            `json:"command"`
-	Args        []string          `json:"args"`
-	Env         map[string]string `json:"env"`
-	EnvFile     string            `json:"envFile"`
-	Cwd         string            `json:"cwd"`
-	URL         string            `json:"url"`
-	Headers     map[string]string `json:"headers"`
-	HeadersCmd  string            `json:"headersCommand"`
-	OAuth       *OAuthConfig      `json:"oauth"`
-	Auth        *AuthConfig       `json:"auth"`
-	Disabled    bool              `json:"disabled"`
-	ReadOnly    bool              `json:"readOnly"`
-	AutoApprove []string          `json:"autoApprove"`
-	Deny        []string          `json:"deny"`
-	Timeout     int               `json:"timeout"`
-	Share       string            `json:"share"`
+	Type         string            `json:"type"`
+	Transport    string            `json:"transport"`
+	Command      string            `json:"command"`
+	Args         []string          `json:"args"`
+	Env          map[string]string `json:"env"`
+	EnvFile      string            `json:"envFile"`
+	Cwd          string            `json:"cwd"`
+	URL          string            `json:"url"`
+	Headers      map[string]string `json:"headers"`
+	HeadersCmd   string            `json:"headersCommand"`
+	OAuth        *OAuthConfig      `json:"oauth"`
+	Auth         *AuthConfig       `json:"auth"`
+	Disabled     bool              `json:"disabled"`
+	ReadOnly     bool              `json:"readOnly"`
+	AutoApprove  []string          `json:"autoApprove"`
+	Deny         []string          `json:"deny"`
+	Timeout      int               `json:"timeout"`
+	Share        string            `json:"share"`
+	StartTimeout int               `json:"startTimeout"`
 }
 
 var nameRe = lazyre.New(`^[A-Za-z0-9_-]{1,40}$`)
@@ -245,7 +248,7 @@ func parseEntry(name string, raw json.RawMessage) Server {
 	s.Command, s.Args, s.Env, s.Cwd, s.EnvFile = e.Command, e.Args, e.Env, e.Cwd, e.EnvFile
 	s.URL, s.Headers, s.OAuth, s.Auth, s.HeadersCommand = e.URL, e.Headers, e.OAuth, e.Auth, e.HeadersCmd
 	s.Disabled, s.ReadOnly, s.AutoApprove, s.Deny, s.Timeout = e.Disabled, e.ReadOnly, e.AutoApprove, e.Deny, e.Timeout
-	s.Share = e.Share
+	s.Share, s.StartTimeout = e.Share, e.StartTimeout
 	t := strings.ToLower(strings.TrimSpace(e.Type))
 	if t == "" {
 		t = strings.ToLower(strings.TrimSpace(e.Transport))
@@ -279,6 +282,8 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		s.Problem = "invalid: http needs a url"
 	case e.HeadersCmd != "" && t != TypeHTTP:
 		s.Problem = "invalid: headersCommand needs an http server"
+	case e.StartTimeout < 0 || e.StartTimeout > 600:
+		s.Problem = "invalid: startTimeout is 1 to 600 seconds"
 	case e.Share != "" && e.Share != ShareUser:
 		s.Problem = `invalid: share can only be "user"`
 	case e.Share != "" && t != TypeStdio:

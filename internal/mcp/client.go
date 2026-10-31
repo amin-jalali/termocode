@@ -30,6 +30,16 @@ type Options struct {
 	// Shared is called when the share broker says how many sessions use
 	// a shared server, and its pid (share.go).
 	Shared func(sessions, pid int)
+	// StartTimeout caps the start of the server (0: initTimeout).
+	StartTimeout time.Duration
+}
+
+// startTimeout is how long a start may take.
+func (o Options) startTimeout() time.Duration {
+	if o.StartTimeout > 0 {
+		return o.StartTimeout
+	}
+	return initTimeout
 }
 
 func (o Options) log(format string, args ...any) {

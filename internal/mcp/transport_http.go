@@ -572,7 +572,7 @@ func StartHTTP(ctx context.Context, s Server, ho HTTPOptions, opts Options) (*Pr
 		<-hc.Done()
 		close(p.done)
 	})
-	ictx, cancel := context.WithTimeout(ctx, initTimeout)
+	ictx, cancel := context.WithTimeout(ctx, opts.startTimeout())
 	defer cancel()
 	if err := c.Initialize(ictx); err != nil {
 		p.Close()

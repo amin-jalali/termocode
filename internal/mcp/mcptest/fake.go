@@ -24,7 +24,8 @@
 // first; FAKE_IGNORE_SHUTDOWN=1 keeps running after stdin closes (to test
 // the hard kill); FAKE_LOG=<file> appends every method it receives;
 // FAKE_TOOLSET=2 lists only echo with another description (tools-changed
-// tests); FAKE_MARKER=<file> exists while the server runs.
+// tests); FAKE_MARKER=<file> exists while the server runs;
+// FAKE_INIT_DELAY=<duration> answers initialize that much later.
 package mcptest
 
 import (
@@ -160,6 +161,9 @@ func run() {
 				if s == p.ProtocolVersion {
 					v = s
 				}
+			}
+			if d, err := time.ParseDuration(os.Getenv("FAKE_INIT_DELAY")); err == nil {
+				time.Sleep(d) // a slow start (startTimeout tests)
 			}
 			if f := os.Getenv("FAKE_VERSION"); f != "" {
 				v = f

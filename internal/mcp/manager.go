@@ -374,8 +374,9 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 	}
 	name := cfg.Name
 	opts := Options{
-		Roots: m.opts.Roots,
-		Log:   func(line string) { m.log(name, "%s", line) },
+		StartTimeout: time.Duration(cfg.StartTimeout) * time.Second,
+		Roots:        m.opts.Roots,
+		Log:          func(line string) { m.log(name, "%s", line) },
 		ToolsChanged: func() {
 			m.mu.Lock()
 			st.haveTools = false // listed again on the next turn
