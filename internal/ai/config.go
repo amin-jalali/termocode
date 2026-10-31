@@ -76,6 +76,10 @@ type Settings struct {
 	// Concurrency is ai_concurrency: most requests at once per provider
 	// kind or "<kind>/<model>" (concurrency.go). Edited by hand.
 	Concurrency map[string]int `json:"ai_concurrency,omitempty"`
+	// Compact is ai_compact (OMX-3): "off" never summarises older turns;
+	// default: summarise them with the quick model near the window limit
+	// or when the provider says the context is too long. Edited by hand.
+	Compact string `json:"ai_compact,omitempty"`
 }
 
 // CheckUntilDoneRounds checks an ai_until_done_rounds value.

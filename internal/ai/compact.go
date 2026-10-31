@@ -129,3 +129,7 @@ func (a *Agent) tryCompact(ctx context.Context, msgs *[]Message, start *int, err
 	emit(Event{Kind: EventCompacted, Detail: summary, Attempt: len(older)})
 	return true
 }
+
+// HTTPStatusError is the error a provider returns for an HTTP error
+// answer with body (fake providers in tests use it).
+func HTTPStatusError(code int, body string) error { return httpError(code, []byte(body)) }

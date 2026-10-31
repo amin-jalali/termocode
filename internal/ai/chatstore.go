@@ -52,6 +52,12 @@ type StoredMessage struct {
 	// Model is the model that answered a plain chat turn (the profile
 	// step's slot model); "" for older chats and pipeline runs.
 	Model string `json:"model,omitempty"`
+	// Summary is set on a user message when the messages before it were
+	// summarised to fit the context window (OMX-3): from then on the
+	// model gets Summary instead of them. Summarised is how many stored
+	// messages it stands for (only shown).
+	Summary    string `json:"summary,omitempty"`
+	Summarised int    `json:"summarised,omitempty"`
 }
 
 // Run states (StoredRun.State).

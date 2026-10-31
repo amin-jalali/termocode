@@ -91,14 +91,18 @@ func (m *Model) aiChatHistory(system string) []ai.Message {
 // pipeline run's step tool lines count as the turn's tools.
 func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 	s := m.aiS()
-	users := 0
-	for i := range s.conv.Messages[:n] {
-		if s.conv.Messages[i].Role == ai.StoredUser {
+	users, sum := 0, aiLastSummary(s.conv.Messages[:n])
+	from := max(sum, 0)
+	for i := range s.conv.Messages[from:n] {
+		if s.conv.Messages[from+i].Role == ai.StoredUser {
 			users++
 		}
 	}
-	msgs := make([]ai.Message, 1, 2*users+2) // a user and an assistant message per turn
+	msgs := make([]ai.Message, 1, 2*users+4) // a user and an assistant message per turn
 	msgs[0] = ai.Message{Role: ai.RoleSystem, Content: system}
+	if sum >= 0 { // OMX-3: the summary stands for what came before
+		msgs = ai.CompactedHistory(msgs[0], s.conv.Messages[sum].Summary, nil)
+	}
 	var tools, text []string // reused from turn to turn (the joins copy)
 	flush := func() {
 		t := ""
@@ -121,7 +125,7 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 		}
 		tools, text = tools[:0], text[:0]
 	}
-	for _, sm := range s.conv.Messages[:n] {
+	for _, sm := range s.conv.Messages[from:n] {
 		switch sm.Role {
 		case ai.StoredUser:
 			flush()
@@ -298,10 +302,12 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
 		Name:        aiSlotLabel(step.Slot, slot.cfg),
 		Fallbacks:   s.aiFallbacks(step.Slot), // OMX-4
+		Compact:     m.aiCompactor(slot),      // OMX-3
 		// OMX-25: tool results are cut to what still fits the window.
 		ContextWindow: aiContextWindow(s.settings, slot.cfg.Model),
 	}
 	s.turnThink = ""
+	window := agent.ContextWindow
 	crash.GoWith("the AI chat", func() {
 		defer cancel()
 		if mcpTools != nil {
@@ -317,6 +323,10 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		emit := func(ev ai.Event) { send(aiChatEventMsg{gen: gen, ev: ev, ch: ch}) }
 		if mentions != nil {
 			aiAddMentioned(ctx, history, mentions, emit)
+		}
+		var ev ai.Event
+		if history, ev = aiCompactEarly(ctx, history, window, agent.Compact); ev.Kind == ai.EventCompacted {
+			emit(ev)
 		}
 		agent.Run(ctx, history, emit)
 		ch <- aiChatDoneMsg{gen: gen}
@@ -446,6 +456,8 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 		m.aiAuditUsage(msg.ev)
 	case ai.EventDone:
 		m.aiAuditUsage(msg.ev)
+	case ai.EventCompacted: // OMX-3
+		s.aiMarkCompacted(msg.ev.Detail)
 	}
 	return waitAIChat(msg.ch)
 }
