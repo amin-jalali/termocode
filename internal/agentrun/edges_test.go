@@ -197,7 +197,7 @@ func TestApplyPlanEditDefaultsAndCategoryMove(t *testing.T) {
 
 func TestParsePlanRefusesLongPrompt(t *testing.T) {
 	long := strings.Repeat("y", PlanPromptMaxBytes+1)
-	_, _, err := ParsePlan(`{"nodes": [{"id": "a", "title": "A", "prompt": "`+long+`"}]}`, nil)
+	_, _, err := ParsePlan(`{"nodes": [{"id": "a", "title": "A", "prompt": "`+long+`"}]}`, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "longer than 8 KB") {
 		t.Errorf("err %v", err)
 	}
