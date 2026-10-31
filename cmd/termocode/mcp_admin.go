@@ -37,6 +37,7 @@ Options of add:
   --env NAME=VALUE       a plain environment value (never a token)
   --secret NAME          an environment value kept in the secret store; it is
                          read from stdin (one line each) or a hidden prompt
+  --share user           one process serves every project (user scope only)
   --dir d                the project folder (default: the current folder)
 
 A project server asks you to trust it in termocode before it first starts.
@@ -96,6 +97,7 @@ type mcpAdmin struct {
 	kind     string
 	pkg      string
 	asJSON   bool
+	share    string
 	pos      []string
 	rest     []string
 	restSeen bool
@@ -159,6 +161,11 @@ func (a *mcpAdmin) parse(args []string) error {
 			}
 			a.kind = strings.TrimPrefix(flag, "--")
 			a.pkg, err = get()
+		case "--share":
+			a.share, err = get()
+			if err == nil && a.share != mcp.ShareUser {
+				err = usageError{"--share can only be user"}
+			}
 		case "--json":
 			a.asJSON = true
 		default:
@@ -227,8 +234,8 @@ func (a *mcpAdmin) add() error {
 	if a.kind != "" || a.restSeen {
 		return a.addLocal(path)
 	}
-	if len(a.env) > 0 || len(a.secrets) > 0 {
-		return usageError{"--env and --secret are for a local server (-- <command>)"}
+	if len(a.env) > 0 || len(a.secrets) > 0 || a.share != "" {
+		return usageError{"--env, --secret and --share are for a local server (-- <command>)"}
 	}
 	var text, name string
 	switch len(a.pos) {
@@ -290,7 +297,10 @@ func (a *mcpAdmin) add() error {
 }
 
 func (a *mcpAdmin) addLocal(path string) error {
-	spec := mcp.LocalSpec{Kind: a.kind, Env: a.env, Secrets: a.secrets}
+	if a.share != "" && a.scope == mcp.SourceProject {
+		return usageError{"--share user is only for your own mcp.json"}
+	}
+	spec := mcp.LocalSpec{Kind: a.kind, Env: a.env, Secrets: a.secrets, Share: a.share}
 	switch {
 	case a.kind != "":
 		spec.Command, spec.Args = a.pkg, a.rest
