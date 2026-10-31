@@ -174,6 +174,24 @@ When a chat gets near that limit, termocode makes it shorter for you:
 - To turn it off, set `"ai_compact": "off"` in config.json. A long chat
   can then fail with "context too long"; start a new chat or fork it.
 
+### Keywords: ulw
+
+Type a keyword anywhere in your message to run just this message with a
+stronger profile. It must be a whole word; text in `code` or in a code
+block does not count.
+
+| Keyword | Runs |
+|---|---|
+| `ulw` or `ultrawork` | **until-done**: do the work, check it, fix it, in rounds |
+| `ulw plan` | **plan**: write a plan first, then run the steps |
+| `mass ulw` or `mulw` | **plan**, with steps in parallel |
+
+- While you type, a chip above the input shows what will happen:
+  **⚡ ulw → Work until done ×**.
+- Click **×** or press `Alt+Q` to send the message as plain text with
+  your normal profile.
+- Your chat's profile does not change. The keyword stays in the message.
+
 ### Todo list and keep going
 
 For work with several steps, the AI keeps a todo list (tools
