@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/picker"
 )
 
 // Spec: the profile picker ends with a "Show details" row that opens
@@ -89,5 +90,22 @@ func TestAIProfilePickerNewAndEditRows(t *testing.T) {
 	}
 	if m.ai.activeProfile().Name != before {
 		t.Error("Edit row switched")
+	}
+}
+
+func TestAIProfilePickerShowsTitleAndKeepsID(t *testing.T) {
+	m, _ := aiProfileTestModel(t)
+	m.openAIProfilePicker()
+	m.picker.SetCursorID("house")
+	if got := ansi.Strip(m.picker.Box()); !strings.Contains(got, "House review") {
+		t.Fatalf("profile title missing: %s", got)
+	}
+	_, cmd := m.picker.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("no selection")
+	}
+	sel, ok := cmd().(picker.SelectMsg)
+	if !ok || sel.ID != "house" {
+		t.Fatalf("title changed profile identity: %#v", sel)
 	}
 }
