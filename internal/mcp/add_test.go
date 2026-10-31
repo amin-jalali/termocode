@@ -152,3 +152,27 @@ func TestParseInstallJSONMovesSecrets(t *testing.T) {
 		t.Fatalf("secret not moved: %s %v", entryJSON(t, list[0].Entry), len(list[0].Secrets))
 	}
 }
+
+func TestParseShareKey(t *testing.T) {
+	cases := []struct {
+		body, source string
+		share        string
+		problem      bool
+	}{
+		{`{"command":"x","share":"user"}`, SourceUser, ShareUser, false},
+		{`{"command":"x"}`, SourceUser, "", false},
+		{`{"command":"x","share":"all"}`, SourceUser, "", true},
+		{`{"url":"https://a.example/mcp","share":"user"}`, SourceUser, "", true},
+		{`{"command":"x","share":"user"}`, SourceProject, "", true},
+	}
+	for _, c := range cases {
+		list, _, err := ParseFile([]byte(`{"mcpServers":{"a":`+c.body+`}}`), c.source, "f")
+		if err != nil || len(list) != 1 {
+			t.Fatal(err)
+		}
+		s := list[0]
+		if (s.Problem != "") != c.problem || (!c.problem && s.Share != c.share) {
+			t.Fatalf("%s (%s): share %q problem %q", c.body, c.source, s.Share, s.Problem)
+		}
+	}
+}
