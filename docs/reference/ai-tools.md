@@ -1703,6 +1703,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai-history-rename` | AI: Rename Chat… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-mcp-background` | AI: Move MCP Call to Background (Ctrl+B in the chat) | never | moves the model's own running call; the user decides |
 | `ai-keep-going` | AI: Toggle Keep Going While Todos Are Open | never | AI provider, credentials and approvals stay with the user; extra paid turns are the user's choice |
+| `ai-mcp-catalog` | AI: MCP: Browse Catalog… (find and add servers) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-mcp-config` | Open Config: MCP Servers | never | AI provider, credentials and approvals stay with the user |
 | `ai-mcp-connect` | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | never | AI provider, credentials and approvals stay with the user (signing in to services is the user's) |
 | `ai-mcp-insert` | AI: MCP Prompts and Resources… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2160,6 +2161,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `key_hints` | confirm (settings) |   |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_disabled_tools` | never | AI provider, credentials and approvals stay with the user |
+| `mcp_catalog_url` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_enabled` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_github_client_id` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_idle_timeout` | never | AI provider, credentials and approvals stay with the user |

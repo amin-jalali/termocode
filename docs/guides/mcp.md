@@ -278,6 +278,24 @@ as it is, and a token written in the file becomes a new
 `${secret:NAME}`. Your own sign-in (`auth`) is left out. The message
 names the secrets your teammate sets.
 
+## Find a server in the catalog
+
+**AI: MCP: Browse Catalog…** lists the servers of the official MCP
+Registry. termocode goes to the network only when you pick **Load the
+catalog**; the list is kept, so the next open is instant and works
+offline. Type to search.
+
+- `✓` means the MCP Registry checked who published the name (a GitHub
+  account or a web domain). It does not mean the code is safe.
+- `⚠` means the publisher marked the server deprecated or removed.
+- Enter shows a card with the publisher, the version, the exact command
+  or URL and the secrets it needs. **Cancel** is first. **Add server**
+  writes it to your `mcp.json`, pinned to that version. A server with
+  secrets opens its actions, so you can set them; they go to the secret
+  store, never into the file.
+- Your team can keep its own approved list: set `mcp_catalog_url` to a
+  server with the same API (https only).
+
 ## The file
 
 | Key | What it does |
@@ -627,7 +645,7 @@ serve every project, add `"share": "user"` to the entry in your own
 The MCP section of the Settings modal (**Preferences: Open Settings (UI)**)
 has `mcp_enabled`, `mcp_idle_timeout`, `mcp_call_timeout`,
 `mcp_max_result_kb`, `mcp_trust_annotations`, `mcp_oauth_port`,
-`mcp_share`, `mcp_log_level`, `mcp_tool_search` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
+`mcp_share`, `mcp_log_level`, `mcp_tool_search`, `mcp_catalog_url` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
 your build has none). The timeouts apply at once. The AI can not change these settings. They are
 listed in the settings reference.
 
