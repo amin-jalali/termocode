@@ -35,6 +35,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/secrets"
+	"github.com/amin-jalali/termocode/internal/services"
 )
 
 // Transport types (mcp.json "type").
@@ -58,6 +59,9 @@ type Server struct {
 	Command string
 	Args    []string
 	Env     map[string]string
+	// EnvFile is a KEY=value file read into Env at start ("env" wins).
+	// A project entry's file must be inside the workspace.
+	EnvFile string
 	Cwd     string
 	URL     string
 	Headers map[string]string
@@ -120,6 +124,7 @@ type entry struct {
 	Command     string            `json:"command"`
 	Args        []string          `json:"args"`
 	Env         map[string]string `json:"env"`
+	EnvFile     string            `json:"envFile"`
 	Cwd         string            `json:"cwd"`
 	URL         string            `json:"url"`
 	Headers     map[string]string `json:"headers"`
@@ -185,7 +190,7 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		s.Problem = "invalid entry: " + err.Error()
 		return s
 	}
-	s.Command, s.Args, s.Env, s.Cwd = e.Command, e.Args, e.Env, e.Cwd
+	s.Command, s.Args, s.Env, s.Cwd, s.EnvFile = e.Command, e.Args, e.Env, e.Cwd, e.EnvFile
 	s.URL, s.Headers, s.OAuth, s.Auth = e.URL, e.Headers, e.OAuth, e.Auth
 	s.Disabled, s.ReadOnly, s.AutoApprove, s.Deny, s.Timeout = e.Disabled, e.ReadOnly, e.AutoApprove, e.Deny, e.Timeout
 	t := strings.ToLower(strings.TrimSpace(e.Type))
@@ -415,6 +420,20 @@ func (s Server) Expand(x Expander) (Server, error) {
 		out.Args[i] = one(a)
 	}
 	out.Env = expandMap(s.Env, one)
+	if s.EnvFile != "" && err == nil {
+		vals, e := s.readEnvFile(one(s.EnvFile), x.Workspace)
+		if e != nil {
+			err = e
+		}
+		if len(vals) > 0 && out.Env == nil {
+			out.Env = map[string]string{}
+		}
+		for k, v := range vals {
+			if _, own := out.Env[k]; !own {
+				out.Env[k] = v
+			}
+		}
+	}
 	out.Headers = expandMap(s.Headers, one)
 	if s.OAuth != nil {
 		o := *s.OAuth
@@ -422,6 +441,37 @@ func (s Server) Expand(x Expander) (Server, error) {
 		out.OAuth = &o
 	}
 	return out, err
+}
+
+// readEnvFile reads the entry's envFile (a relative path is in the
+// workspace). A project entry may only read a file inside the
+// workspace, links resolved: a cloned repository must not feed the
+// reader's own secret files into a server.
+func (s Server) readEnvFile(path, workspace string) (map[string]string, error) {
+	if path == "" {
+		return nil, nil
+	}
+	if !filepath.IsAbs(path) {
+		if workspace == "" {
+			return nil, &NeedsError{"envFile " + path + " (no workspace open)"}
+		}
+		path = filepath.Join(workspace, path)
+	}
+	real, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return nil, &NeedsError{"envFile " + path}
+	}
+	if s.Source != SourceUser {
+		ws, err := filepath.EvalSymlinks(workspace)
+		rel, rerr := filepath.Rel(ws, real)
+		if workspace == "" || err != nil || rerr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+			return nil, errors.New("invalid: a project envFile must be inside the workspace")
+		}
+	}
+	if fi, err := os.Stat(real); err != nil || fi.IsDir() {
+		return nil, &NeedsError{"envFile " + path}
+	}
+	return services.EnvFileValues(real), nil
 }
 
 func expandMap(m map[string]string, one func(string) string) map[string]string {
