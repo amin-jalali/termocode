@@ -118,6 +118,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`agent_run_status`](#agent_run_status) | auto | no | The state of an agent run of this chat: queued, running, paused, done, failed, cancelled, interrupted or not_started; each step's state and model, the cost so far, and what waits for the user (plan approval, budget, a card). |
 | [`agent_run_result`](#agent_run_result) | auto | no | The result of an agent run of this chat: the final answer, each finished step's answer (long text is cut) and the files it changed (in agent worktrees: path, status and branch; they wait for the user's merge). |
 | [`agent_run_stop`](#agent_run_stop) | confirm (always asks): Deny (first) · Stop run | no | Stop an agent run of this chat: one that waits to start is dropped, a running one stops its steps. |
+| [`agent_run_wait`](#agent_run_wait) | auto | no | Wait until a background agent run of this chat ends (or timeout_s passes), then return its status and, when it ended, its result. |
+| [`agent_run_send`](#agent_run_send) | auto | no | Send a message to a running step of an agent run of this chat (to steer it: a hint, a narrower task, a question to answer in its result). |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1345,7 +1347,7 @@ Propose adding one MCP server to the user's mcp.json, from an mcpServers block t
 
 ### agent_run_start
 
-Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title and a prompt, as in profile_draft). The user confirms on a card. The run starts in this chat when your current answer (or run) ends, like a message the user sends with that profile, so plan approval and agent worktrees apply; you cannot wait for it in this turn. Returns the run id for agent_run_status and agent_run_result. At most 3 such runs at once; a run started this way may start one more level, not two.
+Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title and a prompt, as in profile_draft). The user confirms on a card. A run whose steps only read (each step has tools "read-only" or "none"; no plan step, no CLI) starts at once in the background, beside you: keep working; its answer is handed to you in this turn when it ends, agent_run_wait waits for it and agent_run_send steers a step. Start several for research in parallel. A run that may change files starts in this chat when your current answer (or run) ends, like a message the user sends with that profile, so plan approval and agent worktrees apply. Returns the run id for agent_run_status and agent_run_result. At most 3 such runs at once; a run started this way may start one more level, not two.
 
 **Gate:** confirm (always asks): Deny (first) · Start run
 
@@ -1394,6 +1396,33 @@ Stop an agent run of this chat: one that waits to start is dropped, a running on
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `run_id` | string | yes | the id agent_run_start returned |
+
+### agent_run_wait
+
+Wait until a background agent run of this chat ends (or timeout_s passes), then return its status and, when it ended, its result. Only for runs that run in the background (agent_run_start said "running"); a run that waits for the chat cannot end while you wait. Read only.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `run_id` | string | yes | the id agent_run_start returned |
+| `timeout_s` | integer |   | most seconds to wait (default 300, at most 900) |
+
+### agent_run_send
+
+Send a message to a running step of an agent run of this chat (to steer it: a hint, a narrower task, a question to answer in its result). The step reads it after its current tool call, in the same turn. step is the step id or title; leave it out when one step runs. Not for a step of your own run.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | string | yes | what to tell the step, short and concrete |
+| `run_id` | string | yes | the run id |
+| `step` | string |   | the step id or title (optional when only one step runs) |
 
 ### http_list_requests
 
