@@ -582,6 +582,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_parallel_max":     aiNever(aiNoAIConfig),
 	"ai_worktrees":        aiNever(aiNoAIConfig),
 	"ai_plan_approval":    aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai_memory_recall":    aiNever(aiNoAIConfig),
 	"ai_web_fetch":        aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	"ai_web_search":       aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	// Work until done: the AI never raises its own rounds or budget.

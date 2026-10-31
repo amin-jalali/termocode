@@ -90,6 +90,7 @@ type aiState struct {
 	skillsTrust *aiSkillsTrustPending
 	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
 	webPreset   string               // the server the open add card is for (ai_web_presets.go)
+	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the
