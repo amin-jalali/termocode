@@ -551,5 +551,7 @@ also shows the older lines.
 | `not authorized` | The token in `headers` (or gh's token) is wrong or misses scopes. |
 | `insecure url` | Use the server's `https://` URL. |
 | `no answer in 60s` | Raise `timeout` for that server or `mcp_call_timeout`. |
+| `reconnecting in 8s` | The remote server could not be reached. termocode tries again by itself, waiting longer each time (up to 2 minutes, 8 tries). Nothing to do. |
+| `failed: … (gave up after 8 tries …)` | Run **AI: MCP: Reconnect All Servers** when you are back online. It also checks the running servers with a ping. |
 | `tools changed` | Review with **Show tools**, then **Trust the new tools**. |
 | `server not trusted` | **AI: MCP Servers…** → the server → **Trust**. |
