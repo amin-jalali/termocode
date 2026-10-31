@@ -140,3 +140,14 @@ then; **Resume** (`r`) goes on at once.
   Its cost counts in **today** while termocode runs.
 - Runs reads the saved chats (the newest 50). A deleted chat's runs are
   gone from the list.
+
+## Other workspaces
+
+When termocode runs in more than one window (another project), the Runs
+list ends with **OTHER WORKSPACES**: each other workspace whose agents
+work now or wait for you, for example `shop · 1 waiting for you ·
+2 working`. A workspace with an agent that waits is shown in amber.
+It counts AI runs and chats, and coding CLIs in terminal tabs (Claude
+Code, Codex …). Each window writes a small file in
+`~/.local/state/termocode/agents/` only when its agents' states change,
+and removes it when it quits; the list is read when Runs opens.
