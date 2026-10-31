@@ -138,7 +138,7 @@ func (st *servicesState) rows() []svcRow {
 func (st *servicesState) problemRows() []svcRow {
 	note := func(s string) svcRow { return svcRow{kind: svcRowNote, section: svcSecCompose, text: s} }
 	hint := func(s string) svcRow { return svcRow{kind: svcRowHint, section: svcSecCompose, text: s} }
-	p := st.problem
+	p := st.composeProblem()
 	switch p.Kind {
 	case services.ProblemNoDocker:
 		return engineMissingRows(svcSecCompose)
@@ -156,6 +156,17 @@ func (st *servicesState) problemRows() []svcRow {
 		return []svcRow{note(p.Detail), hint("R retry")}
 	}
 	return nil
+}
+
+// composeProblem is the compose problem with the detected engine filled
+// in, so a Podman machine reads "Podman is not running" even when the
+// compose error text does not name the engine (FIX-7).
+func (st *servicesState) composeProblem() services.Problem {
+	p := st.problem
+	if p.Engine == "" && st.containerEngine.Kind == "podman" {
+		p.Engine = "podman"
+	}
+	return p
 }
 
 // retryRow is the one Retry button under an engine problem.

@@ -158,7 +158,7 @@ func (m *Model) webServicesBuild() webproto.ServicesSnap {
 		s.ComposeFiles = append(s.ComposeFiles, webName(f))
 	}
 	if st.problem.Kind != services.ProblemNone {
-		s.Problem, _ = aiServicesRedact(webName(st.problem.Message()))
+		s.Problem, _ = aiServicesRedact(webName(st.composeProblem().Message()))
 	}
 	if d.ConfigErr != nil {
 		s.ConfigError = webName(d.ConfigErr.Error())

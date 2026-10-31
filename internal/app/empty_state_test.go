@@ -121,3 +121,18 @@ func TestServicesEmptyCardButton(t *testing.T) {
 		t.Errorf("button:\n%s", got)
 	}
 }
+
+// FIX-7: on a Podman machine the PROJECT problem names Podman, even when
+// the compose error text does not say which engine answered.
+func TestProblemRowsNameTheDetectedEngine(t *testing.T) {
+	st := svcHostState()
+	st.containerEngine = containers.Engine{Binary: "podman", Kind: "podman", Reachable: false}
+	st.problem = services.Problem{Kind: services.ProblemDaemonDown}
+	if rows := st.problemRows(); len(rows) == 0 || rows[0].text != "Podman is not running" {
+		t.Fatalf("daemon down on podman: %+v", rows)
+	}
+	st.problem = services.Problem{Kind: services.ProblemNoPermission}
+	if rows := st.problemRows(); len(rows) == 0 || rows[0].text != "No access to the Podman socket" {
+		t.Fatalf("no permission on podman: %+v", rows)
+	}
+}

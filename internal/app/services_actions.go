@@ -496,7 +496,7 @@ func (m *Model) servicesLogs(section, name string) tea.Cmd {
 	}
 	c := st.composeBackend()
 	if c == nil {
-		return m.servicesToast(toast.Info, "Docker Compose is not available", st.problem.Message())
+		return m.servicesToast(toast.Info, "Docker Compose is not available", st.composeProblem().Message())
 	}
 	if err := m.servicesRunCommand(c.LogsFollow(name), key); err != nil {
 		return m.servicesToast(toast.Errr, "Cannot show logs", err.Error())
