@@ -226,6 +226,16 @@ func (m *Model) startAIRun(text string, prof ai.Profile, rules ai.Rules) tea.Cmd
 // startAIRunAs is startAIRun with the run's id ("" = a new one) and, for
 // a run the AI started, who started it (G-API).
 func (m *Model) startAIRunAs(text string, prof ai.Profile, rules ai.Rules, id string, by *ai.RunBy) tea.Cmd {
+	resolved, promptErr := ai.ResolveFilePrompts(aiWorkspaceRoot(), prof)
+	if promptErr != nil {
+		return m.aiProfileProblem(prof.Name, promptErr)
+	}
+	if resolved.Source != prof.Source || ai.ProfileHash(resolved) != ai.ProfileHash(prof) {
+		if m.aiProfileTrust(resolved) != aiTrustUse {
+			return m.aiInfo("Trust this profile's file prompts in AI chat before starting this run")
+		}
+	}
+	prof = resolved
 	s := m.aiS()
 	if id == "" {
 		id = aiNewRunID()
@@ -607,6 +617,7 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		st.State = string(agentdag.StateCancelled)
 	case agentrun.NodeBlocked:
 		st.State = string(agentdag.StateBlocked)
+		return tea.Batch(waitAIChat(msg.ch), m.notifyOS("AI agent is blocked"))
 	case agentrun.NodeLimited: // the CLI's usage limit: the step waits and runs again
 		s.agentsNodeEnd(ev.RunID, st.ID)
 		st.State = string(agentdag.StatePending)
@@ -617,7 +628,6 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		}
 	case agentrun.NodeRepair:
 		if ev.Verdict == agentrun.VerdictMissing {
-		return tea.Batch(waitAIChat(msg.ch), m.notifyOS("AI agent is blocked"))
 			st.Notes = append(st.Notes, "↻ no VERDICT line, asked once more")
 		} else {
 			st.Notes = append(st.Notes, "↻ plan not valid, asked again: "+ai.Redact(ev.Err))
