@@ -364,7 +364,7 @@ func (c *httpConn) Call(ctx context.Context, method string, params any) (json.Ra
 	stop := context.AfterFunc(c.ctx, cancel) // Close ends every request
 	defer stop()
 
-	res, err := c.call(rctx, method, body, idRaw)
+	res, err := c.call(rctx, method, body, idRaw, routeHeaders(method, params))
 	if err != nil && ctx.Err() != nil {
 		c.notifyCancelled(idRaw)
 		return nil, ctx.Err()
@@ -377,8 +377,8 @@ func (c *httpConn) Call(ctx context.Context, method string, params any) (json.Ra
 	return res, err
 }
 
-func (c *httpConn) call(ctx context.Context, method string, body []byte, id json.RawMessage) (json.RawMessage, error) {
-	resp, err := c.do(ctx, http.MethodPost, body, "application/json, text/event-stream", nil)
+func (c *httpConn) call(ctx context.Context, method string, body []byte, id json.RawMessage, route map[string]string) (json.RawMessage, error) {
+	resp, err := c.do(ctx, http.MethodPost, body, "application/json, text/event-stream", route)
 	if err != nil {
 		return nil, err
 	}
