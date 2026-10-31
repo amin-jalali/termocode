@@ -66,8 +66,15 @@ func (m *Model) handleMCPMsg(msg tea.Msg) (tea.Cmd, bool) {
 
 // handleMCPPromptSubmit routes the MCP prompt kinds. ok=false: not ours.
 func (m *Model) handleMCPPromptSubmit(value string) (tea.Cmd, bool) {
-	if m.promptKind == promptKindMCPSecret {
+	switch m.promptKind {
+	case promptKindMCPSecret:
 		return m.onMCPSecretEntered(value), true
+	case promptKindMCPBundlePath: // mcp_bundle.go
+		return m.onMCPBundlePath(value), true
+	case promptKindMCPBundleField:
+		return m.onMCPBundleField(value, false), true
+	case promptKindMCPBundleSecret:
+		return m.onMCPBundleField(value, true), true
 	}
 	return nil, false
 }
