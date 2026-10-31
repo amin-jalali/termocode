@@ -421,9 +421,16 @@ func renderToastCompact(t Toast, w int) []string {
 		avail = 4
 	}
 	title := runewidth.Truncate(t.Title, avail, "…")
+	if t.Severity == Errr {
+		title = errorDetailText(t.Title, avail)
+	}
 	row := bg.Render(" ") + iconStyle.Render(icon) + bg.Render(" ") + titleStyle.Render(title)
 	if rest := avail - runewidth.StringWidth(title) - 3; t.Detail != "" && rest >= 4 {
-		row += detailStyle.Render(" · " + runewidth.Truncate(t.Detail, rest, "…"))
+		detail := runewidth.Truncate(t.Detail, rest, "…")
+		if t.Severity == Errr {
+			detail = errorDetailText(t.Detail, rest)
+		}
+		row += detailStyle.Render(" · " + detail)
 	}
 	if used := lipgloss.Width(row); used < inner {
 		row += bg.Render(strings.Repeat(" ", inner-used))
@@ -474,9 +481,17 @@ func renderToast(t Toast, w int) []string {
 		}
 		return s
 	}
-	rows := []string{pad(bg.Render("  ") + iconStyle.Render(icon) + bg.Render("  ") + titleStyle.Render(fit(t.Title)))}
+	title := fit(t.Title)
+	if t.Severity == Errr {
+		title = errorDetailText(t.Title, avail)
+	}
+	rows := []string{pad(bg.Render("  ") + iconStyle.Render(icon) + bg.Render("  ") + titleStyle.Render(title))}
 	if t.Detail != "" {
-		rows = append(rows, pad(bg.Render(strings.Repeat(" ", lead))+detailStyle.Render(fit(t.Detail))))
+		detail := fit(t.Detail)
+		if t.Severity == Errr {
+			detail = errorDetailText(t.Detail, avail)
+		}
+		rows = append(rows, pad(bg.Render(strings.Repeat(" ", lead))+detailStyle.Render(detail)))
 	}
 	// The normal card frame; the severity shows as the left edge only.
 	box := lipgloss.NewStyle().
