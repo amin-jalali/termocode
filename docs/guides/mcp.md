@@ -630,6 +630,11 @@ input. A card shows what it asks; **Deny** comes first and has the focus.
 - A page to open: the card shows the whole address and its site.
   **Open in browser** opens it.
 
+Servers that speak the newest MCP version (2026-07-28) ask the same
+way: the call stops, the same card shows, and termocode sends the call
+again with your answer. A server never gets to use the AI model
+(sampling): termocode refuses that on purpose.
+
 **Long calls.** While a tool runs, the line under the chat shows what it
 does (`mcp.ci.build · 40 s · step 3 · 3 of 10 (30%)`) when the server
 reports progress. Press **Ctrl+B** in the chat (or use **AI: Move MCP
@@ -785,9 +790,11 @@ also shows the older lines.
 | `connected · old transport` | The server only speaks the old HTTP+SSE transport. It works; termocode tries it only when the server refuses the current one. Ask the service for its `/mcp` URL when it has one. |
 | `reconnecting in 8s` | The remote server could not be reached. termocode tries again by itself, waiting longer each time (up to 2 minutes, 8 tries). Nothing to do. |
 | `failed: … (gave up after 8 tries …)` | Run **AI: MCP: Reconnect All Servers** when you are back online. It also checks the running servers with a ping. |
+| `speaks MCP 2026-07-28 (stateless)` | The server speaks the newest MCP version. Nothing to do: termocode asks each server first and uses the older start for older servers. |
+| `the change stream broke` | A new-version server's change list stream ended. termocode opens it again by itself. |
 | `tools changed` | Review with **Show tools**, then **Trust the new tools**. |
 | `server not trusted` | **AI: MCP Servers…** → the server → **Trust**. |
-| A server shows old tools | Run **AI: MCP: Reset Tool Lists**. Each server lists its tools again on next use. |
+| A server shows old tools | Run **AI: MCP: Reset Tool Lists**. Each server lists its tools again on next use. A server can say how long its list stays fresh; a list it marks private (only for your sign-in) is never saved on disk. |
 | `sandbox: no sandbox tool found` | Install what the message says (bubblewrap, docker or podman), or remove `"sandbox"`. |
 
 ### Debug your own server
