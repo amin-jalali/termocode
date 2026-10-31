@@ -65,6 +65,9 @@ type Server struct {
 	Cwd     string
 	URL     string
 	Headers map[string]string
+	// HeadersCommand prints extra headers at each connect (user file
+	// only; headers_cmd.go).
+	HeadersCommand string
 	// OAuth is a pre-registered OAuth app (Slack): client id, secret (a
 	// ${secret:NAME}), scopes. nil: discovery + dynamic registration.
 	OAuth *OAuthConfig
@@ -128,6 +131,7 @@ type entry struct {
 	Cwd         string            `json:"cwd"`
 	URL         string            `json:"url"`
 	Headers     map[string]string `json:"headers"`
+	HeadersCmd  string            `json:"headersCommand"`
 	OAuth       *OAuthConfig      `json:"oauth"`
 	Auth        *AuthConfig       `json:"auth"`
 	Disabled    bool              `json:"disabled"`
@@ -172,6 +176,10 @@ func ParseFile(b []byte, source, path string) ([]Server, []string, error) {
 			// would run on the reader's machine: refuse it, never run it.
 			s.Problem = "invalid: " + secrets.ProjectCmdWarning
 			warns = append(warns, fmt.Sprintf("%s: server %s uses ${cmd:}; %s", path, name, secrets.ProjectCmdWarning))
+		}
+		if source != SourceUser && s.HeadersCommand != "" {
+			s.Problem = "invalid: " + ProjectHeadersCmdWarning
+			warns = append(warns, fmt.Sprintf("%s: server %s has a headersCommand; %s", path, name, ProjectHeadersCmdWarning))
 		}
 		if source != SourceUser && s.Problem == "" {
 			if v := projectEnvRef(s); v != "" {
@@ -228,7 +236,7 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		return s
 	}
 	s.Command, s.Args, s.Env, s.Cwd, s.EnvFile = e.Command, e.Args, e.Env, e.Cwd, e.EnvFile
-	s.URL, s.Headers, s.OAuth, s.Auth = e.URL, e.Headers, e.OAuth, e.Auth
+	s.URL, s.Headers, s.OAuth, s.Auth, s.HeadersCommand = e.URL, e.Headers, e.OAuth, e.Auth, e.HeadersCmd
 	s.Disabled, s.ReadOnly, s.AutoApprove, s.Deny, s.Timeout = e.Disabled, e.ReadOnly, e.AutoApprove, e.Deny, e.Timeout
 	t := strings.ToLower(strings.TrimSpace(e.Type))
 	if t == "" {
@@ -261,6 +269,8 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		s.Problem = "invalid: stdio needs a command"
 	case t == TypeHTTP && e.URL == "":
 		s.Problem = "invalid: http needs a url"
+	case e.HeadersCmd != "" && t != TypeHTTP:
+		s.Problem = "invalid: headersCommand needs an http server"
 	case e.Auth != nil && e.Auth.GH != "" && t != TypeHTTP:
 		s.Problem = "invalid: auth.gh needs an http server"
 	case e.Auth != nil && e.Auth.GH != "" && !ValidGHLogin(e.Auth.GH):
@@ -503,6 +513,26 @@ func (s Server) Expand(x Expander) (Server, error) {
 		}
 	}
 	out.Headers = expandMap(s.Headers, one)
+	if s.HeadersCommand != "" && err == nil {
+		if s.Source != SourceUser {
+			return out, errors.New("invalid: " + ProjectHeadersCmdWarning)
+		}
+		h, e := runHeadersCommand(s.HeadersCommand, x.Workspace)
+		if e != nil {
+			return out, e
+		}
+		if len(h) > 0 && out.Headers == nil {
+			out.Headers = map[string]string{}
+		}
+		for k, v := range h {
+			for old := range out.Headers { // header names ignore case
+				if strings.EqualFold(old, k) {
+					delete(out.Headers, old)
+				}
+			}
+			out.Headers[k] = v
+		}
+	}
 	if s.OAuth != nil {
 		o := *s.OAuth
 		o.ClientID, o.ClientSecret = one(o.ClientID), one(o.ClientSecret)
