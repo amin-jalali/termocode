@@ -9,6 +9,7 @@ package agentdag
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -54,11 +55,19 @@ func (s State) Stops() bool {
 	return s == StateFailed || s == StateCancelled || s == StateBlocked
 }
 
-// Node categories (a profile maps them to model slots).
+// Node categories (a profile maps them to model slots). quick and deep
+// are always there; the app adds more (OMX-16), so any ValidCategory
+// name is accepted here.
 const (
 	CategoryQuick = "quick"
 	CategoryDeep  = "deep"
 )
+
+var categoryRe = regexp.MustCompile(`^[a-z][a-z0-9-]{0,23}$`)
+
+// ValidCategory reports whether name can be a category: lower-case
+// letters, digits and '-', starting with a letter, at most 24.
+func ValidCategory(name string) bool { return categoryRe.MatchString(name) }
 
 // Output modes of a node's text in the chat.
 const (
@@ -217,10 +226,8 @@ func Normalize(r Run) (Run, error) {
 		if !knownState(n.State) {
 			return Run{}, fmt.Errorf("agentdag: node %q has unknown state %q", n.ID, n.State)
 		}
-		switch n.Category {
-		case "", CategoryQuick, CategoryDeep:
-		default:
-			return Run{}, fmt.Errorf("agentdag: node %q has unknown category %q", n.ID, n.Category)
+		if n.Category != "" && !ValidCategory(n.Category) {
+			return Run{}, fmt.Errorf("agentdag: node %q: %q is not a category name (lower-case letters, digits, '-')", n.ID, n.Category)
 		}
 		switch n.Output {
 		case "":
