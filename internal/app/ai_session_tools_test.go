@@ -117,3 +117,11 @@ func TestAIHandoffNeedsAChat(t *testing.T) {
 		t.Fatal("no toast for an empty chat")
 	}
 }
+
+func TestAIHandoffPaletteEntry(t *testing.T) {
+	m := aiTestModel(t)
+	m.ai.provider = fakeAIProvider{}
+	if cmd, ok := m.dispatchAIPalette("ai-handoff"); !ok || cmd == nil {
+		t.Fatal("no palette entry")
+	}
+}
