@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -48,5 +49,38 @@ func TestManagerCallProgress(t *testing.T) {
 	_, err = m.Call(context.Background(), nil, "fake", "slow", map[string]any{"total_ms": 2400})
 	if err == nil || !strings.Contains(err.Error(), "no answer in 1s") {
 		t.Fatalf("silent call: %v", err)
+	}
+}
+
+// MCPX-19: the call's progress (count, total, message) reaches the
+// ctx's progress func, also without a timeout.
+func TestCallProgressText(t *testing.T) {
+	p := startFake(t, nil, Options{})
+	for _, timeout := range []time.Duration{0, 5 * time.Second} {
+		var mu sync.Mutex
+		var got []string
+		ctx := WithProgress(context.Background(), func(pr Progress) {
+			mu.Lock()
+			got = append(got, pr.Text())
+			mu.Unlock()
+		})
+		r, err := p.Client.CallToolTimeout(ctx, "slow", map[string]any{"total_ms": 500, "progress_ms": 100, "progress_total": 10}, timeout)
+		mu.Lock()
+		first := ""
+		if len(got) > 0 {
+			first = got[0]
+		}
+		mu.Unlock()
+		if err != nil || r.Text() != "slow done" || first != "step 1 · 1 of 10 (10%)" {
+			t.Fatalf("timeout %v: %q %v, progress %v", timeout, r.Text(), err, got)
+		}
+	}
+	for _, c := range []struct {
+		p    Progress
+		want string
+	}{{Progress{Progress: 3}, "3"}, {Progress{Progress: 0.5, Total: 1}, "0.5 of 1 (50%)"}, {Progress{Message: "x"}, "x"}} {
+		if got := c.p.Text(); got != c.want {
+			t.Errorf("%+v = %q, want %q", c.p, got, c.want)
+		}
 	}
 }

@@ -63,7 +63,7 @@ type Client struct {
 	version  string
 	info     ServerInfo
 	caps     ServerCaps
-	progress map[string]func() // progress token → push the call's deadline back
+	progress map[string]func(Progress) // progress token → push the call's deadline back, tell the ctx
 	tokens   atomic.Int64
 
 	// elicit asks the user for the running tool call (one call at a
@@ -197,26 +197,38 @@ var ErrCallTimeout = errors.New("no answer in time")
 // progress). It returns ErrCallTimeout when the server stays silent for
 // timeout; timeout <= 0 means no deadline.
 func (c *Client) CallToolTimeout(ctx context.Context, name string, args map[string]any, timeout time.Duration) (CallResult, error) {
-	if timeout <= 0 {
+	report := progressFrom(ctx) // MCPX-19: progress text for the chat
+	if timeout <= 0 && report == nil {
 		return c.CallTool(ctx, name, args)
 	}
 	token := fmt.Sprintf("termocode-%d", c.tokens.Add(1))
 	cctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
-	timer := time.AfterFunc(timeout, func() { cancel(ErrCallTimeout) })
-	defer timer.Stop()
-	c.mu.Lock()
-	if c.progress == nil {
-		c.progress = map[string]func(){}
-	}
-	c.progress[token] = func() { timer.Reset(timeout) }
-	c.hold = func(waiting bool) { // the user answers a question (elicit.go)
-		if waiting {
-			timer.Stop()
-		} else {
-			timer.Reset(timeout)
+	reset := func() {}
+	hold := func(bool) {}
+	if timeout > 0 {
+		timer := time.AfterFunc(timeout, func() { cancel(ErrCallTimeout) })
+		defer timer.Stop()
+		reset = func() { timer.Reset(timeout) }
+		hold = func(waiting bool) { // the user answers a question (elicit.go)
+			if waiting {
+				timer.Stop()
+			} else {
+				timer.Reset(timeout)
+			}
 		}
 	}
+	c.mu.Lock()
+	if c.progress == nil {
+		c.progress = map[string]func(Progress){}
+	}
+	c.progress[token] = func(p Progress) {
+		reset()
+		if report != nil {
+			report(p)
+		}
+	}
+	c.hold = hold
 	c.mu.Unlock()
 	defer func() {
 		c.mu.Lock()
@@ -291,7 +303,10 @@ func (c *Client) handle(m extproc.Message, reply replyFunc) {
 		}
 	case "notifications/progress":
 		var p struct {
-			Token json.RawMessage `json:"progressToken"`
+			Token    json.RawMessage `json:"progressToken"`
+			Progress float64         `json:"progress"`
+			Total    float64         `json:"total"`
+			Message  string          `json:"message"`
 		}
 		_ = json.Unmarshal(m.Params, &p)
 		var tok string
@@ -302,7 +317,7 @@ func (c *Client) handle(m extproc.Message, reply replyFunc) {
 		f := c.progress[tok]
 		c.mu.Unlock()
 		if f != nil {
-			f()
+			f(Progress{Progress: p.Progress, Total: p.Total, Message: p.Message})
 		}
 	case shareNotify:
 		var p struct {

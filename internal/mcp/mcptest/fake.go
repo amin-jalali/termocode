@@ -10,7 +10,8 @@
 //   - write_note (destructiveHint false): returns "wrote <title>"
 //   - delete_all (no hints): returns "deleted everything"
 //   - slow: waits 10 s (or total_ms; with notifications/progress every
-//     progress_ms when the call has a progress token), or ends at once
+//     progress_ms when the call has a progress token; progress_total
+//     adds a total and a "step n" message), or ends at once
 //     on notifications/cancelled
 //   - big: 1 MB of "x"
 //   - image: one PNG image item
@@ -285,7 +286,11 @@ func slow(ctx context.Context, c Notifier, args map[string]any, token json.RawMe
 			return text("slow done"), nil
 		case <-tick:
 			n++
-			_ = c.Notify("notifications/progress", map[string]any{"progressToken": token, "progress": n})
+			note := map[string]any{"progressToken": token, "progress": n}
+			if t, ok := args["progress_total"].(float64); ok {
+				note["total"], note["message"] = t, fmt.Sprintf("step %d", n)
+			}
+			_ = c.Notify("notifications/progress", note)
 		case <-ctx.Done():
 			return nil, nil
 		}
