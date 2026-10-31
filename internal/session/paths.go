@@ -90,6 +90,9 @@ type Paths struct {
 	// MCPSocket is where the UI serves MCP to outside agents (M1); the
 	// `termocode mcp` relay connects to it.
 	MCPSocket string
+	// AgentSocket is the control socket for scripts and outside agents
+	// in the terminal tabs (OMX-33, internal/agentctl).
+	AgentSocket string
 	// WebSocket is the web hub in the UI process (ADR 0020); the web
 	// gateway opens one connection per browser plus a control connection.
 	WebSocket string
@@ -117,14 +120,15 @@ func PathsFor(workspace string) (Paths, error) {
 	k := Key(abs)
 	base := filepath.Join(dir, k)
 	return Paths{
-		Workspace: filepath.Clean(abs),
-		Key:       k,
-		Socket:    base + ".sock",
-		Lock:      base + ".lock",
-		Info:      base + ".json",
-		Log:       base + ".log",
-		Caps:      base + ".caps.json",
-		MCPSocket: base + ".mcp.sock",
+		Workspace:   filepath.Clean(abs),
+		Key:         k,
+		Socket:      base + ".sock",
+		Lock:        base + ".lock",
+		Info:        base + ".json",
+		Log:         base + ".log",
+		Caps:        base + ".caps.json",
+		MCPSocket:   base + ".mcp.sock",
+		AgentSocket: base + ".agent.sock",
 
 		WebSocket:     base + ".web.sock",
 		WebHTTPSocket: base + ".webhttp.sock",
