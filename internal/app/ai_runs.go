@@ -325,7 +325,9 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		parallel = s.settings.PlannedParallel()
 	}
 	pricing := ai.NewPricing(s.settings.Prices)
-	reasoning := s.reasoningFunc(think)     // OMX-5
+	reasoning := s.reasoningFunc(think)                        // OMX-5
+	windows := ai.NewContextWindows(s.settings.ContextWindows) // OMX-25
+	windowOf := func(model string) int { w, _ := windows.Lookup(model); return w }
 	fallbacks := map[string][]ai.Fallback{} // OMX-4: resolved now (nodes run on their own goroutines)
 	for name := range slots {
 		fallbacks[name] = s.aiFallbacks(name)
@@ -438,7 +440,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 			return &ai.Agent{Provider: sl.p, Tools: ts, Native: native, AutoApprove: own, MaxSteps: maxSteps,
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
-				Reasoning: reasoning(n.Slot, sl.cfg), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: fallbacks[n.Slot]}, msgs, nil
+				Reasoning: reasoning(n.Slot, sl.cfg), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: fallbacks[n.Slot],
+				ContextWindow: windowOf(sl.cfg.Model)}, msgs, nil
 		},
 		Finished: func(_ context.Context, n agentdag.Node) {
 			if msg, ok := wts.finished(n); ok {

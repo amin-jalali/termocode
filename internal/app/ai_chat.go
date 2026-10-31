@@ -291,6 +291,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
 		Name:        aiSlotLabel(step.Slot, slot.cfg),
 		Fallbacks:   s.aiFallbacks(step.Slot), // OMX-4
+		// OMX-25: tool results are cut to what still fits the window.
+		ContextWindow: aiContextWindow(s.settings, slot.cfg.Model),
 	}
 	s.turnThink = ""
 	crash.GoWith("the AI chat", func() {
