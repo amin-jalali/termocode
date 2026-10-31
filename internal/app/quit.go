@@ -34,7 +34,7 @@ func (m *Model) quitNow() tea.Cmd {
 	m.stopWebHub()   // the web gateway gets EOF (web_run.go)
 	m.removeAgentMCPFiles()
 	m.agentRollupRemove() // OMX-35
-	m.observeTerminals() // what each shell runs now, before the shells end
+	m.observeTerminals()  // what each shell runs now, before the shells end
 	if m.nvim != nil {
 		_ = m.nvim.Close()
 	}
