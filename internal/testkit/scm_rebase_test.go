@@ -133,7 +133,7 @@ func TestSCMRebaseConfirmAndRun(t *testing.T) {
 	if !until(d, func() bool { return strings.Contains(text(d), "Rebase done: 3 commits → 2 commits") }) {
 		t.Fatalf("no done toast:%s", dump(d))
 	}
-	if s := text(d); !strings.Contains(s, "Undo: git reset --keep ORIG_HEAD") || strings.Contains(s, "--hard") {
+	if s := text(d); !strings.Contains(s, "Undo: u / Git: Undo Last Git Action") || strings.Contains(s, "--hard") {
 		t.Errorf("done toast must point to the safe undo:%s", dump(d))
 	}
 	if got := r.git("log", "--format=%s"); got != "c4\nc2 better\nc1\ninit" {
