@@ -523,6 +523,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-rules", "AI: Project Rules…", ""},
 		{"ai-memory", "AI: Memory…", ""},
 		{"help-bug-report", "Help: Build Bug Report…", ""},
+		{"ai-doctor", "AI: Doctor", ""},
 		{"ai-skills", "AI: Skills…", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
@@ -681,6 +682,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIMemory(), true
 	case "help-bug-report":
 		return m.openBugReport(false), true
+	case "ai-doctor":
+		return m.openAIDoctor(), true
 	case "ai-skills":
 		return m.openAISkills(), true
 	case "ai-memory-toggle":
