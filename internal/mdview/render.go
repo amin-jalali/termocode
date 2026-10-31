@@ -3,6 +3,7 @@ package mdview
 import (
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -96,6 +97,24 @@ func Render(src string, opt Options) []string {
 
 // RenderDoc is Render that also returns where the headings and (with
 // opt.Links) the links are drawn. The rows are the same as Render's.
+// prepends reports whether c joins the character after it into one
+// cell group (Unicode "Prepend" marks such as U+0601): drawn next to the
+// padding or the next word, it made a row one cell short.
+func prepends(c rune) bool {
+	if c < 0x600 {
+		return false
+	}
+	if v, ok := prependCache.Load(c); ok {
+		return v.(bool)
+	}
+	s := string(c)
+	v := ansi.StringWidth(s+"a") != ansi.StringWidth(s)+1
+	prependCache.Store(c, v)
+	return v
+}
+
+var prependCache sync.Map
+
 // lineEnds makes CRLF and a lone CR plain line ends, as CommonMark
 // reads them: a CR left in a row sends the cursor back to its start.
 var lineEnds = strings.NewReplacer("\r\n", "\n", "\r", "\n")
@@ -109,7 +128,7 @@ func RenderDoc(src string, opt Options) ([]string, Marks) {
 	// raw: a lone ESC eats the cells after it, and a sequence could
 	// move the cursor or set a title. Show them as U+FFFD too.
 	source := []byte(strings.Map(func(c rune) rune {
-		if c < 0x20 && c != '\t' && c != '\n' || c == 0x7f || c >= 0x80 && c <= 0x9f {
+		if c < 0x20 && c != '\t' && c != '\n' || c == 0x7f || c >= 0x80 && c <= 0x9f || prepends(c) {
 			return '\uFFFD'
 		}
 		return c
