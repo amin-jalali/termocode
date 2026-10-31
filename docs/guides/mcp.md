@@ -209,6 +209,11 @@ actions: **Connect / Refresh tools**, **Show tools**, **Stop**,
 **Sign in**, **Sign out**, **Set secret NAME…**, **Trust**,
 **Edit in mcp.json**, **Show log**, **Disable** and **Remove…**.
 
+Above the actions, the server's screen shows its details in one place:
+the file it comes from, local or remote, the command or URL, the names
+of its env variables and headers (never their values), the server's own
+name, version and MCP version, its tools, its state and the last error.
+
 ## The file
 
 | Key | What it does |
