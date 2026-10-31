@@ -259,3 +259,31 @@ func TestAIToolsProgress(t *testing.T) {
 		t.Fatalf("progress %q", got)
 	}
 }
+
+// MCPX-38: an item for the user only goes to the user as a tool note
+// (cleaned), and not into the model's result.
+func TestAIToolsUserOnlyNote(t *testing.T) {
+	call := func(context.Context, string, string, map[string]any) (CallResult, error) {
+		return CallResult{Content: []Content{{Type: "text", Text: "for the model"},
+			{Type: "text", Text: "see\x1b[2J the chart", Annotations: &ContentAnnotations{Audience: []string{"user"}}}}}, nil
+	}
+	clean := func(s string) string { return strings.ReplaceAll(s, "\x1b", "") }
+	tools := AITools(Server{Name: "fake"}, []Tool{{Name: "chart", Annotations: ann(bp(true), nil)}}, call, AdapterOptions{TrustAnnotations: true, Clean: clean})
+	a := &ai.Agent{Provider: &oneCall{name: tools[0].Name}, Native: true, Tools: tools}
+	var notes []string
+	result := ""
+	a.Run(context.Background(), []ai.Message{{Role: ai.RoleUser, Content: "go"}}, func(e ai.Event) {
+		switch e.Kind {
+		case ai.EventToolNote:
+			notes = append(notes, e.Detail)
+		case ai.EventToolResult:
+			result = e.Detail
+		}
+	})
+	if len(notes) != 1 || notes[0] != "see[2J the chart" {
+		t.Fatalf("notes %q", notes)
+	}
+	if strings.Contains(result, "chart") || !strings.Contains(result, "for the model") {
+		t.Fatalf("result %q", result)
+	}
+}

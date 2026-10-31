@@ -216,6 +216,9 @@ func AITools(s Server, tools []Tool, call CallFunc, o AdapterOptions) []ai.Tool 
 					// A known secret the server repeats (its own token from
 					// ${secret:}, a password it read) never reaches the model.
 					text := ai.RedactSecrets(clean(res.render(mediaNotes(ctx))))
+					if u := res.UserText(); u != "" { // for the user, not the model (annotations.go)
+						ai.ShowUser(ctx, ai.RedactSecrets(clean(u)))
+					}
 					if t.OutputSchema != nil && !res.IsError && len(res.StructuredContent) > 0 {
 						if serr := checkSchema(t.OutputSchema, res.StructuredContent); serr != nil {
 							why := ai.RedactSecrets(clean(serr.Error()))
