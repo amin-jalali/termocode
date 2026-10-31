@@ -31,7 +31,7 @@ func (f *compactFake) Stream(_ context.Context, req ai.Request) <-chan ai.Chunk 
 	f.mu.Unlock()
 	ch := make(chan ai.Chunk, 2)
 	ch <- ai.Chunk{Delta: r.Delta}
-	ch <- ai.Chunk{Done: true, Err: r.Err}
+	ch <- ai.Chunk{Done: true, Err: r.Err, ToolCalls: r.ToolCalls, Usage: r.Usage}
 	close(ch)
 	return ch
 }
