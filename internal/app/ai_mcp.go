@@ -455,6 +455,10 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 		{ID: "connect", Title: "Connect / Refresh tools", Hint: "start it and list its tools"},
 		{ID: "tools", Title: "Show tools", Hint: mcpToolsHint(m, name)},
 	}
+	if st.State == mcp.StateFailed {
+		// UX-19: the failed start is one key away from a new try.
+		items = append([]picker.Item{{ID: "retry", Title: "Retry", Hint: "start it again"}}, items...)
+	}
 	if st.Pid > 0 {
 		hint := fmt.Sprintf("pid %d", st.Pid)
 		if st.Shared && st.Sessions > 1 {
@@ -566,7 +570,7 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 		return nil
 	}
 	switch id {
-	case "connect":
+	case "connect", "retry":
 		if !st.Trusted {
 			for _, sv := range mcpServerEntries(name) {
 				m.aiS().mcpTrust = &aiMCPTrustPending{server: name, connect: true}
