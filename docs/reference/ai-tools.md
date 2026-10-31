@@ -130,8 +130,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_explain`](#db_explain) | auto | no | Show the query plan of ONE SQL statement (EXPLAIN without ANALYZE: the statement does not run), in a read-only session. |
 | [`db_history`](#db_history) | auto | no | List recent SQL runs (the user's and yours), newest first. |
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
-| [`ast_grep`](#ast_grep) | auto | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
-| [`look_at`](#look_at) | auto | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
+| [`ast_grep`](#ast_grep) | search: auto<br>with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
+| [`look_at`](#look_at) | auto<br>an image is sent to the main model in one extra request (a PDF is read locally) | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
 | [`redis_keys`](#redis_keys) | auto | yes | List the keys of a Redis connection that match a glob pattern (SCAN; never KEYS), with type and TTL. |
 | [`redis_get`](#redis_get) | auto | asks | Read one Redis key: its type, TTL, size and one page of its value (string: up to 64 KB; hash, list, set, sorted set, stream: up to max items). |
 | [`redis_command`](#redis_command) | a read command (allow-list<br>not CONFIG / ACL / CLIENT): auto, in a read-only session<br>any other command: confirm (db:<conn>/write) with the command shown<br>production connections: confirm (always asks)<br>read-only connections: writes refused<br>the never-list (FLUSHALL, FLUSHDB, CONFIG SET, SHUTDOWN, DEBUG, MODULE, scripts, MIGRATE, REPLICAOF, ACL changes, …) and MONITOR / SUBSCRIBE: refused | asks | Run ONE Redis command (one line, as typed in a console). |
@@ -1554,7 +1554,7 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 
 Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). With rewrite, every match is replaced ("log.Print($A)") and the user reviews the change as a diff. Use it for safe refactors across many files; for plain text use search.
 
-**Gate:** auto
+**Gate:** search: auto · with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed
 
 **MCP server:** no
 
@@ -1569,7 +1569,7 @@ Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.
 
 Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. For an image this sends one extra request to the model. Use read_file for text files.
 
-**Gate:** auto
+**Gate:** auto · an image is sent to the main model in one extra request (a PDF is read locally)
 
 **MCP server:** no
 

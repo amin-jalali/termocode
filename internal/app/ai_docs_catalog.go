@@ -47,6 +47,8 @@ type AIPolicyDoc struct {
 var aiGateNotes = map[string]string{
 	"db_query":           "a read (SELECT, SHOW, EXPLAIN without ANALYZE …): auto, in a read-only session; any other statement: confirm (db:<conn>/write) with the SQL shown; production connections: confirm (always asks); read-only connections: writes refused",
 	"execute_action":     "per action: see Palette actions below",
+	"ast_grep":           "search: auto; with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed",
+	"look_at":            "auto; an image is sent to the main model in one extra request (a PDF is read locally)",
 	"containers_control": "confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first",
 	"images_pull":        "confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)",
 	"compose_up":         "confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)",
