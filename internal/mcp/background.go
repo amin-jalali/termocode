@@ -2,8 +2,11 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"sync"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Background calls (MCPX-19, RT-21): while an MCP tool runs in a chat
@@ -123,10 +126,10 @@ func runDetachable(ctx context.Context, b *Background, label string, run func(ct
 		})
 	}
 	done := make(chan callOut, 1)
-	go func() {
+	crash.GoWith("mcp.call", func() {
 		res, err := run(cctx)
 		done <- callOut{res, err}
-	}()
+	}, func() { done <- callOut{err: errors.New("the tool call crashed")} })
 	id, c := b.add(label)
 	select {
 	case o := <-done:
@@ -142,12 +145,12 @@ func runDetachable(ctx context.Context, b *Background, label string, run func(ct
 		mu.Lock()
 		detached = true
 		mu.Unlock()
-		go func() {
+		crash.GoWith("mcp.background-call", func() {
 			o := <-done
 			cancel()
 			text, err := render(context.Background(), o)
 			c.result <- BackgroundResult{Label: label, Text: text, Err: err}
-		}()
+		}, func() { c.result <- BackgroundResult{Label: label, Err: errors.New("the background call crashed")} })
 		return BackgroundNote(label), nil
 	}
 }

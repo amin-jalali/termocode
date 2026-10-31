@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/extproc"
 )
 
@@ -193,7 +194,7 @@ func (c *Client) handleElicit(m extproc.Message, reply replyFunc) {
 		reply(map[string]any{"action": ElicitDecline}, nil)
 		return
 	}
-	go func() {
+	crash.GoWith("mcp.elicit", func() {
 		hold(true) // no timeout while the user answers
 		res := e(ctx, req)
 		hold(false)
@@ -209,7 +210,10 @@ func (c *Client) handleElicit(m extproc.Message, reply replyFunc) {
 			out["content"] = content
 		}
 		reply(out, nil)
-	}()
+	}, func() { // a crashed question is cancelled; the server is not left waiting
+		hold(false)
+		reply(map[string]any{"action": ElicitCancel}, nil)
+	})
 }
 
 // Elicit asks through ctx's elicitor (decline when there is none).
