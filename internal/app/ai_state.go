@@ -42,6 +42,7 @@ import (
 // aiState is the AI feature state. Held by pointer on Model so Bubble Tea
 // value copies and background goroutines share one instance.
 type aiState struct {
+	warmPending <-chan struct{} // startup keychain probe; never wait before the first frame
 	// historyTarget is the chat a Delete / Rename dialog is about.
 	historyTarget string
 	// wtTarget is the step ("run:step") a worktree Merge / Discard card
@@ -324,7 +325,10 @@ type aiAttachment struct {
 // newAIState loads settings + credentials and builds the provider.
 func newAIState() *aiState {
 	s := &aiState{store: ai.DefaultChatStore(), conv: ai.NewConversation(), turnMsg: -1, undoTurn: -1}
-	s.reload()
+	s.warmPending = secretStoreWarmPending()
+	if s.warmPending == nil {
+		s.reload()
+	}
 	s.restoreAIChat() // last chat + scroll from session.json
 	return s
 }
@@ -332,6 +336,7 @@ func newAIState() *aiState {
 // reload re-reads config.json + credentials.json + env and rebuilds the
 // provider. Safe to call any time (e.g. after Configure).
 func (s *aiState) reload() {
+	s.warmPending = nil
 	s.loadErr = ""
 	_, _ = configureSecretStore() // credentials go through the app's one store
 	cfgPath, err := ai.ConfigPath()
