@@ -32,6 +32,7 @@ type Settings struct {
 	// DisabledTools (mcp_disabled_tools): server name → tool names the
 	// user turned off in Show tools; they are not sent to the model.
 	DisabledTools map[string][]string
+	ToolSearch    string // mcp_tool_search ("auto"): defer MCP tool schemas behind a search tool
 }
 
 // ToolOff reports a tool the user turned off (mcp_disabled_tools).
@@ -56,7 +57,7 @@ const (
 func LoadSettings(configPath string) Settings {
 	s := Settings{Enabled: true, IdleTimeout: DefaultIdleTimeout, CallTimeout: DefaultCallTimeout,
 		MaxResultKB: DefaultMaxResultKB, TrustAnnotations: true, Share: true, Trusted: map[string]string{},
-		TrustedTools: map[string]string{}, DisabledTools: map[string][]string{}, LogLevel: "info"}
+		TrustedTools: map[string]string{}, DisabledTools: map[string][]string{}, LogLevel: "info", ToolSearch: ToolSearchAuto}
 	b, err := os.ReadFile(configPath)
 	if err != nil {
 		return s
@@ -74,6 +75,7 @@ func LoadSettings(configPath string) Settings {
 		TrustedTools     map[string]string   `json:"mcp_trusted_tools"`
 		DisabledTools    map[string][]string `json:"mcp_disabled_tools"`
 		LogLevel         string              `json:"mcp_log_level"`
+		ToolSearch       string              `json:"mcp_tool_search"`
 	}
 	if json.Unmarshal(b, &raw) != nil {
 		return s
@@ -102,6 +104,7 @@ func LoadSettings(configPath string) Settings {
 	if ValidClientID(raw.GitHubClientID) {
 		s.GitHubClientID = raw.GitHubClientID
 	}
+	s.ToolSearch = ParseToolSearchMode(raw.ToolSearch)
 	for k, v := range raw.Trusted {
 		s.Trusted[k] = v
 	}

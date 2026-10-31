@@ -96,3 +96,16 @@ func TestParseToolSearchMode(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadSettingsToolSearch(t *testing.T) {
+	p := t.TempDir() + "/config.json"
+	if s := LoadSettings(p); s.ToolSearch != ToolSearchAuto {
+		t.Fatalf("default = %q", s.ToolSearch)
+	}
+	if err := SaveSetting(p, "mcp_tool_search", "off"); err != nil {
+		t.Fatal(err)
+	}
+	if s := LoadSettings(p); s.ToolSearch != ToolSearchOff {
+		t.Fatalf("saved = %q", s.ToolSearch)
+	}
+}
