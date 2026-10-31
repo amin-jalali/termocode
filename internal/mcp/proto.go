@@ -86,7 +86,8 @@ type Content struct {
 	Text     string            `json:"text,omitempty"`
 	Data     string            `json:"data,omitempty"`
 	MimeType string            `json:"mimeType,omitempty"`
-	URI      string            `json:"uri,omitempty"` // resource_link
+	URI      string            `json:"uri,omitempty"`  // resource_link
+	Name     string            `json:"name,omitempty"` // resource_link
 	Resource *ResourceContents `json:"resource,omitempty"`
 }
 
@@ -137,7 +138,12 @@ func (r CallResult) render(media func(i int, c Content) string) string {
 				parts = append(parts, fmt.Sprintf("[resource %s, %s]", c.Resource.URI, c.Resource.MimeType))
 			}
 		case "resource_link":
-			parts = append(parts, "[resource "+c.URI+"]")
+			// mcp_read_resource can follow it (resource_tools.go).
+			label := ""
+			if c.Name != "" {
+				label = " " + c.Name + ":"
+			}
+			parts = append(parts, "[resource link"+label+" "+c.URI+"]")
 		}
 	}
 	out := strings.Join(parts, "\n")

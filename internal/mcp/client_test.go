@@ -168,7 +168,7 @@ func TestCallResultText(t *testing.T) {
 		{"echo", map[string]any{"text": "hi"}, "echo: hi"},
 		{"fails", nil, "error: it broke"},
 		{"image", nil, "[image image/png, 3 KB — not shown]"},
-		{"mixed", nil, "first\nfile body\n[resource file:///b.bin, application/octet-stream]\n[resource file:///c.txt]"},
+		{"mixed", nil, "first\nfile body\n[resource file:///b.bin, application/octet-stream]\n[resource link c: file:///c.txt]"},
 		{"structured", nil, `{"n":42}`},
 		{"roots", nil, "roots: file:///work/a%20b"},
 	}
