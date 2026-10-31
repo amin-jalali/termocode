@@ -37,6 +37,7 @@ var mcpServeGateCases = []mcpServeGateCase{
 	{"read_file", map[string]any{"path": "main.go"}, false},
 	{"list_dir", map[string]any{"path": "."}, false},
 	{"search", map[string]any{"query": "package"}, false},
+	{"glob", map[string]any{"pattern": "*.go"}, false},
 	{"workspace_folders", map[string]any{"op": "list"}, false},
 	{"diagnostics", nil, false},
 	{"lsp_hover", map[string]any{"path": "main.go", "line": 1, "column": 1}, false},
