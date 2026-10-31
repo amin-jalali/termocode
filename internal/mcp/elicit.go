@@ -184,14 +184,19 @@ func (c *Client) handleElicit(m extproc.Message, reply replyFunc) {
 		return
 	}
 	c.mu.Lock()
-	e, ctx := c.elicit, c.elicitCtx
+	e, ctx, hold := c.elicit, c.elicitCtx, c.hold
 	c.mu.Unlock()
+	if hold == nil {
+		hold = func(bool) {}
+	}
 	if e == nil {
 		reply(map[string]any{"action": ElicitDecline}, nil)
 		return
 	}
 	go func() {
+		hold(true) // no timeout while the user answers
 		res := e(ctx, req)
+		hold(false)
 		out := map[string]any{"action": res.Action}
 		if res.Action == "" {
 			out["action"] = ElicitCancel
