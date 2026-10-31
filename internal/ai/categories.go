@@ -12,7 +12,7 @@ import (
 // A category is the kind of work of a run step: it picks the model slot
 // (a profile's categories map, else ai_categories' slot, else the slot
 // of the category it is like: quick or deep) and may narrow the step's
-// tools, add to its prompt and set the temperature. quick and deep are
+// tools, add to its prompt and set the temperature and reasoning level. quick and deep are
 // the old two; the others are built in or come from ai_categories.
 
 // CategoryConfig is one ai_categories entry.
@@ -25,6 +25,8 @@ type CategoryConfig struct {
 	Temperature  *float64 `json:"temperature,omitempty"`
 	PromptAppend string   `json:"prompt_append,omitempty"`
 	Description  string   `json:"description,omitempty"` // for the planner
+	// Reasoning (OMX-5 level, "" for the slot's) is the level of its steps.
+	Reasoning string `json:"reasoning,omitempty"`
 }
 
 // Category is a category with its name.
@@ -80,6 +82,7 @@ func (s Settings) CategoryList() ([]Category, []error) {
 			errs = append(errs, err)
 			continue
 		}
+		c.Reasoning = NormalizeReasoning(c.Reasoning)
 		i, ok := idx[n]
 		if !ok {
 			if c.Like == "" {
@@ -104,6 +107,9 @@ func (s Settings) CategoryList() ([]Category, []error) {
 		if c.Description != "" {
 			have.Description = c.Description
 		}
+		if c.Reasoning != "" {
+			have.Reasoning = c.Reasoning
+		}
 	}
 	return out, errs
 }
@@ -121,6 +127,8 @@ func checkCategory(name string, c CategoryConfig) error {
 		return bad("temperature must be 0 to 2")
 	case len([]rune(c.PromptAppend)) > CategoryPromptMax:
 		return bad("prompt_append is longer than %d characters", CategoryPromptMax)
+	case CheckReasoning(c.Reasoning) != nil:
+		return bad("%v", CheckReasoning(c.Reasoning))
 	}
 	return nil
 }

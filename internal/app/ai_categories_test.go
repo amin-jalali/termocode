@@ -66,6 +66,26 @@ func TestAICategorySettings(t *testing.T) {
 	}
 }
 
+// OMX-16 + OMX-5: a category's reasoning level is the level of its
+// steps; a step without one keeps the slot's level.
+func TestAICategoryReasoning(t *testing.T) {
+	m, _, quick := catModel(t, ai.ProfileStep{ID: "a", Title: "Think", Category: "ultrabrain"}, ai.ProfileStep{ID: "b", Title: "Docs", Category: "docs-de"})
+	m.ai.settings.Categories = map[string]ai.CategoryConfig{
+		"ultrabrain": {Slot: ai.SlotQuick, Reasoning: "xhigh"},
+		"docs-de":    {Like: "quick"},
+	}
+	driveAIChat(t, m, m.sendAIChat("explain the parser"), nil)
+	if len(quick.reqs) != 2 {
+		t.Fatalf("quick requests %d", len(quick.reqs))
+	}
+	if r := quick.reqs[0].Reasoning; r != ai.ReasoningXHigh {
+		t.Fatalf("ultrabrain reasoning %q", r)
+	}
+	if r := quick.reqs[1].Reasoning; r != "" {
+		t.Fatalf("docs-de reasoning %q", r)
+	}
+}
+
 // OMX-16: a step with a category that does not exist does not start.
 func TestAICategoryUnknown(t *testing.T) {
 	m, _, _ := catModel(t, ai.ProfileStep{ID: "a", Title: "Odd", Category: "nope"})

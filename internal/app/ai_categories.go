@@ -176,6 +176,16 @@ func aiCategoryTemp(n agentdag.Node, cats map[string]ai.Category) *float64 {
 	return nil
 }
 
+// aiCategoryReasoning is the step's level: its category's reasoning
+// (OMX-16), raised by the message's think keyword, else base (the slot's
+// and the chat's level).
+func aiCategoryReasoning(n agentdag.Node, cats map[string]ai.Category, base, think string) string {
+	if c, ok := cats[n.Category]; ok && c.Reasoning != "" {
+		return ai.MaxReasoning(c.Reasoning, think)
+	}
+	return base
+}
+
 // aiTempProvider sends every request with a temperature (providers that
 // do not take one leave it out).
 type aiTempProvider struct {

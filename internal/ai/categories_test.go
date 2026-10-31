@@ -53,6 +53,27 @@ func TestCategories(t *testing.T) {
 	}
 }
 
+// OMX-16 + OMX-5: a category may set the reasoning level of its steps;
+// a level that does not exist leaves the entry out.
+func TestCategoryReasoning(t *testing.T) {
+	s := Settings{Categories: map[string]CategoryConfig{
+		"ultrabrain": {Reasoning: " Max "},
+		"slow":       {Reasoning: "high"},
+		"odd":        {Reasoning: "huge"},
+	}}
+	cats, errs := s.CategoryList()
+	by := map[string]Category{}
+	for _, c := range cats {
+		by[c.Name] = c
+	}
+	if by["ultrabrain"].Reasoning != ReasoningMax || by["slow"].Reasoning != ReasoningHigh || by["deep"].Reasoning != "" {
+		t.Errorf("levels %q %q %q", by["ultrabrain"].Reasoning, by["slow"].Reasoning, by["deep"].Reasoning)
+	}
+	if _, ok := by["odd"]; ok || len(errs) != 1 || !strings.Contains(errs[0].Error(), `"odd": reasoning`) {
+		t.Errorf("odd: errs %v", errs)
+	}
+}
+
 // OMX-16: ESCALATE is on unless ai_step_escalate is false.
 func TestEscalatesSetting(t *testing.T) {
 	off := false
