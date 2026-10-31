@@ -398,6 +398,18 @@ are only sent to the URL you signed in for: when you change the
 server's URL to another server, termocode forgets them and asks you to
 sign in again (the read-only and full endpoints of one service count as
 the same server).
+A sign-in also belongs to the service that gave it. When the server
+moves to another sign-in service, termocode forgets the old sign-in
+(it never sends it there) and asks you to sign in again.
+
+**More access.** When a tool needs more access than your sign-in has,
+the server says which. The row says `more access needed: …`. Sign in
+again: termocode asks for your old access plus the missing part.
+
+**Sign-in service in another place.** If a server does not say where
+its sign-in service is, add its metadata URL to the entry:
+`"oauth": {"metadata_url": "https://login.example.com/.well-known/oauth-authorization-server"}`
+(`https://` only).
 
 A server with its own `Authorization` header (a token) never signs in.
 If the server refuses the token, its row says `not authorized`: check
