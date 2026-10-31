@@ -45,10 +45,16 @@ type AuthError struct {
 	ResourceMetadata string
 	Scope            string // scope the server asks for ("" none)
 	Detail           string // error / error_description
+	// InsufficientScope: a 403 error="insufficient_scope": the token is
+	// good but needs Scope too (step-up sign-in).
+	InsufficientScope bool
 }
 
 func (e *AuthError) Error() string {
 	s := "not authorized (HTTP 401)"
+	if e.InsufficientScope {
+		s = "not allowed with this sign-in (HTTP 403)"
+	}
 	if e.Detail != "" {
 		s += ": " + e.Detail
 	}
@@ -212,6 +218,14 @@ func (c *httpConn) do(ctx context.Context, method string, body []byte, accept st
 				continue
 			}
 			return nil, ae
+		case http.StatusForbidden:
+			h := resp.Header.Get("WWW-Authenticate")
+			if authParams(h)["error"] == "insufficient_scope" {
+				drain(resp)
+				ae := parseAuthenticate(h)
+				ae.InsufficientScope = true
+				return nil, ae
+			}
 		case http.StatusNotFound:
 			c.mu.Lock()
 			had := c.session != ""

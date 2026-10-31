@@ -23,6 +23,50 @@ import (
 // sign-in.
 var ErrSignInNeeded = errors.New("sign in first: AI: MCP Servers… → the server → Sign in")
 
+// ErrMoreAccess: the server answered 403 insufficient_scope; a new
+// sign-in asks for the missing scopes (step-up).
+var ErrMoreAccess = errors.New("this needs more access: AI: MCP Servers… → the server → Sign in again (it asks for the missing access)")
+
+// stepUp marks a server for a sign-in with more scopes after a 403
+// insufficient_scope; false when the server does not use our sign-in.
+func (m *Manager) stepUp(st *serverState, ae *AuthError) bool {
+	m.mu.Lock()
+	cfg := st.cfg
+	m.mu.Unlock()
+	if cfg.Type != TypeHTTP || hasAuthHeader(cfg.Headers) || m.opts.Tokens == nil || (cfg.Auth != nil && cfg.Auth.GH != "") {
+		return false
+	}
+	have := ""
+	if e, ok := m.opts.Tokens.Load(cfg.Name); ok {
+		have = e.Scope
+	}
+	want := unionScopes(have, ae.Scope)
+	m.mu.Lock()
+	st.state, st.problem = StateSignIn, "more access needed: "+want
+	st.authScope, st.stepUp = want, true
+	if ae.ResourceMetadata != "" {
+		st.authMeta = ae.ResourceMetadata
+	}
+	m.mu.Unlock()
+	m.log(cfg.Name, "the server wants more access (%s): sign in again", want)
+	return true
+}
+
+// unionScopes joins space-separated scope lists, each once, in order.
+func unionScopes(lists ...string) string {
+	seen := map[string]bool{}
+	var out []string
+	for _, l := range lists {
+		for _, s := range strings.Fields(l) {
+			if !seen[s] {
+				seen[s] = true
+				out = append(out, s)
+			}
+		}
+	}
+	return strings.Join(out, " ")
+}
+
 // TokenStore keeps the OAuth sign-ins by server name.
 type TokenStore interface {
 	Load(name string) (ai.MCPOAuth, bool)
@@ -239,7 +283,7 @@ func (m *Manager) BeginSignInWith(ctx context.Context, name string, so SignInOpt
 	}
 	m.mu.Lock()
 	cfg, trusted := st.cfg, m.trustedLocked(st)
-	meta, scope := st.authMeta, st.authScope
+	meta, scope, stepUp := st.authMeta, st.authScope, st.stepUp
 	m.mu.Unlock()
 	if cfg.Type != TypeHTTP {
 		return nil, errors.New("only remote (http) servers sign in")
@@ -270,6 +314,9 @@ func (m *Manager) BeginSignInWith(ctx context.Context, name string, so SignInOpt
 		c.MetadataURL = exp.OAuth.MetadataURL
 		if len(exp.OAuth.Scopes) > 0 {
 			c.Scopes = exp.OAuth.Scopes
+			if stepUp { // the entry's scopes and the ones the server wants now
+				c.Scopes = strings.Fields(unionScopes(strings.Join(exp.OAuth.Scopes, " "), scope))
+			}
 		}
 	}
 	if m.opts.OAuthPort != nil {
@@ -301,6 +348,10 @@ func (m *Manager) FinishSignIn(name string, e ai.MCPOAuth) error {
 		if st.state == StateSignIn || st.state == StateFailed {
 			st.state, st.problem = StateStopped, ""
 		}
+		if st.proc != nil && st.stepUp {
+			st.state = StateRunning // the connection stays; the next call sends the new token
+		}
+		st.stepUp = false
 		m.mu.Unlock()
 	}
 	m.log(name, "signed in")

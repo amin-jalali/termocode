@@ -78,6 +78,7 @@ type AuthServer struct {
 	clients       map[string]string // client_id → secret ("" public)
 	codes         map[string]authCode
 	access        map[string]string // token → resource
+	scopes        map[string]string // token → scope
 	refresh       map[string]string // refresh token → client_id
 	n             int
 	Registrations []map[string]any
@@ -93,7 +94,7 @@ type AuthServer struct {
 // NewAuthServer starts the fake; it closes with the test.
 func NewAuthServer(t testing.TB, o AuthOptions) *AuthServer {
 	a := &AuthServer{O: o, clients: map[string]string{}, codes: map[string]authCode{},
-		access: map[string]string{}, refresh: map[string]string{}, devices: map[string]*deviceCode{}}
+		access: map[string]string{}, scopes: map[string]string{}, refresh: map[string]string{}, devices: map[string]*deviceCode{}}
 	if o.PreClientID != "" {
 		a.clients[o.PreClientID] = o.PreSecret
 	}
@@ -129,6 +130,13 @@ func (a *AuthServer) ResourceOf(token string) string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.access[token]
+}
+
+// ScopeOf is the scope an access token was issued with.
+func (a *AuthServer) ScopeOf(token string) string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.scopes[token]
 }
 
 // RevokeAccess forgets every access token (refresh tokens stay valid).
@@ -341,6 +349,7 @@ func (a *AuthServer) token(w http.ResponseWriter, r *http.Request) {
 	}
 	at, rt := a.next("at"), a.next("rt")
 	a.access[at] = resource
+	a.scopes[at] = scope
 	exp := a.O.ExpiresIn
 	if exp == 0 {
 		exp = 3600
