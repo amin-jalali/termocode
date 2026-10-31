@@ -343,12 +343,15 @@ func (p *Page) Tap(sel string) {
 func (p *Page) TapJS(el string) {
 	p.T.Helper()
 	p.WaitJS(el)
-	// The point is read only once the target has stood still, in view,
-	// for a few frames: a view still scrolling (a smooth scroll, slow on
-	// the macOS runner) would carry it away from a point read at once.
+	// The point is read only once the fonts are in and the target has
+	// stood still, in view, for a few frames, and the point hits the
+	// target: a view still scrolling (a smooth scroll, slow on the macOS
+	// runner) or a late font swap would carry it away from a point read
+	// at once (the press then missed the button). A target that stays
+	// covered (on purpose) is tapped after 60 more still frames.
 	ctx, cancel := context.WithTimeout(p.Ctx, wait)
 	defer cancel()
-	pt, err := chromedp.Run(ctx, chromedp.Evaluate[struct{ X, Y float64 }](`new Promise((done) => {
+	pt, err := chromedp.Run(ctx, chromedp.Evaluate[struct{ X, Y float64 }](`document.fonts.ready.then(() => new Promise((done) => {
 		const el = `+el+`;
 		el.scrollIntoView({block: "center", inline: "center"});
 		let last = "", still = 0;
@@ -358,14 +361,18 @@ func (p *Page) TapJS(el string) {
 			last = at;
 			if (still >= 3) {
 				const x = r.left + r.width / 2, y = r.top + r.height / 2;
-				if (x >= 0 && y >= 0 && x <= innerWidth && y <= innerHeight) return done({X: x, Y: y});
-				el.scrollIntoView({block: "center", inline: "center"});
-				still = 0;
+				if (x >= 0 && y >= 0 && x <= innerWidth && y <= innerHeight) {
+					const hit = document.elementFromPoint(x, y);
+					if ((hit && el.contains(hit)) || still >= 63) return done({X: x, Y: y});
+				} else {
+					el.scrollIntoView({block: "center", inline: "center"});
+					still = 0;
+				}
 			}
 			requestAnimationFrame(look);
 		};
 		requestAnimationFrame(look);
-	})`, chromedp.EvalAwaitPromise))
+	}))`, chromedp.EvalAwaitPromise))
 	if err != nil {
 		p.T.Fatalf("%s: tap %s: the target did not stand still in view within %s: %v", p.VP.Name, short(el), wait, err)
 	}
