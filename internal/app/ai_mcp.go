@@ -416,6 +416,8 @@ func (m *Model) openMCPServerActions(name string) tea.Cmd {
 	m.aiS().mcpSel = name
 	items := mcpServerActionItems(m, name)
 	m.picker = picker.NewItems(" MCP "+name+" — "+mcpStatusHint(st)+" ", items)
+	m.picker.SetWidth(mcpServeStatusWidth(m.w))
+	m.picker.SetNote(mcpDetailLines(m, name)) // ai_mcp_detail.go
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindMCPServer
