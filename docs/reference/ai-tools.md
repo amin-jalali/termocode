@@ -1620,6 +1620,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-mcp-config` | Open Config: MCP Servers | never | AI provider, credentials and approvals stay with the user |
 | `ai-mcp-connect` | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | never | AI provider, credentials and approvals stay with the user (signing in to services is the user's) |
 | `ai-mcp-log` | AI: MCP: Show Log | auto |   |
+| `ai-mcp-reset-cache` | AI: MCP: Reset Tool Lists | never | AI provider, credentials and approvals stay with the user |
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory` | AI: Memory… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory-toggle` | AI: Memory: Turn On/Off | never | AI provider, credentials and approvals stay with the user |
