@@ -17,10 +17,13 @@ func TestFindResultsPage(t *testing.T) {
 	tm.Type("note")
 	tm.settle()
 	tm.Send(KeyEnter)
-	tm.WaitText("1 match across 1 file", uiTimeout)
-	if s := tm.Screen(); !strings.Contains(s, "notes.txt") || !strings.Contains(s, "1   first note") {
-		t.Fatalf("page lacks the header or the match row:\n%s", s)
-	}
+	// The header and the match row together: the header line can be read
+	// while the rest of the frame is still coming in (the rows below were
+	// still the welcome page on the macOS runner).
+	tm.WaitFor("the header and the match row", uiTimeout, func(ls []string) bool {
+		s := strings.Join(ls, "\n")
+		return strings.Contains(s, "1 match across 1 file") && strings.Contains(s, "notes.txt") && strings.Contains(s, "1   first note")
+	})
 	tm.settle()
 	tm.ClickText("1   first note")
 	tm.WaitText("Ln 1, Col", uiTimeout)
