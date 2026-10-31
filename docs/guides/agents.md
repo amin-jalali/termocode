@@ -238,6 +238,24 @@ termocode agent wait t3 --until done --timeout 20m
   folder's workspace. The socket is in termocode's private session folder;
   only your own user can connect. Not on Windows.
 
+### Exact states with hooks
+
+By default termocode guesses an agent's state from its screen. With
+**Agent: State Hooks…** the agent tells termocode itself:
+
+- **Claude Code**: four hooks in `~/.claude/settings.json`
+  (`UserPromptSubmit`, `PreToolUse` → working, `Notification` → waiting,
+  `Stop` → done).
+- **Codex**: one `notify` line at the top of `~/.codex/config.toml`
+  (done at the end of each turn). If the file has its own `notify`,
+  termocode does not touch it.
+
+The card shows the file and every line that changes; **Not now** is
+first. The old file is kept as `<file>.termocode-backup`. The hook runs
+`termocode agent report <state>`, which does nothing outside a termocode
+terminal. Pick the agent again to **Remove** the hooks. `termocode agent
+list` shows `hook` or `screen` as the source of each state (`--json`).
+
 ## If something does not work
 
 | What you see | Try this |
