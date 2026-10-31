@@ -159,3 +159,63 @@ func addOpenAIReasoning(body map[string]any, kind, model, level string) {
 		body["reasoning"] = map[string]any{"effort": openAIEffort(level)}
 	}
 }
+
+// ReasoningKeyword is the level a chat message asks for with a keyword:
+// "ultrathink" → max, "think" → high ("" for none). A keyword counts as
+// a whole word (letters, digits, '-' and '_' join a word), in any case,
+// outside code (``` fences and `inline` spans). The chat shows it as a
+// chip the user can remove before sending; it raises the level of that
+// one turn only.
+func ReasoningKeyword(msg string) string {
+	best := ""
+	for _, w := range proseWords(msg) {
+		switch strings.ToLower(w) {
+		case "ultrathink":
+			return ReasoningMax
+		case "think":
+			best = ReasoningHigh
+		}
+	}
+	return best
+}
+
+// proseWords are the words of s outside code fences and inline code.
+func proseWords(s string) []string {
+	var words []string
+	var cur strings.Builder
+	flush := func() {
+		if cur.Len() > 0 {
+			words = append(words, cur.String())
+			cur.Reset()
+		}
+	}
+	for i := 0; i < len(s); {
+		if strings.HasPrefix(s[i:], "```") {
+			flush()
+			end := strings.Index(s[i+3:], "```")
+			if end < 0 {
+				return words // an open fence: the rest is code
+			}
+			i += 3 + end + 3
+			continue
+		}
+		c := s[i]
+		if c == '`' {
+			flush()
+			if end := strings.IndexByte(s[i+1:], '`'); end >= 0 {
+				i += 1 + end + 1
+				continue
+			}
+			i++ // a lone backtick is text
+			continue
+		}
+		if c == '-' || c == '_' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= 0x80 {
+			cur.WriteByte(c)
+		} else {
+			flush()
+		}
+		i++
+	}
+	flush()
+	return words
+}
