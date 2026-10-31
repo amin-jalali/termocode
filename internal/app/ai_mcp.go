@@ -425,6 +425,7 @@ func (m *Model) openMCPServers() tea.Cmd {
 	items := make([]picker.Item, 0, len(list)+1)
 	items = append(items, picker.Item{ID: mcpAddID, Title: "+ Connect a service…", Hint: "GitHub, Linear, GitLab, Slack, Notion …"})
 	set := mcp.LoadSettings(mcpConfigPath())
+	ups := mcpKnownUpdates() // mcp_updates.go: from the cached catalog
 	total := 0
 	for _, st := range list {
 		title := mcpStatusIcon(st) + " " + st.Name
@@ -432,7 +433,7 @@ func (m *Model) openMCPServers() tea.Cmd {
 			total += n
 			title += "  " + mcpTokensText(n)
 		}
-		items = append(items, picker.Item{ID: st.Name, Title: title, Hint: mcpStatusHint(st)})
+		items = append(items, picker.Item{ID: st.Name, Title: title, Hint: mcpUpdateHint(ups, st.Name) + mcpStatusHint(st)})
 	}
 	m.picker = picker.NewItems(" MCP servers (Enter: actions) ", items)
 	m.picker.SetWidth(mcpServeStatusWidth(m.w))
@@ -440,7 +441,7 @@ func (m *Model) openMCPServers() tea.Cmd {
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindMCPServers
-	return nil
+	return mcpAutoCheck()
 }
 
 // openMCPServerActions is the second picker for one server.
@@ -488,6 +489,7 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 		// UX-19: the failed start is one key away from a new try.
 		items = append([]picker.Item{{ID: "retry", Title: "Retry", Hint: "start it again"}}, items...)
 	}
+	items = append(items, mcpUpdateItems(name)...) // mcp_updates.go
 	if st.Pid > 0 {
 		hint := fmt.Sprintf("pid %d", st.Pid)
 		if st.Shared && st.Sessions > 1 {
@@ -597,6 +599,9 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 	}
 	if st.Name == "" {
 		return nil
+	}
+	if c, ok := m.onMCPUpdateAction(id, name); ok { // mcp_updates.go
+		return c
 	}
 	switch id {
 	case "connect", "retry":

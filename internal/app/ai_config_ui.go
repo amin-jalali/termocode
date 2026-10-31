@@ -163,6 +163,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerMCPCatalogAdd(id), true
 	case confirmKindMCPBundle: // mcp_bundle.go
 		return m.answerMCPBundle(id), true
+	case confirmKindMCPUpdate: // mcp_updates.go
+		return m.answerMCPUpdate(id), true
 	case confirmKindItermocAgentRevoke: // itermoc_agent_page.go
 		return m.answerItermocAgentRevoke(id), true
 	case confirmKindAISlotRemove: // itermoc_slots.go
