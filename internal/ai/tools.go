@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -368,15 +369,43 @@ func WorkspaceTools(w Workspace) []Tool {
 			},
 		},
 		{
-			Name: "search", Description: "Search the workspace for a literal text pattern (max 50 matches).",
-			Params: map[string]any{"query": strParam("text to find")}, Required: []string{"query"},
-			Describe: func(a map[string]any) string { return fmt.Sprintf("Search: %q", ArgString(a, "query")) },
+			Name: "search", Description: "Search the workspace for text: a literal pattern, or a regular expression with regex=true; " +
+				"glob limits the files (\"*.go\", \"src/**\", \"!*_test.go\"; comma-separated). Max 50 matches.",
+			Params: map[string]any{
+				"query": strParam("text (or regex) to find"),
+				"regex": map[string]any{"type": "boolean", "description": "treat query as a regular expression"},
+				"glob":  strParam("file globs to search in, comma-separated; a leading ! drops files (optional)"),
+			},
+			Required: []string{"query"},
+			Describe: func(a map[string]any) string {
+				s := fmt.Sprintf("Search: %q", ArgString(a, "query"))
+				if ArgBool(a, "regex") {
+					s += " (regex)"
+				}
+				if g := ArgString(a, "glob"); g != "" {
+					s += " in " + g
+				}
+				return s
+			},
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				q := ArgString(a, "query")
 				if q == "" {
 					return "", errors.New("query is empty")
 				}
-				res, sum, err := search.Collect(ctx, []string{w.Root}, q, search.Options{MaxResults: 50})
+				opts := search.Options{MaxResults: 50, Regex: ArgBool(a, "regex")}
+				if opts.Regex {
+					if _, err := regexp.Compile(q); err != nil {
+						return "", fmt.Errorf("bad regex: %v", err)
+					}
+				}
+				for _, g := range search.SplitGlobs(ArgString(a, "glob")) {
+					if e, ok := strings.CutPrefix(g, "!"); ok {
+						opts.Exclude = append(opts.Exclude, e)
+					} else {
+						opts.Include = append(opts.Include, g)
+					}
+				}
+				res, sum, err := search.Collect(ctx, []string{w.Root}, q, opts)
 				if err != nil {
 					return "", err
 				}
@@ -395,6 +424,42 @@ func WorkspaceTools(w Workspace) []Tool {
 				}
 				if sum.Truncated() {
 					fmt.Fprintf(&b, "(showing %d of %d)\n", sum.Shown, sum.Total)
+				}
+				return capOut(b.String(), maxOutBytes), nil
+			},
+		},
+		{
+			Name: "glob", Description: "Find files by name pattern (\"**/*_test.go\", \"src/*.ts\"; comma-separated, a leading ! drops files). " +
+				"Skips ignored, hidden and dependency folders. Max 200 paths.",
+			Params: map[string]any{
+				"pattern": strParam("file globs, comma-separated"),
+				"path":    strParam("folder to look in, relative to the workspace (default: root)"),
+			},
+			Required: []string{"pattern"},
+			Validate: inside,
+			Describe: func(a map[string]any) string { return "Find files: " + ArgString(a, "pattern") },
+			Run: func(ctx context.Context, a map[string]any) (string, error) {
+				globs := search.SplitGlobs(ArgString(a, "pattern"))
+				if len(globs) == 0 {
+					return "", errors.New("pattern is empty")
+				}
+				abs, err := w.Resolve(path(a))
+				if err != nil {
+					return "", err
+				}
+				files, total, err := search.Files(ctx, abs, globs, 200)
+				if err != nil {
+					return "", err
+				}
+				if len(files) == 0 {
+					return "no files", nil
+				}
+				var b strings.Builder
+				for _, f := range files {
+					b.WriteString(filepath.ToSlash(w.rel(filepath.Join(abs, filepath.FromSlash(f)))) + "\n")
+				}
+				if total > len(files) {
+					fmt.Fprintf(&b, "(showing %d of %d; narrow the pattern)\n", len(files), total)
 				}
 				return capOut(b.String(), maxOutBytes), nil
 			},
