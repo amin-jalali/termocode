@@ -264,10 +264,14 @@ func run() {
 				Arguments map[string]any `json:"arguments"`
 				Meta      struct {
 					ProgressToken json.RawMessage `json:"progressToken"`
+					Traceparent   string          `json:"traceparent"`
 				} `json:"_meta"`
 			}
 			_ = json.Unmarshal(m.Params, &p)
 			logf("call " + p.Name)
+			if p.Meta.Traceparent != "" {
+				logf("traceparent " + p.Meta.Traceparent)
+			}
 			if stateless {
 				if res, rerr, ok := MRTR(p.Name, m.Params); ok {
 					_ = c.Reply(m.ID, res, rerr)

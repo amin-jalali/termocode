@@ -314,6 +314,12 @@ func (c *Client) callTool(ctx context.Context, name string, args map[string]any,
 			c.mu.Unlock()
 		}()
 	}
+	if tp := traceparentFrom(ctx); tp != "" { // the call's trace span (otel.go)
+		if meta == nil {
+			meta = map[string]any{}
+		}
+		meta["traceparent"] = tp
+	}
 	if meta != nil {
 		params["_meta"] = meta
 	}

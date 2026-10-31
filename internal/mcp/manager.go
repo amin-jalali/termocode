@@ -848,8 +848,15 @@ func (m *Manager) Connect(ctx context.Context, ask AskTrust, name string) error 
 	return err
 }
 
-// Call runs one tool, starting the server when needed.
+// Call runs one tool, starting the server when needed; a trace span
+// covers it when tracing is on (otel.go).
 func (m *Manager) Call(ctx context.Context, ask AskTrust, server, tool string, args map[string]any) (CallResult, error) {
+	return traceCall(ctx, server, tool, func() string { return m.serverVersion(server) }, func(ctx context.Context) (CallResult, error) {
+		return m.call(ctx, ask, server, tool, args)
+	})
+}
+
+func (m *Manager) call(ctx context.Context, ask AskTrust, server, tool string, args map[string]any) (CallResult, error) {
 	st, err := m.get(server)
 	if err != nil {
 		return CallResult{}, err
