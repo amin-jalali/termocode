@@ -127,7 +127,7 @@ return vim.api.nvim_buf_get_name(b)`, m.confirmTargetID)
 			return m.onQuitConfirm("save"), true
 		case saveAndClose:
 			m.confirmKind = confirmKindCloseBuffer
-			return m.handleConfirmSelect("save"), true
+			return m.answerCloseBuffer("save"), true
 		}
 	}
 	return tea.Batch(fetchGitCmd(), c), true

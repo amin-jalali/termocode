@@ -128,6 +128,39 @@ func (m *Model) promptCloseBufferIfDirty(id int) bool {
 	return true
 }
 
+// answerCloseBuffer answers the close-buffer card (Save / Don't Save /
+// Cancel). The save-conflict card calls it too after "Overwrite", so the
+// close goes on without passing through handleConfirmSelect.
+func (m *Model) answerCloseBuffer(id string) tea.Cmd {
+	switch id {
+	case "cancel":
+		m.closeQueue = nil
+		return nil
+	case "save":
+		if m.askSaveConflict(m.confirmTargetID, saveAndClose) {
+			return nil
+		}
+		if m.nvim != nil {
+			if err := m.nvim.Command(fmt.Sprintf("buffer %d | update | bdelete %d", m.confirmTargetID, m.confirmTargetID)); err != nil {
+				m.closeQueue = nil
+				return m.pushToastDetail(toast.Errr, "Save failed", err.Error())
+			}
+		}
+		if buf, ok := m.findBuffer(m.confirmTargetID); ok {
+			m.pushClosed(buf.Path)
+		}
+	case "discard":
+		if buf, ok := m.findBuffer(m.confirmTargetID); ok {
+			m.pushClosed(buf.Path)
+		}
+		if m.nvim != nil {
+			_ = m.nvim.Command(discardBufferCmd(m.confirmTargetID))
+		}
+	}
+	m.drainCloseQueue() // Close Others / to the Right go on
+	return nil
+}
+
 func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if m.confirmKind == confirmKindKeyCard {
 		return m.answerKeyCard(id)
@@ -187,32 +220,7 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	case confirmKindMergeWholeFile:
 		return m.onMergeWholeCard(id)
 	case confirmKindCloseBuffer:
-		switch id {
-		case "cancel":
-			m.closeQueue = nil
-			return nil
-		case "save":
-			if m.askSaveConflict(m.confirmTargetID, saveAndClose) {
-				return nil
-			}
-			if m.nvim != nil {
-				if err := m.nvim.Command(fmt.Sprintf("buffer %d | update | bdelete %d", m.confirmTargetID, m.confirmTargetID)); err != nil {
-					m.closeQueue = nil
-					return m.pushToastDetail(toast.Errr, "Save failed", err.Error())
-				}
-			}
-			if buf, ok := m.findBuffer(m.confirmTargetID); ok {
-				m.pushClosed(buf.Path)
-			}
-		case "discard":
-			if buf, ok := m.findBuffer(m.confirmTargetID); ok {
-				m.pushClosed(buf.Path)
-			}
-			if m.nvim != nil {
-				_ = m.nvim.Command(discardBufferCmd(m.confirmTargetID))
-			}
-		}
-		m.drainCloseQueue() // Close Others / to the Right go on
+		return m.answerCloseBuffer(id)
 	case confirmKindDeletePath:
 		switch id {
 		case "cancel":
