@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"github.com/amin-jalali/termocode/internal/netmsg"
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -101,7 +102,11 @@ func (m *Model) updateCheckNow() tea.Cmd {
 // onUpdateManual shows the card or says termocode is up to date.
 func (m *Model) onUpdateManual(msg updateManualMsg) tea.Cmd {
 	if msg.err != nil {
-		return m.pushToastDetail(toast.Warn, "Could not check for updates", msg.err.Error())
+		detail := msg.err.Error()
+		if why, ok := netmsg.Why(msg.err); ok {
+			detail = why
+		}
+		return m.pushToastDetail(toast.Warn, "Could not check for updates", detail)
 	}
 	w := m.updW()
 	w.state = msg.state

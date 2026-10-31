@@ -2,8 +2,10 @@ package app
 
 import (
 	"net"
+	"net/url"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -47,5 +49,15 @@ func TestUpdateCheckOffline(t *testing.T) {
 	updRun(t, m2, m2.updateCheckNow())
 	if got := toastText(*m2); strings.Count(got, "Could not check for updates") != 1 {
 		t.Errorf("manual check offline: toast %q", got)
+	}
+}
+
+func TestUpdateManualErrorUsesPlainCause(t *testing.T) {
+	m := &Model{w: 160, h: 40}
+	err := &url.Error{Op: "Get", URL: "https://example.test/x", Err: &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}}
+	m.onUpdateManual(updateManualMsg{err: err})
+	got := toastText(*m)
+	if !strings.Contains(got, "refused the connection") || strings.Contains(got, "dial tcp") {
+		t.Errorf("toast shows the raw error: %q", got)
 	}
 }
