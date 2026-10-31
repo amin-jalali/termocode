@@ -150,7 +150,9 @@ request:
 	for i < len(lines) && !isBlank(lines[i]) {
 		h := lines[i]
 		i++
-		if isComment(h) {
+		// An indented "# x" is a comment too: read as a header named
+		// "#", it would save as "#: x", which reads back as a comment.
+		if isComment(strings.TrimSpace(h)) {
 			continue
 		}
 		k, v, ok := strings.Cut(h, ":")
