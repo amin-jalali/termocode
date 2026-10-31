@@ -441,7 +441,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-servers":      aiNever(aiNoPicker),
 	"ai-mcp-connect":      aiNever(aiNoAIConfig + " (signing in to services is the user's)"),
 	"ai-mcp-log":          aiAuto(),
-	"ai-mcp-config":       aiNever(aiNoAIConfig),
+	// Only servers that ran before (no trust card); network only.
+	"ai-mcp-reconnect-all": aiConfirm(ai.ClassIDE),
+	"ai-mcp-config":        aiNever(aiNoAIConfig),
 	// termocode as an MCP server (mcp_serve_status.go): the user's own
 	// screens; the config snippet is for the user's agents, not the chat.
 	"mcp-serve-status":      aiNever(aiNoPicker),
