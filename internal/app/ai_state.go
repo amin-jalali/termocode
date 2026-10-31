@@ -207,7 +207,8 @@ type aiState struct {
 	mcp       *mcp.Manager
 	mcpTrust  *aiMCPTrustPending
 	mcpSel    string
-	mcpSecret string // the ${secret:NAME} being entered
+	mcpSecret string         // the ${secret:NAME} being entered
+	mcpImport []mcp.Imported // the open Import from Other Apps card (mcp_import_other.go)
 	// mcpUntrustTool is the tool the Reset trust card is about ("" = the
 	// whole server; ai_mcp_untrust.go).
 	mcpUntrustTool string
