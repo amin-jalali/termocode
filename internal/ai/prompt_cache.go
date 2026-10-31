@@ -37,10 +37,11 @@ func promptCacheMode(v string) string {
 }
 
 // anthropicBody is the Messages API body run sends: buildAnthropicBody
-// plus the options of cfg (prompt cache).
+// plus the options of cfg (prompt cache, reasoning level).
 func anthropicBody(req Request, model string, cfg Config) map[string]any {
 	body := buildAnthropicBody(req, model, cfg.Kind == KindClaudeOAuth)
 	addPromptCache(body, cfg.PromptCache)
+	addAnthropicReasoning(body, model, reasoningOf(req, cfg))
 	return body
 }
 

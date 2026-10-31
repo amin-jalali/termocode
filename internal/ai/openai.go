@@ -98,6 +98,17 @@ func buildOpenAIBody(req Request, model string) map[string]any {
 	return body
 }
 
+// openAIBody is the body run sends: buildOpenAIBody plus the options of
+// cfg (usage counts, reasoning level).
+func openAIBody(req Request, model string, cfg Config) map[string]any {
+	body := buildOpenAIBody(req, model)
+	if openAISendsUsage(cfg.Kind) {
+		body["stream_options"] = map[string]any{"include_usage": true}
+	}
+	addOpenAIReasoning(body, cfg.Kind, model, reasoningOf(req, cfg))
+	return body
+}
+
 // openAISendsUsage reports whether requests of kind ask for token counts
 // with stream_options.include_usage (one last chunk with "usage" and no
 // choices). OpenAI, OpenRouter, Ollama and LM Studio accept it; a custom
@@ -121,11 +132,7 @@ func (p *openAIProvider) run(ctx context.Context, req Request, ch chan<- Chunk) 
 	if model == "" {
 		model = p.cfg.Model
 	}
-	body := buildOpenAIBody(req, model)
-	if openAISendsUsage(p.cfg.Kind) {
-		body["stream_options"] = map[string]any{"include_usage": true}
-	}
-	payload, err := marshalBody(body)
+	payload, err := marshalBody(openAIBody(req, model, p.cfg))
 	if err != nil {
 		return Chunk{Done: true, Err: err}
 	}
