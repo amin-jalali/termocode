@@ -175,7 +175,7 @@ type Manager struct {
 	servers  map[string]*serverState
 	warnings []string
 	closed   bool
-	retrying sync.WaitGroup // reconnect tries in flight
+	retrying sync.WaitGroup  // reconnect tries in flight
 	life     context.Context // ends with Close (cuts reconnect tries)
 	end      context.CancelFunc
 }
