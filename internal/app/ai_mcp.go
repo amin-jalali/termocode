@@ -392,10 +392,19 @@ func (m *Model) openMCPServers() tea.Cmd {
 	list := mgr.Servers()
 	items := make([]picker.Item, 0, len(list)+1)
 	items = append(items, picker.Item{ID: mcpAddID, Title: "+ Connect a service…", Hint: "GitHub, Linear, GitLab, Slack, Notion …"})
+	set := mcp.LoadSettings(mcpConfigPath())
+	total := 0
 	for _, st := range list {
-		items = append(items, picker.Item{ID: st.Name, Title: mcpStatusIcon(st) + " " + st.Name, Hint: mcpStatusHint(st)})
+		title := mcpStatusIcon(st) + " " + st.Name
+		if n := mcpServerTokens(m, st.Name, set); n > 0 { // ai_mcp_tokens.go; the hint is cut when long
+			total += n
+			title += "  " + mcpTokensText(n)
+		}
+		items = append(items, picker.Item{ID: st.Name, Title: title, Hint: mcpStatusHint(st)})
 	}
 	m.picker = picker.NewItems(" MCP servers (Enter: actions) ", items)
+	m.picker.SetWidth(mcpServeStatusWidth(m.w))
+	m.picker.SetNote(mcpTokenNote(total))
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindMCPServers
