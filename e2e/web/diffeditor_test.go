@@ -135,7 +135,7 @@ func TestDiffEditorWorkingTree(t *testing.T) {
 	}
 	// Typing on the right edits the laptop's buffer.
 	Eval[bool](p, `(`+diffView+`.querySelector(".desk-editor").focus(), `+diffDoc+`.querySelector(".editor.modified .native-edit-context, .editor.modified textarea").focus(), true)`)
-	p.Do(chromedp.KeyEvent(kb.Home, modKey()))
+	p.Do(deskTextEnd(false))
 	p.Do(chromedp.KeyEvent("X"))
 	r, a := expectSetText(t, c)
 	if a.Buf != 2 || a.Tick != 3 || strings.Join(a.Lines, "|") != "X" {

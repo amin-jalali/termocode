@@ -3,6 +3,7 @@
 package web
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -46,12 +47,24 @@ func deskFocus(p *Page) {
 func deskType(p *Page, end bool, s string) {
 	p.T.Helper()
 	deskFocus(p)
-	k := kb.Home
-	if end {
-		k = kb.End
-	}
-	p.Do(chromedp.KeyEvent(k, modKey()))
+	p.Do(deskTextEnd(end))
 	p.Do(chromedp.KeyEvent(s))
+}
+
+// deskTextEnd moves the desktop editor's caret to the text's start (or
+// end) with the system's keys: Ctrl+Home/End, or Cmd+Up/Down on a Mac
+// (where Cmd+Home/End do nothing).
+func deskTextEnd(end bool) chromedp.Action[chromedp.Void] {
+	if runtime.GOOS == "darwin" {
+		if end {
+			return chromedp.KeyEvent(kb.ArrowDown, modKey())
+		}
+		return chromedp.KeyEvent(kb.ArrowUp, modKey())
+	}
+	if end {
+		return chromedp.KeyEvent(kb.End, modKey())
+	}
+	return chromedp.KeyEvent(kb.Home, modKey())
 }
 
 func TestDeskEditorTwoWaySyncAndUndo(t *testing.T) {

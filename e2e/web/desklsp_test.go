@@ -68,7 +68,7 @@ func enterKey(p *Page) {
 func deskCaret(p *Page, row, n int) {
 	p.T.Helper()
 	deskFocus(p)
-	p.Do(chromedp.KeyEvent(kb.Home, modKey()))
+	p.Do(deskTextEnd(false))
 	for i := 0; i < row; i++ {
 		p.Do(chromedp.KeyEvent(kb.ArrowDown))
 	}
