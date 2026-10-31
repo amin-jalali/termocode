@@ -38,6 +38,12 @@ func (a *Agent) withImageSink(ctx context.Context) (context.Context, func() []Im
 	if !a.Native || !SupportsImages(a.Provider) {
 		return ctx, func() []Image { return nil }
 	}
+	return WithImageSink(ctx)
+}
+
+// WithImageSink returns ctx in which AttachImages collects images, and
+// the function that takes them (callers that run a tool themselves).
+func WithImageSink(ctx context.Context) (context.Context, func() []Image) {
 	s := &imageSink{}
 	return context.WithValue(ctx, imageSinkKey{}, s), func() []Image {
 		s.mu.Lock()

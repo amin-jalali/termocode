@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/base64"
 	"regexp"
 	"strings"
 	"testing"
@@ -150,5 +151,65 @@ func TestAIToolsRedactKnownSecrets(t *testing.T) {
 	out, err := got[0].Run(context.Background(), map[string]any{})
 	if err != nil || strings.Contains(out, secret) || !strings.Contains(out, "signed in with token") {
 		t.Errorf("result %q %v", out, err)
+	}
+}
+
+func imageResult(mime string, n int) CallResult {
+	return CallResult{Content: []Content{{Type: "text", Text: "here"}, {Type: "image", MimeType: mime, Data: base64.StdEncoding.EncodeToString(make([]byte, n))}}}
+}
+
+// MCPX-11: an image from a server goes to a vision model as an image,
+// with a short note in the text; a text-only model gets only the note.
+func TestAIToolsImageToVisionModel(t *testing.T) {
+	res := imageResult("image/png", 3<<10)
+	call := func(context.Context, string, string, map[string]any) (CallResult, error) { return res, nil }
+	tool := AITools(Server{Name: "fake"}, []Tool{{Name: "shot", Annotations: ann(bp(true), nil)}}, call, AdapterOptions{TrustAnnotations: true})[0]
+
+	ctx, take := ai.WithImageSink(context.Background())
+	out, err := tool.Run(ctx, nil)
+	imgs := take()
+	if err != nil || len(imgs) != 1 || imgs[0].MediaType != "image/png" || len(imgs[0].Data) != 3<<10 {
+		t.Fatalf("images %d, err %v", len(imgs), err)
+	}
+	if !strings.Contains(out, "here") || !strings.Contains(out, "[image image/png, 3 KB — attached]") {
+		t.Errorf("vision note: %q", out)
+	}
+
+	out, _ = tool.Run(context.Background(), nil)
+	if !strings.Contains(out, "[image image/png, 3 KB — not shown: this model does not take images]") {
+		t.Errorf("text-only note: %q", out)
+	}
+}
+
+// Limits: an image over 5 MB, a type models do not take, more than 4
+// images in one result and audio are never sent; each gets a note.
+func TestAIToolsImageLimits(t *testing.T) {
+	cases := []struct {
+		res  CallResult
+		want string
+		sent int
+	}{
+		{imageResult("image/png", 6<<20), "— not shown: over the 5 MB limit]", 0},
+		{imageResult("image/tiff", 10), "— not shown: the type is not supported]", 0},
+		{CallResult{Content: []Content{{Type: "audio", MimeType: "audio/wav", Data: "AAAA"}}}, "[audio audio/wav, 3 B — not shown: audio is not sent to the model]", 0},
+		{CallResult{Content: []Content{{Type: "image", MimeType: "image/png", Data: "%%%"}}}, "— not shown: bad data]", 0},
+	}
+	many := CallResult{}
+	for i := 0; i < 6; i++ {
+		many.Content = append(many.Content, Content{Type: "image", MimeType: "image/jpeg", Data: "AAAA"})
+	}
+	cases = append(cases, struct {
+		res  CallResult
+		want string
+		sent int
+	}{many, "— not shown: more than 4 images]", 4})
+	for i, c := range cases {
+		call := func(context.Context, string, string, map[string]any) (CallResult, error) { return c.res, nil }
+		tool := AITools(Server{Name: "fake"}, []Tool{{Name: "shot", Annotations: ann(bp(true), nil)}}, call, AdapterOptions{TrustAnnotations: true})[0]
+		ctx, take := ai.WithImageSink(context.Background())
+		out, _ := tool.Run(ctx, nil)
+		if n := len(take()); n != c.sent || !strings.Contains(out, c.want) {
+			t.Errorf("case %d: sent %d (want %d), out %q", i, n, c.sent, out)
+		}
 	}
 }
