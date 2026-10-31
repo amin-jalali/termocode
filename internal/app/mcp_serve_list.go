@@ -50,7 +50,7 @@ func (s *mcpServeSource) List() []mcp.Tool {
 			out = append(out, t)
 		}
 	}
-	return out
+	return append(out, s.gatewaySpecs()...)
 }
 
 // ToolsCanChange: the list follows the connections (mcp.ToolListChanger).
