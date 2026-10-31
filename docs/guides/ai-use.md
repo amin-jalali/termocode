@@ -728,6 +728,32 @@ card.
 Knowledge files the AI loads only when a task needs them: see
 [AI skills](ai-skills.md).
 
+### Memory in a linked worktree
+
+A linked Git worktree also reads the lessons of its main checkout. They are
+read-only here and shown with a Close-only page. New lessons are saved in
+the worktree itself.
+
+## AI: Doctor
+
+**AI: Doctor** shows, for each profile step, the model slot, the provider
+and the key state (present, missing, locked, or sign-in saved). It reads
+your config only: no model call, no key shown, no server check.
+
+## Notifications
+
+When the terminal is not focused, termocode tells you when AI work ends,
+pauses, is blocked, or needs your input. The text is generic: no prompt,
+path or tool output. Over SSH it uses your own terminal; locally it uses
+the desktop helper. Turn it off with the `notifications` setting.
+
+## Bug report
+
+**Help: Build Bug Report…** shows a preview first. Secret fields in your
+settings are blanked and keys are removed from logs. You can add the
+current chat. Nothing is sent. **Save report** writes a new
+`termocode-report-*.md` in the workspace. Check it for private text.
+
 ## Keys at a glance
 
 | Key | Action |
