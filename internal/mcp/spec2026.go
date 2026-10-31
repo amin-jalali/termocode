@@ -11,7 +11,6 @@ package mcp
 //   - _meta of tools and results is kept (Tool.Meta, CallResult.Meta);
 //   - ttlMs of tools/list: the saved list expires (manager.go).
 
-
 // routeHeaders are the routing headers of one request: Mcp-Method always,
 // Mcp-Name with the tool / prompt name or the resource URI. A value that
 // is not plain printable ASCII is left out.
