@@ -220,3 +220,32 @@ func TestAgentSnapshotWithoutIdentity(t *testing.T) {
 		t.Errorf("snapshot author = %q, want termocode@localhost", got)
 	}
 }
+
+// FIX-27: the agent makes existing files executable, one with the same
+// text and one with new text; the merge sets the exec bit on both.
+func TestMergeAgentMakesAnExistingFileExecutable(t *testing.T) {
+	r := committedRepo(t)
+	w, err := CreateAgentWorktree(r.dir, "x1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Join(w.Path, "a.txt"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(w.Path, "b.txt"), []byte("#!/bin/sh\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Join(w.Path, "b.txt"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	res, err := MergeAgentWorktree(r.dir, "x1", false)
+	if err != nil || len(res.Conflicts) != 0 || strings.Join(res.Applied, ",") != "a.txt,b.txt" {
+		t.Fatalf("merge = %+v, %v", res, err)
+	}
+	for _, name := range []string{"a.txt", "b.txt"} {
+		fi, err := os.Stat(filepath.Join(r.dir, name))
+		if err != nil || fi.Mode().Perm()&0o100 == 0 {
+			t.Errorf("%s mode = %v, %v; want executable", name, fi.Mode(), err)
+		}
+	}
+}

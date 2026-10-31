@@ -443,6 +443,7 @@ type agentFile struct {
 	hasBase, hasTheirs bool
 	hasOurs            bool
 	mode               string
+	baseMode           string
 }
 
 // MergeAgentWorktree writes the agent's changes into the user's tree,
@@ -459,14 +460,18 @@ func MergeAgentWorktree(dir, id string, force bool) (AgentMerge, error) {
 	var res AgentMerge
 	var todo, conflicts []agentFile
 	for _, c := range ds {
-		f := agentFile{path: c.Path}
+		f := agentFile{path: c.Path, baseMode: c.baseMode}
 		f.base, f.hasBase = blobs[c.baseID]
 		f.theirs, f.hasTheirs = blobs[c.tipID]
 		if f.hasTheirs {
 			f.mode = c.tipMode
 		}
 		full := filepath.Join(top, filepath.FromSlash(c.Path))
-		if fi, err := os.Lstat(full); err == nil && fi.Mode().IsRegular() {
+		fi, err := os.Lstat(full)
+		if err != nil {
+			fi = nil
+		}
+		if err == nil && fi.Mode().IsRegular() {
 			f.ours, _ = os.ReadFile(full)
 			f.hasOurs = true
 		} else if err == nil && fi.Mode()&os.ModeSymlink != 0 {
@@ -475,6 +480,13 @@ func MergeAgentWorktree(dir, id string, force bool) (AgentMerge, error) {
 		}
 		switch {
 		case f.hasOurs == f.hasTheirs && bytes.Equal(f.ours, f.theirs):
+			// The user has the text already; a mode-only change (chmod +x)
+			// still needs the exec bit (FIX-27).
+			if f.hasTheirs && fi != nil && fi.Mode().IsRegular() {
+				if err := setAgentExec(full, fi.Mode().Perm(), f.baseMode, f.mode); err != nil {
+					return res, err
+				}
+			}
 			res.Applied = append(res.Applied, c.Path) // the user has it already
 		case f.hasOurs == f.hasBase && bytes.Equal(f.ours, f.base):
 			todo = append(todo, f)
@@ -488,7 +500,7 @@ func MergeAgentWorktree(dir, id string, force bool) (AgentMerge, error) {
 		return res, nil
 	}
 	for _, f := range todo {
-		if err := writeAgentFile(top, f.path, f.theirs, f.mode, f.hasTheirs); err != nil {
+		if err := writeAgentFile(top, f.path, f.theirs, f.baseMode, f.mode, f.hasTheirs); err != nil {
 			return res, err
 		}
 		res.Applied = append(res.Applied, f.path)
@@ -504,7 +516,7 @@ func MergeAgentWorktree(dir, id string, force bool) (AgentMerge, error) {
 		if err != nil {
 			return res, err
 		}
-		if err := writeAgentFile(top, f.path, merged, f.mode, true); err != nil {
+		if err := writeAgentFile(top, f.path, merged, f.baseMode, f.mode, true); err != nil {
 			return res, err
 		}
 	}
@@ -512,7 +524,7 @@ func MergeAgentWorktree(dir, id string, force bool) (AgentMerge, error) {
 	return res, nil
 }
 
-func writeAgentFile(top, path string, data []byte, mode string, keep bool) error {
+func writeAgentFile(top, path string, data []byte, baseMode, mode string, keep bool) error {
 	full := filepath.Join(top, filepath.FromSlash(path))
 	if !keep {
 		if err := os.Remove(full); err != nil && !os.IsNotExist(err) {
@@ -531,10 +543,36 @@ func writeAgentFile(top, path string, data []byte, mode string, keep bool) error
 	if mode == "100755" {
 		perm = 0o755
 	}
-	if fi, err := os.Stat(full); err == nil && mode != "100755" {
+	fi, statErr := os.Stat(full)
+	if statErr == nil && mode != "100755" {
 		perm = fi.Mode().Perm()
 	}
-	return os.WriteFile(full, data, perm)
+	if err := os.WriteFile(full, data, perm); err != nil {
+		return err
+	}
+	if statErr != nil { // created: WriteFile set perm
+		return nil
+	}
+	// os.WriteFile keeps an existing file's mode: set the agent's exec
+	// bit change on it (FIX-27).
+	return setAgentExec(full, fi.Mode().Perm(), baseMode, mode)
+}
+
+// setAgentExec applies the agent's exec bit change to a regular file the
+// user has: 100644 → 100755 adds x where r is set, 100755 → 100644 drops
+// it. Other bits and other changes keep the user's mode.
+func setAgentExec(full string, perm os.FileMode, baseMode, mode string) error {
+	want := perm
+	switch {
+	case mode == "100755":
+		want = perm | (perm&0o444)>>2
+	case mode == "100644" && baseMode == "100755":
+		want = perm &^ 0o111
+	}
+	if want == perm {
+		return nil
+	}
+	return os.Chmod(full, want)
 }
 
 // mergeText is `git merge-file -p` of the three versions (markers on a
