@@ -85,3 +85,15 @@ func TestRenderLoneCRIsALineEnd(t *testing.T) {
 		t.Fatalf("text lost: %q", j)
 	}
 }
+
+// A Prepend mark (U+0601) joins the next character into one cell
+// group; drawn before the row padding it made the row one cell short.
+func TestRenderPrependMarkKeepsRowWidth(t *testing.T) {
+	for _, rtlOn := range []bool{false, true} {
+		for _, r := range Render(" 0؁و", Options{Width: 81, RTL: rtlOn}) {
+			if w := ansi.StringWidth(r); w != 81 {
+				t.Fatalf("rtl=%v: row is %d cells, want 81: %q", rtlOn, w, r)
+			}
+		}
+	}
+}
