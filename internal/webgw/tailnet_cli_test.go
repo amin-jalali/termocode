@@ -96,8 +96,11 @@ func TestStartTailscaleServeRunsUntilStop(t *testing.T) {
 	dir := t.TempDir()
 	argv := filepath.Join(dir, "argv")
 	t.Setenv("TS_ARGV", argv)
-	fakeTailscaleBin(t, `echo "$@" > "$TS_ARGV.tmp" && mv "$TS_ARGV.tmp" "$TS_ARGV"
-echo "Available within your tailnet"
+	// The line first, then argv: the test stops serve once argv is there,
+	// and a stop that came between the two (a slow runner) ended the shell
+	// before it printed, so Reason was "tailscale serve ended".
+	fakeTailscaleBin(t, `echo "Available within your tailnet"
+echo "$@" > "$TS_ARGV.tmp" && mv "$TS_ARGV.tmp" "$TS_ARGV"
 exec sleep 60
 `)
 	p, err := StartTailscaleServe("http://127.0.0.1:41237")
