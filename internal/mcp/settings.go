@@ -26,6 +26,9 @@ type Settings struct {
 	Share            bool              // mcp_share (true): one local server process for every session
 	Trusted          map[string]string // mcp_trusted: server name → entry hash ("Always allow")
 	TrustedTools     map[string]string // mcp_trusted_tools: server name → accepted ToolsHash
+	// LogLevel (mcp_log_level, "info"): the lowest level the MCP log
+	// shows: error, warning, info or debug.
+	LogLevel string
 	// DisabledTools (mcp_disabled_tools): server name → tool names the
 	// user turned off in Show tools; they are not sent to the model.
 	DisabledTools map[string][]string
@@ -53,7 +56,7 @@ const (
 func LoadSettings(configPath string) Settings {
 	s := Settings{Enabled: true, IdleTimeout: DefaultIdleTimeout, CallTimeout: DefaultCallTimeout,
 		MaxResultKB: DefaultMaxResultKB, TrustAnnotations: true, Share: true, Trusted: map[string]string{},
-		TrustedTools: map[string]string{}, DisabledTools: map[string][]string{}}
+		TrustedTools: map[string]string{}, DisabledTools: map[string][]string{}, LogLevel: "info"}
 	b, err := os.ReadFile(configPath)
 	if err != nil {
 		return s
@@ -70,6 +73,7 @@ func LoadSettings(configPath string) Settings {
 		Trusted          map[string]string   `json:"mcp_trusted"`
 		TrustedTools     map[string]string   `json:"mcp_trusted_tools"`
 		DisabledTools    map[string][]string `json:"mcp_disabled_tools"`
+		LogLevel         string              `json:"mcp_log_level"`
 	}
 	if json.Unmarshal(b, &raw) != nil {
 		return s
@@ -104,12 +108,28 @@ func LoadSettings(configPath string) Settings {
 	for k, v := range raw.TrustedTools {
 		s.TrustedTools[k] = v
 	}
+	if l := strings.ToLower(strings.TrimSpace(raw.LogLevel)); ValidLogLevel(l) {
+		s.LogLevel = l
+	}
 	for k, v := range raw.DisabledTools {
 		if len(v) > 0 {
 			s.DisabledTools[k] = v
 		}
 	}
 	return s
+}
+
+// LogLevels are the mcp_log_level values, most important first.
+var LogLevels = []string{"error", "warning", "info", "debug"}
+
+// ValidLogLevel reports one of LogLevels.
+func ValidLogLevel(l string) bool {
+	for _, x := range LogLevels {
+		if x == l {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidClientID reports a plausible OAuth client id (letters, digits,
