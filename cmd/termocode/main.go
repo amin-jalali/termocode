@@ -306,6 +306,8 @@ func run(argv []string) int {
 			return cmdSSH(args[1:])
 		case "mcp":
 			return runMCPTop(args[1:])
+		case "agent":
+			return runAgent(args[1:])
 		case "web":
 			return runWeb(args[1:])
 		case "attach", "kill":
@@ -419,6 +421,8 @@ func printUsage() {
 	fmt.Println("  termocode mcp [--dir d]    run as an MCP server for an agent CLI (stdio)")
 	fmt.Println("  termocode mcp add|list|get|remove")
 	fmt.Println("                             manage MCP servers without the UI (mcp add --help)")
+	fmt.Println("  termocode agent list|prompt|wait|report")
+	fmt.Println("                             drive the agents in termocode's terminal tabs")
 	fmt.Println("  termocode web [start|stop|status]")
 	fmt.Println("                             open or stop the web panel of the running termocode")
 	fmt.Println("  termocode setup            install JetBrainsMono Nerd Font and check prerequisites")
