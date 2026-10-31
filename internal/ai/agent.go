@@ -223,6 +223,8 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 		steps = DefaultMaxSteps
 	}
 	var usage *Usage // summed over every request of the turn
+	ctx, side := claimSideUsage(ctx)
+	total := func() *Usage { usage = usage.Add(side.take()); return usage } // with the side requests
 	compacted := false
 	for step := 0; step < steps; step++ {
 		// Built for each step: a tool search can load a hidden tool.
@@ -269,7 +271,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			continue
 		}
 		if last.Err != nil {
-			emit(Event{Kind: EventError, Detail: Redact(last.Err.Error()), Usage: usage})
+			emit(Event{Kind: EventError, Detail: Redact(last.Err.Error()), Usage: total()})
 			return msgs[start:]
 		}
 		reply := buf.String()
@@ -294,7 +296,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			if prose == -1 {
 				emit(Event{Kind: EventText, Text: reply})
 			}
-			emit(Event{Kind: EventDone, Usage: usage})
+			emit(Event{Kind: EventDone, Usage: total()})
 			return msgs[start:]
 		}
 		if a.BeforeCalls != nil {
@@ -310,14 +312,14 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			}
 		}
 		if ctx.Err() != nil {
-			emit(Event{Kind: EventError, Detail: ctx.Err().Error(), Usage: usage})
+			emit(Event{Kind: EventError, Detail: ctx.Err().Error(), Usage: total()})
 			return msgs[start:]
 		}
 
 		msgs = append(msgs, a.inbox()...)
 	}
 	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
-	emit(Event{Kind: EventDone, Usage: usage})
+	emit(Event{Kind: EventDone, Usage: total()})
 	return msgs[start:]
 }
 
