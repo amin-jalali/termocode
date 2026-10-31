@@ -208,3 +208,19 @@ func TestMCPAdminListGetRemove(t *testing.T) {
 		t.Fatal("a second remove worked")
 	}
 }
+
+func TestMCPAdminAddShareUser(t *testing.T) {
+	cwd := adminEnv(t)
+	if code, _, errs := runAdmin(t, cwd, "", "add", "--share", "user", "notes", "--", "srv"); code != 0 {
+		t.Fatal(errs)
+	}
+	if userEntry(t, "notes")["share"] != "user" {
+		t.Fatalf("entry %v", userEntry(t, "notes"))
+	}
+	if code, _, _ := runAdmin(t, cwd, "", "add", "--share", "user", "--scope", "project", "p", "--", "srv"); code == 0 {
+		t.Fatal("share in the project file was accepted")
+	}
+	if code, _, _ := runAdmin(t, cwd, "", "add", "--share", "all", "q", "--", "srv"); code == 0 {
+		t.Fatal("share all was accepted")
+	}
+}

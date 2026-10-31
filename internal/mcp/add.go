@@ -31,6 +31,7 @@ type LocalSpec struct {
 	Args    []string          // more arguments (after the package)
 	Env     map[string]string // plain values (never a token)
 	Secrets []string          // env names whose value is a stored secret
+	Share   string            // ShareUser: one process for every project
 }
 
 var (
@@ -111,7 +112,13 @@ func (s LocalSpec) Entry() (map[string]any, error) {
 	default:
 		return nil, fmt.Errorf("unknown kind %q (use command, npm, pip or image)", kind)
 	}
+	if s.Share != "" && s.Share != ShareUser {
+		return nil, fmt.Errorf(`share can only be "user"`)
+	}
 	e := map[string]any{"command": command}
+	if s.Share != "" {
+		e["share"] = s.Share
+	}
 	if len(args) > 0 {
 		e["args"] = append([]string(nil), args...)
 	}
