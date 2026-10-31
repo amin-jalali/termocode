@@ -225,6 +225,7 @@ actions: **Connect / Refresh tools**, **Show tools**, **Stop**,
 | `autoApprove` | Tool names that run without asking (`["list_issues"]`). |
 | `deny` | Tool names (or patterns like `"delete_*"`) never offered to the AI. |
 | `timeout` | Seconds one tool call may wait (default `mcp_call_timeout`, 60 s). |
+| `gateway` | `true` lets outside agents use this server through termocode, each call after a card. Only in your own `mcp.json`. |
 | `sandbox` | Local server: run it in a container or a sandbox tool. See [Run a local server in a sandbox](#run-a-local-server-in-a-sandbox). |
 
 `type` and Claude Desktop's `transport` are read too. `readOnly`,
@@ -337,6 +338,25 @@ termocode asks you on a card before a tool runs or changes something.
 How it starts, how to add it by hand, what the agent can and can not do,
 **Always allow** and the status screen are in
 [Give your agent the IDE's tools](agents.md).
+
+### Share your servers with outside agents
+
+Set up a server once and let outside agents use it too. Add
+`"gateway": true` to its entry in **your own** `mcp.json`:
+
+```json
+"files": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "."], "gateway": true }
+```
+
+- The agent then sees the server's tools next to the IDE tools, named
+  `mcp__files__read_file` and so on.
+- **Every** call asks on a card first, even a read. **Deny** has the
+  focus. **Always allow** remembers that tool for that agent.
+- Only servers you trusted before are shared. termocode never shows a
+  trust card for an outside agent.
+- A project's `.termocode/mcp.json` can not set `gateway`: a repository
+  can not share your servers.
+- Without `gateway`, a server stays private to the chat.
 
 ## Resources and privacy
 

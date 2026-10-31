@@ -137,7 +137,9 @@ confirmation and is empty when termocode is not open.
 - Change settings, read secrets or credentials.
 - Start or stop services, containers or databases.
 - Write to a database, or save requests to `.http` files.
-- Use the tools of your own MCP servers (`mcp__…`). They are never passed on.
+- Use the tools of your own MCP servers (`mcp__…`). They are never passed on,
+  unless you mark a server with `"gateway": true` (see
+  [Share your servers with outside agents](mcp.md#share-your-servers-with-outside-agents)).
 
 Some palette commands are closed too: AI, database and container commands,
 extension commands and your own commands.
