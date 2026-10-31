@@ -571,10 +571,11 @@ the run in the AGENTS panel.
   most that many times. The planner's card shows each round
   (`✘ plan review 1: …`, `✓ plan review 2: approved`). Each round costs
   one more model request.
-- **Plan file** (`ai_plan_file`, on by default). A planned run writes
-  `.termocode/plans/<task>-<run id>.md`: the steps and their tasks, the
-  review rounds, the verify step's evidence and how the run ended. The
-  planner's card says `plan saved: …`.
+- **Plan file** (`ai_plan_file`, off by default). Set it to `true` and a
+  planned run writes `.termocode/plans/<task>-<run id>.md`: the steps and
+  their tasks, the review rounds, the verify step's evidence and how the
+  run ended. The planner's card says `plan saved: …`. The file is in your
+  repository, so git shows it as untracked unless you ignore it.
 - **Evidence.** The verify step lists what it checked under `EVIDENCE:`
   (a command and its result, or a file:line) before its verdict; the
   list goes into the plan file.
