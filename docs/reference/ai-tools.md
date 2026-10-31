@@ -2276,6 +2276,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `mcp_server` | never | lets outside agents use the IDE's tools; the user turns it on or off in config.json |
 | `mcp_server_auto_approve` | never | what outside agents may do without asking; only the user's "Always allow" on their card sets it |
 | `mcp_share` | never | AI provider, credentials and approvals stay with the user |
+| `mcp_strict` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_tool_search` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trust_annotations` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trusted` | never | AI provider, credentials and approvals stay with the user |
