@@ -39,16 +39,20 @@ func TestBackoffDoublesWithJitterAndCap(t *testing.T) {
 
 // flakyNet is an HTTP transport whose network can be cut (dial refused).
 type flakyNet struct {
-	mu   sync.Mutex
-	down bool
-	rt   http.RoundTripper
+	mu    sync.Mutex
+	down  bool
+	failN int // the next failN requests fail, then it works
+	rt    http.RoundTripper
 }
 
 func (f *flakyNet) set(down bool) { f.mu.Lock(); f.down = down; f.mu.Unlock() }
 
 func (f *flakyNet) RoundTrip(r *http.Request) (*http.Response, error) {
 	f.mu.Lock()
-	down := f.down
+	down := f.down || f.failN > 0
+	if f.failN > 0 {
+		f.failN--
+	}
 	f.mu.Unlock()
 	if down {
 		return nil, &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}
@@ -218,5 +222,36 @@ func TestReconnectAll(t *testing.T) {
 	// All running and healthy: one ping each, nothing else.
 	if r := m.ReconnectAll(context.Background()); r.Tried != 0 || r.Checked != 2 {
 		t.Errorf("healthy %+v", r)
+	}
+}
+
+// Spec (TS-11): a call to a read-only or idempotent tool that loses the
+// connection is run once more on a new connection; any other tool's is
+// not (it may have run).
+func TestIdempotentCallRetriedAfterDrop(t *testing.T) {
+	f := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{})
+	e := newManagerEnv(t)
+	e.write(t, e.user, map[string]any{"rem": map[string]any{"type": "http", "url": f.MCPURL()}})
+	fn := &flakyNet{rt: http.DefaultTransport}
+	m := reconnectManager(t, e, fn, nil)
+	m.opts.ReconnectBase, m.opts.ReconnectCap = time.Hour, time.Hour
+	if err := m.Connect(context.Background(), nil, "rem"); err != nil {
+		t.Fatal(err)
+	}
+	fn.mu.Lock()
+	fn.failN = 1
+	fn.mu.Unlock()
+	r, err := m.Call(context.Background(), nil, "rem", "echo", map[string]any{"text": "again"})
+	if err != nil || r.Text() != "echo: again" {
+		t.Fatalf("read-only retry: %q %v", r.Text(), err)
+	}
+	fn.mu.Lock()
+	fn.failN = 1
+	fn.mu.Unlock()
+	if _, err := m.Call(context.Background(), nil, "rem", "write_note", map[string]any{"title": "t"}); err == nil {
+		t.Fatal("a write was run again")
+	}
+	if st := status(m, "rem"); st.State != StateReconnecting {
+		t.Errorf("status %+v", st)
 	}
 }
