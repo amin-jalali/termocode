@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -319,16 +320,14 @@ func (m Model) Box() string {
 	if m.multiline {
 		return m.multilineBox()
 	}
-	if m.w <= 0 || m.h <= 0 {
+	if m.w < 3 || m.h <= 0 {
 		return ""
 	}
 	boxW := 64
 	if maxW := m.w - 4; boxW > maxW {
 		boxW = maxW
 	}
-	if boxW < 36 {
-		boxW = 36
-	}
+	boxW = max(3, min(boxW, m.w))
 	innerW := boxW - 2
 	f := theme.Float()
 
@@ -395,6 +394,9 @@ func (m Model) Box() string {
 	rows = append(rows, blank)
 	rows = append(rows, padBg(bgFill.Render("  ")+theme.HintBar(f.Bg, promptHints...), innerW))
 
+	for i := range rows {
+		rows[i] = ansi.Truncate(rows[i], innerW, "")
+	}
 	return theme.FloatBox(lipgloss.JoinVertical(lipgloss.Left, rows...), boxW)
 }
 
