@@ -37,7 +37,7 @@ func (s Staged) Discard() {
 }
 
 // Prepare downloads rel's tarball for goos/goarch and checksums.txt,
-// checks the SHA-256, takes out the binary into a hidden file next to
+// checks the signature of checksums.txt (when a release key is set) and the SHA-256, takes out the binary into a hidden file next to
 // exe with exe's mode, and runs it once with --version: it must answer
 // "termocode <tag>". Nothing is left behind on error.
 func (c Client) Prepare(ctx context.Context, rel Release, exe, goos, goarch string) (Staged, error) {
@@ -61,6 +61,9 @@ func (c Client) Prepare(ctx context.Context, rel Release, exe, goos, goarch stri
 	}
 	sumData, err := c.readSmall(ctx, sums.URL, maxChecksums)
 	if err != nil {
+		return Staged{}, err
+	}
+	if err := c.verifySignature(ctx, rel, sumData); err != nil {
 		return Staged{}, err
 	}
 	if err := VerifyChecksum(tgz, tarball.Name, sumData); err != nil {
