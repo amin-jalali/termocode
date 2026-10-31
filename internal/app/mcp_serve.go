@@ -174,8 +174,9 @@ type mcpServeSource struct {
 	specs   []mcp.Tool
 	confirm mcpServeConfirmFunc
 	audit   mcpServeAuditFunc
-	allow   *mcpServeAllowSet       // nil: nothing is remembered
-	events  func(mcpServeClientMsg) // connection events (mcp_serve_status.go), nil: none
+	allow   *mcpServeAllowSet               // nil: nothing is remembered
+	events  func(mcpServeClientMsg)         // connection events (mcp_serve_status.go), nil: none
+	gateway func(context.Context) []ai.Tool // gateway servers' tools (mcp_serve_gateway.go), nil: none
 
 	dbMu  sync.Mutex
 	dbSet mcpServeDBSet // the connection kinds last told to clients (mcp_serve_list.go)
@@ -195,6 +196,9 @@ func (s *mcpServeSource) Call(ctx context.Context, name string, args map[string]
 		if s.audit != nil {
 			s.audit(at, client, name, argText, gate, result)
 		}
+	}
+	if isGatewayName(name) {
+		return s.callGateway(ctx, client, name, args, audit)
 	}
 	if _, ok := mcpServeRow(name); !ok { // never tools, mcp__* and typos alike
 		audit("refused", "not an exposed tool")

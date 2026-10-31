@@ -181,7 +181,7 @@ func (h *mcpServeHub) auditFunc() mcpServeAuditFunc {
 func newMCPServeSource(h *mcpServeHub, root string) *mcpServeSource {
 	h.allow.replace(mcpServeAllowLoad())
 	return &mcpServeSource{call: h.caller(), root: root, specs: MCPServeToolSpecs(), confirm: h.confirmFunc(), audit: h.auditFunc(), allow: &h.allow, events: h.clientEventFunc(),
-		dbSet: mcpServeDBSetOf(root)}
+		dbSet: mcpServeDBSetOf(root), gateway: mcpGatewayFunc(h.caller())}
 }
 
 // mcpServeLive is the state when msg's hub is the running one.
