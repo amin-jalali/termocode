@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -108,7 +109,7 @@ func agentCtlInitCmd() tea.Cmd {
 		}
 		agentCtlPath.Store(path)
 		agentCtlLn.Store(&agentCtlCloser{close: ln.Close})
-		go agentctl.Serve(ln, agentCtlPeer, agentCtlHandle)
+		crash.Go("the agent control socket", func() { agentctl.Serve(ln, agentCtlPeer, agentCtlHandle) })
 	})
 	return waitAgentCtl()
 }

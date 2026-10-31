@@ -15,6 +15,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Environment variables of a terminal tab.
@@ -87,7 +89,7 @@ func Serve(ln net.Listener, peer func(net.Conn) error, handle func(Request) Repl
 		if err != nil {
 			return
 		}
-		go serveConn(c, peer, handle)
+		crash.GoWith("an agent control connection", func() { serveConn(c, peer, handle) }, func() { _ = c.Close() })
 	}
 }
 

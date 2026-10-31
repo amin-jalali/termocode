@@ -6,6 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // watchdog stops a step's agent when the model has been silent for the
@@ -25,7 +27,7 @@ type watchdog struct {
 
 func startWatchdog(limit time.Duration, stall context.CancelFunc) *watchdog {
 	d := &watchdog{limit: limit, stall: stall, done: make(chan struct{}), last: time.Now()}
-	go d.watch()
+	crash.Go("the agent step stall watchdog", d.watch)
 	return d
 }
 
