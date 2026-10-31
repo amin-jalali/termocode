@@ -46,6 +46,9 @@ func nextOpen(t *testing.T, c *HubConn) *webproto.Req {
 			case "buf.close":
 				c.Send(t, &webproto.Res{T: webproto.KindRes, ID: m.ID})
 			default:
+				if paintOps[m.Op] { // an open file's colours, asked on the way
+					continue
+				}
 				t.Fatalf("page sent %s; want buf.open", show(m))
 			}
 		}
