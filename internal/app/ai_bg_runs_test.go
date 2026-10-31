@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
@@ -241,5 +242,23 @@ func TestAIBackgroundRunStopsWithTheAI(t *testing.T) {
 	rm := aiRunMsg(t, r.m)
 	if rm.Run.ID != id || rm.Run.State != ai.RunStateCancelled {
 		t.Fatalf("run %+v", rm.Run)
+	}
+}
+
+// OMX-6: a background step that runs once more (a stall, ESCALATE) adds
+// the second try's tokens and cost to the first's.
+func TestAIBackgroundStepUsageAddsUp(t *testing.T) {
+	r := newBgRig(t)
+	b := &aiBgRun{id: "r1", slots: map[string]aiSlot{ai.SlotQuick: {cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}}}}
+	st := &ai.StoredStep{ID: "a", Slot: ai.SlotQuick, Model: "gpt-5-mini"}
+	u := &ai.Usage{Model: "gpt-5-mini", Input: 100000, Output: 10000, Requests: 1}
+	r.m.aiBgStepUsage(b, st, agentrun.Event{Usage: u})
+	if st.Cost == nil {
+		t.Fatal("no price for gpt-5-mini")
+	}
+	first := *st.Cost
+	r.m.aiBgStepUsage(b, st, agentrun.Event{Usage: u})
+	if st.Cost == nil || *st.Cost < 1.99*first || st.Usage.Input != 200000 {
+		t.Fatalf("cost %v (first %v) usage %+v", st.Cost, first, st.Usage)
 	}
 }
