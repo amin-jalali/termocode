@@ -89,8 +89,11 @@ func median(ds []time.Duration) time.Duration {
 func TestPerfAgentWorktree5k(t *testing.T) {
 	perfbudget.Require(t)
 	dir := bigAgentRepo(t, 5000)
+	// One warm-up cycle fills the OS file cache and git's index; then the
+	// median of 9 keeps one slow CI runner moment out of the result.
+	agentCycle(t, dir, "warm", 20)
 	var cs, ms []time.Duration
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 9; i++ {
 		c, m := agentCycle(t, dir, fmt.Sprintf("perf%d", i), 20)
 		cs, ms = append(cs, c), append(ms, m)
 	}

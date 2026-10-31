@@ -68,8 +68,8 @@ db_tree_filter_key         25   ms   # tree filter key + sidebar frame; local 0.
 
 # AI agents (PERF-7): termocode's own work around a model (a fake one
 # that answers at once). Go tests: internal/git, internal/app.
-agent_worktree_create_5k  150   ms   # worktree of a 5 000-file repo, median of 5; local 73 ms (139 ms before PERF-7)
-agent_worktree_merge_20   240   ms   # merge 20 changed files back, median of 5; local 120 ms (324 ms before PERF-7)
+agent_worktree_create_5k  150   ms   # worktree of a 5 000-file repo, median of 9 after a warm-up; local 73 ms (139 ms before PERF-7)
+agent_worktree_merge_20   240   ms   # merge 20 changed files back, median of 9 after a warm-up; local 120 ms (324 ms before PERF-7)
 chat_save_2k_messages      25   ms   # end of a turn: save a 2 000-message chat, 50 chats stored; local 1.7 ms (44 ms before PERF-7) (floor)
 chat_load_2k_messages      13   ms   # open that chat; local 6.2 ms
 ai_send_to_request         25   ms   # Enter to the request leaving, 2 000-message chat, median of 15; local 0.95 ms (floor)
