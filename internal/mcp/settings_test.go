@@ -184,3 +184,21 @@ func TestForgetTrusted(t *testing.T) {
 		t.Errorf("config = %s", b)
 	}
 }
+
+// mcp_log_level: error, warning, info (default) or debug; a bad value is
+// the default.
+func TestLogLevelSetting(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	if s := LoadSettings(p); s.LogLevel != "info" {
+		t.Errorf("default = %q", s.LogLevel)
+	}
+	for v, want := range map[string]string{"debug": "debug", "WARNING": "warning", "error": "error", "loud": "info"} {
+		writeFile(t, p, `{"mcp_log_level":"`+v+`"}`)
+		if got := LoadSettings(p).LogLevel; got != want {
+			t.Errorf("%s → %q, want %q", v, got, want)
+		}
+	}
+	if !ValidLogLevel("debug") || ValidLogLevel("trace") {
+		t.Error("ValidLogLevel")
+	}
+}
