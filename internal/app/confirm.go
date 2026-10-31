@@ -219,21 +219,7 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 				return m.runBulkDelete(m.confirmTargetPaths)
 			}
 			path := m.confirmTargetPath
-			if err := m.removePath(path); err != nil {
-				// The file is still there: its tab (maybe with unsaved
-				// edits) stays open.
-				m.err = fileOpFailText(err)
-				return m.pushToastDetail(toast.Errr, "Delete failed", m.err)
-			}
-			// Close any open buffer pointing at the path, so the user
-			// doesn't keep editing a phantom file. discardBufferCmd
-			// marks it unmodified first, so closing it (auto-save on
-			// BufLeave) can't write it back.
-			m.closeBuffersForPaths([]string{path})
-			m.forgetPaths([]string{path})
-			m.err = ""
-			m.explorer.Reload()
-			return m.refreshSearchResults() // drop the deleted file (N2)
+			return m.finishDelete(path, m.removePath(path))
 		}
 	case confirmKindGitDiscard:
 		if id == "discard" {
@@ -287,19 +273,50 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 	if len(paths) == 0 {
 		return nil
 	}
-	deleted := 0
-	var failed, gone []string
+	deleted, failed, gone := removePaths(paths, m.removePath)
+	return m.finishBulkDelete(deleted, failed, gone)
+}
+
+// finishDelete is the end of a single delete: on success the open tabs
+// of path close and the explorer and results drop it.
+func (m *Model) finishDelete(path string, err error) tea.Cmd {
+	if err != nil {
+		// The file is still there: its tab (maybe with unsaved
+		// edits) stays open.
+		m.err = fileOpFailText(err)
+		return m.pushToastDetail(toast.Errr, "Delete failed", m.err)
+	}
+	// Close any open buffer pointing at the path, so the user
+	// doesn't keep editing a phantom file. discardBufferCmd
+	// marks it unmodified first, so closing it (auto-save on
+	// BufLeave) can't write it back.
+	m.closeBuffersForPaths([]string{path})
+	m.forgetPaths([]string{path})
+	m.err = ""
+	m.explorer.Reload()
+	return m.refreshSearchResults() // drop the deleted file (N2)
+}
+
+// removePaths removes each path with remove: how many went, the failures
+// as "name: reason" lines, and the paths that went.
+func removePaths(paths []string, remove func(string) error) (deleted int, failed, gone []string) {
 	for _, p := range paths {
 		if p == "" {
 			continue
 		}
-		if err := m.removePath(p); err != nil {
+		if err := remove(p); err != nil {
 			failed = append(failed, fmt.Sprintf("%s: %s", filepath.Base(p), fileOpFailText(err)))
 			continue
 		}
 		deleted++
 		gone = append(gone, p)
 	}
+	return deleted, failed, gone
+}
+
+// finishBulkDelete is the end of a bulk delete: the tabs of what went
+// close, the tree reloads and one toast counts the outcome.
+func (m *Model) finishBulkDelete(deleted int, failed, gone []string) tea.Cmd {
 	// Close the buffers of what is gone (a failed delete keeps its tab
 	// and unsaved edits). discardBufferCmd marks them unmodified first,
 	// so the auto-save on BufLeave cannot write a deleted file back.
