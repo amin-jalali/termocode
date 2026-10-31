@@ -19,6 +19,10 @@
 //   - mixed: text, a resource and a resource_link
 //   - structured: only structuredContent {"n": 42}
 //   - notify_changed: sends notifications/tools/list_changed, returns "notified"
+//   - notify_resources: sends notifications/resources/list_changed
+//
+// Resources (resources.go): resources/list in two pages, one template
+// notes://{id}, resources/read of each.
 //
 // Environment switches: FAKE_BANNER=1 prints a non-JSON line on stdout
 // first; FAKE_IGNORE_SHUTDOWN=1 keeps running after stdin closes (to test
@@ -170,8 +174,9 @@ func run() {
 			}
 			_ = c.Reply(m.ID, map[string]any{
 				"protocolVersion": v,
-				"capabilities":    map[string]any{"tools": map[string]any{"listChanged": true}},
-				"serverInfo":      map[string]any{"name": "fake-mcp", "version": "1.0.0"},
+				"capabilities": map[string]any{"tools": map[string]any{"listChanged": true},
+					"resources": map[string]any{"listChanged": true}, "prompts": map[string]any{"listChanged": true}, "completions": map[string]any{}},
+				"serverInfo": map[string]any{"name": "fake-mcp", "version": "1.0.0"},
 			}, nil)
 		case "ping":
 			_ = c.Reply(m.ID, map[string]any{}, nil)
@@ -190,6 +195,9 @@ func run() {
 				return
 			}
 			_ = c.Reply(m.ID, map[string]any{"tools": all[4:]}, nil)
+		case "resources/list", "resources/templates/list", "resources/read":
+			res, rerr := Resources(m.Method, m.Params)
+			_ = c.Reply(m.ID, res, rerr)
 		case "notifications/cancelled":
 			var p struct {
 				RequestID json.RawMessage `json:"requestId"`
@@ -327,6 +335,9 @@ func call(ctx context.Context, c Caller, name string, args map[string]any, token
 		}}, nil
 	case "structured":
 		return map[string]any{"content": []any{}, "structuredContent": map[string]any{"n": 42}}, nil
+	case "notify_resources":
+		_ = c.Notify("notifications/resources/list_changed", nil)
+		return text("notified"), nil
 	case "notify_changed":
 		_ = c.Notify("notifications/tools/list_changed", nil)
 		return text("notified"), nil

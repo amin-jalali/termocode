@@ -27,6 +27,9 @@ type Options struct {
 	Log func(line string)
 	// ToolsChanged is called on notifications/tools/list_changed.
 	ToolsChanged func()
+	// ResourcesChanged is called on notifications/resources/list_changed
+	// (uri "") and notifications/resources/updated (the resource's uri).
+	ResourcesChanged func(uri string)
 	// Shared is called when the share broker says how many sessions use
 	// a shared server, and its pid (share.go).
 	Shared func(sessions, pid int)
@@ -69,6 +72,7 @@ type Client struct {
 	mu       sync.Mutex
 	version  string
 	info     ServerInfo
+	caps     ServerCaps
 	progress map[string]func() // progress token → push the call's deadline back
 	tokens   atomic.Int64
 }
@@ -143,7 +147,7 @@ func (c *Client) Initialize(ctx context.Context) error {
 		return fmt.Errorf("the server speaks MCP %q; termocode supports %s", res.ProtocolVersion, strings.Join(SupportedVersions, ", "))
 	}
 	c.mu.Lock()
-	c.version, c.info = res.ProtocolVersion, res.ServerInfo
+	c.version, c.info, c.caps = res.ProtocolVersion, res.ServerInfo, parseCaps(res.Capabilities)
 	c.mu.Unlock()
 	// HTTP sends the negotiated version on every later request.
 	if pv, ok := c.conn.(interface{ setProtocolVersion(string) }); ok {
@@ -275,6 +279,15 @@ func (c *Client) handle(m extproc.Message, reply replyFunc) {
 		c.opts.log("tools changed")
 		if c.opts.ToolsChanged != nil {
 			c.opts.ToolsChanged()
+		}
+	case "notifications/resources/list_changed", "notifications/resources/updated":
+		var p struct {
+			URI string `json:"uri"`
+		}
+		_ = json.Unmarshal(m.Params, &p)
+		c.opts.log("resources changed %s", p.URI)
+		if c.opts.ResourcesChanged != nil {
+			c.opts.ResourcesChanged(p.URI)
 		}
 	case "notifications/progress":
 		var p struct {
