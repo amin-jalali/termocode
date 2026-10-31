@@ -351,6 +351,9 @@ func (b *broker) fromClient(c *shareClient, conn *extproc.Conn, m extproc.Messag
 	case "ping":
 		_ = conn.Reply(m.ID, map[string]any{}, nil)
 		return
+	case "server/discover": // sessions use the broker's handshake (MCPX-20)
+		_ = conn.Reply(m.ID, nil, &extproc.Error{Code: extproc.CodeMethodNotFound, Message: "a shared server uses initialize"})
+		return
 	case shareStop:
 		// No answer: the closed connection is the answer. A reply sent
 		// right before shutdown closes the connection could be lost in

@@ -383,3 +383,14 @@ func TestShareBrokerDroppedSessionKeepsGrace(t *testing.T) {
 	case <-time.After(500 * time.Millisecond):
 	}
 }
+
+// Spec (MCPX-20): the broker initialized the server once, the old way;
+// a session's server/discover probe gets "not supported", so every
+// session uses that same handshake even when the server is dual-era.
+func TestShareBrokerSessionsStayOnTheHandshake(t *testing.T) {
+	_, sock := startTestBroker(t, fakeShareConfig(map[string]string{"FAKE_MODERN": "1"}))
+	c := dialTestShare(t, sock, nil)
+	if c.Stateless() || c.Version() != ProtocolVersion {
+		t.Fatalf("stateless %v version %q, want the broker's handshake", c.Stateless(), c.Version())
+	}
+}
