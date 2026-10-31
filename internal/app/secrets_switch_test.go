@@ -85,7 +85,7 @@ func TestSecretsSwitchKeyringNotAvailableSaysWhy(t *testing.T) {
 }
 
 // Spec (U19 SS-8): to the encrypted file asks a new passphrase twice;
-// the plain file is removed after the check.
+// the plain file is kept until the user deletes it on a card.
 func TestSecretsSwitchPlainToAge(t *testing.T) {
 	ticks := fakeLockTicks(t)
 	dir, _ := withSecretSetting(t, "plain", false)
@@ -113,6 +113,7 @@ func TestSecretsSwitchPlainToAge(t *testing.T) {
 	if v, _, _ := s.Get("ai.key.openai"); v != secretsTestKey {
 		t.Fatalf("Get = %q", v)
 	}
+	deletePlainViaCard(t, m, cred)
 	if _, err := os.Stat(cred); !os.IsNotExist(err) {
 		t.Fatalf("credentials.json still there: %v", err)
 	}
