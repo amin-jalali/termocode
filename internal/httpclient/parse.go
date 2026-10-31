@@ -16,7 +16,10 @@ import (
 //   - `# @no-redirect`, `# @no-cookie-jar`, `# @timeout 10s` directives,
 //   - blank lines between the comment lines above a request.
 
-var varLineRe = lazyre.New(`^@([\w.-]+)\s*=\s*(.*?)\s*$`)
+// The space before "=" is any space strings.TrimSpace drops (\s alone
+// misses \v, U+0085 and U+00A0): "@a \v= b" read as a request "@a"
+// to "= b" saved as "@a = b", which reads back as a variable.
+var varLineRe = lazyre.New(`^@([\w.-]+)[\s\v\x{85}\pZ]*=\s*(.*?)\s*$`)
 
 // Parse reads a `.http` file. It never fails: blocks it cannot read are
 // skipped, like the Dart parser.
