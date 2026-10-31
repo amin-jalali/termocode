@@ -448,6 +448,9 @@ func (h *Handle) loop(runCtx context.Context) {
 					h.mu.Lock()
 					h.stops[id] = stop
 					h.mu.Unlock()
+					if h.node(id).CLI == "" {
+						h.mail.openNode(id)
+					}
 					if h.o.Parallel > 1 && h.sharesWave(id) {
 						nctx = context.WithValue(nctx, sharedWaveKey{}, true)
 					}
@@ -469,6 +472,9 @@ func (h *Handle) loop(runCtx context.Context) {
 		userStop := h.stopped[res.id]
 		delete(h.stopped, res.id)
 		h.mu.Unlock()
+		h.mail.closeNode(res.id, func(text string) {
+			h.emit(Event{NodeID: res.id, Kind: NodeMessage, Output: text, Err: "the step ended before it read the message"})
+		})
 		total = total.Add(res.usage)
 		if res.usage != nil && h.o.Cost != nil {
 			if c, ok := h.o.Cost(*h.node(res.id), *res.usage); ok {
@@ -728,10 +734,6 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 	if n.Input.MaxSteps > 0 {
 		agent.MaxSteps = n.Input.MaxSteps
 	}
-	h.mail.openNode(n.ID)
-	defer h.mail.closeNode(n.ID, func(text string) {
-		h.emit(Event{NodeID: n.ID, Kind: NodeMessage, Output: text, Err: "the step ended before it read the message"})
-	})
 	agent.Inbox = h.inbox(n.ID, agent.Inbox)
 	if g, ask := h.o.Review, agent.Confirm; g != nil && ask != nil {
 		// The confirm queue: one card at a time over all nodes; a node

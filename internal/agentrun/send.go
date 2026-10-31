@@ -65,7 +65,7 @@ func (b *mailbox) take(id string) []string {
 // Send queues text for the agent of running node id: it reads it after
 // its current tool calls, or before its turn would end (NodeMessage).
 // It refuses a node that does not run an agent now (pending, ended, a
-// CLI step).
+// CLI step); a message sent while the agent is being built waits for it.
 func (h *Handle) Send(id, text string) error {
 	text = strings.TrimSpace(text)
 	switch {
