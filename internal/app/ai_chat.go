@@ -147,13 +147,13 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 			}
 			msgs = append(msgs, um)
 		case ai.StoredTool:
-			if !aiFallbackLine(sm.Text) { // OMX-4: for the user, not the model
+			if !aiForUserOnly(sm.Text) { // OMX-4, MCPX-38: for the user, not the model
 				tools = append(tools, sm.Text)
 			}
 		case ai.StoredAssistant:
 			for _, st := range sm.Steps {
 				for _, l := range st.Tools {
-					if !aiFallbackLine(l) {
+					if !aiForUserOnly(l) {
 						tools = append(tools, l)
 					}
 				}
@@ -473,9 +473,14 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 				l.Text += " → " + aiShortResult(msg.ev.Detail)
 			}
 		}
+		for _, n := range s.aiTakeToolNotes() { // MCPX-38: for the user, not the model
+			s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: n})
+		}
 		for _, c := range s.aiTakeRecallChips() { // OMX-18
 			s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: c})
 		}
+	case ai.EventToolNote:
+		s.aiAddToolNote(msg.ev.Detail)
 	case ai.EventFallback: // OMX-4: the turn moved to a backup model
 		if l := last(); l != nil && l.Role == ai.StoredAssistant && strings.TrimSpace(l.Text) == "" {
 			s.conv.Messages = s.conv.Messages[:len(s.conv.Messages)-1]
