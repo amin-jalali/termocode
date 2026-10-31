@@ -74,15 +74,16 @@ type Model struct {
 	// hideEmptyCount drops the "N matches" subtitle while the search is empty.
 	hideEmptyCount bool
 	// actionKey/actionLabel: one extra row key shown in the footer
-	// ("→", "details"); only "→" (Right) is supported.
+	// ("→", "details"); "→" (Right) and "space" are supported.
 	actionKey, actionLabel string
 	// fc keeps the last filter's work for the next key (filter_cache.go).
 	fc filterCache
 }
 
 // SetRowAction adds a footer hint and a key that acts on the highlighted
-// row without selecting it: key "→" (the Right arrow) emits ActionMsg.
-// The footer hint is a button too.
+// row without selecting it: key "→" (the Right arrow) or "space" emits
+// ActionMsg (with "space" a blank is never typed into the search). The
+// footer hint is a button too.
 func (m *Model) SetRowAction(key, label string) { m.actionKey, m.actionLabel = key, label }
 
 // rowAction reports the highlighted row as an ActionMsg command.
@@ -201,6 +202,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 			return m, nil
 		case tea.KeySpace:
+			if m.actionKey == "space" { // Space is the row key: no blank in the search
+				return m, m.rowAction()
+			}
 			m.input += " "
 			m.refilter()
 			return m, nil
@@ -479,7 +483,7 @@ func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	}
 	// The footer hints are buttons: Enter selects, Esc closes.
 	switch m.footerKeyAt(x, y) {
-	case "→":
+	case "→", "space":
 		return m, m.rowAction()
 	case "esc":
 		return m, func() tea.Msg { return CloseMsg{} }

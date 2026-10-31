@@ -33,3 +33,25 @@ func TestRowActionKeyReportsHighlightedRow(t *testing.T) {
 		t.Error("Right acted without SetRowAction")
 	}
 }
+
+// The row action key can be Space ("space"): Space reports the row
+// instead of typing a blank into the search, and the footer names it.
+func TestRowActionSpace(t *testing.T) {
+	m := NewItems(" P ", []Item{{ID: "a", Title: "First"}, {ID: "b", Title: "Second"}})
+	m.SetSize(120, 40)
+	m.SetRowAction("space", "on/off")
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m, cmd := m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	if cmd == nil {
+		t.Fatal("Space did nothing")
+	}
+	if got, ok := cmd().(ActionMsg); !ok || got.ID != "b" || got.Key != "space" {
+		t.Fatalf("got %#v", cmd())
+	}
+	if m.input != "" {
+		t.Errorf("Space typed into the search: %q", m.input)
+	}
+	if !strings.Contains(ansi.Strip(m.Box()), "on/off") {
+		t.Error("footer does not name the key")
+	}
+}
