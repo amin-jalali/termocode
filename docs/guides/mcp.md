@@ -407,7 +407,7 @@ There is nothing to set up.
 The MCP section of the Settings modal (**Preferences: Open Settings (UI)**)
 has `mcp_enabled`, `mcp_idle_timeout`, `mcp_call_timeout`,
 `mcp_max_result_kb`, `mcp_trust_annotations`, `mcp_oauth_port`,
-`mcp_share` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
+`mcp_share`, `mcp_log_level` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
 your build has none). The timeouts apply at once. The AI can not change these settings. They are
 listed in the settings reference.
 
@@ -417,6 +417,13 @@ Run **AI: MCP: Show Log** (the **MCP** channel of the Output panel). It
 shows each start or connect, the server's version and tool count, its
 error output, sign-ins, token refreshes, idle stops and failures.
 Secrets are hidden.
+
+A server's **Show log** shows only that server's lines; a note row at
+the top says so. **AI: MCP: Show Log** shows every server again. Set
+`mcp_log_level` (Settings → MCP) to `error`, `warning`, `info` (the
+default) or `debug` to hide the lines below that level, such as a
+server's debug messages. termocode keeps every line, so a lower level
+also shows the older lines.
 
 | You see | Do this |
 |---|---|
