@@ -46,17 +46,17 @@ func TestFromPlainSkipsNullFields(t *testing.T) {
 // Spec (U19 SS-4): Migrate refuses bad input before it changes anything.
 func TestMigrateRejectsBadInput(t *testing.T) {
 	dir, plain := migrateDir(t, migrateFixture)
-	if _, err := Migrate(MigrateOptions{To: "keyring"}); err == nil || !strings.Contains(err.Error(), "no config dir") {
+	if _, err := Migrate(MigrateOptions{RemovePlain: true, To: "keyring"}); err == nil || !strings.Contains(err.Error(), "no config dir") {
 		t.Fatalf("no dir: err = %v", err)
 	}
-	if _, err := Migrate(MigrateOptions{Options: Options{Dir: dir}, To: "plain"}); !errors.Is(err, ErrUnknownBackend) {
+	if _, err := Migrate(MigrateOptions{RemovePlain: true, Options: Options{Dir: dir}, To: "plain"}); !errors.Is(err, ErrUnknownBackend) {
 		t.Fatalf("to plain: err = %v", err)
 	}
 	if got := readFile(t, plain); got != migrateFixture {
 		t.Fatal("a refused move changed the plain file")
 	}
 	_, bad := migrateDir(t, `{"weird":1}`)
-	if _, err := Migrate(MigrateOptions{Options: Options{Dir: filepath.Dir(filepath.Dir(bad)), PlainPath: bad,
+	if _, err := Migrate(MigrateOptions{RemovePlain: true, Options: Options{Dir: filepath.Dir(filepath.Dir(bad)), PlainPath: bad,
 		KeyringProbe: func() bool { return true }}, To: "keyring"}); err == nil || !strings.Contains(err.Error(), "unknown field") {
 		t.Fatalf("bad plain file: err = %v", err)
 	}
@@ -66,7 +66,7 @@ func TestMigrateRejectsBadInput(t *testing.T) {
 func TestMigrateDefaultPlainPath(t *testing.T) {
 	keyring.MockInit()
 	dir, plain := migrateDir(t, migrateFixture)
-	s, err := Migrate(MigrateOptions{Options: Options{Dir: dir, KeyringProbe: func() bool { return true }}, To: "keyring"})
+	s, err := Migrate(MigrateOptions{RemovePlain: true, Options: Options{Dir: dir, KeyringProbe: func() bool { return true }}, To: "keyring"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestMigrateFailuresRollBack(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			keyring.MockInit()
 			dir, plain := migrateDir(t, migrateFixture)
-			o := MigrateOptions{Options: Options{Dir: dir, PlainPath: plain, KeyringProbe: func() bool { return true }}, To: "keyring"}
+			o := MigrateOptions{RemovePlain: true, Options: Options{Dir: dir, PlainPath: plain, KeyringProbe: func() bool { return true }}, To: "keyring"}
 			c.prep(t, dir, &o)
 			idxBefore, idxErr := os.ReadFile(filepath.Join(dir, IndexFile))
 			ageBefore, ageErr := os.ReadFile(filepath.Join(dir, AgeFile))
@@ -134,7 +134,7 @@ func TestMigrateNotRemoved(t *testing.T) {
 	keyring.MockInit()
 	dir, plain := migrateDir(t, migrateFixture)
 	t.Cleanup(setRemove(func(string) error { return errors.New("busy") }))
-	s, err := Migrate(MigrateOptions{Options: Options{Dir: dir, PlainPath: plain, KeyringProbe: func() bool { return true }}, To: "keyring"})
+	s, err := Migrate(MigrateOptions{RemovePlain: true, Options: Options{Dir: dir, PlainPath: plain, KeyringProbe: func() bool { return true }}, To: "keyring"})
 	if !errors.Is(err, ErrNotRemoved) || s == nil {
 		t.Fatalf("Migrate = %v, %v", s, err)
 	}

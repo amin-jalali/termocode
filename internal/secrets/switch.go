@@ -47,6 +47,9 @@ type SwitchOptions struct {
 	// Commit runs after the copy is checked and recorded and before the
 	// old copies are removed; an error undoes the switch.
 	Commit func(Store) error
+	// RemovePlain also wipes the plain file when the switch leaves the
+	// plain backend. Off by default: the user decides (see Finish).
+	RemovePlain bool
 }
 
 // Switch moves every secret of the open store from to the backend o.To
@@ -184,6 +187,9 @@ func Switch(from Store, o SwitchOptions) (Store, error) {
 			}
 		}
 	case "plain":
+		if !o.RemovePlain {
+			break
+		}
 		if err := Remove(o.PlainPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			errs = append(errs, err)
 		}

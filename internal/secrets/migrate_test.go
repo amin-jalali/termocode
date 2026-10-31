@@ -150,7 +150,7 @@ func TestMigrateToAge(t *testing.T) {
 	dir, plain := migrateDir(t, migrateFixture)
 	seen := removeSpy(t)
 	var committed Store
-	s, err := Migrate(MigrateOptions{
+	s, err := Migrate(MigrateOptions{RemovePlain: true,
 		Options: Options{Dir: dir, PlainPath: plain, ScryptWorkFactor: 10},
 		To:      "age", Pass: []byte("correct horse battery"),
 		Commit: func(s Store) { committed = s },
@@ -194,7 +194,7 @@ func TestMigrateToKeyring(t *testing.T) {
 	keyring.MockInit()
 	dir, plain := migrateDir(t, migrateFixture)
 	seen := removeSpy(t)
-	s, err := Migrate(MigrateOptions{
+	s, err := Migrate(MigrateOptions{RemovePlain: true,
 		Options: Options{Dir: dir, PlainPath: plain, KeyringProbe: func() bool { return true }},
 		To:      "keyring",
 	})
@@ -231,7 +231,7 @@ func TestMigrateVerifyFailureKeepsPlainFile(t *testing.T) {
 	t.Cleanup(setRemove(func(string) error { removed = true; return nil }))
 	t.Cleanup(setVerify(func(Store, map[string]string) error { return errors.New("ai.key.openai differs") }))
 	committed := false
-	_, err := Migrate(MigrateOptions{
+	_, err := Migrate(MigrateOptions{RemovePlain: true,
 		Options: Options{Dir: dir, PlainPath: plain, ScryptWorkFactor: 10},
 		To:      "age", Pass: []byte("correct horse battery"),
 		Commit: func(Store) { committed = true },
@@ -265,7 +265,7 @@ func TestMigrateVerifyFailureKeepsPlainFile(t *testing.T) {
 
 func TestMigrateWeakPassphraseKeepsPlainFile(t *testing.T) {
 	dir, plain := migrateDir(t, migrateFixture)
-	_, err := Migrate(MigrateOptions{Options: Options{Dir: dir, PlainPath: plain, ScryptWorkFactor: 10}, To: "age", Pass: []byte("short")})
+	_, err := Migrate(MigrateOptions{RemovePlain: true, Options: Options{Dir: dir, PlainPath: plain, ScryptWorkFactor: 10}, To: "age", Pass: []byte("short")})
 	if !errors.Is(err, ErrWeakPassphrase) {
 		t.Fatalf("err = %v", err)
 	}
@@ -279,7 +279,7 @@ func TestMigrateWeakPassphraseKeepsPlainFile(t *testing.T) {
 
 func TestMigrateNothingToMove(t *testing.T) {
 	dir, plain := migrateDir(t, `{}`)
-	if _, err := Migrate(MigrateOptions{Options: Options{Dir: dir, PlainPath: plain}, To: "age", Pass: []byte("correct horse battery")}); !errors.Is(err, ErrNothingToMove) {
+	if _, err := Migrate(MigrateOptions{RemovePlain: true, Options: Options{Dir: dir, PlainPath: plain}, To: "age", Pass: []byte("correct horse battery")}); !errors.Is(err, ErrNothingToMove) {
 		t.Fatalf("err = %v", err)
 	}
 	if readFile(t, plain) != `{}` {

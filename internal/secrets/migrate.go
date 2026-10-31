@@ -293,6 +293,9 @@ type MigrateOptions struct {
 	// Commit runs after the check and before the old file is removed:
 	// the caller starts using the new store there.
 	Commit func(Store)
+	// RemovePlain also wipes the plain file after the check. Off by
+	// default: the file is the user's to delete (see Finish).
+	RemovePlain bool
 }
 
 // Migrate moves the plain file's secrets to the backend o.To and
@@ -366,8 +369,10 @@ func Migrate(o MigrateOptions) (Store, error) {
 	if o.Commit != nil {
 		o.Commit(s)
 	}
-	if err := Remove(o.PlainPath); err != nil {
-		return s, fmt.Errorf("%w: %v", ErrNotRemoved, err)
+	if o.RemovePlain { // never by default: the user decides (FIX-24)
+		if err := Remove(o.PlainPath); err != nil {
+			return s, fmt.Errorf("%w: %v", ErrNotRemoved, err)
+		}
 	}
 	return s, nil
 }

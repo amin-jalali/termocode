@@ -81,15 +81,15 @@ func TestSwitchRejectsBadInput(t *testing.T) {
 	from, dir := switchFrom(t, "age")
 	idxBefore := readFile(t, filepath.Join(dir, IndexFile))
 
-	if _, err := Switch(otherStore{from}, SwitchOptions{Options: switchOpts(dir), To: "plain"}); err == nil || !strings.Contains(err.Error(), "can not be switched") {
+	if _, err := Switch(otherStore{from}, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "plain"}); err == nil || !strings.Contains(err.Error(), "can not be switched") {
 		t.Fatalf("foreign store: err = %v", err)
 	}
 	o := switchOpts(dir)
 	o.Dir = ""
-	if _, err := Switch(from, SwitchOptions{Options: o, To: "plain"}); err == nil || !strings.Contains(err.Error(), "no config dir") {
+	if _, err := Switch(from, SwitchOptions{RemovePlain: true, Options: o, To: "plain"}); err == nil || !strings.Contains(err.Error(), "no config dir") {
 		t.Fatalf("no dir: err = %v", err)
 	}
-	if _, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "vault"}); !errors.Is(err, ErrUnknownBackend) {
+	if _, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "vault"}); !errors.Is(err, ErrUnknownBackend) {
 		t.Fatalf("unknown backend: err = %v", err)
 	}
 	if got := readFile(t, filepath.Join(dir, IndexFile)); got != idxBefore {
@@ -108,7 +108,7 @@ func TestSwitchCorruptIndex(t *testing.T) {
 	if err := os.WriteFile(idx, []byte("{not json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "plain"}); !errors.Is(err, ErrCorrupt) {
+	if _, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "plain"}); !errors.Is(err, ErrCorrupt) {
 		t.Fatalf("err = %v, want ErrCorrupt", err)
 	}
 	if got := readFile(t, idx); got != "{not json" {
@@ -122,7 +122,7 @@ func TestSwitchToPlainDefaultPath(t *testing.T) {
 	from, dir := switchFrom(t, "age")
 	o := switchOpts(dir)
 	o.PlainPath = ""
-	s, err := Switch(from, SwitchOptions{Options: o, To: "plain"})
+	s, err := Switch(from, SwitchOptions{RemovePlain: true, Options: o, To: "plain"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestSwitchOldKeyringReadFails(t *testing.T) {
 	from, dir := switchFrom(t, "keyring")
 	keyring.MockInitWithError(errors.New("dbus gone"))
 	t.Cleanup(keyring.MockInit)
-	_, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "plain"})
+	_, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "plain"})
 	if err == nil || !strings.Contains(err.Error(), "read ") || !strings.Contains(err.Error(), "dbus gone") {
 		t.Fatalf("err = %v", err)
 	}
@@ -154,7 +154,7 @@ func TestSwitchKeyringWriteFails(t *testing.T) {
 	idxBefore := readFile(t, filepath.Join(dir, IndexFile))
 	keyring.MockInitWithError(errors.New("keyring is full"))
 	t.Cleanup(keyring.MockInit)
-	_, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "keyring"})
+	_, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "keyring"})
 	if err == nil || !strings.Contains(err.Error(), "write ") || !strings.Contains(err.Error(), "keyring is full") {
 		t.Fatalf("err = %v", err)
 	}
@@ -179,7 +179,7 @@ func TestSwitchKeyringNoAnswer(t *testing.T) {
 		return ""
 	}
 	o.KeyringProbe = func() bool { return false }
-	_, err := Switch(from, SwitchOptions{Options: o, To: "keyring"})
+	_, err := Switch(from, SwitchOptions{RemovePlain: true, Options: o, To: "keyring"})
 	if !errors.Is(err, ErrKeyringUnavailable) || !strings.Contains(err.Error(), "it did not answer") {
 		t.Fatalf("err = %v", err)
 	}
@@ -198,7 +198,7 @@ func TestSwitchToAgeWrongPassphrase(t *testing.T) {
 	}
 	a.Lock()
 	before := readFile(t, filepath.Join(dir, AgeFile))
-	_, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "age", Pass: []byte("wrong pass phrase")})
+	_, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "age", Pass: []byte("wrong pass phrase")})
 	if !errors.Is(err, ErrWrongPassphrase) {
 		t.Fatalf("err = %v", err)
 	}
@@ -223,7 +223,7 @@ func TestSwitchAgeWriteFails(t *testing.T) {
 		}
 		return errors.New("disk full")
 	})
-	_, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "age", Pass: []byte(pass)})
+	_, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "age", Pass: []byte(pass)})
 	restore()
 	if err == nil || !strings.Contains(err.Error(), "disk full") {
 		t.Fatalf("err = %v", err)
@@ -246,7 +246,7 @@ func TestSwitchIndexWriteFailsUndoesKeyring(t *testing.T) {
 		return nil
 	}))
 	t.Cleanup(setRename(os.Rename))
-	_, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "keyring"})
+	_, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "keyring"})
 	if err == nil || !strings.Contains(err.Error(), "index is read-only") {
 		t.Fatalf("err = %v", err)
 	}
@@ -276,7 +276,7 @@ func TestSwitchFailureRestoresFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(setSwitchVerify(func(Backend, map[string]string) error { return errors.New("check failed") }))
-	if _, err := Switch(from, SwitchOptions{Options: o, To: "plain"}); err == nil {
+	if _, err := Switch(from, SwitchOptions{RemovePlain: true, Options: o, To: "plain"}); err == nil {
 		t.Fatal("Switch succeeded")
 	}
 	gone(t, filepath.Join(dir, IndexFile))
@@ -291,7 +291,7 @@ func TestSwitchOldCopiesNotRemoved(t *testing.T) {
 	t.Run("plain", func(t *testing.T) {
 		from, dir := switchFrom(t, "plain")
 		t.Cleanup(setRemove(func(string) error { return errors.New("busy") }))
-		s, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "age", Pass: []byte(pass)})
+		s, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "age", Pass: []byte(pass)})
 		if !errors.Is(err, ErrOldNotRemoved) || s == nil || s.Backend() != "age" {
 			t.Fatalf("Switch = %v, %v", s, err)
 		}
@@ -299,7 +299,7 @@ func TestSwitchOldCopiesNotRemoved(t *testing.T) {
 	})
 	t.Run("keyring", func(t *testing.T) {
 		from, dir := switchFrom(t, "keyring")
-		s, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "plain",
+		s, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "plain",
 			Commit: func(Store) error {
 				keyring.MockInitWithError(errors.New("locked by the desktop"))
 				return nil
@@ -356,7 +356,7 @@ func TestSwitchPlainUnknownField(t *testing.T) {
 	if err := os.WriteFile(o.PlainPath, []byte(b), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := Switch(from, SwitchOptions{Options: o, To: "age", Pass: []byte(pass)})
+	_, err := Switch(from, SwitchOptions{RemovePlain: true, Options: o, To: "age", Pass: []byte(pass)})
 	if err == nil || !strings.Contains(err.Error(), `unknown field "weird_field"`) {
 		t.Fatalf("err = %v", err)
 	}
