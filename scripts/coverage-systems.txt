@@ -6,7 +6,7 @@
 # are never measured. Every shipped package must be listed once; a test
 # fails when a new package is in neither list.
 
-AI and agents: internal/ai internal/netmsg internal/addai internal/agentdag internal/agentrun internal/agents internal/aimemory internal/clilogin internal/clistep
+AI and agents: internal/ai internal/netmsg internal/addai internal/agentdag internal/agentrun internal/agents internal/aimemory internal/clilogin internal/clistep internal/pdftext
 Git: internal/git internal/ghci internal/diffview internal/mergeview internal/rebaseview internal/textdiff
 Containers and remote: internal/containers internal/containerhost internal/kube internal/services internal/workspace/...
 MCP and secrets: internal/mcp/... internal/secrets internal/connectcard
