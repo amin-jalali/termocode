@@ -132,6 +132,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
 | [`ast_grep`](#ast_grep) | search: auto<br>with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
 | [`look_at`](#look_at) | auto<br>an image is sent to the main model in one extra request (a PDF is read locally) | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
+| [`todo_write`](#todo_write) | auto | no | Write the todo list of this chat (the whole list each time; it replaces the old one). |
+| [`todo_read`](#todo_read) | auto | no | Read the todo list of this chat: [x] done, [~] in progress, [ ] pending. |
 | [`redis_keys`](#redis_keys) | auto | yes | List the keys of a Redis connection that match a glob pattern (SCAN; never KEYS), with type and TTL. |
 | [`redis_get`](#redis_get) | auto | asks | Read one Redis key: its type, TTL, size and one page of its value (string: up to 64 KB; hash, list, set, sorted set, stream: up to max items). |
 | [`redis_command`](#redis_command) | a read command (allow-list<br>not CONFIG / ACL / CLIENT): auto, in a read-only session<br>any other command: confirm (db:<conn>/write) with the command shown<br>production connections: confirm (always asks)<br>read-only connections: writes refused<br>the never-list (FLUSHALL, FLUSHDB, CONFIG SET, SHUTDOWN, DEBUG, MODULE, scripts, MIGRATE, REPLICAOF, ACL changes, …) and MONITOR / SUBSCRIBE: refused | asks | Run ONE Redis command (one line, as typed in a console). |
@@ -1555,6 +1557,11 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). With rewrite, every match is replaced ("log.Print($A)") and the user reviews the change as a diff. Use it for safe refactors across many files; for plain text use search.
 
 **Gate:** search: auto · with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed
+### todo_write
+
+Write the todo list of this chat (the whole list each time; it replaces the old one). Use it for work with three or more steps: one item per step, mark the one you work on in_progress and mark items done as soon as they are done. The user sees the list. An empty list clears it.
+
+**Gate:** auto
 
 **MCP server:** no
 
@@ -1577,6 +1584,16 @@ Look at an image file (png, jpg, gif, webp) and answer a question about it, or r
 | --- | --- | --- | --- |
 | `path` | string | yes | image or PDF file, relative to the workspace |
 | `question` | string |   | what you want to know (optional; default: describe it and copy its text) |
+| `todos` | array | yes | every todo, in order |
+
+### todo_read
+
+Read the todo list of this chat: [x] done, [~] in progress, [ ] pending.
+
+**Gate:** auto
+
+
+No arguments.
 
 ### redis_keys
 
