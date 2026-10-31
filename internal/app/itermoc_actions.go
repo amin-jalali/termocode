@@ -664,6 +664,9 @@ func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
 	case "fixfile":
 		return m.itermocFixFile(row)
 	case "log":
+		if row.kind == imRowService {
+			return m.showMCPLogFor(row.name) // only this service (ai_mcp_log.go)
+		}
 		return m.showMCPLog()
 	case "status":
 		return m.openMCPServeStatus()
