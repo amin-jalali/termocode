@@ -941,7 +941,7 @@ func New() Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	cmds := []tea.Cmd{tea.HideCursor, fetchGitCmd(), gitAutoRefreshTick(), settingsReloadTick()}
+	cmds := []tea.Cmd{tea.HideCursor, fetchGitCmd(), gitAutoRefreshTick(), settingsReloadTick(), m.secretsWarmReadyCmd()}
 	if cmd := m.initClipboardCapture(); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
