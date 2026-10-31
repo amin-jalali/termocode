@@ -155,7 +155,7 @@ func AIToolCatalog() []AIToolDoc {
 			kept = append(kept, t)
 		}
 	}
-	tools = append(kept, aiSkillLoadTool(".")) // listed only where a skill is offered
+	tools = append(kept, aiSkillLoadTool("."))                                                                     // listed only where a skill is offered
 	tools = append(tools, aiRedactResults([]ai.Tool{aiWebFetchTool(), aiWebSearchTool(webtools.Providers[0])})...) // only when turned on (OMX-13)
 	out := make([]AIToolDoc, 0, len(tools))
 	for _, t := range tools {
