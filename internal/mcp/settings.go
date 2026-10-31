@@ -33,6 +33,7 @@ type Settings struct {
 	// user turned off in Show tools; they are not sent to the model.
 	DisabledTools map[string][]string
 	ToolSearch    string // mcp_tool_search ("auto"): defer MCP tool schemas behind a search tool
+	CatalogURL    string // mcp_catalog_url (""): a registry API to browse instead of the official one
 }
 
 // ToolOff reports a tool the user turned off (mcp_disabled_tools).
@@ -76,6 +77,7 @@ func LoadSettings(configPath string) Settings {
 		DisabledTools    map[string][]string `json:"mcp_disabled_tools"`
 		LogLevel         string              `json:"mcp_log_level"`
 		ToolSearch       string              `json:"mcp_tool_search"`
+		CatalogURL       string              `json:"mcp_catalog_url"`
 	}
 	if json.Unmarshal(b, &raw) != nil {
 		return s
@@ -105,6 +107,9 @@ func LoadSettings(configPath string) Settings {
 		s.GitHubClientID = raw.GitHubClientID
 	}
 	s.ToolSearch = ParseToolSearchMode(raw.ToolSearch)
+	if u := strings.TrimSpace(raw.CatalogURL); u != "" && CheckCatalogURL(u) == nil {
+		s.CatalogURL = u
+	}
 	for k, v := range raw.Trusted {
 		s.Trusted[k] = v
 	}

@@ -100,7 +100,7 @@ func TestCatalogEntryToServerEntry(t *testing.T) {
 		t.Fatalf("name %q err %v", name, err)
 	}
 	b, _ := json.Marshal(entry)
-	for _, want := range []string{`"command":"npx"`, `"-y","@acme/notes-mcp@1.2.0"`, `"NOTES_TOKEN":"${secret:notes_notes_token}"`, `"NOTES_REGION":"eu"`, `"registry":{"name":"io.github.acme/notes","url":"`+srv.URL+`","version":"1.2.0"}`} {
+	for _, want := range []string{`"command":"npx"`, `"-y","@acme/notes-mcp@1.2.0"`, `"NOTES_TOKEN":"${secret:notes_notes_token}"`, `"NOTES_REGION":"eu"`, `"registry":{"name":"io.github.acme/notes","url":"` + srv.URL + `","version":"1.2.0"}`} {
 		if !strings.Contains(string(b), want) {
 			t.Errorf("entry %s lacks %s", b, want)
 		}
@@ -146,5 +146,20 @@ func TestCatalogFetchErrorKeepsCache(t *testing.T) {
 	}
 	if list, _, ok := c.Cached(); !ok || len(list) != 3 {
 		t.Fatal("a failed fetch dropped the cache")
+	}
+}
+
+func TestLoadSettingsCatalogURL(t *testing.T) {
+	p := t.TempDir() + "/config.json"
+	if s := LoadSettings(p); s.CatalogURL != "" {
+		t.Fatalf("default = %q", s.CatalogURL)
+	}
+	_ = SaveSetting(p, "mcp_catalog_url", "https://mcp.corp.example/")
+	if s := LoadSettings(p); s.CatalogURL != "https://mcp.corp.example/" {
+		t.Fatalf("saved = %q", s.CatalogURL)
+	}
+	_ = SaveSetting(p, "mcp_catalog_url", "ftp://bad")
+	if s := LoadSettings(p); s.CatalogURL != "" {
+		t.Fatalf("a bad URL was kept: %q", s.CatalogURL)
 	}
 }
