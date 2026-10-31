@@ -19,6 +19,7 @@ type gateProvider struct {
 	steps chan ai.Chunk
 	mu    sync.Mutex
 	reqs  [][]ai.Message
+	level []string // each request's reasoning level
 }
 
 func newGateProvider() *gateProvider { return &gateProvider{steps: make(chan ai.Chunk, 8)} }
@@ -29,6 +30,7 @@ func (*gateProvider) SupportsTools() bool { return true }
 func (p *gateProvider) Stream(ctx context.Context, req ai.Request) <-chan ai.Chunk {
 	p.mu.Lock()
 	p.reqs = append(p.reqs, append([]ai.Message(nil), req.Messages...))
+	p.level = append(p.level, req.Reasoning)
 	p.mu.Unlock()
 	ch := make(chan ai.Chunk, 2)
 	go func() {
@@ -267,5 +269,33 @@ func TestAIBackgroundStepUsageAddsUp(t *testing.T) {
 	r.m.aiBgStepUsage(b, st, agentrun.Event{Usage: u})
 	if st.Cost == nil || *st.Cost < 1.99*first || st.Usage.Input != 200000 {
 		t.Fatalf("cost %v (first %v) usage %+v", st.Cost, first, st.Usage)
+	}
+}
+
+// A background step gets the reasoning level of its slot, and its
+// category's level when the category sets one.
+func TestAIBackgroundRunReasoning(t *testing.T) {
+	for _, tc := range []struct {
+		cat, want string
+	}{{"", ai.ReasoningHigh}, {ai.ReasoningXHigh, ai.ReasoningXHigh}} {
+		r := newBgRig(t)
+		quick := r.m.ai.slotFake[ai.SlotQuick]
+		quick.cfg.Reasoning = ai.ReasoningHigh
+		r.m.ai.slotFake[ai.SlotQuick] = quick
+		if tc.cat != "" {
+			r.m.ai.settings.Categories = map[string]ai.CategoryConfig{"quick": {Reasoning: tc.cat}}
+		}
+		r.send("count the TODOs")
+		r.chat.steps <- toolCall("agent_run_start", map[string]any{"task": "Find the TODOs in the repo", "steps": bgSteps})
+		r.pump(func() bool { return len(r.m.ai.bgRuns) == 1 && len(r.bg.requests()) == 1 })
+		r.bg.mu.Lock()
+		got := r.bg.level[0]
+		r.bg.mu.Unlock()
+		if got != tc.want {
+			t.Errorf("category %q: background step reasoning %q, want %q", tc.cat, got, tc.want)
+		}
+		r.bg.steps <- ai.Chunk{Delta: "done"}
+		r.chat.steps <- ai.Chunk{Delta: "ok"}
+		r.pump(func() bool { return r.ended && len(r.m.ai.bgRuns) == 0 })
 	}
 }
