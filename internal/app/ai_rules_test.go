@@ -155,7 +155,7 @@ func TestAIRulesNoFileNoCard(t *testing.T) {
 func TestAIRulesPalette(t *testing.T) {
 	m, rec, _ := aiRulesModel(t, "")
 	m.dispatchAIPalette("ai-rules")
-	if m.confirmOpen || !strings.Contains(aiToastText(m), "No AGENTS.md or .termocode/rules.md") {
+	if m.confirmOpen || !strings.Contains(aiToastText(m), "No AGENTS.md, CLAUDE.md or other rules file") {
 		t.Fatalf("no-file toast %q", aiToastText(m))
 	}
 
@@ -279,5 +279,54 @@ func TestAIRulesInPipelineRun(t *testing.T) {
 	}
 	if got := m.ai.conv.Messages[0].Rules; got != ".termocode/rules.md (21 B)" {
 		t.Errorf("stored rules line %q", got)
+	}
+}
+
+// Spec (OMX-9): a workspace with only a folder AGENTS.md asks too; the
+// card shows that file.
+func TestAIRulesFolderOnlyAsks(t *testing.T) {
+	m, rec, dir := aiRulesModel(t, "")
+	writeAIRules(t, dir, "pkg/AGENTS.md", "Pkg rule.\n")
+	m.sendAIChat("hello")
+	if !m.confirmOpen || m.confirmKind != confirmKindAIRulesTrust || len(rec.reqs) != 0 {
+		t.Fatal("no rules card for a folder rules file")
+	}
+	box := ansi.Strip(m.confirm.Box())
+	for _, want := range []string{"pkg/AGENTS.md", "Pkg rule."} {
+		if !strings.Contains(box, want) {
+			t.Errorf("card lacks %q:\n%s", want, box)
+		}
+	}
+}
+
+// Spec (OMX-9): once trusted, reading a file adds its folder's rules to
+// the read_file result, once per chat; the system prompt does not have
+// them.
+func TestAIRulesFolderRuleOnReadFile(t *testing.T) {
+	p := &scriptedAIProvider{replies: []ai.Chunk{
+		toolCall("read_file", map[string]any{"path": "sub/x.go"}),
+		toolCall("read_file", map[string]any{"path": "sub/y.go"}),
+	}}
+	m, dir := aiIDETestModel(t, p)
+	writeAIRules(t, dir, "AGENTS.md", "Root rule.\n")
+	writeAIRules(t, dir, "sub/AGENTS.md", "Sub rule.\n")
+	writeAIRules(t, dir, "sub/x.go", "package sub\n")
+	writeAIRules(t, dir, "sub/y.go", "package sub\n")
+	trustAIRules(t, m, "read them")
+	r := p.toolResults()
+	if len(r) != 2 {
+		t.Fatalf("results %q", r)
+	}
+	if !strings.Contains(r[0], "package sub") || !strings.Contains(r[0], "from sub/AGENTS.md") || !strings.Contains(r[0], "Sub rule.") {
+		t.Errorf("first read lacks the folder rule: %q", r[0])
+	}
+	if strings.Contains(r[1], "Sub rule.") {
+		t.Errorf("second read added the rule again: %q", r[1])
+	}
+	p.mu.Lock()
+	sys := p.seen[0][0].Content
+	p.mu.Unlock()
+	if strings.Contains(sys, "Sub rule.") || !strings.Contains(sys, "Root rule.") {
+		t.Errorf("system prompt: %q", sys)
 	}
 }

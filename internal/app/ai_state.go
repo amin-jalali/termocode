@@ -86,6 +86,10 @@ type aiState struct {
 	profileSave *aiProfileSavePending
 	// rulesTrust is the open project-rules card (ai_rules.go).
 	rulesTrust *aiRulesTrustPending
+	// rulesInj adds folder / glob rules to read_file results once per
+	// chat (OMX-9); rulesInjChat is the chat it belongs to.
+	rulesInj     *ai.RulesInjector
+	rulesInjChat string
 	// skillsTrust is the open project-skills card (ai_skills.go).
 	skillsTrust *aiSkillsTrustPending
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
