@@ -106,3 +106,15 @@ func TestRenderRTLList(t *testing.T) {
 		t.Errorf("no row ends with %q:\n%s", want, ansi.Strip(strings.Join(rows, "\n")))
 	}
 }
+
+func TestRTLPrependMarkRowWidth(t *testing.T) {
+	for _, src := range []string{"\u0604ا", "# \u0604ا", "- \u0604ا", "> \u0604ا", "text \u0604ا"} {
+		for _, width := range []int{12, 40, 80} {
+			for i, row := range Render(src, Options{Width: width, RTL: true}) {
+				if got := ansi.StringWidth(row); got != width {
+					t.Errorf("%q row %d: width %d, want %d", src, i, got, width)
+				}
+			}
+		}
+	}
+}

@@ -19,6 +19,7 @@
 package rtl
 
 import (
+	"strings"
 	"unicode"
 
 	"golang.org/x/text/unicode/bidi"
@@ -241,7 +242,10 @@ func shapeClusters(rs []rune, atoms []int) []cluster {
 func Line(rs []rune, dir Dir, atoms []int) []Glyph {
 	cs := shapeClusters(rs, atoms)
 	// Units: one cluster, or a whole atom.
-	type unit struct{ from, to int } // clusters [from, to)
+	type unit struct {
+		from, to int
+		prepend  bool
+	} // clusters [from, to)
 	var us []unit
 	var cls []bidi.Class
 	for k := 0; k < len(cs); {
@@ -250,19 +254,32 @@ func Line(rs []rune, dir Dir, atoms []int) []Glyph {
 			for j < len(cs) && cs[j].atom == cs[k].atom {
 				j++
 			}
-			us = append(us, unit{k, j})
+			us = append(us, unit{from: k, to: j})
 			cls = append(cls, bidi.ON)
 			k = j
 			continue
 		}
-		us = append(us, unit{k, j})
-		cls = append(cls, class(cs[k].base))
+		// Prepend marks belong to the following grapheme, not the
+		// preceding one. Keep them ahead of its already shaped letter.
+		for j < len(cs) && cs[j].atom == cs[k].atom && unicode.Is(unicode.Prepended_Concatenation_Mark, cs[j-1].base) {
+			j++
+		}
+		us = append(us, unit{from: k, to: j, prepend: j > k+1})
+		cls = append(cls, class(cs[j-1].base))
 		k = j
 	}
 	ord, lv := reorder(cls, dir)
 	out := make([]Glyph, 0, len(cs))
 	for _, ui := range ord {
 		u := us[ui]
+		if u.prepend {
+			var text strings.Builder
+			for _, c := range cs[u.from:u.to] {
+				text.WriteString(c.text)
+			}
+			out = append(out, Glyph{text.String(), cs[u.from].lo, cs[u.to-1].hi})
+			continue
+		}
 		if u.to-u.from == 1 && cs[u.from].atom == 0 {
 			c := cs[u.from]
 			t := c.text
