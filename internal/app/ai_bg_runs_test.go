@@ -1,0 +1,211 @@
+package app
+
+import (
+	"context"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/ai"
+)
+
+// gateProvider answers each request with the next reply sent on steps
+// (it waits for one) and records the requests.
+type gateProvider struct {
+	steps chan ai.Chunk
+	mu    sync.Mutex
+	reqs  [][]ai.Message
+}
+
+func newGateProvider() *gateProvider { return &gateProvider{steps: make(chan ai.Chunk, 8)} }
+
+func (*gateProvider) Name() string        { return "gate" }
+func (*gateProvider) Configured() bool    { return true }
+func (*gateProvider) SupportsTools() bool { return true }
+func (p *gateProvider) Stream(ctx context.Context, req ai.Request) <-chan ai.Chunk {
+	p.mu.Lock()
+	p.reqs = append(p.reqs, append([]ai.Message(nil), req.Messages...))
+	p.mu.Unlock()
+	ch := make(chan ai.Chunk, 2)
+	go func() {
+		defer close(ch)
+		select {
+		case r := <-p.steps:
+			if r.Delta != "" {
+				ch <- ai.Chunk{Delta: r.Delta}
+			}
+			ch <- ai.Chunk{Done: true, ToolCalls: r.ToolCalls, Usage: r.Usage}
+		case <-ctx.Done():
+			ch <- ai.Chunk{Done: true, Err: ctx.Err()}
+		}
+	}()
+	return ch
+}
+
+func (p *gateProvider) requests() [][]ai.Message {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return append([][]ai.Message(nil), p.reqs...)
+}
+
+// bgRig is a chat (main: chat) whose background runs run on quick (bg).
+type bgRig struct {
+	t        *testing.T
+	m        *Model
+	chat, bg *gateProvider
+	chatCh   chan tea.Msg
+	bgChs    []chan tea.Msg
+	ended    bool
+}
+
+func newBgRig(t *testing.T) *bgRig {
+	t.Helper()
+	r := &bgRig{t: t, chat: newGateProvider(), bg: newGateProvider()}
+	r.m, _ = aiRunModel(t, r.chat, r.bg)
+	r.m.ai.profile = ""
+	r.m.ai.conv.Title = "fix the parser"
+	r.m.output = newOutputStore()
+	return r
+}
+
+func (r *bgRig) send(text string) {
+	r.m.sendAIChat(text)
+	r.chatCh = r.m.ai.chatCh
+}
+
+// pump routes the chat's and the background runs' messages until ok.
+func (r *bgRig) pump(ok func() bool) {
+	r.t.Helper()
+	deadline := time.After(10 * time.Second)
+	for !ok() {
+		for _, b := range r.m.ai.bgRuns {
+			known := false
+			for _, c := range r.bgChs {
+				known = known || c == b.ch
+			}
+			if !known {
+				r.bgChs = append(r.bgChs, b.ch)
+			}
+		}
+		var bgCh chan tea.Msg
+		for _, c := range r.bgChs {
+			if c != nil {
+				bgCh = c
+				break
+			}
+		}
+		var msg tea.Msg
+		var open bool
+		select {
+		case msg, open = <-r.chatCh:
+			if !open {
+				r.chatCh = nil
+				continue
+			}
+		case msg, open = <-bgCh:
+			if !open {
+				for i, c := range r.bgChs {
+					if c == bgCh {
+						r.bgChs[i] = nil
+					}
+				}
+				continue
+			}
+		case <-deadline:
+			r.t.Fatal("condition never true")
+		}
+		if c, isCard := msg.(aiChatConfirmMsg); isCard {
+			r.m.handleAIMsg(msg)
+			r.m.confirmOpen = false
+			r.m.answerAIToolConfirm(map[bool]string{true: "allow", false: "deny"}[c.tool.Name == "agent_run_start"])
+			continue
+		}
+		if _, ok := r.m.handleAIMsg(msg); !ok {
+			r.t.Fatalf("unrouted %T", msg)
+		}
+		if d, done := msg.(aiChatDoneMsg); done && d.gen == r.m.ai.chatGen {
+			r.ended = true
+		}
+	}
+}
+
+var bgSteps = []any{map[string]any{"title": "Scan", "category": "quick", "tools": "read-only", "prompt": "find the TODOs"}}
+
+// OMX-6: a run whose steps only read starts at once and runs beside the
+// turn that started it; when it ends, its answer is handed to that turn
+// (the model reads it after its next reply), and when the turn ends the
+// run joins the chat, marked as started by the AI.
+func TestAIBackgroundRunRunsBesideTheTurn(t *testing.T) {
+	r := newBgRig(t)
+	r.send("count the TODOs")
+	r.chat.steps <- toolCall("agent_run_start", map[string]any{"task": "Find the TODOs in the repo", "steps": bgSteps})
+	r.pump(func() bool { return len(r.m.ai.bgRuns) == 1 && len(r.chat.requests()) == 2 })
+	res := r.chat.requests()[1]
+	got := aiToolJSON(t, res[len(res)-1].Content)
+	id, _ := got["run_id"].(string)
+	if got["state"] != "running" || id == "" {
+		t.Fatalf("tool result %v", got)
+	}
+	if !r.m.ai.streaming {
+		t.Fatal("the turn must still go")
+	}
+	// AGENTS shows the run while the turn goes.
+	if d, ok := r.m.ai.agentsData(); !ok || d.msg.Run.ID != id {
+		t.Fatalf("AGENTS does not show %s", id)
+	}
+	r.bg.steps <- ai.Chunk{Delta: "3 TODOs: a.go:1, b.go:2, c.go:3"}
+	r.pump(func() bool { return r.m.ai.aiBgFind(id) != nil && r.m.ai.aiBgFind(id).done })
+	r.chat.steps <- ai.Chunk{Delta: "I started a scan."}
+	r.pump(func() bool { return len(r.chat.requests()) == 3 })
+	reqs := r.chat.requests()
+	note := reqs[2][len(reqs[2])-1].Content
+	for _, want := range []string{aiBgNotePrefix, "background run " + id, "ended: done", "3 TODOs: a.go:1"} {
+		if !strings.Contains(note, want) {
+			t.Errorf("note lacks %q:\n%s", want, note)
+		}
+	}
+	r.chat.steps <- ai.Chunk{Delta: "There are 3 TODOs."}
+	r.pump(func() bool { return r.ended })
+	rm := aiRunMsg(t, r.m)
+	if rm.Run.ID != id || rm.Run.State != ai.RunStateDone || rm.Run.By == nil || rm.Text != "3 TODOs: a.go:1, b.go:2, c.go:3" {
+		t.Fatalf("run in the chat %+v text %q", rm.Run, rm.Text)
+	}
+	if len(r.m.ai.bgRuns) != 0 {
+		t.Fatalf("held runs left: %d", len(r.m.ai.bgRuns))
+	}
+}
+
+// OMX-6: a run that may change files still waits for the chat.
+func TestAIBackgroundRunOnlyForReadOnlySteps(t *testing.T) {
+	r := newBgRig(t)
+	r.send("fix it")
+	r.chat.steps <- toolCall("agent_run_start", map[string]any{"task": "Fix the TODOs",
+		"steps": []any{map[string]any{"title": "Fix", "category": "quick", "prompt": "fix"}}})
+	r.pump(func() bool { return len(r.chat.requests()) == 2 })
+	res := r.chat.requests()[1]
+	if got := aiToolJSON(t, res[len(res)-1].Content); got["state"] != "queued" || len(r.m.ai.bgRuns) != 0 {
+		t.Fatalf("tool result %v, background runs %d", got, len(r.m.ai.bgRuns))
+	}
+	r.chat.steps <- ai.Chunk{Delta: "queued"}
+	r.pump(func() bool { return r.m.ai.run != nil }) // the turn ended: the queued run starts in the chat
+	r.m.aiCancelAll()
+}
+
+// OMX-6: Ctrl+C (stop the AI) stops background runs too.
+func TestAIBackgroundRunStopsWithTheAI(t *testing.T) {
+	r := newBgRig(t)
+	r.send("count")
+	r.chat.steps <- toolCall("agent_run_start", map[string]any{"task": "Find the TODOs", "steps": bgSteps})
+	r.pump(func() bool { return len(r.chat.requests()) == 2 })
+	id := r.m.ai.bgRuns[0].id
+	r.m.aiCancelAll()
+	r.pump(func() bool { b := r.m.ai.aiBgFind(id); return b == nil || b.done })
+	r.pump(func() bool { return r.ended })
+	rm := aiRunMsg(t, r.m)
+	if rm.Run.ID != id || rm.Run.State != ai.RunStateCancelled {
+		t.Fatalf("run %+v", rm.Run)
+	}
+}

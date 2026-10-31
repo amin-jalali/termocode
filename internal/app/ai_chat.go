@@ -333,6 +333,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		// OMX-25: tool results are cut to what still fits the window.
 		ContextWindow: aiContextWindow(s.settings, slot.cfg.Model),
 	}
+	agent.Inbox = m.aiBgTurnInbox(gen) // OMX-6: background runs hand their answers in
 	s.turnThink = ""
 	window := agent.ContextWindow
 	crash.GoWith("the AI chat", func() {
@@ -629,6 +630,8 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	}
 	s.streaming = false
 	s.chatCancel = nil
+	s.bgMail.closeKey(aiBgTurnKey(msg.gen))
+	m.aiBgFlush() // OMX-6: background runs this turn started join the chat
 	if n := len(s.conv.Messages); n > 0 && s.conv.Messages[n-1].Role == ai.StoredAssistant && s.conv.Messages[n-1].Run == nil && strings.TrimSpace(s.conv.Messages[n-1].Text) == "" {
 		s.conv.Messages = s.conv.Messages[:n-1]
 	}

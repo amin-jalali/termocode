@@ -93,6 +93,9 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case aiOAuthDoneMsg:
 		return m.onAIOAuthDone(msg), true
 	}
+	if cmd, ok := m.handleAIBgMsg(msg); ok { // ai_bg_runs.go
+		return cmd, true
+	}
 	if cmd, ok := m.handleAddAIMsg(msg); ok { // ai_add.go
 		return cmd, true
 	}

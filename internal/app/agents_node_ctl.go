@@ -96,6 +96,9 @@ func (s *aiState) aiRunHandle(id string) *agentrun.Handle {
 	if rm := s.aiRunMessage(); rm != nil && s.run != nil && rm.Run.ID == id {
 		return s.run
 	}
+	if b := s.aiBgFind(id); b != nil && !b.done { // OMX-6
+		return b.h
+	}
 	return nil
 }
 

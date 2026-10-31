@@ -342,6 +342,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	for name := range slots {
 		fallbacks[name] = s.aiFallbacks(name)
 	}
+	mail := &s.bgMail
 
 	ctx, cancel := context.WithCancel(context.Background())
 	send := func(msg tea.Msg) {
@@ -449,12 +450,15 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 					own[c] = true
 				}
 			}
+			k := aiBgStepKey(run.ID, n.ID) // OMX-6: background runs this step starts hand their answers in
+			mail.openKey(k)
 			return &ai.Agent{Provider: sl.p, Tools: aiWithHooks(dir, ts, m.output), Native: native, AutoApprove: own, MaxSteps: maxSteps,
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
 				Reasoning: reasoning(n.Slot, sl.cfg), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: fallbacks[n.Slot],
-				ContextWindow: windowOf(sl.cfg.Model)}, msgs, nil
+				ContextWindow: windowOf(sl.cfg.Model), Inbox: mail.inbox(k)}, msgs, nil
 		},
 		Finished: func(_ context.Context, n agentdag.Node) {
+			mail.closeKey(aiBgStepKey(run.ID, n.ID))
 			if msg, ok := wts.finished(n); ok {
 				msg.gen, msg.ch = gen, ch
 				send(msg)
