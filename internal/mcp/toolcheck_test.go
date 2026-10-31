@@ -37,3 +37,22 @@ func TestBadToolsDropped(t *testing.T) {
 		}
 	}
 }
+
+// Spec (TS-16): a tool whose _meta says requiresUserInteraction always
+// asks, with no "Always allow", even when read-only or in autoApprove.
+func TestRequiresUserInteraction(t *testing.T) {
+	tl := Tool{Name: "pay", Annotations: ann(bp(true), nil), Meta: map[string]any{"vendor.example/requiresUserInteraction": true}}
+	if !tl.RequiresUserInteraction() {
+		t.Fatal("meta not read")
+	}
+	at := AITools(Server{Name: "s", AutoApprove: []string{"pay"}}, []Tool{tl}, bigCall("ok"), AdapterOptions{TrustAnnotations: true})[0]
+	if !at.Mutating || at.Class != "" {
+		t.Errorf("static %v %q", at.Mutating, at.Class)
+	}
+	if mut, class := at.Gate(map[string]any{}); !mut || class != "" {
+		t.Errorf("gate %v %q", mut, class)
+	}
+	if (Tool{Name: "x", Meta: map[string]any{"requiresUserInteraction": false}}).RequiresUserInteraction() {
+		t.Error("false read as true")
+	}
+}
