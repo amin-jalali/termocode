@@ -222,6 +222,7 @@ Tests cache aggressively; if a test wrongly reports stale, use `go clean -testca
 
 - **`.github/workflows/test.yml`** — every push & PR runs `go vet ./...` + `go test ./... -race -count=1` on Ubuntu and macOS.
 - **`.github/workflows/release.yml`** — tagged releases (`v*`) cross-compile for linux/darwin × amd64/arm64, upload tarballs + `checksums.txt` to the GitHub Release with auto-generated release notes, then render the Homebrew formula and AUR `PKGBUILD` from `packaging/` and push them (each push is skipped when its secret is missing — see [CONTRIBUTING.md](https://github.com/amin-jalali/termocode/blob/main/CONTRIBUTING.md#releases)).
+- **Update signature (maintainer step)** — `internal/update/signature.go` can check a minisign signature of `checksums.txt`. It is off while `releasePublicKey` is empty (a placeholder), so updates work today. To turn it on: make a key with `minisign -G` (keep the secret key offline), paste the base64 line of the `.pub` file into `releasePublicKey`, and add `minisign -Sm checksums.txt` (upload `checksums.txt.minisig` to the release) to the release job. After that, an update without a valid signature is refused. Ship the key and the signing step in the same release.
 
 ## Repository layout
 
