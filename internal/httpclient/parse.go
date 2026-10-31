@@ -36,7 +36,9 @@ func Parse(src string) File {
 	}
 	for i, raw := range lines {
 		n := i + 1
-		line := strings.TrimSuffix(raw, "\r")
+		// Every trailing CR is line-end noise: keeping one of "a\r\r"
+		// left "a\r", which a save wrote as "a\r\n" and read back as "a".
+		line := strings.TrimRight(raw, "\r")
 		if strings.HasPrefix(line, "###") {
 			flush(n - 1)
 			block = block[:0]
