@@ -59,6 +59,7 @@ func TestAIUnconfiguredEntriesOnlyToast(t *testing.T) {
 			"ai-discard-proposal", "ai-history", "ai-pick-model", "ai-auto-approve",
 			"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all",
 			"ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", // MCP setup works before a provider
+			"ai-agent-hooks",  // agent CLI hook files need no provider
 			"help-bug-report": // a Help entry: a bug report needs no provider
 			continue
 		}

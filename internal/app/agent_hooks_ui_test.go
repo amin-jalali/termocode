@@ -45,3 +45,19 @@ func TestAgentHooksUI(t *testing.T) {
 		t.Error("installed hooks do not offer Remove")
 	}
 }
+
+// Spec (OMX-34): the palette entry Agent: State Hooks… opens the picker,
+// also before an AI provider is set up (it only changes agent CLI files).
+func TestAgentHooksPaletteEntryOpensPicker(t *testing.T) {
+	m := aiTestModel(t)
+	t.Setenv("HOME", t.TempDir())
+	id := ""
+	for _, e := range aiPaletteItems() {
+		if strings.HasPrefix(e.title, "Agent: State Hooks") {
+			id = e.id
+		}
+	}
+	if _, ok := m.dispatchAIPalette(id); !ok || m.pickerKind != pickerKindAgentHooks {
+		t.Fatalf("palette id %q: ok=%v picker=%v", id, ok, m.pickerKind)
+	}
+}
