@@ -313,10 +313,10 @@ func (m *Model) onRebaseDone(msg rebaseDoneMsg) tea.Cmd {
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase stopped to edit a commit",
 			"Change the commit (Commit (Amend)), then Continue in Source Control.")
 	case msg.summary == "":
-		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase done", "Undo: git reset --keep ORIG_HEAD")
+		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase done", "Undo: u / Git: Undo Last Git Action")
 	default:
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase done: "+msg.summary,
-			"Undo: git reset --keep ORIG_HEAD")
+			"Undo: u / Git: Undo Last Git Action")
 	}
 	return tea.Batch(cmd, fetchGitCmd())
 }

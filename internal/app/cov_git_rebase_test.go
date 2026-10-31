@@ -312,3 +312,16 @@ func TestCovGitRebaseDoneToasts(t *testing.T) {
 		t.Error("control card with no rebase")
 	}
 }
+
+func TestRebaseDonePointsToUndoAction(t *testing.T) {
+	for _, summary := range []string{"", "2 picks"} {
+		m := &Model{w: 160, h: 40}
+		m.onRebaseDone(rebaseDoneMsg{summary: summary})
+		if !toastHas(m, "u / Git: Undo Last Git Action") {
+			t.Fatal("missing safe undo action")
+		}
+		if toastHas(m, "ORIG_HEAD") {
+			t.Fatal("raw reset advice remains")
+		}
+	}
+}
