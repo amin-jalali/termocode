@@ -92,8 +92,11 @@ type terminalTab struct {
 	// External CLI agent in the tab (U8, agent_tabs.go): its registry id,
 	// and what its screen says. agentFromCmd: found from the shell's
 	// command line, so it ends with that command.
-	Agent        string
-	AgentState   agents.State
+	Agent      string
+	AgentState agents.State
+	// AgentHook: the agent reports its own state over the control
+	// socket (agent_ctl.go); the screen guess leaves the tab alone.
+	AgentHook    bool
 	agentFromCmd bool
 
 	// Splits are the panes after the first (terminal_pane.go); BufID is

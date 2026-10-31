@@ -191,6 +191,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIWebPreset(id), true
 	case confirmKindAIShipPush, confirmKindAIShipPR: // ai_ship.go
 		return m.answerAIShipCard(m.confirmKind, id), true
+	case confirmKindAgentCtlPrompt: // agent_ctl.go
+		return m.answerAgentCtlPrompt(id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go
 		return m.answerAIMemoryCard(m.confirmKind, id), true
 	case confirmKindAIProfileSave:
@@ -275,6 +277,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIHooksTrust("") // Esc: no answer, the message goes back
 	case confirmKindAIShipPush, confirmKindAIShipPR:
 		return m.answerAIShipCard(m.confirmKind, "") // Esc: the ship stops
+	case confirmKindAgentCtlPrompt:
+		return m.answerAgentCtlPrompt("") // Esc: Deny
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll:
 		return m.answerAIMemoryCard(m.confirmKind, "") // Esc: Keep
 	case confirmKindAIProfileSave:

@@ -957,6 +957,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, m.secretsMigrateStartCmd()) // plain credentials.json → safer store (SS-4)
 	cmds = append(cmds, m.updateInitCmd())          // G-UPD: a newer release? (update_check.go)
 	cmds = append(cmds, m.crash.waitCmd())          // recovered panics (crash_ui.go)
+	cmds = append(cmds, agentCtlInitCmd())          // OMX-33: the agent control socket (agent_ctl.go)
 	// The card about a crash of the last run; with nvim it comes once
 	// the unsaved work is back (nvim ready).
 	if m.nvim == nil {

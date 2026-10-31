@@ -105,6 +105,7 @@ type aiState struct {
 	webPreset   string               // the server the open add card is for (ai_web_presets.go)
 	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
 	ship        *aiShip              // the running ship loop (ai_ship.go)
+	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
 	shipGen     int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
