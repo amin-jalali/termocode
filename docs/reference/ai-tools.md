@@ -2051,6 +2051,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `mcp_enabled` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_github_client_id` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_idle_timeout` | never | AI provider, credentials and approvals stay with the user |
+| `mcp_log_level` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_max_result_kb` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_oauth_port` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_server` | never | lets outside agents use the IDE's tools; the user turns it on or off in config.json |
