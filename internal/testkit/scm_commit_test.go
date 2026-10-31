@@ -72,8 +72,9 @@ func TestSCMCommitEmptyMessageRefused(t *testing.T) {
 }
 
 // Spec: Given only unstaged changes, when the user commits with a message,
-// then a dialog offers to stage everything; Cancel makes no commit; "Stage
-// All & Commit" commits every change (also the untracked file).
+// then a dialog offers to stage everything; Cancel is first and focused, so
+// Enter makes no commit; "Stage All & Commit" (one step right) commits every
+// change (also the untracked file).
 func TestSCMCommitNothingStagedOffersStageAll(t *testing.T) {
 	d, r := scmDriver(t, func(r *repo) {
 		r.write("main.go", "package main\n// edit\n")
@@ -86,7 +87,7 @@ func TestSCMCommitNothingStagedOffersStageAll(t *testing.T) {
 	if !strings.Contains(text(d), "Stage all changes?") {
 		t.Fatalf("no stage-all dialog:%s", dump(d))
 	}
-	d.Key("right", "enter") // Cancel
+	d.Key("enter") // Cancel is focused (safe first)
 	if got := r.git("rev-parse", "HEAD"); got != before {
 		t.Fatalf("Cancel made a commit")
 	}
@@ -94,7 +95,7 @@ func TestSCMCommitNothingStagedOffersStageAll(t *testing.T) {
 		t.Errorf("Cancel lost the typed message:%s", dump(d))
 	}
 	scmClickText(d, "Commit")
-	d.Key("enter") // "Stage All & Commit" is the default
+	d.Key("right", "enter") // "Stage All & Commit"
 	until(d, func() bool { return inSection(d, "GRAPH", "all") })
 	if got := r.git("log", "-1", "--format=%s"); got != "chore: all" {
 		t.Errorf("HEAD subject = %q", got)
