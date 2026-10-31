@@ -72,6 +72,15 @@ type shareConfig struct {
 	Roots   []string          `json:"roots"`
 	Source  string            `json:"source"`
 	GraceMS int64             `json:"grace_ms"`
+	StartMS int64             `json:"start_ms"` // the server's start timeout (0: initTimeout)
+}
+
+// startTimeout is how long the server's start may take.
+func (c shareConfig) startTimeout() time.Duration {
+	if c.StartMS > 0 {
+		return time.Duration(c.StartMS) * time.Millisecond
+	}
+	return initTimeout
 }
 
 // shareKey names the socket of one server config: an HMAC with a private

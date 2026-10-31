@@ -191,7 +191,7 @@ func (b *broker) startServer() error {
 			_ = conn.Notify("notifications/cancelled", map[string]any{"requestId": id, "reason": "cancelled by the user"})
 		},
 	})
-	ctx, cancel := context.WithTimeout(context.Background(), initTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), b.cfg.startTimeout())
 	defer cancel()
 	raw, err := b.srv.Call(ctx, "initialize", map[string]any{
 		"protocolVersion": ProtocolVersion,

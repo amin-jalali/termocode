@@ -101,7 +101,7 @@ func StartStdio(ctx context.Context, s Server, opts Options) (*Process, error) {
 	})
 	p.Client = NewClient(stdout, stdin, opts)
 
-	ictx, cancel := context.WithTimeout(ctx, initTimeout)
+	ictx, cancel := context.WithTimeout(ctx, opts.startTimeout())
 	defer cancel()
 	if err := p.Client.Initialize(ictx); err != nil {
 		p.Close()
