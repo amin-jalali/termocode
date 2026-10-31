@@ -687,9 +687,18 @@ func (m *Manager) checkTools(ctx context.Context, st *serverState, ask AskTrust)
 // memory or the disk cache, or — only when nothing is known — by
 // starting the server once. Servers that fail are skipped (and logged).
 func (m *Manager) Tools(ctx context.Context, ask AskTrust) []ServerTools {
+	return m.ToolsFor(ctx, ask, nil)
+}
+
+// ToolsFor is Tools for the servers keep allows (nil: all); the others
+// are never started or asked about (an MCP profile).
+func (m *Manager) ToolsFor(ctx context.Context, ask AskTrust, keep func(name string) bool) []ServerTools {
 	m.mu.Lock()
 	var names []string
 	for name, st := range m.servers {
+		if keep != nil && !keep(name) {
+			continue
+		}
 		if st.state != StateInvalid && st.state != StateSignIn && st.state != StateDisabled { // no 401 round trip per turn
 			names = append(names, name)
 		}

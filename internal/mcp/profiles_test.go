@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -107,5 +108,21 @@ func TestExportImportProfile(t *testing.T) {
 	}
 	if _, err := ImportProfiles(user, []byte(`{"profiles":{"x y":{}}}`)); err == nil {
 		t.Fatal("a bad name was accepted")
+	}
+}
+
+// ToolsFor never starts a server the profile leaves out.
+func TestManagerToolsForSkipsLeftOutServers(t *testing.T) {
+	e := newManagerEnv(t)
+	e.write(t, e.user, map[string]any{"fake": map[string]string{}, "other": map[string]string{}})
+	m := e.managerTools(t, &toolsRec{})
+	list := m.ToolsFor(context.Background(), nil, func(name string) bool { return name == "fake" })
+	if len(list) != 1 || list[0].Server.Name != "fake" {
+		t.Fatalf("list = %+v", list)
+	}
+	for _, st := range m.Servers() {
+		if st.Name == "other" && st.State == StateRunning {
+			t.Fatal("the left-out server was started")
+		}
 	}
 }
