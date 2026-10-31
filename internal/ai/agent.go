@@ -92,6 +92,9 @@ type Agent struct {
 	// returns ctx's error when the turn is stopped. nil waits
 	// retryBackoff(n).
 	RetryWait func(ctx context.Context, n int) error
+	// Compact (optional) summarises older messages when the provider
+	// says the context is too long; once per turn (compact.go, OMX-3).
+	Compact func(ctx context.Context, older []Message) (string, error)
 }
 
 // DefaultRetries is how often a request is tried again when the server
@@ -207,6 +210,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 		}
 	}
 	var usage *Usage // summed over every request of the turn
+	compacted := false
 	for step := 0; step < steps; step++ {
 		req := Request{Messages: msgs, Model: a.Model, Tools: specs}
 		var buf strings.Builder
@@ -227,6 +231,11 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 				last.Err = err
 				break
 			}
+		}
+		if last.Err != nil && buf.Len() == 0 && !compacted && a.tryCompact(ctx, &msgs, &start, last.Err, emit) {
+			compacted = true
+			step-- // the refused request was no step
+			continue
 		}
 		if last.Err != nil {
 			emit(Event{Kind: EventError, Detail: Redact(last.Err.Error()), Usage: usage})
