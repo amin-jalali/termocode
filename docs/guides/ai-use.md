@@ -235,7 +235,7 @@ over the editor, like in mobocode.
 ### The agent waits for you
 
 With the default setting, the agent's file changes are not written at
-once. `write_file`, `create_file`, `format`, `lsp_rename` and applying a
+once. `write_file`, `edit_file`, `create_file`, `format`, `lsp_rename` and applying a
 code action (`lsp_code_actions`) open the review card, and the agent waits
 until you decide (at most 30 minutes; **Stop** ends the wait at once).
 There is no extra "AI wants to" question for them: the review is the
@@ -263,7 +263,7 @@ Auto-Approve…**) also skips the review: changes are written at once.
 ### Undo a whole AI turn
 
 Before an agent turn first changes a file, termocode keeps the file's old
-text (a *restore point*). This covers `write_file`, `create_file`,
+text (a *restore point*). This covers `write_file`, `edit_file`, `create_file`,
 `delete`, `rename` and every change you accept in the review card.
 
 - Under the turn, the chat shows **↶ Undo AI changes (N files)**.
@@ -311,15 +311,15 @@ The chat is an agent. It can call tools to answer you:
 
 | Kind | Tools |
 |---|---|
-| Read | read a file, list a folder, search, git status / diff / branches, go to definition, diagnostics |
+| Read | read a file, list a folder, search (plain text or a regex, limited to some files with a glob), find files by name (`glob`), git status / diff / branches, go to definition, diagnostics |
 | Code (language server) | hover info (`lsp_hover`), file outline or workspace symbol search (`lsp_symbols`), go to definition / type definition / implementation / references (`lsp_nav`), rename a symbol in every file (`lsp_rename`), list and apply code actions (`lsp_code_actions`) |
-| Write files | write, create, delete, rename files and folders, format |
+| Write files | write, change part of a file (`edit_file`), create, delete, rename files and folders, format |
 | Git | stage, commit, checkout, push, pull |
 | Run | run a shell command in the workspace (build, test, …); you see only its result |
 | Terminal | type a command in your terminal panel (`terminal_send`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
 
-| Read | read a file, list a folder, search, git status / diff / branches / log (`git_log`) / blame (`git_blame`), go to definition, diagnostics |
-| Write files | write, create, delete, rename files and folders, format |
+| Read | read a file, list a folder, search (text or regex, with a glob), find files by name (`glob`), git status / diff / branches / log (`git_log`) / blame (`git_blame`), go to definition, diagnostics |
+| Write files | write, change part of a file (`edit_file`), create, delete, rename files and folders, format |
 | Git | stage, unstage (`git_unstage`), commit, checkout, push, pull, fetch (`git_fetch`) |
 | Git hunks | stage, unstage or discard one diff hunk (`git_hunk`) |
 | Git stash | list, push, apply, pop, drop (`git_stash`) |
