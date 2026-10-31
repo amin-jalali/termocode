@@ -39,3 +39,17 @@ func TestIsRelease(t *testing.T) {
 		}
 	}
 }
+
+func TestPrereleaseNumbersAndHyphens(t *testing.T) {
+	for _, pair := range [][2]string{
+		{"5", "-5"},
+		{"9223372036854775807", "-5"},
+		{"999999999999999999999999999999", "a"},
+		{"999999999999999999999999999999", "1000000000000000000000000000000"},
+	} {
+		a, b := "v1.0.0-a."+pair[0], "v1.0.0-a."+pair[1]
+		if !Newer(a, b) || Newer(b, a) {
+			t.Errorf("expected %s < %s", a, b)
+		}
+	}
+}
