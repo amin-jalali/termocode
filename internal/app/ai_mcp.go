@@ -213,7 +213,7 @@ func (m *Model) mcpTrustDialog(s mcp.Server) {
 	}
 	from := "your mcp.json (" + s.SourcePath + ")"
 	if s.Source == mcp.SourceProject {
-		from = "this project's .termocode/mcp.json"
+		from = "this project's " + mcp.ProjectFileLabel(s.SourcePath)
 	}
 	var env []string
 	for k := range s.Env {
@@ -223,6 +223,9 @@ func (m *Model) mcpTrustDialog(s mcp.Server) {
 	msg := "From " + from + ". It runs on your computer with your rights: only allow servers you trust."
 	if len(env) > 0 {
 		msg += "\nEnv: " + strings.Join(env, ", ")
+	}
+	if s.EnvFile != "" {
+		msg += "\nEnv file: " + s.EnvFile
 	}
 	code := strings.TrimSpace(s.Command + " " + strings.Join(s.Args, " "))
 	if s.Type != mcp.TypeStdio {
