@@ -54,7 +54,13 @@ func (m *Model) aiMemoryTurn(root, text string) (string, int) {
 	if aiMemoryState() != aiMemoryOn {
 		return "", 0
 	}
-	ls, err := s.aiMemoryLoad(root)
+	var ls []aimemory.Lesson
+	var err error
+	if s.memFake != nil {
+		ls = *s.memFake
+	} else {
+		ls, err = aimemory.LoadForWorktree(root)
+	}
 	if err != nil || len(ls) == 0 {
 		return "", 0
 	}
