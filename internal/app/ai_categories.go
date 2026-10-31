@@ -206,3 +206,12 @@ func (s *aiState) aiRunAgain(id string) {
 	}
 	s.runAgain[id] = true
 }
+
+// aiEscalateTo is the category ESCALATE moves a step to: deep when its
+// slot is set up and ai_step_escalate is on ("": off).
+func aiEscalateTo(st ai.Settings, catSlots map[string]string) string {
+	if !st.Escalates() || catSlots[agentdag.CategoryDeep] == "" {
+		return ""
+	}
+	return agentdag.CategoryDeep
+}

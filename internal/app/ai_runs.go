@@ -301,6 +301,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	}
 	prof, cats, _ := s.aiProfileCategories(prof) // OMX-16 (checked when the run started)
 	catSlots, catErr := s.aiResolveCategorySlots(run, aiCategorySlots(prof, cats), slots)
+	escalate := aiEscalateTo(s.settings, catSlots)
 	by := s.conv.Messages[msgIdx].Run.By
 	budget := aiRunBudget(prof, by)
 	caller := aiRunCaller{parentRun: run.ID, budget: budget}
@@ -390,6 +391,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		Approval:   s.aiRunApproval(),
 		Acts:       acts,
 		StallAfter: s.settings.StepStall(), // OMX-23
+		Escalate:   escalate,               // OMX-16
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
 			if n.CLI != "" {
 				return 0, false // the subscription: no price, not in the budget
@@ -448,7 +450,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			case n.ID == fixID:
 				sys = aiFixStepPrompt + aiStepSystem(n.System)
 			}
-			sys += aiCategoryPrompt(n, cats, false)
+			sys += aiCategoryPrompt(n, cats, escalate != "" && n.Slot != catSlots[escalate] && !n.Plan && n.ID != verifyID && n.ID != fixID)
 			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: ai.SystemPrompt(nodeBase+sys, ts, native)}
 			last := msgs[len(msgs)-1]
 			last.Content = input + wts.othersNote(n.ID)
@@ -654,6 +656,16 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 			st.Error = ev.Err
 			st.Notes = append(st.Notes, "■ "+ev.Err)
 		}
+	case agentrun.NodeEscalated: // OMX-16: it runs once more on a stronger model
+		m.aiStepFinished(st, ev) // the first try's time, tokens and cost
+		s.aiRunAgain(st.ID)
+		s.agentsNodeEnd(ev.RunID, st.ID)
+		if len(ev.Nodes) == 1 {
+			st.Category, st.Slot = ev.Nodes[0].Category, ev.Nodes[0].Slot
+			st.Model = s.runSlots[st.Slot].cfg.Model
+		}
+		st.State, st.Text = string(agentdag.StatePending), ""
+		st.Notes = append(st.Notes, "⇧ "+aiCardText(ai.Redact(ev.Err), 80)+" → runs again on "+st.Category+" ("+st.Model+")")
 	case agentrun.NodeStalled: // OMX-23: it starts once more
 		s.aiRunAgain(st.ID)
 		s.agentsNodeEnd(ev.RunID, st.ID)
