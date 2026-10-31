@@ -26,6 +26,7 @@ type Settings struct {
 	Trusted          map[string]string // mcp_trusted: server name → entry hash ("Always allow")
 	TrustedTools     map[string]string // mcp_trusted_tools: server name → accepted ToolsHash
 	ToolSearch       string            // mcp_tool_search ("auto"): defer MCP tool schemas behind a search tool
+	CatalogURL       string            // mcp_catalog_url (""): a registry API to browse instead of the official one
 }
 
 // Defaults of the mcp_* settings.
@@ -57,6 +58,7 @@ func LoadSettings(configPath string) Settings {
 		Trusted          map[string]string `json:"mcp_trusted"`
 		TrustedTools     map[string]string `json:"mcp_trusted_tools"`
 		ToolSearch       string            `json:"mcp_tool_search"`
+		CatalogURL       string            `json:"mcp_catalog_url"`
 	}
 	if json.Unmarshal(b, &raw) != nil {
 		return s
@@ -86,6 +88,9 @@ func LoadSettings(configPath string) Settings {
 		s.GitHubClientID = raw.GitHubClientID
 	}
 	s.ToolSearch = ParseToolSearchMode(raw.ToolSearch)
+	if u := strings.TrimSpace(raw.CatalogURL); u != "" && CheckCatalogURL(u) == nil {
+		s.CatalogURL = u
+	}
 	for k, v := range raw.Trusted {
 		s.Trusted[k] = v
 	}
