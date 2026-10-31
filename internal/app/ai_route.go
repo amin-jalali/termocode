@@ -52,6 +52,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIMCPPrompts(msg), true
 	case aiMCPCompleteMsg:
 		return m.onAIMCPComplete(msg), true
+	case aiMCPInsertListMsg: // ai_mcp_insert.go
+		return m.onAIMCPInsertList(msg), true
 	case mcpConnectDoneMsg:
 		return m.onMCPConnectDone(msg), true
 	case aiChatDoneMsg:
