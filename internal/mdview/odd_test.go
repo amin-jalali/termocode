@@ -59,3 +59,16 @@ func TestClickableDropsControlBytes(t *testing.T) {
 		t.Fatal("mail links are clickable")
 	}
 }
+
+// Raw control bytes in the text never reach the terminal: a lone ESC
+// ate the cells after it, and a sequence could move the cursor.
+func TestRenderControlBytesShowAsReplacement(t *testing.T) {
+	rows := Render("a\x1b[2Jb\x07c\u009bd\x7fe", Options{Width: 30})
+	all := strings.Join(rows, "\n")
+	if strings.ContainsAny(all, "\x07\u009b\x7f") || strings.Contains(all, "\x1b[2J") {
+		t.Fatalf("control bytes reached the output: %q", all)
+	}
+	if !strings.Contains(ansi.Strip(all), "a�[2Jb�c�d�e") {
+		t.Fatalf("text lost: %q", ansi.Strip(all))
+	}
+}
