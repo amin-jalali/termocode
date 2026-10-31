@@ -236,6 +236,21 @@ we decide about the cache last week?".
   then press `Enter`. Nothing is sent before that.
 - The old chat stays in **AI: Chat History…**.
 
+### Side question
+
+Ask a quick question while the AI works, without waiting and without
+mixing it into the chat.
+
+- Run **AI: Side Question…** and type your question.
+- The quick model answers from a copy of the chat so far. It has no
+  tools and changes nothing. This is one extra request.
+- The answer opens in a **Side chat** card. **Ask another** keeps the
+  side questions together; **Close** goes back.
+- If a card of the main chat is open (for example "AI wants to: …"),
+  the answer waits. Run **AI: Side Question…** again to read it.
+- Side questions are never added to the chat or sent to its model.
+  A new chat starts a new side chat.
+
 ### Files in and out of the chat
 
 Add files to your next message in three ways:
