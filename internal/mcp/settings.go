@@ -27,6 +27,7 @@ type Settings struct {
 	TrustedTools     map[string]string // mcp_trusted_tools: server name → accepted ToolsHash
 	ToolSearch       string            // mcp_tool_search ("auto"): defer MCP tool schemas behind a search tool
 	CatalogURL       string            // mcp_catalog_url (""): a registry API to browse instead of the official one
+	AutoUpdate       string            // mcp_auto_update ("off"): notify / on for catalog servers
 }
 
 // Defaults of the mcp_* settings.
@@ -41,7 +42,7 @@ const (
 func LoadSettings(configPath string) Settings {
 	s := Settings{Enabled: true, IdleTimeout: DefaultIdleTimeout, CallTimeout: DefaultCallTimeout,
 		MaxResultKB: DefaultMaxResultKB, TrustAnnotations: true, Share: true, Trusted: map[string]string{},
-		TrustedTools: map[string]string{}, ToolSearch: ToolSearchAuto}
+		TrustedTools: map[string]string{}, ToolSearch: ToolSearchAuto, AutoUpdate: AutoUpdateOff}
 	b, err := os.ReadFile(configPath)
 	if err != nil {
 		return s
@@ -59,6 +60,7 @@ func LoadSettings(configPath string) Settings {
 		TrustedTools     map[string]string `json:"mcp_trusted_tools"`
 		ToolSearch       string            `json:"mcp_tool_search"`
 		CatalogURL       string            `json:"mcp_catalog_url"`
+		AutoUpdate       string            `json:"mcp_auto_update"`
 	}
 	if json.Unmarshal(b, &raw) != nil {
 		return s
@@ -88,6 +90,7 @@ func LoadSettings(configPath string) Settings {
 		s.GitHubClientID = raw.GitHubClientID
 	}
 	s.ToolSearch = ParseToolSearchMode(raw.ToolSearch)
+	s.AutoUpdate = ParseAutoUpdate(raw.AutoUpdate)
 	if u := strings.TrimSpace(raw.CatalogURL); u != "" && CheckCatalogURL(u) == nil {
 		s.CatalogURL = u
 	}
