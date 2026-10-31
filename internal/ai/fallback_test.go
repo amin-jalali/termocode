@@ -104,3 +104,34 @@ func TestAgentFallbackStaysForTheTurn(t *testing.T) {
 		t.Errorf("requests: a %d b %d", len(p1.requests()), len(p2.requests()))
 	}
 }
+
+func TestFallbackNames(t *testing.T) {
+	s := Settings{Fallback: []string{"gpt", "openai/gpt-5"}, Models: map[string]ModelSlot{
+		"gpt":  {Provider: KindOpenAI, Fallback: []string{"local"}},
+		"self": {Provider: KindOpenAI, Fallback: []string{"self"}},
+		"bad":  {Provider: KindOpenAI, Fallback: []string{"no spaces!"}},
+	}}
+	if got := s.FallbackNames(SlotMain); strings.Join(got, ",") != "gpt,openai/gpt-5" {
+		t.Errorf("main: %v", got)
+	}
+	if got := s.FallbackNames(""); len(got) != 2 {
+		t.Errorf("empty name is main: %v", got)
+	}
+	if got := s.FallbackNames("gpt"); strings.Join(got, ",") != "local" {
+		t.Errorf("gpt: %v", got)
+	}
+	_, errs := ResolveSlots(s, Config{Kind: KindAnthropic, APIKey: "k"}, Credentials{}, func(string) string { return "" })
+	joined := strings.Join(errs, "\n")
+	if !strings.Contains(joined, `"self"`) || !strings.Contains(joined, `"bad"`) || strings.Contains(joined, `"gpt"`) {
+		t.Errorf("errors: %v", errs)
+	}
+	if cfgs, _ := ResolveSlots(s, Config{Kind: KindAnthropic, APIKey: "k"}, Credentials{}, func(string) string { return "" }); cfgs["self"].Kind == "" {
+		t.Error("a bad fallback list drops only the list, not the slot")
+	}
+	if s.FallbackNames("self") != nil {
+		t.Error("a bad list gives no fallbacks")
+	}
+	if err := CheckFallbacks(SlotMain, []string{"main"}); err == nil {
+		t.Error("main may not fall back to itself")
+	}
+}

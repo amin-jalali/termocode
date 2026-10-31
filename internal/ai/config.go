@@ -70,6 +70,9 @@ type Settings struct {
 	// leaves it out of the main Config, so ghost text never thinks; the
 	// chat sends it per request. Edited by hand.
 	Reasoning string `json:"ai_reasoning,omitempty"`
+	// Fallback is ai_fallback: the main slot's backup models (slot names
+	// or "<provider>/<model>"; fallback.go). Edited by hand.
+	Fallback []string `json:"ai_fallback,omitempty"`
 }
 
 // CheckUntilDoneRounds checks an ai_until_done_rounds value.

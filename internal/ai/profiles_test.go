@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -330,7 +331,7 @@ func TestSettingsParallel(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := LoadSettings(p)
-	if s.Models["gpt"] != (ModelSlot{Provider: "openai", Model: "m", BaseURL: "u"}) || s.ParallelMax != 2 {
+	if !reflect.DeepEqual(s.Models["gpt"], ModelSlot{Provider: "openai", Model: "m", BaseURL: "u"}) || s.ParallelMax != 2 {
 		t.Errorf("loaded %+v", s)
 	}
 	if err := SaveSettings(p, Settings{Model: "x"}); err != nil {
