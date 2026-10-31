@@ -1708,6 +1708,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai-mcp-insert` | AI: MCP Prompts and Resources… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-mcp-log` | AI: MCP: Show Log | auto |   |
 | `ai-mcp-reconnect-all` | AI: MCP: Reconnect All Servers | confirm (ide) |   |
+| `ai-mcp-profile` | AI: MCP: Switch Profile… (servers and tools for this chat) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory` | AI: Memory… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory-toggle` | AI: Memory: Turn On/Off | never | AI provider, credentials and approvals stay with the user |

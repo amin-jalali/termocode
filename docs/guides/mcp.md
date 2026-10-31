@@ -495,6 +495,30 @@ its next step. A tool still asks before it runs, as before. Set
 `mcp_tool_search` to `on` to always do this, or `off` to always send
 every tool.
 
+**Profiles.** A profile is a named set of servers and tools, so a chat
+uses only what a task needs. **AI: MCP: Switch Profile…** picks one for
+this chat; **All servers and tools** goes back. Servers a profile leaves
+out never start. Write profiles in `mcp-profiles.json` in the config
+folder (the picker's **Edit profiles file…** makes one), or share them
+with your team in `.termocode/mcp-profiles.json`:
+
+```json
+{
+  "profiles": {
+    "review": {
+      "description": "read-only GitHub",
+      "servers": ["github"],
+      "tools": ["github.get_*", "github.list_*", "!github.delete_*"]
+    }
+  }
+}
+```
+
+No `servers` means every server; no `tools` means every tool. Tool
+rules are globs on `server.tool`; `!` removes. A profile can only make
+the list smaller: it never adds a server, a command or a secret. Your
+own profile wins over a project one with the same name.
+
 **Odd schemas.** Some servers describe a tool's input as "one of these
 forms" at the top level. The AI services refuse that, so termocode sends
 one object with the fields of all forms.
