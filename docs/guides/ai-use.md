@@ -174,6 +174,32 @@ When a chat gets near that limit, termocode makes it shorter for you:
 - To turn it off, set `"ai_compact": "off"` in config.json. A long chat
   can then fail with "context too long"; start a new chat or fork it.
 
+### Todo list and keep going
+
+For work with several steps, the AI keeps a todo list (tools
+`todo_write` and `todo_read`). It only changes the chat, never your
+files, so it asks nothing.
+
+- The list is a card at the end of the chat: **Todos · 1 of 3 done**,
+  with ☑ done, ◐ in progress and ☐ open items.
+- It is saved with the chat and sent to the model with every message,
+  also after the chat was summarised.
+
+**Keep going** (off by default) makes the AI go on by itself while
+todos are open. Run **AI: Toggle Keep Going While Todos Are Open**; it
+is set per chat.
+
+- When a turn ends with open todos, termocode sends "Keep going: N todos
+  are still open" for you. These messages have an **↻ auto · keep going
+  1/3** chip.
+- It stops when every todo is done, after the "work until done" rounds
+  (`ai_until_done_rounds`, default 3), when the auto turns cost the
+  "work until done" budget (`ai_until_done_budget_usd`), when a turn did
+  not change the list, or when a turn failed. The chat says why.
+- **Stop** (`Ctrl+C` or **AI: Stop Generating**) ends it at once. Your
+  next message starts it again.
+- The AI can not turn it on. Each auto turn costs like a normal one.
+
 ### Files in and out of the chat
 
 Add files to your next message in three ways:
