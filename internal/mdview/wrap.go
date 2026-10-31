@@ -127,8 +127,18 @@ func wrap(ws []word, width int) [][]piece {
 					}
 					head := ansi.Truncate(p.text, room, "")
 					hw := ansi.StringWidth(head)
-					if hw == 0 { // a wide rune that does not fit
+					if hw == 0 && curW > 0 { // a wide rune that does not fit
 						push()
+						continue
+					}
+					if hw == 0 {
+						// Not even an empty row holds it (a one-cell
+						// view): show "?" for it, or this looped for ever.
+						cur = append(cur, piece{text: "?", a: p.a, link: p.link, w: 1, dest: p.dest, lid: p.lid})
+						curW++
+						gw := ansi.StringWidth(ansi.Truncate(p.text, 2, ""))
+						p.text = ansi.TruncateLeft(p.text, gw, "")
+						p.w -= gw
 						continue
 					}
 					cur = append(cur, piece{text: head, a: p.a, link: p.link, w: hw, dest: p.dest, lid: p.lid})
