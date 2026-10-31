@@ -851,9 +851,10 @@ func (m Model) aiDividerLine(width int) aiLine {
 	}
 	level, word := "", ""
 	if s != nil {
-		level, word = s.aiInputKeyword() // OMX-5: "think" / "ultrathink" in the input
+		level, word = s.aiInputThink() // OMX-5: "think" / "ultrathink" in the input
 	}
-	if s != nil && (len(s.attachments) > 0 || word != "") {
+	kw, hasKw := s.aiInputKeyword() // OMX-17: ulw and friends
+	if s != nil && (len(s.attachments) > 0 || word != "" || hasKw) {
 		// Each chip is " ⊕ label × "; its "× " removes it.
 		row := bg.Render(" ")
 		x := 1
@@ -864,6 +865,16 @@ func (m Model) aiDividerLine(width int) aiLine {
 			w := runewidth.StringWidth(lbl)
 			buttons = append(buttons, aiLineButton{x + w, x + w + 2, "rm-think"})
 			x += w + 3
+		}
+		if hasKw { // OMX-17: " ⚡ ulw → Work until done × Alt+Q "
+			lbl := "⚡ " + kw.word + " → " + kw.does + " ×"
+			row += chip(lbl, theme.AIAccent, 0.25) + bg.Render(" ")
+			w := runewidth.StringWidth(lbl)
+			buttons = append(buttons, aiLineButton{x + w, x + w + 2, "rm-keyword"})
+			x += w + 3
+			hint := "Alt+Q plain text "
+			row += theme.FgBg(theme.TextDim, theme.BgPanel).Render(hint)
+			x += runewidth.StringWidth(hint)
 		}
 		for i, at := range s.attachments {
 			lbl := aiAttachGlyph() + " " + at.Label + " ×"
@@ -1102,6 +1113,12 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 			return nil, true
 		}
 		return m.submitAIInput(), true
+	case "alt+q": // OMX-17: remove the keyword chip
+		if _, ok := s.aiInputKeyword(); ok {
+			s.kwOff = true
+			return nil, true
+		}
+		return nil, false
 	case "shift+enter", "alt+enter", "ctrl+j":
 		m.aiInsert([]rune{'\n'})
 		return nil, true
@@ -1264,11 +1281,15 @@ func (m *Model) submitAIInput() tea.Cmd {
 	if _, ok := m.aiReady(); ok && !s.streaming {
 		attach = m.aiAttachMentions(text) // "@path" words
 	}
+	if kw, ok := s.aiInputKeyword(); ok && !s.streaming {
+		s.kwProfile = kw.profile // OMX-17
+	}
 	cmd := tea.Batch(attach, m.sendAIChat(text))
+	s.kwProfile = ""
 	if !s.streaming {
 		return cmd // not sent (unconfigured / busy) — keep the draft
 	}
-	s.input, s.caret = nil, 0
+	s.input, s.caret, s.kwOff = nil, 0, false
 	return cmd
 }
 
@@ -1484,6 +1505,9 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 		return m.openAIAttachPicker()
 	case id == "rm-think": // OMX-5: send this message without the keyword's level
 		m.aiS().thinkOff = true
+		return nil
+	case id == "rm-keyword": // OMX-17: send the draft as plain text
+		m.aiS().kwOff = true
 		return nil
 	case strings.HasPrefix(id, "rm-attach:"):
 		s := m.aiS()

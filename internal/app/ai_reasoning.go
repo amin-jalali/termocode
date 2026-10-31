@@ -80,9 +80,9 @@ func (m *Model) cycleAIReasoning() tea.Cmd {
 	return m.aiInfo("Reasoning: " + next + " in this chat (more thinking costs more tokens)")
 }
 
-// aiInputKeyword is the level the input's keyword asks for and the
+// aiInputThink is the level the input's keyword asks for and the
 // keyword ("" when none, or when its chip was removed).
-func (s *aiState) aiInputKeyword() (level, word string) {
+func (s *aiState) aiInputThink() (level, word string) {
 	if s.thinkOff {
 		return "", ""
 	}
