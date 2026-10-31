@@ -183,6 +183,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, aiHelpTools()...)               // U21: the built-in guide (ai_help_tools.go)
 	tools = append(tools, aiItermocTools(call)...)        // AH-7: profiles, models, MCP services, outside agents (ai_itermoc_tools.go)
 	tools = append(tools, m.aiItermocWriteTools(call)...) // AH-8: switch, drafts, connect, access, start (ai_itermoc_write_tools.go)
+	tools = append(tools, aiMCPAddTools()...)             // MCPX-37: propose an MCP server (ai_mcp_add_tool.go)
 	tools = append(tools, m.aiAgentRunTools(call, c)...)  // G-API: agents start agent runs (ai_agent_run_tools.go)
 	if m.aiReviewEdits() {                                // Group R2: file changes become diffs to review
 		tools = m.aiReviewTools(tools, root, call)
@@ -468,7 +469,7 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	if strings.HasPrefix(msg.tool.Name, "db_") {
 		m.confirm = m.confirm.WithScrollText() // the whole SQL, Up/Down scroll
 	}
-	if msg.tool.Name == "profile_draft" || msg.tool.Name == "model_slot_draft" || msg.tool.Name == "agent_run_start" {
+	if msg.tool.Name == "profile_draft" || msg.tool.Name == "model_slot_draft" || msg.tool.Name == "agent_run_start" || msg.tool.Name == "mcp_server_add" {
 		m.confirm = m.confirm.WithScrollText().WithWideText() // AH-8: the whole draft, indents kept, Up/Down scroll
 	}
 	m.confirm.SetSize(m.w, m.h)
@@ -488,6 +489,9 @@ func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	}
 	if title, ok := aiAgentRunAllow[t.Name]; ok { // G-API
 		allow.Title = title
+	}
+	if t.Name == "mcp_server_add" { // MCPX-37
+		allow.Title = "Add server"
 	}
 	deny := confirm.Button{ID: "deny", Title: "Deny"}
 	var more []confirm.Button
