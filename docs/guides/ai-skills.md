@@ -38,8 +38,13 @@ The quickest way: run **AI: Skills…** and pick **New project skill…** or
 
 | Kind | Folder | Who trusts it |
 |---|---|---|
-| Project skills | `.termocode/skills/*.md` in the workspace | You, once per content (see below) |
-| User skills | `~/.config/termocode/skills/*.md` (`$XDG_CONFIG_HOME/termocode/skills`) | Always used |
+| Project skills | `.termocode/skills/`, `.claude/skills/`, `.agents/skills/` in the workspace | You, once per content (see below) |
+| User skills | `~/.config/termocode/skills/` (`$XDG_CONFIG_HOME/termocode/skills`) and `~/.claude/skills/` | Always used |
+
+A skill is either a `name.md` file or a folder with a `SKILL.md` file
+(`pdf-fill/SKILL.md`). For a folder, the folder name is the skill name
+when the front matter has none. So skills you made for other apps work
+here too.
 
 Project skills can be committed, so the whole team shares them. User
 skills are yours and work in every workspace. When both have a skill with
@@ -47,6 +52,28 @@ the same name, your user skill wins.
 
 The files are read again at the start of every message and on every load.
 There is no cache: an edit counts on the next message.
+
+## Chat commands and agent files
+
+Command files are prompts you start with `/name` in the chat:
+
+| Kind | Folder | Who trusts it |
+|---|---|---|
+| Project commands | `.claude/commands/*.md` | The project skills card (one answer for both) |
+| User commands | `~/.config/termocode/commands/*.md`, `~/.claude/commands/*.md` | Always used |
+
+`/fix-issue 42` sends the text of `fix-issue.md`. `$ARGUMENTS` in the
+file becomes `42`; without it, `42` is added at the end. A front matter
+with `description:` is optional. Text that is not a known command (like
+`/usr/bin`) is sent as it is. **AI: Skills…** lists the commands too.
+
+Agent files (`.claude/agents/*.md`, front matter `name`, `description`,
+`tools`, `model`) become one-step AI profiles. The body is the step's
+prompt. A `tools` list that only reads (Read, Grep, Glob…) makes the step
+read-only; `model: haiku` runs it on the quick model, `model: opus` on the
+deep one. They are project profiles: the first run shows the project
+profile card. A name that a built-in or `ai-profiles.json` profile has is
+skipped.
 
 ## Trust for project skills
 
