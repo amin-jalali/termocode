@@ -560,6 +560,7 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			s.segCache[i] = aiSegEntry{key: key, lines: slices.Clip(out[start:])}
 		}
 	}
+	out = append(out, m.aiTodoCard(width)...)              // OMX-7
 	out = append(out, m.aiMemoryAskLines(width, inner)...) // OM-2 ask-once card
 	undo()
 	out = append(out, act.lines(ind, inner)...)

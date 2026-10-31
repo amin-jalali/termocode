@@ -163,7 +163,8 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // (AIToolCatalog, cmd/docgen) is built from this list too, so a new tool
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
-	return m.aiChatToolsBy(root, call, aiRunCaller{})
+	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
+	return append(tools, aiTodoTools(call)...) // OMX-7: the chat's todo list (not in run steps)
 }
 
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:
@@ -340,7 +341,7 @@ func (m *Model) aiChatBasePrompt(root string, rules ai.Rules, memory string) str
 	if p := m.editor.Path(); p != "" {
 		base += "\nThe open file is: " + p
 	}
-	return base + aiRulesPrompt(rules) + memory + aiSkillsPrompt(aiOfferedSkills(aiLoadSkills(root)))
+	return base + aiRulesPrompt(rules) + memory + aiSkillsPrompt(aiOfferedSkills(aiLoadSkills(root))) + ai.TodosPrompt(m.aiS().conv.Todos)
 }
 
 // autoApproveSet is ai_auto_approve as a set (one per agent: "Always
