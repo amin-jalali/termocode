@@ -65,7 +65,7 @@ func TestMCPServeDenySet(t *testing.T) {
 		ai.Tool{Name: "mcp__github__read_file", Run: func(context.Context, map[string]any) (string, error) { return "x", nil }},
 		ai.Tool{Name: "mcp__fs__write_file", Mutating: true, Class: "mcp:fs"})
 	got := mcpServeTools(all, ".", mcpServeNoCall)
-	deny := []string{"write_file", "create_file", "create_dir", "delete", "rename", "format", "run_command",
+	deny := []string{"write_file", "edit_file", "create_file", "create_dir", "delete", "rename", "format", "run_command",
 		"terminal_send", "settings_set", "settings_list", "layout_set", "git_stage", "git_unstage", "git_commit",
 		"git_push", "git_pull", "git_fetch", "git_checkout", "git_stash", "git_hunk", "lsp_rename", "lsp_code_actions",
 		"services_start", "services_stop", "services_restart", "http_set_environment", "http_save_request",
