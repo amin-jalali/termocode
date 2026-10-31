@@ -17,7 +17,6 @@ import (
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
-	"github.com/amin-jalali/termocode/internal/session"
 )
 
 // The agent control socket (OMX-33): every terminal tab gets
@@ -76,15 +75,6 @@ func (m *Model) ctlS() *agentCtlState {
 	return s.ctl
 }
 
-// agentCtlSocketPath is where the socket of root is ("" when unknown).
-func agentCtlSocketPath(root string) string {
-	p, err := session.PathsFor(root)
-	if err != nil {
-		return ""
-	}
-	return p.AgentSocket
-}
-
 // agentCtlTabEnv is the env of a new terminal tab with id.
 func agentCtlTabEnv(id string) map[string]string {
 	env := map[string]string{agentctl.EnvMarker: "1", agentctl.EnvTab: id}
@@ -117,7 +107,7 @@ func agentCtlInitCmd() tea.Cmd {
 		}
 		agentCtlPath.Store(path)
 		agentCtlLn.Store(&agentCtlCloser{close: ln.Close})
-		go agentctl.Serve(ln, session.CheckPeer, agentCtlHandle)
+		go agentctl.Serve(ln, agentCtlPeer, agentCtlHandle)
 	})
 	return waitAgentCtl()
 }
