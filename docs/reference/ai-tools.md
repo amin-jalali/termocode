@@ -743,7 +743,7 @@ No arguments.
 
 ### tasks_run
 
-Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). Pass label (see tasks_list), or group "build" / "test" for the default task of that group. Returns the run id; read the exit code and output with tasks_status(label, wait_ms).
+Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). Pass label (see tasks_list), or group "build" / "test" for the default task of that group. Returns the run id; read the exit code and output with tasks_status(label, wait_ms). With monitor: true its new output is handed to you in batches while you keep working (after your tool calls), and its exit code when it ends.
 
 **Gate:** confirm (run)
 
@@ -753,6 +753,7 @@ Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). Pass label (s
 | --- | --- | --- | --- |
 | `group` | string |   | run the default task of this group instead of a label. One of: `build`, `test` |
 | `label` | string |   | task label from tasks_list |
+| `monitor` | boolean |   | hand me its new output in batches while it runs (default false) |
 
 ### tasks_status
 
