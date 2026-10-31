@@ -163,6 +163,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		cmd = tea.Batch(cmd, kc)
 	}
 	nm.showWaitingHotExit()
+	nm.showWaitingSecretsDeletePlain() // secrets_migrate.go
 	nm.showWaitingCrashCard()
 	if mode := nm.syncMouseMode(); mode != nil { // mouse_hover.go
 		return nm, tea.Batch(cmd, mode)

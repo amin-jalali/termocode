@@ -529,3 +529,30 @@ func TestSecretsMigratePaletteNeverForTheAI(t *testing.T) {
 		t.Fatalf("card=%v toast %q", migrateCardOpen(m), toastText(*m))
 	}
 }
+
+// Spec (FIX-24): when the move ends while another card is on screen (the
+// Restore unsaved changes? card of the start), the Delete the old plain
+// file? card does not replace it; it waits and opens once that card is
+// answered.
+func TestSecretsDeletePlainCardWaitsForOtherCard(t *testing.T) {
+	keyring.MockInit()
+	_, cred := withPlainCredentials(t, true)
+	m := secretsTestModel(t)
+	startMigrateCheck(t, m)
+	cmd := answerStoreConfirm(t, m, "keyring")
+	m.confirm = confirm.New("Other card", "x", []confirm.Button{{ID: "ok", Title: "OK"}})
+	m.confirmOpen, m.confirmKind = true, confirmKindHotExit
+	pumpSecrets(t, m, cmd)
+	if !m.confirmOpen || m.confirmKind != confirmKindHotExit {
+		t.Fatalf("the other card was replaced (kind %v)", m.confirmKind)
+	}
+	m.confirmOpen = false // the other card is answered
+	next, _ := m.update(struct{}{})
+	*m = next
+	if !deletePlainCardOpen(m) {
+		t.Fatal("the delete-plain card did not open after the other card")
+	}
+	if _, err := os.Stat(cred); err != nil {
+		t.Fatalf("the plain file went before the answer: %v", err)
+	}
+}

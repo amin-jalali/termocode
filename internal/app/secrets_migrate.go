@@ -360,6 +360,19 @@ func (m *Model) openSecretsDeletePlainCard(where string) {
 	m.confirmOpen, m.confirmKind = true, confirmKindSecretsDeletePlain
 }
 
+// showWaitingSecretsDeletePlain opens the Delete the old plain file? card
+// a finished move left waiting, once no other dialog is open: opening it
+// over another card (Restore unsaved changes? at start) would throw that
+// question away. Update calls it after every message.
+func (m *Model) showWaitingSecretsDeletePlain() {
+	if m.secrets == nil || m.secrets.deletePlainWaiting == "" || m.confirmOpen || m.promptOpen || m.pickerOpen {
+		return
+	}
+	where := m.secrets.deletePlainWaiting
+	m.secrets.deletePlainWaiting = ""
+	m.openSecretsDeletePlainCard(where)
+}
+
 // answerSecretsDeletePlain handles the card.
 func (m *Model) answerSecretsDeletePlain(id string) tea.Cmd {
 	if id != "delete" {
@@ -405,7 +418,8 @@ func (m *Model) onSecretsMigrateDone(msg secretsMigrateDoneMsg) tea.Cmd {
 			invalidateWelcome()
 		}
 		m.secretsChanged()
-		m.openSecretsDeletePlainCard(strings.TrimPrefix(strings.TrimSuffix(where, "."), "Now in the "))
+		m.secretsS().deletePlainWaiting = strings.TrimPrefix(strings.TrimSuffix(where, "."), "Now in the ")
+		m.showWaitingSecretsDeletePlain()
 		return tea.Batch(m.secretsToast(toast.Info, "Secrets moved · plain file kept", where), m.secretsArmLock())
 	case msg.moved:
 		st.migrating, st.tries, st.creating = false, 0, false

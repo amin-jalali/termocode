@@ -201,6 +201,10 @@ type secretsState struct {
 	migrating     bool
 	migrateAsked  bool
 	finishPending bool
+	// deletePlainWaiting is the store the Delete the old plain file? card
+	// names when the move ended under another card; it opens once no
+	// dialog is on screen (showWaitingSecretsDeletePlain).
+	deletePlainWaiting string
 	// switching sends the passphrase to Switch backend… → Encrypted
 	// file (secrets_switch.go) instead of an unlock.
 	switching bool
