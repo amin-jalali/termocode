@@ -143,10 +143,16 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 			}
 			msgs = append(msgs, um)
 		case ai.StoredTool:
-			tools = append(tools, sm.Text)
+			if !aiFallbackLine(sm.Text) { // OMX-4: for the user, not the model
+				tools = append(tools, sm.Text)
+			}
 		case ai.StoredAssistant:
 			for _, st := range sm.Steps {
-				tools = append(tools, st.Tools...)
+				for _, l := range st.Tools {
+					if !aiFallbackLine(l) {
+						tools = append(tools, l)
+					}
+				}
 			}
 			text = append(text, sm.Text)
 		}
@@ -283,6 +289,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
+		Name:        aiSlotLabel(step.Slot, slot.cfg),
+		Fallbacks:   s.aiFallbacks(step.Slot), // OMX-4
 	}
 	s.turnThink = ""
 	crash.GoWith("the AI chat", func() {
@@ -413,6 +421,12 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 				l.Text += " → " + aiShortResult(msg.ev.Detail)
 			}
 		}
+	case ai.EventFallback: // OMX-4: the turn moved to a backup model
+		if l := last(); l != nil && l.Role == ai.StoredAssistant && strings.TrimSpace(l.Text) == "" {
+			s.conv.Messages = s.conv.Messages[:len(s.conv.Messages)-1]
+		}
+		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: aiFallbackMark + ai.Redact(msg.ev.Detail)},
+			ai.StoredMessage{Role: ai.StoredAssistant, Model: msg.ev.Label}) // the answer is labelled with the backup's model
 	case ai.EventError:
 		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredError, Text: ai.Redact(msg.ev.Detail)})
 		recordError("[ai] chat: " + ai.Redact(msg.ev.Detail))
