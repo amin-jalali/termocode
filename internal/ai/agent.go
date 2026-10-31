@@ -102,6 +102,11 @@ type Agent struct {
 	// first one runs, so the app can show all the files a step changes
 	// in one review list.
 	BeforeCalls func(ctx context.Context, calls []ToolCall)
+	// Inbox (optional) hands over messages that arrived while the turn
+	// works (a note the user sends to a run step, a child run's finish):
+	// they join after the step's tool results, and a reply without tool
+	// calls goes on once more while one waits (OMX-6). Run's goroutine.
+	Inbox func() []Message
 	// RetryWait (optional) pauses before retry attempt n (1-based) and
 	// returns ctx's error when the turn is stopped. nil waits
 	// retryBackoff(n).
@@ -282,6 +287,10 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 		}
 		msgs = append(msgs, asst)
 		if len(calls) == 0 {
+			if in := a.inbox(); len(in) > 0 {
+				msgs = append(msgs, in...)
+				continue
+			}
 			if prose == -1 {
 				emit(Event{Kind: EventText, Text: reply})
 			}
@@ -304,6 +313,8 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			emit(Event{Kind: EventError, Detail: ctx.Err().Error(), Usage: usage})
 			return msgs[start:]
 		}
+
+		msgs = append(msgs, a.inbox()...)
 	}
 	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
 	emit(Event{Kind: EventDone, Usage: usage})
@@ -335,6 +346,13 @@ func (a *Agent) fallBack(err error, emit func(Event)) {
 	a.Provider, a.Model, a.Name = next.Provider, next.Model, next.Name
 	emit(Event{Kind: EventFallback, Tool: next.Name, Label: next.Model,
 		Detail: from + " failed: " + fallbackReason(err) + ". Now using " + next.Name + "."})
+}
+
+func (a *Agent) inbox() []Message {
+	if a.Inbox == nil {
+		return nil
+	}
+	return a.Inbox()
 }
 
 // stream reads one model reply into buf, emitting text as it arrives
