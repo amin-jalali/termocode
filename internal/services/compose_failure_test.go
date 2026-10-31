@@ -43,7 +43,7 @@ func TestStateNamesAndBusy(t *testing.T) {
 	if services.State(99).String() != "unknown" || services.State(-1).String() != "unknown" {
 		t.Fatal("an unknown state has a name")
 	}
-	for s, want := range map[services.State]bool{services.Starting: true, services.Pulling: true, services.Stopping: true, services.Running: false, services.Stopped: false} {
+	for s, want := range map[services.State]bool{services.Starting: true, services.Pulling: true, services.Stopping: true, services.Restarting: true, services.Running: false, services.Stopped: false} {
 		if s.Busy() != want {
 			t.Errorf("%v.Busy() = %v", s, !want)
 		}

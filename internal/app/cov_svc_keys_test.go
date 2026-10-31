@@ -497,3 +497,23 @@ func TestCovSvcNavigationKeys(t *testing.T) {
 		t.Error("m: no sections menu")
 	}
 }
+
+// FIX-32: a restart or pause in flight marks the container Restarting;
+// a second pause or restart is refused until it is done.
+func TestCovSvcRestartInFlightBlocksASecondAction(t *testing.T) {
+	m, f := covSvcHost(t)
+	covSvcContainer(t, m, "c2")
+	if cmd := covSvcKey(m, "r"); cmd == nil {
+		t.Fatal("restart did not start")
+	}
+	if got := m.services.busy[containerBusyPrefix+"c2"]; got != services.Restarting {
+		t.Fatalf("busy = %v, want restarting", got)
+	}
+	covSvcKey(m, "p")
+	if !strings.Contains(regToast(m), "Container is busy") {
+		t.Errorf("second action toast = %q", regToast(m))
+	}
+	if strings.Contains(covSvcCalls(f), "pause c2") {
+		t.Errorf("a pause was sent while the restart ran: %q", f.Calls())
+	}
+}

@@ -343,6 +343,18 @@ func TestCovAIServicesRestart(t *testing.T) {
 	if _, err := aiServicesRestart(ctx, e.call, "redis"); err != errAIChatStopped {
 		t.Errorf("stopped chat: %v", err)
 	}
+	// The stopped chat's restart may still run; a second restart waits
+	// for it to end (FIX-32: a restart in flight is busy).
+	if !servicestest.WaitFor(20*time.Second, func() bool {
+		busy := true
+		_, _ = e.call(context.Background(), func(m *Model) (string, tea.Cmd, error) {
+			_, busy = m.services.busy[svcKey(svcSecCompose, "redis")]
+			return "", nil, nil
+		})
+		return !busy
+	}) {
+		t.Fatal("the stopped chat's restart never ended")
+	}
 	e.f.Set(t, "restart.err", "boom")
 	if _, err := e.run(t, "services_restart", map[string]any{"name": "redis"}); err == nil {
 		t.Error("a failing restart gave no error")

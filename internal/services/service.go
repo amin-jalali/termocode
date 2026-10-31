@@ -38,8 +38,12 @@ func (s State) String() string {
 // Up reports whether the service is running (in any health).
 func (s State) Up() bool { return s == Running || s == Healthy || s == Unhealthy }
 
-// Busy reports a start or stop in flight: a second action is ignored.
-func (s State) Busy() bool { return s == Starting || s == Pulling || s == Stopping }
+// Busy reports a start, stop, restart or pause in flight: a second
+// action is ignored. Restarting counts, so a second restart or pause is
+// not sent while one runs (FIX-32); a stop still works on a crash loop.
+func (s State) Busy() bool {
+	return s == Starting || s == Pulling || s == Stopping || s == Restarting
+}
 
 // Port is one published (or declared) port.
 type Port struct {
