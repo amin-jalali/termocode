@@ -37,6 +37,7 @@ func agentsKeyRows(usage bool) []confirm.KeyRow {
 			[]string{"← / →", "previous / next run"},
 			[]string{"PgUp / PgDn", "scroll"},
 			[]string{"d", "details on / off"},
+			[]string{"t", "a dense task list instead of the cards (and back)"},
 			[]string{"f", "follow the running step again"},
 			[]string{"r", "resume a run that termocode stopped"},
 			[]string{"a", "the plan card of a run that waits for you"},
