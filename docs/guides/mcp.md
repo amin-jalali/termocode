@@ -421,6 +421,19 @@ There is nothing to set up.
 - Set `mcp_share` to `false` to give each window its own server. On
   systems without unix sockets, each window always has its own.
 
+By default, each project folder gets its own server. To let one process
+serve every project, add `"share": "user"` to the entry in your own
+`mcp.json` (or `termocode mcp add --share user …`):
+
+```json
+"notes": { "command": "notes-mcp", "args": ["${userHome}/notes"], "share": "user" }
+```
+
+- The server runs in your home folder and gets no project folder, so give
+  it its paths in `args`. Do not use `${workspaceFolder}` in such an entry.
+- A project file (`.termocode/mcp.json`) can not set `share`.
+- Only local servers can be shared, and only while `mcp_share` is on.
+
 ## Settings
 
 The MCP section of the Settings modal (**Preferences: Open Settings (UI)**)
