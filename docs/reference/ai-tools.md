@@ -1762,12 +1762,12 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | ID | Title | Gate | Reason |
 | --- | --- | --- | --- |
-| `agent-hooks` | Agent: State Hooks… (exact working / waiting / done) | never | it changes other apps' config files: the user decides after the preview |
 | `agent-start-claude` | Agent: Start Claude Code | confirm (run) |   |
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
 | `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
 | `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
 | `ai-add` | AI: Add AI… | never | a card for the user; keys and connected AIs stay with the user (the AI shows them with ai_view_open) |
+| `ai-agent-hooks` | Agent: State Hooks… (exact working / waiting / done) | never | it changes other apps' config files: the user decides after the preview |
 | `ai-agents` | AI: Toggle Agents Panel | auto |   |
 | `ai-apply-code` | AI: Apply Last Code Block to File | never | use write_file to change files |
 | `ai-apply-proposal` | AI: Apply Proposed Edit | never | the user reviews proposed edits |
@@ -2210,6 +2210,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | --- | --- | --- |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
+| `ai_categories` | never | AI provider, credentials and approvals stay with the user |
 | `ai_compact` | never | AI provider, credentials and approvals stay with the user |
 | `ai_concurrency` | never | AI provider, credentials and approvals stay with the user |
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
@@ -2224,10 +2225,14 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_next_edit` | confirm (settings) |   |
 | `ai_parallel_max` | never | AI provider, credentials and approvals stay with the user |
 | `ai_plan_approval` | never | AI provider, credentials and approvals stay with the user; the AI never approves its own plan |
+| `ai_plan_file` | never | AI provider, credentials and approvals stay with the user |
+| `ai_plan_review_rounds` | never | AI provider, credentials and approvals stay with the user |
 | `ai_prices` | never | AI provider, credentials and approvals stay with the user |
 | `ai_prompt_cache` | never | AI provider, credentials and approvals stay with the user |
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `ai_reasoning` | never | AI provider, credentials and approvals stay with the user |
+| `ai_step_escalate` | never | AI provider, credentials and approvals stay with the user |
+| `ai_step_stall_minutes` | never | AI provider, credentials and approvals stay with the user |
 | `ai_until_done_budget_usd` | never | AI provider, credentials and approvals stay with the user |
 | `ai_until_done_rounds` | never | AI provider, credentials and approvals stay with the user |
 | `ai_web_fetch` | never | AI provider, credentials and approvals stay with the user; the AI never turns on its own web access |
