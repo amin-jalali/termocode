@@ -208,6 +208,36 @@ also edit `config.json`.
 
 The chat AI can not run the status and config commands. They are for you.
 
+## Drive agents from a script
+
+Every terminal tab has three environment variables:
+
+| Variable | Value |
+|---|---|
+| `TERMOCODE_ENV` | `1` inside a termocode terminal |
+| `TERMOCODE_TAB_ID` | the tab's id, like `t3` |
+| `TERMOCODE_SOCKET` | termocode's control socket for this workspace |
+
+The `termocode agent` command talks to that socket:
+
+```sh
+termocode agent list                      # ID  NAME  AGENT  STATE
+termocode agent prompt t3 "fix the failing test"
+termocode agent wait t3 --until done --timeout 20m
+```
+
+- `list` shows each tab with its agent and state (`working`, `waiting`,
+  `done`). `--json` prints JSON.
+- `prompt` types the text into the tab and presses Enter; `-` reads the
+  text from stdin. The first time, termocode asks **Let a script type
+  into a terminal tab?** with the text. **Deny** is first; **Allow for
+  this session** lets later prompts in until termocode quits.
+- `wait` returns when the agent reaches the state (default `done`) and
+  exits 1 when the time is up (default 10 minutes).
+- Outside a termocode terminal the command uses the socket of the current
+  folder's workspace. The socket is in termocode's private session folder;
+  only your own user can connect. Not on Windows.
+
 ## If something does not work
 
 | What you see | Try this |
