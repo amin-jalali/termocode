@@ -368,6 +368,27 @@ Draft**. If the branch is not pushed, termocode offers a plain push first
 
 The AI can open the list. It cannot create, merge or review a pull request.
 
+### Ship a branch to merge-ready
+
+**AI: Ship Branch to Merge-Ready** takes the current branch (your work,
+or an AI step's work after a plan run) all the way to a green pull
+request:
+
+1. **Push.** A card lists the new commits. **Not now** is first; it
+   stops the ship. The push is a plain push, never forced.
+2. **Pull request.** If the branch has no open pull request, a card shows
+   the title, base and description (from the commits). **Cancel** is
+   first; **Create** or **Create as Draft** opens it.
+3. **CI.** termocode watches the checks of the pushed commit.
+4. **Fix.** When CI is red, the failing log goes to the AI chat as a new
+   turn. The AI fixes it and commits; its edits get the usual review.
+   Then the push card comes again (step 1).
+5. **Stop.** When CI is green on the pull request, the ship stops with
+   **Merge-ready**. It never merges: you merge when you want.
+
+At most 3 AI fix turns run; after that the ship stops. Run the command
+again to stop it at any time. The default branch is never shipped.
+
 ## Keys at a glance
 
 In the Source Control panel:
