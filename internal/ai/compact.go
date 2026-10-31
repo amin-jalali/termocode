@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -93,4 +94,38 @@ func CompactTranscript(msgs []Message) string {
 // turns in the history sent to the model.
 func CompactedMessage(summary string) Message {
 	return Message{Role: RoleUser, Content: "[summary of the earlier chat, written to save space]\n" + strings.TrimSpace(summary)}
+}
+
+// EventCompacted is the agent's report that it summarised the older
+// turns (Detail = the summary, Attempt = how many messages it replaced).
+// It is kept apart from the iota block so new kinds there never move it.
+const EventCompacted EventKind = 20
+
+// CompactedHistory is system, the summary (a user message and a short
+// assistant answer, so the roles still take turns) and then rest.
+func CompactedHistory(system Message, summary string, rest []Message) []Message {
+	out := make([]Message, 0, len(rest)+3)
+	out = append(out, system, CompactedMessage(summary), Message{Role: RoleAssistant, Content: "Understood. I will go on from this summary."})
+	return append(out, rest...)
+}
+
+// tryCompact handles a "context too long" answer once per turn: the
+// messages between the system prompt and the turn's user message
+// (msgs[start-1]) are summarised by a.Compact and replaced. It reports
+// whether the request should be sent again.
+func (a *Agent) tryCompact(ctx context.Context, msgs *[]Message, start *int, err error, emit func(Event)) bool {
+	m, s := *msgs, *start
+	if a.Compact == nil || !ContextTooLong(err) || ctx.Err() != nil || s < 3 || m[0].Role != RoleSystem {
+		return false
+	}
+	older := m[1 : s-1]
+	summary, cerr := a.Compact(ctx, older)
+	if cerr != nil || strings.TrimSpace(summary) == "" {
+		return false
+	}
+	out := CompactedHistory(m[0], summary, m[s-1:])
+	*start = 4 // system, summary, answer, the turn's user message
+	*msgs = out
+	emit(Event{Kind: EventCompacted, Detail: summary, Attempt: len(older)})
+	return true
 }

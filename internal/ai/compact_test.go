@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -58,5 +59,70 @@ func TestCompactedMessageWrapsTheSummary(t *testing.T) {
 	m := CompactedMessage("We fixed a.go.")
 	if m.Role != RoleUser || !strings.Contains(m.Content, "We fixed a.go.") || !strings.Contains(m.Content, "summary") {
 		t.Fatalf("%+v", m)
+	}
+}
+
+func TestAgentCompactsOnceWhenTheContextIsTooLong(t *testing.T) {
+	tooLong := statusError{code: 400, msg: "HTTP 400: prompt is too long"}
+	p := &scripted{replies: []Chunk{{Err: tooLong}, {Delta: "fine now"}}}
+	var older []Message
+	a := &Agent{Provider: p, Compact: func(_ context.Context, msgs []Message) (string, error) {
+		older = msgs
+		return "We read a.go.", nil
+	}}
+	hist := []Message{
+		{Role: RoleSystem, Content: "sys"},
+		{Role: RoleUser, Content: "read a.go"},
+		{Role: RoleAssistant, Content: "it is long"},
+		{Role: RoleUser, Content: "now fix it"},
+	}
+	evs, _ := collectEvents(a, hist)
+	if len(older) != 2 || older[0].Content != "read a.go" {
+		t.Fatalf("summarised %+v", older)
+	}
+	if p.calls != 2 {
+		t.Fatalf("calls %d", p.calls)
+	}
+	sent := p.seen[1]
+	if sent[0].Content != "sys" || !strings.Contains(sent[1].Content, "We read a.go.") || sent[len(sent)-1].Content != "now fix it" {
+		t.Fatalf("second request %+v", sent)
+	}
+	var compacted, errs int
+	for _, e := range evs {
+		switch e.Kind {
+		case EventCompacted:
+			compacted++
+			if e.Detail != "We read a.go." || e.Attempt != 2 {
+				t.Errorf("event %+v", e)
+			}
+		case EventError:
+			errs++
+		}
+	}
+	if compacted != 1 || errs != 0 {
+		t.Fatalf("compacted %d errors %d", compacted, errs)
+	}
+}
+
+func TestAgentCompactsOnlyOnce(t *testing.T) {
+	tooLong := statusError{code: 400, msg: "HTTP 400: prompt is too long"}
+	p := &scripted{replies: []Chunk{{Err: tooLong}, {Err: tooLong}, {Delta: "never"}}}
+	n := 0
+	a := &Agent{Provider: p, Compact: func(context.Context, []Message) (string, error) { n++; return "s", nil }}
+	evs, _ := collectEvents(a, []Message{{Role: RoleSystem}, {Role: RoleUser, Content: "a"}, {Role: RoleAssistant, Content: "b"}, {Role: RoleUser, Content: "c"}})
+	if n != 1 || p.calls != 2 || evs[len(evs)-1].Kind != EventError {
+		t.Fatalf("compactions %d calls %d last %+v", n, p.calls, evs[len(evs)-1])
+	}
+}
+
+func TestAgentDoesNotCompactOtherErrorsOrAFirstTurn(t *testing.T) {
+	n := 0
+	compact := func(context.Context, []Message) (string, error) { n++; return "s", nil }
+	p := &scripted{replies: []Chunk{{Err: statusError{code: 401, msg: "HTTP 401: bad key"}}}}
+	collectEvents(&Agent{Provider: p, Compact: compact}, []Message{{Role: RoleSystem}, {Role: RoleUser, Content: "a"}, {Role: RoleAssistant, Content: "b"}, {Role: RoleUser, Content: "c"}})
+	p = &scripted{replies: []Chunk{{Err: statusError{code: 400, msg: "HTTP 400: prompt is too long"}}}}
+	collectEvents(&Agent{Provider: p, Compact: compact}, []Message{{Role: RoleSystem}, {Role: RoleUser, Content: "a"}})
+	if n != 0 {
+		t.Fatalf("compacted %d times", n)
 	}
 }
