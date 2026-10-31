@@ -214,6 +214,12 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		s.keep = aiKeepGoingRun{}
 	}
 	prof := s.activeProfile()
+	if name := s.kwProfile; name != "" { // OMX-17: the keyword chip the user kept
+		s.kwProfile = ""
+		if p, ok := s.profiles.Get(name); ok {
+			prof = p
+		}
+	}
 	asked := text
 	// "/done <message>" runs this one message with the until-done
 	// profile; the active profile stays and the prefix is not stored.

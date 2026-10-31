@@ -58,9 +58,13 @@ type aiState struct {
 	batch    *aiBatch
 	settings ai.Settings
 	keep     aiKeepGoingRun // OMX-7: the keep-going chain of the open chat
-	cfg      ai.Config
-	provider ai.Provider
-	loadErr  string
+	// OMX-17: kwOff is set when the user removed the keyword chip of the
+	// draft; kwProfile is the profile the next sendAIChat runs.
+	kwOff     bool
+	kwProfile string
+	cfg       ai.Config
+	provider  ai.Provider
+	loadErr   string
 	// profiles are the agent profiles (built-ins + profiles.json + the
 	// project's ai-profiles.json, with their load errors); slots holds
 	// one provider per model slot, built on first use (ai_profiles.go).
