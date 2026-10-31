@@ -694,10 +694,9 @@ func (m *Model) openCommitPickConfirm(verb string) tea.Cmd {
 		kind = confirmKindCommitCherryPick
 	}
 	cv.pick = info.FullHash
-	m.confirm = confirm.New(title, body, []confirm.Button{
-		{ID: verb, Title: button, Style: confirm.StylePrimary},
-		{ID: "cancel", Title: "Cancel"},
-	})
+	m.confirm = confirm.Risky(title, body,
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: verb, Title: button, Style: confirm.StylePrimary})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = kind

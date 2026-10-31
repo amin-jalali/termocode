@@ -951,13 +951,11 @@ func (m *Model) clearCommitBox() {
 // openStageAllCommitConfirm asks before staging every change for a commit when
 // the index is empty (VSCode's "no staged changes" prompt).
 func (m *Model) openStageAllCommitConfirm() {
-	m.confirm = confirm.New(
+	m.confirm = confirm.Risky(
 		"Stage all changes?",
 		"There are no staged changes. Stage all changes and commit?",
-		[]confirm.Button{
-			{ID: "stage", Title: "Stage All & Commit", Style: confirm.StylePrimary},
-			{ID: "cancel", Title: "Cancel"},
-		},
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: "stage", Title: "Stage All & Commit", Style: confirm.StylePrimary},
 	)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
