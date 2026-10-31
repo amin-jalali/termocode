@@ -90,6 +90,9 @@ type aiState struct {
 	// chat (OMX-9); rulesInjChat is the chat it belongs to.
 	rulesInj     *ai.RulesInjector
 	rulesInjChat string
+	// astGrepAsked: the ast-grep install card was shown this session
+	// (OMX-28), so a missing ast-grep does not open it again.
+	astGrepAsked bool
 	// skillsTrust is the open project-skills card (ai_skills.go).
 	skillsTrust *aiSkillsTrustPending
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
