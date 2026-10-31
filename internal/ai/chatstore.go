@@ -176,6 +176,10 @@ type Conversation struct {
 	// PlanApproval overrides ai_plan_approval for this chat ("": the
 	// setting; AI: Toggle Plan Approval sets it).
 	PlanApproval string `json:"plan_approval,omitempty"`
+	// Reasoning is this chat's reasoning level ("": the slot's; "auto":
+	// the slot's, picked on purpose; else a level). AI: Next Reasoning
+	// Level sets it.
+	Reasoning string `json:"reasoning,omitempty"`
 }
 
 const (

@@ -185,9 +185,10 @@ var actionsHeaderMemo struct {
 	rk      theme.RenderKey
 	mcp     int // mcpChipState: -1 no chip, else connected servers
 	profile string
-	running bool // a pipeline run is active (the profile chip's colour)
-	agents  bool // the slot shows the AGENTS view
-	usage   bool // ... as the usage tables
+	think   string // the reasoning chip (aiReasoningChipLabel)
+	running bool   // a pipeline run is active (the profile chip's colour)
+	agents  bool   // the slot shows the AGENTS view
+	usage   bool   // ... as the usage tables
 	out     string
 }
 
@@ -198,18 +199,19 @@ func (m Model) actionsHeaderEdged(width int, edge func(string) string) string {
 	focused := m.ai != nil && m.ai.focused
 	mcpState := m.mcpChipState()
 	profile, running := m.aiProfileChipLabel(), m.aiRunActive()
+	think := m.aiReasoningChipLabel()
 	agents := m.agentsShowing()
 	usage := agents && m.ai.agents.usage
 	c := &actionsHeaderMemo
 	c.Lock()
 	defer c.Unlock()
 	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.focused == focused && c.hover == hover && c.rk == rk && c.mcp == mcpState &&
-		c.profile == profile && c.running == running && c.agents == agents && c.usage == usage {
+		c.profile == profile && c.think == think && c.running == running && c.agents == agents && c.usage == usage {
 		return c.out
 	}
 	out := edge(m.renderActionsHeader(width))
 	c.ok, c.width, c.pinned, c.focused, c.hover, c.rk, c.mcp, c.out = true, width, m.actionsPinned, focused, hover, rk, mcpState, out
-	c.profile, c.running, c.agents, c.usage = profile, running, agents, usage
+	c.profile, c.think, c.running, c.agents, c.usage = profile, think, running, agents, usage
 	return out
 }
 
@@ -422,9 +424,10 @@ func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
 	}
 	add("profile", m.aiProfileChipLabel())
 	if width >= actionsChipMinWidth {
+		add("think", m.aiReasoningChipLabel()) // OMX-5: only when a level is set
 		add("mcp", m.mcpChipLabel())
 		add("usage", "usage") // last: the first chip to drop
-	} else if m.mcpChipLabel() != "" || m.aiProfileChipLabel() != "" {
+	} else if m.mcpChipLabel() != "" || m.aiProfileChipLabel() != "" || m.aiReasoningChipLabel() != "" {
 		dropped = true
 	}
 	if dropped { // a chip that does not fit leaves a trace: ⋯ opens a menu with them

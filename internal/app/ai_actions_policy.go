@@ -489,12 +489,13 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-until-done": aiConfirm(ai.ClassSettings),
 	// Plan approval (G-PLAN): the AI can never approve its own plan or
 	// turn the question off.
-	"ai-plan-approval": aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
-	"ai-plan-review":   aiNever("the plan card is the user's answer; the AI never approves its own plan"),
-	"ai-profile-edit":  aiNever(aiNoAIConfig),
-	"ai-profile-new":   aiNever(aiNoAIConfig),
-	"ai-profile-form":  aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
-	"ai-profile-trust": aiNever("trusting a project's prompts is the user's decision"),
+	"ai-reasoning-next": aiNever(aiNoAIConfig + "; more thinking costs the user more"),
+	"ai-plan-approval":  aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai-plan-review":    aiNever("the plan card is the user's answer; the AI never approves its own plan"),
+	"ai-profile-edit":   aiNever(aiNoAIConfig),
+	"ai-profile-new":    aiNever(aiNoAIConfig),
+	"ai-profile-form":   aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
+	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),
 	// Project rules (OM-1): the AI only gets the text in its prompt.
 	"ai-rules":       aiNever("trusting a project's rules is the user's decision"),
 	"ai-models-edit": aiNever(aiNoAIConfig),
