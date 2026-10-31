@@ -267,6 +267,7 @@ func (m *Manager) BeginSignInWith(ctx context.Context, name string, so SignInOpt
 	}
 	if exp.OAuth != nil {
 		c.ClientID, c.ClientSecret = exp.OAuth.ClientID, exp.OAuth.ClientSecret
+		c.MetadataURL = exp.OAuth.MetadataURL
 		if len(exp.OAuth.Scopes) > 0 {
 			c.Scopes = exp.OAuth.Scopes
 		}

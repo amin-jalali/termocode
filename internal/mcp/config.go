@@ -104,6 +104,9 @@ type OAuthConfig struct {
 	ClientID     string   `json:"client_id,omitempty"`
 	ClientSecret string   `json:"client_secret,omitempty"`
 	Scopes       []string `json:"scopes,omitempty"`
+	// MetadataURL is the authorization server's metadata document, for a
+	// server that does not say where it is ("" finds it).
+	MetadataURL string `json:"metadata_url,omitempty"`
 }
 
 // AuthConfig is the termocode "auth" key of an http entry.
