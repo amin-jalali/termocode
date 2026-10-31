@@ -122,7 +122,16 @@ request:
 	default:
 		r.Method, url = strings.ToUpper(tok), strings.TrimSpace(rest)
 	}
-	url = strings.TrimSpace(cutHTTPVersion(url))
+	// Drop every trailing version token, not only the last: a line
+	// "u HTTP/1 HTTP/1" would keep "u HTTP/1" as its URL, and the
+	// serialized "GET u HTTP/1" would then read back as "u".
+	for {
+		cut := strings.TrimSpace(cutHTTPVersion(url))
+		if cut == url {
+			break
+		}
+		url = cut
+	}
 	if url == "" {
 		return r, false
 	}
