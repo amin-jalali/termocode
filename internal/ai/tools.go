@@ -629,11 +629,36 @@ func firstLine(s string) string { return strings.SplitN(strings.TrimSpace(s), "\
 
 // runCmd runs a command with a timeout and returns combined output plus
 // the exit status (as text, not an error, so the model can read it).
+// nonInteractive are the variables a hidden command runs with (OMX-10):
+// it has no terminal and no stdin, so a pager or a prompt would hang.
+var nonInteractive = []string{"PAGER=cat", "GIT_PAGER=cat", "GIT_TERMINAL_PROMPT=0", "CI=1"}
+
+// NonInteractiveEnv is env with the nonInteractive variables set (they
+// replace the user's values).
+func NonInteractiveEnv(env []string) []string {
+	out := make([]string, 0, len(env)+len(nonInteractive))
+	for _, kv := range env {
+		k, _, _ := strings.Cut(kv, "=")
+		keep := true
+		for _, ni := range nonInteractive {
+			if strings.HasPrefix(ni, k+"=") {
+				keep = false
+				break
+			}
+		}
+		if keep {
+			out = append(out, kv)
+		}
+	}
+	return append(out, nonInteractive...)
+}
+
 func runCmd(ctx context.Context, dir string, timeout time.Duration, name string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := spawn.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
+	cmd.Env = NonInteractiveEnv(os.Environ()) // OMX-10: no pager, no password prompt
 	out, err := cmd.CombinedOutput()
 	s := capOut(string(out), maxOutBytes)
 	if ctx.Err() == context.DeadlineExceeded {
