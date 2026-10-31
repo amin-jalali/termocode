@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -54,5 +55,42 @@ func TestRequiresUserInteraction(t *testing.T) {
 	}
 	if (Tool{Name: "x", Meta: map[string]any{"requiresUserInteraction": false}}).RequiresUserInteraction() {
 		t.Error("false read as true")
+	}
+}
+
+// Spec (TS-30): structuredContent is checked against the tool's
+// outputSchema; a mismatch is told to the model and logged, the result
+// still comes through.
+func TestOutputSchemaCheck(t *testing.T) {
+	schema := map[string]any{"type": "object", "required": []any{"n"},
+		"properties": map[string]any{"n": map[string]any{"type": "integer"}, "tags": map[string]any{"type": "array", "items": map[string]any{"type": "string"}}}}
+	for raw, bad := range map[string]bool{
+		`{"n":42}`:              false,
+		`{"n":42,"tags":["a"]}`: false,
+		`{"n":"42"}`:            true,
+		`{"tags":["a"]}`:        true,
+		`{"n":4.5}`:             true,
+		`{"n":1,"tags":[1]}`:    true,
+		`[1]`:                   true,
+	} {
+		err := checkSchema(schema, json.RawMessage(raw))
+		if (err != nil) != bad {
+			t.Errorf("%s: %v", raw, err)
+		}
+	}
+	var warned int
+	call := func(context.Context, string, string, map[string]any) (CallResult, error) {
+		return CallResult{StructuredContent: json.RawMessage(`{"n":"x"}`)}, nil
+	}
+	tl := Tool{Name: "s", Annotations: ann(bp(true), nil), OutputSchema: schema}
+	out, err := AITools(Server{Name: "srv"}, []Tool{tl}, call, AdapterOptions{Log: func(string, string) { warned++ }})[0].Run(context.Background(), nil)
+	if err != nil || !strings.Contains(out, `{"n":"x"}`) || !strings.Contains(out, "does not match the tool's output schema") {
+		t.Errorf("out %q %v", out, err)
+	}
+	if warned != 1 {
+		t.Errorf("logged %d", warned)
+	}
+	if ToolsHash([]Tool{{Name: "s"}}) != ToolsHash([]Tool{{Name: "s", OutputSchema: schema}}) {
+		t.Error("outputSchema changes the hash")
 	}
 }

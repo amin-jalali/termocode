@@ -673,7 +673,9 @@ func (m *Manager) toolsChangedLocked(st *serverState) bool {
 func ToolsHash(tools []Tool) string {
 	sorted := append([]Tool(nil), tools...)
 	for i := range sorted {
-		sorted[i].Meta = nil // size hints are not a change the user reviews (hash as before _meta was read)
+		// Size hints and output schemas are not a change the user reviews
+		// (the hash stays as before they were read).
+		sorted[i].Meta, sorted[i].OutputSchema = nil, nil
 	}
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
 	b, _ := json.Marshal(sorted)

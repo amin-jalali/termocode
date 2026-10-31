@@ -123,6 +123,8 @@ type AdapterOptions struct {
 	Spill *Spill
 	// Warn is told about a result over the limit (the MCP log).
 	Warn func(server, tool string, size int)
+	// Log gets other notes about results (the MCP log).
+	Log func(server, line string)
 }
 
 // DefaultMaxResult caps a result (mcp_max_result_kb default 32).
@@ -209,6 +211,15 @@ func AITools(s Server, tools []Tool, call CallFunc, o AdapterOptions) []ai.Tool 
 				// A known secret the server repeats (its own token from
 				// ${secret:}, a password it read) never reaches the model.
 				text := ai.RedactSecrets(clean(res.Text()))
+				if t.OutputSchema != nil && !res.IsError && len(res.StructuredContent) > 0 {
+					if serr := checkSchema(t.OutputSchema, res.StructuredContent); serr != nil {
+						why := ai.RedactSecrets(clean(serr.Error()))
+						if o.Log != nil {
+							o.Log(server, t.Name+": the result does not match its output schema: "+why)
+						}
+						text = "[warning: the structured result does not match the tool's output schema (" + why + "); treat it with care]\n" + text
+					}
+				}
 				max := limit
 				if n := t.MaxResultSize(); n > 0 {
 					max = n
