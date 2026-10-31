@@ -42,7 +42,10 @@ import (
 // aiState is the AI feature state. Held by pointer on Model so Bubble Tea
 // value copies and background goroutines share one instance.
 type aiState struct {
-	warmPending <-chan struct{} // startup keychain probe; never wait before the first frame
+	answerCleaner    aiStreamCleaner
+	cleanAnswerIndex int
+	streamTranscript aiStreamTranscript
+	warmPending      <-chan struct{} // startup keychain probe; never wait before the first frame
 	// historyTarget is the chat a Delete / Rename dialog is about.
 	historyTarget string
 	// wtTarget is the step ("run:step") a worktree Merge / Discard card
