@@ -218,9 +218,21 @@ const (
 	wTerm  = `document.querySelector('[data-view="term"]')`
 )
 
-// goTab taps a tab in the tab bar (phone) or the rail (desktop).
+// goTab taps a tab in the tab bar (phone) or picks the view on the
+// desktop workbench: the activity bar's item, or the bottom panel for
+// the terminal (which a terminal route opens).
 func (p *webPage) goTab(tab string) {
 	p.t.Helper()
+	if !p.vp.Mobile {
+		if tab == "term" {
+			webEval[bool](p, `(location.hash = "#/term", true)`)
+			p.waitJS(`document.querySelector('.wb-panel [data-view="term"]')`)
+			return
+		}
+		p.tap(fmt.Sprintf(`nav .act-item[data-act="%s"]`, tab))
+		p.waitJS(fmt.Sprintf(`document.querySelector('nav .act-item[data-act="%s"][aria-current="page"]') && document.querySelector('[data-view="%s"]')`, tab, tab))
+		return
+	}
 	i := map[string]int{"chat": 1, "files": 2, "term": 3, "git": 4, "more": 5}[tab]
 	p.tap(fmt.Sprintf("nav .nav-item:nth-child(%d)", i))
 	p.waitJS(fmt.Sprintf(`document.querySelector('nav .nav-item:nth-child(%d)[aria-current="page"]') && document.querySelector('[data-view="%s"]')`, i, tab))
@@ -293,25 +305,47 @@ func webRealWalk(t *testing.T, vp webViewport) {
 	p.goTab("term")
 	open := webButton(wTerm, "Open one")
 	line := wTerm + `.querySelector(".term-line")`
+	if !vp.Mobile { // the desktop's panel: a click on it, then every key goes to the shell
+		line = wTerm + `.querySelector(".dterm-pane.is-focus .term-rows")`
+	}
 	p.waitJS(open + ` || ` + line)
 	if webEval[bool](p, `!!(`+open+`)`) {
 		p.tapJS(open)
 	}
 	p.tapJS(line)
+	if !vp.Mobile {
+		p.waitJS(`document.activeElement === ` + wTerm + `.querySelector(".dterm-pane.is-focus .dterm-input")`)
+	}
 	p.keys("echo web-$((6*7))-ok\r")
 	p.waitJS(wTerm + `.innerText.includes("web-42-ok")`)
 
 	// Git: stage notes.txt and commit it.
 	p.goTab("git")
-	notes := `document.querySelector('.git-row-wrap[data-path="notes.txt"] .git-row .btn')`
-	p.tapJS(notes)
-	p.waitJS(`[...document.querySelectorAll(".toasts .toast-title")].some((e) => e.textContent === "Staged notes.txt")`)
-	p.tap(".commit-subject")
-	p.keys("docs: a line from the web")
-	p.tapJS(webButton("document", "Commit 1 file"))
-	p.waitJS(`document.activeElement === document.querySelector(".commit-ask button")`)
-	p.tapJS(webButton(`document.querySelector(".commit-ask")`, "Commit"))
-	p.waitJS(`[...document.querySelectorAll(".toasts .toast-title")].some((e) => e.textContent.startsWith("Committed "))`)
+	if vp.Mobile {
+		notes := `document.querySelector('.git-row-wrap[data-path="notes.txt"] .git-row .btn')`
+		p.tapJS(notes)
+		p.waitJS(`[...document.querySelectorAll(".toasts .toast-title")].some((e) => e.textContent === "Staged notes.txt")`)
+		p.tap(".commit-subject")
+		p.keys("docs: a line from the web")
+		p.tapJS(webButton("document", "Commit 1 file"))
+		p.waitJS(`document.activeElement === document.querySelector(".commit-ask button")`)
+		p.tapJS(webButton(`document.querySelector(".commit-ask")`, "Commit"))
+	} else { // the side bar's source control
+		scm := `document.querySelector('.wb-side [data-view="git"]')`
+		row := scm + `.querySelector('.tr[data-group="changes"][data-path="notes.txt"]')`
+		p.waitJS(row)
+		pt := webEval[struct{ X, Y float64 }](p, `(() => { const r = (`+row+`).getBoundingClientRect(); return {X: r.left + r.width / 2, Y: r.top + r.height / 2}; })()`)
+		p.do(chromedp.MouseEvent(chromedp.MouseMoved, pt.X, pt.Y)) // its actions show on hover
+		p.tapJS(row + `.querySelector('[aria-label="Stage Changes"]')`)
+		p.waitJS(`document.querySelector(".toasts")?.textContent.includes("Staged notes.txt")`)
+		p.waitJS(scm + `.querySelector('.tr[data-group="staged"][data-path="notes.txt"]')`) // the laptop's new status
+		p.tapJS(scm + `.querySelector("textarea")`)
+		p.keys("docs: a line from the web")
+		p.waitJS(scm + `.querySelector("textarea").value === "docs: a line from the web"`)
+		p.tapJS(scm + `.querySelector('[data-act="commit"]')`)
+		p.tapJS(`[...` + scm + `.querySelectorAll(".pv-ask button")].find((b) => b.textContent === "Commit")`)
+	}
+	p.waitJS(`document.querySelector(".toasts")?.textContent.includes("Committed ")`)
 	if got := r.git("log", "-1", "--format=%s"); got != "docs: a line from the web" {
 		t.Errorf("last commit %q", got)
 	}
