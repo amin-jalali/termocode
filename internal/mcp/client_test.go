@@ -102,7 +102,7 @@ func TestHandshake(t *testing.T) {
 	if _, err := p.Client.ListTools(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if got := fakeLog(t, log); !strings.HasPrefix(got, "initialize\nnotifications/initialized\n") {
+	if got := fakeLog(t, log); !strings.HasPrefix(got, "server/discover\ninitialize\nnotifications/initialized\n") {
 		t.Errorf("fake got %q", got)
 	}
 	if !ll.has("fake-mcp v1 starting") {

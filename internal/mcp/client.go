@@ -82,6 +82,7 @@ type Client struct {
 	elicitCtx context.Context
 	hold      func(waiting bool) // stops / restarts the call's timeout
 	toolsTTL  atomic.Int64       // ttlMs of the last tools/list (spec2026_ttl.go)
+	stateless bool               // the 2026-07-28 revision (spec2026_client.go)
 }
 
 // NewClient starts the JSON-RPC connection on r / w (newline framing).
@@ -124,6 +125,9 @@ func (c *Client) Close() { c.conn.Close() }
 // call is conn.Call that reports the caller's ctx error (cancel /
 // deadline) instead of the generic timeout.
 func (c *Client) call(ctx context.Context, method string, params any) (json.RawMessage, error) {
+	if c.Stateless() {
+		params = withMeta(params)
+	}
 	r, err := c.conn.Call(ctx, method, params)
 	if err != nil && ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -134,14 +138,18 @@ func (c *Client) call(ctx context.Context, method string, params any) (json.RawM
 	return r, err
 }
 
-// Initialize runs the handshake: initialize (we offer ProtocolVersion and
+// Initialize starts the connection: the server/discover probe picks the
+// stateless revision when the server speaks it (spec2026_client.go);
+// otherwise the handshake runs: initialize (we offer ProtocolVersion and
 // accept any of SupportedVersions), then notifications/initialized.
 func (c *Client) Initialize(ctx context.Context) error {
+	if modern, err := c.discover(ctx); modern || err != nil {
+		return err
+	}
 	params := map[string]any{
 		"protocolVersion": ProtocolVersion,
-		"capabilities": map[string]any{"roots": map[string]any{"listChanged": false},
-			"elicitation": map[string]any{"form": map[string]any{}, "url": map[string]any{}}},
-		"clientInfo": map[string]any{"name": "termocode", "version": "1"},
+		"capabilities":    clientCapabilities(),
+		"clientInfo":      clientInfo(),
 	}
 	raw, err := c.call(ctx, "initialize", params)
 	if err != nil {
@@ -167,7 +175,11 @@ func (c *Client) Initialize(ctx context.Context) error {
 // Ping checks that the server answers (a health check). A server that
 // does not know ping still answers (an error reply), so that counts too.
 func (c *Client) Ping(ctx context.Context) error {
-	_, err := c.call(ctx, "ping", nil)
+	method := "ping"
+	if c.Stateless() {
+		method = "server/discover" // the stateless revision has no ping
+	}
+	_, err := c.call(ctx, method, nil)
 	var re *extproc.Error
 	if errors.As(err, &re) {
 		return nil

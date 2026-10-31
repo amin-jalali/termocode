@@ -34,7 +34,7 @@
 // FAKE_TOOLSET=2 lists only echo with another description (tools-changed
 // tests); FAKE_MARKER=<file> exists while the server runs;
 // FAKE_INIT_DELAY=<duration> answers initialize that much later; FAKE_TTL_MS adds ttlMs to the last
-// tools/list page.
+// tools/list page; FAKE_MODERN speaks the stateless revision (modern.go).
 package mcptest
 
 import (
@@ -157,10 +157,36 @@ func run() {
 	var mu sync.Mutex
 	cancels := map[string]context.CancelFunc{}
 
+	var initialized bool // guarded by mu
 	handle := func(c *extproc.Conn, m extproc.Message) {
 		logf(m.Method)
+		if mode := modernMode(); mode != "" && m.IsRequest() {
+			mu.Lock()
+			legacy := initialized
+			mu.Unlock()
+			switch {
+			case m.Method == "server/discover":
+				_ = c.Reply(m.ID, DiscoverResult(), nil)
+				return
+			case m.Method == "initialize":
+				if mode == "only" {
+					_ = c.Reply(m.ID, nil, &extproc.Error{Code: extproc.CodeMethodNotFound, Message: "this server speaks only " + ModernVersion})
+					return
+				}
+			case !legacy:
+				v, client := RequestMeta(m.Params)
+				if v != ModernVersion {
+					_ = c.Reply(m.ID, nil, unsupportedVersion(v))
+					return
+				}
+				logf("meta " + m.Method + " " + v + " " + client)
+			}
+		}
 		switch m.Method {
 		case "initialize":
+			mu.Lock()
+			initialized = true
+			mu.Unlock()
 			var p struct {
 				ProtocolVersion string `json:"protocolVersion"`
 			}

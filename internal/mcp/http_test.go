@@ -56,9 +56,14 @@ func TestHTTPJSON(t *testing.T) {
 		t.Fatalf("call %q %v", r.Text(), err)
 	}
 	reqs := f.Requests()
-	if got := strings.Join(rpcs(f), ","); got != "initialize,notifications/initialized,tools/list,tools/call" {
+	if got := strings.Join(rpcs(f), ","); got != "server/discover,initialize,notifications/initialized,tools/list,tools/call" {
 		t.Errorf("rpcs %s", got)
 	}
+	// MCPX-20: the stateless probe names its revision; the old server's 4xx sends us to initialize.
+	if reqs[0].Header.Get("MCP-Protocol-Version") != StatelessVersion {
+		t.Errorf("probe: protocol header %q", reqs[0].Header.Get("MCP-Protocol-Version"))
+	}
+	reqs = reqs[1:]
 	if reqs[0].Header.Get("MCP-Protocol-Version") != "" {
 		t.Error("initialize sent a protocol version header")
 	}
@@ -94,7 +99,7 @@ func TestHTTPSession(t *testing.T) {
 	if _, err := p.Client.CallTool(context.Background(), "echo", map[string]any{"text": "x"}); err != nil {
 		t.Fatal(err)
 	}
-	reqs := f.Requests()
+	reqs := f.Requests()[1:] // after the server/discover probe (MCPX-20)
 	sid := reqs[1].Header.Get("Mcp-Session-Id")
 	if sid == "" {
 		t.Fatal("no session id sent")
