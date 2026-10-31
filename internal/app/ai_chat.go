@@ -320,7 +320,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	agent := &ai.Agent{
 		Provider:    slot.p,
-		Tools:       aiWithHooks(root, tools, m.output), // OMX-12
+		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHooks(root, tools, m.output)), // OMX-12, OMX-18
 		Native:      native,
 		AutoApprove: auto,
 		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
@@ -470,6 +470,9 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 			if !strings.HasPrefix(l.Text, aiSkillChip) || strings.HasPrefix(msg.ev.Detail, "error:") {
 				l.Text += " → " + aiShortResult(msg.ev.Detail)
 			}
+		}
+		for _, c := range s.aiTakeRecallChips() { // OMX-18
+			s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: c})
 		}
 	case ai.EventFallback: // OMX-4: the turn moved to a backup model
 		if l := last(); l != nil && l.Role == ai.StoredAssistant && strings.TrimSpace(l.Text) == "" {
