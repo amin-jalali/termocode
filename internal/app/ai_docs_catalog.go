@@ -8,6 +8,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/webtools"
 )
 
 // K8: catalogs for the AI tools reference page (cmd/docgen →
@@ -144,9 +145,18 @@ func AIToolCatalog() []AIToolDoc {
 	if _, ok := ai.FindTool(tools, "redis_keys"); !ok {
 		tools = append(tools, aiRedactResults(aiRedisTools(".", call))...) // listed only where a Redis connection exists
 	}
-	if _, ok := ai.FindTool(tools, "skill_load"); !ok {
-		tools = append(tools, aiSkillLoadTool(".")) // listed only where a skill is offered
+	// Tools that depend on the machine (a user skill, the web settings)
+	// go last in a fixed order, so the page is the same everywhere.
+	kept := tools[:0]
+	for _, t := range tools {
+		switch t.Name {
+		case "skill_load", "web_fetch", "web_search":
+		default:
+			kept = append(kept, t)
+		}
 	}
+	tools = append(kept, aiSkillLoadTool(".")) // listed only where a skill is offered
+	tools = append(tools, aiRedactResults([]ai.Tool{aiWebFetchTool(), aiWebSearchTool(webtools.Providers[0])})...) // only when turned on (OMX-13)
 	out := make([]AIToolDoc, 0, len(tools))
 	for _, t := range tools {
 		d := AIToolDoc{Name: t.Name, Description: t.Description, Gate: aiToolGate(t)}

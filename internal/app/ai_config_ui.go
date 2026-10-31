@@ -72,6 +72,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIMemoryPicked(id), true
 	case pickerKindAISkills: // ai_skills.go
 		return m.onAISkillsPicked(id), true
+	case pickerKindAIWebTools: // ai_web_tools.go
+		return m.onAIWebToolsPicked(id), true
 	case pickerKindRunsMore: // runs_state.go
 		return m.onRunsMorePicked(id), true
 	case pickerKindAIWorktrees: // ai_worktree_list.go
@@ -96,6 +98,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIEditInstruction(value), true
 	case promptKindAIKey:
 		return m.onAIKeyEntered(value), true
+	case promptKindAIWebKey: // ai_web_tools.go
+		return m.onAIWebKeyEntered(value), true
 	case promptKindAIModel:
 		return m.saveAIModel(strings.TrimSpace(value)), true
 	case promptKindAIBaseURL:
@@ -160,6 +164,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAISkillsTrust(id), true
 	case confirmKindAIHooksTrust: // ai_hooks.go
 		return m.answerAIHooksTrust(id), true
+	case confirmKindAIWebAdd: // ai_web_presets.go
+		return m.answerAIWebPreset(id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go
 		return m.answerAIMemoryCard(m.confirmKind, id), true
 	case confirmKindAIProfileSave:
