@@ -42,6 +42,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: MCP: Import from Other Apps… | `mcp-import-other` |   |   |
 | AI: MCP: Install Bundle (.mcpb)… | `ai-mcp-bundle` |   |   |
 | AI: MCP: Reconnect All Servers | `ai-mcp-reconnect-all` |   |   |
+| AI: MCP: Reset Tool Lists | `ai-mcp-reset-cache` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: MCP: Switch Profile… (servers and tools for this chat) | `ai-mcp-profile` |   |   |
 | AI: Memory: Turn On/Off | `ai-memory-toggle` |   |   |
