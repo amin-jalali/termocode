@@ -270,19 +270,14 @@ func TestMouseOnTheInputsMovesFocus(t *testing.T) {
 	if cmd != nil || m.focus != fieldFind {
 		t.Fatalf("click on Find: focus %v, cmd %v", m.focus, cmd != nil)
 	}
-	m, _ = m.HandleMouse(10+8, 4+2, tea.MouseActionPress, tea.MouseButtonLeft)
+	m, _ = m.HandleMouse(10+8, 4+3, tea.MouseActionPress, tea.MouseButtonLeft)
 	if m.focus != fieldReplace {
 		t.Errorf("click on Replace row: focus %v", m.focus)
 	}
-	// The menu button is consumed and does nothing else.
-	var menu Button
 	for _, b := range m.Buttons() {
 		if b.ID == "menu" {
-			menu = b
+			t.Fatal("find bar exposes an unimplemented menu")
 		}
-	}
-	if _, cmd := m.HandleMouse(menu.X, menu.Y, tea.MouseActionPress, tea.MouseButtonLeft); cmd != nil {
-		t.Errorf("menu click sent %T", cmd())
 	}
 	// Collapsing with the chevron puts the focus back in Find.
 	chev := m.Buttons()[0]
@@ -293,5 +288,32 @@ func TestMouseOnTheInputsMovesFocus(t *testing.T) {
 	var none Model
 	if _, cmd := none.HandleMouse(0, 0, tea.MouseActionPress, tea.MouseButtonLeft); cmd != nil {
 		t.Error("a zero Model handled a click")
+	}
+}
+
+func TestPasteStripsEscapesInBothFields(t *testing.T) {
+	for _, replace := range []bool{false, true} {
+		m := New()
+		m.SetQuery("ab")
+		m.EnableReplace(replace)
+		if replace {
+			m.replace = "ab"
+			m.replaceCursorPos = 1
+		} else {
+			m.cursorPos = 1
+		}
+		m, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Paste: true, Runes: []rune("\x1b[31mé\x1b[0m\x1b]0;title\a\x00\n")})
+		if got := string(m.activeRunes()); got != "aéb" {
+			t.Fatalf("replace %v: %q", replace, got)
+		}
+		if m.activeCursor() != 2 {
+			t.Fatalf("cursor = %d", m.activeCursor())
+		}
+		if !replace && (cmd == nil || cmd().(SearchMsg).Query != "aéb") {
+			t.Fatal("search did not receive clean text")
+		}
+		if replace && cmd != nil {
+			t.Fatal("replacement triggered search")
+		}
 	}
 }

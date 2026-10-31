@@ -3,9 +3,11 @@ package findbar
 import (
 	"strings"
 	"time"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -338,14 +340,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		return m, nil
 	case tea.KeyRunes:
-		s := string(k.Runes)
+		s := strings.Map(func(r rune) rune {
+			if unicode.IsControl(r) {
+				return -1
+			}
+			return r
+		}, ansi.Strip(string(k.Runes)))
 		cp := m.activeCursor()
 		if m.focus == fieldFind {
 			m.input = insertAt(m.input, cp, s)
 		} else {
 			m.replace = insertAt(m.replace, cp, s)
 		}
-		m.setActiveCursor(cp + len(k.Runes))
+		m.setActiveCursor(cp + len([]rune(s)))
 		if m.focus == fieldFind {
 			return m, fireSearch(m.input)
 		}
@@ -417,7 +424,7 @@ func fireSearch(q string) tea.Cmd {
 
 // HandleMouse routes a mouse event through the find bar. Coordinates are
 // in SCREEN cells. Clicks on glyph buttons (chevron, Aa, ab, .*, ↑, ↓,
-// menu, ×) emit corresponding commands; clicks on the replace-row icons
+// ×) emit corresponding commands; clicks on the replace-row icons
 // emit ReplaceMsg / ReplaceAllMsg. Clicks elsewhere inside the panel are
 // consumed silently; clicks outside return no command.
 func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseButton) (Model, tea.Cmd) {
@@ -455,10 +462,6 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 		return m, func() tea.Msg { return FindPrevMsg{} }
 	case "next":
 		return m, func() tea.Msg { return FindNextMsg{} }
-	case "menu":
-		// Menu icon is reserved for a future dropdown; clicking is a no-op
-		// (consumed so it doesn't leak to the editor).
-		return m, nil
 	case "close":
 		return m, func() tea.Msg { return CloseMsg{} }
 	case "replace":
@@ -475,7 +478,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 		if m.replaceMode {
 			m.focus = fieldFind
 		}
-	case row == 2 && m.replaceMode:
+	case row == m.replaceRow() && m.replaceMode:
 		// Click on the replace input area moves focus there.
 		m.focus = fieldReplace
 	}
@@ -484,7 +487,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 
 // Button is a clickable glyph of the panel, in screen cells (one row).
 type Button struct {
-	ID      string // "chevron", "case", "word", "regex", "prev", "next", "menu", "close", "replace", "replace-all"
+	ID      string // "chevron", "case", "word", "regex", "prev", "next", "close", "replace", "replace-all"
 	X, Y, W int
 }
 
@@ -500,18 +503,21 @@ func (m Model) Buttons() []Button {
 			out = append(out, Button{ID: id, X: bx + col, Y: by + row, W: w})
 		}
 	}
-	chev, caseCol, word, regex, prev, next, menu, closeCol := m.buttonColumnsFind()
+	chev, caseCol, word, regex, prev, next, closeCol := m.buttonColumnsFind()
 	add("chevron", chev, 1, 1)
-	add("case", caseCol, 1, 2)
-	add("word", word, 1, 2)
-	add("regex", regex, 1, 2)
+	optionRow := 1
+	if m.compact() {
+		optionRow = 2
+	}
+	add("case", caseCol, optionRow, 2)
+	add("word", word, optionRow, 2)
+	add("regex", regex, optionRow, 2)
 	add("prev", prev, 1, 1)
 	add("next", next, 1, 1)
-	add("menu", menu, 1, 1)
 	add("close", closeCol, 1, 1)
 	one, all := m.buttonColumnsReplace()
-	add("replace", one, 2, 1)
-	add("replace-all", all, 2, 1)
+	add("replace", one, m.replaceRow(), 1)
+	add("replace-all", all, m.replaceRow(), 1)
 	return out
 }
 
@@ -535,7 +541,7 @@ func (m Model) ButtonAt(x, y int) string {
 //	countGap(1) + countSlot(7) + groupGap(2) +
 //	options(Aa + 1 + ab + 1 + .* = 8) + groupGap(2) +
 //	nav(↑ + 1 + ↓ = 3) + groupGap(2) +
-//	menu(1) + closeGap(1) + close(1) +
+//	close(1) +
 //	trailPad(1) + border(1)
 
 const (
@@ -569,21 +575,17 @@ const (
 	fbNavInner = 1
 	fbNavW     = fbPrevW + fbNavInner + fbNextW
 
-	// Menu / close: separated from each other by a 1-cell gap so the close
-	// glyph reads as visually distinct from the menu.
-	fbMenuW    = 1
-	fbCloseW   = 1
-	fbCloseGap = 1
+	fbCloseW = 1
 )
 
 // rightChromeWidth is the on-row width of everything right of the find
 // input cursor: countGap + countSlot + groupGap + options + groupGap + nav
-// + groupGap + menu + closeGap + close.
+// + groupGap + close.
 func rightChromeWidth() int {
 	return fbCountGap + fbCountSlotW + fbGroupGap +
 		fbOptionsW + fbGroupGap +
 		fbNavW + fbGroupGap +
-		fbMenuW + fbCloseGap + fbCloseW
+		fbCloseW
 }
 
 // buttonColumnsFind returns the panel-local column offsets (relative to
@@ -592,10 +594,13 @@ func rightChromeWidth() int {
 //
 // Column math MUST stay in lockstep with renderFindRow — the
 // TestButtonColumnsMatchRenderedGlyphs guard verifies this.
-func (m Model) buttonColumnsFind() (chev, caseCol, word, regex, prev, next, menu, closeCol int) {
+func (m Model) buttonColumnsFind() (chev, caseCol, word, regex, prev, next, closeCol int) {
 	pw := panelWidth(m.w)
 	if pw < 12 {
-		return -1, -1, -1, -1, -1, -1, -1, -1
+		return -1, -1, -1, -1, -1, -1, -1
+	}
+	if m.compact() {
+		return 1, 1, 4, 7, -1, -1, pw - 2
 	}
 	innerW := pw - 2
 	if innerW < 8 {
@@ -627,9 +632,7 @@ func (m Model) buttonColumnsFind() (chev, caseCol, word, regex, prev, next, menu
 	innerPrev := navStart
 	innerNext := innerPrev + fbPrevW + fbNavInner
 
-	menuStart := innerNext + fbNextW + fbGroupGap
-	innerMenu := menuStart
-	innerClose := innerMenu + fbMenuW + fbCloseGap
+	innerClose := innerNext + fbNextW + fbGroupGap
 	// +1 shift to account for the rounded border.
 	return innerChev + 1,
 		innerCase + 1,
@@ -637,7 +640,6 @@ func (m Model) buttonColumnsFind() (chev, caseCol, word, regex, prev, next, menu
 		innerRegex + 1,
 		innerPrev + 1,
 		innerNext + 1,
-		innerMenu + 1,
 		innerClose + 1
 }
 
@@ -645,7 +647,7 @@ func (m Model) buttonColumnsFind() (chev, caseCol, word, regex, prev, next, menu
 // case / regex / prev / next / close columns (no chevron, no whole-word,
 // no menu). New code should call buttonColumnsFind() instead.
 func (m Model) buttonColumns() (caseCol, regexCol, prev, next, closeCol int) {
-	_, c, _, r, p, n, _, x := m.buttonColumnsFind()
+	_, c, _, r, p, n, x := m.buttonColumnsFind()
 	return c, r, p, n, x
 }
 
@@ -665,27 +667,8 @@ func (m Model) buttonColumnsReplace() (oneCol, allCol int) {
 	if pw < 12 {
 		return -1, -1
 	}
-	innerW := pw - 2
-	if innerW < 8 {
-		innerW = 8
-	}
-
-	// Same flex math as the find row so the input sits under the find input.
-	rightW := rightChromeWidth()
-	findInputW := innerW - fbLeadPad - fbChevW - fbChevGap - fbCursorW - rightW - fbTrailPad
-	if findInputW < 1 {
-		findInputW = 1
-	}
-
-	const replOneW = 1
-	const replAllW = 1
-	const innerIconGap = 1
-
-	// Cursor sits at the right edge of the replace input well.
-	cursorEnd := fbLeadPad + fbChevW + fbChevGap + findInputW + fbCursorW
-	innerOne := cursorEnd + fbGroupGap
-	innerAll := innerOne + replOneW + innerIconGap
-	return innerOne + 1, innerAll + 1
+	// The icons sit against the right border in both layouts.
+	return pw - 5, pw - 3
 }
 
 // ── styling ───────────────────────────────────────────────────────────────
@@ -786,11 +769,22 @@ func (m Model) PanelWidth() int { return panelWidth(m.w) }
 //
 //	Collapsed: 3 rows (top border + find row + bottom border)
 //	Expanded:  5 rows (top border + find row + blank + replace row + bottom border)
-func (m Model) PanelHeight() int {
-	if m.replaceMode {
-		return 5
+func (m Model) compact() bool { return panelWidth(m.w) < 34 }
+func (m Model) replaceRow() int {
+	if m.compact() {
+		return 4
 	}
 	return 3
+}
+func (m Model) PanelHeight() int {
+	h := 3
+	if m.compact() {
+		h++
+	}
+	if m.replaceMode {
+		h += 2
+	}
+	return h
 }
 
 // panelWidth picks a compact width: target ~64 cells (≈ 520-560px), but
@@ -830,11 +824,29 @@ func (m Model) View() string {
 	}
 
 	findRow := m.renderFindRow(innerW)
+	if m.compact() {
+		glyph := "▸"
+		if m.replaceMode {
+			glyph = "▾"
+		}
+		findRow = chevronStyle.Render(glyph) + m.renderInput(m.input, m.cursorPos, innerW-3, "Find", m.focus == fieldFind) + closeStyle.Render("×")
+		option := func(text string, on bool) string {
+			if on {
+				return toggleOn.Render(text)
+			}
+			return toggleOff.Render(text)
+		}
+		opts := option("Aa", m.caseSensitive) + bodyStyle.Render(" ") + option("ab", m.wholeWord) + bodyStyle.Render(" ") + option(".*", m.useRegex)
+		findRow += "\n" + opts + bodyStyle.Render(strings.Repeat(" ", innerW-8))
+	}
 
 	var inner string
 	if m.replaceMode {
 		blank := bodyStyle.Render(strings.Repeat(" ", innerW))
 		replaceRow := m.renderReplaceRow(innerW)
+		if m.compact() {
+			replaceRow = m.renderInput(m.replace, m.replaceCursorPos, innerW-6, "Replace", m.focus == fieldReplace) + bodyStyle.Render(" ") + ctrlStyle.Render("↵ ⇒") + bodyStyle.Render(" ")
+		}
 		inner = findRow + "\n" + blank + "\n" + replaceRow
 	} else {
 		inner = findRow
@@ -854,7 +866,7 @@ func (m Model) View() string {
 //
 //	leadPad + chevron + chevGap + findInput(flex+cursor) +
 //	countGap + countSlot + groupGap + options + groupGap + nav +
-//	groupGap + menu + closeGap + close + trailPad
+//	groupGap + close + trailPad
 //
 // Each region is rendered with a styled background (PanelBg or InputBg) so
 // no bare spaces leak the terminal default colour through the overlay.
@@ -900,13 +912,11 @@ func (m Model) renderFindRow(innerW int) string {
 	regexGlyph := regexSty.Render(".*")
 	prev := navSty.Render("↑")
 	next := navSty.Render("↓")
-	menuGlyph := ctrlStyle.Render(theme.GlyphMore.String())
 	closeX := closeStyle.Render("×")
 
 	optInner := bodyStyle.Render(strings.Repeat(" ", fbOptInner))
 	navInner := bodyStyle.Render(strings.Repeat(" ", fbNavInner))
 	groupGap := bodyStyle.Render(strings.Repeat(" ", fbGroupGap))
-	closeGap := bodyStyle.Render(strings.Repeat(" ", fbCloseGap))
 
 	optionsGroup := caseGlyph + optInner + wordGlyph + optInner + regexGlyph
 	navGroup := prev + navInner + next
@@ -927,7 +937,7 @@ func (m Model) renderFindRow(innerW int) string {
 		countGap + countCell + groupGap +
 		optionsGroup + groupGap +
 		navGroup + groupGap +
-		menuGlyph + closeGap + closeX +
+		closeX +
 		trailPad
 
 	if w := lipgloss.Width(row); w < innerW {
