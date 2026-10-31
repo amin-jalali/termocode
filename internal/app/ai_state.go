@@ -208,6 +208,8 @@ type aiState struct {
 	mcpTrust  *aiMCPTrustPending
 	mcpSel    string
 	mcpSecret string // the ${secret:NAME} being entered
+
+	mcpx aiMCPXState // prompts, completion, elicitation (ai_mcp_prompts.go)
 	// mcpWiz is the open Connect-a-service wizard (ai_mcp_connect.go);
 	// mcpWizGen drops messages of a closed one; mcpGHAccounts are gh's
 	// accounts from the last open.

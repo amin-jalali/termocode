@@ -1156,6 +1156,9 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	case aiForkKey: // G-FORK: pick the message to fork from
 		return m.openAIForkPicker(), true
 	case "tab", "shift+tab": // select a step card (Enter toggles it)
+		if msg.String() == "tab" && strings.HasPrefix(string(s.input), "/") { // MCP prompt (MCPX-13)
+			return m.aiMCPPromptTab(), true
+		}
 		dir := 1
 		if msg.String() == "shift+tab" {
 			dir = -1
@@ -1229,6 +1232,11 @@ func (m *Model) submitAIInput() tea.Cmd {
 	text := strings.TrimSpace(string(s.input))
 	if text == "" {
 		return nil
+	}
+	if _, ok := m.aiReady(); ok && !s.streaming {
+		if cmd, ok := m.aiMCPPromptSubmit(text); ok { // "/server.prompt" (MCPX-13)
+			return cmd
+		}
 	}
 	var attach tea.Cmd
 	if _, ok := m.aiReady(); ok && !s.streaming {
