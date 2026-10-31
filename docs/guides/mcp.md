@@ -438,7 +438,17 @@ transcript and the AI audit log (Output: AI) show `mcp.<server>.<tool>`.
 - Set `mcp_trust_annotations` to `false` (Settings → MCP) to make every
   MCP tool ask (except the ones in a server's `autoApprove`).
 
+- A tool the server marks "needs a person" (`requiresUserInteraction`)
+  always asks, with no **Always allow**, even in `autoApprove`.
+
 The server's marks are hints, so review a new server with **Show tools**.
+A tool with a broken description (a bad input schema, a name with
+spaces, a name listed twice) is left out and the **MCP** log says why;
+the server's other tools still work. When a tool says what its result
+looks like (an output schema) and the result does not match, the AI is
+told to treat it with care and the log says so. When the connection
+drops during a call, a read-only or "safe to repeat" tool runs once
+more on a new connection; other tools are never run twice.
 Tool results are cleaned and marked as outside data for the model.
 
 **Big results.** A result over `mcp_max_result_kb` (32 KB) is not cut
