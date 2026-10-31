@@ -382,3 +382,19 @@ func TestAIGitCheckoutReloadsOpenBuffers(t *testing.T) {
 		t.Errorf("buffer %q after checkout, want the other branch's text (result %q)", got, oneResult(t, p))
 	}
 }
+
+// Spec (OMX-2): edit_file on a tab with unsaved edits is refused too.
+func TestAIEditFileRefusesUnsavedBuffer(t *testing.T) {
+	p := &scriptedAIProvider{replies: []ai.Chunk{toolCall("edit_file", map[string]any{"path": "a.txt", "old_text": "old", "new_text": "agent"})}}
+	m, c, dir := aiSyncModel(t, p, map[string]string{"a.txt": "old\n"})
+	path := filepath.Join(dir, "a.txt")
+	m.openFileAtLine(path, 1)
+	_ = c.Command("normal! Imine ")
+	driveAIChat(t, m, m.sendAIChat("edit a"), nil)
+	if r := oneResult(t, p); !strings.Contains(r, "unsaved changes") {
+		t.Fatalf("result %q, want a refusal", r)
+	}
+	if got := readFile(path); got != "old\n" {
+		t.Errorf("disk %q changed", got)
+	}
+}

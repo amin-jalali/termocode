@@ -244,3 +244,64 @@ func TestApplyTextEdits(t *testing.T) {
 		t.Errorf("append: %q", got)
 	}
 }
+
+// Spec (OMX-2): edit_file in review mode shows the one changed part as
+// a diff; accepting writes it, and the open tab follows.
+func TestAIReviewEditFile(t *testing.T) {
+	p := &scriptedAIProvider{replies: []ai.Chunk{toolCall("edit_file", map[string]any{"path": "a.txt", "old_text": "two\n", "new_text": "TWO\n"})}}
+	m, c, dir := reviewModel(t, p, map[string]string{"a.txt": reviewOld})
+	path := filepath.Join(dir, "a.txt")
+	m.openFileAtLine(path, 1)
+	driveAIReview(t, m, m.sendAIChat("change it"), func(m *Model) {
+		if got := readFile(path); got != reviewOld {
+			t.Fatalf("written before the review: %q", got)
+		}
+		if n := len(m.ai.review.items); n != 1 {
+			t.Fatalf("%d review items, want 1", n)
+		}
+		reviewKey(t, m, "A")
+	})
+	want := strings.Replace(reviewOld, "two\n", "TWO\n", 1)
+	if got := readFile(path); got != want {
+		t.Fatalf("disk %q", got)
+	}
+	if got := bufText(t, c, path); got+"\n" != want {
+		t.Errorf("buffer %q", got)
+	}
+	if r := oneResult(t, p); !strings.Contains(r, "accepted the change to a.txt") {
+		t.Errorf("result %q", r)
+	}
+}
+
+// Spec (OMX-2): a stale old_text is refused before any card opens.
+func TestAIReviewEditFileStale(t *testing.T) {
+	p := &scriptedAIProvider{replies: []ai.Chunk{toolCall("edit_file", map[string]any{"path": "a.txt", "old_text": "zero\n", "new_text": "x\n"})}}
+	m, _, dir := reviewModel(t, p, map[string]string{"a.txt": reviewOld})
+	driveAIReview(t, m, m.sendAIChat("change it"), func(*Model) { t.Fatal("a stale edit was reviewed") })
+	if got := readFile(filepath.Join(dir, "a.txt")); got != reviewOld {
+		t.Fatalf("disk changed: %q", got)
+	}
+	if r := oneResult(t, p); !strings.Contains(r, "old_text was not found") {
+		t.Errorf("result %q", r)
+	}
+}
+
+// Spec (OMX-2): with review off, edit_file writes through the editor
+// sync path at once.
+func TestAIEditFileWithoutReview(t *testing.T) {
+	p := &scriptedAIProvider{replies: []ai.Chunk{toolCall("edit_file", map[string]any{"path": "a.txt", "old_text": "a", "new_text": "b"})}}
+	m, c, dir := reviewModel(t, p, map[string]string{"a.txt": "a\n"})
+	m.ai.settings.AutoApprove = []string{ai.ClassFileWrite}
+	path := filepath.Join(dir, "a.txt")
+	m.openFileAtLine(path, 1)
+	driveAIReview(t, m, m.sendAIChat("go"), func(*Model) { t.Fatal("reviewed") })
+	if got := readFile(path); got != "b\n" {
+		t.Errorf("disk %q", got)
+	}
+	if got := bufText(t, c, path); got != "b" {
+		t.Errorf("the open tab did not follow: %q", got)
+	}
+	if r := oneResult(t, p); !strings.Contains(r, "a.txt") {
+		t.Errorf("result %q", r)
+	}
+}
