@@ -111,6 +111,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`service_connect`](#service_connect) | confirm (always asks): Deny (first) · Open wizard (you sign in yourself) | no | Open the Connect wizard for an MCP service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack, or one in mcp.json) so the user can sign in. |
 | [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
 | [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider) in a new terminal tab, with termocode's tools when the agent supports it. |
+| [`mcp_server_add`](#mcp_server_add) | confirm (always asks) | no | Propose adding one MCP server to the user's mcp.json, from an mcpServers block the user gave (config) or a remote MCP server URL (url). |
 | [`agent_run_start`](#agent_run_start) | confirm (always asks): Deny (first) · Start run | no | Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title and a prompt, as in profile_draft). |
 | [`agent_run_status`](#agent_run_status) | auto | no | The state of an agent run of this chat: queued, running, paused, done, failed, cancelled, interrupted or not_started; each step's state and model, the cost so far, and what waits for the user (plan approval, budget, a card). |
 | [`agent_run_result`](#agent_run_result) | auto | no | The result of an agent run of this chat: the final answer, each finished step's answer (long text is cut) and the files it changed (in agent worktrees: path, status and branch; they wait for the user's merge). |
@@ -1287,6 +1288,20 @@ Start an outside coding agent (claude, codex, gemini, opencode, aider) in a new 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider` |
+
+### mcp_server_add
+
+Propose adding one MCP server to the user's mcp.json, from an mcpServers block the user gave (config) or a remote MCP server URL (url). The user sees the entry on a card and decides; nothing starts. For a known service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack) use service_connect instead. Never put secrets in the entry.
+
+**Gate:** confirm (always asks)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `config` | string |   | a pasted block: {"mcpServers": {"name": {…}}} or "name": {…} |
+| `name` | string |   | optional server name (letters, digits, - and _) |
+| `url` | string |   | a remote MCP server URL (https) |
 
 ### agent_run_start
 
