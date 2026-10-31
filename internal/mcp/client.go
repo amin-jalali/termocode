@@ -81,6 +81,7 @@ type Client struct {
 	elicit    Elicitor
 	elicitCtx context.Context
 	hold      func(waiting bool) // stops / restarts the call's timeout
+	toolsTTL  atomic.Int64       // ttlMs of the last tools/list (spec2026_ttl.go)
 }
 
 // NewClient starts the JSON-RPC connection on r / w (newline framing).
@@ -181,6 +182,7 @@ const maxToolPages = 50
 func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 	var all []Tool
 	cursor := ""
+	var ttl int64 // the shortest ttlMs of the pages (0: none)
 	for page := 0; page < maxToolPages; page++ {
 		var params any
 		if cursor != "" {
@@ -202,7 +204,11 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 			c.opts.log("tool dropped: %s", d)
 		}
 		all = append(all, tools...)
+		if res.TTLMs > 0 && (ttl == 0 || res.TTLMs < ttl) {
+			ttl = res.TTLMs
+		}
 		if res.NextCursor == "" {
+			c.toolsTTL.Store(ttl)
 			return all, nil
 		}
 		cursor = res.NextCursor

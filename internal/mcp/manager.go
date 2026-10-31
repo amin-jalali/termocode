@@ -161,14 +161,15 @@ type serverState struct {
 	problem   string
 	idle      *time.Timer
 	idleGen   int
-	trusted   string // entry hash trusted for this session
-	denied    string // entry hash denied for this session
-	toolsHash string // ToolsHash of tools
-	toolsOK   string // tools hash accepted for this session
-	toolsNo   string // tools hash the user did not accept (asked once)
-	authMeta  string // resource_metadata URL of the last 401
-	authScope string // scope of the last 401
-	stepUp    bool   // a 403 insufficient_scope asked for more scopes
+	trusted   string    // entry hash trusted for this session
+	denied    string    // entry hash denied for this session
+	toolsHash string    // ToolsHash of tools
+	toolsOK   string    // tools hash accepted for this session
+	toolsNo   string    // tools hash the user did not accept (asked once)
+	authMeta  string    // resource_metadata URL of the last 401
+	authScope string    // scope of the last 401
+	stepUp    bool      // a 403 insufficient_scope asked for more scopes
+	expires   time.Time // the tool list's ttlMs end (zero: none)
 
 	retryN     int         // reconnect tries since the last success
 	retryAt    time.Time   // when the waiting reconnect runs
@@ -598,10 +599,11 @@ func (m *Manager) idleStop(st *serverState, gen int) {
 // ── Tool lists ─────────────────────────────────────────────────────────
 
 type cacheFile struct {
-	Hash   string     `json:"hash"`
-	Server ServerInfo `json:"server"`
-	Tools  []Tool     `json:"tools"`
-	Caps   ServerCaps `json:"caps"`
+	Hash    string     `json:"hash"`
+	Server  ServerInfo `json:"server"`
+	Tools   []Tool     `json:"tools"`
+	Caps    ServerCaps `json:"caps"`
+	Expires time.Time  `json:"expires,omitzero"` // from ttlMs (spec2026_ttl.go)
 }
 
 func (m *Manager) cachePath(name string) string {
@@ -625,19 +627,19 @@ func (m *Manager) loadCacheLocked(st *serverState) {
 		return
 	}
 	var c cacheFile
-	if json.Unmarshal(b, &c) != nil || c.Hash != st.cfg.Hash() {
+	if json.Unmarshal(b, &c) != nil || c.Hash != st.cfg.Hash() || expired(c.Expires) {
 		return
 	}
-	st.tools, st.haveTools, st.cached, st.caps = c.Tools, true, true, c.Caps
+	st.tools, st.haveTools, st.cached, st.caps, st.expires = c.Tools, true, true, c.Caps, c.Expires
 	st.toolsHash = ToolsHash(c.Tools)
 }
 
-func (m *Manager) saveCache(cfg Server, info ServerInfo, caps ServerCaps, tools []Tool) {
+func (m *Manager) saveCache(cfg Server, info ServerInfo, caps ServerCaps, tools []Tool, expires time.Time) {
 	p := m.cachePath(cfg.Name)
 	if p == "" {
 		return
 	}
-	b, err := json.MarshalIndent(cacheFile{Hash: cfg.Hash(), Server: info, Tools: tools, Caps: caps}, "", "  ")
+	b, err := json.MarshalIndent(cacheFile{Hash: cfg.Hash(), Server: info, Tools: tools, Caps: caps, Expires: expires}, "", "  ")
 	if err != nil {
 		return
 	}
@@ -674,10 +676,11 @@ func (m *Manager) storeTools(st *serverState, p *Process, tools []Tool) {
 	m.mu.Lock()
 	caps := p.Client.Capabilities()
 	st.tools, st.haveTools, st.cached, st.toolsHash, st.caps = tools, true, false, h, caps
-	cfg := st.cfg
+	st.expires = ttlExpiry(p.Client.ToolsTTL())
+	cfg, expires := st.cfg, st.expires
 	changed := m.toolsChangedLocked(st)
 	m.mu.Unlock()
-	m.saveCache(cfg, p.Client.ServerInfo(), caps, tools)
+	m.saveCache(cfg, p.Client.ServerInfo(), caps, tools, expires)
 	m.log(cfg.Name, "%d tools", len(tools))
 	if m.opts.TrustedTools != nil && m.opts.SaveTrustedTools != nil && m.opts.TrustedTools(cfg.Name) == "" {
 		m.opts.SaveTrustedTools(cfg.Name, h)
@@ -793,7 +796,7 @@ func (m *Manager) ToolsFor(ctx context.Context, ask AskTrust, keep func(name str
 		}
 		m.mu.Lock()
 		m.loadCacheLocked(st)
-		tools, have, cfg := st.tools, st.haveTools, st.cfg
+		tools, have, cfg := st.tools, st.haveTools && !expired(st.expires), st.cfg
 		denied := st.denied == cfg.Hash()
 		m.mu.Unlock()
 		if !have {
