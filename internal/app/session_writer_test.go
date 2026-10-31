@@ -223,3 +223,20 @@ func TestStateMsgAndQuitSaveTerminals(t *testing.T) {
 		t.Fatalf("quit: %+v", got)
 	}
 }
+
+// A click on an explorer row that leaves the expanded folders as they
+// were writes nothing.
+func TestSessionWriterExpandedUnchangedWritesNothing(t *testing.T) {
+	m, _, _ := sessionTestModel(t)
+	w := m.ensureSessionWriter()
+	w.expandedChanged([]string{"/a", "/b"})
+	n := w.writes
+	w.expandedChanged([]string{"/a", "/b"})
+	if w.writes != n {
+		t.Fatalf("same folders wrote %d times", w.writes-n)
+	}
+	w.expandedChanged([]string{"/a"})
+	if w.writes != n+1 {
+		t.Fatalf("changed folders did not write (%d -> %d)", n, w.writes)
+	}
+}
