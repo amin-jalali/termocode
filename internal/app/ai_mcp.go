@@ -141,11 +141,16 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 	opts := m.mcpAdapterOptions(set)
 	opts.Background = mcp.NewBackground() // Ctrl+B moves a long call away (MCPX-19)
 	m.aiS().mcpx.bg = opts.Background
+	prof := m.mcpActiveProfile() // nil: every server and tool
 	return func(ctx context.Context) []ai.Tool {
 		mgr.Reload()
 		call := mcp.TurnCaller(mgr.Caller(ask)) // two failures: the server is out for this turn
 		call = mcpElicitCall(call, gen, ch)     // a server may ask the user (MCPX-14)
-		list := mgr.Tools(ctx, ask)
+		var keep func(string) bool
+		if prof != nil {
+			keep = prof.AllowsServer
+		}
+		list := mcp.FilterServerTools(mgr.ToolsFor(ctx, ask, keep), prof)
 		out := mcpTurnTools(list, set, call, opts)
 		var withResources []string
 		for _, st := range list {
@@ -729,6 +734,8 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onMCPServerAction(id), true
 	case pickerKindMCPTools:
 		return nil, true
+	case pickerKindMCPProfile:
+		return m.onMCPProfilePicked(id), true
 	}
 	return nil, false
 }
