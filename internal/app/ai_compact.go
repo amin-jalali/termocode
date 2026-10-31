@@ -56,6 +56,7 @@ func (m *Model) aiCompactor(turn aiSlot) func(ctx context.Context, older []ai.Me
 			{Role: ai.RoleUser, Content: "The earlier chat:\n\n" + ai.CompactTranscript(older)},
 		}}
 		text, last := ai.Collect(slot.p.Stream(ctx, req))
+		ai.AddSideUsage(ctx, last.Usage) // the summary counts in the turn's usage
 		if last.Err != nil {
 			return "", last.Err
 		}
