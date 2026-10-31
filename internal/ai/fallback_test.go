@@ -33,7 +33,7 @@ func TestAgentFallbackAfterRetries(t *testing.T) {
 			t.Errorf("turn failed: %s", evs[i].Detail)
 		}
 	}
-	if fb == nil || !strings.Contains(fb.Detail, "backup") || !strings.Contains(fb.Detail, "529") {
+	if fb == nil || !strings.Contains(fb.Detail, "backup") || !strings.Contains(fb.Detail, "529") || fb.Label != "m2" {
 		t.Fatalf("no fallback event: %+v", fb)
 	}
 }

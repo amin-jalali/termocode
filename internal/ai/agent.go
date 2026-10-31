@@ -22,7 +22,7 @@ const (
 	EventError                       // the turn failed (Detail)
 	EventTurnStart                   // a request went to the model; no token yet
 	EventRetry                       // the server was busy; trying again (Attempt of Attempts)
-	EventFallback                    // the model failed; the turn moves to the next one (Detail, Tool = its name)
+	EventFallback                    // the model failed; the turn moves to the next one (Detail; Tool = its name, Label = its model id)
 )
 
 // Event is one agent progress report.
@@ -305,7 +305,7 @@ func (a *Agent) fallBack(err error, emit func(Event)) {
 	next := a.Fallbacks[0]
 	a.Fallbacks = a.Fallbacks[1:]
 	a.Provider, a.Model, a.Name = next.Provider, next.Model, next.Name
-	emit(Event{Kind: EventFallback, Tool: next.Name,
+	emit(Event{Kind: EventFallback, Tool: next.Name, Label: next.Model,
 		Detail: from + " failed: " + fallbackReason(err) + ". Now using " + next.Name + "."})
 }
 
