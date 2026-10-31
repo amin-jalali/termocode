@@ -47,6 +47,9 @@ type HTTPOptions struct {
 	// BearerScheme is the scheme Bearer must come with ("" = "Bearer";
 	// Sentry's token mode uses "Sentry-Bearer").
 	BearerScheme string
+	// StepUp returns the scope a tools/call needs when the token lacks
+	// it ("" allowed): the call gets 403 insufficient_scope.
+	StepUp func(token, tool string) string
 }
 
 // Recorded is one request the fake got.
@@ -253,7 +256,7 @@ func (s *HTTPServer) serveMCP(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, response(m.ID, res, nil))
 	case "tools/call":
-		s.call(w, r.Context(), m)
+		s.call(w, r, m)
 	default:
 		writeJSON(w, response(m.ID, nil, &extproc.Error{Code: extproc.CodeMethodNotFound, Message: "method not found: " + m.Method}))
 	}
@@ -345,7 +348,8 @@ func (sseCaller) Call(context.Context, string, any) (json.RawMessage, error) {
 	return nil, errors.New("server→client requests are not supported by the HTTP fake")
 }
 
-func (s *HTTPServer) call(w http.ResponseWriter, ctx context.Context, m extproc.Message) {
+func (s *HTTPServer) call(w http.ResponseWriter, r *http.Request, m extproc.Message) {
+	ctx := r.Context()
 	var p struct {
 		Name      string         `json:"name"`
 		Arguments map[string]any `json:"arguments"`
@@ -354,6 +358,14 @@ func (s *HTTPServer) call(w http.ResponseWriter, ctx context.Context, m extproc.
 		} `json:"_meta"`
 	}
 	_ = json.Unmarshal(m.Params, &p)
+	if s.O.StepUp != nil {
+		tok, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if need := s.O.StepUp(tok, p.Name); need != "" {
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer error="insufficient_scope", scope="%s", resource_metadata="%s/.well-known/oauth-protected-resource/mcp"`, need, s.URL))
+			http.Error(w, "insufficient scope", http.StatusForbidden)
+			return
+		}
+	}
 	if p.Name == "get_me" && s.O.Login != "" {
 		b, _ := json.Marshal(map[string]any{"login": s.O.Login, "name": "Test User"})
 		writeJSON(w, response(m.ID, text(string(b)), nil))

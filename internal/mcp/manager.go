@@ -160,6 +160,7 @@ type serverState struct {
 	toolsNo   string // tools hash the user did not accept (asked once)
 	authMeta  string // resource_metadata URL of the last 401
 	authScope string // scope of the last 401
+	stepUp    bool   // a 403 insufficient_scope asked for more scopes
 
 	retryN     int         // reconnect tries since the last success
 	retryAt    time.Time   // when the waiting reconnect runs
@@ -853,6 +854,11 @@ func (m *Manager) Call(ctx context.Context, ask AskTrust, server, tool string, a
 			return CallResult{}, err
 		}
 		res, err = p.Client.CallToolTimeout(ctx, tool, args, timeout)
+	}
+	var ae *AuthError
+	if errors.As(err, &ae) && ae.InsufficientScope && m.stepUp(st, ae) {
+		m.armIdle(st)
+		return res, fmt.Errorf("MCP %s: %w", server, ErrMoreAccess)
 	}
 	if err != nil && st.cfg.Type == TypeHTTP && isConnErr(err) {
 		// The network went away under a running connection: drop it and

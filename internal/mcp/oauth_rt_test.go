@@ -2,8 +2,10 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -50,5 +52,40 @@ func TestSignInWithMetadataURL(t *testing.T) {
 	}
 	if e, _ := tk.Load("lin"); e.Issuer != as.Issuer() {
 		t.Errorf("issuer %q", e.Issuer)
+	}
+}
+
+// Spec (AU-11): a 403 insufficient_scope asks for a new sign-in with the
+// scopes the server named added; after it the call works.
+func TestStepUpOnInsufficientScope(t *testing.T) {
+	as := mcptest.NewAuthServer(t, mcptest.AuthOptions{})
+	srv := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{Validate: as.Valid, AuthServer: as.Issuer(), Scopes: []string{"read"},
+		StepUp: func(tok, tool string) string {
+			if tool == "write_note" && !strings.Contains(as.ScopeOf(tok), "write") {
+				return "read write"
+			}
+			return ""
+		}})
+	e := newManagerEnv(t)
+	e.write(t, e.user, map[string]any{"lin": map[string]any{"type": "http", "url": srv.MCPURL()}})
+	m := e.httpManager(t, nil, &memTokens{}, 0)
+	_ = m.Connect(context.Background(), nil, "lin") // 401: learns the metadata
+	browseAndFinish(t, m, "lin")
+	if _, err := m.Call(context.Background(), nil, "lin", "echo", map[string]any{"text": "a"}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := m.Call(context.Background(), nil, "lin", "write_note", map[string]any{"title": "t"})
+	if !errors.Is(err, ErrMoreAccess) {
+		t.Fatalf("403: %v", err)
+	}
+	if st := status(m, "lin"); st.State != StateSignIn || !strings.Contains(st.Problem, "write") {
+		t.Errorf("status %+v", st)
+	}
+	browseAndFinish(t, m, "lin")
+	if got := as.Authorizes[len(as.Authorizes)-1].Get("scope"); got != "read write" {
+		t.Errorf("asked scope %q", got)
+	}
+	if r, err := m.Call(context.Background(), nil, "lin", "write_note", map[string]any{"title": "t"}); err != nil || r.Text() != "wrote t" {
+		t.Fatalf("after step-up %q %v", r.Text(), err)
 	}
 }
