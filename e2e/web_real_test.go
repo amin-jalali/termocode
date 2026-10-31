@@ -338,8 +338,7 @@ func webRealWalk(t *testing.T, vp webViewport) {
 		// under the pointer between the hover and the click.
 		p.waitJS(row + ` && ` + scm + `.querySelector('.tr[data-group="changes"][data-path="main.go"]')`)
 		stage := row + `.querySelector('[aria-label="Stage Changes"]')`
-		p.hoverJS(row, stage+`?.getClientRects().length > 0`) // its actions show on hover
-		p.tapJS(stage)
+		p.hoverTap(row, stage) // its actions show on hover
 		p.waitJS(`document.querySelector(".toasts")?.textContent.includes("Staged notes.txt")`)
 		p.waitJS(scm + `.querySelector('.tr[data-group="staged"][data-path="notes.txt"]')`) // the laptop's new status
 		p.tapJS(scm + `.querySelector("textarea")`)
