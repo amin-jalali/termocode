@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // maxParallelCalls caps how many read-only calls run at the same time.
@@ -39,7 +41,7 @@ func (a *Agent) runCalls(ctx context.Context, calls []ToolCall, emit func(Event)
 		for k := i; k < j; k++ {
 			wg.Add(1)
 			sem <- struct{}{}
-			go func(k int) {
+			crash.Go("ai.parallel-call", func() {
 				defer wg.Done()
 				defer func() { <-sem }()
 				keep := func(e Event) { evs[k-i] = append(evs[k-i], e) }
@@ -49,7 +51,7 @@ func (a *Agent) runCalls(ctx context.Context, calls []ToolCall, emit func(Event)
 					}
 				}()
 				run(k, keep)
-			}(k)
+			})
 		}
 		wg.Wait()
 		for _, es := range evs {
