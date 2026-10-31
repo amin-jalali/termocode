@@ -69,8 +69,12 @@ func TestRunAgent(t *testing.T) {
 	if code, _, _ := run("", "dance"); code != 2 {
 		t.Error("unknown subcommand")
 	}
+	if code, _, _ := run("", "report", "done", "--agent", "codex", `{"type":"agent-turn-complete"}`); code != 0 || got[len(got)-1].State != "done" {
+		t.Errorf("report with the agent's JSON argument: %d", code)
+	}
 	delete(env, "TERMOCODE_TAB_ID")
-	if code, _, _ := run("", "report", "done"); code != 1 {
-		t.Error("report without a tab must say so")
+	n := len(got)
+	if code, _, errs := run("", "report", "done"); code != 0 || errs != "" || len(got) != n {
+		t.Error("report outside a termocode terminal must be a quiet no-op")
 	}
 }

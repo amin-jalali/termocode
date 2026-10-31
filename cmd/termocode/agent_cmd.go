@@ -153,12 +153,13 @@ func runAgentIn(args []string, in io.Reader, out, errw io.Writer, getenv func(st
 			case a == "--tab" && i+1 < len(args):
 				i++
 				req.Tab = args[i]
+			case strings.HasPrefix(a, "{"): // an agent's JSON event argument (a notify hook)
 			default:
 				return usage()
 			}
 		}
 		if req.Tab == "" {
-			return fail("no tab: run it inside a termocode terminal (TERMOCODE_TAB_ID) or pass --tab")
+			return 0 // not in a termocode terminal: the hook has nothing to do
 		}
 		// A hook must never slow the agent down or fail it: a short
 		// timeout, and a quiet exit 0 when termocode is not there.
