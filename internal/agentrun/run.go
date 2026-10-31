@@ -59,6 +59,7 @@ const (
 	RunApproved                       // the user approved the plan; the run goes on
 	RunPlanEdited                     // the user's edit changed the plan (Nodes = the steps it added); RunAwaitApproval follows
 	RunPlanKept                       // steps joined an approved run and need no approval (Nodes = them): it goes on without asking
+	NodeMessage                       // a message sent to the node (Send) reached its agent (Output = the text), or not (Err = why)
 )
 
 // Verdicts of a loop's verify node (Event.Verdict).
@@ -189,6 +190,9 @@ type Handle struct {
 	// verify and fix are the loop's node ids ("" without a loop; they
 	// never change).
 	verify, fix string
+	// mail holds the messages Send queued for the running agents
+	// (send.go).
+	mail mailbox
 }
 
 type result struct {
@@ -653,6 +657,11 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 	if n.Input.MaxSteps > 0 {
 		agent.MaxSteps = n.Input.MaxSteps
 	}
+	h.mail.openNode(n.ID)
+	defer h.mail.closeNode(n.ID, func(text string) {
+		h.emit(Event{NodeID: n.ID, Kind: NodeMessage, Output: text, Err: "the step ended before it read the message"})
+	})
+	agent.Inbox = h.inbox(n.ID, agent.Inbox)
 	if g, ask := h.o.Review, agent.Confirm; g != nil && ask != nil {
 		// The confirm queue: one card at a time over all nodes; a node
 		// that waits for its turn stops with the run.
