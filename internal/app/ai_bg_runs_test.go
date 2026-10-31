@@ -294,8 +294,13 @@ func TestAIBackgroundRunReasoning(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("category %q: background step reasoning %q, want %q", tc.cat, got, tc.want)
 		}
+		// The run ends first; the turn then reads its note in one more
+		// request before it ends.
 		r.bg.steps <- ai.Chunk{Delta: "done"}
+		r.pump(func() bool { b := r.m.ai.bgRuns[0]; return b.done })
 		r.chat.steps <- ai.Chunk{Delta: "ok"}
+		r.pump(func() bool { return len(r.chat.requests()) == 3 })
+		r.chat.steps <- ai.Chunk{Delta: "fine"}
 		r.pump(func() bool { return r.ended && len(r.m.ai.bgRuns) == 0 })
 	}
 }
