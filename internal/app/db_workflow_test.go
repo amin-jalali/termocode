@@ -217,9 +217,8 @@ func TestPerfGuardDatabaseWorkflowHidden(t *testing.T) {
 	calls := opened[0].calls.Load()
 	d.WaitFor(func() bool { return false }, 5*time.Second)
 	for _, msg := range d.UpdatesSince(before) {
-		// The git refresh and the settings.json reload ticks are app-wide,
-		// not the database view's.
-		if msg != "app.gitAutoRefreshMsg" && msg != "app.GitMsg" && msg != "app.settingsReloadTickMsg" {
+		// The git refresh tick is app-wide, not the database view's.
+		if msg != "app.gitAutoRefreshMsg" && msg != "app.GitMsg" {
 			t.Fatalf("hidden view produced message: %s", msg)
 		}
 	}

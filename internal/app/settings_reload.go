@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sync/atomic"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
@@ -14,17 +15,45 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type settingsReloadTickMsg struct{}
 type liveSettingsState struct {
 	hash                             [32]byte
 	seen, aiPending, profilesPending bool
+	// checked: when the files were last read (FIX-44).
+	checked time.Time
 }
 
-func settingsReloadTick() tea.Cmd {
-	return tea.Tick(2*time.Second, func(time.Time) tea.Msg { return settingsReloadTickMsg{} })
+// settingsCheckGap: a key or a click reads the settings files at most
+// this often. No timer polls them, so an idle app uses no CPU (FIX-44).
+const settingsCheckGap = 2 * time.Second
+
+// settingsSnapshotReads counts settingsSnapshot calls (tests).
+var settingsSnapshotReads atomic.Int64
+
+// liveSettingsOnMsg reloads changed settings files when the user is
+// back: on a focus-in at once, on a key or a click at most once per
+// settingsCheckGap. Other messages only apply AI changes that waited for
+// a request to finish (no file reads).
+func (m *Model) liveSettingsOnMsg(msg tea.Msg, now time.Time) {
+	st := &m.extras.liveSettings
+	check := false
+	switch msg.(type) {
+	case tea.FocusMsg:
+		check = true
+	case tea.KeyMsg, tea.MouseMsg:
+		check = now.Sub(st.checked) >= settingsCheckGap
+	}
+	if check {
+		st.checked = now
+		m.reloadLiveSettings()
+		return
+	}
+	if st.aiPending || st.profilesPending {
+		m.applyPendingLiveSettings()
+	}
 }
 
 func settingsSnapshot() ([]byte, [32]byte) {
+	settingsSnapshotReads.Add(1)
 	path, _ := settingsConfigPath()
 	b := reportRead(path, false)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -97,6 +126,13 @@ func (m *Model) reloadLiveSettings() tea.Cmd {
 		}
 		m.applyLayout()
 	}
+	m.applyPendingLiveSettings()
+	return nil
+}
+
+// applyPendingLiveSettings reloads the AI setup once no request runs.
+func (m *Model) applyPendingLiveSettings() {
+	st := &m.extras.liveSettings
 	if st.aiPending && m.ai != nil && !m.ai.streaming && m.ai.actionCancel == nil && m.ai.inlineCancel == nil {
 		m.ai.reload()
 		st.aiPending = false
@@ -106,5 +142,4 @@ func (m *Model) reloadLiveSettings() tea.Cmd {
 		m.ai.reloadProfiles()
 		st.profilesPending = false
 	}
-	return nil
 }
