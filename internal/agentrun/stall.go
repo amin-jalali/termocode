@@ -74,3 +74,6 @@ func StallText(d time.Duration) string {
 	}
 	return d.String()
 }
+
+// EmptyPrompt asks a step once more when its answer was empty.
+const EmptyPrompt = "Your last answer was empty. Give your final answer now: in a few lines, say what you did and what you found."
