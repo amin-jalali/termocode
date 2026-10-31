@@ -79,6 +79,7 @@ markdown_extensions:
 # Pages that exist for contributors but are not linked from the user nav.
 not_in_nav: |
   /adr/0000-template.md
+  /qc/ai-verification.md
 
 nav:
   - Home: index.md
