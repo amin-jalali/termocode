@@ -20,6 +20,7 @@ func TestFetchGitCmdSameAsSequentialReads(t *testing.T) {
 	run("tag", "v1")
 	cwd, _ := os.Getwd()
 	got, ok := fetchGitCmd()().(GitMsg)
+	got.Seq = 0 // the read order number is new each call (FIX-46); the snapshot is what counts
 	if !ok {
 		t.Fatal("no GitMsg")
 	}
@@ -35,7 +36,9 @@ func TestFetchGitCmdSameAsSequentialReads(t *testing.T) {
 	}
 
 	t.Chdir(t.TempDir())
-	if got := fetchGitCmd()(); !reflect.DeepEqual(got, GitMsg{IsRepo: false}) {
+	out, _ := fetchGitCmd()().(GitMsg)
+	out.Seq = 0
+	if got := out; !reflect.DeepEqual(got, GitMsg{IsRepo: false}) {
 		t.Fatalf("outside a repo: %+v", got)
 	}
 }
