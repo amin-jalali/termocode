@@ -88,3 +88,22 @@ func TestMCPShowToolsSpaceToggles(t *testing.T) {
 		t.Errorf("row after on = %+v", it)
 	}
 }
+
+// MCPX-3 (PR-35, TS-12): a Show tools row names the tool's title next
+// to its name, and says when the tool reaches outside (openWorldHint).
+func TestMCPToolRowTitleAndOpenWorld(t *testing.T) {
+	yes := true
+	srv := mcp.Server{Name: "s"}
+	it := mcpToolRow(srv, mcp.Tool{Name: "web_get", Title: "Fetch a page", Description: "Gets a URL.",
+		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: &yes, OpenWorldHint: &yes}}, mcp.Settings{TrustAnnotations: true})
+	if !strings.HasPrefix(it.Title, "[x] web_get · Fetch a page  Gets a URL.") {
+		t.Errorf("title = %q", it.Title)
+	}
+	if it.Hint != "runs at once · reaches outside" {
+		t.Errorf("hint = %q", it.Hint)
+	}
+	it = mcpToolRow(srv, mcp.Tool{Name: "x", Annotations: &mcp.ToolAnnotations{Title: "Ex"}}, mcp.Settings{})
+	if !strings.HasPrefix(it.Title, "[x] x · Ex") {
+		t.Errorf("annotation title = %q", it.Title)
+	}
+}
