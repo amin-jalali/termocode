@@ -195,6 +195,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	}
 	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
 	tools = append(tools, aiDBTools(root, call)...)            // DB-5: the Databases view (ai_db_tools.go)
+	tools = append(tools, m.aiAstGrepTool(root, call))         // OMX-28: structural search / rewrite
 	tools = append(tools, aiSkillTools(root)...)               // OM-4: only when a skill is offered
 	tools = append(tools, m.aiLookTool(root))                  // OMX-32: images (one extra request) and PDFs
 	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
