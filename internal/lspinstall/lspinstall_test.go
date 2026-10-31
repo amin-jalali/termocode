@@ -24,7 +24,7 @@ func TestRegistryIntegrity(t *testing.T) {
 			t.Errorf("duplicate bin %s", tl.Bin)
 		}
 		seenName[tl.Name], seenBin[tl.Bin] = true, true
-		if len(tl.Filetypes) == 0 && tl.Category != CategoryAgentCLI {
+		if len(tl.Filetypes) == 0 && tl.Category != CategoryAgentCLI && tl.Category != CategoryCodeTool {
 			t.Errorf("%s: no filetypes", tl.Name)
 		}
 		if tl.Category == CategoryLSP && (len(tl.Cmd) == 0 || len(tl.Root) == 0) {
