@@ -143,13 +143,17 @@ func ParseInlineResponse(raw string) (InlineCompletion, bool) {
 		kept = append(kept, line)
 	}
 	body = strings.Join(kept, "\n")
+	// The model sometimes echoes the marker back. Drop it before the
+	// empty check (a reply that is only the marker is no completion),
+	// and again until none is left ("<CUR<CURSOR>SOR>").
+	for strings.Contains(body, CursorMarker) {
+		body = strings.ReplaceAll(body, CursorMarker, "")
+	}
 	body = strings.TrimPrefix(body, "\n")
 	body = strings.TrimRight(body, "\n")
 	if strings.TrimSpace(body) == "" {
 		return InlineCompletion{}, false
 	}
-	// The model sometimes echoes the marker back.
-	body = strings.ReplaceAll(body, CursorMarker, "")
 	return InlineCompletion{InsertText: body, ImportLines: imports}, true
 }
 
