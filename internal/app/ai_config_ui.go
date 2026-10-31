@@ -113,6 +113,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 // handleAIConfirm routes the AI confirm kinds. ok=false: not ours.
 func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 	switch m.confirmKind {
+	case confirmKindBugReport:
+		return m.answerBugReport(id), true
 	case confirmKindAITool:
 		return m.answerAIToolConfirm(id), true
 	case confirmKindAIUndoTurn:
@@ -198,6 +200,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 // onAIConfirmClosed handles Esc on an AI dialog: a tool call is denied.
 func (m *Model) onAIConfirmClosed() tea.Cmd {
 	switch m.confirmKind {
+	case confirmKindBugReport:
+		return m.answerBugReport("cancel")
 	case confirmKindAITool:
 		return m.answerAIToolConfirm("deny")
 	case confirmKindAIPlan: // G-PLAN: Esc denies the plan
