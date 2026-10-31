@@ -26,6 +26,8 @@ import (
 // is kept by hash in the session file). Files are read per turn and per
 // call: no cache, no watcher.
 
+const confirmKindBuiltinSkill confirmKindEnum = 2650
+
 const (
 	confirmKindAISkillsTrust confirmKindEnum = 1020
 	pickerKindAISkills       pickerKindEnum  = 1020
@@ -74,7 +76,7 @@ func aiOfferedSkills(s ai.Skills) []ai.Skill {
 	trusted := aiSkillsTrust(s) == aiTrustUse
 	var out []ai.Skill
 	for _, sk := range s.List {
-		if sk.Source == ai.SkillSourceUser || trusted {
+		if sk.Source == ai.SkillSourceUser || sk.Source == ai.SkillSourceBuiltin || trusted {
 			out = append(out, sk)
 		}
 	}
@@ -249,6 +251,7 @@ func (m *Model) openAISkills() tea.Cmd {
 	}
 	group(ai.SkillSourceProject, project)
 	group(ai.SkillSourceUser, "User skills")
+	group(ai.SkillSourceBuiltin, "Built-in skills")
 	items = append(items, picker.Item{Header: true, Title: "Actions", Group: "actions"},
 		picker.Item{ID: aiSkillsNewProjectID, Title: "New project skill…", Hint: ai.SkillsDir, Group: "actions"},
 		picker.Item{ID: aiSkillsNewUserID, Title: "New user skill…", Hint: "your config folder", Group: "actions"})
@@ -298,6 +301,12 @@ func (m *Model) onAISkillsPicked(id string) tea.Cmd {
 	}
 	for _, sk := range aiLoadSkills(root).List { // only a listed skill file
 		if sk.Path == path {
+			if sk.Source == ai.SkillSourceBuiltin {
+				m.confirm = confirm.New(sk.Name, sk.Body, []confirm.Button{{ID: "close", Title: "Close"}})
+				m.confirm.SetSize(m.w, m.h)
+				m.confirmKind, m.confirmOpen = confirmKindBuiltinSkill, true
+				return nil
+			}
 			aiOpenSkillFile(m, path, 1)
 			return nil
 		}

@@ -162,7 +162,7 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIMemoryCard(m.confirmKind, id), true
 	case confirmKindAIProfileSave:
 		return m.onAIProfileSaveChoice(id), true
-	case confirmKindAIProfileShow: // read-only: Close
+	case confirmKindAIProfileShow, confirmKindBuiltinSkill: // read-only: Close
 		return nil, true
 	case confirmKindAIProfileFormStep, confirmKindAIProfileFormDelete, confirmKindAIProfileFormDiscard:
 		return m.answerAIProfileFormConfirm(id)

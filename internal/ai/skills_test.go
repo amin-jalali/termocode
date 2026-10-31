@@ -74,7 +74,7 @@ func TestParseSkillLongDescription(t *testing.T) {
 func TestLoadSkills(t *testing.T) {
 	t.Run("nothing", func(t *testing.T) {
 		s := LoadSkills(t.TempDir(), t.TempDir())
-		if len(s.List) != 0 || len(s.Notes) != 0 || s.ProjectHash != "" {
+		if len(s.List) != 5 || len(s.Notes) != 0 || s.ProjectHash != "" {
 			t.Errorf("skills %+v", s)
 		}
 	})
@@ -86,7 +86,7 @@ func TestLoadSkills(t *testing.T) {
 		writeSkill(t, pdir, "notes.txt", "not a skill")
 		writeSkill(t, user, "a.md", "---\nname: alpha\ndescription: A\n---\nbody a\n")
 		s := LoadSkills(root, user)
-		if len(s.List) != 2 || s.List[0].Name != "alpha" || s.List[1].Name != "beta" {
+		if len(s.List) != 7 || s.List[0].Name != "alpha" || s.List[1].Name != "beta" {
 			t.Fatalf("list %+v", s.List)
 		}
 		if s.List[0].Source != SkillSourceUser || s.List[1].Source != SkillSourceProject {
@@ -127,7 +127,7 @@ func TestLoadSkills(t *testing.T) {
 		writeSkill(t, user, "mine.md", "---\nname: mine\ndescription: d\n---\nuser body\n")
 		writeSkill(t, pdir, "mine.md", "---\nname: mine\ndescription: d\n---\nproject body\n")
 		s := LoadSkills(root, user)
-		if len(s.List) != 2 {
+		if len(s.List) != 7 {
 			t.Fatalf("list %+v", s.List)
 		}
 		if sk, _ := s.Find("mine"); sk.Source != SkillSourceUser || sk.Body != "user body" {
@@ -151,7 +151,7 @@ func TestLoadSkills(t *testing.T) {
 		if err := os.Symlink(filepath.Join(out, "secret.md"), filepath.Join(pdir, "s.md")); err != nil {
 			t.Skip(err)
 		}
-		if s := LoadSkills(root, ""); len(s.List) != 0 {
+		if s := LoadSkills(root, ""); len(s.List) != 5 {
 			t.Errorf("followed the symlink: %+v", s.List)
 		}
 	})
@@ -164,4 +164,23 @@ func TestLoadSkills(t *testing.T) {
 			t.Errorf("skill %+v", sk)
 		}
 	})
+}
+
+func TestBundledSkillsAndOverrides(t *testing.T) {
+	root, user := t.TempDir(), t.TempDir()
+	s := LoadSkills(root, user)
+	for _, name := range []string{"git-commit", "review-work", "remove-ai-slop", "init-agents-md", "debugging"} {
+		sk, ok := s.Find(name)
+		if !ok || sk.Source != "builtin" || sk.Body == "" || !strings.HasSuffix(sk.Path, "/SKILL.md") {
+			t.Errorf("missing built-in %s", name)
+		}
+	}
+	if s.ProjectHash != "" {
+		t.Fatal("built-ins require project trust")
+	}
+	writeSkill(t, user, "git-commit.md", "---\nname: git-commit\ndescription: Mine\n---\nMy workflow\n")
+	sk, _ := LoadSkills(root, user).Find("git-commit")
+	if sk.Source != SkillSourceUser || sk.Body != "My workflow" {
+		t.Fatal("user override lost")
+	}
 }

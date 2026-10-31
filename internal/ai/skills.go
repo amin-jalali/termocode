@@ -2,6 +2,7 @@ package ai
 
 import (
 	"crypto/sha256"
+	"embed"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -44,6 +45,7 @@ const SkillsMax = 64
 const (
 	SkillSourceProject = "project"
 	SkillSourceUser    = "user"
+	SkillSourceBuiltin = "builtin"
 )
 
 // Skill is one loaded skill file.
@@ -89,6 +91,9 @@ var skillNameRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 // '.', '_', '-'; at most 64 characters).
 func ValidSkillName(name string) bool { return skillNameRe.MatchString(name) }
 
+//go:embed builtin_skills/*/SKILL.md
+var bundledSkills embed.FS
+
 // LoadSkills reads the user skills of userDir ("" for none) and the
 // project skills of root. A user skill keeps its name when a project
 // skill has the same one (the user's own file wins over a repository's).
@@ -100,6 +105,19 @@ func LoadSkills(root, userDir string) Skills {
 	}
 	if root != "" {
 		s.load(root, filepath.Join(root, filepath.FromSlash(SkillsDir)), SkillSourceProject, SkillsDir+"/", seen)
+	}
+	entries, _ := bundledSkills.ReadDir("builtin_skills")
+	for _, e := range entries {
+		path := "builtin_skills/" + e.Name() + "/SKILL.md"
+		data, _ := bundledSkills.ReadFile(path)
+		name, desc, body, err := ParseSkill(string(data), "SKILL.md")
+		if err != nil {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		s.List = append(s.List, Skill{Name: name, Description: desc, Body: body, Source: SkillSourceBuiltin, Path: path})
 	}
 	sort.Slice(s.List, func(i, j int) bool { return s.List[i].Name < s.List[j].Name })
 	if len(s.List) > SkillsMax {

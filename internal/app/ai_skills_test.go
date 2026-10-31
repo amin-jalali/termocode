@@ -53,18 +53,17 @@ func aiReqText(req ai.Request) string {
 	return b.String()
 }
 
-// Spec: no skills, no list and no skill_load tool (the plain chat is
-// unchanged).
-func TestAISkillsNoneNoPromptNoTool(t *testing.T) {
+// Spec: built-in skills are available on first start, without a trust card.
+func TestAISkillsBundledFirstStart(t *testing.T) {
 	m, rec, _, _ := aiSkillsModel(t)
 	driveAIChat(t, m, m.sendAIChat("hello"), nil)
 	if m.confirmOpen || len(rec.reqs) != 1 {
 		t.Fatal("card or no request without skills")
 	}
-	if sys := rec.reqs[0].Messages[0].Content; strings.Contains(sys, "Skills you can load") {
+	if sys := rec.reqs[0].Messages[0].Content; !strings.Contains(sys, "- debugging —") {
 		t.Errorf("skills list without skills:\n%s", sys)
 	}
-	if aiReqHasTool(rec.reqs[0], "skill_load") {
+	if !aiReqHasTool(rec.reqs[0], "skill_load") {
 		t.Error("skill_load offered without skills")
 	}
 }
@@ -146,7 +145,7 @@ func TestAISkillsProjectTrust(t *testing.T) {
 	if len(rec.reqs) != 1 {
 		t.Fatalf("not sent after deny: %d requests", len(rec.reqs))
 	}
-	if sys := rec.reqs[0].Messages[0].Content; strings.Contains(sys, "db-migrate") || aiReqHasTool(rec.reqs[0], "skill_load") {
+	if sys := rec.reqs[0].Messages[0].Content; strings.Contains(sys, "db-migrate") {
 		t.Errorf("refused project skill offered:\n%s", sys)
 	}
 	if out, err := aiSkillLoad(root, "db-migrate"); err == nil {
@@ -243,5 +242,19 @@ func TestAISkillsPalette(t *testing.T) {
 
 	if p, ok := aiActionPolicies["ai-skills"]; !ok || p.Gate != aiGateNever {
 		t.Errorf("ai-skills policy %+v", p)
+	}
+}
+
+func TestAISkillsBuiltinPreview(t *testing.T) {
+	m, _, root, _ := aiSkillsModel(t)
+	sk, _ := aiLoadSkills(root).Find("debugging")
+	m.w, m.h = 120, 50
+	m.openAISkills()
+	if !strings.Contains(ansi.Strip(m.picker.View()), "BUILT-IN SKILLS") {
+		t.Fatalf("built-ins missing from picker: %s", ansi.Strip(m.picker.View()))
+	}
+	m.onAISkillsPicked(aiSkillsOpenPrefix + sk.Path)
+	if !m.confirmOpen || m.confirmKind != confirmKindBuiltinSkill || !strings.Contains(ansi.Strip(m.confirm.View()), "debugging") {
+		t.Fatal("no preview")
 	}
 }
