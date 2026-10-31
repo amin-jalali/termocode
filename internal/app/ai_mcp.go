@@ -506,7 +506,7 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 	items = append(items,
 		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
 		picker.Item{ID: "copy-teammate", Title: "Copy for a teammate", Hint: "its JSON; secrets as ${secret:NAME}, no values"},
-		picker.Item{ID: "log", Title: "Show log", Hint: "Output: MCP"},
+		picker.Item{ID: "log", Title: "Show log", Hint: "only this server; level: mcp_log_level"},
 		picker.Item{ID: "disable", Title: "Disable", Hint: "keep the entry, stop it, no tools for the AI"},
 		picker.Item{ID: "remove", Title: "Remove…", Hint: "delete the entry and forget its sign-in"},
 	)
@@ -596,7 +596,7 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 		}
 		return nil
 	case "log":
-		return m.showMCPLog()
+		return m.showMCPLogFor(name)
 	case "copy-teammate":
 		return m.mcpCopyForTeammate(name) // ai_mcp_copy.go
 	case "signin":
@@ -661,13 +661,9 @@ func (m *Model) openMCPTools(name string) tea.Cmd {
 	return nil
 }
 
-// showMCPLog opens the Output panel on the MCP channel.
-func (m *Model) showMCPLog() tea.Cmd {
-	m.aiMCP() // the channel exists once MCP ran; show it empty otherwise
-	m.output.SetActive(mcpLogChannel)
-	m.showPanelTab(panelKindOutput)
-	return nil
-}
+// showMCPLog opens the Output panel on the MCP channel, every server
+// (ai_mcp_log.go).
+func (m *Model) showMCPLog() tea.Cmd { return m.showMCPLogFor("") }
 
 // editMCPConfig opens the user mcp.json in the editor (created with an
 // empty mcpServers block when missing).

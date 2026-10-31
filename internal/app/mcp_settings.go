@@ -28,6 +28,7 @@ var mcpSettingKeys = map[string]string{
 	"setting-mcp-oauth-port":        "mcp_oauth_port",
 	"setting-mcp-github-client-id":  "mcp_github_client_id",
 	"setting-mcp-share":             "mcp_share",
+	"setting-mcp-log-level":         "mcp_log_level",
 }
 
 func init() {
@@ -48,6 +49,8 @@ func init() {
 			Desc: "Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret."},
 		settingsRow{ID: "setting-mcp-share", Label: "mcp_share", Kind: "bool", Default: "true",
 			Desc: "Run each local MCP server once for all your termocode windows with the same server entry and folder, not once per window. It ends when the last window stops using it (mcp_idle_timeout or quit). false: every window runs its own. Remote servers are not affected."},
+		settingsRow{ID: "setting-mcp-log-level", Label: "mcp_log_level", Kind: "string", Default: "info",
+			Desc: "The lowest level the MCP log (Output: MCP) shows: error, warning, info or debug. Every line is kept, so a lower level shows the older lines too."},
 	)
 }
 
@@ -99,6 +102,8 @@ func mcpSettingValue(id string) (string, bool) {
 		return s.GitHubClientID, true
 	case "setting-mcp-share":
 		return strconv.FormatBool(s.Share), true
+	case "setting-mcp-log-level":
+		return s.LogLevel, true
 	}
 	return "", false
 }
@@ -142,6 +147,12 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 			return bad("0 (the default ports) or a port up to 65535")
 		}
 		v = n
+	case "setting-mcp-log-level":
+		value = strings.ToLower(value)
+		if !mcp.ValidLogLevel(value) {
+			return bad("error, warning, info or debug")
+		}
+		v = value
 	case "setting-mcp-github-client-id":
 		if value == "(built in)" {
 			value = ""
@@ -161,6 +172,9 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 	if s := m.aiS(); s.mcp != nil {
 		s.mcp.SetTimeouts(set.IdleTimeout, set.CallTimeout)
 		s.mcp.SetShare(mcpShareOptions(set))
+	}
+	if id == "setting-mcp-log-level" {
+		m.applyMCPLogFilter() // ai_mcp_log.go
 	}
 	var c tea.Cmd
 	m.toast, c = m.toast.Push(toast.Info, fmt.Sprintf("%s = %v", key, v))
