@@ -363,6 +363,7 @@ The author is not checked: install bundles only from people you trust.
 | `startTimeout` | Seconds the start may take (1–600, default 15). Raise it for a package that downloads first. |
 | `share` | `"user"`: one process serves every project (local servers, your own file only). |
 | `gateway` | `true` lets outside agents use this server through termocode, each call after a card. Only in your own `mcp.json`. |
+| `autostart` | `false`: never start the server just to list its tools. Its tools come after **Connect** in the list. |
 | `sandbox` | Local server: run it in a container or a sandbox tool. See [Run a local server in a sandbox](#run-a-local-server-in-a-sandbox). |
 
 `type` and `transport` are read too, and the top key `servers` works
@@ -779,3 +780,15 @@ also shows the older lines.
 | `failed: … (gave up after 8 tries …)` | Run **AI: MCP: Reconnect All Servers** when you are back online. It also checks the running servers with a ping. |
 | `tools changed` | Review with **Show tools**, then **Trust the new tools**. |
 | `server not trusted` | **AI: MCP Servers…** → the server → **Trust**. |
+| A server shows old tools | Run **AI: MCP: Reset Tool Lists**. Each server lists its tools again on next use. |
+| `sandbox: no sandbox tool found` | Install what the message says (bubblewrap, docker or podman), or remove `"sandbox"`. |
+
+### Debug your own server
+
+To step through a server you write, start it with its debugger on and
+attach from termocode's debugger. For a Node.js server, add
+`"--inspect=9229"` before the script in `args` (or set
+`"env": {"NODE_OPTIONS": "--inspect=9229"}`). Then attach to port 9229.
+A Python server can wait for a debugger with `debugpy --listen 5678
+--wait-for-client`. **Stop** in the servers list and the next tool call
+start it again with your changes.
