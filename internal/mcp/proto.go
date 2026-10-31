@@ -104,14 +104,25 @@ type CallResult struct {
 // Text renders a result for the model: text items as they are, binary
 // items as a short placeholder, structured content as JSON when there is
 // no text, and "error: …" for isError.
-func (r CallResult) Text() string {
+func (r CallResult) Text() string { return r.render(nil) }
+
+// render is Text with media notes: media(i, c) gives the note for an
+// image or audio item i (nil: "not shown").
+func (r CallResult) render(media func(i int, c Content) string) string {
 	var parts []string
-	for _, c := range r.Content {
+	for i, c := range r.Content {
 		switch c.Type {
 		case "text":
 			parts = append(parts, c.Text)
 		case "image", "audio":
-			parts = append(parts, fmt.Sprintf("[%s %s, %s — not shown]", c.Type, c.MimeType, sizeText(base64.StdEncoding.DecodedLen(len(c.Data)))))
+			why := ""
+			if media != nil {
+				why = media(i, c)
+			}
+			if why == "" {
+				why = "not shown"
+			}
+			parts = append(parts, fmt.Sprintf("[%s %s, %s — %s]", c.Type, c.MimeType, sizeText(base64.StdEncoding.DecodedLen(len(c.Data))), why))
 		case "resource":
 			if c.Resource == nil {
 				continue
@@ -136,8 +147,11 @@ func (r CallResult) Text() string {
 }
 
 func sizeText(n int) string {
-	if n < 1024 {
+	switch {
+	case n < 1024:
 		return fmt.Sprintf("%d B", n)
+	case n < 1<<20:
+		return fmt.Sprintf("%d KB", n/1024)
 	}
-	return fmt.Sprintf("%d KB", n/1024)
+	return fmt.Sprintf("%.1f MB", float64(n)/(1<<20))
 }

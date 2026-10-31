@@ -192,7 +192,7 @@ func AITools(s Server, tools []Tool, call CallFunc, o AdapterOptions) []ai.Tool 
 				}
 				// A known secret the server repeats (its own token from
 				// ${secret:}, a password it read) never reaches the model.
-				text := ai.RedactSecrets(clean(res.Text()))
+				text := ai.RedactSecrets(clean(res.render(mediaNotes(ctx))))
 				if len(text) > limit {
 					text = text[:limit] + fmt.Sprintf("\n… [truncated, %d more bytes]", len(text)-limit)
 				}
