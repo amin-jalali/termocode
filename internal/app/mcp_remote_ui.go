@@ -69,6 +69,9 @@ func (m *Model) handleMCPPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind == promptKindMCPSecret {
 		return m.onMCPSecretEntered(value), true
 	}
+	if m.promptKind == promptKindMCPElicit { // ai_mcp_elicit.go
+		return m.onMCPElicitField(value), true
+	}
 	return nil, false
 }
 
