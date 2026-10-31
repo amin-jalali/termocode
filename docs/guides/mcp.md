@@ -487,6 +487,18 @@ tools**, then use **Trust the new tools** in the server's actions.
 chat message, its tools answer "unavailable" for the rest of that
 message, so the AI does not keep trying.
 
+**Many tools.** Every tool's full description costs room in the AI's
+context. When your MCP tools are big (about 10k tokens), termocode sends
+the AI one search tool instead: `mcp_tool_search`. The AI searches by
+keywords, gets the full input of the tools it found, and calls them from
+its next step. A tool still asks before it runs, as before. Set
+`mcp_tool_search` to `on` to always do this, or `off` to always send
+every tool.
+
+**Odd schemas.** Some servers describe a tool's input as "one of these
+forms" at the top level. The AI services refuse that, so termocode sends
+one object with the fields of all forms.
+
 ## Prompts, resources and questions from a server
 
 **Pictures.** When a tool sends an image (a screenshot, a chart), a
@@ -591,7 +603,7 @@ serve every project, add `"share": "user"` to the entry in your own
 The MCP section of the Settings modal (**Preferences: Open Settings (UI)**)
 has `mcp_enabled`, `mcp_idle_timeout`, `mcp_call_timeout`,
 `mcp_max_result_kb`, `mcp_trust_annotations`, `mcp_oauth_port`,
-`mcp_share`, `mcp_log_level` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
+`mcp_share`, `mcp_log_level`, `mcp_tool_search` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
 your build has none). The timeouts apply at once. The AI can not change these settings. They are
 listed in the settings reference.
 

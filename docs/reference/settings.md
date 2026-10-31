@@ -79,6 +79,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_github_client_id` | string | `(built in)` | Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret. |
 | `mcp_share` | bool | `true` | Run each local MCP server once for all your termocode windows with the same server entry and folder, not once per window. It ends when the last window stops using it (mcp_idle_timeout or quit). false: every window runs its own. Remote servers are not affected. |
 | `mcp_log_level` | string | `info` | The lowest level the MCP log (Output: MCP) shows: error, warning, info or debug. Every line is kept, so a lower level shows the older lines too. |
+| `mcp_tool_search` | string | `auto` | Send the AI only a search tool instead of every MCP tool's full schema; it loads the tools it needs. auto: only when the MCP tools are big (about 10k tokens). on: always. off: never. |
 
 ## Updates
 
