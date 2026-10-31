@@ -214,6 +214,12 @@ the file it comes from, local or remote, the command or URL, the names
 of its env variables and headers (never their values), the server's own
 name, version and MCP version, its tools, its state and the last error.
 
+**Copy for a teammate** puts the server's entry on the clipboard as an
+`mcpServers` block. Secrets are never copied: a `${secret:NAME}` stays
+as it is, and a token written in the file becomes a new
+`${secret:NAME}`. Your own sign-in (`auth`) is left out. The message
+names the secrets your teammate sets.
+
 ## The file
 
 | Key | What it does |
