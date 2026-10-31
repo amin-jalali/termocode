@@ -69,6 +69,10 @@ type ModelSlot struct {
 	// Reasoning is the slot's reasoning level (reasoning.go; "": the
 	// model's default). Edited by hand; SaveModelSlot keeps it.
 	Reasoning string `json:"reasoning,omitempty"`
+	// Fallback are backup slots ("gpt", "openai/gpt-5"), in order: a
+	// turn moves to the next when this one fails (fallback.go). Edited
+	// by hand; SaveModelSlot keeps it.
+	Fallback []string `json:"fallback,omitempty"`
 }
 
 // ProfileStep is one agent step of a profile.
@@ -746,6 +750,9 @@ func ResolveSlots(s Settings, main Config, c Credentials, getenv func(string) st
 	}
 	sort.Strings(names)
 	var errs []string
+	if err := CheckFallbacks(SlotMain, s.Fallback); err != nil {
+		errs = append(errs, "ai_fallback: "+err.Error()+"; no fallback is used")
+	}
 	for _, name := range names {
 		sl := s.Models[name]
 		sl.Provider = strings.ToLower(strings.TrimSpace(sl.Provider))
@@ -753,6 +760,9 @@ func ResolveSlots(s Settings, main Config, c Credentials, getenv func(string) st
 		if err := CheckModelSlot(name, sl); err != nil {
 			fail(err.Error())
 			continue
+		}
+		if err := CheckFallbacks(name, sl.Fallback); err != nil {
+			fail(err.Error() + "; no fallback is used") // the slot itself still works
 		}
 		out[name] = slotConfig(sl, main, c, getenv)
 	}

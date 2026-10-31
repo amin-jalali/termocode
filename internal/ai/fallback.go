@@ -2,6 +2,7 @@ package ai
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -76,4 +77,44 @@ func fallbackReason(err error) string {
 		return "not signed in"
 	}
 	return strings.TrimSpace(Redact(err.Error()))
+}
+
+// MaxFallbacks caps a slot's backup list.
+const MaxFallbacks = 4
+
+// CheckFallbacks reports why slot name's backup list is not usable: each
+// entry is a slot name or "<provider>/<model>", not the slot itself, at
+// most MaxFallbacks.
+func CheckFallbacks(name string, list []string) error {
+	if len(list) > MaxFallbacks {
+		return fmt.Errorf("fallback lists at most %d models", MaxFallbacks)
+	}
+	for _, f := range list {
+		f = strings.TrimSpace(f)
+		if _, _, ok := SplitSyntheticSlot(f); !ok && !profileIDRe.MatchString(f) {
+			return fmt.Errorf("fallback %q is not a slot name or <provider>/<model>", f)
+		}
+		if f == name || (name == "" && f == SlotMain) {
+			return fmt.Errorf("fallback %q is the slot itself", f)
+		}
+	}
+	return nil
+}
+
+// FallbackNames is the backup list of slot name: ai_fallback for main
+// ("" too), else ai_models.<name>.fallback; nil when the list is bad
+// (ResolveSlots reports it).
+func (s Settings) FallbackNames(name string) []string {
+	list := s.Models[name].Fallback
+	if name == "" || name == SlotMain {
+		name, list = SlotMain, s.Fallback
+	}
+	if CheckFallbacks(name, list) != nil {
+		return nil
+	}
+	out := make([]string, 0, len(list))
+	for _, f := range list {
+		out = append(out, strings.TrimSpace(f))
+	}
+	return out
 }
