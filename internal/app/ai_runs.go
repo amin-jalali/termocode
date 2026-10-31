@@ -527,6 +527,7 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 	rm := s.aiRunMessage()
 	now := clock.Now()
 	ev := msg.ev
+	s.agentsLogEvent(ev) // OMX-22: the step's transcript
 	if rm != nil {
 		if cmd, ok := m.onAIPlanEvent(rm, ev); ok { // G-PLAN
 			return tea.Batch(waitAIChat(msg.ch), cmd)
@@ -629,6 +630,16 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 	case agentrun.NodeCancelled:
 		s.agentsNodeEnd(ev.RunID, st.ID)
 		st.State = string(agentdag.StateCancelled)
+		if ev.Err != "" { // OMX-22: the user stopped only this step
+			st.Error = ev.Err
+			st.Notes = append(st.Notes, "■ "+ev.Err)
+		}
+	case agentrun.NodeMessage: // OMX-22
+		if ev.Err == "" {
+			st.Notes = append(st.Notes, "✉ you: "+aiCardText(ai.Redact(ev.Output), 60))
+		} else {
+			st.Notes = append(st.Notes, "✉ not read ("+ev.Err+"): "+aiCardText(ai.Redact(ev.Output), 40))
+		}
 	case agentrun.NodeBlocked:
 		st.State = string(agentdag.StateBlocked)
 		return tea.Batch(waitAIChat(msg.ch), m.notifyOS("AI agent is blocked"))
