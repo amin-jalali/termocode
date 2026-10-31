@@ -164,14 +164,16 @@ func TestShareBrokerProgressGoesToTheCaller(t *testing.T) {
 	_, sock := startTestBroker(t, fakeShareConfig(nil))
 	c1 := dialTestShare(t, sock, nil)
 	c2 := dialTestShare(t, sock, nil)
-	// Both sessions use the same token ("termocode-1"); the 300 ms
-	// deadline only holds when each one gets its own progress.
+	// Both sessions use the same token ("termocode-1"); the 800 ms idle
+	// deadline only holds when each one gets its own progress (a 50 ms
+	// beat). The call runs 2.4 s, so without progress it times out; the
+	// wide gap keeps a slow macOS runner from missing one beat window.
 	var wg sync.WaitGroup
 	for _, c := range []*Client{c1, c2} {
 		wg.Add(1)
 		go func(c *Client) {
 			defer wg.Done()
-			res, err := c.CallToolTimeout(context.Background(), "slow", map[string]any{"total_ms": 900, "progress_ms": 50}, 300*time.Millisecond)
+			res, err := c.CallToolTimeout(context.Background(), "slow", map[string]any{"total_ms": 2400, "progress_ms": 50}, 800*time.Millisecond)
 			if err != nil || res.Text() != "slow done" {
 				t.Errorf("slow: %q %v", res.Text(), err)
 			}
