@@ -67,8 +67,11 @@ export function useArming(target: MutableRef<HTMLElement | null>, ms = ARM_MS): 
       pressStartedArmed.current = false;
       return ok;
     },
+    // A press counts only if the button also looked armed when it began:
+    // between the timer and the next paint the ref is already true while
+    // the button still shows the inert look, and a press then must not act.
     pressBegan: () => {
-      pressStartedArmed.current = armedRef.current;
+      pressStartedArmed.current = armed && armedRef.current;
     },
   };
 }

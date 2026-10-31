@@ -60,3 +60,17 @@ func TestNoAlwaysAllowAnywhere(t *testing.T) {
 		}
 	}
 }
+
+// TestArmingNeedsTheArmedLook: a press counts only if the button looked
+// armed when it began. The timer sets the ref before the next paint; a
+// press in that gap hit a button that still showed the inert look (seen
+// on a slow macOS runner: the risky answer went out).
+func TestArmingNeedsTheArmedLook(t *testing.T) {
+	b, err := os.ReadFile("src/ui/arming.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `pressStartedArmed.current = armed && armedRef.current;`) {
+		t.Error("arming.ts: pressBegan must need both the rendered armed state and the ref")
+	}
+}
