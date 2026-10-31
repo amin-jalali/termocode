@@ -35,6 +35,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Lock Secrets | `secrets-lock` |   |   |
 | AI: MCP Servers… | `ai-mcp-servers` |   |   |
 | AI: MCP: Import from Other Apps… | `mcp-import-other` |   |   |
+| AI: MCP: Reconnect All Servers | `ai-mcp-reconnect-all` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: Memory: Turn On/Off | `ai-memory-toggle` |   |   |
 | AI: Memory… | `ai-memory` |   |   |
