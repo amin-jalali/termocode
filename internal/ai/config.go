@@ -65,6 +65,11 @@ type Settings struct {
 	// PromptCache is ai_prompt_cache: "5m" (default), "1h" or "off"
 	// (prompt_cache.go). Edited by hand; SaveSettings leaves it.
 	PromptCache string `json:"ai_prompt_cache,omitempty"`
+	// Reasoning is ai_reasoning: the reasoning level of the chat and of
+	// the main slot (reasoning.go; "": the model's default). Resolve
+	// leaves it out of the main Config, so ghost text never thinks; the
+	// chat sends it per request. Edited by hand.
+	Reasoning string `json:"ai_reasoning,omitempty"`
 }
 
 // CheckUntilDoneRounds checks an ai_until_done_rounds value.

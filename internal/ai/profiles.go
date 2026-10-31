@@ -66,6 +66,9 @@ type ModelSlot struct {
 	Provider string `json:"provider"`
 	Model    string `json:"model,omitempty"`
 	BaseURL  string `json:"base_url,omitempty"`
+	// Reasoning is the slot's reasoning level (reasoning.go; "": the
+	// model's default). Edited by hand; SaveModelSlot keeps it.
+	Reasoning string `json:"reasoning,omitempty"`
 }
 
 // ProfileStep is one agent step of a profile.
@@ -726,8 +729,11 @@ func ResolveSlots(s Settings, main Config, c Credentials, getenv func(string) st
 	}
 	out := map[string]Config{}
 	if main.Kind != KindNone {
-		out[SlotMain] = main
+		m := main
+		m.Reasoning = NormalizeReasoning(s.Reasoning)
+		out[SlotMain] = m
 		q := main
+		q.Reasoning = "" // quick: cheap and fast
 		if q.InlineModel != "" {
 			q.Model = q.InlineModel
 		}
@@ -764,7 +770,7 @@ func knownKind(k string) bool {
 
 func slotConfig(sl ModelSlot, main Config, c Credentials, getenv func(string) string) Config {
 	kind := sl.Provider
-	cfg := Config{Kind: kind, Model: sl.Model, BaseURL: sl.BaseURL, PromptCache: main.PromptCache}
+	cfg := Config{Kind: kind, Model: sl.Model, BaseURL: sl.BaseURL, PromptCache: main.PromptCache, Reasoning: NormalizeReasoning(sl.Reasoning)}
 	switch kind {
 	case KindOllama, KindLMStudio:
 	case KindClaudeOAuth:

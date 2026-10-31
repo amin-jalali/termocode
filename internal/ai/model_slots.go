@@ -31,6 +31,9 @@ func CheckModelSlot(name string, sl ModelSlot) error {
 	case kind == KindCompatible && strings.TrimSpace(sl.BaseURL) == "":
 		return errors.New("openai-compatible needs base_url")
 	}
+	if err := CheckReasoning(sl.Reasoning); err != nil {
+		return err
+	}
 	return nil
 }
 

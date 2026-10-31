@@ -210,6 +210,9 @@ type Request struct {
 	// compatible). Current Claude models reject sampling parameters.
 	Temperature *float64
 	Tools       []ToolSpec
+	// Reasoning is this request's reasoning level (reasoning.go; "":
+	// the config's).
+	Reasoning string
 }
 
 // Chunk is one streamed piece of a reply. The final chunk has Done set; it
@@ -352,6 +355,9 @@ type Config struct {
 	// PromptCache is the Anthropic prompt cache life (ai_prompt_cache):
 	// "" 5 minutes, PromptCache1h or PromptCacheOff.
 	PromptCache string
+	// Reasoning is the slot's reasoning level (ai_reasoning or
+	// ai_models.<slot>.reasoning; "": the model's default).
+	Reasoning string
 }
 
 // Configured reports whether cfg is complete enough to send requests.
