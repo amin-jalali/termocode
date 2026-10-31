@@ -642,6 +642,17 @@ func (m Model) Current() (Item, bool) {
 	return m.items[idx], true
 }
 
+// SetItems replaces the rows but keeps the search text and the row under
+// the cursor (by ID), so a toggle can redraw its row in place.
+func (m *Model) SetItems(items []Item) {
+	cur, ok := m.Current()
+	m.items = items
+	m.refilter()
+	if ok {
+		m.SetCursorID(cur.ID)
+	}
+}
+
 // SetCursorID moves the cursor onto the item with the given ID.
 func (m *Model) SetCursorID(id string) {
 	for i, mt := range m.matches {

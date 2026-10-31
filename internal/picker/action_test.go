@@ -55,3 +55,19 @@ func TestRowActionSpace(t *testing.T) {
 		t.Error("footer does not name the key")
 	}
 }
+
+// SetItems swaps the rows but keeps the search text and the highlighted
+// row (a toggle redraws its row in place).
+func TestSetItemsKeepsSearchAndCursor(t *testing.T) {
+	m := NewItems(" P ", []Item{{ID: "a", Title: "alpha"}, {ID: "b", Title: "beta"}, {ID: "c", Title: "gamma"}})
+	m.SetSize(120, 40)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m.SetCursorID("c")
+	m.SetItems([]Item{{ID: "a", Title: "alpha"}, {ID: "b", Title: "beta"}, {ID: "c", Title: "gamma [off]"}})
+	if m.input != "a" {
+		t.Errorf("search = %q", m.input)
+	}
+	if it, ok := m.Current(); !ok || it.ID != "c" || it.Title != "gamma [off]" {
+		t.Errorf("current = %+v %v", it, ok)
+	}
+}
