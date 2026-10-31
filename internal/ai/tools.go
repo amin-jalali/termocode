@@ -538,6 +538,7 @@ func WorkspaceTools(w Workspace) []Tool {
 				return "wrote " + w.rel(abs), nil
 			},
 		},
+		editFileTool(w),
 		{
 			Name: "create_file", Description: "Create a new file, optionally with content. Fails if it exists.",
 			Params:   map[string]any{"path": strParam("file path"), "content": strParam("initial content (optional)")},
