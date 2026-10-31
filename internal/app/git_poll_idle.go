@@ -11,6 +11,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
@@ -28,6 +30,9 @@ import (
 // gitIdleEvery-th poll step (10 s).
 const gitIdleEvery = 5
 
+// gitIndexRefreshEvery: how often the poll refreshes the index (FIX-40).
+const gitIndexRefreshEvery = time.Minute
+
 // gitPollGate is shared by the copies of the Model (a pointer) and the
 // waiting tick: the fingerprint taken after the last full git read, and
 // whether there was activity since the last tick.
@@ -35,6 +40,8 @@ type gitPollGate struct {
 	mu     sync.Mutex
 	fp     string
 	active atomic.Bool
+	// refreshedAt is when the poll last refreshed the index.
+	refreshedAt time.Time
 }
 
 func (g *gitPollGate) get() string {
@@ -47,6 +54,32 @@ func (g *gitPollGate) set(fp string) {
 	g.mu.Lock()
 	g.fp = fp
 	g.mu.Unlock()
+}
+
+// afterRead runs after a poll's status: about once a minute it refreshes
+// the index (FIX-40: the status takes no lock, so a touched file would be
+// read again by every status), then takes the fingerprint the idle wait
+// compares with (after the refresh, which changes the index).
+func (g *gitPollGate) afterRead(cwd string, ok bool) {
+	if ok && g.refreshIndexDue() {
+		if err := git.RefreshIndex(cwd); err != nil {
+			recordError("git: refresh the index: " + err.Error())
+		}
+	}
+	g.set(gitFingerprint(cwd))
+}
+
+// refreshIndexDue reports (and books) an index refresh when the last one
+// is gitIndexRefreshEvery ago.
+func (g *gitPollGate) refreshIndexDue() bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	now := clock.Now()
+	if !g.refreshedAt.IsZero() && now.Sub(g.refreshedAt) < gitIndexRefreshEvery {
+		return false
+	}
+	g.refreshedAt = now
+	return true
 }
 
 // noteGitActivity marks user activity and screen changes: the next poll
