@@ -75,6 +75,11 @@ type Client struct {
 	caps     ServerCaps
 	progress map[string]func() // progress token → push the call's deadline back
 	tokens   atomic.Int64
+
+	// elicit asks the user for the running tool call (one call at a
+	// time per server); elicitCtx is that call's ctx (elicit.go).
+	elicit    Elicitor
+	elicitCtx context.Context
 }
 
 // NewClient starts the JSON-RPC connection on r / w (newline framing).
@@ -132,8 +137,9 @@ func (c *Client) call(ctx context.Context, method string, params any) (json.RawM
 func (c *Client) Initialize(ctx context.Context) error {
 	params := map[string]any{
 		"protocolVersion": ProtocolVersion,
-		"capabilities":    map[string]any{"roots": map[string]any{"listChanged": false}},
-		"clientInfo":      map[string]any{"name": "termocode", "version": "1"},
+		"capabilities": map[string]any{"roots": map[string]any{"listChanged": false},
+			"elicitation": map[string]any{"form": map[string]any{}, "url": map[string]any{}}},
+		"clientInfo": map[string]any{"name": "termocode", "version": "1"},
 	}
 	raw, err := c.call(ctx, "initialize", params)
 	if err != nil {
@@ -246,6 +252,16 @@ func (c *Client) callTool(ctx context.Context, name string, args map[string]any,
 		args = map[string]any{}
 	}
 	params := map[string]any{"name": name, "arguments": args}
+	if e := elicitorFrom(ctx); e != nil {
+		c.mu.Lock()
+		c.elicit, c.elicitCtx = e, ctx
+		c.mu.Unlock()
+		defer func() {
+			c.mu.Lock()
+			c.elicit, c.elicitCtx = nil, nil
+			c.mu.Unlock()
+		}()
+	}
 	if meta != nil {
 		params["_meta"] = meta
 	}
@@ -323,9 +339,11 @@ func (c *Client) handle(m extproc.Message, reply replyFunc) {
 			s = string(p.Data)
 		}
 		c.opts.log("%s: %s", p.Level, s)
+	case "elicitation/create":
+		c.handleElicit(m, reply)
 	default:
-		// sampling/createMessage and elicitation/create are refused on
-		// purpose: a server must never drive our model or the user.
+		// sampling/createMessage is refused on purpose: a server must
+		// never drive our model.
 		if m.IsRequest() {
 			reply(nil, &extproc.Error{Code: extproc.CodeMethodNotFound, Message: "termocode does not support " + m.Method})
 		}
