@@ -27,6 +27,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
+| `notifications` | bool | `true` | Notify when AI work ends or needs input while the terminal is not focused. Uses the terminal over SSH, or a local desktop helper. |
 | `auto_save` | bool | `false` | Save files automatically after edits. |
 | `word_wrap` | bool | `false` | Soft-wrap long lines in the editor. |
 | `show_hidden` | bool | `false` | Show dot-files in the explorer. |
