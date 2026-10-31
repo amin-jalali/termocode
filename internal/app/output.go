@@ -56,6 +56,38 @@ type outputChannel struct {
 	// scroll is how many rows the view sits above the tail. 0 follows new
 	// output; >0 stays anchored on the same lines while more arrive.
 	scroll int
+	// keep, when set, is the view's filter (SetFilter); note says what it
+	// shows. Every line is still stored.
+	keep func(string) bool
+	note string
+}
+
+// SetFilter shows only the lines keep returns true for in a channel's
+// view, with note as a first row ("only server x"); nil shows all again.
+func (s *outputStore) SetFilter(channel string, keep func(string) bool, note string) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	c := s.channelLocked(channel)
+	c.keep, c.note, c.scroll = keep, note, 0
+	if keep == nil {
+		c.note = ""
+	}
+}
+
+// activeNote is the filter note of the shown channel ("" none).
+func (s *outputStore) activeNote() string {
+	if s == nil {
+		return ""
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if c, ok := s.chans[s.active]; ok {
+		return c.note
+	}
+	return ""
 }
 
 // outputStore holds every Output channel. All methods are nil-safe and
@@ -227,9 +259,18 @@ func (s *outputStore) window(h int) []string {
 	if !ok {
 		return nil
 	}
-	c.scroll = clampOutputScroll(c.scroll, len(c.lines), h)
-	start, end := outputWindow(len(c.lines), h, c.scroll)
-	return append([]string(nil), c.lines[start:end]...)
+	lines := c.lines
+	if c.keep != nil {
+		lines = nil
+		for _, l := range c.lines {
+			if c.keep(l) {
+				lines = append(lines, l)
+			}
+		}
+	}
+	c.scroll = clampOutputScroll(c.scroll, len(lines), h)
+	start, end := outputWindow(len(lines), h, c.scroll)
+	return append([]string(nil), lines[start:end]...)
 }
 
 // clampOutputScroll keeps scroll inside [0, total-h].
@@ -351,6 +392,10 @@ func renderOutputTab(m *Model, w, h int) []string {
 			rows = append(rows, theme.FgBg(theme.TextMuted, theme.BgEditor).Render(" No output yet."))
 		}
 		return rows
+	}
+	if note := m.output.activeNote(); note != "" && bodyH > 1 {
+		rows = append(rows, theme.FgBg(theme.TextMuted, theme.BgEditor).Render(" "+runewidth.Truncate(note, max(w-2, 1), "…")))
+		bodyH--
 	}
 	for _, ln := range m.output.window(bodyH) {
 		if runewidth.StringWidth(ln) > w-2 {
