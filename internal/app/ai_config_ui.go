@@ -106,6 +106,11 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIHistoryRenamed(strings.TrimSpace(value)), true
 	case promptKindAISaveAs:
 		return m.onAISaveAsPath(value), true
+	case promptKindAISide: // OMX-30 (ai_side.go)
+		if strings.TrimSpace(value) == "" {
+			return nil, true
+		}
+		return tea.Batch(m.aiInfo("Side question sent (one request to the quick model)"), m.onAISideQuestion(value)), true
 	}
 	return m.handleMCPPromptSubmit(value)
 }
@@ -121,6 +126,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIBudget(id), true
 	case confirmKindAIPlan: // G-PLAN (ai_plan_approval.go)
 		return m.answerAIPlan(id), true
+	case confirmKindAISide: // OMX-30 (ai_side.go)
+		return m.answerAISide(id), true
 	case confirmKindRunsStop: // runs_state.go
 		return m.answerRunsStop(id), true
 	case confirmKindAIOAuth:

@@ -487,6 +487,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Keep going (OMX-7) sends model turns that cost money: only the
 	// user turns it on.
 	"ai-keep-going": aiNever(aiNoAIConfig + "; extra paid turns are the user's choice"),
+	// The side chat (OMX-30) is the user's own question.
+	"ai-side": aiNever("the side chat is the user's own question beside the AI's turn"),
 	// Handoff (OMX-21) ends the AI's own chat; the user starts it.
 	"ai-handoff":       aiNever("it ends the AI's own chat; the user starts a handoff"),
 	"ai-plan-review":   aiNever("the plan card is the user's answer; the AI never approves its own plan"),
