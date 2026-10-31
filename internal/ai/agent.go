@@ -375,7 +375,9 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 			emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: gate, Decision: decision})
 		}
 	}()
-	out, err := t.Run(context.WithValue(ctx, callIDKey{}, call.ID), args)
+	pctx, endProgress := withProgress(context.WithValue(ctx, callIDKey{}, call.ID), t, emit)
+	defer endProgress()
+	out, err := t.Run(pctx, args)
 	if err != nil {
 		out = "error: " + Redact(err.Error())
 	}
