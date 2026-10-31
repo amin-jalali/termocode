@@ -200,14 +200,17 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 	if steps <= 0 {
 		steps = DefaultMaxSteps
 	}
-	var specs []ToolSpec
-	if a.Native {
-		for _, t := range a.Tools {
-			specs = append(specs, t.Spec())
-		}
-	}
 	var usage *Usage // summed over every request of the turn
 	for step := 0; step < steps; step++ {
+		// Built for each step: a tool search can load a hidden tool.
+		var specs []ToolSpec
+		if a.Native {
+			for _, t := range a.Tools {
+				if !t.IsHidden() {
+					specs = append(specs, t.Spec())
+				}
+			}
+		}
 		req := Request{Messages: msgs, Model: a.Model, Tools: specs}
 		var buf strings.Builder
 		prose := 0 // 0 undecided, 1 stream as text, -1 looks like tool json

@@ -51,6 +51,24 @@ type Tool struct {
 	// map can never meet an old entry.
 	Release func(args map[string]any)
 	Run     func(ctx context.Context, args map[string]any) (string, error)
+	// Hidden (optional) keeps the tool out of the specs and the text
+	// catalog while it returns true (an MCP tool not loaded yet by the
+	// tool search). The model can still call it by name.
+	Hidden func() bool
+}
+
+// IsHidden reports t.Hidden().
+func (t Tool) IsHidden() bool { return t.Hidden != nil && t.Hidden() }
+
+// shownTools drops the hidden tools.
+func shownTools(tools []Tool) []Tool {
+	out := make([]Tool, 0, len(tools))
+	for _, t := range tools {
+		if !t.IsHidden() {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 // Spec is the native tool-calling description of t.
@@ -131,7 +149,7 @@ func FindTool(tools []Tool, name string) (Tool, bool) {
 // ToolsPromptSpec renders the catalog for the text (non-native) protocol.
 func ToolsPromptSpec(tools []Tool) string {
 	var b strings.Builder
-	for _, t := range tools {
+	for _, t := range shownTools(tools) {
 		var args []string
 		keys := make([]string, 0, len(t.Params))
 		for k := range t.Params {
