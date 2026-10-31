@@ -147,6 +147,9 @@ func (c *Client) send(ctx context.Context, method string, params any) (json.RawM
 // accept any of SupportedVersions), then notifications/initialized.
 func (c *Client) Initialize(ctx context.Context) error {
 	if modern, err := c.discover(ctx); modern || err != nil {
+		if modern {
+			c.startListen() // change notifications (spec2026_listen.go)
+		}
 		return err
 	}
 	params := map[string]any{
@@ -339,6 +342,8 @@ func (c *Client) handle(m extproc.Message, reply replyFunc) {
 		if c.opts.ResourcesChanged != nil {
 			c.opts.ResourcesChanged(p.URI)
 		}
+	case "notifications/subscriptions/acknowledged":
+		c.opts.log("listening for changes")
 	case "notifications/progress":
 		var p struct {
 			Token    json.RawMessage `json:"progressToken"`

@@ -76,6 +76,7 @@ type HTTPServer struct {
 	nextEv   int
 	dropped  bool
 	deletes  int
+	listens  []chan any // open subscriptions/listen streams (Modern)
 }
 
 // NewHTTPServer starts the fake; it closes with the test.
@@ -235,6 +236,9 @@ func (s *HTTPServer) serveMCP(w http.ResponseWriter, r *http.Request) {
 		}
 		if v, _ := RequestMeta(m.Params); v != "" && r.Header.Get("MCP-Protocol-Version") != v {
 			http.Error(w, "MCP-Protocol-Version does not match _meta", http.StatusBadRequest)
+			return
+		}
+		if s.modern(w, r, m) {
 			return
 		}
 	}
@@ -427,4 +431,55 @@ func (s *HTTPServer) call(w http.ResponseWriter, r *http.Request, m extproc.Mess
 		return
 	}
 	send(response(m.ID, res, rerr))
+}
+
+// modern serves the stateless-only methods: subscriptions/listen (an SSE
+// stream that stays open: the acknowledgement, then each change) and
+// the notify_changed tool, which sends its change on every open stream.
+func (s *HTTPServer) modern(w http.ResponseWriter, r *http.Request, m extproc.Message) bool {
+	tag := map[string]any{"io.modelcontextprotocol/subscriptionId": m.ID}
+	switch m.Method {
+	case "subscriptions/listen":
+		ch := make(chan any, 8)
+		s.mu.Lock()
+		s.listens = append(s.listens, ch)
+		s.mu.Unlock()
+		w.Header().Set("Content-Type", "text/event-stream")
+		send := func(v any) {
+			_, ev := s.sseEvent(v)
+			_, _ = io.WriteString(w, ev)
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
+		}
+		send(map[string]any{"jsonrpc": "2.0", "method": "notifications/subscriptions/acknowledged",
+			"params": map[string]any{"_meta": tag, "notifications": map[string]any{"toolsListChanged": true}}})
+		for {
+			select {
+			case <-r.Context().Done():
+				return true
+			case method := <-ch:
+				send(map[string]any{"jsonrpc": "2.0", "method": method, "params": map[string]any{"_meta": tag}})
+			}
+		}
+	case "tools/call":
+		var p struct {
+			Name string `json:"name"`
+		}
+		_ = json.Unmarshal(m.Params, &p)
+		if p.Name != "notify_changed" {
+			return false
+		}
+		s.mu.Lock()
+		for _, ch := range s.listens {
+			select {
+			case ch <- "notifications/tools/list_changed":
+			default: // a stream that is gone or full
+			}
+		}
+		s.mu.Unlock()
+		writeJSON(w, response(m.ID, text("notified"), nil))
+		return true
+	}
+	return false
 }

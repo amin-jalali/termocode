@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -74,7 +75,7 @@ func TestModernHTTP(t *testing.T) {
 	if err != nil || r.Text() != "echo: hi" {
 		t.Fatalf("call %q %v", r.Text(), err)
 	}
-	if got := strings.Join(rpcs(f), ","); got != "server/discover,tools/call" {
+	if got := strings.Join(rpcs(f), ","); !strings.HasPrefix(got, "server/discover,") || !strings.Contains(got, "tools/call") {
 		t.Fatalf("rpcs %s", got)
 	}
 	for _, q := range f.Requests() {
@@ -133,4 +134,66 @@ func TestModernMRTRRootsDeclineSampling(t *testing.T) {
 	if _, err := p.Client.CallTool(ctx, "sample", nil); err == nil || !strings.Contains(err.Error(), "sampling") {
 		t.Fatalf("sampling: %v", err)
 	}
+}
+
+func waitUntil(t *testing.T, what string, ok func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for !ok() {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for %s", what)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// Spec (MCPX-20): a stateless connection opens subscriptions/listen for
+// list changes; a change on that stream reaches ToolsChanged /
+// ResourcesChanged. When the server ends the stream, termocode listens
+// again.
+func TestModernSubscriptionsListen(t *testing.T) {
+	log := filepath.Join(t.TempDir(), "log")
+	var tools, resources atomic.Int64
+	p := startFake(t, map[string]string{"FAKE_MODERN": "only", "FAKE_LOG": log}, Options{
+		ToolsChanged:     func() { tools.Add(1) },
+		ResourcesChanged: func(string) { resources.Add(1) },
+	})
+	listens := func() int { return strings.Count(fakeLog(t, log), "\nsubscriptions/listen\n") }
+	waitUntil(t, "the listen request", func() bool { return listens() == 1 })
+	ctx := context.Background()
+	if res, err := p.Client.CallTool(ctx, "notify_changed", nil); err != nil || res.Text() != "notified" {
+		t.Fatalf("notify_changed: %q %v", res.Text(), err)
+	}
+	waitUntil(t, "tools changed", func() bool { return tools.Load() == 1 })
+	if res, err := p.Client.CallTool(ctx, "notify_resources", nil); err != nil || res.Text() != "notified" {
+		t.Fatalf("notify_resources: %q %v", res.Text(), err)
+	}
+	waitUntil(t, "resources changed", func() bool { return resources.Load() == 1 })
+	if _, err := p.Client.CallTool(ctx, "end_listen", nil); err != nil {
+		t.Fatal(err)
+	}
+	waitUntil(t, "a new listen request", func() bool { return listens() == 2 })
+}
+
+// Spec (MCPX-20): over HTTP the change stream is the long answer of the
+// subscriptions/listen POST.
+func TestModernHTTPListen(t *testing.T) {
+	f := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{Modern: true})
+	var tools atomic.Int64
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	p, err := StartHTTP(ctx, httpServer(f.MCPURL()), HTTPOptions{}, Options{ToolsChanged: func() { tools.Add(1) }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	waitUntil(t, "the listen request", func() bool { return strings.Contains(strings.Join(rpcs(f), ","), "subscriptions/listen") })
+	// The stream may still be opening: notify until a change arrives.
+	waitUntil(t, "tools changed", func() bool {
+		if tools.Load() > 0 {
+			return true
+		}
+		_, _ = p.Client.CallTool(ctx, "notify_changed", nil)
+		return tools.Load() > 0
+	})
 }

@@ -3,6 +3,7 @@ package mcptest
 import (
 	"encoding/json"
 	"os"
+	"sync"
 
 	"github.com/amin-jalali/termocode/internal/extproc"
 )
@@ -146,4 +147,63 @@ func MRTR(name string, params json.RawMessage) (result any, rerr *extproc.Error,
 		return nil, &extproc.Error{Code: extproc.CodeInvalidParams, Message: "bad requestState"}, true
 	}
 	return nil, nil, false
+}
+
+// The fake's one subscriptions/listen stream (stdio).
+var listen struct {
+	sync.Mutex
+	id     json.RawMessage // the listen request's id; nil: none
+	filter map[string]any
+}
+
+// Listen opens the subscription: the acknowledgement goes out, the
+// request stays open until EndListen.
+func Listen(c Notifier, id, params json.RawMessage) {
+	var p struct {
+		Notifications map[string]any `json:"notifications"`
+	}
+	_ = json.Unmarshal(params, &p)
+	agreed := map[string]any{}
+	for _, k := range []string{"toolsListChanged", "resourcesListChanged", "promptsListChanged"} {
+		if v, _ := p.Notifications[k].(bool); v {
+			agreed[k] = true
+		}
+	}
+	listen.Lock()
+	listen.id, listen.filter = id, agreed
+	listen.Unlock()
+	_ = c.Notify("notifications/subscriptions/acknowledged", map[string]any{
+		"_meta": map[string]any{"io.modelcontextprotocol/subscriptionId": id}, "notifications": agreed})
+}
+
+// ListenCall runs the stateless tools that use the subscription:
+// notify_changed / notify_resources send their notification on it (only
+// when the client asked for that kind), end_listen ends it gracefully.
+func ListenCall(c *extproc.Conn, name string) (any, bool) {
+	listen.Lock()
+	id, filter := listen.id, listen.filter
+	listen.Unlock()
+	tag := map[string]any{"io.modelcontextprotocol/subscriptionId": id}
+	switch name {
+	case "notify_changed", "notify_resources":
+		kind, method := "toolsListChanged", "notifications/tools/list_changed"
+		if name == "notify_resources" {
+			kind, method = "resourcesListChanged", "notifications/resources/list_changed"
+		}
+		if id == nil || filter[kind] != true {
+			return text("not subscribed"), true
+		}
+		_ = c.Notify(method, map[string]any{"_meta": tag})
+		return text("notified"), true
+	case "end_listen":
+		if id == nil {
+			return text("not subscribed"), true
+		}
+		listen.Lock()
+		listen.id = nil
+		listen.Unlock()
+		_ = c.Reply(id, map[string]any{"resultType": "complete", "_meta": tag}, nil)
+		return text("ended"), true
+	}
+	return nil, false
 }
