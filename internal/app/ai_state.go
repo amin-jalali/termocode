@@ -480,6 +480,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-show", "AI: Show Profile", ""},
 		{"ai-until-done", "AI: Work Until Done (toggle)", ""},
 		{"ai-plan-approval", "AI: Toggle Plan Approval", ""},
+		{"ai-keep-going", "AI: Toggle Keep Going While Todos Are Open", ""},
 		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
@@ -606,6 +607,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIProfile(), true
 	case "ai-until-done":
 		return m.toggleAIUntilDone(), true
+	case "ai-keep-going": // OMX-7 (ai_keep_going.go)
+		return m.toggleAIKeepGoing(), true
 	case "ai-plan-approval": // G-PLAN (ai_plan_approval.go)
 		return m.toggleAIPlanApproval(), true
 	case "ai-plan-review":

@@ -157,3 +157,11 @@ func TestAIKeepGoingToggle(t *testing.T) {
 		t.Fatal("not off")
 	}
 }
+
+func TestAIKeepGoingPaletteEntry(t *testing.T) {
+	m := aiTestModel(t)
+	m.ai.provider = fakeAIProvider{}
+	if cmd, ok := m.dispatchAIPalette("ai-keep-going"); !ok || cmd == nil || !m.ai.conv.KeepGoing {
+		t.Fatal("palette entry does not toggle keep going")
+	}
+}
