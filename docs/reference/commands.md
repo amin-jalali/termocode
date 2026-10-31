@@ -61,6 +61,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Rename Chat… | `ai-history-rename` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Review Waiting Plan | `ai-plan-review` |   |   |
+| AI: Run Next Plan in a Worktree, Then Ship… / Off | `ai-plan-worktree` |   |   |
 | AI: Runs | `ai-runs` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
