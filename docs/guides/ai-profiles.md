@@ -519,6 +519,22 @@ While a planned run goes, the chat shows where it is under its cards:
 `─ run · wave 3/4 · done 2/5 · 2 running ──`. A click on that row opens
 the run in the AGENTS panel.
 
+### Plan review and the plan file
+
+- **Review rounds** (`ai_plan_review_rounds`, off by default). With 1 to
+  5, a reviewer on the `deep` model reads the plan before it runs. It
+  approves it, or sends its reasons back and the planner plans again, at
+  most that many times. The planner's card shows each round
+  (`✘ plan review 1: …`, `✓ plan review 2: approved`). Each round costs
+  one more model request.
+- **Plan file** (`ai_plan_file`, on by default). A planned run writes
+  `.termocode/plans/<task>-<run id>.md`: the steps and their tasks, the
+  review rounds, the verify step's evidence and how the run ended. The
+  planner's card says `plan saved: …`.
+- **Evidence.** The verify step lists what it checked under `EVIDENCE:`
+  (a command and its result, or a file:line) before its verdict; the
+  list goes into the plan file.
+
 ## Approve the plan
 
 Before a run starts a step that **changes files** or **runs commands**,
