@@ -46,7 +46,7 @@ type Tool struct {
 	Annotations *ToolAnnotations `json:"annotations,omitempty"`
 	// OutputSchema is the JSON Schema of the tool's structuredContent.
 	OutputSchema map[string]any `json:"outputSchema,omitempty"`
-	// Meta is the tool's _meta (maxResultSizeChars, …).
+	// Meta is the tool's _meta (maxResultSizeChars, …), kept as sent (spec2026.go).
 	Meta map[string]any `json:"_meta,omitempty"`
 }
 
@@ -104,6 +104,7 @@ type CallResult struct {
 	Content           []Content       `json:"content"`
 	StructuredContent json.RawMessage `json:"structuredContent,omitempty"`
 	IsError           bool            `json:"isError,omitempty"`
+	Meta              map[string]any  `json:"_meta,omitempty"` // kept as sent (spec2026.go)
 }
 
 // Text renders a result for the model: text items as they are, binary

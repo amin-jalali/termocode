@@ -190,6 +190,9 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 		if err != nil {
 			return nil, fmt.Errorf("tools/list: %w", err)
 		}
+		if err := checkResultType(raw); err != nil {
+			return nil, fmt.Errorf("tools/list: %w", err)
+		}
 		var res listToolsResult
 		if err := json.Unmarshal(raw, &res); err != nil {
 			return nil, fmt.Errorf("tools/list: bad answer: %w", err)
@@ -290,11 +293,7 @@ func (c *Client) callTool(ctx context.Context, name string, args map[string]any,
 	if err != nil {
 		return CallResult{}, err
 	}
-	var res CallResult
-	if err := json.Unmarshal(raw, &res); err != nil {
-		return CallResult{}, fmt.Errorf("tools/call: bad answer: %w", err)
-	}
-	return res, nil
+	return decodeCallResult(raw)
 }
 
 // handle answers the server's requests and notifications. It runs on the
