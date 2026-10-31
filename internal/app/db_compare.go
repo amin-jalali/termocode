@@ -209,6 +209,7 @@ func (m *Model) onDBCompareSides(msg dbCompareSidesMsg) tea.Cmd {
 		items = append(items, it)
 	}
 	m.picker = picker.NewItems(" Compare schemas 1/2 · SOURCE (the one to copy) ", items)
+	m.picker.SetWidth(dbComparePickerWidth(m.w))
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindDBCompareSource
@@ -270,6 +271,7 @@ func (m *Model) databaseComparePicker(id string) (tea.Cmd, bool) {
 			items = append(items, picker.Item{ID: strconv.Itoa(j), Title: side.label(), Hint: hint})
 		}
 		m.picker = picker.NewItems(" Compare schemas 2/2 · TARGET (to change) ", items)
+		m.picker.SetWidth(dbComparePickerWidth(m.w))
 		m.picker.SetSize(m.w, m.h)
 		m.pickerOpen = true
 		m.pickerKind = pickerKindDBCompareTarget
@@ -415,4 +417,11 @@ func (m *Model) databaseCompareAction(id string) tea.Cmd {
 		return m.fetchStateCmd()
 	}
 	return nil
+}
+
+// dbComparePickerWidth fits the step title ("… SOURCE (the one to
+// copy)") on its row: the picker cuts a longer title, and the cut part
+// says which side is which.
+func dbComparePickerWidth(w int) int {
+	return max(56, min(76, w-8))
 }
