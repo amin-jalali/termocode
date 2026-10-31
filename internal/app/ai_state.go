@@ -507,6 +507,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-credentials", "Open Config: AI Credentials", ""},
 		{"ai-mcp-connect", "AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry)", ""},
 		{"ai-mcp-servers", "AI: MCP Servers…", ""},
+		{"ai-mcp-insert", "AI: MCP Prompts and Resources…", ""},
 		{"ai-mcp-log", "AI: MCP: Show Log", ""},
 		{"ai-mcp-reconnect-all", "AI: MCP: Reconnect All Servers", ""},
 		{"ai-mcp-config", "Open Config: MCP Servers", ""},
@@ -600,6 +601,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openMCPConnect(), true
 	case "ai-mcp-servers":
 		return m.openMCPServers(), true
+	case "ai-mcp-insert": // ai_mcp_insert.go
+		return m.openMCPInsertPicker(), true
 	case "ai-mcp-log":
 		return m.showMCPLog(), true
 	case "ai-mcp-reconnect-all":

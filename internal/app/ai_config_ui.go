@@ -68,6 +68,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onMCPServeStatusPicked(id), true
 	case pickerKindAIAttach:
 		return m.onAIAttachPicked(id), true
+	case pickerKindMCPInsert: // ai_mcp_insert.go
+		return m.onMCPInsertPicked(id), true
 	case pickerKindAIMemory: // ai_memory_picker.go
 		return m.onAIMemoryPicked(id), true
 	case pickerKindAISkills: // ai_skills.go

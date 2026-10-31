@@ -93,3 +93,33 @@ func TestAIMCPPromptTab(t *testing.T) {
 		t.Fatalf("several commands %q / %q", got, covToastText(m))
 	}
 }
+
+// The palette's "MCP Prompts and Resources…" lists both; a pick puts
+// "/server.prompt " or "@server:uri " in the chat input.
+func TestAIMCPInsertPicker(t *testing.T) {
+	m := covMCPModel(t)
+	writeUserMCP(t, mcptest.Config(map[string]map[string]string{"fake": nil}))
+	list, ok := covCollect[aiMCPInsertListMsg](m.openMCPInsertPicker())
+	if !ok {
+		t.Fatal("no list")
+	}
+	var ids []string
+	for _, it := range list.items {
+		ids = append(ids, it.ID)
+	}
+	all := strings.Join(ids, "|")
+	for _, want := range []string{"/fake.review ", "/fake.hello ", "@fake:file:///notes/a.txt ", "@fake:img://chart.png "} {
+		if !strings.Contains(all, want) {
+			t.Errorf("picker misses %q: %v", want, ids)
+		}
+	}
+	m.onAIMCPInsertList(list)
+	if !m.pickerOpen || m.pickerKind != pickerKindMCPInsert {
+		t.Fatal("picker not open")
+	}
+	m.aiSetInput("look at")
+	m.onMCPInsertPicked("@fake:file:///notes/a.txt ")
+	if got := string(m.aiS().input); got != "look at @fake:file:///notes/a.txt " {
+		t.Errorf("input %q", got)
+	}
+}
