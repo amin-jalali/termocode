@@ -27,6 +27,7 @@ func fakeClipboard(p *Page, paste string) {
 // rightClick opens the context menu of the element el (a JS expression).
 func rightClick(p *Page, el string) {
 	p.T.Helper()
+	p.WaitJS(el) // the row is drawn
 	Eval[bool](p, `(() => { const el = `+el+`; const r = el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2, clientX: r.left + 8, clientY: r.top + 8 })); return true; })()`)
 	p.WaitJS(`document.querySelector(".ctx-menu .ctx-item") && document.activeElement?.classList.contains("ctx-item")`)
 }
