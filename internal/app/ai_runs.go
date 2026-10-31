@@ -466,7 +466,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			mail.openKey(k)
 			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHooks(dir, ts, out), Native: native, AutoApprove: own, MaxSteps: maxSteps,
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
-				Reasoning: aiCategoryReasoning(n, cats, reasoning(n.Slot, sl.cfg), think), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: fallbacks[n.Slot],
+				Reasoning: aiCategoryReasoning(n, cats, reasoning(n.Slot, sl.cfg), think), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: aiFallbacksWithTemp(fallbacks[n.Slot], aiCategoryTemp(n, cats)),
 				ContextWindow: windowOf(sl.cfg.Model), Inbox: mail.inbox(k)}, msgs, nil
 		},
 		Finished: func(_ context.Context, n agentdag.Node) {

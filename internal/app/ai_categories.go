@@ -209,6 +209,20 @@ func aiWithTemp(p ai.Provider, temp *float64) ai.Provider {
 	return aiTempProvider{Provider: p, temp: *temp}
 }
 
+// aiFallbacksWithTemp gives the backup models the step's temperature
+// too, so a fallback to another provider keeps it.
+func aiFallbacksWithTemp(fbs []ai.Fallback, temp *float64) []ai.Fallback {
+	if temp == nil || len(fbs) == 0 {
+		return fbs
+	}
+	out := make([]ai.Fallback, len(fbs))
+	for i, f := range fbs {
+		f.Provider = aiWithTemp(f.Provider, temp)
+		out[i] = f
+	}
+	return out
+}
+
 // aiRunAgain marks step id of the running run to start once more.
 func (s *aiState) aiRunAgain(id string) {
 	if s.runAgain == nil {
