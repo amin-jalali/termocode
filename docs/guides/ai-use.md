@@ -723,6 +723,16 @@ The AI has no memory tool: it can not turn memory on or off or forget a
 lesson. It can change `lessons.md` only like any file, through the review
 card.
 
+**Recall during a turn.** After each tool call, termocode checks the
+lessons against the call: a lesson about the call's file, or one that
+shares two or more words with it. A match that this chat has not seen yet
+is added to the tool result, so the AI sees it before its next step, and
+the chat shows `💡 recalled: <title>`. Lessons already in the turn's
+prompt are not recalled again. This is local and free. Set
+`"ai_memory_recall": "check"` to let the quick model first say if the
+lesson applies (one small request for each new match), or `"off"` to stop
+it.
+
 ## Skills
 
 Knowledge files the AI loads only when a task needs them: see
