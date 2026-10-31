@@ -27,6 +27,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`git_diff`](#git_diff) | auto | yes | Show the diff of one file vs HEAD, or of all changes when path is empty. |
 | [`git_branch`](#git_branch) | auto | yes | List git branches (current marked with *). |
 | [`write_file`](#write_file) | confirm (review) | no | Write a file with new content (creates it if missing). |
+| [`edit_file`](#edit_file) | confirm (review) | no | Change part of a file: replace old_text (copied exactly from the file, unique in it) with new_text. |
 | [`create_file`](#create_file) | confirm (review) | no | Create a new file, optionally with content. |
 | [`create_dir`](#create_dir) | confirm (fileWrite) | no | Create a directory (and missing parents). |
 | [`delete`](#delete) | confirm (fileWrite) | no | Delete a file or directory. |
@@ -231,6 +232,21 @@ Write a file with new content (creates it if missing). If the file is open in th
 | --- | --- | --- | --- |
 | `content` | string | yes | the complete new file content |
 | `path` | string | yes | file path |
+
+### edit_file
+
+Change part of a file: replace old_text (copied exactly from the file, unique in it) with new_text. Use it instead of write_file for small changes in an existing file. Fails if old_text is not found (read the file again) or matches more than one place (add lines around it, or set replace_all). If the file is open in the editor, its tab shows the new text; a file with unsaved edits is refused. The user reviews the change as a diff and accepts or rejects each part; the result says what was written.
+
+**Gate:** confirm (review)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `new_text` | string | yes | the text to put in its place |
+| `old_text` | string | yes | the exact text to replace |
+| `path` | string | yes | file path |
+| `replace_all` | boolean |   | change every place old_text appears |
 
 ### create_file
 
