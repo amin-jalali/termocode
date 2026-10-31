@@ -503,7 +503,7 @@ chat shows the read as a tool line.
 
 **Prompts.** Some servers have ready-made prompts. Type
 `/server.prompt` and the values, in order or as `name=value`:
-`/github.review main.go style=short`. **Tab** completes the prompt name
+`/myserver.review main.go style=short`. **Tab** completes the prompt name
 and the values (when the server can suggest them). The prompt's text is
 sent as your message, so you see what goes to the model.
 
