@@ -206,3 +206,11 @@ func (c *Client) handleElicit(m extproc.Message, reply replyFunc) {
 		reply(out, nil)
 	}()
 }
+
+// Elicit asks through ctx's elicitor (decline when there is none).
+func Elicit(ctx context.Context, req ElicitRequest) ElicitResult {
+	if e := elicitorFrom(ctx); e != nil {
+		return e(ctx, req)
+	}
+	return ElicitResult{Action: ElicitDecline}
+}

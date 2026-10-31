@@ -24,6 +24,7 @@ import (
 type aiMCPXState struct {
 	prompts map[string][]mcp.Prompt // server → prompts (Tab, the picker)
 	loading bool
+	elicit  *aiMCPElicitPending // the open server question (ai_mcp_elicit.go)
 }
 
 // aiMCPPromptTimeout caps one prompt request.

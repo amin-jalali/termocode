@@ -142,6 +142,7 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 	return func(ctx context.Context) []ai.Tool {
 		mgr.Reload()
 		call := mcp.TurnCaller(mgr.Caller(ask)) // two failures: the server is out for this turn
+		call = mcpElicitCall(call, gen, ch)     // a server may ask the user (MCPX-14)
 		list := mgr.Tools(ctx, ask)
 		out := mcpTurnTools(list, set, call, opts)
 		var withResources []string

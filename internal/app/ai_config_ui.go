@@ -140,6 +140,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerMCPTrust(id), true
 	case confirmKindMCPImportOther: // mcp_import_other.go
 		return m.answerMCPImportOther(id), true
+	case confirmKindMCPElicit, confirmKindMCPElicitURL, confirmKindMCPElicitSend: // ai_mcp_elicit.go
+		return m.answerMCPElicit(m.confirmKind, id), true
 	case confirmKindMCPRemove: // mcp_service_manage.go
 		return m.answerMCPRemove(id), true
 	case confirmKindMCPUntrust: // ai_mcp_untrust.go
@@ -216,6 +218,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerMCPTrust("deny")
 	case confirmKindMCPImportOther:
 		return m.answerMCPImportOther("cancel")
+	case confirmKindMCPElicit, confirmKindMCPElicitURL, confirmKindMCPElicitSend:
+		return m.answerMCPElicit(m.confirmKind, "") // Esc: cancel
 	case confirmKindMCPRemove:
 		return m.answerMCPRemove("keep")
 	case confirmKindMCPUntrust:
