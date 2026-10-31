@@ -397,13 +397,21 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 	if c.matches(s, width, rk, resizing, act, stall) {
 		return c
 	}
+	canKeepRows := len(c.lines) > 0 && len(s.streamTranscript.lines) > 0 && &c.lines[0] == &s.streamTranscript.lines[0]
 	lines := m.buildAITranscriptAt(width, act)
 	if c.ok {
 		s.aiKeepSelection(c.msgs, c.width, width)
 	}
+	rows := make([]string, 0)
+	kept := s.streamTranscript.reused
+	if canKeepRows && kept > 0 && kept <= len(c.rows) {
+		rows = append(c.rows[:kept], make([]string, len(lines)-kept)...)
+	} else {
+		rows = make([]string, len(lines))
+	}
 	*c = aiTranscriptCache{ok: true, width: width, rk: rk, rtl: rtlMode, resizing: resizing, streaming: s.streaming, act: act, stall: stall,
 		hasProvider: s.provider != nil, restoreGen: s.restoreGen, runGen: s.runGen, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
-		lines: lines, rows: make([]string, len(lines))}
+		lines: lines, rows: rows}
 	if s.provider != nil {
 		c.configured, c.label = s.provider.Configured(), s.modelLabel()
 	}
@@ -446,7 +454,11 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 	}
 	var out []aiLine
 	s := m.ai
+	reuse := false
 	if s != nil {
+		reuse = s.streamTranscript.prepare(m, width, m.dragKind == dragActionsLeft)
+	}
+	if s != nil && !reuse {
 		// About as long as the last build: no regrowing a long transcript.
 		out = make([]aiLine, 0, len(s.transcript.lines)+64)
 	}
@@ -499,7 +511,14 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 		}
 	}
 	resizing := m.dragKind == dragActionsLeft
-	for i, msg := range s.conv.Messages {
+	first := 0
+	if reuse {
+		out = s.streamTranscript.lines[:s.streamTranscript.start]
+		turn = s.streamTranscript.turn
+		first = last
+	}
+	for i := first; i < len(s.conv.Messages); i++ {
+		msg := s.conv.Messages[i]
 		if msg.Role == ai.StoredUser {
 			undo()
 			turn = i
@@ -515,6 +534,10 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			}
 		}
 		start := len(out)
+		if i == last && s.streamTranscript.active {
+			s.streamTranscript.start = start
+			s.streamTranscript.turn = turn
+		}
 		switch msg.Role {
 		case ai.StoredUser:
 			if msg.Summary != "" { // OMX-3
@@ -542,12 +565,32 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 				break
 			}
 			out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
-			text := aiCleanText(msg.Text)
+			text := ""
+			if streaming {
+				if s.cleanAnswerIndex != i {
+					s.answerCleaner = aiStreamCleaner{}
+					s.cleanAnswerIndex = i
+				}
+				text = s.answerCleaner.clean(msg.Text)
+			} else {
+				text = aiCleanText(msg.Text)
+			}
 			out = append(out, m.aiAnswerHeader(width, i, !streaming))
 			if strings.TrimSpace(text) == "" && streaming {
 				break // the activity line below says what the model does
 			}
-			out = append(out, s.renderAnswer(i, text, width, streaming, resizing)...)
+			stable := 0
+			st := &s.mdStream
+			if reuse && st.ok && st.i == i && st.width == width && st.theme == theme.CurrentRenderKey() && st.rtl == rtlMode && st.startsWith(text) {
+				stable = len(trimBlankAILines(st.lines))
+			}
+			answer := s.renderAnswer(i, text, width, streaming, resizing)
+			stable = min(stable, len(answer))
+			if stable > 0 {
+				out = out[:len(out)+stable]
+				s.streamTranscript.reused = len(out)
+			}
+			out = append(out, answer[stable:]...)
 		case ai.StoredTool:
 			out = append(out, selPlain(aiCleanText(msg.Text), theme.TextDim, i)...)
 			out = append(out, s.aiToolDetailLines(i, width)...) // MCPX-33
@@ -571,6 +614,9 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 	undo()
 	out = append(out, act.lines(ind, inner)...)
 	out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
+	if s.streamTranscript.active {
+		s.streamTranscript.lines = out
+	}
 	return out
 }
 
@@ -804,6 +850,8 @@ func (s *aiState) dropRenderCaches() {
 	}
 	s.transcript, s.inputCache, s.mdCache = aiTranscriptCache{}, aiInputCache{}, nil
 	s.mdStream = aiMDStream{}
+	s.streamTranscript = aiStreamTranscript{}
+	s.answerCleaner = aiStreamCleaner{}
 }
 
 // pruneMDCache drops rendered answers past the last message (a cleared

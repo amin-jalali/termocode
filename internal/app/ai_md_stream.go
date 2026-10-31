@@ -1,7 +1,6 @@
 package app
 
 import (
-	"slices"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/rtl"
@@ -20,16 +19,12 @@ import (
 
 // aiMDStream is the kept, drawn start of answer i.
 type aiMDStream struct {
-	ok    bool
-	i     int
-	width int
-	theme theme.RenderKey
-	rtl   rtl.Mode
-	// parts are the drawn start of the answer (it ends after a blank
-	// line), in the pieces it was drawn in, n bytes in all. They are
-	// copies: a slice of the streamed text would keep every older,
-	// shorter copy of the whole answer alive.
-	parts  []string
+	ok     bool
+	i      int
+	width  int
+	theme  theme.RenderKey
+	rtl    rtl.Mode
+	text   string // latest immutable source; replaced on every append
 	n      int
 	lines  []aiLine
 	blocks int // code blocks in text
@@ -47,10 +42,11 @@ func (s *aiState) renderAnswerParts(i int, text string, width int, streaming boo
 		part := strings.Clone(text[st.n:p])
 		lines, blocks := renderChatMarkdownFrom(part, width, aiIndent, i, st.blocks, streaming)
 		st.lines = append(st.lines, lines...)
-		st.parts, st.n, st.blocks = append(st.parts, part), p, blocks
+		st.n, st.blocks = p, blocks
 	}
 	tail, _ := renderChatMarkdownFrom(text[st.n:], width, aiIndent, i, st.blocks, streaming)
-	out := trimBlankAILines(append(slices.Clip(st.lines), tail...))
+	out := trimBlankAILines(append(st.lines, tail...))
+	st.text = text
 	if !streaming {
 		*st = aiMDStream{} // the answer is done: its rows are kept once, by the caller
 	}
@@ -59,17 +55,7 @@ func (s *aiState) renderAnswerParts(i int, text string, width int, streaming boo
 
 // startsWith reports whether text begins with the drawn start.
 func (st *aiMDStream) startsWith(text string) bool {
-	if len(text) < st.n {
-		return false
-	}
-	off := 0
-	for _, p := range st.parts {
-		if text[off:off+len(p)] != p {
-			return false
-		}
-		off += len(p)
-	}
-	return true
+	return appendedText(text, st.text)
 }
 
 // mdSafeSplit returns the end of the last blank line of text after from
