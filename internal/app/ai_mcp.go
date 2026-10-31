@@ -505,6 +505,7 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 	items = append(items, mcpUntrustItems(m, name)...) // ai_mcp_untrust.go
 	items = append(items,
 		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
+		picker.Item{ID: "copy-teammate", Title: "Copy for a teammate", Hint: "its JSON; secrets as ${secret:NAME}, no values"},
 		picker.Item{ID: "log", Title: "Show log", Hint: "Output: MCP"},
 		picker.Item{ID: "disable", Title: "Disable", Hint: "keep the entry, stop it, no tools for the AI"},
 		picker.Item{ID: "remove", Title: "Remove…", Hint: "delete the entry and forget its sign-in"},
@@ -596,6 +597,8 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 		return nil
 	case "log":
 		return m.showMCPLog()
+	case "copy-teammate":
+		return m.mcpCopyForTeammate(name) // ai_mcp_copy.go
 	case "signin":
 		if !st.Trusted {
 			for _, sv := range mcpServerEntries(name) {
