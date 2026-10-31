@@ -57,7 +57,9 @@ func aiLoadSkills(root string) ai.Skills {
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
 		extra = append(extra, filepath.Join(home, ".claude", "skills"))
 	}
-	return ai.LoadSkills(root, aiSkillsUserDir(), extra...)
+	s := ai.LoadSkills(root, aiSkillsUserDir(), extra...)
+	aiFoldCommandsTrust(&s, aiLoadChatCommands(root)) // OMX-11: one card for both
+	return s
 }
 
 // aiSkillsTrust is the user's answer for the project skills of s.
@@ -166,6 +168,16 @@ func (m *Model) askAISkillsTrust(s ai.Skills, send bool, text string) tea.Cmd {
 			break
 		}
 		b.WriteString("\n    " + runewidth.Truncate(sk.Name+" — "+agentdag.Clean(sk.Description), 72, "…"))
+	}
+	if cmds := aiProjectCommands(aiLoadChatCommands(aiWorkspaceRoot())); len(cmds) > 0 {
+		fmt.Fprintf(&b, "\n%s · %d chat command%s", ai.CommandFilesDir, len(cmds), plural(len(cmds)))
+		for i, c := range cmds {
+			if i == aiSkillsCardLines {
+				b.WriteString("\n    …")
+				break
+			}
+			b.WriteString("\n    " + runewidth.Truncate("/"+c.Name+" — "+agentdag.Clean(c.Description), 72, "…"))
+		}
 	}
 	b.WriteString("\n\nThe AI may load their text when a task needs it: use them only if you trust this project.")
 	// Not in this project is first and focused, as on the rules card.
@@ -276,6 +288,12 @@ func (m *Model) openAISkills() tea.Cmd {
 	group(ai.SkillSourceProject, project)
 	group(ai.SkillSourceUser, "User skills")
 	group(ai.SkillSourceBuiltin, "Built-in skills")
+	for i, c := range aiLoadChatCommands(aiWorkspaceRoot()).List {
+		if i == 0 {
+			items = append(items, picker.Item{Header: true, Title: "Chat commands · type /name in the chat", Group: "commands"})
+		}
+		items = append(items, picker.Item{ID: aiSkillsOpenPrefix + c.Path, Title: "/" + c.Name, Hint: agentdag.Clean(c.Description), Group: "commands"})
+	}
 	items = append(items, picker.Item{Header: true, Title: "Actions", Group: "actions"},
 		picker.Item{ID: aiSkillsNewProjectID, Title: "New project skill…", Hint: ai.SkillsDir, Group: "actions"},
 		picker.Item{ID: aiSkillsNewUserID, Title: "New user skill…", Hint: "your config folder", Group: "actions"})

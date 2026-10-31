@@ -253,7 +253,13 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if sk := aiLoadSkills(aiWorkspaceRoot()); sk.ProjectHash != "" && aiSkillsTrust(sk) == aiTrustAsk {
 		return m.askAISkillsTrust(sk, true, text) // OM-4: a repo's skills are shown first
 	}
-	s.takeTurnKeyword(text)                                     // OMX-5: "think" / "ultrathink" (unless its chip was removed)
+	s.takeTurnKeyword(text) // OMX-5: "think" / "ultrathink" (unless its chip was removed)
+	if out, ok, problem := aiExpandChatCommand(aiWorkspaceRoot(), text); problem != "" {
+		m.ai.input = []rune(asked)
+		return m.aiInfo(problem)
+	} else if ok {
+		text = out // OMX-11: a /name command file
+	}
 	if len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI() { // a CLI step always runs as a run (CS-1)
 		return m.startAIRun(text, prof, rules)
 	}

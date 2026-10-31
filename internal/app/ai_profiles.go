@@ -51,6 +51,7 @@ func (s *aiState) reloadProfiles() {
 	}
 	user, _ := ai.ProfilesPath()
 	s.profiles = ai.LoadProfiles(user, ai.ProjectProfilesPath(aiWorkspaceRoot()), known, s.settings.Parallel())
+	aiAgentFileProfiles(&s.profiles, aiWorkspaceRoot()) // OMX-11
 	s.profiles.Errors = append(append([]string(nil), s.slotErrs...), s.profiles.Errors...)
 	for _, p := range s.profFake {
 		s.profiles.Add(p)
