@@ -809,7 +809,7 @@ also shows the older lines.
 | `connected · old transport` | The server only speaks the old HTTP+SSE transport. It works; termocode tries it only when the server refuses the current one. Ask the service for its `/mcp` URL when it has one. |
 | `reconnecting in 8s` | The remote server could not be reached. termocode tries again by itself, waiting longer each time (up to 2 minutes, 8 tries). Nothing to do. |
 | `failed: … (gave up after 8 tries …)` | Run **AI: MCP: Reconnect All Servers** when you are back online. It also checks the running servers with a ping. |
-| `speaks MCP 2026-07-28 (stateless)` | The server speaks the newest MCP version. Nothing to do: termocode asks each server first and uses the older start for older servers. |
+| `speaks MCP 2026-07-28 (stateless)` | The server speaks the newest MCP version. Nothing to do: termocode asks each server first and uses the older start for older servers. It remembers an older server for a day (or until its entry or version changes), so later starts do not ask again. |
 | `the change stream broke` | A new-version server's change list stream ended. termocode opens it again by itself. |
 | A key in `mcp.json` seems to do nothing | Turn on `mcp_strict` (Settings → MCP). The servers list then shows `⚠ unknown key: …` under a server whose entry has a key termocode does not read, such as a typo. Keys that start with `_` or `$` are comments. |
 | `tools changed` | Review with **Show tools**, then **Trust the new tools**. |
