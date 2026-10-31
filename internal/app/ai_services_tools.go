@@ -344,7 +344,7 @@ func aiServicesLogs(ctx context.Context, call aiIDECaller, name string, lines in
 		if name == "all" {
 			section, comp = svcSecCompose, st.composeBackend()
 			if comp == nil {
-				return "", nil, errors.New("Docker Compose is not available: " + st.problem.Message())
+				return "", nil, errors.New("Docker Compose is not available: " + st.composeProblem().Message())
 			}
 			return "", nil, nil
 		}
@@ -356,7 +356,7 @@ func aiServicesLogs(ctx context.Context, call aiIDECaller, name string, lines in
 		if sec == svcSecCompose {
 			comp = st.composeBackend()
 			if comp == nil {
-				return "", nil, errors.New("Docker Compose is not available: " + st.problem.Message())
+				return "", nil, errors.New("Docker Compose is not available: " + st.composeProblem().Message())
 			}
 			return "", nil, nil
 		}
