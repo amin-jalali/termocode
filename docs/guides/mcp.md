@@ -97,8 +97,9 @@ works the same over SSH.
 **Use a token instead** is on every sign-in screen, as the last way
 (some organisations block new apps). The screen names the page where
 you make the token and the smallest scopes to tick; the token is hidden
-while you paste it and saved in `credentials.json` (mode `0600`), never
-in `mcp.json`. The entry gets a header like
+while you paste it and saved in your secret store (see
+[Which store is used](ai-setup.md#which-store-is-used)), never in
+`mcp.json`. The entry gets a header like
 `"Authorization": "Bearer ${secret:github_token}"` (Sentry uses
 `Sentry-Bearer`, Atlassian an e-mail plus API token). ClickUp has no
 token way.
@@ -176,8 +177,8 @@ The AI's instructions name each connected service and its access
 ## Add a server by hand
 
 **Paste a config…** in the Connect wizard takes an `mcpServers` block from
-another tool as it is: tokens in it move to
-`credentials.json` and the entries get `${secret:…}` instead. Names that
+another tool as it is: tokens in it move to your
+secret store and the entries get `${secret:…}` instead. Names that
 already exist are skipped.
 
 Or run **Open Config: MCP Servers**. It opens
@@ -239,18 +240,16 @@ servers on your own computer (`localhost`, `127.0.0.1`).
 |---|---|
 | `${VAR}` | the environment variable `VAR` |
 | `${VAR:-default}` | `VAR`, or `default` when it is empty |
-| `${secret:NAME}` | `mcp_secrets.NAME` in `~/.config/termocode/ai/credentials.json` |
+| `${secret:NAME}` | the secret `NAME` in your secret store |
 | `${workspaceFolder}` | the open workspace folder |
 | `${userHome}` | your home folder |
 
 Do not put tokens in `mcp.json`. Use `${secret:NAME}` and set the value
 with **AI: MCP Servers…** → the server → **Set secret NAME…**. It is saved
-in `credentials.json` (mode `0600`, only you can read it). You can also
-edit that file:
-
-```json
-{ "mcp_secrets": { "github_token": "ghp_…", "pg_uri": "postgres://me:pass@localhost/db" } }
-```
+in your secret store: the OS keyring, the encrypted file `secrets.age`, or
+the plain file `ai/credentials.json` only if you chose `secret_store:
+plain`. See [Which store is used](ai-setup.md#which-store-is-used).
+**AI: Secret Store…** lists the names (never the values).
 
 termocode warns in the MCP log when a value in `mcp.json` looks like a
 token. A `${cmd:…}` in a project's `.termocode/mcp.json` is refused: the
@@ -285,8 +284,7 @@ of 47391–47395); it stops after one answer or 5 minutes.
 The code sign-in (device flow, GitHub) polls the service at the pace
 the service asks for and stops when the code ends or you press Esc.
 
-The tokens are saved in `credentials.json` (`mcp_oauth`, mode `0600`,
-folder `0700`) with the account name, and refreshed by themselves. They
+The tokens are saved in your secret store with the account name, and refreshed by themselves. They
 are only sent to the URL you signed in for: when you change the
 server's URL to another server, termocode forgets them and asks you to
 sign in again (the read-only and full endpoints of one service count as
