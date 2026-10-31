@@ -404,6 +404,17 @@ The terminal tools use your real terminal panel, so you see the command run.
 The agent uses them for dev servers, watchers and tests you want to watch;
 for a quick command it uses the hidden **run** tool.
 
+The hidden **run** tool has no terminal and no input. It runs with
+`PAGER=cat`, `GIT_PAGER=cat`, `GIT_TERMINAL_PROMPT=0` and `CI=1`, so a
+pager, a git password prompt or a "watch" mode never hangs it. The
+agent's system prompt also says today's date, your OS and your shell.
+
+When a turn gets near the model's context window, big tool results are
+cut to what still fits: the start and the end stay, with a note in the
+middle. The agent can then ask for a smaller part (a line range, a
+narrower search). Small slips in a tool call's JSON (a trailing comma,
+a code fence around it) are fixed; a cut call is never run.
+
 - `terminal_send` asks first (kind *run*). It opens the panel and a tab
   when needed. Your keys stay where they were.
 - `terminal_read` runs at once. It can wait (up to 30 s) until the
