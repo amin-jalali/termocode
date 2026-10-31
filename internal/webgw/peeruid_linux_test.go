@@ -101,7 +101,13 @@ func TestOtherUIDRefused(t *testing.T) {
 		return procHeader + procRow(procHex(p), procHex(us), os.Getuid()+1)
 	})
 	accepted := make(chan net.Conn, 1)
+	done := make(chan struct{})
+	// Runs before fakeProcNet's cleanup (cleanups run last-in first-out):
+	// the Accept below must be over before the real table is put back,
+	// or the race detector sees the swap while peerUID reads it.
+	t.Cleanup(func() { ln.Close(); <-done })
 	go func() {
+		defer close(done)
 		if c, err := ln.Accept(); err == nil {
 			accepted <- c
 		}
