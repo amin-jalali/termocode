@@ -83,6 +83,10 @@ type SessionState struct {
 	// .termocode/skills files. A changed skill asks again.
 	AISkillsTrusted string `json:"ai_skills_trusted,omitempty"`
 	AISkillsRefused string `json:"ai_skills_refused,omitempty"`
+	// AIHooksTrusted / AIHooksRefused are the answers of the project hooks
+	// card (OMX-12): the sha256 of .termocode/hooks.json.
+	AIHooksTrusted string `json:"ai_hooks_trusted,omitempty"`
+	AIHooksRefused string `json:"ai_hooks_refused,omitempty"`
 	// AIMemory is the memory switch of this workspace (OM-2): "" never
 	// decided (off; the first lesson asks once), "on" or "off".
 	AIMemory string `json:"ai_memory,omitempty"`
@@ -210,6 +214,8 @@ func workspacePart(s SessionState) SessionState {
 		AIRulesRefused:    s.AIRulesRefused,
 		AISkillsTrusted:   s.AISkillsTrusted,
 		AISkillsRefused:   s.AISkillsRefused,
+		AIHooksTrusted:    s.AIHooksTrusted,
+		AIHooksRefused:    s.AIHooksRefused,
 		AIMemory:          s.AIMemory,
 
 		ServicesAIAllowed:   s.ServicesAIAllowed,

@@ -88,6 +88,7 @@ type aiState struct {
 	rulesTrust *aiRulesTrustPending
 	// skillsTrust is the open project-skills card (ai_skills.go).
 	skillsTrust *aiSkillsTrustPending
+	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the
@@ -492,6 +493,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-rules", "AI: Project Rules…", ""},
 		{"ai-memory", "AI: Memory…", ""},
 		{"ai-skills", "AI: Skills…", ""},
+		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
@@ -629,6 +631,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIMemory(), true
 	case "ai-skills":
 		return m.openAISkills(), true
+	case "ai-hooks":
+		return m.openAIHooks(), true
 	case "ai-memory-toggle":
 		return m.toggleAIMemory(), true
 	case "ai-models-edit":

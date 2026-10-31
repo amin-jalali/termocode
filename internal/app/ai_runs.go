@@ -429,7 +429,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 					own[c] = true
 				}
 			}
-			return &ai.Agent{Provider: sl.p, Tools: ts, Native: native, AutoApprove: own, MaxSteps: maxSteps,
+			return &ai.Agent{Provider: sl.p, Tools: aiWithHooks(dir, ts, m.output), Native: native, AutoApprove: own, MaxSteps: maxSteps,
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title)}, msgs, nil
 		},
 		Finished: func(_ context.Context, n agentdag.Node) {

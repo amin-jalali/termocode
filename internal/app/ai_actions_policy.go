@@ -499,6 +499,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Skills (OM-4): the AI loads them with skill_load; the picker, new
 	// files and trusting a project's skills are the user's.
 	"ai-skills": aiNever(aiNoPicker),
+	"ai-hooks":  aiNever(aiNoPicker),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
 	// Agent worktrees (G-WT): merging or discarding an agent's work and
