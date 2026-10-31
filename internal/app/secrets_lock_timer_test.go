@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -39,10 +40,13 @@ func fakeLockTicks(t *testing.T) *lockTicks {
 // fakeNow freezes clock.Now; the returned func moves it on.
 func fakeNow(t *testing.T) (advance func(time.Duration)) {
 	t.Helper()
+	// A leftover timer of another test (an MCP reconnect) may read the
+	// clock from its own goroutine: guard now.
+	var mu sync.Mutex
 	now := time.Date(2026, 10, 22, 9, 0, 0, 0, time.UTC)
-	restore := clock.Set(func() time.Time { return now })
+	restore := clock.Set(func() time.Time { mu.Lock(); defer mu.Unlock(); return now })
 	t.Cleanup(restore)
-	return func(d time.Duration) { now = now.Add(d) }
+	return func(d time.Duration) { mu.Lock(); now = now.Add(d); mu.Unlock() }
 }
 
 // setLockMinutes writes secret_lock_minutes into config.json, keeping
@@ -202,4 +206,21 @@ func TestSecretsLockTimerNotForKeyringOrPlain(t *testing.T) {
 			t.Fatalf("%s store armed %d timers", backend, ticks.n)
 		}
 	}
+}
+
+// fakeNow may be read from another goroutine while the test moves it on
+// (a leftover timer of another test reads the clock): no data race.
+func TestFakeNowIsSafeAcrossGoroutines(t *testing.T) {
+	advance := fakeNow(t)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 100; i++ {
+			_ = clock.Now()
+		}
+	}()
+	for i := 0; i < 100; i++ {
+		advance(time.Second)
+	}
+	<-done
 }
