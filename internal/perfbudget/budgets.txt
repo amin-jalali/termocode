@@ -34,6 +34,7 @@ search_20k_done           128   ms   # same search to the end; local 64 ms (was 
 
 # git (internal/app/git_perf_test.go)
 git_refresh_20k            47   ms   # Source Control refresh after a git action, 20k files, 2k changes; local 23 ms (was 51)
+git_poll_touched_20k       40   ms   # background poll, 20k files touched (same text, new times), after its index refresh; local 17 ms (66 without it)
 
 # quick open (internal/app/quick_open_perf_test.go)
 quick_open_50k_list        78   ms   # Go to file, 50k files: list them, median of 9; local 39 ms (was 111)
