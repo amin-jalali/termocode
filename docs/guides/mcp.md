@@ -318,6 +318,11 @@ transcript and the AI audit log (Output: AI) show `mcp.<server>.<tool>`.
   questions for that server (change it in **AI: Agent Auto-Approve…**).
 - A tool whose name says delete, remove, archive, destroy, purge or drop
   always asks.
+- A call whose arguments hold a secret always asks, even a read-only
+  tool: a key or password termocode knows, or a value that looks like a
+  token (`ghp_…`, `sk-…`, `Bearer …`). The card says which argument
+  (never the value), and **Deny** comes first. The log and the chat
+  show such values as `[REDACTED]`.
 - Set `mcp_trust_annotations` to `false` (Settings → MCP) to make every
   MCP tool ask (except the ones in a server's `autoApprove`).
 
