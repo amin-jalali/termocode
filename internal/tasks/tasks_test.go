@@ -140,3 +140,18 @@ func TestPackageScriptsMalformed(t *testing.T) {
 		t.Errorf("nested scripts: %v", got)
 	}
 }
+
+func TestParseCommentsAndTrailingCommas(t *testing.T) {
+	for _, input := range []string{
+		"// tasks\n{\"tasks\": [/* task */{\"label\":\"fetch\",\"command\":\"curl\",\"args\":[\"https://example.test/a/*b*/\",],},],}",
+		"/* tasks */[// task\n{\"label\":\"fetch\",\"command\":\"curl\",\"args\":[\"https://example.test/a/*b*/\",],},]",
+	} {
+		got, err := Parse([]byte(input))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != 1 || got[0].Label != "fetch" || !reflect.DeepEqual(got[0].Args, []string{"https://example.test/a/*b*/"}) {
+			t.Fatalf("tasks: %+v", got)
+		}
+	}
+}
