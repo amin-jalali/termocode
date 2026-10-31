@@ -335,6 +335,9 @@ func mcpStatusHint(st mcp.Status) string {
 		parts = append(parts, "not trusted")
 	}
 	parts = append(parts, kind)
+	if st.Sandbox != "" {
+		parts = append(parts, st.Sandbox)
+	}
 	switch {
 	case st.State == mcp.StateInvalid:
 		parts = append(parts, st.Problem)
