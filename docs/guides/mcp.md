@@ -326,6 +326,46 @@ tools**, then use **Trust the new tools** in the server's actions.
 chat message, its tools answer "unavailable" for the rest of that
 message, so the AI does not keep trying.
 
+## Prompts, resources and questions from a server
+
+**Pictures.** When a tool sends an image (a screenshot, a chart), a
+model that takes images gets the image itself (PNG, JPEG, GIF or WebP,
+up to 5 MB, at most 4 per result). Other models, and audio, get a short
+note like `[image image/png, 30 KB — not shown: this model does not take
+images]`.
+
+**Resources.** Some servers share files, docs or records. The AI can
+list and read them with `mcp_list_resources` and `mcp_read_resource`
+(read only, no question). You can attach one yourself: type
+`@server:uri` in a message, for example `@docs:file:///guide.md`. The
+chat shows the read as a tool line.
+
+**Prompts.** Some servers have ready-made prompts. Type
+`/server.prompt` and the values, in order or as `name=value`:
+`/github.review main.go style=short`. **Tab** completes the prompt name
+and the values (when the server can suggest them). The prompt's text is
+sent as your message, so you see what goes to the model.
+
+**AI: MCP Prompts and Resources…** lists both. A pick puts the text in
+the chat input; nothing is sent until you press **Enter**.
+
+**When a server asks you.** During a tool call a server may ask for
+input. A card shows what it asks; **Deny** comes first and has the focus.
+
+- A form: **Fill in…** asks for each field, then a last card shows what
+  will be sent (**Cancel** first). A field that looks like a password or
+  key is hidden while you type, and the card warns you: servers should
+  not ask for these. termocode never fills in an answer for you.
+- A page to open: the card shows the whole address and its site.
+  **Open in browser** opens it.
+
+**Long calls.** While a tool runs, the line under the chat shows what it
+does (`mcp.ci.build · 40 s · step 3 · 3 of 10 (30%)`) when the server
+reports progress. Press **Ctrl+B** in the chat (or use **AI: Move MCP
+Call to Background**) to let the AI go on: the call keeps running, and
+its result shows in the chat when it ends and goes with your next
+message.
+
 ## Let an outside agent use termocode
 
 This is the other direction: an agent CLI such as Claude Code or Codex,
