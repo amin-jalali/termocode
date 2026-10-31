@@ -100,7 +100,7 @@ func TestCatalogEntryToServerEntry(t *testing.T) {
 		t.Fatalf("name %q err %v", name, err)
 	}
 	b, _ := json.Marshal(entry)
-	for _, want := range []string{`"command":"npx"`, `"-y","@acme/notes-mcp@1.2.0"`, `"NOTES_TOKEN":"${secret:notes_notes_token}"`, `"NOTES_REGION":"eu"`} {
+	for _, want := range []string{`"command":"npx"`, `"-y","@acme/notes-mcp@1.2.0"`, `"NOTES_TOKEN":"${secret:notes_notes_token}"`, `"NOTES_REGION":"eu"`, `"registry":{"name":"io.github.acme/notes","url":"`+srv.URL+`","version":"1.2.0"}`} {
 		if !strings.Contains(string(b), want) {
 			t.Errorf("entry %s lacks %s", b, want)
 		}
@@ -122,6 +122,10 @@ func TestCatalogEntryToServerEntry(t *testing.T) {
 	}
 	if got := list[0].Secrets(); len(got) != 1 || got[0] != "notes_notes_token" {
 		t.Errorf("secrets = %v", got)
+	}
+	sse := CatalogEntry{Name: "a/b", Remotes: []CatalogRemote{{Type: "sse", URL: "https://x.example/sse"}}}
+	if _, _, err := sse.ServerEntry(); err == nil {
+		t.Error("an sse-only entry was accepted")
 	}
 	if _, _, err := (CatalogEntry{Name: "x/y"}).ServerEntry(); err == nil {
 		t.Error("an entry with no package or remote was turned into a server")

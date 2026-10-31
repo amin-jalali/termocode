@@ -52,6 +52,7 @@ type CatalogEntry struct {
 	Verified    bool             `json:"verified,omitempty"`  // namespace checked by the official registry
 	Status      string           `json:"status,omitempty"`    // active, deprecated, deleted
 	UpdatedAt   string           `json:"updatedAt,omitempty"`
+	Source      string           `json:"source,omitempty"` // the catalog's base URL
 	Packages    []CatalogPackage `json:"packages,omitempty"`
 	Remotes     []CatalogRemote  `json:"remotes,omitempty"`
 }
@@ -222,7 +223,7 @@ func (c Catalog) Fetch(ctx context.Context) ([]CatalogEntry, error) {
 func (c Catalog) entry(s wireServer) CatalogEntry {
 	v := s.Server
 	e := CatalogEntry{Name: v.Name, Title: v.Title, Description: v.Description, Version: v.Version,
-		Repo: v.Repository.URL, Publisher: publisherOf(v.Name), Verified: c.official()}
+		Repo: v.Repository.URL, Publisher: publisherOf(v.Name), Verified: c.official(), Source: c.base()}
 	for _, m := range s.Meta {
 		if m.Status != "" {
 			e.Status = m.Status
@@ -359,6 +360,16 @@ func (e CatalogEntry) Secrets() []string {
 	return out
 }
 
+// registryKey is the entry's "registry" key: where it came from, so the
+// version check can find it again.
+func (e CatalogEntry) registryKey() map[string]any {
+	k := map[string]any{"name": e.Name, "version": e.Version}
+	if e.Source != "" && e.Source != OfficialRegistryURL {
+		k["url"] = e.Source
+	}
+	return k
+}
+
 // ServerEntry turns the entry into an mcp.json server: the first
 // remote, else the first npm / pypi / oci package, pinned to its
 // version. Secrets become ${secret:<name>_<var>}; other variables get
@@ -386,11 +397,10 @@ func (e CatalogEntry) ServerEntry() (string, map[string]any, error) {
 		if err := CheckCatalogURL(r.URL); err != nil || strings.HasPrefix(r.URL, "http:") {
 			continue
 		}
-		typ := TypeHTTP
 		if r.Type == "sse" {
-			typ = TypeSSE
+			continue // not supported (parseEntry)
 		}
-		entry := map[string]any{"type": typ, "url": r.URL}
+		entry := map[string]any{"type": TypeHTTP, "url": r.URL, "registry": e.registryKey()}
 		if len(r.Headers) > 0 {
 			entry["headers"] = vars(r.Headers) // a secret header holds the whole value (Bearer …)
 		}
@@ -428,7 +438,7 @@ func (e CatalogEntry) ServerEntry() (string, map[string]any, error) {
 		default:
 			continue
 		}
-		entry := map[string]any{"command": cmd, "args": args}
+		entry := map[string]any{"command": cmd, "args": args, "registry": e.registryKey()}
 		if len(p.Env) > 0 {
 			entry["env"] = vars(p.Env)
 		}
