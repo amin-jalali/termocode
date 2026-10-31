@@ -68,6 +68,9 @@ func (m *Model) saveAll() tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
+	if m.askSaveConflict(0, saveEveryFile) {
+		return nil
+	}
 	_ = m.nvim.Command("silent! wall")
 	var cmd tea.Cmd
 	if left := m.unsavedFiles(); len(left) > 0 {

@@ -192,11 +192,17 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 			m.closeQueue = nil
 			return nil
 		case "save":
-			if buf, ok := m.findBuffer(m.confirmTargetID); ok {
-				m.pushClosed(buf.Path)
+			if m.askSaveConflict(m.confirmTargetID, saveAndClose) {
+				return nil
 			}
 			if m.nvim != nil {
-				_ = m.nvim.Command(fmt.Sprintf("buffer %d | update | bdelete %d", m.confirmTargetID, m.confirmTargetID))
+				if err := m.nvim.Command(fmt.Sprintf("buffer %d | update | bdelete %d", m.confirmTargetID, m.confirmTargetID)); err != nil {
+					m.closeQueue = nil
+					return m.pushToastDetail(toast.Errr, "Save failed", err.Error())
+				}
+			}
+			if buf, ok := m.findBuffer(m.confirmTargetID); ok {
+				m.pushClosed(buf.Path)
 			}
 		case "discard":
 			if buf, ok := m.findBuffer(m.confirmTargetID); ok {
