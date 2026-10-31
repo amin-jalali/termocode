@@ -71,8 +71,9 @@ type HTTPOptions struct {
 	// A static Authorization header in the config wins over it.
 	Token func(ctx context.Context) string
 	// Refresh is called once after a 401 to a request that carried a
-	// Token: it gets a new one and reports whether to try again.
-	Refresh func(ctx context.Context) bool
+	// Token (ae: the 401's fields): it gets a new one and reports
+	// whether to try again.
+	Refresh func(ctx context.Context, ae *AuthError) bool
 	// Client is the HTTP client (tests); nil makes one.
 	Client *http.Client
 }
@@ -214,7 +215,7 @@ func (c *httpConn) do(ctx context.Context, method string, body []byte, accept st
 			ae := parseAuthenticate(resp.Header.Get("WWW-Authenticate"))
 			drain(resp)
 			sent, _ := resp.Request.Context().Value(sentTokenKey{}).(bool)
-			if sent && attempt == 0 && c.o.Refresh != nil && c.o.Refresh(ctx) {
+			if sent && attempt == 0 && c.o.Refresh != nil && c.o.Refresh(ctx, ae) {
 				continue
 			}
 			return nil, ae

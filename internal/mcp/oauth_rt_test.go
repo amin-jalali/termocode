@@ -6,8 +6,11 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/ai"
 
 	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
 )
@@ -87,5 +90,34 @@ func TestStepUpOnInsufficientScope(t *testing.T) {
 	}
 	if r, err := m.Call(context.Background(), nil, "lin", "write_note", map[string]any{"title": "t"}); err != nil || r.Text() != "wrote t" {
 		t.Fatalf("after step-up %q %v", r.Text(), err)
+	}
+}
+
+// Spec (AU-7): a sign-in belongs to its issuer. When the server now
+// names another authorization server, the old sign-in is dropped (never
+// refreshed at the old one) and a new sign-in is needed.
+func TestSignInDroppedWhenIssuerChanges(t *testing.T) {
+	o := newOAuthEnv(t, mcptest.HTTPOptions{})
+	var oldHits int
+	var mu sync.Mutex
+	old := newRawServer(t, func(w http.ResponseWriter, r *http.Request, body string) {
+		mu.Lock()
+		oldHits++
+		mu.Unlock()
+		http.Error(w, "no", http.StatusBadRequest)
+	})
+	_ = o.tokens.Save("lin", ai.MCPOAuth{Issuer: old.srv.URL, TokenEndpoint: old.srv.URL + "/token", ClientID: "c",
+		Resource: o.srv.MCPURL(), AccessToken: "stale-" + "token", RefreshToken: "rt-" + "old"})
+	_, err := o.m.Call(context.Background(), nil, "lin", "echo", map[string]any{"text": "a"})
+	if !errors.Is(err, ErrSignInNeeded) {
+		t.Fatalf("call: %v", err)
+	}
+	if _, ok := o.tokens.Load("lin"); ok {
+		t.Error("the old sign-in is kept")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if oldHits != 0 {
+		t.Errorf("the old issuer got %d requests", oldHits)
 	}
 }

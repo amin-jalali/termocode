@@ -176,7 +176,7 @@ func TestHTTPRefreshOn401(t *testing.T) {
 	var refreshes atomic.Int32
 	ho := HTTPOptions{
 		Token: func(context.Context) string { return cur.Load().(string) },
-		Refresh: func(context.Context) bool {
+		Refresh: func(context.Context, *AuthError) bool {
 			refreshes.Add(1)
 			cur.Store("new-token-abc")
 			return true
