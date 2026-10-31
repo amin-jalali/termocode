@@ -47,6 +47,10 @@ type Settings struct {
 	// Both are edited by hand; SaveSettings leaves them as they are.
 	Models      map[string]ModelSlot `json:"ai_models,omitempty"`
 	ParallelMax int                  `json:"ai_parallel_max,omitempty"`
+	// StepStallMinutes is ai_step_stall_minutes (OMX-23; nil: 10, 0:
+	// off): an agent step whose model sends nothing this long is stopped
+	// and started once more (StepStall).
+	StepStallMinutes *int `json:"ai_step_stall_minutes,omitempty"`
 	// UntilDoneRounds (0: DefaultUntilDoneRounds) and UntilDoneBudgetUSD
 	// (nil: DefaultUntilDoneBudgetUSD; 0 set on purpose: no budget) are
 	// the limits of a "work until done" run whose profile does not set
@@ -62,6 +66,22 @@ type Settings struct {
 	// PlanApproval is ai_plan_approval (G-PLAN): "ask" (default), "auto"
 	// or "always" (planapproval.go).
 	PlanApproval string `json:"ai_plan_approval,omitempty"`
+}
+
+// DefaultStepStall is the stall limit when ai_step_stall_minutes is
+// not set.
+const DefaultStepStall = 10 * time.Minute
+
+// StepStall is the stall limit of an agent step (0: off).
+func (s Settings) StepStall() time.Duration {
+	switch n := s.StepStallMinutes; {
+	case n == nil || *n < 0:
+		return DefaultStepStall
+	case *n > 120:
+		return 120 * time.Minute
+	default:
+		return time.Duration(*n) * time.Minute
+	}
 }
 
 // CheckUntilDoneRounds checks an ai_until_done_rounds value.
