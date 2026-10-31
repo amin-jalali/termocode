@@ -45,29 +45,47 @@ func mcpToolItems(m *Model, name string) ([]picker.Item, bool) {
 		return nil, false
 	}
 	set := mcp.LoadSettings(mcpConfigPath())
-	var items []picker.Item
+	items := make([]picker.Item, 0, len(tools))
 	for _, t := range tools {
-		exposed, mutating, class := mcp.Gate(srv, t, set.TrustAnnotations)
-		gate := "runs at once"
-		switch {
-		case !exposed:
-			gate = "hidden"
-		case mutating && class == "":
-			gate = "always asks"
-		case mutating:
-			gate = "asks"
-		}
-		mark := "[x] "
-		if set.ToolOff(name, t.Name) {
-			mark, gate = "[ ] ", "off · not sent to the AI"
-		}
-		desc := aiCleanText(strings.SplitN(t.Description, "\n", 2)[0])
-		if r := []rune(desc); len(r) > 80 {
-			desc = string(r[:79]) + "…"
-		}
-		items = append(items, picker.Item{ID: t.Name, Title: mark + t.Name + "  " + desc, Hint: gate})
+		items = append(items, mcpToolRow(srv, t, set))
 	}
 	return items, true
+}
+
+// mcpToolRow is one Show tools row: "[x] name · Title  description"
+// with the gate as hint ("runs at once", "asks", … and "reaches outside"
+// for openWorldHint), or "off …".
+func mcpToolRow(srv mcp.Server, t mcp.Tool, set mcp.Settings) picker.Item {
+	exposed, mutating, class := mcp.Gate(srv, t, set.TrustAnnotations)
+	gate := "runs at once"
+	switch {
+	case !exposed:
+		gate = "hidden"
+	case mutating && class == "":
+		gate = "always asks"
+	case mutating:
+		gate = "asks"
+	}
+	if a := t.Annotations; a != nil && a.OpenWorldHint != nil && *a.OpenWorldHint {
+		gate += " · reaches outside"
+	}
+	mark := "[x] "
+	if set.ToolOff(srv.Name, t.Name) {
+		mark, gate = "[ ] ", "off · not sent to the AI"
+	}
+	head := t.Name
+	title := t.Title
+	if title == "" && t.Annotations != nil {
+		title = t.Annotations.Title
+	}
+	if title = aiCleanText(title); title != "" && title != t.Name {
+		head += " · " + title
+	}
+	desc := aiCleanText(strings.SplitN(t.Description, "\n", 2)[0])
+	if r := []rune(desc); len(r) > 80 {
+		desc = string(r[:79]) + "…"
+	}
+	return picker.Item{ID: t.Name, Title: mark + head + "  " + desc, Hint: gate}
 }
 
 // mcpToolsHint is the Show tools row hint: "10 tools" or "10 tools · 2 off".
