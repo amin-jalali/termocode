@@ -247,7 +247,11 @@ func (m *Model) openAIProfilePicker() tea.Cmd {
 	box, hint := m.aiProfilePickerWidth()
 	for _, n := range s.profiles.Names() {
 		p, _ := s.profiles.Get(n)
-		items = append(items, picker.Item{ID: n, Title: n, Hint: m.aiProfileHint(p, hint)})
+		title := n
+		if p.Title != "" && p.Title != n {
+			title = p.Title + " (" + n + ")"
+		}
+		items = append(items, picker.Item{ID: n, Title: title, Hint: m.aiProfileHint(p, hint)})
 	}
 	items = append(items, picker.Item{ID: aiProfileDetailsID, Title: "Show details of " + s.activeProfile().Name + "…",
 		Hint: "agents and models, in order"})
