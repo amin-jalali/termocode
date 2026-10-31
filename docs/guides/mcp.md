@@ -296,6 +296,20 @@ offline. Type to search.
 - Your team can keep its own approved list: set `mcp_catalog_url` to a
   server with the same API (https only).
 
+## Install a bundle (.mcpb)
+
+A `.mcpb` file is one server in one file: its code and a manifest.
+**AI: MCP: Install Bundle (.mcpb)…** asks for the file, then:
+
+1. A card shows the name, version, author, tools and the settings it
+   asks for. Nothing is installed yet. **Cancel** is first.
+2. termocode asks each setting. A secret is typed hidden.
+3. A last card shows the exact command. **Install** unpacks the bundle
+   into `~/.local/share/termocode/mcp-bundles/`, saves the secrets in the
+   secret store and adds the server to your `mcp.json`.
+
+The author is not checked: install bundles only from people you trust.
+
 ## The file
 
 | Key | What it does |
