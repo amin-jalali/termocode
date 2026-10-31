@@ -28,7 +28,11 @@ func (p *openAIProvider) Stream(ctx context.Context, req Request) <-chan Chunk {
 	ch := make(chan Chunk, 16)
 	crash.Go("the AI reply", func() {
 		defer close(ch)
-		ch <- p.run(ctx, req, ch)
+		model := req.Model
+		if model == "" {
+			model = p.cfg.Model
+		}
+		ch <- streamLimited(ctx, p.cfg.Kind, model, func() Chunk { return p.run(ctx, req, ch) })
 	})
 	return ch
 }
