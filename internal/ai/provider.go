@@ -43,8 +43,8 @@ type Message struct {
 	ToolCallID string
 	ToolName   string
 	Blocks     json.RawMessage
-	// Images are sent with a user message (providers with image input;
-	// see SupportsImages).
+	// Images are sent with a user message, or with a tool result
+	// (AttachImages), to providers with image input (SupportsImages).
 	Images []Image
 }
 
@@ -58,6 +58,9 @@ type Image struct {
 // and the hosted OpenAI-style APIs (OpenAI, OpenRouter) do; local and
 // custom servers are not assumed to (their model may be text only).
 func SupportsImages(p Provider) bool {
+	if v, ok := p.(interface{ SupportsImages() bool }); ok {
+		return v.SupportsImages()
+	}
 	switch p := p.(type) {
 	case *anthropicProvider:
 		return true

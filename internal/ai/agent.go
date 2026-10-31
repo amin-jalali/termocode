@@ -257,9 +257,10 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			a.BeforeCalls(ctx, calls)
 		}
 		for _, call := range calls {
-			result := a.runTool(ctx, call, emit)
+			ictx, images := a.withImageSink(ctx)
+			result := a.runTool(ictx, call, emit)
 			if a.Native {
-				msgs = append(msgs, Message{Role: RoleTool, ToolCallID: call.ID, ToolName: call.Name, Content: result})
+				msgs = append(msgs, Message{Role: RoleTool, ToolCallID: call.ID, ToolName: call.Name, Content: result, Images: images()})
 			} else {
 				msgs = append(msgs, Message{Role: RoleUser, Content: "[tool result] " + call.Name + ":\n" + result})
 			}

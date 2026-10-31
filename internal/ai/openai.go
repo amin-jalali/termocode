@@ -53,7 +53,28 @@ type openAIToolCall struct {
 // buildOpenAIBody maps a Request onto the chat-completions JSON body.
 func buildOpenAIBody(req Request, model string) map[string]any {
 	msgs := make([]openAIMessage, 0, len(req.Messages))
+	// Tool messages are text only: their images go in one user message
+	// after the step's last tool message.
+	var toolImages []map[string]any
+	flush := func() {
+		if len(toolImages) > 0 {
+			msgs = append(msgs, openAIMessage{Role: string(RoleUser), Content: toolImages})
+			toolImages = nil
+		}
+	}
 	for _, m := range req.Messages {
+		if m.Role != RoleTool {
+			flush()
+		} else if len(m.Images) > 0 {
+			if toolImages == nil {
+				toolImages = []map[string]any{{"type": "text", "text": "Images from the tool results above."}}
+			}
+			toolImages = append(toolImages, map[string]any{"type": "text", "text": "From tool call " + m.ToolCallID + ":"})
+			for _, im := range m.Images {
+				toolImages = append(toolImages, map[string]any{"type": "image_url", "image_url": map[string]any{
+					"url": "data:" + im.MediaType + ";base64," + base64.StdEncoding.EncodeToString(im.Data)}})
+			}
+		}
 		content := m.Content
 		om := openAIMessage{Role: string(m.Role), Content: content}
 		if m.Role == RoleUser && len(m.Images) > 0 {
@@ -82,6 +103,7 @@ func buildOpenAIBody(req Request, model string) map[string]any {
 		}
 		msgs = append(msgs, om)
 	}
+	flush()
 	body := map[string]any{"messages": msgs, "stream": true}
 	if model != "" {
 		body["model"] = model
