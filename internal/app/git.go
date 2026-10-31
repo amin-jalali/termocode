@@ -123,7 +123,7 @@ func (m *Model) pollGitCmd() tea.Cmd {
 		}
 		st, err := git.StatusBranch(cwd)
 		if gate != nil {
-			gate.set(gitFingerprint(cwd)) // after status: it may refresh the index
+			gate.afterRead(cwd, err == nil) // after status: it may refresh the index
 		}
 		if err != nil {
 			return GitMsg{IsRepo: false}

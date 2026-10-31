@@ -4,10 +4,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/clock"
 )
 
 // gitIdleRepo is a one-commit repo in a temp dir (the cwd) with a model
@@ -148,5 +151,38 @@ func TestGitPollIdleWaitNotSkippedWhenBlurred(t *testing.T) {
 		if !polled {
 			t.Fatalf("blurred tick %d did not poll", i)
 		}
+	}
+}
+
+// FIX-40: the poll's status takes no lock, so it never settles a touched
+// file in the index; about once a minute the poll refreshes the index
+// (git diff-files, which never refreshes, is the witness).
+func TestGitPollRefreshesTheIndexAboutOnceAMinute(t *testing.T) {
+	now := time.Now()
+	defer clock.Set(func() time.Time { return now })()
+	m, _ := gitIdleRepo(t)
+	dirty := func() string {
+		t.Helper()
+		out, err := exec.Command("git", "diff-files", "--name-only").CombinedOutput()
+		if err != nil {
+			t.Fatalf("diff-files: %v %s", err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	later := now.Add(time.Hour)
+	if err := os.Chtimes(filepath.Join("sub", "a.txt"), later, later); err != nil {
+		t.Fatal(err)
+	}
+	m.applyGitSnapshot(m.pollGitCmd()().(GitMsg))
+	if dirty() == "" {
+		t.Fatal("refreshed again within the minute (the setup poll just did)")
+	}
+	now = now.Add(gitIndexRefreshEvery + time.Second)
+	m.applyGitSnapshot(m.pollGitCmd()().(GitMsg))
+	if got := dirty(); got != "" {
+		t.Errorf("a minute on, the poll did not refresh the index: %q", got)
+	}
+	if len(m.gitFiles) != 0 {
+		t.Errorf("a touched file shows as changed: %+v", m.gitFiles)
 	}
 }
