@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 // Resources (MCPX-12, PR-12..14): the client lists a server's resources
@@ -114,4 +115,68 @@ func (c *Client) ReadResource(ctx context.Context, uri string) ([]ResourceConten
 		return nil, fmt.Errorf("resources/read: bad answer: %w", err)
 	}
 	return res.Contents, nil
+}
+
+// withClient runs fn on a server's connection, starting it (with the
+// trust question) when needed; the idle timer starts again after.
+func (m *Manager) withClient(ctx context.Context, ask AskTrust, server string, fn func(context.Context, *Client) error) error {
+	st, err := m.get(server)
+	if err != nil {
+		return err
+	}
+	st.op.Lock()
+	defer st.op.Unlock()
+	p, err := m.ensure(ctx, st, ask)
+	if err != nil {
+		return err
+	}
+	m.mu.Lock()
+	st.caps = p.Client.Capabilities()
+	m.mu.Unlock()
+	defer m.armIdle(st)
+	cctx, cancel := context.WithTimeout(ctx, m.callTimeout(st))
+	defer cancel()
+	return fn(cctx, p.Client)
+}
+
+func (m *Manager) callTimeout(st *serverState) time.Duration {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if t := st.cfg.Timeout; t > 0 {
+		return time.Duration(t) * time.Second
+	}
+	return m.opts.CallTimeout
+}
+
+// Resources lists a server's resources and templates (MCPX-12). A
+// server without the resources feature has none.
+func (m *Manager) Resources(ctx context.Context, ask AskTrust, server string) ([]Resource, []ResourceTemplate, error) {
+	var rs []Resource
+	var ts []ResourceTemplate
+	err := m.withClient(ctx, ask, server, func(ctx context.Context, c *Client) error {
+		if !c.Capabilities().Resources {
+			return nil
+		}
+		var err error
+		if rs, err = c.ListResources(ctx); err != nil {
+			return err
+		}
+		ts, _ = c.ListResourceTemplates(ctx) // optional: many servers have none
+		return nil
+	})
+	return rs, ts, err
+}
+
+// ReadResource reads one resource of a server.
+func (m *Manager) ReadResource(ctx context.Context, ask AskTrust, server, uri string) ([]ResourceContents, error) {
+	var out []ResourceContents
+	err := m.withClient(ctx, ask, server, func(ctx context.Context, c *Client) error {
+		if !c.Capabilities().Resources {
+			return fmt.Errorf("MCP server %s has no resources", server)
+		}
+		var err error
+		out, err = c.ReadResource(ctx, uri)
+		return err
+	})
+	return out, err
 }

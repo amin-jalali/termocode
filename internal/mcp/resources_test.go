@@ -48,3 +48,32 @@ func TestClientResources(t *testing.T) {
 		t.Fatal("no resources change notice")
 	}
 }
+
+// The Manager lists and reads a server's resources (starting it, with
+// the trust question), and Tools tells which servers have resources,
+// also from the disk cache.
+func TestManagerResources(t *testing.T) {
+	e := newManagerEnv(t)
+	e.write(t, e.user, map[string]any{"fake": map[string]string{}})
+	m := e.manager(t, 0, nil)
+	ctx := context.Background()
+	rs, ts, err := m.Resources(ctx, nil, "fake")
+	if err != nil || len(rs) != 3 || len(ts) != 1 {
+		t.Fatalf("resources %d templates %d: %v", len(rs), len(ts), err)
+	}
+	cs, err := m.ReadResource(ctx, nil, "fake", "file:///notes/b.md")
+	if err != nil || len(cs) != 1 || cs[0].Text != "# B" {
+		t.Fatalf("read %+v %v", cs, err)
+	}
+	list := m.Tools(ctx, nil)
+	if len(list) != 1 || !list[0].Caps.Resources || !list[0].Caps.Prompts {
+		t.Fatalf("caps in Tools: %+v", list)
+	}
+	m2 := e.manager(t, 0, nil) // from the cache: nothing starts
+	if l := m2.Tools(ctx, nil); len(l) != 1 || !l[0].Caps.Resources || m2.Running() != 0 {
+		t.Fatalf("cached caps: %+v running %d", l, m2.Running())
+	}
+	if _, _, err := m.Resources(ctx, nil, "nope"); err == nil {
+		t.Fatal("unknown server: no error")
+	}
+}

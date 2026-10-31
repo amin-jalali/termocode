@@ -127,6 +127,9 @@ type ServerTools struct {
 	// ToolsChanged: the user did not accept the server's new tool list,
 	// so every tool asks first (AdapterOptions.ToolsChanged).
 	ToolsChanged bool
+	// Caps are the server's features (resources, prompts), from its last
+	// connection or the disk cache.
+	Caps ServerCaps
 }
 
 type serverState struct {
@@ -136,6 +139,7 @@ type serverState struct {
 	cfg       Server
 	proc      *Process
 	tools     []Tool
+	caps      ServerCaps
 	haveTools bool
 	cached    bool
 	state     string
@@ -531,6 +535,7 @@ type cacheFile struct {
 	Hash   string     `json:"hash"`
 	Server ServerInfo `json:"server"`
 	Tools  []Tool     `json:"tools"`
+	Caps   ServerCaps `json:"caps"`
 }
 
 func (m *Manager) cachePath(name string) string {
@@ -557,16 +562,16 @@ func (m *Manager) loadCacheLocked(st *serverState) {
 	if json.Unmarshal(b, &c) != nil || c.Hash != st.cfg.Hash() {
 		return
 	}
-	st.tools, st.haveTools, st.cached = c.Tools, true, true
+	st.tools, st.haveTools, st.cached, st.caps = c.Tools, true, true, c.Caps
 	st.toolsHash = ToolsHash(c.Tools)
 }
 
-func (m *Manager) saveCache(cfg Server, info ServerInfo, tools []Tool) {
+func (m *Manager) saveCache(cfg Server, info ServerInfo, caps ServerCaps, tools []Tool) {
 	p := m.cachePath(cfg.Name)
 	if p == "" {
 		return
 	}
-	b, err := json.MarshalIndent(cacheFile{Hash: cfg.Hash(), Server: info, Tools: tools}, "", "  ")
+	b, err := json.MarshalIndent(cacheFile{Hash: cfg.Hash(), Server: info, Tools: tools, Caps: caps}, "", "  ")
 	if err != nil {
 		return
 	}
@@ -601,11 +606,12 @@ func (m *Manager) list(ctx context.Context, st *serverState, ask AskTrust) ([]To
 func (m *Manager) storeTools(st *serverState, p *Process, tools []Tool) {
 	h := ToolsHash(tools)
 	m.mu.Lock()
-	st.tools, st.haveTools, st.cached, st.toolsHash = tools, true, false, h
+	caps := p.Client.Capabilities()
+	st.tools, st.haveTools, st.cached, st.toolsHash, st.caps = tools, true, false, h, caps
 	cfg := st.cfg
 	changed := m.toolsChangedLocked(st)
 	m.mu.Unlock()
-	m.saveCache(cfg, p.Client.ServerInfo(), tools)
+	m.saveCache(cfg, p.Client.ServerInfo(), caps, tools)
 	m.log(cfg.Name, "%d tools", len(tools))
 	if m.opts.TrustedTools != nil && m.opts.SaveTrustedTools != nil && m.opts.TrustedTools(cfg.Name) == "" {
 		m.opts.SaveTrustedTools(cfg.Name, h)
@@ -717,7 +723,10 @@ func (m *Manager) Tools(ctx context.Context, ask AskTrust) []ServerTools {
 		}
 		if len(tools) > 0 {
 			ok := m.checkTools(ctx, st, ask)
-			out = append(out, ServerTools{Server: cfg, Tools: tools, ToolsChanged: !ok})
+			m.mu.Lock()
+			caps := st.caps
+			m.mu.Unlock()
+			out = append(out, ServerTools{Server: cfg, Tools: tools, ToolsChanged: !ok, Caps: caps})
 		}
 	}
 	return out
