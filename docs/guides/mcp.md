@@ -640,7 +640,22 @@ does (`mcp.ci.build · 40 s · step 3 · 3 of 10 (30%)`) when the server
 reports progress. Press **Ctrl+B** in the chat (or use **AI: Move MCP
 Call to Background**) to let the AI go on: the call keeps running, and
 its result shows in the chat when it ends and goes with your next
-message.
+message. A new-version server can run a long call as a task: termocode
+asks it how the task goes, and shows its answer the same way.
+
+**Notes for you.** A server can mark part of a result for you only.
+termocode shows it under the tool line (`↳ for you: …`) and does not
+send it to the AI. When a server ranks the parts of a result, the AI
+gets the most important part first.
+
+**Traces.** Set `OTEL_EXPORTER_OTLP_ENDPOINT` (for example
+`http://localhost:4318`) before you start termocode, and each MCP tool
+call goes to your trace collector as one span: the server, the tool,
+how long it took and if it failed. The arguments and the result are
+never in it. `OTEL_EXPORTER_OTLP_HEADERS` adds headers (`api-key=…`),
+`OTEL_SERVICE_NAME` changes the name (`termocode`). The server gets the
+trace id too, so its own spans join the same trace. Without the
+variable nothing is sent.
 
 ## Let an outside agent use termocode
 
