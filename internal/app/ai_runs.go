@@ -342,6 +342,10 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	if planned {
 		parallel = s.settings.PlannedParallel()
 	}
+	whole := s.aiPlanWTTake(run.ID, planned, by, s.conv.Messages[msgIdx-1].Text) // OMX-15: the plan in one worktree
+	if whole {
+		parallel = 1 // its steps share the tree
+	}
 	pricing := ai.NewPricing(s.settings.Prices)
 	reasoning := s.reasoningFunc(think)                        // OMX-5
 	windows := ai.NewContextWindows(s.settings.ContextWindows) // OMX-25
@@ -364,6 +368,9 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	var extra []ai.Tool
 	useWT := s.settings.UseWorktrees() && (by == nil || by.Worktree != "off") // G-API: the AI may ask for none
 	wts := newAIRunWorktrees(root, run.ID, useWT, &s.conv.Messages[msgIdx])   // G-WT
+	if whole {
+		wts.whole, s.planWT.wts = true, wts
+	}
 	// inWorktree moves node n into its own worktree when it shares its
 	// wave: the tools, the prompt's root and the card follow.
 	inWorktree := func(ctx context.Context, n agentdag.Node) (string, []ai.Tool, error) {
@@ -922,6 +929,7 @@ func (m *Model) finishAIRun(final agentrun.Event) {
 			}
 		}
 	}
+	defer m.aiPlanWTEnd(rm)                  // OMX-15: after the final states
 	defer s.aiPlanFileEnd(rm)                // OMX-14: after the final states
 	aiSettleWorktrees(rm.Steps)              // G-WT: a stopped step's worktree waits for the user
 	rm.Run.PlanWait, s.planWait = false, nil // G-PLAN

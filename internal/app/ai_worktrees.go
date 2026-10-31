@@ -32,6 +32,10 @@ type aiRunWorktrees struct {
 	root  string // the user's tree
 	runID string
 	on    bool // ai_worktrees is not off
+	// whole: every step works in one worktree from the last commit (a
+	// plan in a worktree, ai_plan_worktree.go); shared is that tree.
+	whole  bool
+	shared *git.AgentWorktree
 
 	mu     sync.Mutex
 	byNode map[string]git.AgentWorktree
@@ -60,6 +64,9 @@ var createAgentWorktree = git.CreateAgentWorktree
 // that fails the node must not run: it would write in the user's tree
 // at the same time as another step, so err stops it with the reason.
 func (w *aiRunWorktrees) forNode(ctx context.Context, n agentdag.Node) (wt git.AgentWorktree, ok bool, err error) {
+	if w.whole {
+		return w.forRun(n)
+	}
 	w.mu.Lock()
 	wt, ok = w.byNode[n.ID]
 	w.mu.Unlock()
@@ -82,6 +89,34 @@ func (w *aiRunWorktrees) forNode(ctx context.Context, n agentdag.Node) (wt git.A
 	return wt, true, nil
 }
 
+// forRun is the run's one worktree (made on the first step; the steps
+// run one at a time). When it cannot be made the step must not run: the
+// plan works only there, never in the user's tree.
+func (w *aiRunWorktrees) forRun(n agentdag.Node) (git.AgentWorktree, bool, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.shared == nil {
+		wt, err := createPlanWorktree(w.root, git.AgentWorktreeID(w.runID, "plan"))
+		if err != nil {
+			return wt, false, fmt.Errorf("could not make the plan's git worktree (%s); the plan works only there, so nothing changed in your folder: retry the step", aiOneLine(err.Error()))
+		}
+		w.shared = &wt
+	}
+	w.byNode[n.ID] = *w.shared
+	return *w.shared, true, nil
+}
+
+// sharedWorktree is the run's one worktree (nil: none was made).
+func (w *aiRunWorktrees) sharedWorktree() *git.AgentWorktree {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.shared == nil {
+		return nil
+	}
+	wt := *w.shared
+	return &wt
+}
+
 // get is node id's worktree (ok=false: it has none).
 func (w *aiRunWorktrees) get(id string) (git.AgentWorktree, bool) {
 	w.mu.Lock()
@@ -95,6 +130,9 @@ func (w *aiRunWorktrees) get(id string) (git.AgentWorktree, bool) {
 func (w *aiRunWorktrees) othersNote(id string) string {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.whole {
+		return "" // all steps share the one tree
+	}
 	var names []string
 	for node, wt := range w.byNode {
 		if node != id {
@@ -134,7 +172,7 @@ type aiWorktreeMsg struct {
 // worktree goes (nothing to lose).
 func (w *aiRunWorktrees) finished(n agentdag.Node) (aiWorktreeMsg, bool) {
 	wt, ok := w.get(n.ID)
-	if !ok {
+	if !ok || w.whole { // the plan's one tree stays until the run ends
 		return aiWorktreeMsg{}, false
 	}
 	st := ai.StoredWorktree{ID: wt.ID, Path: wt.Path, Branch: wt.Branch, State: ai.WorktreeReady}
