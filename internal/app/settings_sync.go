@@ -23,6 +23,7 @@ import (
 // conflict confirm, settings export/import, and the user snippets
 // manager. Kept in one struct so Model only grows by a single field.
 type extrasState struct {
+	bugReport    *bugReportState
 	// Keymap conflict: the chord + action waiting on Replace / Cancel.
 	kbPendingKey    string
 	kbPendingAction keymap.Action
