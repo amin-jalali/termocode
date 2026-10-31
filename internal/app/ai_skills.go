@@ -50,9 +50,14 @@ func aiSkillsUserDir() string {
 	return filepath.Join(dir, "skills")
 }
 
-// aiLoadSkills reads the skills of root and of the user.
+// aiLoadSkills reads the skills of root and of the user (the own folder
+// and ~/.claude/skills, where other apps keep the user's skills).
 func aiLoadSkills(root string) ai.Skills {
-	return ai.LoadSkills(root, aiSkillsUserDir())
+	var extra []string
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		extra = append(extra, filepath.Join(home, ".claude", "skills"))
+	}
+	return ai.LoadSkills(root, aiSkillsUserDir(), extra...)
 }
 
 // aiSkillsTrust is the user's answer for the project skills of s.
@@ -154,7 +159,7 @@ func (m *Model) askAISkillsTrust(s ai.Skills, send bool, text string) tea.Cmd {
 	m.aiS().skillsTrust = &aiSkillsTrustPending{hash: s.ProjectHash, send: send, text: text}
 	proj := s.Project()
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s · %d skill%s", ai.SkillsDir, len(proj), plural(len(proj)))
+	fmt.Fprintf(&b, "%s · %d skill%s", aiSkillsDirsLabel(proj), len(proj), plural(len(proj)))
 	for i, sk := range proj {
 		if i == aiSkillsCardLines {
 			b.WriteString("\n    …")
@@ -171,6 +176,25 @@ func (m *Model) askAISkillsTrust(s ai.Skills, send bool, text string) tea.Cmd {
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAISkillsTrust
 	return nil
+}
+
+// aiSkillsDirsLabel names the project folders the skills come from.
+func aiSkillsDirsLabel(proj []ai.Skill) string {
+	root := aiWorkspaceRoot()
+	var dirs []string
+	for _, d := range ai.ProjectSkillDirs {
+		dir := filepath.Join(root, filepath.FromSlash(d)) + string(filepath.Separator)
+		for _, sk := range proj {
+			if strings.HasPrefix(sk.Path, dir) {
+				dirs = append(dirs, d)
+				break
+			}
+		}
+	}
+	if len(dirs) == 0 {
+		return ai.SkillsDir
+	}
+	return strings.Join(dirs, ", ")
 }
 
 // answerAISkillsTrust stores the answer and sends the waiting message.

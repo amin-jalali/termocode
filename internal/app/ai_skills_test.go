@@ -258,3 +258,30 @@ func TestAISkillsBuiltinPreview(t *testing.T) {
 		t.Fatal("no preview")
 	}
 }
+
+// Spec (OMX-11): SKILL.md folders in .claude/skills of the project go
+// behind the same trust card (the card names the folder); the user's
+// ~/.claude/skills are offered at once.
+func TestAISkillsOtherAppFolders(t *testing.T) {
+	m, rec, root, _ := aiSkillsModel(t)
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	writeAISkill(t, filepath.Join(home, ".claude", "skills", "mine"), "SKILL.md", "mine", "My own habit", "hi")
+	writeAISkill(t, filepath.Join(root, ".claude", "skills", "pdf"), "SKILL.md", "pdf", "Fill PDF forms", "body")
+	m.sendAIChat("hello")
+	if !m.confirmOpen || m.confirmKind != confirmKindAISkillsTrust {
+		t.Fatal("no trust card for a .claude/skills folder")
+	}
+	box := ansi.Strip(m.confirm.Box())
+	if !strings.Contains(box, ".claude/skills · 1 skill") || !strings.Contains(box, "pdf — Fill PDF forms") || strings.Contains(box, "mine") {
+		t.Errorf("card:\n%s", box)
+	}
+	driveAIChat(t, m, m.answerAIRulesForTest("deny"), nil)
+	if len(rec.reqs) != 1 {
+		t.Fatalf("requests %d", len(rec.reqs))
+	}
+	sys := rec.reqs[0].Messages[0].Content
+	if !strings.Contains(sys, "- mine — My own habit") || strings.Contains(sys, "Fill PDF") {
+		t.Errorf("prompt:\n%s", sys)
+	}
+}
