@@ -211,6 +211,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	// Group A: AI streaming / inline / sign-in messages run under any overlay.
 	if cmd, ok := m.handleAIMsg(msg); ok {
+		m.agentRollupSync() // OMX-35: other windows see this one's agents
 		return m, cmd
 	}
 	if cmd, ok := m.routeDebugMsg(msg); ok { // Group D (debug_state.go)
