@@ -211,10 +211,18 @@ func (m *Model) onSecretsSwitchDone(msg secretsSwitchDoneMsg) tea.Cmd {
 		st.switching, st.tries, st.creating = false, 0, false
 		m.secretsChanged()
 		title, level, detail := "Secrets now in the "+where, toast.Info, "Copied and checked · the "+msg.from+" copy is removed · secret_store: "+msg.to
+		fromPlain := msg.from == "plain file"
+		if fromPlain {
+			detail = "Copied and checked · the plain file is kept · secret_store: " + msg.to
+		}
 		if msg.err != nil {
 			title, level, detail = "Secrets now in the "+where+" · old copy not removed", toast.Warn, secretsRedact(msg.err)
 		}
-		return tea.Batch(m.secretsToast(level, title, detail), m.secretsArmLock(), m.openSecretsStore())
+		cmds := []tea.Cmd{m.secretsToast(level, title, detail), m.secretsArmLock(), m.openSecretsStore()}
+		if fromPlain && msg.to != "plain" {
+			m.openSecretsDeletePlainCard(where) // after the store screen: the card is on top
+		}
+		return tea.Batch(cmds...)
 	case errors.Is(msg.err, secrets.ErrWrongPassphrase) && msg.to == "age":
 		st.tries++
 		if st.tries < secretsMaxTries {

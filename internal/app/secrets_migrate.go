@@ -26,18 +26,23 @@ import (
 //     and the Welcome page shows one note line instead. "Keep plain"
 //     sets secret_store: plain and the card never returns.
 //   - keyring or age while the plain file still exists: a move that was
-//     cut off after the copy. Once the store is open (the keyring at
-//     once, the encrypted file after the user's own unlock) the values
-//     are checked and the plain file removed, without asking.
+//     cut off, or one where the user kept the plain copy. Once the store
+//     is open (the keyring at once, the encrypted file after the user's
+//     own unlock) a card asks: Keep for now (first, focused) / Delete the
+//     plain file. The file is never deleted without that answer; the
+//     values are checked first. AI: Move Secrets… asks again any time.
 //
 // The move itself is secrets.Migrate, run as a tea.Cmd (scrypt, writes,
-// fsync): write, read back, compare, then zero, sync and delete the old
-// file and write credentials.json.migrated. The card counts kinds,
+// fsync): write, read back, compare. The old file stays; the delete (zero,
+// sync, remove, credentials.json.migrated) is secrets.Finish after the card. The card counts kinds,
 // never values; toasts and errors name secrets, never values. AI: Move
 // Secrets to a Safer Store… opens the card any time the plain backend
 // is in use. None of it is for the AI (palette id aiNever).
 
-const confirmKindSecretsMigrate confirmKindEnum = 1802
+const (
+	confirmKindSecretsMigrate     confirmKindEnum = 1802
+	confirmKindSecretsDeletePlain confirmKindEnum = 1806
+)
 
 // secretsMigrateMaxLater "later" answers stop the card at start.
 const secretsMigrateMaxLater = 3
@@ -52,7 +57,8 @@ const welcomeSecretsNoteText = "F1 → AI: Move Secrets to a Safer Store…"
 type secretsMigratePlan struct {
 	ask        bool // show the card
 	note       bool // put off too often: the Welcome note
-	finish     bool // a cut-off move: finish once the store is open
+	finish     bool // a plain copy is left: ask to delete it once the store is open
+	plainLeft  bool // the plain file still exists beside a safer store
 	counts     secrets.Counts
 	keyring    bool   // the OS keyring answered
 	keyringWhy string // why not ("no D-Bus session")
@@ -95,8 +101,8 @@ func secretsMigrateCheck(palette bool) secretsMigratePlan {
 	}
 	if s.Backend() != "plain" {
 		p.backend = secretsBackendLabel(s)
-		if _, err := os.Stat(path); err == nil && !palette && (s.Backend() == "age" || s.Backend() == "keyring") {
-			p.finish = true
+		if _, err := os.Stat(path); err == nil && (s.Backend() == "age" || s.Backend() == "keyring") {
+			p.plainLeft, p.finish = true, !palette
 		}
 		return p
 	}
@@ -158,6 +164,8 @@ func (m *Model) onSecretsMigrateCheck(msg secretsMigrateCheckMsg) tea.Cmd {
 		return m.secretsFinishMove()
 	case msg.palette && p.err != nil:
 		return m.secretsToast(toast.Errr, "Can not read ai/credentials.json", secretsRedact(p.err))
+	case msg.palette && p.backend != "" && p.plainLeft:
+		return m.secretsFinishMove()
 	case msg.palette && p.backend != "":
 		return m.secretsToast(toast.Info, "Secrets are already in the "+p.backend, "Nothing to move · F1 → AI: Secret Store…")
 	case msg.palette && !p.ask:
@@ -188,7 +196,7 @@ func (m *Model) openSecretsMigrateCard(p secretsMigratePlan, palette bool) {
 		b.WriteString("You choose a passphrase once; this session keeps it.\n\n")
 		buttons = append(buttons, confirm.Button{ID: "age", Title: "Encrypted file", Style: confirm.StylePrimary})
 	}
-	b.WriteString("The old file is removed after a check. Esc: ask later.")
+	b.WriteString("The old file stays until you choose to delete it. Esc: ask later.")
 	buttons = append(buttons, confirm.Button{ID: "plain", Title: "Keep plain"})
 	m.secretsS().migrateAsked = !palette
 	m.confirm = confirm.New("✦ Move your secrets to a safer store?", b.String(), buttons).WithWideText()
@@ -319,8 +327,9 @@ func saveSecretStoreSetting(v string) error {
 	})
 }
 
-// secretsFinishMove finishes a cut-off move once the store is open; a
-// locked encrypted file waits for the user's unlock (onSecretsUnlockDone).
+// secretsFinishMove asks about the plain file that is left beside an open
+// safer store; a locked encrypted file waits for the user's unlock
+// (onSecretsUnlockDone). It never deletes by itself.
 func (m *Model) secretsFinishMove() tea.Cmd {
 	s, err := m.secretStore()
 	if err != nil || s == nil {
@@ -330,11 +339,37 @@ func (m *Model) secretsFinishMove() tea.Cmd {
 		m.secretsS().finishPending = true
 		return nil
 	}
-	path, err := ai.CredentialsPath()
-	if err != nil {
+	m.secretsS().finishPending = false
+	if m.confirmOpen || m.promptOpen || m.pickerOpen {
+		return nil // something else is on screen: ask on the next start
+	}
+	m.openSecretsDeletePlainCard(secretsBackendLabel(s))
+	return nil
+}
+
+// openSecretsDeletePlainCard asks before the plain credentials file is
+// deleted. Keep for now is first and focused; Enter and Esc keep.
+func (m *Model) openSecretsDeletePlainCard(where string) {
+	m.confirm = confirm.Risky("Delete the old plain file?",
+		"Your secrets are in the "+where+".\n"+
+			"ai/credentials.json still holds them as plain text, readable on disk.\n"+
+			"termocode checks the copy first, then deletes the file.",
+		confirm.Button{ID: "keep", Title: "Keep for now"},
+		confirm.Button{ID: "delete", Title: "Delete the plain file", Style: confirm.StyleDestructive}).WithWideText()
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen, m.confirmKind = true, confirmKindSecretsDeletePlain
+}
+
+// answerSecretsDeletePlain handles the card.
+func (m *Model) answerSecretsDeletePlain(id string) tea.Cmd {
+	if id != "delete" {
+		return m.secretsToast(toast.Info, "Plain file kept", "It is still readable on disk · F1 → AI: Move Secrets to a Safer Store… to delete it")
+	}
+	s, err := m.secretStore()
+	path, err2 := ai.CredentialsPath()
+	if err != nil || err2 != nil || s == nil {
 		return nil
 	}
-	m.secretsS().finishPending = false
 	return func() tea.Msg {
 		done, err := secrets.Finish(s, path)
 		return secretsMigrateDoneMsg{err: err, finished: done}
@@ -370,7 +405,8 @@ func (m *Model) onSecretsMigrateDone(msg secretsMigrateDoneMsg) tea.Cmd {
 			invalidateWelcome()
 		}
 		m.secretsChanged()
-		return tea.Batch(m.secretsToast(toast.Info, "Secrets moved · credentials.json removed", where), m.secretsArmLock())
+		m.openSecretsDeletePlainCard(strings.TrimPrefix(strings.TrimSuffix(where, "."), "Now in the "))
+		return tea.Batch(m.secretsToast(toast.Info, "Secrets moved · plain file kept", where), m.secretsArmLock())
 	case msg.moved:
 		st.migrating, st.tries, st.creating = false, 0, false
 		m.secretsChanged()

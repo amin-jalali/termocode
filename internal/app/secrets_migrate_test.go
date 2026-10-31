@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/secrets"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // The old plain file with every kind, as a user from before SS-4 has it.
@@ -67,6 +68,26 @@ func startMigrateCheck(t *testing.T, m *Model) {
 
 func migrateCardOpen(m *Model) bool {
 	return m.confirmOpen && m.confirmKind == confirmKindSecretsMigrate
+}
+
+func deletePlainCardOpen(m *Model) bool {
+	return m.confirmOpen && m.confirmKind == confirmKindSecretsDeletePlain
+}
+
+// deletePlainViaCard checks the safe-first card, then answers Delete.
+func deletePlainViaCard(t *testing.T, m *Model, cred string) {
+	t.Helper()
+	if !deletePlainCardOpen(m) {
+		t.Fatal("no delete-plain card")
+	}
+	if got := buttonIDs(m.confirm); got != "keep,delete" || m.confirm.SafeID() != "keep" {
+		t.Fatalf("card is not safe-first: %s", got)
+	}
+	if b, _ := os.ReadFile(cred); len(b) == 0 {
+		t.Fatal("the plain file was deleted before the answer")
+	}
+	pumpSecrets(t, m, answerStoreConfirm(t, m, "delete"))
+	waitGone(t, cred)
 }
 
 func migrateCardText(m *Model) string { return ansi.Strip(m.confirm.Box()) }
@@ -182,10 +203,11 @@ func TestSecretsMigrateToAge(t *testing.T) {
 	if m.secretsPromptOpen() {
 		t.Fatal("prompt still open")
 	}
-	if got := toastText(*m); !strings.Contains(got, "Secrets moved · credentials.json removed") {
+	if got := toastText(*m); !strings.Contains(got, "Secrets moved · plain file kept") {
 		t.Fatalf("toast %q", got)
 	}
 	noSecretValues(t, "the toast", toastText(*m))
+	deletePlainViaCard(t, m, cred)
 	checkMigrated(t, dir, cred, "age")
 	if !m.aiConfigured() {
 		t.Fatal("the AI lost its key after the move")
@@ -215,9 +237,10 @@ func TestSecretsMigrateToKeyring(t *testing.T) {
 	if m.secretsPromptOpen() {
 		t.Fatal("the keyring asked for a passphrase")
 	}
-	if got := toastText(*m); !strings.Contains(got, "Secrets moved · credentials.json removed") {
+	if got := toastText(*m); !strings.Contains(got, "Secrets moved · plain file kept") {
 		t.Fatalf("toast %q", got)
 	}
+	deletePlainViaCard(t, m, cred)
 	checkMigrated(t, dir, cred, "keyring")
 	resetSecretStore()
 	if s, _ := configureSecretStore(); s.Backend() != "keyring" {
@@ -290,8 +313,40 @@ func TestSecretsMigrateKeepPlain(t *testing.T) {
 	if s, _ := configureSecretStore(); s.Backend() != "age" || s.Locked() {
 		t.Fatalf("store %s locked=%v", s.Backend(), s.Locked())
 	}
-	if _, err := os.Stat(cred); !errors.Is(err, os.ErrNotExist) {
-		t.Fatal("plain file still there")
+	if _, err := os.Stat(cred); err != nil {
+		t.Fatalf("the plain file is gone without an answer: %v", err)
+	}
+	deletePlainViaCard(t, m2, cred)
+}
+
+// Keep for now leaves the plain file; Esc and Enter both keep it.
+func TestSecretsDeletePlainKeepsByDefault(t *testing.T) {
+	keyring.MockInit()
+	_, cred := withPlainCredentials(t, true)
+	m := secretsTestModel(t)
+	startMigrateCheck(t, m)
+	pumpSecrets(t, m, answerStoreConfirm(t, m, "keyring"))
+	if !deletePlainCardOpen(m) {
+		t.Fatal("no delete-plain card after the move")
+	}
+	if _, cmd := m.confirm.Update(tea.KeyMsg{Type: tea.KeyEnter}); cmd == nil {
+		t.Fatal("Enter did nothing")
+	} else if msg, ok := cmd().(confirm.SelectMsg); !ok || msg.ID != "keep" {
+		t.Fatalf("Enter = %#v", msg)
+	}
+	next, cmd := m.update(confirm.CloseMsg{}) // Esc
+	*m = next
+	pumpSecrets(t, m, cmd)
+	if _, err := os.Stat(cred); err != nil {
+		t.Fatalf("Esc deleted the plain file: %v", err)
+	}
+	if got := toastText(*m); !strings.Contains(got, "Plain file kept") {
+		t.Fatalf("toast %q", got)
+	}
+	// The palette entry asks again.
+	pumpSecrets(t, m, m.dispatchPaletteAction("secrets-migrate"))
+	if !deletePlainCardOpen(m) {
+		t.Fatal("palette did not offer the delete again")
 	}
 }
 
@@ -330,7 +385,7 @@ func TestSecretsMigrateLaterThreeTimesThenNote(t *testing.T) {
 }
 
 // A move cut off after the copy: the store holds the same names; the
-// next start checks and removes the plain file without asking.
+// next start asks (Keep for now first) before it removes the plain file.
 func TestSecretsMigrateFinishesInterruptedMove(t *testing.T) {
 	keyring.MockInit()
 	dir, cred := withPlainCredentials(t, true)
@@ -349,9 +404,9 @@ func TestSecretsMigrateFinishesInterruptedMove(t *testing.T) {
 	m := secretsTestModel(t)
 	startMigrateCheck(t, m)
 	if migrateCardOpen(m) || m.secretsPromptOpen() {
-		t.Fatal("asked during the finish")
+		t.Fatal("asked to move during the finish")
 	}
-	waitGone(t, cred)
+	deletePlainViaCard(t, m, cred)
 	checkMigrated(t, dir, cred, "keyring")
 }
 
@@ -373,17 +428,15 @@ func TestSecretsMigrateFinishesAfterUnlock(t *testing.T) {
 	resetSecretStore()
 	m := secretsTestModel(t)
 	startMigrateCheck(t, m)
-	if migrateCardOpen(m) {
-		t.Fatal("card during the finish")
+	if migrateCardOpen(m) || deletePlainCardOpen(m) {
+		t.Fatal("card while the store is locked")
 	}
 	if b, _ := os.ReadFile(cred); string(b) != migFixture {
 		t.Fatal("removed before the store could be checked")
 	}
 	pumpSecrets(t, m, m.dispatchPaletteAction("secrets-unlock"))
 	submitSecrets(t, m, secretsTestPass)
-	// The finish runs after the unlock on its own goroutine (the pump
-	// may stop waiting first on a slow runner); give it time.
-	waitGone(t, cred)
+	deletePlainViaCard(t, m, cred)
 	checkMigrated(t, dir, cred, "age")
 }
 
