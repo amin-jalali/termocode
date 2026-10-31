@@ -614,6 +614,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_trust_annotations": aiNever(aiNoAIConfig),
 	"mcp_share":             aiNever(aiNoAIConfig),
 	"mcp_tool_search":       aiNever(aiNoAIConfig),
+	"mcp_catalog_url":       aiNever(aiNoAIConfig),
 	"mcp_trusted":           aiNever(aiNoAIConfig),
 	"mcp_disabled_tools":    aiNever(aiNoAIConfig),
 	"mcp_log_level":         aiNever(aiNoAIConfig),

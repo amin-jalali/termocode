@@ -90,3 +90,26 @@ func fileHas(p, s string) bool {
 	b, _ := os.ReadFile(p)
 	return strings.Contains(string(b), s)
 }
+
+func TestMCPCatalogURLSettingRow(t *testing.T) {
+	m := aiTestModel(t)
+	if v, ok := mcpSettingValue("setting-mcp-catalog-url"); !ok || v != "" {
+		t.Fatalf("row %q %v", v, ok)
+	}
+	m.applySetting("setting-mcp-catalog-url", "https://mcp.corp.example")
+	if s := mcp.LoadSettings(mcpConfigPath()); s.CatalogURL != "https://mcp.corp.example" {
+		t.Fatalf("saved %q", s.CatalogURL)
+	}
+	before, _ := os.ReadFile(mcpConfigPath())
+	m.applySetting("setting-mcp-catalog-url", "http://evil.example")
+	if after, _ := os.ReadFile(mcpConfigPath()); string(after) != string(before) {
+		t.Fatal("a plain http URL was saved")
+	}
+	m.applySetting("setting-mcp-catalog-url", "")
+	if s := mcp.LoadSettings(mcpConfigPath()); s.CatalogURL != "" {
+		t.Fatal("empty did not go back to the official registry")
+	}
+	if p, ok := aiSettingPolicies["mcp_catalog_url"]; !ok || p.Gate != aiGateNever {
+		t.Fatal("the AI must never change mcp_catalog_url")
+	}
+}
