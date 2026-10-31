@@ -36,6 +36,9 @@ const (
 	StateInvalid  = "invalid" // the entry can not run (Problem says why)
 	StateSignIn   = "sign-in needed"
 	StateDisabled = "off" // "disabled": true in the entry: kept, never started, no tools
+	// StateReconnecting: a remote server could not be reached; it tries
+	// again by itself (Status.RetryIn, reconnect.go).
+	StateReconnecting = "reconnecting"
 )
 
 // TrustAnswer is the user's answer to "start this server?".
@@ -95,6 +98,12 @@ type ManagerOptions struct {
 	// Share runs stdio servers once for every session of this user
 	// (share.go); nil: each session runs its own (mcp_share off).
 	Share *ShareOptions
+
+	// ReconnectBase is the first wait before a remote server that can
+	// not be reached tries again (0: 2 s; < 0: no reconnects); each try
+	// doubles it up to ReconnectCap (0: 2 min), ReconnectMax tries (0: 8).
+	ReconnectBase, ReconnectCap time.Duration
+	ReconnectMax                int
 }
 
 // Status is one row of the servers list.
@@ -117,7 +126,9 @@ type Status struct {
 	// Sessions is how many use it now (this one too).
 	Shared   bool
 	Sessions int
-	server   Server
+	// RetryIn is the wait before the next reconnect (StateReconnecting).
+	RetryIn time.Duration
+	server  Server
 }
 
 // ServerTools is one server's tools for a chat turn.
@@ -149,6 +160,11 @@ type serverState struct {
 	toolsNo   string // tools hash the user did not accept (asked once)
 	authMeta  string // resource_metadata URL of the last 401
 	authScope string // scope of the last 401
+
+	retryN     int         // reconnect tries since the last success
+	retryAt    time.Time   // when the waiting reconnect runs
+	retryTimer *time.Timer // the waiting reconnect (nil none)
+	retryGen   int
 }
 
 // Manager is the set of configured servers.
@@ -194,6 +210,9 @@ func (m *Manager) Reload() []string {
 		if old != nil && old.proc != nil {
 			stop = append(stop, old.proc)
 		}
+		if old != nil {
+			m.stopRetryLocked(old)
+		}
 		st := &serverState{cfg: s, state: StateStopped}
 		if s.Problem != "" {
 			st.state, st.problem = StateInvalid, s.Problem
@@ -204,8 +223,11 @@ func (m *Manager) Reload() []string {
 		next[s.Name] = st
 	}
 	for name, old := range m.servers {
-		if _, ok := next[name]; !ok && old.proc != nil {
-			stop = append(stop, old.proc)
+		if _, ok := next[name]; !ok {
+			m.stopRetryLocked(old)
+			if old.proc != nil {
+				stop = append(stop, old.proc)
+			}
 		}
 	}
 	m.servers = next
@@ -255,6 +277,9 @@ func (m *Manager) Servers() []Status {
 			var e ai.MCPOAuth
 			e, s.SignedIn = m.opts.Tokens.Load(st.cfg.Name)
 			s.Expired = s.SignedIn && e.RefreshToken == "" && e.Expired(time.Now())
+		}
+		if st.state == StateReconnecting {
+			s.RetryIn = time.Until(st.retryAt)
 		}
 		if st.proc != nil {
 			s.Pid = st.proc.Pid()
@@ -398,6 +423,14 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 		if !errors.Is(err, ErrSignInNeeded) {
 			m.setFailed(st, err)
 		}
+		if cfg.Type == TypeHTTP && retryable(err) {
+			m.scheduleReconnect(st, err)
+		} else {
+			m.mu.Lock()
+			m.stopRetryLocked(st)
+			st.retryN = 0
+			m.mu.Unlock()
+		}
 		return nil, err
 	}
 	info := p.Client.ServerInfo()
@@ -409,6 +442,8 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 		return nil, errors.New("MCP is shut down")
 	}
 	st.proc, st.state, st.problem = p, StateRunning, ""
+	m.stopRetryLocked(st)
+	st.retryN = 0
 	m.mu.Unlock()
 	crash.Go("an MCP server watcher", func() {
 		<-p.Done()
@@ -701,6 +736,9 @@ func (m *Manager) Tools(ctx context.Context, ask AskTrust) []ServerTools {
 	var names []string
 	for name, st := range m.servers {
 		if st.state != StateInvalid && st.state != StateSignIn && st.state != StateDisabled { // no 401 round trip per turn
+			if st.state == StateReconnecting && !st.haveTools {
+				continue // the reconnect timer starts it, not each turn
+			}
 			names = append(names, name)
 		}
 	}
@@ -809,6 +847,19 @@ func (m *Manager) Call(ctx context.Context, ask AskTrust, server, tool string, a
 		}
 		res, err = p.Client.CallToolTimeout(ctx, tool, args, timeout)
 	}
+	if err != nil && st.cfg.Type == TypeHTTP && isConnErr(err) {
+		// The network went away under a running connection: drop it and
+		// reconnect later (the call is not run again).
+		m.mu.Lock()
+		if st.proc == p {
+			st.proc = nil
+		}
+		m.mu.Unlock()
+		crash.Go("an MCP server stop", func() { p.Close() })
+		m.setFailed(st, err)
+		m.scheduleReconnect(st, err)
+		return res, err
+	}
 	m.armIdle(st)
 	if errors.Is(err, ErrCallTimeout) {
 		m.log(server, "%s: no answer in %v", tool, timeout)
@@ -841,6 +892,8 @@ func (m *Manager) Stop(name string) {
 		st.idle.Stop()
 		st.idle = nil
 	}
+	m.stopRetryLocked(st)
+	st.retryN = 0
 	m.mu.Unlock()
 	if p != nil {
 		m.log(name, "stopped")
@@ -863,6 +916,7 @@ func (m *Manager) Close() {
 			st.idle.Stop()
 			st.idle = nil
 		}
+		m.stopRetryLocked(st)
 	}
 	m.mu.Unlock()
 	var wg sync.WaitGroup
