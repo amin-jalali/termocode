@@ -78,3 +78,22 @@ func TestSplitSQLiteTriggerWithQuotes(t *testing.T) {
 		t.Errorf("comments and strings are not identifiers: %q", w)
 	}
 }
+
+// A custom DELIMITER makes one statement out of text with ';' in it.
+// A server that runs many statements per query still splits on ';', so
+// the read-only gate must judge each ';' part too, never just the first.
+func TestClassifyCustomDelimiterJudgesEverySemicolonPart(t *testing.T) {
+	for _, tc := range []struct {
+		sql  string
+		want Kind
+	}{
+		{"DELIMITER $$\nSELECT 1; DROP TABLE t$$", KindDDL},
+		{"DELIMITER $$\nSELECT 1; DELETE FROM t$$", KindWrite},
+		{"DELIMITER 0\nSELECT;10", KindWrite},
+		{"DELIMITER $$\nSELECT 1; SELECT 2$$", KindRead},
+	} {
+		if got, _ := Classify(tc.sql, "mysql"); got != tc.want {
+			t.Errorf("Classify(%q) = %v, want %v", tc.sql, got, tc.want)
+		}
+	}
+}
