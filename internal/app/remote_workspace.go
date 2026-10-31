@@ -1,7 +1,10 @@
 package app
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/amin-jalali/termocode/internal/explorer"
+	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
@@ -25,4 +28,19 @@ func newExplorerFor(ws workspace.Workspace) explorer.Model {
 		return explorer.NewFS(fsys, ws.Root)
 	}
 	return explorer.New()
+}
+
+// onExplorerDirLoaded applies a container folder's listing (FIX-2: it
+// ran off the UI loop). A folder that cannot be read says why; a root
+// that cannot be read is the explorer's own error line.
+func (m *Model) onExplorerDirLoaded(msg explorer.DirLoadedMsg) tea.Cmd {
+	m.explorer.ApplyDirLoaded(msg)
+	if msg.Err == nil || msg.Root {
+		return nil
+	}
+	label := "the container"
+	if ws := m.workspace(); ws.Host != nil {
+		label = ws.Host.Label()
+	}
+	return m.pushToastDetail(toast.Errr, "Cannot open folder", remoteErrText(label, msg.Err))
 }

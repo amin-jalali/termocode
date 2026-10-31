@@ -20,8 +20,14 @@ type Node struct {
 	Loaded   bool
 
 	// fsys lists a folder that is not on this machine (a container
-	// workspace, ADR 0018); nil = the local disk. Children inherit it.
-	fsys workspace.FS
+	// workspace, ADR 0018); nil = the local disk. Children inherit it,
+	// and ld, the queue its listings go through off the UI loop
+	// (fs_load.go). loading: a listing of the folder runs. root: the
+	// workspace root of ld.
+	fsys    workspace.FS
+	ld      *fsLoader
+	loading bool
+	root    bool
 }
 
 func NewRoot(path string) (*Node, error) {
@@ -49,25 +55,21 @@ func NewRoot(path string) (*Node, error) {
 
 // NewRootFS is NewRoot for the folder root reached through a workspace
 // FS (a container): Path values are the host's own slash paths. Each
-// folder is one listing call; entries are never stat'ed one by one.
+// folder is one listing call; entries are never stat'ed one by one. It
+// reads nothing itself: the root's listing is asked (fs_load.go) and an
+// error comes with its answer.
 func NewRootFS(fsys workspace.FS, root string) (*Node, error) {
 	root = path.Clean(root)
-	info, err := fsys.Stat(context.Background(), root)
-	if err != nil {
-		return nil, err
-	}
 	n := &Node{
 		Name:     path.Base(root),
 		Path:     root,
-		IsDir:    info.IsDir(),
-		Expanded: info.IsDir(),
+		IsDir:    true,
+		Expanded: true,
 		fsys:     fsys,
+		ld:       newFSLoader(),
+		root:     true,
 	}
-	if n.IsDir {
-		if err := n.Load(); err != nil {
-			return nil, err
-		}
-	}
+	_ = n.Load()
 	return n, nil
 }
 
@@ -90,6 +92,14 @@ func (n *Node) readDir() ([]os.DirEntry, error) {
 
 func (n *Node) Load() error {
 	if !n.IsDir {
+		return nil
+	}
+	if n.ld != nil { // a workspace FS: asked, read off the UI loop
+		if !n.loading {
+			touch()
+		}
+		n.ld.ask(n.Path)
+		n.loading = true
 		return nil
 	}
 	entries, err := n.readDir()
@@ -185,7 +195,10 @@ func (n *Node) ExpandedPaths() []string {
 // Only the listed directories and their ancestors are read; other folders
 // stay unloaded (this used to read the whole tree, every folder, on each
 // session restore).
-func (n *Node) ExpandPaths(set map[string]bool) {
+//
+// It reports whether a folder it needs is still being read (a workspace
+// FS: the caller runs it again when the listing arrives).
+func (n *Node) ExpandPaths(set map[string]bool) bool {
 	need := make(map[string]bool, len(set)*4)
 	for p := range set {
 		for d := p; ; {
@@ -200,21 +213,25 @@ func (n *Node) ExpandPaths(set map[string]bool) {
 			d = parent
 		}
 	}
-	n.expandPaths(set, need)
+	return n.expandPaths(set, need)
 }
 
-func (n *Node) expandPaths(set, need map[string]bool) {
+func (n *Node) expandPaths(set, need map[string]bool) bool {
 	if !n.IsDir || !need[n.Path] {
-		return
+		return false
 	}
 	if !n.Loaded {
 		_ = n.Load()
 	}
-	if set[n.Path] {
+	if set[n.Path] && !n.Expanded {
 		touch()
 		n.Expanded = true
 	}
+	waiting := !n.Loaded && n.ld != nil
 	for _, c := range n.Children {
-		c.expandPaths(set, need)
+		if c.expandPaths(set, need) {
+			waiting = true
+		}
 	}
+	return waiting
 }

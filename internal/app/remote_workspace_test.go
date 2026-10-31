@@ -4,8 +4,11 @@ import (
 	"context"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/amin-jalali/termocode/internal/containerhost"
 	"github.com/amin-jalali/termocode/internal/containerhost/fakedocker"
+	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
@@ -33,7 +36,43 @@ func newContainerModel(t *testing.T) (Model, *containerhost.Host, *fakedocker.Do
 	ws, h, d, c := fakeContainerWS(t)
 	setProcWorkspace(t, ws)
 	t.Setenv("TERMOCODE_NO_NVIM", "1")
-	return New(), h, d, c
+	m := New()
+	pumpExplorerLoads(t, &m)
+	return m, h, d, c
+}
+
+// pumpExplorerLoads runs the explorer's container listings (they run off
+// the UI loop, FIX-2) and applies them, until none is left.
+func pumpExplorerLoads(t *testing.T, m *Model) {
+	t.Helper()
+	for i := 0; i < 100; i++ {
+		cmd := m.explorer.ScheduleLoads()
+		if cmd == nil {
+			return
+		}
+		for _, msg := range runBatch(cmd) {
+			if lm, ok := msg.(explorer.DirLoadedMsg); ok {
+				m.onExplorerDirLoaded(lm)
+			}
+		}
+	}
+	t.Fatal("explorer listings never ended")
+}
+
+// runBatch runs cmd and every command of a batch it returns.
+func runBatch(cmd tea.Cmd) []tea.Msg {
+	if cmd == nil {
+		return nil
+	}
+	msg := cmd()
+	if b, ok := msg.(tea.BatchMsg); ok {
+		var out []tea.Msg
+		for _, c := range b {
+			out = append(out, runBatch(c)...)
+		}
+		return out
+	}
+	return []tea.Msg{msg}
 }
 
 func TestContainerWorkspaceExplorerListsTheContainer(t *testing.T) {
@@ -42,6 +81,7 @@ func TestContainerWorkspaceExplorerListsTheContainer(t *testing.T) {
 		t.Fatalf("explorer root = %q, want /app", got)
 	}
 	m.explorer.RevealPath("/app/pkg/util.go")
+	pumpExplorerLoads(t, &m)
 	if got := m.explorer.CursorPath(); got != "/app/pkg/util.go" {
 		t.Fatalf("cursor = %q after reveal", got)
 	}

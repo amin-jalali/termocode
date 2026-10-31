@@ -110,7 +110,9 @@ func (m *Model) ExpandPaths(paths []string) {
 		set[p] = true
 	}
 	for _, r := range roots {
-		r.ExpandPaths(set)
+		if r.ExpandPaths(set) && r.ld != nil {
+			r.ld.expand = paths // folders not read yet: go on when they come
+		}
 	}
 	m.scrollIntoView()
 }
@@ -315,9 +317,13 @@ func (m *Model) Reload() {
 		}
 	}
 
-	// Primary root: rebuild from cwd. Falls back to its existing path on
-	// getcwd error so the root doesn't disappear.
-	if m.root != nil {
+	// A workspace FS root is not read here: its open folders are asked
+	// again and come back off the UI loop (fs_load.go).
+	if m.root != nil && m.root.ld != nil {
+		m.root.refreshFS()
+	} else if m.root != nil {
+		// Primary root: rebuild from cwd. Falls back to its existing path on
+		// getcwd error so the root doesn't disappear.
 		base := m.root.Path
 		if cwd, err := os.Getwd(); err == nil {
 			base = cwd
@@ -332,6 +338,11 @@ func (m *Model) Reload() {
 	rebuilt := make([]*Node, 0, len(m.extraRoots))
 	for _, old := range m.extraRoots {
 		if old == nil {
+			continue
+		}
+		if old.ld != nil {
+			old.refreshFS()
+			rebuilt = append(rebuilt, old)
 			continue
 		}
 		if newRoot, err := rebuild(old, old.Path); err == nil {
@@ -572,6 +583,10 @@ func (m *Model) RevealPath(path string) {
 		if !cur.Expanded {
 			touch()
 			cur.Expanded = true
+		}
+		if !cur.Loaded && cur.ld != nil { // its listing comes later: go on then
+			cur.ld.reveal = path
+			return
 		}
 		var next *Node
 		for _, c := range cur.Children {
