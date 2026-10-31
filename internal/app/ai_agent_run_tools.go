@@ -77,6 +77,7 @@ type aiRunSnap struct {
 	aiCostOK  bool
 	worktrees bool
 	runs      map[string]string // run id → what the stop card says about it
+	cats      map[string]ai.Category
 }
 
 func (m *Model) aiRunSnapshot(c aiRunCaller) aiRunSnap {
@@ -122,6 +123,7 @@ func (m *Model) aiRunSnapshot(c aiRunCaller) aiRunSnap {
 	sn.worktrees = s.settings.UseWorktrees()
 	sn.chatTitle = s.conv.Title
 	sn.active = s.aiRunsActive()
+	sn.cats = s.aiCategoryMap()
 	sn.aiCost, sn.aiCostOK = s.aiStartedCost()
 	sn.runs = map[string]string{}
 	for _, q := range s.runQueue {
@@ -349,7 +351,7 @@ func (sn aiRunSnap) describeStart(a map[string]any) string {
 		by += ", from run " + sn.caller.parentRun
 	}
 	b.WriteString(by + ".\n")
-	if aiBgEligible(r.prof.Run("card")) {
+	if aiBgEligible(r.prof.Run("card"), sn.cats) {
 		b.WriteString("Its steps only read, so it starts now in the background, beside the chat.")
 	} else {
 		b.WriteString("It starts here when the current answer or run ends; plan approval still asks before steps that write.")
@@ -379,7 +381,7 @@ func (m *Model) aiToolRunStart(ctx context.Context, c aiRunCaller, r aiRunStartR
 		}
 	}
 	id := aiNewRunID()
-	if run := r.prof.Run(id); aiBgEligible(run) {
+	if run := r.prof.Run(id); aiBgEligible(run, s.aiCategoryMap()) {
 		// OMX-6: a run that only reads starts now, beside this turn.
 		if r.prof.Name == aiRunInline {
 			if s.runInline == nil {

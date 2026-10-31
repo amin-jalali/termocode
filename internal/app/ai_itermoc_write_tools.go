@@ -696,7 +696,7 @@ func aiProfileStepProps() map[string]any {
 		"id":       str("step id (optional; step-1, step-2 … when left out)"),
 		"title":    str("what the step does, e.g. Review"),
 		"slot":     str("model slot from models_list (optional; main when left out)"),
-		"category": map[string]any{"type": "string", "enum": []string{agentdag.CategoryQuick, agentdag.CategoryDeep}, "description": "instead of slot: the profile's quick or deep slot"},
+		"category": str("instead of slot, the kind of work (OMX-16): quick, deep, visual, writing, architect (read-only), ultrabrain, or a category from ai_categories"),
 		"tools":    map[string]any{"type": "string", "enum": []string{agentdag.PresetNone, agentdag.PresetReadOnly, agentdag.PresetAll}, "description": "which tools the step gets (default all)"},
 		"prompt":   str("the step's instructions"),
 		"planner":  map[string]any{"type": "boolean", "description": "the step plans the run (at most one)"},
