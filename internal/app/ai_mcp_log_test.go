@@ -75,3 +75,14 @@ func TestMCPLogLevel(t *testing.T) {
 		t.Errorf("row value = %q", v)
 	}
 }
+
+// MCPX-30: Log on a service row of Itermoc shows only that service.
+func TestItermocServiceLogIsPerServer(t *testing.T) {
+	m := covMCPModel(t)
+	m.output = newOutputStore()
+	m.output.Append(mcpLogChannel, "10:00:00  a: started", "10:00:01  b: started")
+	m.itermocRun("log", imRow{kind: imRowService, sec: imSecServices, name: "b"})
+	if v := mcpLogView(m); strings.Contains(v, "a: started") || !strings.Contains(v, "only b") {
+		t.Errorf("b's log:\n%s", v)
+	}
+}
