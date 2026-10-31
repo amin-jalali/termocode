@@ -54,6 +54,9 @@ func showTerm(t *testing.T, p *Page, c *HubConn, snap map[string]any, items ...m
 	c.WaitSub(t, topic)
 	c.Send(t, Snap(topic, 1, snap))
 	p.WaitJS(termView + `.querySelector(".trow")`)
+	// The desktop pane focuses its input in an effect after the rows
+	// paint: a check that focuses or selects before it would lose to it.
+	p.WaitJS(`!document.querySelector('[data-view="term"] .dterm-pane.is-focus') || document.activeElement === document.querySelector('[data-view="term"] .dterm-pane.is-focus .dterm-input')`)
 }
 
 func termTexts(p *Page) []string {
