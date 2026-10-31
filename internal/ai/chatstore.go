@@ -186,6 +186,11 @@ type Conversation struct {
 	// the slot's, picked on purpose; else a level). AI: Next Reasoning
 	// Level sets it.
 	Reasoning string `json:"reasoning,omitempty"`
+	// Todos is the AI's todo list for this chat (todo_write, OMX-7) and
+	// KeepGoing whether a turn that ends with open todos sends the next
+	// "keep going" message by itself (AI: Toggle Keep Going).
+	Todos     []Todo `json:"todos,omitempty"`
+	KeepGoing bool   `json:"keep_going,omitempty"`
 }
 
 const (
