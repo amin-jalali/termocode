@@ -22,6 +22,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/statusbar"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // View renders the frame, then lays the terminal-graphics layer (image
@@ -249,14 +250,29 @@ func (m Model) toastPlaces() []toastPlace {
 	}
 	pane := m.editorPaneLayout()
 	edPaneW, editorStart := pane.W, pane.X
-	if m.h <= toastCompactMaxH || edPaneW < toastCompactMinW {
+	// Errors need a separate reason row, even beside a narrow chat pane.
+	errorDetail := false
+	for _, t := range m.toast.Live() {
+		if t.Severity == toast.Errr && t.Detail != "" {
+			errorDetail = true
+			break
+		}
+	}
+	if errorDetail {
+		editorStart, edPaneW = 0, m.w
+	}
+	if !errorDetail && (m.h <= toastCompactMaxH || edPaneW < toastCompactMinW) {
 		return m.compactToastPlaces(editorStart, edPaneW)
 	}
 	if edPaneW-6 < 24 {
 		return nil
 	}
 	// As wide as the text needs (28..52 cells), not always 52.
-	w := m.toast.FitWidth(min(52, edPaneW-6))
+	limit := 52
+	if errorDetail {
+		limit = 80
+	}
+	w := m.toast.FitWidth(min(limit, edPaneW-6))
 	cards := m.toast.Cards(w)
 	x := editorStart + edPaneW - w - 2
 	y := m.h - 3 // the shadow row of the newest card sits just above the status bar
