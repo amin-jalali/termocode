@@ -102,7 +102,7 @@ func aiShipModel(t *testing.T, f *aiShipFake, replies ...ai.Chunk) (*Model, *rec
 	m, rec, _, _ := aiSkillsModel(t, replies...)
 	m.gitIsRepo, m.gitBranch.Name, m.gitLoaded = true, "feat/x", true
 	old, oldPoll := aiShipOpsFor, aiShipPoll
-	aiShipOpsFor, aiShipPoll = func(*Model) aiShipOps { return f }, time.Millisecond
+	aiShipOpsFor, aiShipPoll = func(*Model, string) aiShipOps { return f }, time.Millisecond
 	t.Cleanup(func() { aiShipOpsFor, aiShipPoll = old, oldPoll })
 	return m, rec
 }
@@ -200,5 +200,39 @@ func TestAIShipIgnoresOtherMessagesWithoutAIState(t *testing.T) {
 	}
 	if _, ok := m.handleAIShipMsg(aiShipTickMsg{gen: 1}); !ok || m.ai != nil {
 		t.Fatalf("a stale tick with no ship: ok=%v ai=%v", ok, m.ai != nil)
+	}
+}
+
+// A ship of a plan run's worktree works there: its git calls get the
+// worktree's folder, and the fix turn is a plain chat turn whose
+// workspace is the worktree (the plan profile does not start a run).
+func TestAIShipInWorktree(t *testing.T) {
+	red := aiShipProbe{branch: "termocode/agent-r1-plan", base: "main", subjects: []string{"feat: x"}, head: "h1", pushed: true}
+	red.snap = ghci.Snapshot{HeadSHA: "h1", PR: &ghci.PR{Number: 7, State: "OPEN"},
+		Runs: []ghci.Run{{ID: 1, Workflow: "ci", Status: "completed", Conclusion: "failure", HeadSHA: "h1"}}}
+	f := &aiShipFake{probes: []aiShipProbe{red}}
+	m, rec := aiShipModel(t, f, ai.Chunk{Delta: "fixed"})
+	var dirs []string
+	aiShipOpsFor = func(_ *Model, dir string) aiShipOps { dirs = append(dirs, dir); return f }
+	m.ai.profile = ai.ProfilePlan
+	wt := t.TempDir()
+	aiShipDrive(t, m, m.startAIShip(red.branch, wt), func() bool {
+		rec.mu.Lock()
+		defer rec.mu.Unlock()
+		return len(rec.reqs) == 1 && !m.ai.streaming
+	})
+	if len(dirs) != 1 || dirs[0] != wt {
+		t.Fatalf("ship ops dirs %v", dirs)
+	}
+	if sys := rec.reqs[0].Messages[0].Content; !strings.Contains(sys, "Workspace root: "+wt) {
+		t.Fatalf("the fix turn does not work in the worktree:\n%s", sys)
+	}
+	for _, sm := range m.ai.conv.Messages {
+		if sm.Run != nil {
+			t.Fatal("the fix turn started a plan run")
+		}
+	}
+	if m.ai.turnRoot != "" {
+		t.Fatal("the worktree root stays for the next turn")
 	}
 }

@@ -57,9 +57,12 @@ type aiShipOps interface {
 	FailedLog(ctx context.Context, run ghci.Run) (ghci.FailedLog, error)
 }
 
-// aiShipOpsFor builds the real ops (git and gh in the workspace).
-var aiShipOpsFor = func(m *Model) aiShipOps {
-	dir, _ := m.rootDir()
+// aiShipOpsFor builds the real ops (git and gh in dir; "": the
+// workspace).
+var aiShipOpsFor = func(m *Model, dir string) aiShipOps {
+	if dir == "" {
+		dir, _ = m.rootDir()
+	}
 	return aiShipReal{dir: dir, run: m.ciW().runner()}
 }
 
@@ -98,6 +101,7 @@ func (o aiShipReal) FailedLog(ctx context.Context, r ghci.Run) (ghci.FailedLog, 
 type aiShip struct {
 	gen    int // a newer ship (or Stop) ends older messages
 	branch string
+	dir    string // a plan run's worktree ("": the workspace)
 	ops    aiShipOps
 	fixes  int
 	fixing bool        // a fix turn runs in the chat
@@ -130,16 +134,22 @@ type (
 func (m *Model) toggleAIShip() tea.Cmd {
 	s := m.aiS()
 	if s.ship != nil {
-		s.ship = nil
-		return m.aiInfo("Ship stopped")
+		return m.aiShipStop("Ship stopped")
 	}
 	m.gitEnsureLoaded()
 	if !m.gitIsRepo || m.gitBranch.Name == "" || strings.HasPrefix(m.gitBranch.Name, "(") {
 		return m.aiInfo("Ship needs a git branch: open a folder with a git repository")
 	}
+	return m.startAIShip(m.gitBranch.Name, "")
+}
+
+// startAIShip starts the loop on branch, checked out in dir ("": the
+// workspace; else a plan run's worktree, where its fix turns work too).
+func (m *Model) startAIShip(branch, dir string) tea.Cmd {
+	s := m.aiS()
 	s.shipGen++
-	s.ship = &aiShip{gen: s.shipGen, branch: m.gitBranch.Name, ops: aiShipOpsFor(m)}
-	return tea.Batch(m.aiInfo("Shipping "+s.ship.branch+": push, pull request, CI, fixes · run the command again to stop"), m.aiShipProbeCmd())
+	s.ship = &aiShip{gen: s.shipGen, branch: branch, dir: dir, ops: aiShipOpsFor(m, dir)}
+	return tea.Batch(m.aiInfo("Shipping "+branch+": push, pull request, CI, fixes · run AI: Ship Branch to Merge-Ready again to stop"), m.aiShipProbeCmd())
 }
 
 func (m *Model) aiShipProbeCmd() tea.Cmd {
@@ -159,6 +169,7 @@ func (m *Model) aiShipProbeCmd() tea.Cmd {
 // aiShipStop ends the loop with a message.
 func (m *Model) aiShipStop(text string) tea.Cmd {
 	m.aiS().ship = nil
+	m.aiS().turnRoot = ""
 	return m.aiInfo(text)
 }
 
@@ -258,6 +269,7 @@ func (m *Model) onAIShipLog(msg aiShipLogMsg) tea.Cmd {
 	sh.fixes++
 	sh.fixing = true
 	text := ghci.FixPrompt(sh.branch, msg.run, msg.log) + aiShipFixNote
+	s.turnRoot = sh.dir // a plan run's worktree: the fix is made there
 	return tea.Batch(m.aiInfo(fmt.Sprintf("CI is red: AI fix %d of %d", sh.fixes, aiShipMaxFixes)), m.openAIPanel(true), m.sendAIChat(text))
 }
 
