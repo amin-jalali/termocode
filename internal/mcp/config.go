@@ -316,8 +316,9 @@ func (s Server) Raw() json.RawMessage { return s.raw }
 
 // ── Expansion ──────────────────────────────────────────────────────────
 
-// Expander resolves ${VAR}, ${VAR:-default}, ${secret:NAME},
-// ${workspaceFolder} and ${userHome}.
+// Expander resolves ${VAR} (also spelled ${env:VAR}), ${VAR:-default},
+// ${secret:NAME}, ${workspaceFolder}, ${workspaceFolderBasename},
+// ${userHome} and ${/} (the path separator).
 type Expander struct {
 	Env          func(string) (string, bool) // os.LookupEnv in production
 	Secrets      map[string]string           // compatibility for callers with an in-memory map
@@ -342,6 +343,13 @@ func (x Expander) expand(s string) (string, error) {
 			return x.Workspace
 		case ref == "userHome":
 			return x.Home
+		case ref == "workspaceFolderBasename":
+			if x.Workspace == "" {
+				return ""
+			}
+			return filepath.Base(x.Workspace)
+		case ref == "/":
+			return string(filepath.Separator)
 		case strings.HasPrefix(ref, "secret:"):
 			name := strings.TrimPrefix(ref, "secret:")
 			// A value handed to a server is redacted from then on: a
@@ -361,7 +369,8 @@ func (x Expander) expand(s string) (string, error) {
 			}
 			return ""
 		}
-		name, def, hasDef := strings.Cut(ref, ":-")
+		// ${env:NAME} (other apps' spelling) is ${NAME}.
+		name, def, hasDef := strings.Cut(strings.TrimPrefix(ref, "env:"), ":-")
 		if x.Env != nil {
 			if v, ok := x.Env(name); ok && v != "" {
 				return v
