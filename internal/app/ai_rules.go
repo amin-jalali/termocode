@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -54,7 +55,7 @@ func (m *Model) askAIRulesTrust(r ai.Rules, send bool, text string) tea.Cmd {
 	m.aiS().rulesTrust = &aiRulesTrustPending{hash: r.Hash, send: send, text: text}
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s · %s\n", strings.Join(r.Files, " + "), humanSize(int64(r.Bytes)))
-	lines := strings.Split(r.Text, "\n")
+	lines := strings.Split(r.Preview(), "\n")
 	for i, l := range lines {
 		if i == aiRulesCardLines {
 			b.WriteString("\n    …")
@@ -108,8 +109,8 @@ func (m *Model) answerAIRulesTrust(id string) tea.Cmd {
 // openAIRules is AI: Project Rules…: the card again, to change the answer.
 func (m *Model) openAIRules() tea.Cmd {
 	r := ai.LoadProjectRules(aiWorkspaceRoot())
-	if r.Text == "" {
-		return m.aiInfo("No AGENTS.md or .termocode/rules.md in this workspace")
+	if r.Hash == "" {
+		return m.aiInfo("No AGENTS.md, CLAUDE.md or other rules file in this workspace")
 	}
 	return m.askAIRulesTrust(r, false, "")
 }
@@ -129,7 +130,7 @@ func aiRulesPrompt(r ai.Rules) string {
 // "AGENTS.md (4 KB)", "AGENTS.md + .termocode/rules.md (20 KB, cut)",
 // "AGENTS.md (not used)"; "" without rules.
 func aiRulesLabel(r ai.Rules) string {
-	if r.Text == "" {
+	if r.Hash == "" {
 		return ""
 	}
 	files := strings.Join(r.Files, " + ")
@@ -187,4 +188,42 @@ func (m *Model) openAIRulesFile(rel string) tea.Cmd {
 		}
 	}
 	return nil
+}
+
+// rulesInjector is the current chat's RulesInjector (a new chat starts
+// with a fresh one, so its rules are added again).
+func (s *aiState) rulesInjector() *ai.RulesInjector {
+	if s.rulesInj == nil || s.rulesInjChat != s.conv.ID {
+		s.rulesInj, s.rulesInjChat = &ai.RulesInjector{}, s.conv.ID
+	}
+	return s.rulesInj
+}
+
+// aiRulesOnRead makes read_file add the trusted folder and glob rules
+// of the file it read (OMX-9).
+func aiRulesOnRead(tools []ai.Tool, root string, rules ai.Rules, j *ai.RulesInjector) []ai.Tool {
+	ws := ai.Workspace{Root: root}
+	for i, t := range tools {
+		if t.Name != "read_file" {
+			continue
+		}
+		inner := t.Run
+		t.Run = func(ctx context.Context, a map[string]any) (string, error) {
+			out, err := inner(ctx, a)
+			if err != nil {
+				return out, err
+			}
+			abs, rerr := ws.Resolve(ai.ArgString(a, "path"))
+			if rerr != nil {
+				return out, nil
+			}
+			rel, rerr := filepath.Rel(root, abs)
+			if rerr != nil {
+				return out, nil
+			}
+			return out + j.Inject(rules, rel), nil
+		}
+		tools[i] = t
+	}
+	return tools
 }

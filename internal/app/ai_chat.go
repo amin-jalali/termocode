@@ -224,7 +224,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		return m.askAIProfileTrust(prof, aiTrustAfterSend, asked) // F4: a repo's prompts are shown first
 	}
 	rules := ai.LoadProjectRules(aiWorkspaceRoot()) // OM-1: read once per turn
-	if rules.Text != "" && aiRulesTrust(rules) == aiTrustAsk {
+	if rules.Hash != "" && aiRulesTrust(rules) == aiTrustAsk {
 		return m.askAIRulesTrust(rules, true, text) // a repo's rules file is shown first
 	}
 	if sk := aiLoadSkills(aiWorkspaceRoot()); sk.ProjectHash != "" && aiSkillsTrust(sk) == aiTrustAsk {
@@ -259,6 +259,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 
 	call := newAIIDECaller(gen, ch)
 	tools := aiFilterTools(m.aiChatTools(root, call), step.Tools)
+	if len(rules.Scoped) > 0 && aiRulesTrust(rules) == aiTrustUse {
+		tools = aiRulesOnRead(tools, root, rules, s.rulesInjector())
+	}
 	native := slot.p.SupportsTools()
 	base := m.aiChatBasePrompt(root, rules, memBlock) + aiStepSystem(step.System)
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
