@@ -389,6 +389,7 @@ func paletteItems() []picker.Item {
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
 	items = append(items, secretsPaletteItems()...)   // secret store (secrets_ui.go)
+	items = append(items, mcpImportOtherPaletteItems()...)
 	items = append(items, mcpServePaletteItems()...)  // termocode as an MCP server (mcp_serve_status.go)
 	items = append(items, webPaletteItems()...)       // the web panel (web_tui.go)
 	items = append(items, webAccessPaletteItems()...) // pairing and devices (web_access.go)
@@ -803,6 +804,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchSecretsPalette(id); ok { // secrets_ui.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchMCPImportOtherPalette(id); ok { // mcp_import_other.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchMCPServePalette(id); ok { // mcp_serve_status.go
