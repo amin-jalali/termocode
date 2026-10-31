@@ -52,6 +52,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Runs | `ai-runs` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
+| AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | `ai-ship` |   |   |
 | AI: Show Profile | `ai-profile-show` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |

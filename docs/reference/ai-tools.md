@@ -1654,6 +1654,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
+| `ai-ship` | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | never | it pushes and opens a pull request: the user starts it |
 | `ai-sign-in-claude` | AI: Sign in with Claude (OAuth, opt-in)… | never | AI provider, credentials and approvals stay with the user |
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |
 | `ai-skills` | AI: Skills… | never | opens a picker or prompt that only the user can answer; use a typed tool |
