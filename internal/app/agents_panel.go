@@ -66,6 +66,10 @@ type aiAgentsState struct {
 	snaps   map[string]*aiRunSnapshot
 	snapGen int
 	cache   aiAgentsCache
+	// logs are the steps' transcripts of this session (o) and target
+	// the step a message or stop card is about (agents_node_ctl.go).
+	logs   map[string]*strings.Builder
+	target string
 }
 
 // aiAgentsKey is everything the drawn rows depend on.
@@ -1283,6 +1287,12 @@ func (m *Model) routeAgentsKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 			}
 		}
 		return m.aiInfo("This step has no worktree to review"), true
+	case "m": // OMX-22: a message to the selected running step
+		return m.agentsSendKey(), true
+	case "x":
+		return m.agentsStopKey(), true
+	case "o":
+		return m.agentsOpenKey(), true
 	case "?":
 		return m.openAgentsKeyCard(), true
 	case "esc", "q":

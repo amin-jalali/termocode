@@ -106,6 +106,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIHistoryRenamed(strings.TrimSpace(value)), true
 	case promptKindAISaveAs:
 		return m.onAISaveAsPath(value), true
+	case promptKindAgentsSend: // agents_node_ctl.go
+		return m.onAgentsSend(value), true
 	}
 	return m.handleMCPPromptSubmit(value)
 }
@@ -123,6 +125,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIPlan(id), true
 	case confirmKindRunsStop: // runs_state.go
 		return m.answerRunsStop(id), true
+	case confirmKindAgentsStop: // agents_node_ctl.go
+		return m.answerAgentsStop(id), true
 	case confirmKindAIOAuth:
 		if id == "continue" {
 			return m.beginClaudeOAuth(), true
