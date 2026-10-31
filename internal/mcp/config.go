@@ -140,13 +140,23 @@ var nameRe = lazyre.New(`^[A-Za-z0-9_-]{1,40}$`)
 func ParseFile(b []byte, source, path string) ([]Server, []string, error) {
 	var f struct {
 		MCPServers map[string]json.RawMessage `json:"mcpServers"`
+		// Servers is the top key other editors write; an mcpServers
+		// entry of the same name wins.
+		Servers map[string]json.RawMessage `json:"servers"`
 	}
 	if err := json.Unmarshal(b, &f); err != nil {
 		return nil, nil, fmt.Errorf("%s is not valid JSON: %w", path, err)
 	}
+	all := f.Servers
+	if all == nil {
+		all = map[string]json.RawMessage{}
+	}
+	for name, raw := range f.MCPServers {
+		all[name] = raw
+	}
 	var out []Server
 	var warns []string
-	for name, raw := range f.MCPServers {
+	for name, raw := range all {
 		s := parseEntry(name, raw)
 		s.Source, s.SourcePath = source, path
 		if s.Auth != nil && s.Auth.GH != "" && source != SourceUser && s.Problem == "" {

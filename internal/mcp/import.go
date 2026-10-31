@@ -34,10 +34,22 @@ func ParseImport(text string) ([]Imported, []string, error) {
 		}
 	}
 	servers := top
-	if raw, ok := top["mcpServers"]; ok {
-		servers = nil
-		if err := json.Unmarshal(raw, &servers); err != nil {
-			return nil, nil, errors.New("mcpServers is not an object")
+	_, hasS := top["servers"]
+	_, hasM := top["mcpServers"]
+	if hasS || hasM {
+		servers = map[string]json.RawMessage{}
+		for _, key := range []string{"servers", "mcpServers"} { // mcpServers wins a clash
+			raw, ok := top[key]
+			if !ok {
+				continue
+			}
+			var m map[string]json.RawMessage
+			if err := json.Unmarshal(raw, &m); err != nil {
+				return nil, nil, errors.New(key + " is not an object")
+			}
+			for n, v := range m {
+				servers[n] = v
+			}
 		}
 	}
 	names := make([]string, 0, len(servers))

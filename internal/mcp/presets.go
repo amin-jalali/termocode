@@ -330,14 +330,22 @@ func editServers(path string, fn func(map[string]any) error) error {
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	servers, _ := file["mcpServers"].(map[string]any)
+	// A file with only the "servers" key (other editors' shape) is
+	// edited in that key; adding mcpServers would shadow its entries.
+	key := "mcpServers"
+	if _, has := file[key]; !has {
+		if _, ok := file["servers"].(map[string]any); ok {
+			key = "servers"
+		}
+	}
+	servers, _ := file[key].(map[string]any)
 	if servers == nil {
 		servers = map[string]any{}
 	}
 	if err := fn(servers); err != nil {
 		return err
 	}
-	file["mcpServers"] = servers
+	file[key] = servers
 	b, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return err
