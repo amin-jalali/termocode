@@ -2016,6 +2016,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai_parallel_max` | never | AI provider, credentials and approvals stay with the user |
 | `ai_plan_approval` | never | AI provider, credentials and approvals stay with the user; the AI never approves its own plan |
 | `ai_prices` | never | AI provider, credentials and approvals stay with the user |
+| `ai_prompt_cache` | never | AI provider, credentials and approvals stay with the user |
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `ai_until_done_budget_usd` | never | AI provider, credentials and approvals stay with the user |
 | `ai_until_done_rounds` | never | AI provider, credentials and approvals stay with the user |
