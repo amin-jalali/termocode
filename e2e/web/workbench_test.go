@@ -145,6 +145,9 @@ func waitSubSkipping(t *testing.T, c *HubConn, topic string) {
 			}
 		case *webproto.Unsub:
 		case *webproto.Req:
+			if paintOps[m.Op] {
+				continue // a colour request on the way (term.colors, buf.hl)
+			}
 			if m.Op != "buf.close" {
 				t.Fatalf("page sent %s while a sub for %s was expected", show(m), topic)
 			}
