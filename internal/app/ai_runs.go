@@ -476,6 +476,11 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 		},
 	}
+	if n := s.settings.PlanReviews(); n > 0 { // OMX-14: opt-in, a deep-model request a round
+		if sl := slots[catSlots[agentdag.CategoryDeep]]; sl.p != nil {
+			opts.PlanReview, opts.PlanReviewRounds = aiPlanReviewer(sl.p, user), n
+		}
+	}
 	var h *agentrun.Handle
 	err := catErr // OMX-16: a planner needs its quick and deep slots
 	if err == nil {
@@ -555,7 +560,10 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		switch ev.Kind {
 		case agentrun.RunPlanned:
 			m.aiAddPlannedSteps(rm, ev)
+			m.aiPlanFileEvent(rm, ev) // OMX-14
 			return waitAIChat(msg.ch)
+		case agentrun.NodePlanReview, agentrun.NodeDone:
+			m.aiPlanFileEvent(rm, ev)
 		case agentrun.RunPaused:
 			rm.Run.State, rm.Run.Budget, rm.Run.Spent = ai.RunStatePaused, ev.Budget, ev.Cost
 			s.runPausing = false
@@ -656,6 +664,8 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 			st.Error = ev.Err
 			st.Notes = append(st.Notes, "■ "+ev.Err)
 		}
+	case agentrun.NodePlanReview: // OMX-14
+		st.Notes = append(st.Notes, aiPlanReviewNote(ev))
 	case agentrun.NodeEscalated: // OMX-16: it runs once more on a stronger model
 		m.aiStepFinished(st, ev) // the first try's time, tokens and cost
 		s.aiRunAgain(st.ID)
@@ -911,6 +921,7 @@ func (m *Model) finishAIRun(final agentrun.Event) {
 			}
 		}
 	}
+	defer s.aiPlanFileEnd(rm)                // OMX-14: after the final states
 	aiSettleWorktrees(rm.Steps)              // G-WT: a stopped step's worktree waits for the user
 	rm.Run.PlanWait, s.planWait = false, nil // G-PLAN
 	aiRemovePlanFile(rm.Run.ID)
