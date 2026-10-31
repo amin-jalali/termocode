@@ -38,3 +38,14 @@ func (m *Manager) Info(name string) (info ServerInfo, proto string, ok bool) {
 	}
 	return c.Server, "", true
 }
+
+// Untrust forgets this session's trust of a server ("Allow once" or
+// Trust): a project server asks again before it starts, unless a saved
+// "Always allow" remains (the caller forgets that with ForgetTrusted).
+func (m *Manager) Untrust(name string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if st, ok := m.servers[name]; ok {
+		st.trusted = ""
+	}
+}
