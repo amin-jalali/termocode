@@ -417,6 +417,7 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 	}
 	name := cfg.Name
 	opts := Options{
+		SkipDiscover: m.skipDiscover(cfg), // era.go
 		StartTimeout: time.Duration(cfg.StartTimeout) * time.Second,
 		Roots:        m.opts.Roots,
 		Log:          func(line string) { m.log(name, "%s", line) },
@@ -453,6 +454,7 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 	}
 	info := p.Client.ServerInfo()
 	m.log(name, "connected: %s %s, MCP %s", info.Name, info.Version, p.Client.Version())
+	m.noteEra(cfg, p.Client)
 	m.mu.Lock()
 	if m.closed {
 		m.mu.Unlock()
