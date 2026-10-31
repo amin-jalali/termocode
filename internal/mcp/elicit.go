@@ -198,18 +198,7 @@ func (c *Client) handleElicit(m extproc.Message, reply replyFunc) {
 		hold(true) // no timeout while the user answers
 		res := e(ctx, req)
 		hold(false)
-		out := map[string]any{"action": res.Action}
-		if res.Action == "" {
-			out["action"] = ElicitCancel
-		}
-		if res.Action == ElicitAccept && req.Mode == ElicitForm {
-			content := res.Content
-			if content == nil {
-				content = map[string]any{}
-			}
-			out["content"] = content
-		}
-		reply(out, nil)
+		reply(elicitAnswer(req, res), nil)
 	}, func() { // a crashed question is cancelled; the server is not left waiting
 		hold(false)
 		reply(map[string]any{"action": ElicitCancel}, nil)

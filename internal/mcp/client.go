@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
-	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -126,8 +124,13 @@ func (c *Client) Close() { c.conn.Close() }
 // deadline) instead of the generic timeout.
 func (c *Client) call(ctx context.Context, method string, params any) (json.RawMessage, error) {
 	if c.Stateless() {
-		params = withMeta(params)
+		return c.roundTrips(ctx, method, params) // _meta and MRTR (spec2026_mrtr.go)
 	}
+	return c.send(ctx, method, params)
+}
+
+// send is one request on the connection.
+func (c *Client) send(ctx context.Context, method string, params any) (json.RawMessage, error) {
 	r, err := c.conn.Call(ctx, method, params)
 	if err != nil && ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -321,14 +324,7 @@ func (c *Client) handle(m extproc.Message, reply replyFunc) {
 	case "ping":
 		reply(map[string]any{}, nil)
 	case "roots/list":
-		roots := []map[string]any{}
-		if c.opts.Roots != nil {
-			for _, r := range c.opts.Roots() {
-				u := url.URL{Scheme: "file", Path: filepath.ToSlash(r)}
-				roots = append(roots, map[string]any{"uri": u.String(), "name": filepath.Base(r)})
-			}
-		}
-		reply(map[string]any{"roots": roots}, nil)
+		reply(c.rootsResult(), nil)
 	case "notifications/tools/list_changed":
 		c.opts.log("tools changed")
 		if c.opts.ToolsChanged != nil {

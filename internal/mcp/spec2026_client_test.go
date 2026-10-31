@@ -83,3 +83,54 @@ func TestModernHTTP(t *testing.T) {
 		}
 	}
 }
+
+// Spec (MCPX-20, MRTR): a stateless server asks for input with
+// resultType "input_required"; termocode asks the user through the same
+// elicitation card, then sends the call again with the inputResponses
+// and the server's requestState, and gets the final result.
+func TestModernMRTRElicit(t *testing.T) {
+	log := filepath.Join(t.TempDir(), "log")
+	p := startFake(t, map[string]string{"FAKE_MODERN": "only", "FAKE_LOG": log}, Options{})
+	var asked []ElicitRequest
+	ctx := WithElicitor(context.Background(), func(_ context.Context, req ElicitRequest) ElicitResult {
+		asked = append(asked, req)
+		return ElicitResult{Action: ElicitAccept, Content: map[string]any{"name": "Ann"}}
+	})
+	res, err := p.Client.CallToolTimeout(ctx, "ask", nil, 5*time.Second)
+	if err != nil || res.Text() != `accept {"name":"Ann"}` {
+		t.Fatalf("call: %q %v", res.Text(), err)
+	}
+	if len(asked) != 1 || asked[0].Mode != ElicitForm || len(asked[0].Fields) != 1 || asked[0].Fields[0].Label() != "Your name" {
+		t.Fatalf("asked %+v", asked)
+	}
+	if n := strings.Count(fakeLog(t, log), "meta tools/call"); n != 2 {
+		t.Fatalf("%d tools/call, want the first and the retry", n)
+	}
+	// Two rounds: each retry carries only the newest answers.
+	res, err = p.Client.CallTool(ctx, "ask_twice", nil)
+	if err != nil || res.Text() != `two rounds: accept {"name":"Ann"}` {
+		t.Fatalf("two rounds: %q %v", res.Text(), err)
+	}
+	// URL mode carries no content.
+	asked = nil
+	if res, err = p.Client.CallTool(ctx, "ask_url", nil); err != nil || res.Text() != "accept" || len(asked) != 1 || asked[0].URL == "" {
+		t.Fatalf("url mode: %q %v %+v", res.Text(), err, asked)
+	}
+}
+
+// Spec (MCPX-20, MRTR): without a UI the answer is decline; roots/list
+// is answered with the workspace roots; sampling is refused on purpose.
+func TestModernMRTRRootsDeclineSampling(t *testing.T) {
+	root := t.TempDir()
+	p := startFake(t, map[string]string{"FAKE_MODERN": "only"}, Options{Roots: func() []string { return []string{root} }})
+	ctx := context.Background()
+	if res, err := p.Client.CallTool(ctx, "ask", nil); err != nil || res.Text() != "decline" {
+		t.Fatalf("no UI: %q %v", res.Text(), err)
+	}
+	if res, err := p.Client.CallTool(ctx, "roots", nil); err != nil || !strings.HasPrefix(res.Text(), "roots: file://") {
+		t.Fatalf("roots: %q %v", res.Text(), err)
+	}
+	if _, err := p.Client.CallTool(ctx, "sample", nil); err == nil || !strings.Contains(err.Error(), "sampling") {
+		t.Fatalf("sampling: %v", err)
+	}
+}

@@ -160,10 +160,12 @@ func run() {
 	var initialized bool // guarded by mu
 	handle := func(c *extproc.Conn, m extproc.Message) {
 		logf(m.Method)
+		stateless := false
 		if mode := modernMode(); mode != "" && m.IsRequest() {
 			mu.Lock()
 			legacy := initialized
 			mu.Unlock()
+			stateless = !legacy
 			switch {
 			case m.Method == "server/discover":
 				_ = c.Reply(m.ID, DiscoverResult(), nil)
@@ -257,6 +259,12 @@ func run() {
 			}
 			_ = json.Unmarshal(m.Params, &p)
 			logf("call " + p.Name)
+			if stateless {
+				if res, rerr, ok := MRTR(p.Name, m.Params); ok {
+					_ = c.Reply(m.ID, res, rerr)
+					return
+				}
+			}
 			ctx, cancel := context.WithCancel(context.Background())
 			mu.Lock()
 			cancels[string(m.ID)] = cancel
