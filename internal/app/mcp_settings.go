@@ -30,6 +30,7 @@ var mcpSettingKeys = map[string]string{
 	"setting-mcp-share":             "mcp_share",
 	"setting-mcp-tool-search":       "mcp_tool_search",
 	"setting-mcp-catalog-url":       "mcp_catalog_url",
+	"setting-mcp-auto-update":       "mcp_auto_update",
 }
 
 func init() {
@@ -54,6 +55,8 @@ func init() {
 			Desc: "Send the AI only a search tool instead of every MCP tool's full schema; it loads the tools it needs. auto: only when the MCP tools are big (about 10k tokens). on: always. off: never."},
 		settingsRow{ID: "setting-mcp-catalog-url", Label: "mcp_catalog_url", Kind: "string", Default: "",
 			Desc: "Catalog that AI: MCP: Browse Catalog… reads (an MCP Registry API, for example your team's approved list). Empty: the official MCP Registry. Must be https."},
+		settingsRow{ID: "setting-mcp-auto-update", Label: "mcp_auto_update", Kind: "string", Default: "off",
+			Desc: "Servers added from the catalog are pinned to a version. off: check only with AI: MCP: Check for Updates. notify: also check once a day when the MCP servers list opens, and tell. on: the same, and update your own pinned servers (the project file is never changed)."},
 	)
 }
 
@@ -109,6 +112,8 @@ func mcpSettingValue(id string) (string, bool) {
 		return s.ToolSearch, true
 	case "setting-mcp-catalog-url":
 		return s.CatalogURL, true
+	case "setting-mcp-auto-update":
+		return s.AutoUpdate, true
 	}
 	return "", false
 }
@@ -156,6 +161,12 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 		value = strings.ToLower(value)
 		if value != mcp.ToolSearchAuto && value != mcp.ToolSearchOn && value != mcp.ToolSearchOff {
 			return bad("auto, on or off")
+		}
+		v = value
+	case "setting-mcp-auto-update":
+		value = strings.ToLower(value)
+		if value != mcp.AutoUpdateOff && value != mcp.AutoUpdateNotify && value != mcp.AutoUpdateOn {
+			return bad("off, notify or on")
 		}
 		v = value
 	case "setting-mcp-catalog-url":

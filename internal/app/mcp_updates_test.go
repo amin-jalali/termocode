@@ -115,3 +115,22 @@ func TestMCPAutoUpdateOffNoNetwork(t *testing.T) {
 		t.Fatal("the network was used before the command ran")
 	}
 }
+
+func TestMCPAutoUpdateSettingRow(t *testing.T) {
+	m := aiTestModel(t)
+	if v, ok := mcpSettingValue("setting-mcp-auto-update"); !ok || v != "off" {
+		t.Fatalf("row %q %v", v, ok)
+	}
+	m.applySetting("setting-mcp-auto-update", "on")
+	if s := mcp.LoadSettings(mcpConfigPath()); s.AutoUpdate != mcp.AutoUpdateOn {
+		t.Fatalf("saved %q", s.AutoUpdate)
+	}
+	before, _ := os.ReadFile(mcpConfigPath())
+	m.applySetting("setting-mcp-auto-update", "always")
+	if after, _ := os.ReadFile(mcpConfigPath()); string(after) != string(before) {
+		t.Fatal("a bad value was saved")
+	}
+	if p, ok := aiSettingPolicies["mcp_auto_update"]; !ok || p.Gate != aiGateNever {
+		t.Fatal("the AI must never change mcp_auto_update")
+	}
+}
