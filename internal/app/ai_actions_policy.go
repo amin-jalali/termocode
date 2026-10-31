@@ -500,6 +500,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// files and trusting a project's skills are the user's.
 	"ai-skills":       aiNever(aiNoPicker),
 	"help-bug-report": aiNever("only the user chooses what to export"),
+	"ai-doctor":       aiNever("a local diagnostic page for the user"),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
 	// Agent worktrees (G-WT): merging or discarding an agent's work and
