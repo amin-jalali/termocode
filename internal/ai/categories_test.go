@@ -52,3 +52,11 @@ func TestCategories(t *testing.T) {
 		}
 	}
 }
+
+// OMX-16: ESCALATE is on unless ai_step_escalate is false.
+func TestEscalatesSetting(t *testing.T) {
+	off := false
+	if !(Settings{}).Escalates() || (Settings{StepEscalate: &off}).Escalates() {
+		t.Fatal("ai_step_escalate")
+	}
+}

@@ -54,6 +54,9 @@ type Settings struct {
 	// Categories is ai_categories (OMX-16, categories.go): built-in
 	// categories changed, or new ones, by name.
 	Categories map[string]CategoryConfig `json:"ai_categories,omitempty"`
+	// StepEscalate is ai_step_escalate (OMX-16; nil: on): a step not on
+	// the deep slot may answer ESCALATE to run once more on deep.
+	StepEscalate *bool `json:"ai_step_escalate,omitempty"`
 	// UntilDoneRounds (0: DefaultUntilDoneRounds) and UntilDoneBudgetUSD
 	// (nil: DefaultUntilDoneBudgetUSD; 0 set on purpose: no budget) are
 	// the limits of a "work until done" run whose profile does not set

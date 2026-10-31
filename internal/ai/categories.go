@@ -124,3 +124,6 @@ func checkCategory(name string, c CategoryConfig) error {
 	}
 	return nil
 }
+
+// Escalates reports whether ai_step_escalate is on (the default).
+func (s Settings) Escalates() bool { return s.StepEscalate == nil || *s.StepEscalate }
