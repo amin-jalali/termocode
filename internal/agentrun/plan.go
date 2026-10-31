@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
@@ -67,7 +68,10 @@ var planIDRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 // node never gets the plan or unrelated answers) and the edges between
 // them. taken are ids the run already has. Errors are short and say
 // what to fix: they go back to the planner.
-func ParsePlan(text string, taken map[string]bool) ([]agentdag.Node, []agentdag.Edge, error) {
+//
+// cats are the run's categories (Options.Categories; nil: quick and
+// deep): a node's category must be one of them.
+func ParsePlan(text string, taken map[string]bool, cats map[string]string) ([]agentdag.Node, []agentdag.Edge, error) {
 	body, ok := ai.FirstCodeBlock(text)
 	if !ok {
 		body = strings.TrimSpace(text)
@@ -105,13 +109,9 @@ func ParsePlan(text string, taken map[string]bool) ([]agentdag.Node, []agentdag.
 			return nil, nil, fmt.Errorf("node %q: the prompt is longer than 8 KB", id)
 		}
 		seen[id] = true
-		cat := p.Category
-		switch cat {
-		case "":
-			cat = agentdag.CategoryQuick
-		case agentdag.CategoryQuick, agentdag.CategoryDeep:
-		default:
-			return nil, nil, fmt.Errorf("node %q: unknown category %q (quick or deep)", id, p.Category)
+		cat, err := planCategory(p.Category, cats)
+		if err != nil {
+			return nil, nil, fmt.Errorf("node %q: %v", id, err)
 		}
 		title := agentdag.Clean(p.Title)
 		if title == "" {
@@ -148,6 +148,29 @@ func ParsePlan(text string, taken map[string]bool) ([]agentdag.Node, []agentdag.
 			len(ends), strings.Join(ends, ", "))
 	}
 	return nodes, edges, nil
+}
+
+// planCategory checks a planned node's category against cats ("" is
+// quick).
+func planCategory(cat string, cats map[string]string) (string, error) {
+	cat = strings.TrimSpace(cat)
+	if cat == "" {
+		return agentdag.CategoryQuick, nil
+	}
+	if cat == agentdag.CategoryQuick || cat == agentdag.CategoryDeep {
+		return cat, nil
+	}
+	if _, ok := cats[cat]; ok {
+		return cat, nil
+	}
+	names := []string{agentdag.CategoryQuick, agentdag.CategoryDeep}
+	for c := range cats {
+		if c != agentdag.CategoryQuick && c != agentdag.CategoryDeep {
+			names = append(names, c)
+		}
+	}
+	sort.Strings(names)
+	return "", fmt.Errorf("unknown category %q (one of: %s)", cat, strings.Join(names, ", "))
 }
 
 // grow adds a plan's nodes to the run after planner id: the plan's roots

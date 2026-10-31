@@ -278,11 +278,11 @@ func ApplyPlanEdit(r agentdag.Run, text string, cats map[string]string) (agentda
 			return agentdag.Run{}, fmt.Errorf("step id %q belongs to the loop's fix step; pick another", id)
 		}
 		listed[id] = true
-		cat := p.Category
-		switch cat {
-		case "", agentdag.CategoryQuick, agentdag.CategoryDeep:
-		default:
-			return agentdag.Run{}, fmt.Errorf("step %q: unknown category %q (quick or deep)", id, p.Category)
+		cat := strings.TrimSpace(p.Category)
+		if cat != "" {
+			if _, err := planCategory(cat, cats); err != nil {
+				return agentdag.Run{}, fmt.Errorf("step %q: %v", id, err)
+			}
 		}
 		var ds []string
 		for _, d := range p.Deps {

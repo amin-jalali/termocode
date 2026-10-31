@@ -791,7 +791,7 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 		if h.fix != "" {
 			taken[h.fix] = true // the loop adds it later
 		}
-		res.plan, res.planEdges, err = ParsePlan(finalText(added), taken)
+		res.plan, res.planEdges, err = ParsePlan(finalText(added), taken, h.o.Categories)
 		if err != nil { // one repair request with the error
 			h.emit(Event{NodeID: n.ID, Kind: NodeRepair, Err: err.Error()})
 			hist := append(append(history[:len(history):len(history)], added...),
@@ -799,7 +799,7 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 			raw = nil
 			added = agent.Run(ctx, hist, emit)
 			if ctx.Err() == nil && fail == "" {
-				res.plan, res.planEdges, err = ParsePlan(finalText(added), taken)
+				res.plan, res.planEdges, err = ParsePlan(finalText(added), taken, h.o.Categories)
 				if err != nil {
 					fail = "the plan is not valid after one repair: " + err.Error()
 				}

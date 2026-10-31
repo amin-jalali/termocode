@@ -238,12 +238,12 @@ func TestParsePlan(t *testing.T) {
 		{"two ends", `{"nodes": [{"id": "a", "prompt": "p"}, {"id": "b", "prompt": "q"}]}`, "one final node"},
 		{"too deep", layers, "too many layers"},
 	} {
-		_, _, err := ParsePlan(tc.text, taken)
+		_, _, err := ParsePlan(tc.text, taken, nil)
 		if err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: err %v, want %q", tc.name, err, tc.want)
 		}
 	}
-	nodes, edges, err := ParsePlan(diamondPlan, taken)
+	nodes, edges, err := ParsePlan(diamondPlan, taken, nil)
 	if err != nil || len(nodes) != 4 || len(edges) != 4 {
 		t.Fatalf("diamond: %v %v %v", nodes, edges, err)
 	}
@@ -507,4 +507,21 @@ func (p recProv) Stream(ctx context.Context, r ai.Request) <-chan ai.Chunk {
 	*p.reqs = append(*p.reqs, r)
 	p.mu.Unlock()
 	return p.inner.Stream(ctx, r)
+}
+
+// OMX-16: a plan may use the run's categories (Options.Categories);
+// an unknown one names the ones there are.
+func TestParsePlanCategories(t *testing.T) {
+	cats := map[string]string{"quick": "quick", "deep": "main", "visual": "main"}
+	nodes, _, err := ParsePlan(`{"nodes": [{"id": "ui", "prompt": "p", "category": "visual"}]}`, nil, cats)
+	if err != nil || nodes[0].Category != "visual" {
+		t.Fatalf("visual: %v %+v", err, nodes)
+	}
+	_, _, err = ParsePlan(`{"nodes": [{"id": "a", "prompt": "p", "category": "huge"}]}`, nil, cats)
+	if err == nil || !strings.Contains(err.Error(), "deep, quick, visual") {
+		t.Fatalf("huge: %v", err)
+	}
+	if _, _, err := ParsePlan(`{"nodes": [{"id": "a", "prompt": "p", "category": "visual"}]}`, nil, nil); err == nil {
+		t.Fatal("without categories only quick and deep")
+	}
 }
