@@ -309,6 +309,11 @@ transcript and the AI audit log (Output: AI) show `mcp.<server>.<tool>`.
 - A tool the server marks read-only runs at once.
 - Any other tool asks first. **Always allow mcp:<server>** stops the
   questions for that server (change it in **AI: Agent Auto-Approve…**).
+- To undo a wrong **Always allow**, open the server in
+  **AI: MCP Servers…** and choose **Reset trust…**: the server asks again
+  before it starts (project servers) and its tools ask again before they
+  change something. A tool you listed in `autoApprove` has its own
+  **Untrust tool NAME…** row. Both cards put **Cancel** first.
 - A tool whose name says delete, remove, archive, destroy, purge or drop
   always asks.
 - Set `mcp_trust_annotations` to `false` (Settings → MCP) to make every
