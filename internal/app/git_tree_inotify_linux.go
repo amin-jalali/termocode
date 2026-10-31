@@ -8,6 +8,8 @@ import (
 	"sync"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // File events for the work tree watch (git_tree_watch.go): one inotify
@@ -47,7 +49,8 @@ func gitTreeInotifyStart() bool {
 		w.byWD = map[int32]string{}
 		w.mine = map[*gitPollGate][]string{}
 		w.ready = true
-		go gitTreeInotifyRead(w.fd)
+		fd := w.fd
+		crash.Go("the work tree file events", func() { gitTreeInotifyRead(fd) })
 	})
 	return w.ready
 }
