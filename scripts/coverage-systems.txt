@@ -14,7 +14,7 @@ Session/transfer/update: internal/session internal/transfer internal/update inte
 Database and HTTP: internal/dbclient internal/httpclient
 UI parts: internal/activity internal/anim internal/cellwidth internal/clipring internal/clock internal/confirm internal/darkbg internal/debounce internal/findbar internal/grid internal/help internal/importview internal/keyhint internal/keymap internal/layout internal/menu internal/nerdterm internal/picker internal/preview internal/profileform internal/prompt internal/replacebar internal/rtl internal/statusbar internal/tabbar internal/termcaps internal/termfont internal/termimg internal/theme internal/toast
 Editor and files: internal/editor internal/nvim internal/explorer internal/search internal/mdview internal/recents internal/tasks internal/tests internal/lspinstall internal/ext internal/extproc internal/migrate internal/cfgfile internal/jsonc internal/shellint
-Web UI: internal/webproto internal/webgw/... internal/webdevices internal/webtotp
+Web UI: internal/webproto internal/webgw/... internal/webdevices internal/webtotp internal/webhl
 App shell: internal/app internal/crash internal/bootgc internal/lazyre cmd/termocode internal/setup internal/spawn
 
 exclude: internal/testkit/... internal/perfbudget cmd/failedtests internal/mcp/mcptest internal/services/servicestest internal/kube/kubetest internal/containerhost/fakedocker internal/secrets/secretstest internal/dbclient/dbtest internal/extproc/extproctest internal/keytest internal/devtools/... cmd/docgen cmd/recordgifs cmd/covreport internal/webproto/gen cmd/webbuild cmd/webdev
