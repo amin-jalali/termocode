@@ -172,6 +172,9 @@ type aiState struct {
 	bgMail aiBgMail
 	// catErrShown are the ai_categories errors logged already (OMX-16).
 	catErrShown map[string]bool
+	// runAgain are the running run's steps that start once more (a stall,
+	// ESCALATE): their card keeps its notes, time and tokens.
+	runAgain map[string]bool
 	// agents is the AGENTS view of the chat's runs (agents_panel.go).
 	agents aiAgentsState
 	// usageLog is every step and plain chat turn that used a model in

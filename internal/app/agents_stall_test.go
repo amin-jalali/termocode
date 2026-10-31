@@ -153,3 +153,16 @@ func TestAgentsNodeStalledEvent(t *testing.T) {
 		t.Fatal("a stalled step keeps its activity")
 	}
 }
+
+// OMX-23: a step that starts once more after a stall keeps its notes,
+// time and tokens.
+func TestAgentsStalledStepKeepsNotesWhenItStartsAgain(t *testing.T) {
+	r := newStallRig(t)
+	r.m.onAIRunEvent(aiRunEventMsg{gen: r.m.ai.chatGen, ev: agentrun.Event{Kind: agentrun.NodeStalled, RunID: "r1", NodeID: "left",
+		Err: "no activity for 10 min: stopped, it starts once more", Elapsed: 600 * time.Second}})
+	r.ev(agentrun.NodeStart, ai.Event{}, "left")
+	st := aiFindStep(r.m.ai.aiRunMessage(), "left")
+	if st.State != "running" || len(st.Notes) == 0 || !strings.HasPrefix(st.Notes[len(st.Notes)-1], "⏱") || st.ElapsedMs != 600000 {
+		t.Fatalf("step %+v", st)
+	}
+}
