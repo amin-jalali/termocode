@@ -258,6 +258,11 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 			slots[n.Slot] = sl
 		}
 	}
+	catSlots, err := s.aiResolveCategorySlots(run, aiCategorySlots(prof, cats), slots)
+	if err != nil {
+		return nil, err
+	}
+	escalate := aiEscalateTo(s.settings, catSlots)
 	budget := aiRunBudget(prof, &by)
 	if by.ParentBudget > 0 {
 		left := by.ParentBudget - s.aiParentSpent(by.ParentRun)
@@ -304,7 +309,8 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 	opts := agentrun.Options{
 		Parallel:   s.settings.Parallel(),
 		User:       task,
-		Categories: aiCategorySlots(prof, cats),
+		Categories: catSlots,
+		Escalate:   escalate,
 		Budget:     budget,
 		StallAfter: s.settings.StepStall(),
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
@@ -319,7 +325,7 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 			n = aiCategoryNode(n, cats)
 			ts := aiFilterTools(tools, n.Tools)
 			native := sl.p.SupportsTools()
-			sys := ai.SystemPrompt(base+aiStepPrompt(n, index[n.ID], total)+aiCategoryPrompt(n, cats, false)+aiBgStepNote, ts, native)
+			sys := ai.SystemPrompt(base+aiStepPrompt(n, index[n.ID], total)+aiCategoryPrompt(n, cats, escalate != "" && n.Slot != catSlots[escalate])+aiBgStepNote, ts, native)
 			k := aiBgStepKey(run.ID, n.ID)
 			mail.openKey(k)
 			// No Confirm: a background step never asks; a tool that would
@@ -394,7 +400,8 @@ func (m *Model) onAIBgEvent(msg aiBgEventMsg) {
 	switch ev.Kind {
 	case agentrun.NodeStart:
 		*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: st.Slot, Model: st.Model, Category: st.Category, Deps: st.Deps,
-			State: string(agentdag.StateRunning), StartedAtMs: now.UnixMilli(), Notes: st.Notes, ElapsedMs: st.ElapsedMs}
+			State: string(agentdag.StateRunning), StartedAtMs: now.UnixMilli(), Notes: st.Notes, ElapsedMs: st.ElapsedMs,
+			Usage: st.Usage, Cost: st.Cost} // a step that starts once more keeps what it used
 	case agentrun.NodeText:
 		st.Text = ev.Tail
 	case agentrun.NodeTool:
@@ -423,6 +430,14 @@ func (m *Model) onAIBgEvent(msg aiBgEventMsg) {
 		if ev.Err == "" {
 			st.Notes = append(st.Notes, "✉ "+aiCardText(ai.Redact(ev.Output), 60))
 		}
+	case agentrun.NodeEscalated: // OMX-16
+		m.aiBgStepUsage(b, st, ev)
+		if len(ev.Nodes) == 1 {
+			st.Category, st.Slot = ev.Nodes[0].Category, ev.Nodes[0].Slot
+			st.Model = b.slots[st.Slot].cfg.Model
+		}
+		st.State, st.Text = string(agentdag.StatePending), ""
+		st.Notes = append(st.Notes, "⇧ "+aiCardText(ai.Redact(ev.Err), 80)+" → runs again on "+st.Category+" ("+st.Model+")")
 	case agentrun.NodeStalled:
 		st.State = string(agentdag.StatePending)
 		st.Notes = append(st.Notes, "⏱ "+ev.Err)

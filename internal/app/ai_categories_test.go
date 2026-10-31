@@ -101,3 +101,37 @@ func TestAICategoryPlannerList(t *testing.T) {
 		t.Fatalf("ui step %+v", st)
 	}
 }
+
+// OMX-16: a quick step that answers ESCALATE runs once more on deep;
+// its card says so and names the deep model; with ai_step_escalate off
+// the step is told nothing and its answer stands.
+func TestAICategoryEscalate(t *testing.T) {
+	two := []ai.ProfileStep{{ID: "a", Title: "Fix", Category: "quick"}, {ID: "b", Title: "Sum up", Category: "quick"}}
+	m, main, quick := catModel(t, two...)
+	quick.replies = []ai.Chunk{{Delta: "ESCALATE: the race needs a stronger model"}, {Delta: "summary"}}
+	main.replies = []ai.Chunk{{Delta: "fixed the race"}}
+	driveAIChat(t, m, m.sendAIChat("fix the race"), nil)
+	rm := aiRunMsg(t, m)
+	st := rm.Steps[0]
+	if rm.Run.State != ai.RunStateDone || st.Text != "fixed the race" || st.Slot != ai.SlotMain || st.Model != "claude-sonnet-4-5" {
+		t.Fatalf("run %+v step %+v", rm.Run, st)
+	}
+	if !strings.Contains(strings.Join(st.Notes, "\n"), "⇧ the race needs a stronger model") {
+		t.Fatalf("notes %q", st.Notes)
+	}
+	if !strings.Contains(quick.reqs[0].Messages[0].Content, "ESCALATE: <why>") {
+		t.Fatal("the quick step was not told about ESCALATE")
+	}
+	if strings.Contains(main.reqs[0].Messages[0].Content, "ESCALATE: <why>") {
+		t.Fatal("the deep step was told about ESCALATE")
+	}
+
+	m2, _, quick2 := catModel(t, two...)
+	off := false
+	m2.ai.settings.StepEscalate = &off
+	quick2.replies = []ai.Chunk{{Delta: "ESCALATE: hard"}, {Delta: "summary"}}
+	driveAIChat(t, m2, m2.sendAIChat("fix"), nil)
+	if rm := aiRunMsg(t, m2); rm.Steps[0].Text != "ESCALATE: hard" || strings.Contains(quick2.reqs[0].Messages[0].Content, "ESCALATE: <why>") {
+		t.Fatalf("off: step %+v", rm.Steps[0])
+	}
+}
