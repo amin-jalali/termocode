@@ -220,8 +220,12 @@ func (m *Manager) DeviceSignIn(ctx context.Context, name string, app DeviceApp, 
 		}
 		m.mu.Lock()
 		u, meta := st.cfg.URL, st.authMeta
+		override := ""
+		if st.cfg.OAuth != nil {
+			override = st.cfg.OAuth.MetadataURL
+		}
 		m.mu.Unlock()
-		md, err := auth.Discover(ctx, m.opts.HTTP, u, meta)
+		md, err := auth.DiscoverWith(ctx, m.opts.HTTP, u, meta, override)
 		if err != nil {
 			return nil, err
 		}

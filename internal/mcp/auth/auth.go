@@ -119,6 +119,18 @@ func sameURL(a, b string) bool {
 
 // Discover finds the authorization server of an MCP server.
 func Discover(ctx context.Context, hc *http.Client, serverURL, resourceMetadata string) (Metadata, error) {
+	return DiscoverWith(ctx, hc, serverURL, resourceMetadata, "")
+}
+
+// DiscoverWith is Discover with the authorization server's metadata URL
+// given ("oauth": {"metadata_url"}; "" finds it): the issuer is the
+// one that document names.
+func DiscoverWith(ctx context.Context, hc *http.Client, serverURL, resourceMetadata, asMetadataURL string) (Metadata, error) {
+	if asMetadataURL != "" {
+		if err := checkEndpoint(asMetadataURL); err != nil {
+			return Metadata{}, err
+		}
+	}
 	var prm struct {
 		Resource             string   `json:"resource"`
 		AuthorizationServers []string `json:"authorization_servers"`
@@ -149,6 +161,16 @@ func Discover(ctx context.Context, hc *http.Client, serverURL, resourceMetadata 
 	}
 	md := Metadata{Resource: serverURL}
 	issuer := ""
+	if asMetadataURL != "" {
+		md.Resource = serverURL
+		if found && prm.Resource != "" && strings.HasPrefix(strings.TrimSuffix(serverURL, "/"), strings.TrimSuffix(prm.Resource, "/")) {
+			md.Resource = prm.Resource
+		}
+		if found {
+			md.Scopes = prm.Scopes
+		}
+		return asMetadata(ctx, hc, md, "", []string{asMetadataURL})
+	}
 	if found {
 		issuer = prm.AuthorizationServers[0]
 		md.Scopes = prm.Scopes
@@ -166,6 +188,18 @@ func Discover(ctx context.Context, hc *http.Client, serverURL, resourceMetadata 
 	if err := checkEndpoint(issuer); err != nil {
 		return Metadata{}, err
 	}
+	oa, oaRoot := wellKnown(issuer, "oauth-authorization-server")
+	oi, _ := wellKnown(issuer, "openid-configuration")
+	cands := []string{oa, oi}
+	if oaRoot != "" { // an issuer with a path: also issuer + /.well-known/openid-configuration
+		cands = append(cands, strings.TrimSuffix(issuer, "/")+"/.well-known/openid-configuration")
+	}
+	return asMetadata(ctx, hc, md, issuer, cands)
+}
+
+// asMetadata reads the first authorization server metadata of cands.
+// issuer "" takes the one the document names (a metadata_url override).
+func asMetadata(ctx context.Context, hc *http.Client, md Metadata, issuer string, cands []string) (Metadata, error) {
 	var as struct {
 		Issuer       string   `json:"issuer"`
 		Authorize    string   `json:"authorization_endpoint"`
@@ -176,12 +210,6 @@ func Discover(ctx context.Context, hc *http.Client, serverURL, resourceMetadata 
 		AuthMethods  []string `json:"token_endpoint_auth_methods_supported"`
 		Device       string   `json:"device_authorization_endpoint"`
 		Revocation   string   `json:"revocation_endpoint"`
-	}
-	oa, oaRoot := wellKnown(issuer, "oauth-authorization-server")
-	oi, _ := wellKnown(issuer, "openid-configuration")
-	cands := []string{oa, oi}
-	if oaRoot != "" { // an issuer with a path: also issuer + /.well-known/openid-configuration
-		cands = append(cands, strings.TrimSuffix(issuer, "/")+"/.well-known/openid-configuration")
 	}
 	var lastErr error
 	ok := false
@@ -198,6 +226,12 @@ func Discover(ctx context.Context, hc *http.Client, serverURL, resourceMetadata 
 	}
 	if !ok {
 		return Metadata{}, fmt.Errorf("no OAuth metadata for %s: %v", issuer, lastErr)
+	}
+	if issuer == "" {
+		if err := checkEndpoint(as.Issuer); err != nil {
+			return Metadata{}, err
+		}
+		issuer = as.Issuer
 	}
 	if !sameURL(as.Issuer, issuer) {
 		return Metadata{}, fmt.Errorf("OAuth metadata names issuer %q, not %q", as.Issuer, issuer)
@@ -240,6 +274,7 @@ func contains(list []string, s string) bool {
 type Config struct {
 	ServerURL        string
 	ResourceMetadata string   // from the 401 (WWW-Authenticate), "" to probe
+	MetadataURL      string   // the authorization server's metadata ("oauth": {"metadata_url"}), "" to find it
 	Scopes           []string // from mcp.json "oauth" (wins over the server's list)
 	ClientID         string   // pre-registered client (mcp.json "oauth")
 	ClientSecret     string
@@ -326,7 +361,7 @@ func listen(port int) (net.Listener, error) {
 // Begin discovers the server's authorization server, gets a client id,
 // starts the loopback listener and builds the authorize URL.
 func Begin(ctx context.Context, cfg Config) (*Flow, error) {
-	md, err := Discover(ctx, cfg.HTTP, cfg.ServerURL, cfg.ResourceMetadata)
+	md, err := DiscoverWith(ctx, cfg.HTTP, cfg.ServerURL, cfg.ResourceMetadata, cfg.MetadataURL)
 	if err != nil {
 		return nil, err
 	}
