@@ -138,7 +138,7 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 	}
 	mgr := m.aiMCP()
 	ask := mcpChatAsker(gen, ch)
-	opts := mcp.AdapterOptions{TrustAnnotations: set.TrustAnnotations, MaxResult: set.MaxResultKB << 10, Clean: aiCleanText}
+	opts := m.mcpAdapterOptions(set)
 	return func(ctx context.Context) []ai.Tool {
 		mgr.Reload()
 		var out []ai.Tool
@@ -148,7 +148,7 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 			o.ToolsChanged = st.ToolsChanged
 			out = append(out, mcp.AITools(st.Server, st.Tools, call, o)...)
 		}
-		return out
+		return withMCPReader(out, opts.Spill)
 	}
 }
 
