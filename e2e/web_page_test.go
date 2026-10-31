@@ -228,7 +228,8 @@ func (p *webPage) tapJS(el string) {
 
 // hoverTap moves the mouse onto the element el returns until the action
 // it reveals (act, a JS expression: an element shown on hover) is shown
-// and its middle is not covered, then clicks that middle. Like a user it
+// and its middle is not covered, then clicks that middle, again until
+// the click lands on act. Like a user it
 // points again when the row moved under the pointer (a panel still
 // sliding in, a list that re-rendered, a box above that grew): a hover
 // done once and a separate tap waited for ever on an action that hid
@@ -250,11 +251,25 @@ func (p *webPage) hoverTap(el, act string) {
 		return hit !== null && (a === hit || a.contains(hit)) ? {X: x, Y: y} : null;
 	})()`)
 		if at != nil {
+			// The page may still move between that check and the press
+			// (a box above that grew, a hover state not yet redrawn on a
+			// slow runner): the click then lands on the row and opens it.
+			// Note where the click lands; press again when it missed.
+			webEval[bool](p, `(() => {
+			window.__hoverTapOff?.();
+			window.__hoverTapHit = null;
+			const on = (e) => { const a = `+act+`; window.__hoverTapHit = !!a && (a === e.target || a.contains(e.target)); };
+			document.addEventListener("click", on, {capture: true});
+			window.__hoverTapOff = () => document.removeEventListener("click", on, {capture: true});
+			return true;
+		})()`)
 			p.do(chromedp.MouseClickXY(at.X, at.Y))
-			return
+			if webEval[bool](p, `(() => { window.__hoverTapOff?.(); return window.__hoverTapHit === true; })()`) {
+				return
+			}
 		}
 		if time.Now().After(deadline) {
-			p.t.Fatalf("%s: hovered %s for %s, %s never showed uncovered", p.vp.Name, webWait, webShort(el), webShort(act))
+			p.t.Fatalf("%s: hovered %s for %s, %s never took a click uncovered", p.vp.Name, webWait, webShort(el), webShort(act))
 		}
 		time.Sleep(25 * time.Millisecond)
 	}
