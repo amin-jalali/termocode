@@ -153,6 +153,8 @@ type aiState struct {
 	// runAgain are the running run's steps that start once more (a stall,
 	// ESCALATE): their card keeps its notes, time and tokens.
 	runAgain map[string]bool
+	// planDocs are the plan files of planned runs that go (OMX-14).
+	planDocs map[string]*aiPlanDoc
 	// agents is the AGENTS view of the chat's runs (agents_panel.go).
 	agents aiAgentsState
 	// usageLog is every step and plain chat turn that used a model in
