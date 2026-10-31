@@ -113,6 +113,27 @@ func wellKnown(raw, name string) (pathForm, rootForm string) {
 	return rootForm + p, rootForm
 }
 
+// ResourceIssuer reads a protected-resource metadata document and
+// returns its first authorization server ("" when it names none).
+func ResourceIssuer(ctx context.Context, hc *http.Client, resourceMetadata string) (string, error) {
+	if err := checkEndpoint(resourceMetadata); err != nil {
+		return "", err
+	}
+	var prm struct {
+		AuthorizationServers []string `json:"authorization_servers"`
+	}
+	if _, err := getJSON(ctx, hc, resourceMetadata, &prm); err != nil {
+		return "", err
+	}
+	if len(prm.AuthorizationServers) == 0 {
+		return "", nil
+	}
+	return prm.AuthorizationServers[0], nil
+}
+
+// SameIssuer compares issuer URLs (a trailing slash does not count).
+func SameIssuer(a, b string) bool { return sameURL(a, b) }
+
 func sameURL(a, b string) bool {
 	return strings.TrimSuffix(a, "/") == strings.TrimSuffix(b, "/")
 }

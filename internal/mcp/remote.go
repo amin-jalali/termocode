@@ -191,9 +191,22 @@ func (m *Manager) accessToken(ctx context.Context, name, serverURL string) strin
 }
 
 // refresh runs after a 401 to a request that carried our token.
-func (m *Manager) refresh(ctx context.Context, name, serverURL string) bool {
+func (m *Manager) refresh(ctx context.Context, name, serverURL string, ae *AuthError) bool {
 	e, ok := m.signIn(name, serverURL)
-	if !ok || e.RefreshToken == "" {
+	if !ok {
+		return false
+	}
+	// A sign-in belongs to its issuer (AU-7): when the server now names
+	// another authorization server, drop it; the new sign-in registers
+	// there again.
+	if ae != nil && ae.ResourceMetadata != "" && e.Issuer != "" {
+		if iss, err := auth.ResourceIssuer(ctx, m.opts.HTTP, ae.ResourceMetadata); err == nil && iss != "" && !auth.SameIssuer(iss, e.Issuer) {
+			m.log(name, "the server's sign-in service changed: its sign-in was dropped (sign in again)")
+			_ = m.opts.Tokens.Delete(name)
+			return false
+		}
+	}
+	if e.RefreshToken == "" {
 		return false
 	}
 	ne, err := auth.Refresh(ctx, m.opts.HTTP, e)
@@ -227,7 +240,7 @@ func (m *Manager) startHTTP(ctx context.Context, st *serverState, exp Server, op
 		}
 		var mu sync.Mutex
 		ho.Token = func(context.Context) string { mu.Lock(); defer mu.Unlock(); return tok }
-		ho.Refresh = func(ctx context.Context) bool {
+		ho.Refresh = func(ctx context.Context, _ *AuthError) bool {
 			nt, err := GHTokenFor(ctx, gh)
 			mu.Lock()
 			defer mu.Unlock()
@@ -239,7 +252,7 @@ func (m *Manager) startHTTP(ctx context.Context, st *serverState, exp Server, op
 		}
 	} else if !static && m.opts.Tokens != nil {
 		ho.Token = func(ctx context.Context) string { return m.accessToken(ctx, name, exp.URL) }
-		ho.Refresh = func(ctx context.Context) bool { return m.refresh(ctx, name, exp.URL) }
+		ho.Refresh = func(ctx context.Context, ae *AuthError) bool { return m.refresh(ctx, name, exp.URL, ae) }
 	}
 	p, err := StartHTTP(ctx, exp, ho, opts)
 	var ae *AuthError
