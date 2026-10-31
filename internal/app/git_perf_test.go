@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -102,4 +103,52 @@ func TestPerfGitRefresh20k(t *testing.T) {
 	slices.Sort(took)
 	t.Logf("git refresh: %v", took)
 	perfbudget.Check(t, "git_refresh_20k", float64(took[2].Microseconds()/100)/10)
+}
+
+// FIX-40: the background poll (status --porcelain=v2 --branch, no index
+// lock) on the 20 000-file repo after every file was touched (a build
+// tool, a checkout there and back): the text is the same but the times
+// are not, and a status that never writes the index reads all 20 000
+// files again on every poll. The poll's index refresh settles them: the
+// median of five polls after the first.
+func TestPerfGitPollTouched20k(t *testing.T) {
+	perfbudget.Require(t)
+	dir := bigGitRepo(t)
+	t.Chdir(dir)
+	// The touch is two seconds before the poll's refresh: git compares
+	// whole seconds, and a file touched in the second the index is
+	// written stays "racily clean" until a later refresh.
+	touched := time.Now().Add(-2 * time.Second)
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			if d != nil && d.IsDir() && d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return err
+		}
+		return os.Chtimes(p, touched, touched)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := &Model{gitGate: &gitPollGate{}}
+	m.applyGitSnapshot(fetchGitCmd()().(GitMsg))
+	poll := func() time.Duration {
+		t0 := time.Now()
+		msg := m.pollGitCmd()().(GitMsg)
+		d := time.Since(t0)
+		if !msg.IsRepo || len(msg.Files) != 2200 {
+			t.Fatalf("snapshot: repo %v, %d files", msg.IsRepo, len(msg.Files))
+		}
+		m.applyGitSnapshot(msg)
+		return d
+	}
+	poll() // the first poll refreshes the index
+	var took []time.Duration
+	for i := 0; i < 5; i++ {
+		took = append(took, poll())
+	}
+	slices.Sort(took)
+	t.Logf("git poll, touched files: %v", took)
+	perfbudget.Check(t, "git_poll_touched_20k", float64(took[2].Microseconds()/100)/10)
 }
