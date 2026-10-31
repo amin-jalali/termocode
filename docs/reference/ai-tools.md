@@ -2006,6 +2006,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | --- | --- | --- |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
+| `ai_concurrency` | never | AI provider, credentials and approvals stay with the user |
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_fallback` | never | AI provider, credentials and approvals stay with the user |
