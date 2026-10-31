@@ -84,6 +84,9 @@ type Agent struct {
 	AutoApprove map[string]bool
 	Confirm     ConfirmFunc
 	Native      bool
+	// Reasoning is the reasoning level of every request of the turn
+	// (reasoning.go; "": the provider config's).
+	Reasoning string
 	// BeforeCalls (optional) sees every tool call of a step before the
 	// first one runs, so the app can show all the files a step changes
 	// in one review list.
@@ -208,7 +211,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 	}
 	var usage *Usage // summed over every request of the turn
 	for step := 0; step < steps; step++ {
-		req := Request{Messages: msgs, Model: a.Model, Tools: specs}
+		req := Request{Messages: msgs, Model: a.Model, Tools: specs, Reasoning: a.Reasoning}
 		var buf strings.Builder
 		prose := 0 // 0 undecided, 1 stream as text, -1 looks like tool json
 		var last Chunk
