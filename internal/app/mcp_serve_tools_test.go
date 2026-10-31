@@ -20,7 +20,7 @@ func mcpServeNoCall(context.Context, aiIDEFunc) (string, error) {
 func TestMCPServeAllowListGolden(t *testing.T) {
 	want := []string{
 		"open_file", "get_editor_state", "get_ide_state", "reveal_in_explorer", "show_panel", "notify", "list_actions", "execute_action",
-		"read_file", "list_dir", "search", "workspace_folders",
+		"read_file", "list_dir", "search", "glob", "workspace_folders",
 		"diagnostics", "lsp_hover", "lsp_symbols", "lsp_nav",
 		"tasks_list", "tasks_run", "tasks_status", "tests_run", "tests_results",
 		"debug_state", "debug_breakpoint", "debug_start", "debug_control", "debug_evaluate",
