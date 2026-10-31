@@ -34,6 +34,9 @@ func (m *Model) mcpAdapterOptions(set mcp.Settings) mcp.AdapterOptions {
 		Warn: func(server, tool string, size int) {
 			out.Append(mcpLogChannel, clock.Now().Format("15:04:05")+"  "+server+": "+
 				fmt.Sprintf("%s sent %d KB: the AI got the first part and can read the rest", tool, size>>10))
+		},
+		Log: func(server, line string) {
+			out.Append(mcpLogChannel, clock.Now().Format("15:04:05")+"  "+server+": "+ai.Redact(aiCleanText(line)))
 		}}
 }
 

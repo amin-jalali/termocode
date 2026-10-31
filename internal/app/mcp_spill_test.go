@@ -23,6 +23,10 @@ func TestMCPTurnSpillsBigResults(t *testing.T) {
 	if !strings.Contains(strings.Join(m.output.Lines(mcpLogChannel), "\n"), "srv: big sent 2048 KB") {
 		t.Errorf("log %q", strings.Join(m.output.Lines(mcpLogChannel), "\n"))
 	}
+	o.Log("srv", "t: the result does not match its output schema")
+	if !strings.Contains(strings.Join(m.output.Lines(mcpLogChannel), "\n"), "srv: t: the result does not match") {
+		t.Errorf("log note missing")
+	}
 	if got := withMCPReader(nil, o.Spill); len(got) != 0 {
 		t.Errorf("reader without MCP tools: %v", got)
 	}
