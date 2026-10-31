@@ -138,3 +138,18 @@ func TestAgentsNodeStallIsPerNode(t *testing.T) {
 	}
 	wantAll(t, r.card(), "possibly stalled")
 }
+
+// OMX-23: a stalled step goes back to waiting with a note on its card
+// (it starts once more), and AGENTS stops counting it as running.
+func TestAgentsNodeStalledEvent(t *testing.T) {
+	r := newStallRig(t)
+	r.m.onAIRunEvent(aiRunEventMsg{gen: r.m.ai.chatGen, ev: agentrun.Event{Kind: agentrun.NodeStalled, RunID: "r1", NodeID: "left",
+		Err: "no activity for 10 min: stopped, it starts once more"}})
+	st := aiFindStep(r.m.ai.aiRunMessage(), "left")
+	if st.State != "pending" || len(st.Notes) == 0 || st.Notes[len(st.Notes)-1] != "⏱ no activity for 10 min: stopped, it starts once more" {
+		t.Fatalf("step %+v", st)
+	}
+	if _, ok := r.m.ai.agents.act["left"]; ok {
+		t.Fatal("a stalled step keeps its activity")
+	}
+}
