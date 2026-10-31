@@ -129,7 +129,8 @@ func readJSON(t *testing.T, p string) map[string]any {
 // everything: the settings and their values, the key overrides, the
 // session (tabs) and the unsaved text of the hot-exit backup, the saved
 // AI chats and profiles, and the AI key, which moves from the plain file
-// to the encrypted store with the passphrase flow and still works. No
+// to the encrypted store with the passphrase flow (the plain file goes on
+// the Delete answer of the card after the move) and still works. No
 // file the old version wrote is lost.
 func TestUpgradeFromOldHome(t *testing.T) {
 	for _, version := range upgradeVersions {
@@ -180,6 +181,15 @@ func testUpgradeFrom(t *testing.T, version string) {
 		return strings.Contains(ls[0], "notes.txt ●")
 	})
 	tm.step("restored")
+
+	// The card that waited behind it asks before the plain key file goes
+	// (Keep for now is first); the user picks Delete the plain file.
+	tm.WaitText("Delete the old plain file?", uiTimeout)
+	tm.settle()
+	tm.Send("\x1b[C") // Right: Delete the plain file
+	tm.settle()
+	tm.Send(KeyEnter)
+	waitFile(t, plain, false, "Delete the plain file left credentials.json")
 
 	// keymap.json: F6 is the command palette (its default is another
 	// action).
