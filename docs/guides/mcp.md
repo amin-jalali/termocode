@@ -256,16 +256,20 @@ plain`. See [Which store is used](ai-setup.md#which-store-is-used).
 **AI: Secret Store…** lists the names (never the values).
 
 termocode warns in the MCP log when a value in `mcp.json` looks like a
-token. A `${cmd:…}` in a project's `.termocode/mcp.json` is refused: the
+token. A `${cmd:…}` in a project file (`.mcp.json` or `.termocode/mcp.json`) is refused: the
 server shows `invalid: ${cmd:} is not allowed in project files…` and
 nothing is run. When a variable or secret is missing, the server shows
 `needs ${VAR}` or `needs secret NAME` and does not start.
 
 ### Project servers
 
-A workspace can have its own `.termocode/mcp.json`. Its servers replace
-yours with the same name, and `"disabled": true` hides one of yours in
-that project.
+A workspace can have its own servers in two files: `.mcp.json` at the
+root (the common file other apps read too) and `.termocode/mcp.json`.
+termocode reads your `mcp.json`, then `.mcp.json`, then
+`.termocode/mcp.json`; a later entry replaces an earlier one with the
+same name, so `.termocode/mcp.json` wins. `"disabled": true` hides one of
+yours in that project. The server page and the trust dialog say which
+file an entry comes from.
 
 A cloned repository could put any command or URL in that file, so
 termocode asks before it starts (or signs in to) a project server:
