@@ -28,6 +28,7 @@ var mcpSettingKeys = map[string]string{
 	"setting-mcp-oauth-port":        "mcp_oauth_port",
 	"setting-mcp-github-client-id":  "mcp_github_client_id",
 	"setting-mcp-share":             "mcp_share",
+	"setting-mcp-tool-search":       "mcp_tool_search",
 }
 
 func init() {
@@ -48,6 +49,8 @@ func init() {
 			Desc: "Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret."},
 		settingsRow{ID: "setting-mcp-share", Label: "mcp_share", Kind: "bool", Default: "true",
 			Desc: "Run each local MCP server once for all your termocode windows with the same server entry and folder, not once per window. It ends when the last window stops using it (mcp_idle_timeout or quit). false: every window runs its own. Remote servers are not affected."},
+		settingsRow{ID: "setting-mcp-tool-search", Label: "mcp_tool_search", Kind: "string", Default: "auto",
+			Desc: "Send the AI only a search tool instead of every MCP tool's full schema; it loads the tools it needs. auto: only when the MCP tools are big (about 10k tokens). on: always. off: never."},
 	)
 }
 
@@ -99,6 +102,8 @@ func mcpSettingValue(id string) (string, bool) {
 		return s.GitHubClientID, true
 	case "setting-mcp-share":
 		return strconv.FormatBool(s.Share), true
+	case "setting-mcp-tool-search":
+		return s.ToolSearch, true
 	}
 	return "", false
 }
@@ -142,6 +147,12 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 			return bad("0 (the default ports) or a port up to 65535")
 		}
 		v = n
+	case "setting-mcp-tool-search":
+		value = strings.ToLower(value)
+		if value != mcp.ToolSearchAuto && value != mcp.ToolSearchOn && value != mcp.ToolSearchOff {
+			return bad("auto, on or off")
+		}
+		v = value
 	case "setting-mcp-github-client-id":
 		if value == "(built in)" {
 			value = ""

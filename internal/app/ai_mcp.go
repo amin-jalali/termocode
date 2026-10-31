@@ -148,7 +148,7 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 			o.ToolsChanged = st.ToolsChanged
 			out = append(out, mcp.AITools(st.Server, st.Tools, call, o)...)
 		}
-		return out
+		return mcp.DeferTools(out, set.ToolSearch) // many tools: one search tool loads them
 	}
 }
 
