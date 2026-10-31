@@ -387,6 +387,14 @@ func NewProvider(cfg Config) Provider {
 	if cfg.HTTPClient == nil {
 		cfg.HTTPClient = &http.Client{Timeout: 5 * time.Minute}
 	}
+	client := *cfg.HTTPClient
+	transport := client.Transport
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+	client.Transport = firstByteTransport{base: transport}
+	cfg.HTTPClient = &client
+
 	switch cfg.Kind {
 	case KindAnthropic, KindClaudeOAuth:
 		return &anthropicProvider{cfg: cfg}
