@@ -35,6 +35,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Lock Secrets | `secrets-lock` |   |   |
 | AI: MCP Servers… | `ai-mcp-servers` |   |   |
 | AI: MCP: Browse Catalog… (find and add servers) | `ai-mcp-catalog` |   |   |
+| AI: MCP: Check for Updates (catalog servers) | `ai-mcp-updates` |   |   |
 | AI: MCP: Install Bundle (.mcpb)… | `ai-mcp-bundle` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: MCP: Switch Profile… (servers and tools for this chat) | `ai-mcp-profile` |   |   |
