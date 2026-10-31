@@ -91,6 +91,7 @@ type aiActivityView struct {
 	retry, retries int
 	stalled        bool
 	progress       string
+	bg             bool // an MCP call can move to the background (Ctrl+B)
 }
 
 // aiActivityView is the line's state at now (zero without a running turn).
@@ -105,7 +106,7 @@ func (s *aiState) activityView(now time.Time) aiActivityView {
 	if !s.streaming {
 		return aiActivityView{}
 	}
-	return s.act.view(now)
+	return s.withBgHint(s.act.view(now))
 }
 
 // view is the activity's state at now. The AGENTS cards keep one
@@ -167,6 +168,9 @@ func (v aiActivityView) lines(ind string, inner int) []aiLine {
 		text = theme.GlyphAITool.String() + " " + aiCleanText(v.tool) + " · " + aiSecs(v.secs)
 		if v.progress != "" {
 			text += " · " + aiCleanText(v.progress)
+		}
+		if v.bg {
+			text += " · Ctrl+B: background"
 		}
 	case v.phase == aiPhaseRetry:
 		text = theme.GlyphAIRetry.String() + " retry " + strconv.Itoa(v.retry) + " of " + strconv.Itoa(v.retries)

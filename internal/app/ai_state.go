@@ -511,6 +511,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-mcp-log", "AI: MCP: Show Log", ""},
 		{"ai-mcp-reconnect-all", "AI: MCP: Reconnect All Servers", ""},
 		{"ai-mcp-config", "Open Config: MCP Servers", ""},
+		{"ai-mcp-background", "AI: Move MCP Call to Background (Ctrl+B in the chat)", ""},
 		{"ai-cancel", "AI: Stop Generating", ""},
 	}
 }
@@ -601,6 +602,11 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openMCPConnect(), true
 	case "ai-mcp-servers":
 		return m.openMCPServers(), true
+	case "ai-mcp-background": // ai_mcp_background.go
+		if cmd, ok := m.aiMCPDetach(); ok {
+			return cmd, true
+		}
+		return m.aiInfo("No MCP call is running"), true
 	case "ai-mcp-insert": // ai_mcp_insert.go
 		return m.openMCPInsertPicker(), true
 	case "ai-mcp-log":
