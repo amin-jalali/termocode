@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"net/http"
+	"sort"
+	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Reconnects (RT-5, RT-6, RT-9): a remote server that can not be reached
@@ -131,8 +135,10 @@ func (m *Manager) retryNow(st *serverState, gen int) {
 		return
 	}
 	st.retryTimer = nil
+	m.retrying.Add(1) // Close waits for it
 	m.mu.Unlock()
-	ctx, cancel := context.WithTimeout(context.Background(), initTimeout+5*time.Second)
+	defer m.retrying.Done()
+	ctx, cancel := context.WithTimeout(m.life, initTimeout+5*time.Second)
 	defer cancel()
 	if _, err := m.list(ctx, st, nil); err == nil {
 		m.log(st.cfg.Name, "reconnected")
@@ -143,4 +149,77 @@ func (m *Manager) retryNow(st *serverState, gen int) {
 func isConnErr(err error) bool {
 	var ce *ConnError
 	return errors.As(err, &ce)
+}
+
+// ReconnectResult says what ReconnectAll did.
+type ReconnectResult struct {
+	Tried, OK int      // servers that were down and were tried
+	Checked   int      // running servers that answered the ping
+	Failed    []string // names still down, sorted
+}
+
+// ReconnectAll tries every failed or waiting server now (the user's
+// "Reconnect all"), and pings the running ones: one that does not answer
+// is connected again. Servers that are off, invalid or need a sign-in
+// are left alone; nothing asks for trust.
+func (m *Manager) ReconnectAll(ctx context.Context) ReconnectResult {
+	type job struct {
+		st   *serverState
+		proc *Process
+	}
+	m.mu.Lock()
+	var jobs []job
+	for _, st := range m.servers {
+		switch {
+		case st.proc != nil:
+			jobs = append(jobs, job{st, st.proc})
+		case st.state == StateFailed || st.state == StateReconnecting:
+			m.stopRetryLocked(st)
+			st.retryN = 0
+			jobs = append(jobs, job{st: st})
+		}
+	}
+	m.mu.Unlock()
+	var mu sync.Mutex
+	var res ReconnectResult
+	var wg sync.WaitGroup
+	for _, j := range jobs {
+		wg.Add(1)
+		crash.Go("an MCP reconnect", func() {
+			defer wg.Done()
+			name := j.st.cfg.Name
+			if j.proc != nil {
+				pctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+				err := j.proc.Client.Ping(pctx)
+				cancel()
+				if err == nil {
+					mu.Lock()
+					res.Checked++
+					mu.Unlock()
+					return
+				}
+				m.log(name, "no answer to a ping: connecting again")
+				m.mu.Lock()
+				if j.st.proc == j.proc {
+					j.st.proc, j.st.state = nil, StateStopped
+				}
+				m.mu.Unlock()
+				crash.Go("an MCP server stop", func() { j.proc.Close() })
+			}
+			lctx, cancel := context.WithTimeout(ctx, initTimeout+5*time.Second)
+			_, err := m.list(lctx, j.st, nil)
+			cancel()
+			mu.Lock()
+			defer mu.Unlock()
+			res.Tried++
+			if err == nil {
+				res.OK++
+			} else {
+				res.Failed = append(res.Failed, name)
+			}
+		})
+	}
+	wg.Wait()
+	sort.Strings(res.Failed)
+	return res
 }
