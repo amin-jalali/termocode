@@ -34,7 +34,8 @@
 // FAKE_TOOLSET=2 lists only echo with another description (tools-changed
 // tests); FAKE_MARKER=<file> exists while the server runs;
 // FAKE_INIT_DELAY=<duration> answers initialize that much later; FAKE_TTL_MS adds ttlMs to the last
-// tools/list page; FAKE_MODERN speaks the stateless revision (modern.go).
+// tools/list page; FAKE_MODERN speaks the stateless revision (modern.go);
+// FAKE_DISCOVER_SILENT=1 never answers server/discover.
 package mcptest
 
 import (
@@ -160,6 +161,9 @@ func run() {
 	var initialized bool // guarded by mu
 	handle := func(c *extproc.Conn, m extproc.Message) {
 		logf(m.Method)
+		if m.Method == "server/discover" && os.Getenv("FAKE_DISCOVER_SILENT") == "1" {
+			return // an old server that never answers the probe
+		}
 		stateless := false
 		if mode := modernMode(); mode != "" && m.IsRequest() {
 			mu.Lock()

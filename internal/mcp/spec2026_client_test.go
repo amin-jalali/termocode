@@ -228,3 +228,19 @@ func TestModernTasks(t *testing.T) {
 	}
 	waitUntil(t, "tasks/cancel", func() bool { return strings.Contains(fakeLog(t, log), "\ntasks/cancel\n") })
 }
+
+// Spec (MCPX-20): an old server that stays silent on server/discover
+// costs at most discoverTimeout (3 s), then the handshake runs.
+func TestModernProbeWaitIsShort(t *testing.T) {
+	if discoverTimeout != 3*time.Second {
+		t.Fatalf("probe wait %v, want 3s", discoverTimeout)
+	}
+	start := time.Now()
+	p := startFake(t, map[string]string{"FAKE_DISCOVER_SILENT": "1"}, Options{})
+	if p.Client.Stateless() || p.Client.Version() != ProtocolVersion {
+		t.Fatalf("stateless %v version %q", p.Client.Stateless(), p.Client.Version())
+	}
+	if d := time.Since(start); d > 10*time.Second {
+		t.Fatalf("start took %v", d)
+	}
+}

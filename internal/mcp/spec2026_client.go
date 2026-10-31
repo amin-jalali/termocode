@@ -24,7 +24,7 @@ const CodeUnsupportedVersion = -32022
 
 // discoverTimeout caps the server/discover probe: an old server that
 // stays silent on it must not cost the whole start.
-var discoverTimeout = 10 * time.Second
+var discoverTimeout = 3 * time.Second
 
 func clientInfo() map[string]any { return map[string]any{"name": "termocode", "version": "1"} }
 
