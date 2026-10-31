@@ -61,6 +61,7 @@ const (
 	RunPlanKept                       // steps joined an approved run and need no approval (Nodes = them): it goes on without asking
 	NodeStalled                       // the node's model was silent for Options.StallAfter: it was stopped and waits to start once more (Err says so)
 	NodeEscalated                     // the node answered ESCALATE (Err = why): it waits to run once more on Options.Escalate (Nodes = the node now)
+	NodePlanReview                    // the plan reviewer read the planner's plan (Verdict approve | reject, Err = its reasons, Round; Output: a note)
 	NodeMessage                       // a message sent to the node (Send) reached its agent (Output = the text), or not (Err = why)
 )
 
@@ -171,6 +172,12 @@ type Options struct {
 	// answers ESCALATE: … ; it runs once more on that category's slot
 	// (Categories). A step on that slot already keeps its answer.
 	Escalate string
+	// PlanReview (OMX-14; nil: off) reads a planner's valid plan (as
+	// PlanText) and approves it or gives reasons; a reject sends the
+	// reasons back to the planner, whose new plan is read again, at most
+	// PlanReviewRounds times; then the last plan goes on.
+	PlanReview       func(ctx context.Context, plan string) (approve bool, reasons string, usage *ai.Usage, err error)
+	PlanReviewRounds int
 }
 
 // Handle is a started run.
@@ -819,6 +826,9 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 				}
 			}
 		}
+		if ctx.Err() == nil && fail == "" && h.o.PlanReview != nil {
+			added, fail = h.reviewPlan(ctx, agent, n, history, added, taken, &res, emit)
+		}
 	}
 	if ctx.Err() == nil && fail == "" && n.ID == h.verify && h.verify != "" {
 		pass, report, ok := ParseVerdict(finalText(added))
@@ -1075,4 +1085,50 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// PlanRejectPrompt sends a reviewer's reasons back to the planner.
+func PlanRejectPrompt(reasons string) string {
+	return "A reviewer read your plan and rejected it:\n" + reasons +
+		"\nAnswer again with the improved plan in one ```json block."
+}
+
+// reviewPlan runs the plan review rounds of planner n (OMX-14): it
+// returns the planner's last messages and a failure ("" when none).
+func (h *Handle) reviewPlan(ctx context.Context, agent *ai.Agent, n agentdag.Node, history, added []ai.Message, taken map[string]bool,
+	res *result, emit func(ai.Event)) ([]ai.Message, string) {
+	rounds := max(h.o.PlanReviewRounds, 1)
+	hist := history[:len(history):len(history)]
+	for round := 1; ; round++ {
+		ok, why, u, err := h.o.PlanReview(ctx, PlanText(agentdag.Run{Nodes: res.plan, Edges: res.planEdges}))
+		res.usage = res.usage.Add(u)
+		if ctx.Err() != nil {
+			return added, ""
+		}
+		if err != nil { // the review could not run: the plan goes on as it is
+			h.emit(Event{NodeID: n.ID, Kind: NodePlanReview, Verdict: "error", Err: ai.Redact(err.Error()), Round: round})
+			return added, ""
+		}
+		ev := Event{NodeID: n.ID, Kind: NodePlanReview, Verdict: "approve", Round: round}
+		if !ok {
+			ev.Verdict, ev.Err = "reject", cutRunes(strings.TrimSpace(why), 2000)
+			if round >= rounds {
+				ev.Output = fmt.Sprintf("the review rounds ran out (%d): the last plan goes on", rounds)
+			}
+		}
+		h.emit(ev)
+		if ok || round >= rounds {
+			return added, ""
+		}
+		hist = append(append(hist, added...), ai.Message{Role: ai.RoleUser, Content: PlanRejectPrompt(ev.Err)})
+		added = agent.Run(ctx, hist, emit)
+		if ctx.Err() != nil {
+			return added, ""
+		}
+		plan, edges, err := ParsePlan(finalText(added), taken, h.o.Categories)
+		if err != nil {
+			return added, "the plan is not valid after the review: " + err.Error()
+		}
+		res.plan, res.planEdges = plan, edges
+	}
 }
