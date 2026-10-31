@@ -213,3 +213,49 @@ func TestAIToolsImageLimits(t *testing.T) {
 		}
 	}
 }
+
+// oneCall is a provider that calls one tool, then says "ok".
+type oneCall struct {
+	name string
+	n    int
+}
+
+func (*oneCall) Name() string        { return "fake" }
+func (*oneCall) Configured() bool    { return true }
+func (*oneCall) SupportsTools() bool { return true }
+func (p *oneCall) Stream(context.Context, ai.Request) <-chan ai.Chunk {
+	ch := make(chan ai.Chunk, 1)
+	c := ai.Chunk{Done: true, Delta: "ok"}
+	if p.n == 0 {
+		c = ai.Chunk{Done: true, ToolCalls: []ai.ToolCall{{ID: "1", Name: p.name}}}
+	}
+	p.n++
+	ch <- c
+	close(ch)
+	return ch
+}
+
+// MCPX-19: a server's progress during a call shows as the tool's
+// progress event (cleaned).
+func TestAIToolsProgress(t *testing.T) {
+	call := func(ctx context.Context, _, _ string, _ map[string]any) (CallResult, error) {
+		fn := progressFrom(ctx)
+		if fn == nil {
+			return CallResult{}, nil
+		}
+		fn(Progress{Progress: 1, Total: 4, Message: "page\x1b[2J 1"})
+		return CallResult{Content: []Content{{Type: "text", Text: "done"}}}, nil
+	}
+	clean := func(s string) string { return strings.ReplaceAll(s, "\x1b", "") }
+	tools := AITools(Server{Name: "fake"}, []Tool{{Name: "long", Annotations: ann(bp(true), nil)}}, call, AdapterOptions{TrustAnnotations: true, Clean: clean})
+	a := &ai.Agent{Provider: &oneCall{name: tools[0].Name}, Native: true, Tools: tools}
+	var got []string
+	a.Run(context.Background(), []ai.Message{{Role: ai.RoleUser, Content: "go"}}, func(e ai.Event) {
+		if e.Kind == ai.EventToolProgress {
+			got = append(got, e.Label+" "+e.Detail)
+		}
+	})
+	if len(got) != 1 || got[0] != "mcp.fake.long page[2J 1 · 1 of 4 (25%)" {
+		t.Fatalf("progress %q", got)
+	}
+}

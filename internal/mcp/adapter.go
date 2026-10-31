@@ -204,7 +204,8 @@ func AITools(s Server, tools []Tool, call CallFunc, o AdapterOptions) []ai.Tool 
 				return nil
 			},
 			Run: func(ctx context.Context, args map[string]any) (string, error) {
-				res, err := call(ctx, server, t.Name, args)
+				pctx := WithProgress(ctx, func(p Progress) { ai.ReportProgress(ctx, clean(p.Text())) })
+				res, err := call(pctx, server, t.Name, args)
 				if err != nil {
 					return "", err
 				}
