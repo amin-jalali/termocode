@@ -187,6 +187,23 @@ What you get:
   finished message.
 - The fork uses the same profile and model as before.
 
+### Long chats
+
+Every model can read only so much text at once (its context window).
+When a chat gets near that limit, termocode makes it shorter for you:
+
+- The quick model writes a short summary of the older messages (one
+  extra request). The model then gets the summary instead of them.
+- The chat shows **⋯ Earlier chat summarised (N messages)** above your
+  message. You still see every old message; only the model's copy is
+  shorter.
+- Project rules, memory and the todo list are not in the summary. The
+  model gets them in full every time.
+- If the provider still says "context too long", termocode summarises
+  once and sends the message again.
+- To turn it off, set `"ai_compact": "off"` in config.json. A long chat
+  can then fail with "context too long"; start a new chat or fork it.
+
 ### Files in and out of the chat
 
 Add files to your next message in three ways:
