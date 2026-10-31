@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -38,4 +39,18 @@ func TestStatusUnknownKeys(t *testing.T) {
 		}
 	}
 	t.Fatalf("status %+v", m.Servers())
+}
+
+// Spec (CF-27): mcp_strict is off by default and read from config.json.
+func TestSettingsStrict(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	if LoadSettings(p).Strict {
+		t.Fatal("strict by default")
+	}
+	if err := SaveSetting(p, "mcp_strict", true); err != nil {
+		t.Fatal(err)
+	}
+	if !LoadSettings(p).Strict {
+		t.Fatal("mcp_strict true not read")
+	}
 }

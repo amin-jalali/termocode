@@ -35,6 +35,7 @@ type Settings struct {
 	ToolSearch    string // mcp_tool_search ("auto"): defer MCP tool schemas behind a search tool
 	CatalogURL    string // mcp_catalog_url (""): a registry API to browse instead of the official one
 	AutoUpdate    string // mcp_auto_update ("off"): notify / on for catalog servers
+	Strict        bool   // mcp_strict (false): warn about entry keys termocode does not read (strict.go)
 }
 
 // ToolOff reports a tool the user turned off (mcp_disabled_tools).
@@ -80,6 +81,7 @@ func LoadSettings(configPath string) Settings {
 		ToolSearch       string              `json:"mcp_tool_search"`
 		CatalogURL       string              `json:"mcp_catalog_url"`
 		AutoUpdate       string              `json:"mcp_auto_update"`
+		Strict           bool                `json:"mcp_strict"`
 	}
 	if json.Unmarshal(b, &raw) != nil {
 		return s
@@ -110,6 +112,7 @@ func LoadSettings(configPath string) Settings {
 	}
 	s.ToolSearch = ParseToolSearchMode(raw.ToolSearch)
 	s.AutoUpdate = ParseAutoUpdate(raw.AutoUpdate)
+	s.Strict = raw.Strict
 	if u := strings.TrimSpace(raw.CatalogURL); u != "" && CheckCatalogURL(u) == nil {
 		s.CatalogURL = u
 	}
