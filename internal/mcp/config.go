@@ -319,8 +319,13 @@ func LoadAll(userPath, projectPath string) ([]Server, []string) {
 			by[s.Name] = s
 		}
 	}
+	policies, pw := LoadPolicies(userPath)
+	warns = append(warns, pw...)
 	out := make([]Server, 0, len(by))
 	for _, s := range by {
+		if why := Blocked(policies, s); why != "" {
+			s.Problem = why
+		}
 		out = append(out, s)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
