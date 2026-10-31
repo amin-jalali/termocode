@@ -64,6 +64,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onMCPReconnectAllDone(msg), true
 	case aiChatDoneMsg:
 		return m.onAIChatDone(msg), true
+	case aiSideDoneMsg: // OMX-30 (ai_side.go)
+		return m.onAISideDone(msg), true
 	case aiHandoffMsg: // OMX-21 (ai_session_tools.go)
 		return m.onAIHandoff(msg), true
 	case aiMemoryDoneMsg: // ai_memory_extract.go

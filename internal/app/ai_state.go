@@ -62,6 +62,7 @@ type aiState struct {
 	// draft; kwProfile is the profile the next sendAIChat runs.
 	kwOff     bool
 	kwProfile string
+	side      aiSideChat // OMX-30: the side chat (ai_side.go)
 	cfg       ai.Config
 	provider  ai.Provider
 	loadErr   string
@@ -508,6 +509,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-reasoning-next", "AI: Next Reasoning Level", ""},
 		{"ai-keep-going", "AI: Toggle Keep Going While Todos Are Open", ""},
 		{"ai-handoff", "AI: Handoff to a New Chat", ""},
+		{"ai-side", "AI: Side Question…", ""},
 		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
@@ -648,6 +650,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.toggleAIUntilDone(), true
 	case "ai-reasoning-next": // OMX-5 (ai_reasoning.go)
 		return m.cycleAIReasoning(), true
+	case "ai-side": // OMX-30 (ai_side.go)
+		return m.openAISide(), true
 	case "ai-handoff": // OMX-21 (ai_session_tools.go)
 		return m.aiHandoff(), true
 	case "ai-keep-going": // OMX-7 (ai_keep_going.go)
