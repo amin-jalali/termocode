@@ -91,14 +91,28 @@ func compare(a, b version) int {
 // comparePart compares two pre-release parts: numbers by value and below
 // words, words as text.
 func comparePart(a, b string) int {
-	na, errA := strconv.Atoi(a)
-	nb, errB := strconv.Atoi(b)
+	numeric := func(s string) bool {
+		if s == "" {
+			return false
+		}
+		for _, c := range s {
+			if c < '0' || c > '9' {
+				return false
+			}
+		}
+		return true
+	}
+	numA, numB := numeric(a), numeric(b)
 	switch {
-	case errA == nil && errB == nil:
-		return sign(na - nb)
-	case errA == nil:
+	case numA && numB:
+		// Compare digit strings without an integer size limit.
+		a, b = strings.TrimLeft(a, "0"), strings.TrimLeft(b, "0")
+		if len(a) != len(b) {
+			return sign(len(a) - len(b))
+		}
+	case numA:
 		return -1
-	case errB == nil:
+	case numB:
 		return 1
 	}
 	return strings.Compare(a, b)
