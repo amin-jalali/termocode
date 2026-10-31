@@ -144,8 +144,8 @@ func AITools(s Server, tools []Tool, call CallFunc, o AdapterOptions) []ai.Tool 
 		if !exposed {
 			continue
 		}
-		if o.ToolsChanged {
-			mutating, class = true, ""
+		if o.ToolsChanged || t.RequiresUserInteraction() {
+			mutating, class = true, "" // always asks, no "Always allow"
 		}
 		t := t
 		display := DisplayName(s.Name, t.Name)

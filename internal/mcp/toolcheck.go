@@ -59,6 +59,25 @@ func badSchemaWhy(err error) string {
 	return "not a tool entry"
 }
 
+// metaKey finds a _meta key by its name, also with a vendor prefix
+// ("example.com/name").
+func (t Tool) metaKey(name string) (any, bool) {
+	for k, v := range t.Meta {
+		if k == name || strings.HasSuffix(k, "/"+name) {
+			return v, true
+		}
+	}
+	return nil, false
+}
+
+// RequiresUserInteraction: the server says a person must approve each
+// call (_meta requiresUserInteraction: true, TS-16).
+func (t Tool) RequiresUserInteraction() bool {
+	v, _ := t.metaKey("requiresUserInteraction")
+	b, _ := v.(bool)
+	return b
+}
+
 // checkTool says why a parsed tool can not be used ("" when it can).
 func checkTool(t Tool) string {
 	switch {
