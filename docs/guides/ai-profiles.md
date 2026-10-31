@@ -248,10 +248,10 @@ sign-in. Before a run starts, termocode checks every slot the run needs.
 When one has no key, nothing runs and a toast says what is missing, for
 example `Profile review cannot run · model slot "gpt" needs an openai key`.
 
-## Categories: `quick` and `deep`
+## Categories
 
-A step can name a **category** instead of a slot. The profile maps the
-category to a slot:
+A step can name a **category** instead of a slot: the kind of work it
+does. The profile maps the category to a slot:
 
 ```json
 "categories": { "quick": "gpt", "deep": "claude" }
@@ -260,6 +260,48 @@ category to a slot:
 Without a mapping, `quick` uses the `quick` slot and `deep` uses `main`.
 A step with no slot and no category uses `main`. The steps a planner
 adds use the same mapping.
+
+| Category | Like | What it is for |
+|---|---|---|
+| `quick` | quick | small, clear tasks (a cheaper model) |
+| `deep` | deep | hard reasoning, review or the final check |
+| `visual` | deep | user interface work: layout, styles, colours |
+| `writing` | quick | docs, comments, messages and other prose |
+| `architect` | deep | design advice only: its tools are read-only, it never changes files |
+| `ultrabrain` | deep | the hardest problems, thought through with care |
+
+Each built-in category past `quick` and `deep` adds a short line to its
+step's prompt. A planner hears which categories there are and may give
+its steps any of them.
+
+**Your own categories.** `ai_categories` in `config.json` changes a
+built-in one or adds a new one:
+
+```json
+"ai_categories": {
+  "ultrabrain": { "slot": "opus" },
+  "docs": { "like": "quick", "tools": "read-only", "temperature": 0.3,
+            "prompt_append": "Write for beginners.", "description": "user docs" }
+}
+```
+
+- `slot`: its model slot. Without one it uses the slot of the category
+  it is `like` (`quick` or `deep`; default `deep`).
+- `tools`: `none`, `read-only` or `all`. It can only narrow a step's own
+  tools.
+- `temperature`: 0 to 2, sent only to models that take it.
+- `prompt_append`: added to the step's prompt; `description`: what the
+  planner reads about it.
+
+A profile's own `categories` map wins over `ai_categories`. A step whose
+category does not exist does not start, and the toast names the ones
+there are.
+
+**ESCALATE.** A step that is not on the `deep` model is told it may
+answer `ESCALATE: <why>` when the task is clearly too hard for it. It
+then runs once more on the `deep` model, and its card says
+`⇧ <why> → runs again on deep (model)`; the first try's time, tokens and
+cost stay on the card. `"ai_step_escalate": false` turns this off.
 
 ## Write your own profile
 
