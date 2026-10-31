@@ -550,6 +550,7 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			out = append(out, s.renderAnswer(i, text, width, streaming, resizing)...)
 		case ai.StoredTool:
 			out = append(out, selPlain(aiCleanText(msg.Text), theme.TextDim, i)...)
+			out = append(out, s.aiToolDetailLines(i, width)...) // MCPX-33
 		case ai.StoredError:
 			out = append(out, selPlain("⚠ "+aiCleanText(msg.Text), theme.DiagError, i)...)
 		case ai.StoredNote: // OMX-7
@@ -579,6 +580,7 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 type aiSegKey struct {
 	role, text, context, rules, model, runBy, label string
 	lessons, memory, width, summarised, keepGoing   int
+	detail                                          int // MCP call details: 0 none, 1 closed, 2 open
 	rk                                              theme.RenderKey
 	rtl                                             rtl.Mode
 }
@@ -593,7 +595,8 @@ func (m Model) aiSegKeyFor(i, width int) aiSegKey {
 	s := m.ai
 	msg := &s.conv.Messages[i]
 	k := aiSegKey{role: msg.Role, text: msg.Text, context: msg.Context, rules: msg.Rules, model: msg.Model,
-		lessons: msg.Lessons, memory: msg.Memory, summarised: msg.Summarised, keepGoing: msg.KeepGoing, width: width, rk: theme.CurrentRenderKey(), rtl: rtlMode}
+		lessons: msg.Lessons, memory: msg.Memory, summarised: msg.Summarised, keepGoing: msg.KeepGoing, width: width, rk: theme.CurrentRenderKey(), rtl: rtlMode,
+		detail: s.aiToolDetailState(i)}
 	if i+1 < len(s.conv.Messages) {
 		k.runBy = aiRunByLine(s.conv.Messages[i+1].Run)
 	}
@@ -1497,6 +1500,9 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 		return m.answerAIMemoryAsk("on")
 	case id == "memask-notnow":
 		return m.answerAIMemoryAsk("notnow")
+	case strings.HasPrefix(id, "tooldetail:"): // MCPX-33: open / close an MCP call's details
+		m.aiS().aiToggleToolDetail(id)
+		return nil
 	case id == "memory-view": // OM-2: the memory line opens AI: Memory…
 		return m.openAIMemory()
 	case strings.HasPrefix(id, "rules-open:"):

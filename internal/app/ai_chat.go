@@ -465,6 +465,13 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 			line = aiSkillChip + aiSkillArgName(msg.ev.Args)
 		}
 		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: line})
+		s.toolArgs = nil
+		if aiMCPTool(msg.ev) { // MCPX-33: its details button
+			s.toolArgs = msg.ev.Args
+			if s.toolArgs == nil {
+				s.toolArgs = map[string]any{}
+			}
+		}
 		s.aiAuditStart(msg.ev)
 	case ai.EventToolResult:
 		m.aiAuditResult(msg.ev)
@@ -472,7 +479,11 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 			if !strings.HasPrefix(l.Text, aiSkillChip) || strings.HasPrefix(msg.ev.Detail, "error:") {
 				l.Text += " → " + aiShortResult(msg.ev.Detail)
 			}
+			if s.toolArgs != nil && aiMCPTool(msg.ev) {
+				s.aiKeepToolDetail(len(s.conv.Messages)-1, l.Text, s.toolArgs, msg.ev.Detail)
+			}
 		}
+		s.toolArgs = nil
 		for _, n := range s.aiTakeToolNotes() { // MCPX-38: for the user, not the model
 			s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: n})
 		}

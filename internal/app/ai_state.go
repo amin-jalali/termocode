@@ -53,7 +53,10 @@ type aiState struct {
 	// streamSteps counts chat events; the status bar's busy comet moves
 	// one step per event (no timer).
 	streamSteps int
-	toolNotes   []string // notes of the running tool for the user (ai_tool_note.go)
+	toolNotes   []string             // notes of the running tool for the user (ai_tool_note.go)
+	toolArgs    map[string]any       // the running MCP call's arguments (ai_tool_details.go)
+	toolDetails map[int]aiToolDetail // MCP call details by tool line
+	toolOpen    map[int]bool         // open details
 	// streamText grows the streamed answer in place (aiTextAppender).
 	streamText aiTextAppender
 	// batch is set while one user action changes many files (aiBatch).
