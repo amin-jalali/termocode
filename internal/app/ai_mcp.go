@@ -139,11 +139,16 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 	mgr := m.aiMCP()
 	ask := mcpChatAsker(gen, ch)
 	opts := mcp.AdapterOptions{TrustAnnotations: set.TrustAnnotations, MaxResult: set.MaxResultKB << 10, Clean: aiCleanText}
+	prof := m.mcpActiveProfile() // nil: every server and tool
 	return func(ctx context.Context) []ai.Tool {
 		mgr.Reload()
 		var out []ai.Tool
 		call := mcp.TurnCaller(mgr.Caller(ask)) // two failures: the server is out for this turn
-		for _, st := range mgr.Tools(ctx, ask) {
+		var keep func(string) bool
+		if prof != nil {
+			keep = prof.AllowsServer
+		}
+		for _, st := range mcp.FilterServerTools(mgr.ToolsFor(ctx, ask, keep), prof) {
 			o := opts
 			o.ToolsChanged = st.ToolsChanged
 			out = append(out, mcp.AITools(st.Server, st.Tools, call, o)...)
@@ -701,6 +706,8 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onMCPServerAction(id), true
 	case pickerKindMCPTools:
 		return nil, true
+	case pickerKindMCPProfile:
+		return m.onMCPProfilePicked(id), true
 	}
 	return nil, false
 }
