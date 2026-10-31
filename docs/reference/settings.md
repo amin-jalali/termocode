@@ -80,7 +80,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_share` | bool | `true` | Run each local MCP server once for all your termocode windows with the same server entry and folder, not once per window. It ends when the last window stops using it (mcp_idle_timeout or quit). false: every window runs its own. Remote servers are not affected. |
 | `mcp_log_level` | string | `info` | The lowest level the MCP log (Output: MCP) shows: error, warning, info or debug. Every line is kept, so a lower level shows the older lines too. |
 | `mcp_tool_search` | string | `auto` | Send the AI only a search tool instead of every MCP tool's full schema; it loads the tools it needs. auto: only when the MCP tools are big (about 10k tokens). on: always. off: never. |
-| `mcp_catalog_url` | string |   | Catalog that AI: MCP: Browse Catalog… reads (an MCP Registry API, for example your team's approved list). Empty: the official MCP Registry. Must be https. |
+| `mcp_catalog_url` | string | `(official registry)` | Catalog that AI: MCP: Browse Catalog… reads (an MCP Registry API, for example your team's approved list). Empty: the official MCP Registry. Must be https. |
 | `mcp_auto_update` | string | `off` | Servers added from the catalog are pinned to a version. off: check only with AI: MCP: Check for Updates. notify: also check once a day when the MCP servers list opens, and tell. on: the same, and update your own pinned servers (the project file is never changed). |
 
 ## Updates

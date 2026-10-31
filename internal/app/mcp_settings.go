@@ -56,7 +56,7 @@ func init() {
 			Desc: "The lowest level the MCP log (Output: MCP) shows: error, warning, info or debug. Every line is kept, so a lower level shows the older lines too."},
 		settingsRow{ID: "setting-mcp-tool-search", Label: "mcp_tool_search", Kind: "string", Default: "auto",
 			Desc: "Send the AI only a search tool instead of every MCP tool's full schema; it loads the tools it needs. auto: only when the MCP tools are big (about 10k tokens). on: always. off: never."},
-		settingsRow{ID: "setting-mcp-catalog-url", Label: "mcp_catalog_url", Kind: "string", Default: "",
+		settingsRow{ID: "setting-mcp-catalog-url", Label: "mcp_catalog_url", Kind: "string", Default: "(official registry)",
 			Desc: "Catalog that AI: MCP: Browse Catalog… reads (an MCP Registry API, for example your team's approved list). Empty: the official MCP Registry. Must be https."},
 		settingsRow{ID: "setting-mcp-auto-update", Label: "mcp_auto_update", Kind: "string", Default: "off",
 			Desc: "Servers added from the catalog are pinned to a version. off: check only with AI: MCP: Check for Updates. notify: also check once a day when the MCP servers list opens, and tell. on: the same, and update your own pinned servers (the project file is never changed)."},
@@ -181,6 +181,9 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 		}
 		v = value
 	case "setting-mcp-catalog-url":
+		if value == "(official registry)" {
+			value = ""
+		}
 		if value != "" {
 			if err := mcp.CheckCatalogURL(value); err != nil {
 				return bad("an https URL, or empty for the official MCP Registry")
