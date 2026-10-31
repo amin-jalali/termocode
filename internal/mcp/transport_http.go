@@ -242,6 +242,19 @@ func unwrapURLError(err error) error {
 	return err
 }
 
+// StatusError is a non-2xx answer: its code and a short body.
+type StatusError struct {
+	Code int
+	Body string // trimmed, at most 200 bytes ("" none)
+}
+
+func (e *StatusError) Error() string {
+	if e.Body == "" {
+		return fmt.Sprintf("HTTP %d", e.Code)
+	}
+	return fmt.Sprintf("HTTP %d: %s", e.Code, e.Body)
+}
+
 // statusError is a non-2xx answer with a short body.
 func statusError(resp *http.Response) error {
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 300))
@@ -250,10 +263,7 @@ func statusError(resp *http.Response) error {
 	if len(msg) > 200 {
 		msg = msg[:200] + "…"
 	}
-	if msg == "" {
-		return fmt.Errorf("HTTP %d", resp.StatusCode)
-	}
-	return fmt.Errorf("HTTP %d: %s", resp.StatusCode, msg)
+	return &StatusError{Code: resp.StatusCode, Body: msg}
 }
 
 // parseAuthenticate reads the Bearer challenge of WWW-Authenticate.
