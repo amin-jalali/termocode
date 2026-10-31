@@ -198,3 +198,11 @@ func aiWithTemp(p ai.Provider, temp *float64) ai.Provider {
 	}
 	return aiTempProvider{Provider: p, temp: *temp}
 }
+
+// aiRunAgain marks step id of the running run to start once more.
+func (s *aiState) aiRunAgain(id string) {
+	if s.runAgain == nil {
+		s.runAgain = map[string]bool{}
+	}
+	s.runAgain[id] = true
+}

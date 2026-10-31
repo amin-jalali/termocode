@@ -276,6 +276,7 @@ func (m *Model) startAIRunAs(text string, prof ai.Profile, rules ai.Rules, id st
 func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlot, outputs map[string]string, rules ai.Rules) tea.Cmd {
 	s := m.aiS()
 	s.runMsg, s.runSlots, s.runFiles = msgIdx, slots, map[string]int{}
+	s.runAgain = nil
 	s.chatGen++
 	gen := s.chatGen
 	ch := make(chan tea.Msg, 64)
@@ -566,7 +567,9 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: st.Slot, Model: st.Model, Category: st.Category,
 			Deps: st.Deps, Planned: st.Planned, Prompt: st.Prompt, State: string(agentdag.StateRunning), Round: ev.Round,
 			StartedAtMs: now.UnixMilli(), CLI: st.CLI, Worktree: st.Worktree}
-		if ev.Round > 1 && prev.Round > 0 { // a loop step runs again: its time, tokens, cost and notes add up
+		again := s.runAgain[st.ID] // OMX-16/23: it starts once more after a stall or ESCALATE
+		delete(s.runAgain, st.ID)
+		if (ev.Round > 1 && prev.Round > 0) || again { // a loop step runs again: its time, tokens, cost and notes add up
 			st.ElapsedMs, st.Usage, st.Cost, st.Notes = prev.ElapsedMs, prev.Usage, prev.Cost, prev.Notes
 			st.StartedAtMs = prev.StartedAtMs
 		}
@@ -628,6 +631,7 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 			st.Notes = append(st.Notes, "■ "+ev.Err)
 		}
 	case agentrun.NodeStalled: // OMX-23: it starts once more
+		s.aiRunAgain(st.ID)
 		s.agentsNodeEnd(ev.RunID, st.ID)
 		st.State = string(agentdag.StatePending)
 		st.Notes = append(st.Notes, "⏱ "+ev.Err)
