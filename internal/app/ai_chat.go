@@ -573,9 +573,9 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	}
 	m.aiRestoreTurnDone()
 	m.persistAIState()
-	_, cmd := m.aiSyncIDE("", aiSyncDisk)            // each tool synced already; this catches the rest
-	mem := m.aiMemoryAfterTurn()                     // OM-2: lessons, beside the chat
-	return tea.Batch(cmd, mem, m.aiStartQueuedRun()) // G-API: a run the AI started waits for this turn
+	_, cmd := m.aiSyncIDE("", aiSyncDisk)                                  // each tool synced already; this catches the rest
+	mem := m.aiMemoryAfterTurn()                                           // OM-2: lessons, beside the chat
+	return tea.Batch(cmd, mem, m.aiStartQueuedRun(), m.aiShipOnChatDone()) // G-API: a run the AI started waits for this turn; OMX-15
 }
 
 // persistAIState stores the open chat id + scroll in session.json.
