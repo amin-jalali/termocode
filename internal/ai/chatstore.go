@@ -182,6 +182,11 @@ type Conversation struct {
 	// PlanApproval overrides ai_plan_approval for this chat ("": the
 	// setting; AI: Toggle Plan Approval sets it).
 	PlanApproval string `json:"plan_approval,omitempty"`
+	// Todos is the AI's todo list for this chat (todo_write, OMX-7) and
+	// KeepGoing whether a turn that ends with open todos sends the next
+	// "keep going" message by itself (AI: Toggle Keep Going).
+	Todos     []Todo `json:"todos,omitempty"`
+	KeepGoing bool   `json:"keep_going,omitempty"`
 }
 
 const (
