@@ -1604,6 +1604,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-history-rename` | AI: Rename Chat… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-mcp-config` | Open Config: MCP Servers | never | AI provider, credentials and approvals stay with the user |
 | `ai-mcp-connect` | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | never | AI provider, credentials and approvals stay with the user (signing in to services is the user's) |
+| `ai-mcp-insert` | AI: MCP Prompts and Resources… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-mcp-log` | AI: MCP: Show Log | auto |   |
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory` | AI: Memory… | never | opens a picker or prompt that only the user can answer; use a typed tool |
