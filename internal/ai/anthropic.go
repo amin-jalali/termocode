@@ -100,6 +100,14 @@ func buildAnthropicBody(req Request, model string, oauth bool) map[string]any {
 			msgs = append(msgs, map[string]any{"role": "assistant", "content": blocks})
 		case RoleTool:
 			block := map[string]any{"type": "tool_result", "tool_use_id": m.ToolCallID, "content": m.Content}
+			if len(m.Images) > 0 {
+				parts := []map[string]any{{"type": "text", "text": m.Content}}
+				for _, im := range m.Images {
+					parts = append(parts, map[string]any{"type": "image", "source": map[string]any{
+						"type": "base64", "media_type": im.MediaType, "data": base64.StdEncoding.EncodeToString(im.Data)}})
+				}
+				block["content"] = parts
+			}
 			if n := len(msgs); n > 0 && msgs[n-1]["role"] == "user" {
 				if prev, ok := msgs[n-1]["content"].([]map[string]any); ok {
 					msgs[n-1]["content"] = append(prev, block)
