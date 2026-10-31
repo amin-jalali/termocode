@@ -754,6 +754,35 @@ settings are blanked and keys are removed from logs. You can add the
 current chat. Nothing is sent. **Save report** writes a new
 `termocode-report-*.md` in the workspace. Check it for private text.
 
+## Hooks after AI tool calls
+
+A hook is a command that runs after an AI tool call worked, for example a
+formatter after the AI writes a file:
+
+```json
+{"post_tool": [
+  {"tools": ["write_file", "create_file"], "run": "gofmt -w \"$TERMOCODE_TOOL_PATH\""},
+  {"tools": ["*"], "run": "make lint", "timeout_s": 60}
+]}
+```
+
+- **Your hooks**: `~/.config/termocode/ai/hooks.json`. They always run.
+- **Project hooks**: `.termocode/hooks.json` in the workspace. They come
+  from the repository, so the first message opens a card **Run this
+  project's hooks?** that lists the commands. **Not in this project** is
+  first and is what Enter picks. The answer is kept for that exact file;
+  a changed file asks again. **AI: Hooks…** opens the card again.
+- `tools` names the AI tools (`*` or no list: every tool). The hook runs
+  in the workspace with `sh -c` (`cmd /C` on Windows) and gets
+  `TERMOCODE_TOOL`, `TERMOCODE_TOOL_PATH` (the call's file, as a full
+  path) and `TERMOCODE_WORKSPACE`. It is stopped after `timeout_s`
+  (default 30, at most 300).
+- Every run is one line in **View: Output** → **AI** (the audit log):
+  `hook after=write_file run=… by=user → exit 0 · 40ms`.
+- When a hook fails (exit code not 0), its output (at most 4 KB, secrets
+  blanked) is added to the tool result, so the AI can fix a lint error.
+- Hooks run only after built-in tools, not after MCP tools.
+
 ## Keys at a glance
 
 | Key | Action |
