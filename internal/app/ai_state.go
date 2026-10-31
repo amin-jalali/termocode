@@ -500,6 +500,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-mcp-connect", "AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry)", ""},
 		{"ai-mcp-servers", "AI: MCP Servers…", ""},
 		{"ai-mcp-log", "AI: MCP: Show Log", ""},
+		{"ai-mcp-reset-cache", "AI: MCP: Reset Tool Lists", ""},
 		{"ai-mcp-config", "Open Config: MCP Servers", ""},
 		{"ai-cancel", "AI: Stop Generating", ""},
 	}
@@ -519,7 +520,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat",
-		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect":
+		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reset-cache":
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -593,6 +594,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openMCPServers(), true
 	case "ai-mcp-log":
 		return m.showMCPLog(), true
+	case "ai-mcp-reset-cache":
+		return m.resetMCPToolLists(), true // ai_mcp_reset_cache.go
 	case "ai-mcp-config":
 		return m.editMCPConfig(), true
 	case "ai-cancel":

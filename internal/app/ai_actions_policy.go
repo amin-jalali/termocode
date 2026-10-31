@@ -441,6 +441,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-servers":      aiNever(aiNoPicker),
 	"ai-mcp-connect":      aiNever(aiNoAIConfig + " (signing in to services is the user's)"),
 	"ai-mcp-log":          aiAuto(),
+	"ai-mcp-reset-cache":  aiNever(aiNoAIConfig),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),
 	// termocode as an MCP server (mcp_serve_status.go): the user's own
 	// screens; the config snippet is for the user's agents, not the chat.
