@@ -485,10 +485,23 @@ to go on. Change the limit with `ai_max_steps` in `config.json`.
 
 ## Project rules file
 
-A project can tell the AI how to work in it: put the rules in `AGENTS.md`
-or `.termocode/rules.md` in the workspace root. termocode reads them at the
-start of every chat turn and puts them in the AI's system prompt. When both
-files exist, both are used (AGENTS.md first).
+A project can tell the AI how to work in it: put the rules in `AGENTS.md`,
+`CLAUDE.md` or `.termocode/rules.md` in the workspace root. termocode reads
+them at the start of every chat turn and puts them in the AI's system prompt.
+When several files exist, all are used (in this order).
+
+More rules can apply to some files only:
+
+- An `AGENTS.md` or `CLAUDE.md` in a sub folder applies to the files in that
+  folder and below.
+- A file in `.claude/rules/` (`*.md` or `*.mdc`) with `globs:` (or `paths:`)
+  in its front matter applies to the files that match, for example
+  `globs: "*.go, cmd/**"`. With `alwaysApply: true`, or with no front matter,
+  it goes into the system prompt like `AGENTS.md`.
+
+These rules are not in the system prompt. When the AI reads a matching file
+with `read_file`, the rules are added to the result, once per chat (at most
+4 KB per file and 16 KB per chat).
 
 The text steers the AI, so it is used only when you say so:
 
@@ -499,8 +512,9 @@ The text steers the AI, so it is used only when you say so:
 - **Always in this project** sends it with the rules.
 - **Esc** sends nothing and puts your message back in the input.
 
-The answer is kept per workspace for that exact text. When the file
-changes (you edit it, a pull brings a new version, or the AI writes it),
+The card lists every rules file, also the folder and `.claude/rules` ones;
+one answer covers all of them. The answer is kept per workspace for that
+exact text. When a file changes (you edit it, a pull brings a new version, or the AI writes it),
 the next message asks again.
 
 Under your message, the chat shows a dim line such as
