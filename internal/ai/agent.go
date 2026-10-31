@@ -279,13 +279,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 		if a.BeforeCalls != nil {
 			a.BeforeCalls(ctx, calls)
 		}
-		results := make([]string, len(calls))
-		images := make([][]Image, len(calls))
-		for i, call := range calls {
-			ictx, imgs := a.withImageSink(ctx)
-			results[i] = a.runTool(ictx, call, emit)
-			images[i] = imgs()
-		}
+		results, images := a.runCalls(ctx, calls, emit)                                    // OMX-24: read-only calls at once
 		results = fitToolResults(results, a.ContextWindow, promptTokens(last.Usage, msgs)) // OMX-25
 		for i, call := range calls {
 			if a.Native {

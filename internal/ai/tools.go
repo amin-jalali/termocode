@@ -33,7 +33,10 @@ type Tool struct {
 	Schema map[string]any
 	// Display (optional) is the name people see in the confirm dialog
 	// ("mcp.linear.create_issue"); Name is the wire name the model calls.
-	Display  string
+	Display string
+	// ReadOnly marks a tool that only reads and never asks: the agent
+	// runs such calls of one reply at the same time (OMX-24).
+	ReadOnly bool
 	Mutating bool
 	Class    string
 	Describe func(args map[string]any) string
@@ -326,7 +329,8 @@ func WorkspaceTools(w Workspace) []Tool {
 	inside := w.argsInside("path")
 	return []Tool{
 		{
-			Name: "read_file", Description: "Read a file and return its contents.",
+			ReadOnly: true,
+			Name:     "read_file", Description: "Read a file and return its contents.",
 			Params: map[string]any{"path": strParam("file path, relative to the workspace")}, Required: []string{"path"},
 			Describe: func(a map[string]any) string { return "Read " + path(a) },
 			Run: func(_ context.Context, a map[string]any) (string, error) {
@@ -345,7 +349,8 @@ func WorkspaceTools(w Workspace) []Tool {
 			},
 		},
 		{
-			Name: "list_dir", Description: "List the entries of a directory.",
+			ReadOnly: true,
+			Name:     "list_dir", Description: "List the entries of a directory.",
 			Params:   map[string]any{"path": strParam("directory, relative to the workspace (default: root)")},
 			Describe: func(a map[string]any) string { return "List " + orDot(path(a)) },
 			Run: func(_ context.Context, a map[string]any) (string, error) {
@@ -369,7 +374,8 @@ func WorkspaceTools(w Workspace) []Tool {
 			},
 		},
 		{
-			Name: "search", Description: "Search the workspace for text: a literal pattern, or a regular expression with regex=true; " +
+			ReadOnly: true,
+			Name:     "search", Description: "Search the workspace for text: a literal pattern, or a regular expression with regex=true; " +
 				"glob limits the files (\"*.go\", \"src/**\", \"!*_test.go\"; comma-separated). Max 50 matches.",
 			Params: map[string]any{
 				"query": strParam("text (or regex) to find"),
@@ -429,7 +435,8 @@ func WorkspaceTools(w Workspace) []Tool {
 			},
 		},
 		{
-			Name: "glob", Description: "Find files by name pattern (\"**/*_test.go\", \"src/*.ts\"; comma-separated, a leading ! drops files). " +
+			ReadOnly: true,
+			Name:     "glob", Description: "Find files by name pattern (\"**/*_test.go\", \"src/*.ts\"; comma-separated, a leading ! drops files). " +
 				"Skips ignored, hidden and dependency folders. Max 200 paths.",
 			Params: map[string]any{
 				"pattern": strParam("file globs, comma-separated"),
@@ -465,7 +472,8 @@ func WorkspaceTools(w Workspace) []Tool {
 			},
 		},
 		{
-			Name: "git_status", Description: "Show the working-tree status (changed / staged files).",
+			ReadOnly: true,
+			Name:     "git_status", Description: "Show the working-tree status (changed / staged files).",
 			Describe: func(map[string]any) string { return "Git status" },
 			Run: func(context.Context, map[string]any) (string, error) {
 				files, err := git.Status(w.Root)
@@ -483,7 +491,8 @@ func WorkspaceTools(w Workspace) []Tool {
 			},
 		},
 		{
-			Name: "git_diff", Description: "Show the diff of one file vs HEAD, or of all changes when path is empty.",
+			ReadOnly: true,
+			Name:     "git_diff", Description: "Show the diff of one file vs HEAD, or of all changes when path is empty.",
 			Params: map[string]any{"path": strParam("file path (optional)")},
 			Describe: func(a map[string]any) string {
 				if path(a) == "" {
@@ -509,7 +518,8 @@ func WorkspaceTools(w Workspace) []Tool {
 			},
 		},
 		{
-			Name: "git_branch", Description: "List git branches (current marked with *).",
+			ReadOnly: true,
+			Name:     "git_branch", Description: "List git branches (current marked with *).",
 			Describe: func(map[string]any) string { return "Git branches" },
 			Run: func(context.Context, map[string]any) (string, error) {
 				return runCmd(context.Background(), w.Root, 15*time.Second, "git", "branch", "--list")
