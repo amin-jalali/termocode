@@ -44,6 +44,7 @@ type Tool struct {
 	Description string           `json:"description,omitempty"`
 	InputSchema map[string]any   `json:"inputSchema,omitempty"`
 	Annotations *ToolAnnotations `json:"annotations,omitempty"`
+	Meta        map[string]any   `json:"_meta,omitempty"` // kept as sent (spec2026.go)
 }
 
 // ToolAnnotations are the server's hints about a tool. They are hints,
@@ -99,6 +100,7 @@ type CallResult struct {
 	Content           []Content       `json:"content"`
 	StructuredContent json.RawMessage `json:"structuredContent,omitempty"`
 	IsError           bool            `json:"isError,omitempty"`
+	Meta              map[string]any  `json:"_meta,omitempty"` // kept as sent (spec2026.go)
 }
 
 // Text renders a result for the model: text items as they are, binary
