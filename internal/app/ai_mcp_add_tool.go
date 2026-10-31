@@ -56,7 +56,7 @@ func aiMCPAddPropose(a map[string]any) (aiMCPAddProposal, error) {
 			return p, errors.New("propose one server at a time")
 		}
 		if len(list[0].Secrets) > 0 {
-			return p, errors.New("refused: the entry has a literal secret; ask the user to add it with AI: MCP Servers… → Import, which stores secrets safely")
+			return p, errors.New("refused: the entry has a literal secret; ask the user to add it with Paste a config… in the Connect list, which stores secrets safely")
 		}
 		p.name, p.entry = list[0].Name, list[0].Entry
 		if name != "" {
