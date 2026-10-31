@@ -389,6 +389,25 @@ request:
 At most 3 AI fix turns run; after that the ship stops. Run the command
 again to stop it at any time. The default branch is never shipped.
 
+### Run a plan in a worktree, then ship it
+
+**AI: Run Next Plan in a Worktree, Then Ship…** prepares the next plan
+run. It picks the plan profile; then you type the task in the AI chat.
+
+- The run works in one new git worktree on branch
+  `termocode/agent-<run>-plan`. It starts from your last commit, so your
+  uncommitted edits stay out of it. Your branch and files do not change.
+- Its steps run one at a time, because they share that tree.
+- When the run is done, a card asks **Ship the plan's branch?**
+  **Not now** is first and keeps the branch (AI: Agent Worktrees… lists
+  it; the command again shows the card again). **Ship** commits the work
+  in the worktree, with the task as the commit message, and starts
+  **AI: Ship Branch to Merge-Ready** on that branch. Each push and the
+  pull request still ask first. CI fixes are made in the worktree too.
+
+Run the command again before you send the task to turn it off. It needs
+a git repository with at least one commit.
+
 ## Keys at a glance
 
 In the Source Control panel:
