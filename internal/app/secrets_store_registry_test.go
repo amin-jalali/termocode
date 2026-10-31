@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/secrets"
 )
 
@@ -134,10 +136,50 @@ func TestRegistrySavedTokenOnLockedStoreUnlocksFirst(t *testing.T) {
 	if !m.secretsPromptOpen() {
 		t.Fatal("no passphrase prompt")
 	}
-	submitSecrets(t, m, secretsTestPass)
-	pumpHost(t, m, nil)
+	submitUnlockThenLogin(t, m, secretsTestPass)
 	if stdin() != regRememberSecret+"\n" {
 		t.Fatalf("stdin %q", stdin())
+	}
+}
+
+// submitUnlockThenLogin types the passphrase and runs what follows until
+// the login the unlock lets go has answered. submitSecrets stops 100 ms
+// after the unlock: a login slower than that (the macOS runner) had not
+// written its stdin yet, and the test read "".
+func submitUnlockThenLogin(t *testing.T, m *Model, pass string) {
+	t.Helper()
+	if !m.secretsPromptOpen() {
+		t.Fatalf("no passphrase prompt open (kind %v)", m.promptKind)
+	}
+	next, cmd := m.update(prompt.SubmitMsg{Value: pass})
+	*m = next
+	results := make(chan tea.Msg, 64)
+	start := func(c tea.Cmd) {
+		if c != nil {
+			go func() { results <- c() }()
+		}
+	}
+	start(cmd)
+	deadline := time.After(30 * time.Second)
+	for {
+		select {
+		case got := <-results:
+			switch msg := got.(type) {
+			case tea.BatchMsg:
+				for _, c := range msg {
+					start(c)
+				}
+			case secretsUnlockDoneMsg:
+				next, more := m.update(msg)
+				*m = next
+				start(more)
+			case registryLoginDoneMsg:
+				m.handleServicesMsg(msg)
+				return
+			}
+		case <-deadline:
+			t.Fatal("the login after the unlock never answered")
+		}
 	}
 }
 
