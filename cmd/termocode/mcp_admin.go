@@ -341,6 +341,11 @@ func (a *mcpAdmin) addLocal(path string) error {
 		return err
 	}
 	a.done(path, []string{spec.Name})
+	if command, _ := entry["command"].(string); command != "" {
+		if err := mcp.CheckRuntime(command); err != nil {
+			fmt.Fprintf(a.errw, "warning: %v\n", err)
+		}
+	}
 	return nil
 }
 

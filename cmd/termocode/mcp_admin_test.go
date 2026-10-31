@@ -224,3 +224,12 @@ func TestMCPAdminAddShareUser(t *testing.T) {
 		t.Fatal("share all was accepted")
 	}
 }
+
+func TestMCPAdminAddWarnsMissingRuntime(t *testing.T) {
+	cwd := adminEnv(t)
+	t.Setenv("PATH", t.TempDir())
+	code, _, errs := runAdmin(t, cwd, "", "add", "--npm", "some-mcp")
+	if code != 0 || !strings.Contains(errs, "npx not found") || !strings.Contains(errs, "nodejs.org") {
+		t.Fatalf("exit %d, stderr %q", code, errs)
+	}
+}
