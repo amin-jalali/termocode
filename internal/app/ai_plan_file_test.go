@@ -30,6 +30,8 @@ func TestAIPlanReviewAndPlanFile(t *testing.T) {
 	}}
 	m := aiPlanModel(t, p)
 	m.ai.settings.PlanReviewRounds = 2
+	on := true
+	m.ai.settings.PlanFile = &on
 	driveAIChat(t, m, m.sendAIChat("make the parser faster"), nil)
 	rm := aiRunMsg(t, m)
 	if rm.Run.State != ai.RunStateDone || reviews != 2 {
@@ -49,6 +51,8 @@ func TestAIPlanReviewAndPlanFile(t *testing.T) {
 // OMX-14: a verify step's evidence goes into the plan file.
 func TestAIPlanFileEvidence(t *testing.T) {
 	m, _ := aiRunModel(t, &recordingAIProvider{}, &recordingAIProvider{})
+	on := true
+	m.ai.settings.PlanFile = &on
 	rm := &ai.StoredMessage{Run: &ai.StoredRun{ID: "r9", Profile: "plan", State: ai.RunStateDone, Verdict: "pass"},
 		Steps: []ai.StoredStep{{ID: "v", Title: "Verify", Planned: true}}}
 	d := m.ai.aiPlanDocOf(rm, "fix it")
@@ -62,9 +66,13 @@ func TestAIPlanFileEvidence(t *testing.T) {
 	wantAll(t, string(b), "## Verify evidence", "- go test ./... → ok", "done · verify pass")
 }
 
-// OMX-14: ai_plan_file false writes no file.
+// OMX-14: ai_plan_file false writes no file, and by default (unset) a
+// run writes none either: no untracked file in the user's repository.
 func TestAIPlanFileOff(t *testing.T) {
 	m, _ := aiRunModel(t, &recordingAIProvider{}, &recordingAIProvider{})
+	if m.ai.aiPlanDocOf(&ai.StoredMessage{Run: &ai.StoredRun{ID: "r0"}}, "x") != nil {
+		t.Fatal("a plan doc by default")
+	}
 	off := false
 	m.ai.settings.PlanFile = &off
 	if m.ai.aiPlanDocOf(&ai.StoredMessage{Run: &ai.StoredRun{ID: "r1"}}, "x") != nil {

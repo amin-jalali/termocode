@@ -83,11 +83,12 @@ func TestEscalatesSetting(t *testing.T) {
 }
 
 // OMX-14: plan review is off unless asked (at most 5 rounds); the plan
-// file is on unless turned off.
+// file is off unless turned on (it would show as an untracked file in
+// the user's repository).
 func TestPlanSettings(t *testing.T) {
-	off := false
-	if (Settings{}).PlanReviews() != 0 || (Settings{PlanReviewRounds: 9}).PlanReviews() != 5 || !(Settings{}).PlanFiles() ||
-		(Settings{PlanFile: &off}).PlanFiles() {
+	off, on := false, true
+	if (Settings{}).PlanReviews() != 0 || (Settings{PlanReviewRounds: 9}).PlanReviews() != 5 || (Settings{}).PlanFiles() ||
+		(Settings{PlanFile: &off}).PlanFiles() || !(Settings{PlanFile: &on}).PlanFiles() {
 		t.Fatal("plan settings")
 	}
 }

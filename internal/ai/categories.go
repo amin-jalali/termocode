@@ -139,5 +139,6 @@ func (s Settings) Escalates() bool { return s.StepEscalate == nil || *s.StepEsca
 // PlanReviews is ai_plan_review_rounds, 0 to 5 (0: no reviewer).
 func (s Settings) PlanReviews() int { return max(0, min(s.PlanReviewRounds, 5)) }
 
-// PlanFiles reports whether a planned run writes its plan file.
-func (s Settings) PlanFiles() bool { return s.PlanFile == nil || *s.PlanFile }
+// PlanFiles reports whether a planned run writes its plan file (off
+// unless ai_plan_file is true).
+func (s Settings) PlanFiles() bool { return s.PlanFile != nil && *s.PlanFile }
