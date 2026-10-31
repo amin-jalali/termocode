@@ -32,3 +32,20 @@ func TestManagerInfo(t *testing.T) {
 		t.Error("info for an unknown server")
 	}
 }
+
+// Untrust forgets the session's "Allow once": with no saved "Always
+// allow" (the caller forgets that one) a project server asks again.
+func TestManagerUntrust(t *testing.T) {
+	e := newManagerEnv(t)
+	e.write(t, e.project, map[string]any{"proj": map[string]string{}})
+	m := e.manager(t, 0, nil)
+	m.Trust("proj", false)
+	if !status(m, "proj").Trusted {
+		t.Fatal("Trust did not trust")
+	}
+	m.Untrust("proj")
+	if status(m, "proj").Trusted {
+		t.Error("still trusted after Untrust")
+	}
+	m.Untrust("nope") // no panic
+}
