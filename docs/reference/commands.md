@@ -58,6 +58,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
 | AI: Show Profile | `ai-profile-show` |   |   |
+| AI: Side Question… | `ai-side` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
 | AI: Skills… | `ai-skills` |   |   |

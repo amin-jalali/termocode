@@ -1736,6 +1736,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
+| `ai-side` | AI: Side Question… | never | the side chat is the user's own question beside the AI's turn |
 | `ai-sign-in-claude` | AI: Sign in with Claude (OAuth, opt-in)… | never | AI provider, credentials and approvals stay with the user |
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |
 | `ai-skills` | AI: Skills… | never | opens a picker or prompt that only the user can answer; use a typed tool |
