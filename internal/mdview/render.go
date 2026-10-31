@@ -101,7 +101,15 @@ func RenderDoc(src string, opt Options) ([]string, Marks) {
 	left, col := Layout(w, opt.MaxColumn)
 	// Bytes that are not UTF-8 would be measured one way and drawn
 	// another (as U+FFFD); make them U+FFFD up front.
-	source := []byte(strings.ToValidUTF8(src, "\uFFFD"))
+	// Control bytes (ESC, BEL, C1 like U+009B) would reach the terminal
+	// raw: a lone ESC eats the cells after it, and a sequence could
+	// move the cursor or set a title. Show them as U+FFFD too.
+	source := []byte(strings.Map(func(c rune) rune {
+		if c < 0x20 && c != '\t' && c != '\n' && c != '\r' || c == 0x7f || c >= 0x80 && c <= 0x9f {
+			return '\uFFFD'
+		}
+		return c
+	}, strings.ToValidUTF8(src, "\uFFFD")))
 	doc := md.Parser().Parse(text.NewReader(source))
 	r := newRenderer(source, opt)
 	wide := max(col, w-4)
