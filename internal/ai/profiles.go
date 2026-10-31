@@ -546,10 +546,8 @@ func checkStep(st ProfileStep, what string, slots map[string]bool) error {
 	if st.Slot != "" && !slots[st.Slot] {
 		return bad("slot", "unknown slot %q", st.Slot)
 	}
-	switch st.Category {
-	case "", agentdag.CategoryQuick, agentdag.CategoryDeep:
-	default:
-		return bad("category", "unknown category %q (quick or deep)", st.Category)
+	if st.Category != "" && !agentdag.ValidCategory(st.Category) { // OMX-16: the run checks that it exists
+		return bad("category", "%q is not a category name (lower-case letters, digits, '-')", st.Category)
 	}
 	switch st.Tools.Preset {
 	case "", agentdag.PresetNone, agentdag.PresetReadOnly, agentdag.PresetAll:
@@ -631,8 +629,8 @@ func validateProfile(p *Profile, slots map[string]bool, parallelMax int) error {
 		return pe("plan", "at most one planner step (plan: true)")
 	}
 	for cat, slot := range p.Categories {
-		if cat != agentdag.CategoryQuick && cat != agentdag.CategoryDeep {
-			return pe("categories", "unknown category %q in categories (quick or deep)", cat)
+		if !agentdag.ValidCategory(cat) {
+			return pe("categories", "%q in categories is not a category name (lower-case letters, digits, '-')", cat)
 		}
 		if !slots[slot] {
 			return &ProfileError{Field: "categories:" + cat, Msg: fmt.Sprintf("categories: unknown slot %q", slot)}
