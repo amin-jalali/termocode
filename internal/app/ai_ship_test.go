@@ -186,3 +186,19 @@ func TestAIShipStops(t *testing.T) {
 		t.Error("shipping the default branch")
 	}
 }
+
+// A message that is not the ship's must not build the AI state: that opens
+// the secret store and writes secrets.json (the import-from-file tests
+// caught it).
+func TestAIShipIgnoresOtherMessagesWithoutAIState(t *testing.T) {
+	var m Model
+	if _, ok := m.handleAIShipMsg(struct{}{}); ok {
+		t.Fatal("a foreign message was taken as ours")
+	}
+	if m.ai != nil {
+		t.Fatal("a foreign message built the AI state")
+	}
+	if _, ok := m.handleAIShipMsg(aiShipTickMsg{gen: 1}); !ok || m.ai != nil {
+		t.Fatalf("a stale tick with no ship: ok=%v ai=%v", ok, m.ai != nil)
+	}
+}

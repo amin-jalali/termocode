@@ -164,8 +164,9 @@ func (m *Model) aiShipStop(text string) tea.Cmd {
 
 // handleAIShipMsg routes the ship messages. ok=false: not ours.
 func (m *Model) handleAIShipMsg(msg tea.Msg) (tea.Cmd, bool) {
-	sh := m.aiS().ship
-	cur := func(gen int) bool { return sh != nil && sh.gen == gen }
+	// Not m.aiS(): every message passes here, and building the AI state
+	// opens the secret store (it writes secrets.json) for nothing.
+	cur := func(gen int) bool { return m.ai != nil && m.ai.ship != nil && m.ai.ship.gen == gen }
 	switch msg := msg.(type) {
 	case aiShipProbeMsg:
 		if !cur(msg.gen) {
