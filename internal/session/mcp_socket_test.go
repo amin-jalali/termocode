@@ -71,3 +71,16 @@ func TestCheckPeerExported(t *testing.T) {
 		t.Error("a pipe passed the peer check")
 	}
 }
+
+// Spec (OMX-33): the agent control socket sits next to the session
+// socket, under the same key, short enough for sun_path.
+func TestPathsAgentSocket(t *testing.T) {
+	t.Setenv("XDG_RUNTIME_DIR", shortTemp(t))
+	p, err := PathsFor("/some/project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Base(p.AgentSocket) != p.Key+".agent.sock" || filepath.Dir(p.AgentSocket) != filepath.Dir(p.Socket) || len(p.AgentSocket) > maxSocketPath {
+		t.Fatalf("AgentSocket = %q (socket %q)", p.AgentSocket, p.Socket)
+	}
+}
