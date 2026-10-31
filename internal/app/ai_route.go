@@ -48,6 +48,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIMCPTrust(msg), true
 	case mcpConnectDoneMsg:
 		return m.onMCPConnectDone(msg), true
+	case mcpReconnectAllDoneMsg:
+		return m.onMCPReconnectAllDone(msg), true
 	case aiChatDoneMsg:
 		return m.onAIChatDone(msg), true
 	case aiMemoryDoneMsg: // ai_memory_extract.go
