@@ -23,8 +23,10 @@ import (
 // checks a few file times under .git and the work tree root (no process
 // started) and waits 2 s more. It comes back, and git runs, when that
 // check sees a change (a commit, checkout, stage, fetch or a new file at
-// the root), after gitIdleEvery waits (an edit inside a file shows
-// within 10 s), or on the first 2 s step after any activity.
+// the root), when the work tree watch saw a file change
+// (git_tree_watch.go: an edit inside a file shows within 2 s), after
+// gitIdleEvery waits (the safety step), or on the first 2 s step after
+// any activity.
 
 // gitIdleEvery: while nobody uses termocode, git is read at least every
 // gitIdleEvery-th poll step (10 s).
@@ -42,6 +44,11 @@ type gitPollGate struct {
 	active atomic.Bool
 	// refreshedAt is when the poll last refreshed the index.
 	refreshedAt time.Time
+	// tree and treeDirty: what changed in the work tree since the last
+	// git read (git_tree_watch.go).
+	tree      workTreeList
+	treeDirty atomic.Bool
+	treeStale atomic.Bool // a watched folder went away: make the lists again
 }
 
 func (g *gitPollGate) get() string {
@@ -60,13 +67,14 @@ func (g *gitPollGate) set(fp string) {
 // the index (FIX-40: the status takes no lock, so a touched file would be
 // read again by every status), then takes the fingerprint the idle wait
 // compares with (after the refresh, which changes the index).
-func (g *gitPollGate) afterRead(cwd string, ok bool) {
+func (g *gitPollGate) afterRead(cwd string, ok bool, files []git.FileStatus) {
 	if ok && g.refreshIndexDue() {
 		if err := git.RefreshIndex(cwd); err != nil {
 			recordError("git: refresh the index: " + err.Error())
 		}
 	}
 	g.set(gitFingerprint(cwd))
+	g.track(cwd, ok, files)
 }
 
 // refreshIndexDue reports (and books) an index refresh when the last one
@@ -122,7 +130,7 @@ func gitIdleWait(gate *gitPollGate, cwd string, sleep func(time.Duration)) tea.M
 		if gate.active.Swap(false) || i >= gitIdleEvery {
 			return gitAutoRefreshMsg{}
 		}
-		if fp := gitFingerprint(cwd); fp == "" || fp != gate.get() {
+		if fp := gitFingerprint(cwd); fp == "" || fp != gate.get() || gate.treeSeen() {
 			return gitAutoRefreshMsg{}
 		}
 	}

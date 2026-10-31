@@ -82,13 +82,15 @@ func TestGitPollSleepsWhileIdle(t *testing.T) {
 	if n := idleSteps(t, m, nil); n != gitIdleEvery {
 		t.Fatalf("idle: polled after %d steps, want %d", n, gitIdleEvery)
 	}
-	// An edit inside a file only: still the safety step.
+	// An edit inside a file another program made (FIX-33): polled after
+	// that step, not on the 10 s safety step.
 	if n := idleSteps(t, m, func(k int) {
 		if k == 1 {
 			_ = os.WriteFile(filepath.Join("sub", "a.txt"), []byte("b\n"), 0o644)
+			waitTreeSeen(t, m)
 		}
-	}); n != gitIdleEvery {
-		t.Fatalf("edit: polled after %d steps, want %d", n, gitIdleEvery)
+	}); n != 1 {
+		t.Fatalf("edit: polled after %d steps, want 1", n)
 	}
 	m.applyGitSnapshot(m.pollGitCmd()().(GitMsg))
 	if len(m.gitFiles) != 1 {
@@ -112,6 +114,7 @@ func TestGitPollSleepsWhileIdle(t *testing.T) {
 	if n := idleSteps(t, m, func(k int) {
 		if k == 3 {
 			_ = os.WriteFile("new.txt", []byte("n\n"), 0o644)
+			waitTreeSeen(t, m) // its file event too, or it would wake a later wait
 		}
 	}); n != 3 {
 		t.Fatalf("new file: polled after %d steps, want 3", n)
@@ -184,5 +187,67 @@ func TestGitPollRefreshesTheIndexAboutOnceAMinute(t *testing.T) {
 	}
 	if len(m.gitFiles) != 0 {
 		t.Errorf("a touched file shows as changed: %+v", m.gitFiles)
+	}
+}
+
+// waitTreeSeen waits until the work tree watch has seen a change (file
+// events come a moment after the write); the stat scan sees it at once.
+func waitTreeSeen(t *testing.T, m *Model) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for !m.gitGate.treeSeen() {
+		if time.Now().After(deadline) {
+			t.Fatal("the work tree watch never saw the change")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+// FIX-33: edits by another program inside existing files, in a new file
+// in a folder and in an already changed file, each wake the idle poll on
+// the next 2 s step, with file events and with the stat scan used where
+// events are missing (network folders, other systems).
+func TestGitPollSeesEditsInsideTheTree(t *testing.T) {
+	for _, scan := range []bool{false, true} {
+		name := "events"
+		if scan {
+			name = "scan"
+		}
+		t.Run(name, func(t *testing.T) {
+			defer func(v bool) { gitTreeNoWatch = v }(gitTreeNoWatch)
+			gitTreeNoWatch = scan
+			m, _ := gitIdleRepo(t)
+			want := gitTreeScan
+			if !scan && gitTreeWatchSupported {
+				want = gitTreeWatch
+			}
+			if got := m.gitGate.treeBackend(); got != want {
+				t.Fatalf("backend = %v, want %v", got, want)
+			}
+			if n := idleSteps(t, m, nil); n != gitIdleEvery {
+				t.Fatalf("idle: polled after %d steps, want %d", n, gitIdleEvery)
+			}
+			for _, c := range []struct {
+				what string
+				do   func()
+			}{
+				{"edit a clean file", func() { _ = os.WriteFile(filepath.Join("sub", "a.txt"), []byte("b\n"), 0o644) }},
+				{"edit it again", func() { _ = os.WriteFile(filepath.Join("sub", "a.txt"), []byte("c\n"), 0o644) }},
+				{"new file in a folder", func() { _ = os.WriteFile(filepath.Join("sub", "n.txt"), []byte("n\n"), 0o644) }},
+			} {
+				if n := idleSteps(t, m, func(k int) {
+					if k == 2 {
+						c.do()
+						waitTreeSeen(t, m)
+					}
+				}); n != 2 {
+					t.Fatalf("%s: polled after %d steps, want 2", c.what, n)
+				}
+				m.applyGitSnapshot(m.pollGitCmd()().(GitMsg))
+			}
+			if len(m.gitFiles) != 2 {
+				t.Errorf("files = %+v", m.gitFiles)
+			}
+		})
 	}
 }
