@@ -195,9 +195,10 @@ func TestSecretsWrongPassphraseThenUnlockFromPalette(t *testing.T) {
 }
 
 // Spec: a plain ai/credentials.json starts the migration card. It counts
-// what it found and never shows a value. Encrypted file: passphrase twice,
-// the plain file is replaced by credentials.json.migrated, and the key is
-// in the store after a restart and an unlock.
+// what it found and never shows a value. Encrypted file: passphrase twice;
+// a card then asks before the plain file goes (Keep for now first: Enter
+// keeps it). Delete the plain file replaces it by credentials.json.migrated,
+// and the key is in the store after a restart and an unlock.
 func TestSecretsMigrationCardMovesPlainFile(t *testing.T) {
 	r := newSessionRig(t)
 	if err := os.MkdirAll(filepath.Dir(r.plainFile()), 0o700); err != nil {
@@ -218,9 +219,23 @@ func TestSecretsMigrationCardMovesPlainFile(t *testing.T) {
 	tm.typeMasked("Type it again:", secretsPass)
 	tm.WaitText("Secrets moved", secretsWait)
 
-	if _, err := os.Stat(r.plainFile()); err == nil {
-		t.Error("credentials.json is still there")
+	// The plain file stays until the user says so: Keep for now is first
+	// and focused, so Enter keeps it.
+	tm.WaitText("Delete the old plain file?", uiTimeout)
+	tm.settle()
+	tm.Send(KeyEnter)
+	tm.WaitText("Plain file kept", uiTimeout)
+	if !strings.Contains(readFileOrEmpty(r.plainFile()), secretsAIKey) {
+		t.Fatal("Keep for now removed credentials.json")
 	}
+	// AI: Move Secrets… asks again; Delete the plain file removes it.
+	tm.Palette("AI: Move Secrets to a Safer Store…")
+	tm.WaitText("Delete the old plain file?", uiTimeout)
+	tm.settle()
+	tm.Send("\x1b[C") // Right: Delete the plain file
+	tm.settle()
+	tm.Send(KeyEnter)
+	waitFile(t, r.plainFile(), false, "Delete the plain file left credentials.json")
 	if _, err := os.Stat(r.plainFile() + ".migrated"); err != nil {
 		t.Errorf("credentials.json.migrated: %v", err)
 	}
