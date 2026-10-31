@@ -447,6 +447,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-updates":      aiNever(aiNoAIConfig),
 	"ai-mcp-connect":      aiNever(aiNoAIConfig + " (signing in to services is the user's)"),
 	"ai-mcp-log":          aiAuto(),
+	"ai-mcp-reset-cache":  aiNever(aiNoAIConfig),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),
 	"mcp-import-other":    aiNever(aiNoAIConfig + " (importing servers is the user's)"),
 	// Only servers that ran before (no trust card); network only.
