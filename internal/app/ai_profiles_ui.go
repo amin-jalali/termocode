@@ -357,7 +357,7 @@ func (m *Model) askAIProfileTrust(p ai.Profile, after int, text string) tea.Cmd 
 	s := m.aiS()
 	s.profTrust = &aiProfileTrustPending{name: p.Name, hash: ai.ProfileHash(p), after: after, text: text}
 	var b strings.Builder
-	b.WriteString("From this project's .termocode/ai-profiles.json. Its prompts steer the AI: use it only if you trust this project.\n")
+	b.WriteString("This profile uses prompts from the project. They steer the AI: use it only if you trust this project.\n")
 	for i, st := range p.Steps {
 		title := st.Title
 		if title == "" {

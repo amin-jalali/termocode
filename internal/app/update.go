@@ -997,6 +997,8 @@ end })`)
 			m.layoutHint = ""
 		}
 		return m, nil, true
+	case settingsReloadTickMsg:
+		return m, tea.Batch(m.reloadLiveSettings(), settingsReloadTick()), true
 	case gitAutoRefreshMsg:
 		// Background poll: refresh git state and reschedule the next tick. The
 		// GitMsg handler only re-clamps the cursor, so this never disturbs the

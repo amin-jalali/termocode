@@ -932,11 +932,12 @@ func New() Model {
 	}
 	m.clipRing = clipring.New()
 	m.gitGate = &gitPollGate{}
+	m.primeLiveSettings()
 	return m
 }
 
 func (m Model) Init() tea.Cmd {
-	cmds := []tea.Cmd{tea.HideCursor, fetchGitCmd(), gitAutoRefreshTick()}
+	cmds := []tea.Cmd{tea.HideCursor, fetchGitCmd(), gitAutoRefreshTick(), settingsReloadTick()}
 	if cmd := m.initClipboardCapture(); cmd != nil {
 		cmds = append(cmds, cmd)
 	}

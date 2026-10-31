@@ -237,6 +237,11 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 			prof, text = p, strings.TrimLeft(rest, " ")
 		}
 	}
+	var promptErr error
+	prof, promptErr = ai.ResolveFilePrompts(aiWorkspaceRoot(), prof)
+	if promptErr != nil {
+		return m.aiProfileProblem(prof.Name, promptErr)
+	}
 	if prof.Source == ai.ProfileSourceProject && m.aiProfileTrust(prof) != aiTrustUse {
 		return m.askAIProfileTrust(prof, aiTrustAfterSend, asked) // F4: a repo's prompts are shown first
 	}
