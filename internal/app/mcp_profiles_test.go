@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
 )
@@ -44,7 +45,7 @@ func TestMCPProfilePickerAndTurnFilter(t *testing.T) {
 	if m.aiS().mcpProfile != "small" {
 		t.Fatalf("profile = %q", m.aiS().mcpProfile)
 	}
-	tools := m.aiMCPTurn(1, make(chan tea.Msg, 8))(context.Background())
+	tools := mcpWireTools(m.aiMCPTurn(1, make(chan tea.Msg, 8))(context.Background()))
 	if len(tools) != 1 || tools[0].Display != "mcp.fake.echo" {
 		var n []string
 		for _, tl := range tools {
@@ -57,7 +58,19 @@ func TestMCPProfilePickerAndTurnFilter(t *testing.T) {
 	if m.aiS().mcpProfile != "" {
 		t.Fatal("All did not clear the profile")
 	}
-	if len(m.aiMCPTurn(2, make(chan tea.Msg, 8))(context.Background())) < 2 {
+	if len(mcpWireTools(m.aiMCPTurn(2, make(chan tea.Msg, 8))(context.Background()))) < 2 {
 		t.Fatal("All did not give every tool back")
 	}
+}
+
+// mcpWireTools are a turn's server tools (mcp__…), without the resource,
+// result and search tools termocode adds beside them.
+func mcpWireTools(tools []ai.Tool) []ai.Tool {
+	var out []ai.Tool
+	for _, t := range tools {
+		if strings.HasPrefix(t.Name, mcp.WirePrefix) {
+			out = append(out, t)
+		}
+	}
+	return out
 }

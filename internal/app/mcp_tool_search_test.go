@@ -52,7 +52,9 @@ func TestMCPTurnDefersToolsWhenToolSearchOn(t *testing.T) {
 	}
 	tools := m.aiMCPTurn(1, make(chan tea.Msg, 8))(context.Background())
 	var shown, hidden int
-	for _, tl := range tools {
+	// only the server tools and the search tool count: the resource and
+	// result tools are never hidden
+	for _, tl := range append(mcpWireTools(tools), searchToolOf(tools)...) {
 		if tl.IsHidden() {
 			hidden++
 		} else {
@@ -62,4 +64,11 @@ func TestMCPTurnDefersToolsWhenToolSearchOn(t *testing.T) {
 	if _, ok := ai.FindTool(tools, mcp.ToolSearchName); !ok || shown != 1 || hidden == 0 {
 		t.Fatalf("shown=%d hidden=%d tools=%d", shown, hidden, len(tools))
 	}
+}
+
+func searchToolOf(tools []ai.Tool) []ai.Tool {
+	if t, ok := ai.FindTool(tools, mcp.ToolSearchName); ok {
+		return []ai.Tool{t}
+	}
+	return nil
 }
