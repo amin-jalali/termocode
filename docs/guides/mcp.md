@@ -643,6 +643,10 @@ its result shows in the chat when it ends and goes with your next
 message. A new-version server can run a long call as a task: termocode
 asks it how the task goes, and shows its answer the same way.
 
+**Details of a call.** An MCP tool line in the chat has a **▸ details**
+button. Click it to see the call's full arguments (secrets hidden) and
+its result; click again to close them.
+
 **Notes for you.** A server can mark part of a result for you only.
 termocode shows it under the tool line (`↳ for you: …`) and does not
 send it to the AI. When a server ranks the parts of a result, the AI
@@ -807,6 +811,7 @@ also shows the older lines.
 | `failed: … (gave up after 8 tries …)` | Run **AI: MCP: Reconnect All Servers** when you are back online. It also checks the running servers with a ping. |
 | `speaks MCP 2026-07-28 (stateless)` | The server speaks the newest MCP version. Nothing to do: termocode asks each server first and uses the older start for older servers. |
 | `the change stream broke` | A new-version server's change list stream ended. termocode opens it again by itself. |
+| A key in `mcp.json` seems to do nothing | Turn on `mcp_strict` (Settings → MCP). The servers list then shows `⚠ unknown key: …` under a server whose entry has a key termocode does not read, such as a typo. Keys that start with `_` or `$` are comments. |
 | `tools changed` | Review with **Show tools**, then **Trust the new tools**. |
 | `server not trusted` | **AI: MCP Servers…** → the server → **Trust**. |
 | A server shows old tools | Run **AI: MCP: Reset Tool Lists**. Each server lists its tools again on next use. A server can say how long its list stays fresh; a list it marks private (only for your sign-in) is never saved on disk. |
