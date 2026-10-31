@@ -198,7 +198,7 @@ func (m *Model) onTermOSC(buf int, seq string) tea.Cmd {
 		t.FixChip = t.LastExit != 0 && t.LastExit != 130 && t.LastCmd != "" && m.termTabVisible(shown)
 		if t.Agent != "" && t.agentFromCmd {
 			m.agentWatch(buf, false)
-			t.Agent, t.AgentState, t.agentFromCmd = "", agents.Unknown, false
+			t.Agent, t.AgentState, t.agentFromCmd, t.AgentHook = "", agents.Unknown, false, false
 		}
 	case shellint.Cwd:
 		if !termHostLocal(e.Host) {
