@@ -118,3 +118,26 @@ func TestNextReasoning(t *testing.T) {
 		t.Errorf("cycle: %v", got)
 	}
 }
+
+func TestReasoningKeyword(t *testing.T) {
+	for msg, want := range map[string]string{
+		"think about the bug":           ReasoningHigh,
+		"Please THINK hard":             ReasoningHigh,
+		"ultrathink: why does it fail?": ReasoningMax,
+		"think, then ultrathink":        ReasoningMax,
+		"I thinking out loud":           "",
+		"rethink the plan":              "",
+		"call `think` in the code":      "",
+		"```\nthink\n```\nfix it":       "",
+		"no keyword here":               "",
+		"think-tank":                    "",
+		"overthinking":                  "",
+		"use ultrathink":                ReasoningMax,
+		"first `x` then think":          ReasoningHigh,
+		"unclosed `code think":          ReasoningHigh,
+	} {
+		if got := ReasoningKeyword(msg); got != want {
+			t.Errorf("ReasoningKeyword(%q) = %q, want %q", msg, got, want)
+		}
+	}
+}
