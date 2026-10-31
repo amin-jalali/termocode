@@ -93,6 +93,8 @@ type mcpWizard struct {
 	result  mcp.IdentityResult
 	errText string
 	errBtns []connectcard.Button
+
+	local *mcpLocalForm // Local server… (ai_mcp_local.go)
 }
 
 // Messages of the wizard's Cmd goroutines (gen drops stale ones).
@@ -199,6 +201,7 @@ func (m *Model) mcpConnectItems() []picker.Item {
 	}
 	items = append(items,
 		picker.Item{ID: mcpConnectURLID, Title: fmt.Sprintf("%-15s %s", "Custom URL…", "any MCP server"), Hint: "type its address"},
+		picker.Item{ID: mcpConnectLocalID, Title: fmt.Sprintf("%-15s %s", "Local server…", "a command or package"), Hint: "npm, pip or an image"},
 		picker.Item{ID: mcpConnectJSONID, Title: fmt.Sprintf("%-15s %s", "Paste a config…", "an mcpServers block"), Hint: "tokens move to credentials"})
 	return items
 }
@@ -270,6 +273,8 @@ func (m *Model) mcpPlanEnv(p mcp.Preset) mcp.PlanEnv {
 // onMCPConnectPicked starts the wizard for a picker row.
 func (m *Model) onMCPConnectPicked(id string) tea.Cmd {
 	switch id {
+	case mcpConnectLocalID:
+		return m.openMCPLocal()
 	case mcpConnectJSONID:
 		w := m.newWizard(mcp.Preset{Name: "pasted", Title: "pasted servers"}, "")
 		w.step = wizPaste
@@ -688,6 +693,9 @@ func countdown(until time.Time) string {
 
 // wizCard builds the card of the current step.
 func (m *Model) wizCard() connectcard.Card {
+	if c, ok := m.localCard(); ok {
+		return c
+	}
 	w := m.wiz()
 	p := w.preset
 	title := "Connect " + p.Title
@@ -839,7 +847,7 @@ func (m *Model) wizCard() connectcard.Card {
 		return connectcard.Card{Title: "Paste a config", Rows: rows,
 			Buttons: []connectcard.Button{{ID: "submit", Title: "Add", Primary: true}, {ID: "edit-json", Title: "Open mcp.json"}, cancel}}
 	case wizDone:
-		if w.preset.Name == "pasted" {
+		if w.preset.Name == "pasted" || w.local != nil {
 			rows := []connectcard.Row{{Kind: connectcard.OK, Text: w.errText}}
 			rows = append(rows, connectcard.Row{Kind: connectcard.Blank},
 				connectcard.Row{Kind: connectcard.Dim, Text: "Local servers start on the first chat message that needs them. A remote one that needs a sign-in: AI: MCP Servers… → the server → Sign in."})
@@ -900,6 +908,9 @@ func (m *Model) onMCPWizButton(id string) tea.Cmd {
 	if w == nil {
 		m.connectOpen = false
 		return nil
+	}
+	if c, ok := m.onLocalButton(id); ok {
+		return c
 	}
 	switch id {
 	case "cancel", "done":
@@ -977,6 +988,9 @@ func (m *Model) onMCPWizSubmit(id, v string) tea.Cmd {
 	w := m.wiz()
 	if w == nil {
 		return nil
+	}
+	if c, ok := m.onLocalSubmit(id, v); ok {
+		return c
 	}
 	v = strings.TrimSpace(v)
 	if v == "" {
