@@ -8,8 +8,9 @@ import (
 )
 
 // ProtocolVersion is the MCP revision we offer in initialize. The server
-// may answer an older one from SupportedVersions; the stateless
-// 2026-07-28 revision is a later step (MC-9).
+// may answer an older one from SupportedVersions. The stateless
+// StatelessVersion is picked before, by the server/discover probe
+// (spec2026_client.go).
 const ProtocolVersion = "2025-11-25"
 
 // SupportedVersions are the revisions we accept, newest first.

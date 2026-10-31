@@ -1,8 +1,9 @@
 package mcp
 
-// Cheap, safe parts of the 2026-07-28 revision on the client side
-// (MCPX-20). termocode still offers 2025-11-25 in initialize; these work
-// with old and new servers alike:
+// Parts of the 2026-07-28 revision on the client side (MCPX-20) that
+// work with old and new servers alike (the stateless mode itself is in
+// spec2026_client.go, MRTR in spec2026_mrtr.go, subscriptions/listen in
+// spec2026_listen.go):
 //
 //   - Mcp-Method / Mcp-Name headers on every HTTP request, so gateways
 //     and load balancers can route without reading the body;
