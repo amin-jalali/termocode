@@ -1865,6 +1865,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `layout-save` | Layout: Save As… | never | the AI changes the layout with the layout_set tool |
 | `lowercase` | Edit: Convert to lowercase | confirm (fileWrite) |   |
 | `lsp-manage` | LSP: Manage Language Servers... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_servers) |
+| `mcp-import-other` | AI: MCP: Import from Other Apps… | never | AI provider, credentials and approvals stay with the user (importing servers is the user's) |
 | `mcp-serve-copy-config` | MCP: Copy termocode Server Config | never | AI provider, credentials and approvals stay with the user (the config is for the user to paste into an agent) |
 | `mcp-serve-status` | MCP: Server Status… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `next-buffer` | View: Next Editor | auto |   |
