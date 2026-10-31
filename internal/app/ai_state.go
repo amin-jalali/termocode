@@ -212,7 +212,10 @@ type aiState struct {
 	// turnThink is the keyword level of the message being sent
 	// (takeTurnKeyword); the turn or run it starts reads and clears it.
 	turnThink string
-	restored  bool
+	// turnRoot is the workspace of the next plain turn when it is not
+	// the user's tree (a ship's fix in a plan run's worktree; "": none).
+	turnRoot string
+	restored bool
 	// claim holds the shown chat against other termocode windows on the
 	// same store (ai_chat_claim.go).
 	claim *ai.ChatClaim

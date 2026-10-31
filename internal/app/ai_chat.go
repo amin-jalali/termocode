@@ -264,7 +264,12 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	} else if ok {
 		text = out // OMX-11: a /name command file
 	}
-	if len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI() { // a CLI step always runs as a run (CS-1)
+	if s.turnRoot != "" { // a ship's fix in a plan run's worktree: one plain turn there
+		if p, ok := s.profiles.Get(ai.ProfileDefault); ok {
+			prof = p
+		}
+	}
+	if s.turnRoot == "" && (len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI()) { // a CLI step always runs as a run (CS-1)
 		return m.startAIRun(text, prof, rules)
 	}
 	step := prof.Run("").Nodes[0]
@@ -273,6 +278,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		return m.aiProfileProblem(prof.Name, err)
 	}
 	root := aiWorkspaceRoot()
+	if s.turnRoot != "" {
+		root, s.turnRoot = s.turnRoot, ""
+	}
 	memBlock, lessons := m.aiMemoryTurn(root, text) // OM-2: before the attachments are taken
 	ctxText, images := s.takeAttachments()
 	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
