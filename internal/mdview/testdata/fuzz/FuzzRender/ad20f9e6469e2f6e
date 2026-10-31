@@ -1,0 +1,4 @@
+go test fuzz v1
+string("0\r0")
+byte('S')
+bool(false)
