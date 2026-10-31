@@ -24,7 +24,7 @@ func TestNormalizeErrors(t *testing.T) {
 		{"empty id", Run{Nodes: []Node{{ID: " "}}}, "empty id"},
 		{"duplicate id", Run{Nodes: nodes("a", "a")}, "duplicate node id"},
 		{"unknown state", Run{Nodes: []Node{{ID: "a", State: "dancing"}}}, "unknown state"},
-		{"unknown category", Run{Nodes: []Node{{ID: "a", Category: "slow"}}}, "unknown category"},
+		{"bad category name", Run{Nodes: []Node{{ID: "a", Category: "Slow one"}}}, "category name"},
 		{"unknown output", Run{Nodes: []Node{{ID: "a", Output: "loud"}}}, "unknown output"},
 		{"unknown preset", Run{Nodes: []Node{{ID: "a", Tools: ToolRule{Preset: "some"}}}}, "unknown tool preset"},
 		{"negative steps", Run{Nodes: []Node{{ID: "a", Input: InputRule{MaxSteps: -1}}}}, "max steps"},
@@ -282,5 +282,23 @@ func TestValidateLoop(t *testing.T) {
 	c.Loop.Round, c.Nodes[0].ID = 3, "x"
 	if r.Loop.Round != 2 || r.Nodes[0].ID != "planner" {
 		t.Error("Clone shares the loop or the nodes")
+	}
+}
+
+// OMX-16: any lower-case category name is valid here (the app knows
+// which ones exist and maps them to model slots).
+func TestCategoryNames(t *testing.T) {
+	for _, c := range []string{"quick", "deep", "visual", "ultrabrain", "my-docs2"} {
+		if _, err := Normalize(Run{Nodes: []Node{{ID: "a", Category: c}}}); err != nil {
+			t.Errorf("%s: %v", c, err)
+		}
+		if !ValidCategory(c) {
+			t.Errorf("%s not valid", c)
+		}
+	}
+	for _, c := range []string{"Deep", "a b", "-x", strings.Repeat("a", 25)} {
+		if ValidCategory(c) {
+			t.Errorf("%q valid", c)
+		}
 	}
 }
