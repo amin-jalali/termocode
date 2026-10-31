@@ -334,9 +334,9 @@ func webRealWalk(t *testing.T, vp webViewport) {
 		scm := `document.querySelector('.wb-side [data-view="git"]')`
 		row := scm + `.querySelector('.tr[data-group="changes"][data-path="notes.txt"]')`
 		p.waitJS(row)
-		pt := webEval[struct{ X, Y float64 }](p, `(() => { const r = (`+row+`).getBoundingClientRect(); return {X: r.left + r.width / 2, Y: r.top + r.height / 2}; })()`)
-		p.do(chromedp.MouseEvent(chromedp.MouseMoved, pt.X, pt.Y)) // its actions show on hover
-		p.tapJS(row + `.querySelector('[aria-label="Stage Changes"]')`)
+		stage := row + `.querySelector('[aria-label="Stage Changes"]')`
+		p.hoverJS(row, stage+`?.getClientRects().length > 0`) // its actions show on hover
+		p.tapJS(stage)
 		p.waitJS(`document.querySelector(".toasts")?.textContent.includes("Staged notes.txt")`)
 		p.waitJS(scm + `.querySelector('.tr[data-group="staged"][data-path="notes.txt"]')`) // the laptop's new status
 		p.tapJS(scm + `.querySelector("textarea")`)

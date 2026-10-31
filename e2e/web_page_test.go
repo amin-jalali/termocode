@@ -226,6 +226,28 @@ func (p *webPage) tapJS(el string) {
 	}
 }
 
+// hoverJS moves the mouse onto the element el returns until shown (a JS
+// expression) is true, like a user who points again when a row moved
+// under the pointer (a panel still sliding in, a list that re-rendered).
+func (p *webPage) hoverJS(el, shown string) {
+	p.t.Helper()
+	deadline := time.Now().Add(webWait)
+	for {
+		pt := webEval[struct{ X, Y float64 }](p, `(() => {
+		const r = (`+el+`).getBoundingClientRect();
+		return {X: r.left + r.width / 2, Y: r.top + r.height / 2};
+	})()`)
+		p.do(chromedp.MouseEvent(chromedp.MouseMoved, pt.X, pt.Y))
+		if webEval[bool](p, `!!(`+shown+`)`) {
+			return
+		}
+		if time.Now().After(deadline) {
+			p.t.Fatalf("%s: hovered %s for %s, still not %s", p.vp.Name, webWait, webShort(el), webShort(shown))
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+}
+
 // tap is tapJS for the first element matching a CSS selector.
 func (p *webPage) tap(sel string) {
 	p.t.Helper()
