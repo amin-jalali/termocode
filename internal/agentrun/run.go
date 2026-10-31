@@ -60,6 +60,7 @@ const (
 	RunPlanEdited                     // the user's edit changed the plan (Nodes = the steps it added); RunAwaitApproval follows
 	RunPlanKept                       // steps joined an approved run and need no approval (Nodes = them): it goes on without asking
 	NodeStalled                       // the node's model was silent for Options.StallAfter: it was stopped and waits to start once more (Err says so)
+	NodeEscalated                     // the node answered ESCALATE (Err = why): it waits to run once more on Options.Escalate (Nodes = the node now)
 	NodeMessage                       // a message sent to the node (Send) reached its agent (Output = the text), or not (Err = why)
 )
 
@@ -166,6 +167,10 @@ type Options struct {
 	// nothing for this long (a running tool call does not count) and
 	// starts it once more (NodeStalled); a second stall fails it.
 	StallAfter time.Duration
+	// Escalate (OMX-16; "": off) is the category a step moves to when it
+	// answers ESCALATE: … ; it runs once more on that category's slot
+	// (Categories). A step on that slot already keeps its answer.
+	Escalate string
 }
 
 // Handle is a started run.
@@ -219,6 +224,8 @@ type result struct {
 	verdict, report string
 	// stalled: the watchdog stopped the node (OMX-23)
 	stalled bool
+	// escalate: the node answered ESCALATE with this reason (OMX-16)
+	escalate string
 	// limit: a CLI node hit its usage limit (it runs again on Continue)
 	limit *ai.LimitError
 }
@@ -490,6 +497,13 @@ func (h *Handle) loop(runCtx context.Context) {
 			}
 			h.setState(res.id, func(n *agentdag.Node) { n.State = agentdag.StatePending })
 			h.emit(Event{NodeID: res.id, Kind: NodeStalled, Err: "no activity for " + quiet + ": stopped, it starts once more",
+				Usage: res.usage, Elapsed: res.elapsed})
+		case res.escalate != "" && nodeCtx.Err() == nil:
+			to := h.o.Escalate
+			h.setState(res.id, func(n *agentdag.Node) {
+				n.Category, n.Slot, n.State = to, h.o.Categories[to], agentdag.StatePending
+			})
+			h.emit(Event{NodeID: res.id, Kind: NodeEscalated, Err: res.escalate, Nodes: []agentdag.Node{*h.node(res.id)},
 				Usage: res.usage, Elapsed: res.elapsed})
 		case res.stalled:
 			h.setState(res.id, func(n *agentdag.Node) { n.State = agentdag.StateCancelled })
@@ -844,7 +858,36 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 		res.err = errors.New(fail)
 	default:
 		res.output = finalText(added)
+		if why, ok := escalation(res.output); ok && h.escalates(n) {
+			res.output, res.escalate = "", why
+		}
 	}
+}
+
+// EscalateWord starts the answer of a step that asks for a stronger
+// model.
+const EscalateWord = "ESCALATE"
+
+// escalation reads "ESCALATE: why" on the answer's first line.
+func escalation(text string) (string, bool) {
+	line, _, _ := strings.Cut(strings.TrimSpace(text), "\n")
+	rest, ok := strings.CutPrefix(strings.TrimSpace(line), EscalateWord)
+	if !ok || (rest != "" && !strings.HasPrefix(rest, ":")) {
+		return "", false
+	}
+	why := strings.TrimSpace(strings.TrimPrefix(rest, ":"))
+	if why == "" {
+		why = "no reason given"
+	}
+	return cutRunes(why, 200), true
+}
+
+// escalates reports whether node n may move to Options.Escalate.
+func (h *Handle) escalates(n agentdag.Node) bool {
+	to := h.o.Escalate
+	slot := h.o.Categories[to]
+	return to != "" && slot != "" && n.Category != to && n.Slot != slot && !n.Plan && n.CLI == "" &&
+		n.ID != h.verify && n.ID != h.fix
 }
 
 // runCLI runs a CLI node through Options.Exec (CS-1). A verify node's
