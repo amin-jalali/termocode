@@ -19,6 +19,7 @@ type progressKey struct{}
 type progressSink struct {
 	mu   sync.Mutex
 	emit func(string) // nil once the call ended
+	note func(string) // ShowUser (tool_note.go); nil once the call ended
 }
 
 // ReportProgress tells the user what the running tool does now. It may
@@ -40,10 +41,12 @@ func ReportProgress(ctx context.Context, text string) {
 func withProgress(ctx context.Context, t Tool, emit func(Event)) (context.Context, func()) {
 	s := &progressSink{emit: func(text string) {
 		emit(Event{Kind: EventToolProgress, Tool: t.Name, Label: t.Label(), Detail: Redact(text)})
+	}, note: func(text string) {
+		emit(Event{Kind: EventToolNote, Tool: t.Name, Label: t.Label(), Detail: Redact(text)})
 	}}
 	return context.WithValue(ctx, progressKey{}, s), func() {
 		s.mu.Lock()
-		s.emit = nil
+		s.emit, s.note = nil, nil
 		s.mu.Unlock()
 	}
 }
