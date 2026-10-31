@@ -46,6 +46,7 @@ var mcpServeAllowList = []mcpServeToolRow{
 	{name: "read_file"},
 	{name: "list_dir"},
 	{name: "search"},
+	{name: "glob"},
 	{name: "workspace_folders", only: []string{"list"}},
 	// LSP (read)
 	{name: "diagnostics"},
