@@ -341,14 +341,14 @@ The chat is an agent. It can call tools to answer you:
 
 | Kind | Tools |
 |---|---|
-| Read | read a file, list a folder, search (plain text or a regex, limited to some files with a glob), find files by name (`glob`), git status / diff / branches, go to definition, diagnostics |
+| Read | read a file, list a folder, search (plain text or a regex, limited to some files with a glob), find files by name (`glob`), look at an image or read a PDF (`look_at`; an image costs one extra model request), git status / diff / branches, go to definition, diagnostics |
 | Code (language server) | hover info (`lsp_hover`), file outline or workspace symbol search (`lsp_symbols`), go to definition / type definition / implementation / references (`lsp_nav`), rename a symbol in every file (`lsp_rename`), list and apply code actions (`lsp_code_actions`) |
 | Write files | write, change part of a file (`edit_file`), create, delete, rename files and folders, format |
 | Git | stage, commit, checkout, push, pull |
 | Run | run a shell command in the workspace (build, test, …); you see only its result |
 | Terminal | type a command in your terminal panel (`terminal_send`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
 
-| Read | read a file, list a folder, search (text or regex, with a glob), find files by name (`glob`), git status / diff / branches / log (`git_log`) / blame (`git_blame`), go to definition, diagnostics |
+| Read | read a file, list a folder, search (text or regex, with a glob), find files by name (`glob`), look at an image or a PDF (`look_at`), git status / diff / branches / log (`git_log`) / blame (`git_blame`), go to definition, diagnostics |
 | Write files | write, change part of a file (`edit_file`), create, delete, rename files and folders, format |
 | Git | stage, unstage (`git_unstage`), commit, checkout, push, pull, fetch (`git_fetch`) |
 | Git hunks | stage, unstage or discard one diff hunk (`git_hunk`) |

@@ -130,6 +130,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_explain`](#db_explain) | auto | no | Show the query plan of ONE SQL statement (EXPLAIN without ANALYZE: the statement does not run), in a read-only session. |
 | [`db_history`](#db_history) | auto | no | List recent SQL runs (the user's and yours), newest first. |
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
+| [`look_at`](#look_at) | auto | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
 | [`redis_keys`](#redis_keys) | auto | yes | List the keys of a Redis connection that match a glob pattern (SCAN; never KEYS), with type and TTL. |
 | [`redis_get`](#redis_get) | auto | asks | Read one Redis key: its type, TTL, size and one page of its value (string: up to 64 KB; hash, list, set, sorted set, stream: up to max items). |
 | [`redis_command`](#redis_command) | a read command (allow-list<br>not CONFIG / ACL / CLIENT): auto, in a read-only session<br>any other command: confirm (db:<conn>/write) with the command shown<br>production connections: confirm (always asks)<br>read-only connections: writes refused<br>the never-list (FLUSHALL, FLUSHDB, CONFIG SET, SHUTDOWN, DEBUG, MODULE, scripts, MIGRATE, REPLICAOF, ACL changes, …) and MONITOR / SUBSCRIBE: refused | asks | Run ONE Redis command (one line, as typed in a console). |
@@ -1547,6 +1548,19 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 | `conn` | string | yes | connection id |
 | `table` | string | yes | table name |
 | `schema` | string |   | schema (optional; MySQL: the database) |
+
+### look_at
+
+Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. For an image this sends one extra request to the model. Use read_file for text files.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | string | yes | image or PDF file, relative to the workspace |
+| `question` | string |   | what you want to know (optional; default: describe it and copy its text) |
 
 ### redis_keys
 
