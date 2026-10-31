@@ -1141,6 +1141,8 @@ you change an answer.
 | Setting (`config.json`) | Default | Meaning |
 |---|---|---|
 | `ai_models` | `{}` | Your model slots. |
+| `ai_concurrency` | `{}` | Most requests at once per provider or model, for example `{"anthropic": 2, "openai/gpt-5": 1}`. Extra requests wait before they are sent. Use it when parallel steps get rate limit (429) answers. |
+| `ai_fallback` | `[]` | [Backup models](#backup-models-fallback) of the `main` slot. |
 | `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. A planned run uses 3 when this is not set. |
 | `ai_worktrees` | `auto` | `auto`: writing steps that run at the same time get [their own worktree](#own-worktrees-for-parallel-steps). `off`: every step works in your tree. |
 | `ai_plan_approval` | `ask` | [Approve the plan](#approve-the-plan): `ask` before steps that change files or run commands, `always` for every plan, `auto` never. |
