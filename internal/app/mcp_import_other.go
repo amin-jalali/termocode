@@ -21,7 +21,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/picker"
 )
 
-const confirmKindMCPImportOther confirmKindEnum = 2290
+const confirmKindMCPImportOther confirmKindEnum = 2291
 
 const mcpImportOtherID = "mcp-import-other"
 
