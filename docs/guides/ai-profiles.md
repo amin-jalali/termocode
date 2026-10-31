@@ -553,7 +553,12 @@ steps it writes itself, on a task. It always asks first.
 
 - **Deny** is first and has the focus. The card asks every time: no
   "Always allow" and no setting turns it off.
-- **Start run** puts the run in a queue. When the AI's answer (or the
+- **Start run** on a run whose steps only read (every step has tools
+  `read-only` or `none`, no plan step, no CLI step) starts it at once,
+  **in the background**: the AI keeps working, and it can start a few
+  such runs side by side (research, reviews). See
+  [Background runs](#background-runs).
+- **Start run** on any other run puts it in a queue. When the AI's answer (or the
   run it works in) ends, the run starts in the same chat, as if you sent
   the task with that profile. [Approve the plan](#approve-the-plan),
   [own worktrees](#own-worktrees-for-parallel-steps), the budget card
@@ -562,17 +567,45 @@ steps it writes itself, on a task. It always asks first.
   [AGENTS panel](#the-agents-panel) and [Runs](runs.md) show a
   **by AI** chip.
 - The AI reads a run with `agent_run_status` and `agent_run_result`
-  (state, steps, cost, final answer, changed files) in a later answer.
-  It can not wait for the run inside the same answer.
+  (state, steps, cost, final answer, changed files). It can wait for a
+  background run with `agent_run_wait`; a queued run can not end while
+  the AI's answer goes.
 - `agent_run_stop` drops a run that waits, or stops a running one. It
   asks first too. A step can not stop its own run.
-- **Stop** (`Ctrl+C`) also drops the runs that wait.
+- **Stop** (`Ctrl+C`) also drops the runs that wait and stops the
+  background runs.
 
 **Limits.** At most 3 runs started by the AI wait or run at once. A run
 the AI started can start one more run, not two levels more. A run
 started from a run with a budget gets only what is left of that budget;
 when nothing is left it does not start and the chat says why. Outside
 agents (over MCP) never get these tools.
+
+### Background runs
+
+A background run works beside the chat. Nothing in it asks you
+anything: its steps can read and search, not change files or run
+commands (a tool that would ask is declined).
+
+- **While the AI's answer goes**, the run shows in the
+  [AGENTS panel](#the-agents-panel) after the chat's runs. When the
+  answer ends, the run's card joins the chat, marked **✦ started by AI**.
+- **When it ends**, its answer is handed to whoever started it, in the
+  same answer: the AI reads it after its current tool call (or before it
+  would stop). If that answer has ended already, a toast says
+  `Background run … is done` and the run's card is in the chat.
+- `agent_run_wait` waits for a background run (up to 15 minutes) and
+  returns its result; then no second note comes.
+- `agent_run_send` sends a running step a message, for example a hint or
+  a narrower task. The step reads it after its current tool call. You can
+  do the same with `m` in AGENTS.
+- A background run uses the step stall limit and its budget like any
+  run; when the budget is reached it stops (no card can ask).
+
+**Task output.** `tasks_run` with `monitor: true` hands the task's new
+output to the AI in batches (every 5 s, the newest 40 lines, secrets
+hidden) while it keeps working, and the exit code when the task ends.
+The monitor stops with the answer that started it.
 
 ## The AGENTS panel
 
@@ -621,7 +654,11 @@ panel.
   on a narrow card the tokens go first, then the model version. When a
   running step gets no token for 30 s (90 s before its first token), its
   card shows `⚠ possibly stalled · 35s` and turns yellow; the step in the
-  chat says the same. A tool that runs long never warns. Lines with `│ ├ ┐ ▼`
+  chat says the same. A tool that runs long never warns. When a step's
+  model sends nothing for 10 minutes (`ai_step_stall_minutes`), termocode
+  stops it and starts it once more (`⏱ no activity for 10 min` on its
+  card); a second stall fails the step. A step that answers with empty
+  text is asked once more for its answer; empty again counts as a fail. Lines with `│ ├ ┐ ▼`
   join one wave to the next; the **Dependencies** list says exactly
   which step feeds which.
 - **Header.** The run id, the profile, `wave i/n` (the first wave that
@@ -645,6 +682,9 @@ panel.
 | `f` | Follow the running step again |
 | `r` | Resume the shown run when termocode's restart interrupted it |
 | `a` | Open the plan card of a run that waits for your approval |
+| `m` | Send the running step a message: it reads it after its current tool call (`✉` on its card) |
+| `x` | Stop only the selected step. A card asks first (**Keep running** is first); the steps that need its answer are blocked, the others go on, and the run ends as failed |
+| `o` | Open the step's whole transcript (what it wrote, its tool calls, your messages, notes) in a read-only editor page |
 | `←` / `→` (or `h` / `l`) | Show the previous / next run of this chat |
 | `PgUp` / `PgDn` | Scroll the panel |
 | `Home` | Scroll to the top |
