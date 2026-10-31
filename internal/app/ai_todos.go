@@ -97,7 +97,7 @@ func (m Model) aiTodoCard(width int) []aiLine {
 		}
 		return t
 	}
-	head := "Todos · " + aiTodoCount(ts)
+	head := "Todos · " + aiTodoCount(ts) + m.aiKeepGoingLabel()
 	out := []aiLine{{}, {text: ind + cut(head), style: aiStyle(theme.Fg(theme.AIAccent).Bold(true))}}
 	for _, t := range ts {
 		mark, st := "☐ ", theme.Fg(theme.TextPrimary)

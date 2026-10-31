@@ -22,6 +22,7 @@ const (
 	StoredAssistant = "assistant"
 	StoredTool      = "tool"
 	StoredError     = "error"
+	StoredNote      = "note" // a status line of termocode (keep going stopped …); only shown
 )
 
 // StoredMessage is one persisted chat line.
@@ -58,6 +59,9 @@ type StoredMessage struct {
 	// messages it stands for (only shown).
 	Summary    string `json:"summary,omitempty"`
 	Summarised int    `json:"summarised,omitempty"`
+	// KeepGoing is set on a user message the keep-going loop sent
+	// (OMX-7): the push number, from 1.
+	KeepGoing int `json:"keep_going,omitempty"`
 }
 
 // Run states (StoredRun.State).

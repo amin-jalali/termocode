@@ -57,6 +57,7 @@ type aiState struct {
 	// batch is set while one user action changes many files (aiBatch).
 	batch    *aiBatch
 	settings ai.Settings
+	keep     aiKeepGoingRun // OMX-7: the keep-going chain of the open chat
 	cfg      ai.Config
 	provider ai.Provider
 	loadErr  string
@@ -641,6 +642,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 func (m *Model) aiCancelAll() tea.Cmd {
 	s := m.aiS()
 	stopped := s.streaming || s.actionBusy != ""
+	s.keep.stopped = true                                    // OMX-45: Stop ends a keep-going chain at once
 	dropped := m.aiDropQueuedRuns("the user stopped the AI") // G-API: Stop stops what the AI queued too
 	if s.chatCancel != nil {
 		s.chatCancel()

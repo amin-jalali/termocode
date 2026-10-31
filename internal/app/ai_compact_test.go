@@ -45,7 +45,16 @@ func (f *compactFake) requests() []ai.Request {
 // runAITurn sends text and feeds every message back until the turn ends.
 func runAITurn(t *testing.T, m *Model, text string) {
 	t.Helper()
-	cmd := m.sendAIChat(text)
+	driveAITurn(t, m, m.sendAIChat(text))
+	if m.ai.streaming {
+		t.Fatal("still streaming")
+	}
+}
+
+// driveAITurn feeds the messages of the turn cmd waits on back until
+// the turn ends.
+func driveAITurn(t *testing.T, m *Model, cmd tea.Cmd) {
+	t.Helper()
 	for i := 0; cmd != nil && i < 200; i++ {
 		msg := cmd()
 		if msg == nil {
@@ -62,9 +71,6 @@ func runAITurn(t *testing.T, m *Model, text string) {
 			break
 		}
 		cmd = next
-	}
-	if m.ai.streaming {
-		t.Fatal("still streaming")
 	}
 }
 
