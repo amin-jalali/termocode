@@ -59,6 +59,10 @@ setting, see [Settings reference](../reference/settings.md).
     too. EditorConfig files are honoured; **View: Show Buffer Info**
     (`Ctrl+Alt+I`) shows what applied.
 
+Edits to `settings.json` on disk apply while termocode runs. If the file
+is not valid JSON, the last good settings stay and you see a short note.
+A setting that would disturb a running AI turn waits until it ends.
+
 ## Change a key binding
 
 1. Run **Preferences: Customize Keybindings**.

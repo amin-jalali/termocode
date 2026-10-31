@@ -178,6 +178,13 @@ file shows the problem and line; built-in profiles remain available.
 Use it for fields the form does not show (`output`, `max_steps`,
 `allow` and `deny` lists).
 
+## Prompts from a file
+
+A step can use `"system": "file://prompts/review.md"`. The path is
+relative to the repository and must stay inside it (up to 8 KB). The file
+text is part of the trust hash, so the profile asks for trust before it
+runs, even if it is your own profile.
+
 ## Built-in profiles
 
 | Profile | Steps | Use it for |

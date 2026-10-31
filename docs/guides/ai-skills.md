@@ -9,6 +9,16 @@ prompts.
 
 The chat itself is explained in [Use AI](ai-use.md).
 
+## Built-in skills
+
+Five skills are ready on first start: `git-commit`, `review-work`,
+`remove-ai-slop`, `init-agents-md`, and `debugging`. Open **AI: Skills…**
+to read them. Their bodies are loaded only when needed, just like your
+own skills. They do not need project trust.
+
+A user or project skill with the same name replaces a built-in skill.
+User skills have first priority; project replacements still need trust.
+
 ## Write a skill
 
 A skill is a markdown file with a small header (front matter):
