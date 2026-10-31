@@ -221,6 +221,8 @@ type Model struct {
 	// gitGate lets the git poll sleep while nothing happens
 	// (git_poll_idle.go).
 	gitGate *gitPollGate
+	// gitSeq: the Seq of the git read applied last (git.go).
+	gitSeq uint64
 
 	// Always-visible commit box (VSCode-style). gitCommitMsg is the single-line
 	// inline message buffer; gitCommitFocused routes keystrokes to it (vs the

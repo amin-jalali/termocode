@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -66,7 +67,14 @@ type GitMsg struct {
 	KeepGraph bool
 	// Rebase: an interactive rebase stopped here (git_rebase.go banner).
 	Rebase git.RebaseState
+	// Seq: when the read started (gitReadSeq). Refreshes run at the same
+	// time and can end out of order; one that started before the last
+	// applied one is dropped. 0: always applied.
+	Seq uint64
 }
+
+// gitReadSeq numbers git reads in the order they start.
+var gitReadSeq atomic.Uint64
 
 // gitGraphMaxAge is how long the poll keeps a graph while HEAD stays put.
 // Refs that do not move HEAD (a new tag, a fetched branch) show up after
@@ -83,6 +91,7 @@ const gitGraphLimit = 200
 // big repo the six git processes one after another took twice as long.
 func fetchGitCmd() tea.Cmd {
 	return func() tea.Msg {
+		seq := gitReadSeq.Add(1)
 		cwd, err := procRootDir()
 		if err != nil {
 			return GitMsg{}
@@ -99,9 +108,9 @@ func fetchGitCmd() tea.Cmd {
 		st, err := git.StatusBranch(cwd)
 		<-done
 		if err != nil {
-			return GitMsg{IsRepo: false}
+			return GitMsg{IsRepo: false, Seq: seq}
 		}
-		return GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Graph: graph, More: more, Rebase: git.RebaseStatus(cwd)}
+		return GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Graph: graph, More: more, Rebase: git.RebaseStatus(cwd), Seq: seq}
 	}
 }
 
@@ -121,14 +130,15 @@ func (m *Model) pollGitCmd() tea.Cmd {
 		if cwdErr != nil {
 			return GitMsg{}
 		}
+		seq := gitReadSeq.Add(1)
 		st, err := git.StatusBranch(cwd)
 		if gate != nil {
 			gate.set(gitFingerprint(cwd)) // after status: it may refresh the index
 		}
 		if err != nil {
-			return GitMsg{IsRepo: false}
+			return GitMsg{IsRepo: false, Seq: seq}
 		}
-		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Rebase: git.RebaseStatus(cwd)}
+		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Rebase: git.RebaseStatus(cwd), Seq: seq}
 		if !stale && graphHead != "" && strings.HasPrefix(st.OID, graphHead) && st.Branch == branch {
 			msg.KeepGraph = true
 			return msg
@@ -140,6 +150,12 @@ func (m *Model) pollGitCmd() tea.Cmd {
 
 // applyGitSnapshot stores a git snapshot in the model.
 func (m *Model) applyGitSnapshot(msg GitMsg) {
+	if msg.Seq != 0 {
+		if msg.Seq < m.gitSeq {
+			return // an older read that ended after a newer one
+		}
+		m.gitSeq = msg.Seq
+	}
 	if msg.KeepGraph {
 		msg.Graph, msg.More = m.gitCommits, m.gitGraphMore
 	} else {

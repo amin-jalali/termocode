@@ -188,3 +188,54 @@ func TestGitFullRefreshGitProcesses(t *testing.T) {
 		t.Fatalf("%d git processes, want at most 3:\n%s", n, runs)
 	}
 }
+
+// FIX-46: git refreshes run in the background and can come back out of
+// order (a poll that started before a file was written ends after the
+// refresh that started after it). The older result must not replace the
+// newer one: the Source Control list lost a changed file for a moment,
+// and the web page's row vanished under the pointer.
+func TestGitOlderResultDoesNotReplaceNewer(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	dir := t.TempDir()
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run("init", "-q", "-b", "main")
+	run("config", "user.email", "t@e.x")
+	run("config", "user.name", "T")
+	run("config", "commit.gpgsign", "false")
+	_ = os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a\n"), 0o644)
+	run("add", ".")
+	run("commit", "-q", "-m", "one")
+	t.Chdir(dir)
+
+	m := &Model{}
+	m.applyGitSnapshot(fetchGitCmd()().(GitMsg))
+	_ = os.WriteFile(filepath.Join(dir, "a.txt"), []byte("b\n"), 0o644)
+	older := m.pollGitCmd()().(GitMsg) // sees a.txt only
+	_ = os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("n\n"), 0o644)
+	newer := fetchGitCmd()().(GitMsg) // sees a.txt and notes.txt
+	if len(older.Files) != 1 || len(newer.Files) != 2 {
+		t.Fatalf("setup: older %v, newer %v", older.Files, newer.Files)
+	}
+
+	m.applyGitSnapshot(newer)
+	m.applyGitSnapshot(older) // came back last
+	if len(m.gitFiles) != 2 {
+		t.Fatalf("an older git status replaced a newer one: files %v", m.gitFiles)
+	}
+
+	// A refresh that starts after both still applies.
+	_ = os.Remove(filepath.Join(dir, "notes.txt"))
+	m.applyGitSnapshot(m.pollGitCmd()().(GitMsg))
+	if len(m.gitFiles) != 1 {
+		t.Fatalf("a new git status was dropped: files %v", m.gitFiles)
+	}
+}
