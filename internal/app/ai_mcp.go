@@ -138,11 +138,11 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 	}
 	mgr := m.aiMCP()
 	ask := mcpChatAsker(gen, ch)
-	opts := mcp.AdapterOptions{TrustAnnotations: set.TrustAnnotations, MaxResult: set.MaxResultKB << 10, Clean: aiCleanText}
+	opts := m.mcpAdapterOptions(set)
 	return func(ctx context.Context) []ai.Tool {
 		mgr.Reload()
 		call := mcp.TurnCaller(mgr.Caller(ask)) // two failures: the server is out for this turn
-		return mcpTurnTools(mgr.Tools(ctx, ask), set, call, opts)
+		return withMCPReader(mcpTurnTools(mgr.Tools(ctx, ask), set, call, opts), opts.Spill)
 	}
 }
 
