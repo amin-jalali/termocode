@@ -40,6 +40,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: Memory: Turn On/Off | `ai-memory-toggle` |   |   |
 | AI: Memory… | `ai-memory` |   |   |
+| AI: Move MCP Call to Background (Ctrl+B in the chat) | `ai-mcp-background` |   |   |
 | AI: Move Secrets to a Safer Store… | `secrets-migrate` |   |   |
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
