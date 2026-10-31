@@ -142,6 +142,9 @@ func (w *sessionWriter) observe(files []string, active string, attached bool, ex
 func (w *sessionWriter) expandedChanged(paths []string) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.hasExpanded && slices.Equal(paths, w.expanded) {
+		return
+	}
 	w.expanded, w.hasExpanded, w.setExpanded = paths, true, true
 	w.dirty = true
 	w.flushLocked()
