@@ -477,7 +477,7 @@ func TestChevronClickTogglesReplaceMode(t *testing.T) {
 	m := New()
 	m.SetWidth(80)
 	m.SetAnchor(40, 5)
-	chev, _, _, _, _, _, _, _ := m.buttonColumnsFind()
+	chev, _, _, _, _, _, _ := m.buttonColumnsFind()
 	if chev < 0 {
 		t.Fatal("buttonColumnsFind returned -1 chevron column")
 	}
@@ -495,7 +495,7 @@ func TestWholeWordToggleViaMouse(t *testing.T) {
 	m := New()
 	m.SetWidth(80)
 	m.SetAnchor(40, 5)
-	_, _, word, _, _, _, _, _ := m.buttonColumnsFind()
+	_, _, word, _, _, _, _ := m.buttonColumnsFind()
 	if word < 0 {
 		t.Fatal("buttonColumnsFind returned -1 word column")
 	}
@@ -611,7 +611,7 @@ func TestReplaceOneIconClickEmitsReplaceMsg(t *testing.T) {
 	if one < 0 {
 		t.Fatal("buttonColumnsReplace returned -1 in replace mode")
 	}
-	_, cmd := m.HandleMouse(40+one, 5+2, tea.MouseActionPress, tea.MouseButtonLeft)
+	_, cmd := m.HandleMouse(40+one, 5+3, tea.MouseActionPress, tea.MouseButtonLeft)
 	if cmd == nil {
 		t.Fatal("click on replace-one icon should emit cmd")
 	}
@@ -635,7 +635,7 @@ func TestReplaceAllIconClickEmitsReplaceAllMsg(t *testing.T) {
 	if all < 0 {
 		t.Fatal("buttonColumnsReplace returned -1 in replace mode")
 	}
-	_, cmd := m.HandleMouse(40+all, 5+2, tea.MouseActionPress, tea.MouseButtonLeft)
+	_, cmd := m.HandleMouse(40+all, 5+3, tea.MouseActionPress, tea.MouseButtonLeft)
 	if cmd == nil {
 		t.Fatal("click on replace-all icon should emit cmd")
 	}
