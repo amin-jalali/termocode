@@ -274,9 +274,11 @@ actions: **Connect / Refresh tools**, **Show tools**, **Stop**,
 | `autoApprove` | Tool names that run without asking (`["list_issues"]`). |
 | `deny` | Tool names (or patterns like `"delete_*"`) never offered to the AI. |
 | `timeout` | Seconds one tool call may wait (default `mcp_call_timeout`, 60 s). |
+| `startTimeout` | Seconds the start may take (1–600, default 15). Raise it for a package that downloads first. |
+| `share` | `"user"`: one process serves every project (local servers, your own file only). |
 
 `type` and Claude Desktop's `transport` are read too. `readOnly`,
-`autoApprove`, `deny`, `timeout`, `oauth` and `auth` are termocode keys: other
+`autoApprove`, `deny`, `timeout`, `startTimeout`, `share`, `oauth` and `auth` are termocode keys: other
 apps ignore them, so the same file still works there.
 
 A remote URL must use `https://`. Plain `http://` works only for
@@ -452,7 +454,9 @@ Secrets are hidden.
 
 | You see | Do this |
 |---|---|
-| `failed: npx not found` | Install Node.js, or set `command` to a full path. |
+| `npx not found. Install Node.js …` | Install what the message says (Node.js for `npx`, uv for `uvx`, Docker for `docker`), or set `command` to a full path. termocode checks this before the start; the Local server… preview and `termocode mcp add` warn too. |
+| `failed: …` | Fix the cause, then the server → **Retry** (the first action of a failed server). |
+| a slow first start fails | Raise `startTimeout` for that server. |
 | `needs ${GITHUB_PAT}` | Export the variable, or use `${secret:…}`. |
 | `needs secret github_token` | The server → **Set secret github_token…**, or connect it again with **AI: Connect a Service…**. |
 | `sign-in needed`, `sign-in expired` | The server → **Sign in** (the Connect wizard). |
