@@ -231,6 +231,9 @@ func run() {
 			if ttl := os.Getenv("FAKE_TTL_MS"); ttl != "" { // 2026-07-28 list caching
 				last["ttlMs"] = json.Number(ttl)
 			}
+			if sc := os.Getenv("FAKE_CACHE_SCOPE"); sc != "" {
+				last["cacheScope"] = sc
+			}
 			_ = c.Reply(m.ID, last, nil)
 		case "prompts/list", "prompts/get", "completion/complete":
 			res, rerr := Prompts(m.Method, m.Params)

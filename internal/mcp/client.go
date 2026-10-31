@@ -80,6 +80,7 @@ type Client struct {
 	elicitCtx context.Context
 	hold      func(waiting bool) // stops / restarts the call's timeout
 	toolsTTL  atomic.Int64       // ttlMs of the last tools/list (spec2026_ttl.go)
+	toolsPriv atomic.Bool        // the last tools/list was cacheScope "private"
 	stateless bool               // the 2026-07-28 revision (spec2026_client.go)
 }
 
@@ -201,6 +202,7 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 	var all []Tool
 	cursor := ""
 	var ttl int64 // the shortest ttlMs of the pages (0: none)
+	private := false
 	for page := 0; page < maxToolPages; page++ {
 		var params any
 		if cursor != "" {
@@ -225,8 +227,10 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 		if res.TTLMs > 0 && (ttl == 0 || res.TTLMs < ttl) {
 			ttl = res.TTLMs
 		}
+		private = private || res.CacheScope == "private"
 		if res.NextCursor == "" {
 			c.toolsTTL.Store(ttl)
+			c.toolsPriv.Store(private)
 			return all, nil
 		}
 		cursor = res.NextCursor

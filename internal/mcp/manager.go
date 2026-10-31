@@ -680,7 +680,13 @@ func (m *Manager) storeTools(st *serverState, p *Process, tools []Tool) {
 	cfg, expires := st.cfg, st.expires
 	changed := m.toolsChangedLocked(st)
 	m.mu.Unlock()
-	m.saveCache(cfg, p.Client.ServerInfo(), caps, tools, expires)
+	if p.Client.ToolsPrivate() { // cacheScope "private": never on disk (spec2026_ttl.go)
+		if path := m.cachePath(cfg.Name); path != "" {
+			_ = os.Remove(path)
+		}
+	} else {
+		m.saveCache(cfg, p.Client.ServerInfo(), caps, tools, expires)
+	}
 	m.log(cfg.Name, "%d tools", len(tools))
 	if m.opts.TrustedTools != nil && m.opts.SaveTrustedTools != nil && m.opts.TrustedTools(cfg.Name) == "" {
 		m.opts.SaveTrustedTools(cfg.Name, h)

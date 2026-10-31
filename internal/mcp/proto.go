@@ -78,7 +78,8 @@ func (t Tool) Destructive() bool {
 type listToolsResult struct {
 	Tools      []json.RawMessage `json:"tools"` // parsed one by one (parseTools)
 	NextCursor string            `json:"nextCursor,omitempty"`
-	TTLMs      int64             `json:"ttlMs,omitempty"` // 2026-07-28: how long the list may be cached
+	TTLMs      int64             `json:"ttlMs,omitempty"`      // 2026-07-28: how long the list may be cached
+	CacheScope string            `json:"cacheScope,omitempty"` // 2026-07-28: "private" = this user only
 }
 
 // Content is one item of a tools/call result.

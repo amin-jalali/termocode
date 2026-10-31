@@ -9,13 +9,17 @@ import (
 // ttlMs of tools/list (2026-07-28): the server says how long its list
 // may be cached. The manager keeps the end in memory and in the disk
 // cache; an expired list is listed again on next use. No ttlMs: the list
-// stays until the server says it changed (as before). cacheScope is not
-// read yet: termocode's cache is per user already.
+// stays until the server says it changed (as before). cacheScope
+// "private" (data for this user's sign-in only) keeps the list in memory
+// and out of the disk cache.
 
 // ToolsTTL is the ttlMs of the last full tools/list (0: none).
 func (c *Client) ToolsTTL() time.Duration {
 	return time.Duration(c.toolsTTL.Load()) * time.Millisecond
 }
+
+// ToolsPrivate reports a last tools/list with cacheScope "private".
+func (c *Client) ToolsPrivate() bool { return c.toolsPriv.Load() }
 
 func ttlExpiry(ttl time.Duration) time.Time {
 	if ttl <= 0 {
