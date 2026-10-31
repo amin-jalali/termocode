@@ -427,6 +427,9 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 // startStdio uses the shared server when sharing is on and possible,
 // else its own process.
 func (m *Manager) startStdio(ctx context.Context, exp Server, opts Options) (*Process, error) {
+	if err := CheckRuntime(exp.Command); err != nil {
+		return nil, err // before a broker or a process starts
+	}
 	m.mu.Lock()
 	share := m.opts.Share
 	m.mu.Unlock()
