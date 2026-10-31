@@ -439,7 +439,7 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 	}
 	items := []picker.Item{
 		{ID: "connect", Title: "Connect / Refresh tools", Hint: "start it and list its tools"},
-		{ID: "tools", Title: "Show tools", Hint: fmt.Sprintf("%d tools", st.Tools)},
+		{ID: "tools", Title: "Show tools", Hint: mcpToolsHint(m, name)},
 	}
 	if st.Pid > 0 {
 		hint := fmt.Sprintf("pid %d", st.Pid)
@@ -622,32 +622,18 @@ func mcpServerEntries(name string) []mcp.Server {
 }
 
 // openMCPTools shows a server's tools with how each one is gated, so the
-// user can review them (tool poisoning).
+// user can review them (tool poisoning). Space turns a tool off or on
+// (ai_mcp_tools.go).
 func (m *Model) openMCPTools(name string) tea.Cmd {
-	srv, tools, ok := m.aiMCP().KnownTools(name)
-	if !ok || len(tools) == 0 {
+	items, ok := mcpToolItems(m, name)
+	if !ok {
 		return m.aiInfo("MCP " + name + ": no tools known yet — Connect first")
 	}
-	trust := mcp.LoadSettings(mcpConfigPath()).TrustAnnotations
-	var items []picker.Item
-	for _, t := range tools {
-		exposed, mutating, class := mcp.Gate(srv, t, trust)
-		gate := "runs at once"
-		switch {
-		case !exposed:
-			gate = "hidden"
-		case mutating && class == "":
-			gate = "always asks"
-		case mutating:
-			gate = "asks"
-		}
-		desc := aiCleanText(strings.SplitN(t.Description, "\n", 2)[0])
-		if r := []rune(desc); len(r) > 80 {
-			desc = string(r[:79]) + "…"
-		}
-		items = append(items, picker.Item{ID: t.Name, Title: t.Name + "  " + desc, Hint: gate})
-	}
+	m.aiS().mcpSel = name
 	m.picker = picker.NewItems(" MCP "+name+" tools ", items)
+	m.picker.SetWidth(mcpServeStatusWidth(m.w))
+	m.picker.SetRowAction("space", "on/off")
+	m.picker.SetNote([]string{"[x] on, [ ] off. Off tools are not sent to the AI."})
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindMCPTools
