@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 type firstByteRoundTripFunc func(*http.Request) (*http.Response, error)
@@ -79,5 +80,27 @@ func TestFirstByteStopsOnlyShortTimer(t *testing.T) {
 	b, err := io.ReadAll(resp.Body)
 	if err != nil || string(b) != "data: hello\n\n" {
 		t.Fatalf("body %q: %v", b, err)
+	}
+}
+
+func TestFirstByteLimitLocalIsLonger(t *testing.T) {
+	for _, c := range []struct {
+		kind, url string
+		want      time.Duration
+	}{
+		{KindOllama, "https://example.com", localFirstByte},
+		{KindLMStudio, "", localFirstByte},
+		{KindCompatible, "http://localhost:8080/v1", localFirstByte},
+		{KindCompatible, "http://127.0.0.1:1234/v1", localFirstByte},
+		{KindCompatible, "http://[::1]:1234/v1", localFirstByte},
+		{KindCompatible, "http://192.168.1.20:8000/v1", localFirstByte},
+		{KindCompatible, "http://10.0.0.5/v1", localFirstByte},
+		{KindOpenAI, "https://api.openai.com/v1", cloudFirstByte},
+		{KindCompatible, "https://8.8.8.8/v1", cloudFirstByte},
+		{KindCompatible, "https://localhost.evil.com/v1", cloudFirstByte},
+	} {
+		if got := firstByteLimit(c.kind, c.url); got != c.want {
+			t.Errorf("%s %s = %v, want %v", c.kind, c.url, got, c.want)
+		}
 	}
 }

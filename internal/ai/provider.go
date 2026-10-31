@@ -392,7 +392,7 @@ func NewProvider(cfg Config) Provider {
 	if transport == nil {
 		transport = http.DefaultTransport
 	}
-	client.Transport = firstByteTransport{base: transport}
+	client.Transport = firstByteTransport{base: transport, limit: firstByteLimit(cfg.Kind, cfg.BaseURL)}
 	cfg.HTTPClient = &client
 
 	switch cfg.Kind {
