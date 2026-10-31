@@ -89,55 +89,64 @@ func TestCardEscIsLater(t *testing.T) {
 	})
 }
 
-// earlyPress tries up to three fresh cards to press the risky button
-// before it is armed; press does the pressing. It reports whether a
-// press landed early (then nothing may have been answered).
-func earlyPress(p *Page, k cardKind, press func()) bool {
-	p.T.Helper()
+// earlyPress tries up to three fresh kit pages to press the risky
+// button before it is armed; press does the pressing. It returns the
+// page and whether a press landed early there (then nothing may have
+// been answered). Each try gets its own page: a late press was armed
+// and answers, and that answer (its toast comes after the check mark)
+// must not be taken for one from the early press.
+func earlyPress(t *testing.T, vp Viewport, k cardKind, press func(p *Page)) (*Page, bool) {
+	t.Helper()
+	var p *Page
 	for try := 0; try < 3; try++ {
+		p = openKit(t, vp)
 		openCard(p, k.kind)
 		Eval[bool](p, recordPress(riskyBtn))
-		press()
+		press(p)
 		if pressedEarly(p) {
-			return true
+			return p, true
 		}
-		p.Key(kb.Escape) // too slow this time: close it and try again
-		p.WaitJS("!" + dialog)
 	}
-	return false
+	return p, false
 }
 
 // A press that begins in the first 600 ms does nothing; once the fill
 // is done the same press answers.
 func TestCardRiskyIgnoredBeforeArming(t *testing.T) {
-	forEachCard(t, func(t *testing.T, p *Page, k cardKind) {
-		if k.risky == "" { // trust: the web cannot answer it at all
-			openCard(p, k.kind)
-			if Eval[bool](p, riskyBtn+` !== null`) {
-				t.Fatal("a trust card has an answer button")
-			}
-			return
+	for _, vp := range Both {
+		for _, k := range cardKinds {
+			t.Run(vp.Name+"/"+k.kind, func(t *testing.T) {
+				if k.risky == "" { // trust: the web cannot answer it at all
+					p := openKit(t, vp)
+					openCard(p, k.kind)
+					if Eval[bool](p, riskyBtn+` !== null`) {
+						t.Fatal("a trust card has an answer button")
+					}
+					return
+				}
+				p, early := earlyPress(t, vp, k, func(p *Page) { p.TapJS(riskyBtn) })
+				if !early {
+					t.Skip("this machine never got a tap in within 600 ms")
+				}
+				p.Holds(dialog+` && !(`+toastsJS+`).includes(`+jsq(k.done)+`)`, 800*time.Millisecond)
+				p.WaitJS(riskyBtn + `.classList.contains("is-armed")`)
+				p.TapJS(riskyBtn)
+				p.WaitJS(`(` + toastsJS + `).includes(` + jsq(k.done) + `)`)
+			})
 		}
-		if !earlyPress(p, k, func() { p.TapJS(riskyBtn) }) {
-			t.Skip("this machine never got a tap in within 600 ms")
-		}
-		p.Holds(dialog+` && !(`+toastsJS+`).includes(`+jsq(k.done)+`)`, 800*time.Millisecond)
-		p.WaitJS(riskyBtn + `.classList.contains("is-armed")`)
-		p.TapJS(riskyBtn)
-		p.WaitJS(`(` + toastsJS + `).includes(` + jsq(k.done) + `)`)
-	})
+	}
 }
 
 // Tab then Enter on the risky button before it is armed does nothing.
 func TestCardEnterOnRiskyBeforeArmingDoesNothing(t *testing.T) {
 	for _, vp := range Both {
 		t.Run(vp.Name, func(t *testing.T) {
-			p := openKit(t, vp)
 			k := cardKinds[0]
-			if !earlyPress(p, k, func() {
+			p, early := earlyPress(t, vp, k, func(p *Page) {
 				p.Key(kb.Tab)
 				p.Key(kb.Enter)
-			}) {
+			})
+			if !early {
 				t.Skip("this machine never got a key in within 600 ms")
 			}
 			p.Holds(dialog+` && !(`+toastsJS+`).includes(`+jsq(k.done)+`)`, 800*time.Millisecond)
