@@ -33,6 +33,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Fork Chat from Message… | `ai-fork-chat` |   |   |
 | AI: Generate Doc Comment | `ai-doc` |   |   |
 | AI: Lock Secrets | `secrets-lock` |   |   |
+| AI: MCP Prompts and Resources… | `ai-mcp-insert` |   |   |
 | AI: MCP Servers… | `ai-mcp-servers` |   |   |
 | AI: MCP: Import from Other Apps… | `mcp-import-other` |   |   |
 | AI: MCP: Reconnect All Servers | `ai-mcp-reconnect-all` |   |   |
