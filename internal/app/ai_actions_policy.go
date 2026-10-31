@@ -592,6 +592,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_trust_annotations": aiNever(aiNoAIConfig),
 	"mcp_share":             aiNever(aiNoAIConfig),
 	"mcp_trusted":           aiNever(aiNoAIConfig),
+	"mcp_disabled_tools":    aiNever(aiNoAIConfig),
 	// The secret store's backend and auto-lock (secrets_ui.go).
 	"secret_store":        aiNever(aiNoAIConfig),
 	"secret_lock_minutes": aiNever(aiNoAIConfig),

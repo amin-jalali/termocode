@@ -2047,6 +2047,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `images` | confirm (settings) |   |
 | `key_hints` | confirm (settings) |   |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
+| `mcp_disabled_tools` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_enabled` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_github_client_id` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_idle_timeout` | never | AI provider, credentials and approvals stay with the user |
