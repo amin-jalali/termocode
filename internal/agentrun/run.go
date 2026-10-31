@@ -823,6 +823,16 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 			res.verdict, res.report = VerdictFail, report
 		}
 	}
+	if ctx.Err() == nil && fail == "" && !n.Plan && n.ID != h.verify && finalText(added) == "" {
+		// OMX-23: an empty answer is asked for once more, then fails.
+		h.emit(Event{NodeID: n.ID, Kind: NodeRepair, Err: "empty answer"})
+		hist := append(append(history[:len(history):len(history)], added...), ai.Message{Role: ai.RoleUser, Content: EmptyPrompt})
+		raw = nil
+		added = agent.Run(ctx, hist, emit)
+		if ctx.Err() == nil && fail == "" && finalText(added) == "" {
+			fail = "the step gave an empty answer, even after asking again"
+		}
+	}
 	switch {
 	case dog != nil && dog.fired.Load() && parent.Err() == nil:
 		res.stalled = true

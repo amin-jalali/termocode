@@ -117,3 +117,25 @@ func TestLongToolIsNoStall(t *testing.T) {
 	}
 }
 
+// OMX-23: an empty answer is asked for once more; empty again fails.
+func TestEmptyAnswerAsksOnceThenFails(t *testing.T) {
+	h := newHarness(map[string]*fakeProv{"a": {replies: []ai.Chunk{{}, {Delta: "the answer"}}}})
+	r, err := Start(context.Background(), chain("a"), h.options(1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if end := wait(t, r); end.Kind != RunDone || end.Output != "the answer" {
+		t.Fatalf("end %+v", end)
+	}
+	if ev, ok := h.find(NodeRepair, "a"); !ok || !strings.Contains(ev.Err, "empty") {
+		t.Fatalf("NodeRepair %+v %v", ev, ok)
+	}
+	h2 := newHarness(map[string]*fakeProv{"a": {replies: []ai.Chunk{{}}}})
+	r2, err := Start(context.Background(), chain("a"), h2.options(1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if end := wait(t, r2); end.Kind != RunFailed || !strings.Contains(end.Err, "empty answer") {
+		t.Fatalf("end %+v", end)
+	}
+}

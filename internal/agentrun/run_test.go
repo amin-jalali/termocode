@@ -447,7 +447,7 @@ func TestInputRules(t *testing.T) {
 	}, Edges: []agentdag.Edge{{From: "a", To: "c"}, {From: "b", To: "c"}}}
 	h := newHarness(map[string]*fakeProv{
 		"a": {replies: []ai.Chunk{{Delta: "aaa"}}},
-		"b": {replies: []ai.Chunk{{Delta: "  "}}}, // empty output
+		"b": {replies: []ai.Chunk{{Delta: " bbb "}}},
 		"c": {},
 	})
 	run, err := Start(context.Background(), r, h.options(1))
@@ -455,7 +455,7 @@ func TestInputRules(t *testing.T) {
 		t.Fatal(err)
 	}
 	wait(t, run)
-	if got, want := h.input("c"), "### Output of step \"B\"\n(no output)"; got != want {
+	if got, want := h.input("c"), "### Output of step \"B\"\nbbb"; got != want {
 		t.Errorf("c input %q, want %q", got, want)
 	}
 }
@@ -504,8 +504,10 @@ func TestMaxStepsFromNode(t *testing.T) {
 		t.Fatal(err)
 	}
 	wait(t, run)
-	if n := h.provs["a"].callCount(); n != 2 {
-		t.Errorf("calls %d, want 2 (max_steps)", n)
+	// 2 (max_steps) and, as the answer is empty, 2 more after asking
+	// once again (OMX-23).
+	if n := h.provs["a"].callCount(); n != 4 {
+		t.Errorf("calls %d, want 4 (max_steps twice)", n)
 	}
 }
 
