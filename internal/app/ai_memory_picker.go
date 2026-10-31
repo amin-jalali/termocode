@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/aimemory"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/picker"
@@ -17,6 +18,9 @@ import (
 // opens the lesson's card (Close, Open in editor, Forget…); Forget asks
 // first with Keep focused. The last row forgets every lesson, after the
 // same kind of card. Only the user runs it: the AI has no memory tool.
+
+const confirmKindSharedMemory confirmKindEnum = 2652
+const aiSharedMemoryID = "\x00shared-memory"
 
 const pickerKindAIMemory pickerKindEnum = 1005
 
@@ -37,7 +41,11 @@ func (m *Model) openAIMemory() tea.Cmd {
 	if err != nil {
 		return m.aiToastErr("Could not read "+aiMemoryRel, err)
 	}
-	if len(ls) == 0 {
+	var shared []aimemory.Lesson
+	if root := aimemory.SharedRoot(aiWorkspaceRoot()); root != "" {
+		shared, _ = aimemory.LoadForWorktree(root)
+	}
+	if len(ls) == 0 && len(shared) == 0 {
 		if aiMemoryState() == aiMemoryOn {
 			return m.aiInfo("No lessons in this workspace yet")
 		}
@@ -49,7 +57,12 @@ func (m *Model) openAIMemory() tea.Cmd {
 		items = append(items, picker.Item{ID: l.ID, Title: l.Date + " · " + aimemory.CleanLine(l.Title, aimemory.MaxTitleRunes),
 			Hint: strings.Join(l.Paths, ", ")})
 	}
-	items = append(items, picker.Item{ID: aiMemoryForgetAllID, Title: "Forget all…"})
+	if len(shared) > 0 {
+		items = append(items, picker.Item{ID: aiSharedMemoryID, Title: "Main checkout lessons (read only)", Hint: strconv.Itoa(len(shared)) + " shared lessons"})
+	}
+	if len(ls) > 0 {
+		items = append(items, picker.Item{ID: aiMemoryForgetAllID, Title: "Forget all…"})
+	}
 	m.picker = picker.NewItems(" "+aiSpark()+" AI Memory ", items)
 	state := "on"
 	if aiMemoryState() != aiMemoryOn {
@@ -75,6 +88,21 @@ func (s *aiState) aiMemoryFind(id string) (aimemory.Lesson, bool) {
 
 // onAIMemoryPicked opens the lesson's card (or the Forget all card).
 func (m *Model) onAIMemoryPicked(id string) tea.Cmd {
+	if id == aiSharedMemoryID {
+		root := aimemory.SharedRoot(aiWorkspaceRoot())
+		if root == "" {
+			return nil
+		}
+		ls, _ := aimemory.LoadForWorktree(root)
+		body := "Shared from the main checkout. Edit or forget these lessons there.\n"
+		for _, l := range ls {
+			body += "\n" + aimemory.CleanLine(l.Title, aimemory.MaxTitleRunes) + "\n" + aimemory.CleanLine(l.Text, aimemory.MaxTextRunes) + "\n"
+		}
+		m.confirm = confirm.New("Main checkout lessons", ai.Redact(body), []confirm.Button{{ID: "close", Title: "Close"}}).WithScrollText().WithWideText()
+		m.confirmKind, m.confirmOpen = confirmKindSharedMemory, true
+		m.confirm.SetSize(m.w, m.h)
+		return nil
+	}
 	s := m.aiS()
 	if id == aiMemoryForgetAllID {
 		ls, _ := s.aiMemoryLoad(aiWorkspaceRoot())
