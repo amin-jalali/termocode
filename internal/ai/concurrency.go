@@ -43,6 +43,14 @@ func SetConcurrencyLimits(limits map[string]int) {
 	limiter.mu.Unlock()
 }
 
+// ConcurrencyLimit is the limit in use for key (a kind or
+// "<kind>/<model>"; 0: none).
+func ConcurrencyLimit(key string) int {
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	return cap(limiter.sems[key])
+}
+
 // acquireLimit waits for a slot of "<kind>/<model>", then of kind (always
 // in that order: no deadlock), and returns the function that frees both.
 // It fails only when ctx ends first.

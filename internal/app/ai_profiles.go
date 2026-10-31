@@ -15,6 +15,9 @@ func (s *aiState) loadProfiles(creds ai.Credentials) {
 	s.providers = loadAIProviders(s.settings, creds)
 	s.modelsCache = nil // read again with the providers (Add AI wrote it)
 	cfgs, errs := ai.ResolveSlots(s.settings, s.cfg, creds, os.Getenv)
+	limits, problems := s.settings.ConcurrencyLimits() // OMX-26
+	ai.SetConcurrencyLimits(limits)
+	errs = append(errs, problems...)
 	s.slots = ai.NewSlotPool(cfgs, nil).WithSynthetic(ai.SyntheticResolver(s.providers, s.cfg, creds, os.Getenv))
 	known := map[string]bool{ai.SlotMain: true, ai.SlotQuick: true, ai.SlotLocal: true}
 	for n := range cfgs {
