@@ -111,6 +111,9 @@ func LookAtTool(w Workspace, see func() (Provider, string, bool)) Tool {
 			var out strings.Builder
 			for c := range p.Stream(ctx, Request{Messages: msgs, Model: model}) {
 				out.WriteString(c.Delta)
+				if c.Done {
+					AddSideUsage(ctx, c.Usage) // into the turn's total
+				}
 				if c.Done && c.Err != nil {
 					return "", c.Err
 				}

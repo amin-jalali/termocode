@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -264,5 +265,42 @@ func TestSettingsPricesAndWindows(t *testing.T) {
 	s2 := LoadSettings(path)
 	if s2.Model != "y" || s2.Prices["my-model"].In != 3 || s2.ContextWindows["my-model"] != 64000 {
 		t.Fatalf("after save = %+v", s2)
+	}
+}
+
+// A turn's total counts its side requests too (look_at's request, a
+// summary): their tokens add up, but the turn's model and its context
+// window use stay the main model's.
+func TestAgentTurnCountsSideUsage(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "shot.png"), "\x89PNG fake")
+	eye := &scripted{replies: []Chunk{{Delta: "A Save button.", Usage: &Usage{Model: "eye-1", Input: 900, Output: 20, Requests: 1, PeakContext: 900}}}}
+	main := &scripted{tools: true, replies: []Chunk{
+		{ToolCalls: []ToolCall{{ID: "1", Name: "look_at", Args: map[string]any{"path": "shot.png"}}}, Usage: &Usage{Model: "main-1", Input: 100, Output: 5, Requests: 1, PeakContext: 100}},
+		{Delta: "It is a Save button.", Usage: &Usage{Model: "main-1", Input: 120, Output: 7, Requests: 1, PeakContext: 120}},
+	}}
+	a := &Agent{Provider: main, Native: true, Tools: []Tool{LookAtTool(Workspace{Root: dir}, func() (Provider, string, bool) { return eye, "eye-1", true })}}
+	evs, _ := collectEvents(a, []Message{{Role: RoleSystem, Content: "s"}, {Role: RoleUser, Content: "what is in shot.png?"}})
+	last := evs[len(evs)-1]
+	if last.Kind != EventDone || last.Usage == nil {
+		t.Fatalf("last event %+v", last)
+	}
+	u := *last.Usage
+	if u.Input != 1120 || u.Output != 32 || u.Requests != 3 || u.Model != "main-1" || u.PeakContext != 120 {
+		t.Fatalf("turn usage %+v", u)
+	}
+}
+
+// A side request outside a turn's sink is not counted anywhere (no
+// panic); AddSideUsage before Agent.Run lands in that turn's total.
+func TestSideUsageBeforeTheTurn(t *testing.T) {
+	AddSideUsage(context.Background(), &Usage{Input: 5})
+	ctx := WithSideUsage(context.Background())
+	AddSideUsage(ctx, &Usage{Model: "quick-1", Input: 50, Output: 5, Requests: 1})
+	main := &scripted{replies: []Chunk{{Delta: "hi", Usage: &Usage{Model: "main-1", Input: 10, Output: 1, Requests: 1}}}}
+	var last Event
+	(&Agent{Provider: main}).Run(ctx, []Message{{Role: RoleSystem, Content: "s"}, {Role: RoleUser, Content: "hi"}}, func(e Event) { last = e })
+	if last.Usage == nil || last.Usage.Input != 60 || last.Usage.Requests != 2 || last.Usage.Model != "main-1" {
+		t.Fatalf("turn usage %+v", last.Usage)
 	}
 }
