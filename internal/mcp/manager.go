@@ -668,6 +668,9 @@ func (m *Manager) toolsChangedLocked(st *serverState) bool {
 // annotations, in any order.
 func ToolsHash(tools []Tool) string {
 	sorted := append([]Tool(nil), tools...)
+	for i := range sorted {
+		sorted[i].Meta = nil // size hints are not a change the user reviews (hash as before _meta was read)
+	}
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
 	b, _ := json.Marshal(sorted)
 	sum := sha256.Sum256(b)

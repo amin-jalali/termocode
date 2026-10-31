@@ -44,6 +44,8 @@ type Tool struct {
 	Description string           `json:"description,omitempty"`
 	InputSchema map[string]any   `json:"inputSchema,omitempty"`
 	Annotations *ToolAnnotations `json:"annotations,omitempty"`
+	// Meta is the tool's _meta (maxResultSizeChars, …).
+	Meta map[string]any `json:"_meta,omitempty"`
 }
 
 // ToolAnnotations are the server's hints about a tool. They are hints,
