@@ -339,6 +339,8 @@ func mcpStatusHint(st mcp.Status) string {
 		parts = append(parts, "failed: "+st.Problem)
 	case st.State == mcp.StateReconnecting:
 		parts = append(parts, st.StateText()+" ("+st.Problem+")")
+	case st.State == mcp.StateRunning && kind == "remote" && st.OldTransport:
+		parts = append(parts, "connected · old transport")
 	case st.State == mcp.StateRunning && kind == "remote":
 		parts = append(parts, "connected")
 	default:
@@ -854,6 +856,8 @@ func mcpServiceHint(st mcp.Status) string {
 		parts = append(parts, "failed: "+st.Problem)
 	case st.State == mcp.StateReconnecting:
 		parts = append(parts, st.StateText())
+	case st.State == mcp.StateRunning && st.OldTransport:
+		parts = append(parts, "connected · old transport")
 	case st.State == mcp.StateRunning:
 		parts = append(parts, "connected")
 	case !st.SignedIn && (e.Auth == nil || e.Auth.GH == "") && !mcpHasAuthHeader(e):

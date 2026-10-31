@@ -49,3 +49,12 @@ func TestMCPReconnectAllPalette(t *testing.T) {
 		t.Errorf("text %q", got)
 	}
 }
+
+// Spec (CF-11): a server on the old HTTP+SSE transport says so.
+func TestMCPOldTransportHint(t *testing.T) {
+	covMCPModel(t)
+	st := mcp.Status{Name: "x", Type: mcp.TypeHTTP, State: mcp.StateRunning, OldTransport: true, Trusted: true}
+	if got := mcpStatusHint(st); !strings.HasPrefix(got, "remote · connected · old transport") {
+		t.Errorf("hint %q", got)
+	}
+}
