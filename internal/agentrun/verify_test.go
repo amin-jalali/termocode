@@ -30,3 +30,19 @@ func TestParseVerdict(t *testing.T) {
 		t.Error("the prompts must name the verdict line")
 	}
 }
+
+// OMX-14: the verify step lists its evidence under EVIDENCE:, one item
+// a line (a "- " is dropped), up to the next blank line.
+func TestParseEvidence(t *testing.T) {
+	text := "Checked it.\nEVIDENCE:\n- go test ./... → ok\n* read parser.go:12\n\nVERDICT: PASS"
+	got := ParseEvidence(text)
+	if len(got) != 2 || got[0] != "go test ./... → ok" || got[1] != "read parser.go:12" {
+		t.Fatalf("evidence %q", got)
+	}
+	if ParseEvidence("VERDICT: PASS") != nil {
+		t.Fatal("evidence without a list")
+	}
+	if !strings.Contains(VerifyPrompt, "EVIDENCE:") {
+		t.Fatal("the verify prompt does not ask for evidence")
+	}
+}
