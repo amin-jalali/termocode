@@ -290,7 +290,7 @@ add it. The AI never adds a server on its own:
 - Nothing starts at once. The tools reach the AI from the next message.
 - The AI can not add an entry with `${cmd:}`, a literal token,
   `autoApprove`, `gateway` or `auth`. Add a server with a token through
-  **Import** (it stores the token safely).
+  **Paste a config…** in the Connect list (it stores the token safely).
 - For a known service (GitHub, Linear …) the AI opens the Connect
   wizard instead, so you sign in yourself.
 
