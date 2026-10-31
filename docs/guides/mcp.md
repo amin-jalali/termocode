@@ -227,6 +227,7 @@ names the secrets your teammate sets.
 |---|---|
 | `command`, `args` | Local server: the program to start and its arguments. |
 | `env` | Local server: extra environment variables. |
+| `envFile` | Local server: a file of `KEY=value` lines added to `env` (a key in `env` wins). A relative path is in the workspace. A project file may only name a file inside the workspace. |
 | `cwd` | Local server: folder to start it in. |
 | `type`, `url` | Remote server: `"http"` (or `"streamable-http"`) and its URL. A `url` without `type` is remote too. |
 | `headers` | Remote server: HTTP headers sent with every request, for example a token. |
@@ -238,7 +239,8 @@ names the secrets your teammate sets.
 | `deny` | Tool names (or patterns like `"delete_*"`) never offered to the AI. |
 | `timeout` | Seconds one tool call may wait (default `mcp_call_timeout`, 60 s). |
 
-`type` and Claude Desktop's `transport` are read too. `readOnly`,
+`type` and `transport` are read too, and the top key `servers` works
+like `mcpServers` (when both have a name, `mcpServers` wins). `readOnly`,
 `autoApprove`, `deny`, `timeout`, `oauth` and `auth` are termocode keys: other
 apps ignore them, so the same file still works there.
 
@@ -249,10 +251,12 @@ servers on your own computer (`localhost`, `127.0.0.1`).
 
 | Write | Gets |
 |---|---|
-| `${VAR}` | the environment variable `VAR` |
+| `${VAR}` or `${env:VAR}` | the environment variable `VAR` |
 | `${VAR:-default}` | `VAR`, or `default` when it is empty |
 | `${secret:NAME}` | the secret `NAME` in your secret store |
 | `${workspaceFolder}` | the open workspace folder |
+| `${workspaceFolderBasename}` | the folder's name only, for example `my-app` |
+| `${/}` | the path separator (`/`, or `\` on Windows) |
 | `${userHome}` | your home folder |
 
 Do not put tokens in `mcp.json`. Use `${secret:NAME}` and set the value
