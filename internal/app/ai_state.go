@@ -215,6 +215,7 @@ type aiState struct {
 	// turnRoot is the workspace of the next plain turn when it is not
 	// the user's tree (a ship's fix in a plan run's worktree; "": none).
 	turnRoot string
+	planWT   *aiPlanWT // the plan in a worktree (ai_plan_worktree.go)
 	restored bool
 	// claim holds the shown chat against other termocode windows on the
 	// same store (ai_chat_claim.go).
@@ -558,6 +559,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
+		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
@@ -742,6 +744,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIWebTools(), true
 	case "ai-ship":
 		return m.toggleAIShip(), true
+	case "ai-plan-worktree":
+		return m.toggleAIPlanWorktree(), true
 	case "ai-agent-hooks":
 		return m.openAgentHooks(), true
 	case "ai-memory-toggle":

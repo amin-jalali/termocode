@@ -202,6 +202,8 @@ func (m *Model) handleAIShipMsg(msg tea.Msg) (tea.Cmd, bool) {
 			return nil, true
 		}
 		return m.onAIShipLog(msg), true
+	case aiPlanShipMsg: // ai_plan_worktree.go
+		return m.onAIPlanShip(msg), true
 	}
 	return nil, false
 }

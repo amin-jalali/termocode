@@ -524,7 +524,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Web tools reach the internet and add servers: the user turns them on.
 	"ai-web-tools": aiNever(aiNoPicker),
 	// Ship pushes and opens pull requests: only the user starts it.
-	"ai-ship": aiNever("it pushes and opens a pull request: the user starts it"),
+	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
+	"ai-plan-worktree": aiNever("it leads to a push and a pull request: the user starts it"),
 	// It edits other apps' config files: only the user, after the preview.
 	"ai-agent-hooks": aiNever("it changes other apps' config files: the user decides after the preview"),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
