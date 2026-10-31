@@ -220,6 +220,7 @@ actions: **Connect / Refresh tools**, **Show tools**, **Stop**,
 | `cwd` | Local server: folder to start it in. |
 | `type`, `url` | Remote server: `"http"` (or `"streamable-http"`) and its URL. A `url` without `type` is remote too. |
 | `headers` | Remote server: HTTP headers sent with every request, for example a token. |
+| `headersCommand` | Remote server: a command line run at each connect that prints one JSON object of headers, for example `{"Authorization": "Bearer …"}` for a short-lived token. They replace `headers` of the same name. Its output never shows in a log or error. Only allowed in your own `mcp.json`, never in a project's. |
 | `oauth` | Remote server: a pre-registered app: `client_id`, `client_secret`, `scopes`. The wizard writes it for Slack (your app's client id) and for the read / write scopes. |
 | `auth` | Remote server: `{"gh": "<login>"}` takes the token from the GitHub CLI (`gh auth token`) at each connect. Only allowed in your own `mcp.json`, never in a project's. |
 | `disabled` | `true` turns the server off: it stays in the list as `off`, does not start and gives the AI no tools. **Disable** / **Enable** in the list set it. |
