@@ -40,7 +40,8 @@ type aiActivity struct {
 	since          time.Time // the phase began
 	lastAt         time.Time // last token (or request sent)
 	retry, retries int
-	ticking        bool // a 1 s tick is in flight
+	ticking        bool   // a 1 s tick is in flight
+	progress       string // the running tool's last progress text (MCPX-19)
 }
 
 // aiActivityTickMsg redraws the activity line once a second.
@@ -65,10 +66,12 @@ func (a *aiActivity) onEvent(ev ai.Event, now time.Time) {
 		}
 		a.lastAt = now
 	case ai.EventToolStart:
-		a.phase, a.since, a.tool = aiPhaseTool, now, ev.Label
+		a.phase, a.since, a.tool, a.progress = aiPhaseTool, now, ev.Label, ""
 		if a.tool == "" {
 			a.tool = ev.Tool
 		}
+	case ai.EventToolProgress:
+		a.progress, a.lastAt = ev.Detail, now
 	case ai.EventToolResult:
 		a.phase, a.since, a.lastAt = aiPhaseWaiting, now, now
 	case ai.EventRetry:
@@ -87,6 +90,7 @@ type aiActivityView struct {
 	secs           int // phase seconds (waiting / tool) or silent seconds (stalled)
 	retry, retries int
 	stalled        bool
+	progress       string
 }
 
 // aiActivityView is the line's state at now (zero without a running turn).
@@ -125,7 +129,7 @@ func (a *aiActivity) view(now time.Time) aiActivityView {
 		v.secs = int(now.Sub(a.since) / time.Second)
 	}
 	if a.phase == aiPhaseTool {
-		v.tool = a.tool
+		v.tool, v.progress = a.tool, a.progress
 	}
 	if a.phase == aiPhaseRetry {
 		v.retry, v.retries = a.retry, a.retries
@@ -161,6 +165,9 @@ func (v aiActivityView) lines(ind string, inner int) []aiLine {
 		text = theme.GlyphAIWriting.String() + " writing"
 	case v.phase == aiPhaseTool:
 		text = theme.GlyphAITool.String() + " " + aiCleanText(v.tool) + " · " + aiSecs(v.secs)
+		if v.progress != "" {
+			text += " · " + aiCleanText(v.progress)
+		}
 	case v.phase == aiPhaseRetry:
 		text = theme.GlyphAIRetry.String() + " retry " + strconv.Itoa(v.retry) + " of " + strconv.Itoa(v.retries)
 	}
