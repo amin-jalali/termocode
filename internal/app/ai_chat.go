@@ -256,6 +256,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	base := m.aiChatBasePrompt(root, rules, memBlock) + aiStepSystem(step.System)
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
+	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
+	mentions := m.aiMCPMentions(gen, ch, text, ai.SupportsImages(slot.p))
 	mcpLines := ""
 	if mcpTools != nil {
 		mcpLines = m.mcpPromptLines() // "GitHub is connected as … (read only)."
@@ -294,7 +296,11 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 				history[0].Content = ai.SystemPrompt(b, agent.Tools, native)
 			}
 		}
-		agent.Run(ctx, history, func(ev ai.Event) { send(aiChatEventMsg{gen: gen, ev: ev, ch: ch}) })
+		emit := func(ev ai.Event) { send(aiChatEventMsg{gen: gen, ev: ev, ch: ch}) }
+		if mentions != nil {
+			aiAddMentioned(ctx, history, mentions, emit)
+		}
+		agent.Run(ctx, history, emit)
 		ch <- aiChatDoneMsg{gen: gen}
 		close(ch)
 	}, func() { // the chat turn ends instead of waiting for ever
