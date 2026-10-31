@@ -20,6 +20,8 @@
 //   - structured: only structuredContent {"n": 42}
 //   - notify_changed: sends notifications/tools/list_changed, returns "notified"
 //   - notify_resources: sends notifications/resources/list_changed
+//   - ask / ask_url: elicitation/create (form / URL mode), returns the
+//     answer's action and content
 //
 // Resources (resources.go): resources/list in two pages, one template
 // notes://{id}, resources/read of each. Prompts (prompts.go): review and
@@ -335,6 +337,8 @@ func call(ctx context.Context, c Caller, name string, args map[string]any, token
 		}}, nil
 	case "structured":
 		return map[string]any{"content": []any{}, "structuredContent": map[string]any{"n": 42}}, nil
+	case "ask", "ask_url":
+		return Elicit(ctx, c, name)
 	case "notify_resources":
 		_ = c.Notify("notifications/resources/list_changed", nil)
 		return text("notified"), nil
