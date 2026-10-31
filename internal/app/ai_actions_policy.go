@@ -496,6 +496,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-profile-new":    aiNever(aiNoAIConfig),
 	"ai-profile-form":   aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
 	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),
+	// Keep going (OMX-7) sends model turns that cost money: only the
+	// user turns it on.
+	"ai-keep-going": aiNever(aiNoAIConfig + "; extra paid turns are the user's choice"),
 	// Project rules (OM-1): the AI only gets the text in its prompt.
 	"ai-rules":       aiNever("trusting a project's rules is the user's decision"),
 	"ai-models-edit": aiNever(aiNoAIConfig),
