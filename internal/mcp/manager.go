@@ -117,7 +117,9 @@ type Status struct {
 	// Sessions is how many use it now (this one too).
 	Shared   bool
 	Sessions int
-	server   Server
+	// Sandbox is the entry's sandbox text ("" when off; sandbox.go).
+	Sandbox string
+	server  Server
 }
 
 // ServerTools is one server's tools for a chat turn.
@@ -251,6 +253,7 @@ func (m *Manager) Servers() []Status {
 		s := Status{Name: st.cfg.Name, Type: st.cfg.Type, Source: st.cfg.Source, State: st.state,
 			Problem: st.problem, Tools: len(st.tools), Cached: st.cached, Trusted: m.trustedLocked(st),
 			ToolsChanged: m.toolsChangedLocked(st) && st.toolsOK != st.toolsHash, server: st.cfg}
+		s.Sandbox = sandboxText(st.cfg)
 		if st.cfg.Type == TypeHTTP && m.opts.Tokens != nil {
 			var e ai.MCPOAuth
 			e, s.SignedIn = m.opts.Tokens.Load(st.cfg.Name)
@@ -430,11 +433,18 @@ func (m *Manager) startStdio(ctx context.Context, exp Server, opts Options) (*Pr
 	m.mu.Lock()
 	share := m.opts.Share
 	m.mu.Unlock()
+	var roots []string
+	if m.opts.Roots != nil {
+		roots = m.opts.Roots()
+	}
+	exp, note, err := ApplySandbox(exp, roots) // sandbox.go
+	if err != nil {
+		return nil, err
+	}
+	if note != "" {
+		m.log(exp.Name, "%s", note)
+	}
 	if share != nil {
-		var roots []string
-		if m.opts.Roots != nil {
-			roots = m.opts.Roots()
-		}
 		p, err := startShared(ctx, share, exp, roots, opts)
 		if !errors.Is(err, errShareUnavailable) {
 			return p, err
