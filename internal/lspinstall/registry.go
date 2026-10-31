@@ -29,6 +29,9 @@ const (
 	// CategoryAgentCLI: the subscription agent CLIs (Claude Code, Codex)
 	// the Add AI card installs; never listed with the language tools.
 	CategoryAgentCLI
+	// CategoryCodeTool: helper tools the AI uses (ast-grep), installed
+	// from the AI's install card; never listed with the language tools.
+	CategoryCodeTool
 )
 
 // InstallKind says how a tool is installed.
@@ -258,6 +261,13 @@ var tools = []Tool{
 		Name: "codex", Label: "Codex", Category: CategoryAgentCLI,
 		Bin:         "codex",
 		InstallKind: KindNpm, Spec: "@openai/codex", Version: "latest",
+		Needs: []string{"node"},
+	},
+	// ── Code tools ──────────────────────────────────────────────────────
+	{
+		Name: "ast-grep", Label: "Structural search", Category: CategoryCodeTool,
+		Bin:         "ast-grep",
+		InstallKind: KindNpm, Spec: "@ast-grep/cli", Version: "latest",
 		Needs: []string{"node"},
 	},
 }
