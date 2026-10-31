@@ -17,6 +17,7 @@ import (
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // The agent control socket (OMX-33): every terminal tab gets
@@ -217,6 +218,16 @@ func (m *Model) agentCtlFind(id string) (agentCtlTab, bool) {
 	return agentCtlTab{}, false
 }
 
+// agentCtlTabShown: t is the tab on show in an open terminal panel.
+func (m *Model) agentCtlTabShown(t *terminalTab) bool {
+	for i := range m.terminalTabs {
+		if &m.terminalTabs[i] == t {
+			return m.inTerminal && m.termTabVisible(i)
+		}
+	}
+	return false
+}
+
 func agentCtlStateName(t *terminalTab) string {
 	if t.Agent == "" {
 		return ""
@@ -281,7 +292,19 @@ func (m *Model) onAgentCtl(call agentCtlCall) tea.Cmd {
 		}
 		return nil
 	case agentctl.OpReport:
-		return answer(m.agentCtlReport(r))
+		t, _ := m.agentCtlFind(r.Tab)
+		was := agents.Unknown
+		if t.t != nil {
+			was = t.t.AgentState
+		}
+		rep := m.agentCtlReport(r)
+		answer(rep)
+		if rep.OK && rep.State == "waiting" && was != agents.Waiting && !m.agentCtlTabShown(t.t) {
+			var c tea.Cmd
+			m.toast, c = m.toast.Push(toast.Info, t.t.agentTitle()+" is waiting for you")
+			return c
+		}
+		return nil
 	}
 	return fail("unknown op %q (list, prompt, wait, report)", r.Op)
 }

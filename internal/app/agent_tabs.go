@@ -74,6 +74,9 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		m.agentWatch(buf, false)
 		return nil
 	}
+	if t.AgentHook { // the agent reports its own state (agent_ctl.go)
+		return nil
+	}
 	var raw string
 	if err := m.nvim.ExecLuaResult(agentTailLua, &raw, buf, agentTailLines); err != nil {
 		return nil

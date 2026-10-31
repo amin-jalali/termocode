@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
+	"github.com/amin-jalali/termocode/internal/agenthooks"
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/aimemory"
@@ -93,7 +94,9 @@ type aiState struct {
 	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
 	ship        *aiShip              // the running ship loop (ai_ship.go)
 	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
-	shipGen     int
+	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
+	agentHooksPlan *agenthooks.Plan
+	shipGen        int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the
@@ -501,6 +504,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
+		{"agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
@@ -644,6 +648,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIWebTools(), true
 	case "ai-ship":
 		return m.toggleAIShip(), true
+	case "agent-hooks":
+		return m.openAgentHooks(), true
 	case "ai-memory-toggle":
 		return m.toggleAIMemory(), true
 	case "ai-models-edit":
