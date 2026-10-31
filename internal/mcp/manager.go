@@ -175,6 +175,9 @@ type Manager struct {
 	servers  map[string]*serverState
 	warnings []string
 	closed   bool
+	retrying sync.WaitGroup // reconnect tries in flight
+	life     context.Context // ends with Close (cuts reconnect tries)
+	end      context.CancelFunc
 }
 
 // NewManager loads the config (it starts nothing).
@@ -183,6 +186,7 @@ func NewManager(o ManagerOptions) *Manager {
 		o.CallTimeout = 60 * time.Second
 	}
 	m := &Manager{opts: o, servers: map[string]*serverState{}}
+	m.life, m.end = context.WithCancel(context.Background())
 	m.Reload()
 	return m
 }
@@ -915,4 +919,6 @@ func (m *Manager) Close() {
 		crash.Go("an MCP server stop", func() { defer wg.Done(); p.Close() })
 	}
 	wg.Wait()
+	m.end()
+	m.retrying.Wait()
 }

@@ -178,3 +178,45 @@ func (m *Manager) retries(name string) int {
 	defer m.mu.Unlock()
 	return m.servers[name].retryN
 }
+
+// Spec (RT-5, RT-9): Reconnect all tries every failed or waiting server
+// now, and checks the running ones with a ping.
+func TestReconnectAll(t *testing.T) {
+	f := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{})
+	e := newManagerEnv(t)
+	e.write(t, e.user, map[string]any{
+		"rem": map[string]any{"type": "http", "url": f.MCPURL()},
+		"run": map[string]any{"type": "http", "url": f.MCPURL() + "?b=1"},
+		"off": map[string]any{"type": "http", "url": f.MCPURL(), "disabled": true},
+	})
+	fn := &flakyNet{rt: http.DefaultTransport}
+	m := reconnectManager(t, e, fn, nil)
+	m.opts.ReconnectBase, m.opts.ReconnectCap = time.Hour, time.Hour
+	if err := m.Connect(context.Background(), nil, "run"); err != nil {
+		t.Fatal(err)
+	}
+	fn.set(true)
+	_ = m.Connect(context.Background(), nil, "rem")
+	if r := m.ReconnectAll(context.Background()); r.Tried != 2 || r.OK != 0 || len(r.Failed) != 2 {
+		t.Fatalf("offline %+v", r)
+	}
+	if st := status(m, "run"); st.State != StateReconnecting {
+		t.Errorf("the dead running one: %+v", st)
+	}
+	fn.set(false)
+	if r := m.ReconnectAll(context.Background()); r.Tried != 2 || r.OK != 2 || len(r.Failed) != 0 {
+		t.Fatalf("online %+v", r)
+	}
+	for _, n := range []string{"rem", "run"} {
+		if st := status(m, n); st.State != StateRunning {
+			t.Errorf("%s: %+v", n, st)
+		}
+	}
+	if st := status(m, "off"); st.State != StateDisabled {
+		t.Errorf("off: %+v", st)
+	}
+	// All running and healthy: one ping each, nothing else.
+	if r := m.ReconnectAll(context.Background()); r.Tried != 0 || r.Checked != 2 {
+		t.Errorf("healthy %+v", r)
+	}
+}

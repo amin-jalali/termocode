@@ -142,6 +142,17 @@ func (c *Client) Initialize(ctx context.Context) error {
 	return c.conn.Notify("notifications/initialized", nil)
 }
 
+// Ping checks that the server answers (a health check). A server that
+// does not know ping still answers (an error reply), so that counts too.
+func (c *Client) Ping(ctx context.Context) error {
+	_, err := c.call(ctx, "ping", nil)
+	var re *extproc.Error
+	if errors.As(err, &re) {
+		return nil
+	}
+	return err
+}
+
 // maxToolPages guards against a server whose cursor never ends.
 const maxToolPages = 50
 
