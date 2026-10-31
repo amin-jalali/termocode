@@ -148,7 +148,7 @@ func (p *anthropicProvider) run(ctx context.Context, req Request, ch chan<- Chun
 	if model == "" {
 		model = p.cfg.Model
 	}
-	payload, err := marshalBody(buildAnthropicBody(req, model, oauth))
+	payload, err := marshalBody(anthropicBody(req, model, p.cfg))
 	if err != nil {
 		return Chunk{Done: true, Err: err}
 	}

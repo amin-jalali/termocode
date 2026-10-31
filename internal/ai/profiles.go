@@ -721,6 +721,9 @@ func ResolveSlots(s Settings, main Config, c Credentials, getenv func(string) st
 	if getenv == nil {
 		getenv = os.Getenv
 	}
+	if main.PromptCache == "" {
+		main.PromptCache = promptCacheMode(s.PromptCache)
+	}
 	out := map[string]Config{}
 	if main.Kind != KindNone {
 		out[SlotMain] = main
@@ -761,7 +764,7 @@ func knownKind(k string) bool {
 
 func slotConfig(sl ModelSlot, main Config, c Credentials, getenv func(string) string) Config {
 	kind := sl.Provider
-	cfg := Config{Kind: kind, Model: sl.Model, BaseURL: sl.BaseURL}
+	cfg := Config{Kind: kind, Model: sl.Model, BaseURL: sl.BaseURL, PromptCache: main.PromptCache}
 	switch kind {
 	case KindOllama, KindLMStudio:
 	case KindClaudeOAuth:

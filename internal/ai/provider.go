@@ -346,6 +346,9 @@ type Config struct {
 	Token func(ctx context.Context) (string, error)
 	// HTTPClient overrides the client (tests). nil → a sane default.
 	HTTPClient *http.Client
+	// PromptCache is the Anthropic prompt cache life (ai_prompt_cache):
+	// "" 5 minutes, PromptCache1h or PromptCacheOff.
+	PromptCache string
 }
 
 // Configured reports whether cfg is complete enough to send requests.
