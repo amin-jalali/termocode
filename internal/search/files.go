@@ -118,3 +118,11 @@ func filesWalk(ctx context.Context, dir string, globs globFilter) ([]string, err
 	})
 	return files, err
 }
+
+// MatchGlob reports whether the slash-separated relative path rel
+// matches the glob (the same gitignore-style rules as the search
+// filters: no "/" matches a name anywhere, "dir/**" everything below).
+func MatchGlob(glob, rel string) bool {
+	rel = filepath.ToSlash(rel)
+	return globMatch(glob, rel, filepath.Base(rel))
+}
