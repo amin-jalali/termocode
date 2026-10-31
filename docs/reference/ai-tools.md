@@ -130,6 +130,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_explain`](#db_explain) | auto | no | Show the query plan of ONE SQL statement (EXPLAIN without ANALYZE: the statement does not run), in a read-only session. |
 | [`db_history`](#db_history) | auto | no | List recent SQL runs (the user's and yours), newest first. |
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
+| [`ast_grep`](#ast_grep) | auto | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
 | [`look_at`](#look_at) | auto | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
 | [`redis_keys`](#redis_keys) | auto | yes | List the keys of a Redis connection that match a glob pattern (SCAN; never KEYS), with type and TTL. |
 | [`redis_get`](#redis_get) | auto | asks | Read one Redis key: its type, TTL, size and one page of its value (string: up to 64 KB; hash, list, set, sorted set, stream: up to max items). |
@@ -1548,6 +1549,21 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 | `conn` | string | yes | connection id |
 | `table` | string | yes | table name |
 | `schema` | string |   | schema (optional; MySQL: the database) |
+
+### ast_grep
+
+Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). With rewrite, every match is replaced ("log.Print($A)") and the user reviews the change as a diff. Use it for safe refactors across many files; for plain text use search.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `pattern` | string | yes | ast-grep pattern, e.g. foo($A, $$$REST) |
+| `lang` | string |   | language (go, ts, python, rust …); optional when the files say it |
+| `path` | string |   | folder or file to search, relative to the workspace (default: root) |
+| `rewrite` | string |   | replacement for each match, may use the pattern's $VARs (optional) |
 
 ### look_at
 
