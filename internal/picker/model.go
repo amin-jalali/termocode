@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/sahilm/fuzzy"
 
 	"github.com/amin-jalali/termocode/internal/anim"
@@ -438,7 +439,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 }
 
 func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseButton) (Model, tea.Cmd) {
-	if m.w <= 0 || m.h <= 0 {
+	if m.w < 3 || m.h <= 0 {
 		return m, nil
 	}
 	if button == tea.MouseButtonWheelUp {
@@ -523,7 +524,7 @@ func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 // standalone tests and any caller that needs a raw frame; the app wraps
 // Box() with modalOverlay for the production look.
 func (m Model) View() string {
-	if m.w <= 0 || m.h <= 0 {
+	if m.w < 3 || m.h <= 0 {
 		return ""
 	}
 	box := m.Box()
@@ -537,7 +538,7 @@ func (m Model) View() string {
 // fill). The caller (view.go) overlays it with modalOverlay onto the
 // dimmed editor base.
 func (m Model) Box() string {
-	if m.w <= 0 || m.h <= 0 {
+	if m.w < 3 || m.h <= 0 {
 		return ""
 	}
 	return m.renderBox()
@@ -693,9 +694,7 @@ func (m Model) layoutDims() (boxW, boxH, available int) {
 	if maxW := m.w - 4; boxW > maxW {
 		boxW = maxW
 	}
-	if boxW < 36 {
-		boxW = 36
-	}
+	boxW = max(3, min(boxW, m.w))
 
 	resultCount := len(m.matches)
 	if m.loading || resultCount == 0 {
@@ -789,7 +788,7 @@ func (m Model) renderBox() string {
 	if m.input == "" {
 		field += caret.Render("▏") + placeholder.Render("Type to search")
 	} else {
-		field += inputStyle.Render(m.input) + caret.Render("▏")
+		field += inputStyle.Render(inputTail(m.input, max(0, innerW-4))) + caret.Render("▏")
 	}
 	if w := lipgloss.Width(field); w < innerW {
 		field += inputBgFill.Render(strings.Repeat(" ", innerW-w))
@@ -848,6 +847,9 @@ func (m Model) renderBox() string {
 	footer := theme.HintBar(pmBoxBg, m.footerPairs(innerW)...)
 	rows = append(rows, padBg(bgFill.Render("  ")+footer, innerW))
 
+	for i := range rows {
+		rows[i] = ansi.Truncate(rows[i], innerW, "")
+	}
 	return theme.FloatBox(lipgloss.JoinVertical(lipgloss.Left, rows...), boxW)
 }
 
@@ -1215,7 +1217,7 @@ type RowRect struct {
 // RowRects lists the visible result rows with the screen cells
 // HandleMouse hit tests for them.
 func (m Model) RowRects() []RowRect {
-	if m.w <= 0 || m.h <= 0 {
+	if m.w < 3 || m.h <= 0 {
 		return nil
 	}
 	bx, by, bw, _ := m.boxRect()
@@ -1239,4 +1241,13 @@ func (m Model) RowAt(x, y int) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+// inputTail keeps the caret and the most recent query text visible.
+func inputTail(s string, width int) string {
+	r := []rune(s)
+	for len(r) > 0 && runewidth.StringWidth(string(r)) > width {
+		r = r[1:]
+	}
+	return string(r)
 }

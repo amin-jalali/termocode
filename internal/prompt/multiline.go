@@ -98,7 +98,10 @@ func (m Model) updateMultiline(k tea.KeyMsg) (Model, tea.Cmd) {
 	return m, nil
 }
 func (m Model) multilineBox() string {
-	w := max(min(76, m.w-4), 8)
+	if m.w < 3 || m.h <= 0 {
+		return ""
+	}
+	w := max(3, min(76, m.w-4))
 	f := theme.Float()
 	style := lipgloss.NewStyle().Background(f.Bg).Foreground(f.InputFg)
 	r := []rune(m.value)
@@ -113,5 +116,8 @@ func (m Model) multilineBox() string {
 		rows = append(rows, ansi.Truncate(lines[i], w-4, "…"))
 	}
 	rows = append(rows, "Ctrl+S preview   Esc cancel")
+	for i := range rows {
+		rows[i] = ansi.Truncate(rows[i], w-2, "")
+	}
 	return theme.FloatBox(style.Width(w-2).Render(strings.Join(rows, "\n")), w)
 }
