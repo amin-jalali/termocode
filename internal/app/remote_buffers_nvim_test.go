@@ -207,7 +207,7 @@ func TestRemoteBufferFollowsARename(t *testing.T) {
 	_ = n.Command("edit /app/main.go")
 	_ = n.ExecLua(`vim.api.nvim_buf_set_lines(0, 0, -1, false, {'unsaved'})`)
 	m := Model{ws: ws, nvim: n}
-	m.remoteRename(ws.Host.FS(), "/app/main.go", "app.go")
+	runRemoteOp(t, &m, m.remoteRename(ws.Host.FS(), "/app/main.go", "app.go"))
 	if m.err != "" {
 		t.Fatal(m.err)
 	}

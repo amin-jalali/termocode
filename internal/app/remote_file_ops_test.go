@@ -5,13 +5,15 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/amin-jalali/termocode/internal/containerhost/fakedocker"
 )
 
 func TestContainerNewFileIsMadeInTheContainer(t *testing.T) {
 	m, _, _, c := newContainerModel(t)
 	m.promptKind, m.promptPath = promptKindNewFile, "/app/pkg"
-	m.handlePromptSubmit("new.go")
+	runRemoteOp(t, &m, m.handlePromptSubmit("new.go"))
 	if fi, err := os.Stat(c.Local("/app/pkg/new.go")); err != nil || fi.Size() != 0 {
 		t.Fatalf("new file in the container: %v %v", fi, err)
 	}
@@ -29,7 +31,7 @@ func TestContainerNewFileIsMadeInTheContainer(t *testing.T) {
 func TestContainerNewFileRefusesAnExistingFile(t *testing.T) {
 	m, _, _, c := newContainerModel(t)
 	m.promptKind, m.promptPath = promptKindNewFile, "/app"
-	m.handlePromptSubmit("main.go")
+	runRemoteOp(t, &m, m.handlePromptSubmit("main.go"))
 	if !strings.Contains(m.err, "already exists") {
 		t.Fatalf("err = %q", m.err)
 	}
@@ -50,7 +52,7 @@ func TestContainerNewFileOutsideTheRootFails(t *testing.T) {
 func TestContainerNewFolderIsMadeInTheContainer(t *testing.T) {
 	m, _, _, c := newContainerModel(t)
 	m.promptKind, m.promptPath = promptKindNewFolder, "/app"
-	m.handlePromptSubmit("web/static")
+	runRemoteOp(t, &m, m.handlePromptSubmit("web/static"))
 	if fi, err := os.Stat(c.Local("/app/web/static")); err != nil || !fi.IsDir() {
 		t.Fatalf("new folder in the container: %v %v", fi, err)
 	}
@@ -69,7 +71,7 @@ func TestContainerNewFolderGoneContainerSaysSo(t *testing.T) {
 	m, _, _, c := newContainerModel(t)
 	c.Remove()
 	m.promptKind, m.promptPath = promptKindNewFolder, "/app"
-	m.handlePromptSubmit("web")
+	runRemoteOp(t, &m, m.handlePromptSubmit("web"))
 	if m.err != "api-1 is not running." {
 		t.Fatalf("err = %q", m.err)
 	}
@@ -78,7 +80,7 @@ func TestContainerNewFolderGoneContainerSaysSo(t *testing.T) {
 func TestContainerRenameAndMoveInTheContainer(t *testing.T) {
 	m, _, _, c := newContainerModel(t)
 	m.promptKind, m.promptPath = promptKindRename, "/app/main.go"
-	m.handlePromptSubmit("app.go")
+	runRemoteOp(t, &m, m.handlePromptSubmit("app.go"))
 	if _, err := os.Stat(c.Local("/app/app.go")); err != nil || m.err != "" {
 		t.Fatalf("rename: %v, err %q", err, m.err)
 	}
@@ -87,7 +89,7 @@ func TestContainerRenameAndMoveInTheContainer(t *testing.T) {
 	}
 	// A path in the new name moves the file to another folder.
 	m.promptKind, m.promptPath = promptKindRename, "/app/pkg/util.go"
-	m.handlePromptSubmit("../lib/util.go")
+	runRemoteOp(t, &m, m.handlePromptSubmit("../lib/util.go"))
 	if b, err := os.ReadFile(c.Local("/app/lib/util.go")); err != nil || string(b) != "package pkg\n" || m.err != "" {
 		t.Fatalf("move: %q %v, err %q", b, err, m.err)
 	}
@@ -103,7 +105,7 @@ func TestContainerRenameRefusesAnExistingName(t *testing.T) {
 	m, _, _, c := newContainerModel(t)
 	c.WriteFile(t, "/app/b.go", []byte("keep me"), 0o644)
 	m.promptKind, m.promptPath = promptKindRename, "/app/main.go"
-	m.handlePromptSubmit("b.go")
+	runRemoteOp(t, &m, m.handlePromptSubmit("b.go"))
 	if !strings.Contains(m.err, "already exists") {
 		t.Fatalf("err = %q", m.err)
 	}
@@ -118,7 +120,7 @@ func TestContainerRenameWithoutShellSaysWhy(t *testing.T) {
 	t.Setenv("TERMOCODE_NO_NVIM", "1")
 	m := New()
 	m.promptKind, m.promptPath = promptKindRename, "/app/main.go"
-	m.handlePromptSubmit("app.go")
+	runRemoteOp(t, &m, m.handlePromptSubmit("app.go"))
 	if m.err != "api-1 has no shell (sh), so this is not possible." {
 		t.Fatalf("err = %q", m.err)
 	}
@@ -127,7 +129,7 @@ func TestContainerRenameWithoutShellSaysWhy(t *testing.T) {
 func TestContainerDeleteRemovesInTheContainer(t *testing.T) {
 	m, _, _, c := newContainerModel(t)
 	m.openDeleteConfirm("/app/pkg")
-	m.handleConfirmSelect("delete")
+	runRemoteOp(t, &m, m.handleConfirmSelect("delete"))
 	if _, err := os.Stat(c.Local("/app/pkg")); !os.IsNotExist(err) || m.err != "" {
 		t.Fatalf("pkg still there: %v, err %q", err, m.err)
 	}
@@ -140,7 +142,7 @@ func TestContainerBulkDeleteRemovesInTheContainer(t *testing.T) {
 	m, _, _, c := newContainerModel(t)
 	c.WriteFile(t, "/app/a.txt", []byte("a"), 0o644)
 	m.openBulkDeleteConfirm([]string{"/app/a.txt", "/app/pkg"})
-	m.handleConfirmSelect("delete")
+	runRemoteOp(t, &m, m.handleConfirmSelect("delete"))
 	for _, p := range []string{"/app/a.txt", "/app/pkg"} {
 		if _, err := os.Stat(c.Local(p)); !os.IsNotExist(err) {
 			t.Fatalf("%s still there: %v", p, err)
@@ -154,7 +156,7 @@ func TestContainerDeleteWithoutShellSaysWhy(t *testing.T) {
 	t.Setenv("TERMOCODE_NO_NVIM", "1")
 	m := New()
 	m.openDeleteConfirm("/app/main.go")
-	m.handleConfirmSelect("delete")
+	runRemoteOp(t, &m, m.handleConfirmSelect("delete"))
 	if m.err != "api-1 has no shell (sh), so this is not possible." {
 		t.Fatalf("err = %q", m.err)
 	}
@@ -175,5 +177,58 @@ func TestContainerBulkRenameIsRefused(t *testing.T) {
 	}
 	if !strings.Contains(m.err, "one by one") {
 		t.Fatalf("err = %q", m.err)
+	}
+}
+
+// FIX-2: a file operation in a container makes no engine call on the UI
+// loop (a hung engine froze the UI up to 10 s per call): new file, new
+// folder, rename, delete and bulk delete each return a command at once,
+// and the work happens when it runs.
+func TestContainerFileOpsRunOffTheUILoop(t *testing.T) {
+	m, _, d, c := newContainerModel(t)
+	c.WriteFile(t, "/app/a.txt", []byte("a"), 0o644)
+	c.WriteFile(t, "/app/b.txt", []byte("b"), 0o644)
+	for _, op := range []struct {
+		what string
+		do   func() tea.Cmd
+		gone string
+	}{
+		{"new file", func() tea.Cmd {
+			m.promptKind, m.promptPath = promptKindNewFile, "/app"
+			return m.handlePromptSubmit("n.go")
+		}, ""},
+		{"new folder", func() tea.Cmd {
+			m.promptKind, m.promptPath = promptKindNewFolder, "/app"
+			return m.handlePromptSubmit("web")
+		}, ""},
+		{"rename", func() tea.Cmd {
+			m.promptKind, m.promptPath = promptKindRename, "/app/main.go"
+			return m.handlePromptSubmit("app.go")
+		}, "/app/main.go"},
+		{"delete", func() tea.Cmd { m.openDeleteConfirm("/app/pkg"); return m.handleConfirmSelect("delete") }, "/app/pkg"},
+		{"bulk delete", func() tea.Cmd {
+			m.openBulkDeleteConfirm([]string{"/app/a.txt", "/app/b.txt"})
+			return m.handleConfirmSelect("delete")
+		}, "/app/b.txt"},
+	} {
+		before := len(d.Calls())
+		cmd := op.do()
+		if n := len(d.Calls()) - before; n != 0 || cmd == nil {
+			t.Fatalf("%s: %d engine calls on the UI loop (cmd %v), want 0 and a command", op.what, n, cmd != nil)
+		}
+		runRemoteOp(t, &m, cmd)
+		if m.err != "" {
+			t.Fatalf("%s: err %q", op.what, m.err)
+		}
+		if op.gone != "" {
+			if _, err := os.Stat(c.Local(op.gone)); !os.IsNotExist(err) {
+				t.Fatalf("%s: %s still there (%v)", op.what, op.gone, err)
+			}
+		}
+	}
+	for _, p := range []string{"/app/n.go", "/app/web", "/app/app.go"} {
+		if _, err := os.Stat(c.Local(p)); err != nil {
+			t.Errorf("%s not made: %v", p, err)
+		}
 	}
 }

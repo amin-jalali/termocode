@@ -59,6 +59,19 @@ func pumpExplorerLoads(t *testing.T, m *Model) {
 	t.Fatal("explorer listings never ended")
 }
 
+// runRemoteOp runs a container file operation's command (it runs off
+// the UI loop, FIX-2), applies its answer and the explorer listings
+// that follow.
+func runRemoteOp(t *testing.T, m *Model, cmd tea.Cmd) {
+	t.Helper()
+	for _, msg := range runBatch(cmd) {
+		if f, ok := msg.(applyMsg); ok {
+			_ = f(m)
+		}
+	}
+	pumpExplorerLoads(t, m)
+}
+
 // runBatch runs cmd and every command of a batch it returns.
 func runBatch(cmd tea.Cmd) []tea.Msg {
 	if cmd == nil {

@@ -225,6 +225,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 				return m.runBulkDelete(m.confirmTargetPaths)
 			}
 			path := m.confirmTargetPath
+			if fsys, ok := m.remoteFS(); ok { // a container: off the UI loop (FIX-2)
+				return m.remoteDelete(fsys, []string{path}, false)
+			}
 			return m.finishDelete(path, m.removePath(path))
 		}
 	case confirmKindGitDiscard:
@@ -278,6 +281,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 	if len(paths) == 0 {
 		return nil
+	}
+	if fsys, ok := m.remoteFS(); ok { // a container: off the UI loop (FIX-2)
+		return m.remoteDelete(fsys, paths, true)
 	}
 	deleted, failed, gone := removePaths(paths, m.removePath)
 	return m.finishBulkDelete(deleted, failed, gone)
