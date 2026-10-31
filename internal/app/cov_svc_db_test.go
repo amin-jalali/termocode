@@ -14,6 +14,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/workspace/localhost"
 )
 
 // covSvcSQL is a scripted SQL session: Ping fails with pingErr, the
@@ -91,6 +92,11 @@ func covSvcDB(t *testing.T, extra string) (*Model, *covSvcSQL) {
 	old := dbSQLSessionFactory
 	dbSQLSessionFactory = func(context.Context, dbclient.Conn, string) (dbclient.Session, error) { return fake, nil }
 	t.Cleanup(func() { dbSQLSessionFactory = old })
+	ws, err := localhost.New(root) // the project file goes here, not into the package folder
+	if err != nil {
+		t.Fatal(err)
+	}
+	setProcWorkspace(t, ws)
 	st := newDBState()
 	st.visible = true
 	st.load(root)
@@ -230,8 +236,13 @@ func TestCovSvcDBTreeKeys(t *testing.T) {
 	m.pickerOpen = false
 	// e on a project connection opens .termocode/databases.json; m opens
 	// the user file (created from the template).
+	_, statErr := os.Stat(filepath.Join(".termocode", "databases.json"))
 	covSvcDBSelect(t, m, "pg")
 	covSvcDBKey(m, "e")
+	if _, err := os.Stat(filepath.Join(".termocode", "databases.json")); err == nil && statErr != nil {
+		os.RemoveAll(".termocode")
+		t.Error("e wrote .termocode/databases.json into the package folder, not the test workspace")
+	}
 	covSvcDBKey(m, "m")
 	dir, _ := configDir()
 	if b, err := os.ReadFile(filepath.Join(dir, "db", "connections.json")); err != nil || !strings.Contains(string(b), "connections") {
