@@ -22,7 +22,8 @@
 //   - notify_resources: sends notifications/resources/list_changed
 //
 // Resources (resources.go): resources/list in two pages, one template
-// notes://{id}, resources/read of each.
+// notes://{id}, resources/read of each. Prompts (prompts.go): review and
+// hello, with completion/complete for review's arguments.
 //
 // Environment switches: FAKE_BANNER=1 prints a non-JSON line on stdout
 // first; FAKE_IGNORE_SHUTDOWN=1 keeps running after stdin closes (to test
@@ -195,6 +196,9 @@ func run() {
 				return
 			}
 			_ = c.Reply(m.ID, map[string]any{"tools": all[4:]}, nil)
+		case "prompts/list", "prompts/get", "completion/complete":
+			res, rerr := Prompts(m.Method, m.Params)
+			_ = c.Reply(m.ID, res, rerr)
 		case "resources/list", "resources/templates/list", "resources/read":
 			res, rerr := Resources(m.Method, m.Params)
 			_ = c.Reply(m.ID, res, rerr)
