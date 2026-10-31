@@ -155,3 +155,24 @@ func TestAICategoryEscalate(t *testing.T) {
 		t.Fatalf("off: step %+v", rm.Steps[0])
 	}
 }
+
+// A category's temperature stays when the step falls back to a backup
+// model (another provider).
+func TestAICategoryTempKeptOnFallback(t *testing.T) {
+	m, _, quick := catModel(t, ai.ProfileStep{ID: "a", Title: "Think", Category: "ultrabrain"}, ai.ProfileStep{ID: "b", Title: "Sum up", Category: "deep"})
+	quick.replies = []ai.Chunk{{Err: ai.ErrNotConfigured}}
+	backup := &recordingAIProvider{replies: []ai.Chunk{{Delta: "backup answer"}}}
+	m.ai.slotFake["gpt"] = aiSlot{p: backup, cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5"}}
+	temp := 0.3
+	m.ai.settings.Categories = map[string]ai.CategoryConfig{"ultrabrain": {Slot: ai.SlotQuick, Temperature: &temp}}
+	m.ai.settings.Models = map[string]ai.ModelSlot{ai.SlotQuick: {Fallback: []string{"gpt"}}}
+	driveAIChat(t, m, m.sendAIChat("explain the parser"), nil)
+	backup.mu.Lock()
+	defer backup.mu.Unlock()
+	if len(backup.reqs) == 0 {
+		t.Fatal("no fallback request")
+	}
+	if tp := backup.reqs[0].Temperature; tp == nil || *tp != 0.3 {
+		t.Fatalf("fallback temperature %v", tp)
+	}
+}
