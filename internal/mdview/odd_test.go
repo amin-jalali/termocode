@@ -72,3 +72,16 @@ func TestRenderControlBytesShowAsReplacement(t *testing.T) {
 		t.Fatalf("text lost: %q", ansi.Strip(all))
 	}
 }
+
+// A lone CR is a line end, as in CommonMark, never a byte in a row.
+func TestRenderLoneCRIsALineEnd(t *testing.T) {
+	got := Render("a\rb\r\nc", Options{Width: 20})
+	for _, r := range got {
+		if strings.Contains(r, "\r") {
+			t.Fatalf("row holds a CR: %q", r)
+		}
+	}
+	if j := joined(got); !strings.Contains(j, "a b c") && !strings.Contains(j, "a\nb\nc") {
+		t.Fatalf("text lost: %q", j)
+	}
+}

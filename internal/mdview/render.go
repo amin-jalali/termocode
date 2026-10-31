@@ -96,6 +96,10 @@ func Render(src string, opt Options) []string {
 
 // RenderDoc is Render that also returns where the headings and (with
 // opt.Links) the links are drawn. The rows are the same as Render's.
+// lineEnds makes CRLF and a lone CR plain line ends, as CommonMark
+// reads them: a CR left in a row sends the cursor back to its start.
+var lineEnds = strings.NewReplacer("\r\n", "\n", "\r", "\n")
+
 func RenderDoc(src string, opt Options) ([]string, Marks) {
 	w := max(opt.Width, 1)
 	left, col := Layout(w, opt.MaxColumn)
@@ -105,11 +109,11 @@ func RenderDoc(src string, opt Options) ([]string, Marks) {
 	// raw: a lone ESC eats the cells after it, and a sequence could
 	// move the cursor or set a title. Show them as U+FFFD too.
 	source := []byte(strings.Map(func(c rune) rune {
-		if c < 0x20 && c != '\t' && c != '\n' && c != '\r' || c == 0x7f || c >= 0x80 && c <= 0x9f {
+		if c < 0x20 && c != '\t' && c != '\n' || c == 0x7f || c >= 0x80 && c <= 0x9f {
 			return '\uFFFD'
 		}
 		return c
-	}, strings.ToValidUTF8(src, "\uFFFD")))
+	}, lineEnds.Replace(strings.ToValidUTF8(src, "\uFFFD"))))
 	doc := md.Parser().Parse(text.NewReader(source))
 	r := newRenderer(source, opt)
 	wide := max(col, w-4)
