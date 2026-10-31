@@ -517,6 +517,9 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 		start := len(out)
 		switch msg.Role {
 		case ai.StoredUser:
+			if msg.Summary != "" { // OMX-3
+				out = append(out, aiSummaryLine(msg.Summarised, width))
+			}
 			out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 			out = append(out, aiUserBubble(aiCleanText(msg.Text), width, i)...)
 			if msg.Context != "" {
@@ -569,7 +572,7 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 // next one, the width, the theme and the model label of its header.
 type aiSegKey struct {
 	role, text, context, rules, model, runBy, label string
-	lessons, memory, width                          int
+	lessons, memory, width, summarised              int
 	rk                                              theme.RenderKey
 	rtl                                             rtl.Mode
 }
@@ -584,7 +587,7 @@ func (m Model) aiSegKeyFor(i, width int) aiSegKey {
 	s := m.ai
 	msg := &s.conv.Messages[i]
 	k := aiSegKey{role: msg.Role, text: msg.Text, context: msg.Context, rules: msg.Rules, model: msg.Model,
-		lessons: msg.Lessons, memory: msg.Memory, width: width, rk: theme.CurrentRenderKey(), rtl: rtlMode}
+		lessons: msg.Lessons, memory: msg.Memory, summarised: msg.Summarised, width: width, rk: theme.CurrentRenderKey(), rtl: rtlMode}
 	if i+1 < len(s.conv.Messages) {
 		k.runBy = aiRunByLine(s.conv.Messages[i+1].Run)
 	}

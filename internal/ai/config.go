@@ -62,6 +62,10 @@ type Settings struct {
 	// PlanApproval is ai_plan_approval (G-PLAN): "ask" (default), "auto"
 	// or "always" (planapproval.go).
 	PlanApproval string `json:"ai_plan_approval,omitempty"`
+	// Compact is ai_compact (OMX-3): "off" never summarises older turns;
+	// default: summarise them with the quick model near the window limit
+	// or when the provider says the context is too long. Edited by hand.
+	Compact string `json:"ai_compact,omitempty"`
 }
 
 // CheckUntilDoneRounds checks an ai_until_done_rounds value.
