@@ -113,3 +113,17 @@ func TestRenderWideRuneInOneCellView(t *testing.T) {
 		}
 	}
 }
+
+// Inline HTML over two lines draws on one row, never with a raw line
+// break inside the row.
+func TestRenderInlineHTMLOverLines(t *testing.T) {
+	rows := Render("a <span\nclass=x> b", Options{Width: 40})
+	for _, r := range rows {
+		if strings.Contains(r, "\n") {
+			t.Fatalf("row holds a line break: %q", r)
+		}
+	}
+	if j := joined(rows); !strings.Contains(j, "<span class=x>") {
+		t.Fatalf("got %q", j)
+	}
+}

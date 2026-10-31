@@ -631,7 +631,9 @@ func (r *renderer) walkInline(n ast.Node, a attrs, link string, out *[]span) {
 				seg := v.Segments.At(i)
 				b.Write(seg.Value(r.src))
 			}
-			*out = append(*out, span{text: b.String(), a: attrs{fg: r.p.muted, bg: a.bg}})
+			// Inline HTML can span lines ("<?\n?>"); a line break left in
+			// the span would split the row, so it reads as a space.
+			*out = append(*out, span{text: strings.ReplaceAll(b.String(), "\n", " "), a: attrs{fg: r.p.muted, bg: a.bg}})
 		case *east.TaskCheckBox:
 			// drawn as the list marker
 		default:
