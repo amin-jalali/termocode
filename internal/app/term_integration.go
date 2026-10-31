@@ -52,18 +52,29 @@ type termShellSpec struct {
 	Plain string            `json:"plain"`
 	Argv  []string          `json:"argv,omitempty"`
 	Env   map[string]string `json:"env,omitempty"`
+	// Tab is the tab's control id and Base its TERMOCODE_* env, used
+	// with and without the integration (OMX-33, agent_ctl.go).
+	Tab  string            `json:"tab,omitempty"`
+	Base map[string]string `json:"base,omitempty"`
 }
 
 // termShellSpecJSON returns the spawn spec for shell. Without the
 // integration (setting off, unknown shell, scripts not writable) only
 // plain is set.
 func termShellSpecJSON(shell string) string {
-	spec := termShellSpec{Plain: shell}
+	spec := termShellSpec{Plain: shell, Tab: agentCtlNextTabID()}
+	spec.Base = agentCtlTabEnv(spec.Tab)
 	if shellIntegrationOn() && shellint.Supported(shell) {
 		dir := shellint.Dir()
 		if err := shellint.Install(dir); err == nil {
 			if s, ok := shellint.For(shell, dir, os.Getenv); ok {
 				spec.Argv, spec.Env = s.Argv, s.Env
+				if spec.Env == nil {
+					spec.Env = map[string]string{}
+				}
+				for k, v := range spec.Base {
+					spec.Env[k] = v
+				}
 			}
 		} else {
 			recordError("[shellint] install: " + err.Error())
@@ -78,6 +89,22 @@ func termShellSpecJSON(shell string) string {
 // OSC 7 to Go. On nvim without TermRequest the shell starts plain.
 const termShellIntLua = `
 	_G.termocode_shellint = _G.termocode_shellint or function(spec)
+		if spec.tab then
+			-- The next terminal buffer is this tab: keep its control id there.
+			_G.termocode_tab_next = spec.tab
+			if not _G.termocode_tabid_au then
+				_G.termocode_tabid_au = true
+				vim.api.nvim_create_autocmd('TermOpen', {
+					group = vim.api.nvim_create_augroup('termocode_tabid', { clear = true }),
+					callback = function(ev)
+						if _G.termocode_tab_next then
+							vim.b[ev.buf].termocode_tab_id = _G.termocode_tab_next
+							_G.termocode_tab_next = nil
+						end
+					end,
+				})
+			end
+		end
 		if spec.argv and vim.fn.exists('##TermRequest') == 1 then
 			if not _G.termocode_shellint_au then
 				_G.termocode_shellint_au = true
@@ -96,7 +123,7 @@ const termShellIntLua = `
 			end
 			return spec.argv, spec.env
 		end
-		return spec.plain, nil
+		return spec.plain, spec.base
 	end
 `
 

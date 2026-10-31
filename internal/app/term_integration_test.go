@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -218,15 +219,45 @@ func TestTermShellSpec(t *testing.T) {
 	if s := termShellSpecJSON("/bin/bash"); !strings.Contains(s, `"--init-file"`) || !strings.Contains(s, `"plain":"/bin/bash"`) {
 		t.Errorf("bash spec %s", s)
 	}
-	if s := termShellSpecJSON("/bin/sh"); s != `{"plain":"/bin/sh"}` {
+	plainOnly := func(s, shell string) bool {
+		var sp termShellSpec
+		return json.Unmarshal([]byte(s), &sp) == nil && sp.Plain == shell && sp.Argv == nil && sp.Env == nil
+	}
+	if s := termShellSpecJSON("/bin/sh"); !plainOnly(s, "/bin/sh") {
 		t.Errorf("sh spec %s", s)
 	}
 	_ = os.MkdirAll(filepath.Join(dir, "termocode"), 0o755)
 	if err := os.WriteFile(filepath.Join(dir, "termocode", "config.json"), []byte(`{"terminal_shell_integration": false}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if s := termShellSpecJSON("/bin/bash"); s != `{"plain":"/bin/bash"}` {
+	if s := termShellSpecJSON("/bin/bash"); !plainOnly(s, "/bin/bash") {
 		t.Errorf("off: %s", s)
+	}
+}
+
+// Spec (OMX-33): every tab gets its own control id and TERMOCODE_ENV=1,
+// TERMOCODE_TAB_ID and TERMOCODE_SOCKET, with the integration (in its
+// env) and without it (base, for the plain shell).
+func TestTermShellSpecTabEnv(t *testing.T) {
+	withConfigDir(t)
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	var a, b termShellSpec
+	if json.Unmarshal([]byte(termShellSpecJSON("/bin/bash")), &a) != nil || json.Unmarshal([]byte(termShellSpecJSON("/bin/sh")), &b) != nil {
+		t.Fatal("bad json")
+	}
+	if a.Tab == "" || a.Tab == b.Tab {
+		t.Fatalf("tab ids %q %q", a.Tab, b.Tab)
+	}
+	for _, sp := range []termShellSpec{a, b} {
+		if sp.Base["TERMOCODE_ENV"] != "1" || sp.Base["TERMOCODE_TAB_ID"] != sp.Tab || !strings.HasSuffix(sp.Base["TERMOCODE_SOCKET"], ".agent.sock") {
+			t.Errorf("base env %v", sp.Base)
+		}
+	}
+	if a.Env["TERMOCODE_TAB_ID"] != a.Tab || a.Env["TERMOCODE_ENV"] != "1" {
+		t.Errorf("integration env lacks the tab vars: %v", a.Env)
+	}
+	if !strings.Contains(termShellIntLua, "termocode_tab_id") || !strings.Contains(termShellIntLua, "return spec.plain, spec.base") {
+		t.Error("the spawn Lua does not keep the tab id or the plain env")
 	}
 }
 

@@ -119,6 +119,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleAIShipMsg(msg); ok { // ai_ship.go
 		return m, c
 	}
+	if c, ok := m.handleAgentCtlMsg(msg); ok { // agent_ctl.go
+		return m, c
+	}
 	if c, ok := m.handleUpdateMsg(msg); ok { // update_check.go
 		return m, c
 	}

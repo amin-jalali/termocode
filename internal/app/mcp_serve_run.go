@@ -26,6 +26,7 @@ var mcpServeTargetHub atomic.Pointer[mcpServeHub]
 // StopMCPServer closes the MCP server's socket and its connections.
 // cmd/termocode calls it when Bubble Tea returns, next to StopMCP.
 func StopMCPServer() {
+	StopAgentCtl()       // the agent control socket (agent_ctl.go)
 	removeAgentMCPLive() // the agents' temp config files (agent_mcp.go)
 	if h := mcpServeTargetHub.Swap(nil); h != nil {
 		h.stop()
