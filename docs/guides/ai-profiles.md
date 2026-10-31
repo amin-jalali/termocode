@@ -720,6 +720,7 @@ panel.
 | `Shift+Tab` / `↑` / `k` | Select the previous step |
 | `Space` / `Enter` | Fold or unfold the selected card (the same choice as its card in the chat) |
 | `d` | Show or hide the node details |
+| `t` | Show the run as a dense task list: one row per step in wave order (wave, state, title, model, time, tokens); `t` again shows the cards |
 | `u` | Switch to [AI: Usage](#see-your-agents-and-what-they-cost) (and back) |
 | `f` | Follow the running step again |
 | `r` | Resume the shown run when termocode's restart interrupted it |
