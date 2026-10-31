@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode"
 )
 
 // FuzzParseRelease reads any GitHub answer. An accepted release is a
@@ -63,7 +64,10 @@ func FuzzChecksums(f *testing.F) {
 		if w := wantSum(sums, name); w != "" && len(w) != sha256.Size*2 {
 			t.Fatalf("sum %q has the wrong length", w)
 		}
-		if name == "" || strings.ContainsAny(name, " \t\r\n\v\f\x85\xa0") || strings.HasPrefix(name, "*") {
+		// checksums.txt splits on any Unicode space, so a name with one can
+		// never be listed. ("\x85" in ContainsAny is one invalid byte, not
+		// U+0085, so the old list let "\u0085" through.)
+		if name == "" || strings.ContainsFunc(name, unicode.IsSpace) || strings.HasPrefix(name, "*") {
 			return
 		}
 		p := filepath.Join(t.TempDir(), "file")
