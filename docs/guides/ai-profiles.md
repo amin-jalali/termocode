@@ -320,7 +320,7 @@ built-in one or adds a new one:
 
 ```json
 "ai_categories": {
-  "ultrabrain": { "slot": "opus" },
+  "ultrabrain": { "slot": "opus", "reasoning": "max" },
   "docs": { "like": "quick", "tools": "read-only", "temperature": 0.3,
             "prompt_append": "Write for beginners.", "description": "user docs" }
 }
@@ -331,6 +331,9 @@ built-in one or adds a new one:
 - `tools`: `none`, `read-only` or `all`. It can only narrow a step's own
   tools.
 - `temperature`: 0 to 2, sent only to models that take it.
+- `reasoning`: the reasoning level of its steps (`low`, `medium`, `high`,
+  `xhigh`, `max`). Without one a step uses its slot's level. A `think`
+  word in your message can still raise it.
 - `prompt_append`: added to the step's prompt; `description`: what the
   planner reads about it.
 
