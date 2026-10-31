@@ -33,6 +33,9 @@ type Options struct {
 	Shared func(sessions, pid int)
 	// StartTimeout caps the start of the server (0: initTimeout).
 	StartTimeout time.Duration
+	// SkipDiscover starts with initialize: the server is known to speak
+	// only the old handshake (the manager remembers it).
+	SkipDiscover bool
 }
 
 // startTimeout is how long a start may take.
@@ -82,6 +85,7 @@ type Client struct {
 	toolsTTL  atomic.Int64       // ttlMs of the last tools/list (spec2026_ttl.go)
 	toolsPriv atomic.Bool        // the last tools/list was cacheScope "private"
 	stateless bool               // the 2026-07-28 revision (spec2026_client.go)
+	probed    bool               // server/discover was asked
 }
 
 // NewClient starts the JSON-RPC connection on r / w (newline framing).
@@ -147,12 +151,40 @@ func (c *Client) send(ctx context.Context, method string, params any) (json.RawM
 // otherwise the handshake runs: initialize (we offer ProtocolVersion and
 // accept any of SupportedVersions), then notifications/initialized.
 func (c *Client) Initialize(ctx context.Context) error {
-	if modern, err := c.discover(ctx); modern || err != nil {
-		if modern {
-			c.startListen() // change notifications (spec2026_listen.go)
+	if !c.opts.SkipDiscover {
+		if modern, err := c.probe(ctx); modern || err != nil {
+			return err
 		}
+		return c.handshake(ctx)
+	}
+	// Known to speak only the handshake: no probe, unless the server
+	// refuses initialize (it moved on to the stateless revision).
+	err := c.handshake(ctx)
+	if err == nil || !oldServerError(err) || ctx.Err() != nil {
 		return err
 	}
+	c.opts.log("initialize refused (%v): asking with server/discover", err)
+	if modern, perr := c.probe(ctx); modern || perr != nil {
+		return perr
+	}
+	return err
+}
+
+// probe runs the server/discover probe (spec2026_client.go) and, for a
+// stateless server, opens the change stream.
+func (c *Client) probe(ctx context.Context) (bool, error) {
+	c.mu.Lock()
+	c.probed = true
+	c.mu.Unlock()
+	modern, err := c.discover(ctx)
+	if modern {
+		c.startListen() // change notifications (spec2026_listen.go)
+	}
+	return modern, err
+}
+
+// handshake is initialize, then notifications/initialized.
+func (c *Client) handshake(ctx context.Context) error {
 	params := map[string]any{
 		"protocolVersion": ProtocolVersion,
 		"capabilities":    clientCapabilities(),

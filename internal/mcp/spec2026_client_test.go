@@ -244,3 +244,18 @@ func TestModernProbeWaitIsShort(t *testing.T) {
 		t.Fatalf("start took %v", d)
 	}
 }
+
+// Spec (MCPX-20): SkipDiscover (the server is known to speak only the
+// old handshake) starts with initialize; if initialize is refused (the
+// server moved on), the probe runs after all.
+func TestModernSkipDiscover(t *testing.T) {
+	log := filepath.Join(t.TempDir(), "log")
+	p := startFake(t, map[string]string{"FAKE_LOG": log}, Options{SkipDiscover: true})
+	if p.Client.Probed() || strings.Contains(fakeLog(t, log), "server/discover") || p.Client.Version() != ProtocolVersion {
+		t.Fatalf("probed %v version %q log:\n%s", p.Client.Probed(), p.Client.Version(), fakeLog(t, log))
+	}
+	q := startFake(t, map[string]string{"FAKE_MODERN": "only"}, Options{SkipDiscover: true})
+	if !q.Client.Stateless() || !q.Client.Probed() {
+		t.Fatalf("a modern-only server: stateless %v probed %v", q.Client.Stateless(), q.Client.Probed())
+	}
+}

@@ -42,6 +42,13 @@ type discoverResult struct {
 	} `json:"_meta"`
 }
 
+// Probed reports that Initialize asked server/discover.
+func (c *Client) Probed() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.probed
+}
+
 // Stateless reports a connection in the stateless revision.
 func (c *Client) Stateless() bool {
 	c.mu.Lock()
