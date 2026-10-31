@@ -708,6 +708,8 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 		return nil, true
 	case pickerKindMCPProfile:
 		return m.onMCPProfilePicked(id), true
+	case pickerKindMCPCatalog:
+		return m.onMCPCatalogPicked(id), true
 	}
 	return nil, false
 }
