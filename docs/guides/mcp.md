@@ -786,7 +786,7 @@ also shows the older lines.
 ### Debug your own server
 
 To step through a server you write, start it with its debugger on and
-attach from termocode's debugger. For a Node.js server, add
+attach a debugger to it. For a Node.js server, add
 `"--inspect=9229"` before the script in `args` (or set
 `"env": {"NODE_OPTIONS": "--inspect=9229"}`). Then attach to port 9229.
 A Python server can wait for a debugger with `debugpy --listen 5678
