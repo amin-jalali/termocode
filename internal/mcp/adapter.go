@@ -172,11 +172,22 @@ func AITools(s Server, tools []Tool, call CallFunc, o AdapterOptions) []ai.Tool 
 			Schema:      schema,
 			Mutating:    mutating,
 			Class:       class,
-			Describe: func(args map[string]any) string {
-				if a := shortArgs(args); a != "" {
-					return display + " " + a
+			// A call whose arguments hold a secret always asks (AU-28).
+			Gate: func(args map[string]any) (bool, string) {
+				if len(ScanSecrets(args)) > 0 {
+					return true, ""
 				}
-				return display
+				return mutating, class
+			},
+			Describe: func(args map[string]any) string {
+				out := display
+				if a := shortArgs(args); a != "" {
+					out += " " + a
+				}
+				if hits := ScanSecrets(args); len(hits) > 0 {
+					out += "  " + secretNote(hits)
+				}
+				return out
 			},
 			Validate: func(args map[string]any) error {
 				var miss []string
@@ -241,7 +252,7 @@ func shortArgs(args map[string]any) string {
 		if !ok {
 			v = fmt.Sprint(args[k])
 		}
-		v = strings.ReplaceAll(v, "\n", " ")
+		v = ai.Redact(strings.ReplaceAll(v, "\n", " ")) // before the cut: half a token slips past Redact
 		if r := []rune(v); len(r) > 40 {
 			v = string(r[:39]) + "…"
 		}
