@@ -330,6 +330,13 @@ config.json (`mcp_disabled_tools`), so it stays after a restart. The
 server's **Show tools** row says how many are off, for example
 `12 tools · 2 off`.
 
+**What the tools cost.** Every chat message carries the description of
+every MCP tool. **AI: MCP Servers…** shows an estimate next to each
+server (for example `~1.2k tokens`), and the server's screen shows it
+too. When all servers together pass about 10k tokens, the list warns:
+many tools make each message slower and more costly. Turn off the tools
+you do not need.
+
 **When a server's tools change.** termocode remembers the tool list of
 each server the first time it sees it. If the list changes later (a
 server can change what its tools do), the next chat message asks again:
