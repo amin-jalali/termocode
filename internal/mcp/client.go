@@ -61,6 +61,7 @@ type Client struct {
 	info     ServerInfo
 	progress map[string]func() // progress token → push the call's deadline back
 	tokens   atomic.Int64
+	toolsTTL atomic.Int64 // ttlMs of the last tools/list (spec2026_ttl.go)
 }
 
 // NewClient starts the JSON-RPC connection on r / w (newline framing).
@@ -149,6 +150,7 @@ const maxToolPages = 50
 func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 	var all []Tool
 	cursor := ""
+	var ttl int64 // the shortest ttlMs of the pages (0: none)
 	for page := 0; page < maxToolPages; page++ {
 		var params any
 		if cursor != "" {
@@ -166,7 +168,11 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 			return nil, fmt.Errorf("tools/list: bad answer: %w", err)
 		}
 		all = append(all, res.Tools...)
+		if res.TTLMs > 0 && (ttl == 0 || res.TTLMs < ttl) {
+			ttl = res.TTLMs
+		}
 		if res.NextCursor == "" {
+			c.toolsTTL.Store(ttl)
 			return all, nil
 		}
 		cursor = res.NextCursor

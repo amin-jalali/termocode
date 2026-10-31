@@ -24,7 +24,8 @@
 // first; FAKE_IGNORE_SHUTDOWN=1 keeps running after stdin closes (to test
 // the hard kill); FAKE_LOG=<file> appends every method it receives;
 // FAKE_TOOLSET=2 lists only echo with another description (tools-changed
-// tests); FAKE_MARKER=<file> exists while the server runs.
+// tests); FAKE_MARKER=<file> exists while the server runs; FAKE_TTL_MS
+// adds ttlMs to the last tools/list page.
 package mcptest
 
 import (
@@ -185,7 +186,11 @@ func run() {
 				_ = c.Reply(m.ID, map[string]any{"tools": all[:4], "nextCursor": "page2"}, nil)
 				return
 			}
-			_ = c.Reply(m.ID, map[string]any{"tools": all[4:]}, nil)
+			last := map[string]any{"tools": all[4:]}
+			if ttl := os.Getenv("FAKE_TTL_MS"); ttl != "" { // 2026-07-28 list caching
+				last["ttlMs"] = json.Number(ttl)
+			}
+			_ = c.Reply(m.ID, last, nil)
 		case "notifications/cancelled":
 			var p struct {
 				RequestID json.RawMessage `json:"requestId"`
