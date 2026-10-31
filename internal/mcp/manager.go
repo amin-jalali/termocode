@@ -797,7 +797,7 @@ func (m *Manager) ToolsFor(ctx context.Context, ask AskTrust, keep func(name str
 		denied := st.denied == cfg.Hash()
 		m.mu.Unlock()
 		if !have {
-			if denied {
+			if denied || cfg.AutostartOff() { // manager_extra.go
 				continue
 			}
 			if tools, err = m.list(ctx, st, ask); err != nil {
