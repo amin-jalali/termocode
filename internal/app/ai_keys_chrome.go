@@ -77,6 +77,7 @@ func (m *Model) openAIMoreMenu() tea.Cmd {
 	items := []picker.Item{
 		{ID: "profile", Title: "Profile…", Hint: "pick the agent profile"},
 		{ID: "services", Title: "Services", Hint: "what the chat can use"},
+		{ID: "think", Title: "Next reasoning level", Hint: "how hard the model thinks"},
 		{ID: "usage", Title: "Usage", Hint: "tokens and cost"},
 		{ID: "agents", Title: "Agents", Hint: "the steps of the run"},
 	}
@@ -94,6 +95,8 @@ func (m *Model) onAIMorePicked(id string) tea.Cmd {
 		return m.openAIProfilePicker()
 	case "services":
 		return m.onMCPChip()
+	case "think":
+		return m.cycleAIReasoning()
 	case "usage":
 		return m.showAIUsage("")
 	case "agents":

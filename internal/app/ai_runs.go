@@ -271,6 +271,8 @@ func (m *Model) startAIRunAs(text string, prof ai.Profile, rules ai.Rules, id st
 // for this launch (OM-1).
 func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlot, outputs map[string]string, rules ai.Rules) tea.Cmd {
 	s := m.aiS()
+	think := s.turnThink // OMX-5: the message's keyword raises every step of this run
+	s.turnThink = ""
 	s.runMsg, s.runSlots, s.runFiles = msgIdx, slots, map[string]int{}
 	s.chatGen++
 	gen := s.chatGen
@@ -323,6 +325,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		parallel = s.settings.PlannedParallel()
 	}
 	pricing := ai.NewPricing(s.settings.Prices)
+	reasoning := s.reasoningFunc(think) // OMX-5
 
 	ctx, cancel := context.WithCancel(context.Background())
 	send := func(msg tea.Msg) {
@@ -430,7 +433,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				}
 			}
 			return &ai.Agent{Provider: sl.p, Tools: ts, Native: native, AutoApprove: own, MaxSteps: maxSteps,
-				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title)}, msgs, nil
+				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
+				Reasoning: reasoning(n.Slot, sl.cfg)}, msgs, nil
 		},
 		Finished: func(_ context.Context, n agentdag.Node) {
 			if msg, ok := wts.finished(n); ok {

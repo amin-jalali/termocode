@@ -840,11 +840,22 @@ func (m Model) aiDividerLine(width int) aiLine {
 			return l
 		}
 	}
-	if s != nil && len(s.attachments) > 0 {
+	level, word := "", ""
+	if s != nil {
+		level, word = s.aiInputKeyword() // OMX-5: "think" / "ultrathink" in the input
+	}
+	if s != nil && (len(s.attachments) > 0 || word != "") {
 		// Each chip is " ⊕ label × "; its "× " removes it.
 		row := bg.Render(" ")
 		x := 1
 		var buttons []aiLineButton
+		if word != "" { // the keyword's reasoning level for this message
+			lbl := aiSpark() + " " + word + " · " + level + " ×"
+			row += chip(lbl, theme.AIAccent, 0.22) + bg.Render(" ")
+			w := runewidth.StringWidth(lbl)
+			buttons = append(buttons, aiLineButton{x + w, x + w + 2, "rm-think"})
+			x += w + 3
+		}
 		for i, at := range s.attachments {
 			lbl := aiAttachGlyph() + " " + at.Label + " ×"
 			row += chip(lbl, theme.TextPrimary, 0.10) + bg.Render(" ")
@@ -1260,7 +1271,7 @@ func (m Model) aiPanelTargetAt(x, y int) string {
 	switch y {
 	case 0:
 		switch id := m.hitActionsButton(x, y); id {
-		case "new", "history", "mcp", "profile", "usage", "chat", "more":
+		case "new", "history", "mcp", "profile", "think", "usage", "chat", "more":
 			return "ai:" + id
 		}
 		return ""
@@ -1383,6 +1394,8 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 		return m.openAIProfilePicker(), true
 	case id == "ai:usage":
 		return m.showAIUsage(""), true
+	case id == "ai:think":
+		return m.cycleAIReasoning(), true
 	case id == "ai:more":
 		return m.openAIMoreMenu(), true
 	case strings.HasPrefix(id, "ai:btn:"):
@@ -1450,6 +1463,9 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 		return m.openAIRulesFile(strings.TrimPrefix(id, "rules-open:"))
 	case id == "attach-file":
 		return m.openAIAttachPicker()
+	case id == "rm-think": // OMX-5: send this message without the keyword's level
+		m.aiS().thinkOff = true
+		return nil
 	case strings.HasPrefix(id, "rm-attach:"):
 		s := m.aiS()
 		if i, err := strconv.Atoi(strings.TrimPrefix(id, "rm-attach:")); err == nil && i >= 0 && i < len(s.attachments) {

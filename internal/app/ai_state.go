@@ -173,7 +173,13 @@ type aiState struct {
 	chatCh      chan tea.Msg
 	act         aiActivity // the activity line (ai_activity.go)
 	attachments []aiAttachment
-	restored    bool
+	// thinkOff: the user removed the input's think / ultrathink chip
+	// (OMX-5, ai_reasoning.go); the next send clears it.
+	thinkOff bool
+	// turnThink is the keyword level of the message being sent
+	// (takeTurnKeyword); the turn or run it starts reads and clears it.
+	turnThink string
+	restored  bool
 	// claim holds the shown chat against other termocode windows on the
 	// same store (ai_chat_claim.go).
 	claim *ai.ChatClaim
@@ -479,6 +485,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-show", "AI: Show Profile", ""},
 		{"ai-until-done", "AI: Work Until Done (toggle)", ""},
 		{"ai-plan-approval", "AI: Toggle Plan Approval", ""},
+		{"ai-reasoning-next", "AI: Next Reasoning Level", ""},
 		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
@@ -605,6 +612,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIProfile(), true
 	case "ai-until-done":
 		return m.toggleAIUntilDone(), true
+	case "ai-reasoning-next": // OMX-5 (ai_reasoning.go)
+		return m.cycleAIReasoning(), true
 	case "ai-plan-approval": // G-PLAN (ai_plan_approval.go)
 		return m.toggleAIPlanApproval(), true
 	case "ai-plan-review":
