@@ -22,6 +22,7 @@ const (
 	EventError                       // the turn failed (Detail)
 	EventTurnStart                   // a request went to the model; no token yet
 	EventRetry                       // the server was busy; trying again (Attempt of Attempts)
+	EventFallback                    // the model failed; the turn moves to the next one (Detail, Tool = its name)
 )
 
 // Event is one agent progress report.
@@ -87,6 +88,13 @@ type Agent struct {
 	// Reasoning is the reasoning level of every request of the turn
 	// (reasoning.go; "": the provider config's).
 	Reasoning string
+	// Fallbacks are the backup models, in order (fallback.go). Run moves
+	// Provider and Model to the next one when a request fails in a
+	// FallbackWorthy way before any text.
+	Fallbacks []Fallback
+	// Name is the model's name in the chat's fallback line ("" = the
+	// provider's).
+	Name string
 	// BeforeCalls (optional) sees every tool call of a step before the
 	// first one runs, so the app can show all the files a step changes
 	// in one review list.
@@ -221,6 +229,15 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			emit(Event{Kind: EventTurnStart})
 			a.stream(ctx, req, &buf, &prose, &last, emit)
 			usage = usage.Add(last.Usage)
+			// Failed before any token in a way the next model may not
+			// (OMX-4): move on to it, after the retries for a busy server.
+			if last.Err != nil && buf.Len() == 0 && ctx.Err() == nil && len(a.Fallbacks) > 0 &&
+				FallbackWorthy(last.Err) && (try >= DefaultRetries || !Retryable(last.Err)) {
+				a.fallBack(last.Err, emit)
+				req.Model = a.Model
+				try = -1
+				continue
+			}
 			// A busy server before any token: wait and send it again.
 			if last.Err == nil || buf.Len() > 0 || try >= DefaultRetries || !Retryable(last.Err) || ctx.Err() != nil {
 				break
@@ -275,6 +292,20 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
 	emit(Event{Kind: EventDone, Usage: usage})
 	return msgs[start:]
+}
+
+// fallBack moves the agent to its next backup model and tells the chat
+// why.
+func (a *Agent) fallBack(err error, emit func(Event)) {
+	from := a.Name
+	if from == "" {
+		from = a.Provider.Name()
+	}
+	next := a.Fallbacks[0]
+	a.Fallbacks = a.Fallbacks[1:]
+	a.Provider, a.Model, a.Name = next.Provider, next.Model, next.Name
+	emit(Event{Kind: EventFallback, Tool: next.Name,
+		Detail: from + " failed: " + fallbackReason(err) + ". Now using " + next.Name + "."})
 }
 
 // stream reads one model reply into buf, emitting text as it arrives
