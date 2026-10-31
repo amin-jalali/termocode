@@ -46,6 +46,22 @@ func Classify(sql string, dialectName string) (Kind, []Statement) {
 	worst := KindRead
 	for i, text := range sqls {
 		st := classifyStatement(text, dialect)
+		// Under a custom DELIMITER one statement can hold ';'. A server
+		// that runs many statements per query splits there anyway, so
+		// "SELECT 1; DROP TABLE t" must not pass as a read: judge every
+		// ';' part and keep the worst (fail closed).
+		if parts, err := Split(text, string(dialect)); err != nil {
+			st.Kind = KindWrite
+		} else if len(parts) != 1 || parts[0] != st.SQL {
+			for _, p := range parts {
+				if k := classifyStatement(p, dialect).Kind; severity(k) > severity(st.Kind) {
+					st.Kind = k
+				}
+			}
+			if len(parts) == 0 && st.Kind == KindRead {
+				st.Kind = KindWrite
+			}
+		}
 		statements[i] = st
 		if severity(st.Kind) > severity(worst) {
 			worst = st.Kind
