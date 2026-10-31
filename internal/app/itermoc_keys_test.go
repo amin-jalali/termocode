@@ -22,7 +22,7 @@ func imRune(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: 
 func TestAgentsAndUsageHaveAKeyCard(t *testing.T) {
 	for _, usage := range []bool{false, true} {
 		m, _ := aiProfileTestModel(t)
-		m.w, m.h = 200, 40
+		m.w, m.h = 200, 50 // the whole card fits (it scrolls in a smaller window)
 		m.showAgents("")
 		m.ai.agents.usage = usage
 		cmd, ok := m.routeAgentsKey(imRune("?"))
