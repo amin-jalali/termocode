@@ -208,6 +208,9 @@ func TestAIBackgroundRunWaitAndSend(t *testing.T) {
 	if got := r.bg.requests()[1]; !strings.Contains(got[len(got)-1].Content, "also count FIXME") {
 		t.Fatalf("the step did not get the message: %q", got[len(got)-1].Content)
 	}
+	// The wait must hold the run before it ends: a run that ends with no
+	// waiter hands the chat a note (a slow runner ended it first).
+	r.pump(func() bool { b := r.m.ai.aiBgFind(id); return b != nil && b.waiters.Load() == 1 })
 	r.bg.steps <- ai.Chunk{Delta: "2 TODOs, 1 FIXME"}
 	r.pump(func() bool { return len(r.chat.requests()) == 4 })
 	wait := r.chat.requests()[3]
