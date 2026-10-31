@@ -83,8 +83,14 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		return nil
 	}
 	t.AgentState = st
-	if st != agents.Waiting || (m.inTerminal && m.termTabVisible(shown)) {
+	if st == agents.Done {
+		return m.notifyOS("Agent run ended")
+	}
+	if st != agents.Waiting {
 		return nil
+	}
+	if m.inTerminal && m.termTabVisible(shown) {
+		return m.notifyOS("Agent needs your input")
 	}
 	title := t.Agent
 	if a, ok := agents.ByID(t.Agent); ok {
@@ -92,7 +98,7 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 	}
 	var c tea.Cmd
 	m.toast, c = m.toast.Push(toast.Info, title+" is waiting for you")
-	return c
+	return tea.Batch(c, m.notifyOS("Agent needs your input"))
 }
 
 // agentTitle is the tab name of an agent tab ("" for none).

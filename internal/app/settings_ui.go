@@ -28,11 +28,12 @@ import (
 // default". A bool *true is meaningful; a missing key remains nil so the
 // caller can apply a sane fallback (e.g. tab_size defaults to 4, not 0).
 type settingsConfig struct {
-	Theme      string `json:"theme,omitempty"`
-	FontDelta  *int   `json:"font_delta,omitempty"`
-	AutoSave   *bool  `json:"auto_save,omitempty"`
-	WordWrap   *bool  `json:"word_wrap,omitempty"`
-	ShowHidden *bool  `json:"show_hidden,omitempty"`
+	Notifications *bool  `json:"notifications,omitempty"`
+	Theme         string `json:"theme,omitempty"`
+	FontDelta     *int   `json:"font_delta,omitempty"`
+	AutoSave      *bool  `json:"auto_save,omitempty"`
+	WordWrap      *bool  `json:"word_wrap,omitempty"`
+	ShowHidden    *bool  `json:"show_hidden,omitempty"`
 	// KeyHints: the popup after a leader key (key_hints.go); nil = on.
 	KeyHints *bool `json:"key_hints,omitempty"`
 	TabSize  *int  `json:"tab_size,omitempty"`
@@ -167,6 +168,9 @@ func saveSettings(cfg settingsConfig) error {
 		if cfg.FontDelta != nil {
 			merged["font_delta"] = *cfg.FontDelta
 		}
+		if cfg.Notifications != nil {
+			merged["notifications"] = *cfg.Notifications
+		}
 		if cfg.AutoSave != nil {
 			merged["auto_save"] = *cfg.AutoSave
 		}
@@ -225,6 +229,7 @@ type settingsRow struct {
 var settingsRows = []settingsRow{
 	{ID: "setting-theme", Label: "theme", Kind: "string", Default: "vscode-dark-plus",
 		Desc: "Color theme ID. Same as Preferences: Color Theme."},
+	{ID: "setting-notifications", Label: "notifications", Kind: "bool", Default: "true", Desc: "Notify when AI work ends or needs input while the terminal is not focused. Uses the terminal over SSH, or a local desktop helper."},
 	{ID: "setting-icons", Label: "icons", Kind: "enum", Default: "auto",
 		Desc: "Icon set: nerd (Nerd Font glyphs), unicode (plain symbols), ascii, or auto (nerd when the terminal bundles Nerd symbols — WezTerm, Ghostty, kitty — or its font setting is a Nerd Font — GNOME Terminal profile, Alacritty, foot; ascii on TERM=linux or a non-UTF-8 locale; else unicode). TERMOCODE_ICON_MODE wins over it."},
 	{ID: "setting-animations", Label: "animations", Kind: "enum", Default: "auto",
@@ -288,6 +293,11 @@ func currentSettingValue(r settingsRow, cfg settingsConfig) string {
 		return v
 	}
 	switch r.ID {
+	case "setting-notifications":
+		if cfg.Notifications == nil {
+			return "true"
+		}
+		return strconv.FormatBool(*cfg.Notifications)
 	case "setting-theme":
 		if cfg.Theme == "" {
 			return r.Default // Docs: default lives in settingsRows
@@ -387,6 +397,8 @@ func (m *Model) applySetting(id, value string) tea.Cmd {
 	cfg := loadSettings()
 	var toastCmd tea.Cmd
 	switch row.ID {
+	case "setting-notifications":
+		return m.applyNotificationSetting(value)
 	case "setting-theme":
 		// Validate the theme exists before persisting; otherwise the
 		// next launch would silently fall back to the default and the

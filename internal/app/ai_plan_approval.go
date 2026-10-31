@@ -115,6 +115,7 @@ func (m *Model) onAIPlanEvent(rm *ai.StoredMessage, ev agentrun.Event) (tea.Cmd,
 		if !m.confirmOpen || m.confirmKind == confirmKindAIPlan {
 			m.openAIPlanCard()
 		}
+		return m.notifyOS("AI plan needs your input"), true
 	case agentrun.RunApproved:
 		rm.Run.PlanWait = false
 		s.planWait = nil
