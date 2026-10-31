@@ -773,7 +773,7 @@ serve every project, add `"share": "user"` to the entry in your own
 The MCP section of the Settings modal (**Preferences: Open Settings (UI)**)
 has `mcp_enabled`, `mcp_idle_timeout`, `mcp_call_timeout`,
 `mcp_max_result_kb`, `mcp_trust_annotations`, `mcp_oauth_port`,
-`mcp_share`, `mcp_log_level`, `mcp_tool_search`, `mcp_catalog_url`, `mcp_auto_update` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
+`mcp_share`, `mcp_log_level`, `mcp_tool_search`, `mcp_catalog_url`, `mcp_auto_update`, `mcp_strict` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
 your build has none). The timeouts apply at once. The AI can not change these settings. They are
 listed in the settings reference.
 
