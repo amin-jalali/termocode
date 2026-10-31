@@ -318,7 +318,7 @@ link). You sign in, copy the code, and paste it back. Run
 With an Anthropic key or a Claude sign-in, termocode marks the tools, the
 system prompt and the chat so far for Claude's prompt cache. The next step
 of the same chat reads that part from the cache, at a small part of the
-input price. You see it as "cache read" tokens in the cost of a turn.
+input price. The turn's usage line shows these tokens as "cached".
 
 Set `ai_prompt_cache` in `config.json`:
 
