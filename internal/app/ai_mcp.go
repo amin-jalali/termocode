@@ -493,6 +493,7 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 			items = append(items, picker.Item{ID: "secret:" + n, Title: "Set secret " + n + "…", Hint: hint})
 		}
 	}
+	items = append(items, mcpUntrustItems(m, name)...) // ai_mcp_untrust.go
 	items = append(items,
 		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
 		picker.Item{ID: "log", Title: "Show log", Hint: "Output: MCP"},
@@ -605,6 +606,12 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 		return m.mcpSetDisabled(name, id == "disable")
 	case "remove":
 		return m.openMCPRemove(name)
+	}
+	if id == "untrust" {
+		return m.openMCPUntrust(name, "")
+	}
+	if tool, ok := strings.CutPrefix(id, "untrust-tool:"); ok {
+		return m.openMCPUntrust(name, tool)
 	}
 	if secret, ok := strings.CutPrefix(id, "secret:"); ok {
 		return m.mcpAskSecret(secret)

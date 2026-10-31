@@ -208,6 +208,9 @@ type aiState struct {
 	mcpTrust  *aiMCPTrustPending
 	mcpSel    string
 	mcpSecret string // the ${secret:NAME} being entered
+	// mcpUntrustTool is the tool the Reset trust card is about ("" = the
+	// whole server; ai_mcp_untrust.go).
+	mcpUntrustTool string
 	// mcpWiz is the open Connect-a-service wizard (ai_mcp_connect.go);
 	// mcpWizGen drops messages of a closed one; mcpGHAccounts are gh's
 	// accounts from the last open.
