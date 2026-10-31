@@ -18,7 +18,9 @@ func TestContainerNewFileIsMadeInTheContainer(t *testing.T) {
 	if m.err != "" {
 		t.Fatalf("err = %q", m.err)
 	}
+	pumpExplorerLoads(t, &m)
 	m.explorer.RevealPath("/app/pkg/new.go")
+	pumpExplorerLoads(t, &m)
 	if got := m.explorer.CursorPath(); got != "/app/pkg/new.go" {
 		t.Fatalf("explorer does not show the new file: cursor %q", got)
 	}
@@ -55,7 +57,9 @@ func TestContainerNewFolderIsMadeInTheContainer(t *testing.T) {
 	if m.err != "" {
 		t.Fatalf("err = %q", m.err)
 	}
+	pumpExplorerLoads(t, &m)
 	m.explorer.RevealPath("/app/web/static")
+	pumpExplorerLoads(t, &m)
 	if got := m.explorer.CursorPath(); got != "/app/web/static" {
 		t.Fatalf("explorer does not show the new folder: cursor %q", got)
 	}
@@ -87,7 +91,9 @@ func TestContainerRenameAndMoveInTheContainer(t *testing.T) {
 	if b, err := os.ReadFile(c.Local("/app/lib/util.go")); err != nil || string(b) != "package pkg\n" || m.err != "" {
 		t.Fatalf("move: %q %v, err %q", b, err, m.err)
 	}
+	pumpExplorerLoads(t, &m)
 	m.explorer.RevealPath("/app/lib/util.go")
+	pumpExplorerLoads(t, &m)
 	if got := m.explorer.CursorPath(); got != "/app/lib/util.go" {
 		t.Fatalf("explorer cursor %q", got)
 	}

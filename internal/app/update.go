@@ -69,6 +69,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if pc := m.explorer.SchedulePreview(); pc != nil {
 		cmd = tea.Batch(cmd, pc)
 	}
+	if lc := m.explorer.ScheduleLoads(); lc != nil { // container folders, off the loop (FIX-2)
+		cmd = tea.Batch(cmd, lc)
+	}
 	if wc := m.webAfterUpdate(msg); wc != nil { // what changed goes to the web views (web_after.go)
 		cmd = tea.Batch(cmd, wc)
 	}
@@ -725,6 +728,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.explorer, cmd = m.explorer.Update(msg)
 		return m, cmd
+	case explorer.DirLoadedMsg:
+		return m, m.onExplorerDirLoaded(msg)
 	case undoExplorerRenameMsg:
 		return m, m.undoBulkRename(msg.Serial)
 	case explorer.OpenFileMsg:

@@ -509,6 +509,9 @@ func (m Model) renderTreeRow(
 		availForName = 4
 	}
 	name := e.Node.Name
+	if e.Node.loading {
+		name += " …" // a container folder being read (fs_load.go)
+	}
 	if runewidth.StringWidth(name) > availForName {
 		name = runewidth.Truncate(name, availForName, "…")
 	}
