@@ -298,6 +298,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Lock the encrypted secret file after this many idle minutes (0 = never; the passphrase stays until AI: Lock Secrets or quit). Each use of a secret starts the count again. Only while the file is unlocked does one timer run; none with 0, for the OS keyring or for the plain file. Read when the file is unlocked."},
 	{Key: "mcp_trusted", Type: "object", Default: "{}", Category: "AI (file only)",
 		Description: "Project MCP servers you allowed with \"Always allow\": server name → hash of its mcp.json entry. A changed entry asks again. Written by the trust dialog and AI: MCP Servers…."},
+	{Key: "mcp_disabled_tools", Type: "object", Default: "{}", Category: "AI (file only)",
+		Description: "MCP tools you turned off: server name → tool names. Off tools are not sent to the AI. Turn them off or on with Space in AI: MCP Servers… → a server → Show tools."},
 	{Key: "services_on_quit", Type: "enum", Default: "ask", Category: "Services (file only)", Choices: []string{"ask", "keep", "stop"},
 		Description: "On quit, the Docker Compose services termocode started in this session (never the ones that were already running): ask shows a card (Keep running and quit / Stop and quit / Cancel), keep leaves them running, stop runs docker compose stop for them first. Local services always stop with the editor."},
 	{Key: "services_max_log_kb", Type: "int", Default: "16", Category: "Services (file only)",
