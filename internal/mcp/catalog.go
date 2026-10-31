@@ -166,6 +166,28 @@ func (v wireVar) entry() CatalogVar {
 // Fetch reads the whole catalog (paged) and caches it. A failed fetch
 // keeps the old cache.
 func (c Catalog) Fetch(ctx context.Context) ([]CatalogEntry, error) {
+	out, err := c.fetchPages(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.save(out)
+	return out, nil
+}
+
+// FetchSince reads only the servers changed since t (the registry's
+// updated_since) and merges them into the cache; it returns the changed
+// ones.
+func (c Catalog) FetchSince(ctx context.Context, t time.Time) ([]CatalogEntry, error) {
+	changed, err := c.fetchPages(ctx, url.Values{"updated_since": {t.UTC().Format(time.RFC3339)}})
+	if err != nil {
+		return nil, err
+	}
+	old, _, _ := c.Cached()
+	c.save(latestOnly(append(old, changed...)))
+	return changed, nil
+}
+
+func (c Catalog) fetchPages(ctx context.Context, extra url.Values) ([]CatalogEntry, error) {
 	base := c.base()
 	if err := CheckCatalogURL(base); err != nil {
 		return nil, err
@@ -178,6 +200,9 @@ func (c Catalog) Fetch(ctx context.Context) ([]CatalogEntry, error) {
 	cursor := ""
 	for page := 0; page < catalogMaxPages; page++ {
 		q := url.Values{"limit": {"100"}}
+		for k, v := range extra {
+			q[k] = v
+		}
 		if cursor != "" {
 			q.Set("cursor", cursor)
 		}
@@ -215,9 +240,7 @@ func (c Catalog) Fetch(ctx context.Context) ([]CatalogEntry, error) {
 		}
 		cursor = w.Metadata.NextCursor
 	}
-	out = latestOnly(out)
-	c.save(out)
-	return out, nil
+	return latestOnly(out), nil
 }
 
 func (c Catalog) entry(s wireServer) CatalogEntry {
