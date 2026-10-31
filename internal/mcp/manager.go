@@ -130,6 +130,8 @@ type Status struct {
 	OldTransport bool
 	// RetryIn is the wait before the next reconnect (StateReconnecting).
 	RetryIn time.Duration
+	// Sandbox is the entry's sandbox text ("" when off; sandbox.go).
+	Sandbox string
 	server  Server
 }
 
@@ -284,6 +286,7 @@ func (m *Manager) Servers() []Status {
 		s := Status{Name: st.cfg.Name, Type: st.cfg.Type, Source: st.cfg.Source, State: st.state,
 			Problem: st.problem, Tools: len(st.tools), Cached: st.cached, Trusted: m.trustedLocked(st),
 			ToolsChanged: m.toolsChangedLocked(st) && st.toolsOK != st.toolsHash, server: st.cfg}
+		s.Sandbox = sandboxText(st.cfg)
 		if st.cfg.Type == TypeHTTP && m.opts.Tokens != nil {
 			var e ai.MCPOAuth
 			e, s.SignedIn = m.opts.Tokens.Load(st.cfg.Name)
@@ -481,16 +484,26 @@ func (m *Manager) startStdio(ctx context.Context, exp Server, opts Options) (*Pr
 	m.mu.Lock()
 	share := m.opts.Share
 	m.mu.Unlock()
-	if share != nil {
-		var roots []string
-		if m.opts.Roots != nil && exp.Share != ShareUser {
-			roots = m.opts.Roots()
+	if share != nil && exp.Share == ShareUser && exp.Cwd == "" {
+		// Not the folder of the project that happened to start it.
+		if home, err := os.UserHomeDir(); err == nil {
+			exp.Cwd = home
 		}
-		if exp.Share == ShareUser && exp.Cwd == "" {
-			// Not the folder of the project that happened to start it.
-			if home, err := os.UserHomeDir(); err == nil {
-				exp.Cwd = home
-			}
+	}
+	var roots []string
+	if m.opts.Roots != nil {
+		roots = m.opts.Roots()
+	}
+	exp, note, err := ApplySandbox(exp, roots) // sandbox.go
+	if err != nil {
+		return nil, err
+	}
+	if note != "" {
+		m.log(exp.Name, "%s", note)
+	}
+	if share != nil {
+		if exp.Share == ShareUser {
+			roots = nil // one process for every project: no project roots
 		}
 		p, err := startShared(ctx, share, exp, roots, opts)
 		if !errors.Is(err, errShareUnavailable) {
