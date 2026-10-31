@@ -256,12 +256,12 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 		if a.BeforeCalls != nil {
 			a.BeforeCalls(ctx, calls)
 		}
-		for _, call := range calls {
-			result := a.runTool(ctx, call, emit)
+		results := a.runCalls(ctx, calls, emit) // OMX-24: read-only calls at once
+		for i, call := range calls {
 			if a.Native {
-				msgs = append(msgs, Message{Role: RoleTool, ToolCallID: call.ID, ToolName: call.Name, Content: result})
+				msgs = append(msgs, Message{Role: RoleTool, ToolCallID: call.ID, ToolName: call.Name, Content: results[i]})
 			} else {
-				msgs = append(msgs, Message{Role: RoleUser, Content: "[tool result] " + call.Name + ":\n" + result})
+				msgs = append(msgs, Message{Role: RoleUser, Content: "[tool result] " + call.Name + ":\n" + results[i]})
 			}
 		}
 		if ctx.Err() != nil {
