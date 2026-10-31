@@ -14,7 +14,7 @@ import (
 // G-UPD cards: the notice (chip, toast or Check for Updates).
 
 const (
-	confirmKindUpdateNotice confirmKindEnum = 3200 + iota
+	confirmKindUpdateNotice confirmKindEnum = 3250 + iota
 	confirmKindUpdateInstall
 	confirmKindUpdateRestart
 	confirmKindUpdateRollback

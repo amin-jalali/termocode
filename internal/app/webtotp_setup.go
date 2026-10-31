@@ -22,7 +22,7 @@ import (
 // no; the seed and the code never go back to it.
 
 const (
-	confirmKindWebTotpShow    confirmKindEnum = 2610
+	confirmKindWebTotpShow    confirmKindEnum = 2619
 	confirmKindWebTotpReplace confirmKindEnum = 2611
 )
 
