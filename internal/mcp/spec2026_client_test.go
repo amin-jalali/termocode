@@ -197,3 +197,34 @@ func TestModernHTTPListen(t *testing.T) {
 		return tools.Load() > 0
 	})
 }
+
+// Spec (MCPX-38, tasks extension): termocode declares the extension; a
+// tools/call answered with a task handle is polled with tasks/get until
+// it ends. Each "working" poll counts as progress (the chat shows it, the
+// call's timeout starts again), a question goes through the same card
+// and back with tasks/update, and a cancelled call sends tasks/cancel.
+func TestModernTasks(t *testing.T) {
+	log := filepath.Join(t.TempDir(), "log")
+	p := startFake(t, map[string]string{"FAKE_MODERN": "only", "FAKE_LOG": log}, Options{})
+	var steps []string
+	ctx := WithProgress(context.Background(), func(pr Progress) { steps = append(steps, pr.Message) })
+	res, err := p.Client.CallToolTimeout(ctx, "long_task", nil, 5*time.Second)
+	if err != nil || res.Text() != "task done" {
+		t.Fatalf("long_task: %q %v", res.Text(), err)
+	}
+	if strings.Join(steps, ",") != "step 1,step 2" {
+		t.Fatalf("progress %q", steps)
+	}
+	ctx = WithElicitor(context.Background(), func(context.Context, ElicitRequest) ElicitResult {
+		return ElicitResult{Action: ElicitAccept, Content: map[string]any{"name": "Ann"}}
+	})
+	if res, err := p.Client.CallTool(ctx, "task_ask", nil); err != nil || res.Text() != `task done: accept {"name":"Ann"}` {
+		t.Fatalf("task_ask: %q %v", res.Text(), err)
+	}
+	cctx, cancel := context.WithCancel(context.Background())
+	cctx = WithProgress(cctx, func(Progress) { cancel() }) // the user stops it at the first poll
+	if _, err := p.Client.CallToolTimeout(cctx, "long_task", nil, 5*time.Second); err == nil {
+		t.Fatal("a cancelled task call did not fail")
+	}
+	waitUntil(t, "tasks/cancel", func() bool { return strings.Contains(fakeLog(t, log), "\ntasks/cancel\n") })
+}

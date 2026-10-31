@@ -327,7 +327,20 @@ func (c *Client) callTool(ctx context.Context, name string, args map[string]any,
 	if err != nil {
 		return CallResult{}, err
 	}
+	if _, rt := readTask(raw); rt == "task" { // the tasks extension (spec2026_tasks.go)
+		if raw, err = c.awaitTask(ctx, raw, c.progressFunc(meta)); err != nil {
+			return CallResult{}, err
+		}
+	}
 	return decodeCallResult(raw)
+}
+
+// progressFunc is the progress hook of the call with meta's token.
+func (c *Client) progressFunc(meta map[string]any) func(Progress) {
+	tok, _ := meta["progressToken"].(string)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.progress[tok]
 }
 
 // handle answers the server's requests and notifications. It runs on the

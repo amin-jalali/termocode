@@ -120,7 +120,9 @@ func withMeta(params any) map[string]any {
 	}
 	meta[metaVersionKey] = StatelessVersion
 	meta[metaClientKey] = clientInfo()
-	meta[metaCapsKey] = clientCapabilities()
+	caps := clientCapabilities()
+	caps["extensions"] = map[string]any{tasksExtension: map[string]any{}} // spec2026_tasks.go
+	meta[metaCapsKey] = caps
 	m["_meta"] = meta
 	return m
 }

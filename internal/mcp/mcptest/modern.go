@@ -207,3 +207,97 @@ func ListenCall(c *extproc.Conn, name string) (any, bool) {
 	}
 	return nil, false
 }
+
+// The tasks extension: in stateless mode, when the client declares
+// io.modelcontextprotocol/tasks, long_task and task_ask answer with a
+// task handle; tasks/get reports "working" (with "step n") twice, then
+// the result. task_ask asks a question (input_required) before it ends;
+// tasks/update takes the answer. tasks/cancel ends a task.
+var tasks struct {
+	sync.Mutex
+	polls  map[string]int
+	answer map[string]string
+	kind   map[string]string
+	n      int
+}
+
+// ClientHasTasks reports a request whose _meta declares the extension.
+func ClientHasTasks(params json.RawMessage) bool {
+	var p struct {
+		Meta struct {
+			Caps struct {
+				Extensions map[string]json.RawMessage `json:"extensions"`
+			} `json:"io.modelcontextprotocol/clientCapabilities"`
+		} `json:"_meta"`
+	}
+	_ = json.Unmarshal(params, &p)
+	_, ok := p.Meta.Caps.Extensions["io.modelcontextprotocol/tasks"]
+	return ok
+}
+
+// StartTask answers a task tool with a task handle (ok false: not one).
+func StartTask(name string, params json.RawMessage) (any, bool) {
+	if (name != "long_task" && name != "task_ask") || !ClientHasTasks(params) {
+		return nil, false
+	}
+	tasks.Lock()
+	defer tasks.Unlock()
+	if tasks.polls == nil {
+		tasks.polls, tasks.answer, tasks.kind = map[string]int{}, map[string]string{}, map[string]string{}
+	}
+	tasks.n++
+	id := "task-" + string(rune('0'+tasks.n))
+	tasks.polls[id], tasks.kind[id] = 0, name
+	return map[string]any{"resultType": "task", "task": map[string]any{"taskId": id, "status": "working", "ttlMs": 60000, "pollIntervalMs": 20}}, true
+}
+
+// TaskMethod serves tasks/get, tasks/update and tasks/cancel.
+func TaskMethod(method string, params json.RawMessage) (any, *extproc.Error) {
+	var p struct {
+		TaskID         string                     `json:"taskId"`
+		InputResponses map[string]json.RawMessage `json:"inputResponses"`
+	}
+	_ = json.Unmarshal(params, &p)
+	tasks.Lock()
+	defer tasks.Unlock()
+	kind, ok := tasks.kind[p.TaskID]
+	if !ok {
+		return nil, &extproc.Error{Code: extproc.CodeInvalidParams, Message: "unknown task " + p.TaskID}
+	}
+	switch method {
+	case "tasks/cancel":
+		tasks.kind[p.TaskID] = "cancelled"
+		return map[string]any{}, nil
+	case "tasks/update":
+		if r, ok := p.InputResponses["who"]; ok {
+			var a struct {
+				Action  string          `json:"action"`
+				Content json.RawMessage `json:"content"`
+			}
+			_ = json.Unmarshal(r, &a)
+			tasks.answer[p.TaskID] = a.Action + " " + string(a.Content)
+		}
+		return map[string]any{}, nil
+	}
+	task := map[string]any{"taskId": p.TaskID}
+	n := tasks.polls[p.TaskID]
+	tasks.polls[p.TaskID] = n + 1
+	switch {
+	case kind == "cancelled":
+		task["status"] = "cancelled"
+	case n < 2:
+		task["status"], task["statusMessage"] = "working", "step "+string(rune('1'+n))
+	case kind == "task_ask" && tasks.answer[p.TaskID] == "":
+		task["status"] = "input_required"
+		task["inputRequests"] = map[string]any{"who": map[string]any{"method": "elicitation/create", "params": map[string]any{
+			"mode": "form", "message": "Who are you?",
+			"requestedSchema": json.RawMessage(`{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`)}}}
+	default:
+		out := "task done"
+		if a := tasks.answer[p.TaskID]; a != "" {
+			out += ": " + a
+		}
+		task["status"], task["result"] = "completed", text(out)
+	}
+	return map[string]any{"resultType": "complete", "task": task}, nil
+}

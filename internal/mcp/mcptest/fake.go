@@ -241,6 +241,9 @@ func run() {
 		case "resources/list", "resources/templates/list", "resources/read":
 			res, rerr := Resources(m.Method, m.Params)
 			_ = c.Reply(m.ID, res, rerr)
+		case "tasks/get", "tasks/update", "tasks/cancel":
+			res, rerr := TaskMethod(m.Method, m.Params)
+			_ = c.Reply(m.ID, res, rerr)
 		case "subscriptions/listen":
 			if stateless {
 				Listen(c, m.ID, m.Params)
@@ -275,6 +278,10 @@ func run() {
 			if stateless {
 				if res, rerr, ok := MRTR(p.Name, m.Params); ok {
 					_ = c.Reply(m.ID, res, rerr)
+					return
+				}
+				if res, ok := StartTask(p.Name, m.Params); ok {
+					_ = c.Reply(m.ID, res, nil)
 					return
 				}
 				if res, ok := ListenCall(c, p.Name); ok {
