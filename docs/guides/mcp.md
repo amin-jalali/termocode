@@ -269,7 +269,12 @@ plain`. See [Which store is used](ai-setup.md#which-store-is-used).
 termocode warns in the MCP log when a value in `mcp.json` looks like a
 token. A `${cmd:…}` in a project file (`.mcp.json` or `.termocode/mcp.json`) is refused: the
 server shows `invalid: ${cmd:} is not allowed in project files…` and
-nothing is run. When a variable or secret is missing, the server shows
+nothing is run. A project file may not put an environment variable
+(`${VAR}`, `${env:VAR}`) into a remote server's `url` or `headers`: keys
+live in such variables, and a cloned repository must not send them to its
+own server. The server shows `invalid: a project file may not send env
+vars…`; use `${secret:NAME}` or move the entry to your own `mcp.json`.
+When a variable or secret is missing, the server shows
 `needs ${VAR}` or `needs secret NAME` and does not start.
 
 ### Project servers
