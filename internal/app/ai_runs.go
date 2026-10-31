@@ -325,7 +325,11 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		parallel = s.settings.PlannedParallel()
 	}
 	pricing := ai.NewPricing(s.settings.Prices)
-	reasoning := s.reasoningFunc(think) // OMX-5
+	reasoning := s.reasoningFunc(think)     // OMX-5
+	fallbacks := map[string][]ai.Fallback{} // OMX-4: resolved now (nodes run on their own goroutines)
+	for name := range slots {
+		fallbacks[name] = s.aiFallbacks(name)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	send := func(msg tea.Msg) {
@@ -434,7 +438,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 			return &ai.Agent{Provider: sl.p, Tools: ts, Native: native, AutoApprove: own, MaxSteps: maxSteps,
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
-				Reasoning: reasoning(n.Slot, sl.cfg)}, msgs, nil
+				Reasoning: reasoning(n.Slot, sl.cfg), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: fallbacks[n.Slot]}, msgs, nil
 		},
 		Finished: func(_ context.Context, n agentdag.Node) {
 			if msg, ok := wts.finished(n); ok {
@@ -584,6 +588,9 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		s.agentsNodeEvent(ev.RunID, st.ID, ev.AI, now, false)
 		if ev.AI.Kind == ai.EventTurnStart {
 			s.agentsNodeTurn(ev.RunID, st.ID) // the AGENTS card's turns
+		}
+		if ev.AI.Kind == ai.EventFallback { // OMX-4: the step moved to a backup model
+			st.Tools = append(st.Tools, aiFallbackMark+ai.Redact(ev.AI.Detail))
 		}
 	case agentrun.NodeDone:
 		s.agentsNodeEnd(ev.RunID, st.ID)
