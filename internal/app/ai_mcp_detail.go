@@ -55,7 +55,11 @@ func mcpDetailLines(m *Model, name string) []string {
 	} else {
 		lines = append(lines, "Server: not connected yet")
 	}
-	lines = append(lines, "Tools: "+mcpToolsHint(m, name))
+	tools := "Tools: " + mcpToolsHint(m, name)
+	if n := mcpServerTokens(m, name, mcp.LoadSettings(mcpConfigPath())); n > 0 {
+		tools += " · " + mcpTokensText(n) + " per message"
+	}
+	lines = append(lines, tools)
 	state := st.State
 	if st.Pid > 0 {
 		state += fmt.Sprintf(" · pid %d", st.Pid)
