@@ -101,6 +101,9 @@ func (m *Model) showQuitCard(body string) {
 func (m *Model) onQuitConfirm(id string) tea.Cmd {
 	switch id {
 	case "save":
+		if m.askSaveConflict(0, saveAndQuit) {
+			return nil
+		}
 		if m.nvim != nil {
 			_ = m.nvim.Command("silent! wall")
 		}

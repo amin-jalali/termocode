@@ -614,6 +614,7 @@ type Model struct {
 	hotDiskChanged    []hotBackup // restored files that changed on disk (hot_exit_disk.go)
 	workspaceGone     string      // the recent workspace folder that is gone (workspaces.go)
 	hotExitWaiting    []hotBackup
+	saveAfter         saveContinuation
 	confirmTargetID   int
 	keyCardGuide      help.Loc             // the key card's guide page (keycard.go)
 	keyCardBack       func(*Model) tea.Cmd // runs after the key card closes
