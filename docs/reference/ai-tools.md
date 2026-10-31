@@ -1622,6 +1622,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-profile-show` | AI: Show Profile | never | a read-only screen for the user; the AI already knows its own profile |
 | `ai-profile-switch` | AI: Switch Profile… | confirm (settings) |   |
 | `ai-profile-trust` | AI: Project Profiles Trust… | never | trusting a project's prompts is the user's decision |
+| `ai-reasoning-next` | AI: Next Reasoning Level | never | AI provider, credentials and approvals stay with the user; more thinking costs the user more |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
@@ -2018,6 +2019,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai_prices` | never | AI provider, credentials and approvals stay with the user |
 | `ai_prompt_cache` | never | AI provider, credentials and approvals stay with the user |
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
+| `ai_reasoning` | never | AI provider, credentials and approvals stay with the user |
 | `ai_until_done_budget_usd` | never | AI provider, credentials and approvals stay with the user |
 | `ai_until_done_rounds` | never | AI provider, credentials and approvals stay with the user |
 | `ai_worktrees` | never | AI provider, credentials and approvals stay with the user |
