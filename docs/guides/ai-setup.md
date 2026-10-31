@@ -313,6 +313,21 @@ link). You sign in, copy the code, and paste it back. Run
 | OpenRouter | `anthropic/claude-sonnet-5-5` | same as chat |
 | Ollama | `qwen2.5-coder:7b` | same as chat |
 
+## Prompt cache (Claude)
+
+With an Anthropic key or a Claude sign-in, termocode marks the tools, the
+system prompt and the chat so far for Claude's prompt cache. The next step
+of the same chat reads that part from the cache, at a small part of the
+input price. You see it as "cache read" tokens in the cost of a turn.
+
+Set `ai_prompt_cache` in `config.json`:
+
+| Value | Meaning |
+|---|---|
+| `5m` (default) | The cache lasts 5 minutes after its last use. |
+| `1h` | The cache lasts one hour. Writing it costs more; use it when you often pause for more than 5 minutes. |
+| `off` | Nothing is cached. |
+
 ## Keys at a glance
 
 | Key / command | Action |
