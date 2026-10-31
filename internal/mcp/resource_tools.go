@@ -169,3 +169,9 @@ func ResourceResult(cs []ResourceContents) CallResult {
 func textLike(mime string) bool {
 	return strings.HasPrefix(mime, "text/") || strings.HasSuffix(mime, "json") || strings.HasSuffix(mime, "xml") || strings.HasSuffix(mime, "yaml")
 }
+
+// ResourceRender renders read contents as text; images go to the model
+// through ctx (ai.WithImageSink) when it can see them.
+func ResourceRender(ctx context.Context, cs []ResourceContents) string {
+	return ResourceResult(cs).render(mediaNotes(ctx))
+}

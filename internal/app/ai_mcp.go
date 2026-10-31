@@ -143,11 +143,23 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 		mgr.Reload()
 		var out []ai.Tool
 		call := mcp.TurnCaller(mgr.Caller(ask)) // two failures: the server is out for this turn
+		var withResources []string
 		for _, st := range mgr.Tools(ctx, ask) {
 			o := opts
 			o.ToolsChanged = st.ToolsChanged
 			out = append(out, mcp.AITools(st.Server, st.Tools, call, o)...)
+			if st.Caps.Resources {
+				withResources = append(withResources, st.Server.Name)
+			}
 		}
+		out = append(out, mcp.ResourceTools(withResources, mcp.ResourceAccess{
+			List: func(ctx context.Context, server string) ([]mcp.Resource, []mcp.ResourceTemplate, error) {
+				return mgr.Resources(ctx, ask, server)
+			},
+			Read: func(ctx context.Context, server, uri string) ([]mcp.ResourceContents, error) {
+				return mgr.ReadResource(ctx, ask, server, uri)
+			},
+		}, opts)...)
 		return out
 	}
 }
