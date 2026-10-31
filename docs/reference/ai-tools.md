@@ -1605,6 +1605,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | ID | Title | Gate | Reason |
 | --- | --- | --- | --- |
+| `agent-hooks` | Agent: State Hooks… (exact working / waiting / done) | never | it changes other apps' config files: the user decides after the preview |
 | `agent-start-claude` | Agent: Start Claude Code | confirm (run) |   |
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
 | `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
