@@ -523,6 +523,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-hooks":        aiNever(aiNoPicker),
 	// Web tools reach the internet and add servers: the user turns them on.
 	"ai-web-tools": aiNever(aiNoPicker),
+	// Ship pushes and opens pull requests: only the user starts it.
+	"ai-ship": aiNever("it pushes and opens a pull request: the user starts it"),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
 	// Agent worktrees (G-WT): merging or discarding an agent's work and

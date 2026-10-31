@@ -104,6 +104,8 @@ type aiState struct {
 	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
 	webPreset   string               // the server the open add card is for (ai_web_presets.go)
 	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
+	ship        *aiShip              // the running ship loop (ai_ship.go)
+	shipGen     int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the
@@ -537,6 +539,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-skills", "AI: Skills…", ""},
 		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
+		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
@@ -717,6 +720,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIHooks(), true
 	case "ai-web-tools":
 		return m.openAIWebTools(), true
+	case "ai-ship":
+		return m.toggleAIShip(), true
 	case "ai-memory-toggle":
 		return m.toggleAIMemory(), true
 	case "ai-models-edit":
