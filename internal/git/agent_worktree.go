@@ -172,6 +172,17 @@ func gitRetry(dir string, args ...string) (string, error) {
 // (bounded); an error means there is no worktree, never a worktree from
 // a wrong start.
 func CreateAgentWorktree(dir, id string) (AgentWorktree, error) {
+	return createAgentWorktree(dir, id, true)
+}
+
+// CreateAgentWorktreeFromHead is CreateAgentWorktree from the last commit
+// only: the user's uncommitted edits stay out (a plan run's branch that
+// may be pushed).
+func CreateAgentWorktreeFromHead(dir, id string) (AgentWorktree, error) {
+	return createAgentWorktree(dir, id, false)
+}
+
+func createAgentWorktree(dir, id string, edits bool) (AgentWorktree, error) {
 	if id == "" {
 		return AgentWorktree{}, errors.New("no worktree id")
 	}
@@ -195,12 +206,14 @@ func CreateAgentWorktree(dir, id string) (AgentWorktree, error) {
 	base := strings.TrimSpace(head)
 	// stash create takes the index lock; a failure is not "no edits": the
 	// worktree would miss the user's uncommitted edits.
-	st, err := gitRetry(top, "stash", "create", "termocode agent "+id)
-	if err != nil {
-		return AgentWorktree{}, fmt.Errorf("could not read your uncommitted edits: %w", err)
-	}
-	if st := strings.TrimSpace(st); st != "" {
-		base = st // the user's uncommitted edits, as a commit nothing points at
+	if edits {
+		st, err := gitRetry(top, "stash", "create", "termocode agent "+id)
+		if err != nil {
+			return AgentWorktree{}, fmt.Errorf("could not read your uncommitted edits: %w", err)
+		}
+		if st := strings.TrimSpace(st); st != "" {
+			base = st // the user's uncommitted edits, as a commit nothing points at
+		}
 	}
 	if err := os.MkdirAll(filepath.Dir(w.Path), 0o755); err != nil {
 		return AgentWorktree{}, err
@@ -266,6 +279,35 @@ func snapshotAgent(dir, id string) (top string, w AgentWorktree, base, tip strin
 		return "", w, "", "", fmt.Errorf("branch %s is gone", w.Branch)
 	}
 	return top, w, base, strings.TrimSpace(t), nil
+}
+
+// CommitAgentWorktree commits everything in the worktree of id on its
+// branch with message (the user's git identity and hooks; termocode's
+// identity only when the repository has none). ok=false: nothing to
+// commit.
+func CommitAgentWorktree(dir, id, message string) (ok bool, err error) {
+	_, common, err := agentRepo(dir)
+	if err != nil {
+		return false, err
+	}
+	w := agentWorktree(common, id)
+	if _, err := os.Stat(w.Path); err != nil {
+		return false, fmt.Errorf("agent worktree %s is gone", id)
+	}
+	if _, err := gitOut(w.Path, "add", "-A"); err != nil {
+		return false, err
+	}
+	if st, _ := gitOut(w.Path, "status", "--porcelain"); strings.TrimSpace(st) == "" {
+		return false, nil
+	}
+	var args []string
+	if e, _ := gitOut(w.Path, "config", "user.email"); strings.TrimSpace(e) == "" {
+		args = append(args, "-c", "user.name=termocode", "-c", "user.email=termocode@localhost")
+	}
+	if _, err := gitOut(w.Path, append(args, "commit", "-q", "-m", message)...); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // AgentChanges lists the files the agent of id changed, by path.
