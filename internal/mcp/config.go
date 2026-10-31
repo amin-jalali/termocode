@@ -173,6 +173,12 @@ func ParseFile(b []byte, source, path string) ([]Server, []string, error) {
 			s.Problem = "invalid: " + secrets.ProjectCmdWarning
 			warns = append(warns, fmt.Sprintf("%s: server %s uses ${cmd:}; %s", path, name, secrets.ProjectCmdWarning))
 		}
+		if source != SourceUser && s.Problem == "" {
+			if v := projectEnvRef(s); v != "" {
+				s.Problem = "invalid: " + ProjectEnvWarning
+				warns = append(warns, fmt.Sprintf("%s: server %s sends env var %s in its url or headers; %s", path, name, v, ProjectEnvWarning))
+			}
+		}
 		if w := secretLiteral(s); w != "" {
 			warns = append(warns, fmt.Sprintf("%s: server %s has a literal secret in %s; use ${secret:NAME} or ${VAR}", path, name, w))
 		}
@@ -181,6 +187,37 @@ func ParseFile(b []byte, source, path string) ([]Server, []string, error) {
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	sort.Strings(warns)
 	return out, warns, nil
+}
+
+// ProjectEnvWarning is the problem of a project entry that puts a
+// process env var into its url or headers.
+const ProjectEnvWarning = "a project file may not send env vars in a url or header; use ${secret:NAME} or your own mcp.json"
+
+// projectEnvRef is the first process env var (${VAR}, ${env:VAR},
+// ${VAR:-x}) in the url or a header ("" when none). Keys and tokens live
+// in env vars; a cloned repository must not send them to its server.
+func projectEnvRef(s Server) string {
+	vals := []string{s.URL}
+	keys := make([]string, 0, len(s.Headers))
+	for k := range s.Headers {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		vals = append(vals, s.Headers[k])
+	}
+	for _, v := range vals {
+		for _, m := range refRe.FindAllStringSubmatch(v, -1) {
+			switch ref := m[1]; {
+			case ref == "workspaceFolder", ref == "workspaceFolderBasename", ref == "userHome", ref == "/",
+				strings.HasPrefix(ref, "secret:"), strings.HasPrefix(ref, "dotenv:"):
+			default:
+				name, _, _ := strings.Cut(strings.TrimPrefix(ref, "env:"), ":-")
+				return name
+			}
+		}
+	}
+	return ""
 }
 
 func parseEntry(name string, raw json.RawMessage) Server {
