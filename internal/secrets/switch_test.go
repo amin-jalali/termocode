@@ -116,7 +116,7 @@ func TestSwitchBackends(t *testing.T) {
 			from, dir := switchFrom(t, c.from)
 			o := switchOpts(dir)
 			committed := false
-			s, err := Switch(from, SwitchOptions{Options: o, To: c.to, Pass: []byte(pass),
+			s, err := Switch(from, SwitchOptions{RemovePlain: true, Options: o, To: c.to, Pass: []byte(pass),
 				Commit: func(s Store) error {
 					committed = true
 					if _, err := os.Stat(filepath.Join(dir, IndexFile)); err != nil {
@@ -177,7 +177,7 @@ func TestSwitchFromPlainFileWithoutIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "keyring"})
+	s, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "keyring"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestSwitchFailuresKeepOldStore(t *testing.T) {
 			from, dir := switchFrom(t, "age")
 			idxBefore := readFile(t, filepath.Join(dir, IndexFile))
 			ageBefore := readFile(t, filepath.Join(dir, AgeFile))
-			o := SwitchOptions{Options: switchOpts(dir), To: c.to, Pass: []byte(pass)}
+			o := SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: c.to, Pass: []byte(pass)}
 			if c.prep != nil {
 				defer c.prep(t, dir, &o)()
 			}
@@ -248,7 +248,7 @@ func TestSwitchFailuresKeepOldStore(t *testing.T) {
 func TestSwitchOldNotRemoved(t *testing.T) {
 	from, dir := switchFrom(t, "age")
 	t.Cleanup(setRemove(func(string) error { return errors.New("busy") }))
-	s, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "keyring"})
+	s, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "keyring"})
 	if !errors.Is(err, ErrOldNotRemoved) || s == nil || s.Backend() != "keyring" {
 		t.Fatalf("Switch = %v, %v", s, err)
 	}
@@ -261,7 +261,7 @@ func TestSwitchOldNotRemoved(t *testing.T) {
 func TestSwitchNeedsOpenStore(t *testing.T) {
 	from, dir := switchFrom(t, "age")
 	from.Lock()
-	if _, err := Switch(from, SwitchOptions{Options: switchOpts(dir), To: "keyring"}); !errors.Is(err, ErrLocked) {
+	if _, err := Switch(from, SwitchOptions{RemovePlain: true, Options: switchOpts(dir), To: "keyring"}); !errors.Is(err, ErrLocked) {
 		t.Fatalf("err = %v", err)
 	}
 }
