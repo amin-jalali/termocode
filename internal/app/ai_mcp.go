@@ -139,6 +139,8 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 	mgr := m.aiMCP()
 	ask := mcpChatAsker(gen, ch)
 	opts := mcp.AdapterOptions{TrustAnnotations: set.TrustAnnotations, MaxResult: set.MaxResultKB << 10, Clean: aiCleanText}
+	opts.Background = mcp.NewBackground() // Ctrl+B moves a long call away (MCPX-19)
+	m.aiS().mcpx.bg = opts.Background
 	return func(ctx context.Context) []ai.Tool {
 		mgr.Reload()
 		var out []ai.Tool

@@ -1155,6 +1155,8 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		return m.newAIChat(), true
 	case aiForkKey: // G-FORK: pick the message to fork from
 		return m.openAIForkPicker(), true
+	case aiMCPBackgroundKey: // a running MCP call goes to the background (MCPX-19)
+		return m.aiMCPDetach()
 	case "tab", "shift+tab": // select a step card (Enter toggles it)
 		if msg.String() == "tab" && strings.HasPrefix(string(s.input), "/") { // MCP prompt (MCPX-13)
 			return m.aiMCPPromptTab(), true

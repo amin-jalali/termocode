@@ -46,6 +46,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIIDECall(msg), true
 	case aiMCPTrustMsg:
 		return m.onAIMCPTrust(msg), true
+	case aiMCPBackgroundMsg: // ai_mcp_background.go
+		return m.onAIMCPBackground(msg), true
 	case aiMCPElicitMsg: // ai_mcp_elicit.go
 		return m.onAIMCPElicit(msg), true
 	case aiMCPPromptMsg: // ai_mcp_prompts.go
