@@ -442,6 +442,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-insert":       aiNever(aiNoPicker),
 	"ai-mcp-background":   aiNever("moves the model's own running call; the user decides"),
 	"ai-mcp-profile":      aiNever(aiNoPicker),
+	"ai-mcp-catalog":      aiNever(aiNoPicker),
 	"ai-mcp-connect":      aiNever(aiNoAIConfig + " (signing in to services is the user's)"),
 	"ai-mcp-log":          aiAuto(),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),

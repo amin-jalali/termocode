@@ -62,6 +62,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onMCPConnectDone(msg), true
 	case mcpReconnectAllDoneMsg:
 		return m.onMCPReconnectAllDone(msg), true
+	case mcpCatalogLoadedMsg: // mcp_catalog.go
+		return m.onMCPCatalogLoaded(msg), true
 	case aiChatDoneMsg:
 		return m.onAIChatDone(msg), true
 	case aiSideDoneMsg: // OMX-30 (ai_side.go)

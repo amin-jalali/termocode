@@ -237,6 +237,10 @@ type aiState struct {
 	mcpx aiMCPXState // prompts, completion, elicitation (ai_mcp_prompts.go)
 	// mcpProfile is the MCP profile this chat uses ("" all; mcp_profiles.go).
 	mcpProfile string
+	// mcpCatalog is the catalog list shown; mcpCatalogSel the server the
+	// add card is about (mcp_catalog.go).
+	mcpCatalog    []mcp.CatalogEntry
+	mcpCatalogSel string
 	// mcpWiz is the open Connect-a-service wizard (ai_mcp_connect.go);
 	// mcpWizGen drops messages of a closed one; mcpGHAccounts are gh's
 	// accounts from the last open.
@@ -535,6 +539,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-mcp-connect", "AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry)", ""},
 		{"ai-mcp-servers", "AI: MCP Servers…", ""},
 		{"ai-mcp-insert", "AI: MCP Prompts and Resources…", ""},
+		{"ai-mcp-catalog", "AI: MCP: Browse Catalog… (find and add servers)", ""},
 		{"ai-mcp-profile", "AI: MCP: Switch Profile… (servers and tools for this chat)", ""},
 		{"ai-mcp-log", "AI: MCP: Show Log", ""},
 		{"ai-mcp-reconnect-all", "AI: MCP: Reconnect All Servers", ""},
@@ -558,7 +563,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat",
-		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile":
+		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-catalog":
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -639,6 +644,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openMCPInsertPicker(), true
 	case "ai-mcp-profile":
 		return m.openMCPProfiles(), true
+	case "ai-mcp-catalog":
+		return m.openMCPCatalog(), true
 	case "ai-mcp-log":
 		return m.showMCPLog(), true
 	case "ai-mcp-reconnect-all":
