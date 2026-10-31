@@ -248,6 +248,24 @@ is set per chat.
   next message starts it again.
 - The AI can not turn it on. Each auto turn costs like a normal one.
 
+### Old chats and handoff
+
+The AI can look at your saved chats when you ask, for example "what did
+we decide about the cache last week?".
+
+- `chats_search` finds chats by words; `chat_read` reads one. Both only
+  read. Attached files are left out and keys are hidden.
+- They see the chats of this machine only (the same list as **AI: Chat
+  History…**).
+
+**AI: Handoff to a New Chat** starts fresh without losing the thread:
+
+- The quick model writes a short handoff note of the open chat (goal,
+  what is done, open todos, next step). This is one extra request.
+- A new chat opens with the note in the input box. Check or change it,
+  then press `Enter`. Nothing is sent before that.
+- The old chat stays in **AI: Chat History…**.
+
 ### Files in and out of the chat
 
 Add files to your next message in three ways:
