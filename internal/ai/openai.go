@@ -226,6 +226,9 @@ func parseOpenAISSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk {
 				bad = json.Unmarshal([]byte(s), &args) != nil
 				if bad {
 					args = map[string]any{}
+					if fixed, ok := RepairToolArgs(s); ok { // OMX-25: a small slip
+						args, bad = fixed, false
+					}
 				}
 			}
 			out.ToolCalls = append(out.ToolCalls, ToolCall{ID: c.id, Name: c.name, Args: args, BadArgs: bad})

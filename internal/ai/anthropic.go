@@ -261,6 +261,8 @@ func parseAnthropicSSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk 
 					parsed := map[string]any{}
 					if json.Unmarshal([]byte(s), &parsed) == nil {
 						args = parsed
+					} else if fixed, ok := RepairToolArgs(s); ok { // OMX-25: a small slip
+						args = fixed
 					} else {
 						bad = true
 					}
