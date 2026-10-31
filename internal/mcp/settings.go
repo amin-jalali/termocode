@@ -173,6 +173,19 @@ func SaveTrusted(configPath, name, hash string) error {
 	return saveMapEntry(configPath, "mcp_trusted", name, hash)
 }
 
+// ForgetTrusted removes the saved "Always allow" of one server from
+// config.json mcp_trusted (the key goes when it is empty), keeping every
+// other key.
+func ForgetTrusted(configPath, name string) error {
+	return updateConfig(configPath, func(merged map[string]any) {
+		tr, _ := merged["mcp_trusted"].(map[string]any)
+		delete(tr, name)
+		if len(tr) == 0 {
+			delete(merged, "mcp_trusted")
+		}
+	})
+}
+
 // SaveTrustedTools stores the accepted tool list of a server (name →
 // ToolsHash) in config.json mcp_trusted_tools.
 func SaveTrustedTools(configPath, name, hash string) error {
