@@ -306,6 +306,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
+		if m.pickerKind == pickerKindMCPTools { // ai_mcp_tools.go: Space turns a tool off or on
+			return m, m.onMCPToolToggle(msg.ID)
+		}
 		cmd, ok := m.handleAIProfilePickerAction(msg.ID)
 		if ok && m.confirmOpen {
 			m.pickerOpen = false
