@@ -529,7 +529,7 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAITool
-	return waitAIChat(msg.ch)
+	return tea.Batch(waitAIChat(msg.ch), m.notifyOS("AI needs your input"))
 }
 
 // aiToolCardButtons are the buttons of an agent tool's card. Deny is the
@@ -622,7 +622,7 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	if msg.run == nil {
 		more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
 	}
-	return tea.Batch(cmd, mem, queued, more)
+	return tea.Batch(cmd, mem, m.notifyOS("AI run ended"), queued, more)
 }
 
 // persistAIState stores the open chat id + scroll in session.json.

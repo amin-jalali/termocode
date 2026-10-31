@@ -538,7 +538,7 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 			if ev.Budget > 0 { // Budget 0: the user paused it (Runs page); no budget card
 				m.aiOpenBudgetCard()
 			}
-			return tea.Batch(waitAIChat(msg.ch), tick)
+			return tea.Batch(waitAIChat(msg.ch), tick, m.notifyOS("AI run is paused"))
 		case agentrun.RunResumed:
 			rm.Run.State = ai.RunStateRunning
 			rm.Run.Limit, rm.Run.ResumeAtMs = "", 0
@@ -631,6 +631,7 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		}
 	case agentrun.NodeRepair:
 		if ev.Verdict == agentrun.VerdictMissing {
+		return tea.Batch(waitAIChat(msg.ch), m.notifyOS("AI agent is blocked"))
 			st.Notes = append(st.Notes, "↻ no VERDICT line, asked once more")
 		} else {
 			st.Notes = append(st.Notes, "↻ plan not valid, asked again: "+ai.Redact(ev.Err))

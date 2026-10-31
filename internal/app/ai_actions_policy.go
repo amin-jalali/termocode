@@ -562,6 +562,7 @@ func aiActionPolicyFor(id string) (aiActionPolicy, bool) {
 // setting asks first with class settings, so the user can "Always allow"
 // them in AI: Agent Auto-Approve…; never settings are not listed.
 var aiSettingPolicies = map[string]aiActionPolicy{
+	"notifications":       aiNever("the user controls desktop notifications"),
 	"theme":               aiConfirm(ai.ClassSettings),
 	"icons":               aiConfirm(ai.ClassSettings),
 	"animations":          aiConfirm(ai.ClassSettings),
