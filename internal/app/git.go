@@ -19,8 +19,8 @@ import (
 // explorer decorations, status-bar branch, and editor diff signs) stays live
 // when files change OUTSIDE termocode's own actions — `:w` typed directly in
 // nvim, edits/commits run from the integrated terminal, or changes made by
-// external tools. termocode has no filesystem watcher (no fsnotify dependency);
-// a lightweight poll catches every change source uniformly. fetchGitCmd
+// external tools. A lightweight poll catches every change source uniformly;
+// while idle it waits for a change (git_poll_idle.go, git_tree_watch.go). fetchGitCmd
 // short-circuits on a cheap git.IsRepo() check when the cwd isn't a repo, so
 // polling stays inexpensive.
 type gitAutoRefreshMsg struct{}
@@ -121,9 +121,12 @@ func (m *Model) pollGitCmd() tea.Cmd {
 		if cwdErr != nil {
 			return GitMsg{}
 		}
+		if gate != nil {
+			gate.beforeRead()
+		}
 		st, err := git.StatusBranch(cwd)
 		if gate != nil {
-			gate.afterRead(cwd, err == nil) // after status: it may refresh the index
+			gate.afterRead(cwd, err == nil, st.Files) // after status: it may refresh the index
 		}
 		if err != nil {
 			return GitMsg{IsRepo: false}
