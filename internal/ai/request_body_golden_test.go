@@ -38,14 +38,15 @@ func goldenRequest() Request {
 	}
 }
 
-// The request bodies sent to the providers stay byte for byte the same
+// The request bodies sent to the providers (with the default options:
+// the Anthropic ones carry the prompt cache points) stay byte for byte the same
 // (testdata/request_body_*.json; -update-bodies rewrites them).
 func TestRequestBodiesGolden(t *testing.T) {
 	req := goldenRequest()
 	bodies := map[string]any{
 		"openai":          buildOpenAIBody(req, "m"),
-		"anthropic":       buildAnthropicBody(req, "m", false),
-		"anthropic_oauth": buildAnthropicBody(req, "m", true),
+		"anthropic":       anthropicBody(req, "m", Config{Kind: KindAnthropic}),
+		"anthropic_oauth": anthropicBody(req, "m", Config{Kind: KindClaudeOAuth}),
 	}
 	for name, body := range bodies {
 		for round := 0; round < 2; round++ { // a second request of the turn reuses the specs
@@ -75,9 +76,9 @@ func TestRequestBodiesGolden(t *testing.T) {
 			case "openai":
 				body = buildOpenAIBody(req, "m")
 			case "anthropic":
-				body = buildAnthropicBody(req, "m", false)
+				body = anthropicBody(req, "m", Config{Kind: KindAnthropic})
 			default:
-				body = buildAnthropicBody(req, "m", true)
+				body = anthropicBody(req, "m", Config{Kind: KindClaudeOAuth})
 			}
 		}
 	}
