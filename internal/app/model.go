@@ -796,6 +796,8 @@ type Model struct {
 	// wfGate is the queue of workflow write gate cards
 	// (workflow_gate.go); shared by Model copies.
 	wfGate *workflowGateState
+	// wfx is the Workflows view (workflows_*.go; nil until it opens).
+	wfx *wfxState
 	// setup is the first-run setup card on the Welcome page
 	// (setup_card*.go); shared by Model copies.
 	setup *setupState

@@ -691,6 +691,11 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			return newM, cmd
 		}
 	}
+	if m.wfxPageShown() {
+		if newM, cmd, ok := m.routeToWorkflowsPage(msg); ok {
+			return newM, cmd
+		}
+	}
 	if m.itermocPageShown() {
 		if newM, cmd, ok := m.routeToItermocPage(msg); ok {
 			return newM, cmd
@@ -1651,7 +1656,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Source Control panel has the focus: its list and commit box need
 	// the arrows, Tab and Enter. The Services and Databases trees also own
 	// their navigation keys when focused.
-	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns || m.activity.Active() == activity.ViewKubernetes)) {
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns || m.activity.Active() == activity.ViewWorkflows || m.activity.Active() == activity.ViewKubernetes)) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}
@@ -2477,6 +2482,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 			if k, ok := msg.(tea.KeyMsg); ok {
 				return m.handleRunsSidebarKey(k)
 			}
+		case activity.ViewWorkflows: // workflows_keys.go
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m.handleWorkflowsSidebarKey(k)
+			}
 		default:
 			// Files pane: intercept the Delete / `d` chord here so the
 			// confirm modal opens with the multi-selection (or the
@@ -2660,7 +2669,7 @@ func (m *Model) refreshBreadcrumbs(path string) {
 	}
 	// The Find Results page has its own header rows; a breadcrumb would
 	// only show the temp folder its buffer is named after.
-	if path == "" || isFindResultsPath(path) || isHTTPPagePath(path) || isDBResultPath(path) || isRunsPagePath(path) || isItermocPagePath(path) {
+	if path == "" || isFindResultsPath(path) || isHTTPPagePath(path) || isDBResultPath(path) || isRunsPagePath(path) || isItermocPagePath(path) || isWfxPagePath(path) {
 		if len(prev) > 0 {
 			m.applyLayout()
 		}
@@ -2899,6 +2908,8 @@ func (m *Model) showSidebarView(v activity.View) tea.Cmd {
 		return m.revealItermocView(false, "")
 	case activity.ViewRuns:
 		return m.revealRuns(false)
+	case activity.ViewWorkflows:
+		return m.revealWorkflows(false)
 	}
 	return nil
 }

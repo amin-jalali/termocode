@@ -635,6 +635,18 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Web: Start Panel | `web-start-panel` |   |   |
 | Web: Stop Panel | `web-stop` |   |   |
 
+## Workflows
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Workflows: Dry Run Selected… | `workflow-dry-run` |   |   |
+| Workflows: Edit Selected File | `workflow-edit-file` |   |   |
+| Workflows: History of Selected | `workflow-history` |   |   |
+| Workflows: Open | `workflows` |   |   |
+| Workflows: Run Selected… | `workflow-run` |   |   |
+| Workflows: Stop Selected Run… | `workflow-stop` |   |   |
+| Workflows: Turn Selected On/Off… | `workflow-enable` |   |   |
+
 ## Workspace
 
 | Title | ID | Key | Hint |

@@ -545,6 +545,9 @@ func (m Model) renderBaseLines() []string {
 	} else if m.runsPageShown() {
 		// The Runs page: drawn here, not by nvim (runs_page.go).
 		editorContent = m.renderRunsPage(edPaneW, editorH)
+	} else if m.wfxPageShown() {
+		// The Workflows page: drawn here, not by nvim (workflows_view.go).
+		editorContent = m.renderWorkflowsPage(edPaneW, editorH)
 	} else if m.itermocPageShown() {
 		// The Itermoc detail page: drawn here, not by nvim (itermoc_page.go).
 		editorContent = m.renderItermocPage(edPaneW, editorH)
@@ -1284,6 +1287,8 @@ func (m Model) renderSidebar(h int) string {
 		content = m.renderItermocSidebar(contentW, h)
 	case activity.ViewRuns: // runs_view.go
 		content = m.renderRunsSidebar(contentW, h)
+	case activity.ViewWorkflows: // workflows_view.go
+		content = m.renderWorkflowsSidebar(contentW, h)
 	default:
 		if !m.isExtSidebar() { // Group I: extension panels (ext.go)
 			return ""
