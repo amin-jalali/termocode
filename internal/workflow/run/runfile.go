@@ -2,6 +2,7 @@ package run
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 	"unicode/utf8"
 
@@ -37,6 +38,9 @@ const (
 	StateCancelled   = "cancelled"
 	StateInterrupted = "interrupted" // the process ended mid-step
 )
+
+// WriteSending is a write record that went out but has no answer yet.
+const WriteSending = "sending"
 
 // RunFile is the whole state of one run. It is what the run file holds
 // (JSON) and what Handle.Snapshot returns.
@@ -128,3 +132,72 @@ func capOutput(o Output) Output {
 	}
 	return o
 }
+
+// RunFileWriter saves the run file. The engine calls it at every step
+// and item boundary (never per token) with the whole file; the adapter
+// writes it atomically (a temp file, then rename) under
+// <state>/termocode/workflows/<ws>/runs/<id>.json.
+type RunFileWriter interface {
+	WriteRunFile(id string, data []byte) error
+}
+
+// Load reads a run file.
+func Load(data []byte) (*RunFile, error) {
+	var rf RunFile
+	if err := json.Unmarshal(data, &rf); err != nil {
+		return nil, fmt.Errorf("run file: %w", err)
+	}
+	if rf.Version > RunFileVersion {
+		return nil, fmt.Errorf("run file %s was made by a newer termocode (version %d)", rf.ID, rf.Version)
+	}
+	if rf.Steps == nil {
+		rf.Steps = map[string]*StepState{}
+	}
+	return &rf, nil
+}
+
+// Recover is the state of a run file whose process ended while it ran
+// (a crash or a restart): the run and every step or item that was
+// running are marked interrupted. Finished ones stay as they are. A
+// write that was "sending" stays so; a resumed run checks its marker
+// before it sends again. A run file that is not running comes back as
+// it is.
+func Recover(rf *RunFile) *RunFile {
+	out := rf.clone()
+	if out.State != RunRunning {
+		return out
+	}
+	out.State = RunInterrupt
+	interruptSteps(out.Steps)
+	return out
+}
+
+func interruptSteps(steps map[string]*StepState) {
+	for _, st := range steps {
+		if st.State == StateRunning {
+			st.State = StateInterrupted
+		}
+		if st.Each == nil {
+			continue
+		}
+		for _, is := range st.Each.Items {
+			if is.State == StateRunning {
+				is.State = StateInterrupted
+			}
+			interruptSteps(is.Steps)
+		}
+	}
+}
+
+// finished is a step state that a resumed run keeps (it is not run
+// again).
+func finished(state string) bool {
+	switch state {
+	case StateDone, StateSkipped, StateWouldRun, StateRecorded:
+		return true
+	}
+	return false
+}
+
+// itemFinished is an item state that a resumed run keeps.
+func itemFinished(state string) bool { return state == StateDone || state == StateFailed }
