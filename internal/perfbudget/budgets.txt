@@ -104,3 +104,4 @@ web_gateway_conn_kib       350   KiB  # heap per browser after hello, 4 open, bo
 # Worktrees (WTX-1/2): internal/worktrees, internal/app. Median of 9.
 worktrees_list_200         25   ms   # parse 200 worktree list blocks + build the model with metadata; local 0.3 ms (floor)
 worktrees_status_200       50   ms   # UI-thread share of a status refresh of 200 worktrees (git runs in 4 workers); local 0.4 ms (floor)
+worktrees_draw_200         25   ms   # one WORKTREES frame of 200 worktrees, nothing cached, 150x42; local 3.3 ms (floor)
