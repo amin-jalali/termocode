@@ -2036,6 +2036,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.openLayoutPicker()
 	case keymap.ActionWorktreeView: // worktrees_keys.go
 		return m, m.revealWorktrees()
+	case keymap.ActionWorktreeJump: // worktrees_jump.go
+		return m, m.worktreeJump()
 	case keymap.ActionGitCIFix: // G-CI (ci_card.go)
 		return m, m.ciFixWithAI()
 	// Group A — AI keys.
@@ -2373,6 +2375,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		m.focus = FocusEditor
 	case pickerKindWorkspaces:
 		return m.openWorkspace(msg.ID)
+	case pickerKindWorktreeJump: // worktrees_jump.go
+		return m.onWorktreeJumpPicked(msg.ID)
 	case pickerKindStash:
 		return m.applyStashSelected(msg.ID)
 	case pickerKindDiffLeft:

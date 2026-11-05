@@ -113,6 +113,7 @@ func (m *Model) worktreesSync() tea.Cmd {
 
 type wtLoadMsg struct {
 	gen     uint64
+	jump    bool // Worktree: Jump… asked: apply it and open the picker
 	root    string
 	common  string
 	list    []git.Worktree
@@ -127,11 +128,13 @@ type wtStatusMsg struct{ gen uint64 }
 type wtTickMsg struct{ gen uint64 }
 
 // worktreesLoad reads the list in the background.
-func (m *Model) worktreesLoad() tea.Cmd {
+func (m *Model) worktreesLoad() tea.Cmd { return m.worktreesLoadFor(false) }
+
+func (m *Model) worktreesLoadFor(jump bool) tea.Cmd {
 	gen := m.wt.gen
 	root, _ := m.rootDir()
 	return func() tea.Msg {
-		msg := wtLoadMsg{gen: gen, root: root}
+		msg := wtLoadMsg{gen: gen, root: root, jump: jump}
 		list, common, err := git.ListWorktrees(root)
 		if err != nil {
 			msg.err = err
@@ -146,7 +149,7 @@ func (m *Model) worktreesLoad() tea.Cmd {
 
 func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 	st := m.wt
-	if st == nil || msg.gen != st.gen || !st.polling {
+	if st == nil || (!msg.jump && (msg.gen != st.gen || !st.polling)) {
 		return nil
 	}
 	st.loaded = true
@@ -170,7 +173,11 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 		cmds = append(cmds, st.refreshStatus())
 	}
 	st.touch()
-	cmds = append(cmds, wtTick(st.gen))
+	if msg.jump {
+		cmds = append(cmds, m.openWorktreeJump()) // the poll chain (if any) keeps its own tick
+	} else {
+		cmds = append(cmds, wtTick(st.gen))
+	}
 	return tea.Batch(cmds...)
 }
 

@@ -187,6 +187,9 @@ const (
 	// ActionWorktreeView shows the WORKTREES view (WTX-2): Alt+Shift+W
 	// (Alt+W is word wrap).
 	ActionWorktreeView
+	// ActionWorktreeJump opens Worktree: Jump… (WTX-3): Ctrl+Shift+J
+	// (kitty keyboard protocol only; the palette works everywhere).
+	ActionWorktreeJump
 )
 
 // KittyOnlyKeys are default bindings a legacy terminal cannot send (or
@@ -200,7 +203,7 @@ var KittyOnlyKeys = map[string]bool{
 	"ctrl+.":     true, "ctrl+shift+.": true, "ctrl+/": true, "ctrl+`": true, "ctrl+shift+`": true,
 	"ctrl+tab": true, "ctrl+alt+i": true,
 	"ctrl+shift+e": true, "ctrl+shift+h": true, "ctrl+shift+m": true, "ctrl+shift+o": true,
-	"ctrl+shift+t": true, "ctrl+shift+v": true, "ctrl+shift+w": true,
+	"ctrl+shift+t": true, "ctrl+shift+v": true, "ctrl+shift+w": true, "ctrl+shift+j": true,
 }
 
 type KeyMap struct {
@@ -536,8 +539,9 @@ func Default() KeyMap {
 			"alt+o":       ActionItermocToggle,
 			// The WORKTREES view. Alt+Shift+W arrives as "alt+W" on legacy
 			// terminals and "alt+shift+w" on CSI-u ones.
-			"alt+W":       ActionWorktreeView,
-			"alt+shift+w": ActionWorktreeView,
+			"alt+W":        ActionWorktreeView,
+			"alt+shift+w":  ActionWorktreeView,
+			"ctrl+shift+j": ActionWorktreeJump,
 
 			// Help for the focused item (or the hover label on screen).
 			// F1 is the palette; Shift+F1 is free in every terminal we

@@ -10,12 +10,15 @@ import (
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // The jump list has every worktree and every agent in one: agents that
 // wait for you first, then working ones, then the worktrees by last
 // visit; gone worktrees are left out.
 func TestWorktreeJumpRows(t *testing.T) {
+	defer func(m theme.IconMode) { theme.CurrentIconMode = m }(theme.CurrentIconMode)
+	theme.CurrentIconMode = theme.IconModeUnicode
 	st, tabs := wtFixture(t)
 	tabs = append(tabs, wtTabAgent{name: "Aider", cwd: "/src/app", state: agents.Working})
 	st.others = append(st.others, agentroll.Rollup{Workspace: "/x", PID: 9, Items: []agentroll.Item{{Name: "Gemini", State: "waiting", Worktree: "/elsewhere/api-v2"}}})
@@ -31,11 +34,11 @@ func TestWorktreeJumpRows(t *testing.T) {
 		"tab:2=Aider · main",
 		"ag:0:/src/app.worktrees/toast=Codex · fix/toast-race",
 		"wt:/src/app.worktrees/wt-sidebar=feat/wt-sidebar",
+		"wt:/elsewhere/api-v2=api-v2",
+		"wt:/src/app=main",
 		"wt:/src/app.worktrees/toast=fix/toast-race",
 		"wt:/src/app.worktrees/grpc=spike/grpc",
-		"wt:/src/app=main",
 		"wt:/src/app/.git/termocode/worktrees/r9-a=agent r9-a",
-		"wt:/elsewhere/api-v2=api-v2",
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("rows\n got %s\nwant %s", strings.Join(got, "\n     "), strings.Join(want, "\n     "))

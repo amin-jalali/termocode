@@ -154,6 +154,7 @@ var paletteActions = map[string]keymap.Action{
 	"layout-open":                 keymap.ActionLayoutOpen,
 	"web-stop":                    keymap.ActionWebStop,
 	"worktree-view":               keymap.ActionWorktreeView,
+	"worktree-jump":               keymap.ActionWorktreeJump,
 	"quit":                        keymap.ActionQuit,
 }
 

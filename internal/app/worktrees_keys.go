@@ -40,6 +40,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: "worktree-view", Title: "Worktree: Show"},
 		{ID: "worktree-open", Title: "Worktree: Open Selected"},
 		{ID: "worktree-add-folder", Title: "Worktree: Add Selected as Folder"},
+		{ID: "worktree-jump", Title: "Worktree: Jump…"},
 	}
 }
 
@@ -52,6 +53,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeOpen(), true
 	case "worktree-add-folder":
 		return m.worktreeAddFolder(), true
+	case "worktree-jump":
+		return m.worktreeJump(), true
 	}
 	return nil, false
 }
