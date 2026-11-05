@@ -167,6 +167,9 @@ func agentPaletteFilter(items []picker.Item) []picker.Item {
 
 // dispatchAgentPalette handles "agent-start-<id>".
 func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
+	if id == agentPickerPaletteID { // Agent: Start… (agent_picker.go)
+		return m.openAgentPicker(), true
+	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
 		return nil, false

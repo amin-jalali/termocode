@@ -78,6 +78,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIWebToolsPicked(id), true
 	case pickerKindAgentHooks: // agent_hooks_ui.go
 		return m.onAgentHooksPicked(id), true
+	case pickerKindAgentPicker: // agent_picker.go
+		return m.onAgentPicked(id), true
 	case pickerKindRunsMore: // runs_state.go
 		return m.onRunsMorePicked(id), true
 	case pickerKindAIWorktrees: // ai_worktree_list.go

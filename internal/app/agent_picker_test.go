@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/profileform"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // fakeAgentLookPath makes bins the installed agent programs.
@@ -54,13 +55,14 @@ func TestAgentPickerItemsGroups(t *testing.T) {
 		profiles:  []agentPickProfile{{name: "default", steps: 1}, {name: "plan", steps: 3}},
 	}
 	got := agentPickRowsText(agentPickerItems(in))
+	on, off, spark := theme.GlyphRadioOn.String(), theme.GlyphRadioOff.String(), aiSpark()
 	head := "# INSTALLED\n" +
-		"agent:claude | ◉ Claude Code | claude · signed in\n" +
-		"agent:codex | ◦ Codex | codex · not signed in · Enter to sign in\n" +
-		"agent:amp | ◦ Amp | amp\n" +
+		"agent:claude | " + on + " Claude Code | claude · signed in\n" +
+		"agent:codex | " + off + " Codex | codex · Enter to sign in\n" +
+		"agent:amp | " + off + " Amp | amp\n" +
 		"# BUILT-IN\n" +
-		"profile:default | ✦ default | termocode AI · 1 step\n" +
-		"profile:plan | ✦ plan | termocode AI · 3 steps\n" +
+		"profile:default | " + spark + " default | termocode AI · 1 step\n" +
+		"profile:plan | " + spark + " plan | termocode AI · 3 steps\n" +
 		"# NOT INSTALLED\n" +
 		"agent:gemini |   Gemini CLI | gemini · Enter to install (npm)\n"
 	if !strings.HasPrefix(got, head) {
@@ -68,7 +70,7 @@ func TestAgentPickerItemsGroups(t *testing.T) {
 	}
 	for _, want := range []string{
 		"agent:aider |   Aider | aider · Enter to install (pip)\n",
-		"agent:cursor |   Cursor CLI | cursor-agent · install it from its own site\n",
+		"agent:cursor |   Cursor CLI | cursor-agent · manual install\n",
 		"agent:pi |   Pi | pi · Enter to install (npm)\n",
 	} {
 		if !strings.Contains(got, want) {
@@ -80,7 +82,7 @@ func TestAgentPickerItemsGroups(t *testing.T) {
 	}
 	// Not checked yet: no sign-in word at all (never a wrong one).
 	in.cli = nil
-	if got := agentPickRowsText(agentPickerItems(in)); !strings.Contains(got, "agent:claude | ◦ Claude Code | claude\n") {
+	if got := agentPickRowsText(agentPickerItems(in)); !strings.Contains(got, "agent:claude | "+off+" Claude Code | claude\n") {
 		t.Errorf("unchecked claude:\n%s", got)
 	}
 }
