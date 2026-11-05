@@ -70,27 +70,41 @@ func (m *Model) worktreeAddFolder() tea.Cmd {
 	return wtAddFolder(m, it.e.Path)
 }
 
-// wtTouchMeta changes one worktree's metadata in worktrees.json and in
-// the list; a demo writes nothing to disk. It reports whether it worked.
-func (m *Model) wtTouchMeta(path string, fn func(*worktrees.Meta)) bool {
+// wtTouchMeta changes one worktree's metadata in worktrees.json, then in
+// the list; a demo writes nothing to disk. It returns the write error
+// (the list is left as it was then).
+func (m *Model) wtTouchMeta(path string, fn func(*worktrees.Meta)) error {
 	st := m.wt
+	if !st.off && st.common != "" {
+		err := worktrees.Update(st.common, func(all map[string]worktrees.Meta) {
+			md := all[path]
+			fn(&md)
+			all[path] = md
+		})
+		if err != nil {
+			recordError("[worktrees] " + err.Error())
+			return err
+		}
+	}
 	for i := range st.entries {
 		if st.entries[i].Path == path {
 			fn(&st.entries[i].Meta)
 		}
 	}
 	st.touch()
-	if st.off || st.common == "" {
-		return true
+	return nil
+}
+
+// worktreePin pins or unpins the cursor's worktree (p, worktree-pin).
+func (m *Model) worktreePin() tea.Cmd {
+	it, ok := m.wtSelected()
+	if !ok {
+		return m.revealWorktrees()
 	}
-	err := worktrees.Update(st.common, func(all map[string]worktrees.Meta) {
-		md := all[path]
-		fn(&md)
-		all[path] = md
-	})
-	if err != nil {
-		recordError("[worktrees] " + err.Error())
-		return false
+	pin := !it.e.Meta.Pinned
+	if err := m.wtTouchMeta(it.e.Path, func(md *worktrees.Meta) { md.Pinned = pin }); err != nil {
+		return m.pushToastDetail(toast.Warn, "The pin could not be saved", err.Error())
 	}
-	return true
+	m.wt.cursorPath = it.e.Path
+	return nil
 }

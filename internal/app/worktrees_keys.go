@@ -41,6 +41,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: "worktree-open", Title: "Worktree: Open Selected"},
 		{ID: "worktree-add-folder", Title: "Worktree: Add Selected as Folder"},
 		{ID: "worktree-jump", Title: "Worktree: Jump…"},
+		{ID: "worktree-pin", Title: "Worktree: Pin or Unpin Selected"},
 	}
 }
 
@@ -55,6 +56,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeAddFolder(), true
 	case "worktree-jump":
 		return m.worktreeJump(), true
+	case "worktree-pin":
+		return m.worktreePin(), true
 	}
 	return nil, false
 }
@@ -70,6 +73,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil
 		case "enter":
 			return m, m.worktreeOpen()
+		case "p":
+			return m, m.worktreePin()
 		}
 	}
 	items, rows := m.wtList()
@@ -98,6 +103,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeOpen()
 	case "a":
 		return m, m.worktreeAddFolder()
+	case "p":
+		return m, m.worktreePin()
 	case "R":
 		return m, m.worktreesReload()
 	case "?":

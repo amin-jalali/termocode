@@ -2204,6 +2204,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-add-folder` | Worktree: Add Selected as Folder | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
+| `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
 | `worktree-view` | Worktree: Show | auto |   |
 | `zen-mode` | View: Toggle Zen Mode | auto |   |
 
