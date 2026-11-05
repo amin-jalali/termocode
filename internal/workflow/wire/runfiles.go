@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/workflow/run"
 )
@@ -108,3 +109,6 @@ func writeAtomic(path string, data []byte) (err error) {
 	}
 	return os.Rename(tmp.Name(), path)
 }
+
+// NewRunID is a run id from the clock: 20260106-090000-123.
+func NewRunID() string { return time.Now().UTC().Format("20060102-150405.000") }
