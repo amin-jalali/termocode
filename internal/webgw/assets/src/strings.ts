@@ -979,6 +979,23 @@ export const S = {
   "quick.ask_go": "Enter to ask the AI",
   "quick.ask_type": "Type what should change.",
   "cmd.agents": "View: Show Agent Worktrees",
+  "cmd.copy_lines_down": "Edit: Duplicate Line",
+  "cmd.comment_line": "Edit: Toggle Line Comment",
+  "cmd.fold_all": "View: Fold All",
+  "cmd.unfold_all": "View: Unfold All",
+  "cmd.toggle_fold": "View: Toggle Fold",
+  "cmd.join_lines": "Edit: Join Lines",
+  "cmd.sort_asc": "Edit: Sort Lines Ascending",
+  "cmd.sort_desc": "Edit: Sort Lines Descending",
+  "cmd.reverse_lines": "Edit: Reverse Lines",
+  "cmd.upper": "Edit: Convert to UPPERCASE",
+  "cmd.lower": "Edit: Convert to lowercase",
+  "cmd.trim_ws": "Edit: Trim Trailing Whitespace",
+  "cmd.tabs_to_spaces": "Edit: Convert Tabs to Spaces",
+  "cmd.spaces_to_tabs": "Edit: Convert Spaces to Tabs",
+  "cmd.collapse_blank": "Edit: Collapse Blank Lines",
+  "cmd.replace_file": "Edit: Replace in File",
+  "cmd.no_comment": "This file type has no line comment.",
 } as const;
 
 export type StringKey = keyof typeof S;

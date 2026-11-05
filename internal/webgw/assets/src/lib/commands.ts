@@ -10,7 +10,8 @@ import { link } from "../session";
 import type { StringKey } from "../strings";
 import { t } from "../strings";
 import { toast } from "./toasts";
-import { activeDesk } from "./deskeditor";
+import { activeDesk, lineComment } from "./deskeditor";
+import type { EditAct } from "../monaco/protocol";
 import { saveLive } from "../views/LiveEditor";
 import { newChat } from "../views/Chat";
 import { newTerm } from "../views/Term";
@@ -84,7 +85,50 @@ export function commands(): Command[] {
     { id: "themeLight", label: "cmd.theme_light", run: () => setPref("theme", "light") },
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
     ...gitCommands(),
+    ...editCommands(),
   ];
+}
+
+/** hasDesk: a file is open in the desktop editor. */
+const hasDesk = () => hasFile() && activeDesk.peek() !== null;
+
+/** EDIT_ACTS are the editor's line and text commands (the laptop's
+ * Edit: and fold entries): id, name, the laptop's key. */
+const EDIT_ACTS: { id: EditAct; label: StringKey; keys?: string }[] = [
+  { id: "copyLinesDown", label: "cmd.copy_lines_down", keys: "Shift+Alt+Down" },
+  { id: "commentLine", label: "cmd.comment_line", keys: "Ctrl+/" },
+  { id: "foldAll", label: "cmd.fold_all" },
+  { id: "unfoldAll", label: "cmd.unfold_all" },
+  { id: "toggleFold", label: "cmd.toggle_fold" },
+  { id: "joinLines", label: "cmd.join_lines" },
+  { id: "sortLinesAsc", label: "cmd.sort_asc" },
+  { id: "sortLinesDesc", label: "cmd.sort_desc" },
+  { id: "reverseLines", label: "cmd.reverse_lines" },
+  { id: "upperCase", label: "cmd.upper" },
+  { id: "lowerCase", label: "cmd.lower" },
+  { id: "trimWhitespace", label: "cmd.trim_ws" },
+  { id: "tabsToSpaces", label: "cmd.tabs_to_spaces" },
+  { id: "spacesToTabs", label: "cmd.spaces_to_tabs" },
+  { id: "collapseBlankLines", label: "cmd.collapse_blank" },
+  { id: "replaceInFile", label: "cmd.replace_file", keys: "Ctrl+H" },
+];
+
+/** editCommands run on the focused desktop editor's text. */
+function editCommands(): Command[] {
+  const mod = modKey();
+  return EDIT_ACTS.map(({ id, label, keys }) => ({
+    id,
+    label,
+    keys: keys?.replace("Ctrl", mod),
+    when: hasDesk,
+    run: () => {
+      if (id === "commentLine" && !lineComment(activeFile.peek() ?? "")) {
+        toast("info", t("cmd.no_comment"));
+        return;
+      }
+      activeDesk.peek()?.act(id);
+    },
+  }));
 }
 
 /** cmdTitle is a command's name as the list shows it. */

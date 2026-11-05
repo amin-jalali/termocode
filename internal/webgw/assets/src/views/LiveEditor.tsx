@@ -9,7 +9,7 @@ import type { BufSnap, GitBlame, GitDiff, GitSnap } from "../../../../webproto/p
 import type { EditorHandle, EditorModule } from "../editor/api";
 import { startEdit } from "../lib/edit";
 import { hl, hlRows, wantHl } from "../lib/hl";
-import { mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
+import { lineComment, mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
 import { loadEditor } from "../lib/lazy";
 import { editing, liveStatus, LiveSync, session, setSync, syncs } from "../lib/live";
 import { toast } from "../lib/toasts";
@@ -140,6 +140,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               // The laptop's language servers: hover, completion, go to
               // definition (another file opens in its tab), references.
               path,
+              comment: lineComment(path),
               lsp: true,
               refsLabel: t("menu.refs"),
               onLsp: (kind, line, col) => ask(kind, buf, line, col),

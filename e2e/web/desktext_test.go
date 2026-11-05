@@ -3,7 +3,9 @@
 package web
 
 import (
+	"fmt"
 	"strings"
+	"time"
 	"testing"
 
 	"github.com/chromedp/chromedp"
@@ -36,7 +38,25 @@ func runCmd(t *testing.T, p *Page, c *HubConn, first bool, q, label string) {
 func waitDeskText(t *testing.T, p *Page, lines ...string) {
 	t.Helper()
 	want := strings.Join(lines, "\n")
-	p.WaitJS(`[...` + deskDoc + `.querySelectorAll(".view-lines .view-line")].sort((a, b) => a.offsetTop - b.offsetTop).map((l) => l.textContent.replace(/ /g, " ")).join("\n") === ` + jsq(want))
+	end := time.Now().Add(wait)
+	for {
+		got := deskText(p)
+		if got == want {
+			return
+		}
+		if time.Now().After(end) {
+			t.Fatalf("the editor shows %q, want %q", got, want)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// openDeskTabs opens path on the desktop and waits for its rows (a tab
+// shows as spaces, so the text is not compared).
+func openDeskTabs(t *testing.T, p *Page, c *HubConn, buf int, path string, lines ...string) {
+	t.Helper()
+	openBufAs(t, p, c, buf, path, nil, lines...)
+	p.WaitJS(fmt.Sprintf(`%s?.querySelectorAll(".view-lines .view-line").length === %d`, deskDoc, len(lines)))
 }
 
 // deskRow puts the caret at the start of 1-based row n.
@@ -57,32 +77,33 @@ func TestDeskEditorLineCommands(t *testing.T) {
 	waitDeskText(t, p, "c", "", "", "a", "b")
 	runCmd(t, p, c, false, "collapse blank", "Edit: Collapse Blank Lines")
 	waitDeskText(t, p, "c", "", "a", "b")
+	openDesk(t, p, c, 3, "s.go", "b", "c", "a")
 	runCmd(t, p, c, false, "sort lines asc", "Edit: Sort Lines Ascending")
-	waitDeskText(t, p, "", "a", "b", "c")
+	waitDeskText(t, p, "a", "b", "c")
 	runCmd(t, p, c, false, "sort lines desc", "Edit: Sort Lines Descending")
-	waitDeskText(t, p, "c", "b", "a", "")
+	waitDeskText(t, p, "c", "b", "a")
 	runCmd(t, p, c, false, "reverse lines", "Edit: Reverse Lines")
-	waitDeskText(t, p, "", "a", "b", "c")
+	waitDeskText(t, p, "a", "b", "c")
 
-	deskRow(p, 2)
+	deskRow(p, 1)
 	runCmd(t, p, c, false, "duplicate line", "Edit: Duplicate Line")
-	waitDeskText(t, p, "", "a", "a", "b", "c")
+	waitDeskText(t, p, "a", "a", "b", "c")
 	runCmd(t, p, c, false, "uppercase", "Edit: Convert to UPPERCASE")
-	waitDeskText(t, p, "", "a", "A", "b", "c")
+	waitDeskText(t, p, "a", "A", "b", "c")
 	runCmd(t, p, c, false, "lowercase", "Edit: Convert to lowercase")
-	waitDeskText(t, p, "", "a", "a", "b", "c")
+	waitDeskText(t, p, "a", "a", "b", "c")
 	// A Go file comments with //; again takes it back.
 	runCmd(t, p, c, false, "toggle line comment", "Edit: Toggle Line Comment")
-	waitDeskText(t, p, "", "a", "// a", "b", "c")
+	waitDeskText(t, p, "a", "// a", "b", "c")
 	runCmd(t, p, c, false, "toggle line comment", "Edit: Toggle Line Comment")
-	waitDeskText(t, p, "", "a", "a", "b", "c")
+	waitDeskText(t, p, "a", "a", "b", "c")
 	runCmd(t, p, c, false, "join lines", "Edit: Join Lines")
-	waitDeskText(t, p, "", "a", "a b", "c")
+	waitDeskText(t, p, "a", "a b", "c")
 
 	// Each command is one step of the user's own undo.
 	deskFocus(p)
 	p.Do(chromedp.KeyEvent("z", modKey()))
-	waitDeskText(t, p, "", "a", "a", "b", "c")
+	waitDeskText(t, p, "a", "a", "b", "c")
 
 	// Replace in File opens the editor's find with its replace field.
 	runCmd(t, p, c, false, "replace in file", "Edit: Replace in File")
@@ -91,7 +112,7 @@ func TestDeskEditorLineCommands(t *testing.T) {
 
 func TestDeskEditorFoldCommands(t *testing.T) {
 	p, c := openFiles(t, Desktop)
-	openDesk(t, p, c, 2, "f.go", "func a() {", "\tx()", "}", "func b() {", "\ty()", "}")
+	openDeskTabs(t, p, c, 2, "f.go", "func a() {", "\tx()", "}", "func b() {", "\ty()", "}")
 	rows := func() int {
 		return Eval[int](p, deskDoc+`.querySelectorAll(".view-lines .view-line").length`)
 	}
@@ -100,9 +121,9 @@ func TestDeskEditorFoldCommands(t *testing.T) {
 	runCmd(t, p, c, false, "unfold all", "View: Unfold All")
 	p.WaitJS(deskDoc + `.querySelectorAll(".view-lines .view-line").length === 6`)
 	deskRow(p, 1)
-	runCmd(t, p, c, false, "toggle fold", "View: Toggle Fold Under Cursor")
+	runCmd(t, p, c, false, "toggle fold", "View: Toggle Fold")
 	p.WaitJS(deskDoc + `.querySelectorAll(".view-lines .view-line").length === 5`)
-	runCmd(t, p, c, false, "toggle fold", "View: Toggle Fold Under Cursor")
+	runCmd(t, p, c, false, "toggle fold", "View: Toggle Fold")
 	p.WaitJS(deskDoc + `.querySelectorAll(".view-lines .view-line").length === 6`)
 	if n := rows(); n != 6 {
 		t.Errorf("%d rows after the fold opened again", n)
@@ -113,7 +134,7 @@ func TestDeskEditorFoldCommands(t *testing.T) {
 // file's tab width; the laptop gets the new rows.
 func TestDeskEditorIndentCommands(t *testing.T) {
 	p, c := openFiles(t, Desktop)
-	openDesk(t, p, c, 2, "t.go", "\tx", "\t\ty")
+	openDeskTabs(t, p, c, 2, "t.go", "\tx", "\t\ty")
 	runCmd(t, p, c, true, "tabs to spaces", "Edit: Convert Tabs to Spaces")
 	r, a := expectSetText(t, c)
 	if got := strings.Join(a.Lines, "|"); !strings.Contains(got, "    x") || strings.Contains(got, "\t") {
