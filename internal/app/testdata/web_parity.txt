@@ -65,6 +65,7 @@ web	explorer-undo-rename	cmd:undoRename
 web	find-files	cmd:search
 web	find-references	op:lsp.references
 web	fold-all	cmd:foldAll
+web	format-document	cmd:formatDocument
 web	git-blame	cmd:gitBlame
 web	git-branch	op:git.branches
 web	git-ci	op:ci.status
@@ -99,8 +100,10 @@ web	git-stash	palette
 web	git-stash-pop	palette
 web	git-sync	palette
 web	git-unstage-hunk	op:git.unstage_hunk
+web	goto-impl	cmd:gotoImpl
 web	goto-line	cmd:gotoLine
 web	goto-symbol-file	op:buf.symbols
+web	goto-type-def	cmd:gotoTypeDef
 web	hover	op:lsp.hover
 web	join-lines	cmd:joinLines
 web	kubernetes-context	op:kube.contexts
@@ -116,8 +119,10 @@ web	pick-theme	cmd:themeDark
 web	pin-tab	cmd:pinTab
 web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
+web	preview-md	cmd:markdownPreview
 web	problems	cmd:problems
 web	quick-open	cmd:quickOpen
+web	reload-buffer	cmd:revertFile
 web	reopen-closed	cmd:reopenClosed
 web	replace-in-file	cmd:replaceInFile
 web	reveal-file	cmd:revealFile
@@ -365,7 +370,6 @@ missing	db-test-connection	Databases|L
 missing	db-transaction-mode	Databases|L
 missing	debug-open-launch	Debug|S
 missing	diff-files	Editor and files|S
-missing	format-document	Editor and files|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
 missing	git-conflict-next	Git|S
@@ -384,9 +388,7 @@ missing	git-tags	Git|S
 missing	git-undo	Git|S
 missing	git-unstage-lines	Git|S
 missing	git-view-toggle	Git|S
-missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
-missing	goto-type-def	Editor and files|S
 missing	help-bug-report	AI chat and agents|M
 missing	http-cancel	HTTP client|L
 missing	http-copy-curl	HTTP client|L
@@ -416,10 +418,8 @@ missing	open-recent	Editor and files|S
 missing	open-workspace	Editor and files|S
 missing	output-clear	Testing and web access|S
 missing	prev-hunk	Git|S
-missing	preview-md	Editor and files|S
 missing	redis-delete-key	Databases|L
 missing	redis-set-ttl	Databases|L
-missing	reload-buffer	Editor and files|S
 missing	replace-workspace	Editor and files|S
 missing	services-configure	Containers|S
 missing	services-open-compose	Containers|S
