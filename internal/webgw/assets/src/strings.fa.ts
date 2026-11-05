@@ -140,6 +140,7 @@ export const FA: Record<StringKey, string> = {
   "card.reject": "نپذیرفتن",
   "card.approve": "تأیید",
   "card.later": "بعداً",
+  "card.cancelled": "لغو شد. چیزی فرستاده نشد.",
   "card.answer_laptop": "پاسخ روی لپ‌تاپ",
   "card.hint": "Enter  رد · Esc  بعداً",
   "card.hint_touch": "کشیدن به پایین  بعداً",
