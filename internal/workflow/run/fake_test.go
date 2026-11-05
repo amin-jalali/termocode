@@ -256,8 +256,13 @@ func (f *fakes) Run(ctx context.Context, c RunCall) (Output, error) {
 
 func (f *fakes) Write(ctx context.Context, c WriteCall) (Output, error) {
 	k := callKey(c.Step, c.Item)
-	f.add("write %s to=%s title=%q marker=%s resumed=%v", k, c.Spec.To, c.Spec.Title, c.Marker, c.Resumed)
+	f.add("write %s to=%s title=%q body=%q marker=%s resumed=%v", k, c.Spec.To, c.Spec.Title, c.Spec.Body, c.Marker, c.Resumed)
 	c.Wait()
+	if k == f.block {
+		f.blocked <- struct{}{}
+		<-ctx.Done()
+		return Output{}, ctx.Err()
+	}
 	if f.deny[stepKey(c.Step)] {
 		return Output{}, fmt.Errorf("write %s: %w", k, ErrDenied)
 	}
