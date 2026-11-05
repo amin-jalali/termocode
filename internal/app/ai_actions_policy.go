@@ -344,6 +344,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
 	"containers-focus":             aiAuto(),
 	"kubernetes-show":              aiAuto(), // read only (kube_actions.go)
+	"worktree-view":                aiAuto(), // read only (worktrees_keys.go)
 	"kubernetes-refresh":           aiAuto(),
 	"kubernetes-context":           aiNever(aiNoPicker + "; the context is the user's choice"),
 	"kubernetes-namespace":         aiNever(aiNoPicker),

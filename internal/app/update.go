@@ -117,6 +117,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleKubeMsg(msg); ok { // kube_state.go
 		return m, c
 	}
+	if c, ok := m.handleWTMsg(msg); ok { // worktrees_state.go
+		return m, c
+	}
 	if c, ok := m.handleCIMsg(msg); ok { // ci_watch.go
 		return m, c
 	}
@@ -161,6 +164,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if kc := nm.kubeSync(); kc != nil { // the Kubernetes view shown / hidden (kube_state.go)
 		cmd = tea.Batch(cmd, kc)
+	}
+	if wc := nm.worktreesSync(); wc != nil { // the WORKTREES view shown / hidden (worktrees_state.go)
+		cmd = tea.Batch(cmd, wc)
 	}
 	nm.showWaitingHotExit()
 	nm.showWaitingSecretsDeletePlain() // secrets_migrate.go
@@ -1648,7 +1654,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Source Control panel has the focus: its list and commit box need
 	// the arrows, Tab and Enter. The Services and Databases trees also own
 	// their navigation keys when focused.
-	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns || m.activity.Active() == activity.ViewKubernetes)) {
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns || m.activity.Active() == activity.ViewKubernetes || m.activity.Active() == activity.ViewWorktrees)) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}
@@ -2028,6 +2034,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.toggleItermoc()
 	case keymap.ActionLayoutOpen: // layout_palette.go
 		return m, m.openLayoutPicker()
+	case keymap.ActionWorktreeView: // worktrees_keys.go
+		return m, m.revealWorktrees()
 	case keymap.ActionGitCIFix: // G-CI (ci_card.go)
 		return m, m.ciFixWithAI()
 	// Group A — AI keys.
@@ -2461,6 +2469,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 		case activity.ViewKubernetes: // kube_keys.go
 			if k, ok := msg.(tea.KeyMsg); ok {
 				return m.handleKubeSidebarKey(k)
+			}
+		case activity.ViewWorktrees: // worktrees_keys.go
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m.handleWTSidebarKey(k)
 			}
 		case activity.ViewDatabases: // db_actions.go
 			if k, ok := msg.(tea.KeyMsg); ok {

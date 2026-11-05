@@ -385,6 +385,7 @@ func paletteItems() []picker.Item {
 	}
 	items = append(items, servicesPaletteItems()...)  // services_actions.go
 	items = append(items, kubePaletteItems()...)      // kube_actions.go
+	items = append(items, worktreePaletteItems()...)  // worktrees_keys.go
 	items = append(items, databasesPaletteItems()...) // DB-3
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
@@ -858,6 +859,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchKubePalette(id); ok { // kube_actions.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchWorktreePalette(id); ok { // worktrees_keys.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchDatabasesPalette(id); ok { // db_actions.go

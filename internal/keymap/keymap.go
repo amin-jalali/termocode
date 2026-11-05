@@ -184,6 +184,9 @@ const (
 	// ActionWebStop stops the web panel (the kill switch, ADR 0020). No
 	// default key (owner): the user binds one in keymap.json.
 	ActionWebStop
+	// ActionWorktreeView shows the WORKTREES view (WTX-2): Alt+Shift+W
+	// (Alt+W is word wrap).
+	ActionWorktreeView
 )
 
 // KittyOnlyKeys are default bindings a legacy terminal cannot send (or
@@ -531,6 +534,10 @@ func Default() KeyMap {
 			"alt+I":       ActionItermocToggle,
 			"alt+shift+i": ActionItermocToggle,
 			"alt+o":       ActionItermocToggle,
+			// The WORKTREES view. Alt+Shift+W arrives as "alt+W" on legacy
+			// terminals and "alt+shift+w" on CSI-u ones.
+			"alt+W":       ActionWorktreeView,
+			"alt+shift+w": ActionWorktreeView,
 
 			// Help for the focused item (or the hover label on screen).
 			// F1 is the palette; Shift+F1 is free in every terminal we

@@ -50,6 +50,7 @@ type wtState struct {
 	filterTyping bool
 	kind         wtKind // the f filter
 	detail       bool   // the compact layout shows the cursor's card
+	lastClick    time.Time
 
 	gen     uint64
 	polling bool

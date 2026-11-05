@@ -330,6 +330,7 @@ var actionNames = map[Action]string{
 	ActionContextHelp:     "ContextHelp",
 	ActionLayoutOpen:      "LayoutOpen",
 	ActionWebStop:         "WebStop",
+	ActionWorktreeView:    "WorktreeView",
 	// Docs: these had default keys but no name, so keymap.json could not
 	// rebind them.
 	ActionShowBufferInfo:        "ShowBufferInfo",
