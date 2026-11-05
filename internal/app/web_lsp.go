@@ -46,6 +46,9 @@ var webLspKinds = map[string]string{
 	webproto.OpLspComplete:   "complete",
 	webproto.OpLspDefinition: "definition",
 	webproto.OpLspReferences: "references",
+	// WEBP-9: go to type definition and to implementation.
+	webproto.OpLspTypeDefinition: "typedef",
+	webproto.OpLspImplementation: "impl",
 }
 
 // webLspState holds the calls waiting for the servers (Update only).
@@ -69,8 +72,10 @@ local api = vim.api
 if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
 local cur = api.nvim_buf_get_changedtick(b)
 if cur ~= tick then return { err = 'stale', tick = cur } end
-local caps = { hover = 'hoverProvider', complete = 'completionProvider', definition = 'definitionProvider', references = 'referencesProvider' }
-local methods = { hover = 'textDocument/hover', complete = 'textDocument/completion', definition = 'textDocument/definition', references = 'textDocument/references' }
+local caps = { hover = 'hoverProvider', complete = 'completionProvider', definition = 'definitionProvider', references = 'referencesProvider',
+  typedef = 'typeDefinitionProvider', impl = 'implementationProvider' }
+local methods = { hover = 'textDocument/hover', complete = 'textDocument/completion', definition = 'textDocument/definition', references = 'textDocument/references',
+  typedef = 'textDocument/typeDefinition', impl = 'textDocument/implementation' }
 local get = vim.lsp.get_clients or vim.lsp.get_active_clients
 local all = get({ bufnr = b })
 if #all == 0 then return { err = 'nolsp' } end

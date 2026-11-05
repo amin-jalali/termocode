@@ -278,6 +278,11 @@ export interface LspPosArgs {
   col: number;
 }
 
+export interface BufTickArgs {
+  buf: number;
+  tick: number;
+}
+
 export interface TestOutputArgs {
   id?: string;
 }
@@ -1309,6 +1314,27 @@ export interface DebugSource {
   outside?: boolean;
 }
 
+export interface LspLocations {
+  locs: LspLoc[];
+  cut?: boolean;
+}
+
+export interface LspLoc {
+  path?: string;
+  name?: string;
+  outside?: boolean;
+  line: number;
+  col: number;
+  endLine: number;
+  endCol: number;
+  text?: string;
+}
+
+export interface BufMarkdown {
+  md?: MdNode;
+  cut?: boolean;
+}
+
 export interface LspHover {
   md?: MdNode;
   none?: boolean;
@@ -1340,22 +1366,6 @@ export interface LspEdit {
   endLine: number;
   endCol: number;
   text: string;
-}
-
-export interface LspLocations {
-  locs: LspLoc[];
-  cut?: boolean;
-}
-
-export interface LspLoc {
-  path?: string;
-  name?: string;
-  outside?: boolean;
-  line: number;
-  col: number;
-  endLine: number;
-  endCol: number;
-  text?: string;
 }
 
 export interface TestOutput {
@@ -1865,6 +1875,11 @@ export interface OpArgs {
   "debug.watch": DebugWatchArgs;
   "debug.eval": DebugEvalArgs;
   "debug.frame": DebugFrameArgs;
+  "lsp.type_definition": LspPosArgs;
+  "lsp.implementation": LspPosArgs;
+  "buf.format": BufTickArgs;
+  "buf.reload": BufArgs;
+  "buf.markdown": BufArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
@@ -2007,6 +2022,11 @@ export interface OpResult {
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
   "debug.sources": DebugSources;
+  "lsp.type_definition": LspLocations;
+  "lsp.implementation": LspLocations;
+  "buf.format": EditRes;
+  "buf.reload": EditRes;
+  "buf.markdown": BufMarkdown;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;

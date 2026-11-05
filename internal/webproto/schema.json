@@ -1150,6 +1150,77 @@
       "phase": "v2"
     },
     {
+      "op": "lsp.type_definition",
+      "args": "LspPosArgs",
+      "result": "LspLocations",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.implementation",
+      "args": "LspPosArgs",
+      "result": "LspLocations",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "buf.format",
+      "args": "BufTickArgs",
+      "result": "EditRes",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "buf.reload",
+      "args": "BufArgs",
+      "result": "EditRes",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "buf.markdown",
+      "args": "BufArgs",
+      "result": "BufMarkdown",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "lsp.hover",
       "args": "LspPosArgs",
       "result": "LspHover",
@@ -2822,6 +2893,19 @@
       ],
       "additionalProperties": true
     },
+    "BufMarkdown": {
+      "type": "object",
+      "properties": {
+        "cut": {
+          "type": "boolean"
+        },
+        "md": {
+          "$ref": "#/defs/MdNode"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
     "BufOpenRes": {
       "type": "object",
       "properties": {
@@ -2969,6 +3053,22 @@
         "symbols"
       ],
       "additionalProperties": true
+    },
+    "BufTickArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick"
+      ],
+      "additionalProperties": false
     },
     "BufsSnap": {
       "type": "object",
