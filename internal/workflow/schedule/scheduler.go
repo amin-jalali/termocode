@@ -29,6 +29,9 @@ const (
 	OnTime = time.Minute
 	// DefaultPrecheckTimeout caps a precheck.
 	DefaultPrecheckTimeout = 30 * time.Second
+	// MaxSleep caps the loop's wait: timers stop during a suspend, so the
+	// loop looks again at least this often (the 30 s idle tick).
+	MaxSleep = 30 * time.Second
 	// maxCatchUp bounds the walk over in-grace slots.
 	maxCatchUp = 10000
 )
@@ -63,8 +66,21 @@ type Event struct {
 	Err     error
 }
 
+// Clock is the time source of the loop (tests inject a fake one).
+type Clock interface {
+	Now() time.Time
+	After(d time.Duration) <-chan time.Time
+}
+
+type realClock struct{}
+
+func (realClock) Now() time.Time                         { return clock.Now() }
+func (realClock) After(d time.Duration) <-chan time.Time { return clock.After(d) }
+
 // Options configure a Scheduler.
 type Options struct {
+	// Clock: nil is the real clock.
+	Clock Clock
 	// Grace: a slot missed by less than this still runs once, late.
 	// 0 is DefaultGrace; negative: only slots within OnTime run.
 	Grace time.Duration
@@ -92,11 +108,14 @@ type job struct {
 type Scheduler struct {
 	opts   Options
 	window time.Duration
+	clock  Clock
 	now    func() time.Time
+	wake   chan struct{}
 
 	mu      sync.Mutex
 	jobs    map[string]*job
 	stopped bool
+	started bool
 	ctx     context.Context
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
@@ -114,9 +133,82 @@ func New(o Options) *Scheduler {
 	case window < OnTime:
 		window = OnTime
 	}
+	c := o.Clock
+	if c == nil {
+		c = realClock{}
+	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Scheduler{opts: o, window: window, now: clock.Now,
-		jobs: map[string]*job{}, ctx: ctx, cancel: cancel}
+	return &Scheduler{opts: o, window: window, clock: c, now: c.Now,
+		wake: make(chan struct{}, 1), jobs: map[string]*job{}, ctx: ctx, cancel: cancel}
+}
+
+// Start runs the loop: Tick, then sleep until the next slot (at most
+// MaxSleep), or with no job until Add. Later calls do nothing.
+func (s *Scheduler) Start() {
+	s.mu.Lock()
+	if s.started || s.stopped {
+		s.mu.Unlock()
+		return
+	}
+	s.started = true
+	s.wg.Add(1)
+	s.mu.Unlock()
+	select { // the loop's first Tick sees every Add before Start
+	case <-s.wake:
+	default:
+	}
+	crash.Go("workflow/schedule.loop", func() {
+		defer s.wg.Done()
+		s.loop()
+	})
+}
+
+func (s *Scheduler) loop() {
+	for {
+		now := s.clock.Now()
+		s.Tick(now)
+		var timer <-chan time.Time
+		if d, ok := s.sleepFor(now); ok {
+			timer = s.clock.After(d)
+		}
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-s.wake:
+		case <-timer:
+		}
+	}
+}
+
+// sleepFor is the wait until the earliest next slot, capped at MaxSleep;
+// false: no job, so no timer (no idle wakeups).
+func (s *Scheduler) sleepFor(now time.Time) (time.Duration, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var first time.Time
+	for _, j := range s.jobs {
+		if !j.next.IsZero() && (first.IsZero() || j.next.Before(first)) {
+			first = j.next
+		}
+	}
+	if first.IsZero() {
+		return 0, false
+	}
+	d := first.Sub(now)
+	if d > MaxSleep {
+		d = MaxSleep
+	}
+	if d < time.Millisecond {
+		d = time.Millisecond
+	}
+	return d, true
+}
+
+func (s *Scheduler) poke() {
+	select {
+	case s.wake <- struct{}{}:
+	default:
+	}
 }
 
 // Add schedules a job. Its first slot is the first after LastRun (or
@@ -143,6 +235,7 @@ func (s *Scheduler) Add(j Job) error {
 	}
 	ctx, cancel := context.WithCancel(s.ctx)
 	s.jobs[j.ID] = &job{Job: j, next: j.Schedule.Next(from), ctx: ctx, cancel: cancel}
+	s.poke()
 	return nil
 }
 
@@ -154,6 +247,7 @@ func (s *Scheduler) Remove(id string) {
 	s.mu.Unlock()
 	if j != nil {
 		j.cancel()
+		s.poke()
 	}
 }
 
