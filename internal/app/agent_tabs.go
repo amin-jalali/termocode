@@ -254,7 +254,7 @@ func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
 	}
 	// Without shell integration the mark stays until the tab closes;
 	// with it, the shell's command-end clears it (term_integration.go).
-	t.Agent, t.AgentState = a.ID, agents.Working
+	t.Agent, t.AgentState = a.ID, agents.StartState(a.ID)
 	// The listener first, then the line: the agent may call at once.
 	serveCmd := m.ensureMCPServeForAgent() // mcp_server auto: the agent may use the IDE's tools
 	line, launchCmd := m.agentLaunchLine(a)
@@ -263,7 +263,9 @@ func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
 		local ok, chan = pcall(function() return vim.bo[buf].channel end)
 		if ok and chan and chan > 0 then pcall(vim.fn.chansend, chan, %q) end
 	`, t.BufID, line+"\n"))
-	m.agentWatch(t.BufID, true)
+	if agents.HasScreenRules(a.ID) { // a preset without rules: nothing to read
+		m.agentWatch(t.BufID, true)
+	}
 	m.applyLayout()
 	m.resizeTerminalSplit()
 	return tea.Batch(serveCmd, launchCmd, m.agentMCPHandTip(a))
