@@ -51,6 +51,14 @@ func (e *evaluator) eval(n node) (any, error) {
 			out[i] = v
 		}
 		return out, nil
+	case notNode:
+		v, err := e.eval(t.x)
+		if err != nil {
+			return nil, err
+		}
+		return !truthy(v), nil
+	case binNode:
+		return e.bin(t)
 	}
 	return nil, fmt.Errorf("expr: internal error: unknown node %T", n)
 }
