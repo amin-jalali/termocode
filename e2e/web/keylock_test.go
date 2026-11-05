@@ -3,10 +3,13 @@
 package web
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 )
 
@@ -84,10 +87,26 @@ func TestDeskTermKeysHintInstallsApp(t *testing.T) {
 	p.WaitJS(`window.__prompted === true`)
 }
 
-// In the installed app's window the keys are the page's already: no hint.
+// In the installed app's window the keys are the page's already: no hint
+// and no Full screen. (DevTools cannot emulate display-mode, so the page
+// gets a matchMedia that answers standalone before it loads.)
 func TestDeskTermKeysNoHintInTheApp(t *testing.T) {
-	p, c := openTerm(t, Desktop)
-	p.Media(map[string]string{"display-mode": "standalone", "prefers-reduced-motion": "reduce"})
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	p.Do(chromedp.Func(func(ctx context.Context, tg *chromedp.Target) error {
+		_, err := cdp.Call(ctx, tg, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: `{
+			const mm = window.matchMedia.bind(window);
+			window.matchMedia = (q) => {
+				const m = mm(q);
+				return q === "(display-mode: standalone)" ? { matches: true, media: q, onchange: null, addEventListener() {}, removeEventListener() {} } : m;
+			};
+		}`})
+		return err
+	}))
+	c := p.Login("c-1")
+	p.GoTab("term")
+	c.Subs(t, "terms")
 	showTerm(t, p, c, termSnap(3, 0, 80, "$"), termItem(3, "zsh", false, true))
 	p.Holds(`!`+keyHint+` && document.querySelector('[data-view="term"] .trow')`, 300*time.Millisecond)
 	if Eval[bool](p, `document.querySelector(".dterm-fullscreen") !== null`) {
