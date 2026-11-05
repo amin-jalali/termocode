@@ -27,6 +27,12 @@ func EvalEnv(src string, scope map[string]any, env *Env) (v Value, err error) {
 			v, err = Value{}, fmt.Errorf("expr: internal error: %v", r)
 		}
 	}()
+	return evalRaw(src, scope, env)
+}
+
+// evalRaw is EvalEnv without the recover guard (the fuzz test calls it,
+// so a panic shows up as a failure instead of an error).
+func evalRaw(src string, scope map[string]any, env *Env) (Value, error) {
 	n, err := parse(src)
 	if err != nil {
 		return Value{}, err
