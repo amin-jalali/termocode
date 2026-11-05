@@ -161,8 +161,10 @@ func (l *Ledger) Forget(step, item string) error {
 	return l.saveLocked()
 }
 
-// set stores e (replacing the entry of its step and item) and saves.
-func (l *Ledger) set(e Entry) error {
+// set stores e redacted (replacing the entry of its step and item) and
+// saves.
+func (l *Ledger) set(e Entry) (Entry, error) {
+	e = clean(e)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if i := l.find(e.Step, e.Item); i >= 0 {
@@ -170,7 +172,7 @@ func (l *Ledger) set(e Entry) error {
 	} else {
 		l.f.Writes = append(l.f.Writes, e)
 	}
-	return l.saveLocked()
+	return e, l.saveLocked()
 }
 
 func (l *Ledger) saveLocked() error {
@@ -216,24 +218,25 @@ func (l *Ledger) Do(ctx context.Context, w Write, send SendFunc, find FindFunc) 
 		}
 		if found {
 			old.State, old.ExternalID, old.Error, old.DoneMs = Done, res.ExternalID, "", clock.Now().UnixMilli()
-			return old, false, l.set(old)
+			old, err = l.set(old)
+			return old, false, err
 		}
 	}
 	e := Entry{
 		Step: w.Step, Item: w.Item, Target: w.Target, ArgsHash: ArgsHash(w.Args),
 		Marker: marker, State: Sending, Undo: w.Undo, StartedMs: clock.Now().UnixMilli(),
 	}
-	if err := l.set(e); err != nil {
+	e, err := l.set(e)
+	if err != nil {
 		return e, false, err
 	}
 	res, err := send(ctx, marker)
 	if err != nil {
 		e.State, e.Error = Failed, err.Error()
-		if serr := l.set(e); serr != nil {
-			return e, true, errors.Join(err, serr)
-		}
-		return e, true, err
+		e, serr := l.set(e)
+		return e, true, errors.Join(err, serr)
 	}
 	e.State, e.ExternalID, e.DoneMs = Done, res.ExternalID, clock.Now().UnixMilli()
-	return e, true, l.set(e)
+	e, err = l.set(e)
+	return e, true, err
 }
