@@ -274,6 +274,8 @@ func (r *runner) item(ctx context.Context, s *workflow.Step, f *frame, is *ItemS
 	case err == nil:
 	case r.user.Err() != nil:
 		state = StateCancelled
+	case errors.Is(err, ErrPaused):
+		state = StatePaused
 	default:
 		state, msg = StateFailed, err.Error()
 	}

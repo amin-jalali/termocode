@@ -215,6 +215,8 @@ func (r *runner) main(ctx context.Context) {
 		r.end(RunOK, nil)
 	case r.user.Err() != nil:
 		r.end(RunCancel, nil)
+	case errors.Is(err, ErrPaused):
+		r.end(RunPause, cause(err))
 	case r.runCtx.Err() != nil:
 		r.end(RunFail, fmt.Errorf("the run timed out after %s", r.file.Limits.Timeout))
 	default:
@@ -272,6 +274,15 @@ type stepFailure struct {
 
 func (e *stepFailure) Error() string { return fmt.Sprintf("step %s: %v", e.Step, e.Err) }
 func (e *stepFailure) Unwrap() error { return e.Err }
+
+// cause is the adapter's error under the step failures.
+func cause(err error) error {
+	var sf *stepFailure
+	for errors.As(err, &sf) {
+		err = sf.Err
+	}
+	return err
+}
 
 func isStop(err error) bool {
 	var sf *stepFailure
@@ -437,7 +448,7 @@ func Permanent(err error) error {
 func retryable(ctx context.Context, err error) bool {
 	var p permanent
 	var sf *stepFailure
-	return ctx.Err() == nil && !errors.Is(err, ErrDenied) && !errors.As(err, &p) && !errors.As(err, &sf)
+	return ctx.Err() == nil && !errors.Is(err, ErrDenied) && !errors.Is(err, ErrPaused) && !errors.As(err, &p) && !errors.As(err, &sf)
 }
 
 // failed records a failed step, runs its else (on_error continue) and
@@ -448,6 +459,11 @@ func (r *runner) failed(ctx context.Context, s *workflow.Step, f *frame, st *Ste
 		r.edit(func() { st.State = StateCancelled })
 		r.save()
 		return r.user.Err()
+	}
+	if errors.Is(err, ErrPaused) { // not a failure: the whole run waits
+		r.edit(func() { st.State = StatePaused; st.Error = err.Error() })
+		r.save()
+		return &stepFailure{Step: key, Err: err, Stop: true}
 	}
 	if ctx.Err() != nil && r.runCtx.Err() == nil { // the item's time is up
 		err = fmt.Errorf("item timed out after %s", r.file.Limits.ItemTimeout)
