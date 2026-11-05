@@ -5,37 +5,134 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
+// front brings p's tab to the front: a tab behind another runs no
+// animation frames, and the page's taps wait for them.
+func front(p *Page) {
+	p.T.Helper()
+	p.Do(chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
+		_, err := cdp.Call(ctx, t, page.BringToFront, cdp.Empty{})
+		return err
+	}))
+}
+
 // popOut taps Pop out on the desktop terminal panel and returns the new
 // tab as a Page (sized as a desktop) and its hub connection, after the
 // handshake: the new tab never shows a sign-in.
 func popOut(t *testing.T, p *Page) (*Page, *HubConn) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(p.Ctx, wait)
-	defer cancel()
-	ch := chromedp.WaitNewTarget(ctx, func(i *target.Info) bool { return i.Type == "page" })
+	before := map[target.ID]bool{}
+	for _, x := range targets(t, p) {
+		before[x.TargetID] = true
+	}
 	p.Tap(".dterm-popout")
+	// The new tab has loaded once it connects: look for it after that.
+	c := p.S.Hub.Accept(t)
+	c.Handshake(t, "c-2")
 	var id target.ID
-	select {
-	case id = <-ch:
-	case <-ctx.Done():
+	for _, x := range targets(t, p) {
+		if x.Type == "page" && x.OpenerID != "" && !before[x.TargetID] {
+			id = x.TargetID
+		}
+	}
+	if id == "" {
 		t.Fatal("Pop out opened no tab")
 	}
 	pctx, pcancel := chromedp.NewContext(p.Ctx, chromedp.WithTargetID(id))
 	t.Cleanup(pcancel)
+	// The first run attaches the tab for the context's whole life: it
+	// runs on pctx itself, not on a context with a time limit.
+	if err := chromedp.Do(pctx, chromedp.EmulateViewport(p.VP.W, p.VP.H, chromedp.EmulateScale(p.VP.Scale))); err != nil {
+		t.Fatalf("attach to the new tab: %v", err)
+	}
 	q := &Page{T: t, Ctx: pctx, S: p.S, VP: p.VP}
-	q.Do(chromedp.EmulateViewport(p.VP.W, p.VP.H, chromedp.EmulateScale(p.VP.Scale)))
-	c := p.S.Hub.Accept(t)
-	c.Handshake(t, "c-2")
+	front(q)
 	return q, c
+}
+
+// popReq returns the next request for op; subs, unsubs and paint
+// requests on the way are skipped (the new tab may start narrow and
+// change its view when it is sized as a desktop).
+func popReq(t *testing.T, c *HubConn, op string) *webproto.Req {
+	t.Helper()
+	for {
+		switch m := c.Next(t).(type) {
+		case *webproto.Req:
+			if m.Op == op {
+				return m
+			}
+			if !paintOps[m.Op] {
+				t.Fatalf("page sent %s; want %s", show(m), op)
+			}
+		case *webproto.Sub, *webproto.Unsub:
+		default:
+			t.Fatalf("page sent %s; want %s", show(m), op)
+		}
+	}
+}
+
+// popSub reads until a sub that names topic, skipping what popReq skips.
+func popSub(t *testing.T, c *HubConn, topic string) {
+	t.Helper()
+	for {
+		switch m := c.Next(t).(type) {
+		case *webproto.Sub:
+			if slices.Contains(m.Topics, topic) {
+				return
+			}
+		case *webproto.Unsub:
+		case *webproto.Req:
+			if !paintOps[m.Op] {
+				t.Fatalf("page sent %s while a sub for %s was expected", show(m), topic)
+			}
+		default:
+			t.Fatalf("page sent %s while a sub for %s was expected", show(m), topic)
+		}
+	}
+}
+
+// settle waits until the new tab shows the desktop pane of buf and has
+// asked for its rows, then reads what it sent on the way: a headless new
+// tab starts narrow, and its view changes once it is sized as a desktop.
+func settle(t *testing.T, q *Page, c *HubConn, buf int) {
+	t.Helper()
+	q.WaitJS(fmt.Sprintf(`document.querySelector('.layout-solo [data-view="term"] .dterm-pane[data-buf="%d"]')`, buf))
+	popSub(t, c, fmt.Sprint("term:", buf))
+	for {
+		select {
+		case m := <-c.in:
+			if r, ok := m.(*webproto.Req); ok && !paintOps[r.Op] {
+				t.Fatalf("the new tab sent %s at start", show(m))
+			}
+			continue
+		case <-time.After(300 * time.Millisecond):
+		}
+		return
+	}
+}
+
+// targets lists the browser's targets.
+func targets(t *testing.T, p *Page) []*target.Info {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(p.Ctx, wait)
+	defer cancel()
+	ts, err := chromedp.Targets(ctx)
+	if err != nil {
+		t.Fatalf("list the tabs: %v", err)
+	}
+	return ts
 }
 
 // WEBP-13: Pop out opens the focused shell in its own tab: a live view of
@@ -48,7 +145,7 @@ func TestDeskTermPopOutLiveAndCloseKeepsShell(t *testing.T) {
 	showTerm(t, p, c, termSnap(3, 0, 80, "$ ls", "a.txt", "$"), termItem(3, "zsh", false, true))
 
 	q, c2 := popOut(t, p)
-	c2.Subs(t, "terms", "term:3")
+	settle(t, q, c2, 3)
 	c2.Send(t, Snap("status", 1, statusData("main", 0)))
 	c2.Send(t, Snap("toasts", 1, map[string]any{"toasts": []any{}}))
 	c2.Send(t, Snap("terms", 1, termsSnap(termItem(3, "zsh", false, true))))
@@ -68,7 +165,7 @@ func TestDeskTermPopOutLiveAndCloseKeepsShell(t *testing.T) {
 	// Keys typed there go to shell 3.
 	q.WaitJS(`document.activeElement === document.querySelector('[data-view="term"] .dterm-pane.is-focus .dterm-input')`)
 	q.Key("x")
-	r := expectReq(t, c2, "term.send")
+	r := popReq(t, c2, "term.send")
 	var a webproto.TermSendArgs
 	if err := json.Unmarshal(r.Args, &a); err != nil || a.Buf != 3 || a.Text != "x" {
 		t.Fatalf("term.send %s, want x to shell 3", r.Args)
@@ -92,7 +189,18 @@ func TestDeskTermPopOutLiveAndCloseKeepsShell(t *testing.T) {
 		}
 		break
 	}
-	c.Quiet(t, 300*time.Millisecond)
+	for end := time.After(300 * time.Millisecond); ; {
+		select {
+		case m := <-c.in:
+			if r, ok := m.(*webproto.Req); ok && !paintOps[r.Op] {
+				t.Fatalf("the first tab sent %s when the other tab closed", show(m))
+			}
+			continue
+		case <-end:
+		}
+		break
+	}
+	front(p)
 	if !Eval[bool](p, `document.querySelector('[data-view="term"] .dterm-pane[data-buf="3"] .trow') !== null`) {
 		t.Error("the first tab lost the shell")
 	}
@@ -102,13 +210,14 @@ func TestDeskTermPopOutLiveAndCloseKeepsShell(t *testing.T) {
 func TestDeskTermPopOutTwoShellsTwoTabs(t *testing.T) {
 	p, c := openTerm(t, Desktop)
 	showTerm(t, p, c, termSnap(3, 0, 80, "$"), termItem(3, "zsh", false, true), termItem(9, "build", false, false))
-	_, c2 := popOut(t, p)
-	c2.Subs(t, "term:3")
+	q2, c2 := popOut(t, p)
+	settle(t, q2, c2, 3)
 
+	front(p)
 	p.Tap(`.dterm-tab[data-buf="9"] .dterm-tab-open`)
-	c.WaitSub(t, "term:9")
+	popSub(t, c, "term:9")
 	c.Send(t, Snap("term:9", 1, termSnap(9, 0, 80, "building")))
 	p.WaitJS(`document.querySelector('[data-view="term"] .dterm-pane.is-focus[data-buf="9"] .trow')`)
-	_, c3 := popOut(t, p)
-	c3.Subs(t, "term:9")
+	q3, c3 := popOut(t, p)
+	settle(t, q3, c3, 9)
 }
