@@ -33,15 +33,11 @@ func EvalEnv(src string, scope map[string]any, env *Env) (v Value, err error) {
 // evalRaw is EvalEnv without the recover guard (the fuzz test calls it,
 // so a panic shows up as a failure instead of an error).
 func evalRaw(src string, scope map[string]any, env *Env) (Value, error) {
-	n, err := parse(src)
+	n, err := parseCached(src)
 	if err != nil {
 		return Value{}, err
 	}
-	x, err := (&evaluator{scope: scope, env: env}).eval(n)
-	if err != nil {
-		return Value{}, err
-	}
-	return Value{x}, nil
+	return evalNode(n, scope, env)
 }
 
 type evaluator struct {
