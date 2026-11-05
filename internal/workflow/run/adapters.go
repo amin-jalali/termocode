@@ -51,6 +51,10 @@ type SourceCall struct {
 	Item         *Item          // the each item when the source is inside an each
 	Dry          bool           // a dry run (sources still read for real)
 	Attempt      int            // 1 on the first try
+	// ReadOnly is set for an mcp source whose tool is marked read-only
+	// (ToolCheck, asked before the call). An mcp source that is not
+	// read-only only runs after the user said yes (Options.Ask).
+	ReadOnly bool
 }
 
 // SourceResult is what a source read.
@@ -164,6 +168,10 @@ type WriteCall struct {
 	// was sent before a crash.
 	Marker  string
 	Attempt int
+	// ReadOnly is set for an mcp / status write whose tool is marked
+	// read-only (ToolCheck, asked before the call). The gate decides
+	// what that means.
+	ReadOnly bool
 	// Resumed is set when this write may have been sent before (resume
 	// after a crash): look for the marker before sending again.
 	Resumed bool
@@ -174,3 +182,17 @@ type WriteCall struct {
 // ErrDenied is wrapped by a Writer (or an Ask) when the user said no.
 // A denied step is never retried.
 var ErrDenied = errors.New("denied")
+
+// ToolCheck tells whether an MCP tool is marked read-only (its
+// annotation). The engine asks it before every mcp source and every mcp
+// / status write, so the answer is known before the call.
+type ToolCheck interface {
+	ReadOnly(ctx context.Context, server, tool string) (bool, error)
+}
+
+// AskCall is a question to the user (a card) before a step calls an MCP
+// tool that is not marked read-only from a source.
+type AskCall struct {
+	Step         *workflow.Step
+	Server, Tool string
+}
