@@ -49,8 +49,8 @@ func dbResult() dbclient.Result {
 func TestDBSelect(t *testing.T) {
 	sess := &fakeDBSession{res: dbResult()}
 	op := &fakeOpener{sess: sess}
-	s := &Sources{DB: op}
-	r, err := s.DB(context.Background(), DBInput{Conn: "main", SQL: "SELECT id, name FROM t", Shape: Shape{MaxItems: 2}})
+	s := &Sources{Databases: op}
+	r, err := s.DB(context.Background(), DBInput{Conn: "main", SQL: "SELECT id, name FROM t", Shape: Shape{MaxItems: 2, Key: "$.id"}})
 	if err != nil || keys(r) != "1 2" || !r.Truncated || r.Total != 3 {
 		t.Fatalf("select: %+v %v", r, err)
 	}
@@ -65,7 +65,7 @@ func TestDBSelect(t *testing.T) {
 func TestDBRefusesNonReadOnlySQL(t *testing.T) {
 	sess := &fakeDBSession{res: dbResult()}
 	op := &fakeOpener{sess: sess}
-	s := &Sources{DB: op}
+	s := &Sources{Databases: op}
 	for _, q := range []string{
 		"DELETE FROM t",
 		"UPDATE t SET a=1",
@@ -88,13 +88,13 @@ func TestDBRefusesNonReadOnlySQL(t *testing.T) {
 func TestDBErrorsAndSecrets(t *testing.T) {
 	secret := "pw-" + "s3cret"
 	op := &fakeOpener{err: errors.New("dial postgres://u:" + secret + "@h/db failed")}
-	s := &Sources{DB: op}
+	s := &Sources{Databases: op}
 	_, err := s.DB(context.Background(), DBInput{Conn: "main", SQL: "SELECT 1"})
 	if err == nil || strings.Contains(err.Error(), secret) {
 		t.Fatalf("open err leaks: %v", err)
 	}
 	sess := &fakeDBSession{res: dbclient.Result{Err: errors.New("failed password=" + secret)}}
-	s = &Sources{DB: &fakeOpener{sess: sess}}
+	s = &Sources{Databases: &fakeOpener{sess: sess}}
 	_, err = s.DB(context.Background(), DBInput{Conn: "main", SQL: "SELECT 1"})
 	if err == nil || strings.Contains(err.Error(), secret) {
 		t.Fatalf("run err leaks: %v", err)
