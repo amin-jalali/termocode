@@ -16,6 +16,8 @@ import type { TermItem, TermNewRes } from "../../../../webproto/proto";
 import { rang } from "../lib/attention";
 import { isMac } from "../lib/platform";
 import { route } from "../lib/router";
+import { BROWSER_KEYS, canLock, fullScreenKeys, inApp, install, installAsk, keysWin } from "../lib/keylock";
+import { prefs, setPref } from "../lib/prefs";
 import { loadingOlder, loadOlder, older, stitch } from "../lib/term";
 import { colorsOn, paintLine, termColors, wantColors, type TermSeg } from "../lib/termcolors";
 import { keyBytes, pasteLines, pasteText, workbenchKey } from "../lib/termkeys";
@@ -423,6 +425,37 @@ function Pane({ buf, item, n, focused, controller }: { buf: number; item: TermIt
   );
 }
 
+function goFullScreen(): void {
+  fullScreenKeys().then((ok) => {
+    if (!ok) toast("warn", t("dterm.fullscreen_failed"));
+  });
+}
+
+/** KeysHint is the one-time line about the keys the browser keeps
+ * (WEBP-11): it names them and offers the ways to get them. It never
+ * takes the focus from the shell. */
+function KeysHint() {
+  if (keysWin.value || prefs.value.keysHintDone) return null;
+  return (
+    <div class="hint dterm-keyhint" role="note">
+      <span class="hint-text">{t("dterm.keys_body", { keys: BROWSER_KEYS })}</span>
+      {canLock() && (
+        <button type="button" class="btn btn-neutral btn-small dterm-keyhint-fs" onClick={goFullScreen}>
+          {t("dterm.fullscreen")}
+        </button>
+      )}
+      {installAsk.value && (
+        <button type="button" class="btn btn-neutral btn-small dterm-install" onClick={install}>
+          {t("dterm.install")}
+        </button>
+      )}
+      <button type="button" class="btn btn-neutral btn-small dterm-keyhint-ok" onClick={() => setPref("keysHintDone", true)}>
+        {t("firstrun.ok")}
+      </button>
+    </div>
+  );
+}
+
 /** List is the shells on the right (two or more): a click shows one. */
 function List({ terms, shown, focus, onKill }: { terms: TermItem[]; shown: readonly number[]; focus: number | null; onKill: (x: TermItem) => void }) {
   return (
@@ -486,6 +519,11 @@ export function DeskTerm() {
       <Portal into="panel-view-actions">
       <div class="dterm-actions" role="toolbar" aria-label={t("tab.term")}>
         {ring && <span class="bell-dot" role="status" aria-label={t("term.bell")} />}
+        {canLock() && !inApp.value && !keysWin.value && (
+          <button type="button" class="tb tb-icon dterm-fullscreen" aria-label={t("dterm.fullscreen")} title={t("dterm.fullscreen_title")} onClick={goFullScreen}>
+            <Cod name="screen-full" />
+          </button>
+        )}
         {focus !== null && (
           <button type="button" class="tb tb-icon head-btn term-info-btn" aria-label={t("term.about")} title={t("term.about")} onClick={() => setAbout(true)}>
             ⓘ
@@ -507,6 +545,7 @@ export function DeskTerm() {
         {!controller && st?.data !== undefined && <span class="chip dterm-viewonly">{t("viewonly")}</span>}
       </div>
       </Portal>
+      {terms.length > 0 && <KeysHint />}
       {!st?.data ? (
         <SkeletonRows rows={6} />
       ) : terms.length === 0 ? (
