@@ -3,6 +3,7 @@ package source
 import (
 	"net"
 
+	"github.com/amin-jalali/termocode/internal/ghci"
 	"github.com/amin-jalali/termocode/internal/httpclient"
 )
 
@@ -24,6 +25,10 @@ type Sources struct {
 	// Tools calls MCP tools for mcp sources; nil: every mcp source fails with
 	// ErrNotConnected.
 	Tools ToolCaller
+	// GH runs gh for github sources (ghci.DefaultRunner, or a fake); nil:
+	// every github source fails. The token is gh's own login; nothing
+	// here reads or passes one.
+	GH ghci.Runner
 }
 
 // SecretGetter returns a named secret (secrets.Store.Get). Its errors
