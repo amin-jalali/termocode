@@ -22,7 +22,9 @@ web	ai-toggle-inline	op:ai.complete
 web	ai-toggle-next-edit	op:ai.next_edit
 web	ai-trigger-inline	op:ai.complete
 web	ai-worktrees	op:ai.worktrees
+web	alternate-file	cmd:lastFile
 web	close-buffer	cmd:closeEditor
+web	close-split	cmd:closeSplit
 web	containers-focus	view:containers
 web	containers-logs	op:containers.logs
 web	containers-refresh	op:containers.list
@@ -57,6 +59,9 @@ web	debug-stop	op:debug.control
 web	debug-toggle-breakpoint	op:debug.bp
 web	debug-view	view:run
 web	duplicate-line	cmd:copyLinesDown
+web	explorer-rename-selected	cmd:renameFile
+web	explorer-toggle-preview	cmd:togglePreview
+web	explorer-undo-rename	cmd:undoRename
 web	find-files	cmd:search
 web	find-references	op:lsp.references
 web	fold-all	cmd:foldAll
@@ -106,12 +111,16 @@ web	lowercase	cmd:lowerCase
 web	next-buffer	cmd:nextEditor
 web	next-diagnostic	cmd:problems
 web	open-settings-ui	cmd:settings
+web	open-url	cmd:openUrl
 web	pick-theme	cmd:themeDark
+web	pin-tab	cmd:pinTab
 web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
 web	problems	cmd:problems
 web	quick-open	cmd:quickOpen
+web	reopen-closed	cmd:reopenClosed
 web	replace-in-file	cmd:replaceInFile
+web	reveal-file	cmd:revealFile
 web	reveal-fs	op:tree.reveal_on_laptop
 web	reverse-lines	cmd:reverseLines
 web	run-doctor	palette
@@ -146,6 +155,7 @@ web	toggle-auto-save	palette
 web	toggle-comment	cmd:commentLine
 web	toggle-explorer	cmd:sidebar
 web	toggle-fold	cmd:toggleFold
+web	toggle-hidden	cmd:toggleHidden
 web	toggle-terminal	cmd:terminal
 web	toggle-wrap	cmd:wrap
 web	transfer-download	op:file.download
@@ -289,11 +299,9 @@ missing	ai-until-done	AI chat and agents|M
 missing	ai-usage	AI chat and agents|M
 missing	ai-web-tools	AI chat and agents|M
 missing	ai-worktrees-toggle	AI chat and agents|M
-missing	alternate-file	Editor and files|S
 missing	bookmark-clear	Editor and files|S
 missing	bookmark-list	Editor and files|S
 missing	bookmark-toggle	Editor and files|S
-missing	close-split	Editor and files|S
 missing	code-action-apply-preferred	Editor and files|S
 missing	code-actions	Editor and files|S
 missing	containers-attach	Containers|M
@@ -357,9 +365,6 @@ missing	db-test-connection	Databases|L
 missing	db-transaction-mode	Databases|L
 missing	debug-open-launch	Debug|S
 missing	diff-files	Editor and files|S
-missing	explorer-rename-selected	Editor and files|S
-missing	explorer-toggle-preview	Editor and files|S
-missing	explorer-undo-rename	Editor and files|S
 missing	format-document	Editor and files|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
@@ -408,18 +413,14 @@ missing	mcp-serve-copy-config	AI chat and agents|M
 missing	mcp-serve-status	AI chat and agents|M
 missing	next-hunk	Git|S
 missing	open-recent	Editor and files|S
-missing	open-url	Editor and files|S
 missing	open-workspace	Editor and files|S
 missing	output-clear	Testing and web access|S
-missing	pin-tab	Editor and files|S
 missing	prev-hunk	Git|S
 missing	preview-md	Editor and files|S
 missing	redis-delete-key	Databases|L
 missing	redis-set-ttl	Databases|L
 missing	reload-buffer	Editor and files|S
-missing	reopen-closed	Editor and files|S
 missing	replace-workspace	Editor and files|S
-missing	reveal-file	Editor and files|S
 missing	services-configure	Containers|S
 missing	services-open-compose	Containers|S
 missing	services-start-all	Containers|S
@@ -427,7 +428,6 @@ missing	services-stop-all	Containers|S
 missing	snippet-picker	Editor and files|S
 missing	snippets-manage	Editor and files|S
 missing	testing-collapse	Testing and web access|S
-missing	toggle-hidden	Editor and files|S
 missing	toggle-inlay-hints	Editor and files|S
 missing	web-devices	Testing and web access|S
 missing	workspace-add-folder	Editor and files|S
