@@ -54,7 +54,7 @@ func (r *runner) renderMap(m map[string]any, sc map[string]any) (map[string]any,
 
 func (r *runner) source(ctx context.Context, s *workflow.Step, f *frame, st *StepState, attempt int) (string, error) {
 	if r.opts.Source == nil {
-		return "", errors.New("no source adapter")
+		return "", Permanent(errors.New("no source adapter"))
 	}
 	sc := r.scope(f)
 	spec := s.Source
@@ -63,11 +63,11 @@ func (r *runner) source(ctx context.Context, s *workflow.Step, f *frame, st *Ste
 	}
 	args, err := r.renderMap(spec.Args, sc)
 	if err != nil {
-		return "", fmt.Errorf("args: %w", err)
+		return "", Permanent(fmt.Errorf("args: %w", err))
 	}
 	since, err := r.opts.Eval.Render(spec.ChangedSince, sc)
 	if err != nil {
-		return "", fmt.Errorf("changed_since: %w", err)
+		return "", Permanent(fmt.Errorf("changed_since: %w", err))
 	}
 	res, err := r.opts.Source.Read(ctx, SourceCall{Step: s, Args: args, ChangedSince: since,
 		Item: f.nearestItem(), Dry: r.opts.Dry, Attempt: attempt})
@@ -89,13 +89,13 @@ func (r *runner) plan(ctx context.Context, s *workflow.Step, f *frame, st *StepS
 		return StateSkipped, nil
 	}
 	if r.opts.Plan == nil {
-		return "", errors.New("no plan adapter")
+		return "", Permanent(errors.New("no plan adapter"))
 	}
 	prompt := ""
 	if s.Plan != nil {
 		var err error
 		if prompt, err = r.opts.Eval.Render(s.Plan.Prompt, r.scope(f)); err != nil {
-			return "", fmt.Errorf("prompt: %w", err)
+			return "", Permanent(fmt.Errorf("prompt: %w", err))
 		}
 	}
 	res, err := r.opts.Plan.Plan(ctx, PlanCall{Step: s, Items: items, Prompt: prompt, Dry: r.opts.Dry, Attempt: attempt})
@@ -155,7 +155,7 @@ func (r *runner) eachItems(s *workflow.Step, f *frame) ([]Item, error) {
 
 func (r *runner) each(ctx context.Context, s *workflow.Step, f *frame, st *StepState) (string, error) {
 	if s.Each == nil {
-		return "", errors.New("each without steps")
+		return "", Permanent(errors.New("each without steps"))
 	}
 	items, err := r.eachItems(s, f)
 	if err != nil {
@@ -219,7 +219,13 @@ func (r *runner) item(ctx context.Context, s *workflow.Step, f *frame, is *ItemS
 		}
 	}
 	if err == nil {
-		err = r.runList(ctx, s.Each.Steps, child)
+		ictx := ctx
+		if d := r.file.Limits.ItemTimeout; d > 0 {
+			var cancel context.CancelFunc
+			ictx, cancel = context.WithTimeout(ctx, d)
+			defer cancel()
+		}
+		err = r.runList(ictx, s.Each.Steps, child)
 	}
 	if entered {
 		if lerr := r.opts.Each.Leave(context.WithoutCancel(ctx), call, child.env, err == nil); lerr != nil && err == nil {
@@ -257,12 +263,12 @@ func (r *runner) runStepCall(ctx context.Context, s *workflow.Step, f *frame, st
 		return StateWouldRun, nil
 	}
 	if r.opts.Run == nil {
-		return "", errors.New("no run adapter")
+		return "", Permanent(errors.New("no run adapter"))
 	}
 	sc := r.scope(f)
 	prompt, err := r.opts.Eval.Render(r.prompt(s), sc)
 	if err != nil {
-		return "", fmt.Errorf("prompt: %w", err)
+		return "", Permanent(fmt.Errorf("prompt: %w", err))
 	}
 	render := func(t string) (string, error) { return r.opts.Eval.Render(t, sc) }
 	out, err := r.opts.Run.Run(ctx, RunCall{Step: s, Item: f.nearestItem(), Env: f.nearestEnv(),
@@ -316,11 +322,11 @@ func (r *runner) marker(s *workflow.Step, f *frame) string {
 
 func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *StepState, attempt int) (string, error) {
 	if s.Write == nil {
-		return "", errors.New("write without a target")
+		return "", Permanent(errors.New("write without a target"))
 	}
 	spec, err := r.renderWrite(s.Write, r.scope(f))
 	if err != nil {
-		return "", err
+		return "", Permanent(err)
 	}
 	key, item := stepKey(s), f.itemPath()
 	rec := WriteRecord{Step: key, Item: item, To: spec.To, Marker: r.marker(s, f), Spec: spec}
@@ -331,7 +337,7 @@ func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *Step
 		return StateRecorded, nil
 	}
 	if r.opts.Write == nil {
-		return "", errors.New("no write adapter")
+		return "", Permanent(errors.New("no write adapter"))
 	}
 	rec.State = "sending"
 	var idx int
