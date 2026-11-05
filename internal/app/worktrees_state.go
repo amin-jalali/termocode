@@ -33,8 +33,9 @@ import (
 const wtInterval = worktrees.StatusTTL
 
 type wtState struct {
-	visible bool
-	off     bool // a demo: never call git
+	visible  bool
+	off      bool         // a demo: never call git
+	demoTabs []wtTabAgent // a demo's terminal tabs
 
 	loaded  bool
 	err     string // why the list could not be read

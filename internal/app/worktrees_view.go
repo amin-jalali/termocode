@@ -54,6 +54,9 @@ func wtCompact(w, h int) bool { return w < wtCardMinW || h < wtCardMinH }
 
 // wtTabs is this window's terminal tabs as the view needs them.
 func (m Model) wtTabs() []wtTabAgent {
+	if m.wt != nil && m.wt.off {
+		return m.wt.demoTabs
+	}
 	out := make([]wtTabAgent, 0, len(m.terminalTabs))
 	for _, t := range m.terminalTabs {
 		out = append(out, wtTabAgent{name: t.agentTitle(), cwd: t.Cwd, state: t.AgentState})
