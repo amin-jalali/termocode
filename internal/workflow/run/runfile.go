@@ -36,6 +36,7 @@ const (
 	StateRecorded    = "recorded"  // dry run or gate "dry": a write only listed
 	StateDenied      = "denied"    // the user said no
 	StateCancelled   = "cancelled"
+	StatePaused      = "paused"
 	StateInterrupted = "interrupted" // the process ended mid-step
 )
 

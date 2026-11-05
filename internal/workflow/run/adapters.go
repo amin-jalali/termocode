@@ -183,6 +183,11 @@ type WriteCall struct {
 // A denied step is never retried.
 var ErrDenied = errors.New("denied")
 
+// ErrPaused is wrapped by an adapter when the run must wait for the user
+// (a budget reached, a usage limit): the run ends paused, the step is not
+// retried, and Options.Resume continues it from that step.
+var ErrPaused = errors.New("paused")
+
 // ToolCheck tells whether an MCP tool is marked read-only (its
 // annotation). The engine asks it before every mcp source and every mcp
 // / status write, so the answer is known before the call.
