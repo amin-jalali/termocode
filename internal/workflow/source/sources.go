@@ -29,6 +29,9 @@ type Sources struct {
 	// every github source fails. The token is gh's own login; nothing
 	// here reads or passes one.
 	GH ghci.Runner
+	// Databases opens read-only database sessions for db sources; nil: every db
+	// source fails.
+	Databases DBOpener
 }
 
 // SecretGetter returns a named secret (secrets.Store.Get). Its errors
