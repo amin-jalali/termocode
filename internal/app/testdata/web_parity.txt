@@ -56,8 +56,10 @@ web	debug-step-over	op:debug.control
 web	debug-stop	op:debug.control
 web	debug-toggle-breakpoint	op:debug.bp
 web	debug-view	view:run
+web	duplicate-line	cmd:copyLinesDown
 web	find-files	cmd:search
 web	find-references	op:lsp.references
+web	fold-all	cmd:foldAll
 web	git-blame	cmd:gitBlame
 web	git-branch	op:git.branches
 web	git-ci	op:ci.status
@@ -95,10 +97,12 @@ web	git-unstage-hunk	op:git.unstage_hunk
 web	goto-line	cmd:gotoLine
 web	goto-symbol-file	op:buf.symbols
 web	hover	op:lsp.hover
+web	join-lines	cmd:joinLines
 web	kubernetes-context	op:kube.contexts
 web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
 web	kubernetes-show	view:kube
+web	lowercase	cmd:lowerCase
 web	next-buffer	cmd:nextEditor
 web	next-diagnostic	cmd:problems
 web	open-settings-ui	cmd:settings
@@ -107,7 +111,9 @@ web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
 web	problems	cmd:problems
 web	quick-open	cmd:quickOpen
+web	replace-in-file	cmd:replaceInFile
 web	reveal-fs	op:tree.reveal_on_laptop
+web	reverse-lines	cmd:reverseLines
 web	run-doctor	palette
 web	run-tests	palette
 web	save	op:buf.save
@@ -118,8 +124,12 @@ web	services-refresh	op:services.refresh
 web	services-restart	op:services.restart
 web	services-start	op:services.start
 web	services-stop	op:services.stop
+web	sort-asc	cmd:sortLinesAsc
+web	sort-desc	cmd:sortLinesDesc
+web	spaces-to-tabs	cmd:spacesToTabs
 web	split-horizontal	cmd:splitDown
 web	split-vertical	cmd:splitRight
+web	tabs-to-spaces	cmd:tabsToSpaces
 web	terminal-close-tab	op:term.close
 web	terminal-maximize	cmd:panelMax
 web	terminal-new-tab	op:term.new
@@ -133,11 +143,17 @@ web	testing-run-cursor	op:tests.run
 web	testing-run-file	op:tests.run
 web	testing-stop	palette
 web	toggle-auto-save	palette
+web	toggle-comment	cmd:commentLine
 web	toggle-explorer	cmd:sidebar
+web	toggle-fold	cmd:toggleFold
 web	toggle-terminal	cmd:terminal
 web	toggle-wrap	cmd:wrap
 web	transfer-download	op:file.download
 web	transfer-upload	op:file.upload_begin
+web	trim-blanks	cmd:collapseBlankLines
+web	trim-whitespace	cmd:trimWhitespace
+web	unfold-all	cmd:unfoldAll
+web	uppercase	cmd:upperCase
 web	view-output	cmd:tasks
 web	web-pair	op:web.pair_ask
 web	web-share	op:web.grant_ask
@@ -341,11 +357,9 @@ missing	db-test-connection	Databases|L
 missing	db-transaction-mode	Databases|L
 missing	debug-open-launch	Debug|S
 missing	diff-files	Editor and files|S
-missing	duplicate-line	Editor and files|S
 missing	explorer-rename-selected	Editor and files|S
 missing	explorer-toggle-preview	Editor and files|S
 missing	explorer-undo-rename	Editor and files|S
-missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
@@ -389,8 +403,6 @@ missing	itermoc-open	Itermoc and AI setup|M
 missing	itermoc-open-ai	Itermoc and AI setup|M
 missing	itermoc-profiles	Itermoc and AI setup|M
 missing	itermoc-services	Itermoc and AI setup|M
-missing	join-lines	Editor and files|S
-missing	lowercase	Editor and files|S
 missing	mcp-import-other	AI chat and agents|M
 missing	mcp-serve-copy-config	AI chat and agents|M
 missing	mcp-serve-status	AI chat and agents|M
@@ -406,29 +418,17 @@ missing	redis-delete-key	Databases|L
 missing	redis-set-ttl	Databases|L
 missing	reload-buffer	Editor and files|S
 missing	reopen-closed	Editor and files|S
-missing	replace-in-file	Editor and files|S
 missing	replace-workspace	Editor and files|S
 missing	reveal-file	Editor and files|S
-missing	reverse-lines	Editor and files|S
 missing	services-configure	Containers|S
 missing	services-open-compose	Containers|S
 missing	services-start-all	Containers|S
 missing	services-stop-all	Containers|S
 missing	snippet-picker	Editor and files|S
 missing	snippets-manage	Editor and files|S
-missing	sort-asc	Editor and files|S
-missing	sort-desc	Editor and files|S
-missing	spaces-to-tabs	Editor and files|S
-missing	tabs-to-spaces	Editor and files|S
 missing	testing-collapse	Testing and web access|S
-missing	toggle-comment	Editor and files|S
-missing	toggle-fold	Editor and files|S
 missing	toggle-hidden	Editor and files|S
 missing	toggle-inlay-hints	Editor and files|S
-missing	trim-blanks	Editor and files|S
-missing	trim-whitespace	Editor and files|S
-missing	unfold-all	Editor and files|S
-missing	uppercase	Editor and files|S
 missing	web-devices	Testing and web access|S
 missing	workspace-add-folder	Editor and files|S
 missing	workspace-remove-folder	Editor and files|S
