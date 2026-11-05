@@ -214,6 +214,20 @@ ci+docs: install libx11-dev on linux runner; fix README placeholders
 3. Add screenshots for visible UI changes.
 4. For a choice that is hard to undo, add an ADR in [docs/adr/](docs/adr/README.md).
 
+### When CI runs
+
+CI runs on the last commit of a branch, not on every push:
+
+- Push to `main`: full CI.
+- Push to `land-*` or `feat/land-*` (landing branches): full CI.
+- Pull request: only when it is not a draft. It runs on open, new
+  commits, reopen and "Ready for review".
+- Push to any other `feat/*` branch: no CI. Keep the PR a draft while you
+  work, push every commit, then mark it ready.
+- By hand: every workflow has `workflow_dispatch`
+  (Actions tab, or `gh workflow run test.yml --ref <branch>`).
+  `release.yml` is tag-only. Fuzz and nightly keep their schedules.
+
 ### CI checks
 
 `.github/workflows/test.yml` runs these jobs. Their names stay stable, so
@@ -221,12 +235,12 @@ they can be marked as required checks in the branch protection of `main`:
 
 | Check | Runs on | What it does |
 |---|---|---|
-| `test (ubuntu-latest)` | every push and PR | build, vet, unit tests with `-race`, Android build, docgen check |
-| `test (macos-latest)` | every push and PR | the same on macOS |
-| `golden screens (ubuntu-latest)` | every push and PR | golden screens with a pinned nvim |
-| `e2e (ubuntu-latest)` | every push and PR | the e2e suite (real binary in a PTY) |
-| `e2e (macos-latest)` | PRs and pushes to `main` | the e2e suite on macOS |
-| `coverage (ubuntu-latest)` | PRs and pushes to `main` | coverage per system against `scripts/coverage-floors.txt`; table in the job summary, profile as an artifact |
+| `test (ubuntu-latest)` | every CI run | build, vet, unit tests with `-race`, Android build, docgen check |
+| `test (macos-latest)` | every CI run | the same on macOS |
+| `golden screens (ubuntu-latest)` | every CI run | golden screens with a pinned nvim |
+| `e2e (ubuntu-latest)` | every CI run | the e2e suite (real binary in a PTY) |
+| `e2e (macos-latest)` | every CI run except plain feature-branch pushes | the e2e suite on macOS |
+| `coverage (ubuntu-latest)` | every CI run except plain feature-branch pushes | coverage per system against `scripts/coverage-floors.txt`; table in the job summary, profile as an artifact |
 
 - A new push to a branch or PR cancels the older run of it. Runs on `main`
   are never cancelled.
