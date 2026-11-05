@@ -30,6 +30,9 @@ const (
 	// ViewKubernetes has no icon: it lives under Containers, whose icon
 	// is lit while it shows (kube_*.go in app).
 	ViewKubernetes
+	// ViewWorktrees has no icon either: it lives under Source Control,
+	// whose icon is lit while it shows (worktrees_*.go in app).
+	ViewWorktrees
 )
 
 // Width is the column count taken by the activity bar.
