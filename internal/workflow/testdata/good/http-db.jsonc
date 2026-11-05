@@ -1,0 +1,10 @@
+{
+  "version": 1, "name": "http-db",
+  "steps": [
+    { "id": "tickets", "type": "source", "from": "http", "request": "requests/open-tickets.http",
+      "headers": { "Authorization": "Bearer ${secret:TICKETS_TOKEN}" }, "items": "$.data[*].node", "when": "run.dry == false" },
+    { "id": "each", "type": "each", "items": "steps.tickets.items", "steps": [
+      { "id": "rows", "type": "source", "from": "db", "connection": "reports", "sql": "WITH a AS (select 1) SELECT * FROM a;", "max_items": 50 }
+    ] }
+  ]
+}
