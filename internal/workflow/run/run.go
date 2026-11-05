@@ -49,6 +49,8 @@ type Options struct {
 	OnEvent func(Event)
 	// Now is the clock (nil: time.Now).
 	Now func() time.Time
+	// Sleep waits between tries (nil: a timer that ends early on ctx).
+	Sleep func(ctx context.Context, d time.Duration) error
 }
 
 // Handle is a started run.
@@ -86,6 +88,9 @@ func Start(ctx context.Context, file *workflow.File, opts Options) *Handle {
 	}
 	if opts.Filter == nil {
 		opts.Filter = ExprFilter{}
+	}
+	if opts.Sleep == nil {
+		opts.Sleep = sleep
 	}
 	now := opts.Now()
 	id := opts.RunID
@@ -131,6 +136,7 @@ type runner struct {
 	file    *workflow.File
 	opts    Options
 	user    context.Context // cancelled by Handle.Cancel only
+	runCtx  context.Context // user + limits.timeout
 	vars    map[string]any
 	runInfo map[string]any
 
@@ -143,13 +149,21 @@ func (r *runner) main(ctx context.Context) {
 		r.end(RunFail, errors.New("no expression evaluator"))
 		return
 	}
+	r.runCtx = ctx
+	if d := r.file.Limits.Timeout; d > 0 {
+		var cancel context.CancelFunc
+		r.runCtx, cancel = context.WithTimeout(ctx, d)
+		defer cancel()
+	}
 	top := newFrame(nil, nil, r.rf.Steps)
-	err := r.runList(ctx, r.file.Steps, top)
+	err := r.runList(r.runCtx, r.file.Steps, top)
 	switch {
 	case err == nil:
 		r.end(RunOK, nil)
 	case r.user.Err() != nil:
 		r.end(RunCancel, nil)
+	case r.runCtx.Err() != nil:
+		r.end(RunFail, fmt.Errorf("the run timed out after %s", r.file.Limits.Timeout))
 	default:
 		r.end(RunFail, err)
 	}
@@ -279,10 +293,84 @@ func (r *runner) runStep(ctx context.Context, s *workflow.Step, f *frame) error 
 	return nil
 }
 
-// attempts runs one step (retries come with the step's retries).
+// attempts runs a step and tries it again on a retryable error, up to
+// retries.max more times, waiting backoff, 2×backoff, … in between.
 func (r *runner) attempts(ctx context.Context, s *workflow.Step, f *frame, st *StepState) (string, error) {
-	r.edit(func() { st.Attempts++ })
-	return r.exec(ctx, s, f, st, st.Attempts)
+	rt := r.file.Retries
+	if s.Retries != nil {
+		rt = *s.Retries
+	}
+	for try := 1; ; try++ {
+		r.edit(func() { st.Attempts = try })
+		state, err := r.try(ctx, s, f, st, try)
+		if err == nil || try > rt.Max || !retryable(ctx, err) {
+			return state, err
+		}
+		if serr := r.opts.Sleep(ctx, backoff(rt.Backoff, try)); serr != nil {
+			return "", err
+		}
+	}
+}
+
+// try runs one try under the step's timeout.
+func (r *runner) try(ctx context.Context, s *workflow.Step, f *frame, st *StepState, attempt int) (string, error) {
+	if s.Timeout <= 0 || s.Type == workflow.TypeEach {
+		return r.exec(ctx, s, f, st, attempt)
+	}
+	tctx, cancel := context.WithTimeout(ctx, s.Timeout)
+	defer cancel()
+	state, err := r.exec(tctx, s, f, st, attempt)
+	if err != nil && tctx.Err() != nil && ctx.Err() == nil {
+		err = fmt.Errorf("timed out after %s", s.Timeout)
+	}
+	return state, err
+}
+
+// MaxBackoff caps the wait between two tries.
+const MaxBackoff = time.Hour
+
+// backoff is the wait after try n (1-based): base doubled n-1 times.
+func backoff(base time.Duration, n int) time.Duration {
+	d := base
+	for i := 1; i < n && d < MaxBackoff; i++ {
+		d *= 2
+	}
+	return min(d, MaxBackoff)
+}
+
+func sleep(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return ctx.Err()
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// permanent marks an error that a retry cannot fix.
+type permanent struct{ err error }
+
+func (p permanent) Error() string { return p.err.Error() }
+func (p permanent) Unwrap() error { return p.err }
+
+// Permanent marks err as not worth a retry (a bad argument, a missing
+// adapter). Adapters use it; ErrDenied is never retried either.
+func Permanent(err error) error {
+	if err == nil {
+		return nil
+	}
+	return permanent{err}
+}
+
+func retryable(ctx context.Context, err error) bool {
+	var p permanent
+	var sf *stepFailure
+	return ctx.Err() == nil && !errors.Is(err, ErrDenied) && !errors.As(err, &p) && !errors.As(err, &sf)
 }
 
 // failed records a failed step, runs its else (on_error continue) and
@@ -292,6 +380,9 @@ func (r *runner) failed(ctx context.Context, s *workflow.Step, f *frame, st *Ste
 	if r.user.Err() != nil { // cancelled: not a failure of the step
 		r.edit(func() { st.State = StateCancelled })
 		return r.user.Err()
+	}
+	if ctx.Err() != nil && r.runCtx.Err() == nil { // the item's time is up
+		err = fmt.Errorf("item timed out after %s", r.file.Limits.ItemTimeout)
 	}
 	state := StateFailed
 	if errors.Is(err, ErrDenied) {
