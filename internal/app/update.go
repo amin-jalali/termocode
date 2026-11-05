@@ -164,6 +164,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	nm.showWaitingHotExit()
 	nm.showWaitingSecretsDeletePlain() // secrets_migrate.go
+	nm.showWaitingWorkflowGate()       // workflow_gate.go
 	nm.showWaitingCrashCard()
 	if mode := nm.syncMouseMode(); mode != nil { // mouse_hover.go
 		return nm, tea.Batch(cmd, mode)
@@ -436,6 +437,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		m.applyLayout()
 		return m, nil
+	case WorkflowWriteMsg: // workflow_gate.go
+		return m, m.AskWorkflowWrite(msg.Ask)
 	case confirm.SelectMsg:
 		m.confirmOpen = false
 		return m, m.handleConfirmSelect(msg.ID)
