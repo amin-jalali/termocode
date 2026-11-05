@@ -190,11 +190,12 @@ type fakes struct {
 	block   string
 	blocked chan struct{}
 	deny    map[string]bool // write step keys that the user denies
+	slow    map[string]bool // run steps ("step/item") that wait for their context
 	plan    PlanResult
 }
 
 func newFakes(items ...Item) *fakes {
-	return &fakes{items: items, fail: map[string][]error{}, tries: map[string]int{}, deny: map[string]bool{}, blocked: make(chan struct{}, 1)}
+	return &fakes{items: items, fail: map[string][]error{}, tries: map[string]int{}, deny: map[string]bool{}, slow: map[string]bool{}, blocked: make(chan struct{}, 1)}
 }
 
 func (f *fakes) try(key string) error {
@@ -239,6 +240,11 @@ func (f *fakes) Run(ctx context.Context, c RunCall) (Output, error) {
 	f.add("run %s prompt=%q wt=%s", k, c.Prompt, c.Env.Worktree)
 	if k == f.block {
 		f.blocked <- struct{}{}
+		<-ctx.Done()
+		return Output{}, ctx.Err()
+	}
+	if f.slow[k] {
+		f.try(k)
 		<-ctx.Done()
 		return Output{}, ctx.Err()
 	}
