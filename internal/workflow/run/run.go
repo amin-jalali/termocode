@@ -10,6 +10,7 @@ package run
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -49,6 +50,12 @@ type Options struct {
 	OnEvent func(Event)
 	// Now is the clock (nil: time.Now).
 	Now func() time.Time
+	// Store saves the run file at every boundary (nil: not saved).
+	Store RunFileWriter
+	// Resume continues a run from its run file (after Recover): finished
+	// steps and items are kept, the others run again. The file must be the
+	// one the run started with (same hash).
+	Resume *RunFile
 	// Sleep waits between tries (nil: a timer that ends early on ctx).
 	Sleep func(ctx context.Context, d time.Duration) error
 }
@@ -101,20 +108,36 @@ func Start(ctx context.Context, file *workflow.File, opts Options) *Handle {
 	maps.Copy(vars, file.Vars)
 	maps.Copy(vars, opts.Vars)
 
+	rf := &RunFile{
+		Version: RunFileVersion, ID: id, Workflow: file.Name, Hash: file.Hash,
+		Dry: opts.Dry, State: RunRunning, StartedAt: now, Vars: vars,
+		Steps: map[string]*StepState{},
+	}
+	var resumeErr error
+	if opts.Resume != nil {
+		rf = opts.Resume.clone()
+		if rf.Hash != file.Hash {
+			resumeErr = errors.New("the workflow file changed since this run started; start a new run")
+		}
+		rf.State, rf.EndedAt, rf.Error = RunRunning, time.Time{}, ""
+		rf.Resumed++
+		if rf.Vars == nil {
+			rf.Vars = map[string]any{}
+		}
+		vars, opts.Dry = rf.Vars, rf.Dry
+	}
+
 	userCtx, cancel := context.WithCancel(ctx)
 	r := &runner{
-		file: file,
-		opts: opts,
-		user: userCtx,
-		vars: vars,
-		rf: &RunFile{
-			Version: RunFileVersion, ID: id, Workflow: file.Name, Hash: file.Hash,
-			Dry: opts.Dry, State: RunRunning, StartedAt: now, Vars: vars,
-			Steps: map[string]*StepState{},
-		},
+		file:   file,
+		opts:   opts,
+		user:   userCtx,
+		vars:   vars,
+		resume: opts.Resume != nil,
+		rf:     rf,
 		runInfo: map[string]any{
-			"id": id, "date": now.Format("2006-01-02"), "started_at": now.Format(time.RFC3339),
-			"dry": opts.Dry, "last_ok_at": opts.LastOKAt,
+			"id": rf.ID, "date": rf.StartedAt.Format("2006-01-02"), "started_at": rf.StartedAt.Format(time.RFC3339),
+			"dry": rf.Dry, "last_ok_at": opts.LastOKAt,
 		},
 	}
 	h := &Handle{cancel: cancel, done: make(chan struct{}), r: r}
@@ -122,6 +145,10 @@ func Start(ctx context.Context, file *workflow.File, opts Options) *Handle {
 	finish := func() { once.Do(func() { cancel(); close(h.done) }) }
 	crash.GoWith("workflow.run", func() {
 		defer finish()
+		if resumeErr != nil {
+			r.end(RunFail, resumeErr)
+			return
+		}
 		r.main(userCtx)
 	}, func() {
 		r.end(RunFail, errors.New("the engine stopped on an internal error"))
@@ -139,9 +166,27 @@ type runner struct {
 	runCtx  context.Context // user + limits.timeout
 	vars    map[string]any
 	runInfo map[string]any
+	resume  bool  // continuing a run file: finished states are kept
+	saveErr error // the first failed save; the run stops at the next step
 
 	mu sync.Mutex
 	rf *RunFile
+}
+
+// save writes the run file (a boundary).
+func (r *runner) save() {
+	if r.opts.Store == nil || r.saveErr != nil {
+		return
+	}
+	r.mu.Lock()
+	b, err := json.Marshal(r.rf)
+	r.mu.Unlock()
+	if err == nil {
+		err = r.opts.Store.WriteRunFile(r.rf.ID, b)
+	}
+	if err != nil {
+		r.saveErr = fmt.Errorf("run file: %w", err)
+	}
 }
 
 func (r *runner) main(ctx context.Context) {
@@ -155,6 +200,7 @@ func (r *runner) main(ctx context.Context) {
 		r.runCtx, cancel = context.WithTimeout(ctx, d)
 		defer cancel()
 	}
+	r.save()
 	top := newFrame(nil, nil, r.rf.Steps)
 	err := r.runList(r.runCtx, r.file.Steps, top)
 	switch {
@@ -181,6 +227,7 @@ func (r *runner) end(state string, err error) {
 		r.rf.Error = err.Error()
 	}
 	r.mu.Unlock()
+	r.save()
 	ev := Event{Kind: RunDone}
 	switch state {
 	case RunFail:
@@ -238,6 +285,9 @@ func (r *runner) onError(s *workflow.Step) string {
 // a *stepFailure, or the context's error when the run was cancelled.
 func (r *runner) runList(ctx context.Context, steps []workflow.Step, f *frame) error {
 	for i := range steps {
+		if r.saveErr != nil {
+			return &stepFailure{Step: stepKey(&steps[i]), Err: r.saveErr, Stop: true}
+		}
 		if err := r.runStep(ctx, &steps[i], f); err != nil {
 			return err
 		}
@@ -264,6 +314,13 @@ func (r *runner) runStep(ctx context.Context, s *workflow.Step, f *frame) error 
 	key := stepKey(s)
 	item := f.itemPath()
 	st := r.state(f, key)
+	if r.resume && finished(st.State) {
+		r.restore(f, s, st)
+		if st.State == StateSkipped && s.Type != workflow.TypePlan {
+			return r.runList(ctx, s.Else, f)
+		}
+		return nil
+	}
 
 	if s.When != "" && s.Type != workflow.TypeFilter {
 		ok, err := r.opts.Eval.Test(s.When, r.scope(f))
@@ -273,18 +330,21 @@ func (r *runner) runStep(ctx context.Context, s *workflow.Step, f *frame) error 
 		if !ok {
 			r.edit(func() { st.State = StateSkipped })
 			r.setOutput(f, s, map[string]any{"ok": false, "skipped": true})
+			r.save()
 			r.emit(Event{Kind: StepSkipped, Step: key, Item: item})
 			return r.runList(ctx, s.Else, f)
 		}
 	}
 
 	r.edit(func() { st.State = StateRunning; st.Attempts = 0; st.Error = "" })
+	r.save()
 	r.emit(Event{Kind: StepStart, Step: key, Item: item})
 	state, err := r.attempts(ctx, s, f, st)
 	if err != nil {
 		return r.failed(ctx, s, f, st, err)
 	}
 	r.edit(func() { st.State = state })
+	r.save()
 	kind := StepDone
 	if state == StateSkipped || state == StateWouldRun {
 		kind = StepSkipped
@@ -379,6 +439,7 @@ func (r *runner) failed(ctx context.Context, s *workflow.Step, f *frame, st *Ste
 	key := stepKey(s)
 	if r.user.Err() != nil { // cancelled: not a failure of the step
 		r.edit(func() { st.State = StateCancelled })
+		r.save()
 		return r.user.Err()
 	}
 	if ctx.Err() != nil && r.runCtx.Err() == nil { // the item's time is up
@@ -390,6 +451,7 @@ func (r *runner) failed(ctx context.Context, s *workflow.Step, f *frame, st *Ste
 	}
 	r.edit(func() { st.State = state; st.Error = err.Error() })
 	r.setOutput(f, s, map[string]any{"ok": false, "error": err.Error()})
+	r.save()
 	r.emit(Event{Kind: StepFailed, Step: key, Item: f.itemPath(), Attempt: st.Attempts, Err: err.Error()})
 	stop := r.onError(s) == workflow.OnErrorStop
 	if !stop && len(s.Else) > 0 && ctx.Err() == nil {

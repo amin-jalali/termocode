@@ -161,16 +161,32 @@ func (r *runner) each(ctx context.Context, s *workflow.Step, f *frame, st *StepS
 	if err != nil {
 		return "", err
 	}
-	es := &EachState{}
-	for _, it := range items {
-		es.Items = append(es.Items, &ItemState{Key: it.Key, Data: it.Data, Plan: it.Plan, State: StatePending, Steps: map[string]*StepState{}})
+	es := st.Each
+	if r.resume && es != nil { // the items of the first start, not a new list
+		items = items[:0:0]
+		for _, is := range es.Items {
+			items = append(items, is.item())
+		}
+	} else {
+		es = &EachState{}
+		for _, it := range items {
+			es.Items = append(es.Items, &ItemState{Key: it.Key, Data: it.Data, Plan: it.Plan, State: StatePending, Steps: map[string]*StepState{}})
+		}
+		r.edit(func() { st.Each = es })
 	}
-	r.edit(func() { st.Each = es })
 
 	var done, failed []any
 	for _, is := range es.Items {
 		if err := ctx.Err(); err != nil {
 			return "", err
+		}
+		if r.resume && itemFinished(is.State) {
+			if is.State == StateDone {
+				done = append(done, is.Key)
+			} else {
+				failed = append(failed, is.Key)
+			}
+			continue
 		}
 		err := r.item(ctx, s, f, is)
 		switch {
@@ -197,9 +213,13 @@ func nonNil(l []any) []any {
 func (r *runner) item(ctx context.Context, s *workflow.Step, f *frame, is *ItemState) error {
 	key := stepKey(s)
 	it := is.item()
+	if is.Steps == nil {
+		r.edit(func() { is.Steps = map[string]*StepState{} })
+	}
 	child := newFrame(f, &it, is.Steps)
 	path := child.itemPath()
 	r.edit(func() { is.State = StateRunning; is.Error = "" })
+	r.save()
 	r.emit(Event{Kind: ItemStart, Step: key, Item: path})
 
 	call := EachCall{Step: s, Item: it}
@@ -241,6 +261,7 @@ func (r *runner) item(ctx context.Context, s *workflow.Step, f *frame, is *ItemS
 		state, msg = StateFailed, err.Error()
 	}
 	r.edit(func() { is.State = state; is.Error = msg })
+	r.save()
 	r.emit(Event{Kind: ItemDone, Step: key, Item: path, Err: msg})
 	return err
 }
@@ -339,12 +360,25 @@ func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *Step
 	if r.opts.Write == nil {
 		return "", Permanent(errors.New("no write adapter"))
 	}
-	rec.State = "sending"
-	var idx int
-	r.edit(func() { r.rf.Writes = append(r.rf.Writes, rec); idx = len(r.rf.Writes) - 1 })
+	rec.State = WriteSending
+	idx, resumed := -1, false
+	r.edit(func() {
+		// An earlier try that crashed or failed may have been sent.
+		for i, w := range r.rf.Writes {
+			if w.Marker == rec.Marker && (w.State == WriteSending || w.State == StateFailed) {
+				idx, resumed = i, true
+				r.rf.Writes[i] = rec
+			}
+		}
+		if idx < 0 {
+			r.rf.Writes = append(r.rf.Writes, rec)
+			idx = len(r.rf.Writes) - 1
+		}
+	})
+	r.save() // "sending" is on disk before the write goes out
 	wait := func() { r.emit(Event{Kind: WriteWait, Step: key, Item: item, Attempt: attempt}) }
 	out, err := r.opts.Write.Write(ctx, WriteCall{Step: s, Item: f.nearestItem(), Spec: spec, Marker: rec.Marker,
-		Attempt: attempt, Wait: wait})
+		Attempt: attempt, Resumed: resumed, Wait: wait})
 	switch {
 	case errors.Is(err, ErrDenied):
 		r.edit(func() { r.rf.Writes[idx].State = StateDenied })
@@ -359,4 +393,34 @@ func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *Step
 	r.emit(Event{Kind: WriteAllowed, Step: key, Item: item, Attempt: attempt})
 	r.keepOutput(f, s, st, out)
 	return StateDone, nil
+}
+
+// restore puts a kept step's output back into scope (resume).
+func (r *runner) restore(f *frame, s *workflow.Step, st *StepState) {
+	switch {
+	case st.Items != nil || s.Type == workflow.TypeSource || s.Type == workflow.TypePlan || s.Type == workflow.TypeFilter:
+		r.setList(f, s, st, st.Items)
+	case st.Each != nil:
+		var all []Item
+		done, failed := []any{}, []any{}
+		for _, is := range st.Each.Items {
+			all = append(all, is.item())
+			if is.State == StateDone {
+				done = append(done, is.Key)
+			} else {
+				failed = append(failed, is.Key)
+			}
+		}
+		r.setOutput(f, s, map[string]any{"ok": len(failed) == 0, "items": listScope(all), "done": done, "failed": failed})
+	case st.State == StateSkipped:
+		r.setOutput(f, s, map[string]any{"ok": false, "skipped": true})
+	case st.State == StateWouldRun || st.State == StateRecorded:
+		r.setOutput(f, s, map[string]any{"ok": true, "dry": true})
+	case st.Output != nil:
+		o := *st.Output
+		r.setOutput(f, s, map[string]any{"ok": true, "text": o.Text, "json": o.JSON, "url": o.URL,
+			"path": o.Path, "exit": float64(o.Exit), "worktree": o.Worktree})
+	default:
+		r.setOutput(f, s, map[string]any{"ok": true})
+	}
 }
