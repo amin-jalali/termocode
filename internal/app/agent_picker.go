@@ -166,7 +166,7 @@ func (m *Model) onAgentPicked(id string) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	return agentPickStart(m, a)
+	return m.onAgentPickedRow(a) // start, sign in or install (agent_install.go)
 }
 
 func init() {

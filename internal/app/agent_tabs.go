@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -143,8 +142,9 @@ func agentPaletteItems() []picker.Item {
 	return out
 }
 
-// agentLookPath finds an agent's program (a var for tests).
-var agentLookPath = exec.LookPath
+// agentLookPath finds an agent's program on PATH or in termocode's
+// tools/bin (agent_install.go; a var for tests).
+var agentLookPath = agentLookPathDefault
 
 // agentPaletteFilter drops "Agent: Start …" rows whose program is not
 // installed.
