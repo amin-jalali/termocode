@@ -105,6 +105,11 @@ type Model struct {
 	// ai_agent_rollup.go).
 	agentRollSig string
 
+	// agentChat is the open Agent: Chat View (agent_chat.go, AGX-8);
+	// agentChatPendingBuf the tab the transcripts card asks for.
+	agentChat           *agentChatState
+	agentChatPendingBuf int
+
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process
 	// workspace. Read it through m.workspace() / m.rootDir().

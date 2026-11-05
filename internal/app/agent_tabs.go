@@ -170,6 +170,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentPickerPaletteID { // Agent: Start… (agent_picker.go)
 		return m.openAgentPicker(), true
 	}
+	if id == agentChatPaletteID { // Agent: Chat View (agent_chat.go)
+		return m.toggleAgentChatView(), true
+	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
 		return nil, false

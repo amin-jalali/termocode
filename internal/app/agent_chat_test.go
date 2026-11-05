@@ -23,7 +23,7 @@ func chatFixture(t *testing.T, cli agentlog.CLI, rel string) agentlog.Session {
 	return s
 }
 
-func plainRows(rows []string) string {
+func chatPlain(rows []string) string {
 	var b strings.Builder
 	for _, r := range rows {
 		b.WriteString(strings.TrimRight(ansi.Strip(r), " ") + "\n")
@@ -38,14 +38,14 @@ func plainRows(rows []string) string {
 // collapsed: their text is not drawn. Narrow: the file's base name only.
 func TestAgentChatBodyRows(t *testing.T) {
 	s := chatFixture(t, agentlog.Claude, "testdata/claude/-work-demo/3f9a2c1e-0000-4000-8000-000000000001.jsonl")
-	got := plainRows(agentChatBody(s, 110))
+	got := chatPlain(agentChatBody(s, 110))
 	for _, want := range []string{
 		"you   Add the pinned row as in the issue. Run go test.\n",
-		"✦     I will add a PINNED group to the worktree list.\n",
+		aiSpark() + "     I will add a PINNED group to the worktree list.\n",
 		"      ▸ Read  internal/app/worktrees_view.go  ✓\n",
 		"      ▸ Edit  internal/app/worktrees_view.go +4 -1  ✓\n",
 		"      ▸ Bash  go test ./internal/app/ -run Worktree  ✓\n",
-		"✦     Done. The pinned rows sit first; 2 tests added.\n",
+		aiSpark() + "     Done. The pinned rows sit first; 2 tests added.\n",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("no row %q in:\n%s", want, got)
@@ -54,7 +54,7 @@ func TestAgentChatBodyRows(t *testing.T) {
 	if strings.Contains(got, "func worktreesView") {
 		t.Errorf("a tool result is drawn open:\n%s", got)
 	}
-	narrow := plainRows(agentChatBody(s, 60))
+	narrow := chatPlain(agentChatBody(s, 60))
 	if !strings.Contains(narrow, "▸ Edit worktrees_view.go +4 -1 ✓\n") {
 		t.Errorf("narrow rows:\n%s", narrow)
 	}
@@ -64,13 +64,13 @@ func TestAgentChatBodyRows(t *testing.T) {
 		}
 	}
 	c := chatFixture(t, agentlog.Codex, "testdata/codex/sessions/2026/11/05/rollout-2026-11-05T11-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeeeee0001.jsonl")
-	got = plainRows(agentChatBody(c, 110))
+	got = chatPlain(agentChatBody(c, 110))
 	if !strings.Contains(got, "▸ shell  go test ./...  ✘\n") || !strings.Contains(got, "▸ apply_patch  queue.go +2 -1  ✓\n") {
 		t.Errorf("codex rows:\n%s", got)
 	}
 	// A call without its result yet is running.
 	s.Turns = s.Turns[:len(s.Turns)-2]
-	if got := plainRows(agentChatBody(s, 110)); !strings.Contains(got, "▸ Bash  go test ./internal/app/ -run Worktree  …\n") {
+	if got := chatPlain(agentChatBody(s, 110)); !strings.Contains(got, "▸ Bash  go test ./internal/app/ -run Worktree  …\n") {
 		t.Errorf("running call:\n%s", got)
 	}
 }
@@ -203,7 +203,7 @@ func TestAgentChatUnknownFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 	runApply(m, m.openAgentChatView())
-	rows := plainRows(m.agentChatRender(100, 12))
+	rows := chatPlain(m.agentChatRender(100, 12))
 	if !strings.Contains(rows, "cannot read this session") || !strings.Contains(rows, "v terminal") {
 		t.Errorf("rows:\n%s", rows)
 	}

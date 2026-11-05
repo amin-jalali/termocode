@@ -91,6 +91,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
 | Agent: Start Claude Code | `agent-start-claude` |   |   |
 | Agent: Start Codex | `agent-start-codex` |   |   |
 | Agent: Start Gemini CLI | `agent-start-gemini` |   |   |
