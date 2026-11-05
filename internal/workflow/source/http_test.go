@@ -52,7 +52,9 @@ func newHTTPServer(t *testing.T) *httptest.Server {
 	return srv
 }
 
-func bearer() map[string]string { return map[string]string{"Authorization": "Bearer ${secret:TICKETS_TOKEN}"} }
+func bearer() map[string]string {
+	return map[string]string{"Authorization": "Bearer ${secret:TICKETS_TOKEN}"}
+}
 
 func TestHTTPInlineWithSecretHeader(t *testing.T) {
 	srv := newHTTPServer(t)
