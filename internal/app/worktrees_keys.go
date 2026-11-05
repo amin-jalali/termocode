@@ -38,6 +38,8 @@ func worktreeKeyRows() []confirm.KeyRow {
 func worktreePaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "worktree-view", Title: "Worktree: Show"},
+		{ID: "worktree-open", Title: "Worktree: Open Selected"},
+		{ID: "worktree-add-folder", Title: "Worktree: Add Selected as Folder"},
 	}
 }
 
@@ -46,6 +48,10 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 	switch id {
 	case "worktree-view":
 		return m.revealWorktrees(), true
+	case "worktree-open":
+		return m.worktreeOpen(), true
+	case "worktree-add-folder":
+		return m.worktreeAddFolder(), true
 	}
 	return nil, false
 }
@@ -59,6 +65,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			st.detail = false
 			st.touch()
 			return m, nil
+		case "enter":
+			return m, m.worktreeOpen()
 		}
 	}
 	items, rows := m.wtList()
@@ -76,6 +84,17 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.wtMove(items, rows, cur, -len(rows))
 	case "end", "G":
 		m.wtMove(items, rows, cur, len(rows))
+	case "enter", "l":
+		if wtCompact(m.explorerWidth-1, m.h) {
+			if cur >= 0 {
+				st.detail = true
+				st.touch()
+			}
+			return m, nil
+		}
+		return m, m.worktreeOpen()
+	case "a":
+		return m, m.worktreeAddFolder()
 	case "R":
 		return m, m.worktreesReload()
 	case "?":

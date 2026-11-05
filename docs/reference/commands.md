@@ -646,6 +646,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Worktree: Add Selected as Folder | `worktree-add-folder` |   |   |
+| Worktree: Open Selected | `worktree-open` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 
 ## termocode
