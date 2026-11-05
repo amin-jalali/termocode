@@ -79,8 +79,16 @@ func (e *evaluator) bin(b binNode) (any, error) {
 	return nil, errAt(b.pos, "internal error: unknown operator %q", b.op)
 }
 
+// maxEqualDepth stops equal on very deep or cyclic values.
+const maxEqualDepth = 10000
+
 // equal is deep JSON equality; numbers compare by value.
-func equal(a, b any) bool {
+func equal(a, b any) bool { return equalAt(a, b, 0) }
+
+func equalAt(a, b any, depth int) bool {
+	if depth > maxEqualDepth {
+		return false
+	}
 	a, b = norm(a), norm(b)
 	switch x := a.(type) {
 	case nil:
@@ -100,7 +108,7 @@ func equal(a, b any) bool {
 			return false
 		}
 		for i := range x {
-			if !equal(x[i], y[i]) {
+			if !equalAt(x[i], y[i], depth+1) {
 				return false
 			}
 		}
@@ -112,7 +120,7 @@ func equal(a, b any) bool {
 		}
 		for k, xv := range x {
 			yv, ok := y[k]
-			if !ok || !equal(xv, yv) {
+			if !ok || !equalAt(xv, yv, depth+1) {
 				return false
 			}
 		}

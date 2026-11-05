@@ -145,3 +145,16 @@ func TestBadPatternErrorHasOnePrefix(t *testing.T) {
 		t.Fatalf("err = %v, want one expr: prefix", err)
 	}
 }
+
+// A scope built in Go (not from JSON) may hold a cycle; == and has must
+// still end instead of running out of stack.
+func TestEqualStopsOnACycle(t *testing.T) {
+	a := map[string]any{}
+	a["self"] = a
+	b := map[string]any{}
+	b["self"] = b
+	scope := map[string]any{"item": a, "vars": b}
+	for _, src := range []string{`item == vars`, `[item] has vars`, `json(item)`, `"" + json(item)`} {
+		_, _ = Eval(src, scope) // must return
+	}
+}
