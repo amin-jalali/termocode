@@ -34,8 +34,8 @@ func turnsText(ts []Turn) string {
 	var b strings.Builder
 	for _, t := range ts {
 		text := strings.ReplaceAll(t.Text, "\n", "⏎")
-		if len(text) > 40 {
-			text = text[:40]
+		if r := []rune(text); len(r) > 40 {
+			text = string(r[:40])
 		}
 		fail := ""
 		if t.Failed {
@@ -57,7 +57,7 @@ func turnsText(ts []Turn) string {
 func TestParseClaude(t *testing.T) {
 	s := parseFixture(t, Claude, claudeFixture)
 	want := "user |  |  | Add the pinned row as in the issue. Run \n" +
-		"assistant |  |  | I will add a PINNED group to the worktree\n" +
+		"assistant |  |  | I will add a PINNED group to the worktre\n" +
 		"tool | Read | /work/demo/internal/app/worktrees_view.go | \n" +
 		"result | Read |  | package app⏎⏎func worktreesView() string\n" +
 		"tool | Edit | /work/demo/internal/app/worktrees_view.go +4 -1 | \n" +
