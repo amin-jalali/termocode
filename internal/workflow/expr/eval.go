@@ -1,6 +1,9 @@
 package expr
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Eval parses and evaluates src against scope. Missing paths are null.
 // It never panics: an internal fault comes back as an error.
@@ -8,8 +11,14 @@ func Eval(src string, scope map[string]any) (Value, error) {
 	return EvalEnv(src, scope, nil)
 }
 
-// Env holds the hooks some functions need. A nil Env is fine.
-type Env struct{}
+// Env holds the hooks some functions need. A nil Env is fine: seen()
+// then fails and days_since() uses the real clock.
+type Env struct {
+	// Seen asks the workflow's seen ledger whether key was handled.
+	Seen func(key string) (bool, error)
+	// Now is the clock for days_since; nil means time.Now.
+	Now func() time.Time
+}
 
 // EvalEnv is Eval with hooks.
 func EvalEnv(src string, scope map[string]any, env *Env) (v Value, err error) {
@@ -59,6 +68,8 @@ func (e *evaluator) eval(n node) (any, error) {
 		return !truthy(v), nil
 	case binNode:
 		return e.bin(t)
+	case callNode:
+		return e.call(t)
 	}
 	return nil, fmt.Errorf("expr: internal error: unknown node %T", n)
 }
