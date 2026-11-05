@@ -74,3 +74,35 @@ func TestArmingNeedsTheArmedLook(t *testing.T) {
 		t.Error("arming.ts: pressBegan must need both the rendered armed state and the ref")
 	}
 }
+
+// TestCardEscInCheckWindowCancels (FIX-47): a valid risky press is sent
+// only after the check mark (CHECK_MS). Esc inside that window, or the
+// card going away (scrim, swipe), must drop the answer, not send it under
+// a "Later" toast; the screen then says nothing was sent.
+func TestCardEscInCheckWindowCancels(t *testing.T) {
+	b, err := os.ReadFile("src/ui/Card.tsx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	for _, want := range []string{
+		`check.current = setTimeout(`,                    // the pending answer can be found again …
+		`clearTimeout(check.current);`,                   // … and dropped
+		`if (cancelCheck()) {`,                           // Esc in the window cancels it
+		`onCancel?.();`,                                  // and says so
+		`useEffect(() => () => void cancelCheck(), []);`, // leaving the screen drops it too
+	} {
+		if !strings.Contains(src, want) {
+			t.Errorf("Card.tsx lacks %q", want)
+		}
+	}
+	for _, f := range []string{"src/strings.ts", "src/strings.fa.ts", "src/ui/CardSheet.tsx", "src/kit/main.tsx"} {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), `"card.cancelled"`) {
+			t.Errorf("%s does not use card.cancelled", f)
+		}
+	}
+}
