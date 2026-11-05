@@ -69,8 +69,25 @@ func (r *runner) source(ctx context.Context, s *workflow.Step, f *frame, st *Ste
 	if err != nil {
 		return "", Permanent(fmt.Errorf("changed_since: %w", err))
 	}
+	ro := false
+	if spec.From == "mcp" {
+		if ro, err = r.readOnly(ctx, spec.Server, spec.Tool); err != nil {
+			return "", err
+		}
+		if !ro {
+			yes := false
+			if r.opts.Ask != nil {
+				if yes, err = r.opts.Ask(ctx, AskCall{Step: s, Server: spec.Server, Tool: spec.Tool}); err != nil {
+					return "", err
+				}
+			}
+			if !yes {
+				return "", fmt.Errorf("%s/%s is not marked read-only: %w", spec.Server, spec.Tool, ErrDenied)
+			}
+		}
+	}
 	res, err := r.opts.Source.Read(ctx, SourceCall{Step: s, Args: args, ChangedSince: since,
-		Item: f.nearestItem(), Dry: r.opts.Dry, Attempt: attempt})
+		Item: f.nearestItem(), Dry: r.opts.Dry, Attempt: attempt, ReadOnly: ro})
 	if err != nil {
 		return "", err
 	}
@@ -360,6 +377,12 @@ func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *Step
 	if r.opts.Write == nil {
 		return "", Permanent(errors.New("no write adapter"))
 	}
+	ro := false
+	if spec.To == "mcp" || spec.To == "status" {
+		if ro, err = r.readOnly(ctx, spec.Server, spec.Tool); err != nil {
+			return "", err
+		}
+	}
 	rec.State = WriteSending
 	idx, resumed := -1, false
 	r.edit(func() {
@@ -378,7 +401,7 @@ func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *Step
 	r.save() // "sending" is on disk before the write goes out
 	wait := func() { r.emit(Event{Kind: WriteWait, Step: key, Item: item, Attempt: attempt}) }
 	out, err := r.opts.Write.Write(ctx, WriteCall{Step: s, Item: f.nearestItem(), Spec: spec, Marker: rec.Marker,
-		Attempt: attempt, Resumed: resumed, Wait: wait})
+		Attempt: attempt, Resumed: resumed, ReadOnly: ro, Wait: wait})
 	switch {
 	case errors.Is(err, ErrDenied):
 		r.edit(func() { r.rf.Writes[idx].State = StateDenied })
@@ -423,4 +446,17 @@ func (r *runner) restore(f *frame, s *workflow.Step, st *StepState) {
 	default:
 		r.setOutput(f, s, map[string]any{"ok": true})
 	}
+}
+
+// readOnly asks Options.Tools whether an MCP tool is read-only (false
+// when there is no check).
+func (r *runner) readOnly(ctx context.Context, server, tool string) (bool, error) {
+	if r.opts.Tools == nil {
+		return false, nil
+	}
+	ro, err := r.opts.Tools.ReadOnly(ctx, server, tool)
+	if err != nil {
+		return false, fmt.Errorf("%s/%s: %w", server, tool, err)
+	}
+	return ro, nil
 }

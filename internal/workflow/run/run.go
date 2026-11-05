@@ -45,6 +45,13 @@ type Options struct {
 	Run    Runner
 	Write  Writer
 
+	// Tools tells whether an MCP tool is read-only, before any mcp source
+	// or write calls it (nil: never known, so a source asks).
+	Tools ToolCheck
+	// Ask asks the user before an mcp source calls a tool that is not
+	// read-only; true runs it (nil: no).
+	Ask func(ctx context.Context, c AskCall) (bool, error)
+
 	// OnEvent gets every event, in order, on the run's goroutine. It must
 	// not block for long.
 	OnEvent func(Event)
