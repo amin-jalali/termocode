@@ -86,3 +86,44 @@ func ListWorktrees(dir string) ([]Worktree, string, error) {
 	}
 	return ParseWorktreeList(out, common), common, nil
 }
+
+// WorktreeStatus is how a worktree differs: Dirty changed, new or
+// conflicted files; Ahead / Behind its upstream (Upstream: it has one).
+type WorktreeStatus struct {
+	Dirty    int
+	Ahead    int
+	Behind   int
+	Upstream bool
+}
+
+// GetWorktreeStatus reads the status of the worktree at path with one
+// `git status --porcelain=v2 --branch` call (no optional locks: it never
+// takes the index lock from the user's own git command).
+func GetWorktreeStatus(path string) (WorktreeStatus, error) {
+	out, err := gitOut(path, "--no-optional-locks", "status", "--porcelain=v2", "--branch")
+	if err != nil {
+		return WorktreeStatus{}, err
+	}
+	return parseWorktreeStatus(out), nil
+}
+
+func parseWorktreeStatus(out string) WorktreeStatus {
+	var st WorktreeStatus
+	for _, line := range strings.Split(out, "\n") {
+		switch {
+		case line == "":
+		case strings.HasPrefix(line, "# branch.upstream "):
+			st.Upstream = true
+		case strings.HasPrefix(line, "# branch.ab "):
+			f := strings.Fields(strings.TrimPrefix(line, "# branch.ab "))
+			if len(f) == 2 {
+				st.Ahead = atoiPrefix(strings.TrimPrefix(f[0], "+"))
+				st.Behind = atoiPrefix(strings.TrimPrefix(f[1], "-"))
+			}
+		case line[0] == '#', line[0] == '!':
+		default:
+			st.Dirty++
+		}
+	}
+	return st
+}
