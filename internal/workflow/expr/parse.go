@@ -34,6 +34,20 @@ type pathNode struct {
 
 type listNode struct{ elems []node }
 
+type notNode struct{ x node }
+
+// binNode is and, or, a comparison, + or -.
+type binNode struct {
+	op   string
+	l, r node
+	pos  int
+}
+
+var cmpOps = map[string]bool{
+	"==": true, "!=": true, "<": true, "<=": true, ">": true, ">=": true,
+	"has": true, "in": true, "matches": true, "startswith": true, "endswith": true,
+}
+
 type parser struct {
 	toks  []token
 	i     int
@@ -110,7 +124,93 @@ func (p *parser) enter(pos int) error {
 
 func (p *parser) leave() { p.depth-- }
 
-func (p *parser) expr() (node, error) { return p.atom() }
+func (p *parser) expr() (node, error) { return p.or() }
+
+func (p *parser) or() (node, error) {
+	l, err := p.and()
+	if err != nil {
+		return nil, err
+	}
+	for p.isName("or") {
+		pos := p.next().pos
+		r, err := p.and()
+		if err != nil {
+			return nil, err
+		}
+		l = binNode{op: "or", l: l, r: r, pos: pos}
+	}
+	return l, nil
+}
+
+func (p *parser) and() (node, error) {
+	l, err := p.not()
+	if err != nil {
+		return nil, err
+	}
+	for p.isName("and") {
+		pos := p.next().pos
+		r, err := p.not()
+		if err != nil {
+			return nil, err
+		}
+		l = binNode{op: "and", l: l, r: r, pos: pos}
+	}
+	return l, nil
+}
+
+func (p *parser) not() (node, error) {
+	if p.isName("not") {
+		t := p.next()
+		if err := p.enter(t.pos); err != nil {
+			return nil, err
+		}
+		defer p.leave()
+		x, err := p.not()
+		if err != nil {
+			return nil, err
+		}
+		return notNode{x}, nil
+	}
+	return p.cmp()
+}
+
+func (p *parser) cmp() (node, error) {
+	l, err := p.sum()
+	if err != nil {
+		return nil, err
+	}
+	t := p.peek()
+	if (t.kind == tOp || t.kind == tName) && cmpOps[t.text] {
+		p.next()
+		r, err := p.sum()
+		if err != nil {
+			return nil, err
+		}
+		return binNode{op: t.text, l: l, r: r, pos: t.pos}, nil
+	}
+	return l, nil
+}
+
+func (p *parser) sum() (node, error) {
+	l, err := p.atom()
+	if err != nil {
+		return nil, err
+	}
+	for p.isOp("+") || p.isOp("-") {
+		t := p.next()
+		r, err := p.atom()
+		if err != nil {
+			return nil, err
+		}
+		l = binNode{op: t.text, l: l, r: r, pos: t.pos}
+	}
+	return l, nil
+}
+
+func (p *parser) isName(s string) bool {
+	t := p.peek()
+	return t.kind == tName && t.text == s
+}
 
 func (p *parser) atom() (node, error) {
 	t := p.next()
