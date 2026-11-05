@@ -150,13 +150,15 @@ func Start(ctx context.Context, file *workflow.File, opts Options) *Handle {
 	h := &Handle{cancel: cancel, done: make(chan struct{}), r: r}
 	var once sync.Once
 	finish := func() { once.Do(func() { cancel(); close(h.done) }) }
+	// finish is not deferred in fn: on a panic, onPanic must end the run
+	// before Done closes.
 	crash.GoWith("workflow.run", func() {
-		defer finish()
 		if resumeErr != nil {
 			r.end(RunFail, resumeErr)
-			return
+		} else {
+			r.main(userCtx)
 		}
-		r.main(userCtx)
+		finish()
 	}, func() {
 		r.end(RunFail, errors.New("the engine stopped on an internal error"))
 		finish()
@@ -260,8 +262,8 @@ func (r *runner) emit(e Event) {
 // edit changes the run state under the lock.
 func (r *runner) edit(fn func()) {
 	r.mu.Lock()
+	defer r.mu.Unlock()
 	fn()
-	r.mu.Unlock()
 }
 
 // stepFailure is a failed step that ends its list. Stop is set for
