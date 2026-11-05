@@ -193,11 +193,89 @@ export function openIn(g: number, path: string, preview = false): void {
   setGroup(g, { tabs: out, active: path, preview: preview ? path : old === path ? null : old !== null && out.includes(old) ? old : null });
 }
 
+/** pinned are the pinned tabs: first in their group, and Close Others,
+ * Close to the Right and Close Saved leave them open. */
+export const pinned = signal<ReadonlySet<string>>(new Set());
+
+/** togglePin pins path (it moves after the other pinned tabs and is kept)
+ * or unpins it. */
+export function togglePin(path: string, g: number = focusedGroup.peek()): void {
+  const next = new Set(pinned.peek());
+  if (next.has(path)) next.delete(path);
+  else next.add(path);
+  pinned.value = next;
+  keep(path, g);
+  const gr = groups.peek()[g];
+  if (!gr) return;
+  const tabs = tabsIn(g);
+  setGroup(g, { ...gr, tabs: [...tabs.filter((p) => next.has(p)), ...tabs.filter((p) => !next.has(p))] });
+}
+
+/** closedTabs are the tabs closed last, newest last (Reopen Closed Editor). */
+const closedTabs: string[] = [];
+const MAX_CLOSED = 20;
+
+/** reopenClosed shows the tab closed last that is not open again; false: none. */
+export function reopenClosed(): boolean {
+  while (closedTabs.length > 0) {
+    const p = closedTabs.pop() as string;
+    if (groups.peek().some((_, g) => tabsIn(g).includes(p))) continue;
+    showFile(p);
+    return true;
+  }
+  return false;
+}
+
+/** lastFile is the file shown before the active one (Switch to Last File). */
+let lastFile: string | null = null;
+let nowFile: string | null = null;
+effect(() => {
+  const a = activeFile.value;
+  if (a === nowFile) return;
+  if (nowFile !== null) lastFile = nowFile;
+  nowFile = a;
+});
+
+/** alternateFile shows the file shown before this one; false: none open. */
+export function alternateFile(): boolean {
+  const p = lastFile;
+  if (p === null || p === activeFile.peek() || !groups.peek().some((_, g) => tabsIn(g).includes(p))) return false;
+  const g = groups.peek().findIndex((_, i) => tabsIn(i).includes(p));
+  if (g !== focusedGroup.peek() && !tabsIn(focusedGroup.peek()).includes(p)) focusedGroup.value = g;
+  showFile(p);
+  return true;
+}
+
+/** closeGroup closes the focused group of a split editor and its tabs
+ * (their files stay open on the laptop); false: one group only. */
+export function closeGroup(g: number = focusedGroup.peek()): boolean {
+  const all = groups.peek();
+  if (all.length < 2 || !all[g]) return false;
+  for (const p of tabsIn(g)) remember(p);
+  if (g === 0) for (const p of tabsIn(0)) if (!tabsIn(1).includes(p)) hide(p);
+  dropGroup(g);
+  focusGroup(0);
+  const f = groups.peek()[0].active;
+  if (f) go({ tab: "files", rest: f, query: {} }, true);
+  return true;
+}
+
+function remember(p: string): void {
+  const i = closedTabs.indexOf(p);
+  if (i >= 0) closedTabs.splice(i, 1);
+  closedTabs.push(p);
+  if (closedTabs.length > MAX_CLOSED) closedTabs.shift();
+}
+
 /** keep makes path a kept tab (no longer the preview) in group g. */
 export function keep(path: string, g: number = focusedGroup.peek()): void {
   const gr = groups.peek()[g];
   if (gr?.preview === path) setGroup(g, { ...gr, preview: null });
 }
+
+/** previewTabs: a single click in the tree opens a preview tab (the
+ * explorer's Toggle Preview turns it off: every opened file is kept). */
+export const previewTabs = signal(true);
 
 /** previewNext: the next file route opens as a preview tab. */
 let previewNext = false;
@@ -205,7 +283,7 @@ let previewNext = false;
 /** showFile shows path in the focused group (its tab opens if needed);
  * preview: as a preview tab (a single click in the tree). */
 export function showFile(path: string, preview = false): void {
-  previewNext = preview;
+  previewNext = preview && previewTabs.peek();
   go({ tab: "files", rest: path, query: {} });
   previewNext = false;
 }
@@ -242,6 +320,7 @@ export function closeTab(path: string, g: number = focusedGroup.peek()): void {
   const i = tabs.indexOf(path);
   const rest = tabs.filter((p) => p !== path);
   if (g === 0) hide(path);
+  if (i >= 0) remember(path);
   const next = gr.active === path ? (rest[Math.min(i, rest.length - 1)] ?? null) : gr.active;
   setGroup(g, { tabs: rest, active: next, preview: gr.preview === path ? null : gr.preview });
   if (rest.length === 0 && all.length > 1) {
@@ -258,7 +337,8 @@ export function closeTab(path: string, g: number = focusedGroup.peek()): void {
 /** closeMany closes the tabs of group g that keepIt says no to. */
 export function closeMany(g: number, keepIt: (path: string, i: number, tabs: readonly string[]) => boolean): void {
   const tabs = tabsIn(g);
-  for (const [i, p] of tabs.entries()) if (!keepIt(p, i, tabs)) closeTab(p, g);
+  const pin = pinned.peek();
+  for (const [i, p] of tabs.entries()) if (!keepIt(p, i, tabs) && !pin.has(p)) closeTab(p, g);
 }
 
 /** moveTab moves path from group from to group to, before index at

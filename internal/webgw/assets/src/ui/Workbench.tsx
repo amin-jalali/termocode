@@ -14,6 +14,8 @@ import {
   CHAT_MAX,
   CHAT_MIN,
   closeMany,
+  pinned,
+  togglePin,
   closeTab,
   focusedGroup,
   focusGroup,
@@ -159,11 +161,12 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
         const on = path === cur;
         const name = tabName(path);
         const pv = gr?.preview === path;
+        const pin = pinned.value.has(path);
         const mark = drop?.group === group && drop.index === i ? " is-drop-before" : drop?.group === group && drop.index === i + 1 && i === tabs.length - 1 ? " is-drop-after" : "";
         return (
           <div
             key={path}
-            class={`ed-tab${on ? " is-on" : ""}${b?.dirty ? " is-dirty" : ""}${pv ? " is-preview" : ""}${mark}`}
+            class={`ed-tab${on ? " is-on" : ""}${b?.dirty ? " is-dirty" : ""}${pv ? " is-preview" : ""}${pin ? " is-pinned" : ""}${mark}`}
             title={path}
             data-path={path}
             draggable
@@ -198,10 +201,16 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
               <TabIcon tab={path} />
               <span class="ed-tab-name" dir="auto">{name}</span>
             </button>
-            <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={`${t("wb.close_tab", { name })} (${modKey()}+W)`} onClick={() => closeTab(path, group)}>
-              <Cod name="circle-filled" />
-              <Cod name="close" />
-            </button>
+            {pin ? (
+              <button type="button" class="ed-tab-x ed-tab-pin" aria-label={t("wb.unpin_tab", { name })} title={t("wb.unpin_tab", { name })} onClick={() => togglePin(path, group)}>
+                <Cod name="pinned" />
+              </button>
+            ) : (
+              <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={`${t("wb.close_tab", { name })} (${modKey()}+W)`} onClick={() => closeTab(path, group)}>
+                <Cod name="circle-filled" />
+                <Cod name="close" />
+              </button>
+            )}
           </div>
         );
       })}
@@ -230,6 +239,8 @@ function tabMenu(path: string, group: number, tabs: readonly string[], bufs: rea
     { label: t("menu.close_others"), disabled: tabs.length < 2, run: () => closeMany(group, (p) => p === path) },
     { label: t("menu.close_right"), disabled: i === tabs.length - 1, run: () => closeMany(group, (_p, j) => j <= i) },
     { label: t("menu.close_saved"), disabled: tabs.every(dirty), run: () => closeMany(group, dirty) },
+    null,
+    { label: t(pinned.peek().has(path) ? "menu.unpin" : "menu.pin"), run: () => togglePin(path, group) },
     null,
     { label: t("menu.copy_path"), run: () => copyText(absPath(path)) },
     { label: t("menu.copy_rel"), run: () => copyText(path) },

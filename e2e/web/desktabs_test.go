@@ -3,6 +3,7 @@
 package web
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -13,6 +14,16 @@ import (
 // closed tab, close the split, open the URL on the caret's row (asked
 // first), reveal the file in the tree, hidden files, preview tabs,
 // rename the open file and undo that rename.
+
+// waitArgs waits for a req for op (others go by) and checks its args.
+func waitArgs(t *testing.T, c *HubConn, op, args string) *webproto.Req {
+	t.Helper()
+	r := waitReq(t, c, op)
+	if canonJSON(t, r.Args) != canonJSON(t, json.RawMessage(args)) {
+		t.Fatalf("%s args %s; want %s", op, r.Args, args)
+	}
+	return r
+}
 
 const activeTab = `document.querySelector(".ed-tab.is-on")?.dataset.path`
 
@@ -33,6 +44,7 @@ func TestDeskTabCommands(t *testing.T) {
 	p.WaitJS(`[...document.querySelectorAll(".ed-tab")].map((t) => t.dataset.path).join() === "a.go,b.go" || [...document.querySelectorAll(".ed-tab")].map((t) => t.dataset.path).join() === "b.go,a.go"`)
 
 	// A closed tab comes back.
+	p.TapJS(`document.querySelector('.ed-tab[data-path="a.go"] .ed-tab-open')`)
 	p.WaitJS(activeTab + ` === "a.go"`)
 	runCmd(t, p, c, false, "close editor", "Close Editor")
 	p.WaitJS(`!document.querySelector('.ed-tab[data-path="a.go"]')`)
@@ -87,17 +99,18 @@ func TestDeskExplorerCommands(t *testing.T) {
 	// Reveal: the file's folders open in the tree.
 	openDesk(t, p, c, 3, "pkg/c.go", "package pkg")
 	runCmd(t, p, c, false, "reveal file", "File: Reveal in Files")
-	expectOp(t, c, webproto.OpTreeList, `{"path":"pkg"}`)
+	waitArgs(t, c, webproto.OpTreeList, `{"path":"pkg"}`)
 
 	// Rename the open file, then undo it.
 	runCmd(t, p, c, false, "rename selected", "Explorer: Rename Selected…")
 	p.WaitJS(`document.querySelector(".name-input")?.value === "c.go"`)
 	setInput(p, `document.querySelector(".name-input")`, "d.go")
 	p.TapJS(`[...document.querySelectorAll(".name-form .btn")].find((b) => b.textContent === "Rename")`)
-	r = expectOp(t, c, webproto.OpTreeRename, `{"path":"pkg/c.go","name":"d.go"}`)
+	r = waitArgs(t, c, webproto.OpTreeRename, `{"path":"pkg/c.go","name":"d.go"}`)
 	reply(t, c, r, webproto.TreeChanged{Path: "pkg/d.go"})
+	p.WaitJS(`!document.querySelector(".name-form") && document.querySelector(".toasts")?.textContent.includes("Renamed to d.go.")`)
 	runCmd(t, p, c, false, "undo rename", "Explorer: Undo Rename")
-	r = expectOp(t, c, webproto.OpTreeRename, `{"path":"pkg/d.go","name":"c.go"}`)
+	r = waitArgs(t, c, webproto.OpTreeRename, `{"path":"pkg/d.go","name":"c.go"}`)
 	reply(t, c, r, webproto.TreeChanged{Path: "pkg/c.go"})
 	p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("Renamed back to c.go.")`)
 }

@@ -6,7 +6,7 @@
 // commands used last come first (kept per browser).
 import { signal } from "@preact/signals";
 import type { PaletteItem, PaletteList } from "../../../../webproto/proto";
-import { link } from "../session";
+import { link, store } from "../session";
 import type { StringKey } from "../strings";
 import { t } from "../strings";
 import { toast } from "./toasts";
@@ -22,7 +22,13 @@ import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
-import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
+import { activeFile, alternateFile, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, splitEditor, tabsIn, togglePin, wordWrap } from "./workbench";
+import { askLink } from "./links";
+import { expandTo, hideDots } from "./tree";
+import { sideView } from "../ui/ActivityBar";
+import { renameFile } from "../views/Files";
+import { undoRename } from "../views/files/FileActions";
+import { fileOfTab } from "./difftab";
 
 export interface Command {
   id: string;
@@ -86,7 +92,81 @@ export function commands(): Command[] {
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
     ...gitCommands(),
     ...editCommands(),
+    { id: "lastFile", label: "cmd.last_file", when: () => activeFile.peek() !== null, run: () => alternateFile() || toast("info", t("cmd.no_last_file")) },
+    { id: "reopenClosed", label: "cmd.reopen_closed", run: () => reopenClosed() || toast("info", t("cmd.no_closed")) },
+    { id: "pinTab", label: "cmd.pin_tab", when: () => activeFile.peek() !== null, run: () => { const f = activeFile.peek(); if (f) togglePin(f); } },
+    { id: "closeSplit", label: "cmd.close_split", when: () => groups.peek().length > 1, run: () => closeGroup() },
+    { id: "openUrl", label: "cmd.open_url", when: hasDesk, run: openRowURL },
+    { id: "revealFile", label: "cmd.reveal_file", when: () => realFile() !== null, run: () => { const f = realFile(); if (f) revealInTree(f); } },
+    { id: "toggleHidden", label: "cmd.toggle_hidden", run: toggleHidden },
+    { id: "togglePreview", label: "cmd.toggle_preview", run: togglePreviewTabs },
+    { id: "renameFile", label: "cmd.rename_file", when: () => realFile() !== null && link.meta.peek()?.role === "controller", run: () => { const f = realFile(); if (f) { showSide(); renameFile(f); } } },
+    { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
   ];
+}
+
+/** realFile is the workspace file of the active tab (null: none, or a tab
+ * that is not a file: a table, a commit graph …). */
+function realFile(): string | null {
+  const a = activeFile.peek();
+  return a ? fileOfTab(a) : null;
+}
+
+/** showSide shows the files in the side bar. */
+function showSide(): void {
+  setPanes({ side: true });
+  sideView.value = "files";
+}
+
+/** revealInTree opens the file's folders in the tree and shows its row. */
+function revealInTree(path: string): void {
+  showSide();
+  expandTo(path);
+  const end = Date.now() + 3000;
+  const find = () => {
+    const row = document.querySelector<HTMLElement>(`.wb-side .tree-row[data-path="${CSS.escape(path)}"]`);
+    if (row) {
+      row.scrollIntoView({ block: "nearest" });
+      row.focus();
+    } else if (Date.now() < end) setTimeout(find, 50);
+  };
+  find();
+}
+
+/** toggleHidden hides the dotfiles here or shows them again (the laptop
+ * must show them for the page to). */
+function toggleHidden(): void {
+  const d = store.topic("tree").peek()?.data as { hidden?: unknown } | undefined;
+  if (d?.hidden !== true) {
+    toast("info", t("files.dots_laptop"));
+    return;
+  }
+  hideDots.value = !hideDots.peek();
+}
+
+/** togglePreviewTabs turns the tree's preview tabs off or on again. */
+function togglePreviewTabs(): void {
+  previewTabs.value = !previewTabs.peek();
+  toast("info", t(previewTabs.peek() ? "cmd.preview_on" : "cmd.preview_off"));
+}
+
+/** URL_RE finds web addresses in a row. */
+const URL_RE = /https?:\/\/[^\s<>"'`]+/g;
+
+/** openRowURL asks to open the URL on the caret's row (the one under the
+ * caret, else the first); a row with none says so. */
+function openRowURL(): void {
+  const at = cursorAt.peek();
+  const text = activeDesk.peek()?.text() ?? "";
+  const row = text.split("\n")[(at?.line ?? 1) - 1] ?? "";
+  const found = [...row.matchAll(URL_RE)].map((m) => ({ url: m[0].replace(/[.,;:!?)\]}>]+$/, ""), from: m.index ?? 0 }));
+  const col = (at?.col ?? 1) - 1;
+  const hit = found.find((f) => col >= f.from && col <= f.from + f.url.length) ?? found[0];
+  if (!hit) {
+    toast("info", t("cmd.no_url"));
+    return;
+  }
+  askLink(hit.url);
 }
 
 /** hasDesk: a file is open in the desktop editor. */
