@@ -260,6 +260,8 @@ export const S = {
   "dterm.input": "Terminal {name}: type here, every key goes to the shell",
   "dterm.paste_ask": "Paste {n} lines into the shell? Each line runs as a command.",
   "dterm.copy_sel": "Copy the selection",
+  "dterm.popout": "Pop out terminal",
+  "dterm.popout_blocked": "The browser blocked the new window. Allow pop-ups here, then try again.",
   "key.esc": "Esc",
   "key.tab": "Tab",
   "key.ctrl": "Ctrl",

@@ -53,7 +53,9 @@ var sourceRules = []rule{
 	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`)},
 	// Messages only between the page and the desktop editor's frame, both
 	// sides checking the other's origin and window (monaco/protocol.ts).
-	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`), allow: map[string]bool{"lib/deskeditor.ts": true, "monaco/frame.ts": true}},
+	// lib/popout.ts opens this page's own terminal route in a new window
+	// (WEBP-13): a fixed same-origin path, no message.
+	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`), allow: map[string]bool{"lib/deskeditor.ts": true, "monaco/frame.ts": true, "lib/popout.ts": true}},
 	// Names from the hub or the URL (folders, topics, query keys) are never
 	// keys of a plain object: "__proto__" would swap its prototype and
 	// "constructor" would read Object's. Tables built from data are a Map

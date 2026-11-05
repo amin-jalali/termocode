@@ -3,3 +3,4 @@
 // desktop only (lib/lazy.ts); it shares app.js's modules through
 // app-chunk.js.
 export { StatusBar, Workbench } from "./ui/Workbench";
+export { SoloTerm } from "./views/DeskTerm";

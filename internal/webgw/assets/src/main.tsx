@@ -19,7 +19,8 @@ import "./styles/media.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";
-import { goTab } from "./lib/router";
+import { soloBuf } from "./lib/popout";
+import { goTab, route } from "./lib/router";
 import { watchViewport } from "./lib/viewport";
 import { laptopTheme, link, waiting } from "./session";
 import { dict, has } from "./state/dict";
@@ -127,7 +128,7 @@ effect(() => {
 document.addEventListener("visibilitychange", () => link.setVisible(!document.hidden));
 
 addEventListener("keydown", (e: KeyboardEvent) => {
-  if (phase.value !== "shell" || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+  if (phase.value !== "shell" || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || soloBuf(route.value) !== null) return;
   const i = "12345".indexOf(e.key);
   if (i >= 0) {
     e.preventDefault();
@@ -146,6 +147,10 @@ if (location.protocol === "https:") {
 
 watchViewport();
 setOnOpen((kind) => (kind === "card" ? openCards() : goTab("more")));
+
+// A popped-out terminal tab (WEBP-13) came with this session's token;
+// it keeps no handle on the tab that opened it.
+if (soloBuf(route.peek()) !== null && window.opener) window.opener = null;
 
 if (!secret && !pairSecret && token()) startShell();
 
