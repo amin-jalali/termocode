@@ -98,7 +98,7 @@ func describe(t token) string {
 	case tStr:
 		return "string"
 	}
-	return strconv.Quote(t.text)
+	return strconv.Quote(clip(t.text))
 }
 
 func (p *parser) peek() token { return p.toks[p.i] }
@@ -274,7 +274,7 @@ func (p *parser) atom() (node, error) {
 		if _, ok := funcs[t.text]; ok {
 			return p.call(t)
 		}
-		return nil, errAt(t.pos, "unknown name %q (a path starts with %s)", t.text, rootList)
+		return nil, errAt(t.pos, "unknown name %q (a path starts with %s)", clip(t.text), rootList)
 	}
 	return nil, errAt(t.pos, "unexpected %s", describe(t))
 }
