@@ -23,3 +23,19 @@ func agentPickerCases() []goldenCase {
 	ascii.Icons = "ascii"
 	return append(out, goldenCase{"agent-picker-ascii-150x42", ascii, 150, 42})
 }
+
+// agentChatScene is Agent: Chat View (AGX-8) over a made-up Claude Code
+// session (app agentChatDemo; no file is read): arg working or waiting.
+func agentChatScene(name, arg string) Scene {
+	return Scene{Name: name, Steps: WithEditor(Act("agentchatdemo:"+arg), Pause(600*time.Millisecond))}
+}
+
+// agentChatCases are the chat view working and waiting at 150x42, and
+// narrow at 80x24.
+func agentChatCases() []goldenCase {
+	return []goldenCase{
+		{"agent-chat-working-150x42", agentChatScene("agent-chat-working", "working"), 150, 42},
+		{"agent-chat-waiting-150x42", agentChatScene("agent-chat-waiting", "waiting"), 150, 42},
+		{"agent-chat-narrow-80x24", agentChatScene("agent-chat-narrow", "working"), 80, 24},
+	}
+}
