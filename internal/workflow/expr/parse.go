@@ -36,6 +36,17 @@ type listNode struct{ elems []node }
 
 type notNode struct{ x node }
 
+type callNode struct {
+	fn   string
+	args []node
+	pos  int
+}
+
+// funcs are the only functions, with their argument counts.
+var funcs = map[string]int{
+	"len": 1, "lower": 1, "upper": 1, "trim": 1, "has": 1, "seen": 1, "days_since": 1, "json": 1,
+}
+
 // binNode is and, or, a comparison, + or -.
 type binNode struct {
 	op   string
@@ -260,6 +271,9 @@ func (p *parser) atom() (node, error) {
 		if roots[t.text] {
 			return p.path(t.text)
 		}
+		if _, ok := funcs[t.text]; ok {
+			return p.call(t)
+		}
 		return nil, errAt(t.pos, "unknown name %q (a path starts with %s)", t.text, rootList)
 	}
 	return nil, errAt(t.pos, "unexpected %s", describe(t))
@@ -317,4 +331,40 @@ func (p *parser) path(root string) (node, error) {
 			return pn, nil
 		}
 	}
+}
+
+func (p *parser) call(name token) (node, error) {
+	if err := p.expect("("); err != nil {
+		return nil, err
+	}
+	if err := p.enter(name.pos); err != nil {
+		return nil, err
+	}
+	defer p.leave()
+	c := callNode{fn: name.text, pos: name.pos}
+	if !p.isOp(")") {
+		for {
+			n, err := p.expr()
+			if err != nil {
+				return nil, err
+			}
+			c.args = append(c.args, n)
+			if !p.isOp(",") {
+				break
+			}
+			p.next()
+		}
+	}
+	if err := p.expect(")"); err != nil {
+		return nil, err
+	}
+	if want := funcs[c.fn]; len(c.args) != want {
+		return nil, errAt(c.pos, "%s takes %d argument (got %d)", c.fn, want, len(c.args))
+	}
+	if c.fn == "has" {
+		if _, ok := c.args[0].(pathNode); !ok {
+			return nil, errAt(c.pos, "has( ) needs a path, like has(item.labels)")
+		}
+	}
+	return c, nil
 }
