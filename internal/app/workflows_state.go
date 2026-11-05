@@ -679,13 +679,17 @@ func workflowsEnabled() bool {
 	return v != "false"
 }
 
+// wfxLoc is the zone the view shows times in (tests pin UTC).
+var wfxLoc = time.Local
+
 // wfxAgo is a short time for the rows.
 func wfxAgo(t, now time.Time) string {
 	if t.IsZero() {
 		return "—"
 	}
+	t, now = t.In(wfxLoc), now.In(wfxLoc)
 	if t.Year() == now.Year() && t.YearDay() == now.YearDay() {
-		return t.Local().Format("15:04")
+		return t.Format("15:04")
 	}
-	return t.Local().Format("Jan 2")
+	return t.Format("Jan 2")
 }

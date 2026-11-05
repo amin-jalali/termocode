@@ -1,0 +1,40 @@
+ ◉ docs-report · Docs report                                                                    ◌ not trusted · by hand
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ STEPS
+   docs     source  files docs/**/*.md
+   rep      write   file reports/docs.md                                                                  asks
+ TRUST            not trusted yet — r or d shows the file and asks
+ ALLOWED WRITES   none (every write asks)
+ LIMITS           100 items max
+ LAST RUNS        none yet
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [Run now (r)] [Dry run (d)] [On/Off (o)] [Edit file (e)] [History (h)] [Back (Esc)]
