@@ -33,7 +33,7 @@ func parseFixture(t *testing.T, cli CLI, path string) Session {
 func turnsText(ts []Turn) string {
 	var b strings.Builder
 	for _, t := range ts {
-		text := strings.ReplaceAll(t.Text, "\n", "⏎")
+		text := strings.ReplaceAll(t.Body(), "\n", "⏎")
 		if r := []rune(text); len(r) > 40 {
 			text = string(r[:40])
 		}
@@ -180,8 +180,8 @@ func TestParseRedactsSecrets(t *testing.T) {
 		t.Fatalf("turns:\n%s", turnsText(s.Turns))
 	}
 	for _, tr := range s.Turns {
-		if strings.Contains(tr.Text, "QQQQ") || strings.Contains(tr.Args, "QQQQ") {
-			t.Errorf("secret left in %s turn: %q %q", tr.Kind, tr.Args, tr.Text)
+		if strings.Contains(tr.Body(), "QQQQ") || strings.Contains(tr.Args, "QQQQ") {
+			t.Errorf("secret left in %s turn: %q %q", tr.Kind, tr.Args, tr.Body())
 		}
 	}
 	if s.FirstPrompt() == "" || strings.Contains(s.FirstPrompt(), "QQQQ") {

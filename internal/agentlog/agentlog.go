@@ -61,9 +61,13 @@ func (k Kind) String() string {
 type Turn struct {
 	Kind Kind
 	Time time.Time
-	// Text is the prompt, the answer or the tool result (redacted; a
-	// result is cut to maxResultText).
+	// Text is the prompt or the answer (redacted). A tool result keeps
+	// its text unexported until Body is asked for it (redacting every
+	// result of a long session would cost more than reading it).
 	Text string
+	// Lines is a tool result's line count (all of it, before the cut).
+	Lines int
+	raw   string
 	// Tool is the tool's name (calls and results); Args a one-line
 	// summary of the call: the file, the command, "+N -M" of an edit.
 	Tool, Args string
@@ -131,9 +135,18 @@ const MaxRead = 16 << 20
 // maxRead is MaxRead (a var for tests).
 var maxRead int64 = MaxRead
 
+// Body is the turn's text, redacted: Text, or for a tool result its
+// first maxResultText bytes.
+func (t Turn) Body() string {
+	if t.Kind == ToolResult {
+		return redact(t.raw)
+	}
+	return t.Text
+}
+
 // maxResultText is how much of one tool result is kept (it is drawn
 // collapsed; the rest stays in the file).
-const maxResultText = 4 << 10
+const maxResultText = 1 << 10
 
 // maxTurns is how many turns a session keeps (the newest).
 const maxTurns = 5000
@@ -188,8 +201,14 @@ func (p *Parser) Write(b []byte) (int, error) {
 	return n, nil
 }
 
-// Session is the session read so far.
-func (p *Parser) Session() Session { return p.s }
+// Session is the session read so far (the newest maxTurns turns).
+func (p *Parser) Session() Session {
+	s := p.s
+	if n := len(s.Turns); n > maxTurns {
+		s.Turns = s.Turns[n-maxTurns:]
+	}
+	return s
+}
 
 // Err is ErrUnknownFormat when lines were read and none was understood.
 func (p *Parser) Err() error {
@@ -232,9 +251,11 @@ func (p *Parser) stamp(t time.Time) {
 	}
 }
 
+// add appends a turn; past 2×maxTurns the oldest are dropped at once
+// (Session returns at most maxTurns).
 func (p *Parser) add(t Turn) {
 	p.s.Turns = append(p.s.Turns, t)
-	if len(p.s.Turns) > maxTurns {
+	if len(p.s.Turns) > 2*maxTurns {
 		p.s.Turns = append(p.s.Turns[:0:0], p.s.Turns[len(p.s.Turns)-maxTurns:]...)
 	}
 }
@@ -248,12 +269,13 @@ func (p *Parser) addText(k Kind, at time.Time, text string) {
 	p.add(Turn{Kind: k, Time: at, Text: redact(text)})
 }
 
-// addResult adds a tool result, cut and redacted.
+// addResult adds a tool result, cut (Body redacts it).
 func (p *Parser) addResult(at time.Time, callID, text string, failed bool) {
+	n := lineCount(text)
 	if len(text) > maxResultText {
-		text = text[:maxResultText] + "\n…"
+		text = strings.Clone(text[:maxResultText]) + "\n…"
 	}
-	p.add(Turn{Kind: ToolResult, Time: at, Tool: p.calls[callID], Text: redact(text), Failed: failed})
+	p.add(Turn{Kind: ToolResult, Time: at, Tool: p.calls[callID], Lines: n, raw: text, Failed: failed})
 }
 
 // Parse reads a whole session from r. A half last line is left out.

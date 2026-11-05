@@ -13,38 +13,30 @@ import (
 // "summary" and "system" lines are known and not drawn.
 
 type claudeLine struct {
-	Type        string          `json:"type"`
-	SessionID   string          `json:"sessionId"`
-	Cwd         string          `json:"cwd"`
-	GitBranch   string          `json:"gitBranch"`
-	Timestamp   string          `json:"timestamp"`
-	IsSidechain bool            `json:"isSidechain"`
-	IsMeta      bool            `json:"isMeta"`
-	Message     json.RawMessage `json:"message"`
+	Type        string         `json:"type"`
+	SessionID   string         `json:"sessionId"`
+	Cwd         string         `json:"cwd"`
+	GitBranch   string         `json:"gitBranch"`
+	Timestamp   string         `json:"timestamp"`
+	IsSidechain bool           `json:"isSidechain"`
+	IsMeta      bool           `json:"isMeta"`
+	Message     *claudeMessage `json:"message"`
 }
 
+// claudeMessage is decoded in the same pass as its line (one JSON scan
+// per line: the lines can be large tool results). Content is a string
+// or a list of blocks (maps).
 type claudeMessage struct {
-	ID      string          `json:"id"`
-	Role    string          `json:"role"`
-	Model   string          `json:"model"`
-	Content json.RawMessage `json:"content"`
+	ID      string `json:"id"`
+	Role    string `json:"role"`
+	Model   string `json:"model"`
+	Content any    `json:"content"`
 	Usage   *struct {
 		Input       int `json:"input_tokens"`
 		CacheCreate int `json:"cache_creation_input_tokens"`
 		CacheRead   int `json:"cache_read_input_tokens"`
 		Output      int `json:"output_tokens"`
 	} `json:"usage"`
-}
-
-type claudeBlock struct {
-	Type      string          `json:"type"`
-	Text      string          `json:"text"`
-	ID        string          `json:"id"`
-	Name      string          `json:"name"`
-	Input     json.RawMessage `json:"input"`
-	ToolUseID string          `json:"tool_use_id"`
-	Content   json.RawMessage `json:"content"`
-	IsError   bool            `json:"is_error"`
 }
 
 func (p *Parser) claudeLine(raw []byte) bool {
@@ -62,8 +54,8 @@ func (p *Parser) claudeLine(raw []byte) bool {
 		p.stamp(at) // a kind this version does not know: dated, skipped
 		return false
 	}
-	var msg claudeMessage
-	if len(l.Message) == 0 || json.Unmarshal(l.Message, &msg) != nil {
+	msg := l.Message
+	if msg == nil {
 		return false
 	}
 	p.stamp(at)
@@ -91,42 +83,44 @@ func (p *Parser) claudeLine(raw []byte) bool {
 		p.s.Usage.Out += u.Output
 		p.s.Usage.Context = in
 	}
-	// content: a plain string (a typed prompt) or blocks.
-	var text string
-	if json.Unmarshal(msg.Content, &text) == nil {
-		if l.Type == "user" && claudeIsCommandNoise(text) {
+	k := User
+	if l.Type == "assistant" {
+		k = Assistant
+	}
+	switch c := msg.Content.(type) {
+	case string: // a typed prompt
+		if k == User && claudeIsCommandNoise(c) {
 			return true
 		}
-		k := User
-		if l.Type == "assistant" {
-			k = Assistant
+		p.addText(k, at, c)
+		return true
+	case []any:
+		for _, el := range c {
+			b, _ := el.(map[string]any)
+			switch str(b, "type") {
+			case "text":
+				if t := str(b, "text"); k != User || !claudeIsCommandNoise(t) {
+					p.addText(k, at, t)
+				}
+			case "tool_use":
+				name := str(b, "name")
+				p.calls[str(b, "id")] = name
+				in, _ := b["input"].(map[string]any)
+				p.add(Turn{Kind: ToolCall, Time: at, Tool: name, Args: redact(claudeToolArgs(in))})
+			case "tool_result":
+				failed, _ := b["is_error"].(bool)
+				p.addResult(at, str(b, "tool_use_id"), claudeResultText(b["content"]), failed)
+			}
 		}
-		p.addText(k, at, text)
 		return true
 	}
-	var blocks []claudeBlock
-	if json.Unmarshal(msg.Content, &blocks) != nil {
-		return false
-	}
-	for _, b := range blocks {
-		switch b.Type {
-		case "text":
-			k := User
-			if l.Type == "assistant" {
-				k = Assistant
-			}
-			if k == User && claudeIsCommandNoise(b.Text) {
-				continue
-			}
-			p.addText(k, at, b.Text)
-		case "tool_use":
-			p.calls[b.ID] = b.Name
-			p.add(Turn{Kind: ToolCall, Time: at, Tool: b.Name, Args: redact(claudeToolArgs(b.Input))})
-		case "tool_result":
-			p.addResult(at, b.ToolUseID, claudeResultText(b.Content), b.IsError)
-		}
-	}
-	return true
+	return false
+}
+
+// str is m[k] as a string ("" when missing or not a string).
+func str(m map[string]any, k string) string {
+	s, _ := m[k].(string)
+	return s
 }
 
 // claudeIsCommandNoise is a user line the CLI wrote for its own slash
@@ -138,52 +132,48 @@ func claudeIsCommandNoise(s string) bool {
 }
 
 // claudeResultText is a tool_result's content: a string or text blocks.
-func claudeResultText(raw json.RawMessage) string {
-	var s string
-	if json.Unmarshal(raw, &s) == nil {
-		return s
-	}
-	var blocks []claudeBlock
-	if json.Unmarshal(raw, &blocks) != nil {
-		return ""
-	}
-	var parts []string
-	for _, b := range blocks {
-		if b.Type == "text" {
-			parts = append(parts, b.Text)
-		} else if b.Type == "image" {
-			parts = append(parts, "[image]")
+func claudeResultText(c any) string {
+	switch c := c.(type) {
+	case string:
+		return c
+	case []any:
+		var parts []string
+		for _, el := range c {
+			b, _ := el.(map[string]any)
+			switch str(b, "type") {
+			case "text":
+				parts = append(parts, str(b, "text"))
+			case "image":
+				parts = append(parts, "[image]")
+			}
 		}
+		return strings.Join(parts, "\n")
 	}
-	return strings.Join(parts, "\n")
+	return ""
 }
 
 // claudeToolArgs is the one-line summary of a tool call's input.
-func claudeToolArgs(raw json.RawMessage) string {
-	var in map[string]any
-	if json.Unmarshal(raw, &in) != nil {
-		return ""
-	}
-	str := func(k string) string { s, _ := in[k].(string); return s }
+func claudeToolArgs(in map[string]any) string {
+	get := func(k string) string { return str(in, k) }
 	switch {
-	case str("file_path") != "" && (str("old_string") != "" || str("new_string") != ""):
-		return oneLine(str("file_path"), 120) + " " + diffCount(lineCount(str("new_string")), lineCount(str("old_string")))
-	case str("file_path") != "" && str("content") != "":
-		return oneLine(str("file_path"), 120) + " " + diffCount(lineCount(str("content")), 0)
-	case str("file_path") != "":
-		return oneLine(str("file_path"), 120)
-	case str("notebook_path") != "":
-		return oneLine(str("notebook_path"), 120)
-	case str("command") != "":
-		return oneLine(str("command"), 120)
-	case str("pattern") != "":
-		return oneLine(str("pattern"), 120)
-	case str("url") != "":
-		return oneLine(str("url"), 120)
-	case str("query") != "":
-		return oneLine(str("query"), 120)
-	case str("description") != "":
-		return oneLine(str("description"), 120)
+	case get("file_path") != "" && (get("old_string") != "" || get("new_string") != ""):
+		return oneLine(get("file_path"), 120) + " " + diffCount(lineCount(get("new_string")), lineCount(get("old_string")))
+	case get("file_path") != "" && get("content") != "":
+		return oneLine(get("file_path"), 120) + " " + diffCount(lineCount(get("content")), 0)
+	case get("file_path") != "":
+		return oneLine(get("file_path"), 120)
+	case get("notebook_path") != "":
+		return oneLine(get("notebook_path"), 120)
+	case get("command") != "":
+		return oneLine(get("command"), 120)
+	case get("pattern") != "":
+		return oneLine(get("pattern"), 120)
+	case get("url") != "":
+		return oneLine(get("url"), 120)
+	case get("query") != "":
+		return oneLine(get("query"), 120)
+	case get("description") != "":
+		return oneLine(get("description"), 120)
 	}
 	keys := make([]string, 0, len(in))
 	for k := range in {
