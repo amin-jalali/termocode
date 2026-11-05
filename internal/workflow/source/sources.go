@@ -21,6 +21,9 @@ type Sources struct {
 	// AllowIP, when set, is asked for every IP an http source connects
 	// to (see httpclient.Hooks.AllowIP).
 	AllowIP func(net.IP) bool
+	// Tools calls MCP tools for mcp sources; nil: every mcp source fails with
+	// ErrNotConnected.
+	Tools ToolCaller
 }
 
 // SecretGetter returns a named secret (secrets.Store.Get). Its errors
