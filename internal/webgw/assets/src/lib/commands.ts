@@ -6,7 +6,6 @@
 // commands used last come first (kept per browser).
 import { signal } from "@preact/signals";
 import type { PaletteItem, PaletteList } from "../../../../webproto/proto";
-import { link } from "../session";
 import type { StringKey } from "../strings";
 import { t } from "../strings";
 import { toast } from "./toasts";
@@ -21,6 +20,9 @@ import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
+import { ctrFilter, ctrSearch, ctrSel, openPort } from "../views/desk/DeskContainers";
+import { configureServices, openCompose } from "../views/run/ServicesView";
+import { link } from "../session";
 import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
 
 export interface Command {
@@ -83,9 +85,16 @@ export function commands(): Command[] {
     { id: "themeDark", label: "cmd.theme_dark", run: () => setPref("theme", "dark") },
     { id: "themeLight", label: "cmd.theme_light", run: () => setPref("theme", "light") },
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
+    { id: "containersFilter", label: "ctr.filter", run: () => (openSide("containers"), (ctrFilter.value = ctrFilter.peek() ?? "")) },
+    { id: "containersSearch", label: "ctr.search", when: canAct, run: () => (openSide("containers"), (ctrSearch.value = true)) },
+    { id: "containersOpenPort", label: "ctr.open_port", when: () => !!ctrSel.peek()?.ports, run: () => openPort(ctrSel.peek()) },
+    { id: "servicesOpenCompose", label: "svc.open_compose", run: openCompose },
+    { id: "servicesConfigure", label: "svc.configure", when: canAct, run: configureServices },
     ...gitCommands(),
   ];
 }
+
+const canAct = () => link.meta.peek()?.role !== "viewer";
 
 /** cmdTitle is a command's name as the list shows it. */
 export function cmdTitle(c: Command): string {

@@ -274,6 +274,18 @@
 .mcpd-table { border-collapse: collapse; font-size: var(--fs-ui); }
 .mcpd-table th, .mcpd-table td { height: 22px; padding: 0 16px 0 0; text-align: start; }
 .mcpd-table th { color: var(--wb-desc); font-weight: 400; }
+/* A container read in an editor tab (views/desk/CtrTab.tsx). */
+.ctrt { padding: 12px 20px; overflow: auto; background: var(--wb-editor-bg); color: var(--wb-editor-fg); }
+.ctrt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ctrt-head h1 { margin: 0; font-size: 16px; font-weight: 600; }
+.ctrt-note { margin: 4px 0; color: var(--wb-desc); }
+.ctrt-pre { margin: 0; font-family: var(--font-mono); font-size: 12px; line-height: 18px; white-space: pre; }
+.ctrt-by { font-family: var(--font-mono); white-space: pre-wrap; word-break: break-all; }
+.ctrt-list { margin: 0; padding: 0; list-style: none; }
+.ctrt-item { display: flex; align-items: center; gap: 8px; min-height: 24px; }
+.ctrt-item .tr-desc { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctrt-name { font-family: var(--font-mono); }
+.ctr-filter, .ctr-form { margin: 4px 12px 4px 20px; }
 .mcpd-empty { color: var(--wb-desc); }
 
 /* ---- The panel's OUTPUT tab ---- */
