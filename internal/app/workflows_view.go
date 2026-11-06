@@ -636,8 +636,26 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 			out = append(out, wfxLine{row, ""})
 		}
 	}
+	if !rf.Dry && st.root != "" {
+		if undo := wire.Undoable(st.root, rf); len(undo) > 0 {
+			out = append(out, wfxLine{" UNDO  (u takes back the first one not undone; it asks first)", "head"})
+			for _, u := range undo {
+				row := fmt.Sprintf("   %-8s %s", rcCut(u.Step, 8), u.Title)
+				if u.Item != "" {
+					row = fmt.Sprintf("   %-8s %s · %s", rcCut(u.Step, 8), u.Item, u.Title)
+				}
+				tint := ""
+				if u.Undone {
+					row, tint = row+"  ↶ undone", "dim"
+				}
+				out = append(out, wfxLine{row, tint})
+			}
+		}
+	}
 	if l != nil {
-		if l.h.Held() {
+		if l.budget {
+			out = append(out, wfxLine{" PAUSED", "head"}, wfxLine{"   the day budget is reached (workflows_day_budget_usd): the card asks to stop or go on", "warn"})
+		} else if l.h.Held() {
 			out = append(out, wfxLine{" PAUSED", "head"}, wfxLine{"   by you: the working step finishes, the next one waits (p continues)", "warn"})
 		}
 		if l.waiting != "" {
@@ -651,6 +669,9 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 		}
 	}
 	verbs := " [Back (Esc)] [Logs (l)]"
+	if !rf.Dry && st.root != "" && len(wire.Undoable(st.root, rf)) > 0 {
+		verbs = " [Undo… (u)] [Back (Esc)] [Logs (l)]"
+	}
 	if l != nil {
 		verbs = " [Stop (x)] [Pause (p)] [Logs (l)] [Back (Esc)]"
 		if l.h.Held() {

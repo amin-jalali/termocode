@@ -124,6 +124,7 @@ The AI never saves a file by itself:
 | `x` | stop the run (asks; Keep running is first) |
 | `p` | pause the run before its next step; `p` again continues |
 | `l` | jump to the live output |
+| `u` | undo a write of the run: it asks first, Cancel is first (a write with an undo recipe, up to 7 days) |
 | `?` | this list |
 
 ## From the command line

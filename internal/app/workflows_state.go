@@ -45,6 +45,9 @@ const (
 	confirmKindWorkflowTrust confirmKindEnum = 3502
 	confirmKindWorkflowOnOff confirmKindEnum = 3503
 	confirmKindWorkflowStop  confirmKindEnum = 3504
+	// workflows_trust.go
+	confirmKindWorkflowUndo   confirmKindEnum = 3505
+	confirmKindWorkflowBudget confirmKindEnum = 3506
 )
 
 // wfxNarrowW: a window narrower than this shows the view as one page.
@@ -73,7 +76,10 @@ type wfxState struct {
 	live       map[string]*wfxLive // by run id
 	pending    string              // the workflow a card is about
 	pendingDry bool
-	problemSig string // the Problems rows last sent
+	// pendingRun, pendingStep, pendingItem: the run (and write) the
+	// undo or budget card is about.
+	pendingRun, pendingStep, pendingItem string
+	problemSig                           string // the Problems rows last sent
 	// sched is the scheduler (workflows_sched.go; nil until a workflow
 	// is on); schedClock is its clock (nil: the real one).
 	sched      *wfxSchedHost
@@ -95,6 +101,9 @@ type wfxLive struct {
 	waiting  string   // what the run waits for ("" = nothing)
 	// scheduled: the scheduler started it (no page is opened for it).
 	scheduled bool
+	// budget: paused by the day budget; budgetOK: the user let it go on
+	// past it (it is not paused again).
+	budget, budgetOK bool
 }
 
 func (l *wfxLive) addLine(s string) {
@@ -420,6 +429,9 @@ func wfxCounts(e wire.Entry) (reads, writes int) {
 func (m *Model) answerWorkflowCard(id string) tea.Cmd {
 	st := m.wfxS()
 	kind := m.confirmKind
+	if cmd, ok := m.answerWorkflowTrustCard(kind, id); ok {
+		return cmd
+	}
 	name, dry := st.pending, st.pendingDry
 	st.pending = ""
 	e, ok := wire.Find(st.list, name)
@@ -669,6 +681,7 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 		l.ch <- wfxDoneMsg{id: id}
 	})
 	m.wfxPutRun(h.Snapshot())
+	m.wfxCheckBudget(l)
 	if !show {
 		return id, h, wfxListen(l.ch), nil
 	}
@@ -703,6 +716,9 @@ func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
 			l.addLine(msg.ev.Step + " " + msg.ev.Item + ": " + string(msg.ev.Kind) + " " + msg.ev.Err)
 		}
 		m.wfxPutRun(l.h.Snapshot())
+		if msg.ev.Kind == run.StepDone {
+			m.wfxCheckBudget(l)
+		}
 		return wfxListen(l.ch), true
 	case wfxLineMsg:
 		l := m.wfxS().live[msg.id]

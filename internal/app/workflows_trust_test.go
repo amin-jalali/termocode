@@ -65,11 +65,13 @@ func TestWorkflowsUndoCard(t *testing.T) {
 		t.Fatalf("card:\n%s", box)
 	}
 	m.answerWorkflowCard("cancel")
+	m.confirmOpen = false
 	if len(ran) != 0 {
 		t.Fatal("Cancel ran the undo")
 	}
 	m.handleWorkflowsPageKey(wfxKey('u'))
 	cmd := m.answerWorkflowCard("undo")
+	m.confirmOpen = false
 	wfxRunCmd(cmd)
 	if len(ran) != 1 || ran[0] != ws+": gh pr close wf/lin-2 --delete-branch" {
 		t.Fatalf("undo ran %q", ran)
@@ -106,6 +108,7 @@ func TestWorkflowsDayBudgetPauses(t *testing.T) {
 		t.Fatalf("budget card: open %v kind %v safe %q", m.confirmOpen, m.confirmKind, m.confirm.SafeID())
 	}
 	m.answerWorkflowCard("continue")
+	m.confirmOpen = false
 	if l.h.Held() {
 		t.Fatal("Continue did not let the run go on")
 	}
@@ -117,6 +120,7 @@ func TestWorkflowsDayBudgetPauses(t *testing.T) {
 	m.answerWorkflowCardKind(confirmKindWorkflowRun, "run")
 	id = wfxOnlyLive(t, m)
 	m.answerWorkflowCard("stop")
+	m.confirmOpen = false
 	if rf := wfxPump(t, m, id, nil); rf.State != run.RunCancel {
 		t.Fatalf("Stop on the budget card: %s", rf.State)
 	}
