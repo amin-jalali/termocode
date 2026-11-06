@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,6 +19,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/ghci"
+	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/aistep"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
@@ -136,6 +138,12 @@ func (m *Model) wfxS() *wfxState {
 		m.wfx = &wfxState{runs: map[string][]*run.RunFile{}, live: map[string]*wfxLive{}}
 	}
 	return m.wfx
+}
+
+// wfxPolicy is the admin policy (workflows-policy.json), read each time
+// so an admin's change counts at once.
+func wfxPolicy() workflow.Policy {
+	return workflow.LoadPolicy(workflow.SystemPolicyPath, workflow.UserPolicyPath(filepath.Dir(filepath.Dir(wfxPrivateDir()))))
 }
 
 // wfxPrivateDir is the user's own workflow folder.
@@ -569,6 +577,11 @@ func (m *Model) wfxStartRun(e wire.Entry, dry, show bool) (string, *run.Handle, 
 // wfxStartRunFrom is wfxStartRun that may continue a recovered run file.
 func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFile) (string, *run.Handle, tea.Cmd, error) {
 	st := m.wfxS()
+	if !dry && e.File != nil {
+		if why := wfxPolicy().Blocked(e.File); why != "" {
+			return "", nil, nil, errors.New("blocked: " + why)
+		}
+	}
 	id := wire.NewRunID()
 	if resume != nil {
 		id = resume.ID
@@ -622,7 +635,7 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 		Notify: func(ctx context.Context, via, text string) error {
 			return block(ctx, wfxLineMsg{id: id, text: "message (" + via + "): " + text})
 		},
-		OnEvent: func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
+		OnEvent:      func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
 		OnAuditError: func(err error) { recordError("workflow " + e.Name + ": audit: " + err.Error()) },
 		OnAgent: func(step, item string, ev ai.Event) {
 			if ev.Kind == ai.EventToolStart && ev.Detail != "" {

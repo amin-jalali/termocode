@@ -88,8 +88,9 @@ func (m *Model) wfxSchedWanted() map[string]wire.Entry {
 	if !workflowsEnabled() {
 		return want
 	}
+	pol := wfxPolicy()
 	for _, e := range m.wfxS().list {
-		if !e.Broken() && e.Trusted && e.Enabled && e.File.Schedule != nil {
+		if !e.Broken() && e.Trusted && e.Enabled && e.File.Schedule != nil && pol.BlockedSchedule(e.File) == "" {
 			want[e.Name] = e
 		}
 	}
