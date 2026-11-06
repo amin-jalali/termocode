@@ -203,6 +203,51 @@ func waitTreeSeen(t *testing.T, m *Model) {
 	}
 }
 
+// gitTreeEventsDrained waits until the file event reader has handled
+// every event queued so far: it watches a folder of its own with a gate
+// of its own, makes a file there and waits for that event. The kernel
+// queues events in order and one reader handles them in order, so the
+// events of earlier writes were handled first. No-op without file events.
+func gitTreeEventsDrained(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	b := &gitPollGate{}
+	if !gitTreeWatchDirs(b, []string{dir}) {
+		return
+	}
+	defer gitTreeUnwatch(b)
+	if err := os.WriteFile(filepath.Join(dir, "barrier"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for !b.treeDirty.Load() {
+		if time.Now().After(deadline) {
+			t.Fatal("the file event reader never reached the barrier")
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// waitTreeSeen must return only after all events of the change were
+// handled: one write gives several events (truncate, write), and one
+// handled after the next git read marks the tree changed again, so the
+// next idle wait ended a step early (CI flake in the tests above).
+func TestWaitTreeSeenLeavesNoLateEvents(t *testing.T) {
+	m, _ := gitIdleRepo(t)
+	if m.gitGate.treeBackend() != gitTreeWatch {
+		t.Skip("no file events here")
+	}
+	for i := 0; i < 300; i++ {
+		_ = os.WriteFile(filepath.Join("sub", "a.txt"), []byte(strings.Repeat("x", i+1)), 0o644)
+		waitTreeSeen(t, m)
+		m.gitGate.beforeRead() // what the next git read does
+		gitTreeEventsDrained(t)
+		if m.gitGate.treeSeen() {
+			t.Fatalf("write %d: an event of it came after waitTreeSeen returned", i)
+		}
+	}
+}
+
 // FIX-33: edits by another program inside existing files, in a new file
 // in a folder and in an already changed file, each wake the idle poll on
 // the next 2 s step, with file events and with the stat scan used where
