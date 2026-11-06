@@ -182,6 +182,7 @@ var badCases = []struct {
 	{"vars object", `{"version":1,"name":"bad","vars":{"a":{}},"steps":[{"type":"tests"}]}`, "vars.a: must be a string, a number or true/false"},
 	{"vars name", `{"version":1,"name":"bad","vars":{"A B":1},"steps":[{"type":"tests"}]}`, `vars: the name "A B": use a-z`},
 	{"notify bad", `{"version":1,"name":"bad","notify":["mail"],"steps":[{"type":"tests"}]}`, `notify[0]: use "os", "web" or "message:<step id>"`},
+	{"notify channel template", `{"version":1,"name":"bad","notify":["message:m"],"steps":[{"id":"m","type":"write","to":"message","via":"slack","channel":"{{vars.ch}}","text":"x"}]}`, `notify[0]: the summary goes to "m" after the run, so its "channel" cannot hold {{…}}; write the channel id`},
 	{"notify step", `{"version":1,"name":"bad","notify":["message:t"],"steps":[{"id":"t","type":"tests"}]}`, `notify[0]: "t" is not a message write step`},
 	{"too many steps", `{"version":1,"name":"bad","steps":[` + strings.TrimSuffix(strings.Repeat(`{"type":"tests"},`, 41), ",") + `]}`, "steps: 41 steps in all; the most is 40"},
 	{"wrong kind", `{"version":1,"name":"bad","title":3,"steps":[{"type":"tests"}]}`, "title: must be a string, not a number"},
