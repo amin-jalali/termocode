@@ -45,9 +45,9 @@ func (m *Model) agentRollupItems() []agentroll.Item {
 		}
 		switch t.AgentState {
 		case agents.Working:
-			out = append(out, agentroll.Item{Name: t.agentTitle(), State: "working"})
+			out = append(out, agentroll.Item{Name: t.agentTitle(), State: "working", Worktree: t.Cwd})
 		case agents.Waiting:
-			out = append(out, agentroll.Item{Name: t.agentTitle(), State: "waiting"})
+			out = append(out, agentroll.Item{Name: t.agentTitle(), State: "waiting", Worktree: t.Cwd})
 		}
 	}
 	return out
@@ -58,7 +58,7 @@ func (m *Model) agentRollupSync() {
 	items := m.agentRollupItems()
 	var sig strings.Builder
 	for _, it := range items {
-		sig.WriteString(it.Name + "=" + it.State + ";")
+		sig.WriteString(it.Name + "=" + it.State + "@" + it.Worktree + ";")
 	}
 	if sig.String() == m.agentRollSig {
 		return

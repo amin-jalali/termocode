@@ -17,6 +17,7 @@ import "./styles/fonts.css";
 import "./styles/hl.css";
 import "./styles/media.css";
 import { App } from "./app";
+import { loadPersian } from "./lib/lazy";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";
 import { soloBuf } from "./lib/popout";
@@ -31,7 +32,7 @@ import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
 import { PairScreen } from "./ui/PairScreen";
 import { SignInScreen } from "./ui/SignInScreen";
 import { passkeysHere } from "./net/passkey";
-import { lang } from "./strings";
+import { lang, persian, type Lang } from "./strings";
 
 const RTL_LANGS = /^(fa|ar|he|ur|ps|ckb|dv|yi|sd|ug)\b/i;
 
@@ -101,9 +102,20 @@ effect(() => {
 
 // The UI language: Persian when chosen, or on "auto" when the browser
 // asks for Persian first; English otherwise (WEB-UX-5).
-effect(() => {
+function wantedLang(): Lang {
   const p = prefs.value.lang;
-  const l = p === "auto" ? (/^fa\b/i.test(navigator.language) ? "fa" : "en") : p;
+  return p === "auto" ? (/^fa\b/i.test(navigator.language) ? "fa" : "en") : p;
+}
+
+// Persian switches on once its strings (strings-fa.js) are here, so the
+// page never shows half Persian; English stays meanwhile, and a failed
+// load stays English until the language is picked again.
+effect(() => {
+  const l = wantedLang();
+  if (l === "fa" && !persian.value) {
+    loadPersian().catch(() => {});
+    return; // runs again when persian is set
+  }
   lang.value = l;
   html.lang = l;
 });
@@ -154,5 +166,11 @@ if (soloBuf(route.peek()) !== null && window.opener) window.opener = null;
 
 if (!secret && !pairSecret && token()) startShell();
 
-const root = document.getElementById("app");
-if (root) render(<Root />, root);
+// A Persian page draws first in Persian: it waits for strings-fa.js (or
+// its failure) before the first render.
+function mount() {
+  const root = document.getElementById("app");
+  if (root) render(<Root />, root);
+}
+if (wantedLang() === "fa" && !persian.value) loadPersian().then(mount, mount);
+else mount();

@@ -185,9 +185,10 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			// load anything. The other rules hold for it too.
 			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
 		}
-		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's two dynamic imports (lib/lazy.ts), fixed paths
+		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's three dynamic imports (lib/lazy.ts), fixed paths
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
+			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
 		}
 		for _, r := range []*regexp.Regexp{
 			regexp.MustCompile(`\beval\s*\(`), regexp.MustCompile(`\bnew Function\b|\bFunction\s*\(\s*["'\x60]`),

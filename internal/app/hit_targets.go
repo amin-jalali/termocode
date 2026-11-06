@@ -255,6 +255,11 @@ func (m Model) sidebarTargets() []hitTarget {
 			h.X += x0
 			out = append(out, h)
 		}
+	case activity.ViewWorktrees: // worktrees_mouse.go
+		for _, h := range m.wtHits(w) {
+			h.X += x0
+			out = append(out, h)
+		}
 	case activity.ViewItermoc: // itermoc_view.go
 		for _, h := range m.itermocHits(w) {
 			h.X += x0
@@ -522,6 +527,12 @@ func (m Model) sidebarTargetAt(x, y int) string {
 		}
 	case activity.ViewKubernetes:
 		for _, h := range m.kubeHits(m.explorerWidth - 1) {
+			if x >= h.X && x < h.X+h.W && y == h.Y {
+				return h.ID
+			}
+		}
+	case activity.ViewWorktrees:
+		for _, h := range m.wtHits(m.explorerWidth - 1) {
 			if x >= h.X && x < h.X+h.W && y == h.Y {
 				return h.ID
 			}
