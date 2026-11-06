@@ -9,6 +9,9 @@
 #               sorted names (default: the slow ones). They are left out of
 #               the dealt packages.
 # CI_TAGS       build tags for go list (pass -tags to go test as well)
+# CI_COVER_DIR  when set, also write cover profiles there (deal.out and
+#               split.out), measuring the packages in CI_COVERPKG
+#               (covreport -print-coverpkg)
 #
 # Every package of CI_DEAL_PKGS and every Test/Fuzz/Example function of
 # CI_SPLIT_PKGS runs in exactly one shard. The test names are read from the
@@ -89,16 +92,27 @@ fi
 
 echo "shard $i/$n: ${#pkgs[@]} packages whole, ${#names[@]} tests of: $split"
 
+cover_deal=() cover_split=()
+if [ -n "${CI_COVER_DIR:-}" ]; then
+	: "${CI_COVERPKG:?CI_COVER_DIR needs CI_COVERPKG}"
+	mkdir -p "$CI_COVER_DIR"
+	cover_deal=("-coverpkg=$CI_COVERPKG" "-coverprofile=$CI_COVER_DIR/deal.out")
+	cover_split=("-coverpkg=$CI_COVERPKG" "-coverprofile=$CI_COVER_DIR/split.out")
+fi
+
+# go test repeats the whole -coverpkg list on every "ok" line: cut it.
+shorten() { sed -E 's/(of statements in ).*/\1-coverpkg/'; }
+
 status=0
 pid_deal="" pid_split=""
 if [ ${#pkgs[@]} -gt 0 ]; then
-	go test "$@" "${pkgs[@]}" &
+	go test "$@" "${cover_deal[@]+"${cover_deal[@]}"}" "${pkgs[@]}" > >(shorten) &
 	pid_deal=$!
 fi
 if [ ${#names[@]} -gt 0 ]; then
 	re="^($(IFS='|'; echo "${names[*]}"))\$"
 	# shellcheck disable=SC2086
-	go test "$@" -run "$re" $split &
+	go test "$@" "${cover_split[@]+"${cover_split[@]}"}" -run "$re" $split > >(shorten) &
 	pid_split=$!
 fi
 if [ -n "$pid_deal" ]; then wait "$pid_deal" || status=1; fi
