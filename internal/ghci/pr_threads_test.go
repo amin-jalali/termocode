@@ -101,3 +101,51 @@ func TestSetResolved(t *testing.T) {
 		t.Error("empty thread id accepted")
 	}
 }
+
+// AddComment leaves a comment on one line of the diff at the head commit.
+func TestAddComment(t *testing.T) {
+	f := &fakeGH{answers: map[string]fakeAnswer{"api --method": {}}}
+	c := LineComment{Commit: "abc123", Path: "parser.go", Line: 12, Side: "RIGHT", Body: " -looks odd "}
+	if err := AddComment(context.Background(), f.run, "/r", 14, c); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"api", "--method", "POST", "repos/{owner}/{repo}/pulls/14/comments",
+		"-f", "body=-looks odd", "-f", "commit_id=abc123", "-f", "path=parser.go", "-F", "line=12", "-f", "side=RIGHT"}
+	if got := f.calls[0]; strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("args %q\nwant %q", got, want)
+	}
+	for _, bad := range []LineComment{
+		{Commit: "abc", Path: "p", Line: 1, Side: "RIGHT"},             // no text
+		{Commit: "", Path: "p", Line: 1, Side: "RIGHT", Body: "x"},     // no commit
+		{Commit: "abc", Path: "", Line: 1, Side: "RIGHT", Body: "x"},   // no file
+		{Commit: "abc", Path: "p", Line: 0, Side: "RIGHT", Body: "x"},  // no line
+		{Commit: "abc", Path: "p", Line: 1, Side: "MIDDLE", Body: "x"}, // bad side
+		{Commit: "-x", Path: "p", Line: 1, Side: "RIGHT", Body: "x"},   // option-like commit
+	} {
+		g := &fakeGH{}
+		if err := AddComment(context.Background(), g.run, "/r", 14, bad); err == nil || len(g.calls) != 0 {
+			t.Errorf("%+v accepted (calls %d)", bad, len(g.calls))
+		}
+	}
+}
+
+// A suggestion is a fenced block GitHub turns into an "apply" button; a
+// fence inside the code gets a longer outer fence.
+func TestSuggestion(t *testing.T) {
+	if got := Suggestion("x := 1"); got != "```suggestion\nx := 1\n```" {
+		t.Errorf("got %q", got)
+	}
+	if got := Suggestion("a\n```\nb\n"); got != "````suggestion\na\n```\nb\n````" {
+		t.Errorf("got %q", got)
+	}
+	code, ok := SuggestedCode("Use this:\n```suggestion\nx := 2\n```\nthanks")
+	if !ok || code != "x := 2" {
+		t.Errorf("code %q ok %v", code, ok)
+	}
+	if code, ok := SuggestedCode("```suggestion\n```"); !ok || code != "" {
+		t.Errorf("empty suggestion (delete the line): %q %v", code, ok)
+	}
+	if _, ok := SuggestedCode("plain text"); ok {
+		t.Error("plain text read as a suggestion")
+	}
+}
