@@ -135,6 +135,9 @@ func newRCWorkspace(t *testing.T, files fstest.MapFS) (workspace.Workspace, *rcH
 		"local.png": "not an image",
 		".git/HEAD": "ref: refs/heads/local-only\n",
 		"local.txt": "needle",
+		// A folder only the local disk has: it must never become a
+		// workspace folder of the container.
+		"localdir/keep.txt": "local",
 	}
 	for name, text := range decoys {
 		p := filepath.Join(root, name)
