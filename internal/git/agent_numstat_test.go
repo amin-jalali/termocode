@@ -25,8 +25,8 @@ func TestAgentNumstat(t *testing.T) {
 		}
 	}
 	write("a.txt", "one\nTWO\nthree\nfour\n") // 1 changed + 1 added: +2 -1
-	write("new.txt", "x\ny\n")                 // +2
-	write("bin.dat", "\x00\x01\x02")           // binary
+	write("new.txt", "x\ny\n")                // +2
+	write("bin.dat", "\x00\x01\x02")          // binary
 	if err := os.Remove(filepath.Join(w.Path, "b.txt")); err != nil {
 		t.Fatal(err)
 	}
