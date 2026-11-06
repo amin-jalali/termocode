@@ -49,7 +49,7 @@ func (r gitReader) status() (git.BranchStatus, error) {
 
 func (r gitReader) commits(limit int) ([]git.GraphCommit, bool, error) {
 	if !r.remote {
-		return git.Commits(r.dir, 0, limit)
+		return gitGraphCommits(r.dir, 0, limit) // honors the all-branches toggle
 	}
 	if r.x == nil {
 		return nil, false, errNoHostExec

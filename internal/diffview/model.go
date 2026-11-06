@@ -103,6 +103,9 @@ type Model struct {
 	// it is centred on the screen.
 	bx, by, bw, bh int
 
+	// ignoreSpace hides whitespace-only changes (w; read-only cards only)
+	ignoreSpace bool
+
 	// cache of the built display rows of the current file (a pointer:
 	// View runs on value copies)
 	cache *cache
@@ -117,11 +120,18 @@ func New(title string, files []File, review bool) Model {
 	return m
 }
 
-func newFileState(f File) *fileState {
+func newFileState(f File) *fileState { return newFileStateOpt(f, false) }
+
+// newFileStateOpt is newFileState; ignoreSpace hides whitespace-only
+// changes (GITX-26).
+func newFileStateOpt(f File, ignoreSpace bool) *fileState {
 	if f.Pending || f.Binary || f.Note != "" {
 		return &fileState{File: f, diff: textdiff.Compute("", ""), expanded: map[int]bool{}}
 	}
 	d := textdiff.Compute(f.Old, f.New)
+	if ignoreSpace {
+		d = textdiff.ComputeIgnoreSpace(f.Old, f.New)
+	}
 	n := len(d.Hunks)
 	if n == 0 && d.EOLOnly() {
 		n = 1
@@ -132,7 +142,7 @@ func newFileState(f File) *fileState {
 // AddFile appends a file (a later proposal of the same review) and
 // returns its index.
 func (m *Model) AddFile(f File) int {
-	m.files = append(m.files, newFileState(f))
+	m.files = append(m.files, newFileStateOpt(f, m.ignoreSpace))
 	return len(m.files) - 1
 }
 
@@ -254,6 +264,9 @@ func (m *Model) Action(id string) tea.Cmd {
 	switch id {
 	case "hide":
 		return func() tea.Msg { return HideMsg{} }
+	case "whitespace":
+		m.toggleIgnoreSpace()
+		return nil
 	case "mode":
 		if m.splitNow() {
 			m.mode = ModeUnified
@@ -480,6 +493,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.stepFile(-1)
 	case "t", "v":
 		return m, m.Action("mode")
+	case "w":
+		return m, m.Action("whitespace")
 	case "z":
 		return m, m.Action("expand")
 	case "a", "y":
@@ -583,4 +598,26 @@ func scanID(id, prefix string, n *int) bool {
 	}
 	*n = v
 	return true
+}
+
+// IgnoreSpace reports whether whitespace-only changes are hidden.
+func (m Model) IgnoreSpace() bool { return m.ignoreSpace }
+
+// toggleIgnoreSpace hides or shows whitespace-only changes (GITX-26, git
+// diff -b) and diffs the loaded files again. A review card applies its
+// hunks to the file, so it always shows every change.
+func (m *Model) toggleIgnoreSpace() {
+	if m.review {
+		return
+	}
+	m.ignoreSpace = !m.ignoreSpace
+	for i, f := range m.files {
+		if f.Pending || f.Binary || f.Note != "" {
+			continue
+		}
+		nf := newFileStateOpt(f.File, m.ignoreSpace)
+		nf.synOld, nf.synNew = f.synOld, f.synNew
+		m.files[i] = nf
+	}
+	m.cache.reset()
 }

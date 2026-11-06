@@ -17,8 +17,8 @@ import { newChat } from "../views/Chat";
 import { chatFlow, exportChat, INFO_KINDS, moreChat, openAutoApprove, openInfo, openMCPProfiles, startFork } from "../views/ChatMore";
 import { newTerm } from "../views/Term";
 import { showOnLaptop } from "../views/FileView";
-import { modKey } from "./platform";
-import { loadRecentCmds, saveRecentCmds, setPref } from "./prefs";
+import { isMac, modKey } from "./platform";
+import { loadRecentCmds, prefs, saveRecentCmds, setPref } from "./prefs";
 import { toggleProblems } from "./lsp";
 import { moreCommands } from "./morecmds";
 import { go, route } from "./router";
@@ -29,7 +29,7 @@ import { askLaptopForm, openItermoc } from "../views/ItermocView";
 import { dbCommands } from "../views/desk/dbcommands";
 import { ctrFilter, ctrSearch, ctrSel, openPort } from "../views/desk/DeskContainers";
 import { configureServices, openCompose } from "../views/run/ServicesView";
-import { activeFile, alternateFile, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, showFile, splitEditor, tabsIn, togglePin, wordWrap } from "./workbench";
+import { activeFile, alternateFile, clips, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, showFile, splitEditor, tabsIn, togglePin, wordWrap, zen } from "./workbench";
 import { askLink } from "./links";
 import { expandTo, hideDots } from "./tree";
 import { sideView } from "../ui/ActivityBar";
@@ -57,6 +57,40 @@ export interface Command {
   run: () => void;
 }
 
+/** pasteHistory lists the tab's clipboard history; the pick goes in at
+ * the focused editor's caret as the user's own edit. */
+function pasteHistory(): void {
+  const list = clips.peek();
+  if (!list.length) {
+    toast("info", t("clip.empty"));
+    return;
+  }
+  const one = (s: string) => (s.length > 80 ? s.slice(0, 79) + "…" : s).replace(/\s+/g, " ");
+  quick.value = {
+    mode: "pick",
+    pick: {
+      title: t("clip.title"),
+      items: list.map((s) => ({
+        label: one(s),
+        detail: s.includes("\n") ? t("clip.lines", { n: s.split("\n").length }) : undefined,
+        run: () => {
+          const d = activeDesk.peek();
+          if (!d) return;
+          setTimeout(() => {
+            d.insert(s);
+            d.focus();
+          }, 0);
+        },
+      })),
+    },
+  };
+}
+
+/** cursors runs a multi-cursor command in the focused editor. */
+function cursors(op: "above" | "below" | "next" | "all"): void {
+  activeDesk.peek()?.cursors(op);
+}
+
 /** tabsNow is the focused group's tab list. */
 const tabsNow = (): string[] => tabsIn(focusedGroup.peek());
 
@@ -77,6 +111,14 @@ export function commands(): Command[] {
     { id: "focusGroup1", label: "cmd.focus_group1", keys: `${mod}+1`, run: () => focusGroup(0) },
     { id: "focusGroup2", label: "cmd.focus_group2", keys: `${mod}+2`, when: () => groups.peek().length > 1 || hasFile(), run: focusSecond },
     { id: "wrap", label: "cmd.wrap", keys: "Alt+Z", run: () => (wordWrap.value = !wordWrap.peek()) },
+    // Multi-cursor (WEBP-1): the editor's own actions, with its keys.
+    { id: "cursorAbove", label: "cmd.cursor_above", keys: isMac() ? "⌥⌘↑" : "Ctrl+Alt+Up", when: hasFile, run: () => cursors("above") },
+    { id: "cursorBelow", label: "cmd.cursor_below", keys: isMac() ? "⌥⌘↓" : "Ctrl+Alt+Down", when: hasFile, run: () => cursors("below") },
+    { id: "nextMatch", label: "cmd.next_match", keys: `${mod}+D`, when: hasFile, run: () => cursors("next") },
+    { id: "allMatches", label: "cmd.all_matches", keys: `${mod}+Shift+L`, when: hasFile, run: () => cursors("all") },
+    { id: "pasteHistory", label: "cmd.paste_history", when: hasFile, run: pasteHistory },
+    { id: "vim", label: "cmd.vim", run: () => setPref("vim", !prefs.peek().vim) },
+    { id: "zen", label: "cmd.zen", keys: `${mod}+K Z`, run: () => (zen.value = !zen.peek()) },
     { id: "aiExplain", label: "ai.explain", when: hasFile, run: () => activeDesk.peek()?.aiAct("explain") },
     { id: "aiFix", label: "ai.fix", when: hasFile, run: () => activeDesk.peek()?.aiAct("fix") },
     { id: "aiEdit", label: "ai.edit", keys: `${mod}+I`, when: hasFile, run: () => activeDesk.peek()?.aiAct("edit") },
