@@ -20,9 +20,10 @@ const (
 	OpAINextEdit = "ai.next_edit"
 )
 
-// OpAIAction is the editor's AI actions (Explain, Fix, Edit, Doc), as the
-// laptop's editor has them: Explain asks in the laptop's open chat; the
-// others answer with the lines to replace, which the page shows as a
+// OpAIAction is the editor's AI actions (Explain, Fix, Edit, Doc, Add to
+// Chat), as the laptop's editor has them: Explain asks in the laptop's
+// open chat; Attach adds the selection (or the whole file) to that chat's
+// next message and asks nothing; the others answer with the lines to replace, which the page shows as a
 // diff to accept or reject (nothing changes before the user accepts).
 const OpAIAction = "ai.action"
 
@@ -32,6 +33,7 @@ const (
 	AIFix     = "fix"
 	AIEdit    = "edit"
 	AIDoc     = "doc"
+	AIAttach  = "attach"
 )
 
 // MaxAIInstruction caps an Edit instruction.
@@ -44,7 +46,7 @@ const MaxAIInstruction = 2 << 10
 type AIActionArgs struct {
 	Buf         int    `json:"buf"`
 	Tick        int    `json:"tick"`
-	Kind        string `json:"kind" enum:"explain|fix|edit|doc"`
+	Kind        string `json:"kind" enum:"explain|fix|edit|doc|attach"`
 	Start       int    `json:"start"`
 	End         int    `json:"end"`
 	Line        int    `json:"line"`
@@ -56,7 +58,7 @@ func (a *AIActionArgs) validate(int) error {
 		return invalid("bad range")
 	}
 	switch a.Kind {
-	case AIExplain, AIFix, AIDoc:
+	case AIExplain, AIFix, AIDoc, AIAttach:
 		if a.Instruction != "" {
 			return invalid("an instruction is only for edit")
 		}
@@ -75,7 +77,7 @@ func (a *AIActionArgs) validate(int) error {
 // Start…End (zero-based, End not included) with Lines; None: the AI
 // suggests no change. Title names the change ("AI fix").
 type AIAction struct {
-	Kind   string   `json:"kind" enum:"explain|fix|edit|doc"`
+	Kind   string   `json:"kind" enum:"explain|fix|edit|doc|attach"`
 	Chat   bool     `json:"chat,omitempty"`
 	ChatID string   `json:"chatId,omitempty"`
 	None   bool     `json:"none,omitempty"`

@@ -65,7 +65,7 @@ func wtRun(t *testing.T, m *Model, cmd tea.Cmd) {
 	}
 	wtWaitFor(t, func() bool {
 		for _, e := range m.wt.entries {
-			if _, ok := m.wt.cache.Get(e.Path); !ok {
+			if _, ok := m.wt.cache.Get(e.Path); !ok && !e.Gone { // a gone folder has no status
 				return false
 			}
 		}
@@ -124,8 +124,8 @@ func TestWorktreeShowLoadsTheList(t *testing.T) {
 		t.Errorf("Alt+Shift+W runs %v", a)
 	}
 	m.activity.SetActive(activity.ViewWorktrees)
-	if !strings.HasSuffix(m.sidebarHelpTopic(), "#worktrees") {
-		t.Errorf("guide section %q", m.sidebarHelpTopic())
+	if got := m.sidebarHelpTopic(); got != "guides/worktrees.md#worktrees" { // WTX-17: the view has its own guide
+		t.Errorf("guide section %q", got)
 	}
 }
 
@@ -164,12 +164,12 @@ func TestWorktreeKeysMove(t *testing.T) {
 	if st.cursorPath != "/src/app.worktrees/toast" {
 		t.Errorf("j: %q", st.cursorPath)
 	}
-	key("G")
-	if st.cursorPath != "/tmp/deleted" {
+	key("G") // the archived row is last (WTX-14)
+	if st.cursorPath != "/src/app.worktrees/old" {
 		t.Errorf("G: %q", st.cursorPath)
 	}
 	key("k")
-	if st.cursorPath != "/elsewhere/api-v2" {
+	if st.cursorPath != "/tmp/deleted" {
 		t.Errorf("k: %q", st.cursorPath)
 	}
 	key("g")
@@ -200,5 +200,19 @@ func TestWorktreeClickAndIcon(t *testing.T) {
 	nm, _ := m.handleWTSidebarMouse(3, y, tea.MouseLeft)
 	if nm.wt.cursorPath != "/elsewhere/api-v2" || nm.focus != FocusExplorer {
 		t.Errorf("click: %q %v", nm.wt.cursorPath, nm.focus)
+	}
+}
+
+// W3 leftover: Worktree: Show run while the terminal has the keys moves
+// them to the view (F, s, x … reach the list, not the shell).
+func TestWorktreeShowFromTerminalTakesTheKeys(t *testing.T) {
+	m := wtTestModel(t, t.TempDir())
+	m.wt.off = true
+	m.inTerminal, m.panelFocused, m.focus = true, true, FocusEditor
+	if _, ok := m.dispatchWorktreePalette("worktree-view"); !ok {
+		t.Fatal("worktree-view not handled")
+	}
+	if m.inTerminal || m.panelFocused || m.focus != FocusExplorer {
+		t.Errorf("keys still go to the terminal: inTerminal %v panelFocused %v focus %v", m.inTerminal, m.panelFocused, m.focus)
 	}
 }

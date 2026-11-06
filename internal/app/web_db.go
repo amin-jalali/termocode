@@ -65,6 +65,33 @@ func (m *Model) webDBConns(call *webCall) tea.Cmd {
 		call.fail(webproto.CodeNotFound, "No workspace is open.")
 		return nil
 	}
+	// The laptop session's state, read here on Update.
+	type live struct {
+		connected, manual, tx bool
+		writes                int
+	}
+	state := map[string]live{}
+	if d := m.databases; d != nil {
+		for key, s := range d.sessions {
+			if s != nil {
+				id := dbTxConn(key)
+				st := state[id]
+				st.connected = true
+				state[id] = st
+			}
+		}
+		for id := range d.manual {
+			st := state[id]
+			st.manual = d.manualMode(id)
+			state[id] = st
+		}
+		for key := range d.txs {
+			id := dbTxConn(key)
+			st := state[id]
+			st.tx, st.writes = len(d.txKeys(id)) > 0, d.txWrites(id)
+			state[id] = st
+		}
+	}
 	call.later()
 	return func() tea.Msg {
 		_, _, list := dbLoadConfigs(root)
@@ -86,6 +113,9 @@ func (m *Model) webDBConns(call *webCall) tea.Cmd {
 			}
 			if c.Problem != "" {
 				it.Problem = dbFriendlyProblem(c.Problem)
+			}
+			if st, ok := state[c.ID]; ok {
+				it.Connected, it.Manual, it.Tx, it.Writes = st.connected, st.manual, st.tx, st.writes
 			}
 			out.Conns = append(out.Conns, it)
 		}
@@ -153,10 +183,10 @@ func (m *Model) webDBTables(call *webCall) tea.Cmd {
 	if !ok {
 		return nil
 	}
+	ctx, stop := m.webDBCtx(call, w.c.ID)
 	call.later()
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(call.ctx, loadDBConsoleSettings().timeout())
-		defer cancel()
+		defer stop()
 		s, err := w.open(ctx)
 		if err != nil {
 			call.fail(webproto.CodeInternal, err.Error())
@@ -170,14 +200,16 @@ func (m *Model) webDBTables(call *webCall) tea.Cmd {
 			return nil
 		}
 		out := webproto.DBTables{Conn: w.c.ID, Schema: schema, Tables: []webproto.DBTable{}}
-		names := map[string]bool{}
+		names, views := map[string]bool{}, map[string]bool{}
 		for i, o := range res.Objects {
 			if i == webproto.MaxDBTables {
 				out.More = len(res.Objects) - i
 				break
 			}
 			names[o.Name] = true
-			out.Tables = append(out.Tables, webproto.DBTable{Name: o.Name, View: strings.Contains(strings.ToLower(o.Kind), "view")})
+			view := strings.Contains(strings.ToLower(o.Kind), "view")
+			views[o.Name] = view
+			out.Tables = append(out.Tables, webproto.DBTable{Name: o.Name, View: view})
 		}
 		return applyMsg(func(m *Model) tea.Cmd {
 			if m.web != nil {
@@ -185,6 +217,11 @@ func (m *Model) webDBTables(call *webCall) tea.Cmd {
 					m.web.more.dbTables = map[string]map[string]bool{}
 				}
 				m.web.more.dbTables[w.c.ID] = names
+				st := m.webDB()
+				if st.views == nil {
+					st.views = map[string]map[string]bool{}
+				}
+				st.views[w.c.ID] = views
 			}
 			call.reply(out)
 			return nil
@@ -208,10 +245,12 @@ func (m *Model) webDBRows(call *webCall) tea.Cmd {
 		from = d.QuoteIdent(webDBSchema(w.c)) + "." + from
 	}
 	sql := "SELECT * FROM " + from + d.Limit(webproto.DBPageRows+1, a.From)
+	view := m.webDB().views[a.Conn][a.Table]
+	t := webDBTableOf(w.c, a.Table, view)
+	ctx, stop := m.webDBCtx(call, w.c.ID)
 	call.later()
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(call.ctx, loadDBConsoleSettings().timeout())
-		defer cancel()
+		defer stop()
 		s, err := w.open(ctx)
 		if err != nil {
 			call.fail(webproto.CodeInternal, err.Error())
@@ -231,6 +270,14 @@ func (m *Model) webDBRows(call *webCall) tea.Cmd {
 		out.From = a.From
 		if more && !out.Truncated {
 			out.Next = a.From + webproto.DBPageRows
+		}
+		if !view {
+			// The key that finds a row: the page edits rows only with it.
+			if ir, err := s.Introspect(ctx, t.request()); err == nil {
+				for _, k := range webDBKeyOf(ir) {
+					out.Key = append(out.Key, webName(k))
+				}
+			}
 		}
 		call.reply(out)
 		return nil
@@ -270,10 +317,10 @@ func (m *Model) webDBQuery(call *webCall) tea.Cmd {
 		return nil
 	}
 	m.webAuditOp(call, w.c.ID+" "+strconv.Itoa(len(sql))+" bytes", "read")
+	ctx, stop := m.webDBCtx(call, w.c.ID)
 	call.later()
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(call.ctx, loadDBConsoleSettings().timeout())
-		defer cancel()
+		defer stop()
 		s, err := w.open(ctx)
 		if err != nil {
 			call.fail(webproto.CodeInternal, err.Error())

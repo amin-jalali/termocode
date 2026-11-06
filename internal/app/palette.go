@@ -243,7 +243,10 @@ func paletteItems() []picker.Item {
 		{ID: "git-fetch", Title: "Git: Fetch"},
 		{ID: "git-sync", Title: "Git: Sync (Pull, then Push)"},
 		{ID: "git-branch", Title: "Git: Switch Branch..."},
-		{ID: "problems", Title: "Go to Problem..."}, // Group C: "View: Problems" opens the panel now
+		{ID: "git-branch-rename", Title: "Git: Rename Branch…"},    // git_branch_ops.go
+		{ID: "git-branch-delete", Title: "Git: Delete Branch…"},    // git_branch_ops.go
+		{ID: "git-branch-from", Title: "Git: Create Branch From…"}, // git_branch_ops.go
+		{ID: "problems", Title: "Go to Problem..."},                // Group C: "View: Problems" opens the panel now
 		{ID: "code-actions", Title: "Edit: Quick Fix...", Hint: "Ctrl+. / Alt+Enter"},
 		{ID: "code-action-apply-preferred", Title: "Edit: Apply Preferred Quick Fix", Hint: "Ctrl+Shift+."},
 		{ID: "goto-symbol-file", Title: "Go to Symbol in File...", Hint: "Ctrl+Shift+O"},
@@ -302,6 +305,15 @@ func paletteItems() []picker.Item {
 		{ID: "git-log", Title: "Git: Show Log..."},
 		{ID: "git-compare-rev", Title: "Git: Compare with Revision..."},
 		{ID: "git-blame", Title: "Git: Blame Current Line", Hint: "Alt+B"},
+		{ID: "git-inline-blame", Title: "Git: Toggle Inline Blame"},        // git_blame_view.go
+		{ID: "git-status-blame", Title: "Git: Toggle Blame in Status Bar"}, // git_blame_view.go
+		{ID: "git-blame-annotate", Title: "Git: Toggle Blame Annotations"}, // git_blame_view.go
+		{ID: "git-blame-options", Title: "Git: Blame Options…"},            // git_blame_view.go
+		{ID: "git-blame-commit", Title: "Git: Open Commit of Line"},        // git_blame_view.go
+		{ID: "git-blame-before", Title: "Git: Blame Before This Change"},   // git_blame_view.go
+		{ID: "git-line-history", Title: "Git: Show Line History"},          // git_blame_view.go
+		{ID: "git-rev-prev", Title: "Git: Open Previous Revision of File"}, // git_blame_view.go
+		{ID: "git-rev-next", Title: "Git: Open Next Revision of File"},     // git_blame_view.go
 		{ID: "git-history", Title: "Git: Show File History..."},
 		{ID: "git-tags", Title: "Git: Show Tags..."},
 		{ID: "zen-mode", Title: "View: Toggle Zen Mode", Hint: "Alt+Z"},
@@ -319,6 +331,8 @@ func paletteItems() []picker.Item {
 		{ID: "git-conflict-both", Title: "Git: Accept Both Changes (Conflict at Cursor)"},
 		{ID: "git-clone", Title: "Git: Clone Repository..."},
 		// Three-way merge view (git_merge_view.go).
+		{ID: "git-merge-branch", Title: "Git: Merge Branch…"},                         // git_merge_branch.go
+		{ID: "git-merge-status", Title: "Git: Merge in Progress (Continue / Abort)…"}, // git_merge_branch.go
 		{ID: "git-merge-open", Title: "Git: Open Merge View"},
 		{ID: "git-merge-next", Title: "Git: Merge View: Next Conflict", Hint: "n"},
 		{ID: "git-merge-prev", Title: "Git: Merge View: Previous Conflict", Hint: "p"},
@@ -411,6 +425,7 @@ func paletteItems() []picker.Item {
 	items = append(items, webPaletteItems()...)       // the web panel (web_tui.go)
 	items = append(items, webAccessPaletteItems()...) // pairing and devices (web_access.go)
 	items = append(items, itermocPaletteItems()...)   // the Itermoc view (itermoc_actions.go)
+	items = append(items, workflowsPaletteItems()...) // WFX-7 (workflows_keys.go)
 	items = append(items, ciPaletteItems()...)        // G-CI (ci_card.go)
 	items = append(items, layoutPaletteItems()...)    // G-LAY (layout_palette.go)
 	items = append(items, updatePaletteItems()...)    // G-UPD (update_palette.go)
@@ -606,6 +621,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.showExp = true
 		m.focus = FocusExplorer
 		m.applyLayout()
+	case "git-merge-branch":
+		return m.openMergeBranchPicker()
+	case "git-merge-status":
+		return m.openGitOpControl()
 	case "git-unstage-all":
 		return m.gitUnstageAll()
 	case "git-discard-all":
@@ -626,6 +645,12 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.gitSync()
 	case "git-branch":
 		return m.openBranchPicker()
+	case "git-branch-rename":
+		return m.openRenameBranchPrompt()
+	case "git-branch-delete":
+		return m.openDeleteBranchPicker()
+	case "git-branch-from":
+		return m.openBranchFromPicker()
 	case "problems":
 		return m.openProblemsPicker()
 	case "code-actions":
@@ -753,6 +778,24 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.openCompareWithRevisionPrompt()
 	case "git-blame":
 		return m.gitBlameCurrentLine()
+	case "git-inline-blame":
+		return m.toggleInlineBlame()
+	case "git-status-blame":
+		return m.toggleStatusBlame()
+	case "git-blame-annotate":
+		return m.toggleBlameAnnotate()
+	case "git-blame-options":
+		return m.openBlameOptionsPicker()
+	case "git-blame-commit":
+		return m.gitOpenLineCommit()
+	case "git-blame-before":
+		return m.gitBlameBefore()
+	case "git-line-history":
+		return m.gitLineHistoryPicker()
+	case "git-rev-prev":
+		return m.gitStepRevision(-1)
+	case "git-rev-next":
+		return m.gitStepRevision(1)
 	case "git-history":
 		return m.gitFileHistoryPicker()
 	case "git-tags":
@@ -855,6 +898,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchItermocPalette(id); ok { // itermoc_actions.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchWorkflowsPalette(id); ok { // workflows_keys.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchCIPalette(id); ok { // ci_card.go

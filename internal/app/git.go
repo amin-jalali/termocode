@@ -67,6 +67,8 @@ type GitMsg struct {
 	KeepGraph bool
 	// Rebase: an interactive rebase stopped here (git_rebase.go banner).
 	Rebase git.RebaseState
+	// Stopped: a merge, cherry-pick or revert stopped here (git_merge_branch.go).
+	Stopped string
 	// Seq: when the read started (gitReadSeq). Refreshes run at the same
 	// time and can end out of order; one that started before the last
 	// applied one is dropped. 0: always applied.
@@ -110,7 +112,7 @@ func fetchGitCmd() tea.Cmd {
 		if err != nil {
 			return GitMsg{IsRepo: false, Seq: seq}
 		}
-		return GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Graph: graph, More: more, Rebase: rd.rebase(), Seq: seq}
+		return GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Graph: graph, More: more, Rebase: rd.rebase(), Stopped: rd.stopped(), Seq: seq}
 	}
 }
 
@@ -145,7 +147,7 @@ func (m *Model) pollGitCmd() tea.Cmd {
 		if err != nil {
 			return GitMsg{IsRepo: false, Seq: seq}
 		}
-		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Rebase: rd.rebase(), Seq: seq}
+		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Rebase: rd.rebase(), Stopped: rd.stopped(), Seq: seq}
 		if !stale && graphHead != "" && strings.HasPrefix(st.OID, graphHead) && st.Branch == branch {
 			msg.KeepGraph = true
 			return msg
@@ -182,6 +184,7 @@ func (m *Model) applyGitSnapshot(msg GitMsg) {
 	m.gitLoaded = true
 	m.gitBranch = msg.Branch
 	m.gitRebase = msg.Rebase
+	m.gitStopped = msg.Stopped
 	m.gitFiles = msg.Files
 	m.setGitCommits(msg.Graph, msg.More)
 	// Clamp against the visible-row count: the accordion interleaves
@@ -392,6 +395,8 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea
 		return m, m.gitShowMore()
 	case gitRowRebase:
 		m.openRebaseControl()
+	case gitRowStopped:
+		return m, m.openGitOpControl()
 	}
 	return m, nil
 }

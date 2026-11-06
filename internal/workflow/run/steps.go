@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/workflow"
 )
 
@@ -192,31 +194,102 @@ func (r *runner) each(ctx context.Context, s *workflow.Step, f *frame, st *StepS
 		r.edit(func() { st.Each = es })
 	}
 
+	errs := r.runItems(ctx, s, f, es.Items)
 	var done, failed []any
-	for _, is := range es.Items {
-		if err := ctx.Err(); err != nil {
-			return "", err
-		}
-		if r.resume && itemFinished(is.State) {
-			if is.State == StateDone {
-				done = append(done, is.Key)
-			} else {
-				failed = append(failed, is.Key)
-			}
-			continue
-		}
-		err := r.item(ctx, s, f, is)
+	for i, is := range es.Items {
+		err := errs[i]
 		switch {
+		case err == errNotRun:
+			continue
 		case err == nil:
 			done = append(done, is.Key)
-		case r.user.Err() != nil || isStop(err):
-			return "", err
 		default:
 			failed = append(failed, is.Key)
 		}
 	}
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	for _, err := range errs {
+		if err != nil && err != errNotRun && (r.user.Err() != nil || isStop(err)) {
+			return "", err
+		}
+	}
 	r.setOutput(f, s, map[string]any{"ok": len(failed) == 0, "items": listScope(items), "done": nonNil(done), "failed": nonNil(failed)})
 	return StateDone, nil
+}
+
+// errNotRun marks an item a stopped each did not start.
+var errNotRun = errors.New("not run")
+
+// parallel is how many items of an each run at once: the step's
+// parallel, else limits.parallel, capped by Options.ParallelMax.
+func (r *runner) parallel(s *workflow.Step) int {
+	n := s.Each.Parallel
+	if n <= 0 {
+		n = r.file.Limits.Parallel
+	}
+	if m := r.opts.ParallelMax; m > 0 && n > m {
+		n = m
+	}
+	return max(n, 1)
+}
+
+// runItems runs the items of an each, parallel at once, and returns the
+// error of each (errNotRun: not started, because the run was cancelled
+// or an item stopped the run). Items that a resumed run finished before
+// are not run again (nil, or their old failure).
+func (r *runner) runItems(ctx context.Context, s *workflow.Step, f *frame, list []*ItemState) []error {
+	errs := make([]error, len(list))
+	for i := range errs {
+		errs[i] = errNotRun
+	}
+	var mu sync.Mutex
+	next, stopped := 0, false
+	take := func() int {
+		mu.Lock()
+		defer mu.Unlock()
+		for next < len(list) && !stopped && ctx.Err() == nil {
+			i := next
+			next++
+			if is := list[i]; r.resume && itemFinished(is.State) {
+				if is.State == StateDone {
+					errs[i] = nil
+				} else {
+					errs[i] = errors.New(is.Error)
+				}
+				continue
+			}
+			return i
+		}
+		return -1
+	}
+	work := func() {
+		for i := take(); i >= 0; i = take() {
+			err := r.item(ctx, s, f, list[i])
+			mu.Lock()
+			errs[i] = err
+			if err != nil && (r.user.Err() != nil || isStop(err)) {
+				stopped = true // no new items; the running ones finish
+			}
+			mu.Unlock()
+		}
+	}
+	n := min(r.parallel(s), len(list))
+	if n <= 1 {
+		work()
+		return errs
+	}
+	var wg sync.WaitGroup
+	for w := 0; w < n; w++ {
+		wg.Add(1)
+		crash.Go("workflow.each", func() {
+			defer wg.Done()
+			work()
+		})
+	}
+	wg.Wait()
+	return errs
 }
 
 func nonNil(l []any) []any {
@@ -253,6 +326,9 @@ func (r *runner) item(ctx context.Context, s *workflow.Step, f *frame, is *ItemS
 		} else {
 			env := child.env
 			r.edit(func() { is.Env = env })
+			if s.ID != "" { // steps.<each id>.worktree inside the item
+				child.steps[s.ID] = map[string]any{"worktree": env.Worktree, "branch": env.Branch}
+			}
 		}
 	}
 	if err == nil {
@@ -364,7 +440,8 @@ func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *Step
 	if s.Write == nil {
 		return "", Permanent(errors.New("write without a target"))
 	}
-	spec, err := r.renderWrite(s.Write, r.scope(f))
+	sc := r.scope(f)
+	spec, err := r.renderWrite(s.Write, sc)
 	if err != nil {
 		return "", Permanent(err)
 	}
@@ -402,8 +479,9 @@ func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *Step
 	})
 	r.save() // "sending" is on disk before the write goes out
 	wait := func() { r.emit(Event{Kind: WriteWait, Step: key, Item: item, Attempt: attempt}) }
-	out, err := r.opts.Write.Write(ctx, WriteCall{Step: s, Item: f.nearestItem(), Spec: spec, Marker: rec.Marker,
-		Attempt: attempt, Resumed: resumed, ReadOnly: ro, Wait: wait})
+	out, err := r.opts.Write.Write(ctx, WriteCall{Step: s, Item: f.nearestItem(), Env: f.nearestEnv(), Spec: spec, Marker: rec.Marker,
+		Attempt: attempt, Resumed: resumed, ReadOnly: ro, Wait: wait,
+		Render: func(t string) (string, error) { return r.opts.Eval.Render(t, sc) }})
 	switch {
 	case errors.Is(err, ErrDenied):
 		r.edit(func() { r.rf.Writes[idx].State = StateDenied })

@@ -231,6 +231,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, cmd
 	}
 	// Group A: AI streaming / inline / sign-in messages run under any overlay.
+	if cmd, ok := m.handleRaceMsg(msg); ok { // agent_race.go
+		return m, cmd
+	}
 	if cmd, ok := m.handleAIMsg(msg); ok {
 		m.agentRollupSync() // OMX-35: other windows see this one's agents
 		return m, cmd
@@ -334,6 +337,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		if m.pickerKind == pickerKindMCPTools { // ai_mcp_tools.go: Space turns a tool off or on
 			return m, m.onMCPToolToggle(msg.ID)
 		}
+		if m.pickerKind == pickerKindWTCleanup { // worktrees_cleanup.go: Space ticks
+			return m, m.onWTCleanupToggle(msg.ID)
+		}
 		cmd, ok := m.handleAIProfilePickerAction(msg.ID)
 		if ok && m.confirmOpen {
 			m.pickerOpen = false
@@ -341,6 +347,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, cmd
 	case picker.CloseMsg:
 		m.pickerOpen = false
+		if m.pickerKind == pickerKindWTRef { // worktrees_new.go: Esc goes back to the dialog
+			m.reopenWTForm("")
+			return m, nil
+		}
 		if cmd, ok := m.databaseTransferPickerClosed(); ok {
 			return m, cmd
 		}
@@ -528,6 +538,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onMergeMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
+	case gitMergeDoneMsg, gitOpDoneMsg: // git_merge_branch.go
+		return m, m.onGitMergeBranchMsg(msg)
 	case gitxDoneMsg: // gitx_hub.go
 		return m, msg.apply(&m)
 	case preview.CloseMsg:
@@ -677,6 +689,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	if m.reviewOpen {
 		return m.routeToReview(msg)
 	}
+	if m.raceOpen() { // agent_race.go
+		return m.routeToRace(msg)
+	}
 	if m.settingsModalOpen {
 		return m.routeToSettingsModal(msg)
 	}
@@ -699,6 +714,11 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if m.runsPageShown() {
 		if newM, cmd, ok := m.routeToRunsPage(msg); ok {
+			return newM, cmd
+		}
+	}
+	if m.wfxPageShown() {
+		if newM, cmd, ok := m.routeToWorkflowsPage(msg); ok {
 			return newM, cmd
 		}
 	}
@@ -973,6 +993,7 @@ end })`)
 		}
 		sessCmd := m.persistStateSession(msg)
 		m.editor.SetMeta(msg.Path, msg.Dirty, msg.Lang)
+		sessCmd = tea.Batch(sessCmd, m.onGitBlameState()) // git_blame_view.go: follow the cursor and the file
 		// LSP installer: status-bar chip + one-time missing-server toast.
 		m.setLSPClients(msg.LSPClients)
 		lspSuggestCmd := tea.Batch(m.maybeSuggestLanguageServer(msg.Lang), m.maybeSuggestDevContainerTools(workspaceRoot()))
@@ -1043,7 +1064,13 @@ end })`)
 	case GitMsg:
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
-		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh()), true // G-CI: a new branch or a push; web tree badges
+		m.gitBlameInit()
+		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh(), m.gitBlameRefreshCmd(false)), true // blame: again when HEAD or the file changed (gitBlameKey)
+	case gitBlameLoadedMsg: // git_blame_view.go
+		m.onGitBlameLoaded(msg)
+		return m, nil, true
+	case gitRevisionReadyMsg:
+		return m, m.openGitRevision(msg), true // G-CI: a new branch or a push; web tree badges
 	case gitOlderMsg:
 		m.onGitOlder(msg)
 		return m, nil, true
@@ -1665,7 +1692,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Source Control panel has the focus: its list and commit box need
 	// the arrows, Tab and Enter. The Services and Databases trees also own
 	// their navigation keys when focused.
-	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns || m.activity.Active() == activity.ViewKubernetes || m.activity.Active() == activity.ViewWorktrees)) {
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns || m.activity.Active() == activity.ViewWorkflows || m.activity.Active() == activity.ViewKubernetes || m.activity.Active() == activity.ViewWorktrees)) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}
@@ -2388,6 +2415,11 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.openWorkspace(msg.ID)
 	case pickerKindWorktreeJump: // worktrees_jump.go
 		return m.onWorktreeJumpPicked(msg.ID)
+	case pickerKindWTCleanup: // worktrees_cleanup.go: a row ticks, the first row goes on
+		return m.onWTCleanupPicked(msg.ID)
+	case pickerKindWTRef: // worktrees_new.go: back to the dialog with the start point
+		m.reopenWTForm(msg.ID)
+		return nil
 	case pickerKindStash:
 		return m.applyStashSelected(msg.ID)
 	case pickerKindDiffLeft:
@@ -2402,6 +2434,14 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindBlameOptions: // git_blame_view.go
+		return m.onBlameOptionPicked(msg.ID)
+	case pickerKindDeleteBranch: // git_branch_ops.go
+		return m.onDeleteBranchPicked(msg.ID)
+	case pickerKindBranchFrom:
+		return m.onBranchFromPicked(msg.ID)
+	case pickerKindMergeBranch:
+		return m.onMergeBranchPicked(msg.ID)
 	case pickerKindTags:
 		return m.checkoutTagSelected(msg.ID)
 	case pickerKindHelpGuide:
@@ -2503,6 +2543,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 		case activity.ViewRuns: // runs_state.go
 			if k, ok := msg.(tea.KeyMsg); ok {
 				return m.handleRunsSidebarKey(k)
+			}
+		case activity.ViewWorkflows: // workflows_keys.go
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m.handleWorkflowsSidebarKey(k)
 			}
 		default:
 			// Files pane: intercept the Delete / `d` chord here so the
@@ -2687,7 +2731,7 @@ func (m *Model) refreshBreadcrumbs(path string) {
 	}
 	// The Find Results page has its own header rows; a breadcrumb would
 	// only show the temp folder its buffer is named after.
-	if path == "" || isFindResultsPath(path) || isHTTPPagePath(path) || isDBResultPath(path) || isRunsPagePath(path) || isItermocPagePath(path) {
+	if path == "" || isFindResultsPath(path) || isHTTPPagePath(path) || isDBResultPath(path) || isRunsPagePath(path) || isItermocPagePath(path) || isWfxPagePath(path) {
 		if len(prev) > 0 {
 			m.applyLayout()
 		}
@@ -2926,6 +2970,8 @@ func (m *Model) showSidebarView(v activity.View) tea.Cmd {
 		return m.revealItermocView(false, "")
 	case activity.ViewRuns:
 		return m.revealRuns(false)
+	case activity.ViewWorkflows:
+		return m.revealWorkflows(false)
 	}
 	return nil
 }

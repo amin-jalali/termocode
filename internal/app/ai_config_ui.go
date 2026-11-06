@@ -197,6 +197,18 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIProfileTrust(id), true
 	case confirmKindAIRulesTrust: // ai_rules.go
 		return m.answerAIRulesTrust(id), true
+	case confirmKindWTSetupTrust: // worktrees_setup.go
+		return m.answerWTSetupTrust(id), true
+	case confirmKindWTCtlLink: // worktrees_notes.go
+		return m.answerWTCtlLink(id), true
+	case confirmKindWTSleep: // worktrees_sleep.go
+		return m.answerWTSleep(id), true
+	case confirmKindWTArchive: // worktrees_archive.go
+		return m.answerWTArchive(id), true
+	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
+		return m.answerWTDelete(m.confirmKind, id), true
+	case confirmKindWTCleanup, confirmKindWTCleanupDirty: // worktrees_cleanup.go
+		return m.answerWTCleanup(m.confirmKind, id), true
 	case confirmKindAISkillsTrust: // ai_skills.go
 		return m.answerAISkillsTrust(id), true
 	case confirmKindAIHooksTrust: // ai_hooks.go
@@ -211,8 +223,13 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentCtlPrompt(id), true
 	case confirmKindAgentHooks: // agent_hooks_ui.go
 		return m.answerAgentHooks(id), true
+	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard: // agent_race_compare.go
+		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
+	case confirmKindWorkflowRun, confirmKindWorkflowDry, confirmKindWorkflowTrust, confirmKindWorkflowOnOff, confirmKindWorkflowStop,
+		confirmKindWorkflowUndo, confirmKindWorkflowBudget: // workflows_state.go, workflows_trust.go
+		return m.answerWorkflowCard(id), true
 	case confirmKindAgentTranscripts: // agent_chat.go
 		return m.answerAgentTranscripts(id), true
 	case confirmKindAgentInstall, confirmKindAgentSignIn: // agent_install.go
@@ -299,6 +316,18 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIProfileTrust("") // Esc: no answer, ask again next time
 	case confirmKindAIRulesTrust:
 		return m.answerAIRulesTrust("") // Esc: no answer, the message goes back
+	case confirmKindWTSetupTrust:
+		return m.answerWTSetupTrust("") // Esc: no answer, nothing runs
+	case confirmKindWTCtlLink:
+		return m.answerWTCtlLink("") // Esc: Deny
+	case confirmKindWTSleep:
+		return m.answerWTSleep("") // Esc: Keep running
+	case confirmKindWTArchive:
+		return m.answerWTArchive("") // Esc: Cancel
+	case confirmKindWTDelete, confirmKindWTDeleteDirty:
+		return m.answerWTDelete(m.confirmKind, "") // Esc: Cancel
+	case confirmKindWTCleanup, confirmKindWTCleanupDirty:
+		return m.answerWTCleanup(m.confirmKind, "") // Esc: Cancel / Keep it
 	case confirmKindAISkillsTrust:
 		return m.answerAISkillsTrust("") // Esc: no answer, the message goes back
 	case confirmKindAIHooksTrust:
@@ -512,6 +541,21 @@ func (m *Model) saveAIModel(id string) tea.Cmd {
 // ── Auto-approve ───────────────────────────────────────────────────────
 
 func (m *Model) openAIAutoApprovePicker() tea.Cmd {
+	items := m.aiAutoApproveItems()
+	// The title is the palette title (with the theme's AI glyph, "*" in ASCII);
+	// the box follows the window so the rows are not cut at 80 columns.
+	m.picker = picker.NewItems(" "+theme.GlyphAI.String()+" AI: Agent Auto-Approve… ", items)
+	m.picker.SetWidth(mcpServeStatusWidth(m.w))
+	m.picker.SetNote([]string{"Enter switches ask and AUTO; on an agent it revokes."})
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = pickerKindAIAutoApprove
+	return nil
+}
+
+// aiAutoApproveItems are the auto-approve rows (the picker's and the
+// web's): each class ask or AUTO, then the outside agents' Always allow.
+func (m *Model) aiAutoApproveItems() []picker.Item {
 	s := m.aiS()
 	desc := map[string]string{
 		ai.ClassFileWrite: "write / create / delete / rename files",
@@ -547,15 +591,7 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 	}
 	items = append(items, m.dbAutoApproveItems(s.settings.AutoApprove)...)
 	items = append(items, mcpServeAllowItems()...) // outside agents: their own list
-	// The title is the palette title (with the theme's AI glyph, "*" in ASCII);
-	// the box follows the window so the rows are not cut at 80 columns.
-	m.picker = picker.NewItems(" "+theme.GlyphAI.String()+" AI: Agent Auto-Approve… ", items)
-	m.picker.SetWidth(mcpServeStatusWidth(m.w))
-	m.picker.SetNote([]string{"Enter switches ask and AUTO; on an agent it revokes."})
-	m.picker.SetSize(m.w, m.h)
-	m.pickerOpen = true
-	m.pickerKind = pickerKindAIAutoApprove
-	return nil
+	return items
 }
 
 func (m *Model) onAIAutoApproveToggled(class string) tea.Cmd {

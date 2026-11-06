@@ -59,6 +59,7 @@ type RunFile struct {
 	Writes    []WriteRecord         `json:"writes,omitempty"`
 	Error     string                `json:"error,omitempty"`
 	Resumed   int                   `json:"resumed,omitempty"` // how often this run was resumed
+	Held      bool                  `json:"held,omitempty"`    // the user paused it: no new step starts
 }
 
 // StepState is one step of one list (the run's, or an item's).

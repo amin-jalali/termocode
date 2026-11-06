@@ -263,6 +263,10 @@ type SettingEntry struct {
 // fileOnlySettings are config.json keys with no row in the Settings modal.
 // They are set by other UI (named in the description) or by hand.
 var fileOnlySettings = []SettingEntry{
+	{Key: "git_status_blame", Type: "bool", Default: "false", Category: "Git (file only)", Description: "The status bar shows who last changed the cursor line, and when. Click it to open the commit. Toggle with Git: Toggle Blame in Status Bar."},
+	{Key: "git_inline_blame", Type: "bool", Default: "false", Category: "Git (file only)", Description: "Author, age and subject of the cursor line's commit at the end of the line. Toggle with Git: Toggle Inline Blame."},
+	{Key: "git_blame_ignore_whitespace", Type: "bool", Default: "false", Category: "Git (file only)", Description: "Blame ignores whitespace-only changes (git blame -w). Set with Git: Blame Options…."},
+	{Key: "git_blame_detect_moves", Type: "bool", Default: "false", Category: "Git (file only)", Description: "Blame keeps the first commit of lines that were moved or copied (git blame -M -C). Set with Git: Blame Options…."},
 	{Key: "db_max_rows", Type: "int", Default: "10000", Category: "Databases (file only)", Description: "Maximum loaded rows per SQL result (1–100000). Larger results are cut and marked."},
 	{Key: "db_page_rows", Type: "int", Default: "100", Category: "Databases (file only)", Description: "Rows per SQL result page (1–1000)."},
 	{Key: "db_timeout", Type: "int", Default: "30", Category: "Databases (file only)", Description: "Maximum seconds for a console statement. The session also enforces its own timeout."},
@@ -308,6 +312,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "true: a planned run writes its plan to .termocode/plans/<slug>.md in the workspace: the steps with their tasks, the review rounds, the verify step's evidence and how the run ended (secrets hidden). The file shows as untracked in git unless you ignore it. false (the default): no file."},
 	{Key: "ai_step_stall_minutes", Type: "int", Default: "10", Category: "AI (file only)",
 		Description: "An agent step whose model sends nothing for this many minutes is stopped and started once more; a second stall fails the step. A running tool call (a build, a card that waits for you) is no stall. 0 turns it off; at most 120."},
+	{Key: "worktree_dir", Type: "string", Default: "\"\"", Category: "Git (file only)",
+		Description: "The folder Worktree: New… puts new worktrees in, one folder per branch. Empty: `<repo>.worktrees` next to the repository. `~` is your home folder; a relative path is relative to the repository. Read when the form opens."},
 	{Key: "ai_worktrees", Type: "enum", Default: "auto", Category: "AI (file only)", Choices: []string{"auto", "off"},
 		Description: "auto: in a git repository, each agent step that runs at the same time as another writing step works in its own git worktree (branch termocode/agent-<id>), so they never change the same files. When it ends, its card shows the changed files with Review, Merge and Discard. off: every step works in your tree. Toggle with AI: Toggle Agent Worktrees."},
 	{Key: "ai_plan_approval", Type: "enum", Default: "ask", Category: "AI (file only)", Choices: []string{"ask", "auto", "always"},

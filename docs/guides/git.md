@@ -97,6 +97,49 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 | **Git: Blame Current Line** (`Alt+B`) | Who changed this line, and when |
 | **Git: Stash Changes** / **Pop Latest Stash** / **Show Stash List...** | Stash work |
 | **Git: Show Tags...** | Check out a tag |
+| **Git: Rename Branch…** | Give the current branch a new name |
+| **Git: Create Branch From…** | Start a new branch at another branch or a tag |
+| **Git: Delete Branch…** | Delete a local or a remote branch (see below) |
+
+**Git: Delete Branch…** asks first, and **Cancel** is the choice that is
+ready. A local branch is only deleted when its commits are on another
+branch. If it has commits of its own, a second card asks before a **Force
+Delete**. The toast names the commit it was at, so `git branch <name>
+<hash>` brings it back. To delete a branch on the remote you also type its
+full name, for example `origin/feature`.
+
+Right-click a commit in the **GRAPH** for **Create Branch Here…** and
+**Check Out This Commit (Detached)**.
+
+| **Git: Merge Branch…** | Merge another branch into this one (see [Merge a branch](#merge-a-branch)) |
+
+## Blame
+
+Blame shows who last changed a line, and when.
+
+| Command | What it does |
+|---|---|
+| **Git: Toggle Blame in Status Bar** | The status bar shows the cursor line's author and age, for example `Tess, 3 days ago`. Click it to open the commit. |
+| **Git: Toggle Inline Blame** | The same, plus the commit subject, in dim text at the end of the cursor line |
+| **Git: Toggle Blame Annotations** | Every line gets the hash, author and age of its commit at its start. A run of lines from one commit names it once. The colour shows the age: amber is new, blue is old. |
+| **Git: Open Commit of Line** | Opens the commit that last changed the cursor line |
+| **Git: Blame Before This Change** | Opens the file as it was before the line's commit, with annotations. Run it again to go further back. |
+| **Git: Blame Options…** | Ignore whitespace changes (`-w`), detect moved or copied lines (`-M -C`), and the two toggles above |
+
+The two toggles and the options are saved. Blame reads the saved file, so
+save first after an edit. A line you changed and did not commit says **Not
+committed yet**. When the repository has a `.git-blame-ignore-revs` file,
+blame skips the commits it lists (for example a big formatting commit).
+
+## Line history and older revisions
+
+- **Git: Show Line History** lists the commits that changed the cursor line,
+  or the selected lines. `Enter` opens a commit.
+- **Git: Open Previous Revision of File** opens the file as it was one commit
+  earlier, read-only. Run it again to step further back. The toast says
+  which commit it is and how many there are. Renames are followed.
+- **Git: Open Next Revision of File** steps forward again. After the newest
+  commit you are back at the working file.
 
 ## The GRAPH
 
@@ -286,6 +329,22 @@ How it works:
 press `Enter`: the card asks **Move HEAD back to here?** with the same
 checks.
 
+## Merge a branch
+
+1. Run **Git: Merge Branch…**. Pick a branch: a local one, or a remote one
+   such as `origin/main`.
+2. A card says how many commits come in. **Cancel** is the choice that is
+   ready. **Merge** moves your branch forward when it can, or makes a
+   merge commit. **Merge (No Fast-Forward)** always makes a merge commit.
+3. If files conflict, the merge stops. A **⇄ Merging** banner shows at the
+   top of the panel, with the **CONFLICTS** section below it.
+
+Press `Enter` on the banner, or run **Git: Merge in Progress (Continue /
+Abort)…**. **Close** is ready, so `Enter` and `Esc` change nothing.
+**Continue** stages the fixed files and makes the merge commit; it refuses
+while a file still has conflict markers. **Abort** puts the branch back as
+it was. A stopped cherry-pick or revert shows the same banner.
+
 ## Resolve a merge conflict
 
 When a merge or rebase stops with conflicts, a **CONFLICTS** section appears
@@ -299,7 +358,8 @@ at the top of the panel.
     - **Git: Accept Both Changes (Conflict at Cursor)**
 3. Jump to the next conflict with `]x`, or back with `[x` (Normal mode).
 4. Save the file. Press `s` on it in the panel to mark it resolved.
-5. Commit. In an interactive rebase, use **Continue** on the rebase banner
+5. Commit, or use **Continue** on the merge banner. In an interactive
+   rebase, use **Continue** on the rebase banner
    (see [When the rebase stops](#when-the-rebase-stops)).
 
 Each accept is one edit, so one `u` brings the markers back.
@@ -427,39 +487,9 @@ a git repository with at least one commit.
 
 ## Worktrees
 
-The **WORKTREES** view lists every worktree of the repository in the
-sidebar: the main checkout, the worktrees you made in `<repo>.worktrees/`,
-the agent lanes termocode made, and worktrees made outside termocode.
-Open it with **Alt+Shift+W** or **Worktree: Show**. It lives under the
-Source Control icon, which is lit while it shows.
-
-- Groups: **PINNED**, **ACTIVE**, **ASLEEP** and **EXTERNAL**.
-- Each card shows the name, the agent's state (working, waiting for you,
-  done), the branch, commits ahead and behind its upstream, and the
-  count of changed files. A coding agent in a terminal tab of this or
-  another termocode window shows on the worktree its folder is in.
-- A worktree whose folder was deleted shows as **gone**.
-- In a short window each worktree is one line; Enter shows its card.
-- The list is read again every 10 seconds while it is on screen. Git
-  runs in the background, at most 4 calls at once.
-
-Pins and names are stored in `termocode/worktrees.json` inside the
-repository's git folder, never in your project.
-
-| Key | What it does |
-|---|---|
-| `↑` `↓` `j` `k` | Move (`g` `G` top, end) |
-| `Enter` | Open the worktree in this window; the old session keeps running |
-| `a` | Add the worktree as a folder of this window |
-| `p` | Pin or unpin |
-| `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
-| `/` | Filter by name (`Esc` clears) |
-| `R` | Read every worktree again |
-| `?` | Show these keys |
-
-**Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
-agents in them, from every termocode window, with the ones that wait for
-you first.
+The **WORKTREES** view (**Alt+Shift+W**) lists every worktree of the
+repository: make, open, pin, link, sleep, archive, delete and clean them
+up. See [Worktrees](worktrees.md).
 
 ## Cherry-pick, revert and restore
 

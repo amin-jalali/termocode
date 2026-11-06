@@ -59,10 +59,19 @@ type webAskState struct {
 
 // webAskOpen puts a laptop card in line for call and answers with its id.
 func (m *Model) webAskOpen(call *webCall, a *webAsk) {
+	if id, ok := m.webAskQueue(call, a); ok {
+		call.reply(webproto.AskRef{Card: id})
+	}
+}
+
+// webAskQueue puts a laptop card in line for call and returns its id; an
+// op that answers with more than the id replies itself. ok=false: it
+// answered the call (too many cards wait).
+func (m *Model) webAskQueue(call *webCall, a *webAsk) (string, bool) {
 	h := m.web
 	if len(h.asks.line) >= webMaxAsks {
 		call.fail(webproto.CodeBusy, "Too many questions wait for the laptop.")
-		return
+		return "", false
 	}
 	a.op, a.conn, a.device = call.op, call.conn.id, webName(call.conn.device)
 	if a.device == "" {
@@ -72,7 +81,7 @@ func (m *Model) webAskOpen(call *webCall, a *webAsk) {
 	h.asks.line = append(h.asks.line, a)
 	id, _ := h.cards.id(a)
 	m.webAskShow()
-	call.reply(webproto.AskRef{Card: id})
+	return id, true
 }
 
 // webAskShow opens the first waiting card's dialog when the laptop shows

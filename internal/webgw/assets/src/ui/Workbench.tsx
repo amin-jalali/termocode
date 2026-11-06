@@ -61,24 +61,30 @@ import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, openSide, routeSide, sideView, type Activity } from "./ActivityBar";
 import type { StringKey } from "../strings";
 import { DeskSearch } from "../views/desk/DeskSearch";
+import { DeskWorktrees } from "../views/desk/DeskWorktrees";
 import { DeskDB } from "../views/desk/DeskDB";
 import { DeskDevice, DeskSettings } from "../views/desk/DeskSettings";
 import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
-import { DBQueryTab, DBTableTab } from "../views/desk/DBTabs";
+import { CtrTab } from "../views/desk/CtrTab";
+import { DBHistoryTab, DBQueryTab, DBTableTab, DBTextTab } from "../views/desk/DBTabs";
 import { DeskMCP, MCPAgentTab } from "../views/desk/DeskMCP";
 import { vtabIcon, vtabOf } from "../lib/vtabs";
 import { MDPreview } from "../views/MDPreview";
 import { CompareView } from "../views/CompareView";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
+import { GitAskHost } from "../views/git/GitAsk";
 import { AgentsView } from "../views/AgentsView";
+import { ItermocView } from "../views/ItermocView";
 import { QuickInput } from "./QuickInput";
+import { SideChat } from "../views/desk/SideChat";
 import { RefsPeek } from "./RefsPeek";
 import { diags, panelTab, toggleProblems, type PanelTab } from "../lib/lsp";
 import { ProblemsView } from "../views/ProblemsView";
 import { StatusBar } from "./StatusBar";
 import { panelsAround, panelViews, sideView as registeredSideView, type PanelDef } from "../lib/views";
 import "../views/run/index";
+import "../views/http/index";
 
 /** Sash is a drag handle between two panes. It reports the new size from
  * the size at the start plus the pointer's move (dir -1: the pane is on
@@ -337,7 +343,10 @@ function EditorBody({ more, file, slot }: { more: boolean; file: string | null; 
   const v = file ? vtabOf(file) : null;
   if (v?.kind === "db") return <DBTableTab key={file} conn={v.conn} table={v.table} slot={slot} />;
   if (v?.kind === "sql") return <DBQueryTab key={file} conn={v.conn} slot={slot} />;
+  if (v?.kind === "ddl" || v?.kind === "scmp") return <DBTextTab key={file} kind={v.kind} conn={v.conn} table={v.table} slot={slot} />;
+  if (v?.kind === "dbh") return <DBHistoryTab key={file} />;
   if (v?.kind === "mcp") return <MCPAgentTab key={file} name={v.name} slot={slot} />;
+  if (v?.kind === "ctr") return <CtrTab key={file} what={v.what} arg={v.arg} label={v.label} slot={slot} />;
   if (v?.kind === "md") return <MDPreview key={file} path={v.path} />;
   if (v?.kind === "cmp") return <CompareView key={file} a={v.a} b={v.b} slot={slot} />;
   if (file && gitTabOf(file)) return <GitTabView key={file} tab={file} slot={slot} />;
@@ -471,6 +480,10 @@ function SideView({ id }: { id: Activity }) {
       return <DeskContainers />;
     case "agents":
       return <AgentsView />;
+    case "itermoc":
+      return <ItermocView />;
+    case "worktrees":
+      return <DeskWorktrees />;
     default:
       return (
         <div class="side-stack ex-stack">
@@ -540,9 +553,11 @@ export function Workbench() {
         <div class="wb-editor">
           {quick.value && <QuickInput key={quick.value.mode + (quick.value.ask?.title ?? quick.value.pick?.title ?? "")} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
+          <SideChat />
           {askHere.value && <AskHere ask={askHere.value} />}
           {askLaptop.value && <AskLaptop key={askLaptop.value.text} label={askLaptop.value.label} text={askLaptop.value.text} send={askLaptop.value.send} onDone={() => (askLaptop.value = null)} />}
           <RemoteAskHost />
+          <GitAskHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
             {all.map((g, i) => (

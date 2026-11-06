@@ -192,11 +192,23 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-fetch":           aiConfirm(ai.ClassGit),
 	"git-sync":            aiDestructive(), // pushes too
 	"git-branch":          aiNever(aiNoPicker + " (git_branch, git_checkout)"),
+	"git-branch-rename":   aiNever(aiNoPicker),
+	"git-branch-delete":   aiNever(aiNoPicker),
+	"git-branch-from":     aiNever(aiNoPicker + " (git_branch)"),
 	"git-stash":           aiConfirm(ai.ClassGit),
 	"git-stash-pop":       aiConfirm(ai.ClassGit),
 	"git-stash-list":      aiNever(aiNoPicker + " (git_stash list)"),
 	"git-log":             aiNever(aiNoPicker + " (git_log)"),
 	"git-compare-rev":     aiNever(aiNoPicker),
+	"git-inline-blame":    aiAuto(),
+	"git-status-blame":    aiAuto(),
+	"git-blame-annotate":  aiAuto(),
+	"git-blame-options":   aiNever(aiNoPicker),
+	"git-blame-commit":    aiAuto(),
+	"git-blame-before":    aiAuto(),
+	"git-line-history":    aiNever(aiNoPicker + " (git_log)"),
+	"git-rev-prev":        aiAuto(),
+	"git-rev-next":        aiAuto(),
 	"git-history":         aiNever(aiNoPicker),
 	"git-tags":            aiNever(aiNoPicker),
 	"git-conflict-next":   aiAuto(),
@@ -225,6 +237,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// ── Merge view (git_merge_view.go): opening and moving around are
 	// UI only; each Take changes the user's merge result, so the user
 	// decides it. ──
+	"git-merge-branch":                 aiNever(aiNoPicker),
+	"git-merge-status":                 aiNever("its card asks the user to abort or continue a stopped merge"),
 	"git-merge-open":                   aiAuto(),
 	"git-merge-next":                   aiAuto(),
 	"git-merge-prev":                   aiAuto(),
@@ -487,6 +501,17 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"itermoc-agents":    aiNever(itermocNoOpen),
 	"ai-model-slot-add": aiNever(itermocNoSlotEdit),
 	"ai-add":            aiNever(addAINoAI),
+	// Workflows view (workflows_keys.go, plan §5.8): opening and reading
+	// are free; a run reads outside systems and may write (its writes ask
+	// again on the gate card); on/off changes what runs unattended.
+	"workflows":          aiAuto(),
+	"workflow-new":       aiNever("starts a chat with the user; the AI drafts workflows with workflow_draft"),
+	"workflow-run":       aiConfirm(ai.ClassRun),
+	"workflow-dry-run":   aiConfirm(ai.ClassRun),
+	"workflow-enable":    aiDestructive(),
+	"workflow-stop":      aiConfirm(ai.ClassRun),
+	"workflow-edit-file": aiAuto(),
+	"workflow-history":   aiAuto(),
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),
@@ -701,6 +726,12 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"workflows_history_days":     aiConfirm(ai.ClassSettings),
 	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
 	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
+
+	// Git blame (GITX-3..5)
+	"git_status_blame":            aiConfirm(ai.ClassSettings),
+	"git_inline_blame":            aiConfirm(ai.ClassSettings),
+	"git_blame_ignore_whitespace": aiConfirm(ai.ClassSettings),
+	"git_blame_detect_moves":      aiConfirm(ai.ClassSettings),
 }
 
 // aiNoWeb is why the AI never touches the web panel.

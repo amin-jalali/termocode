@@ -106,3 +106,9 @@
 .agent-file .git-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 0.75rem; opacity: 0.8; }
 .agent-file .git-badge { margin-inline-start: auto; }
 .agent-none { padding: 2px 10px 2px 36px; color: var(--wb-side-title); font-size: 0.75rem; }
+/* AI: Side Question… (views/desk/SideChat.tsx) */
+.side-chat { display: flex; flex-direction: column; gap: 10px; max-height: 70vh; }
+.side-title { margin: 0; font-size: 1rem; }
+.side-list { overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.side-q { margin: 0; font-weight: 600; white-space: pre-wrap; }
+.side-a { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }

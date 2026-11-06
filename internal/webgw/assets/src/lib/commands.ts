@@ -14,14 +14,21 @@ import { activeDesk, lineComment } from "./deskeditor";
 import type { EditAct } from "../monaco/protocol";
 import { saveLive } from "../views/LiveEditor";
 import { newChat } from "../views/Chat";
+import { chatFlow, exportChat, INFO_KINDS, moreChat, openAutoApprove, openInfo, openMCPProfiles, startFork } from "../views/ChatMore";
 import { newTerm } from "../views/Term";
 import { showOnLaptop } from "../views/FileView";
 import { modKey } from "./platform";
 import { loadRecentCmds, saveRecentCmds, setPref } from "./prefs";
 import { toggleProblems } from "./lsp";
+import { moreCommands } from "./morecmds";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
+import { httpForm } from "./views";
 import { gitCommands } from "../views/git/gitcommands";
+import { askLaptopForm, openItermoc } from "../views/ItermocView";
+import { dbCommands } from "../views/desk/dbcommands";
+import { ctrFilter, ctrSearch, ctrSel, openPort } from "../views/desk/DeskContainers";
+import { configureServices, openCompose } from "../views/run/ServicesView";
 import { activeFile, alternateFile, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, showFile, splitEditor, tabsIn, togglePin, wordWrap } from "./workbench";
 import { askLink } from "./links";
 import { expandTo, hideDots } from "./tree";
@@ -74,7 +81,23 @@ export function commands(): Command[] {
     { id: "aiFix", label: "ai.fix", when: hasFile, run: () => activeDesk.peek()?.aiAct("fix") },
     { id: "aiEdit", label: "ai.edit", keys: `${mod}+I`, when: hasFile, run: () => activeDesk.peek()?.aiAct("edit") },
     { id: "aiDoc", label: "ai.doc", when: hasFile, run: () => activeDesk.peek()?.aiAct("doc") },
+    ...moreCommands(),
+    { id: "itermoc", label: "cmd.itermoc", run: () => openItermoc(null) },
+    { id: "itermocProfiles", label: "cmd.itermoc_profiles", run: () => openItermoc("profiles") },
+    { id: "itermocModels", label: "cmd.itermoc_models", run: () => openItermoc("models") },
+    { id: "itermocServices", label: "cmd.itermoc_services", run: () => openItermoc("services") },
+    { id: "itermocAgents", label: "cmd.itermoc_agents", run: () => openItermoc("agents") },
+    { id: "aiProfileShow", label: "cmd.ai_profile_show", run: () => openItermoc("profiles") },
+    { id: "aiProfileNext", label: "cmd.ai_profile_next", run: () => openItermoc("profiles", { kind: "next" }) },
+    { id: "aiAdd", label: "cmd.ai_add", run: () => askLaptopForm("ai-add") },
+    { id: "aiModelSlotAdd", label: "cmd.ai_slot_add", run: () => askLaptopForm("ai-model-slot-add") },
+    { id: "aiModelsEdit", label: "cmd.ai_slots_edit", run: () => askLaptopForm("ai-models-edit") },
+    { id: "aiProfileEdit", label: "cmd.ai_profiles_edit", run: () => askLaptopForm("ai-profile-edit") },
+    { id: "aiProfileNew", label: "cmd.ai_profile_new", run: () => askLaptopForm("ai-profile-new") },
+    { id: "aiProfileForm", label: "cmd.ai_profile_form", run: () => askLaptopForm("ai-profile-form") },
+    { id: "aiAttach", label: "ai.attach", when: hasFile, run: () => activeDesk.peek()?.aiAct("attach") },
     { id: "agents", label: "cmd.agents", run: () => (setPanes({ side: true }), go({ tab: "more", rest: "agents", query: {} })) },
+    { id: "worktrees", label: "cmd.worktrees", run: () => (setPanes({ side: true }), go({ tab: "more", rest: "worktrees", query: {} })) },
     { id: "showOnLaptop", label: "cmd.show_on_laptop", when: hasFile, run: () => { const f = activeFile.peek(); if (f) showOnLaptop(f); } },
     { id: "sidebar", label: "cmd.toggle_side", keys: `${mod}+B`, run: () => setPanes({ side: !panes.peek().side }) },
     { id: "panel", label: "cmd.toggle_panel", keys: `${mod}+J`, run: () => setPanes({ panel: !panes.peek().panel }) },
@@ -85,6 +108,8 @@ export function commands(): Command[] {
     { id: "chatPanel", label: "cmd.toggle_chat", run: () => setPanes({ chat: !panes.peek().chat }) },
     { id: "explorer", label: "cmd.explorer", run: () => openSide("files") },
     { id: "scm", label: "cmd.scm", run: () => openSide("git") },
+    { id: "httpSendPick", label: "cmd.http_send", run: () => openSide("http") },
+    { id: "httpQuick", label: "cmd.http_quick", run: () => ((httpForm.value = "quick"), openSide("http")) },
     { id: "search", label: "cmd.search", run: () => go({ tab: "more", rest: "search", query: {} }) },
     { id: "tasks", label: "cmd.tasks", run: () => go({ tab: "more", rest: "tasks", query: {} }) },
     { id: "runs", label: "cmd.runs", run: () => go({ tab: "more", rest: "runs", query: {} }) },
@@ -93,10 +118,17 @@ export function commands(): Command[] {
     { id: "newTerminal", label: "cmd.new_terminal", run: newTerm },
     { id: "chat", label: "cmd.chat", run: () => go({ tab: "chat", rest: "", query: {} }) },
     { id: "newChat", label: "cmd.new_chat", run: newChat },
+    ...chatCommands(),
     { id: "themeDark", label: "cmd.theme_dark", run: () => setPref("theme", "dark") },
     { id: "themeLight", label: "cmd.theme_light", run: () => setPref("theme", "light") },
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
+    { id: "containersFilter", label: "ctr.filter", run: () => (openSide("containers"), (ctrFilter.value = ctrFilter.peek() ?? "")) },
+    { id: "containersSearch", label: "ctr.search", when: canAct, run: () => (openSide("containers"), (ctrSearch.value = true)) },
+    { id: "containersOpenPort", label: "ctr.open_port", when: () => !!ctrSel.peek()?.ports, run: () => openPort(ctrSel.peek()) },
+    { id: "servicesOpenCompose", label: "svc.open_compose", run: openCompose },
+    { id: "servicesConfigure", label: "svc.configure", when: canAct, run: configureServices },
     ...gitCommands(),
+    ...dbCommands(),
     ...editCommands(),
     { id: "lastFile", label: "cmd.last_file", when: () => activeFile.peek() !== null, run: () => alternateFile() || toast("info", t("cmd.no_last_file")) },
     { id: "reopenClosed", label: "cmd.reopen_closed", run: () => reopenClosed() || toast("info", t("cmd.no_closed")) },
@@ -128,6 +160,32 @@ export function commands(): Command[] {
     { id: "replaceWorkspace", label: "cmd.replace_ws", when: canWrite, run: replaceWorkspace },
     { id: "manageSnippets", label: "cmd.snippets_manage", when: canWrite, run: manageSnippets },
     { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
+  ];
+}
+
+const canAct = () => link.meta.peek()?.role !== "viewer";
+const isController = () => link.meta.peek()?.role === "controller";
+
+/** chatCommands act on the laptop's open chat and read the laptop's AI
+ * screens (the chat column shows their questions). */
+function chatCommands(): Command[] {
+  const show = () => setPanes({ chat: true });
+  const withChat = (fn: (c: NonNullable<ReturnType<typeof moreChat>>) => void) => () => {
+    const c = moreChat();
+    if (!c) return;
+    show();
+    fn(c);
+  };
+  const hasChat = () => isController() && moreChat() !== null;
+  return [
+    { id: "chatRename", label: "chat.rename", when: hasChat, run: withChat((c) => (chatFlow.value = { s: "rename", id: c.id, title: c.title })) },
+    { id: "chatFork", label: "chat.fork", when: hasChat, run: withChat((c) => startFork(c.msgs)) },
+    { id: "chatExport", label: "chat.export", when: hasChat, run: withChat((c) => exportChat(c.id)) },
+    { id: "chatDelete", label: "chat.delete", when: hasChat, run: withChat((c) => (chatFlow.value = { s: "delete", id: c.id, title: c.title })) },
+    { id: "chatClear", label: "chat.clear", when: isController, run: () => (show(), (chatFlow.value = { s: "clear" })) },
+    { id: "mcpProfile", label: "mcp.switch", when: isController, run: () => (show(), openMCPProfiles()) },
+    { id: "autoApprove", label: "auto.title", when: isController, run: () => (show(), openAutoApprove()) },
+    ...INFO_KINDS.map(([kind, key]) => ({ id: "aiInfo:" + kind, label: key, when: isController, run: () => (show(), openInfo(kind)) })),
   ];
 }
 

@@ -211,6 +211,12 @@ type httpState struct {
 	copyRun     *httpRun
 	importInto  string // .http file the next curl import appends to
 	bufCache    *httpBufCache
+
+	// The web's request (one at a time) and the hosts the laptop allowed
+	// the web to send to in this session (web_http.go).
+	webRun    *httpRun
+	webCancel context.CancelFunc
+	webHosts  map[string]bool
 }
 
 type httpLens struct {
@@ -225,7 +231,7 @@ type httpPickReq struct {
 }
 
 func newHTTPState() *httpState {
-	return &httpState{lens: map[string]httpLens{}, insecure: map[string]bool{}, gitWarned: map[string]bool{}}
+	return &httpState{lens: map[string]httpLens{}, insecure: map[string]bool{}, gitWarned: map[string]bool{}, webHosts: map[string]bool{}}
 }
 
 // httpS returns the HTTP state, made on first use.

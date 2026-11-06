@@ -104,6 +104,10 @@ func (m Model) helpTopicForFocus() string {
 			return helpContexts["db-compare"] // the only card with its own actions
 		}
 		return helpContexts["review"]
+	case m.wtLinkOpen():
+		return worktreesGuidePage + "#worktrees"
+	case m.wtFormOpen():
+		return worktreesGuidePage + "#new-worktree" // Worktree: New… (worktrees_new.go)
 	case m.connectOpen && m.itermoc != nil && m.itermoc.form != nil:
 		return itermocGuidePage + "#models" // the slot form (itermoc_slots.go)
 	case m.connectOpen:

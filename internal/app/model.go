@@ -189,6 +189,7 @@ type Model struct {
 	gitRemoteBusy string // running push/pull/fetch/sync note, "" when idle
 	gitBranch     git.Branch
 	gitRebase     git.RebaseState // a stopped interactive rebase (git_rebase.go)
+	gitStopped    string          // a stopped merge / cherry-pick / revert (git_merge_branch.go)
 	gitFiles      []git.FileStatus
 	gitCursor     int // index into gitVisibleRows() for the ViewGit sidebar
 
@@ -244,6 +245,12 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitBlame is the current file's blame and the blame settings
+	// (git_blame_view.go).
+	gitBlame gitBlameState
+	// gitBranchRef is the branch / start ref a branch card or prompt is
+	// about (git_branch_ops.go).
+	gitBranchRef string
 	// gitCommitAfter is what follows the commit the stage-all card waits
 	// for: gitAfterPush, gitAfterSync or "" (GITX-7).
 	gitCommitAfter string
@@ -607,7 +614,11 @@ type Model struct {
 	connect     connectcard.Model
 	// addAIOpen shows the Add AI card (ai_add.go).
 	addAIOpen bool
-	addAI     addai.Model
+	// agentPickDir is the folder Agent: Start… starts in ("" = the
+	// workspace): the selected worktree when it was opened from the
+	// WORKTREES view (agent_picker.go, AGX-2).
+	agentPickDir string
+	addAI        addai.Model
 	// profileFormOpen shows the profile step form (ai_profile_form.go).
 	profileFormOpen bool
 	profileForm     profileform.Model
@@ -734,6 +745,10 @@ type Model struct {
 	importOpen bool
 	imp        *importState
 
+	// race is the agent race flow (agent_race.go): the Agent: Race…
+	// card, the compare page and the lanes; nil until first used.
+	race *raceState
+
 	// themePromptKey is the palette field the user is editing in the
 	// custom-theme editor (BgEditor, SyntaxKeyword, etc.). Mirrors
 	// settingPromptID's usage.
@@ -814,6 +829,8 @@ type Model struct {
 	// wfGate is the queue of workflow write gate cards
 	// (workflow_gate.go); shared by Model copies.
 	wfGate *workflowGateState
+	// wfx is the Workflows view (workflows_*.go; nil until it opens).
+	wfx *wfxState
 	// setup is the first-run setup card on the Welcome page
 	// (setup_card*.go); shared by Model copies.
 	setup *setupState
@@ -990,6 +1007,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, m.crash.waitCmd())          // recovered panics (crash_ui.go)
 	cmds = append(cmds, agentCtlInitCmd())          // OMX-33: the agent control socket (agent_ctl.go)
 	cmds = append(cmds, m.explorer.ScheduleLoads()) // FIX-2: a container root's first listing
+	cmds = append(cmds, wfxBootCmd())               // WFX-15: the workflow scheduler (workflows_sched.go)
 	// The card about a crash of the last run; with nvim it comes once
 	// the unsaved work is back (nvim ready).
 	if m.nvim == nil {

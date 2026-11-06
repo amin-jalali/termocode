@@ -65,3 +65,12 @@ func (r gitReader) rebase() git.RebaseState {
 	}
 	return git.RebaseStatus(r.dir)
 }
+
+// stopped is the stopped merge, cherry-pick or revert, if any. Like
+// rebase it reads files in .git, so a container workspace shows none.
+func (r gitReader) stopped() string {
+	if r.remote {
+		return ""
+	}
+	return git.StoppedOp(r.dir)
+}

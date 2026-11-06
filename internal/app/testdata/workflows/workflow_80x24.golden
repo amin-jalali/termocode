@@ -1,0 +1,24 @@
+ ◉ mine · Docs report                                           ○ off · by hand
+ ──────────────────────────────────────────────────────────────────────────────
+ STEPS
+   docs     source  files docs/**/*.md
+   rep      write   file reports/docs.md                          asks
+ TRUST            your own file (~/.config/termocode/workflows/mine.jsonc)
+ ALLOWED WRITES   none (every write asks)
+ LIMITS           100 items max
+ LAST RUNS        09:30 ✓ done · 09:21 ✓ done (dry)
+ ──────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [Run now (r)] [Dry run (d)] [On/Off (o)] [Edit file (e)] [History (h)] [Back (~
