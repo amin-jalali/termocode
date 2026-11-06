@@ -21,7 +21,7 @@ func stashRepo(t *testing.T) *gitTestRepo {
 	return r
 }
 
-func porcelain(t *testing.T, r *gitTestRepo) string {
+func stashPorcelain(t *testing.T, r *gitTestRepo) string {
 	t.Helper()
 	return strings.TrimRight(r.git(t, "status", "--porcelain"), "\n")
 }
@@ -32,7 +32,7 @@ func TestStashPushUntracked(t *testing.T) {
 	if err := StashPush(r.dir, StashOptions{Message: "all of it", Untracked: true}); err != nil {
 		t.Fatal(err)
 	}
-	if got := porcelain(t, r); got != "" {
+	if got := stashPorcelain(t, r); got != "" {
 		t.Errorf("left %q", got)
 	}
 	if got := strings.TrimSpace(r.git(t, "stash", "list", "--format=%s")); !strings.HasSuffix(got, "all of it") {
@@ -50,13 +50,13 @@ func TestStashPushStagedAndPaths(t *testing.T) {
 	if err := StashPush(r.dir, StashOptions{StagedOnly: true}); err != nil {
 		t.Fatal(err)
 	}
-	if got := porcelain(t, r); got != " M b.txt\n?? new.txt" {
+	if got := stashPorcelain(t, r); got != " M b.txt\n?? new.txt" {
 		t.Errorf("after staged-only %q", got)
 	}
 	if err := StashPush(r.dir, StashOptions{Paths: []string{"b.txt"}}); err != nil {
 		t.Fatal(err)
 	}
-	if got := porcelain(t, r); got != "?? new.txt" {
+	if got := stashPorcelain(t, r); got != "?? new.txt" {
 		t.Errorf("after one file %q", got)
 	}
 	if err := StashPush(r.dir, StashOptions{}); err == nil {
@@ -81,7 +81,7 @@ func TestStashDropRestoreAndBranch(t *testing.T) {
 	if err := StashStore(r.dir, hash, "keep me"); err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.TrimSpace(r.git(t, "stash", "list", "--format=%s")); got != "keep me" {
+	if got := strings.TrimSpace(r.git(t, "stash", "list", "--format=%gs")); got != "keep me" {
 		t.Fatalf("restored %q", got)
 	}
 	if err := StashBranch(r.dir, "from-stash", "stash@{0}"); err != nil {
@@ -114,14 +114,14 @@ func TestResetModes(t *testing.T) {
 	if err := Reset(r.dir, ResetSoft, "HEAD~1"); err != nil {
 		t.Fatal(err)
 	}
-	if got := porcelain(t, r); got != "M  f.txt" {
+	if got := stashPorcelain(t, r); got != "M  f.txt" {
 		t.Errorf("soft %q", got)
 	}
 	r.git(t, "commit", "-q", "-m", "three again")
 	if err := Reset(r.dir, ResetMixed, "HEAD~1"); err != nil {
 		t.Fatal(err)
 	}
-	if got := porcelain(t, r); got != " M f.txt" {
+	if got := stashPorcelain(t, r); got != " M f.txt" {
 		t.Errorf("mixed %q", got)
 	}
 	if err := Reset(r.dir, ResetKeep, "HEAD~1"); err == nil {
@@ -157,6 +157,7 @@ func TestResetHardSafe(t *testing.T) {
 		t.Errorf("work not back: %q", got)
 	}
 	// A clean tree has nothing to stash.
+	r.git(t, "checkout", "-q", "--", "f.txt")
 	if b, err := ResetHardSafe(r.dir, "HEAD~1"); err == nil && b.Stashed {
 		t.Errorf("stashed a clean tree: %+v", b)
 	}
@@ -172,7 +173,7 @@ func TestUncommit(t *testing.T) {
 	if got := strings.TrimSpace(r.git(t, "log", "-1", "--format=%s")); got != "two" {
 		t.Errorf("head %q", got)
 	}
-	if got := porcelain(t, r); got != "M  f.txt" {
+	if got := stashPorcelain(t, r); got != "M  f.txt" {
 		t.Errorf("status %q", got)
 	}
 	r2 := newGitTestRepo(t)
