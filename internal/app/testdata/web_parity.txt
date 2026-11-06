@@ -70,6 +70,8 @@ web	git-conflict-prev	cmd:prevConflict
 web	git-conflict-theirs	op:git.resolve_side
 web	git-diff	op:git.diff
 web	git-discard	op:git.discard
+web	git-discard-hunk	op:git.discard_hunk
+web	git-discard-lines	op:git.discard_lines
 web	git-fetch	palette
 web	git-focus	view:git
 web	git-history	op:git.file_log
@@ -93,10 +95,12 @@ web	git-refresh	palette
 web	git-stage	op:git.stage
 web	git-stage-all	palette
 web	git-stage-hunk	op:git.stage_hunk
+web	git-stage-lines	op:git.stage_lines
 web	git-stash	palette
 web	git-stash-pop	palette
 web	git-sync	palette
 web	git-unstage-hunk	op:git.unstage_hunk
+web	git-unstage-lines	op:git.unstage_lines
 web	git-view-toggle	cmd:scmViewToggle
 web	goto-line	cmd:gotoLine
 web	goto-symbol-file	op:buf.symbols
@@ -357,16 +361,12 @@ missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
-missing	git-discard-hunk	Git|S
-missing	git-discard-lines	Git|S
 missing	git-fixup	Git|S
 missing	git-redo	Git|S
 missing	git-reflog	Git|S
-missing	git-stage-lines	Git|S
 missing	git-stash-list	Git|S
 missing	git-tags	Git|S
 missing	git-undo	Git|S
-missing	git-unstage-lines	Git|S
 missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
 missing	goto-type-def	Editor and files|S

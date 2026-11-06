@@ -108,3 +108,32 @@ func TestGitCloneOp(t *testing.T) {
 		[]string{`{"url":"https://github.com/amin-jalali/termocode.git"}`, `{"url":"git@github.com:amin-jalali/termocode.git"}`, `{"url":"ssh://git@host.example:2222/a/b.git"}`})
 	checkRow(t, OpGitClone, RoleController, true, AuditYes)
 }
+
+// Spec (line and hunk ops of the web): git.stage_lines and
+// git.unstage_lines take a file and rows from..to (1-based, from <= to,
+// at most MaxGitLineSpan rows) for a controller, audited, no card;
+// git.discard_lines and git.discard_hunk wait for a laptop card.
+func TestGitLineOps(t *testing.T) {
+	for _, op := range []string{"git.stage_lines", "git.unstage_lines", "git.discard_lines"} {
+		for _, bad := range []string{`{"path":"a.go","from":0,"to":1}`, `{"path":"a.go","from":3,"to":2}`, `{"path":"../a","from":1,"to":1}`,
+			`{"path":"a.go","from":1,"to":100000}`, `{"path":"","from":1,"to":1}`, `{"path":"d/","from":1,"to":1}`} {
+			if _, err := DecodeArgs(op, json.RawMessage(bad)); !errors.Is(err, ErrInvalid) {
+				t.Errorf("%s %s: %v, want invalid", op, bad, err)
+			}
+		}
+		if _, err := DecodeArgs(op, json.RawMessage(`{"path":"src/a.go","from":2,"to":4}`)); err != nil {
+			t.Errorf("%s: %v", op, err)
+		}
+		p, ok := Lookup(op)
+		if !ok || p.Role != RoleController || p.Audit != AuditYes || p.LaptopCard != (op == "git.discard_lines") {
+			t.Errorf("%s row %+v", op, p)
+		}
+	}
+	p, ok := Lookup("git.discard_hunk")
+	if !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+		t.Errorf("git.discard_hunk row %+v", p)
+	}
+	if _, err := DecodeArgs("git.discard_hunk", json.RawMessage(`{"path":"a.go","hunk":"x"}`)); !errors.Is(err, ErrInvalid) {
+		t.Errorf("a bad header: %v", err)
+	}
+}
