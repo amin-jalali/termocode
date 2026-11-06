@@ -169,3 +169,61 @@ func SetResolved(ctx context.Context, run Runner, dir, threadID string, resolved
 	}
 	return nil
 }
+
+// LineComment is a new comment on one line of a pull request's diff.
+type LineComment struct {
+	Commit string // the head commit the line belongs to
+	Path   string
+	Line   int    // the line in the file of Side
+	Side   string // RIGHT (new file) or LEFT (old file)
+	Body   string
+}
+
+// AddComment leaves a single line comment (it starts a new thread).
+func AddComment(ctx context.Context, run Runner, dir string, number int, c LineComment) error {
+	body := strings.TrimSpace(c.Body)
+	switch {
+	case body == "":
+		return ErrNeedsText
+	case number <= 0 || c.Line <= 0 || c.Path == "" || c.Commit == "" || strings.HasPrefix(c.Commit, "-"):
+		return errors.New("no line to comment on")
+	case c.Side != "RIGHT" && c.Side != "LEFT":
+		return errors.New("unknown side " + c.Side)
+	}
+	path := fmt.Sprintf("repos/{owner}/{repo}/pulls/%d/comments", number)
+	_, errOut, err := run(ctx, dir, "api", "--method", "POST", path, "-f", "body="+body, "-f", "commit_id="+c.Commit,
+		"-f", "path="+c.Path, "-F", "line="+strconv.Itoa(c.Line), "-f", "side="+c.Side)
+	return classify(err, errOut)
+}
+
+// Suggestion wraps code as a GitHub suggestion: the reviewer's proposed
+// text for the commented line, which the author can apply in one click.
+func Suggestion(code string) string {
+	code = strings.TrimSuffix(code, "\n")
+	fence := "```"
+	for strings.Contains(code, fence) {
+		fence += "`"
+	}
+	return fence + "suggestion\n" + code + "\n" + fence
+}
+
+// SuggestedCode reads the first suggestion block of a comment body.
+func SuggestedCode(body string) (string, bool) {
+	lines := strings.Split(body, "\n")
+	for i, l := range lines {
+		t := strings.TrimSpace(l)
+		fence := strings.TrimSuffix(t, "suggestion")
+		if fence == t || len(fence) < 3 || strings.Trim(fence, "`") != "" {
+			continue
+		}
+		var code []string
+		for _, c := range lines[i+1:] {
+			if strings.TrimSpace(c) == fence {
+				return strings.Join(code, "\n"), true
+			}
+			code = append(code, c)
+		}
+		return "", false
+	}
+	return "", false
+}
