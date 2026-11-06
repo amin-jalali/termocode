@@ -116,14 +116,28 @@ func Submodules(dir string) ([]Submodule, error) {
 type subCacheEntry struct {
 	key  string
 	mod  time.Time
+	here string // which submodules had a .git entry (subsHere)
 	subs []Submodule
+}
+
+// subsHere marks, per submodule, whether its folder has a .git entry: a
+// deinit or an init changes it, but not HEAD or the changed files.
+func subsHere(dir string, subs []Submodule) string {
+	b := make([]byte, len(subs))
+	for i, s := range subs {
+		b[i] = '0'
+		if _, err := os.Lstat(filepath.Join(dir, filepath.FromSlash(s.Path), ".git")); err == nil {
+			b[i] = '1'
+		}
+	}
+	return string(b)
 }
 
 var subCache sync.Map // dir → *subCacheEntry
 
 // SubmodulesCached is Submodules, reused while key (the caller's view
-// of the repo state: HEAD and the changed files) and the .gitmodules
-// file are the same. Errors give nil.
+// of the repo state: HEAD and the changed files), the .gitmodules file
+// and which submodules are checked out are the same. Errors give nil.
 func SubmodulesCached(dir, key string) []Submodule {
 	st, err := os.Stat(filepath.Join(dir, ".gitmodules"))
 	if err != nil {
@@ -131,7 +145,7 @@ func SubmodulesCached(dir, key string) []Submodule {
 	}
 	if v, ok := subCache.Load(dir); ok {
 		c := v.(*subCacheEntry)
-		if c.key == key && c.mod.Equal(st.ModTime()) {
+		if c.key == key && c.mod.Equal(st.ModTime()) && c.here == subsHere(dir, c.subs) {
 			return c.subs
 		}
 	}
@@ -142,7 +156,7 @@ func SubmodulesCached(dir, key string) []Submodule {
 	if subs == nil {
 		subs = []Submodule{}
 	}
-	subCache.Store(dir, &subCacheEntry{key: key, mod: st.ModTime(), subs: subs})
+	subCache.Store(dir, &subCacheEntry{key: key, mod: st.ModTime(), here: subsHere(dir, subs), subs: subs})
 	return subs
 }
 

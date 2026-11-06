@@ -475,6 +475,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stash with AI Message | `git-ai-stash` |   |   |
 | Git: Stash… | `git-stash-options` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
+| Git: Switch Repository… | `git-repo-pick` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle All Branches in GRAPH | `git-graph-all` |   |   |
 | Git: Toggle Auto Fetch | `git-auto-fetch` |   |   |
@@ -490,6 +491,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
+| Git: Update Submodules… | `git-submodule-update` |   |   |
 | Git: Write Pull Request Description with AI | `git-ai-pr-text` |   |   |
 
 ## HTTP

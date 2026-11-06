@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/workspace"
@@ -21,7 +22,7 @@ type gitReader struct {
 var errNoHostExec = errors.New("the workspace host cannot run commands")
 
 func gitReaderOf(ws workspace.Workspace) (gitReader, error) {
-	dir, err := rootOf(ws)
+	dir, err := gitRootOf(ws) // the active repository (gitx_multirepo.go)
 	if err != nil {
 		return gitReader{}, err
 	}
@@ -82,4 +83,19 @@ func (r gitReader) stopped() string {
 		return ""
 	}
 	return git.StoppedOp(r.dir)
+}
+
+// submodules is the submodule list, read again only when HEAD or the
+// changed files moved (a submodule at another commit shows there). Like
+// rebase, a container workspace shows none for now.
+func (r gitReader) submodules(st git.BranchStatus) []git.Submodule {
+	if r.remote {
+		return nil
+	}
+	var key strings.Builder
+	key.WriteString(st.OID)
+	for _, f := range st.Files {
+		key.WriteString("\x00" + f.Code + f.Path)
+	}
+	return git.SubmodulesCached(r.dir, key.String())
 }

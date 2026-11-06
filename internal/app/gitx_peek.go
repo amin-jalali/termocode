@@ -47,7 +47,7 @@ func (m *Model) gitPeekFile(path string, line int) tea.Cmd {
 	if path == "" {
 		path = m.editor.Path()
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if path == "" || line <= 0 || err != nil {
 		return nil
 	}

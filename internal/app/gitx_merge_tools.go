@@ -237,7 +237,7 @@ func (m *Model) gitxAIReview(branch bool) tea.Cmd {
 		m.toast, c = m.toast.PushDetail(toast.Warn, "Set up AI first", "Run AI: Configure Provider…, then try again")
 		return c
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

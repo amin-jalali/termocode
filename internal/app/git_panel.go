@@ -32,6 +32,8 @@ const (
 	gitRowRebase                    // the "rebase in progress" banner (git_rebase.go)
 	gitRowStopped                   // the stopped merge / cherry-pick / revert banner (git_merge_branch.go)
 	gitRowStash                     // STASHES: one stash (gitx_stash_panel.go)
+	gitRowRepo                      // REPOSITORIES: one repository (gitx_multirepo.go)
+	gitRowSubmodule                 // SUBMODULES: one submodule (gitx_multirepo.go)
 )
 
 type gitSection int
@@ -42,6 +44,8 @@ const (
 	gitSecGraph
 	gitSecConflicts // merge conflicts (unmerged paths); shown first, only when non-empty
 	gitSecStashes   // the stash list; only when there are stashes (gitx_stash_panel.go)
+	gitSecRepos      // the workspace's repositories; only when there are several (gitx_multirepo.go)
+	gitSecSubmodules // the active repo's submodules; only when it has some (gitx_multirepo.go)
 )
 
 // gitPanelRow is one rendered line of the Source Control panel.
@@ -65,6 +69,8 @@ type gitPanelRow struct {
 	note string // gitRowNote → the dim placeholder text
 
 	stash int // gitRowStash → index into m.gitStashes
+	repo  int // gitRowRepo → index into m.gitRepos
+	sub   int // gitRowSubmodule → index into m.gitSubmodules
 }
 
 // selectable reports whether the cursor may land on this row. Empty-section
@@ -87,7 +93,9 @@ func (r gitPanelRow) selectable() bool {
 // is unchanged (git_rows_memo.go).
 func (m Model) gitPanelRows() []gitPanelRow {
 	prefix := m.gitFileRowsCached()
-	graph := m.appendStashRows(nil)
+	graph := m.appendRepoRows(nil)
+	graph = m.appendSubmoduleRows(graph)
+	graph = m.appendStashRows(graph)
 	graph = append(graph, gitPanelRow{kind: gitRowSpacer}, gitPanelRow{kind: gitRowSection, section: gitSecGraph})
 	if !m.gitGraphCollapsed {
 		graph = m.appendGraphRows(graph)
@@ -264,7 +272,7 @@ type gitOlderMsg struct {
 // gitLoadOlderCmd reads gitGraphLimit commits after the first skip.
 func gitLoadOlderCmd(skip int) tea.Cmd {
 	return func() tea.Msg {
-		cwd, err := procRootDir()
+		cwd, err := procGitRootDir()
 		if err != nil {
 			return nil
 		}
@@ -373,6 +381,10 @@ func (m *Model) gitToggleSection(s gitSection) {
 		m.gitConflictsCollapsed = !m.gitConflictsCollapsed
 	case gitSecStashes:
 		m.gitStashesOpen = !m.gitStashesOpen
+	case gitSecRepos:
+		m.gitReposFolded = !m.gitReposFolded
+	case gitSecSubmodules:
+		m.gitSubsFolded = !m.gitSubsFolded
 	}
 	m.gitClampCursor()
 }
@@ -426,7 +438,7 @@ func (m *Model) gitCopyCommit(ci int, message bool) tea.Cmd {
 	c := m.gitCommits[ci]
 	text, what := c.FullHash, c.Hash
 	if message {
-		cwd, _ := m.rootDir()
+		cwd, _ := m.gitRootDir()
 		msg, err := git.CommitMessage(cwd, c.FullHash)
 		if err != nil {
 			var cmd tea.Cmd

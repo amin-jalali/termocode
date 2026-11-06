@@ -150,7 +150,7 @@ func (m *Model) webGitUndo(call *webCall) *webAsk {
 	title, action := webUndoTexts(p, move)
 	return &webAsk{summary: p.Entry.Short() + " " + webName(p.Entry.Summary()), title: title, body: undoConfirmText(p, move), action: action,
 		run: func(m *Model) tea.Cmd {
-			cwd, err := m.rootDir()
+			cwd, err := m.gitRootDir()
 			if err != nil {
 				return nil
 			}
@@ -272,7 +272,7 @@ func (m *Model) webGitFixup(call *webCall) *webAsk {
 			if m.gitRebase.InProgress {
 				return m.rebaseBusyToast()
 			}
-			cwd, err := m.rootDir()
+			cwd, err := m.gitRootDir()
 			if err != nil {
 				return nil
 			}
