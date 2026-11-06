@@ -60,6 +60,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `git_auto_fetch` | bool | `false` | Fetch from the remote every 3 minutes in the background while termocode runs (Git: Toggle Auto Fetch). A failed fetch turns it off for this session and says why. |
+| `git_issue_link` | string | `(none)` | The web page of an issue key such as ABC-123, with {key} where the key goes (https://tracker.example.com/browse/{key}). A click on a key in a terminal tab opens it. Empty or (none): keys are no links. |
 | `git_commit_checks` | bool | `false` | Before each commit, look for large staged files, secret-looking added lines and errors of the Problems list in staged files. A finding asks before the commit (Commit Anyway or Cancel). |
 | `git_commit_format` | bool | `false` | Before each commit, format the fully staged files that are open in the editor with their language server and stage the result. A file with unstaged changes too is left as it is. |
 | `git_commit_task` | string | `(none)` | Before each commit, run this task (its label, as in Tasks: Run Task). The commit waits; a task that fails asks before the commit. Empty or (none): no task. |
