@@ -1,0 +1,7 @@
+⏺ The API returns "usage limit reached" when the quota is gone, so the
+  client should retry after the reset time it gives.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ >                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

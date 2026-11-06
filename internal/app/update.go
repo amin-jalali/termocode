@@ -62,6 +62,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if n := m.drainKeyringNotice(); n != nil { // keyring gone (secrets_failures.go)
 			cmd = tea.Batch(cmd, n)
 		}
+		if n := m.drainAgentLater(); n != nil { // a hibernated agent resumed on a tab switch (agent_hibernate.go)
+			cmd = tea.Batch(cmd, n)
+		}
 	}
 	if wasDatabasesVisible && !m.databasesVisible() {
 		m.databasesClose(true)
@@ -2435,6 +2438,14 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindStashMode: // git_stash_reset.go
+		return m.onStashModePicked(msg.ID)
+	case pickerKindStashPick:
+		return m.onStashPicked(msg.ID)
+	case pickerKindStashAction:
+		return m.onStashActionPicked(msg.ID)
+	case pickerKindResetMode:
+		return m.onResetModePicked(msg.ID)
 	case pickerKindBlameOptions: // git_blame_view.go
 		return m.onBlameOptionPicked(msg.ID)
 	case pickerKindDeleteBranch: // git_branch_ops.go

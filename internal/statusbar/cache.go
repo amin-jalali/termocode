@@ -36,7 +36,8 @@ func sameState(a, b *State) bool {
 		a.ServicesTotal == b.ServicesTotal && a.ServicesBad == b.ServicesBad && a.ServicesStale == b.ServicesStale && a.Agents == b.Agents && a.AgentsReady == b.AgentsReady && a.WebOn == b.WebOn && a.WebBrowsers == b.WebBrowsers && a.CI == b.CI && a.CIFailed == b.CIFailed &&
 		a.ShowDatabase == b.ShowDatabase && a.DatabaseName == b.DatabaseName && a.DatabaseProd == b.DatabaseProd &&
 		slices.Equal(a.Ext, b.Ext) && a.AI == b.AI && a.AIState == b.AIState &&
-		a.Update == b.Update
+		a.Update == b.Update &&
+		a.Plan == b.Plan && a.PlanShort == b.PlanShort && a.PlanLimited == b.PlanLimited
 }
 
 func cachedView(w int, s State, draw func() string) string {
