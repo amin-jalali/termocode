@@ -122,11 +122,12 @@ func TestWebChatExport(t *testing.T) {
 	if !strings.HasPrefix(ex.Name, "ai-chat-") || !strings.HasSuffix(ex.Name, ".md") {
 		t.Fatalf("name %q", ex.Name)
 	}
-	webTestData(t, r.call(webproto.OpChatExport, &webproto.ChatOpenArgs{ID: "c-old"}), &ex)
+	stored, _ := webTestCall(t, r.m, r.c, webproto.OpChatExport, `{"id":"c-old"}`) // read off the UI thread
+	webTestData(t, stored, &ex)
 	if !strings.Contains(ex.Text, "# Old chat") {
 		t.Fatalf("stored export:\n%s", ex.Text)
 	}
-	if code := webErrCode(r.call(webproto.OpChatExport, &webproto.ChatOpenArgs{ID: "c-none"})); code != "not_found" {
-		t.Fatalf("missing: %s", code)
+	if missing, _ := webTestCall(t, r.m, r.c, webproto.OpChatExport, `{"id":"c-none"}`); webErrCode(missing) != "not_found" {
+		t.Fatalf("missing: %v", missing)
 	}
 }

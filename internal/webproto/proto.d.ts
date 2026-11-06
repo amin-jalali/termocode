@@ -363,6 +363,15 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface ChatRenameArgs {
+  id: string;
+  title: string;
+}
+
+export interface ChatForkArgs {
+  i: number;
+}
+
 export interface GitGraphArgs {
   skip?: number;
   head?: boolean;
@@ -1527,6 +1536,11 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface ChatExport {
+  name: string;
+  text: string;
+}
+
 export interface GitGraph {
   skip: number;
   rows: GitGraphRow[];
@@ -1895,6 +1909,11 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "chat.rename": ChatRenameArgs;
+  "chat.fork": ChatForkArgs;
+  "chat.delete": ChatOpenArgs;
+  "chat.clear": EmptyArgs;
+  "chat.export": ChatOpenArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2032,6 +2051,10 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "chat.fork": ChatRef;
+  "chat.delete": AskRef;
+  "chat.clear": AskRef;
+  "chat.export": ChatExport;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;
