@@ -1137,6 +1137,20 @@
       "phase": "v2"
     },
     {
+      "op": "debug.open_launch",
+      "args": "EmptyArgs",
+      "result": "DebugLaunch",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "debug.frame",
       "args": "DebugFrameArgs",
       "role": "controller",
@@ -4144,6 +4158,18 @@
         "id"
       ],
       "additionalProperties": false
+    },
+    "DebugLaunch": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": true
     },
     "DebugLine": {
       "type": "object",

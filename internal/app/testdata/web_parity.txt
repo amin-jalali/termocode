@@ -43,6 +43,7 @@ web	debug-conditional-bp	op:debug.bp
 web	debug-console	op:debug.eval
 web	debug-continue	op:debug.control
 web	debug-logpoint	op:debug.bp
+web	debug-open-launch	op:debug.open_launch
 web	debug-pause	op:debug.control
 web	debug-restart	op:debug.control
 web	debug-run-nodebug	op:debug.run
@@ -339,7 +340,6 @@ missing	db-ssl	Databases|L
 missing	db-submit-changes	Databases|L
 missing	db-test-connection	Databases|L
 missing	db-transaction-mode	Databases|L
-missing	debug-open-launch	Debug|S
 missing	diff-files	Editor and files|S
 missing	duplicate-line	Editor and files|S
 missing	explorer-rename-selected	Editor and files|S

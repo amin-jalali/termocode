@@ -980,4 +980,5 @@ export const FA: Record<StringKey, string> = {
   "quick.ask_go": "Enter برای پرسیدن از هوش مصنوعی",
   "quick.ask_type": "بنویسید چه چیزی تغییر کند.",
   "cmd.agents": "نما: نشان دادن worktreeهای عامل‌ها",
+  "cmd.debug_open_launch": "اشکال‌زدایی: باز کردن launch.json",
 };

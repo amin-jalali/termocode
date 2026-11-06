@@ -363,6 +363,7 @@ func TestDebugReplayGolden(t *testing.T) {
 // configurations); one that exists is never changed.
 func TestWebDebugOpenLaunchWritesTheTemplateOnce(t *testing.T) {
 	m := aiTestModel(t)
+	m.output = newOutputStore()
 	webTestHub(t, &m)
 	dir := webTestDebug(t, &m)
 	t.Chdir(dir)

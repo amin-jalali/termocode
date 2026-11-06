@@ -18,6 +18,7 @@ import { showOnLaptop } from "../views/FileView";
 import { modKey } from "./platform";
 import { loadRecentCmds, saveRecentCmds, setPref } from "./prefs";
 import { toggleProblems } from "./lsp";
+import { moreCommands } from "./morecmds";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
@@ -61,6 +62,7 @@ export function commands(): Command[] {
     { id: "aiFix", label: "ai.fix", when: hasFile, run: () => activeDesk.peek()?.aiAct("fix") },
     { id: "aiEdit", label: "ai.edit", keys: `${mod}+I`, when: hasFile, run: () => activeDesk.peek()?.aiAct("edit") },
     { id: "aiDoc", label: "ai.doc", when: hasFile, run: () => activeDesk.peek()?.aiAct("doc") },
+    ...moreCommands(),
     { id: "agents", label: "cmd.agents", run: () => (setPanes({ side: true }), go({ tab: "more", rest: "agents", query: {} })) },
     { id: "showOnLaptop", label: "cmd.show_on_laptop", when: hasFile, run: () => { const f = activeFile.peek(); if (f) showOnLaptop(f); } },
     { id: "sidebar", label: "cmd.toggle_side", keys: `${mod}+B`, run: () => setPanes({ side: !panes.peek().side }) },

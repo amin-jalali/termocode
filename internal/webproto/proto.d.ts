@@ -1309,6 +1309,10 @@ export interface DebugSource {
   outside?: boolean;
 }
 
+export interface DebugLaunch {
+  path: string;
+}
+
 export interface LspHover {
   md?: MdNode;
   none?: boolean;
@@ -1864,6 +1868,7 @@ export interface OpArgs {
   "debug.bp": DebugBpArgs;
   "debug.watch": DebugWatchArgs;
   "debug.eval": DebugEvalArgs;
+  "debug.open_launch": EmptyArgs;
   "debug.frame": DebugFrameArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
@@ -2007,6 +2012,7 @@ export interface OpResult {
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
   "debug.sources": DebugSources;
+  "debug.open_launch": DebugLaunch;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;
