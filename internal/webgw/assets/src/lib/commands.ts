@@ -20,6 +20,7 @@ import { loadRecentCmds, saveRecentCmds, setPref } from "./prefs";
 import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
+import { httpForm } from "./views";
 import { gitCommands } from "../views/git/gitcommands";
 import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
 
@@ -72,6 +73,8 @@ export function commands(): Command[] {
     { id: "chatPanel", label: "cmd.toggle_chat", run: () => setPanes({ chat: !panes.peek().chat }) },
     { id: "explorer", label: "cmd.explorer", run: () => openSide("files") },
     { id: "scm", label: "cmd.scm", run: () => openSide("git") },
+    { id: "httpSendPick", label: "cmd.http_send", run: () => openSide("http") },
+    { id: "httpQuick", label: "cmd.http_quick", run: () => ((httpForm.value = "quick"), openSide("http")) },
     { id: "search", label: "cmd.search", run: () => go({ tab: "more", rest: "search", query: {} }) },
     { id: "tasks", label: "cmd.tasks", run: () => go({ tab: "more", rest: "tasks", query: {} }) },
     { id: "runs", label: "cmd.runs", run: () => go({ tab: "more", rest: "runs", query: {} }) },

@@ -3,6 +3,7 @@
 // bottom panel's tabs besides PROBLEMS and TERMINAL. A feature registers
 // them when its module loads.
 import type { ComponentChildren } from "preact";
+import { signal } from "@preact/signals";
 import type { StringKey } from "../strings";
 
 const sides = new Map<string, () => ComponentChildren>();
@@ -50,3 +51,7 @@ export function panelViews(): readonly PanelDef[] {
 export function panelsAround(): [PanelDef[], PanelDef[]] {
   return [panelDefs.filter((p) => p.order <= TERMINAL_ORDER), panelDefs.filter((p) => p.order > TERMINAL_ORDER)];
 }
+
+/** httpForm is the form the HTTP client's side bar shows on top
+ * ("quick", "import", "newfile"; "": none); commands open it. */
+export const httpForm = signal<string>("");
