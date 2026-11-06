@@ -194,6 +194,7 @@ func TestContainersPageActions(t *testing.T) {
 	if cfg.Path != services.ConfigPath || !cfg.Created {
 		t.Fatalf("configure %+v", cfg)
 	}
+	cfg = webproto.ServicesConfig{}
 	webTestData(t, webTestCallBg(t, m, c, webproto.OpServicesConfigure, `{}`), &cfg)
 	if cfg.Created {
 		t.Error("the template was written twice")
@@ -213,7 +214,7 @@ func TestContainersLaptopCards(t *testing.T) {
 	webTestCallBg(t, m, c, webproto.OpContainersHost, `{}`)
 	dir := t.TempDir()
 	m.web.more.ctrRaw["9f3c2e1a1234"] = webTestWithDir(m.web.more.ctrRaw["9f3c2e1a1234"], dir)
-	n := len(calls())
+	n, nt := len(calls()), 0
 	ask := func(op, args, inCard string) {
 		t.Helper()
 		var ref webproto.AskRef
@@ -224,11 +225,11 @@ func TestContainersLaptopCards(t *testing.T) {
 		if v := m.confirm.View(); !strings.Contains(v, inCard) {
 			t.Errorf("%s card:\n%s", op, v)
 		}
-		if len(calls()) != n || len(*terms) != 0 {
+		if len(calls()) != n || len(*terms) != nt {
 			t.Fatalf("%s ran before the laptop said yes: %q %q", op, calls()[n:], *terms)
 		}
 		webTestLaptopSelect(t, m, "confirm")
-		n = len(calls())
+		n, nt = len(calls()), len(*terms)
 	}
 	ask(webproto.OpContainersPrune, `{"kind":"images"}`, "untagged images")
 	ask(webproto.OpContainersStorageRemove, `{"kind":"volume","name":"termocode_db"}`, "termocode_db")
@@ -250,7 +251,7 @@ func TestContainersLaptopCards(t *testing.T) {
 		ask(a[0], a[1], a[2])
 	}
 	if len(*terms) != 5 || !strings.Contains((*terms)[0], "exec -it 9f3c2e1a1234") || !strings.Contains((*terms)[1], "pull redis:7") ||
-		!strings.Contains((*terms)[2], "run -d --name pg2 -p 5434:5432 postgres:16") || !strings.Contains((*terms)[4], "down") {
+		!strings.Contains((*terms)[2], "run --rm -it --name pg2 -p 5434:5432 postgres:16") || !strings.Contains((*terms)[4], "down") {
 		t.Errorf("terminals %q", *terms)
 	}
 	for _, bad := range [][3]string{

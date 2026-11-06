@@ -99,7 +99,7 @@ func init() {
 
 // Containers host limits.
 const (
-	MaxHostItems     = 500  // images, networks, volumes each
+	MaxHostItems     = 500 // images, networks, volumes each
 	MaxInspectText   = 256 << 10
 	MaxHistoryRows   = 200
 	MaxSearchResults = 50
