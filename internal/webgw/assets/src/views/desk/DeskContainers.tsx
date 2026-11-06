@@ -566,7 +566,9 @@ export function DeskContainers() {
             aria-label={t("ctr.filter")}
             placeholder={t("ctr.filter_place")}
             value={ctrFilter.value}
-            ref={(el) => el && document.activeElement === document.body && el.focus()}
+            ref={(el) => {
+              if (el && document.activeElement === document.body) el.focus();
+            }}
             onInput={(e) => (ctrFilter.value = (e.target as HTMLInputElement).value)}
             onKeyDown={(e) => e.key === "Escape" && (e.stopPropagation(), (ctrFilter.value = null))}
           />
