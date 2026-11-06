@@ -1231,7 +1231,7 @@ No arguments.
 
 ### usage_summary
 
-This session's AI usage, as the USAGE view shows it: per model and per agent step, the calls, input and output token counts (fields input, output) and the cost in USD (only where the price is known). Subscription steps (a Claude sign-in, Claude Code, Codex) say "subscription" and have no dollar cost. Numbers and names only.
+This session's AI usage, as the USAGE view shows it: per model and per agent step, the calls, input and output token counts (fields input, output) and the cost in USD (only where the price is known). Subscription steps (a Claude sign-in, Claude Code, Codex) say "subscription" and have no dollar cost. plans: per outside agent account (Claude Code, Codex) the used share of the plan window when known, whether a usage limit is on, the reset time, the last limit and today's tokens, from the agents' own screens and (when the user allows it) their session files; never from a vendor endpoint. Numbers and names only.
 
 **Gate:** auto
 
@@ -1771,6 +1771,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
 | `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
 | `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
+| `agent-usage-plans` | Agent: Usage Plans | never | a read-only screen for the user; the AI reads the numbers through usage_summary |
 | `ai-add` | AI: Add AI… | never | a card for the user; keys and connected AIs stay with the user (the AI shows them with ai_view_open) |
 | `ai-agent-hooks` | Agent: State Hooks… (exact working / waiting / done) | never | it changes other apps' config files: the user decides after the preview |
 | `ai-agents` | AI: Toggle Agents Panel | auto |   |

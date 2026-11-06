@@ -43,6 +43,8 @@ func (m Model) statusSpans() []statusSpan {
 	add("status:ci", x0, x1, ok)
 	x0, x1, ok = sb.UpdateChipSpan(st)
 	add("status:update", x0, x1, ok)
+	x0, x1, ok = sb.PlanChipSpan(st)
+	add(agentPlanStatusID, x0, x1, ok) // AGX-12 (agent_usage.go)
 	if m.ext != nil && len(st.Ext) > 0 {
 		for _, sp := range sb.ExtItemSpans(st) {
 			add("status:ext:"+strconv.Itoa(sp.Index), sp.X0, sp.X1, true)

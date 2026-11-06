@@ -65,7 +65,7 @@ func TestAgentUsageFromTranscript(t *testing.T) {
 func TestAgentUsagePlansRows(t *testing.T) {
 	agentsUnicode(t)
 	m, screen, _ := limitTestModel(t)
-	m.dispatchAIPalette("ai-usage")
+	m.showAIUsage("") // AI: Usage (the palette row needs a provider; the pill and Agent: Usage Plans do not)
 	wantAll(t, agentsText(m, 100, 40), "PLANS", "No plan numbers yet", "!Codex")
 	*screen = limitScreen(t, "limit/codex-usage.txt")
 	m.onAgentOutput(7)

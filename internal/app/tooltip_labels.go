@@ -95,6 +95,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"status:web":      {name: "Web panel: click to stop it", palette: "web-stop", help: "guides/web.md"},
 	"status:services": {name: "Services", help: "guides/services.md#the-view"},
 	"status:ci":       {name: "CI and pull request", help: "guides/git.md#ci-and-pull-requests"},
+	"status:plan":     {name: "Outside agents' plan limits", help: "guides/agents.md#usage-and-plan-limits"},
 	"status:update":   {name: "A newer termocode is out", help: "getting-started/install.md#update-termocode"},
 	"status:debug":    {name: "Call stack", help: "guides/debug.md#step-through-code"},
 	"status:branch":   {name: "Git branch", help: helpBranches},

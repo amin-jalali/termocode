@@ -270,6 +270,9 @@ func (m *Model) agentChatPollCmd(gen int) tea.Cmd {
 			c.polling, c.loaded, c.missing, c.err = false, true, missing, err
 			if tail != nil {
 				c.tail, c.sess, c.path = tail, sess, tail.Path()
+				if err == nil {
+					m.agentUsageSession(c.agent, m.agentChatAccount(c), sess) // AGX-12 (agent_usage.go)
+				}
 			}
 			return agentChatTick(gen)
 		})

@@ -106,6 +106,9 @@ type terminalTab struct {
 	LimitAt      time.Time
 	limitTyped   bool
 	AutoContinue autoContinueMode
+	// Account is the agent account label the tab runs as ("" = the
+	// CLI's own default folder; agent_accounts.go, AGX-13).
+	Account string
 
 	// Splits are the panes after the first (terminal_pane.go); BufID is
 	// pane 0. PaneFocus is the focused pane (0 = BufID).

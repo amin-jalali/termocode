@@ -193,6 +193,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
 		return m.openAgentSessionsSearch(), true
 	}
+	if id == agentUsagePlansPaletteID { // Agent: Usage Plans (agent_usage.go)
+		return m.showAIUsage(""), true
+	}
 	if id == agentAutoContinuePaletteID { // Agent: Toggle Auto-Continue (agent_limit.go)
 		return m.toggleAgentAutoContinue(), true
 	}

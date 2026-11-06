@@ -113,6 +113,7 @@ func (m *Model) agentSeeLimit(t *terminalTab, lines []string) tea.Cmd {
 	}
 	reset := clistep.LimitReset(line, now)
 	t.LimitMsg, t.LimitAt, t.limitTyped = msg, reset, false
+	m.agentUsageLimit(t, msg, reset, now) // AGX-12 (agent_usage.go)
 	title := t.agentTitle()
 	text := title + " hit its usage limit"
 	if !reset.IsZero() {
