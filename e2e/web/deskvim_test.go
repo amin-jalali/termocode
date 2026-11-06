@@ -63,20 +63,23 @@ func (v *vimRig) mode(want string) {
 	v.p.WaitJS(`(document.querySelector(".statusbar .sb-vim")?.textContent ?? "") === ` + jsq(want))
 }
 
-// toggleVim runs Editor: Toggle Vim Mode from the command list.
-func toggleVim(t *testing.T, p *Page, c *HubConn) {
+// toggleVim runs Editor: Toggle vi Keys from the command list (the
+// laptop's list is asked for the first time only).
+func toggleVim(t *testing.T, p *Page, c *HubConn, first bool) {
 	t.Helper()
 	wbKey(p, "P", true, true)
-	reply(t, c, expectOp(t, c, "palette.list", `{}`), webproto.PaletteList{})
+	if first {
+		reply(t, c, expectOp(t, c, "palette.list", `{}`), webproto.PaletteList{})
+	}
 	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box")`)
-	p.Key("toggle vim")
-	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === "Editor: Toggle Vim Mode"`)
+	p.Key("toggle vi keys")
+	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === "Editor: Toggle vi Keys"`)
 	p.Key("\r")
 	p.WaitJS(`!document.querySelector(".quick")`)
 }
 
 // Spec (WEBP-1): Vim mode in the desktop editor, off until Editor: Toggle
-// Vim Mode, kept per browser. Normal mode takes the keys (nothing is
+// vi Keys, kept per browser. Normal mode takes the keys (nothing is
 // typed); the basic motions (h j k l w b e 0 $ gg G, counts), operators
 // (d c y with a motion, dd yy cc), x, p P, o O i a A I, u and Ctrl+R work
 // through the laptop's buffer like typing; the status bar shows the mode;
@@ -85,7 +88,7 @@ func toggleVim(t *testing.T, p *Page, c *HubConn) {
 func TestDeskVimBasicMotions(t *testing.T) {
 	p, c := openFiles(t, Desktop)
 	openDesk(t, p, c, 2, "a.txt", "alpha beta", "gamma", "delta")
-	toggleVim(t, p, c)
+	toggleVim(t, p, c, true)
 	v := &vimRig{t: t, p: p, c: c, tick: 3}
 	v.mode("-- NORMAL --")
 	deskFocus(p)
@@ -118,7 +121,7 @@ func TestDeskVimBasicMotions(t *testing.T) {
 	v.keys("2dd", "GMM", "tahi", "end")
 
 	// Off again: the keys type.
-	toggleVim(t, p, c)
+	toggleVim(t, p, c, false)
 	p.WaitJS(`!document.querySelector(".statusbar .sb-vim")`)
 	deskFocus(p)
 	p.Do(deskTextEnd(false))
