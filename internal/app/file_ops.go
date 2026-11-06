@@ -167,6 +167,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if cmd, ok := m.handlePRPromptSubmit(value); ok { // pr_actions.go
 		return cmd
 	}
+	if cmd, ok := m.handleGitAIPromptSubmit(value); ok { // git_ai_helpers.go
+		return cmd
+	}
 	if cmd, ok := m.handleAIPromptSubmit(value); ok { // Group A
 		return cmd
 	}

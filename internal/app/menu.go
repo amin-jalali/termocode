@@ -45,6 +45,12 @@ const (
 	gitMenuRefresh  = "git-refresh"
 	gitMenuShowRaw  = "git-show-raw"
 	gitMenuRebase   = "git-rebase-from" // git_rebase.go
+	// GITX-6, GITX-8 (git_commit_msg.go, git_ai_helpers.go).
+	gitMenuExplainAI   = "git-explain-ai"
+	gitMenuAIMessage   = "git-ai-message"
+	gitMenuEditMessage = "git-edit-message"
+	gitMenuCoAuthor    = "git-co-author-menu"
+	gitMenuRecentMsg   = "git-recent-message"
 
 	// Action-bar overflow (⋯) menu.
 	gitMenuAmend     = "git-amend"
@@ -82,6 +88,7 @@ func gitCommitMenuItems() []menu.Item {
 		{ID: gitMenuCopyMsg, Title: "Copy Commit Message", Icon: "⎘"},
 		{ID: gitMenuShowRaw, Title: "Show Raw (git show)", Icon: "≢"},
 		{ID: gitMenuRebase, Title: "Rebase from Here…", Icon: "⇅"},
+		{ID: gitMenuExplainAI, Title: "Explain with AI", Icon: "✦"},
 		{Sep: true},
 		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
 	}
@@ -154,6 +161,10 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
 			return m.gitRebaseFromCmd(m.gitCommits[cur.ci].FullHash)
 		}
+	case gitMenuExplainAI:
+		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
+			return m.gitAIExplainCommit(m.gitCommits[cur.ci].Hash)
+		}
 	case gitMenuRefresh:
 		return fetchGitCmd()
 	}
@@ -167,6 +178,10 @@ func gitActionsMenuItems() []menu.Item {
 		{ID: gitMenuAmend, Title: "Commit (Amend)", Icon: "✎"},
 		{ID: gitMenuSignoff, Title: "Commit (Sign-off)", Icon: "✍"},
 		{ID: gitMenuCommitMsg, Title: "Commit Message…", Icon: "≡"},
+		{ID: gitMenuAIMessage, Title: "Generate Message with AI", Icon: "✦"},
+		{ID: gitMenuEditMessage, Title: "Edit Message in Editor", Icon: "✎"},
+		{ID: gitMenuRecentMsg, Title: "Recent Messages…", Icon: "↺"},
+		{ID: gitMenuCoAuthor, Title: "Add Co-Author…", Icon: "+"},
 		{Sep: true},
 		{ID: gitMenuSync, Title: "Sync", Icon: "⟳"},
 		{ID: gitMenuPush, Title: "Push", Icon: "↑"},
@@ -205,6 +220,14 @@ func (m *Model) handleGitActionsMenuSelect(id string) tea.Cmd {
 		return m.gitInlineCommit(false, true)
 	case gitMenuCommitMsg:
 		m.openCommitPrompt()
+	case gitMenuAIMessage:
+		return m.gitAIAsk("commit", true)
+	case gitMenuEditMessage:
+		return m.gitOpenCommitEditor()
+	case gitMenuRecentMsg:
+		return m.openCommitHistoryPicker()
+	case gitMenuCoAuthor:
+		return m.openCoAuthorPicker()
 	case gitMenuSync:
 		return m.gitSync()
 	case gitMenuPush:

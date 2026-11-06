@@ -1026,9 +1026,12 @@ end })`)
 		}
 		m.gitBlurredSkips = 0
 		return m, tea.Batch(m.pollGitCmd(), m.gitAutoRefreshTick()), true
+	case gitAIReplyMsg: // git_ai_helpers.go
+		return m, m.onGitAIReply(msg), true
 	case GitMsg:
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
+		m.syncCommitEditFile()                                                 // git_commit_msg.go: a saved message file
 		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh()), true // G-CI: a new branch or a push; web tree badges
 	case gitOlderMsg:
 		m.onGitOlder(msg)
@@ -2379,6 +2382,10 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindCommitHistory: // git_commit_msg.go
+		return m.onCommitHistoryPicked(msg.ID)
+	case pickerKindCoAuthor:
+		return m.onCoAuthorPicked(msg.ID)
 	case pickerKindTags:
 		return m.checkoutTagSelected(msg.ID)
 	case pickerKindHelpGuide:

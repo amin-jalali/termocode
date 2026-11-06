@@ -338,6 +338,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Add Co-Author… | `git-co-author` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
 | Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
@@ -347,10 +348,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
+| Git: Edit Commit Message in Editor | `git-commit-edit` |   |   |
+| Git: Explain Changes with AI | `git-ai-explain-changes` |   |   |
+| Git: Explain Line's Commit with AI | `git-ai-explain-line` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
+| Git: Generate Commit Message with AI | `git-ai-commit-msg` |   |   |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
@@ -369,6 +374,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Merge View: Take Theirs | `git-merge-take-theirs` |   | `t` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
 | Git: Open Merge View | `git-merge-open` |   |   |
+| Git: Pick Recent Commit Message… | `git-commit-history` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
@@ -387,12 +393,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stage Hunk (at cursor) | `git-stage-hunk` | `Alt+S` | `Alt+S` |
 | Git: Stage Line (or Selected Lines) | `git-stage-lines` | `Alt+Shift+S` | `Alt+Shift+S` |
 | Git: Stash Changes | `git-stash` |   |   |
+| Git: Stash with AI Message | `git-ai-stash` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
+| Git: Write Pull Request Description with AI | `git-ai-pr-text` |   |   |
 
 ## HTTP
 

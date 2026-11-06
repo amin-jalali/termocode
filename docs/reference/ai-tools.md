@@ -1972,12 +1972,20 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `focus-explorer` | View: Focus Explorer | auto |   |
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
+| `git-ai-commit-msg` | Git: Generate Commit Message with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-explain-changes` | Git: Explain Changes with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-explain-line` | Git: Explain Line's Commit with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-pr-text` | Git: Write Pull Request Description with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-stash` | Git: Stash with AI Message | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-blame` | Git: Blame Current Line | auto |   |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
 | `git-ci` | Git: CI and Pull Request… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
+| `git-co-author` | Git: Add Co-Author… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
+| `git-commit-edit` | Git: Edit Commit Message in Editor | never | opens the commit message for the user to write; use git_commit |
+| `git-commit-history` | Git: Pick Recent Commit Message… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-compare-rev` | Git: Compare with Revision... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-conflict-both` | Git: Accept Both Changes (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-conflict-next` | Git: Go to Next Merge Conflict | auto |   |

@@ -231,6 +231,15 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// Commit box extras (git_commit_msg.go): the recent messages Up / Down
+	// step through (pos 0 = the draft), the template, the editor file.
+	gitCommitHist       []string
+	gitCommitHistLoaded bool
+	gitCommitHistPos    int
+	gitCommitDraft      string
+	gitCommitTplTried   bool
+	gitCommitEditFile   string
+	gitCommitEditMod    time.Time
 
 	// VSCode-style mouse hover. hoverX/hoverY are the absolute screen cell
 	// under the pointer (or -1 when unknown). mouseAllMotion mirrors the live

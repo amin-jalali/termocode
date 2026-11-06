@@ -946,6 +946,7 @@ func (m *Model) clearCommitBox() {
 	m.gitCommitMsg = ""
 	m.gitCommitCaret = 0
 	m.gitCommitFocused = false
+	m.gitCommitMsgReset() // git_commit_msg.go: history, template, editor file
 }
 
 // openStageAllCommitConfirm asks before staging every change for a commit when
