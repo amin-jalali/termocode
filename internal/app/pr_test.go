@@ -680,7 +680,7 @@ func TestPRCreateFlow(t *testing.T) {
 		t.Fatal("create card not open")
 	}
 	b := m.confirm.Buttons()
-	if len(b) != 3 || b[0].ID != "cancel" || b[1].ID != "create" || b[2].ID != "draft" {
+	if len(b) != 5 || b[0].ID != "cancel" || b[1].ID != "create" || b[2].ID != "draft" || b[3].ID != "reviewers" || b[4].ID != "labels" {
 		t.Fatalf("buttons %+v", b)
 	}
 	box := ansi.Strip(m.confirm.Box())

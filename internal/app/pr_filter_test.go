@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -105,5 +107,46 @@ func TestPRMine(t *testing.T) {
 	prDo(t, empty, empty.prMineCmd())
 	if empty.pickerOpen || !toastHas(empty, "Nothing waits for you") {
 		t.Error("empty launchpad")
+	}
+}
+
+// The create card adds reviewers and labels through small prompts and
+// comes back; the repository's template fills the description first.
+func TestPRCreateReviewersLabelsTemplate(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"repo view": prRepoViewJSON, "pr create": "https://github.com/o/r/pull/15\n"}}
+	m, dir := prCreateModel(t, f, true)
+	if err := os.MkdirAll(filepath.Join(dir, ".github"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".github", "pull_request_template.md"), []byte("## Why\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	prDo(t, m, m.prCreateCmd())
+	m.promptOpen = false
+	m.handlePromptSubmit("feat: first")
+	if cmd, _ := m.handlePRCreateConfirm("reviewers"); cmd != nil || !m.promptOpen || m.promptKind != promptKindPRReviewers {
+		t.Fatal("reviewers prompt not open")
+	}
+	m.promptOpen = false
+	m.handlePromptSubmit("@ann, bob")
+	if !m.confirmOpen || m.confirmKind != confirmKindPRCreate {
+		t.Fatal("the card did not come back after reviewers")
+	}
+	m.handlePRCreateConfirm("labels")
+	if !m.promptOpen || m.promptKind != promptKindPRLabels {
+		t.Fatal("labels prompt not open")
+	}
+	m.promptOpen = false
+	m.handlePromptSubmit("bug")
+	text := ansi.Strip(m.confirm.Box())
+	for _, want := range []string{"Reviewers: ann, bob", "Labels: bug", "## Why", "Template: .github/pull_request_template.md"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("card misses %q:\n%s", want, text)
+		}
+	}
+	cmd, _ := m.handlePRCreateConfirm("create")
+	cmd()
+	if !f.called("pr create --title feat: first --body ## Why\n\n- feat: first\n- fix: second --head feat/x --base main --reviewer ann,bob --label bug") {
+		t.Errorf("calls %q", f.calls)
 	}
 }
