@@ -35,6 +35,9 @@ func TestDeskTypeDefinitionAndImplementation(t *testing.T) {
 	waitSubSkipping(t, c, "buf:3")
 	c.Send(t, Snap("buf:3", 1, bufSnap(3, "t.go", "package a", "", "type T int")))
 	p.WaitJS(activeTab + ` === "t.go"`)
+	// The editor commands list only once t.go's editor is up: a command
+	// list opened while it loads has none of them (seen on macOS).
+	p.WaitJS(deskDoc + `?.querySelectorAll(".view-lines .view-line").length === 3`)
 
 	runCmd(t, p, c, false, "implementation", "Go to Implementation")
 	r = waitReq(t, c, webproto.OpLspImplementation)
