@@ -57,7 +57,9 @@ type wtState struct {
 	gen     uint64
 	polling bool
 
-	form *wtForm // Worktree: New… (worktrees_new.go)
+	form     *wtForm                // Worktree: New… (worktrees_new.go)
+	setupAsk *wtSetupPending        // the open setup trust card (worktrees_setup.go)
+	setups   map[string]*wtSetupRun // setups run in this window, by worktree path
 
 	seq    uint64
 	render struct {
@@ -222,6 +224,8 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTNewPrep(msg), true
 	case wtCreatedMsg:
 		return m.onWTCreated(msg), true
+	case wtSetupDoneMsg:
+		return m.onWTSetupDone(msg), true
 	case wtLoadMsg:
 		return m.onWTLoad(msg), true
 	case wtStatusMsg:

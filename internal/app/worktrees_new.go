@@ -26,17 +26,18 @@ import (
 // A form card (the shared connect card, like the slot form): Name, From
 // (the ref it starts from; Start point… picks one), Branch (drafted from
 // the name), Agent and Task (WTX-8), what .termocode/worktrees.json adds
-// (WTX-6) and the folder. Cancel is first; nothing is made until
+// (WTX-6/7) and the folder. Cancel is first; nothing is made until
 // Create. Create runs git worktree add off the UI thread (internal/spawn
 // through internal/git); an error stays on the card and nothing is half
 // made. Create + Start also starts the chosen agent in the new worktree
 // and types the task once the agent shows its input box.
 
 const (
-	wtFormTitle                    = "New worktree"
-	pickerKindWTRef pickerKindEnum = 3601
-	wtFormAgentsMax                = 3 // agent options after "none" (one row)
-	wtNewPaletteID                 = "worktree-new"
+	wtFormTitle                        = "New worktree"
+	pickerKindWTRef     pickerKindEnum = 3601
+	wtFormAgentsMax                    = 3 // agent options after "none" (one row)
+	wtNewPaletteID                     = "worktree-new"
+	wtSetupLogPaletteID                = "worktree-setup-log"
 )
 
 // wtForm is the open dialog.
@@ -263,7 +264,14 @@ func wtAlsoRows(f *wtForm, short bool) []connectcard.Row {
 			links = append(links, fl.Rel)
 		}
 	}
-	if len(copies)+len(links)+len(skips) == 0 {
+	setup := ""
+	if len(f.cfg.Setup) > 0 {
+		setup = "asks first"
+		if worktreeform.SetupTrusted(f.hash, loadSession().WorktreeSetupTrusted) {
+			setup = "trusted " + theme.GlyphOK.String()
+		}
+	}
+	if len(copies)+len(links)+len(skips) == 0 && setup == "" {
 		return nil
 	}
 	if short {
@@ -273,6 +281,9 @@ func wtAlsoRows(f *wtForm, short bool) []connectcard.Row {
 		}
 		if len(links) > 0 {
 			parts = append(parts, "link "+strconv.Itoa(len(links)))
+		}
+		if setup != "" {
+			parts = append(parts, "setup "+setup)
 		}
 		if len(skips) > 0 {
 			parts = append(parts, "skip "+strconv.Itoa(len(skips)))
@@ -286,6 +297,9 @@ func wtAlsoRows(f *wtForm, short bool) []connectcard.Row {
 	}
 	if len(links) > 0 {
 		add(connectcard.Text, "link "+strings.Join(links, ", ")+" "+theme.ASCIIText("→")+" shared (both sides see writes)")
+	}
+	if setup != "" {
+		add(connectcard.Text, "run setup: "+strings.Join(f.cfg.Setup, " && ")+dot+setup)
 	}
 	if len(skips) > 0 {
 		add(connectcard.Dim, "skip "+strings.Join(skips, ", "))
@@ -511,6 +525,9 @@ func (m *Model) onWTCreated(msg wtCreatedMsg) tea.Cmd {
 	if msg.start && msg.agent.ID != "" {
 		cmds = append(cmds, m.startAgentWithTask(msg.agent, msg.folder, msg.task))
 	}
+	if len(f.cfg.Setup) > 0 && f.cfgErr == "" {
+		cmds = append(cmds, m.wtSetupAsk(f, msg.folder))
+	}
 	return tea.Batch(cmds...)
 }
 
@@ -526,5 +543,6 @@ func wtCreateError(err error) string {
 
 func init() {
 	aiActionPolicies[wtNewPaletteID] = aiNever(aiNoPicker + " (worktree_create comes later)")
+	aiActionPolicies[wtSetupLogPaletteID] = aiAuto() // opens a log file in the editor
 	aiSettingPolicies["worktree_dir"] = aiNever("where new worktrees go on disk; a file-only switch the user edits in config.json")
 }

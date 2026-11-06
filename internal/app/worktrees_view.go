@@ -93,6 +93,11 @@ func (st *wtState) dirty(path string) (int, bool) {
 func (m Model) wtList() ([]wtItem, []wtRow) {
 	st := m.wt
 	items := wtItems(st.entries, m.wtTabs(), st.others, st.root)
+	for i := range items {
+		if r := st.setups[items[i].e.Path]; r != nil {
+			items[i].setup = r.state
+		}
+	}
 	return items, wtRows(items, st.kind, st.filter, st.dirty)
 }
 
@@ -422,6 +427,9 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	}
 	if it.e.Locked {
 		links = append(links, "locked")
+	}
+	if s := wtSetupLine(it.setup); s != "" {
+		links = append(links, theme.ASCIIText(s))
 	}
 	if !it.e.Meta.LastSeen.IsZero() {
 		links = append(links, formatRecentTime(it.e.Meta.LastSeen, now))

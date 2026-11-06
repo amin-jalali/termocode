@@ -25,6 +25,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"a", "add it as a folder of this window"},
 		[]string{"p", "pin or unpin"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
+		[]string{"L", "open the setup log of a new worktree"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
 		[]string{"/", "filter by name · Esc clears"},
@@ -45,6 +46,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: "worktree-pin", Title: "Worktree: Pin or Unpin Selected"},
 		{ID: "worktree-filter", Title: "Worktree: Next Filter"},
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
+		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
 	}
 }
 
@@ -66,6 +68,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.revealWorktrees(), true
 	case wtNewPaletteID:
 		return m.openWorktreeNew(), true
+	case wtSetupLogPaletteID:
+		return m.worktreeSetupLog(), true
 	}
 	return nil, false
 }
@@ -121,6 +125,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreePin()
 	case "n":
 		return m, m.openWorktreeNew()
+	case "L":
+		return m, m.worktreeSetupLog()
 	case "f":
 		m.worktreeNextFilter()
 	case "R":

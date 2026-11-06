@@ -191,6 +191,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIProfileTrust(id), true
 	case confirmKindAIRulesTrust: // ai_rules.go
 		return m.answerAIRulesTrust(id), true
+	case confirmKindWTSetupTrust: // worktrees_setup.go
+		return m.answerWTSetupTrust(id), true
 	case confirmKindAISkillsTrust: // ai_skills.go
 		return m.answerAISkillsTrust(id), true
 	case confirmKindAIHooksTrust: // ai_hooks.go
@@ -287,6 +289,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIProfileTrust("") // Esc: no answer, ask again next time
 	case confirmKindAIRulesTrust:
 		return m.answerAIRulesTrust("") // Esc: no answer, the message goes back
+	case confirmKindWTSetupTrust:
+		return m.answerWTSetupTrust("") // Esc: no answer, nothing runs
 	case confirmKindAISkillsTrust:
 		return m.answerAISkillsTrust("") // Esc: no answer, the message goes back
 	case confirmKindAIHooksTrust:

@@ -93,6 +93,11 @@ func (m *Model) worktreesDemo(variant string) {
 		m.openWorktreeJump()
 	case "new", "new-error":
 		m.worktreesNewDemo(variant == "new-error")
+	case "setup":
+		f := wtDemoForm()
+		m.wtSetupAsk(f, "/src/app.worktrees/feat-pin-row")
+	case "setup-running":
+		st.setups = map[string]*wtSetupRun{"/src/app.worktrees/wt-sidebar": {state: wtSetupRunning}}
 	}
 	st.touch()
 }
