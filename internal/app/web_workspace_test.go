@@ -31,7 +31,7 @@ func TestWebWorkspaceFolders(t *testing.T) {
 	r, _ := webWorkspaceRig(t)
 	extra := t.TempDir()
 	var ref webproto.AskRef
-	webTestData(t, r.call(webproto.OpWorkspaceAddFolder, &webproto.WorkspacePathArgs{Path: extra}), &ref)
+	webTestData(t, r.call(webproto.OpWorkspaceAddFolder, &webproto.WorkspacePathArgs{Folder: extra}), &ref)
 	if ref.Card == "" || len(r.m.explorer.Roots()) != 1 {
 		t.Fatalf("added before the laptop said yes: %v", r.m.explorer.Roots())
 	}

@@ -9479,12 +9479,12 @@
     "WorkspacePathArgs": {
       "type": "object",
       "properties": {
-        "path": {
+        "folder": {
           "type": "string"
         }
       },
       "required": [
-        "path"
+        "folder"
       ],
       "additionalProperties": false
     }

@@ -21,13 +21,14 @@ const (
 const MaxFolderPath = 4096
 
 // WorkspacePathArgs names a laptop folder by its absolute path ("~/"
-// is the laptop user's home).
+// is the laptop user's home). It is not a workspace path: the laptop
+// card shows it whole before anything happens.
 type WorkspacePathArgs struct {
-	Path string `json:"path"`
+	Folder string `json:"folder"`
 }
 
 func (a *WorkspacePathArgs) validate(int) error {
-	p := a.Path
+	p := a.Folder
 	if p == "" || len(p) > MaxFolderPath || hasControl(p) || !(strings.HasPrefix(p, "/") || strings.HasPrefix(p, "~/") || p == "~" || (len(p) > 2 && p[1] == ':' && (p[2] == '\\' || p[2] == '/'))) {
 		return invalid("bad folder path")
 	}

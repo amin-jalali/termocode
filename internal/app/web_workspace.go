@@ -53,7 +53,7 @@ func (m *Model) webWorkspaceList(call *webCall) tea.Cmd {
 }
 
 func (m *Model) webWorkspaceAdd(call *webCall) *webAsk {
-	p := call.args.(*webproto.WorkspacePathArgs).Path
+	p := call.args.(*webproto.WorkspacePathArgs).Folder
 	return &webAsk{
 		summary: filepath.Base(p),
 		title:   "Add a folder to the workspace?",

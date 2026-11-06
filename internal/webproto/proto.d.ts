@@ -329,7 +329,7 @@ export interface TestIDArgs {
 }
 
 export interface WorkspacePathArgs {
-  path: string;
+  folder: string;
 }
 
 export interface IDArgs {

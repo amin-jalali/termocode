@@ -22,10 +22,10 @@ func TestWorkspaceOps(t *testing.T) {
 			t.Errorf("%s row %+v: a laptop card", op, p)
 		}
 	}
-	if _, err := DecodeArgs(OpWorkspaceAddFolder, json.RawMessage(`{"path":"/home/me/lib"}`)); err != nil {
+	if _, err := DecodeArgs(OpWorkspaceAddFolder, json.RawMessage(`{"folder":"/home/me/lib"}`)); err != nil {
 		t.Error(err)
 	}
-	for _, bad := range []string{`{"path":""}`, `{"path":"rel/dir"}`, `{"path":"/a\u0000"}`, `{"path":"/` + strings.Repeat("x", 5000) + `"}`} {
+	for _, bad := range []string{`{"folder":""}`, `{"folder":"rel/dir"}`, `{"folder":"/a\u0000"}`, `{"folder":"/` + strings.Repeat("x", 5000) + `"}`} {
 		if _, err := DecodeArgs(OpWorkspaceAddFolder, json.RawMessage(bad)); err == nil {
 			t.Errorf("add %s: accepted", bad)
 		}
