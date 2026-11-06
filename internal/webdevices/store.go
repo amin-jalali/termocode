@@ -1,7 +1,7 @@
 // Package webdevices is the list of browsers paired with the web panel
 // (WEB-32): phones and tablets on the user's tailnet that signed in with
 // a QR code and a passkey. It holds no secret: names, roles, credential
-// ids and passkey public keys only. The file is devices.json, 0600 in a
+// ids, passkey public keys and bookmark key hashes only. The file is devices.json, 0600 in a
 // 0700 folder next to config.json; the gateway adds devices and keeps
 // their sign counts, the UI removes them and changes their roles. Every
 // change is read-change-write under a file lock, written atomically.
@@ -62,6 +62,20 @@ type Device struct {
 	NeedsRepair bool      `json:"needs_repair,omitempty"`
 	Created     time.Time `json:"created"`
 	LastSeen    time.Time `json:"last_seen,omitempty"`
+	// Bookmark is the remembered browser's key (WEBP-12), as a hash.
+	Bookmark *Bookmark `json:"bookmark,omitempty"`
+}
+
+// Bookmark is what the laptop keeps of a device's bookmark key: the
+// SHA-256 of the key now and of the one before it (a second use of the
+// old one is a stolen copy), and the one origin it works on. Never the
+// key itself.
+type Bookmark struct {
+	Hash    []byte    `json:"hash"`
+	Prev    []byte    `json:"prev,omitempty"`
+	Origin  string    `json:"origin"`
+	Created time.Time `json:"created"`
+	Used    time.Time `json:"used"`
 }
 
 // file is the JSON on disk.

@@ -432,6 +432,11 @@ excluded	web-devices	laptop only: the paired devices (list, rename, revoke) are 
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
+missing	git-ai-commit-msg	Git|S
+missing	git-ai-explain-changes	Git|S
+missing	git-ai-explain-line	Git|S
+missing	git-ai-pr-text	Git|S
+missing	git-ai-stash	Git|S
 missing	git-autosquash	Git|S
 missing	git-bisect	Git|S
 missing	git-blame-annotate	Git|S
@@ -440,6 +445,9 @@ missing	git-blame-commit	Git|S
 missing	git-blame-options	Git|S
 missing	git-cherry-pick-branch	Git|S
 missing	git-clean-untracked	Git|S
+missing	git-co-author	Git|S
+missing	git-commit-edit	Git|S
+missing	git-commit-history	Git|S
 missing	git-commit-push	Git|S
 missing	git-commit-sync	Git|S
 missing	git-compare-branches	Git|S
