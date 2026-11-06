@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Archive, restore and delete of worktrees (WTX-14) and the bulk cleanup
@@ -162,4 +163,18 @@ func DeleteBranch(dir, branch string, force bool) error {
 func PruneWorktrees(dir string) error {
 	_, err := gitRetry(dir, "worktree", "prune")
 	return err
+}
+
+// HeadCommitTime is when the worktree's HEAD commit was made (zero when
+// it cannot be read).
+func HeadCommitTime(path string) time.Time {
+	out, err := gitOut(path, "log", "-1", "--format=%ct", "HEAD")
+	if err != nil {
+		return time.Time{}
+	}
+	sec, err := strconv.ParseInt(strings.TrimSpace(out), 10, 64)
+	if err != nil {
+		return time.Time{}
+	}
+	return time.Unix(sec, 0)
 }
