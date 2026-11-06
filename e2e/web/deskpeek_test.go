@@ -32,6 +32,7 @@ func gitMarkAt(p *Page, line int) (float64, float64) {
 
 // peekButtons are the card's buttons in order, and the focused one's text.
 func peekButtons(p *Page) string {
+	p.WaitJS(`document.activeElement?.textContent === "Close"`)
 	return Eval[string](p, `[...`+peekCard+`.querySelectorAll(".choices button")].map((b) => b.textContent).join() + "|" + (document.activeElement?.textContent ?? "")`)
 }
 
@@ -78,7 +79,7 @@ func TestDeskGitPeek(t *testing.T) {
 
 	// The command peeks on the caret's line; a staged change offers
 	// Unstage and no Revert.
-	runGitCmd(t, p, c, "Git: Peek Change Under Cursor", true)
+	runGitCmd(t, p, c, "Git: Peek Change Under the Caret", true)
 	staged := second
 	staged.Staged, staged.Count, staged.Index = true, 1, 1
 	reply(t, c, reqFor(t, c, webproto.OpGitPeek, `{"path":"a.txt","line":4}`), staged)
@@ -90,11 +91,11 @@ func TestDeskGitPeek(t *testing.T) {
 	p.WaitJS(`!` + peekCard)
 
 	// Revert… asks here first, Cancel first and focused; nothing is sent.
-	runGitCmd(t, p, c, "Git: Peek Change Under Cursor", false)
+	runGitCmd(t, p, c, "Git: Peek Change Under the Caret", false)
 	reply(t, c, reqFor(t, c, webproto.OpGitPeek, `{"path":"a.txt","line":4}`), second)
 	p.WaitJS(peekCard)
 	p.TapJS(ButtonByText("Revert…"))
-	p.WaitJS(`!` + peekCard + ` && document.querySelector(".ask")?.textContent.includes("Your edits in this change are lost.")`)
+	p.WaitJS(`!` + peekCard + ` && document.querySelector(".ask")?.textContent.includes("Your edits there are lost.")`)
 	p.WaitJS(`document.activeElement?.textContent === "Cancel"`)
 	if len(p.Problems()) > 0 {
 		t.Errorf("problems: %v", p.Problems())

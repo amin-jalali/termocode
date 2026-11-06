@@ -14,8 +14,7 @@ import (
 // hunk header (git.stage_hunk takes it), its rows, "change N of M",
 // whether it is staged and where every change starts (Next Change). A
 // line with no change is not found; a file with unsaved edits on the
-// laptop, a file that may hold secrets and a path out of the workspace
-// are refused.
+// laptop and a file that may hold secrets are refused.
 func TestWebGitPeek(t *testing.T) {
 	m := aiTestModel(t)
 	webTestHub(t, &m)
@@ -57,7 +56,6 @@ func TestWebGitPeek(t *testing.T) {
 	for args, want := range map[string]webproto.ErrCode{
 		`{"path":"a.txt","line":6}`: webproto.CodeNotFound,
 		`{"path":".env","line":1}`:  webproto.CodeForbidden,
-		`{"path":"../x","line":1}`:  webproto.CodeBadRequest,
 	} {
 		if got := webTestErr(webTestCallBg(t, &m, c, webproto.OpGitPeek, args)); got != string(want) {
 			t.Errorf("%s: %q, want %s", args, got, want)

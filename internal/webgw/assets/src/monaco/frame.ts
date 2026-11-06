@@ -228,6 +228,8 @@ let applying: "remote" | "undo" | "replace" | null = null;
 let hlDecos: Collection | null = null;
 let flashDecos: Collection | null = null;
 let gutterDecos: Collection | null = null;
+/** gitMarks are the rows the git change marks cover now. */
+let gitMarks: { from: number; to: number }[] = [];
 let lineDecos: Collection | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | undefined;
 let readOnly = false;
@@ -247,6 +249,8 @@ let glyphMenu = 0;
 /** lastStop: the editor shows a new stopped row once, then the user scrolls. */
 let lastStop = 0;
 const GLYPH_MARGIN = 2;
+/** GUTTER_DECOS is the editor's lines decorations column (the git marks). */
+const GUTTER_DECOS = 4;
 
 /** workerless stands in for the editor's worker service (the frame runs
  * no worker, its policy says worker-src 'none'): the diff editor's diff
@@ -1117,7 +1121,10 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   gutterDecos = ed.createDecorationsCollection();
   glyphDecos = ed.createDecorationsCollection();
   hintDecos = ed.createDecorationsCollection();
-  if (!m.diff) watchGlyphs(ed);
+  if (!m.diff) {
+    watchGlyphs(ed);
+    watchGitMarks(ed);
+  }
   lineDecos = ed.createDecorationsCollection();
   blameDecos = ed.createDecorationsCollection();
   inlayDecos = ed.createDecorationsCollection();
@@ -1306,6 +1313,7 @@ function onMessage(e: MessageEvent): void {
       ed?.focus();
       return;
     case "gutter":
+      gitMarks = m.marks.map((g) => ({ from: g.from, to: g.to }));
       gutterDecos?.set(
         m.marks.map((g) => ({
           range: { startLineNumber: g.from, startColumn: 1, endLineNumber: g.to, endColumn: 1 },
@@ -1414,6 +1422,16 @@ function watchGlyphs(e: Editor): void {
     hintDecos?.set([{ range: { startLineNumber: line, startColumn: 1, endLineNumber: line, endColumn: 1 }, options: { glyphMarginClassName: "tc-g tc-g-hint" } }]);
   });
   e.onMouseLeave(() => hintDecos?.clear());
+}
+
+/** watchGitMarks sends a click on a git change mark to the page (it
+ * peeks at that change), as a click on the laptop's git signs does. */
+function watchGitMarks(e: Editor): void {
+  e.onMouseDown((ev) => {
+    if (ev.target.type !== GUTTER_DECOS || !ev.event.leftButton) return;
+    const line = ev.target.position?.lineNumber ?? 0;
+    if (line && gitMarks.some((g) => line >= g.from && line <= g.to)) post({ t: "gitMark", line });
+  });
 }
 
 addEventListener("message", onMessage);

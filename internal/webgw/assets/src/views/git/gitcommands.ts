@@ -18,6 +18,7 @@ import { conflictRows, gitAsk, mergeActs, nextRow, scmTree } from "../../lib/git
 import { toast } from "../../lib/toasts";
 import { t } from "../../strings";
 import { gitFailed } from "./errors";
+import { peekChange } from "../../lib/gitpeek";
 import { pendingDraft } from "../../lib/drafts";
 import { readChat } from "../../state/chat";
 import { newChat } from "../Chat";
@@ -49,6 +50,13 @@ function change(dir: 1 | -1): void {
   if (tab && diffOf(tab)) return d.diffGo(dir);
   const n = nextRow(d.marks().map((m) => m.from), cursorAt.peek()?.line ?? 0, dir);
   if (n > 0) d.reveal(n);
+}
+
+/** peekHere peeks at the change on the caret's line of the open file. */
+function peekHere(): void {
+  const path = fileNow();
+  const line = cursorAt.peek()?.line ?? 0;
+  if (path) peekChange(path, Math.max(1, line));
 }
 
 /** conflict goes to the next (1) or previous (-1) "<<<<<<<" row. */
@@ -173,6 +181,7 @@ export function gitCommands(): Command[] {
     { id: "gitBlame", label: "cmd.git_blame", when: repo, run: () => (blameOn.value = !blameOn.peek()) },
     { id: "gitAmend", label: "cmd.git_amend", when: () => repo() && canAct(), run: () => start("amend") },
     { id: "gitClone", label: "cmd.git_clone", when: canAct, run: () => start("clone") },
+    { id: "gitPeekChange", label: "cmd.git_peek", when: () => repo() && desk() && fileNow() !== null && !diffOf(activeFile.peek() ?? ""), run: peekHere },
     { id: "nextChange", label: "cmd.next_change", when: desk, run: () => change(1) },
     { id: "prevChange", label: "cmd.prev_change", when: desk, run: () => change(-1) },
     { id: "nextConflict", label: "cmd.next_conflict", when: () => desk() && !merge(), run: () => conflict(1) },
