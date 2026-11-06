@@ -534,6 +534,11 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.search = search.New()
 		m.search.SetSize(m.w, m.h)
 		m.search.SetRoots(m.explorer.Roots())
+		if fsys, ok := m.remoteFS(); ok {
+			// A container workspace (FIX-3): its one root, in the container.
+			m.search.SetRoots([]string{m.workspace().Root})
+			m.search.SetFS(fsys)
+		}
 		m.search.SetMaxResults(searchMaxResults(loadSettings()))
 		m.searchOpen = true
 	case "replace-in-file":
