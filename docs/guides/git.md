@@ -441,6 +441,16 @@ what to compare:
 
 The first three open in the commit view, with every changed file.
 
+## Issues, new repositories and publishing
+
+These use the `gh` command (signed in with `gh auth login`).
+
+| Command | What it does |
+|---|---|
+| **Git: Issues… (Start Work on One)** | Lists the open issues. Pick one: **Start Work: New Branch** makes a branch like `12-login-crashes` (you can change the name) and switches to it; **Copy #12** copies the number. |
+| **Git: Initialize Repository** | Runs `git init` (branch `main`) in a folder that is not a repository yet |
+| **Git: Publish to GitHub…** | For a repository with no remote: type the name, pick **Private** or **Public**, then a card asks (**Cancel** is ready). gh creates the repository, adds it as `origin` and pushes. |
+
 ## Keys at a glance
 
 In the Source Control panel:
