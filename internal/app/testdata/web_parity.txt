@@ -12,6 +12,9 @@ web	ai-doc	cmd:aiDoc
 web	ai-edit	cmd:aiEdit
 web	ai-explain	cmd:aiExplain
 web	ai-fix	cmd:aiFix
+web	ai-mcp-bundle	palette
+web	ai-mcp-catalog	palette
+web	ai-mcp-connect	palette
 web	ai-mcp-insert	op:ai.mcp_items
 web	ai-mcp-servers	view:mcp
 web	ai-new-chat	op:chat.new
@@ -102,6 +105,7 @@ web	kubernetes-context	op:kube.contexts
 web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
 web	kubernetes-show	view:kube
+web	mcp-import-other	palette
 web	next-buffer	cmd:nextEditor
 web	next-diagnostic	cmd:problems
 web	open-settings-ui	cmd:settings
@@ -247,9 +251,6 @@ missing	ai-history-rename	AI chat and agents|M
 missing	ai-hooks	AI chat and agents|M
 missing	ai-keep-going	AI chat and agents|M
 missing	ai-mcp-background	AI chat and agents|M
-missing	ai-mcp-bundle	AI chat and agents|M
-missing	ai-mcp-catalog	AI chat and agents|M
-missing	ai-mcp-connect	AI chat and agents|M
 missing	ai-mcp-log	AI chat and agents|M
 missing	ai-mcp-profile	AI chat and agents|M
 missing	ai-mcp-reconnect-all	AI chat and agents|M
@@ -394,7 +395,6 @@ missing	itermoc-profiles	Itermoc and AI setup|M
 missing	itermoc-services	Itermoc and AI setup|M
 missing	join-lines	Editor and files|S
 missing	lowercase	Editor and files|S
-missing	mcp-import-other	AI chat and agents|M
 missing	mcp-serve-copy-config	AI chat and agents|M
 missing	mcp-serve-status	AI chat and agents|M
 missing	next-hunk	Git|S
