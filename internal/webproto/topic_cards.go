@@ -13,12 +13,13 @@ func init() {
 
 // Card kinds.
 const (
-	CardTool   = "tool"   // the chat's AI wants to run a tool
-	CardMCP    = "mcp"    // an outside agent's call over MCP
-	CardPlan   = "plan"   // a run waits for its plan to be approved
-	CardReview = "review" // a proposed change to one file
-	CardTrust  = "trust"  // a project profile, rules, skills or MCP server asks for trust (laptop only)
-	CardLaptop = "laptop" // a web request that cannot be undone waits for the laptop (the web may only cancel it)
+	CardTool     = "tool"     // the chat's AI wants to run a tool
+	CardMCP      = "mcp"      // an outside agent's call over MCP
+	CardPlan     = "plan"     // a run waits for its plan to be approved
+	CardReview   = "review"   // a proposed change to one file
+	CardTrust    = "trust"    // a project profile, rules, skills or MCP server asks for trust (laptop only)
+	CardLaptop   = "laptop"   // a web request that cannot be undone waits for the laptop (the web may only cancel it)
+	CardWorkflow = "workflow" // a workflow step wants to write to an outside system
 )
 
 // Choice ids the web may send.
@@ -45,7 +46,7 @@ type CardsSnap struct {
 // draws it first and focused.
 type Card struct {
 	ID       string       `json:"id"`
-	Kind     string       `json:"kind" enum:"tool|mcp|plan|review|trust|laptop"`
+	Kind     string       `json:"kind" enum:"tool|mcp|plan|review|trust|laptop|workflow"`
 	Title    string       `json:"title"`
 	Body     string       `json:"body,omitempty"` // plain text
 	Choices  []CardChoice `json:"choices"`

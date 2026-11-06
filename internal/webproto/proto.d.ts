@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "worktrees";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees";
 
 export interface Bye {
   t: "bye";
@@ -394,6 +394,10 @@ export interface TestRunArgs {
 
 export interface TestIDArgs {
   id: string;
+}
+
+export interface WorkflowRunArgs {
+  run: string;
 }
 
 export interface WorkspacePathArgs {
@@ -986,7 +990,7 @@ export interface CardsSnap {
 
 export interface Card {
   id: string;
-  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop";
+  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop" | "workflow";
   title: string;
   body?: string;
   choices: CardChoice[];
@@ -1469,6 +1473,36 @@ export interface AIProfile {
   source: "builtin" | "user" | "project";
   trust: "use" | "ask" | "refused";
   hint?: string;
+}
+
+export interface WorkflowsSnap {
+  workflows: WorkflowItem[];
+  runs: WorkflowRun[];
+}
+
+export interface WorkflowItem {
+  name: string;
+  title?: string;
+  state: "running" | "on" | "off" | "untrusted" | "broken";
+  when?: string;
+  next?: number;
+  last?: string;
+}
+
+export interface WorkflowRun {
+  id: string;
+  workflow: string;
+  state: string;
+  dry?: boolean;
+  started: number;
+  ended?: number;
+  items?: number;
+  failed?: number;
+  wrote?: number;
+  resumed?: number;
+  waiting?: string;
+  tail?: string[];
+  stopping?: boolean;
 }
 
 export interface WorktreesSnap {
@@ -2814,6 +2848,7 @@ export interface OpArgs {
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
   "workspace.remove_folder": IDArgs;
@@ -2990,6 +3025,7 @@ export interface TopicData {
   "debug": { snap: DebugSnap; delta: DebugSnap };
   "services": { snap: ServicesSnap; delta: ServicesSnap };
   "ai": { snap: AISnap; delta: AISnap };
+  "workflows": { snap: WorkflowsSnap; delta: WorkflowsSnap };
   "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
 }
 

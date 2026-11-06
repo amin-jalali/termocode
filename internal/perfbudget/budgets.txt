@@ -106,6 +106,9 @@ web_chat_append_overhead    88   B    # wire bytes of a streamed token beyond it
 web_term_key_bytes         180   B    # wire bytes per key typed into a real shell (the row's delta), median of 24; local 121 (the ~100 B envelope dominates a short row)
 web_gateway_conn_kib       350   KiB  # heap per browser after hello, 4 open, both ends in one process; local 174
 
+# Workflows (WFX-21; internal/app/workflows_perf_guard_test.go)
+workflows_topic_100        25   ms   # the web topic of 100 workflows, median of 9; local 0.02 ms (floor)
+
 # Worktrees (WTX-1/2): internal/worktrees, internal/app. Median of 9.
 worktrees_list_200         25   ms   # parse 200 worktree list blocks + build the model with metadata; local 0.3 ms (floor)
 worktrees_status_200       50   ms   # UI-thread share of a status refresh of 200 worktrees (git runs in 4 workers); local 0.4 ms (floor)

@@ -21,6 +21,9 @@ type WorkflowState struct {
 	TrustedHash string   `json:"trusted_hash,omitempty"`
 	LastRunMs   int64    `json:"last_run_ms,omitempty"`
 	NextRunMs   int64    `json:"next_run_ms,omitempty"`
+	// LastOutcome is what the scheduler did with the last slot: ran,
+	// failed, skipped (precheck), skipped (still running), missed.
+	LastOutcome string `json:"last_outcome,omitempty"`
 }
 
 // stateMu serialises the read-modify-write of state files in this
