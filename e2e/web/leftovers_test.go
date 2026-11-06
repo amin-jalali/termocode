@@ -80,3 +80,21 @@ func TestCommandAsksASideQuestion(t *testing.T) {
 	p.TapJS(ButtonByText("Close"))
 	p.WaitJS(`!document.querySelector(".side-chat")`)
 }
+
+// AI: MCP Prompts and Resources… lists the laptop's MCP prompts and
+// resources; a pick goes into the chat draft (after what was typed),
+// and nothing is sent.
+func TestCommandPutsAnMCPItemInTheChat(t *testing.T) {
+	p, c := openChat(t, Desktop, chatWith(false, userMsg(0, "hi")))
+	typeDraft(p, "look at")
+	runCmd(t, p, c, "mcp prompts", "AI: MCP Prompts and Resources…")
+	reply(t, c, expectOp(t, c, "ai.mcp_items", `{}`), map[string]any{"items": []map[string]any{
+		{"text": "/gh.review ", "title": "/gh.review — Review a PR", "hint": "prompt · pr"},
+		{"text": "@gh:issue://12 ", "title": "@gh: Issue 12", "hint": "resource · issue://12"},
+	}})
+	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box") && document.querySelectorAll(".quick-row").length === 2`)
+	p.Key("issue")
+	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === "@gh: Issue 12"`)
+	p.Key("\r")
+	p.WaitJS(`!document.querySelector(".quick") && ` + composer + `.querySelector("textarea").value === "look at @gh:issue://12 "`)
+}
