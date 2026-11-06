@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/crash"
@@ -327,11 +328,18 @@ func (b *broker) watch(c *shareClient) {
 	b.sendStatus()
 }
 
+// shareStatusCounted runs in sendStatus between the count and the
+// sends (tests hold a status there).
+var shareStatusCounted atomic.Pointer[func(n int)]
+
 // sendStatus tells every session how many sessions use the server.
 func (b *broker) sendStatus() {
 	b.mu.Lock()
 	n := len(b.clients)
 	b.mu.Unlock()
+	if f := shareStatusCounted.Load(); f != nil {
+		(*f)(n)
+	}
 	for _, c := range b.readyClients() {
 		_ = c.conn.Notify(shareNotify, map[string]any{"sessions": n, "pid": b.pid()})
 	}
