@@ -38,6 +38,7 @@ type Header struct {
 	Hash, FullHash   string
 	Subject, Body    string
 	Author           string // name only: the e-mail is never on the card
+	Badge            string // the signature ("✓ Verified · ann"); "" unsigned
 	DateRel, DateAbs string
 	Parents          []string // short hashes; each is a click target
 	Refs             []Ref
@@ -355,6 +356,16 @@ func (m Model) commitMeta(g geom, p pal) (left, right rowB) {
 	files := "files"
 	if h.Files == 1 {
 		files = "file"
+	}
+	if b := h.Badge; b != "" { // GITX-38: the signature
+		c := p.muted
+		switch {
+		case strings.HasPrefix(b, "✓"):
+			c = p.add
+		case strings.HasPrefix(b, "✗"):
+			c = p.del
+		}
+		right.add(b+"  ", bg.Foreground(c), "")
 	}
 	right.add(fmt.Sprintf("%d %s  ", h.Files, files), bg.Foreground(p.muted), "")
 	right.add(fmt.Sprintf("+%d", h.Add), bg.Foreground(p.add), "")
