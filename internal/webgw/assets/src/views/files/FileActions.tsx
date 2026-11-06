@@ -27,6 +27,23 @@ type Step = { s: "menu" } | { s: "new"; dir: boolean } | { s: "rename" } | { s: 
 const base = (p: string): string => p.slice(p.lastIndexOf("/") + 1);
 const join = (dir: string, name: string): string => (dir ? dir + "/" + name : name);
 
+/** lastRename is the rename this page did last (Explorer: Undo Rename). */
+export let lastRename: { from: string; to: string } | null = null;
+
+/** undoRename gives the file renamed last its old name again. */
+export function undoRename(): void {
+  const r = lastRename;
+  if (!r) {
+    toast("info", t("files.no_rename"));
+    return;
+  }
+  const name = base(r.from);
+  link.request("tree.rename", { path: r.to, name }).then(() => {
+    lastRename = null;
+    toast("ok", t("files.renamed_back", { name }));
+  }, failed);
+}
+
 /** goodName is one plain name, as the hub's wire rule wants it. */
 export function goodName(n: string): boolean {
   return n !== "" && n !== "." && n !== ".." && !/[/\\\u0000-\u001f\u007f]/.test(n) && new TextEncoder().encode(n).length <= 255;
@@ -163,7 +180,12 @@ export function FileActions({ target, onDone }: { target: Target; onDone: () => 
             start={base(target.path)}
             verb={t("files.rename")}
             onCancel={onDone}
-            onSend={(name) => run("tree.rename", { path: target.path, name }, () => toast("ok", t("files.renamed", { name })))}
+            onSend={(name) =>
+              run("tree.rename", { path: target.path, name }, (p) => {
+                lastRename = { from: target.path, to: p || join(target.path.slice(0, Math.max(0, target.path.lastIndexOf("/"))), name) };
+                toast("ok", t("files.renamed", { name }));
+              })
+            }
           />
         )}
       </div>

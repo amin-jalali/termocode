@@ -105,6 +105,9 @@ var (
 	// IconRuns — the Runs view (what the AI is doing now): nf-fa-heartbeat,
 	// a pulse; ∿ (U+223F, EAW=Neutral) without the Nerd Font.
 	IconRuns = Icon{NerdFont: "\uf21e", Unicode: "∿", ASCII: "~"}
+	// IconWorkflows — the Workflows view (WFX): nf-fa-sitemap, a flow; ⇶
+	// (U+21F6, EAW=Neutral) without the Nerd Font.
+	IconWorkflows = Icon{NerdFont: "\uf0e8", Unicode: "⇶", ASCII: "W"}
 	// IconServices is the same icon under its old name.
 	IconServices = IconContainers
 	// IconDebug — fisheye, reads as a "bug eye". U+25C9, EAW=Neutral.

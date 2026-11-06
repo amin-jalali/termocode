@@ -7,13 +7,15 @@
 // references list (ui/RefsPeek.tsx). A read is asked at the changedtick
 // the page's text is known at: unsent typing goes out first.
 import { effect, signal } from "@preact/signals";
-import type { DiagFile, DiagSnap, LspLocations, LspLoc } from "../../../../webproto/proto";
-import type { FrameMarker, LspKind } from "../monaco/protocol";
+import type { DiagFile, DiagSnap, LspAction, LspActions, LspHints, LspLocations, LspLoc } from "../../../../webproto/proto";
+import type { FrameHint, FrameMarker, LspKind } from "../monaco/protocol";
 import { ReqError } from "../net/link";
 import { link, store } from "../session";
 import { session } from "./live";
 import { route } from "./router";
-import { panes, setPanes, showFile } from "./workbench";
+import { cursorAt, panes, setPanes, showFile } from "./workbench";
+import { toast } from "./toasts";
+import { t } from "../strings";
 
 /** PanelTab is what the bottom panel shows: "problems", "output", "terminal" or
  * a registered tab's id (lib/views.ts). */
@@ -88,6 +90,73 @@ async function settledTick(buf: number): Promise<number | null> {
   return s.settled();
 }
 
+/** LSP_OPS names the ops whose name is not lsp.<kind>. */
+const LSP_OPS: Partial<Record<LspKind | "references", string>> = { typedef: "lsp.type_definition", impl: "lsp.implementation" };
+
+/** formatBuf formats the focused editor's buffer with the laptop's
+ * language server, at the tick the page's text is known at; the new text
+ * comes back as the laptop's change. */
+export async function formatBuf(): Promise<void> {
+  const s = session.peek();
+  if (!s) return;
+  const tick = await settledTick(s.buf);
+  if (tick === null) {
+    toast("info", t("cmd.format_wait"));
+    return;
+  }
+  try {
+    await link.request("buf.format", { buf: s.buf, tick });
+    toast("ok", t("cmd.formatted"));
+  } catch (e) {
+    toast("warn", e instanceof Error && e.message ? e.message : t("cmd.failed"));
+  }
+}
+
+/** inlayHints: the desktop editor shows the servers' inlay hints (LSP:
+ * Toggle Inlay Hints; this page only). */
+export const inlayHints = signal(false);
+
+/** askHints reads the inlay hints of rows first..last of buffer buf at
+ * the tick the page's text is known at (null: unsent text, no server). */
+export async function askHints(buf: number, first: number, last: number): Promise<FrameHint[] | null> {
+  const tick = await settledTick(buf);
+  if (tick === null) return null;
+  try {
+    const r = (await link.request("lsp.inlay_hints", { buf, tick, first, last: Math.min(last, first + 1999) })) as LspHints;
+    return (r.items ?? []).map((h) => ({ line: h.line + 1, col: h.col + 1, label: h.label, padLeft: h.padLeft, padRight: h.padRight }));
+  } catch {
+    return null;
+  }
+}
+
+/** quickFixes lists the code actions at the caret of the focused editor
+ * (null: unsent text or a refusal, already told). */
+export async function quickFixes(): Promise<{ buf: number; tick: number; items: LspAction[] } | null> {
+  const s = session.peek();
+  if (!s) return null;
+  const tick = await settledTick(s.buf);
+  if (tick === null) {
+    toast("info", t("cmd.format_wait"));
+    return null;
+  }
+  const at = cursorAt.peek() ?? { line: 1, col: 1 };
+  try {
+    const r = (await link.request("lsp.code_actions", { buf: s.buf, tick, line: at.line - 1, col: at.col - 1, end_line: at.line - 1, end_col: at.col - 1 })) as LspActions;
+    return { buf: s.buf, tick, items: r.items ?? [] };
+  } catch (e) {
+    toast("warn", e instanceof Error && e.message ? e.message : t("cmd.failed"));
+    return null;
+  }
+}
+
+/** applyFix applies action index of a list on the laptop. */
+export function applyFix(buf: number, tick: number, index: number): void {
+  link.request("lsp.code_action_apply", { buf, tick, index }).then(
+    () => undefined,
+    (e: unknown) => toast("warn", e instanceof Error && e.message ? e.message : t("cmd.failed")),
+  );
+}
+
 /** ask runs lsp.<kind> for buffer buf at a 0-based line and UTF-16
  * column, at the tick the page's text is known at. A changed buffer is
  * asked once more after a moment (the laptop's change on its way). */
@@ -98,7 +167,7 @@ export async function ask(kind: LspKind | "references", buf: number, line: numbe
     const tick = await settledTick(buf);
     if (tick === null) return null;
     try {
-      return await link.request("lsp." + kind, { buf, tick, line, col });
+      return await link.request(LSP_OPS[kind] ?? "lsp." + kind, { buf, tick, line, col });
     } catch (e) {
       if (e instanceof ReqError && e.code === "conflict" && tries === 0) {
         await new Promise((r) => setTimeout(r, 200));

@@ -216,6 +216,9 @@ func goldenExtras() []Scene {
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
+		// History edits from the GRAPH (GITX-17): D on the oldest commit
+		// opens the Cancel-first Drop card.
+		{Name: "drop-commit-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-focus"), Key("G"), Key("D"), Pause(600 * time.Millisecond)}},
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
@@ -255,10 +258,13 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
 	out = append(out, keyHintCases()...)
-	out = append(out, kubeCases()...)        // golden_kube_test.go
-	out = append(out, worktreesCases()...)   // golden_worktrees_test.go
-	out = append(out, webCases()...)         // golden_web_test.go
-	out = append(out, agentPickerCases()...) // golden_agents_test.go
+	out = append(out, kubeCases()...)          // golden_kube_test.go
+	out = append(out, webCases()...)           // golden_web_test.go
+	out = append(out, agentPickerCases()...)   // golden_agents_test.go
+	out = append(out, raceCases()...)          // golden_race_test.go
+	out = append(out, worktreesCases()...)     // golden_worktrees_test.go
+	out = append(out, agentChatCases()...)     // golden_agents_test.go
+	out = append(out, agentSessionsCases()...) // golden_agents_test.go
 	// A terminal tab split into three panes (G-SPL).
 	{
 		sc := TerminalSplit()

@@ -45,30 +45,36 @@ type GraphCommit struct {
 // newest first, and says whether more exist. An empty repository is not
 // an error. Commits on HEAD that its upstream lacks are marked Unpushed.
 func Commits(dir string, skip, limit int) ([]GraphCommit, bool, error) {
-	return commitsOf(dir, skip, limit, "HEAD")
+	return commitsOf(localGit(dir), skip, limit, "HEAD")
+}
+
+// CommitsVia is Commits with git run by x (a container workspace,
+// ADR 0018).
+func CommitsVia(x Runner, dir string, skip, limit int) ([]GraphCommit, bool, error) {
+	return commitsOf(viaGit(x, dir), skip, limit, "HEAD")
 }
 
 // CommitsAll is Commits over every local branch, remote-tracking branch
 // and tag as well as HEAD, newest first (a child always before its
 // parents), for a graph of all branches.
 func CommitsAll(dir string, skip, limit int) ([]GraphCommit, bool, error) {
-	return commitsOf(dir, skip, limit, "--date-order", "--branches", "--remotes", "--tags", "HEAD")
+	return commitsOf(localGit(dir), skip, limit, "--date-order", "--branches", "--remotes", "--tags", "HEAD")
 }
 
-func commitsOf(dir string, skip, limit int, revs ...string) ([]GraphCommit, bool, error) {
+func commitsOf(run gitRunFn, skip, limit int, revs ...string) ([]GraphCommit, bool, error) {
 	if limit <= 0 {
 		limit = 200
 	}
 	const format = "--format=%h%x1f%H%x1f%p%x1f%s%x1f%an%x1f%ct%x1f%D%x1e"
 	// The unpushed set does not depend on the log: read both at once.
 	upc := make(chan map[string]bool, 1)
-	crash.GoWith("reading the unpushed commits", func() { upc <- unpushed(dir) }, func() { upc <- nil })
+	crash.GoWith("reading the unpushed commits", func() { upc <- unpushed(run) }, func() { upc <- nil })
 	args := append([]string{"log", "--decorate=full", format,
 		fmt.Sprintf("-n%d", limit+1), fmt.Sprintf("--skip=%d", skip)}, revs...)
-	out, err := runOut(dir, "git", append(args, "--")...)
+	out, err := run(append(args, "--")...)
 	up := <-upc
 	if err != nil {
-		if !hasCommits(dir) {
+		if !hasCommits(run) {
 			return nil, false, nil
 		}
 		return nil, false, err
@@ -105,15 +111,15 @@ func parseCommitLog(out string) []GraphCommit {
 }
 
 // hasCommits says whether HEAD points at a commit.
-func hasCommits(dir string) bool {
-	_, err := runOut(dir, "git", "rev-parse", "--verify", "-q", "HEAD")
+func hasCommits(run gitRunFn) bool {
+	_, err := run("rev-parse", "--verify", "-q", "HEAD")
 	return err == nil
 }
 
 // unpushed is the set of full hashes on HEAD but not on its upstream
 // (empty without an upstream).
-func unpushed(dir string) map[string]bool {
-	out, err := runOut(dir, "git", "rev-list", "-n500", "@{upstream}..HEAD")
+func unpushed(run gitRunFn) map[string]bool {
+	out, err := run("rev-list", "-n500", "@{upstream}..HEAD")
 	if err != nil {
 		return nil
 	}

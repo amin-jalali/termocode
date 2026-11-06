@@ -315,6 +315,30 @@ func TestBuildSplitsTheWorkbench(t *testing.T) {
 	}
 }
 
+// The Persian strings are their own file (strings-fa.js), loaded only
+// when the UI language is Persian: the phone's first files carry one
+// language, English. strings-fa.js is the strings alone (no Preact).
+func TestBuildWritesThePersianChunk(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page, fa := string(out["app.js"])+string(out["app-chunk.js"]), string(out["strings-fa.js"])
+	if fa == "" {
+		t.Fatal("build wrote no strings-fa.js")
+	}
+	const persian = "باز کردن فضای کار" // connect.open
+	if !strings.Contains(fa, persian) || strings.Contains(fa, "__H") {
+		t.Error("strings-fa.js is not the Persian strings alone")
+	}
+	if strings.Contains(page, persian) {
+		t.Error("the phone's first files hold the Persian strings")
+	}
+	if !strings.Contains(page, `import("/assets/strings-fa.js")`) {
+		t.Error("the page does not load /assets/strings-fa.js")
+	}
+}
+
 func TestBuildRefusesAnyOtherDynamicImport(t *testing.T) {
 	dir := fixture(t, `import("/assets/other.js").then(() => 0);`)
 	if _, err := Build(dir); err == nil || !strings.Contains(err.Error(), "other.js") {
