@@ -142,6 +142,18 @@ func (m *Model) webDemo(variant string) {
 			}
 			m.web.live[&webConn{id: "c-demo"}] = true
 		}
+	case "worktrees": // a page asks to archive a worktree: the laptop card (WTX-16)
+		m.worktreesDemo("running")
+		if m.web == nil {
+			m.web = newWebHub()
+		}
+		if it, ok := m.wtItemByPath("/src/app.worktrees/toast-race"); ok {
+			a := m.webWorktreesAskFor(it, "archive")
+			a.op, a.device = "worktrees.archive", "phone"
+			a.body += "\n\nRequested from phone."
+			m.web.asks.line = append(m.web.asks.line, a)
+			m.webAskShow()
+		}
 	}
 }
 

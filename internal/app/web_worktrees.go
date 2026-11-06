@@ -283,16 +283,19 @@ func (m *Model) webWorktreesAsk(call *webCall, verb string) *webAsk {
 		call.fail(webproto.CodeConflict, "Its folder is gone.")
 		return nil
 	}
-	device := webName(call.conn.device)
-	if device == "" {
-		device = "web"
-	}
-	title, action, body := "Archive worktree?", "Go on", device+" asks to archive "+wtTitle(it)+" ("+wtShortPath(it.e.Path)+"). The next card says what goes."
+	return m.webWorktreesAskFor(it, verb)
+}
+
+// webWorktreesAskFor is the laptop card of a page's archive, restore or
+// delete of it (webAskOpen adds who asked).
+func (m *Model) webWorktreesAskFor(it wtItem, verb string) *webAsk {
+	where := wtShortPath(it.e.Path)
+	title, action, body := "Archive worktree?", "Go on", "The page asks to archive "+wtTitle(it)+":\n"+where+"\n\nThe next card says what goes."
 	if verb == "delete" {
-		title, body = "Delete worktree?", device+" asks to delete "+wtTitle(it)+" and its branch ("+wtShortPath(it.e.Path)+"). The next cards say what is lost."
+		title, body = "Delete worktree?", "The page asks to delete "+wtTitle(it)+" and its branch:\n"+where+"\n\nThe next cards say what is lost."
 	}
 	if it.e.Meta.State == worktrees.StateArchived && verb == "archive" {
-		title, body = "Restore worktree?", device+" asks to restore "+wtTitle(it)+" from its branch."
+		title, body = "Restore worktree?", "The page asks to restore "+wtTitle(it)+" from its branch:\n"+where
 	}
 	path := it.e.Path
 	ask := &webAsk{summary: wtTitle(it), title: title, action: action, body: body}
