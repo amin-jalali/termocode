@@ -444,7 +444,7 @@ repository's git folder, never in your project.
 | `N` | The notes agents left on it, with their times |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
-| `L` | Open the setup log of a new worktree |
+| `L` | Show the setup of a new worktree (its terminal tab) |
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
 | `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
@@ -533,8 +533,9 @@ A repository can list files for each new worktree in
 - **setup** commands come from the repository, so they run only after you
   trust them on a card that shows each command (**Not now** comes first).
   The answer is kept for this exact file: a changed file asks again. They
-  run with your environment minus termocode's secrets. The card shows
-  `setup ● running`, `✓` or `✗`; `L` opens the log.
+  run in a terminal tab of their own inside the new worktree, so you can
+  watch them, with your environment minus termocode's secrets. The card
+  shows `setup ● running`, `✓` or `✗`; `L` shows the tab.
 
 ## Keys at a glance
 

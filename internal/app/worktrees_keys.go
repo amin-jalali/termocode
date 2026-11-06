@@ -34,7 +34,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"N", "the notes agents left on it, with their times"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
 		[]string{"c", "new child worktree: from this one's branch, listed under it"},
-		[]string{"L", "open the setup log of a new worktree"},
+		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
 		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
 		[]string{"F", "forget a worktree whose folder is gone"},
 		[]string{"List"},
