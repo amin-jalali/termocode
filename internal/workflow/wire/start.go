@@ -24,6 +24,8 @@ type Config struct {
 	NoPlan    bool
 	Vars      map[string]any
 	LastOKAt  string
+	// ParallelMax is workflows_parallel_max (0: no cap).
+	ParallelMax int
 
 	Src      *source.Sources
 	Tools    run.ToolCheck
@@ -78,6 +80,7 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 	opts := run.Options{
 		RunID: id, Dry: cfg.Dry, NoPlan: cfg.NoPlan, Vars: cfg.Vars, LastOKAt: cfg.LastOKAt,
 		Eval: ev, Source: &Sources{Src: cfg.Src, Eval: ev}, Plan: steps, Run: steps, Write: w,
+		Each: &Worktrees{Workspace: cfg.Workspace, RunID: id}, ParallelMax: cfg.ParallelMax,
 		Tools: cfg.Tools, Ask: cfg.AskTool, OnEvent: cfg.OnEvent, Store: store,
 	}
 	return run.Start(ctx, f, opts), nil
