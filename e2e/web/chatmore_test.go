@@ -121,3 +121,21 @@ func TestChatMoreMCPProfile(t *testing.T) {
 		})
 	}
 }
+
+// AI: Agent Auto-Approve… lists ask or AUTO per row; a switch asks here
+// first (Cancel first), then the laptop.
+func TestChatMoreAutoApprove(t *testing.T) {
+	p, c := openChat(t, Desktop, chatWith(false, userMsg(0, "hi")))
+	pickMore(t, p, c, "AI: Agent Auto-Approve…", true)
+	reply(t, c, expectOp(t, c, "ai.auto_approve", `{}`), webproto.AutoApprove{Rows: []webproto.AutoApproveRow{
+		{ID: "fileWrite", Title: "fileWrite — write / create / delete / rename files"},
+		{ID: "git", Title: "git — stage / commit / checkout / push / pull", On: true},
+	}})
+	p.WaitJS(moreItem("fileWrite — write / create / delete / rename files · ask") + ` && ` + moreItem("git — stage / commit / checkout / push / pull · AUTO"))
+	p.TapJS(moreItem("fileWrite — write / create / delete / rename files · ask"))
+	p.WaitJS(`document.querySelector(".ask") && document.activeElement === document.querySelector(".ask .choices button")`)
+	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
+	p.TapJS(ButtonByText("Ask the laptop"))
+	reply(t, c, expectOp(t, c, "ai.set_auto_approve", `{"id":"fileWrite"}`), webproto.AskRef{Card: "card-8"})
+	p.WaitJS(`document.querySelector(".waiting")`)
+}
