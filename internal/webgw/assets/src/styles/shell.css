@@ -118,7 +118,7 @@ html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
 .hint-x { display: grid; place-items: center; flex: none; width: 2rem; height: 2rem; margin: -0.25rem calc(-1 * var(--s2)) -0.25rem 0; border-radius: var(--r-chip); color: var(--muted); }
 .hint-x:hover { background: var(--bg-hover); color: var(--text); }
 .layout-desktop .hint { padding: 0 var(--s2) 0 var(--s3); min-height: 24px; border: 0; border-top: 1px solid var(--wb-panel-border); background: var(--wb-side-bg); animation: none; }
-.layout-desktop .hint-x { width: 22px; height: 22px; margin: 0; }
+.layout-desktop .hint-x { width: 24px; height: 24px; margin: 0; }
 
 /* ---- Body: rail | main | chat ---- */
 /* Turned sideways, a notch or a rounded corner covers a side: the

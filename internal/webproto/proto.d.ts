@@ -420,6 +420,17 @@ export interface ThemeColorArgs {
   color: string;
 }
 
+export interface UserCmdSaveArgs {
+  items: UserCmd[];
+}
+
+export interface UserCmd {
+  id: string;
+  title: string;
+  cmd: string;
+  cwd?: string;
+}
+
 export interface WorkflowRunArgs {
   run: string;
 }
@@ -459,6 +470,11 @@ export interface AIActionArgs {
 
 export interface AIInfoArgs {
   kind: "usage" | "rules" | "memory" | "skills" | "hooks" | "web-tools" | "mcp-log" | "serve-status" | "serve-config" | "configure" | "bug-report";
+}
+
+export interface GitPeekArgs {
+  path: string;
+  line: number;
 }
 
 export interface GitFileLogArgs {
@@ -893,6 +909,7 @@ export interface StatusSnap {
   runs: StatusRuns;
   web: StatusWeb;
   theme: StatusTheme;
+  update?: string;
   ext?: StatusExt;
 }
 
@@ -1126,6 +1143,11 @@ export interface TreeRemoveDelta {
 export interface TreeHiddenDelta {
   kind: "hidden";
   on: boolean;
+}
+
+export interface TreeRootsDelta {
+  kind: "roots";
+  roots: TreeRoot[];
 }
 
 export interface BufsSnap {
@@ -2066,6 +2088,11 @@ export interface ThemeColor {
   custom?: boolean;
 }
 
+export interface UserCmdList {
+  items: UserCmd[];
+  error?: string;
+}
+
 export interface WorkspaceList {
   folders: WorkspaceEntry[];
   recent: WorkspaceEntry[];
@@ -2119,6 +2146,17 @@ export interface AIInfoRow {
   title: string;
   hint?: string;
   header?: boolean;
+}
+
+export interface GitPeek {
+  path: string;
+  line: number;
+  header: string;
+  lines: string[];
+  index: number;
+  count: number;
+  staged?: boolean;
+  starts: number[];
 }
 
 export interface GitFileLog {
@@ -2993,6 +3031,8 @@ export interface OpArgs {
   "theme.set": ThemeArgs;
   "theme.colors": EmptyArgs;
   "theme.color_set": ThemeColorArgs;
+  "usercmds.list": EmptyArgs;
+  "usercmds.save": UserCmdSaveArgs;
   "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
@@ -3002,6 +3042,7 @@ export interface OpArgs {
   "ai.next_edit": AINextEditArgs;
   "ai.action": AIActionArgs;
   "ai.info": AIInfoArgs;
+  "git.peek": GitPeekArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -3162,7 +3203,7 @@ export interface TopicData {
   "chats": { snap: ChatsSnap; delta: ChatsDelta };
   "chat": { snap: ChatSnap; delta: ChatDelta };
   "cards": { snap: CardsSnap; delta: CardsDelta };
-  "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta };
+  "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta | TreeRootsDelta };
   "bufs": { snap: BufsSnap; delta: BufsSnap };
   "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta };
   "terms": { snap: TermsSnap; delta: TermsSnap };
@@ -3258,6 +3299,8 @@ export interface OpResult {
   "theme.set": ThemeList;
   "theme.colors": ThemeColors;
   "theme.color_set": ThemeColors;
+  "usercmds.list": UserCmdList;
+  "usercmds.save": UserCmdList;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
@@ -3266,6 +3309,7 @@ export interface OpResult {
   "ai.next_edit": AINextEdit;
   "ai.action": AIAction;
   "ai.info": AIInfo;
+  "git.peek": GitPeek;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;

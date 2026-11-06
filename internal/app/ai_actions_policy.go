@@ -587,6 +587,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-plan-worktree": aiNever("it leads to a push and a pull request: the user starts it"),
 	// It edits other apps' config files: only the user, after the preview.
 	"ai-agent-hooks": aiNever("it changes other apps' config files: the user decides after the preview"),
+	"ai-agent-packs": aiNever("it writes many files into other apps' config folders: the user decides after the preview"),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
 	// Agent worktrees (G-WT): merging or discarding an agent's work and

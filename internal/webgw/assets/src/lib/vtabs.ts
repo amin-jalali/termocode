@@ -11,6 +11,8 @@
 //   "@scmp:" + conn + "/" + target a schema compare's script
 //   "@dbh:"                        the SQL history
 //   "@wf:" + workflow + "/" + run  a workflow run's page (both URI-encoded)
+//   "@theme:"                      the laptop's color theme form
+//   "@ucmd:"                       the user's commands form (commands.json)
 // (Diff tabs are lib/difftab.ts.)
 import { t } from "../strings";
 
@@ -26,6 +28,8 @@ export type VTab =
   | { kind: "md"; path: string }
   | { kind: "cmp"; a: string; b: string }
   | { kind: "dbh" }
+  | { kind: "theme" }
+  | { kind: "ucmd" }
   | { kind: "wf"; workflow: string; run: string };
 
 const enc = encodeURIComponent;
@@ -47,6 +51,9 @@ export function dbTab(conn: string, table: string): string {
 export const ddlTab = (conn: string, table: string): string => "@ddl:" + enc(conn) + "/" + enc(table);
 export const schemaCmpTab = (conn: string, target: string): string => "@scmp:" + enc(conn) + "/" + enc(target);
 export const DBH_TAB = "@dbh:";
+/** THEME_TAB is the laptop's color theme form; UCMD_TAB the user's commands form. */
+export const THEME_TAB = "@theme:";
+export const UCMD_TAB = "@ucmd:";
 
 /** sqlTab names the query editor tab of a connection. */
 export function sqlTab(conn: string): string {
@@ -87,6 +94,8 @@ export function vtabOf(tab: string): VTab | null {
     return conn && table ? { kind: two[1] as "db" | "ddl" | "scmp", conn, table } : null;
   }
   if (tab === DBH_TAB) return { kind: "dbh" };
+  if (tab === THEME_TAB) return { kind: "theme" };
+  if (tab === UCMD_TAB) return { kind: "ucmd" };
   if (tab.startsWith("@sql:")) {
     const conn = dec(tab.slice(5));
     return conn ? { kind: "sql", conn } : null;
@@ -132,6 +141,8 @@ export function vtabName(v: VTab): string {
   if (v.kind === "ddl") return t("dbv.ddl_tab", { table: v.table });
   if (v.kind === "scmp") return v.table + " ↔ " + v.conn;
   if (v.kind === "dbh") return t("dbv.history");
+  if (v.kind === "theme") return t("theme");
+  if (v.kind === "ucmd") return t("cfg.ucmd_tab");
   if (v.kind === "sql") return t("dbv.query_tab", { conn: v.conn });
   if (v.kind === "wf") return t("wfv.tab", { name: v.workflow });
   if (v.kind === "ctr") return v.label;
@@ -144,5 +155,5 @@ export function vtabName(v: VTab): string {
 /** vtabIcon is the codicon of the tab. */
 export function vtabIcon(v: VTab): string {
   if (v.kind === "ctr") return v.what === "stats" ? "pulse" : v.what === "history" ? "history" : v.what === "search" || v.what === "tags" ? "search" : v.what === "df" ? "graph" : "json";
-  return v.kind === "db" ? "table" : v.kind === "sql" ? "database" : v.kind === "ddl" ? "code" : v.kind === "scmp" ? "diff" : v.kind === "dbh" ? "history" : v.kind === "md" ? "open-preview" : v.kind === "cmp" ? "compare-changes" : v.kind === "wf" ? "type-hierarchy" : "plug";
+  return v.kind === "db" ? "table" : v.kind === "sql" ? "database" : v.kind === "ddl" ? "code" : v.kind === "scmp" ? "diff" : v.kind === "dbh" ? "history" : v.kind === "md" ? "open-preview" : v.kind === "cmp" ? "compare-changes" : v.kind === "wf" ? "type-hierarchy" : v.kind === "theme" ? "symbol-color" : v.kind === "ucmd" ? "terminal" : "plug";
 }

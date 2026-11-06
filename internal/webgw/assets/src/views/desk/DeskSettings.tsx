@@ -82,7 +82,7 @@ function Item({ s }: { s: SettingView }) {
 }
 
 /** SetPage is the frame both pages share: search, groups, list. */
-function SetPage({ id, title, groups, search, children, note }: { id: string; title: string; groups: { id: string; label: string; n: number }[]; search?: boolean; note?: ComponentChildren; children: ComponentChildren }) {
+export function SetPage({ id, title, groups, search, children, note }: { id: string; title: string; groups: { id: string; label: string; n: number }[]; search?: boolean; note?: ComponentChildren; children: ComponentChildren }) {
   const list = useRef<HTMLDivElement | null>(null);
   return (
     <section class="view setp" data-view={id} aria-labelledby={`setp-${id}`}>

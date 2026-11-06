@@ -51,7 +51,8 @@ func gitxSettingsCategories(cats map[string]string) map[string]string {
 	for _, id := range []string{gitxChecksRowID, gitxFormatRowID, gitxTaskRowID, gitxLargeRowID} {
 		cats[id] = "Git" // GITX-27 (gitx_commit_checks.go)
 	}
-	cats[localHistRowID] = "Editor" // GITX-35 (gitx_local_history.go)
+	cats[localHistRowID] = "Editor"  // GITX-35 (gitx_local_history.go)
+	cats[gitxIssueLinkRowID] = "Git" // GITX-29 (gitx_autolink.go)
 	return cats
 }
 

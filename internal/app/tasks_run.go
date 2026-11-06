@@ -736,22 +736,22 @@ func cellToByte(s string, cell int) int {
 	return -1
 }
 
-// routeTerminalLinkClick opens a file:line link under a left click in a
-// terminal tab. Returns false (click not consumed) when there is no link
-// under the pointer.
-func (m *Model) routeTerminalLinkClick(msg tea.MouseMsg) bool {
+// routeTerminalLinkClick opens a file:line link (or a GITX-29 autolink)
+// under a left click in a terminal tab. Returns false (click not
+// consumed) when there is no link under the pointer.
+func (m *Model) routeTerminalLinkClick(msg tea.MouseMsg) (tea.Cmd, bool) {
 	if msg.Type != tea.MouseLeft || !m.termOpen || m.terminalMinimized ||
 		m.panelActive != panelKindTerminal || m.nvim == nil {
-		return false
+		return nil, false
 	}
 	tab := m.activeTerminalTab()
 	if tab == nil || m.terminalWinID <= 0 {
-		return false
+		return nil, false
 	}
 	bar := m.terminalTabBarRowAbsolute()
 	x0 := m.editorPaneLayout().X
 	if bar < 0 || msg.Y <= bar || msg.Y >= m.h-1 || msg.X < x0 {
-		return false
+		return nil, false
 	}
 	row, cell := msg.Y-bar-1, msg.X-x0
 	var text string
@@ -762,22 +762,23 @@ func (m *Model) routeTerminalLinkClick(msg tea.MouseMsg) bool {
 		local buf = vim.api.nvim_win_get_buf(win)
 		return vim.api.nvim_buf_get_lines(buf, top - 1 + row, top + row, false)[1] or ''
 	`, &text, m.terminalWinID, row); err != nil || text == "" {
-		return false
+		return nil, false
 	}
 	off := cellToByte(text, cell)
 	if off < 0 {
-		return false
+		return nil, false
 	}
 	link, ok := tasks.LinkAt(text, off)
 	if !ok {
-		return false
+		// GITX-29: a commit hash, #123 or an issue key (gitx_autolink.go).
+		return m.gitAutoLinkAt(text, off, m.gitAutoLinkDir())
 	}
 	abs := newPathResolver(m.taskVars().WorkspaceFolder).resolve(link.Path, tab.Cwd)
 	if abs == "" {
-		return false
+		return nil, false
 	}
 	m.jumpToDiagnostic(abs, link.Line, link.Col)
-	return true
+	return nil, true
 }
 
 // openTerminalLinksPicker lists every file:line link in the active

@@ -239,6 +239,8 @@ export type FromFrame =
   /** glyph: a click in the glyph margin on a 1-based row; menu: a right
    * click at (x, y) in the frame. */
   | { t: "glyph"; line: number; menu: boolean; x: number; y: number }
+  /** gitMark: a click on a git change mark in the gutter (1-based row). */
+  | { t: "gitMark"; line: number }
   /** vim: Vim mode's mode now ("": off) and the keys of a command not
    * finished yet. */
   | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline"; pending: string }

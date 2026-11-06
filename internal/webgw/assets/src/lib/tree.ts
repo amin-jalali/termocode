@@ -11,7 +11,8 @@ import { under } from "../state/files";
 import { t } from "../strings";
 import { toast } from "./toasts";
 
-/** expanded holds the open folders (the root "" is always listed). */
+/** expanded holds the open folders (the roots, "" and every added
+ * folder's ":name", are always listed). */
 export const expanded = signal<ReadonlySet<string>>(new Set());
 /** failed holds the folders whose listing failed, with the reason. */
 export const failed = signal<ReadonlyMap<string, string>>(new Map());
@@ -114,7 +115,7 @@ export function expandTo(path: string): void {
  * after a remove delta for a folder that still exists. A folder the topic
  * had and then dropped while this page still lists it is closed. stale
  * data (before the fresh snap of a new connection) is not judged. */
-export function reconcile(dirs: Readonly<Record<string, unknown>>, stale: boolean): void {
+export function reconcile(dirs: Readonly<Record<string, unknown>>, stale: boolean, roots: readonly string[] = [""]): void {
   if (!link.live.peek() || stale) return;
   const now = link.meta.peek()?.conn ?? "";
   if (now !== conn) {
@@ -123,7 +124,10 @@ export function reconcile(dirs: Readonly<Record<string, unknown>>, stale: boolea
     asked.clear();
     tries.clear();
   }
-  for (const p of ["", ...expanded.peek()]) {
+  const isRoot = (p: string) => p === "" || roots.includes(p);
+  // An added folder that left the workspace: close what was open in it.
+  for (const p of expanded.peek()) if (p.startsWith(":") && !roots.some((r) => r !== "" && under(r, p))) collapse(p);
+  for (const p of [...new Set(["", ...roots, ...expanded.peek()])]) {
     if (has(dirs, p)) {
       seen.add(p);
       asked.delete(p);
@@ -131,7 +135,7 @@ export function reconcile(dirs: Readonly<Record<string, unknown>>, stale: boolea
     }
     if (seen.has(p)) {
       seen.delete(p);
-      if (p !== "") {
+      if (!isRoot(p)) {
         collapse(p);
         continue;
       }

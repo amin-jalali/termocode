@@ -346,8 +346,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		return m, cmd
 	}
 	// Group C: file:line links in terminal tabs (tasks_run.go).
-	if m.mouseProbe == nil && m.routeTerminalLinkClick(msg) {
-		return m, nil
+	if m.mouseProbe == nil {
+		if cmd, ok := m.routeTerminalLinkClick(msg); ok {
+			return m, cmd
+		}
 	}
 
 	// Find bar takes priority when open: it floats above the editor and

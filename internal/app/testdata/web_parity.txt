@@ -80,6 +80,8 @@ web	close-buffer	cmd:closeEditor
 web	close-split	cmd:closeSplit
 web	code-action-apply-preferred	cmd:quickFixPreferred
 web	code-actions	cmd:quickFix
+web	config-commands	cmd:configCommands
+web	config-theme	cmd:configTheme
 web	containers-attach	op:containers.exec
 web	containers-browse-tags	op:containers.tags
 web	containers-compose-down	op:containers.compose_ask
@@ -214,6 +216,7 @@ web	git-merge-take-both	op:git.resolve_side
 web	git-merge-take-both-theirs-first	op:git.resolve_side
 web	git-merge-take-ours	op:git.resolve_side
 web	git-merge-take-theirs	op:git.resolve_side
+web	git-peek-change	cmd:gitPeekChange
 web	git-pr-create	op:pr.view
 web	git-pr-list	cmd:gitPRs
 web	git-pull	palette
@@ -359,6 +362,7 @@ web	workspace-add-folder	cmd:addFolder
 web	workspace-remove-folder	cmd:removeFolder
 web	zen-mode	cmd:zen
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
+excluded	ai-agent-packs	laptop only: installs files into outside agents on the laptop
 excluded	ai-credentials	security: credentials file is laptop only
 excluded	ai-doctor	laptop only: checks the laptop setup
 excluded	ai-mcp-config	laptop only: edits the MCP config file
@@ -368,8 +372,6 @@ excluded	ai-sign-out-claude	security: credentials are managed on the laptop
 excluded	buffer-info	laptop only: TUI status overlay
 excluded	cheat-sheet	laptop only: TUI shortcut sheet (the web has its own keys sheet)
 excluded	clipboard-history	laptop only: the laptop clipboard is never shared with the web
-excluded	config-commands	laptop only: opens a laptop config file in the TUI
-excluded	config-theme	laptop only: opens a laptop config file in the TUI
 excluded	containers-copy-id	laptop only: copies to the laptop clipboard
 excluded	containers-help	laptop only: opens the TUI guide
 excluded	copy-file-ref	laptop only: copies to the laptop clipboard
@@ -485,7 +487,6 @@ missing	git-outgoing	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S
 missing	git-patch-save	Git|S
-missing	git-peek-change	Git|S
 missing	git-pr-filter	Git|S
 missing	git-pr-mine	Git|S
 missing	git-publish	Git|S

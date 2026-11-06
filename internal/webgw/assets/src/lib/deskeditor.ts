@@ -85,6 +85,8 @@ export interface DeskHost extends EditorHost {
   /** onGlyph hears a click in the glyph margin (menu: a right click at
    * x, y on the page). */
   onGlyph?(line: number, menu: boolean, x: number, y: number): void;
+  /** onGitMark hears a click on a git change mark (1-based row). */
+  onGitMark?(line: number): void;
 }
 
 /** DeskHandle is an EditorHandle with the settings the view changes. */
@@ -256,6 +258,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         host.onGlyph?.(m.line, m.menu, r.left + m.x, r.top + m.y);
         return;
       }
+      case "gitMark":
+        host.onGitMark?.(m.line);
+        return;
       case "open":
         host.onOpen?.(m.path, m.line, m.col);
         return;

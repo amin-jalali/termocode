@@ -66,6 +66,7 @@ import { DeskSearch } from "../views/desk/DeskSearch";
 import { DeskWorktrees } from "../views/desk/DeskWorktrees";
 import { DeskDB } from "../views/desk/DeskDB";
 import { DeskDevice, DeskSettings } from "../views/desk/DeskSettings";
+import { ThemeTab, UserCmdsTab } from "../views/desk/ConfigTabs";
 import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
 import { CtrTab } from "../views/desk/CtrTab";
 import { DBHistoryTab, DBQueryTab, DBTableTab, DBTextTab } from "../views/desk/DBTabs";
@@ -77,6 +78,7 @@ import { CompareView } from "../views/CompareView";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
 import { GitAskHost } from "../views/git/GitAsk";
+import { PeekHost } from "../views/git/PeekCard";
 import { AgentsView } from "../views/AgentsView";
 import { ItermocView } from "../views/ItermocView";
 import { QuickInput } from "./QuickInput";
@@ -348,6 +350,8 @@ function EditorBody({ more, file, slot }: { more: boolean; file: string | null; 
   if (v?.kind === "sql") return <DBQueryTab key={file} conn={v.conn} slot={slot} />;
   if (v?.kind === "ddl" || v?.kind === "scmp") return <DBTextTab key={file} kind={v.kind} conn={v.conn} table={v.table} slot={slot} />;
   if (v?.kind === "dbh") return <DBHistoryTab key={file} />;
+  if (v?.kind === "theme") return <ThemeTab key={file} />;
+  if (v?.kind === "ucmd") return <UserCmdsTab key={file} />;
   if (v?.kind === "mcp") return <MCPAgentTab key={file} name={v.name} slot={slot} />;
   if (v?.kind === "wf") return <WorkflowRunTab key={file} run={v.run} slot={slot} />;
   if (v?.kind === "ctr") return <CtrTab key={file} what={v.what} arg={v.arg} label={v.label} slot={slot} />;
@@ -580,6 +584,7 @@ export function Workbench() {
           {askLaptop.value && <AskLaptop key={askLaptop.value.text} label={askLaptop.value.label} text={askLaptop.value.text} send={askLaptop.value.send} onDone={() => (askLaptop.value = null)} />}
           <RemoteAskHost />
           <GitAskHost />
+          <PeekHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
             {all.map((g, i) => (

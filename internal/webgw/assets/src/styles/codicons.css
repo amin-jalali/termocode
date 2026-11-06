@@ -169,6 +169,7 @@
 .cod-symbol-interface::before { content: "\eb61"; }
 .cod-symbol-key::before { content: "\ea93"; }
 .cod-symbol-method::before { content: "\ea8c"; }
+.cod-symbol-color::before { content: "\eb5c"; }
 .cod-symbol-misc::before { content: "\eb63"; }
 .cod-symbol-namespace::before { content: "\ea8b"; }
 .cod-symbol-property::before { content: "\eb65"; }

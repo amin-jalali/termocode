@@ -1,0 +1,1 @@
+{"t":"req","id":42,"op":"git.peek","args":{"path":"src/a.go","line":12}}

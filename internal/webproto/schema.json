@@ -145,7 +145,8 @@
       "deltas": [
         "TreeDirDelta",
         "TreeRemoveDelta",
-        "TreeHiddenDelta"
+        "TreeHiddenDelta",
+        "TreeRootsDelta"
       ]
     },
     {
@@ -1891,6 +1892,34 @@
       "phase": "v2"
     },
     {
+      "op": "usercmds.list",
+      "args": "EmptyArgs",
+      "result": "UserCmdList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "usercmds.save",
+      "args": "UserCmdSaveArgs",
+      "result": "UserCmdList",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 524288,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "workflows.stop",
       "args": "WorkflowRunArgs",
       "role": "controller",
@@ -2017,6 +2046,20 @@
       "live": 1,
       "laptop_card": false,
       "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.peek",
+      "args": "GitPeekArgs",
+      "result": "GitPeek",
+      "role": "viewer",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
       "phase": "v2"
     },
     {
@@ -8365,6 +8408,67 @@
       ],
       "additionalProperties": false
     },
+    "GitPeek": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "header": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "staged": {
+          "type": "boolean"
+        },
+        "starts": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "line",
+        "header",
+        "lines",
+        "index",
+        "count",
+        "starts"
+      ],
+      "additionalProperties": true
+    },
+    "GitPeekArgs": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "line"
+      ],
+      "additionalProperties": false
+    },
     "GitRebaseArgs": {
       "type": "object",
       "properties": {
@@ -12730,6 +12834,9 @@
         "theme": {
           "$ref": "#/defs/StatusTheme"
         },
+        "update": {
+          "type": "string"
+        },
         "web": {
           "$ref": "#/defs/StatusWeb"
         },
@@ -13794,6 +13901,25 @@
       ],
       "additionalProperties": true
     },
+    "TreeRootsDelta": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "roots"
+        },
+        "roots": {
+          "items": {
+            "$ref": "#/defs/TreeRoot"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "roots"
+      ],
+      "additionalProperties": true
+    },
     "TreeSnap": {
       "type": "object",
       "properties": {
@@ -13917,6 +14043,62 @@
         "chunk"
       ],
       "additionalProperties": true
+    },
+    "UserCmd": {
+      "type": "object",
+      "properties": {
+        "cmd": {
+          "type": "string"
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "cmd"
+      ],
+      "additionalProperties": false
+    },
+    "UserCmdList": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/UserCmd"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "UserCmdSaveArgs": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/UserCmd"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false
     },
     "UserSnippet": {
       "type": "object",

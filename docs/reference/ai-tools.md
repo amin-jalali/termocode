@@ -1913,6 +1913,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-usage-plans` | Agent: Usage Plans | never | a read-only screen for the user; the AI reads the numbers through usage_summary |
 | `ai-add` | AI: Add AI… | never | a card for the user; keys and connected AIs stay with the user (the AI shows them with ai_view_open) |
 | `ai-agent-hooks` | Agent: State Hooks… (exact working / waiting / done) | never | it changes other apps' config files: the user decides after the preview |
+| `ai-agent-packs` | Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex) | never | it writes many files into other apps' config folders: the user decides after the preview |
 | `ai-agents` | AI: Toggle Agents Panel | auto |   |
 | `ai-apply-code` | AI: Apply Last Code Block to File | never | use write_file to change files |
 | `ai-apply-proposal` | AI: Apply Proposed Edit | never | the user reviews proposed edits |
@@ -2524,6 +2525,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git_commit_large_mb` | never | changes what runs before the user's commits; only the user does that |
 | `git_commit_task` | never | sets a shell command that runs before each commit; only the user does that |
 | `git_inline_blame` | confirm (settings) |   |
+| `git_issue_link` | never | sets the page a click on an issue key opens; only the user does that |
 | `git_status_blame` | confirm (settings) |   |
 | `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
 | `http_cookie_jar` | confirm (settings) |   |
