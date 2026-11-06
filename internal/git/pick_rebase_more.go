@@ -317,12 +317,23 @@ func AutosquashPlan(dir string) (n int, base string, err error) {
 			continue
 		}
 		n++
+		// A subject match wins; a hash prefix counts only when no older
+		// subject matches, so a short subject like "c1" never lands on a
+		// commit whose hash happens to start with it.
+		match := -1
 		for j := i + 1; j < len(rows); j++ {
-			if rows[j].subject == target || strings.HasPrefix(rows[j].full, target) {
-				oldest = max(oldest, j)
+			if rows[j].subject == target {
+				match = j
 				break
 			}
 		}
+		for j := i + 1; match < 0 && j < len(rows); j++ {
+			if strings.HasPrefix(rows[j].full, target) {
+				match = j
+				break
+			}
+		}
+		oldest = max(oldest, match)
 	}
 	if n == 0 || oldest < 0 {
 		return n, "", nil
