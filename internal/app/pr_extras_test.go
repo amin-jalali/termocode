@@ -1,8 +1,11 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/ghci"
 )
@@ -74,6 +77,55 @@ func TestPRRerunFailed(t *testing.T) {
 	m.prS().detail.Checks = []ghci.Check{{Name: "test", State: ghci.StateFail, URL: "https://github.com/o/r/actions/runs/77/job/1"}}
 	done := m.onPRActionPicked("rerun-failed")().(prDoneMsg)
 	if done.err != nil || !f.called("run rerun 77 --failed") || !strings.Contains(done.ok, "Re-running") {
+		t.Errorf("done %+v calls %v", done, f.calls)
+	}
+}
+
+// Edit Description… writes the text to a file in the git folder and
+// opens it; a save shows a card (Cancel first) that sends the file with
+// gh pr edit --body-file; Cancel sends nothing.
+func TestPREditDescription(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr view": prViewText14, "pr edit": ""}}
+	m, dir := prRepoModel(t, f)
+	prDo(t, m, m.prViewCmd(14))
+	m.onPRActionPicked("edit-description")
+	e := m.prS().editBody
+	if e == nil || !strings.HasPrefix(e.path, filepath.Join(dir, ".git")) {
+		t.Fatalf("edit file %+v", e)
+	}
+	b, err := os.ReadFile(e.path)
+	if err != nil || !strings.HasPrefix(string(b), "Adds a parser.") {
+		t.Fatalf("file %q %v", b, err)
+	}
+	m.syncPRBodyFile() // not saved yet: nothing
+	if m.confirmOpen && m.confirmKind == confirmKindPREditBody {
+		t.Fatal("card before a save")
+	}
+	if err := os.WriteFile(e.path, []byte("New text.\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(2 * time.Second)
+	_ = os.Chtimes(e.path, later, later)
+	m.syncPRBodyFile()
+	if !m.confirmOpen || m.confirmKind != confirmKindPREditBody {
+		t.Fatal("no card after the save")
+	}
+	bs := m.confirm.Buttons()
+	if len(bs) != 2 || bs[0].ID != "cancel" || bs[1].ID != "update-body" {
+		t.Fatalf("buttons %+v", bs)
+	}
+	if !strings.Contains(m.confirm.Box(), "New text.") {
+		t.Errorf("card does not show the text:\n%s", m.confirm.Box())
+	}
+	if cmd, _ := m.handlePRConfirm("cancel"); cmd != nil || f.called("pr edit") {
+		t.Fatal("Cancel sent the text")
+	}
+	later = later.Add(2 * time.Second)
+	_ = os.Chtimes(e.path, later, later)
+	m.syncPRBodyFile()
+	cmd, _ := m.handlePRConfirm("update-body")
+	done := cmd().(prDoneMsg)
+	if done.err != nil || !done.reopen || !f.called("pr edit 14 --body-file "+e.path) {
 		t.Errorf("done %+v calls %v", done, f.calls)
 	}
 }

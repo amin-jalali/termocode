@@ -50,3 +50,17 @@ func TestRerunFailed(t *testing.T) {
 		t.Error("nothing to re-run accepted")
 	}
 }
+
+// EditBody sends the new description from a file (never as an argument).
+func TestEditBody(t *testing.T) {
+	f := &fakeGH{answers: map[string]fakeAnswer{"pr edit": {}}}
+	if err := EditBody(context.Background(), f.run, "/r", 7, "/r/.git/TERMOCODE_PR_7.md"); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(f.calls[0], " "); got != "pr edit 7 --body-file /r/.git/TERMOCODE_PR_7.md" {
+		t.Errorf("args %q", got)
+	}
+	if err := EditBody(context.Background(), (&fakeGH{}).run, "/r", 7, "-x"); err == nil {
+		t.Error("an option-like path accepted")
+	}
+}
