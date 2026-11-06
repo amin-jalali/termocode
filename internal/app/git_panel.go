@@ -21,19 +21,19 @@ import (
 type gitRowKind int
 
 const (
-	gitRowSection gitRowKind = iota // accordion header: CHANGES / GRAPH
-	gitRowDir                       // CHANGES: directory header (tree mode)
-	gitRowFile                      // CHANGES: a changed file
-	gitRowCommit                    // GRAPH: a commit node
-	gitRowGroup                     // GRAPH: a date group header (Today, …); folds
-	gitRowMore                      // GRAPH: "Show 15 more" / "Load older commits"
-	gitRowNote                      // empty-section note ("No changes") (not selectable)
-	gitRowSpacer                    // blank separator between sections (not selectable)
-	gitRowRebase                    // the "rebase in progress" banner (git_rebase.go)
-	gitRowStopped                   // the stopped merge / cherry-pick / revert banner (git_merge_branch.go)
-	gitRowStash                     // STASHES: one stash (gitx_stash_panel.go)
-	gitRowRepo                      // REPOSITORIES: one repository (gitx_multirepo.go)
-	gitRowSubmodule                 // SUBMODULES: one submodule (gitx_multirepo.go)
+	gitRowSection   gitRowKind = iota // accordion header: CHANGES / GRAPH
+	gitRowDir                         // CHANGES: directory header (tree mode)
+	gitRowFile                        // CHANGES: a changed file
+	gitRowCommit                      // GRAPH: a commit node
+	gitRowGroup                       // GRAPH: a date group header (Today, …); folds
+	gitRowMore                        // GRAPH: "Show 15 more" / "Load older commits"
+	gitRowNote                        // empty-section note ("No changes") (not selectable)
+	gitRowSpacer                      // blank separator between sections (not selectable)
+	gitRowRebase                      // the "rebase in progress" banner (git_rebase.go)
+	gitRowStopped                     // the stopped merge / cherry-pick / revert banner (git_merge_branch.go)
+	gitRowStash                       // STASHES: one stash (gitx_stash_panel.go)
+	gitRowRepo                        // REPOSITORIES: one repository (gitx_multirepo.go)
+	gitRowSubmodule                   // SUBMODULES: one submodule (gitx_multirepo.go)
 )
 
 type gitSection int
@@ -42,8 +42,8 @@ const (
 	gitSecStaged gitSection = iota
 	gitSecChanges
 	gitSecGraph
-	gitSecConflicts // merge conflicts (unmerged paths); shown first, only when non-empty
-	gitSecStashes   // the stash list; only when there are stashes (gitx_stash_panel.go)
+	gitSecConflicts  // merge conflicts (unmerged paths); shown first, only when non-empty
+	gitSecStashes    // the stash list; only when there are stashes (gitx_stash_panel.go)
 	gitSecRepos      // the workspace's repositories; only when there are several (gitx_multirepo.go)
 	gitSecSubmodules // the active repo's submodules; only when it has some (gitx_multirepo.go)
 )
