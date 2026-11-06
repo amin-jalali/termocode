@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -72,6 +73,20 @@ func TestWorktreeDeleteDirtyUnmerged(t *testing.T) {
 		t.Fatalf("wrong name: %s", ansi.Strip(m.connect.Box()))
 	}
 	m.connect.SetInputValue("name", "feat/x")
+	// Enter in the field never deletes, even with the right name: only
+	// the Delete button does.
+	nm, c := m.routeToConnect(tea.KeyMsg{Type: tea.KeyEnter})
+	*m = nm
+	if c != nil {
+		if msg := c(); msg != nil {
+			if c2, _ := m.handleWTMsg(msg); c2 != nil {
+				t.Fatal("Enter in the name field deleted")
+			}
+		}
+	}
+	if !m.connectOpen || !git.BranchExists(root, "feat/x") {
+		t.Fatal("Enter in the name field went on")
+	}
 	cmd, _ := m.handleWTMsg(connectcard.ButtonMsg{ID: "delete"})
 	wtStep(t, m, cmd)
 	if _, err := os.Stat(x); !os.IsNotExist(err) || git.BranchExists(root, "feat/x") {
