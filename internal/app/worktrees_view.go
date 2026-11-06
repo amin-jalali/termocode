@@ -521,9 +521,9 @@ func (st *wtState) renderDetail(it wtItem, w int, now time.Time) []string {
 
 // footer is two lines: the cursor's folder and the keys.
 func (st *wtState) footer(items []wtItem, rows []wtRow, cur, w, h int) []string {
-	keys := "Enter open · a add folder · p pin · f filter · ? keys"
+	keys := "Enter open · a add folder · n new · p pin · f filter · ? keys"
 	if wtCompact(w, h) {
-		keys = "Enter card · ? keys"
+		keys = "Enter card · n new · ? keys"
 		if st.detail {
 			keys = "Esc back · ? keys"
 		}

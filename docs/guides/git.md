@@ -435,6 +435,8 @@ repository's git folder, never in your project.
 | `Enter` | Open the worktree in this window; the old session keeps running |
 | `a` | Add the worktree as a folder of this window |
 | `p` | Pin or unpin |
+| `n` | New worktree (see below) |
+| `L` | Open the setup log of a new worktree |
 | `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
@@ -443,6 +445,47 @@ repository's git folder, never in your project.
 **Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
 agents in them, from every termocode window, with the ones that wait for
 you first.
+
+### New worktree
+
+**Worktree: New…** (`n` in the view) opens a form: **Name**, **From**
+(the branch, remote branch or tag it starts from; **Start point…** lists
+them), **Branch** (made from the name; type to change it), **Agent** and
+**Task**. Nothing is made until you press **Create**; **Cancel** comes
+first. The worktree goes to `<repo>.worktrees/<branch>` next to the
+repository (setting `worktree_dir`). When git refuses (the branch or the
+folder is there already, an unknown start point) the card says why and
+nothing is left behind.
+
+**Create + Start** also starts the agent in a terminal tab inside the
+new worktree and types the task once the agent shows its input box. It
+never types into a question or a y/n prompt. An agent whose screen
+termocode cannot read gets no task; type it yourself.
+
+**Agent: Start…** opened from the WORKTREES view starts the agent in the
+selected worktree.
+
+A repository can list files for each new worktree in
+`.termocode/worktrees.json`:
+
+```jsonc
+{
+  "include": [".env", ".env.local"], // copied
+  "shared": ["node_modules"],        // linked to the main checkout's folder
+  "setup": ["pnpm install"]          // run in the new worktree
+}
+```
+
+- **include** files are copied (at most 20 MB each). **shared** files and
+  folders are links, so both worktrees see each other's writes.
+- A path that leads out of the repository is refused, and so is a file
+  git already put in the worktree. The form lists what is copied, linked
+  and skipped, by name only.
+- **setup** commands come from the repository, so they run only after you
+  trust them on a card that shows each command (**Not now** comes first).
+  The answer is kept for this exact file: a changed file asks again. They
+  run with your environment minus termocode's secrets. The card shows
+  `setup ● running`, `✓` or `✗`; `L` opens the log.
 
 ## Keys at a glance
 
