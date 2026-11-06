@@ -1,8 +1,12 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/agentlog"
 	"github.com/amin-jalali/termocode/internal/agentlog/agentlogtest"
@@ -130,5 +134,54 @@ func TestAgentSessionsResumeAndRead(t *testing.T) {
 	m.handleAIPickerSelect(id)
 	if len(ran) != 0 {
 		t.Errorf("ran %q without resume support", ran)
+	}
+}
+
+// Spec (AGX-10, D1b): / in Agent: Sessions… (with nothing typed) asks
+// for words and searches inside this project's sessions; the hits list
+// the snippet, the time and the session, and Enter reads that session in
+// the chat view. With text typed, / is part of the filter. Agent: Search
+// Sessions… asks directly. The AI gets no tool over the sessions.
+func TestAgentSessionsSearch(t *testing.T) {
+	m := sessionsTestModel(t)
+	setAgentTranscripts(t, "read")
+	runApply(m, m.openAgentSessions())
+	slash := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")}
+	if _, ok := m.agentSessionsPickerKey(slash); !ok || !m.promptOpen || m.promptKind != promptKindAgentSessionsSearch {
+		t.Fatalf("/: prompt %v kind %v", m.promptOpen, m.promptKind)
+	}
+	m.promptOpen = false
+	cmd, ok := m.handleAIPromptSubmit("queue")
+	if !ok || !m.pickerOpen || m.pickerKind != pickerKindAgentSessionsHits {
+		t.Fatalf("submit: ok %v picker %v kind %v", ok, m.pickerOpen, m.pickerKind)
+	}
+	runApply(m, cmd)
+	rows := agentPickRowsText(m.agentSearchItems())
+	if !strings.Contains(rows, "| Fix the failing test in queue.go | ") || !strings.Contains(rows, "Codex") {
+		t.Errorf("hits:\n%s", rows)
+	}
+	first := m.agentSearchItems()[0].ID
+	m.handleAIPickerSelect(first)
+	if c := m.agentChat; c == nil || !c.readOnly || !strings.Contains(c.path, "rollout-") {
+		t.Errorf("Enter on a hit: %+v", m.agentChat)
+	}
+	// With a filter typed, / is text.
+	runApply(m, m.openAgentSessions())
+	m.picker, _ = m.picker.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m.promptOpen = false
+	if _, ok := m.agentSessionsPickerKey(slash); ok || m.promptOpen {
+		t.Error("/ after typed text opened the search")
+	}
+	if p, ok := aiActionPolicyFor(agentSessionsSearchID); !ok || p.Gate != aiGateNever {
+		t.Errorf("policy %+v %v", p, ok)
+	}
+	m.pickerOpen = false
+	m.dispatchTasksPalette(agentSessionsSearchID)
+	if !m.promptOpen || m.promptKind != promptKindAgentSessionsSearch {
+		t.Errorf("palette: prompt %v", m.promptOpen)
+	}
+	doc, err := os.ReadFile(filepath.Join("..", "..", "docs", "reference", "ai-tools.md"))
+	if err != nil || strings.Contains(string(doc), "agent_sessions_search") {
+		t.Errorf("an AI tool over the sessions is listed (owner D1b: no): %v", err)
 	}
 }
