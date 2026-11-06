@@ -67,9 +67,12 @@ func TestDeskOpenURLAsksFirst(t *testing.T) {
 	if first := p.Text(".link-ask .choices button"); first != "Cancel" {
 		t.Errorf("the first choice is %q", first)
 	}
-	// A row with no URL says so.
-	deskRow(p, 2)
+	// A row with no URL says so. Cancel first and wait for the card to
+	// go, so the arrow keys that move to row 2 reach the editor, not the
+	// card (keys sent while the card was open left the cursor on row 1).
 	p.TapJS(`document.querySelector(".link-ask .choices button")`)
+	p.WaitJS(`!document.querySelector(".link-ask")`)
+	deskRow(p, 2)
 	runCmd(t, p, c, false, "open url", "View: Open URL on Current Line")
 	p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("No URL on this line.")`)
 }
