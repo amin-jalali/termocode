@@ -149,6 +149,7 @@ web	services-restart	op:services.restart
 web	services-start	op:services.start
 web	services-stop	op:services.stop
 web	snippet-picker	cmd:snippetPicker
+web	snippets-manage	cmd:manageSnippets
 web	sort-asc	cmd:sortLinesAsc
 web	sort-desc	cmd:sortLinesDesc
 web	spaces-to-tabs	cmd:spacesToTabs
@@ -429,7 +430,6 @@ missing	services-configure	Containers|S
 missing	services-open-compose	Containers|S
 missing	services-start-all	Containers|S
 missing	services-stop-all	Containers|S
-missing	snippets-manage	Editor and files|S
 missing	testing-collapse	Testing and web access|S
 missing	web-devices	Testing and web access|S
 web	view/Files	view:files
