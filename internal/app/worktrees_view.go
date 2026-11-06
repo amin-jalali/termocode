@@ -109,13 +109,14 @@ func (m Model) renderWorktreesSidebar(w, h int) string {
 }
 
 func (st *wtState) titleSuffix() string {
-	if st.filter != "" || st.filterTyping {
-		return inlineFilterTitle(st.filter, st.filterTyping, theme.CurrentIconMode == theme.IconModeASCII)
-	}
+	var parts []string
 	if st.kind != wtKindAll {
-		return st.kind.String()
+		parts = append(parts, st.kind.String())
 	}
-	return ""
+	if st.filter != "" || st.filterTyping {
+		parts = append(parts, inlineFilterTitle(st.filter, st.filterTyping, theme.CurrentIconMode == theme.IconModeASCII))
+	}
+	return strings.Join(parts, " ")
 }
 
 func (st *wtState) renderRaw(items []wtItem, rows []wtRow, w, h int, focused bool, now time.Time) string {

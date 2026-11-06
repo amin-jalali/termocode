@@ -62,7 +62,7 @@ import (
 //	contdemo[:down|noengine|menu|filter|keys|tags|ai-card|logs|inspect|search|db-menu|db-container-menu] show the Containers view with a canned host snapshot
 //	kubedemo[:restart|down|keys] show the Kubernetes view with a canned
 //	                       cluster (no kubectl; the shots and goldens)
-//	worktreesdemo[:running|waiting|asleep|external|keys] show the
+//	worktreesdemo[:running|waiting|asleep|external|keys|filter|jump] show the
 //	                       WORKTREES view with a canned repository (no git)
 //	webdemo:card|on|connected the web panel's start card, or its status
 //	                       chip with no browser / one browser (made-up

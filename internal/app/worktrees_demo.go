@@ -31,7 +31,9 @@ func wtCannedCache(vals map[string]git.WorktreeStatus) *worktrees.StatusCache {
 // worktreesDemo is the WORKTREES view with a canned repository (dev
 // action "worktreesdemo", for the screenshots and goldens; git is never
 // called). The variant puts the cursor on a card: "running" (default),
-// "waiting", "asleep", "external"; "keys" opens the ? card.
+// "waiting", "asleep", "external"; "keys" opens the ? card; "filter"
+// shows the Dirty filter with the text "fix"; "jump" opens Worktree:
+// Jump….
 func (m *Model) worktreesDemo(variant string) {
 	now := clock.Now()
 	ago := func(d time.Duration) time.Time { return now.Add(-d) }
@@ -71,6 +73,7 @@ func (m *Model) worktreesDemo(variant string) {
 	st.cursorPath = map[string]string{
 		"": "/src/app.worktrees/wt-sidebar", "running": "/src/app.worktrees/wt-sidebar",
 		"waiting": "/src/app.worktrees/toast-race", "asleep": "/src/app.worktrees/grpc", "external": "/src/api-v2", "keys": "/src/app.worktrees/wt-sidebar",
+		"filter": "/src/app.worktrees/toast-race", "jump": "/src/app.worktrees/wt-sidebar",
 	}[variant]
 	m.wt = st
 	m.activity.SetActive(activity.ViewWorktrees)
@@ -79,8 +82,13 @@ func (m *Model) worktreesDemo(variant string) {
 		m.applyLayout()
 	}
 	m.focus = FocusExplorer
-	if variant == "keys" {
+	switch variant {
+	case "keys":
 		m.openKeyCard("Worktree keys", worktreeKeyRows(), helpLocWorktrees(), nil)
+	case "filter":
+		st.kind, st.filter = wtKindDirty, "fix"
+	case "jump":
+		m.openWorktreeJump()
 	}
 	st.touch()
 }
