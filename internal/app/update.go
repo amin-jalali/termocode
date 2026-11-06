@@ -1071,6 +1071,7 @@ end })`)
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
 		m.syncCommitEditFile() // git_commit_msg.go: a saved message file
+		m.syncPRBodyFile()     // pr_edit_body.go: a saved PR description
 		m.gitBlameInit()
 		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh(), m.gitBlameRefreshCmd(false)), true // blame: again when HEAD or the file changed (gitBlameKey)
 	case gitBlameLoadedMsg: // git_blame_view.go

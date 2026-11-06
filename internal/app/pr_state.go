@@ -30,6 +30,7 @@ type prState struct {
 	thread     string        // the id of the thread on the card
 	wantThread string        // show this thread again once the PR is read again
 	line       *prLineTarget // the line the open comment prompt is for (pr_line_comment.go)
+	editBody   *prBodyEdit   // the open description file (pr_edit_body.go)
 }
 
 // prS returns the state, creating it on first use.

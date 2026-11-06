@@ -193,6 +193,12 @@ func (m *Model) handlePRConfirm(id string) (tea.Cmd, bool) {
 	if m.confirmKind == confirmKindPRThread { // pr_threads.go
 		return m.answerPRThread(id), true
 	}
+	if m.confirmKind == confirmKindPRClose { // pr_extras.go
+		return m.answerPRClose(id), true
+	}
+	if m.confirmKind == confirmKindPREditBody { // pr_edit_body.go
+		return m.answerPREditBody(id), true
+	}
 	if m.confirmKind != confirmKindPRView {
 		return nil, false
 	}
