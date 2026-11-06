@@ -2299,6 +2299,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflow-new` | AI: New Workflow… | never | starts a chat with the user; the AI drafts workflows with workflow_draft |
 | `workflow-run` | Workflows: Run Selected… | confirm (run) |   |
 | `workflow-stop` | Workflows: Stop Selected Run… | confirm (run) |   |
+| `workflow-undo-write` | Workflows: Undo a Write of Selected Run… | confirm (always asks) |   |
 | `workflows` | Workflows: Open | auto |   |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
 | `workspace-remove-folder` | Workspace: Remove Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |

@@ -647,6 +647,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workflows: Run Selected… | `workflow-run` |   |   |
 | Workflows: Stop Selected Run… | `workflow-stop` |   |   |
 | Workflows: Turn Selected On/Off… | `workflow-enable` |   |   |
+| Workflows: Undo a Write of Selected Run… | `workflow-undo-write` |   |   |
 
 ## Workspace
 

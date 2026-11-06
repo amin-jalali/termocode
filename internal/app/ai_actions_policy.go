@@ -479,14 +479,15 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Workflows view (workflows_keys.go, plan §5.8): opening and reading
 	// are free; a run reads outside systems and may write (its writes ask
 	// again on the gate card); on/off changes what runs unattended.
-	"workflows":          aiAuto(),
-	"workflow-new":       aiNever("starts a chat with the user; the AI drafts workflows with workflow_draft"),
-	"workflow-run":       aiConfirm(ai.ClassRun),
-	"workflow-dry-run":   aiConfirm(ai.ClassRun),
-	"workflow-enable":    aiDestructive(),
-	"workflow-stop":      aiConfirm(ai.ClassRun),
-	"workflow-edit-file": aiAuto(),
-	"workflow-history":   aiAuto(),
+	"workflows":           aiAuto(),
+	"workflow-new":        aiNever("starts a chat with the user; the AI drafts workflows with workflow_draft"),
+	"workflow-run":        aiConfirm(ai.ClassRun),
+	"workflow-dry-run":    aiConfirm(ai.ClassRun),
+	"workflow-enable":     aiDestructive(),
+	"workflow-stop":       aiConfirm(ai.ClassRun),
+	"workflow-edit-file":  aiAuto(),
+	"workflow-history":    aiAuto(),
+	"workflow-undo-write": aiConfirm(""), // writes to outside systems again; the undo card asks
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),
