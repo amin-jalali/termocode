@@ -15,6 +15,7 @@ type gitFileRowsKey struct {
 	files                         unsafe.Pointer
 	n                             int
 	tree, rebase                  bool
+	stopped                       string
 	conflictsC, stagedC, changesC bool
 	collapsed                     string // the folded folders
 }
@@ -40,7 +41,7 @@ func (m Model) gitFileRowsKey() gitFileRowsKey {
 	sort.Strings(folded)
 	return gitFileRowsKey{
 		files: unsafe.Pointer(unsafe.SliceData(m.gitFiles)), n: len(m.gitFiles),
-		tree: m.gitViewTree, rebase: m.gitRebase.InProgress,
+		tree: m.gitViewTree, rebase: m.gitRebase.InProgress, stopped: m.gitStopped,
 		conflictsC: m.gitConflictsCollapsed, stagedC: m.gitStagedCollapsed, changesC: m.gitChangesCollapsed,
 		collapsed: strings.Join(folded, "\x00"),
 	}

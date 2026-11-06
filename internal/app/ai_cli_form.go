@@ -53,5 +53,6 @@ func (m *Model) onAICLIStatus(msg aiCLIStatusMsg) tea.Cmd {
 	if m.profileFormOpen {
 		m.profileForm.SetAIs(m.aiFormGroups(), msg.states)
 	}
+	m.refreshAgentPicker() // Agent: Start… shows the sign-in state
 	return nil
 }

@@ -1,0 +1,16 @@
+╭────────────────────────────────────────────────────────────╮
+│  ! weekday-bugs wants to write                             │
+│──────────────────────────────────────────────────────────  │
+│                                                            │
+│  Step state · item LIN-228                                 │
+│  Linear · update_issue · LIN-228                           │
+│                                                            │
+│  state: Todo → In Review                                   │
+│                                                            │
+│  Undo: update_issue state → Todo                           │
+│                                                            │
+│    Deny      Allow once      Allow for this workflow       │
+│                                                            │
+│──────────────────────────────────────────────────────────  │
+│   ←→  move    Enter  select    Esc  cancel                 │
+╰────────────────────────────────────────────────────────────╯

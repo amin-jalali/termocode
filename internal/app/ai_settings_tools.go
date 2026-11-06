@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -107,6 +108,9 @@ func aiSettingRange(key string) (lo, hi int) {
 	if lo, hi, ok := httpSettingRange(key); ok {
 		return lo, hi
 	}
+	if lo, hi, ok := workflowSettingRange(key); ok {
+		return lo, hi
+	}
 	switch key {
 	case "tab_size":
 		return 1, 16
@@ -165,6 +169,12 @@ func aiValidateSetting(key, value string) (settingsRow, string, error) {
 			return row, "", fmt.Errorf("%s: expected an integer %d..%d", key, lo, hi)
 		}
 		return row, strconv.Itoa(n), nil
+	case "number":
+		f, err := strconv.ParseFloat(value, 64)
+		if err != nil || f < 0 || math.IsInf(f, 0) {
+			return row, "", fmt.Errorf("%s: expected a number ≥ 0, got %q", key, value)
+		}
+		return row, strconv.FormatFloat(f, 'f', -1, 64), nil
 	}
 	if choices := aiSettingChoices(e); len(choices) > 0 {
 		for _, c := range choices {
