@@ -1004,6 +1004,11 @@ export const S = {
   "aiinfo.bug_report": "Help: Bug Report",
   "ai.attach": "Add to AI Chat",
   "ai.attached": "Added to the AI chat's next message",
+  "mcp.switch": "AI: MCP: Switch Profile…",
+  "mcp.all": "All servers and tools",
+  "mcp.in_use": "This chat uses it already.",
+  "mcp.use": "Use MCP profile {name} here? The AI calls only its tools.",
+  "mcp.use_all": "Let this chat use every MCP server and tool again?",
 } as const;
 
 export type StringKey = keyof typeof S;

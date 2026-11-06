@@ -13,7 +13,7 @@ import { toast } from "./toasts";
 import { activeDesk } from "./deskeditor";
 import { saveLive } from "../views/LiveEditor";
 import { newChat } from "../views/Chat";
-import { chatFlow, exportChat, INFO_KINDS, moreChat, openInfo, startFork } from "../views/ChatMore";
+import { chatFlow, exportChat, INFO_KINDS, moreChat, openInfo, openMCPProfiles, startFork } from "../views/ChatMore";
 import { newTerm } from "../views/Term";
 import { showOnLaptop } from "../views/FileView";
 import { modKey } from "./platform";
@@ -109,6 +109,7 @@ function chatCommands(): Command[] {
     { id: "chatExport", label: "chat.export", when: hasChat, run: withChat((c) => exportChat(c.id)) },
     { id: "chatDelete", label: "chat.delete", when: hasChat, run: withChat((c) => (chatFlow.value = { s: "delete", id: c.id, title: c.title })) },
     { id: "chatClear", label: "chat.clear", when: isController, run: () => (show(), (chatFlow.value = { s: "clear" })) },
+    { id: "mcpProfile", label: "mcp.switch", when: isController, run: () => (show(), openMCPProfiles()) },
     ...INFO_KINDS.map(([kind, key]) => ({ id: "aiInfo:" + kind, label: key, when: isController, run: () => (show(), openInfo(kind)) })),
   ];
 }

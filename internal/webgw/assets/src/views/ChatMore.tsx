@@ -9,7 +9,7 @@
 import { Fragment, h } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { AIInfo, ChatExport, ChatMsg, MdNode, PaletteItem, PaletteList } from "../../../../webproto/proto";
+import type { AIInfo, ChatExport, ChatMsg, MCPProfiles, MdNode, PaletteItem, PaletteList } from "../../../../webproto/proto";
 import { copyText } from "../lib/clip";
 import { layout } from "../lib/layout";
 import { toast } from "../lib/toasts";
@@ -49,6 +49,8 @@ type Flow =
   | { s: "clear" }
   | { s: "laptop"; item: PaletteItem }
   | { s: "info"; kind: string; info: AIInfo | null }
+  | { s: "mcp"; list: MCPProfiles }
+  | { s: "mcpask"; name: string }
   | { s: "menu"; title: string; items: MenuItems };
 
 /** chatFlow is the open step of More Actions (null: none). */
@@ -108,6 +110,11 @@ export function openInfo(kind: string): void {
   );
 }
 
+/** openMCPProfiles lists the MCP profiles to switch the chat to. */
+export function openMCPProfiles(): void {
+  link.request("ai.mcp_profiles").then((data) => (chatFlow.value = { s: "mcp", list: data as MCPProfiles }), fail);
+}
+
 /** exportChat saves the chat as markdown in the browser. */
 export function exportChat(id: string): void {
   link.request("chat.export", { id }).then((data) => {
@@ -136,6 +143,7 @@ function moreItems(chat: MoreChat, cmds: readonly PaletteItem[]): MenuItems {
     { label: t("chat.clear"), run: () => (chatFlow.value = { s: "clear" }) },
   ];
   if (cmds.length > 0) items.push(null, ...cmds.map((it) => ({ label: it.title, run: () => runLaptop(it) })));
+  items.push(null, { label: t("mcp.switch"), run: openMCPProfiles });
   items.push(null, ...INFO_KINDS.map(([kind, key]) => ({ label: t(key), run: () => openInfo(kind) })));
   return items;
 }
@@ -321,6 +329,36 @@ export function ChatMoreFlows() {
       return <AskLaptop label={t("chat.clear")} text={t("chat.clear_ask")} send={() => link.request("chat.clear")} onDone={done} />;
     case "laptop":
       return <AskLaptop label={f.item.title} text={t("cmd.ask_text", { name: f.item.title })} send={() => link.request("palette.ask", { id: f.item.id })} onDone={done} />;
+    case "mcp": {
+      const mark = (on: boolean) => (on ? "● " : "");
+      const rows = [{ label: mark(f.list.current === "") + t("mcp.all"), name: "" }, ...f.list.profiles.map((p) => ({ label: mark(f.list.current === p.name) + p.name, name: p.name }))];
+      return (
+        <RowMenu
+          title={t("mcp.switch")}
+          items={rows.map((r) => ({
+            label: r.label,
+            pick: () => {
+              if (r.name === f.list.current) return void toast("info", t("mcp.in_use"));
+              chatFlow.value = { s: "mcpask", name: r.name };
+            },
+          }))}
+          onClose={() => {
+            if (chatFlow.peek() === f) done();
+          }}
+        />
+      );
+    }
+    case "mcpask": {
+      const all = f.name === "";
+      return (
+        <AskLaptop
+          label={t("mcp.switch")}
+          text={all ? t("mcp.use_all") : t("mcp.use", { name: f.name })}
+          send={() => link.request("ai.use_mcp_profile", all ? { all: true } : { name: f.name })}
+          onDone={done}
+        />
+      );
+    }
     case "info":
       return <InfoSheet info={f.info} kind={f.kind} onDone={done} />;
   }

@@ -29,6 +29,7 @@ web	ai-hooks	op:ai.info
 web	ai-keep-going	palette
 web	ai-mcp-background	palette
 web	ai-mcp-log	op:ai.info
+web	ai-mcp-profile	op:ai.use_mcp_profile
 web	ai-mcp-reconnect-all	palette
 web	ai-mcp-reset-cache	palette
 web	ai-mcp-servers	view:mcp
@@ -267,7 +268,6 @@ missing	ai-mcp-bundle	AI chat and agents|M
 missing	ai-mcp-catalog	AI chat and agents|M
 missing	ai-mcp-connect	AI chat and agents|M
 missing	ai-mcp-insert	AI chat and agents|M
-missing	ai-mcp-profile	AI chat and agents|M
 missing	ai-model-slot-add	Itermoc and AI setup|M
 missing	ai-models-edit	Itermoc and AI setup|M
 missing	ai-profile-edit	Itermoc and AI setup|M
