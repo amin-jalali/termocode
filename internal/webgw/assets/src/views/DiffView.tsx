@@ -167,8 +167,10 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
   const git = store.topic("git").value;
   const gs = git?.data as GitSnap | undefined;
   const entry = d ? gs?.files?.find((f) => f.path === d.path) : undefined;
-  // A file deleted from the working tree has no buffer: its right side is empty.
-  const deleted = d?.kind === "wt" && entry?.y === "D";
+  // The working file is the right side of a working tree change and of a
+  // revision compared with it. Deleted, it has no buffer: the side is empty.
+  const live2 = d?.kind === "wt" || d?.kind === "rev";
+  const deleted = live2 && entry?.y === "D";
   const r = d ? revs(d) : { left: "", right: "" };
   const left = useGitText(d?.path ?? "", r.left, git?.seq);
   const right = useGitText(d?.path ?? "", r.right, git?.seq);
@@ -177,7 +179,7 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
   const go = (dir: 1 | -1) => desks.peek().get(slot)?.diffGo(dir);
   const mod = modKey();
   // The live buffer has no last line end; git's text has one.
-  const leftSide = left.side && d.kind === "wt" && !deleted ? { ...left.side, text: left.side.text.replace(/\n$/, "") } : left.side;
+  const leftSide = left.side && live2 && !deleted ? { ...left.side, text: left.side.text.replace(/\n$/, "") } : left.side;
   const rightSide: Side | null = deleted ? { text: "", binary: false, cut: false } : right.side;
   const binary = leftSide?.binary || rightSide?.binary;
   const cut = leftSide?.cut || rightSide?.cut;
@@ -195,7 +197,7 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
       actionsInto={"ed-actions-" + slot}
       actions={
         <>
-          {d.kind !== "wt" && <Chip>{t("viewonly")}</Chip>}
+          {!live2 && <Chip>{t("viewonly")}</Chip>}
           {d.kind === "review" && cards.value.some((c) => c.id === d.hash) && (
             <button type="button" class="tb" data-act="review" title={t("dv.review")} onClick={() => goRoute({ ...route.peek(), card: d.hash })}>
               {t("dv.review")}
@@ -248,9 +250,9 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
           <p class="empty">{t("dv.binary")}</p>
         ) : d.kind === "review" ? (
           <ReviewSide d={d} slot={slot} />
-        ) : !leftSide || (d.kind !== "wt" && !rightSide) ? (
+        ) : !leftSide || (!live2 && !rightSide) ? (
           <div class="editor-host desk-host" />
-        ) : d.kind === "wt" && !deleted ? (
+        ) : live2 && !deleted ? (
           <LiveSide d={d} left={leftSide} slot={slot} onCount={onCount} />
         ) : (
           rightSide && <StaticDiff d={d} left={leftSide} right={rightSide} slot={slot} onCount={onCount} />

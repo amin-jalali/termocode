@@ -5,13 +5,14 @@
 // Next and Previous Conflict, source control's tree or flat list, and
 // staging, unstaging or discarding the selected rows or the change at
 // the caret; the tags (check one out) and the stash (apply an entry);
-// undo, redo, the reflog and a fixup (each after the laptop's card).
+// undo, redo, the reflog and a fixup (each after the laptop's card);
+// the file compared with a revision.
 import type { Command } from "../../lib/commands";
 import { blameOn } from "../../lib/blame";
 import { GRAPH_TAB, PRS_TAB } from "../../lib/gittab";
 import { go } from "../../lib/router";
 import { activeDesk } from "../../lib/deskeditor";
-import { diffOf } from "../../lib/difftab";
+import { diffOf, diffTab, isVirtual } from "../../lib/difftab";
 import { discardHunk, discardLines, lineTarget, stageLines } from "../../lib/gitlines";
 import { conflictRows, gitAsk, mergeActs, nextRow, scmTree } from "../../lib/gitnav";
 import { toast } from "../../lib/toasts";
@@ -119,6 +120,28 @@ function fixup(): void {
   }, gitFailed);
 }
 
+/** fileNow is the workspace file the focused editor shows (a file tab,
+ * or the working side of its change), or null. */
+function fileNow(): string | null {
+  const tab = activeFile.peek();
+  if (!tab) return null;
+  const d = diffOf(tab);
+  if (d) return d.kind === "wt" || d.kind === "rev" || d.kind === "idx" ? d.path : null;
+  return isVirtual(tab) ? null : tab;
+}
+
+/** compareRev picks a commit (by subject, with its branches and tags)
+ * and opens the file at it beside the working file. */
+function compareRev(): void {
+  const path = fileNow();
+  if (!path) return;
+  link.request("git.graph", {}).then((r) => {
+    const rows = (r as GitGraph).rows ?? [];
+    const items = rows.map((c) => ({ key: c.hash, label: c.subject, detail: [c.hash, ...(c.refs ?? []).map((x) => x.name)].join(" · ") }));
+    pick(t("gc.pick"), items, t("gf.none"), (hash) => showFile(diffTab("rev", path, hash)));
+  }, gitFailed);
+}
+
 export function gitCommands(): Command[] {
   return [
     { id: "gitGraph", label: "cmd.git_graph", when: repo, run: () => showFile(GRAPH_TAB) },
@@ -143,6 +166,7 @@ export function gitCommands(): Command[] {
     { id: "gitRedo", label: "cmd.git_redo", when: () => repo() && canAct(), run: () => (gitAsk.value = { op: "git.redo", args: {}, label: t("live.redo"), text: t("gu.redo_q") }) },
     { id: "gitReflog", label: "cmd.git_reflog", when: repo, run: reflog },
     { id: "gitFixup", label: "cmd.git_fixup", when: () => repo() && canAct(), run: fixup },
+    { id: "gitCompareRev", label: "cmd.git_compare_rev", when: () => repo() && fileNow() !== null, run: compareRev },
     { id: "scmViewToggle", label: "cmd.scm_tree", when: repo, run: () => (scmTree.value = !scmTree.peek()) },
   ];
 }
