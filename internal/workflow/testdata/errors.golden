@@ -1,0 +1,168 @@
+not json:
+  bad.jsonc: line 1: not valid JSON: invalid character '}' looking for beginning of object key string
+ends early:
+  bad.jsonc: line 3: the file ends too early (a } or ] is missing)
+not an object:
+  bad.jsonc: line 1: the file must be one { … } object
+text after:
+  bad.jsonc: line 1: more text after the end of the file's { … }
+duplicate key:
+  bad.jsonc: line 1: the key "version" appears twice in one object
+no version:
+  bad.jsonc: line 1: "version" is missing; add "version": 1
+version 2:
+  bad.jsonc: line 2: version: this file was made by a newer termocode (version 2); this one reads version 1. Update termocode.
+version text:
+  bad.jsonc: line 1: version: must be the number 1
+version 0:
+  bad.jsonc: line 1: version: must be the number 1
+no name:
+  bad.jsonc: line 1: "name" is missing
+bad name:
+  bad.jsonc: line 1: name: use a-z, 0-9, _ and -, starting with a letter, at most 40 characters
+name mismatch:
+  bad.jsonc: line 1: name: is "other" but the file is "bad.jsonc"; they must match
+no steps:
+  bad.jsonc: line 1: "steps" is missing; a workflow needs at least one step
+empty steps:
+  bad.jsonc: line 1: steps: is empty; a workflow needs at least one step
+steps not list:
+  bad.jsonc: line 1: steps: must be a list of steps
+step not object:
+  bad.jsonc: line 1: steps[0]: must be an object { … }, not a number
+no type:
+  bad.jsonc: line 1: steps[0] (x): "type" is missing; use one of: source, plan, filter, each, ai, agent, pipeline, tests, shell, write
+bad type:
+  bad.jsonc: line 1: steps[0].type: "sourse" is not a step type; use one of: source, plan, filter, each, ai, agent, pipeline, tests, shell, write (did you mean "source"?)
+bad id:
+  bad.jsonc: line 1: steps[0].id: use a-z, 0-9, _ and -, starting with a letter, at most 40 characters
+dup id:
+  bad.jsonc: line 3: steps[1] (t).id: "t" is already the id of the step on line 2
+two sources:
+  bad.jsonc: line 1: steps[1]: a second source in one list; use one source per workflow or per each
+source no from:
+  bad.jsonc: line 1: steps[0]: "from" is missing; use one of: mcp, github, shell, files, http, db
+source bad from:
+  bad.jsonc: line 1: steps[0].from: "ftp" is not allowed; use one of: mcp, github, shell, files, http, db
+mcp no server:
+  bad.jsonc: line 1: steps[0]: "server" is missing
+bad items path:
+  bad.jsonc: line 1: steps[0].items: must be a path like "$.issues" or "$.data[*].node"
+max items cap:
+  bad.jsonc: line 1: steps[0].max_items: must be a whole number from 1 to 500
+glob escapes:
+  bad.jsonc: line 1: steps[0].glob: must stay inside the workspace (no leading / and no ..)
+sql write:
+  bad.jsonc: line 1: steps[0].sql: a source may only read: start with SELECT (or WITH … SELECT) and run one statement
+sql two:
+  bad.jsonc: line 1: steps[0].sql: a source may only read: start with SELECT (or WITH … SELECT) and run one statement
+github what:
+  bad.jsonc: line 1: steps[0].what: "repos" is not allowed; use one of: issues, pulls, checks
+shell parse:
+  bad.jsonc: line 1: steps[0].parse: "xml" is not allowed; use one of: json, jsonl, lines
+argv template:
+  bad.jsonc: line 1: steps[0].argv[1]: {{…}} templates are not allowed in a command line (item text must never become an argument); pass data in env or a file
+precheck template:
+  bad.jsonc: line 1: schedule.precheck[1]: {{…}} templates are not allowed in a command line (item text must never become an argument); pass data in env or a file
+argv empty:
+  bad.jsonc: line 1: steps[0].argv: is empty; give the program and its arguments
+cwd escapes:
+  bad.jsonc: line 1: steps[0].cwd: must be a path inside the workspace (no leading /, ~ or ..)
+prompt both:
+  bad.jsonc: line 1: steps[0]: has both "prompt" and "prompt_file"; keep one
+ai nothing:
+  bad.jsonc: line 1: steps[0]: needs "prompt" or "prompt_file" (or a "profile")
+ai allow:
+  bad.jsonc: line 1: steps[0].tools.allow: a workflow can only remove tools; use "deny"
+prompt file escapes:
+  bad.jsonc: line 1: steps[0].prompt_file: must be a path inside the workspace (no leading /, ~ or ..)
+agent bad:
+  bad.jsonc: line 1: steps[0].agent: "other" is not allowed; use one of: codex, claude-code
+agent sandbox:
+  bad.jsonc: line 1: steps[0].sandbox: "none" is not allowed; use one of: worktree, read-only
+tests both:
+  bad.jsonc: line 1: steps[0]: has both "task" and "argv"; keep one
+filter empty:
+  bad.jsonc: line 1: steps[0]: a filter needs "when" (the keep test), "dedupe" or "take"
+each nested deep:
+  bad.jsonc: line 1: steps[0].steps[0].steps[0].steps[0]: each is nested 4 deep; the most is 3
+each no steps:
+  bad.jsonc: line 1: steps[0]: "steps" is missing
+each unknown ref:
+  bad.jsonc: line 1: step "e".items: no step has the id "nope"
+write no to:
+  bad.jsonc: line 1: steps[0]: "to" is missing; use one of: pr, commit, mcp, status, github.comment, file, http, message
+write bad gate:
+  bad.jsonc: line 1: steps[0].gate: "always" is not allowed; use one of: ask, allow, dry
+write pr title:
+  bad.jsonc: line 1: steps[0]: "title" is missing
+write comment body:
+  bad.jsonc: line 1: steps[0]: needs "body" or "body_file"
+write file mode:
+  bad.jsonc: line 1: steps[0].mode: "truncate" is not allowed; use one of: create, overwrite, append
+write file abs:
+  bad.jsonc: line 1: steps[0].path: must be a path inside the workspace (no leading /, ~ or ..)
+else not list:
+  bad.jsonc: line 1: steps[0].else: must be a list of steps
+bad when:
+  bad.jsonc: line 1: steps[0].when: is empty
+long expr:
+  bad.jsonc: line 1: steps[0].when: the expression is 1025 bytes; the most is 1024
+long prompt:
+  bad.jsonc: line 1: steps[0].prompt: is 33 KB; the most is 32 KB (put it in a file)
+bad duration:
+  bad.jsonc: line 1: steps[0].timeout: must be a time like "90s", "20m" or "2h"
+bad on_error:
+  bad.jsonc: line 1: on_error: "retry" is not allowed; use one of: continue, stop
+bad retries:
+  bad.jsonc: line 1: retries.max: must be a whole number from 0 to 10
+limits parallel:
+  bad.jsonc: line 1: limits.parallel: must be a whole number from 1 to 16
+limits budget:
+  bad.jsonc: line 1: limits.budget_usd: must be from 0 to 1000000
+schedule none:
+  bad.jsonc: line 1: schedule: needs "preset" (hourly, daily, weekdays, weekly, monthly) or "cron"
+schedule both:
+  bad.jsonc: line 1: schedule: has both "preset" and "cron"; keep one
+schedule time:
+  bad.jsonc: line 1: schedule.time: must be HH:MM, like "09:00"
+schedule cron:
+  bad.jsonc: line 1: schedule.cron: must have 5 fields: minute hour day month weekday, like "0 9 * * 1-5"
+vars object:
+  bad.jsonc: line 1: vars.a: must be a string, a number or true/false
+vars name:
+  bad.jsonc: line 1: vars: the name "A B": use a-z, 0-9, _ and -, starting with a letter, at most 40 characters
+notify bad:
+  bad.jsonc: line 1: notify[0]: use "os", "web" or "message:<step id>"
+notify step:
+  bad.jsonc: line 1: notify[0]: "t" is not a message write step
+too many steps:
+  bad.jsonc: line 1: steps: 41 steps in all; the most is 40
+wrong kind:
+  bad.jsonc: line 1: title: must be a string, not a number
+too big:
+  bad.jsonc: the file is 257 KB; the most is 256 KB
+not utf8:
+  bad.jsonc: the file is not UTF-8 text
+deep nesting:
+  bad.jsonc: line 1: nested more than 64 levels deep
+cmd ref:
+  bad.jsonc: line 1: steps[0].env.T: ${cmd:} is not allowed in a workflow file (it would run a command on the reader's machine); use ${secret:NAME} in headers or env
+env ref:
+  bad.jsonc: line 1: steps[0].headers.A: ${env:} and ${dotenv:} are not allowed in a workflow file; store the value as a secret and use ${secret:NAME} in headers or env
+secret in prompt:
+  bad.jsonc: line 1: steps[0].prompt: ${secret:} is allowed only in headers, env and via; a secret must never be in a prompt, a body, args or a title
+secret in args:
+  bad.jsonc: line 1: steps[0].args.headers.a: ${secret:} is allowed only in headers, env and via; a secret must never be in a prompt, a body, args or a title
+secret in title:
+  bad.jsonc: line 1: steps[0].title: ${secret:} is allowed only in headers, env and via; a secret must never be in a prompt, a body, args or a title
+secret bad name:
+  bad.jsonc: line 1: steps[0].env.T: ${secret:NAME} needs a secret name of letters, digits, _, - and .
+literal gh token:
+  bad.jsonc: line 1: steps[0].headers.Authorization: looks like a key or token written in the file; store it as a secret and use ${secret:NAME} in headers or env
+literal sk in body:
+  bad.jsonc: line 1: steps[0].text: looks like a key or token written in the file; store it as a secret and use ${secret:NAME} in headers or env
+literal bearer:
+  bad.jsonc: line 1: vars.t: looks like a key or token written in the file; store it as a secret and use ${secret:NAME} in headers or env
+literal in key:
+  bad.jsonc: line 1: vars.(hidden): looks like a key or token written in the file; store it as a secret and use ${secret:NAME} in headers or env
