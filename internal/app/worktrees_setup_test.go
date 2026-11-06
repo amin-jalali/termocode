@@ -4,6 +4,7 @@ package app
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -130,5 +131,70 @@ func TestWTSetupOnCard(t *testing.T) {
 		if it.e.Path == "/src/app.worktrees/toast" && it.setup != wtSetupFailed {
 			t.Errorf("item setup %q", it.setup)
 		}
+	}
+}
+
+// W2 leftover (plan WTX-7): with an editor the setup runs in a terminal
+// tab you can watch: in the new worktree, through /bin/sh whatever your
+// shell is, with a clean environment (no termocode secrets); its exit
+// puts ✓ or ✗ on the card, and L shows the tab.
+func TestWTSetupInTab(t *testing.T) {
+	t.Setenv("ANTHROPIC_API_KEY", "sk-"+"test-not-real")
+	var jobs []terminalJob
+	old := wtSetupSpawn
+	wtSetupSpawn = func(m *Model, j terminalJob) (int, error) {
+		jobs = append(jobs, j)
+		m.terminalTabs = append(m.terminalTabs, terminalTab{BufID: 40 + len(jobs), Name: j.Label, Cwd: j.Dir, Running: true})
+		return 40 + len(jobs), nil
+	}
+	defer func() { wtSetupSpawn = old }()
+	m := wtFormModel(t)
+	folder := "/src/app.worktrees/feat-x"
+	p := &wtSetupPending{folder: folder, common: m.wt.common, setup: []string{"pnpm install", "echo 'it''s done'"}}
+	m.wtSetupStart(p)
+	if len(jobs) != 1 {
+		t.Fatalf("jobs %v", jobs)
+	}
+	j := jobs[0]
+	if j.Dir != folder || !strings.Contains(j.Label, "feat-x") || !j.ClearEnv || !strings.HasPrefix(j.Cmdline, "/bin/sh -c ") {
+		t.Errorf("job %+v", j)
+	}
+	if !strings.Contains(j.Cmdline, "pnpm install") {
+		t.Errorf("cmdline %q", j.Cmdline)
+	}
+	for k, v := range j.Env {
+		if k == "ANTHROPIC_API_KEY" || strings.Contains(v.(string), "sk-"+"test") {
+			t.Errorf("a secret in the tab's env: %s", k)
+		}
+	}
+	if r := m.wt.setups[folder]; r == nil || r.state != wtSetupRunning || r.buf != 41 {
+		t.Fatalf("setup %+v", r)
+	}
+	// The script really runs each line and stops at the first failure.
+	dir := t.TempDir()
+	script := wtSetupScript([]string{"echo one > a.txt", "false", "echo never > b.txt"})
+	cmd := exec.Command("/bin/sh", "-c", script)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "$ false") {
+		t.Errorf("script: %v\n%s", err, out)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "b.txt")); err == nil {
+		t.Error("a line after the failure ran")
+	}
+	m.terminalActiveTab = -1
+	wtSetupL := m.worktreeSetupLogFor(folder)
+	_ = wtSetupL
+	if m.terminalActiveTab != 0 {
+		t.Errorf("L did not show the tab: %d", m.terminalActiveTab)
+	}
+	m.onTaskExit(41, 1)
+	if r := m.wt.setups[folder]; r.state != wtSetupFailed {
+		t.Errorf("after exit 1: %+v", r)
+	}
+	m.wtSetupStart(p)
+	m.onTaskExit(42, 0)
+	if r := m.wt.setups[folder]; r.state != wtSetupOK || !strings.Contains(wtLastToast(m), "Setup done") {
+		t.Errorf("after exit 0: %+v %q", r, wtLastToast(m))
 	}
 }

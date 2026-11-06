@@ -40,7 +40,27 @@ const (
 // wtSetupRun is the setup of one worktree.
 type wtSetupRun struct {
 	state string
-	log   string // the log file
+	log   string // the log file (a setup run without an editor)
+	buf   int    // the terminal tab's buffer (a setup run in a tab)
+}
+
+// wtSetupSpawn opens the setup's terminal tab (a var: tests; nil = the
+// panel's spawnTerminalJob when the editor runs).
+var wtSetupSpawn func(m *Model, j terminalJob) (int, error)
+
+// wtShellQuote is s in single quotes for /bin/sh.
+func wtShellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
+
+// wtSetupScript is the /bin/sh script of a setup: each line shown, then
+// run; the first failure stops it.
+func wtSetupScript(lines []string) string {
+	var b strings.Builder
+	for _, l := range lines {
+		q := wtShellQuote("$ " + l)
+		fmt.Fprintf(&b, "printf '%%s\\n' %s; ( %s ) || { printf '\\n✗ failed: %%s\\n' %s; exit 1; }\n", q, l, wtShellQuote(l))
+	}
+	b.WriteString("printf '\\n✓ setup done\\n'\n")
+	return b.String()
 }
 
 // wtSetupPending is the open trust card.
@@ -132,6 +152,27 @@ func (m *Model) wtSetupStart(p *wtSetupPending) tea.Cmd {
 	if st.setups == nil {
 		st.setups = map[string]*wtSetupRun{}
 	}
+	spawnTab := wtSetupSpawn
+	if spawnTab == nil && m.nvim != nil {
+		spawnTab = (*Model).spawnTerminalJob
+	}
+	if spawnTab != nil {
+		env := map[string]any{}
+		for _, kv := range clistep.CleanEnv(os.Environ()) {
+			if k, v, ok := strings.Cut(kv, "="); ok {
+				env[k] = v
+			}
+		}
+		j := terminalJob{Label: "setup: " + filepath.Base(p.folder), Dir: p.folder, Env: env, ClearEnv: true,
+			Cmdline: "/bin/sh -c " + wtShellQuote(wtSetupScript(p.setup))}
+		buf, err := spawnTab(m, j)
+		if err == nil {
+			st.setups[p.folder] = &wtSetupRun{state: wtSetupRunning, buf: buf}
+			st.touch()
+			return nil
+		}
+		recordError("[worktrees] setup tab: " + err.Error()) // run it in the background instead
+	}
 	logPath := wtSetupLogPath(p.common, p.folder)
 	st.setups[p.folder] = &wtSetupRun{state: wtSetupRunning, log: logPath}
 	st.touch()
@@ -156,22 +197,54 @@ func (m *Model) onWTSetupDone(msg wtSetupDoneMsg) tea.Cmd {
 		return m.pushToastDetail(toast.Info, "Setup done", wtShortPath(msg.folder))
 	}
 	r.state = wtSetupFailed
-	why := "It could not start; see the log (L in WORKTREES)."
+	why := "See its output (L in WORKTREES)."
 	if msg.failed != "" {
 		why = "`" + aiCleanText(msg.failed) + "` failed; see the log (L in WORKTREES)."
 	}
 	return m.pushToastDetail(toast.Warn, "Setup failed", why)
 }
 
-// worktreeSetupLog opens the setup log of the cursor's worktree.
+// wtSetupExit is the end of a setup tab (ok=false: not a setup's).
+func (m *Model) wtSetupExit(buf, code int) (tea.Cmd, bool) {
+	if m.wt == nil || buf <= 0 {
+		return nil, false
+	}
+	for folder, r := range m.wt.setups {
+		if r.buf == buf && r.state == wtSetupRunning {
+			return m.onWTSetupDone(wtSetupDoneMsg{folder: folder, ok: code == 0}), true
+		}
+	}
+	return nil, false
+}
+
+// worktreeSetupLog shows the setup of the cursor's worktree: its tab, or
+// its log file.
 func (m *Model) worktreeSetupLog() tea.Cmd {
 	it, ok := m.wtSelected()
 	if !ok {
 		return m.revealWorktrees()
 	}
-	r := m.wt.setups[it.e.Path]
+	return m.worktreeSetupLogFor(it.e.Path)
+}
+
+func (m *Model) worktreeSetupLogFor(folder string) tea.Cmd {
+	r := m.wt.setups[folder]
 	if r == nil {
 		return m.pushToastDetail(toast.Info, "No setup ran in this worktree", "Setup runs after Worktree: New… when .termocode/worktrees.json lists setup commands.")
+	}
+	if r.buf > 0 {
+		for i := range m.terminalTabs {
+			if m.terminalTabs[i].BufID == r.buf {
+				m.terminalActiveTab = i
+				m.panelActive = panelKindTerminal
+				if m.nvim != nil {
+					m.applyLayout()
+					m.resizeTerminalSplit()
+				}
+				return nil
+			}
+		}
+		return m.pushToastDetail(toast.Info, "The setup tab is closed", "Its output went with it; run the setup again in a terminal if you need it.")
 	}
 	m.openFileAtLine(r.log, 1)
 	return nil

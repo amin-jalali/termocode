@@ -35,7 +35,9 @@ func wtCannedCache(vals map[string]git.WorktreeStatus) *worktrees.StatusCache {
 // called). The variant puts the cursor on a card: "running" (default),
 // "waiting", "asleep", "external"; "keys" opens the ? card; "filter"
 // shows the Dirty filter with the text "fix"; "jump" opens Worktree:
-// Jump….
+// Jump…; "link" the link card; "nested" a child, a linked PR with an
+// agent status and an external worktree with no meta; "notes" the N
+// card.
 func (m *Model) worktreesDemo(variant string) {
 	now := clock.Now()
 	ago := func(d time.Duration) time.Time { return now.Add(-d) }
@@ -48,8 +50,11 @@ func (m *Model) worktreesDemo(variant string) {
 		{Path: "/src/api-v2", Branch: "api-v2"},
 		{Path: "/src/old-fix", Branch: "old-fix", Prunable: true},
 	}
+	if variant == "nested" { // a worktree made by hand, nothing known about it
+		list = append(list[:len(list)-1], git.Worktree{Path: "/src/scratch", Branch: "scratch"}, list[len(list)-1])
+	}
 	metas := map[string]worktrees.Meta{
-		"/src/app.worktrees/wt-sidebar": {Pinned: true, Notes: []string{"adding the pin row"}, Issue: 412, LastSeen: ago(2 * time.Minute)},
+		"/src/app.worktrees/wt-sidebar": {Pinned: true, Notes: []worktrees.Note{{Text: "adding the pin row"}}, Issue: 412, LastSeen: ago(2 * time.Minute)},
 		"/src/app":                      {Pinned: true},
 		"/src/app.worktrees/toast-race": {LastSeen: ago(20 * time.Minute)},
 		"/src/app.worktrees/grpc":       {State: worktrees.StateAsleep, LastSeen: ago(72 * time.Hour)},
@@ -71,11 +76,13 @@ func (m *Model) worktreesDemo(variant string) {
 		"/src/app.worktrees/grpc":                    {Ahead: 5},
 		"/src/app/.git/termocode/worktrees/r9-tests": {Dirty: 7},
 		"/src/api-v2":                                {Behind: 12, Upstream: true},
+		"/src/scratch":                               {Dirty: 1},
 	})
 	st.cursorPath = map[string]string{
 		"": "/src/app.worktrees/wt-sidebar", "running": "/src/app.worktrees/wt-sidebar",
 		"waiting": "/src/app.worktrees/toast-race", "asleep": "/src/app.worktrees/grpc", "external": "/src/api-v2", "keys": "/src/app.worktrees/wt-sidebar",
 		"filter": "/src/app.worktrees/toast-race", "jump": "/src/app.worktrees/wt-sidebar",
+		"link": "/src/app.worktrees/toast-race", "nested": "/src/app/.git/termocode/worktrees/r9-tests", "notes": "/src/app.worktrees/wt-sidebar",
 	}[variant]
 	m.wt = st
 	m.activity.SetActive(activity.ViewWorktrees)
@@ -85,6 +92,31 @@ func (m *Model) worktreesDemo(variant string) {
 	}
 	m.focus = FocusExplorer
 	switch variant {
+	case "nested", "notes":
+		for i := range st.entries {
+			md := &st.entries[i].Meta
+			switch st.entries[i].Path {
+			case "/src/app.worktrees/toast-race":
+				md.PR, md.Checkpoint = 12, worktrees.CheckBlocked
+				md.Link = worktrees.LinkInfo{Title: "Fix the toast race", State: "open", CI: "pass"}
+				md.AddNote("waiting on review of the lock order", ago(5*time.Minute))
+			case "/src/app/.git/termocode/worktrees/r9-tests":
+				md.Parent = "/src/app.worktrees/toast-race"
+			case "/src/app.worktrees/wt-sidebar":
+				md.Checkpoint, md.CheckpointAt = worktrees.CheckWorking, ago(time.Minute)
+				md.Notes = nil
+				md.AddNote("read the plan; starting with the model", ago(3*time.Hour))
+				md.AddNote("pin row drawn; goldens next", ago(40*time.Minute))
+				md.AddNote("adding the pin row", ago(2*time.Minute))
+			}
+		}
+		if variant == "notes" {
+			m.worktreeNotes()
+		}
+	case "link":
+		m.worktreeLink()
+		m.connect.SetInputValue("ref", "https://github.com/o/app/pull/12")
+		m.connect.SetCard(m.wtLinkCard("https://github.com/o/app/pull/12"))
 	case "keys":
 		m.openKeyCard("Worktree keys", worktreeKeyRows(), helpLocWorktrees(), nil)
 	case "filter":

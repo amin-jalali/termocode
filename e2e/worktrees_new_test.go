@@ -77,7 +77,7 @@ func TestWorktreeNewIncludeAndSetup(t *testing.T) {
 	if _, err := os.Stat(ws + ".worktrees"); err == nil {
 		t.Fatal("Enter in the name field made the worktree")
 	}
-	for range 4 { // From, Branch, Agent, Task → the buttons (Cancel lit)
+	for range 5 { // Issue, From, Branch, Agent, Task → the buttons (Cancel lit)
 		tm.Send(keyTab)
 	}
 	tm.Send(keyRight + keyRight) // Cancel → Start point… → Create
@@ -124,9 +124,9 @@ func TestWorktreeNewStartsAgentWithTask(t *testing.T) {
 	tm.WaitText("New worktree", uiTimeout)
 	tm.WaitText("Claude Code", uiTimeout)
 	tm.Type("feat/agent")
-	tm.Send(keyTab + keyTab + keyTab) // → Agent
-	tm.Send(keyRight)                 // none → Claude Code
-	tm.Send(keyTab)                   // → Task
+	tm.Send(keyTab + keyTab + keyTab + keyTab) // Issue, From, Branch → Agent
+	tm.Send(keyRight)                          // none → Claude Code
+	tm.Send(keyTab)                            // → Task
 	tm.Type("say hello")
 	tm.Send(keyTab)                         // → the buttons (Cancel lit)
 	tm.Send(keyRight + keyRight + keyRight) // → Create + Start

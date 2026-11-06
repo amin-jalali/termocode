@@ -68,7 +68,7 @@ func wtDrive(t *testing.T, m *Model, cmd tea.Cmd) []tea.Msg {
 		}
 		out = append(out, msg)
 		switch msg.(type) {
-		case connectcard.ButtonMsg, connectcard.CloseMsg, wtCreatedMsg, wtNewPrepMsg, wtSetupDoneMsg:
+		case connectcard.ButtonMsg, connectcard.CloseMsg, wtCreatedMsg, wtNewPrepMsg, wtSetupDoneMsg, wtForgotMsg:
 			next, _ := m.handleWTMsg(msg)
 			queue = append(queue, next)
 		}

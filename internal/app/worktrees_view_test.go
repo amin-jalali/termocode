@@ -34,7 +34,7 @@ func wtFixture(t *testing.T) (*wtState, []wtTabAgent) {
 		{Path: "/tmp/deleted", Branch: "gone", Prunable: true},
 	}
 	metas := map[string]worktrees.Meta{
-		"/src/app.worktrees/wt-sidebar": {Pinned: true, Notes: []string{"adding the pin row"}, Issue: 412, LastSeen: wtTestNow.Add(-2 * time.Minute)},
+		"/src/app.worktrees/wt-sidebar": {Pinned: true, Notes: []worktrees.Note{{Text: "adding the pin row"}}, Issue: 412, LastSeen: wtTestNow.Add(-2 * time.Minute)},
 		"/src/app.worktrees/grpc":       {State: worktrees.StateAsleep, LastSeen: wtTestNow.Add(-72 * time.Hour)},
 		"/src/app.worktrees/old":        {State: worktrees.StateArchived},
 	}

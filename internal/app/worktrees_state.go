@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/agentroll"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/worktrees"
@@ -60,6 +61,10 @@ type wtState struct {
 	form     *wtForm                // Worktree: New… (worktrees_new.go)
 	setupAsk *wtSetupPending        // the open setup trust card (worktrees_setup.go)
 	setups   map[string]*wtSetupRun // setups run in this window, by worktree path
+
+	link        *wtLinkForm   // the open link card (worktrees_link.go)
+	linkReading bool          // due links are being read again
+	ctlLink     *wtCtlPending // the open card of a CLI link (worktrees_notes.go)
 
 	seq    uint64
 	render struct {
@@ -178,7 +183,7 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 			st.badMeta = true
 			cmds = append(cmds, m.pushToastDetail(toast.Warn, "Worktree notes could not be read", "termocode/worktrees.json in the git folder is kept as it is; pins and names are off until it is fixed."))
 		}
-		cmds = append(cmds, st.refreshStatus())
+		cmds = append(cmds, st.refreshStatus(), st.wtLinksRefresh(clock.Now()))
 	}
 	st.touch()
 	if msg.jump {
@@ -216,6 +221,12 @@ func wtTick(gen uint64) tea.Cmd {
 // handleWTMsg routes the WORKTREES messages. ok=false: not ours.
 func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	st := m.wt
+	if c, ok := m.handleWTCtlMsg(msg); ok { // the control socket (worktrees_notes.go)
+		return c, true
+	}
+	if c, ok := m.handleWTLinkMsg(msg); ok { // the link card (worktrees_link.go)
+		return c, true
+	}
 	if c, ok := m.handleWTFormMsg(msg); ok { // the dialog's buttons (worktrees_new.go)
 		return c, true
 	}
@@ -224,6 +235,8 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTNewPrep(msg), true
 	case wtCreatedMsg:
 		return m.onWTCreated(msg), true
+	case wtForgotMsg:
+		return m.onWTForgot(msg), true
 	case wtSetupDoneMsg:
 		return m.onWTSetupDone(msg), true
 	case wtLoadMsg:
