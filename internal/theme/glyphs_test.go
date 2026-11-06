@@ -33,7 +33,9 @@ func TestGlyphTable(t *testing.T) {
 		// HTTP client.
 		"send": GlyphSend, "sending": GlyphSending, "fail": GlyphFail, "redirect": GlyphRedirect,
 		// Connect a service (MCP wizard).
-		"radio-on": GlyphRadioOn, "radio-off": GlyphRadioOff, "ok": GlyphOK, "mcp": GlyphMCP, "wait": GlyphWait, "agents": GlyphAgents, "web": GlyphWeb}
+		"radio-on": GlyphRadioOn, "radio-off": GlyphRadioOff, "ok": GlyphOK, "mcp": GlyphMCP, "wait": GlyphWait, "agents": GlyphAgents, "web": GlyphWeb,
+		// WORKTREES view (WTX-2): a worktree and one that sleeps.
+		"worktree": GlyphWorktree, "asleep": GlyphAsleep}
 	for name, g := range glyphs {
 		for _, m := range []IconMode{IconModeNerdFont, IconModeUnicode, IconModeASCII} {
 			CurrentIconMode = m

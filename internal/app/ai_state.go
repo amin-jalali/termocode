@@ -117,7 +117,9 @@ type aiState struct {
 	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
-	shipGen        int
+	// agentPickPending is the agent the open install / sign-in card is about (agent_install.go).
+	agentPickPending string
+	shipGen          int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the

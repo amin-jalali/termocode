@@ -1,12 +1,14 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"image"
 	"image/color"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -15,6 +17,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // Image preview: opening a PNG / JPEG / GIF / WebP from the explorer, Quick
@@ -86,6 +89,9 @@ func (m *Model) openImagePreview(path string) tea.Cmd {
 	if imageProtocol() == termimg.Kitty {
 		m.kittyUsed = true
 	}
+	if fsys, ok := m.remoteFS(); ok {
+		return loadImageFS(fsys, path)
+	}
 	return func() tea.Msg {
 		st, err := os.Stat(path)
 		if err != nil {
@@ -93,6 +99,34 @@ func (m *Model) openImagePreview(path string) tea.Cmd {
 		}
 		img, err := termimg.Decode(path, imagePreviewMaxBytes)
 		return imageLoadedMsg{path: path, img: img, err: err, size: st.Size(), mod: st.ModTime().UnixNano()}
+	}
+}
+
+// imageRemoteTimeout caps reading one picture from a container.
+const imageRemoteTimeout = 30 * time.Second
+
+// loadImageFS reads and decodes a picture of a container workspace
+// through its Host FS (FIX-3): the local disk is never read.
+func loadImageFS(fsys workspace.FS, path string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), imageRemoteTimeout)
+		defer cancel()
+		st, err := fsys.Stat(ctx, path)
+		if err != nil {
+			return imageLoadedMsg{path: path, err: err}
+		}
+		if st.Size() > imagePreviewMaxBytes {
+			return imageLoadedMsg{path: path, err: fmt.Errorf("image too large (%d bytes, limit %d)", st.Size(), imagePreviewMaxBytes)}
+		}
+		data, err := fsys.ReadFile(ctx, path)
+		if err != nil {
+			return imageLoadedMsg{path: path, err: err}
+		}
+		if len(data) > imagePreviewMaxBytes {
+			return imageLoadedMsg{path: path, err: fmt.Errorf("image too large (%d bytes, limit %d)", len(data), imagePreviewMaxBytes)}
+		}
+		img, err := termimg.DecodeBytes(data)
+		return imageLoadedMsg{path: path, img: img, err: err, size: int64(len(data)), mod: st.ModTime().UnixNano()}
 	}
 }
 

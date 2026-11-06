@@ -229,3 +229,12 @@ func TestContainersItemAfterTesting(t *testing.T) {
 		t.Fatalf("got %#v", cmd())
 	}
 }
+
+// The WORKTREES view has no icon: it lights Source Control (WTX-2).
+func TestWorktreesLightsSourceControl(t *testing.T) {
+	m := New()
+	m.SetActive(ViewWorktrees)
+	if !m.lit(ViewGit) || m.lit(ViewFiles) {
+		t.Error("Source Control is not lit for the WORKTREES view")
+	}
+}
