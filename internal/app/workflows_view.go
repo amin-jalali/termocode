@@ -655,8 +655,8 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 		}
 	}
 	if l != nil {
-		if l.budget {
-			out = append(out, wfxLine{" PAUSED", "head"}, wfxLine{"   the day budget is reached (workflows_day_budget_usd): the card asks to stop or go on", "warn"})
+		if l.budget != "" {
+			out = append(out, wfxLine{" PAUSED", "head"}, wfxLine{"   the " + wfxBudgetName(l.budget) + " is reached: the card asks to stop or go on", "warn"})
 		} else if l.h.Held() {
 			out = append(out, wfxLine{" PAUSED", "head"}, wfxLine{"   by you: the working step finishes, the next one waits (p continues)", "warn"})
 		}

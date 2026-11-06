@@ -170,6 +170,9 @@ one again: `termocode workflow again <name> <key>`.
 - `workflows_day_budget_usd` caps what all workflows spend on AI in one
   day (0 = no cap). A run that reaches it waits before its next step and
   asks: **Stop** (first) or **Continue**.
+- In the file, `"limits": { "budget_usd": 5, "item_budget_usd": 1.5 }`
+  caps one run and one item the same way. Each budget asks once; after
+  **Continue** it does not ask again in that run.
 - Each run keeps an `audit.jsonl` next to its run file: one line per
   step event and per answer on a write card.
 

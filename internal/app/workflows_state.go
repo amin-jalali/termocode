@@ -103,9 +103,11 @@ type wfxLive struct {
 	waiting  string   // what the run waits for ("" = nothing)
 	// scheduled: the scheduler started it (no page is opened for it).
 	scheduled bool
-	// budget: paused by the day budget; budgetOK: the user let it go on
-	// past it (it is not paused again).
-	budget, budgetOK bool
+	// budget: the budget that paused it ("" = none: "day", "run" or
+	// "item:<key>"); budgetOK: the budgets the user let it go on past
+	// (each is not asked again).
+	budget   string
+	budgetOK map[string]bool
 }
 
 func (l *wfxLive) addLine(s string) {

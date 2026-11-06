@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
 	"github.com/amin-jalali/termocode/internal/workflow/wire"
 )
@@ -91,13 +93,17 @@ func (m *Model) answerWorkflowTrustCard(kind confirmKindEnum, id string) (tea.Cm
 		if l == nil {
 			return nil, true
 		}
+		what := wfxBudgetName(l.budget)
 		if id == "continue" {
-			l.budget, l.budgetOK = false, true
+			if l.budgetOK == nil {
+				l.budgetOK = map[string]bool{}
+			}
+			l.budgetOK[l.budget], l.budget = true, ""
 			l.h.Continue()
-			return m.aiInfo(l.name + ": goes on past the day budget"), true
+			return m.aiInfo(l.name + ": goes on past the " + what), true
 		}
 		l.h.Cancel() // Stop: the safe answer
-		return m.aiInfo(l.name + ": stopped at the day budget"), true
+		return m.aiInfo(l.name + ": stopped at the " + what), true
 	}
 	return nil, false
 }
@@ -157,26 +163,93 @@ func wfxRunCost(rf *run.RunFile) float64 {
 	return sum(rf.Steps)
 }
 
-// wfxCheckBudget pauses l when today's spend reached the day budget and
-// asks; a run the user let go on is not asked again.
+// wfxBudgetName names a budget key for the user.
+func wfxBudgetName(key string) string {
+	switch {
+	case key == "run":
+		return "run budget"
+	case strings.HasPrefix(key, "item:"):
+		return "item budget of " + strings.TrimPrefix(key, "item:")
+	}
+	return "day budget"
+}
+
+// wfxCheckBudget pauses l when an item, the run or today's workflows
+// reached their budget, and asks (plan §4.4).
 func (m *Model) wfxCheckBudget(l *wfxLive) {
-	limit := wfxDayBudget()
-	if l == nil || l.dry || l.budgetOK || l.budget || limit <= 0 {
+	if l == nil {
 		return
 	}
-	spent := m.wfxDaySpent()
-	if spent < limit {
+	m.wfxBudgetCheck(l, l.h.Snapshot())
+}
+
+// wfxBudgetCheck is wfxCheckBudget on the run's state rf: the first
+// budget reached that the user did not let go on pauses the run and
+// shows the budget card (Stop first, Continue second).
+func (m *Model) wfxBudgetCheck(l *wfxLive, rf *run.RunFile) {
+	if l == nil || l.dry || l.budget != "" {
 		return
 	}
-	l.budget = true
+	var lim workflow.Limits
+	if e, ok := wire.Find(m.wfxS().list, l.name); ok && e.File != nil {
+		lim = e.File.Limits
+	}
+	key, title, body := "", "", ""
+	if lim.ItemBudgetUSD > 0 {
+		for _, it := range wfxItemCosts(rf) {
+			if it.cost >= lim.ItemBudgetUSD && !l.budgetOK["item:"+it.key] {
+				key, title = "item:"+it.key, "Item budget reached"
+				body = fmt.Sprintf("%s · item %s spent $%.2f; its budget is $%.2f (limits.item_budget_usd).", l.name, it.key, it.cost, lim.ItemBudgetUSD)
+				break
+			}
+		}
+	}
+	if spent := wfxRunCost(rf); key == "" && lim.BudgetUSD > 0 && spent >= lim.BudgetUSD && !l.budgetOK["run"] {
+		key, title = "run", "Run budget reached"
+		body = fmt.Sprintf("%s · this run spent $%.2f; its budget is $%.2f (limits.budget_usd).", l.name, spent, lim.BudgetUSD)
+	}
+	if limit := wfxDayBudget(); key == "" && limit > 0 && !l.budgetOK["day"] {
+		if spent := m.wfxDaySpent(); spent >= limit {
+			key, title = "day", "Day budget reached"
+			body = fmt.Sprintf("%s · workflows spent $%.2f today; the day budget is $%.2f (workflows_day_budget_usd).", l.name, spent, limit)
+		}
+	}
+	if key == "" {
+		return
+	}
+	l.budget = key
 	l.h.Pause()
 	if m.confirmOpen || m.promptOpen || m.pickerOpen {
 		return // the PAUSED row says why; p continues
 	}
 	st := m.wfxS()
 	st.pendingRun = l.id
-	m.wfxCard(confirmKindWorkflowBudget, "Day budget reached",
-		fmt.Sprintf("%s · workflows spent $%.2f today; the day budget is $%.2f (workflows_day_budget_usd).\n"+
-			"The run waits before its next step. Stop ends it; finished items keep their results.", l.name, spent, limit),
+	m.wfxCard(confirmKindWorkflowBudget, title,
+		body+"\nThe run waits before its next step. Stop ends it; finished items keep their results.",
 		confirm.Button{ID: "stop", Title: "Stop"}, confirm.Button{ID: "continue", Title: "Continue"})
+}
+
+type wfxItemCost struct {
+	key  string
+	cost float64
+}
+
+// wfxItemCosts is what each item of rf spent so far, in run order.
+func wfxItemCosts(rf *run.RunFile) []wfxItemCost {
+	var out []wfxItemCost
+	ids := make([]string, 0, len(rf.Steps))
+	for id := range rf.Steps {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		s := rf.Steps[id]
+		if s == nil || s.Each == nil {
+			continue
+		}
+		for _, it := range s.Each.Items {
+			out = append(out, wfxItemCost{it.Key, wfxRunCost(&run.RunFile{Steps: it.Steps})})
+		}
+	}
+	return out
 }
