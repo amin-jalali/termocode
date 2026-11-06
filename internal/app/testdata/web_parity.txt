@@ -122,6 +122,7 @@ web	containers-volume-create	op:containers.create
 web	containers-volume-disk-usage	op:containers.disk_usage
 web	containers-volume-prune	op:containers.prune
 web	containers-volume-remove	op:containers.storage_remove
+web	customize-keybindings	op:keys.bind
 web	db-add	op:db.add
 web	db-add-tunnel	op:db.ssh
 web	db-cancel	op:db.cancel
@@ -368,7 +369,6 @@ excluded	config-theme	laptop only: opens a laptop config file in the TUI
 excluded	containers-copy-id	laptop only: copies to the laptop clipboard
 excluded	containers-help	laptop only: opens the TUI guide
 excluded	copy-file-ref	laptop only: copies to the laptop clipboard
-excluded	customize-keybindings	laptop only: edits laptop key bindings
 excluded	dap-install	laptop only: installs a debug adapter on the laptop disk
 excluded	db-guide	laptop only: opens the TUI guide
 excluded	detach-session	laptop only: detaches the laptop terminal; the web has its own connection
