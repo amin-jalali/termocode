@@ -163,3 +163,29 @@ func expectAnyOp(t *testing.T, c *HubConn, ops ...string) *webproto.Req {
 		}
 	}
 }
+
+// The HTTP client's side bar, a form and the HTTP RESPONSE panel pass
+// the accessibility checker in both themes.
+func TestAxeHTTPView(t *testing.T) {
+	src := axeSource(t)
+	for _, theme := range []string{"dark", "light"} {
+		t.Run(theme, func(t *testing.T) {
+			s := StartServer(t)
+			p := NewPage(t, s, Desktop)
+			p.Media(map[string]string{"prefers-color-scheme": theme, "prefers-reduced-motion": "reduce"})
+			c := p.Login("c-http")
+			p.Tap(`nav .act-item[data-act="http"]`)
+			reply(t, c, expectOp(t, c, webproto.OpHTTPFiles, `{}`), httpFiles())
+			reply(t, c, expectOp(t, c, webproto.OpHTTPSaved, `{}`), webproto.HTTPSaved{Requests: []webproto.HTTPReqItem{{Index: 1, Name: "health", Method: "GET", URL: "http://localhost:8080/health"}}})
+			reply(t, c, expectOp(t, c, webproto.OpHTTPHistory, `{}`), webproto.HTTPHistory{Entries: []webproto.HTTPHistItem{{ID: "h1", At: 1, Method: "GET", URL: "{{host}}/users", Status: 404, ElapsedMS: 12}}})
+			p.WaitJS(`document.querySelectorAll('.tr[data-req]').length === 2`)
+			click(p, `document.querySelector('.pv[data-view="http"] [data-act="http-quick"]')`)
+			p.WaitJS(`document.querySelector(".http-form .http-url")`)
+			click(p, `document.querySelector('.pv[data-view="http"] [data-act="http-last"]')`)
+			reply(t, c, expectOp(t, c, webproto.OpHTTPResponse, `{}`), webproto.HTTPResponse{Run: 2, Method: "GET", URL: "{{host}}/users", Status: 200, StatusText: "OK",
+				ContentType: "application/json", Body: `{"a":1}`, ReqHeaders: []webproto.HTTPHeader{}, Headers: []webproto.HTTPHeader{{Name: "content-type", Value: "application/json"}}})
+			p.WaitJS(`document.querySelector(".http-resp .http-status")?.textContent.includes("200 OK")`)
+			p.axeDense(src, "http "+theme) // a dense tree, as the other side views
+		})
+	}
+}
