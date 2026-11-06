@@ -36,16 +36,17 @@ const (
 
 // Source Control context-menu action IDs.
 const (
-	gitMenuDiff     = "git-diff"
-	gitMenuStage    = "git-stage"
-	gitMenuDiscard  = "git-discard"
-	gitMenuCommit   = "git-commit"
-	gitMenuCopyHash = "git-copy-hash"
-	gitMenuCopyMsg  = "git-copy-message"
-	gitMenuRefresh  = "git-refresh"
-	gitMenuShowRaw  = "git-show-raw"
-	gitMenuRebase   = "git-rebase-from" // git_rebase.go
-	gitMenuTagHere  = "git-tag-here"    // git_tags_remotes.go
+	gitMenuDiff      = "git-diff"
+	gitMenuStage     = "git-stage"
+	gitMenuDiscard   = "git-discard"
+	gitMenuCommit    = "git-commit"
+	gitMenuCopyHash  = "git-copy-hash"
+	gitMenuCopyMsg   = "git-copy-message"
+	gitMenuRefresh   = "git-refresh"
+	gitMenuShowRaw   = "git-show-raw"
+	gitMenuRebase    = "git-rebase-from" // git_rebase.go
+	gitMenuTagHere   = "git-tag-here"    // git_tags_remotes.go
+	gitMenuResetHere = "git-reset-here"  // git_stash_reset.go
 	// GITX-2 (git_branch_ops.go).
 	gitMenuBranchHere     = "git-branch-here"
 	gitMenuCheckoutCommit = "git-checkout-commit"
@@ -93,6 +94,7 @@ func gitCommitMenuItems() []menu.Item {
 		{ID: gitMenuShowRaw, Title: "Show Raw (git show)", Icon: "≢"},
 		{ID: gitMenuRebase, Title: "Rebase from Here…", Icon: "⇅"},
 		{ID: gitMenuTagHere, Title: "Create Tag Here…", Icon: "⌂"},
+		{ID: gitMenuResetHere, Title: "Reset Current Branch to Here…", Icon: "↶"},
 		{ID: gitMenuBranchHere, Title: "Create Branch Here…", Icon: "⑂"},
 		{ID: gitMenuCheckoutCommit, Title: "Check Out This Commit (Detached)", Icon: "⎇"},
 		{Sep: true},
@@ -172,6 +174,8 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 		}
 	case gitMenuTagHere:
 		return m.gitTagHereFromRow()
+	case gitMenuResetHere:
+		return m.gitResetFromRow()
 	case gitMenuBranchHere:
 		return m.gitBranchHereFromRow()
 	case gitMenuCheckoutCommit:

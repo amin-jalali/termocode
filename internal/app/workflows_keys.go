@@ -241,6 +241,7 @@ func workflowsPaletteItems() []picker.Item {
 		{ID: "workflow-stop", Title: "Workflows: Stop Selected Run…"},
 		{ID: "workflow-edit-file", Title: "Workflows: Edit Selected File"},
 		{ID: "workflow-history", Title: "Workflows: History of Selected"},
+		{ID: "workflow-undo-write", Title: "Workflows: Undo a Write of Selected Run…"},
 	}
 }
 
@@ -268,8 +269,33 @@ func (m *Model) dispatchWorkflowsPalette(id string) (tea.Cmd, bool) {
 	case "workflow-history":
 		cmd, _ := m.handleWorkflowsPageKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 		return tea.Batch(open, cmd), true
+	case "workflow-undo-write":
+		id := m.wfxUndoRun()
+		if id == "" {
+			return tea.Batch(open, m.aiInfo("No ended run to undo a write of")), true
+		}
+		return tea.Batch(open, m.wfxAskUndo(id)), true
 	}
 	return nil, false
+}
+
+// wfxUndoRun is the run an undo is about: the run page's, else the
+// selected workflow's newest run that has ended ("" = none).
+func (m *Model) wfxUndoRun() string {
+	st := m.wfxS()
+	if id, ok := strings.CutPrefix(st.detail, "run:"); ok && st.pageOn {
+		return id
+	}
+	e, ok := m.wfxTarget()
+	if !ok {
+		return ""
+	}
+	for _, rf := range st.runs[e.Name] {
+		if st.live[rf.ID] == nil && !rf.Dry {
+			return rf.ID
+		}
+	}
+	return ""
 }
 
 // ── Problems rows for broken files ───────────────────────────────────────

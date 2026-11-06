@@ -170,6 +170,36 @@ branch name. termocode uses `--force-with-lease`: if someone pushed after
 your last fetch, git refuses and nothing changes. Fetch, look, and try
 again.
 
+## Stash with options
+
+**Git: Stash…** asks what to stash: **All changes**, **All changes and new
+files**, **Staged changes only**, or **Only the current file**. Then type a
+message, or leave it empty.
+
+**Git: Stash Actions…** lists your stashes. Pick one to **Apply** it (it
+stays), **Pop** it (apply, then drop), **View Changes**, **Create Branch
+from Stash…** (the stash is applied on the new branch, then dropped), or
+**Drop…** it. Drop asks first, and **Cancel** is ready. The toast says how
+to bring a dropped stash back (`git stash store …`).
+
+## Reset and uncommit
+
+Right-click a commit in the **GRAPH** and pick **Reset Current Branch to
+Here…**:
+
+| Mode | Your changes |
+|---|---|
+| **Soft** | The commits after it are undone; their changes stay, staged |
+| **Mixed** | The same, but the changes are not staged |
+| **Keep** | Your local changes stay; git stops if one is in the way |
+| **Hard…** | The changes in your files go. termocode first saves them as a stash and the old commit as a backup ref (`refs/termocode/backup/…`). |
+
+A card says how many commits leave the branch and how to bring them back;
+**Cancel** is ready. For **Hard…** you also type the branch name.
+
+**Git: Uncommit Last Commit (Keep Changes)** undoes the last commit. Its
+changes stay staged, so you can change them and commit again.
+
 ## The GRAPH
 
 **GRAPH** lists the commits, newest first. Each row shows a node, the
@@ -513,6 +543,49 @@ run. It picks the plan profile; then you type the task in the AI chat.
 
 Run the command again before you send the task to turn it off. It needs
 a git repository with at least one commit.
+
+## Find the commit that broke it (bisect)
+
+**Git: Bisect (Find the Commit That Broke It)…** treats `HEAD` as bad and
+asks which commit was still good. git checks out a commit in the middle.
+A picker asks about it:
+
+| Row | What it does |
+|---|---|
+| **Good: this commit works** | The problem is not here; git picks a newer commit |
+| **Bad: the problem is here** | git picks an older commit |
+| **Skip: can't test this one** | git picks a commit next to it |
+| **Run a Task to Decide…** | Pick a task. A card shows its command (**Cancel** is ready). git runs it on each commit: exit 0 is good, 125 skip, anything else bad. |
+| **End Bisect** | Back to where you started |
+
+When git knows, a card names the first bad commit: **Open Commit**,
+**End Bisect**, or **Stay Here** to look around (run **Bisect…** again
+for the picker). Commit or stash your changes first: git checks out
+other commits.
+
+## Compare branches
+
+**Git: Compare Branches…** picks a branch, remote branch or tag, then
+what to compare:
+
+| Row | Shows |
+|---|---|
+| **Changes on X since it split from yours** | What a merge of X would bring (from the merge-base to X) |
+| **Changes on yours since it split from X** | What your branch adds (swap of the row above) |
+| **yours → X (every difference)** | The two tips, file by file |
+| **Working tree → X** | Your files as they are now (saved, not committed) against X, in a read-only diff card |
+
+The first three open in the commit view, with every changed file.
+
+## Issues, new repositories and publishing
+
+These use the `gh` command (signed in with `gh auth login`).
+
+| Command | What it does |
+|---|---|
+| **Git: Issues… (Start Work on One)** | Lists the open issues. Pick one: **Start Work: New Branch** makes a branch like `12-login-crashes` (you can change the name) and switches to it; **Copy #12** copies the number. |
+| **Git: Initialize Repository** | Runs `git init` (branch `main`) in a folder that is not a repository yet |
+| **Git: Publish to GitHub…** | For a repository with no remote: type the name, pick **Private** or **Public**, then a card asks (**Cancel** is ready). gh creates the repository, adds it as `origin` and pushes. |
 
 ## Worktrees
 
