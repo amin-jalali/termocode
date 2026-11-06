@@ -1891,6 +1891,34 @@
       "phase": "v2"
     },
     {
+      "op": "usercmds.list",
+      "args": "EmptyArgs",
+      "result": "UserCmdList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "usercmds.save",
+      "args": "UserCmdSaveArgs",
+      "result": "UserCmdList",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 524288,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "workflows.stop",
       "args": "WorkflowRunArgs",
       "role": "controller",
@@ -13917,6 +13945,62 @@
         "chunk"
       ],
       "additionalProperties": true
+    },
+    "UserCmd": {
+      "type": "object",
+      "properties": {
+        "cmd": {
+          "type": "string"
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "cmd"
+      ],
+      "additionalProperties": false
+    },
+    "UserCmdList": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/UserCmd"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "UserCmdSaveArgs": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/UserCmd"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false
     },
     "UserSnippet": {
       "type": "object",
