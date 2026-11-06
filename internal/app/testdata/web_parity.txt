@@ -347,6 +347,8 @@ missing	explorer-toggle-preview	Editor and files|S
 missing	explorer-undo-rename	Editor and files|S
 missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
+missing	git-autosquash	Git|S
+missing	git-cherry-pick-branch	Git|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
 missing	git-conflict-next	Git|S
@@ -357,6 +359,10 @@ missing	git-fixup	Git|S
 missing	git-merge-next	Git|S
 missing	git-merge-prev	Git|S
 missing	git-merge-take-base	Git|S
+missing	git-patch-apply-clip	Git|S
+missing	git-patch-apply-file	Git|S
+missing	git-patch-save	Git|S
+missing	git-rebase-onto	Git|S
 missing	git-redo	Git|S
 missing	git-reflog	Git|S
 missing	git-stage-lines	Git|S
