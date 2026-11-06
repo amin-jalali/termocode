@@ -96,8 +96,10 @@ func TestAgentStepCodexInTheWorktree(t *testing.T) {
 	if strings.Contains(argv, "nil map") || strings.Contains(argv, "Fix it") {
 		t.Errorf("item or prompt text in argv:\n%s", argv)
 	}
-	if pwd := strings.TrimSpace(rig.read(t, "pwd")); pwd != wt {
-		t.Errorf("pwd %q, want the worktree", pwd)
+	// macOS: the temp folder is under /var, a link to /private/var.
+	realWt, _ := filepath.EvalSymlinks(wt)
+	if pwd := strings.TrimSpace(rig.read(t, "pwd")); pwd != wt && pwd != realWt {
+		t.Errorf("pwd %q, want the worktree %q", pwd, wt)
 	}
 	stdin := rig.read(t, "stdin")
 	for _, want := range []string{"Fix it.", aistep.DataSentence, "<<<item key=LIN-7", "nil map in parser", "<<<end item>>>"} {

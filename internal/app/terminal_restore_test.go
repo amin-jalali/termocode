@@ -181,3 +181,26 @@ func TestLiveTerminalsReplacePendingOnes(t *testing.T) {
 		t.Error("the old terminals must not come back on a later Ctrl+T")
 	}
 }
+
+// A command that starts in a shell is saved at once (the OSC from the
+// shell), not only on the next editor state message: a hangup or close
+// right after it still brings back "was running: sleep" (testkit
+// TestTerminalTabsComeBackAfterRestart failed when no state message came).
+func TestCommandStartSavesTheBusyPane(t *testing.T) {
+	m, _, _ := sessionTestModel(t)
+	m.termRestoreReady = true
+	m.termOpen = true
+	m.terminalTabs = []terminalTab{{Name: "notes", Cwd: "/w/notes", BufID: 7, Splits: []termPane{{BufID: 9, Cwd: "/w/notes"}}}}
+	m.observeTerminals()
+	notifyHandlers["termocode_term_osc"](m, []any{9, "\x1b]133;C;cmdline_url=sleep 300"})
+	m.ensureSessionWriter().flush()
+	got := loadSession().Terminals
+	if got == nil || len(got.Tabs) != 1 || len(got.Tabs[0].Panes) != 2 || got.Tabs[0].Panes[1].Program != "sleep" {
+		t.Fatalf("saved %+v", got)
+	}
+	notifyHandlers["termocode_term_osc"](m, []any{7, "\x1b]133;C;cmdline_url=make"})
+	m.ensureSessionWriter().flush()
+	if got := loadSession().Terminals; got.Tabs[0].Panes[0].Program != "make" {
+		t.Fatalf("pane 0 saved %+v", got.Tabs[0].Panes[0])
+	}
+}
