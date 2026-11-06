@@ -96,3 +96,18 @@ func TestWorktreeRefs(t *testing.T) {
 		t.Errorf("tags before branches: %v", refs)
 	}
 }
+
+// RemoteHosts (WTX-9) lists the hosts of the repository's remotes, once
+// each, in name order; a repository without remotes has none.
+func TestRemoteHosts(t *testing.T) {
+	r := committedRepo(t)
+	if h := RemoteHosts(r.dir); len(h) != 0 {
+		t.Errorf("no remotes: %v", h)
+	}
+	r.git(t, "remote", "add", "origin", "git@github.com:o/r.git")
+	r.git(t, "remote", "add", "work", "https://user@git.example.com/team/app.git")
+	r.git(t, "remote", "add", "zz", "https://github.com/o/fork.git")
+	if h := RemoteHosts(r.dir); !slices.Equal(h, []string{"github.com", "git.example.com"}) {
+		t.Errorf("hosts %v", h)
+	}
+}
