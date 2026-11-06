@@ -70,6 +70,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
 | [`tests_run`](#tests_run) | confirm (run) | asks | Run tests with the IDE's test runner (go test, pytest, cargo, jest, vitest); the Testing view shows progress. |
 | [`tests_results`](#tests_results) | auto | yes | Results of the last test run: pass / fail / skip counts, each failing test with file:line and its message, package (build) errors. |
+| [`worktrees_list`](#worktrees_list) | auto | yes | List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done) and the last note. |
+| [`worktree_note`](#worktree_note) | auto | yes | Leave a short note (one line, at most 500 characters) and / or a status on a worktree, so the user sees what you do there in the WORKTREES view. |
 | [`lsp_servers`](#lsp_servers) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the language servers termocode installs (like the manager picker). |
 | [`dap_adapters`](#dap_adapters) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the debug adapters termocode installs (like the manager picker). |
 | [`extensions`](#extensions) | list: auto<br>run: confirm (run)<br>reload: confirm (run)<br>log: auto | no | termocode's Lua extensions (~/.config/termocode/extensions). |
@@ -121,6 +123,13 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`agent_run_stop`](#agent_run_stop) | confirm (always asks): Deny (first) · Stop run | no | Stop an agent run of this chat: one that waits to start is dropped, a running one stops its steps. |
 | [`agent_run_wait`](#agent_run_wait) | auto | no | Wait until a background agent run of this chat ends (or timeout_s passes), then return its status and, when it ended, its result. |
 | [`agent_run_send`](#agent_run_send) | auto | no | Send a message to a running step of an agent run of this chat (to steer it: a hint, a narrower task, a question to answer in its result). |
+| [`workflow_list`](#workflow_list) | auto | no | List the workflows of this workspace (.termocode/workflows/*.jsonc) and of the user's own folder: name, title, state (file error, not trusted, on, off, runs by hand), steps, writes and the last run. |
+| [`workflow_read`](#workflow_read) | auto | no | Read one workflow file: where it is, whether it is trusted, its problems and warnings, its write steps (and whether each asks), and the file text. |
+| [`workflow_runs`](#workflow_runs) | auto | no | The recent runs of the workflows (or of one), newest first: id, dry run or run, state, writes. |
+| [`workflow_validate`](#workflow_validate) | auto | no | Check workflow file text (content) before you save it, or a saved workflow (name): every problem with its line, and the warnings. |
+| [`workflow_draft`](#workflow_draft) | confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version) | no | Save a workflow file .termocode/workflows/<name>.jsonc (new, or a change of one: send the whole file). |
+| [`workflow_dry_run`](#workflow_dry_run) | confirm (always asks): Deny (first) · Dry run (reads sources, runs plan steps, never writes)<br>a file the user has not trusted is refused | no | Dry run a workflow: its sources are read for real (read-only) and its plan steps run (they cost AI money), run steps are only shown and writes are listed with their full text, never sent. |
+| [`workflow_run`](#workflow_run) | confirm (always asks): Deny (first) · Run<br>then every write asks again on its own gate card (Deny first) unless allowed for this file version | no | Run a workflow now, for real. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -797,6 +806,30 @@ Results of the last test run: pass / fail / skip counts, each failing test with 
 | `only_failed` | boolean |   | list only failures |
 | `wait_ms` | integer |   | wait up to this long (ms, max 120000) for the run to end; default 0 (answer at once) |
 
+### worktrees_list
+
+List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done) and the last note.
+
+**Gate:** auto
+
+**MCP server:** yes
+
+No arguments.
+
+### worktree_note
+
+Leave a short note (one line, at most 500 characters) and / or a status on a worktree, so the user sees what you do there in the WORKTREES view. Text only; it is shown as plain text.
+
+**Gate:** auto
+
+**MCP server:** yes
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `status` | string |   | optional: your status in it. One of: `working`, `blocked`, `done` |
+| `text` | string |   | the note |
+| `worktree` | string |   | optional: a path or branch from worktrees_list; the workspace's worktree when left out |
+
 ### lsp_servers
 
 Manage the language servers termocode installs (like the manager picker). op list: the language servers for the workspace's languages and their state (installed, on PATH, installing, failed). op install: download and install one (asks the user; runs in the background, the tool waits up to wait_ms, default 60000). op uninstall: remove termocode's copy (always asks). Known: gopls, pyright, pylsp, ts_ls, rust_analyzer, clangd, lua_ls, bashls, taplo.
@@ -1440,6 +1473,92 @@ Send a message to a running step of an agent run of this chat (to steer it: a hi
 | `message` | string | yes | what to tell the step, short and concrete |
 | `run_id` | string | yes | the run id |
 | `step` | string |   | the step id or title (optional when only one step runs) |
+
+### workflow_list
+
+List the workflows of this workspace (.termocode/workflows/*.jsonc) and of the user's own folder: name, title, state (file error, not trusted, on, off, runs by hand), steps, writes and the last run.
+
+**Gate:** auto
+
+**MCP server:** no
+
+No arguments.
+
+### workflow_read
+
+Read one workflow file: where it is, whether it is trusted, its problems and warnings, its write steps (and whether each asks), and the file text.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | workflow name from workflow_list |
+
+### workflow_runs
+
+The recent runs of the workflows (or of one), newest first: id, dry run or run, state, writes. With run (an id) it shows that run's steps and every write with its state (recorded, done, denied, failed).
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `limit` | integer |   | how many runs (default 10, at most 50) |
+| `name` | string |   | only this workflow (optional) |
+| `run` | string |   | one run id: its steps and writes (optional) |
+
+### workflow_validate
+
+Check workflow file text (content) before you save it, or a saved workflow (name): every problem with its line, and the warnings. It saves nothing.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `content` | string |   | the whole JSONC text to check (optional) |
+| `name` | string |   | the workflow name: the file name must match it; alone it checks the saved file |
+
+### workflow_draft
+
+Save a workflow file .termocode/workflows/<name>.jsonc (new, or a change of one: send the whole file). It must be valid (workflow_validate checks text). The user sees the file (a diff for a change) and its write steps on a card; Create writes it and trusts that version. Nothing runs. Ask the user before you add a write step. Never put a key in it: ${secret:NAME} only in headers, env and via.
+
+**Gate:** confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `content` | string | yes | the whole JSONC file |
+| `name` | string | yes | workflow name: the file name, [a-z][a-z0-9_-]; the file's "name" must match |
+
+### workflow_dry_run
+
+Dry run a workflow: its sources are read for real (read-only) and its plan steps run (they cost AI money), run steps are only shown and writes are listed with their full text, never sent. The user confirms on a card. It waits for the dry run and answers with what it read and would write.
+
+**Gate:** confirm (always asks): Deny (first) · Dry run (reads sources, runs plan steps, never writes) · a file the user has not trusted is refused
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | workflow name from workflow_list |
+
+### workflow_run
+
+Run a workflow now, for real. The user confirms on a card first; then every write asks the user again on its own card unless they allowed it for this file version. It answers at once with the run id; workflow_runs with run=<id> shows how it went. Offer workflow_dry_run first.
+
+**Gate:** confirm (always asks): Deny (first) · Run · then every write asks again on its own gate card (Deny first) unless allowed for this file version
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | workflow name from workflow_list |
 
 ### http_list_requests
 
@@ -2250,18 +2369,28 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflow-edit-file` | Workflows: Edit Selected File | auto |   |
 | `workflow-enable` | Workflows: Turn Selected On/Off… | confirm (always asks) |   |
 | `workflow-history` | Workflows: History of Selected | auto |   |
+| `workflow-new` | AI: New Workflow… | never | starts a chat with the user; the AI drafts workflows with workflow_draft |
 | `workflow-run` | Workflows: Run Selected… | confirm (run) |   |
 | `workflow-stop` | Workflows: Stop Selected Run… | confirm (run) |   |
 | `workflows` | Workflows: Open | auto |   |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
 | `workspace-remove-folder` | Workspace: Remove Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
 | `worktree-add-folder` | Worktree: Add Selected as Folder | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-adopt` | Worktree: Adopt Selected | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-archive` | Worktree: Archive or Restore Selected… | confirm (always asks) |   |
+| `worktree-cleanup` | Worktree: Clean Up… | confirm (always asks) |   |
+| `worktree-delete` | Worktree: Delete Selected… | confirm (always asks) |   |
 | `worktree-filter` | Worktree: Next Filter | auto |   |
+| `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-link` | Worktree: Link Issue or PR… | never | links are the user's choice; the AI reads them with worktrees_list |
 | `worktree-new` | Worktree: New… | never | opens a picker or prompt that only the user can answer; use a typed tool (worktree_create comes later) |
+| `worktree-new-child` | Worktree: New Child of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-notes` | Worktree: Show Notes of Selected | auto |   |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
+| `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |
 | `worktree-view` | Worktree: Show | auto |   |
 | `zen-mode` | View: Toggle Zen Mode | auto |   |
 

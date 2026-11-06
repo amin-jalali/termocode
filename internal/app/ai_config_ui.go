@@ -199,6 +199,16 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIRulesTrust(id), true
 	case confirmKindWTSetupTrust: // worktrees_setup.go
 		return m.answerWTSetupTrust(id), true
+	case confirmKindWTCtlLink: // worktrees_notes.go
+		return m.answerWTCtlLink(id), true
+	case confirmKindWTSleep: // worktrees_sleep.go
+		return m.answerWTSleep(id), true
+	case confirmKindWTArchive: // worktrees_archive.go
+		return m.answerWTArchive(id), true
+	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
+		return m.answerWTDelete(m.confirmKind, id), true
+	case confirmKindWTCleanup, confirmKindWTCleanupDirty: // worktrees_cleanup.go
+		return m.answerWTCleanup(m.confirmKind, id), true
 	case confirmKindAISkillsTrust: // ai_skills.go
 		return m.answerAISkillsTrust(id), true
 	case confirmKindAIHooksTrust: // ai_hooks.go
@@ -307,6 +317,16 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIRulesTrust("") // Esc: no answer, the message goes back
 	case confirmKindWTSetupTrust:
 		return m.answerWTSetupTrust("") // Esc: no answer, nothing runs
+	case confirmKindWTCtlLink:
+		return m.answerWTCtlLink("") // Esc: Deny
+	case confirmKindWTSleep:
+		return m.answerWTSleep("") // Esc: Keep running
+	case confirmKindWTArchive:
+		return m.answerWTArchive("") // Esc: Cancel
+	case confirmKindWTDelete, confirmKindWTDeleteDirty:
+		return m.answerWTDelete(m.confirmKind, "") // Esc: Cancel
+	case confirmKindWTCleanup, confirmKindWTCleanupDirty:
+		return m.answerWTCleanup(m.confirmKind, "") // Esc: Cancel / Keep it
 	case confirmKindAISkillsTrust:
 		return m.answerAISkillsTrust("") // Esc: no answer, the message goes back
 	case confirmKindAIHooksTrust:

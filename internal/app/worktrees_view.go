@@ -191,11 +191,13 @@ func (st *wtState) bodyLines(items []wtItem, rows []wtRow, cur, w, h int, focuse
 			continue
 		}
 		active := i == cur
+		it := items[r.item]
+		it.depth = r.depth
 		var card []string
 		if compact {
-			card = []string{wtCompactLine(items[r.item], st.status(items[r.item]), active, focused, w)}
+			card = []string{wtCompactLine(it, st.status(it), active, focused, w)}
 		} else {
-			card = wtCardLines(items[r.item], st.status(items[r.item]), active, focused, w, now)
+			card = wtCardLines(it, st.status(it), active, focused, w, now)
 		}
 		if active {
 			first, last = len(all), len(all)+len(card)-1
@@ -244,6 +246,8 @@ func wtStateGlyph(state string) (theme.Icon, theme.Color256) {
 		return theme.GlyphAsleep, theme.TextDim
 	case wtStateGone:
 		return theme.GlyphFail, theme.DiagError
+	case wtStateArchived:
+		return theme.GlyphStop, theme.TextDim
 	}
 	return theme.GlyphSvcStopped, theme.TextDim
 }
@@ -329,6 +333,8 @@ func wtAheadBehind(s wtStatus) string {
 // the folder for one that is gone.
 func wtBranch(e worktrees.Entry) string {
 	switch {
+	case e.Meta.State == worktrees.StateArchived && e.Branch != "":
+		return e.Branch
 	case e.Gone:
 		return "folder gone"
 	case e.Branch != "":
@@ -365,7 +371,7 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 		word = fmt.Sprintf("%d %s", it.agents, it.state)
 	}
 	titleFg := theme.TextPrimary
-	if it.e.Gone || it.state == wtStateAsleep {
+	if it.e.Gone || it.state == wtStateAsleep || it.state == wtStateArchived {
 		titleFg = theme.TextMuted
 	}
 	right := []wtSeg{{g.String(), gc}, {" " + word, theme.TextMuted}}
@@ -376,7 +382,11 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	case it.state == wtStateIdle:
 		right = []wtSeg{{g.String(), gc}}
 	}
-	out := []string{wtPaint([]wtSeg{wtPinGlyph(it), {" " + wtTitle(it), titleFg}}, right, active, focused, w)}
+	out := []string{wtPaint([]wtSeg{wtPinGlyph(it), {" " + wtTreeMark(it.depth) + wtTitle(it), titleFg}}, right, active, focused, w)}
+	ind := "" // the lines under a child's name start under it
+	if it.depth > 0 {
+		ind = "  "
+	}
 
 	// 2: branch · ahead/behind · dirty (· you are here).
 	var tail []wtSeg
@@ -399,31 +409,37 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	if it.here && !hereUp {
 		tail = append(tail, wtSeg{dot + "you are here", theme.AccentGreen})
 	}
-	line2 := append([]wtSeg{{"  " + theme.GlyphWorktree.String() + " ", theme.TextDim}, {wtBranch(it.e), theme.TextSecondary}}, tail...)
+	if it.state == wtStateArchived {
+		tail = append(tail, wtSeg{dot + "archived · x restores", theme.TextDim})
+	}
+	line2 := append([]wtSeg{{ind + "  " + theme.GlyphWorktree.String() + " ", theme.TextDim}, {wtBranch(it.e), theme.TextSecondary}}, tail...)
 	out = append(out, wtPaintTail(line2, active, focused, w))
 	if w < wtCardFullW {
 		return out
 	}
 	// 3: agent · last note.
 	note := ""
-	if n := len(it.e.Meta.Notes); n > 0 {
-		note = `"` + it.e.Meta.Notes[n-1] + `"`
+	if n, ok := it.e.Meta.LastNote(); ok {
+		note = `"` + n.Text + `"`
 	}
 	switch {
 	case it.agent.name != "" && note != "":
-		out = append(out, wtPaint([]wtSeg{{"  " + theme.GlyphAI.String() + " ", theme.AccentLavender}, {it.agent.name, theme.TextSecondary}, {dot + note, theme.TextMuted}}, nil, active, focused, w))
+		out = append(out, wtPaint([]wtSeg{{ind + "  " + theme.GlyphAI.String() + " ", theme.AccentLavender}, {it.agent.name, theme.TextSecondary}, {dot + note, theme.TextMuted}}, nil, active, focused, w))
 	case it.agent.name != "":
-		out = append(out, wtPaint([]wtSeg{{"  " + theme.GlyphAI.String() + " ", theme.AccentLavender}, {it.agent.name, theme.TextSecondary}, {dot + wtAgentLine(it), theme.TextMuted}}, nil, active, focused, w))
+		out = append(out, wtPaint([]wtSeg{{ind + "  " + theme.GlyphAI.String() + " ", theme.AccentLavender}, {it.agent.name, theme.TextSecondary}, {dot + wtAgentLine(it), theme.TextMuted}}, nil, active, focused, w))
 	case note != "":
-		out = append(out, wtPaint([]wtSeg{{"  " + note, theme.TextMuted}}, nil, active, focused, w))
+		out = append(out, wtPaint([]wtSeg{{ind + "  " + note, theme.TextMuted}}, nil, active, focused, w))
 	}
 	// 4: links · last seen · locked.
 	var links []string
-	if it.e.Meta.Issue > 0 {
-		links = append(links, "#"+strconv.Itoa(it.e.Meta.Issue))
+	if c := it.e.Meta.Checkpoint; c != "" {
+		links = append(links, c)
 	}
-	if it.e.Meta.PR > 0 {
-		links = append(links, "PR #"+strconv.Itoa(it.e.Meta.PR))
+	if l := wtLinkLine(it.e.Meta); l != "" {
+		links = append(links, l)
+	}
+	if wtNoMeta(it) {
+		links = append(links, "— no meta (A adopts)")
 	}
 	if it.e.Locked {
 		links = append(links, "locked")
@@ -435,7 +451,7 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 		links = append(links, formatRecentTime(it.e.Meta.LastSeen, now))
 	}
 	if len(links) > 0 {
-		out = append(out, wtPaint([]wtSeg{{"  " + strings.Join(links, dot), theme.TextMuted}}, nil, active, focused, w))
+		out = append(out, wtPaint([]wtSeg{{ind + "  " + strings.Join(links, dot), theme.TextMuted}}, nil, active, focused, w))
 	}
 	return out
 }
@@ -485,6 +501,8 @@ func wtCompactLine(it wtItem, s wtStatus, active, focused bool, w int) string {
 	switch {
 	case it.state == wtStateAsleep && !it.e.Meta.LastSeen.IsZero():
 		right = strings.TrimSuffix(formatRecentTime(it.e.Meta.LastSeen, clock.Now()), " ago")
+	case it.state == wtStateArchived:
+		right = "archived"
 	case it.e.Gone:
 		right = "gone"
 	case !s.known:
@@ -507,7 +525,7 @@ func wtCompactLine(it wtItem, s wtStatus, active, focused bool, w int) string {
 	if it.agents > 1 {
 		right = fmt.Sprintf("%d agents", it.agents)
 	}
-	return wtPaint([]wtSeg{wtPinGlyph(it), {g.String(), gc}, {" " + name, theme.TextPrimary}}, []wtSeg{{right, theme.TextMuted}}, active, focused, w)
+	return wtPaint([]wtSeg{wtPinGlyph(it), {g.String(), gc}, {" " + wtTreeMark(it.depth) + name, theme.TextPrimary}}, []wtSeg{{right, theme.TextMuted}}, active, focused, w)
 }
 
 // renderDetail is the card page of the compact layout: the full card and

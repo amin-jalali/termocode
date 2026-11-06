@@ -61,6 +61,7 @@ import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, openSide, routeSide, sideView, type Activity } from "./ActivityBar";
 import type { StringKey } from "../strings";
 import { DeskSearch } from "../views/desk/DeskSearch";
+import { DeskWorktrees } from "../views/desk/DeskWorktrees";
 import { DeskDB } from "../views/desk/DeskDB";
 import { DeskDevice, DeskSettings } from "../views/desk/DeskSettings";
 import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
@@ -72,6 +73,7 @@ import { MDPreview } from "../views/MDPreview";
 import { CompareView } from "../views/CompareView";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
+import { GitAskHost } from "../views/git/GitAsk";
 import { AgentsView } from "../views/AgentsView";
 import { QuickInput } from "./QuickInput";
 import { RefsPeek } from "./RefsPeek";
@@ -473,6 +475,8 @@ function SideView({ id }: { id: Activity }) {
       return <DeskContainers />;
     case "agents":
       return <AgentsView />;
+    case "worktrees":
+      return <DeskWorktrees />;
     default:
       return (
         <div class="side-stack ex-stack">
@@ -545,6 +549,7 @@ export function Workbench() {
           {askHere.value && <AskHere ask={askHere.value} />}
           {askLaptop.value && <AskLaptop key={askLaptop.value.text} label={askLaptop.value.label} text={askLaptop.value.text} send={askLaptop.value.send} onDone={() => (askLaptop.value = null)} />}
           <RemoteAskHost />
+          <GitAskHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
             {all.map((g, i) => (

@@ -1,0 +1,1 @@
+{"t":"req","id":70,"op":"git.undo_plan","args":{"reflog":true,"index":2,"hash":"a1b2c3d"}}

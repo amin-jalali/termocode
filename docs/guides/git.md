@@ -487,82 +487,10 @@ a git repository with at least one commit.
 
 ## Worktrees
 
-The **WORKTREES** view lists every worktree of the repository in the
-sidebar: the main checkout, the worktrees you made in `<repo>.worktrees/`,
-the agent lanes termocode made, and worktrees made outside termocode.
-Open it with **Alt+Shift+W** or **Worktree: Show**. It lives under the
-Source Control icon, which is lit while it shows.
+The **WORKTREES** view (**Alt+Shift+W**) lists every worktree of the
+repository: make, open, pin, link, sleep, archive, delete and clean them
+up. See [Worktrees](worktrees.md).
 
-- Groups: **PINNED**, **ACTIVE**, **ASLEEP** and **EXTERNAL**.
-- Each card shows the name, the agent's state (working, waiting for you,
-  done), the branch, commits ahead and behind its upstream, and the
-  count of changed files. A coding agent in a terminal tab of this or
-  another termocode window shows on the worktree its folder is in.
-- A worktree whose folder was deleted shows as **gone**.
-- In a short window each worktree is one line; Enter shows its card.
-- The list is read again every 10 seconds while it is on screen. Git
-  runs in the background, at most 4 calls at once.
-
-Pins and names are stored in `termocode/worktrees.json` inside the
-repository's git folder, never in your project.
-
-| Key | What it does |
-|---|---|
-| `↑` `↓` `j` `k` | Move (`g` `G` top, end) |
-| `Enter` | Open the worktree in this window; the old session keeps running |
-| `a` | Add the worktree as a folder of this window |
-| `p` | Pin or unpin |
-| `n` | New worktree (see below) |
-| `L` | Open the setup log of a new worktree |
-| `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
-| `/` | Filter by name (`Esc` clears) |
-| `R` | Read every worktree again |
-| `?` | Show these keys |
-
-**Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
-agents in them, from every termocode window, with the ones that wait for
-you first.
-
-### New worktree
-
-**Worktree: New…** (`n` in the view) opens a form: **Name**, **From**
-(the branch, remote branch or tag it starts from; **Start point…** lists
-them), **Branch** (made from the name; type to change it), **Agent** and
-**Task**. Nothing is made until you press **Create**; **Cancel** comes
-first. The worktree goes to `<repo>.worktrees/<branch>` next to the
-repository (setting `worktree_dir`). When git refuses (the branch or the
-folder is there already, an unknown start point) the card says why and
-nothing is left behind.
-
-**Create + Start** also starts the agent in a terminal tab inside the
-new worktree and types the task once the agent shows its input box. It
-never types into a question or a y/n prompt. An agent whose screen
-termocode cannot read gets no task; type it yourself.
-
-**Agent: Start…** opened from the WORKTREES view starts the agent in the
-selected worktree.
-
-A repository can list files for each new worktree in
-`.termocode/worktrees.json`:
-
-```jsonc
-{
-  "include": [".env", ".env.local"], // copied
-  "shared": ["node_modules"],        // linked to the main checkout's folder
-  "setup": ["pnpm install"]          // run in the new worktree
-}
-```
-
-- **include** files are copied (at most 20 MB each). **shared** files and
-  folders are links, so both worktrees see each other's writes.
-- A path that leads out of the repository is refused, and so is a file
-  git already put in the worktree. The form lists what is copied, linked
-  and skipped, by name only.
-- **setup** commands come from the repository, so they run only after you
-  trust them on a card that shows each command (**Not now** comes first).
-  The answer is kept for this exact file: a changed file asks again. They
-  run with your environment minus termocode's secrets. The card shows
-  `setup ● running`, `✓` or `✗`; `L` opens the log.
 ## Cherry-pick, revert and restore
 
 | Command | What it does |

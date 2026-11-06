@@ -105,7 +105,7 @@ func Build(list []git.Worktree, metas map[string]Meta) []Entry {
 	}
 	sort.Strings(gone)
 	for _, p := range gone {
-		e := Entry{Worktree: git.Worktree{Path: p}, Meta: clean[p], Gone: true, Kind: KindExternal}
+		e := Entry{Worktree: git.Worktree{Path: p, Branch: clean[p].Branch}, Meta: clean[p], Gone: true, Kind: KindExternal}
 		if (userDir != "" && within(p, userDir)) || !e.Meta.Created.IsZero() {
 			e.Kind = KindUser
 		}

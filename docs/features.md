@@ -77,6 +77,8 @@ its name and key.
 - Stage files or single hunks, commit, amend, sync, stash, blame, history. → [Git guide](guides/git.md)
 - Side-by-side diffs, a commit graph, and gutter change bars.
 - A merge-conflict resolver and a Clone repository flow.
+- A WORKTREES view for every worktree of the repository: make one with its agent and first task, pin, link an issue or PR, and see each agent's state and notes. → [Worktrees](guides/worktrees.md)
+- Sleep a worktree (its agent tabs end, its files stay), archive it (the branch stays; restore it later), delete it in safe steps, or clean up merged and old ones at once. → [Worktrees](guides/worktrees.md#clean-up)
 
 ![Source Control: commit box, change tree and commit graph](assets/screenshots/scm.png)
 

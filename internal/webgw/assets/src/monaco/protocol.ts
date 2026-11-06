@@ -210,7 +210,9 @@ export type FromFrame =
   | { t: "viewport"; first: number; last: number }
   /** diff: the diff editor counted its changes (after each change). */
   | { t: "diff"; changes: number; added: number; removed: number }
-  | { t: "cursor"; line: number; col: number }
+  /** cursor: the caret, and the rows from..to (1-based) the selection
+   * covers (the caret's row when nothing is selected). */
+  | { t: "cursor"; line: number; col: number; from?: number; to?: number }
   | { t: "save" }
   /** menu: a right click at (x, y) in the frame; sel is the selected text. */
   | { t: "menu"; x: number; y: number; sel: string; readOnly: boolean; can: MenuCan; at: AiAt }

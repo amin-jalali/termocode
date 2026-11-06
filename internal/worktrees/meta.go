@@ -39,10 +39,30 @@ type Meta struct {
 	Agent    string    `json:"agent,omitempty"`  // the agent preset started in it
 	Issue    int       `json:"issue,omitempty"`
 	PR       int       `json:"pr,omitempty"`
-	Notes    []string  `json:"notes,omitempty"`
-	State    string    `json:"state,omitempty"` // "" | asleep | archived
+	Notes    []Note    `json:"notes,omitempty"`  // agent notes, oldest first (notes.go)
+	State    string    `json:"state,omitempty"`  // "" | asleep | archived
+	Branch   string    `json:"branch,omitempty"` // an archived worktree's branch (git no longer lists it)
 	Created  time.Time `json:"created,omitzero"`
 	LastSeen time.Time `json:"last_seen,omitzero"`
+
+	Checkpoint   string    `json:"checkpoint,omitempty"` // working | blocked | done, set by an agent
+	CheckpointAt time.Time `json:"checkpoint_at,omitzero"`
+
+	Link LinkInfo `json:"link,omitzero"` // what gh last said about Issue / PR (WTX-9)
+
+	Adopted bool `json:"adopted,omitempty"` // an external worktree the user adopted (WTX-10)
+}
+
+// Empty: termocode knows nothing about the worktree.
+func (m Meta) Empty() bool { return reflect.ValueOf(m).IsZero() }
+
+// LinkInfo is the last read of a worktree's linked issue or PR.
+type LinkInfo struct {
+	Title   string    `json:"title,omitempty"`
+	State   string    `json:"state,omitempty"` // open, closed, merged
+	CI      string    `json:"ci,omitempty"`    // pull requests: pass, fail, pending or ""
+	URL     string    `json:"url,omitempty"`
+	Checked time.Time `json:"checked,omitzero"`
 }
 
 // States of Meta.State.

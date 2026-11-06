@@ -34,7 +34,7 @@ func wtFixture(t *testing.T) (*wtState, []wtTabAgent) {
 		{Path: "/tmp/deleted", Branch: "gone", Prunable: true},
 	}
 	metas := map[string]worktrees.Meta{
-		"/src/app.worktrees/wt-sidebar": {Pinned: true, Notes: []string{"adding the pin row"}, Issue: 412, LastSeen: wtTestNow.Add(-2 * time.Minute)},
+		"/src/app.worktrees/wt-sidebar": {Pinned: true, Notes: []worktrees.Note{{Text: "adding the pin row"}}, Issue: 412, LastSeen: wtTestNow.Add(-2 * time.Minute)},
 		"/src/app.worktrees/grpc":       {State: worktrees.StateAsleep, LastSeen: wtTestNow.Add(-72 * time.Hour)},
 		"/src/app.worktrees/old":        {State: worktrees.StateArchived},
 	}
@@ -68,9 +68,6 @@ func TestWTItemsGroupsAndAgents(t *testing.T) {
 	for _, it := range items {
 		by[it.e.Path] = it
 	}
-	if _, ok := by["/src/app.worktrees/old"]; ok {
-		t.Error("an archived worktree is listed")
-	}
 	check := func(path, group, state string) {
 		t.Helper()
 		it, ok := by[path]
@@ -85,6 +82,7 @@ func TestWTItemsGroupsAndAgents(t *testing.T) {
 	check("/elsewhere/api-v2", "EXTERNAL", wtStateIdle)
 	check("/src/app/.git/termocode/worktrees/r9-a", "ACTIVE", wtStateIdle)
 	check("/tmp/deleted", "EXTERNAL", wtStateGone)
+	check("/src/app.worktrees/old", "ARCHIVED", wtStateArchived) // WTX-14: the row stays, x restores it
 	if !by["/src/app"].here || by["/src/app.worktrees/toast"].here {
 		t.Error("you are here is on the wrong card")
 	}
@@ -104,7 +102,7 @@ func TestWTItemsGroupsAndAgents(t *testing.T) {
 			order = append(order, items[r.item].e.Path)
 		}
 	}
-	want := "PINNED ACTIVE /src/app.worktrees/toast /src/app /src/app/.git/termocode/worktrees/r9-a ASLEEP EXTERNAL"
+	want := "PINNED ACTIVE /src/app.worktrees/toast /src/app /src/app/.git/termocode/worktrees/r9-a ASLEEP EXTERNAL ARCHIVED"
 	if got := strings.Join(order, " "); got != want {
 		t.Errorf("order\n got %s\nwant %s", got, want)
 	}

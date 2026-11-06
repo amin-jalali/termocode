@@ -7,6 +7,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentroll"
 	"github.com/amin-jalali/termocode/internal/agents"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/worktrees"
 )
 
@@ -40,7 +41,7 @@ const (
 )
 
 // Groups of the list, in order.
-var wtGroups = []string{"PINNED", "ACTIVE", "ASLEEP", "EXTERNAL"}
+var wtGroups = []string{"PINNED", "ACTIVE", "ASLEEP", "EXTERNAL", "ARCHIVED"}
 
 // wtAgent is the agent working in a worktree: a terminal tab of this
 // window, or one of another window's (agentroll).
@@ -59,6 +60,7 @@ type wtItem struct {
 	state  string
 	group  string
 	setup  string // the setup state of a new worktree (worktrees_setup.go)
+	depth  int    // drawn under its parent (WTX-11); set when drawn
 }
 
 // wtRow is a line of the list model: a group header or a card.
@@ -66,6 +68,7 @@ type wtRow struct {
 	group string
 	item  int // index into items; -1 for a group header
 	count int // group headers: the cards in the group
+	depth int // cards: how deep under a parent of the same group (0 = a root)
 }
 
 // wtTabAgent is the part of a terminal tab the view needs.
@@ -107,7 +110,8 @@ func wtStateRank(s string) int {
 
 // wtItems joins the entries with the agents in them (this window's tabs
 // first, then the other windows'), the "you are here" mark and the
-// group. Archived worktrees are left out (W4 shows them).
+// group. Archived worktrees (their folder removed, the branch kept) go
+// under ARCHIVED.
 func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Rollup, root string) []wtItem {
 	byPath := map[string][]wtAgent{}
 	for i, t := range tabs {
@@ -138,6 +142,7 @@ func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Ro
 	var out []wtItem
 	for _, e := range entries {
 		if e.Meta.State == worktrees.StateArchived {
+			out = append(out, wtItem{e: e, state: wtStateArchived, group: "ARCHIVED"})
 			continue
 		}
 		it := wtItem{e: e, here: e.Path == here, state: wtStateIdle}
@@ -178,6 +183,9 @@ func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Ro
 
 // wtMatch: the card passes the f filter and the text filter.
 func wtMatch(it wtItem, kind wtKind, filter string, dirty func(string) (int, bool)) bool {
+	if it.state == wtStateArchived && kind != wtKindAll {
+		return false // archived rows show only in All
+	}
 	switch kind {
 	case wtKindMine:
 		if it.e.Kind != worktrees.KindMain && it.e.Kind != worktrees.KindUser {
@@ -213,20 +221,51 @@ func wtMatch(it wtItem, kind wtKind, filter string, dirty func(string) (int, boo
 }
 
 // wtRows groups the cards that pass the filters: a header, then its
-// cards; empty groups are left out.
+// cards, each child under its parent (worktrees.Nest; a parent that is
+// gone or in another group leaves the child a root); empty groups are
+// left out.
 func wtRows(items []wtItem, kind wtKind, filter string, dirty func(string) (int, bool)) []wtRow {
+	gone := map[string]bool{}
+	for _, it := range items {
+		if it.e.Gone {
+			gone[it.e.Path] = true
+		}
+	}
 	var rows []wtRow
 	for _, g := range wtGroups {
-		head := len(rows)
+		var idx []int
+		var paths, parents []string
 		for i, it := range items {
 			if it.group == g && wtMatch(it, kind, filter, dirty) {
-				if len(rows) == head {
-					rows = append(rows, wtRow{group: g, item: -1})
+				idx = append(idx, i)
+				paths = append(paths, it.e.Path)
+				p := it.e.Meta.Parent
+				if gone[p] {
+					p = ""
 				}
-				rows = append(rows, wtRow{group: g, item: i})
-				rows[head].count++
+				parents = append(parents, p)
 			}
+		}
+		if len(idx) == 0 {
+			continue
+		}
+		rows = append(rows, wtRow{group: g, item: -1, count: len(idx)})
+		order, depth := worktrees.Nest(paths, parents)
+		for k, o := range order {
+			rows = append(rows, wtRow{group: g, item: idx[o], depth: depth[k]})
 		}
 	}
 	return rows
+}
+
+// wtTreeMark is the mark before a child's name: "└ " one level down,
+// "└ … " deeper (drawn one level in).
+func wtTreeMark(depth int) string {
+	switch {
+	case depth <= 0:
+		return ""
+	case depth == 1:
+		return theme.ASCIIText("└ ")
+	}
+	return theme.ASCIIText("└ … ")
 }
