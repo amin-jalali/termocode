@@ -95,6 +95,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start Codex | `agent-start-codex` |   |   |
 | Agent: Start Gemini CLI | `agent-start-gemini` |   |   |
 | Agent: Start OpenCode | `agent-start-opencode` |   |   |
+| Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
 
 ## Bookmarks
