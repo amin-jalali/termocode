@@ -224,6 +224,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, cmd
 	}
 	// Group A: AI streaming / inline / sign-in messages run under any overlay.
+	if cmd, ok := m.handleRaceMsg(msg); ok { // agent_race.go
+		return m, cmd
+	}
 	if cmd, ok := m.handleAIMsg(msg); ok {
 		m.agentRollupSync() // OMX-35: other windows see this one's agents
 		return m, cmd
@@ -662,6 +665,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if m.reviewOpen {
 		return m.routeToReview(msg)
+	}
+	if m.raceOpen() { // agent_race.go
+		return m.routeToRace(msg)
 	}
 	if m.settingsModalOpen {
 		return m.routeToSettingsModal(msg)

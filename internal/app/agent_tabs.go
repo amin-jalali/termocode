@@ -85,7 +85,10 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		return nil
 	}
 	t.AgentState = st
-	m.agentRollupSync() // OMX-35
+	m.agentRollupSync()     // OMX-35
+	if m.raceLaneBuf(buf) { // a race lane says its own news (agent_race.go)
+		return m.raceOnAgentState(buf, st)
+	}
 	if st == agents.Done {
 		return m.notifyOS("Agent run ended")
 	}
@@ -167,8 +170,13 @@ func agentPaletteFilter(items []picker.Item) []picker.Item {
 
 // dispatchAgentPalette handles "agent-start-<id>".
 func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
-	if id == agentPickerPaletteID { // Agent: Start… (agent_picker.go)
+	switch id {
+	case agentPickerPaletteID: // Agent: Start… (agent_picker.go)
 		return m.openAgentPicker(), true
+	case agentRacePaletteID: // Agent: Race… (agent_race.go)
+		return m.openRaceForm("", ""), true
+	case agentRaceComparePaletteID:
+		return m.openRaceCompare(), true
 	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {

@@ -716,6 +716,10 @@ type Model struct {
 	importOpen bool
 	imp        *importState
 
+	// race is the agent race flow (agent_race.go): the Agent: Race…
+	// card, the compare page and the lanes; nil until first used.
+	race *raceState
+
 	// themePromptKey is the palette field the user is editing in the
 	// custom-theme editor (BgEditor, SyntaxKeyword, etc.). Mirrors
 	// settingPromptID's usage.
