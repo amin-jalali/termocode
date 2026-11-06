@@ -347,16 +347,21 @@ missing	explorer-toggle-preview	Editor and files|S
 missing	explorer-undo-rename	Editor and files|S
 missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
+missing	git-bisect	Git|S
 missing	git-ci-fix	Git|S
+missing	git-compare-branches	Git|S
 missing	git-compare-rev	Git|S
 missing	git-conflict-next	Git|S
 missing	git-conflict-prev	Git|S
 missing	git-discard-hunk	Git|S
 missing	git-discard-lines	Git|S
 missing	git-fixup	Git|S
+missing	git-init	Git|S
+missing	git-issues	Git|S
 missing	git-merge-next	Git|S
 missing	git-merge-prev	Git|S
 missing	git-merge-take-base	Git|S
+missing	git-publish	Git|S
 missing	git-redo	Git|S
 missing	git-reflog	Git|S
 missing	git-stage-lines	Git|S
