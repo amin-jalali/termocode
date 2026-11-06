@@ -1034,8 +1034,9 @@ func (m Model) renderTerminalTabBar(width int) string {
 			segBg, glyphStyle, nameStyle, closeStyle = editorBg, accent, primary, closeOnEditor
 			segTok = theme.BgEditor
 		}
-		// An agent tab (U8) shows its state mark in the glyph cell.
-		if t, ok := m.termTabAt(e); ok && t.Agent != "" {
+		// An agent tab (U8) shows its state mark in the glyph cell; an
+		// Unknown state (a preset without screen rules) keeps the glyph.
+		if t, ok := m.termTabAt(e); ok && t.Agent != "" && t.AgentState != agents.Unknown {
 			mark, c := agentMark(t.AgentState)
 			glyph, glyphStyle = mark, theme.FgBg(c, segTok)
 		}

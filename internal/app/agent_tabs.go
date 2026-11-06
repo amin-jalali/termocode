@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -143,8 +142,9 @@ func agentPaletteItems() []picker.Item {
 	return out
 }
 
-// agentLookPath finds an agent's program (a var for tests).
-var agentLookPath = exec.LookPath
+// agentLookPath finds an agent's program on PATH or in termocode's
+// tools/bin (agent_install.go; a var for tests).
+var agentLookPath = agentLookPathDefault
 
 // agentPaletteFilter drops "Agent: Start …" rows whose program is not
 // installed.
@@ -167,6 +167,9 @@ func agentPaletteFilter(items []picker.Item) []picker.Item {
 
 // dispatchAgentPalette handles "agent-start-<id>".
 func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
+	if id == agentPickerPaletteID { // Agent: Start… (agent_picker.go)
+		return m.openAgentPicker(), true
+	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
 		return nil, false
@@ -254,7 +257,7 @@ func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
 	}
 	// Without shell integration the mark stays until the tab closes;
 	// with it, the shell's command-end clears it (term_integration.go).
-	t.Agent, t.AgentState = a.ID, agents.Working
+	t.Agent, t.AgentState = a.ID, agents.StartState(a.ID)
 	// The listener first, then the line: the agent may call at once.
 	serveCmd := m.ensureMCPServeForAgent() // mcp_server auto: the agent may use the IDE's tools
 	line, launchCmd := m.agentLaunchLine(a)
@@ -263,7 +266,9 @@ func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
 		local ok, chan = pcall(function() return vim.bo[buf].channel end)
 		if ok and chan and chan > 0 then pcall(vim.fn.chansend, chan, %q) end
 	`, t.BufID, line+"\n"))
-	m.agentWatch(t.BufID, true)
+	if agents.HasScreenRules(a.ID) { // a preset without rules: nothing to read
+		m.agentWatch(t.BufID, true)
+	}
 	m.applyLayout()
 	m.resizeTerminalSplit()
 	return tea.Batch(serveCmd, launchCmd, m.agentMCPHandTip(a))
