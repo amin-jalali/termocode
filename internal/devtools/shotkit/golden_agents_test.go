@@ -46,3 +46,11 @@ func agentSessionsCases() []goldenCase {
 	sc := Scene{Name: "agent-sessions", Steps: WithEditor(Act("agentsessionsdemo"), Pause(600*time.Millisecond))}
 	return []goldenCase{{"agent-sessions-150x42", sc, 150, 42}, {"agent-sessions-80x24", sc, 80, 24}}
 }
+
+// agentUsagePlansCases are AI: Usage with the PLANS rows and the plan
+// pill in the status bar (AGX-12; app agentUsageDemo, made-up numbers,
+// no file is read) at 150x42 and 80x24.
+func agentUsagePlansCases() []goldenCase {
+	sc := Scene{Name: "agent-usage-plans", Steps: WithEditor(Act("agentusagedemo"), Pause(600*time.Millisecond))}
+	return []goldenCase{{"agent-usage-plans-150x42", sc, 150, 42}, {"agent-usage-plans-80x24", sc, 80, 24}}
+}
