@@ -11,6 +11,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/webproto"
 	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
@@ -340,6 +342,7 @@ func (m *Model) wfxBootIn(ws string, c schedule.Clock) tea.Cmd {
 		}
 		st.owner = o
 	}
+	m.wfxPrune()
 	cmds := []tea.Cmd{m.wfxResumeOnStart(), m.wfxSchedBoot(c)}
 	return tea.Batch(cmds...)
 }
@@ -387,4 +390,85 @@ func (m *Model) wfxNextRun(name string) (time.Time, bool) {
 		return time.Time{}, false
 	}
 	return m.wfx.sched.s.NextRun(name)
+}
+
+// wfxPrune deletes the runs older than workflows_history_days (at start).
+func (m *Model) wfxPrune() {
+	st := m.wfxS()
+	v, _ := workflowSettingValue("setting-workflows-history-days")
+	days, err := strconv.Atoi(v)
+	if err != nil || days < 1 || st.root == "" {
+		return
+	}
+	n, err := wire.RunFiles{Root: st.root}.Prune(clock.Now().AddDate(0, 0, -days))
+	if err != nil {
+		recordError("workflows: history: " + err.Error())
+	}
+	if n > 0 {
+		m.wfxLoad("")
+	}
+}
+
+// wfxNotifyDone tells the user that a run ended: on the OS (while the
+// terminal is in the background) and to the browsers. A scheduled run
+// notifies unless the file says otherwise; a run by hand only when the
+// file asks. The text is a short summary, never step output.
+func (m *Model) wfxNotifyDone(l *wfxLive, rf *run.RunFile) tea.Cmd {
+	if rf.Dry {
+		return nil
+	}
+	var notify []string
+	if e, ok := wire.Find(m.wfxS().list, l.name); ok && e.File != nil {
+		notify = e.File.Notify
+	}
+	osOn, web := l.scheduled && len(notify) == 0, l.scheduled && len(notify) == 0
+	for _, n := range notify {
+		osOn = osOn || n == "os"
+		web = web || n == "web"
+	}
+	if web && m.web != nil {
+		kind := webproto.AttentionRunDone
+		if rf.State != run.RunOK {
+			kind = webproto.AttentionRunFailed
+		}
+		m.web.attention(kind, rf.ID)
+	}
+	if osOn {
+		return m.notifyOS(wfxSummary(l.name, rf))
+	}
+	return nil
+}
+
+// wfxSummary is one line about a run: "weekday-bugs: done · 3 items (1
+// failed) · wrote 2".
+func wfxSummary(name string, rf *run.RunFile) string {
+	word := map[string]string{run.RunOK: "done", run.RunFail: "failed", run.RunCancel: "stopped", run.RunPause: "paused"}[rf.State]
+	if word == "" {
+		word = rf.State
+	}
+	items, failed, wrote := 0, 0, 0
+	for _, st := range rf.Steps {
+		if st == nil || st.Each == nil {
+			continue
+		}
+		for _, it := range st.Each.Items {
+			items++
+			if it.State == run.StateFailed {
+				failed++
+			}
+		}
+	}
+	for _, w := range rf.Writes {
+		if w.State == "done" {
+			wrote++
+		}
+	}
+	s := name + ": " + word
+	if items > 0 {
+		s += fmt.Sprintf(" · %d items", items)
+		if failed > 0 {
+			s += fmt.Sprintf(" (%d failed)", failed)
+		}
+	}
+	return s + fmt.Sprintf(" · wrote %d", wrote)
 }

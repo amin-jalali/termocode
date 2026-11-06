@@ -743,7 +743,7 @@ func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
 		if rf.Dry {
 			kind = "dry run"
 		}
-		return m.aiInfo(l.name + ": " + kind + " " + word), true
+		return tea.Batch(m.wfxNotifyDone(l, rf), m.aiInfo(l.name+": "+kind+" "+word)), true
 	}
 	return nil, false
 }
