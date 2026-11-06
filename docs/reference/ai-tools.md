@@ -2241,6 +2241,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-rev-prev` | Git: Open Previous Revision of File | auto |   |
 | `git-signing-toggle` | Git: Toggle Commit Signing (This Repository) | never | changes how the user's commits are signed; only the user does that |
 | `git-skip-hooks` | Git: Toggle Skip Hooks on Commit (--no-verify) | never | turns off the checks the repository runs on each commit; only the user does that |
+| `git-split-guide` | Git: How to Split a Commit | auto |   |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |

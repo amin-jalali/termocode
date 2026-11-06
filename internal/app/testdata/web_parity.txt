@@ -510,6 +510,7 @@ missing	git-rev-next	Git|S
 missing	git-rev-prev	Git|S
 missing	git-signing-toggle	Git|S
 missing	git-skip-hooks	Git|S
+missing	git-split-guide	Git|S
 missing	git-stash-actions	Git|S
 missing	git-stash-options	Git|S
 missing	git-status-blame	Git|S

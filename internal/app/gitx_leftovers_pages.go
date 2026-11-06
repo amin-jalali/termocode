@@ -11,17 +11,20 @@ import (
 )
 
 // GITX-39: the read-only git pages of the small leftovers: the
-// contributors (E28) and the Git LFS files (M10).
+// contributors (E28), the Git LFS files (M10) and the split-commit
+// guide (J12).
 
 func init() {
 	registerGitx(gitxFeature{
 		palette: []picker.Item{
 			{ID: "git-contributors", Title: "Git: Show Contributors", Hint: "the authors of this branch and their commit counts"},
 			{ID: "git-lfs-files", Title: "Git: Show LFS Files", Hint: "the files Git LFS tracks; which ones are only pointers"},
+			{ID: "git-split-guide", Title: "Git: How to Split a Commit", Hint: "step by step, with the commands of this app"},
 		},
 		policies: map[string]aiActionPolicy{
 			"git-contributors": aiAuto(),
 			"git-lfs-files":    aiAuto(),
+			"git-split-guide":  aiAuto(),
 		},
 		dispatch: func(m *Model, id string) (tea.Cmd, bool) {
 			switch id {
@@ -29,6 +32,9 @@ func init() {
 				return m.gitxOpenContributors(), true
 			case "git-lfs-files":
 				return m.gitxOpenLFSFiles(), true
+			case "git-split-guide":
+				m.gitEnsureLoaded()
+				return m.gitxOpenPage("How to Split a Commit", gitxSplitGuidePage(m.gitBranch.Name)), true
 			}
 			return nil, false
 		},
@@ -120,4 +126,38 @@ func gitxLFSPage(files []git.LFSFile) string {
 		fmt.Fprintf(&b, "%s  %9s  %s\n", state, humanBytes(f.Size), f.Path)
 	}
 	return b.String()
+}
+
+// gitxSplitGuidePage is the split-commit guide; branch is the current
+// branch.
+func gitxSplitGuidePage(branch string) string {
+	if branch == "" {
+		branch = "this branch"
+	}
+	return `How to split a commit into smaller ones (on ` + branch + `)
+
+Splitting rewrites the commit: do it before you push, or push with
+"Git: Force Push (with Lease)…" afterwards.
+
+A. The last commit
+  1. Run "Git: Uncommit Last Commit (Keep Changes)". The commit goes
+     away; its changes stay staged.
+  2. In Source Control, unstage everything that is not part of the first
+     new commit, or mark its files with Space and run
+     "Git: Commit Marked Files Only…" (c with rows marked).
+  3. Commit the first part, then stage and commit the next part, until
+     nothing is left.
+
+B. An older commit
+  1. Run "Git: Interactive Rebase…" from a commit before the one to
+     split, and set the commit to split to edit.
+  2. The rebase stops after that commit. Run
+     "Git: Uncommit Last Commit (Keep Changes)": its changes are staged.
+  3. Commit the parts one by one, as in A.2 and A.3.
+  4. Run "Git: Rebase in Progress (Continue / Skip / Abort)…" and choose
+     Continue. Abort there brings back the branch as it was.
+
+"Git: Plan Commits for My Changes with AI" can suggest how to group the
+changes into commits before you start.
+`
 }

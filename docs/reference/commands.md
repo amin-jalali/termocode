@@ -409,6 +409,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
+| Git: How to Split a Commit | `git-split-guide` |   | `step by step, with the commands of this app` |
 | Git: Initialize Repository | `git-init` |   |   |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
 | Git: Issues… (Start Work on One) | `git-issues` |   |   |
