@@ -33,6 +33,21 @@ func (m *Model) wtSelected() (wtItem, bool) {
 	return items[rows[cur].item], true
 }
 
+// wtItemByPath is the card of the worktree at path, whatever the
+// filters show.
+func (m *Model) wtItemByPath(path string) (wtItem, bool) {
+	st := m.wt
+	if st == nil {
+		return wtItem{}, false
+	}
+	for _, it := range wtItems(st.entries, m.wtTabs(), st.others, st.root) {
+		if it.e.Path == path {
+			return it, true
+		}
+	}
+	return wtItem{}, false
+}
+
 // wtUsable says why a worktree cannot be opened or added ("" = it can).
 func wtUsable(it wtItem) string {
 	if it.e.Gone {

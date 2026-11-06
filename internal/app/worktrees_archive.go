@@ -106,6 +106,11 @@ func (m *Model) worktreeArchive() tea.Cmd {
 	if !ok {
 		return m.revealWorktrees()
 	}
+	return m.wtArchiveItem(it)
+}
+
+// wtArchiveItem archives (or restores) it.
+func (m *Model) wtArchiveItem(it wtItem) tea.Cmd {
 	if it.e.Meta.State == worktrees.StateArchived {
 		return m.wtRestore(it)
 	}

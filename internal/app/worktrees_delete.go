@@ -79,6 +79,11 @@ func (m *Model) worktreeDelete() tea.Cmd {
 	if !ok {
 		return m.revealWorktrees()
 	}
+	return m.wtDeleteItem(it)
+}
+
+// wtDeleteItem starts the delete of it.
+func (m *Model) wtDeleteItem(it wtItem) tea.Cmd {
 	archived := it.e.Meta.State == worktrees.StateArchived
 	if it.e.Gone && !archived {
 		return m.pushToastDetail(toast.Info, "Its folder is gone", "F forgets it.")

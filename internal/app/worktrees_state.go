@@ -136,6 +136,7 @@ func (m *Model) worktreesSync() tea.Cmd {
 type wtLoadMsg struct {
 	gen     uint64
 	jump    bool // Worktree: Jump… asked: apply it and open the picker
+	web     bool // the page asked (web_worktrees.go): apply it, no poll tick
 	root    string
 	common  string
 	list    []git.Worktree
@@ -171,8 +172,11 @@ func (m *Model) worktreesLoadFor(jump bool) tea.Cmd {
 
 func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 	st := m.wt
-	if st == nil || (!msg.jump && (msg.gen != st.gen || !st.polling)) {
+	if st == nil || (!msg.jump && !msg.web && (msg.gen != st.gen || !st.polling)) {
 		return nil
+	}
+	if msg.web && m.web != nil {
+		m.web.wt.loading = false
 	}
 	st.loaded = true
 	st.root = msg.root
@@ -195,9 +199,11 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 		cmds = append(cmds, st.refreshStatus(), st.wtLinksRefresh(clock.Now()))
 	}
 	st.touch()
-	if msg.jump {
+	switch {
+	case msg.jump:
 		cmds = append(cmds, m.openWorktreeJump()) // the poll chain (if any) keeps its own tick
-	} else {
+	case msg.web: // the page's read: the poll chain (if any) keeps its own tick
+	default:
 		cmds = append(cmds, wtTick(st.gen))
 	}
 	return tea.Batch(cmds...)

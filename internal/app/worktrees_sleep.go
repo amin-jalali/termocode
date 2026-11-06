@@ -128,6 +128,11 @@ func (m *Model) worktreeSleep() tea.Cmd {
 	if !ok {
 		return m.revealWorktrees()
 	}
+	return m.wtSleepItem(it)
+}
+
+// wtSleepItem sleeps or wakes it.
+func (m *Model) wtSleepItem(it wtItem) tea.Cmd {
 	switch {
 	case it.e.Kind == worktrees.KindMain:
 		return m.pushToastDetail(toast.Info, "The main checkout stays awake", "Sleep is for the other worktrees.")
