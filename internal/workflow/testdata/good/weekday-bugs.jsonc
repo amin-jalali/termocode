@@ -1,0 +1,44 @@
+// .termocode/workflows/weekday-bugs.jsonc (plan §3.6)
+{
+  "version": 1,
+  "name": "weekday-bugs",
+  "title": "Weekday bug fixer",
+  "description": "New tracker bugs labeled auto-fix → agent fix in a worktree → tests → draft PR → comment the link.",
+  "schedule": { "preset": "weekdays", "time": "09:00", "tz": "Europe/Berlin",
+                "precheck": ["git", "fetch", "--dry-run"] },
+  "vars":   { "label": "auto-fix", "base": "main" },
+  "limits": { "budget_usd": 5, "item_budget_usd": 1.5, "parallel": 2, "timeout": "45m", "max_items": 10 },
+  "retries": { "max": 1, "backoff": "2m" },
+  "on_error": "continue",
+  "notify": ["os", "web", "message:sum"],
+  "steps": [
+    { "id": "bugs", "type": "source", "from": "mcp", "server": "linear", "tool": "list_issues",
+      "args": { "label": "{{vars.label}}", "state": "Todo" }, "items": "$.issues", "key": "{{item.id}}" },
+
+    { "id": "order", "type": "plan", "model": "quick", "prompt_file": "prompts/plan-bugs.md" },
+
+    { "id": "ready", "type": "filter",
+      "when": "not item.plan.skip and item.description matches \"(?i)steps to reproduce\" and not seen(item.key)",
+      "sort": "item.plan.rank", "take": 5 },
+
+    { "id": "fix", "type": "each", "items": "steps.ready.items", "parallel": 2, "worktree": true, "base": "{{vars.base}}",
+      "steps": [
+        { "id": "code", "type": "agent", "agent": "codex", "sandbox": "worktree", "prompt_file": "prompts/fix-bug.md" },
+        { "id": "test", "type": "tests", "task": "test",
+          "else": [
+            { "id": "sorry", "type": "write", "to": "mcp", "server": "linear", "tool": "create_comment",
+              "args": { "issueId": "{{item.id}}", "body": "termocode: automatic fix failed (tests red). Run {{run.id}}." } }
+          ] },
+        { "id": "pr", "type": "write", "to": "pr", "draft": true, "base": "{{vars.base}}",
+          "title": "fix: {{item.title}} ({{item.identifier}})", "body_file": "prompts/pr-body.md", "gate": "allow" },
+        { "id": "note", "type": "write", "to": "mcp", "server": "linear", "tool": "create_comment",
+          "args": { "issueId": "{{item.id}}", "body": "Draft PR: {{steps.pr.url}}" }, "gate": "allow" },
+        { "id": "state", "type": "write", "to": "mcp", "server": "linear", "tool": "update_issue",
+          "args": { "id": "{{item.id}}", "state": "In Review" },
+          "undo": { "tool": "update_issue", "args": { "id": "{{item.id}}", "state": "{{item.state}}" } } },
+      ] },
+
+    { "id": "sum", "type": "write", "to": "message", "via": "os",
+      "text": "weekday-bugs: {{len(steps.fix.done)}} PRs, {{len(steps.fix.failed)}} failed" }
+  ]
+}
