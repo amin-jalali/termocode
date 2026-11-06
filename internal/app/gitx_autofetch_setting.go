@@ -38,14 +38,11 @@ func gitxAutoFetchSaved() bool {
 	return s.On != nil && *s.On
 }
 
-// gitxAutoFetchInitCmd starts the timer at start when the setting is on.
-func gitxAutoFetchInitCmd() tea.Cmd {
-	if !gitxAutoFetchSaved() {
-		return nil
+// gitxAutoFetchInit turns auto fetch on at start when the setting is on.
+func gitxAutoFetchInit() {
+	if gitxAutoFetchSaved() {
+		gitxAutoFetchStart()
 	}
-	gitxAutoFetch.on = true
-	gitxAutoFetch.gen++
-	return gitxAutoFetchAfter(gitxAutoFetch.gen)
 }
 
 // gitxSettingsCategories puts the row in the Git Settings group.

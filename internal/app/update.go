@@ -1060,7 +1060,7 @@ end })`)
 			return m, m.gitAutoRefreshTick(), true
 		}
 		m.gitBlurredSkips = 0
-		return m, tea.Batch(m.pollGitCmd(), m.gitAutoRefreshTick()), true
+		return m, tea.Batch(m.pollGitCmd(), m.gitAutoRefreshTick(), m.gitxAutoFetchPoll()), true // GITX-12: auto fetch rides on the poll
 	case GitMsg:
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
