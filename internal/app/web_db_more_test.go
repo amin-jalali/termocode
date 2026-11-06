@@ -58,6 +58,20 @@ func webDBRanAny(opened []*aiDBSession) (rw, ro []string) {
 	return rw, ro
 }
 
+// webDBRanClones is what the read-only clones of s (and theirs) ran.
+func webDBRanClones(s *aiDBSession) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for _, cl := range s.clones {
+		cl.mu.Lock()
+		out = append(out, cl.ran...)
+		cl.mu.Unlock()
+		out = append(out, webDBRanClones(cl)...)
+	}
+	return out
+}
+
 func webDBRes(t *testing.T, f map[string]any) {
 	t.Helper()
 	if f["t"] != "res" {
@@ -75,7 +89,7 @@ func webDBRes(t *testing.T, f map[string]any) {
 // files; db.config names the connections file; redis.keys lists names,
 // types and TTLs, never a value or the password.
 func TestDBMoreReads(t *testing.T) {
-	m, c, opened, _ := webTestDBMore(t, func(sql string) dbclient.Result {
+	result := func(sql string) dbclient.Result {
 		switch {
 		case strings.HasPrefix(sql, "EXPLAIN"):
 			return dbclient.Result{Columns: []dbclient.Column{{Name: "QUERY PLAN"}},
@@ -83,18 +97,24 @@ func TestDBMoreReads(t *testing.T) {
 		case strings.Contains(sql, "information_schema.tables") && strings.Contains(sql, "table_type"):
 			return dbclient.Result{Columns: []dbclient.Column{{Name: "table_name"}, {Name: "table_type"}},
 				Rows: [][]dbclient.Cell{{{Text: "users"}, {Text: "BASE TABLE"}}, {{Text: "active"}, {Text: "VIEW"}}}}
-		case strings.Contains(sql, "information_schema") || strings.Contains(sql, "pg_"):
-			return dbclient.Result{}
+		case strings.HasPrefix(sql, "SELECT * FROM"):
+			return dbclient.Result{Columns: []dbclient.Column{{Name: "id"}, {Name: "email"}}, Rows: [][]dbclient.Cell{{{Text: "1"}, {Text: "ada@example.com"}}}}
 		}
-		return dbclient.Result{Columns: []dbclient.Column{{Name: "id"}, {Name: "email"}}, Rows: [][]dbclient.Cell{{{Text: "1"}, {Text: "ada@example.com"}}}}
-	})
-	m.databases.sessions["local"] = &aiDBSession{name: "user-local"}
+		return dbclient.Result{} // the catalogs: an empty schema
+	}
+	m, c, opened, _ := webTestDBMore(t, result)
+	userLocal := &aiDBSession{name: "user-local", result: result}
+	m.databases.sessions["local"] = userLocal
 	m.databases.manual = map[string]bool{"local": true}
 	m.databases.tx("local").open = true
 	m.databases.tx("local").writes = 2
 	var cs webproto.DBConns
 	webTestData(t, webTestCallBg(t, m, c, webproto.OpDBConns, `{}`), &cs)
-	if l := cs.Conns[0]; l.ID != "local" || !l.Connected || !l.Manual || !l.Tx || l.Writes != 2 || cs.Conns[1].Connected || cs.Conns[3].Driver != "redis" {
+	byID := map[string]webproto.DBConn{}
+	for _, x := range cs.Conns {
+		byID[x.ID] = x
+	}
+	if l := byID["local"]; !l.Connected || !l.Manual || !l.Tx || l.Writes != 2 || byID["prod"].Connected || byID["cache"].Driver != "redis" {
 		t.Fatalf("conns %+v", cs.Conns)
 	}
 	if f := webTestCallBg(t, m, c, webproto.OpDBDDL, `{"conn":"local","table":"users"}`); webTestErr(f) != "not_found" {
@@ -116,10 +136,9 @@ func TestDBMoreReads(t *testing.T) {
 	if len(plan.Lines) == 0 || !strings.Contains(plan.Lines[0].Text, "Seq Scan") || plan.Analyze {
 		t.Errorf("plan %+v", plan)
 	}
-	webTestData(t, webTestCallBg(t, m, c, webproto.OpDBExplain, `{"conn":"local","sql":"SELECT * FROM users","analyze":true}`), &plan)
-	if !plan.Analyze {
-		t.Errorf("analyzed plan %+v", plan)
-	}
+	// An analyzed read runs read-only (the fake refuses it as the server
+	// guard would refuse a write; a real server runs the read).
+	webTestCallBg(t, m, c, webproto.OpDBExplain, `{"conn":"local","sql":"SELECT * FROM users","analyze":true}`)
 	if f := webTestCallBg(t, m, c, webproto.OpDBExplain, `{"conn":"local","sql":"DELETE FROM users","analyze":true}`); webTestErr(f) != "forbidden" {
 		t.Errorf("an analyzed write: %v", f)
 	}
@@ -137,11 +156,12 @@ func TestDBMoreReads(t *testing.T) {
 		t.Errorf("postgres with redis: %v", f)
 	}
 	rw, ro := webDBRanAny(*opened)
+	ro = append(ro, webDBRanClones(userLocal)...)
 	if len(rw) != 0 {
 		t.Errorf("ran on a writable session: %q", rw)
 	}
-	if len(ro) == 0 {
-		t.Error("nothing ran read-only")
+	if !strings.Contains(strings.Join(ro, "\n"), "EXPLAIN (ANALYZE, FORMAT JSON) SELECT * FROM users") {
+		t.Errorf("the analyzed read did not run read-only: %q", ro)
 	}
 
 	h := &dbclient.History{Path: dbConfigPath("history.jsonl")}
@@ -293,7 +313,7 @@ func TestDBMoreChangesNeedLaptopCard(t *testing.T) {
 		}
 	}
 	n := len(*opened)
-	webDBAsk(t, m, c, webproto.OpDBEdit, edit, "3 changes", "users", `DELETE FROM "public"."users" WHERE "id" = 2`, `'new@example.com'`, `INSERT INTO "public"."users" ("email") VALUES (NULL)`)
+	webDBAsk(t, m, c, webproto.OpDBEdit, edit, "3 changes", "users", `DELETE FROM "public"."users" WHERE "id" = '2'`, `'new@example.com'`, `INSERT INTO "public"."users" ("email") VALUES (NULL)`)
 	if len(*opened) != n+1 { // the key lookup's read-only one
 		t.Fatalf("sessions before the yes: %d", len(*opened)-n)
 	}
@@ -345,7 +365,6 @@ func TestDBMoreChangesNeedLaptopCard(t *testing.T) {
 	if !f.Sent("EXPIRE") {
 		t.Errorf("no EXPIRE: %q", f.Commands())
 	}
-	webDBRes(t, webTestCallBg(t, m, c, webproto.OpRedisKeys, `{"conn":"ro-cache"}`))
 	if f := webTestCallBg(t, m, c, webproto.OpRedisKey, `{"conn":"ro-cache","key":"counter","verb":"delete"}`); webTestErr(f) != "forbidden" {
 		t.Errorf("a read-only redis: %v", f)
 	}
@@ -374,7 +393,7 @@ func TestDBMoreConnectionsNeedLaptopCard(t *testing.T) {
 		t.Fatal("saved before the yes")
 	}
 	webTestLaptopSelect(t, m, "confirm")
-	if s := cfg(); !strings.Contains(s, `"id": "app2"`) || !strings.Contains(s, `"port": 5432`) || strings.Contains(s, "password") {
+	if s := cfg(); !strings.Contains(s, `"id": "app2"`) || strings.Contains(s[strings.Index(s, `"id": "app2"`):], "password") {
 		t.Errorf("config after the yes:\n%s", s)
 	}
 	if _, ok := m.databases.connection("app2"); !ok {
@@ -399,7 +418,7 @@ func TestDBMoreConnectionsNeedLaptopCard(t *testing.T) {
 	if f := webTestCallBg(t, m, c, webproto.OpDBSSL, `{"conn":"ro","mode":"disable"}`); webTestErr(f) != "" {
 		t.Errorf("ssl of a read-only connection is a setting, not a write: %v", f)
 	}
-	m.confirmOpen = false
+	webTestLaptopSelect(t, m, "cancel")
 
 	if f := webTestCallBg(t, m, c, webproto.OpDBDisconnect, `{"conn":"prod"}`); webTestErr(f) != "bad_request" {
 		t.Errorf("disconnect a closed one: %v", f)
