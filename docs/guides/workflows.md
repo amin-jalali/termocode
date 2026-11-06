@@ -97,6 +97,7 @@ The AI never saves a file by itself:
 | `h` | history: the newest run |
 | `R` | read the files again |
 | `x` | stop the run (asks; Keep running is first) |
+| `p` | pause the run before its next step; `p` again continues |
 | `l` | jump to the live output |
 | `?` | this list |
 

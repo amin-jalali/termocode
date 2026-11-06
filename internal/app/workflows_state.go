@@ -495,6 +495,25 @@ func (m *Model) wfxAskStop() tea.Cmd {
 	return nil
 }
 
+// wfxTogglePause pauses the target's live run before its next step, or
+// lets a paused one go on. No card: a pause only waits.
+func (m *Model) wfxTogglePause() tea.Cmd {
+	e, ok := m.wfxTarget()
+	if !ok {
+		return nil
+	}
+	l := m.wfxRunning(e.Name)
+	if l == nil {
+		return m.aiInfo(e.Name + " is not running")
+	}
+	if l.h.Held() {
+		l.h.Continue()
+		return m.aiInfo(e.Name + ": continues")
+	}
+	l.h.Pause()
+	return m.aiInfo(e.Name + ": paused before its next step (p continues)")
+}
+
 // wfxEdit opens the workflow file in the editor.
 func (m *Model) wfxEdit() tea.Cmd {
 	e, ok := m.wfxTarget()
