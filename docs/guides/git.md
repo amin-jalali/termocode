@@ -28,8 +28,25 @@ The panel refreshes by itself every two seconds.
 
 If nothing is staged, termocode asks: *Stage all changes?*
 
-The **▾** menu has **Commit (Amend)**, **Commit (Sign-off)**, **Push**,
-**Pull**, **Fetch** and **Refresh**.
+The **▾** menu has **Commit (Amend)**, **Commit (Sign-off)**, **Commit and
+Push**, **Commit and Sync**, **Push**, **Pull**, **Fetch**, **Unstage All**,
+**Discard All Changes…**, **Delete Untracked Files…** and **Refresh**.
+
+**Commit and Push** commits, then pushes. **Commit and Sync** commits, then
+pulls and pushes. Nothing is pushed when the commit fails.
+
+## Throw away all changes
+
+**Git: Discard All Changes…** asks first, and **Cancel** is the choice that
+is ready. **Discard Changes** takes back every change to tracked files,
+staged ones too. New files stay, unless you press **Discard and Delete New
+Files**. **Git: Delete Untracked Files…** removes only the new files.
+Ignored files always stay.
+
+Nothing is lost for good: termocode first saves a safety copy in the stash
+list. The toast names it (for example `stash@{0}`). Open **Git: Show Stash
+List…** and apply it to get your work back. **Git: Unstage All Changes**
+takes every file out of the index and keeps your edits.
 
 Press `t` to switch between a tree view and a flat list. termocode remembers
 your choice.
@@ -407,6 +424,47 @@ run. It picks the plan profile; then you type the task in the AI chat.
 
 Run the command again before you send the task to turn it off. It needs
 a git repository with at least one commit.
+
+## Cherry-pick, revert and restore
+
+| Command | What it does |
+|---|---|
+| **Git: Cherry-pick from Branch…** | Pick a branch. A card lists its commits that your branch lacks (changes you already have are left out). **Cancel** is ready; **Cherry-pick All** applies them oldest first. |
+| **Revert Merge…** (right-click a merge in **GRAPH**) | Pick the parent to keep (parent 1 is the branch it was merged into). A new commit undoes what the merge brought in. |
+| **Cherry-pick a File from Here…** (right-click a commit) | Pick one file of the commit. Its changes go into your working tree and are staged; nothing is committed. |
+| **Restore a File from Here…** (right-click a commit) | Pick one file. It is put back as it was in that commit. Uncommitted changes to it are saved in the stash list first. |
+
+Each one asks on a card where **Cancel** is ready. A conflict stops the
+pick; fix it in **CONFLICTS** and commit, or run `git cherry-pick --abort`.
+
+## Edit history from the GRAPH
+
+On a **GRAPH** commit (keys, or right-click):
+
+| Key | Menu | What it does |
+|---|---|---|
+| `E` | **Edit Commit Message…** | Type the subject, then the body (`\n` starts a new line) |
+| `S` | **Squash into Previous…** | The commit joins the one before it; both messages are kept |
+| `D` | **Drop Commit…** | The commit and its changes leave the branch; newer commits stay |
+
+**Git: Rebase Current Branch onto…** picks a branch and replays your
+commits on top of it: **Rebase**, or **Rebase (Keep Merges)** to keep merge
+commits. **Git: Autosquash fixup! Commits…** folds `fixup!` and `squash!`
+commits into the commits they name.
+
+Every card lists what changes, warns when the commits are on the remote
+already (you will need to force-push) and stashes uncommitted changes
+first. **Cancel** is ready. A conflict stops the rebase: see
+[When the rebase stops](#when-the-rebase-stops). Undo with `u`.
+
+## Patches
+
+| Command | What it does |
+|---|---|
+| **Copy as Patch** (right-click a commit) | Copies the commit as a mail patch (`git format-patch`) |
+| **Git: Save Changes as Patch…** | Writes your uncommitted changes to a file (`changes.patch`). It asks before it replaces a file. |
+| **Git: Apply Patch from File…** | Checks the patch, lists the files it changes on a card (**Cancel** is ready), then applies it to your working tree |
+| **Git: Apply Patch from Clipboard…** | The same with the patch on the clipboard |
 
 ## Keys at a glance
 

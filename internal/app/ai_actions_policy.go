@@ -167,6 +167,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// ── Git ──
 	"git-stage":           aiConfirm(ai.ClassGit),
 	"git-stage-all":       aiConfirm(ai.ClassGit),
+	"git-unstage-all":     aiConfirm(ai.ClassGit),
+	"git-discard-all":     aiDestructive(), // its card is Cancel-first; a safety stash is kept
+	"git-clean-untracked": aiDestructive(), // deletes new files (a safety stash is kept)
+	"git-commit-push":     aiNever("commits the message the user typed in the box, then pushes; use git_commit, then git_push"),
+	"git-commit-sync":     aiNever("commits the message the user typed in the box, then pushes; use git_commit, then git_push"),
 	"git-stage-hunk":      aiConfirm(ai.ClassGit),
 	"git-unstage-hunk":    aiConfirm(ai.ClassGit),
 	"git-discard-hunk":    aiDestructive(),
@@ -681,6 +686,15 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"web_max_hours":    aiNever(aiNoWeb),
 	"web_open_browser": aiNever(aiNoWeb),
 	"web_max_viewers":  aiNever(aiNoWeb),
+	// Workflows (ADR 0021): the AI may change a limit after its card; it
+	// never turns workflows on or off and never widens the agent sandbox.
+	"workflows_enabled":          aiNever("workflows run unattended and write to outside systems; only the user turns them on or off"),
+	"workflows_parallel_max":     aiConfirm(ai.ClassSettings),
+	"workflows_day_budget_usd":   aiConfirm(ai.ClassSettings),
+	"workflows_missed_grace_min": aiConfirm(ai.ClassSettings),
+	"workflows_history_days":     aiConfirm(ai.ClassSettings),
+	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
+	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
 }
 
 // aiNoWeb is why the AI never touches the web panel.

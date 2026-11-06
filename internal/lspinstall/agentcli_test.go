@@ -52,7 +52,7 @@ func TestAgentCLITools(t *testing.T) {
 			}
 		}
 	}
-	if got := ByCategory(CategoryAgentCLI); len(got) != 2 {
+	if got := ByCategory(CategoryAgentCLI); len(got) != 11 { // claude-code, codex + the AGX-3 presets (agents.Registry)
 		t.Fatalf("agent CLIs = %v", got)
 	}
 }
