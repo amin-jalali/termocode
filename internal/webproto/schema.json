@@ -1920,6 +1920,20 @@
       "phase": "v2"
     },
     {
+      "op": "editor.vim_maps",
+      "args": "EmptyArgs",
+      "result": "VimMapList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "workflows.stop",
       "args": "WorkflowRunArgs",
       "role": "controller",
@@ -14128,6 +14142,47 @@
             "$ref": "#/defs/UserSnippet"
           },
           "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "VimMap": {
+      "type": "object",
+      "properties": {
+        "lhs": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "noremap": {
+          "type": "boolean"
+        },
+        "rhs": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "lhs",
+        "rhs"
+      ],
+      "additionalProperties": true
+    },
+    "VimMapList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/VimMap"
+          },
+          "type": "array"
+        },
+        "timeout": {
+          "type": "integer"
         }
       },
       "required": [

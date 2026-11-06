@@ -2093,6 +2093,18 @@ export interface UserCmdList {
   error?: string;
 }
 
+export interface VimMapList {
+  items: VimMap[];
+  timeout?: number;
+}
+
+export interface VimMap {
+  mode: string;
+  lhs: string;
+  rhs: string;
+  noremap?: boolean;
+}
+
 export interface WorkspaceList {
   folders: WorkspaceEntry[];
   recent: WorkspaceEntry[];
@@ -3033,6 +3045,7 @@ export interface OpArgs {
   "theme.color_set": ThemeColorArgs;
   "usercmds.list": EmptyArgs;
   "usercmds.save": UserCmdSaveArgs;
+  "editor.vim_maps": EmptyArgs;
   "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
@@ -3301,6 +3314,7 @@ export interface OpResult {
   "theme.color_set": ThemeColors;
   "usercmds.list": UserCmdList;
   "usercmds.save": UserCmdList;
+  "editor.vim_maps": VimMapList;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
