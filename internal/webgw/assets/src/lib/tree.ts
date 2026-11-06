@@ -97,6 +97,18 @@ export function toggle(path: string): void {
   list(path);
 }
 
+/** expandTo opens every folder above path (the Reveal command). */
+export function expandTo(path: string): void {
+  const parts = path.split("/").slice(0, -1);
+  const dirs = parts.map((_, i) => parts.slice(0, i + 1).join("/"));
+  const open = new Set(expanded.peek());
+  const fresh = dirs.filter((d) => !open.has(d));
+  if (fresh.length === 0) return;
+  for (const d of fresh) open.add(d);
+  expanded.value = open;
+  for (const d of fresh) list(d);
+}
+
 /** reconcile lists every open folder the topic does not have yet: at the
  * start, after a new connection (the hub forgot this page's folders) and
  * after a remove delta for a folder that still exists. A folder the topic

@@ -49,7 +49,7 @@ func logRange(dir string, rng []string, limit int) ([]LogEntry, error) {
 	args := append([]string{"log", "--pretty=format:%h%x1f%s%x1f%an%x1f%at%x1f%d%x1e", fmt.Sprintf("-n%d", limit)}, rng...)
 	out, err := runCombined(dir, "git", append(args, "--")...)
 	if err != nil {
-		if !hasCommits(dir) {
+		if !hasCommits(localGit(dir)) {
 			return nil, nil
 		}
 		return nil, err

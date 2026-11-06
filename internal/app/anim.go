@@ -34,6 +34,8 @@ func (m Model) overlayKind() string {
 		return "profileform"
 	case m.importOpen:
 		return "import"
+	case m.raceOpen():
+		return "race"
 	case m.reviewOpen:
 		return "review"
 	case m.menuOpen:

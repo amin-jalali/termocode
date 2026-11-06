@@ -1,0 +1,1 @@
+{"t":"req","id":71,"op":"db.ssh","args":{"conn":"local","host":"bastion","port":22,"user":"me","auth":"key","keyfile":"~/.ssh/id_ed25519","jump":["jump.example"]}}

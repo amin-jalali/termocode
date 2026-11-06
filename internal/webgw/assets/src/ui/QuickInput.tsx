@@ -1,12 +1,13 @@
 // The workbench's quick input: Go to file (Ctrl/Cmd+P), the command list
 // (Ctrl/Cmd+Shift+P, or ">" in Go to file) and Go to line (":"). One
 // box at the top of the editor area; arrows move, Enter runs, Esc closes.
+// A view's list to pick from (the tags, the stash, the reflog) uses it too.
 import { h, type JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { FilesListRes } from "../../../../webproto/proto";
 import { allCommands, cmdTitle, gotoLine, loadLaptopCmds, noteRun, recentCmds, type Command } from "../lib/commands";
 import { rank, type Hit } from "../lib/fuzzy";
-import { quick, showFile } from "../lib/workbench";
+import { quick, showFile, type Pick, type PickItem } from "../lib/workbench";
 import { link } from "../session";
 import { t } from "../strings";
 import { FileIcon } from "./icons";
@@ -50,6 +51,8 @@ interface Row {
   /** tag starts a group on the right: "recently used", "other commands". */
   tag?: string;
   file?: boolean;
+  /** icon is the file whose icon shows (key, when not given). */
+  icon?: string;
   run: () => void;
 }
 
@@ -68,6 +71,17 @@ function fileRows(q: string, list: readonly string[]): Row[] {
   });
 }
 
+/** PICK_MS is the pause in typing before a picker asks again. */
+const PICK_MS = 150;
+
+/** pickRows: a picker's items that match q (its own list), or the rows
+ * it loaded for what is typed (in the order they came). */
+function pickRows(q: string, pk: Pick, loaded: readonly PickItem[] | null): Row[] {
+  const row = (it: PickItem, i: number, at: number[]): Row => ({ key: String(i) + "#" + it.label, label: it.label, at, detail: it.detail, file: it.file !== undefined, icon: it.file, run: it.run });
+  if (pk.items) return rank(q, pk.items, (it) => it.label, MAX_ROWS).map(({ item, hit }, i) => row(item, i, hit.at));
+  return (loaded ?? []).slice(0, MAX_ROWS).map((it, i) => row(it, i, []));
+}
+
 /** commandRows: the commands that match q, the recently used ones first
  * (newest first), then the rest by how well they match. */
 function commandRows(q: string): Row[] {
@@ -75,16 +89,22 @@ function commandRows(q: string): Row[] {
   const recent = recentCmds.value;
   const ranked = rank(q, list, cmdTitle, list.length);
   const at = (c: Command) => recent.indexOf(c.id);
-  const used = ranked.filter((x) => at(x.item) >= 0).sort((a, b) => at(a.item) - at(b.item));
-  const rest = ranked.filter((x) => at(x.item) < 0);
-  const rows = [...used, ...rest].slice(0, MAX_ROWS).map(({ item, hit }: { item: Command; hit: Hit }, i): Row => ({
+  // A command whose whole name was typed comes first: Enter runs it, not
+  // a recently used one that also holds those letters.
+  const whole = q.trim().toLowerCase();
+  const exact = whole ? ranked.filter((x) => cmdTitle(x.item).toLowerCase() === whole) : [];
+  const others = ranked.filter((x) => !exact.includes(x));
+  const used = others.filter((x) => at(x.item) >= 0).sort((a, b) => at(a.item) - at(b.item));
+  const rest = others.filter((x) => at(x.item) < 0);
+  const u0 = exact.length, u1 = u0 + used.length;
+  const rows = [...exact, ...used, ...rest].slice(0, MAX_ROWS).map(({ item, hit }: { item: Command; hit: Hit }, i): Row => ({
     key: item.id,
     label: cmdTitle(item),
     at: hit.at,
     detail: item.laptop ? t("quick.laptop") : undefined,
     keys: item.keys,
     keysTitle: item.laptop ? t("quick.laptop_keys") : undefined,
-    tag: used.length && i === 0 ? t("quick.recent") : used.length && i === used.length ? t("quick.other") : undefined,
+    tag: used.length && i === u0 ? t("quick.recent") : used.length && i === u1 ? t("quick.other") : undefined,
     run: () => {
       noteRun(item.id);
       item.run();
@@ -103,7 +123,9 @@ export function QuickInput() {
   const box = useRef<HTMLInputElement | null>(null);
 
   const ask = q0?.mode === "ask" ? (q0.ask ?? null) : null;
-  const wantFiles = !ask && !text.startsWith(">") && !text.startsWith(":");
+  const pk = q0?.mode === "pick" ? (q0.pick ?? null) : null;
+  const [loaded, setLoaded] = useState<{ q: string; items: readonly PickItem[] } | null>(null);
+  const wantFiles = !ask && !pk && !text.startsWith(">") && !text.startsWith(":");
   const wantCmds = text.startsWith(">");
   useLayoutEffect(() => box.current?.focus(), []);
   useEffect(() => {
@@ -121,23 +143,43 @@ export function QuickInput() {
     );
   }, [wantFiles]);
 
+  // A picker that asks for what is typed: once typing pauses.
+  useEffect(() => {
+    const load = pk?.load;
+    if (!load) return;
+    let stop = false;
+    const timer = setTimeout(
+      () =>
+        load(text).then(
+          (items) => !stop && setLoaded({ q: text, items }),
+          (e: unknown) => !stop && (setLoaded({ q: text, items: [] }), setNote(e instanceof Error ? e.message : "")),
+        ),
+      PICK_MS,
+    );
+    return () => {
+      stop = true;
+      clearTimeout(timer);
+    };
+  }, [pk, text]);
+
   const close = () => (quick.value = null);
-  let rows: Row[] = [];
-  let placeholder = t("quick.files");
-  if (ask) {
-    // A question (Edit with AI): Enter sends what was typed.
-    rows = text.trim() ? [{ key: "ask", label: text.trim(), at: [], detail: t("quick.ask_go"), run: () => ask.run(text.trim()) }] : [];
-    placeholder = ask.title;
-  } else if (text.startsWith(">")) {
-    rows = commandRows(text.slice(1));
-    placeholder = t("quick.commands");
-  } else if (text.startsWith(":")) {
-    const n = parseInt(text.slice(1), 10);
-    rows = Number.isFinite(n) && n > 0 ? [{ key: "line", label: t("quick.line_go", { n }), at: [], run: () => gotoLine(n) }] : [];
-    placeholder = t("quick.line");
-  } else if (list) {
-    rows = fileRows(text, list);
-  }
+  // rowsOf is the list for a box text: Enter reads the box itself, so a
+  // key typed just before it counts even when the list has not drawn yet.
+  const rowsOf = (text: string): Row[] => {
+    if (pk) return pickRows(text, pk, loaded?.items ?? null);
+    if (ask) {
+      // A question (Edit with AI): Enter sends what was typed.
+      return text.trim() ? [{ key: "ask", label: text.trim(), at: [], detail: t("quick.ask_go"), run: () => ask.run(text.trim()) }] : [];
+    }
+    if (text.startsWith(">")) return commandRows(text.slice(1));
+    if (text.startsWith(":")) {
+      const n = parseInt(text.slice(1), 10);
+      return Number.isFinite(n) && n > 0 ? [{ key: "line", label: t("quick.line_go", { n }), at: [], run: () => gotoLine(n) }] : [];
+    }
+    return list ? fileRows(text, list) : [];
+  };
+  const rows = rowsOf(text);
+  const placeholder = pk ? pk.title : ask ? ask.title : text.startsWith(">") ? t("quick.commands") : text.startsWith(":") ? t("quick.line") : t("quick.files");
   const cur = Math.min(sel, Math.max(0, rows.length - 1));
   const pick = (r: Row | undefined) => {
     if (!r) return;
@@ -175,7 +217,8 @@ export function QuickInput() {
               setSel(Math.max(cur - 1, 0));
             } else if (e.key === "Enter") {
               e.preventDefault();
-              pick(rows[cur]);
+              const now = e.currentTarget.value;
+              pick(now === text ? rows[cur] : rowsOf(now)[0]);
             }
           }}
         />
@@ -193,7 +236,7 @@ export function QuickInput() {
               }}
               onMouseMove={() => i !== cur && setSel(i)}
             >
-              {r.file && <FileIcon path={r.key} />}
+              {r.file && <FileIcon path={r.icon ?? r.key} />}
               <span class="quick-label" dir="auto">
                 <Marked text={r.label} at={r.at} />
               </span>
@@ -212,7 +255,7 @@ export function QuickInput() {
           ))}
           {!rows.length && (
             <li class="quick-empty" role="presentation">
-              {ask ? t("quick.ask_type") : note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
+              {ask ? t("quick.ask_type") : pk ? note || (pk.load && loaded?.q !== text ? t("quick.loading") : t("quick.none")) : note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
             </li>
           )}
         </ul>

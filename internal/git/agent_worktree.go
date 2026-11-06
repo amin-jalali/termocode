@@ -172,17 +172,28 @@ func gitRetry(dir string, args ...string) (string, error) {
 // (bounded); an error means there is no worktree, never a worktree from
 // a wrong start.
 func CreateAgentWorktree(dir, id string) (AgentWorktree, error) {
-	return createAgentWorktree(dir, id, true)
+	return createAgentWorktree(dir, id, true, "")
 }
 
 // CreateAgentWorktreeFromHead is CreateAgentWorktree from the last commit
 // only: the user's uncommitted edits stay out (a plan run's branch that
 // may be pushed).
 func CreateAgentWorktreeFromHead(dir, id string) (AgentWorktree, error) {
-	return createAgentWorktree(dir, id, false)
+	return createAgentWorktree(dir, id, false, "")
 }
 
-func createAgentWorktree(dir, id string, edits bool) (AgentWorktree, error) {
+// CreateAgentWorktreeFrom is CreateAgentWorktreeFromHead from the last
+// commit of base (a branch, tag or commit; "" is HEAD): a workflow item
+// starts from the each step's base branch. A base that git does not know,
+// or that could pass for a flag, is refused.
+func CreateAgentWorktreeFrom(dir, id, base string) (AgentWorktree, error) {
+	if base != "" && strings.HasPrefix(base, "-") {
+		return AgentWorktree{}, fmt.Errorf("base %q is not a branch", base)
+	}
+	return createAgentWorktree(dir, id, false, base)
+}
+
+func createAgentWorktree(dir, id string, edits bool, from string) (AgentWorktree, error) {
 	if id == "" {
 		return AgentWorktree{}, errors.New("no worktree id")
 	}
@@ -199,7 +210,14 @@ func createAgentWorktree(dir, id string, edits bool) (AgentWorktree, error) {
 	if _, err := os.Stat(filepath.Join(w.Path, ".git")); err == nil {
 		return w, nil
 	}
-	head, err := gitOut(top, "rev-parse", "--verify", "-q", "HEAD")
+	rev := "HEAD"
+	if from != "" {
+		rev = from + "^{commit}"
+	}
+	head, err := gitOut(top, "rev-parse", "--verify", "-q", "--end-of-options", rev)
+	if err != nil && from != "" {
+		return AgentWorktree{}, fmt.Errorf("base %q is not a branch or commit of this repository", from)
+	}
 	if err != nil {
 		return AgentWorktree{}, errors.New("the repository has no commit yet: an agent worktree needs one")
 	}
@@ -662,4 +680,64 @@ func AgentFiles(dir, id string) ([]AgentFile, error) {
 		out = append(out, AgentFile{AgentChange: c.AgentChange, Before: string(blobs[c.baseID]), After: string(blobs[c.tipID])})
 	}
 	return out, nil
+}
+
+// AgentFileStat is one changed file with its added and deleted lines
+// (Binary: git cannot count lines; Add and Del are 0).
+type AgentFileStat struct {
+	AgentChange
+	Add, Del int
+	Binary   bool
+}
+
+// AgentNumstat lists the files the agent of id changed with their line
+// counts, by path (the race compare view). It snapshots first, like
+// AgentChanges.
+func AgentNumstat(dir, id string) ([]AgentFileStat, error) {
+	top, _, base, tip, err := snapshotAgent(dir, id)
+	if err != nil {
+		return nil, err
+	}
+	ds, err := agentDiffRaw(top, base, tip)
+	if err != nil {
+		return nil, err
+	}
+	out, err := gitOut(top, "diff", "--no-renames", "--numstat", "-z", base, tip)
+	if err != nil {
+		return nil, err
+	}
+	// "<add>\t<del>\t<path>\x00"; a binary file has "-\t-".
+	counts := map[string]AgentFileStat{}
+	for _, rec := range strings.Split(strings.TrimRight(out, "\x00"), "\x00") {
+		f := strings.SplitN(rec, "\t", 3)
+		if len(f) != 3 {
+			continue
+		}
+		var s AgentFileStat
+		if f[0] == "-" || f[1] == "-" {
+			s.Binary = true
+		} else {
+			s.Add, _ = strconv.Atoi(f[0])
+			s.Del, _ = strconv.Atoi(f[1])
+		}
+		counts[f[2]] = s
+	}
+	stats := make([]AgentFileStat, len(ds))
+	for i, d := range ds {
+		s := counts[d.Path]
+		s.AgentChange = d.AgentChange
+		stats[i] = s
+	}
+	return stats, nil
+}
+
+// AgentStateDir is termocode's folder in the repository's git dir
+// (<git-common-dir>/termocode): the agent worktrees and the race records
+// live there, never in the project.
+func AgentStateDir(dir string) (string, error) {
+	_, common, err := agentRepo(dir)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(common, "termocode"), nil
 }

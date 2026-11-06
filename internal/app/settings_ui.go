@@ -81,6 +81,10 @@ type settingsConfig struct {
 	// agent's card, client name → tool names (mcp_serve_allow.go). File
 	// only; separate from ai_auto_approve.
 	MCPServerAutoApprove map[string][]string `json:"mcp_server_auto_approve,omitempty"`
+	// AgentTranscripts: "read" lets termocode read the Claude Code /
+	// Codex session files (chat view, history, search); "off" or "" =
+	// never (agent_transcripts.go, owner decision D1). File only.
+	AgentTranscripts string `json:"agent_transcripts,omitempty"`
 	// The web panel (ADR 0020, web_settings.go). File only; the AI can
 	// never change them, project files never set them.
 	WebPanel       string `json:"web_panel,omitempty"`
@@ -91,6 +95,11 @@ type settingsConfig struct {
 	WebMaxHours    *int   `json:"web_max_hours,omitempty"`
 	WebOpenBrowser *bool  `json:"web_open_browser,omitempty"`
 	WebMaxViewers  *int   `json:"web_max_viewers,omitempty"`
+	// Blame (git_blame_view.go). File only; the palette toggles write them.
+	GitInlineBlame      *bool `json:"git_inline_blame,omitempty"`
+	GitStatusBlame      *bool `json:"git_status_blame,omitempty"`
+	GitBlameIgnoreWS    *bool `json:"git_blame_ignore_whitespace,omitempty"`
+	GitBlameDetectMoves *bool `json:"git_blame_detect_moves,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't

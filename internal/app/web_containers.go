@@ -21,8 +21,10 @@ import (
 // included), the same one the AI's container tools use. Every engine
 // call runs off the UI thread with a time limit; a container is named
 // only by its hex id from a fresh listing, never by text from the page.
-// The logs pass the same redaction as the AI's, then webData's. No
-// prune, run, pull, exec or shell from the web.
+// The logs pass the same redaction as the AI's, then webData's. The
+// rest of the view (images, prune, run, pull, shell …) is in
+// web_containers_host.go; what removes or runs something waits for a
+// laptop card there too.
 
 const webContainersWait = 30 * time.Second
 
@@ -98,6 +100,7 @@ func (m *Model) webContainersList(call *webCall) tea.Cmd {
 		return applyMsg(func(m *Model) tea.Cmd {
 			out := webproto.ContainersList{Engine: h.bin(), Context: label, Containers: []webproto.ContainerItem{}}
 			keep := map[string]webproto.ContainerItem{}
+			raw := map[string]containers.Container{}
 			for i, c := range list {
 				busy := false
 				if m.services != nil {
@@ -110,9 +113,10 @@ func (m *Model) webContainersList(call *webCall) tea.Cmd {
 				}
 				out.Containers = append(out.Containers, it)
 				keep[c.ID] = it
+				raw[c.ID] = c
 			}
 			if m.web != nil {
-				m.web.more.ctrs = keep
+				m.web.more.ctrs, m.web.more.ctrRaw = keep, raw
 			}
 			call.reply(out)
 			return nil
@@ -173,8 +177,12 @@ func webContainersRun(parent context.Context, h aiContainersHost, id, action str
 		defer cancel()
 		c, err := webContainersFind(ctx, h, id)
 		if err == nil {
+			pause := h.e.Pause
+			if strings.EqualFold(c.State, "paused") {
+				pause = h.e.Unpause
+			}
 			run := map[string]func(context.Context, string) error{"start": h.e.Start, "stop": h.e.Stop,
-				"restart": h.e.Restart, "remove": h.e.RemoveContainer}[action]
+				"restart": h.e.Restart, "remove": h.e.RemoveContainer, "pause": pause}[action]
 			err = run(ctx, c.ID)
 			if err != nil {
 				err = errors.New(aiContainersRedact(err.Error()))
@@ -210,7 +218,8 @@ func (m *Model) webContainersBusy(id, action string) {
 	m.services.touch()
 }
 
-// webContainersAct starts or restarts a container (the page asked first).
+// webContainersAct starts, restarts or pauses (a paused one: unpauses)
+// a container (the page asked first).
 func (m *Model) webContainersAct(call *webCall, action string) tea.Cmd {
 	id := call.args.(*webproto.ContainerArgs).ID
 	h, ok := m.webContainersHost(call)

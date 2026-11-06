@@ -105,6 +105,9 @@ var (
 	// IconRuns — the Runs view (what the AI is doing now): nf-fa-heartbeat,
 	// a pulse; ∿ (U+223F, EAW=Neutral) without the Nerd Font.
 	IconRuns = Icon{NerdFont: "\uf21e", Unicode: "∿", ASCII: "~"}
+	// IconWorkflows — the Workflows view (WFX): nf-fa-sitemap, a flow; ⇶
+	// (U+21F6, EAW=Neutral) without the Nerd Font.
+	IconWorkflows = Icon{NerdFont: "\uf0e8", Unicode: "⇶", ASCII: "W"}
 	// IconServices is the same icon under its old name.
 	IconServices = IconContainers
 	// IconDebug — fisheye, reads as a "bug eye". U+25C9, EAW=Neutral.
@@ -343,6 +346,10 @@ var (
 	// GlyphAgents marks outside agents connected to termocode's MCP
 	// server (status-bar chip).
 	GlyphAgents = Icon{NerdFont: "\uf0ec", Unicode: "⇄", ASCII: "="} // nf-fa-exchange
+	// WORKTREES view (WTX-2): a worktree (nf-fa-code_fork) and one put
+	// to sleep (nf-md-sleep).
+	GlyphWorktree = Icon{NerdFont: "\uf126", Unicode: "⑂", ASCII: "Y"}
+	GlyphAsleep   = Icon{NerdFont: "\U000f04b2", Unicode: "☾", ASCII: "z"}
 	// GlyphWeb marks the running web panel (status-bar chip).
 	GlyphWeb = Icon{NerdFont: "\U000f059f", Unicode: "◉", ASCII: "@"} // nf-md-web
 )

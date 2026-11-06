@@ -86,3 +86,23 @@ func TestTabKeys(t *testing.T) {
 	wbKey(p, "w", true, false)
 	p.WaitJS(`document.querySelectorAll(".ed-tab").length === 1 && location.hash === "#/files/b.txt"`)
 }
+
+// A command's full name and Enter runs that command, even when a recently
+// used command also matches the name (View: Toggle Maximized Panel holds
+// every letter of View: Toggle Panel) and even when Enter comes right
+// after the last letter, before the list drew again.
+func TestCommandListFullNameRunsThatCommand(t *testing.T) {
+	p, _ := openFiles(t, Desktop)
+	run := func(name string) {
+		wbKey(p, "P", true, true)
+		p.WaitJS(`document.querySelector(".quick .quick-box")?.value === ">" && document.activeElement === document.querySelector(".quick .quick-box")`)
+		p.Key(name + "\r")
+		p.WaitJS(`!document.querySelector(".quick")`)
+	}
+	run("View: Toggle Maximized Panel")
+	p.WaitJS(`document.querySelector(".wb.is-panel-max .wb-panel")`)
+	p.TapJS(`document.querySelector('.wb-panel [data-act="panel-max"]')`)
+	p.WaitJS(`document.querySelector(".wb-panel") && !document.querySelector(".wb.is-panel-max")`)
+	run("View: Toggle Panel")
+	p.WaitJS(`!document.querySelector(".wb-panel") && !document.querySelector(".wb.is-panel-max")`)
+}
