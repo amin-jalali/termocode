@@ -175,6 +175,7 @@ web	debug-toggle-breakpoint	op:debug.bp
 web	debug-view	view:run
 web	diff-files	cmd:compareFiles
 web	duplicate-line	cmd:copyLinesDown
+web	edit-custom-theme	op:theme.color_set
 web	explorer-rename-selected	cmd:renameFile
 web	explorer-toggle-preview	cmd:togglePreview
 web	explorer-undo-rename	cmd:undoRename
@@ -279,7 +280,7 @@ web	open-settings-ui	cmd:settings
 web	open-url	cmd:openUrl
 web	open-workspace	cmd:openWorkspace
 web	output-clear	cmd:outputClear
-web	pick-theme	cmd:themeDark
+web	pick-theme	op:theme.set
 web	pin-tab	cmd:pinTab
 web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
@@ -371,7 +372,6 @@ excluded	customize-keybindings	laptop only: edits laptop key bindings
 excluded	dap-install	laptop only: installs a debug adapter on the laptop disk
 excluded	db-guide	laptop only: opens the TUI guide
 excluded	detach-session	laptop only: detaches the laptop terminal; the web has its own connection
-excluded	edit-custom-theme	laptop only: edits a laptop config file
 excluded	error-log	laptop only: TUI error log overlay
 excluded	ext-manage-install-samples	laptop only: extensions run on the laptop
 excluded	ext-manage-log	laptop only: extensions run on the laptop
