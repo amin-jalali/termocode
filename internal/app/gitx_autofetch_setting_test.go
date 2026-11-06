@@ -29,8 +29,8 @@ func TestGitxAutoFetchSetting(t *testing.T) {
 	if _, ok := aiSettingPolicies["git_auto_fetch"]; !ok {
 		t.Fatal("no AI policy for git_auto_fetch")
 	}
-	if gitxAutoFetchInitCmd() != nil {
-		t.Fatal("a start with the setting off starts the timer")
+	if gitxAutoFetchInit(); gitxAutoFetch.on {
+		t.Fatal("a start with the setting off turns auto fetch on")
 	}
 
 	m, _, _ := gitxUpstreamRepo(t)
@@ -63,7 +63,7 @@ func TestGitxAutoFetchSetting(t *testing.T) {
 	// A start with the setting on.
 	m.applySetting("setting-git-auto-fetch", "true")
 	gitxAutoFetch = gitxAuto{}
-	if gitxAutoFetchInitCmd() == nil || !gitxAutoFetch.on {
-		t.Fatal("a start with the setting on did not start the timer")
+	if gitxAutoFetchInit(); !gitxAutoFetch.on {
+		t.Fatal("a start with the setting on did not turn auto fetch on")
 	}
 }

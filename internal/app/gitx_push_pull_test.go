@@ -3,7 +3,9 @@ package app
 import (
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/picker"
 )
 
@@ -143,8 +145,33 @@ func TestGitxAutoFetch(t *testing.T) {
 	if m.gitxAutoFetchOn() || !toastHas(m, "Auto fetch off") {
 		t.Error("not off")
 	}
-	// A tick of a stopped timer does nothing.
-	if c := m.gitxAutoFetchTick(m.gitxAutoFetchGen() - 1); c != nil {
-		t.Error("a stale tick fetched")
+}
+
+// GITX-12: the auto fetch has no timer of its own (TestNoNewTimers); it
+// rides on the 2 s git poll. A poll before the step does nothing, the
+// first poll after it fetches once, and a poll after Off does nothing.
+func TestGitxAutoFetchRidesOnThePoll(t *testing.T) {
+	now := time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
+	m, _, _ := gitxUpstreamRepo(t)
+	t.Cleanup(clock.Set(func() time.Time { return now }))
+	t.Cleanup(func() { gitxAutoFetch = gitxAuto{} })
+	if m.gitxAutoFetchPoll() != nil {
+		t.Fatal("off: a poll fetched")
+	}
+	m.dispatchPaletteAction("git-auto-fetch")
+	if m.gitxAutoFetchPoll() != nil {
+		t.Fatal("a poll fetched before the step")
+	}
+	now = now.Add(gitxAutoFetchStep)
+	if m.gitxAutoFetchPoll() == nil {
+		t.Fatal("no fetch after the step")
+	}
+	if m.gitxAutoFetchPoll() != nil {
+		t.Fatal("fetched twice in one step")
+	}
+	m.dispatchPaletteAction("git-auto-fetch")
+	now = now.Add(2 * gitxAutoFetchStep)
+	if m.gitxAutoFetchPoll() != nil {
+		t.Fatal("off: a poll fetched")
 	}
 }
