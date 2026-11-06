@@ -357,13 +357,22 @@ missing	git-fixup	Git|S
 missing	git-merge-next	Git|S
 missing	git-merge-prev	Git|S
 missing	git-merge-take-base	Git|S
+missing	git-push-force	Git|S
 missing	git-redo	Git|S
 missing	git-reflog	Git|S
+missing	git-remotes	Git|S
 missing	git-stage-lines	Git|S
 missing	git-stash-list	Git|S
+missing	git-tag-create	Git|S
+missing	git-tag-delete	Git|S
+missing	git-tag-delete-remote	Git|S
+missing	git-tag-details	Git|S
+missing	git-tag-push	Git|S
 missing	git-tags	Git|S
 missing	git-undo	Git|S
 missing	git-unstage-lines	Git|S
+missing	git-upstream-set	Git|S
+missing	git-upstream-unset	Git|S
 missing	git-view-toggle	Git|S
 missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
