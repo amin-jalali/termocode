@@ -31,7 +31,23 @@ func postFrom(t *testing.T, h http.Handler, origin, path, body string) (int, map
 	h.ServeHTTP(w, req)
 	var m map[string]any
 	_ = json.Unmarshal(w.Body.Bytes(), &m)
+	if _, ok := m["cookie_key"]; ok {
+		t.Errorf("%s: the bookmark key is in the JSON reply, where page code can read it: %v", path, m)
+	}
+	if c := deviceCookieOf(w.Result()); c != nil && c.MaxAge > 0 && m != nil {
+		m["cookie_key"] = c.Value
+	}
 	return w.Code, m
+}
+
+// deviceCookieOf is the bookmark cookie a reply sets, or nil.
+func deviceCookieOf(res *http.Response) *http.Cookie {
+	for _, c := range res.Cookies() {
+		if c.Name == DeviceCookie {
+			return c
+		}
+	}
+	return nil
 }
 
 // rememberLogin signs in with the passkey and "Remember this browser",
@@ -63,7 +79,7 @@ func TestBookmarkSignInRotatesAndCatchesReuse(t *testing.T) {
 	r, l, k := passkeyPairRig(t)
 	pairWithKey(t, r, k, webdevices.RoleControl)
 	f := rememberLogin(t, l, k)
-	key1, _ := f["device_key"].(string)
+	key1, _ := f["cookie_key"].(string)
 	if _, _, err := ParseDeviceKey(key1); err != nil || f["token"] == nil {
 		t.Fatalf("remember reply %v", f)
 	}
@@ -79,12 +95,12 @@ func TestBookmarkSignInRotatesAndCatchesReuse(t *testing.T) {
 	// Without remember: no key.
 	_, m := postFrom(t, l, bmOrigin, "/login/start", `{}`)
 	opts, _ := json.Marshal(m["options"])
-	if _, f := postFrom(t, l, bmOrigin, "/login/finish", `{"login_id":"`+m["login_id"].(string)+`","credential":`+string(k.get(opts))+`}`); f["device_key"] != nil {
+	if _, f := postFrom(t, l, bmOrigin, "/login/finish", `{"login_id":"`+m["login_id"].(string)+`","credential":`+string(k.get(opts))+`}`); f["cookie_key"] != nil {
 		t.Fatalf("a key without remember: %v", f)
 	}
 
 	code, g := postFrom(t, l, bmOrigin, "/login/device", keyBody(key1))
-	key2, _ := g["device_key"].(string)
+	key2, _ := g["cookie_key"].(string)
 	if code != http.StatusOK || g["token"] == nil || key2 == "" || key2 == key1 {
 		t.Fatalf("bookmark sign-in: %d %v", code, g)
 	}
@@ -112,7 +128,7 @@ func TestBookmarkFromPairing(t *testing.T) {
 	m := r.waitState(id, "approved")
 	opts, _ := json.Marshal(m["options"])
 	code, f := postFrom(t, r.p, bmOrigin, "/pair/finish", `{"pair_id":"`+id+`","credential":`+string(k.create(opts))+`,"remember":true}`)
-	key, _ := f["device_key"].(string)
+	key, _ := f["cookie_key"].(string)
 	if code != http.StatusOK || key == "" {
 		t.Fatalf("pair finish with remember: %d %v", code, f)
 	}
@@ -134,11 +150,11 @@ func TestBookmarkRefusals(t *testing.T) {
 	pairWithKey(t, r, k, webdevices.RoleControl)
 	ds, _ := r.store.List()
 	dev := ds[0].ID
-	fresh := func() string { return rememberLogin(t, l, k)["device_key"].(string) }
+	fresh := func() string { return rememberLogin(t, l, k)["cookie_key"].(string) }
 	refused := func(what, origin, body, want string) {
 		t.Helper()
 		code, g := postFrom(t, l, origin, "/login/device", body)
-		if code == http.StatusOK || g["token"] != nil || g["device_key"] != nil {
+		if code == http.StatusOK || g["token"] != nil || g["cookie_key"] != nil {
 			t.Fatalf("%s: %d %v", what, code, g)
 		}
 		if want != "" && g["error"] != want {
@@ -198,7 +214,7 @@ func TestBookmarkRefusals(t *testing.T) {
 func TestBookmarkAsksTOTP(t *testing.T) {
 	r, l, k := passkeyPairRig(t)
 	pairWithKey(t, r, k, webdevices.RoleControl)
-	key := rememberLogin(t, l, k)["device_key"].(string)
+	key := rememberLogin(t, l, k)["cookie_key"].(string)
 	l.SetRequireTOTP(true)
 	l.cfg.CheckTOTP = func(_ context.Context, _, code string) error {
 		if code == "123456" {
@@ -207,15 +223,15 @@ func TestBookmarkAsksTOTP(t *testing.T) {
 		return errors.New("wrong")
 	}
 	code, f := postFrom(t, l, bmOrigin, "/login/device", keyBody(key))
-	if code != http.StatusOK || f["totp"] != true || f["token"] != nil || f["device_key"] != nil {
+	if code != http.StatusOK || f["totp"] != true || f["token"] != nil || f["cookie_key"] != nil {
 		t.Fatalf("bookmark with TOTP on: %d %v", code, f)
 	}
 	tk := f["ticket"].(string)
-	if _, g := postFrom(t, l, bmOrigin, "/login/totp", `{"ticket":"`+tk+`","code":"000000"}`); g["token"] != nil || g["device_key"] != nil {
+	if _, g := postFrom(t, l, bmOrigin, "/login/totp", `{"ticket":"`+tk+`","code":"000000"}`); g["token"] != nil || g["cookie_key"] != nil {
 		t.Fatalf("wrong code: %v", g)
 	}
 	_, g := postFrom(t, l, bmOrigin, "/login/totp", `{"ticket":"`+tk+`","code":"123456"}`)
-	next, _ := g["device_key"].(string)
+	next, _ := g["cookie_key"].(string)
 	if g["token"] == nil || next == "" || next == key {
 		t.Fatalf("right code: %v", g)
 	}
@@ -236,9 +252,9 @@ func TestBookmarkKeyNeverLogged(t *testing.T) {
 	defer a.Close()
 	l.cfg.Audit = a
 	pairWithKey(t, r, k, webdevices.RoleControl)
-	key := rememberLogin(t, l, k)["device_key"].(string)
+	key := rememberLogin(t, l, k)["cookie_key"].(string)
 	_, g := postFrom(t, l, bmOrigin, "/login/device", keyBody(key))
-	next := g["device_key"].(string)
+	next := g["cookie_key"].(string)
 	postFrom(t, l, "http://localhost:1", "/login/device", keyBody(next))
 	postFrom(t, l, bmOrigin, "/login/device", keyBody(key)) // reuse
 	postFrom(t, l, bmOrigin, "/login/forget", keyBody(next))
@@ -263,13 +279,13 @@ func TestBookmarkNeverForGuests(t *testing.T) {
 	m := r.waitState(id, "approved")
 	opts, _ := json.Marshal(m["options"])
 	code, f := postFrom(t, r.p, bmOrigin, "/pair/finish", `{"pair_id":"`+id+`","credential":`+string(k.create(opts))+`,"remember":true}`)
-	if code != http.StatusOK || f["device_key"] != nil {
+	if code != http.StatusOK || f["cookie_key"] != nil {
 		t.Fatalf("guest pairing with remember: %d %v", code, f)
 	}
 	if ds, _ := r.store.List(); len(ds) != 1 || ds[0].Bookmark != nil {
 		t.Fatalf("guest kept a bookmark: %+v", ds)
 	}
-	if f := rememberLoginOf(t, l, k); f["device_key"] != nil {
+	if f := rememberLoginOf(t, l, k); f["cookie_key"] != nil {
 		t.Fatal("a guest's sign-in with remember got a key")
 	}
 }

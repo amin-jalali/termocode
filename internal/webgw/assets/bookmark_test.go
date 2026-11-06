@@ -9,22 +9,29 @@ import (
 	"testing"
 )
 
-// Spec (WEBP-12): the bookmark key of a remembered browser lives in one
-// module, net/devicekey.ts: only it names the storage key and the
-// device_key reply field, it sends the key only in the body of
-// /login/device and /login/forget, and it never touches the URL, the
-// history or the console, so the key never lands in a URL, a bookmark,
-// a log or a screenshot of the address bar. Two tabs use it one at a
-// time (Web Locks), so a rotation never looks like a stolen copy.
+// Spec (WEBP-12): the bookmark key of a remembered browser is an
+// httpOnly cookie the laptop sets; page code never holds it. One module,
+// net/devicekey.ts, deals with bookmark sign-in: it posts /login/device
+// and /login/forget (the cookie rides along), keeps only a "remembered"
+// mark, and moves a key an older page left in localStorage into the
+// cookie once, then deletes it. It never touches the URL, the history or
+// the console. Two tabs use it one at a time (Web Locks), so a rotation
+// never looks like a stolen copy.
 func TestBookmarkKeyStaysInItsModule(t *testing.T) {
 	b, err := os.ReadFile("src/net/devicekey.ts")
 	if err != nil {
 		t.Fatal(err)
 	}
 	src := string(b)
-	for _, want := range []string{`"termocode.device"`, "localStorage", `postJSON("/login/device"`, `postJSON("/login/forget"`, "navigator.locks", "device_key"} {
+	for _, want := range []string{`"termocode.device"`, "localStorage.removeItem(OLD_KEY)", `postJSON("/login/device"`, `postJSON("/login/forget"`, "navigator.locks", "remembered"} {
 		if !strings.Contains(src, want) {
 			t.Errorf("devicekey.ts has no %s", want)
+		}
+	}
+	// The key is never written to storage again, and never read from a reply.
+	for _, bad := range []*regexp.Regexp{regexp.MustCompile(`setItem\(OLD_KEY`), regexp.MustCompile(`device_key`), regexp.MustCompile(`document\.cookie`)} {
+		if m := bad.FindString(src); m != "" {
+			t.Errorf("devicekey.ts still keeps the key where page code reads it: %s", m)
 		}
 	}
 	never := regexp.MustCompile(`\b(location|history|console|URLSearchParams|sessionStorage|document)\b|new URL\(|\?key=`)
@@ -74,7 +81,7 @@ func TestRememberIsOptIn(t *testing.T) {
 		t.Error("Remember this browser is not off at first")
 	}
 	m, _ := os.ReadFile("src/main.tsx")
-	if !strings.Contains(string(m), "savedDeviceKey()") || !strings.Contains(string(m), "signInWithBookmark(") {
+	if !strings.Contains(string(m), "isRemembered()") || !strings.Contains(string(m), "signInWithBookmark(") {
 		t.Error("the page does not try its kept key on open")
 	}
 }
