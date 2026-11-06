@@ -3,6 +3,7 @@ package git
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -62,7 +63,8 @@ func TestIdentity(t *testing.T) {
 	if err := SetIdentity(r.dir, "Ann Lee", "ann@example.com", false); err != nil {
 		t.Fatal(err)
 	}
-	if n, e := Identity(r.dir); n != "Ann Lee" || e != "ann@example.com" {
+	// (TestMain's GIT_AUTHOR_* win over the config, so read the config.)
+	if n, e := strings.TrimSpace(r.git(t, "config", "--local", "user.name")), strings.TrimSpace(r.git(t, "config", "--local", "user.email")); n != "Ann Lee" || e != "ann@example.com" {
 		t.Errorf("local identity %q %q", n, e)
 	}
 	global := filepath.Join(t.TempDir(), "gitconfig")
