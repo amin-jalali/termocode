@@ -56,3 +56,27 @@ func TestCommandClearsTheOutput(t *testing.T) {
 	runCmd(t, p, c, "output clear", "Output: Clear")
 	p.WaitJS(`document.querySelectorAll('.wb-panel [data-view="output"] .outv-line').length === 0 && !!document.querySelector(".outv-channel")`)
 }
+
+// AI: Side Question… asks the quick model beside the main chat: the
+// question box, then the answer in a sheet (Close first and focused);
+// Ask another asks again, and the sheet keeps the side questions.
+func TestCommandAsksASideQuestion(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	runCmd(t, p, c, "side question", "AI: Side Question…")
+	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box") && document.querySelector(".quick .quick-box").placeholder === "Ask (not added to the main chat)"`)
+	p.Key("how do I compare errors?")
+	p.Key("\r")
+	reply(t, c, expectOp(t, c, "chat.side", `{"text":"how do I compare errors?"}`), map[string]any{"answer": "Use <b>errors.Is</b>."})
+	p.WaitJS(`document.querySelector(".side-chat .side-a")?.textContent === "Use <b>errors.Is</b>." && document.activeElement?.textContent === "Close"`)
+	if got := p.Text(".side-chat .side-q"); got != "how do I compare errors?" {
+		t.Errorf("the question shows as %q", got)
+	}
+	p.TapJS(ButtonByText("Ask another"))
+	p.WaitJS(`!document.querySelector(".side-chat") && document.activeElement === document.querySelector(".quick .quick-box")`)
+	p.Key("and wrapping?")
+	p.Key("\r")
+	reply(t, c, expectOp(t, c, "chat.side", `{"text":"and wrapping?"}`), map[string]any{"answer": "Yes."})
+	p.WaitJS(`document.querySelectorAll(".side-chat .side-a").length === 2`)
+	p.TapJS(ButtonByText("Close"))
+	p.WaitJS(`!document.querySelector(".side-chat")`)
+}
