@@ -77,9 +77,51 @@ export const closed = signal<ReadonlySet<string>>(new Set());
  * off on a desktop, as the laptop's editor has it). */
 export const wordWrap = signal<boolean>(!matchMedia("(min-width: 1200px)").matches);
 
+/** vimMode is the focused editor's Vim mode for the status bar ("": off)
+ * and the keys of a command typed so far. */
+export const vimMode = signal<{ mode: string; pending: string }>({ mode: "", pending: "" });
+
+/** zen: Zen mode (WEBP-1): only the editor shows; the page marks it on
+ * <html data-zen="on"> so the status bar hides too. */
+export const zen = signal(false);
+effect(() => {
+  if (zen.value) document.documentElement.dataset.zen = "on";
+  else delete document.documentElement.dataset.zen;
+});
+
+let lastEsc = 0;
+const ESC_TWICE_MS = 600;
+
+/** escapeKey counts an Escape (also one in the editor's frame): two in a
+ * row leave Zen. */
+export function escapeKey(): void {
+  const now = Date.now();
+  if (zen.peek() && now - lastEsc < ESC_TWICE_MS) {
+    zen.value = false;
+    lastEsc = 0;
+    return;
+  }
+  lastEsc = now;
+}
+
 /** QuickMode is what the quick input lists: files, commands, a line, or
  * a question the page asks (ask: its title, and what Enter does). */
 export type QuickMode = "files" | "commands" | "line" | "ask" | "pick";
+
+/** CLIP_MAX texts of CLIP_TEXT_MAX chars at most are kept. */
+const CLIP_MAX = 20;
+const CLIP_TEXT_MAX = 64 * 1024;
+
+/** clips is the clipboard history of this tab (WEBP-1): what was copied or
+ * cut in its editors, newest first. In memory only: never stored, gone
+ * with the tab; the system clipboard is never read. */
+export const clips = signal<readonly string[]>([]);
+
+/** noteClip keeps a copied text at the top of the history. */
+export function noteClip(text: string): void {
+  if (!text || text.length > CLIP_TEXT_MAX) return;
+  clips.value = [text, ...clips.peek().filter((c) => c !== text)].slice(0, CLIP_MAX);
+}
 
 /** PickItem is one row of a picker: its name, a quiet detail, a file
  * (its icon shows) and what Enter does. */

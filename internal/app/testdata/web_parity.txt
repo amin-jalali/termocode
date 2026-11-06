@@ -350,6 +350,7 @@ web	web-share	op:web.grant_ask
 web	web-totp	op:web.totp_check
 web	workspace-add-folder	cmd:addFolder
 web	workspace-remove-folder	cmd:removeFolder
+web	zen-mode	cmd:zen
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
 excluded	ai-credentials	security: credentials file is laptop only
 excluded	ai-doctor	laptop only: checks the laptop setup
@@ -431,7 +432,6 @@ excluded	web-devices	laptop only: the paired devices (list, rename, revoke) are 
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
-excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
 missing	git-ai-commit-msg	Git|S
 missing	git-ai-explain-changes	Git|S
 missing	git-ai-explain-line	Git|S
