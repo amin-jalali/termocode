@@ -47,7 +47,7 @@ func TestGitxPeekGutterClick(t *testing.T) {
 	covNvimEval(t, m, `
 vim.o.mouse = 'a'
 vim.o.number = true
-vim.wo.statuscolumn = '` + editorStatusColumn + `'
+vim.wo.statuscolumn = '`+editorStatusColumn+`'
 _G._tc_git_marks[vim.api.nvim_get_current_buf()] = { [3] = 'TermocodeGitChange' }
 _G._peek_got = nil
 _G.termocode_notify = function(method, line) _G._peek_got = method .. ':' .. tostring(line) end
