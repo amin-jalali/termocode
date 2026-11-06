@@ -36,7 +36,7 @@ vim.fn.sign_define('TermocodeGitAdd',    { text = '┃', texthl = 'TermocodeGitA
 vim.fn.sign_define('TermocodeGitChange', { text = '┃', texthl = 'TermocodeGitChange' })
 vim.fn.sign_define('TermocodeGitDelete', { text = '▁', texthl = 'TermocodeGitDelete' })
 
--- The editor's statuscolumn ('%=%l %{%v:lua.TcGitMark()%}', model.go) has
+-- The editor's statuscolumn (editorStatusColumn, Go side) has
 -- no sign column, so placed signs alone are never drawn. TcGitMark draws
 -- the one-cell git mark of each line from this table:
 -- bufnr -> { [lnum] = sign name }.
@@ -48,6 +48,24 @@ function _G.TcGitMark()
   local name = marks and marks[vim.v.lnum]
   if not name then return ' ' end
   return '%#' .. name .. '#' .. _tc_mark_text[name] .. '%*'
+end
+
+-- TcGitMarkClick runs on a click in the mark cell (the statuscolumn's
+-- click label; a label made inside TcGitMark's own text is not kept). On
+-- a line with a mark it puts the cursor there and sends the line and the
+-- file to the app, which opens the gutter peek (GITX-21, gitx_peek.go).
+function _G.TcGitMarkClick(_, _, button)
+  if button ~= 'l' then return end
+  local pos = vim.fn.getmousepos()
+  if not pos or (pos.line or 0) <= 0 or (pos.winid or 0) == 0 then return end
+  local marks = _G._tc_git_marks[vim.api.nvim_win_get_buf(pos.winid)]
+  if not (marks and marks[pos.line]) then return end
+  pcall(vim.api.nvim_set_current_win, pos.winid)
+  pcall(vim.api.nvim_win_set_cursor, pos.winid, { pos.line, 0 })
+  local buf = vim.api.nvim_win_get_buf(pos.winid)
+  if _G.termocode_notify then
+    _G.termocode_notify('termocode_git_peek', pos.line, vim.api.nvim_buf_get_name(buf))
+  end
 end
 
 -- Render: clears the buffer's sign group and re-paints from the diff hunks.
@@ -187,3 +205,8 @@ vim.api.nvim_create_autocmd({ 'BufWritePost', 'BufReadPost', 'BufEnter', 'Cursor
   callback = _git_signs_maybe,
 })
 `
+
+// editorStatusColumn is the editor's line-number gutter: the number, a
+// space, and the one-cell git mark (TcGitMark) inside a click label, so
+// a click on the mark opens the gutter peek (TcGitMarkClick).
+const editorStatusColumn = `%=%l %@v:lua.TcGitMarkClick@%{%v:lua.TcGitMark()%}%X`

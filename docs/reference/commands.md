@@ -426,6 +426,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Open Merge View | `git-merge-open` |   |   |
 | Git: Open Next Revision of File | `git-rev-next` |   |   |
 | Git: Open Previous Revision of File | `git-rev-prev` |   |   |
+| Git: Peek Change Under Cursor | `git-peek-change` |   |   |
 | Git: Pick Recent Commit Message… | `git-commit-history` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Publish to GitHub… | `git-publish` |   |   |

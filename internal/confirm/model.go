@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -44,6 +45,7 @@ type Model struct {
 	keyRows    []KeyRow // a key card's table (WithKeys)
 	safeID     string   // the safe answer of a Risky card
 	picture    []string // lines shown exactly as given (WithPicture)
+	diff       []string // lines of a change, coloured by their first cell (WithDiff)
 }
 
 func New(title, message string, buttons []Button) Model {
@@ -80,6 +82,19 @@ func (m Model) WithPicture(lines []string) Model {
 	m.picture = append([]string(nil), lines...)
 	return m
 }
+
+// WithDiff shows the lines of a change (unified diff body: " context",
+// "-removed", "+added") below the message, each line in its colour: the
+// added green, the removed red, the rest quiet. Lines are never wrapped:
+// a long one is cut with …, and a long change ends in a "more lines" row.
+// The card grows (up to 110 cells) to fit the longest line.
+func (m Model) WithDiff(lines []string) Model {
+	m.diff = append([]string(nil), lines...)
+	return m
+}
+
+// maxDiffLines is how many lines of a change a card shows.
+const maxDiffLines = 16
 
 // WithScrollText keeps the entire message available with Up/Down.
 func (m Model) WithScrollText() Model { m.scrollText = true; return m }
@@ -382,6 +397,8 @@ type confirmDims struct {
 	buttonXs     []int // inner-x offset of each button (relative to inner area)
 	codeAt       int   // index in bodyLines of the code frame's top row; -1 without code
 	pictureAt    int   // index in bodyLines of the picture's first row; -1 without one
+	diffAt       int   // index in bodyLines of the change's first row; -1 without one
+	diffN        int   // rows of the change (the "more lines" row included)
 }
 
 // layoutDims is the single source of truth for confirm panel geometry.
@@ -418,6 +435,9 @@ func (m Model) boxWidth() int {
 	}
 	for _, l := range m.picture {
 		boxW = max(boxW, lipgloss.Width(l)+6)
+	}
+	for _, l := range m.diff {
+		boxW = max(boxW, min(lipgloss.Width(l)+6, 110))
 	}
 	if m.code != "" {
 		// Room for the command on one line: frame + padding + border.
@@ -459,6 +479,23 @@ func (m Model) layoutRest(boxW, innerW, bodyW int, bodyLines []string) confirmDi
 	if len(m.picture) > 0 {
 		pictureAt = len(bodyLines) + 1
 		bodyLines = append(append(bodyLines, ""), m.picture...)
+	}
+	diffAt, diffN := -1, 0
+	if len(m.diff) > 0 {
+		shown := m.diff
+		more := 0
+		if len(shown) > maxDiffLines {
+			shown, more = shown[:maxDiffLines-1], len(shown)-maxDiffLines+1
+		}
+		diffAt = len(bodyLines) + 1
+		bodyLines = append(bodyLines, "")
+		for _, l := range shown {
+			bodyLines = append(bodyLines, ansi.Truncate(strings.ReplaceAll(l, "\t", "    "), bodyW, "…"))
+		}
+		if more > 0 {
+			bodyLines = append(bodyLines, "…and "+strconv.Itoa(more)+" more lines")
+		}
+		diffN = len(bodyLines) - diffAt
 	}
 	codeAt := -1
 	if m.code != "" {
@@ -510,6 +547,8 @@ func (m Model) layoutRest(boxW, innerW, bodyW int, bodyLines []string) confirmDi
 		buttonXs:     xs,
 		codeAt:       codeAt,
 		pictureAt:    pictureAt,
+		diffAt:       diffAt,
+		diffN:        diffN,
 	}
 }
 
@@ -613,6 +652,10 @@ func (m Model) Box() string {
 			rows = append(rows, padBg(row, innerW))
 			continue
 		}
+		if dims.diffAt >= 0 && i >= dims.diffAt && i < dims.diffAt+dims.diffN {
+			rows = append(rows, padBg(bgFill.Render("  ")+diffLineStyle(line).Render(line), innerW))
+			continue
+		}
 		style := bodyStyle
 		switch {
 		case cmdAt >= 0 && i >= cmdAt:
@@ -661,6 +704,20 @@ func (m Model) Box() string {
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	// Height intentionally NOT set — auto-fit to content rows.
 	return theme.FloatBox(content, dims.boxW+2)
+}
+
+// diffLineStyle colours one line of a change by its first cell.
+func diffLineStyle(line string) lipgloss.Style {
+	st := lipgloss.NewStyle().Background(cmBoxBg)
+	switch {
+	case strings.HasPrefix(line, "+"):
+		return st.Foreground(theme.LG(theme.GitAdded))
+	case strings.HasPrefix(line, "-"):
+		return st.Foreground(theme.LG(theme.GitDeleted))
+	case strings.HasPrefix(line, " "):
+		return st.Foreground(cmTextBody)
+	}
+	return st.Foreground(cmTextDim) // "\ No newline at end of file", "…and N more lines"
 }
 
 // renderButtonsRow lays out all buttons centered within `w` cells. The

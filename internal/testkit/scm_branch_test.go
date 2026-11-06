@@ -84,8 +84,9 @@ func TestSCMBranchSwitch(t *testing.T) {
 }
 
 // Spec: Given a local edit that the other branch would overwrite, when the
-// user switches, then git refuses, the edit is kept, the branch does not
-// change and the toast says why.
+// user switches, then a Cancel-first card says why (GITX-32). Enter is
+// Cancel: the edit is kept and the branch does not change. Stash and
+// Switch saves the edit in the stash and switches.
 func TestSCMBranchSwitchBlockedByLocalChanges(t *testing.T) {
 	d, r := scmDriver(t, func(r *repo) {
 		r.git("checkout", "-q", "-b", "dev")
@@ -97,15 +98,27 @@ func TestSCMBranchSwitchBlockedByLocalChanges(t *testing.T) {
 	d.Palette("git-branch")
 	d.Type("dev")
 	d.Key("enter")
-	until(d, func() bool { return strings.Contains(text(d), "Checkout failed") })
-	if !strings.Contains(text(d), "Your local changes") {
-		t.Errorf("toast does not say why:%s", dump(d))
+	until(d, func() bool { return strings.Contains(text(d), "Your changes block the switch") })
+	if !strings.Contains(text(d), "Stash and Switch") {
+		t.Errorf("the card has no Stash and Switch:%s", dump(d))
 	}
+	d.Key("enter") // Cancel has the focus
+	until(d, func() bool { return !strings.Contains(text(d), "Your changes block the switch") })
 	if got := r.git("branch", "--show-current"); got != "main" {
 		t.Errorf("branch %q, want main", got)
 	}
 	if got := r.read("main.go"); got != "package main\n// local\n" {
 		t.Errorf("local edit lost: %q", got)
+	}
+	d.Palette("git-branch")
+	d.Type("dev")
+	d.Key("enter")
+	until(d, func() bool { return strings.Contains(text(d), "Your changes block the switch") })
+	d.Key("right")
+	d.Key("enter")
+	until(d, func() bool { return strings.Contains(statusBar(d), "dev") })
+	if got := r.git("stash", "list"); !strings.Contains(got, "before switching to dev") {
+		t.Errorf("the edit is not in the stash: %q", got)
 	}
 }
 
