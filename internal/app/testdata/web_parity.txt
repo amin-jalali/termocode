@@ -268,6 +268,10 @@ web	kubernetes-context	op:kube.contexts
 web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
 web	kubernetes-show	view:kube
+web	layout-delete	op:layout.delete
+web	layout-open	op:layout.open
+web	layout-reset	op:layout.reset
+web	layout-save	op:layout.save
 web	lowercase	cmd:lowerCase
 web	lsp-manage	op:lsp.servers
 web	mcp-import-other	palette
@@ -389,10 +393,6 @@ excluded	git-merge-undo	laptop only: TUI merge view undo (web editor has its own
 excluded	help-context	laptop only: explains TUI widgets
 excluded	help-guide	laptop only: opens the TUI guide
 excluded	http-env-open-private	security: private environment file stays on the laptop
-excluded	layout-delete	laptop only: TUI pane layouts
-excluded	layout-open	laptop only: TUI pane layouts
-excluded	layout-reset	laptop only: TUI pane layouts
-excluded	layout-save	laptop only: TUI pane layouts
 excluded	open-docs	laptop only: opens docs in the laptop browser
 excluded	open-shell	laptop only: opens an external shell window on the laptop
 excluded	prefs-import-editor	laptop only: imports from other editors on the laptop disk
