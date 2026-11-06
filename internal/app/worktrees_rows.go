@@ -41,7 +41,7 @@ const (
 )
 
 // Groups of the list, in order.
-var wtGroups = []string{"PINNED", "ACTIVE", "ASLEEP", "EXTERNAL"}
+var wtGroups = []string{"PINNED", "ACTIVE", "ASLEEP", "EXTERNAL", "ARCHIVED"}
 
 // wtAgent is the agent working in a worktree: a terminal tab of this
 // window, or one of another window's (agentroll).
@@ -110,7 +110,8 @@ func wtStateRank(s string) int {
 
 // wtItems joins the entries with the agents in them (this window's tabs
 // first, then the other windows'), the "you are here" mark and the
-// group. Archived worktrees are left out (W4 shows them).
+// group. Archived worktrees (their folder removed, the branch kept) go
+// under ARCHIVED.
 func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Rollup, root string) []wtItem {
 	byPath := map[string][]wtAgent{}
 	for i, t := range tabs {
@@ -141,6 +142,7 @@ func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Ro
 	var out []wtItem
 	for _, e := range entries {
 		if e.Meta.State == worktrees.StateArchived {
+			out = append(out, wtItem{e: e, state: wtStateArchived, group: "ARCHIVED"})
 			continue
 		}
 		it := wtItem{e: e, here: e.Path == here, state: wtStateIdle}
@@ -181,6 +183,9 @@ func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Ro
 
 // wtMatch: the card passes the f filter and the text filter.
 func wtMatch(it wtItem, kind wtKind, filter string, dirty func(string) (int, bool)) bool {
+	if it.state == wtStateArchived && kind != wtKindAll {
+		return false // archived rows show only in All
+	}
 	switch kind {
 	case wtKindMine:
 		if it.e.Kind != worktrees.KindMain && it.e.Kind != worktrees.KindUser {

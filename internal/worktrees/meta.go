@@ -41,6 +41,7 @@ type Meta struct {
 	PR       int       `json:"pr,omitempty"`
 	Notes    []Note    `json:"notes,omitempty"` // agent notes, oldest first (notes.go)
 	State    string    `json:"state,omitempty"` // "" | asleep | archived
+	Branch   string    `json:"branch,omitempty"` // an archived worktree's branch (git no longer lists it)
 	Created  time.Time `json:"created,omitzero"`
 	LastSeen time.Time `json:"last_seen,omitzero"`
 

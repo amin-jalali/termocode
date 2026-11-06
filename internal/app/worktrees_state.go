@@ -66,7 +66,8 @@ type wtState struct {
 	linkReading bool          // due links are being read again
 	ctlLink     *wtCtlPending // the open card of a CLI link (worktrees_notes.go)
 
-	sleepAsk *wtSleepPending // the open sleep card (worktrees_sleep.go)
+	sleepAsk   *wtSleepPending   // the open sleep card (worktrees_sleep.go)
+	archiveAsk *wtArchivePending // the open archive card (worktrees_archive.go)
 
 	seq    uint64
 	render struct {
@@ -243,6 +244,10 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTCreated(msg), true
 	case wtForgotMsg:
 		return m.onWTForgot(msg), true
+	case wtArchivePrepMsg:
+		return m.onWTArchivePrep(msg), true
+	case wtArchivedMsg:
+		return m.onWTArchived(msg), true
 	case wtSetupDoneMsg:
 		return m.onWTSetupDone(msg), true
 	case wtLoadMsg:
