@@ -11,7 +11,7 @@ import (
 )
 
 // gitxBisectRepo: first, then c2..c8; from c5 on, bug.txt says "bug".
-// Its tasks.json has a "check" task that fails on the bug.
+// An untracked tasks.json has a "check" task that fails on the bug.
 func gitxBisectRepo(t *testing.T) (*Model, string, []string) {
 	t.Helper()
 	m, dir := covGitRepo(t)
@@ -22,13 +22,13 @@ func gitxBisectRepo(t *testing.T) (*Model, string, []string) {
 			v = "bug"
 		}
 		covWrite(t, dir, "bug.txt", v+"\n")
+		covWrite(t, dir, fmt.Sprintf("f%d.txt", i), "x\n")
 		covCommit(t, dir, fmt.Sprintf("c%d", i))
 		hs = append(hs, covGit(t, dir, "rev-parse", "HEAD"))
 	}
+	// Not committed: an untracked tasks.json stays while bisect checks
+	// out older commits.
 	covWrite(t, dir, ".termocode/tasks.json", `{"version":"2.0.0","tasks":[{"label":"check","type":"shell","command":"grep -q ok bug.txt"}]}`)
-	covGit(t, dir, "add", "-A")
-	covGit(t, dir, "commit", "-q", "-m", "tasks")
-	hs = append(hs, covGit(t, dir, "rev-parse", "HEAD"))
 	covRefresh(m)
 	return m, dir, hs
 }
@@ -44,7 +44,7 @@ func gitxBug(t *testing.T, dir string) bool {
 func TestGitxBisectByHand(t *testing.T) {
 	m, dir, hs := gitxBisectRepo(t)
 	m.dispatchPaletteAction("git-bisect")
-	if !m.pickerOpen || len(gitxPickerIDs(m)) < 8 {
+	if !m.pickerOpen || len(gitxPickerIDs(m)) < 7 {
 		t.Fatalf("good picker %v", gitxPickerIDs(m))
 	}
 	m.pickerOpen = false
