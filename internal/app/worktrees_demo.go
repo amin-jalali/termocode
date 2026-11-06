@@ -8,7 +8,9 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentroll"
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/connectcard"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/worktreeform"
 	"github.com/amin-jalali/termocode/internal/worktrees"
 )
 
@@ -89,6 +91,50 @@ func (m *Model) worktreesDemo(variant string) {
 		st.kind, st.filter = wtKindDirty, "fix"
 	case "jump":
 		m.openWorktreeJump()
+	case "new", "new-error":
+		m.worktreesNewDemo(variant == "new-error")
+	case "setup":
+		f := wtDemoForm()
+		m.wtSetupAsk(f, "/src/app.worktrees/feat-pin-row")
+	case "setup-running":
+		st.setups = map[string]*wtSetupRun{"/src/app.worktrees/wt-sidebar": {state: wtSetupRunning}}
 	}
 	st.touch()
+}
+
+// wtDemoForm is a dialog state with a canned repository and config.
+func wtDemoForm() *wtForm {
+	return &wtForm{
+		off: true, root: "/src/app", main: "/src/app", common: "/src/app/.git", base: "/src/app.worktrees",
+		from: "main", refs: []string{"main", "feat/wt-sidebar", "fix/toast-race", "origin/main", "v1.4.0"},
+		cfg:  worktreeform.Config{Include: []string{".env", ".env.local", "secrets.env"}, Shared: []string{"node_modules"}, Setup: []string{"pnpm install"}},
+		hash: "demo",
+		files: []worktreeform.File{
+			{Rel: ".env", Kind: worktreeform.Copy}, {Rel: ".env.local", Kind: worktreeform.Copy},
+			{Rel: "secrets.env", Kind: worktreeform.Copy, Skip: "not there"},
+			{Rel: "node_modules", Kind: worktreeform.Link},
+		},
+		agents: []agents.Agent{agentDemo("claude"), agentDemo("codex")},
+	}
+}
+
+func agentDemo(id string) agents.Agent {
+	a, _ := agents.ByID(id)
+	return a
+}
+
+// worktreesNewDemo opens Worktree: New… with a typed name and task
+// (nothing is made); fail shows git's error on the card.
+func (m *Model) worktreesNewDemo(fail bool) {
+	f := wtDemoForm()
+	m.wt.form = f
+	m.connect = connectcard.New(m.wtFormCard())
+	m.connect.SetSize(m.w, m.h)
+	m.connectOpen = true
+	m.connect.SetInputValue("name", "feat/pin-row")
+	m.connect.SetInputValue("task", "Add the pinned row as in issue 412. Run go test.")
+	if fail {
+		f.fail = "the branch feat/pin-row already exists"
+	}
+	m.connect.SetCard(m.wtFormCard())
 }

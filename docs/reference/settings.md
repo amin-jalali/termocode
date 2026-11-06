@@ -158,6 +158,12 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_server_auto_approve` | object | `{}` | The "Always allow" answers you gave on an outside agent's card (see mcp_server): agent name → tool names that run without asking for that agent. Separate from ai_auto_approve, which never applies to outside agents. The name is the agent's own claim. See and revoke them in AI: Agent Auto-Approve…. |
 | `mcp_trusted_tools` | object | `{}` | The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first. |
 
+## Git (file only)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `worktree_dir` | string | `""` | The folder Worktree: New… puts new worktrees in, one folder per branch. Empty: `<repo>.worktrees` next to the repository. `~` is your home folder; a relative path is relative to the repository. Read when the form opens. |
+
 ## Services (file only)
 
 | Key | Type | Default | Description |

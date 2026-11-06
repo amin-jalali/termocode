@@ -57,6 +57,10 @@ type wtState struct {
 	gen     uint64
 	polling bool
 
+	form     *wtForm                // Worktree: New… (worktrees_new.go)
+	setupAsk *wtSetupPending        // the open setup trust card (worktrees_setup.go)
+	setups   map[string]*wtSetupRun // setups run in this window, by worktree path
+
 	seq    uint64
 	render struct {
 		sync.Mutex
@@ -212,7 +216,16 @@ func wtTick(gen uint64) tea.Cmd {
 // handleWTMsg routes the WORKTREES messages. ok=false: not ours.
 func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	st := m.wt
+	if c, ok := m.handleWTFormMsg(msg); ok { // the dialog's buttons (worktrees_new.go)
+		return c, true
+	}
 	switch msg := msg.(type) {
+	case wtNewPrepMsg:
+		return m.onWTNewPrep(msg), true
+	case wtCreatedMsg:
+		return m.onWTCreated(msg), true
+	case wtSetupDoneMsg:
+		return m.onWTSetupDone(msg), true
 	case wtLoadMsg:
 		return m.onWTLoad(msg), true
 	case wtStatusMsg:

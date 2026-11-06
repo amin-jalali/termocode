@@ -344,6 +344,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, cmd
 	case picker.CloseMsg:
 		m.pickerOpen = false
+		if m.pickerKind == pickerKindWTRef { // worktrees_new.go: Esc goes back to the dialog
+			m.reopenWTForm("")
+			return m, nil
+		}
 		if cmd, ok := m.databaseTransferPickerClosed(); ok {
 			return m, cmd
 		}
@@ -2396,6 +2400,9 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.openWorkspace(msg.ID)
 	case pickerKindWorktreeJump: // worktrees_jump.go
 		return m.onWorktreeJumpPicked(msg.ID)
+	case pickerKindWTRef: // worktrees_new.go: back to the dialog with the start point
+		m.reopenWTForm(msg.ID)
+		return nil
 	case pickerKindStash:
 		return m.applyStashSelected(msg.ID)
 	case pickerKindDiffLeft:

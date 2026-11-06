@@ -58,6 +58,7 @@ type wtItem struct {
 	here   bool
 	state  string
 	group  string
+	setup  string // the setup state of a new worktree (worktrees_setup.go)
 }
 
 // wtRow is a line of the list model: a group header or a card.

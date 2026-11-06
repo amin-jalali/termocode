@@ -59,7 +59,11 @@ func (m Model) wtTabs() []wtTabAgent {
 	}
 	out := make([]wtTabAgent, 0, len(m.terminalTabs))
 	for _, t := range m.terminalTabs {
-		out = append(out, wtTabAgent{name: t.agentTitle(), cwd: t.Cwd, state: t.AgentState})
+		cwd := t.Cwd
+		if t.Worktree != "" { // an agent started in a worktree belongs to it (AGX-2)
+			cwd = t.Worktree
+		}
+		out = append(out, wtTabAgent{name: t.agentTitle(), cwd: cwd, state: t.AgentState})
 	}
 	return out
 }
@@ -89,6 +93,11 @@ func (st *wtState) dirty(path string) (int, bool) {
 func (m Model) wtList() ([]wtItem, []wtRow) {
 	st := m.wt
 	items := wtItems(st.entries, m.wtTabs(), st.others, st.root)
+	for i := range items {
+		if r := st.setups[items[i].e.Path]; r != nil {
+			items[i].setup = r.state
+		}
+	}
 	return items, wtRows(items, st.kind, st.filter, st.dirty)
 }
 
@@ -419,6 +428,9 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	if it.e.Locked {
 		links = append(links, "locked")
 	}
+	if s := wtSetupLine(it.setup); s != "" {
+		links = append(links, theme.ASCIIText(s))
+	}
 	if !it.e.Meta.LastSeen.IsZero() {
 		links = append(links, formatRecentTime(it.e.Meta.LastSeen, now))
 	}
@@ -517,9 +529,9 @@ func (st *wtState) renderDetail(it wtItem, w int, now time.Time) []string {
 
 // footer is two lines: the cursor's folder and the keys.
 func (st *wtState) footer(items []wtItem, rows []wtRow, cur, w, h int) []string {
-	keys := "Enter open · a add folder · p pin · f filter · ? keys"
+	keys := "Enter open · a add folder · n new · p pin · f filter · ? keys"
 	if wtCompact(w, h) {
-		keys = "Enter card · ? keys"
+		keys = "Enter card · n new · ? keys"
 		if st.detail {
 			keys = "Esc back · ? keys"
 		}

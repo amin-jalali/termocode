@@ -1332,6 +1332,7 @@ Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, a
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider`, `cursor`, `amp`, `goose`, `qwen`, `crush`, `copilot`, `kimi`, `droid`, `pi` |
+| `worktree` | string |   | optional: start it in this worktree (a path or branch from worktrees_list); the workspace when left out |
 
 ### agent_race_start
 
@@ -2241,8 +2242,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-add-folder` | Worktree: Add Selected as Folder | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-filter` | Worktree: Next Filter | auto |   |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-new` | Worktree: New… | never | opens a picker or prompt that only the user can answer; use a typed tool (worktree_create comes later) |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
+| `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
 | `worktree-view` | Worktree: Show | auto |   |
 | `zen-mode` | View: Toggle Zen Mode | auto |   |
 
@@ -2359,3 +2362,4 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflows_missed_grace_min` | confirm (settings) |   |
 | `workflows_parallel_max` | confirm (settings) |   |
 | `workflows_wait_hours` | confirm (settings) |   |
+| `worktree_dir` | never | where new worktrees go on disk; a file-only switch the user edits in config.json |

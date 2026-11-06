@@ -269,3 +269,8 @@ func Detect(id string, lines []string) State {
 	}
 	return Unknown
 }
+
+// InputReady says whether agent id shows its input box with nothing
+// asked: Detect is Done (a y/n or permission question is Waiting, and
+// so is never ready). An agent without screen rules is never ready.
+func InputReady(id string, lines []string) bool { return Detect(id, lines) == Done }

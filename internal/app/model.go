@@ -611,7 +611,11 @@ type Model struct {
 	connect     connectcard.Model
 	// addAIOpen shows the Add AI card (ai_add.go).
 	addAIOpen bool
-	addAI     addai.Model
+	// agentPickDir is the folder Agent: Start… starts in ("" = the
+	// workspace): the selected worktree when it was opened from the
+	// WORKTREES view (agent_picker.go, AGX-2).
+	agentPickDir string
+	addAI        addai.Model
 	// profileFormOpen shows the profile step form (ai_profile_form.go).
 	profileFormOpen bool
 	profileForm     profileform.Model

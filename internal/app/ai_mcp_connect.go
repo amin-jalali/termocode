@@ -1138,6 +1138,9 @@ func (m *Model) onMCPWizKey(k string) tea.Cmd {
 
 // routeToConnect sends keys, clicks and resizes to the open card.
 func (m Model) routeToConnect(msg tea.Msg) (Model, tea.Cmd) {
+	if _, key := msg.(tea.KeyMsg); key && m.wtFormOpen() { // Worktree: New… (worktrees_new.go)
+		return m.routeToWTForm(msg)
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -1158,6 +1161,7 @@ func (m Model) routeToConnect(msg tea.Msg) (Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.connect, cmd = m.connect.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
 		m.refreshItermocSlotCard()
+		m.refreshWTForm()
 		return m, cmd
 	}
 	var cmd tea.Cmd
