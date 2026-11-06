@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -157,7 +156,8 @@ func loadFilesIn(roots []string) []picker.Item {
 // instead we read the saved-roots list from the session file (kept in sync
 // by the explorer's add/remove handlers). cwd is always first.
 func workspaceRoots() []string {
-	cwd, err := procRootDir()
+	ws := procWorkspace()
+	cwd, err := rootOf(ws)
 	if err != nil {
 		return nil
 	}
@@ -166,7 +166,9 @@ func workspaceRoots() []string {
 		if p == "" || p == cwd {
 			continue
 		}
-		if _, err := os.Stat(p); err != nil {
+		// Checked where the workspace lives: a container's extra folders
+		// are container paths (FIX-3).
+		if _, err := statOn(ws, p); err != nil {
 			continue
 		}
 		out = append(out, p)
@@ -543,6 +545,11 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.search = search.New()
 		m.search.SetSize(m.w, m.h)
 		m.search.SetRoots(m.explorer.Roots())
+		if fsys, ok := m.remoteFS(); ok {
+			// A container workspace (FIX-3): its one root, in the container.
+			m.search.SetRoots([]string{m.workspace().Root})
+			m.search.SetFS(fsys)
+		}
 		m.search.SetMaxResults(searchMaxResults(loadSettings()))
 		m.searchOpen = true
 	case "replace-in-file":
