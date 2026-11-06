@@ -315,3 +315,21 @@ func TestGitxAIComposeCommits(t *testing.T) {
 		t.Error("sent without Enter")
 	}
 }
+
+// GITX-39 (J12): Git: How to Split a Commit opens a guide that walks
+// through the app's own commands: the last commit with Uncommit, an older
+// one with an edit stop in Interactive Rebase, then staging the parts and
+// Continue.
+func TestGitxSplitCommitGuide(t *testing.T) {
+	page := gitxSplitGuidePage("feat/x")
+	for _, want := range []string{"Git: Uncommit Last Commit (Keep Changes)", "Git: Interactive Rebase…", "edit", "Git: Rebase in Progress (Continue / Skip / Abort)…", "Git: Commit Marked Files Only…", "feat/x"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("no %q in:\n%s", want, page)
+		}
+	}
+	m, _ := covGitRepo(t)
+	m.dispatchPaletteAction("git-split-guide")
+	if p := aiActionPolicies["git-split-guide"]; p.Gate != aiGateAuto {
+		t.Error("the guide is not auto for the AI")
+	}
+}
