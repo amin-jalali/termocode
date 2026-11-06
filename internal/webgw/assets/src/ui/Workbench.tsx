@@ -14,6 +14,8 @@ import {
   CHAT_MAX,
   CHAT_MIN,
   closeMany,
+  pinned,
+  togglePin,
   closeTab,
   focusedGroup,
   focusGroup,
@@ -52,29 +54,38 @@ import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
 import { asking, closeActive, cycleTab, focusSecond } from "../lib/commands";
 import { AskLaptop } from "./AskLaptop";
+import { AskHere, askHere, askLaptop } from "./AskHere";
 import { ContextMenu, onMenu, openMenu, type MenuItems } from "./ContextMenu";
 import { absPath, copyText } from "../lib/clip";
 import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, openSide, routeSide, sideView, type Activity } from "./ActivityBar";
 import type { StringKey } from "../strings";
 import { DeskSearch } from "../views/desk/DeskSearch";
+import { DeskWorktrees } from "../views/desk/DeskWorktrees";
 import { DeskDB } from "../views/desk/DeskDB";
 import { DeskDevice, DeskSettings } from "../views/desk/DeskSettings";
 import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
-import { DBQueryTab, DBTableTab } from "../views/desk/DBTabs";
+import { CtrTab } from "../views/desk/CtrTab";
+import { DBHistoryTab, DBQueryTab, DBTableTab, DBTextTab } from "../views/desk/DBTabs";
 import { DeskMCP, MCPAgentTab } from "../views/desk/DeskMCP";
 import { WorkflowRunTab } from "../views/desk/DeskWorkflows";
 import { vtabIcon, vtabOf } from "../lib/vtabs";
+import { MDPreview } from "../views/MDPreview";
+import { CompareView } from "../views/CompareView";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
+import { GitAskHost } from "../views/git/GitAsk";
 import { AgentsView } from "../views/AgentsView";
+import { ItermocView } from "../views/ItermocView";
 import { QuickInput } from "./QuickInput";
+import { SideChat } from "../views/desk/SideChat";
 import { RefsPeek } from "./RefsPeek";
 import { diags, panelTab, toggleProblems, type PanelTab } from "../lib/lsp";
 import { ProblemsView } from "../views/ProblemsView";
 import { StatusBar } from "./StatusBar";
 import { panelsAround, panelViews, sideView as registeredSideView, type PanelDef } from "../lib/views";
 import "../views/run/index";
+import "../views/http/index";
 
 /** Sash is a drag handle between two panes. It reports the new size from
  * the size at the start plus the pointer's move (dir -1: the pane is on
@@ -160,11 +171,12 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
         const on = path === cur;
         const name = tabName(path);
         const pv = gr?.preview === path;
+        const pin = pinned.value.has(path);
         const mark = drop?.group === group && drop.index === i ? " is-drop-before" : drop?.group === group && drop.index === i + 1 && i === tabs.length - 1 ? " is-drop-after" : "";
         return (
           <div
             key={path}
-            class={`ed-tab${on ? " is-on" : ""}${b?.dirty ? " is-dirty" : ""}${pv ? " is-preview" : ""}${mark}`}
+            class={`ed-tab${on ? " is-on" : ""}${b?.dirty ? " is-dirty" : ""}${pv ? " is-preview" : ""}${pin ? " is-pinned" : ""}${mark}`}
             title={path}
             data-path={path}
             draggable
@@ -199,10 +211,16 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
               <TabIcon tab={path} />
               <span class="ed-tab-name" dir="auto">{name}</span>
             </button>
-            <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={`${t("wb.close_tab", { name })} (${modKey()}+W)`} onClick={() => closeTab(path, group)}>
-              <Cod name="circle-filled" />
-              <Cod name="close" />
-            </button>
+            {pin ? (
+              <button type="button" class="ed-tab-x ed-tab-pin" aria-label={t("wb.unpin_tab", { name })} title={t("wb.unpin_tab", { name })} onClick={() => togglePin(path, group)}>
+                <Cod name="pinned" />
+              </button>
+            ) : (
+              <button type="button" class="ed-tab-x" aria-label={t("wb.close_tab", { name })} title={`${t("wb.close_tab", { name })} (${modKey()}+W)`} onClick={() => closeTab(path, group)}>
+                <Cod name="circle-filled" />
+                <Cod name="close" />
+              </button>
+            )}
           </div>
         );
       })}
@@ -231,6 +249,8 @@ function tabMenu(path: string, group: number, tabs: readonly string[], bufs: rea
     { label: t("menu.close_others"), disabled: tabs.length < 2, run: () => closeMany(group, (p) => p === path) },
     { label: t("menu.close_right"), disabled: i === tabs.length - 1, run: () => closeMany(group, (_p, j) => j <= i) },
     { label: t("menu.close_saved"), disabled: tabs.every(dirty), run: () => closeMany(group, dirty) },
+    null,
+    { label: t(pinned.peek().has(path) ? "menu.unpin" : "menu.pin"), run: () => togglePin(path, group) },
     null,
     { label: t("menu.copy_path"), run: () => copyText(absPath(path)) },
     { label: t("menu.copy_rel"), run: () => copyText(path) },
@@ -324,8 +344,13 @@ function EditorBody({ more, file, slot }: { more: boolean; file: string | null; 
   const v = file ? vtabOf(file) : null;
   if (v?.kind === "db") return <DBTableTab key={file} conn={v.conn} table={v.table} slot={slot} />;
   if (v?.kind === "sql") return <DBQueryTab key={file} conn={v.conn} slot={slot} />;
+  if (v?.kind === "ddl" || v?.kind === "scmp") return <DBTextTab key={file} kind={v.kind} conn={v.conn} table={v.table} slot={slot} />;
+  if (v?.kind === "dbh") return <DBHistoryTab key={file} />;
   if (v?.kind === "mcp") return <MCPAgentTab key={file} name={v.name} slot={slot} />;
   if (v?.kind === "wf") return <WorkflowRunTab key={file} run={v.run} slot={slot} />;
+  if (v?.kind === "ctr") return <CtrTab key={file} what={v.what} arg={v.arg} label={v.label} slot={slot} />;
+  if (v?.kind === "md") return <MDPreview key={file} path={v.path} />;
+  if (v?.kind === "cmp") return <CompareView key={file} a={v.a} b={v.b} slot={slot} />;
   if (file && gitTabOf(file)) return <GitTabView key={file} tab={file} slot={slot} />;
   if (file) return <FileView key={file} path={file} slot={slot} />;
   return <Welcome />;
@@ -457,6 +482,10 @@ function SideView({ id }: { id: Activity }) {
       return <DeskContainers />;
     case "agents":
       return <AgentsView />;
+    case "itermoc":
+      return <ItermocView />;
+    case "worktrees":
+      return <DeskWorktrees />;
     default:
       return (
         <div class="side-stack ex-stack">
@@ -524,9 +553,13 @@ export function Workbench() {
       {p.side && <Sash axis="x" size={p.sideW} min={SIDE_MIN} max={SIDE_MAX} dir={1} label={t("wb.resize_side")} def={PANE_DEFAULTS.sideW} onSize={(n) => setPanes({ sideW: n })} />}
       <div class="wb-center">
         <div class="wb-editor">
-          {quick.value && <QuickInput key={quick.value.mode} />}
+          {quick.value && <QuickInput key={quick.value.mode + (quick.value.ask?.title ?? quick.value.pick?.title ?? "")} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
+          <SideChat />
+          {askHere.value && <AskHere ask={askHere.value} />}
+          {askLaptop.value && <AskLaptop key={askLaptop.value.text} label={askLaptop.value.label} text={askLaptop.value.text} send={askLaptop.value.send} onDone={() => (askLaptop.value = null)} />}
           <RemoteAskHost />
+          <GitAskHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
             {all.map((g, i) => (

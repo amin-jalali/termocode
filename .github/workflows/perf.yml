@@ -13,11 +13,11 @@ on:
 permissions:
   contents: read
 
-# Same queue rule as test.yml: on main a waiting run is replaced by a
-# newer one (a running one finishes); a PR cancels its older run.
+# Same queue rule as test.yml: a newer push (main too) or PR commit
+# cancels the older run, so only the newest commit is measured.
 concurrency:
   group: perf-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: true
 
 jobs:
   perf:

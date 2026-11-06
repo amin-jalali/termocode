@@ -46,6 +46,7 @@ var topicDefs = []TopicDef{
 	{Name: "services", Phase: PhaseV2},
 	{Name: "ai", Phase: PhaseV2},
 	{Name: "workflows", Phase: PhaseV2},
+	{Name: "worktrees", Phase: PhaseV2},
 }
 
 // Topics lists every topic the protocol knows.

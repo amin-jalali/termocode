@@ -4,3 +4,4 @@
 // app-chunk.js.
 import "./strings.desk"; // the workbench's strings, in this file only
 export { StatusBar, Workbench } from "./ui/Workbench";
+export { SoloTerm } from "./views/DeskTerm";

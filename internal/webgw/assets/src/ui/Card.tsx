@@ -1,6 +1,7 @@
 // Approval cards (web UX 3.2, 5.3). The safe answer comes first and has
 // focus; Enter presses the focused button only; Esc means Later, never an
-// answer; the risky button is inert for 600 ms (useArming) with a visible
+// answer (inside the check window after a risky press it cancels that
+// answer before it is sent); the risky button is inert for 600 ms (useArming) with a visible
 // fill. There is no "Always allow" from the web, ever.
 import { h, type ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -44,6 +45,8 @@ export interface CardProps {
   mode?: "dialog" | "inline";
   onAnswer?: (choice: "safe" | "risky") => void;
   onLater?: () => void;
+  /** onCancel: Esc came inside the check window, so the risky answer was dropped unsent. */
+  onCancel?: () => void;
   onClose?: () => void;
   onLaptop?: () => void;
   /** by names who answered an answered card: "laptop" (the default) or another browser. */
@@ -52,11 +55,21 @@ export interface CardProps {
 
 const CHECK_MS = 300;
 
-export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onClose, onLaptop, by }: CardProps) {
+export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onCancel, onClose, onLaptop, by }: CardProps) {
   const root = useRef<HTMLElement | null>(null);
   const safeBtn = useRef<HTMLButtonElement | null>(null);
   const arm = useArming(root);
   const [done, setDone] = useState(false);
+  // check holds the risky answer while its check mark shows; it is not
+  // sent yet, so Esc (or the card going away) can still drop it.
+  const check = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const cancelCheck = (): boolean => {
+    if (check.current === undefined) return false;
+    clearTimeout(check.current);
+    check.current = undefined;
+    return true;
+  };
+  useEffect(() => () => void cancelCheck(), []);
 
   useEffect(() => {
     if (mode === "dialog") safeBtn.current?.focus();
@@ -69,14 +82,20 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
-      onLater?.();
+      if (cancelCheck()) {
+        setDone(false);
+        onCancel?.();
+      } else onLater?.();
     }
   };
 
   const risky = () => {
     if (done || !arm.pressOK()) return;
     setDone(true);
-    setTimeout(() => onAnswer?.("risky"), CHECK_MS);
+    check.current = setTimeout(() => {
+      check.current = undefined;
+      onAnswer?.("risky");
+    }, CHECK_MS);
   };
 
   let foot: ComponentChildren;

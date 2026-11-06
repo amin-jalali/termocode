@@ -23,6 +23,9 @@ const (
 	OpDebugEval    = "debug.eval"
 	OpDebugFrame   = "debug.frame"
 	OpDebugSources = "debug.sources"
+	// OpDebugOpenLaunch answers the launch.json the page opens (the
+	// laptop writes its template first when there is none).
+	OpDebugOpenLaunch = "debug.open_launch"
 )
 
 var opDebugRows = []Policy{
@@ -35,6 +38,7 @@ var opDebugRows = []Policy{
 	{Op: OpDebugBp, New: newOf[DebugBpArgs](), Role: RoleController, Rate: perSec(10), MaxBytes: 16 * kib, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDebugWatch, New: newOf[DebugWatchArgs](), Role: RoleController, Rate: perSec(5), MaxBytes: 8 * kib, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDebugEval, New: newOf[DebugEvalArgs](), Role: RoleController, Rate: perSec(5), MaxBytes: 8 * kib, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpDebugOpenLaunch, New: newOf[EmptyArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpDebugFrame, New: newOf[DebugFrameArgs](), Role: RoleController, Rate: perSec(10), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 }
 
@@ -43,6 +47,7 @@ var _ = func() bool { opTable = append(opTable, opDebugRows...); return true }()
 func init() {
 	registerTopic("debug", DebugSnap{}, DebugSnap{})
 	registerResult(OpDebugSources, DebugSources{})
+	registerResult(OpDebugOpenLaunch, DebugLaunch{})
 }
 
 // Run and Debug limits.
@@ -309,4 +314,10 @@ func (a *DebugFrameArgs) validate(int) error {
 		return invalid("bad frame")
 	}
 	return nil
+}
+
+// DebugLaunch is the result of debug.open_launch: the launch.json to
+// open, workspace-relative.
+type DebugLaunch struct {
+	Path string `json:"path"`
 }

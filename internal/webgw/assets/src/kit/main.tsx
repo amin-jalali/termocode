@@ -213,6 +213,7 @@ function SheetDemo() {
             where={open === "tool" ? "terminal 2 · ~/termocode" : undefined}
             onAnswer={(c) => close(answerToast[open][c])}
             onLater={() => close("card.later")}
+            onCancel={() => close("card.cancelled")}
             onLaptop={() => close("laptop.shown")}
           >
             {cardBody(open)}

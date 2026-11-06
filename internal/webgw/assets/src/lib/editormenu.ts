@@ -41,7 +41,7 @@ export function editorMenu(x: number, y: number, m: MenuMsg, edit: (e: ToFrame) 
     },
   ];
   if (m.can.format) items.push(null, { label: t("menu.format"), keys: "Shift+Alt+F", run: () => edit({ t: "edit", op: "format" }) });
-  // The laptop's AI actions (the laptop's editor has the same four).
+  // The laptop's AI actions (the laptop's editor has the same five).
   if (ai) {
     const run = (kind: AiAct) => () => ai(kind, m.at);
     items.push(
@@ -50,6 +50,7 @@ export function editorMenu(x: number, y: number, m: MenuMsg, edit: (e: ToFrame) 
       { label: t("ai.fix"), disabled: m.readOnly, run: run("fix") },
       { label: t("ai.edit"), keys: `${mod}+I`, disabled: m.readOnly, run: run("edit") },
       { label: t("ai.doc"), disabled: m.readOnly, run: run("doc") },
+      { label: t("ai.attach"), run: run("attach") },
     );
   }
   items.push(null, { label: t("menu.palette"), keys: `${mod}+Shift+P`, run: () => (quick.value = { mode: "commands" }) });
