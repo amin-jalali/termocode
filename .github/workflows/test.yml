@@ -7,18 +7,22 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
-# A new push to a branch or PR cancels the older run of it, so the queue
-# only holds the newest commit. On main a running job is never cancelled,
-# but a waiting run is replaced by a newer one: commits land one by one
-# after their branch was green, and one run per commit there filled the
-# queue with hundreds of runs. The newest main commit is always tested.
+# A new push to a branch, PR or main cancels the older run of it, so only
+# the newest commit of each is tested. On main this means a merge that lands
+# while the run of the one before is still going stops that run: commits
+# land one by one after their own MR was green, so testing the newest main
+# commit covers them all and the queue never fills with one full run per
+# merge. The cost: a main commit that was replaced is never tested alone,
+# so a red main run can point at a few merges, not one.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: true
 
 # Required checks (CONTRIBUTING.md): keep these job names stable.
 #   test (ubuntu-latest), test (macos-latest), golden screens (ubuntu-latest),
 #   e2e (ubuntu-latest), e2e (macos-latest), coverage (ubuntu-latest)
+# The slow jobs run as parallel shards ("test (ubuntu-latest, 2/4)"); a
+# small job with the old name waits for all shards and fails if one did.
 # A skipped job counts as passed, so docs-only changes skip the heavy jobs
 # through the "changes" job (a workflow-level paths-ignore would leave the
 # required checks waiting forever).
@@ -33,6 +37,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      web: ${{ steps.diff.outputs.web }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,29 +50,39 @@ jobs:
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
           # Docs no test reads: top-level *.md, ADRs, concept pages, media.
           # docs/guides, docs/reference … are embedded in the app (docs/embed.go).
           docs='^([^/]+\.md|docs/(adr|concepts)/.*|assets/(gifs|screenshots)/.*|\.github/PULL_REQUEST_TEMPLATE\.md|LICENSE.*|requirements-docs\.txt)$'
+          # web=false: a PR that touches no web code skips the macOS web-e2e
+          # run (main and every push still run it).
+          web_paths='^(internal/web[^/]*/|cmd/web[^/]*/|e2e/web|e2e/ssh_web|\.github/workflows/|scripts/ci-)'
           code=true
+          web=true
           if [ -n "$BASE" ] && [ "$BASE" != 0000000000000000000000000000000000000000 ] \
             && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             files=$(git diff --name-only "$BASE...$HEAD")
             if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE "$docs"; then
               code=false
             fi
+            if [ "$EVENT" = pull_request ] && [ -n "$files" ] \
+              && ! printf '%s\n' "$files" | grep -qE "$web_paths"; then
+              web=false
+            fi
           fi
+          [ "$code" = true ] || web=false
           echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+          echo "web=$web" | tee -a "$GITHUB_OUTPUT"
 
-  test:
-    name: test (${{ matrix.os }})
+  # Build, vet and the "generated files up to date" checks, once, beside
+  # the test shards (they used to run before the tests in the test job).
+  checks:
+    name: checks (ubuntu-latest)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,11 +93,8 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      # sqlite3: the internal/dbclient tests that drive the CLI skip
-      # without it (macOS has it built in).
-      - name: Install X11 dev headers and sqlite3 (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev sqlite3
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -90,7 +102,6 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-            ~/Library/Caches/go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
@@ -108,7 +119,6 @@ jobs:
       # cgo build must not pull in golang.design/x/clipboard (its Android
       # backend needs an APK with a Java VM).
       - name: Android (Termux) build
-        if: runner.os == 'Linux'
         run: |
           GOOS=android GOARCH=arm64 go vet ./...
           CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -o /dev/null ./cmd/termocode
@@ -120,45 +130,180 @@ jobs:
             exit 1
           fi
 
-      - name: Test
-        # internal/app takes 5–10 min under -race on a macOS runner; the
-        # default 10 min limit failed a slow run.
-        run: go test ./... -race -count=1 -timeout 25m
-
-      # The patched Bubble Tea renderer (third_party/bubbletea/PATCHES.md).
-      - name: Test the renderer patch
-        run: go -C third_party/bubbletea test -race -count=1 -run TestRendererIdlesAndWakes .
-
       - name: Reference docs up to date
-        if: runner.os == 'Linux'
         run: go run ./cmd/docgen -check
 
       - name: Web protocol types up to date
-        if: runner.os == 'Linux'
         run: |
           go generate ./internal/webproto
           git diff --exit-code -- internal/webproto
 
       # The browser assets are built by the esbuild Go API (no node).
       - name: Web assets up to date
-        if: runner.os == 'Linux'
         run: |
           go generate ./internal/webgw/assets
           git diff --exit-code -- internal/webgw/assets
 
-      - name: Shellcheck release and install scripts
-        if: runner.os == 'Linux'
-        run: shellcheck scripts/install.sh scripts/build-release.sh scripts/release.sh
+      - name: Shellcheck release, install and CI scripts
+        run: shellcheck scripts/install.sh scripts/build-release.sh scripts/release.sh scripts/ci-test-shard.sh
+
+      # The test shards must run every package and every test exactly once.
+      - name: Test shards cover everything once
+        run: |
+          set -euo pipefail
+          for n in 4 3; do
+            for i in $(seq "$n"); do scripts/ci-test-shard.sh -list "$i" "$n"; done > "$RUNNER_TEMP/plan.txt"
+            if sort "$RUNNER_TEMP/plan.txt" | uniq -d | grep .; then
+              echo "a package or test is in two shards (n=$n)" >&2; exit 1
+            fi
+            want=$(go list ./... | wc -l)
+            got=$(grep -c '^pkg ' "$RUNNER_TEMP/plan.txt" || true)
+            split=$(go list ./internal/app ./internal/testkit ./internal/mdview ./internal/git | wc -l)
+            if [ "$((got + split))" -ne "$want" ]; then
+              echo "n=$n: shards have $got whole packages + $split split, go list has $want" >&2; exit 1
+            fi
+            [ "$(grep -c '^test ' "$RUNNER_TEMP/plan.txt")" -gt 1000 ] || { echo "too few split tests" >&2; exit 1; }
+          done
+          for i in 1 2; do (cd e2e && CI_DEAL_PKGS= CI_SPLIT_PKGS=./web/ CI_TAGS=browser,webdev ../scripts/ci-test-shard.sh -list "$i" 2); done > "$RUNNER_TEMP/web.txt"
+          [ "$(grep -c '^test ' "$RUNNER_TEMP/web.txt")" -gt 100 ] || { echo "too few web e2e tests" >&2; exit 1; }
+          ! sort "$RUNNER_TEMP/web.txt" | uniq -d | grep .
+
+  # go test ./... -race in parallel shards (scripts/ci-test-shard.sh): the
+  # small packages are dealt out whole, internal/app, testkit, mdview and
+  # git are split by test name.
+  test-linux:
+    name: test (ubuntu-latest, ${{ matrix.shard }}/4)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      # sqlite3: the internal/dbclient tests that drive the CLI skip
+      # without it.
+      - name: Install X11 dev headers and sqlite3
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev sqlite3
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Test
+        run: scripts/ci-test-shard.sh ${{ matrix.shard }} 4 -race -count=1 -timeout 25m
+
+      # The patched Bubble Tea renderer (third_party/bubbletea/PATCHES.md).
+      - name: Test the renderer patch
+        if: matrix.shard == 1
+        run: go -C third_party/bubbletea test -race -count=1 -run TestRendererIdlesAndWakes .
+
+  test-macos:
+    name: test (macos-latest, ${{ matrix.shard }}/3)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: macos-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Vet
+        if: matrix.shard == 1
+        run: go vet ./...
+
+      - name: Test
+        run: scripts/ci-test-shard.sh ${{ matrix.shard }} 3 -race -count=1 -timeout 25m
+
+      - name: Test the renderer patch
+        if: matrix.shard == 1
+        run: go -C third_party/bubbletea test -race -count=1 -run TestRendererIdlesAndWakes .
+
+  # The old one-job names: green only when every shard (and the checks) is.
+  test-linux-result:
+    name: test (ubuntu-latest)
+    needs: [checks, test-linux]
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All shards passed
+        env:
+          RESULTS: ${{ needs.checks.result }} ${{ needs.test-linux.result }}
+        run: |
+          echo "checks, shards: $RESULTS"
+          [ "$RESULTS" = "success success" ]
+
+  test-macos-result:
+    name: test (macos-latest)
+    needs: test-macos
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All shards passed
+        env:
+          RESULT: ${{ needs.test-macos.result }}
+        run: |
+          echo "shards: $RESULT"
+          [ "$RESULT" = success ]
 
   # Golden screens (internal/devtools/shotkit): they start nvim, so the
   # test job above (no nvim) skips them and a stale golden went unseen.
   # The harness fixes TZ, locale, clock, PATH and HOME for every case.
+  # Four shards (SHOTKIT_GOLDEN_SHARD=i/4): every case runs in one of them.
   golden:
-    name: golden screens (ubuntu-latest)
+    name: golden screens (ubuntu-latest, ${{ matrix.shard }}/4)
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
+      SHOTKIT_GOLDEN_SHARD: ${{ matrix.shard }}/4
       # The nvim the golden frames were made with: editor screens can
       # change between nvim releases.
       NVIM_VERSION: v0.12.2
@@ -195,7 +340,7 @@ jobs:
           echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
 
       - name: Golden screens
-        # ~540 cases, each a child app with its own nvim.
+        # ~540 cases (a quarter per shard), each a child app with its own nvim.
         env:
           SHOTKIT_GOLDEN_JOBS: "4"
         run: go test ./internal/devtools/shotkit -run 'Golden' -count=1 -timeout 45m
@@ -204,9 +349,24 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: golden-actual-frames
+          name: golden-actual-frames-${{ matrix.shard }}
           path: internal/devtools/shotkit/testdata/golden/*_actual.*
           if-no-files-found: ignore
+
+  golden-result:
+    name: golden screens (ubuntu-latest)
+    needs: [changes, golden]
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All shards passed (or skipped for a docs-only change)
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          RESULT: ${{ needs.golden.result }}
+        run: |
+          echo "changes: $CHANGES, shards: $RESULT"
+          [ "$CHANGES" = success ] && { [ "$RESULT" = success ] || [ "$RESULT" = skipped ]; }
 
   # End-to-end: the real binary in a PTY + VT emulator (e2e/, build tag
   # e2e). Needs nvim; on failure the screen dumps are uploaded.
@@ -330,13 +490,16 @@ jobs:
   # Coverage per system (cmd/covreport, scripts/coverage-systems.txt). It
   # fails when a system is below its floor in scripts/coverage-floors.txt.
   # Unit tests only: the e2e suite adds ~0.5 points and 5+ minutes, and a
-  # flaky e2e test would move the numbers. Only for PRs and main.
+  # flaky e2e test would move the numbers. Only for main (and land
+  # branches, and runs started by hand): it is the slowest job and the
+  # test jobs already run every test on a PR, so a PR does not wait for it.
   coverage:
     name: coverage (ubuntu-latest)
     needs: changes
     if: >-
       needs.changes.outputs.code == 'true' &&
-      (github.event_name != 'push' || github.ref == 'refs/heads/main' || startsWith(github.ref_name, 'land-') || startsWith(github.ref_name, 'feat/land-'))
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref_name, 'land-') || startsWith(github.ref_name, 'feat/land-'))))
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -430,16 +593,19 @@ jobs:
   # the embedded page behind the real gateway guard, CSP and /auth, with a
   # fake hub on /ws; then the real-binary walk (WEB-28). Both runner
   # images ship Chrome; a missing Chrome fails here instead of skipping.
-  # Screenshots of failures are uploaded.
+  # Screenshots of failures are uploaded. Two shards per system. On a PR
+  # that touches no web code (changes.web) the macOS run is skipped; main
+  # and pushes always run both.
   web-e2e:
-    name: web-e2e (${{ matrix.os }})
+    name: web-e2e (ubuntu-latest, ${{ matrix.shard }}/2)
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        shard: [1, 2]
     env:
       TERMOCODE_WEB_E2E: require
       WEB_E2E_DUMP_DIR: ${{ github.workspace }}/web-e2e-dumps
@@ -460,23 +626,30 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-            ~/Library/Caches/go-build
           key: ${{ runner.os }}-go-web-e2e-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-web-e2e-
             ${{ runner.os }}-go-
 
+      # Half of the e2e/web tests per shard, split by test name.
       - name: Web e2e tests
-        run: go -C e2e test -tags browser,webdev -race -count=1 -v -timeout 30m ./web/
+        working-directory: e2e
+        env:
+          CI_DEAL_PKGS: ""
+          CI_SPLIT_PKGS: ./web/
+          CI_TAGS: browser,webdev
+        run: ../scripts/ci-test-shard.sh ${{ matrix.shard }} 2 -tags browser,webdev -race -count=1 -v -timeout 30m
 
       # The same page against the real binary in a PTY (e2e/web_real_test.go,
       # tags e2e + browser): termocode web start → link → auth → chat with a
       # fake AI → card → file → terminal → commit → web stop. Needs nvim.
+      # Only in shard 2.
       - name: Install X11 dev headers (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.shard == 2
         run: sudo apt-get update && sudo apt-get install -y libx11-dev
 
       - name: Install Neovim (pinned release)
+        if: matrix.shard == 2
         run: |
           set -euo pipefail
           if [ "$RUNNER_OS" = Linux ]; then
@@ -490,6 +663,7 @@ jobs:
           echo "$RUNNER_TEMP/${name}/bin" >> "$GITHUB_PATH"
 
       - name: Web e2e tests against the real binary
+        if: matrix.shard == 2
         env:
           E2E_DUMP_DIR: ${{ github.workspace }}/web-e2e-dumps
         run: go -C e2e test -tags e2e,browser -count=1 -v -timeout 15m -run 'TestWebReal' .
@@ -498,9 +672,119 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: web-e2e-dumps-${{ matrix.os }}
+          name: web-e2e-dumps-ubuntu-latest-${{ matrix.shard }}
           path: web-e2e-dumps/
           if-no-files-found: ignore
+
+  web-e2e-macos:
+    name: web-e2e (macos-latest, ${{ matrix.shard }}/2)
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      TERMOCODE_WEB_E2E: require
+      WEB_E2E_DUMP_DIR: ${{ github.workspace }}/web-e2e-dumps
+      NVIM_VERSION: v0.11.4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: ${{ runner.os }}-go-web-e2e-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-web-e2e-
+            ${{ runner.os }}-go-
+
+      # Half of the e2e/web tests per shard, split by test name.
+      - name: Web e2e tests
+        working-directory: e2e
+        env:
+          CI_DEAL_PKGS: ""
+          CI_SPLIT_PKGS: ./web/
+          CI_TAGS: browser,webdev
+        run: ../scripts/ci-test-shard.sh ${{ matrix.shard }} 2 -tags browser,webdev -race -count=1 -v -timeout 30m
+
+      # The same page against the real binary in a PTY (e2e/web_real_test.go,
+      # tags e2e + browser): termocode web start → link → auth → chat with a
+      # fake AI → card → file → terminal → commit → web stop. Needs nvim.
+      # Only in shard 2.
+      - name: Install X11 dev headers (Linux)
+        if: runner.os == 'Linux' && matrix.shard == 2
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Install Neovim (pinned release)
+        if: matrix.shard == 2
+        run: |
+          set -euo pipefail
+          if [ "$RUNNER_OS" = Linux ]; then
+            name=nvim-linux-x86_64
+          else
+            case "$(uname -m)" in arm64) name=nvim-macos-arm64 ;; *) name=nvim-macos-x86_64 ;; esac
+          fi
+          curl -fsSL -o "$RUNNER_TEMP/nvim.tar.gz" \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/${name}.tar.gz"
+          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/${name}/bin" >> "$GITHUB_PATH"
+
+      - name: Web e2e tests against the real binary
+        if: matrix.shard == 2
+        env:
+          E2E_DUMP_DIR: ${{ github.workspace }}/web-e2e-dumps
+        run: go -C e2e test -tags e2e,browser -count=1 -v -timeout 15m -run 'TestWebReal' .
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e-dumps-macos-latest-${{ matrix.shard }}
+          path: web-e2e-dumps/
+          if-no-files-found: ignore
+
+  web-e2e-result:
+    name: web-e2e (ubuntu-latest)
+    needs: [changes, web-e2e]
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All shards passed (or skipped)
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          RESULT: ${{ needs.web-e2e.result }}
+        run: |
+          echo "changes: $CHANGES, shards: $RESULT"
+          [ "$CHANGES" = success ] && { [ "$RESULT" = success ] || [ "$RESULT" = skipped ]; }
+
+  web-e2e-macos-result:
+    name: web-e2e (macos-latest)
+    needs: [changes, web-e2e-macos]
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All shards passed (or skipped)
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          RESULT: ${{ needs.web-e2e-macos.result }}
+        run: |
+          echo "changes: $CHANGES, shards: $RESULT"
+          [ "$CHANGES" = success ] && { [ "$RESULT" = success ] || [ "$RESULT" = skipped ]; }
 
   # Known vulnerabilities in the code we call (golang.org/x/vuln). The web
   # packages (the network door) must have none: that step fails the job.
