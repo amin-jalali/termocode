@@ -236,6 +236,28 @@ export interface ControlAskArgs {
   credential: string;
 }
 
+export interface LspRangeArgs {
+  buf: number;
+  tick: number;
+  line: number;
+  col: number;
+  end_line: number;
+  end_col: number;
+}
+
+export interface LspApplyArgs {
+  buf: number;
+  tick: number;
+  index: number;
+}
+
+export interface LspRowsArgs {
+  buf: number;
+  tick: number;
+  first: number;
+  last: number;
+}
+
 export interface DebugExpandArgs {
   key: string;
   open: boolean;
@@ -278,6 +300,37 @@ export interface LspPosArgs {
   col: number;
 }
 
+export interface BufTickArgs {
+  buf: number;
+  tick: number;
+}
+
+export interface BufLineArgs {
+  buf: number;
+  line: number;
+}
+
+export interface SymbolQueryArgs {
+  buf: number;
+  query: string;
+}
+
+export interface SearchReplaceArgs {
+  find: string;
+  replace: string;
+}
+
+export interface SnippetSaveArgs {
+  scope: string;
+  trigger: string;
+  body: string;
+}
+
+export interface SnippetRefArgs {
+  scope: string;
+  trigger: string;
+}
+
 export interface TestOutputArgs {
   id?: string;
 }
@@ -289,6 +342,14 @@ export interface TestRunArgs {
 
 export interface TestIDArgs {
   id: string;
+}
+
+export interface WorkspacePathArgs {
+  folder: string;
+}
+
+export interface IDArgs {
+  id: number;
 }
 
 export interface AICompleteArgs {
@@ -1297,6 +1358,29 @@ export interface ControlChallenge {
   options: unknown;
 }
 
+export interface LspActions {
+  items: LspAction[];
+}
+
+export interface LspAction {
+  title: string;
+  kind?: string;
+  preferred?: boolean;
+}
+
+export interface LspHints {
+  items: LspHint[];
+  cut?: boolean;
+}
+
+export interface LspHint {
+  line: number;
+  col: number;
+  label: string;
+  padLeft?: boolean;
+  padRight?: boolean;
+}
+
 export interface DebugSources {
   sources: DebugSource[];
   unsupported?: boolean;
@@ -1307,6 +1391,34 @@ export interface DebugSource {
   name: string;
   path?: string;
   outside?: boolean;
+}
+
+export interface LspLocations {
+  locs: LspLoc[];
+  cut?: boolean;
+}
+
+export interface LspLoc {
+  path?: string;
+  name?: string;
+  outside?: boolean;
+  line: number;
+  col: number;
+  endLine: number;
+  endCol: number;
+  text?: string;
+}
+
+export interface BufMarkdown {
+  md?: MdNode;
+  cut?: boolean;
+}
+
+export interface FileText {
+  path: string;
+  text: string;
+  binary?: boolean;
+  truncated?: boolean;
 }
 
 export interface LspHover {
@@ -1342,26 +1454,77 @@ export interface LspEdit {
   text: string;
 }
 
-export interface LspLocations {
-  locs: LspLoc[];
+export interface BookmarkToggle {
+  on: boolean;
+  mark?: string;
+}
+
+export interface BookmarkList {
+  items: Bookmark[];
+}
+
+export interface Bookmark {
+  mark: string;
+  path: string;
+  line: number;
+  text?: string;
+}
+
+export interface FilesRecent {
+  paths: string[];
+}
+
+export interface LspSymbols {
+  items: LspSymbol[];
   cut?: boolean;
 }
 
-export interface LspLoc {
-  path?: string;
-  name?: string;
-  outside?: boolean;
+export interface LspSymbol {
+  name: string;
+  kind: number;
+  path: string;
   line: number;
   col: number;
-  endLine: number;
-  endCol: number;
-  text?: string;
+  container?: string;
+}
+
+export interface SnippetList {
+  items: Snippet[];
+}
+
+export interface Snippet {
+  trigger: string;
+  body: string;
+}
+
+export interface UserSnippetList {
+  items: UserSnippet[];
+}
+
+export interface UserSnippet {
+  scope: string;
+  trigger: string;
+  body: string;
+}
+
+export interface SnippetSaved {
+  replaced?: boolean;
 }
 
 export interface TestOutput {
   id?: string;
   lines: string[];
   truncated?: boolean;
+}
+
+export interface WorkspaceList {
+  folders: WorkspaceEntry[];
+  recent: WorkspaceEntry[];
+}
+
+export interface WorkspaceEntry {
+  id: number;
+  name: string;
 }
 
 export interface AICompletion {
@@ -1855,6 +2018,9 @@ export interface OpArgs {
   "runs.resume": KeyArgs;
   "control.challenge": EmptyArgs;
   "control.ask": ControlAskArgs;
+  "lsp.code_actions": LspRangeArgs;
+  "lsp.code_action_apply": LspApplyArgs;
+  "lsp.inlay_hints": LspRowsArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -1865,15 +2031,35 @@ export interface OpArgs {
   "debug.watch": DebugWatchArgs;
   "debug.eval": DebugEvalArgs;
   "debug.frame": DebugFrameArgs;
+  "lsp.type_definition": LspPosArgs;
+  "lsp.implementation": LspPosArgs;
+  "buf.format": BufTickArgs;
+  "buf.reload": BufArgs;
+  "buf.markdown": BufArgs;
+  "file.text": PathArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
   "lsp.references": LspPosArgs;
+  "bookmarks.toggle": BufLineArgs;
+  "bookmarks.list": EmptyArgs;
+  "bookmarks.clear": EmptyArgs;
+  "files.recent": EmptyArgs;
+  "lsp.workspace_symbols": SymbolQueryArgs;
+  "snippets.list": BufArgs;
+  "search.replace": SearchReplaceArgs;
+  "snippets.user": EmptyArgs;
+  "snippets.save": SnippetSaveArgs;
+  "snippets.delete": SnippetRefArgs;
   "tests.output": TestOutputArgs;
   "tests.refresh": EmptyArgs;
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "workspace.list": EmptyArgs;
+  "workspace.add_folder": WorkspacePathArgs;
+  "workspace.remove_folder": IDArgs;
+  "workspace.open": IDArgs;
   "ai.complete": AICompleteArgs;
   "ai.next_edit": AINextEditArgs;
   "ai.action": AIActionArgs;
@@ -2006,12 +2192,34 @@ export interface OpResult {
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
+  "lsp.code_actions": LspActions;
+  "lsp.code_action_apply": EditRes;
+  "lsp.inlay_hints": LspHints;
   "debug.sources": DebugSources;
+  "lsp.type_definition": LspLocations;
+  "lsp.implementation": LspLocations;
+  "buf.format": EditRes;
+  "buf.reload": EditRes;
+  "buf.markdown": BufMarkdown;
+  "file.text": FileText;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;
   "lsp.references": LspLocations;
+  "bookmarks.toggle": BookmarkToggle;
+  "bookmarks.list": BookmarkList;
+  "files.recent": FilesRecent;
+  "lsp.workspace_symbols": LspSymbols;
+  "snippets.list": SnippetList;
+  "search.replace": AskRef;
+  "snippets.user": UserSnippetList;
+  "snippets.save": SnippetSaved;
+  "snippets.delete": SnippetSaved;
   "tests.output": TestOutput;
+  "workspace.list": WorkspaceList;
+  "workspace.add_folder": AskRef;
+  "workspace.remove_folder": AskRef;
+  "workspace.open": AskRef;
   "ai.complete": AICompletion;
   "ai.next_edit": AINextEdit;
   "ai.action": AIAction;
