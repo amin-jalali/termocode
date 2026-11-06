@@ -7,7 +7,10 @@
 // u and Ctrl+R; the . repeat; macros (q, @, @@); the registers a-z (A-Z
 // appends), the unnamed one, 0 (the last yank), 1-9 (deletes of lines),
 // - (small deletes), _ (the black hole) and . (the last insert; Ctrl+R
-// in insert mode puts a register). Every change goes through the host
+// in insert mode puts a register); search (/ ? n N * #); ex commands
+// (:N, :s, :d, :y, :j, :> :<, :normal, :w, :q, the :map family); marks;
+// text objects (words, quotes, brackets, paragraphs); the user's own
+// mappings (the laptop editor's, and :map made here). Every change goes through the host
 // as one edit, so the page's undo and the laptop's buffer see it like
 // typing.
 import type { Text } from "@codemirror/state";
@@ -152,6 +155,80 @@ const PIECES: Record<string, string> = {
   "<End>": "\x00End\x00",
 };
 
+/** VimMapDef is one mapping as the page gives it (the laptop editor's
+ * notation: "<Space>w", ":w<CR>"); mode n, x, o or i. */
+export interface VimMapDef {
+  mode: string;
+  lhs: string;
+  rhs: string;
+  noremap?: boolean;
+}
+
+interface VimMapping {
+  lhs: string[];
+  rhs: string[];
+  noremap: boolean;
+}
+
+const NAMED_KEYS: Record<string, string> = {
+  space: " ",
+  lt: "<",
+  bar: "|",
+  bslash: "\\",
+  cr: "<CR>",
+  enter: "<CR>",
+  return: "<CR>",
+  nl: "<CR>",
+  esc: "<Esc>",
+  bs: "<BS>",
+  backspace: "<BS>",
+  del: "<Del>",
+  delete: "<Del>",
+  tab: "<Tab>",
+  up: "<Up>",
+  down: "<Down>",
+  left: "<Left>",
+  right: "<Right>",
+  home: "<Home>",
+  end: "<End>",
+  nop: "",
+  cmd: "<Cmd>",
+};
+
+/** parseKeys reads keys in the editor's notation as tokens; null: it
+ * names a key the browser never gives the editor (Alt, F-keys, the
+ * mouse) or a script's name (<Plug>, <SID>), so the mapping is left out. */
+export function parseKeys(s: string, leader = "\\"): string[] | null {
+  const out: string[] = [];
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    const j = c === "<" ? s.indexOf(">", i + 2) : -1;
+    if (j > 0) {
+      const name = s.slice(i + 1, j);
+      const low = name.toLowerCase();
+      if (low === "leader" || low === "localleader") {
+        out.push(...[...leader].map((ch) => (ch === " " ? " " : ch)));
+        i = j;
+        continue;
+      }
+      if (low in NAMED_KEYS) {
+        if (NAMED_KEYS[low]) out.push(NAMED_KEYS[low]);
+        i = j;
+        continue;
+      }
+      const ctrl = /^c-(.)$/i.exec(name);
+      if (ctrl) {
+        out.push(ctrl[1] === "[" ? "<Esc>" : "<C-" + ctrl[1].toLowerCase() + ">");
+        i = j;
+        continue;
+      }
+      if (/^(?:[msadt]-|f\d|plug|sid|snr|sni|.*mouse|.*drag|.*release|scroll)/i.test(name)) return null;
+    }
+    out.push(c);
+  }
+  return out;
+}
+
 /** keysText writes tokens as a register's text (a recorded macro). */
 function keysText(toks: readonly string[]): string {
   return toks.map((t) => (t === "<CR>" ? "\n" : t === "<Esc>" ? "\x1b" : t === "<BS>" ? "\b" : t === "<Tab>" ? "\t" : t)).join("");
@@ -225,6 +302,13 @@ export class Vim {
   private lastVisual: { anchor: number; head: number; mode: VimMode } | null = null;
   private msg = "";
   private lastSub: { rep: string } | null = null;
+  /** maps are the user's mappings by mode (n x o i): the page's (the
+   * laptop editor's) and the ones :map made here. */
+  private maps = new Map<string, VimMapping[]>();
+  private mapBuf: string[] = [];
+  private mapTimer: ReturnType<typeof setTimeout> | null = null;
+  private timeout = 1000;
+  private leader = "\\";
 
   constructor(private readonly h: VimHost) {
     this.normal();
@@ -241,7 +325,113 @@ export class Vim {
       this.msg = "";
       this.show();
     }
-    return this.exec(tok, true);
+    return this.typed(tok, true);
+  }
+
+  /** setMaps takes the page's mappings (the laptop editor's); timeout is
+   * how long a key that starts a longer mapping waits (0: forever). */
+  setMaps(defs: readonly VimMapDef[], timeout: number): void {
+    for (const k of this.maps.keys()) this.maps.set(k, []);
+    for (const d of defs) this.addMap(d.mode, d.lhs, d.rhs, d.noremap === true);
+    if (timeout >= 0) this.timeout = timeout;
+  }
+
+  private addMap(mode: string, lhs: string, rhs: string, noremap: boolean): void {
+    const l = parseKeys(lhs, this.leader), r = parseKeys(rhs, this.leader);
+    if (!l || !r || l.length === 0 || !"nxoi".includes(mode) || mode.length !== 1) return;
+    const list = (this.maps.get(mode) ?? []).filter((m) => !same(m.lhs, l));
+    list.push({ lhs: l, rhs: r, noremap });
+    this.maps.set(mode, list);
+  }
+
+  private unmap(mode: string, lhs: string): boolean {
+    const l = parseKeys(lhs, this.leader);
+    const list = this.maps.get(mode);
+    if (!l || !list) return false;
+    const left = list.filter((m) => !same(m.lhs, l));
+    this.maps.set(mode, left);
+    return left.length < list.length;
+  }
+
+  /** mapMode is the mode mappings are looked up in now (null: none; a
+   * char the command waits for is never mapped). */
+  private mapMode(): string | null {
+    if (this.cl || this.insReg) return null;
+    if (this.mode === "insert") return "i";
+    if (this.awaitingChar()) return null;
+    if (this.mode === "visual" || this.mode === "vline") return "x";
+    return this.pendingOp() ? "o" : "n";
+  }
+
+  /** typed runs a typed token through the user's mappings: a key that
+   * starts a longer mapping waits for the next (or the timeout). */
+  private typed(tok: string, live: boolean): boolean {
+    const mode = this.mapMode();
+    const list = mode ? this.maps.get(mode) : undefined;
+    if (!list || list.length === 0) {
+      if (this.mapBuf.length === 0) return this.exec(tok, live);
+    }
+    this.stopTimer();
+    const buf = [...this.mapBuf, tok];
+    const maps = list ?? [];
+    const exact = maps.find((m) => same(m.lhs, buf));
+    if (maps.some((m) => m.lhs.length > buf.length && same(m.lhs.slice(0, buf.length), buf))) {
+      this.mapBuf = buf;
+      if (this.timeout > 0) this.mapTimer = setTimeout(() => this.flushMaps(), this.timeout);
+      this.show();
+      return true;
+    }
+    this.mapBuf = [];
+    if (exact) {
+      this.runMap(exact);
+      return true;
+    }
+    if (buf.length === 1) return this.exec(tok, live);
+    // No mapping: the first key as itself, the others looked up again.
+    this.exec(buf[0], false);
+    for (const t of buf.slice(1)) this.typed(t, false);
+    this.show();
+    return true;
+  }
+
+  private stopTimer(): void {
+    if (this.mapTimer !== null) clearTimeout(this.mapTimer);
+    this.mapTimer = null;
+  }
+
+  /** flushMaps: the wait ran out; the keys so far run (as their
+   * mapping if they are one). */
+  private flushMaps(): void {
+    this.mapTimer = null;
+    const buf = this.mapBuf;
+    this.mapBuf = [];
+    if (buf.length === 0) return;
+    this.steps = 0;
+    const mode = this.mapMode();
+    const exact = mode ? this.maps.get(mode)?.find((m) => same(m.lhs, buf)) : undefined;
+    if (exact) this.runMap(exact);
+    else {
+      this.exec(buf[0], false);
+      for (const t of buf.slice(1)) this.typed(t, false);
+    }
+    this.show();
+  }
+
+  private runMap(m: VimMapping): void {
+    if (this.depth > 50) return;
+    this.depth++;
+    try {
+      // A right side that starts with its own keys does not map them
+      // again (nmap < <gv), as in Vim.
+      const own = !m.noremap && same(m.rhs.slice(0, m.lhs.length), m.lhs) ? m.lhs.length : 0;
+      m.rhs.forEach((t, i) => {
+        if (this.steps > STEP_LIMIT) return;
+        if (m.noremap || i < own) this.exec(t, false);
+        else this.typed(t, false);
+      });
+    } finally {
+      this.depth--;
+    }
   }
 
   /** exec runs one token; live: it is the keydown being handled now (an
@@ -253,14 +443,16 @@ export class Vim {
     return took;
   }
 
-  /** play runs tokens as if typed (a macro, the . repeat). */
-  private play(toks: readonly string[]): void {
+  /** play runs tokens as if typed (a macro, the . repeat); remap: the
+   * user's mappings apply (a macro, :normal; not the . repeat). */
+  private play(toks: readonly string[], remap = false): void {
     if (this.depth > 50) return;
     this.depth++;
     try {
       for (const t of toks) {
         if (this.steps > STEP_LIMIT) break;
-        this.exec(t, false);
+        if (remap) this.typed(t, false);
+        else this.exec(t, false);
       }
     } finally {
       this.depth--;
@@ -269,6 +461,11 @@ export class Vim {
 
   private handle(tok: string): boolean {
     if (this.cl) return this.clKey(tok);
+    if (tok === "<Cmd>") {
+      // A mapping's <Cmd>…<CR>: an ex command that keeps the mode.
+      this.cl = { kind: ":", text: "", prefix: "" };
+      return true;
+    }
     if (this.mode === "insert") return this.insertKey(tok);
     if (tok === "<Esc>" || tok === "<C-[>") return this.escape();
     if (tok.startsWith("<C-")) return this.ctrlKey(tok);
@@ -371,7 +568,7 @@ export class Vim {
   }
 
   private show(): void {
-    const p = this.cl ? this.cl.prefix.replace(/\x00[^\x00]*\x00/g, "") + this.cl.kind + this.cl.text : this.pending;
+    const p = this.cl ? this.cl.prefix.replace(/\x00[^\x00]*\x00/g, "") + this.cl.kind + this.cl.text : this.pending + this.mapBuf.filter((t) => t.length === 1).join("");
     this.h.show(this.mode, p, this.rec, this.msg);
   }
 
@@ -467,7 +664,7 @@ export class Vim {
     if (tok === "<CR>") {
       this.cl = null;
       if (cl.kind === ":") {
-        if (!this.dotReplay) this.dotRec = null;
+        if (!this.dotReplay && this.mode === "normal") this.dotRec = null;
         this.pending = "";
         this.ex(cl.text);
         this.after();
@@ -1385,9 +1582,46 @@ export class Vim {
       return;
     }
     if (full("normal", 4)) return this.normalLines(lo, hi, arg);
+    if (this.mapCommand(name, arg)) return;
+    const leader = /^(?:let\s+)?(?:g:)?mapleader\s*=\s*(["'])(.*)\1\s*$/.exec(line.trim());
+    if (leader && name === "let") {
+      this.leader = leader[2] === "\\<Space>" || leader[2] === " " ? " " : leader[2];
+      return;
+    }
     if (full("nohlsearch", 3) || full("set", 2) || full("redraw", 4)) return;
     if (full("registers", 3) || full("display", 2) || full("marks", 4)) return;
     this.say("noecmd", line);
+  }
+
+  /** mapCommand runs :map, :nnoremap, :iunmap … (made here, for this
+   * editor while the page is open); false: name is none of them. */
+  private mapCommand(name: string, arg: string): boolean {
+    const known: Record<string, [string, boolean, boolean]> = {
+      map: ["nxo", false, false], noremap: ["nxo", true, false], no: ["nxo", true, false], unmap: ["nxo", false, true], unm: ["nxo", false, true],
+      nmap: ["n", false, false], nm: ["n", false, false], nnoremap: ["n", true, false], nn: ["n", true, false], nno: ["n", true, false], nunmap: ["n", false, true], nun: ["n", false, true],
+      vmap: ["x", false, false], vm: ["x", false, false], xmap: ["x", false, false], xm: ["x", false, false], vnoremap: ["x", true, false], vn: ["x", true, false], xnoremap: ["x", true, false], xn: ["x", true, false], vunmap: ["x", false, true], vu: ["x", false, true], xunmap: ["x", false, true], xu: ["x", false, true],
+      omap: ["o", false, false], om: ["o", false, false], onoremap: ["o", true, false], ono: ["o", true, false], ounmap: ["o", false, true], ou: ["o", false, true],
+      imap: ["i", false, false], im: ["i", false, false], inoremap: ["i", true, false], ino: ["i", true, false], iunmap: ["i", false, true], iu: ["i", false, true],
+    };
+    const k = known[name];
+    if (!k) return false;
+    const [modes, noremap, un] = k;
+    let rest = arg.trim();
+    for (;;) {
+      const opt = /^<(silent|buffer|nowait|unique|special|script|expr)>\s*/i.exec(rest);
+      if (!opt) break;
+      if (opt[1].toLowerCase() === "expr" || opt[1].toLowerCase() === "script") return true; // the web cannot run it
+      rest = rest.slice(opt[0].length);
+    }
+    const sp = rest.search(/\s/);
+    const lhs = sp < 0 ? rest : rest.slice(0, sp);
+    const rhs = sp < 0 ? "" : rest.slice(sp).trim();
+    if (lhs === "") return true;
+    for (const mode of modes) {
+      if (un) this.unmap(mode, lhs);
+      else if (rhs !== "") this.addMap(mode, lhs, rhs, noremap);
+    }
+    return true;
   }
 
   /** address reads one line address at the start of s: a number, . $
@@ -1469,7 +1703,7 @@ export class Vim {
       this.mode = "normal";
       this.pending = "";
       this.h.place(d.line(ln).from);
-      this.play(toks);
+      this.play(toks, true);
       this.cl = null;
       const mode = this.mode as VimMode;
       if (mode === "insert") this.leaveInsert();
@@ -1527,7 +1761,7 @@ export class Vim {
     this.lastMacro = r;
     this.pending = "";
     this.dotRec = null;
-    for (let i = 0; i < count && this.steps <= STEP_LIMIT; i++) this.play(keys);
+    for (let i = 0; i < count && this.steps <= STEP_LIMIT; i++) this.play(keys, true);
   }
 
   private insertAt(at: number): void {
@@ -1691,6 +1925,10 @@ function subRep(rep: string, g: string[]): string {
     } else out += c;
   }
   return out;
+}
+
+function same(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((t, i) => t === b[i]);
 }
 
 function nl(s: string): string {

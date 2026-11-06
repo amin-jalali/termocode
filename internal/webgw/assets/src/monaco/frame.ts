@@ -15,7 +15,7 @@ import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } 
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
 import type { AiAt, AiKind, CursorOp, EditAct, FrameBlame, FrameGlyph, FrameHint, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
-import type { Vim, VimMode } from "./vim";
+import type { Vim, VimMapDef, VimMode } from "./vim";
 import type * as VimModule from "./vim";
 import "./frame.css";
 
@@ -827,6 +827,8 @@ let vimShown = "";
 /** vimWant is the page's choice; the keymap is its own file
  * (monaco-vim.js), loaded the first time Vim mode is on. */
 let vimWant = false;
+/** vimMaps are the user's mappings (the page's; [] until it has them). */
+let vimMaps: { maps: VimMapDef[]; timeout: number } = { maps: [], timeout: -1 };
 let vimLoading: Promise<typeof VimModule> | null = null;
 
 function loadVim(): Promise<typeof VimModule> {
@@ -920,6 +922,7 @@ function vimStart(mod: typeof VimModule): void {
     },
     copied: (text) => post({ t: "copied", text }),
   });
+  vim.setMaps(vimMaps.maps, vimMaps.timeout);
 }
 
 /** VIM_TYPE are the editor's commands for the special keys Vim types in
@@ -1091,6 +1094,10 @@ function setOpts(o: FrameOpts): void {
   if (o.insertSpaces !== undefined) u.insertSpaces = spaces = o.insertSpaces;
   if (o.ai) setAI(o.ai);
   ed.updateOptions(u);
+  if (o.vimMaps) {
+    vimMaps = { maps: o.vimMaps, timeout: o.vimTimeout ?? -1 };
+    vim?.setMaps(vimMaps.maps, vimMaps.timeout);
+  }
   if (o.vim !== undefined) vimOn(o.vim);
 }
 

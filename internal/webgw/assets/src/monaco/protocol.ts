@@ -28,6 +28,10 @@ export interface FrameOpts {
   ai?: { inline: boolean; nes: boolean; hint?: string };
   /** vim: Vim mode (WEBP-1; the page's per-browser choice). */
   vim?: boolean;
+  /** vimMaps are the user's own mappings for Vim mode (the laptop
+   * editor's, editor.vim_maps); vimTimeout its timeoutlen in ms. */
+  vimMaps?: { mode: string; lhs: string; rhs: string; noremap?: boolean }[];
+  vimTimeout?: number;
   /** comment is the file type's line comment ("//", "#"); none: the
    * file has no line comment and Toggle Line Comment does nothing. */
   comment?: string;

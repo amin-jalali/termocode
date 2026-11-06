@@ -27,7 +27,7 @@ type VimMap struct {
 }
 
 // VimMapList answers editor.vim_maps, by mode and keys; Timeout is the
-// editor's timeoutlen in ms (0: it waits for the next key forever).
+// editor's timeoutlen in ms (0: not known or off; the page waits 1 s).
 type VimMapList struct {
 	Items   []VimMap `json:"items"`
 	Timeout int      `json:"timeout,omitempty"`

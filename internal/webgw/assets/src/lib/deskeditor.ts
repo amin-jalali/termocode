@@ -15,6 +15,7 @@ import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
 import { toast } from "./toasts";
 import { t } from "../strings";
+import { vimMaps } from "./vimmaps";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -193,6 +194,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         ready = true;
         const c = frameColors(parent);
         frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, comment: host.comment, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, vim: prefs.peek().vim, ...c } satisfies ToFrame, location.origin);
+        if (prefs.peek().vim) sendMaps();
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.
@@ -293,7 +295,15 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     if (on === vimWas) return;
     vimWas = on;
     send({ t: "opts", vim: on });
+    if (on) sendMaps();
   });
+
+  /** sendMaps gives the frame the user's own mappings (asked once). */
+  function sendMaps(): void {
+    void vimMaps().then((l) => {
+      if (l && Array.isArray(l.items)) send({ t: "opts", vimMaps: l.items, vimTimeout: typeof l.timeout === "number" && l.timeout > 0 ? l.timeout : 1000 });
+    });
+  }
 
   return {
     text: () => text,
