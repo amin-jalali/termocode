@@ -158,7 +158,8 @@ func TestLaptopCardOps(t *testing.T) {
 		OpGitDiscardLines: true, OpGitDiscardHunk: true, OpGitCheckoutTag: true, OpGitStashApply: true, OpGitUndo: true, OpGitRedo: true, OpGitFixup: true,
 		OpContainersExec: true, OpContainersImage: true, OpContainersPrune: true, OpContainersStorageRemove: true, OpContainersComposeAsk: true, OpContainersContextDefault: true, OpContainersRegistry: true, OpContainersOpenDB: true, OpServicesStopAll: true,
 		OpChatDelete: true, OpChatClear: true, OpAIUseMCPProfile: true, OpAISetAutoApprove: true,
-		OpWorkspaceAddFolder: true, OpWorkspaceRemoveFolder: true, OpWorkspaceOpen: true, OpSearchReplace: true}
+		OpWorkspaceAddFolder: true, OpWorkspaceRemoveFolder: true, OpWorkspaceOpen: true, OpSearchReplace: true,
+		OpLSPServerAsk: true, OpLayoutDelete: true}
 	for _, p := range Ops() {
 		if p.LaptopCard != want[p.Op] {
 			t.Errorf("%s: laptop card = %v", p.Op, p.LaptopCard)

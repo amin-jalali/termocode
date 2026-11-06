@@ -3,7 +3,7 @@
 app-chunk.js sha384-duVD5lo4QeAxBS8/fImIXJlXzfBXFkEXDlmcCoI9/BglwjcPLMKb9BKJHRtGNtrd 295955
 app.css sha384-XhqdYxbSFsNWxdphf6PcA475PRKgdYKB9AJNgxTZ3XLW6DY0bI0BLvUGq4oadrKa 67233
 app.js sha384-DTTrrzb92kykT90NKbi5nZ5Wn+SnYAJkuw0CJJSsF4m29zF/ZtdVLATWAkB5hQEb 24755
-desk.css sha384-LVOTNn6GMfEDfIT4GBY8xWMN8mlxPcy5Qhn4pZq3cv7pJO9V8G94XX4c3oEk2e9n 101684
+desk.css sha384-BADoTVLs2eHa0FiMgFJlLbxLE4QZzsOmf2/MrOkMZPJElhWpyTi4hruks68oHEng 102441
 editor.js sha384-y2LrycVeXa+jyDjFfB9mM8o1Z9ecf6SRIFg5ZA889DHvz50ly111hLiCI0mjCvcc 219692
 fonts/nf-devicons.woff2 sha384-wUH+v6WoaVUttsmf/h5v4dkRuoqahceAkv1xrpwZtXkl+OmHeVQ8Na1lkb47vg+C 183656
 fonts/nf-fa-extension.woff2 sha384-6BEtIZZkxrg7PvLXCc1ixQVY7+TPzyhXLbdjhd7alitXS26M37KznH4dEnv4+g3k 35536
@@ -15,7 +15,7 @@ fonts/nf-seti.woff2 sha384-SIRO07PrKQGKqZz8AqBLr5pTSfSdjHR93D+woV27NzC1QnmdQf6bY
 icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 icons/codicon.ttf sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N 125828
-index.html sha384-YQjQSsiiJeot5n7Q8tvPieh8d6/HOrxHbtRvpVOFLj/LCc1P4GPL7CZmVwH5Ccds 1274
+index.html sha384-tmDJ5aJw7wm4G76hWC4JwnbWpIKx1cnUSu5+U3qRLvrDtlZqt1rTChhEx6oQPnvM 1274
 kit.css sha384-7WHeFdiodusvQPgKcbACG91UfM/irxKZ4JGOuwXSpfUFFislX5uTaJ+hNpywIlLk 34402
 kit.html sha384-lc8cFbKFrcPTm2RF/nx1G2xEP4c1a8CE0aJ5rIyTEUTPG7KJ/7cj786YQkhfWQYE 719
 kit.js sha384-IFNcnH9BXbWLs5sbz9iM6z3aR9/XARbucP/xnw5Oq6/QON/eBDHZHnjkSkvGUSk4 113039
@@ -29,5 +29,5 @@ monaco/editor-contrib.js sha384-zovZc9/8c8IF6IlccJXAp+iG87TnOpWjJGqruAwc0mBMA0kL
 monaco/editor-host.js sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf 361750
 monaco/editor.css sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4 390829
 monaco/editor.js sha384-n5VxbIFjdhl1sERXQHN52h87EGviSdsndgKg9eRxZVuVsFtoxtLJDuY2UxnnGx/r 2472349
-strings-fa.js sha384-4Cl5M/QGLr3nYRbwAWuAh/UXs0JSY9eMxGmcOP3n4wbEE/amuuAcLT/2LdKNpwEc 89694
-workbench.js sha384-4oxo6Wmbv+seo1qB9F6myaJOIJ190ZQnsk5Ct/uAbUUS1co1E47ngJe+Sxdb7VRp 236445
+strings-fa.js sha384-1hSlwwVrY55PFcxVgJ2wc73Zb9frz4liCsvVkwtW/dJdESAPlyvyp/UreWqMzPQ1 93510
+workbench.js sha384-1fFeshz48X7EtTTpiIVm1cY8DKfxtJcW0/xTfKXPtdyY8fRM4++jGkWHQjyV04Ug 245810

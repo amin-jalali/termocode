@@ -122,6 +122,7 @@ web	containers-volume-create	op:containers.create
 web	containers-volume-disk-usage	op:containers.disk_usage
 web	containers-volume-prune	op:containers.prune
 web	containers-volume-remove	op:containers.storage_remove
+web	customize-keybindings	op:keys.bind
 web	db-add	op:db.add
 web	db-add-tunnel	op:db.ssh
 web	db-cancel	op:db.cancel
@@ -175,6 +176,7 @@ web	debug-toggle-breakpoint	op:debug.bp
 web	debug-view	view:run
 web	diff-files	cmd:compareFiles
 web	duplicate-line	cmd:copyLinesDown
+web	edit-custom-theme	op:theme.color_set
 web	explorer-rename-selected	cmd:renameFile
 web	explorer-toggle-preview	cmd:togglePreview
 web	explorer-undo-rename	cmd:undoRename
@@ -266,7 +268,12 @@ web	kubernetes-context	op:kube.contexts
 web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
 web	kubernetes-show	view:kube
+web	layout-delete	op:layout.delete
+web	layout-open	op:layout.open
+web	layout-reset	op:layout.reset
+web	layout-save	op:layout.save
 web	lowercase	cmd:lowerCase
+web	lsp-manage	op:lsp.servers
 web	mcp-import-other	palette
 web	mcp-serve-copy-config	op:ai.info
 web	mcp-serve-status	op:ai.info
@@ -278,7 +285,7 @@ web	open-settings-ui	cmd:settings
 web	open-url	cmd:openUrl
 web	open-workspace	cmd:openWorkspace
 web	output-clear	cmd:outputClear
-web	pick-theme	cmd:themeDark
+web	pick-theme	op:theme.set
 web	pin-tab	cmd:pinTab
 web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
@@ -366,11 +373,9 @@ excluded	config-theme	laptop only: opens a laptop config file in the TUI
 excluded	containers-copy-id	laptop only: copies to the laptop clipboard
 excluded	containers-help	laptop only: opens the TUI guide
 excluded	copy-file-ref	laptop only: copies to the laptop clipboard
-excluded	customize-keybindings	laptop only: edits laptop key bindings
 excluded	dap-install	laptop only: installs a debug adapter on the laptop disk
 excluded	db-guide	laptop only: opens the TUI guide
 excluded	detach-session	laptop only: detaches the laptop terminal; the web has its own connection
-excluded	edit-custom-theme	laptop only: edits a laptop config file
 excluded	error-log	laptop only: TUI error log overlay
 excluded	ext-manage-install-samples	laptop only: extensions run on the laptop
 excluded	ext-manage-log	laptop only: extensions run on the laptop
@@ -388,11 +393,6 @@ excluded	git-merge-undo	laptop only: TUI merge view undo (web editor has its own
 excluded	help-context	laptop only: explains TUI widgets
 excluded	help-guide	laptop only: opens the TUI guide
 excluded	http-env-open-private	security: private environment file stays on the laptop
-excluded	layout-delete	laptop only: TUI pane layouts
-excluded	layout-open	laptop only: TUI pane layouts
-excluded	layout-reset	laptop only: TUI pane layouts
-excluded	layout-save	laptop only: TUI pane layouts
-excluded	lsp-manage	laptop only: installs language servers on the laptop disk
 excluded	open-docs	laptop only: opens docs in the laptop browser
 excluded	open-shell	laptop only: opens an external shell window on the laptop
 excluded	prefs-import-editor	laptop only: imports from other editors on the laptop disk

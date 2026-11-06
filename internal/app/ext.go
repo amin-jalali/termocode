@@ -74,6 +74,8 @@ type extState struct {
 	status map[string]string   // status item id → last text
 	cursor map[string]int      // panel id → selected row (0-based)
 	scroll map[string]int      // panel id → first visible row
+	// webLines: panel id → the lines the web last rendered (web_ext.go).
+	webLines map[string][]string
 
 	keys map[string]string // key string → command id (keymap.json "ext:")
 
@@ -97,6 +99,7 @@ func newExtState() *extState {
 		status:   map[string]string{},
 		cursor:   map[string]int{},
 		scroll:   map[string]int{},
+		webLines: map[string][]string{},
 		proc:     newExtHost(),
 		procRegs: map[string]*procReg{},
 	}
