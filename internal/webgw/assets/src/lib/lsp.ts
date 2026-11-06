@@ -14,6 +14,8 @@ import { link, store } from "../session";
 import { session } from "./live";
 import { route } from "./router";
 import { panes, setPanes, showFile } from "./workbench";
+import { toast } from "./toasts";
+import { t } from "../strings";
 
 /** PanelTab is what the bottom panel shows: "problems", "output", "terminal" or
  * a registered tab's id (lib/views.ts). */
@@ -88,6 +90,28 @@ async function settledTick(buf: number): Promise<number | null> {
   return s.settled();
 }
 
+/** LSP_OPS names the ops whose name is not lsp.<kind>. */
+const LSP_OPS: Partial<Record<LspKind | "references", string>> = { typedef: "lsp.type_definition", impl: "lsp.implementation" };
+
+/** formatBuf formats the focused editor's buffer with the laptop's
+ * language server, at the tick the page's text is known at; the new text
+ * comes back as the laptop's change. */
+export async function formatBuf(): Promise<void> {
+  const s = session.peek();
+  if (!s) return;
+  const tick = await settledTick(s.buf);
+  if (tick === null) {
+    toast("info", t("cmd.format_wait"));
+    return;
+  }
+  try {
+    await link.request("buf.format", { buf: s.buf, tick });
+    toast("ok", t("cmd.formatted"));
+  } catch (e) {
+    toast("warn", e instanceof Error && e.message ? e.message : t("cmd.failed"));
+  }
+}
+
 /** ask runs lsp.<kind> for buffer buf at a 0-based line and UTF-16
  * column, at the tick the page's text is known at. A changed buffer is
  * asked once more after a moment (the laptop's change on its way). */
@@ -98,7 +122,7 @@ export async function ask(kind: LspKind | "references", buf: number, line: numbe
     const tick = await settledTick(buf);
     if (tick === null) return null;
     try {
-      return await link.request("lsp." + kind, { buf, tick, line, col });
+      return await link.request(LSP_OPS[kind] ?? "lsp." + kind, { buf, tick, line, col });
     } catch (e) {
       if (e instanceof ReqError && e.code === "conflict" && tries === 0) {
         await new Promise((r) => setTimeout(r, 200));

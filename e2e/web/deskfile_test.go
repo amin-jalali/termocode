@@ -67,7 +67,7 @@ func TestDeskRevertFileAsksFirst(t *testing.T) {
 	// Enter takes the safe choice.
 	p.Key(kb.Enter)
 	p.WaitJS(`!document.querySelector(".ask-here")`)
-	c.Quiet(t, 300*time.Millisecond)
+	noOp(t, c, webproto.OpBufReload, 300*time.Millisecond)
 	runCmd(t, p, c, false, "revert file", "File: Revert File")
 	p.WaitJS(`document.querySelector(".ask-here .btn-danger.is-armed")`)
 	p.TapJS(`document.querySelector(".ask-here .btn-danger")`)
@@ -86,5 +86,21 @@ func TestDeskMarkdownPreview(t *testing.T) {
 		{K: webproto.MdParagraph, C: []webproto.MdNode{{K: webproto.MdText, Text: "Some text"}}},
 	}}})
 	p.WaitJS(`document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "Preview README.md"`)
-	p.WaitJS(`document.querySelector(".md-preview h1")?.textContent === "Hi"`)
+	p.WaitJS(`document.querySelector(".md-preview .md-h1")?.textContent === "Hi"`)
+}
+
+// noOp reads the page's messages for d and fails on a req for op.
+func noOp(t *testing.T, c *HubConn, op string, d time.Duration) {
+	t.Helper()
+	end := time.After(d)
+	for {
+		select {
+		case m := <-c.in:
+			if r, ok := m.(*webproto.Req); ok && r.Op == op {
+				t.Fatalf("page sent %s", show(m))
+			}
+		case <-end:
+			return
+		}
+	}
 }

@@ -1016,6 +1016,21 @@ export const S = {
   "wb.unpin_tab": "Unpin {name}",
   "menu.pin": "Pin",
   "menu.unpin": "Unpin",
+  "cmd.goto_typedef": "Go to Type Definition",
+  "cmd.goto_impl": "Go to Implementation",
+  "cmd.no_typedef": "No type definition found.",
+  "cmd.no_impl": "No implementation found.",
+  "cmd.format_wait": "Your typing is still on its way. Try again.",
+  "cmd.formatted": "Formatted.",
+  "cmd.revert_file": "File: Revert File",
+  "cmd.revert_ask": "Read {name} from disk again? Its unsaved changes are lost.",
+  "cmd.revert": "Revert",
+  "cmd.reverted": "Read again from disk.",
+  "cmd.md_preview": "Markdown: Open Preview",
+  "md.preview_tab": "Preview {name}",
+  "md.open_first": "Open the file first.",
+  "md.loading": "Reading the file…",
+  "md.cut": "The file is long: the preview shows its start.",
 } as const;
 
 export type StringKey = keyof typeof S;

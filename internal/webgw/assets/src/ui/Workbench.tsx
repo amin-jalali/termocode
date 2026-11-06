@@ -54,6 +54,7 @@ import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
 import { asking, closeActive, cycleTab, focusSecond } from "../lib/commands";
 import { AskLaptop } from "./AskLaptop";
+import { AskHere, askHere } from "./AskHere";
 import { ContextMenu, onMenu, openMenu, type MenuItems } from "./ContextMenu";
 import { absPath, copyText } from "../lib/clip";
 import { signal } from "@preact/signals";
@@ -66,6 +67,7 @@ import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
 import { DBQueryTab, DBTableTab } from "../views/desk/DBTabs";
 import { DeskMCP, MCPAgentTab } from "../views/desk/DeskMCP";
 import { vtabIcon, vtabOf } from "../lib/vtabs";
+import { MDPreview } from "../views/MDPreview";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
 import { AgentsView } from "../views/AgentsView";
@@ -335,6 +337,7 @@ function EditorBody({ more, file, slot }: { more: boolean; file: string | null; 
   if (v?.kind === "db") return <DBTableTab key={file} conn={v.conn} table={v.table} slot={slot} />;
   if (v?.kind === "sql") return <DBQueryTab key={file} conn={v.conn} slot={slot} />;
   if (v?.kind === "mcp") return <MCPAgentTab key={file} name={v.name} slot={slot} />;
+  if (v?.kind === "md") return <MDPreview key={file} path={v.path} />;
   if (file && gitTabOf(file)) return <GitTabView key={file} tab={file} slot={slot} />;
   if (file) return <FileView key={file} path={file} slot={slot} />;
   return <Welcome />;
@@ -535,6 +538,7 @@ export function Workbench() {
         <div class="wb-editor">
           {quick.value && <QuickInput key={quick.value.mode} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
+          {askHere.value && <AskHere ask={askHere.value} />}
           <RemoteAskHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>

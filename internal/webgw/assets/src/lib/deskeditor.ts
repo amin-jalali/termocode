@@ -6,12 +6,14 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
 import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
+import { toast } from "./toasts";
+import { t } from "../strings";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -107,6 +109,8 @@ export interface DeskHandle extends EditorHandle {
   aiAct(kind: AiAct): void;
   /** act runs a line or text command (sort, fold, comment …). */
   act(id: EditAct): void;
+  /** nav goes to the type definition or the implementation at the caret. */
+  nav(kind: NavKind): void;
 }
 
 /** COMMENTS are the line comments of file types by extension (or name). */
@@ -229,6 +233,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "refs":
         host.onRefs?.(m.line, m.col);
         return;
+      case "navNone":
+        toast("info", t(m.kind === "typedef" ? "cmd.no_typedef" : "cmd.no_impl"));
+        return;
       case "glyph": {
         const r = frame.getBoundingClientRect();
         host.onGlyph?.(m.line, m.menu, r.left + m.x, r.top + m.y);
@@ -313,6 +320,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     act(id) {
       send({ t: "act", id });
+    },
+    nav(kind) {
+      send({ t: "edit", op: kind });
     },
     destroy() {
       removeEventListener("message", onMessage);

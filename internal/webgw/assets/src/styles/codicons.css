@@ -111,6 +111,7 @@
 .cod-lock::before { content: "\ea75"; }
 .cod-new-file::before { content: "\ea7f"; }
 .cod-new-folder::before { content: "\ea80"; }
+.cod-open-preview::before { content: "\eb28"; }
 .cod-organization::before { content: "\ea7e"; }
 .cod-output::before { content: "\eb9d"; }
 .cod-package::before { content: "\eb29"; }

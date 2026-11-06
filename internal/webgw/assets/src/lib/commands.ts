@@ -22,13 +22,19 @@ import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
-import { activeFile, alternateFile, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, splitEditor, tabsIn, togglePin, wordWrap } from "./workbench";
+import { activeFile, alternateFile, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, showFile, splitEditor, tabsIn, togglePin, wordWrap } from "./workbench";
 import { askLink } from "./links";
 import { expandTo, hideDots } from "./tree";
 import { sideView } from "../ui/ActivityBar";
 import { renameFile } from "../views/Files";
 import { undoRename } from "../views/files/FileActions";
 import { fileOfTab } from "./difftab";
+import { formatBuf } from "./lsp";
+import { session } from "./live";
+import { askHere } from "../ui/AskHere";
+import { gitFailed } from "../views/git/errors";
+import { mdBufs } from "../views/MDPreview";
+import { mdTab } from "./vtabs";
 
 export interface Command {
   id: string;
@@ -101,8 +107,40 @@ export function commands(): Command[] {
     { id: "toggleHidden", label: "cmd.toggle_hidden", run: toggleHidden },
     { id: "togglePreview", label: "cmd.toggle_preview", run: togglePreviewTabs },
     { id: "renameFile", label: "cmd.rename_file", when: () => realFile() !== null && link.meta.peek()?.role === "controller", run: () => { const f = realFile(); if (f) { showSide(); renameFile(f); } } },
+    { id: "gotoTypeDef", label: "cmd.goto_typedef", when: hasDesk, run: () => activeDesk.peek()?.nav("typedef") },
+    { id: "gotoImpl", label: "cmd.goto_impl", when: hasDesk, run: () => activeDesk.peek()?.nav("impl") },
+    { id: "formatDocument", label: "menu.format", keys: "Shift+Alt+F", when: () => hasDesk() && canWrite(), run: () => void formatBuf() },
+    { id: "revertFile", label: "cmd.revert_file", when: () => hasDesk() && canWrite(), run: askRevert },
+    { id: "markdownPreview", label: "cmd.md_preview", when: () => hasDesk() && /\.(md|markdown|mdx)$/i.test(activeFile.peek() ?? ""), run: openPreview },
     { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
   ];
+}
+
+/** canWrite: a controller may change files. */
+const canWrite = () => link.meta.peek()?.role === "controller";
+
+/** askRevert asks here first (Cancel first): Revert File drops the
+ * buffer's unsaved changes and reads the file from disk again. */
+function askRevert(): void {
+  const s = session.peek();
+  const f = activeFile.peek();
+  if (!s || !f) return;
+  const name = f.slice(f.lastIndexOf("/") + 1);
+  askHere.value = {
+    label: t("cmd.revert_file"),
+    text: t("cmd.revert_ask", { name }),
+    verb: t("cmd.revert"),
+    run: () => link.request("buf.reload", { buf: s.buf }).then(() => toast("ok", t("cmd.reverted")), gitFailed),
+  };
+}
+
+/** openPreview opens the Markdown preview tab of the focused file. */
+function openPreview(): void {
+  const s = session.peek();
+  const f = activeFile.peek();
+  if (!s || !f) return;
+  mdBufs.set(f, s.buf);
+  showFile(mdTab(f));
 }
 
 /** realFile is the workspace file of the active tab (null: none, or a tab

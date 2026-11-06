@@ -14,7 +14,7 @@ import { diff } from "../lib/textdiff";
 import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
-import type { AiAt, AiKind, EditAct, FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
+import type { AiAt, AiKind, EditAct, FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -321,13 +321,18 @@ function caretRefs(): void {
 }
 
 /** goDef: the menu's Go to Definition, the same lsp.definition read as
- * F12: a place in this file gets the caret, one in another file opens
- * there (the page opens its tab). */
-async function goDef(): Promise<void> {
+ * F12 (or the type definition, the implementation): a place in this
+ * file gets the caret, one in another file opens there (the page opens
+ * its tab). */
+async function goDef(kind: "definition" | NavKind = "definition"): Promise<void> {
   const p = ed?.getPosition();
-  if (!p || !lspOn) return;
-  const d = (await ask("definition", p)) as LspLocations | null;
+  if (!p || !lspOn) {
+    if (kind !== "definition") post({ t: "navNone", kind });
+    return;
+  }
+  const d = (await ask(kind, p)) as LspLocations | null;
   const l = d && Array.isArray(d.locs) ? d.locs.find((x) => !x.outside && x.path) : undefined;
+  if (!l?.path && kind !== "definition") post({ t: "navNone", kind });
   if (!l?.path || !ed) return;
   if (l.path !== myPath) {
     post({ t: "open", path: l.path, line: l.line, col: l.col });
@@ -447,9 +452,10 @@ function collapseBlanks(): void {
 /** menuEdit runs a context menu choice. */
 function menuEdit(m: Extract<ToFrame, { t: "edit" }>): void {
   if (!ed) return;
-  if (m.op === "def" || m.op === "refs" || m.op === "format") {
+  if (m.op === "def" || m.op === "refs" || m.op === "format" || m.op === "typedef" || m.op === "impl") {
     ed.focus();
     if (m.op === "def") void goDef();
+    else if (m.op === "typedef" || m.op === "impl") void goDef(m.op);
     else if (m.op === "refs") caretRefs();
     else void ed.getAction(FORMAT)?.run();
     return;

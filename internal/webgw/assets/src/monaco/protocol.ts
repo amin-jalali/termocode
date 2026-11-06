@@ -83,7 +83,11 @@ export interface FrameBlame {
 }
 
 /** LspKind is what the frame asks the page about a position. */
-export type LspKind = "hover" | "complete" | "definition";
+export type LspKind = "hover" | "complete" | "definition" | NavKind;
+
+/** NavKind is a go-to the command list runs: the type definition or the
+ * implementation at the caret. */
+export type NavKind = "typedef" | "impl";
 
 /** AiKind is what the frame asks the laptop's AI: ghost text at the
  * caret, the next edit after a pause, or "seed" (the editor opened: the
@@ -162,7 +166,7 @@ export type ToFrame =
   | { t: "reveal"; line: number; col?: number }
   /** edit: a context menu choice. cut drops the selection (the page put
    * it on the clipboard); def, refs and format run the editor's own action. */
-  | { t: "edit"; op: "cut" | "def" | "refs" | "format" }
+  | { t: "edit"; op: "cut" | "def" | "refs" | "format" | NavKind }
   /** markers: the file's diagnostics (all of them, each time). */
   | { t: "markers"; items: FrameMarker[] }
   /** glyphs: the glyph margin's marks (all of them, each time) and the
@@ -202,6 +206,8 @@ export type FromFrame =
   | { t: "ai"; id: number; kind: AiKind; line: number; col: number; manual?: boolean }
   /** aiAct: the user ran an AI action from the keyboard (Ctrl/Cmd+I: Edit). */
   | { t: "aiAct"; kind: AiAct; at: AiAt }
+  /** navNone: a go-to found nothing at the caret. */
+  | { t: "navNone"; kind: NavKind }
   /** refs: the user asked for the references at a position (0-based). */
   | { t: "refs"; line: number; col: number }
   /** open: go to another file (a definition there), 0-based. */
