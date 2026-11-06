@@ -98,6 +98,11 @@ type terminalTab struct {
 	// socket (agent_ctl.go); the screen guess leaves the tab alone.
 	AgentHook    bool
 	agentFromCmd bool
+	// Worktree is the folder an agent was started in (AGX-2; "" = the
+	// workspace): the WORKTREES view puts the agent on that card.
+	// FirstTask is typed once the agent shows its input box (WTX-8).
+	Worktree  string
+	FirstTask string
 
 	// Splits are the panes after the first (terminal_pane.go); BufID is
 	// pane 0. PaneFocus is the focused pane (0 = BufID).
@@ -1034,8 +1039,9 @@ func (m Model) renderTerminalTabBar(width int) string {
 			segBg, glyphStyle, nameStyle, closeStyle = editorBg, accent, primary, closeOnEditor
 			segTok = theme.BgEditor
 		}
-		// An agent tab (U8) shows its state mark in the glyph cell.
-		if t, ok := m.termTabAt(e); ok && t.Agent != "" {
+		// An agent tab (U8) shows its state mark in the glyph cell; an
+		// Unknown state (a preset without screen rules) keeps the glyph.
+		if t, ok := m.termTabAt(e); ok && t.Agent != "" && t.AgentState != agents.Unknown {
 			mark, c := agentMark(t.AgentState)
 			glyph, glyphStyle = mark, theme.FgBg(c, segTok)
 		}

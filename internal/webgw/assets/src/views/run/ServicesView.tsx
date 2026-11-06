@@ -10,6 +10,7 @@ import type { ServiceDone, ServiceItem, ServiceLogs } from "../../../../../webpr
 import { toast } from "../../lib/toasts";
 import { link, store } from "../../session";
 import { readServicesSnap } from "../../state/run";
+import { go } from "../../lib/router";
 import { t } from "../../strings";
 import { AskLaptop } from "../../ui/AskLaptop";
 import { Cod } from "../../ui/icons";
@@ -96,10 +97,29 @@ function Row({ s, act }: { s: ServiceItem; act: boolean }) {
   );
 }
 
+const openFile = (path: string) => go({ tab: "files", rest: path, query: {} });
+
+/** openCompose opens the project's compose file (Containers: Open Compose File). */
+export function openCompose(): void {
+  const f = readServicesSnap(store.topic("services").peek()?.data)?.compose_files?.[0];
+  if (f) openFile(f);
+  else toast("info", t("svc.no_compose"));
+}
+
+/** configureServices writes .termocode/services.json (a template) when
+ * missing, then opens it. */
+export function configureServices(): void {
+  ask("services.configure", {}, (r) => {
+    const p = (r as { path?: unknown } | null)?.path;
+    if (typeof p === "string" && p) openFile(p);
+  });
+}
+
 export function ServicesView() {
   useEffect(() => link.subscribe("services"), []);
   const s = readServicesSnap(store.topic("services").value?.data);
   const act = canAct();
+  const [all, setAll] = useState<"" | "start" | "stop">("");
   const compose = s?.services.filter((x) => x.kind === "compose") ?? [];
   const local = s?.services.filter((x) => x.kind === "local") ?? [];
   const group = (title: string, list: readonly ServiceItem[]) =>
@@ -112,7 +132,21 @@ export function ServicesView() {
       </section>
     );
   return (
-    <SubView title={t("act.services")} name="services" actions={<IconBtn icon="refresh" act="refresh" label={t("ctr.refresh")} onClick={() => ask("services.refresh")} />}>
+    <SubView
+      title={t("act.services")}
+      name="services"
+      actions={
+        <>
+          {act && <IconBtn icon="run-all" act="start-all" label={t("svc.start_all")} onClick={() => setAll("start")} />}
+          {act && <IconBtn icon="stop-circle" act="stop-all" label={t("svc.stop_all")} onClick={() => setAll("stop")} />}
+          {(s?.compose_files?.length ?? 0) > 0 && <IconBtn icon="go-to-file" act="open-compose" label={t("svc.open_compose")} onClick={openCompose} />}
+          {act && <IconBtn icon="gear" act="configure" label={t("svc.configure")} onClick={configureServices} />}
+          <IconBtn icon="refresh" act="refresh" label={t("ctr.refresh")} onClick={() => ask("services.refresh")} />
+        </>
+      }
+    >
+      {all === "start" && <Confirm text={t("svc.start_all_q")} verb={t("svc.start_all")} onNo={() => setAll("")} onYes={() => (setAll(""), ask("services.start_all"))} />}
+      {all === "stop" && <AskLaptop label={t("svc.stop_all")} text={t("svc.stop_all_q")} send={() => link.request("services.stop_all", {})} onDone={() => setAll("")} />}
       <div class="svcs">
         {!s || s.state === "loading" ? (
           <SkeletonRows rows={4} />

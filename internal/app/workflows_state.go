@@ -575,7 +575,7 @@ func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd
 		OnEvent: func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
 		OnAI: func(step, item string, ev agentrun.Event) {
 			if ev.Tail != "" {
-				l.addLine(step + " " + item + ": " + lastLine(ev.Tail))
+				l.addLine(step + " " + item + ": " + wfxLastLine(ev.Tail))
 				send(wfxLineMsg{id: id})
 			}
 		},
@@ -594,7 +594,7 @@ func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd
 	return id, h, tea.Batch(m.wfxShowPage("run:"+id, true), wfxListen(l.ch)), nil
 }
 
-func lastLine(s string) string {
+func wfxLastLine(s string) string {
 	s = strings.TrimRight(s, "\n")
 	if i := strings.LastIndexByte(s, '\n'); i >= 0 {
 		s = s[i+1:]

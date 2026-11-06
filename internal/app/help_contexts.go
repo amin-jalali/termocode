@@ -51,6 +51,7 @@ var helpContexts = map[string]string{
 	"databases":     databasesGuidePage + "#open-the-view",
 	"db-result":     databasesGuidePage + "#results",
 	"kubernetes":    kubeGuidePage + "#what-you-see",
+	"worktrees":     worktreesGuidePage + "#worktrees",
 }
 
 // settingsTopic is the row of setting key in the settings reference:
@@ -103,6 +104,8 @@ func (m Model) helpTopicForFocus() string {
 			return helpContexts["db-compare"] // the only card with its own actions
 		}
 		return helpContexts["review"]
+	case m.wtFormOpen():
+		return worktreesGuidePage + "#new-worktree" // Worktree: New… (worktrees_new.go)
 	case m.connectOpen && m.itermoc != nil && m.itermoc.form != nil:
 		return itermocGuidePage + "#models" // the slot form (itermoc_slots.go)
 	case m.connectOpen:
@@ -215,6 +218,8 @@ func (m Model) sidebarHelpTopic() string {
 		return activityHelp["Runs"]
 	case activity.ViewKubernetes:
 		return helpContexts["kubernetes"]
+	case activity.ViewWorktrees:
+		return helpContexts["worktrees"]
 	}
 	return ""
 }
