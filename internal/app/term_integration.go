@@ -197,8 +197,8 @@ func (m *Model) onTermOSC(buf int, seq string) tea.Cmd {
 		}
 		// The Fix chip (U9b): a failed command in the tab on show. Ctrl+C
 		// (130) is the user's own stop, not a failure to fix.
-		t.FixChip = t.LastExit != 0 && t.LastExit != 130 && t.LastCmd != "" && m.termTabVisible(shown)
-		if t.Agent != "" && t.agentFromCmd {
+		t.FixChip = t.LastExit != 0 && t.LastExit != 130 && t.LastCmd != "" && m.termTabVisible(shown) && !t.Hibernated
+		if t.Agent != "" && t.agentFromCmd && !t.Hibernated { // a hibernated agent (agent_hibernate.go) keeps its tab
 			m.agentWatch(buf, false)
 			t.Agent, t.AgentState, t.agentFromCmd, t.AgentHook = "", agents.Unknown, false, false
 		}

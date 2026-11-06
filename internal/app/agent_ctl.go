@@ -355,6 +355,10 @@ func orDash(s string) string {
 
 // agentCtlSend types the prompt into the tab.
 func (m *Model) agentCtlSend(t agentCtlTab, r agentctl.Request) agentctl.Reply {
+	if t.t != nil && t.t.Hibernated { // AGX-15: the shell is bare; resume first (agent_hibernate.go)
+		m.agentWake(t.t)
+		return agentctl.Reply{Error: "the agent in this tab was hibernated; it is starting again on its session: send the prompt again in a few seconds"}
+	}
 	if m.nvim == nil {
 		return agentctl.Reply{Error: "the editor is not running"}
 	}

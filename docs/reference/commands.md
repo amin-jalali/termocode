@@ -91,7 +91,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Agent: Accounts… | `agent-account-use` |   | `Claude Code / Codex accounts, own folders` |
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
+| Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
 | Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
 | Agent: Sessions… | `agent-sessions` |   | `resume or read a past session` |
 | Agent: Start Claude Code | `agent-start-claude` |   |   |
@@ -100,6 +102,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start OpenCode | `agent-start-opencode` |   |   |
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
+| Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
+| Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
 
 ## Bookmarks
 
@@ -645,6 +649,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Workspace: Add Folder... | `workspace-add-folder` |   |   |
 | Workspace: Remove Folder... | `workspace-remove-folder` |   |   |
+
+## Worktree
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Worktree: Suggest a Name… | `worktree-suggest-name` |   | `quick model drafts branch names` |
 
 ## termocode
 

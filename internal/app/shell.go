@@ -98,6 +98,25 @@ type terminalTab struct {
 	// socket (agent_ctl.go); the screen guess leaves the tab alone.
 	AgentHook    bool
 	agentFromCmd bool
+	// AGX-11 (agent_limit.go): the agent's usage-limit message on its
+	// screen (redacted) and when it resets (zero: not said);
+	// limitTyped: auto-continue typed once for it. AutoContinue is the
+	// tab's own switch.
+	LimitMsg     string
+	LimitAt      time.Time
+	limitTyped   bool
+	AutoContinue autoContinueMode
+	// AGX-15 (agent_hibernate.go): the idle clock (the last output, one
+	// check in flight, asked for this idle time) and the hibernated
+	// state with the kept session id ("" = not known).
+	lastOutput  time.Time
+	idlePending bool
+	idleAsked   bool
+	Hibernated  bool
+	HibSession  string
+	// Account is the agent account label the tab runs as ("" = the
+	// CLI's own default folder; agent_accounts.go, AGX-13).
+	Account string
 
 	// Splits are the panes after the first (terminal_pane.go); BufID is
 	// pane 0. PaneFocus is the focused pane (0 = BufID).
@@ -658,6 +677,9 @@ func (m *Model) switchTerminalTab(idx int) {
 	if idx < 0 || idx >= len(m.terminalTabs) {
 		return
 	}
+	if m.terminalTabs[idx].Hibernated { // AGX-15: going back resumes it (agent_hibernate.go)
+		m.agentWake(&m.terminalTabs[idx])
+	}
 	m.terminalActiveTab = idx
 	m.panelActive = panelKindTerminal
 	m.panelFocused = false
@@ -1109,7 +1131,7 @@ func (m Model) panelEntryName(e panelBarEntry) string {
 	if e.Index < 0 || e.Index >= len(m.terminalTabs) {
 		return "shell"
 	}
-	if title := m.terminalTabs[e.Index].agentTitle(); title != "" { // U8
+	if title := m.terminalTabs[e.Index].agentTabName(); title != "" { // U8
 		return title
 	}
 	if name := m.terminalTabs[e.Index].Name; name != "" {
