@@ -1972,6 +1972,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `focus-explorer` | View: Focus Explorer | auto |   |
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
+| `git-auto-fetch` | Git: Toggle Auto Fetch | never | starts a timer that talks to the remote; only the user turns it on |
 | `git-blame` | Git: Blame Current Line | auto |   |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
 | `git-ci` | Git: CI and Pull Request… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -1989,12 +1990,14 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-discard-hunk` | Git: Discard Hunk (at cursor) | confirm (always asks) |   |
 | `git-discard-lines` | Git: Discard Line (or Selected Lines) | confirm (always asks) |   |
 | `git-fetch` | Git: Fetch | confirm (git) |   |
+| `git-fetch-all` | Git: Fetch All Remotes (Prune) | confirm (git) |   |
 | `git-fixup` | Git: Fixup Staged Changes Into… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-focus` | Git: Focus Source Control | auto |   |
 | `git-goto-commit` | Git: Go to Commit… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
 | `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-incoming` | Git: Show Incoming Commits… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-folder` | Git: Show Folder History… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-search` | Git: Search Log… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
@@ -2011,10 +2014,15 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-merge-take-ours` | Git: Merge View: Take Ours | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-theirs` | Git: Merge View: Take Theirs | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-undo` | Git: Merge View: Undo Last Change | never | resolves the user's merge conflict in the merge view; user only |
+| `git-outgoing` | Git: Show Outgoing Commits… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-pr-create` | Git: Create Pull Request… | never | publishes a pull request in the user's name; only the user creates one |
 | `git-pr-list` | Git: Pull Requests… | auto |   |
 | `git-pull` | Git: Pull | confirm (git) |   |
+| `git-pull-options` | Git: Pull… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-pull-rebase` | Git: Pull (Rebase) | confirm (git) |   |
 | `git-push` | Git: Push | confirm (always asks) |   |
+| `git-push-preview` | Git: Push… (Show Outgoing Commits First) | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-push-to` | Git: Push to… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-rebase` | Git: Interactive Rebase… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-rebase-status` | Git: Rebase in Progress (Continue / Skip / Abort)… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-redo` | Git: Redo Undone Git Action | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |

@@ -137,7 +137,7 @@ func (m *Model) gitxSearchLog(f git.LogFilter) tea.Cmd {
 	if label == "" {
 		label = "all commits"
 	}
-	m.gitxPick(" Log: "+label+" (Enter opens the commit) ", items, func(m *Model, id string) tea.Cmd {
+	m.gitxPick(" Log: "+label+" ", items, func(m *Model, id string) tea.Cmd {
 		return m.gitOpenCommitViewCmd(strings.TrimPrefix(id, "commit-"))
 	})
 	return nil

@@ -103,7 +103,7 @@ func fetchGitCmd() tea.Cmd {
 		done := make(chan struct{})
 		crash.Go("reading the git graph", func() {
 			defer close(done) // also after a panic, so the refresh goes on
-			graph, more, _ = gitGraphCommits(cwd, 0, gitGraphLimit) // gitx_log_search.go
+			graph, more, _ = gitGraphCommits(cwd, 0, gitGraphLimit)
 		})
 		st, err := git.StatusBranch(cwd)
 		<-done

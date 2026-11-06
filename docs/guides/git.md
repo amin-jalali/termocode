@@ -432,6 +432,19 @@ double quotes for spaces (`author:"Ann Lee"`):
 | **Git: Go to HEAD in GRAPH** (`@` in Source Control) | Moves the **GRAPH** cursor to `HEAD` |
 | **Git: Toggle All Branches in GRAPH** | The **GRAPH** shows every branch, or only the current one again |
 
+## Push and pull options
+
+| Command | What it does |
+|---|---|
+| **Git: Push… (Show Outgoing Commits First)** | A card lists the commits that go out and how many files they change. **Cancel** is ready; **Push** sends them. |
+| **Git: Push to…** | Pick a remote, type a branch name, check the card, push. Your upstream does not change. |
+| **Git: Pull…** | **Pull (merge)**, **Pull (rebase)** (your commits go on top) or **Pull from…** another remote and branch |
+| **Git: Pull (Rebase)** | `git pull --rebase` in one step |
+| **Git: Fetch All Remotes (Prune)** | Fetches every remote and drops remote branches that are gone |
+| **Git: Show Incoming Commits…** | Commits a pull brings, as of the last fetch |
+| **Git: Show Outgoing Commits…** | Commits a push sends |
+| **Git: Toggle Auto Fetch** | Fetches every 3 minutes until termocode closes. Off by default. A failed fetch turns it off and says why. |
+
 ## Keys at a glance
 
 In the Source Control panel:
