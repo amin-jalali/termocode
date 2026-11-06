@@ -15,7 +15,8 @@ import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } 
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
 import type { AiAt, AiKind, CursorOp, EditAct, FrameBlame, FrameGlyph, FrameHint, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
-import { Vim, type VimMode } from "./vim";
+import type { Vim, VimMode } from "./vim";
+import type * as VimModule from "./vim";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -819,8 +820,24 @@ let chordUntil = 0;
 let vim: Vim | null = null;
 let vimShown = "";
 
+/** vimWant is the page's choice; the keymap is its own file
+ * (monaco-vim.js), loaded the first time Vim mode is on. */
+let vimWant = false;
+let vimLoading: Promise<typeof VimModule> | null = null;
+
+function loadVim(): Promise<typeof VimModule> {
+  if (!vimLoading) {
+    vimLoading = import("/assets/monaco-vim.js").catch((e: unknown) => {
+      vimLoading = null; // a later toggle tries again
+      throw e;
+    });
+  }
+  return vimLoading;
+}
+
 /** vimOn turns Vim mode on or off; the page hears the mode (none: off). */
 function vimOn(on: boolean): void {
+  vimWant = on;
   if (!ed || on === (vim !== null)) return;
   if (!on) {
     vim = null;
@@ -828,9 +845,19 @@ function vimOn(on: boolean): void {
     vimShow(null, "");
     return;
   }
+  loadVim().then(
+    (m) => {
+      if (vimWant && !vim) vimStart(m);
+    },
+    () => vimShow(null, ""),
+  );
+}
+
+function vimStart(mod: typeof VimModule): void {
+  if (!ed) return;
   const e = ed;
   const at = (off: number): Pos => (model ? model.getPositionAt(off) : { lineNumber: 1, column: 1 });
-  vim = new Vim({
+  vim = new mod.Vim({
     doc: () => cur,
     caret: () => {
       const p = e.getPosition();
