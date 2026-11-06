@@ -76,7 +76,7 @@ func CleanMessage(s string) string {
 		}
 		keep = append(keep, l)
 	}
-	return strings.TrimRight(strings.TrimLeft(strings.Join(keep, "\n"), "\n"), "\n \t")
+	return strings.TrimRight(strings.TrimLeft(strings.Join(keep, "\n"), "\n"), "\n")
 }
 
 // Authors lists "Name <email>" of the people who committed in the last n
