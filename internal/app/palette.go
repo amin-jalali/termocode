@@ -319,6 +319,8 @@ func paletteItems() []picker.Item {
 		{ID: "git-conflict-both", Title: "Git: Accept Both Changes (Conflict at Cursor)"},
 		{ID: "git-clone", Title: "Git: Clone Repository..."},
 		// Three-way merge view (git_merge_view.go).
+		{ID: "git-merge-branch", Title: "Git: Merge Branch…"},                         // git_merge_branch.go
+		{ID: "git-merge-status", Title: "Git: Merge in Progress (Continue / Abort)…"}, // git_merge_branch.go
 		{ID: "git-merge-open", Title: "Git: Open Merge View"},
 		{ID: "git-merge-next", Title: "Git: Merge View: Next Conflict", Hint: "n"},
 		{ID: "git-merge-prev", Title: "Git: Merge View: Previous Conflict", Hint: "p"},
@@ -606,6 +608,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.showExp = true
 		m.focus = FocusExplorer
 		m.applyLayout()
+	case "git-merge-branch":
+		return m.openMergeBranchPicker()
+	case "git-merge-status":
+		return m.openGitOpControl()
 	case "git-unstage-all":
 		return m.gitUnstageAll()
 	case "git-discard-all":

@@ -399,8 +399,10 @@ missing	git-discard-all	Git|S
 missing	git-discard-hunk	Git|S
 missing	git-discard-lines	Git|S
 missing	git-fixup	Git|S
+missing	git-merge-branch	Git|S
 missing	git-merge-next	Git|S
 missing	git-merge-prev	Git|S
+missing	git-merge-status	Git|S
 missing	git-merge-take-base	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S

@@ -220,6 +220,10 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onFixupConfirm(id)
 	case confirmKindGitUndo:
 		return m.onUndoConfirm(id)
+	case confirmKindGitMergeBranch: // git_merge_branch.go
+		return m.onMergeBranchConfirm(id)
+	case confirmKindGitOpControl:
+		return m.onGitOpControl(id)
 	case confirmKindMergeWholeFile:
 		return m.onMergeWholeCard(id)
 	case confirmKindCloseBuffer:

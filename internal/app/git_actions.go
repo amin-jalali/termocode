@@ -113,6 +113,8 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 			return m, m.gitShowMore(), true
 		case gitRowRebase:
 			m.openRebaseControl()
+		case gitRowStopped:
+			return m, m.openGitOpControl(), true
 		case gitRowFile:
 			if cur.section == gitSecConflicts {
 				return m, m.gitOpenMergeViewForFile(cur.fileIndex), true

@@ -97,6 +97,7 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 | **Git: Blame Current Line** (`Alt+B`) | Who changed this line, and when |
 | **Git: Stash Changes** / **Pop Latest Stash** / **Show Stash List...** | Stash work |
 | **Git: Show Tags...** | Check out a tag |
+| **Git: Merge Branch…** | Merge another branch into this one (see [Merge a branch](#merge-a-branch)) |
 
 ## The GRAPH
 
@@ -286,6 +287,22 @@ How it works:
 press `Enter`: the card asks **Move HEAD back to here?** with the same
 checks.
 
+## Merge a branch
+
+1. Run **Git: Merge Branch…**. Pick a branch: a local one, or a remote one
+   such as `origin/main`.
+2. A card says how many commits come in. **Cancel** is the choice that is
+   ready. **Merge** moves your branch forward when it can, or makes a
+   merge commit. **Merge (No Fast-Forward)** always makes a merge commit.
+3. If files conflict, the merge stops. A **⇄ Merging** banner shows at the
+   top of the panel, with the **CONFLICTS** section below it.
+
+Press `Enter` on the banner, or run **Git: Merge in Progress (Continue /
+Abort)…**. **Close** is ready, so `Enter` and `Esc` change nothing.
+**Continue** stages the fixed files and makes the merge commit; it refuses
+while a file still has conflict markers. **Abort** puts the branch back as
+it was. A stopped cherry-pick or revert shows the same banner.
+
 ## Resolve a merge conflict
 
 When a merge or rebase stops with conflicts, a **CONFLICTS** section appears
@@ -299,7 +316,8 @@ at the top of the panel.
     - **Git: Accept Both Changes (Conflict at Cursor)**
 3. Jump to the next conflict with `]x`, or back with `[x` (Normal mode).
 4. Save the file. Press `s` on it in the panel to mark it resolved.
-5. Commit. In an interactive rebase, use **Continue** on the rebase banner
+5. Commit, or use **Continue** on the merge banner. In an interactive
+   rebase, use **Continue** on the rebase banner
    (see [When the rebase stops](#when-the-rebase-stops)).
 
 Each accept is one edit, so one `u` brings the markers back.

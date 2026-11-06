@@ -189,6 +189,7 @@ type Model struct {
 	gitRemoteBusy string // running push/pull/fetch/sync note, "" when idle
 	gitBranch     git.Branch
 	gitRebase     git.RebaseState // a stopped interactive rebase (git_rebase.go)
+	gitStopped    string          // a stopped merge / cherry-pick / revert (git_merge_branch.go)
 	gitFiles      []git.FileStatus
 	gitCursor     int // index into gitVisibleRows() for the ViewGit sidebar
 

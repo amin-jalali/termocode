@@ -531,6 +531,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onMergeMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
+	case gitMergeDoneMsg, gitOpDoneMsg: // git_merge_branch.go
+		return m, m.onGitMergeBranchMsg(msg)
 	case gitxDoneMsg: // gitx_hub.go
 		return m, msg.apply(&m)
 	case preview.CloseMsg:
@@ -2408,6 +2410,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindMergeBranch:
+		return m.onMergeBranchPicked(msg.ID)
 	case pickerKindTags:
 		return m.checkoutTagSelected(msg.ID)
 	case pickerKindHelpGuide:
