@@ -507,7 +507,11 @@ func TestGoldenScreens(t *testing.T) {
 		}
 	}
 	sem := make(chan struct{}, goldenJobs())
-	for _, c := range goldenCases() {
+	keep := goldenShard()
+	for idx, c := range goldenCases() {
+		if !keep(idx) {
+			continue
+		}
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			sem <- struct{}{}
@@ -542,6 +546,23 @@ func TestGoldenScreens(t *testing.T) {
 				c.name, msg, actual, c.name)
 		})
 	}
+}
+
+// goldenShard reads SHOTKIT_GOLDEN_SHARD=i/n (1 <= i <= n): CI splits the
+// cases over n parallel jobs and job i keeps every case whose index is
+// i-1 mod n. Unset or malformed, every case runs.
+func goldenShard() func(idx int) bool {
+	all := func(int) bool { return true }
+	a, b, ok := strings.Cut(os.Getenv("SHOTKIT_GOLDEN_SHARD"), "/")
+	if !ok {
+		return all
+	}
+	i, err1 := strconv.Atoi(a)
+	n, err2 := strconv.Atoi(b)
+	if err1 != nil || err2 != nil || n < 1 || i < 1 || i > n {
+		return all
+	}
+	return func(idx int) bool { return idx%n == i-1 }
 }
 
 // goldenJobs is how many child apps run at once (SHOTKIT_GOLDEN_JOBS).
