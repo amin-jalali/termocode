@@ -1310,7 +1310,7 @@ export const FA: Record<StringKey, string> = {
   "http.saved_as": "{name} ذخیره شد.",
   "http.headers_tab": "سرآیندها",
   "http.binary": "بدنه دودویی است. آن را در یک فایل ذخیره کنید تا باز شود.",
-  "wt.title": "Worktreeها",
+  "wt.title": "درخت‌های کاری",
   "wt.g_active": "فعال",
   "wt.g_asleep": "خواب",
   "wt.g_external": "ساخته‌شده بیرون از termocode",

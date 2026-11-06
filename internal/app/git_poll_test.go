@@ -170,6 +170,7 @@ func TestGitFullRefreshGitProcesses(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "a.txt"), []byte("b\n"), 0o644)
 	t.Chdir(dir)
 	git.RebaseStatus(dir) // its rev-parse is cached per folder
+	git.StoppedOp(dir)    // so is the stopped merge / pick check's
 
 	// A git on PATH that logs each run, then runs the real one.
 	bin, log := t.TempDir(), filepath.Join(t.TempDir(), "runs")

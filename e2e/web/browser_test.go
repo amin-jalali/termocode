@@ -354,7 +354,7 @@ func (p *Page) TapJS(el string) {
 	pt, err := chromedp.Run(ctx, chromedp.Evaluate[struct{ X, Y float64 }](`document.fonts.ready.then(() => new Promise((done) => {
 		const el = `+el+`;
 		el.scrollIntoView({block: "center", inline: "center"});
-		let last = "", still = 0;
+		let last = "", still = 0, rescrolled = false;
 		const look = () => {
 			const r = el.getBoundingClientRect(), at = [r.left, r.top, r.width, r.height].join();
 			still = at === last ? still + 1 : 0;
@@ -364,6 +364,14 @@ func (p *Page) TapJS(el string) {
 				if (x >= 0 && y >= 0 && x <= innerWidth && y <= innerHeight) {
 					const hit = document.elementFromPoint(x, y);
 					if ((hit && el.contains(hit)) || still >= 63) return done({X: x, Y: y});
+					if (!rescrolled) {
+						// Covered (a scroll that went on after the first
+						// scrollIntoView left it under the tab bar): bring it
+						// to the middle once more.
+						rescrolled = true;
+						el.scrollIntoView({block: "center", inline: "center"});
+						still = 0;
+					}
 				} else {
 					el.scrollIntoView({block: "center", inline: "center"});
 					still = 0;
