@@ -367,6 +367,11 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface AIMCPProfileArgs {
+  name?: string;
+  all?: boolean;
+}
+
 export interface ChatRenameArgs {
   id: string;
   title: string;
@@ -1555,6 +1560,16 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface MCPProfiles {
+  current: string;
+  profiles: MCPProfileItem[];
+}
+
+export interface MCPProfileItem {
+  name: string;
+  hint?: string;
+}
+
 export interface ChatExport {
   name: string;
   text: string;
@@ -1929,6 +1944,8 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.mcp_profiles": EmptyArgs;
+  "ai.use_mcp_profile": AIMCPProfileArgs;
   "chat.rename": ChatRenameArgs;
   "chat.fork": ChatForkArgs;
   "chat.delete": ChatOpenArgs;
@@ -2072,6 +2089,8 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.mcp_profiles": MCPProfiles;
+  "ai.use_mcp_profile": AskRef;
   "chat.fork": ChatRef;
   "chat.delete": AskRef;
   "chat.clear": AskRef;

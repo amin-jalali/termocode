@@ -1592,6 +1592,34 @@
       "phase": "v2"
     },
     {
+      "op": "ai.mcp_profiles",
+      "args": "EmptyArgs",
+      "result": "MCPProfiles",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.use_mcp_profile",
+      "args": "AIMCPProfileArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "chat.rename",
       "args": "ChatRenameArgs",
       "role": "controller",
@@ -2586,6 +2614,19 @@
         "title"
       ],
       "additionalProperties": true
+    },
+    "AIMCPProfileArgs": {
+      "type": "object",
+      "properties": {
+        "all": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     },
     "AINextEdit": {
       "type": "object",
@@ -6559,6 +6600,40 @@
         "since",
         "calls",
         "asked"
+      ],
+      "additionalProperties": true
+    },
+    "MCPProfileItem": {
+      "type": "object",
+      "properties": {
+        "hint": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "MCPProfiles": {
+      "type": "object",
+      "properties": {
+        "current": {
+          "type": "string"
+        },
+        "profiles": {
+          "items": {
+            "$ref": "#/defs/MCPProfileItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "current",
+        "profiles"
       ],
       "additionalProperties": true
     },
