@@ -39,10 +39,13 @@ type Meta struct {
 	Agent    string    `json:"agent,omitempty"`  // the agent preset started in it
 	Issue    int       `json:"issue,omitempty"`
 	PR       int       `json:"pr,omitempty"`
-	Notes    []string  `json:"notes,omitempty"`
+	Notes    []Note    `json:"notes,omitempty"` // agent notes, oldest first (notes.go)
 	State    string    `json:"state,omitempty"` // "" | asleep | archived
 	Created  time.Time `json:"created,omitzero"`
 	LastSeen time.Time `json:"last_seen,omitzero"`
+
+	Checkpoint   string    `json:"checkpoint,omitempty"` // working | blocked | done, set by an agent
+	CheckpointAt time.Time `json:"checkpoint_at,omitzero"`
 }
 
 // States of Meta.State.

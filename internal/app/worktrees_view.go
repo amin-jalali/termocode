@@ -406,8 +406,8 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	}
 	// 3: agent · last note.
 	note := ""
-	if n := len(it.e.Meta.Notes); n > 0 {
-		note = `"` + it.e.Meta.Notes[n-1] + `"`
+	if n, ok := it.e.Meta.LastNote(); ok {
+		note = `"` + n.Text + `"`
 	}
 	switch {
 	case it.agent.name != "" && note != "":

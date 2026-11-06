@@ -49,7 +49,7 @@ func (m *Model) worktreesDemo(variant string) {
 		{Path: "/src/old-fix", Branch: "old-fix", Prunable: true},
 	}
 	metas := map[string]worktrees.Meta{
-		"/src/app.worktrees/wt-sidebar": {Pinned: true, Notes: []string{"adding the pin row"}, Issue: 412, LastSeen: ago(2 * time.Minute)},
+		"/src/app.worktrees/wt-sidebar": {Pinned: true, Notes: []worktrees.Note{{Text: "adding the pin row"}}, Issue: 412, LastSeen: ago(2 * time.Minute)},
 		"/src/app":                      {Pinned: true},
 		"/src/app.worktrees/toast-race": {LastSeen: ago(20 * time.Minute)},
 		"/src/app.worktrees/grpc":       {State: worktrees.StateAsleep, LastSeen: ago(72 * time.Hour)},

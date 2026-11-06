@@ -25,7 +25,7 @@ func TestPerfWorktreesDraw200(t *testing.T) {
 		list = append(list, git.Worktree{Path: p, Branch: fmt.Sprintf("feat/w%03d", i)})
 		vals[p] = git.WorktreeStatus{Ahead: i % 4, Dirty: i % 7}
 		if i%10 == 0 {
-			metas[p] = worktrees.Meta{Pinned: true, Notes: []string{"a note"}}
+			metas[p] = worktrees.Meta{Pinned: true, Notes: []worktrees.Note{{Text: "a note"}}}
 		}
 		if i%5 == 0 {
 			tabs = append(tabs, terminalTab{Agent: "claude", Cwd: p, AgentState: agents.Working})
