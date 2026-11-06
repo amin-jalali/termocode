@@ -443,3 +443,24 @@ web	view/Runs	cmd:runs
 web	view/Kubernetes	view:kube
 excluded	view/Search	removed from the laptop activity bar (the enum value is kept for back-compat only)
 missing	view/Itermoc	Itermoc and AI setup|M
+missing	git-auto-fetch	Git|S
+missing	git-cmd-log	Git|S
+missing	git-copy-commit-link	Git|S
+missing	git-copy-line-link	Git|S
+missing	git-diff-clipboard	Git|S
+missing	git-diff-merge-parent	Git|S
+missing	git-fetch-all	Git|S
+missing	git-goto-commit	Git|S
+missing	git-graph-all	Git|S
+missing	git-graph-head	Git|S
+missing	git-identity	Git|S
+missing	git-ignore-file	Git|S
+missing	git-incoming	Git|S
+missing	git-log-folder	Git|S
+missing	git-log-search	Git|S
+missing	git-outgoing	Git|S
+missing	git-pull-options	Git|S
+missing	git-pull-rebase	Git|S
+missing	git-push-preview	Git|S
+missing	git-push-to	Git|S
+missing	git-signing-toggle	Git|S
