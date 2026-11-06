@@ -30,13 +30,37 @@ web	containers-remove	op:containers.remove
 web	containers-restart	op:containers.restart
 web	containers-start	op:containers.start
 web	containers-stop	op:containers.stop
+web	db-add	op:db.add
+web	db-add-tunnel	op:db.ssh
+web	db-cancel	op:db.cancel
+web	db-commit	op:db.tx
+web	db-compare-schemas	op:db.compare
+web	db-configure	op:db.config
+web	db-connect	op:db.connect
 web	db-count-rows	op:db.query
 web	db-data	op:db.rows
+web	db-ddl	op:db.ddl
 web	db-describe	op:db.tables
+web	db-disconnect	op:db.disconnect
+web	db-explain	op:db.explain
+web	db-explain-analyze	op:db.explain
+web	db-export	cmd:dbExport
+web	db-filter	cmd:dbFilter
 web	db-focus	view:db
+web	db-history	op:db.history
+web	db-import-csv	op:db.import
+web	db-new-console	cmd:dbNewConsole
 web	db-refresh	op:db.conns
+web	db-result-pin	cmd:dbResultPin
+web	db-revert-changes	cmd:dbRevertChanges
+web	db-rollback	op:db.tx
 web	db-run	op:db.query
+web	db-run-file	cmd:dbRunFile
 web	db-select	op:db.query
+web	db-ssl	op:db.ssl
+web	db-submit-changes	op:db.edit
+web	db-test-connection	op:db.test
+web	db-transaction-mode	op:db.tx
 web	debug-add-watch	op:debug.watch
 web	debug-clear-bps	op:debug.bp
 web	debug-conditional-bp	op:debug.bp
@@ -107,6 +131,8 @@ web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
 web	problems	cmd:problems
 web	quick-open	cmd:quickOpen
+web	redis-delete-key	op:redis.key
+web	redis-set-ttl	op:redis.key
 web	reveal-fs	op:tree.reveal_on_laptop
 web	run-doctor	palette
 web	run-tests	palette
@@ -315,30 +341,6 @@ missing	containers-volume-create	Containers|M
 missing	containers-volume-disk-usage	Containers|M
 missing	containers-volume-prune	Containers|M
 missing	containers-volume-remove	Containers|M
-missing	db-add	Databases|L
-missing	db-add-tunnel	Databases|L
-missing	db-cancel	Databases|L
-missing	db-commit	Databases|L
-missing	db-compare-schemas	Databases|L
-missing	db-configure	Databases|L
-missing	db-connect	Databases|L
-missing	db-ddl	Databases|L
-missing	db-disconnect	Databases|L
-missing	db-explain	Databases|L
-missing	db-explain-analyze	Databases|L
-missing	db-export	Databases|L
-missing	db-filter	Databases|L
-missing	db-history	Databases|L
-missing	db-import-csv	Databases|L
-missing	db-new-console	Databases|L
-missing	db-result-pin	Databases|L
-missing	db-revert-changes	Databases|L
-missing	db-rollback	Databases|L
-missing	db-run-file	Databases|L
-missing	db-ssl	Databases|L
-missing	db-submit-changes	Databases|L
-missing	db-test-connection	Databases|L
-missing	db-transaction-mode	Databases|L
 missing	debug-open-launch	Debug|S
 missing	diff-files	Editor and files|S
 missing	duplicate-line	Editor and files|S
@@ -402,8 +404,6 @@ missing	output-clear	Testing and web access|S
 missing	pin-tab	Editor and files|S
 missing	prev-hunk	Git|S
 missing	preview-md	Editor and files|S
-missing	redis-delete-key	Databases|L
-missing	redis-set-ttl	Databases|L
 missing	reload-buffer	Editor and files|S
 missing	reopen-closed	Editor and files|S
 missing	replace-in-file	Editor and files|S
