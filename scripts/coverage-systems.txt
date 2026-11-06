@@ -6,8 +6,8 @@
 # are never measured. Every shipped package must be listed once; a test
 # fails when a new package is in neither list.
 
-AI and agents: internal/ai internal/netmsg internal/addai internal/agentdag internal/agentrun internal/agents internal/aimemory internal/clilogin internal/clistep internal/pdftext internal/agentroll internal/webtools internal/agentctl internal/agenthooks internal/aihooks
-Git: internal/git internal/ghci internal/diffview internal/mergeview internal/rebaseview internal/textdiff
+AI and agents: internal/ai internal/netmsg internal/addai internal/agentdag internal/agentrun internal/agents internal/aimemory internal/clilogin internal/clistep internal/pdftext internal/agentroll internal/webtools internal/agentctl internal/agenthooks internal/aihooks internal/agentrace internal/raceview internal/agentlog
+Git: internal/git internal/ghci internal/diffview internal/mergeview internal/rebaseview internal/textdiff internal/worktrees internal/worktreeform
 Containers and remote: internal/containers internal/containerhost internal/kube internal/services internal/workspace/...
 MCP and secrets: internal/mcp/... internal/secrets internal/connectcard
 Session/transfer/update: internal/session internal/transfer internal/update internal/fetch
@@ -17,4 +17,4 @@ Editor and files: internal/editor internal/nvim internal/explorer internal/searc
 Web UI: internal/webproto internal/webgw/... internal/webdevices internal/webtotp internal/webhl
 App shell: internal/app internal/crash internal/bootgc internal/lazyre cmd/termocode internal/setup internal/spawn internal/workflow/... internal/svcinstall
 
-exclude: internal/testkit/... internal/perfbudget cmd/failedtests internal/mcp/mcptest internal/services/servicestest internal/kube/kubetest internal/containerhost/fakedocker internal/secrets/secretstest internal/dbclient/dbtest internal/extproc/extproctest internal/keytest internal/devtools/... cmd/docgen cmd/recordgifs cmd/covreport internal/webproto/gen cmd/webbuild cmd/webdev
+exclude: internal/testkit/... internal/perfbudget cmd/failedtests internal/mcp/mcptest internal/services/servicestest internal/kube/kubetest internal/containerhost/fakedocker internal/secrets/secretstest internal/dbclient/dbtest internal/extproc/extproctest internal/keytest internal/devtools/... cmd/docgen cmd/recordgifs cmd/covreport internal/webproto/gen cmd/webbuild cmd/webdev internal/agentlog/agentlogtest

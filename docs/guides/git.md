@@ -28,8 +28,25 @@ The panel refreshes by itself every two seconds.
 
 If nothing is staged, termocode asks: *Stage all changes?*
 
-The **▾** menu has **Commit (Amend)**, **Commit (Sign-off)**, **Push**,
-**Pull**, **Fetch** and **Refresh**.
+The **▾** menu has **Commit (Amend)**, **Commit (Sign-off)**, **Commit and
+Push**, **Commit and Sync**, **Push**, **Pull**, **Fetch**, **Unstage All**,
+**Discard All Changes…**, **Delete Untracked Files…** and **Refresh**.
+
+**Commit and Push** commits, then pushes. **Commit and Sync** commits, then
+pulls and pushes. Nothing is pushed when the commit fails.
+
+## Throw away all changes
+
+**Git: Discard All Changes…** asks first, and **Cancel** is the choice that
+is ready. **Discard Changes** takes back every change to tracked files,
+staged ones too. New files stay, unless you press **Discard and Delete New
+Files**. **Git: Delete Untracked Files…** removes only the new files.
+Ignored files always stay.
+
+Nothing is lost for good: termocode first saves a safety copy in the stash
+list. The toast names it (for example `stash@{0}`). Open **Git: Show Stash
+List…** and apply it to get your work back. **Git: Unstage All Changes**
+takes every file out of the index and keeps your edits.
 
 Press `t` to switch between a tree view and a flat list. termocode remembers
 your choice.
@@ -80,6 +97,21 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 | **Git: Blame Current Line** (`Alt+B`) | Who changed this line, and when |
 | **Git: Stash Changes** / **Pop Latest Stash** / **Show Stash List...** | Stash work |
 | **Git: Show Tags...** | Check out a tag |
+| **Git: Rename Branch…** | Give the current branch a new name |
+| **Git: Create Branch From…** | Start a new branch at another branch or a tag |
+| **Git: Delete Branch…** | Delete a local or a remote branch (see below) |
+
+**Git: Delete Branch…** asks first, and **Cancel** is the choice that is
+ready. A local branch is only deleted when its commits are on another
+branch. If it has commits of its own, a second card asks before a **Force
+Delete**. The toast names the commit it was at, so `git branch <name>
+<hash>` brings it back. To delete a branch on the remote you also type its
+full name, for example `origin/feature`.
+
+Right-click a commit in the **GRAPH** for **Create Branch Here…** and
+**Check Out This Commit (Detached)**.
+
+| **Git: Merge Branch…** | Merge another branch into this one (see [Merge a branch](#merge-a-branch)) |
 
 ## The GRAPH
 
@@ -269,6 +301,22 @@ How it works:
 press `Enter`: the card asks **Move HEAD back to here?** with the same
 checks.
 
+## Merge a branch
+
+1. Run **Git: Merge Branch…**. Pick a branch: a local one, or a remote one
+   such as `origin/main`.
+2. A card says how many commits come in. **Cancel** is the choice that is
+   ready. **Merge** moves your branch forward when it can, or makes a
+   merge commit. **Merge (No Fast-Forward)** always makes a merge commit.
+3. If files conflict, the merge stops. A **⇄ Merging** banner shows at the
+   top of the panel, with the **CONFLICTS** section below it.
+
+Press `Enter` on the banner, or run **Git: Merge in Progress (Continue /
+Abort)…**. **Close** is ready, so `Enter` and `Esc` change nothing.
+**Continue** stages the fixed files and makes the merge commit; it refuses
+while a file still has conflict markers. **Abort** puts the branch back as
+it was. A stopped cherry-pick or revert shows the same banner.
+
 ## Resolve a merge conflict
 
 When a merge or rebase stops with conflicts, a **CONFLICTS** section appears
@@ -282,7 +330,8 @@ at the top of the panel.
     - **Git: Accept Both Changes (Conflict at Cursor)**
 3. Jump to the next conflict with `]x`, or back with `[x` (Normal mode).
 4. Save the file. Press `s` on it in the panel to mark it resolved.
-5. Commit. In an interactive rebase, use **Continue** on the rebase banner
+5. Commit, or use **Continue** on the merge banner. In an interactive
+   rebase, use **Continue** on the rebase banner
    (see [When the rebase stops](#when-the-rebase-stops)).
 
 Each accept is one edit, so one `u` brings the markers back.
@@ -407,6 +456,176 @@ run. It picks the plan profile; then you type the task in the AI chat.
 
 Run the command again before you send the task to turn it off. It needs
 a git repository with at least one commit.
+
+## Worktrees
+
+The **WORKTREES** view lists every worktree of the repository in the
+sidebar: the main checkout, the worktrees you made in `<repo>.worktrees/`,
+the agent lanes termocode made, and worktrees made outside termocode.
+Open it with **Alt+Shift+W** or **Worktree: Show**. It lives under the
+Source Control icon, which is lit while it shows.
+
+- Groups: **PINNED**, **ACTIVE**, **ASLEEP** and **EXTERNAL**.
+- Each card shows the name, the agent's state (working, waiting for you,
+  done), the branch, commits ahead and behind its upstream, and the
+  count of changed files. A coding agent in a terminal tab of this or
+  another termocode window shows on the worktree its folder is in.
+- A worktree whose folder was deleted shows as **gone**. `F` forgets
+  it: termocode drops its notes and git's record of that one worktree.
+  It never deletes files, and it refuses a worktree whose folder is there.
+- A worktree made outside termocode shows in **EXTERNAL** with
+  `no meta`. Open, add, pin and link work on it. `A` adopts it, so
+  termocode keeps its notes; it stays in EXTERNAL.
+- In a short window each worktree is one line; Enter shows its card.
+- The list is read again every 10 seconds while it is on screen. Git
+  runs in the background, at most 4 calls at once.
+
+Pins and names are stored in `termocode/worktrees.json` inside the
+repository's git folder, never in your project.
+
+| Key | What it does |
+|---|---|
+| `↑` `↓` `j` `k` | Move (`g` `G` top, end) |
+| `Enter` | Open the worktree in this window; the old session keeps running |
+| `a` | Add the worktree as a folder of this window |
+| `p` | Pin or unpin |
+| `i` | Link an issue or pull request (see below) |
+| `N` | The notes agents left on it, with their times |
+| `n` | New worktree (see below) |
+| `c` | New child worktree: it starts from the selected one's branch |
+| `L` | Show the setup of a new worktree (its terminal tab) |
+| `A` | Adopt a worktree made outside termocode |
+| `F` | Forget a worktree whose folder is gone |
+| `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
+| `/` | Filter by name (`Esc` clears) |
+| `R` | Read every worktree again |
+| `?` | Show these keys |
+
+### Link an issue or pull request
+
+`i` (**Worktree: Link Issue or PR…**) links the selected worktree to an
+issue or a pull request: type its number, `#412`, or its GitHub URL. A
+URL must be `https` on the repository's own GitHub host. termocode asks
+`gh` with your own sign-in, so the card shows `#412 open` or
+`PR #12 open · CI ✓`. The state is read again while the view shows: every
+20 seconds while checks run, else every 5 minutes. Without `gh`, or when
+it is not signed in, the number is kept without its title. **Unlink**
+on the same card takes it off. The AI can read links but never set one.
+
+### Notes and status from agents
+
+An agent (or a script) in a worktree can say what it does there:
+
+```sh
+termocode worktree note "adding the pin row"
+termocode worktree status blocked     # working, blocked or done
+termocode worktree list               # every worktree with its status and last note
+termocode worktree link 412           # asks you first
+```
+
+The worktree is the one the current folder is in. The AI chat and outside
+agents have the same through the `worktrees_list` and `worktree_note`
+tools. A note is one line of plain text, at most 500 characters, with
+secrets hidden; the 50 newest are kept. The card shows the last note and
+the status; `N` lists all notes with their times. A link from the command
+line shows a card first (**Deny** comes first).
+
+### Child worktrees
+
+`c` (**Worktree: New Child of Selected…**) opens the New worktree form
+for a child of the selected worktree: it starts from that worktree's
+branch, and the list draws it under its parent (`└`; deeper children
+show as `└ …`). A child whose parent is gone moves up to the top level.
+
+**Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
+agents in them, from every termocode window, with the ones that wait for
+you first.
+
+### New worktree
+
+**Worktree: New…** (`n` in the view) opens a form: **Name**, **From**
+(the branch, remote branch or tag it starts from; **Start point…** lists
+them), **Branch** (made from the name; type to change it), **Agent** and
+**Task**. **Issue** is optional: give an issue number or URL and leave
+the name empty, and the branch is made from its title
+(`412-pinned-row-in-worktrees`); the new worktree is linked to it.
+Nothing is made until you press **Create**; **Cancel** comes
+first. The worktree goes to `<repo>.worktrees/<branch>` next to the
+repository (setting `worktree_dir`). When git refuses (the branch or the
+folder is there already, an unknown start point) the card says why and
+nothing is left behind.
+
+**Create + Start** also starts the agent in a terminal tab inside the
+new worktree and types the task once the agent shows its input box. It
+never types into a question or a y/n prompt. An agent whose screen
+termocode cannot read gets no task; type it yourself.
+
+**Agent: Start…** opened from the WORKTREES view starts the agent in the
+selected worktree.
+
+A repository can list files for each new worktree in
+`.termocode/worktrees.json`:
+
+```jsonc
+{
+  "include": [".env", ".env.local"], // copied
+  "shared": ["node_modules"],        // linked to the main checkout's folder
+  "setup": ["pnpm install"]          // run in the new worktree
+}
+```
+
+- **include** files are copied (at most 20 MB each). **shared** files and
+  folders are links, so both worktrees see each other's writes.
+- A path that leads out of the repository is refused, and so is a file
+  git already put in the worktree. The form lists what is copied, linked
+  and skipped, by name only.
+- **setup** commands come from the repository, so they run only after you
+  trust them on a card that shows each command (**Not now** comes first).
+  The answer is kept for this exact file: a changed file asks again. They
+  run in a terminal tab of their own inside the new worktree, so you can
+  watch them, with your environment minus termocode's secrets. The card
+  shows `setup ● running`, `✓` or `✗`; `L` shows the tab.
+
+## Cherry-pick, revert and restore
+
+| Command | What it does |
+|---|---|
+| **Git: Cherry-pick from Branch…** | Pick a branch. A card lists its commits that your branch lacks (changes you already have are left out). **Cancel** is ready; **Cherry-pick All** applies them oldest first. |
+| **Revert Merge…** (right-click a merge in **GRAPH**) | Pick the parent to keep (parent 1 is the branch it was merged into). A new commit undoes what the merge brought in. |
+| **Cherry-pick a File from Here…** (right-click a commit) | Pick one file of the commit. Its changes go into your working tree and are staged; nothing is committed. |
+| **Restore a File from Here…** (right-click a commit) | Pick one file. It is put back as it was in that commit. Uncommitted changes to it are saved in the stash list first. |
+
+Each one asks on a card where **Cancel** is ready. A conflict stops the
+pick; fix it in **CONFLICTS** and commit, or run `git cherry-pick --abort`.
+
+## Edit history from the GRAPH
+
+On a **GRAPH** commit (keys, or right-click):
+
+| Key | Menu | What it does |
+|---|---|---|
+| `E` | **Edit Commit Message…** | Type the subject, then the body (`\n` starts a new line) |
+| `S` | **Squash into Previous…** | The commit joins the one before it; both messages are kept |
+| `D` | **Drop Commit…** | The commit and its changes leave the branch; newer commits stay |
+
+**Git: Rebase Current Branch onto…** picks a branch and replays your
+commits on top of it: **Rebase**, or **Rebase (Keep Merges)** to keep merge
+commits. **Git: Autosquash fixup! Commits…** folds `fixup!` and `squash!`
+commits into the commits they name.
+
+Every card lists what changes, warns when the commits are on the remote
+already (you will need to force-push) and stashes uncommitted changes
+first. **Cancel** is ready. A conflict stops the rebase: see
+[When the rebase stops](#when-the-rebase-stops). Undo with `u`.
+
+## Patches
+
+| Command | What it does |
+|---|---|
+| **Copy as Patch** (right-click a commit) | Copies the commit as a mail patch (`git format-patch`) |
+| **Git: Save Changes as Patch…** | Writes your uncommitted changes to a file (`changes.patch`). It asks before it replaces a file. |
+| **Git: Apply Patch from File…** | Checks the patch, lists the files it changes on a card (**Cancel** is ready), then applies it to your working tree |
+| **Git: Apply Patch from Clipboard…** | The same with the patch on the clipboard |
 
 ## Keys at a glance
 

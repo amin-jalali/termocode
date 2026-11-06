@@ -101,7 +101,7 @@ const reflogFormat = "--format=%H%x1f%gd%x1f%gs%x1f%s"
 // Reflog lists the last limit actions of HEAD's reflog, newest first. A
 // repo without commits has none.
 func Reflog(dir string, limit int) ([]ReflogEntry, error) {
-	if !hasCommits(dir) {
+	if !hasCommits(localGit(dir)) {
 		return nil, nil
 	}
 	// A rebase folds many lines into one entry: read more lines until

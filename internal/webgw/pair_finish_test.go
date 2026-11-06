@@ -66,4 +66,26 @@ func TestPairFinishTooManySessions(t *testing.T) {
 	if code, m := r.post("/pair/finish", `{"pair_id":"`+id+`"}`); code != http.StatusServiceUnavailable || m["error"] != "too_many_sessions" || m["token"] != nil {
 		t.Fatalf("too many sessions: %d %v", code, m)
 	}
+	// WEB-F5: no device is saved without its token (it could later log
+	// in with a passkey the person never got a session for).
+	if ds, _ := r.store.List(); len(ds) != 0 {
+		t.Fatalf("a device was saved without a token: %v", ds)
+	}
+}
+
+// WEB-F5: a full device list gives no token and leaves no session behind.
+func TestPairFinishStoreFullLeavesNoSession(t *testing.T) {
+	r := newPairRig(t)
+	for i := range webdevices.MaxDevices {
+		if err := r.store.Add(webdevices.Device{ID: fmt.Sprintf("dev-%d", i), Name: "x", Role: webdevices.RoleViewer, Created: time.Unix(1700000000, 0)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	id := r.approvedPair("Phone")
+	if code, m := r.post("/pair/finish", `{"pair_id":"`+id+`"}`); m["error"] != "full" {
+		t.Fatalf("full: %d %v", code, m)
+	}
+	if n := r.tokens.Len(); n != 0 {
+		t.Fatalf("%d sessions left after a refused pairing", n)
+	}
 }

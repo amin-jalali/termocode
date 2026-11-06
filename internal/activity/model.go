@@ -33,6 +33,9 @@ const (
 	// ViewWorkflows is the Workflows view (workflows_*.go in app). Its icon
 	// sits after Runs and shows only while SetWorkflowsShown(true).
 	ViewWorkflows
+	// ViewWorktrees has no icon either: it lives under Source Control,
+	// whose icon is lit while it shows (worktrees_*.go in app).
+	ViewWorktrees
 )
 
 // Width is the column count taken by the activity bar.
@@ -128,9 +131,10 @@ func (m *Model) SetHeight(h int)  { m.h = h }
 func (m *Model) SetActive(v View) { m.active = v }
 func (m Model) Active() View      { return m.active }
 
-// lit: the icon of v is drawn active. Kubernetes lights Containers.
+// lit: the icon of v is drawn active. Kubernetes lights Containers;
+// Worktrees lights Source Control.
 func (m Model) lit(v View) bool {
-	return v == m.active || (v == ViewServices && m.active == ViewKubernetes)
+	return v == m.active || (v == ViewServices && m.active == ViewKubernetes) || (v == ViewGit && m.active == ViewWorktrees)
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) { return m, nil }

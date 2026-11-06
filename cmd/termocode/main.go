@@ -308,6 +308,8 @@ func run(argv []string) int {
 			return runMCPTop(args[1:])
 		case "agent":
 			return runAgent(args[1:])
+		case "worktree":
+			return runWorktree(args[1:])
 		case "workflow", "workflows":
 			return runWorkflow(args[1:])
 		case "web":
@@ -427,6 +429,8 @@ func printUsage() {
 	fmt.Println("                             manage MCP servers without the UI (mcp add --help)")
 	fmt.Println("  termocode agent list|prompt|wait|report")
 	fmt.Println("                             drive the agents in termocode's terminal tabs")
+	fmt.Println("  termocode worktree list|note|status|link")
+	fmt.Println("                             notes and status for the worktree you are in")
 	fmt.Println("  termocode web [start|stop|status]")
 	fmt.Println("                             open or stop the web panel of the running termocode")
 	fmt.Println("  termocode service install|uninstall|status")
