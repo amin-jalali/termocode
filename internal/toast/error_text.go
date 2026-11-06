@@ -7,9 +7,11 @@ import (
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 )
 
-// Recognize file-operation errors without rearranging ordinary sentences.
-// Keep the original Toast detail intact for logs and other screens.
-var pathErrorText = regexp.MustCompile(`^(.*?\b(?:open|stat|lstat|read|write|mkdir|chmod|chown|remove|unlink|rename|link|symlink|readdir) )(.+): ([^:\n]+)$`)
+// Recognize file-operation errors without rearranging ordinary sentences:
+// the operation starts the text or follows one-word labels ("save: open
+// …"), as Go's path errors print. Keep the original Toast detail intact
+// for logs and other screens.
+var pathErrorText = regexp.MustCompile(`^((?:[^\s:]+: )*(?:open|stat|lstat|read|write|mkdir|chmod|chown|remove|unlink|rename|link|symlink|readdir) )(.+): ([^:\n]+)$`)
 
 func errorDetailText(text string, width int) string {
 	parts := pathErrorText.FindStringSubmatch(text)

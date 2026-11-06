@@ -178,7 +178,8 @@ func TestSaveWritableFileInReadOnlyFolder(t *testing.T) {
 
 // Spec: Given the disk is full (full.txt is swapped for a link to
 // /dev/full, which fails every write with ENOSPC) and the buffer is
-// edited, when the user saves, then the error says the disk is full and
+// edited, when the user saves (and Overwrite on the changed-file card),
+// then the error says the disk is full and
 // the text stays modified in the editor.
 func TestSaveOnFullDiskKeepsText(t *testing.T) {
 	skipIfRoot(t)
@@ -199,6 +200,12 @@ func TestSaveOnFullDiskKeepsText(t *testing.T) {
 	}
 	lua(d, `vim.cmd('silent! checktime'); return ''`)
 	d.Key("ctrl+s")
+	// The file was swapped under the editor: Ctrl+S asks first (Cancel
+	// is lit); Overwrite goes on to the write that fails.
+	if !d.WaitForText("File changed on disk", 3*time.Second) {
+		t.Fatalf("no overwrite card:\n%s", screen(d))
+	}
+	d.Key("right", "enter")
 	if !d.WaitForText("Save failed", 3*time.Second) {
 		t.Fatalf("no Save failed toast:\n%s", screen(d))
 	}

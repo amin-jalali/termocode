@@ -37,3 +37,19 @@ func TestErrorTitleReasonAndMiddlePath(t *testing.T) {
 		t.Fatalf("lost filename that fits: %s", got)
 	}
 }
+
+// A plain sentence that names a file operation ("no permission to write
+// in …") is not a raw path error: it stays as written, so the toast
+// starts with the reason the app gave, not the temp file's path.
+func TestErrorPlainSentenceKeepsItsOrder(t *testing.T) {
+	raw := "no permission to write in ~/.config/termocode; config.json was not changed: open /home/u/.config/termocode/.config.json-123.tmp: permission denied"
+	m := New()
+	m, _ = m.PushDetail(Errr, "Settings error", raw)
+	text := ansi.Strip(strings.Join(m.Cards(80)[0].Lines, "\n"))
+	if !strings.Contains(text, "no permission to write in ~/.config/termocode;") || strings.Contains(text, "permission denied ·") {
+		t.Fatalf("the sentence was rearranged: %s", text)
+	}
+	if got := errorDetailText("save: open /a/b.txt: permission denied", 60); !strings.HasPrefix(got, "permission denied · ") {
+		t.Fatalf("a labelled path error lost its reason first: %s", got)
+	}
+}

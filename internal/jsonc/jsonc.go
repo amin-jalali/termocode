@@ -1,7 +1,8 @@
 package jsonc
 
-// Strip removes // and /* */ comments (outside strings) and trailing
-// commas before } or ], so VSCode-style launch.json files parse.
+// Strip removes // and /* */ comments (outside strings; a block comment
+// between two words becomes one space) and trailing commas before } or ],
+// so VSCode-style launch.json files parse.
 func Strip(src []byte) []byte {
 	var out []byte
 	inStr, esc := false, false
@@ -39,6 +40,11 @@ func Strip(src []byte) []byte {
 				i++
 			}
 			i++
+			// Between two words a space keeps them apart ("0/**/e0" is not
+			// the number 0e0); the comment is at least 2 bytes.
+			if len(out) > 0 && !separator(out[len(out)-1]) && i+1 < len(src) && !separator(src[i+1]) {
+				out = append(out, ' ')
+			}
 			continue
 		}
 		out = append(out, c)
@@ -75,6 +81,15 @@ func Strip(src []byte) []byte {
 		res = append(res, c)
 	}
 	return res
+}
+
+// separator: c ends a JSON word (a number, true, false, null) by itself.
+func separator(c byte) bool {
+	switch c {
+	case ' ', '\t', '\n', '\r', '{', '}', '[', ']', ',', ':', '"', '/':
+		return true
+	}
+	return false
 }
 
 // Blank is Strip that keeps every offset: comments and trailing commas
