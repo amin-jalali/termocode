@@ -78,6 +78,7 @@ web	git-merge-next	cmd:mergeNext
 web	git-merge-open	op:git.conflict
 web	git-merge-prev	cmd:mergePrev
 web	git-merge-resolve	op:git.resolve
+web	git-merge-take-base	cmd:mergeTakeBase
 web	git-merge-take-both	op:git.resolve_side
 web	git-merge-take-both-theirs-first	op:git.resolve_side
 web	git-merge-take-ours	op:git.resolve_side
@@ -359,7 +360,6 @@ missing	git-compare-rev	Git|S
 missing	git-discard-hunk	Git|S
 missing	git-discard-lines	Git|S
 missing	git-fixup	Git|S
-missing	git-merge-take-base	Git|S
 missing	git-redo	Git|S
 missing	git-reflog	Git|S
 missing	git-stage-lines	Git|S

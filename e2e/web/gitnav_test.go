@@ -110,3 +110,28 @@ func TestGitNavTreeView(t *testing.T) {
 	runCmd(t, p, c, "Git: Toggle Tree/Flat View", false)
 	p.WaitJS(`!` + scm + `.querySelector(".tr[data-dir]") && ` + scmRow("changes", "src/a.go") + `?.querySelector(".tr-desc")?.textContent === "src"`)
 }
+
+// Take Base (a conflict with the common ancestor's section): the
+// command and the result's Accept Base put the base text in place.
+func TestGitNavMergeTakeBase(t *testing.T) {
+	snap := gitSnap()
+	snap.Op = "merge"
+	snap.Files = append(snap.Files, webproto.GitFile{Path: "src/c.go", X: "U", Y: "U", Conflict: true})
+	p, c := openGit(t, Desktop, snap)
+	p.TapJS(scm + `.querySelector('.tr[data-group="merge"][data-path="src/c.go"]')`)
+	r := waitReq(t, c, "git.conflict")
+	one := "<<<<<<< HEAD\nours\n||||||| base\nbase\n=======\ntheirs\n>>>>>>> side\n"
+	mc := map[string]any{"path": "src/c.go", "text": "package a\n" + one + "end\n", "version": strings.Repeat("ab", 32),
+		"ours":   map[string]any{"present": true, "text": "package a\nours\nend\n"},
+		"theirs": map[string]any{"present": true, "text": "package a\ntheirs\nend\n"},
+		"base":   map[string]any{"present": true, "text": "package a\nbase\nend\n"},
+		"blocks": []map[string]any{{"line": 2, "raw": one, "oursLabel": "HEAD", "theirsLabel": "side", "ours": "ours\n", "theirs": "theirs\n", "both": "ours\ntheirs\n", "base": "base\n", "hasBase": true}}}
+	reply(t, c, r, mc)
+	p.WaitJS(mergeView + `?.querySelectorAll(".desk-editor").length === 3`)
+	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "Conflict 1 of 1 remaining" && ` + mergeView + `.querySelector('[data-act="base"]')`)
+	runCmd(t, p, c, "Git: Merge View: Take Base", true)
+	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "No conflicts left"`)
+	if got := strings.TrimSuffix(paneText(p, "result"), "\n"); got != "package a\nbase\nend" {
+		t.Errorf("result %q", got)
+	}
+}

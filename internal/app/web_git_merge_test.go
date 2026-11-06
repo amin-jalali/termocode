@@ -167,3 +167,45 @@ func webJSONString(s string) string {
 func nvimBufferInfo(path string, modified bool) nvim.BufferInfo {
 	return nvim.BufferInfo{ID: 9, Path: path, Modified: modified}
 }
+
+// Spec (merge editor, Take Base): a conflict written with the common
+// ancestor's section (merge.conflictStyle diff3) gives that text as
+// base, which Take Base puts in its place; without the section there is
+// no base (hasBase false), as on the laptop's merge view.
+func TestGitConflictBase(t *testing.T) {
+	for _, diff3 := range []bool{true, false} {
+		m := aiTestModel(t)
+		webTestHub(t, &m)
+		dir, run := webTestRepo(t, &m)
+		if diff3 {
+			run("config", "merge.conflictStyle", "diff3")
+		}
+		run("checkout", "-q", "-b", "side")
+		webTestWrite(t, dir, "a.txt", "theirs\ntwo\n")
+		run("commit", "-q", "-am", "side change")
+		run("checkout", "-q", "main")
+		webTestWrite(t, dir, "a.txt", "ours\ntwo\n")
+		run("commit", "-q", "-am", "main change")
+		cmd := exec.Command("git", "merge", "-q", "side")
+		cmd.Dir = dir
+		if err := cmd.Run(); err == nil {
+			t.Fatal("the merge did not stop on a conflict")
+		}
+		webTestGitLoad(&m)
+		c := webTestSub(t, &m)
+		var g struct {
+			Blocks []map[string]any `json:"blocks"`
+		}
+		webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitConflict, `{"path":"a.txt"}`), &g)
+		if len(g.Blocks) != 1 {
+			t.Fatalf("diff3=%v: blocks %v", diff3, g.Blocks)
+		}
+		b := g.Blocks[0]
+		if diff3 && (b["hasBase"] != true || b["base"] != "one\n") {
+			t.Errorf("diff3: base %q hasBase %v", b["base"], b["hasBase"])
+		}
+		if !diff3 && (b["hasBase"] != nil || b["base"] != nil) {
+			t.Errorf("no diff3 section, but base %q hasBase %v", b["base"], b["hasBase"])
+		}
+	}
+}
