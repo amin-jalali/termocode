@@ -117,6 +117,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleKubeMsg(msg); ok { // kube_state.go
 		return m, c
 	}
+	if c, ok := m.handleWTMsg(msg); ok { // worktrees_state.go
+		return m, c
+	}
 	if c, ok := m.handleCIMsg(msg); ok { // ci_watch.go
 		return m, c
 	}
@@ -161,6 +164,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if kc := nm.kubeSync(); kc != nil { // the Kubernetes view shown / hidden (kube_state.go)
 		cmd = tea.Batch(cmd, kc)
+	}
+	if wc := nm.worktreesSync(); wc != nil { // the WORKTREES view shown / hidden (worktrees_state.go)
+		cmd = tea.Batch(cmd, wc)
 	}
 	nm.showWaitingHotExit()
 	nm.showWaitingSecretsDeletePlain() // secrets_migrate.go
@@ -225,6 +231,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, cmd
 	}
 	// Group A: AI streaming / inline / sign-in messages run under any overlay.
+	if cmd, ok := m.handleRaceMsg(msg); ok { // agent_race.go
+		return m, cmd
+	}
 	if cmd, ok := m.handleAIMsg(msg); ok {
 		m.agentRollupSync() // OMX-35: other windows see this one's agents
 		return m, cmd
@@ -322,6 +331,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
+		if m.pickerKind == pickerKindAgentSessions { // agent_sessions.go: → reads the session
+			return m, m.onAgentSessionsAction(msg.ID)
+		}
 		if m.pickerKind == pickerKindMCPTools { // ai_mcp_tools.go: Space turns a tool off or on
 			return m, m.onMCPToolToggle(msg.ID)
 		}
@@ -332,6 +344,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, cmd
 	case picker.CloseMsg:
 		m.pickerOpen = false
+		if m.pickerKind == pickerKindWTRef { // worktrees_new.go: Esc goes back to the dialog
+			m.reopenWTForm("")
+			return m, nil
+		}
 		if cmd, ok := m.databaseTransferPickerClosed(); ok {
 			return m, cmd
 		}
@@ -519,6 +535,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onMergeMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
+	case gitMergeDoneMsg, gitOpDoneMsg: // git_merge_branch.go
+		return m, m.onGitMergeBranchMsg(msg)
+	case gitxDoneMsg: // gitx_hub.go
+		return m, msg.apply(&m)
 	case preview.CloseMsg:
 		m.previewOpen = false
 		m.closeHelp()
@@ -665,6 +685,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if m.reviewOpen {
 		return m.routeToReview(msg)
+	}
+	if m.raceOpen() { // agent_race.go
+		return m.routeToRace(msg)
 	}
 	if m.settingsModalOpen {
 		return m.routeToSettingsModal(msg)
@@ -1124,6 +1147,9 @@ func (m Model) routeToPicker(msg tea.Msg) (Model, tea.Cmd) {
 			return m, c
 		}
 		if c, ok := m.mcpServeStatusKey(k); ok { // "?" on the MCP server status screen
+			return m, c
+		}
+		if c, ok := m.agentSessionsPickerKey(k); ok { // "/" in Agent: Sessions… (agent_sessions_search.go)
 			return m, c
 		}
 	}
@@ -1656,7 +1682,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Source Control panel has the focus: its list and commit box need
 	// the arrows, Tab and Enter. The Services and Databases trees also own
 	// their navigation keys when focused.
-	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns || m.activity.Active() == activity.ViewWorkflows || m.activity.Active() == activity.ViewKubernetes)) {
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns || m.activity.Active() == activity.ViewWorkflows || m.activity.Active() == activity.ViewKubernetes || m.activity.Active() == activity.ViewWorktrees)) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}
@@ -2036,6 +2062,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.toggleItermoc()
 	case keymap.ActionLayoutOpen: // layout_palette.go
 		return m, m.openLayoutPicker()
+	case keymap.ActionWorktreeView: // worktrees_keys.go
+		return m, m.revealWorktrees()
+	case keymap.ActionWorktreeJump: // worktrees_jump.go
+		return m, m.worktreeJump()
 	case keymap.ActionGitCIFix: // G-CI (ci_card.go)
 		return m, m.ciFixWithAI()
 	// Group A — AI keys.
@@ -2373,6 +2403,11 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		m.focus = FocusEditor
 	case pickerKindWorkspaces:
 		return m.openWorkspace(msg.ID)
+	case pickerKindWorktreeJump: // worktrees_jump.go
+		return m.onWorktreeJumpPicked(msg.ID)
+	case pickerKindWTRef: // worktrees_new.go: back to the dialog with the start point
+		m.reopenWTForm(msg.ID)
+		return nil
 	case pickerKindStash:
 		return m.applyStashSelected(msg.ID)
 	case pickerKindDiffLeft:
@@ -2387,6 +2422,12 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindDeleteBranch: // git_branch_ops.go
+		return m.onDeleteBranchPicked(msg.ID)
+	case pickerKindBranchFrom:
+		return m.onBranchFromPicked(msg.ID)
+	case pickerKindMergeBranch:
+		return m.onMergeBranchPicked(msg.ID)
 	case pickerKindTags:
 		return m.checkoutTagSelected(msg.ID)
 	case pickerKindHelpGuide:
@@ -2422,6 +2463,9 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 	case pickerKindContainerSearch: // containers_remote.go
 		return m.onSearchPicked(msg.ID)
 	default:
+		if cmd, ok := m.handleGitxPickerSelect(msg.ID); ok { // gitx_hub.go
+			return cmd
+		}
 		if cmd, ok := m.handlePRPickerSelect(msg.ID); ok { // pr_list.go
 			return cmd
 		}
@@ -2469,6 +2513,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 		case activity.ViewKubernetes: // kube_keys.go
 			if k, ok := msg.(tea.KeyMsg); ok {
 				return m.handleKubeSidebarKey(k)
+			}
+		case activity.ViewWorktrees: // worktrees_keys.go
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m.handleWTSidebarKey(k)
 			}
 		case activity.ViewDatabases: // db_actions.go
 			if k, ok := msg.(tea.KeyMsg); ok {

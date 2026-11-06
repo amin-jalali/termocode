@@ -189,6 +189,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleImportConfirm(id); ok { // import_apply.go
 		return cmd
 	}
+	if cmd, ok := m.handleGitxConfirm(id); ok { // gitx_hub.go
+		return cmd
+	}
 	if cmd, ok := m.handleCIConfirm(id); ok { // ci_card.go
 		return cmd
 	}
@@ -217,6 +220,12 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onFixupConfirm(id)
 	case confirmKindGitUndo:
 		return m.onUndoConfirm(id)
+	case confirmKindGitDeleteBranch, confirmKindGitForceDeleteBranch, confirmKindGitDeleteRemote: // git_branch_ops.go
+		return m.onBranchConfirm(m.confirmKind, id)
+	case confirmKindGitMergeBranch: // git_merge_branch.go
+		return m.onMergeBranchConfirm(id)
+	case confirmKindGitOpControl:
+		return m.onGitOpControl(id)
 	case confirmKindMergeWholeFile:
 		return m.onMergeWholeCard(id)
 	case confirmKindCloseBuffer:
@@ -242,6 +251,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		if id == "discard" {
 			return m.gitDiscardConfirmed()
 		}
+	case confirmKindGitDiscardAll, confirmKindGitCleanUntracked:
+		return m.onGitBulkConfirm(m.confirmKind, id) // git_bulk.go
 	case confirmKindGitDiscardLines:
 		if id == "discard" {
 			return m.gitDiscardLinesConfirmed()

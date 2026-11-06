@@ -1,0 +1,1 @@
+{"t":"req","id":63,"op":"git.discard_lines","args":{"path":"src/main.go","from":2,"to":3}}

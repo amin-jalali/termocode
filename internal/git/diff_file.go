@@ -128,7 +128,20 @@ func UnstageHunkHeader(dir, path, header string) error {
 	return applyHunkHeader(dir, path, header, true)
 }
 
+// DiscardHunkHeader reverts the one hunk of path's unstaged diff whose
+// header is exactly header in the working file (the index stays). It
+// cannot be undone; a header the diff no longer has changes nothing.
+func DiscardHunkHeader(dir, path, header string) error {
+	return applyHunkHeaderTo(dir, path, header, false, true)
+}
+
 func applyHunkHeader(dir, path, header string, staged bool) error {
+	return applyHunkHeaderTo(dir, path, header, staged, false)
+}
+
+// applyHunkHeaderTo applies the hunk to the index, or reversed to the
+// working file (work).
+func applyHunkHeaderTo(dir, path, header string, staged, work bool) error {
 	const maxHunkDiff = 8 << 20
 	diff, cut, err := DiffFile(dir, path, staged, false, maxHunkDiff)
 	if err != nil {
@@ -142,7 +155,10 @@ func applyHunkHeader(dir, path, header string, staged bool) error {
 		return ErrHunkGone
 	}
 	args := []string{"apply", "--cached"}
-	if staged {
+	switch {
+	case work:
+		args = []string{"apply", "--reverse"}
+	case staged:
 		args = append(args, "--reverse")
 	}
 	return runStdin(dir, patch, "git", append(args, "-")...)

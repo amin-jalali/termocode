@@ -681,3 +681,63 @@ func AgentFiles(dir, id string) ([]AgentFile, error) {
 	}
 	return out, nil
 }
+
+// AgentFileStat is one changed file with its added and deleted lines
+// (Binary: git cannot count lines; Add and Del are 0).
+type AgentFileStat struct {
+	AgentChange
+	Add, Del int
+	Binary   bool
+}
+
+// AgentNumstat lists the files the agent of id changed with their line
+// counts, by path (the race compare view). It snapshots first, like
+// AgentChanges.
+func AgentNumstat(dir, id string) ([]AgentFileStat, error) {
+	top, _, base, tip, err := snapshotAgent(dir, id)
+	if err != nil {
+		return nil, err
+	}
+	ds, err := agentDiffRaw(top, base, tip)
+	if err != nil {
+		return nil, err
+	}
+	out, err := gitOut(top, "diff", "--no-renames", "--numstat", "-z", base, tip)
+	if err != nil {
+		return nil, err
+	}
+	// "<add>\t<del>\t<path>\x00"; a binary file has "-\t-".
+	counts := map[string]AgentFileStat{}
+	for _, rec := range strings.Split(strings.TrimRight(out, "\x00"), "\x00") {
+		f := strings.SplitN(rec, "\t", 3)
+		if len(f) != 3 {
+			continue
+		}
+		var s AgentFileStat
+		if f[0] == "-" || f[1] == "-" {
+			s.Binary = true
+		} else {
+			s.Add, _ = strconv.Atoi(f[0])
+			s.Del, _ = strconv.Atoi(f[1])
+		}
+		counts[f[2]] = s
+	}
+	stats := make([]AgentFileStat, len(ds))
+	for i, d := range ds {
+		s := counts[d.Path]
+		s.AgentChange = d.AgentChange
+		stats[i] = s
+	}
+	return stats, nil
+}
+
+// AgentStateDir is termocode's folder in the repository's git dir
+// (<git-common-dir>/termocode): the agent worktrees and the race records
+// live there, never in the project.
+func AgentStateDir(dir string) (string, error) {
+	_, common, err := agentRepo(dir)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(common, "termocode"), nil
+}

@@ -172,6 +172,9 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | <code>Ctrl+&#92;</code> | <code>ctrl+&#92;</code> | `SplitVertical` | Split the editor to the right. |
 | `Alt+W` | `alt+w` | `ToggleWordWrap` | Turn soft word wrap on or off. |
 | `Alt+Z` | `alt+z` | `ToggleZenMode` | Turn Zen mode on or off. |
+| `Ctrl+Shift+J` | `ctrl+shift+j` | `WorktreeJump` | Jump to a worktree or an agent in one, from every termocode window (Worktree: Jump…). |
+| `Alt+Shift+W` | `alt+W` | `WorktreeView` | Show the WORKTREES view: every worktree of the repository and the agents in them (Worktree: Show). |
+| `Alt+Shift+W` | `alt+shift+w` | `WorktreeView` | Show the WORKTREES view: every worktree of the repository and the agents in them (Worktree: Show). |
 
 ## Help
 
