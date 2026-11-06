@@ -351,6 +351,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
+| Git: Go to Commit… | `git-goto-commit` |   |   |
+| Git: Go to HEAD in GRAPH | `git-graph-head` |   | `@` |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
@@ -377,8 +379,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Redo Undone Git Action | `git-redo` |   |   |
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
+| Git: Search Log… | `git-log-search` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
+| Git: Show Folder History… | `git-log-folder` |   |   |
 | Git: Show Log... | `git-log` |   |   |
 | Git: Show Stash List... | `git-stash-list` |   |   |
 | Git: Show Tags... | `git-tags` |   |   |
@@ -389,6 +393,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stash Changes | `git-stash` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
+| Git: Toggle All Branches in GRAPH | `git-graph-all` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |

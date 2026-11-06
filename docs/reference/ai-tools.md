@@ -1991,8 +1991,13 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-fetch` | Git: Fetch | confirm (git) |   |
 | `git-fixup` | Git: Fixup Staged Changes Into… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-focus` | Git: Focus Source Control | auto |   |
+| `git-goto-commit` | Git: Go to Commit… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
+| `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
+| `git-log-folder` | Git: Show Folder History… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
+| `git-log-search` | Git: Search Log… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-merge-close` | Git: Merge View: Close | auto |   |
 | `git-merge-focus` | Git: Merge View: Merge Keys | auto |   |
 | `git-merge-next` | Git: Merge View: Next Conflict | auto |   |

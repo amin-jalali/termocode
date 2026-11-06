@@ -408,6 +408,30 @@ run. It picks the plan profile; then you type the task in the AI chat.
 Run the command again before you send the task to turn it off. It needs
 a git repository with at least one commit.
 
+## Search the log
+
+**Git: Search Log…** asks one line. Plain words search the commit
+messages (any case, plain text). Add filters as `key:value` words; use
+double quotes for spaces (`author:"Ann Lee"`):
+
+| Filter | Example | Finds commits |
+|---|---|---|
+| `author:` | `author:ann` | by this author (name or e-mail) |
+| `since:` / `until:` | `since:2.weeks`, `until:2026-01-31` | in this time |
+| `path:` | `path:internal/git` | that changed this file or folder |
+| `branch:` | `branch:release` | on this branch or tag (not the current one) |
+| `all` | `fix all` | on every branch, remote branch and tag |
+| `changes:` | `changes:parseFoo` | that added or removed this text |
+
+`Enter` on a result opens it in the commit view.
+
+| Command | What it does |
+|---|---|
+| **Git: Show Folder History…** | Commits that changed a folder (the active file's folder is the default) |
+| **Git: Go to Commit…** | Type a hash, branch or tag. The **GRAPH** cursor moves to it. A commit that is not in the **GRAPH** opens its changes. |
+| **Git: Go to HEAD in GRAPH** (`@` in Source Control) | Moves the **GRAPH** cursor to `HEAD` |
+| **Git: Toggle All Branches in GRAPH** | The **GRAPH** shows every branch, or only the current one again |
+
 ## Keys at a glance
 
 In the Source Control panel:

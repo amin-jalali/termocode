@@ -259,7 +259,7 @@ func gitLoadOlderCmd(skip int) tea.Cmd {
 		if err != nil {
 			return nil
 		}
-		cs, more, _ := git.Commits(cwd, skip, gitGraphLimit)
+		cs, more, _ := gitGraphCommits(cwd, skip, gitGraphLimit)
 		return gitOlderMsg{skip: skip, commits: cs, more: more}
 	}
 }
