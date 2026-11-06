@@ -69,6 +69,8 @@ type GitMsg struct {
 	Rebase git.RebaseState
 	// Stopped: a merge, cherry-pick or revert stopped here (git_merge_branch.go).
 	Stopped string
+	// Stashes: the stash list (STASHES section, gitx_stash_panel.go).
+	Stashes []git.StashEntry
 	// Seq: when the read started (gitReadSeq). Refreshes run at the same
 	// time and can end out of order; one that started before the last
 	// applied one is dropped. 0: always applied.
@@ -112,7 +114,7 @@ func fetchGitCmd() tea.Cmd {
 		if err != nil {
 			return GitMsg{IsRepo: false, Seq: seq}
 		}
-		return GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Graph: graph, More: more, Rebase: rd.rebase(), Stopped: rd.stopped(), Seq: seq}
+		return GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Graph: graph, More: more, Rebase: rd.rebase(), Stopped: rd.stopped(), Stashes: rd.stashes(), Seq: seq}
 	}
 }
 
@@ -147,7 +149,7 @@ func (m *Model) pollGitCmd() tea.Cmd {
 		if err != nil {
 			return GitMsg{IsRepo: false, Seq: seq}
 		}
-		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Rebase: rd.rebase(), Stopped: rd.stopped(), Seq: seq}
+		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Rebase: rd.rebase(), Stopped: rd.stopped(), Stashes: rd.stashes(), Seq: seq}
 		if !stale && graphHead != "" && strings.HasPrefix(st.OID, graphHead) && st.Branch == branch {
 			msg.KeepGraph = true
 			return msg
@@ -185,6 +187,8 @@ func (m *Model) applyGitSnapshot(msg GitMsg) {
 	m.gitBranch = msg.Branch
 	m.gitRebase = msg.Rebase
 	m.gitStopped = msg.Stopped
+	m.gitStashes = msg.Stashes
+	defer m.gitSelPrune() // after the clamp: marks of rows that went
 	m.gitFiles = msg.Files
 	m.setGitCommits(msg.Graph, msg.More)
 	// Clamp against the visible-row count: the accordion interleaves
@@ -344,8 +348,23 @@ func (m Model) gitSidebarHitAt(x, y int) (gitSidebarHit, bool) {
 //   - A changed file shows its diff (VSCode-style single click).
 //   - A graph commit shows that commit's diff.
 func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea.Cmd) {
+	return m.handleGitSidebarMouseMod(x, y, t, false, false)
+}
+
+// handleGitSidebarMouseMod is handleGitSidebarMouse with the modifier
+// keys: Ctrl+click and Shift+click on a file row mark rows (GITX-20,
+// gitx_multi_select.go); a plain click drops the marks.
+func (m Model) handleGitSidebarMouseMod(x, y int, t tea.MouseEventType, ctrl, shift bool) (Model, tea.Cmd) {
 	if t != tea.MouseLeft {
 		return m, nil
+	}
+	if ctrl || shift {
+		if h, ok := m.gitSidebarHitAt(x, y); ok && h.row >= 0 && m.gitEnsureLoaded() && m.gitSelClick(h.row, ctrl, shift) {
+			m.focus = FocusExplorer
+			return m, nil
+		}
+	} else if h, ok := m.gitSidebarHitAt(x, y); ok && h.row >= 0 {
+		m.gitSelClear()
 	}
 	m.focus = FocusExplorer
 	if !m.gitEnsureLoaded() {
@@ -397,6 +416,8 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea
 		m.openRebaseControl()
 	case gitRowStopped:
 		return m, m.openGitOpControl()
+	case gitRowStash:
+		return m, m.onStashRow(r.stash)
 	}
 	return m, nil
 }

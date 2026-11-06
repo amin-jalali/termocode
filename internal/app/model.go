@@ -221,6 +221,14 @@ type Model struct {
 	gitGraphCollapsed   bool
 	// gitConflictsCollapsed folds the CONFLICTS section (git_conflicts.go).
 	gitConflictsCollapsed bool
+	// gitStashes is the stash list of the STASHES section; gitStashesOpen
+	// unfolds it (folded at start) (gitx_stash_panel.go).
+	gitStashes     []git.StashEntry
+	gitStashesOpen bool
+	// gitSel is the marked file rows, gitSelAnchor the row a range
+	// starts at (-1 / 0 with no marks) (gitx_multi_select.go).
+	gitSel       map[gitSelKey]bool
+	gitSelAnchor int
 	// clone is the in-flight "Clone Repository" request (git_clone.go).
 	clone      cloneState
 	gitCommits []git.GraphCommit
