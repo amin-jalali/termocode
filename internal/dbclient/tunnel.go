@@ -671,6 +671,9 @@ func sshAuth(ctx context.Context, t SSHTarget, o TunnelOptions) ([]ssh.AuthMetho
 		}, noop, nil
 	case SSHAuthKey:
 		signer, err := loadSSHKey(t.KeyFiles, o.Passphrase)
+		if f := sshKeyLoaded.Load(); f != nil {
+			(*f)()
+		}
 		if err != nil {
 			return nil, noop, err
 		}
@@ -700,6 +703,10 @@ func sshAuth(ctx context.Context, t SSHTarget, o TunnelOptions) ([]ssh.AuthMetho
 		return []ssh.AuthMethod{ssh.PublicKeys(signers...)}, func() { _ = conn.Close() }, nil
 	}
 }
+
+// sshKeyLoaded runs right after a key file was read and decrypted (tests
+// stand in for a slow passphrase key there).
+var sshKeyLoaded atomic.Pointer[func()]
 
 // maxKeyFile is the largest private key file read.
 const maxKeyFile = 1 << 20
