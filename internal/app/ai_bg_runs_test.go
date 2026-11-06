@@ -290,7 +290,12 @@ func TestAIBackgroundRunReasoning(t *testing.T) {
 		}
 		r.send("count the TODOs")
 		r.chat.steps <- toolCall("agent_run_start", map[string]any{"task": "Find the TODOs in the repo", "steps": bgSteps})
-		r.pump(func() bool { return len(r.m.ai.bgRuns) == 1 && len(r.bg.requests()) == 1 })
+		// The turn's next request too: a run that ended before the turn
+		// read its notes after the tool call would hand its note in that
+		// request, and the turn would never make the third one.
+		r.pump(func() bool {
+			return len(r.m.ai.bgRuns) == 1 && len(r.bg.requests()) == 1 && len(r.chat.requests()) == 2
+		})
 		r.bg.mu.Lock()
 		got := r.bg.level[0]
 		r.bg.mu.Unlock()
