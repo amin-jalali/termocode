@@ -175,7 +175,9 @@ func HasCommitHooks(dir string) bool {
 // CommitOptions are the switches of CommitOpts.
 type CommitOptions struct {
 	Amend, Signoff bool
-	NoVerify       bool // skip the pre-commit and commit-msg hooks
+	NoVerify       bool   // skip the pre-commit and commit-msg hooks
+	AllowEmpty     bool   // a commit without changes (--allow-empty)
+	Author         string // "Name <e-mail>" from ParseAuthor (--author); "" = the user
 }
 
 // CommitOpts commits the index. An empty message is an error unless
@@ -190,6 +192,16 @@ func CommitOpts(dir, message string, o CommitOptions) error {
 	}
 	if o.NoVerify {
 		args = append(args, "--no-verify")
+	}
+	if o.AllowEmpty {
+		args = append(args, "--allow-empty")
+	}
+	if o.Author != "" {
+		a, err := ParseAuthor(o.Author)
+		if err != nil {
+			return err
+		}
+		args = append(args, "--author="+a)
 	}
 	if strings.TrimSpace(message) == "" {
 		if !o.Amend {

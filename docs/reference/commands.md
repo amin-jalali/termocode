@@ -367,6 +367,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Cherry-pick from Branch… | `git-cherry-pick-branch` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
+| Git: Commit Empty (No Changes)… | `git-commit-empty` |   | `a commit without changes, e.g. to run CI again` |
+| Git: Commit Staged as Another Author… | `git-commit-author` |   | `git commit --author; you stay the committer` |
 | Git: Commit and Push | `git-commit-push` |   |   |
 | Git: Commit and Sync | `git-commit-sync` |   |   |
 | Git: Commit... | `git-commit` |   |   |

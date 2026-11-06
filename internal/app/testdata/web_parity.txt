@@ -452,8 +452,10 @@ missing	git-cherry-pick-branch	Git|S
 missing	git-clean-untracked	Git|S
 missing	git-cmd-log	Git|S
 missing	git-co-author	Git|S
+missing	git-commit-author	Git|S
 missing	git-commit-checks	Git|S
 missing	git-commit-edit	Git|S
+missing	git-commit-empty	Git|S
 missing	git-commit-history	Git|S
 missing	git-commit-push	Git|S
 missing	git-commit-sync	Git|S
