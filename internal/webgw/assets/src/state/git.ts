@@ -28,6 +28,13 @@ export interface GitState {
   files: GitFile[];
   more: number;
   log: GitCommit[];
+  /** stashes is the stash list, newest first (the STASHES section). */
+  stashes: GitStash[];
+}
+
+export interface GitStash {
+  ref: string;
+  message: string;
 }
 
 export interface DiffLine {
@@ -89,6 +96,10 @@ export function readGit(data: unknown): GitState {
     log: list(d.log)
       .map(obj)
       .map((c) => ({ hash: str(c.hash), subject: str(c.subject), author: str(c.author), when: num(c.when), unpushed: c.unpushed === true })),
+    stashes: list(d.stashes)
+      .map(obj)
+      .filter((s) => /^stash@\{\d+\}$/.test(str(s.ref)))
+      .map((s) => ({ ref: str(s.ref), message: str(s.message) })),
   };
 }
 
