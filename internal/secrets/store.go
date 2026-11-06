@@ -280,8 +280,8 @@ func (s *store) Get(name string) (string, bool, error) {
 			return "", false, err
 		}
 	}
-	if s.register != nil {
-		s.register(v)
+	if s.register != nil && !PublicName(name) {
+		s.register(v) // an account label is not a secret, also on the plain backend
 	}
 	return v, true, nil
 }
