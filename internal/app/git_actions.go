@@ -48,6 +48,9 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	// (section headers + change files/dirs + graph commits) so every section
 	// shares one cursor model. Connector lines are skipped by gitMoveCursor.
 	cur, hasCur := m.gitCurrentRow()
+	if cmd, ok := m.gitxSidebarKey(msg); ok { // gitx_hub.go
+		return m, cmd, true
+	}
 
 	switch msg.Type {
 	case tea.KeyDown:

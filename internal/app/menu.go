@@ -114,7 +114,7 @@ func (m *Model) openGitMenu(anchorX, anchorY int) {
 		items = gitFileMenuItems(f.Untracked() || f.Unstaged())
 		m.menuKind = menuKindGitFile
 	case gitRowCommit:
-		items = gitCommitMenuItems()
+		items = append(gitCommitMenuItems(), gitxMenuItems()...) // gitx_hub.go
 		m.menuKind = menuKindGitCommit
 	default:
 		return
@@ -129,6 +129,9 @@ func (m *Model) openGitMenu(anchorX, anchorY int) {
 // handleGitMenuSelect dispatches a Source Control context-menu action. The
 // target row is whatever openGitMenu left under the cursor.
 func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
+	if cmd, ok := m.handleGitxMenuSelect(id); ok { // gitx_hub.go
+		return cmd
+	}
 	switch id {
 	case gitMenuDiff:
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {

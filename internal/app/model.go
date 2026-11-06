@@ -796,6 +796,8 @@ type Model struct {
 	// setup is the first-run setup card on the Welcome page
 	// (setup_card*.go); shared by Model copies.
 	setup *setupState
+	// gitx is the open GITX picker, card or prompt (gitx_hub.go).
+	gitx gitxState
 
 	// lastLineCopy is the text of the last whole-line Ctrl+C / Ctrl+X (no
 	// selection). While the OS clipboard still holds it, Ctrl+V pastes it

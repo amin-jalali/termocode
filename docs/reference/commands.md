@@ -338,10 +338,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Bisect (Find the Commit That Broke It)… | `git-bisect` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
 | Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
 | Git: Commit... | `git-commit` |   |   |
+| Git: Compare Branches… | `git-compare-branches` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
