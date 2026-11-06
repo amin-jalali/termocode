@@ -37,7 +37,7 @@ git_refresh_20k            47   ms   # Source Control refresh after a git action
 git_poll_touched_20k       40   ms   # background poll, 20k files touched (same text, new times), after its index refresh; local 17 ms (66 without it)
 
 # quick open (internal/app/quick_open_perf_test.go)
-quick_open_50k_list        78   ms   # Go to file, 50k files: list them, median of 9; local 39 ms (was 111)
+quick_open_50k_list        78   ms   # Go to file, 50k files: list them, median of 9; local 24 ms (31 before FIX-42 list sizing; was 111)
 quick_open_50k_key         25   ms   # filter the 50k list after a typed key (median key); local 1.7 ms (floor; was 18.9)
 
 # testkit (internal/testkit/perf_ui_test.go). Before = feat/stab-perf.
