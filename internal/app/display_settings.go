@@ -49,7 +49,7 @@ func settingChoices(id string) []string {
 	case "setting-dashboard-logo":
 		return logoChoices
 	}
-	return nil
+	return workflowSettingChoices(id) // WFX-0 (workflow_settings.go)
 }
 
 // DisplayConfig is what cmd/termocode needs before the TUI starts.
