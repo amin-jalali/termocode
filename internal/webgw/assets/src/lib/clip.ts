@@ -18,7 +18,8 @@ export function copyText(text: string): void {
  * with the laptop's own separator). */
 export function absPath(rel: string): string {
   const root = status.peek().root;
-  if (!root) return rel;
+  // An added folder's file (":lib/x.go"): the laptop keeps its path.
+  if (!root || rel.startsWith(":")) return rel;
   const win = root.includes("\\") && !root.includes("/");
   const sep = win ? "\\" : "/";
   const tail = win ? rel.replaceAll("/", "\\") : rel;

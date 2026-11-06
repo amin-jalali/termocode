@@ -17,6 +17,8 @@ import { Cod } from "./icons";
 import { readGit } from "../state/git";
 import { syncMenu } from "../views/desk/DeskSCM";
 import { Comet, rttLevel } from "./Strip";
+import { workspaceMenu } from "../lib/commands";
+import { toast } from "../lib/toasts";
 
 // Filetypes as people name them; others show as nvim names them.
 const LANGS: ReadonlyMap<string, string> = new Map([
@@ -111,10 +113,10 @@ export function StatusBar() {
   const tint = s.aiBusy ? "ai" : s.dirty > 0 ? "dirty" : "calm";
   return (
     <footer class={`strip statusbar${readDebugSnap(store.topic("debug").value?.data)?.active ? " is-debugging" : ""}`} dir="ltr">
-      <span class={`brand sb-remote tint-${tint}`} title={s.workspace}>
+      <button type="button" class={`brand sb-remote tint-${tint}`} title={t("sb.workspace_of", { name: s.workspace })} onClick={workspaceMenu}>
         <Cod name="remote" />
         <span>termocode</span>
-      </span>
+      </button>
       {s.branch && (
         <button
           type="button"
@@ -139,6 +141,12 @@ export function StatusBar() {
       </span>
       <span class="strip-gap" />
       <FileFacts />
+      {s.update && (
+        <button type="button" class="strip-item sb-update" title={t("sb.update", { tag: s.update })} onClick={() => toast("info", t("sb.update", { tag: s.update }), t("sb.update_how"))}>
+          <Cod name="arrow-up" />
+          <span>{s.update}</span>
+        </button>
+      )}
       {s.webClients > 0 && (
         <span class="strip-item web" title={t("strip.web", { n: s.webClients })}>
           ◉ <span class="web-label">{t("strip.web", { n: s.webClients })}</span>

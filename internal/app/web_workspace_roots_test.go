@@ -73,6 +73,12 @@ func TestWebTreeShowsAddedFolders(t *testing.T) {
 		t.Errorf("rel of the workspace's file: %q %v", rel, ok)
 	}
 
+	var files webproto.FilesListRes
+	webResData(t, r.call(webproto.OpFilesList, &webproto.EmptyArgs{}), &files)
+	if got := strings.Join(files.Paths, " "); got != ":lib/sub/y.go :lib/x.go a.txt" {
+		t.Errorf("files.list %q", got)
+	}
+
 	outside := t.TempDir()
 	if err := os.Symlink(outside, filepath.Join(lib, "out")); err != nil {
 		t.Fatal(err)
@@ -84,11 +90,6 @@ func TestWebTreeShowsAddedFolders(t *testing.T) {
 		}
 	}
 
-	var files webproto.FilesListRes
-	webResData(t, r.call(webproto.OpFilesList, &webproto.EmptyArgs{}), &files)
-	if got := strings.Join(files.Paths, " "); got != ":lib/sub/y.go :lib/x.go a.txt" {
-		t.Errorf("files.list %q", got)
-	}
 }
 
 // Two added folders with one name get their own names; removing one
@@ -104,7 +105,7 @@ func TestWebTreeRootsFollowTheLaptop(t *testing.T) {
 		t.Fatalf("deltas after the add %v", ds)
 	}
 	b, _ := json.Marshal(ds[0]["roots"])
-	if string(b) != `[{"path":"","label":"ws-root"},{"path":":lib","label":"lib"},{"path":":lib~2","label":"lib"}]` {
+	if string(b) != `[{"label":"ws-root","path":""},{"label":"lib","path":":lib"},{"label":"lib","path":":lib~2"}]` {
 		t.Errorf("roots %s", b)
 	}
 	if got := webTreeNames(webTreeList(t, r, ":lib~2").Entries); got != "sub/ x.go" {

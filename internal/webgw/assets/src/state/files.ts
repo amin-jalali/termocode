@@ -66,7 +66,8 @@ export function under(dir: string, p: string): boolean {
 }
 
 /** tree: dir replaces one folder's listing, remove drops a folder and
- * every folder under it, hidden follows the laptop's dotfile toggle. */
+ * every folder under it, hidden follows the laptop's dotfile toggle,
+ * roots replaces the workspace's folders (one was added or removed). */
 export const reduceTree: Reducer = (data, delta) => {
   const s = obj(data, "tree") as unknown as TreeSnap;
   const d = obj(delta, "tree delta");
@@ -85,6 +86,8 @@ export const reduceTree: Reducer = (data, delta) => {
     }
     case "hidden":
       return { ...s, dirs, hidden: bool(d.on, "hidden") };
+    case "roots":
+      return { ...s, dirs, roots: arr(d.roots, "roots") as TreeSnap["roots"] };
     default:
       return bad("tree: unknown delta kind " + String(d.kind));
   }

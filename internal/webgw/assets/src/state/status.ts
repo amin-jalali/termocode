@@ -15,6 +15,8 @@ export interface StatusView {
   runsLive: number;
   runsNeedYou: number;
   webClients: number;
+  /** update is a newer termocode release ("v0.2.0"), "" when none. */
+  update: string;
 }
 
 function obj(v: unknown): Record<string, unknown> {
@@ -44,5 +46,6 @@ export function readStatus(data: unknown): StatusView {
     runsLive: num(runs.live),
     runsNeedYou: num(runs.needs_you),
     webClients: num(web.clients),
+    update: text(d.update, 40),
   };
 }

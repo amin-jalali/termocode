@@ -24,6 +24,11 @@ type StatusSnap struct {
 	Runs       StatusRuns  `json:"runs"`
 	Web        StatusWeb   `json:"web"`
 	Theme      StatusTheme `json:"theme"`
+	// Update is a newer termocode release ("v0.2.0"), as the laptop's
+	// status-bar chip shows it; "" when there is none (or it is
+	// installed or skipped). The web only shows it: updating is done on
+	// the laptop.
+	Update string `json:"update,omitempty"`
 }
 
 // StatusAI is the AI chip.

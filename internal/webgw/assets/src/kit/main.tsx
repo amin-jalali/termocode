@@ -51,6 +51,7 @@ const baseStatus: StatusView = {
   runsLive: 0,
   runsNeedYou: 0,
   webClients: 1,
+  update: "",
 };
 
 /** Pair shows children once per theme, each in a frame of the chosen width. */
@@ -183,6 +184,7 @@ const answerToast: Record<CardKind, { safe: StringKey; risky: StringKey }> = {
   plan: { safe: "toast.denied", risky: "toast.allowed" },
   review: { safe: "toast.rejected", risky: "toast.accepted" },
   trust: { safe: "card.later", risky: "laptop.shown" },
+  workflow: { safe: "toast.denied", risky: "toast.allowed" },
 };
 
 const sheetKinds: CardKind[] = ["tool", "review", "plan", "mcp", "trust"];
