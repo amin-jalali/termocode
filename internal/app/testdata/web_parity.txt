@@ -347,7 +347,15 @@ missing	explorer-toggle-preview	Editor and files|S
 missing	explorer-undo-rename	Editor and files|S
 missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
+missing	git-ai-commit-msg	Git|S
+missing	git-ai-explain-changes	Git|S
+missing	git-ai-explain-line	Git|S
+missing	git-ai-pr-text	Git|S
+missing	git-ai-stash	Git|S
 missing	git-ci-fix	Git|S
+missing	git-co-author	Git|S
+missing	git-commit-edit	Git|S
+missing	git-commit-history	Git|S
 missing	git-compare-rev	Git|S
 missing	git-conflict-next	Git|S
 missing	git-conflict-prev	Git|S
