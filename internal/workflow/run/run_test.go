@@ -263,3 +263,14 @@ func TestCancelMidItem(t *testing.T) {
 	}
 	h.Cancel() // again: no panic
 }
+
+// Spec (WFX-18): a message's channel is a template, filled like its text.
+func TestMessageChannelIsRendered(t *testing.T) {
+	src := `{"version": 1, "name": "w", "vars": {"ch": "C0123"}, "steps": [
+	  {"id": "sum", "type": "write", "to": "message", "via": "slack", "channel": "{{vars.ch}}", "text": "hi"}]}`
+	fk := newFakes()
+	rf := wait(t, Start(context.Background(), mustParse(t, src), fk.options()))
+	if rf.State != RunOK || len(rf.Writes) != 1 || rf.Writes[0].Spec.Channel != "C0123" {
+		t.Fatalf("state %q writes %+v", rf.State, rf.Writes)
+	}
+}

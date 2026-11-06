@@ -20,7 +20,8 @@ import (
 // Messages of workflows (plan §3.2, §3.4, WFX-18): a message write step
 // and a "message:<step id>" notify target go out through
 // wire.Messenger: the OS note and the browsers' attention here, a
-// webhook (${secret:NAME}) over https. A notify target's summary to a
+// webhook (${secret:NAME}) over https, an MCP server's send tool (Slack)
+// on the step's channel. A notify target's summary to a
 // webhook is a write to an outside system: it goes only when that
 // step's writes are allowed for this file version.
 
@@ -107,10 +108,16 @@ func (m *Model) wfxNotifyMessage(e wire.Entry, rf *run.RunFile, sid string) tea.
 		return m.aiInfo(e.Name + ": summary not sent to " + sid + "; first Allow for this workflow on its card")
 	}
 	ms := wfxMessenger(rf.ID, nil)
+	if mc := newWFMCP(m.aiMCP(), m.aiMCPTrustAnnotations()); mc != nil {
+		ms.Tools = mc
+	}
+	// The channel is the step's as written: a template in it needs the
+	// run's values, which a summary does not have.
+	msg := wire.Message{Via: via, Channel: step.Write.Channel, Tool: step.Write.Tool, Text: text}
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		if err := ms.Send(ctx, via, text); err != nil {
+		if err := ms.Deliver(ctx, msg); err != nil {
 			recordError("workflow " + e.Name + ": notify message:" + sid + ": " + err.Error())
 			return wfxNoteMsg{text: e.Name + ": the summary was not sent to message:" + sid + ": " + agentCtlShort(err.Error())}
 		}

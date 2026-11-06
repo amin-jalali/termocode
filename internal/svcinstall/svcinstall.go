@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -33,7 +34,14 @@ type Spec struct {
 	Home      string // the user's HOME
 	Exe       string // absolute path of the termocode binary
 	Workspace string // absolute workspace folder
-	UID       int    // macOS: for the gui/<uid> domain
+	UID       int    // macOS: the gui/<uid> domain; Linux: loginctl's user
+	Termux    bool   // running inside Termux (see InTermux), even as GOOS linux
+}
+
+// InTermux reports whether termocode runs inside Termux on Android:
+// TERMUX_VERSION is set by the Termux app, PREFIX is inside com.termux.
+func InTermux(getenv func(string) string) bool {
+	return getenv("TERMUX_VERSION") != "" || strings.Contains(getenv("PREFIX"), "com.termux")
 }
 
 // File is a rendered service file.
@@ -113,6 +121,9 @@ func sysdEsc(s string) string {
 
 // Render builds the service file for s without touching the disk.
 func Render(s Spec) (File, error) {
+	if s.Termux {
+		return File{}, unsupported("android")
+	}
 	if s.GOOS != "linux" && s.GOOS != "darwin" {
 		return File{}, unsupported(s.GOOS)
 	}
@@ -222,7 +233,11 @@ func Install(s Spec, w io.Writer, confirm func() bool) error {
 		if err := ctl("systemctl", "--user", "enable", "--now", f.Name); err != nil {
 			return err
 		}
-		fmt.Fprintln(w, "Installed. To start it at boot even when you are not logged in, run once:\n  loginctl enable-linger $USER")
+		if lingerOn(s.UID) {
+			fmt.Fprintln(w, "Installed. It starts at boot, even when you are not logged in.")
+			return nil
+		}
+		fmt.Fprintln(w, "Installed. "+lingerHint)
 		return nil
 	}
 	if exists {
@@ -295,5 +310,17 @@ func Status(s Spec, w io.Writer) error {
 		out = "inactive"
 	}
 	fmt.Fprintln(w, "state: "+out)
+	if s.GOOS == "linux" && !lingerOn(s.UID) {
+		fmt.Fprintln(w, lingerHint)
+	}
 	return nil
+}
+
+const lingerHint = "It starts when you log in. To start it at boot even when you are not logged in, run once:\n  loginctl enable-linger $USER"
+
+// lingerOn asks loginctl whether the user's services run without a
+// login (linger). No loginctl or no answer counts as off.
+func lingerOn(uid int) bool {
+	out, err := run("loginctl", "show-user", strconv.Itoa(uid), "--property=Linger", "--value")
+	return err == nil && strings.TrimSpace(out) == "yes"
 }

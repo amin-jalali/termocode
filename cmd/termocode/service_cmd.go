@@ -66,7 +66,7 @@ func runServiceIn(args []string, in io.Reader, out, errw io.Writer, cwd, home, e
 		fmt.Fprintln(errw, "termocode service:", err)
 		return 1
 	}
-	s := svcinstall.Spec{GOOS: runtime.GOOS, Home: home, Exe: exe, Workspace: abs, UID: os.Getuid()}
+	s := svcinstall.Spec{GOOS: runtime.GOOS, Home: home, Exe: exe, Workspace: abs, UID: os.Getuid(), Termux: svcinstall.InTermux(os.Getenv)}
 	switch cmd {
 	case "install":
 		confirm := func() bool { return yes }
