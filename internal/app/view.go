@@ -1575,6 +1575,8 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 			return renderGitSectionHeader("CHANGES", strconv.Itoa(changed), !m.gitChangesCollapsed, active, focused, w)
 		case gitSecConflicts:
 			return renderGitSectionHeader("CONFLICTS", strconv.Itoa(m.gitConflictCount()), !m.gitConflictsCollapsed, active, focused, w)
+		case gitSecStashes:
+			return renderGitSectionHeader("STASHES", strconv.Itoa(len(m.gitStashes)), m.gitStashesOpen, active, focused, w)
 		default:
 			n := ""
 			if len(m.gitCommits) > 0 {
@@ -1608,6 +1610,8 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		return m.renderGitRebaseRow(active, focused, w)
 	case gitRowStopped:
 		return m.renderGitStoppedRow(active, focused, w)
+	case gitRowStash:
+		return m.renderGitStashRow(r.stash, active, focused, w)
 	case gitRowSpacer:
 		return sidebarFill.Render(strings.Repeat(" ", w))
 	}

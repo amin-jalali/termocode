@@ -31,6 +31,7 @@ const (
 	gitRowSpacer                    // blank separator between sections (not selectable)
 	gitRowRebase                    // the "rebase in progress" banner (git_rebase.go)
 	gitRowStopped                   // the stopped merge / cherry-pick / revert banner (git_merge_branch.go)
+	gitRowStash                     // STASHES: one stash (gitx_stash_panel.go)
 )
 
 type gitSection int
@@ -40,6 +41,7 @@ const (
 	gitSecChanges
 	gitSecGraph
 	gitSecConflicts // merge conflicts (unmerged paths); shown first, only when non-empty
+	gitSecStashes   // the stash list; only when there are stashes (gitx_stash_panel.go)
 )
 
 // gitPanelRow is one rendered line of the Source Control panel.
@@ -61,6 +63,8 @@ type gitPanelRow struct {
 	older   bool   // gitRowMore → "Load older commits" (else "Show 15 more")
 
 	note string // gitRowNote → the dim placeholder text
+
+	stash int // gitRowStash → index into m.gitStashes
 }
 
 // selectable reports whether the cursor may land on this row. Empty-section
@@ -83,7 +87,8 @@ func (r gitPanelRow) selectable() bool {
 // is unchanged (git_rows_memo.go).
 func (m Model) gitPanelRows() []gitPanelRow {
 	prefix := m.gitFileRowsCached()
-	graph := []gitPanelRow{{kind: gitRowSpacer}, {kind: gitRowSection, section: gitSecGraph}}
+	graph := m.appendStashRows(nil)
+	graph = append(graph, gitPanelRow{kind: gitRowSpacer}, gitPanelRow{kind: gitRowSection, section: gitSecGraph})
 	if !m.gitGraphCollapsed {
 		graph = m.appendGraphRows(graph)
 	}
@@ -366,6 +371,8 @@ func (m *Model) gitToggleSection(s gitSection) {
 		m.gitGraphCollapsed = !m.gitGraphCollapsed
 	case gitSecConflicts:
 		m.gitConflictsCollapsed = !m.gitConflictsCollapsed
+	case gitSecStashes:
+		m.gitStashesOpen = !m.gitStashesOpen
 	}
 	m.gitClampCursor()
 }

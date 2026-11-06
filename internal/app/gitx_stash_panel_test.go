@@ -79,6 +79,7 @@ func TestGitStashPanelSection(t *testing.T) {
 			idx = i
 		}
 	}
+	m.explorerWidth = 40
 	top, _, _ := m.gitPanelLayout(m.h)
 	m2, _ := m.handleGitSidebarMouse(2, m.gitPanelTopOffset()+idx-top, tea.MouseLeft)
 	*m = m2

@@ -116,6 +116,8 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 			m.openRebaseControl()
 		case gitRowStopped:
 			return m, m.openGitOpControl(), true
+		case gitRowStash:
+			return m, m.onStashRow(cur.stash), true
 		case gitRowFile:
 			if cur.section == gitSecConflicts {
 				return m, m.gitOpenMergeViewForFile(cur.fileIndex), true
