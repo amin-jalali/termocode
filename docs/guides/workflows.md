@@ -63,6 +63,23 @@ A dry run (`d`) reads the sources for real (read-only) and runs plan and
 filter steps. It does not run AI, shell or test steps, and it never
 writes. The run page lists every write it would do, with its full text.
 
+## Build by chat
+
+Run **AI: New Workflow…** from the command palette, or press `n` in the
+view. The chat opens with the start of a message. Say what the workflow
+should do and press `Enter`. To change a workflow, press `c` on it: the
+chat opens with its file attached.
+
+The AI never saves a file by itself:
+
+- It checks the file first. A file with problems never reaches you.
+- A card shows the whole file (or the diff for a change) and every
+  write step it will do. **Cancel** is first. **Create** writes the file
+  and trusts this exact version.
+- It asks you before it adds a write step.
+- A dry run and a real run from the chat ask on a card too (**Deny** is
+  first). In a real run, every write still asks on its own card.
+
 ## Keys
 
 | Key | What it does |
@@ -75,6 +92,8 @@ writes. The run page lists every write it would do, with its full text.
 | `d` | dry run: read for real, write nothing (asks) |
 | `o` | schedule on or off (asks) |
 | `e` | open the file (at the first problem) |
+| `n` | new workflow by chat (**AI: New Workflow…**) |
+| `c` | change this workflow by chat (the file is attached) |
 | `h` | history: the newest run |
 | `R` | read the files again |
 | `x` | stop the run (asks; Keep running is first) |

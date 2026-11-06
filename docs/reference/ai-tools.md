@@ -2296,6 +2296,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflow-edit-file` | Workflows: Edit Selected File | auto |   |
 | `workflow-enable` | Workflows: Turn Selected On/Off… | confirm (always asks) |   |
 | `workflow-history` | Workflows: History of Selected | auto |   |
+| `workflow-new` | AI: New Workflow… | never | starts a chat with the user; the AI drafts workflows with workflow_draft |
 | `workflow-run` | Workflows: Run Selected… | confirm (run) |   |
 | `workflow-stop` | Workflows: Stop Selected Run… | confirm (run) |   |
 | `workflows` | Workflows: Open | auto |   |

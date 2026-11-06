@@ -398,7 +398,7 @@ func (s *aiState) takeAttachments() (string, []string) {
 // the user trusts them); memory is the turn's lessons block (OM-2), after
 // the rules.
 func (m *Model) aiChatBasePrompt(root string, rules ai.Rules, memory string) string {
-	base := aiChatSystemPrompt + "\nWorkspace root: " + root + "\n" + ai.EnvBlock(aiEnvInfo()) + m.aiServicesPromptLine(root) + m.aiContainersPromptLine() + aiDBPromptLine(root)
+	base := aiChatSystemPrompt + "\nWorkspace root: " + root + "\n" + ai.EnvBlock(aiEnvInfo()) + m.aiServicesPromptLine(root) + m.aiContainersPromptLine() + aiDBPromptLine(root) + m.aiWorkflowsPromptLine(root)
 	if p := m.editor.Path(); p != "" {
 		base += "\nThe open file is: " + p
 	}
