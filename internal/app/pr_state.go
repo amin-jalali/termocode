@@ -93,6 +93,19 @@ func (m *Model) handlePRMsg(msg tea.Msg) (tea.Cmd, bool) {
 	return nil, false
 }
 
+// prPromptClosed brings back the card a cancelled PR prompt came from.
+func (m *Model) prPromptClosed() {
+	if m.pr == nil || m.confirmOpen {
+		return
+	}
+	switch m.promptKind {
+	case promptKindPRReply:
+		m.showPRThread()
+	case promptKindPRReviewers, promptKindPRLabels:
+		m.showPRCreateCard()
+	}
+}
+
 // prDoneMsg is a finished change through gh (check out, review, merge…).
 type prDoneMsg struct {
 	number  int

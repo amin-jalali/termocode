@@ -559,6 +559,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case prompt.CloseMsg:
 		m.promptOpen = false
 		// Group G / Group I / secret store: no-op unless theirs
+		m.prPromptClosed() // pr_state.go: back to the thread or create card
 		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.secretsPromptClosed(), m.aiMCPElicitPromptClosed())
 	case secretsUnlockDoneMsg:
 		return m, m.onSecretsUnlockDone(msg)
