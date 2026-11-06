@@ -119,6 +119,11 @@ type Model struct {
 	agentHits           []agentlog.Hit // the search inside sessions (agent_sessions_search.go)
 	agentHitsCapped     bool
 	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
+	// AGX-15 (agent_hibernate.go): the tab the hibernate card is about,
+	// "Always for this session", and commands queued by a tab switch.
+	agentHibernatePending int
+	agentHibernateAlways  bool
+	agentLaterCmds        []tea.Cmd
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process

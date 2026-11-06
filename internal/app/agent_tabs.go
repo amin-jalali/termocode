@@ -81,7 +81,7 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		return nil
 	}
 	lines := strings.Split(raw, "\n")
-	limit := m.agentSeeLimit(t, lines) // AGX-11 (agent_limit.go)
+	limit := tea.Batch(m.agentSeeLimit(t, lines), m.agentIdleSeen(t)) // AGX-11 (agent_limit.go), AGX-15 (agent_hibernate.go)
 	if t.AgentHook {
 		return limit
 	}
@@ -123,6 +123,9 @@ func (t terminalTab) agentTitle() string {
 // agentTabName is the tab bar name of an agent tab: "limit ↻14:30"
 // while its usage limit is on (AGX-11), else its title.
 func (t terminalTab) agentTabName() string {
+	if l := t.agentHibernatedLabel(); l != "" { // AGX-15
+		return l
+	}
 	if l := t.agentLimitLabel(); l != "" {
 		return l
 	}
@@ -195,6 +198,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
 		return m.openAgentSessionsSearch(), true
+	}
+	if id == agentHibernatePaletteID { // Agent: Hibernate or Wake (agent_hibernate.go)
+		return m.toggleAgentHibernate(), true
 	}
 	if id == agentAccountsPaletteID { // Agent: Accounts… (agent_accounts.go)
 		return m.openAgentAccounts(), true
