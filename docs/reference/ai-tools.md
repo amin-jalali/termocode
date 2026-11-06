@@ -1973,6 +1973,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `focus-explorer` | View: Focus Explorer | auto |   |
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
+| `git-ai-review-branch` | Git: AI Review Branch (Pull Request) | never | fills the user's chat box; the user reads it and sends it |
+| `git-ai-review-changes` | Git: AI Review My Changes | never | fills the user's chat box; the user reads it and sends it |
 | `git-auto-fetch` | Git: Toggle Auto Fetch | never | starts a timer that talks to the remote; only the user turns it on |
 | `git-blame` | Git: Blame Current Line | auto |   |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
@@ -2004,6 +2006,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-folder` | Git: Show Folder History… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-search` | Git: Search Log… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
+| `git-merge-ai-resolve` | Git: Merge View: AI Resolve Conflict… | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-close` | Git: Merge View: Close | auto |   |
 | `git-merge-focus` | Git: Merge View: Merge Keys | auto |   |
 | `git-merge-next` | Git: Merge View: Next Conflict | auto |   |
@@ -2011,6 +2014,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-merge-pane` | Git: Merge View: Show Next Pane | auto |   |
 | `git-merge-prev` | Git: Merge View: Previous Conflict | auto |   |
 | `git-merge-resolve` | Git: Merge View: Mark as Resolved | never | resolves the user's merge conflict in the merge view; user only |
+| `git-merge-resolve-simple` | Git: Merge View: Resolve Simple Conflicts | never | resolves the user's merge conflict in the merge view; user only |
+| `git-merge-take-all-ours` | Git: Merge View: Take Ours for the Whole File | never | resolves the user's merge conflict in the merge view; user only |
+| `git-merge-take-all-theirs` | Git: Merge View: Take Theirs for the Whole File | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-base` | Git: Merge View: Take Base | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-both` | Git: Merge View: Take Both (Ours, Then Theirs) | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-both-theirs-first` | Git: Merge View: Take Both (Theirs, Then Ours) | never | resolves the user's merge conflict in the merge view; user only |

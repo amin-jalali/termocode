@@ -287,6 +287,28 @@ at the top of the panel.
 
 Each accept is one edit, so one `u` brings the markers back.
 
+### Merge view tools
+
+In the merge view (**Git: Open Merge View**), these keys work on the whole
+file. Each one is one edit: `u` takes it back.
+
+| Key | Command | What it does |
+|---|---|---|
+| `O` | **Git: Merge View: Take Ours for the Whole File** | Every conflict keeps your side. Lines git merged on its own stay. |
+| `T` | **Git: Merge View: Take Theirs for the Whole File** | Every conflict takes the incoming side |
+| `s` | **Git: Merge View: Resolve Simple Conflicts** | Settles the conflicts where only one side changed the base, or both made the same change (spaces and tabs do not count). The others stay. |
+| `i` | **Git: Merge View: AI Resolve Conflict…** | Sends the current conflict (base, ours, theirs) to the AI. A card shows its answer; **Cancel** is ready. **Use AI Result** puts it in the file. |
+
+In the current conflict, the words that differ between ours and theirs
+are underlined.
+
+### AI review
+
+**Git: AI Review My Changes** and **Git: AI Review Branch (Pull Request)**
+put a review request with the diff in the chat box. The branch review
+uses the change since the branch left `origin`'s default branch (or
+`main`). Nothing is sent until you press `Enter`.
+
 ## Clone a repository
 
 1. On the welcome screen, pick **Clone repository**. Or run
