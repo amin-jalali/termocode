@@ -28,6 +28,8 @@ test that runs on every change, not a manual try.
 | Lesson recall | Tests with saved lessons: a match is added once per chat; check mode asks a fake quick model | Whether recalled lessons help a real model |
 | Ship to merge-ready | The loop runs against fake git/gh steps: push card, PR card, red CI → fix turn → push → green → stop | A real push, a real pull request and real CI |
 | Agent control socket and CLI | Socket protocol tests on a real unix socket; app tests for list / wait / report / the prompt card; CLI tests with a fake socket call | Typing into a live agent; Windows (no socket there) |
+| Worktrees: sleep, archive, delete, cleanup | Unit tests on real git repos in temp folders (dirty and merged checks, locked worktrees refused, restore from the branch); safe-first card tests (Cancel / Keep running / Keep it first, Esc and Enter never act, a dirty folder needs a second card with the changed files count, an unmerged branch needs its name typed); goldens of each card; e2e on the real binary (a fake agent tab ends on sleep, a dirty archive is cancelled, a merged one is deleted, cleanup archives the ticked one) | A real agent CLI; Windows |
+| Worktrees from the web page | Topic and op tests (ids, never paths; pin, note, sleep; archive and delete only through a laptop card), a replay golden, and a browser test of the desktop view against the fake hub | A real phone browser |
 | State hooks in other apps' config | Tests write and remove the hooks in temporary config files, keep backups and the user's own entries | That the other apps keep the same hook format |
 | Screen-based agent state | Pattern tests on recorded screen text | New versions of the agents that change their screen |
 

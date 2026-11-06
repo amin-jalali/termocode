@@ -163,6 +163,17 @@ func (m *Model) onWebCall(msg webCallMsg) tea.Cmd {
 // for a browser (the control connection is the same user's CLI).
 func (m *Model) webRunCall(h *webHub, call *webCall) (cmd tea.Cmd, found bool) {
 	if p, _ := webproto.Lookup(call.op); p.LaptopCard && call.conn.role != webproto.RoleCtl {
+		if later := webAskLaterOps[call.op]; later != nil {
+			// The card is built after a read off the UI thread; open puts it
+			// in line from the Update that msg brings.
+			open := func(a *webAsk) tea.Msg {
+				return applyMsg(func(m *Model) tea.Cmd {
+					m.webAskOpen(call, a)
+					return nil
+				})
+			}
+			return m.webRunOp(func(m *Model, call *webCall) tea.Cmd { return later(m, call, open) }, call), true
+		}
 		ask := webAskOps[call.op]
 		if ask == nil {
 			return nil, false

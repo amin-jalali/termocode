@@ -1,0 +1,1 @@
+{"t":"req","id":61,"op":"containers.compose_ask","args":{"project":"shop","verb":"down"}}

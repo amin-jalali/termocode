@@ -18,14 +18,6 @@ func gitxStashRepo(t *testing.T) (*Model, string) {
 	return m, dir
 }
 
-func gitxButtons(m *Model) string {
-	var ids []string
-	for _, b := range m.confirm.Buttons() {
-		ids = append(ids, b.ID)
-	}
-	return strings.Join(ids, ",")
-}
-
 // GITX-10: Stash… picks what to stash, then asks a message.
 func TestGitxStashOptions(t *testing.T) {
 	m, dir := gitxStashRepo(t)

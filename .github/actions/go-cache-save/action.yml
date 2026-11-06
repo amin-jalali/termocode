@@ -1,0 +1,22 @@
+name: Save the Go build and module cache
+description: >-
+  The last step of a job that used .github/actions/go-cache with save
+  "true": saves the cache on main. Does nothing anywhere else.
+runs:
+  using: composite
+  steps:
+    - name: Trim test results
+      if: env.GO_CACHE_SAVE_KEY != ''
+      shell: bash
+      # Test results are never reused (-count=1); keep the cache small.
+      run: go clean -testcache || true
+
+    - name: Save
+      if: env.GO_CACHE_SAVE_KEY != ''
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+          ~/Library/Caches/go-build
+        key: ${{ env.GO_CACHE_SAVE_KEY }}

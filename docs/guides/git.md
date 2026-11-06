@@ -28,8 +28,25 @@ The panel refreshes by itself every two seconds.
 
 If nothing is staged, termocode asks: *Stage all changes?*
 
-The **▾** menu has **Commit (Amend)**, **Commit (Sign-off)**, **Push**,
-**Pull**, **Fetch** and **Refresh**.
+The **▾** menu has **Commit (Amend)**, **Commit (Sign-off)**, **Commit and
+Push**, **Commit and Sync**, **Push**, **Pull**, **Fetch**, **Unstage All**,
+**Discard All Changes…**, **Delete Untracked Files…** and **Refresh**.
+
+**Commit and Push** commits, then pushes. **Commit and Sync** commits, then
+pulls and pushes. Nothing is pushed when the commit fails.
+
+## Throw away all changes
+
+**Git: Discard All Changes…** asks first, and **Cancel** is the choice that
+is ready. **Discard Changes** takes back every change to tracked files,
+staged ones too. New files stay, unless you press **Discard and Delete New
+Files**. **Git: Delete Untracked Files…** removes only the new files.
+Ignored files always stay.
+
+Nothing is lost for good: termocode first saves a safety copy in the stash
+list. The toast names it (for example `stash@{0}`). Open **Git: Show Stash
+List…** and apply it to get your work back. **Git: Unstage All Changes**
+takes every file out of the index and keeps your edits.
 
 Press `t` to switch between a tree view and a flat list. termocode remembers
 your choice.
@@ -80,6 +97,49 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 | **Git: Blame Current Line** (`Alt+B`) | Who changed this line, and when |
 | **Git: Stash Changes** / **Pop Latest Stash** / **Show Stash List...** | Stash work |
 | **Git: Show Tags...** | Check out a tag |
+| **Git: Rename Branch…** | Give the current branch a new name |
+| **Git: Create Branch From…** | Start a new branch at another branch or a tag |
+| **Git: Delete Branch…** | Delete a local or a remote branch (see below) |
+
+**Git: Delete Branch…** asks first, and **Cancel** is the choice that is
+ready. A local branch is only deleted when its commits are on another
+branch. If it has commits of its own, a second card asks before a **Force
+Delete**. The toast names the commit it was at, so `git branch <name>
+<hash>` brings it back. To delete a branch on the remote you also type its
+full name, for example `origin/feature`.
+
+Right-click a commit in the **GRAPH** for **Create Branch Here…** and
+**Check Out This Commit (Detached)**.
+
+| **Git: Merge Branch…** | Merge another branch into this one (see [Merge a branch](#merge-a-branch)) |
+
+## Blame
+
+Blame shows who last changed a line, and when.
+
+| Command | What it does |
+|---|---|
+| **Git: Toggle Blame in Status Bar** | The status bar shows the cursor line's author and age, for example `Tess, 3 days ago`. Click it to open the commit. |
+| **Git: Toggle Inline Blame** | The same, plus the commit subject, in dim text at the end of the cursor line |
+| **Git: Toggle Blame Annotations** | Every line gets the hash, author and age of its commit at its start. A run of lines from one commit names it once. The colour shows the age: amber is new, blue is old. |
+| **Git: Open Commit of Line** | Opens the commit that last changed the cursor line |
+| **Git: Blame Before This Change** | Opens the file as it was before the line's commit, with annotations. Run it again to go further back. |
+| **Git: Blame Options…** | Ignore whitespace changes (`-w`), detect moved or copied lines (`-M -C`), and the two toggles above |
+
+The two toggles and the options are saved. Blame reads the saved file, so
+save first after an edit. A line you changed and did not commit says **Not
+committed yet**. When the repository has a `.git-blame-ignore-revs` file,
+blame skips the commits it lists (for example a big formatting commit).
+
+## Line history and older revisions
+
+- **Git: Show Line History** lists the commits that changed the cursor line,
+  or the selected lines. `Enter` opens a commit.
+- **Git: Open Previous Revision of File** opens the file as it was one commit
+  earlier, read-only. Run it again to step further back. The toast says
+  which commit it is and how many there are. Renames are followed.
+- **Git: Open Next Revision of File** steps forward again. After the newest
+  commit you are back at the working file.
 
 ## Stash with options
 
@@ -299,6 +359,22 @@ How it works:
 press `Enter`: the card asks **Move HEAD back to here?** with the same
 checks.
 
+## Merge a branch
+
+1. Run **Git: Merge Branch…**. Pick a branch: a local one, or a remote one
+   such as `origin/main`.
+2. A card says how many commits come in. **Cancel** is the choice that is
+   ready. **Merge** moves your branch forward when it can, or makes a
+   merge commit. **Merge (No Fast-Forward)** always makes a merge commit.
+3. If files conflict, the merge stops. A **⇄ Merging** banner shows at the
+   top of the panel, with the **CONFLICTS** section below it.
+
+Press `Enter` on the banner, or run **Git: Merge in Progress (Continue /
+Abort)…**. **Close** is ready, so `Enter` and `Esc` change nothing.
+**Continue** stages the fixed files and makes the merge commit; it refuses
+while a file still has conflict markers. **Abort** puts the branch back as
+it was. A stopped cherry-pick or revert shows the same banner.
+
 ## Resolve a merge conflict
 
 When a merge or rebase stops with conflicts, a **CONFLICTS** section appears
@@ -312,7 +388,8 @@ at the top of the panel.
     - **Git: Accept Both Changes (Conflict at Cursor)**
 3. Jump to the next conflict with `]x`, or back with `[x` (Normal mode).
 4. Save the file. Press `s` on it in the panel to mark it resolved.
-5. Commit. In an interactive rebase, use **Continue** on the rebase banner
+5. Commit, or use **Continue** on the merge banner. In an interactive
+   rebase, use **Continue** on the rebase banner
    (see [When the rebase stops](#when-the-rebase-stops)).
 
 Each accept is one edit, so one `u` brings the markers back.
@@ -437,6 +514,53 @@ run. It picks the plan profile; then you type the task in the AI chat.
 
 Run the command again before you send the task to turn it off. It needs
 a git repository with at least one commit.
+
+## Worktrees
+
+The **WORKTREES** view (**Alt+Shift+W**) lists every worktree of the
+repository: make, open, pin, link, sleep, archive, delete and clean them
+up. See [Worktrees](worktrees.md).
+
+## Cherry-pick, revert and restore
+
+| Command | What it does |
+|---|---|
+| **Git: Cherry-pick from Branch…** | Pick a branch. A card lists its commits that your branch lacks (changes you already have are left out). **Cancel** is ready; **Cherry-pick All** applies them oldest first. |
+| **Revert Merge…** (right-click a merge in **GRAPH**) | Pick the parent to keep (parent 1 is the branch it was merged into). A new commit undoes what the merge brought in. |
+| **Cherry-pick a File from Here…** (right-click a commit) | Pick one file of the commit. Its changes go into your working tree and are staged; nothing is committed. |
+| **Restore a File from Here…** (right-click a commit) | Pick one file. It is put back as it was in that commit. Uncommitted changes to it are saved in the stash list first. |
+
+Each one asks on a card where **Cancel** is ready. A conflict stops the
+pick; fix it in **CONFLICTS** and commit, or run `git cherry-pick --abort`.
+
+## Edit history from the GRAPH
+
+On a **GRAPH** commit (keys, or right-click):
+
+| Key | Menu | What it does |
+|---|---|---|
+| `E` | **Edit Commit Message…** | Type the subject, then the body (`\n` starts a new line) |
+| `S` | **Squash into Previous…** | The commit joins the one before it; both messages are kept |
+| `D` | **Drop Commit…** | The commit and its changes leave the branch; newer commits stay |
+
+**Git: Rebase Current Branch onto…** picks a branch and replays your
+commits on top of it: **Rebase**, or **Rebase (Keep Merges)** to keep merge
+commits. **Git: Autosquash fixup! Commits…** folds `fixup!` and `squash!`
+commits into the commits they name.
+
+Every card lists what changes, warns when the commits are on the remote
+already (you will need to force-push) and stashes uncommitted changes
+first. **Cancel** is ready. A conflict stops the rebase: see
+[When the rebase stops](#when-the-rebase-stops). Undo with `u`.
+
+## Patches
+
+| Command | What it does |
+|---|---|
+| **Copy as Patch** (right-click a commit) | Copies the commit as a mail patch (`git format-patch`) |
+| **Git: Save Changes as Patch…** | Writes your uncommitted changes to a file (`changes.patch`). It asks before it replaces a file. |
+| **Git: Apply Patch from File…** | Checks the patch, lists the files it changes on a card (**Cancel** is ready), then applies it to your working tree |
+| **Git: Apply Patch from Clipboard…** | The same with the patch on the clipboard |
 
 ## Keys at a glance
 

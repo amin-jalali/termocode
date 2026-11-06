@@ -98,6 +98,11 @@ type terminalTab struct {
 	// socket (agent_ctl.go); the screen guess leaves the tab alone.
 	AgentHook    bool
 	agentFromCmd bool
+	// Worktree is the folder an agent was started in (AGX-2; "" = the
+	// workspace): the WORKTREES view puts the agent on that card.
+	// FirstTask is typed once the agent shows its input box (WTX-8).
+	Worktree  string
+	FirstTask string
 
 	// Splits are the panes after the first (terminal_pane.go); BufID is
 	// pane 0. PaneFocus is the focused pane (0 = BufID).
