@@ -5,8 +5,8 @@ package web
 import (
 	"fmt"
 	"strings"
-	"time"
 	"testing"
+	"time"
 
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
