@@ -1331,6 +1331,7 @@ Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, a
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider`, `cursor`, `amp`, `goose`, `qwen`, `crush`, `copilot`, `kimi`, `droid`, `pi` |
+| `worktree` | string |   | optional: start it in this worktree (a path or branch from worktrees_list); the workspace when left out |
 
 ### mcp_server_add
 

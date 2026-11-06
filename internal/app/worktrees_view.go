@@ -59,7 +59,11 @@ func (m Model) wtTabs() []wtTabAgent {
 	}
 	out := make([]wtTabAgent, 0, len(m.terminalTabs))
 	for _, t := range m.terminalTabs {
-		out = append(out, wtTabAgent{name: t.agentTitle(), cwd: t.Cwd, state: t.AgentState})
+		cwd := t.Cwd
+		if t.Worktree != "" { // an agent started in a worktree belongs to it (AGX-2)
+			cwd = t.Worktree
+		}
+		out = append(out, wtTabAgent{name: t.agentTitle(), cwd: cwd, state: t.AgentState})
 	}
 	return out
 }
