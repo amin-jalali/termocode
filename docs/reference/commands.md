@@ -457,6 +457,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Search Log… | `git-log-search` |   |   |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
 | Git: Set Upstream Branch… | `git-upstream-set` |   |   |
+| Git: Show Contributors | `git-contributors` |   | `the authors of this branch and their commit counts` |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Folder History… | `git-log-folder` |   |   |

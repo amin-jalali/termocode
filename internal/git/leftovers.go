@@ -2,6 +2,7 @@ package git
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 )
 
@@ -43,4 +44,33 @@ func CommitPaths(dir, message string, paths []string, o CommitOptions) error {
 		return err
 	}
 	return commitRun(dir, append(append(args, "--only", "--"), paths...))
+}
+
+// Contributor is one author of the commits on HEAD.
+type Contributor struct {
+	Name, Email string
+	Commits     int
+}
+
+// Contributors counts the commits on HEAD by author (git shortlog -sne),
+// most commits first.
+func Contributors(dir string) ([]Contributor, error) {
+	out, err := runCombined(dir, "git", "shortlog", "-sne", "--no-merges", "HEAD", "--")
+	if err != nil {
+		return nil, err
+	}
+	var list []Contributor
+	for _, l := range strings.Split(out, "\n") {
+		n, who, ok := strings.Cut(strings.TrimSpace(l), "\t")
+		count, cerr := strconv.Atoi(strings.TrimSpace(n))
+		if !ok || cerr != nil {
+			continue
+		}
+		c := Contributor{Name: strings.TrimSpace(who), Commits: count}
+		if lt := strings.LastIndex(who, " <"); lt >= 0 && strings.HasSuffix(who, ">") {
+			c.Name, c.Email = strings.TrimSpace(who[:lt]), who[lt+2:len(who)-1]
+		}
+		list = append(list, c)
+	}
+	return list, nil
 }

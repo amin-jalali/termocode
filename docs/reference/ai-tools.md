@@ -2160,6 +2160,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-conflict-ours` | Git: Accept Current Change (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-conflict-prev` | Git: Go to Previous Merge Conflict | auto |   |
 | `git-conflict-theirs` | Git: Accept Incoming Change (Conflict at Cursor) | confirm (fileWrite) |   |
+| `git-contributors` | Git: Show Contributors | auto |   |
 | `git-copy-commit-link` | Git: Copy Remote Link to Commit | confirm (ide) |   |
 | `git-copy-line-link` | Git: Copy Remote Link to Line | confirm (ide) |   |
 | `git-diff` | Git: Show Diff for Current File | auto |   |

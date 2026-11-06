@@ -461,6 +461,7 @@ missing	git-commit-marked	Git|S
 missing	git-commit-push	Git|S
 missing	git-commit-sync	Git|S
 missing	git-compare-branches	Git|S
+missing	git-contributors	Git|S
 missing	git-copy-commit-link	Git|S
 missing	git-copy-line-link	Git|S
 missing	git-diff-clipboard	Git|S
