@@ -87,3 +87,94 @@ func TestGitStashListAndApply(t *testing.T) {
 		t.Errorf("apply dropped the entry: %q", got)
 	}
 }
+
+// Spec (GITX-10 web, the STASHES section): the git topic lists the stash
+// as the laptop's STASHES section has it; git.stash_show sends one
+// entry's changes; git.stash_act takes only an entry on show, waits for
+// a laptop card (Cancel first), then drops, pops or branches there.
+func TestGitStashPanelFromWeb(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	webTestHub(t, &m)
+	dir, run := webTestRepo(t, &m)
+	webTestWrite(t, dir, "a.txt", "first stash\n")
+	run("stash", "push", "-q", "-m", "first")
+	webTestWrite(t, dir, "a.txt", "second stash\n")
+	run("stash", "push", "-q", "-m", "second")
+	webTestGitLoad(&m)
+	snap := m.webGitBuild()
+	if len(snap.Stashes) != 2 || snap.Stashes[0].Ref != "stash@{0}" || !strings.Contains(snap.Stashes[0].Message, "second") ||
+		!strings.Contains(snap.Stashes[1].Message, "first") {
+		t.Fatalf("stashes in the topic %+v", snap.Stashes)
+	}
+	c := webTestSub(t, &m)
+	var d struct {
+		Rows []struct {
+			K    string `json:"k"`
+			Text string `json:"text"`
+		} `json:"rows"`
+	}
+	webTestData(t, webTestCallBg(t, &m, c, "git.stash_show", `{"ref":"stash@{1}"}`), &d)
+	found := false
+	for _, r := range d.Rows {
+		found = found || (r.K == "add" && r.Text == "first stash")
+	}
+	if !found {
+		t.Fatalf("show rows %+v", d.Rows)
+	}
+	if f := webTestCallBg(t, &m, c, "git.stash_act", `{"ref":"stash@{5}","do":"drop"}`); webTestErr(f) != "not_found" {
+		t.Fatalf("an entry not on show: %v", f)
+	}
+	var ref webproto.AskRef
+	webTestData(t, webTestCallBg(t, &m, c, "git.stash_act", `{"ref":"stash@{1}","do":"drop"}`), &ref)
+	if v := m.confirm.View(); ref.Card == "" || m.confirm.SafeID() != "cancel" || !strings.Contains(v, "stash@{1}") || !strings.Contains(v, "first") {
+		t.Fatalf("drop card %+v:\n%s", ref, v)
+	}
+	if got := run("stash", "list"); !strings.Contains(got, "first") {
+		t.Fatal("dropped before the laptop said so")
+	}
+	webTestLaptopConfirmRemote(t, &m)
+	if got := run("stash", "list"); strings.Contains(got, "first") || !strings.Contains(got, "second") {
+		t.Fatalf("after drop: %q", got)
+	}
+	webTestGitLoad(&m)
+	webTestData(t, webTestCallBg(t, &m, c, "git.stash_act", `{"ref":"stash@{0}","do":"branch","branch":"from-stash"}`), &ref)
+	if v := m.confirm.View(); m.confirm.SafeID() != "cancel" || !strings.Contains(v, "from-stash") {
+		t.Fatalf("branch card:\n%s", v)
+	}
+	webTestLaptopConfirmRemote(t, &m)
+	if b := strings.TrimSpace(run("branch", "--show-current")); b != "from-stash" {
+		t.Errorf("branch %q", b)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(b) != "second stash\n" {
+		t.Errorf("a.txt %q", b)
+	}
+	if got := strings.TrimSpace(run("stash", "list")); got != "" {
+		t.Errorf("stash after branch: %q", got)
+	}
+}
+
+// Spec (GITX-10 web): a pop names the entry on the card, then applies it
+// and drops it on the laptop.
+func TestGitStashPanelPopFromWeb(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	webTestHub(t, &m)
+	dir, run := webTestRepo(t, &m)
+	webTestWrite(t, dir, "a.txt", "popped\n")
+	run("stash", "push", "-q", "-m", "to pop")
+	webTestGitLoad(&m)
+	c := webTestSub(t, &m)
+	var ref webproto.AskRef
+	webTestData(t, webTestCallBg(t, &m, c, "git.stash_act", `{"ref":"stash@{0}","do":"pop"}`), &ref)
+	if v := m.confirm.View(); m.confirm.SafeID() != "cancel" || !strings.Contains(v, "to pop") {
+		t.Fatalf("pop card:\n%s", v)
+	}
+	webTestLaptopConfirmRemote(t, &m)
+	if b, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(b) != "popped\n" {
+		t.Errorf("a.txt %q", b)
+	}
+	if got := strings.TrimSpace(run("stash", "list")); got != "" {
+		t.Errorf("stash after pop: %q", got)
+	}
+}
