@@ -117,7 +117,9 @@ type aiState struct {
 	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
-	shipGen        int
+	// agentPickPending is the agent the open install / sign-in card is about (agent_install.go).
+	agentPickPending string
+	shipGen          int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the
@@ -822,8 +824,9 @@ func init() {
 
 // aiSettingsCategories puts the AI rows in their own Settings group.
 func aiSettingsCategories(cats map[string]string) map[string]string {
-	httpSettingsCategories(cats)   // the HTTP client's group (http_settings.go)
-	updateSettingsCategories(cats) // G-UPD (update_settings.go)
+	httpSettingsCategories(cats)     // the HTTP client's group (http_settings.go)
+	updateSettingsCategories(cats)   // G-UPD (update_settings.go)
+	workflowSettingsCategories(cats) // WFX-0 (workflow_settings.go)
 	for _, id := range []string{"setting-ai-inline", "setting-ai-next-edit", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
 		"setting-ai-until-done-rounds", "setting-ai-until-done-budget"} {
 		cats[id] = "AI"
@@ -840,6 +843,9 @@ func aiSettingValue(id string) (string, bool) {
 		return v, true
 	}
 	if v, ok := updateSettingValue(id); ok { // G-UPD (update_settings.go)
+		return v, true
+	}
+	if v, ok := workflowSettingValue(id); ok { // WFX-0 (workflow_settings.go)
 		return v, true
 	}
 	path, _ := ai.ConfigPath()
@@ -889,6 +895,9 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 		return c, true
 	}
 	if c, ok := m.applyUpdateSetting(id, value); ok { // G-UPD (update_settings.go)
+		return c, true
+	}
+	if c, ok := m.applyWorkflowSetting(id, value); ok { // WFX-0 (workflow_settings.go)
 		return c, true
 	}
 	path, err := ai.ConfigPath()

@@ -261,6 +261,9 @@ func (m *Model) onToolInstallEvent(ev lspInstallEventMsg) tea.Cmd {
 		}
 		return m.toolErrorToast(t, ev.err, ev.output)
 	}
+	if t.Category == lspinstall.CategoryAgentCLI && !byAI { // Agent: Start… (agent_install.go)
+		return m.onAgentInstalled(t)
+	}
 	detail := "language server started for open files"
 	if m.debug != nil && m.debug.hintTool == t.Name {
 		m.debug.setHint("", "") // the Run view's install hint is done

@@ -170,6 +170,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	nm.showWaitingHotExit()
 	nm.showWaitingSecretsDeletePlain() // secrets_migrate.go
+	nm.showWaitingWorkflowGate()       // workflow_gate.go
 	nm.showWaitingCrashCard()
 	if mode := nm.syncMouseMode(); mode != nil { // mouse_hover.go
 		return nm, tea.Batch(cmd, mode)
@@ -327,6 +328,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
+		if m.pickerKind == pickerKindAgentSessions { // agent_sessions.go: → reads the session
+			return m, m.onAgentSessionsAction(msg.ID)
+		}
 		if m.pickerKind == pickerKindMCPTools { // ai_mcp_tools.go: Space turns a tool off or on
 			return m, m.onMCPToolToggle(msg.ID)
 		}
@@ -442,6 +446,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		m.applyLayout()
 		return m, nil
+	case WorkflowWriteMsg: // workflow_gate.go
+		return m, m.AskWorkflowWrite(msg.Ask)
 	case confirm.SelectMsg:
 		m.confirmOpen = false
 		return m, m.handleConfirmSelect(msg.ID)
@@ -522,6 +528,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onMergeMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
+	case gitxDoneMsg: // gitx_hub.go
+		return m, msg.apply(&m)
 	case preview.CloseMsg:
 		m.previewOpen = false
 		m.closeHelp()
@@ -1122,6 +1130,9 @@ func (m Model) routeToPicker(msg tea.Msg) (Model, tea.Cmd) {
 			return m, c
 		}
 		if c, ok := m.mcpServeStatusKey(k); ok { // "?" on the MCP server status screen
+			return m, c
+		}
+		if c, ok := m.agentSessionsPickerKey(k); ok { // "/" in Agent: Sessions… (agent_sessions_search.go)
 			return m, c
 		}
 	}
@@ -2426,6 +2437,9 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 	case pickerKindContainerSearch: // containers_remote.go
 		return m.onSearchPicked(msg.ID)
 	default:
+		if cmd, ok := m.handleGitxPickerSelect(msg.ID); ok { // gitx_hub.go
+			return cmd
+		}
 		if cmd, ok := m.handlePRPickerSelect(msg.ID); ok { // pr_list.go
 			return cmd
 		}

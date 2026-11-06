@@ -3,8 +3,6 @@ package git
 import (
 	"strconv"
 	"strings"
-
-	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // BranchStatus is the result of StatusBranch.
@@ -20,18 +18,26 @@ type BranchStatus struct {
 // gives the same answer as GetBranch + Status, which start three or
 // four git processes; the background poll runs it every 2 s.
 func StatusBranch(dir string) (BranchStatus, error) {
+	return statusBranch(localGit(dir))
+}
+
+// StatusBranchVia is StatusBranch with git run by x (a container
+// workspace, ADR 0018).
+func StatusBranchVia(x Runner, dir string) (BranchStatus, error) {
+	return statusBranch(viaGit(x, dir))
+}
+
+func statusBranch(run gitRunFn) (BranchStatus, error) {
 	// --no-optional-locks: a read never takes .git/index.lock, so it
 	// cannot make the user's commit or rebase fail at the same moment.
-	cmd := spawn.Command("git", "--no-optional-locks", "status", "--porcelain=v2", "--branch", "-z")
-	cmd.Dir = dir
-	out, err := cmd.Output()
+	out, err := run("--no-optional-locks", "status", "--porcelain=v2", "--branch", "-z")
 	if err != nil {
 		return BranchStatus{}, err
 	}
-	bs := parseStatusV2(string(out))
+	bs := parseStatusV2(out)
 	if strings.HasPrefix(bs.Branch.Name, "(detached ") {
 		// The short hash grows with the repo (core.abbrev=auto); ask git.
-		if short, err := runOut(dir, "git", "rev-parse", "--short", "HEAD"); err == nil {
+		if short, err := run("rev-parse", "--short", "HEAD"); err == nil {
 			bs.Branch.Name = "(detached " + strings.TrimSpace(short) + ")"
 		}
 	}
