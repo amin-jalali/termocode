@@ -420,6 +420,17 @@ export interface ThemeColorArgs {
   color: string;
 }
 
+export interface UserCmdSaveArgs {
+  items: UserCmd[];
+}
+
+export interface UserCmd {
+  id: string;
+  title: string;
+  cmd: string;
+  cwd?: string;
+}
+
 export interface WorkflowRunArgs {
   run: string;
 }
@@ -2077,6 +2088,11 @@ export interface ThemeColor {
   custom?: boolean;
 }
 
+export interface UserCmdList {
+  items: UserCmd[];
+  error?: string;
+}
+
 export interface WorkspaceList {
   folders: WorkspaceEntry[];
   recent: WorkspaceEntry[];
@@ -3015,6 +3031,8 @@ export interface OpArgs {
   "theme.set": ThemeArgs;
   "theme.colors": EmptyArgs;
   "theme.color_set": ThemeColorArgs;
+  "usercmds.list": EmptyArgs;
+  "usercmds.save": UserCmdSaveArgs;
   "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
@@ -3281,6 +3299,8 @@ export interface OpResult {
   "theme.set": ThemeList;
   "theme.colors": ThemeColors;
   "theme.color_set": ThemeColors;
+  "usercmds.list": UserCmdList;
+  "usercmds.save": UserCmdList;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;

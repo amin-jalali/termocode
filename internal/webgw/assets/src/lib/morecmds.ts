@@ -14,6 +14,7 @@ import { collapseTests } from "../views/run/TestingView";
 import { logs } from "../views/desk/DeskContainers";
 import { askSide } from "../views/desk/SideChat";
 import { askHere, askLaptop } from "../ui/AskHere";
+import { THEME_TAB, UCMD_TAB } from "./vtabs";
 
 const canAct = () => link.meta.peek()?.role === "controller";
 
@@ -337,6 +338,8 @@ export function moreCommands(): Command[] {
     { id: "aiMcpInsert", label: "cmd.ai_mcp_insert", when: canAct, run: pickMCP },
     { id: "pickTheme", label: "cmd.pick_theme", when: canAct, run: pickTheme },
     { id: "editTheme", label: "cmd.edit_theme", when: canAct, run: editTheme },
+    { id: "configTheme", label: "cmd.config_theme", run: () => showFile(THEME_TAB) },
+    { id: "configCommands", label: "cmd.config_commands", when: canAct, run: () => showFile(UCMD_TAB) },
     { id: "customizeKeys", label: "cmd.keybindings", when: canAct, run: customizeKeys },
     { id: "layoutOpen", label: "cmd.layout_open", when: canAct, run: openLayout },
     { id: "layoutSave", label: "cmd.layout_save", when: canAct, run: askLayoutSave },

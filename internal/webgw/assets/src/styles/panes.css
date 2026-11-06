@@ -459,3 +459,16 @@
 .xm-italic { font-style: italic; }
 .xm-underline { text-decoration: underline; }
 .xm-faint { opacity: 0.7; }
+/* Open Config: Theme and User Commands forms (views/desk/ConfigTabs.tsx) */
+.cfg-pad { padding: 0 14px; }
+.cfg-warn { color: var(--wb-warn); }
+.cfg-color { display: flex; align-items: center; gap: 8px; }
+.cfg-swatch { width: 26px; height: 26px; padding: 0; border: 1px solid var(--wb-input-border); border-radius: 2px; background: none; cursor: pointer; }
+.cfg-swatch:disabled { cursor: default; opacity: 0.75; }
+.cfg-fields { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 6px 12px; margin-top: 8px; max-width: 760px; }
+.cfg-field { display: flex; flex-direction: column; gap: 2px; color: var(--wb-desc); font-size: 11px; }
+.cfg-field .set-input { width: 100%; }
+.cfg-field.is-wide { grid-column: 1 / -1; }
+.cfg-mono { font-family: var(--font-mono); }
+.cfg-row-acts, .cfg-acts { margin-top: 8px; }
+.cfg-acts { padding: 0 14px; }

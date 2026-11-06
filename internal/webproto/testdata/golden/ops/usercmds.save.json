@@ -1,0 +1,1 @@
+{"t":"req","id":41,"op":"usercmds.save","args":{"items":[{"id":"build","title":"Build","cmd":"go build ./..."},{"id":"web","title":"Web","cmd":"npm run dev","cwd":"web"}]}}

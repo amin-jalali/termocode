@@ -396,6 +396,7 @@ export const S = {
   "runs.state.failed": "failed",
   "runs.state.cancelled": "stopped",
   "wfv.tab": "{name} (Run)",
+  "cfg.ucmd_tab": "User Commands",
 
   // Waiting for the laptop
   "wait.title": "Waiting for the laptop…",
