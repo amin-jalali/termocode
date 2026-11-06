@@ -217,6 +217,47 @@ func TestCardViewRiskyIgnoredBeforeArming(t *testing.T) {
 	})
 }
 
+// FIX-47: Esc inside the check window (the risky press is valid, its
+// answer goes out after the check mark) cancels the answer: nothing is
+// sent and the screen says so, never "Later" with the answer sent.
+func TestCardViewEscInCheckWindowCancels(t *testing.T) {
+	forEachCardView(t, func(t *testing.T, vp Viewport, k cardKind) {
+		if k.risky == "" {
+			t.Skip("a trust card has no risky answer")
+		}
+		// Each try gets its own page and hub: an Esc that came after the
+		// window let the answer go, and that page cannot be used again.
+		var p *Page
+		var c *HubConn
+		inWindow := false
+		for try := 0; try < 3 && !inWindow; try++ {
+			p, c = openCardView(t, vp, k.kind)
+			p.WaitJS(riskyBtn + `.classList.contains("is-armed")`)
+			Eval[bool](p, `(() => {
+	window.__esc = null;
+	document.addEventListener("keydown", (e) => {
+		if (e.key !== "Escape" || window.__esc !== null) return;
+		const b = `+riskyBtn+`;
+		window.__esc = !!b && b.classList.contains("is-done") && b.contains(e.target);
+	}, {capture: true});
+	return true;
+})()`)
+			p.TapJS(riskyBtn)
+			p.Key(kb.Escape)
+			inWindow = Eval[bool](p, `window.__esc === true`)
+		}
+		if !inWindow {
+			t.Skip("this machine never got an Esc in within the check window")
+		}
+		p.WaitJS("!" + dialog)
+		c.Quiet(t, 800*time.Millisecond)
+		if got := toasts(p); got != "Cancelled. Nothing was sent." {
+			t.Errorf("after Esc in the check window the toasts say %q, want the cancel line only", got)
+		}
+		p.WaitJS(`document.querySelector(".attention")`)
+	})
+}
+
 // The laptop (or another browser) answers first: the buttons go, a line
 // says who answered, and Close closes.
 func TestCardViewAnsweredElsewhere(t *testing.T) {

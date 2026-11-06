@@ -10,9 +10,11 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -87,6 +89,17 @@ type Options struct {
 	Exclude       []string // glob filters that drop a file or directory
 	Context       int      // lines of context before/after each match
 	MaxResults    int      // total cap on collected results; 0 = unlimited
+	// FS, when set, holds the roots: the search walks it with the
+	// built-in matcher and never runs rg or reads the local disk (a
+	// container workspace, ADR 0018).
+	FS FS
+}
+
+// FS is a file system the built-in search can walk instead of the local
+// disk. Paths are absolute on that file system. workspace.FS fits it.
+type FS interface {
+	ReadDir(ctx context.Context, p string) ([]fs.DirEntry, error)
+	ReadFile(ctx context.Context, p string) ([]byte, error)
 }
 
 // Summary describes a finished search. Total keeps counting after the
@@ -197,7 +210,7 @@ func search(ctx context.Context, dirs []string, query string, opts Options, abs 
 	if strings.TrimSpace(query) == "" || len(dirs) == 0 {
 		return sum, nil
 	}
-	useRg := Available()
+	useRg := opts.FS == nil && Available()
 	var lastErr error
 	for _, dir := range dirs {
 		if dir == "" {
@@ -221,7 +234,11 @@ func search(ctx context.Context, dirs []string, query string, opts Options, abs 
 				// Rewrite each result's relative Path to absolute so the
 				// caller can open the file whichever root it came from.
 				for i := range rs {
-					if rs[i].Path != "" {
+					switch {
+					case rs[i].Path == "":
+					case opts.FS != nil:
+						rs[i].Path = path.Join(dir, filepath.ToSlash(rs[i].Path))
+					default:
 						rs[i].Path = absJoin(dir, rs[i].Path)
 					}
 				}
@@ -233,9 +250,12 @@ func search(ctx context.Context, dirs []string, query string, opts Options, abs 
 			}
 		}
 		var err error
-		if useRg {
+		switch {
+		case opts.FS != nil:
+			err = runFS(ctx, opts.FS, dir, query, opts, emit)
+		case useRg:
 			err = runRg(ctx, dir, query, opts, emit)
-		} else {
+		default:
 			err = runFallback(ctx, dir, query, opts, emit)
 		}
 		if err != nil {
@@ -733,6 +753,65 @@ func runFallback(ctx context.Context, dir, query string, opts Options, onFile fu
 		}
 	}
 	return <-walkDone
+}
+
+// runFS is the built-in search over opts.FS: it walks dir there (in name
+// order, the same folders skipped as runFallback) and reads each file
+// through the FS. Paths stay relative to dir, with forward slashes.
+func runFS(ctx context.Context, fsys FS, dir, query string, opts Options, onFile func([]Result)) error {
+	lm, err := newLineMatcher(query, opts)
+	if err != nil {
+		return err
+	}
+	globs := globFilter{include: opts.Include, exclude: opts.Exclude}
+	var walk func(rel string) error
+	walk = func(rel string) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		es, err := fsys.ReadDir(ctx, path.Join(dir, rel))
+		if err != nil {
+			if rel == "" {
+				return err
+			}
+			return nil // unreadable folder: skip it, keep walking
+		}
+		slices.SortFunc(es, func(a, b fs.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
+		for _, e := range es {
+			name := e.Name()
+			r := path.Join(rel, name)
+			if e.IsDir() {
+				if skipSearchDir(name) || globs.excluded(r, name) {
+					continue
+				}
+				if err := walk(r); err != nil {
+					return err
+				}
+				continue
+			}
+			if !e.Type().IsRegular() || !globs.allowFile(r, name) {
+				continue
+			}
+			if info, err := e.Info(); err == nil && info.Size() > maxFallbackFileSize {
+				continue
+			}
+			data, err := fsys.ReadFile(ctx, path.Join(dir, r))
+			if err != nil {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				continue
+			}
+			if len(data) > maxFallbackFileSize || isBinary(data) || !lm.mayMatch(data) {
+				continue
+			}
+			if rs := searchLines(string(data), r, lm, opts.Context); len(rs) > 0 {
+				onFile(rs)
+			}
+		}
+		return nil
+	}
+	return walk("")
 }
 
 // fileJob is one file for the built-in search's workers; out gets its

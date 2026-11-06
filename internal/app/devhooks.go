@@ -62,6 +62,8 @@ import (
 //	contdemo[:down|noengine|menu|filter|keys|tags|ai-card|logs|inspect|search|db-menu|db-container-menu] show the Containers view with a canned host snapshot
 //	kubedemo[:restart|down|keys] show the Kubernetes view with a canned
 //	                       cluster (no kubectl; the shots and goldens)
+//	worktreesdemo[:running|waiting|asleep|external|keys|filter|jump] show the
+//	                       WORKTREES view with a canned repository (no git)
 //	webdemo:card|on|connected the web panel's start card, or its status
 //	                       chip with no browser / one browser (made-up
 //	                       state: nothing listens, nothing starts)
@@ -132,8 +134,16 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.containersDemo(arg)
 	case "kubedemo": // the Kubernetes view with a canned cluster (kube_demo.go)
 		m.kubeDemo(arg)
+	case "worktreesdemo": // the WORKTREES view with a canned repository (worktrees_demo.go)
+		m.worktreesDemo(arg)
 	case "agentpickerdemo": // Agent: Start… with made-up programs (agent_picker_demo.go)
 		m.agentPickerDemo()
+	case "racedemo": // the race card or compare page, a made-up race (agent_race_demo.go)
+		m.raceDemo(arg)
+	case "agentchatdemo": // Agent: Chat View over a made-up session (agent_chat_demo.go)
+		m.agentChatDemo(arg)
+	case "agentsessionsdemo": // Agent: Sessions… with made-up sessions (agent_chat_demo.go)
+		m.agentSessionsDemo()
 	case "webdemo": // the web start card or chip, made-up state (web_tui.go)
 		m.webDemo(arg)
 	case "secretsdemo":

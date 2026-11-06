@@ -201,6 +201,7 @@ func (m *Model) onTermOSC(buf int, seq string) tea.Cmd {
 		if t.Agent != "" && t.agentFromCmd {
 			m.agentWatch(buf, false)
 			t.Agent, t.AgentState, t.agentFromCmd, t.AgentHook = "", agents.Unknown, false, false
+			return m.raceOnAgentExit(buf) // a race lane's agent quit (agent_race.go)
 		}
 	case shellint.Cwd:
 		if !termHostLocal(e.Host) {

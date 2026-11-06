@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -157,7 +156,8 @@ func loadFilesIn(roots []string) []picker.Item {
 // instead we read the saved-roots list from the session file (kept in sync
 // by the explorer's add/remove handlers). cwd is always first.
 func workspaceRoots() []string {
-	cwd, err := procRootDir()
+	ws := procWorkspace()
+	cwd, err := rootOf(ws)
 	if err != nil {
 		return nil
 	}
@@ -166,7 +166,9 @@ func workspaceRoots() []string {
 		if p == "" || p == cwd {
 			continue
 		}
-		if _, err := os.Stat(p); err != nil {
+		// Checked where the workspace lives: a container's extra folders
+		// are container paths (FIX-3).
+		if _, err := statOn(ws, p); err != nil {
 			continue
 		}
 		out = append(out, p)
@@ -219,6 +221,9 @@ func paletteItems() []picker.Item {
 		{ID: "pick-theme", Title: "Preferences: Color Theme…"},
 		{ID: "git-stage", Title: "Git: Stage Current File"},
 		{ID: "git-stage-all", Title: "Git: Stage All Changes"},
+		{ID: "git-unstage-all", Title: "Git: Unstage All Changes"},         // git_bulk.go
+		{ID: "git-discard-all", Title: "Git: Discard All Changes…"},        // git_bulk.go
+		{ID: "git-clean-untracked", Title: "Git: Delete Untracked Files…"}, // git_bulk.go
 		{ID: "git-stage-hunk", Title: "Git: Stage Hunk (at cursor)"},
 		{ID: "git-unstage-hunk", Title: "Git: Unstage Hunk (at cursor)"},
 		{ID: "git-discard-hunk", Title: "Git: Discard Hunk (at cursor)"},
@@ -226,6 +231,8 @@ func paletteItems() []picker.Item {
 		{ID: "git-unstage-lines", Title: "Git: Unstage Line (or Selected Lines)"},
 		{ID: "git-discard-lines", Title: "Git: Discard Line (or Selected Lines)"},
 		{ID: "git-commit", Title: "Git: Commit..."},
+		{ID: "git-commit-push", Title: "Git: Commit and Push"}, // git_bulk.go
+		{ID: "git-commit-sync", Title: "Git: Commit and Sync"}, // git_bulk.go
 		{ID: "git-diff", Title: "Git: Show Diff for Current File"},
 		{ID: "git-discard", Title: "Git: Discard Changes in Current File"},
 		{ID: "git-refresh", Title: "Git: Refresh Status"},
@@ -396,6 +403,7 @@ func paletteItems() []picker.Item {
 	}
 	items = append(items, servicesPaletteItems()...)  // services_actions.go
 	items = append(items, kubePaletteItems()...)      // kube_actions.go
+	items = append(items, worktreePaletteItems()...)  // worktrees_keys.go
 	items = append(items, databasesPaletteItems()...) // DB-3
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
@@ -410,6 +418,7 @@ func paletteItems() []picker.Item {
 	items = append(items, updatePaletteItems()...)    // G-UPD (update_palette.go)
 	items = append(items, prPaletteItems()...)        // G-PR (pr_list.go)
 	items = append(items, termPanePaletteItems()...)  // terminal splits (terminal_split.go)
+	items = append(items, gitxPaletteItems()...)      // GITX features (gitx_hub.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -545,6 +554,11 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.search = search.New()
 		m.search.SetSize(m.w, m.h)
 		m.search.SetRoots(m.explorer.Roots())
+		if fsys, ok := m.remoteFS(); ok {
+			// A container workspace (FIX-3): its one root, in the container.
+			m.search.SetRoots([]string{m.workspace().Root})
+			m.search.SetFS(fsys)
+		}
 		m.search.SetMaxResults(searchMaxResults(loadSettings()))
 		m.searchOpen = true
 	case "replace-in-file":
@@ -598,6 +612,16 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.openMergeBranchPicker()
 	case "git-merge-status":
 		return m.openGitOpControl()
+	case "git-unstage-all":
+		return m.gitUnstageAll()
+	case "git-discard-all":
+		return m.openGitDiscardAllCard()
+	case "git-clean-untracked":
+		return m.openGitCleanUntrackedCard()
+	case "git-commit-push":
+		return m.gitInlineCommitThen(false, false, gitAfterPush)
+	case "git-commit-sync":
+		return m.gitInlineCommitThen(false, false, gitAfterSync)
 	case "git-push":
 		return m.gitPush()
 	case "git-pull":
@@ -809,6 +833,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	case "snippets-manage":
 		return m.openSnippetManager()
 	default:
+		if cmd, ok := m.dispatchGitxPalette(id); ok { // gitx_hub.go
+			return cmd
+		}
 		if cmd, ok := m.dispatchImportPalette(id); ok { // import_editor.go
 			return cmd
 		}
@@ -873,6 +900,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchKubePalette(id); ok { // kube_actions.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchWorktreePalette(id); ok { // worktrees_keys.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchDatabasesPalette(id); ok { // db_actions.go

@@ -20,6 +20,9 @@ import (
 type Item struct {
 	Name  string `json:"name"`
 	State string `json:"state"` // working | waiting | done
+	// Worktree is the folder the agent works in (a terminal tab's
+	// folder), so the WORKTREES view can put it on its worktree (WTX-2).
+	Worktree string `json:"worktree,omitempty"`
 }
 
 // Rollup is one window's agents.

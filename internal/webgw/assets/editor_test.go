@@ -31,8 +31,9 @@ func TestPerfGuardEditorBudget(t *testing.T) {
 	}
 }
 
-// The page's only dynamic imports are the editor file and the desktop
-// workbench, each by a fixed path, both in lib/lazy.ts.
+// The page's only dynamic imports are the editor file, the desktop
+// workbench and the Persian strings, each by a fixed path, all in
+// lib/lazy.ts.
 func TestTheOnlyDynamicImportsAreTheEditorAndTheWorkbench(t *testing.T) {
 	re := regexp.MustCompile(`\bimport\s*\(([^)]*)\)`)
 	var found []string
@@ -54,8 +55,8 @@ func TestTheOnlyDynamicImportsAreTheEditorAndTheWorkbench(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Strings(found)
-	if len(found) != 2 || found[0] != `src/lib/lazy.ts "/assets/editor.js"` || found[1] != `src/lib/lazy.ts "/assets/workbench.js"` {
-		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js and /assets/workbench.js", found)
+	if len(found) != 3 || found[0] != `src/lib/lazy.ts "/assets/editor.js"` || found[1] != `src/lib/lazy.ts "/assets/strings-fa.js"` || found[2] != `src/lib/lazy.ts "/assets/workbench.js"` {
+		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js, /assets/strings-fa.js and /assets/workbench.js", found)
 	}
 }
 

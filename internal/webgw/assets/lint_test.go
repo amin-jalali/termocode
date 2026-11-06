@@ -53,7 +53,9 @@ var sourceRules = []rule{
 	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`)},
 	// Messages only between the page and the desktop editor's frame, both
 	// sides checking the other's origin and window (monaco/protocol.ts).
-	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`), allow: map[string]bool{"lib/deskeditor.ts": true, "monaco/frame.ts": true}},
+	// lib/popout.ts opens this page's own terminal route in a new window
+	// (WEBP-13): a fixed same-origin path, no message.
+	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`), allow: map[string]bool{"lib/deskeditor.ts": true, "monaco/frame.ts": true, "lib/popout.ts": true}},
 	// Names from the hub or the URL (folders, topics, query keys) are never
 	// keys of a plain object: "__proto__" would swap its prototype and
 	// "constructor" would read Object's. Tables built from data are a Map
@@ -183,9 +185,10 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			// load anything. The other rules hold for it too.
 			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
 		}
-		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's two dynamic imports (lib/lazy.ts), fixed paths
+		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's three dynamic imports (lib/lazy.ts), fixed paths
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
+			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
 		}
 		for _, r := range []*regexp.Regexp{
 			regexp.MustCompile(`\beval\s*\(`), regexp.MustCompile(`\bnew Function\b|\bFunction\s*\(\s*["'\x60]`),
