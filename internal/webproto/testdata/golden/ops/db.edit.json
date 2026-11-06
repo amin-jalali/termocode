@@ -1,0 +1,1 @@
+{"t":"req","id":71,"op":"db.edit","args":{"conn":"local","table":"users","edits":[{"kind":"update","key":[{"col":"id","v":"7"}],"set":[{"col":"email","v":"a@example.com"}],"old":[{"col":"email","n":true}]}]}}
