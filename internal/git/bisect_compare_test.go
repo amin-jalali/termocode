@@ -140,3 +140,26 @@ func TestCompareHelpers(t *testing.T) {
 		t.Error("an option as ref")
 	}
 }
+
+// CI: newer git words its result differently, so the end of a bisect is
+// read from refs/bisect, not from git's message: with no message at all
+// the state still names the first bad commit.
+func TestBisectDoneWithoutGitsMessage(t *testing.T) {
+	r, hs := bisectRepo(t)
+	r.git(t, "bisect", "start", hs[7], hs[0], "--")
+	for i := 0; i < 10; i++ {
+		if st := bisectRead(r.dir, ""); st.Done {
+			if st.FirstBad != hs[4] || st.FirstBadSubject != "c5" {
+				t.Fatalf("done %+v, want %s", st, hs[4])
+			}
+			_ = BisectReset(r.dir)
+			return
+		}
+		v := "good"
+		if bugNow(t, r) {
+			v = "bad"
+		}
+		r.git(t, "bisect", v)
+	}
+	t.Fatal("never done")
+}
