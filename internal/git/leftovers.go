@@ -74,3 +74,17 @@ func Contributors(dir string) ([]Contributor, error) {
 	}
 	return list, nil
 }
+
+// IsShallow reports a shallow repository (a clone with --depth).
+func IsShallow(dir string) bool {
+	out, err := runOut(dir, "git", "rev-parse", "--is-shallow-repository")
+	return err == nil && strings.TrimSpace(out) == "true"
+}
+
+// Unshallow fetches the rest of the history of a shallow repository.
+func Unshallow(dir string) error {
+	if out, err := remoteCmd(dir, "fetch", "--unshallow").CombinedOutput(); err != nil {
+		return cmdError(err, out)
+	}
+	return nil
+}

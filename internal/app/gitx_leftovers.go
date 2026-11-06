@@ -5,14 +5,17 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // GITX-39: the small git leftovers (docs-local/plans/git-gap.md). This
 // file has the commit extras: an empty commit (B10), a commit made as
-// another author (B19) and a commit of the marked files only (B8).
+// another author (B19), a commit of the marked files only (B8), and a
+// shallow clone and unshallow (M11).
 
 func init() {
 	registerGitx(gitxFeature{
@@ -20,11 +23,15 @@ func init() {
 			{ID: "git-commit-empty", Title: "Git: Commit Empty (No Changes)…", Hint: "a commit without changes, e.g. to run CI again"},
 			{ID: "git-commit-author", Title: "Git: Commit Staged as Another Author…", Hint: "git commit --author; you stay the committer"},
 			{ID: "git-commit-marked", Title: "Git: Commit Marked Files Only…", Hint: "the files marked in Source Control (Space); c there"},
+			{ID: "git-clone-shallow", Title: "Git: Clone Repository (Shallow)…", Hint: "only the last commit: fast for big repositories"},
+			{ID: "git-unshallow", Title: "Git: Fetch Full History (Unshallow)", Hint: "a shallow clone gets all its commits"},
 		},
 		policies: map[string]aiActionPolicy{
 			"git-commit-empty":  aiNever("makes a commit in the user's name; only the user does that"),
 			"git-commit-author": aiNever("makes a commit under another person's name; only the user does that"),
 			"git-commit-marked": aiNever("makes a commit in the user's name; only the user does that"),
+			"git-clone-shallow": aiNever("clones into a folder outside the workspace and opens it"),
+			"git-unshallow":     aiConfirm(ai.ClassGit),
 		},
 		dispatch: func(m *Model, id string) (tea.Cmd, bool) {
 			switch id {
@@ -34,6 +41,16 @@ func init() {
 				return m.gitxCommitAsAuthor(), true
 			case "git-commit-marked":
 				return m.gitxCommitMarked(), true
+			case "git-clone-shallow":
+				c := m.openCloneURLPrompt()
+				if m.promptOpen && m.promptKind == promptKindCloneURL {
+					m.clone.depth = 1
+					m.prompt = prompt.New("Clone Repository (Shallow, Last Commit Only)", "Repository URL (https:// or git@…):", m.clone.url)
+					m.prompt.SetSize(m.w, m.h)
+				}
+				return c, true
+			case "git-unshallow":
+				return m.gitxUnshallow(), true
 			}
 			return nil, false
 		},
@@ -151,4 +168,21 @@ func (m *Model) gitxCommitMarked() tea.Cmd {
 		return c
 	})
 	return nil
+}
+
+// gitxUnshallow fetches the rest of the history of a shallow clone.
+func (m *Model) gitxUnshallow() tea.Cmd {
+	if !m.gitEnsureLoaded() {
+		return nil
+	}
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	if !git.IsShallow(cwd) {
+		return m.gitxInfo("This repository has its full history already")
+	}
+	return m.gitRemoteOp("Fetching the full history…", func(cwd string) gitRemoteDoneMsg {
+		return gitRemoteDoneMsg{failTitle: "Unshallow failed", okText: "Fetched the full history", err: git.Unshallow(cwd), reload: true}
+	})
 }

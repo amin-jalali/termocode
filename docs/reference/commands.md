@@ -366,6 +366,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Blame Options… | `git-blame-options` |   |   |
 | Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Cherry-pick from Branch… | `git-cherry-pick-branch` |   |   |
+| Git: Clone Repository (Shallow)… | `git-clone-shallow` |   | `only the last commit: fast for big repositories` |
 | Git: Clone Repository... | `git-clone` |   |   |
 | Git: Commit Empty (No Changes)… | `git-commit-empty` |   | `a commit without changes, e.g. to run CI again` |
 | Git: Commit Marked Files Only… | `git-commit-marked` |   | `the files marked in Source Control (Space); c there` |
@@ -395,6 +396,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Explain Line's Commit with AI | `git-ai-explain-line` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
 | Git: Fetch All Remotes (Prune) | `git-fetch-all` |   |   |
+| Git: Fetch Full History (Unshallow) | `git-unshallow` |   | `a shallow clone gets all its commits` |
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |

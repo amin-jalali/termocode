@@ -42,6 +42,7 @@ type CloneOptions struct {
 	Dest     string
 	Username string // used for git's "Username for …" prompt; default "x-access-token"
 	Token    string // when set, answered for git's "Password for …" prompt via GIT_ASKPASS
+	Depth    int    // > 0: a shallow clone of the last Depth commits (--depth)
 	// OnProgress, when non-nil, receives parsed progress updates. It is
 	// called from the goroutine running Clone.
 	OnProgress func(CloneProgress)
@@ -317,7 +318,11 @@ func Clone(opts CloneOptions) error {
 		}
 	}
 
-	cmd := spawn.Command("git", "clone", "--progress", "--", url, opts.Dest)
+	args := []string{"clone", "--progress"}
+	if opts.Depth > 0 {
+		args = append(args, "--depth", strconv.Itoa(opts.Depth))
+	}
+	cmd := spawn.Command("git", append(args, "--", url, opts.Dest)...)
 	cmd.Env = cloneEnv(os.Environ(), askpass, opts.Username, opts.Token)
 	cmd.Stdin = nil
 	detachTTY(cmd)

@@ -2142,6 +2142,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-clean-untracked` | Git: Delete Untracked Files… | confirm (always asks) |   |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
+| `git-clone-shallow` | Git: Clone Repository (Shallow)… | never | clones into a folder outside the workspace and opens it |
 | `git-cmd-log` | Git: Show Git Command Log | auto |   |
 | `git-co-author` | Git: Add Co-Author… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
@@ -2255,6 +2256,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-uncommit` | Git: Uncommit Last Commit (Keep Changes) | confirm (git) |   |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
+| `git-unshallow` | Git: Fetch Full History (Unshallow) | confirm (git) |   |
 | `git-unstage-all` | Git: Unstage All Changes | confirm (git) |   |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |
 | `git-unstage-lines` | Git: Unstage Line (or Selected Lines) | confirm (git) |   |
