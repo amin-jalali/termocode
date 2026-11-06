@@ -188,6 +188,7 @@ func (m *Model) applyGitSnapshot(msg GitMsg) {
 	m.gitRebase = msg.Rebase
 	m.gitStopped = msg.Stopped
 	m.gitStashes = msg.Stashes
+	defer m.gitSelPrune() // after the clamp: marks of rows that went
 	m.gitFiles = msg.Files
 	m.setGitCommits(msg.Graph, msg.More)
 	// Clamp against the visible-row count: the accordion interleaves
@@ -347,8 +348,23 @@ func (m Model) gitSidebarHitAt(x, y int) (gitSidebarHit, bool) {
 //   - A changed file shows its diff (VSCode-style single click).
 //   - A graph commit shows that commit's diff.
 func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea.Cmd) {
+	return m.handleGitSidebarMouseMod(x, y, t, false, false)
+}
+
+// handleGitSidebarMouseMod is handleGitSidebarMouse with the modifier
+// keys: Ctrl+click and Shift+click on a file row mark rows (GITX-20,
+// gitx_multi_select.go); a plain click drops the marks.
+func (m Model) handleGitSidebarMouseMod(x, y int, t tea.MouseEventType, ctrl, shift bool) (Model, tea.Cmd) {
 	if t != tea.MouseLeft {
 		return m, nil
+	}
+	if ctrl || shift {
+		if h, ok := m.gitSidebarHitAt(x, y); ok && h.row >= 0 && m.gitEnsureLoaded() && m.gitSelClick(h.row, ctrl, shift) {
+			m.focus = FocusExplorer
+			return m, nil
+		}
+	} else if h, ok := m.gitSidebarHitAt(x, y); ok && h.row >= 0 {
+		m.gitSelClear()
 	}
 	m.focus = FocusExplorer
 	if !m.gitEnsureLoaded() {

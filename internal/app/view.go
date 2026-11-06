@@ -1467,7 +1467,11 @@ func (m Model) renderGitSidebar(w, h int) string {
 	var header []string
 	header = append(header, renderGitTitleRow(w, focused))
 	header = append(header, renderGitHairline(w, focused))
-	header = append(header, renderGitSubheader(m.gitBranch, m.gitViewTree, w))
+	if n := m.gitSelCount(); n > 0 { // marked rows (gitx_multi_select.go)
+		header = append(header, renderGitSelBar(n, m.gitViewTree, w))
+	} else {
+		header = append(header, renderGitSubheader(m.gitBranch, m.gitViewTree, w))
+	}
 	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 	header = append(header, m.renderGitCommitBox(w))
 	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
@@ -1481,7 +1485,12 @@ func (m Model) renderGitSidebar(w, h int) string {
 
 	var body []string
 	for i := top; i < len(rows) && len(body) < bodyH; i++ {
-		body = append(body, m.renderGitPanelRow(rows[i], i == m.gitCursor, focused, w))
+		cur := i == m.gitCursor
+		if !cur && m.gitRowSelected(rows[i]) { // a marked row: the selection wash
+			body = append(body, m.renderGitPanelRow(rows[i], true, false, w))
+			continue
+		}
+		body = append(body, m.renderGitPanelRow(rows[i], cur, focused, w))
 	}
 	for len(body) < bodyH {
 		body = append(body, sidebarFill.Render(strings.Repeat(" ", w)))

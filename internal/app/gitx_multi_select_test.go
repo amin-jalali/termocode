@@ -75,7 +75,7 @@ func TestGitMultiSelectStage(t *testing.T) {
 	}
 	covKey(m, covRunes("s"))
 	covRefresh(m)
-	if got := gitSelStatus(t, dir); got != " M a.txt\n?? b.txt\n?? c.txt" {
+	if got := gitSelStatus(t, dir); got != "M a.txt\n?? b.txt\n?? c.txt" {
 		t.Fatalf("after unstage: %q", got)
 	}
 
@@ -105,7 +105,7 @@ func TestGitMultiSelectDiscard(t *testing.T) {
 	}
 	m.confirmOpen = false
 	m.handleConfirmSelect("cancel")
-	if got := gitSelStatus(t, dir); got != " M a.txt\n?? b.txt\n?? c.txt" {
+	if got := gitSelStatus(t, dir); got != "M a.txt\n?? b.txt\n?? c.txt" {
 		t.Fatalf("Cancel changed files: %q", got)
 	}
 

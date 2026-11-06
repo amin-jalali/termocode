@@ -250,6 +250,9 @@ func (m *Model) gitHunkOp(kind gitHunkKind) tea.Cmd {
 }
 
 func (m *Model) gitStageToggle() tea.Cmd {
+	if m.gitSelCount() > 0 { // marked rows (gitx_multi_select.go)
+		return m.gitStageSelected()
+	}
 	fi, ok := m.gitCurrentFileIndex()
 	if !ok {
 		return nil
@@ -591,6 +594,10 @@ func (m *Model) openCommitPrompt() {
 // openGitDiscardConfirm wires up the standard confirm dialog for the destructive
 // "Discard Changes" action.
 func (m *Model) openGitDiscardConfirm() {
+	if m.gitSelCount() > 0 { // marked rows (gitx_multi_select.go)
+		m.openGitDiscardSelectedCard()
+		return
+	}
 	fi, ok := m.gitCurrentFileIndex()
 	if !ok {
 		return

@@ -471,7 +471,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 				m.openGitMenu(msg.X, msg.Y)
 				return m, nil
 			}
-			return m.handleGitSidebarMouse(x, msg.Y, msg.Type)
+			return m.handleGitSidebarMouseMod(x, msg.Y, msg.Type, msg.Ctrl, msg.Shift)
 		case activity.ViewSearch:
 			// Header + placeholder; nothing interactive yet.
 			return m, nil
