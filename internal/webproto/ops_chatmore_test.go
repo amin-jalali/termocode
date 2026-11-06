@@ -69,3 +69,15 @@ func TestAIInfoOp(t *testing.T) {
 		}
 	}
 }
+
+// Spec (web parity: ai-attach): ai.action has the kind attach (add the
+// selection, or the whole file, to the laptop chat's next message); like
+// explain it takes no instruction.
+func TestAIActionAttachKind(t *testing.T) {
+	if _, err := DecodeArgs(OpAIAction, []byte(`{"buf":3,"tick":5,"kind":"attach","start":2,"end":4,"line":2}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeArgs(OpAIAction, []byte(`{"buf":3,"tick":5,"kind":"attach","start":0,"end":0,"line":0,"instruction":"x"}`)); err == nil {
+		t.Fatal("attach took an instruction")
+	}
+}
