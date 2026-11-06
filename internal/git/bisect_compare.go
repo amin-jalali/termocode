@@ -44,13 +44,41 @@ func bisectRead(dir, out string) BisectState {
 	if m := bisectStepsRe.FindStringSubmatch(out); m != nil {
 		st.StepsLeft, _ = strconv.Atoi(m[1])
 	}
+	first := ""
 	if m := bisectFirstRe.FindStringSubmatch(out); m != nil {
-		st.Done, st.FirstBad = true, m[1]
-		if s, err := runOut(dir, "git", "log", "-1", "--format=%s", m[1], "--"); err == nil {
+		first = m[1]
+	} else if st.Active {
+		first = bisectFirstBad(dir) // newer git words its result differently
+	}
+	if first != "" {
+		st.Done, st.FirstBad = true, first
+		if s, err := runOut(dir, "git", "log", "-1", "--format=%s", first, "--"); err == nil {
 			st.FirstBadSubject = strings.TrimSpace(s)
 		}
 	}
 	return st
+}
+
+// bisectFirstBad reads the end of a bisect from refs/bisect, as git
+// decides it: the bad commit is the only commit left between it and the
+// good ones. Skipped commits left too means git cannot tell: not done.
+func bisectFirstBad(dir string) string {
+	bad, err := runOut(dir, "git", "rev-parse", "--verify", "-q", "refs/bisect/bad")
+	if err != nil {
+		return ""
+	}
+	bad = strings.TrimSpace(bad)
+	goods, err := runOut(dir, "git", "for-each-ref", "--format=%(objectname)", "refs/bisect/good-*")
+	if err != nil || strings.TrimSpace(goods) == "" {
+		return ""
+	}
+	args := []string{"rev-list", bad, "--not"}
+	args = append(args, strings.Fields(goods)...)
+	left, err := runOut(dir, "git", append(args, "--")...)
+	if err != nil || strings.TrimSpace(left) != bad {
+		return ""
+	}
+	return bad
 }
 
 // BisectStatus says whether a bisect runs here and which commit is
