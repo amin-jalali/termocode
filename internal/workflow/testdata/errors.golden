@@ -140,6 +140,8 @@ vars name:
   bad.jsonc: line 1: vars: the name "A B": use a-z, 0-9, _ and -, starting with a letter, at most 40 characters
 notify bad:
   bad.jsonc: line 1: notify[0]: use "os", "web" or "message:<step id>"
+notify channel template:
+  bad.jsonc: line 1: notify[0]: the summary goes to "m" after the run, so its "channel" cannot hold {{…}}; write the channel id
 notify step:
   bad.jsonc: line 1: notify[0]: "t" is not a message write step
 too many steps:

@@ -279,6 +279,8 @@ func (c *checker) notify(o *obj, f *File) []string {
 			st := f.StepByID(id)
 			if st == nil || st.Write == nil || st.Write.To != "message" {
 				c.errAt(o.elemOff("notify", i), where, "%s is not a message write step", quote(id))
+			} else if strings.Contains(st.Write.Channel, "{{") {
+				c.errAt(o.elemOff("notify", i), where, `the summary goes to %s after the run, so its "channel" cannot hold {{…}}; write the channel id`, quote(id))
 			}
 		default:
 			c.errAt(o.elemOff("notify", i), where, `use "os", "web" or "message:<step id>"`)
