@@ -360,8 +360,11 @@ missing	git-merge-take-base	Git|S
 missing	git-redo	Git|S
 missing	git-reflog	Git|S
 missing	git-stage-lines	Git|S
+missing	git-stash-actions	Git|S
 missing	git-stash-list	Git|S
+missing	git-stash-options	Git|S
 missing	git-tags	Git|S
+missing	git-uncommit	Git|S
 missing	git-undo	Git|S
 missing	git-unstage-lines	Git|S
 missing	git-view-toggle	Git|S
