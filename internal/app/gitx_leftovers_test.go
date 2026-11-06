@@ -3,6 +3,9 @@ package app
 import (
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // GITX-39 (B10): Commit Empty… asks the message (the commit box text
@@ -70,5 +73,44 @@ func TestGitxCommitAsAuthor(t *testing.T) {
 	}
 	if !strings.Contains(covGit(t, dir, "show", "HEAD:a.txt"), "changed") {
 		t.Error("the staged change is not in the commit")
+	}
+}
+
+// GITX-39 (B8): with rows marked in Source Control, c (or Git: Commit
+// Marked Files Only…) commits only the marked files, new ones too; the
+// rest stays as it was, staged or not.
+func TestGitxCommitMarked(t *testing.T) {
+	m, dir := gitSelRepo(t)
+	covGit(t, dir, "add", "c.txt")
+	covRefresh(m)
+	m.dispatchPaletteAction("git-commit-marked")
+	if m.promptOpen || !toastHas(m, "Mark the files") {
+		t.Fatal("no note without marks")
+	}
+	gitSelCursor(t, m, gitSecChanges, "a.txt")
+	covKey(m, tea.KeyMsg{Type: tea.KeySpace})
+	gitSelCursor(t, m, gitSecChanges, "b.txt")
+	covKey(m, tea.KeyMsg{Type: tea.KeySpace})
+	if v := ansi.Strip(m.renderGitSidebar(60, 40)); !strings.Contains(v, "c commit") {
+		t.Errorf("the marks bar does not offer c commit:\n%s", v)
+	}
+	m.gitCommitMsg = "feat: a and b"
+	covKey(m, covRunes("c"))
+	if !m.promptOpen || m.prompt.Value() != "feat: a and b" {
+		t.Fatalf("prompt %v %q", m.promptOpen, m.prompt.Value())
+	}
+	m.promptOpen = false
+	m.handlePromptSubmit("feat: a and b")
+	if got := covGit(t, dir, "show", "--name-only", "--format=%s", "HEAD"); got != "feat: a and b\n\na.txt\nb.txt" {
+		t.Fatalf("commit:\n%s", got)
+	}
+	if got := covGit(t, dir, "status", "--porcelain"); got != "A  c.txt" {
+		t.Errorf("status %q", got)
+	}
+	if m.gitSelCount() != 0 || m.gitCommitMsg != "" {
+		t.Error("marks or the commit box text stay")
+	}
+	if p := aiActionPolicies["git-commit-marked"]; p.Gate != aiGateNever {
+		t.Error("the AI may commit")
 	}
 }

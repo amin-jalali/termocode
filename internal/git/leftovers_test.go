@@ -1,6 +1,8 @@
 package git
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -39,5 +41,34 @@ func TestCommitEmptyAndAuthor(t *testing.T) {
 	}
 	if got := strings.TrimSpace(r.git(t, "log", "-1", "--format=%an <%ae>|%cn")); got != "Ann Lee <ann@example.com>|Test" {
 		t.Fatalf("author|committer %q", got)
+	}
+}
+
+// GITX-39 (B8): CommitPaths commits only the named files (new ones too),
+// as they are on disk; what else is staged stays staged.
+func TestCommitPaths(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "a.txt", "one\n")
+	r.write(t, "gone.txt", "x\n")
+	r.git(t, "add", "a.txt", "gone.txt")
+	r.git(t, "commit", "-q", "-m", "first")
+	r.write(t, "a.txt", "two\n")
+	r.write(t, "b.txt", "new\n")
+	r.write(t, "c.txt", "staged\n")
+	r.git(t, "add", "c.txt")
+	if err := os.Remove(filepath.Join(r.dir, "gone.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := CommitPaths(r.dir, "a, b and gone", []string{"a.txt", "b.txt", "gone.txt"}, CommitOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(r.git(t, "show", "--name-status", "--format=%s", "HEAD")); got != "a, b and gone\n\nM\ta.txt\nA\tb.txt\nD\tgone.txt" {
+		t.Fatalf("commit:\n%s", got)
+	}
+	if got := strings.TrimSpace(r.git(t, "status", "--porcelain")); got != "A  c.txt" {
+		t.Fatalf("status %q", got)
+	}
+	if err := CommitPaths(r.dir, "none", nil, CommitOptions{}); err == nil {
+		t.Error("a commit of no files passed")
 	}
 }
