@@ -217,3 +217,27 @@ func write(t *testing.T, dir, rel, body string) {
 		t.Fatal(err)
 	}
 }
+
+// WTX-9: the branch of a worktree made from an issue: the number, then
+// the title as a slug, cut on a word border.
+func TestBranchFromIssue(t *testing.T) {
+	for _, c := range []struct {
+		n     int
+		title string
+		want  string
+	}{
+		{412, "Pinned row in WORKTREES", "412-pinned-row-in-worktrees"},
+		{7, "Fix: crash when `git` is missing!", "7-fix-crash-when-git-is-missing"},
+		{9, "../../etc/passwd", "9-etc-passwd"},
+		{3, "", "issue-3"},
+		{3, "!!!", "issue-3"},
+		{12, strings.Repeat("word ", 30), "12-" + strings.TrimSuffix(strings.Repeat("word-", 11), "-")},
+	} {
+		if got := BranchFromIssue(c.n, c.title); got != c.want {
+			t.Errorf("BranchFromIssue(%d, %q) = %q, want %q", c.n, c.title, got, c.want)
+		}
+		if got := BranchFromIssue(c.n, c.title); len(got) > MaxBranch {
+			t.Errorf("%q is over %d", got, MaxBranch)
+		}
+	}
+}

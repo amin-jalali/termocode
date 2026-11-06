@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -54,6 +55,27 @@ func BranchFromName(name string) string {
 	out := strings.Join(parts, "/")
 	if len(out) > MaxBranch {
 		out = strings.TrimRight(cutRunes(out, MaxBranch), "-/")
+	}
+	return out
+}
+
+// BranchFromIssue is the branch of a worktree made from issue n: the
+// number, then the title as a slug (no /), cut on a word border;
+// "issue-<n>" when the title gives nothing.
+func BranchFromIssue(n int, title string) string {
+	num := strconv.Itoa(n)
+	slug := BranchFromName(strings.ReplaceAll(title, "/", " "))
+	if slug == "" {
+		return "issue-" + num
+	}
+	out := num + "-" + slug
+	for len(out) > MaxBranch {
+		i := strings.LastIndexByte(out, '-')
+		if i <= len(num) {
+			out = strings.TrimRight(cutRunes(out, MaxBranch), "-")
+			break
+		}
+		out = out[:i]
 	}
 	return out
 }

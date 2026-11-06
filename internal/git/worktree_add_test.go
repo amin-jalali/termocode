@@ -96,3 +96,51 @@ func TestWorktreeRefs(t *testing.T) {
 		t.Errorf("tags before branches: %v", refs)
 	}
 }
+
+// RemoteHosts (WTX-9) lists the hosts of the repository's remotes, once
+// each, in name order; a repository without remotes has none.
+func TestRemoteHosts(t *testing.T) {
+	r := committedRepo(t)
+	if h := RemoteHosts(r.dir); len(h) != 0 {
+		t.Errorf("no remotes: %v", h)
+	}
+	r.git(t, "remote", "add", "origin", "git@github.com:o/r.git")
+	r.git(t, "remote", "add", "work", "https://user@git.example.com/team/app.git")
+	r.git(t, "remote", "add", "zz", "https://github.com/o/fork.git")
+	if h := RemoteHosts(r.dir); !slices.Equal(h, []string{"github.com", "git.example.com"}) {
+		t.Errorf("hosts %v", h)
+	}
+}
+
+// ForgetWorktree (W2 leftover) drops git's record of one worktree whose
+// folder is gone, and never touches one whose folder is still there.
+func TestForgetWorktree(t *testing.T) {
+	r := committedRepo(t)
+	base := t.TempDir()
+	gone, kept := filepath.Join(base, "gone"), filepath.Join(base, "kept")
+	r.git(t, "worktree", "add", "-q", "-b", "gone", gone)
+	r.git(t, "worktree", "add", "-q", "-b", "kept", kept)
+	if err := ForgetWorktree(r.dir, kept); err == nil {
+		t.Fatal("a worktree with its folder was forgotten")
+	}
+	if _, err := os.Stat(kept); err != nil {
+		t.Fatalf("the folder was touched: %v", err)
+	}
+	if err := os.RemoveAll(gone); err != nil {
+		t.Fatal(err)
+	}
+	if err := ForgetWorktree(r.dir, gone); err != nil {
+		t.Fatal(err)
+	}
+	list, _, err := ListWorktrees(r.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var paths []string
+	for _, w := range list {
+		paths = append(paths, filepath.Base(w.Path))
+	}
+	if slices.Contains(paths, "gone") || !slices.Contains(paths, "kept") {
+		t.Errorf("worktrees after forget: %v", paths)
+	}
+}

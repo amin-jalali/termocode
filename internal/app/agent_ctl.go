@@ -306,8 +306,13 @@ func (m *Model) onAgentCtl(call agentCtlCall) tea.Cmd {
 			return c
 		}
 		return nil
+	case agentctl.OpWorktreeList, agentctl.OpWorktreeNote, agentctl.OpWorktreeStatus, agentctl.OpWorktreeLink:
+		if m.wt == nil {
+			m.wt = newWTState()
+		}
+		return m.onWTCtl(call) // worktrees_notes.go
 	}
-	return fail("unknown op %q (list, prompt, wait, report)", r.Op)
+	return fail("unknown op %q (list, prompt, wait, report, worktree-…)", r.Op)
 }
 
 // agentCtlPoll is how often the waits look at the tabs.

@@ -70,6 +70,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
 | [`tests_run`](#tests_run) | confirm (run) | asks | Run tests with the IDE's test runner (go test, pytest, cargo, jest, vitest); the Testing view shows progress. |
 | [`tests_results`](#tests_results) | auto | yes | Results of the last test run: pass / fail / skip counts, each failing test with file:line and its message, package (build) errors. |
+| [`worktrees_list`](#worktrees_list) | auto | yes | List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done) and the last note. |
+| [`worktree_note`](#worktree_note) | auto | yes | Leave a short note (one line, at most 500 characters) and / or a status on a worktree, so the user sees what you do there in the WORKTREES view. |
 | [`lsp_servers`](#lsp_servers) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the language servers termocode installs (like the manager picker). |
 | [`dap_adapters`](#dap_adapters) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the debug adapters termocode installs (like the manager picker). |
 | [`extensions`](#extensions) | list: auto<br>run: confirm (run)<br>reload: confirm (run)<br>log: auto | no | termocode's Lua extensions (~/.config/termocode/extensions). |
@@ -796,6 +798,30 @@ Results of the last test run: pass / fail / skip counts, each failing test with 
 | --- | --- | --- | --- |
 | `only_failed` | boolean |   | list only failures |
 | `wait_ms` | integer |   | wait up to this long (ms, max 120000) for the run to end; default 0 (answer at once) |
+
+### worktrees_list
+
+List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done) and the last note.
+
+**Gate:** auto
+
+**MCP server:** yes
+
+No arguments.
+
+### worktree_note
+
+Leave a short note (one line, at most 500 characters) and / or a status on a worktree, so the user sees what you do there in the WORKTREES view. Text only; it is shown as plain text.
+
+**Gate:** auto
+
+**MCP server:** yes
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `status` | string |   | optional: your status in it. One of: `working`, `blocked`, `done` |
+| `text` | string |   | the note |
+| `worktree` | string |   | optional: a path or branch from worktrees_list; the workspace's worktree when left out |
 
 ### lsp_servers
 
@@ -2247,9 +2273,14 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
 | `workspace-remove-folder` | Workspace: Remove Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
 | `worktree-add-folder` | Worktree: Add Selected as Folder | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-adopt` | Worktree: Adopt Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-filter` | Worktree: Next Filter | auto |   |
+| `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-link` | Worktree: Link Issue or PR… | never | links are the user's choice; the AI reads them with worktrees_list |
 | `worktree-new` | Worktree: New… | never | opens a picker or prompt that only the user can answer; use a typed tool (worktree_create comes later) |
+| `worktree-new-child` | Worktree: New Child of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-notes` | Worktree: Show Notes of Selected | auto |   |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |

@@ -681,12 +681,17 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Worktree: Add Selected as Folder | `worktree-add-folder` |   |   |
+| Worktree: Adopt Selected | `worktree-adopt` |   |   |
+| Worktree: Forget Gone Selected | `worktree-forget` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
+| Worktree: Link Issue or PR… | `worktree-link` |   |   |
+| Worktree: New Child of Selected… | `worktree-new-child` |   |   |
 | Worktree: New… | `worktree-new` |   |   |
 | Worktree: Next Filter | `worktree-filter` |   |   |
 | Worktree: Open Selected | `worktree-open` |   |   |
 | Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
+| Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 
 ## termocode

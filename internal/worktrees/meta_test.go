@@ -14,7 +14,7 @@ func TestMetaRoundTrip(t *testing.T) {
 	common := t.TempDir()
 	created := time.Date(2026, 11, 6, 10, 0, 0, 0, time.UTC)
 	err := Update(common, func(m map[string]Meta) {
-		m["/src/app.worktrees/feat"] = Meta{Name: "feat", Pinned: true, Agent: "claude", Issue: 412, Notes: []string{"adding the pin row"}, Created: created}
+		m["/src/app.worktrees/feat"] = Meta{Name: "feat", Pinned: true, Agent: "claude", Issue: 412, Notes: []Note{{Text: "adding the pin row"}}, Created: created}
 	})
 	if err != nil {
 		t.Fatal(err)
