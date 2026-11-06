@@ -124,6 +124,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`workflow_read`](#workflow_read) | auto | no | Read one workflow file: where it is, whether it is trusted, its problems and warnings, its write steps (and whether each asks), and the file text. |
 | [`workflow_runs`](#workflow_runs) | auto | no | The recent runs of the workflows (or of one), newest first: id, dry run or run, state, writes. |
 | [`workflow_validate`](#workflow_validate) | auto | no | Check workflow file text (content) before you save it, or a saved workflow (name): every problem with its line, and the warnings. |
+| [`workflow_draft`](#workflow_draft) | confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version) | no | Save a workflow file .termocode/workflows/<name>.jsonc (new, or a change of one: send the whole file). |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1477,6 +1478,19 @@ Check workflow file text (content) before you save it, or a saved workflow (name
 | --- | --- | --- | --- |
 | `content` | string |   | the whole JSONC text to check (optional) |
 | `name` | string |   | the workflow name: the file name must match it; alone it checks the saved file |
+
+### workflow_draft
+
+Save a workflow file .termocode/workflows/<name>.jsonc (new, or a change of one: send the whole file). It must be valid (workflow_validate checks text). The user sees the file (a diff for a change) and its write steps on a card; Create writes it and trusts that version. Nothing runs. Ask the user before you add a write step. Never put a key in it: ${secret:NAME} only in headers, env and via.
+
+**Gate:** confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `content` | string | yes | the whole JSONC file |
+| `name` | string | yes | workflow name: the file name, [a-z][a-z0-9_-]; the file's "name" must match |
 
 ### http_list_requests
 

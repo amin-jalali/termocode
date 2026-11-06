@@ -247,6 +247,11 @@ func aiWfxValidate(name string, data []byte) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
+// aiWorkflowTools are the workflow tools of workspace ws.
+func (m *Model) aiWorkflowTools(ws string, call aiIDECaller) []ai.Tool {
+	return append(aiWorkflowReadTools(ws), m.aiWorkflowDraftTool(ws, call))
+}
+
 // aiWorkflowReadTools are the read-only workflow tools of workspace ws.
 func aiWorkflowReadTools(ws string) []ai.Tool {
 	d := func() aiWfxDisk { return aiWfxDiskOf(ws) }
