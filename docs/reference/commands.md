@@ -352,6 +352,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
 | Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
 | Git: Autosquash fixup! Commits… | `git-autosquash` |   |   |
+| Git: Bisect (Find the Commit That Broke It)… | `git-bisect` |   |   |
 | Git: Blame Before This Change | `git-blame-before` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
 | Git: Blame Options… | `git-blame-options` |   |   |
@@ -361,6 +362,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Commit and Push | `git-commit-push` |   |   |
 | Git: Commit and Sync | `git-commit-sync` |   |   |
 | Git: Commit... | `git-commit` |   |   |
+| Git: Compare Branches… | `git-compare-branches` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
 | Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
@@ -378,7 +380,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
+| Git: Initialize Repository | `git-init` |   |   |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
+| Git: Issues… (Start Work on One) | `git-issues` |   |   |
 | Git: Merge Branch… | `git-merge-branch` |   |   |
 | Git: Merge View: Close | `git-merge-close` |   | `Esc` |
 | Git: Merge View: Mark as Resolved | `git-merge-resolve` |   | `r` |
@@ -398,6 +402,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Open Next Revision of File | `git-rev-next` |   |   |
 | Git: Open Previous Revision of File | `git-rev-prev` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
+| Git: Publish to GitHub… | `git-publish` |   |   |
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Push | `git-push` |   |   |

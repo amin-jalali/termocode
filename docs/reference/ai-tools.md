@@ -2118,6 +2118,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
 | `git-autosquash` | Git: Autosquash fixup! Commits… | never | rewrites the branch history; only the user starts a rebase |
+| `git-bisect` | Git: Bisect (Find the Commit That Broke It)… | never | checks out commits one by one and asks the user which work; user only |
 | `git-blame` | Git: Blame Current Line | auto |   |
 | `git-blame-annotate` | Git: Toggle Blame Annotations | auto |   |
 | `git-blame-before` | Git: Blame Before This Change | auto |   |
@@ -2135,6 +2136,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
 | `git-commit-push` | Git: Commit and Push | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-commit-sync` | Git: Commit and Sync | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
+| `git-compare-branches` | Git: Compare Branches… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-compare-rev` | Git: Compare with Revision... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-conflict-both` | Git: Accept Both Changes (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-conflict-next` | Git: Go to Next Merge Conflict | auto |   |
@@ -2150,7 +2152,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-fixup` | Git: Fixup Staged Changes Into… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-focus` | Git: Focus Source Control | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-init` | Git: Initialize Repository | never | makes a new git repository in the user's folder; user only |
 | `git-inline-blame` | Git: Toggle Inline Blame | auto |   |
+| `git-issues` | Git: Issues… (Start Work on One) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-line-history` | Git: Show Line History | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-merge-branch` | Git: Merge Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2173,6 +2177,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-patch-save` | Git: Save Changes as Patch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-pr-create` | Git: Create Pull Request… | never | publishes a pull request in the user's name; only the user creates one |
 | `git-pr-list` | Git: Pull Requests… | auto |   |
+| `git-publish` | Git: Publish to GitHub… | never | creates a GitHub repository in the user's name and pushes to it; user only |
 | `git-pull` | Git: Pull | confirm (git) |   |
 | `git-push` | Git: Push | confirm (always asks) |   |
 | `git-rebase` | Git: Interactive Rebase… | never | opens a picker or prompt that only the user can answer; use a typed tool |

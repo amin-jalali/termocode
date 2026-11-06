@@ -433,6 +433,7 @@ excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
 excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
 missing	git-autosquash	Git|S
+missing	git-bisect	Git|S
 missing	git-blame-annotate	Git|S
 missing	git-blame-before	Git|S
 missing	git-blame-commit	Git|S
@@ -441,14 +442,18 @@ missing	git-cherry-pick-branch	Git|S
 missing	git-clean-untracked	Git|S
 missing	git-commit-push	Git|S
 missing	git-commit-sync	Git|S
+missing	git-compare-branches	Git|S
 missing	git-discard-all	Git|S
+missing	git-init	Git|S
 missing	git-inline-blame	Git|S
+missing	git-issues	Git|S
 missing	git-line-history	Git|S
 missing	git-merge-branch	Git|S
 missing	git-merge-status	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S
 missing	git-patch-save	Git|S
+missing	git-publish	Git|S
 missing	git-rebase-onto	Git|S
 missing	git-rev-next	Git|S
 missing	git-rev-prev	Git|S
