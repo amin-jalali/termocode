@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/agentdag"
+	"github.com/amin-jalali/termocode/internal/ai"
 )
 
 // Spec (AGX-4, plan 2.8): the AI starts a race only with agent_race_start,
