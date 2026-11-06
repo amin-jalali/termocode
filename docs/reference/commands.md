@@ -421,6 +421,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Merge View: Take Theirs for the Whole File | `git-merge-take-all-theirs` |   | `T` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
 | Git: Merge in Progress (Continue / Abort)… | `git-merge-status` |   |   |
+| Git: My Pull Requests… | `git-pr-mine` |   |   |
 | Git: Open Commit of Line | `git-blame-commit` |   |   |
 | Git: Open Merge View | `git-merge-open` |   |   |
 | Git: Open Next Revision of File | `git-rev-next` |   |   |
@@ -430,6 +431,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Publish to GitHub… | `git-publish` |   |   |
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull (Rebase) | `git-pull-rebase` |   |   |
+| Git: Pull Requests (Filter)… | `git-pr-filter` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Pull… | `git-pull-options` |   |   |
 | Git: Push | `git-push` |   |   |

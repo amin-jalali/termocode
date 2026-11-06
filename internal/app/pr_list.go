@@ -16,6 +16,8 @@ const pickerKindPRList pickerKindEnum = 3200
 func prPaletteItems() []picker.Item {
 	return append([]picker.Item{
 		{ID: "git-pr-list", Title: "Git: Pull Requests…"},
+		{ID: "git-pr-filter", Title: "Git: Pull Requests (Filter)…"}, // pr_filter.go
+		{ID: "git-pr-mine", Title: "Git: My Pull Requests…"},
 	}, prCreatePaletteItems()...)
 }
 
@@ -26,6 +28,10 @@ func (m *Model) dispatchPRPalette(id string) (tea.Cmd, bool) {
 		return m.openPRList(), true
 	case "git-pr-create":
 		return m.prCreateCmd(), true
+	case "git-pr-filter":
+		return m.openPRFilter(), true
+	case "git-pr-mine":
+		return m.openPRMine(), true
 	}
 	return nil, false
 }
@@ -34,6 +40,11 @@ func (m *Model) dispatchPRPalette(id string) (tea.Cmd, bool) {
 type prListMsg struct {
 	items []ghci.PRItem
 	err   error
+	title string // the picker title ("" : Pull Requests)
+	empty string // the toast of an empty list ("": No open pull requests)
+	// mine: the launchpad (pr_filter.go): review first, then items
+	mine   bool
+	review []ghci.PRItem
 }
 
 // openPRList asks gh for the open pull requests; the picker opens when
@@ -66,14 +77,26 @@ func (m *Model) onPRList(msg prListMsg) tea.Cmd {
 	}
 	s := m.prS()
 	s.items = msg.items
-	if len(msg.items) == 0 {
-		return m.aiInfo("No open pull requests")
+	title, empty := msg.title, msg.empty
+	if title == "" {
+		title = " Pull Requests "
 	}
-	items := make([]picker.Item, 0, len(msg.items))
-	for _, p := range msg.items {
-		items = append(items, picker.Item{ID: prRef(p.Number), Title: prRowTitle(p), Hint: prRowHint(p)})
+	if empty == "" {
+		empty = "No open pull requests"
 	}
-	m.picker = picker.NewItems(" Pull Requests ", items)
+	var items []picker.Item
+	if msg.mine {
+		title, empty = " My Pull Requests ", "Nothing waits for you: no pull requests of yours and none ask for your review"
+		items = prMineItems(msg.review, msg.items)
+	} else {
+		for _, p := range msg.items {
+			items = append(items, picker.Item{ID: prRef(p.Number), Title: prRowTitle(p), Hint: prRowHint(p)})
+		}
+	}
+	if len(items) == 0 {
+		return m.aiInfo(empty)
+	}
+	m.picker = picker.NewItems(title, items)
 	m.picker.SetNote([]string{"Filter by number, title, author or branch · Enter opens"})
 	m.picker.SetWidth(min(m.w-4, 110)) // the row shows title, author and branch
 	m.picker.SetSize(m.w, m.h)
@@ -97,6 +120,12 @@ func prRowTitle(p ghci.PRItem) string {
 // prRowHint is the state: draft, checks and review.
 func prRowHint(p ghci.PRItem) string {
 	var parts []string
+	switch p.State {
+	case "MERGED":
+		parts = append(parts, "Merged")
+	case "CLOSED":
+		parts = append(parts, "Closed")
+	}
 	if p.Draft {
 		parts = append(parts, "Draft")
 	}
@@ -118,13 +147,15 @@ func (m *Model) handlePRPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onPRActionPicked(id), true
 	case pickerKindPRThreads: // pr_threads.go
 		return m.onPRThreadPicked(id), true
+	case pickerKindPRFilter: // pr_filter.go
+		return m.onPRFilterPicked(id), true
 	}
 	return nil, false
 }
 
 // onPRListPicked opens the view of the chosen pull request (pr_view.go).
 func (m *Model) onPRListPicked(id string) tea.Cmd {
-	n := prNumber(id)
+	n := prNumber(strings.TrimPrefix(id, "mine-"))
 	if n == 0 {
 		return nil
 	}

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -35,7 +36,7 @@ func TestPRFilterPicker(t *testing.T) {
 	}
 	cmd, _ = m.handlePRPromptSubmit("label:bug")
 	prDo(t, m, cmd)
-	if !f.called("pr list --state all --limit 50 --json " + "number") || !f.called("pr list --state all") {
+	if !f.called("pr list --state all --limit 50 --json "+"number") || !f.called("pr list --state all") {
 		t.Errorf("calls %v", f.calls)
 	}
 	found := false
@@ -65,6 +66,13 @@ func TestPRRowHintState(t *testing.T) {
 func TestPRMine(t *testing.T) {
 	f := &prFakeGH{answers: map[string]string{"pr list": prListText, "pr view": prViewText14}}
 	m := prModel(f)
+	m.ciW().run = func(ctx context.Context, dir string, args ...string) (string, string, error) {
+		out, errOut, err := f.run(ctx, dir, args...)
+		if strings.Contains(strings.Join(args, " "), "--author=@me") { // mine: #14 (also a review request) and #8
+			out = `[{"number":14,"title":"Add parser"},{"number":8,"title":"My fix","author":{"login":"me"}}]`
+		}
+		return out, errOut, err
+	}
 	cmd, ok := m.dispatchPRPalette("git-pr-mine")
 	if !ok || cmd == nil {
 		t.Fatal("no command")
@@ -81,6 +89,9 @@ func TestPRMine(t *testing.T) {
 	}
 	if strings.Index(box, "Needs your review") > strings.Index(box, "Yours") {
 		t.Error("review requests are not first")
+	}
+	if strings.Count(box, "#14 ") != 1 {
+		t.Errorf("#14 shows twice:\n%s", box)
 	}
 	if !f.called("pr list --state open") {
 		t.Errorf("calls %v", f.calls)
