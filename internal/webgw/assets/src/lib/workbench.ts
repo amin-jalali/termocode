@@ -79,10 +79,27 @@ export const wordWrap = signal<boolean>(!matchMedia("(min-width: 1200px)").match
 
 /** QuickMode is what the quick input lists: files, commands, a line, or
  * a question the page asks (ask: its title, and what Enter does). */
-export type QuickMode = "files" | "commands" | "line" | "ask";
+export type QuickMode = "files" | "commands" | "line" | "ask" | "pick";
+
+/** PickItem is one row of a picker: its name, a quiet detail, a file
+ * (its icon shows) and what Enter does. */
+export interface PickItem {
+  label: string;
+  detail?: string;
+  file?: string;
+  run(): void;
+}
+
+/** Pick is a list the quick input picks from (pick mode): the items, or
+ * load: the rows of what is typed (asked again as typing pauses). */
+export interface Pick {
+  title: string;
+  items?: readonly PickItem[];
+  load?(q: string): Promise<readonly PickItem[]>;
+}
 
 /** quick is the open quick input (Go to file, the command list), or null. */
-export const quick = signal<{ mode: QuickMode; ask?: { title: string; run(text: string): void } } | null>(null);
+export const quick = signal<{ mode: QuickMode; ask?: { title: string; run(text: string): void }; pick?: Pick } | null>(null);
 
 /** cursorAt is the desktop editor's cursor (1-based), for the status bar. */
 export const cursorAt = signal<{ line: number; col: number } | null>(null);

@@ -175,6 +175,9 @@ export type ToFrame =
   /** aiAct: run an AI action on the selection (the frame answers with
    * its own aiAct, which names the rows). */
   | { t: "aiAct"; kind: AiAct }
+  /** snippet: insert a snippet at the cursor (the protocol's snippet
+   * syntax: $1, ${2:name}, $0) as the user's own edit. */
+  | { t: "snippet"; body: string }
   /** act: run a line or text command on the selection (or the caret's row). */
   | { t: "act"; id: EditAct }
   /** lspRes answers the frame's lsp question id (data null: nothing). */

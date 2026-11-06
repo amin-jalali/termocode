@@ -111,6 +111,8 @@ export interface DeskHandle extends EditorHandle {
   act(id: EditAct): void;
   /** nav goes to the type definition or the implementation at the caret. */
   nav(kind: NavKind): void;
+  /** snippet inserts a snippet at the cursor. */
+  snippet(body: string): void;
 }
 
 /** COMMENTS are the line comments of file types by extension (or name). */
@@ -323,6 +325,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     nav(kind) {
       send({ t: "edit", op: kind });
+    },
+    snippet(body) {
+      send({ t: "snippet", body });
     },
     destroy() {
       removeEventListener("message", onMessage);

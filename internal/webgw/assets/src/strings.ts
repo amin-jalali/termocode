@@ -1031,6 +1031,21 @@ export const S = {
   "md.open_first": "Open the file first.",
   "md.loading": "Reading the file…",
   "md.cut": "The file is long: the preview shows its start.",
+  "cmd.bm_toggle": "Bookmarks: Toggle on Current Line",
+  "cmd.bm_list": "Bookmarks: Show List",
+  "cmd.bm_clear": "Bookmarks: Clear All",
+  "cmd.bm_set": "Bookmark {mark} set.",
+  "cmd.bm_off": "Bookmark {mark} removed.",
+  "cmd.bm_none": "No bookmarks on the laptop.",
+  "cmd.bm_clear_ask": "Remove all of the laptop's bookmarks?",
+  "cmd.bm_clear_verb": "Remove All",
+  "cmd.bm_cleared": "All bookmarks cleared.",
+  "cmd.open_recent": "File: Open Recent…",
+  "cmd.no_recent": "No recent files in this workspace.",
+  "cmd.ws_symbol": "Go to Symbol in Workspace…",
+  "cmd.ws_symbol_type": "Type the name of a symbol",
+  "cmd.snippets": "Snippets: Browse…",
+  "cmd.no_snippets": "No snippets for this file type.",
 } as const;
 
 export type StringKey = keyof typeof S;

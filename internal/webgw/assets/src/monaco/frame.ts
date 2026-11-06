@@ -1230,6 +1230,16 @@ function onMessage(e: MessageEvent): void {
     case "act":
       runAct(m.id);
       return;
+    case "snippet": {
+      if (!ed || readOnly || diffEd) return;
+      const sc = (ed as unknown as { getContribution(id: string): { insert(body: string): void } | null }).getContribution("snippetController2");
+      ed.focus();
+      ed.pushUndoStop();
+      if (sc) sc.insert(m.body);
+      else ed.executeEdits("snippet", (ed.getSelections() ?? []).map((range) => ({ range, text: m.body, forceMoveMarkers: true })));
+      ed.pushUndoStop();
+      return;
+    }
   }
 }
 

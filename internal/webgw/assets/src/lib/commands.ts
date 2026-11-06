@@ -5,7 +5,7 @@
 // runs there by id, and a risky one only after a laptop card. The
 // commands used last come first (kept per browser).
 import { signal } from "@preact/signals";
-import type { PaletteItem, PaletteList } from "../../../../webproto/proto";
+import type { BookmarkList, BookmarkToggle, FilesRecent, LspSymbols, PaletteItem, PaletteList, SnippetList } from "../../../../webproto/proto";
 import { link, store } from "../session";
 import type { StringKey } from "../strings";
 import { t } from "../strings";
@@ -29,7 +29,7 @@ import { sideView } from "../ui/ActivityBar";
 import { renameFile } from "../views/Files";
 import { undoRename } from "../views/files/FileActions";
 import { fileOfTab } from "./difftab";
-import { formatBuf } from "./lsp";
+import { formatBuf, goTo } from "./lsp";
 import { session } from "./live";
 import { askHere } from "../ui/AskHere";
 import { gitFailed } from "../views/git/errors";
@@ -112,6 +112,12 @@ export function commands(): Command[] {
     { id: "formatDocument", label: "menu.format", keys: "Shift+Alt+F", when: () => hasDesk() && canWrite(), run: () => void formatBuf() },
     { id: "revertFile", label: "cmd.revert_file", when: () => hasDesk() && canWrite(), run: askRevert },
     { id: "markdownPreview", label: "cmd.md_preview", when: () => hasDesk() && /\.(md|markdown|mdx)$/i.test(activeFile.peek() ?? ""), run: openPreview },
+    { id: "bookmarkToggle", label: "cmd.bm_toggle", when: () => hasDesk() && canWrite(), run: toggleBookmark },
+    { id: "bookmarkList", label: "cmd.bm_list", run: listBookmarks },
+    { id: "bookmarkClear", label: "cmd.bm_clear", when: canWrite, run: askClearBookmarks },
+    { id: "openRecent", label: "cmd.open_recent", run: openRecent },
+    { id: "workspaceSymbol", label: "cmd.ws_symbol", when: hasDesk, run: workspaceSymbols },
+    { id: "snippetPicker", label: "cmd.snippets", when: () => hasDesk() && canWrite(), run: pickSnippet },
     { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
   ];
 }
@@ -141,6 +147,94 @@ function openPreview(): void {
   if (!s || !f) return;
   mdBufs.set(f, s.buf);
   showFile(mdTab(f));
+}
+
+/** failToast shows a request's refusal in the laptop's words. */
+const failToast = (e: unknown) => toast("warn", e instanceof Error && e.message ? e.message : t("cmd.failed"));
+
+/** baseOf is a path's last part; dirOf the folders before it. */
+const baseOf = (p: string) => p.slice(p.lastIndexOf("/") + 1);
+const dirOf = (p: string) => p.slice(0, Math.max(0, p.lastIndexOf("/")));
+
+/** toggleBookmark sets the laptop's bookmark on the caret's row, or takes it away. */
+function toggleBookmark(): void {
+  const s = session.peek();
+  if (!s) return;
+  const line = (cursorAt.peek()?.line ?? 1) - 1;
+  link.request("bookmarks.toggle", { buf: s.buf, line }).then((r) => {
+    const b = r as BookmarkToggle;
+    toast("ok", t(b.on ? "cmd.bm_set" : "cmd.bm_off", { mark: b.mark ?? "" }));
+  }, failToast);
+}
+
+/** listBookmarks lists the laptop's bookmarks; one opens at its row. */
+function listBookmarks(): void {
+  link.request("bookmarks.list").then((r) => {
+    const items = (r as BookmarkList).items ?? [];
+    if (items.length === 0) {
+      toast("info", t("cmd.bm_none"));
+      return;
+    }
+    quick.value = {
+      mode: "pick",
+      pick: { title: t("cmd.bm_list"), items: items.map((b) => ({ label: `${b.mark}  ${b.path}:${b.line + 1}`, detail: b.text, file: b.path, run: () => goTo(b.path, b.line, 0) })) },
+    };
+  }, failToast);
+}
+
+/** askClearBookmarks asks here first (Cancel first): all of the laptop's bookmarks go. */
+function askClearBookmarks(): void {
+  askHere.value = {
+    label: t("cmd.bm_clear"),
+    text: t("cmd.bm_clear_ask"),
+    verb: t("cmd.bm_clear_verb"),
+    run: () => link.request("bookmarks.clear").then(() => toast("ok", t("cmd.bm_cleared")), failToast),
+  };
+}
+
+/** openRecent lists the laptop's recent files in the workspace. */
+function openRecent(): void {
+  link.request("files.recent").then((r) => {
+    const paths = (r as FilesRecent).paths ?? [];
+    if (paths.length === 0) {
+      toast("info", t("cmd.no_recent"));
+      return;
+    }
+    quick.value = { mode: "pick", pick: { title: t("cmd.open_recent"), items: paths.map((p) => ({ label: baseOf(p), detail: dirOf(p), file: p, run: () => showFile(p) })) } };
+  }, failToast);
+}
+
+/** workspaceSymbols asks the laptop's language servers as the user types. */
+function workspaceSymbols(): void {
+  const s = session.peek();
+  if (!s) return;
+  const buf = s.buf;
+  quick.value = {
+    mode: "pick",
+    pick: {
+      title: t("cmd.ws_symbol_type"),
+      load: (q) =>
+        q.trim() === ""
+          ? Promise.resolve([])
+          : link.request("lsp.workspace_symbols", { buf, query: q.trim() }).then((r) =>
+              ((r as LspSymbols).items ?? []).map((x) => ({ label: x.name, detail: x.container ? `${x.container} · ${x.path}` : x.path, run: () => goTo(x.path, x.line, x.col) })),
+            ),
+    },
+  };
+}
+
+/** pickSnippet lists the snippets of the file's type; one goes in at the cursor. */
+function pickSnippet(): void {
+  const s = session.peek();
+  if (!s) return;
+  link.request("snippets.list", { buf: s.buf }).then((r) => {
+    const items = (r as SnippetList).items ?? [];
+    if (items.length === 0) {
+      toast("info", t("cmd.no_snippets"));
+      return;
+    }
+    quick.value = { mode: "pick", pick: { title: t("cmd.snippets"), items: items.map((x) => ({ label: x.trigger, detail: x.body.split("\n")[0], run: () => activeDesk.peek()?.snippet(x.body) })) } };
+  }, failToast);
 }
 
 /** realFile is the workspace file of the active tab (null: none, or a tab

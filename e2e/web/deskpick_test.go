@@ -69,11 +69,18 @@ func TestDeskOpenRecent(t *testing.T) {
 func TestDeskWorkspaceSymbols(t *testing.T) {
 	p, c := openFiles(t, Desktop)
 	openDesk(t, p, c, 2, "a.go", "package a")
-	runCmd(t, p, c, true, "symbol in workspace", "Go to Symbol in Workspace…")
+	wbKey(p, "P", true, true)
+	answerReqs(t, c, map[string]any{"palette.list": webproto.PaletteList{Items: []webproto.PaletteItem{}}})
+	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box")`)
+	p.Key("symbol in workspace")
+	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === "Go to Symbol in Workspace…"`)
+	p.Key("\r")
+	p.WaitJS(`document.querySelector(".quick-box")?.placeholder === "Type the name of a symbol" && document.activeElement === document.querySelector(".quick-box")`)
 	p.Key("Hand")
 	r := waitArgs(t, c, webproto.OpLspWorkspaceSymbols, `{"buf":2,"query":"Hand"}`)
 	reply(t, c, r, webproto.LspSymbols{Items: []webproto.LspSymbol{{Name: "Handler", Kind: 23, Path: "pkg/h.go", Line: 2, Col: 5, Container: "pkg"}}})
-	if got := Eval[string](p, `(async () => { for (let i = 0; i < 100; i++) { const d = document.querySelector(".quick-row.is-on .quick-detail"); if (d) return d.textContent; await new Promise((r) => setTimeout(r, 30)); } return ""; })()`); got != "pkg · pkg/h.go" {
+	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-detail")`)
+	if got := p.Text(".quick-row.is-on .quick-detail"); got != "pkg · pkg/h.go" {
 		t.Errorf("symbol detail %q", got)
 	}
 	pickRow(p, "Handler")
@@ -90,6 +97,7 @@ func TestDeskSnippetPicker(t *testing.T) {
 	runCmd(t, p, c, true, "snippets browse", "Snippets: Browse…")
 	r := waitArgs(t, c, webproto.OpSnippetsList, `{"buf":2}`)
 	reply(t, c, r, webproto.SnippetList{Items: []webproto.Snippet{{Trigger: "fn", Body: "func ${1:name}() {\n\t$0\n}"}, {Trigger: "iferr", Body: "if err != nil {\n\treturn ${1:err}\n}"}}})
+	p.WaitJS(`document.querySelector(".quick-box")?.placeholder === "Snippets: Browse…" && document.activeElement === document.querySelector(".quick-box")`)
 	p.Key("iferr")
 	pickRow(p, "iferr")
 	waitDeskText(t, p, "package a", "if err != nil {", "    return err", "}")
