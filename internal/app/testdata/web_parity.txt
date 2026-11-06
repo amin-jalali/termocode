@@ -123,6 +123,7 @@ web	next-diagnostic	cmd:problems
 web	open-recent	cmd:openRecent
 web	open-settings-ui	cmd:settings
 web	open-url	cmd:openUrl
+web	open-workspace	cmd:openWorkspace
 web	pick-theme	cmd:themeDark
 web	pin-tab	cmd:pinTab
 web	prev-buffer	cmd:prevEditor
@@ -183,6 +184,8 @@ web	view-output	cmd:tasks
 web	web-pair	op:web.pair_ask
 web	web-share	op:web.grant_ask
 web	web-totp	op:web.totp_check
+web	workspace-add-folder	cmd:addFolder
+web	workspace-remove-folder	cmd:removeFolder
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
 excluded	ai-credentials	security: credentials file is laptop only
 excluded	ai-doctor	laptop only: checks the laptop setup
@@ -417,7 +420,6 @@ missing	mcp-import-other	AI chat and agents|M
 missing	mcp-serve-copy-config	AI chat and agents|M
 missing	mcp-serve-status	AI chat and agents|M
 missing	next-hunk	Git|S
-missing	open-workspace	Editor and files|S
 missing	output-clear	Testing and web access|S
 missing	prev-hunk	Git|S
 missing	redis-delete-key	Databases|L
@@ -430,8 +432,6 @@ missing	services-stop-all	Containers|S
 missing	snippets-manage	Editor and files|S
 missing	testing-collapse	Testing and web access|S
 missing	web-devices	Testing and web access|S
-missing	workspace-add-folder	Editor and files|S
-missing	workspace-remove-folder	Editor and files|S
 web	view/Files	view:files
 web	view/Git	view:git
 web	view/Run	view:run
