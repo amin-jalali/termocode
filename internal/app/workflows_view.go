@@ -564,6 +564,9 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 	if rf.Error != "" {
 		out = append(out, wfxLine{" ERROR  " + rf.Error, "err"})
 	}
+	if rf.Resumed > 0 {
+		out = append(out, wfxLine{fmt.Sprintf(" ↻ Resumed after termocode ended mid-run (%d×): finished steps kept, the rest ran again", rf.Resumed), "warn"})
+	}
 	if e.File != nil {
 		var chain []string
 		for i := range e.File.Steps {

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/debounce"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
 	"github.com/amin-jalali/termocode/internal/workflow/wire"
@@ -76,7 +78,8 @@ func wfxCrashAtGate(t *testing.T, m *Model, name string) string {
 // wfxRestart is a new process on the same workspace and state.
 func wfxRestart(t *testing.T, ws string) *Model {
 	t.Helper()
-	m := aiTestModel(t)
+	m := Model{w: 120, h: 40, debounce: debounce.New(), ai: newAIState(), actionsWidth: defaultActionsWidth}
+	m.ai.settings.PlanApproval = ai.PlanApprovalAuto
 	m.wfxLoad(ws)
 	return &m
 }

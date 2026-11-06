@@ -76,6 +76,10 @@ type wfxState struct {
 	// is on); schedClock is its clock (nil: the real one).
 	sched      *wfxSchedHost
 	schedClock schedule.Clock
+	// owner is this process's claim of the workspace's workflows;
+	// notOwner: another process has it (no schedules, no resume here).
+	owner    *ledger.Owner
+	notOwner bool
 }
 
 // wfxLive is a run of this process.
@@ -559,8 +563,16 @@ func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd
 
 // wfxStartRun starts a run; show opens its page.
 func (m *Model) wfxStartRun(e wire.Entry, dry, show bool) (string, *run.Handle, tea.Cmd, error) {
+	return m.wfxStartRunFrom(e, dry, show, nil)
+}
+
+// wfxStartRunFrom is wfxStartRun that may continue a recovered run file.
+func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFile) (string, *run.Handle, tea.Cmd, error) {
 	st := m.wfxS()
 	id := wire.NewRunID()
+	if resume != nil {
+		id = resume.ID
+	}
 	l := &wfxLive{id: id, name: e.Name, dry: dry, ch: make(chan tea.Msg, 64)}
 	send := func(msg tea.Msg) {
 		select {
@@ -599,7 +611,7 @@ func (m *Model) wfxStartRun(e wire.Entry, dry, show bool) (string, *run.Handle, 
 		src.Secrets = s
 	}
 	cfg := wire.Config{
-		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry,
+		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume,
 		Src: src, Tools: check, AI: m.wfxAIEnv(), Exec: wfxExec,
 		Gate: func(ctx context.Context, a wire.GateAsk) (wire.GateDecision, error) { return ask(ctx, a, false) },
 		AskTool: func(ctx context.Context, c run.AskCall) (bool, error) {

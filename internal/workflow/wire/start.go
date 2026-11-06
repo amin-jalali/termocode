@@ -25,6 +25,9 @@ type Config struct {
 	NoPlan    bool
 	Vars      map[string]any
 	LastOKAt  string
+	// Resume continues this run file (run.Recover'd): its id, finished
+	// steps and write records are kept.
+	Resume *run.RunFile
 	// ParallelMax is workflows_parallel_max (0: no cap).
 	ParallelMax int
 
@@ -71,6 +74,9 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 		return nil, err
 	}
 	id := cfg.RunID
+	if cfg.Resume != nil {
+		id = cfg.Resume.ID
+	}
 	if id == "" {
 		id = NewRunID()
 	}
@@ -92,7 +98,7 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 		RunID: id, Dry: cfg.Dry, NoPlan: cfg.NoPlan, Vars: cfg.Vars, LastOKAt: cfg.LastOKAt,
 		Eval: ev, Source: &Sources{Src: cfg.Src, Eval: ev}, Plan: steps, Run: steps, Write: w,
 		Each: &Worktrees{Workspace: cfg.Workspace, RunID: id}, ParallelMax: cfg.ParallelMax,
-		Tools: cfg.Tools, Ask: cfg.AskTool, OnEvent: cfg.OnEvent, Store: store,
+		Tools: cfg.Tools, Ask: cfg.AskTool, OnEvent: cfg.OnEvent, Store: store, Resume: cfg.Resume,
 	}
 	return run.Start(ctx, f, opts), nil
 }

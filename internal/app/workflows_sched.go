@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -102,6 +103,9 @@ func (m *Model) wfxSchedSync() tea.Cmd {
 		return nil
 	}
 	var cmd tea.Cmd
+	if st.sched == nil && st.notOwner {
+		return nil // another process runs this workspace's schedules
+	}
 	if st.sched == nil {
 		st.sched = m.newWfxSchedHost(st.schedClock)
 		st.sched.s.Start()
@@ -306,16 +310,75 @@ func (m *Model) wfxStartScheduled(name string) (*run.Handle, tea.Cmd, error) {
 	return h, cmd, nil
 }
 
-// wfxBoot starts the workflows of the workspace: the scheduler when a
-// workflow is on.
+// wfxBoot starts the workflows of the workspace at start.
 func (m *Model) wfxBoot() tea.Cmd {
 	ws, _ := m.rootDir()
 	if ws == "" {
 		return nil
 	}
+	return m.wfxBootIn(ws, nil)
+}
+
+// wfxBootIn claims the workspace's workflows (one process owns them),
+// resumes interrupted runs and starts the scheduler. Another owner: this
+// process runs workflows by hand only.
+func (m *Model) wfxBootIn(ws string, c schedule.Clock) tea.Cmd {
 	m.wfxLoad(ws)
 	m.wfxSyncActivity()
-	return m.wfxSchedBoot(nil)
+	st := m.wfxS()
+	if st.root == "" || len(st.list) == 0 {
+		return nil
+	}
+	if st.owner == nil {
+		o, err := ledger.ClaimOwner(st.root)
+		if err != nil {
+			st.notOwner = true
+			if !errors.Is(err, ledger.ErrOwned) {
+				recordError("workflows: " + err.Error())
+			}
+			return nil
+		}
+		st.owner = o
+	}
+	cmds := []tea.Cmd{m.wfxResumeOnStart(), m.wfxSchedBoot(c)}
+	return tea.Batch(cmds...)
+}
+
+// wfxResumeOnStart handles the run files that say running: their process
+// ended. Each is marked interrupted; with resume_on_start, the same file
+// version and workflows on, it goes on from the step that was running.
+func (m *Model) wfxResumeOnStart() tea.Cmd {
+	st := m.wfxS()
+	if st.root == "" {
+		return nil
+	}
+	store := wire.RunFiles{Root: st.root}
+	all, _ := store.List("", 0)
+	var cmds []tea.Cmd
+	for _, rf := range all {
+		if rf.State != run.RunRunning || st.live[rf.ID] != nil {
+			continue
+		}
+		rec := run.Recover(rf)
+		if b, err := json.Marshal(rec); err == nil {
+			if err := store.WriteRunFile(rec.ID, b); err != nil {
+				recordError("workflow run " + rec.ID + ": " + err.Error())
+			}
+		}
+		e, ok := wire.Find(st.list, rf.Workflow)
+		if !ok || e.Broken() || !e.Trusted || rf.Dry || !e.File.ResumeOnStart || e.Hash != rf.Hash || !workflowsEnabled() || m.wfxRunning(e.Name) != nil {
+			m.wfxPutRun(rec)
+			continue
+		}
+		_, _, cmd, err := m.wfxStartRunFrom(e, false, false, rec)
+		if err != nil {
+			recordError("workflow " + e.Name + ": resume: " + err.Error())
+			m.wfxPutRun(rec)
+			continue
+		}
+		cmds = append(cmds, cmd)
+	}
+	return tea.Batch(cmds...)
 }
 
 // wfxNextRun is the next slot of a scheduled workflow.
