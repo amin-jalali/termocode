@@ -6,6 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/amin-jalali/termocode/internal/git"
 )
 
 // GITX-39 (B10): Commit Empty… asks the message (the commit box text
@@ -112,5 +114,24 @@ func TestGitxCommitMarked(t *testing.T) {
 	}
 	if p := aiActionPolicies["git-commit-marked"]; p.Gate != aiGateNever {
 		t.Error("the AI may commit")
+	}
+}
+
+// GITX-39 (E28): Git: Show Contributors lists the authors with their
+// commit counts and share, most commits first.
+func TestGitxContributorsPage(t *testing.T) {
+	page := gitxContributorsPage([]git.Contributor{
+		{Name: "Ann", Email: "ann@example.com", Commits: 3},
+		{Name: "Bo", Email: "bo@example.com", Commits: 1},
+	})
+	for _, want := range []string{"2 contributors, 4 commits", "3  75%  Ann <ann@example.com>", "1  25%  Bo <bo@example.com>"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("no %q in:\n%s", want, page)
+		}
+	}
+	m, _ := covGitRepo(t)
+	m.dispatchPaletteAction("git-contributors")
+	if p := aiActionPolicies["git-contributors"]; p.Gate != aiGateAuto {
+		t.Error("reading the contributors is not auto for the AI")
 	}
 }

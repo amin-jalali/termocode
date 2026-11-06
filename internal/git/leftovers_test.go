@@ -72,3 +72,21 @@ func TestCommitPaths(t *testing.T) {
 		t.Error("a commit of no files passed")
 	}
 }
+
+// GITX-39 (E28): Contributors counts the commits of each author (by
+// name and e-mail), most commits first.
+func TestContributors(t *testing.T) {
+	r := newGitTestRepo(t)
+	for i, who := range []string{"Ann <ann@example.com>", "Bo <bo@example.com>", "Ann <ann@example.com>"} {
+		r.write(t, "a.txt", strings.Repeat("x", i+1))
+		r.git(t, "add", "a.txt")
+		r.git(t, "commit", "-q", "--author="+who, "-m", "c")
+	}
+	got, err := Contributors(r.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0] != (Contributor{Name: "Ann", Email: "ann@example.com", Commits: 2}) || got[1] != (Contributor{Name: "Bo", Email: "bo@example.com", Commits: 1}) {
+		t.Fatalf("contributors %+v", got)
+	}
+}
