@@ -216,6 +216,10 @@ func goldenExtras() []Scene {
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
+		// Commit box helpers (GITX-6): the recent messages and the
+		// co-author pickers.
+		{Name: "commit-history-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-commit-history"), Pause(600 * time.Millisecond)}},
+		{Name: "co-author-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-co-author"), Pause(600 * time.Millisecond)}},
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
