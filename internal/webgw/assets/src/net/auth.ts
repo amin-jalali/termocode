@@ -2,7 +2,9 @@
 // The laptop opens /#s=<secret>; the page takes the secret out of the URL
 // at once (so it never lands in history, a bookmark or a screenshot),
 // trades it on POST /auth for a session token, and keeps the token in
-// sessionStorage: this tab only, gone when the tab closes. No cookies.
+// sessionStorage: this tab only, gone when the tab closes. The one cookie
+// is a remembered browser's bookmark key (WEBP-12): httpOnly, set by the
+// laptop, sent only to /login/ paths, never read here.
 
 const TOKEN_KEY = "termocode.session";
 const SECRET_HASH = /^#s=([A-Za-z0-9_-]{43})$/;
@@ -103,8 +105,9 @@ export interface Reply {
 }
 
 /** postJSON posts body to one of the gateway's own endpoints (pairing and
- * passkey sign-in), the way /auth is posted: no credentials, no cache, no
- * redirect, no referrer. A network failure is status 0. */
+ * passkey sign-in), the way /auth is posted: no cache, no redirect, no
+ * referrer. Same-origin credentials, so the laptop can set and read the
+ * httpOnly bookmark cookie (WEBP-12). A network failure is status 0. */
 export async function postJSON(path: "/pair/start" | "/pair/wait" | "/pair/finish" | "/login/start" | "/login/finish" | "/login/totp" | "/login/device" | "/login/forget", body: unknown): Promise<Reply> {
   let res: Response;
   try {
@@ -112,7 +115,7 @@ export async function postJSON(path: "/pair/start" | "/pair/wait" | "/pair/finis
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      credentials: "omit",
+      credentials: "same-origin",
       cache: "no-store",
       redirect: "error",
       referrerPolicy: "no-referrer",

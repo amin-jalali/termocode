@@ -1,50 +1,73 @@
-// The bookmark key of a remembered browser (WEBP-12). A paired device that
-// ticked "Remember this browser" keeps one key here, in localStorage of
-// this one origin, so a bookmark opens the panel without the passkey. The
-// key is sent only in the body of POST /login/device (to sign in; the
-// answer brings the next key) and /login/forget; it never goes into the
-// address bar, the back list or a log. Tabs take turns (Web Locks): two tabs that
-// opened at once must not both use one key, or the second use would look
-// like a stolen copy and end the bookmark.
+// Bookmark sign-in of a remembered browser (WEBP-12). A paired device that
+// ticked "Remember this browser" gets a bookmark key from the laptop as an
+// httpOnly, SameSite=Strict cookie, sent only to /login/ paths: page code
+// never sees the key, so a script on the page cannot copy it. Here we keep
+// only a "remembered" mark (no secret), so the page knows to try
+// POST /login/device when it opens; the answer sets the next key. Tabs
+// take turns (Web Locks): two tabs that opened at once must not both use
+// one key, or the second use would look like a stolen copy and end the
+// bookmark.
+//
+// Pages from before the cookie kept the key itself in localStorage under
+// OLD_KEY. It is sent once in the body, the laptop moves it into the
+// cookie, and the copy here is deleted.
 import { signal } from "@preact/signals";
 import { postJSON, type Reply } from "./auth";
 
-const KEY = "termocode.device";
+const OLD_KEY = "termocode.device";
+const MARK = "termocode.remembered";
 const LOCK = "termocode.device";
 const SHAPE = /^tcb1\.dev-[0-9a-f]{8}\.[A-Za-z0-9_-]{43}$/;
 
-/** savedDeviceKey is this browser's bookmark key, or null. */
-export function savedDeviceKey(): string | null {
+function oldKey(): string | null {
   try {
-    const v = localStorage.getItem(KEY);
+    const v = localStorage.getItem(OLD_KEY);
     return v !== null && SHAPE.test(v) ? v : null;
   } catch {
     return null;
   }
 }
 
-/** remembered is true while this browser keeps a bookmark key. */
-export const remembered = signal(savedDeviceKey() !== null);
-
-/** keepDeviceKey keeps the key of a sign-in or pairing reply, if it has one. */
-export function keepDeviceKey(r: Reply): void {
-  const v = r.data.device_key;
-  if (r.status !== 200 || typeof v !== "string" || !SHAPE.test(v)) return;
+function dropOldKey(): void {
   try {
-    localStorage.setItem(KEY, v);
-    remembered.value = true;
-  } catch {
-    // No storage: no bookmark sign-in, the passkey still works.
-  }
-}
-
-function dropKey(): void {
-  try {
-    localStorage.removeItem(KEY);
+    localStorage.removeItem(OLD_KEY);
   } catch {
     // Nothing kept.
   }
-  remembered.value = false;
+}
+
+function marked(): boolean {
+  try {
+    return localStorage.getItem(MARK) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function mark(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(MARK, "1");
+    else localStorage.removeItem(MARK);
+  } catch {
+    // No storage: the cookie still works, the page just does not know.
+  }
+  remembered.value = on;
+}
+
+/** isRemembered: this browser may hold a bookmark cookie (or an old key). */
+export function isRemembered(): boolean {
+  return marked() || oldKey() !== null;
+}
+
+/** remembered is true while this browser keeps a bookmark key. */
+export const remembered = signal(isRemembered());
+
+/** keepDeviceKey notes a sign-in or pairing reply that set the cookie; an
+ * old key here is then stale (the laptop moved on) and goes. */
+export function keepDeviceKey(r: Reply): void {
+  if (r.status !== 200 || r.data.remembered !== true) return;
+  dropOldKey();
+  mark(true);
 }
 
 async function oneAtATime<T>(run: () => Promise<T>): Promise<T> {
@@ -52,16 +75,19 @@ async function oneAtATime<T>(run: () => Promise<T>): Promise<T> {
   return locks ? locks.request(LOCK, run) : run();
 }
 
-/** useDeviceKey signs in with the kept key: the reply, or null when no
- * key is kept. A refused key is dropped; a network or busy answer keeps
- * it for the next try. */
+/** useDeviceKey signs in with the kept key: the reply, or null when this
+ * browser is not remembered. A refused key is dropped; a network or busy
+ * answer keeps it for the next try. */
 export function useDeviceKey(): Promise<Reply | null> {
   return oneAtATime(async () => {
-    const key = savedDeviceKey();
-    if (key === null) return null;
-    const r = await postJSON("/login/device", { key });
-    if (r.status === 200) keepDeviceKey(r);
-    else if (r.status === 400 || r.status === 401) dropKey();
+    const old = oldKey();
+    if (old === null && !marked()) return null;
+    const r = await postJSON("/login/device", old !== null ? { key: old } : {});
+    if (r.status === 200) keepDeviceKey(r); // an old key is now in the cookie
+    else if (r.status === 400 || r.status === 401) {
+      dropOldKey();
+      mark(false);
+    }
     return r;
   });
 }
@@ -69,8 +95,9 @@ export function useDeviceKey(): Promise<Reply | null> {
 /** forgetThisBrowser ends the bookmark here and on the laptop. */
 export function forgetThisBrowser(): Promise<void> {
   return oneAtATime(async () => {
-    const key = savedDeviceKey();
-    dropKey();
-    if (key !== null) await postJSON("/login/forget", { key });
+    const old = oldKey();
+    dropOldKey();
+    mark(false);
+    await postJSON("/login/forget", old !== null ? { key: old } : {});
   });
 }

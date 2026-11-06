@@ -431,7 +431,8 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 	reply := map[string]any{"token": tok, "role": pp.role, "device": id,
 		"idle_s": int(p.cfg.Tokens.idle / time.Second), "max_s": int(p.cfg.Tokens.max / time.Second)}
 	if devKey != "" {
-		reply["device_key"] = devKey
+		setDeviceCookie(w, r, devKey)
+		reply["remembered"] = true
 	}
 	writeJSON(w, http.StatusOK, reply)
 }

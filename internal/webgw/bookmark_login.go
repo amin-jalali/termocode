@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/webdevices"
@@ -14,11 +15,14 @@ import (
 // Bookmark sign-in (WEBP-12): a paired device that chose "Remember this
 // browser" opens the panel from a bookmark with its key alone:
 //
-//	POST /login/device {key} → {token, role, device, device_key} (or a TOTP ticket)
-//	POST /login/forget {key} → {}   (the page's "Forget this browser")
+//	POST /login/device {} → {token, role, device, remembered} (or a TOTP ticket)
+//	POST /login/forget {} → {}   (the page's "Forget this browser")
 //
-// The key travels only in a POST body on the panel's own origin (the
-// guard checks Host and Origin first), works only on the origin it was
+// The key lives in an httpOnly, SameSite=Strict cookie (DeviceCookie) the
+// laptop sets, sent only to /login/ paths of the panel's own origin (the
+// guard checks Host and Origin first): page code never reads it. A page
+// from before the cookie may still send its old key once as {key}; the
+// answer moves it into the cookie. The key works only on the origin it was
 // made on, and is replaced on every use. A second use of the key before
 // (a copy) forgets the bookmark. Unused for BookmarkTTL, it expires.
 // Removing the device on the laptop, or its Forget bookmark, ends it.
@@ -44,17 +48,57 @@ func (l *Login) store() *webdevices.Store {
 	return nil
 }
 
+// DeviceCookie is the cookie that holds a remembered browser's bookmark
+// key: httpOnly, SameSite=Strict, Path /login, Secure over TLS.
+const DeviceCookie = "termocode_device"
+
+// deviceCookiePath: the cookie goes to the sign-in paths alone, never to
+// the socket or the files.
+const deviceCookiePath = "/login"
+
+// cookieSecure: the page came over TLS, here or at a proxy in front (an
+// https Origin, which the guard has checked). Plain loopback http stays
+// without Secure, or the browser would never send the cookie back.
+func cookieSecure(r *http.Request) bool {
+	return r.TLS != nil || strings.HasPrefix(r.Header.Get("Origin"), "https://")
+}
+
+// setDeviceCookie hands the browser its (next) bookmark key.
+func setDeviceCookie(w http.ResponseWriter, r *http.Request, key string) {
+	http.SetCookie(w, &http.Cookie{Name: DeviceCookie, Value: key, Path: deviceCookiePath,
+		MaxAge: int(BookmarkTTL / time.Second), HttpOnly: true, Secure: cookieSecure(r), SameSite: http.SameSiteStrictMode})
+}
+
+// clearDeviceCookie makes the browser drop its bookmark key.
+func clearDeviceCookie(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{Name: DeviceCookie, Value: "", Path: deviceCookiePath,
+		MaxAge: -1, HttpOnly: true, Secure: cookieSecure(r), SameSite: http.SameSiteStrictMode})
+}
+
+// requestKey is the bookmark key of a request: the cookie, else the key
+// an older page sends in the body (moved into the cookie by the answer).
+func requestKey(r *http.Request) (string, bool) {
+	var req deviceKeyReq
+	if !decodeStrict(r.Body, &req) {
+		return "", false
+	}
+	if c, err := r.Cookie(DeviceCookie); err == nil && c.Value != "" {
+		return c.Value, true
+	}
+	return req.Key, true
+}
+
 // device signs a remembered browser in with its bookmark key.
 func (l *Login) device(w http.ResponseWriter, r *http.Request) {
-	var req deviceKeyReq
-	if !decodeStrict(r.Body, &req) || req.Key == "" {
+	key, ok := requestKey(r)
+	if !ok || key == "" {
 		writeJSON(w, http.StatusBadRequest, errorReply("bad_request"))
 		return
 	}
 	origin := r.Header.Get("Origin")
-	dev, sec, err := ParseDeviceKey(req.Key)
+	dev, sec, err := ParseDeviceKey(key)
 	if err != nil {
-		l.bookmarkFail(w, "", "bad_key", "login_failed")
+		l.bookmarkFail(w, r, "", "bad_key", "login_failed")
 		return
 	}
 	st := l.store()
@@ -108,16 +152,16 @@ func (l *Login) device(w http.ResponseWriter, r *http.Request) {
 	}
 	switch {
 	case !found:
-		l.bookmarkFail(w, dev, "removed", "removed")
+		l.bookmarkFail(w, r, dev, "removed", "removed")
 		return
 	case why == "key_reused":
-		l.bookmarkFail(w, dev, why, "revoked")
+		l.bookmarkFail(w, r, dev, why, "revoked")
 		return
 	case why == "expired":
-		l.bookmarkFail(w, dev, why, "expired")
+		l.bookmarkFail(w, r, dev, why, "expired")
 		return
 	case why != "":
-		l.bookmarkFail(w, dev, why, "login_failed")
+		l.bookmarkFail(w, r, dev, why, "login_failed")
 		return
 	}
 	if totp {
@@ -129,7 +173,7 @@ func (l *Login) device(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"totp": true, "ticket": tk})
 		return
 	}
-	if !l.issueWith(w, got, next, "bookmark") {
+	if !l.issueWith(w, r, got, next, "bookmark") {
 		// No session, so the page keeps its key: put it back.
 		_, _ = st.Change(dev, func(d *webdevices.Device) {
 			if b := d.Bookmark; b != nil && subtle.ConstantTimeCompare(b.Hash, nextHash) == 1 {
@@ -140,8 +184,9 @@ func (l *Login) device(w http.ResponseWriter, r *http.Request) {
 }
 
 // bookmarkFail refuses a key: an audit line with the rule (never the
-// key) and a short error for the page.
-func (l *Login) bookmarkFail(w http.ResponseWriter, dev, why, reply string) {
+// key), the cookie cleared, and a short error for the page.
+func (l *Login) bookmarkFail(w http.ResponseWriter, r *http.Request, dev, why, reply string) {
+	clearDeviceCookie(w, r)
 	_ = l.cfg.Audit.Log(Event{Kind: EvLoginFail, Code: http.StatusUnauthorized, Device: dev, Why: why, Summary: "bookmark"})
 	writeJSON(w, http.StatusUnauthorized, errorReply(reply))
 }
@@ -149,12 +194,13 @@ func (l *Login) bookmarkFail(w http.ResponseWriter, dev, why, reply string) {
 // forget ends a bookmark from the page: the key itself (now or the one
 // before) proves which. The answer is the same either way.
 func (l *Login) forget(w http.ResponseWriter, r *http.Request) {
-	var req deviceKeyReq
-	if !decodeStrict(r.Body, &req) {
+	key, ok := requestKey(r)
+	if !ok {
 		writeJSON(w, http.StatusBadRequest, errorReply("bad_request"))
 		return
 	}
-	dev, sec, err := ParseDeviceKey(req.Key)
+	clearDeviceCookie(w, r)
+	dev, sec, err := ParseDeviceKey(key)
 	st := l.store()
 	if err == nil && st != nil {
 		h := DeviceKeyHash(sec)

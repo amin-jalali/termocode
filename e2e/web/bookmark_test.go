@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 
@@ -29,14 +30,14 @@ func (p *Page) noKeyInStorage(where string) {
 	}
 }
 
-// deviceCookie is the browser's bookmark cookie, read over DevTools (page
-// code cannot), or nil.
-func (p *Page) deviceCookie() *network.Cookie {
+// deviceCookie is the browser's bookmark cookie for the sign-in path,
+// read over DevTools (page code cannot), or nil.
+func (p *Page) deviceCookie(base string) *network.Cookie {
 	p.T.Helper()
 	var got *network.Cookie
-	p.Do(chromedp.ActionFunc(func(ctx context.Context) error {
-		cs, err := network.GetCookies().Do(ctx)
-		for _, c := range cs {
+	p.Do(chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
+		res, err := cdp.Call(ctx, t, network.GetCookies, network.GetCookiesParams{URLs: []string{base + "/login/device"}})
+		for _, c := range res.Cookies {
 			if c.Name == webgw.DeviceCookie {
 				got = c
 			}
@@ -68,7 +69,7 @@ func TestBookmarkKeyNotInLocalStorage(t *testing.T) {
 	c.HandshakeMeta(t, Meta("c-paired"))
 	p.WaitJS(`document.documentElement.dataset.link === "online"`)
 	p.noKeyInStorage("after pairing")
-	ck := p.deviceCookie()
+	ck := p.deviceCookie(s.localhostBase())
 	if ck == nil || !ck.HTTPOnly || ck.SameSite != network.CookieSameSiteStrict || ck.Path != "/login" {
 		t.Fatalf("bookmark cookie %+v", ck)
 	}
@@ -84,7 +85,7 @@ func TestBookmarkKeyNotInLocalStorage(t *testing.T) {
 	}
 	p.WaitJS(`document.documentElement.dataset.link === "online"`)
 	p.noKeyInStorage("after the bookmark sign-in")
-	if ck := p.deviceCookie(); ck == nil || ck.Value == first {
+	if ck := p.deviceCookie(s.localhostBase()); ck == nil || ck.Value == first {
 		t.Fatalf("the key did not turn over: %+v", ck)
 	}
 }
@@ -113,7 +114,7 @@ func TestBookmarkOldLocalStorageKeyMovesToTheCookie(t *testing.T) {
 	c.HandshakeMeta(t, Meta("c-moved"))
 	p.WaitJS(`document.documentElement.dataset.link === "online"`)
 	p.noKeyInStorage("after the move")
-	if ck := p.deviceCookie(); ck == nil || !ck.HTTPOnly || ck.Value == key {
+	if ck := p.deviceCookie(s.localhostBase()); ck == nil || !ck.HTTPOnly || ck.Value == key {
 		t.Fatalf("the old key was not moved into a new cookie: %+v", ck)
 	}
 }

@@ -165,6 +165,8 @@ is on, the phone still types it.
 
 - Only this browser on this one address is remembered. termocode keeps
   only a fingerprint (hash) of its key, never the key.
+- The browser keeps the key in a locked cookie (httpOnly, SameSite=Strict,
+  Secure over https). Scripts on the page cannot read it.
 - The key changes each time it is used. If an old copy is used again,
   termocode ends the bookmark at once.
 - Not used for 30 days, it ends.

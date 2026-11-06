@@ -185,17 +185,17 @@ func (l *Login) finish(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"totp": true, "ticket": tk})
 		return
 	}
-	l.issueRemember(w, d, req.Remember, origin)
+	l.issueRemember(w, r, d, req.Remember, origin)
 }
 
 // issueRemember issues a token and, when asked, a new bookmark key. A key
 // that cannot be made leaves the sign-in good, without a key.
-func (l *Login) issueRemember(w http.ResponseWriter, d webdevices.Device, remember bool, origin string) {
+func (l *Login) issueRemember(w http.ResponseWriter, r *http.Request, d webdevices.Device, remember bool, origin string) {
 	key := ""
 	if remember {
 		key, _ = rememberDevice(l.store(), d.ID, origin, l.cfg.Now())
 	}
-	l.issueWith(w, d, key, "passkey")
+	l.issueWith(w, r, d, key, "passkey")
 }
 
 // newTicket keeps a device that passed its passkey until its code comes.
@@ -259,7 +259,7 @@ func (l *Login) totp(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusGone, errorReply("expired"))
 		return
 	}
-	l.issueRemember(w, tk.dev, tk.remember, tk.origin)
+	l.issueRemember(w, r, tk.dev, tk.remember, tk.origin)
 }
 
 // sixDigits: exactly six ASCII digits.
@@ -276,9 +276,9 @@ func sixDigits(s string) bool {
 }
 
 // issueWith logs a device in: a token with the device's role, and the
-// bookmark key (when not "") next to it; how names the way in for the
-// audit log. False: no token (too many sessions).
-func (l *Login) issueWith(w http.ResponseWriter, d webdevices.Device, key, how string) bool {
+// bookmark key (when not "") in its httpOnly cookie; how names the way in
+// for the audit log. False: no token (too many sessions).
+func (l *Login) issueWith(w http.ResponseWriter, r *http.Request, d webdevices.Device, key, how string) bool {
 	tok, sess, err := l.cfg.Tokens.Issue(d.ID, sessionRole(d.Role), l.cfg.Now())
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, errorReply("too_many_sessions"))
@@ -288,7 +288,8 @@ func (l *Login) issueWith(w http.ResponseWriter, d webdevices.Device, key, how s
 	reply := map[string]any{"token": tok, "role": d.Role, "device": d.ID,
 		"idle_s": int(l.cfg.Tokens.idle / time.Second), "max_s": int(l.cfg.Tokens.max / time.Second)}
 	if key != "" {
-		reply["device_key"] = key
+		setDeviceCookie(w, r, key)
+		reply["remembered"] = true
 	}
 	writeJSON(w, http.StatusOK, reply)
 	return true
