@@ -3,6 +3,7 @@ package app
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/picker"
 )
@@ -143,8 +144,30 @@ func TestGitxAutoFetch(t *testing.T) {
 	if m.gitxAutoFetchOn() || !toastHas(m, "Auto fetch off") {
 		t.Error("not off")
 	}
-	// A tick of a stopped timer does nothing.
-	if c := m.gitxAutoFetchTick(m.gitxAutoFetchGen() - 1); c != nil {
-		t.Error("a stale tick fetched")
+	// Off: a git poll long after does not fetch.
+	if c := m.gitxAutoFetchPoll(time.Now().Add(time.Hour)); c != nil {
+		t.Error("a poll fetched while auto fetch is off")
+	}
+}
+
+// GITX-12: auto fetch adds no timer (TestNoNewTimers); the 2 s git poll
+// fetches once 3 minutes have passed, then waits 3 minutes again.
+func TestGitxAutoFetchRidesTheGitPoll(t *testing.T) {
+	m, _, _ := gitxUpstreamRepo(t)
+	m.dispatchPaletteAction("git-auto-fetch")
+	t.Cleanup(func() {
+		if m.gitxAutoFetchOn() {
+			m.dispatchPaletteAction("git-auto-fetch")
+		}
+	})
+	now := time.Now()
+	if c := m.gitxAutoFetchPoll(now.Add(time.Minute)); c != nil {
+		t.Fatal("fetched before 3 minutes")
+	}
+	if c := m.gitxAutoFetchPoll(now.Add(3*time.Minute + time.Second)); c == nil {
+		t.Fatal("no fetch after 3 minutes")
+	}
+	if c := m.gitxAutoFetchPoll(now.Add(4 * time.Minute)); c != nil {
+		t.Error("fetched again before the next 3 minutes")
 	}
 }
