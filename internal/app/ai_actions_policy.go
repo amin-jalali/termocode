@@ -492,6 +492,16 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"itermoc-agents":    aiNever(itermocNoOpen),
 	"ai-model-slot-add": aiNever(itermocNoSlotEdit),
 	"ai-add":            aiNever(addAINoAI),
+	// Workflows view (workflows_keys.go, plan §5.8): opening and reading
+	// are free; a run reads outside systems and may write (its writes ask
+	// again on the gate card); on/off changes what runs unattended.
+	"workflows":          aiAuto(),
+	"workflow-run":       aiConfirm(ai.ClassRun),
+	"workflow-dry-run":   aiConfirm(ai.ClassRun),
+	"workflow-enable":    aiDestructive(),
+	"workflow-stop":      aiConfirm(ai.ClassRun),
+	"workflow-edit-file": aiAuto(),
+	"workflow-history":   aiAuto(),
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),

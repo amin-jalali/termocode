@@ -103,6 +103,10 @@ type SessionState struct {
 	// WORKTREES view (worktrees_filter.go): the f filter and the / text.
 	WorktreesKind   string `json:"worktrees_kind,omitempty"`
 	WorktreesFilter string `json:"worktrees_filter,omitempty"`
+	// WorktreeSetupTrusted is the hash of the .termocode/worktrees.json
+	// whose setup commands the user trusted (WTX-7); a changed file asks
+	// again.
+	WorktreeSetupTrusted string `json:"worktree_setup_trusted,omitempty"`
 
 	// Terminals are the terminal tabs, split panes and folders of this
 	// workspace, opened again after a restart (terminal_restore.go).
@@ -222,12 +226,13 @@ func workspacePart(s SessionState) SessionState {
 		AIHooksRefused:    s.AIHooksRefused,
 		AIMemory:          s.AIMemory,
 
-		ServicesAIAllowed:   s.ServicesAIAllowed,
-		ServicesStarted:     s.ServicesStarted,
-		ServicesLocalOK:     s.ServicesLocalOK,
-		ContainersCollapsed: s.ContainersCollapsed,
-		WorktreesKind:       s.WorktreesKind,
-		WorktreesFilter:     s.WorktreesFilter,
+		ServicesAIAllowed:    s.ServicesAIAllowed,
+		ServicesStarted:      s.ServicesStarted,
+		ServicesLocalOK:      s.ServicesLocalOK,
+		ContainersCollapsed:  s.ContainersCollapsed,
+		WorktreesKind:        s.WorktreesKind,
+		WorktreesFilter:      s.WorktreesFilter,
+		WorktreeSetupTrusted: s.WorktreeSetupTrusted,
 
 		Terminals: s.Terminals,
 	}

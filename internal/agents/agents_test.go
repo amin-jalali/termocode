@@ -190,3 +190,32 @@ func TestMCPLineQuoting(t *testing.T) {
 		t.Errorf("plain word quoted: %s", w)
 	}
 }
+
+// InputReady (WTX-8): the first task is typed only at the input box,
+// never into a question or a y/n prompt, and never into an agent whose
+// screen cannot be read.
+func TestInputReady(t *testing.T) {
+	read := func(name string) []string {
+		b, err := os.ReadFile(filepath.Join("testdata", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Split(string(b), "\n")
+	}
+	if !InputReady("claude", read("claude-done.txt")) || !InputReady("codex", read("codex-done.txt")) {
+		t.Error("the input box is not ready")
+	}
+	for _, f := range []string{"claude-waiting-bash.txt", "claude-waiting-question.txt", "claude-working.txt", "codex-waiting-command.txt"} {
+		id, _, _ := strings.Cut(f, "-")
+		if InputReady(id, read(f)) {
+			t.Errorf("%s is ready", f)
+		}
+	}
+	yn := append(read("claude-done.txt"), "Overwrite the file? [y/N]")
+	if InputReady("claude", yn) {
+		t.Error("ready under a y/n prompt")
+	}
+	if InputReady("amp", read("claude-done.txt")) {
+		t.Error("an agent without screen rules is ready")
+	}
+}

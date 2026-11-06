@@ -8,7 +8,8 @@ import (
 // worktreesScene is the WORKTREES view with a canned repository (app
 // worktreesDemo): the cursor on a working, a waiting, an asleep and an
 // external worktree, the ? card, the filter line (WTX-4) and Worktree:
-// Jump… (WTX-3).
+// Jump… (WTX-3), the link card (WTX-9), children, an external worktree
+// with no meta and an agent status (WTX-10..12), and the notes card.
 func worktreesScene(name, variant string) Scene {
 	return Scene{Name: name, Steps: WithEditor(Act("worktreesdemo:"+variant), Pause(400*time.Millisecond))}
 }
@@ -17,7 +18,7 @@ func worktreesScene(name, variant string) Scene {
 // compact one-line list), and the list with ASCII icons.
 func worktreesCases() []goldenCase {
 	var out []goldenCase
-	for _, v := range []string{"running", "waiting", "asleep", "external", "keys", "filter", "jump"} {
+	for _, v := range []string{"running", "waiting", "asleep", "external", "keys", "filter", "jump", "new", "new-error", "setup", "setup-running", "link", "nested", "notes"} {
 		sc := worktreesScene("worktrees-"+v, v)
 		for _, sz := range [][2]int{{150, 42}, {80, 24}} {
 			out = append(out, goldenCase{fmt.Sprintf("%s-%dx%d", sc.Name, sz[0], sz[1]), sc, sz[0], sz[1]})
