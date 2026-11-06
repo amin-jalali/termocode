@@ -113,6 +113,39 @@ func countLines(path, line string) int {
 	return n
 }
 
+// A status counted before a second session joined must not reach a
+// session after the newer one: the first session then showed 1 session
+// for good (TestShareBrokerTwoSessionsOneServer timed out on CI).
+func TestShareBrokerStatusComesInOrder(t *testing.T) {
+	_, sock := startTestBroker(t, fakeShareConfig(nil))
+	held, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	hold := func(n int) {
+		if n == 1 {
+			once.Do(func() { close(held); <-release })
+		}
+	}
+	shareStatusCounted.Store(&hold)
+	t.Cleanup(func() { shareStatusCounted.Store(nil) })
+	s1, s2 := &shareSeen{}, &shareSeen{}
+	dialTestShare(t, sock, s1)
+	<-held // the first session's "1 session" is counted, not sent yet
+	dialTestShare(t, sock, s2)
+	time.Sleep(300 * time.Millisecond) // the second session's status goes out (or waits its turn)
+	close(release)
+	deadline := time.Now().Add(3 * time.Second)
+	for s1.sessions.Load() != 2 || s2.sessions.Load() != 2 {
+		if time.Now().After(deadline) {
+			t.Fatalf("sessions seen %d and %d, want 2 and 2", s1.sessions.Load(), s2.sessions.Load())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	time.Sleep(200 * time.Millisecond) // nothing older comes after
+	if s1.sessions.Load() != 2 {
+		t.Fatalf("the first session ends at %d sessions", s1.sessions.Load())
+	}
+}
+
 func TestShareBrokerTwoSessionsOneServer(t *testing.T) {
 	log := filepath.Join(t.TempDir(), "fake.log")
 	b, sock := startTestBroker(t, fakeShareConfig(map[string]string{"FAKE_LOG": log}))
