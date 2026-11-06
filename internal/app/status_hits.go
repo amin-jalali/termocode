@@ -48,6 +48,8 @@ func (m Model) statusSpans() []statusSpan {
 			add("status:blame", sp.X0, sp.X1, sp.Index == len(st.Ext)-1)
 		}
 	}
+	x0, x1, ok = sb.PlanChipSpan(st)
+	add(agentPlanStatusID, x0, x1, ok) // AGX-12 (agent_usage.go)
 	if m.ext != nil && len(st.Ext) > 0 {
 		for _, sp := range sb.ExtItemSpans(st) {
 			add("status:ext:"+strconv.Itoa(sp.Index), sp.X0, sp.X1, true)

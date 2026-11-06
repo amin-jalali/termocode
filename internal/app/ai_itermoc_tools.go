@@ -439,11 +439,12 @@ func aiUsageInfo(m *Model, _ itermocSnap) (any, error) {
 		ByAgent []aiUsageLine `json:"by_agent"`
 		Total   aiUsageLine   `json:"total"`
 		Subs    []string      `json:"subscription_models,omitempty"`
+		Plans   []aiPlanLine  `json:"plans"`
 		NoPrice []string      `json:"models_without_price,omitempty"`
 		Note    string        `json:"note"`
 	}{
 		Scope: "this session (kept in memory; gone when termocode closes)", ByModel: aiUsageLines(log, aiUsageByModel),
-		ByAgent: aiUsageLines(log, aiUsageByAgent), Total: total, Subs: sum.Sub, NoPrice: sum.Unknown,
+		ByAgent: aiUsageLines(log, aiUsageByAgent), Total: total, Subs: sum.Sub, NoPrice: sum.Unknown, Plans: m.aiPlanLines(),
 		Note: "cost_usd counts only models with a known price; a subscription (Claude sign-in or a CLI step) has no price per token",
 	}
 	return out, nil
@@ -505,7 +506,10 @@ func aiItermocTools(call aiIDECaller) []ai.Tool {
 			Name: "usage_summary",
 			Description: "This session's AI usage, as the USAGE view shows it: per model and per agent step, the calls, " +
 				"input and output token counts (fields input, output) and the cost in USD (only where the price is known). Subscription steps (a Claude " +
-				"sign-in, Claude Code, Codex) say \"subscription\" and have no dollar cost. Numbers and names only.",
+				"sign-in, Claude Code, Codex) say \"subscription\" and have no dollar cost. plans: per outside agent account " +
+				"(Claude Code, Codex) the used share of the plan window when known, whether a usage limit is on, the reset time, the " +
+				"last limit and today's tokens, from the agents' own screens and (when the user allows it) their session files; " +
+				"never from a vendor endpoint. Numbers and names only.",
 			Params:   map[string]any{},
 			Describe: func(map[string]any) string { return "Show AI usage" },
 			Run: func(ctx context.Context, _ map[string]any) (string, error) {

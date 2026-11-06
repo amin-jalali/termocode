@@ -33,7 +33,7 @@ func (m Model) TerminalTabStates() []TerminalTabState {
 
 // panelEntryNameOf is the tab label of t (panelEntryName by value).
 func (m Model) panelEntryNameOf(t terminalTab) string {
-	if title := t.agentTitle(); title != "" {
+	if title := t.agentTabName(); title != "" {
 		return title
 	}
 	if t.Name != "" {
