@@ -220,6 +220,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// ── Merge view (git_merge_view.go): opening and moving around are
 	// UI only; each Take changes the user's merge result, so the user
 	// decides it. ──
+	"git-merge-branch":                 aiNever(aiNoPicker),
+	"git-merge-status":                 aiNever("its card asks the user to abort or continue a stopped merge"),
 	"git-merge-open":                   aiAuto(),
 	"git-merge-next":                   aiAuto(),
 	"git-merge-prev":                   aiAuto(),

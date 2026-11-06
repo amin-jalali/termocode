@@ -356,6 +356,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
+| Git: Merge Branch… | `git-merge-branch` |   |   |
 | Git: Merge View: Close | `git-merge-close` |   | `Esc` |
 | Git: Merge View: Mark as Resolved | `git-merge-resolve` |   | `r` |
 | Git: Merge View: Merge Keys | `git-merge-focus` |   | `F6` |
@@ -368,6 +369,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Merge View: Take Ours | `git-merge-take-ours` |   | `o` |
 | Git: Merge View: Take Theirs | `git-merge-take-theirs` |   | `t` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
+| Git: Merge in Progress (Continue / Abort)… | `git-merge-status` |   |   |
 | Git: Open Merge View | `git-merge-open` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Pull | `git-pull` |   |   |

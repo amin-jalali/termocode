@@ -1993,6 +1993,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-focus` | Git: Focus Source Control | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
+| `git-merge-branch` | Git: Merge Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-merge-close` | Git: Merge View: Close | auto |   |
 | `git-merge-focus` | Git: Merge View: Merge Keys | auto |   |
 | `git-merge-next` | Git: Merge View: Next Conflict | auto |   |
@@ -2000,6 +2001,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-merge-pane` | Git: Merge View: Show Next Pane | auto |   |
 | `git-merge-prev` | Git: Merge View: Previous Conflict | auto |   |
 | `git-merge-resolve` | Git: Merge View: Mark as Resolved | never | resolves the user's merge conflict in the merge view; user only |
+| `git-merge-status` | Git: Merge in Progress (Continue / Abort)… | never | its card asks the user to abort or continue a stopped merge |
 | `git-merge-take-base` | Git: Merge View: Take Base | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-both` | Git: Merge View: Take Both (Ours, Then Theirs) | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-both-theirs-first` | Git: Merge View: Take Both (Theirs, Then Ours) | never | resolves the user's merge conflict in the merge view; user only |
