@@ -231,6 +231,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitRef is what a tag, remote or force-push card or prompt is about
+	// (git_tags_remotes.go).
+	gitRef gitRefOpsState
 
 	// VSCode-style mouse hover. hoverX/hoverY are the absolute screen cell
 	// under the pointer (or -1 when unknown). mouseAllMotion mirrors the live

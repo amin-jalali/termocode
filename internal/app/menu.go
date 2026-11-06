@@ -45,6 +45,7 @@ const (
 	gitMenuRefresh  = "git-refresh"
 	gitMenuShowRaw  = "git-show-raw"
 	gitMenuRebase   = "git-rebase-from" // git_rebase.go
+	gitMenuTagHere  = "git-tag-here"    // git_tags_remotes.go
 
 	// Action-bar overflow (⋯) menu.
 	gitMenuAmend     = "git-amend"
@@ -82,6 +83,7 @@ func gitCommitMenuItems() []menu.Item {
 		{ID: gitMenuCopyMsg, Title: "Copy Commit Message", Icon: "⎘"},
 		{ID: gitMenuShowRaw, Title: "Show Raw (git show)", Icon: "≢"},
 		{ID: gitMenuRebase, Title: "Rebase from Here…", Icon: "⇅"},
+		{ID: gitMenuTagHere, Title: "Create Tag Here…", Icon: "⌂"},
 		{Sep: true},
 		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
 	}
@@ -154,6 +156,8 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
 			return m.gitRebaseFromCmd(m.gitCommits[cur.ci].FullHash)
 		}
+	case gitMenuTagHere:
+		return m.gitTagHereFromRow()
 	case gitMenuRefresh:
 		return fetchGitCmd()
 	}

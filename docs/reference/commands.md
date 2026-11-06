@@ -344,6 +344,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Commit... | `git-commit` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
+| Git: Create Tag… | `git-tag-create` |   |   |
+| Git: Delete Remote Tag… | `git-tag-delete-remote` |   |   |
+| Git: Delete Tag… | `git-tag-delete` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
@@ -351,11 +354,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
+| Git: Force Push (with Lease)… | `git-push-force` |   |   |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
+| Git: Manage Remotes… | `git-remotes` |   |   |
 | Git: Merge View: Close | `git-merge-close` |   | `Esc` |
 | Git: Merge View: Mark as Resolved | `git-merge-resolve` |   | `r` |
 | Git: Merge View: Merge Keys | `git-merge-focus` |   | `F6` |
@@ -373,14 +378,17 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Push | `git-push` |   |   |
+| Git: Push Tag… | `git-tag-push` |   |   |
 | Git: Rebase in Progress (Continue / Skip / Abort)… | `git-rebase-status` |   |   |
 | Git: Redo Undone Git Action | `git-redo` |   |   |
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
+| Git: Set Upstream Branch… | `git-upstream-set` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |
 | Git: Show Stash List... | `git-stash-list` |   |   |
+| Git: Show Tag Details… | `git-tag-details` |   |   |
 | Git: Show Tags... | `git-tags` |   |   |
 | Git: Stage All Changes | `git-stage-all` |   |   |
 | Git: Stage Current File | `git-stage` |   |   |
@@ -391,6 +399,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
+| Git: Unset Upstream Branch | `git-upstream-unset` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
 

@@ -132,7 +132,9 @@ func ListRemotes(dir string) ([]Remote, error) {
 func AddRemote(dir, name, url string) error { return gitRun(dir, "remote", "add", "--", name, url) }
 
 // RenameRemote renames a remote (its tracking branches move too).
-func RenameRemote(dir, old, name string) error { return gitRun(dir, "remote", "rename", "--", old, name) }
+func RenameRemote(dir, old, name string) error {
+	return gitRun(dir, "remote", "rename", "--", old, name)
+}
 
 // SetRemoteURL changes a remote's URL.
 func SetRemoteURL(dir, name, url string) error {

@@ -286,6 +286,15 @@ func paletteItems() []picker.Item {
 		{ID: "git-log", Title: "Git: Show Log..."},
 		{ID: "git-compare-rev", Title: "Git: Compare with Revision..."},
 		{ID: "git-blame", Title: "Git: Blame Current Line", Hint: "Alt+B"},
+		{ID: "git-tag-create", Title: "Git: Create Tag…"},               // git_tags_remotes.go
+		{ID: "git-tag-delete", Title: "Git: Delete Tag…"},               // git_tags_remotes.go
+		{ID: "git-tag-push", Title: "Git: Push Tag…"},                   // git_tags_remotes.go
+		{ID: "git-tag-delete-remote", Title: "Git: Delete Remote Tag…"}, // git_tags_remotes.go
+		{ID: "git-tag-details", Title: "Git: Show Tag Details…"},        // git_tags_remotes.go
+		{ID: "git-remotes", Title: "Git: Manage Remotes…"},              // git_tags_remotes.go
+		{ID: "git-upstream-set", Title: "Git: Set Upstream Branch…"},    // git_tags_remotes.go
+		{ID: "git-upstream-unset", Title: "Git: Unset Upstream Branch"}, // git_tags_remotes.go
+		{ID: "git-push-force", Title: "Git: Force Push (with Lease)…"},  // git_tags_remotes.go
 		{ID: "git-history", Title: "Git: Show File History..."},
 		{ID: "git-tags", Title: "Git: Show Tags..."},
 		{ID: "zen-mode", Title: "View: Toggle Zen Mode", Hint: "Alt+Z"},
@@ -720,6 +729,24 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.openCompareWithRevisionPrompt()
 	case "git-blame":
 		return m.gitBlameCurrentLine()
+	case "git-tag-create":
+		return m.openCreateTagPrompt("", "")
+	case "git-tag-delete":
+		return m.openTagPickerFor(pickerKindGitTagDelete, " Delete which tag? ")
+	case "git-tag-push":
+		return m.openTagPickerFor(pickerKindGitTagPush, " Push which tag? ", picker.Item{ID: "tags-all", Title: "All tags"})
+	case "git-tag-delete-remote":
+		return m.openTagPickerFor(pickerKindGitTagDeleteRemote, " Delete which tag on the remote? ")
+	case "git-tag-details":
+		return m.openTagPickerFor(pickerKindGitTagDetails, " Tag details ")
+	case "git-remotes":
+		return m.openRemotesPicker()
+	case "git-upstream-set":
+		return m.openUpstreamPicker()
+	case "git-upstream-unset":
+		return m.gitUnsetUpstream()
+	case "git-push-force":
+		return m.openForcePushCard()
 	case "git-history":
 		return m.gitFileHistoryPicker()
 	case "git-tags":

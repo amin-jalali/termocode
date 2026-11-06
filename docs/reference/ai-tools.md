@@ -2010,11 +2010,13 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-pr-list` | Git: Pull Requests… | auto |   |
 | `git-pull` | Git: Pull | confirm (git) |   |
 | `git-push` | Git: Push | confirm (always asks) |   |
+| `git-push-force` | Git: Force Push (with Lease)… | never | replaces commits on the remote; only the user force pushes, after typing the branch name |
 | `git-rebase` | Git: Interactive Rebase… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-rebase-status` | Git: Rebase in Progress (Continue / Skip / Abort)… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-redo` | Git: Redo Undone Git Action | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-refresh` | Git: Refresh Status | auto |   |
+| `git-remotes` | Git: Manage Remotes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |
@@ -2023,10 +2025,17 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-stash-list` | Git: Show Stash List... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_stash list) |
 | `git-stash-pop` | Git: Pop Latest Stash | confirm (git) |   |
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
+| `git-tag-create` | Git: Create Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-tag-delete` | Git: Delete Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-tag-delete-remote` | Git: Delete Remote Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-tag-details` | Git: Show Tag Details… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-tag-push` | Git: Push Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |
 | `git-unstage-lines` | Git: Unstage Line (or Selected Lines) | confirm (git) |   |
+| `git-upstream-set` | Git: Set Upstream Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-upstream-unset` | Git: Unset Upstream Branch | confirm (git) |   |
 | `git-view-toggle` | Git: Toggle Tree/Flat View | auto |   |
 | `goto-impl` | LSP: Go to Implementation | auto |   |
 | `goto-line` | Go to Line... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file with line) |
