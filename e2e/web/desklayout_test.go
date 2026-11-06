@@ -39,7 +39,13 @@ func TestDeskLayoutOpen(t *testing.T) {
 // card.
 func TestDeskLayoutSaveAndDelete(t *testing.T) {
 	p, c := openFiles(t, Desktop)
-	runCmd(t, p, c, true, "layout save", "Layout: Save As…")
+	// Not runCmd: the name box opens at once, so the quick input never closes.
+	wbKey(p, "P", true, true)
+	answerReqs(t, c, map[string]any{"palette.list": webproto.PaletteList{Items: []webproto.PaletteItem{}}})
+	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box")`)
+	p.Key("layout save")
+	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === "Layout: Save As…"`)
+	p.Key("\r")
 	p.WaitJS(`document.querySelector(".quick-box")?.placeholder === "Name for the laptop's layout now" && document.activeElement === document.querySelector(".quick-box")`)
 	p.Key("mine")
 	p.Key("\r")

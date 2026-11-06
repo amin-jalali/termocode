@@ -760,6 +760,26 @@ export const SD = {
   "kb.conflict_body": "{key} is the key of {owner} now. Give it to {action}? {owner} loses this key.",
   "kb.replace": "Replace",
   "kb.bound": "{action}: {key} on the laptop.",
+  // Layout: Open…, Save As…, Delete…, Reset to Default (WEBP-7)
+  "cmd.layout_open": "Layout: Open…",
+  "cmd.layout_save": "Layout: Save As…",
+  "cmd.layout_delete": "Layout: Delete…",
+  "cmd.layout_reset": "Layout: Reset to Default",
+  "lay.open_title": "Layouts of the laptop (Enter: open on the laptop)",
+  "lay.delete_title": "Saved layouts (the built-in ones stay)",
+  "lay.none": "No saved layouts to list.",
+  "lay.opened": "Layout {name} is open on the laptop.",
+  "lay.reset_done": "The laptop shows the default layout.",
+  "lay.name": "Name for the laptop's layout now",
+  "lay.bad_name": "Use letters, digits, space, - _ or . (up to 40).",
+  "lay.who": "Who gets the layout {name}?",
+  "lay.user": "Only me",
+  "lay.user_detail": "every project of yours",
+  "lay.project": "This project",
+  "lay.project_detail": ".termocode/layouts, to share with the team",
+  "lay.replace_ask": "A layout named {name} exists. Replace it with the laptop's layout now?",
+  "lay.saved": "Layout {name} saved.",
+  "lay.delete_ask": "Delete the layout {name} on the laptop? It cannot be restored there.",
 } as const;
 
 addStrings(SD);

@@ -481,6 +481,16 @@ export interface KubeObjectArgs {
   name: string;
 }
 
+export interface LayoutNameArgs {
+  name: string;
+}
+
+export interface LayoutSaveArgs {
+  name: string;
+  scope: "user" | "project";
+  replace?: boolean;
+}
+
 export interface LSPServerAskArgs {
   name: string;
   action: "install" | "uninstall";
@@ -2166,6 +2176,26 @@ export interface KubeText {
   truncated?: boolean;
 }
 
+export interface LayoutList {
+  items: LayoutEntry[];
+}
+
+export interface LayoutEntry {
+  name: string;
+  source: "built-in" | "user" | "project";
+  description?: string;
+  preview: string[];
+}
+
+export interface LayoutOpened {
+  name: string;
+}
+
+export interface LayoutSaved {
+  saved?: boolean;
+  exists?: boolean;
+}
+
 export interface LSPServerList {
   items: LSPServer[];
 }
@@ -2942,6 +2972,11 @@ export interface OpArgs {
   "kube.logs": KubeLogsArgs;
   "kube.describe": KubeObjectArgs;
   "kube.restart": KubeObjectArgs;
+  "layout.list": EmptyArgs;
+  "layout.open": LayoutNameArgs;
+  "layout.save": LayoutSaveArgs;
+  "layout.delete": LayoutNameArgs;
+  "layout.reset": EmptyArgs;
   "lsp.servers": EmptyArgs;
   "lsp.server_ask": LSPServerAskArgs;
   "services.refresh": EmptyArgs;
@@ -3200,6 +3235,11 @@ export interface OpResult {
   "kube.logs": KubeText;
   "kube.describe": KubeText;
   "kube.restart": AskRef;
+  "layout.list": LayoutList;
+  "layout.open": LayoutOpened;
+  "layout.save": LayoutSaved;
+  "layout.delete": AskRef;
+  "layout.reset": LayoutOpened;
   "lsp.servers": LSPServerList;
   "lsp.server_ask": AskRef;
   "services.logs": ServiceLogs;

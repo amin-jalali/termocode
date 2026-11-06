@@ -1,7 +1,7 @@
 // More commands of the workbench's command list (WEBP-9): laptop palette
 // commands the page does too, each through its own op or on the page.
 // Only the desktop workbench loads this file (lib/commands.ts).
-import type { DebugLaunch, KeyBindings, KeyBound, LSPServer, LSPServerList, MCPItems, ThemeColor, ThemeColors, ThemeList } from "../../../../webproto/proto";
+import type { DebugLaunch, KeyBindings, KeyBound, LayoutEntry, LayoutList, LayoutSaved, LSPServer, LSPServerList, MCPItems, ThemeColor, ThemeColors, ThemeList } from "../../../../webproto/proto";
 import { link } from "../session";
 import { t } from "../strings";
 import { toast } from "./toasts";
@@ -248,6 +248,86 @@ export function customizeKeys(): void {
   }, failed);
 }
 
+/** layoutDetail is where a layout comes from and what it changes. */
+function layoutDetail(e: LayoutEntry): string {
+  return [e.source, e.description || (e.preview ?? []).join(" · ")].filter(Boolean).join(" · ");
+}
+
+/** pickLayout lists the laptop's layouts (keep: the ones to list). */
+function pickLayout(title: string, keep: (e: LayoutEntry) => boolean, run: (e: LayoutEntry) => void): void {
+  link.request("layout.list").then((r) => {
+    const items = ((r as LayoutList).items ?? []).filter(keep);
+    if (!items.length) {
+      toast("info", t("lay.none"));
+      return;
+    }
+    quick.value = { mode: "pick", pick: { title, items: items.map((e) => ({ label: e.name, detail: layoutDetail(e), run: () => run(e) })) } };
+  }, failed);
+}
+
+/** openLayout is Layout: Open…: the one picked opens on the laptop. */
+export function openLayout(): void {
+  pickLayout(t("lay.open_title"), () => true, (e) =>
+    link.request("layout.open", { name: e.name }).then(() => toast("ok", t("lay.opened", { name: e.name })), failed),
+  );
+}
+
+/** saveLayout saves the laptop's screen as name; a taken name is asked
+ * here first, then replaced. */
+function saveLayout(name: string, scope: "user" | "project", replace = false): void {
+  link.request("layout.save", replace ? { name, scope, replace } : { name, scope }).then((r) => {
+    if ((r as LayoutSaved).exists && !replace) {
+      askHere.value = { label: t("cmd.layout_save"), text: t("lay.replace_ask", { name }), verb: t("kb.replace"), run: () => saveLayout(name, scope, true) };
+      return;
+    }
+    toast("ok", t("lay.saved", { name }));
+  }, failed);
+}
+
+/** askLayoutSave is Layout: Save As…: a name, then who gets it. */
+export function askLayoutSave(): void {
+  quick.value = {
+    mode: "ask",
+    ask: {
+      title: t("lay.name"),
+      run: (raw) => {
+        const name = raw.trim();
+        if (!/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/.test(name) || /[. ]$/.test(name)) {
+          toast("warn", t("lay.bad_name"));
+          return;
+        }
+        setTimeout(
+          () =>
+            (quick.value = {
+              mode: "pick",
+              pick: {
+                title: t("lay.who", { name }),
+                items: [
+                  { label: t("lay.user"), detail: t("lay.user_detail"), run: () => saveLayout(name, "user") },
+                  { label: t("lay.project"), detail: t("lay.project_detail"), run: () => saveLayout(name, "project") },
+                ],
+              },
+            }),
+          0,
+        );
+      },
+    },
+  };
+}
+
+/** deleteLayout is Layout: Delete…: a saved layout, after a question here
+ * and the laptop card. */
+export function deleteLayout(): void {
+  pickLayout(t("lay.delete_title"), (e) => e.source !== "built-in", (e) => {
+    askLaptop.value = { label: t("cmd.layout_delete"), text: t("lay.delete_ask", { name: e.name }), send: () => link.request("layout.delete", { name: e.name }) };
+  });
+}
+
+/** resetLayout is Layout: Reset to Default on the laptop. */
+export function resetLayout(): void {
+  link.request("layout.reset").then(() => toast("ok", t("lay.reset_done")), failed);
+}
+
 /** moreCommands are this file's commands. */
 export function moreCommands(): Command[] {
   return [
@@ -258,6 +338,10 @@ export function moreCommands(): Command[] {
     { id: "pickTheme", label: "cmd.pick_theme", when: canAct, run: pickTheme },
     { id: "editTheme", label: "cmd.edit_theme", when: canAct, run: editTheme },
     { id: "customizeKeys", label: "cmd.keybindings", when: canAct, run: customizeKeys },
+    { id: "layoutOpen", label: "cmd.layout_open", when: canAct, run: openLayout },
+    { id: "layoutSave", label: "cmd.layout_save", when: canAct, run: askLayoutSave },
+    { id: "layoutDelete", label: "cmd.layout_delete", when: canAct, run: deleteLayout },
+    { id: "layoutReset", label: "cmd.layout_reset", when: canAct, run: resetLayout },
     { id: "lspManage", label: "cmd.lsp_manage", when: canAct, run: manageLSP },
     { id: "outputClear", label: "cmd.output_clear", when: () => logs.peek() !== null, run: clearOutput },
   ];

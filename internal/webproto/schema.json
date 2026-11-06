@@ -2111,6 +2111,76 @@
       "phase": "v2"
     },
     {
+      "op": "layout.list",
+      "args": "EmptyArgs",
+      "result": "LayoutList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "layout.open",
+      "args": "LayoutNameArgs",
+      "result": "LayoutOpened",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "layout.save",
+      "args": "LayoutSaveArgs",
+      "result": "LayoutSaved",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "layout.delete",
+      "args": "LayoutNameArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "layout.reset",
+      "args": "EmptyArgs",
+      "result": "LayoutOpened",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "lsp.servers",
       "args": "EmptyArgs",
       "result": "LSPServerList",
@@ -10183,6 +10253,110 @@
         "label"
       ],
       "additionalProperties": false
+    },
+    "LayoutEntry": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "preview": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "source": {
+          "enum": [
+            "built-in",
+            "user",
+            "project"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "preview"
+      ],
+      "additionalProperties": true
+    },
+    "LayoutList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/LayoutEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "LayoutNameArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "LayoutOpened": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "LayoutSaveArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "replace": {
+          "type": "boolean"
+        },
+        "scope": {
+          "enum": [
+            "user",
+            "project"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "LayoutSaved": {
+      "type": "object",
+      "properties": {
+        "exists": {
+          "type": "boolean"
+        },
+        "saved": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
     },
     "LinesDelta": {
       "type": "object",
