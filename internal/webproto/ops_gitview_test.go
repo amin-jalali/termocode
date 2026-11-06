@@ -137,3 +137,35 @@ func TestGitLineOps(t *testing.T) {
 		t.Errorf("a bad header: %v", err)
 	}
 }
+
+// Spec (tags and stash list): git.tags and git.stash_list are reads for
+// viewers; git.checkout_tag and git.stash_apply wait for a laptop card
+// and take a plain tag name or "stash@{n}" only.
+func TestGitTagStashOps(t *testing.T) {
+	for _, op := range []string{"git.tags", "git.stash_list"} {
+		if p, ok := Lookup(op); !ok || p.Role != RoleViewer || p.LaptopCard {
+			t.Errorf("%s row %+v", op, p)
+		}
+	}
+	for _, op := range []string{"git.checkout_tag", "git.stash_apply"} {
+		if p, ok := Lookup(op); !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+			t.Errorf("%s row %+v", op, p)
+		}
+	}
+	for _, bad := range []string{`{"tag":""}`, `{"tag":"-x"}`, `{"tag":"a b"}`, `{"tag":"a..b"}`, `{"tag":"x\n"}`} {
+		if _, err := DecodeArgs("git.checkout_tag", json.RawMessage(bad)); !errors.Is(err, ErrInvalid) {
+			t.Errorf("tag %s: %v", bad, err)
+		}
+	}
+	if _, err := DecodeArgs("git.checkout_tag", json.RawMessage(`{"tag":"release/v1.2.0"}`)); err != nil {
+		t.Errorf("a good tag: %v", err)
+	}
+	for _, bad := range []string{`{"ref":"stash"}`, `{"ref":"stash@{-1}"}`, `{"ref":"stash@{x}"}`, `{"ref":"HEAD"}`, `{"ref":"stash@{0}x"}`} {
+		if _, err := DecodeArgs("git.stash_apply", json.RawMessage(bad)); !errors.Is(err, ErrInvalid) {
+			t.Errorf("ref %s: %v", bad, err)
+		}
+	}
+	if _, err := DecodeArgs("git.stash_apply", json.RawMessage(`{"ref":"stash@{12}"}`)); err != nil {
+		t.Errorf("a good ref: %v", err)
+	}
+}

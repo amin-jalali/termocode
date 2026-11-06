@@ -97,8 +97,10 @@ web	git-stage-all	palette
 web	git-stage-hunk	op:git.stage_hunk
 web	git-stage-lines	op:git.stage_lines
 web	git-stash	palette
+web	git-stash-list	op:git.stash_list
 web	git-stash-pop	palette
 web	git-sync	palette
+web	git-tags	op:git.tags
 web	git-unstage-hunk	op:git.unstage_hunk
 web	git-unstage-lines	op:git.unstage_lines
 web	git-view-toggle	cmd:scmViewToggle
@@ -364,8 +366,6 @@ missing	git-compare-rev	Git|S
 missing	git-fixup	Git|S
 missing	git-redo	Git|S
 missing	git-reflog	Git|S
-missing	git-stash-list	Git|S
-missing	git-tags	Git|S
 missing	git-undo	Git|S
 missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
