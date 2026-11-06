@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -438,6 +439,12 @@ func perfUndoTurn(t *testing.T, m *Model, dir string, n, round int) time.Duratio
 	}
 	m.aiRestoreTurnDone()
 	s.streaming = false
+	// The turn's writes are still waiting to reach the disk, and cutting
+	// a file and writing it again makes the file system flush it first
+	// (ext4 waits for those writes when the disk is busy: the CI rounds of
+	// 150-300 ms next to 60 ms ones). A real undo comes later, when they
+	// are on the disk: wait for that, so the time is the undo's own.
+	syscall.Sync()
 	t0 := time.Now()
 	_ = m.aiUndoTurn(-1)
 	dt := time.Since(t0)
