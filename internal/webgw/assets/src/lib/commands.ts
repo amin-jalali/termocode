@@ -14,6 +14,7 @@ import { activeDesk, lineComment } from "./deskeditor";
 import type { EditAct } from "../monaco/protocol";
 import { saveLive } from "../views/LiveEditor";
 import { newChat } from "../views/Chat";
+import { chatFlow, exportChat, INFO_KINDS, moreChat, openAutoApprove, openInfo, openMCPProfiles, startFork } from "../views/ChatMore";
 import { newTerm } from "../views/Term";
 import { showOnLaptop } from "../views/FileView";
 import { modKey } from "./platform";
@@ -74,6 +75,7 @@ export function commands(): Command[] {
     { id: "aiFix", label: "ai.fix", when: hasFile, run: () => activeDesk.peek()?.aiAct("fix") },
     { id: "aiEdit", label: "ai.edit", keys: `${mod}+I`, when: hasFile, run: () => activeDesk.peek()?.aiAct("edit") },
     { id: "aiDoc", label: "ai.doc", when: hasFile, run: () => activeDesk.peek()?.aiAct("doc") },
+    { id: "aiAttach", label: "ai.attach", when: hasFile, run: () => activeDesk.peek()?.aiAct("attach") },
     { id: "agents", label: "cmd.agents", run: () => (setPanes({ side: true }), go({ tab: "more", rest: "agents", query: {} })) },
     { id: "showOnLaptop", label: "cmd.show_on_laptop", when: hasFile, run: () => { const f = activeFile.peek(); if (f) showOnLaptop(f); } },
     { id: "sidebar", label: "cmd.toggle_side", keys: `${mod}+B`, run: () => setPanes({ side: !panes.peek().side }) },
@@ -93,6 +95,7 @@ export function commands(): Command[] {
     { id: "newTerminal", label: "cmd.new_terminal", run: newTerm },
     { id: "chat", label: "cmd.chat", run: () => go({ tab: "chat", rest: "", query: {} }) },
     { id: "newChat", label: "cmd.new_chat", run: newChat },
+    ...chatCommands(),
     { id: "themeDark", label: "cmd.theme_dark", run: () => setPref("theme", "dark") },
     { id: "themeLight", label: "cmd.theme_light", run: () => setPref("theme", "light") },
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
@@ -128,6 +131,31 @@ export function commands(): Command[] {
     { id: "replaceWorkspace", label: "cmd.replace_ws", when: canWrite, run: replaceWorkspace },
     { id: "manageSnippets", label: "cmd.snippets_manage", when: canWrite, run: manageSnippets },
     { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
+  ];
+}
+
+const isController = () => link.meta.peek()?.role === "controller";
+
+/** chatCommands act on the laptop's open chat and read the laptop's AI
+ * screens (the chat column shows their questions). */
+function chatCommands(): Command[] {
+  const show = () => setPanes({ chat: true });
+  const withChat = (fn: (c: NonNullable<ReturnType<typeof moreChat>>) => void) => () => {
+    const c = moreChat();
+    if (!c) return;
+    show();
+    fn(c);
+  };
+  const hasChat = () => isController() && moreChat() !== null;
+  return [
+    { id: "chatRename", label: "chat.rename", when: hasChat, run: withChat((c) => (chatFlow.value = { s: "rename", id: c.id, title: c.title })) },
+    { id: "chatFork", label: "chat.fork", when: hasChat, run: withChat((c) => startFork(c.msgs)) },
+    { id: "chatExport", label: "chat.export", when: hasChat, run: withChat((c) => exportChat(c.id)) },
+    { id: "chatDelete", label: "chat.delete", when: hasChat, run: withChat((c) => (chatFlow.value = { s: "delete", id: c.id, title: c.title })) },
+    { id: "chatClear", label: "chat.clear", when: isController, run: () => (show(), (chatFlow.value = { s: "clear" })) },
+    { id: "mcpProfile", label: "mcp.switch", when: isController, run: () => (show(), openMCPProfiles()) },
+    { id: "autoApprove", label: "auto.title", when: isController, run: () => (show(), openAutoApprove()) },
+    ...INFO_KINDS.map(([kind, key]) => ({ id: "aiInfo:" + kind, label: key, when: isController, run: () => (show(), openInfo(kind)) })),
   ];
 }
 

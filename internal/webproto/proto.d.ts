@@ -370,11 +370,15 @@ export interface AINextEditArgs {
 export interface AIActionArgs {
   buf: number;
   tick: number;
-  kind: "explain" | "fix" | "edit" | "doc";
+  kind: "explain" | "fix" | "edit" | "doc" | "attach";
   start: number;
   end: number;
   line: number;
   instruction?: string;
+}
+
+export interface AIInfoArgs {
+  kind: "usage" | "rules" | "memory" | "skills" | "hooks" | "web-tools" | "mcp-log" | "serve-status" | "serve-config" | "configure" | "bug-report";
 }
 
 export interface GitFileLogArgs {
@@ -422,6 +426,20 @@ export interface AIWorktreeTextArgs {
 
 export interface AIWorktreeArgs {
   id: string;
+}
+
+export interface AIMCPProfileArgs {
+  name?: string;
+  all?: boolean;
+}
+
+export interface ChatRenameArgs {
+  id: string;
+  title: string;
+}
+
+export interface ChatForkArgs {
+  i: number;
 }
 
 export interface GitGraphArgs {
@@ -559,6 +577,10 @@ export interface PRReviewArgs {
 
 export interface AIUseArgs {
   name: string;
+}
+
+export interface AutoApproveArgs {
+  id: string;
 }
 
 export interface StatusSnap {
@@ -1547,7 +1569,7 @@ export interface AINextEdit {
 }
 
 export interface AIAction {
-  kind: "explain" | "fix" | "edit" | "doc";
+  kind: "explain" | "fix" | "edit" | "doc" | "attach";
   chat?: boolean;
   chatId?: string;
   none?: boolean;
@@ -1555,6 +1577,21 @@ export interface AIAction {
   start: number;
   end: number;
   lines: string[];
+}
+
+export interface AIInfo {
+  title: string;
+  note?: string;
+  rows: AIInfoRow[];
+  text?: string;
+  copy?: boolean;
+  save?: string;
+}
+
+export interface AIInfoRow {
+  title: string;
+  hint?: string;
+  header?: boolean;
 }
 
 export interface GitFileLog {
@@ -1688,6 +1725,21 @@ export interface AIWorktreeText {
   binary?: boolean;
   secret?: boolean;
   truncated?: boolean;
+}
+
+export interface MCPProfiles {
+  current: string;
+  profiles: MCPProfileItem[];
+}
+
+export interface MCPProfileItem {
+  name: string;
+  hint?: string;
+}
+
+export interface ChatExport {
+  name: string;
+  text: string;
 }
 
 export interface GitGraph {
@@ -1968,6 +2020,17 @@ export interface CIRun {
   url?: string;
 }
 
+export interface AutoApprove {
+  rows: AutoApproveRow[];
+}
+
+export interface AutoApproveRow {
+  id?: string;
+  title: string;
+  on?: boolean;
+  header?: boolean;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -2063,6 +2126,7 @@ export interface OpArgs {
   "ai.complete": AICompleteArgs;
   "ai.next_edit": AINextEditArgs;
   "ai.action": AIActionArgs;
+  "ai.info": AIInfoArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -2081,6 +2145,13 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.mcp_profiles": EmptyArgs;
+  "ai.use_mcp_profile": AIMCPProfileArgs;
+  "chat.rename": ChatRenameArgs;
+  "chat.fork": ChatForkArgs;
+  "chat.delete": ChatOpenArgs;
+  "chat.clear": EmptyArgs;
+  "chat.export": ChatOpenArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2130,6 +2201,8 @@ export interface OpArgs {
   "pr.checkout": PRNumberArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
+  "ai.auto_approve": EmptyArgs;
+  "ai.set_auto_approve": AutoApproveArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -2223,6 +2296,7 @@ export interface OpResult {
   "ai.complete": AICompletion;
   "ai.next_edit": AINextEdit;
   "ai.action": AIAction;
+  "ai.info": AIInfo;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
@@ -2240,6 +2314,12 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.mcp_profiles": MCPProfiles;
+  "ai.use_mcp_profile": AskRef;
+  "chat.fork": ChatRef;
+  "chat.delete": AskRef;
+  "chat.clear": AskRef;
+  "chat.export": ChatExport;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;
@@ -2287,4 +2367,6 @@ export interface OpResult {
   "pr.checkout": AskRef;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
+  "ai.auto_approve": AutoApprove;
+  "ai.set_auto_approve": AskRef;
 }

@@ -1642,6 +1642,21 @@
       "phase": "v2"
     },
     {
+      "op": "ai.info",
+      "args": "AIInfoArgs",
+      "result": "AIInfo",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.file_log",
       "args": "GitFileLogArgs",
       "result": "GitFileLog",
@@ -1898,6 +1913,104 @@
       "max_bytes": 1024,
       "laptop_card": true,
       "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.mcp_profiles",
+      "args": "EmptyArgs",
+      "result": "MCPProfiles",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.use_mcp_profile",
+      "args": "AIMCPProfileArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.rename",
+      "args": "ChatRenameArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.fork",
+      "args": "ChatForkArgs",
+      "result": "ChatRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.delete",
+      "args": "ChatOpenArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.clear",
+      "args": "EmptyArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.export",
+      "args": "ChatOpenArgs",
+      "result": "ChatExport",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
       "phase": "v2"
     },
     {
@@ -2598,6 +2711,34 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "ai.auto_approve",
+      "args": "EmptyArgs",
+      "result": "AutoApprove",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.set_auto_approve",
+      "args": "AutoApproveArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -2618,7 +2759,8 @@
             "explain",
             "fix",
             "edit",
-            "doc"
+            "doc",
+            "attach"
           ]
         },
         "lines": {
@@ -2662,7 +2804,8 @@
             "explain",
             "fix",
             "edit",
-            "doc"
+            "doc",
+            "attach"
           ]
         },
         "line": {
@@ -2750,6 +2893,92 @@
         "text"
       ],
       "additionalProperties": true
+    },
+    "AIInfo": {
+      "type": "object",
+      "properties": {
+        "copy": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/defs/AIInfoRow"
+          },
+          "type": "array"
+        },
+        "save": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "rows"
+      ],
+      "additionalProperties": true
+    },
+    "AIInfoArgs": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "usage",
+            "rules",
+            "memory",
+            "skills",
+            "hooks",
+            "web-tools",
+            "mcp-log",
+            "serve-status",
+            "serve-config",
+            "configure",
+            "bug-report"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "AIInfoRow": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "boolean"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "AIMCPProfileArgs": {
+      "type": "object",
+      "properties": {
+        "all": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     },
     "AINextEdit": {
       "type": "object",
@@ -3080,6 +3309,54 @@
       },
       "required": [
         "kind"
+      ],
+      "additionalProperties": true
+    },
+    "AutoApprove": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "items": {
+            "$ref": "#/defs/AutoApproveRow"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "rows"
+      ],
+      "additionalProperties": true
+    },
+    "AutoApproveArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "AutoApproveRow": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
       ],
       "additionalProperties": true
     },
@@ -3686,6 +3963,34 @@
       ],
       "additionalProperties": true
     },
+    "ChatExport": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "ChatForkArgs": {
+      "type": "object",
+      "properties": {
+        "i": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "i"
+      ],
+      "additionalProperties": false
+    },
     "ChatGetMessageArgs": {
       "type": "object",
       "properties": {
@@ -3833,6 +4138,22 @@
         "id"
       ],
       "additionalProperties": true
+    },
+    "ChatRenameArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": false
     },
     "ChatRun": {
       "type": "object",
@@ -7028,6 +7349,40 @@
         "since",
         "calls",
         "asked"
+      ],
+      "additionalProperties": true
+    },
+    "MCPProfileItem": {
+      "type": "object",
+      "properties": {
+        "hint": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "MCPProfiles": {
+      "type": "object",
+      "properties": {
+        "current": {
+          "type": "string"
+        },
+        "profiles": {
+          "items": {
+            "$ref": "#/defs/MCPProfileItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "current",
+        "profiles"
       ],
       "additionalProperties": true
     },

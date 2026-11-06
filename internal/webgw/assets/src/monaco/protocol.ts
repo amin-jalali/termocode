@@ -95,7 +95,7 @@ export type NavKind = "typedef" | "impl";
 export type AiKind = "complete" | "next_edit" | "seed";
 
 /** AiAct is one of the editor's AI actions. */
-export type AiAct = "explain" | "fix" | "edit" | "doc";
+export type AiAct = "explain" | "fix" | "edit" | "doc" | "attach";
 
 /** AiAt is where an AI action works: the selected rows start…end
  * (0-based, end not included; start === end: no selection) and the

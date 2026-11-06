@@ -105,8 +105,6 @@ export const SD = {
   "cmd.focus_group1": "View: Focus First Editor Group",
   "cmd.focus_group2": "View: Focus Second Editor Group",
   "wb.group": "Editor group {n}",
-  "cmd.ran_laptop": "Done on the laptop: {name}",
-  "cmd.ask_text": "Run “{name}” on the laptop?",
   "quick.laptop": "Laptop",
   "quick.laptop_keys": "Key on the laptop",
   "quick.recent": "recently used",
