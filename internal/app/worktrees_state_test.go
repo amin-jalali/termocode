@@ -65,7 +65,7 @@ func wtRun(t *testing.T, m *Model, cmd tea.Cmd) {
 	}
 	wtWaitFor(t, func() bool {
 		for _, e := range m.wt.entries {
-			if _, ok := m.wt.cache.Get(e.Path); !ok {
+			if _, ok := m.wt.cache.Get(e.Path); !ok && !e.Gone { // a gone folder has no status
 				return false
 			}
 		}
