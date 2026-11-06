@@ -205,8 +205,5 @@ func init() {
 
 // agentChatAccount is the account of the chat view's tab ("" for none).
 func (m *Model) agentChatAccount(c *agentChatState) string {
-	if t, _ := m.termTabByBuf(c.buf); t != nil && c.buf > 0 {
-		return t.Account
-	}
-	return ""
+	return c.account
 }

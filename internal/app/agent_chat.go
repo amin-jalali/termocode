@@ -45,7 +45,8 @@ type agentChatState struct {
 	title    string
 	cwd      string
 	since    time.Time
-	readOnly bool // opened from the history: no tab to type into
+	readOnly bool   // opened from the history: no tab to type into
+	account  string // the tab's agent account (agent_accounts.go)
 	path     string
 
 	tail    *agentlog.Tail // used only by the one poll in flight
@@ -181,7 +182,7 @@ func (m *Model) openAgentChatFor(t terminalTab) tea.Cmd {
 	}
 	agentChatGen++
 	m.agentChat = &agentChatState{gen: agentChatGen, buf: t.BufID, agent: t.Agent, cli: agentCLI(t.Agent),
-		title: t.agentTitle(), cwd: cwd, since: since}
+		title: t.agentTitle(), cwd: cwd, since: since, account: t.Account}
 	m.showAgentChatPanel()
 	return m.agentChatPollCmd(agentChatGen)
 }
@@ -245,13 +246,13 @@ func (m *Model) agentChatPollCmd(gen int) tea.Cmd {
 		return nil
 	}
 	c.polling = true
-	tail, cli, cwd, since := c.tail, c.cli, c.cwd, c.since
+	tail, cli, cwd, since, account := c.tail, c.cli, c.cwd, c.since, c.account
 	return func() tea.Msg {
 		var sess agentlog.Session
 		var err error
 		missing := false
 		if tail == nil {
-			ref, ferr := agentTranscriptFind(cli, cwd, since)
+			ref, ferr := agentTranscriptFindAs(cli, account, cwd, since)
 			if ferr != nil {
 				missing = true
 			} else {

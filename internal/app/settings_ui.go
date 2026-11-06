@@ -89,6 +89,9 @@ type settingsConfig struct {
 	// type "continue" once into its tab (agent_limit.go, AGX-11). Off by
 	// default; File only.
 	AgentAutoContinue *bool `json:"agent_auto_continue,omitempty"`
+	// AgentAccounts: agent id → account labels (agent_accounts.go,
+	// AGX-13). Labels only; each has its own config folder. File only.
+	AgentAccounts map[string][]string `json:"agent_accounts,omitempty"`
 	// The web panel (ADR 0020, web_settings.go). File only; the AI can
 	// never change them, project files never set them.
 	WebPanel       string `json:"web_panel,omitempty"`

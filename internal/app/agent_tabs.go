@@ -126,6 +126,9 @@ func (t terminalTab) agentTabName() string {
 	if l := t.agentLimitLabel(); l != "" {
 		return l
 	}
+	if t.Account != "" { // AGX-13
+		return t.agentTitle() + " " + t.Account
+	}
 	return t.agentTitle()
 }
 
@@ -193,6 +196,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
 		return m.openAgentSessionsSearch(), true
 	}
+	if id == agentAccountsPaletteID { // Agent: Accounts… (agent_accounts.go)
+		return m.openAgentAccounts(), true
+	}
 	if id == agentUsagePlansPaletteID { // Agent: Usage Plans (agent_usage.go)
 		return m.showAIUsage(""), true
 	}
@@ -246,7 +252,11 @@ func (m *Model) agentLaunchLine(a agents.Agent) (string, tea.Cmd) {
 // startAgent opens a terminal tab in the workspace and runs the agent in
 // its shell, so the shell is back when the agent quits. A tab already
 // running that agent is shown instead (no second copy by accident).
-func (m *Model) startAgent(a agents.Agent) tea.Cmd {
+func (m *Model) startAgent(a agents.Agent) tea.Cmd { return m.startAgentAs(a, "") }
+
+// startAgentAs is startAgent as account label ("" = the CLI's default
+// folder; agent_accounts.go).
+func (m *Model) startAgentAs(a agents.Agent, label string) tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
@@ -259,7 +269,7 @@ func (m *Model) startAgent(a agents.Agent) tea.Cmd {
 		m.toggleTerminalPanel() // bring the hidden tabs back first
 	}
 	for i, t := range m.terminalTabs {
-		if t.Agent == a.ID {
+		if t.Agent == a.ID && t.Account == label {
 			m.showPanelTab(panelKindTerminal)
 			m.switchTerminalTab(i)
 			return nil
@@ -269,15 +279,21 @@ func (m *Model) startAgent(a agents.Agent) tea.Cmd {
 		m.openAgentMCPCard(card) // OpenCode: a project file, ask first
 		return nil
 	} else if c != nil {
-		return tea.Batch(c, m.launchAgent(a))
+		return tea.Batch(c, m.launchAgentAs(a, label))
 	}
-	return m.launchAgent(a)
+	return m.launchAgentAs(a, label)
 }
 
 // launchAgent opens the agent's tab and types its command line.
-func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
+func (m *Model) launchAgent(a agents.Agent) tea.Cmd { return m.launchAgentAs(a, "") }
+
+// launchAgentAs is launchAgent as account label (agent_accounts.go).
+func (m *Model) launchAgentAs(a agents.Agent, label string) tea.Cmd {
 	if m.nvim == nil {
 		return nil
+	}
+	if _, err := agentAccountLine(a, label, a.Bin); err != nil {
+		return m.pushToastDetail(toast.Errr, a.Title+" not started", err.Error())
 	}
 	m.newTerminalTab()
 	t := m.activeTerminalTab()
@@ -286,10 +302,11 @@ func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
 	}
 	// Without shell integration the mark stays until the tab closes;
 	// with it, the shell's command-end clears it (term_integration.go).
-	t.Agent, t.AgentState = a.ID, agents.StartState(a.ID)
+	t.Agent, t.AgentState, t.Account = a.ID, agents.StartState(a.ID), label
 	// The listener first, then the line: the agent may call at once.
 	serveCmd := m.ensureMCPServeForAgent() // mcp_server auto: the agent may use the IDE's tools
 	line, launchCmd := m.agentLaunchLine(a)
+	line, _ = agentAccountLine(a, label, line) // checked above
 	_ = m.nvim.ExecLua(fmt.Sprintf(`
 		local buf = %d
 		local ok, chan = pcall(function() return vim.bo[buf].channel end)
