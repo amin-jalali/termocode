@@ -939,6 +939,13 @@ export const S = {
   "cmd.git_blame": "Git: Toggle Line Blame",
   "cmd.git_amend": "Git: Commit (Amend)…",
   "cmd.git_clone": "Git: Clone Repository…",
+  "cmd.next_change": "Git: Go to Next Change",
+  "cmd.prev_change": "Git: Go to Previous Change",
+  "cmd.next_conflict": "Git: Go to Next Merge Conflict",
+  "cmd.prev_conflict": "Git: Go to Previous Merge Conflict",
+  "cmd.merge_next": "Git: Merge View: Next Conflict",
+  "cmd.merge_prev": "Git: Merge View: Previous Conflict",
+  "cmd.scm_tree": "Git: Toggle Tree/Flat View",
   // The laptop's AI in the editor, agent worktrees, profile and model (WEBP-3)
   "ai.explain": "Explain with AI",
   "ai.fix": "Fix with AI",

@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { GitConflict, GitConflictPart } from "../../../../../webproto/proto";
 import { mountDesk, setDesk, type DeskHandle } from "../../lib/deskeditor";
 import { mergeTab } from "../../lib/gittab";
+import { setMergeActs } from "../../lib/gitnav";
 import { toast } from "../../lib/toasts";
 import { closeTab, wordWrap } from "../../lib/workbench";
 import type { FrameLines } from "../../monaco/protocol";
@@ -263,6 +264,14 @@ export function MergeEditor({ path, slot = "g0" }: { path: string; slot?: string
         setAsking(false);
       });
   };
+
+  // The commands (Git: Merge View: Next Conflict …) act on this editor.
+  const acts = useRef({ go, base: () => false });
+  acts.current = { go, base: () => false };
+  useEffect(() => {
+    setMergeActs(slot, { go: (d) => acts.current.go(d), base: () => acts.current.base() });
+    return () => setMergeActs(slot, null);
+  }, [slot]);
 
   const incLines = useMemo(() => sideLines(c?.theirs.text ?? "", parts, (p) => p.theirs, "incoming"), [c]);
   const curLines = useMemo(() => sideLines(c?.ours.text ?? "", parts, (p) => p.ours, "current"), [c]);

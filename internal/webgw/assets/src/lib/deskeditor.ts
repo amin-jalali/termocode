@@ -86,6 +86,8 @@ export interface DeskHost extends EditorHost {
 export interface DeskHandle extends EditorHandle {
   opts(o: FrameOpts): void;
   gutter(marks: Mark[]): void;
+  /** marks are the git change marks the gutter shows now. */
+  marks(): readonly Mark[];
   /** lines colours whole rows (the merge editor's conflicts). */
   lines(items: FrameLines[]): void;
   /** blame sets each line's blame (null: off). */
@@ -129,6 +131,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
   let text = host.doc;
   let seen = 0;
   let canUndo = false, canRedo = false;
+  let marks: readonly Mark[] = [];
   let ready = false;
   const queue: ToFrame[] = [];
 
@@ -254,9 +257,11 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     opts(o) {
       send({ t: "opts", ...o });
     },
-    gutter(marks) {
-      send({ t: "gutter", marks });
+    gutter(m) {
+      marks = m;
+      send({ t: "gutter", marks: m });
     },
+    marks: () => marks,
     lines(items) {
       send({ t: "lines", items });
     },

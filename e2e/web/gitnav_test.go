@@ -23,8 +23,9 @@ func runCmd(t *testing.T, p *Page, c *HubConn, name string, first bool) {
 	}
 	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box")`)
 	p.Key(name)
-	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === ` + jsq(name))
-	p.Key("\r")
+	row := `[...document.querySelectorAll(".quick-row")].find((r) => r.querySelector(".quick-label")?.textContent === ` + jsq(name) + `)`
+	p.WaitJS(row)
+	p.TapJS(row)
 	p.WaitJS(`!document.querySelector(".quick")`)
 }
 

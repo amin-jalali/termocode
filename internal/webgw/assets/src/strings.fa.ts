@@ -935,6 +935,13 @@ export const FA: Record<StringKey, string> = {
   "cmd.git_blame": "گیت: روشن/خاموش کردن نویسنده خط‌ها",
   "cmd.git_amend": "گیت: اصلاح کامیت آخر…",
   "cmd.git_clone": "گیت: کلون مخزن…",
+  "cmd.next_change": "گیت: رفتن به تغییر بعدی",
+  "cmd.prev_change": "گیت: رفتن به تغییر قبلی",
+  "cmd.next_conflict": "گیت: رفتن به تداخل ادغام بعدی",
+  "cmd.prev_conflict": "گیت: رفتن به تداخل ادغام قبلی",
+  "cmd.merge_next": "گیت: نمای ادغام: تداخل بعدی",
+  "cmd.merge_prev": "گیت: نمای ادغام: تداخل قبلی",
+  "cmd.scm_tree": "گیت: نمای درختی یا فهرستی",
   // The laptop's AI in the editor, agent worktrees, profile and model (WEBP-3)
   "ai.explain": "توضیح با هوش مصنوعی",
   "ai.fix": "درست کردن با هوش مصنوعی",
