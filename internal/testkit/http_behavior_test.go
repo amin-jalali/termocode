@@ -728,6 +728,48 @@ func TestHTTPLuaLoadsOnce(t *testing.T) {
 	}
 }
 
+// FIX-48: when the answer comes, the page shows it before the lens of
+// the .http buffer is redrawn (the lens needs three editor calls; on a
+// busy machine they held the answer back by 5-9 ms).
+func TestHTTPAnswerPageBeforeLens(t *testing.T) {
+	api := newHTTPAPI(t, false)
+	d := httpDriver(t, api.srv.URL, 170, 40, "")
+	httpCursor(d, 5)
+	d.Key("alt+ctrl+r")
+	waitPage(d, "200 OK · ")
+	lua(d, `_G.__order = {}
+local open, set = _G._termocode_http_open, _G._termocode_http_buf_set
+_G._termocode_http_open = function(tmp, split, h, ...)
+  table.insert(_G.__order, vim.inspect(h):find('200 OK', 1, true) and 'page:answer' or 'page:wait')
+  return open(tmp, split, h, ...)
+end
+_G._termocode_http_buf_set = function(b, r, running, ...)
+  table.insert(_G.__order, running and 'lens:sending' or 'lens:done')
+  return set(b, r, running, ...)
+end
+return ''`)
+	open(d, "api/users.http")
+	httpCursor(d, 5)
+	d.Key("alt+ctrl+r")
+	if !d.WaitFor(func() bool { return strings.Contains(httpLensRow(d, 5), "200 · ") }, 5*time.Second) {
+		t.Fatalf("lens %q", httpLensRow(d, 5))
+	}
+	waitPage(d, "200 OK · ")
+	order := strings.Fields(lua(d, `return table.concat(_G.__order, ' ')`))
+	page, lens := -1, -1
+	for i, e := range order {
+		if e == "page:answer" && page < 0 {
+			page = i
+		}
+		if e == "lens:done" && lens < 0 {
+			lens = i
+		}
+	}
+	if page < 0 || lens < 0 || lens < page {
+		t.Fatalf("editor calls %v: want the answer page before the lens redraw", order)
+	}
+}
+
 // PERF-8: a send reuses the parsed buffer only while it is unchanged:
 // an edit right before the send (inside the lens debounce) is sent.
 func TestHTTPSendSeesEditBeforeRefresh(t *testing.T) {

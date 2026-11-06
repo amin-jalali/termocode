@@ -9,7 +9,7 @@ import type { BufSnap, GitBlame, GitDiff, GitSnap } from "../../../../webproto/p
 import type { EditorHandle, EditorModule } from "../editor/api";
 import { startEdit } from "../lib/edit";
 import { hl, hlRows, wantHl } from "../lib/hl";
-import { mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
+import { lineComment, mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
 import { loadEditor } from "../lib/lazy";
 import { editing, liveStatus, LiveSync, session, setSync, syncs } from "../lib/live";
 import { toast } from "../lib/toasts";
@@ -17,7 +17,7 @@ import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
 import { BpAsk, onGlyph, useRunGutter } from "../lib/rungutter";
 import { blameOn, blameRows } from "../lib/blame";
-import { ask, diagSnap, fileMarkers, findRefs, goTo, revealAt, wordAt } from "../lib/lsp";
+import { ask, askHints, diagSnap, fileMarkers, findRefs, goTo, inlayHints, revealAt, wordAt } from "../lib/lsp";
 import { aiAction, aiAsk, aiSnap } from "../lib/ai";
 import { isGone } from "../state/files";
 import { t } from "../strings";
@@ -116,6 +116,9 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
   const host = useRef<HTMLDivElement | null>(null);
   const ed = useRef<EditorHandle | null>(null);
   const [ready, setReady] = useState(false);
+  /** view: the rows on screen (0-based); viewTick moves when they change. */
+  const view = useRef({ a: 0, b: 60 });
+  const [viewTick, setViewTick] = useState(0);
   const diffRef = useRef(diff);
   diffRef.current = diff;
   // The laptop's AI helps typing in a file this page may edit (its own
@@ -140,6 +143,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               // The laptop's language servers: hover, completion, go to
               // definition (another file opens in its tab), references.
               path,
+              comment: lineComment(path),
               lsp: true,
               refsLabel: t("menu.refs"),
               onLsp: (kind, line, col) => ask(kind, buf, line, col),
@@ -166,6 +170,10 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
           onSave: saveLive,
           onDone: doneLive,
           onViewport: (a, b) => {
+            if (view.current.a !== a || view.current.b !== b) {
+              view.current = { a, b };
+              setViewTick((n) => n + 1);
+            }
             const s = peek();
             if (s) wantHl(buf, s.tick, a, b, () => peek()?.lines ?? [], () => peek()?.tick ?? -1);
           },
@@ -250,6 +258,26 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
       clearTimeout(timer);
     };
   }, [ready, blaming, saved, head, changed?.x, changed?.y]);
+  // Inlay hints (desktop, when turned on): the visible rows' hints,
+  // asked again when the text or the view settles.
+  const hinting = !!desk && !diff && inlayHints.value;
+  useEffect(() => {
+    const h = ed.current as DeskHandle | null;
+    if (!desk || !ready || !h) return;
+    if (!hinting) {
+      h.hints([]);
+      return;
+    }
+    let stop = false;
+    const timer = setTimeout(() => {
+      const v = view.current;
+      void askHints(buf, Math.max(0, v.a - 20), v.b + 20).then((items) => !stop && items && (ed.current as DeskHandle | null)?.hints(items));
+    }, 300);
+    return () => {
+      stop = true;
+      clearTimeout(timer);
+    };
+  }, [ready, hinting, snap?.tick, viewTick]);
   // Problems: the file's diagnostics as squiggles (desktop).
   const fileDiags = desk ? diagSnap(store.topic("diagnostics").value?.data)?.files.find((f) => f.path === path) : undefined;
   useEffect(() => {

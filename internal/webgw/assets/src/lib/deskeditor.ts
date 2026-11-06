@@ -6,12 +6,14 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
 import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
+import { toast } from "./toasts";
+import { t } from "../strings";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -76,6 +78,8 @@ export interface DeskHost extends EditorHost {
   diff?: FrameDiff;
   /** lang: "sql" for a query editor (the frame colours it). */
   lang?: "sql";
+  /** comment is the file type's line comment (lineComment). */
+  comment?: string;
   onDiff?(changes: number, added: number, removed: number): void;
   /** onGlyph hears a click in the glyph margin (menu: a right click at
    * x, y on the page). */
@@ -108,6 +112,34 @@ export interface DeskHandle extends EditorHandle {
   glyphs(items: FrameGlyph[], stop: number): void;
   /** aiAct runs an AI action on the editor's selection. */
   aiAct(kind: AiAct): void;
+  /** act runs a line or text command (sort, fold, comment …). */
+  act(id: EditAct): void;
+  /** nav goes to the type definition or the implementation at the caret. */
+  nav(kind: NavKind): void;
+  /** snippet inserts a snippet at the cursor. */
+  snippet(body: string): void;
+  /** hints shows the inlay hints ([] hides them). */
+  hints(items: FrameHint[]): void;
+}
+
+/** COMMENTS are the line comments of file types by extension (or name). */
+const COMMENTS = dict<string>();
+for (const [c, exts] of [
+  ["//", "go c h cc cpp cxx hpp hh m mm java kt kts scala swift rs cs fs js jsx mjs cjs ts tsx mts cts dart php proto jsonc json5 zig v groovy gradle sol scss less hcl"],
+  ["#", "py pyi sh bash zsh fish rb pl pm r yaml yml toml conf cfg ini properties env tf tfvars nix ex exs cmake ps1 mk makefile dockerfile containerfile gitignore dockerignore editorconfig jl cr nim awk tcl"],
+  ["--", "lua sql hs elm ada vhd vhdl"],
+  [";", "lisp clj cljs cljc edn el scm rkt asm s"],
+  ["%", "tex sty erl hrl m4"],
+  ['"', "vim"],
+] as const) {
+  for (const e of exts.split(" ")) COMMENTS[e] = c;
+}
+
+/** lineComment is the line comment of the file at path ("": none). */
+export function lineComment(path: string): string {
+  const name = (path.split("/").pop() ?? "").toLowerCase();
+  const dot = name.lastIndexOf(".");
+  return COMMENTS[dot >= 0 ? name.slice(dot + 1) : name] ?? "";
 }
 
 /** desks are the desktop editors on screen, by editor group slot. */
@@ -155,7 +187,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "ready": {
         ready = true;
         const c = frameColors(parent);
-        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
+        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, comment: host.comment, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.
@@ -212,6 +244,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         return;
       case "refs":
         host.onRefs?.(m.line, m.col);
+        return;
+      case "navNone":
+        toast("info", t(m.kind === "typedef" ? "cmd.no_typedef" : "cmd.no_impl"));
         return;
       case "glyph": {
         const r = frame.getBoundingClientRect();
@@ -297,6 +332,18 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     aiAct(kind) {
       send({ t: "aiAct", kind });
+    },
+    act(id) {
+      send({ t: "act", id });
+    },
+    nav(kind) {
+      send({ t: "edit", op: kind });
+    },
+    snippet(body) {
+      send({ t: "snippet", body });
+    },
+    hints(items) {
+      send({ t: "hints", items });
     },
     destroy() {
       removeEventListener("message", onMessage);

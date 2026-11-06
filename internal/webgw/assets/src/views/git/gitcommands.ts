@@ -23,7 +23,7 @@ import { readChat } from "../../state/chat";
 import { newChat } from "../Chat";
 import type { CIFixPrompt, GitFixupPlan, GitGraph, GitReflog, GitStashList, GitTags, GitUndoPlan } from "../../../../../webproto/proto";
 import { age } from "../../state/git";
-import { activeFile, cursorAt, focusSlot, quick, setPanes, showFile, type PickItem } from "../../lib/workbench";
+import { activeFile, cursorAt, focusSlot, quick, setPanes, showFile } from "../../lib/workbench";
 import { link, store } from "../../session";
 import { readGit } from "../../state/git";
 import { gitAction, type GitAction } from "./GitMore";
@@ -59,13 +59,20 @@ function conflict(dir: 1 | -1): void {
   if (n > 0) d.reveal(n);
 }
 
+/** KeyItem is one row to pick: key names it, detail is dim. */
+interface KeyItem {
+  key: string;
+  label: string;
+  detail?: string;
+}
+
 /** pick opens a list in the quick input (empty: a toast says so). */
-function pick(title: string, items: PickItem[], empty: string, run: (key: string) => void): void {
+function pick(title: string, items: KeyItem[], empty: string, run: (key: string) => void): void {
   if (items.length === 0) {
     toast("info", empty);
     return;
   }
-  quick.value = { mode: "pick", pick: { title, items, run } };
+  quick.value = { mode: "pick", pick: { title, items: items.map((it) => ({ label: it.label, detail: it.detail, run: () => run(it.key) })) } };
 }
 
 /** tags lists the tags; picking one asks to check it out. */

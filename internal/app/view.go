@@ -150,6 +150,7 @@ func (m Model) viewFrame() string {
 		base = m.overlayToastsInEditor(base)
 		base = m.reviewLayer(base)      // a confirm can sit on the review card
 		base = m.importLayer(base)      // or on the import review panel
+		base = m.raceLayer(base)        // or on the race card / page
 		base = m.profileFormLayer(base) // or on the profile form
 		return modalOverlay(base, m.confirm.Box(), m.w, m.h, m.modalOpts())
 	}
@@ -187,12 +188,19 @@ func (m Model) viewFrame() string {
 	if m.reviewOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
+		base = m.raceLayer(base) // the review card sits on the race page
 		if m.ai != nil && m.ai.review != nil && m.ai.review.onAction != nil {
 			// A card with its own buttons (schema compare): their toasts
 			// ("Migration script copied") show on top of it.
 			return m.overlayToastsInEditor(m.reviewLayer(base))
 		}
 		return m.reviewLayer(base)
+	}
+
+	if m.raceOpen() { // agent_race.go
+		base := m.renderBase()
+		base = m.overlayToastsInEditor(base)
+		return m.overlayToastsInEditor(m.raceLayer(base))
 	}
 
 	base := m.renderBase()
@@ -1278,6 +1286,8 @@ func (m Model) renderSidebar(h int) string {
 		content = m.renderServicesSidebar(contentW, h)
 	case activity.ViewKubernetes: // kube_view.go
 		content = m.renderKubeSidebar(contentW, h)
+	case activity.ViewWorktrees: // worktrees_view.go
+		content = m.renderWorktreesSidebar(contentW, h)
 	case activity.ViewDatabases: // db_view.go
 		content = m.renderDatabasesSidebar(contentW, h)
 	case activity.ViewItermoc: // itermoc_view.go
@@ -1591,6 +1601,8 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		return padBgToWidth(gitBranchStyle.Render("   "+r.note), w)
 	case gitRowRebase:
 		return m.renderGitRebaseRow(active, focused, w)
+	case gitRowStopped:
+		return m.renderGitStoppedRow(active, focused, w)
 	case gitRowSpacer:
 		return sidebarFill.Render(strings.Repeat(" ", w))
 	}
