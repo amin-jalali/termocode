@@ -39,7 +39,7 @@ func TestBudgetsFile(t *testing.T) {
 		"open_50k_line_file", "palette_open_all", "explorer_5k_files",
 		"agent_worktree_create_5k", "agent_worktree_merge_20", "chat_save_2k_messages", "chat_load_2k_messages",
 		"ai_send_to_request", "ai_turn_3k_tokens", "ai_tool_calls_20", "runs_view_open_200", "runs_view_reopen_200", "runs_view_redraw_200", "ai_undo_turn_300_files",
-		"ai_run_start", "ai_send_to_server", "agent_picker", "agent_transcript_tail_10mb", "agent_history_index_500", "agent_sessions_search_200"} {
+		"ai_run_start", "ai_send_to_server", "agent_picker", "race_compare_4_lanes", "agent_transcript_tail_10mb", "agent_history_index_500", "agent_sessions_search_200"} {
 		if _, ok := bs[name]; !ok {
 			t.Errorf("budgets.txt has no %s", name)
 		}

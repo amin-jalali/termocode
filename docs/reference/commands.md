@@ -92,6 +92,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
+| Agent: Race Compare | `agent-race-compare` |   |   |
+| Agent: Race… | `agent-race` |   |   |
 | Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
 | Agent: Sessions… | `agent-sessions` |   | `resume or read a past session` |
 | Agent: Start Claude Code | `agent-start-claude` |   |   |

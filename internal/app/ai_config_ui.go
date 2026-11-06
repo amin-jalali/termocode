@@ -211,6 +211,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentCtlPrompt(id), true
 	case confirmKindAgentHooks: // agent_hooks_ui.go
 		return m.answerAgentHooks(id), true
+	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard: // agent_race_compare.go
+		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
 	case confirmKindAgentTranscripts: // agent_chat.go

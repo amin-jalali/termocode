@@ -113,6 +113,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`service_connect`](#service_connect) | confirm (always asks): Deny (first) · Open wizard (you sign in yourself) | no | Open the Connect wizard for an MCP service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack, or one in mcp.json) so the user can sign in. |
 | [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
 | [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi) in a new terminal tab, with termocode's tools when the agent supports it. |
+| [`agent_race_start`](#agent_race_start) | confirm (always asks): Deny (first) · Start race | no | Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
 | [`mcp_server_add`](#mcp_server_add) | confirm (always asks) | no | Propose adding one MCP server to the user's mcp.json, from an mcpServers block the user gave (config) or a remote MCP server URL (url). |
 | [`agent_run_start`](#agent_run_start) | confirm (always asks): Deny (first) · Start run | no | Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title and a prompt, as in profile_draft). |
 | [`agent_run_status`](#agent_run_status) | auto | no | The state of an agent run of this chat: queued, running, paused, done, failed, cancelled, interrupted or not_started; each step's state and model, the cost so far, and what waits for the user (plan approval, budget, a card). |
@@ -1332,6 +1333,20 @@ Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, a
 | --- | --- | --- | --- |
 | `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider`, `cursor`, `amp`, `goose`, `qwen`, `crush`, `copilot`, `kimi`, `droid`, `pi` |
 
+### agent_race_start
+
+Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). The user confirms first.
+
+**Gate:** confirm (always asks): Deny (first) · Start race
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `agents` | array | yes | 2 to 4 agents, one lane each (an agent may run twice) |
+| `task` | string | yes | what every agent should do (one paragraph) |
+| `verify` | string |   | optional command run in each finished lane when the user asks, e.g. go test ./... |
+
 ### mcp_server_add
 
 Propose adding one MCP server to the user's mcp.json, from an mcpServers block the user gave (config) or a remote MCP server URL (url). The user sees the entry on a card and decides; nothing starts. For a known service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack) use service_connect instead. Never put secrets in the entry.
@@ -1763,6 +1778,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | ID | Title | Gate | Reason |
 | --- | --- | --- | --- |
 | `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
+| `agent-race` | Agent: Race… | never | opens a picker or prompt that only the user can answer; use a typed tool (agent_race_start) |
+| `agent-race-compare` | Agent: Race Compare | auto |   |
 | `agent-sessions` | Agent: Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; it reads the outside agents' own session files (owner decision D1) |
 | `agent-sessions-search` | Agent: Search Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
 | `agent-start` | Agent: Start… | never | opens a picker or prompt that only the user can answer; use a typed tool (outside_agent_start) |
