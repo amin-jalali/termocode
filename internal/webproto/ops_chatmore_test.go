@@ -103,3 +103,23 @@ func TestAIMCPProfileOps(t *testing.T) {
 		}
 	}
 }
+
+// Spec (web parity: ai-auto-approve): the auto-approve list is a read;
+// switching a row between ask and AUTO changes what the AI may do without
+// asking, so it waits for a laptop card.
+func TestAIAutoApproveOps(t *testing.T) {
+	if p, ok := Lookup(OpAIAutoApprove); !ok || p.Role != RoleController || p.LaptopCard {
+		t.Errorf("ai.auto_approve: %+v", p)
+	}
+	if p, ok := Lookup(OpAISetAutoApprove); !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+		t.Errorf("ai.set_auto_approve: %+v", p)
+	}
+	if _, err := DecodeArgs(OpAISetAutoApprove, []byte(`{"id":"fileWrite"}`)); err != nil {
+		t.Error(err)
+	}
+	for _, b := range []string{`{"id":""}`, `{"id":"a\u0007"}`} {
+		if _, err := DecodeArgs(OpAISetAutoApprove, []byte(b)); err == nil {
+			t.Errorf("%s accepted", b)
+		}
+	}
+}

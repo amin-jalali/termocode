@@ -3,8 +3,10 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -49,5 +51,42 @@ func TestWebAIMCPProfileThroughTheLaptop(t *testing.T) {
 	m.answerWebAsk(webproto.ChoiceConfirm)
 	if m.aiS().mcpProfile != "" {
 		t.Fatalf("all: %q", m.aiS().mcpProfile)
+	}
+}
+
+// Spec (web parity: ai-auto-approve): the web lists what AI: Agent
+// Auto-Approve… lists (ask or AUTO per row); a switch runs only after the
+// laptop's yes, and only for a row the laptop lists.
+func TestWebAIAutoApproveThroughTheLaptop(t *testing.T) {
+	r := newWebFilesRig(t)
+	m := r.m
+	var list webproto.AutoApprove
+	webTestData(t, r.call(webproto.OpAIAutoApprove, &webproto.EmptyArgs{}), &list)
+	var fw *webproto.AutoApproveRow
+	for i := range list.Rows {
+		if list.Rows[i].ID == ai.ClassFileWrite {
+			fw = &list.Rows[i]
+		}
+	}
+	if fw == nil || fw.On || fw.Title == "" {
+		t.Fatalf("rows: %+v", list.Rows)
+	}
+	if code := webErrCode(r.call(webproto.OpAISetAutoApprove, &webproto.AutoApproveArgs{ID: "everything"})); code != "not_found" {
+		t.Fatalf("unknown row: %s", code)
+	}
+	r.call(webproto.OpAISetAutoApprove, &webproto.AutoApproveArgs{ID: ai.ClassFileWrite})
+	if !m.confirmOpen || m.confirmKind != confirmKindWebAsk || slices.Contains(m.aiS().settings.AutoApprove, ai.ClassFileWrite) {
+		t.Fatal("no card, or switched before the yes")
+	}
+	m.confirmOpen = false
+	m.answerWebAsk(webproto.ChoiceCancel)
+	if slices.Contains(m.aiS().settings.AutoApprove, ai.ClassFileWrite) {
+		t.Fatal("cancel switched")
+	}
+	r.call(webproto.OpAISetAutoApprove, &webproto.AutoApproveArgs{ID: ai.ClassFileWrite})
+	m.confirmOpen = false
+	m.answerWebAsk(webproto.ChoiceConfirm)
+	if !slices.Contains(m.aiS().settings.AutoApprove, ai.ClassFileWrite) {
+		t.Fatalf("auto approve %v", m.aiS().settings.AutoApprove)
 	}
 }
