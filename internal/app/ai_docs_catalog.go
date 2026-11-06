@@ -63,6 +63,7 @@ var aiGateNotes = map[string]string{
 	"service_connect":     "confirm (always asks): Deny (first) · Open wizard (you sign in yourself)",
 	"service_set_access":  "confirm (always asks): Deny (first) · Change",
 	"outside_agent_start": "confirm (always asks): Deny (first) · Start",
+	"agent_race_start":    "confirm (always asks): Deny (first) · Start race",
 	"agent_run_start":     "confirm (always asks): Deny (first) · Start run",
 	"agent_run_stop":      "confirm (always asks): Deny (first) · Stop run",
 }

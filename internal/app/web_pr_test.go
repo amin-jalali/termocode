@@ -123,3 +123,30 @@ func TestPRActionsNeedLaptopCard(t *testing.T) {
 		}
 	}
 }
+
+// Spec (Git: Fix CI with AI from the web): ci.fix_prompt reads the first
+// failed run's log through the laptop's gh and answers the laptop's own
+// Fix with AI message (branch, workflow, failing lines, redacted), for
+// the page to put in the chat input; nothing is sent to the AI. A branch
+// whose CI is not red is refused.
+func TestCIFixPrompt(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"run view": "test\tRun go test\t2026-11-06T10:00:00Z --- FAIL: TestParse\ntest\tRun go test\t2026-11-06T10:00:01Z FAIL\n"}}
+	m, c := webTestPR(t, f)
+	w := m.ciW()
+	w.branch, w.loaded = "main", true
+	w.snap = ghci.Snapshot{Branch: "main", HeadSHA: "60ed1c82aa", Runs: []ghci.Run{{ID: 1, Workflow: "Lint", Status: "completed", Conclusion: "success"}}}
+	if got := webTestErr(webTestCallBg(t, m, c, "ci.fix_prompt", `{}`)); got != string(webproto.CodeConflict) {
+		t.Fatalf("a green branch: %q", got)
+	}
+	w.snap.Runs = append(w.snap.Runs, ghci.Run{ID: 9, Workflow: "CI", Status: "completed", Conclusion: "failure", URL: "https://x/9"})
+	var p struct {
+		Prompt string `json:"prompt"`
+	}
+	webTestData(t, webTestCallBg(t, m, c, "ci.fix_prompt", `{}`), &p)
+	if !strings.Contains(p.Prompt, "CI failed on branch main (workflow CI)") || !strings.Contains(p.Prompt, "--- FAIL: TestParse") || !strings.Contains(p.Prompt, "Find the cause and fix it.") {
+		t.Errorf("prompt:\n%s", p.Prompt)
+	}
+	if !f.called("run view 9 --log-failed") {
+		t.Errorf("gh calls %v", f.calls)
+	}
+}

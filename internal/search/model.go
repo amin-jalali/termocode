@@ -66,6 +66,8 @@ type Model struct {
 	// means "use cwd" (single-root behaviour). Set via SetRoots before
 	// the search overlay opens to enable multi-root search.
 	roots []string
+	// fsys holds the roots instead of the local disk (SetFS).
+	fsys FS
 
 	// Search options — the Aa / ab / .* toggles (Alt+C / Alt+W / Alt+R or
 	// a click on the glyph) and the filter row (include / exclude globs,
@@ -123,6 +125,10 @@ func (m *Model) SetRoots(roots []string) {
 	m.roots = append(m.roots[:0], roots...)
 }
 
+// SetFS makes the overlay search the roots on fsys (a container
+// workspace) instead of the local disk; nil is the local disk.
+func (m *Model) SetFS(fsys FS) { m.fsys = fsys }
+
 // Options returns the search options built from the overlay's toggles and
 // filter fields.
 func (m Model) Options() Options {
@@ -138,6 +144,7 @@ func (m Model) Options() Options {
 		Exclude:       SplitGlobs(m.exclude),
 		Context:       n,
 		MaxResults:    m.maxResults,
+		FS:            m.fsys,
 	}
 }
 

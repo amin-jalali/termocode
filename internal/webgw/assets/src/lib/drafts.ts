@@ -20,3 +20,17 @@ export function setDraft(chat: string, text: string): void {
   drafts.value = next;
   saveDraft(chat, text, Date.now());
 }
+
+/** pendingDraft is text a command put aside for the chat input (Git: Fix
+ * CI with AI): the composer takes it as the draft of the first chat it
+ * shows that is not notChat (the chat that was open when a new one was
+ * asked for). Nothing is sent. */
+export const pendingDraft = signal<{ text: string; notChat: string } | null>(null);
+
+/** takePending gives chat the pending text, once. */
+export function takePending(chat: string): void {
+  const p = pendingDraft.peek();
+  if (!p || !chat || chat === p.notChat) return;
+  pendingDraft.value = null;
+  setDraft(chat, p.text);
+}

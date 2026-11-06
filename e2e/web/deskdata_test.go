@@ -112,6 +112,7 @@ func TestDeskContainers(t *testing.T) {
 	p, c := deskLogin(t, nil)
 	Eval[bool](p, `(location.hash = "#/more/containers", true)`)
 	reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+	reply(t, c, expectOp(t, c, webproto.OpContainersHost, `{}`), ctrHost())
 	const side = `document.querySelector('.wb-side [data-view="containers"]')`
 	p.WaitJS(side + `?.querySelectorAll(".tr[data-id]").length === 2`)
 	if !Eval[bool](p, `!!`+side+`.querySelector('.tr[data-project="shop"]') && !!`+side+`.querySelector('.tr[data-id="9f3c2e1a1234"] .c-ok .cod-vm-running') && !!`+side+`.querySelector('.tr[data-id="aabbccdd1122"] .c-err')`) {

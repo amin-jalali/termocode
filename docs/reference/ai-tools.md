@@ -70,6 +70,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
 | [`tests_run`](#tests_run) | confirm (run) | asks | Run tests with the IDE's test runner (go test, pytest, cargo, jest, vitest); the Testing view shows progress. |
 | [`tests_results`](#tests_results) | auto | yes | Results of the last test run: pass / fail / skip counts, each failing test with file:line and its message, package (build) errors. |
+| [`worktrees_list`](#worktrees_list) | auto | yes | List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done) and the last note. |
+| [`worktree_note`](#worktree_note) | auto | yes | Leave a short note (one line, at most 500 characters) and / or a status on a worktree, so the user sees what you do there in the WORKTREES view. |
 | [`lsp_servers`](#lsp_servers) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the language servers termocode installs (like the manager picker). |
 | [`dap_adapters`](#dap_adapters) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the debug adapters termocode installs (like the manager picker). |
 | [`extensions`](#extensions) | list: auto<br>run: confirm (run)<br>reload: confirm (run)<br>log: auto | no | termocode's Lua extensions (~/.config/termocode/extensions). |
@@ -112,7 +114,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`model_slot_draft`](#model_slot_draft) | confirm (always asks): Deny (first) · Open in form (only the form's own Save writes config.json) | no | Draft a model slot (a named provider and model that profile steps can use) for the user. |
 | [`service_connect`](#service_connect) | confirm (always asks): Deny (first) · Open wizard (you sign in yourself) | no | Open the Connect wizard for an MCP service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack, or one in mcp.json) so the user can sign in. |
 | [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
-| [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider) in a new terminal tab, with termocode's tools when the agent supports it. |
+| [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi) in a new terminal tab, with termocode's tools when the agent supports it. |
+| [`agent_race_start`](#agent_race_start) | confirm (always asks): Deny (first) · Start race | no | Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
 | [`mcp_server_add`](#mcp_server_add) | confirm (always asks) | no | Propose adding one MCP server to the user's mcp.json, from an mcpServers block the user gave (config) or a remote MCP server URL (url). |
 | [`agent_run_start`](#agent_run_start) | confirm (always asks): Deny (first) · Start run | no | Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title and a prompt, as in profile_draft). |
 | [`agent_run_status`](#agent_run_status) | auto | no | The state of an agent run of this chat: queued, running, paused, done, failed, cancelled, interrupted or not_started; each step's state and model, the cost so far, and what waits for the user (plan approval, budget, a card). |
@@ -796,6 +799,30 @@ Results of the last test run: pass / fail / skip counts, each failing test with 
 | `only_failed` | boolean |   | list only failures |
 | `wait_ms` | integer |   | wait up to this long (ms, max 120000) for the run to end; default 0 (answer at once) |
 
+### worktrees_list
+
+List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done) and the last note.
+
+**Gate:** auto
+
+**MCP server:** yes
+
+No arguments.
+
+### worktree_note
+
+Leave a short note (one line, at most 500 characters) and / or a status on a worktree, so the user sees what you do there in the WORKTREES view. Text only; it is shown as plain text.
+
+**Gate:** auto
+
+**MCP server:** yes
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `status` | string |   | optional: your status in it. One of: `working`, `blocked`, `done` |
+| `text` | string |   | the note |
+| `worktree` | string |   | optional: a path or branch from worktrees_list; the workspace's worktree when left out |
+
 ### lsp_servers
 
 Manage the language servers termocode installs (like the manager picker). op list: the language servers for the workspace's languages and their state (installed, on PATH, installing, failed). op install: download and install one (asks the user; runs in the background, the tool waits up to wait_ms, default 60000). op uninstall: remove termocode's copy (always asks). Known: gopls, pyright, pylsp, ts_ls, rust_analyzer, clangd, lua_ls, bashls, taplo.
@@ -1322,7 +1349,7 @@ Allow writes for a connected MCP service, or make it read only (known services w
 
 ### outside_agent_start
 
-Start an outside coding agent (claude, codex, gemini, opencode, aider) in a new terminal tab, with termocode's tools when the agent supports it. The user confirms first.
+Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi) in a new terminal tab, with termocode's tools when the agent supports it. The user confirms first.
 
 **Gate:** confirm (always asks): Deny (first) · Start
 
@@ -1330,7 +1357,22 @@ Start an outside coding agent (claude, codex, gemini, opencode, aider) in a new 
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider` |
+| `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider`, `cursor`, `amp`, `goose`, `qwen`, `crush`, `copilot`, `kimi`, `droid`, `pi` |
+| `worktree` | string |   | optional: start it in this worktree (a path or branch from worktrees_list); the workspace when left out |
+
+### agent_race_start
+
+Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). The user confirms first.
+
+**Gate:** confirm (always asks): Deny (first) · Start race
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `agents` | array | yes | 2 to 4 agents, one lane each (an agent may run twice) |
+| `task` | string | yes | what every agent should do (one paragraph) |
+| `verify` | string |   | optional command run in each finished lane when the user asks, e.g. go test ./... |
 
 ### mcp_server_add
 
@@ -1762,6 +1804,12 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | ID | Title | Gate | Reason |
 | --- | --- | --- | --- |
+| `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
+| `agent-race` | Agent: Race… | never | opens a picker or prompt that only the user can answer; use a typed tool (agent_race_start) |
+| `agent-race-compare` | Agent: Race Compare | auto |   |
+| `agent-sessions` | Agent: Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; it reads the outside agents' own session files (owner decision D1) |
+| `agent-sessions-search` | Agent: Search Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
+| `agent-start` | Agent: Start… | never | opens a picker or prompt that only the user can answer; use a typed tool (outside_agent_start) |
 | `agent-start-claude` | Agent: Start Claude Code | confirm (run) |   |
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
 | `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
@@ -1972,12 +2020,20 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `focus-explorer` | View: Focus Explorer | auto |   |
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
+| `git-autosquash` | Git: Autosquash fixup! Commits… | never | rewrites the branch history; only the user starts a rebase |
 | `git-blame` | Git: Blame Current Line | auto |   |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
+| `git-branch-delete` | Git: Delete Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-branch-from` | Git: Create Branch From… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch) |
+| `git-branch-rename` | Git: Rename Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-cherry-pick-branch` | Git: Cherry-pick from Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci` | Git: CI and Pull Request… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-clean-untracked` | Git: Delete Untracked Files… | confirm (always asks) |   |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
+| `git-commit-push` | Git: Commit and Push | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
+| `git-commit-sync` | Git: Commit and Sync | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-compare-rev` | Git: Compare with Revision... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-conflict-both` | Git: Accept Both Changes (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-conflict-next` | Git: Go to Next Merge Conflict | auto |   |
@@ -1986,6 +2042,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-conflict-theirs` | Git: Accept Incoming Change (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-diff` | Git: Show Diff for Current File | auto |   |
 | `git-discard` | Git: Discard Changes in Current File | confirm (always asks) |   |
+| `git-discard-all` | Git: Discard All Changes… | confirm (always asks) |   |
 | `git-discard-hunk` | Git: Discard Hunk (at cursor) | confirm (always asks) |   |
 | `git-discard-lines` | Git: Discard Line (or Selected Lines) | confirm (always asks) |   |
 | `git-fetch` | Git: Fetch | confirm (git) |   |
@@ -1993,6 +2050,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-focus` | Git: Focus Source Control | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
+| `git-merge-branch` | Git: Merge Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-merge-close` | Git: Merge View: Close | auto |   |
 | `git-merge-focus` | Git: Merge View: Merge Keys | auto |   |
 | `git-merge-next` | Git: Merge View: Next Conflict | auto |   |
@@ -2000,17 +2058,22 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-merge-pane` | Git: Merge View: Show Next Pane | auto |   |
 | `git-merge-prev` | Git: Merge View: Previous Conflict | auto |   |
 | `git-merge-resolve` | Git: Merge View: Mark as Resolved | never | resolves the user's merge conflict in the merge view; user only |
+| `git-merge-status` | Git: Merge in Progress (Continue / Abort)… | never | its card asks the user to abort or continue a stopped merge |
 | `git-merge-take-base` | Git: Merge View: Take Base | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-both` | Git: Merge View: Take Both (Ours, Then Theirs) | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-both-theirs-first` | Git: Merge View: Take Both (Theirs, Then Ours) | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-ours` | Git: Merge View: Take Ours | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-theirs` | Git: Merge View: Take Theirs | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-undo` | Git: Merge View: Undo Last Change | never | resolves the user's merge conflict in the merge view; user only |
+| `git-patch-apply-clip` | Git: Apply Patch from Clipboard… | never | applies text from the user's clipboard to the files; user only |
+| `git-patch-apply-file` | Git: Apply Patch from File… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-patch-save` | Git: Save Changes as Patch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-pr-create` | Git: Create Pull Request… | never | publishes a pull request in the user's name; only the user creates one |
 | `git-pr-list` | Git: Pull Requests… | auto |   |
 | `git-pull` | Git: Pull | confirm (git) |   |
 | `git-push` | Git: Push | confirm (always asks) |   |
 | `git-rebase` | Git: Interactive Rebase… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-rebase-onto` | Git: Rebase Current Branch onto… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-rebase-status` | Git: Rebase in Progress (Continue / Skip / Abort)… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-redo` | Git: Redo Undone Git Action | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2025,6 +2088,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
+| `git-unstage-all` | Git: Unstage All Changes | confirm (git) |   |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |
 | `git-unstage-lines` | Git: Unstage Line (or Selected Lines) | confirm (git) |   |
 | `git-view-toggle` | Git: Toggle Tree/Flat View | auto |   |
@@ -2199,8 +2263,28 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `web-start-panel` | Web: Start Panel | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web-stop` | Web: Stop Panel | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web-totp` | Web: Set Up Sign-in Code… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (a second factor of the web sign-in) |
+| `workflow-dry-run` | Workflows: Dry Run Selected… | confirm (run) |   |
+| `workflow-edit-file` | Workflows: Edit Selected File | auto |   |
+| `workflow-enable` | Workflows: Turn Selected On/Off… | confirm (always asks) |   |
+| `workflow-history` | Workflows: History of Selected | auto |   |
+| `workflow-run` | Workflows: Run Selected… | confirm (run) |   |
+| `workflow-stop` | Workflows: Stop Selected Run… | confirm (run) |   |
+| `workflows` | Workflows: Open | auto |   |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
 | `workspace-remove-folder` | Workspace: Remove Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
+| `worktree-add-folder` | Worktree: Add Selected as Folder | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-adopt` | Worktree: Adopt Selected | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-filter` | Worktree: Next Filter | auto |   |
+| `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-link` | Worktree: Link Issue or PR… | never | links are the user's choice; the AI reads them with worktrees_list |
+| `worktree-new` | Worktree: New… | never | opens a picker or prompt that only the user can answer; use a typed tool (worktree_create comes later) |
+| `worktree-new-child` | Worktree: New Child of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-notes` | Worktree: Show Notes of Selected | auto |   |
+| `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
+| `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
+| `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
+| `worktree-view` | Worktree: Show | auto |   |
 | `zen-mode` | View: Toggle Zen Mode | auto |   |
 
 ## Settings
@@ -2209,6 +2293,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | Key | Gate | Reason |
 | --- | --- | --- |
+| `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
 | `ai_categories` | never | AI provider, credentials and approvals stay with the user |
@@ -2315,3 +2400,4 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflows_missed_grace_min` | confirm (settings) |   |
 | `workflows_parallel_max` | confirm (settings) |   |
 | `workflows_wait_hours` | confirm (settings) |   |
+| `worktree_dir` | never | where new worktrees go on disk; a file-only switch the user edits in config.json |

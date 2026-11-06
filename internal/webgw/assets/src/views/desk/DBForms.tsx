@@ -8,7 +8,7 @@
 import { h } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { activeDesk } from "../../lib/deskeditor";
-import { cmpTab, sqlTab } from "../../lib/vtabs";
+import { schemaCmpTab, sqlTab } from "../../lib/vtabs";
 import { showFile } from "../../lib/workbench";
 import { link } from "../../session";
 import { t, type StringKey } from "../../strings";
@@ -114,7 +114,7 @@ function request(f: DBForm, v: Vals): { op: string; args: unknown; label: string
 
 /** done runs the forms that act here: open a tab. */
 function done(f: DBForm, v: Vals): void {
-  if (f.kind === "compare" && v.target) showFile(cmpTab(f.conn, v.target));
+  if (f.kind === "compare" && v.target) showFile(schemaCmpTab(f.conn, v.target));
   if ((f.kind === "pick-console" || f.kind === "pick-file") && v.conn) {
     if (f.kind === "pick-file") {
       pushQuery(v.conn, activeDesk.peek()?.text() ?? "");

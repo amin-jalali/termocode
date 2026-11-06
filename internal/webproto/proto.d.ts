@@ -236,6 +236,28 @@ export interface ControlAskArgs {
   credential: string;
 }
 
+export interface LspRangeArgs {
+  buf: number;
+  tick: number;
+  line: number;
+  col: number;
+  end_line: number;
+  end_col: number;
+}
+
+export interface LspApplyArgs {
+  buf: number;
+  tick: number;
+  index: number;
+}
+
+export interface LspRowsArgs {
+  buf: number;
+  tick: number;
+  first: number;
+  last: number;
+}
+
 export interface DebugExpandArgs {
   key: string;
   open: boolean;
@@ -278,6 +300,37 @@ export interface LspPosArgs {
   col: number;
 }
 
+export interface BufTickArgs {
+  buf: number;
+  tick: number;
+}
+
+export interface BufLineArgs {
+  buf: number;
+  line: number;
+}
+
+export interface SymbolQueryArgs {
+  buf: number;
+  query: string;
+}
+
+export interface SearchReplaceArgs {
+  find: string;
+  replace: string;
+}
+
+export interface SnippetSaveArgs {
+  scope: string;
+  trigger: string;
+  body: string;
+}
+
+export interface SnippetRefArgs {
+  scope: string;
+  trigger: string;
+}
+
 export interface TestOutputArgs {
   id?: string;
 }
@@ -289,6 +342,14 @@ export interface TestRunArgs {
 
 export interface TestIDArgs {
   id: string;
+}
+
+export interface WorkspacePathArgs {
+  folder: string;
+}
+
+export interface IDArgs {
+  id: number;
 }
 
 export interface AICompleteArgs {
@@ -309,11 +370,15 @@ export interface AINextEditArgs {
 export interface AIActionArgs {
   buf: number;
   tick: number;
-  kind: "explain" | "fix" | "edit" | "doc";
+  kind: "explain" | "fix" | "edit" | "doc" | "attach";
   start: number;
   end: number;
   line: number;
   instruction?: string;
+}
+
+export interface AIInfoArgs {
+  kind: "usage" | "rules" | "memory" | "skills" | "hooks" | "web-tools" | "mcp-log" | "serve-status" | "serve-config" | "configure" | "bug-report";
 }
 
 export interface GitFileLogArgs {
@@ -361,6 +426,82 @@ export interface AIWorktreeTextArgs {
 
 export interface AIWorktreeArgs {
   id: string;
+}
+
+export interface AIMCPProfileArgs {
+  name?: string;
+  all?: boolean;
+}
+
+export interface ChatRenameArgs {
+  id: string;
+  title: string;
+}
+
+export interface ChatForkArgs {
+  i: number;
+}
+
+export interface InspectArgs {
+  kind: "container" | "image" | "network" | "volume";
+  id: string;
+}
+
+export interface RefArgs {
+  ref: string;
+}
+
+export interface ContainerArgs {
+  id: string;
+}
+
+export interface SearchTermArgs {
+  term: string;
+}
+
+export interface ImageTagArgs {
+  ref: string;
+  tag: string;
+}
+
+export interface StorageArgs {
+  kind: "network" | "volume";
+  name: string;
+}
+
+export interface ComposeArgs {
+  project: string;
+  verb: "up" | "restart";
+}
+
+export interface ContextArgs {
+  name: string;
+}
+
+export interface ExecArgs {
+  id: string;
+  kind: "shell" | "attach";
+}
+
+export interface ImageActArgs {
+  verb: "pull" | "push" | "run" | "remove";
+  ref: string;
+  name?: string;
+  ports?: string[];
+}
+
+export interface PruneArgs {
+  kind: "containers" | "images" | "images-all" | "networks" | "volumes" | "system";
+}
+
+export interface ComposeAskArgs {
+  project: string;
+  verb: "stop" | "down";
+}
+
+export interface RegistryArgs {
+  verb: "connect" | "signout";
+  host: string;
 }
 
 export interface DBTableArgs {
@@ -463,6 +604,35 @@ export interface DBSSLArgs {
 export interface DBTxArgs {
   conn: string;
   verb: "commit" | "rollback" | "manual" | "auto";
+}
+
+export interface GitLinesArgs {
+  path: string;
+  from: number;
+  to: number;
+  index?: boolean;
+}
+
+export interface GitTagArgs {
+  tag: string;
+}
+
+export interface GitStashRefArgs {
+  ref: string;
+}
+
+export interface GitUndoPlanArgs {
+  reflog?: boolean;
+  index?: number;
+  hash?: string;
+}
+
+export interface GitUndoArgs {
+  move?: boolean;
+}
+
+export interface GitFixupArgs {
+  hash: string;
 }
 
 export interface GitGraphArgs {
@@ -571,10 +741,6 @@ export interface ContainerLogsArgs {
   lines?: number;
 }
 
-export interface ContainerArgs {
-  id: string;
-}
-
 export interface PaletteArgs {
   id: string;
 }
@@ -596,6 +762,10 @@ export interface PRReviewArgs {
 
 export interface AIUseArgs {
   name: string;
+}
+
+export interface AutoApproveArgs {
+  id: string;
 }
 
 export interface StatusSnap {
@@ -1395,6 +1565,29 @@ export interface ControlChallenge {
   options: unknown;
 }
 
+export interface LspActions {
+  items: LspAction[];
+}
+
+export interface LspAction {
+  title: string;
+  kind?: string;
+  preferred?: boolean;
+}
+
+export interface LspHints {
+  items: LspHint[];
+  cut?: boolean;
+}
+
+export interface LspHint {
+  line: number;
+  col: number;
+  label: string;
+  padLeft?: boolean;
+  padRight?: boolean;
+}
+
 export interface DebugSources {
   sources: DebugSource[];
   unsupported?: boolean;
@@ -1405,6 +1598,34 @@ export interface DebugSource {
   name: string;
   path?: string;
   outside?: boolean;
+}
+
+export interface LspLocations {
+  locs: LspLoc[];
+  cut?: boolean;
+}
+
+export interface LspLoc {
+  path?: string;
+  name?: string;
+  outside?: boolean;
+  line: number;
+  col: number;
+  endLine: number;
+  endCol: number;
+  text?: string;
+}
+
+export interface BufMarkdown {
+  md?: MdNode;
+  cut?: boolean;
+}
+
+export interface FileText {
+  path: string;
+  text: string;
+  binary?: boolean;
+  truncated?: boolean;
 }
 
 export interface LspHover {
@@ -1440,26 +1661,77 @@ export interface LspEdit {
   text: string;
 }
 
-export interface LspLocations {
-  locs: LspLoc[];
+export interface BookmarkToggle {
+  on: boolean;
+  mark?: string;
+}
+
+export interface BookmarkList {
+  items: Bookmark[];
+}
+
+export interface Bookmark {
+  mark: string;
+  path: string;
+  line: number;
+  text?: string;
+}
+
+export interface FilesRecent {
+  paths: string[];
+}
+
+export interface LspSymbols {
+  items: LspSymbol[];
   cut?: boolean;
 }
 
-export interface LspLoc {
-  path?: string;
-  name?: string;
-  outside?: boolean;
+export interface LspSymbol {
+  name: string;
+  kind: number;
+  path: string;
   line: number;
   col: number;
-  endLine: number;
-  endCol: number;
-  text?: string;
+  container?: string;
+}
+
+export interface SnippetList {
+  items: Snippet[];
+}
+
+export interface Snippet {
+  trigger: string;
+  body: string;
+}
+
+export interface UserSnippetList {
+  items: UserSnippet[];
+}
+
+export interface UserSnippet {
+  scope: string;
+  trigger: string;
+  body: string;
+}
+
+export interface SnippetSaved {
+  replaced?: boolean;
 }
 
 export interface TestOutput {
   id?: string;
   lines: string[];
   truncated?: boolean;
+}
+
+export interface WorkspaceList {
+  folders: WorkspaceEntry[];
+  recent: WorkspaceEntry[];
+}
+
+export interface WorkspaceEntry {
+  id: number;
+  name: string;
 }
 
 export interface AICompletion {
@@ -1482,7 +1754,7 @@ export interface AINextEdit {
 }
 
 export interface AIAction {
-  kind: "explain" | "fix" | "edit" | "doc";
+  kind: "explain" | "fix" | "edit" | "doc" | "attach";
   chat?: boolean;
   chatId?: string;
   none?: boolean;
@@ -1490,6 +1762,21 @@ export interface AIAction {
   start: number;
   end: number;
   lines: string[];
+}
+
+export interface AIInfo {
+  title: string;
+  note?: string;
+  rows: AIInfoRow[];
+  text?: string;
+  copy?: boolean;
+  save?: string;
+}
+
+export interface AIInfoRow {
+  title: string;
+  hint?: string;
+  header?: boolean;
 }
 
 export interface GitFileLog {
@@ -1625,6 +1912,134 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface MCPProfiles {
+  current: string;
+  profiles: MCPProfileItem[];
+}
+
+export interface MCPProfileItem {
+  name: string;
+  hint?: string;
+}
+
+export interface ChatExport {
+  name: string;
+  text: string;
+}
+
+export interface ContainersHost {
+  engine: string;
+  context?: string;
+  images: ImageItem[];
+  networks: NetworkItem[];
+  volumes: VolumeItem[];
+  contexts: ContextItem[];
+  registries: RegistryItem[];
+  problems?: Record<string, string>;
+}
+
+export interface ImageItem {
+  id: string;
+  tags: string[];
+  size?: string;
+  created?: string;
+  in_use?: boolean;
+}
+
+export interface NetworkItem {
+  name: string;
+  driver?: string;
+  scope?: string;
+  built_in?: boolean;
+}
+
+export interface VolumeItem {
+  name: string;
+  driver?: string;
+  size?: string;
+}
+
+export interface ContextItem {
+  name: string;
+  current?: boolean;
+  session?: boolean;
+  description?: string;
+}
+
+export interface RegistryItem {
+  host: string;
+  signed_in?: boolean;
+  user?: string;
+}
+
+export interface ContainerInspect {
+  kind: string;
+  id: string;
+  text: string;
+  masked?: number;
+  truncated?: boolean;
+}
+
+export interface ImageHistory {
+  ref: string;
+  rows: HistoryRow[];
+}
+
+export interface HistoryRow {
+  id?: string;
+  created?: string;
+  created_by: string;
+  size?: string;
+  comment?: string;
+}
+
+export interface ContainerStats {
+  id: string;
+  cpu: string;
+  mem: string;
+  mem_perc: string;
+  net: string;
+  block: string;
+  pids: string;
+}
+
+export interface DiskUsage {
+  lines: string[];
+}
+
+export interface ImageSearch {
+  term: string;
+  results: SearchItem[];
+}
+
+export interface SearchItem {
+  name: string;
+  description?: string;
+  stars?: number;
+  official?: boolean;
+}
+
+export interface RemoteTags {
+  repo: string;
+  tags: string[];
+  truncated?: boolean;
+  note?: string;
+}
+
+export interface ContainerDone {
+  state: string;
+  status?: string;
+}
+
+export interface HostDone {
+  note?: string;
+}
+
+export interface ServicesConfig {
+  path: string;
+  created?: boolean;
+}
+
 export interface DBText {
   text: string;
 }
@@ -1688,6 +2103,46 @@ export interface RedisKey {
   key: string;
   type: string;
   ttl: number;
+}
+
+export interface CIFixPrompt {
+  prompt: string;
+}
+
+export interface GitTags {
+  tags: string[];
+  more?: number;
+}
+
+export interface GitStashList {
+  entries: GitStashEntry[];
+}
+
+export interface GitStashEntry {
+  ref: string;
+  message: string;
+}
+
+export interface GitReflog {
+  entries: GitReflogEntry[];
+}
+
+export interface GitReflogEntry {
+  hash: string;
+  summary: string;
+  when: number;
+}
+
+export interface GitUndoPlan {
+  title: string;
+  text: string;
+  action: string;
+  move?: boolean;
+}
+
+export interface GitFixupPlan {
+  text: string;
+  action: string;
 }
 
 export interface GitGraph {
@@ -1761,6 +2216,8 @@ export interface GitConflictPart {
   ours: string;
   theirs: string;
   both: string;
+  base?: string;
+  hasBase?: boolean;
 }
 
 export interface GitResolved {
@@ -1893,11 +2350,6 @@ export interface ContainerLogs {
   truncated?: boolean;
 }
 
-export interface ContainerDone {
-  state: string;
-  status?: string;
-}
-
 export interface PaletteList {
   items: PaletteItem[];
 }
@@ -1973,6 +2425,17 @@ export interface CIRun {
   url?: string;
 }
 
+export interface AutoApprove {
+  rows: AutoApproveRow[];
+}
+
+export interface AutoApproveRow {
+  id?: string;
+  title: string;
+  on?: boolean;
+  header?: boolean;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -2023,6 +2486,9 @@ export interface OpArgs {
   "runs.resume": KeyArgs;
   "control.challenge": EmptyArgs;
   "control.ask": ControlAskArgs;
+  "lsp.code_actions": LspRangeArgs;
+  "lsp.code_action_apply": LspApplyArgs;
+  "lsp.inlay_hints": LspRowsArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -2033,18 +2499,39 @@ export interface OpArgs {
   "debug.watch": DebugWatchArgs;
   "debug.eval": DebugEvalArgs;
   "debug.frame": DebugFrameArgs;
+  "lsp.type_definition": LspPosArgs;
+  "lsp.implementation": LspPosArgs;
+  "buf.format": BufTickArgs;
+  "buf.reload": BufArgs;
+  "buf.markdown": BufArgs;
+  "file.text": PathArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
   "lsp.references": LspPosArgs;
+  "bookmarks.toggle": BufLineArgs;
+  "bookmarks.list": EmptyArgs;
+  "bookmarks.clear": EmptyArgs;
+  "files.recent": EmptyArgs;
+  "lsp.workspace_symbols": SymbolQueryArgs;
+  "snippets.list": BufArgs;
+  "search.replace": SearchReplaceArgs;
+  "snippets.user": EmptyArgs;
+  "snippets.save": SnippetSaveArgs;
+  "snippets.delete": SnippetRefArgs;
   "tests.output": TestOutputArgs;
   "tests.refresh": EmptyArgs;
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "workspace.list": EmptyArgs;
+  "workspace.add_folder": WorkspacePathArgs;
+  "workspace.remove_folder": IDArgs;
+  "workspace.open": IDArgs;
   "ai.complete": AICompleteArgs;
   "ai.next_edit": AINextEditArgs;
   "ai.action": AIActionArgs;
+  "ai.info": AIInfoArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -2063,6 +2550,36 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.mcp_profiles": EmptyArgs;
+  "ai.use_mcp_profile": AIMCPProfileArgs;
+  "chat.rename": ChatRenameArgs;
+  "chat.fork": ChatForkArgs;
+  "chat.delete": ChatOpenArgs;
+  "chat.clear": EmptyArgs;
+  "chat.export": ChatOpenArgs;
+  "containers.host": EmptyArgs;
+  "containers.inspect": InspectArgs;
+  "containers.history": RefArgs;
+  "containers.stats": ContainerArgs;
+  "containers.disk_usage": EmptyArgs;
+  "containers.search": SearchTermArgs;
+  "containers.tags": RefArgs;
+  "containers.pause": ContainerArgs;
+  "containers.tag": ImageTagArgs;
+  "containers.create": StorageArgs;
+  "containers.compose": ComposeArgs;
+  "containers.context": ContextArgs;
+  "containers.exec": ExecArgs;
+  "containers.image": ImageActArgs;
+  "containers.prune": PruneArgs;
+  "containers.storage_remove": StorageArgs;
+  "containers.compose_ask": ComposeAskArgs;
+  "containers.context_default": ContextArgs;
+  "containers.registry": RegistryArgs;
+  "containers.open_db": ContainerArgs;
+  "services.start_all": EmptyArgs;
+  "services.stop_all": EmptyArgs;
+  "services.configure": EmptyArgs;
   "db.ddl": DBTableArgs;
   "db.explain": DBExplainArgs;
   "db.test": DBConnArgs;
@@ -2081,6 +2598,21 @@ export interface OpArgs {
   "db.ssl": DBSSLArgs;
   "db.disconnect": DBConnArgs;
   "db.tx": DBTxArgs;
+  "ci.fix_prompt": EmptyArgs;
+  "git.stage_lines": GitLinesArgs;
+  "git.unstage_lines": GitLinesArgs;
+  "git.discard_lines": GitLinesArgs;
+  "git.discard_hunk": GitHunkArgs;
+  "git.tags": EmptyArgs;
+  "git.checkout_tag": GitTagArgs;
+  "git.stash_list": EmptyArgs;
+  "git.stash_apply": GitStashRefArgs;
+  "git.reflog": EmptyArgs;
+  "git.undo_plan": GitUndoPlanArgs;
+  "git.undo": GitUndoArgs;
+  "git.redo": EmptyArgs;
+  "git.fixup_plan": GitFixupArgs;
+  "git.fixup": GitFixupArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2130,6 +2662,8 @@ export interface OpArgs {
   "pr.checkout": PRNumberArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
+  "ai.auto_approve": EmptyArgs;
+  "ai.set_auto_approve": AutoApproveArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -2192,15 +2726,38 @@ export interface OpResult {
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
+  "lsp.code_actions": LspActions;
+  "lsp.code_action_apply": EditRes;
+  "lsp.inlay_hints": LspHints;
   "debug.sources": DebugSources;
+  "lsp.type_definition": LspLocations;
+  "lsp.implementation": LspLocations;
+  "buf.format": EditRes;
+  "buf.reload": EditRes;
+  "buf.markdown": BufMarkdown;
+  "file.text": FileText;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;
   "lsp.references": LspLocations;
+  "bookmarks.toggle": BookmarkToggle;
+  "bookmarks.list": BookmarkList;
+  "files.recent": FilesRecent;
+  "lsp.workspace_symbols": LspSymbols;
+  "snippets.list": SnippetList;
+  "search.replace": AskRef;
+  "snippets.user": UserSnippetList;
+  "snippets.save": SnippetSaved;
+  "snippets.delete": SnippetSaved;
   "tests.output": TestOutput;
+  "workspace.list": WorkspaceList;
+  "workspace.add_folder": AskRef;
+  "workspace.remove_folder": AskRef;
+  "workspace.open": AskRef;
   "ai.complete": AICompletion;
   "ai.next_edit": AINextEdit;
   "ai.action": AIAction;
+  "ai.info": AIInfo;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
@@ -2218,6 +2775,35 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.mcp_profiles": MCPProfiles;
+  "ai.use_mcp_profile": AskRef;
+  "chat.fork": ChatRef;
+  "chat.delete": AskRef;
+  "chat.clear": AskRef;
+  "chat.export": ChatExport;
+  "containers.host": ContainersHost;
+  "containers.inspect": ContainerInspect;
+  "containers.history": ImageHistory;
+  "containers.stats": ContainerStats;
+  "containers.disk_usage": DiskUsage;
+  "containers.search": ImageSearch;
+  "containers.tags": RemoteTags;
+  "containers.pause": ContainerDone;
+  "containers.tag": HostDone;
+  "containers.create": HostDone;
+  "containers.compose": HostDone;
+  "containers.context": HostDone;
+  "containers.exec": AskRef;
+  "containers.image": AskRef;
+  "containers.prune": AskRef;
+  "containers.storage_remove": AskRef;
+  "containers.compose_ask": AskRef;
+  "containers.context_default": AskRef;
+  "containers.registry": AskRef;
+  "containers.open_db": AskRef;
+  "services.start_all": HostDone;
+  "services.stop_all": AskRef;
+  "services.configure": ServicesConfig;
   "db.ddl": DBText;
   "db.explain": DBPlan;
   "db.test": DBDone;
@@ -2236,6 +2822,19 @@ export interface OpResult {
   "db.ssl": AskRef;
   "db.disconnect": AskRef;
   "db.tx": AskRef;
+  "ci.fix_prompt": CIFixPrompt;
+  "git.discard_lines": AskRef;
+  "git.discard_hunk": AskRef;
+  "git.tags": GitTags;
+  "git.checkout_tag": AskRef;
+  "git.stash_list": GitStashList;
+  "git.stash_apply": AskRef;
+  "git.reflog": GitReflog;
+  "git.undo_plan": GitUndoPlan;
+  "git.undo": AskRef;
+  "git.redo": AskRef;
+  "git.fixup_plan": GitFixupPlan;
+  "git.fixup": AskRef;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;
@@ -2283,4 +2882,6 @@ export interface OpResult {
   "pr.checkout": AskRef;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
+  "ai.auto_approve": AutoApprove;
+  "ai.set_auto_approve": AskRef;
 }

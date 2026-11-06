@@ -299,6 +299,9 @@
 /* ---- MCP ---- */
 .mcp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--wb-desc); }
 .mcp-dot.is-on { background: var(--wb-ok); }
+.md-preview { padding: 20px 28px; overflow-y: auto; background: var(--wb-editor-bg); color: var(--wb-editor-fg); }
+.md-preview-body { max-width: 880px; line-height: 1.6; }
+.md-preview-note { color: var(--wb-desc, inherit); }
 .mcpd { padding: 20px 28px; overflow-y: auto; background: var(--wb-editor-bg); color: var(--wb-editor-fg); }
 .mcpd-head { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; }
 .mcpd-icon { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 8px; background: var(--wb-side-bg); }
@@ -309,6 +312,18 @@
 .mcpd-table { border-collapse: collapse; font-size: var(--fs-ui); }
 .mcpd-table th, .mcpd-table td { height: 22px; padding: 0 16px 0 0; text-align: start; }
 .mcpd-table th { color: var(--wb-desc); font-weight: 400; }
+/* A container read in an editor tab (views/desk/CtrTab.tsx). */
+.ctrt { padding: 12px 20px; overflow: auto; background: var(--wb-editor-bg); color: var(--wb-editor-fg); }
+.ctrt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ctrt-head h1 { margin: 0; font-size: 16px; font-weight: 600; }
+.ctrt-note { margin: 4px 0; color: var(--wb-desc); }
+.ctrt-pre { margin: 0; font-family: var(--font-mono); font-size: 12px; line-height: 18px; white-space: pre; }
+.ctrt-by { font-family: var(--font-mono); white-space: pre-wrap; word-break: break-all; }
+.ctrt-list { margin: 0; padding: 0; list-style: none; }
+.ctrt-item { display: flex; align-items: center; gap: 8px; min-height: 24px; }
+.ctrt-item .tr-desc { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctrt-name { font-family: var(--font-mono); }
+.ctr-filter, .ctr-form { margin: 4px 12px 4px 20px; }
 .mcpd-empty { color: var(--wb-desc); }
 
 /* ---- The panel's OUTPUT tab ---- */

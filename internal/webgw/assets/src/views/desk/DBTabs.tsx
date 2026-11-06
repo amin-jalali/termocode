@@ -582,7 +582,7 @@ export function DBQueryTab({ conn, slot }: { conn: string; slot: string }) {
 // ── Text tabs: a table's DDL, a schema compare ──────────────────────────
 
 /** DBTextTab shows a read-only SQL text the laptop gives (DDL, a compare). */
-export function DBTextTab({ kind, conn, table, slot }: { kind: "ddl" | "cmp"; conn: string; table: string; slot: string }) {
+export function DBTextTab({ kind, conn, table, slot }: { kind: "ddl" | "scmp"; conn: string; table: string; slot: string }) {
   const box = useRef<HTMLDivElement | null>(null);
   const [st, setSt] = useState<{ text: string | null; err: string; note: string }>({ text: null, err: "", note: "" });
   const on = live.value;

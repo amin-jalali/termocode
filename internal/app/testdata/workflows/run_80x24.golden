@@ -1,0 +1,24 @@
+ ◉ mine · run 09:30 · 1 m                                      ✓ done · wrote 0
+ ──────────────────────────────────────────────────────────────────────────────
+ docs ✓ 2  →  rep ⊘
+ STEPS
+   docs     source  ✓ → 2 items
+   rep      write   ⊘ · the write was denied
+ WRITES
+   rep      ⊘           file reports/docs.md  "2 docs"  denied
+ ──────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [Back (Esc)] [Logs (l)]

@@ -2,6 +2,8 @@
 // left, read only, and the newer on the right, side by side (or inline),
 // with the changed rows and words marked, an overview ruler, unchanged
 // regions folded, and Previous / Next Change (F7, Shift+F7, Alt+F5).
+// A change of the working tree stages or discards its selected rows; a
+// staged change unstages them.
 // The working tree's side is the laptop's live buffer: typing there edits
 // the file through the same tick-guarded sync as the file editor. Every
 // other side is git's text (git.text), read only.
@@ -11,6 +13,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { BufSnap, GitSnap, GitText } from "../../../../webproto/proto";
 import { desks, mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
 import { applyRows, diffOf, revs, type DiffTab } from "../lib/difftab";
+import { discardLines, stageLines } from "../lib/gitlines";
 import { go as goRoute, route } from "../lib/router";
 import { closePath, fileOf, holdPath } from "../lib/file";
 import { showFile, wordWrap } from "../lib/workbench";
@@ -164,8 +167,10 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
   const git = store.topic("git").value;
   const gs = git?.data as GitSnap | undefined;
   const entry = d ? gs?.files?.find((f) => f.path === d.path) : undefined;
-  // A file deleted from the working tree has no buffer: its right side is empty.
-  const deleted = d?.kind === "wt" && entry?.y === "D";
+  // The working file is the right side of a working tree change and of a
+  // revision compared with it. Deleted, it has no buffer: the side is empty.
+  const live2 = d?.kind === "wt" || d?.kind === "rev";
+  const deleted = live2 && entry?.y === "D";
   const r = d ? revs(d) : { left: "", right: "" };
   const left = useGitText(d?.path ?? "", r.left, git?.seq);
   const right = useGitText(d?.path ?? "", r.right, git?.seq);
@@ -174,12 +179,14 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
   const go = (dir: 1 | -1) => desks.peek().get(slot)?.diffGo(dir);
   const mod = modKey();
   // The live buffer has no last line end; git's text has one.
-  const leftSide = left.side && d.kind === "wt" && !deleted ? { ...left.side, text: left.side.text.replace(/\n$/, "") } : left.side;
+  const leftSide = left.side && live2 && !deleted ? { ...left.side, text: left.side.text.replace(/\n$/, "") } : left.side;
   const rightSide: Side | null = deleted ? { text: "", binary: false, cut: false } : right.side;
   const binary = leftSide?.binary || rightSide?.binary;
   const cut = leftSide?.cut || rightSide?.cut;
   const err = left.err || right.err;
   const onCount = () => undefined;
+  // Rows of a tracked file's change, for a controller.
+  const canLines = link.meta.value?.role === "controller" && live.value && !!entry && !entry.untracked && !entry.conflict;
   return (
     <View
       tab="files"
@@ -190,10 +197,25 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
       actionsInto={"ed-actions-" + slot}
       actions={
         <>
-          {d.kind !== "wt" && <Chip>{t("viewonly")}</Chip>}
+          {!live2 && <Chip>{t("viewonly")}</Chip>}
           {d.kind === "review" && cards.value.some((c) => c.id === d.hash) && (
             <button type="button" class="tb" data-act="review" title={t("dv.review")} onClick={() => goRoute({ ...route.peek(), card: d.hash })}>
               {t("dv.review")}
+            </button>
+          )}
+          {canLines && d.kind === "wt" && !deleted && (
+            <>
+              <button type="button" class="tb tb-icon" data-act="stage-lines" aria-label={t("gl.stage")} title={t("gl.stage")} onClick={() => stageLines(true)}>
+                <Cod name="add" />
+              </button>
+              <button type="button" class="tb tb-icon" data-act="discard-lines" aria-label={t("gl.discard")} title={t("gl.discard")} onClick={discardLines}>
+                <Cod name="discard" />
+              </button>
+            </>
+          )}
+          {canLines && d.kind === "idx" && (
+            <button type="button" class="tb tb-icon" data-act="unstage-lines" aria-label={t("gl.unstage")} title={t("gl.unstage")} onClick={() => stageLines(false)}>
+              <Cod name="remove" />
             </button>
           )}
           <button type="button" class="tb tb-icon" data-act="prev" aria-label={t("dv.prev")} title={`${t("dv.prev")} (Shift+F7)`} onClick={() => go(-1)}>
@@ -228,9 +250,9 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
           <p class="empty">{t("dv.binary")}</p>
         ) : d.kind === "review" ? (
           <ReviewSide d={d} slot={slot} />
-        ) : !leftSide || (d.kind !== "wt" && !rightSide) ? (
+        ) : !leftSide || (!live2 && !rightSide) ? (
           <div class="editor-host desk-host" />
-        ) : d.kind === "wt" && !deleted ? (
+        ) : live2 && !deleted ? (
           <LiveSide d={d} left={leftSide} slot={slot} onCount={onCount} />
         ) : (
           rightSide && <StaticDiff d={d} left={leftSide} right={rightSide} slot={slot} onCount={onCount} />
