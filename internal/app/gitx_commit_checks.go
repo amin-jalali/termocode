@@ -26,8 +26,9 @@ import (
 // Before-commit checks (GITX-27; B20–B22, P7, P8). All of them are off
 // until the user turns them on in Settings → Git:
 //
-//   - git_commit_checks: large staged files, secret-looking added lines
-//     and errors of the Problems list in staged files,
+//   - git_commit_checks: large staged files, secret-looking added lines,
+//     Windows line endings (CRLF) brought into a file and errors of the
+//     Problems list in staged files,
 //   - git_commit_format: format the fully staged files with the language
 //     server and stage the result,
 //   - git_commit_task: a task (Tasks: Run Task) that must pass.
@@ -58,7 +59,7 @@ type gitxChecks struct {
 func init() {
 	settingsRows = append(settingsRows,
 		settingsRow{ID: gitxChecksRowID, Label: "git_commit_checks", Kind: "bool", Default: "false",
-			Desc: "Before each commit, look for large staged files, secret-looking added lines and errors of the Problems list in staged files. A finding asks before the commit (Commit Anyway or Cancel)."},
+			Desc: "Before each commit, look for large staged files, secret-looking added lines, Windows line endings (CRLF) brought into a file and errors of the Problems list in staged files. A finding asks before the commit (Commit Anyway or Cancel)."},
 		settingsRow{ID: gitxFormatRowID, Label: "git_commit_format", Kind: "bool", Default: "false",
 			Desc: "Before each commit, format the fully staged files that are open in the editor with their language server and stage the result. A file with unstaged changes too is left as it is."},
 		settingsRow{ID: gitxTaskRowID, Label: "git_commit_task", Kind: "string", Default: "(none)",
@@ -374,6 +375,17 @@ func (r gitxCheckRun) do() gitxCheckResult {
 			}
 		}
 		gitxReportSection(&rep, "Secret-looking added lines (the text is not shown)", secrets)
+
+		// GITX-39 (P6): Windows line endings brought into a file.
+		var crlf []string
+		if paths, err := git.StagedCRLF(r.cwd); err == nil {
+			for _, p := range paths {
+				line := p + " has Windows line endings (CRLF)"
+				crlf = append(crlf, line+"; set core.autocrlf or a .gitattributes eol rule to keep LF")
+				add(line)
+			}
+		}
+		gitxReportSection(&rep, "Windows line endings (CRLF) in staged files", crlf)
 
 		probs := r.problems(files)
 		if len(probs) > 0 {

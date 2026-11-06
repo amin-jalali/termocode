@@ -88,3 +88,35 @@ func Unshallow(dir string) error {
 	}
 	return nil
 }
+
+// StagedCRLF names the staged files whose added lines end in CRLF while
+// the file at HEAD has no CRLF (or is new): Windows line endings that the
+// commit would bring in. Binary files are left out (git shows no lines).
+func StagedCRLF(dir string) ([]string, error) {
+	out, err := runCombined(dir, "git", "-c", "core.quotePath=false", "diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--diff-filter=ACMR")
+	if err != nil {
+		return nil, err
+	}
+	var paths []string
+	seen := map[string]bool{}
+	path := ""
+	for _, l := range strings.Split(out, "\n") {
+		switch {
+		case strings.HasPrefix(l, "diff --git "):
+			path = ""
+		case strings.HasPrefix(l, "+++ "):
+			p := strings.TrimSuffix(strings.TrimPrefix(l, "+++ "), "\t")
+			path = ""
+			if p != "/dev/null" {
+				path = strings.TrimPrefix(unquotePath(p), "b/")
+			}
+		case strings.HasPrefix(l, "+") && path != "" && strings.HasSuffix(l, "\r") && !seen[path]:
+			seen[path] = true
+			if old, err := runOut(dir, "git", "cat-file", "-p", "HEAD:"+path); err == nil && strings.Contains(old, "\r\n") {
+				continue
+			}
+			paths = append(paths, path)
+		}
+	}
+	return paths, nil
+}
