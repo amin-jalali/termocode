@@ -39,3 +39,10 @@ func agentChatCases() []goldenCase {
 		{"agent-chat-narrow-80x24", agentChatScene("agent-chat-narrow", "working"), 80, 24},
 	}
 }
+
+// agentSessionsCases are Agent: Sessions… (AGX-9) with made-up sessions
+// (app agentSessionsDemo; no file is read) at 150x42 and 80x24.
+func agentSessionsCases() []goldenCase {
+	sc := Scene{Name: "agent-sessions", Steps: WithEditor(Act("agentsessionsdemo"), Pause(600*time.Millisecond))}
+	return []goldenCase{{"agent-sessions-150x42", sc, 150, 42}, {"agent-sessions-80x24", sc, 80, 24}}
+}
