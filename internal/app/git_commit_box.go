@@ -80,6 +80,7 @@ const gitCommitPlaceholder = "Message…"
 // caret at the end of the current text.
 func (m *Model) gitFocusCommitBox() {
 	m.gitCommitFocused = true
+	m.gitFillCommitTemplate() // git_commit_msg.go
 	m.gitCommitCaret = len([]rune(m.gitCommitMsg))
 }
 
@@ -98,6 +99,7 @@ func (m *Model) gitCommitInsert(s string) {
 	out = append(out, r[m.gitCommitCaret:]...)
 	m.gitCommitMsg = string(out)
 	m.gitCommitCaret += len(ins)
+	m.gitCommitHistPos = 0 // an edit makes the text the draft again
 }
 
 func (m *Model) gitCommitBackspace() {
@@ -108,6 +110,7 @@ func (m *Model) gitCommitBackspace() {
 	out := append(r[:m.gitCommitCaret-1], r[m.gitCommitCaret:]...)
 	m.gitCommitMsg = string(out)
 	m.gitCommitCaret--
+	m.gitCommitHistPos = 0
 }
 
 func (m *Model) gitCommitDeleteFwd() {
@@ -117,6 +120,7 @@ func (m *Model) gitCommitDeleteFwd() {
 	}
 	out := append(r[:m.gitCommitCaret], r[m.gitCommitCaret+1:]...)
 	m.gitCommitMsg = string(out)
+	m.gitCommitHistPos = 0
 }
 
 func (m *Model) gitCommitMoveCaret(d int) {
@@ -152,6 +156,12 @@ func (m Model) handleGitCommitKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		return m, nil, true
 	case tea.KeyRight:
 		m.gitCommitMoveCaret(1)
+		return m, nil, true
+	case tea.KeyUp: // GITX-6: older message (git_commit_msg.go)
+		m.gitCommitHistoryStep(1)
+		return m, nil, true
+	case tea.KeyDown:
+		m.gitCommitHistoryStep(-1)
 		return m, nil, true
 	case tea.KeyHome:
 		m.gitCommitCaret = 0
@@ -211,6 +221,20 @@ func (m Model) renderGitCommitField(w int) string {
 	}
 
 	runes := []rune(m.gitCommitMsg)
+	// GITX-6 (B13): the subject's length at the right while typing.
+	ruler := ""
+	if m.gitCommitFocused && len(runes) > 0 && inner >= 12 {
+		text, level := gitCommitRuler(m.gitCommitMsg)
+		c := gitInputPlace
+		switch level {
+		case 1:
+			c = theme.LG(theme.AccentAmber)
+		case 2:
+			c = theme.LG(theme.DiagError)
+		}
+		ruler = lipgloss.NewStyle().Background(gitInputBg).Foreground(c).Render(" " + text)
+		inner -= 1 + len(text)
+	}
 	var body string
 	if len(runes) == 0 && !m.gitCommitFocused {
 		place := gitCommitPlaceholder
@@ -234,6 +258,9 @@ func (m Model) renderGitCommitField(w int) string {
 		caretStyle := lipgloss.NewStyle().Background(gitInputAccent).Foreground(gitInputBg)
 		cells := 0
 		for i, r := range vis {
+			if r == '\n' {
+				r = '⏎' // one cell per rune keeps the caret maths
+			}
 			if m.gitCommitFocused && start+i == caret {
 				sb.WriteString(caretStyle.Render(string(r)))
 			} else {
@@ -252,7 +279,7 @@ func (m Model) renderGitCommitField(w int) string {
 		body = sb.String()
 	}
 
-	return lead + field.Render(" ") + body + field.Render(" ")
+	return lead + field.Render(" ") + body + ruler + field.Render(" ")
 }
 
 // gitActionBtn is one clickable chip on the action bar. x0..x1 are inclusive

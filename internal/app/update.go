@@ -1064,9 +1064,12 @@ end })`)
 		}
 		m.gitBlurredSkips = 0
 		return m, tea.Batch(m.pollGitCmd(), m.gitAutoRefreshTick(), m.gitxAutoFetchPoll()), true // GITX-12: auto fetch rides on the poll
+	case gitAIReplyMsg: // git_ai_helpers.go
+		return m, m.onGitAIReply(msg), true
 	case GitMsg:
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
+		m.syncCommitEditFile() // git_commit_msg.go: a saved message file
 		m.gitBlameInit()
 		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh(), m.gitBlameRefreshCmd(false)), true // blame: again when HEAD or the file changed (gitBlameKey)
 	case gitBlameLoadedMsg: // git_blame_view.go
@@ -2437,6 +2440,10 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindCommitHistory: // git_commit_msg.go
+		return m.onCommitHistoryPicked(msg.ID)
+	case pickerKindCoAuthor:
+		return m.onCoAuthorPicked(msg.ID)
 	case pickerKindStashMode: // git_stash_reset.go
 		return m.onStashModePicked(msg.ID)
 	case pickerKindStashPick:

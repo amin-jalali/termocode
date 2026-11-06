@@ -349,6 +349,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Add Co-Author… | `git-co-author` |   |   |
 | Git: Add to .gitignore… | `git-ignore-file` |   |   |
 | Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
 | Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
@@ -377,11 +378,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
+| Git: Edit Commit Message in Editor | `git-commit-edit` |   |   |
+| Git: Explain Changes with AI | `git-ai-explain-changes` |   |   |
+| Git: Explain Line's Commit with AI | `git-ai-explain-line` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
 | Git: Fetch All Remotes (Prune) | `git-fetch-all` |   |   |
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
+| Git: Generate Commit Message with AI | `git-ai-commit-msg` |   |   |
 | Git: Go to Commit… | `git-goto-commit` |   |   |
 | Git: Go to HEAD in GRAPH | `git-graph-head` |   | `@` |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
@@ -409,6 +414,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Open Merge View | `git-merge-open` |   |   |
 | Git: Open Next Revision of File | `git-rev-next` |   |   |
 | Git: Open Previous Revision of File | `git-rev-prev` |   |   |
+| Git: Pick Recent Commit Message… | `git-commit-history` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Publish to GitHub… | `git-publish` |   |   |
 | Git: Pull | `git-pull` |   |   |
@@ -443,6 +449,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stage Line (or Selected Lines) | `git-stage-lines` | `Alt+Shift+S` | `Alt+Shift+S` |
 | Git: Stash Actions… | `git-stash-actions` |   |   |
 | Git: Stash Changes | `git-stash` |   |   |
+| Git: Stash with AI Message | `git-ai-stash` |   |   |
 | Git: Stash… | `git-stash-options` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
@@ -458,6 +465,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
+| Git: Write Pull Request Description with AI | `git-ai-pr-text` |   |   |
 
 ## HTTP
 

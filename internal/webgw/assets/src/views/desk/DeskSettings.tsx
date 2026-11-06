@@ -15,6 +15,7 @@ import { readSettings, type SettingView } from "../../state/more";
 import { t } from "../../strings";
 import { Cod } from "../../ui/icons";
 import { NotifyField } from "../../ui/NotifyField";
+import { BookmarkField } from "../../ui/BookmarkField";
 
 const query = signal("");
 
@@ -209,7 +210,7 @@ export function DeskDevice() {
   const groups = [
     { id: "look", label: t("dev.look"), n: 3 },
     { id: "notify", label: t("notify.title"), n: 1 },
-    { id: "link", label: t("dev.link"), n: 3 },
+    { id: "link", label: t("dev.link"), n: 4 },
     { id: "about", label: t("more.about"), n: 1 },
   ];
   return (
@@ -231,6 +232,7 @@ export function DeskDevice() {
         <Fact title={t("dev.name")} value={m?.device || "—"} />
         <Fact title={t("dev.role")} value={m ? t(m.role === "viewer" ? "dev.viewer" : "dev.controller") : "—"} />
         <Fact title={t("dev.viewers")} value={m ? String(m.viewers) : "—"} />
+        <BookmarkField desk />
       </section>
       <section class="set-group" data-group="about" aria-label={t("more.about")}>
         <h2 class="set-group-h">{t("more.about")}</h2>

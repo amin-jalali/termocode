@@ -313,6 +313,9 @@ func webDeviceHint(d webdevices.Device, live bool, now time.Time) string {
 	if d.Guest {
 		parts = append(parts, "guest")
 	}
+	if d.Bookmark != nil {
+		parts = append(parts, "bookmark")
+	}
 	switch {
 	case d.NeedsRepair:
 		parts = append(parts, "must pair again")
@@ -361,6 +364,10 @@ func (m *Model) openWebDeviceCard(id string) tea.Cmd {
 	} else if !d.Guest {
 		body += "\nTo give it control, tap Ask for control on that device."
 	}
+	if d.Bookmark != nil {
+		body += "\nThis browser opens from a bookmark without its passkey."
+		buttons = append(buttons, confirm.Button{ID: "forget-bookmark", Title: "Forget bookmark"})
+	}
 	buttons = append(buttons, confirm.Button{ID: "remove", Title: "Remove device", Style: confirm.StyleDestructive})
 	m.confirm = confirm.New(d.Name, body, buttons)
 	m.confirm.SetSize(m.w, m.h)
@@ -374,6 +381,9 @@ func (m *Model) answerWebDevice(id string) tea.Cmd {
 	acc := m.webAccess()
 	if id == "viewer" {
 		return m.webMakeViewer(acc.device)
+	}
+	if id == "forget-bookmark" {
+		return m.webForgetBookmark(acc.device)
 	}
 	if id != "remove" {
 		acc.device = ""
@@ -423,6 +433,19 @@ func (m *Model) webRevokeDevice(dev string) {
 	for _, c := range m.web.ctlConns() {
 		c.send(&webproto.Event{T: webproto.KindEv, Kind: "revoke", Data: data})
 	}
+}
+
+// webForgetBookmark ends a device's bookmark key (WEBP-12; no card: the
+// safe direction). The device stays paired and signs in with its passkey.
+func (m *Model) webForgetBookmark(dev string) tea.Cmd {
+	m.webAccess().device = ""
+	dir, _ := webDevicesDir()
+	var name string
+	ok, err := webdevices.Open(dir).Change(dev, func(d *webdevices.Device) { d.Bookmark, name = nil, d.Name })
+	if err != nil || !ok {
+		return m.webToast(toast.Warn, "That device is not paired any more.")
+	}
+	return m.webToast(toast.Info, name+" needs its passkey again next time.")
 }
 
 // webMakeViewer takes control back from a device (no card: it is the
