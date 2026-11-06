@@ -10,19 +10,6 @@ import (
 	"github.com/amin-jalali/termocode/internal/picker"
 )
 
-// gitxRemoteRepo is covGitRepo pushed to a bare remote "origin" (main
-// tracks origin/main).
-func gitxRemoteRepo(t *testing.T) (*Model, string, string) {
-	t.Helper()
-	m, dir := covGitRepo(t)
-	bare := t.TempDir()
-	covGit(t, bare, "init", "-q", "--bare")
-	covGit(t, dir, "remote", "add", "origin", bare)
-	covGit(t, dir, "push", "-q", "-u", "origin", "main")
-	covRefresh(m)
-	return m, dir, bare
-}
-
 func gitxCardIDs(m *Model) string {
 	var ids []string
 	for _, b := range m.confirm.Buttons() {

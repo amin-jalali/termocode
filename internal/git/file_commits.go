@@ -16,7 +16,7 @@ func FileCommits(dir, path string, limit int) ([]CommitHead, error) {
 	out, err := runOut(dir, "git", "-c", "core.quotepath=off", "log", "--format=%h%x1f%an%x1f%ct%x1f%s%x1e",
 		fmt.Sprintf("-n%d", limit), "--follow", "--", path)
 	if err != nil {
-		if !hasCommits(dir) {
+		if !hasCommits(localGit(dir)) {
 			return nil, nil
 		}
 		return nil, err

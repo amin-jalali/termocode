@@ -63,8 +63,13 @@ var aiGateNotes = map[string]string{
 	"service_connect":     "confirm (always asks): Deny (first) · Open wizard (you sign in yourself)",
 	"service_set_access":  "confirm (always asks): Deny (first) · Change",
 	"outside_agent_start": "confirm (always asks): Deny (first) · Start",
+	"agent_race_start":    "confirm (always asks): Deny (first) · Start race",
 	"agent_run_start":     "confirm (always asks): Deny (first) · Start run",
-	"agent_run_stop":      "confirm (always asks): Deny (first) · Stop run",
+	// WFX-9: workflows by chat.
+	"workflow_draft":   "confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version)",
+	"workflow_dry_run": "confirm (always asks): Deny (first) · Dry run (reads sources, runs plan steps, never writes); a file the user has not trusted is refused",
+	"workflow_run":     "confirm (always asks): Deny (first) · Run; then every write asks again on its own gate card (Deny first) unless allowed for this file version",
+	"agent_run_stop":   "confirm (always asks): Deny (first) · Stop run",
 }
 
 // aiGateRefused are ops a tool always refuses (Validate), with no dialog.

@@ -2,7 +2,8 @@
 // conflicted file's incoming side (theirs) and current side (ours) on
 // top, read only, and the result below, which you edit. Each conflict
 // takes Accept Incoming, Accept Current or Accept Both (the laptop's own
-// resolutions, given by git.conflict); Complete Merge saves the result
+// resolutions, given by git.conflict), and Accept Base when the file
+// has the common ancestor's section (diff3); Complete Merge saves the result
 // and marks the file resolved, if it is still the file you read. A file
 // that cannot be merged line by line keeps one side through the laptop.
 import { Crumbs } from "../FileView";
@@ -11,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { GitConflict, GitConflictPart } from "../../../../../webproto/proto";
 import { mountDesk, setDesk, type DeskHandle } from "../../lib/deskeditor";
 import { mergeTab } from "../../lib/gittab";
+import { setMergeActs } from "../../lib/gitnav";
 import { toast } from "../../lib/toasts";
 import { closeTab, wordWrap } from "../../lib/workbench";
 import type { FrameLines } from "../../monaco/protocol";
@@ -21,7 +23,7 @@ import { Cod } from "../../ui/icons";
 import { View } from "../View";
 import { gitErrText, gitFailed } from "./errors";
 
-type Choice = "theirs" | "ours" | "both";
+type Choice = "theirs" | "ours" | "both" | "base";
 
 const MARKERS = /^(<{7}|>{7})( |$)/m;
 
@@ -236,11 +238,11 @@ export function MergeEditor({ path, slot = "g0" }: { path: string; slot?: string
   };
   const accept = (choice: Choice) => {
     const p = parts[at], hd = ed.current;
-    if (!p || !hd) return;
+    if (!p || !hd || (choice === "base" && !p.hasBase)) return;
     const all = hd.text();
     const o = all.indexOf(p.raw);
     if (o < 0) return;
-    hd.replace(all.slice(0, o) + p[choice] + all.slice(o + p.raw.length));
+    hd.replace(all.slice(0, o) + (choice === "base" ? p.base ?? "" : p[choice]) + all.slice(o + p.raw.length));
     setTick((x) => x + 1);
     const next = open.findIndex((v, i) => v && i !== at);
     if (next >= 0) {
@@ -263,6 +265,20 @@ export function MergeEditor({ path, slot = "g0" }: { path: string; slot?: string
         setAsking(false);
       });
   };
+
+  // The commands (Git: Merge View: Next Conflict …) act on this editor.
+  const hasBase = parts[at]?.hasBase === true;
+  const takeBase = () => {
+    if (!hasBase || viewer || !on) return false;
+    accept("base");
+    return true;
+  };
+  const acts = useRef({ go, base: takeBase });
+  acts.current = { go, base: takeBase };
+  useEffect(() => {
+    setMergeActs(slot, { go: (d) => acts.current.go(d), base: () => acts.current.base() });
+    return () => setMergeActs(slot, null);
+  }, [slot]);
 
   const incLines = useMemo(() => sideLines(c?.theirs.text ?? "", parts, (p) => p.theirs, "incoming"), [c]);
   const curLines = useMemo(() => sideLines(c?.ours.text ?? "", parts, (p) => p.ours, "current"), [c]);
@@ -331,6 +347,11 @@ export function MergeEditor({ path, slot = "g0" }: { path: string; slot?: string
               <button type="button" class="gm-act" data-act="both" disabled={!canAct} onClick={() => accept("both")}>
                 {t("gm.accept_both")}
               </button>
+              {hasBase && (
+                <button type="button" class="gm-act" data-act="base" disabled={!canAct} onClick={() => accept("base")}>
+                  {t("gm.accept_base")}
+                </button>
+              )}
             </header>
             <div ref={box} class="editor-host desk-host gm-host" />
             <footer class="gm-foot">

@@ -33,6 +33,8 @@ type agentMCPCard struct {
 	agent agents.Agent
 	path  string // the project file
 	out   []byte // what the file will hold
+	dir   string // the folder the agent starts in ("" = the workspace; AGX-2)
+	task  string // the first task to type (WTX-8)
 }
 
 // opencodeMCPMerge returns the opencode.json that adds termocode to old
@@ -82,6 +84,12 @@ func opencodeMCPMerge(old []byte, exe, root string) (out []byte, changed bool, e
 // agentMCPCardFor decides whether launching a needs the project-file
 // card. A plain launch (nothing to ask) returns nil.
 func (m *Model) agentMCPCardFor(a agents.Agent) (*agentMCPCard, tea.Cmd) {
+	return m.agentMCPCardIn(a, "")
+}
+
+// agentMCPCardIn is agentMCPCardFor for an agent started in dir ("" =
+// the workspace): the project file is the one of that folder.
+func (m *Model) agentMCPCardIn(a agents.Agent, dir string) (*agentMCPCard, tea.Cmd) {
 	if mcpServeMode() == "off" || a.MCP.Kind != agents.MCPProjectFile || a.MCP.ProjectFile == "" || m.confirmOpen {
 		return nil, nil
 	}
@@ -90,6 +98,9 @@ func (m *Model) agentMCPCardFor(a agents.Agent) (*agentMCPCard, tea.Cmd) {
 		return nil, nil
 	}
 	root := aiWorkspaceRoot()
+	if dir != "" {
+		root = dir
+	}
 	if m.agentMCPDeclined[root+"|"+a.ID] {
 		return nil, nil
 	}
@@ -105,7 +116,7 @@ func (m *Model) agentMCPCardFor(a agents.Agent) (*agentMCPCard, tea.Cmd) {
 	if !changed {
 		return nil, nil
 	}
-	return &agentMCPCard{agent: a, path: path, out: out}, nil
+	return &agentMCPCard{agent: a, path: path, out: out, dir: dir}, nil
 }
 
 func (m *Model) agentMCPToast(title, detail string) tea.Cmd {
@@ -158,9 +169,13 @@ func (m *Model) answerAgentMCPCard(id string) tea.Cmd {
 		if m.agentMCPDeclined == nil {
 			m.agentMCPDeclined = map[string]bool{}
 		}
-		m.agentMCPDeclined[aiWorkspaceRoot()+"|"+c.agent.ID] = true
+		root := aiWorkspaceRoot()
+		if c.dir != "" {
+			root = c.dir
+		}
+		m.agentMCPDeclined[root+"|"+c.agent.ID] = true
 	}
-	cmds = append(cmds, m.launchAgent(c.agent))
+	cmds = append(cmds, m.launchAgentIn(c.agent, c.dir, c.task))
 	return tea.Batch(cmds...)
 }
 

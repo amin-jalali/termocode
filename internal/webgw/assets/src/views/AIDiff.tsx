@@ -22,7 +22,7 @@ import { View } from "./View";
 
 /** Side mounts the diff editor: left read only, right typed in unless
  * readOnly; revert puts an arrow on each change. */
-function Sides({ path, left, right, slot, readOnly, revert, onEditor }: { path: string; left: string; right: string; slot: string; readOnly: boolean; revert: boolean; onEditor?: (h: DeskHandle | null) => void }) {
+export function Sides({ path, left, right, slot, readOnly, revert, onEditor }: { path: string; left: string; right: string; slot: string; readOnly: boolean; revert: boolean; onEditor?: (h: DeskHandle | null) => void }) {
   const box = useRef<HTMLDivElement | null>(null);
   const ed = useRef<DeskHandle | null>(null);
   useEffect(() => {

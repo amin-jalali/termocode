@@ -1,7 +1,9 @@
 package explorer
 
 import (
+	"context"
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -46,7 +48,14 @@ func (m Model) PrimaryRoot() string {
 // explorer's extra-roots list. The primary root and any already-added extras
 // are left untouched. Returns an error if path can't be statted, isn't a
 // directory, or is already present (primary or extra).
+//
+// The extras of an explorer whose primary root is listed through a
+// workspace FS (a container) live on that FS too: path must be absolute
+// there, and the local disk is never read.
 func (m *Model) AddRoot(path string) error {
+	if m.root != nil && m.root.fsys != nil {
+		return m.addRootFS(path)
+	}
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return err
@@ -68,6 +77,37 @@ func (m *Model) AddRoot(path string) error {
 	}
 	if !node.IsDir {
 		return fmt.Errorf("%s is not a folder", abs)
+	}
+	m.extraRoots = append(m.extraRoots, node)
+	m.scrollIntoView()
+	return nil
+}
+
+// addRootFS is AddRoot on the primary root's workspace FS.
+func (m *Model) addRootFS(p string) error {
+	if !path.IsAbs(p) {
+		return fmt.Errorf("%s is not an absolute path", p)
+	}
+	p = path.Clean(p)
+	if path.Clean(m.root.Path) == p {
+		return nil
+	}
+	for _, r := range m.extraRoots {
+		if r != nil && path.Clean(r.Path) == p {
+			return nil
+		}
+	}
+	fsys := m.root.fsys
+	st, err := fsys.Stat(context.Background(), p)
+	if err != nil {
+		return err
+	}
+	if !st.IsDir() {
+		return fmt.Errorf("%s is not a folder", p)
+	}
+	node, err := NewRootFS(fsys, p)
+	if err != nil {
+		return err
 	}
 	m.extraRoots = append(m.extraRoots, node)
 	m.scrollIntoView()

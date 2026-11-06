@@ -104,6 +104,9 @@ func webConflictParts(text string) []webproto.GitConflictPart {
 		out = append(out, webproto.GitConflictPart{Line: b.Start + 1, Raw: join(lines[b.Start : b.End+1]),
 			OursLabel: webName(b.OursLabel), TheirsLabel: webName(b.TheirsLabel),
 			Ours: join(b.Replacement(git.AcceptOurs)), Theirs: join(b.Replacement(git.AcceptTheirs)), Both: join(b.Replacement(git.AcceptBoth))})
+		if b.Base >= 0 {
+			out[len(out)-1].Base, out[len(out)-1].HasBase = join(b.Replacement(git.AcceptBase)), true
+		}
 	}
 	return out
 }

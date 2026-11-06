@@ -1,6 +1,7 @@
 package app
 
 import (
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -354,4 +355,35 @@ func TestDebugReplayGolden(t *testing.T) {
 	// The workspace path is the test's temp dir: the golden keeps the
 	// frames' workspace paths, never an absolute one.
 	webReplayGolden(t, webReplayPath("debug", "stop_print_end"), c)
+}
+
+// Spec (WEBP-9, Debug: Open launch.json): debug.open_launch answers the
+// workspace path of the launch.json the page opens. When there is none
+// the laptop writes the template its own command writes (the found
+// configurations); one that exists is never changed.
+func TestWebDebugOpenLaunchWritesTheTemplateOnce(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	webTestHub(t, &m)
+	dir := webTestDebug(t, &m)
+	t.Chdir(dir)
+	c := webTestSub(t, &m)
+	f, _ := webTestCall(t, &m, c, webproto.OpDebugOpenLaunch, `{}`)
+	if f["t"] != "res" || f["data"].(map[string]any)["path"] != launchJSONRel {
+		t.Fatalf("open launch: %v", f)
+	}
+	b, err := os.ReadFile(filepath.Join(dir, launchJSONRel))
+	if err != nil || !strings.Contains(string(b), `"configurations"`) {
+		t.Fatalf("no template: %v %q", err, b)
+	}
+	webTestWrite(t, dir, launchJSONRel, `{"version":"0.2.0","configurations":[]}`)
+	if f, _ := webTestCall(t, &m, c, webproto.OpDebugOpenLaunch, `{}`); f["t"] != "res" {
+		t.Fatalf("second open: %v", f)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, launchJSONRel)); string(b) != `{"version":"0.2.0","configurations":[]}` {
+		t.Fatalf("the user's launch.json changed: %q", b)
+	}
+	if a := webTestAudit(&m); !strings.Contains(a, "debug.open_launch") {
+		t.Errorf("not audited:\n%s", a)
+	}
 }

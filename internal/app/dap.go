@@ -351,19 +351,28 @@ func (m *Model) debugRunInTerminal(cwd, cmdline string) {
 // debugOpenLaunchJSON opens .termocode/launch.json, creating it from the
 // auto-detected configurations when missing.
 func (m *Model) debugOpenLaunchJSON() tea.Cmd {
-	root := workspaceRoot()
+	path, err := m.ensureLaunchJSON(workspaceRoot())
+	if err != nil {
+		return m.debugErrorToast(err.Error())
+	}
+	m.openFileAtLine(path, 1)
+	return nil
+}
+
+// ensureLaunchJSON is root's launch.json, written from the found
+// configurations when there is none (one that exists is never changed).
+func (m *Model) ensureLaunchJSON(root string) (string, error) {
 	path := filepath.Join(root, launchJSONRel)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return m.debugErrorToast(err.Error())
+			return "", err
 		}
 		if err := os.WriteFile(path, []byte(launchJSONTemplate(detectLaunchConfigs(root))), 0o644); err != nil {
-			return m.debugErrorToast(err.Error())
+			return "", err
 		}
 	}
 	m.ensureDebug().configs.invalidate()
-	m.openFileAtLine(path, 1)
-	return nil
+	return path, nil
 }
 
 // ── Prompts (watch / condition / logpoint) ───────────────────────────────

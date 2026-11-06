@@ -37,8 +37,11 @@ func TestDetectSamples(t *testing.T) {
 	}
 	for _, a := range Registry {
 		for _, st := range []string{"waiting", "working", "done"} {
-			if !seen[a.ID+"-"+st] {
+			if HasScreenRules(a.ID) && !seen[a.ID+"-"+st] {
 				t.Errorf("no %s sample for %s", st, a.ID)
+			}
+			if !HasScreenRules(a.ID) && seen[a.ID+"-"+st] {
+				t.Errorf("%s has a %s sample but no screen rules", a.ID, st)
 			}
 		}
 	}
@@ -55,8 +58,12 @@ func TestDetectUnknown(t *testing.T) {
 			t.Errorf("%s: %s on no lines", a.ID, s)
 		}
 	}
-	// A plain [y/n] question is "waiting" for every agent.
+	// A plain [y/n] question is "waiting" for every agent with screen
+	// rules (a preset without them stays Unknown: presets_test.go).
 	for _, a := range Registry {
+		if !HasScreenRules(a.ID) {
+			continue
+		}
 		if s := Detect(a.ID, []string{"Overwrite go.mod? [y/N] "}); s != Waiting {
 			t.Errorf("%s: [y/N] is %s", a.ID, s)
 		}
@@ -111,8 +118,8 @@ func TestFromCommand(t *testing.T) {
 	}
 }
 
-// The registry has the four palette agents plus aider, each with a
-// title and a binary.
+// The registry has the four palette agents, aider and the AGX-1
+// presets, each with a title and a binary.
 func TestRegistry(t *testing.T) {
 	ids := []string{}
 	for _, a := range Registry {
@@ -121,14 +128,16 @@ func TestRegistry(t *testing.T) {
 		}
 		ids = append(ids, a.ID)
 	}
-	if strings.Join(ids, ",") != "claude,codex,gemini,opencode,aider" {
+	if strings.Join(ids, ",") != "claude,codex,gemini,opencode,aider,cursor,amp,goose,qwen,crush,copilot,kimi,droid,pi" {
 		t.Errorf("ids %v", ids)
 	}
 	if a, _ := ByID("claude"); a.Title != "Claude Code" || !a.Palette {
 		t.Errorf("claude %+v", a)
 	}
-	if a, _ := ByID("aider"); a.Palette {
-		t.Error("aider is not a palette entry")
+	for _, id := range []string{"aider", "cursor", "amp", "goose", "qwen", "crush", "copilot", "kimi", "droid", "pi"} {
+		if a, _ := ByID(id); a.Palette {
+			t.Errorf("%s is not a palette entry (Agent: Start… lists it)", id)
+		}
 	}
 }
 
@@ -154,8 +163,8 @@ func TestMCPLineGolden(t *testing.T) {
 	if a, _ := ByID("opencode"); a.MCP.Kind != MCPProjectFile || a.MCP.ProjectFile != "opencode.json" {
 		t.Errorf("opencode: %+v", a.MCP)
 	}
-	for _, id := range []string{"gemini", "aider"} {
-		if a, _ := ByID(id); a.MCP.Kind != MCPNone {
+	for _, id := range []string{"gemini", "aider", "cursor", "amp", "goose", "qwen", "crush", "copilot", "kimi", "droid", "pi"} {
+		if a, _ := ByID(id); a.MCP.Kind != MCPNone || a.MCP.NoteTitle == "" || a.MCP.Note == "" {
 			t.Errorf("%s: %+v", id, a.MCP)
 		}
 	}
@@ -179,5 +188,34 @@ func TestMCPLineQuoting(t *testing.T) {
 	}
 	if w, _ := ShellWord("/plain/path-1.2"); w != "/plain/path-1.2" {
 		t.Errorf("plain word quoted: %s", w)
+	}
+}
+
+// InputReady (WTX-8): the first task is typed only at the input box,
+// never into a question or a y/n prompt, and never into an agent whose
+// screen cannot be read.
+func TestInputReady(t *testing.T) {
+	read := func(name string) []string {
+		b, err := os.ReadFile(filepath.Join("testdata", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Split(string(b), "\n")
+	}
+	if !InputReady("claude", read("claude-done.txt")) || !InputReady("codex", read("codex-done.txt")) {
+		t.Error("the input box is not ready")
+	}
+	for _, f := range []string{"claude-waiting-bash.txt", "claude-waiting-question.txt", "claude-working.txt", "codex-waiting-command.txt"} {
+		id, _, _ := strings.Cut(f, "-")
+		if InputReady(id, read(f)) {
+			t.Errorf("%s is ready", f)
+		}
+	}
+	yn := append(read("claude-done.txt"), "Overwrite the file? [y/N]")
+	if InputReady("claude", yn) {
+		t.Error("ready under a y/n prompt")
+	}
+	if InputReady("amp", read("claude-done.txt")) {
+		t.Error("an agent without screen rules is ready")
 	}
 }
