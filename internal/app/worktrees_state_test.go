@@ -164,12 +164,12 @@ func TestWorktreeKeysMove(t *testing.T) {
 	if st.cursorPath != "/src/app.worktrees/toast" {
 		t.Errorf("j: %q", st.cursorPath)
 	}
-	key("G")
-	if st.cursorPath != "/tmp/deleted" {
+	key("G") // the archived row is last (WTX-14)
+	if st.cursorPath != "/src/app.worktrees/old" {
 		t.Errorf("G: %q", st.cursorPath)
 	}
 	key("k")
-	if st.cursorPath != "/elsewhere/api-v2" {
+	if st.cursorPath != "/tmp/deleted" {
 		t.Errorf("k: %q", st.cursorPath)
 	}
 	key("g")
