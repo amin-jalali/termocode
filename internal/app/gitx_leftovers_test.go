@@ -168,3 +168,19 @@ func TestGitxShallowAndUnshallow(t *testing.T) {
 		t.Fatalf("unshallow: %v, %s commits", done.err, covGit(t, dest, "rev-list", "--count", "HEAD"))
 	}
 }
+
+// GITX-39 (P6): the before-commit checks (git_commit_checks) warn about
+// staged files that bring Windows line endings (CRLF) in.
+func TestGitxCommitChecksCRLF(t *testing.T) {
+	gitxChecksReset(t)
+	m, dir := covGitRepo(t)
+	covGit(t, dir, "config", "core.autocrlf", "false")
+	covWrite(t, dir, "a.txt", "one\r\ntwo\r\n")
+	covGit(t, dir, "add", "a.txt")
+	res := gitxCheckRun{cwd: dir, cfg: gitxCheckCfg{scan: true, largeMB: 5}}.do()
+	if !strings.Contains(strings.Join(res.findings, "\n"), "a.txt has Windows line endings (CRLF)") ||
+		!strings.Contains(res.report, "Windows line endings (CRLF)") {
+		t.Fatalf("findings %v\nreport:\n%s", res.findings, res.report)
+	}
+	_ = m
+}

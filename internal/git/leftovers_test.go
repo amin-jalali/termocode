@@ -124,3 +124,30 @@ func TestShallowCloneAndUnshallow(t *testing.T) {
 		t.Fatalf("after unshallow: shallow %v, %s commits", IsShallow(dest), count())
 	}
 }
+
+// GITX-39 (P6): StagedCRLF names the staged files that bring Windows
+// line endings (CRLF) into a file that had none (or a new file); a file
+// that had CRLF already, an LF change and a binary file are left out.
+func TestStagedCRLF(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.git(t, "config", "core.autocrlf", "false")
+	r.write(t, "lf.txt", "one\n")
+	r.write(t, "win.bat", "echo\r\n")
+	r.write(t, "ok.txt", "a\n")
+	r.git(t, "add", ".")
+	r.git(t, "commit", "-q", "-m", "first")
+	r.write(t, "lf.txt", "one\r\ntwo\r\n")
+	r.write(t, "win.bat", "echo\r\necho 2\r\n")
+	r.write(t, "ok.txt", "a\nb\n")
+	r.write(t, "new.txt", "x\r\n")
+	r.write(t, "bin.dat", "\x00\x01\r\n")
+	r.write(t, "unstaged.txt", "u\r\n")
+	r.git(t, "add", "lf.txt", "win.bat", "ok.txt", "new.txt", "bin.dat")
+	got, err := StagedCRLF(r.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(got, ",") != "lf.txt,new.txt" {
+		t.Fatalf("CRLF files %v", got)
+	}
+}
