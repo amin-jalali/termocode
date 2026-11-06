@@ -95,6 +95,11 @@ type settingsConfig struct {
 	WebMaxHours    *int   `json:"web_max_hours,omitempty"`
 	WebOpenBrowser *bool  `json:"web_open_browser,omitempty"`
 	WebMaxViewers  *int   `json:"web_max_viewers,omitempty"`
+	// Blame (git_blame_view.go). File only; the palette toggles write them.
+	GitInlineBlame      *bool `json:"git_inline_blame,omitempty"`
+	GitStatusBlame      *bool `json:"git_status_blame,omitempty"`
+	GitBlameIgnoreWS    *bool `json:"git_blame_ignore_whitespace,omitempty"`
+	GitBlameDetectMoves *bool `json:"git_blame_detect_moves,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't

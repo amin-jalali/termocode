@@ -422,18 +422,27 @@ missing	ai-profile-next	Itermoc and AI setup|M
 missing	ai-profile-show	Itermoc and AI setup|M
 missing	ai-side	AI chat and agents|M
 missing	debug-open-launch	Debug|S
+missing	git-blame-annotate	Git|S
+missing	git-blame-before	Git|S
+missing	git-blame-commit	Git|S
+missing	git-blame-options	Git|S
 missing	git-autosquash	Git|S
 missing	git-cherry-pick-branch	Git|S
 missing	git-clean-untracked	Git|S
 missing	git-commit-push	Git|S
 missing	git-commit-sync	Git|S
 missing	git-discard-all	Git|S
+missing	git-inline-blame	Git|S
+missing	git-line-history	Git|S
 missing	git-merge-branch	Git|S
 missing	git-merge-status	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S
 missing	git-patch-save	Git|S
 missing	git-rebase-onto	Git|S
+missing	git-rev-next	Git|S
+missing	git-rev-prev	Git|S
+missing	git-status-blame	Git|S
 missing	git-unstage-all	Git|S
 missing	itermoc-agents	Itermoc and AI setup|M
 missing	itermoc-models	Itermoc and AI setup|M

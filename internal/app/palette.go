@@ -305,6 +305,15 @@ func paletteItems() []picker.Item {
 		{ID: "git-log", Title: "Git: Show Log..."},
 		{ID: "git-compare-rev", Title: "Git: Compare with Revision..."},
 		{ID: "git-blame", Title: "Git: Blame Current Line", Hint: "Alt+B"},
+		{ID: "git-inline-blame", Title: "Git: Toggle Inline Blame"},        // git_blame_view.go
+		{ID: "git-status-blame", Title: "Git: Toggle Blame in Status Bar"}, // git_blame_view.go
+		{ID: "git-blame-annotate", Title: "Git: Toggle Blame Annotations"}, // git_blame_view.go
+		{ID: "git-blame-options", Title: "Git: Blame Options…"},            // git_blame_view.go
+		{ID: "git-blame-commit", Title: "Git: Open Commit of Line"},        // git_blame_view.go
+		{ID: "git-blame-before", Title: "Git: Blame Before This Change"},   // git_blame_view.go
+		{ID: "git-line-history", Title: "Git: Show Line History"},          // git_blame_view.go
+		{ID: "git-rev-prev", Title: "Git: Open Previous Revision of File"}, // git_blame_view.go
+		{ID: "git-rev-next", Title: "Git: Open Next Revision of File"},     // git_blame_view.go
 		{ID: "git-history", Title: "Git: Show File History..."},
 		{ID: "git-tags", Title: "Git: Show Tags..."},
 		{ID: "zen-mode", Title: "View: Toggle Zen Mode", Hint: "Alt+Z"},
@@ -769,6 +778,24 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.openCompareWithRevisionPrompt()
 	case "git-blame":
 		return m.gitBlameCurrentLine()
+	case "git-inline-blame":
+		return m.toggleInlineBlame()
+	case "git-status-blame":
+		return m.toggleStatusBlame()
+	case "git-blame-annotate":
+		return m.toggleBlameAnnotate()
+	case "git-blame-options":
+		return m.openBlameOptionsPicker()
+	case "git-blame-commit":
+		return m.gitOpenLineCommit()
+	case "git-blame-before":
+		return m.gitBlameBefore()
+	case "git-line-history":
+		return m.gitLineHistoryPicker()
+	case "git-rev-prev":
+		return m.gitStepRevision(-1)
+	case "git-rev-next":
+		return m.gitStepRevision(1)
 	case "git-history":
 		return m.gitFileHistoryPicker()
 	case "git-tags":
