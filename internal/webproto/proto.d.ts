@@ -461,6 +461,11 @@ export interface AIInfoArgs {
   kind: "usage" | "rules" | "memory" | "skills" | "hooks" | "web-tools" | "mcp-log" | "serve-status" | "serve-config" | "configure" | "bug-report";
 }
 
+export interface GitPeekArgs {
+  path: string;
+  line: number;
+}
+
 export interface GitFileLogArgs {
   path: string;
 }
@@ -2121,6 +2126,17 @@ export interface AIInfoRow {
   header?: boolean;
 }
 
+export interface GitPeek {
+  path: string;
+  line: number;
+  header: string;
+  lines: string[];
+  index: number;
+  count: number;
+  staged?: boolean;
+  starts: number[];
+}
+
 export interface GitFileLog {
   path: string;
   log: GitCommit[];
@@ -3002,6 +3018,7 @@ export interface OpArgs {
   "ai.next_edit": AINextEditArgs;
   "ai.action": AIActionArgs;
   "ai.info": AIInfoArgs;
+  "git.peek": GitPeekArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -3266,6 +3283,7 @@ export interface OpResult {
   "ai.next_edit": AINextEdit;
   "ai.action": AIAction;
   "ai.info": AIInfo;
+  "git.peek": GitPeek;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
