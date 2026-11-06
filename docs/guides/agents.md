@@ -282,6 +282,33 @@ of Claude Code and Codex), **BUILT-IN** (termocode's own AI profiles) and
 into termocode's tools folder, after a card (**Not now** first). Then a
 second card runs the CLI's own sign-in command in a terminal tab.
 
+From the **WORKTREES** view, **Agent: Start…** starts the agent in the
+selected worktree, and the agent shows on that worktree's card.
+
+## Race agents on one task
+
+**Agent: Race…** gives one task to 2 to 4 agents at once. Tick the lanes,
+type the task and, if you like, a verify command such as `go test ./...`.
+Each lane gets its own worktree from `HEAD` (hidden in the git folder) and
+its own terminal tab. termocode types the task once, only when the agent's
+input box is on screen, never into a question.
+
+**Agent: Race Compare** shows one row per lane: state, files and `+/-`.
+
+| Key | What it does |
+|---|---|
+| `Enter` | Review the lane's diff (read only) |
+| `m` | Merge this lane into your folder; a conflict stops first and asks (**Cancel** first) |
+| `d` | Discard one lane (**Cancel** first) |
+| `v` | Run the verify command in every finished lane |
+| `s` | Ask your **Quick** model for a 3-line summary of the differences (capped, secrets hidden; the cost is shown) |
+| `x` | Stop every lane |
+
+After a merge, a card asks about the other lanes: **Keep** is first. A
+lane whose agent still works is never merged or discarded. The AI chat can
+start a race with `agent_race_start`, always behind a card (**Deny**
+first).
+
 ## Chat view and sessions
 
 With `agent_transcripts` on:
