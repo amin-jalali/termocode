@@ -110,7 +110,8 @@ func TestPerfGitRefresh20k(t *testing.T) {
 // tool, a checkout there and back): the text is the same but the times
 // are not, and a status that never writes the index reads all 20 000
 // files again on every poll. The poll's index refresh settles them: the
-// median of five polls after the first.
+// median of nine polls after the first and one warm-up (five gave 40 and
+// 47 ms on the same CI runner).
 func TestPerfGitPollTouched20k(t *testing.T) {
 	perfbudget.Require(t)
 	dir := bigGitRepo(t)
@@ -144,11 +145,12 @@ func TestPerfGitPollTouched20k(t *testing.T) {
 		return d
 	}
 	poll() // the first poll refreshes the index
+	poll() // and one warm-up after it (file cache, the git binary)
 	var took []time.Duration
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 9; i++ {
 		took = append(took, poll())
 	}
 	slices.Sort(took)
 	t.Logf("git poll, touched files: %v", took)
-	perfbudget.Check(t, "git_poll_touched_20k", float64(took[2].Microseconds()/100)/10)
+	perfbudget.Check(t, "git_poll_touched_20k", float64(took[4].Microseconds()/100)/10) // the median of 9
 }
