@@ -33,7 +33,9 @@ func (e *raceEnv) finishLane(t *testing.T, i int, files map[string]string) {
 	}
 }
 
-func (e *raceEnv) act(a raceview.Action, lane string) { e.feed(e.m.raceAct(raceview.ActionMsg{Action: a, Lane: lane})) }
+func (e *raceEnv) act(a raceview.Action, lane string) {
+	e.feed(e.m.raceAct(raceview.ActionMsg{Action: a, Lane: lane}))
+}
 
 // answer presses a button of the open card.
 func (e *raceEnv) answer(id string) {
