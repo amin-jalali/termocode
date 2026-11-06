@@ -442,6 +442,7 @@ repository's git folder, never in your project.
 | `p` | Pin or unpin |
 | `i` | Link an issue or pull request (see below) |
 | `n` | New worktree (see below) |
+| `c` | New child worktree: it starts from the selected one's branch |
 | `L` | Open the setup log of a new worktree |
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
@@ -460,6 +461,13 @@ URL must be `https` on the repository's own GitHub host. termocode asks
 20 seconds while checks run, else every 5 minutes. Without `gh`, or when
 it is not signed in, the number is kept without its title. **Unlink**
 on the same card takes it off. The AI can read links but never set one.
+
+### Child worktrees
+
+`c` (**Worktree: New Child of Selected…**) opens the New worktree form
+for a child of the selected worktree: it starts from that worktree's
+branch, and the list draws it under its parent (`└`; deeper children
+show as `└ …`). A child whose parent is gone moves up to the top level.
 
 **Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
 agents in them, from every termocode window, with the ones that wait for

@@ -2210,6 +2210,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-link` | Worktree: Link Issue or PR… | never | links are the user's choice; the AI reads them with worktrees_list |
 | `worktree-new` | Worktree: New… | never | opens a picker or prompt that only the user can answer; use a typed tool (worktree_create comes later) |
+| `worktree-new-child` | Worktree: New Child of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |

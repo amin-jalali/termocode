@@ -66,6 +66,9 @@ type wtForm struct {
 	// issueNum / issueTitle: the issue read for the branch (WTX-9).
 	issueNum   int
 	issueTitle string
+	// parent / parentTitle: a child worktree (c, WTX-11) starts from the
+	// parent's branch and is stored under it.
+	parent, parentTitle string
 }
 
 // wtFormVals are the typed values of the card.
@@ -130,7 +133,26 @@ func worktreeDirSetting() string {
 
 // openWorktreeNew reads the repository off the UI thread, then opens
 // the dialog (Worktree: New…, n in the view).
-func (m *Model) openWorktreeNew() tea.Cmd {
+func (m *Model) openWorktreeNew() tea.Cmd { return m.openWorktreeNewFrom("", "", "") }
+
+// openWorktreeNewChild is c: a child of the cursor's worktree, from its
+// branch (or its commit when detached).
+func (m *Model) openWorktreeNewChild() tea.Cmd {
+	it, ok := m.wtSelected()
+	if !ok {
+		return m.revealWorktrees()
+	}
+	if it.e.Gone {
+		return m.pushToastDetail(toast.Info, "No child of a gone worktree", "Its folder is gone: F forgets it.")
+	}
+	from := it.e.Branch
+	if from == "" {
+		from = it.e.Head
+	}
+	return m.openWorktreeNewFrom(it.e.Path, wtTitle(it), from)
+}
+
+func (m *Model) openWorktreeNewFrom(parent, parentTitle, from string) tea.Cmd {
 	if m.wt == nil {
 		return nil
 	}
@@ -139,7 +161,16 @@ func (m *Model) openWorktreeNew() tea.Cmd {
 	}
 	root, _ := m.rootDir()
 	setting := worktreeDirSetting()
-	return func() tea.Msg { return wtNewPrep(root, setting) }
+	return func() tea.Msg {
+		msg := wtNewPrep(root, setting)
+		if msg.f != nil && parent != "" {
+			msg.f.parent, msg.f.parentTitle = parent, parentTitle
+			if from != "" {
+				msg.f.from = from
+			}
+		}
+		return msg
+	}
 }
 
 // wtNewPrep reads what the dialog shows: the main checkout, the refs,
@@ -229,7 +260,11 @@ func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 	for _, a := range f.agents {
 		opts = append(opts, a.Title)
 	}
-	rows := []connectcard.Row{
+	var rows []connectcard.Row
+	if f.parent != "" {
+		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Child of " + f.parentTitle + " (starts from its branch)"})
+	}
+	rows = append(rows, []connectcard.Row{
 		{Kind: connectcard.Input, ID: "name", Text: "Name", Inline: true, Placeholder: "feat/my-change", Value: v.name},
 		{Kind: connectcard.Input, ID: "issue", Text: "Issue", Inline: true, Placeholder: "optional: number or URL, linked to it", Value: v.issue},
 		{Kind: connectcard.Input, ID: "from", Text: "From", Inline: true, Value: v.from},
@@ -237,7 +272,7 @@ func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 		{Kind: connectcard.Choice, ID: "agent", Text: "Agent", Options: opts, Selected: v.agent},
 		{Kind: connectcard.Input, ID: "task", Text: "Task", Inline: true, Placeholder: "typed into the agent once it is ready", Value: v.task},
 		{Kind: connectcard.Blank},
-	}
+	}...)
 	rows = append(rows, wtAlsoRows(f, short)...)
 	where := "type a name"
 	if folder == "" && strings.TrimSpace(v.issue) != "" {
@@ -544,6 +579,11 @@ func (m *Model) onWTCreated(msg wtCreatedMsg) tea.Cmd {
 			md.Name = name
 		}
 		md.Created, md.LastSeen = clock.Now(), clock.Now()
+		if f.parent != "" {
+			mm[msg.folder] = md
+			_ = worktrees.SetParent(mm, msg.folder, f.parent)
+			md = mm[msg.folder]
+		}
 		if msg.start {
 			md.Agent = msg.agent.ID
 		}

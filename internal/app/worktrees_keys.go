@@ -15,6 +15,12 @@ const worktreesGuidePage = "guides/git.md"
 
 func helpLocWorktrees() help.Loc { return help.Loc{Page: worktreesGuidePage, Anchor: "worktrees"} }
 
+const wtChildPaletteID = "worktree-new-child"
+
+func init() {
+	aiActionPolicies[wtChildPaletteID] = aiNever(aiNoPicker)
+}
+
 // worktreeKeyRows are the rows of the ? card (the guide's table).
 func worktreeKeyRows() []confirm.KeyRow {
 	return keyRows(
@@ -26,6 +32,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"p", "pin or unpin"},
 		[]string{"i", "link an issue or pull request (its state and CI show on the card)"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
+		[]string{"c", "new child worktree: from this one's branch, listed under it"},
 		[]string{"L", "open the setup log of a new worktree"},
 		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
 		[]string{"F", "forget a worktree whose folder is gone"},
@@ -49,6 +56,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: "worktree-pin", Title: "Worktree: Pin or Unpin Selected"},
 		{ID: "worktree-filter", Title: "Worktree: Next Filter"},
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
+		{ID: wtChildPaletteID, Title: "Worktree: New Child of Selected…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
 		{ID: wtLinkPaletteID, Title: "Worktree: Link Issue or PR…"},
 		{ID: wtAdoptPaletteID, Title: "Worktree: Adopt Selected"},
@@ -74,6 +82,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.revealWorktrees(), true
 	case wtNewPaletteID:
 		return m.openWorktreeNew(), true
+	case wtChildPaletteID:
+		return m.openWorktreeNewChild(), true
 	case wtSetupLogPaletteID:
 		return m.worktreeSetupLog(), true
 	case wtLinkPaletteID:
@@ -137,6 +147,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreePin()
 	case "n":
 		return m, m.openWorktreeNew()
+	case "c":
+		return m, m.openWorktreeNewChild()
 	case "L":
 		return m, m.worktreeSetupLog()
 	case "i":
