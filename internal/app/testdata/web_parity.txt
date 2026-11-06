@@ -367,8 +367,6 @@ excluded	web-copy-link	laptop only: copies to the laptop clipboard
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
-excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
-excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
 missing	ai-add	Itermoc and AI setup|M
 missing	ai-mcp-bundle	AI chat and agents|M
@@ -447,11 +445,6 @@ missing	redis-delete-key	Databases|L
 missing	redis-set-ttl	Databases|L
 missing	testing-collapse	Testing and web access|S
 missing	web-devices	Testing and web access|S
-missing	workflow-dry-run	Workflows|S
-missing	workflow-history	Workflows|S
-missing	workflow-new	Workflows|S
-missing	workflow-run	Workflows|S
-missing	workflows	Workflows|S
 web	view/Databases	view:db
 web	view/Files	view:files
 web	view/Git	view:git
@@ -461,12 +454,19 @@ web	view/Runs	cmd:runs
 web	view/Services	view:services
 web	view/Settings	view:settings
 web	view/Tests	view:testing
-web	workflow-stop	op:workflows.stop
 excluded	view/Search	removed from the laptop activity bar (the enum value is kept for back-compat only)
 missing	git-branch-delete	Git|S
 missing	git-branch-from	Git|S
 missing	git-branch-rename	Git|S
 missing	view/Itermoc	Itermoc and AI setup|M
+missing	workflow-dry-run	Workflows|S
+excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
+excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
+missing	workflow-history	Workflows|S
+missing	workflow-new	Workflows|S
+missing	workflow-run	Workflows|S
+web	workflow-stop	op:workflows.stop
+missing	workflows	Workflows|S
 missing	worktree-add-folder	Worktrees|M
 missing	worktree-adopt	Worktrees|M
 missing	worktree-filter	Worktrees|M

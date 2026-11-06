@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees";
 
 export interface Bye {
   t: "bye";
@@ -421,6 +421,20 @@ export interface ServiceLogsArgs {
 
 export interface ServiceArgs {
   name: string;
+}
+
+export interface WorktreeOnArgs {
+  id: string;
+  on: boolean;
+}
+
+export interface WorktreeNoteArgs {
+  id: string;
+  text: string;
+}
+
+export interface WorktreeArgs {
+  id: string;
 }
 
 export interface AIWorktreeTextArgs {
@@ -1337,6 +1351,38 @@ export interface WorkflowRun {
   stopping?: boolean;
 }
 
+export interface WorktreesSnap {
+  state: "none" | "loading" | "ready";
+  worktrees: WorktreeItem[];
+  more?: number;
+}
+
+export interface WorktreeItem {
+  id: string;
+  title: string;
+  branch?: string;
+  where: string;
+  kind: "main" | "user" | "agent" | "external";
+  group: "pinned" | "active" | "asleep" | "external" | "archived";
+  state: "working" | "waiting" | "done" | "idle" | "asleep" | "gone" | "archived";
+  pinned?: boolean;
+  here?: boolean;
+  locked?: boolean;
+  gone?: boolean;
+  agent?: string;
+  agents?: number;
+  status?: boolean;
+  ahead?: number;
+  behind?: number;
+  dirty?: number;
+  note?: string;
+  checkpoint?: string;
+  link?: string;
+  parent?: string;
+  depth?: number;
+  last_seen?: number;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -1814,6 +1860,11 @@ export interface ServiceLogs {
 }
 
 export interface ServiceDone {
+  asked?: boolean;
+  note?: string;
+}
+
+export interface WorktreeDone {
   asked?: boolean;
   note?: string;
 }
@@ -2413,6 +2464,12 @@ export interface OpArgs {
   "services.start": ServiceArgs;
   "services.restart": ServiceArgs;
   "services.stop": ServiceArgs;
+  "worktrees.refresh": EmptyArgs;
+  "worktrees.pin": WorktreeOnArgs;
+  "worktrees.sleep": WorktreeOnArgs;
+  "worktrees.note": WorktreeNoteArgs;
+  "worktrees.archive": WorktreeArgs;
+  "worktrees.delete": WorktreeArgs;
   "ai.worktrees": EmptyArgs;
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
@@ -2540,6 +2597,7 @@ export interface TopicData {
   "services": { snap: ServicesSnap; delta: ServicesSnap };
   "ai": { snap: AISnap; delta: AISnap };
   "workflows": { snap: WorkflowsSnap; delta: WorkflowsSnap };
+  "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
 }
 
 // The data of an ev message, by kind.
@@ -2621,6 +2679,11 @@ export interface OpResult {
   "services.start": ServiceDone;
   "services.restart": ServiceDone;
   "services.stop": AskRef;
+  "worktrees.pin": WorktreeDone;
+  "worktrees.sleep": WorktreeDone;
+  "worktrees.note": WorktreeDone;
+  "worktrees.archive": AskRef;
+  "worktrees.delete": AskRef;
   "ai.worktrees": AIWorktrees;
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;

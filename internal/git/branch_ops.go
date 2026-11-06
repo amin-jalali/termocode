@@ -30,6 +30,9 @@ func RenameBranch(dir, old, name string) error {
 // DeleteBranch deletes a local branch. Without force a branch with
 // commits no other branch has is refused with ErrBranchNotMerged.
 func DeleteBranch(dir, name string, force bool) error {
+	if name == "" || strings.HasPrefix(name, "-") {
+		return fmt.Errorf("%q is not a branch name", name)
+	}
 	flag := "-d"
 	if force {
 		flag = "-D"

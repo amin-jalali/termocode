@@ -2368,6 +2368,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workspace-remove-folder` | Workspace: Remove Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
 | `worktree-add-folder` | Worktree: Add Selected as Folder | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-adopt` | Worktree: Adopt Selected | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-archive` | Worktree: Archive or Restore Selected… | confirm (always asks) |   |
+| `worktree-cleanup` | Worktree: Clean Up… | confirm (always asks) |   |
+| `worktree-delete` | Worktree: Delete Selected… | confirm (always asks) |   |
 | `worktree-filter` | Worktree: Next Filter | auto |   |
 | `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2378,6 +2381,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
+| `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |
 | `worktree-view` | Worktree: Show | auto |   |
 | `zen-mode` | View: Toggle Zen Mode | auto |   |
 

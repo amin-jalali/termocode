@@ -18,6 +18,7 @@ var nav = []PageInfo{
 	{"Guides", "Edit and move around", "guides/editing.md"},
 	{"Guides", "Find and replace across files", "guides/search.md"},
 	{"Guides", "Git: stage, commit, sync, conflicts", "guides/git.md"},
+	{"Guides", "Worktrees", "guides/worktrees.md"},
 	{"Guides", "Set up AI", "guides/ai-setup.md"},
 	{"Guides", "Use AI", "guides/ai-use.md"},
 	{"Guides", "AI profiles and pipelines", "guides/ai-profiles.md"},

@@ -246,6 +246,8 @@ func wtStateGlyph(state string) (theme.Icon, theme.Color256) {
 		return theme.GlyphAsleep, theme.TextDim
 	case wtStateGone:
 		return theme.GlyphFail, theme.DiagError
+	case wtStateArchived:
+		return theme.GlyphStop, theme.TextDim
 	}
 	return theme.GlyphSvcStopped, theme.TextDim
 }
@@ -331,6 +333,8 @@ func wtAheadBehind(s wtStatus) string {
 // the folder for one that is gone.
 func wtBranch(e worktrees.Entry) string {
 	switch {
+	case e.Meta.State == worktrees.StateArchived && e.Branch != "":
+		return e.Branch
 	case e.Gone:
 		return "folder gone"
 	case e.Branch != "":
@@ -367,7 +371,7 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 		word = fmt.Sprintf("%d %s", it.agents, it.state)
 	}
 	titleFg := theme.TextPrimary
-	if it.e.Gone || it.state == wtStateAsleep {
+	if it.e.Gone || it.state == wtStateAsleep || it.state == wtStateArchived {
 		titleFg = theme.TextMuted
 	}
 	right := []wtSeg{{g.String(), gc}, {" " + word, theme.TextMuted}}
@@ -404,6 +408,9 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	}
 	if it.here && !hereUp {
 		tail = append(tail, wtSeg{dot + "you are here", theme.AccentGreen})
+	}
+	if it.state == wtStateArchived {
+		tail = append(tail, wtSeg{dot + "archived · x restores", theme.TextDim})
 	}
 	line2 := append([]wtSeg{{ind + "  " + theme.GlyphWorktree.String() + " ", theme.TextDim}, {wtBranch(it.e), theme.TextSecondary}}, tail...)
 	out = append(out, wtPaintTail(line2, active, focused, w))
@@ -494,6 +501,8 @@ func wtCompactLine(it wtItem, s wtStatus, active, focused bool, w int) string {
 	switch {
 	case it.state == wtStateAsleep && !it.e.Meta.LastSeen.IsZero():
 		right = strings.TrimSuffix(formatRecentTime(it.e.Meta.LastSeen, clock.Now()), " ago")
+	case it.state == wtStateArchived:
+		right = "archived"
 	case it.e.Gone:
 		right = "gone"
 	case !s.known:

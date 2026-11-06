@@ -18,7 +18,7 @@ func worktreesScene(name, variant string) Scene {
 // compact one-line list), and the list with ASCII icons.
 func worktreesCases() []goldenCase {
 	var out []goldenCase
-	for _, v := range []string{"running", "waiting", "asleep", "external", "keys", "filter", "jump", "new", "new-error", "setup", "setup-running", "link", "nested", "notes"} {
+	for _, v := range []string{"running", "waiting", "asleep", "external", "keys", "filter", "jump", "new", "new-error", "setup", "setup-running", "link", "nested", "notes", "sleep", "archive", "delete", "cleanup", "archived"} {
 		sc := worktreesScene("worktrees-"+v, v)
 		for _, sz := range [][2]int{{150, 42}, {80, 24}} {
 			out = append(out, goldenCase{fmt.Sprintf("%s-%dx%d", sc.Name, sz[0], sz[1]), sc, sz[0], sz[1]})

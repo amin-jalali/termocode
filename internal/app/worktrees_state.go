@@ -66,6 +66,11 @@ type wtState struct {
 	linkReading bool          // due links are being read again
 	ctlLink     *wtCtlPending // the open card of a CLI link (worktrees_notes.go)
 
+	sleepAsk   *wtSleepPending   // the open sleep card (worktrees_sleep.go)
+	archiveAsk *wtArchivePending // the open archive card (worktrees_archive.go)
+	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
+	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
+
 	seq    uint64
 	render struct {
 		sync.Mutex
@@ -93,6 +98,10 @@ func (m *Model) revealWorktrees() tea.Cmd {
 		m.applyLayout()
 	}
 	m.focus = FocusExplorer
+	if m.inTerminal || m.panelFocused { // run from the terminal: the keys come to the list
+		m.inTerminal, m.panelFocused = false, false
+		m.ensureEditorWindowCurrent()
+	}
 	return m.worktreesSync()
 }
 
@@ -127,6 +136,7 @@ func (m *Model) worktreesSync() tea.Cmd {
 type wtLoadMsg struct {
 	gen     uint64
 	jump    bool // Worktree: Jump… asked: apply it and open the picker
+	web     bool // the page asked (web_worktrees.go): apply it, no poll tick
 	root    string
 	common  string
 	list    []git.Worktree
@@ -162,8 +172,11 @@ func (m *Model) worktreesLoadFor(jump bool) tea.Cmd {
 
 func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 	st := m.wt
-	if st == nil || (!msg.jump && (msg.gen != st.gen || !st.polling)) {
+	if st == nil || (!msg.jump && !msg.web && (msg.gen != st.gen || !st.polling)) {
 		return nil
+	}
+	if msg.web && m.web != nil {
+		m.web.wt.loading = false
 	}
 	st.loaded = true
 	st.root = msg.root
@@ -186,9 +199,11 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 		cmds = append(cmds, st.refreshStatus(), st.wtLinksRefresh(clock.Now()))
 	}
 	st.touch()
-	if msg.jump {
+	switch {
+	case msg.jump:
 		cmds = append(cmds, m.openWorktreeJump()) // the poll chain (if any) keeps its own tick
-	} else {
+	case msg.web: // the page's read: the poll chain (if any) keeps its own tick
+	default:
 		cmds = append(cmds, wtTick(st.gen))
 	}
 	return tea.Batch(cmds...)
@@ -224,6 +239,9 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	if c, ok := m.handleWTCtlMsg(msg); ok { // the control socket (worktrees_notes.go)
 		return c, true
 	}
+	if c, ok := m.handleWTDeleteMsg(msg); ok { // the type-the-name card (worktrees_delete.go)
+		return c, true
+	}
 	if c, ok := m.handleWTLinkMsg(msg); ok { // the link card (worktrees_link.go)
 		return c, true
 	}
@@ -237,6 +255,18 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTCreated(msg), true
 	case wtForgotMsg:
 		return m.onWTForgot(msg), true
+	case wtArchivePrepMsg:
+		return m.onWTArchivePrep(msg), true
+	case wtArchivedMsg:
+		return m.onWTArchived(msg), true
+	case wtCleanupPrepMsg:
+		return m.onWTCleanupPrep(msg), true
+	case wtCleanedMsg:
+		return m.onWTCleaned(msg), true
+	case wtDeletePrepMsg:
+		return m.onWTDeletePrep(msg), true
+	case wtDeletedMsg:
+		return m.onWTDeleted(msg), true
 	case wtSetupDoneMsg:
 		return m.onWTSetupDone(msg), true
 	case wtLoadMsg:

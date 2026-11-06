@@ -37,7 +37,9 @@ func wtCannedCache(vals map[string]git.WorktreeStatus) *worktrees.StatusCache {
 // shows the Dirty filter with the text "fix"; "jump" opens Worktree:
 // Jump…; "link" the link card; "nested" a child, a linked PR with an
 // agent status and an external worktree with no meta; "notes" the N
-// card.
+// card; W4: "sleep" the sleep card of a parent, "archive" the archive
+// card of a dirty worktree, "delete" the type-the-name step, "cleanup"
+// the cleanup list, "archived" the list with an archived row.
 func (m *Model) worktreesDemo(variant string) {
 	now := clock.Now()
 	ago := func(d time.Duration) time.Time { return now.Add(-d) }
@@ -59,6 +61,9 @@ func (m *Model) worktreesDemo(variant string) {
 		"/src/app.worktrees/toast-race": {LastSeen: ago(20 * time.Minute)},
 		"/src/app.worktrees/grpc":       {State: worktrees.StateAsleep, LastSeen: ago(72 * time.Hour)},
 		"/src/api-v2":                   {LastSeen: ago(9 * 24 * time.Hour)},
+	}
+	if variant == "archived" || variant == "cleanup" {
+		metas["/src/app.worktrees/old-ui"] = worktrees.Meta{State: worktrees.StateArchived, Branch: "feat/old-ui", LastSeen: ago(30 * 24 * time.Hour)}
 	}
 	st := newWTState()
 	st.off, st.loaded, st.visible = true, true, true
@@ -83,6 +88,8 @@ func (m *Model) worktreesDemo(variant string) {
 		"waiting": "/src/app.worktrees/toast-race", "asleep": "/src/app.worktrees/grpc", "external": "/src/api-v2", "keys": "/src/app.worktrees/wt-sidebar",
 		"filter": "/src/app.worktrees/toast-race", "jump": "/src/app.worktrees/wt-sidebar",
 		"link": "/src/app.worktrees/toast-race", "nested": "/src/app/.git/termocode/worktrees/r9-tests", "notes": "/src/app.worktrees/wt-sidebar",
+		"sleep": "/src/app.worktrees/wt-sidebar", "archive": "/src/app.worktrees/toast-race", "delete": "/src/app.worktrees/toast-race",
+		"cleanup": "/src/app.worktrees/wt-sidebar", "archived": "/src/app.worktrees/old-ui",
 	}[variant]
 	m.wt = st
 	m.activity.SetActive(activity.ViewWorktrees)
@@ -130,6 +137,29 @@ func (m *Model) worktreesDemo(variant string) {
 		m.wtSetupAsk(f, "/src/app.worktrees/feat-pin-row")
 	case "setup-running":
 		st.setups = map[string]*wtSetupRun{"/src/app.worktrees/wt-sidebar": {state: wtSetupRunning}}
+	case "sleep":
+		for i := range st.entries {
+			if st.entries[i].Path == "/src/app.worktrees/toast-race" {
+				st.entries[i].Meta.Parent = "/src/app.worktrees/wt-sidebar"
+			}
+		}
+		m.worktreeSleep()
+	case "archive":
+		m.onWTArchivePrep(wtArchivePrepMsg{title: "fix/toast-race",
+			main: wtArchiveTarget{path: "/src/app.worktrees/toast-race", branch: "fix/toast-race", dirty: 2}})
+	case "delete":
+		m.wt.del = &wtDeletePending{title: "fix/toast-race", path: "/src/app.worktrees/toast-race", branch: "fix/toast-race", base: "main",
+			folder: true, dirty: 2, unmerged: 3, discard: true}
+		m.wtDeleteNext()
+		m.connect.SetInputValue("name", "fix/toast")
+	case "cleanup":
+		m.onWTCleanupPrep(wtCleanupPrepMsg{c: &wtCleanup{gone: 1, prune: true, rows: []wtCleanRow{
+			{path: "/src/app.worktrees/wt-sidebar", title: "feat/wt-sidebar", why: "kept: 4 changed files", dirty: 4},
+			{path: "/src/app.worktrees/toast-race", title: "fix/toast-race", why: "PR #12 merged · 2 changed files", dirty: 2},
+			{path: "/src/app.worktrees/grpc", title: "spike/grpc", why: "merged into main", tick: true},
+			{path: "/src/api-v2", title: "api-v2", why: "kept: active 9 days ago"},
+			{path: "/src/scratch", title: "scratch", why: "no activity for 21 days", tick: true},
+		}}})
 	}
 	st.touch()
 }
