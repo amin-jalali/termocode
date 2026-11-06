@@ -11,7 +11,7 @@ import (
 // ── WORKTREES view: keys and palette (WTX-2) ─────────────────────────────
 
 // worktreesGuidePage is the guide section of the view.
-const worktreesGuidePage = "guides/git.md"
+const worktreesGuidePage = "guides/worktrees.md"
 
 func helpLocWorktrees() help.Loc { return help.Loc{Page: worktreesGuidePage, Anchor: "worktrees"} }
 

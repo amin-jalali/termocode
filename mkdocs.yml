@@ -92,6 +92,7 @@ nav:
       - Edit and move around: guides/editing.md
       - Find and replace across files: guides/search.md
       - "Git: stage, commit, sync, conflicts": guides/git.md
+      - Worktrees: guides/worktrees.md
       - Set up AI: guides/ai-setup.md
       - Use AI: guides/ai-use.md
       - AI profiles and pipelines: guides/ai-profiles.md
