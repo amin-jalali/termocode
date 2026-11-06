@@ -16,6 +16,8 @@ export interface Prefs {
   dir: Direction;
   lang: Language;
   firstRunDone: boolean;
+  /** keysHintDone: the terminal's hint about the keys the browser keeps was seen (WEBP-11). */
+  keysHintDone: boolean;
   /** rowPx is the text size of terminal and file rows in px; 0 is the default. */
   rowPx: number;
   /** wakeLock: keep the screen on while a run streams (opt-in). */
@@ -30,7 +32,7 @@ export interface Prefs {
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [] };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [] };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -50,6 +52,7 @@ function load(): Prefs {
       dir: pick(v.dir, ["auto", "ltr", "rtl"], defaults.dir),
       lang: pick(v.lang, ["auto", "en", "fa"], defaults.lang),
       firstRunDone: v.firstRunDone === true,
+      keysHintDone: v.keysHintDone === true,
       rowPx: rowSize(v.rowPx),
       wakeLock: v.wakeLock === true,
       notify: v.notify === true,

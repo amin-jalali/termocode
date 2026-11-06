@@ -149,3 +149,4 @@ nav:
           - "0018 Workspace host": adr/0018-workspace-host-abstraction.md
           - "0019 AI providers": adr/0019-ai-providers.md
           - "0020 Web UI": adr/0020-web-ui.md
+          - "0021 Workflows": adr/0021-workflows.md
