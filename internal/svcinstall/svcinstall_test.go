@@ -88,6 +88,36 @@ func TestUnsupportedSystems(t *testing.T) {
 	if !strings.Contains(err.Error(), "Termux") {
 		t.Errorf("no Termux message: %v", err)
 	}
+	// A linux build run inside Termux has GOOS linux but no systemd.
+	_, err = Render(Spec{GOOS: "linux", Termux: true, Home: "/h", Exe: "/bin/tc", Workspace: "/w"})
+	if err == nil || !strings.Contains(err.Error(), "Termux") || !strings.Contains(err.Error(), "termux-wake-lock") {
+		t.Errorf("linux in Termux: %v", err)
+	}
+	if err := Install(Spec{GOOS: "linux", Termux: true, Home: t.TempDir(), Exe: "/bin/tc", Workspace: "/w"}, &bytes.Buffer{}, func() bool { return true }); err == nil {
+		t.Error("install in Termux went on")
+	}
+}
+
+// Spec (WFX-17): Termux is found by TERMUX_VERSION or a PREFIX inside
+// com.termux.
+func TestInTermux(t *testing.T) {
+	for env, want := range map[string]bool{
+		"TERMUX_VERSION=0.118.0":                true,
+		"PREFIX=/data/data/com.termux/files/usr": true,
+		"PREFIX=/usr/local":                      false,
+		"":                                       false,
+	} {
+		k, v, _ := strings.Cut(env, "=")
+		got := InTermux(func(n string) string {
+			if n == k {
+				return v
+			}
+			return ""
+		})
+		if got != want {
+			t.Errorf("%q: %v, want %v", env, got, want)
+		}
+	}
 }
 
 // fakeCtl puts a fake systemctl/launchctl/loginctl on PATH that logs argv.
@@ -98,8 +128,8 @@ func fakeCtl(t *testing.T) string {
 	}
 	bin := t.TempDir()
 	log := filepath.Join(t.TempDir(), "calls.log")
-	for _, n := range []string{"systemctl", "launchctl"} {
-		script := "#!/bin/sh\necho \"" + n + " $*\" >> '" + log + "'\ncase \"$*\" in *is-active*) echo active;; esac\n"
+	for _, n := range []string{"systemctl", "launchctl", "loginctl"} {
+		script := "#!/bin/sh\necho \"" + n + " $*\" >> '" + log + "'\ncase \"$*\" in *is-active*) echo active;; *Linger*) echo \"${FAKE_LINGER:-no}\";; esac\n"
 		if err := os.WriteFile(filepath.Join(bin, n), []byte(script), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -111,7 +141,7 @@ func fakeCtl(t *testing.T) string {
 func TestRoundTripLinux(t *testing.T) {
 	log := fakeCtl(t)
 	home := t.TempDir()
-	s := Spec{GOOS: "linux", Home: home, Exe: "/bin/tc", Workspace: "/w"}
+	s := Spec{GOOS: "linux", Home: home, Exe: "/bin/tc", Workspace: "/w", UID: 1000}
 	var out bytes.Buffer
 
 	// Preview only: nothing is written without a yes.
@@ -136,6 +166,9 @@ func TestRoundTripLinux(t *testing.T) {
 	if !strings.Contains(out.String(), "enable-linger") {
 		t.Errorf("no linger hint:\n%s", out.String())
 	}
+	if !strings.Contains(string(mustRead(t, log)), "loginctl show-user 1000 --property=Linger --value") {
+		t.Errorf("linger not checked:\n%s", mustRead(t, log))
+	}
 	calls, _ := os.ReadFile(log)
 	if !strings.Contains(string(calls), "systemctl --user enable --now "+filepath.Base(f.Path)) {
 		t.Errorf("calls:\n%s", calls)
@@ -144,6 +177,9 @@ func TestRoundTripLinux(t *testing.T) {
 	out.Reset()
 	if err := Status(s, &out); err != nil || !strings.Contains(out.String(), "installed") || !strings.Contains(out.String(), "active") {
 		t.Errorf("status %v:\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "enable-linger") {
+		t.Errorf("status has no linger hint while linger is off:\n%s", out.String())
 	}
 
 	if err := Uninstall(s, &out); err != nil {
@@ -214,4 +250,32 @@ func TestInstallRefusesForeignFile(t *testing.T) {
 	if b, _ := os.ReadFile(f.Path); string(b) != "mine" {
 		t.Error("foreign file changed")
 	}
+}
+
+// Spec (WFX-17, plan §4.1): the linger hint shows only when it is needed:
+// when loginctl says linger is on, install and status do not ask for it.
+func TestLingerHintOnlyWhenNeeded(t *testing.T) {
+	fakeCtl(t)
+	t.Setenv("FAKE_LINGER", "yes")
+	s := Spec{GOOS: "linux", Home: t.TempDir(), Exe: "/bin/tc", Workspace: "/w", UID: 1000}
+	var out bytes.Buffer
+	if err := Install(s, &out, func() bool { return true }); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), "enable-linger") || !strings.Contains(out.String(), "boot") {
+		t.Errorf("linger on, install output:\n%s", out.String())
+	}
+	out.Reset()
+	if err := Status(s, &out); err != nil || strings.Contains(out.String(), "enable-linger") {
+		t.Errorf("linger on, status %v:\n%s", err, out.String())
+	}
+}
+
+func mustRead(t *testing.T, p string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }
