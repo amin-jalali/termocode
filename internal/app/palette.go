@@ -415,6 +415,7 @@ func paletteItems() []picker.Item {
 	items = append(items, updatePaletteItems()...)    // G-UPD (update_palette.go)
 	items = append(items, prPaletteItems()...)        // G-PR (pr_list.go)
 	items = append(items, termPanePaletteItems()...)  // terminal splits (terminal_split.go)
+	items = append(items, gitxPaletteItems()...)      // GITX features (gitx_hub.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -825,6 +826,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	case "snippets-manage":
 		return m.openSnippetManager()
 	default:
+		if cmd, ok := m.dispatchGitxPalette(id); ok { // gitx_hub.go
+			return cmd
+		}
 		if cmd, ok := m.dispatchImportPalette(id); ok { // import_editor.go
 			return cmd
 		}

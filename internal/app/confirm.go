@@ -189,6 +189,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleImportConfirm(id); ok { // import_apply.go
 		return cmd
 	}
+	if cmd, ok := m.handleGitxConfirm(id); ok { // gitx_hub.go
+		return cmd
+	}
 	if cmd, ok := m.handleCIConfirm(id); ok { // ci_card.go
 		return cmd
 	}
