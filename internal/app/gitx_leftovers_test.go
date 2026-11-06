@@ -184,3 +184,23 @@ func TestGitxCommitChecksCRLF(t *testing.T) {
 	}
 	_ = m
 }
+
+// GITX-39 (M10): Git: Show LFS Files lists the files Git LFS tracks and
+// says plainly which are only pointers (not downloaded), with the size
+// of the real file and how to get it.
+func TestGitxLFSPage(t *testing.T) {
+	page := gitxLFSPage([]git.LFSFile{{Path: "assets/big.bin", Pointer: true, Size: 5 << 20}, {Path: "here.bin", Size: 12}})
+	for _, want := range []string{"2 files", "pointer only", "5.0 MB", "assets/big.bin", "downloaded", "here.bin", "git lfs pull"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("no %q in:\n%s", want, page)
+		}
+	}
+	if page := gitxLFSPage(nil); !strings.Contains(page, "No file") {
+		t.Errorf("empty page:\n%s", page)
+	}
+	m, _ := covGitRepo(t)
+	m.dispatchPaletteAction("git-lfs-files")
+	if p := aiActionPolicies["git-lfs-files"]; p.Gate != aiGateAuto {
+		t.Error("reading the LFS list is not auto for the AI")
+	}
+}

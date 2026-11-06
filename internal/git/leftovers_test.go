@@ -3,6 +3,7 @@ package git
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -149,5 +150,38 @@ func TestStagedCRLF(t *testing.T) {
 	}
 	if strings.Join(got, ",") != "lf.txt,new.txt" {
 		t.Fatalf("CRLF files %v", got)
+	}
+}
+
+// lfsPointer is a Git LFS pointer file for a file of size bytes.
+func lfsPointer(size int) string {
+	return "version https://git-lfs.github.com/spec/v1\noid sha256:" + strings.Repeat("ab", 32) + "\nsize " + strconv.Itoa(size) + "\n"
+}
+
+// GITX-39 (M10): ParseLFSPointer reads a Git LFS pointer file and
+// LFSFiles lists the files .gitattributes sends to LFS, each as a
+// pointer only (not downloaded) or as the real file.
+func TestLFSFiles(t *testing.T) {
+	if oid, size, ok := ParseLFSPointer([]byte(lfsPointer(12345))); !ok || size != 12345 || oid != "sha256:"+strings.Repeat("ab", 32) {
+		t.Fatalf("pointer: %q %d %v", oid, size, ok)
+	}
+	for _, bad := range []string{"", "hello\n", "version https://git-lfs.github.com/spec/v1\nsize 3\n", lfsPointer(1) + strings.Repeat("x", 2000)} {
+		if _, _, ok := ParseLFSPointer([]byte(bad)); ok {
+			t.Errorf("not a pointer, but read as one: %.40q", bad)
+		}
+	}
+	r := newGitTestRepo(t)
+	r.write(t, ".gitattributes", "*.bin filter=lfs diff=lfs merge=lfs -text\n")
+	r.write(t, "assets/big.bin", lfsPointer(5<<20))
+	r.write(t, "here.bin", "real bytes\x00\x01")
+	r.write(t, "a.txt", "text\n")
+	r.git(t, "add", ".")
+	r.git(t, "commit", "-q", "-m", "first")
+	files, err := LFSFiles(r.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 2 || files[0] != (LFSFile{Path: "assets/big.bin", Pointer: true, Size: 5 << 20}) || files[1] != (LFSFile{Path: "here.bin", Size: 12}) {
+		t.Fatalf("LFS files %+v", files)
 	}
 }
