@@ -1198,6 +1198,20 @@
       "phase": "v2"
     },
     {
+      "op": "debug.open_launch",
+      "args": "EmptyArgs",
+      "result": "DebugLaunch",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "debug.frame",
       "args": "DebugFrameArgs",
       "role": "controller",
@@ -3818,6 +3832,36 @@
       "phase": "v2"
     },
     {
+      "op": "ai.mcp_items",
+      "args": "EmptyArgs",
+      "result": "MCPItems",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.side",
+      "args": "ChatSendArgs",
+      "result": "ChatSide",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 73728,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.use_profile",
       "args": "AIUseArgs",
       "result": "AskRef",
@@ -5351,6 +5395,18 @@
       ],
       "additionalProperties": false
     },
+    "ChatSide": {
+      "type": "object",
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "additionalProperties": true
+    },
     "ChatSnap": {
       "type": "object",
       "properties": {
@@ -6714,6 +6770,18 @@
         "id"
       ],
       "additionalProperties": false
+    },
+    "DebugLaunch": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": true
     },
     "DebugLine": {
       "type": "object",
@@ -10302,6 +10370,40 @@
         "since",
         "calls",
         "asked"
+      ],
+      "additionalProperties": true
+    },
+    "MCPItem": {
+      "type": "object",
+      "properties": {
+        "hint": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "MCPItems": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/MCPItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
       ],
       "additionalProperties": true
     },

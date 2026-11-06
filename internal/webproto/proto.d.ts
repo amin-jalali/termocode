@@ -1736,6 +1736,10 @@ export interface DebugSource {
   outside?: boolean;
 }
 
+export interface DebugLaunch {
+  path: string;
+}
+
 export interface LspLocations {
   locs: LspLoc[];
   cut?: boolean;
@@ -2716,6 +2720,20 @@ export interface CIRun {
   url?: string;
 }
 
+export interface MCPItems {
+  items: MCPItem[];
+}
+
+export interface MCPItem {
+  text: string;
+  title: string;
+  hint?: string;
+}
+
+export interface ChatSide {
+  answer: string;
+}
+
 export interface AutoApprove {
   rows: AutoApproveRow[];
 }
@@ -2789,6 +2807,7 @@ export interface OpArgs {
   "debug.bp": DebugBpArgs;
   "debug.watch": DebugWatchArgs;
   "debug.eval": DebugEvalArgs;
+  "debug.open_launch": EmptyArgs;
   "debug.frame": DebugFrameArgs;
   "lsp.type_definition": LspPosArgs;
   "lsp.implementation": LspPosArgs;
@@ -2974,6 +2993,8 @@ export interface OpArgs {
   "pr.merge": PRMergeArgs;
   "pr.review": PRReviewArgs;
   "pr.checkout": PRNumberArgs;
+  "ai.mcp_items": EmptyArgs;
+  "chat.side": ChatSendArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
@@ -3046,6 +3067,7 @@ export interface OpResult {
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;
   "debug.sources": DebugSources;
+  "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;
   "lsp.implementation": LspLocations;
   "buf.format": EditRes;
@@ -3214,6 +3236,8 @@ export interface OpResult {
   "pr.merge": AskRef;
   "pr.review": AskRef;
   "pr.checkout": AskRef;
+  "ai.mcp_items": MCPItems;
+  "chat.side": ChatSide;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;

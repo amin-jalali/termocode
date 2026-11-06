@@ -68,3 +68,20 @@ func TestDebugArgsRules(t *testing.T) {
 		}
 	}
 }
+
+// Spec (WEBP-9, Debug: Open launch.json): a controller opens the
+// workspace's launch.json in the page's editor; when there is none the
+// laptop writes its template first (a file in the workspace, like a
+// save: no laptop card), so it is audited.
+func TestDebugOpenLaunchRow(t *testing.T) {
+	p, ok := Lookup(OpDebugOpenLaunch)
+	if !ok || p.Role != RoleController || p.LaptopCard || p.Audit != AuditYes || p.Phase != PhaseV2 {
+		t.Fatalf("debug.open_launch row %+v", p)
+	}
+	if _, err := DecodeArgs(OpDebugOpenLaunch, json.RawMessage(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeArgs(OpDebugOpenLaunch, json.RawMessage(`{"path":"/etc/passwd"}`)); err == nil {
+		t.Fatal("a path was accepted: the laptop names the file")
+	}
+}

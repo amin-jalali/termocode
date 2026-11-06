@@ -677,6 +677,18 @@ export const SD = {
   "cmd.ai_profiles_edit": "AI: Edit Profiles…",
   "cmd.ai_profile_new": "AI: New Profile from Current…",
   "cmd.ai_profile_form": "AI: Edit Profile…",
+  "cmd.debug_open_launch": "Debug: Open launch.json",
+  "cmd.testing_collapse": "Testing: Collapse All",
+  "cmd.output_clear": "Output: Clear",
+  "cmd.ai_side": "AI: Side Question…",
+  "cmd.ai_mcp_insert": "AI: MCP Prompts and Resources…",
+  "mcpi.title": "MCP prompts and resources (Enter: put in the chat)",
+  "mcpi.none": "No MCP prompts or resources: no connected server has any.",
+  "side.ask": "Ask (not added to the main chat)",
+  "side.wait": "Asking the side question…",
+  "side.busy": "The side question is still being answered.",
+  "side.title": "Side chat (not in the main chat)",
+  "side.again": "Ask another",
 } as const;
 
 addStrings(SD);
