@@ -23,6 +23,8 @@ import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
+import { ctrFilter, ctrSearch, ctrSel, openPort } from "../views/desk/DeskContainers";
+import { configureServices, openCompose } from "../views/run/ServicesView";
 import { activeFile, alternateFile, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, showFile, splitEditor, tabsIn, togglePin, wordWrap } from "./workbench";
 import { askLink } from "./links";
 import { expandTo, hideDots } from "./tree";
@@ -99,6 +101,11 @@ export function commands(): Command[] {
     { id: "themeDark", label: "cmd.theme_dark", run: () => setPref("theme", "dark") },
     { id: "themeLight", label: "cmd.theme_light", run: () => setPref("theme", "light") },
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
+    { id: "containersFilter", label: "ctr.filter", run: () => (openSide("containers"), (ctrFilter.value = ctrFilter.peek() ?? "")) },
+    { id: "containersSearch", label: "ctr.search", when: canAct, run: () => (openSide("containers"), (ctrSearch.value = true)) },
+    { id: "containersOpenPort", label: "ctr.open_port", when: () => !!ctrSel.peek()?.ports, run: () => openPort(ctrSel.peek()) },
+    { id: "servicesOpenCompose", label: "svc.open_compose", run: openCompose },
+    { id: "servicesConfigure", label: "svc.configure", when: canAct, run: configureServices },
     ...gitCommands(),
     ...editCommands(),
     { id: "lastFile", label: "cmd.last_file", when: () => activeFile.peek() !== null, run: () => alternateFile() || toast("info", t("cmd.no_last_file")) },
@@ -134,6 +141,7 @@ export function commands(): Command[] {
   ];
 }
 
+const canAct = () => link.meta.peek()?.role !== "viewer";
 const isController = () => link.meta.peek()?.role === "controller";
 
 /** chatCommands act on the laptop's open chat and read the laptop's AI

@@ -20,6 +20,7 @@
 .cod-account::before { content: "\eb99"; }
 .cod-add::before { content: "\ea60"; }
 .cod-arrow-down::before { content: "\ea9a"; }
+.cod-arrow-swap::before { content: "\ebcb"; }
 .cod-arrow-up::before { content: "\eaa1"; }
 .cod-beaker::before { content: "\ea79"; }
 .cod-bell::before { content: "\eaa2"; }
@@ -39,6 +40,8 @@
 .cod-close::before { content: "\ea76"; }
 .cod-close-all::before { content: "\eac1"; }
 .cod-cloud::before { content: "\ebaa"; }
+.cod-cloud-download::before { content: "\eac2"; }
+.cod-cloud-upload::before { content: "\eac3"; }
 .cod-collapse-all::before { content: "\eac5"; }
 .cod-comment::before { content: "\ea6b"; }
 .cod-comment-discussion::before { content: "\eac7"; }
@@ -88,6 +91,7 @@
 .cod-git-pull-request::before { content: "\ea64"; }
 .cod-globe::before { content: "\eb01"; }
 .cod-go-to-file::before { content: "\ea94"; }
+.cod-graph::before { content: "\eb03"; }
 .cod-gripper::before { content: "\eb04"; }
 .cod-group-by-ref-type::before { content: "\eb97"; }
 .cod-history::before { content: "\ea82"; }
@@ -146,6 +150,8 @@
 .cod-server-process::before { content: "\eba2"; }
 .cod-settings-gear::before { content: "\eb51"; }
 .cod-shield::before { content: "\eb53"; }
+.cod-sign-in::before { content: "\ea6f"; }
+.cod-sign-out::before { content: "\ea6e"; }
 .cod-source-control::before { content: "\ea68"; }
 .cod-sparkle::before { content: "\ec10"; }
 .cod-screen-full::before { content: "\eb4c"; }
