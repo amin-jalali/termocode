@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/crash"
@@ -72,6 +73,8 @@ type broker struct {
 	init  json.RawMessage // the server's initialize result
 	exit  chan struct{}   // closed when the server process exited
 	done  chan struct{}   // closed when the broker is finished
+
+	statusMu sync.Mutex // sendStatus, one at a time
 
 	mu      sync.Mutex
 	clients map[uint64]*shareClient
@@ -327,11 +330,22 @@ func (b *broker) watch(c *shareClient) {
 	b.sendStatus()
 }
 
-// sendStatus tells every session how many sessions use the server.
+// shareStatusCounted runs in sendStatus between the count and the
+// sends (tests hold a status there).
+var shareStatusCounted atomic.Pointer[func(n int)]
+
+// sendStatus tells every session how many sessions use the server. One
+// status at a time, counted and sent in turn: an older count never
+// reaches a session after a newer one.
 func (b *broker) sendStatus() {
+	b.statusMu.Lock()
+	defer b.statusMu.Unlock()
 	b.mu.Lock()
 	n := len(b.clients)
 	b.mu.Unlock()
+	if f := shareStatusCounted.Load(); f != nil {
+		(*f)(n)
+	}
 	for _, c := range b.readyClients() {
 		_ = c.conn.Notify(shareNotify, map[string]any{"sessions": n, "pid": b.pid()})
 	}
