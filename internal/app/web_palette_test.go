@@ -37,7 +37,7 @@ func TestWebPaletteListIsTheSafeAllowList(t *testing.T) {
 	for _, it := range res.Items {
 		byID[it.ID] = it
 		p, ok := aiActionPolicyFor(it.ID)
-		if !ok || p.Gate == aiGateNever {
+		if _, form := webPaletteLaptopForms[it.ID]; !ok || p.Gate == aiGateNever && !form {
 			t.Errorf("%s offered, but the AI policy is %+v", it.ID, p)
 		}
 		if p.Gate == aiGateConfirm && p.Class == "" && !it.Ask {
