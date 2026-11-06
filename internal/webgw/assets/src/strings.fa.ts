@@ -257,6 +257,8 @@ export const FA: Record<StringKey, string> = {
   "dterm.input": "ترمینال {name}: اینجا بنویسید، هر کلید به پوسته می‌رود",
   "dterm.paste_ask": "{n} خط در پوسته چسبانده شود؟ هر خط مثل یک فرمان اجرا می‌شود.",
   "dterm.copy_sel": "کپی متن انتخاب‌شده",
+  "dterm.popout": "باز کردن ترمینال در پنجرهٔ جدا",
+  "dterm.popout_blocked": "مرورگر پنجرهٔ تازه را بست. پنجره‌های بازشو را اینجا اجازه دهید و دوباره امتحان کنید.",
   "dterm.fullscreen": "تمام صفحه",
   "dterm.fullscreen_title": "تمام صفحه: هر کلید به پوسته می‌رود",
   "dterm.fullscreen_failed": "مرورگر به حالت تمام صفحه نرفت.",

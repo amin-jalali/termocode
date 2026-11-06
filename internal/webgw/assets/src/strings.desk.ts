@@ -25,6 +25,8 @@ export const SD = {
   "dterm.input": "Terminal {name}: type here, every key goes to the shell",
   "dterm.paste_ask": "Paste {n} lines into the shell? Each line runs as a command.",
   "dterm.copy_sel": "Copy the selection",
+  "dterm.popout": "Pop out terminal",
+  "dterm.popout_blocked": "The browser blocked the new window. Allow pop-ups here, then try again.",
   "dterm.fullscreen": "Full screen",
   "dterm.fullscreen_title": "Full screen: every key goes to the shell",
   "dterm.fullscreen_failed": "The browser did not go full screen.",
