@@ -6,6 +6,7 @@
 # excluded id  reason why the web will never have it (one line)
 # missing  id  area|size  a gap the web should close; NOT an exclusion
 
+web	ai-add	cmd:aiAdd
 web	ai-agents	cmd:agents
 web	ai-cancel	op:chat.stop
 web	ai-doc	cmd:aiDoc
@@ -13,9 +14,16 @@ web	ai-edit	cmd:aiEdit
 web	ai-explain	cmd:aiExplain
 web	ai-fix	cmd:aiFix
 web	ai-mcp-servers	view:mcp
+web	ai-model-slot-add	cmd:aiModelSlotAdd
+web	ai-models-edit	cmd:aiModelsEdit
 web	ai-new-chat	op:chat.new
 web	ai-open-chat	cmd:chat
 web	ai-pick-model	op:ai.use_model
+web	ai-profile-edit	cmd:aiProfileEdit
+web	ai-profile-form	cmd:aiProfileForm
+web	ai-profile-new	cmd:aiProfileNew
+web	ai-profile-next	cmd:aiProfileNext
+web	ai-profile-show	cmd:aiProfileShow
 web	ai-profile-switch	op:ai.use_profile
 web	ai-runs	cmd:runs
 web	ai-toggle-inline	op:ai.complete
@@ -95,6 +103,12 @@ web	git-unstage-hunk	op:git.unstage_hunk
 web	goto-line	cmd:gotoLine
 web	goto-symbol-file	op:buf.symbols
 web	hover	op:lsp.hover
+web	itermoc-agents	cmd:itermocAgents
+web	itermoc-models	cmd:itermocModels
+web	itermoc-open	cmd:itermoc
+web	itermoc-open-ai	cmd:itermoc
+web	itermoc-profiles	cmd:itermocProfiles
+web	itermoc-services	cmd:itermocServices
 web	kubernetes-context	op:kube.contexts
 web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
@@ -223,7 +237,6 @@ excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
 excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
-missing	ai-add	Itermoc and AI setup|M
 missing	ai-apply-code	AI chat and agents|M
 missing	ai-apply-proposal	AI chat and agents|M
 missing	ai-attach	AI chat and agents|M
@@ -252,16 +265,9 @@ missing	ai-mcp-reset-cache	AI chat and agents|M
 missing	ai-mcp-updates	AI chat and agents|M
 missing	ai-memory	AI chat and agents|M
 missing	ai-memory-toggle	AI chat and agents|M
-missing	ai-model-slot-add	Itermoc and AI setup|M
-missing	ai-models-edit	Itermoc and AI setup|M
 missing	ai-plan-approval	AI chat and agents|M
 missing	ai-plan-review	AI chat and agents|M
 missing	ai-plan-worktree	AI chat and agents|M
-missing	ai-profile-edit	Itermoc and AI setup|M
-missing	ai-profile-form	Itermoc and AI setup|M
-missing	ai-profile-new	Itermoc and AI setup|M
-missing	ai-profile-next	Itermoc and AI setup|M
-missing	ai-profile-show	Itermoc and AI setup|M
 missing	ai-reasoning-next	AI chat and agents|M
 missing	ai-review	AI chat and agents|M
 missing	ai-rules	AI chat and agents|M
@@ -383,12 +389,6 @@ missing	http-save-body	HTTP client|L
 missing	http-saved	HTTP client|L
 missing	http-send	HTTP client|L
 missing	http-send-pick	HTTP client|L
-missing	itermoc-agents	Itermoc and AI setup|M
-missing	itermoc-models	Itermoc and AI setup|M
-missing	itermoc-open	Itermoc and AI setup|M
-missing	itermoc-open-ai	Itermoc and AI setup|M
-missing	itermoc-profiles	Itermoc and AI setup|M
-missing	itermoc-services	Itermoc and AI setup|M
 missing	join-lines	Editor and files|S
 missing	lowercase	Editor and files|S
 missing	mcp-import-other	AI chat and agents|M
@@ -434,6 +434,7 @@ missing	workspace-add-folder	Editor and files|S
 missing	workspace-remove-folder	Editor and files|S
 web	view/Files	view:files
 web	view/Git	view:git
+web	view/Itermoc	view:itermoc
 web	view/Run	view:run
 web	view/Settings	view:settings
 web	view/Tests	view:testing
@@ -442,4 +443,3 @@ web	view/Databases	view:db
 web	view/Runs	cmd:runs
 web	view/Kubernetes	view:kube
 excluded	view/Search	removed from the laptop activity bar (the enum value is kept for back-compat only)
-missing	view/Itermoc	Itermoc and AI setup|M
