@@ -511,6 +511,16 @@ func (m *Model) wfxEdit() tea.Cmd {
 
 // wfxStart starts a run of e with every adapter of the app.
 func (m *Model) wfxStart(e wire.Entry, dry bool) tea.Cmd {
+	_, _, cmd, err := m.wfxStartID(e, dry)
+	if err != nil {
+		return m.aiInfo(e.Name + ": " + agentCtlShort(err.Error()))
+	}
+	return cmd
+}
+
+// wfxStartID is wfxStart that also gives the run id and handle (the AI's
+// workflow tools wait on it).
+func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd, error) {
 	st := m.wfxS()
 	id := wire.NewRunID()
 	l := &wfxLive{id: id, name: e.Name, dry: dry, ch: make(chan tea.Msg, 64)}
@@ -572,7 +582,7 @@ func (m *Model) wfxStart(e wire.Entry, dry bool) tea.Cmd {
 	}
 	h, err := wire.Start(context.Background(), cfg)
 	if err != nil {
-		return m.aiInfo(e.Name + ": " + agentCtlShort(err.Error()))
+		return "", nil, nil, err
 	}
 	l.h = h
 	st.live[id] = l
@@ -581,7 +591,7 @@ func (m *Model) wfxStart(e wire.Entry, dry bool) tea.Cmd {
 		l.ch <- wfxDoneMsg{id: id}
 	})
 	m.wfxPutRun(h.Snapshot())
-	return tea.Batch(m.wfxShowPage("run:"+id, true), wfxListen(l.ch))
+	return id, h, tea.Batch(m.wfxShowPage("run:"+id, true), wfxListen(l.ch)), nil
 }
 
 func lastLine(s string) string {

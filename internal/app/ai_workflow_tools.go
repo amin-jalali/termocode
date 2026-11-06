@@ -249,7 +249,7 @@ func aiWfxValidate(name string, data []byte) string {
 
 // aiWorkflowTools are the workflow tools of workspace ws.
 func (m *Model) aiWorkflowTools(ws string, call aiIDECaller) []ai.Tool {
-	return append(aiWorkflowReadTools(ws), m.aiWorkflowDraftTool(ws, call))
+	return append(append(aiWorkflowReadTools(ws), m.aiWorkflowDraftTool(ws, call)), m.aiWorkflowRunTools(ws, call)...)
 }
 
 // aiWorkflowReadTools are the read-only workflow tools of workspace ws.

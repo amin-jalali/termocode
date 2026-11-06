@@ -30,7 +30,7 @@ import (
 // user has just read it on the card.
 
 // aiWorkflowAllow is the Allow button's title on the workflow cards.
-var aiWorkflowAllow = map[string]string{"workflow_draft": "Create"}
+var aiWorkflowAllow = map[string]string{"workflow_draft": "Create", "workflow_dry_run": "Dry run", "workflow_run": "Run"}
 
 // aiWorkflowCancelFirst are the cards whose safe button says Cancel.
 var aiWorkflowCancelFirst = map[string]bool{"workflow_draft": true}

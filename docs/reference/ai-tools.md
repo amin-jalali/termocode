@@ -125,6 +125,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`workflow_runs`](#workflow_runs) | auto | no | The recent runs of the workflows (or of one), newest first: id, dry run or run, state, writes. |
 | [`workflow_validate`](#workflow_validate) | auto | no | Check workflow file text (content) before you save it, or a saved workflow (name): every problem with its line, and the warnings. |
 | [`workflow_draft`](#workflow_draft) | confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version) | no | Save a workflow file .termocode/workflows/<name>.jsonc (new, or a change of one: send the whole file). |
+| [`workflow_dry_run`](#workflow_dry_run) | confirm (always asks): Deny (first) · Dry run (reads sources, runs plan steps, never writes)<br>a file the user has not trusted is refused | no | Dry run a workflow: its sources are read for real (read-only) and its plan steps run (they cost AI money), run steps are only shown and writes are listed with their full text, never sent. |
+| [`workflow_run`](#workflow_run) | confirm (always asks): Deny (first) · Run<br>then every write asks again on its own gate card (Deny first) unless allowed for this file version | no | Run a workflow now, for real. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1491,6 +1493,30 @@ Save a workflow file .termocode/workflows/<name>.jsonc (new, or a change of one:
 | --- | --- | --- | --- |
 | `content` | string | yes | the whole JSONC file |
 | `name` | string | yes | workflow name: the file name, [a-z][a-z0-9_-]; the file's "name" must match |
+
+### workflow_dry_run
+
+Dry run a workflow: its sources are read for real (read-only) and its plan steps run (they cost AI money), run steps are only shown and writes are listed with their full text, never sent. The user confirms on a card. It waits for the dry run and answers with what it read and would write.
+
+**Gate:** confirm (always asks): Deny (first) · Dry run (reads sources, runs plan steps, never writes) · a file the user has not trusted is refused
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | workflow name from workflow_list |
+
+### workflow_run
+
+Run a workflow now, for real. The user confirms on a card first; then every write asks the user again on its own card unless they allowed it for this file version. It answers at once with the run id; workflow_runs with run=<id> shows how it went. Offer workflow_dry_run first.
+
+**Gate:** confirm (always asks): Deny (first) · Run · then every write asks again on its own gate card (Deny first) unless allowed for this file version
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | workflow name from workflow_list |
 
 ### http_list_requests
 
