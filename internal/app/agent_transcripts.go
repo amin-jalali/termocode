@@ -39,7 +39,28 @@ func agentTranscriptFind(cli agentlog.CLI, cwd string, since time.Time) (agentlo
 	if !agentTranscriptsOn() {
 		return agentlog.Ref{}, errAgentTranscriptsOff
 	}
-	ref, ok := agentlogHomes().Latest(cli, cwd, since)
+	return agentTranscriptFindAs(cli, "", cwd, since)
+}
+
+// agentTranscriptFindAs is agentTranscriptFind for a tab started as an
+// agent account (agent_accounts.go): its files are in that folder.
+func agentTranscriptFindAs(cli agentlog.CLI, account, cwd string, since time.Time) (agentlog.Ref, error) {
+	if !agentTranscriptsOn() {
+		return agentlog.Ref{}, errAgentTranscriptsOff
+	}
+	homes := agentlogHomes()
+	if account != "" {
+		dir, err := agentAccountDir(string(cli), account)
+		if err != nil {
+			return agentlog.Ref{}, err
+		}
+		if cli == agentlog.Claude {
+			homes.Claude = dir
+		} else {
+			homes.Codex = dir
+		}
+	}
+	ref, ok := homes.Latest(cli, cwd, since)
 	if !ok {
 		return agentlog.Ref{}, os.ErrNotExist
 	}

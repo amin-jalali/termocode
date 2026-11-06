@@ -11,6 +11,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/agentlog"
+	"github.com/amin-jalali/termocode/internal/agentusage"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -117,6 +118,16 @@ type Model struct {
 	agentSessionsResume map[agentlog.CLI]bool
 	agentHits           []agentlog.Hit // the search inside sessions (agent_sessions_search.go)
 	agentHitsCapped     bool
+	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
+	// AGX-15 (agent_hibernate.go): the tab the hibernate card is about,
+	// "Always for this session", and commands queued by a tab switch.
+	agentHibernatePending int
+	agentHibernateAlways  bool
+	agentLaterCmds        []tea.Cmd
+	// AGX-16 (agent_names.go): what Enter on a suggested name does, and
+	// the request in flight.
+	agentNamesOnPick agentNamesPick
+	agentNamesGen    int
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process

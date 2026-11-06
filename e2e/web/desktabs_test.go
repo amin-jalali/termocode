@@ -67,12 +67,14 @@ func TestDeskOpenURLAsksFirst(t *testing.T) {
 	if first := p.Text(".link-ask .choices button"); first != "Cancel" {
 		t.Errorf("the first choice is %q", first)
 	}
-	// A row with no URL says so. Cancel first and wait for the card to
-	// go, so the arrow keys that move to row 2 reach the editor, not the
-	// card (keys sent while the card was open left the cursor on row 1).
+	// A row with no URL says so. The card closes first (while it is
+	// open it takes the keys), and the command waits until the caret is
+	// on row 2: it reads the caret's row, which comes a moment after the
+	// key, and a quick runner asked about row 1's URL again.
 	p.TapJS(`document.querySelector(".link-ask .choices button")`)
 	p.WaitJS(`!document.querySelector(".link-ask")`)
 	deskRow(p, 2)
+	p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent.startsWith("Ln 2,")`)
 	runCmd(t, p, c, false, "open url", "View: Open URL on Current Line")
 	p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("No URL on this line.")`)
 }

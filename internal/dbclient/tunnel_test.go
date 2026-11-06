@@ -223,6 +223,31 @@ func TestTunnelKeyFileWithPassphrase(t *testing.T) {
 	}
 }
 
+// Decrypting a passphrase key is local work (bcrypt rounds: seconds on a
+// slow machine, more under -race). It must not use up the time the
+// server has to answer: the third open of TestTunnelKeyFileWithPassphrase
+// said "b:22 did not answer in time" on macOS.
+func TestTunnelSlowKeyDoesNotUseTheServersTime(t *testing.T) {
+	home := sshHome(t)
+	signer, priv := newClientKey(t)
+	srv := dbtest.NewSSHServer()
+	srv.AuthorizedKeys = []ssh.PublicKey{signer.PublicKey()}
+	defer srv.Close()
+	trustServer(t, home, "b:22", srv)
+	keyPath := filepath.Join(home, "id_slow")
+	writeKeyFile(t, keyPath, priv, "", 0o600)
+	slow := func() { time.Sleep(1500 * time.Millisecond) }
+	sshKeyLoaded.Store(&slow)
+	t.Cleanup(func() { sshKeyLoaded.Store(nil) })
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	tun, err := OpenTunnel(ctx, SSHConfig{Host: "b", User: "u", Auth: "key", KeyFile: keyPath}, TunnelOptions{Home: home, Dial: srv.Dial})
+	if err != nil {
+		t.Fatalf("a slow key took the server's time: %v", err)
+	}
+	_ = tun.Close()
+}
+
 func TestTunnelKeyFileReadableByOthersIsRefused(t *testing.T) {
 	home := sshHome(t)
 	signer, priv := newClientKey(t)

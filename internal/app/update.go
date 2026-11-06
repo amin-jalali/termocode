@@ -62,6 +62,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if n := m.drainKeyringNotice(); n != nil { // keyring gone (secrets_failures.go)
 			cmd = tea.Batch(cmd, n)
 		}
+		if n := m.drainAgentLater(); n != nil { // a hibernated agent resumed on a tab switch (agent_hibernate.go)
+			cmd = tea.Batch(cmd, n)
+		}
 	}
 	if wasDatabasesVisible && !m.databasesVisible() {
 		m.databasesClose(true)
