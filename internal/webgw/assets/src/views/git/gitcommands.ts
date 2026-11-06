@@ -4,7 +4,7 @@
 // and previous change or merge conflict of the file, the merge editor's
 // Next and Previous Conflict, source control's tree or flat list, and
 // staging, unstaging or discarding the selected rows or the change at
-// the caret.
+// the caret; the tags (check one out) and the stash (apply an entry).
 import type { Command } from "../../lib/commands";
 import { blameOn } from "../../lib/blame";
 import { GRAPH_TAB, PRS_TAB } from "../../lib/gittab";
@@ -12,8 +12,12 @@ import { go } from "../../lib/router";
 import { activeDesk } from "../../lib/deskeditor";
 import { diffOf } from "../../lib/difftab";
 import { discardHunk, discardLines, lineTarget, stageLines } from "../../lib/gitlines";
-import { conflictRows, mergeActs, nextRow, scmTree } from "../../lib/gitnav";
-import { activeFile, cursorAt, focusSlot, setPanes, showFile } from "../../lib/workbench";
+import { conflictRows, gitAsk, mergeActs, nextRow, scmTree } from "../../lib/gitnav";
+import { toast } from "../../lib/toasts";
+import { t } from "../../strings";
+import { gitFailed } from "./errors";
+import type { GitStashList, GitTags } from "../../../../../webproto/proto";
+import { activeFile, cursorAt, focusSlot, quick, setPanes, showFile, type PickItem } from "../../lib/workbench";
 import { link, store } from "../../session";
 import { readGit } from "../../state/git";
 import { gitAction, type GitAction } from "./GitMore";
@@ -49,6 +53,35 @@ function conflict(dir: 1 | -1): void {
   if (n > 0) d.reveal(n);
 }
 
+/** pick opens a list in the quick input (empty: a toast says so). */
+function pick(title: string, items: PickItem[], empty: string, run: (key: string) => void): void {
+  if (items.length === 0) {
+    toast("info", empty);
+    return;
+  }
+  quick.value = { mode: "pick", pick: { title, items, run } };
+}
+
+/** tags lists the tags; picking one asks to check it out. */
+function tags(): void {
+  link.request("git.tags", {}).then((r) => {
+    const list = (r as GitTags).tags ?? [];
+    pick(t("gt.pick"), list.map((n) => ({ key: n, label: n })), t("gt.none"), (tag) => {
+      if (canAct()) gitAsk.value = { op: "git.checkout_tag", args: { tag }, label: t("gt.checkout"), text: t("gt.checkout_q", { tag }) };
+    });
+  }, gitFailed);
+}
+
+/** stashList lists the stash; picking an entry asks to apply it. */
+function stashList(): void {
+  link.request("git.stash_list", {}).then((r) => {
+    const list = (r as GitStashList).entries ?? [];
+    pick(t("gs.pick"), list.map((e) => ({ key: e.ref, label: e.message || e.ref, detail: e.ref })), t("gs.none"), (ref) => {
+      if (canAct()) gitAsk.value = { op: "git.stash_apply", args: { ref }, label: t("gs.apply"), text: t("gs.apply_q", { ref }) };
+    });
+  }, gitFailed);
+}
+
 export function gitCommands(): Command[] {
   return [
     { id: "gitGraph", label: "cmd.git_graph", when: repo, run: () => showFile(GRAPH_TAB) },
@@ -67,6 +100,8 @@ export function gitCommands(): Command[] {
     { id: "unstageLines", label: "cmd.unstage_lines", when: () => canAct() && lineTarget() !== null, run: () => stageLines(false) },
     { id: "discardLines", label: "cmd.discard_lines", when: () => canAct() && lineTarget()?.index === false, run: discardLines },
     { id: "discardHunk", label: "cmd.discard_hunk", when: () => canAct() && lineTarget()?.index === false, run: discardHunk },
+    { id: "gitTags", label: "cmd.git_tags", when: repo, run: tags },
+    { id: "gitStashList", label: "cmd.git_stash_list", when: repo, run: stashList },
     { id: "scmViewToggle", label: "cmd.scm_tree", when: repo, run: () => (scmTree.value = !scmTree.peek()) },
   ];
 }

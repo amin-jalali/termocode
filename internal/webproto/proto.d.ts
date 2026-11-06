@@ -370,6 +370,14 @@ export interface GitLinesArgs {
   index?: boolean;
 }
 
+export interface GitTagArgs {
+  tag: string;
+}
+
+export interface GitStashRefArgs {
+  ref: string;
+}
+
 export interface GitGraphArgs {
   skip?: number;
   head?: boolean;
@@ -1534,6 +1542,20 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface GitTags {
+  tags: string[];
+  more?: number;
+}
+
+export interface GitStashList {
+  entries: GitStashEntry[];
+}
+
+export interface GitStashEntry {
+  ref: string;
+  message: string;
+}
+
 export interface GitGraph {
   skip: number;
   rows: GitGraphRow[];
@@ -1908,6 +1930,10 @@ export interface OpArgs {
   "git.unstage_lines": GitLinesArgs;
   "git.discard_lines": GitLinesArgs;
   "git.discard_hunk": GitHunkArgs;
+  "git.tags": EmptyArgs;
+  "git.checkout_tag": GitTagArgs;
+  "git.stash_list": EmptyArgs;
+  "git.stash_apply": GitStashRefArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2047,6 +2073,10 @@ export interface OpResult {
   "ai.worktree_discard": AskRef;
   "git.discard_lines": AskRef;
   "git.discard_hunk": AskRef;
+  "git.tags": GitTags;
+  "git.checkout_tag": AskRef;
+  "git.stash_list": GitStashList;
+  "git.stash_apply": AskRef;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;

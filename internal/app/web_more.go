@@ -18,4 +18,5 @@ type webMorePub struct {
 	ctrs     map[string]webproto.ContainerItem // the containers containers.list gave last, by id (stop and remove take one)
 	rebase   *webRebasePlan                    // the list git.rebase_plan gave last (git.rebase takes its rows)
 	prs      map[int]ghci.PRDetail             // the pull requests pr.view read last (the action cards name them)
+	gitLists webGitLists                       // the tags, stash entries and reflog the git lists gave last (web_git_lists.go)
 }

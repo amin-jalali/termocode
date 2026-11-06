@@ -1,6 +1,7 @@
 // The workbench's quick input: Go to file (Ctrl/Cmd+P), the command list
 // (Ctrl/Cmd+Shift+P, or ">" in Go to file) and Go to line (":"). One
 // box at the top of the editor area; arrows move, Enter runs, Esc closes.
+// A view's list to pick from (the tags, the stash, the reflog) uses it too.
 import { h, type JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { FilesListRes } from "../../../../webproto/proto";
@@ -103,7 +104,8 @@ export function QuickInput() {
   const box = useRef<HTMLInputElement | null>(null);
 
   const ask = q0?.mode === "ask" ? (q0.ask ?? null) : null;
-  const wantFiles = !ask && !text.startsWith(">") && !text.startsWith(":");
+  const pickList = q0?.mode === "pick" ? (q0.pick ?? null) : null;
+  const wantFiles = !ask && !pickList && !text.startsWith(">") && !text.startsWith(":");
   const wantCmds = text.startsWith(">");
   useLayoutEffect(() => box.current?.focus(), []);
   useEffect(() => {
@@ -124,7 +126,16 @@ export function QuickInput() {
   const close = () => (quick.value = null);
   let rows: Row[] = [];
   let placeholder = t("quick.files");
-  if (ask) {
+  if (pickList) {
+    rows = rank(text, pickList.items, (i) => i.label, MAX_ROWS * 4).map(({ item, hit }) => ({
+      key: item.key,
+      label: item.label,
+      at: hit.at,
+      detail: item.detail,
+      run: () => pickList.run(item.key),
+    }));
+    placeholder = pickList.title;
+  } else if (ask) {
     // A question (Edit with AI): Enter sends what was typed.
     rows = text.trim() ? [{ key: "ask", label: text.trim(), at: [], detail: t("quick.ask_go"), run: () => ask.run(text.trim()) }] : [];
     placeholder = ask.title;
@@ -212,7 +223,7 @@ export function QuickInput() {
           ))}
           {!rows.length && (
             <li class="quick-empty" role="presentation">
-              {ask ? t("quick.ask_type") : note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
+              {ask ? t("quick.ask_type") : pickList ? t("quick.none") : note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
             </li>
           )}
         </ul>

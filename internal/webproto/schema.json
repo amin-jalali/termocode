@@ -1631,6 +1631,62 @@
       "phase": "v2"
     },
     {
+      "op": "git.tags",
+      "args": "EmptyArgs",
+      "result": "GitTags",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.checkout_tag",
+      "args": "GitTagArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stash_list",
+      "args": "EmptyArgs",
+      "result": "GitStashList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stash_apply",
+      "args": "GitStashRefArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.graph",
       "args": "GitGraphArgs",
       "result": "GitGraph",
@@ -5690,6 +5746,79 @@
       },
       "required": [],
       "additionalProperties": false
+    },
+    "GitStashEntry": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "message"
+      ],
+      "additionalProperties": true
+    },
+    "GitStashList": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/defs/GitStashEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": true
+    },
+    "GitStashRefArgs": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "GitTagArgs": {
+      "type": "object",
+      "properties": {
+        "tag": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tag"
+      ],
+      "additionalProperties": false
+    },
+    "GitTags": {
+      "type": "object",
+      "properties": {
+        "more": {
+          "type": "integer"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "tags"
+      ],
+      "additionalProperties": true
     },
     "GitText": {
       "type": "object",
