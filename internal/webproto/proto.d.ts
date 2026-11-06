@@ -320,6 +320,17 @@ export interface SearchReplaceArgs {
   replace: string;
 }
 
+export interface SnippetSaveArgs {
+  scope: string;
+  trigger: string;
+  body: string;
+}
+
+export interface SnippetRefArgs {
+  scope: string;
+  trigger: string;
+}
+
 export interface TestOutputArgs {
   id?: string;
 }
@@ -1486,6 +1497,20 @@ export interface Snippet {
   body: string;
 }
 
+export interface UserSnippetList {
+  items: UserSnippet[];
+}
+
+export interface UserSnippet {
+  scope: string;
+  trigger: string;
+  body: string;
+}
+
+export interface SnippetSaved {
+  replaced?: boolean;
+}
+
 export interface TestOutput {
   id?: string;
   lines: string[];
@@ -2023,6 +2048,9 @@ export interface OpArgs {
   "lsp.workspace_symbols": SymbolQueryArgs;
   "snippets.list": BufArgs;
   "search.replace": SearchReplaceArgs;
+  "snippets.user": EmptyArgs;
+  "snippets.save": SnippetSaveArgs;
+  "snippets.delete": SnippetRefArgs;
   "tests.output": TestOutputArgs;
   "tests.refresh": EmptyArgs;
   "tests.run": TestRunArgs;
@@ -2184,6 +2212,9 @@ export interface OpResult {
   "lsp.workspace_symbols": LspSymbols;
   "snippets.list": SnippetList;
   "search.replace": AskRef;
+  "snippets.user": UserSnippetList;
+  "snippets.save": SnippetSaved;
+  "snippets.delete": SnippetSaved;
   "tests.output": TestOutput;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;

@@ -1069,6 +1069,15 @@ export const S = {
   "cmd.replace_find": "Find in every file",
   "cmd.replace_with": "Replace {find} with",
   "cmd.replace_ws_ask": "Replace {find} with {replace} in every file of the workspace?",
+  "cmd.snippets_manage": "Snippets: Manage…",
+  "cmd.snippet_new": "+ New Snippet…",
+  "cmd.snippet_name": "Name: scope:trigger (go:iferr), or a trigger for every file type",
+  "cmd.snippet_body": "Body of {name} (\\n is a new line, \\t a tab, $1 a stop)",
+  "cmd.snippet_bad": "A trigger is letters, digits or _ only.",
+  "cmd.snippet_saved": "Snippet {name} saved.",
+  "cmd.snippet_delete_ask": "Delete the snippet {name}?",
+  "cmd.snippet_delete": "Delete",
+  "cmd.snippet_deleted": "Snippet {name} deleted.",
 } as const;
 
 export type StringKey = keyof typeof S;

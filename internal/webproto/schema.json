@@ -1433,6 +1433,48 @@
       "phase": "v2"
     },
     {
+      "op": "snippets.user",
+      "args": "EmptyArgs",
+      "result": "UserSnippetList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "snippets.save",
+      "args": "SnippetSaveArgs",
+      "result": "SnippetSaved",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 16384,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "snippets.delete",
+      "args": "SnippetRefArgs",
+      "result": "SnippetSaved",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "tests.output",
       "args": "TestOutputArgs",
       "result": "TestOutput",
@@ -8311,6 +8353,52 @@
       ],
       "additionalProperties": true
     },
+    "SnippetRefArgs": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "trigger"
+      ],
+      "additionalProperties": false
+    },
+    "SnippetSaveArgs": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "trigger",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "SnippetSaved": {
+      "type": "object",
+      "properties": {
+        "replaced": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
     "StatusAI": {
       "type": "object",
       "properties": {
@@ -9452,6 +9540,41 @@
       "required": [
         "id",
         "chunk"
+      ],
+      "additionalProperties": true
+    },
+    "UserSnippet": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "trigger",
+        "body"
+      ],
+      "additionalProperties": true
+    },
+    "UserSnippetList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/UserSnippet"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
       ],
       "additionalProperties": true
     },

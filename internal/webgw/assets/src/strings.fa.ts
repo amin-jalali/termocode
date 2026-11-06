@@ -1065,4 +1065,13 @@ export const FA: Record<StringKey, string> = {
   "cmd.replace_find": "یافتن در همه فایل‌ها",
   "cmd.replace_with": "جایگزین {find} شود با",
   "cmd.replace_ws_ask": "{find} در همه فایل‌های فضای کار با {replace} جایگزین شود؟",
+  "cmd.snippets_manage": "قطعه‌کدها: مدیریت…",
+  "cmd.snippet_new": "+ قطعه‌کد تازه…",
+  "cmd.snippet_name": "نام: scope:trigger (go:iferr)، یا یک trigger برای همه نوع فایل‌ها",
+  "cmd.snippet_body": "متن {name} (\\n خط تازه، \\t تب، $1 یک ایستگاه)",
+  "cmd.snippet_bad": "trigger فقط حرف، رقم یا _ است.",
+  "cmd.snippet_saved": "قطعه‌کد {name} ذخیره شد.",
+  "cmd.snippet_delete_ask": "قطعه‌کد {name} پاک شود؟",
+  "cmd.snippet_delete": "پاک کردن",
+  "cmd.snippet_deleted": "قطعه‌کد {name} پاک شد.",
 };

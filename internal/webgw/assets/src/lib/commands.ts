@@ -5,7 +5,7 @@
 // runs there by id, and a risky one only after a laptop card. The
 // commands used last come first (kept per browser).
 import { signal } from "@preact/signals";
-import type { FilesListRes, WorkspaceList, BookmarkList, BookmarkToggle, FilesRecent, LspSymbols, PaletteItem, PaletteList, SnippetList } from "../../../../webproto/proto";
+import type { FilesListRes, UserSnippetList, WorkspaceList, BookmarkList, BookmarkToggle, FilesRecent, LspSymbols, PaletteItem, PaletteList, SnippetList } from "../../../../webproto/proto";
 import { link, store } from "../session";
 import type { StringKey } from "../strings";
 import { t } from "../strings";
@@ -126,6 +126,7 @@ export function commands(): Command[] {
     { id: "removeFolder", label: "cmd.remove_folder", when: canWrite, run: removeFolder },
     { id: "openWorkspace", label: "cmd.open_workspace", when: canWrite, run: openWorkspace },
     { id: "replaceWorkspace", label: "cmd.replace_ws", when: canWrite, run: replaceWorkspace },
+    { id: "manageSnippets", label: "cmd.snippets_manage", when: canWrite, run: manageSnippets },
     { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
   ];
 }
@@ -359,6 +360,73 @@ function replaceWorkspace(): void {
             },
           };
         }, 0),
+    },
+  };
+}
+
+/** unescapeBody turns the one-line input into a body: \\n a new line,
+ * \\t a tab, \\\\ a backslash (other escapes stay, as snippets need them). */
+function unescapeBody(s: string): string {
+  return s.replace(/\\([nt\\])/g, (_m, c: string) => (c === "n" ? "\n" : c === "t" ? "\t" : "\\"));
+}
+
+/** manageSnippets lists the user's own snippets: a new one is named and
+ * typed here; one picked is deleted after a question here. */
+function manageSnippets(): void {
+  link.request("snippets.user").then((r) => {
+    const items = (r as UserSnippetList).items ?? [];
+    const name = (scope: string, trigger: string) => (scope === "*" ? trigger : scope + ":" + trigger);
+    quick.value = {
+      mode: "pick",
+      pick: {
+        title: t("cmd.snippets_manage"),
+        items: [
+          { label: t("cmd.snippet_new"), run: () => setTimeout(newSnippet, 0) },
+          ...items.map((s) => ({
+            label: s.trigger,
+            detail: "[" + s.scope + "] " + s.body.split("\n")[0],
+            run: () =>
+              (askHere.value = {
+                label: t("cmd.snippets_manage"),
+                text: t("cmd.snippet_delete_ask", { name: name(s.scope, s.trigger) }),
+                verb: t("cmd.snippet_delete"),
+                run: () => link.request("snippets.delete", { scope: s.scope, trigger: s.trigger }).then(() => toast("ok", t("cmd.snippet_deleted", { name: name(s.scope, s.trigger) })), failToast),
+              }),
+          })),
+        ],
+      },
+    };
+  }, failToast);
+}
+
+/** newSnippet asks the snippet's name, then its body, and saves it. */
+function newSnippet(): void {
+  quick.value = {
+    mode: "ask",
+    ask: {
+      title: t("cmd.snippet_name"),
+      run: (raw) => {
+        const i = raw.lastIndexOf(":");
+        const scope = i >= 0 ? raw.slice(0, i).trim() || "*" : "*";
+        const trigger = (i >= 0 ? raw.slice(i + 1) : raw).trim();
+        if (!/^[A-Za-z0-9_]+$/.test(trigger)) {
+          toast("warn", t("cmd.snippet_bad"));
+          return;
+        }
+        const label = scope === "*" ? trigger : scope + ":" + trigger;
+        setTimeout(
+          () =>
+            (quick.value = {
+              mode: "ask",
+              ask: {
+                title: t("cmd.snippet_body", { name: label }),
+                run: (body) =>
+                  link.request("snippets.save", { scope, trigger, body: unescapeBody(body) }).then(() => toast("ok", t("cmd.snippet_saved", { name: label })), failToast),
+              },
+            }),
+          0,
+        );
+      },
     },
   };
 }
