@@ -518,6 +518,35 @@ export interface RegistryArgs {
   host: string;
 }
 
+export interface GitLinesArgs {
+  path: string;
+  from: number;
+  to: number;
+  index?: boolean;
+}
+
+export interface GitTagArgs {
+  tag: string;
+}
+
+export interface GitStashRefArgs {
+  ref: string;
+}
+
+export interface GitUndoPlanArgs {
+  reflog?: boolean;
+  index?: number;
+  hash?: string;
+}
+
+export interface GitUndoArgs {
+  move?: boolean;
+}
+
+export interface GitFixupArgs {
+  hash: string;
+}
+
 export interface GitGraphArgs {
   skip?: number;
   head?: boolean;
@@ -1964,6 +1993,46 @@ export interface ServicesConfig {
   created?: boolean;
 }
 
+export interface CIFixPrompt {
+  prompt: string;
+}
+
+export interface GitTags {
+  tags: string[];
+  more?: number;
+}
+
+export interface GitStashList {
+  entries: GitStashEntry[];
+}
+
+export interface GitStashEntry {
+  ref: string;
+  message: string;
+}
+
+export interface GitReflog {
+  entries: GitReflogEntry[];
+}
+
+export interface GitReflogEntry {
+  hash: string;
+  summary: string;
+  when: number;
+}
+
+export interface GitUndoPlan {
+  title: string;
+  text: string;
+  action: string;
+  move?: boolean;
+}
+
+export interface GitFixupPlan {
+  text: string;
+  action: string;
+}
+
 export interface GitGraph {
   skip: number;
   rows: GitGraphRow[];
@@ -2035,6 +2104,8 @@ export interface GitConflictPart {
   ours: string;
   theirs: string;
   both: string;
+  base?: string;
+  hasBase?: boolean;
 }
 
 export interface GitResolved {
@@ -2398,6 +2469,21 @@ export interface OpArgs {
   "services.start_all": EmptyArgs;
   "services.stop_all": EmptyArgs;
   "services.configure": EmptyArgs;
+  "ci.fix_prompt": EmptyArgs;
+  "git.stage_lines": GitLinesArgs;
+  "git.unstage_lines": GitLinesArgs;
+  "git.discard_lines": GitLinesArgs;
+  "git.discard_hunk": GitHunkArgs;
+  "git.tags": EmptyArgs;
+  "git.checkout_tag": GitTagArgs;
+  "git.stash_list": EmptyArgs;
+  "git.stash_apply": GitStashRefArgs;
+  "git.reflog": EmptyArgs;
+  "git.undo_plan": GitUndoPlanArgs;
+  "git.undo": GitUndoArgs;
+  "git.redo": EmptyArgs;
+  "git.fixup_plan": GitFixupArgs;
+  "git.fixup": GitFixupArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2595,6 +2681,19 @@ export interface OpResult {
   "services.start_all": HostDone;
   "services.stop_all": AskRef;
   "services.configure": ServicesConfig;
+  "ci.fix_prompt": CIFixPrompt;
+  "git.discard_lines": AskRef;
+  "git.discard_hunk": AskRef;
+  "git.tags": GitTags;
+  "git.checkout_tag": AskRef;
+  "git.stash_list": GitStashList;
+  "git.stash_apply": AskRef;
+  "git.reflog": GitReflog;
+  "git.undo_plan": GitUndoPlan;
+  "git.undo": AskRef;
+  "git.redo": AskRef;
+  "git.fixup_plan": GitFixupPlan;
+  "git.fixup": AskRef;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;

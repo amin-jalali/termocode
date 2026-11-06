@@ -22,9 +22,9 @@ const (
 	// budgetWorkbench is the desktop workbench's code (workbench.js): its
 	// layout and the views only a wide screen has (debug, testing,
 	// services, the commit graph, merge, rebase, pull requests, agent
-	// worktrees, the data grid, settings). Only screens 1200 px and wider
-	// load it, after the page; about 39 KiB today.
-	budgetWorkbench = 60 << 10 // 56 KiB until the worktrees view and the main work met (58 KiB)
+	// worktrees, the data grid, settings, the git commands). Only screens
+	// 1200 px and wider load it, after the page; about 58 KiB today.
+	budgetWorkbench = 80 << 10
 )
 
 func gzSize(t *testing.T, name string) int {

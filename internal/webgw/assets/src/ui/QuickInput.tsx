@@ -1,6 +1,7 @@
 // The workbench's quick input: Go to file (Ctrl/Cmd+P), the command list
 // (Ctrl/Cmd+Shift+P, or ">" in Go to file) and Go to line (":"). One
 // box at the top of the editor area; arrows move, Enter runs, Esc closes.
+// A view's list to pick from (the tags, the stash, the reflog) uses it too.
 import { h, type JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { FilesListRes } from "../../../../webproto/proto";

@@ -268,3 +268,7 @@ func filePath(s workflow.WriteSpec) string {
 	}
 	return ""
 }
+
+// Describe is what the gate card shows for a write spec: where it
+// writes, what it writes and how to undo it ("" when it cannot be).
+func Describe(s workflow.WriteSpec) (target, preview, undo string) { return describe(s) }

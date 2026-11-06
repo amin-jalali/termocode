@@ -69,13 +69,30 @@ func (m *Model) openFixupConfirm(msg fixupCheckMsg) tea.Cmd {
 		m.toast, cmd = m.toast.PushDetail(toast.Warn, "Can't fix up into this commit", msg.err.Error())
 		return cmd
 	}
-	staged, unstaged := 0, false
-	for _, f := range m.gitFiles {
+	text, stash := fixupConfirmText(msg, m.gitFiles)
+	run := confirm.Button{ID: "fixup", Title: "Fixup", Style: confirm.StyleDestructive}
+	if stash {
+		run = confirm.Button{ID: "fixup-stash", Title: "Stash and Fixup", Style: confirm.StyleDestructive}
+	}
+	m.fixupTarget = msg.target
+	m.confirm = confirm.Risky("Fixup into "+msg.short+"?", text,
+		confirm.Button{ID: "cancel", Title: "Cancel"}, run)
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindRebaseFixup
+	return nil
+}
+
+// fixupConfirmText is what the fixup card says (the laptop's and the
+// web's); stash: unstaged changes are put aside and back.
+func fixupConfirmText(msg fixupCheckMsg, files []git.FileStatus) (text string, stash bool) {
+	staged := 0
+	for _, f := range files {
 		if f.Staged() {
 			staged++
 		}
 		if f.Unstaged() {
-			unstaged = true
+			stash = true
 		}
 	}
 	lines := []string{
@@ -86,19 +103,11 @@ func (m *Model) openFixupConfirm(msg fixupCheckMsg) tea.Cmd {
 		lines = append(lines, "", fmt.Sprintf("⚠ %d of these commits are on %s already; you will need to force-push.", msg.pushed, msg.upstream),
 			"termocode never force-pushes for you.")
 	}
-	run := confirm.Button{ID: "fixup", Title: "Fixup", Style: confirm.StyleDestructive}
-	if unstaged {
+	if stash {
 		lines = append(lines, "", "Unstaged changes are stashed and put back after.")
-		run = confirm.Button{ID: "fixup-stash", Title: "Stash and Fixup", Style: confirm.StyleDestructive}
 	}
 	lines = append(lines, "", "Undo afterwards: git reset --keep ORIG_HEAD")
-	m.fixupTarget = msg.target
-	m.confirm = confirm.Risky("Fixup into "+msg.short+"?", strings.Join(lines, "\n"),
-		confirm.Button{ID: "cancel", Title: "Cancel"}, run)
-	m.confirm.SetSize(m.w, m.h)
-	m.confirmOpen = true
-	m.confirmKind = confirmKindRebaseFixup
-	return nil
+	return strings.Join(lines, "\n"), stash
 }
 
 func fileWord(n int) string {

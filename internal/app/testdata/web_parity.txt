@@ -64,6 +64,9 @@ web	bookmark-clear	cmd:bookmarkClear
 web	bookmark-list	cmd:bookmarkList
 web	bookmark-toggle	cmd:bookmarkToggle
 web	close-buffer	cmd:closeEditor
+web	close-split	cmd:closeSplit
+web	code-action-apply-preferred	cmd:quickFixPreferred
+web	code-actions	cmd:quickFix
 web	containers-attach	op:containers.exec
 web	containers-browse-tags	op:containers.tags
 web	containers-compose-down	op:containers.compose_ask
@@ -73,9 +76,6 @@ web	containers-compose-up	op:containers.compose
 web	containers-context-default	op:containers.context_default
 web	containers-context-use	op:containers.context
 web	containers-filter	cmd:containersFilter
-web	close-split	cmd:closeSplit
-web	code-action-apply-preferred	cmd:quickFixPreferred
-web	code-actions	cmd:quickFix
 web	containers-focus	view:containers
 web	containers-image-history	op:containers.history
 web	containers-image-inspect	op:containers.inspect
@@ -147,19 +147,29 @@ web	format-document	cmd:formatDocument
 web	git-blame	cmd:gitBlame
 web	git-branch	op:git.branches
 web	git-ci	op:ci.status
+web	git-ci-fix	op:ci.fix_prompt
 web	git-clone	cmd:gitClone
 web	git-commit	op:git.commit
+web	git-compare-rev	cmd:gitCompareRev
 web	git-conflict-both	op:git.resolve_side
+web	git-conflict-next	cmd:nextConflict
 web	git-conflict-ours	op:git.resolve_side
+web	git-conflict-prev	cmd:prevConflict
 web	git-conflict-theirs	op:git.resolve_side
 web	git-diff	op:git.diff
 web	git-discard	op:git.discard
+web	git-discard-hunk	op:git.discard_hunk
+web	git-discard-lines	op:git.discard_lines
 web	git-fetch	palette
+web	git-fixup	op:git.fixup
 web	git-focus	view:git
 web	git-history	op:git.file_log
 web	git-log	cmd:gitGraph
+web	git-merge-next	cmd:mergeNext
 web	git-merge-open	op:git.conflict
+web	git-merge-prev	cmd:mergePrev
 web	git-merge-resolve	op:git.resolve
+web	git-merge-take-base	cmd:mergeTakeBase
 web	git-merge-take-both	op:git.resolve_side
 web	git-merge-take-both-theirs-first	op:git.resolve_side
 web	git-merge-take-ours	op:git.resolve_side
@@ -170,31 +180,40 @@ web	git-pull	palette
 web	git-push	palette
 web	git-rebase	op:git.rebase_plan
 web	git-rebase-status	op:git.rebase_state
+web	git-redo	op:git.redo
+web	git-reflog	op:git.reflog
 web	git-refresh	palette
 web	git-stage	op:git.stage
 web	git-stage-all	palette
 web	git-stage-hunk	op:git.stage_hunk
+web	git-stage-lines	op:git.stage_lines
 web	git-stash	palette
+web	git-stash-list	op:git.stash_list
 web	git-stash-pop	palette
 web	git-sync	palette
+web	git-tags	op:git.tags
+web	git-undo	op:git.undo
 web	git-unstage-hunk	op:git.unstage_hunk
+web	git-unstage-lines	op:git.unstage_lines
+web	git-view-toggle	cmd:scmViewToggle
 web	goto-impl	cmd:gotoImpl
 web	goto-line	cmd:gotoLine
 web	goto-symbol-file	op:buf.symbols
-web	help-bug-report	op:ai.info
 web	goto-symbol-workspace	cmd:workspaceSymbol
 web	goto-type-def	cmd:gotoTypeDef
+web	help-bug-report	op:ai.info
 web	hover	op:lsp.hover
 web	join-lines	cmd:joinLines
 web	kubernetes-context	op:kube.contexts
 web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
 web	kubernetes-show	view:kube
+web	lowercase	cmd:lowerCase
 web	mcp-serve-copy-config	op:ai.info
 web	mcp-serve-status	op:ai.info
-web	lowercase	cmd:lowerCase
 web	next-buffer	cmd:nextEditor
 web	next-diagnostic	cmd:problems
+web	next-hunk	cmd:nextChange
 web	open-recent	cmd:openRecent
 web	open-settings-ui	cmd:settings
 web	open-url	cmd:openUrl
@@ -203,6 +222,7 @@ web	pick-theme	cmd:themeDark
 web	pin-tab	cmd:pinTab
 web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
+web	prev-hunk	cmd:prevChange
 web	preview-md	cmd:markdownPreview
 web	problems	cmd:problems
 web	quick-open	cmd:quickOpen
@@ -388,35 +408,17 @@ missing	db-transaction-mode	Databases|L
 missing	debug-open-launch	Debug|S
 missing	git-autosquash	Git|S
 missing	git-cherry-pick-branch	Git|S
-missing	git-ci-fix	Git|S
 missing	git-clean-untracked	Git|S
 missing	git-commit-push	Git|S
 missing	git-commit-sync	Git|S
-missing	git-compare-rev	Git|S
-missing	git-conflict-next	Git|S
-missing	git-conflict-prev	Git|S
 missing	git-discard-all	Git|S
-missing	git-discard-hunk	Git|S
-missing	git-discard-lines	Git|S
-missing	git-fixup	Git|S
 missing	git-merge-branch	Git|S
-missing	git-merge-next	Git|S
-missing	git-merge-prev	Git|S
 missing	git-merge-status	Git|S
-missing	git-merge-take-base	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S
 missing	git-patch-save	Git|S
 missing	git-rebase-onto	Git|S
-missing	git-redo	Git|S
-missing	git-reflog	Git|S
-missing	git-stage-lines	Git|S
-missing	git-stash-list	Git|S
-missing	git-tags	Git|S
-missing	git-undo	Git|S
 missing	git-unstage-all	Git|S
-missing	git-unstage-lines	Git|S
-missing	git-view-toggle	Git|S
 missing	http-cancel	HTTP client|L
 missing	http-copy-curl	HTTP client|L
 missing	http-env-open	HTTP client|L
@@ -438,21 +440,42 @@ missing	itermoc-open-ai	Itermoc and AI setup|M
 missing	itermoc-profiles	Itermoc and AI setup|M
 missing	itermoc-services	Itermoc and AI setup|M
 missing	mcp-import-other	AI chat and agents|M
-missing	next-hunk	Git|S
 missing	output-clear	Testing and web access|S
-missing	prev-hunk	Git|S
 missing	redis-delete-key	Databases|L
 missing	redis-set-ttl	Databases|L
 missing	testing-collapse	Testing and web access|S
 missing	web-devices	Testing and web access|S
+web	view/Databases	view:db
 web	view/Files	view:files
 web	view/Git	view:git
+web	view/Kubernetes	view:kube
 web	view/Run	view:run
+web	view/Runs	cmd:runs
+web	view/Services	view:services
 web	view/Settings	view:settings
 web	view/Tests	view:testing
-web	view/Services	view:services
-web	view/Databases	view:db
-web	view/Runs	cmd:runs
-web	view/Kubernetes	view:kube
 excluded	view/Search	removed from the laptop activity bar (the enum value is kept for back-compat only)
+missing	git-branch-delete	Git|S
+missing	git-branch-from	Git|S
+missing	git-branch-rename	Git|S
 missing	view/Itermoc	Itermoc and AI setup|M
+missing	workflow-dry-run	Workflows|M
+missing	workflow-edit-file	Workflows|M
+missing	workflow-enable	Workflows|M
+missing	workflow-history	Workflows|M
+missing	workflow-run	Workflows|M
+missing	workflow-stop	Workflows|M
+missing	workflows	Workflows|M
+missing	worktree-add-folder	Worktrees|M
+missing	worktree-adopt	Worktrees|M
+missing	worktree-filter	Worktrees|M
+missing	worktree-forget	Worktrees|M
+missing	worktree-jump	Worktrees|M
+missing	worktree-link	Worktrees|M
+missing	worktree-new	Worktrees|M
+missing	worktree-new-child	Worktrees|M
+missing	worktree-notes	Worktrees|M
+missing	worktree-open	Worktrees|M
+missing	worktree-pin	Worktrees|M
+missing	worktree-setup-log	Worktrees|M
+missing	worktree-view	Worktrees|M
