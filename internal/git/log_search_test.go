@@ -36,7 +36,7 @@ func searchRepo(t *testing.T) *gitTestRepo {
 	return r
 }
 
-func subjects(es []LogEntry) string {
+func logSubjects(es []LogEntry) string {
 	var s []string
 	for _, e := range es {
 		s = append(s, e.Subject)
@@ -71,7 +71,7 @@ func TestSearchLogFilters(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", c.name, err)
 		}
-		if s := subjects(got); s != c.want {
+		if s := logSubjects(got); s != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, s, c.want)
 		}
 	}
