@@ -159,3 +159,31 @@ func TestWorkflowsUndoRedactedExplains(t *testing.T) {
 		t.Fatalf("toast %q", txt)
 	}
 }
+
+// Spec (plan §5.8): "Workflows: Undo a Write of Selected Run…"
+// (workflow-undo-write) asks on the undo card for the selected
+// workflow's newest ended run, Cancel first; the AI may only ask for it
+// (confirm, class "").
+func TestWorkflowsUndoWritePaletteID(t *testing.T) {
+	m, _ := wfxRig(t)
+	found := false
+	for _, it := range workflowsPaletteItems() {
+		found = found || it.ID == "workflow-undo-write"
+	}
+	if !found {
+		t.Fatal("workflow-undo-write is not in the palette")
+	}
+	p, ok := aiActionPolicies["workflow-undo-write"]
+	if !ok || p.Gate != aiGateConfirm || p.Class != "" {
+		t.Fatalf("AI policy %+v %v: want confirm with class \"\"", p, ok)
+	}
+	wfxStoredRun(t, m, "u1", "mine", 0, wfxTestNow.Add(-time.Hour))
+	m.wfxLoad("")
+	m.wfxS().sel = "mine"
+	if _, ok := m.dispatchWorkflowsPalette("workflow-undo-write"); !ok {
+		t.Fatal("workflow-undo-write does not dispatch")
+	}
+	if !m.confirmOpen || m.confirmKind != confirmKindWorkflowUndo || m.confirm.SafeID() != "cancel" {
+		t.Fatalf("undo card: open %v kind %v safe %q", m.confirmOpen, m.confirmKind, m.confirm.SafeID())
+	}
+}
