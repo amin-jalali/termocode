@@ -169,3 +169,30 @@ func TestGitTagStashOps(t *testing.T) {
 		t.Errorf("a good ref: %v", err)
 	}
 }
+
+// Spec (undo, redo, reflog): git.reflog and git.undo_plan read (the
+// plan is kept for git.undo); git.undo and git.redo wait for a laptop
+// card; a reflog line is named by its index and short hash.
+func TestGitUndoOps(t *testing.T) {
+	if p, ok := Lookup("git.reflog"); !ok || p.Role != RoleViewer || p.LaptopCard {
+		t.Errorf("git.reflog row %+v", p)
+	}
+	if p, ok := Lookup("git.undo_plan"); !ok || p.Role != RoleController || p.LaptopCard {
+		t.Errorf("git.undo_plan row %+v", p)
+	}
+	for _, op := range []string{"git.undo", "git.redo"} {
+		if p, ok := Lookup(op); !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+			t.Errorf("%s row %+v", op, p)
+		}
+	}
+	for _, bad := range []string{`{"reflog":true,"index":-1,"hash":"abcdef0"}`, `{"reflog":true,"index":1,"hash":"xyz"}`, `{"reflog":true,"index":100,"hash":"abcdef0"}`, `{"index":1}`} {
+		if _, err := DecodeArgs("git.undo_plan", json.RawMessage(bad)); !errors.Is(err, ErrInvalid) {
+			t.Errorf("plan %s: %v", bad, err)
+		}
+	}
+	for _, ok := range []string{`{}`, `{"reflog":true,"index":3,"hash":"abcdef0"}`} {
+		if _, err := DecodeArgs("git.undo_plan", json.RawMessage(ok)); err != nil {
+			t.Errorf("plan %s: %v", ok, err)
+		}
+	}
+}

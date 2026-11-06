@@ -91,6 +91,8 @@ web	git-pull	palette
 web	git-push	palette
 web	git-rebase	op:git.rebase_plan
 web	git-rebase-status	op:git.rebase_state
+web	git-redo	op:git.redo
+web	git-reflog	op:git.reflog
 web	git-refresh	palette
 web	git-stage	op:git.stage
 web	git-stage-all	palette
@@ -101,6 +103,7 @@ web	git-stash-list	op:git.stash_list
 web	git-stash-pop	palette
 web	git-sync	palette
 web	git-tags	op:git.tags
+web	git-undo	op:git.undo
 web	git-unstage-hunk	op:git.unstage_hunk
 web	git-unstage-lines	op:git.unstage_lines
 web	git-view-toggle	cmd:scmViewToggle
@@ -364,9 +367,6 @@ missing	format-document	Editor and files|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
 missing	git-fixup	Git|S
-missing	git-redo	Git|S
-missing	git-reflog	Git|S
-missing	git-undo	Git|S
 missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
 missing	goto-type-def	Editor and files|S
