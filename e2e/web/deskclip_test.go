@@ -7,6 +7,8 @@ import (
 
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
+
+	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // Spec (WEBP-1): clipboard history of the desktop editor: what is copied
@@ -27,7 +29,7 @@ func TestDeskClipboardHistory(t *testing.T) {
 	p.Do(chromedp.KeyEvent(kb.End))
 
 	wbKey(p, "P", true, true)
-	reply(t, c, expectOp(t, c, "palette.list", `{}`), nil)
+	reply(t, c, expectOp(t, c, "palette.list", `{}`), webproto.PaletteList{})
 	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box")`)
 	p.Key("clipboard history")
 	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === "Edit: Paste from Clipboard History…"`)
