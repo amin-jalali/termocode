@@ -24,17 +24,17 @@ const (
 	gitxAutoFetchStep = 3 * time.Minute
 )
 
-// gitxAuto is the auto fetch timer. gen grows on each toggle, so a tick
-// of an old timer stops.
+// gitxAuto is the auto fetch state. It adds no timer (TestNoNewTimers):
+// the 2 s git poll asks gitxAutoFetchPoll, which fetches once next has
+// passed.
 type gitxAuto struct {
-	on  bool
-	gen int
+	on   bool
+	next time.Time
 }
 
 var gitxAutoFetch gitxAuto // one UI per process
 
 func (m *Model) gitxAutoFetchOn() bool { return gitxAutoFetch.on }
-func (m *Model) gitxAutoFetchGen() int { return gitxAutoFetch.gen }
 func gitxPlural(n int, one string) string {
 	if n == 1 {
 		return "1 " + one
@@ -271,44 +271,38 @@ func (m *Model) openCommitList(incoming bool) tea.Cmd {
 	return nil
 }
 
-// toggleAutoFetch turns the auto fetch timer on or off.
+// toggleAutoFetch turns auto fetch on or off.
 func (m *Model) toggleAutoFetch() tea.Cmd {
 	gitxAutoFetch.on = !gitxAutoFetch.on
-	gitxAutoFetch.gen++
 	if !gitxAutoFetch.on {
 		return m.gitxInfo("Auto fetch off")
 	}
+	gitxAutoFetch.next = time.Now().Add(gitxAutoFetchStep)
 	var c tea.Cmd
 	m.toast, c = m.toast.PushDetail(toast.Info, "Auto fetch on", "Every 3 minutes, until termocode closes")
-	return tea.Batch(c, gitxAutoFetchAfter(gitxAutoFetch.gen))
+	return c
 }
 
-func gitxAutoFetchAfter(gen int) tea.Cmd {
-	return tea.Tick(gitxAutoFetchStep, func(time.Time) tea.Msg {
-		return gitxDoneMsg{apply: func(m *Model) tea.Cmd { return m.gitxAutoFetchTick(gen) }}
-	})
-}
-
-// gitxAutoFetchTick fetches in the background (quietly; a failure shows
-// once) and plans the next tick. A tick of an older timer stops.
-func (m *Model) gitxAutoFetchTick(gen int) tea.Cmd {
-	if !gitxAutoFetch.on || gen != gitxAutoFetch.gen {
+// gitxAutoFetchPoll runs on each git poll. Once 3 minutes have passed it
+// fetches in the background (quietly; a failure turns auto fetch off and
+// shows once) and waits 3 minutes again.
+func (m *Model) gitxAutoFetchPoll(now time.Time) tea.Cmd {
+	if !gitxAutoFetch.on || now.Before(gitxAutoFetch.next) {
 		return nil
 	}
-	next := gitxAutoFetchAfter(gen)
+	gitxAutoFetch.next = now.Add(gitxAutoFetchStep)
 	cwd, err := m.rootDir()
 	if err != nil || m.gitRemoteBusy != "" || !m.gitIsRepo {
-		return next
+		return nil
 	}
-	return tea.Batch(next, func() tea.Msg {
+	return func() tea.Msg {
 		err := git.Fetch(cwd)
 		return gitxDoneMsg{apply: func(m *Model) tea.Cmd {
 			if err != nil {
 				gitxAutoFetch.on = false
-				gitxAutoFetch.gen++
 				return m.gitxFail("Auto fetch stopped", err)
 			}
 			return fetchGitCmd()
 		}}
-	})
+	}
 }

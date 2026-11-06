@@ -1055,12 +1055,13 @@ end })`)
 		// user's section-collapse state, selection, or the commit message box.
 		// In the background: poll less often. The idle wait
 		// (git_poll_idle.go) already does that when it runs.
+		fetch := m.gitxAutoFetchPoll(time.Now()) // GITX-12: auto fetch rides this poll
 		if m.termBlurred && !m.gitIdleGated() && m.gitBlurredSkips < gitBlurredEvery-1 {
 			m.gitBlurredSkips++
-			return m, m.gitAutoRefreshTick(), true
+			return m, tea.Batch(fetch, m.gitAutoRefreshTick()), true
 		}
 		m.gitBlurredSkips = 0
-		return m, tea.Batch(m.pollGitCmd(), m.gitAutoRefreshTick()), true
+		return m, tea.Batch(m.pollGitCmd(), m.gitAutoRefreshTick(), fetch), true
 	case GitMsg:
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
