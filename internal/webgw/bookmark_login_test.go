@@ -38,6 +38,11 @@ func postFrom(t *testing.T, h http.Handler, origin, path, body string) (int, map
 // and returns the reply.
 func rememberLogin(t *testing.T, l *Login, k *softKey) map[string]any {
 	t.Helper()
+	return rememberLoginOf(t, l, k)
+}
+
+func rememberLoginOf(t *testing.T, l *Login, k *softKey) map[string]any {
+	t.Helper()
 	_, m := postFrom(t, l, bmOrigin, "/login/start", `{}`)
 	opts, _ := json.Marshal(m["options"])
 	code, f := postFrom(t, l, bmOrigin, "/login/finish", `{"login_id":"`+m["login_id"].(string)+`","credential":`+string(k.get(opts))+`,"remember":true}`)
@@ -245,5 +250,47 @@ func TestBookmarkKeyNeverLogged(t *testing.T) {
 	}
 	if !strings.Contains(string(b), "key_reused") {
 		t.Fatalf("the reuse is not in the audit log:\n%s", b)
+	}
+}
+
+// A guest (Share as Viewer) never gets a bookmark: its pairing is for
+// one visit, so remember is ignored.
+func TestBookmarkNeverForGuests(t *testing.T) {
+	r, l, k := passkeyPairRig(t)
+	r.open(true)
+	id, _ := r.start("Friend")
+	r.approve(webdevices.RoleViewer)
+	m := r.waitState(id, "approved")
+	opts, _ := json.Marshal(m["options"])
+	code, f := postFrom(t, r.p, bmOrigin, "/pair/finish", `{"pair_id":"`+id+`","credential":`+string(k.create(opts))+`,"remember":true}`)
+	if code != http.StatusOK || f["device_key"] != nil {
+		t.Fatalf("guest pairing with remember: %d %v", code, f)
+	}
+	if ds, _ := r.store.List(); len(ds) != 1 || ds[0].Bookmark != nil {
+		t.Fatalf("guest kept a bookmark: %+v", ds)
+	}
+	if f := rememberLoginOf(t, l, k); f["device_key"] != nil {
+		t.Fatal("a guest's sign-in with remember got a key")
+	}
+}
+
+// The guard stands in front of the bookmark paths like every other: a
+// wrong or missing Origin is 403 before the key is read.
+func TestBookmarkPathsBehindTheGuard(t *testing.T) {
+	for _, path := range []string{"/login/device", "/login/forget"} {
+		for _, origin := range []string{"", "http://evil.example", "http://localhost:41237"} {
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"key":"x"}`))
+			req.Host = "127.0.0.1:41237"
+			req.Header.Set("Content-Type", "application/json")
+			if origin != "" {
+				req.Header.Set("Origin", origin)
+			}
+			w := httptest.NewRecorder()
+			h := &okHandler{}
+			Guard(testSite, h).ServeHTTP(w, req)
+			if w.Code != http.StatusForbidden {
+				t.Errorf("%s from %q: %d", path, origin, w.Code)
+			}
+		}
 	}
 }
