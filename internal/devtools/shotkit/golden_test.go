@@ -255,9 +255,10 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
 	out = append(out, keyHintCases()...)
-	out = append(out, kubeCases()...)      // golden_kube_test.go
-	out = append(out, worktreesCases()...) // golden_worktrees_test.go
-	out = append(out, webCases()...)       // golden_web_test.go
+	out = append(out, kubeCases()...)        // golden_kube_test.go
+	out = append(out, worktreesCases()...)   // golden_worktrees_test.go
+	out = append(out, webCases()...)         // golden_web_test.go
+	out = append(out, agentPickerCases()...) // golden_agents_test.go
 	// A terminal tab split into three panes (G-SPL).
 	{
 		sc := TerminalSplit()

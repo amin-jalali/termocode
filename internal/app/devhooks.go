@@ -136,6 +136,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.kubeDemo(arg)
 	case "worktreesdemo": // the WORKTREES view with a canned repository (worktrees_demo.go)
 		m.worktreesDemo(arg)
+	case "agentpickerdemo": // Agent: Start… with made-up programs (agent_picker_demo.go)
+		m.agentPickerDemo()
 	case "webdemo": // the web start card or chip, made-up state (web_tui.go)
 		m.webDemo(arg)
 	case "secretsdemo":
