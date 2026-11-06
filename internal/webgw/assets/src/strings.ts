@@ -1056,6 +1056,15 @@ export const S = {
   "cmd.compare_with": "Compare {name} with…",
   "cmp.binary": "{name} is not text.",
   "cmp.cut": "A file is long: its start is compared.",
+  "cmd.add_folder": "Workspace: Add Folder…",
+  "cmd.remove_folder": "Workspace: Remove Folder…",
+  "cmd.open_workspace": "File: Open Recent Workspace…",
+  "cmd.folder_type": "The folder's full path on the laptop",
+  "cmd.add_folder_ask": "Add the folder {path} to this workspace on the laptop?",
+  "cmd.remove_folder_ask": "Remove the folder {name} from this workspace? Its files stay on disk.",
+  "cmd.open_workspace_body": "Open the workspace {name} on the laptop? termocode restarts there and this web session ends.",
+  "cmd.no_folders": "This workspace has no added folders.",
+  "cmd.no_workspaces": "No other recent workspaces.",
 } as const;
 
 export type StringKey = keyof typeof S;

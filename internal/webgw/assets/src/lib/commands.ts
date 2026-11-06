@@ -5,7 +5,7 @@
 // runs there by id, and a risky one only after a laptop card. The
 // commands used last come first (kept per browser).
 import { signal } from "@preact/signals";
-import type { FilesListRes, BookmarkList, BookmarkToggle, FilesRecent, LspSymbols, PaletteItem, PaletteList, SnippetList } from "../../../../webproto/proto";
+import type { FilesListRes, WorkspaceList, BookmarkList, BookmarkToggle, FilesRecent, LspSymbols, PaletteItem, PaletteList, SnippetList } from "../../../../webproto/proto";
 import { link, store } from "../session";
 import type { StringKey } from "../strings";
 import { t } from "../strings";
@@ -31,7 +31,7 @@ import { undoRename } from "../views/files/FileActions";
 import { fileOfTab } from "./difftab";
 import { applyFix, formatBuf, goTo, inlayHints, quickFixes } from "./lsp";
 import { session } from "./live";
-import { askHere } from "../ui/AskHere";
+import { askHere, askLaptop } from "../ui/AskHere";
 import { gitFailed } from "../views/git/errors";
 import { mdBufs } from "../views/MDPreview";
 import { cmpTab, mdTab } from "./vtabs";
@@ -122,6 +122,9 @@ export function commands(): Command[] {
     { id: "quickFixPreferred", label: "cmd.quick_fix_pref", when: () => hasDesk() && canWrite(), run: () => void preferredFix() },
     { id: "inlayHints", label: "cmd.inlay_hints", when: hasDesk, run: () => (inlayHints.value = !inlayHints.peek()) },
     { id: "compareFiles", label: "cmd.compare", run: compareFiles },
+    { id: "addFolder", label: "cmd.add_folder", when: canWrite, run: addFolder },
+    { id: "removeFolder", label: "cmd.remove_folder", when: canWrite, run: removeFolder },
+    { id: "openWorkspace", label: "cmd.open_workspace", when: canWrite, run: openWorkspace },
     { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
   ];
 }
@@ -279,6 +282,61 @@ function compareFiles(): void {
     if (a) second(a);
     else pickOf(t("cmd.compare"), (p) => setTimeout(() => second(p), 0));
   }, failToast);
+}
+
+/** addFolder asks for a laptop folder's path, then asks the laptop to
+ * add it to the workspace (its card shows the whole path). */
+function addFolder(): void {
+  quick.value = {
+    mode: "ask",
+    ask: {
+      title: t("cmd.folder_type"),
+      run: (path) => {
+        askLaptop.value = { label: t("cmd.add_folder"), text: t("cmd.add_folder_ask", { path }), send: () => link.request("workspace.add_folder", { folder: path }) };
+      },
+    },
+  };
+}
+
+/** workspaceList reads the folder and recent workspace names. */
+function workspaceList(then: (l: WorkspaceList) => void): void {
+  link.request("workspace.list").then((r) => then(r as WorkspaceList), failToast);
+}
+
+/** removeFolder picks an added folder; the laptop removes it after its card. */
+function removeFolder(): void {
+  workspaceList((l) => {
+    const extra = (l.folders ?? []).filter((f) => f.id > 0);
+    if (extra.length === 0) {
+      toast("info", t("cmd.no_folders"));
+      return;
+    }
+    quick.value = {
+      mode: "pick",
+      pick: {
+        title: t("cmd.remove_folder"),
+        items: extra.map((f) => ({ label: f.name, run: () => (askLaptop.value = { label: t("cmd.remove_folder"), text: t("cmd.remove_folder_ask", { name: f.name }), send: () => link.request("workspace.remove_folder", { id: f.id }) }) })),
+      },
+    };
+  });
+}
+
+/** openWorkspace picks a recent workspace; the laptop restarts there after its card. */
+function openWorkspace(): void {
+  workspaceList((l) => {
+    const recent = l.recent ?? [];
+    if (recent.length === 0) {
+      toast("info", t("cmd.no_workspaces"));
+      return;
+    }
+    quick.value = {
+      mode: "pick",
+      pick: {
+        title: t("cmd.open_workspace"),
+        items: recent.map((w) => ({ label: w.name, run: () => (askLaptop.value = { label: t("cmd.open_workspace"), text: t("cmd.open_workspace_body", { name: w.name }), send: () => link.request("workspace.open", { id: w.id }) }) })),
+      },
+    };
+  });
 }
 
 /** realFile is the workspace file of the active tab (null: none, or a tab

@@ -54,7 +54,7 @@ import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
 import { asking, closeActive, cycleTab, focusSecond } from "../lib/commands";
 import { AskLaptop } from "./AskLaptop";
-import { AskHere, askHere } from "./AskHere";
+import { AskHere, askHere, askLaptop } from "./AskHere";
 import { ContextMenu, onMenu, openMenu, type MenuItems } from "./ContextMenu";
 import { absPath, copyText } from "../lib/clip";
 import { signal } from "@preact/signals";
@@ -541,6 +541,7 @@ export function Workbench() {
           {quick.value && <QuickInput key={quick.value.mode} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
           {askHere.value && <AskHere ask={askHere.value} />}
+          {askLaptop.value && <AskLaptop key={askLaptop.value.text} label={askLaptop.value.label} text={askLaptop.value.text} send={askLaptop.value.send} onDone={() => (askLaptop.value = null)} />}
           <RemoteAskHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>

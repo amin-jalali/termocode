@@ -1052,4 +1052,13 @@ export const FA: Record<StringKey, string> = {
   "cmd.compare_with": "مقایسه {name} با…",
   "cmp.binary": "{name} متنی نیست.",
   "cmp.cut": "یک فایل بلند است: آغاز آن مقایسه می‌شود.",
+  "cmd.add_folder": "فضای کار: افزودن پوشه…",
+  "cmd.remove_folder": "فضای کار: برداشتن پوشه…",
+  "cmd.open_workspace": "فایل: باز کردن فضای کار اخیر…",
+  "cmd.folder_type": "مسیر کامل پوشه روی لپ‌تاپ",
+  "cmd.add_folder_ask": "پوشه {path} روی لپ‌تاپ به این فضای کار افزوده شود؟",
+  "cmd.remove_folder_ask": "پوشه {name} از این فضای کار برداشته شود؟ فایل‌هایش روی دیسک می‌مانند.",
+  "cmd.open_workspace_body": "فضای کار {name} روی لپ‌تاپ باز شود؟ termocode آنجا دوباره راه می‌افتد و این نشست وب تمام می‌شود.",
+  "cmd.no_folders": "این فضای کار پوشه افزوده‌ای ندارد.",
+  "cmd.no_workspaces": "فضای کار اخیر دیگری نیست.",
 };

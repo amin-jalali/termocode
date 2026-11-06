@@ -19,6 +19,16 @@ export interface HereAsk {
 /** askHere is the question on screen (null: none). */
 export const askHere = signal<HereAsk | null>(null);
 
+/** LaptopAsk is a request that waits for a laptop card (AskLaptop). */
+export interface LaptopAsk {
+  label: string;
+  text: string;
+  send(): Promise<unknown>;
+}
+
+/** askLaptop is the laptop request on screen (null: none). */
+export const askLaptop = signal<LaptopAsk | null>(null);
+
 export function AskHere({ ask }: { ask: HereAsk }) {
   const box = useRef<HTMLDivElement | null>(null);
   const safe = useRef<HTMLButtonElement | null>(null);
