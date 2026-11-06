@@ -94,6 +94,12 @@ write no to:
   bad.jsonc: line 1: steps[0]: "to" is missing; use one of: pr, commit, mcp, status, github.comment, file, http, message
 write bad gate:
   bad.jsonc: line 1: steps[0].gate: "always" is not allowed; use one of: ask, allow, dry
+message mcp channel:
+  bad.jsonc: line 1: steps[0]: a message via the MCP server "slack" needs "channel"
+message via name:
+  bad.jsonc: line 1: steps[0].via: use "os", "web", ${secret:NAME} (a webhook) or an MCP server name
+message channel os:
+  bad.jsonc: line 1: steps[0]: "channel" and "tool" are only for a message via an MCP server
 write pr title:
   bad.jsonc: line 1: steps[0]: "title" is missing
 write comment body:

@@ -33,6 +33,7 @@ func Parse(path string, data []byte) (*File, []Problem, error) {
 
 var (
 	idRe       = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,39}$`)
+	serverRe   = regexp.MustCompile(`^[A-Za-z0-9_-]{1,40}$`) // an mcp.json server name
 	timeRe     = regexp.MustCompile(`^([01][0-9]|2[0-3]):[0-5][0-9]$`)
 	itemPathRe = regexp.MustCompile(`^\$((\.[A-Za-z_][A-Za-z0-9_-]*)|(\[\*\])|(\[[0-9]{1,6}\]))*$`)
 )
@@ -592,7 +593,20 @@ func (c *checker) write(o *obj, n *node, where string) (*WriteSpec, []string) {
 		keys = append(keys, "request", "headers", "body")
 	case "message":
 		w.Via, w.Text = o.req("via"), o.text("text")
-		keys = append(keys, "via", "text")
+		w.Channel, w.Tool = o.str("channel"), o.str("tool")
+		keys = append(keys, "via", "text", "channel", "tool")
+		via := strings.TrimSpace(w.Via)
+		switch {
+		case via == "" || strings.Contains(via, "${") || strings.Contains(via, "://"): // a webhook: checked when it is sent
+		case via == "os" || via == "web":
+			if w.Channel != "" || w.Tool != "" {
+				c.errAt(n.off, where, `"channel" and "tool" are only for a message via an MCP server`)
+			}
+		case !serverRe.MatchString(via):
+			c.errAt(o.off("via"), o.at("via"), `use "os", "web", ${secret:NAME} (a webhook) or an MCP server name`)
+		case strings.TrimSpace(w.Channel) == "":
+			c.errAt(n.off, where, `a message via the MCP server %q needs "channel"`, via)
+		}
 	}
 	return w, keys
 }

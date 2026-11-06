@@ -162,10 +162,15 @@ one again: `termocode workflow again <name> <key>`.
   `"notify": ["os"]` or `["web"]` to choose; a run you start by hand
   notifies only when the file asks.
 - `"notify": ["message:sum"]` sends the same summary through the
-  message step `sum` (`"via": "os"`, `"web"` or `"${secret:NAME}"`, a
-  secret that holds an https webhook URL). A webhook is a write to an
+  message step `sum` (`"via": "os"`, `"web"`, `"${secret:NAME}"`, a
+  secret that holds an https webhook URL, or an MCP server such as
+  `"slack"` with a `"channel"`). A webhook or a server is a write to an
   outside system: the summary goes there only after you chose **Allow
   for this workflow** on that step's card.
+- A message via an MCP server calls its send tool: for Slack
+  `slack_send_message` with the channel id, or the step's own `"tool"`.
+  Connect the server with writes allowed. Text that goes to a webhook
+  or a server has secrets and keys hidden first.
 - Runs are kept for `workflows_history_days` (30) days and deleted when
   termocode starts. `h` opens the newest run;
   `termocode workflow runs --json` lists them.
