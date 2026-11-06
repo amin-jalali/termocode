@@ -143,6 +143,7 @@ export const S = {
   "card.reject": "Reject",
   "card.approve": "Approve",
   "card.later": "Later",
+  "card.cancelled": "Cancelled. Nothing was sent.",
   "card.answer_laptop": "Answer on laptop",
   "card.hint": "Enter  Deny · Esc  Later",
   "card.hint_touch": "Swipe down  Later",
