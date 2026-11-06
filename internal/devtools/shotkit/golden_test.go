@@ -220,6 +220,10 @@ func goldenExtras() []Scene {
 		// Search Log… query, and the Cancel-first Push… card.
 		{Name: "log-search-results", Steps: append(append([]Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-log-search"), Pause(400 * time.Millisecond)}, TypeKeys("all")...), Key("enter"), Pause(600*time.Millisecond))},
 		{Name: "push-preview-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-push-preview"), Pause(600 * time.Millisecond)}},
+		// Diff options (GITX-26): the parents of the demo merge, then the
+		// merge against parent 2 (what it brought from toast-slide).
+		{Name: "merge-parent-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("commit:HEAD"), Pause(1200 * time.Millisecond), Act("palette:git-diff-merge-parent"), Pause(500 * time.Millisecond)}},
+		{Name: "merge-parent-diff", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("commit:HEAD"), Pause(1200 * time.Millisecond), Act("palette:git-diff-merge-parent"), Pause(500 * time.Millisecond), Key("down"), Key("enter"), Pause(1200 * time.Millisecond)}},
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
