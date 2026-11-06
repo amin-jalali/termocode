@@ -347,6 +347,10 @@ missing	explorer-toggle-preview	Editor and files|S
 missing	explorer-undo-rename	Editor and files|S
 missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
+missing	git-blame-annotate	Git|S
+missing	git-blame-before	Git|S
+missing	git-blame-commit	Git|S
+missing	git-blame-options	Git|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
 missing	git-conflict-next	Git|S
@@ -354,13 +358,18 @@ missing	git-conflict-prev	Git|S
 missing	git-discard-hunk	Git|S
 missing	git-discard-lines	Git|S
 missing	git-fixup	Git|S
+missing	git-inline-blame	Git|S
+missing	git-line-history	Git|S
 missing	git-merge-next	Git|S
 missing	git-merge-prev	Git|S
 missing	git-merge-take-base	Git|S
 missing	git-redo	Git|S
 missing	git-reflog	Git|S
+missing	git-rev-next	Git|S
+missing	git-rev-prev	Git|S
 missing	git-stage-lines	Git|S
 missing	git-stash-list	Git|S
+missing	git-status-blame	Git|S
 missing	git-tags	Git|S
 missing	git-undo	Git|S
 missing	git-unstage-lines	Git|S
