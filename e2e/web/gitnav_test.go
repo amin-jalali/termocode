@@ -94,6 +94,8 @@ func TestGitNavMergeEditor(t *testing.T) {
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "Conflict 1 of 2 remaining"`)
 	runCmd(t, p, c, "Git: Merge View: Next Conflict", true)
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "Conflict 2 of 2 remaining"`)
+	// The result editor shows the conflict and takes the keys.
+	p.WaitJS(`document.activeElement === ` + mergeView + `.querySelector(".gm-result .desk-editor")`)
 	runCmd(t, p, c, "Git: Merge View: Previous Conflict", false)
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "Conflict 1 of 2 remaining"`)
 }
