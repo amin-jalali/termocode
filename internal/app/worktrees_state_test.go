@@ -202,3 +202,17 @@ func TestWorktreeClickAndIcon(t *testing.T) {
 		t.Errorf("click: %q %v", nm.wt.cursorPath, nm.focus)
 	}
 }
+
+// W3 leftover: Worktree: Show run while the terminal has the keys moves
+// them to the view (F, s, x … reach the list, not the shell).
+func TestWorktreeShowFromTerminalTakesTheKeys(t *testing.T) {
+	m := wtTestModel(t, t.TempDir())
+	m.wt.off = true
+	m.inTerminal, m.panelFocused, m.focus = true, true, FocusEditor
+	if _, ok := m.dispatchWorktreePalette("worktree-view"); !ok {
+		t.Fatal("worktree-view not handled")
+	}
+	if m.inTerminal || m.panelFocused || m.focus != FocusExplorer {
+		t.Errorf("keys still go to the terminal: inTerminal %v panelFocused %v focus %v", m.inTerminal, m.panelFocused, m.focus)
+	}
+}
