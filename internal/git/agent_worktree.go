@@ -172,17 +172,28 @@ func gitRetry(dir string, args ...string) (string, error) {
 // (bounded); an error means there is no worktree, never a worktree from
 // a wrong start.
 func CreateAgentWorktree(dir, id string) (AgentWorktree, error) {
-	return createAgentWorktree(dir, id, true)
+	return createAgentWorktree(dir, id, true, "")
 }
 
 // CreateAgentWorktreeFromHead is CreateAgentWorktree from the last commit
 // only: the user's uncommitted edits stay out (a plan run's branch that
 // may be pushed).
 func CreateAgentWorktreeFromHead(dir, id string) (AgentWorktree, error) {
-	return createAgentWorktree(dir, id, false)
+	return createAgentWorktree(dir, id, false, "")
 }
 
-func createAgentWorktree(dir, id string, edits bool) (AgentWorktree, error) {
+// CreateAgentWorktreeFrom is CreateAgentWorktreeFromHead from the last
+// commit of base (a branch, tag or commit; "" is HEAD): a workflow item
+// starts from the each step's base branch. A base that git does not know,
+// or that could pass for a flag, is refused.
+func CreateAgentWorktreeFrom(dir, id, base string) (AgentWorktree, error) {
+	if base != "" && strings.HasPrefix(base, "-") {
+		return AgentWorktree{}, fmt.Errorf("base %q is not a branch", base)
+	}
+	return createAgentWorktree(dir, id, false, base)
+}
+
+func createAgentWorktree(dir, id string, edits bool, from string) (AgentWorktree, error) {
 	if id == "" {
 		return AgentWorktree{}, errors.New("no worktree id")
 	}
@@ -199,7 +210,14 @@ func createAgentWorktree(dir, id string, edits bool) (AgentWorktree, error) {
 	if _, err := os.Stat(filepath.Join(w.Path, ".git")); err == nil {
 		return w, nil
 	}
-	head, err := gitOut(top, "rev-parse", "--verify", "-q", "HEAD")
+	rev := "HEAD"
+	if from != "" {
+		rev = from + "^{commit}"
+	}
+	head, err := gitOut(top, "rev-parse", "--verify", "-q", "--end-of-options", rev)
+	if err != nil && from != "" {
+		return AgentWorktree{}, fmt.Errorf("base %q is not a branch or commit of this repository", from)
+	}
 	if err != nil {
 		return AgentWorktree{}, errors.New("the repository has no commit yet: an agent worktree needs one")
 	}
