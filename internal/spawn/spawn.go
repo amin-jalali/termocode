@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"syscall"
 )
 
@@ -36,13 +37,35 @@ var systemDirs = []string{"/system/", "/apex/", "/vendor/", "/product/", "/odm/"
 
 // Command is exec.Command, started through the trampoline on Android.
 func Command(name string, arg ...string) *exec.Cmd {
+	observe(name, arg)
 	return Fix(exec.Command(name, arg...))
 }
 
 // CommandContext is exec.CommandContext, started through the
 // trampoline on Android.
 func CommandContext(ctx context.Context, name string, arg ...string) *exec.Cmd {
+	observe(name, arg)
 	return Fix(exec.CommandContext(ctx, name, arg...))
+}
+
+// observer sees each command made (the Git Command Log, GITX-33).
+var observer atomic.Pointer[func(argv []string)]
+
+// SetObserver makes f see the program and args of every command made
+// with Command / CommandContext (nil: none). f runs on the caller's
+// goroutine and must be quick.
+func SetObserver(f func(argv []string)) {
+	if f == nil {
+		observer.Store(nil)
+		return
+	}
+	observer.Store(&f)
+}
+
+func observe(name string, arg []string) {
+	if f := observer.Load(); f != nil {
+		(*f)(append([]string{name}, arg...))
+	}
 }
 
 // Fix rewrites a not yet started cmd for the trampoline on Android. Use

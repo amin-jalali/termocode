@@ -220,6 +220,14 @@ func goldenExtras() []Scene {
 		// Search Log… query, and the Cancel-first Push… card.
 		{Name: "log-search-results", Steps: append(append([]Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-log-search"), Pause(400 * time.Millisecond)}, TypeKeys("all")...), Key("enter"), Pause(600*time.Millisecond))},
 		{Name: "push-preview-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-push-preview"), Pause(600 * time.Millisecond)}},
+		// Diff options (GITX-26): the parents of the demo merge, then the
+		// merge against parent 2 (what it brought from toast-slide).
+		{Name: "merge-parent-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("commit:HEAD"), Pause(1200 * time.Millisecond), Act("palette:git-diff-merge-parent"), Pause(500 * time.Millisecond)}},
+		{Name: "merge-parent-diff", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("commit:HEAD"), Pause(1200 * time.Millisecond), Act("palette:git-diff-merge-parent"), Pause(500 * time.Millisecond), Key("down"), Key("enter"), Pause(1200 * time.Millisecond)}},
+		// Commit box helpers (GITX-6): the recent messages and the
+		// co-author pickers.
+		{Name: "commit-history-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-commit-history"), Pause(600 * time.Millisecond)}},
+		{Name: "co-author-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-co-author"), Pause(600 * time.Millisecond)}},
 		// Stash… (GITX-10): what to stash.
 		{Name: "stash-mode-picker", Steps: WithEditor(Act("palette:git-stash-options"), Pause(600*time.Millisecond))},
 		// Bisect and compare (GITX-19, GITX-24): the good-commit picker that

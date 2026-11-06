@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/picker"
@@ -17,24 +18,32 @@ import (
 // Push and pull options (GITX-12): Push… shows what goes out first,
 // Push to… another remote or branch, Pull… with merge, rebase or from
 // another branch, Fetch All Remotes, the incoming and outgoing lists and
-// an auto fetch timer (off by default, this session only).
+// an auto fetch timer (off by default; the git_auto_fetch setting keeps it).
 
 const (
 	gitxPreviewRows   = 10 // commits listed on the Push card
 	gitxAutoFetchStep = 3 * time.Minute
 )
 
-// gitxAuto is the auto fetch state. It adds no timer (TestNoNewTimers):
-// the 2 s git poll asks gitxAutoFetchPoll, which fetches once next has
-// passed.
+// gitxAuto is the auto fetch state. It has no timer of its own: the 2 s
+// git poll asks gitxAutoFetchPoll, which fetches once due has passed.
+// gen grows on each toggle, so a fetch that ends after Off is ignored.
 type gitxAuto struct {
-	on   bool
-	next time.Time
+	on  bool
+	gen int
+	due time.Time
 }
 
 var gitxAutoFetch gitxAuto // one UI per process
 
 func (m *Model) gitxAutoFetchOn() bool { return gitxAutoFetch.on }
+
+// gitxAutoFetchStart turns auto fetch on; the first fetch is one step away.
+func gitxAutoFetchStart() {
+	gitxAutoFetch.on = true
+	gitxAutoFetch.gen++
+	gitxAutoFetch.due = clock.Now().Add(gitxAutoFetchStep)
+}
 func gitxPlural(n int, one string) string {
 	if n == 1 {
 		return "1 " + one
@@ -273,33 +282,45 @@ func (m *Model) openCommitList(incoming bool) tea.Cmd {
 
 // toggleAutoFetch turns auto fetch on or off.
 func (m *Model) toggleAutoFetch() tea.Cmd {
-	gitxAutoFetch.on = !gitxAutoFetch.on
+	if gitxAutoFetch.on {
+		gitxAutoFetch.on = false
+		gitxAutoFetch.gen++
+	} else {
+		gitxAutoFetchStart()
+	}
+	if err := saveAutoFetch(gitxAutoFetch.on); err != nil { // GITX-12: the git_auto_fetch setting
+		return m.gitxFail("Settings error", err)
+	}
 	if !gitxAutoFetch.on {
 		return m.gitxInfo("Auto fetch off")
 	}
-	gitxAutoFetch.next = time.Now().Add(gitxAutoFetchStep)
 	var c tea.Cmd
-	m.toast, c = m.toast.PushDetail(toast.Info, "Auto fetch on", "Every 3 minutes, until termocode closes")
+	m.toast, c = m.toast.PushDetail(toast.Info, "Auto fetch on", "Every 3 minutes, also after a restart (setting git_auto_fetch)")
 	return c
 }
 
-// gitxAutoFetchPoll runs on each git poll. Once 3 minutes have passed it
+// gitxAutoFetchPoll runs on each git poll. Once the step has passed it
 // fetches in the background (quietly; a failure turns auto fetch off and
-// shows once) and waits 3 minutes again.
-func (m *Model) gitxAutoFetchPoll(now time.Time) tea.Cmd {
-	if !gitxAutoFetch.on || now.Before(gitxAutoFetch.next) {
+// shows once) and sets the next due time.
+func (m *Model) gitxAutoFetchPoll() tea.Cmd {
+	if !gitxAutoFetch.on || clock.Now().Before(gitxAutoFetch.due) {
 		return nil
 	}
-	gitxAutoFetch.next = now.Add(gitxAutoFetchStep)
 	cwd, err := m.rootDir()
 	if err != nil || m.gitRemoteBusy != "" || !m.gitIsRepo {
-		return nil
+		return nil // try again on the next poll
 	}
+	gitxAutoFetch.due = clock.Now().Add(gitxAutoFetchStep)
+	gen := gitxAutoFetch.gen
 	return func() tea.Msg {
 		err := git.Fetch(cwd)
 		return gitxDoneMsg{apply: func(m *Model) tea.Cmd {
+			if gen != gitxAutoFetch.gen {
+				return nil // turned off (or on again) meanwhile
+			}
 			if err != nil {
 				gitxAutoFetch.on = false
+				gitxAutoFetch.gen++
 				return m.gitxFail("Auto fetch stopped", err)
 			}
 			return fetchGitCmd()

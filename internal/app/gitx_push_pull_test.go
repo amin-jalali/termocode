@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/picker"
 )
 
@@ -144,30 +145,33 @@ func TestGitxAutoFetch(t *testing.T) {
 	if m.gitxAutoFetchOn() || !toastHas(m, "Auto fetch off") {
 		t.Error("not off")
 	}
-	// Off: a git poll long after does not fetch.
-	if c := m.gitxAutoFetchPoll(time.Now().Add(time.Hour)); c != nil {
-		t.Error("a poll fetched while auto fetch is off")
-	}
 }
 
-// GITX-12: auto fetch adds no timer (TestNoNewTimers); the 2 s git poll
-// fetches once 3 minutes have passed, then waits 3 minutes again.
-func TestGitxAutoFetchRidesTheGitPoll(t *testing.T) {
+// GITX-12: the auto fetch has no timer of its own (TestNoNewTimers); it
+// rides on the 2 s git poll. A poll before the step does nothing, the
+// first poll after it fetches once, and a poll after Off does nothing.
+func TestGitxAutoFetchRidesOnThePoll(t *testing.T) {
+	now := time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
 	m, _, _ := gitxUpstreamRepo(t)
+	t.Cleanup(clock.Set(func() time.Time { return now }))
+	t.Cleanup(func() { gitxAutoFetch = gitxAuto{} })
+	if m.gitxAutoFetchPoll() != nil {
+		t.Fatal("off: a poll fetched")
+	}
 	m.dispatchPaletteAction("git-auto-fetch")
-	t.Cleanup(func() {
-		if m.gitxAutoFetchOn() {
-			m.dispatchPaletteAction("git-auto-fetch")
-		}
-	})
-	now := time.Now()
-	if c := m.gitxAutoFetchPoll(now.Add(time.Minute)); c != nil {
-		t.Fatal("fetched before 3 minutes")
+	if m.gitxAutoFetchPoll() != nil {
+		t.Fatal("a poll fetched before the step")
 	}
-	if c := m.gitxAutoFetchPoll(now.Add(3*time.Minute + time.Second)); c == nil {
-		t.Fatal("no fetch after 3 minutes")
+	now = now.Add(gitxAutoFetchStep)
+	if m.gitxAutoFetchPoll() == nil {
+		t.Fatal("no fetch after the step")
 	}
-	if c := m.gitxAutoFetchPoll(now.Add(4 * time.Minute)); c != nil {
-		t.Error("fetched again before the next 3 minutes")
+	if m.gitxAutoFetchPoll() != nil {
+		t.Fatal("fetched twice in one step")
+	}
+	m.dispatchPaletteAction("git-auto-fetch")
+	now = now.Add(2 * gitxAutoFetchStep)
+	if m.gitxAutoFetchPoll() != nil {
+		t.Fatal("off: a poll fetched")
 	}
 }

@@ -98,6 +98,9 @@ func (m *Model) gitOpenCommitViewCmd(hash string) tea.Cmd {
 	}
 	return func() tea.Msg {
 		info, err := git.CommitFiles(cwd, hash)
+		if err == nil {
+			info.Signature = git.Signature(cwd, info.FullHash).Label() // GITX-38
+		}
 		return commitViewReadyMsg{want: hash, info: info, err: err}
 	}
 }
@@ -222,7 +225,7 @@ func (m *Model) onCommitViewReady(msg commitViewReadyMsg) tea.Cmd {
 func commitHeader(info git.CommitInfo) diffview.Header {
 	h := diffview.Header{
 		Hash: info.Hash, FullHash: info.FullHash, Subject: info.Subject, Body: info.Body,
-		Author: info.Author, DateRel: info.DateRel, DateAbs: info.DateAbs, Parents: info.Parents,
+		Author: info.Author, DateRel: info.DateRel, DateAbs: info.DateAbs, Parents: info.Parents, Badge: info.Signature,
 		Files: info.CommitDetail.Files, Add: info.Add, Del: info.Del,
 		NewLabel: "+ " + info.Hash + " (this commit)",
 	}

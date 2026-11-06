@@ -350,6 +350,7 @@ web	web-share	op:web.grant_ask
 web	web-totp	op:web.totp_check
 web	workspace-add-folder	cmd:addFolder
 web	workspace-remove-folder	cmd:removeFolder
+web	zen-mode	cmd:zen
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
 excluded	ai-credentials	security: credentials file is laptop only
 excluded	ai-doctor	laptop only: checks the laptop setup
@@ -431,7 +432,11 @@ excluded	web-devices	laptop only: the paired devices (list, rename, revoke) are 
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
-excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
+missing	git-ai-commit-msg	Git|S
+missing	git-ai-explain-changes	Git|S
+missing	git-ai-explain-line	Git|S
+missing	git-ai-pr-text	Git|S
+missing	git-ai-stash	Git|S
 missing	git-auto-fetch	Git|S
 missing	git-autosquash	Git|S
 missing	git-bisect	Git|S
@@ -441,9 +446,17 @@ missing	git-blame-commit	Git|S
 missing	git-blame-options	Git|S
 missing	git-cherry-pick-branch	Git|S
 missing	git-clean-untracked	Git|S
+missing	git-cmd-log	Git|S
+missing	git-co-author	Git|S
+missing	git-commit-edit	Git|S
+missing	git-commit-history	Git|S
 missing	git-commit-push	Git|S
 missing	git-commit-sync	Git|S
 missing	git-compare-branches	Git|S
+missing	git-copy-commit-link	Git|S
+missing	git-copy-line-link	Git|S
+missing	git-diff-clipboard	Git|S
+missing	git-diff-merge-parent	Git|S
 missing	git-discard-all	Git|S
 missing	git-fetch-all	Git|S
 missing	git-goto-commit	Git|S
@@ -472,6 +485,7 @@ missing	git-push-to	Git|S
 missing	git-rebase-onto	Git|S
 missing	git-rev-next	Git|S
 missing	git-rev-prev	Git|S
+missing	git-signing-toggle	Git|S
 missing	git-stash-actions	Git|S
 missing	git-stash-options	Git|S
 missing	git-status-blame	Git|S

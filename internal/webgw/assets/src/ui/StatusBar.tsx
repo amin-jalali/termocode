@@ -8,7 +8,7 @@ import { selection } from "../lib/edit";
 import { file } from "../lib/file";
 import { route } from "../lib/router";
 import { fileOfTab } from "../lib/difftab";
-import { activeFile, cursorAt } from "../lib/workbench";
+import { activeFile, cursorAt, vimMode } from "../lib/workbench";
 import { diags, toggleProblems } from "../lib/lsp";
 import { link, status, store } from "../session";
 import { readDebugSnap } from "../state/run";
@@ -45,8 +45,16 @@ function FileFacts() {
   const line = at ? at.line : sel ? sel.a + 1 : 1;
   const col = at ? at.col : 1;
   const ts = d.ts ?? 0;
+  const vm = vimMode.value;
+  const vimKey = vm.mode === "normal" ? "sb.vim_normal" : vm.mode === "insert" ? "sb.vim_insert" : vm.mode === "visual" ? "sb.vim_visual" : vm.mode === "vline" ? "sb.vim_vline" : null;
   return (
     <>
+      {vimKey && (
+        <span class="strip-item sb-vim" title={t("sb.vim_title")}>
+          {t(vimKey)}
+        </span>
+      )}
+      {vimKey && vm.pending && <span class="strip-item sb-vim-keys" dir="ltr">{vm.pending.replace(/\x00[^\x00]*\x00/g, "").replace(/\n/g, "⏎")}</span>}
       <span class="strip-item sb-pos" title={t("sb.line_of", { n: line, m: d.lines.length })}>
         {t("sb.pos", { n: line, c: col })}
       </span>
