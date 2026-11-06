@@ -84,8 +84,14 @@ func (p *Page) GoTab(tab string) {
 		return
 	}
 	i := map[string]int{"chat": 1, "files": 2, "term": 3, "git": 4, "more": 5}[tab]
+	open := fmt.Sprintf(`!!(document.querySelector('nav .nav-item:nth-child(%d)[aria-current="page"]') && document.querySelector('[data-view="%s"]'))`, i, tab)
+	// A tap on the tab already open scrolls its view to the top (smoothly):
+	// a tap right after it raced that scroll (FIX-42). Already there: done.
+	if Eval[bool](p, open) {
+		return
+	}
 	p.Tap(fmt.Sprintf("nav .nav-item:nth-child(%d)", i))
-	p.WaitJS(fmt.Sprintf(`document.querySelector('nav .nav-item:nth-child(%d)[aria-current="page"]') && document.querySelector('[data-view="%s"]')`, i, tab))
+	p.WaitJS(open)
 }
 
 // goActivity is GoTab on the desktop workbench: the activity bar's item
@@ -99,8 +105,14 @@ func (p *Page) goActivity(tab string) {
 		return
 	}
 	act := map[string]string{"chat": "chat", "files": "files", "git": "git", "more": "device"}[tab]
+	open := fmt.Sprintf(`!!(document.querySelector('nav .act-item[data-act="%s"][aria-current="page"]') && document.querySelector('[data-view="%s"]'))`, act, tab)
+	// A press on the open view's activity item does something else (as on
+	// the phone's tab bar): already there, done.
+	if Eval[bool](p, open) {
+		return
+	}
 	p.Tap(fmt.Sprintf(`nav .act-item[data-act="%s"]`, act))
-	p.WaitJS(fmt.Sprintf(`document.querySelector('nav .act-item[data-act="%s"][aria-current="page"]') && document.querySelector('[data-view="%s"]')`, act, tab))
+	p.WaitJS(open)
 }
 
 // pickPref picks choice n (1-based) of this device's setting field (1

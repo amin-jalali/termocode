@@ -90,6 +90,18 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | --- | --- | --- | --- |
 | `update_check` | bool | `true` | Look for a newer termocode release once a day, in the background (GitHub, no account needed). A newer one shows a quiet ⬆ chip in the status bar and one toast. Dev builds never look. termocode: Check for Updates works with it off too. |
 
+## Workflows
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `workflows_enabled` | bool | `true` | Workflows can run: by hand, from the CLI and on their schedules. false stops every schedule and refuses new runs. |
+| `workflows_parallel_max` | int | `2` | Most workflow runs at the same time, across all workflows (1-16). A workflow's own parallel setting splits its items inside one run. |
+| `workflows_day_budget_usd` | number | `0` | US dollars all workflows may spend on AI in one day; a run that reaches it pauses and asks. 0 means no day budget. |
+| `workflows_missed_grace_min` | int | `30` | A scheduled run that was missed (termocode was not running) still runs once if it was due at most this many minutes ago; older ones are recorded as missed. 0 never runs a missed one. |
+| `workflows_history_days` | int | `30` | Days a finished workflow run (its file and logs) is kept before it is deleted at start. |
+| `workflows_wait_hours` | int | `12` | Hours a run waits for an answer on a card (a write to allow, a budget pause) before the step is marked waiting too long. |
+| `workflows_agent_sandbox` | enum | `worktree` | Where an outside agent step works: worktree (it may change files in its own git worktree) or read-only (it may only read). |
+
 ## Databases (file only)
 
 | Key | Type | Default | Description |
@@ -142,6 +154,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_trusted` | object | `{}` | Project MCP servers you allowed with "Always allow": server name → hash of its mcp.json entry. A changed entry asks again. Written by the trust dialog and AI: MCP Servers…. |
 | `mcp_disabled_tools` | object | `{}` | MCP tools you turned off: server name → tool names. Off tools are not sent to the AI. Turn them off or on with Space in AI: MCP Servers… → a server → Show tools. |
 | `mcp_server` | enum | `auto` | termocode as an MCP server: outside agents (Claude Code, Codex, …) reach a short list of IDE tools (open files, diagnostics, tests, debugger, terminal and git reads) over a private socket in the session folder, open only to your own user. Tools that change something ask on a card first; files, settings, git writes and your own MCP servers are never offered. auto: serve once you start an agent tab (F1 → Agent: Start …). on: serve from start. off: never. Applied when you save config.json. |
+| `agent_transcripts` | enum | `off` | read: termocode may read the session files that Claude Code and Codex write for themselves (~/.claude/projects, ~/.codex/sessions, or CLAUDE_CONFIG_DIR / CODEX_HOME) for Agent: Chat View, Agent: Sessions… and the search inside them. Read only: termocode never writes there. Secrets are hidden before anything is drawn, and nothing from them goes to the AI or the web panel unless you send it. A file in a format termocode does not know shows "cannot read this session". off (the default): no file there is opened. |
 | `mcp_server_auto_approve` | object | `{}` | The "Always allow" answers you gave on an outside agent's card (see mcp_server): agent name → tool names that run without asking for that agent. Separate from ai_auto_approve, which never applies to outside agents. The name is the agent's own claim. See and revoke them in AI: Agent Auto-Approve…. |
 | `mcp_trusted_tools` | object | `{}` | The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first. |
 
