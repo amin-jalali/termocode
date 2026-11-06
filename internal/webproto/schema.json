@@ -2027,6 +2027,34 @@
       "phase": "v2"
     },
     {
+      "op": "lsp.servers",
+      "args": "EmptyArgs",
+      "result": "LSPServerList",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.server_ask",
+      "args": "LSPServerAskArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "services.refresh",
       "args": "EmptyArgs",
       "role": "viewer",
@@ -9913,6 +9941,84 @@
       },
       "required": [
         "lines"
+      ],
+      "additionalProperties": true
+    },
+    "LSPServer": {
+      "type": "object",
+      "properties": {
+        "langs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "problem": {
+          "type": "string"
+        },
+        "progress": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "missing",
+            "managed",
+            "system",
+            "installing"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "used": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "title",
+        "langs",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "LSPServerAskArgs": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "install",
+            "uninstall"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    "LSPServerList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/LSPServer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
       ],
       "additionalProperties": true
     },

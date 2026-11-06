@@ -723,6 +723,20 @@ export const SD = {
   "side.busy": "The side question is still being answered.",
   "side.title": "Side chat (not in the main chat)",
   "side.again": "Ask another",
+  // LSP: Manage Language Servers… (WEBP-2)
+  "cmd.lsp_manage": "LSP: Manage Language Servers…",
+  "lspm.title": "Language servers on the laptop (Enter: install or remove)",
+  "lspm.managed": "Installed by termocode {version}",
+  "lspm.system": "On the laptop's PATH",
+  "lspm.missing": "Not installed",
+  "lspm.installing": "Installing…",
+  "lspm.installing_line": "Installing… {line}",
+  "lspm.used": "used in this workspace",
+  "lspm.reinstall": "Reinstall",
+  "lspm.uninstall": "Uninstall",
+  "lspm.busy": "{name} is installing on the laptop now.",
+  "lspm.install_ask": "Install {name} on the laptop? The laptop card shows what runs there.",
+  "lspm.uninstall_ask": "Uninstall {name} from the laptop? Only termocode's own copy is removed.",
 } as const;
 
 addStrings(SD);

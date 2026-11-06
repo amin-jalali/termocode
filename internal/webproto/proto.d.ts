@@ -466,6 +466,11 @@ export interface KubeObjectArgs {
   name: string;
 }
 
+export interface LSPServerAskArgs {
+  name: string;
+  action: "install" | "uninstall";
+}
+
 export interface ServiceLogsArgs {
   name: string;
   lines?: number;
@@ -2111,6 +2116,21 @@ export interface KubeText {
   truncated?: boolean;
 }
 
+export interface LSPServerList {
+  items: LSPServer[];
+}
+
+export interface LSPServer {
+  name: string;
+  title: string;
+  langs: string[];
+  state: "missing" | "managed" | "system" | "installing";
+  version?: string;
+  progress?: string;
+  problem?: string;
+  used?: boolean;
+}
+
 export interface ServiceLogs {
   name: string;
   lines: string[];
@@ -2866,6 +2886,8 @@ export interface OpArgs {
   "kube.logs": KubeLogsArgs;
   "kube.describe": KubeObjectArgs;
   "kube.restart": KubeObjectArgs;
+  "lsp.servers": EmptyArgs;
+  "lsp.server_ask": LSPServerAskArgs;
   "services.refresh": EmptyArgs;
   "services.logs": ServiceLogsArgs;
   "services.start": ServiceArgs;
@@ -3116,6 +3138,8 @@ export interface OpResult {
   "kube.logs": KubeText;
   "kube.describe": KubeText;
   "kube.restart": AskRef;
+  "lsp.servers": LSPServerList;
+  "lsp.server_ask": AskRef;
   "services.logs": ServiceLogs;
   "services.start": ServiceDone;
   "services.restart": ServiceDone;

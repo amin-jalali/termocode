@@ -1,7 +1,7 @@
 // More commands of the workbench's command list (WEBP-9): laptop palette
 // commands the page does too, each through its own op or on the page.
 // Only the desktop workbench loads this file (lib/commands.ts).
-import type { DebugLaunch, MCPItems } from "../../../../webproto/proto";
+import type { DebugLaunch, LSPServer, LSPServerList, MCPItems } from "../../../../webproto/proto";
 import { link } from "../session";
 import { t } from "../strings";
 import { toast } from "./toasts";
@@ -13,6 +13,7 @@ import type { Command } from "./commands";
 import { collapseTests } from "../views/run/TestingView";
 import { logs } from "../views/desk/DeskContainers";
 import { askSide } from "../views/desk/SideChat";
+import { askLaptop } from "../ui/AskHere";
 
 const canAct = () => link.meta.peek()?.role === "controller";
 
@@ -54,6 +55,69 @@ export function pickMCP(): void {
   }, failed);
 }
 
+/** lspState is a language server's state in the picker's detail. */
+function lspState(s: LSPServer): string {
+  const parts = [
+    s.state === "managed"
+      ? t("lspm.managed", { version: s.version ?? "" }).trim()
+      : s.state === "system"
+        ? t("lspm.system")
+        : s.state === "installing"
+          ? s.progress
+            ? t("lspm.installing_line", { line: s.progress })
+            : t("lspm.installing")
+          : t("lspm.missing"),
+  ];
+  if (s.used) parts.push(t("lspm.used"));
+  if (s.problem) parts.push(s.problem);
+  return parts.join(" · ");
+}
+
+/** askLSP asks here, then the laptop card, to install or uninstall s. */
+function askLSP(s: LSPServer, action: "install" | "uninstall"): void {
+  askLaptop.value = {
+    label: t("cmd.lsp_manage"),
+    text: t(action === "install" ? "lspm.install_ask" : "lspm.uninstall_ask", { name: s.name }),
+    send: () => link.request("lsp.server_ask", { name: s.name, action }),
+  };
+}
+
+/** pickLSP is a row picked: install a missing one (or one on PATH);
+ * termocode's own copy offers Reinstall and Uninstall. */
+function pickLSP(s: LSPServer): void {
+  if (s.state === "installing") {
+    toast("info", t("lspm.busy", { name: s.name }));
+    return;
+  }
+  if (s.state !== "managed") {
+    askLSP(s, "install");
+    return;
+  }
+  setTimeout(
+    () =>
+      (quick.value = {
+        mode: "pick",
+        pick: {
+          title: s.title,
+          items: [
+            { label: t("lspm.reinstall"), run: () => askLSP(s, "install") },
+            { label: t("lspm.uninstall"), run: () => askLSP(s, "uninstall") },
+          ],
+        },
+      }),
+    0,
+  );
+}
+
+/** manageLSP lists the laptop's language servers (LSP: Manage Language
+ * Servers…): the workspace's own first, each with its state. */
+export function manageLSP(): void {
+  link.request("lsp.servers").then((r) => {
+    const items = (r as LSPServerList).items ?? [];
+    quick.value = { mode: "pick", pick: { title: t("lspm.title"), items: items.map((s) => ({ label: s.title, detail: lspState(s), run: () => pickLSP(s) })) } };
+  }, failed);
+}
+
 /** moreCommands are this file's commands. */
 export function moreCommands(): Command[] {
   return [
@@ -61,6 +125,7 @@ export function moreCommands(): Command[] {
     { id: "testingCollapse", label: "cmd.testing_collapse", run: collapseTests },
     { id: "aiSide", label: "cmd.ai_side", when: canAct, run: askSide },
     { id: "aiMcpInsert", label: "cmd.ai_mcp_insert", when: canAct, run: pickMCP },
+    { id: "lspManage", label: "cmd.lsp_manage", when: canAct, run: manageLSP },
     { id: "outputClear", label: "cmd.output_clear", when: () => logs.peek() !== null, run: clearOutput },
   ];
 }
