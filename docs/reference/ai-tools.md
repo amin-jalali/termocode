@@ -2264,6 +2264,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db_redis_separator` | confirm (settings) |   |
 | `db_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `font_delta` | confirm (settings) |   |
+| `git_blame_detect_moves` | confirm (settings) |   |
+| `git_blame_ignore_whitespace` | confirm (settings) |   |
+| `git_inline_blame` | confirm (settings) |   |
+| `git_status_blame` | confirm (settings) |   |
 | `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
 | `http_cookie_jar` | confirm (settings) |   |
 | `http_history_max` | confirm (settings) |   |
