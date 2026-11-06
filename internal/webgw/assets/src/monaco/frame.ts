@@ -14,7 +14,7 @@ import { diff } from "../lib/textdiff";
 import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
-import type { AiAt, AiKind, FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
+import type { AiAt, AiKind, CursorOp, FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
 import { Vim, type VimMode } from "./vim";
 import "./frame.css";
 
@@ -1102,6 +1102,14 @@ addEventListener(
   true,
 );
 
+/** CURSOR_ACTIONS are the editor's own multi-cursor actions. */
+const CURSOR_ACTIONS: Record<CursorOp, string> = {
+  above: "editor.action.insertCursorAbove",
+  below: "editor.action.insertCursorBelow",
+  next: "editor.action.addSelectionToNextFindMatch",
+  all: "editor.action.selectHighlights",
+};
+
 function onMessage(e: MessageEvent): void {
   if (e.source !== parent || e.origin !== location.origin) return;
   const m = e.data as ToFrame;
@@ -1188,6 +1196,12 @@ function onMessage(e: MessageEvent): void {
       if (blameRows) startBlameHover();
       blamePaint();
       return;
+    case "cursors": {
+      const id = CURSOR_ACTIONS[m.op];
+      if (document.hasFocus()) ed?.focus(); // never taken from the page's own inputs
+      if (id) void ed?.getAction(id)?.run();
+      return;
+    }
     case "undo":
       undoRedo(false);
       return;

@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, effect, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame, type CursorOp } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, escapeKey, focusSlot, quick, vimMode } from "./workbench";
@@ -104,6 +104,8 @@ export interface DeskHandle extends EditorHandle {
   glyphs(items: FrameGlyph[], stop: number): void;
   /** aiAct runs an AI action on the editor's selection. */
   aiAct(kind: AiAct): void;
+  /** cursors runs a multi-cursor command (and gives the editor the keyboard). */
+  cursors(op: CursorOp): void;
 }
 
 /** desks are the desktop editors on screen, by editor group slot. */
@@ -301,6 +303,14 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     aiAct(kind) {
       send({ t: "aiAct", kind });
+    },
+    cursors(op) {
+      // After the command list is gone (it took the keyboard with it);
+      // the frame takes the keyboard back only while it still has it.
+      setTimeout(() => {
+        if (!quick.peek()) frame.focus();
+        send({ t: "cursors", op });
+      }, 0);
     },
     destroy() {
       removeEventListener("message", onMessage);

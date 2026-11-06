@@ -136,6 +136,8 @@ export type ToFrame =
   | { t: "blame"; rows: (FrameBlame | null)[] | null }
   | { t: "undo" }
   | { t: "redo" }
+  /** cursors: a multi-cursor command (WEBP-1), the editor's own action. */
+  | { t: "cursors"; op: CursorOp }
   | { t: "focus" }
   | { t: "reveal"; line: number; col?: number }
   /** edit: a context menu choice. cut drops the selection (the page put
@@ -151,6 +153,9 @@ export type ToFrame =
   | { t: "aiAct"; kind: AiAct }
   /** lspRes answers the frame's lsp question id (data null: nothing). */
   | { t: "lspRes"; id: number; data: unknown };
+
+/** CursorOp is one of the editor's multi-cursor commands. */
+export type CursorOp = "above" | "below" | "next" | "all";
 
 /** MenuCan says which of the editor's actions work here now. */
 export interface MenuCan {

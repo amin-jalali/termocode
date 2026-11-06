@@ -15,7 +15,7 @@ import { saveLive } from "../views/LiveEditor";
 import { newChat } from "../views/Chat";
 import { newTerm } from "../views/Term";
 import { showOnLaptop } from "../views/FileView";
-import { modKey } from "./platform";
+import { isMac, modKey } from "./platform";
 import { loadRecentCmds, prefs, saveRecentCmds, setPref } from "./prefs";
 import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
@@ -35,6 +35,11 @@ export interface Command {
   /** when: shown only when it can run now. */
   when?: () => boolean;
   run: () => void;
+}
+
+/** cursors runs a multi-cursor command in the focused editor. */
+function cursors(op: "above" | "below" | "next" | "all"): void {
+  activeDesk.peek()?.cursors(op);
 }
 
 /** tabsNow is the focused group's tab list. */
@@ -57,6 +62,11 @@ export function commands(): Command[] {
     { id: "focusGroup1", label: "cmd.focus_group1", keys: `${mod}+1`, run: () => focusGroup(0) },
     { id: "focusGroup2", label: "cmd.focus_group2", keys: `${mod}+2`, when: () => groups.peek().length > 1 || hasFile(), run: focusSecond },
     { id: "wrap", label: "cmd.wrap", keys: "Alt+Z", run: () => (wordWrap.value = !wordWrap.peek()) },
+    // Multi-cursor (WEBP-1): the editor's own actions, with its keys.
+    { id: "cursorAbove", label: "cmd.cursor_above", keys: isMac() ? "⌥⌘↑" : "Ctrl+Alt+Up", when: hasFile, run: () => cursors("above") },
+    { id: "cursorBelow", label: "cmd.cursor_below", keys: isMac() ? "⌥⌘↓" : "Ctrl+Alt+Down", when: hasFile, run: () => cursors("below") },
+    { id: "nextMatch", label: "cmd.next_match", keys: `${mod}+D`, when: hasFile, run: () => cursors("next") },
+    { id: "allMatches", label: "cmd.all_matches", keys: `${mod}+Shift+L`, when: hasFile, run: () => cursors("all") },
     { id: "vim", label: "cmd.vim", run: () => setPref("vim", !prefs.peek().vim) },
     { id: "zen", label: "cmd.zen", keys: `${mod}+K Z`, run: () => (zen.value = !zen.peek()) },
     { id: "aiExplain", label: "ai.explain", when: hasFile, run: () => activeDesk.peek()?.aiAct("explain") },
