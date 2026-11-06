@@ -291,7 +291,7 @@ func SquashIntoPrevious(dir, full string, opt RebaseOptions) (RebaseOutcome, err
 func AutosquashPlan(dir string) (n int, base string, err error) {
 	out, err := runCombined(dir, "git", "log", "--format=%H%x1f%s", "-n200", "HEAD", "--")
 	if err != nil {
-		if !hasCommits(dir) {
+		if !hasCommits(localGit(dir)) {
 			return 0, "", nil
 		}
 		return 0, "", err

@@ -211,6 +211,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentCtlPrompt(id), true
 	case confirmKindAgentHooks: // agent_hooks_ui.go
 		return m.answerAgentHooks(id), true
+	case confirmKindWorkflowGate: // workflow_gate.go
+		return m.answerWorkflowGate(id), true
 	case confirmKindAgentTranscripts: // agent_chat.go
 		return m.answerAgentTranscripts(id), true
 	case confirmKindAgentInstall, confirmKindAgentSignIn: // agent_install.go
@@ -261,6 +263,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerBugReport("cancel")
 	case confirmKindAITool:
 		return m.answerAIToolConfirm("deny")
+	case confirmKindWorkflowGate: // Esc denies the write
+		return m.answerWorkflowGate("deny")
 	case confirmKindAIPlan: // G-PLAN: Esc denies the plan
 		return m.answerAIPlan("deny")
 	case confirmKindAIWorktreeConflict, confirmKindAIWorktreeDiscard:

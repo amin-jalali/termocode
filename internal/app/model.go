@@ -809,6 +809,9 @@ type Model struct {
 	// secrets is the secret store's unlock flow (secrets_ui.go); the store
 	// itself is m.secretStore().
 	secrets *secretsState
+	// wfGate is the queue of workflow write gate cards
+	// (workflow_gate.go); shared by Model copies.
+	wfGate *workflowGateState
 	// setup is the first-run setup card on the Welcome page
 	// (setup_card*.go); shared by Model copies.
 	setup *setupState
