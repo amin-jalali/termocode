@@ -51,6 +51,7 @@ const baseStatus: StatusView = {
   runsLive: 0,
   runsNeedYou: 0,
   webClients: 1,
+  update: "",
 };
 
 /** Pair shows children once per theme, each in a frame of the chosen width. */

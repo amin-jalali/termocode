@@ -64,6 +64,14 @@ type TreeHiddenDelta struct {
 	On   bool   `json:"on"`
 }
 
+// TreeRootsDelta: the workspace's roots changed (a folder was added or
+// removed); Roots replaces the list. Folders of a root that went away
+// follow as remove deltas first.
+type TreeRootsDelta struct {
+	Kind  string     `json:"kind" const:"roots"`
+	Roots []TreeRoot `json:"roots"`
+}
+
 // TreeListRes is the result of tree.list.
 type TreeListRes struct {
 	Path      string      `json:"path"`
@@ -183,7 +191,7 @@ const (
 )
 
 func init() {
-	registerTopic("tree", TreeSnap{}, TreeDirDelta{}, TreeRemoveDelta{}, TreeHiddenDelta{})
+	registerTopic("tree", TreeSnap{}, TreeDirDelta{}, TreeRemoveDelta{}, TreeHiddenDelta{}, TreeRootsDelta{})
 	registerTopic("bufs", BufsSnap{}, BufsSnap{})
 	registerTopic("buf", BufSnap{}, LinesDelta{}, TickDelta{}, DirtyDelta{}, ResetDelta{}, GoneDelta{})
 	registerResult(OpTreeList, TreeListRes{})

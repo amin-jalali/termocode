@@ -898,6 +898,7 @@ export interface StatusSnap {
   runs: StatusRuns;
   web: StatusWeb;
   theme: StatusTheme;
+  update?: string;
   ext?: StatusExt;
 }
 
@@ -1131,6 +1132,11 @@ export interface TreeRemoveDelta {
 export interface TreeHiddenDelta {
   kind: "hidden";
   on: boolean;
+}
+
+export interface TreeRootsDelta {
+  kind: "roots";
+  roots: TreeRoot[];
 }
 
 export interface BufsSnap {
@@ -3179,7 +3185,7 @@ export interface TopicData {
   "chats": { snap: ChatsSnap; delta: ChatsDelta };
   "chat": { snap: ChatSnap; delta: ChatDelta };
   "cards": { snap: CardsSnap; delta: CardsDelta };
-  "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta };
+  "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta | TreeRootsDelta };
   "bufs": { snap: BufsSnap; delta: BufsSnap };
   "buf": { snap: BufSnap; delta: LinesDelta | TickDelta | DirtyDelta | ResetDelta | GoneDelta };
   "terms": { snap: TermsSnap; delta: TermsSnap };

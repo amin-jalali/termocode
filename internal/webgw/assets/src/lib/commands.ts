@@ -441,6 +441,23 @@ function openWorkspace(): void {
   });
 }
 
+/** workspaceMenu lists the workspace's actions (the status bar's remote
+ * item, as the laptop's project switcher): open a recent workspace, add
+ * or remove a folder. Each asks the laptop as from the command list. */
+export function workspaceMenu(): void {
+  if (!canWrite()) {
+    toast("info", t("viewonly"));
+    return;
+  }
+  const later = (f: () => void) => () => setTimeout(f, 0);
+  const items = [
+    { label: t("cmd.open_workspace"), run: later(openWorkspace) },
+    { label: t("cmd.add_folder"), run: later(addFolder) },
+    { label: t("cmd.remove_folder"), run: later(removeFolder) },
+  ];
+  quick.value = { mode: "pick", pick: { title: t("sb.workspace"), items } };
+}
+
 /** replaceWorkspace asks for the text and its replacement here, then the
  * laptop's card counts the matches; its yes writes the files. */
 function replaceWorkspace(): void {

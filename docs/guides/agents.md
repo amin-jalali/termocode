@@ -399,6 +399,29 @@ slot. You get up to 3 names like `fix-toast-queue`, with the cost. `Enter`
 copies one. Without a model nothing is sent, and the list says to set a
 quick model.
 
+## Agent packs
+
+**Agent: Agent Packs…** installs a pack of ready agents, skills, rules
+and commands for Claude Code or Codex.
+
+1. Pick **Install a pack…** and give a folder, or a git address with a
+   version: `https://example.com/pack.git@v2.1` or `…@<commit>`. A git
+   address without a version is refused, so the install is pinned.
+2. Pick the agent. Claude Code gets `~/.claude/agents`, `skills`,
+   `rules` and `commands`. Codex gets `~/.codex/skills` and
+   `~/.codex/prompts`; it has no agent or rule files, so those are skipped.
+3. Pick **Everything** or one part. Each row shows its files and the
+   tokens every chat loads (rules in full, the name and description of
+   agents, skills and commands).
+4. The card lists every file it adds (`+`) or replaces (`~`), and the
+   token cost. **Cancel** is first. Nothing is written before **Install**.
+
+The old files are copied to termocode's config folder first. The
+installed pack shows in **Agent Packs…** with its version; Enter on it
+opens the **Undo** card, which puts your old files back and removes the
+added ones. A file you changed after the install is kept. To install
+another version of the same pack, undo the first one.
+
 ## If something does not work
 
 | What you see | Try this |

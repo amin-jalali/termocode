@@ -78,6 +78,12 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIWebToolsPicked(id), true
 	case pickerKindAgentHooks: // agent_hooks_ui.go
 		return m.onAgentHooksPicked(id), true
+	case pickerKindAgentPacks: // agent_packs_ui.go
+		return m.onAgentPacksPicked(id), true
+	case pickerKindAgentPacksTarget:
+		return m.onAgentPacksTargetPicked(id), true
+	case pickerKindAgentPacksParts:
+		return m.onAgentPacksPartsPicked(id), true
 	case pickerKindAgentPicker: // agent_picker.go
 		return m.onAgentPicked(id), true
 	case pickerKindAgentSessions: // agent_sessions.go
@@ -118,6 +124,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
 		return m.onAgentSessionsSearch(value), true
+	case promptKindAgentPacksSource: // agent_packs_ui.go
+		return m.onAgentPackSource(value), true
 	case promptKindAIWebKey: // ai_web_tools.go
 		return m.onAIWebKeyEntered(value), true
 	case promptKindAIModel:
@@ -231,6 +239,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentCtlPrompt(id), true
 	case confirmKindAgentHooks: // agent_hooks_ui.go
 		return m.answerAgentHooks(id), true
+	case confirmKindAgentPacksInstall: // agent_packs_ui.go
+		return m.answerAgentPackInstall(id), true
+	case confirmKindAgentPacksUndo:
+		return m.answerAgentPackUndo(id), true
 	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard: // agent_race_compare.go
 		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindWorkflowGate: // workflow_gate.go

@@ -101,7 +101,7 @@ func TestFileTopicDataGenerated(t *testing.T) {
 	}
 	ts := string(b)
 	for _, want := range []string{
-		`  "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta };`,
+		`  "tree": { snap: TreeSnap; delta: TreeDirDelta | TreeRemoveDelta | TreeHiddenDelta | TreeRootsDelta };`,
 		`  "bufs": { snap: BufsSnap; delta: BufsSnap };`,
 		`  kind: "lines";`, `  kind: "dir";`,
 		`  "buf.open": BufOpenRes;`,
