@@ -118,7 +118,7 @@ func TestApplyAndUndo(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(home, ".claude", "skills")); !os.IsNotExist(err) {
 		t.Error("the folders the pack made are still there")
 	}
-	if res.Restored != 1 || res.Removed != 2 || len(res.Kept) != 1 {
+	if res.Restored != 1 || res.Removed != 3 || len(res.Kept) != 1 {
 		t.Errorf("result %+v", res)
 	}
 	if list, _ := Installed(state); len(list) != 0 {
