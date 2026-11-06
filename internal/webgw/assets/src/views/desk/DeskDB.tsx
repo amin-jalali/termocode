@@ -1,80 +1,146 @@
 // The desktop's Databases view, a tree as the laptop editor's database
 // tools draw one: connections (driver and database dim, production and
-// read-only marked), their schema, Tables and Views with counts, and each
-// table or view. A table opens its rows in an editor tab; New Query on a
-// connection opens a query editor tab. Everything here reads; a statement
-// that may change data asks the laptop (in the query tab). No host, user
-// or password ever comes to the page.
+// read-only marked, a dot when the laptop is connected, the open
+// transaction's changes), their schema, Tables and Views with counts,
+// each table or view, and a Redis connection's keys (names, types and
+// TTLs; never a value). A table opens its rows in an editor tab; New
+// Query opens a query editor tab; the "…" menu (or a right click) has
+// the rest. Reads run here; what changes a database or a saved
+// connection asks the laptop, which shows exactly what happens. No host,
+// user or password ever comes to the page.
 import { Fragment, h } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
-import { dbTab, sqlTab } from "../../lib/vtabs";
+import { DBH_TAB, dbTab, ddlTab, sqlTab } from "../../lib/vtabs";
+import { toast } from "../../lib/toasts";
 import { showFile } from "../../lib/workbench";
 import { link, live } from "../../session";
-import { readDBConns, readDBTables, type DBConnView } from "../../state/more";
+import { readDBTables, type DBConnView } from "../../state/more";
 import { t } from "../../strings";
+import { AskLaptop } from "../../ui/AskLaptop";
 import { errText } from "../../ui/CardSheet";
+import { onMenu, openMenu, type MenuItems } from "../../ui/ContextMenu";
 import { Cod } from "../../ui/icons";
 import { Act, PaneView, Row, Tree } from "../../ui/pane";
+import type { RedisKeys } from "../../../../../webproto/proto";
+import { DBFormView } from "./DBForms";
+import { canAct, conns, dbFilter, dbForm, loadConns, type Load } from "./dbstate";
 
 type Tables = ReturnType<typeof readDBTables>;
-type Load<T> = { s: "loading" } | { s: "ok"; v: T } | { s: "err"; msg: string };
 
-const conns = signal<Load<DBConnView[]> | null>(null);
-const tables = signal<ReadonlyMap<string, Load<Tables>>>(new Map());
+const tables = signal<ReadonlyMap<string, Load<Tables | RedisKeys>>>(new Map());
 /** open: the tree nodes shown open (conn, conn/schema, conn/schema/kind). */
 const open = signal<ReadonlySet<string>>(new Set());
+/** laptop is the question for the laptop a menu item asked. */
+const laptop = signal<{ label: string; op: string; args: unknown } | null>(null);
 
-function loadConns(): void {
-  conns.value = { s: "loading" };
-  tables.value = new Map();
-  link.request("db.conns", {}).then(
-    (r) => (conns.value = { s: "ok", v: readDBConns(r) }),
-    (e: unknown) => (conns.value = { s: "err", msg: errText(e) }),
-  );
-}
-
-function loadTables(conn: string): void {
-  const set = (l: Load<Tables>) => {
+function loadChildren(c: DBConnView): void {
+  const set = (l: Load<Tables | RedisKeys>) => {
     const n = new Map(tables.peek());
-    n.set(conn, l);
+    n.set(c.id, l);
     tables.value = n;
   };
   set({ s: "loading" });
-  link.request("db.tables", { conn }).then(
-    (r) => set({ s: "ok", v: readDBTables(r) }),
+  const redis = c.driver === "redis";
+  link.request(redis ? "redis.keys" : "db.tables", { conn: c.id }).then(
+    (r) => set({ s: "ok", v: redis ? (r as RedisKeys) : readDBTables(r) }),
     (e: unknown) => set({ s: "err", msg: errText(e) }),
   );
 }
 
-function flip(key: string, conn?: string): void {
+function refresh(): void {
+  tables.value = new Map();
+  loadConns();
+}
+
+function flip(key: string, c?: DBConnView): void {
   const n = new Set(open.peek());
   if (n.has(key)) n.delete(key);
   else {
     n.add(key);
-    if (conn && !tables.peek().has(conn)) loadTables(conn);
+    if (c && !tables.peek().has(c.id)) loadChildren(c);
   }
   open.value = n;
 }
 
+/** ask asks the laptop (a menu item's change). */
+const ask = (label: string, op: string, args: unknown) => (laptop.value = { label, op, args });
+
+/** read runs a read and tells its one line. */
+function read(op: string, args: unknown): void {
+  link.request(op, args).then(
+    (r) => toast("ok", (r as { text?: string }).text ?? t("wait.done")),
+    (e: unknown) => toast("warn", errText(e)),
+  );
+}
+
+function connItems(c: DBConnView): MenuItems {
+  const act = canAct();
+  const sql = c.sql;
+  return [
+    { label: t("dbv.new_query"), disabled: !sql, run: () => showFile(sqlTab(c.id)) },
+    c.connected
+      ? { label: t("dbv.disconnect"), disabled: !act, run: () => ask(t("dbv.disconnect"), "db.disconnect", { conn: c.id }) }
+      : { label: t("dbv.connect"), disabled: !act, run: () => read("db.connect", { conn: c.id }) },
+    { label: t("dbv.test"), disabled: !act || !sql, run: () => read("db.test", { conn: c.id }) },
+    null,
+    { label: t("dbv.commit"), disabled: !act || !c.tx, run: () => ask(t("dbv.commit"), "db.tx", { conn: c.id, verb: "commit" }) },
+    { label: t("dbv.rollback"), disabled: !act || !c.tx, run: () => ask(t("dbv.rollback"), "db.tx", { conn: c.id, verb: "rollback" }) },
+    { label: t("dbv.tx_mode"), disabled: !act || !sql, run: () => (dbForm.value = { kind: "tx", conn: c.id }) },
+    null,
+    { label: t("dbv.compare"), disabled: !sql, run: () => (dbForm.value = { kind: "compare", conn: c.id }) },
+    { label: t("dbv.ssh"), disabled: !act || c.driver === "sqlite", run: () => (dbForm.value = { kind: "ssh", conn: c.id }) },
+    { label: t("dbv.ssl"), disabled: !act || c.driver === "sqlite", run: () => (dbForm.value = { kind: "ssl", conn: c.id }) },
+  ];
+}
+
+function tableItems(c: DBConnView, name: string, view: boolean): MenuItems {
+  return [
+    { label: t("dbv.open_rows"), run: () => showFile(dbTab(c.id, name)) },
+    { label: t("dbv.ddl"), run: () => showFile(ddlTab(c.id, name)) },
+    { label: t("dbv.import"), disabled: !canAct() || view || c.readonly, run: () => (dbForm.value = { kind: "import", conn: c.id, table: name }) },
+  ];
+}
+
+function keyItems(c: DBConnView, db: number, key: string): MenuItems {
+  const act = canAct() && !c.readonly;
+  return [
+    { label: t("dbv.ttl"), disabled: !act, run: () => (dbForm.value = { kind: "ttl", conn: c.id, db, key }) },
+    { label: t("dbv.del_key"), disabled: !act, run: () => ask(t("dbv.del_key"), "redis.key", { conn: c.id, db: db || undefined, key, verb: "delete" }) },
+  ];
+}
+
+const match = (s: string): boolean => {
+  const f = dbFilter.value?.trim().toLowerCase();
+  return !f || s.toLowerCase().includes(f);
+};
+
 function ConnRows({ c }: { c: DBConnView }) {
   const key = c.id;
-  const isOpen = open.value.has(key) && c.sql;
+  const opens = c.sql || c.driver === "redis";
+  const isOpen = open.value.has(key) && opens;
   const tl = tables.value.get(c.id);
   const desc = [c.driver, c.database].filter(Boolean).join(" · ");
+  const more = (e: MouseEvent) => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    openMenu(r.left, r.bottom, t("scm.more_actions"), connItems(c));
+  };
   return (
     <>
       <Row
         level={0}
-        twist={c.sql ? (isOpen ? "open" : "closed") : null}
-        onToggle={() => flip(key, c.id)}
+        twist={opens ? (isOpen ? "open" : "closed") : null}
+        onToggle={() => flip(key, c)}
         icon={<Cod name="database" />}
         label={c.name || c.id}
         desc={desc}
-        title={[c.name || c.id, desc, c.env, c.readonly ? t("db.readonly") : "", c.problem || (!c.sql ? t("db.not_sql") : "")].filter(Boolean).join(" — ")}
+        title={[c.name || c.id, desc, c.env, c.readonly ? t("db.readonly") : "", c.connected ? t("dbv.connected") : "", c.problem || (!opens ? t("db.not_sql") : "")].filter(Boolean).join(" — ")}
         data={{ conn: c.id }}
+        onContextMenu={onMenu(t("scm.more_actions"), () => connItems(c))}
         end={
           <>
+            {c.tx && <span class="db-tx">{t("dbv.pending", { n: c.writes })}</span>}
+            {c.connected && <span class="db-on" title={t("dbv.connected")} />}
             {c.env && <span class={`db-env${c.env === "production" ? " is-prod" : ""}`}>{c.env}</span>}
             {c.readonly && (
               <span class="c-dim" title={t("db.readonly")}>
@@ -88,22 +154,61 @@ function ConnRows({ c }: { c: DBConnView }) {
             )}
           </>
         }
-        actions={c.sql && <Act icon="new-file" label={t("dbv.new_query")} onClick={() => showFile(sqlTab(c.id))} />}
+        actions={
+          <>
+            {c.sql && <Act icon="new-file" label={t("dbv.new_query")} onClick={() => showFile(sqlTab(c.id))} />}
+            <Act icon="ellipsis" label={t("scm.more_actions")} onClick={more} />
+          </>
+        }
       />
-      {isOpen && !tl && <p class="tr-note">{t("loading")}</p>}
-      {isOpen && tl?.s === "loading" && <p class="tr-note">{t("loading")}</p>}
+      {isOpen && (!tl || tl.s === "loading") && <p class="tr-note">{t("loading")}</p>}
       {isOpen && tl?.s === "err" && <p class="tr-note is-err">{tl.msg}</p>}
-      {isOpen && tl?.s === "ok" && <SchemaRows conn={c.id} v={tl.v} />}
+      {isOpen && tl?.s === "ok" && ("keys" in tl.v ? <KeyRows c={c} v={tl.v} /> : <SchemaRows c={c} v={tl.v} />)}
     </>
   );
 }
 
-function SchemaRows({ conn, v }: { conn: string; v: Tables }) {
+function KeyRows({ c, v }: { c: DBConnView; v: RedisKeys }) {
+  const keys = (v.keys ?? []).filter((k) => match(k.key));
+  return (
+    <>
+      {keys.length === 0 && <p class="tr-note">{t("dbv.no_keys")}</p>}
+      {keys.map((k) => (
+        <Row
+          key={k.key}
+          level={1}
+          twist={null}
+          icon={<Cod name="symbol-key" />}
+          label={k.key}
+          desc={k.type}
+          title={k.key}
+          data={{ key: k.key }}
+          end={k.ttl > 0 ? <span class="count">{Math.ceil(k.ttl / 1000) + "s"}</span> : undefined}
+          onContextMenu={onMenu(k.key, () => keyItems(c, v.db, k.key))}
+          actions={
+            canAct() &&
+            !c.readonly && (
+              <>
+                <Act icon="watch" label={t("dbv.ttl")} onClick={() => (dbForm.value = { kind: "ttl", conn: c.id, db: v.db, key: k.key })} />
+                <Act icon="trash" label={t("dbv.del_key")} onClick={() => ask(t("dbv.del_key"), "redis.key", { conn: c.id, db: v.db || undefined, key: k.key, verb: "delete" })} />
+              </>
+            )
+          }
+        />
+      ))}
+      {v.more && <p class="tr-note">{t("dbv.keys_more")}</p>}
+    </>
+  );
+}
+
+function SchemaRows({ c, v }: { c: DBConnView; v: Tables }) {
+  const conn = c.id;
   const sk = conn + "/" + (v.schema || "-");
   const base = v.schema ? 2 : 1;
+  const all = v.tables.filter((x) => match(x.name));
   const kinds: { id: "t" | "v"; label: string; items: Tables["tables"] }[] = [
-    { id: "t", label: t("db.tables"), items: v.tables.filter((x) => !x.view) },
-    { id: "v", label: t("tabs.label"), items: v.tables.filter((x) => x.view) },
+    { id: "t", label: t("db.tables"), items: all.filter((x) => !x.view) },
+    { id: "v", label: t("tabs.label"), items: all.filter((x) => x.view) },
   ];
   const schemaOpen = !open.value.has(sk + "!");
   return (
@@ -132,6 +237,8 @@ function SchemaRows({ conn, v }: { conn: string; v: Tables }) {
                     data={{ table: x.name }}
                     onClick={() => showFile(dbTab(conn, x.name), true)}
                     onDblClick={() => showFile(dbTab(conn, x.name))}
+                    onContextMenu={onMenu(x.name, () => tableItems(c, x.name, x.view))}
+                    actions={<Act icon="code" label={t("dbv.ddl")} onClick={() => showFile(ddlTab(conn, x.name))} />}
                   />
                 ))}
             </Fragment>
@@ -142,15 +249,51 @@ function SchemaRows({ conn, v }: { conn: string; v: Tables }) {
   );
 }
 
+/** openConfig opens the laptop's connections file in an editor tab. */
+export function openConfig(): void {
+  link.request("db.config", {}).then(
+    (r) => showFile((r as { path?: string }).path ?? ".termocode/databases.json"),
+    (e: unknown) => toast("warn", errText(e)),
+  );
+}
+
 export function DeskDB() {
   const on = live.value;
   useEffect(() => {
     if (on && (!conns.peek() || conns.peek()?.s === "err")) loadConns();
   }, [on]);
   const c = conns.value;
+  const act = canAct();
+  const f = dbFilter.value;
+  const l = laptop.value;
   return (
-    <PaneView id="db" title={t("more.db")} actions={<Act icon="refresh" label={t("ctr.refresh")} disabled={!on} onClick={loadConns} />}>
+    <PaneView
+      id="db"
+      title={t("more.db")}
+      actions={
+        <>
+          <Act icon="filter" label={t("files.filter")} on={f !== null} onClick={() => (dbFilter.value = f === null ? "" : null)} />
+          {act && <Act icon="add" label={t("dbv.add")} disabled={!on} onClick={() => (dbForm.value = { kind: "add" })} />}
+          <Act icon="history" label={t("dbv.history")} onClick={() => showFile(DBH_TAB)} />
+          {act && <Act icon="gear" label={t("dbv.configure")} disabled={!on} onClick={openConfig} />}
+          <Act icon="refresh" label={t("ctr.refresh")} disabled={!on} onClick={refresh} />
+        </>
+      }
+    >
       <div class="pv-scroll">
+        {f !== null && (
+          <div class="pv-input dbf-filter">
+            <input
+              ref={(el) => void (el && !el.dataset.f && ((el.dataset.f = "1"), el.focus()))}
+              aria-label={t("files.filter")}
+              placeholder={t("files.filter")}
+              value={f}
+              onInput={(e) => (dbFilter.value = (e.currentTarget as HTMLInputElement).value)}
+              onKeyDown={(e) => e.key === "Escape" && (dbFilter.value = null)}
+            />
+          </div>
+        )}
+        <DBFormView />
         {!c || c.s === "loading" ? (
           <p class="pv-msg">{t("loading")}</p>
         ) : c.s === "err" ? (
@@ -166,6 +309,15 @@ export function DeskDB() {
         )}
         <p class="pv-msg">{t("dbv.readonly_note")}</p>
       </div>
+      {l && (
+        <AskLaptop
+          label={l.label}
+          text={t("dbv.laptop_q")}
+          send={() => link.request(l.op, l.args)}
+          onDone={() => (laptop.value = null)}
+          onConfirmed={() => setTimeout(refresh, 300)}
+        />
+      )}
     </PaneView>
   );
 }

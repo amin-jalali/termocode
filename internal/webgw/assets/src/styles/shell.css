@@ -281,3 +281,7 @@ html[data-kb="up"] .layout-phone .pill-wrap { display: none; }
 .viewer-bar { border-inline-start-color: var(--blue); }
 .viewer-bar.is-error { border-inline-start-color: var(--red); }
 .viewer-eye { font-size: 0.875rem; }
+
+/* ---- A popped-out terminal tab (WEBP-13): the bars and the terminal. ---- */
+.shell.layout-solo { grid-template-rows: auto minmax(0, 1fr); }
+.layout-solo > .main { min-height: 0; }

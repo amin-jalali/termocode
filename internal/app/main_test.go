@@ -13,6 +13,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clistep"
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
 	"github.com/amin-jalali/termocode/internal/nvim"
@@ -28,8 +29,9 @@ import (
 // that forgets its fake (servicestest) fails instead of reaching the
 // developer's real Docker or cluster.
 func TestMain(m *testing.M) {
-	mcp.RunShareIfHelper() // the shared-server broker re-runs this binary
-	mcptest.RunIfHelper()  // the fake MCP server re-runs this binary
+	mcp.RunShareIfHelper()       // the shared-server broker re-runs this binary
+	mcptest.RunIfHelper()        // the fake MCP server re-runs this binary
+	git.RunRebaseHelperIfAsked() // a rebase's editor re-runs this binary
 	dir, err := os.MkdirTemp("", "termocode-app-test-")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

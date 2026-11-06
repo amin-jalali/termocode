@@ -69,3 +69,32 @@ func TestReadProfileCountsDuplicateBlocksOnce(t *testing.T) {
 		t.Fatalf("got %+v, %v", got, err)
 	}
 }
+
+// CI shards the coverage run: each shard passes the -coverpkg value that
+// covreport -print-coverpkg prints, then covreport -profile merges them.
+func TestMeasuredPkgsListsTheShippedPackagesOfARepo(t *testing.T) {
+	root := t.TempDir()
+	files := map[string]string{
+		"go.mod":                  "module example.com/m\n\ngo 1.21\n",
+		"internal/a/a.go":         "package a\n",
+		"internal/a/fake/fake.go": "package fake\n",
+		"internal/other/o.go":     "package other\n",
+		"systems.txt":             "One: internal/a\nexclude: internal/a/fake\n",
+	}
+	for name, body := range files {
+		p := filepath.Join(root, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := measuredPkgs(root, "systems.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "example.com/m/internal/a" {
+		t.Fatalf("got %q", got)
+	}
+}

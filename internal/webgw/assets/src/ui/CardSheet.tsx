@@ -127,6 +127,10 @@ export function CardSheet({ id }: { id: string }) {
         by={by}
         onAnswer={answer}
         onLater={closeCard}
+        onCancel={() => {
+          toast("info", t("card.cancelled"));
+          closeCard();
+        }}
         onClose={closeCard}
         onLaptop={closeCard}
       >

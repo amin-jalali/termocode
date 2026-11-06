@@ -46,6 +46,13 @@ func UnstageLines(dir, file string, from, to int) error {
 	return applyLines(dir, file, from, to, true, true, true)
 }
 
+// UnstageIndexLines takes the staged changes on lines from..to of the
+// index's text (the rows a staged diff shows) out of the index; the
+// working file keeps them.
+func UnstageIndexLines(dir, file string, from, to int) error {
+	return applyLines(dir, file, from, to, true, true, true)
+}
+
 // DiscardLines reverts the unstaged changes on lines from..to of the working
 // file. The working file is rewritten: this cannot be undone.
 func DiscardLines(dir, file string, from, to int) error {

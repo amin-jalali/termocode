@@ -28,7 +28,31 @@ export interface FrameOpts {
   ai?: { inline: boolean; nes: boolean; hint?: string };
   /** vim: Vim mode (WEBP-1; the page's per-browser choice). */
   vim?: boolean;
+  /** comment is the file type's line comment ("//", "#"); none: the
+   * file has no line comment and Toggle Line Comment does nothing. */
+  comment?: string;
 }
+
+/** EditAct is one of the editor's line and text commands (the command
+ * list's Edit: and View: fold entries, as the laptop's editor has them).
+ * Each edit is one step of the user's own undo. */
+export type EditAct =
+  | "copyLinesDown"
+  | "commentLine"
+  | "foldAll"
+  | "unfoldAll"
+  | "toggleFold"
+  | "joinLines"
+  | "sortLinesAsc"
+  | "sortLinesDesc"
+  | "reverseLines"
+  | "upperCase"
+  | "lowerCase"
+  | "trimWhitespace"
+  | "tabsToSpaces"
+  | "spacesToTabs"
+  | "collapseBlankLines"
+  | "replaceInFile";
 
 /** FrameMarker is one diagnostic for the editor's squiggles: rows and
  * columns 1-based in the editor's units (UTF-16), the end excluded. */
@@ -61,7 +85,11 @@ export interface FrameBlame {
 }
 
 /** LspKind is what the frame asks the page about a position. */
-export type LspKind = "hover" | "complete" | "definition";
+export type LspKind = "hover" | "complete" | "definition" | NavKind;
+
+/** NavKind is a go-to the command list runs: the type definition or the
+ * implementation at the caret. */
+export type NavKind = "typedef" | "impl";
 
 /** AiKind is what the frame asks the laptop's AI: ghost text at the
  * caret, the next edit after a pause, or "seed" (the editor opened: the
@@ -69,7 +97,7 @@ export type LspKind = "hover" | "complete" | "definition";
 export type AiKind = "complete" | "next_edit" | "seed";
 
 /** AiAct is one of the editor's AI actions. */
-export type AiAct = "explain" | "fix" | "edit" | "doc";
+export type AiAct = "explain" | "fix" | "edit" | "doc" | "attach";
 
 /** AiAt is where an AI action works: the selected rows start…end
  * (0-based, end not included; start === end: no selection) and the
@@ -91,6 +119,16 @@ export interface FrameDiff {
   /** revert: each change has an arrow in the gutter that takes it back
    * (an AI suggestion: reject one change, keep the others). */
   revert?: boolean;
+}
+
+/** FrameHint is one inlay hint: its place (1-based row and column, in
+ * the editor's units) and its text, with the space around it. */
+export interface FrameHint {
+  line: number;
+  col: number;
+  label: string;
+  padLeft?: boolean;
+  padRight?: boolean;
 }
 
 /** GlyphKind is what the editor's glyph margin shows on a row: a
@@ -142,7 +180,7 @@ export type ToFrame =
   | { t: "reveal"; line: number; col?: number }
   /** edit: a context menu choice. cut drops the selection (the page put
    * it on the clipboard); def, refs and format run the editor's own action. */
-  | { t: "edit"; op: "cut" | "def" | "refs" | "format" }
+  | { t: "edit"; op: "cut" | "def" | "refs" | "format" | NavKind }
   /** markers: the file's diagnostics (all of them, each time). */
   | { t: "markers"; items: FrameMarker[] }
   /** glyphs: the glyph margin's marks (all of them, each time) and the
@@ -151,6 +189,13 @@ export type ToFrame =
   /** aiAct: run an AI action on the selection (the frame answers with
    * its own aiAct, which names the rows). */
   | { t: "aiAct"; kind: AiAct }
+  /** hints: the inlay hints to show (all of them, each time; [] hides them). */
+  | { t: "hints"; items: FrameHint[] }
+  /** snippet: insert a snippet at the cursor (the protocol's snippet
+   * syntax: $1, ${2:name}, $0) as the user's own edit. */
+  | { t: "snippet"; body: string }
+  /** act: run a line or text command on the selection (or the caret's row). */
+  | { t: "act"; id: EditAct }
   /** lspRes answers the frame's lsp question id (data null: nothing). */
   | { t: "lspRes"; id: number; data: unknown };
 
@@ -172,7 +217,9 @@ export type FromFrame =
   | { t: "viewport"; first: number; last: number }
   /** diff: the diff editor counted its changes (after each change). */
   | { t: "diff"; changes: number; added: number; removed: number }
-  | { t: "cursor"; line: number; col: number }
+  /** cursor: the caret, and the rows from..to (1-based) the selection
+   * covers (the caret's row when nothing is selected). */
+  | { t: "cursor"; line: number; col: number; from?: number; to?: number }
   | { t: "save" }
   /** menu: a right click at (x, y) in the frame; sel is the selected text. */
   | { t: "menu"; x: number; y: number; sel: string; readOnly: boolean; can: MenuCan; at: AiAt }
@@ -183,6 +230,8 @@ export type FromFrame =
   | { t: "ai"; id: number; kind: AiKind; line: number; col: number; manual?: boolean }
   /** aiAct: the user ran an AI action from the keyboard (Ctrl/Cmd+I: Edit). */
   | { t: "aiAct"; kind: AiAct; at: AiAt }
+  /** navNone: a go-to found nothing at the caret. */
+  | { t: "navNone"; kind: NavKind }
   /** refs: the user asked for the references at a position (0-based). */
   | { t: "refs"; line: number; col: number }
   /** open: go to another file (a definition there), 0-based. */

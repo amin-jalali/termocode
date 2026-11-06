@@ -10,6 +10,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // Side chat (OMX-30): a quick question while the main chat works. The
@@ -40,6 +41,7 @@ type aiSideChat struct {
 type aiSideDoneMsg struct {
 	chat, question, answer string
 	err                    error
+	web                    *webCall // the page's chat.side waits for it (nil: the laptop asked)
 }
 
 const aiSideSystem = "You answer a quick side question while the user's main AI chat keeps working. " +
@@ -67,7 +69,11 @@ func (m *Model) openAISide() tea.Cmd {
 
 // onAISideQuestion sends a side question; the cmd answers with
 // aiSideDoneMsg.
-func (m *Model) onAISideQuestion(q string) tea.Cmd {
+func (m *Model) onAISideQuestion(q string) tea.Cmd { return m.aiSideAsk(q, nil) }
+
+// aiSideAsk sends a side question for the laptop's prompt (web nil) or
+// the page's chat.side (web: its call gets the answer, or why not).
+func (m *Model) aiSideAsk(q string, web *webCall) tea.Cmd {
 	s := m.aiS()
 	q = strings.TrimSpace(q)
 	if q == "" || s.side.busy {
@@ -76,6 +82,10 @@ func (m *Model) onAISideQuestion(q string) tea.Cmd {
 	slot, err := s.resolveSlot(ai.SlotQuick)
 	if err != nil {
 		if slot, err = s.resolveSlot(ai.SlotMain); err != nil {
+			if web != nil {
+				web.fail(webproto.CodeConflict, "The AI profile on the laptop has no model for a side question.")
+				return nil
+			}
 			return m.aiProfileProblem("side chat", err)
 		}
 	}
@@ -99,7 +109,7 @@ func (m *Model) onAISideQuestion(q string) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), aiMemoryTimeout)
 		defer cancel()
 		text, last := ai.Collect(slot.p.Stream(ctx, req))
-		return aiSideDoneMsg{chat: chat, question: q, answer: strings.TrimSpace(ai.Redact(text)), err: last.Err}
+		return aiSideDoneMsg{chat: chat, question: q, answer: strings.TrimSpace(ai.Redact(text)), err: last.Err, web: web}
 	}
 }
 
@@ -108,10 +118,17 @@ func (m *Model) onAISideQuestion(q string) tea.Cmd {
 func (m *Model) onAISideDone(msg aiSideDoneMsg) tea.Cmd {
 	s := m.aiS()
 	if s.side.chat != msg.chat {
+		if msg.web != nil {
+			msg.web.fail(webproto.CodeConflict, "Another chat was opened on the laptop.")
+		}
 		return nil // the main chat changed: the side chat went with it
 	}
 	s.side.busy = false
 	if msg.err != nil {
+		if msg.web != nil {
+			msg.web.fail(webproto.CodeConflict, webText("The side question failed: "+ai.Redact(msg.err.Error())))
+			return nil
+		}
 		var c tea.Cmd
 		m.toast, c = m.toast.PushDetail(toast.Warn, "Side question failed", ai.Redact(msg.err.Error()))
 		return c
@@ -121,6 +138,10 @@ func (m *Model) onAISideDone(msg aiSideDoneMsg) tea.Cmd {
 		ai.Message{Role: ai.RoleAssistant, Content: msg.answer})
 	if n := len(s.side.msgs); n > aiSideMax {
 		s.side.msgs = s.side.msgs[n-aiSideMax:]
+	}
+	if msg.web != nil {
+		msg.web.reply(webproto.ChatSide{Answer: msg.answer})
+		return nil // the page shows it: no card on the laptop
 	}
 	if m.confirmOpen || m.promptOpen || m.pickerOpen {
 		s.side.unread = true

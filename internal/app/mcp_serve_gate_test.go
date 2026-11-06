@@ -66,6 +66,8 @@ var mcpServeGateCases = []mcpServeGateCase{
 	{"git_log", nil, false},
 	{"git_blame", map[string]any{"path": "main.go"}, false},
 	{"git_branch", nil, false},
+	{"worktrees_list", nil, false},
+	{"worktree_note", map[string]any{"text": "a note"}, false},
 	{"services_list", nil, false},
 	{"services_status", nil, false},
 	{"services_logs", map[string]any{"name": "all"}, false},

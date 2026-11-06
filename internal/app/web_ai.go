@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 	"unicode/utf16"
@@ -341,6 +342,18 @@ func (m *Model) webAIAction(call *webCall) tea.Cmd {
 	}
 	var title, instr string
 	switch a.Kind {
+	case webproto.AIAttach: // AI: Add File / Selection to Chat (aiAttachCurrent)
+		label, text := filepath.Base(b.path), strings.Join(full, "\n")
+		if t.hadSelection {
+			label += fmt.Sprintf(":%d-%d", a.Start+1, a.End)
+			text = strings.Join(full[a.Start:a.End], "\n")
+		}
+		if len(text) > aiMaxAttach {
+			text = text[:aiMaxAttach] + "\n… [truncated]"
+		}
+		s.attachments = append(s.attachments, aiAttachment{Label: label, Text: text})
+		call.reply(webproto.AIAction{Kind: a.Kind, Chat: true, ChatID: s.conv.ID, Lines: []string{}})
+		return m.aiInfo("Attached " + label + " to the AI chat from the web")
 	case webproto.AIExplain:
 		if s.streaming {
 			call.fail(webproto.CodeBusy, "The AI is still answering. Stop it or wait.")

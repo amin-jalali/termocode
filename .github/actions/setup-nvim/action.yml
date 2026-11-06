@@ -1,0 +1,54 @@
+name: Set up Neovim
+description: >-
+  Puts a pinned Neovim release on PATH (Linux x86_64 or macOS). The release
+  tarball is kept in the Actions cache, so a run does not download it again.
+inputs:
+  version:
+    description: Neovim release tag, e.g. v0.12.2
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Pick the tarball
+      id: pick
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "$RUNNER_OS" = Linux ]; then
+          name=nvim-linux-x86_64
+        else
+          case "$(uname -m)" in arm64) name=nvim-macos-arm64 ;; *) name=nvim-macos-x86_64 ;; esac
+        fi
+        echo "name=$name" >> "$GITHUB_OUTPUT"
+        echo "dir=$HOME/.cache/nvim-release/${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+
+    - name: Cache the tarball
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pick.outputs.dir }}
+        key: nvim-${{ steps.pick.outputs.name }}-${{ inputs.version }}
+
+    - name: Download (cache miss)
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        DIR: ${{ steps.pick.outputs.dir }}
+        NAME: ${{ steps.pick.outputs.name }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$DIR"
+        curl -fsSL --retry 3 -o "$DIR/$NAME.tar.gz" \
+          "https://github.com/neovim/neovim/releases/download/${VERSION}/${NAME}.tar.gz"
+
+    - name: Unpack and put on PATH
+      shell: bash
+      env:
+        DIR: ${{ steps.pick.outputs.dir }}
+        NAME: ${{ steps.pick.outputs.name }}
+      run: |
+        set -euo pipefail
+        tar -xzf "$DIR/$NAME.tar.gz" -C "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/$NAME/bin" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/$NAME/bin/nvim" --version | head -1

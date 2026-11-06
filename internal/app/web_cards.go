@@ -255,6 +255,15 @@ func (m *Model) webCards(p *webCardsPub, diffs bool) []webCardRef {
 				Body: body, Choices: []webproto.CardChoice{deny, allow}})
 		}
 	}
+	if g := m.wfGate; g != nil { // workflow writes (web_workflows.go)
+		asks := append([]*WorkflowWriteAsk(nil), g.queue...)
+		if g.cur != nil {
+			asks = append([]*WorkflowWriteAsk{g.cur}, asks...)
+		}
+		for _, a := range asks {
+			add(a, webWorkflowCard(a, deny, allow))
+		}
+	}
 	if s != nil {
 		if rm := s.aiPlanWaiting(); rm != nil {
 			title := "Approve this plan?"

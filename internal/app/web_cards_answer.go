@@ -99,6 +99,8 @@ func (m *Model) webAnswerCard(ref *webCardRef, choice string) tea.Cmd {
 			}
 		}
 		return m.mcpServePump()
+	case *WorkflowWriteAsk:
+		return m.webAnswerWorkflowGate(obj, choice)
 	case *aiPlanWait:
 		if m.confirmOpen && m.confirmKind == confirmKindAIPlan {
 			m.confirmOpen = false
@@ -135,6 +137,12 @@ func webAuditArgs(ref *webCardRef) string {
 		return "tool=" + obj.tool.Name + " client=" + obj.client
 	case *aiReviewItem:
 		return "file=" + ref.card.File
+	case *WorkflowWriteAsk:
+		args := "workflow=" + obj.Workflow + " step=" + obj.Step
+		if obj.Item != "" {
+			args += " item=" + obj.Item
+		}
+		return args
 	}
 	return ""
 }
