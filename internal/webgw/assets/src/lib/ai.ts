@@ -91,7 +91,7 @@ async function runAction(kind: AiAct, path: string, buf: number, at: AiAt, instr
     const r = (await link.request("ai.action", { buf, tick: s.tick, kind, start: at.start, end: at.end, line: at.line, instruction })) as AIAction;
     if (r.chat) {
       setPanes({ chat: true });
-      return void toast("ok", t("ai.asked_chat"));
+      return void toast("ok", t(kind === "attach" ? "ai.attached" : "ai.asked_chat"));
     }
     if (r.none) return void toast("info", t("ai.no_change"));
     const rows = s.text.split("\n");

@@ -67,6 +67,8 @@ type GitMsg struct {
 	KeepGraph bool
 	// Rebase: an interactive rebase stopped here (git_rebase.go banner).
 	Rebase git.RebaseState
+	// Stopped: a merge, cherry-pick or revert stopped here (git_merge_branch.go).
+	Stopped string
 	// Seq: when the read started (gitReadSeq). Refreshes run at the same
 	// time and can end out of order; one that started before the last
 	// applied one is dropped. 0: always applied.
@@ -92,7 +94,7 @@ const gitGraphLimit = 200
 func fetchGitCmd() tea.Cmd {
 	return func() tea.Msg {
 		seq := gitReadSeq.Add(1)
-		cwd, err := procRootDir()
+		rd, err := gitReaderOf(procWorkspace())
 		if err != nil {
 			return GitMsg{}
 		}
@@ -103,14 +105,14 @@ func fetchGitCmd() tea.Cmd {
 		done := make(chan struct{})
 		crash.Go("reading the git graph", func() {
 			defer close(done) // also after a panic, so the refresh goes on
-			graph, more, _ = gitGraphCommits(cwd, 0, gitGraphLimit)
+			graph, more, _ = rd.commits(gitGraphLimit)
 		})
-		st, err := git.StatusBranch(cwd)
+		st, err := rd.status()
 		<-done
 		if err != nil {
 			return GitMsg{IsRepo: false, Seq: seq}
 		}
-		return GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Graph: graph, More: more, Rebase: git.RebaseStatus(cwd), Seq: seq}
+		return GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Graph: graph, More: more, Rebase: rd.rebase(), Stopped: rd.stopped(), Seq: seq}
 	}
 }
 
@@ -124,29 +126,33 @@ func (m *Model) pollGitCmd() tea.Cmd {
 	limit := max(gitGraphLimit, len(m.gitCommits))
 	branch := m.gitBranch
 	stale := clock.Now().Sub(m.gitGraphAt) > gitGraphMaxAge
-	cwd, cwdErr := m.rootDir()
+	rd, rdErr := gitReaderOf(m.workspace())
 	gate := m.gitGate
+	if rd.remote {
+		// The gate refreshes the local index; a container's is its own.
+		gate = nil
+	}
 	return func() tea.Msg {
-		if cwdErr != nil {
+		if rdErr != nil {
 			return GitMsg{}
 		}
 		seq := gitReadSeq.Add(1)
 		if gate != nil {
 			gate.beforeRead()
 		}
-		st, err := git.StatusBranch(cwd)
+		st, err := rd.status()
 		if gate != nil {
-			gate.afterRead(cwd, err == nil, st.Files) // after status: it may refresh the index
+			gate.afterRead(rd.dir, err == nil, st.Files) // after status: it may refresh the index
 		}
 		if err != nil {
 			return GitMsg{IsRepo: false, Seq: seq}
 		}
-		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Rebase: git.RebaseStatus(cwd), Seq: seq}
+		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Rebase: rd.rebase(), Stopped: rd.stopped(), Seq: seq}
 		if !stale && graphHead != "" && strings.HasPrefix(st.OID, graphHead) && st.Branch == branch {
 			msg.KeepGraph = true
 			return msg
 		}
-		msg.Graph, msg.More, _ = gitGraphCommits(cwd, 0, limit)
+		msg.Graph, msg.More, _ = rd.commits(limit)
 		return msg
 	}
 }
@@ -178,6 +184,7 @@ func (m *Model) applyGitSnapshot(msg GitMsg) {
 	m.gitLoaded = true
 	m.gitBranch = msg.Branch
 	m.gitRebase = msg.Rebase
+	m.gitStopped = msg.Stopped
 	m.gitFiles = msg.Files
 	m.setGitCommits(msg.Graph, msg.More)
 	// Clamp against the visible-row count: the accordion interleaves
@@ -388,6 +395,8 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea
 		return m, m.gitShowMore()
 	case gitRowRebase:
 		m.openRebaseControl()
+	case gitRowStopped:
+		return m, m.openGitOpControl()
 	}
 	return m, nil
 }

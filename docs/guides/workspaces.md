@@ -144,6 +144,27 @@ When a layout opens:
   its folder. A tab with a single shell gets the panes its entry lists.
 - Zen mode ends, so the layout shows.
 
+## Start the session at login
+
+`termocode service install` makes the session of a folder come back
+after a reboot (and so the workflows running in it).
+
+```
+cd ~/proj
+termocode service install      # shows the file, asks [y/N], default no
+termocode service status
+termocode service uninstall
+```
+
+- Linux: a systemd user unit in `~/.config/systemd/user/`. To start it at
+  boot even when you are not logged in, run once `loginctl enable-linger $USER`.
+- macOS: a LaunchAgent in `~/Library/LaunchAgents/`. It starts at login.
+- Only files in your home folder are written. No sudo.
+- `uninstall` removes only a file that termocode wrote (it has a marker
+  line). A file you made yourself is never touched or overwritten.
+- `--yes` skips the question; `--dir d` picks another folder.
+- Termux (Android) has no user services; the command says so.
+
 ## Start fresh
 
 - **Developer: Reset Session** clears the saved tabs and cursor history of

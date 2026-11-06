@@ -88,7 +88,7 @@ func TestWebParityGate(t *testing.T) {
 		}
 		want[name] = true
 	}
-	cmds := srcText(t, "lib/commands.ts", "views/git/gitcommands.ts")
+	cmds := srcText(t, "lib/commands.ts", "views/git/gitcommands.ts", "views/desk/dbcommands.ts", "lib/morecmds.ts")
 	bar := srcText(t, "ui/ActivityBar.tsx")
 	ops := map[string]bool{}
 	for _, p := range webproto.Ops() {
@@ -123,8 +123,9 @@ func TestWebParityGate(t *testing.T) {
 		switch r.kind {
 		case "web":
 			if r.detail == "palette" {
-				if _, ok := webPaletteAllow[r.id]; !ok {
-					t.Errorf("%s: says palette, but it is not on webPaletteAllow", r.id)
+				_, form := webPaletteLaptopForms[r.id]
+				if _, ok := webPaletteAllow[r.id]; !ok && !form {
+					t.Errorf("%s: says palette, but it is not on webPaletteAllow or webPaletteLaptopForms", r.id)
 				}
 			} else if !refOK(r.detail) {
 				t.Errorf("%s: the web ref %q does not exist (op, workbench command or activity id)", r.id, r.detail)
@@ -156,6 +157,11 @@ func TestWebParityGate(t *testing.T) {
 	for id := range webPaletteAllow {
 		if seen[id] != "web" {
 			t.Errorf("%s is on webPaletteAllow but not a web row", id)
+		}
+	}
+	for id := range webPaletteLaptopForms {
+		if seen[id] != "web" {
+			t.Errorf("%s is on webPaletteLaptopForms but not a web row", id)
 		}
 	}
 	sort.Strings(missing)

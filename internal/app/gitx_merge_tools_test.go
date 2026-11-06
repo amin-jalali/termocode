@@ -45,7 +45,7 @@ func TestGitxMergeAIResolve(t *testing.T) {
 	p := &recordingAIProvider{replies: []ai.Chunk{{Delta: "```\nours and theirs\n```"}}}
 	m.aiS().provider = p
 	cmd := m.dispatchPaletteAction("git-merge-ai-resolve")
-	done := gitxRunDone(t, &m, cmd)
+	done := gitxMergeRunDone(t, &m, cmd)
 	if !done {
 		t.Fatal("no AI answer came back")
 	}
@@ -96,9 +96,9 @@ func TestGitxAIReview(t *testing.T) {
 	}
 }
 
-// gitxRunDone runs cmd (and batches) until a gitxDoneMsg comes, and
+// gitxMergeRunDone runs cmd (and batches) until a gitxDoneMsg comes, and
 // applies it.
-func gitxRunDone(t *testing.T, m *Model, cmd tea.Cmd) bool {
+func gitxMergeRunDone(t *testing.T, m *Model, cmd tea.Cmd) bool {
 	t.Helper()
 	var walk func(c tea.Cmd) bool
 	walk = func(c tea.Cmd) bool {

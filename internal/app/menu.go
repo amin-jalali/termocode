@@ -45,6 +45,9 @@ const (
 	gitMenuRefresh  = "git-refresh"
 	gitMenuShowRaw  = "git-show-raw"
 	gitMenuRebase   = "git-rebase-from" // git_rebase.go
+	// GITX-2 (git_branch_ops.go).
+	gitMenuBranchHere     = "git-branch-here"
+	gitMenuCheckoutCommit = "git-checkout-commit"
 
 	// Action-bar overflow (⋯) menu.
 	gitMenuAmend     = "git-amend"
@@ -54,6 +57,12 @@ const (
 	gitMenuPull      = "git-pull"
 	gitMenuFetch     = "git-fetch"
 	gitMenuSync      = "git-sync"
+	// GITX-7, GITX-20 (git_bulk.go).
+	gitMenuCommitPush     = "git-commit-push"
+	gitMenuCommitSync     = "git-commit-sync"
+	gitMenuUnstageAll     = "git-unstage-all"
+	gitMenuDiscardAll     = "git-discard-all"
+	gitMenuCleanUntracked = "git-clean-untracked"
 )
 
 // gitFileMenuItems builds the right-click menu for a changed file. willStage
@@ -82,6 +91,8 @@ func gitCommitMenuItems() []menu.Item {
 		{ID: gitMenuCopyMsg, Title: "Copy Commit Message", Icon: "⎘"},
 		{ID: gitMenuShowRaw, Title: "Show Raw (git show)", Icon: "≢"},
 		{ID: gitMenuRebase, Title: "Rebase from Here…", Icon: "⇅"},
+		{ID: gitMenuBranchHere, Title: "Create Branch Here…", Icon: "⑂"},
+		{ID: gitMenuCheckoutCommit, Title: "Check Out This Commit (Detached)", Icon: "⎇"},
 		{Sep: true},
 		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
 	}
@@ -157,6 +168,10 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
 			return m.gitRebaseFromCmd(m.gitCommits[cur.ci].FullHash)
 		}
+	case gitMenuBranchHere:
+		return m.gitBranchHereFromRow()
+	case gitMenuCheckoutCommit:
+		return m.gitCheckoutCommitFromRow()
 	case gitMenuRefresh:
 		return fetchGitCmd()
 	}
@@ -170,11 +185,17 @@ func gitActionsMenuItems() []menu.Item {
 		{ID: gitMenuAmend, Title: "Commit (Amend)", Icon: "✎"},
 		{ID: gitMenuSignoff, Title: "Commit (Sign-off)", Icon: "✍"},
 		{ID: gitMenuCommitMsg, Title: "Commit Message…", Icon: "≡"},
+		{ID: gitMenuCommitPush, Title: "Commit and Push", Icon: "↑"},
+		{ID: gitMenuCommitSync, Title: "Commit and Sync", Icon: "⟳"},
 		{Sep: true},
 		{ID: gitMenuSync, Title: "Sync", Icon: "⟳"},
 		{ID: gitMenuPush, Title: "Push", Icon: "↑"},
 		{ID: gitMenuPull, Title: "Pull", Icon: "↓"},
 		{ID: gitMenuFetch, Title: "Fetch", Icon: "⇊"},
+		{Sep: true},
+		{ID: gitMenuUnstageAll, Title: "Unstage All", Icon: "−"},
+		{ID: gitMenuDiscardAll, Title: "Discard All Changes…", Icon: "↩"},
+		{ID: gitMenuCleanUntracked, Title: "Delete Untracked Files…", Icon: "✕"},
 		{Sep: true},
 		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
 	}
@@ -212,6 +233,8 @@ func (m *Model) handleGitActionsMenuSelect(id string) tea.Cmd {
 		return m.gitSync()
 	case gitMenuPush:
 		return m.gitPush()
+	case gitMenuCommitPush, gitMenuCommitSync, gitMenuUnstageAll, gitMenuDiscardAll, gitMenuCleanUntracked:
+		return m.dispatchPaletteAction(id)
 	case gitMenuPull:
 		return m.gitPull()
 	case gitMenuFetch:

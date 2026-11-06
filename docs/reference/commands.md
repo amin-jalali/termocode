@@ -52,6 +52,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Move Secrets to a Safer Store… | `secrets-migrate` |   |   |
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
+| AI: New Workflow… | `workflow-new` |   |   |
 | AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` / `Alt+N` | `Alt+Shift+P / Alt+N` |
 | AI: Next Reasoning Level | `ai-reasoning-next` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
@@ -91,6 +92,11 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
+| Agent: Race Compare | `agent-race-compare` |   |   |
+| Agent: Race… | `agent-race` |   |   |
+| Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
+| Agent: Sessions… | `agent-sessions` |   | `resume or read a past session` |
 | Agent: Start Claude Code | `agent-start-claude` |   |   |
 | Agent: Start Codex | `agent-start-codex` |   |   |
 | Agent: Start Gemini CLI | `agent-start-gemini` |   |   |
@@ -342,12 +348,24 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
 | Git: Add to .gitignore… | `git-ignore-file` |   |   |
+| Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
+| Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
+| Git: Autosquash fixup! Commits… | `git-autosquash` |   |   |
+| Git: Blame Before This Change | `git-blame-before` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
+| Git: Blame Options… | `git-blame-options` |   |   |
 | Git: CI and Pull Request… | `git-ci` |   |   |
+| Git: Cherry-pick from Branch… | `git-cherry-pick-branch` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
+| Git: Commit and Push | `git-commit-push` |   |   |
+| Git: Commit and Sync | `git-commit-sync` |   |   |
 | Git: Commit... | `git-commit` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
+| Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
+| Git: Delete Branch… | `git-branch-delete` |   |   |
+| Git: Delete Untracked Files… | `git-clean-untracked` |   |   |
+| Git: Discard All Changes… | `git-discard-all` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
@@ -363,6 +381,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
+| Git: Merge Branch… | `git-merge-branch` |   |   |
 | Git: Merge View: AI Resolve Conflict… | `git-merge-ai-resolve` |   | `i` |
 | Git: Merge View: Close | `git-merge-close` |   | `Esc` |
 | Git: Merge View: Mark as Resolved | `git-merge-resolve` |   | `r` |
@@ -379,7 +398,11 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Merge View: Take Theirs | `git-merge-take-theirs` |   | `t` |
 | Git: Merge View: Take Theirs for the Whole File | `git-merge-take-all-theirs` |   | `T` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
+| Git: Merge in Progress (Continue / Abort)… | `git-merge-status` |   |   |
+| Git: Open Commit of Line | `git-blame-commit` |   |   |
 | Git: Open Merge View | `git-merge-open` |   |   |
+| Git: Open Next Revision of File | `git-rev-next` |   |   |
+| Git: Open Previous Revision of File | `git-rev-prev` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull (Rebase) | `git-pull-rebase` |   |   |
@@ -388,16 +411,20 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Push | `git-push` |   |   |
 | Git: Push to… | `git-push-to` |   |   |
 | Git: Push… (Show Outgoing Commits First) | `git-push-preview` |   |   |
+| Git: Rebase Current Branch onto… | `git-rebase-onto` |   |   |
 | Git: Rebase in Progress (Continue / Skip / Abort)… | `git-rebase-status` |   |   |
 | Git: Redo Undone Git Action | `git-redo` |   |   |
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
+| Git: Rename Branch… | `git-branch-rename` |   |   |
+| Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Search Log… | `git-log-search` |   |   |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Folder History… | `git-log-folder` |   |   |
 | Git: Show Incoming Commits… | `git-incoming` |   |   |
+| Git: Show Line History | `git-line-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |
 | Git: Show Outgoing Commits… | `git-outgoing` |   |   |
 | Git: Show Stash List... | `git-stash-list` |   |   |
@@ -411,8 +438,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle All Branches in GRAPH | `git-graph-all` |   |   |
 | Git: Toggle Auto Fetch | `git-auto-fetch` |   |   |
+| Git: Toggle Blame Annotations | `git-blame-annotate` |   |   |
+| Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
+| Git: Toggle Inline Blame | `git-inline-blame` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
+| Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
 
@@ -657,12 +688,46 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Web: Start Panel | `web-start-panel` |   |   |
 | Web: Stop Panel | `web-stop` |   |   |
 
+## Workflows
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Workflows: Dry Run Selected… | `workflow-dry-run` |   |   |
+| Workflows: Edit Selected File | `workflow-edit-file` |   |   |
+| Workflows: History of Selected | `workflow-history` |   |   |
+| Workflows: Open | `workflows` |   |   |
+| Workflows: Run Selected… | `workflow-run` |   |   |
+| Workflows: Stop Selected Run… | `workflow-stop` |   |   |
+| Workflows: Turn Selected On/Off… | `workflow-enable` |   |   |
+
 ## Workspace
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Workspace: Add Folder... | `workspace-add-folder` |   |   |
 | Workspace: Remove Folder... | `workspace-remove-folder` |   |   |
+
+## Worktree
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Worktree: Add Selected as Folder | `worktree-add-folder` |   |   |
+| Worktree: Adopt Selected | `worktree-adopt` |   |   |
+| Worktree: Archive or Restore Selected… | `worktree-archive` |   |   |
+| Worktree: Clean Up… | `worktree-cleanup` |   |   |
+| Worktree: Delete Selected… | `worktree-delete` |   |   |
+| Worktree: Forget Gone Selected | `worktree-forget` |   |   |
+| Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
+| Worktree: Link Issue or PR… | `worktree-link` |   |   |
+| Worktree: New Child of Selected… | `worktree-new-child` |   |   |
+| Worktree: New… | `worktree-new` |   |   |
+| Worktree: Next Filter | `worktree-filter` |   |   |
+| Worktree: Open Selected | `worktree-open` |   |   |
+| Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
+| Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
+| Worktree: Show Notes of Selected | `worktree-notes` |   |   |
+| Worktree: Show Setup Log | `worktree-setup-log` |   |   |
+| Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
 
 ## termocode
 

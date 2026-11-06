@@ -146,7 +146,7 @@ func SearchLog(dir string, f LogFilter, limit int) ([]LogEntry, error) {
 	}
 	out, err := runCombined(dir, "git", args...)
 	if err != nil {
-		if !hasCommits(dir) {
+		if !hasCommits(localGit(dir)) {
 			return nil, nil
 		}
 		return nil, err

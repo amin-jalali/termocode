@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -80,12 +81,20 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 	if err := m.nvim.ExecLuaResult(agentTailLua, &raw, buf, agentTailLines); err != nil {
 		return nil
 	}
-	st := agents.Detect(t.Agent, strings.Split(raw, "\n"))
+	lines := strings.Split(raw, "\n")
+	st := agents.Detect(t.Agent, lines)
+	if task := agentFirstTaskDue(t, lines); task != "" {
+		t.FirstTask = "" // at most once
+		m.agentType(t.BufID, task)
+	}
 	if st == agents.Unknown || st == t.AgentState {
 		return nil
 	}
 	t.AgentState = st
-	m.agentRollupSync() // OMX-35
+	m.agentRollupSync()     // OMX-35
+	if m.raceLaneBuf(buf) { // a race lane says its own news (agent_race.go)
+		return m.raceOnAgentState(buf, st)
+	}
 	if st == agents.Done {
 		return m.notifyOS("Agent run ended")
 	}
@@ -167,8 +176,22 @@ func agentPaletteFilter(items []picker.Item) []picker.Item {
 
 // dispatchAgentPalette handles "agent-start-<id>".
 func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
-	if id == agentPickerPaletteID { // Agent: Start… (agent_picker.go)
+	switch id {
+	case agentPickerPaletteID: // Agent: Start… (agent_picker.go)
 		return m.openAgentPicker(), true
+	case agentRacePaletteID: // Agent: Race… (agent_race.go)
+		return m.openRaceForm("", ""), true
+	case agentRaceComparePaletteID:
+		return m.openRaceCompare(), true
+	}
+	if id == agentChatPaletteID { // Agent: Chat View (agent_chat.go)
+		return m.toggleAgentChatView(), true
+	}
+	if id == agentSessionsPaletteID { // Agent: Sessions… (agent_sessions.go)
+		return m.openAgentSessions(), true
+	}
+	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
+		return m.openAgentSessionsSearch(), true
 	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
@@ -188,6 +211,28 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 // and a failure says so in a toast. The user's own config files are never
 // touched.
 func (m *Model) agentLaunchLine(a agents.Agent) (string, tea.Cmd) {
+	return m.agentLaunchLineIn(a, "")
+}
+
+// agentLaunchLineIn is agentLaunchLine for an agent started in dir (""
+// = the workspace): the MCP server gets that folder as --dir, and the
+// line starts with a cd into it, so the agent runs there however the tab
+// was opened (AGX-2).
+func (m *Model) agentLaunchLineIn(a agents.Agent, dir string) (string, tea.Cmd) {
+	line, cmd := m.agentLaunchLineAt(a, dir)
+	if dir == "" {
+		return line, cmd
+	}
+	q, ok := agents.ShellWord(dir)
+	if !ok {
+		var c tea.Cmd
+		m.toast, c = m.toast.PushDetail(toast.Warn, a.Title+" starts in the workspace", "the folder's path has a character the shell line cannot quote")
+		return line, tea.Batch(cmd, c)
+	}
+	return "cd " + q + " && " + line, cmd
+}
+
+func (m *Model) agentLaunchLineAt(a agents.Agent, dir string) (string, tea.Cmd) {
 	if mcpServeMode() == "off" || a.MCP.Kind != agents.MCPFlag {
 		return a.Bin, nil
 	}
@@ -196,6 +241,9 @@ func (m *Model) agentLaunchLine(a agents.Agent) (string, tea.Cmd) {
 		return a.Bin, nil
 	}
 	root := aiWorkspaceRoot()
+	if dir != "" {
+		root = dir
+	}
 	file := ""
 	if a.MCP.TempFile != "" {
 		if file, err = m.writeAgentMCPFile(a, exe, root); err != nil {
@@ -217,7 +265,23 @@ func (m *Model) agentLaunchLine(a agents.Agent) (string, tea.Cmd) {
 // startAgent opens a terminal tab in the workspace and runs the agent in
 // its shell, so the shell is back when the agent quits. A tab already
 // running that agent is shown instead (no second copy by accident).
-func (m *Model) startAgent(a agents.Agent) tea.Cmd {
+func (m *Model) startAgent(a agents.Agent) tea.Cmd { return m.startAgentIn(a, "", "") }
+
+// agentStartedIn says whether tab t runs agent id in dir ("" = the
+// workspace).
+func agentStartedIn(t terminalTab, id, dir string) bool {
+	return t.Agent == id && filepath.Clean(t.Worktree+"/") == filepath.Clean(dir+"/")
+}
+
+// startAgentWithTask starts a in dir and types task once the agent shows
+// its input box (WTX-8: Create + Start).
+func (m *Model) startAgentWithTask(a agents.Agent, dir, task string) tea.Cmd {
+	return m.startAgentIn(a, dir, task)
+}
+
+// startAgentIn is startAgent in folder dir ("" = the workspace), with a
+// first task to type ("" = none).
+func (m *Model) startAgentIn(a agents.Agent, dir, task string) tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
@@ -230,27 +294,31 @@ func (m *Model) startAgent(a agents.Agent) tea.Cmd {
 		m.toggleTerminalPanel() // bring the hidden tabs back first
 	}
 	for i, t := range m.terminalTabs {
-		if t.Agent == a.ID {
+		if agentStartedIn(t, a.ID, dir) {
 			m.showPanelTab(panelKindTerminal)
 			m.switchTerminalTab(i)
 			return nil
 		}
 	}
-	if card, c := m.agentMCPCardFor(a); card != nil {
+	if card, c := m.agentMCPCardIn(a, dir); card != nil {
+		card.task = task
 		m.openAgentMCPCard(card) // OpenCode: a project file, ask first
 		return nil
 	} else if c != nil {
-		return tea.Batch(c, m.launchAgent(a))
+		return tea.Batch(c, m.launchAgentIn(a, dir, task))
 	}
-	return m.launchAgent(a)
+	return m.launchAgentIn(a, dir, task)
 }
 
 // launchAgent opens the agent's tab and types its command line.
-func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
+func (m *Model) launchAgent(a agents.Agent) tea.Cmd { return m.launchAgentIn(a, "", "") }
+
+// launchAgentIn is launchAgent in folder dir with a first task.
+func (m *Model) launchAgentIn(a agents.Agent, dir, task string) tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
-	m.newTerminalTab()
+	m.newTerminalTabIn(dir)
 	t := m.activeTerminalTab()
 	if t == nil {
 		return nil
@@ -258,9 +326,18 @@ func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
 	// Without shell integration the mark stays until the tab closes;
 	// with it, the shell's command-end clears it (term_integration.go).
 	t.Agent, t.AgentState = a.ID, agents.StartState(a.ID)
+	t.Worktree = dir
+	var taskCmd tea.Cmd
+	if task != "" {
+		if agents.HasScreenRules(a.ID) {
+			t.FirstTask = task
+		} else {
+			taskCmd = m.pushToastDetail(toast.Info, "Type the first task yourself", a.Title+"'s screen cannot be read, so termocode does not know when it is ready.")
+		}
+	}
 	// The listener first, then the line: the agent may call at once.
 	serveCmd := m.ensureMCPServeForAgent() // mcp_server auto: the agent may use the IDE's tools
-	line, launchCmd := m.agentLaunchLine(a)
+	line, launchCmd := m.agentLaunchLineIn(a, dir)
 	_ = m.nvim.ExecLua(fmt.Sprintf(`
 		local buf = %d
 		local ok, chan = pcall(function() return vim.bo[buf].channel end)
@@ -271,7 +348,7 @@ func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
 	}
 	m.applyLayout()
 	m.resizeTerminalSplit()
-	return tea.Batch(serveCmd, launchCmd, m.agentMCPHandTip(a))
+	return tea.Batch(serveCmd, launchCmd, taskCmd, m.agentMCPHandTip(a))
 }
 
 func init() {
@@ -285,4 +362,42 @@ func init() {
 	}
 	aiActionPolicies["terminal-fix-ai"] = aiNever(aiNoNested)
 	aiSettingPolicies["terminal_shell_integration"] = aiNever("changes how the user's shell starts; a file-only switch the user edits in config.json")
+}
+
+// agentFirstTaskDue is the first task to type now: the tab has one and
+// the agent shows its input box (Done), never a question or a y/n prompt
+// (WTX-8). "" = not now.
+func agentFirstTaskDue(t *terminalTab, lines []string) string {
+	if t.FirstTask == "" || !agents.InputReady(t.Agent, lines) {
+		return ""
+	}
+	return t.FirstTask
+}
+
+// agentType types text into the agent's tab and presses Enter.
+func (m *Model) agentType(buf int, text string) {
+	if m.nvim == nil {
+		return
+	}
+	_ = m.nvim.ExecLua(fmt.Sprintf(`
+		local buf = %d
+		local ok, chan = pcall(function() return vim.bo[buf].channel end)
+		if ok and chan and chan > 0 then pcall(vim.fn.chansend, chan, %q) end
+	`, buf, agentCleanTask(text)+"\r"))
+}
+
+// agentCleanTask is the task as one line (no control characters: a
+// newline would send it early, an escape could drive the agent's UI).
+func agentCleanTask(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r == '\n' || r == '\r' || r == '\t':
+			b.WriteByte(' ')
+		case r < 0x20 || r == 0x7f || (r >= 0x80 && r < 0xa0):
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return strings.TrimSpace(b.String())
 }

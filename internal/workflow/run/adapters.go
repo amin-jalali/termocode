@@ -115,7 +115,11 @@ type EachCall struct {
 
 // ItemEnv is where an item's run steps work.
 type ItemEnv struct {
-	Worktree string `json:"worktree,omitempty"`
+	Worktree string `json:"worktree,omitempty"` // the folder run steps work in
+	// ID and Branch name the item's agent worktree (git writes commit
+	// and push it); "" without one.
+	ID     string `json:"worktree_id,omitempty"`
+	Branch string `json:"branch,omitempty"`
 }
 
 // Runner runs ai, agent, pipeline, tests and shell steps. It is not
@@ -163,6 +167,8 @@ type WriteCall struct {
 	Item *Item
 	// Spec is Step.Write with every template filled.
 	Spec workflow.WriteSpec
+	// Env is the item's environment (its worktree) inside an each.
+	Env ItemEnv
 	// Marker is termocode-run:<run>/<step>/<item>. It goes at the end of
 	// every comment and PR body, so a resumed run can find a write that
 	// was sent before a crash.
@@ -177,6 +183,8 @@ type WriteCall struct {
 	Resumed bool
 	// Wait tells the run the write now waits for the user (WriteWait).
 	Wait func()
+	// Render fills templates in this write's scope (a body_file).
+	Render func(tmpl string) (string, error)
 }
 
 // ErrDenied is wrapped by a Writer (or an Ask) when the user said no.

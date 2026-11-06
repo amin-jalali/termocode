@@ -1,0 +1,1 @@
+{"t":"req","id":71,"op":"db.add","args":{"id":"app","name":"App","driver":"postgres","host":"localhost","port":5432,"user":"app","database":"app","env":"development","readonly":true}}
