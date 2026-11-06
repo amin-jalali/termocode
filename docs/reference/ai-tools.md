@@ -2117,8 +2117,13 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `focus-explorer` | View: Focus Explorer | auto |   |
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
+| `git-ai-commit-msg` | Git: Generate Commit Message with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-explain-changes` | Git: Explain Changes with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-explain-line` | Git: Explain Line's Commit with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-pr-text` | Git: Write Pull Request Description with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-review-branch` | Git: AI Review Branch (Pull Request) | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-review-changes` | Git: AI Review My Changes | never | fills the user's chat box; the user reads it and sends it |
+| `git-ai-stash` | Git: Stash with AI Message | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-auto-fetch` | Git: Toggle Auto Fetch | never | starts a timer that talks to the remote; only the user turns it on |
 | `git-autosquash` | Git: Autosquash fixup! Commits… | never | rewrites the branch history; only the user starts a rebase |
 | `git-bisect` | Git: Bisect (Find the Commit That Broke It)… | never | checks out commits one by one and asks the user which work; user only |
@@ -2136,7 +2141,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-clean-untracked` | Git: Delete Untracked Files… | confirm (always asks) |   |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
+| `git-cmd-log` | Git: Show Git Command Log | auto |   |
+| `git-co-author` | Git: Add Co-Author… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
+| `git-commit-edit` | Git: Edit Commit Message in Editor | never | opens the commit message for the user to write; use git_commit |
+| `git-commit-history` | Git: Pick Recent Commit Message… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit-push` | Git: Commit and Push | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-commit-sync` | Git: Commit and Sync | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-compare-branches` | Git: Compare Branches… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2146,7 +2155,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-conflict-ours` | Git: Accept Current Change (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-conflict-prev` | Git: Go to Previous Merge Conflict | auto |   |
 | `git-conflict-theirs` | Git: Accept Incoming Change (Conflict at Cursor) | confirm (fileWrite) |   |
+| `git-copy-commit-link` | Git: Copy Remote Link to Commit | confirm (ide) |   |
+| `git-copy-line-link` | Git: Copy Remote Link to Line | confirm (ide) |   |
 | `git-diff` | Git: Show Diff for Current File | auto |   |
+| `git-diff-clipboard` | Git: Compare Active File with Clipboard | never | reads the user's clipboard; only the user does that |
+| `git-diff-merge-parent` | Git: Diff Merge Commit Against Parent… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-discard` | Git: Discard Changes in Current File | confirm (always asks) |   |
 | `git-discard-all` | Git: Discard All Changes… | confirm (always asks) |   |
 | `git-discard-hunk` | Git: Discard Hunk (at cursor) | confirm (always asks) |   |
@@ -2199,6 +2212,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-pull-options` | Git: Pull… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-pull-rebase` | Git: Pull (Rebase) | confirm (git) |   |
 | `git-push` | Git: Push | confirm (always asks) |   |
+| `git-push-force` | Git: Force Push (with Lease)… | never | replaces commits on the remote; only the user force pushes, after typing the branch name |
 | `git-push-preview` | Git: Push… (Show Outgoing Commits First) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-push-to` | Git: Push to… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-rebase` | Git: Interactive Rebase… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2207,8 +2221,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-redo` | Git: Redo Undone Git Action | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-refresh` | Git: Refresh Status | auto |   |
+| `git-remotes` | Git: Manage Remotes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-rev-next` | Git: Open Next Revision of File | auto |   |
 | `git-rev-prev` | Git: Open Previous Revision of File | auto |   |
+| `git-signing-toggle` | Git: Toggle Commit Signing (This Repository) | never | changes how the user's commits are signed; only the user does that |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |
@@ -2220,12 +2236,19 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-stash-pop` | Git: Pop Latest Stash | confirm (git) |   |
 | `git-status-blame` | Git: Toggle Blame in Status Bar | auto |   |
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
+| `git-tag-create` | Git: Create Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-tag-delete` | Git: Delete Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-tag-delete-remote` | Git: Delete Remote Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-tag-details` | Git: Show Tag Details… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-tag-push` | Git: Push Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-uncommit` | Git: Uncommit Last Commit (Keep Changes) | confirm (git) |   |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-unstage-all` | Git: Unstage All Changes | confirm (git) |   |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |
 | `git-unstage-lines` | Git: Unstage Line (or Selected Lines) | confirm (git) |   |
+| `git-upstream-set` | Git: Set Upstream Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-upstream-unset` | Git: Unset Upstream Branch | confirm (git) |   |
 | `git-view-toggle` | Git: Toggle Tree/Flat View | auto |   |
 | `goto-impl` | LSP: Go to Implementation | auto |   |
 | `goto-line` | Go to Line... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file with line) |
@@ -2484,6 +2507,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db_redis_separator` | confirm (settings) |   |
 | `db_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `font_delta` | confirm (settings) |   |
+| `git_auto_fetch` | never | starts a timer that talks to the remote; only the user turns it on |
 | `git_blame_detect_moves` | confirm (settings) |   |
 | `git_blame_ignore_whitespace` | confirm (settings) |   |
 | `git_inline_blame` | confirm (settings) |   |

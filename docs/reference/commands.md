@@ -351,6 +351,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Add Co-Author… | `git-co-author` |   |   |
 | Git: Add to .gitignore… | `git-ignore-file` |   |   |
 | Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
 | Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
@@ -365,21 +366,33 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Commit and Push | `git-commit-push` |   |   |
 | Git: Commit and Sync | `git-commit-sync` |   |   |
 | Git: Commit... | `git-commit` |   |   |
+| Git: Compare Active File with Clipboard | `git-diff-clipboard` |   |   |
 | Git: Compare Branches… | `git-compare-branches` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
+| Git: Copy Remote Link to Commit | `git-copy-commit-link` |   |   |
+| Git: Copy Remote Link to Line | `git-copy-line-link` |   |   |
 | Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
+| Git: Create Tag… | `git-tag-create` |   |   |
 | Git: Delete Branch… | `git-branch-delete` |   |   |
+| Git: Delete Remote Tag… | `git-tag-delete-remote` |   |   |
+| Git: Delete Tag… | `git-tag-delete` |   |   |
 | Git: Delete Untracked Files… | `git-clean-untracked` |   |   |
+| Git: Diff Merge Commit Against Parent… | `git-diff-merge-parent` |   |   |
 | Git: Discard All Changes… | `git-discard-all` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
+| Git: Edit Commit Message in Editor | `git-commit-edit` |   |   |
+| Git: Explain Changes with AI | `git-ai-explain-changes` |   |   |
+| Git: Explain Line's Commit with AI | `git-ai-explain-line` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
 | Git: Fetch All Remotes (Prune) | `git-fetch-all` |   |   |
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
+| Git: Force Push (with Lease)… | `git-push-force` |   |   |
+| Git: Generate Commit Message with AI | `git-ai-commit-msg` |   |   |
 | Git: Go to Commit… | `git-goto-commit` |   |   |
 | Git: Go to HEAD in GRAPH | `git-graph-head` |   | `@` |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
@@ -389,6 +402,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Initialize Repository | `git-init` |   |   |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
 | Git: Issues… (Start Work on One) | `git-issues` |   |   |
+| Git: Manage Remotes… | `git-remotes` |   |   |
 | Git: Merge Branch… | `git-merge-branch` |   |   |
 | Git: Merge View: AI Resolve Conflict… | `git-merge-ai-resolve` |   | `i` |
 | Git: Merge View: Close | `git-merge-close` |   | `Esc` |
@@ -411,6 +425,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Open Merge View | `git-merge-open` |   |   |
 | Git: Open Next Revision of File | `git-rev-next` |   |   |
 | Git: Open Previous Revision of File | `git-rev-prev` |   |   |
+| Git: Pick Recent Commit Message… | `git-commit-history` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Publish to GitHub… | `git-publish` |   |   |
 | Git: Pull | `git-pull` |   |   |
@@ -418,6 +433,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Pull… | `git-pull-options` |   |   |
 | Git: Push | `git-push` |   |   |
+| Git: Push Tag… | `git-tag-push` |   |   |
 | Git: Push to… | `git-push-to` |   |   |
 | Git: Push… (Show Outgoing Commits First) | `git-push-preview` |   |   |
 | Git: Rebase Current Branch onto… | `git-rebase-onto` |   |   |
@@ -429,14 +445,17 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Search Log… | `git-log-search` |   |   |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
+| Git: Set Upstream Branch… | `git-upstream-set` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Folder History… | `git-log-folder` |   |   |
+| Git: Show Git Command Log | `git-cmd-log` |   |   |
 | Git: Show Incoming Commits… | `git-incoming` |   |   |
 | Git: Show Line History | `git-line-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |
 | Git: Show Outgoing Commits… | `git-outgoing` |   |   |
 | Git: Show Stash List... | `git-stash-list` |   |   |
+| Git: Show Tag Details… | `git-tag-details` |   |   |
 | Git: Show Tags... | `git-tags` |   |   |
 | Git: Stage All Changes | `git-stage-all` |   |   |
 | Git: Stage Current File | `git-stage` |   |   |
@@ -444,6 +463,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stage Line (or Selected Lines) | `git-stage-lines` | `Alt+Shift+S` | `Alt+Shift+S` |
 | Git: Stash Actions… | `git-stash-actions` |   |   |
 | Git: Stash Changes | `git-stash` |   |   |
+| Git: Stash with AI Message | `git-ai-stash` |   |   |
 | Git: Stash… | `git-stash-options` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
@@ -451,13 +471,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Toggle Auto Fetch | `git-auto-fetch` |   |   |
 | Git: Toggle Blame Annotations | `git-blame-annotate` |   |   |
 | Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
+| Git: Toggle Commit Signing (This Repository) | `git-signing-toggle` |   |   |
 | Git: Toggle Inline Blame | `git-inline-blame` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
+| Git: Unset Upstream Branch | `git-upstream-unset` |   |   |
 | Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
+| Git: Write Pull Request Description with AI | `git-ai-pr-text` |   |   |
 
 ## HTTP
 

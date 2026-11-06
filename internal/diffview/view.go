@@ -711,6 +711,9 @@ func (m Model) layout(draw bool) layoutOut {
 		if len(m.files) > 1 && m.header == nil {
 			hints = theme.HintBar(p.bg, "tab", "next file") + bg.Render("   ") + hints
 		}
+		if m.ignoreSpace { // GITX-26: say what is not shown
+			hints = theme.HintBar(p.bg, "w", "whitespace hidden") + bg.Render("   ") + hints
+		}
 		inner = append(inner, padStyled(bg.Render(" ")+hints, g.iw, bg))
 		out.rows = strings.Split(theme.FloatBox(strings.Join(inner, "\n"), g.w), "\n")
 	}

@@ -38,6 +38,8 @@ import {
   splitEditor,
   tabsIn,
   wordWrap,
+  zen,
+  escapeKey,
 } from "../lib/workbench";
 import { link, listOf, store } from "../session";
 import type { Tab } from "../state/route";
@@ -434,6 +436,10 @@ function PanelHead({ children }: { children: ComponentChildren }) {
  * frame passes on). Keys the browser keeps for itself (Ctrl+W, Ctrl+Tab
  * in a normal window) work where the browser lets them through, as in an
  * installed app window. */
+/** The Ctrl/Cmd+K chord's second key is waited for until chordUntil. */
+let chordUntil = 0;
+const CHORD_MS = 1500;
+
 function workbenchKeys(e: KeyboardEvent): void {
   const mod = e.ctrlKey || e.metaKey;
   const k = e.key.toLowerCase();
@@ -441,6 +447,17 @@ function workbenchKeys(e: KeyboardEvent): void {
     e.preventDefault();
     f();
   };
+  if (k === "escape" && !mod) escapeKey();
+  if (chordUntil > 0 && !["control", "meta", "shift", "alt"].includes(k)) {
+    const live = Date.now() < chordUntil;
+    chordUntil = 0;
+    if (live && (k === "z" || e.code === "KeyZ") && !e.altKey) return run(() => (zen.value = !zen.peek()));
+  }
+  if (mod && !e.shiftKey && !e.altKey && k === "k") {
+    e.preventDefault();
+    chordUntil = Date.now() + CHORD_MS;
+    return;
+  }
   if (e.key === "F1" || (mod && e.shiftKey && k === "p")) return run(() => (quick.value = { mode: "commands" }));
   if (e.altKey && !mod && (k === "z" || e.code === "KeyZ")) return run(() => (wordWrap.value = !wordWrap.peek()));
   if (e.ctrlKey && k === "tab") return run(() => cycleTab(e.shiftKey ? -1 : 1));
@@ -539,18 +556,21 @@ export function Workbench() {
   const asked = routeSide(r);
   if (asked && asked !== sideView.peek()) sideView.value = asked;
   const side = asked ?? sideView.value;
+  // Zen (WEBP-1): the same tree with the bars, panel and chat left out,
+  // so the editor stays as it is (its text, undo and caret).
+  const z = zen.value;
   return (
     <div
-      class={`wb${p.panel && p.panelMax ? " is-panel-max" : ""}${p.panelPos === "right" ? " is-panel-right" : ""}`}
+      class={`wb${p.panel && p.panelMax ? " is-panel-max" : ""}${p.panelPos === "right" ? " is-panel-right" : ""}${z ? " is-zen" : ""}`}
       style={{ "--side-w": p.sideW + "px", "--panel-h": p.panelH + "px", "--panel-w": p.panelW + "px", "--chat-w": p.chatW + "px" }}
     >
-      <ActivityBar />
-      {p.side && (
+      {!z && <ActivityBar />}
+      {p.side && !z && (
         <aside class="wb-side" data-side={side} aria-label={t(sideLabel(side))}>
           <SideView id={side} />
         </aside>
       )}
-      {p.side && <Sash axis="x" size={p.sideW} min={SIDE_MIN} max={SIDE_MAX} dir={1} label={t("wb.resize_side")} def={PANE_DEFAULTS.sideW} onSize={(n) => setPanes({ sideW: n })} />}
+      {p.side && !z && <Sash axis="x" size={p.sideW} min={SIDE_MIN} max={SIDE_MAX} dir={1} label={t("wb.resize_side")} def={PANE_DEFAULTS.sideW} onSize={(n) => setPanes({ sideW: n })} />}
       <div class="wb-center">
         <div class="wb-editor">
           {quick.value && <QuickInput key={quick.value.mode + (quick.value.ask?.title ?? quick.value.pick?.title ?? "")} />}
@@ -580,7 +600,7 @@ export function Workbench() {
           </div>
           <RefsPeek />
         </div>
-        {p.panel && (
+        {p.panel && !z && (
           <>
             {p.panelPos === "right" ? (
               <Sash axis="x" size={p.panelW} min={PANEL_W_MIN} max={Math.max(PANEL_W_MIN, innerWidth - 600)} dir={-1} label={t("wb.resize_panel")} def={PANE_DEFAULTS.panelW} onSize={(n) => setPanes({ panelW: n })} />
@@ -596,7 +616,7 @@ export function Workbench() {
           </>
         )}
       </div>
-      {p.chat && (
+      {p.chat && !z && (
         <>
           <Sash axis="x" size={p.chatW} min={CHAT_MIN} max={CHAT_MAX} dir={-1} label={t("wb.resize_chat")} def={PANE_DEFAULTS.chatW} onSize={(n) => setPanes({ chatW: n })} />
           <aside class={`chatcol${r.tab === "chat" ? " is-focus" : ""}`} aria-label={t("tab.chat")}>

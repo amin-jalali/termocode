@@ -18,7 +18,7 @@ import (
 // Push and pull options (GITX-12): Push… shows what goes out first,
 // Push to… another remote or branch, Pull… with merge, rebase or from
 // another branch, Fetch All Remotes, the incoming and outgoing lists and
-// an auto fetch timer (off by default, this session only).
+// an auto fetch timer (off by default; the git_auto_fetch setting keeps it).
 
 const (
 	gitxPreviewRows   = 10 // commits listed on the Push card
@@ -285,11 +285,17 @@ func (m *Model) toggleAutoFetch() tea.Cmd {
 	if gitxAutoFetch.on {
 		gitxAutoFetch.on = false
 		gitxAutoFetch.gen++
+	} else {
+		gitxAutoFetchStart()
+	}
+	if err := saveAutoFetch(gitxAutoFetch.on); err != nil { // GITX-12: the git_auto_fetch setting
+		return m.gitxFail("Settings error", err)
+	}
+	if !gitxAutoFetch.on {
 		return m.gitxInfo("Auto fetch off")
 	}
-	gitxAutoFetchStart()
 	var c tea.Cmd
-	m.toast, c = m.toast.PushDetail(toast.Info, "Auto fetch on", "Every 3 minutes, until termocode closes")
+	m.toast, c = m.toast.PushDetail(toast.Info, "Auto fetch on", "Every 3 minutes, also after a restart (setting git_auto_fetch)")
 	return c
 }
 

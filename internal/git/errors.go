@@ -38,6 +38,9 @@ func errorReason(out string) string {
 	if strings.Contains(out, "index.lock") && strings.Contains(out, "File exists") {
 		return indexLockReason
 	}
+	if signFailed(out) { // GITX-38: say how to fix it
+		return signReason(out)
+	}
 	lines := strings.Split(out, "\n")
 	find := func(match func(string) bool) string {
 		for _, l := range lines {

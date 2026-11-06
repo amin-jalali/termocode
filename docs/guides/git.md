@@ -51,6 +51,39 @@ takes every file out of the index and keeps your edits.
 Press `t` to switch between a tree view and a flat list. termocode remembers
 your choice.
 
+## Write a better commit message
+
+- **History.** In the message box, `↑` shows your older messages and `↓`
+  goes back to the newer ones and then to your draft. **Git: Pick Recent
+  Commit Message…** lists them.
+- **Template.** When git has a `commit.template`, an empty box starts with
+  its text (without the `#` lines).
+- **Length.** While you type, the box shows how long the first line is. It
+  turns amber past 50 characters, or when the second line is not blank, and
+  red past 72.
+- **Full editor.** **Git: Edit Commit Message in Editor** opens the message
+  in an editor tab. Save the file and the box takes the text. Lines that
+  start with `#` are left out. A new line shows as `⏎` in the box.
+- **Co-authors.** **Git: Add Co-Author…** lists the people who committed in
+  this repository and adds a `Co-authored-by:` line.
+
+The **▾** menu has these too.
+
+## AI help for git
+
+These need an AI provider (**AI: Configure Provider…**). termocode never
+commits, stashes or sends a chat message for you: you check the text first.
+
+| Command | What it does |
+|---|---|
+| **Git: Generate Commit Message with AI** | The AI reads the staged changes (or all changes when nothing is staged) and writes a message in the box. `↑` brings your old text back. |
+| **Git: Stash with AI Message** | The AI names the stash. You can change the name, then `Enter` stashes; `Esc` keeps the changes as they are. |
+| **Git: Explain Changes with AI** | Puts your uncommitted changes in the chat box with a question. Press `Enter` to send. |
+| **Git: Explain Line's Commit with AI** | The same for the commit that last changed the cursor line. In the **GRAPH**, right-click a commit for **Explain with AI**. |
+| **Git: Write Pull Request Description with AI** | Puts the branch's commits and files in the chat box and asks for a title and a description. |
+
+Only the changes (at most 48 KB) and your recent commit subjects go to the AI.
+
 ## Stage one hunk
 
 You do not have to stage the whole file.
@@ -140,6 +173,35 @@ blame skips the commits it lists (for example a big formatting commit).
   which commit it is and how many there are. Renames are followed.
 - **Git: Open Next Revision of File** steps forward again. After the newest
   commit you are back at the working file.
+
+## Tags
+
+| Command | What it does |
+|---|---|
+| **Git: Create Tag…** | Tags `HEAD`. Type a name, then a message. An empty message makes a lightweight tag; a message makes an annotated one. Right-click a **GRAPH** commit for **Create Tag Here…**. |
+| **Git: Show Tag Details…** | Kind, tagger, date, message and commit of a tag |
+| **Git: Push Tag…** | Pushes one tag, or **All tags**, to the branch's remote (else `origin`) |
+| **Git: Delete Tag…** | Deletes a local tag after a card where **Cancel** is ready. The toast names the commit, so `git tag <name> <hash>` brings it back. |
+| **Git: Delete Remote Tag…** | Deletes a tag on the remote. A card asks first (**Cancel** is ready), then you type the tag name. Your local tag stays. |
+
+## Remotes and the upstream
+
+**Git: Manage Remotes…** lists the remotes with their URL. Pick **+ Add
+Remote…** to add one, or pick a remote to **Rename…**, **Change URL…** or
+**Remove…** it. Remove asks first; it only changes this repository, not the
+server.
+
+**Git: Set Upstream Branch…** picks the remote branch the current branch
+tracks. **Git: Unset Upstream Branch** stops that.
+
+## Force push
+
+**Git: Force Push (with Lease)…** replaces the branch on the remote with
+yours, for example after an amend or a rebase. A card says how many remote
+commits your branch does not have; **Cancel** is ready. Then you type the
+branch name. termocode uses `--force-with-lease`: if someone pushed after
+your last fetch, git refuses and nothing changes. Fetch, look, and try
+again.
 
 ## Stash with options
 
@@ -572,7 +634,7 @@ double quotes for spaces (`author:"Ann Lee"`):
 | **Git: Fetch All Remotes (Prune)** | Fetches every remote and drops remote branches that are gone |
 | **Git: Show Incoming Commits…** | Commits a pull brings, as of the last fetch |
 | **Git: Show Outgoing Commits…** | Commits a push sends |
-| **Git: Toggle Auto Fetch** | Fetches every 3 minutes until termocode closes. Off by default. A failed fetch turns it off and says why. |
+| **Git: Toggle Auto Fetch** | Fetches every 3 minutes, also after a restart (setting `git_auto_fetch`). Off by default. A failed fetch turns it off and says why. |
 
 ## Ignore files and set your identity
 

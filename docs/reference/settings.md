@@ -54,6 +54,12 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_until_done_rounds` | int | `3` | Work until done (the until-done profile, /done, AI: Work Until Done): how many times verify runs at most (1 to 10). A profile's loop.max_rounds wins over it. |
 | `ai_until_done_budget_usd` | number | `2.00` | Work until done: the run pauses and asks once its steps have cost this many US dollars. 0 means no budget. A profile's budget_usd wins over it. |
 
+## Git
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `git_auto_fetch` | bool | `false` | Fetch from the remote every 3 minutes in the background while termocode runs (Git: Toggle Auto Fetch). A failed fetch turns it off for this session and says why. |
+
 ## HTTP
 
 | Key | Type | Default | Description |

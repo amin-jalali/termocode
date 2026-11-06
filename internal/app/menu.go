@@ -45,7 +45,14 @@ const (
 	gitMenuRefresh   = "git-refresh"
 	gitMenuShowRaw   = "git-show-raw"
 	gitMenuRebase    = "git-rebase-from" // git_rebase.go
+	gitMenuTagHere   = "git-tag-here"    // git_tags_remotes.go
 	gitMenuResetHere = "git-reset-here"  // git_stash_reset.go
+	// GITX-6, GITX-8 (git_commit_msg.go, git_ai_helpers.go).
+	gitMenuExplainAI   = "git-explain-ai"
+	gitMenuAIMessage   = "git-ai-message"
+	gitMenuEditMessage = "git-edit-message"
+	gitMenuCoAuthor    = "git-co-author-menu"
+	gitMenuRecentMsg   = "git-recent-message"
 	// GITX-2 (git_branch_ops.go).
 	gitMenuBranchHere     = "git-branch-here"
 	gitMenuCheckoutCommit = "git-checkout-commit"
@@ -92,6 +99,8 @@ func gitCommitMenuItems() []menu.Item {
 		{ID: gitMenuCopyMsg, Title: "Copy Commit Message", Icon: "⎘"},
 		{ID: gitMenuShowRaw, Title: "Show Raw (git show)", Icon: "≢"},
 		{ID: gitMenuRebase, Title: "Rebase from Here…", Icon: "⇅"},
+		{ID: gitMenuTagHere, Title: "Create Tag Here…", Icon: "⌂"},
+		{ID: gitMenuExplainAI, Title: "Explain with AI", Icon: "✦"},
 		{ID: gitMenuResetHere, Title: "Reset Current Branch to Here…", Icon: "↶"},
 		{ID: gitMenuBranchHere, Title: "Create Branch Here…", Icon: "⑂"},
 		{ID: gitMenuCheckoutCommit, Title: "Check Out This Commit (Detached)", Icon: "⎇"},
@@ -170,6 +179,12 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
 			return m.gitRebaseFromCmd(m.gitCommits[cur.ci].FullHash)
 		}
+	case gitMenuTagHere:
+		return m.gitTagHereFromRow()
+	case gitMenuExplainAI:
+		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
+			return m.gitAIExplainCommit(m.gitCommits[cur.ci].Hash)
+		}
 	case gitMenuResetHere:
 		return m.gitResetFromRow()
 	case gitMenuBranchHere:
@@ -189,6 +204,10 @@ func gitActionsMenuItems() []menu.Item {
 		{ID: gitMenuAmend, Title: "Commit (Amend)", Icon: "✎"},
 		{ID: gitMenuSignoff, Title: "Commit (Sign-off)", Icon: "✍"},
 		{ID: gitMenuCommitMsg, Title: "Commit Message…", Icon: "≡"},
+		{ID: gitMenuAIMessage, Title: "Generate Message with AI", Icon: "✦"},
+		{ID: gitMenuEditMessage, Title: "Edit Message in Editor", Icon: "✎"},
+		{ID: gitMenuRecentMsg, Title: "Recent Messages…", Icon: "↺"},
+		{ID: gitMenuCoAuthor, Title: "Add Co-Author…", Icon: "+"},
 		{ID: gitMenuCommitPush, Title: "Commit and Push", Icon: "↑"},
 		{ID: gitMenuCommitSync, Title: "Commit and Sync", Icon: "⟳"},
 		{Sep: true},
@@ -233,6 +252,14 @@ func (m *Model) handleGitActionsMenuSelect(id string) tea.Cmd {
 		return m.gitInlineCommit(false, true)
 	case gitMenuCommitMsg:
 		m.openCommitPrompt()
+	case gitMenuAIMessage:
+		return m.gitAIAsk("commit", true)
+	case gitMenuEditMessage:
+		return m.gitOpenCommitEditor()
+	case gitMenuRecentMsg:
+		return m.openCommitHistoryPicker()
+	case gitMenuCoAuthor:
+		return m.openCoAuthorPicker()
 	case gitMenuSync:
 		return m.gitSync()
 	case gitMenuPush:

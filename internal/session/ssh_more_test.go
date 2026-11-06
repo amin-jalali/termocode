@@ -71,7 +71,13 @@ func TestRunSSHQuitWhileConnecting(t *testing.T) {
 	f.set("slow", true)
 	t.Cleanup(func() { f.set("slow", false) })
 	_, _ = keys.WriteString("D")
-	waitFor(t, "the slow attempt", func() bool { return strings.Count(readOut(out), "connecting") >= 1 })
+	// ssh's own whole "connecting" line, not the offline line's
+	// "Reconnecting": a line still without its newline reads as ssh asking
+	// a question, and the keys (Ctrl+C too) then go to ssh.
+	waitFor(t, "the slow attempt", func() bool {
+		o := readOut(out)
+		return strings.Contains(o, "connecting\r\n") || strings.Contains(o, "connecting\n")
+	})
 	_, _ = keys.WriteString("x") // dropped
 	_, _ = keys.WriteString("\x03")
 	if c := waitCode(t, code); c != 0 {

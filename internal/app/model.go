@@ -256,6 +256,18 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitRef is what a tag, remote or force-push card or prompt is about
+	// (git_tags_remotes.go).
+	gitRef gitRefOpsState
+	// Commit box extras (git_commit_msg.go): the recent messages Up / Down
+	// step through (pos 0 = the draft), the template, the editor file.
+	gitCommitHist       []string
+	gitCommitHistLoaded bool
+	gitCommitHistPos    int
+	gitCommitDraft      string
+	gitCommitTplTried   bool
+	gitCommitEditFile   string
+	gitCommitEditMod    time.Time
 	// gitStashOps is what a stash or reset picker, card or prompt is
 	// about (git_stash_reset.go).
 	gitStashOps gitStashOpsState
@@ -1018,6 +1030,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, aiRunsStartupCmd())         // prune old agent run snapshots
 	cmds = append(cmds, m.secretsMigrateStartCmd()) // plain credentials.json → safer store (SS-4)
 	cmds = append(cmds, m.updateInitCmd())          // G-UPD: a newer release? (update_check.go)
+	gitxAutoFetchInit()                             // GITX-12: git_auto_fetch (gitx_autofetch_setting.go)
 	cmds = append(cmds, m.crash.waitCmd())          // recovered panics (crash_ui.go)
 	cmds = append(cmds, agentCtlInitCmd())          // OMX-33: the agent control socket (agent_ctl.go)
 	cmds = append(cmds, m.explorer.ScheduleLoads()) // FIX-2: a container root's first listing

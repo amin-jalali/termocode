@@ -92,8 +92,46 @@ func hasEOL(text string) bool { return strings.HasSuffix(text, "\n") }
 
 // Compute diffs oldText against newText: the line diff, then word-level
 // spans for paired removed / added runs, then the hunks.
-func Compute(oldText, newText string) *Diff {
-	ops := lineOps(SplitLines(oldText), SplitLines(newText))
+func Compute(oldText, newText string) *Diff { return compute(oldText, newText, false) }
+
+// ComputeIgnoreSpace is Compute where lines that differ only in spaces
+// and tabs are unchanged: such a row is context with the
+// new line's text (git diff -b).
+func ComputeIgnoreSpace(oldText, newText string) *Diff { return compute(oldText, newText, true) }
+
+// spaceKey is a line with each run of spaces and tabs as one space and
+// none at the ends (git diff -b: a space that splits a word still counts).
+func spaceKey(lines []string) []string {
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = strings.Join(strings.Fields(l), " ")
+	}
+	return out
+}
+
+func compute(oldText, newText string, ignoreSpace bool) *Diff {
+	oldLines, newLines := SplitLines(oldText), SplitLines(newText)
+	ops := lineOps(oldLines, newLines)
+	if ignoreSpace {
+		// Diff the keys, then put the real lines back: the ops come in
+		// old / new order, so counters find each one.
+		ops = lineOps(spaceKey(oldLines), spaceKey(newLines))
+		oi, ni := 0, 0
+		for k := range ops {
+			switch ops[k].kind {
+			case opEqual:
+				ops[k].text = newLines[ni]
+				oi++
+				ni++
+			case opDelete:
+				ops[k].text = oldLines[oi]
+				oi++
+			case opInsert:
+				ops[k].text = newLines[ni]
+				ni++
+			}
+		}
+	}
 	d := &Diff{OldEOL: hasEOL(oldText), NewEOL: hasEOL(newText)}
 	d.Rows = make([]Row, 0, len(ops))
 	oldNo, newNo := 0, 0
