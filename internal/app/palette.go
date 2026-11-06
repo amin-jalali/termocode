@@ -221,6 +221,9 @@ func paletteItems() []picker.Item {
 		{ID: "pick-theme", Title: "Preferences: Color Theme…"},
 		{ID: "git-stage", Title: "Git: Stage Current File"},
 		{ID: "git-stage-all", Title: "Git: Stage All Changes"},
+		{ID: "git-unstage-all", Title: "Git: Unstage All Changes"},         // git_bulk.go
+		{ID: "git-discard-all", Title: "Git: Discard All Changes…"},        // git_bulk.go
+		{ID: "git-clean-untracked", Title: "Git: Delete Untracked Files…"}, // git_bulk.go
 		{ID: "git-stage-hunk", Title: "Git: Stage Hunk (at cursor)"},
 		{ID: "git-unstage-hunk", Title: "Git: Unstage Hunk (at cursor)"},
 		{ID: "git-discard-hunk", Title: "Git: Discard Hunk (at cursor)"},
@@ -228,6 +231,8 @@ func paletteItems() []picker.Item {
 		{ID: "git-unstage-lines", Title: "Git: Unstage Line (or Selected Lines)"},
 		{ID: "git-discard-lines", Title: "Git: Discard Line (or Selected Lines)"},
 		{ID: "git-commit", Title: "Git: Commit..."},
+		{ID: "git-commit-push", Title: "Git: Commit and Push"}, // git_bulk.go
+		{ID: "git-commit-sync", Title: "Git: Commit and Sync"}, // git_bulk.go
 		{ID: "git-diff", Title: "Git: Show Diff for Current File"},
 		{ID: "git-discard", Title: "Git: Discard Changes in Current File"},
 		{ID: "git-refresh", Title: "Git: Refresh Status"},
@@ -599,6 +604,16 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.showExp = true
 		m.focus = FocusExplorer
 		m.applyLayout()
+	case "git-unstage-all":
+		return m.gitUnstageAll()
+	case "git-discard-all":
+		return m.openGitDiscardAllCard()
+	case "git-clean-untracked":
+		return m.openGitCleanUntrackedCard()
+	case "git-commit-push":
+		return m.gitInlineCommitThen(false, false, gitAfterPush)
+	case "git-commit-sync":
+		return m.gitInlineCommitThen(false, false, gitAfterSync)
 	case "git-push":
 		return m.gitPush()
 	case "git-pull":
