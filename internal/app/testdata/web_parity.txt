@@ -134,6 +134,7 @@ web	quick-open	cmd:quickOpen
 web	reload-buffer	cmd:revertFile
 web	reopen-closed	cmd:reopenClosed
 web	replace-in-file	cmd:replaceInFile
+web	replace-workspace	cmd:replaceWorkspace
 web	reveal-file	cmd:revealFile
 web	reveal-fs	op:tree.reveal_on_laptop
 web	reverse-lines	cmd:reverseLines
@@ -424,7 +425,6 @@ missing	output-clear	Testing and web access|S
 missing	prev-hunk	Git|S
 missing	redis-delete-key	Databases|L
 missing	redis-set-ttl	Databases|L
-missing	replace-workspace	Editor and files|S
 missing	services-configure	Containers|S
 missing	services-open-compose	Containers|S
 missing	services-start-all	Containers|S
