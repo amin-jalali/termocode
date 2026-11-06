@@ -132,6 +132,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.containersDemo(arg)
 	case "kubedemo": // the Kubernetes view with a canned cluster (kube_demo.go)
 		m.kubeDemo(arg)
+	case "agentpickerdemo": // Agent: Start… with made-up programs (agent_picker_demo.go)
+		m.agentPickerDemo()
 	case "webdemo": // the web start card or chip, made-up state (web_tui.go)
 		m.webDemo(arg)
 	case "secretsdemo":
