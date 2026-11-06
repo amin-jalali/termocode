@@ -216,6 +216,8 @@ func goldenExtras() []Scene {
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
+		// Stash… (GITX-10): what to stash.
+		{Name: "stash-mode-picker", Steps: WithEditor(Act("palette:git-stash-options"), Pause(600*time.Millisecond))},
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
