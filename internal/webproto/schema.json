@@ -1264,6 +1264,20 @@
       "phase": "v2"
     },
     {
+      "op": "file.text",
+      "args": "PathArgs",
+      "result": "FileText",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "lsp.hover",
       "args": "LspPosArgs",
       "result": "LspHover",
@@ -4997,6 +5011,28 @@
         "from",
         "data",
         "mtime"
+      ],
+      "additionalProperties": true
+    },
+    "FileText": {
+      "type": "object",
+      "properties": {
+        "binary": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "text"
       ],
       "additionalProperties": true
     },

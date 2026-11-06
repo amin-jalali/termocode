@@ -37,5 +37,5 @@ func TestDeskCompareTwoFiles(t *testing.T) {
 	}
 	p.WaitJS(`document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent === "a.go ↔ b.go"`)
 	p.WaitJS(deskDoc + `?.querySelector(".editor.original .view-lines")?.textContent.replace(/\u00a0/g, " ").includes("var x = 1")`)
-	p.WaitJS(deskDoc + `?.querySelector(".editor.modified .view-lines")?.textContent.replace(/\u00a0/g, " ").includes("var x = 2")`)
+	p.WaitJS(`[...` + deskDoc + `.querySelectorAll(".editor.modified .view-lines")].some((v) => v.textContent.replace(/\u00a0/g, " ").includes("var x = 2"))`)
 }

@@ -42,6 +42,7 @@
 .cod-collapse-all::before { content: "\eac5"; }
 .cod-comment::before { content: "\ea6b"; }
 .cod-comment-discussion::before { content: "\eac7"; }
+.cod-compare-changes::before { content: "\eafd"; }
 .cod-copy::before { content: "\ebcc"; }
 .cod-database::before { content: "\eace"; }
 .cod-debug::before { content: "\ead8"; }

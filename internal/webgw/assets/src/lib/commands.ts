@@ -5,7 +5,7 @@
 // runs there by id, and a risky one only after a laptop card. The
 // commands used last come first (kept per browser).
 import { signal } from "@preact/signals";
-import type { BookmarkList, BookmarkToggle, FilesRecent, LspSymbols, PaletteItem, PaletteList, SnippetList } from "../../../../webproto/proto";
+import type { FilesListRes, BookmarkList, BookmarkToggle, FilesRecent, LspSymbols, PaletteItem, PaletteList, SnippetList } from "../../../../webproto/proto";
 import { link, store } from "../session";
 import type { StringKey } from "../strings";
 import { t } from "../strings";
@@ -34,7 +34,7 @@ import { session } from "./live";
 import { askHere } from "../ui/AskHere";
 import { gitFailed } from "../views/git/errors";
 import { mdBufs } from "../views/MDPreview";
-import { mdTab } from "./vtabs";
+import { cmpTab, mdTab } from "./vtabs";
 
 export interface Command {
   id: string;
@@ -121,6 +121,7 @@ export function commands(): Command[] {
     { id: "quickFix", label: "cmd.quick_fix", when: () => hasDesk() && canWrite(), run: () => void pickFix() },
     { id: "quickFixPreferred", label: "cmd.quick_fix_pref", when: () => hasDesk() && canWrite(), run: () => void preferredFix() },
     { id: "inlayHints", label: "cmd.inlay_hints", when: hasDesk, run: () => (inlayHints.value = !inlayHints.peek()) },
+    { id: "compareFiles", label: "cmd.compare", run: compareFiles },
     { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
   ];
 }
@@ -264,6 +265,20 @@ async function preferredFix(): Promise<void> {
     return;
   }
   applyFix(r.buf, r.tick, i);
+}
+
+/** compareFiles compares the open file (or a first one picked) with a
+ * file picked from the workspace, side by side as they are on disk. */
+function compareFiles(): void {
+  link.request("files.list").then((r) => {
+    const paths = (r as FilesListRes).paths ?? [];
+    const pickOf = (title: string, then: (p: string) => void) =>
+      (quick.value = { mode: "pick", pick: { title, items: paths.map((p) => ({ label: baseOf(p), detail: dirOf(p), file: p, run: () => then(p) })) } });
+    const second = (a: string) => pickOf(t("cmd.compare_with", { name: baseOf(a) }), (b) => showFile(cmpTab(a, b)));
+    const a = realFile();
+    if (a) second(a);
+    else pickOf(t("cmd.compare"), (p) => setTimeout(() => second(p), 0));
+  }, failToast);
 }
 
 /** realFile is the workspace file of the active tab (null: none, or a tab

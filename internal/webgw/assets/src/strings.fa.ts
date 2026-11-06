@@ -1048,4 +1048,8 @@ export const FA: Record<StringKey, string> = {
   "cmd.no_pref_fix": "اینجا رفع سریع پیشنهادی نیست.",
   "cmd.fix_preferred": "پیشنهادی",
   "cmd.inlay_hints": "LSP: نمایش یا پنهان کردن راهنماهای درون‌خطی",
+  "cmd.compare": "فایل: مقایسه دو فایل…",
+  "cmd.compare_with": "مقایسه {name} با…",
+  "cmp.binary": "{name} متنی نیست.",
+  "cmp.cut": "یک فایل بلند است: آغاز آن مقایسه می‌شود.",
 };

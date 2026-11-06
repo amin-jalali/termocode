@@ -1390,6 +1390,13 @@ export interface BufMarkdown {
   cut?: boolean;
 }
 
+export interface FileText {
+  path: string;
+  text: string;
+  binary?: boolean;
+  truncated?: boolean;
+}
+
 export interface LspHover {
   md?: MdNode;
   none?: boolean;
@@ -1981,6 +1988,7 @@ export interface OpArgs {
   "buf.format": BufTickArgs;
   "buf.reload": BufArgs;
   "buf.markdown": BufArgs;
+  "file.text": PathArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
@@ -2137,6 +2145,7 @@ export interface OpResult {
   "buf.format": EditRes;
   "buf.reload": EditRes;
   "buf.markdown": BufMarkdown;
+  "file.text": FileText;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;

@@ -1052,6 +1052,10 @@ export const S = {
   "cmd.no_pref_fix": "No preferred quick fix here.",
   "cmd.fix_preferred": "preferred",
   "cmd.inlay_hints": "LSP: Toggle Inlay Hints",
+  "cmd.compare": "File: Compare Two Files…",
+  "cmd.compare_with": "Compare {name} with…",
+  "cmp.binary": "{name} is not text.",
+  "cmp.cut": "A file is long: its start is compared.",
 } as const;
 
 export type StringKey = keyof typeof S;
