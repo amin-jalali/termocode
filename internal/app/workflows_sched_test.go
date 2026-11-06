@@ -35,7 +35,7 @@ func (c *wfxClock) After(time.Duration) <-chan time.Time { return make(chan time
 
 const wfxScheduled = `{
   "version": 1, "name": "%NAME%", "title": "Hourly docs",
-  "schedule": { "preset": "hourly", "time": ":00", "tz": "UTC"%PRE% },
+  "schedule": { "cron": "0 * * * *", "tz": "UTC"%PRE% },
   "steps": [
     { "id": "docs", "type": "source", "from": "files", "glob": "docs/**/*.md" }%WRITE%
   ]
@@ -110,6 +110,9 @@ func wfxWaitState(t *testing.T, m *Model, name string, ok func(ledger.WorkflowSt
 
 func TestWorkflowsScheduledRunFires(t *testing.T) {
 	m, _ := wfxRig(t)
+	prev := wfxLoc
+	wfxLoc = time.UTC
+	t.Cleanup(func() { wfxLoc = prev })
 	wfxAddScheduled(t, m, "tick", "", false)
 	c := &wfxClock{now: wfxTestNow} // 09:41
 	m.wfxSchedBoot(c)
@@ -168,7 +171,13 @@ func TestWorkflowsScheduleParallelMax(t *testing.T) {
 	wfxAddScheduled(t, m, "one", "", true)
 	wfxAddScheduled(t, m, "two", "", true)
 	m.wfxSchedBoot(&wfxClock{now: wfxTestNow})
-	t.Cleanup(m.wfxSchedStop)
+	t.Cleanup(func() {
+		for _, l := range m.wfxS().live {
+			l.h.Cancel()
+			<-l.h.Done()
+		}
+		m.wfxSchedStop()
+	})
 	m.wfxS().sched.s.Tick(time.Date(2026, 11, 6, 10, 0, 0, 0, time.UTC))
 	first, ok := wfxNextDue(t, m, 5*time.Second)
 	if !ok {

@@ -21,6 +21,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/workflow/aistep"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
+	"github.com/amin-jalali/termocode/internal/workflow/schedule"
 	"github.com/amin-jalali/termocode/internal/workflow/source"
 	"github.com/amin-jalali/termocode/internal/workflow/wire"
 )
@@ -71,6 +72,10 @@ type wfxState struct {
 	pending    string              // the workflow a card is about
 	pendingDry bool
 	problemSig string // the Problems rows last sent
+	// sched is the scheduler (workflows_sched.go; nil until a workflow
+	// is on); schedClock is its clock (nil: the real one).
+	sched      *wfxSchedHost
+	schedClock schedule.Clock
 }
 
 // wfxLive is a run of this process.
@@ -82,6 +87,8 @@ type wfxLive struct {
 	mu       sync.Mutex
 	lines    []string // live output (AI tails, step lines)
 	waiting  string   // what the run waits for ("" = nothing)
+	// scheduled: the scheduler started it (no page is opened for it).
+	scheduled bool
 }
 
 func (l *wfxLive) addLine(s string) {
@@ -473,10 +480,15 @@ func (m *Model) wfxToggle(e wire.Entry) tea.Cmd {
 		return m.aiInfo("Could not save: " + agentCtlShort(err.Error()))
 	}
 	m.wfxLoad("")
+	cmd := m.wfxSchedSync()
 	if s.Enabled {
-		return m.aiInfo(e.Name + " is on (the scheduler comes with a later version; runs by hand work now)")
+		word := e.Name + " is on"
+		if next, ok := m.wfxNextRun(e.Name); ok {
+			word += "; next run " + next.In(wfxLoc).Format("Mon Jan 2 15:04")
+		}
+		return tea.Batch(cmd, m.aiInfo(word))
 	}
-	return m.aiInfo(e.Name + " is off")
+	return tea.Batch(cmd, m.aiInfo(e.Name+" is off"))
 }
 
 // wfxAskStop asks before the live run of the target stops.
@@ -542,6 +554,11 @@ func (m *Model) wfxStart(e wire.Entry, dry bool) tea.Cmd {
 // wfxStartID is wfxStart that also gives the run id and handle (the AI's
 // workflow tools wait on it).
 func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd, error) {
+	return m.wfxStartRun(e, dry, true)
+}
+
+// wfxStartRun starts a run; show opens its page.
+func (m *Model) wfxStartRun(e wire.Entry, dry, show bool) (string, *run.Handle, tea.Cmd, error) {
 	st := m.wfxS()
 	id := wire.NewRunID()
 	l := &wfxLive{id: id, name: e.Name, dry: dry, ch: make(chan tea.Msg, 64)}
@@ -626,6 +643,9 @@ func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd
 		l.ch <- wfxDoneMsg{id: id}
 	})
 	m.wfxPutRun(h.Snapshot())
+	if !show {
+		return id, h, wfxListen(l.ch), nil
+	}
 	return id, h, tea.Batch(m.wfxShowPage("run:"+id, true), wfxListen(l.ch)), nil
 }
 
@@ -644,6 +664,9 @@ func wfxListen(ch chan tea.Msg) tea.Cmd {
 
 // handleWfxMsg handles the run messages. ok=false: not ours.
 func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
+	if cmd, ok := m.handleWfxSchedMsg(msg); ok {
+		return cmd, true
+	}
 	switch msg := msg.(type) {
 	case wfxEventMsg:
 		l := m.wfxS().live[msg.id]

@@ -404,6 +404,9 @@ func (m *Model) wfxFileLines(name string, w int, now time.Time) []wfxLine {
 	if e.File != nil && e.File.Schedule != nil {
 		sc := e.File.Schedule
 		when = strings.TrimSpace(firstNonEmpty(sc.Cron, sc.Preset+" "+sc.Time) + " " + sc.TZ)
+		if next, ok := m.wfxNextRun(e.Name); ok && e.Enabled {
+			when += " · next " + wfxAgo(next, now)
+		}
 	}
 	title := wfxTitle(e)
 	left := " ◉ " + e.Name
