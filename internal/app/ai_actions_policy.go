@@ -699,6 +699,12 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"workflows_history_days":     aiConfirm(ai.ClassSettings),
 	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
 	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
+
+	// Git blame (GITX-3..5)
+	"git_status_blame":            aiConfirm(ai.ClassSettings),
+	"git_inline_blame":            aiConfirm(ai.ClassSettings),
+	"git_blame_ignore_whitespace": aiConfirm(ai.ClassSettings),
+	"git_blame_detect_moves":      aiConfirm(ai.ClassSettings),
 }
 
 // aiNoWeb is why the AI never touches the web panel.
