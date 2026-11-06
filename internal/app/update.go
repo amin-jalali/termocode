@@ -559,6 +559,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case prompt.CloseMsg:
 		m.promptOpen = false
 		// Group G / Group I / secret store: no-op unless theirs
+		m.prPromptClosed() // pr_state.go: back to the thread or create card
 		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.secretsPromptClosed(), m.aiMCPElicitPromptClosed())
 	case secretsUnlockDoneMsg:
 		return m, m.onSecretsUnlockDone(msg)
@@ -1070,6 +1071,7 @@ end })`)
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
 		m.syncCommitEditFile() // git_commit_msg.go: a saved message file
+		m.syncPRBodyFile()     // pr_edit_body.go: a saved PR description
 		m.gitBlameInit()
 		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh(), m.gitBlameRefreshCmd(false)), true // blame: again when HEAD or the file changed (gitBlameKey)
 	case gitBlameLoadedMsg: // git_blame_view.go

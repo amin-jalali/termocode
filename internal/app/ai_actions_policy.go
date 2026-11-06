@@ -229,6 +229,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"update-check":           aiNever(aiNoUpdate),
 	"update-rollback":        aiNever(aiNoUpdate),
 	"git-pr-list":            aiAuto(), // read only: a list of open pull requests
+	"git-pr-filter":          aiAuto(), // read only: a filtered list of pull requests
+	"git-pr-mine":            aiAuto(), // read only: the user's pull requests and review requests
 	"git-pr-create":          aiNever("publishes a pull request in the user's name; only the user creates one"),
 	"git-rebase":             aiNever(aiNoPicker),
 	"git-fixup":              aiNever(aiNoPicker),
