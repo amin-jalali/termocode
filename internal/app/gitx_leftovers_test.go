@@ -1,6 +1,7 @@
 package app
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -133,5 +134,37 @@ func TestGitxContributorsPage(t *testing.T) {
 	m.dispatchPaletteAction("git-contributors")
 	if p := aiActionPolicies["git-contributors"]; p.Gate != aiGateAuto {
 		t.Error("reading the contributors is not auto for the AI")
+	}
+}
+
+// GITX-39 (M11): Git: Clone Repository (Shallow)… is the clone flow with
+// only the last commit; Git: Fetch Full History (Unshallow) fetches the
+// rest of a shallow repository and says so for a full one.
+func TestGitxShallowAndUnshallow(t *testing.T) {
+	m, dir := covGitRepo(t)
+	covWrite(t, dir, "a.txt", "two\n")
+	covCommit(t, dir, "second")
+	m.dispatchPaletteAction("git-clone-shallow")
+	if !m.promptOpen || m.promptKind != promptKindCloneURL || m.clone.depth != 1 {
+		t.Fatalf("shallow clone prompt: open %v depth %d", m.promptOpen, m.clone.depth)
+	}
+	m.promptOpen = false
+	m.dispatchPaletteAction("git-clone")
+	if m.clone.depth != 0 {
+		t.Error("the plain clone stays shallow")
+	}
+	m.promptOpen = false
+
+	m.dispatchPaletteAction("git-unshallow")
+	if !toastHas(m, "full history") {
+		t.Fatal("no note for a full repository")
+	}
+	dest := filepath.Join(t.TempDir(), "clone")
+	covGit(t, dir, "clone", "-q", "--depth", "1", "file://"+filepath.ToSlash(dir), dest)
+	m2 := covModelAt(t, dest)
+	done := covMsg[gitRemoteDoneMsg](t, m2.dispatchPaletteAction("git-unshallow"))
+	m2.gitRemoteDone(done)
+	if done.err != nil || covGit(t, dest, "rev-list", "--count", "HEAD") != "2" {
+		t.Fatalf("unshallow: %v, %s commits", done.err, covGit(t, dest, "rev-list", "--count", "HEAD"))
 	}
 }

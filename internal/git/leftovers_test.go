@@ -90,3 +90,37 @@ func TestContributors(t *testing.T) {
 		t.Fatalf("contributors %+v", got)
 	}
 }
+
+// GITX-39 (M11): a shallow clone (Depth) has only the last commits;
+// IsShallow sees it and Unshallow fetches the rest of the history.
+func TestShallowCloneAndUnshallow(t *testing.T) {
+	r := newGitTestRepo(t)
+	for i := 0; i < 3; i++ {
+		r.write(t, "a.txt", strings.Repeat("x", i+1))
+		r.git(t, "add", "a.txt")
+		r.git(t, "commit", "-q", "-m", "c")
+	}
+	if IsShallow(r.dir) {
+		t.Fatal("a full repository is shallow")
+	}
+	dest := filepath.Join(t.TempDir(), "clone")
+	if err := Clone(CloneOptions{URL: "file://" + filepath.ToSlash(r.dir), Dest: dest, Depth: 1}); err != nil {
+		t.Fatal(err)
+	}
+	count := func() string {
+		out, err := runOut(dest, "git", "rev-list", "--count", "HEAD")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.TrimSpace(out)
+	}
+	if !IsShallow(dest) || count() != "1" {
+		t.Fatalf("shallow %v, %s commits", IsShallow(dest), count())
+	}
+	if err := Unshallow(dest); err != nil {
+		t.Fatal(err)
+	}
+	if IsShallow(dest) || count() != "3" {
+		t.Fatalf("after unshallow: shallow %v, %s commits", IsShallow(dest), count())
+	}
+}
