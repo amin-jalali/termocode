@@ -440,7 +440,8 @@ func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *Step
 	if s.Write == nil {
 		return "", Permanent(errors.New("write without a target"))
 	}
-	spec, err := r.renderWrite(s.Write, r.scope(f))
+	sc := r.scope(f)
+	spec, err := r.renderWrite(s.Write, sc)
 	if err != nil {
 		return "", Permanent(err)
 	}
@@ -479,7 +480,8 @@ func (r *runner) write(ctx context.Context, s *workflow.Step, f *frame, st *Step
 	r.save() // "sending" is on disk before the write goes out
 	wait := func() { r.emit(Event{Kind: WriteWait, Step: key, Item: item, Attempt: attempt}) }
 	out, err := r.opts.Write.Write(ctx, WriteCall{Step: s, Item: f.nearestItem(), Env: f.nearestEnv(), Spec: spec, Marker: rec.Marker,
-		Attempt: attempt, Resumed: resumed, ReadOnly: ro, Wait: wait})
+		Attempt: attempt, Resumed: resumed, ReadOnly: ro, Wait: wait,
+		Render: func(t string) (string, error) { return r.opts.Eval.Render(t, sc) }})
 	switch {
 	case errors.Is(err, ErrDenied):
 		r.edit(func() { r.rf.Writes[idx].State = StateDenied })

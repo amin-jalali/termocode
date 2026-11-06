@@ -183,6 +183,8 @@ type WriteCall struct {
 	Resumed bool
 	// Wait tells the run the write now waits for the user (WriteWait).
 	Wait func()
+	// Render fills templates in this write's scope (a body_file).
+	Render func(tmpl string) (string, error)
 }
 
 // ErrDenied is wrapped by a Writer (or an Ask) when the user said no.
