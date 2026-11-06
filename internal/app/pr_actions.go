@@ -25,6 +25,9 @@ func prActionItems(d ghci.PRDetail) []picker.Item {
 		{ID: "browser", Title: "Open in Browser", Hint: "or copy the link over SSH"},
 		{ID: "description", Title: "Read Description", Hint: "the whole text, in a read-only page"},
 	}
+	if d.State == "CLOSED" {
+		return append(items, picker.Item{ID: "reopen", Title: "Reopen Pull Request"})
+	}
 	if d.State != "OPEN" {
 		return items
 	}
@@ -39,7 +42,13 @@ func prActionItems(d ghci.PRDetail) []picker.Item {
 	} else {
 		items = append(items, picker.Item{ID: "draft", Title: "Convert to Draft"})
 	}
-	items = append(items, picker.Item{ID: "merge", Title: "Merge…", Hint: "squash, merge or rebase"})
+	items = append(items, picker.Item{ID: "edit-description", Title: "Edit Description…", Hint: "in the editor; save to update"})
+	if ids := ghci.FailedRunIDs(d.Checks); len(ids) > 0 {
+		items = append(items, picker.Item{ID: "rerun-failed", Title: "Re-run Failed Checks", Hint: "only the failed jobs"})
+	}
+	items = append(items,
+		picker.Item{ID: "merge", Title: "Merge…", Hint: "squash, merge or rebase"},
+		picker.Item{ID: "close", Title: "Close Pull Request…", Hint: "without merging; can be reopened"})
 	return items
 }
 
@@ -82,6 +91,14 @@ func (m *Model) onPRActionPicked(id string) tea.Cmd {
 		return m.prAskReview(ghci.ReviewRequestChanges)
 	case "comment":
 		return m.prAskReview(ghci.ReviewComment)
+	case "close": // pr_extras.go
+		return m.prAskClose()
+	case "reopen":
+		return m.prSetClosed(false)
+	case "rerun-failed":
+		return m.prRerunFailed()
+	case "edit-description": // pr_edit_body.go
+		return m.prEditDescription()
 	}
 	return nil
 }
@@ -153,6 +170,15 @@ func (m *Model) prAskReview(kind ghci.ReviewKind) tea.Cmd {
 // handlePRPromptSubmit sends the review. ok=false: not ours.
 func (m *Model) handlePRPromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.handlePRCreatePromptSubmit(value); ok { // pr_create.go
+		return cmd, true
+	}
+	if cmd, ok := m.handlePRReplySubmit(value); ok { // pr_threads.go
+		return cmd, true
+	}
+	if cmd, ok := m.handlePRLineCommentSubmit(value); ok { // pr_line_comment.go
+		return cmd, true
+	}
+	if cmd, ok := m.handlePRSearchSubmit(value); ok { // pr_filter.go
 		return cmd, true
 	}
 	if m.promptKind != promptKindPRReview {

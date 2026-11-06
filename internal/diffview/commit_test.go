@@ -344,3 +344,21 @@ func TestCustomKeysAndHints(t *testing.T) {
 		}
 	}
 }
+
+// FocusedHunk is the change n / p moved to, so the app can comment on it.
+func TestFocusedHunk(t *testing.T) {
+	m := NewCommit(commitHeader(), []File{{Name: "a.go", Status: 'M', Old: "a\nb\nc\nd\ne\nf\ng\nh\n", New: "a\nB\nc\nd\ne\nf\ng\nH\n"}}, nil)
+	m.SetSize(120, 40)
+	h, ok := m.FocusedHunk()
+	if !ok || h.NewStart != 1 || h.NewCount != 1 {
+		t.Fatalf("first hunk %+v %v", h, ok)
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
+	if h, ok = m.FocusedHunk(); !ok || h.NewStart != 7 {
+		t.Errorf("after n: %+v %v", h, ok)
+	}
+	empty := NewCommit(commitHeader(), []File{{Name: "b.png", Binary: true}}, nil)
+	if _, ok := empty.FocusedHunk(); ok {
+		t.Error("a binary file has a focused change")
+	}
+}

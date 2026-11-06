@@ -534,3 +534,13 @@ func commitListItem(i int, f *fileState, sel bool, w int, p pal) listItem {
 			{dirText, st.Foreground(p.dim)}, {strings.Repeat(" ", pad), st}, {stats, st.Foreground(p.dim)}},
 	}
 }
+
+// FocusedHunk is the change of the current file that n / p moved to
+// (ok false: the file has no text change).
+func (m Model) FocusedHunk() (textdiff.Hunk, bool) {
+	f := m.file()
+	if f == nil || f.diff == nil || len(f.diff.Hunks) == 0 {
+		return textdiff.Hunk{}, false
+	}
+	return f.diff.Hunks[min(max(f.focus, 0), len(f.diff.Hunks)-1)], true
+}

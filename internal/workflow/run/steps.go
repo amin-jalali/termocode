@@ -407,7 +407,7 @@ func (r *runner) keepOutput(f *frame, s *workflow.Step, st *StepState, out Outpu
 // renderWrite fills every template of a write spec.
 func (r *runner) renderWrite(w *workflow.WriteSpec, sc map[string]any) (workflow.WriteSpec, error) {
 	out := *w
-	for _, p := range []*string{&out.Title, &out.Body, &out.Base, &out.Message, &out.PR, &out.Path, &out.Content, &out.Text} {
+	for _, p := range []*string{&out.Title, &out.Body, &out.Base, &out.Message, &out.PR, &out.Path, &out.Content, &out.Text, &out.Channel} {
 		v, err := r.opts.Eval.Render(*p, sc)
 		if err != nil {
 			return out, err

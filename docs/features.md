@@ -21,7 +21,7 @@ you how.
 ```
 
 The **activity bar** on the left switches the sidebar: **Explorer**,
-**Source Control**, **Run** (Run and Debug), **Testing**, **Services** and **Databases**, with **Settings**
+**Source Control**, **Run** (Run and Debug), **Testing**, **Services**, **Databases** and **Workflows** (once the folder has `.termocode/workflows`), with **Settings**
 at the bottom. Extensions can add their own icons. Click the active icon again
 to hide the sidebar. Rest the mouse on an icon button for half a second to see
 its name and key.
@@ -61,6 +61,15 @@ its name and key.
 ![AI chat with a Markdown answer and a code card](assets/screenshots/ai-chat-answer.png)
 
 ![Review AI changes: accept or reject each change](assets/screenshots/diff-review.png)
+
+## Workflows
+
+- A small `.jsonc` file reads items (issues, files, an MCP tool, a URL, a database), keeps the ones that matter, lets the AI or an outside agent work on each one and writes the result back. Build one by chat, try it with a dry run, then run it by hand or on a schedule. → [Workflows](guides/workflows.md)
+- Every write asks first on its card (Deny first); **Allow for this workflow** holds only for that version of the file. → [Trust and writes](guides/workflows.md#trust-and-writes)
+- Fan out: each item in its own worktree with an agent step, tests and a pull request. → [Fan out](guides/workflows.md#fan-out-worktrees-agents-tests-pull-requests)
+- Schedules keep going after a restart; `termocode service install` starts the session at login. Results come as a desktop note, on the phone, to a webhook or to Slack. → [Schedules](guides/workflows.md#schedules) · [Notifications](guides/workflows.md#notifications-and-history)
+- Undo a write from the run page, day / run / item AI budgets, an audit file per run and an admin policy file. → [Undo and budgets](guides/workflows.md#undo-budgets-and-the-audit-file)
+- Follow a run and answer its cards from the phone. → [On your phone](guides/workflows.md#on-your-phone)
 
 ## Run, test and debug
 

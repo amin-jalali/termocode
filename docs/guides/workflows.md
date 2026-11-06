@@ -135,7 +135,11 @@ it will run by itself; Cancel is first.
   `termocode service install` in the folder. It shows the service file
   (a systemd user unit on Linux, a launchd agent on macOS) and asks
   before it writes it. `termocode service status` and
-  `termocode service uninstall` check and remove it.
+  `termocode service uninstall` check and remove it. On Linux it starts
+  at login; when it should also start at boot without a login, it tells
+  you to run `loginctl enable-linger $USER` once. Termux on Android has
+  no user services: there the command says so and writes nothing (use
+  `termux-wake-lock` to keep the session alive).
 - Every write still asks on its card, unless you allowed it for this
   version of the file.
 
@@ -158,10 +162,15 @@ one again: `termocode workflow again <name> <key>`.
   `"notify": ["os"]` or `["web"]` to choose; a run you start by hand
   notifies only when the file asks.
 - `"notify": ["message:sum"]` sends the same summary through the
-  message step `sum` (`"via": "os"`, `"web"` or `"${secret:NAME}"`, a
-  secret that holds an https webhook URL). A webhook is a write to an
+  message step `sum` (`"via": "os"`, `"web"`, `"${secret:NAME}"`, a
+  secret that holds an https webhook URL, or an MCP server such as
+  `"slack"` with a `"channel"`). A webhook or a server is a write to an
   outside system: the summary goes there only after you chose **Allow
   for this workflow** on that step's card.
+- A message via an MCP server calls its send tool: for Slack
+  `slack_send_message` with the channel id, or the step's own `"tool"`.
+  Connect the server with writes allowed. Text that goes to a webhook
+  or a server has secrets and keys hidden first.
 - Runs are kept for `workflows_history_days` (30) days and deleted when
   termocode starts. `h` opens the newest run;
   `termocode workflow runs --json` lists them.

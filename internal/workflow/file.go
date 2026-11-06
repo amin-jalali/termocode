@@ -264,7 +264,7 @@ type WriteSpec struct {
 	Gate string // GateAsk (default), GateAllow or GateDry
 
 	Server string         // mcp, status
-	Tool   string         // mcp, status
+	Tool   string         // mcp, status; message via an MCP server: its send tool
 	Args   map[string]any // mcp, status
 	Undo   *UndoSpec      // mcp, status
 
@@ -284,8 +284,9 @@ type WriteSpec struct {
 	Request string            // http
 	Headers map[string]string // http; ${secret:NAME} allowed
 
-	Via  string // message: os | web | an MCP server | a webhook; ${secret:NAME} allowed
-	Text string // message
+	Via     string // message: os | web | an MCP server | a webhook; ${secret:NAME} allowed
+	Channel string // message via an MCP server: the channel (template)
+	Text    string // message
 }
 
 // Walk calls fn for every step in steps, depth first: each step, then
