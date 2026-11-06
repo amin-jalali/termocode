@@ -71,10 +71,12 @@ func TestWebKeysBind(t *testing.T) {
 		t.Fatalf("bind: %+v, saved %v, live %v", done, keymap.LoadOverrides("")["ctrl+alt+t"], r.m.keys.Bindings()["ctrl+alt+t"])
 	}
 	key, owner := webKeysOther(t, keymap.ActionPickTheme)
+	done = webproto.KeyBound{}
 	webResData(t, r.call(webproto.OpKeysBind, &webproto.KeyBindArgs{Action: "PickTheme", Key: key}), &done)
 	if done.Conflict != keymap.ActionName(owner) || done.Saved || r.m.keys.Bindings()[key] != owner {
 		t.Fatalf("a key in use was taken without replace: %+v, live %v", done, r.m.keys.Bindings()[key])
 	}
+	done = webproto.KeyBound{}
 	webResData(t, r.call(webproto.OpKeysBind, &webproto.KeyBindArgs{Action: "PickTheme", Key: key, Replace: true}), &done)
 	if !done.Saved || r.m.keys.Bindings()[key] != keymap.ActionPickTheme {
 		t.Fatalf("replace: %+v, live %v", done, r.m.keys.Bindings()[key])

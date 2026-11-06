@@ -1525,4 +1525,11 @@ export const FA: Record<StringKey, string> = {
   "thm.reset": "بازگشت به رنگ پوسته",
   "thm.color_set": "{key} اکنون {color} است.",
   "thm.color_reset": "{key} به رنگ پوسته برگشت.",
+  "cmd.keybindings": "ترجیحات: سفارشی‌سازی کلیدها",
+  "kb.title": "کلیدهای لپ‌تاپ (Enter: دادن کلید به یک کار)",
+  "kb.none": "بدون کلید",
+  "kb.ask": "کلید لپ‌تاپ برای {action} (ctrl+x، f5، alt+enter)",
+  "kb.conflict_body": "{key} اکنون کلید {owner} است. به {action} داده شود؟ {owner} این کلید را از دست می‌دهد.",
+  "kb.replace": "جایگزینی",
+  "kb.bound": "{action}: {key} روی لپ‌تاپ.",
 };

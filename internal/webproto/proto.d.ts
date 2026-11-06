@@ -357,6 +357,12 @@ export interface HTTPSaveBodyArgs {
   path: string;
 }
 
+export interface KeyBindArgs {
+  action: string;
+  key: string;
+  replace?: boolean;
+}
+
 export interface BufLineArgs {
   buf: number;
   line: number;
@@ -1883,6 +1889,20 @@ export interface HTTPCurl {
   curl: string;
 }
 
+export interface KeyBindings {
+  items: KeyBinding[];
+}
+
+export interface KeyBinding {
+  action: string;
+  keys: string[];
+}
+
+export interface KeyBound {
+  saved?: boolean;
+  conflict?: string;
+}
+
 export interface LspHover {
   md?: MdNode;
   none?: boolean;
@@ -2879,6 +2899,8 @@ export interface OpArgs {
   "http.import_curl": HTTPImportArgs;
   "http.new_file": HTTPNewFileArgs;
   "http.save_body": HTTPSaveBodyArgs;
+  "keys.list": EmptyArgs;
+  "keys.bind": KeyBindArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
@@ -3141,6 +3163,8 @@ export interface OpResult {
   "http.import_curl": HTTPPath;
   "http.new_file": HTTPPath;
   "http.save_body": HTTPPath;
+  "keys.list": KeyBindings;
+  "keys.bind": KeyBound;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;

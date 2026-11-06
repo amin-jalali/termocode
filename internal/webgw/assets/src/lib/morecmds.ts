@@ -1,7 +1,7 @@
 // More commands of the workbench's command list (WEBP-9): laptop palette
 // commands the page does too, each through its own op or on the page.
 // Only the desktop workbench loads this file (lib/commands.ts).
-import type { DebugLaunch, LSPServer, LSPServerList, MCPItems, ThemeColor, ThemeColors, ThemeList } from "../../../../webproto/proto";
+import type { DebugLaunch, KeyBindings, KeyBound, LSPServer, LSPServerList, MCPItems, ThemeColor, ThemeColors, ThemeList } from "../../../../webproto/proto";
 import { link } from "../session";
 import { t } from "../strings";
 import { toast } from "./toasts";
@@ -13,7 +13,7 @@ import type { Command } from "./commands";
 import { collapseTests } from "../views/run/TestingView";
 import { logs } from "../views/desk/DeskContainers";
 import { askSide } from "../views/desk/SideChat";
-import { askLaptop } from "../ui/AskHere";
+import { askHere, askLaptop } from "../ui/AskHere";
 
 const canAct = () => link.meta.peek()?.role === "controller";
 
@@ -203,6 +203,51 @@ export function editTheme(): void {
   }, failed);
 }
 
+/** bindKey binds key to action on the laptop; a key another action has
+ * is asked here first, then taken with replace. */
+function bindKey(action: string, key: string, replace = false): void {
+  link.request("keys.bind", replace ? { action, key, replace } : { action, key }).then((r) => {
+    const b = r as KeyBound;
+    if (b.conflict && !replace) {
+      askHere.value = {
+        label: t("cmd.keybindings"),
+        text: t("kb.conflict_body", { key, owner: b.conflict, action }),
+        verb: t("kb.replace"),
+        run: () => bindKey(action, key, true),
+      };
+      return;
+    }
+    toast("ok", t("kb.bound", { action, key }));
+  }, failed);
+}
+
+/** customizeKeys lists the laptop's actions with their keys (Preferences:
+ * Customize Keybindings); one picked takes a key typed here. */
+export function customizeKeys(): void {
+  link.request("keys.list").then((r) => {
+    const items = (r as KeyBindings).items ?? [];
+    quick.value = {
+      mode: "pick",
+      pick: {
+        title: t("kb.title"),
+        items: items.map((b) => ({
+          label: b.action,
+          detail: b.keys.length ? b.keys.join(", ") : t("kb.none"),
+          run: () =>
+            setTimeout(
+              () =>
+                (quick.value = {
+                  mode: "ask",
+                  ask: { title: t("kb.ask", { action: b.action }), run: (key) => bindKey(b.action, key.trim()) },
+                }),
+              0,
+            ),
+        })),
+      },
+    };
+  }, failed);
+}
+
 /** moreCommands are this file's commands. */
 export function moreCommands(): Command[] {
   return [
@@ -212,6 +257,7 @@ export function moreCommands(): Command[] {
     { id: "aiMcpInsert", label: "cmd.ai_mcp_insert", when: canAct, run: pickMCP },
     { id: "pickTheme", label: "cmd.pick_theme", when: canAct, run: pickTheme },
     { id: "editTheme", label: "cmd.edit_theme", when: canAct, run: editTheme },
+    { id: "customizeKeys", label: "cmd.keybindings", when: canAct, run: customizeKeys },
     { id: "lspManage", label: "cmd.lsp_manage", when: canAct, run: manageLSP },
     { id: "outputClear", label: "cmd.output_clear", when: () => logs.peek() !== null, run: clearOutput },
   ];

@@ -752,6 +752,14 @@ export const SD = {
   "thm.reset": "Back to the Theme's Color",
   "thm.color_set": "{key} is {color} now.",
   "thm.color_reset": "{key} is back to the theme's color.",
+  // Preferences: Customize Keybindings (WEBP-7)
+  "cmd.keybindings": "Preferences: Customize Keybindings",
+  "kb.title": "Keys of the laptop (Enter: give an action a key)",
+  "kb.none": "no key",
+  "kb.ask": "Laptop key for {action} (ctrl+x, f5, alt+enter)",
+  "kb.conflict_body": "{key} is the key of {owner} now. Give it to {action}? {owner} loses this key.",
+  "kb.replace": "Replace",
+  "kb.bound": "{action}: {key} on the laptop.",
 } as const;
 
 addStrings(SD);
