@@ -9,7 +9,7 @@ import (
 // shows them again); the hint bar says when they are hidden. A review
 // card keeps every change (its hunks are applied to the file).
 func TestIgnoreWhitespaceKey(t *testing.T) {
-	files := []File{{Name: "x.go", Old: "a\n\tb\nc\n", New: "a\n    b\nC\n"}}
+	files := []File{{Name: "x.go", Old: "a\n\tb\nc\nd\ne\n", New: "a\n    b\nc\nd\nE\n"}}
 	m := New("Compare", files, false)
 	m.SetSize(120, 30)
 	if n := len(m.files[0].diff.Hunks); n != 2 {
