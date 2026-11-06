@@ -46,6 +46,17 @@ type Meta struct {
 
 	Checkpoint   string    `json:"checkpoint,omitempty"` // working | blocked | done, set by an agent
 	CheckpointAt time.Time `json:"checkpoint_at,omitzero"`
+
+	Link LinkInfo `json:"link,omitzero"` // what gh last said about Issue / PR (WTX-9)
+}
+
+// LinkInfo is the last read of a worktree's linked issue or PR.
+type LinkInfo struct {
+	Title   string    `json:"title,omitempty"`
+	State   string    `json:"state,omitempty"` // open, closed, merged
+	CI      string    `json:"ci,omitempty"`    // pull requests: pass, fail, pending or ""
+	URL     string    `json:"url,omitempty"`
+	Checked time.Time `json:"checked,omitzero"`
 }
 
 // States of Meta.State.

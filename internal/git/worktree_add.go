@@ -115,3 +115,25 @@ func WorktreeRefs(dir string) (refs []string, current string, err error) {
 	refs = append(append(append(refs, heads...), remotes...), tags...)
 	return refs, current, nil
 }
+
+// RemoteHosts lists the hosts of the repository's remotes (fetch URLs),
+// once each, in remote name order (WTX-9: the hosts a link URL may use).
+func RemoteHosts(dir string) []string {
+	out, err := runOut(dir, "git", "remote", "-v")
+	if err != nil {
+		return nil
+	}
+	var hosts []string
+	seen := map[string]bool{}
+	for _, l := range strings.Split(out, "\n") {
+		f := strings.Fields(l)
+		if len(f) < 3 || f[2] != "(fetch)" {
+			continue
+		}
+		if h := strings.ToLower(HostFromURL(f[1])); h != "" && !seen[h] {
+			seen[h] = true
+			hosts = append(hosts, h)
+		}
+	}
+	return hosts
+}

@@ -435,12 +435,24 @@ repository's git folder, never in your project.
 | `Enter` | Open the worktree in this window; the old session keeps running |
 | `a` | Add the worktree as a folder of this window |
 | `p` | Pin or unpin |
+| `i` | Link an issue or pull request (see below) |
 | `n` | New worktree (see below) |
 | `L` | Open the setup log of a new worktree |
 | `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
 | `?` | Show these keys |
+
+### Link an issue or pull request
+
+`i` (**Worktree: Link Issue or PR…**) links the selected worktree to an
+issue or a pull request: type its number, `#412`, or its GitHub URL. A
+URL must be `https` on the repository's own GitHub host. termocode asks
+`gh` with your own sign-in, so the card shows `#412 open` or
+`PR #12 open · CI ✓`. The state is read again while the view shows: every
+20 seconds while checks run, else every 5 minutes. Without `gh`, or when
+it is not signed in, the number is kept without its title. **Unlink**
+on the same card takes it off. The AI can read links but never set one.
 
 **Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
 agents in them, from every termocode window, with the ones that wait for
@@ -451,7 +463,10 @@ you first.
 **Worktree: New…** (`n` in the view) opens a form: **Name**, **From**
 (the branch, remote branch or tag it starts from; **Start point…** lists
 them), **Branch** (made from the name; type to change it), **Agent** and
-**Task**. Nothing is made until you press **Create**; **Cancel** comes
+**Task**. **Issue** is optional: give an issue number or URL and leave
+the name empty, and the branch is made from its title
+(`412-pinned-row-in-worktrees`); the new worktree is linked to it.
+Nothing is made until you press **Create**; **Cancel** comes
 first. The worktree goes to `<repo>.worktrees/<branch>` next to the
 repository (setting `worktree_dir`). When git refuses (the branch or the
 folder is there already, an unknown start point) the card says why and

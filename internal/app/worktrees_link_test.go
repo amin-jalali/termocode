@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/connectcard"
 	"github.com/amin-jalali/termocode/internal/ghci"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/worktreeform"
 	"github.com/amin-jalali/termocode/internal/worktrees"
 )
@@ -56,7 +57,14 @@ func wtLinkDrive(t *testing.T, m *Model, cmd tea.Cmd) {
 		if c == nil {
 			continue
 		}
-		msg := c()
+		ch := make(chan tea.Msg, 1)
+		go func() { ch <- c() }()
+		var msg tea.Msg
+		select {
+		case msg = <-ch:
+		case <-time.After(500 * time.Millisecond): // a toast timer
+			continue
+		}
 		if b, ok := msg.(tea.BatchMsg); ok {
 			queue = append(queue, b...)
 			continue
@@ -67,8 +75,16 @@ func wtLinkDrive(t *testing.T, m *Model, cmd tea.Cmd) {
 	}
 }
 
+func wtUnicodeIcons(t *testing.T) {
+	t.Helper()
+	prev := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeUnicode
+	t.Cleanup(func() { theme.CurrentIconMode = prev })
+}
+
 func wtLinkModel(t *testing.T) *Model {
 	t.Helper()
+	wtUnicodeIcons(t)
 	withConfigDir(t)
 	st, _ := wtFixture(t)
 	st.common = t.TempDir()
@@ -95,7 +111,7 @@ func TestWorktreeLinkPR(t *testing.T) {
 	m.connect.SetInputValue("ref", "#12")
 	wtLinkDrive(t, m, func() tea.Msg { return connectcard.ButtonMsg{ID: "link"} })
 	if m.connectOpen {
-		t.Fatalf("card still open: %s", ansi.Strip(m.connect.View()))
+		t.Fatalf("card still open: %s", ansi.Strip(m.connect.Box()))
 	}
 	md, _ := worktrees.Load(m.wt.common)
 	got := md["/src/app.worktrees/toast"]
@@ -132,8 +148,8 @@ func TestWorktreeLinkBadInputAndNoGH(t *testing.T) {
 	wtKey(t, m, "i")
 	m.connect.SetInputValue("ref", "https://evil.example/o/r/pull/1")
 	wtLinkDrive(t, m, func() tea.Msg { return connectcard.ButtonMsg{ID: "link"} })
-	if !m.connectOpen || !strings.Contains(ansi.Strip(m.connect.View()), "not this repository's GitHub host") {
-		t.Fatalf("no error on the card:\n%s", ansi.Strip(m.connect.View()))
+	if !m.connectOpen || !strings.Contains(ansi.Strip(m.connect.Box()), "not this repository's GitHub host") {
+		t.Fatalf("no error on the card:\n%s", ansi.Strip(m.connect.Box()))
 	}
 	if len(gh.calls) != 0 {
 		t.Errorf("gh ran for a refused URL: %v", gh.calls)
@@ -158,6 +174,7 @@ func TestWorktreeLinkBadInputAndNoGH(t *testing.T) {
 // requests with pending CI on the fast cadence, the rest slowly, merged
 // and closed ones never.
 func TestWorktreeLinkLineAndRefresh(t *testing.T) {
+	wtUnicodeIcons(t)
 	for _, c := range []struct {
 		md   worktrees.Meta
 		want string
@@ -201,14 +218,14 @@ func TestWorktreeNewFromIssue(t *testing.T) {
 	}
 	defer func() { wtCreateRun = old }()
 	m := wtFormModel(t)
-	if !strings.Contains(ansi.Strip(m.connect.View()), "Issue") {
-		t.Fatalf("no Issue row:\n%s", ansi.Strip(m.connect.View()))
+	if !strings.Contains(ansi.Strip(m.connect.Box()), "Issue") {
+		t.Fatalf("no Issue row:\n%s", ansi.Strip(m.connect.Box()))
 	}
 	m.connect.SetInputValue("issue", "412")
 	m.refreshWTForm()
 	wtDrive(t, m, func() tea.Msg { return connectcard.ButtonMsg{ID: "create"} })
 	if len(made) != 1 || made[0] != "412-pinned-row-in-worktrees /src/app.worktrees/412-pinned-row-in-worktrees" {
-		t.Fatalf("made %v (card: %s)", made, ansi.Strip(m.connect.View()))
+		t.Fatalf("made %v (card: %s)", made, ansi.Strip(m.connect.Box()))
 	}
 	if md, _ := worktrees.Load(m.wt.common); md["/src/app.worktrees/412-pinned-row-in-worktrees"].Issue != 412 {
 		t.Errorf("not linked: %+v", md)

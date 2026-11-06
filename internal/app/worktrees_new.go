@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,6 +14,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/connectcard"
+	"github.com/amin-jalali/termocode/internal/ghci"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/jsonc"
 	"github.com/amin-jalali/termocode/internal/picker"
@@ -60,12 +63,16 @@ type wtForm struct {
 	vals map[string]string
 	pick int // the agent choice while the ref picker is open
 	off  bool
+	// issueNum / issueTitle: the issue read for the branch (WTX-9).
+	issueNum   int
+	issueTitle string
 }
 
 // wtFormVals are the typed values of the card.
 type wtFormVals struct {
 	name, from, branch, task string
-	agent                    int // 0 = none
+	issue                    string // an issue or PR to link (WTX-9): the branch comes from its title
+	agent                    int    // 0 = none
 }
 
 // wtFormDraft is what Create would do with vals: the branch and folder.
@@ -73,6 +80,9 @@ func (f *wtForm) draft(v wtFormVals) (branch, folder string) {
 	branch = strings.TrimSpace(v.branch)
 	if branch == "" {
 		branch = worktreeform.BranchFromName(v.name)
+	}
+	if branch == "" && f.issueTitle != "" {
+		branch = worktreeform.BranchFromIssue(f.issueNum, f.issueTitle)
 	}
 	if branch == "" {
 		return "", ""
@@ -188,6 +198,7 @@ func (m *Model) wtFormValues() wtFormVals {
 		from:   strings.TrimSpace(m.connect.InputValue("from")),
 		branch: strings.TrimSpace(m.connect.InputValue("branch")),
 		task:   strings.TrimSpace(m.connect.InputValue("task")),
+		issue:  strings.TrimSpace(m.connect.InputValue("issue")),
 		agent:  m.connect.Choice("agent"),
 	}
 }
@@ -199,7 +210,7 @@ func (m *Model) wtFormCard() connectcard.Card {
 	if m.connectOpen && m.connect.Card().Title == wtFormTitle {
 		v = m.wtFormValues()
 	} else if f.vals != nil {
-		v = wtFormVals{name: f.vals["name"], from: f.vals["from"], branch: f.vals["branch"], task: f.vals["task"], agent: f.pick}
+		v = wtFormVals{name: f.vals["name"], from: f.vals["from"], branch: f.vals["branch"], task: f.vals["task"], issue: f.vals["issue"], agent: f.pick}
 	}
 	return wtFormCardFor(f, v, m.h < 30)
 }
@@ -208,8 +219,11 @@ func (m *Model) wtFormCard() connectcard.Card {
 func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 	branch, folder := f.draft(v)
 	ph := "from the name"
-	if strings.TrimSpace(v.branch) == "" && branch != "" {
+	switch {
+	case strings.TrimSpace(v.branch) == "" && branch != "":
 		ph = branch
+	case strings.TrimSpace(v.issue) != "":
+		ph = "from the issue title"
 	}
 	opts := []string{"none"}
 	for _, a := range f.agents {
@@ -217,6 +231,7 @@ func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 	}
 	rows := []connectcard.Row{
 		{Kind: connectcard.Input, ID: "name", Text: "Name", Inline: true, Placeholder: "feat/my-change", Value: v.name},
+		{Kind: connectcard.Input, ID: "issue", Text: "Issue", Inline: true, Placeholder: "optional: number or URL, linked to it", Value: v.issue},
 		{Kind: connectcard.Input, ID: "from", Text: "From", Inline: true, Value: v.from},
 		{Kind: connectcard.Input, ID: "branch", Text: "Branch", Inline: true, Placeholder: ph, Value: v.branch},
 		{Kind: connectcard.Choice, ID: "agent", Text: "Agent", Options: opts, Selected: v.agent},
@@ -225,6 +240,9 @@ func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 	}
 	rows = append(rows, wtAlsoRows(f, short)...)
 	where := "type a name"
+	if folder == "" && strings.TrimSpace(v.issue) != "" {
+		where = "from the issue title"
+	}
 	if folder != "" {
 		home, _ := os.UserHomeDir()
 		where = homeShort(folder, home)
@@ -389,7 +407,7 @@ func (m *Model) onWTFormButton(id string) tea.Cmd {
 func (m *Model) openWTRefPicker() tea.Cmd {
 	f := m.wt.form
 	v := m.wtFormValues()
-	f.vals = map[string]string{"name": v.name, "from": v.from, "branch": v.branch, "task": v.task}
+	f.vals = map[string]string{"name": v.name, "from": v.from, "branch": v.branch, "task": v.task, "issue": v.issue}
 	f.pick = v.agent
 	m.connectOpen = false
 	items := make([]picker.Item, 0, len(f.refs))
@@ -433,6 +451,8 @@ type wtCreatedMsg struct {
 	start          bool
 	agent          agents.Agent
 	task           string
+	link           *ghci.Link    // the linked issue / PR as gh read it
+	linkRef        *ghci.LinkRef // linked without a read (no gh)
 }
 
 // wtCreateRun makes the worktree and copies / links the files (a var:
@@ -450,8 +470,11 @@ func (m *Model) wtCreate(start bool) tea.Cmd {
 	v := m.wtFormValues()
 	branch, folder := f.draft(v)
 	f.fail = ""
+	ref, hasRef, refErr := wtLinkRefOf(v.issue, f.root)
 	switch {
-	case branch == "":
+	case refErr != nil:
+		f.fail = "Issue: " + refErr.Error()
+	case branch == "" && !hasRef:
 		f.fail = "Type a name (or a branch)."
 	case v.from == "":
 		f.fail = "Type where it starts from, or pick a start point."
@@ -471,11 +494,30 @@ func (m *Model) wtCreate(start bool) tea.Cmd {
 	f.gen++
 	gen := f.gen
 	m.refreshWTForm()
-	ref := v.from
+	from := v.from
 	task := v.task
+	run := wtGHRun()
 	return func() tea.Msg {
-		files, err := wtCreateRun(f, folder, branch, ref)
-		return wtCreatedMsg{gen: gen, folder: folder, branch: branch, files: files, err: err, start: start, agent: ag, task: task}
+		msg := wtCreatedMsg{gen: gen, start: start, agent: ag, task: task}
+		if hasRef {
+			l, err := ghci.ViewLink(context.Background(), run, f.root, ref)
+			switch {
+			case err == nil:
+				msg.link = &l
+				if branch == "" {
+					branch = worktreeform.BranchFromIssue(l.Number, l.Title)
+					folder = worktreeform.Folder(f.base, branch)
+				}
+			case branch == "":
+				msg.err = errors.New("Could not read #" + strconv.Itoa(ref.Number) + " for its title (" + err.Error() + "); type a name.")
+				return msg
+			default:
+				msg.linkRef = &ref
+			}
+		}
+		msg.folder, msg.branch = folder, branch
+		msg.files, msg.err = wtCreateRun(f, folder, branch, from)
+		return msg
 	}
 }
 
@@ -504,6 +546,14 @@ func (m *Model) onWTCreated(msg wtCreatedMsg) tea.Cmd {
 		md.Created, md.LastSeen = clock.Now(), clock.Now()
 		if msg.start {
 			md.Agent = msg.agent.ID
+		}
+		switch {
+		case msg.link != nil:
+			wtLinkMeta(&md, *msg.link, clock.Now())
+		case msg.linkRef != nil && msg.linkRef.Kind == ghci.LinkPR:
+			md.PR = msg.linkRef.Number
+		case msg.linkRef != nil:
+			md.Issue = msg.linkRef.Number
 		}
 		mm[msg.folder] = md
 	})

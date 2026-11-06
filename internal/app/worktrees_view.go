@@ -419,11 +419,8 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	}
 	// 4: links · last seen · locked.
 	var links []string
-	if it.e.Meta.Issue > 0 {
-		links = append(links, "#"+strconv.Itoa(it.e.Meta.Issue))
-	}
-	if it.e.Meta.PR > 0 {
-		links = append(links, "PR #"+strconv.Itoa(it.e.Meta.PR))
+	if l := wtLinkLine(it.e.Meta); l != "" {
+		links = append(links, l)
 	}
 	if it.e.Locked {
 		links = append(links, "locked")

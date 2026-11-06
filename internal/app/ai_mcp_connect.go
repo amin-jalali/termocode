@@ -1141,6 +1141,9 @@ func (m Model) routeToConnect(msg tea.Msg) (Model, tea.Cmd) {
 	if _, key := msg.(tea.KeyMsg); key && m.wtFormOpen() { // Worktree: New… (worktrees_new.go)
 		return m.routeToWTForm(msg)
 	}
+	if k, key := msg.(tea.KeyMsg); key && k.Type == tea.KeyEnter && m.wtLinkOpen() && m.connect.FocusedID() == "ref" {
+		return m, m.wtLinkStart() // Enter in the field links (worktrees_link.go)
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
