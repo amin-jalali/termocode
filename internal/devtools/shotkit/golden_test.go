@@ -220,6 +220,12 @@ func goldenExtras() []Scene {
 		// co-author pickers.
 		{Name: "commit-history-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-commit-history"), Pause(600 * time.Millisecond)}},
 		{Name: "co-author-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-co-author"), Pause(600 * time.Millisecond)}},
+		// Stash… (GITX-10): what to stash.
+		{Name: "stash-mode-picker", Steps: WithEditor(Act("palette:git-stash-options"), Pause(600*time.Millisecond))},
+		// Bisect and compare (GITX-19, GITX-24): the good-commit picker that
+		// starts a bisect, and what Compare Branches… offers.
+		{Name: "bisect-start", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-bisect"), Pause(600 * time.Millisecond)}},
+		{Name: "compare-branches-modes", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-compare-branches"), Pause(400 * time.Millisecond), Key("enter"), Pause(600 * time.Millisecond)}},
 		// Blame (GITX-3, GITX-4): annotations beside every line, the
 		// cursor line's blame at its end and in the status bar; the
 		// Blame Options picker.
@@ -275,6 +281,8 @@ func goldenCases() []goldenCase {
 	out = append(out, worktreesCases()...)     // golden_worktrees_test.go
 	out = append(out, agentChatCases()...)     // golden_agents_test.go
 	out = append(out, agentSessionsCases()...) // golden_agents_test.go
+	out = append(out, agentUsagePlansCases()...)
+	out = append(out, agentNamesCases()...)
 	// A terminal tab split into three panes (G-SPL).
 	{
 		sc := TerminalSplit()

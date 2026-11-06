@@ -119,7 +119,9 @@ type aiState struct {
 	agentHooksPlan *agenthooks.Plan
 	// agentPickPending is the agent the open install / sign-in card is about (agent_install.go).
 	agentPickPending string
-	shipGen          int
+	// agentAccountPending is the sign-in line of the open account card (agent_accounts.go).
+	agentAccountPending string
+	shipGen             int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the

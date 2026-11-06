@@ -157,6 +157,11 @@ one again: `termocode workflow again <name> <key>`.
   the terminal is in the background) and on a connected phone. Set
   `"notify": ["os"]` or `["web"]` to choose; a run you start by hand
   notifies only when the file asks.
+- `"notify": ["message:sum"]` sends the same summary through the
+  message step `sum` (`"via": "os"`, `"web"` or `"${secret:NAME}"`, a
+  secret that holds an https webhook URL). A webhook is a write to an
+  outside system: the summary goes there only after you chose **Allow
+  for this workflow** on that step's card.
 - Runs are kept for `workflows_history_days` (30) days and deleted when
   termocode starts. `h` opens the newest run;
   `termocode workflow runs --json` lists them.
@@ -170,6 +175,9 @@ one again: `termocode workflow again <name> <key>`.
 - `workflows_day_budget_usd` caps what all workflows spend on AI in one
   day (0 = no cap). A run that reaches it waits before its next step and
   asks: **Stop** (first) or **Continue**.
+- In the file, `"limits": { "budget_usd": 5, "item_budget_usd": 1.5 }`
+  caps one run and one item the same way. Each budget asks once; after
+  **Continue** it does not ask again in that run.
 - Each run keeps an `audit.jsonl` next to its run file: one line per
   step event and per answer on a write card.
 
@@ -181,6 +189,11 @@ A write card shows up like the other cards: **Deny** (first) or **Allow
 once**. "Allow for this workflow", turning a schedule on and editing a
 file stay on the laptop. You can stop a run from the phone; it asks
 first.
+
+In a browser on a wide screen, **Workflows** in the activity bar lists
+the same in the side bar. A run opens as an editor tab with its counts,
+its last lines and the write card that waits for it (**Deny** first).
+**Stop** asks first, **Cancel** first.
 
 ## Admin policy
 

@@ -36,15 +36,16 @@ const (
 
 // Source Control context-menu action IDs.
 const (
-	gitMenuDiff     = "git-diff"
-	gitMenuStage    = "git-stage"
-	gitMenuDiscard  = "git-discard"
-	gitMenuCommit   = "git-commit"
-	gitMenuCopyHash = "git-copy-hash"
-	gitMenuCopyMsg  = "git-copy-message"
-	gitMenuRefresh  = "git-refresh"
-	gitMenuShowRaw  = "git-show-raw"
-	gitMenuRebase   = "git-rebase-from" // git_rebase.go
+	gitMenuDiff      = "git-diff"
+	gitMenuStage     = "git-stage"
+	gitMenuDiscard   = "git-discard"
+	gitMenuCommit    = "git-commit"
+	gitMenuCopyHash  = "git-copy-hash"
+	gitMenuCopyMsg   = "git-copy-message"
+	gitMenuRefresh   = "git-refresh"
+	gitMenuShowRaw   = "git-show-raw"
+	gitMenuRebase    = "git-rebase-from" // git_rebase.go
+	gitMenuResetHere = "git-reset-here"  // git_stash_reset.go
 	// GITX-6, GITX-8 (git_commit_msg.go, git_ai_helpers.go).
 	gitMenuExplainAI   = "git-explain-ai"
 	gitMenuAIMessage   = "git-ai-message"
@@ -98,6 +99,7 @@ func gitCommitMenuItems() []menu.Item {
 		{ID: gitMenuShowRaw, Title: "Show Raw (git show)", Icon: "≢"},
 		{ID: gitMenuRebase, Title: "Rebase from Here…", Icon: "⇅"},
 		{ID: gitMenuExplainAI, Title: "Explain with AI", Icon: "✦"},
+		{ID: gitMenuResetHere, Title: "Reset Current Branch to Here…", Icon: "↶"},
 		{ID: gitMenuBranchHere, Title: "Create Branch Here…", Icon: "⑂"},
 		{ID: gitMenuCheckoutCommit, Title: "Check Out This Commit (Detached)", Icon: "⎇"},
 		{Sep: true},
@@ -179,6 +181,8 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
 			return m.gitAIExplainCommit(m.gitCommits[cur.ci].Hash)
 		}
+	case gitMenuResetHere:
+		return m.gitResetFromRow()
 	case gitMenuBranchHere:
 		return m.gitBranchHereFromRow()
 	case gitMenuCheckoutCommit:

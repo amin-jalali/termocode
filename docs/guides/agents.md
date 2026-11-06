@@ -258,6 +258,147 @@ first. The old file is kept as `<file>.termocode-backup`. The hook runs
 terminal. Pick the agent again to **Remove** the hooks. `termocode agent
 list` shows `hook` or `screen` as the source of each state (`--json`).
 
+## Your privacy settings first
+
+Some agent features read or touch the agents' own files. Each one is a
+setting in `config.json`, **off** by default. The AI chat can not turn
+them on.
+
+| Setting | What it allows | Default |
+|---|---|---|
+| `agent_transcripts` | termocode reads the session files Claude Code and Codex write for themselves (chat view, sessions, search, plan numbers). Read only; secrets are hidden first. | `off` |
+| `agent_auto_continue` | termocode types `continue` into an agent tab once its usage limit resets. | `false` |
+| `agent_hibernate_minutes` | termocode stops an idle agent and starts it again when you come back. | `0` (off) |
+| `agent_accounts` | Named accounts of Claude Code and Codex, each in its own folder. Labels only. | `{}` |
+
+termocode never writes into `~/.claude` or `~/.codex` for these features,
+and it never calls a vendor's usage service.
+
+## Start an agent
+
+**Agent: Start…** lists every agent: **INSTALLED** (with the sign-in state
+of Claude Code and Codex), **BUILT-IN** (termocode's own AI profiles) and
+**NOT INSTALLED**. `Enter` on a missing agent installs it with npm or pip
+into termocode's tools folder, after a card (**Not now** first). Then a
+second card runs the CLI's own sign-in command in a terminal tab.
+
+From the **WORKTREES** view, **Agent: Start…** starts the agent in the
+selected worktree, and the agent shows on that worktree's card.
+
+## Race agents on one task
+
+**Agent: Race…** gives one task to 2 to 4 agents at once. Tick the lanes,
+type the task and, if you like, a verify command such as `go test ./...`.
+Each lane gets its own worktree from `HEAD` (hidden in the git folder) and
+its own terminal tab. termocode types the task once, only when the agent's
+input box is on screen, never into a question.
+
+**Agent: Race Compare** shows one row per lane: state, files and `+/-`.
+
+| Key | What it does |
+|---|---|
+| `Enter` | Review the lane's diff (read only) |
+| `m` | Merge this lane into your folder; a conflict stops first and asks (**Cancel** first) |
+| `d` | Discard one lane (**Cancel** first) |
+| `v` | Run the verify command in every finished lane |
+| `s` | Ask your **Quick** model for a 3-line summary of the differences (capped, secrets hidden; the cost is shown) |
+| `x` | Stop every lane |
+
+After a merge, a card asks about the other lanes: **Keep** is first. A
+lane whose agent still works is never merged or discarded. The AI chat can
+start a race with `agent_race_start`, always behind a card (**Deny**
+first).
+
+## Chat view and sessions
+
+With `agent_transcripts` on:
+
+- **Agent: Chat View** (or `v` on an agent tab) shows the session as a
+  chat. Tool calls are one line each. What you type goes to the tab. Press
+  `v` again for the terminal.
+- **Agent: Sessions…** lists this project's past sessions. `Enter` resumes
+  one in a new tab with the CLI's own resume command; `→` reads it.
+- `/` in the list, or **Agent: Search Sessions…**, searches the text of
+  this project's sessions, on this computer only.
+
+While the setting is off, termocode asks first and opens no file there.
+
+## Usage limits and auto-continue
+
+When Claude Code or Codex shows its usage-limit message, the tab is named
+`limit ↻14:30` until the reset, and a toast says when it resets.
+
+With `agent_auto_continue` set to `true`, or **Agent: Toggle
+Auto-Continue** on the tab, termocode types `continue` (then `Enter`) one
+minute after the reset, **once** per limit, and a toast says so. It never
+types while the agent works, while a y/n or permission question is on the
+screen, or into a closed tab.
+
+## Usage and plan limits
+
+The status bar shows a pill like `✦ Claude 62% ↻14:30`: the part of the
+plan window used and the next reset. `✦ Claude limit ↻14:30` means a
+limit is on. On a narrow bar it shrinks to `✦62%`, then goes. When
+termocode knows nothing, there is no pill.
+
+The numbers come only from:
+
+1. the limit message on an agent tab's screen, and
+2. the agents' session files, when `agent_transcripts` is on.
+
+termocode never asks the vendor (no usage endpoint, no use of the CLI's
+sign-in). Click the pill, or run **Agent: Usage Plans**, to open **AI:
+Usage**. Its **PLANS** block has one row per account: used share, reset,
+last limit, today's tokens and auto-continue. The AI's `usage_summary`
+tool gets the same numbers, never the message text.
+
+## Accounts
+
+**Agent: Accounts…** gives Claude Code and Codex named accounts, like
+`work` and `personal`:
+
+- Each account has its own folder in termocode's config folder
+  (`agents/<agent>/<label>`). Only your user can open it.
+- A tab started as that account runs the CLI with `CLAUDE_CONFIG_DIR` or
+  `CODEX_HOME` set to that folder, so the CLI keeps that sign-in there.
+- **Add a … account…** asks for a label, then a card (**Not now** first)
+  runs the CLI's own sign-in with that folder.
+- **Agent: Start…** shows `as work` rows under the agent.
+
+termocode keeps only the labels in `config.json`. It never reads the
+sign-in files and never copies or swaps them. Your default
+`~/.claude` and `~/.codex` stay as they are. Agents without such a
+variable (Gemini CLI, OpenCode, …) have no accounts. The account folders
+are hidden in bug reports.
+
+## Hibernate idle agents
+
+Set `agent_hibernate_minutes` (for example `30`). When a Claude Code or
+Codex tab is done or waiting with no output for that long, a card asks
+**Hibernate Claude Code?** (**Keep running** first; **Always for this
+session** skips the card later). Then termocode:
+
+- keeps the session id (from the session file when `agent_transcripts` is
+  on),
+- stops the agent's program (the shell and the tab stay), and
+- marks the tab `☾ Claude Code`.
+
+Go back to the tab and termocode types the CLI's resume command:
+`claude --resume <id>` or `codex resume <id>`. Without a known id it uses
+`claude --continue` or `codex resume --last` and says so. A script prompt
+to a hibernated tab resumes it first and asks to send the prompt again.
+termocode never hibernates a tab with a question on the screen, or the tab
+you are looking at. **Agent: Hibernate or Wake** does it at once. Linux and
+macOS only.
+
+## Suggested worktree names
+
+**Worktree: Suggest a Name…** asks for the task or issue title. Only that
+text (cut to 300 characters, secrets hidden) goes to your **Quick** model
+slot. You get up to 3 names like `fix-toast-queue`, with the cost. `Enter`
+copies one. Without a model nothing is sent, and the list says to set a
+quick model.
+
 ## If something does not work
 
 | What you see | Try this |
@@ -267,3 +408,6 @@ list` shows `hook` or `screen` as the source of each state (`--json`).
 | A message says the agent is not installed | Install the agent so its program is on your `PATH`, then start it again. |
 | The agent shows no termocode tools | Start it again from the palette, or add the config by hand. |
 | A card never appears | Another dialog may be open. The card waits until it closes. |
+| No plan pill in the status bar | termocode has seen no limit message yet. Turn on `agent_transcripts` to read the numbers from the session files. |
+| Auto-continue did not type | A question was on the screen, or the agent was working again. The toast says why. |
+| A resumed agent starts a new session | No session id was known. Turn on `agent_transcripts` so termocode can keep it. |

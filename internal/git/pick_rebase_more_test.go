@@ -1,6 +1,7 @@
 package git
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -286,4 +287,29 @@ func logSubjectsOf(es []LogEntry) string {
 		s = append(s, e.Subject)
 	}
 	return strings.Join(s, "|")
+}
+
+// A fixup! subject that is also the start of a newer commit's hash still
+// folds into the commit with that subject (the hash prefix matched first,
+// so TestAutosquash failed when a hash began with "c1").
+func TestAutosquashPrefersSubjectOverHashPrefix(t *testing.T) {
+	r, h := rebaseRepo(t, 1)
+	r.write(t, "a.txt", "a\n")
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "a")
+	found := false
+	for i := 0; i < 300 && !found; i++ {
+		r.git(t, "commit", "-q", "--allow-empty", "-m", fmt.Sprintf("n%d", i))
+		found = strings.HasPrefix(strings.TrimSpace(r.git(t, "rev-parse", "HEAD")), "a")
+	}
+	if !found {
+		t.Skip("no hash starting with a in 300 commits")
+	}
+	r.write(t, "a.txt", "a fixed\n")
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "fixup! a")
+	n, base, err := AutosquashPlan(r.dir)
+	if err != nil || n != 1 || base != h[0] {
+		t.Fatalf("plan %d %q %v, want base %q (the parent of a)", n, base, err, h[0])
+	}
 }
