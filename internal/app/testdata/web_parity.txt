@@ -483,6 +483,7 @@ missing	git-outgoing	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S
 missing	git-patch-save	Git|S
+missing	git-peek-change	Git|S
 missing	git-publish	Git|S
 missing	git-pull-options	Git|S
 missing	git-pull-rebase	Git|S
