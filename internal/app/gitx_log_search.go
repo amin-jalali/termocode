@@ -70,18 +70,6 @@ func init() {
 	})
 }
 
-func (m *Model) gitxInfo(title string) tea.Cmd {
-	var c tea.Cmd
-	m.toast, c = m.toast.Push(toast.Info, title)
-	return c
-}
-
-func (m *Model) gitxFail(title string, err error) tea.Cmd {
-	var c tea.Cmd
-	m.toast, c = m.toast.PushDetail(toast.Errr, title, err.Error())
-	return c
-}
-
 func (m *Model) openLogSearchPrompt() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil

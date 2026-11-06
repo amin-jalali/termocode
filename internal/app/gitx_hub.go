@@ -7,6 +7,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // The GITX hub (docs-local/plans/git-gap.md): each GITX feature lives in
@@ -162,4 +163,18 @@ func (m *Model) gitxPrompt(title, label, value string, on func(m *Model, value s
 	m.promptOpen = true
 	m.promptKind = promptKindGitx
 	m.gitx.onPrompt = on
+}
+
+// gitxInfo shows a short note.
+func (m *Model) gitxInfo(title string) tea.Cmd {
+	var c tea.Cmd
+	m.toast, c = m.toast.Push(toast.Info, title)
+	return c
+}
+
+// gitxFail shows what failed and git's reason.
+func (m *Model) gitxFail(title string, err error) tea.Cmd {
+	var c tea.Cmd
+	m.toast, c = m.toast.PushDetail(toast.Errr, title, err.Error())
+	return c
 }
