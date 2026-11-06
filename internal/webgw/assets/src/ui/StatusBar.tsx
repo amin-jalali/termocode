@@ -38,6 +38,12 @@ export function langName(ft: string): string {
 
 const EOLS: Readonly<Record<string, string>> = { unix: "LF", dos: "CRLF", mac: "CR" };
 
+/** vimMsg is a message of Vim mode in words ("notfound\x00foo"). */
+function vimMsg(m: string): string {
+  const [code, arg = ""] = m.split("\x00");
+  return code === "notfound" ? t("sb.vim_notfound", { s: arg }) : code === "noecmd" ? t("sb.vim_noecmd", { s: arg }) : code === "nomark" ? t("sb.vim_nomark", { s: arg }) : "";
+}
+
 function FileFacts() {
   const f = file.value;
   if (route.value.tab === "more" || !f || f.path !== fileOfTab(activeFile.value ?? "") || f.kind !== "open" || f.buf === undefined) return null;
@@ -57,6 +63,7 @@ function FileFacts() {
           {t(vimKey)}
         </span>
       )}
+      {vimKey && vm.msg && <span class="strip-item sb-vim-msg">{vimMsg(vm.msg)}</span>}
       {vimKey && vm.rec && <span class="strip-item sb-vim-rec">{t("sb.vim_rec", { r: vm.rec })}</span>}
       {vimKey && vm.pending && <span class="strip-item sb-vim-keys" dir="ltr">{vm.pending.replace(/\x00[^\x00]*\x00/g, "").replace(/\n/g, "⏎")}</span>}
       <span class="strip-item sb-pos" title={t("sb.line_of", { n: line, m: d.lines.length })}>

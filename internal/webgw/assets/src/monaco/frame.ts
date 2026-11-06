@@ -129,6 +129,9 @@ interface Editor {
   getAction(id: string): { isSupported(): boolean; run(): Promise<void> } | null;
   getContainerDomNode(): HTMLElement;
   trigger(source: string, handlerId: string, payload: unknown): void;
+  setScrollTop(top: number): void;
+  getTopForLineNumber(line: number): number;
+  getLayoutInfo(): { height: number };
 }
 interface LineChange {
   originalStartLineNumber: number;
@@ -898,7 +901,24 @@ function vimStart(mod: typeof VimModule): void {
       if (cmd === "\n" || cmd === "\t") e.trigger("keyboard", "type", { text: cmd });
       else if (cmd) e.trigger("keyboard", cmd, null);
     },
-    show: (mode, pending, rec) => vimShow(mode, pending, rec),
+    show: (mode, pending, rec, msg) => vimShow(mode, pending, rec, msg),
+    save: () => post({ t: "save" }),
+    close: () => post({ t: "vimQuit" }),
+    indent: () => (spaces ? " ".repeat(tabWidth) : "\t"),
+    view: () => {
+      const r = e.getVisibleRanges();
+      return r.length ? { top: r[0].startLineNumber, bottom: r[r.length - 1].endLineNumber } : { top: 1, bottom: 1 };
+    },
+    reveal: (off, where) => {
+      const p = at(off);
+      if (where === "center") e.revealLineInCenter(p.lineNumber);
+      else {
+        const top = e.getTopForLineNumber(p.lineNumber);
+        const row = e.getTopForLineNumber(p.lineNumber + 1) - top;
+        e.setScrollTop(Math.max(0, where === "top" ? top : top + row - e.getLayoutInfo().height));
+      }
+    },
+    copied: (text) => post({ t: "copied", text }),
   });
 }
 
@@ -917,14 +937,16 @@ const VIM_TYPE: Record<string, string> = {
   "<End>": "cursorEnd",
 };
 
-function vimShow(mode: VimMode | null, pending: string, rec = ""): void {
+function vimShow(mode: VimMode | null, pending: string, rec = "", msg = ""): void {
   ed?.updateOptions({ cursorStyle: mode === null || mode === "insert" ? "line" : "block" });
-  const key = (mode ?? "") + "\x00" + pending + "\x00" + rec;
+  const key = (mode ?? "") + "\x00" + pending + "\x00" + rec + "\x00" + msg;
   if (key === vimShown) return;
   vimShown = key;
-  post({ t: "vim", mode: mode ?? "", pending, rec });
+  post({ t: "vim", mode: mode ?? "", pending, rec, msg });
 }
 let tabWidth = 4;
+/** spaces: the file indents with spaces (Vim's > and <). */
+let spaces = false;
 
 function sendText(user: boolean): void {
   post({ t: "text", text: cur.toString(), v, user, canUndo: hist.canUndo(), canRedo: hist.canRedo() });
@@ -1066,7 +1088,7 @@ function setOpts(o: FrameOpts): void {
   }
   if (o.wrap !== undefined) u.wordWrap = o.wrap ? "on" : "off";
   if (o.tabSize !== undefined && o.tabSize > 0) u.tabSize = tabWidth = o.tabSize;
-  if (o.insertSpaces !== undefined) u.insertSpaces = o.insertSpaces;
+  if (o.insertSpaces !== undefined) u.insertSpaces = spaces = o.insertSpaces;
   if (o.ai) setAI(o.ai);
   ed.updateOptions(u);
   if (o.vim !== undefined) vimOn(o.vim);
@@ -1102,7 +1124,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     readOnly: m.readOnly === true,
     wordWrap: m.wrap ? "on" : "off",
     tabSize: (tabWidth = m.tabSize && m.tabSize > 0 ? m.tabSize : 4),
-    insertSpaces: m.insertSpaces === true,
+    insertSpaces: (spaces = m.insertSpaces === true),
     detectIndentation: false,
     automaticLayout: true,
     minimap: { enabled: true },

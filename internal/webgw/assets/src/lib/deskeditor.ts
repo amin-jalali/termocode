@@ -9,7 +9,7 @@ import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
 import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame, type CursorOp } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
-import { cursorAt, escapeKey, focusSlot, noteClip, quick, vimMode } from "./workbench";
+import { activeFile, closeTab, cursorAt, escapeKey, focusSlot, noteClip, quick, vimMode } from "./workbench";
 import { prefs } from "./prefs";
 import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
@@ -271,8 +271,14 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         if (typeof m.text === "string") noteClip(m.text);
         return;
       case "vim":
-        if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending, rec: typeof m.rec === "string" ? m.rec : "" };
+        if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending, rec: typeof m.rec === "string" ? m.rec : "", msg: typeof m.msg === "string" ? m.msg : "" };
         return;
+      case "vimQuit": {
+        // :q closes the editor's tab (as File: Close Editor does).
+        const f = activeFile.peek();
+        if ((host.slot ?? "g0") === focusSlot.peek() && f) closeTab(f);
+        return;
+      }
       case "key":
         // The workbench's keys work while the editor has the focus.
         dispatchEvent(new KeyboardEvent("keydown", { key: m.key, code: m.code, ctrlKey: m.ctrl, metaKey: m.meta, shiftKey: m.shift, altKey: m.alt, bubbles: true, cancelable: true }));

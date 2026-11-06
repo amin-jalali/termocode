@@ -79,7 +79,7 @@ export const wordWrap = signal<boolean>(!matchMedia("(min-width: 1200px)").match
 
 /** vimMode is the focused editor's Vim mode for the status bar ("": off)
  * and the keys of a command typed so far. */
-export const vimMode = signal<{ mode: string; pending: string; rec?: string }>({ mode: "", pending: "" });
+export const vimMode = signal<{ mode: string; pending: string; rec?: string; msg?: string }>({ mode: "", pending: "" });
 
 /** zen: Zen mode (WEBP-1): only the editor shows; the page marks it on
  * <html data-zen="on"> so the status bar hides too. */
