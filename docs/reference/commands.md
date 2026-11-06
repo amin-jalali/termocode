@@ -343,7 +343,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Clone Repository... | `git-clone` |   |   |
 | Git: Commit... | `git-commit` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
+| Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
+| Git: Delete Branch… | `git-branch-delete` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
@@ -377,6 +379,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Redo Undone Git Action | `git-redo` |   |   |
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
+| Git: Rename Branch… | `git-branch-rename` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |

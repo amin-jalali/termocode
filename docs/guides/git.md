@@ -80,6 +80,19 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 | **Git: Blame Current Line** (`Alt+B`) | Who changed this line, and when |
 | **Git: Stash Changes** / **Pop Latest Stash** / **Show Stash List...** | Stash work |
 | **Git: Show Tags...** | Check out a tag |
+| **Git: Rename Branch…** | Give the current branch a new name |
+| **Git: Create Branch From…** | Start a new branch at another branch or a tag |
+| **Git: Delete Branch…** | Delete a local or a remote branch (see below) |
+
+**Git: Delete Branch…** asks first, and **Cancel** is the choice that is
+ready. A local branch is only deleted when its commits are on another
+branch. If it has commits of its own, a second card asks before a **Force
+Delete**. The toast names the commit it was at, so `git branch <name>
+<hash>` brings it back. To delete a branch on the remote you also type its
+full name, for example `origin/feature`.
+
+Right-click a commit in the **GRAPH** for **Create Branch Here…** and
+**Check Out This Commit (Detached)**.
 
 ## The GRAPH
 

@@ -1974,6 +1974,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
 | `git-blame` | Git: Blame Current Line | auto |   |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
+| `git-branch-delete` | Git: Delete Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-branch-from` | Git: Create Branch From… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch) |
+| `git-branch-rename` | Git: Rename Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci` | Git: CI and Pull Request… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |

@@ -45,6 +45,9 @@ const (
 	gitMenuRefresh  = "git-refresh"
 	gitMenuShowRaw  = "git-show-raw"
 	gitMenuRebase   = "git-rebase-from" // git_rebase.go
+	// GITX-2 (git_branch_ops.go).
+	gitMenuBranchHere     = "git-branch-here"
+	gitMenuCheckoutCommit = "git-checkout-commit"
 
 	// Action-bar overflow (⋯) menu.
 	gitMenuAmend     = "git-amend"
@@ -82,6 +85,8 @@ func gitCommitMenuItems() []menu.Item {
 		{ID: gitMenuCopyMsg, Title: "Copy Commit Message", Icon: "⎘"},
 		{ID: gitMenuShowRaw, Title: "Show Raw (git show)", Icon: "≢"},
 		{ID: gitMenuRebase, Title: "Rebase from Here…", Icon: "⇅"},
+		{ID: gitMenuBranchHere, Title: "Create Branch Here…", Icon: "⑂"},
+		{ID: gitMenuCheckoutCommit, Title: "Check Out This Commit (Detached)", Icon: "⎇"},
 		{Sep: true},
 		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
 	}
@@ -154,6 +159,10 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
 			return m.gitRebaseFromCmd(m.gitCommits[cur.ci].FullHash)
 		}
+	case gitMenuBranchHere:
+		return m.gitBranchHereFromRow()
+	case gitMenuCheckoutCommit:
+		return m.gitCheckoutCommitFromRow()
 	case gitMenuRefresh:
 		return fetchGitCmd()
 	}

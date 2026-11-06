@@ -231,6 +231,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitBranchRef is the branch / start ref a branch card or prompt is
+	// about (git_branch_ops.go).
+	gitBranchRef string
 
 	// VSCode-style mouse hover. hoverX/hoverY are the absolute screen cell
 	// under the pointer (or -1 when unknown). mouseAllMotion mirrors the live
