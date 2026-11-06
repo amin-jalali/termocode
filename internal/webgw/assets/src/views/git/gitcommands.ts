@@ -4,7 +4,8 @@
 // and previous change or merge conflict of the file, the merge editor's
 // Next and Previous Conflict, source control's tree or flat list, and
 // staging, unstaging or discarding the selected rows or the change at
-// the caret; the tags (check one out) and the stash (apply an entry).
+// the caret; the tags (check one out) and the stash (apply an entry);
+// undo, redo and the reflog (each after the laptop's card).
 import type { Command } from "../../lib/commands";
 import { blameOn } from "../../lib/blame";
 import { GRAPH_TAB, PRS_TAB } from "../../lib/gittab";
@@ -16,7 +17,8 @@ import { conflictRows, gitAsk, mergeActs, nextRow, scmTree } from "../../lib/git
 import { toast } from "../../lib/toasts";
 import { t } from "../../strings";
 import { gitFailed } from "./errors";
-import type { GitStashList, GitTags } from "../../../../../webproto/proto";
+import type { GitReflog, GitStashList, GitTags, GitUndoPlan } from "../../../../../webproto/proto";
+import { age } from "../../state/git";
 import { activeFile, cursorAt, focusSlot, quick, setPanes, showFile, type PickItem } from "../../lib/workbench";
 import { link, store } from "../../session";
 import { readGit } from "../../state/git";
@@ -82,6 +84,26 @@ function stashList(): void {
   }, gitFailed);
 }
 
+/** undoAsk shows a plan of git.undo_plan, then asks the laptop. */
+function undoAsk(args: Record<string, unknown>): void {
+  link.request("git.undo_plan", args).then((r) => {
+    const p = r as GitUndoPlan;
+    gitAsk.value = { op: "git.undo", args: p.move ? { move: true } : {}, label: p.action, text: p.text };
+  }, gitFailed);
+}
+
+/** reflog lists HEAD's moves; picking one plans moving HEAD back there. */
+function reflog(): void {
+  link.request("git.reflog", {}).then((r) => {
+    const list = (r as GitReflog).entries ?? [];
+    const now = Date.now();
+    pick(t("gu.reflog_pick"), list.map((e, i) => ({ key: String(i), label: e.summary, detail: `${e.hash} · ${age(e.when, now)}` })), t("gu.reflog_none"), (k) => {
+      const e = list[Number(k)];
+      if (e && canAct()) undoAsk({ reflog: true, index: Number(k), hash: e.hash });
+    });
+  }, gitFailed);
+}
+
 export function gitCommands(): Command[] {
   return [
     { id: "gitGraph", label: "cmd.git_graph", when: repo, run: () => showFile(GRAPH_TAB) },
@@ -102,6 +124,9 @@ export function gitCommands(): Command[] {
     { id: "discardHunk", label: "cmd.discard_hunk", when: () => canAct() && lineTarget()?.index === false, run: discardHunk },
     { id: "gitTags", label: "cmd.git_tags", when: repo, run: tags },
     { id: "gitStashList", label: "cmd.git_stash_list", when: repo, run: stashList },
+    { id: "gitUndo", label: "cmd.git_undo", when: () => repo() && canAct(), run: () => undoAsk({}) },
+    { id: "gitRedo", label: "cmd.git_redo", when: () => repo() && canAct(), run: () => (gitAsk.value = { op: "git.redo", args: {}, label: t("live.redo"), text: t("gu.redo_q") }) },
+    { id: "gitReflog", label: "cmd.git_reflog", when: repo, run: reflog },
     { id: "scmViewToggle", label: "cmd.scm_tree", when: repo, run: () => (scmTree.value = !scmTree.peek()) },
   ];
 }

@@ -1687,6 +1687,63 @@
       "phase": "v2"
     },
     {
+      "op": "git.reflog",
+      "args": "EmptyArgs",
+      "result": "GitReflog",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.undo_plan",
+      "args": "GitUndoPlanArgs",
+      "result": "GitUndoPlan",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.undo",
+      "args": "GitUndoArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.redo",
+      "args": "EmptyArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.graph",
       "args": "GitGraphArgs",
       "result": "GitGraph",
@@ -5622,6 +5679,41 @@
       ],
       "additionalProperties": true
     },
+    "GitReflog": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/defs/GitReflogEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": true
+    },
+    "GitReflogEntry": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "when": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "summary",
+        "when"
+      ],
+      "additionalProperties": true
+    },
     "GitResolveArgs": {
       "type": "object",
       "properties": {
@@ -5863,6 +5955,55 @@
         "path",
         "rev"
       ],
+      "additionalProperties": false
+    },
+    "GitUndoArgs": {
+      "type": "object",
+      "properties": {
+        "move": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "GitUndoPlan": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "move": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "text",
+        "action"
+      ],
+      "additionalProperties": true
+    },
+    "GitUndoPlanArgs": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "reflog": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
       "additionalProperties": false
     },
     "GoneDelta": {

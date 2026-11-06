@@ -378,6 +378,16 @@ export interface GitStashRefArgs {
   ref: string;
 }
 
+export interface GitUndoPlanArgs {
+  reflog?: boolean;
+  index?: number;
+  hash?: string;
+}
+
+export interface GitUndoArgs {
+  move?: boolean;
+}
+
 export interface GitGraphArgs {
   skip?: number;
   head?: boolean;
@@ -1556,6 +1566,23 @@ export interface GitStashEntry {
   message: string;
 }
 
+export interface GitReflog {
+  entries: GitReflogEntry[];
+}
+
+export interface GitReflogEntry {
+  hash: string;
+  summary: string;
+  when: number;
+}
+
+export interface GitUndoPlan {
+  title: string;
+  text: string;
+  action: string;
+  move?: boolean;
+}
+
 export interface GitGraph {
   skip: number;
   rows: GitGraphRow[];
@@ -1934,6 +1961,10 @@ export interface OpArgs {
   "git.checkout_tag": GitTagArgs;
   "git.stash_list": EmptyArgs;
   "git.stash_apply": GitStashRefArgs;
+  "git.reflog": EmptyArgs;
+  "git.undo_plan": GitUndoPlanArgs;
+  "git.undo": GitUndoArgs;
+  "git.redo": EmptyArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2077,6 +2108,10 @@ export interface OpResult {
   "git.checkout_tag": AskRef;
   "git.stash_list": GitStashList;
   "git.stash_apply": AskRef;
+  "git.reflog": GitReflog;
+  "git.undo_plan": GitUndoPlan;
+  "git.undo": AskRef;
+  "git.redo": AskRef;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;

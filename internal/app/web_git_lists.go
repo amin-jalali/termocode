@@ -21,6 +21,7 @@ type webGitLists struct {
 	tags   []string
 	stash  []git.StashEntry
 	reflog []git.ReflogEntry
+	undo   *webUndoPlan // the plan git.undo_plan gave last (git.undo runs it once)
 }
 
 func init() {
