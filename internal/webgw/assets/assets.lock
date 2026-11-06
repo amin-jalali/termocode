@@ -3,7 +3,7 @@
 app-chunk.js sha384-qGQKknlZcFwcvyVaIB9DEx9vs97MdjyGFIjOJCPlzv/rrJWUT3cgIlP4HfLL1LGF 284243
 app.css sha384-dC/qVUxd/IQpO2+ujxBByJu9kZomlMoELjL8eBQnczXBBltcaysVunk9PT/p8ePh 66058
 app.js sha384-/rWIKQgbfstFUwLHO6JSHcabQJ8Re1s67Q+MR/GYIMbF4dcLep+03DxtrVuZiuFS 23872
-desk.css sha384-Vq5eyI4WzJe2TlpfdiCoZqgsVXdVbY1x5UymkIDBhvkjaQCu0mGDd1swdpJ2/78R 99128
+desk.css sha384-PTMf3Wt4h7M5Y/j5HUD6AOM5iWEG6BH3qyCBAwnOycVnh0sNldPgOr+d9KCNZzrm 100890
 editor.js sha384-y2LrycVeXa+jyDjFfB9mM8o1Z9ecf6SRIFg5ZA889DHvz50ly111hLiCI0mjCvcc 219692
 fonts/nf-devicons.woff2 sha384-wUH+v6WoaVUttsmf/h5v4dkRuoqahceAkv1xrpwZtXkl+OmHeVQ8Na1lkb47vg+C 183656
 fonts/nf-fa-extension.woff2 sha384-6BEtIZZkxrg7PvLXCc1ixQVY7+TPzyhXLbdjhd7alitXS26M37KznH4dEnv4+g3k 35536
@@ -15,7 +15,7 @@ fonts/nf-seti.woff2 sha384-SIRO07PrKQGKqZz8AqBLr5pTSfSdjHR93D+woV27NzC1QnmdQf6bY
 icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 icons/codicon.ttf sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N 125828
-index.html sha384-bzxGqYuEJ2buZ06J7xeVWORMc2R7xuBRy8c6Gk8ys70jWG2cuHS5U+5wVJ5loXgE 1274
+index.html sha384-Z0ciQ+eLnC4pPHjC4lKP8OM6muxWbnzBiBliicMui+A7Xja4T8qaUFmIdJHVt1nQ 1274
 kit.css sha384-+j0LWfSOYdmoUjja+8WC5x0aXRzBf7+o2VgWLJy92KJAPlXvGud1/HVAlJpl7LSr 34063
 kit.html sha384-7zL3VmYuy3CZU6+QssVd1FiqeIGXBt/N7qolnhijbiW8C0lTEX4sTbsd13EtWt3a 719
 kit.js sha384-fZ9M8m1pX/PRptdQx23uUiFs+CT5lAnVw5nlIrtsjiolJqgn7PfAADllpfggGEtC 110485
@@ -29,5 +29,5 @@ monaco/editor-contrib.js sha384-zovZc9/8c8IF6IlccJXAp+iG87TnOpWjJGqruAwc0mBMA0kL
 monaco/editor-host.js sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf 361750
 monaco/editor.css sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4 390829
 monaco/editor.js sha384-n5VxbIFjdhl1sERXQHN52h87EGviSdsndgKg9eRxZVuVsFtoxtLJDuY2UxnnGx/r 2472349
-strings-fa.js sha384-bGPgC1JrkJUrsFwkzpRcsex3qE31gapxYeM76dIM/T+HWHyw+BIQi9sHsfErTlU9 81083
-workbench.js sha384-fNr2pn9aWidw3tYEKknhl0bpeIo5a2dtKP/geyZqrUVOrPvqC1vH9fHuG3Eh4KhF 213468
+strings-fa.js sha384-MiwXHNM8tpQdhCGCoFj07wgle84NZZi00QYe5jg6Q79k2b2TeXg4mqFhR4FcSgrE 82647
+workbench.js sha384-YTXuJcnb4jXPU9XBEnhJh0N6MrAFzxhi1eHpCGjB2rlTnRoLzWsTtUesSaRquriY 223881

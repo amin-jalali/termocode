@@ -82,6 +82,7 @@ import { ProblemsView } from "../views/ProblemsView";
 import { StatusBar } from "./StatusBar";
 import { panelsAround, panelViews, sideView as registeredSideView, type PanelDef } from "../lib/views";
 import "../views/run/index";
+import "../views/http/index";
 
 /** Sash is a drag handle between two panes. It reports the new size from
  * the size at the start plus the pointer's move (dir -1: the pane is on

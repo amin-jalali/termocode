@@ -404,5 +404,31 @@
 .layout-desktop .cb-head button:hover { background: var(--wb-toolbar-hover); }
 .layout-desktop .cb-head button:disabled { opacity: 0.4; }
 .layout-desktop .cb-pre { margin: 0; padding: 8px 10px; background: transparent; }
+
+/* HTTP client (WEBP-HTTP) */
+.http-head { display: flex; flex-direction: column; gap: 6px; padding: 4px 12px 8px 20px; }
+.http-env-label { display: flex; align-items: center; gap: 6px; }
+.http-env, .http-method { min-width: 0; height: 24px; border: 1px solid var(--wb-input-border); border-radius: 2px; background: var(--wb-input-bg); color: var(--wb-input-fg); font: inherit; font-size: var(--fs-ui); }
+.http-env { flex: 1 1 auto; }
+.http-note { margin: 0; color: var(--wb-desc); }
+.http-form { display: flex; flex-direction: column; gap: 6px; }
+.http-form textarea { overflow-y: auto; }
+.http-line { display: flex; gap: 4px; }
+.http-line .pv-input { flex: 1 1 auto; }
+.http-m { font-size: 0.8em; font-weight: 600; letter-spacing: 0.02em; }
+.http-resp { display: flex; flex-direction: column; height: 100%; min-height: 0; padding: 0 12px; }
+.http-resp .http-form { padding: 6px 0; max-width: 480px; }
+.http-bar { display: flex; align-items: center; gap: 10px; min-height: 28px; }
+.http-status { font-weight: 600; }
+.http-what { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--wb-desc); }
+.http-acts { display: flex; gap: 2px; }
+.http-tabs { display: flex; gap: 12px; border-bottom: 1px solid var(--wb-panel-border); }
+.http-tab { padding: 4px 0; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--wb-desc); font: inherit; font-size: var(--fs-ui); cursor: pointer; }
+.http-tab.is-on { color: var(--wb-tab-active-fg); border-bottom-color: var(--wb-focus); }
+.http-body-text { flex: 1 1 auto; min-height: 0; margin: 0; padding: 6px 0; overflow: auto; font-family: var(--font-mono, monospace); font-size: var(--fs-ui); white-space: pre-wrap; word-break: break-word; }
+.http-h { margin: 6px 0 2px; font-size: 0.85em; text-transform: uppercase; color: var(--wb-desc); }
+.http-hdr { display: grid; grid-template-columns: max-content 1fr; gap: 0 12px; margin: 0; }
+.http-hdr dd { margin: 0; word-break: break-all; }
+.http-empty { padding: 8px 12px; color: var(--wb-desc); }
 .wt-filter { margin: 4px 12px 6px; }
 .wt-note .pv-input { margin-bottom: 6px; }

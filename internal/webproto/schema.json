@@ -1287,6 +1287,200 @@
       "phase": "v2"
     },
     {
+      "op": "http.files",
+      "args": "EmptyArgs",
+      "result": "HTTPFiles",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "http.send",
+      "args": "HTTPSendArgs",
+      "result": "HTTPSent",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 589824,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "http.cancel",
+      "args": "EmptyArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "http.response",
+      "args": "HTTPRunArgs",
+      "result": "HTTPResponse",
+      "role": "viewer",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "http.history",
+      "args": "EmptyArgs",
+      "result": "HTTPHistory",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "http.envs",
+      "args": "EmptyArgs",
+      "result": "HTTPEnvs",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "http.env_select",
+      "args": "HTTPEnvArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "http.env_file",
+      "args": "EmptyArgs",
+      "result": "HTTPPath",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "http.saved",
+      "args": "EmptyArgs",
+      "result": "HTTPSaved",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "http.save",
+      "args": "HTTPSaveArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "http.curl",
+      "args": "HTTPCurlArgs",
+      "result": "HTTPCurl",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "http.import_curl",
+      "args": "HTTPImportArgs",
+      "result": "HTTPPath",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 73728,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "http.new_file",
+      "args": "HTTPNewFileArgs",
+      "result": "HTTPPath",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "http.save_body",
+      "args": "HTTPSaveBodyArgs",
+      "result": "HTTPPath",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "lsp.hover",
       "args": "LspPosArgs",
       "result": "LspHover",
@@ -8289,6 +8483,508 @@
         "name"
       ],
       "additionalProperties": false
+    },
+    "HTTPCurl": {
+      "type": "object",
+      "properties": {
+        "curl": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "curl"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPCurlArgs": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "run": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "HTTPEnv": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "vars": {
+          "items": {
+            "$ref": "#/defs/HTTPVar"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "vars"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPEnvArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "HTTPEnvs": {
+      "type": "object",
+      "properties": {
+        "envs": {
+          "items": {
+            "$ref": "#/defs/HTTPEnv"
+          },
+          "type": "array"
+        },
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "selected": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "files",
+        "envs"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPFile": {
+      "type": "object",
+      "properties": {
+        "err": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "requests": {
+          "items": {
+            "$ref": "#/defs/HTTPReqItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "requests"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPFiles": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "type": "string"
+        },
+        "envs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/defs/HTTPFile"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "files",
+        "envs"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPHeader": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "HTTPHistItem": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "integer"
+        },
+        "by": {
+          "type": "string"
+        },
+        "elapsed_ms": {
+          "type": "integer"
+        },
+        "env": {
+          "type": "string"
+        },
+        "err": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "at",
+        "method",
+        "url"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPHistory": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/defs/HTTPHistItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPImportArgs": {
+      "type": "object",
+      "properties": {
+        "curl": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "curl"
+      ],
+      "additionalProperties": false
+    },
+    "HTTPNewFileArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "HTTPPath": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPReqItem": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "method": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "method",
+        "url"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPResponse": {
+      "type": "object",
+      "properties": {
+        "binary": {
+          "type": "boolean"
+        },
+        "body": {
+          "type": "string"
+        },
+        "by": {
+          "type": "string"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "elapsed_ms": {
+          "type": "integer"
+        },
+        "env": {
+          "type": "string"
+        },
+        "err": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "headers": {
+          "items": {
+            "$ref": "#/defs/HTTPHeader"
+          },
+          "type": "array"
+        },
+        "hops": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "label": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "proto": {
+          "type": "string"
+        },
+        "req_headers": {
+          "items": {
+            "$ref": "#/defs/HTTPHeader"
+          },
+          "type": "array"
+        },
+        "run": {
+          "type": "integer"
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "integer"
+        },
+        "status_text": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "run",
+        "label",
+        "method",
+        "url",
+        "req_headers",
+        "headers"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPRunArgs": {
+      "type": "object",
+      "properties": {
+        "run": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "HTTPSaveArgs": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "run": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "HTTPSaveBodyArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "run": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "HTTPSaved": {
+      "type": "object",
+      "properties": {
+        "requests": {
+          "items": {
+            "$ref": "#/defs/HTTPReqItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "requests"
+      ],
+      "additionalProperties": true
+    },
+    "HTTPSendArgs": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "env": {
+          "type": "string"
+        },
+        "headers": {
+          "items": {
+            "$ref": "#/defs/HTTPHeader"
+          },
+          "type": "array"
+        },
+        "history": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "method": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "saved": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "HTTPSent": {
+      "type": "object",
+      "properties": {
+        "card": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "run": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "HTTPVar": {
+      "type": "object",
+      "properties": {
+        "hidden": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
     },
     "Hello": {
       "type": "object",

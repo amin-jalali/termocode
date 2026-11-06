@@ -305,6 +305,58 @@ export interface BufTickArgs {
   tick: number;
 }
 
+export interface HTTPSendArgs {
+  path?: string;
+  index?: number;
+  method?: string;
+  url?: string;
+  headers?: HTTPHeader[];
+  body?: string;
+  env?: string;
+  history?: string;
+  saved?: number;
+}
+
+export interface HTTPHeader {
+  name: string;
+  value: string;
+}
+
+export interface HTTPRunArgs {
+  run?: number;
+}
+
+export interface HTTPEnvArgs {
+  name: string;
+}
+
+export interface HTTPSaveArgs {
+  run?: number;
+  path?: string;
+  index?: number;
+  name: string;
+}
+
+export interface HTTPCurlArgs {
+  run?: number;
+  path?: string;
+  index?: number;
+}
+
+export interface HTTPImportArgs {
+  curl: string;
+  path?: string;
+}
+
+export interface HTTPNewFileArgs {
+  path: string;
+}
+
+export interface HTTPSaveBodyArgs {
+  run?: number;
+  path: string;
+}
+
 export interface BufLineArgs {
   buf: number;
   line: number;
@@ -1674,6 +1726,107 @@ export interface FileText {
   truncated?: boolean;
 }
 
+export interface HTTPFiles {
+  files: HTTPFile[];
+  env?: string;
+  envs: string[];
+  more?: number;
+}
+
+export interface HTTPFile {
+  path: string;
+  requests: HTTPReqItem[];
+  err?: string;
+}
+
+export interface HTTPReqItem {
+  index: number;
+  name?: string;
+  method: string;
+  url: string;
+  line?: number;
+}
+
+export interface HTTPSent {
+  run?: number;
+  card?: string;
+  host?: string;
+}
+
+export interface HTTPResponse {
+  run: number;
+  running?: boolean;
+  by?: string;
+  label: string;
+  method: string;
+  url: string;
+  file?: string;
+  env?: string;
+  req_headers: HTTPHeader[];
+  status?: number;
+  status_text?: string;
+  proto?: string;
+  elapsed_ms?: number;
+  size?: number;
+  content_type?: string;
+  headers: HTTPHeader[];
+  body?: string;
+  binary?: boolean;
+  truncated?: boolean;
+  hops?: string[];
+  err?: string;
+}
+
+export interface HTTPHistory {
+  entries: HTTPHistItem[];
+}
+
+export interface HTTPHistItem {
+  id: string;
+  at: number;
+  method: string;
+  url: string;
+  status?: number;
+  err?: string;
+  elapsed_ms?: number;
+  size?: number;
+  file?: string;
+  name?: string;
+  env?: string;
+  by?: string;
+}
+
+export interface HTTPEnvs {
+  selected?: string;
+  files: string[];
+  envs: HTTPEnv[];
+}
+
+export interface HTTPEnv {
+  name: string;
+  vars: HTTPVar[];
+}
+
+export interface HTTPVar {
+  name: string;
+  value?: string;
+  hidden?: boolean;
+}
+
+export interface HTTPPath {
+  path: string;
+  line?: number;
+  size?: number;
+}
+
+export interface HTTPSaved {
+  requests: HTTPReqItem[];
+}
+
+export interface HTTPCurl {
+  curl: string;
+}
+
 export interface LspHover {
   md?: MdNode;
   none?: boolean;
@@ -2556,6 +2709,20 @@ export interface OpArgs {
   "buf.reload": BufArgs;
   "buf.markdown": BufArgs;
   "file.text": PathArgs;
+  "http.files": EmptyArgs;
+  "http.send": HTTPSendArgs;
+  "http.cancel": EmptyArgs;
+  "http.response": HTTPRunArgs;
+  "http.history": EmptyArgs;
+  "http.envs": EmptyArgs;
+  "http.env_select": HTTPEnvArgs;
+  "http.env_file": EmptyArgs;
+  "http.saved": EmptyArgs;
+  "http.save": HTTPSaveArgs;
+  "http.curl": HTTPCurlArgs;
+  "http.import_curl": HTTPImportArgs;
+  "http.new_file": HTTPNewFileArgs;
+  "http.save_body": HTTPSaveBodyArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
@@ -2794,6 +2961,17 @@ export interface OpResult {
   "buf.reload": EditRes;
   "buf.markdown": BufMarkdown;
   "file.text": FileText;
+  "http.files": HTTPFiles;
+  "http.send": HTTPSent;
+  "http.response": HTTPResponse;
+  "http.history": HTTPHistory;
+  "http.envs": HTTPEnvs;
+  "http.env_file": HTTPPath;
+  "http.saved": HTTPSaved;
+  "http.curl": HTTPCurl;
+  "http.import_curl": HTTPPath;
+  "http.new_file": HTTPPath;
+  "http.save_body": HTTPPath;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;

@@ -695,6 +695,7 @@ export const S = {
   "ai.model": "AI model",
   "ai.use_profile": "Use profile {name} for the next chat messages?",
   "ai.use_model": "Use model {name} for the AI chat?",
+  // HTTP client (WEBP-HTTP)
   "chat.rename": "Rename Chat…",
   "chat.rename_to": "New title",
   "chat.renamed": "Chat renamed",
