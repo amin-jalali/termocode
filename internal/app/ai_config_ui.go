@@ -236,7 +236,7 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
 	case confirmKindWorkflowRun, confirmKindWorkflowDry, confirmKindWorkflowTrust, confirmKindWorkflowOnOff, confirmKindWorkflowStop,
-		confirmKindWorkflowUndo, confirmKindWorkflowBudget: // workflows_state.go, workflows_trust.go
+		confirmKindWorkflowUndo, confirmKindWorkflowBudget, confirmKindWorkflowOffStop: // workflows_state.go, workflows_trust.go
 		return m.answerWorkflowCard(id), true
 	case confirmKindAgentTranscripts: // agent_chat.go
 		return m.answerAgentTranscripts(id), true

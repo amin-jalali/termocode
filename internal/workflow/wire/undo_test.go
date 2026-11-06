@@ -92,3 +92,43 @@ func TestUndoRunsTheRecipe(t *testing.T) {
 		t.Errorf("old write: %v", err)
 	}
 }
+
+// Spec (WFX-20, plan §6.6): an MCP undo whose argument held a secret
+// keeps "[REDACTED]" in the ledger, never the value. Undo refuses that
+// write before it calls anything, names the argument and says to undo
+// it by hand; it never sends a guessed value. Undoable marks it so the
+// run page and the card can say so first.
+func TestUndoRefusesARedactedArgument(t *testing.T) {
+	now := time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
+	t.Cleanup(clock.Set(func() time.Time { return now }))
+	root := t.TempDir()
+	l, err := ledger.Open(root, "wf", "r1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ok := func(context.Context, string) (ledger.Result, error) { return ledger.Result{}, nil }
+	tok := "sk-" + "test0123456789abcdefghij"
+	if _, _, err := l.Do(context.Background(), ledger.Write{Step: "hook", Item: "LIN-1", Target: "slack · set_topic",
+		Undo: &ledger.Undo{Title: "topic back", Tool: "set_topic", Args: map[string]string{"channel": "dev", "api_key": tok, "note": "Bearer " + tok}}}, ok, nil); err != nil {
+		t.Fatal(err)
+	}
+	rf := &run.RunFile{ID: "r1", Workflow: "wf", Writes: []run.WriteRecord{
+		{Step: "hook", Item: "LIN-1", To: "mcp", State: "done", Spec: workflow.WriteSpec{To: "mcp", Server: "slack"}}}}
+	list := Undoable(root, rf)
+	if len(list) != 1 || list[0].Blocked == "" || !strings.Contains(list[0].Blocked, "api_key") || !strings.Contains(list[0].Blocked, "note") {
+		t.Fatalf("undoable %+v: want it marked blocked, naming api_key and note", list)
+	}
+	tools := &undoTools{}
+	for _, u := range []Undoer{{Root: root, Tools: tools}, {Root: root}} { // with and without a connected server
+		err := u.Undo(context.Background(), rf, "hook", "LIN-1")
+		if err == nil || !strings.Contains(err.Error(), "api_key") || !strings.Contains(err.Error(), "by hand") || strings.Contains(err.Error(), tok) {
+			t.Errorf("undo of a redacted argument: %v", err)
+		}
+	}
+	if len(tools.calls) != 0 {
+		t.Fatalf("a tool was called with a guessed value: %q", tools.calls)
+	}
+	if got := Undoable(root, rf); got[0].Undone {
+		t.Error("a refused undo was marked undone")
+	}
+}
