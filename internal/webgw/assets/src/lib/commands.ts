@@ -21,6 +21,7 @@ import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
+import { dbCommands } from "../views/desk/dbcommands";
 import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
 
 export interface Command {
@@ -84,6 +85,7 @@ export function commands(): Command[] {
     { id: "themeLight", label: "cmd.theme_light", run: () => setPref("theme", "light") },
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
     ...gitCommands(),
+    ...dbCommands(),
   ];
 }
 
