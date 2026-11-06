@@ -15,6 +15,7 @@ import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } 
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
 import type { AiAt, AiKind, FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
+import { Vim, type VimMode } from "./vim";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -56,6 +57,7 @@ interface Model {
   getWordAtPosition(p: Pos): Word | null;
   setEOL(eol: number): void;
   getPositionAt(offset: number): Pos;
+  getOffsetAt(p: Pos): number;
   getLineCount(): number;
   getLineContent(line: number): string;
   getLineMaxColumn(line: number): number;
@@ -106,6 +108,8 @@ interface Editor {
   revealLineInCenter(line: number): void;
   revealPositionInCenter(p: Pos): void;
   setPosition(p: Pos): void;
+  setSelection(s: { selectionStartLineNumber: number; selectionStartColumn: number; positionLineNumber: number; positionColumn: number }): void;
+  revealPosition(p: Pos): void;
   getPosition(): Pos | null;
   addAction(a: { id: string; label: string; keybindings?: number[]; contextMenuGroupId?: string; contextMenuOrder?: number; run: () => void }): unknown;
   getVisibleRanges(): IRange[];
@@ -692,6 +696,66 @@ function nesLater(): void {
 let nesHint = "Tab";
 /** chordUntil: the Ctrl/Cmd+K chord waits for its next key until then. */
 let chordUntil = 0;
+/** vim is the Vim keymap while Vim mode is on (WEBP-1). */
+let vim: Vim | null = null;
+let vimShown = "";
+
+/** vimOn turns Vim mode on or off; the page hears the mode (none: off). */
+function vimOn(on: boolean): void {
+  if (!ed || on === (vim !== null)) return;
+  if (!on) {
+    vim = null;
+    ed.updateOptions({ cursorStyle: "line" });
+    vimShow(null, "");
+    return;
+  }
+  const e = ed;
+  const at = (off: number): Pos => (model ? model.getPositionAt(off) : { lineNumber: 1, column: 1 });
+  vim = new Vim({
+    doc: () => cur,
+    caret: () => {
+      const p = e.getPosition();
+      return p && model ? model.getOffsetAt(p) : 0;
+    },
+    place: (off) => {
+      const p = at(off);
+      e.setPosition(p);
+      e.revealPosition(p);
+    },
+    select: (a, h) => {
+      const pa = at(a), ph = at(h);
+      e.setSelection({ selectionStartLineNumber: pa.lineNumber, selectionStartColumn: pa.column, positionLineNumber: ph.lineNumber, positionColumn: ph.column });
+      e.revealPosition(ph);
+    },
+    edit: (from, to, insert, caret) => {
+      if (!model) return;
+      const a = at(from), b = at(to);
+      applying = "replace"; // one step of the user's own, never merged
+      try {
+        e.pushUndoStop();
+        e.executeEdits("vim", [{ range: { startLineNumber: a.lineNumber, startColumn: a.column, endLineNumber: b.lineNumber, endColumn: b.column }, text: insert, forceMoveMarkers: true }]);
+        e.pushUndoStop();
+      } finally {
+        applying = null;
+      }
+      const p = at(caret);
+      e.setPosition(p);
+      e.revealPosition(p);
+    },
+    undo: () => undoRedo(false),
+    redo: () => undoRedo(true),
+    readOnly: () => readOnly,
+    show: (mode, pending) => vimShow(mode, pending),
+  });
+}
+
+function vimShow(mode: VimMode | null, pending: string): void {
+  ed?.updateOptions({ cursorStyle: mode === null || mode === "insert" ? "line" : "block" });
+  const key = (mode ?? "") + "\x00" + pending;
+  if (key === vimShown) return;
+  vimShown = key;
+  post({ t: "vim", mode: mode ?? "", pending });
+}
 let tabWidth = 4;
 
 function sendText(user: boolean): void {
@@ -836,6 +900,7 @@ function setOpts(o: FrameOpts): void {
   if (o.insertSpaces !== undefined) u.insertSpaces = o.insertSpaces;
   if (o.ai) setAI(o.ai);
   ed.updateOptions(u);
+  if (o.vim !== undefined) vimOn(o.vim);
 }
 
 /** setAI follows the laptop's AI settings; next edits start from the
@@ -997,7 +1062,13 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   }
   ed.onKeyDown((e) => {
     const b = e.browserEvent;
-    if (b.key === "Escape") post({ t: "esc" });
+    if (vim && vim.key(b)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    // Escape twice leaves Zen; with Vim on, Escape is Vim's.
+    if (b.key === "Escape" && !vim) post({ t: "esc" });
     if (!workbenchKey(b)) return;
     e.preventDefault();
     e.stopPropagation();
@@ -1011,6 +1082,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   ed.onDidLayoutChange(viewport);
   viewport();
   sendText(false);
+  if (m.vim) vimOn(true);
 }
 
 // After Ctrl/Cmd+K the next key is the chord's (Ctrl/Cmd+K Z: Zen): the

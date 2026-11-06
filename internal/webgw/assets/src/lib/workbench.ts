@@ -77,6 +77,10 @@ export const closed = signal<ReadonlySet<string>>(new Set());
  * off on a desktop, as the laptop's editor has it). */
 export const wordWrap = signal<boolean>(!matchMedia("(min-width: 1200px)").matches);
 
+/** vimMode is the focused editor's Vim mode for the status bar ("": off)
+ * and the keys of a command typed so far. */
+export const vimMode = signal<{ mode: string; pending: string }>({ mode: "", pending: "" });
+
 /** zen: Zen mode (WEBP-1): only the editor shows; the page marks it on
  * <html data-zen="on"> so the status bar hides too. */
 export const zen = signal(false);

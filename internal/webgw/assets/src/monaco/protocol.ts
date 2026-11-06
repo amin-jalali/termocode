@@ -26,6 +26,8 @@ export interface FrameOpts {
    * laptop's ai_inline and ai_next_edit; a file the user may edit);
    * hint is the next edit's key hint in the page's words. */
   ai?: { inline: boolean; nes: boolean; hint?: string };
+  /** vim: Vim mode (WEBP-1; the page's per-browser choice). */
+  vim?: boolean;
 }
 
 /** FrameMarker is one diagnostic for the editor's squiggles: rows and
@@ -183,6 +185,9 @@ export type FromFrame =
   /** glyph: a click in the glyph margin on a 1-based row; menu: a right
    * click at (x, y) in the frame. */
   | { t: "glyph"; line: number; menu: boolean; x: number; y: number }
+  /** vim: Vim mode's mode now ("": off) and the keys of a command not
+   * finished yet. */
+  | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline"; pending: string }
   /** esc: Escape was pressed in the editor (it still does its own work
    * there; two in a row leave Zen). */
   | { t: "esc" }

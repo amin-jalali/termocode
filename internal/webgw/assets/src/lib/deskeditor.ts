@@ -4,12 +4,13 @@
 // way. The frame gets the text and colours by message and sends back what
 // the user typed; the page keeps a copy of the frame's text, so text() is
 // at hand at once.
-import { computed, signal } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
 import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
-import { cursorAt, escapeKey, focusSlot, quick } from "./workbench";
+import { cursorAt, escapeKey, focusSlot, quick, vimMode } from "./workbench";
+import { prefs } from "./prefs";
 import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
 
@@ -148,7 +149,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "ready": {
         ready = true;
         const c = frameColors(parent);
-        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
+        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, vim: prefs.peek().vim, ...c } satisfies ToFrame, location.origin);
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.
@@ -216,6 +217,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "esc":
         escapeKey();
         return;
+      case "vim":
+        if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending };
+        return;
       case "key":
         // The workbench's keys work while the editor has the focus.
         dispatchEvent(new KeyboardEvent("keydown", { key: m.key, code: m.code, ctrlKey: m.ctrl, metaKey: m.meta, shiftKey: m.shift, altKey: m.alt, bubbles: true, cancelable: true }));
@@ -223,6 +227,14 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     }
   };
   addEventListener("message", onMessage);
+  // Vim mode follows the browser's choice in every editor at once.
+  let vimWas = prefs.peek().vim;
+  const stopVim = effect(() => {
+    const on = prefs.value.vim;
+    if (on === vimWas) return;
+    vimWas = on;
+    send({ t: "opts", vim: on });
+  });
 
   return {
     text: () => text,
@@ -292,6 +304,8 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     destroy() {
       removeEventListener("message", onMessage);
+      stopVim();
+      if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: "", pending: "" };
       if ((host.slot ?? "g0") === focusSlot.peek()) cursorAt.value = null;
       frame.remove();
     },
