@@ -326,6 +326,13 @@
 .ctr-filter, .ctr-form { margin: 4px 12px 4px 20px; }
 .mcpd-empty { color: var(--wb-desc); }
 
+/* ---- Workflows: a run's tab ---- */
+.wfr-acts { display: flex; gap: 8px; margin: -8px 0 16px; }
+.wfr-stop { display: inline-flex; align-items: center; gap: 4px; }
+.wfr .pv-ask { max-width: 640px; margin: 0 0 16px; }
+.wfr .card { max-width: 640px; margin: 8px 0 16px; }
+.wfr-log { max-width: 100%; margin: 0 0 16px; padding: 8px 12px; overflow-x: auto; border-radius: 2px; background: var(--wb-side-bg); font-family: var(--font-mono); font-size: 12px; line-height: 18px; white-space: pre; }
+
 /* ---- The panel's OUTPUT tab ---- */
 .outv { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 .outv-head { display: flex; align-items: center; gap: 4px; height: 22px; margin-inline-end: 4px; }

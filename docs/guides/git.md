@@ -141,6 +141,36 @@ blame skips the commits it lists (for example a big formatting commit).
 - **Git: Open Next Revision of File** steps forward again. After the newest
   commit you are back at the working file.
 
+## Stash with options
+
+**Git: Stash…** asks what to stash: **All changes**, **All changes and new
+files**, **Staged changes only**, or **Only the current file**. Then type a
+message, or leave it empty.
+
+**Git: Stash Actions…** lists your stashes. Pick one to **Apply** it (it
+stays), **Pop** it (apply, then drop), **View Changes**, **Create Branch
+from Stash…** (the stash is applied on the new branch, then dropped), or
+**Drop…** it. Drop asks first, and **Cancel** is ready. The toast says how
+to bring a dropped stash back (`git stash store …`).
+
+## Reset and uncommit
+
+Right-click a commit in the **GRAPH** and pick **Reset Current Branch to
+Here…**:
+
+| Mode | Your changes |
+|---|---|
+| **Soft** | The commits after it are undone; their changes stay, staged |
+| **Mixed** | The same, but the changes are not staged |
+| **Keep** | Your local changes stay; git stops if one is in the way |
+| **Hard…** | The changes in your files go. termocode first saves them as a stash and the old commit as a backup ref (`refs/termocode/backup/…`). |
+
+A card says how many commits leave the branch and how to bring them back;
+**Cancel** is ready. For **Hard…** you also type the branch name.
+
+**Git: Uncommit Last Commit (Keep Changes)** undoes the last commit. Its
+changes stay staged, so you can change them and commit again.
+
 ## The GRAPH
 
 **GRAPH** lists the commits, newest first. Each row shows a node, the
@@ -485,96 +515,48 @@ run. It picks the plan profile; then you type the task in the AI chat.
 Run the command again before you send the task to turn it off. It needs
 a git repository with at least one commit.
 
-## Search the log
+## Find the commit that broke it (bisect)
 
-**Git: Search Log…** asks one line. Plain words search the commit
-messages (any case, plain text). Add filters as `key:value` words; use
-double quotes for spaces (`author:"Ann Lee"`):
+**Git: Bisect (Find the Commit That Broke It)…** treats `HEAD` as bad and
+asks which commit was still good. git checks out a commit in the middle.
+A picker asks about it:
 
-| Filter | Example | Finds commits |
-|---|---|---|
-| `author:` | `author:ann` | by this author (name or e-mail) |
-| `since:` / `until:` | `since:2.weeks`, `until:2026-01-31` | in this time |
-| `path:` | `path:internal/git` | that changed this file or folder |
-| `branch:` | `branch:release` | on this branch or tag (not the current one) |
-| `all` | `fix all` | on every branch, remote branch and tag |
-| `changes:` | `changes:parseFoo` | that added or removed this text |
+| Row | What it does |
+|---|---|
+| **Good: this commit works** | The problem is not here; git picks a newer commit |
+| **Bad: the problem is here** | git picks an older commit |
+| **Skip: can't test this one** | git picks a commit next to it |
+| **Run a Task to Decide…** | Pick a task. A card shows its command (**Cancel** is ready). git runs it on each commit: exit 0 is good, 125 skip, anything else bad. |
+| **End Bisect** | Back to where you started |
 
-`Enter` on a result opens it in the commit view.
+When git knows, a card names the first bad commit: **Open Commit**,
+**End Bisect**, or **Stay Here** to look around (run **Bisect…** again
+for the picker). Commit or stash your changes first: git checks out
+other commits.
+
+## Compare branches
+
+**Git: Compare Branches…** picks a branch, remote branch or tag, then
+what to compare:
+
+| Row | Shows |
+|---|---|
+| **Changes on X since it split from yours** | What a merge of X would bring (from the merge-base to X) |
+| **Changes on yours since it split from X** | What your branch adds (swap of the row above) |
+| **yours → X (every difference)** | The two tips, file by file |
+| **Working tree → X** | Your files as they are now (saved, not committed) against X, in a read-only diff card |
+
+The first three open in the commit view, with every changed file.
+
+## Issues, new repositories and publishing
+
+These use the `gh` command (signed in with `gh auth login`).
 
 | Command | What it does |
 |---|---|
-| **Git: Show Folder History…** | Commits that changed a folder (the active file's folder is the default) |
-| **Git: Go to Commit…** | Type a hash, branch or tag. The **GRAPH** cursor moves to it. A commit that is not in the **GRAPH** opens its changes. |
-| **Git: Go to HEAD in GRAPH** (`@` in Source Control) | Moves the **GRAPH** cursor to `HEAD` |
-| **Git: Toggle All Branches in GRAPH** | The **GRAPH** shows every branch, or only the current one again |
-
-## Push and pull options
-
-| Command | What it does |
-|---|---|
-| **Git: Push… (Show Outgoing Commits First)** | A card lists the commits that go out and how many files they change. **Cancel** is ready; **Push** sends them. |
-| **Git: Push to…** | Pick a remote, type a branch name, check the card, push. Your upstream does not change. |
-| **Git: Pull…** | **Pull (merge)**, **Pull (rebase)** (your commits go on top) or **Pull from…** another remote and branch |
-| **Git: Pull (Rebase)** | `git pull --rebase` in one step |
-| **Git: Fetch All Remotes (Prune)** | Fetches every remote and drops remote branches that are gone |
-| **Git: Show Incoming Commits…** | Commits a pull brings, as of the last fetch |
-| **Git: Show Outgoing Commits…** | Commits a push sends |
-| **Git: Toggle Auto Fetch** | Fetches every 3 minutes. Off by default. The choice is saved (setting `git_auto_fetch`), so it comes back at the next start. A failed fetch turns it off for this session and says why. |
-
-## Ignore files and set your identity
-
-**Git: Add to .gitignore…** works on the active file. Pick **This file**,
-**All .ext files** or **Its folder**; the pattern goes at the end of the
-`.gitignore` at the top of the repository. A tracked file asks first
-(**Cancel** is ready): git keeps showing changes of a tracked file, so
-**Ignore and Stop Tracking** also runs `git rm --cached`. The file stays
-on disk.
-
-**Git: Set Identity (Name and E-mail)…** asks the name and the e-mail on
-your commits, then **This repository only** or **All repositories**.
-
-## Diff options
-
-| Command or key | What it does |
-|---|---|
-| `w` in a diff card | Hides changes that are only spaces and tabs (like `git diff -b`), in the commit view, a compare and **Compare Two Files**. The hint bar says **whitespace hidden**. Press `w` again to show them. A review card always shows every change. |
-| **Git: Diff Merge Commit Against Parent…** | On a merge commit (in the commit view, or `HEAD`), pick a parent. The compare card shows the merge against that parent. Parent 2 shows what the merge brought in. |
-| **Git: Compare Active File with Clipboard** | Diffs the clipboard text (left) with the active file (right) |
-
-## Share links
-
-| Command | What it does |
-|---|---|
-| **Git: Copy Remote Link to Line** | Copies the web link of the cursor line at `HEAD` (GitHub form; GitLab form on a GitLab host) |
-| **Git: Copy Remote Link to Commit** | Copies the web link of the commit in the commit view, or of `HEAD` |
-
-A commit that is not pushed yet gives a link that does not open. The
-toast says so: push first.
-
-## Git command log
-
-**Git: Show Git Command Log** opens a page with the last 500 git commands
-termocode ran, newest first, with their time. The panel's status reads
-(every few seconds) are not listed. A user name or token in a URL shows as
-`***`, and a long argument (a commit message) is cut.
-
-## Signed commits
-
-The commit view shows the signature of a signed commit next to the file
-count:
-
-| Badge | Means |
-|---|---|
-| **✓ Verified · name** | git checked the signature and trusts the key |
-| **✓ Signed, key not trusted** | the signature is good; the key is not marked as trusted |
-| **✗ Bad signature** / **✗ Signed, key revoked** | do not trust this commit |
-| **Signed (not checked…)** | git cannot check it here: no key, or no `gpg.ssh.allowedSignersFile` for ssh keys |
-
-**Git: Toggle Commit Signing (This Repository)** sets `commit.gpgsign` for
-this repository. git signs with `user.signingkey` and `gpg.format`
-(`openpgp` or `ssh`). When a commit cannot be signed, the toast says why
-and how to fix it.
+| **Git: Issues… (Start Work on One)** | Lists the open issues. Pick one: **Start Work: New Branch** makes a branch like `12-login-crashes` (you can change the name) and switches to it; **Copy #12** copies the number. |
+| **Git: Initialize Repository** | Runs `git init` (branch `main`) in a folder that is not a repository yet |
+| **Git: Publish to GitHub…** | For a repository with no remote: type the name, pick **Private** or **Public**, then a card asks (**Cancel** is ready). gh creates the repository, adds it as `origin` and pushes. |
 
 ## Worktrees
 

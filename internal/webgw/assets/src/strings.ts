@@ -386,6 +386,7 @@ export const S = {
   "runs.state.done": "finished",
   "runs.state.failed": "failed",
   "runs.state.cancelled": "stopped",
+  "wfv.tab": "{name} (Run)",
 
   // Waiting for the laptop
   "wait.title": "Waiting for the laptop…",

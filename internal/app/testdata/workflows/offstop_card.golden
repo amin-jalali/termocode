@@ -1,0 +1,14 @@
+╭────────────────────────────────────────────────────────────╮
+│  ! Stop the run of tick too?                               │
+│──────────────────────────────────────────────────────────  │
+│                                                            │
+│  tick is off now: no new run starts on its schedule. A     │
+│  run of it still works.                                    │
+│  Keep running lets it finish. Stop run ends it;            │
+│  finished items keep their results.                        │
+│                                                            │
+│                Keep running      Stop run                  │
+│                                                            │
+│──────────────────────────────────────────────────────────  │
+│   ←→  move    Enter  select    Esc  cancel                 │
+╰────────────────────────────────────────────────────────────╯
