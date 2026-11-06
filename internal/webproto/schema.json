@@ -1018,6 +1018,49 @@
       "phase": "v2"
     },
     {
+      "op": "lsp.code_actions",
+      "args": "LspRangeArgs",
+      "result": "LspActions",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.code_action_apply",
+      "args": "LspApplyArgs",
+      "result": "EditRes",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.inlay_hints",
+      "args": "LspRowsArgs",
+      "result": "LspHints",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "debug.expand",
       "args": "DebugExpandArgs",
       "role": "viewer",
@@ -1150,6 +1193,91 @@
       "phase": "v2"
     },
     {
+      "op": "lsp.type_definition",
+      "args": "LspPosArgs",
+      "result": "LspLocations",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.implementation",
+      "args": "LspPosArgs",
+      "result": "LspLocations",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "buf.format",
+      "args": "BufTickArgs",
+      "result": "EditRes",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "buf.reload",
+      "args": "BufArgs",
+      "result": "EditRes",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "buf.markdown",
+      "args": "BufArgs",
+      "result": "BufMarkdown",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "file.text",
+      "args": "PathArgs",
+      "result": "FileText",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "lsp.hover",
       "args": "LspPosArgs",
       "result": "LspHover",
@@ -1204,6 +1332,146 @@
       "live": 1,
       "laptop_card": false,
       "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "bookmarks.toggle",
+      "args": "BufLineArgs",
+      "result": "BookmarkToggle",
+      "role": "controller",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "bookmarks.list",
+      "args": "EmptyArgs",
+      "result": "BookmarkList",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "bookmarks.clear",
+      "args": "EmptyArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "files.recent",
+      "args": "EmptyArgs",
+      "result": "FilesRecent",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.workspace_symbols",
+      "args": "SymbolQueryArgs",
+      "result": "LspSymbols",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 2048,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "snippets.list",
+      "args": "BufArgs",
+      "result": "SnippetList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "search.replace",
+      "args": "SearchReplaceArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 12288,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "snippets.user",
+      "args": "EmptyArgs",
+      "result": "UserSnippetList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "snippets.save",
+      "args": "SnippetSaveArgs",
+      "result": "SnippetSaved",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 16384,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "snippets.delete",
+      "args": "SnippetRefArgs",
+      "result": "SnippetSaved",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
       "phase": "v2"
     },
     {
@@ -1273,6 +1541,62 @@
       "phase": "v2"
     },
     {
+      "op": "workspace.list",
+      "args": "EmptyArgs",
+      "result": "WorkspaceList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "workspace.add_folder",
+      "args": "WorkspacePathArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workspace.remove_folder",
+      "args": "IDArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workspace.open",
+      "args": "IDArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.complete",
       "args": "AICompleteArgs",
       "result": "AICompletion",
@@ -1312,6 +1636,21 @@
         "per_ms": 2000
       },
       "max_bytes": 4096,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.info",
+      "args": "AIInfoArgs",
+      "result": "AIInfo",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
       "live": 1,
       "laptop_card": false,
       "audit": "yes",
@@ -1574,6 +1913,104 @@
       "max_bytes": 1024,
       "laptop_card": true,
       "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.mcp_profiles",
+      "args": "EmptyArgs",
+      "result": "MCPProfiles",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.use_mcp_profile",
+      "args": "AIMCPProfileArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.rename",
+      "args": "ChatRenameArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.fork",
+      "args": "ChatForkArgs",
+      "result": "ChatRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.delete",
+      "args": "ChatOpenArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.clear",
+      "args": "EmptyArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.export",
+      "args": "ChatOpenArgs",
+      "result": "ChatExport",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
       "phase": "v2"
     },
     {
@@ -2602,6 +3039,34 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "ai.auto_approve",
+      "args": "EmptyArgs",
+      "result": "AutoApprove",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.set_auto_approve",
+      "args": "AutoApproveArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -2622,7 +3087,8 @@
             "explain",
             "fix",
             "edit",
-            "doc"
+            "doc",
+            "attach"
           ]
         },
         "lines": {
@@ -2666,7 +3132,8 @@
             "explain",
             "fix",
             "edit",
-            "doc"
+            "doc",
+            "attach"
           ]
         },
         "line": {
@@ -2754,6 +3221,92 @@
         "text"
       ],
       "additionalProperties": true
+    },
+    "AIInfo": {
+      "type": "object",
+      "properties": {
+        "copy": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/defs/AIInfoRow"
+          },
+          "type": "array"
+        },
+        "save": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "rows"
+      ],
+      "additionalProperties": true
+    },
+    "AIInfoArgs": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "usage",
+            "rules",
+            "memory",
+            "skills",
+            "hooks",
+            "web-tools",
+            "mcp-log",
+            "serve-status",
+            "serve-config",
+            "configure",
+            "bug-report"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "AIInfoRow": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "boolean"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "AIMCPProfileArgs": {
+      "type": "object",
+      "properties": {
+        "all": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     },
     "AINextEdit": {
       "type": "object",
@@ -3087,6 +3640,107 @@
       ],
       "additionalProperties": true
     },
+    "AutoApprove": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "items": {
+            "$ref": "#/defs/AutoApproveRow"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "rows"
+      ],
+      "additionalProperties": true
+    },
+    "AutoApproveArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "AutoApproveRow": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "Bookmark": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer"
+        },
+        "mark": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mark",
+        "path",
+        "line"
+      ],
+      "additionalProperties": true
+    },
+    "BookmarkList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/Bookmark"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "BookmarkToggle": {
+      "type": "object",
+      "properties": {
+        "mark": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "on"
+      ],
+      "additionalProperties": true
+    },
     "BufArgs": {
       "type": "object",
       "properties": {
@@ -3148,6 +3802,35 @@
         "dirty",
         "active"
       ],
+      "additionalProperties": true
+    },
+    "BufLineArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "line"
+      ],
+      "additionalProperties": false
+    },
+    "BufMarkdown": {
+      "type": "object",
+      "properties": {
+        "cut": {
+          "type": "boolean"
+        },
+        "md": {
+          "$ref": "#/defs/MdNode"
+        }
+      },
+      "required": [],
       "additionalProperties": true
     },
     "BufOpenRes": {
@@ -3297,6 +3980,22 @@
         "symbols"
       ],
       "additionalProperties": true
+    },
+    "BufTickArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick"
+      ],
+      "additionalProperties": false
     },
     "BufsSnap": {
       "type": "object",
@@ -3592,6 +4291,34 @@
       ],
       "additionalProperties": true
     },
+    "ChatExport": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "ChatForkArgs": {
+      "type": "object",
+      "properties": {
+        "i": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "i"
+      ],
+      "additionalProperties": false
+    },
     "ChatGetMessageArgs": {
       "type": "object",
       "properties": {
@@ -3739,6 +4466,22 @@
         "id"
       ],
       "additionalProperties": true
+    },
+    "ChatRenameArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": false
     },
     "ChatRun": {
       "type": "object",
@@ -5255,6 +5998,28 @@
       ],
       "additionalProperties": true
     },
+    "FileText": {
+      "type": "object",
+      "properties": {
+        "binary": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "text"
+      ],
+      "additionalProperties": true
+    },
     "FilesListRes": {
       "type": "object",
       "properties": {
@@ -5266,6 +6031,21 @@
         },
         "truncated": {
           "type": "boolean"
+        }
+      },
+      "required": [
+        "paths"
+      ],
+      "additionalProperties": true
+    },
+    "FilesRecent": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -6355,6 +7135,18 @@
       "required": [],
       "additionalProperties": true
     },
+    "IDArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
     "ImageActArgs": {
       "type": "object",
       "properties": {
@@ -6864,6 +7656,59 @@
       ],
       "additionalProperties": true
     },
+    "LspAction": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "preferred": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "LspActions": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/LspAction"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "LspApplyArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "index"
+      ],
+      "additionalProperties": false
+    },
     "LspCompletion": {
       "type": "object",
       "properties": {
@@ -6910,6 +7755,50 @@
         "endLine",
         "endCol",
         "text"
+      ],
+      "additionalProperties": true
+    },
+    "LspHint": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "label": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "padLeft": {
+          "type": "boolean"
+        },
+        "padRight": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "line",
+        "col",
+        "label"
+      ],
+      "additionalProperties": true
+    },
+    "LspHints": {
+      "type": "object",
+      "properties": {
+        "cut": {
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/LspHint"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
       ],
       "additionalProperties": true
     },
@@ -7052,6 +7941,111 @@
       ],
       "additionalProperties": false
     },
+    "LspRangeArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "col": {
+          "type": "integer"
+        },
+        "end_col": {
+          "type": "integer"
+        },
+        "end_line": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "line",
+        "col",
+        "end_line",
+        "end_col"
+      ],
+      "additionalProperties": false
+    },
+    "LspRowsArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "first": {
+          "type": "integer"
+        },
+        "last": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "first",
+        "last"
+      ],
+      "additionalProperties": false
+    },
+    "LspSymbol": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "container": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "path",
+        "line",
+        "col"
+      ],
+      "additionalProperties": true
+    },
+    "LspSymbols": {
+      "type": "object",
+      "properties": {
+        "cut": {
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/LspSymbol"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
     "MCPAgent": {
       "type": "object",
       "properties": {
@@ -7073,6 +8067,40 @@
         "since",
         "calls",
         "asked"
+      ],
+      "additionalProperties": true
+    },
+    "MCPProfileItem": {
+      "type": "object",
+      "properties": {
+        "hint": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "MCPProfiles": {
+      "type": "object",
+      "properties": {
+        "current": {
+          "type": "string"
+        },
+        "profiles": {
+          "items": {
+            "$ref": "#/defs/MCPProfileItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "current",
+        "profiles"
       ],
       "additionalProperties": true
     },
@@ -8100,6 +9128,22 @@
       ],
       "additionalProperties": false
     },
+    "SearchReplaceArgs": {
+      "type": "object",
+      "properties": {
+        "find": {
+          "type": "string"
+        },
+        "replace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "find",
+        "replace"
+      ],
+      "additionalProperties": false
+    },
     "SearchRunArgs": {
       "type": "object",
       "properties": {
@@ -8513,6 +9557,83 @@
       ],
       "additionalProperties": true
     },
+    "Snippet": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "trigger",
+        "body"
+      ],
+      "additionalProperties": true
+    },
+    "SnippetList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/Snippet"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "SnippetRefArgs": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "trigger"
+      ],
+      "additionalProperties": false
+    },
+    "SnippetSaveArgs": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "trigger",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "SnippetSaved": {
+      "type": "object",
+      "properties": {
+        "replaced": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
     "StatusAI": {
       "type": "object",
       "properties": {
@@ -8695,6 +9816,22 @@
       "required": [
         "t",
         "topics"
+      ],
+      "additionalProperties": false
+    },
+    "SymbolQueryArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "buf",
+        "query"
       ],
       "additionalProperties": false
     },
@@ -9660,6 +10797,41 @@
       ],
       "additionalProperties": true
     },
+    "UserSnippet": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "trigger",
+        "body"
+      ],
+      "additionalProperties": true
+    },
+    "UserSnippetList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/UserSnippet"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
     "VolumeItem": {
       "type": "object",
       "properties": {
@@ -9689,6 +10861,56 @@
         }
       },
       "required": [],
+      "additionalProperties": false
+    },
+    "WorkspaceEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "WorkspaceList": {
+      "type": "object",
+      "properties": {
+        "folders": {
+          "items": {
+            "$ref": "#/defs/WorkspaceEntry"
+          },
+          "type": "array"
+        },
+        "recent": {
+          "items": {
+            "$ref": "#/defs/WorkspaceEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "folders",
+        "recent"
+      ],
+      "additionalProperties": true
+    },
+    "WorkspacePathArgs": {
+      "type": "object",
+      "properties": {
+        "folder": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "folder"
+      ],
       "additionalProperties": false
     }
   }

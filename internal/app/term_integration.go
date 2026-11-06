@@ -181,8 +181,10 @@ func (m *Model) onTermOSC(buf int, seq string) tea.Cmd {
 		// command ends. A palette start lands here too, via its shell.
 		if a, ok := agents.FromCommand(cmd); ok && (t.Agent == "" || t.Agent == a.ID) {
 			if t.Agent == "" {
-				t.AgentState = agents.Working
-				m.agentWatch(buf, true)
+				t.AgentState = agents.StartState(a.ID) // Unknown for a preset without screen rules
+				if agents.HasScreenRules(a.ID) {
+					m.agentWatch(buf, true)
+				}
 			}
 			t.Agent, t.agentFromCmd = a.ID, true
 		}
@@ -199,6 +201,7 @@ func (m *Model) onTermOSC(buf int, seq string) tea.Cmd {
 		if t.Agent != "" && t.agentFromCmd {
 			m.agentWatch(buf, false)
 			t.Agent, t.AgentState, t.agentFromCmd, t.AgentHook = "", agents.Unknown, false, false
+			return m.raceOnAgentExit(buf) // a race lane's agent quit (agent_race.go)
 		}
 	case shellint.Cwd:
 		if !termHostLocal(e.Host) {

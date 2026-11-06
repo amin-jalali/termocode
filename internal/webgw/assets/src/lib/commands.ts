@@ -5,13 +5,16 @@
 // runs there by id, and a risky one only after a laptop card. The
 // commands used last come first (kept per browser).
 import { signal } from "@preact/signals";
-import type { PaletteItem, PaletteList } from "../../../../webproto/proto";
+import type { FilesListRes, UserSnippetList, WorkspaceList, BookmarkList, BookmarkToggle, FilesRecent, LspSymbols, PaletteItem, PaletteList, SnippetList } from "../../../../webproto/proto";
+import { link, store } from "../session";
 import type { StringKey } from "../strings";
 import { t } from "../strings";
 import { toast } from "./toasts";
-import { activeDesk } from "./deskeditor";
+import { activeDesk, lineComment } from "./deskeditor";
+import type { EditAct } from "../monaco/protocol";
 import { saveLive } from "../views/LiveEditor";
 import { newChat } from "../views/Chat";
+import { chatFlow, exportChat, INFO_KINDS, moreChat, openAutoApprove, openInfo, openMCPProfiles, startFork } from "../views/ChatMore";
 import { newTerm } from "../views/Term";
 import { showOnLaptop } from "../views/FileView";
 import { modKey } from "./platform";
@@ -22,8 +25,19 @@ import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
 import { ctrFilter, ctrSearch, ctrSel, openPort } from "../views/desk/DeskContainers";
 import { configureServices, openCompose } from "../views/run/ServicesView";
-import { link } from "../session";
-import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
+import { activeFile, alternateFile, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, showFile, splitEditor, tabsIn, togglePin, wordWrap } from "./workbench";
+import { askLink } from "./links";
+import { expandTo, hideDots } from "./tree";
+import { sideView } from "../ui/ActivityBar";
+import { renameFile } from "../views/Files";
+import { undoRename } from "../views/files/FileActions";
+import { fileOfTab } from "./difftab";
+import { applyFix, formatBuf, goTo, inlayHints, quickFixes } from "./lsp";
+import { session } from "./live";
+import { askHere, askLaptop } from "../ui/AskHere";
+import { gitFailed } from "../views/git/errors";
+import { mdBufs } from "../views/MDPreview";
+import { cmpTab, mdTab } from "./vtabs";
 
 export interface Command {
   id: string;
@@ -63,6 +77,7 @@ export function commands(): Command[] {
     { id: "aiFix", label: "ai.fix", when: hasFile, run: () => activeDesk.peek()?.aiAct("fix") },
     { id: "aiEdit", label: "ai.edit", keys: `${mod}+I`, when: hasFile, run: () => activeDesk.peek()?.aiAct("edit") },
     { id: "aiDoc", label: "ai.doc", when: hasFile, run: () => activeDesk.peek()?.aiAct("doc") },
+    { id: "aiAttach", label: "ai.attach", when: hasFile, run: () => activeDesk.peek()?.aiAct("attach") },
     { id: "agents", label: "cmd.agents", run: () => (setPanes({ side: true }), go({ tab: "more", rest: "agents", query: {} })) },
     { id: "showOnLaptop", label: "cmd.show_on_laptop", when: hasFile, run: () => { const f = activeFile.peek(); if (f) showOnLaptop(f); } },
     { id: "sidebar", label: "cmd.toggle_side", keys: `${mod}+B`, run: () => setPanes({ side: !panes.peek().side }) },
@@ -82,6 +97,7 @@ export function commands(): Command[] {
     { id: "newTerminal", label: "cmd.new_terminal", run: newTerm },
     { id: "chat", label: "cmd.chat", run: () => go({ tab: "chat", rest: "", query: {} }) },
     { id: "newChat", label: "cmd.new_chat", run: newChat },
+    ...chatCommands(),
     { id: "themeDark", label: "cmd.theme_dark", run: () => setPref("theme", "dark") },
     { id: "themeLight", label: "cmd.theme_light", run: () => setPref("theme", "light") },
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
@@ -91,10 +107,471 @@ export function commands(): Command[] {
     { id: "servicesOpenCompose", label: "svc.open_compose", run: openCompose },
     { id: "servicesConfigure", label: "svc.configure", when: canAct, run: configureServices },
     ...gitCommands(),
+    ...editCommands(),
+    { id: "lastFile", label: "cmd.last_file", when: () => activeFile.peek() !== null, run: () => alternateFile() || toast("info", t("cmd.no_last_file")) },
+    { id: "reopenClosed", label: "cmd.reopen_closed", run: () => reopenClosed() || toast("info", t("cmd.no_closed")) },
+    { id: "pinTab", label: "cmd.pin_tab", when: () => activeFile.peek() !== null, run: () => { const f = activeFile.peek(); if (f) togglePin(f); } },
+    { id: "closeSplit", label: "cmd.close_split", when: () => groups.peek().length > 1, run: () => closeGroup() },
+    { id: "openUrl", label: "cmd.open_url", when: hasDesk, run: openRowURL },
+    { id: "revealFile", label: "cmd.reveal_file", when: () => realFile() !== null, run: () => { const f = realFile(); if (f) revealInTree(f); } },
+    { id: "toggleHidden", label: "cmd.toggle_hidden", run: toggleHidden },
+    { id: "togglePreview", label: "cmd.toggle_preview", run: togglePreviewTabs },
+    { id: "renameFile", label: "cmd.rename_file", when: () => realFile() !== null && link.meta.peek()?.role === "controller", run: () => { const f = realFile(); if (f) { showSide(); renameFile(f); } } },
+    { id: "gotoTypeDef", label: "cmd.goto_typedef", when: hasDesk, run: () => activeDesk.peek()?.nav("typedef") },
+    { id: "gotoImpl", label: "cmd.goto_impl", when: hasDesk, run: () => activeDesk.peek()?.nav("impl") },
+    { id: "formatDocument", label: "menu.format", when: () => hasDesk() && canWrite(), run: () => void formatBuf() },
+    { id: "revertFile", label: "cmd.revert_file", when: () => hasDesk() && canWrite(), run: askRevert },
+    { id: "markdownPreview", label: "cmd.md_preview", when: () => hasDesk() && /\.(md|markdown|mdx)$/i.test(activeFile.peek() ?? ""), run: openPreview },
+    { id: "bookmarkToggle", label: "cmd.bm_toggle", when: () => hasDesk() && canWrite(), run: toggleBookmark },
+    { id: "bookmarkList", label: "cmd.bm_list", run: listBookmarks },
+    { id: "bookmarkClear", label: "cmd.bm_clear", when: canWrite, run: askClearBookmarks },
+    { id: "openRecent", label: "cmd.open_recent", run: openRecent },
+    { id: "workspaceSymbol", label: "cmd.ws_symbol", when: hasDesk, run: workspaceSymbols },
+    { id: "snippetPicker", label: "cmd.snippets", when: () => hasDesk() && canWrite(), run: pickSnippet },
+    { id: "quickFix", label: "cmd.quick_fix", when: () => hasDesk() && canWrite(), run: () => void pickFix() },
+    { id: "quickFixPreferred", label: "cmd.quick_fix_pref", when: () => hasDesk() && canWrite(), run: () => void preferredFix() },
+    { id: "inlayHints", label: "cmd.inlay_hints", when: hasDesk, run: () => (inlayHints.value = !inlayHints.peek()) },
+    { id: "compareFiles", label: "cmd.compare", run: compareFiles },
+    { id: "addFolder", label: "cmd.add_folder", when: canWrite, run: addFolder },
+    { id: "removeFolder", label: "cmd.remove_folder", when: canWrite, run: removeFolder },
+    { id: "openWorkspace", label: "cmd.open_workspace", when: canWrite, run: openWorkspace },
+    { id: "replaceWorkspace", label: "cmd.replace_ws", when: canWrite, run: replaceWorkspace },
+    { id: "manageSnippets", label: "cmd.snippets_manage", when: canWrite, run: manageSnippets },
+    { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
   ];
 }
 
 const canAct = () => link.meta.peek()?.role !== "viewer";
+const isController = () => link.meta.peek()?.role === "controller";
+
+/** chatCommands act on the laptop's open chat and read the laptop's AI
+ * screens (the chat column shows their questions). */
+function chatCommands(): Command[] {
+  const show = () => setPanes({ chat: true });
+  const withChat = (fn: (c: NonNullable<ReturnType<typeof moreChat>>) => void) => () => {
+    const c = moreChat();
+    if (!c) return;
+    show();
+    fn(c);
+  };
+  const hasChat = () => isController() && moreChat() !== null;
+  return [
+    { id: "chatRename", label: "chat.rename", when: hasChat, run: withChat((c) => (chatFlow.value = { s: "rename", id: c.id, title: c.title })) },
+    { id: "chatFork", label: "chat.fork", when: hasChat, run: withChat((c) => startFork(c.msgs)) },
+    { id: "chatExport", label: "chat.export", when: hasChat, run: withChat((c) => exportChat(c.id)) },
+    { id: "chatDelete", label: "chat.delete", when: hasChat, run: withChat((c) => (chatFlow.value = { s: "delete", id: c.id, title: c.title })) },
+    { id: "chatClear", label: "chat.clear", when: isController, run: () => (show(), (chatFlow.value = { s: "clear" })) },
+    { id: "mcpProfile", label: "mcp.switch", when: isController, run: () => (show(), openMCPProfiles()) },
+    { id: "autoApprove", label: "auto.title", when: isController, run: () => (show(), openAutoApprove()) },
+    ...INFO_KINDS.map(([kind, key]) => ({ id: "aiInfo:" + kind, label: key, when: isController, run: () => (show(), openInfo(kind)) })),
+  ];
+}
+
+/** canWrite: a controller may change files. */
+const canWrite = () => link.meta.peek()?.role === "controller";
+
+/** askRevert asks here first (Cancel first): Revert File drops the
+ * buffer's unsaved changes and reads the file from disk again. */
+function askRevert(): void {
+  const s = session.peek();
+  const f = activeFile.peek();
+  if (!s || !f) return;
+  const name = f.slice(f.lastIndexOf("/") + 1);
+  askHere.value = {
+    label: t("cmd.revert_file"),
+    text: t("cmd.revert_ask", { name }),
+    verb: t("cmd.revert"),
+    run: () => link.request("buf.reload", { buf: s.buf }).then(() => toast("ok", t("cmd.reverted")), gitFailed),
+  };
+}
+
+/** openPreview opens the Markdown preview tab of the focused file. */
+function openPreview(): void {
+  const s = session.peek();
+  const f = activeFile.peek();
+  if (!s || !f) return;
+  mdBufs.set(f, s.buf);
+  showFile(mdTab(f));
+}
+
+/** failToast shows a request's refusal in the laptop's words. */
+const failToast = (e: unknown) => toast("warn", e instanceof Error && e.message ? e.message : t("cmd.failed"));
+
+/** baseOf is a path's last part; dirOf the folders before it. */
+const baseOf = (p: string) => p.slice(p.lastIndexOf("/") + 1);
+const dirOf = (p: string) => p.slice(0, Math.max(0, p.lastIndexOf("/")));
+
+/** toggleBookmark sets the laptop's bookmark on the caret's row, or takes it away. */
+function toggleBookmark(): void {
+  const s = session.peek();
+  if (!s) return;
+  const line = (cursorAt.peek()?.line ?? 1) - 1;
+  link.request("bookmarks.toggle", { buf: s.buf, line }).then((r) => {
+    const b = r as BookmarkToggle;
+    toast("ok", t(b.on ? "cmd.bm_set" : "cmd.bm_off", { mark: b.mark ?? "" }));
+  }, failToast);
+}
+
+/** listBookmarks lists the laptop's bookmarks; one opens at its row. */
+function listBookmarks(): void {
+  link.request("bookmarks.list").then((r) => {
+    const items = (r as BookmarkList).items ?? [];
+    if (items.length === 0) {
+      toast("info", t("cmd.bm_none"));
+      return;
+    }
+    quick.value = {
+      mode: "pick",
+      pick: { title: t("cmd.bm_list"), items: items.map((b) => ({ label: `${b.mark}  ${b.path}:${b.line + 1}`, detail: b.text, file: b.path, run: () => goTo(b.path, b.line, 0) })) },
+    };
+  }, failToast);
+}
+
+/** askClearBookmarks asks here first (Cancel first): all of the laptop's bookmarks go. */
+function askClearBookmarks(): void {
+  askHere.value = {
+    label: t("cmd.bm_clear"),
+    text: t("cmd.bm_clear_ask"),
+    verb: t("cmd.bm_clear_verb"),
+    run: () => link.request("bookmarks.clear").then(() => toast("ok", t("cmd.bm_cleared")), failToast),
+  };
+}
+
+/** openRecent lists the laptop's recent files in the workspace. */
+function openRecent(): void {
+  link.request("files.recent").then((r) => {
+    const paths = (r as FilesRecent).paths ?? [];
+    if (paths.length === 0) {
+      toast("info", t("cmd.no_recent"));
+      return;
+    }
+    quick.value = { mode: "pick", pick: { title: t("cmd.open_recent"), items: paths.map((p) => ({ label: baseOf(p), detail: dirOf(p), file: p, run: () => showFile(p) })) } };
+  }, failToast);
+}
+
+/** workspaceSymbols asks the laptop's language servers as the user types. */
+function workspaceSymbols(): void {
+  const s = session.peek();
+  if (!s) return;
+  const buf = s.buf;
+  quick.value = {
+    mode: "pick",
+    pick: {
+      title: t("cmd.ws_symbol_type"),
+      load: (q) =>
+        q.trim() === ""
+          ? Promise.resolve([])
+          : link.request("lsp.workspace_symbols", { buf, query: q.trim() }).then((r) =>
+              ((r as LspSymbols).items ?? []).map((x) => ({ label: x.name, detail: x.container ? `${x.container} · ${x.path}` : x.path, run: () => goTo(x.path, x.line, x.col) })),
+            ),
+    },
+  };
+}
+
+/** pickSnippet lists the snippets of the file's type; one goes in at the cursor. */
+function pickSnippet(): void {
+  const s = session.peek();
+  if (!s) return;
+  link.request("snippets.list", { buf: s.buf }).then((r) => {
+    const items = (r as SnippetList).items ?? [];
+    if (items.length === 0) {
+      toast("info", t("cmd.no_snippets"));
+      return;
+    }
+    quick.value = { mode: "pick", pick: { title: t("cmd.snippets"), items: items.map((x) => ({ label: x.trigger, detail: x.body.split("\n")[0], run: () => activeDesk.peek()?.snippet(x.body) })) } };
+  }, failToast);
+}
+
+/** pickFix lists the quick fixes at the caret; the one picked is applied on the laptop. */
+async function pickFix(): Promise<void> {
+  const r = await quickFixes();
+  if (!r) return;
+  if (r.items.length === 0) {
+    toast("info", t("cmd.no_fix"));
+    return;
+  }
+  quick.value = {
+    mode: "pick",
+    pick: { title: t("cmd.quick_fix"), items: r.items.map((a, i) => ({ label: a.title, detail: a.preferred ? t("cmd.fix_preferred") : a.kind, run: () => applyFix(r.buf, r.tick, i) })) },
+  };
+}
+
+/** preferredFix applies the preferred quick fix at the caret at once. */
+async function preferredFix(): Promise<void> {
+  const r = await quickFixes();
+  if (!r) return;
+  const i = r.items.findIndex((a) => a.preferred);
+  if (i < 0) {
+    toast("info", t("cmd.no_pref_fix"));
+    return;
+  }
+  applyFix(r.buf, r.tick, i);
+}
+
+/** compareFiles compares the open file (or a first one picked) with a
+ * file picked from the workspace, side by side as they are on disk. */
+function compareFiles(): void {
+  link.request("files.list").then((r) => {
+    const paths = (r as FilesListRes).paths ?? [];
+    const pickOf = (title: string, then: (p: string) => void) =>
+      (quick.value = { mode: "pick", pick: { title, items: paths.map((p) => ({ label: baseOf(p), detail: dirOf(p), file: p, run: () => then(p) })) } });
+    const second = (a: string) => pickOf(t("cmd.compare_with", { name: baseOf(a) }), (b) => showFile(cmpTab(a, b)));
+    const a = realFile();
+    if (a) second(a);
+    else pickOf(t("cmd.compare"), (p) => setTimeout(() => second(p), 0));
+  }, failToast);
+}
+
+/** addFolder asks for a laptop folder's path, then asks the laptop to
+ * add it to the workspace (its card shows the whole path). */
+function addFolder(): void {
+  quick.value = {
+    mode: "ask",
+    ask: {
+      title: t("cmd.folder_type"),
+      run: (path) => {
+        askLaptop.value = { label: t("cmd.add_folder"), text: t("cmd.add_folder_ask", { path }), send: () => link.request("workspace.add_folder", { folder: path }) };
+      },
+    },
+  };
+}
+
+/** workspaceList reads the folder and recent workspace names. */
+function workspaceList(then: (l: WorkspaceList) => void): void {
+  link.request("workspace.list").then((r) => then(r as WorkspaceList), failToast);
+}
+
+/** removeFolder picks an added folder; the laptop removes it after its card. */
+function removeFolder(): void {
+  workspaceList((l) => {
+    const extra = (l.folders ?? []).filter((f) => f.id > 0);
+    if (extra.length === 0) {
+      toast("info", t("cmd.no_folders"));
+      return;
+    }
+    quick.value = {
+      mode: "pick",
+      pick: {
+        title: t("cmd.remove_folder"),
+        items: extra.map((f) => ({ label: f.name, run: () => (askLaptop.value = { label: t("cmd.remove_folder"), text: t("cmd.remove_folder_ask", { name: f.name }), send: () => link.request("workspace.remove_folder", { id: f.id }) }) })),
+      },
+    };
+  });
+}
+
+/** openWorkspace picks a recent workspace; the laptop restarts there after its card. */
+function openWorkspace(): void {
+  workspaceList((l) => {
+    const recent = l.recent ?? [];
+    if (recent.length === 0) {
+      toast("info", t("cmd.no_workspaces"));
+      return;
+    }
+    quick.value = {
+      mode: "pick",
+      pick: {
+        title: t("cmd.open_workspace"),
+        items: recent.map((w) => ({ label: w.name, run: () => (askLaptop.value = { label: t("cmd.open_workspace"), text: t("cmd.open_workspace_body", { name: w.name }), send: () => link.request("workspace.open", { id: w.id }) }) })),
+      },
+    };
+  });
+}
+
+/** replaceWorkspace asks for the text and its replacement here, then the
+ * laptop's card counts the matches; its yes writes the files. */
+function replaceWorkspace(): void {
+  quick.value = {
+    mode: "ask",
+    ask: {
+      title: t("cmd.replace_find"),
+      run: (find) =>
+        setTimeout(() => {
+          quick.value = {
+            mode: "ask",
+            ask: {
+              title: t("cmd.replace_with", { find }),
+              run: (replace) => {
+                askLaptop.value = { label: t("cmd.replace_ws"), text: t("cmd.replace_ws_ask", { find, replace }), send: () => link.request("search.replace", { find, replace }) };
+              },
+            },
+          };
+        }, 0),
+    },
+  };
+}
+
+/** unescapeBody turns the one-line input into a body: \\n a new line,
+ * \\t a tab, \\\\ a backslash (other escapes stay, as snippets need them). */
+function unescapeBody(s: string): string {
+  return s.replace(/\\([nt\\])/g, (_m, c: string) => (c === "n" ? "\n" : c === "t" ? "\t" : "\\"));
+}
+
+/** manageSnippets lists the user's own snippets: a new one is named and
+ * typed here; one picked is deleted after a question here. */
+function manageSnippets(): void {
+  link.request("snippets.user").then((r) => {
+    const items = (r as UserSnippetList).items ?? [];
+    const name = (scope: string, trigger: string) => (scope === "*" ? trigger : scope + ":" + trigger);
+    quick.value = {
+      mode: "pick",
+      pick: {
+        title: t("cmd.snippets_manage"),
+        items: [
+          { label: t("cmd.snippet_new"), run: () => setTimeout(newSnippet, 0) },
+          ...items.map((s) => ({
+            label: s.trigger,
+            detail: "[" + s.scope + "] " + s.body.split("\n")[0],
+            run: () =>
+              (askHere.value = {
+                label: t("cmd.snippets_manage"),
+                text: t("cmd.snippet_delete_ask", { name: name(s.scope, s.trigger) }),
+                verb: t("cmd.snippet_delete"),
+                run: () => link.request("snippets.delete", { scope: s.scope, trigger: s.trigger }).then(() => toast("ok", t("cmd.snippet_deleted", { name: name(s.scope, s.trigger) })), failToast),
+              }),
+          })),
+        ],
+      },
+    };
+  }, failToast);
+}
+
+/** newSnippet asks the snippet's name, then its body, and saves it. */
+function newSnippet(): void {
+  quick.value = {
+    mode: "ask",
+    ask: {
+      title: t("cmd.snippet_name"),
+      run: (raw) => {
+        const i = raw.lastIndexOf(":");
+        const scope = i >= 0 ? raw.slice(0, i).trim() || "*" : "*";
+        const trigger = (i >= 0 ? raw.slice(i + 1) : raw).trim();
+        if (!/^[A-Za-z0-9_]+$/.test(trigger)) {
+          toast("warn", t("cmd.snippet_bad"));
+          return;
+        }
+        const label = scope === "*" ? trigger : scope + ":" + trigger;
+        setTimeout(
+          () =>
+            (quick.value = {
+              mode: "ask",
+              ask: {
+                title: t("cmd.snippet_body", { name: label }),
+                run: (body) =>
+                  link.request("snippets.save", { scope, trigger, body: unescapeBody(body) }).then(() => toast("ok", t("cmd.snippet_saved", { name: label })), failToast),
+              },
+            }),
+          0,
+        );
+      },
+    },
+  };
+}
+
+/** realFile is the workspace file of the active tab (null: none, or a tab
+ * that is not a file: a table, a commit graph …). */
+function realFile(): string | null {
+  const a = activeFile.peek();
+  return a ? fileOfTab(a) : null;
+}
+
+/** showSide shows the files in the side bar. */
+function showSide(): void {
+  setPanes({ side: true });
+  sideView.value = "files";
+}
+
+/** revealInTree opens the file's folders in the tree and shows its row. */
+function revealInTree(path: string): void {
+  showSide();
+  expandTo(path);
+  const end = Date.now() + 3000;
+  const find = () => {
+    const row = document.querySelector<HTMLElement>(`.wb-side .tree-row[data-path="${CSS.escape(path)}"]`);
+    if (row) {
+      row.scrollIntoView({ block: "nearest" });
+      row.focus();
+    } else if (Date.now() < end) setTimeout(find, 50);
+  };
+  find();
+}
+
+/** toggleHidden hides the dotfiles here or shows them again (the laptop
+ * must show them for the page to). */
+function toggleHidden(): void {
+  const d = store.topic("tree").peek()?.data as { hidden?: unknown } | undefined;
+  if (d?.hidden !== true) {
+    toast("info", t("files.dots_laptop"));
+    return;
+  }
+  hideDots.value = !hideDots.peek();
+}
+
+/** togglePreviewTabs turns the tree's preview tabs off or on again. */
+function togglePreviewTabs(): void {
+  previewTabs.value = !previewTabs.peek();
+  toast("info", t(previewTabs.peek() ? "cmd.preview_on" : "cmd.preview_off"));
+}
+
+/** URL_RE finds web addresses in a row. */
+const URL_RE = /https?:\/\/[^\s<>"'`]+/g;
+
+/** openRowURL asks to open the URL on the caret's row (the one under the
+ * caret, else the first); a row with none says so. */
+function openRowURL(): void {
+  const at = cursorAt.peek();
+  const text = activeDesk.peek()?.text() ?? "";
+  const row = text.split("\n")[(at?.line ?? 1) - 1] ?? "";
+  const found = [...row.matchAll(URL_RE)].map((m) => ({ url: m[0].replace(/[.,;:!?)\]}>]+$/, ""), from: m.index ?? 0 }));
+  const col = (at?.col ?? 1) - 1;
+  const hit = found.find((f) => col >= f.from && col <= f.from + f.url.length) ?? found[0];
+  if (!hit) {
+    toast("info", t("cmd.no_url"));
+    return;
+  }
+  askLink(hit.url);
+}
+
+/** hasDesk: a file is open in the desktop editor. */
+const hasDesk = () => hasFile() && activeDesk.peek() !== null;
+
+/** EDIT_ACTS are the editor's line and text commands (the laptop's
+ * Edit: and fold entries): id, name, the laptop's key. */
+const EDIT_ACTS: { id: EditAct; label: StringKey; keys?: string }[] = [
+  { id: "copyLinesDown", label: "cmd.copy_lines_down", keys: "Shift+Alt+Down" },
+  { id: "commentLine", label: "cmd.comment_line", keys: "Ctrl+/" },
+  { id: "foldAll", label: "cmd.fold_all" },
+  { id: "unfoldAll", label: "cmd.unfold_all" },
+  { id: "toggleFold", label: "cmd.toggle_fold" },
+  { id: "joinLines", label: "cmd.join_lines" },
+  { id: "sortLinesAsc", label: "cmd.sort_asc" },
+  { id: "sortLinesDesc", label: "cmd.sort_desc" },
+  { id: "reverseLines", label: "cmd.reverse_lines" },
+  { id: "upperCase", label: "cmd.upper" },
+  { id: "lowerCase", label: "cmd.lower" },
+  { id: "trimWhitespace", label: "cmd.trim_ws" },
+  { id: "tabsToSpaces", label: "cmd.tabs_to_spaces" },
+  { id: "spacesToTabs", label: "cmd.spaces_to_tabs" },
+  { id: "collapseBlankLines", label: "cmd.collapse_blank" },
+  { id: "replaceInFile", label: "cmd.replace_file", keys: "Ctrl+H" },
+];
+
+/** editCommands run on the focused desktop editor's text. */
+function editCommands(): Command[] {
+  const mod = modKey();
+  return EDIT_ACTS.map(({ id, label, keys }) => ({
+    id,
+    label,
+    keys: keys?.replace("Ctrl", mod),
+    when: hasDesk,
+    run: () => {
+      if (id === "commentLine" && !lineComment(activeFile.peek() ?? "")) {
+        toast("info", t("cmd.no_comment"));
+        return;
+      }
+      activeDesk.peek()?.act(id);
+    },
+  }));
+}
 
 /** cmdTitle is a command's name as the list shows it. */
 export function cmdTitle(c: Command): string {

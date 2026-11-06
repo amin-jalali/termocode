@@ -45,6 +45,7 @@
 .cod-collapse-all::before { content: "\eac5"; }
 .cod-comment::before { content: "\ea6b"; }
 .cod-comment-discussion::before { content: "\eac7"; }
+.cod-compare-changes::before { content: "\eafd"; }
 .cod-copy::before { content: "\ebcc"; }
 .cod-database::before { content: "\eace"; }
 .cod-debug::before { content: "\ead8"; }
@@ -108,7 +109,6 @@
 .cod-layout-sidebar-right::before { content: "\ebf4"; }
 .cod-layout-sidebar-right-off::before { content: "\ec00"; }
 .cod-lightbulb::before { content: "\ea61"; }
-.cod-link-external::before { content: "\eb14"; }
 .cod-list-flat::before { content: "\eb84"; }
 .cod-list-ordered::before { content: "\eb16"; }
 .cod-list-tree::before { content: "\eb86"; }
@@ -116,6 +116,7 @@
 .cod-lock::before { content: "\ea75"; }
 .cod-new-file::before { content: "\ea7f"; }
 .cod-new-folder::before { content: "\ea80"; }
+.cod-open-preview::before { content: "\eb28"; }
 .cod-organization::before { content: "\ea7e"; }
 .cod-output::before { content: "\eb9d"; }
 .cod-package::before { content: "\eb29"; }
