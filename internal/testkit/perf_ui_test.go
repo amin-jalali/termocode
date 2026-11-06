@@ -77,22 +77,27 @@ func TestPerfPaletteFilterKey(t *testing.T) {
 func TestPerfCommitPicker(t *testing.T) {
 	perfbudget.Require(t)
 	d, _ := scmDriver(t, func(r *repo) { bigHistory(r, 300) })
+	// One warm-up open (first git log of the new history: cold caches),
+	// then the median of 9: one CI run gave 67 ms for the median of 5
+	// next to 5-9 ms in every other run (same code).
 	var open []time.Duration
-	for i := 0; i < 5; i++ {
+	for i := 0; i <= 9; i++ {
 		dt, ok := waitFrame(d, app.DevActionMsg{ID: "palette:git-log"}, func(s string) bool {
 			return strings.Contains(s, "Git Log") && strings.Contains(s, "change number 300")
 		}, 5*time.Second)
 		if !ok {
 			t.Fatalf("Git: Show Log did not open:\n%s", screen(d))
 		}
-		open = append(open, dt)
-		if i < 4 {
+		if i > 0 {
+			open = append(open, dt)
+		}
+		if i < 9 {
 			d.Key("esc")
 		}
 	}
 	keys := []string{"c", "h", "a", "n", "g", "e", "backspace", "backspace", "backspace", "backspace", "backspace", "backspace"}
 	took := typeTimed(t, d, keys, searchShows)
-	t.Logf("commit picker: open p50 %v; key p50 %v", median(open), median(took))
+	t.Logf("commit picker: open p50 %v (all %v); key p50 %v", median(open), open, median(took))
 	perfbudget.Check(t, "commit_picker_open", ms(median(open)))
 	perfbudget.Check(t, "commit_picker_filter_key", ms(median(took)))
 }
