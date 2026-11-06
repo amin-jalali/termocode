@@ -169,3 +169,47 @@ func TestDeskVimRepeatMacrosRegisters(t *testing.T) {
 		t.Errorf("problems (CSP, console): %v", probs)
 	}
 }
+
+// Spec (WEBP-1): search, ex commands, text objects and marks. /foo<CR>
+// goes to the next foo (the status bar shows the search as it is
+// typed), n to the one after (round the end); :3 goes to line 3; di(
+// deletes inside the brackets; :%s/o/0/g changes every o; gUiw makes
+// the word upper case; ma marks a line and d'a deletes up to it; an
+// unknown command and a search with no match say so in the status bar;
+// :w saves through the laptop.
+func TestDeskVimSearchExMarks(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "foo bar", "baz foo", "qux (a, b) end", "last")
+	toggleVim(t, p, c, true)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+	keysShown := `(document.querySelector(".statusbar .sb-vim-keys")?.textContent ?? "")`
+	msg := `(document.querySelector(".statusbar .sb-vim-msg")?.textContent ?? "")`
+
+	v.keys("/fo", "foo bar", "baz foo", "qux (a, b) end", "last")
+	p.WaitJS(keysShown + ` === "/fo"`)
+	v.keys("o\rdw", "foo bar", "baz ", "qux (a, b) end", "last")
+	v.keys("nx", "oo bar", "baz ", "qux (a, b) end", "last")
+	v.keys(":3\rf(di(", "oo bar", "baz ", "qux () end", "last")
+	v.keys(":%s/o/0/g\r", "00 bar", "baz ", "qux () end", "last")
+	v.keys("GgUiw", "00 bar", "baz ", "qux () end", "LAST")
+	v.keys("3Gmaggd'a", "LAST")
+
+	v.keys(":foo\r", "LAST")
+	p.WaitJS(msg + ` === "Not an editor command: foo"`)
+	v.keys("/zzz\r", "LAST")
+	p.WaitJS(msg + ` === "Pattern not found: zzz"`)
+	// A key clears the message.
+	v.keys("l", "LAST")
+	p.WaitJS(`!document.querySelector(".statusbar .sb-vim-msg")`)
+
+	realKeys(p, ":w\r")
+	r := expectReq(t, c, "buf.save")
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"tick": v.tick + 1, "dirty": false})})
+	p.WaitJS(`(` + toastsJS + `).includes("Saved. The laptop's on-save hooks ran.")`)
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
