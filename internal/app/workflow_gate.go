@@ -59,7 +59,7 @@ type WorkflowWriteMsg struct{ Ask WorkflowWriteAsk }
 
 type workflowGateState struct {
 	cur   *WorkflowWriteAsk
-	queue []WorkflowWriteAsk
+	queue []*WorkflowWriteAsk // pointers: the web's card ids follow them
 }
 
 const (
@@ -73,7 +73,7 @@ func (m *Model) AskWorkflowWrite(a WorkflowWriteAsk) tea.Cmd {
 	if m.wfGate == nil {
 		m.wfGate = &workflowGateState{}
 	}
-	m.wfGate.queue = append(m.wfGate.queue, a)
+	m.wfGate.queue = append(m.wfGate.queue, &a)
 	m.showWaitingWorkflowGate()
 	return nil
 }
@@ -97,12 +97,12 @@ func (m *Model) showWaitingWorkflowGate() {
 	}
 	a := g.queue[0]
 	g.queue = g.queue[1:]
-	g.cur = &a
+	g.cur = a
 	actions := []confirm.Button{{ID: "once", Title: "Allow once"}}
 	if a.FileHash != "" {
 		actions = append(actions, confirm.Button{ID: "workflow", Title: "Allow for this workflow"})
 	}
-	m.confirm = confirm.Risky(a.Workflow+" wants to write", workflowGateBody(a),
+	m.confirm = confirm.Risky(a.Workflow+" wants to write", workflowGateBody(*a),
 		confirm.Button{ID: "deny", Title: "Deny"}, actions...).WithWideText()
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen, m.confirmKind = true, confirmKindWorkflowGate

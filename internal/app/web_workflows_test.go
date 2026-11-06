@@ -152,6 +152,7 @@ func TestWorkflowsWebTopicAndStop(t *testing.T) {
 		t.Fatalf("workflows %+v", snap.Workflows)
 	}
 	id := wfxStartMine(t, m)
+	m.web.wfx.checked = time.Time{} // the 500 ms wait is over
 	m.webAfterUpdate(nil)
 	var raw strings.Builder
 	var cur webproto.WorkflowsSnap
@@ -179,4 +180,22 @@ func TestWorkflowsWebTopicAndStop(t *testing.T) {
 	if rf := wfxPump(t, m, id, nil); rf.State != run.RunCancel {
 		t.Fatalf("stopped run: %s", rf.State)
 	}
+}
+
+// Spec (WEB-7, WFX-19): the workflows replay golden: trusting a repo
+// workflow turns its row from untrusted to off.
+func TestWorkflowsReplayGolden(t *testing.T) {
+	m, _ := wfxRig(t)
+	h := webTestHub(t, m)
+	c := webReplayRecord(t, m, h, "workflows", func() {
+		e, _ := wire.Find(m.wfxS().list, "docs-report")
+		if err := wire.Trust(m.wfxS().root, e); err != nil {
+			t.Fatal(err)
+		}
+		m.wfxLoad("")
+		m.web.wfx.checked = time.Time{}
+		m.webAfterUpdate(nil)
+	})
+	webReplayCheck(t, h.topics["workflows"], c)
+	webReplayGolden(t, webReplayPath("workflows", "trust_turns_off"), c)
 }
