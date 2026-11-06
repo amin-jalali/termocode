@@ -1,0 +1,9 @@
+⏺ Reading internal/parser/tokenizer.go
+
+  ⎿  5-hour limit reached ∙ resets 4pm
+     /upgrade to increase your usage limit.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ >                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

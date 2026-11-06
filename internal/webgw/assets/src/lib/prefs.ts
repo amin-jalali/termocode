@@ -26,13 +26,15 @@ export interface Prefs {
   notify: boolean;
   /** keys is the terminal key bar, as names from lib/keys.ts; [] is the default bar. */
   keys: KeyId[];
+  /** vim: the desktop editor's Vim mode (WEBP-1), off by default. */
+  vim: boolean;
 }
 
 /** ROW_MIN and ROW_MAX bound rowPx (WEB-36). */
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [] };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -57,6 +59,7 @@ function load(): Prefs {
       wakeLock: v.wakeLock === true,
       notify: v.notify === true,
       keys: readKeys(v.keys),
+      vim: v.vim === true,
     };
   } catch {
     return defaults;

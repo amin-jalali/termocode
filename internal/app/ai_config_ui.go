@@ -88,6 +88,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAgentPicked(id), true
 	case pickerKindAgentSessions: // agent_sessions.go
 		return m.onAgentSessionPicked(id), true
+	case pickerKindAgentNames: // agent_names.go
+		return m.onAgentNamePicked(id), true
+	case pickerKindAgentAccounts: // agent_accounts.go
+		return m.onAgentAccountPicked(id), true
 	case pickerKindAgentSessionsHits: // agent_sessions_search.go
 		return m.onAgentSearchPicked(id), true
 	case pickerKindRunsMore: // runs_state.go
@@ -114,6 +118,10 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIEditInstruction(value), true
 	case promptKindAIKey:
 		return m.onAIKeyEntered(value), true
+	case promptKindAgentNames: // agent_names.go
+		return m.onAgentNamesTask(value), true
+	case promptKindAgentAccountNew: // agent_accounts.go
+		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
 		return m.onAgentSessionsSearch(value), true
 	case promptKindAgentPacksSource: // agent_packs_ui.go
@@ -240,10 +248,14 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
 	case confirmKindWorkflowRun, confirmKindWorkflowDry, confirmKindWorkflowTrust, confirmKindWorkflowOnOff, confirmKindWorkflowStop,
-		confirmKindWorkflowUndo, confirmKindWorkflowBudget: // workflows_state.go, workflows_trust.go
+		confirmKindWorkflowUndo, confirmKindWorkflowBudget, confirmKindWorkflowOffStop: // workflows_state.go, workflows_trust.go
 		return m.answerWorkflowCard(id), true
 	case confirmKindAgentTranscripts: // agent_chat.go
 		return m.answerAgentTranscripts(id), true
+	case confirmKindAgentHibernate: // agent_hibernate.go
+		return m.answerAgentHibernate(id), true
+	case confirmKindAgentAccountSignIn: // agent_accounts.go
+		return m.answerAgentAccountCard(id), true
 	case confirmKindAgentInstall, confirmKindAgentSignIn: // agent_install.go
 		return m.answerAgentPickCard(m.confirmKind, id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go

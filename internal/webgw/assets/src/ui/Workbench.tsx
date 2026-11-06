@@ -38,6 +38,8 @@ import {
   splitEditor,
   tabsIn,
   wordWrap,
+  zen,
+  escapeKey,
 } from "../lib/workbench";
 import { link, listOf, store } from "../session";
 import type { Tab } from "../state/route";
@@ -68,12 +70,14 @@ import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
 import { CtrTab } from "../views/desk/CtrTab";
 import { DBHistoryTab, DBQueryTab, DBTableTab, DBTextTab } from "../views/desk/DBTabs";
 import { DeskMCP, MCPAgentTab } from "../views/desk/DeskMCP";
+import { WorkflowRunTab } from "../views/desk/DeskWorkflows";
 import { vtabIcon, vtabOf } from "../lib/vtabs";
 import { MDPreview } from "../views/MDPreview";
 import { CompareView } from "../views/CompareView";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
 import { GitAskHost } from "../views/git/GitAsk";
+import { PeekHost } from "../views/git/PeekCard";
 import { AgentsView } from "../views/AgentsView";
 import { ItermocView } from "../views/ItermocView";
 import { QuickInput } from "./QuickInput";
@@ -346,6 +350,7 @@ function EditorBody({ more, file, slot }: { more: boolean; file: string | null; 
   if (v?.kind === "ddl" || v?.kind === "scmp") return <DBTextTab key={file} kind={v.kind} conn={v.conn} table={v.table} slot={slot} />;
   if (v?.kind === "dbh") return <DBHistoryTab key={file} />;
   if (v?.kind === "mcp") return <MCPAgentTab key={file} name={v.name} slot={slot} />;
+  if (v?.kind === "wf") return <WorkflowRunTab key={file} run={v.run} slot={slot} />;
   if (v?.kind === "ctr") return <CtrTab key={file} what={v.what} arg={v.arg} label={v.label} slot={slot} />;
   if (v?.kind === "md") return <MDPreview key={file} path={v.path} />;
   if (v?.kind === "cmp") return <CompareView key={file} a={v.a} b={v.b} slot={slot} />;
@@ -432,6 +437,10 @@ function PanelHead({ children }: { children: ComponentChildren }) {
  * frame passes on). Keys the browser keeps for itself (Ctrl+W, Ctrl+Tab
  * in a normal window) work where the browser lets them through, as in an
  * installed app window. */
+/** The Ctrl/Cmd+K chord's second key is waited for until chordUntil. */
+let chordUntil = 0;
+const CHORD_MS = 1500;
+
 function workbenchKeys(e: KeyboardEvent): void {
   const mod = e.ctrlKey || e.metaKey;
   const k = e.key.toLowerCase();
@@ -439,6 +448,17 @@ function workbenchKeys(e: KeyboardEvent): void {
     e.preventDefault();
     f();
   };
+  if (k === "escape" && !mod) escapeKey();
+  if (chordUntil > 0 && !["control", "meta", "shift", "alt"].includes(k)) {
+    const live = Date.now() < chordUntil;
+    chordUntil = 0;
+    if (live && (k === "z" || e.code === "KeyZ") && !e.altKey) return run(() => (zen.value = !zen.peek()));
+  }
+  if (mod && !e.shiftKey && !e.altKey && k === "k") {
+    e.preventDefault();
+    chordUntil = Date.now() + CHORD_MS;
+    return;
+  }
   if (e.key === "F1" || (mod && e.shiftKey && k === "p")) return run(() => (quick.value = { mode: "commands" }));
   if (e.altKey && !mod && (k === "z" || e.code === "KeyZ")) return run(() => (wordWrap.value = !wordWrap.peek()));
   if (e.ctrlKey && k === "tab") return run(() => cycleTab(e.shiftKey ? -1 : 1));
@@ -537,18 +557,21 @@ export function Workbench() {
   const asked = routeSide(r);
   if (asked && asked !== sideView.peek()) sideView.value = asked;
   const side = asked ?? sideView.value;
+  // Zen (WEBP-1): the same tree with the bars, panel and chat left out,
+  // so the editor stays as it is (its text, undo and caret).
+  const z = zen.value;
   return (
     <div
-      class={`wb${p.panel && p.panelMax ? " is-panel-max" : ""}${p.panelPos === "right" ? " is-panel-right" : ""}`}
+      class={`wb${p.panel && p.panelMax ? " is-panel-max" : ""}${p.panelPos === "right" ? " is-panel-right" : ""}${z ? " is-zen" : ""}`}
       style={{ "--side-w": p.sideW + "px", "--panel-h": p.panelH + "px", "--panel-w": p.panelW + "px", "--chat-w": p.chatW + "px" }}
     >
-      <ActivityBar />
-      {p.side && (
+      {!z && <ActivityBar />}
+      {p.side && !z && (
         <aside class="wb-side" data-side={side} aria-label={t(sideLabel(side))}>
           <SideView id={side} />
         </aside>
       )}
-      {p.side && <Sash axis="x" size={p.sideW} min={SIDE_MIN} max={SIDE_MAX} dir={1} label={t("wb.resize_side")} def={PANE_DEFAULTS.sideW} onSize={(n) => setPanes({ sideW: n })} />}
+      {p.side && !z && <Sash axis="x" size={p.sideW} min={SIDE_MIN} max={SIDE_MAX} dir={1} label={t("wb.resize_side")} def={PANE_DEFAULTS.sideW} onSize={(n) => setPanes({ sideW: n })} />}
       <div class="wb-center">
         <div class="wb-editor">
           {quick.value && <QuickInput key={quick.value.mode + (quick.value.ask?.title ?? quick.value.pick?.title ?? "")} />}
@@ -558,6 +581,7 @@ export function Workbench() {
           {askLaptop.value && <AskLaptop key={askLaptop.value.text} label={askLaptop.value.label} text={askLaptop.value.text} send={askLaptop.value.send} onDone={() => (askLaptop.value = null)} />}
           <RemoteAskHost />
           <GitAskHost />
+          <PeekHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
             {all.map((g, i) => (
@@ -578,7 +602,7 @@ export function Workbench() {
           </div>
           <RefsPeek />
         </div>
-        {p.panel && (
+        {p.panel && !z && (
           <>
             {p.panelPos === "right" ? (
               <Sash axis="x" size={p.panelW} min={PANEL_W_MIN} max={Math.max(PANEL_W_MIN, innerWidth - 600)} dir={-1} label={t("wb.resize_panel")} def={PANE_DEFAULTS.panelW} onSize={(n) => setPanes({ panelW: n })} />
@@ -594,7 +618,7 @@ export function Workbench() {
           </>
         )}
       </div>
-      {p.chat && (
+      {p.chat && !z && (
         <>
           <Sash axis="x" size={p.chatW} min={CHAT_MIN} max={CHAT_MAX} dir={-1} label={t("wb.resize_chat")} def={PANE_DEFAULTS.chatW} onSize={(n) => setPanes({ chatW: n })} />
           <aside class={`chatcol${r.tab === "chat" ? " is-focus" : ""}`} aria-label={t("tab.chat")}>

@@ -121,7 +121,9 @@ type aiState struct {
 	packs *agentPacksState
 	// agentPickPending is the agent the open install / sign-in card is about (agent_install.go).
 	agentPickPending string
-	shipGen          int
+	// agentAccountPending is the sign-in line of the open account card (agent_accounts.go).
+	agentAccountPending string
+	shipGen             int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the
@@ -832,6 +834,7 @@ func aiSettingsCategories(cats map[string]string) map[string]string {
 	httpSettingsCategories(cats)     // the HTTP client's group (http_settings.go)
 	updateSettingsCategories(cats)   // G-UPD (update_settings.go)
 	workflowSettingsCategories(cats) // WFX-0 (workflow_settings.go)
+	gitxSettingsCategories(cats)     // GITX-12 (gitx_autofetch_setting.go)
 	for _, id := range []string{"setting-ai-inline", "setting-ai-next-edit", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
 		"setting-ai-until-done-rounds", "setting-ai-until-done-budget"} {
 		cats[id] = "AI"
@@ -851,6 +854,9 @@ func aiSettingValue(id string) (string, bool) {
 		return v, true
 	}
 	if v, ok := workflowSettingValue(id); ok { // WFX-0 (workflow_settings.go)
+		return v, true
+	}
+	if v, ok := gitxSettingValue(id); ok { // GITX-12 (gitx_autofetch_setting.go)
 		return v, true
 	}
 	path, _ := ai.ConfigPath()
@@ -903,6 +909,9 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 		return c, true
 	}
 	if c, ok := m.applyWorkflowSetting(id, value); ok { // WFX-0 (workflow_settings.go)
+		return c, true
+	}
+	if c, ok := m.applyGitxSetting(id, value); ok { // GITX-12 (gitx_autofetch_setting.go)
 		return c, true
 	}
 	path, err := ai.ConfigPath()

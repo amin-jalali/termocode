@@ -51,6 +51,39 @@ takes every file out of the index and keeps your edits.
 Press `t` to switch between a tree view and a flat list. termocode remembers
 your choice.
 
+## Write a better commit message
+
+- **History.** In the message box, `↑` shows your older messages and `↓`
+  goes back to the newer ones and then to your draft. **Git: Pick Recent
+  Commit Message…** lists them.
+- **Template.** When git has a `commit.template`, an empty box starts with
+  its text (without the `#` lines).
+- **Length.** While you type, the box shows how long the first line is. It
+  turns amber past 50 characters, or when the second line is not blank, and
+  red past 72.
+- **Full editor.** **Git: Edit Commit Message in Editor** opens the message
+  in an editor tab. Save the file and the box takes the text. Lines that
+  start with `#` are left out. A new line shows as `⏎` in the box.
+- **Co-authors.** **Git: Add Co-Author…** lists the people who committed in
+  this repository and adds a `Co-authored-by:` line.
+
+The **▾** menu has these too.
+
+## AI help for git
+
+These need an AI provider (**AI: Configure Provider…**). termocode never
+commits, stashes or sends a chat message for you: you check the text first.
+
+| Command | What it does |
+|---|---|
+| **Git: Generate Commit Message with AI** | The AI reads the staged changes (or all changes when nothing is staged) and writes a message in the box. `↑` brings your old text back. |
+| **Git: Stash with AI Message** | The AI names the stash. You can change the name, then `Enter` stashes; `Esc` keeps the changes as they are. |
+| **Git: Explain Changes with AI** | Puts your uncommitted changes in the chat box with a question. Press `Enter` to send. |
+| **Git: Explain Line's Commit with AI** | The same for the commit that last changed the cursor line. In the **GRAPH**, right-click a commit for **Explain with AI**. |
+| **Git: Write Pull Request Description with AI** | Puts the branch's commits and files in the chat box and asks for a title and a description. |
+
+Only the changes (at most 48 KB) and your recent commit subjects go to the AI.
+
 ## Stage one hunk
 
 You do not have to stage the whole file.
@@ -62,6 +95,19 @@ You do not have to stage the whole file.
    `Alt+U` unstages it. **Git: Discard Hunk (at cursor)** throws it away.
 
 The colored bars in the left gutter show added, changed and deleted lines.
+
+### Peek at a change
+
+Click a colored bar in the gutter, or run **Git: Peek Change Under Cursor**.
+A card shows the change: removed lines in red, added lines in green.
+
+- **Close** is first and has the focus. `Enter` and `Esc` just close the card.
+- **Stage** stages this change. On a staged change the button is **Unstage**.
+- **Revert…** asks again on a card with **Cancel** first. Only then it puts
+  the text back as the index has it.
+- **Next Change** goes to the next change of the file and shows it.
+
+Save the file first: the change is read from the saved file.
 
 ## Stage single lines
 
@@ -90,7 +136,7 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 
 | Command | What it does |
 |---|---|
-| **Git: Switch Branch...** | Pick a branch. The first row creates a new one. |
+| **Git: Switch Branch...** | Pick a branch. The first row creates a new one. See below. |
 | **Git: Show Log...** | Pick a commit to see its full diff |
 | **Git: Show File History...** | Commits that changed this file |
 | **Git: Compare with Revision...** | Diff against a branch, tag, `HEAD~3` or a SHA |
@@ -100,6 +146,23 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 | **Git: Rename Branch…** | Give the current branch a new name |
 | **Git: Create Branch From…** | Start a new branch at another branch or a tag |
 | **Git: Delete Branch…** | Delete a local or a remote branch (see below) |
+
+### The branch picker
+
+**Git: Switch Branch...** shows your branches in this order:
+
+- **Recent**: the branches you used last. The current one is on top.
+- **Branches**, then one group per prefix, such as `feat/` or `fix/`.
+- **Remote**: remote branches you do not have yet. Pick one and you get a
+  local branch that tracks it.
+
+Each row shows `current`, and `↑2 ↓1` when the branch is ahead of or behind
+its upstream. `upstream gone` means the remote branch was deleted.
+
+Sometimes your local changes block the switch. Then a card asks first.
+**Cancel** has the focus and changes nothing. **Stash and Switch** saves your
+changes (new files too) in the stash and switches. **Git: Pop Latest Stash**
+brings them back.
 
 **Git: Delete Branch…** asks first, and **Cancel** is the choice that is
 ready. A local branch is only deleted when its commits are on another
@@ -140,6 +203,65 @@ blame skips the commits it lists (for example a big formatting commit).
   which commit it is and how many there are. Renames are followed.
 - **Git: Open Next Revision of File** steps forward again. After the newest
   commit you are back at the working file.
+
+## Tags
+
+| Command | What it does |
+|---|---|
+| **Git: Create Tag…** | Tags `HEAD`. Type a name, then a message. An empty message makes a lightweight tag; a message makes an annotated one. Right-click a **GRAPH** commit for **Create Tag Here…**. |
+| **Git: Show Tag Details…** | Kind, tagger, date, message and commit of a tag |
+| **Git: Push Tag…** | Pushes one tag, or **All tags**, to the branch's remote (else `origin`) |
+| **Git: Delete Tag…** | Deletes a local tag after a card where **Cancel** is ready. The toast names the commit, so `git tag <name> <hash>` brings it back. |
+| **Git: Delete Remote Tag…** | Deletes a tag on the remote. A card asks first (**Cancel** is ready), then you type the tag name. Your local tag stays. |
+
+## Remotes and the upstream
+
+**Git: Manage Remotes…** lists the remotes with their URL. Pick **+ Add
+Remote…** to add one, or pick a remote to **Rename…**, **Change URL…** or
+**Remove…** it. Remove asks first; it only changes this repository, not the
+server.
+
+**Git: Set Upstream Branch…** picks the remote branch the current branch
+tracks. **Git: Unset Upstream Branch** stops that.
+
+## Force push
+
+**Git: Force Push (with Lease)…** replaces the branch on the remote with
+yours, for example after an amend or a rebase. A card says how many remote
+commits your branch does not have; **Cancel** is ready. Then you type the
+branch name. termocode uses `--force-with-lease`: if someone pushed after
+your last fetch, git refuses and nothing changes. Fetch, look, and try
+again.
+
+## Stash with options
+
+**Git: Stash…** asks what to stash: **All changes**, **All changes and new
+files**, **Staged changes only**, or **Only the current file**. Then type a
+message, or leave it empty.
+
+**Git: Stash Actions…** lists your stashes. Pick one to **Apply** it (it
+stays), **Pop** it (apply, then drop), **View Changes**, **Create Branch
+from Stash…** (the stash is applied on the new branch, then dropped), or
+**Drop…** it. Drop asks first, and **Cancel** is ready. The toast says how
+to bring a dropped stash back (`git stash store …`).
+
+## Reset and uncommit
+
+Right-click a commit in the **GRAPH** and pick **Reset Current Branch to
+Here…**:
+
+| Mode | Your changes |
+|---|---|
+| **Soft** | The commits after it are undone; their changes stay, staged |
+| **Mixed** | The same, but the changes are not staged |
+| **Keep** | Your local changes stay; git stops if one is in the way |
+| **Hard…** | The changes in your files go. termocode first saves them as a stash and the old commit as a backup ref (`refs/termocode/backup/…`). |
+
+A card says how many commits leave the branch and how to bring them back;
+**Cancel** is ready. For **Hard…** you also type the branch name.
+
+**Git: Uncommit Last Commit (Keep Changes)** undoes the last commit. Its
+changes stay staged, so you can change them and commit again.
 
 ## The GRAPH
 
@@ -364,6 +486,28 @@ at the top of the panel.
 
 Each accept is one edit, so one `u` brings the markers back.
 
+### Merge view tools
+
+In the merge view (**Git: Open Merge View**), these keys work on the whole
+file. Each one is one edit: `u` takes it back.
+
+| Key | Command | What it does |
+|---|---|---|
+| `O` | **Git: Merge View: Take Ours for the Whole File** | Every conflict keeps your side. Lines git merged on its own stay. |
+| `T` | **Git: Merge View: Take Theirs for the Whole File** | Every conflict takes the incoming side |
+| `s` | **Git: Merge View: Resolve Simple Conflicts** | Settles the conflicts where only one side changed the base, or both made the same change (spaces and tabs do not count). The others stay. |
+| `i` | **Git: Merge View: AI Resolve Conflict…** | Sends the current conflict (base, ours, theirs) to the AI. A card shows its answer; **Cancel** is ready. **Use AI Result** puts it in the file. |
+
+In the current conflict, the words that differ between ours and theirs
+are underlined.
+
+### AI review
+
+**Git: AI Review My Changes** and **Git: AI Review Branch (Pull Request)**
+put a review request with the diff in the chat box. The branch review
+uses the change since the branch left `origin`'s default branch (or
+`main`). Nothing is sent until you press `Enter`.
+
 ## Clone a repository
 
 1. On the welcome screen, pick **Clone repository**. Or run
@@ -484,6 +628,97 @@ run. It picks the plan profile; then you type the task in the AI chat.
 
 Run the command again before you send the task to turn it off. It needs
 a git repository with at least one commit.
+
+## Search the log
+
+**Git: Search Log…** asks one line. Plain words search the commit
+messages (any case, plain text). Add filters as `key:value` words; use
+double quotes for spaces (`author:"Ann Lee"`):
+
+| Filter | Example | Finds commits |
+|---|---|---|
+| `author:` | `author:ann` | by this author (name or e-mail) |
+| `since:` / `until:` | `since:2.weeks`, `until:2026-01-31` | in this time |
+| `path:` | `path:internal/git` | that changed this file or folder |
+| `branch:` | `branch:release` | on this branch or tag (not the current one) |
+| `all` | `fix all` | on every branch, remote branch and tag |
+| `changes:` | `changes:parseFoo` | that added or removed this text |
+
+`Enter` on a result opens it in the commit view.
+
+| Command | What it does |
+|---|---|
+| **Git: Show Folder History…** | Commits that changed a folder (the active file's folder is the default) |
+| **Git: Go to Commit…** | Type a hash, branch or tag. The **GRAPH** cursor moves to it. A commit that is not in the **GRAPH** opens its changes. |
+| **Git: Go to HEAD in GRAPH** (`@` in Source Control) | Moves the **GRAPH** cursor to `HEAD` |
+| **Git: Toggle All Branches in GRAPH** | The **GRAPH** shows every branch, or only the current one again |
+
+## Push and pull options
+
+| Command | What it does |
+|---|---|
+| **Git: Push… (Show Outgoing Commits First)** | A card lists the commits that go out and how many files they change. **Cancel** is ready; **Push** sends them. |
+| **Git: Push to…** | Pick a remote, type a branch name, check the card, push. Your upstream does not change. |
+| **Git: Pull…** | **Pull (merge)**, **Pull (rebase)** (your commits go on top) or **Pull from…** another remote and branch |
+| **Git: Pull (Rebase)** | `git pull --rebase` in one step |
+| **Git: Fetch All Remotes (Prune)** | Fetches every remote and drops remote branches that are gone |
+| **Git: Show Incoming Commits…** | Commits a pull brings, as of the last fetch |
+| **Git: Show Outgoing Commits…** | Commits a push sends |
+| **Git: Toggle Auto Fetch** | Fetches every 3 minutes, also after a restart (setting `git_auto_fetch`). Off by default. A failed fetch turns it off and says why. |
+
+## Ignore files and set your identity
+
+**Git: Add to .gitignore…** works on the active file. Pick **This file**,
+**All .ext files** or **Its folder**; the pattern goes at the end of the
+`.gitignore` at the top of the repository. A tracked file asks first
+(**Cancel** is ready): git keeps showing changes of a tracked file, so
+**Ignore and Stop Tracking** also runs `git rm --cached`. The file stays
+on disk.
+
+**Git: Set Identity (Name and E-mail)…** asks the name and the e-mail on
+your commits, then **This repository only** or **All repositories**.
+## Find the commit that broke it (bisect)
+
+**Git: Bisect (Find the Commit That Broke It)…** treats `HEAD` as bad and
+asks which commit was still good. git checks out a commit in the middle.
+A picker asks about it:
+
+| Row | What it does |
+|---|---|
+| **Good: this commit works** | The problem is not here; git picks a newer commit |
+| **Bad: the problem is here** | git picks an older commit |
+| **Skip: can't test this one** | git picks a commit next to it |
+| **Run a Task to Decide…** | Pick a task. A card shows its command (**Cancel** is ready). git runs it on each commit: exit 0 is good, 125 skip, anything else bad. |
+| **End Bisect** | Back to where you started |
+
+When git knows, a card names the first bad commit: **Open Commit**,
+**End Bisect**, or **Stay Here** to look around (run **Bisect…** again
+for the picker). Commit or stash your changes first: git checks out
+other commits.
+
+## Compare branches
+
+**Git: Compare Branches…** picks a branch, remote branch or tag, then
+what to compare:
+
+| Row | Shows |
+|---|---|
+| **Changes on X since it split from yours** | What a merge of X would bring (from the merge-base to X) |
+| **Changes on yours since it split from X** | What your branch adds (swap of the row above) |
+| **yours → X (every difference)** | The two tips, file by file |
+| **Working tree → X** | Your files as they are now (saved, not committed) against X, in a read-only diff card |
+
+The first three open in the commit view, with every changed file.
+
+## Issues, new repositories and publishing
+
+These use the `gh` command (signed in with `gh auth login`).
+
+| Command | What it does |
+|---|---|
+| **Git: Issues… (Start Work on One)** | Lists the open issues. Pick one: **Start Work: New Branch** makes a branch like `12-login-crashes` (you can change the name) and switches to it; **Copy #12** copies the number. |
+| **Git: Initialize Repository** | Runs `git init` (branch `main`) in a folder that is not a repository yet |
+| **Git: Publish to GitHub…** | For a repository with no remote: type the name, pick **Private** or **Public**, then a card asks (**Cancel** is ready). gh creates the repository, adds it as `origin` and pushes. |
 
 ## Worktrees
 

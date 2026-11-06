@@ -305,15 +305,35 @@ func paletteItems() []picker.Item {
 		{ID: "git-log", Title: "Git: Show Log..."},
 		{ID: "git-compare-rev", Title: "Git: Compare with Revision..."},
 		{ID: "git-blame", Title: "Git: Blame Current Line", Hint: "Alt+B"},
-		{ID: "git-inline-blame", Title: "Git: Toggle Inline Blame"},        // git_blame_view.go
-		{ID: "git-status-blame", Title: "Git: Toggle Blame in Status Bar"}, // git_blame_view.go
-		{ID: "git-blame-annotate", Title: "Git: Toggle Blame Annotations"}, // git_blame_view.go
-		{ID: "git-blame-options", Title: "Git: Blame Options…"},            // git_blame_view.go
-		{ID: "git-blame-commit", Title: "Git: Open Commit of Line"},        // git_blame_view.go
-		{ID: "git-blame-before", Title: "Git: Blame Before This Change"},   // git_blame_view.go
-		{ID: "git-line-history", Title: "Git: Show Line History"},          // git_blame_view.go
-		{ID: "git-rev-prev", Title: "Git: Open Previous Revision of File"}, // git_blame_view.go
-		{ID: "git-rev-next", Title: "Git: Open Next Revision of File"},     // git_blame_view.go
+		{ID: "git-tag-create", Title: "Git: Create Tag…"},                            // git_tags_remotes.go
+		{ID: "git-tag-delete", Title: "Git: Delete Tag…"},                            // git_tags_remotes.go
+		{ID: "git-tag-push", Title: "Git: Push Tag…"},                                // git_tags_remotes.go
+		{ID: "git-tag-delete-remote", Title: "Git: Delete Remote Tag…"},              // git_tags_remotes.go
+		{ID: "git-tag-details", Title: "Git: Show Tag Details…"},                     // git_tags_remotes.go
+		{ID: "git-remotes", Title: "Git: Manage Remotes…"},                           // git_tags_remotes.go
+		{ID: "git-upstream-set", Title: "Git: Set Upstream Branch…"},                 // git_tags_remotes.go
+		{ID: "git-upstream-unset", Title: "Git: Unset Upstream Branch"},              // git_tags_remotes.go
+		{ID: "git-push-force", Title: "Git: Force Push (with Lease)…"},               // git_tags_remotes.go
+		{ID: "git-stash-options", Title: "Git: Stash…"},                              // git_stash_reset.go
+		{ID: "git-stash-actions", Title: "Git: Stash Actions…"},                      // git_stash_reset.go
+		{ID: "git-uncommit", Title: "Git: Uncommit Last Commit (Keep Changes)"},      // git_stash_reset.go
+		{ID: "git-commit-history", Title: "Git: Pick Recent Commit Message…"},        // git_commit_msg.go
+		{ID: "git-commit-edit", Title: "Git: Edit Commit Message in Editor"},         // git_commit_msg.go
+		{ID: "git-co-author", Title: "Git: Add Co-Author…"},                          // git_commit_msg.go
+		{ID: "git-ai-commit-msg", Title: "Git: Generate Commit Message with AI"},     // git_ai_helpers.go
+		{ID: "git-ai-stash", Title: "Git: Stash with AI Message"},                    // git_ai_helpers.go
+		{ID: "git-ai-explain-changes", Title: "Git: Explain Changes with AI"},        // git_ai_helpers.go
+		{ID: "git-ai-explain-line", Title: "Git: Explain Line's Commit with AI"},     // git_ai_helpers.go
+		{ID: "git-ai-pr-text", Title: "Git: Write Pull Request Description with AI"}, // git_ai_helpers.go
+		{ID: "git-inline-blame", Title: "Git: Toggle Inline Blame"},                  // git_blame_view.go
+		{ID: "git-status-blame", Title: "Git: Toggle Blame in Status Bar"},           // git_blame_view.go
+		{ID: "git-blame-annotate", Title: "Git: Toggle Blame Annotations"},           // git_blame_view.go
+		{ID: "git-blame-options", Title: "Git: Blame Options…"},                      // git_blame_view.go
+		{ID: "git-blame-commit", Title: "Git: Open Commit of Line"},                  // git_blame_view.go
+		{ID: "git-blame-before", Title: "Git: Blame Before This Change"},             // git_blame_view.go
+		{ID: "git-line-history", Title: "Git: Show Line History"},                    // git_blame_view.go
+		{ID: "git-rev-prev", Title: "Git: Open Previous Revision of File"},           // git_blame_view.go
+		{ID: "git-rev-next", Title: "Git: Open Next Revision of File"},               // git_blame_view.go
 		{ID: "git-history", Title: "Git: Show File History..."},
 		{ID: "git-tags", Title: "Git: Show Tags..."},
 		{ID: "zen-mode", Title: "View: Toggle Zen Mode", Hint: "Alt+Z"},
@@ -778,6 +798,46 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.openCompareWithRevisionPrompt()
 	case "git-blame":
 		return m.gitBlameCurrentLine()
+	case "git-tag-create":
+		return m.openCreateTagPrompt("", "")
+	case "git-tag-delete":
+		return m.openTagPickerFor(pickerKindGitTagDelete, " Delete which tag? ")
+	case "git-tag-push":
+		return m.openTagPickerFor(pickerKindGitTagPush, " Push which tag? ", picker.Item{ID: "tags-all", Title: "All tags"})
+	case "git-tag-delete-remote":
+		return m.openTagPickerFor(pickerKindGitTagDeleteRemote, " Delete which tag on the remote? ")
+	case "git-tag-details":
+		return m.openTagPickerFor(pickerKindGitTagDetails, " Tag details ")
+	case "git-remotes":
+		return m.openRemotesPicker()
+	case "git-upstream-set":
+		return m.openUpstreamPicker()
+	case "git-upstream-unset":
+		return m.gitUnsetUpstream()
+	case "git-push-force":
+		return m.openForcePushCard()
+	case "git-commit-history":
+		return m.openCommitHistoryPicker()
+	case "git-commit-edit":
+		return m.gitOpenCommitEditor()
+	case "git-co-author":
+		return m.openCoAuthorPicker()
+	case "git-ai-commit-msg":
+		return m.gitAIAsk("commit", true)
+	case "git-ai-stash":
+		return m.gitAIAsk("stash", false)
+	case "git-ai-explain-changes":
+		return m.gitAIExplainChanges()
+	case "git-ai-explain-line":
+		return m.gitAIExplainLineCommit()
+	case "git-ai-pr-text":
+		return m.gitAIPRText()
+	case "git-stash-options":
+		return m.openStashModePicker()
+	case "git-stash-actions":
+		return m.openStashActionsPicker()
+	case "git-uncommit":
+		return m.gitUncommit()
 	case "git-inline-blame":
 		return m.toggleInlineBlame()
 	case "git-status-blame":

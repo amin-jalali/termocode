@@ -91,3 +91,20 @@ func countFiles(root string) (n int) {
 	})
 	return n
 }
+
+// Spec (WFX-17): inside Termux the command says so clearly and writes
+// nothing, even for a linux build.
+func TestServiceInTermuxSaysSo(t *testing.T) {
+	t.Setenv("TERMUX_VERSION", "0.118.0")
+	home, ws := t.TempDir(), t.TempDir()
+	var out, errw bytes.Buffer
+	if code := runServiceIn([]string{"install", "--yes"}, nil, &out, &errw, ws, home, "/bin/termocode"); code == 0 {
+		t.Fatal("install in Termux exited 0")
+	}
+	if !strings.Contains(errw.String(), "Termux") || !strings.Contains(errw.String(), "termux-wake-lock") {
+		t.Errorf("message: %s", errw.String())
+	}
+	if n := countFiles(home); n != 0 {
+		t.Errorf("%d files written in Termux", n)
+	}
+}

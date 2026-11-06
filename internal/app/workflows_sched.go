@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -419,8 +420,15 @@ func (m *Model) wfxNotifyDone(l *wfxLive, rf *run.RunFile) tea.Cmd {
 		return nil
 	}
 	var notify []string
-	if e, ok := wire.Find(m.wfxS().list, l.name); ok && e.File != nil {
+	e, found := wire.Find(m.wfxS().list, l.name)
+	if found && e.File != nil {
 		notify = e.File.Notify
+	}
+	var cmds []tea.Cmd
+	for _, n := range notify {
+		if sid, ok := strings.CutPrefix(n, "message:"); ok && found {
+			cmds = append(cmds, m.wfxNotifyMessage(e, rf, sid))
+		}
 	}
 	osOn, web := l.scheduled && len(notify) == 0, l.scheduled && len(notify) == 0
 	for _, n := range notify {
@@ -435,9 +443,9 @@ func (m *Model) wfxNotifyDone(l *wfxLive, rf *run.RunFile) tea.Cmd {
 		m.web.attention(kind, rf.ID)
 	}
 	if osOn {
-		return m.notifyOS(wfxSummary(l.name, rf))
+		cmds = append(cmds, m.notifyOS(wfxSummary(l.name, rf)))
 	}
-	return nil
+	return tea.Batch(cmds...)
 }
 
 // wfxSummary is one line about a run: "weekday-bugs: done · 3 items (1

@@ -173,3 +173,10 @@
 .pr-rev-head { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; }
 .pr-rev-who { font-weight: 600; }
 .pr-rev-when { margin-inline-start: auto; color: var(--wb-breadcrumb); font-size: 0.75rem; }
+
+/* The gutter peek card (views/git/PeekCard.tsx). */
+.peek-card { display: flex; flex-direction: column; gap: 8px; min-width: min(560px, 90vw); }
+.peek-title { margin: 0; font-weight: 600; }
+.peek-head, .peek-note { margin: 0; color: var(--wb-breadcrumb); font-size: 12px; }
+.peek-head { font-family: var(--font-mono); overflow-wrap: anywhere; }
+.peek-rows { max-height: 40vh; overflow: auto; border: 1px solid var(--wb-section-border); }

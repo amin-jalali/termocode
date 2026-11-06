@@ -305,6 +305,15 @@ export interface BufTickArgs {
   tick: number;
 }
 
+export interface ExtIDArgs {
+  id: string;
+}
+
+export interface ExtSelectArgs {
+  id: string;
+  row: number;
+}
+
 export interface HTTPSendArgs {
   path?: string;
   index?: number;
@@ -357,6 +366,12 @@ export interface HTTPSaveBodyArgs {
   path: string;
 }
 
+export interface KeyBindArgs {
+  action: string;
+  key: string;
+  replace?: boolean;
+}
+
 export interface BufLineArgs {
   buf: number;
   line: number;
@@ -394,6 +409,15 @@ export interface TestRunArgs {
 
 export interface TestIDArgs {
   id: string;
+}
+
+export interface ThemeArgs {
+  id: string;
+}
+
+export interface ThemeColorArgs {
+  key: string;
+  color: string;
 }
 
 export interface WorkflowRunArgs {
@@ -437,6 +461,11 @@ export interface AIInfoArgs {
   kind: "usage" | "rules" | "memory" | "skills" | "hooks" | "web-tools" | "mcp-log" | "serve-status" | "serve-config" | "configure" | "bug-report";
 }
 
+export interface GitPeekArgs {
+  path: string;
+  line: number;
+}
+
 export interface GitFileLogArgs {
   path: string;
 }
@@ -464,6 +493,21 @@ export interface KubeObjectArgs {
   namespace?: string;
   kind: "pod" | "deployment" | "service" | "job";
   name: string;
+}
+
+export interface LayoutNameArgs {
+  name: string;
+}
+
+export interface LayoutSaveArgs {
+  name: string;
+  scope: "user" | "project";
+  replace?: boolean;
+}
+
+export interface LSPServerAskArgs {
+  name: string;
+  action: "install" | "uninstall";
 }
 
 export interface ServiceLogsArgs {
@@ -855,6 +899,7 @@ export interface StatusSnap {
   web: StatusWeb;
   theme: StatusTheme;
   update?: string;
+  ext?: StatusExt;
 }
 
 export interface StatusAI {
@@ -882,6 +927,23 @@ export interface StatusTheme {
   name: string;
   light?: boolean;
   colors: Record<string, string>;
+}
+
+export interface StatusExt {
+  panels: StatusExtPanel[];
+  items: StatusExtItem[];
+}
+
+export interface StatusExtPanel {
+  id: string;
+  title: string;
+  ext: string;
+}
+
+export interface StatusExtItem {
+  id: string;
+  text: string;
+  run?: boolean;
 }
 
 export interface ToastsSnap {
@@ -1767,6 +1829,15 @@ export interface BufMarkdown {
   cut?: boolean;
 }
 
+export interface ExtPanelView {
+  lines: ExtSpan[][];
+}
+
+export interface ExtSpan {
+  t: string;
+  s?: string;
+}
+
 export interface FileText {
   path: string;
   text: string;
@@ -1875,6 +1946,20 @@ export interface HTTPCurl {
   curl: string;
 }
 
+export interface KeyBindings {
+  items: KeyBinding[];
+}
+
+export interface KeyBinding {
+  action: string;
+  keys: string[];
+}
+
+export interface KeyBound {
+  saved?: boolean;
+  conflict?: string;
+}
+
 export interface LspHover {
   md?: MdNode;
   none?: boolean;
@@ -1971,6 +2056,27 @@ export interface TestOutput {
   truncated?: boolean;
 }
 
+export interface ThemeList {
+  themes: ThemeInfo[];
+  active: string;
+}
+
+export interface ThemeInfo {
+  id: string;
+  name: string;
+  light?: boolean;
+}
+
+export interface ThemeColors {
+  colors: ThemeColor[];
+}
+
+export interface ThemeColor {
+  key: string;
+  color: string;
+  custom?: boolean;
+}
+
 export interface WorkspaceList {
   folders: WorkspaceEntry[];
   recent: WorkspaceEntry[];
@@ -2024,6 +2130,17 @@ export interface AIInfoRow {
   title: string;
   hint?: string;
   header?: boolean;
+}
+
+export interface GitPeek {
+  path: string;
+  line: number;
+  header: string;
+  lines: string[];
+  index: number;
+  count: number;
+  staged?: boolean;
+  starts: number[];
 }
 
 export interface GitFileLog {
@@ -2115,6 +2232,41 @@ export interface KubeText {
   lines: string[];
   redacted?: number;
   truncated?: boolean;
+}
+
+export interface LayoutList {
+  items: LayoutEntry[];
+}
+
+export interface LayoutEntry {
+  name: string;
+  source: "built-in" | "user" | "project";
+  description?: string;
+  preview: string[];
+}
+
+export interface LayoutOpened {
+  name: string;
+}
+
+export interface LayoutSaved {
+  saved?: boolean;
+  exists?: boolean;
+}
+
+export interface LSPServerList {
+  items: LSPServer[];
+}
+
+export interface LSPServer {
+  name: string;
+  title: string;
+  langs: string[];
+  state: "missing" | "managed" | "system" | "installing";
+  version?: string;
+  progress?: string;
+  problem?: string;
+  used?: boolean;
 }
 
 export interface ServiceLogs {
@@ -2820,6 +2972,9 @@ export interface OpArgs {
   "buf.format": BufTickArgs;
   "buf.reload": BufArgs;
   "buf.markdown": BufArgs;
+  "ext.panel": ExtIDArgs;
+  "ext.select": ExtSelectArgs;
+  "ext.status_run": ExtIDArgs;
   "file.text": PathArgs;
   "http.files": EmptyArgs;
   "http.send": HTTPSendArgs;
@@ -2835,6 +2990,8 @@ export interface OpArgs {
   "http.import_curl": HTTPImportArgs;
   "http.new_file": HTTPNewFileArgs;
   "http.save_body": HTTPSaveBodyArgs;
+  "keys.list": EmptyArgs;
+  "keys.bind": KeyBindArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
@@ -2854,6 +3011,10 @@ export interface OpArgs {
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "theme.list": EmptyArgs;
+  "theme.set": ThemeArgs;
+  "theme.colors": EmptyArgs;
+  "theme.color_set": ThemeColorArgs;
   "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
@@ -2863,6 +3024,7 @@ export interface OpArgs {
   "ai.next_edit": AINextEditArgs;
   "ai.action": AIActionArgs;
   "ai.info": AIInfoArgs;
+  "git.peek": GitPeekArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -2872,6 +3034,13 @@ export interface OpArgs {
   "kube.logs": KubeLogsArgs;
   "kube.describe": KubeObjectArgs;
   "kube.restart": KubeObjectArgs;
+  "layout.list": EmptyArgs;
+  "layout.open": LayoutNameArgs;
+  "layout.save": LayoutSaveArgs;
+  "layout.delete": LayoutNameArgs;
+  "layout.reset": EmptyArgs;
+  "lsp.servers": EmptyArgs;
+  "lsp.server_ask": LSPServerAskArgs;
   "services.refresh": EmptyArgs;
   "services.logs": ServiceLogsArgs;
   "services.start": ServiceArgs;
@@ -3079,6 +3248,7 @@ export interface OpResult {
   "buf.format": EditRes;
   "buf.reload": EditRes;
   "buf.markdown": BufMarkdown;
+  "ext.panel": ExtPanelView;
   "file.text": FileText;
   "http.files": HTTPFiles;
   "http.send": HTTPSent;
@@ -3091,6 +3261,8 @@ export interface OpResult {
   "http.import_curl": HTTPPath;
   "http.new_file": HTTPPath;
   "http.save_body": HTTPPath;
+  "keys.list": KeyBindings;
+  "keys.bind": KeyBound;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;
@@ -3105,6 +3277,10 @@ export interface OpResult {
   "snippets.save": SnippetSaved;
   "snippets.delete": SnippetSaved;
   "tests.output": TestOutput;
+  "theme.list": ThemeList;
+  "theme.set": ThemeList;
+  "theme.colors": ThemeColors;
+  "theme.color_set": ThemeColors;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
@@ -3113,6 +3289,7 @@ export interface OpResult {
   "ai.next_edit": AINextEdit;
   "ai.action": AIAction;
   "ai.info": AIInfo;
+  "git.peek": GitPeek;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
@@ -3122,6 +3299,13 @@ export interface OpResult {
   "kube.logs": KubeText;
   "kube.describe": KubeText;
   "kube.restart": AskRef;
+  "layout.list": LayoutList;
+  "layout.open": LayoutOpened;
+  "layout.save": LayoutSaved;
+  "layout.delete": AskRef;
+  "layout.reset": LayoutOpened;
+  "lsp.servers": LSPServerList;
+  "lsp.server_ask": AskRef;
   "services.logs": ServiceLogs;
   "services.start": ServiceDone;
   "services.restart": ServiceDone;

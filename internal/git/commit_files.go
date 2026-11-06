@@ -26,6 +26,9 @@ type CommitInfo struct {
 	Refs     []Ref
 	Files    []CommitFile
 	Commits  int // CommitFilesBetween: commits in the range
+	// Signature is the signature badge (Sig.Label; "" unsigned). The
+	// commit view fills it (GITX-38).
+	Signature string
 }
 
 // CommitFiles loads a commit's meta and changed files in one git call. A

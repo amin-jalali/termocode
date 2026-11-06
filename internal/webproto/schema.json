@@ -1297,6 +1297,46 @@
       "phase": "v2"
     },
     {
+      "op": "ext.panel",
+      "args": "ExtIDArgs",
+      "result": "ExtPanelView",
+      "role": "viewer",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ext.select",
+      "args": "ExtSelectArgs",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ext.status_run",
+      "args": "ExtIDArgs",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "file.text",
       "args": "PathArgs",
       "result": "FileText",
@@ -1500,6 +1540,34 @@
         "per_ms": 1000
       },
       "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "keys.list",
+      "args": "EmptyArgs",
+      "result": "KeyBindings",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "keys.bind",
+      "args": "KeyBindArgs",
+      "result": "KeyBound",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
       "laptop_card": false,
       "audit": "yes",
       "phase": "v2"
@@ -1768,6 +1836,62 @@
       "phase": "v2"
     },
     {
+      "op": "theme.list",
+      "args": "EmptyArgs",
+      "result": "ThemeList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "theme.set",
+      "args": "ThemeArgs",
+      "result": "ThemeList",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "theme.colors",
+      "args": "EmptyArgs",
+      "result": "ThemeColors",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "theme.color_set",
+      "args": "ThemeColorArgs",
+      "result": "ThemeColors",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "workflows.stop",
       "args": "WorkflowRunArgs",
       "role": "controller",
@@ -1897,6 +2021,20 @@
       "phase": "v2"
     },
     {
+      "op": "git.peek",
+      "args": "GitPeekArgs",
+      "result": "GitPeek",
+      "role": "viewer",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "git.file_log",
       "args": "GitFileLogArgs",
       "result": "GitFileLog",
@@ -2023,6 +2161,104 @@
         "per_ms": 5000
       },
       "max_bytes": 2048,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "layout.list",
+      "args": "EmptyArgs",
+      "result": "LayoutList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "layout.open",
+      "args": "LayoutNameArgs",
+      "result": "LayoutOpened",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "layout.save",
+      "args": "LayoutSaveArgs",
+      "result": "LayoutSaved",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "layout.delete",
+      "args": "LayoutNameArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "layout.reset",
+      "args": "EmptyArgs",
+      "result": "LayoutOpened",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.servers",
+      "args": "EmptyArgs",
+      "result": "LSPServerList",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.server_ask",
+      "args": "LSPServerAskArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
@@ -7346,6 +7582,67 @@
       ],
       "additionalProperties": false
     },
+    "ExtIDArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ExtPanelView": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "items": {
+            "items": {
+              "$ref": "#/defs/ExtSpan"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "ExtSelectArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "row": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "row"
+      ],
+      "additionalProperties": false
+    },
+    "ExtSpan": {
+      "type": "object",
+      "properties": {
+        "s": {
+          "type": "string"
+        },
+        "t": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "t"
+      ],
+      "additionalProperties": true
+    },
     "FileChunk": {
       "type": "object",
       "properties": {
@@ -8080,6 +8377,67 @@
         "path",
         "from",
         "to"
+      ],
+      "additionalProperties": false
+    },
+    "GitPeek": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "header": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "staged": {
+          "type": "boolean"
+        },
+        "starts": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "line",
+        "header",
+        "lines",
+        "index",
+        "count",
+        "starts"
+      ],
+      "additionalProperties": true
+    },
+    "GitPeekArgs": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "line"
       ],
       "additionalProperties": false
     },
@@ -9628,6 +9986,72 @@
       ],
       "additionalProperties": false
     },
+    "KeyBindArgs": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "replace": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "action",
+        "key"
+      ],
+      "additionalProperties": false
+    },
+    "KeyBinding": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "action",
+        "keys"
+      ],
+      "additionalProperties": true
+    },
+    "KeyBindings": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/KeyBinding"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "KeyBound": {
+      "type": "object",
+      "properties": {
+        "conflict": {
+          "type": "string"
+        },
+        "saved": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
     "KubeContexts": {
       "type": "object",
       "properties": {
@@ -9917,6 +10341,84 @@
       ],
       "additionalProperties": true
     },
+    "LSPServer": {
+      "type": "object",
+      "properties": {
+        "langs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "problem": {
+          "type": "string"
+        },
+        "progress": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "missing",
+            "managed",
+            "system",
+            "installing"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "used": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "title",
+        "langs",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "LSPServerAskArgs": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "install",
+            "uninstall"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    "LSPServerList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/LSPServer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
     "LabelArgs": {
       "type": "object",
       "properties": {
@@ -9928,6 +10430,110 @@
         "label"
       ],
       "additionalProperties": false
+    },
+    "LayoutEntry": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "preview": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "source": {
+          "enum": [
+            "built-in",
+            "user",
+            "project"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "preview"
+      ],
+      "additionalProperties": true
+    },
+    "LayoutList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/LayoutEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "LayoutNameArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "LayoutOpened": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "LayoutSaveArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "replace": {
+          "type": "boolean"
+        },
+        "scope": {
+          "enum": [
+            "user",
+            "project"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "LayoutSaved": {
+      "type": "object",
+      "properties": {
+        "exists": {
+          "type": "boolean"
+        },
+        "saved": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
     },
     "LinesDelta": {
       "type": "object",
@@ -12090,6 +12696,67 @@
       ],
       "additionalProperties": true
     },
+    "StatusExt": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/StatusExtItem"
+          },
+          "type": "array"
+        },
+        "panels": {
+          "items": {
+            "$ref": "#/defs/StatusExtPanel"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "panels",
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "StatusExtItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "run": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "StatusExtPanel": {
+      "type": "object",
+      "properties": {
+        "ext": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "ext"
+      ],
+      "additionalProperties": true
+    },
     "StatusRuns": {
       "type": "object",
       "properties": {
@@ -12123,6 +12790,9 @@
         },
         "dirty_files": {
           "type": "integer"
+        },
+        "ext": {
+          "$ref": "#/defs/StatusExt"
         },
         "root": {
           "type": "string"
@@ -12847,6 +13517,106 @@
         "state",
         "counts",
         "items"
+      ],
+      "additionalProperties": true
+    },
+    "ThemeArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ThemeColor": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string"
+        },
+        "custom": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "color"
+      ],
+      "additionalProperties": true
+    },
+    "ThemeColorArgs": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "color"
+      ],
+      "additionalProperties": false
+    },
+    "ThemeColors": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "items": {
+            "$ref": "#/defs/ThemeColor"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "colors"
+      ],
+      "additionalProperties": true
+    },
+    "ThemeInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "light": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "ThemeList": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "string"
+        },
+        "themes": {
+          "items": {
+            "$ref": "#/defs/ThemeInfo"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "themes",
+        "active"
       ],
       "additionalProperties": true
     },

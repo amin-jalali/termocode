@@ -34,6 +34,9 @@ type Agent struct {
 	// terminal tab after the card shows it ("" when the CLI asks on its
 	// first start).
 	Login string
+	// ConfigEnv is the CLI's documented config-folder variable (AGX-13
+	// accounts: CLAUDE_CONFIG_DIR, CODEX_HOME); "" = no accounts.
+	ConfigEnv string
 }
 
 // handNote is the MCP note of a preset whose per-launch MCP flag is not
@@ -43,12 +46,12 @@ var handNote = MCPRecipe{Kind: MCPNone, NoteTitle: "add termocode by hand", Note
 // Registry is every known agent, in palette order.
 var Registry = []Agent{
 	{ID: "claude", Title: "Claude Code", Bin: "claude", Palette: true, Packages: []string{"@anthropic-ai/claude-code"},
-		Tool: "claude-code", Login: "claude auth login",
+		Tool: "claude-code", Login: "claude auth login", ConfigEnv: "CLAUDE_CONFIG_DIR",
 		MCP: MCPRecipe{Kind: MCPFlag, TempFile: "claude.json", Args: func(_, _, file string) []string {
 			return []string{"--mcp-config", file}
 		}}},
 	{ID: "codex", Title: "Codex", Bin: "codex", Palette: true, Packages: []string{"@openai/codex"},
-		Tool: "codex", Login: "codex login",
+		Tool: "codex", Login: "codex login", ConfigEnv: "CODEX_HOME",
 		MCP: MCPRecipe{Kind: MCPFlag, Args: func(exe, root, _ string) []string {
 			return []string{
 				"-c", "mcp_servers.termocode.command=" + tomlString(exe),
@@ -241,14 +244,7 @@ func Detect(id string, lines []string) State {
 	if !ok {
 		return Unknown
 	}
-	var tail []string
-	for i := len(lines) - 1; i >= 0 && len(tail) < bottomLines; i-- {
-		l := strings.TrimRight(lines[i], " \t\r")
-		if strings.TrimSpace(l) == "" {
-			continue
-		}
-		tail = append(tail, l)
-	}
+	tail := bottom(lines)
 	match := func(rs []*regexp.Regexp) bool {
 		for _, l := range tail {
 			for _, re := range rs {
@@ -274,3 +270,16 @@ func Detect(id string, lines []string) State {
 // asked: Detect is Done (a y/n or permission question is Waiting, and
 // so is never ready). An agent without screen rules is never ready.
 func InputReady(id string, lines []string) bool { return Detect(id, lines) == Done }
+
+// bottom is the last bottomLines non-blank lines, newest first.
+func bottom(lines []string) []string {
+	var tail []string
+	for i := len(lines) - 1; i >= 0 && len(tail) < bottomLines; i-- {
+		l := strings.TrimRight(lines[i], " \t\r")
+		if strings.TrimSpace(l) == "" {
+			continue
+		}
+		tail = append(tail, l)
+	}
+	return tail
+}

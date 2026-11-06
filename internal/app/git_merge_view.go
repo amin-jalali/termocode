@@ -398,6 +398,8 @@ func (m Model) mergeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		return m, m.mergeTake(git.AcceptBothTheirsFirst), true
 	case "a":
 		return m, m.mergeTake(git.AcceptBase), true
+	case "O", "T", "s", "i": // GITX-1, 34, 28 (gitx_merge_tools.go)
+		return m, m.mergeToolKey(msg.String()), true
 	case "u":
 		return m, m.mergeUndo(), true
 	case "r":

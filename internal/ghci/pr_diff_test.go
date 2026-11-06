@@ -2,6 +2,7 @@ package ghci
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -78,5 +79,38 @@ func TestPRDiff(t *testing.T) {
 	}
 	if got := strings.Join(f.calls[0], " "); got != "pr diff 14" {
 		t.Errorf("args %q", got)
+	}
+}
+
+// ParseDiff keeps the real line number of each shown line, so a line
+// comment can name it; the "…" between hunks has none.
+func TestParseDiffLineNumbers(t *testing.T) {
+	text := "diff --git a/p.go b/p.go\n--- a/p.go\n+++ b/p.go\n" +
+		"@@ -1,3 +1,3 @@\n package p\n-func Old() {}\n+func New() {}\n var x = 1\n" +
+		"@@ -20,2 +20,3 @@ func y() {\n a\n+b\n c\n"
+	fs := ParseDiff(text)
+	if len(fs) != 1 {
+		t.Fatalf("files %+v", fs)
+	}
+	f := fs[0]
+	wantNew := []int{1, 2, 3, 0, 20, 21, 22}
+	wantOld := []int{1, 2, 3, 0, 20, 21}
+	if fmt.Sprint(f.NewLines) != fmt.Sprint(wantNew) || fmt.Sprint(f.OldLines) != fmt.Sprint(wantOld) {
+		t.Errorf("new %v old %v", f.NewLines, f.OldLines)
+	}
+	if n := strings.Count(f.New, "\n"); n != len(f.NewLines) {
+		t.Errorf("%d new lines, %d numbers", n, len(f.NewLines))
+	}
+}
+
+// ViewPR keeps the head commit: line comments are left on it.
+func TestViewPRHeadSHA(t *testing.T) {
+	f := &fakeGH{answers: map[string]fakeAnswer{"pr view": {out: `{"number":3,"headRefOid":"abc123"}`}}}
+	d, err := ViewPR(context.Background(), f.run, "/r", 3)
+	if err != nil || d.HeadSHA != "abc123" {
+		t.Errorf("head %q err %v", d.HeadSHA, err)
+	}
+	if !strings.Contains(strings.Join(f.calls[0], " "), "headRefOid") {
+		t.Errorf("args %v", f.calls[0])
 	}
 }

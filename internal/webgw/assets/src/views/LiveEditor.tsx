@@ -15,6 +15,7 @@ import { editing, liveStatus, LiveSync, session, setSync, syncs } from "../lib/l
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
+import { peekChange } from "../lib/gitpeek";
 import { BpAsk, onGlyph, useRunGutter } from "../lib/rungutter";
 import { blameOn, blameRows } from "../lib/blame";
 import { ask, askHints, diagSnap, fileMarkers, findRefs, goTo, inlayHints, revealAt, wordAt } from "../lib/lsp";
@@ -155,6 +156,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               diff: diff ? { original: diff.original ?? "", inline: diff.inline, collapse: diff.collapse } : undefined,
               onDiff: (n, a, r) => diffRef.current?.onCount(n, a, r),
               onGlyph: diff ? undefined : (line, menu, x, y) => onGlyph(path, line, menu, x, y),
+              onGitMark: diff ? undefined : (line) => peekChange(path, line),
             }),
         })
       : loadEditor();

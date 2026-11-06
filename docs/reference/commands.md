@@ -92,8 +92,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Agent: Accounts… | `agent-account-use` |   | `Claude Code / Codex accounts, own folders` |
 | Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex) | `ai-agent-packs` |   |   |
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
+| Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
@@ -104,6 +106,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start OpenCode | `agent-start-opencode` |   |   |
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
+| Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
+| Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
 
 ## Bookmarks
 
@@ -311,12 +315,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | File: Download to This Computer | `transfer-download` |   |   |
 | File: Open Recent Workspace... | `open-workspace` |   |   |
 | File: Open Recent... | `open-recent` | `Ctrl+R` | `Ctrl+R` |
+| File: Put Label in Local History… | `local-history-label` |   |   |
 | File: Quit | `quit` | `Ctrl+Q` | `Ctrl+Q` |
+| File: Recover Deleted File… | `local-history-deleted` |   | `from the local history` |
 | File: Reveal in File System | `reveal-fs` |   |   |
 | File: Revert / Reload from Disk | `reload-buffer` |   |   |
 | File: Save | `save` | `Ctrl+S` | `Ctrl+S` |
 | File: Save All Files | `save-all` |   |   |
 | File: Show Last Download in Folder | `transfer-reveal` |   |   |
+| File: Show Local History | `local-history` |   | `the saved versions of this file: compare, restore` |
 | File: Toggle Auto Save | `toggle-auto-save` |   |   |
 | File: Upload from This Computer... | `transfer-upload` |   |   |
 
@@ -343,12 +350,17 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Git: AI Review Branch (Pull Request) | `git-ai-review-branch` |   |   |
+| Git: AI Review My Changes | `git-ai-review-changes` |   |   |
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Add Co-Author… | `git-co-author` |   |   |
+| Git: Add to .gitignore… | `git-ignore-file` |   |   |
 | Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
 | Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
 | Git: Autosquash fixup! Commits… | `git-autosquash` |   |   |
+| Git: Bisect (Find the Commit That Broke It)… | `git-bisect` |   |   |
 | Git: Blame Before This Change | `git-blame-before` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
 | Git: Blame Options… | `git-blame-options` |   |   |
@@ -358,74 +370,127 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Commit and Push | `git-commit-push` |   |   |
 | Git: Commit and Sync | `git-commit-sync` |   |   |
 | Git: Commit... | `git-commit` |   |   |
+| Git: Compare Active File with Clipboard | `git-diff-clipboard` |   |   |
+| Git: Compare Branches… | `git-compare-branches` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
+| Git: Copy Remote Link to Commit | `git-copy-commit-link` |   |   |
+| Git: Copy Remote Link to Line | `git-copy-line-link` |   |   |
 | Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
+| Git: Create Tag… | `git-tag-create` |   |   |
 | Git: Delete Branch… | `git-branch-delete` |   |   |
+| Git: Delete Remote Tag… | `git-tag-delete-remote` |   |   |
+| Git: Delete Tag… | `git-tag-delete` |   |   |
 | Git: Delete Untracked Files… | `git-clean-untracked` |   |   |
+| Git: Diff Merge Commit Against Parent… | `git-diff-merge-parent` |   |   |
 | Git: Discard All Changes… | `git-discard-all` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
+| Git: Edit Commit Message in Editor | `git-commit-edit` |   |   |
+| Git: Explain Changes with AI | `git-ai-explain-changes` |   |   |
+| Git: Explain Line's Commit with AI | `git-ai-explain-line` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
+| Git: Fetch All Remotes (Prune) | `git-fetch-all` |   |   |
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
+| Git: Force Push (with Lease)… | `git-push-force` |   |   |
+| Git: Generate Commit Message with AI | `git-ai-commit-msg` |   |   |
+| Git: Go to Commit… | `git-goto-commit` |   |   |
+| Git: Go to HEAD in GRAPH | `git-graph-head` |   | `@` |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
+| Git: Initialize Repository | `git-init` |   |   |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
+| Git: Issues… (Start Work on One) | `git-issues` |   |   |
+| Git: Manage Remotes… | `git-remotes` |   |   |
 | Git: Merge Branch… | `git-merge-branch` |   |   |
+| Git: Merge View: AI Resolve Conflict… | `git-merge-ai-resolve` |   | `i` |
 | Git: Merge View: Close | `git-merge-close` |   | `Esc` |
 | Git: Merge View: Mark as Resolved | `git-merge-resolve` |   | `r` |
 | Git: Merge View: Merge Keys | `git-merge-focus` |   | `F6` |
 | Git: Merge View: Next Conflict | `git-merge-next` |   | `n` |
 | Git: Merge View: Previous Conflict | `git-merge-prev` |   | `p` |
+| Git: Merge View: Resolve Simple Conflicts | `git-merge-resolve-simple` |   | `s` |
 | Git: Merge View: Show Next Pane | `git-merge-pane` |   | `v` |
 | Git: Merge View: Take Base | `git-merge-take-base` |   | `a` |
 | Git: Merge View: Take Both (Ours, Then Theirs) | `git-merge-take-both` |   | `b` |
 | Git: Merge View: Take Both (Theirs, Then Ours) | `git-merge-take-both-theirs-first` |   | `B` |
 | Git: Merge View: Take Ours | `git-merge-take-ours` |   | `o` |
+| Git: Merge View: Take Ours for the Whole File | `git-merge-take-all-ours` |   | `O` |
 | Git: Merge View: Take Theirs | `git-merge-take-theirs` |   | `t` |
+| Git: Merge View: Take Theirs for the Whole File | `git-merge-take-all-theirs` |   | `T` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
 | Git: Merge in Progress (Continue / Abort)… | `git-merge-status` |   |   |
+| Git: My Pull Requests… | `git-pr-mine` |   |   |
 | Git: Open Commit of Line | `git-blame-commit` |   |   |
 | Git: Open Merge View | `git-merge-open` |   |   |
 | Git: Open Next Revision of File | `git-rev-next` |   |   |
 | Git: Open Previous Revision of File | `git-rev-prev` |   |   |
+| Git: Peek Change Under Cursor | `git-peek-change` |   |   |
+| Git: Pick Recent Commit Message… | `git-commit-history` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
+| Git: Publish to GitHub… | `git-publish` |   |   |
 | Git: Pull | `git-pull` |   |   |
+| Git: Pull (Rebase) | `git-pull-rebase` |   |   |
+| Git: Pull Requests (Filter)… | `git-pr-filter` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
+| Git: Pull… | `git-pull-options` |   |   |
 | Git: Push | `git-push` |   |   |
+| Git: Push Tag… | `git-tag-push` |   |   |
+| Git: Push to… | `git-push-to` |   |   |
+| Git: Push… (Show Outgoing Commits First) | `git-push-preview` |   |   |
 | Git: Rebase Current Branch onto… | `git-rebase-onto` |   |   |
 | Git: Rebase in Progress (Continue / Skip / Abort)… | `git-rebase-status` |   |   |
 | Git: Redo Undone Git Action | `git-redo` |   |   |
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
 | Git: Rename Branch… | `git-branch-rename` |   |   |
+| Git: Run Before-Commit Checks | `git-commit-checks` |   | `the checks of Settings → Git on what is staged; no commit` |
 | Git: Save Changes as Patch… | `git-patch-save` |   |   |
+| Git: Search Log… | `git-log-search` |   |   |
+| Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
+| Git: Set Upstream Branch… | `git-upstream-set` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
+| Git: Show Folder History… | `git-log-folder` |   |   |
+| Git: Show Git Command Log | `git-cmd-log` |   |   |
+| Git: Show Incoming Commits… | `git-incoming` |   |   |
+| Git: Show Last Hook Output | `git-hook-output` |   |   |
 | Git: Show Line History | `git-line-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |
+| Git: Show Outgoing Commits… | `git-outgoing` |   |   |
 | Git: Show Stash List... | `git-stash-list` |   |   |
+| Git: Show Tag Details… | `git-tag-details` |   |   |
 | Git: Show Tags... | `git-tags` |   |   |
 | Git: Stage All Changes | `git-stage-all` |   |   |
 | Git: Stage Current File | `git-stage` |   |   |
 | Git: Stage Hunk (at cursor) | `git-stage-hunk` | `Alt+S` | `Alt+S` |
 | Git: Stage Line (or Selected Lines) | `git-stage-lines` | `Alt+Shift+S` | `Alt+Shift+S` |
+| Git: Stash Actions… | `git-stash-actions` |   |   |
 | Git: Stash Changes | `git-stash` |   |   |
+| Git: Stash with AI Message | `git-ai-stash` |   |   |
+| Git: Stash… | `git-stash-options` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
+| Git: Toggle All Branches in GRAPH | `git-graph-all` |   |   |
+| Git: Toggle Auto Fetch | `git-auto-fetch` |   |   |
 | Git: Toggle Blame Annotations | `git-blame-annotate` |   |   |
 | Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
+| Git: Toggle Commit Signing (This Repository) | `git-signing-toggle` |   |   |
 | Git: Toggle Inline Blame | `git-inline-blame` |   |   |
+| Git: Toggle Skip Hooks on Commit (--no-verify) | `git-skip-hooks` |   | `this session only` |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
+| Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
+| Git: Unset Upstream Branch | `git-upstream-unset` |   |   |
 | Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
+| Git: Write Pull Request Description with AI | `git-ai-pr-text` |   |   |
 
 ## HTTP
 
@@ -679,6 +744,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workflows: Run Selected… | `workflow-run` |   |   |
 | Workflows: Stop Selected Run… | `workflow-stop` |   |   |
 | Workflows: Turn Selected On/Off… | `workflow-enable` |   |   |
+| Workflows: Undo a Write of Selected Run… | `workflow-undo-write` |   |   |
 
 ## Workspace
 
@@ -708,6 +774,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 | Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
+| Worktree: Suggest a Name… | `worktree-suggest-name` |   | `quick model drafts branch names` |
 
 ## termocode
 

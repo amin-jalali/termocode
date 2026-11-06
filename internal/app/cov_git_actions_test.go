@@ -223,6 +223,7 @@ func TestCovGitInlineCommit(t *testing.T) {
 	// Stage all & commit, the happy path.
 	covWrite(t, dir, "a.txt", "again\n")
 	m.gitCommitMsg = "fix: again"
+	m.confirmKind = confirmKindGitStageCommit // the hook card (GITX-27) was the last card
 	m.handleConfirmSelect("stage")
 	if covGit(t, dir, "log", "-1", "--format=%s") != "fix: again" {
 		t.Fatal("stage all & commit did not commit")

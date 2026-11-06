@@ -38,6 +38,7 @@ type Header struct {
 	Hash, FullHash   string
 	Subject, Body    string
 	Author           string // name only: the e-mail is never on the card
+	Badge            string // the signature ("✓ Verified · ann"); "" unsigned
 	DateRel, DateAbs string
 	Parents          []string // short hashes; each is a click target
 	Refs             []Ref
@@ -108,8 +109,8 @@ func (m *Model) SetFileText(i int, old, new string) {
 	if i < 0 || i >= len(m.files) {
 		return
 	}
-	f := newFileState(File{Name: m.files[i].Name, Tag: m.files[i].Tag, Status: m.files[i].Status,
-		Add: m.files[i].Add, Del: m.files[i].Del, Old: old, New: new})
+	f := newFileStateOpt(File{Name: m.files[i].Name, Tag: m.files[i].Tag, Status: m.files[i].Status,
+		Add: m.files[i].Add, Del: m.files[i].Del, Old: old, New: new}, m.ignoreSpace)
 	m.files[i] = f
 	m.cache.reset()
 }
@@ -356,6 +357,16 @@ func (m Model) commitMeta(g geom, p pal) (left, right rowB) {
 	if h.Files == 1 {
 		files = "file"
 	}
+	if b := h.Badge; b != "" { // GITX-38: the signature
+		c := p.muted
+		switch {
+		case strings.HasPrefix(b, "✓"):
+			c = p.add
+		case strings.HasPrefix(b, "✗"):
+			c = p.del
+		}
+		right.add(b+"  ", bg.Foreground(c), "")
+	}
 	right.add(fmt.Sprintf("%d %s  ", h.Files, files), bg.Foreground(p.muted), "")
 	right.add(fmt.Sprintf("+%d", h.Add), bg.Foreground(p.add), "")
 	right.add(" ", bg, "")
@@ -522,4 +533,14 @@ func commitListItem(i int, f *fileState, sel bool, w int, p pal) listItem {
 		text: []seg{{lead, st.Foreground(lc)}, {iconSeg, st.Foreground(theme.LG(icol))}, {name, st.Foreground(p.text)},
 			{dirText, st.Foreground(p.dim)}, {strings.Repeat(" ", pad), st}, {stats, st.Foreground(p.dim)}},
 	}
+}
+
+// FocusedHunk is the change of the current file that n / p moved to
+// (ok false: the file has no text change).
+func (m Model) FocusedHunk() (textdiff.Hunk, bool) {
+	f := m.file()
+	if f == nil || f.diff == nil || len(f.diff.Hunks) == 0 {
+		return textdiff.Hunk{}, false
+	}
+	return f.diff.Hunks[min(max(f.focus, 0), len(f.diff.Hunks)-1)], true
 }

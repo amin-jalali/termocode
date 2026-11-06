@@ -48,6 +48,8 @@ const (
 	// workflows_trust.go
 	confirmKindWorkflowUndo   confirmKindEnum = 3505
 	confirmKindWorkflowBudget confirmKindEnum = 3506
+	// the schedule went off while a run works: stop it too?
+	confirmKindWorkflowOffStop confirmKindEnum = 3507
 )
 
 // wfxNarrowW: a window narrower than this shows the view as one page.
@@ -101,9 +103,11 @@ type wfxLive struct {
 	waiting  string   // what the run waits for ("" = nothing)
 	// scheduled: the scheduler started it (no page is opened for it).
 	scheduled bool
-	// budget: paused by the day budget; budgetOK: the user let it go on
-	// past it (it is not paused again).
-	budget, budgetOK bool
+	// budget: the budget that paused it ("" = none: "day", "run" or
+	// "item:<key>"); budgetOK: the budgets the user let it go on past
+	// (each is not asked again).
+	budget   string
+	budgetOK map[string]bool
 }
 
 func (l *wfxLive) addLine(s string) {
@@ -456,8 +460,19 @@ func (m *Model) answerWorkflowCard(id string) tea.Cmd {
 		if id != "toggle" || !ok {
 			return nil
 		}
-		return m.wfxToggle(e)
-	case confirmKindWorkflowStop:
+		was := e.Enabled
+		cmd := m.wfxToggle(e)
+		if was && m.wfxRunning(name) != nil {
+			if now, ok := wire.Find(st.list, name); ok && !now.Enabled {
+				st.pending = name
+				m.wfxCard(confirmKindWorkflowOffStop, "Stop the run of "+name+" too?",
+					name+" is off now: no new run starts on its schedule. A run of it still works.\n"+
+						"Keep running lets it finish. Stop run ends it; finished items keep their results.",
+					confirm.Button{ID: "keep", Title: "Keep running"}, confirm.Button{ID: "stop", Title: "Stop run", Style: confirm.StyleDestructive})
+			}
+		}
+		return cmd
+	case confirmKindWorkflowStop, confirmKindWorkflowOffStop:
 		if id != "stop" {
 			return nil
 		}
@@ -635,6 +650,8 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 	if s, err := m.secretStore(); err == nil && s != nil {
 		src.Secrets = s
 	}
+	ms := wfxMessenger(id, block)
+	ms.Tools = tools
 	cfg := wire.Config{
 		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume,
 		Src: src, Tools: check, AI: m.wfxAIEnv(), Exec: wfxExec,
@@ -644,8 +661,18 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 				Preview: "This source step calls a tool that is not marked read-only. It may change things there."}, true)
 			return d != wire.GateDeny, err
 		},
-		Notify: func(ctx context.Context, via, text string) error {
-			return block(ctx, wfxLineMsg{id: id, text: "message (" + via + "): " + text})
+		Notify: func(ctx context.Context, msg wire.Message) error {
+			if err := ms.Deliver(ctx, msg); err != nil {
+				return err
+			}
+			via := strings.TrimSpace(msg.Via)
+			switch {
+			case via == "os" || via == "web":
+				return nil // the line comes with the message
+			case strings.HasPrefix(via, "${"):
+				via = "webhook"
+			}
+			return block(ctx, wfxLineMsg{id: id, text: "message (" + via + "): " + wire.RedactOutside(msg.Text)})
 		},
 		OnEvent:      func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
 		OnAuditError: func(err error) { recordError("workflow " + e.Name + ": audit: " + err.Error()) },
@@ -720,6 +747,15 @@ func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
 			m.wfxCheckBudget(l)
 		}
 		return wfxListen(l.ch), true
+	case wfxNoteMsg:
+		return m.aiInfo(msg.text), true
+	case wfxMessageMsg:
+		l := m.wfxS().live[msg.id]
+		if l == nil {
+			return nil, true
+		}
+		l.addLine("message (" + msg.via + "): " + msg.text)
+		return tea.Batch(m.wfxDeliverLocal(msg.via, msg.text, msg.id, true), wfxListen(l.ch)), true
 	case wfxLineMsg:
 		l := m.wfxS().live[msg.id]
 		if l == nil {

@@ -77,6 +77,7 @@
 .cod-error::before { content: "\ea87"; }
 .cod-expand-all::before { content: "\eb95"; }
 .cod-export::before { content: "\ebac"; }
+.cod-extensions::before { content: "\eae6"; }
 .cod-eye::before { content: "\ea70"; }
 .cod-file::before { content: "\ea7b"; }
 .cod-file-code::before { content: "\eae9"; }
@@ -181,6 +182,7 @@
 .cod-terminal::before { content: "\ea85"; }
 .cod-tools::before { content: "\eb6d"; }
 .cod-trash::before { content: "\ea81"; }
+.cod-type-hierarchy::before { content: "\ebb9"; }
 .cod-vm::before { content: "\ea7a"; }
 .cod-vm-active::before { content: "\eb79"; }
 .cod-vm-outline::before { content: "\eb7a"; }

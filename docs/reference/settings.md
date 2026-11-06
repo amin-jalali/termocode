@@ -35,6 +35,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `tab_size` | int | `4` | Indent width in spaces (1-16). Sets tabstop and shiftwidth. |
 | `persistent_session` | enum | `auto` | Run the editor in a background session that survives a dropped connection; run termocode again in the same folder to get it back: on, off, or auto (on over SSH, off locally and inside tmux / screen). Applies the next time termocode starts; --no-session wins over it. |
 | `auto_reconnect` | bool | `true` | When the connection to a persistent session drops (network change, Wi-Fi switch, sleep), keep the screen and attach again by itself, also after `termocode ssh` restarts ssh. Keys typed while offline are not sent. Applies the next time termocode starts. |
+| `local_history` | bool | `true` | Keep a copy of each file you save (File: Show Local History, File: Recover Deleted File…): 50 versions per file for 30 days, files up to 2 MB, in $XDG_STATE_HOME/termocode/history. Off keeps no new copies. |
 
 ## Search
 
@@ -53,6 +54,17 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_base_url` | string | `(default)` | API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default. |
 | `ai_until_done_rounds` | int | `3` | Work until done (the until-done profile, /done, AI: Work Until Done): how many times verify runs at most (1 to 10). A profile's loop.max_rounds wins over it. |
 | `ai_until_done_budget_usd` | number | `2.00` | Work until done: the run pauses and asks once its steps have cost this many US dollars. 0 means no budget. A profile's budget_usd wins over it. |
+
+## Git
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `git_auto_fetch` | bool | `false` | Fetch from the remote every 3 minutes in the background while termocode runs (Git: Toggle Auto Fetch). A failed fetch turns it off for this session and says why. |
+| `git_issue_link` | string | `(none)` | The web page of an issue key such as ABC-123, with {key} where the key goes (https://tracker.example.com/browse/{key}). A click on a key in a terminal tab opens it. Empty or (none): keys are no links. |
+| `git_commit_checks` | bool | `false` | Before each commit, look for large staged files, secret-looking added lines and errors of the Problems list in staged files. A finding asks before the commit (Commit Anyway or Cancel). |
+| `git_commit_format` | bool | `false` | Before each commit, format the fully staged files that are open in the editor with their language server and stage the result. A file with unstaged changes too is left as it is. |
+| `git_commit_task` | string | `(none)` | Before each commit, run this task (its label, as in Tasks: Run Task). The commit waits; a task that fails asks before the commit. Empty or (none): no task. |
+| `git_commit_large_mb` | int | `5` | git_commit_checks: a staged file bigger than this many MB is a finding. |
 
 ## HTTP
 
@@ -165,6 +177,9 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_disabled_tools` | object | `{}` | MCP tools you turned off: server name → tool names. Off tools are not sent to the AI. Turn them off or on with Space in AI: MCP Servers… → a server → Show tools. |
 | `mcp_server` | enum | `auto` | termocode as an MCP server: outside agents (Claude Code, Codex, …) reach a short list of IDE tools (open files, diagnostics, tests, debugger, terminal and git reads) over a private socket in the session folder, open only to your own user. Tools that change something ask on a card first; files, settings, git writes and your own MCP servers are never offered. auto: serve once you start an agent tab (F1 → Agent: Start …). on: serve from start. off: never. Applied when you save config.json. |
 | `agent_transcripts` | enum | `off` | read: termocode may read the session files that Claude Code and Codex write for themselves (~/.claude/projects, ~/.codex/sessions, or CLAUDE_CONFIG_DIR / CODEX_HOME) for Agent: Chat View, Agent: Sessions… and the search inside them. Read only: termocode never writes there. Secrets are hidden before anything is drawn, and nothing from them goes to the AI or the web panel unless you send it. A file in a format termocode does not know shows "cannot read this session". off (the default): no file there is opened. |
+| `agent_auto_continue` | bool | `false` | When a Claude Code or Codex tab shows its usage-limit message, the tab is named limit ↻<time> until the reset. true: one minute after the reset, termocode types continue (then Enter) into that tab, once per limit, and a toast says so. It never types while the agent works or while a y/n or permission question is on its screen. Agent: Toggle Auto-Continue sets it for one tab. false (the default): termocode only shows the limit. |
+| `agent_accounts` | object | `{}` | Named accounts of Claude Code and Codex, agent id → labels, e.g. {"claude": ["work", "personal"]}. Each account has its own config folder under termocode's config folder (agents/<agent>/<label>, only your user can open it); a tab started as that account sets CLAUDE_CONFIG_DIR or CODEX_HOME to it, so the CLI keeps that sign-in there. termocode stores only the labels and never reads the sign-in files there (with agent_transcripts = read it reads only the session files, as it does in ~/.claude); it never changes ~/.claude or ~/.codex. Add one with Agent: Accounts…. |
+| `agent_hibernate_minutes` | int | `0` | Hibernate idle Claude Code and Codex tabs: when a tab is done or waiting with no output for this many minutes, a card asks (Keep running first; Always for this session skips it later), then termocode stops the agent's program and keeps its session id (read from its session file when agent_transcripts is read). The tab stays, marked ☾. Going back to the tab types the CLI's own resume command: the same session, or the last session of the folder when no id is known. Never a tab with a question on screen or the tab you look at. Agent: Hibernate or Wake does it at once. 0 (the default): off. |
 | `mcp_server_auto_approve` | object | `{}` | The "Always allow" answers you gave on an outside agent's card (see mcp_server): agent name → tool names that run without asking for that agent. Separate from ai_auto_approve, which never applies to outside agents. The name is the agent's own claim. See and revoke them in AI: Agent Auto-Approve…. |
 | `mcp_trusted_tools` | object | `{}` | The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first. |
 
@@ -228,4 +243,4 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `XDG_CONFIG_HOME` | Moves the config folder to `$XDG_CONFIG_HOME/termocode`. |
 | `XDG_DATA_HOME` | Moves the data folder to `$XDG_DATA_HOME/termocode`. |
 | `XDG_RUNTIME_DIR` | Folder for the persistent-session sockets (`$XDG_RUNTIME_DIR/termocode`); without it they go to `~/.cache/termocode/sessions`. |
-| `XDG_STATE_HOME` | Moves the hot-exit backups of unsaved files to `$XDG_STATE_HOME/termocode/backup`. |
+| `XDG_STATE_HOME` | Moves the hot-exit backups of unsaved files to `$XDG_STATE_HOME/termocode/backup` and the local history of saved files to `$XDG_STATE_HOME/termocode/history`. |

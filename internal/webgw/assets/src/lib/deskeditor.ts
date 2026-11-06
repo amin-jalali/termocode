@@ -4,12 +4,13 @@
 // way. The frame gets the text and colours by message and sends back what
 // the user typed; the page keeps a copy of the frame's text, so text() is
 // at hand at once.
-import { computed, signal } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame, type CursorOp } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
-import { cursorAt, focusSlot, quick } from "./workbench";
+import { cursorAt, escapeKey, focusSlot, noteClip, quick, vimMode } from "./workbench";
+import { prefs } from "./prefs";
 import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
 import { toast } from "./toasts";
@@ -84,6 +85,8 @@ export interface DeskHost extends EditorHost {
   /** onGlyph hears a click in the glyph margin (menu: a right click at
    * x, y on the page). */
   onGlyph?(line: number, menu: boolean, x: number, y: number): void;
+  /** onGitMark hears a click on a git change mark (1-based row). */
+  onGitMark?(line: number): void;
 }
 
 /** DeskHandle is an EditorHandle with the settings the view changes. */
@@ -112,6 +115,8 @@ export interface DeskHandle extends EditorHandle {
   glyphs(items: FrameGlyph[], stop: number): void;
   /** aiAct runs an AI action on the editor's selection. */
   aiAct(kind: AiAct): void;
+  /** cursors runs a multi-cursor command (and gives the editor the keyboard). */
+  cursors(op: CursorOp): void;
   /** act runs a line or text command (sort, fold, comment …). */
   act(id: EditAct): void;
   /** nav goes to the type definition or the implementation at the caret. */
@@ -187,7 +192,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "ready": {
         ready = true;
         const c = frameColors(parent);
-        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, comment: host.comment, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
+        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lang: host.lang, comment: host.comment, lsp: host.lsp, refsLabel: host.refsLabel, ai: host.ai, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, vim: prefs.peek().vim, ...c } satisfies ToFrame, location.origin);
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.
@@ -253,8 +258,20 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         host.onGlyph?.(m.line, m.menu, r.left + m.x, r.top + m.y);
         return;
       }
+      case "gitMark":
+        host.onGitMark?.(m.line);
+        return;
       case "open":
         host.onOpen?.(m.path, m.line, m.col);
+        return;
+      case "esc":
+        escapeKey();
+        return;
+      case "copied":
+        if (typeof m.text === "string") noteClip(m.text);
+        return;
+      case "vim":
+        if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending };
         return;
       case "key":
         // The workbench's keys work while the editor has the focus.
@@ -263,6 +280,14 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     }
   };
   addEventListener("message", onMessage);
+  // Vim mode follows the browser's choice in every editor at once.
+  let vimWas = prefs.peek().vim;
+  const stopVim = effect(() => {
+    const on = prefs.value.vim;
+    if (on === vimWas) return;
+    vimWas = on;
+    send({ t: "opts", vim: on });
+  });
 
   return {
     text: () => text,
@@ -333,6 +358,14 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     aiAct(kind) {
       send({ t: "aiAct", kind });
     },
+    cursors(op) {
+      // After the command list is gone (it took the keyboard with it);
+      // the frame takes the keyboard back only while it still has it.
+      setTimeout(() => {
+        if (!quick.peek()) frame.focus();
+        send({ t: "cursors", op });
+      }, 0);
+    },
     act(id) {
       send({ t: "act", id });
     },
@@ -347,6 +380,8 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     destroy() {
       removeEventListener("message", onMessage);
+      stopVim();
+      if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: "", pending: "" };
       if ((host.slot ?? "g0") === focusSlot.peek()) cursorAt.value = null;
       frame.remove();
     },

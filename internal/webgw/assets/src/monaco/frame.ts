@@ -14,7 +14,8 @@ import { diff } from "../lib/textdiff";
 import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
-import type { AiAt, AiKind, EditAct, FrameBlame, FrameGlyph, FrameHint, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
+import type { AiAt, AiKind, CursorOp, EditAct, FrameBlame, FrameGlyph, FrameHint, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
+import { Vim, type VimMode } from "./vim";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -56,6 +57,7 @@ interface Model {
   getWordAtPosition(p: Pos): Word | null;
   setEOL(eol: number): void;
   getPositionAt(offset: number): Pos;
+  getOffsetAt(p: Pos): number;
   getLineCount(): number;
   getLineContent(line: number): string;
   getLineMaxColumn(line: number): number;
@@ -106,6 +108,8 @@ interface Editor {
   revealLineInCenter(line: number): void;
   revealPositionInCenter(p: Pos): void;
   setPosition(p: Pos): void;
+  setSelection(s: { selectionStartLineNumber: number; selectionStartColumn: number; positionLineNumber: number; positionColumn: number }): void;
+  revealPosition(p: Pos): void;
   getPosition(): Pos | null;
   addAction(a: { id: string; label: string; keybindings?: number[]; contextMenuGroupId?: string; contextMenuOrder?: number; run: () => void }): unknown;
   getVisibleRanges(): IRange[];
@@ -224,6 +228,8 @@ let applying: "remote" | "undo" | "replace" | null = null;
 let hlDecos: Collection | null = null;
 let flashDecos: Collection | null = null;
 let gutterDecos: Collection | null = null;
+/** gitMarks are the rows the git change marks cover now. */
+let gitMarks: { from: number; to: number }[] = [];
 let lineDecos: Collection | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | undefined;
 let readOnly = false;
@@ -243,6 +249,8 @@ let glyphMenu = 0;
 /** lastStop: the editor shows a new stopped row once, then the user scrolls. */
 let lastStop = 0;
 const GLYPH_MARGIN = 2;
+/** GUTTER_DECOS is the editor's lines decorations column (the git marks). */
+const GUTTER_DECOS = 4;
 
 /** workerless stands in for the editor's worker service (the frame runs
  * no worker, its policy says worker-src 'none'): the diff editor's diff
@@ -805,6 +813,68 @@ function nesLater(): void {
 /** nesHint is the next edit's key hint (the page's words); tabWidth the
  * editor's tab size (the new rows line up with the text). */
 let nesHint = "Tab";
+/** chordUntil: the Ctrl/Cmd+K chord waits for its next key until then. */
+let chordUntil = 0;
+/** vim is the Vim keymap while Vim mode is on (WEBP-1). */
+let vim: Vim | null = null;
+let vimShown = "";
+
+/** vimOn turns Vim mode on or off; the page hears the mode (none: off). */
+function vimOn(on: boolean): void {
+  if (!ed || on === (vim !== null)) return;
+  if (!on) {
+    vim = null;
+    ed.updateOptions({ cursorStyle: "line" });
+    vimShow(null, "");
+    return;
+  }
+  const e = ed;
+  const at = (off: number): Pos => (model ? model.getPositionAt(off) : { lineNumber: 1, column: 1 });
+  vim = new Vim({
+    doc: () => cur,
+    caret: () => {
+      const p = e.getPosition();
+      return p && model ? model.getOffsetAt(p) : 0;
+    },
+    place: (off) => {
+      const p = at(off);
+      e.setPosition(p);
+      e.revealPosition(p);
+    },
+    select: (a, h) => {
+      const pa = at(a), ph = at(h);
+      e.setSelection({ selectionStartLineNumber: pa.lineNumber, selectionStartColumn: pa.column, positionLineNumber: ph.lineNumber, positionColumn: ph.column });
+      e.revealPosition(ph);
+    },
+    edit: (from, to, insert, caret) => {
+      if (!model) return;
+      const a = at(from), b = at(to);
+      applying = "replace"; // one step of the user's own, never merged
+      try {
+        e.pushUndoStop();
+        e.executeEdits("vim", [{ range: { startLineNumber: a.lineNumber, startColumn: a.column, endLineNumber: b.lineNumber, endColumn: b.column }, text: insert, forceMoveMarkers: true }]);
+        e.pushUndoStop();
+      } finally {
+        applying = null;
+      }
+      const p = at(caret);
+      e.setPosition(p);
+      e.revealPosition(p);
+    },
+    undo: () => undoRedo(false),
+    redo: () => undoRedo(true),
+    readOnly: () => readOnly,
+    show: (mode, pending) => vimShow(mode, pending),
+  });
+}
+
+function vimShow(mode: VimMode | null, pending: string): void {
+  ed?.updateOptions({ cursorStyle: mode === null || mode === "insert" ? "line" : "block" });
+  const key = (mode ?? "") + "\x00" + pending;
+  if (key === vimShown) return;
+  vimShown = key;
+  post({ t: "vim", mode: mode ?? "", pending });
+}
 let tabWidth = 4;
 
 function sendText(user: boolean): void {
@@ -950,6 +1020,7 @@ function setOpts(o: FrameOpts): void {
   if (o.insertSpaces !== undefined) u.insertSpaces = o.insertSpaces;
   if (o.ai) setAI(o.ai);
   ed.updateOptions(u);
+  if (o.vim !== undefined) vimOn(o.vim);
 }
 
 /** setAI follows the laptop's AI settings; next edits start from the
@@ -1050,7 +1121,10 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   gutterDecos = ed.createDecorationsCollection();
   glyphDecos = ed.createDecorationsCollection();
   hintDecos = ed.createDecorationsCollection();
-  if (!m.diff) watchGlyphs(ed);
+  if (!m.diff) {
+    watchGlyphs(ed);
+    watchGitMarks(ed);
+  }
   lineDecos = ed.createDecorationsCollection();
   blameDecos = ed.createDecorationsCollection();
   inlayDecos = ed.createDecorationsCollection();
@@ -1113,6 +1187,13 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   }
   ed.onKeyDown((e) => {
     const b = e.browserEvent;
+    if (vim && vim.key(b)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    // Escape twice leaves Zen; with Vim on, Escape is Vim's.
+    if (b.key === "Escape" && !vim) post({ t: "esc" });
     if (!workbenchKey(b)) return;
     e.preventDefault();
     e.stopPropagation();
@@ -1127,7 +1208,44 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   ed.onDidLayoutChange(viewport);
   viewport();
   sendText(false);
+  if (m.vim) vimOn(true);
 }
+
+// What is copied or cut goes to the page's clipboard history too (the
+// editor's own selections; the system clipboard is never read).
+function onCopy(): void {
+  if (!ed || !model) return;
+  const m = model;
+  const parts = (ed.getSelections() ?? []).map((r) => m.getValueInRange(r)).filter((s) => s !== "");
+  if (parts.length) post({ t: "copied", text: parts.join("\n") });
+}
+addEventListener("copy", onCopy, true);
+addEventListener("cut", onCopy, true);
+
+// After Ctrl/Cmd+K the next key is the chord's (Ctrl/Cmd+K Z: Zen): the
+// page's, never the text's. It is taken before the editor sees it (the
+// editor has chords of its own on Ctrl/Cmd+K).
+addEventListener(
+  "keydown",
+  (b: KeyboardEvent) => {
+    const k = (b.ctrlKey || b.metaKey) && !b.shiftKey && !b.altKey && b.key.toLowerCase() === "k";
+    if (k) chordUntil = Date.now() + 1500;
+    else if (Date.now() >= chordUntil || ["Control", "Meta", "Shift", "Alt"].includes(b.key)) return;
+    else chordUntil = 0;
+    b.preventDefault();
+    b.stopImmediatePropagation();
+    post({ t: "key", key: b.key, code: b.code, ctrl: b.ctrlKey, meta: b.metaKey, shift: b.shiftKey, alt: b.altKey });
+  },
+  true,
+);
+
+/** CURSOR_ACTIONS are the editor's own multi-cursor actions. */
+const CURSOR_ACTIONS: Record<CursorOp, string> = {
+  above: "editor.action.insertCursorAbove",
+  below: "editor.action.insertCursorBelow",
+  next: "editor.action.addSelectionToNextFindMatch",
+  all: "editor.action.selectHighlights",
+};
 
 function onMessage(e: MessageEvent): void {
   if (e.source !== parent || e.origin !== location.origin) return;
@@ -1195,6 +1313,7 @@ function onMessage(e: MessageEvent): void {
       ed?.focus();
       return;
     case "gutter":
+      gitMarks = m.marks.map((g) => ({ from: g.from, to: g.to }));
       gutterDecos?.set(
         m.marks.map((g) => ({
           range: { startLineNumber: g.from, startColumn: 1, endLineNumber: g.to, endColumn: 1 },
@@ -1215,6 +1334,12 @@ function onMessage(e: MessageEvent): void {
       if (blameRows) startBlameHover();
       blamePaint();
       return;
+    case "cursors": {
+      const id = CURSOR_ACTIONS[m.op];
+      if (document.hasFocus()) ed?.focus(); // never taken from the page's own inputs
+      if (id) void ed?.getAction(id)?.run();
+      return;
+    }
     case "undo":
       undoRedo(false);
       return;
@@ -1297,6 +1422,16 @@ function watchGlyphs(e: Editor): void {
     hintDecos?.set([{ range: { startLineNumber: line, startColumn: 1, endLineNumber: line, endColumn: 1 }, options: { glyphMarginClassName: "tc-g tc-g-hint" } }]);
   });
   e.onMouseLeave(() => hintDecos?.clear());
+}
+
+/** watchGitMarks sends a click on a git change mark to the page (it
+ * peeks at that change), as a click on the laptop's git signs does. */
+function watchGitMarks(e: Editor): void {
+  e.onMouseDown((ev) => {
+    if (ev.target.type !== GUTTER_DECOS || !ev.event.leftButton) return;
+    const line = ev.target.position?.lineNumber ?? 0;
+    if (line && gitMarks.some((g) => line >= g.from && line <= g.to)) post({ t: "gitMark", line });
+  });
 }
 
 addEventListener("message", onMessage);

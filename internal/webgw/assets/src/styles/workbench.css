@@ -1053,3 +1053,6 @@ kbd {
 .refs-ln { color: var(--wb-line-num); text-align: end; font-variant-numeric: tabular-nums; }
 .refs-text { overflow: hidden; text-overflow: ellipsis; white-space: pre; unicode-bidi: isolate; }
 .refs-text mark { background: var(--wb-sel); color: inherit; border-radius: 2px; }
+/* Zen (WEBP-1): only the editor; no tabs, no status bar. */
+.wb.is-zen .ed-tabs { display: none; }
+html[data-zen="on"] .statusbar { display: none; }

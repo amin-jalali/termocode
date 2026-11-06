@@ -89,3 +89,10 @@ func resetTime(text string, now time.Time) time.Time {
 	}
 	return time.Time{}
 }
+
+// IsLimit reports whether text is a usage-limit message (AGX-11: the
+// agents' limit lines on a terminal screen use the same words).
+func IsLimit(text string) bool { return isLimit(text) }
+
+// LimitReset is when the limit in text resets (zero: it does not say).
+func LimitReset(text string, now time.Time) time.Time { return resetTime(text, now) }

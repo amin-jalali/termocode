@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -921,9 +922,24 @@ func (m *Model) gitInlineCommitThen(amend, signoff bool, after string) tea.Cmd {
 		m.gitCommitAfter = after
 		return nil
 	}
+	return m.gitCommitStaged(cwd, msg, amend, signoff, after)
+}
+
+// gitCommitStaged commits the index with msg once the before-commit
+// checks (GITX-27, gitx_commit_checks.go) have passed or the user said
+// Commit Anyway.
+func (m *Model) gitCommitStaged(cwd, msg string, amend, signoff bool, after string) tea.Cmd {
+	if c, ok := m.gitxBeforeCommit(cwd, msg, amend, signoff, after); ok {
+		return c
+	}
 	var toastCmd tea.Cmd
-	if err := git.CommitWith(cwd, msg, amend, signoff); err != nil {
+	noVerify := m.gitx.skipHooks || m.gitx.noVerifyOnce
+	m.gitx.noVerifyOnce = false
+	if err := git.CommitOpts(cwd, msg, git.CommitOptions{Amend: amend, Signoff: signoff, NoVerify: noVerify}); err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Commit failed", err.Error())
+		if !noVerify && git.HasCommitHooks(cwd) { // GITX-27 (gitx_commit_hooks.go)
+			return tea.Batch(fetchGitCmd(), toastCmd, m.gitxHookCard(err, cwd, msg, amend, signoff, after))
+		}
 		return tea.Batch(fetchGitCmd(), toastCmd)
 	}
 	m.clearCommitBox()
@@ -945,15 +961,7 @@ func (m *Model) gitStageAllAndCommit() tea.Cmd {
 		m.toast, c = m.toast.PushDetail(toast.Errr, "Stage all failed", err.Error())
 		return c
 	}
-	msg := strings.TrimSpace(m.gitCommitMsg)
-	var toastCmd tea.Cmd
-	if err := git.Commit(cwd, msg); err != nil {
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Commit failed", err.Error())
-		return tea.Batch(fetchGitCmd(), toastCmd)
-	}
-	m.clearCommitBox()
-	m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Committed", commitToastLabel(msg, false))
-	return tea.Batch(fetchGitCmd(), toastCmd, m.gitAfterCommit(after))
+	return tea.Batch(fetchGitCmd(), m.gitCommitStaged(cwd, strings.TrimSpace(m.gitCommitMsg), false, false, after))
 }
 
 // clearCommitBox resets the inline message field after a successful commit.
@@ -961,6 +969,7 @@ func (m *Model) clearCommitBox() {
 	m.gitCommitMsg = ""
 	m.gitCommitCaret = 0
 	m.gitCommitFocused = false
+	m.gitCommitMsgReset() // git_commit_msg.go: history, template, editor file
 }
 
 // openStageAllCommitConfirm asks before staging every change for a commit when
@@ -993,10 +1002,12 @@ func commitToastLabel(msg string, amend bool) string {
 	return first
 }
 
-// openBranchPicker shows a fuzzy picker of local branches; selecting one
-// runs `git checkout <name>`. The first item is always "Create new branch
-// …" (id "new") so users can stay in the picker flow for the new-branch
-// case too.
+// openBranchPicker shows the branches (GITX-32): "Create new branch…"
+// first, then the recently checked-out branches (the current one on top),
+// the other local branches grouped by prefix ("feat/"), and the remote
+// branches that have no local twin (picking one makes a tracking branch).
+// Each local row says "current" and how far it is ahead / behind its
+// upstream.
 func (m *Model) openBranchPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
@@ -1005,30 +1016,125 @@ func (m *Model) openBranchPicker() tea.Cmd {
 	if err != nil {
 		return nil
 	}
-	branches, err := git.Branches(cwd)
+	branches, err := git.BranchList(cwd)
 	if err != nil {
 		var toastCmd tea.Cmd
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Branches failed", err.Error())
 		return toastCmd
 	}
-	items := make([]picker.Item, 0, len(branches)+1)
-	items = append(items, picker.Item{ID: "new", Title: "+  Create new branch…", Hint: ""})
-	for _, b := range branches {
-		hint := ""
-		if b == m.gitBranch.Name {
-			hint = "current"
-		}
-		items = append(items, picker.Item{ID: "co-" + b, Title: b, Hint: hint})
-	}
+	remotes, _ := git.RemoteBranches(cwd)
+	items := branchPickerItems(branches, git.RecentBranches(cwd, branchPickerRecent), remotes)
 	m.picker = picker.NewItems(" Switch Branch ", items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindBranches
+	m.gitx.items = items
 	return nil
 }
 
-// gitCheckoutSelected runs `git checkout <branch>` for the picked entry.
-// Called from handlePickerSelect (case pickerKindBranches).
+// branchPickerRecent is how many recent branches lead the picker.
+const branchPickerRecent = 5
+
+// branchPickerItems lays out the branch picker rows (see openBranchPicker).
+func branchPickerItems(branches []git.BranchInfo, recent, remotes []string) []picker.Item {
+	items := []picker.Item{{ID: "new", Title: "+  Create new branch…"}}
+	byName := map[string]git.BranchInfo{}
+	upstreams := map[string]bool{}
+	for _, b := range branches {
+		byName[b.Name] = b
+		upstreams[b.Upstream] = true
+	}
+	row := func(b git.BranchInfo, group string) picker.Item {
+		return picker.Item{ID: "co-" + b.Name, Title: b.Name, Hint: branchPickerHint(b), Group: group}
+	}
+	inRecent := map[string]bool{}
+	if len(recent) > 0 {
+		items = append(items, picker.Item{Title: "Recent", Header: true, Group: "recent"})
+		for _, name := range recent {
+			if b, ok := byName[name]; ok {
+				inRecent[name] = true
+				items = append(items, row(b, "recent"))
+			}
+		}
+	}
+	// The rest, grouped by the part before the first "/" (sorted by git).
+	var plain []git.BranchInfo
+	groups := map[string][]git.BranchInfo{}
+	var prefixes []string
+	for _, b := range branches {
+		if inRecent[b.Name] {
+			continue
+		}
+		i := strings.IndexByte(b.Name, '/')
+		if i <= 0 {
+			plain = append(plain, b)
+			continue
+		}
+		p := b.Name[:i+1]
+		if _, ok := groups[p]; !ok {
+			prefixes = append(prefixes, p)
+		}
+		groups[p] = append(groups[p], b)
+	}
+	if len(plain) > 0 {
+		items = append(items, picker.Item{Title: "Branches", Header: true, Group: "local"})
+		for _, b := range plain {
+			items = append(items, row(b, "local"))
+		}
+	}
+	sort.Strings(prefixes)
+	for _, p := range prefixes {
+		items = append(items, picker.Item{Title: p, Header: true, Group: "prefix:" + p})
+		for _, b := range groups[p] {
+			items = append(items, row(b, "prefix:"+p))
+		}
+	}
+	var remoteRows []picker.Item
+	for _, r := range remotes {
+		_, short, ok := strings.Cut(r, "/")
+		if !ok || upstreams[r] {
+			continue
+		}
+		if _, local := byName[short]; local {
+			continue
+		}
+		remoteRows = append(remoteRows, picker.Item{ID: "tr-" + r, Title: r, Hint: "track as " + short, Group: "remote"})
+	}
+	if len(remoteRows) > 0 {
+		items = append(items, picker.Item{Title: "Remote", Header: true, Group: "remote"})
+		items = append(items, remoteRows...)
+	}
+	return items
+}
+
+// branchPickerHint is "current", "↑2 ↓1" and "gone" (the upstream was
+// deleted), joined with " · ".
+func branchPickerHint(b git.BranchInfo) string {
+	var parts []string
+	if b.Current {
+		parts = append(parts, "current")
+	}
+	var track []string
+	if b.Ahead > 0 {
+		track = append(track, "↑"+strconv.Itoa(b.Ahead))
+	}
+	if b.Behind > 0 {
+		track = append(track, "↓"+strconv.Itoa(b.Behind))
+	}
+	if len(track) > 0 {
+		parts = append(parts, strings.Join(track, " "))
+	}
+	if b.Gone {
+		parts = append(parts, "upstream gone")
+	}
+	return strings.Join(parts, " · ")
+}
+
+// gitCheckoutSelected switches to the picked branch (Called from
+// handlePickerSelect, case pickerKindBranches): "co-<branch>" checks out a
+// local branch, "tr-<remote>/<branch>" makes a local branch that tracks
+// the remote one. When local changes block the switch, a Cancel-first
+// card offers Stash and Switch.
 func (m *Model) gitCheckoutSelected(id string) tea.Cmd {
 	if id == "new" {
 		// Open a prompt for the new branch name; commit on submit goes
@@ -1039,21 +1145,56 @@ func (m *Model) gitCheckoutSelected(id string) tea.Cmd {
 		m.promptKind = promptKindGitNewBranch
 		return nil
 	}
-	branch := id[len("co-"):]
 	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
-	var toastCmd tea.Cmd
-	if err := git.Checkout(cwd, branch); err != nil {
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Checkout failed", err.Error())
+	var branch string
+	var opErr error
+	if remote, ok := strings.CutPrefix(id, "tr-"); ok {
+		_, branch, _ = strings.Cut(remote, "/")
+		opErr = git.CheckoutTracking(cwd, remote)
 	} else {
+		branch = strings.TrimPrefix(id, "co-")
+		opErr = git.Checkout(cwd, branch)
+	}
+	var toastCmd tea.Cmd
+	switch {
+	case opErr != nil && git.IsBlockedByChanges(opErr) && !strings.HasPrefix(id, "tr-"):
+		m.openStashAndSwitchCard(cwd, branch)
+		return nil
+	case opErr != nil:
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Checkout failed", opErr.Error())
+	default:
 		m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Switched to", branch)
 		if m.nvim != nil {
 			_ = m.nvim.Command("silent! checktime")
 		}
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
+}
+
+// openStashAndSwitchCard asks before stashing: a switch that local
+// changes block can save them in the stash first (smart checkout).
+func (m *Model) openStashAndSwitchCard(cwd, branch string) {
+	m.gitxCard("Your changes block the switch",
+		fmt.Sprintf("Switching to \"%s\" would overwrite your local changes. Stash and Switch saves them (new files too) in the stash, then switches. Git: Pop Latest Stash brings them back.", branch),
+		func(m *Model, id string) tea.Cmd {
+			if id != "stash-switch" {
+				return nil
+			}
+			var c tea.Cmd
+			if err := git.StashAndSwitch(cwd, branch); err != nil {
+				m.toast, c = m.toast.PushDetail(toast.Errr, "Stash and Switch failed", err.Error())
+				return tea.Batch(fetchGitCmd(), c)
+			}
+			if m.nvim != nil {
+				_ = m.nvim.Command("silent! checktime")
+			}
+			m.toast, c = m.toast.PushDetail(toast.Info, "Switched to "+branch, "Your changes are in the stash")
+			return tea.Batch(fetchGitCmd(), c)
+		},
+		confirm.Button{ID: "stash-switch", Title: "Stash and Switch", Style: confirm.StylePrimary})
 }
 
 // gitCreateBranchFromPrompt runs `git checkout -b <name>` after a successful

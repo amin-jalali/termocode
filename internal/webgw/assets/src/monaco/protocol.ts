@@ -26,6 +26,8 @@ export interface FrameOpts {
    * laptop's ai_inline and ai_next_edit; a file the user may edit);
    * hint is the next edit's key hint in the page's words. */
   ai?: { inline: boolean; nes: boolean; hint?: string };
+  /** vim: Vim mode (WEBP-1; the page's per-browser choice). */
+  vim?: boolean;
   /** comment is the file type's line comment ("//", "#"); none: the
    * file has no line comment and Toggle Line Comment does nothing. */
   comment?: string;
@@ -172,6 +174,8 @@ export type ToFrame =
   | { t: "blame"; rows: (FrameBlame | null)[] | null }
   | { t: "undo" }
   | { t: "redo" }
+  /** cursors: a multi-cursor command (WEBP-1), the editor's own action. */
+  | { t: "cursors"; op: CursorOp }
   | { t: "focus" }
   | { t: "reveal"; line: number; col?: number }
   /** edit: a context menu choice. cut drops the selection (the page put
@@ -194,6 +198,9 @@ export type ToFrame =
   | { t: "act"; id: EditAct }
   /** lspRes answers the frame's lsp question id (data null: nothing). */
   | { t: "lspRes"; id: number; data: unknown };
+
+/** CursorOp is one of the editor's multi-cursor commands. */
+export type CursorOp = "above" | "below" | "next" | "all";
 
 /** MenuCan says which of the editor's actions work here now. */
 export interface MenuCan {
@@ -232,7 +239,19 @@ export type FromFrame =
   /** glyph: a click in the glyph margin on a 1-based row; menu: a right
    * click at (x, y) in the frame. */
   | { t: "glyph"; line: number; menu: boolean; x: number; y: number }
-  /** key: a workbench key pressed in the editor (Ctrl/Cmd+P, +B, +J …). */
+  /** gitMark: a click on a git change mark in the gutter (1-based row). */
+  | { t: "gitMark"; line: number }
+  /** vim: Vim mode's mode now ("": off) and the keys of a command not
+   * finished yet. */
+  | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline"; pending: string }
+  /** copied: the user copied or cut text in the editor (the clipboard
+   * history of the tab keeps it). */
+  | { t: "copied"; text: string }
+  /** esc: Escape was pressed in the editor (it still does its own work
+   * there; two in a row leave Zen). */
+  | { t: "esc" }
+  /** key: a workbench key pressed in the editor (Ctrl/Cmd+P, +B, +J …;
+   * after Ctrl/Cmd+K, the chord's next key too). */
   | { t: "key"; key: string; code: string; ctrl: boolean; meta: boolean; shift: boolean; alt: boolean };
 
 /** FRAME_PATH is where the gateway serves the frame. */

@@ -62,6 +62,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if n := m.drainKeyringNotice(); n != nil { // keyring gone (secrets_failures.go)
 			cmd = tea.Batch(cmd, n)
 		}
+		if n := m.drainAgentLater(); n != nil { // a hibernated agent resumed on a tab switch (agent_hibernate.go)
+			cmd = tea.Batch(cmd, n)
+		}
 	}
 	if wasDatabasesVisible && !m.databasesVisible() {
 		m.databasesClose(true)
@@ -556,6 +559,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case prompt.CloseMsg:
 		m.promptOpen = false
 		// Group G / Group I / secret store: no-op unless theirs
+		m.prPromptClosed() // pr_state.go: back to the thread or create card
 		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.secretsPromptClosed(), m.aiMCPElicitPromptClosed())
 	case secretsUnlockDoneMsg:
 		return m, m.onSecretsUnlockDone(msg)
@@ -901,6 +905,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)
+		m.startLocalHistory() // GITX-35 (gitx_local_history.go)
 		return m, tea.Batch(cmds...), true
 	case hotExitFoundMsg:
 		// Another dialog open: wait until it closes (Update shows it).
@@ -1060,10 +1065,14 @@ end })`)
 			return m, m.gitAutoRefreshTick(), true
 		}
 		m.gitBlurredSkips = 0
-		return m, tea.Batch(m.pollGitCmd(), m.gitAutoRefreshTick()), true
+		return m, tea.Batch(m.pollGitCmd(), m.gitAutoRefreshTick(), m.gitxAutoFetchPoll()), true // GITX-12: auto fetch rides on the poll
+	case gitAIReplyMsg: // git_ai_helpers.go
+		return m, m.onGitAIReply(msg), true
 	case GitMsg:
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
+		m.syncCommitEditFile() // git_commit_msg.go: a saved message file
+		m.syncPRBodyFile()     // pr_edit_body.go: a saved PR description
 		m.gitBlameInit()
 		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh(), m.gitBlameRefreshCmd(false)), true // blame: again when HEAD or the file changed (gitBlameKey)
 	case gitBlameLoadedMsg: // git_blame_view.go
@@ -2434,6 +2443,26 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindGitTagDelete, pickerKindGitTagPush, pickerKindGitTagDeleteRemote, pickerKindGitTagDetails: // git_tags_remotes.go
+		return m.onGitTagPicked(m.pickerKind, msg.ID)
+	case pickerKindGitRemotes:
+		return m.onRemotePicked(msg.ID)
+	case pickerKindGitRemoteAction:
+		return m.onRemoteActionPicked(msg.ID)
+	case pickerKindGitUpstream:
+		return m.onUpstreamPicked(msg.ID)
+	case pickerKindCommitHistory: // git_commit_msg.go
+		return m.onCommitHistoryPicked(msg.ID)
+	case pickerKindCoAuthor:
+		return m.onCoAuthorPicked(msg.ID)
+	case pickerKindStashMode: // git_stash_reset.go
+		return m.onStashModePicked(msg.ID)
+	case pickerKindStashPick:
+		return m.onStashPicked(msg.ID)
+	case pickerKindStashAction:
+		return m.onStashActionPicked(msg.ID)
+	case pickerKindResetMode:
+		return m.onResetModePicked(msg.ID)
 	case pickerKindBlameOptions: // git_blame_view.go
 		return m.onBlameOptionPicked(msg.ID)
 	case pickerKindDeleteBranch: // git_branch_ops.go

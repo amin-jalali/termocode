@@ -326,6 +326,13 @@
 .ctr-filter, .ctr-form { margin: 4px 12px 4px 20px; }
 .mcpd-empty { color: var(--wb-desc); }
 
+/* ---- Workflows: a run's tab ---- */
+.wfr-acts { display: flex; gap: 8px; margin: -8px 0 16px; }
+.wfr-stop { display: inline-flex; align-items: center; gap: 4px; }
+.wfr .pv-ask { max-width: 640px; margin: 0 0 16px; }
+.wfr .card { max-width: 640px; margin: 8px 0 16px; }
+.wfr-log { max-width: 100%; margin: 0 0 16px; padding: 8px 12px; overflow-x: auto; border-radius: 2px; background: var(--wb-side-bg); font-family: var(--font-mono); font-size: 12px; line-height: 18px; white-space: pre; }
+
 /* ---- The panel's OUTPUT tab ---- */
 .outv { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 .outv-head { display: flex; align-items: center; gap: 4px; height: 22px; margin-inline-end: 4px; }
@@ -432,3 +439,23 @@
 .http-empty { padding: 8px 12px; color: var(--wb-desc); }
 .wt-filter { margin: 4px 12px 6px; }
 .wt-note .pv-input { margin-bottom: 6px; }
+
+/* Extension panels (WEBP-7): the markup's style names on theme tokens. */
+.xm-primary, .xm-white { color: var(--text); }
+.xm-secondary, .xm-muted, .xm-dim, .xm-comment { color: var(--muted); }
+.xm-accent, .xm-magenta, .xm-lavender { color: var(--ai); }
+.xm-blue, .xm-info, .xm-function { color: var(--blue); }
+.xm-green, .xm-success, .xm-added { color: var(--green); }
+.xm-amber, .xm-yellow, .xm-warning, .xm-modified { color: var(--amber); }
+.xm-red, .xm-error, .xm-deleted { color: var(--red); }
+.xm-hint, .xm-untracked { color: var(--git-conf); }
+.xm-keyword { color: var(--syn-kw); }
+.xm-string { color: var(--syn-str); }
+.xm-number { color: var(--syn-num); }
+.xm-type { color: var(--syn-ty); }
+.xm-constant { color: var(--syn-cst); }
+.xm-variable { color: var(--syn-var); }
+.xm-bold { font-weight: 600; }
+.xm-italic { font-style: italic; }
+.xm-underline { text-decoration: underline; }
+.xm-faint { opacity: 0.7; }

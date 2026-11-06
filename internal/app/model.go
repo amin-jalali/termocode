@@ -11,6 +11,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/agentlog"
+	"github.com/amin-jalali/termocode/internal/agentusage"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -117,6 +118,16 @@ type Model struct {
 	agentSessionsResume map[agentlog.CLI]bool
 	agentHits           []agentlog.Hit // the search inside sessions (agent_sessions_search.go)
 	agentHitsCapped     bool
+	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
+	// AGX-15 (agent_hibernate.go): the tab the hibernate card is about,
+	// "Always for this session", and commands queued by a tab switch.
+	agentHibernatePending int
+	agentHibernateAlways  bool
+	agentLaterCmds        []tea.Cmd
+	// AGX-16 (agent_names.go): what Enter on a suggested name does, and
+	// the request in flight.
+	agentNamesOnPick agentNamesPick
+	agentNamesGen    int
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process
@@ -245,6 +256,21 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitRef is what a tag, remote or force-push card or prompt is about
+	// (git_tags_remotes.go).
+	gitRef gitRefOpsState
+	// Commit box extras (git_commit_msg.go): the recent messages Up / Down
+	// step through (pos 0 = the draft), the template, the editor file.
+	gitCommitHist       []string
+	gitCommitHistLoaded bool
+	gitCommitHistPos    int
+	gitCommitDraft      string
+	gitCommitTplTried   bool
+	gitCommitEditFile   string
+	gitCommitEditMod    time.Time
+	// gitStashOps is what a stash or reset picker, card or prompt is
+	// about (git_stash_reset.go).
+	gitStashOps gitStashOpsState
 	// gitBlame is the current file's blame and the blame settings
 	// (git_blame_view.go).
 	gitBlame gitBlameState
@@ -1004,6 +1030,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, aiRunsStartupCmd())         // prune old agent run snapshots
 	cmds = append(cmds, m.secretsMigrateStartCmd()) // plain credentials.json → safer store (SS-4)
 	cmds = append(cmds, m.updateInitCmd())          // G-UPD: a newer release? (update_check.go)
+	gitxAutoFetchInit()                             // GITX-12: git_auto_fetch (gitx_autofetch_setting.go)
 	cmds = append(cmds, m.crash.waitCmd())          // recovered panics (crash_ui.go)
 	cmds = append(cmds, agentCtlInitCmd())          // OMX-33: the agent control socket (agent_ctl.go)
 	cmds = append(cmds, m.explorer.ScheduleLoads()) // FIX-2: a container root's first listing
@@ -1122,7 +1149,7 @@ func (m Model) attachCmd() tea.Cmd {
 			// the trailing spaces).
 			// The last cell is the git change mark (git_signs_lua.go): this
 			// statuscolumn has no sign column, so signs alone never show.
-			`lua _G.TcGitMark = _G.TcGitMark or function() return ' ' end; vim.opt.statuscolumn = '%=%l %{%v:lua.TcGitMark()%}'`,
+			`lua _G.TcGitMark = _G.TcGitMark or function() return ' ' end; _G.TcGitMarkClick = _G.TcGitMarkClick or function() end; vim.opt.statuscolumn = '` + editorStatusColumn + `'`,
 			// Word jumps with Ctrl+Right / Ctrl+Left in both normal and insert
 			// mode. Insert-mode bindings use <C-O> so we don't drop out of insert.
 			"nnoremap <silent> <C-Right> w",
@@ -1258,7 +1285,7 @@ func (m Model) attachCmd() tea.Cmd {
 						vim.wo[w].signcolumn   = 'auto'
 						vim.wo[w].cursorline   = true
 						vim.wo[w].foldcolumn   = '0'
-						vim.wo[w].statuscolumn = vim.o.number and '%=%l %{%v:lua.TcGitMark()%}' or ''
+						vim.wo[w].statuscolumn = vim.o.number and '` + editorStatusColumn + `' or ''
 					end)
 				end,
 			})

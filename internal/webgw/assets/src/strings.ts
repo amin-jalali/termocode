@@ -44,6 +44,15 @@ export const S = {
   "signin.code_label": "Code",
   "signin.code_send": "Sign in",
   "signin.wrong_code": "That code is not right. Type the newest code.",
+  "signin.bookmark": "Opening from your bookmark…",
+  "signin.body_bookmark_gone": "The bookmark sign-in ended on the laptop. Sign in with the passkey, or open the link from the laptop.",
+  "remember.label": "Remember this browser",
+  "remember.body": "Next time a bookmark opens the panel without the passkey. Only this browser, only this address.",
+  "bookmark.title": "Bookmark sign-in",
+  "bookmark.body_on": "On: this browser opens the panel from a bookmark. Forget it on a shared computer.",
+  "bookmark.body_off": "Off. To turn it on, tick Remember this browser when you sign in.",
+  "bookmark.body_forgotten": "Forgotten here and on the laptop. Next time, sign in with the passkey.",
+  "bookmark.forget": "Forget this browser",
   "firstrun": "This is the same termocode as on your laptop. What you do here happens there.",
   "firstrun.ok": "Got it",
   "strip.web": "web {n}",
@@ -386,6 +395,7 @@ export const S = {
   "runs.state.done": "finished",
   "runs.state.failed": "failed",
   "runs.state.cancelled": "stopped",
+  "wfv.tab": "{name} (Run)",
 
   // Waiting for the laptop
   "wait.title": "Waiting for the laptop…",
