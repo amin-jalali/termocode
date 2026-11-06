@@ -25,14 +25,6 @@ func gitxLogRepo(t *testing.T) (*Model, string) {
 	return m, dir
 }
 
-func gitxPickerIDs(m *Model) []string {
-	var ids []string
-	for _, it := range m.gitx.items {
-		ids = append(ids, it.ID)
-	}
-	return ids
-}
-
 // GITX-9: Search Log… asks one line (text and key:value filters) and
 // lists the matching commits; Enter opens one.
 func TestGitxSearchLog(t *testing.T) {

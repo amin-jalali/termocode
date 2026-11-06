@@ -4,37 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
-
 	"github.com/amin-jalali/termocode/internal/picker"
 )
-
-// gitxCardIDList is the card's button ids, in order.
-func gitxCardIDList(m *Model) string {
-	var ids []string
-	for _, b := range m.confirm.Buttons() {
-		ids = append(ids, b.ID)
-	}
-	return strings.Join(ids, ",")
-}
-
-// gitxUpstreamRepo is covGitRepo pushed to a bare "origin".
-func gitxUpstreamRepo(t *testing.T) (*Model, string, string) {
-	t.Helper()
-	m, dir := covGitRepo(t)
-	bare := t.TempDir()
-	covGit(t, dir, "init", "-q", "--bare", "-b", "main", bare)
-	covGit(t, dir, "remote", "add", "origin", bare)
-	covGit(t, dir, "push", "-q", "-u", "origin", "main")
-	covRefresh(m)
-	return m, dir, bare
-}
-
-// gitxDone runs cmd and applies the gitRemoteDoneMsg it ends with.
-func gitxDone(t *testing.T, m *Model, cmd tea.Cmd) {
-	t.Helper()
-	m.gitRemoteDone(covMsg[gitRemoteDoneMsg](t, cmd))
-}
 
 // GITX-12 (H10): Push… shows the outgoing commits on a Cancel-first card
 // first; Cancel pushes nothing, Push sends them.
