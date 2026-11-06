@@ -13,9 +13,9 @@ import (
 // next and previous change and conflict in the file, next and previous
 // conflict in the merge editor, and source control's tree or flat list.
 
-// runCmd runs a workbench command by its name from the command list.
+// runGitCmd runs a workbench command by its name from the command list.
 // The first open asks the laptop for its own commands: none here.
-func runCmd(t *testing.T, p *Page, c *HubConn, name string, first bool) {
+func runGitCmd(t *testing.T, p *Page, c *HubConn, name string, first bool) {
 	t.Helper()
 	wbKey(p, "P", true, true)
 	if first {
@@ -50,13 +50,13 @@ func TestGitNavNextChange(t *testing.T) {
 		{K: "ctx", Text: "five", Old: 4, New: 5},
 	}})})
 	p.WaitJS(deskDoc + `.querySelector(".tc-gm-mod") && ` + deskDoc + `.querySelector(".tc-gm-add")`)
-	runCmd(t, p, c, "Git: Go to Next Change", true)
+	runGitCmd(t, p, c, "Git: Go to Next Change", true)
 	waitLine(p, "2")
-	runCmd(t, p, c, "Git: Go to Next Change", false)
+	runGitCmd(t, p, c, "Git: Go to Next Change", false)
 	waitLine(p, "4")
-	runCmd(t, p, c, "Git: Go to Next Change", false)
+	runGitCmd(t, p, c, "Git: Go to Next Change", false)
 	waitLine(p, "2") // round to the first
-	runCmd(t, p, c, "Git: Go to Previous Change", false)
+	runGitCmd(t, p, c, "Git: Go to Previous Change", false)
 	waitLine(p, "4")
 }
 
@@ -64,11 +64,11 @@ func TestGitNavNextChange(t *testing.T) {
 func TestGitNavNextConflict(t *testing.T) {
 	p, c := openFiles(t, Desktop)
 	openDesk(t, p, c, 2, "a.txt", "one", "<<<<<<< HEAD", "a", "=======", "b", ">>>>>>> side", "mid", "<<<<<<< HEAD", "c", "=======", "d", ">>>>>>> side")
-	runCmd(t, p, c, "Git: Go to Next Merge Conflict", true)
+	runGitCmd(t, p, c, "Git: Go to Next Merge Conflict", true)
 	waitLine(p, "2")
-	runCmd(t, p, c, "Git: Go to Next Merge Conflict", false)
+	runGitCmd(t, p, c, "Git: Go to Next Merge Conflict", false)
 	waitLine(p, "8")
-	runCmd(t, p, c, "Git: Go to Previous Merge Conflict", false)
+	runGitCmd(t, p, c, "Git: Go to Previous Merge Conflict", false)
 	waitLine(p, "2")
 }
 
@@ -92,11 +92,11 @@ func TestGitNavMergeEditor(t *testing.T) {
 	reply(t, c, r, mc)
 	p.WaitJS(mergeView + `?.querySelectorAll(".desk-editor").length === 3`)
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "Conflict 1 of 2 remaining"`)
-	runCmd(t, p, c, "Git: Merge View: Next Conflict", true)
+	runGitCmd(t, p, c, "Git: Merge View: Next Conflict", true)
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "Conflict 2 of 2 remaining"`)
 	// The result editor shows the conflict and takes the keys.
 	p.WaitJS(`document.activeElement === ` + mergeView + `.querySelector(".gm-result .desk-editor")`)
-	runCmd(t, p, c, "Git: Merge View: Previous Conflict", false)
+	runGitCmd(t, p, c, "Git: Merge View: Previous Conflict", false)
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "Conflict 1 of 2 remaining"`)
 }
 
@@ -107,9 +107,9 @@ func TestGitNavTreeView(t *testing.T) {
 	if n := Eval[int](p, scm+`.querySelectorAll(".tr[data-dir]").length`); n != 0 {
 		t.Fatalf("the flat list has %d folder rows", n)
 	}
-	runCmd(t, p, c, "Git: Toggle Tree/Flat View", true)
+	runGitCmd(t, p, c, "Git: Toggle Tree/Flat View", true)
 	p.WaitJS(scm + `.querySelector('.tr[data-dir="src"]') && ` + scmRow("changes", "src/a.go") + `?.querySelector(".tr-desc") === null`)
-	runCmd(t, p, c, "Git: Toggle Tree/Flat View", false)
+	runGitCmd(t, p, c, "Git: Toggle Tree/Flat View", false)
 	p.WaitJS(`!` + scm + `.querySelector(".tr[data-dir]") && ` + scmRow("changes", "src/a.go") + `?.querySelector(".tr-desc")?.textContent === "src"`)
 }
 
@@ -131,7 +131,7 @@ func TestGitNavMergeTakeBase(t *testing.T) {
 	reply(t, c, r, mc)
 	p.WaitJS(mergeView + `?.querySelectorAll(".desk-editor").length === 3`)
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "Conflict 1 of 1 remaining" && ` + mergeView + `.querySelector('[data-act="base"]')`)
-	runCmd(t, p, c, "Git: Merge View: Take Base", true)
+	runGitCmd(t, p, c, "Git: Merge View: Take Base", true)
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "No conflicts left"`)
 	p.WaitJS(`[...(` + mergeView + `.querySelector(".gm-result .desk-editor")?.contentDocument?.querySelectorAll(".view-lines .view-line") ?? [])].map((l) => l.textContent).join("|").includes("base") && !` + mergeView + `.querySelector(".gm-result .desk-editor").contentDocument.querySelector(".tc-mg-marker")`)
 	if got := strings.TrimSuffix(paneText(p, "result"), "\n"); got != "package a\nbase\nend" {

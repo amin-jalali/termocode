@@ -209,8 +209,11 @@ func ValidateKey(s string) error {
 	if namedKeys[rest] {
 		return nil
 	}
-	if n, err := strconv.Atoi(strings.TrimPrefix(rest, "f")); err == nil && rest[0] == 'f' && n >= 1 && n <= 24 {
-		return nil
+	// f1-f24: digits only after the f (Atoi alone takes "f+01" as f1).
+	if digits := rest[1:]; rest[0] == 'f' && digits != "" && strings.Trim(digits, "0123456789") == "" {
+		if n, err := strconv.Atoi(digits); err == nil && n >= 1 && n <= 24 {
+			return nil
+		}
 	}
 	return fmt.Errorf("%q: unknown key %q (use a character, f1-f24, or one of enter, tab, esc, backspace, space, up, down, left, right, home, end, pgup, pgdown, delete, insert)", s, rest)
 }

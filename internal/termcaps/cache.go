@@ -74,8 +74,8 @@ func load(path string) map[string]Entry {
 		return m
 	}
 	b, err := os.ReadFile(path)
-	if err != nil || json.Unmarshal(b, &m) != nil {
-		return map[string]Entry{}
+	if err != nil || json.Unmarshal(b, &m) != nil || m == nil {
+		return map[string]Entry{} // a file holding null leaves m nil
 	}
 	return m
 }

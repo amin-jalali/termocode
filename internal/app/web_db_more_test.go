@@ -399,6 +399,9 @@ func TestDBMoreConnectionsNeedLaptopCard(t *testing.T) {
 	if _, ok := m.databases.connection("app2"); !ok {
 		t.Error("the laptop's list has no app2")
 	}
+	// A new sqlite file in the workspace still asks (it need not exist yet).
+	webDBAsk(t, m, c, webproto.OpDBAdd, `{"id":"lite","driver":"sqlite","path":"new.db"}`, "new.db")
+	webTestLaptopSelect(t, m, "cancel")
 
 	webDBAsk(t, m, c, webproto.OpDBSSH, `{"conn":"local","host":"bastion","user":"me","auth":"agent"}`, "bastion", "me")
 	webTestLaptopSelect(t, m, "confirm")
