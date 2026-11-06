@@ -35,6 +35,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `tab_size` | int | `4` | Indent width in spaces (1-16). Sets tabstop and shiftwidth. |
 | `persistent_session` | enum | `auto` | Run the editor in a background session that survives a dropped connection; run termocode again in the same folder to get it back: on, off, or auto (on over SSH, off locally and inside tmux / screen). Applies the next time termocode starts; --no-session wins over it. |
 | `auto_reconnect` | bool | `true` | When the connection to a persistent session drops (network change, Wi-Fi switch, sleep), keep the screen and attach again by itself, also after `termocode ssh` restarts ssh. Keys typed while offline are not sent. Applies the next time termocode starts. |
+| `local_history` | bool | `true` | Keep a copy of each file you save (File: Show Local History, File: Recover Deleted File…): 50 versions per file for 30 days, files up to 2 MB, in $XDG_STATE_HOME/termocode/history. Off keeps no new copies. |
 
 ## Search
 

@@ -87,8 +87,7 @@ func (s *Store) fileDir(abs string) string {
 // Save keeps data as a new version of abs. saved is false when data is
 // the newest version already or bigger than MaxBytes.
 func (s *Store) Save(abs string, data []byte, now time.Time) (saved bool, err error) {
-	id, saved, err := s.save(abs, data, now)
-	_ = id
+	_, saved, err = s.save(abs, data, now)
 	return saved, err
 }
 

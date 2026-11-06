@@ -314,12 +314,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | File: Download to This Computer | `transfer-download` |   |   |
 | File: Open Recent Workspace... | `open-workspace` |   |   |
 | File: Open Recent... | `open-recent` | `Ctrl+R` | `Ctrl+R` |
+| File: Put Label in Local History… | `local-history-label` |   |   |
 | File: Quit | `quit` | `Ctrl+Q` | `Ctrl+Q` |
+| File: Recover Deleted File… | `local-history-deleted` |   | `from the local history` |
 | File: Reveal in File System | `reveal-fs` |   |   |
 | File: Revert / Reload from Disk | `reload-buffer` |   |   |
 | File: Save | `save` | `Ctrl+S` | `Ctrl+S` |
 | File: Save All Files | `save-all` |   |   |
 | File: Show Last Download in Folder | `transfer-reveal` |   |   |
+| File: Show Local History | `local-history` |   | `the saved versions of this file: compare, restore` |
 | File: Toggle Auto Save | `toggle-auto-save` |   |   |
 | File: Upload from This Computer... | `transfer-upload` |   |   |
 

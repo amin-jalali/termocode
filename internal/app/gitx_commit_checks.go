@@ -136,7 +136,7 @@ func gitxCheckSettingValue(id string) (string, bool) {
 	case gitxLargeRowID:
 		return strconv.Itoa(c.largeMB), true
 	}
-	return "", false
+	return localHistSettingValue(id) // GITX-35 (gitx_local_history.go)
 }
 
 // applyGitxCheckSetting checks and saves a check row. ok=false: not ours.
@@ -168,7 +168,7 @@ func (m *Model) applyGitxCheckSetting(id, value string) (tea.Cmd, bool) {
 		}
 		v = n
 	default:
-		return nil, false
+		return m.applyLocalHistSetting(id, value) // GITX-35 (gitx_local_history.go)
 	}
 	if err := saveHTTPSetting(key, v); err != nil {
 		return m.pushToastDetail(toast.Errr, "Settings error", err.Error()), true

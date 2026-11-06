@@ -904,6 +904,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)
+		m.startLocalHistory() // GITX-35 (gitx_local_history.go)
 		return m, tea.Batch(cmds...), true
 	case hotExitFoundMsg:
 		// Another dialog open: wait until it closes (Update shows it).

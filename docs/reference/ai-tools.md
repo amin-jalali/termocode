@@ -2292,6 +2292,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `layout-open` | Layout: Open… | never | the AI changes the layout with the layout_set tool |
 | `layout-reset` | Layout: Reset to Default | never | the AI changes the layout with the layout_set tool |
 | `layout-save` | Layout: Save As… | never | the AI changes the layout with the layout_set tool |
+| `local-history` | File: Show Local History | auto |   |
+| `local-history-deleted` | File: Recover Deleted File… | never | writes a file back from the local history; only the user does that |
+| `local-history-label` | File: Put Label in Local History… | auto |   |
 | `lowercase` | Edit: Convert to lowercase | confirm (fileWrite) |   |
 | `lsp-manage` | LSP: Manage Language Servers... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_servers) |
 | `mcp-import-other` | AI: MCP: Import from Other Apps… | never | AI provider, credentials and approvals stay with the user (importing servers is the user's) |
@@ -2529,6 +2532,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `icons` | confirm (settings) |   |
 | `images` | confirm (settings) |   |
 | `key_hints` | confirm (settings) |   |
+| `local_history` | never | turns the user's safety copies of saved files off; only the user does that |
 | `mcp_auto_update` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_catalog_url` | never | AI provider, credentials and approvals stay with the user |

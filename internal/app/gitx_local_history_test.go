@@ -159,3 +159,26 @@ func gitxPickIDs(m *Model) string {
 	}
 	return strings.Join(ids, ",")
 }
+
+// The save hook sends each save of a file buffer (not of a page).
+func TestGitxLocalHistoryLua(t *testing.T) {
+	m, dir := covGitRepo(t)
+	c := aiTestNvim(t, m)
+	m.startLocalHistory()
+	if err := c.ExecLua(`_G.lh_seen = {}; _G.termocode_notify = function(method, p) table.insert(_G.lh_seen, method .. '=' .. p) end`); err != nil {
+		t.Fatal(err)
+	}
+	p := filepath.Join(dir, "saved.txt")
+	if err := c.Command("edit " + p); err != nil {
+		t.Fatal(err)
+	}
+	_ = c.Command("call setline(1, 'hello') | write")
+	_ = c.Command("enew | setlocal buftype=nofile | call setline(1, 'page') | silent! write! " + filepath.Join(dir, "page.txt"))
+	got, err := c.EvalLuaString(`return table.concat(_G.lh_seen, ',')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "termocode_local_history="+p {
+		t.Fatalf("notified %q", got)
+	}
+}

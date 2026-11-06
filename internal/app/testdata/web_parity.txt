@@ -523,6 +523,9 @@ missing	git-branch-from	Git|S
 missing	git-branch-rename	Git|S
 missing	git-upstream-set	Git|S
 missing	git-upstream-unset	Git|S
+missing	local-history	Git|S
+missing	local-history-deleted	Git|S
+missing	local-history-label	Git|S
 missing	workflow-dry-run	Workflows|S
 excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
