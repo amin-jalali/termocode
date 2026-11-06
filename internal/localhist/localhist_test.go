@@ -67,17 +67,19 @@ func TestStoreVersions(t *testing.T) {
 	}
 
 	// Deleted files.
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(p, []byte("five"), 0o644)
 	if d, _ := s.Deleted(root); len(d) != 0 {
 		t.Fatalf("nothing is deleted yet: %+v", d)
 	}
+	_ = os.Remove(p)
 	other := filepath.Join(t.TempDir(), "elsewhere.txt")
 	_, _ = s.Save(other, []byte("x"), at(1))
 	d, err := s.Deleted(root)
 	if err != nil || len(d) != 1 || d[0].Path != p || !d[0].Last.Equal(at(10)) {
 		t.Fatalf("deleted %+v %v", d, err)
-	}
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		t.Fatal(err)
 	}
 	_ = os.WriteFile(p, []byte("back"), 0o644)
 	if d, _ := s.Deleted(root); len(d) != 0 {
