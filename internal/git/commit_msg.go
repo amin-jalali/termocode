@@ -137,7 +137,7 @@ func ChangesDiff(dir string, staged bool, max int) (diff string, cut bool, err e
 	args := []string{"diff", "--no-color", "--no-ext-diff", "--stat", "--patch"}
 	if staged {
 		args = append(args, "--cached")
-	} else if hasCommits(dir) {
+	} else if hasCommits(localGit(dir)) {
 		args = append(args, "HEAD")
 	}
 	out, err := runCombined(dir, "git", args...)

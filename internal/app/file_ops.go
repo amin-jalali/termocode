@@ -158,6 +158,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if m.refusePromptSecret(value) { // secret_refs.go: a malformed reference stays in the prompt
 		return nil
 	}
+	if cmd, ok := m.handleGitxPromptSubmit(value); ok { // gitx_hub.go
+		return cmd
+	}
 	if cmd, ok := m.handleSecretsPromptSubmit(value); ok { // secrets_ui.go
 		return cmd
 	}
@@ -168,6 +171,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return cmd
 	}
 	if cmd, ok := m.handleGitAIPromptSubmit(value); ok { // git_ai_helpers.go
+		return cmd
+	}
+	if cmd, ok := m.handleBranchPromptSubmit(value); ok { // git_branch_ops.go
 		return cmd
 	}
 	if cmd, ok := m.handleAIPromptSubmit(value); ok { // Group A

@@ -48,6 +48,9 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	// (section headers + change files/dirs + graph commits) so every section
 	// shares one cursor model. Connector lines are skipped by gitMoveCursor.
 	cur, hasCur := m.gitCurrentRow()
+	if cmd, ok := m.gitxSidebarKey(msg); ok { // gitx_hub.go
+		return m, cmd, true
+	}
 
 	switch msg.Type {
 	case tea.KeyDown:
@@ -110,6 +113,8 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 			return m, m.gitShowMore(), true
 		case gitRowRebase:
 			m.openRebaseControl()
+		case gitRowStopped:
+			return m, m.openGitOpControl(), true
 		case gitRowFile:
 			if cur.section == gitSecConflicts {
 				return m, m.gitOpenMergeViewForFile(cur.fileIndex), true
@@ -883,6 +888,13 @@ func (m *Model) gitSync() tea.Cmd {
 // if there are unstaged changes, offers to stage-all-and-commit) rather than
 // letting git fail. On success the box is cleared and blurred.
 func (m *Model) gitInlineCommit(amend, signoff bool) tea.Cmd {
+	return m.gitInlineCommitThen(amend, signoff, "")
+}
+
+// gitInlineCommitThen is gitInlineCommit followed, when the commit is
+// made, by a push (gitAfterPush) or a sync (gitAfterSync).
+func (m *Model) gitInlineCommitThen(amend, signoff bool, after string) tea.Cmd {
+	m.gitCommitAfter = ""
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
@@ -906,6 +918,7 @@ func (m *Model) gitInlineCommit(amend, signoff bool) tea.Cmd {
 			return c
 		}
 		m.openStageAllCommitConfirm()
+		m.gitCommitAfter = after
 		return nil
 	}
 	var toastCmd tea.Cmd
@@ -915,12 +928,14 @@ func (m *Model) gitInlineCommit(amend, signoff bool) tea.Cmd {
 	}
 	m.clearCommitBox()
 	m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Committed", commitToastLabel(msg, amend))
-	return tea.Batch(fetchGitCmd(), toastCmd)
+	return tea.Batch(fetchGitCmd(), toastCmd, m.gitAfterCommit(after))
 }
 
 // gitStageAllAndCommit is the confirmed branch of the "nothing staged" prompt:
 // stage every change, then commit the stored message.
 func (m *Model) gitStageAllAndCommit() tea.Cmd {
+	after := m.gitCommitAfter
+	m.gitCommitAfter = ""
 	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
@@ -938,7 +953,7 @@ func (m *Model) gitStageAllAndCommit() tea.Cmd {
 	}
 	m.clearCommitBox()
 	m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Committed", commitToastLabel(msg, false))
-	return tea.Batch(fetchGitCmd(), toastCmd)
+	return tea.Batch(fetchGitCmd(), toastCmd, m.gitAfterCommit(after))
 }
 
 // clearCommitBox resets the inline message field after a successful commit.

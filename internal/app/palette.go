@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -157,7 +156,8 @@ func loadFilesIn(roots []string) []picker.Item {
 // instead we read the saved-roots list from the session file (kept in sync
 // by the explorer's add/remove handlers). cwd is always first.
 func workspaceRoots() []string {
-	cwd, err := procRootDir()
+	ws := procWorkspace()
+	cwd, err := rootOf(ws)
 	if err != nil {
 		return nil
 	}
@@ -166,7 +166,9 @@ func workspaceRoots() []string {
 		if p == "" || p == cwd {
 			continue
 		}
-		if _, err := os.Stat(p); err != nil {
+		// Checked where the workspace lives: a container's extra folders
+		// are container paths (FIX-3).
+		if _, err := statOn(ws, p); err != nil {
 			continue
 		}
 		out = append(out, p)
@@ -219,6 +221,9 @@ func paletteItems() []picker.Item {
 		{ID: "pick-theme", Title: "Preferences: Color Theme…"},
 		{ID: "git-stage", Title: "Git: Stage Current File"},
 		{ID: "git-stage-all", Title: "Git: Stage All Changes"},
+		{ID: "git-unstage-all", Title: "Git: Unstage All Changes"},         // git_bulk.go
+		{ID: "git-discard-all", Title: "Git: Discard All Changes…"},        // git_bulk.go
+		{ID: "git-clean-untracked", Title: "Git: Delete Untracked Files…"}, // git_bulk.go
 		{ID: "git-stage-hunk", Title: "Git: Stage Hunk (at cursor)"},
 		{ID: "git-unstage-hunk", Title: "Git: Unstage Hunk (at cursor)"},
 		{ID: "git-discard-hunk", Title: "Git: Discard Hunk (at cursor)"},
@@ -226,6 +231,8 @@ func paletteItems() []picker.Item {
 		{ID: "git-unstage-lines", Title: "Git: Unstage Line (or Selected Lines)"},
 		{ID: "git-discard-lines", Title: "Git: Discard Line (or Selected Lines)"},
 		{ID: "git-commit", Title: "Git: Commit..."},
+		{ID: "git-commit-push", Title: "Git: Commit and Push"}, // git_bulk.go
+		{ID: "git-commit-sync", Title: "Git: Commit and Sync"}, // git_bulk.go
 		{ID: "git-diff", Title: "Git: Show Diff for Current File"},
 		{ID: "git-discard", Title: "Git: Discard Changes in Current File"},
 		{ID: "git-refresh", Title: "Git: Refresh Status"},
@@ -236,7 +243,10 @@ func paletteItems() []picker.Item {
 		{ID: "git-fetch", Title: "Git: Fetch"},
 		{ID: "git-sync", Title: "Git: Sync (Pull, then Push)"},
 		{ID: "git-branch", Title: "Git: Switch Branch..."},
-		{ID: "problems", Title: "Go to Problem..."}, // Group C: "View: Problems" opens the panel now
+		{ID: "git-branch-rename", Title: "Git: Rename Branch…"},    // git_branch_ops.go
+		{ID: "git-branch-delete", Title: "Git: Delete Branch…"},    // git_branch_ops.go
+		{ID: "git-branch-from", Title: "Git: Create Branch From…"}, // git_branch_ops.go
+		{ID: "problems", Title: "Go to Problem..."},                // Group C: "View: Problems" opens the panel now
 		{ID: "code-actions", Title: "Edit: Quick Fix...", Hint: "Ctrl+. / Alt+Enter"},
 		{ID: "code-action-apply-preferred", Title: "Edit: Apply Preferred Quick Fix", Hint: "Ctrl+Shift+."},
 		{ID: "goto-symbol-file", Title: "Go to Symbol in File...", Hint: "Ctrl+Shift+O"},
@@ -303,6 +313,15 @@ func paletteItems() []picker.Item {
 		{ID: "git-ai-explain-changes", Title: "Git: Explain Changes with AI"},        // git_ai_helpers.go
 		{ID: "git-ai-explain-line", Title: "Git: Explain Line's Commit with AI"},     // git_ai_helpers.go
 		{ID: "git-ai-pr-text", Title: "Git: Write Pull Request Description with AI"}, // git_ai_helpers.go
+		{ID: "git-inline-blame", Title: "Git: Toggle Inline Blame"},        // git_blame_view.go
+		{ID: "git-status-blame", Title: "Git: Toggle Blame in Status Bar"}, // git_blame_view.go
+		{ID: "git-blame-annotate", Title: "Git: Toggle Blame Annotations"}, // git_blame_view.go
+		{ID: "git-blame-options", Title: "Git: Blame Options…"},            // git_blame_view.go
+		{ID: "git-blame-commit", Title: "Git: Open Commit of Line"},        // git_blame_view.go
+		{ID: "git-blame-before", Title: "Git: Blame Before This Change"},   // git_blame_view.go
+		{ID: "git-line-history", Title: "Git: Show Line History"},          // git_blame_view.go
+		{ID: "git-rev-prev", Title: "Git: Open Previous Revision of File"}, // git_blame_view.go
+		{ID: "git-rev-next", Title: "Git: Open Next Revision of File"},     // git_blame_view.go
 		{ID: "git-history", Title: "Git: Show File History..."},
 		{ID: "git-tags", Title: "Git: Show Tags..."},
 		{ID: "zen-mode", Title: "View: Toggle Zen Mode", Hint: "Alt+Z"},
@@ -320,6 +339,8 @@ func paletteItems() []picker.Item {
 		{ID: "git-conflict-both", Title: "Git: Accept Both Changes (Conflict at Cursor)"},
 		{ID: "git-clone", Title: "Git: Clone Repository..."},
 		// Three-way merge view (git_merge_view.go).
+		{ID: "git-merge-branch", Title: "Git: Merge Branch…"},                         // git_merge_branch.go
+		{ID: "git-merge-status", Title: "Git: Merge in Progress (Continue / Abort)…"}, // git_merge_branch.go
 		{ID: "git-merge-open", Title: "Git: Open Merge View"},
 		{ID: "git-merge-next", Title: "Git: Merge View: Next Conflict", Hint: "n"},
 		{ID: "git-merge-prev", Title: "Git: Merge View: Previous Conflict", Hint: "p"},
@@ -402,6 +423,7 @@ func paletteItems() []picker.Item {
 	}
 	items = append(items, servicesPaletteItems()...)  // services_actions.go
 	items = append(items, kubePaletteItems()...)      // kube_actions.go
+	items = append(items, worktreePaletteItems()...)  // worktrees_keys.go
 	items = append(items, databasesPaletteItems()...) // DB-3
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
@@ -411,11 +433,13 @@ func paletteItems() []picker.Item {
 	items = append(items, webPaletteItems()...)       // the web panel (web_tui.go)
 	items = append(items, webAccessPaletteItems()...) // pairing and devices (web_access.go)
 	items = append(items, itermocPaletteItems()...)   // the Itermoc view (itermoc_actions.go)
+	items = append(items, workflowsPaletteItems()...) // WFX-7 (workflows_keys.go)
 	items = append(items, ciPaletteItems()...)        // G-CI (ci_card.go)
 	items = append(items, layoutPaletteItems()...)    // G-LAY (layout_palette.go)
 	items = append(items, updatePaletteItems()...)    // G-UPD (update_palette.go)
 	items = append(items, prPaletteItems()...)        // G-PR (pr_list.go)
 	items = append(items, termPanePaletteItems()...)  // terminal splits (terminal_split.go)
+	items = append(items, gitxPaletteItems()...)      // GITX features (gitx_hub.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -551,6 +575,11 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.search = search.New()
 		m.search.SetSize(m.w, m.h)
 		m.search.SetRoots(m.explorer.Roots())
+		if fsys, ok := m.remoteFS(); ok {
+			// A container workspace (FIX-3): its one root, in the container.
+			m.search.SetRoots([]string{m.workspace().Root})
+			m.search.SetFS(fsys)
+		}
 		m.search.SetMaxResults(searchMaxResults(loadSettings()))
 		m.searchOpen = true
 	case "replace-in-file":
@@ -600,6 +629,20 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.showExp = true
 		m.focus = FocusExplorer
 		m.applyLayout()
+	case "git-merge-branch":
+		return m.openMergeBranchPicker()
+	case "git-merge-status":
+		return m.openGitOpControl()
+	case "git-unstage-all":
+		return m.gitUnstageAll()
+	case "git-discard-all":
+		return m.openGitDiscardAllCard()
+	case "git-clean-untracked":
+		return m.openGitCleanUntrackedCard()
+	case "git-commit-push":
+		return m.gitInlineCommitThen(false, false, gitAfterPush)
+	case "git-commit-sync":
+		return m.gitInlineCommitThen(false, false, gitAfterSync)
 	case "git-push":
 		return m.gitPush()
 	case "git-pull":
@@ -610,6 +653,12 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.gitSync()
 	case "git-branch":
 		return m.openBranchPicker()
+	case "git-branch-rename":
+		return m.openRenameBranchPrompt()
+	case "git-branch-delete":
+		return m.openDeleteBranchPicker()
+	case "git-branch-from":
+		return m.openBranchFromPicker()
 	case "problems":
 		return m.openProblemsPicker()
 	case "code-actions":
@@ -753,6 +802,24 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.gitAIExplainLineCommit()
 	case "git-ai-pr-text":
 		return m.gitAIPRText()
+	case "git-inline-blame":
+		return m.toggleInlineBlame()
+	case "git-status-blame":
+		return m.toggleStatusBlame()
+	case "git-blame-annotate":
+		return m.toggleBlameAnnotate()
+	case "git-blame-options":
+		return m.openBlameOptionsPicker()
+	case "git-blame-commit":
+		return m.gitOpenLineCommit()
+	case "git-blame-before":
+		return m.gitBlameBefore()
+	case "git-line-history":
+		return m.gitLineHistoryPicker()
+	case "git-rev-prev":
+		return m.gitStepRevision(-1)
+	case "git-rev-next":
+		return m.gitStepRevision(1)
 	case "git-history":
 		return m.gitFileHistoryPicker()
 	case "git-tags":
@@ -827,6 +894,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	case "snippets-manage":
 		return m.openSnippetManager()
 	default:
+		if cmd, ok := m.dispatchGitxPalette(id); ok { // gitx_hub.go
+			return cmd
+		}
 		if cmd, ok := m.dispatchImportPalette(id); ok { // import_editor.go
 			return cmd
 		}
@@ -852,6 +922,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchItermocPalette(id); ok { // itermoc_actions.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchWorkflowsPalette(id); ok { // workflows_keys.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchCIPalette(id); ok { // ci_card.go
@@ -891,6 +964,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchKubePalette(id); ok { // kube_actions.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchWorktreePalette(id); ok { // worktrees_keys.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchDatabasesPalette(id); ok { // db_actions.go

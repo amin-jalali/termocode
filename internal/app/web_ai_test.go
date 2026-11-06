@@ -340,3 +340,27 @@ func TestWebAIActionExplainAsksInTheChat(t *testing.T) {
 		t.Errorf("not set up: %s", code)
 	}
 }
+
+// Spec (web parity: ai-attach): attach adds the selection (or the whole
+// file, when nothing is selected) to the laptop chat's next message, as
+// AI: Add File / Selection to Chat does; it asks the AI nothing. A file
+// that may hold secrets is never attached.
+func TestWebAIActionAttach(t *testing.T) {
+	r, f := webAIRig(t, "calc/add.go", "package main", "func add(a, b int) int {", "\treturn a + b", "}")
+	s := r.m.aiS()
+	out := webAIActionRes(t, r.call(webproto.OpAIAction, &webproto.AIActionArgs{Buf: 2, Tick: 7, Kind: "attach", Start: 1, End: 3, Line: 1}))
+	if !out.Chat || len(s.attachments) != 1 || s.attachments[0].Label != "add.go:2-3" || s.attachments[0].Text != "func add(a, b int) int {\n\treturn a + b" {
+		t.Fatalf("attach: %+v %+v", out, s.attachments)
+	}
+	webAIActionRes(t, r.call(webproto.OpAIAction, &webproto.AIActionArgs{Buf: 2, Tick: 7, Kind: "attach", Start: 0, End: 0, Line: 0}))
+	if len(s.attachments) != 2 || s.attachments[1].Label != "add.go" || !strings.HasPrefix(s.attachments[1].Text, "package main\n") {
+		t.Fatalf("whole file: %+v", s.attachments[1])
+	}
+	if len(f.requests()) != 0 || s.streaming {
+		t.Fatal("attach asked the AI")
+	}
+	r.h.filesState().bufs[2].path = "id_rsa.pem"
+	if code := webErrCode(r.call(webproto.OpAIAction, &webproto.AIActionArgs{Buf: 2, Tick: 7, Kind: "attach", Start: 0, End: 0, Line: 0})); code != "forbidden" || len(s.attachments) != 2 {
+		t.Errorf("secret file: %s", code)
+	}
+}

@@ -96,6 +96,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"status:services": {name: "Services", help: "guides/services.md#the-view"},
 	"status:ci":       {name: "CI and pull request", help: "guides/git.md#ci-and-pull-requests"},
 	"status:update":   {name: "A newer termocode is out", help: "getting-started/install.md#update-termocode"},
+	"status:blame":    {name: "Who changed this line: click to open the commit", help: "guides/git.md#blame"},
 	"status:debug":    {name: "Call stack", help: "guides/debug.md#step-through-code"},
 	"status:branch":   {name: "Git branch", help: helpBranches},
 	"status:indent":   {name: "Indentation"},

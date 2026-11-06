@@ -278,7 +278,7 @@ func TestDeskAIMenuDocRejectAndExplain(t *testing.T) {
 	p, c, _ := openAIDesk(t, false, false, "calc.go", "package calc", "func Add(a, b int) int { return a + b }")
 	deskCaret(p, 1, 0)
 	editorRightClick(p)
-	if got := menuLabels(p); !strings.Contains(got, "Paste|Explain with AI|Fix with AI|Edit with AI…|Generate Doc Comment with AI|Command Palette…") {
+	if got := menuLabels(p); !strings.Contains(got, "Paste|Explain with AI|Fix with AI|Edit with AI…|Generate Doc Comment with AI|Add to AI Chat|Command Palette…") {
 		t.Errorf("editor menu %q", got)
 	}
 	menuPick(p, "Generate Doc Comment with AI")
@@ -304,6 +304,21 @@ func TestDeskAIMenuDocRejectAndExplain(t *testing.T) {
 	}
 	reply(t, c, r, webproto.AIAction{Kind: "explain", Chat: true, ChatID: "c-1", Lines: []string{}})
 	p.WaitJS(`document.querySelector(".chatcol")`)
+}
+
+// Add to AI Chat (web parity: ai-attach) adds the selection to the laptop
+// chat's next message; the AI is asked nothing yet.
+func TestDeskAIAttach(t *testing.T) {
+	p, c, _ := openAIDesk(t, false, false, "calc.go", "package calc", "func Add(a, b int) int { return a + b }")
+	deskCaret(p, 1, 0)
+	editorRightClick(p)
+	menuPick(p, "Add to AI Chat")
+	r, a := expectAIAction(t, c)
+	if a.Kind != "attach" || a.Line != 1 || a.Instruction != "" {
+		t.Fatalf("attach %+v", a)
+	}
+	reply(t, c, r, webproto.AIAction{Kind: "attach", Chat: true, ChatID: "c-1", Lines: []string{}})
+	p.WaitJS(`(` + toastsJS + `).includes("Added to the AI chat's next message")`)
 }
 
 // The chat's input shows the laptop's profile and model (where its

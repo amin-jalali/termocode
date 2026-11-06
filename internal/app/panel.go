@@ -58,6 +58,7 @@ const (
 	panelKindOutput
 	panelKindTests
 	panelKindDebugConsole
+	panelKindAgentChat // agent_chat.go (AGX-8)
 )
 
 // panelKindSpec describes how a non-terminal tab kind renders and reacts.

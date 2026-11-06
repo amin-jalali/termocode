@@ -1,0 +1,12 @@
+# termocode-service: managed by termocode, remove with `termocode service uninstall`
+[Unit]
+Description=termocode session for /home/u/my proj
+
+[Service]
+Type=simple
+ExecStart="/usr/local/bin/termocode" __session-server "/home/u/my proj"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

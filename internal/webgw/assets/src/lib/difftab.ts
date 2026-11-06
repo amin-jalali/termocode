@@ -7,6 +7,7 @@
 //   "@review:" + card + ":" + path     the AI's change a review card asks about
 //   "@ai:" + n + ":" + path    the AI's suggestion n for a file (lib/ai.ts)
 //   "@agent:" + id + ":" + path   a file an agent changed in its worktree
+//   "@rev:" + hash + ":" + path   a commit's file against the working tree
 import { t } from "../strings";
 import { vtabName, vtabOf } from "./vtabs";
 import { gitTabName, gitTabOf } from "./gittab";
@@ -17,8 +18,9 @@ const TIMELINE = "@timeline:";
 const REVIEW = "@review:";
 const AI = "@ai:";
 const AGENT = "@agent:";
+const REV = "@rev:";
 
-export type DiffKind = "wt" | "idx" | "commit" | "review" | "ai" | "agent";
+export type DiffKind = "wt" | "idx" | "commit" | "review" | "ai" | "agent" | "rev";
 
 export interface DiffTab {
   kind: DiffKind;
@@ -51,6 +53,7 @@ function keyed(tab: string, prefix: string, key: RegExp): { key: string; path: s
 export function diffTab(kind: DiffKind, path: string, hash = ""): string {
   if (kind === "wt") return WT + path;
   if (kind === "idx") return IDX + path;
+  if (kind === "rev") return REV + hash + ":" + path;
   return (kind === "review" ? REVIEW : TIMELINE) + hash + ":" + path;
 }
 
@@ -66,6 +69,8 @@ export function diffOf(tab: string): DiffTab | null {
   }
   const ai = keyed(tab, AI, /^[0-9]+$/);
   if (ai) return { kind: "ai", path: ai.path, hash: ai.key };
+  const rv = keyed(tab, REV, /^[0-9a-f]{4,64}$/);
+  if (rv) return { kind: "rev", path: rv.path, hash: rv.key };
   const ag = keyed(tab, AGENT, /^[A-Za-z0-9][A-Za-z0-9._-]*$/);
   if (ag) return { kind: "agent", path: ag.path, hash: ag.key };
   if (!tab.startsWith(TIMELINE)) return null;
@@ -106,6 +111,7 @@ export function tabName(tab: string): string {
   if (d.kind === "review") return t("dv.tab_review", { name });
   if (d.kind === "ai") return t("ai.tab", { name });
   if (d.kind === "agent") return t("ai.tab_agent", { name });
+  if (d.kind === "rev") return t("dv.tab_rev", { name, hash: d.hash });
   return t("dv.tab_commit", { name, hash: d.hash });
 }
 
@@ -113,6 +119,7 @@ export function tabName(tab: string): string {
 export function revs(d: DiffTab): { left: string; right: string } {
   if (d.kind === "ai" || d.kind === "agent") return { left: "", right: "" }; // not git's: views/AIDiff.tsx
   if (d.kind === "wt") return { left: "index", right: "" };
+  if (d.kind === "rev") return { left: d.hash, right: "" };
   if (d.kind === "idx") return { left: "HEAD", right: "index" };
   if (d.kind === "review") return { left: "", right: "" };
   return { left: d.hash + "^", right: d.hash };
