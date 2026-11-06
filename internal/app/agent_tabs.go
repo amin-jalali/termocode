@@ -199,6 +199,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
 		return m.openAgentSessionsSearch(), true
 	}
+	if id == agentNamesPaletteID { // Worktree: Suggest a Name… (agent_names.go)
+		return m.openAgentNames(), true
+	}
 	if id == agentHibernatePaletteID { // Agent: Hibernate or Wake (agent_hibernate.go)
 		return m.toggleAgentHibernate(), true
 	}

@@ -124,6 +124,10 @@ type Model struct {
 	agentHibernatePending int
 	agentHibernateAlways  bool
 	agentLaterCmds        []tea.Cmd
+	// AGX-16 (agent_names.go): what Enter on a suggested name does, and
+	// the request in flight.
+	agentNamesOnPick agentNamesPick
+	agentNamesGen    int
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process

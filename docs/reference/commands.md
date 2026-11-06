@@ -650,6 +650,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workspace: Add Folder... | `workspace-add-folder` |   |   |
 | Workspace: Remove Folder... | `workspace-remove-folder` |   |   |
 
+## Worktree
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Worktree: Suggest a Name… | `worktree-suggest-name` |   | `quick model drafts branch names` |
+
 ## termocode
 
 | Title | ID | Key | Hint |

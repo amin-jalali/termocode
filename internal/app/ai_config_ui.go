@@ -82,6 +82,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAgentPicked(id), true
 	case pickerKindAgentSessions: // agent_sessions.go
 		return m.onAgentSessionPicked(id), true
+	case pickerKindAgentNames: // agent_names.go
+		return m.onAgentNamePicked(id), true
 	case pickerKindAgentAccounts: // agent_accounts.go
 		return m.onAgentAccountPicked(id), true
 	case pickerKindAgentSessionsHits: // agent_sessions_search.go
@@ -110,6 +112,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIEditInstruction(value), true
 	case promptKindAIKey:
 		return m.onAIKeyEntered(value), true
+	case promptKindAgentNames: // agent_names.go
+		return m.onAgentNamesTask(value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go

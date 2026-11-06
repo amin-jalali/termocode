@@ -2209,6 +2209,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `web-totp` | Web: Set Up Sign-in Code… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (a second factor of the web sign-in) |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
 | `workspace-remove-folder` | Workspace: Remove Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
+| `worktree-suggest-name` | Worktree: Suggest a Name… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the name |
 | `zen-mode` | View: Toggle Zen Mode | auto |   |
 
 ## Settings
