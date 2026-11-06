@@ -28,7 +28,7 @@ func runCmd(t *testing.T, p *Page, c *HubConn, first bool, search, label string)
 const deskCursors = deskDoc + `.querySelectorAll(".cursors-layer .cursor").length`
 
 // Spec (WEBP-1): multi-cursor editing has its commands in the list, with
-// the editor's own keys: Selection: Add Cursor Below / Above, Add
+// the editor's own keys: Selection: Add Caret Below / Above, Add
 // Selection to Next Find Match and Select All Occurrences. Typing then
 // edits at every caret, through the laptop's buffer like one edit.
 func TestDeskMultiCursorCommands(t *testing.T) {
@@ -36,7 +36,7 @@ func TestDeskMultiCursorCommands(t *testing.T) {
 	openDesk(t, p, c, 2, "a.txt", "foo", "foo", "bar")
 	deskFocus(p)
 	p.Do(deskTextEnd(false))
-	runCmd(t, p, c, true, "add cursor below", "Selection: Add Cursor Below")
+	runCmd(t, p, c, true, "add caret below", "Selection: Add Caret Below")
 	p.WaitJS(deskCursors + ` === 2`)
 	v := &vimRig{t: t, p: p, c: c, tick: 3}
 	v.keys("X", "Xfoo", "Xfoo", "bar")
@@ -58,10 +58,10 @@ func TestDeskMultiCursorCommands(t *testing.T) {
 	p.WaitJS(deskCursors + ` === 2`)
 	v.keys("Z", "Z", "Z", "bar")
 
-	// Add Cursor Above, from the last row.
+	// Add Caret Above, from the last row.
 	deskFocus(p)
 	p.Do(deskTextEnd(true))
-	runCmd(t, p, c, false, "add cursor above", "Selection: Add Cursor Above")
+	runCmd(t, p, c, false, "add caret above", "Selection: Add Caret Above")
 	p.WaitJS(deskCursors + ` === 2`)
 	if probs := p.Problems(); len(probs) > 0 {
 		t.Errorf("problems (CSP, console): %v", probs)
