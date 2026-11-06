@@ -86,7 +86,7 @@ func (m *Model) wtLinkCard(value string) connectcard.Card {
 	rows := []connectcard.Row{
 		{Kind: connectcard.Text, Text: "Worktree  " + f.title},
 		{Kind: connectcard.Blank},
-		{Kind: connectcard.Input, ID: "ref", Text: "Issue or PR", Inline: true, Placeholder: "412, #412 or its GitHub URL", Value: value},
+		{Kind: connectcard.Input, ID: "ref", Text: "Link", Inline: true, Placeholder: "412, #412 or its GitHub URL", Value: value},
 		{Kind: connectcard.Dim, Text: "The card shows its state and CI; gh reads it with your own sign-in."},
 	}
 	switch {
