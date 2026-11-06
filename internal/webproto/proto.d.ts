@@ -754,6 +754,10 @@ export interface GitCloneArgs {
   url: string;
 }
 
+export interface ItermocAskArgs {
+  action: "ai-add" | "ai-model-slot-add" | "ai-models-edit" | "ai-profile-edit" | "ai-profile-new" | "ai-profile-form";
+}
+
 export interface ItemArgs {
   path: string;
 }
@@ -2449,6 +2453,55 @@ export interface GitRebaseState {
   conflicts?: string[];
 }
 
+export interface Itermoc {
+  profiles: ItermocProfile[];
+  slots: ItermocSlot[];
+  providers: ItermocProvider[];
+  services: ItermocService[];
+  listening: boolean;
+  agents: ItermocAgent[];
+  problems?: number;
+}
+
+export interface ItermocProfile {
+  name: string;
+  title?: string;
+  source: "builtin" | "user" | "project";
+  trust: "use" | "ask" | "refused";
+  active?: boolean;
+  steps: number;
+  model?: string;
+}
+
+export interface ItermocSlot {
+  name: string;
+  provider?: string;
+  model?: string;
+  hasKey: "ok" | "missing" | "none" | "unset";
+  user?: boolean;
+}
+
+export interface ItermocProvider {
+  kind: string;
+  name: string;
+  label?: string;
+  cost?: string;
+  models: number;
+  signedOut?: boolean;
+}
+
+export interface ItermocService {
+  name: string;
+  state: string;
+  tools: number;
+}
+
+export interface ItermocAgent {
+  name: string;
+  since: string;
+  calls: number;
+}
+
 export interface TreeChanged {
   path: string;
 }
@@ -2848,6 +2901,8 @@ export interface OpArgs {
   "git.rebase": GitRebaseArgs;
   "git.rebase_ctl": GitRebaseCtlArgs;
   "git.clone": GitCloneArgs;
+  "itermoc.state": EmptyArgs;
+  "itermoc.ask": ItermocAskArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -3087,6 +3142,8 @@ export interface OpResult {
   "git.rebase": AskRef;
   "git.rebase_ctl": AskRef;
   "git.clone": AskRef;
+  "itermoc.state": Itermoc;
+  "itermoc.ask": AskRef;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;
