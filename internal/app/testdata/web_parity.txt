@@ -63,6 +63,7 @@ web	git-branch	op:git.branches
 web	git-ci	op:ci.status
 web	git-clone	cmd:gitClone
 web	git-commit	op:git.commit
+web	git-compare-rev	cmd:gitCompareRev
 web	git-conflict-both	op:git.resolve_side
 web	git-conflict-next	cmd:nextConflict
 web	git-conflict-ours	op:git.resolve_side
@@ -366,7 +367,6 @@ missing	explorer-undo-rename	Editor and files|S
 missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
 missing	git-ci-fix	Git|S
-missing	git-compare-rev	Git|S
 missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
 missing	goto-type-def	Editor and files|S
