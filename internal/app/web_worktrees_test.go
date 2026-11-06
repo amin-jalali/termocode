@@ -72,8 +72,8 @@ func TestWorktreesTopicSnapshot(t *testing.T) {
 		t.Errorf("archived %+v", old)
 	}
 	b, _ := json.Marshal(frames)
-	if strings.Contains(string(b), `"/src/app"`) {
-		t.Errorf("a raw path went to the page: %s", b)
+	if strings.Contains(string(b), `"id":"/`) || strings.Contains(string(b), `"parent":"/`) {
+		t.Errorf("a path names a worktree on the page: %s", b)
 	}
 	st.entries[1].Meta.Pinned = false
 	st.touch()
