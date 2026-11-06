@@ -1,0 +1,11 @@
+⏺ I updated the three parsers. Two tests still fail; I will look at the
+  tokenizer next.
+
+  ⎿  Claude usage limit reached. Your limit will reset at 2pm (Europe/Berlin).
+
+     /upgrade to increase your usage limit.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ >                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
