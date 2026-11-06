@@ -10,8 +10,8 @@ import (
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
-// runCmd runs a workbench command by its name from the command list.
-func runCmd(t *testing.T, p *Page, c *HubConn, first bool, search, label string) {
+// runCmdKeys runs a workbench command by its name from the command list.
+func runCmdKeys(t *testing.T, p *Page, c *HubConn, first bool, search, label string) {
 	t.Helper()
 	wbKey(p, "P", true, true)
 	if first {
@@ -36,7 +36,7 @@ func TestDeskMultiCursorCommands(t *testing.T) {
 	openDesk(t, p, c, 2, "a.txt", "foo", "foo", "bar")
 	deskFocus(p)
 	p.Do(deskTextEnd(false))
-	runCmd(t, p, c, true, "add caret below", "Selection: Add Caret Below")
+	runCmdKeys(t, p, c, true, "add caret below", "Selection: Add Caret Below")
 	p.WaitJS(deskCursors + ` === 2`)
 	v := &vimRig{t: t, p: p, c: c, tick: 3}
 	v.keys("X", "Xfoo", "Xfoo", "bar")
@@ -46,22 +46,22 @@ func TestDeskMultiCursorCommands(t *testing.T) {
 	realKeys(p, string(kb.Escape))
 	p.Do(deskTextEnd(false))
 	p.WaitJS(deskCursors + ` === 1`)
-	runCmd(t, p, c, false, "next find match", "Selection: Add Selection to Next Find Match")
-	runCmd(t, p, c, false, "next find match", "Selection: Add Selection to Next Find Match")
+	runCmdKeys(t, p, c, false, "next find match", "Selection: Add Selection to Next Find Match")
+	runCmdKeys(t, p, c, false, "next find match", "Selection: Add Selection to Next Find Match")
 	p.WaitJS(deskCursors + ` === 2`)
 	v.keys("Y", "Y", "Y", "bar")
 
 	// All occurrences of the word under the caret at once.
 	deskFocus(p)
 	p.Do(deskTextEnd(false))
-	runCmd(t, p, c, false, "select all occurrences", "Selection: Select All Occurrences")
+	runCmdKeys(t, p, c, false, "select all occurrences", "Selection: Select All Occurrences")
 	p.WaitJS(deskCursors + ` === 2`)
 	v.keys("Z", "Z", "Z", "bar")
 
 	// Add Caret Above, from the last row.
 	deskFocus(p)
 	p.Do(deskTextEnd(true))
-	runCmd(t, p, c, false, "add caret above", "Selection: Add Caret Above")
+	runCmdKeys(t, p, c, false, "add caret above", "Selection: Add Caret Above")
 	p.WaitJS(deskCursors + ` === 2`)
 	if probs := p.Problems(); len(probs) > 0 {
 		t.Errorf("problems (CSP, console): %v", probs)

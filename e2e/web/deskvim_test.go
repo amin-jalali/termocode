@@ -67,7 +67,7 @@ func (v *vimRig) mode(want string) {
 // laptop's list is asked for the first time only).
 func toggleVim(t *testing.T, p *Page, c *HubConn, first bool) {
 	t.Helper()
-	runCmd(t, p, c, first, "toggle vi keys", "Editor: Toggle vi Keys")
+	runCmdKeys(t, p, c, first, "toggle vi keys", "Editor: Toggle vi Keys")
 }
 
 // Spec (WEBP-1): Vim mode in the desktop editor, off until Editor: Toggle
