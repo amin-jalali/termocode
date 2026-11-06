@@ -175,7 +175,7 @@ func (m *Model) onWTCleanupPrep(msg wtCleanupPrepMsg) tea.Cmd {
 	m.picker = picker.NewItems(" Clean up worktrees ", msg.c.items())
 	m.picker.SetWidth(min(m.w-4, 110))
 	m.picker.SetRowAction("space", "tick")
-	m.picker.SetNote([]string{"[x] is archived: its folder goes, its branch stays (x restores it). A worktree with changed files is never pre-ticked."})
+	m.picker.SetNote([]string{"[x] is archived: the folder goes, the branch stays. Changed files are never pre-ticked."})
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindWTCleanup

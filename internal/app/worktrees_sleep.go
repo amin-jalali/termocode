@@ -77,12 +77,17 @@ func wtDescendants(entries []worktrees.Entry, path string) []worktrees.Entry {
 // wtAgentTabsIn are this window's agent tabs whose folder is in one of
 // paths: their BufIDs and titles.
 func (m *Model) wtAgentTabsIn(paths []string) (bufs []int, names []string) {
-	if m.wt != nil && m.wt.off {
-		return nil, nil
-	}
 	in := map[string]bool{}
 	for _, p := range paths {
 		in[p] = true
+	}
+	if m.wt != nil && m.wt.off { // a demo: its canned tabs, never stopped
+		for _, t := range m.wt.demoTabs {
+			if t.name != "" && in[wtOwner(m.wt.entries, t.cwd)] {
+				bufs, names = append(bufs, -1), append(names, t.name)
+			}
+		}
+		return bufs, names
 	}
 	for _, t := range m.terminalTabs {
 		if t.Agent == "" {
@@ -160,7 +165,7 @@ func (m *Model) worktreeSleep() tea.Cmd {
 		}
 		body.WriteString("\n\nIt has " + wtChildCount(len(awake)) + ": " + strings.Join(titles, ", ") + ".")
 		if extra := allNames[len(names):]; len(extra) > 0 {
-			body.WriteString(" With them, their agent tabs end too: " + strings.Join(extra, ", ") + ".")
+			body.WriteString(" Sleeping with " + map[bool]string{true: "it", false: "them"}[len(awake) == 1] + " also ends " + strings.Join(extra, ", ") + ".")
 		}
 	}
 	if n := m.wt.wtOtherAgentsIn(append([]string{it.e.Path}, awake...)); n > 0 {
@@ -215,7 +220,9 @@ func (m *Model) answerWTSleep(id string) tea.Cmd {
 // wtSleepDo ends the tabs and marks paths asleep.
 func (m *Model) wtSleepDo(paths []string, tabs []int, title string) tea.Cmd {
 	for _, b := range tabs {
-		wtStopTab(m, b)
+		if b >= 0 {
+			wtStopTab(m, b)
+		}
 	}
 	now := clock.Now()
 	for _, p := range paths {
