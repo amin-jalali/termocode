@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
+	"github.com/amin-jalali/termocode/internal/textdiff"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -142,6 +143,10 @@ func (m Model) renderPane(p Pane, w, h int) []string {
 		if r.line < 0 {
 			body = "┄ nothing here"
 			tx = tx.Foreground(theme.LG(theme.TextDim)).Italic(true)
+		}
+		if spans := m.wordSpans(p, r); spans != nil { // GITX-34: the changed words
+			out = append(out, nm.Render(fit(g, gutterW-1)+mark)+renderSpans(spans, tx, w-gutterW))
+			continue
 		}
 		out = append(out, nm.Render(fit(g, gutterW-1)+mark)+tx.Render(fit(" "+body, w-gutterW)))
 	}
@@ -313,4 +318,63 @@ func (m *Model) Click(x, y int) bool {
 	}
 	m.setCur(rs[i].block)
 	return true
+}
+
+// wordSpans is the word diff of row r of the current conflict in pane p
+// (ours or theirs) against the same line of the other side; nil when
+// there is none to show.
+func (m Model) wordSpans(p Pane, r row) []textdiff.Span {
+	if r.block != m.cur || r.line < 0 || (p != PaneOurs && p != PaneTheirs) || m.cur >= len(m.blocks) {
+		return nil
+	}
+	other := PaneTheirs
+	if p == PaneTheirs {
+		other = PaneOurs
+	}
+	b := m.blocks[m.cur]
+	ol := b.Ranges[other][0] + r.line - b.Ranges[p][0]
+	if ol < b.Ranges[other][0] || ol >= b.Ranges[other][1] || ol >= len(m.sides[other]) {
+		return nil
+	}
+	o := m.sides[other][ol]
+	if o == r.text {
+		return nil
+	}
+	var mine []textdiff.Span
+	if p == PaneOurs {
+		mine, _ = textdiff.WordDiff(r.text, o)
+	} else {
+		_, mine = textdiff.WordDiff(o, r.text)
+	}
+	return mine
+}
+
+// renderSpans draws " "+spans in w cells, the changed ones underlined.
+func renderSpans(spans []textdiff.Span, tx lipgloss.Style, w int) string {
+	if w <= 0 {
+		return ""
+	}
+	hi := tx.Underline(true).Bold(true)
+	var b strings.Builder
+	b.WriteString(tx.Render(" "))
+	used := 1
+	for _, sp := range spans {
+		t := strings.ReplaceAll(sp.Text, "\t", "    ")
+		if used >= w {
+			break
+		}
+		if sw := runewidth.StringWidth(t); used+sw > w {
+			t = runewidth.Truncate(t, max(w-used-1, 0), "") + "…"
+		}
+		st := tx
+		if sp.Changed {
+			st = hi
+		}
+		b.WriteString(st.Render(t))
+		used += runewidth.StringWidth(t)
+	}
+	if used < w {
+		b.WriteString(tx.Render(strings.Repeat(" ", w-used)))
+	}
+	return ansi.Truncate(b.String(), w, "")
 }

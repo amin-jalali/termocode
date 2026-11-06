@@ -317,6 +317,10 @@ func lcsDiff(a, b []string) []op {
 
 // ── Word-level intra-line diff ────────────────────────────────────────────
 
+// WordDiff is the word-level diff of two lines: the old and the new
+// spans, the changed words marked (the merge view underlines them).
+func WordDiff(oldLine, newLine string) ([]Span, []Span) { return wordDiff(oldLine, newLine) }
+
 // wordDiff diffs two changed lines token by token and returns the old and
 // new spans, neighbours of the same kind merged.
 func wordDiff(oldLine, newLine string) ([]Span, []Span) {
