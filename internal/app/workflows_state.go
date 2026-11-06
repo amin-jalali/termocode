@@ -48,6 +48,8 @@ const (
 	// workflows_trust.go
 	confirmKindWorkflowUndo   confirmKindEnum = 3505
 	confirmKindWorkflowBudget confirmKindEnum = 3506
+	// the schedule went off while a run works: stop it too?
+	confirmKindWorkflowOffStop confirmKindEnum = 3507
 )
 
 // wfxNarrowW: a window narrower than this shows the view as one page.
@@ -456,8 +458,19 @@ func (m *Model) answerWorkflowCard(id string) tea.Cmd {
 		if id != "toggle" || !ok {
 			return nil
 		}
-		return m.wfxToggle(e)
-	case confirmKindWorkflowStop:
+		was := e.Enabled
+		cmd := m.wfxToggle(e)
+		if was && m.wfxRunning(name) != nil {
+			if now, ok := wire.Find(st.list, name); ok && !now.Enabled {
+				st.pending = name
+				m.wfxCard(confirmKindWorkflowOffStop, "Stop the run of "+name+" too?",
+					name+" is off now: no new run starts on its schedule. A run of it still works.\n"+
+						"Keep running lets it finish. Stop run ends it; finished items keep their results.",
+					confirm.Button{ID: "keep", Title: "Keep running"}, confirm.Button{ID: "stop", Title: "Stop run", Style: confirm.StyleDestructive})
+			}
+		}
+		return cmd
+	case confirmKindWorkflowStop, confirmKindWorkflowOffStop:
 		if id != "stop" {
 			return nil
 		}
