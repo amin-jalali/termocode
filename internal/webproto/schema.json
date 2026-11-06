@@ -2379,7 +2379,8 @@
             "explain",
             "fix",
             "edit",
-            "doc"
+            "doc",
+            "attach"
           ]
         },
         "lines": {
@@ -2423,7 +2424,8 @@
             "explain",
             "fix",
             "edit",
-            "doc"
+            "doc",
+            "attach"
           ]
         },
         "line": {

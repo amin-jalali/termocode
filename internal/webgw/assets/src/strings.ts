@@ -1002,6 +1002,8 @@ export const S = {
   "aiinfo.serve_config": "MCP: termocode Server Config",
   "aiinfo.configure": "AI: Provider Setup",
   "aiinfo.bug_report": "Help: Bug Report",
+  "ai.attach": "Add to AI Chat",
+  "ai.attached": "Added to the AI chat's next message",
 } as const;
 
 export type StringKey = keyof typeof S;

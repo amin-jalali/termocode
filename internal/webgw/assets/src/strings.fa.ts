@@ -998,4 +998,6 @@ export const FA: Record<StringKey, string> = {
   "aiinfo.serve_config": "MCP: تنظیم سرور termocode",
   "aiinfo.configure": "هوش مصنوعی: تنظیم ارائه‌دهنده",
   "aiinfo.bug_report": "راهنما: گزارش اشکال",
+  "ai.attach": "افزودن به گفتگوی هوش مصنوعی",
+  "ai.attached": "به پیام بعدی گفتگوی هوش مصنوعی افزوده شد",
 };

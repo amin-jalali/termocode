@@ -309,7 +309,7 @@ export interface AINextEditArgs {
 export interface AIActionArgs {
   buf: number;
   tick: number;
-  kind: "explain" | "fix" | "edit" | "doc";
+  kind: "explain" | "fix" | "edit" | "doc" | "attach";
   start: number;
   end: number;
   line: number;
@@ -1397,7 +1397,7 @@ export interface AINextEdit {
 }
 
 export interface AIAction {
-  kind: "explain" | "fix" | "edit" | "doc";
+  kind: "explain" | "fix" | "edit" | "doc" | "attach";
   chat?: boolean;
   chatId?: string;
   none?: boolean;
