@@ -27,6 +27,7 @@ type prState struct {
 	threads    []ghci.Thread // the review threads of detail, open first (pr_threads.go)
 	thread     string        // the id of the thread on the card
 	wantThread string        // show this thread again once the PR is read again
+	line       *prLineTarget // the line the open comment prompt is for (pr_line_comment.go)
 }
 
 // prS returns the state, creating it on first use.

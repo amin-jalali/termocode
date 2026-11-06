@@ -63,8 +63,13 @@ func (m *Model) onPRDiff(msg prDiffMsg) tea.Cmd {
 		Author: d.Author, Files: len(files), Add: add, Del: del,
 		OldLabel: "− " + d.Base, NewLabel: "+ " + d.Branch,
 	}, files, []diffview.Button{{ID: "copy-link", Label: "Copy link", Kind: "primary"}})
-	card.SetCustom(map[string]string{"y": "copy-link"},
-		[]string{"y", "copy link", "n/p", "change", "tab", "file", "t", "split/unified", "esc", "close"})
+	keys := map[string]string{"y": "copy-link"}
+	hints := []string{"y", "copy link", "n/p", "change", "tab", "file", "t", "split/unified", "esc", "close"}
+	if d.State == "OPEN" {
+		keys["c"], keys["s"] = "comment", "suggest"
+		hints = append([]string{"c", "comment", "s", "suggest"}, hints...)
+	}
+	card.SetCustom(keys, hints)
 	m.aiS().review = &aiReview{card: card, onAction: func(m *Model, id string) tea.Cmd { return m.prDiffAction(id) }}
 	return m.showAIReview()
 }
@@ -97,6 +102,8 @@ func (m *Model) prDiffAction(id string) tea.Cmd {
 	switch id {
 	case "copy-link":
 		return m.copyWithToast(d.URL, fmt.Sprintf("Copied the link of %s", prRef(d.Number)))
+	case "comment", "suggest": // pr_line_comment.go
+		return m.prAskLineComment(id == "suggest")
 	}
 	return nil
 }
