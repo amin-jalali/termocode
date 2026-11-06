@@ -1,6 +1,9 @@
 package webproto
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 // Spec (WEBP containers): the host's images, networks, volumes, contexts
 // and registries, an inspect (env values masked on the hub), an image's
@@ -60,7 +63,7 @@ func TestContainersLaptopOps(t *testing.T) {
 	checkArgs(t, OpContainersExec, []string{`{"id":"9f3c2e1a1234","kind":"rm"}`, `{"id":"x","kind":"shell"}`}, []string{`{"id":"9f3c2e1a1234","kind":"shell"}`, `{"id":"9f3c2e1a1234","kind":"attach"}`})
 	checkRow(t, OpContainersExec, RoleController, true, AuditYes)
 	checkArgs(t, OpContainersImage,
-		[]string{`{"verb":"build","ref":"nginx:1.27"}`, `{"verb":"pull","ref":"-x"}`, `{"verb":"run","ref":"nginx:1.27","name":"-n"}`, `{"verb":"run","ref":"nginx:1.27","ports":["-p"]}`, `{"verb":"run","ref":"nginx:1.27","env":["A=b"]}`, `{"verb":"pull","ref":"nginx","password":"x"}`},
+		[]string{`{"verb":"build","ref":"nginx:1.27"}`, `{"verb":"pull","ref":"-x"}`, `{"verb":"run","ref":"nginx:1.27","name":"-n"}`, `{"verb":"run","ref":"nginx:1.27","ports":["-p"]}`},
 		[]string{`{"verb":"pull","ref":"postgres:17"}`, `{"verb":"push","ref":"ghcr.io/acme/api:1.4"}`, `{"verb":"remove","ref":"nginx:1.27"}`, `{"verb":"run","ref":"nginx:1.27","name":"web","ports":["8080:80"]}`})
 	checkRow(t, OpContainersImage, RoleController, true, AuditYes)
 	checkArgs(t, OpContainersPrune, []string{`{"kind":"everything"}`, `{"kind":""}`}, []string{`{"kind":"containers"}`, `{"kind":"images"}`, `{"kind":"images-all"}`, `{"kind":"networks"}`, `{"kind":"volumes"}`, `{"kind":"system"}`})
@@ -71,10 +74,17 @@ func TestContainersLaptopOps(t *testing.T) {
 	checkRow(t, OpContainersComposeAsk, RoleController, true, AuditYes)
 	checkArgs(t, OpContainersContextDefault, []string{`{"name":"-x"}`}, []string{`{"name":"remote"}`})
 	checkRow(t, OpContainersContextDefault, RoleController, true, AuditYes)
-	checkArgs(t, OpContainersRegistry, []string{`{"verb":"login","host":"ghcr.io"}`, `{"verb":"connect","host":"-x"}`, `{"verb":"connect","host":"ghcr.io","password":"x"}`}, []string{`{"verb":"connect","host":"ghcr.io"}`, `{"verb":"connect","host":""}`, `{"verb":"signout","host":"ghcr.io"}`})
+	checkArgs(t, OpContainersRegistry, []string{`{"verb":"login","host":"ghcr.io"}`, `{"verb":"connect","host":"-x"}`}, []string{`{"verb":"connect","host":"ghcr.io"}`, `{"verb":"connect","host":""}`, `{"verb":"signout","host":"ghcr.io"}`})
 	checkRow(t, OpContainersRegistry, RoleController, true, AuditYes)
 	checkArgs(t, OpContainersOpenDB, []string{`{"id":"pg"}`}, []string{`{"id":"9f3c2e1a1234"}`})
 	checkRow(t, OpContainersOpenDB, RoleController, true, AuditYes)
 	checkArgs(t, OpServicesStopAll, nil, []string{`{}`})
 	checkRow(t, OpServicesStopAll, RoleController, true, AuditYes)
+	// No field carries an env value or a password: such args are refused.
+	for _, c := range [][2]string{{OpContainersImage, `{"verb":"run","ref":"nginx:1.27","env":["A=b"]}`}, {OpContainersImage, `{"verb":"pull","ref":"nginx","password":"x"}`},
+		{OpContainersRegistry, `{"verb":"connect","host":"ghcr.io","password":"x"}`}} {
+		if _, err := DecodeArgs(c[0], json.RawMessage(c[1])); err == nil {
+			t.Errorf("%s %s was taken", c[0], c[1])
+		}
+	}
 }

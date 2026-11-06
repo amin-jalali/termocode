@@ -363,6 +363,68 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface InspectArgs {
+  kind: "container" | "image" | "network" | "volume";
+  id: string;
+}
+
+export interface RefArgs {
+  ref: string;
+}
+
+export interface ContainerArgs {
+  id: string;
+}
+
+export interface SearchTermArgs {
+  term: string;
+}
+
+export interface ImageTagArgs {
+  ref: string;
+  tag: string;
+}
+
+export interface StorageArgs {
+  kind: "network" | "volume";
+  name: string;
+}
+
+export interface ComposeArgs {
+  project: string;
+  verb: "up" | "restart";
+}
+
+export interface ContextArgs {
+  name: string;
+}
+
+export interface ExecArgs {
+  id: string;
+  kind: "shell" | "attach";
+}
+
+export interface ImageActArgs {
+  verb: "pull" | "push" | "run" | "remove";
+  ref: string;
+  name?: string;
+  ports?: string[];
+}
+
+export interface PruneArgs {
+  kind: "containers" | "images" | "images-all" | "networks" | "volumes" | "system";
+}
+
+export interface ComposeAskArgs {
+  project: string;
+  verb: "stop" | "down";
+}
+
+export interface RegistryArgs {
+  verb: "connect" | "signout";
+  host: string;
+}
+
 export interface GitGraphArgs {
   skip?: number;
   head?: boolean;
@@ -471,10 +533,6 @@ export interface UploadArgs {
 export interface ContainerLogsArgs {
   id: string;
   lines?: number;
-}
-
-export interface ContainerArgs {
-  id: string;
 }
 
 export interface PaletteArgs {
@@ -1527,6 +1585,119 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface ContainersHost {
+  engine: string;
+  context?: string;
+  images: ImageItem[];
+  networks: NetworkItem[];
+  volumes: VolumeItem[];
+  contexts: ContextItem[];
+  registries: RegistryItem[];
+  problems?: Record<string, string>;
+}
+
+export interface ImageItem {
+  id: string;
+  tags: string[];
+  size?: string;
+  created?: string;
+  in_use?: boolean;
+}
+
+export interface NetworkItem {
+  name: string;
+  driver?: string;
+  scope?: string;
+  built_in?: boolean;
+}
+
+export interface VolumeItem {
+  name: string;
+  driver?: string;
+  size?: string;
+}
+
+export interface ContextItem {
+  name: string;
+  current?: boolean;
+  session?: boolean;
+  description?: string;
+}
+
+export interface RegistryItem {
+  host: string;
+  signed_in?: boolean;
+  user?: string;
+}
+
+export interface ContainerInspect {
+  kind: string;
+  id: string;
+  text: string;
+  masked?: number;
+  truncated?: boolean;
+}
+
+export interface ImageHistory {
+  ref: string;
+  rows: HistoryRow[];
+}
+
+export interface HistoryRow {
+  id?: string;
+  created?: string;
+  created_by: string;
+  size?: string;
+  comment?: string;
+}
+
+export interface ContainerStats {
+  id: string;
+  cpu: string;
+  mem: string;
+  mem_perc: string;
+  net: string;
+  block: string;
+  pids: string;
+}
+
+export interface DiskUsage {
+  lines: string[];
+}
+
+export interface ImageSearch {
+  term: string;
+  results: SearchItem[];
+}
+
+export interface SearchItem {
+  name: string;
+  description?: string;
+  stars?: number;
+  official?: boolean;
+}
+
+export interface RemoteTags {
+  repo: string;
+  tags: string[];
+  truncated?: boolean;
+  note?: string;
+}
+
+export interface ContainerDone {
+  state: string;
+  status?: string;
+}
+
+export interface HostDone {
+  note?: string;
+}
+
+export interface ServicesConfig {
+  path: string;
+  created?: boolean;
+}
+
 export interface GitGraph {
   skip: number;
   rows: GitGraphRow[];
@@ -1725,11 +1896,6 @@ export interface ContainerLogs {
   truncated?: boolean;
 }
 
-export interface ContainerDone {
-  state: string;
-  status?: string;
-}
-
 export interface PaletteList {
   items: PaletteItem[];
 }
@@ -1895,6 +2061,29 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "containers.host": EmptyArgs;
+  "containers.inspect": InspectArgs;
+  "containers.history": RefArgs;
+  "containers.stats": ContainerArgs;
+  "containers.disk_usage": EmptyArgs;
+  "containers.search": SearchTermArgs;
+  "containers.tags": RefArgs;
+  "containers.pause": ContainerArgs;
+  "containers.tag": ImageTagArgs;
+  "containers.create": StorageArgs;
+  "containers.compose": ComposeArgs;
+  "containers.context": ContextArgs;
+  "containers.exec": ExecArgs;
+  "containers.image": ImageActArgs;
+  "containers.prune": PruneArgs;
+  "containers.storage_remove": StorageArgs;
+  "containers.compose_ask": ComposeAskArgs;
+  "containers.context_default": ContextArgs;
+  "containers.registry": RegistryArgs;
+  "containers.open_db": ContainerArgs;
+  "services.start_all": EmptyArgs;
+  "services.stop_all": EmptyArgs;
+  "services.configure": EmptyArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2032,6 +2221,29 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "containers.host": ContainersHost;
+  "containers.inspect": ContainerInspect;
+  "containers.history": ImageHistory;
+  "containers.stats": ContainerStats;
+  "containers.disk_usage": DiskUsage;
+  "containers.search": ImageSearch;
+  "containers.tags": RemoteTags;
+  "containers.pause": ContainerDone;
+  "containers.tag": HostDone;
+  "containers.create": HostDone;
+  "containers.compose": HostDone;
+  "containers.context": HostDone;
+  "containers.exec": AskRef;
+  "containers.image": AskRef;
+  "containers.prune": AskRef;
+  "containers.storage_remove": AskRef;
+  "containers.compose_ask": AskRef;
+  "containers.context_default": AskRef;
+  "containers.registry": AskRef;
+  "containers.open_db": AskRef;
+  "services.start_all": HostDone;
+  "services.stop_all": AskRef;
+  "services.configure": ServicesConfig;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;
