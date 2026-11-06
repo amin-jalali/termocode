@@ -216,6 +216,10 @@ func goldenExtras() []Scene {
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
+		// Log search and push preview (GITX-9, GITX-12): the results of a
+		// Search Log… query, and the Cancel-first Push… card.
+		{Name: "log-search-results", Steps: append(append([]Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-log-search"), Pause(400 * time.Millisecond)}, TypeKeys("all")...), Key("enter"), Pause(600*time.Millisecond))},
+		{Name: "push-preview-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-push-preview"), Pause(600 * time.Millisecond)}},
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}

@@ -516,6 +516,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onMergeMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
+	case gitxDoneMsg: // gitx_hub.go
+		return m, msg.apply(&m)
 	case preview.CloseMsg:
 		m.previewOpen = false
 		m.closeHelp()
@@ -2414,6 +2416,9 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 	case pickerKindContainerSearch: // containers_remote.go
 		return m.onSearchPicked(msg.ID)
 	default:
+		if cmd, ok := m.handleGitxPickerSelect(msg.ID); ok { // gitx_hub.go
+			return cmd
+		}
 		if cmd, ok := m.handlePRPickerSelect(msg.ID); ok { // pr_list.go
 			return cmd
 		}

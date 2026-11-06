@@ -339,6 +339,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Add to .gitignore… | `git-ignore-file` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
 | Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
@@ -349,9 +350,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
+| Git: Fetch All Remotes (Prune) | `git-fetch-all` |   |   |
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
+| Git: Go to Commit… | `git-goto-commit` |   |   |
+| Git: Go to HEAD in GRAPH | `git-graph-head` |   | `@` |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
@@ -372,15 +376,24 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Open Merge View | `git-merge-open` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Pull | `git-pull` |   |   |
+| Git: Pull (Rebase) | `git-pull-rebase` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
+| Git: Pull… | `git-pull-options` |   |   |
 | Git: Push | `git-push` |   |   |
+| Git: Push to… | `git-push-to` |   |   |
+| Git: Push… (Show Outgoing Commits First) | `git-push-preview` |   |   |
 | Git: Rebase in Progress (Continue / Skip / Abort)… | `git-rebase-status` |   |   |
 | Git: Redo Undone Git Action | `git-redo` |   |   |
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
+| Git: Search Log… | `git-log-search` |   |   |
+| Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
+| Git: Show Folder History… | `git-log-folder` |   |   |
+| Git: Show Incoming Commits… | `git-incoming` |   |   |
 | Git: Show Log... | `git-log` |   |   |
+| Git: Show Outgoing Commits… | `git-outgoing` |   |   |
 | Git: Show Stash List... | `git-stash-list` |   |   |
 | Git: Show Tags... | `git-tags` |   |   |
 | Git: Stage All Changes | `git-stage-all` |   |   |
@@ -390,6 +403,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stash Changes | `git-stash` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
+| Git: Toggle All Branches in GRAPH | `git-graph-all` |   |   |
+| Git: Toggle Auto Fetch | `git-auto-fetch` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |

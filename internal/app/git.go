@@ -103,7 +103,7 @@ func fetchGitCmd() tea.Cmd {
 		done := make(chan struct{})
 		crash.Go("reading the git graph", func() {
 			defer close(done) // also after a panic, so the refresh goes on
-			graph, more, _ = git.Commits(cwd, 0, gitGraphLimit)
+			graph, more, _ = gitGraphCommits(cwd, 0, gitGraphLimit)
 		})
 		st, err := git.StatusBranch(cwd)
 		<-done
@@ -146,7 +146,7 @@ func (m *Model) pollGitCmd() tea.Cmd {
 			msg.KeepGraph = true
 			return msg
 		}
-		msg.Graph, msg.More, _ = git.Commits(cwd, 0, limit)
+		msg.Graph, msg.More, _ = gitGraphCommits(cwd, 0, limit)
 		return msg
 	}
 }
