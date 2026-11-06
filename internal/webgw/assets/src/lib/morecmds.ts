@@ -9,6 +9,7 @@ import { showFile } from "./workbench";
 import type { Command } from "./commands";
 import { collapseTests } from "../views/run/TestingView";
 import { logs } from "../views/desk/DeskContainers";
+import { askSide } from "../views/desk/SideChat";
 
 const canAct = () => link.meta.peek()?.role === "controller";
 
@@ -32,6 +33,7 @@ export function moreCommands(): Command[] {
   return [
     { id: "debugOpenLaunch", label: "cmd.debug_open_launch", when: canAct, run: openLaunch },
     { id: "testingCollapse", label: "cmd.testing_collapse", run: collapseTests },
+    { id: "aiSide", label: "cmd.ai_side", when: canAct, run: askSide },
     { id: "outputClear", label: "cmd.output_clear", when: () => logs.peek() !== null, run: clearOutput },
   ];
 }

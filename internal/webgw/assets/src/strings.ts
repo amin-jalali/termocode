@@ -987,6 +987,12 @@ export const S = {
   "cmd.debug_open_launch": "Debug: Open launch.json",
   "cmd.testing_collapse": "Testing: Collapse All",
   "cmd.output_clear": "Output: Clear",
+  "cmd.ai_side": "AI: Side Question…",
+  "side.ask": "Ask (not added to the main chat)",
+  "side.wait": "Asking the side question…",
+  "side.busy": "The side question is still being answered.",
+  "side.title": "Side chat (not in the main chat)",
+  "side.again": "Ask another",
 } as const;
 
 export type StringKey = keyof typeof S;

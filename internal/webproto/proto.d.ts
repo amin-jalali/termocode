@@ -1809,6 +1809,10 @@ export interface CIRun {
   url?: string;
 }
 
+export interface ChatSide {
+  answer: string;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -1947,6 +1951,7 @@ export interface OpArgs {
   "pr.merge": PRMergeArgs;
   "pr.review": PRReviewArgs;
   "pr.checkout": PRNumberArgs;
+  "chat.side": ChatSendArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
 }
@@ -2083,6 +2088,7 @@ export interface OpResult {
   "pr.merge": AskRef;
   "pr.review": AskRef;
   "pr.checkout": AskRef;
+  "chat.side": ChatSide;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
 }

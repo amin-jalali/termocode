@@ -2262,6 +2262,21 @@
       "phase": "v2"
     },
     {
+      "op": "chat.side",
+      "args": "ChatSendArgs",
+      "result": "ChatSide",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 73728,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.use_profile",
       "args": "AIUseArgs",
       "result": "AskRef",
@@ -3475,6 +3490,18 @@
         "text"
       ],
       "additionalProperties": false
+    },
+    "ChatSide": {
+      "type": "object",
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "additionalProperties": true
     },
     "ChatSnap": {
       "type": "object",

@@ -68,6 +68,7 @@ import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
 import { AgentsView } from "../views/AgentsView";
 import { QuickInput } from "./QuickInput";
+import { SideChat } from "../views/desk/SideChat";
 import { RefsPeek } from "./RefsPeek";
 import { diags, panelTab, toggleProblems, type PanelTab } from "../lib/lsp";
 import { ProblemsView } from "../views/ProblemsView";
@@ -524,6 +525,7 @@ export function Workbench() {
         <div class="wb-editor">
           {quick.value && <QuickInput key={quick.value.mode} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
+          <SideChat />
           <RemoteAskHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>

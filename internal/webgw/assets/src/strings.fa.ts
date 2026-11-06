@@ -983,4 +983,10 @@ export const FA: Record<StringKey, string> = {
   "cmd.debug_open_launch": "اشکال‌زدایی: باز کردن launch.json",
   "cmd.testing_collapse": "آزمون‌ها: بستن همه",
   "cmd.output_clear": "خروجی: پاک کردن",
+  "cmd.ai_side": "هوش مصنوعی: پرسش کناری…",
+  "side.ask": "بپرسید (به گفتگوی اصلی اضافه نمی‌شود)",
+  "side.wait": "در حال پرسیدن پرسش کناری…",
+  "side.busy": "پرسش کناری هنوز در حال پاسخ است.",
+  "side.title": "گفتگوی کناری (نه در گفتگوی اصلی)",
+  "side.again": "پرسش دیگر",
 };

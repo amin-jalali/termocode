@@ -18,6 +18,7 @@ web	ai-open-chat	cmd:chat
 web	ai-pick-model	op:ai.use_model
 web	ai-profile-switch	op:ai.use_profile
 web	ai-runs	cmd:runs
+web	ai-side	op:chat.side
 web	ai-toggle-inline	op:ai.complete
 web	ai-toggle-next-edit	op:ai.next_edit
 web	ai-trigger-inline	op:ai.complete
@@ -270,7 +271,6 @@ missing	ai-reasoning-next	AI chat and agents|M
 missing	ai-review	AI chat and agents|M
 missing	ai-rules	AI chat and agents|M
 missing	ai-ship	AI chat and agents|M
-missing	ai-side	AI chat and agents|M
 missing	ai-skills	AI chat and agents|M
 missing	ai-undo-turn	AI chat and agents|M
 missing	ai-until-done	AI chat and agents|M

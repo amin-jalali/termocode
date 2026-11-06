@@ -12,7 +12,8 @@ import (
 // workbench's command list runs too.
 
 // runCmd opens the command list, answers the laptop's list with none,
-// types q and runs the first row, which must be label.
+// types q and runs the first row, which must be label (a command may
+// open the quick input again: the caller waits for what it does).
 func runCmd(t *testing.T, p *Page, c *HubConn, q, label string) {
 	t.Helper()
 	wbKey(p, "P", true, true)
@@ -21,7 +22,6 @@ func runCmd(t *testing.T, p *Page, c *HubConn, q, label string) {
 	p.Key(q)
 	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === ` + jsq(label))
 	p.Key("\r")
-	p.WaitJS(`!document.querySelector(".quick")`)
 }
 
 // Debug: Open launch.json asks the laptop for the file (it writes the
