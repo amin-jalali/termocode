@@ -96,6 +96,19 @@ You do not have to stage the whole file.
 
 The colored bars in the left gutter show added, changed and deleted lines.
 
+### Peek at a change
+
+Click a colored bar in the gutter, or run **Git: Peek Change Under Cursor**.
+A card shows the change: removed lines in red, added lines in green.
+
+- **Close** is first and has the focus. `Enter` and `Esc` just close the card.
+- **Stage** stages this change. On a staged change the button is **Unstage**.
+- **Revert…** asks again on a card with **Cancel** first. Only then it puts
+  the text back as the index has it.
+- **Next Change** goes to the next change of the file and shows it.
+
+Save the file first: the change is read from the saved file.
+
 ## Stage single lines
 
 A hunk is sometimes too big. Stage just the lines you want.

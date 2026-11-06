@@ -29,6 +29,13 @@ func peekModel(t *testing.T) (*Model, string) {
 
 func peekPlain(m *Model) string { return stripANSI(m.confirm.View()) }
 
+// peekAnswer presses a button of the open card (the card closes first, as
+// a real click does).
+func peekAnswer(m *Model, id string) {
+	m.confirmOpen = false
+	m.handleConfirmSelect(id)
+}
+
 // GITX-21: a click on the git mark in the gutter sends the clicked line
 // to the app (termocode_git_peek); a click on a line without a mark
 // sends nothing.
@@ -40,7 +47,7 @@ func TestGitxPeekGutterClick(t *testing.T) {
 	covNvimEval(t, m, `
 vim.o.mouse = 'a'
 vim.o.number = true
-vim.wo.statuscolumn = '%=%l %{%v:lua.TcGitMark()%}'
+vim.wo.statuscolumn = '` + editorStatusColumn + `'
 _G._tc_git_marks[vim.api.nvim_get_current_buf()] = { [3] = 'TermocodeGitChange' }
 _G._peek_got = nil
 _G.termocode_notify = function(method, line) _G._peek_got = method .. ':' .. tostring(line) end
@@ -85,7 +92,7 @@ func TestGitxPeekStage(t *testing.T) {
 			t.Errorf("peek misses %q\n%s", want, view)
 		}
 	}
-	m.handleConfirmSelect("stage")
+	peekAnswer(m, "stage")
 	if !strings.Contains(covGit(t, dir, "diff", "--cached"), "+L3") || !toastHas(m, "Staged") {
 		t.Fatal("Stage did not stage the change")
 	}
@@ -94,7 +101,7 @@ func TestGitxPeekStage(t *testing.T) {
 	if !m.confirmOpen || !strings.Contains(peekPlain(m), "Unstage") {
 		t.Fatalf("no Unstage on a staged change\n%s", peekPlain(m))
 	}
-	m.handleConfirmSelect("unstage")
+	peekAnswer(m, "unstage")
 	if covGit(t, dir, "diff", "--cached") != "" {
 		t.Fatal("Unstage left the change staged")
 	}
@@ -109,17 +116,17 @@ func TestGitxPeekRevert(t *testing.T) {
 	m, dir := peekModel(t)
 	covWrite(t, dir, "f.txt", "l1\nl2\nL3\nl4\nl5\nl6\nl7\nl8\nl9\nl10\n")
 	m.gitPeekAt(3)
-	m.handleConfirmSelect("revert")
+	peekAnswer(m, "revert")
 	if !m.confirmOpen || m.confirm.SafeID() != "cancel" || !strings.Contains(peekPlain(m), "cannot be undone") {
 		t.Fatalf("Revert did not ask first\n%s", peekPlain(m))
 	}
-	m.handleConfirmSelect("cancel")
+	peekAnswer(m, "cancel")
 	if !strings.Contains(covGit(t, dir, "diff"), "+L3") {
 		t.Fatal("Cancel reverted the change")
 	}
 	m.gitPeekAt(3)
-	m.handleConfirmSelect("revert")
-	m.handleConfirmSelect("revert")
+	peekAnswer(m, "revert")
+	peekAnswer(m, "revert")
 	if covGit(t, dir, "diff") != "" || !toastHas(m, "Reverted") {
 		t.Fatal("Revert left the change")
 	}
@@ -138,23 +145,23 @@ func TestGitxPeekNextAndEdges(t *testing.T) {
 	if !strings.Contains(peekPlain(m), "1 of 2") {
 		t.Fatalf("first card\n%s", peekPlain(m))
 	}
-	m.handleConfirmSelect("next")
+	peekAnswer(m, "next")
 	if !m.confirmOpen || !strings.Contains(peekPlain(m), "2 of 2") || !strings.Contains(peekPlain(m), "+L10") {
 		t.Fatalf("Next did not show the second change\n%s", peekPlain(m))
 	}
 	if covNvimLine(t, m) != "10" {
 		t.Errorf("cursor at %s after Next", covNvimLine(t, m))
 	}
-	m.handleConfirmSelect("next")
+	peekAnswer(m, "next")
 	if !strings.Contains(peekPlain(m), "1 of 2") {
 		t.Fatalf("Next did not wrap\n%s", peekPlain(m))
 	}
-	m.handleConfirmSelect("close")
+	peekAnswer(m, "close")
 	if m.confirmOpen {
 		t.Fatal("Close left the card open")
 	}
-	m.gitPeekAt(5)
-	if m.confirmOpen || !toastHas(m, "No change on line 5") {
+	m.gitPeekAt(6)
+	if m.confirmOpen || !toastHas(m, "No change on line 6") {
 		t.Fatal("a clean line opened a card")
 	}
 	covNvimEval(t, m, `vim.api.nvim_buf_set_lines(0, 0, 1, false, {'edited'}); return ''`)

@@ -2205,6 +2205,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-patch-apply-clip` | Git: Apply Patch from Clipboard… | never | applies text from the user's clipboard to the files; user only |
 | `git-patch-apply-file` | Git: Apply Patch from File… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-patch-save` | Git: Save Changes as Patch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-peek-change` | Git: Peek Change Under Cursor | never | opens a card for the user to read; its Revert asks the user |
 | `git-pr-create` | Git: Create Pull Request… | never | publishes a pull request in the user's name; only the user creates one |
 | `git-pr-list` | Git: Pull Requests… | auto |   |
 | `git-publish` | Git: Publish to GitHub… | never | creates a GitHub repository in the user's name and pushes to it; user only |
