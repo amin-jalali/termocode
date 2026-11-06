@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // User worktrees (WTX-5): Worktree: New… makes one on a new branch in a
@@ -136,4 +138,24 @@ func RemoteHosts(dir string) []string {
 		}
 	}
 	return hosts
+}
+
+// ForgetWorktree drops git's record of the worktree at path whose folder
+// is gone (`git worktree remove --force`, one worktree, not a prune of
+// all). A folder that is still there is refused; a path git no longer
+// lists is fine.
+func ForgetWorktree(dir, path string) error {
+	if _, err := os.Lstat(path); err == nil {
+		return fmt.Errorf("%s is still there", path)
+	}
+	cmd := spawn.Command("git", "worktree", "remove", "--force", "--", path)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		if strings.Contains(string(out), "is not a working tree") {
+			return nil
+		}
+		return fmt.Errorf("git worktree remove: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
 }

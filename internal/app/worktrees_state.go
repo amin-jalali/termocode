@@ -231,6 +231,8 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTNewPrep(msg), true
 	case wtCreatedMsg:
 		return m.onWTCreated(msg), true
+	case wtForgotMsg:
+		return m.onWTForgot(msg), true
 	case wtSetupDoneMsg:
 		return m.onWTSetupDone(msg), true
 	case wtLoadMsg:

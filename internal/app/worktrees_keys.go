@@ -27,6 +27,8 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"i", "link an issue or pull request (its state and CI show on the card)"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
 		[]string{"L", "open the setup log of a new worktree"},
+		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
+		[]string{"F", "forget a worktree whose folder is gone"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
 		[]string{"/", "filter by name · Esc clears"},
@@ -49,6 +51,8 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
 		{ID: wtLinkPaletteID, Title: "Worktree: Link Issue or PR…"},
+		{ID: wtAdoptPaletteID, Title: "Worktree: Adopt Selected"},
+		{ID: wtForgetPaletteID, Title: "Worktree: Forget Gone Selected"},
 	}
 }
 
@@ -74,6 +78,10 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeSetupLog(), true
 	case wtLinkPaletteID:
 		return m.worktreeLink(), true
+	case wtAdoptPaletteID:
+		return m.worktreeAdopt(), true
+	case wtForgetPaletteID:
+		return m.worktreeForget(), true
 	}
 	return nil, false
 }
@@ -133,6 +141,10 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeSetupLog()
 	case "i":
 		return m, m.worktreeLink()
+	case "A":
+		return m, m.worktreeAdopt()
+	case "F":
+		return m, m.worktreeForget()
 	case "f":
 		m.worktreeNextFilter()
 	case "R":

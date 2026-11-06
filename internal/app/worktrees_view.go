@@ -422,6 +422,9 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	if l := wtLinkLine(it.e.Meta); l != "" {
 		links = append(links, l)
 	}
+	if wtNoMeta(it) {
+		links = append(links, "— no meta (A adopts)")
+	}
 	if it.e.Locked {
 		links = append(links, "locked")
 	}

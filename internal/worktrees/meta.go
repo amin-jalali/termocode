@@ -48,7 +48,12 @@ type Meta struct {
 	CheckpointAt time.Time `json:"checkpoint_at,omitzero"`
 
 	Link LinkInfo `json:"link,omitzero"` // what gh last said about Issue / PR (WTX-9)
+
+	Adopted bool `json:"adopted,omitempty"` // an external worktree the user adopted (WTX-10)
 }
+
+// Empty: termocode knows nothing about the worktree.
+func (m Meta) Empty() bool { return reflect.ValueOf(m).IsZero() }
 
 // LinkInfo is the last read of a worktree's linked issue or PR.
 type LinkInfo struct {

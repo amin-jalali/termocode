@@ -421,7 +421,12 @@ Source Control icon, which is lit while it shows.
   done), the branch, commits ahead and behind its upstream, and the
   count of changed files. A coding agent in a terminal tab of this or
   another termocode window shows on the worktree its folder is in.
-- A worktree whose folder was deleted shows as **gone**.
+- A worktree whose folder was deleted shows as **gone**. `F` forgets
+  it: termocode drops its notes and git's record of that one worktree.
+  It never deletes files, and it refuses a worktree whose folder is there.
+- A worktree made outside termocode shows in **EXTERNAL** with
+  `no meta`. Open, add, pin and link work on it. `A` adopts it, so
+  termocode keeps its notes; it stays in EXTERNAL.
 - In a short window each worktree is one line; Enter shows its card.
 - The list is read again every 10 seconds while it is on screen. Git
   runs in the background, at most 4 calls at once.
@@ -438,6 +443,8 @@ repository's git folder, never in your project.
 | `i` | Link an issue or pull request (see below) |
 | `n` | New worktree (see below) |
 | `L` | Open the setup log of a new worktree |
+| `A` | Adopt a worktree made outside termocode |
+| `F` | Forget a worktree whose folder is gone |
 | `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
