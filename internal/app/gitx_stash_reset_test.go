@@ -55,8 +55,8 @@ func TestGitxStashOptions(t *testing.T) {
 func TestGitxStashCurrentFile(t *testing.T) {
 	m, dir := gitxStashRepo(t)
 	covWrite(t, dir, "b.txt", "b\n")
-	covCommit(t, dir, "add b")
-	covWrite(t, dir, "a.txt", "ONE\ntwo\nthree\n")
+	covCommit(t, dir, "add b") // a.txt, b.txt and new.txt are committed now
+	covWrite(t, dir, "a.txt", "changed again\n")
 	covWrite(t, dir, "b.txt", "B\n")
 	covRefresh(m)
 	m.editor.SetMeta(filepath.Join(dir, "b.txt"), false, "text")
@@ -65,7 +65,7 @@ func TestGitxStashCurrentFile(t *testing.T) {
 	m.handlePickerSelect(picker.SelectMsg{ID: "stash-file"})
 	m.promptOpen = false
 	m.handlePromptSubmit("")
-	if got := covGit(t, dir, "status", "--porcelain"); got != "M a.txt\n?? new.txt" {
+	if got := covGit(t, dir, "status", "--porcelain"); got != "M a.txt" {
 		t.Errorf("status %q", got)
 	}
 }
