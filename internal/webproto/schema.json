@@ -291,6 +291,15 @@
       "deltas": [
         "AISnap"
       ]
+    },
+    {
+      "name": "workflows",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "WorkflowsSnap",
+      "deltas": [
+        "WorkflowsSnap"
+      ]
     }
   ],
   "events": {
@@ -1265,6 +1274,19 @@
       "role": "controller",
       "rate": {
         "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workflows.stop",
+      "args": "WorkflowRunArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
         "per_ms": 1000
       },
       "max_bytes": 1024,
@@ -3100,7 +3122,8 @@
             "plan",
             "review",
             "trust",
-            "laptop"
+            "laptop",
+            "workflow"
           ]
         },
         "read_only": {
@@ -8773,6 +8796,128 @@
       },
       "required": [],
       "additionalProperties": false
+    },
+    "WorkflowItem": {
+      "type": "object",
+      "properties": {
+        "last": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "next": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "on",
+            "off",
+            "untrusted",
+            "broken"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "when": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "WorkflowRun": {
+      "type": "object",
+      "properties": {
+        "dry": {
+          "type": "boolean"
+        },
+        "ended": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "items": {
+          "type": "integer"
+        },
+        "resumed": {
+          "type": "integer"
+        },
+        "started": {
+          "type": "integer"
+        },
+        "state": {
+          "type": "string"
+        },
+        "stopping": {
+          "type": "boolean"
+        },
+        "tail": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "waiting": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        },
+        "wrote": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "workflow",
+        "state",
+        "started"
+      ],
+      "additionalProperties": true
+    },
+    "WorkflowRunArgs": {
+      "type": "object",
+      "properties": {
+        "run": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "run"
+      ],
+      "additionalProperties": false
+    },
+    "WorkflowsSnap": {
+      "type": "object",
+      "properties": {
+        "runs": {
+          "items": {
+            "$ref": "#/defs/WorkflowRun"
+          },
+          "type": "array"
+        },
+        "workflows": {
+          "items": {
+            "$ref": "#/defs/WorkflowItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "workflows",
+        "runs"
+      ],
+      "additionalProperties": true
     }
   }
 }
