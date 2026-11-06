@@ -348,7 +348,7 @@ func (c Compare) Box() string {
 		case !l.Stats && l.Note != "" && l.State == agentrace.Failed:
 			head = l.Title + " · " + l.Note
 		case !l.Stats:
-			head = l.Title + " · files show when the lane is done (r reads them now)"
+			head = l.Title + " · the files show when the lane is done"
 		case l.Branch != "":
 			head += " · " + l.Branch
 		}

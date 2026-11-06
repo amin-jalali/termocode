@@ -518,6 +518,9 @@ func (m *Model) onTaskExit(buf, code int) tea.Cmd {
 	if service != "" {
 		return m.onServiceJobExit(service, code)
 	}
+	if c, ok := m.raceOnVerifyExit(buf, code); ok { // a race lane's verify (agent_race_compare.go)
+		return c
+	}
 	r := tr.runs[buf]
 	if r == nil || !r.Running {
 		return nil
