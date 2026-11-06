@@ -922,9 +922,24 @@ func (m *Model) gitInlineCommitThen(amend, signoff bool, after string) tea.Cmd {
 		m.gitCommitAfter = after
 		return nil
 	}
+	return m.gitCommitStaged(cwd, msg, amend, signoff, after)
+}
+
+// gitCommitStaged commits the index with msg once the before-commit
+// checks (GITX-27, gitx_commit_checks.go) have passed or the user said
+// Commit Anyway.
+func (m *Model) gitCommitStaged(cwd, msg string, amend, signoff bool, after string) tea.Cmd {
+	if c, ok := m.gitxBeforeCommit(cwd, msg, amend, signoff, after); ok {
+		return c
+	}
 	var toastCmd tea.Cmd
-	if err := git.CommitWith(cwd, msg, amend, signoff); err != nil {
+	noVerify := m.gitx.skipHooks || m.gitx.noVerifyOnce
+	m.gitx.noVerifyOnce = false
+	if err := git.CommitOpts(cwd, msg, git.CommitOptions{Amend: amend, Signoff: signoff, NoVerify: noVerify}); err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Commit failed", err.Error())
+		if !noVerify && git.HasCommitHooks(cwd) { // GITX-27 (gitx_commit_hooks.go)
+			return tea.Batch(fetchGitCmd(), toastCmd, m.gitxHookCard(err, cwd, msg, amend, signoff, after))
+		}
 		return tea.Batch(fetchGitCmd(), toastCmd)
 	}
 	m.clearCommitBox()
@@ -946,15 +961,7 @@ func (m *Model) gitStageAllAndCommit() tea.Cmd {
 		m.toast, c = m.toast.PushDetail(toast.Errr, "Stage all failed", err.Error())
 		return c
 	}
-	msg := strings.TrimSpace(m.gitCommitMsg)
-	var toastCmd tea.Cmd
-	if err := git.Commit(cwd, msg); err != nil {
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Commit failed", err.Error())
-		return tea.Batch(fetchGitCmd(), toastCmd)
-	}
-	m.clearCommitBox()
-	m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Committed", commitToastLabel(msg, false))
-	return tea.Batch(fetchGitCmd(), toastCmd, m.gitAfterCommit(after))
+	return tea.Batch(fetchGitCmd(), m.gitCommitStaged(cwd, strings.TrimSpace(m.gitCommitMsg), false, false, after))
 }
 
 // clearCommitBox resets the inline message field after a successful commit.

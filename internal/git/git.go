@@ -193,31 +193,11 @@ func Commit(dir, message string) error {
 // (--amend --no-edit); otherwise an empty message is rejected. signoff adds the
 // "Signed-off-by:" trailer (git commit -s).
 func CommitWith(dir, message string, amend, signoff bool) error {
-	args := []string{"commit"}
-	if amend {
-		args = append(args, "--amend")
-	}
-	if signoff {
-		args = append(args, "--signoff")
-	}
-	if strings.TrimSpace(message) == "" {
-		if amend {
-			// Reword nothing: keep the previous message verbatim.
-			args = append(args, "--no-edit")
-		} else {
-			return fmt.Errorf("commit message is empty")
-		}
-	} else {
-		args = append(args, "-m", message)
-	}
-	cmd := spawn.Command("git", args...)
-	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return cmdError(err, out)
-	}
-	return nil
+	return CommitOpts(dir, message, CommitOptions{Amend: amend, Signoff: signoff})
 }
+
+// errEmptyMessage is the error for a commit without a message.
+var errEmptyMessage = fmt.Errorf("commit message is empty")
 
 // BlameLine summarises `git blame` for a single line: who last touched it
 // and when. Hash is the abbreviated commit SHA; "0000000" means "uncommitted

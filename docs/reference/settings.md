@@ -35,6 +35,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `tab_size` | int | `4` | Indent width in spaces (1-16). Sets tabstop and shiftwidth. |
 | `persistent_session` | enum | `auto` | Run the editor in a background session that survives a dropped connection; run termocode again in the same folder to get it back: on, off, or auto (on over SSH, off locally and inside tmux / screen). Applies the next time termocode starts; --no-session wins over it. |
 | `auto_reconnect` | bool | `true` | When the connection to a persistent session drops (network change, Wi-Fi switch, sleep), keep the screen and attach again by itself, also after `termocode ssh` restarts ssh. Keys typed while offline are not sent. Applies the next time termocode starts. |
+| `local_history` | bool | `true` | Keep a copy of each file you save (File: Show Local History, File: Recover Deleted File…): 50 versions per file for 30 days, files up to 2 MB, in $XDG_STATE_HOME/termocode/history. Off keeps no new copies. |
 
 ## Search
 
@@ -59,6 +60,10 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `git_auto_fetch` | bool | `false` | Fetch from the remote every 3 minutes in the background while termocode runs (Git: Toggle Auto Fetch). A failed fetch turns it off for this session and says why. |
+| `git_commit_checks` | bool | `false` | Before each commit, look for large staged files, secret-looking added lines and errors of the Problems list in staged files. A finding asks before the commit (Commit Anyway or Cancel). |
+| `git_commit_format` | bool | `false` | Before each commit, format the fully staged files that are open in the editor with their language server and stage the result. A file with unstaged changes too is left as it is. |
+| `git_commit_task` | string | `(none)` | Before each commit, run this task (its label, as in Tasks: Run Task). The commit waits; a task that fails asks before the commit. Empty or (none): no task. |
+| `git_commit_large_mb` | int | `5` | git_commit_checks: a staged file bigger than this many MB is a finding. |
 
 ## HTTP
 
@@ -237,4 +242,4 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `XDG_CONFIG_HOME` | Moves the config folder to `$XDG_CONFIG_HOME/termocode`. |
 | `XDG_DATA_HOME` | Moves the data folder to `$XDG_DATA_HOME/termocode`. |
 | `XDG_RUNTIME_DIR` | Folder for the persistent-session sockets (`$XDG_RUNTIME_DIR/termocode`); without it they go to `~/.cache/termocode/sessions`. |
-| `XDG_STATE_HOME` | Moves the hot-exit backups of unsaved files to `$XDG_STATE_HOME/termocode/backup`. |
+| `XDG_STATE_HOME` | Moves the hot-exit backups of unsaved files to `$XDG_STATE_HOME/termocode/backup` and the local history of saved files to `$XDG_STATE_HOME/termocode/history`. |

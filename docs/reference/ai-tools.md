@@ -2144,6 +2144,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-cmd-log` | Git: Show Git Command Log | auto |   |
 | `git-co-author` | Git: Add Co-Author… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
+| `git-commit-checks` | Git: Run Before-Commit Checks | never | runs the user's before-commit task, a shell command |
 | `git-commit-edit` | Git: Edit Commit Message in Editor | never | opens the commit message for the user to write; use git_commit |
 | `git-commit-history` | Git: Pick Recent Commit Message… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit-push` | Git: Commit and Push | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
@@ -2172,6 +2173,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
 | `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-hook-output` | Git: Show Last Hook Output | auto |   |
 | `git-identity` | Git: Set Identity (Name and E-mail)… | never | sets the name and e-mail on the user's commits; only the user does that |
 | `git-ignore-file` | Git: Add to .gitignore… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-incoming` | Git: Show Incoming Commits… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2228,6 +2230,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-rev-next` | Git: Open Next Revision of File | auto |   |
 | `git-rev-prev` | Git: Open Previous Revision of File | auto |   |
 | `git-signing-toggle` | Git: Toggle Commit Signing (This Repository) | never | changes how the user's commits are signed; only the user does that |
+| `git-skip-hooks` | Git: Toggle Skip Hooks on Commit (--no-verify) | never | turns off the checks the repository runs on each commit; only the user does that |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |
@@ -2292,6 +2295,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `layout-open` | Layout: Open… | never | the AI changes the layout with the layout_set tool |
 | `layout-reset` | Layout: Reset to Default | never | the AI changes the layout with the layout_set tool |
 | `layout-save` | Layout: Save As… | never | the AI changes the layout with the layout_set tool |
+| `local-history` | File: Show Local History | auto |   |
+| `local-history-deleted` | File: Recover Deleted File… | never | writes a file back from the local history; only the user does that |
+| `local-history-label` | File: Put Label in Local History… | auto |   |
 | `lowercase` | Edit: Convert to lowercase | confirm (fileWrite) |   |
 | `lsp-manage` | LSP: Manage Language Servers... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_servers) |
 | `mcp-import-other` | AI: MCP: Import from Other Apps… | never | AI provider, credentials and approvals stay with the user (importing servers is the user's) |
@@ -2513,6 +2519,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git_auto_fetch` | never | starts a timer that talks to the remote; only the user turns it on |
 | `git_blame_detect_moves` | confirm (settings) |   |
 | `git_blame_ignore_whitespace` | confirm (settings) |   |
+| `git_commit_checks` | never | changes what runs before the user's commits; only the user does that |
+| `git_commit_format` | never | changes the user's files before each commit; only the user turns it on |
+| `git_commit_large_mb` | never | changes what runs before the user's commits; only the user does that |
+| `git_commit_task` | never | sets a shell command that runs before each commit; only the user does that |
 | `git_inline_blame` | confirm (settings) |   |
 | `git_status_blame` | confirm (settings) |   |
 | `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
@@ -2525,6 +2535,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `icons` | confirm (settings) |   |
 | `images` | confirm (settings) |   |
 | `key_hints` | confirm (settings) |   |
+| `local_history` | never | turns the user's safety copies of saved files off; only the user does that |
 | `mcp_auto_update` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_catalog_url` | never | AI provider, credentials and approvals stay with the user |

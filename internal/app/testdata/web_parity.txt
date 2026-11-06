@@ -450,6 +450,7 @@ missing	git-cherry-pick-branch	Git|S
 missing	git-clean-untracked	Git|S
 missing	git-cmd-log	Git|S
 missing	git-co-author	Git|S
+missing	git-commit-checks	Git|S
 missing	git-commit-edit	Git|S
 missing	git-commit-history	Git|S
 missing	git-commit-push	Git|S
@@ -464,6 +465,7 @@ missing	git-fetch-all	Git|S
 missing	git-goto-commit	Git|S
 missing	git-graph-all	Git|S
 missing	git-graph-head	Git|S
+missing	git-hook-output	Git|S
 missing	git-identity	Git|S
 missing	git-ignore-file	Git|S
 missing	git-incoming	Git|S
@@ -497,6 +499,7 @@ missing	git-remotes	Git|S
 missing	git-rev-next	Git|S
 missing	git-rev-prev	Git|S
 missing	git-signing-toggle	Git|S
+missing	git-skip-hooks	Git|S
 missing	git-stash-actions	Git|S
 missing	git-stash-options	Git|S
 missing	git-status-blame	Git|S
@@ -523,6 +526,9 @@ missing	git-branch-from	Git|S
 missing	git-branch-rename	Git|S
 missing	git-upstream-set	Git|S
 missing	git-upstream-unset	Git|S
+missing	local-history	Git|S
+missing	local-history-deleted	Git|S
+missing	local-history-label	Git|S
 missing	workflow-dry-run	Workflows|S
 excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)

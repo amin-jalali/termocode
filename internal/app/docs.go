@@ -434,7 +434,7 @@ func EnvCatalog() []EnvVar {
 		{"OPENAI_API_KEY", "OpenAI API key. Also selects OpenAI when no provider is set."},
 		{"OPENROUTER_API_KEY", "OpenRouter API key."},
 		{"OLLAMA_HOST", "Ollama host, used for the base URL of the ollama provider."},
-		{"XDG_STATE_HOME", "Moves the hot-exit backups of unsaved files to `$XDG_STATE_HOME/termocode/backup`."},
+		{"XDG_STATE_HOME", "Moves the hot-exit backups of unsaved files to `$XDG_STATE_HOME/termocode/backup` and the local history of saved files to `$XDG_STATE_HOME/termocode/history`."},
 		{"TERMOCODE_NO_SESSION", "Any value: run without a persistent session, like `--no-session`."},
 		{"XDG_RUNTIME_DIR", "Folder for the persistent-session sockets (`$XDG_RUNTIME_DIR/termocode`); without it they go to `~/.cache/termocode/sessions`."},
 	}

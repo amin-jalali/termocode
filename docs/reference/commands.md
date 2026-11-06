@@ -314,12 +314,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | File: Download to This Computer | `transfer-download` |   |   |
 | File: Open Recent Workspace... | `open-workspace` |   |   |
 | File: Open Recent... | `open-recent` | `Ctrl+R` | `Ctrl+R` |
+| File: Put Label in Local History… | `local-history-label` |   |   |
 | File: Quit | `quit` | `Ctrl+Q` | `Ctrl+Q` |
+| File: Recover Deleted File… | `local-history-deleted` |   | `from the local history` |
 | File: Reveal in File System | `reveal-fs` |   |   |
 | File: Revert / Reload from Disk | `reload-buffer` |   |   |
 | File: Save | `save` | `Ctrl+S` | `Ctrl+S` |
 | File: Save All Files | `save-all` |   |   |
 | File: Show Last Download in Folder | `transfer-reveal` |   |   |
+| File: Show Local History | `local-history` |   | `the saved versions of this file: compare, restore` |
 | File: Toggle Auto Save | `toggle-auto-save` |   |   |
 | File: Upload from This Computer... | `transfer-upload` |   |   |
 
@@ -445,6 +448,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
 | Git: Rename Branch… | `git-branch-rename` |   |   |
+| Git: Run Before-Commit Checks | `git-commit-checks` |   | `the checks of Settings → Git on what is staged; no commit` |
 | Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Search Log… | `git-log-search` |   |   |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
@@ -454,6 +458,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Show Folder History… | `git-log-folder` |   |   |
 | Git: Show Git Command Log | `git-cmd-log` |   |   |
 | Git: Show Incoming Commits… | `git-incoming` |   |   |
+| Git: Show Last Hook Output | `git-hook-output` |   |   |
 | Git: Show Line History | `git-line-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |
 | Git: Show Outgoing Commits… | `git-outgoing` |   |   |
@@ -476,6 +481,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
 | Git: Toggle Commit Signing (This Repository) | `git-signing-toggle` |   |   |
 | Git: Toggle Inline Blame | `git-inline-blame` |   |   |
+| Git: Toggle Skip Hooks on Commit (--no-verify) | `git-skip-hooks` |   | `this session only` |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
