@@ -64,6 +64,11 @@ function treeMenu(path: string, dir: boolean): MenuItems {
   return items;
 }
 
+/** renameFile opens the rename sheet of path (the side bar shows the files). */
+export function renameFile(path: string): void {
+  acting.value = { path, dir: false, start: "rename" };
+}
+
 /** join is a workspace path under dir. */
 export function join(dir: string, name: string): string {
   return dir ? dir + "/" + name : name;

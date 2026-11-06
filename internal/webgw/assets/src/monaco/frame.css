@@ -61,6 +61,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--wb-edi
 .tc-mgg-incoming { background: var(--wb-mg-incoming-bar, #40a6ff); }
 
 /* Blame at the end of the cursor's line (as a faded note). */
+.tc-inlay { color: var(--wb-line-num, #858585); background: color-mix(in srgb, var(--wb-line-num, #858585) 14%, transparent); border-radius: 3px; font-size: 90%; }
 .tc-blame { color: var(--wb-line-num, #858585); opacity: 0.75; font-style: italic; }
 /* The next edit suggestion: the rows it would change are marked, the new
    text shows under them in the editor's font, with its key hint. */

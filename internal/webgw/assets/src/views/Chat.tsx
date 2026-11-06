@@ -20,6 +20,7 @@ import { layout } from "../lib/layout";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
 import { errText } from "../ui/CardSheet";
 import { ChatList } from "./ChatList";
+import { ChatMoreFlows, openMore } from "./ChatMore";
 import { Composer } from "./Composer";
 import { Run } from "./Run";
 import { View } from "./View";
@@ -300,6 +301,17 @@ export function ChatView() {
               t("chat.list")
             )}
           </button>
+          {!pin && link.meta.value?.role === "controller" && (
+            <button
+              type="button"
+              class="head-btn chat-more"
+              aria-label={t("scm.more_actions")}
+              title={t("scm.more_actions")}
+              onClick={(e) => openMore({ id: laptop?.id ?? "", title: laptop?.title ?? "", msgs: laptop?.messages ?? [] }, (e.currentTarget as HTMLElement).getBoundingClientRect())}
+            >
+              <Cod name="ellipsis" />
+            </button>
+          )}
           {pin ? (
             <button type="button" class="head-btn chat-follow" onClick={follow}>
               {t("chat.follow")}
@@ -322,6 +334,7 @@ export function ChatView() {
       foot={foot}
     >
       {content}
+      <ChatMoreFlows />
     </View>
   );
 }

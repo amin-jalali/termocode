@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,6 +17,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/mcp"
 )
@@ -654,7 +657,62 @@ func checkAgentStart(a map[string]any) error {
 	if _, err := agentLookPath(ag.Bin); err != nil {
 		return fmt.Errorf("%s is not installed (%s is not on PATH); the user installs it first (guide: guides/agents.md)", ag.Title, ag.Bin)
 	}
-	return nil
+	_, err := agentStartDir(a)
+	return err
+}
+
+// agentWorktreeList lists the repository's worktrees for
+// outside_agent_start's worktree argument (a var: tests).
+var agentWorktreeList = func(root string) []git.Worktree {
+	ws, _, _ := git.ListWorktrees(root)
+	return ws
+}
+
+// agentStartDir is the folder of outside_agent_start's optional
+// worktree argument ("" = the workspace).
+func agentStartDir(a map[string]any) (string, error) {
+	arg := strings.TrimSpace(ai.ArgString(a, "worktree"))
+	if arg == "" {
+		return "", nil
+	}
+	root := aiWorkspaceRoot()
+	return agentDirIn(arg, root, agentWorktreeList(root))
+}
+
+// agentDirIn resolves a worktree argument (a path or a branch) against
+// the listed worktrees and the workspace: anything else is refused, so
+// the AI cannot start an agent in a folder the user does not work in.
+func agentDirIn(arg, workspace string, list []git.Worktree) (string, error) {
+	real := func(p string) string {
+		if r, err := filepath.EvalSymlinks(p); err == nil {
+			return r
+		}
+		return filepath.Clean(p)
+	}
+	want := ""
+	if filepath.IsAbs(arg) {
+		want = real(arg)
+	}
+	for _, w := range list {
+		if w.Bare || w.Prunable {
+			continue
+		}
+		if (want != "" && real(w.Path) == want) || (want == "" && w.Branch == arg) {
+			if w.Main && real(w.Path) == real(workspace) {
+				return "", nil
+			}
+			return w.Path, nil
+		}
+	}
+	if want != "" && workspace != "" {
+		ws := real(workspace)
+		if rel, err := filepath.Rel(ws, want); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			if fi, err := os.Stat(want); err == nil && fi.IsDir() {
+				return want, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("worktree %q is not a worktree of this repository (see worktrees_list) or a folder of the workspace", arg)
 }
 
 func describeAgentStart(a map[string]any) string {
@@ -663,6 +721,9 @@ func describeAgentStart(a map[string]any) string {
 		return "Start an outside agent (invalid)"
 	}
 	out := "Start " + ag.Title + " in a new terminal tab (it runs " + ag.Bin + ")"
+	if dir, err := agentStartDir(a); err == nil && dir != "" {
+		out = "Start " + ag.Title + " in " + wtShortPath(dir) + " in a new terminal tab (it runs " + ag.Bin + ")"
+	}
 	switch ag.MCP.Kind {
 	case agents.MCPFlag, agents.MCPProjectFile:
 		out += "? It can use termocode's tools; the risky ones still ask you."
@@ -675,13 +736,19 @@ func describeAgentStart(a map[string]any) string {
 // aiStartOutsideAgent starts a as "Agent: Start …" in the palette does
 // (aiStartOutsideAgentHook replaces it in a test).
 func aiStartOutsideAgent(m *Model, a agents.Agent) (tea.Cmd, error) {
+	return aiStartOutsideAgentIn(m, a, "")
+}
+
+// aiStartOutsideAgentIn is aiStartOutsideAgent in folder dir ("" = the
+// workspace; AGX-2).
+func aiStartOutsideAgentIn(m *Model, a agents.Agent, dir string) (tea.Cmd, error) {
 	if aiStartOutsideAgentHook != nil {
 		return aiStartOutsideAgentHook(m, a)
 	}
 	if m.nvim == nil {
 		return nil, errors.New("the terminal is not ready")
 	}
-	return m.startAgent(a), nil
+	return m.startAgentIn(a, dir, ""), nil
 }
 
 var aiStartOutsideAgentHook func(m *Model, a agents.Agent) (tea.Cmd, error)
@@ -829,7 +896,8 @@ func (m *Model) aiItermocWriteTools(call aiIDECaller) []ai.Tool {
 			Description: "Start an outside coding agent (" + strings.Join(aiAgentIDs(), ", ") + ") in a new terminal tab, " +
 				"with termocode's tools when the agent supports it. The user confirms first.",
 			Params: map[string]any{
-				"agent": map[string]any{"type": "string", "enum": aiAgentIDs(), "description": "which agent"},
+				"agent":    map[string]any{"type": "string", "enum": aiAgentIDs(), "description": "which agent"},
+				"worktree": str("optional: start it in this worktree (a path or branch from worktrees_list); the workspace when left out"),
 			},
 			Required: []string{"agent"},
 			// No Always allow class: every call asks (owner 2026-10-26).
@@ -841,8 +909,9 @@ func (m *Model) aiItermocWriteTools(call aiIDECaller) []ai.Tool {
 					return "", err
 				}
 				ag, _ := agents.ByID(strings.TrimSpace(ai.ArgString(a, "agent")))
+				dir, _ := agentStartDir(a)
 				return call(ctx, func(m *Model) (string, tea.Cmd, error) {
-					cmd, err := aiStartOutsideAgent(m, ag)
+					cmd, err := aiStartOutsideAgentIn(m, ag, dir)
 					if err != nil {
 						return "", nil, err
 					}

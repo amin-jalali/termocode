@@ -1,0 +1,1 @@
+{"t":"req","id":14,"op":"snippets.save","args":{"scope":"go","trigger":"iferr","body":"if err != nil {\n\treturn $1\n}"}}

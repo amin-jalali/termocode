@@ -50,7 +50,7 @@ export function pickMCP(): void {
       toast("info", t("mcpi.none"));
       return;
     }
-    quick.value = { mode: "pick", pick: { title: t("mcpi.title"), items: items.map((x) => ({ id: x.text, label: x.title, detail: x.hint })), run: insertMCP } };
+    quick.value = { mode: "pick", pick: { title: t("mcpi.title"), items: items.map((x) => ({ label: x.title, detail: x.hint, run: () => insertMCP(x.text) })) } };
   }, failed);
 }
 
