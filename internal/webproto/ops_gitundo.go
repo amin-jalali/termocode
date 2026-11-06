@@ -7,7 +7,9 @@ import "strings"
 // Reflog…. git.undo_plan reads what the undo (or a move of HEAD to a
 // reflog line) would do, in the laptop's own words, and keeps that plan;
 // git.undo runs it and git.redo takes the last undo back, each after a
-// laptop card. Nothing here ever force-pushes or drops local changes.
+// laptop card. Git: Fixup Staged Changes Into… works the same way
+// (git.fixup_plan, then git.fixup). Nothing here ever force-pushes or
+// drops local changes.
 
 // Undo op names.
 const (
@@ -15,7 +17,30 @@ const (
 	OpGitUndoPlan = "git.undo_plan"
 	OpGitUndo     = "git.undo"
 	OpGitRedo     = "git.redo"
+
+	OpGitFixupPlan = "git.fixup_plan"
+	OpGitFixup     = "git.fixup"
 )
+
+// GitFixupArgs names a commit of HEAD's history: git.fixup_plan says
+// what folding the staged changes into it does, git.fixup does it.
+type GitFixupArgs struct {
+	Hash string `json:"hash"`
+}
+
+// GitFixupPlan is the result of git.fixup_plan: the laptop card's text
+// and action ("Fixup", or "Stash and Fixup" with unstaged changes).
+type GitFixupPlan struct {
+	Text   string `json:"text"`
+	Action string `json:"action"`
+}
+
+func (a *GitFixupArgs) validate(int) error {
+	if !validHash(a.Hash) || len(a.Hash) < 7 {
+		return invalid("bad commit")
+	}
+	return nil
+}
 
 // MaxGitReflog caps the lines of git.reflog (the laptop's list is as long).
 const MaxGitReflog = 50
@@ -62,6 +87,8 @@ var opGitUndoRows = []Policy{
 	{Op: OpGitUndoPlan, New: newOf[GitUndoPlanArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpGitUndo, New: newOf[GitUndoArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpGitRedo, New: newOf[EmptyArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpGitFixupPlan, New: newOf[GitFixupArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpGitFixup, New: newOf[GitFixupArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 }
 
 func (a *GitUndoPlanArgs) validate(int) error {
@@ -85,4 +112,6 @@ func init() {
 	registerResult(OpGitUndoPlan, GitUndoPlan{})
 	registerResult(OpGitUndo, AskRef{})
 	registerResult(OpGitRedo, AskRef{})
+	registerResult(OpGitFixupPlan, GitFixupPlan{})
+	registerResult(OpGitFixup, AskRef{})
 }

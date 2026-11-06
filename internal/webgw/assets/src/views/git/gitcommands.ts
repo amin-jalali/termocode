@@ -5,7 +5,7 @@
 // Next and Previous Conflict, source control's tree or flat list, and
 // staging, unstaging or discarding the selected rows or the change at
 // the caret; the tags (check one out) and the stash (apply an entry);
-// undo, redo and the reflog (each after the laptop's card).
+// undo, redo, the reflog and a fixup (each after the laptop's card).
 import type { Command } from "../../lib/commands";
 import { blameOn } from "../../lib/blame";
 import { GRAPH_TAB, PRS_TAB } from "../../lib/gittab";
@@ -17,7 +17,7 @@ import { conflictRows, gitAsk, mergeActs, nextRow, scmTree } from "../../lib/git
 import { toast } from "../../lib/toasts";
 import { t } from "../../strings";
 import { gitFailed } from "./errors";
-import type { GitReflog, GitStashList, GitTags, GitUndoPlan } from "../../../../../webproto/proto";
+import type { GitFixupPlan, GitGraph, GitReflog, GitStashList, GitTags, GitUndoPlan } from "../../../../../webproto/proto";
 import { age } from "../../state/git";
 import { activeFile, cursorAt, focusSlot, quick, setPanes, showFile, type PickItem } from "../../lib/workbench";
 import { link, store } from "../../session";
@@ -104,6 +104,21 @@ function reflog(): void {
   }, gitFailed);
 }
 
+/** fixup lists HEAD's commits; picking one shows what folding the
+ * staged changes into it does, then asks the laptop. */
+function fixup(): void {
+  link.request("git.graph", { head: true }).then((r) => {
+    const rows = (r as GitGraph).rows ?? [];
+    pick(t("gf.pick"), rows.map((c) => ({ key: c.hash, label: c.subject, detail: `${c.hash} · ${c.author}` })), t("gf.none"), (hash) => {
+      if (!canAct()) return;
+      link.request("git.fixup_plan", { hash }).then((p) => {
+        const plan = p as GitFixupPlan;
+        gitAsk.value = { op: "git.fixup", args: { hash }, label: plan.action, text: plan.text };
+      }, gitFailed);
+    });
+  }, gitFailed);
+}
+
 export function gitCommands(): Command[] {
   return [
     { id: "gitGraph", label: "cmd.git_graph", when: repo, run: () => showFile(GRAPH_TAB) },
@@ -127,6 +142,7 @@ export function gitCommands(): Command[] {
     { id: "gitUndo", label: "cmd.git_undo", when: () => repo() && canAct(), run: () => undoAsk({}) },
     { id: "gitRedo", label: "cmd.git_redo", when: () => repo() && canAct(), run: () => (gitAsk.value = { op: "git.redo", args: {}, label: t("live.redo"), text: t("gu.redo_q") }) },
     { id: "gitReflog", label: "cmd.git_reflog", when: repo, run: reflog },
+    { id: "gitFixup", label: "cmd.git_fixup", when: () => repo() && canAct(), run: fixup },
     { id: "scmViewToggle", label: "cmd.scm_tree", when: repo, run: () => (scmTree.value = !scmTree.peek()) },
   ];
 }

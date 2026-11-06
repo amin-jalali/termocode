@@ -388,6 +388,10 @@ export interface GitUndoArgs {
   move?: boolean;
 }
 
+export interface GitFixupArgs {
+  hash: string;
+}
+
 export interface GitGraphArgs {
   skip?: number;
   head?: boolean;
@@ -1583,6 +1587,11 @@ export interface GitUndoPlan {
   move?: boolean;
 }
 
+export interface GitFixupPlan {
+  text: string;
+  action: string;
+}
+
 export interface GitGraph {
   skip: number;
   rows: GitGraphRow[];
@@ -1965,6 +1974,8 @@ export interface OpArgs {
   "git.undo_plan": GitUndoPlanArgs;
   "git.undo": GitUndoArgs;
   "git.redo": EmptyArgs;
+  "git.fixup_plan": GitFixupArgs;
+  "git.fixup": GitFixupArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2112,6 +2123,8 @@ export interface OpResult {
   "git.undo_plan": GitUndoPlan;
   "git.undo": AskRef;
   "git.redo": AskRef;
+  "git.fixup_plan": GitFixupPlan;
+  "git.fixup": AskRef;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;

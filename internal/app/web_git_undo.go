@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -27,6 +28,15 @@ func init() {
 	webOps[webproto.OpGitUndoPlan] = (*Model).webGitUndoPlan
 	webAskOps[webproto.OpGitUndo] = (*Model).webGitUndo
 	webAskOps[webproto.OpGitRedo] = (*Model).webGitRedo
+	webOps[webproto.OpGitFixupPlan] = (*Model).webGitFixupPlan
+	webAskOps[webproto.OpGitFixup] = (*Model).webGitFixup
+}
+
+// webFixupPlan is a fixup the page was shown.
+type webFixupPlan struct {
+	check fixupCheckMsg
+	text  string
+	stash bool
 }
 
 func (m *Model) webGitReflog(call *webCall) tea.Cmd {
@@ -180,6 +190,98 @@ func (m *Model) webGitRedo(call *webCall) *webAsk {
 					return applyMsg(func(m *Model) tea.Cmd { return m.onRedoDone(d) })
 				}
 				return msg
+			}
+		}}
+}
+
+// webGitStagedCount counts the staged files the Git tab lists.
+func (m *Model) webGitStagedCount() int {
+	n := 0
+	for _, f := range m.gitFiles {
+		if f.Staged() {
+			n++
+		}
+	}
+	return n
+}
+
+func (m *Model) webGitFixupPlan(call *webCall) tea.Cmd {
+	hash := call.args.(*webproto.GitFixupArgs).Hash
+	root, ok := m.webGitRoot(call)
+	if !ok {
+		return nil
+	}
+	switch {
+	case m.gitRebase.InProgress || m.webGitBuild().Op != "":
+		call.fail(webproto.CodeConflict, "A merge or rebase is in progress. Finish it first.")
+		return nil
+	case m.webGitStagedCount() == 0:
+		call.fail(webproto.CodeConflict, "Nothing is staged. Stage the changes that belong in the older commit first.")
+		return nil
+	}
+	call.later()
+	return func() tea.Msg {
+		msg := fixupCheckMsg{}
+		base, _ := git.ParentOf(root, hash)
+		todo, err := git.LoadRebaseTodo(root, base)
+		if err == nil && (len(todo.Items) == 0 || !strings.HasPrefix(todo.Items[0].FullHash, hash)) {
+			err = errors.New("that commit is not in HEAD's history")
+		}
+		if err == nil {
+			msg.target, msg.commits = todo.Items[0].FullHash, len(todo.Items)
+			msg.short, msg.subject = todo.Items[0].Hash, todo.Items[0].Subject
+			msg.upstream, msg.pushed = git.RebasePushed(root, base)
+		}
+		return applyMsg(func(m *Model) tea.Cmd {
+			if err != nil {
+				call.fail(webproto.CodeConflict, "Can't fix up into this commit: "+err.Error())
+				return nil
+			}
+			text, stash := fixupConfirmText(msg, m.gitFiles)
+			if m.web != nil {
+				m.web.more.gitLists.fixup = &webFixupPlan{check: msg, text: text, stash: stash}
+			}
+			action := "Fixup"
+			if stash {
+				action = "Stash and Fixup"
+			}
+			call.reply(webproto.GitFixupPlan{Text: text, Action: action})
+			return nil
+		})
+	}
+}
+
+func (m *Model) webGitFixup(call *webCall) *webAsk {
+	hash := call.args.(*webproto.GitFixupArgs).Hash
+	if _, ok := m.webGitRoot(call); !ok {
+		return nil
+	}
+	f := m.web.more.gitLists.fixup
+	if f == nil || !strings.HasPrefix(f.check.target, hash) {
+		call.fail(webproto.CodeConflict, "Read what the fixup does first.")
+		return nil
+	}
+	m.web.more.gitLists.fixup = nil
+	action := "Fixup"
+	if f.stash {
+		action = "Stash and Fixup"
+	}
+	target := f.check.target
+	return &webAsk{summary: f.check.short, title: "Fixup into " + f.check.short + "?", body: f.text, action: action,
+		run: func(m *Model) tea.Cmd {
+			if m.gitRebase.InProgress {
+				return m.rebaseBusyToast()
+			}
+			cwd, err := m.rootDir()
+			if err != nil {
+				return nil
+			}
+			opt := git.RebaseOptions{Autostash: f.stash}
+			return func() tea.Msg {
+				out, err := git.FixupInto(cwd, target, opt)
+				return applyMsg(func(m *Model) tea.Cmd {
+					return m.onRebaseDone(rebaseDoneMsg{summary: "staged changes folded into " + target[:min(7, len(target))], out: out, err: err})
+				})
 			}
 		}}
 }

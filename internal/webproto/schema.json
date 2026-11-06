@@ -1744,6 +1744,35 @@
       "phase": "v2"
     },
     {
+      "op": "git.fixup_plan",
+      "args": "GitFixupArgs",
+      "result": "GitFixupPlan",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.fixup",
+      "args": "GitFixupArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.graph",
       "args": "GitGraphArgs",
       "result": "GitGraph",
@@ -5352,6 +5381,34 @@
         "path"
       ],
       "additionalProperties": false
+    },
+    "GitFixupArgs": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "hash"
+      ],
+      "additionalProperties": false
+    },
+    "GitFixupPlan": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "action"
+      ],
+      "additionalProperties": true
     },
     "GitGraph": {
       "type": "object",
