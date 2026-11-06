@@ -26,6 +26,8 @@ type raceEnv struct {
 
 func newRaceEnv(t *testing.T, bins ...string) *raceEnv {
 	t.Helper()
+	withConfigDir(t)
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
 	m, dir := covGitRepo(t)
 	t.Chdir(dir)
 	fakeAgentLookPath(t, bins...)
