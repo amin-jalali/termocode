@@ -197,6 +197,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiItermocWriteTools(call)...) // AH-8: switch, drafts, connect, access, start (ai_itermoc_write_tools.go)
 	tools = append(tools, aiMCPAddTools()...)             // MCPX-37: propose an MCP server (ai_mcp_add_tool.go)
 	tools = append(tools, m.aiAgentRunTools(call, c)...)  // G-API: agents start agent runs (ai_agent_run_tools.go)
+	tools = append(tools, aiWorkflowReadTools(root)...)   // WFX-9: workflows, read only (ai_workflow_tools.go)
 	if m.aiReviewEdits() {                                // Group R2: file changes become diffs to review
 		tools = m.aiReviewTools(tools, root, call)
 	}

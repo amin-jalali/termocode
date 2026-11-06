@@ -120,6 +120,10 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`agent_run_stop`](#agent_run_stop) | confirm (always asks): Deny (first) · Stop run | no | Stop an agent run of this chat: one that waits to start is dropped, a running one stops its steps. |
 | [`agent_run_wait`](#agent_run_wait) | auto | no | Wait until a background agent run of this chat ends (or timeout_s passes), then return its status and, when it ended, its result. |
 | [`agent_run_send`](#agent_run_send) | auto | no | Send a message to a running step of an agent run of this chat (to steer it: a hint, a narrower task, a question to answer in its result). |
+| [`workflow_list`](#workflow_list) | auto | no | List the workflows of this workspace (.termocode/workflows/*.jsonc) and of the user's own folder: name, title, state (file error, not trusted, on, off, runs by hand), steps, writes and the last run. |
+| [`workflow_read`](#workflow_read) | auto | no | Read one workflow file: where it is, whether it is trusted, its problems and warnings, its write steps (and whether each asks), and the file text. |
+| [`workflow_runs`](#workflow_runs) | auto | no | The recent runs of the workflows (or of one), newest first: id, dry run or run, state, writes. |
+| [`workflow_validate`](#workflow_validate) | auto | no | Check workflow file text (content) before you save it, or a saved workflow (name): every problem with its line, and the warnings. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1424,6 +1428,55 @@ Send a message to a running step of an agent run of this chat (to steer it: a hi
 | `message` | string | yes | what to tell the step, short and concrete |
 | `run_id` | string | yes | the run id |
 | `step` | string |   | the step id or title (optional when only one step runs) |
+
+### workflow_list
+
+List the workflows of this workspace (.termocode/workflows/*.jsonc) and of the user's own folder: name, title, state (file error, not trusted, on, off, runs by hand), steps, writes and the last run.
+
+**Gate:** auto
+
+**MCP server:** no
+
+No arguments.
+
+### workflow_read
+
+Read one workflow file: where it is, whether it is trusted, its problems and warnings, its write steps (and whether each asks), and the file text.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | workflow name from workflow_list |
+
+### workflow_runs
+
+The recent runs of the workflows (or of one), newest first: id, dry run or run, state, writes. With run (an id) it shows that run's steps and every write with its state (recorded, done, denied, failed).
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `limit` | integer |   | how many runs (default 10, at most 50) |
+| `name` | string |   | only this workflow (optional) |
+| `run` | string |   | one run id: its steps and writes (optional) |
+
+### workflow_validate
+
+Check workflow file text (content) before you save it, or a saved workflow (name): every problem with its line, and the warnings. It saves nothing.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `content` | string |   | the whole JSONC text to check (optional) |
+| `name` | string |   | the workflow name: the file name must match it; alone it checks the saved file |
 
 ### http_list_requests
 
