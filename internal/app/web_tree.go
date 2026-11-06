@@ -39,8 +39,10 @@ type webTree struct {
 	refs      map[string]map[string]bool  // folder → ids of connections that listed it
 	hidden    bool                        // dotfiles listed (as last published)
 	hiddenSet bool
-	reading   bool // a refresh of every folder runs
-	again     bool // and another one is owed
+	reading   bool           // a refresh of every folder runs
+	again     bool           // and another one is owed
+	roots     []webAddedRoot // the added folders (as last published)
+	rootsSet  bool
 }
 
 func newWebTree() webTree {
@@ -90,11 +92,66 @@ func webTreeSnapshot(m *Model, _ string) (any, error) {
 	for k, v := range t.dirs {
 		dirs[k] = v
 	}
+	roots, extras := m.webTreeRoots(root)
+	t.roots, t.rootsSet = extras, true
 	return webproto.TreeSnap{
-		Roots:  []webproto.TreeRoot{{Path: "", Label: webName(path.Base(filepath.ToSlash(root)))}},
+		Roots:  roots,
 		Hidden: t.hidden,
 		Dirs:   dirs,
 	}, nil
+}
+
+// webTreeRoots is the tree's roots: the workspace's own folder ("")
+// first, then every added folder (WEBP-8).
+func (m *Model) webTreeRoots(root string) ([]webproto.TreeRoot, []webAddedRoot) {
+	extras := m.webExtraRoots()
+	out := make([]webproto.TreeRoot, 0, 1+len(extras))
+	out = append(out, webproto.TreeRoot{Path: "", Label: webName(path.Base(filepath.ToSlash(root)))})
+	for _, r := range extras {
+		out = append(out, webproto.TreeRoot{Path: r.key, Label: r.label})
+	}
+	return out, extras
+}
+
+// webTrackRoots tells the browsers when a folder was added to the
+// workspace or removed: the folders of an added folder whose name now
+// means another folder (or none) are dropped first, then the roots go
+// out.
+func (m *Model) webTrackRoots(t *webTree) {
+	root, err := m.rootDir()
+	if err != nil || !t.rootsSet {
+		return
+	}
+	roots, extras := m.webTreeRoots(root)
+	if reflect.DeepEqual(extras, t.roots) {
+		return
+	}
+	now := map[string]string{}
+	for _, r := range extras {
+		now[r.key] = r.abs
+	}
+	for _, r := range t.roots {
+		if now[r.key] == r.abs {
+			continue
+		}
+		var gone []string
+		for rel := range t.refs {
+			if rel == r.key || strings.HasPrefix(rel, r.key+"/") {
+				gone = append(gone, rel)
+			}
+		}
+		for rel := range t.dirs {
+			if (rel == r.key || strings.HasPrefix(rel, r.key+"/")) && t.refs[rel] == nil {
+				gone = append(gone, rel)
+			}
+		}
+		sort.Strings(gone)
+		for _, rel := range gone {
+			m.webTreeDrop(t, rel)
+		}
+	}
+	t.roots = extras
+	m.webPublish("tree", webproto.TreeRootsDelta{Kind: "roots", Roots: roots})
 }
 
 // webTreeApply folds one tree delta into a snapshot (the browser store
@@ -136,6 +193,12 @@ func webTreeApply(snap, delta json.RawMessage) (json.RawMessage, error) {
 			return nil, err
 		}
 		s.Hidden = d.On
+	case "roots":
+		var d webproto.TreeRootsDelta
+		if err := json.Unmarshal(delta, &d); err != nil {
+			return nil, err
+		}
+		s.Roots = d.Roots
 	default:
 		return nil, fmt.Errorf("tree: unknown delta kind %q", k.Kind)
 	}
@@ -274,6 +337,7 @@ func (m *Model) webTrackTree(h *webHub, f *webFiles) tea.Cmd {
 			}
 		}
 	}
+	m.webTrackRoots(t)
 	if t.hiddenSet && m.explorer.HiddenShown() != t.hidden {
 		t.hidden = m.explorer.HiddenShown()
 		m.webPublish("tree", webproto.TreeHiddenDelta{Kind: "hidden", On: t.hidden})
@@ -324,15 +388,24 @@ type webTreeRead struct {
 func (m *Model) webTreeRead(rels []string, call *webCall) tea.Cmd {
 	root, err := m.rootDir()
 	fsys, remote := m.remoteFS()
+	// The folder each one is in, found on Update (an added folder's
+	// files are named ":<name>/…").
+	in := make([][2]string, len(rels))
+	for i, rel := range rels {
+		in[i] = [2]string{root, rel}
+		if r, sub, ok := m.webExtraRootOf(rel); ok && !remote {
+			in[i] = [2]string{r.abs, sub}
+		}
+	}
 	return func() tea.Msg {
 		reads := make([]webTreeRead, 0, len(rels))
-		for _, rel := range rels {
+		for i, rel := range rels {
 			r := webTreeRead{rel: rel, err: err}
 			if err == nil {
 				if remote {
 					r.entries, r.err = webReadDirFS(fsys, path.Join(root, rel))
 				} else {
-					r.entries, r.err = webReadDirLocal(root, rel)
+					r.entries, r.err = webReadDirLocal(in[i][0], in[i][1])
 				}
 			}
 			reads = append(reads, r)

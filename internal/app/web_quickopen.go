@@ -28,23 +28,30 @@ func webOpFilesList(m *Model, call *webCall) tea.Cmd {
 		call.fail(webproto.CodeNotFound, "No workspace is open on the laptop.")
 		return nil
 	}
+	extras := m.webExtraRoots()
 	call.later()
 	return func() tea.Msg {
-		call.reply(webFilesList(root))
+		call.reply(webFilesList(root, extras...))
 		return nil
 	}
 }
 
-// webFilesList lists the files under root (at most MaxQuickFiles).
-func webFilesList(root string) webproto.FilesListRes {
-	items := loadFilesIn([]string{root})
-	out := webproto.FilesListRes{Paths: make([]string, 0, min(len(items), webproto.MaxQuickFiles))}
-	for _, it := range items {
-		if len(out.Paths) >= webproto.MaxQuickFiles {
-			out.Truncated = true
-			break
+// webFilesList lists the files under root and the added folders (named
+// ":<name>/…"), at most MaxQuickFiles.
+func webFilesList(root string, extras ...webAddedRoot) webproto.FilesListRes {
+	out := webproto.FilesListRes{Paths: []string{}}
+	add := func(dir, prefix string) {
+		for _, it := range loadFilesIn([]string{dir}) {
+			if len(out.Paths) >= webproto.MaxQuickFiles {
+				out.Truncated = true
+				return
+			}
+			out.Paths = append(out.Paths, prefix+filepath.ToSlash(it.ID))
 		}
-		out.Paths = append(out.Paths, filepath.ToSlash(it.ID))
+	}
+	add(root, "")
+	for _, r := range extras {
+		add(r.abs, r.key+"/")
 	}
 	sort.Strings(out.Paths)
 	return out

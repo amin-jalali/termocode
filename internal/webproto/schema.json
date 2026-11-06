@@ -145,7 +145,8 @@
       "deltas": [
         "TreeDirDelta",
         "TreeRemoveDelta",
-        "TreeHiddenDelta"
+        "TreeHiddenDelta",
+        "TreeRootsDelta"
       ]
     },
     {
@@ -12833,6 +12834,9 @@
         "theme": {
           "$ref": "#/defs/StatusTheme"
         },
+        "update": {
+          "type": "string"
+        },
         "web": {
           "$ref": "#/defs/StatusWeb"
         },
@@ -13894,6 +13898,25 @@
       "required": [
         "path",
         "label"
+      ],
+      "additionalProperties": true
+    },
+    "TreeRootsDelta": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "roots"
+        },
+        "roots": {
+          "items": {
+            "$ref": "#/defs/TreeRoot"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "roots"
       ],
       "additionalProperties": true
     },

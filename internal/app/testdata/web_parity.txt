@@ -362,6 +362,7 @@ web	workspace-add-folder	cmd:addFolder
 web	workspace-remove-folder	cmd:removeFolder
 web	zen-mode	cmd:zen
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
+excluded	ai-agent-packs	laptop only: installs files into outside agents on the laptop
 excluded	ai-credentials	security: credentials file is laptop only
 excluded	ai-doctor	laptop only: checks the laptop setup
 excluded	ai-mcp-config	laptop only: edits the MCP config file

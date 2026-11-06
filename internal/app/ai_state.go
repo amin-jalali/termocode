@@ -117,6 +117,8 @@ type aiState struct {
 	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
+	// packs is the open agent-pack flow (agent_packs_ui.go).
+	packs *agentPacksState
 	// agentPickPending is the agent the open install / sign-in card is about (agent_install.go).
 	agentPickPending string
 	// agentAccountPending is the sign-in line of the open account card (agent_accounts.go).
@@ -577,6 +579,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
 		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
+		{"ai-agent-packs", "Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex)", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
@@ -613,7 +616,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat",
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
-		"ai-agent-hooks": // agent CLI hook files need no provider
+		"ai-agent-hooks", "ai-agent-packs": // agent CLI files need no provider
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -764,6 +767,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.toggleAIPlanWorktree(), true
 	case "ai-agent-hooks":
 		return m.openAgentHooks(), true
+	case "ai-agent-packs":
+		return m.openAgentPacks(), true
 	case "ai-memory-toggle":
 		return m.toggleAIMemory(), true
 	case "ai-models-edit":

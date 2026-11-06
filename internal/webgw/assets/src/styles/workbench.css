@@ -858,7 +858,8 @@ kbd {
 
 /* ---- Status bar items with icons ---- */
 .layout-desktop .statusbar .cod { font-size: 14px; }
-.layout-desktop .statusbar .sb-remote { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-sans); font-weight: 400; padding: 0 9px; }
+.layout-desktop .statusbar .sb-remote { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-sans); font-size: inherit; font-weight: 400; padding: 0 9px; border: 0; cursor: pointer; }
+.layout-desktop .statusbar .sb-remote:hover { filter: brightness(1.15); }
 .layout-desktop .statusbar .brand.tint-dirty::after { content: none; }
 .layout-desktop .statusbar .star { display: none; }
 
