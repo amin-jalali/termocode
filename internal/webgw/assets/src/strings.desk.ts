@@ -110,6 +110,7 @@ export const SD = {
   "sb.vim_insert": "-- INSERT --",
   "sb.vim_visual": "-- VISUAL --",
   "sb.vim_vline": "-- VISUAL LINE --",
+  "sb.vim_rec": "recording @{r}",
   "sb.vim_title": "This browser uses vi keys. Editor: Toggle vi Keys stops them.",
   "cmd.show_on_laptop": "File: Show on the Laptop",
   "cmd.toggle_side": "View: Toggle Side Bar",

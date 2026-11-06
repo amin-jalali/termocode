@@ -271,7 +271,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         if (typeof m.text === "string") noteClip(m.text);
         return;
       case "vim":
-        if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending };
+        if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending, rec: typeof m.rec === "string" ? m.rec : "" };
         return;
       case "key":
         // The workbench's keys work while the editor has the focus.

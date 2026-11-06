@@ -128,6 +128,7 @@ interface Editor {
   getSelections(): IRange[] | null;
   getAction(id: string): { isSupported(): boolean; run(): Promise<void> } | null;
   getContainerDomNode(): HTMLElement;
+  trigger(source: string, handlerId: string, payload: unknown): void;
 }
 interface LineChange {
   originalStartLineNumber: number;
@@ -891,16 +892,37 @@ function vimStart(mod: typeof VimModule): void {
     undo: () => undoRedo(false),
     redo: () => undoRedo(true),
     readOnly: () => readOnly,
-    show: (mode, pending) => vimShow(mode, pending),
+    typeKey: (tok) => {
+      if (tok.length === 1) return e.trigger("keyboard", "type", { text: tok });
+      const cmd = VIM_TYPE[tok];
+      if (cmd === "\n" || cmd === "\t") e.trigger("keyboard", "type", { text: cmd });
+      else if (cmd) e.trigger("keyboard", cmd, null);
+    },
+    show: (mode, pending, rec) => vimShow(mode, pending, rec),
   });
 }
 
-function vimShow(mode: VimMode | null, pending: string): void {
+/** VIM_TYPE are the editor's commands for the special keys Vim types in
+ * insert mode (a macro, the . repeat). */
+const VIM_TYPE: Record<string, string> = {
+  "<CR>": "\n",
+  "<Tab>": "\t",
+  "<BS>": "deleteLeft",
+  "<Del>": "deleteRight",
+  "<Left>": "cursorLeft",
+  "<Right>": "cursorRight",
+  "<Up>": "cursorUp",
+  "<Down>": "cursorDown",
+  "<Home>": "cursorHome",
+  "<End>": "cursorEnd",
+};
+
+function vimShow(mode: VimMode | null, pending: string, rec = ""): void {
   ed?.updateOptions({ cursorStyle: mode === null || mode === "insert" ? "line" : "block" });
-  const key = (mode ?? "") + "\x00" + pending;
+  const key = (mode ?? "") + "\x00" + pending + "\x00" + rec;
   if (key === vimShown) return;
   vimShown = key;
-  post({ t: "vim", mode: mode ?? "", pending });
+  post({ t: "vim", mode: mode ?? "", pending, rec });
 }
 let tabWidth = 4;
 

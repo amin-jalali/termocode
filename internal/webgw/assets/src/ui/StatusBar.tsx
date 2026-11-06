@@ -57,6 +57,7 @@ function FileFacts() {
           {t(vimKey)}
         </span>
       )}
+      {vimKey && vm.rec && <span class="strip-item sb-vim-rec">{t("sb.vim_rec", { r: vm.rec })}</span>}
       {vimKey && vm.pending && <span class="strip-item sb-vim-keys" dir="ltr">{vm.pending.replace(/\x00[^\x00]*\x00/g, "").replace(/\n/g, "⏎")}</span>}
       <span class="strip-item sb-pos" title={t("sb.line_of", { n: line, m: d.lines.length })}>
         {t("sb.pos", { n: line, c: col })}

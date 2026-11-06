@@ -709,6 +709,7 @@ export const FA: Record<StringKey, string> = {
   "sb.vim_insert": "-- درج --",
   "sb.vim_visual": "-- انتخاب --",
   "sb.vim_vline": "-- انتخاب خط --",
+  "sb.vim_rec": "ضبط در @{r}",
   "sb.vim_title": "کلیدهای vi این مرورگر. «ویرایشگر: کلیدهای vi» آن‌ها را خاموش می‌کند.",
   "cmd.show_on_laptop": "فایل: نشان دادن روی لپ‌تاپ",
   "cmd.toggle_side": "نما: نمایش یا پنهان کردن پنل کناری",

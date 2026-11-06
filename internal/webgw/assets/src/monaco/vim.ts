@@ -1,12 +1,15 @@
-// Vim mode of the desktop editor (WEBP-1): a small keymap of our own over
-// the frame's text (no library). Normal, insert, visual and visual-line
-// modes; counts; the motions h j k l w b e W B E 0 ^ $ gg G f F t T { };
-// the operators d c y (with a motion, doubled for whole lines, or the
-// text objects iw aw); x X D C s S Y p P J r ~ i a I A o O; u and Ctrl+R;
-// named registers ("a … "z). Every change goes through the host as one
-// edit, so the page's undo and the laptop's buffer see it like typing.
-// Not here (yet): macros, marks, search (/ ? n), the . repeat, ex
-// commands (:w; Ctrl/Cmd+S saves).
+// Vim mode of the desktop editor (WEBP-1): a keymap of our own over the
+// frame's text (no library), in its own file (monaco-vim.js) that the
+// frame loads only when Vim mode is on. Normal, insert, visual and
+// visual-line modes; counts; the motions h j k l w b e W B E 0 ^ $ gg G
+// f F t T ; , { }; the operators d c y (with a motion, doubled for whole
+// lines, or the text objects iw aw); x X D C s S Y p P J r ~ i a I A o O;
+// u and Ctrl+R; the . repeat; macros (q, @, @@); the registers a-z (A-Z
+// appends), the unnamed one, 0 (the last yank), 1-9 (deletes of lines),
+// - (small deletes), _ (the black hole) and . (the last insert; Ctrl+R
+// in insert mode puts a register). Every change goes through the host
+// as one edit, so the page's undo and the laptop's buffer see it like
+// typing.
 import type { Text } from "@codemirror/state";
 
 export type VimMode = "normal" | "insert" | "visual" | "vline";
@@ -26,8 +29,12 @@ export interface VimHost {
   undo(): void;
   redo(): void;
   readOnly(): boolean;
-  /** show tells the page the mode and the keys typed so far. */
-  show(mode: VimMode, pending: string): void;
+  /** typeKey types one key (a token: "a", "<CR>", "<BS>" …) as the
+   * user's own typing in insert mode (a macro, the . repeat). */
+  typeKey(tok: string): void;
+  /** show tells the page the mode, the keys typed so far and the
+   * register a macro is being recorded into ("": none). */
+  show(mode: VimMode, pending: string, rec: string): void;
 }
 
 /** VimKey is the part of a keydown the keymap reads. */
@@ -60,6 +67,71 @@ interface Motion {
 const MOTIONS = new Set(["h", "j", "k", "l", "w", "b", "e", "W", "B", "E", "0", "^", "$", "G", "gg", "{", "}", " ", "Backspace", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
 const CHAR_MOTIONS = new Set(["f", "F", "t", "T"]);
 
+/** STEP_LIMIT stops a macro that calls itself forever. */
+const STEP_LIMIT = 20000;
+
+const KEY_TOKENS: Record<string, string> = {
+  Escape: "<Esc>",
+  Enter: "<CR>",
+  Backspace: "<BS>",
+  Delete: "<Del>",
+  Tab: "<Tab>",
+  ArrowLeft: "<Left>",
+  ArrowRight: "<Right>",
+  ArrowUp: "<Up>",
+  ArrowDown: "<Down>",
+  Home: "<Home>",
+  End: "<End>",
+};
+
+/** tokOf names a keydown as one token: the char it types, or a special
+ * key in the editor's notation ("<CR>", "<C-r>"); null: not Vim's. */
+export function tokOf(e: VimKey): string | null {
+  if (e.metaKey || e.altKey) return null;
+  const k = e.key;
+  if (e.ctrlKey) return k.length === 1 ? "<C-" + k.toLowerCase() + ">" : null;
+  if (k.length === 1) return k;
+  return KEY_TOKENS[k] ?? null;
+}
+
+/** PIECES are the special tokens as the command parser reads them. */
+const PIECES: Record<string, string> = {
+  "<CR>": "\n",
+  "<Del>": "\x7f",
+  "<Tab>": "",
+  "<BS>": "\x00Backspace\x00",
+  "<Left>": "\x00ArrowLeft\x00",
+  "<Right>": "\x00ArrowRight\x00",
+  "<Up>": "\x00ArrowUp\x00",
+  "<Down>": "\x00ArrowDown\x00",
+  "<Home>": "\x00Home\x00",
+  "<End>": "\x00End\x00",
+};
+
+/** keysText writes tokens as a register's text (a recorded macro). */
+function keysText(toks: readonly string[]): string {
+  return toks.map((t) => (t === "<CR>" ? "\n" : t === "<Esc>" ? "\x1b" : t === "<BS>" ? "\b" : t === "<Tab>" ? "\t" : t)).join("");
+}
+
+/** textKeys reads a register's text as keys (@a on yanked text). */
+function textKeys(s: string): string[] {
+  const out: string[] = [];
+  for (const ch of s) out.push(ch === "\n" ? "<CR>" : ch === "\x1b" ? "<Esc>" : ch === "\b" ? "<BS>" : ch === "\t" ? "<Tab>" : ch);
+  return out;
+}
+
+/** insertedText is the text a run of insert-mode keys typed. */
+function insertedText(toks: readonly string[]): string {
+  let out = "";
+  for (const t of toks) {
+    if (t === "<CR>") out += "\n";
+    else if (t === "<BS>") out = out.slice(0, -1);
+    else if (t === "<Tab>") out += "\t";
+    else if (t.length === 1) out += t;
+  }
+  return out;
+}
+
 type Kind = 0 | 1 | 2; // blank, word, punctuation
 
 function kindOf(c: string, big: boolean): Kind {
@@ -77,6 +149,27 @@ export class Vim {
   private vhead = 0;
   /** want is the column j and k keep to (-1: the line's end). */
   private want: number | null = null;
+  /** dotRec gathers the keys of the change being made (the . repeat);
+   * lastDot is the last finished one. */
+  private dotRec: string[] | null = null;
+  private lastDot: string[] = [];
+  private dotReplay = false;
+  /** changed: the command running now changed the text. */
+  private changed = false;
+  /** insKeys are the keys typed since insert mode began; insRepeat how
+   * many more times they are typed at Escape (2ia). */
+  private insKeys: string[] = [];
+  private insRepeat = 0;
+  /** insReg: Ctrl+R in insert mode waits for a register's name. */
+  private insReg = false;
+  /** rec is the register a macro is being recorded into ("": none). */
+  private rec = "";
+  private recAppend = false;
+  private recKeys: string[] = [];
+  private macros = new Map<string, string[]>();
+  private lastMacro = "";
+  private steps = 0;
+  private depth = 0;
 
   constructor(private readonly h: VimHost) {
     this.normal();
@@ -85,22 +178,41 @@ export class Vim {
   /** key handles one keydown: true when Vim took it (the editor must
    * not see it). */
   key(e: VimKey): boolean {
-    if (e.metaKey || e.altKey) return false;
-    const k = e.key;
-    if (this.mode === "insert") {
-      if (k === "Escape" || (e.ctrlKey && k === "[")) {
-        const at = this.pos();
-        const ls = this.lineStart(at);
-        this.mode = "normal";
-        this.h.place(Math.max(ls, at - 1));
-        this.normal();
-        return true;
+    const tok = tokOf(e);
+    if (tok === null) return false;
+    if (this.rec) this.recKeys.push(tok);
+    this.steps = 0;
+    return this.exec(tok, true);
+  }
+
+  /** exec runs one token; live: it is the keydown being handled now (an
+   * insert-mode key the editor then types itself), else Vim types it. */
+  private exec(tok: string, live: boolean): boolean {
+    if (++this.steps > STEP_LIMIT) return true;
+    const took = this.handle(tok);
+    if (!took && !live && this.mode === "insert") this.h.typeKey(tok);
+    return took;
+  }
+
+  /** play runs tokens as if typed (a macro, the . repeat). */
+  private play(toks: readonly string[]): void {
+    if (this.depth > 50) return;
+    this.depth++;
+    try {
+      for (const t of toks) {
+        if (this.steps > STEP_LIMIT) break;
+        this.exec(t, false);
       }
-      return false;
+    } finally {
+      this.depth--;
     }
-    if (e.ctrlKey) {
-      if (k === "[") return this.escape();
-      if (k === "r" && this.mode === "normal") {
+  }
+
+  private handle(tok: string): boolean {
+    if (this.mode === "insert") return this.insertKey(tok);
+    if (tok === "<Esc>" || tok === "<C-[>") return this.escape();
+    if (tok.startsWith("<C-")) {
+      if (tok === "<C-r>" && this.mode === "normal") {
         this.pending = "";
         this.h.redo();
         this.after();
@@ -108,12 +220,62 @@ export class Vim {
       }
       return false; // the workbench's keys, the editor's own
     }
-    if (k === "Escape") return this.escape();
-    if (k === "Shift" || k === "Control" || k === "Alt" || k === "Meta" || k === "CapsLock") return false;
-    if (k.length > 1 && !MOTIONS.has(k) && k !== "Enter" && k !== "Delete" && k !== "Tab") return false; // F-keys, PageUp …
-    this.pending += k === "Enter" ? "\n" : k === "Delete" ? "\x7f" : k === "Tab" ? "" : k.length > 1 ? "\x00" + k + "\x00" : k;
+    const piece = tok.length === 1 ? tok : PIECES[tok];
+    if (piece === undefined) return false; // PageUp …: the editor's
+    if (this.pending === "" && this.mode === "normal" && !this.dotReplay) {
+      this.dotRec = [];
+      this.changed = false;
+    }
+    if (!this.dotReplay) this.dotRec?.push(tok);
+    this.pending += piece;
     this.run();
     return true;
+  }
+
+  private insertKey(tok: string): boolean {
+    if (this.insReg) {
+      this.insReg = false;
+      const r = tok.length === 1 ? this.getReg(tok) : undefined;
+      if (r) for (const t of textKeys(r.text)) this.typeIn(t);
+      return true;
+    }
+    if (tok === "<Esc>" || tok === "<C-[>") {
+      this.leaveInsert();
+      return true;
+    }
+    if (tok === "<C-r>") {
+      this.insReg = true;
+      return true;
+    }
+    if (tok.startsWith("<C-")) return false; // the workbench's keys
+    this.insKeys.push(tok);
+    if (!this.dotReplay) this.dotRec?.push(tok);
+    return false;
+  }
+
+  /** typeIn types a key in insert mode as if the user typed it. */
+  private typeIn(tok: string): void {
+    this.insKeys.push(tok);
+    if (!this.dotReplay) this.dotRec?.push(tok);
+    this.h.typeKey(tok);
+  }
+
+  private leaveInsert(): void {
+    const keys = this.insKeys;
+    for (let i = 0; i < this.insRepeat; i++) for (const t of keys) this.h.typeKey(t);
+    this.insRepeat = 0;
+    this.regs.set(".", { text: insertedText(keys), line: false });
+    if (this.dotRec && !this.dotReplay) {
+      this.dotRec.push("<Esc>");
+      this.lastDot = this.dotRec;
+    }
+    this.dotRec = null;
+    this.changed = false;
+    const at = this.h.caret();
+    const ls = this.lineStart(at);
+    this.mode = "normal";
+    this.h.place(Math.max(ls, at - 1));
+    this.normal();
   }
 
   private escape(): boolean {
@@ -134,7 +296,7 @@ export class Vim {
       const c = this.clamp(at);
       if (c !== at) this.h.place(c);
     }
-    this.h.show(this.mode, this.pending);
+    this.h.show(this.mode, this.pending, this.rec);
   }
 
   private after(): void {
@@ -186,25 +348,42 @@ export class Vim {
 
   private run(): void {
     const p = this.pending;
-    const m = /^(?:"([a-z"]))?([1-9]\d*)?(.*)$/s.exec(p);
+    const m = /^(?:"([a-zA-Z0-9"_+*.:/-]))?([1-9]\d*)?(.*)$/s.exec(p);
     if (!m) return this.reset();
     const reg = m[1] ?? '"';
     if (p.startsWith('"') && m[1] === undefined) {
-      if (p.length < 2) return this.h.show(this.mode, p);
+      if (p.length < 2) return this.h.show(this.mode, p, this.rec);
       return this.reset();
     }
     const n1 = m[2] ? parseInt(m[2], 10) : 0;
     const rest = m[3];
-    if (rest === "") return this.h.show(this.mode, p);
+    if (rest === "") return this.h.show(this.mode, p, this.rec);
     const done = this.command(reg, n1, rest);
-    if (done === "more") return this.h.show(this.mode, p);
+    if (done === "more") return this.h.show(this.mode, p, this.rec);
     this.pending = "";
+    this.endCommand();
     this.after();
   }
 
   private reset(): void {
     this.pending = "";
+    this.endCommand();
     this.after();
+  }
+
+  /** endCommand keeps a finished change for the . repeat (a change that
+   * went on into insert mode is kept at Escape). */
+  private endCommand(): void {
+    if (this.dotReplay || this.mode === "insert") return;
+    if (this.changed && this.dotRec) this.lastDot = this.dotRec;
+    this.dotRec = null;
+    this.changed = false;
+  }
+
+  /** edit is the host's edit, noted as a change for the . repeat. */
+  private edit(from: number, to: number, insert: string, caret: number): void {
+    this.changed = true;
+    this.h.edit(from, to, insert, caret);
   }
 
   /** command runs rest (after register and count); "more": wait for keys. */
@@ -227,7 +406,23 @@ export class Vim {
       case "A":
       case "o":
       case "O":
-        return this.insertCommand(c0), "done";
+        this.insertCommand(c0);
+        if (this.mode === "insert") this.insRepeat = count - 1;
+        return "done";
+      case ".":
+        return this.repeat(n1), "done";
+      case "q":
+        if (this.rec) return this.stopRecording(), "done";
+        if (rest.length < 2) return "more";
+        if (/^[a-zA-Z0-9"]$/.test(rest[1])) {
+          this.rec = rest[1].toLowerCase();
+          this.recAppend = rest[1] !== this.rec;
+          this.recKeys = [];
+        }
+        return "done";
+      case "@":
+        if (rest.length < 2) return "more";
+        return this.playMacro(rest[1], count), "done";
       case "v":
       case "V":
         this.anchor = this.pos();
@@ -487,6 +682,7 @@ export class Vim {
       return "done";
     }
     const r = this.visualRange();
+    if ("dxc~s\x7f".includes(c)) this.visualDot(c === "x" || c === "\x7f" ? "d" : c === "s" ? "c" : c, r);
     const done = (): "done" => ((this.mode = "normal"), "done");
     switch (c) {
       case "d":
@@ -517,6 +713,24 @@ export class Vim {
       }
     }
     return "done"; // anything else: still visual
+  }
+
+  /** visualDot keeps a visual change for the . repeat as the normal
+   * command that does the same from the caret: as many lines (3dd), or
+   * as many chars on one line (4x). Other shapes are not repeated. */
+  private visualDot(op: string, r: Range): void {
+    const d = this.d;
+    const a = d.lineAt(r.from).number, b = d.lineAt(Math.max(r.from, r.to - 1)).number;
+    let keys: string[] | null = null;
+    if (r.line && op !== "~") {
+      const n = b - a + 1;
+      keys = [...(n > 1 ? String(n) : ""), op, op];
+    } else if (!r.line && a === b && r.to > r.from) {
+      const n = r.to - r.from;
+      keys = [...(n > 1 ? String(n) : ""), op === "d" ? "x" : op === "c" ? "s" : op];
+    }
+    this.dotRec = keys;
+    this.changed = false;
   }
 
   /** headChar is the char the visual caret is on (the host's caret is
@@ -602,9 +816,36 @@ export class Vim {
     return { from: this.d.line(a).from, to: this.d.line(b).to, line: true };
   }
 
-  private setReg(reg: string, r: Reg): void {
+  /** setReg keeps what y or d took: in reg (A-Z appends to a-z; _
+   * keeps nothing), the unnamed register, 0 for a yank, 1-9 (lines) or
+   * - (a small delete) for a delete. */
+  private setReg(reg: string, r: Reg, yank: boolean): void {
+    if (reg === "_") return;
+    if (/^[A-Z]$/.test(reg)) {
+      const lower = reg.toLowerCase();
+      const prev = this.regs.get(lower);
+      if (prev) r = prev.line || r.line ? { text: nl(prev.text) + nl(r.text), line: true } : { text: prev.text + r.text, line: false };
+      this.macros.delete(lower);
+      reg = lower;
+    }
     this.regs.set('"', r);
-    if (reg !== '"') this.regs.set(reg, r);
+    if (reg !== '"') {
+      this.regs.set(reg, r);
+      if (/^[a-z]$/.test(reg)) this.macros.delete(reg);
+      return;
+    }
+    if (yank) this.regs.set("0", r);
+    else if (r.line || r.text.includes("\n")) {
+      for (let i = 9; i > 1; i--) {
+        const prev = this.regs.get(String(i - 1));
+        if (prev) this.regs.set(String(i), prev);
+      }
+      this.regs.set("1", r);
+    } else this.regs.set("-", r);
+  }
+
+  private getReg(reg: string): Reg | undefined {
+    return this.regs.get(reg.toLowerCase());
   }
 
   /** operate runs d, c or y over r. */
@@ -615,21 +856,21 @@ export class Vim {
       if (op === "c") this.insertAt(r.from);
       return;
     }
-    this.setReg(reg, { text: r.line ? text + "\n" : text, line: r.line });
+    this.setReg(reg, { text: r.line ? text + "\n" : text, line: r.line }, op === "y");
     if (op === "y") {
       this.h.place(r.line ? this.firstNonBlank(d.lineAt(r.from).number) : r.from);
       return;
     }
     if (this.h.readOnly()) return;
     if (!r.line) {
-      this.h.edit(r.from, r.to, "", r.from);
+      this.edit(r.from, r.to, "", r.from);
       if (op === "c") this.insertAt(r.from);
       return;
     }
     if (op === "c") {
       // cc keeps the first line's indent and the line itself.
       const ind = /^\s*/.exec(d.lineAt(r.from).text)?.[0] ?? "";
-      this.h.edit(r.from, r.to, ind, r.from + ind.length);
+      this.edit(r.from, r.to, ind, r.from + ind.length);
       this.insertAt(r.from + ind.length);
       return;
     }
@@ -637,13 +878,61 @@ export class Vim {
     let from = r.from, to = r.to;
     if (to < d.length) to++;
     else if (from > 0) from--;
-    this.h.edit(from, to, "", from);
+    this.edit(from, to, "", from);
     const nd = this.d;
     const ln = nd.lineAt(Math.min(from === r.from ? from : from + 1, nd.length)).number;
     this.h.place(this.firstNonBlank(Math.min(ln, nd.lines)));
   }
 
+  /** repeat does the last change again (n: with this count instead). */
+  private repeat(n: number): void {
+    let keys = this.lastDot;
+    if (keys.length === 0) return;
+    if (n > 0) {
+      let i = 0;
+      while (i < keys.length && /^[0-9]$/.test(keys[i]) && !(i === 0 && keys[i] === "0")) i++;
+      keys = [...String(n), ...keys.slice(i)];
+    }
+    this.pending = "";
+    this.dotRec = null;
+    this.dotReplay = true;
+    try {
+      this.play(keys);
+      if (this.mode === "insert") this.leaveInsert();
+    } finally {
+      this.dotReplay = false;
+    }
+    this.dotRec = null;
+    this.changed = false;
+  }
+
+  private stopRecording(): void {
+    const keys = this.recKeys.slice(0, -1); // not the q that stops it
+    const r = this.rec;
+    const all = this.recAppend ? [...(this.macros.get(r) ?? []), ...keys] : keys;
+    this.rec = "";
+    this.recKeys = [];
+    this.macros.set(r, all);
+    this.regs.set(r, { text: keysText(all), line: false });
+  }
+
+  /** playMacro plays register r count times (@@: the last one again). */
+  private playMacro(r: string, count: number): void {
+    if (r === "@") r = this.lastMacro;
+    r = r.toLowerCase();
+    if (!r) return;
+    const reg = this.regs.get(r);
+    const keys = this.macros.get(r) ?? (reg ? textKeys(reg.text) : []);
+    if (keys.length === 0) return;
+    this.lastMacro = r;
+    this.pending = "";
+    this.dotRec = null;
+    for (let i = 0; i < count && this.steps <= STEP_LIMIT; i++) this.play(keys);
+  }
+
   private insertAt(at: number): void {
+    this.insKeys = [];
+    this.insRepeat = 0;
     this.mode = "insert";
     this.want = null;
     this.h.place(at);
@@ -667,17 +956,17 @@ export class Vim {
         if (this.h.readOnly()) return;
         const ind = /^\s*/.exec(l.text)?.[0] ?? "";
         if (c === "o") {
-          this.h.edit(l.to, l.to, "\n" + ind, l.to + 1 + ind.length);
+          this.edit(l.to, l.to, "\n" + ind, l.to + 1 + ind.length);
           return this.insertAt(l.to + 1 + ind.length);
         }
-        this.h.edit(l.from, l.from, ind + "\n", l.from + ind.length);
+        this.edit(l.from, l.from, ind + "\n", l.from + ind.length);
         return this.insertAt(l.from + ind.length);
       }
     }
   }
 
   private put(reg: string, before: boolean, count: number): void {
-    const r = this.regs.get(reg);
+    const r = this.getReg(reg);
     if (!r || this.h.readOnly()) return;
     const at = this.pos();
     const d = this.d;
@@ -685,21 +974,21 @@ export class Vim {
     if (r.line) {
       const body = r.text.repeat(count);
       if (before) {
-        this.h.edit(l.from, l.from, body, l.from);
+        this.edit(l.from, l.from, body, l.from);
         this.h.place(this.firstNonBlank(l.number));
       } else if (l.to < d.length) {
-        this.h.edit(l.to + 1, l.to + 1, body, l.to + 1);
+        this.edit(l.to + 1, l.to + 1, body, l.to + 1);
         this.h.place(this.firstNonBlank(l.number + 1));
       } else {
         // After the last line: a line end first, none at the end.
-        this.h.edit(l.to, l.to, "\n" + body.slice(0, -1), l.to + 1);
+        this.edit(l.to, l.to, "\n" + body.slice(0, -1), l.to + 1);
         this.h.place(this.firstNonBlank(l.number + 1));
       }
       return;
     }
     const pos = before || l.length === 0 ? at : at + 1;
     const body = r.text.repeat(count);
-    this.h.edit(pos, pos, body, pos + body.length - 1);
+    this.edit(pos, pos, body, pos + body.length - 1);
   }
 
   private join(lines: number): void {
@@ -716,7 +1005,7 @@ export class Vim {
       out = out.replace(/\s+$/, "") + (t === "" || t.startsWith(")") ? "" : " ") + t;
     }
     const from = d.line(first).from;
-    this.h.edit(from, d.line(last).to, out, from + caret);
+    this.edit(from, d.line(last).to, out, from + caret);
   }
 
   private toggleCase(count: number): void {
@@ -725,12 +1014,12 @@ export class Vim {
     const to = Math.min(this.lineEnd(at), at + count);
     if (to <= at) return;
     const s = this.d.sliceString(at, to);
-    this.h.edit(at, to, swapCase(s), Math.min(to, this.lineEnd(at) - 1));
+    this.edit(at, to, swapCase(s), Math.min(to, this.lineEnd(at) - 1));
   }
 
   private caseRange(r: Range): void {
     if (this.h.readOnly() || r.to <= r.from) return;
-    this.h.edit(r.from, r.to, swapCase(this.d.sliceString(r.from, r.to)), r.from);
+    this.edit(r.from, r.to, swapCase(this.d.sliceString(r.from, r.to)), r.from);
   }
 
   private replaceChars(c: string, count: number): void {
@@ -738,8 +1027,12 @@ export class Vim {
     const at = this.pos();
     if (at + count > this.lineEnd(at)) return;
     const ins = c === "\n" ? "\n" : c.repeat(count);
-    this.h.edit(at, at + count, ins, c === "\n" ? at + 1 : at + count - 1);
+    this.edit(at, at + count, ins, c === "\n" ? at + 1 : at + count - 1);
   }
+}
+
+function nl(s: string): string {
+  return s.endsWith("\n") ? s : s + "\n";
 }
 
 function swapCase(s: string): string {

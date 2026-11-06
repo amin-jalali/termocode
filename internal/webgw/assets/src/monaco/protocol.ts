@@ -241,9 +241,9 @@ export type FromFrame =
   | { t: "glyph"; line: number; menu: boolean; x: number; y: number }
   /** gitMark: a click on a git change mark in the gutter (1-based row). */
   | { t: "gitMark"; line: number }
-  /** vim: Vim mode's mode now ("": off) and the keys of a command not
-   * finished yet. */
-  | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline"; pending: string }
+  /** vim: Vim mode's mode now ("": off), the keys of a command not
+   * finished yet and the register a macro is being recorded into. */
+  | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline"; pending: string; rec?: string }
   /** copied: the user copied or cut text in the editor (the clipboard
    * history of the tab keeps it). */
   | { t: "copied"; text: string }
