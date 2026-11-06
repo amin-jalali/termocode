@@ -686,6 +686,15 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"web_max_hours":    aiNever(aiNoWeb),
 	"web_open_browser": aiNever(aiNoWeb),
 	"web_max_viewers":  aiNever(aiNoWeb),
+	// Workflows (ADR 0021): the AI may change a limit after its card; it
+	// never turns workflows on or off and never widens the agent sandbox.
+	"workflows_enabled":          aiNever("workflows run unattended and write to outside systems; only the user turns them on or off"),
+	"workflows_parallel_max":     aiConfirm(ai.ClassSettings),
+	"workflows_day_budget_usd":   aiConfirm(ai.ClassSettings),
+	"workflows_missed_grace_min": aiConfirm(ai.ClassSettings),
+	"workflows_history_days":     aiConfirm(ai.ClassSettings),
+	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
+	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
 }
 
 // aiNoWeb is why the AI never touches the web panel.
