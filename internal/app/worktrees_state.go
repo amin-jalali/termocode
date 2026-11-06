@@ -93,6 +93,10 @@ func (m *Model) revealWorktrees() tea.Cmd {
 		m.applyLayout()
 	}
 	m.focus = FocusExplorer
+	if m.inTerminal || m.panelFocused { // run from the terminal: the keys come to the list
+		m.inTerminal, m.panelFocused = false, false
+		m.ensureEditorWindowCurrent()
+	}
 	return m.worktreesSync()
 }
 
