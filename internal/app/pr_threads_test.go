@@ -99,6 +99,7 @@ func TestPRThreadCard(t *testing.T) {
 // same thread; Resolve resolves it, and a resolved thread offers Reopen.
 func TestPRThreadReplyAndResolve(t *testing.T) {
 	m, f := prThreadsModel(t)
+	m.prOpenThreads()
 	m.handlePRPickerSelect("thread-PRRT_1")
 	if cmd, _ := m.handlePRConfirm("reply"); cmd != nil || !m.promptOpen || m.promptKind != promptKindPRReply {
 		t.Fatal("reply prompt not open")
@@ -131,6 +132,7 @@ func TestPRThreadReplyAndResolve(t *testing.T) {
 		t.Error("no resolve toast")
 	}
 
+	m.prOpenThreads()
 	m.handlePRPickerSelect("thread-PRRT_2")
 	b := m.confirm.Buttons()
 	if b[2].ID != "resolve" || b[2].Title != "Reopen Thread" {

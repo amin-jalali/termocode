@@ -155,6 +155,9 @@ func (m *Model) handlePRPromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.handlePRCreatePromptSubmit(value); ok { // pr_create.go
 		return cmd, true
 	}
+	if cmd, ok := m.handlePRReplySubmit(value); ok { // pr_threads.go
+		return cmd, true
+	}
 	if m.promptKind != promptKindPRReview {
 		return nil, false
 	}

@@ -23,9 +23,10 @@ const prBodyLines = 14
 
 // prViewMsg is a finished `gh pr view`.
 type prViewMsg struct {
-	number int
-	detail ghci.PRDetail
-	err    error
+	number  int
+	detail  ghci.PRDetail
+	threads []ghci.Thread // nil when gh could not read them (the view still opens)
+	err     error
 }
 
 // openPRView reads pull request n; the card opens when gh answers.
@@ -41,7 +42,14 @@ func (m *Model) openPRView(n int) tea.Cmd {
 func (m *Model) prViewCmd(n int) tea.Cmd {
 	return m.prRun(func(ctx context.Context, run ghci.Runner, dir string) tea.Msg {
 		d, err := ghci.ViewPR(ctx, run, dir, n)
-		return prViewMsg{number: n, detail: d, err: err}
+		if err != nil {
+			return prViewMsg{number: n, err: err}
+		}
+		threads, terr := ghci.Threads(ctx, run, dir, n)
+		if terr != nil {
+			threads = nil // an old gh or no API access: the view without threads
+		}
+		return prViewMsg{number: n, detail: d, threads: threads}
 	})
 }
 
@@ -53,6 +61,17 @@ func (m *Model) onPRView(msg prViewMsg) tea.Cmd {
 	s := m.prS()
 	d := msg.detail
 	s.detail, s.diff = &d, nil
+	s.threads = msg.threads
+	sortThreads(s.threads)
+	want := s.wantThread
+	s.wantThread = ""
+	if want != "" {
+		s.thread = want
+		if s.threadOn() != nil {
+			m.showPRThread()
+			return nil
+		}
+	}
 	m.showPRView()
 	return nil
 }
@@ -67,11 +86,14 @@ func (m *Model) showPRView() {
 		return
 	}
 	buttons := []confirm.Button{{ID: "actions", Title: "Actions…", Style: confirm.StylePrimary}}
+	if n := len(m.prS().threads); n > 0 {
+		buttons = append(buttons, confirm.Button{ID: "threads", Title: "Threads…"})
+	}
 	if len(d.Files) > 0 {
 		buttons = append(buttons, confirm.Button{ID: "files", Title: "Files…"})
 	}
 	buttons = append(buttons, confirm.Button{ID: "close", Title: "Close"})
-	m.confirm = confirm.New(prRef(d.Number)+" Pull Request", prViewText(*d), buttons).WithScrollText().WithWideText()
+	m.confirm = confirm.New(prRef(d.Number)+" Pull Request", m.prViewBody(), buttons).WithScrollText().WithWideText()
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindPRView
@@ -168,12 +190,17 @@ func (m *Model) handlePRConfirm(id string) (tea.Cmd, bool) {
 	if m.confirmKind == confirmKindPRMerge { // pr_merge.go
 		return m.answerPRMerge(id), true
 	}
+	if m.confirmKind == confirmKindPRThread { // pr_threads.go
+		return m.answerPRThread(id), true
+	}
 	if m.confirmKind != confirmKindPRView {
 		return nil, false
 	}
 	switch id {
 	case "files":
 		return m.prOpenFiles(), true
+	case "threads":
+		return m.prOpenThreads(), true
 	case "actions":
 		return m.prOpenActions(), true
 	}
