@@ -14,7 +14,7 @@ import type { Route } from "../state/route";
 import { t, type StringKey } from "../strings";
 import { Cod } from "./icons";
 
-export type Activity = "files" | "search" | "git" | "run" | "testing" | "agents" | "db" | "containers" | "services" | "kube" | "mcp" | "chat" | "device" | "settings";
+export type Activity = "files" | "search" | "git" | "run" | "testing" | "agents" | "itermoc" | "db" | "containers" | "services" | "kube" | "mcp" | "chat" | "device" | "settings";
 
 interface Item {
   id: Activity;
@@ -35,6 +35,7 @@ export const ACTIVITIES: readonly Item[] = [
   { id: "run", label: "act.run", icon: "debug-alt", keys: "Shift+D", side: true, to: () => more("tasks") },
   { id: "testing", label: "act.testing", icon: "beaker", side: true, to: () => more("testing") },
   { id: "agents", label: "ai.wt_title", icon: "worktree", side: true, to: () => more("agents") },
+  { id: "itermoc", label: "im.title", icon: "sparkle", side: true, to: () => more("itermoc") },
   { id: "db", label: "more.db", icon: "database", side: true, to: () => more("db") },
   { id: "containers", label: "more.containers", icon: "package", side: true, to: () => more("containers") },
   { id: "services", label: "act.services", icon: "server-process", side: true, to: () => more("services") },
@@ -70,6 +71,7 @@ export function activityOf(r: Route): Activity | null {
       if (sub === "containers") return "containers";
       if (sub === "mcp") return "mcp";
       if (sub === "agents") return "agents";
+      if (sub === "itermoc") return "itermoc";
       if (sub === "settings") return "settings";
       return "device";
     }

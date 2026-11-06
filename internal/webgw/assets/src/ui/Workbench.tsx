@@ -67,6 +67,7 @@ import { vtabIcon, vtabOf } from "../lib/vtabs";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
 import { AgentsView } from "../views/AgentsView";
+import { ItermocView } from "../views/ItermocView";
 import { QuickInput } from "./QuickInput";
 import { RefsPeek } from "./RefsPeek";
 import { diags, panelTab, toggleProblems, type PanelTab } from "../lib/lsp";
@@ -455,6 +456,8 @@ function SideView({ id }: { id: Activity }) {
       return <DeskContainers />;
     case "agents":
       return <AgentsView />;
+    case "itermoc":
+      return <ItermocView />;
     default:
       return (
         <div class="side-stack ex-stack">

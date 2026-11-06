@@ -21,6 +21,7 @@ import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
+import { askLaptopForm, openItermoc } from "../views/ItermocView";
 import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
 
 export interface Command {
@@ -61,6 +62,19 @@ export function commands(): Command[] {
     { id: "aiFix", label: "ai.fix", when: hasFile, run: () => activeDesk.peek()?.aiAct("fix") },
     { id: "aiEdit", label: "ai.edit", keys: `${mod}+I`, when: hasFile, run: () => activeDesk.peek()?.aiAct("edit") },
     { id: "aiDoc", label: "ai.doc", when: hasFile, run: () => activeDesk.peek()?.aiAct("doc") },
+    { id: "itermoc", label: "cmd.itermoc", run: () => openItermoc(null) },
+    { id: "itermocProfiles", label: "cmd.itermoc_profiles", run: () => openItermoc("profiles") },
+    { id: "itermocModels", label: "cmd.itermoc_models", run: () => openItermoc("models") },
+    { id: "itermocServices", label: "cmd.itermoc_services", run: () => openItermoc("services") },
+    { id: "itermocAgents", label: "cmd.itermoc_agents", run: () => openItermoc("agents") },
+    { id: "aiProfileShow", label: "cmd.ai_profile_show", run: () => openItermoc("profiles") },
+    { id: "aiProfileNext", label: "cmd.ai_profile_next", run: () => openItermoc("profiles", { kind: "next" }) },
+    { id: "aiAdd", label: "cmd.ai_add", run: () => askLaptopForm("ai-add") },
+    { id: "aiModelSlotAdd", label: "cmd.ai_slot_add", run: () => askLaptopForm("ai-model-slot-add") },
+    { id: "aiModelsEdit", label: "cmd.ai_slots_edit", run: () => askLaptopForm("ai-models-edit") },
+    { id: "aiProfileEdit", label: "cmd.ai_profiles_edit", run: () => askLaptopForm("ai-profile-edit") },
+    { id: "aiProfileNew", label: "cmd.ai_profile_new", run: () => askLaptopForm("ai-profile-new") },
+    { id: "aiProfileForm", label: "cmd.ai_profile_form", run: () => askLaptopForm("ai-profile-form") },
     { id: "agents", label: "cmd.agents", run: () => (setPanes({ side: true }), go({ tab: "more", rest: "agents", query: {} })) },
     { id: "showOnLaptop", label: "cmd.show_on_laptop", when: hasFile, run: () => { const f = activeFile.peek(); if (f) showOnLaptop(f); } },
     { id: "sidebar", label: "cmd.toggle_side", keys: `${mod}+B`, run: () => setPanes({ side: !panes.peek().side }) },
