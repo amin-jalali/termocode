@@ -68,6 +68,7 @@ type wtState struct {
 
 	sleepAsk   *wtSleepPending   // the open sleep card (worktrees_sleep.go)
 	archiveAsk *wtArchivePending // the open archive card (worktrees_archive.go)
+	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 
 	seq    uint64
 	render struct {
@@ -231,6 +232,9 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	if c, ok := m.handleWTCtlMsg(msg); ok { // the control socket (worktrees_notes.go)
 		return c, true
 	}
+	if c, ok := m.handleWTDeleteMsg(msg); ok { // the type-the-name card (worktrees_delete.go)
+		return c, true
+	}
 	if c, ok := m.handleWTLinkMsg(msg); ok { // the link card (worktrees_link.go)
 		return c, true
 	}
@@ -248,6 +252,10 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTArchivePrep(msg), true
 	case wtArchivedMsg:
 		return m.onWTArchived(msg), true
+	case wtDeletePrepMsg:
+		return m.onWTDeletePrep(msg), true
+	case wtDeletedMsg:
+		return m.onWTDeleted(msg), true
 	case wtSetupDoneMsg:
 		return m.onWTSetupDone(msg), true
 	case wtLoadMsg:

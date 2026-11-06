@@ -38,6 +38,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
 		[]string{"F", "forget a worktree whose folder is gone"},
 		[]string{"x", "archive: remove the folder, keep the branch · on an archived row: restore"},
+		[]string{"D", "delete the worktree and its branch (asks, step by step)"},
 		[]string{"s", "sleep: end its agent tabs, move it under ASLEEP · again: wake it"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
@@ -67,6 +68,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtForgetPaletteID, Title: "Worktree: Forget Gone Selected"},
 		{ID: wtSleepPaletteID, Title: "Worktree: Sleep or Wake Selected"},
 		{ID: wtArchivePaletteID, Title: "Worktree: Archive or Restore Selected…"},
+		{ID: wtDeletePaletteID, Title: "Worktree: Delete Selected…"},
 	}
 }
 
@@ -104,6 +106,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeSleep(), true
 	case wtArchivePaletteID:
 		return m.worktreeArchive(), true
+	case wtDeletePaletteID:
+		return m.worktreeDelete(), true
 	}
 	return nil, false
 }
@@ -175,6 +179,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeSleep()
 	case "x":
 		return m, m.worktreeArchive()
+	case "D":
+		return m, m.worktreeDelete()
 	case "f":
 		m.worktreeNextFilter()
 	case "R":
