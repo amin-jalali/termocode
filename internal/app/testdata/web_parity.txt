@@ -95,6 +95,20 @@ web	git-unstage-hunk	op:git.unstage_hunk
 web	goto-line	cmd:gotoLine
 web	goto-symbol-file	op:buf.symbols
 web	hover	op:lsp.hover
+web	http-cancel	op:http.cancel
+web	http-copy-curl	op:http.curl
+web	http-env-open	op:http.env_file
+web	http-env-select	op:http.env_select
+web	http-history	op:http.history
+web	http-import-curl	op:http.import_curl
+web	http-last-response	op:http.response
+web	http-new-file	op:http.new_file
+web	http-quick	cmd:httpQuick
+web	http-save	op:http.save
+web	http-save-body	op:http.save_body
+web	http-saved	op:http.saved
+web	http-send	op:http.send
+web	http-send-pick	cmd:httpSendPick
 web	kubernetes-context	op:kube.contexts
 web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
@@ -369,20 +383,6 @@ missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
 missing	goto-type-def	Editor and files|S
 missing	help-bug-report	AI chat and agents|M
-missing	http-cancel	HTTP client|L
-missing	http-copy-curl	HTTP client|L
-missing	http-env-open	HTTP client|L
-missing	http-env-select	HTTP client|L
-missing	http-history	HTTP client|L
-missing	http-import-curl	HTTP client|L
-missing	http-last-response	HTTP client|L
-missing	http-new-file	HTTP client|L
-missing	http-quick	HTTP client|L
-missing	http-save	HTTP client|L
-missing	http-save-body	HTTP client|L
-missing	http-saved	HTTP client|L
-missing	http-send	HTTP client|L
-missing	http-send-pick	HTTP client|L
 missing	itermoc-agents	Itermoc and AI setup|M
 missing	itermoc-models	Itermoc and AI setup|M
 missing	itermoc-open	Itermoc and AI setup|M
