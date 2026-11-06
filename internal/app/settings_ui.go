@@ -85,6 +85,10 @@ type settingsConfig struct {
 	// Codex session files (chat view, history, search); "off" or "" =
 	// never (agent_transcripts.go, owner decision D1). File only.
 	AgentTranscripts string `json:"agent_transcripts,omitempty"`
+	// AgentAutoContinue: after an outside agent's usage limit resets,
+	// type "continue" once into its tab (agent_limit.go, AGX-11). Off by
+	// default; File only.
+	AgentAutoContinue *bool `json:"agent_auto_continue,omitempty"`
 	// The web panel (ADR 0020, web_settings.go). File only; the AI can
 	// never change them, project files never set them.
 	WebPanel       string `json:"web_panel,omitempty"`

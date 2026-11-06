@@ -241,14 +241,7 @@ func Detect(id string, lines []string) State {
 	if !ok {
 		return Unknown
 	}
-	var tail []string
-	for i := len(lines) - 1; i >= 0 && len(tail) < bottomLines; i-- {
-		l := strings.TrimRight(lines[i], " \t\r")
-		if strings.TrimSpace(l) == "" {
-			continue
-		}
-		tail = append(tail, l)
-	}
+	tail := bottom(lines)
 	match := func(rs []*regexp.Regexp) bool {
 		for _, l := range tail {
 			for _, re := range rs {
@@ -268,4 +261,17 @@ func Detect(id string, lines []string) State {
 		return Done
 	}
 	return Unknown
+}
+
+// bottom is the last bottomLines non-blank lines, newest first.
+func bottom(lines []string) []string {
+	var tail []string
+	for i := len(lines) - 1; i >= 0 && len(tail) < bottomLines; i-- {
+		l := strings.TrimRight(lines[i], " \t\r")
+		if strings.TrimSpace(l) == "" {
+			continue
+		}
+		tail = append(tail, l)
+	}
+	return tail
 }

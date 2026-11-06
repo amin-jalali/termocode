@@ -1762,6 +1762,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | ID | Title | Gate | Reason |
 | --- | --- | --- | --- |
+| `agent-auto-continue-toggle` | Agent: Toggle Auto-Continue | never | AI provider, credentials and approvals stay with the user; it lets termocode type into an outside agent's tab |
 | `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
 | `agent-sessions` | Agent: Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; it reads the outside agents' own session files (owner decision D1) |
 | `agent-sessions-search` | Agent: Search Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
@@ -2213,6 +2214,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | Key | Gate | Reason |
 | --- | --- | --- |
+| `agent_auto_continue` | never | AI provider, credentials and approvals stay with the user; it lets termocode type continue into an outside agent's tab after its usage limit resets |
 | `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |

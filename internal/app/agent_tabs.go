@@ -69,31 +69,36 @@ func (m *Model) agentWatch(buf int, on bool) {
 // onAgentOutput runs when an agent tab's text changed.
 func (m *Model) onAgentOutput(buf int) tea.Cmd {
 	t, shown := m.termTabByBuf(buf)
-	if t == nil || t.Agent == "" || m.nvim == nil {
+	if t == nil || t.Agent == "" {
 		m.agentWatch(buf, false)
 		return nil
 	}
-	if t.AgentHook { // the agent reports its own state (agent_ctl.go)
+	if t.AgentHook && !agents.HasLimitRules(t.Agent) { // the agent reports its own state (agent_ctl.go)
 		return nil
 	}
-	var raw string
-	if err := m.nvim.ExecLuaResult(agentTailLua, &raw, buf, agentTailLines); err != nil {
+	raw, ok := agentReadTail(m, buf)
+	if !ok {
 		return nil
 	}
-	st := agents.Detect(t.Agent, strings.Split(raw, "\n"))
+	lines := strings.Split(raw, "\n")
+	limit := m.agentSeeLimit(t, lines) // AGX-11 (agent_limit.go)
+	if t.AgentHook {
+		return limit
+	}
+	st := agents.Detect(t.Agent, lines)
 	if st == agents.Unknown || st == t.AgentState {
-		return nil
+		return limit
 	}
 	t.AgentState = st
 	m.agentRollupSync() // OMX-35
 	if st == agents.Done {
-		return m.notifyOS("Agent run ended")
+		return tea.Batch(limit, m.notifyOS("Agent run ended"))
 	}
 	if st != agents.Waiting {
-		return nil
+		return limit
 	}
 	if m.inTerminal && m.termTabVisible(shown) {
-		return m.notifyOS("Agent needs your input")
+		return tea.Batch(limit, m.notifyOS("Agent needs your input"))
 	}
 	title := t.Agent
 	if a, ok := agents.ByID(t.Agent); ok {
@@ -101,7 +106,7 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 	}
 	var c tea.Cmd
 	m.toast, c = m.toast.Push(toast.Info, title+" is waiting for you")
-	return tea.Batch(c, m.notifyOS("Agent needs your input"))
+	return tea.Batch(limit, c, m.notifyOS("Agent needs your input"))
 }
 
 // agentTitle is the tab name of an agent tab ("" for none).
@@ -113,6 +118,15 @@ func (t terminalTab) agentTitle() string {
 		return a.Title
 	}
 	return t.Agent
+}
+
+// agentTabName is the tab bar name of an agent tab: "limit ↻14:30"
+// while its usage limit is on (AGX-11), else its title.
+func (t terminalTab) agentTabName() string {
+	if l := t.agentLimitLabel(); l != "" {
+		return l
+	}
+	return t.agentTitle()
 }
 
 // agentMark is the 1-cell state mark of an agent tab and its colour.
@@ -178,6 +192,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
 		return m.openAgentSessionsSearch(), true
+	}
+	if id == agentAutoContinuePaletteID { // Agent: Toggle Auto-Continue (agent_limit.go)
+		return m.toggleAgentAutoContinue(), true
 	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {

@@ -43,6 +43,9 @@ func limitTestModel(t *testing.T) (m *Model, screen *string, typed *[]string) {
 	oldSend := agentChatSend
 	agentChatSend = func(_ *Model, buf int, text string) { sent = append(sent, text) }
 	t.Cleanup(func() { agentChatSend = oldSend })
+	oldLater := agentTypeLater
+	agentTypeLater = func(m *Model, buf int, text string) tea.Cmd { agentChatSend(m, buf, text); return nil }
+	t.Cleanup(func() { agentTypeLater = oldLater })
 	planned = nil
 	oldTick := agentLimitTick
 	agentLimitTick = func(d time.Duration, msg agentLimitResumeMsg) tea.Cmd {
@@ -122,15 +125,8 @@ func TestAgentAutoContinueOnce(t *testing.T) {
 		t.Errorf("delay %v", d)
 	}
 	*screen = limitScreen(t, "codex-done.txt")
-	c := m.onAgentLimitResume(msg)
-	if len(*typed) != 1 || (*typed)[0] != "continue" {
-		t.Fatalf("typed %q", *typed)
-	}
-	if c == nil {
-		t.Fatal("no Enter after the text")
-	}
-	runApply(m, c)
-	if len(*typed) != 2 || (*typed)[1] != "\r" {
+	m.onAgentLimitResume(msg)
+	if len(*typed) != 2 || (*typed)[0] != "continue" || (*typed)[1] != "\r" {
 		t.Errorf("typed %q", *typed)
 	}
 	if txt := toastText(*m); !strings.Contains(txt, "Typed continue into Codex") {
