@@ -183,6 +183,7 @@ const answerToast: Record<CardKind, { safe: StringKey; risky: StringKey }> = {
   plan: { safe: "toast.denied", risky: "toast.allowed" },
   review: { safe: "toast.rejected", risky: "toast.accepted" },
   trust: { safe: "card.later", risky: "laptop.shown" },
+  workflow: { safe: "toast.denied", risky: "toast.allowed" },
 };
 
 const sheetKinds: CardKind[] = ["tool", "review", "plan", "mcp", "trust"];

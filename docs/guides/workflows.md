@@ -190,6 +190,11 @@ once**. "Allow for this workflow", turning a schedule on and editing a
 file stay on the laptop. You can stop a run from the phone; it asks
 first.
 
+In a browser on a wide screen, **Workflows** in the activity bar lists
+the same in the side bar. A run opens as an editor tab with its counts,
+its last lines and the write card that waits for it (**Deny** first).
+**Stop** asks first, **Cancel** first.
+
 ## Admin policy
 
 An admin can limit workflows on a machine with

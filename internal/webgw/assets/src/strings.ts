@@ -5,7 +5,8 @@
 // strings_test.go lints this file: unique keys and texts, length,
 // banned words, every key the code uses exists.
 import { signal } from "@preact/signals";
-import { has } from "./state/dict";
+import { dict, has } from "./state/dict";
+import type { SD } from "./strings.desk";
 import { FA } from "./strings.fa";
 
 export const S = {
@@ -991,7 +992,19 @@ export const S = {
   "cmd.agents": "View: Show Agent Worktrees",
 } as const;
 
-export type StringKey = keyof typeof S;
+/** StringKey is a key of the page's strings or of the workbench's
+ * (strings.desk.ts, in workbench.js). */
+export type StringKey = keyof typeof S | keyof typeof SD;
+
+const desk = dict<string>();
+
+/** addStrings adds the workbench's strings (strings.desk.ts) once
+ * workbench.js loads. */
+export function addStrings(d: Readonly<Record<string, string>>): void {
+  for (const k of Object.keys(d)) desk[k] = d[k];
+}
+
+const page: Readonly<Record<string, string>> = S;
 
 export type Lang = "en" | "fa";
 
@@ -1015,7 +1028,7 @@ export function localDigits(v: number, l: Lang): string {
  * stay as they are. */
 export function t(key: StringKey, vars?: Record<string, string | number>): string {
   const l = lang.value;
-  const text: string = (l === "fa" && FA[key]) || S[key];
+  const text: string = (l === "fa" && FA[key]) || (has(page, key) ? page[key] : desk[key]) || key;
   if (!vars) return text;
   return text.replace(/\{([a-z_]+)\}/g, (m, name: string) => {
     if (!has(vars, name)) return m;

@@ -9,12 +9,13 @@ import { signal } from "@preact/signals";
 import { modKey } from "../lib/platform";
 import { go, route } from "../lib/router";
 import { activeFile, panes, setPanes } from "../lib/workbench";
-import { status, waiting } from "../session";
+import { status, store, waiting } from "../session";
+import { workflowsBadge } from "../state/workflows";
 import type { Route } from "../state/route";
 import { t, type StringKey } from "../strings";
 import { Cod } from "./icons";
 
-export type Activity = "files" | "search" | "git" | "run" | "testing" | "agents" | "db" | "containers" | "services" | "kube" | "mcp" | "chat" | "device" | "settings";
+export type Activity = "files" | "search" | "git" | "run" | "testing" | "agents" | "db" | "containers" | "services" | "kube" | "mcp" | "workflows" | "chat" | "device" | "settings";
 
 interface Item {
   id: Activity;
@@ -40,6 +41,7 @@ export const ACTIVITIES: readonly Item[] = [
   { id: "services", label: "act.services", icon: "server-process", side: true, to: () => more("services") },
   { id: "kube", label: "act.kube", icon: "cloud", side: false, to: () => more("kube") },
   { id: "mcp", label: "more.mcp", icon: "plug", side: true, to: () => more("mcp") },
+  { id: "workflows", label: "more.workflows", icon: "type-hierarchy", side: true, to: () => more("workflows") },
   { id: "chat", label: "tab.chat", icon: "comment-discussion", side: false, to: () => ({ tab: "chat", rest: "", query: {} }) },
 ];
 
@@ -69,6 +71,7 @@ export function activityOf(r: Route): Activity | null {
       if (sub === "db") return "db";
       if (sub === "containers") return "containers";
       if (sub === "mcp") return "mcp";
+      if (sub === "workflows") return "workflows";
       if (sub === "agents") return "agents";
       if (sub === "settings") return "settings";
       return "device";
@@ -119,6 +122,12 @@ function badge(id: Activity): { n: number; tone: "count" | "dot" } | null {
   if (id === "chat" && waiting.value.count > 0) return { n: waiting.value.count, tone: "count" };
   if (id === "run" && s.runsNeedYou > 0) return { n: s.runsNeedYou, tone: "count" };
   if (id === "run" && s.runsLive > 0) return { n: s.runsLive, tone: "dot" };
+  if (id === "workflows") {
+    // The topic is there once the view subscribed to it.
+    const w = workflowsBadge(store.topic("workflows").value?.data);
+    if (w.waiting > 0) return { n: w.waiting, tone: "count" };
+    if (w.running > 0) return { n: w.running, tone: "dot" };
+  }
   return null;
 }
 

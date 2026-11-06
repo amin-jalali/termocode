@@ -50,13 +50,13 @@ func TestDeskWorkflows(t *testing.T) {
 	if got := Eval[string](p, side+`.querySelector('.tr[data-workflow="weekday-bugs"]').textContent`); !strings.Contains(got, "weekday-bugs") || !strings.Contains(got, "weekdays 09:00") {
 		t.Errorf("workflow row %q", got)
 	}
-	if !Eval[bool](p, side+`.querySelector('.tr[data-workflow="bad"] .cod-error') && !!`+side+`.querySelector('.tr[data-workflow="pr-review"] .cod-circle-outline')`) {
+	if !Eval[bool](p, `!!`+side+`.querySelector('.tr[data-workflow="bad"] .cod-error') && !!`+side+`.querySelector('.tr[data-workflow="pr-review"] .cod-circle-outline')`) {
 		t.Error("the state icons are missing (✗ broken, ○ off)")
 	}
 	if got := Eval[string](p, `[...`+side+`.querySelectorAll('[data-section="runs"] .tr[data-run]')].map((r) => r.dataset.run).join(",")`); got != "20261106-090000,20261105-090000" {
 		t.Errorf("runs %q", got)
 	}
-	if !Eval[bool](p, side+`.querySelector('.tr[data-run="20261106-090000"] .cod-warning')`) {
+	if !Eval[bool](p, `!!`+side+`.querySelector('.tr[data-run="20261106-090000"] .cod-warning')`) {
 		t.Error("the run that waits for a write is not marked")
 	}
 	if got := Eval[string](p, `document.querySelector('nav.act-bar .act-item[data-act="workflows"] .act-badge')?.textContent ?? ""`); got != "1" {
