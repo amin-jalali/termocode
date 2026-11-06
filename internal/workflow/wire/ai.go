@@ -11,6 +11,8 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/agentrun"
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/aistep"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
@@ -34,6 +36,19 @@ type Steps struct {
 	TestArgv []string
 	// OnEvent gets the AI runs' events (live output); may be nil.
 	OnEvent func(step, item string, e agentrun.Event)
+
+	// Agent runs an outside agent CLI (nil: clistep.Run).
+	Agent func(ctx context.Context, s clistep.Spec, prompt string, emit func(ai.Event)) (clistep.Result, error)
+	// AgentEnv is the agents' environment before CleanEnv (nil: the
+	// user's, with termocode's tools first).
+	AgentEnv []string
+	// AgentSandbox is workflows_agent_sandbox ("": worktree).
+	AgentSandbox string
+	// AllowFlagged asks the user before an agent works on an item that
+	// looks like an injection (nil: the item is skipped).
+	AllowFlagged func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error)
+	// OnAgent gets the agents' events (live output); may be nil.
+	OnAgent func(step, item string, e ai.Event)
 }
 
 // Plan runs a plan step over every item.
@@ -71,6 +86,8 @@ func (s *Steps) Run(ctx context.Context, c run.RunCall) (run.Output, error) {
 	switch c.Step.Type {
 	case workflow.TypeAI:
 		return s.runAI(ctx, c)
+	case workflow.TypeAgent:
+		return s.runAgent(ctx, c)
 	case workflow.TypeShell:
 		if c.Step.Shell == nil {
 			return run.Output{}, run.Permanent(errors.New("the step has no argv"))
