@@ -829,6 +829,7 @@ func tasksPaletteItems() []picker.Item {
 		{ID: "problems-panel", Title: "View: Problems", Hint: "Ctrl+Shift+M / Alt+M"},
 		// U9b (term_fix.go) and U8 (agent_tabs.go).
 		{ID: "terminal-fix-ai", Title: "Terminal: Fix Last Command with AI", Hint: "Alt+\\ in the terminal"},
+		{ID: agentPickerPaletteID, Title: "Agent: Start…"}, // AGX-1 (agent_picker.go)
 	}, agentPaletteItems()...)
 }
 
