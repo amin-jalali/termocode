@@ -157,6 +157,11 @@ one again: `termocode workflow again <name> <key>`.
   the terminal is in the background) and on a connected phone. Set
   `"notify": ["os"]` or `["web"]` to choose; a run you start by hand
   notifies only when the file asks.
+- `"notify": ["message:sum"]` sends the same summary through the
+  message step `sum` (`"via": "os"`, `"web"` or `"${secret:NAME}"`, a
+  secret that holds an https webhook URL). A webhook is a write to an
+  outside system: the summary goes there only after you chose **Allow
+  for this workflow** on that step's card.
 - Runs are kept for `workflows_history_days` (30) days and deleted when
   termocode starts. `h` opens the newest run;
   `termocode workflow runs --json` lists them.

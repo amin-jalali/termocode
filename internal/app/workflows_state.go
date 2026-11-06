@@ -650,6 +650,7 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 	if s, err := m.secretStore(); err == nil && s != nil {
 		src.Secrets = s
 	}
+	ms := wfxMessenger(id, block)
 	cfg := wire.Config{
 		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume,
 		Src: src, Tools: check, AI: m.wfxAIEnv(), Exec: wfxExec,
@@ -660,7 +661,13 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 			return d != wire.GateDeny, err
 		},
 		Notify: func(ctx context.Context, via, text string) error {
-			return block(ctx, wfxLineMsg{id: id, text: "message (" + via + "): " + text})
+			if err := ms.Send(ctx, via, text); err != nil {
+				return err
+			}
+			if via == "os" || via == "web" {
+				return nil // the line comes with the message
+			}
+			return block(ctx, wfxLineMsg{id: id, text: "message (webhook): " + text})
 		},
 		OnEvent:      func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
 		OnAuditError: func(err error) { recordError("workflow " + e.Name + ": audit: " + err.Error()) },
@@ -735,6 +742,15 @@ func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
 			m.wfxCheckBudget(l)
 		}
 		return wfxListen(l.ch), true
+	case wfxNoteMsg:
+		return m.aiInfo(msg.text), true
+	case wfxMessageMsg:
+		l := m.wfxS().live[msg.id]
+		if l == nil {
+			return nil, true
+		}
+		l.addLine("message (" + msg.via + "): " + msg.text)
+		return tea.Batch(m.wfxDeliverLocal(msg.via, msg.text, msg.id, true), wfxListen(l.ch)), true
 	case wfxLineMsg:
 		l := m.wfxS().live[msg.id]
 		if l == nil {

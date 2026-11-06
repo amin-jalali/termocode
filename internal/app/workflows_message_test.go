@@ -30,7 +30,9 @@ func TestWorkflowsNotifyMessageTarget(t *testing.T) {
 		posts = append(posts, url+" "+string(body))
 		return nil
 	}
-	wfxMessageSecrets = func() (source.SecretGetter, error) { return wfxTestSecrets{"HOOK": "https://hooks.example.test/x"}, nil }
+	wfxMessageSecrets = func() (source.SecretGetter, error) {
+		return wfxTestSecrets{"HOOK": "https://hooks.example.test/x"}, nil
+	}
 	t.Cleanup(func() { wfxWebhookPost, wfxMessageSecrets = prevPost, prevSec })
 	m.termBlurred = true
 	write := func(name, via string) {
