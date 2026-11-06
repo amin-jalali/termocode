@@ -355,7 +355,7 @@ func (m *Model) configureTasks() tea.Cmd {
 // exit code to Go (termocode_task_exit) and keeps the buffer so the
 // output stays readable.
 const taskSpawnLua = `
-	local termWin, cmd, cwd, env, label = ...
+	local termWin, cmd, cwd, env, label, clear = ...
 	if not vim.api.nvim_win_is_valid(termWin) then return 0 end
 	local buf = vim.api.nvim_create_buf(false, true)
 	if buf <= 0 then return 0 end
@@ -375,6 +375,7 @@ const taskSpawnLua = `
 		end,
 	}
 	if type(env) == 'table' and next(env) ~= nil then opts.env = env end
+	if clear then opts.clear_env = true end
 	local argv = { vim.o.shell, '-c', cmd }
 	local ok, job
 	if vim.fn.has('nvim-0.11') == 1 then
@@ -409,6 +410,9 @@ type terminalJob struct {
 	Env     map[string]any // extra env
 	Task    string         // task label (task tabs)
 	Service string         // services key (services tabs)
+	// ClearEnv: Env is the whole environment (a worktree setup: the
+	// user's environment minus termocode's secrets).
+	ClearEnv bool
 }
 
 // spawnTerminalJob opens a job tab in the panel running j.Cmdline. A tab
@@ -428,7 +432,7 @@ func (m *Model) spawnTerminalJob(j terminalJob) (int, error) {
 		env = map[string]any{}
 	}
 	var bufNum int64
-	if err := m.nvim.EvalLuaArgs(taskSpawnLua, &bufNum, m.terminalWinID, j.Cmdline, j.Dir, env, j.Label); err != nil {
+	if err := m.nvim.EvalLuaArgs(taskSpawnLua, &bufNum, m.terminalWinID, j.Cmdline, j.Dir, env, j.Label, j.ClearEnv); err != nil {
 		return 0, err
 	}
 	if bufNum <= 0 {
@@ -517,6 +521,12 @@ func (m *Model) onTaskExit(buf, code int) tea.Cmd {
 	}
 	if service != "" {
 		return m.onServiceJobExit(service, code)
+	}
+	if c, ok := m.wtSetupExit(buf, code); ok { // a worktree setup tab (worktrees_setup.go)
+		return c
+	}
+	if c, ok := m.raceOnVerifyExit(buf, code); ok { // a race lane's verify (agent_race_compare.go)
+		return c
 	}
 	r := tr.runs[buf]
 	if r == nil || !r.Running {
@@ -829,6 +839,12 @@ func tasksPaletteItems() []picker.Item {
 		{ID: "problems-panel", Title: "View: Problems", Hint: "Ctrl+Shift+M / Alt+M"},
 		// U9b (term_fix.go) and U8 (agent_tabs.go).
 		{ID: "terminal-fix-ai", Title: "Terminal: Fix Last Command with AI", Hint: "Alt+\\ in the terminal"},
+		{ID: agentPickerPaletteID, Title: "Agent: Start…"},                                                            // AGX-1 (agent_picker.go)
+		{ID: agentRacePaletteID, Title: "Agent: Race…"},                                                               // AGX-4 (agent_race.go)
+		{ID: agentRaceComparePaletteID, Title: "Agent: Race Compare"},                                                 // AGX-5
+		{ID: agentChatPaletteID, Title: "Agent: Chat View", Hint: "chat / terminal of an agent tab"},                  // AGX-8 (agent_chat.go)
+		{ID: agentSessionsPaletteID, Title: "Agent: Sessions…", Hint: "resume or read a past session"},                // AGX-9 (agent_sessions.go)
+		{ID: agentSessionsSearchID, Title: "Agent: Search Sessions…", Hint: "words in this project's agent sessions"}, // AGX-10
 	}, agentPaletteItems()...)
 }
 

@@ -1,9 +1,11 @@
 // Package agents knows the external AI coding CLIs that run in terminal
-// tabs (Claude Code, Codex, Gemini CLI, OpenCode, Aider): how to find
+// tabs (Claude Code, Codex, Gemini CLI, OpenCode, Aider and the AGX-1
+// presets): how to find
 // them in a command line, and what their screen says — working, waiting
 // for the user (a permission prompt or a question) or done (back at
 // their input box). The screen rules are small regex tables tested on
-// sample screens (testdata/); they look only at the last lines.
+// sample screens (testdata/); they look only at the last lines. A preset
+// without sample screens has no rules: its state stays Unknown.
 package agents
 
 import (
@@ -24,15 +26,29 @@ type Agent struct {
 	// MCP is how to give this agent termocode's MCP server for one
 	// launch, without editing its own config files.
 	MCP MCPRecipe
+	// Tool is the lspinstall tool (CategoryAgentCLI) of the one-click
+	// install: npm or pip into termocode's tools folder ("" none: the
+	// CLI installs only with its own script or brew, so the user does it).
+	Tool string
+	// Login is the CLI's own documented sign-in command line, run in a
+	// terminal tab after the card shows it ("" when the CLI asks on its
+	// first start).
+	Login string
 }
+
+// handNote is the MCP note of a preset whose per-launch MCP flag is not
+// known: the user adds termocode's server by hand.
+var handNote = MCPRecipe{Kind: MCPNone, NoteTitle: "add termocode by hand", Note: "F1, then MCP: Copy termocode Server Config"}
 
 // Registry is every known agent, in palette order.
 var Registry = []Agent{
 	{ID: "claude", Title: "Claude Code", Bin: "claude", Palette: true, Packages: []string{"@anthropic-ai/claude-code"},
+		Tool: "claude-code", Login: "claude auth login",
 		MCP: MCPRecipe{Kind: MCPFlag, TempFile: "claude.json", Args: func(_, _, file string) []string {
 			return []string{"--mcp-config", file}
 		}}},
 	{ID: "codex", Title: "Codex", Bin: "codex", Palette: true, Packages: []string{"@openai/codex"},
+		Tool: "codex", Login: "codex login",
 		MCP: MCPRecipe{Kind: MCPFlag, Args: func(exe, root, _ string) []string {
 			return []string{
 				"-c", "mcp_servers.termocode.command=" + tomlString(exe),
@@ -40,15 +56,28 @@ var Registry = []Agent{
 			}
 		}}},
 	{ID: "gemini", Title: "Gemini CLI", Bin: "gemini", Palette: true, Packages: []string{"@google/gemini-cli"},
+		Tool: "gemini-cli",
 		MCP: MCPRecipe{Kind: MCPNone, // no per-launch override known: the user adds it by hand
 			NoteTitle: "add termocode by hand",
 			Note:      "F1, then MCP: Copy termocode Server Config"}}, // the action first; it must fit one toast line
 	{ID: "opencode", Title: "OpenCode", Bin: "opencode", Palette: true, Packages: []string{"opencode-ai"},
+		Tool: "opencode", Login: "opencode auth login",
 		MCP: MCPRecipe{Kind: MCPProjectFile, ProjectFile: "opencode.json"}},
-	{ID: "aider", Title: "Aider", Bin: "aider", Packages: []string{"aider-chat"},
+	{ID: "aider", Title: "Aider", Bin: "aider", Packages: []string{"aider-chat"}, Tool: "aider",
 		MCP: MCPRecipe{Kind: MCPNone, // Aider has no MCP client
 			NoteTitle: "no termocode tools",
 			Note:      "Aider has no MCP support"}},
+	// AGX-1 presets: listed in Agent: Start… (not one palette row each).
+	// No sample screens yet, so no screen rules: their state is Unknown.
+	{ID: "cursor", Title: "Cursor CLI", Bin: "cursor-agent", Login: "cursor-agent login", MCP: handNote},
+	{ID: "amp", Title: "Amp", Bin: "amp", Packages: []string{"@sourcegraph/amp"}, Tool: "amp", Login: "amp login", MCP: handNote},
+	{ID: "goose", Title: "Goose", Bin: "goose", Login: "goose configure", MCP: handNote},
+	{ID: "qwen", Title: "Qwen Code", Bin: "qwen", Packages: []string{"@qwen-code/qwen-code"}, Tool: "qwen-code", MCP: handNote},
+	{ID: "crush", Title: "Crush", Bin: "crush", Packages: []string{"@charmland/crush"}, Tool: "crush", MCP: handNote},
+	{ID: "copilot", Title: "Copilot CLI", Bin: "copilot", Packages: []string{"@github/copilot"}, Tool: "copilot-cli", MCP: handNote},
+	{ID: "kimi", Title: "Kimi CLI", Bin: "kimi", Packages: []string{"kimi-cli"}, Tool: "kimi-cli", MCP: handNote},
+	{ID: "droid", Title: "Droid", Bin: "droid", MCP: handNote},
+	{ID: "pi", Title: "Pi", Bin: "pi", Packages: []string{"@mariozechner/pi-coding-agent"}, Tool: "pi", MCP: handNote},
 }
 
 // ByID returns the agent with id.
@@ -185,6 +214,22 @@ var table = map[string]rules{
 	},
 }
 
+// HasScreenRules says whether Detect can read agent id's screen (it has
+// sample screens in testdata/).
+func HasScreenRules(id string) bool {
+	_, ok := table[id]
+	return ok
+}
+
+// StartState is the state of a new tab of agent id: Working when its
+// screen can be read (the screen corrects it), Unknown otherwise.
+func StartState(id string) State {
+	if HasScreenRules(id) {
+		return Working
+	}
+	return Unknown
+}
+
 // bottomLines is how many non-blank lines from the bottom count.
 const bottomLines = 20
 
@@ -224,3 +269,8 @@ func Detect(id string, lines []string) State {
 	}
 	return Unknown
 }
+
+// InputReady says whether agent id shows its input box with nothing
+// asked: Detect is Done (a y/n or permission question is Waiting, and
+// so is never ready). An agent without screen rules is never ready.
+func InputReady(id string, lines []string) bool { return Detect(id, lines) == Done }

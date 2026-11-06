@@ -242,7 +242,7 @@ export function HTTPView() {
             <Cod name="server-environment" />
             <select
               class="http-env"
-              aria-label={t("http.env")}
+              aria-label={t("dbv.f_env")}
               value={fs?.env ?? ""}
               disabled={!can || !fs}
               onChange={(e) => {

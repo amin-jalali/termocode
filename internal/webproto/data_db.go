@@ -40,6 +40,12 @@ type DBConn struct {
 	ReadOnly bool   `json:"readonly,omitempty"`
 	Problem  string `json:"problem,omitempty"`
 	SQL      bool   `json:"sql"` // the web can browse it (postgres, mysql, sqlite)
+	// The laptop's own session (web parity): connected, its transaction
+	// mode is manual, a transaction is open with Writes statements in it.
+	Connected bool `json:"connected,omitempty"`
+	Manual    bool `json:"manual,omitempty"`
+	Tx        bool `json:"tx,omitempty"`
+	Writes    int  `json:"writes,omitempty"`
 }
 
 // DBTables answers db.tables.
@@ -65,6 +71,9 @@ type DBRows struct {
 	Truncated bool       `json:"truncated,omitempty"` // rows or bytes were cut
 	Masked    int        `json:"masked,omitempty"`    // cells masked as secrets
 	Ms        int64      `json:"ms"`
+	// Key (db.rows) names the columns that find a row (the primary key,
+	// else a unique key): the page can edit rows only with it.
+	Key []string `json:"key,omitempty"`
 }
 
 // DBCell is one value: its text, or null, or masked.

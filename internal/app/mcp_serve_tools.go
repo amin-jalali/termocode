@@ -74,6 +74,9 @@ var mcpServeAllowList = []mcpServeToolRow{
 	{name: "git_log"},
 	{name: "git_blame"},
 	{name: "git_branch"},
+	// Worktrees (WTX-12): read, and short notes (text only, redacted)
+	{name: "worktrees_list"},
+	{name: "worktree_note"},
 	// Services and HTTP (read)
 	{name: "services_list"},
 	{name: "services_status"},

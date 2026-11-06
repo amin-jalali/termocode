@@ -85,7 +85,7 @@ func (m Model) screenTargets() []hitTarget {
 		return nil
 	}
 	switch {
-	case m.promptOpen, m.settingsModalOpen, m.recentsOpen, m.menuOpen, m.reviewOpen && !m.confirmOpen, m.importOpen && !m.confirmOpen:
+	case m.promptOpen, m.settingsModalOpen, m.recentsOpen, m.menuOpen, m.reviewOpen && !m.confirmOpen, m.importOpen && !m.confirmOpen, m.raceOpen() && !m.confirmOpen:
 		return nil // not mapped yet
 	case m.confirmOpen:
 		return m.confirmTargets()
@@ -252,6 +252,11 @@ func (m Model) sidebarTargets() []hitTarget {
 		}
 	case activity.ViewKubernetes: // kube_mouse.go
 		for _, h := range m.kubeHits(w) {
+			h.X += x0
+			out = append(out, h)
+		}
+	case activity.ViewWorktrees: // worktrees_mouse.go
+		for _, h := range m.wtHits(w) {
 			h.X += x0
 			out = append(out, h)
 		}
@@ -522,6 +527,12 @@ func (m Model) sidebarTargetAt(x, y int) string {
 		}
 	case activity.ViewKubernetes:
 		for _, h := range m.kubeHits(m.explorerWidth - 1) {
+			if x >= h.X && x < h.X+h.W && y == h.Y {
+				return h.ID
+			}
+		}
+	case activity.ViewWorktrees:
+		for _, h := range m.wtHits(m.explorerWidth - 1) {
 			if x >= h.X && x < h.X+h.W && y == h.Y {
 				return h.ID
 			}

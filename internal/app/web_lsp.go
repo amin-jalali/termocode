@@ -34,6 +34,10 @@ func init() {
 	for op, kind := range webLspKinds {
 		webOps[op] = func(m *Model, call *webCall) tea.Cmd { return m.webOpLsp(call, kind) }
 	}
+	webOps[webproto.OpLspWorkspaceSymbols] = (*Model).webOpLspSymbols
+	webOps[webproto.OpLspCodeActions] = (*Model).webOpLspActions
+	webOps[webproto.OpLspInlayHints] = (*Model).webOpLspHints
+	webOps[webproto.OpLspCodeActionApply] = (*Model).webOpLspApply
 	registerNotifyHandler("termocode_web_lsp", func(m *Model, a []any) tea.Cmd {
 		m.webLspDone(notifyArgInt(a, 0), notifyArgString(a, 1))
 		return nil
@@ -46,6 +50,9 @@ var webLspKinds = map[string]string{
 	webproto.OpLspComplete:   "complete",
 	webproto.OpLspDefinition: "definition",
 	webproto.OpLspReferences: "references",
+	// WEBP-9: go to type definition and to implementation.
+	webproto.OpLspTypeDefinition: "typedef",
+	webproto.OpLspImplementation: "impl",
 }
 
 // webLspState holds the calls waiting for the servers (Update only).
@@ -64,13 +71,18 @@ type webLspCall struct {
 // answer it and returns at once: {ok}, or {err = gone | stale (with the
 // buffer's tick) | nolsp | nocap}.
 const webLuaLsp = `
-local id, kind, b, tick, line, col16, maxn, maxtext = ...
+local id, kind, b, tick, line, col16, maxn, maxtext, extra = ...
+extra = type(extra) == 'table' and extra or {}
 local api = vim.api
 if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
 local cur = api.nvim_buf_get_changedtick(b)
-if cur ~= tick then return { err = 'stale', tick = cur } end
-local caps = { hover = 'hoverProvider', complete = 'completionProvider', definition = 'definitionProvider', references = 'referencesProvider' }
-local methods = { hover = 'textDocument/hover', complete = 'textDocument/completion', definition = 'textDocument/definition', references = 'textDocument/references' }
+if tick >= 0 and cur ~= tick then return { err = 'stale', tick = cur } end
+local caps = { hover = 'hoverProvider', complete = 'completionProvider', definition = 'definitionProvider', references = 'referencesProvider',
+  typedef = 'typeDefinitionProvider', impl = 'implementationProvider', wsymbols = 'workspaceSymbolProvider',
+  actions = 'codeActionProvider', hints = 'inlayHintProvider' }
+local methods = { hover = 'textDocument/hover', complete = 'textDocument/completion', definition = 'textDocument/definition', references = 'textDocument/references',
+  typedef = 'textDocument/typeDefinition', impl = 'textDocument/implementation', wsymbols = 'workspace/symbol',
+  actions = 'textDocument/codeAction', hints = 'textDocument/inlayHint' }
 local get = vim.lsp.get_clients or vim.lsp.get_active_clients
 local all = get({ bufnr = b })
 if #all == 0 then return { err = 'nolsp' } end
@@ -201,6 +213,61 @@ local function finish()
       end
     end
     out.items = items
+  elseif kind == 'wsymbols' then
+    local syms = {}
+    for _, r in ipairs(results) do
+      if type(r.res) == 'table' then
+        for _, s in ipairs(r.res) do
+          if #syms >= maxn then out.cut = true break end
+          local loc = s.location or {}
+          local st = (loc.range or {}).start or { line = 0, character = 0 }
+          if type(loc.uri) == 'string' and type(s.name) == 'string' then
+            local ok, f = pcall(vim.uri_to_fname, loc.uri)
+            if ok then
+              syms[#syms + 1] = { name = cut(s.name), kind = s.kind, container = cut(s.containerName), file = f, line = st.line, col = st.character }
+            end
+          end
+        end
+      end
+    end
+    out.syms = syms
+  elseif kind == 'actions' then
+    local keep, acts = {}, {}
+    for _, r in ipairs(results) do
+      if type(r.res) == 'table' then
+        for _, a in ipairs(r.res) do
+          if #acts >= maxn then break end
+          if type(a) == 'table' and type(a.title) == 'string' then
+            keep[#keep + 1] = { cid = r.cid, a = a }
+            acts[#acts + 1] = { title = cut(a.title), kind = type(a.kind) == 'string' and cut(a.kind) or nil, preferred = a.isPreferred == true }
+          end
+        end
+      end
+    end
+    _G.termocode_web_ca = { buf = b, tick = api.nvim_buf_get_changedtick(b), list = keep }
+    out.acts = acts
+  elseif kind == 'hints' then
+    local hs = {}
+    for _, r in ipairs(results) do
+      if type(r.res) == 'table' then
+        for _, h in ipairs(r.res) do
+          if #hs >= maxn then out.cut = true break end
+          if type(h) == 'table' and type(h.position) == 'table' then
+            local label = h.label
+            if type(label) == 'table' then
+              local parts = {}
+              for _, p in ipairs(label) do parts[#parts + 1] = type(p) == 'table' and (p.value or '') or '' end
+              label = table.concat(parts)
+            end
+            if type(label) == 'string' and label ~= '' then
+              local l, c16 = here(h.position, r.enc)
+              hs[#hs + 1] = { line = l, col = c16, label = cut(label), padLeft = h.paddingLeft == true, padRight = h.paddingRight == true }
+            end
+          end
+        end
+      end
+    end
+    out.hints = hs
   else
     local seen, locs = {}, {}
     for _, r in ipairs(results) do
@@ -238,7 +305,7 @@ end
 local pending = #cs
 local function back(c, enc)
   return function(err, res)
-    results[#results + 1] = { enc = enc, res = (err == nil) and res or nil }
+    results[#results + 1] = { enc = enc, cid = c.id, res = (err == nil) and res or nil }
     pending = pending - 1
     if pending == 0 then finish() end
   end
@@ -248,6 +315,20 @@ local sent = 0
 for _, c in ipairs(cs) do
   local enc = c.offset_encoding or 'utf-16'
   local params = { textDocument = { uri = uri }, position = { line = line, character = units(text, bcol, enc) } }
+  if kind == 'wsymbols' then params = { query = extra.query or '' } end
+  if kind == 'actions' then
+    local et = row(extra.end_line or line)
+    local diags = {}
+    for _, d in ipairs(vim.diagnostic.get(b, { lnum = line })) do
+      if type(d.user_data) == 'table' and d.user_data.lsp then diags[#diags + 1] = d.user_data.lsp end
+    end
+    params.range = { start = params.position, ['end'] = { line = extra.end_line or line, character = units(et, bytes(et, extra.end_col or col16, 'utf-16'), enc) } }
+    params.position = nil
+    params.context = { diagnostics = diags, triggerKind = 1 }
+  end
+  if kind == 'hints' then
+    params = { textDocument = { uri = uri }, range = { start = { line = line, character = 0 }, ['end'] = { line = (extra.last or line) + 1, character = 0 } } }
+  end
   if kind == 'references' then params.context = { includeDeclaration = true } end
   if kind == 'complete' then params.context = { triggerKind = 1 } end
   local ok, r
@@ -267,11 +348,14 @@ type webLuaLspRes struct {
 
 // webLspOut is the notification's JSON.
 type webLspOut struct {
-	MD         string          `json:"md"`
-	Items      []webLspOutItem `json:"items"`
-	Incomplete bool            `json:"incomplete"`
-	Locs       []webLspOutLoc  `json:"locs"`
-	Cut        bool            `json:"cut"`
+	MD         string               `json:"md"`
+	Items      []webLspOutItem      `json:"items"`
+	Incomplete bool                 `json:"incomplete"`
+	Locs       []webLspOutLoc       `json:"locs"`
+	Syms       []webLspOutSym       `json:"syms"`
+	Acts       []webproto.LspAction `json:"acts"`
+	Hints      []webproto.LspHint   `json:"hints"`
+	Cut        bool                 `json:"cut"`
 }
 
 type webLspOutItem struct {
@@ -288,6 +372,15 @@ type webLspOutItem struct {
 	Edits   []webproto.LspEdit `json:"edits"`
 }
 
+type webLspOutSym struct {
+	Name      string `json:"name"`
+	Kind      int    `json:"kind"`
+	Container string `json:"container"`
+	File      string `json:"file"`
+	Line      int    `json:"line"`
+	Col       int    `json:"col"`
+}
+
 type webLspOutLoc struct {
 	File    string `json:"file"`
 	Line    int    `json:"line"`
@@ -300,6 +393,32 @@ type webLspOutLoc struct {
 // webOpLsp sends the request; the answer comes with the notification.
 func (m *Model) webOpLsp(call *webCall, kind string) tea.Cmd {
 	a := call.args.(*webproto.LspPosArgs)
+	return m.webLspSend(call, kind, a.Buf, a.Tick, a.Line, a.Col, nil)
+}
+
+// webOpLspSymbols asks for the workspace symbols of a query (at the
+// buffer's tick now: a query has no position).
+func (m *Model) webOpLspSymbols(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.SymbolQueryArgs)
+	return m.webLspSend(call, "wsymbols", a.Buf, -1, 0, 0, map[string]any{"query": a.Query})
+}
+
+// webOpLspActions lists the code actions of a range (the laptop keeps
+// the list for lsp.code_action_apply).
+func (m *Model) webOpLspActions(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.LspRangeArgs)
+	return m.webLspSend(call, "actions", a.Buf, a.Tick, a.Line, a.Col, map[string]any{"end_line": a.EndLine, "end_col": a.EndCol})
+}
+
+// webOpLspHints reads the inlay hints of some rows.
+func (m *Model) webOpLspHints(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.LspRowsArgs)
+	return m.webLspSend(call, "hints", a.Buf, a.Tick, a.First, 0, map[string]any{"last": a.Last})
+}
+
+// webLspSend sends one request to the servers of buffer n.
+func (m *Model) webLspSend(call *webCall, kind string, n, tick, line, col int, extra map[string]any) tea.Cmd {
+	a := struct{ Buf, Tick, Line, Col int }{n, tick, line, col}
 	if m.web == nil || m.nvim == nil {
 		call.fail(webproto.CodeGone, "The editor is not running.")
 		return nil
@@ -320,8 +439,16 @@ func (m *Model) webOpLsp(call *webCall, kind string) tea.Cmd {
 	if kind == "complete" {
 		maxn, maxText = webproto.MaxCompletions, webproto.MaxCompleteDoc
 	}
+	switch kind {
+	case "wsymbols":
+		maxn, maxText = webproto.MaxWorkspaceSymbols, webproto.MaxCompleteText
+	case "actions":
+		maxn, maxText = webproto.MaxCodeActions, webproto.MaxCompleteText
+	case "hints":
+		maxn, maxText = webproto.MaxHints, webproto.MaxHintLabel
+	}
 	var res webLuaLspRes
-	if err := m.nvim.ExecLuaResult(webLuaLsp, &res, id, kind, b.buf, a.Tick, a.Line, a.Col, maxn, maxText); err != nil {
+	if err := m.nvim.ExecLuaResult(webLuaLsp, &res, id, kind, b.buf, a.Tick, a.Line, a.Col, maxn, maxText, extra); err != nil {
 		webFail(call, err)
 		return nil
 	}
@@ -388,9 +515,47 @@ func (m *Model) webLspDone(id int, raw string) {
 		w.call.reply(webLspHover(out.MD))
 	case "complete":
 		w.call.reply(webLspCompletion(out))
+	case "wsymbols":
+		w.call.reply(webLspSymbols(out, m.webRel))
+	case "actions":
+		acts := out.Acts
+		if acts == nil {
+			acts = []webproto.LspAction{}
+		}
+		w.call.reply(webproto.LspActions{Items: acts})
+	case "hints":
+		hs := webproto.LspHints{Items: []webproto.LspHint{}, Cut: out.Cut}
+		for _, h := range out.Hints {
+			if h.Line >= 0 && h.Col >= 0 && h.Label != "" {
+				h.Label = webDiagCut(h.Label, webproto.MaxHintLabel)
+				hs.Items = append(hs.Items, h)
+			}
+		}
+		w.call.reply(hs)
 	default:
 		w.call.reply(webLspLocations(out, m.webRel, w.kind == "references"))
 	}
+}
+
+// webLspSymbols keeps the symbols in the workspace, paths relative.
+func webLspSymbols(out webLspOut, rel func(string) (string, bool)) webproto.LspSymbols {
+	res := webproto.LspSymbols{Items: []webproto.LspSymbol{}, Cut: out.Cut}
+	for _, s := range out.Syms {
+		if len(res.Items) == webproto.MaxWorkspaceSymbols {
+			res.Cut = true
+			break
+		}
+		p, in := rel(s.File)
+		if !in || p == "" || s.Name == "" || s.Line < 0 || s.Col < 0 {
+			continue
+		}
+		it := webproto.LspSymbol{Name: webDiagCut(s.Name, webproto.MaxCompleteText), Path: p, Line: s.Line, Col: s.Col, Container: webDiagCut(s.Container, webproto.MaxCompleteText)}
+		if s.Kind >= 1 && s.Kind <= 26 {
+			it.Kind = s.Kind
+		}
+		res.Items = append(res.Items, it)
+	}
+	return res
 }
 
 // webLspHover makes the hover's markdown an AST.
