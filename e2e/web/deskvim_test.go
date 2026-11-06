@@ -213,3 +213,51 @@ func TestDeskVimSearchExMarks(t *testing.T) {
 		t.Errorf("problems (CSP, console): %v", probs)
 	}
 }
+
+// Spec (WEBP-1): Vim mode follows the user's own mappings. Turned on,
+// the page asks the laptop once for its editor's mappings
+// (editor.vim_maps) and the keys do what they say: <Space>d deletes the
+// line, jk in insert mode is Escape (j alone, then another key, types
+// both), Q plays the macro in q. :nnoremap adds one in the browser.
+func TestDeskVimUserMappings(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "abc", "def", "ghi")
+	toggleVim(t, p, c, true)
+	for {
+		r := nextReq(t, c)
+		if r.Op == webproto.OpEditorVimMaps {
+			reply(t, c, r, webproto.VimMapList{Items: []webproto.VimMap{
+				{Mode: "i", LHS: "jk", RHS: "<Esc>", Noremap: true},
+				{Mode: "n", LHS: "<Space>d", RHS: "dd", Noremap: true},
+				{Mode: "n", LHS: "Q", RHS: "@q"},
+			}})
+			break
+		}
+	}
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+
+	v.keys(" d", "def", "ghi")
+	v.keys("ix", "xdef", "ghi")
+	v.mode("-- INSERT --")
+	v.keys("jk", "xdef", "ghi")
+	v.mode("-- NORMAL --")
+	v.keys("ajy", "xjydef", "ghi")
+	realKeys(p, string(kb.Escape))
+	v.mode("-- NORMAL --")
+
+	// Q is @q: the macro recorded in q.
+	v.keys("qqI-", "-xjydef", "ghi")
+	realKeys(p, string(kb.Escape))
+	v.keys("jq", "-xjydef", "ghi")
+	v.keys("Q", "-xjydef", "-ghi")
+
+	// A mapping made here.
+	v.keys(":nnoremap ,a A!<Esc>\rgg,a", "-xjydef!", "-ghi")
+	v.mode("-- NORMAL --")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
