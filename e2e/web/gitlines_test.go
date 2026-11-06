@@ -60,7 +60,7 @@ func TestGitDiscardHunkCommand(t *testing.T) {
 	Eval[bool](p, `(`+diffView+`.querySelector(".desk-editor").focus(), `+diffDoc+`.querySelector(".editor.modified .native-edit-context, .editor.modified textarea").focus(), true)`)
 	p.Do(chromedp.KeyEvent(kb.F7))
 	waitLine(p, "4")
-	runCmd(t, p, c, "Git: Discard Hunk (at cursor)", true)
+	runGitCmd(t, p, c, "Git: Discard Hunk (at cursor)", true)
 	r := waitReq(t, c, "git.diff")
 	reply(t, c, r, webproto.GitDiff{Path: "src/a.go", Rows: []webproto.DiffRow{
 		{K: "hunk", Text: "@@ -1,5 +1,5 @@", Old: 1, New: 1},
