@@ -442,6 +442,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
 | Git: Rename Branch… | `git-branch-rename` |   |   |
+| Git: Run Before-Commit Checks | `git-commit-checks` |   | `the checks of Settings → Git on what is staged; no commit` |
 | Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Search Log… | `git-log-search` |   |   |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |

@@ -53,6 +53,7 @@ type gitxState struct {
 	onConfirm func(m *Model, id string) tea.Cmd
 	onPrompt  func(m *Model, value string) tea.Cmd
 	items     []picker.Item // the rows of the last GITX picker (tests read them)
+	checks    gitxChecks    // the before-commit checks (gitx_commit_checks.go)
 }
 
 // gitxDoneMsg carries the end of work done off the UI loop; apply runs

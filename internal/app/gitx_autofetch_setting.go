@@ -48,13 +48,16 @@ func gitxAutoFetchInit() {
 // gitxSettingsCategories puts the row in the Git Settings group.
 func gitxSettingsCategories(cats map[string]string) map[string]string {
 	cats[gitxAutoFetchRowID] = "Git"
+	for _, id := range []string{gitxChecksRowID, gitxFormatRowID, gitxTaskRowID, gitxLargeRowID} {
+		cats[id] = "Git" // GITX-27 (gitx_commit_checks.go)
+	}
 	return cats
 }
 
 // gitxSettingValue renders the row's value. ok=false: not ours.
 func gitxSettingValue(id string) (string, bool) {
 	if id != gitxAutoFetchRowID {
-		return "", false
+		return gitxCheckSettingValue(id) // GITX-27 (gitx_commit_checks.go)
 	}
 	return strconv.FormatBool(gitxAutoFetchSaved()), true
 }
@@ -62,7 +65,7 @@ func gitxSettingValue(id string) (string, bool) {
 // applyGitxSetting checks, saves and applies the row. ok=false: not ours.
 func (m *Model) applyGitxSetting(id, value string) (tea.Cmd, bool) {
 	if id != gitxAutoFetchRowID {
-		return nil, false
+		return m.applyGitxCheckSetting(id, value) // GITX-27 (gitx_commit_checks.go)
 	}
 	b, err := parseBoolLoose(strings.TrimSpace(value))
 	if err != nil {

@@ -2144,6 +2144,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-cmd-log` | Git: Show Git Command Log | auto |   |
 | `git-co-author` | Git: Add Co-Author… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
+| `git-commit-checks` | Git: Run Before-Commit Checks | never | runs the user's before-commit task, a shell command |
 | `git-commit-edit` | Git: Edit Commit Message in Editor | never | opens the commit message for the user to write; use git_commit |
 | `git-commit-history` | Git: Pick Recent Commit Message… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit-push` | Git: Commit and Push | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
@@ -2510,6 +2511,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git_auto_fetch` | never | starts a timer that talks to the remote; only the user turns it on |
 | `git_blame_detect_moves` | confirm (settings) |   |
 | `git_blame_ignore_whitespace` | confirm (settings) |   |
+| `git_commit_checks` | never | changes what runs before the user's commits; only the user does that |
+| `git_commit_format` | never | changes the user's files before each commit; only the user turns it on |
+| `git_commit_large_mb` | never | changes what runs before the user's commits; only the user does that |
+| `git_commit_task` | never | sets a shell command that runs before each commit; only the user does that |
 | `git_inline_blame` | confirm (settings) |   |
 | `git_status_blame` | confirm (settings) |   |
 | `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
