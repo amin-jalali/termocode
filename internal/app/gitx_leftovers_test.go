@@ -91,7 +91,7 @@ func TestGitxCommitMarked(t *testing.T) {
 	covKey(m, tea.KeyMsg{Type: tea.KeySpace})
 	gitSelCursor(t, m, gitSecChanges, "b.txt")
 	covKey(m, tea.KeyMsg{Type: tea.KeySpace})
-	if v := ansi.Strip(m.renderGitSidebar(60, 40)); !strings.Contains(v, "c commit") {
+	if v := ansi.Strip(m.renderGitSidebar(80, 40)); !strings.Contains(v, "c commit") {
 		t.Errorf("the marks bar does not offer c commit:\n%s", v)
 	}
 	m.gitCommitMsg = "feat: a and b"

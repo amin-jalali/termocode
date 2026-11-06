@@ -183,6 +183,15 @@ type CommitOptions struct {
 // CommitOpts commits the index. An empty message is an error unless
 // Amend keeps the old one.
 func CommitOpts(dir, message string, o CommitOptions) error {
+	args, err := commitArgs(message, o)
+	if err != nil {
+		return err
+	}
+	return commitRun(dir, args)
+}
+
+// commitArgs is the git commit command line for message and o.
+func commitArgs(message string, o CommitOptions) ([]string, error) {
 	args := []string{"commit"}
 	if o.Amend {
 		args = append(args, "--amend")
@@ -199,18 +208,22 @@ func CommitOpts(dir, message string, o CommitOptions) error {
 	if o.Author != "" {
 		a, err := ParseAuthor(o.Author)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		args = append(args, "--author="+a)
 	}
 	if strings.TrimSpace(message) == "" {
 		if !o.Amend {
-			return errEmptyMessage
+			return nil, errEmptyMessage
 		}
 		args = append(args, "--no-edit")
 	} else {
 		args = append(args, "-m", message)
 	}
+	return args, nil
+}
+
+func commitRun(dir string, args []string) error {
 	cmd := spawn.Command("git", args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()

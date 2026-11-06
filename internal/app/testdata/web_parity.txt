@@ -457,6 +457,7 @@ missing	git-commit-checks	Git|S
 missing	git-commit-edit	Git|S
 missing	git-commit-empty	Git|S
 missing	git-commit-history	Git|S
+missing	git-commit-marked	Git|S
 missing	git-commit-push	Git|S
 missing	git-commit-sync	Git|S
 missing	git-compare-branches	Git|S

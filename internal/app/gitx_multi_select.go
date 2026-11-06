@@ -282,9 +282,12 @@ func renderGitSelBar(n int, viewTree bool, w int) string {
 	strong := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.AccentBlue)).Bold(true)
 	dim := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextMuted))
 	label := fmt.Sprintf("%d selected", n)
-	hint := " · s stage · x discard · Esc clears"
+	hint := " · s stage · c commit · x discard · Esc clears"
 	toggle := gitViewToggleGlyph(viewTree)
 	room := w - 1 - textWidth(label) - textWidth(toggle) - 1
+	if textWidth(hint) > room {
+		hint = " · s stage · x discard · Esc clears"
+	}
 	if textWidth(hint) > room {
 		hint = " · Esc clears"
 		if textWidth(hint) > room {

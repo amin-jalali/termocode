@@ -27,3 +27,20 @@ func ParseAuthor(s string) (string, error) {
 	}
 	return name + " <" + email + ">", nil
 }
+
+// CommitPaths commits only paths, as they are on disk (git commit
+// --only): new files are added and deleted ones removed first; whatever
+// else is staged stays staged and out of the commit.
+func CommitPaths(dir, message string, paths []string, o CommitOptions) error {
+	if len(paths) == 0 {
+		return errors.New("no files to commit")
+	}
+	args, err := commitArgs(message, o)
+	if err != nil {
+		return err
+	}
+	if err := runGit(dir, append([]string{"add", "-A", "--"}, paths...)...); err != nil {
+		return err
+	}
+	return commitRun(dir, append(append(args, "--only", "--"), paths...))
+}

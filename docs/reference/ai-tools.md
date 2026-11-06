@@ -2150,6 +2150,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-commit-edit` | Git: Edit Commit Message in Editor | never | opens the commit message for the user to write; use git_commit |
 | `git-commit-empty` | Git: Commit Empty (No Changes)… | never | makes a commit in the user's name; only the user does that |
 | `git-commit-history` | Git: Pick Recent Commit Message… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-commit-marked` | Git: Commit Marked Files Only… | never | makes a commit in the user's name; only the user does that |
 | `git-commit-push` | Git: Commit and Push | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-commit-sync` | Git: Commit and Sync | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-compare-branches` | Git: Compare Branches… | never | opens a picker or prompt that only the user can answer; use a typed tool |

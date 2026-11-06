@@ -11,18 +11,20 @@ import (
 )
 
 // GITX-39: the small git leftovers (docs-local/plans/git-gap.md). This
-// file has the commit extras: an empty commit (B10) and a commit made as
-// another author (B19).
+// file has the commit extras: an empty commit (B10), a commit made as
+// another author (B19) and a commit of the marked files only (B8).
 
 func init() {
 	registerGitx(gitxFeature{
 		palette: []picker.Item{
 			{ID: "git-commit-empty", Title: "Git: Commit Empty (No Changes)…", Hint: "a commit without changes, e.g. to run CI again"},
 			{ID: "git-commit-author", Title: "Git: Commit Staged as Another Author…", Hint: "git commit --author; you stay the committer"},
+			{ID: "git-commit-marked", Title: "Git: Commit Marked Files Only…", Hint: "the files marked in Source Control (Space); c there"},
 		},
 		policies: map[string]aiActionPolicy{
 			"git-commit-empty":  aiNever("makes a commit in the user's name; only the user does that"),
 			"git-commit-author": aiNever("makes a commit under another person's name; only the user does that"),
+			"git-commit-marked": aiNever("makes a commit in the user's name; only the user does that"),
 		},
 		dispatch: func(m *Model, id string) (tea.Cmd, bool) {
 			switch id {
@@ -30,6 +32,14 @@ func init() {
 				return m.gitxCommitEmpty(), true
 			case "git-commit-author":
 				return m.gitxCommitAsAuthor(), true
+			case "git-commit-marked":
+				return m.gitxCommitMarked(), true
+			}
+			return nil, false
+		},
+		key: func(m *Model, k tea.KeyMsg) (tea.Cmd, bool) {
+			if k.String() == "c" && m.gitSelCount() > 0 {
+				return m.gitxCommitMarked(), true
 			}
 			return nil, false
 		},
@@ -39,12 +49,23 @@ func init() {
 // gitxCommitExtra commits with o and the typed message; a message from
 // the commit box empties the box.
 func (m *Model) gitxCommitExtra(cwd, msg string, o git.CommitOptions) tea.Cmd {
+	return m.gitxCommitPaths(cwd, msg, nil, o)
+}
+
+// gitxCommitPaths is gitxCommitExtra for paths only (nil: the index).
+func (m *Model) gitxCommitPaths(cwd, msg string, paths []string, o git.CommitOptions) tea.Cmd {
 	msg = strings.TrimSpace(msg)
 	if msg == "" {
 		return m.gitxInfo("Enter a commit message")
 	}
 	o.NoVerify = m.gitx.skipHooks
-	if err := git.CommitOpts(cwd, msg, o); err != nil {
+	var err error
+	if paths != nil {
+		err = git.CommitPaths(cwd, msg, paths, o)
+	} else {
+		err = git.CommitOpts(cwd, msg, o)
+	}
+	if err != nil {
 		return tea.Batch(fetchGitCmd(), m.gitxFail("Commit failed", err))
 	}
 	if strings.TrimSpace(m.gitCommitMsg) == msg {
@@ -97,6 +118,37 @@ func (m *Model) gitxCommitAsAuthor() tea.Cmd {
 			return m.gitxCommitExtra(cwd, msg, git.CommitOptions{Author: author})
 		})
 		return nil
+	})
+	return nil
+}
+
+// gitxCommitMarked asks the message (the commit box text first) and
+// commits only the files marked in Source Control.
+func (m *Model) gitxCommitMarked() tea.Cmd {
+	if !m.gitEnsureLoaded() {
+		return nil
+	}
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	var paths []string
+	seen := map[string]bool{}
+	for _, k := range m.gitSelRows() {
+		if !seen[k.path] {
+			seen[k.path] = true
+			paths = append(paths, k.path)
+		}
+	}
+	if len(paths) == 0 {
+		return m.gitxInfo("Mark the files to commit first: Space on their rows in Source Control")
+	}
+	m.gitxPrompt("Commit "+gitxPlural(len(paths), "Marked File"), "Commit message (only the marked files)", strings.TrimSpace(m.gitCommitMsg), func(m *Model, msg string) tea.Cmd {
+		c := m.gitxCommitPaths(cwd, msg, paths, git.CommitOptions{})
+		if strings.TrimSpace(msg) != "" {
+			m.gitSelClear()
+		}
+		return c
 	})
 	return nil
 }
