@@ -993,6 +993,7 @@ end })`)
 		}
 		sessCmd := m.persistStateSession(msg)
 		m.editor.SetMeta(msg.Path, msg.Dirty, msg.Lang)
+		sessCmd = tea.Batch(sessCmd, m.onGitBlameState()) // git_blame_view.go: follow the cursor and the file
 		// LSP installer: status-bar chip + one-time missing-server toast.
 		m.setLSPClients(msg.LSPClients)
 		lspSuggestCmd := tea.Batch(m.maybeSuggestLanguageServer(msg.Lang), m.maybeSuggestDevContainerTools(workspaceRoot()))
@@ -1063,7 +1064,13 @@ end })`)
 	case GitMsg:
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
-		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh()), true // G-CI: a new branch or a push; web tree badges
+		m.gitBlameInit()
+		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh(), m.gitBlameRefreshCmd(false)), true // blame: again when HEAD or the file changed (gitBlameKey)
+	case gitBlameLoadedMsg: // git_blame_view.go
+		m.onGitBlameLoaded(msg)
+		return m, nil, true
+	case gitRevisionReadyMsg:
+		return m, m.openGitRevision(msg), true // G-CI: a new branch or a push; web tree badges
 	case gitOlderMsg:
 		m.onGitOlder(msg)
 		return m, nil, true
@@ -2427,6 +2434,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindBlameOptions: // git_blame_view.go
+		return m.onBlameOptionPicked(msg.ID)
 	case pickerKindDeleteBranch: // git_branch_ops.go
 		return m.onDeleteBranchPicked(msg.ID)
 	case pickerKindBranchFrom:

@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "worktrees";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees";
 
 export interface Bye {
   t: "bye";
@@ -305,6 +305,58 @@ export interface BufTickArgs {
   tick: number;
 }
 
+export interface HTTPSendArgs {
+  path?: string;
+  index?: number;
+  method?: string;
+  url?: string;
+  headers?: HTTPHeader[];
+  body?: string;
+  env?: string;
+  history?: string;
+  saved?: number;
+}
+
+export interface HTTPHeader {
+  name: string;
+  value: string;
+}
+
+export interface HTTPRunArgs {
+  run?: number;
+}
+
+export interface HTTPEnvArgs {
+  name: string;
+}
+
+export interface HTTPSaveArgs {
+  run?: number;
+  path?: string;
+  index?: number;
+  name: string;
+}
+
+export interface HTTPCurlArgs {
+  run?: number;
+  path?: string;
+  index?: number;
+}
+
+export interface HTTPImportArgs {
+  curl: string;
+  path?: string;
+}
+
+export interface HTTPNewFileArgs {
+  path: string;
+}
+
+export interface HTTPSaveBodyArgs {
+  run?: number;
+  path: string;
+}
+
 export interface BufLineArgs {
   buf: number;
   line: number;
@@ -342,6 +394,10 @@ export interface TestRunArgs {
 
 export interface TestIDArgs {
   id: string;
+}
+
+export interface WorkflowRunArgs {
+  run: string;
 }
 
 export interface WorkspacePathArgs {
@@ -518,6 +574,108 @@ export interface RegistryArgs {
   host: string;
 }
 
+export interface DBTableArgs {
+  conn: string;
+  table: string;
+}
+
+export interface DBExplainArgs {
+  conn: string;
+  sql: string;
+  analyze?: boolean;
+}
+
+export interface DBConnArgs {
+  conn: string;
+}
+
+export interface DBCompareArgs {
+  conn: string;
+  target: string;
+}
+
+export interface DBHistoryArgs {
+  conn?: string;
+}
+
+export interface RedisKeysArgs {
+  conn: string;
+  db?: number;
+  pattern?: string;
+}
+
+export interface DBEditArgs {
+  conn: string;
+  table: string;
+  edits: DBEdit[];
+}
+
+export interface DBEdit {
+  kind: "update" | "insert" | "delete";
+  key?: DBColValue[];
+  set?: DBColValue[];
+  old?: DBColValue[];
+}
+
+export interface DBColValue {
+  col: string;
+  v?: string;
+  n?: boolean;
+}
+
+export interface DBImportArgs {
+  conn: string;
+  table: string;
+  path: string;
+  noheader?: boolean;
+}
+
+export interface RedisKeyArgs {
+  conn: string;
+  db?: number;
+  key: string;
+  verb: "delete" | "ttl";
+  ttl?: number;
+}
+
+export interface DBAddArgs {
+  id: string;
+  name?: string;
+  driver: "postgres" | "mysql" | "sqlite" | "redis";
+  host?: string;
+  port?: number;
+  user?: string;
+  database?: string;
+  path?: string;
+  db?: number;
+  env?: string;
+  readonly?: boolean;
+}
+
+export interface DBSSHArgs {
+  conn: string;
+  host?: string;
+  port?: number;
+  user?: string;
+  auth?: "agent" | "key" | "password";
+  keyfile?: string;
+  jump?: string[];
+  remove?: boolean;
+}
+
+export interface DBSSLArgs {
+  conn: string;
+  mode: "disable" | "require" | "verify-ca" | "verify-full";
+  ca?: string;
+  cert?: string;
+  key?: string;
+}
+
+export interface DBTxArgs {
+  conn: string;
+  verb: "commit" | "rollback" | "manual" | "auto";
+}
+
 export interface GitLinesArgs {
   path: string;
   from: number;
@@ -600,6 +758,10 @@ export interface GitCloneArgs {
   url: string;
 }
 
+export interface ItermocAskArgs {
+  action: "ai-add" | "ai-model-slot-add" | "ai-models-edit" | "ai-profile-edit" | "ai-profile-new" | "ai-profile-form";
+}
+
 export interface ItemArgs {
   path: string;
 }
@@ -615,10 +777,6 @@ export interface GitCheckoutArgs {
 
 export interface GitStashArgs {
   message?: string;
-}
-
-export interface DBConnArgs {
-  conn: string;
 }
 
 export interface DBRowsArgs {
@@ -832,7 +990,7 @@ export interface CardsSnap {
 
 export interface Card {
   id: string;
-  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop";
+  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop" | "workflow";
   title: string;
   body?: string;
   choices: CardChoice[];
@@ -1317,6 +1475,36 @@ export interface AIProfile {
   hint?: string;
 }
 
+export interface WorkflowsSnap {
+  workflows: WorkflowItem[];
+  runs: WorkflowRun[];
+}
+
+export interface WorkflowItem {
+  name: string;
+  title?: string;
+  state: "running" | "on" | "off" | "untrusted" | "broken";
+  when?: string;
+  next?: number;
+  last?: string;
+}
+
+export interface WorkflowRun {
+  id: string;
+  workflow: string;
+  state: string;
+  dry?: boolean;
+  started: number;
+  ended?: number;
+  items?: number;
+  failed?: number;
+  wrote?: number;
+  resumed?: number;
+  waiting?: string;
+  tail?: string[];
+  stopping?: boolean;
+}
+
 export interface WorktreesSnap {
   state: "none" | "loading" | "ready";
   worktrees: WorktreeItem[];
@@ -1548,6 +1736,10 @@ export interface DebugSource {
   outside?: boolean;
 }
 
+export interface DebugLaunch {
+  path: string;
+}
+
 export interface LspLocations {
   locs: LspLoc[];
   cut?: boolean;
@@ -1574,6 +1766,107 @@ export interface FileText {
   text: string;
   binary?: boolean;
   truncated?: boolean;
+}
+
+export interface HTTPFiles {
+  files: HTTPFile[];
+  env?: string;
+  envs: string[];
+  more?: number;
+}
+
+export interface HTTPFile {
+  path: string;
+  requests: HTTPReqItem[];
+  err?: string;
+}
+
+export interface HTTPReqItem {
+  index: number;
+  name?: string;
+  method: string;
+  url: string;
+  line?: number;
+}
+
+export interface HTTPSent {
+  run?: number;
+  card?: string;
+  host?: string;
+}
+
+export interface HTTPResponse {
+  run: number;
+  running?: boolean;
+  by?: string;
+  label: string;
+  method: string;
+  url: string;
+  file?: string;
+  env?: string;
+  req_headers: HTTPHeader[];
+  status?: number;
+  status_text?: string;
+  proto?: string;
+  elapsed_ms?: number;
+  size?: number;
+  content_type?: string;
+  headers: HTTPHeader[];
+  body?: string;
+  binary?: boolean;
+  truncated?: boolean;
+  hops?: string[];
+  err?: string;
+}
+
+export interface HTTPHistory {
+  entries: HTTPHistItem[];
+}
+
+export interface HTTPHistItem {
+  id: string;
+  at: number;
+  method: string;
+  url: string;
+  status?: number;
+  err?: string;
+  elapsed_ms?: number;
+  size?: number;
+  file?: string;
+  name?: string;
+  env?: string;
+  by?: string;
+}
+
+export interface HTTPEnvs {
+  selected?: string;
+  files: string[];
+  envs: HTTPEnv[];
+}
+
+export interface HTTPEnv {
+  name: string;
+  vars: HTTPVar[];
+}
+
+export interface HTTPVar {
+  name: string;
+  value?: string;
+  hidden?: boolean;
+}
+
+export interface HTTPPath {
+  path: string;
+  line?: number;
+  size?: number;
+}
+
+export interface HTTPSaved {
+  requests: HTTPReqItem[];
+}
+
+export interface HTTPCurl {
+  curl: string;
 }
 
 export interface LspHover {
@@ -1993,6 +2286,71 @@ export interface ServicesConfig {
   created?: boolean;
 }
 
+export interface DBText {
+  text: string;
+}
+
+export interface DBPlan {
+  lines: DBPlanLine[];
+  summary?: string[];
+  analyze?: boolean;
+  truncated?: boolean;
+  ms: number;
+}
+
+export interface DBPlanLine {
+  depth: number;
+  text: string;
+  detail?: boolean;
+  costly?: boolean;
+}
+
+export interface DBDone {
+  text: string;
+  ms?: number;
+}
+
+export interface DBCompare {
+  script: string;
+  changes: number;
+  destructive?: number;
+  truncated?: boolean;
+}
+
+export interface DBHistory {
+  entries: DBHistoryEntry[];
+}
+
+export interface DBHistoryEntry {
+  conn: string;
+  sql: string;
+  at: number;
+  ms?: number;
+  rows?: number;
+}
+
+export interface DBFiles {
+  files: string[];
+  more?: number;
+}
+
+export interface DBConfigFile {
+  path: string;
+  created?: boolean;
+}
+
+export interface RedisKeys {
+  db: number;
+  keys: RedisKey[];
+  more?: boolean;
+}
+
+export interface RedisKey {
+  key: string;
+  type: string;
+  ttl: number;
+}
+
 export interface CIFixPrompt {
   prompt: string;
 }
@@ -2133,6 +2491,55 @@ export interface GitRebaseState {
   conflicts?: string[];
 }
 
+export interface Itermoc {
+  profiles: ItermocProfile[];
+  slots: ItermocSlot[];
+  providers: ItermocProvider[];
+  services: ItermocService[];
+  listening: boolean;
+  agents: ItermocAgent[];
+  problems?: number;
+}
+
+export interface ItermocProfile {
+  name: string;
+  title?: string;
+  source: "builtin" | "user" | "project";
+  trust: "use" | "ask" | "refused";
+  active?: boolean;
+  steps: number;
+  model?: string;
+}
+
+export interface ItermocSlot {
+  name: string;
+  provider?: string;
+  model?: string;
+  hasKey: "ok" | "missing" | "none" | "unset";
+  user?: boolean;
+}
+
+export interface ItermocProvider {
+  kind: string;
+  name: string;
+  label?: string;
+  cost?: string;
+  models: number;
+  signedOut?: boolean;
+}
+
+export interface ItermocService {
+  name: string;
+  state: string;
+  tools: number;
+}
+
+export interface ItermocAgent {
+  name: string;
+  since: string;
+  calls: number;
+}
+
 export interface TreeChanged {
   path: string;
 }
@@ -2158,6 +2565,10 @@ export interface DBConn {
   readonly?: boolean;
   problem?: string;
   sql: boolean;
+  connected?: boolean;
+  manual?: boolean;
+  tx?: boolean;
+  writes?: number;
 }
 
 export interface DBTables {
@@ -2180,6 +2591,7 @@ export interface DBRows {
   truncated?: boolean;
   masked?: number;
   ms: number;
+  key?: string[];
 }
 
 export interface DBCell {
@@ -2308,6 +2720,20 @@ export interface CIRun {
   url?: string;
 }
 
+export interface MCPItems {
+  items: MCPItem[];
+}
+
+export interface MCPItem {
+  text: string;
+  title: string;
+  hint?: string;
+}
+
+export interface ChatSide {
+  answer: string;
+}
+
 export interface AutoApprove {
   rows: AutoApproveRow[];
 }
@@ -2381,6 +2807,7 @@ export interface OpArgs {
   "debug.bp": DebugBpArgs;
   "debug.watch": DebugWatchArgs;
   "debug.eval": DebugEvalArgs;
+  "debug.open_launch": EmptyArgs;
   "debug.frame": DebugFrameArgs;
   "lsp.type_definition": LspPosArgs;
   "lsp.implementation": LspPosArgs;
@@ -2388,6 +2815,20 @@ export interface OpArgs {
   "buf.reload": BufArgs;
   "buf.markdown": BufArgs;
   "file.text": PathArgs;
+  "http.files": EmptyArgs;
+  "http.send": HTTPSendArgs;
+  "http.cancel": EmptyArgs;
+  "http.response": HTTPRunArgs;
+  "http.history": EmptyArgs;
+  "http.envs": EmptyArgs;
+  "http.env_select": HTTPEnvArgs;
+  "http.env_file": EmptyArgs;
+  "http.saved": EmptyArgs;
+  "http.save": HTTPSaveArgs;
+  "http.curl": HTTPCurlArgs;
+  "http.import_curl": HTTPImportArgs;
+  "http.new_file": HTTPNewFileArgs;
+  "http.save_body": HTTPSaveBodyArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
@@ -2407,6 +2848,7 @@ export interface OpArgs {
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
   "workspace.remove_folder": IDArgs;
@@ -2469,6 +2911,24 @@ export interface OpArgs {
   "services.start_all": EmptyArgs;
   "services.stop_all": EmptyArgs;
   "services.configure": EmptyArgs;
+  "db.ddl": DBTableArgs;
+  "db.explain": DBExplainArgs;
+  "db.test": DBConnArgs;
+  "db.compare": DBCompareArgs;
+  "db.history": DBHistoryArgs;
+  "db.csv_files": EmptyArgs;
+  "db.cancel": DBConnArgs;
+  "db.connect": DBConnArgs;
+  "db.config": EmptyArgs;
+  "redis.keys": RedisKeysArgs;
+  "db.edit": DBEditArgs;
+  "db.import": DBImportArgs;
+  "redis.key": RedisKeyArgs;
+  "db.add": DBAddArgs;
+  "db.ssh": DBSSHArgs;
+  "db.ssl": DBSSLArgs;
+  "db.disconnect": DBConnArgs;
+  "db.tx": DBTxArgs;
   "ci.fix_prompt": EmptyArgs;
   "git.stage_lines": GitLinesArgs;
   "git.unstage_lines": GitLinesArgs;
@@ -2495,6 +2955,8 @@ export interface OpArgs {
   "git.rebase": GitRebaseArgs;
   "git.rebase_ctl": GitRebaseCtlArgs;
   "git.clone": GitCloneArgs;
+  "itermoc.state": EmptyArgs;
+  "itermoc.ask": ItermocAskArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -2531,6 +2993,8 @@ export interface OpArgs {
   "pr.merge": PRMergeArgs;
   "pr.review": PRReviewArgs;
   "pr.checkout": PRNumberArgs;
+  "ai.mcp_items": EmptyArgs;
+  "chat.side": ChatSendArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
@@ -2561,6 +3025,7 @@ export interface TopicData {
   "debug": { snap: DebugSnap; delta: DebugSnap };
   "services": { snap: ServicesSnap; delta: ServicesSnap };
   "ai": { snap: AISnap; delta: AISnap };
+  "workflows": { snap: WorkflowsSnap; delta: WorkflowsSnap };
   "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
 }
 
@@ -2602,12 +3067,24 @@ export interface OpResult {
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;
   "debug.sources": DebugSources;
+  "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;
   "lsp.implementation": LspLocations;
   "buf.format": EditRes;
   "buf.reload": EditRes;
   "buf.markdown": BufMarkdown;
   "file.text": FileText;
+  "http.files": HTTPFiles;
+  "http.send": HTTPSent;
+  "http.response": HTTPResponse;
+  "http.history": HTTPHistory;
+  "http.envs": HTTPEnvs;
+  "http.env_file": HTTPPath;
+  "http.saved": HTTPSaved;
+  "http.curl": HTTPCurl;
+  "http.import_curl": HTTPPath;
+  "http.new_file": HTTPPath;
+  "http.save_body": HTTPPath;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;
@@ -2681,6 +3158,24 @@ export interface OpResult {
   "services.start_all": HostDone;
   "services.stop_all": AskRef;
   "services.configure": ServicesConfig;
+  "db.ddl": DBText;
+  "db.explain": DBPlan;
+  "db.test": DBDone;
+  "db.compare": DBCompare;
+  "db.history": DBHistory;
+  "db.csv_files": DBFiles;
+  "db.cancel": DBDone;
+  "db.connect": DBDone;
+  "db.config": DBConfigFile;
+  "redis.keys": RedisKeys;
+  "db.edit": AskRef;
+  "db.import": AskRef;
+  "redis.key": AskRef;
+  "db.add": AskRef;
+  "db.ssh": AskRef;
+  "db.ssl": AskRef;
+  "db.disconnect": AskRef;
+  "db.tx": AskRef;
   "ci.fix_prompt": CIFixPrompt;
   "git.discard_lines": AskRef;
   "git.discard_hunk": AskRef;
@@ -2705,6 +3200,8 @@ export interface OpResult {
   "git.rebase": AskRef;
   "git.rebase_ctl": AskRef;
   "git.clone": AskRef;
+  "itermoc.state": Itermoc;
+  "itermoc.ask": AskRef;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;
@@ -2739,6 +3236,8 @@ export interface OpResult {
   "pr.merge": AskRef;
   "pr.review": AskRef;
   "pr.checkout": AskRef;
+  "ai.mcp_items": MCPItems;
+  "chat.side": ChatSide;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;

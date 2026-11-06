@@ -200,6 +200,15 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-stash-list":      aiNever(aiNoPicker + " (git_stash list)"),
 	"git-log":             aiNever(aiNoPicker + " (git_log)"),
 	"git-compare-rev":     aiNever(aiNoPicker),
+	"git-inline-blame":    aiAuto(),
+	"git-status-blame":    aiAuto(),
+	"git-blame-annotate":  aiAuto(),
+	"git-blame-options":   aiNever(aiNoPicker),
+	"git-blame-commit":    aiAuto(),
+	"git-blame-before":    aiAuto(),
+	"git-line-history":    aiNever(aiNoPicker + " (git_log)"),
+	"git-rev-prev":        aiAuto(),
+	"git-rev-next":        aiAuto(),
 	"git-history":         aiNever(aiNoPicker),
 	"git-tags":            aiNever(aiNoPicker),
 	"git-conflict-next":   aiAuto(),
@@ -717,6 +726,12 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"workflows_history_days":     aiConfirm(ai.ClassSettings),
 	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
 	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
+
+	// Git blame (GITX-3..5)
+	"git_status_blame":            aiConfirm(ai.ClassSettings),
+	"git_inline_blame":            aiConfirm(ai.ClassSettings),
+	"git_blame_ignore_whitespace": aiConfirm(ai.ClassSettings),
+	"git_blame_detect_moves":      aiConfirm(ai.ClassSettings),
 }
 
 // aiNoWeb is why the AI never touches the web panel.

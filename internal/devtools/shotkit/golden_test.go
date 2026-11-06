@@ -216,6 +216,12 @@ func goldenExtras() []Scene {
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
+		// Blame (GITX-3, GITX-4): annotations beside every line, the
+		// cursor line's blame at its end and in the status bar; the
+		// Blame Options picker.
+		{Name: "editor-blame", Steps: WithEditor(Act("palette:git-blame-annotate"), Pause(600*time.Millisecond),
+			Act("palette:git-inline-blame"), Pause(400*time.Millisecond), Act("palette:git-status-blame"), Pause(1500*time.Millisecond))},
+		{Name: "blame-options", Steps: WithEditor(Act("palette:git-blame-options"), Pause(600*time.Millisecond))},
 		// History edits from the GRAPH (GITX-17): D on the oldest commit
 		// opens the Cancel-first Drop card.
 		{Name: "drop-commit-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-focus"), Key("G"), Key("D"), Pause(600 * time.Millisecond)}},
@@ -508,7 +514,11 @@ func TestGoldenScreens(t *testing.T) {
 		}
 	}
 	sem := make(chan struct{}, goldenJobs())
-	for _, c := range goldenCases() {
+	keep := goldenShard()
+	for idx, c := range goldenCases() {
+		if !keep(idx) {
+			continue
+		}
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			sem <- struct{}{}
@@ -543,6 +553,23 @@ func TestGoldenScreens(t *testing.T) {
 				c.name, msg, actual, c.name)
 		})
 	}
+}
+
+// goldenShard reads SHOTKIT_GOLDEN_SHARD=i/n (1 <= i <= n): CI splits the
+// cases over n parallel jobs and job i keeps every case whose index is
+// i-1 mod n. Unset or malformed, every case runs.
+func goldenShard() func(idx int) bool {
+	all := func(int) bool { return true }
+	a, b, ok := strings.Cut(os.Getenv("SHOTKIT_GOLDEN_SHARD"), "/")
+	if !ok {
+		return all
+	}
+	i, err1 := strconv.Atoi(a)
+	n, err2 := strconv.Atoi(b)
+	if err1 != nil || err2 != nil || n < 1 || i < 1 || i > n {
+		return all
+	}
+	return func(idx int) bool { return idx%n == i-1 }
 }
 
 // goldenJobs is how many child apps run at once (SHOTKIT_GOLDEN_JOBS).

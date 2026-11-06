@@ -26,34 +26,40 @@ type aiMCPInsertListMsg struct{ items []picker.Item }
 func (m *Model) openMCPInsertPicker() tea.Cmd {
 	mgr := m.aiMCP()
 	return tea.Batch(m.aiInfo("Loading MCP prompts and resources…"), func() tea.Msg {
-		mgr.Reload()
-		ctx, cancel := context.WithTimeout(context.Background(), aiMCPPromptTimeout)
-		defer cancel()
-		var items []picker.Item
-		for _, st := range mgr.Servers() {
-			if st.State == mcp.StateInvalid || st.State == mcp.StateDisabled || st.State == mcp.StateSignIn {
-				continue
-			}
-			ps, _ := mgr.Prompts(ctx, nil, st.Name)
-			for _, p := range ps {
-				hint := p.Description
-				if u := aiMCPPromptUsage(p); u != "" {
-					hint = u + " · " + hint
-				}
-				title := p.Title
-				if title == "" {
-					title = p.Name
-				}
-				items = append(items, picker.Item{ID: "/" + st.Name + "." + p.Name + " ", Title: "/" + st.Name + "." + p.Name + " — " + title, Hint: "prompt · " + hint})
-			}
-			rs, _, _ := mgr.Resources(ctx, nil, st.Name)
-			for _, r := range rs {
-				items = append(items, picker.Item{ID: "@" + st.Name + ":" + r.URI + " ", Title: "@" + st.Name + ": " + r.Label(), Hint: "resource · " + r.URI})
-			}
-		}
-		sort.SliceStable(items, func(i, j int) bool { return items[i].ID < items[j].ID })
-		return aiMCPInsertListMsg{items: items}
+		return aiMCPInsertListMsg{items: aiMCPInsertItems(mgr)}
 	})
+}
+
+// aiMCPInsertItems lists the prompts and resources (off the UI thread:
+// servers start). The id is the text the chat input takes.
+func aiMCPInsertItems(mgr *mcp.Manager) []picker.Item {
+	mgr.Reload()
+	ctx, cancel := context.WithTimeout(context.Background(), aiMCPPromptTimeout)
+	defer cancel()
+	var items []picker.Item
+	for _, st := range mgr.Servers() {
+		if st.State == mcp.StateInvalid || st.State == mcp.StateDisabled || st.State == mcp.StateSignIn {
+			continue
+		}
+		ps, _ := mgr.Prompts(ctx, nil, st.Name)
+		for _, p := range ps {
+			hint := p.Description
+			if u := aiMCPPromptUsage(p); u != "" {
+				hint = u + " · " + hint
+			}
+			title := p.Title
+			if title == "" {
+				title = p.Name
+			}
+			items = append(items, picker.Item{ID: "/" + st.Name + "." + p.Name + " ", Title: "/" + st.Name + "." + p.Name + " — " + title, Hint: "prompt · " + hint})
+		}
+		rs, _, _ := mgr.Resources(ctx, nil, st.Name)
+		for _, r := range rs {
+			items = append(items, picker.Item{ID: "@" + st.Name + ":" + r.URI + " ", Title: "@" + st.Name + ": " + r.Label(), Hint: "resource · " + r.URI})
+		}
+	}
+	sort.SliceStable(items, func(i, j int) bool { return items[i].ID < items[j].ID })
+	return items
 }
 
 func (m *Model) onAIMCPInsertList(msg aiMCPInsertListMsg) tea.Cmd {

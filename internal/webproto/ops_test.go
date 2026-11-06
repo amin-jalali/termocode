@@ -152,7 +152,8 @@ func TestRolesAndCaps(t *testing.T) {
 func TestLaptopCardOps(t *testing.T) {
 	want := map[string]bool{OpTermClose: true, OpGitDiscard: true, OpWebOpen: true, OpWebPairAsk: true, OpWebGrantAsk: true, OpTreeDelete: true,
 		OpGitPush: true, OpGitPull: true, OpGitCheckout: true, OpGitStash: true, OpGitStashPop: true, OpContainersStop: true, OpContainersRemove: true, OpDBExec: true, OpFileUploadReplace: true, OpPaletteAsk: true,
-		OpServicesStop: true, OpKubeRestart: true, OpGitResolveSide: true, OpGitAmend: true, OpGitRebase: true, OpGitRebaseCtl: true, OpGitClone: true, OpPRMerge: true, OpPRReview: true, OpPRCheckout: true, OpAIWorktreeMerge: true, OpAIWorktreeDiscard: true, OpAIUseProfile: true, OpAIUseModel: true,
+		OpServicesStop: true, OpKubeRestart: true, OpGitResolveSide: true, OpGitAmend: true, OpGitRebase: true, OpGitRebaseCtl: true, OpGitClone: true, OpPRMerge: true, OpPRReview: true, OpPRCheckout: true, OpAIWorktreeMerge: true, OpAIWorktreeDiscard: true, OpAIUseProfile: true, OpAIUseModel: true, OpItermocAsk: true,
+		OpDBEdit: true, OpDBImport: true, OpRedisKey: true, OpDBAdd: true, OpDBSSH: true, OpDBSSL: true, OpDBDisconnect: true, OpDBTx: true,
 		OpWorktreesArchive: true, OpWorktreesDelete: true,
 		OpGitDiscardLines: true, OpGitDiscardHunk: true, OpGitCheckoutTag: true, OpGitStashApply: true, OpGitUndo: true, OpGitRedo: true, OpGitFixup: true,
 		OpContainersExec: true, OpContainersImage: true, OpContainersPrune: true, OpContainersStorageRemove: true, OpContainersComposeAsk: true, OpContainersContextDefault: true, OpContainersRegistry: true, OpContainersOpenDB: true, OpServicesStopAll: true,

@@ -26,6 +26,8 @@ const (
 	// Failed: the send returned an error. It may still have arrived (a
 	// timeout), so it is treated like Sending on the next try.
 	Failed State = "failed"
+	// Undone: the user ran the write's undo recipe.
+	Undone State = "undone"
 )
 
 // ErrMaybeSent: the write was started before and there is no way to look
@@ -148,6 +150,18 @@ func (l *Ledger) find(step, item string) int {
 	return -1
 }
 
+// MarkUndone records that the write of step for item was taken back.
+func (l *Ledger) MarkUndone(step, item string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	i := l.find(step, item)
+	if i < 0 {
+		return errors.New("write ledger: no write " + step + "/" + item)
+	}
+	l.f.Writes[i].State = Undone
+	return l.saveLocked()
+}
+
 // Forget removes the write of step for item (the user chose to send it
 // again).
 func (l *Ledger) Forget(step, item string) error {
@@ -206,7 +220,7 @@ func ArgsHash(args any) string {
 func (l *Ledger) Do(ctx context.Context, w Write, send SendFunc, find FindFunc) (Entry, bool, error) {
 	marker := Marker(l.f.Run, w.Step, w.Item)
 	if old, ok := l.Get(w.Step, w.Item); ok {
-		if old.State == Done {
+		if old.State == Done || old.State == Undone {
 			return old, false, nil
 		}
 		if find == nil {

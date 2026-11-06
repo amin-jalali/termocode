@@ -184,6 +184,10 @@ func (m *Model) handleWorkflowsPageKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	case "l":
 		st.pageScroll = 1 << 20 // the bottom: the live output
 		return nil, true
+	case "u":
+		if strings.HasPrefix(st.detail, "run:") {
+			return m.wfxAskUndo(strings.TrimPrefix(st.detail, "run:")), true
+		}
 	case "h":
 		// History: the newest run of the target, else its page.
 		if e, ok := m.wfxTarget(); ok {
@@ -217,6 +221,7 @@ func wfxKeyRowsList() [][]string {
 		{"x", "stop the run (asks; Keep running is first)"},
 		{"p", "pause the run before its next step; p again continues"},
 		{"l", "jump to the live output"},
+		{"u", "undo a write of the run (asks; Cancel is first)"},
 	}
 }
 

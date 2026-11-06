@@ -64,6 +64,8 @@ type Writer struct {
 	PR func(ctx context.Context, p PRCall) (ledger.Result, error)
 	// Dir is the workflow file's folder; body_file stays inside it.
 	Dir string
+	// Audit gets one line per gate answer (nil: none).
+	Audit *ledger.Audit
 }
 
 // PRCall is one pull request a pr write opens: Branch (pushed by PR)
@@ -210,12 +212,16 @@ func describeGit(s workflow.WriteSpec, env run.ItemEnv) (target, undo string) {
 }
 
 func (w *Writer) gate(ctx context.Context, c run.WriteCall, target, preview, undo, item string) error {
+	answer := func(a string) {
+		_ = w.Audit.Add(ledger.AuditLine{Kind: "gate", Step: c.Step.ID, Item: item, Target: target, Answer: a})
+	}
 	if c.Spec.Gate == workflow.GateAllow && w.Root != "" {
 		ok, err := ledger.Allowed(w.Root, w.Workflow, w.Hash, c.Step.ID)
 		if err != nil {
 			return err
 		}
 		if ok {
+			answer("allow-list")
 			return nil
 		}
 	}
@@ -227,9 +233,16 @@ func (w *Writer) gate(ctx context.Context, c run.WriteCall, target, preview, und
 	}
 	d, err := w.Ask(ctx, GateAsk{Step: c.Step.ID, Item: item, Target: target, Preview: preview, Undo: undo})
 	if err != nil {
+		answer("deny")
 		return err
 	}
-	if d == GateDeny {
+	switch d {
+	case GateAllowOnce:
+		answer("allow once")
+	case GateAllowWorkflow:
+		answer("allow for this workflow")
+	default:
+		answer("deny")
 		return fmt.Errorf("the write was denied: %w", run.ErrDenied)
 	}
 	return nil

@@ -46,6 +46,10 @@ func (m *Model) webChatSend(call *webCall) tea.Cmd {
 		call.fail(webproto.CodeConflict, "AI is not set up on the laptop.")
 		return nil
 	}
+	if cmd, ok := m.aiMCPPromptSubmit(strings.TrimSpace(a.Text)); ok { // "/server.prompt" (MCPX-13), as Enter on the laptop
+		call.reply(webproto.ChatRef{ID: s.conv.ID})
+		return cmd
+	}
 	cmd := m.sendAIChat(a.Text)
 	call.reply(webproto.ChatRef{ID: s.conv.ID})
 	return cmd

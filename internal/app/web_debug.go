@@ -36,6 +36,7 @@ func init() {
 	webOps[webproto.OpDebugEval] = (*Model).webDebugEval
 	webOps[webproto.OpDebugFrame] = (*Model).webDebugFrame
 	webOps[webproto.OpDebugSources] = (*Model).webDebugSources
+	webOps[webproto.OpDebugOpenLaunch] = (*Model).webDebugOpenLaunch
 }
 
 // webDebugMaxOpen caps the rows the page may keep open.
@@ -724,4 +725,32 @@ func (m *Model) webDebugSources(call *webCall) tea.Cmd {
 			return nil
 		})
 	}
+}
+
+// webDebugOpenLaunch is Debug: Open launch.json from the page: the laptop
+// writes the template when there is none (as its own command does) and
+// answers the path; the page opens it in its editor.
+func (m *Model) webDebugOpenLaunch(call *webCall) tea.Cmd {
+	if _, remote := m.remoteFS(); remote {
+		call.fail(webproto.CodeConflict, "Open launch.json on the laptop for this workspace.")
+		return nil
+	}
+	root, err := m.rootDir()
+	if err != nil {
+		webFail(call, err)
+		return nil
+	}
+	path, err := m.ensureLaunchJSON(root)
+	if err != nil {
+		call.fail(webproto.CodeConflict, "launch.json could not be written.")
+		return nil
+	}
+	rel, ok := m.webRel(path)
+	if !ok {
+		webFail(call, webPathOutside())
+		return nil
+	}
+	m.webAuditOp(call, rel, "ok")
+	call.reply(webproto.DebugLaunch{Path: rel})
+	return nil
 }

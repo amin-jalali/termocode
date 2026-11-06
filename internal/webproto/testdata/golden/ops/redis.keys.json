@@ -1,0 +1,1 @@
+{"t":"req","id":71,"op":"redis.keys","args":{"conn":"cache","db":2,"pattern":"session:*"}}

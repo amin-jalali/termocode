@@ -9,8 +9,10 @@ import { NotifyField } from "../ui/NotifyField";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
 import { RunsView } from "./more/RunsView";
+import { WorkflowsView } from "./more/WorkflowsView";
 import { SettingsView } from "./more/SettingsView";
 import { AgentsView } from "./AgentsView";
+import { ItermocView } from "./ItermocView";
 import { MCPView } from "./more/MCPView";
 import { ContainersView } from "./more/ContainersView";
 import { DBView } from "./more/DBView";
@@ -40,9 +42,11 @@ export function MoreView() {
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
   if (sub === "runs") return <RunsView />;
+  if (sub === "workflows") return <WorkflowsView />;
   if (sub === "settings") return <SettingsView />;
   if (sub === "mcp") return <MCPView />;
   if (sub === "agents") return <AgentsView />;
+  if (sub === "itermoc") return <ItermocView />;
   if (sub === "containers") return <ContainersView />;
   if (sub === "db" || sub.startsWith("db/")) return <DBView rest={sub} />;
   if (sub === "testing") return <TestingView />;
@@ -79,6 +83,9 @@ export function MoreView() {
           <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "runs", query: {} })}>
             {t("more.runs")}
           </button>
+          <button type="button" class="more-link" data-sub="workflows" onClick={() => go({ tab: "more", rest: "workflows", query: {} })}>
+            {t("more.workflows")}
+          </button>
           <button type="button" class="more-link" data-sub="settings" onClick={() => go({ tab: "more", rest: "settings", query: {} })}>
             {t("more.settings")}
           </button>
@@ -87,6 +94,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" data-sub="containers" onClick={() => go({ tab: "more", rest: "containers", query: {} })}>
             {t("more.containers")}
+          </button>
+          <button type="button" class="more-link" data-sub="itermoc" onClick={() => go({ tab: "more", rest: "itermoc", query: {} })}>
+            {t("im.title")}
           </button>
           <button type="button" class="more-link" data-sub="mcp" onClick={() => go({ tab: "more", rest: "mcp", query: {} })}>
             {t("more.mcp")}

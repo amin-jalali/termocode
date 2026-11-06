@@ -31,6 +31,7 @@ const workflowUsage = `usage: termocode workflow <command>
   run <name> --dry-run [--var k=v]  read for real, write nothing (no plan steps)
   runs [<name>] [--json] [--limit N]
   logs <run id>                     what a run did
+  again <name> <key>                forget a seen item: the next run handles it again
   stop <run id>                     (in the IDE: Workflows, x)
 Exit codes: 0 ok, 1 failed, 2 usage, 3 needs the IDE session.`
 
@@ -127,6 +128,12 @@ func runWorkflowIn(args []string, ws string, out, errw io.Writer) int {
 		}
 		wfPrintRun(rf, out)
 		return 0
+	case "again":
+		if len(rest) != 2 {
+			fmt.Fprintln(errw, "usage: termocode workflow again <name> <key>")
+			return 2
+		}
+		return wfAgain(load(), root, rest[0], rest[1], out, errw)
 	case "stop", "pause", "resume":
 		fmt.Fprintf(errw, "termocode: %s works on a live run in the IDE (Workflows, x)\n", cmd)
 		return 3
@@ -394,5 +401,28 @@ func wfRuns(root, name string, limit int, asJSON bool, out, errw io.Writer) int 
 		}
 		fmt.Fprintf(out, "%s  %-20s %-11s %s\n", rf.ID, rf.Workflow, rf.State, kind)
 	}
+	return 0
+}
+
+// wfAgain forgets key in the seen ledger of workflow name.
+func wfAgain(list []wire.Entry, root, name, key string, out, errw io.Writer) int {
+	if _, ok := wire.Find(list, name); !ok {
+		fmt.Fprintf(errw, "termocode: no workflow %q\n", name)
+		return 1
+	}
+	seen, err := ledger.OpenSeen(root, name)
+	if err != nil {
+		fmt.Fprintln(errw, "termocode:", err)
+		return 1
+	}
+	if !seen.Has(key) {
+		fmt.Fprintf(errw, "termocode: %s has not seen %q\n", name, key)
+		return 1
+	}
+	if err := seen.Forget(key); err != nil {
+		fmt.Fprintln(errw, "termocode:", err)
+		return 1
+	}
+	fmt.Fprintf(out, "%s: %s is new again; the next run handles it\n", name, key)
 	return 0
 }

@@ -245,6 +245,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitBlame is the current file's blame and the blame settings
+	// (git_blame_view.go).
+	gitBlame gitBlameState
 	// gitBranchRef is the branch / start ref a branch card or prompt is
 	// about (git_branch_ops.go).
 	gitBranchRef string
@@ -1004,6 +1007,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, m.crash.waitCmd())          // recovered panics (crash_ui.go)
 	cmds = append(cmds, agentCtlInitCmd())          // OMX-33: the agent control socket (agent_ctl.go)
 	cmds = append(cmds, m.explorer.ScheduleLoads()) // FIX-2: a container root's first listing
+	cmds = append(cmds, wfxBootCmd())               // WFX-15: the workflow scheduler (workflows_sched.go)
 	// The card about a crash of the last run; with nvim it comes once
 	// the unsaved work is back (nvim ready).
 	if m.nvim == nil {
