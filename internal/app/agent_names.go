@@ -158,7 +158,7 @@ func (m *Model) onAgentNamesReply(gen int, slot aiSlot, text string, last ai.Chu
 	}
 	var items []picker.Item
 	for _, slug := range agentNameSlugs(text) {
-		items = append(items, picker.Item{ID: agentNamePfx + slug, Title: slug, Hint: "branch " + slug})
+		items = append(items, picker.Item{ID: agentNamePfx + slug, Title: slug, Hint: m.agentNamesHint()})
 	}
 	if len(items) == 0 {
 		items = []picker.Item{{ID: "none", Title: "No usable names in the reply"}}
@@ -194,4 +194,23 @@ func (m *Model) onAgentNamePicked(id string) tea.Cmd {
 
 func init() {
 	aiActionPolicies[agentNamesPaletteID] = aiNever(aiNoPicker + "; the user picks the name")
+}
+
+// agentNamesDemo is the picker with made-up slugs (DevActionMsg
+// "agentnamesdemo"; no model is called).
+func (m *Model) agentNamesDemo() {
+	m.agentNamesOnPick = nil
+	m.openAgentNamesPicker([]picker.Item{
+		{ID: agentNamePfx + "fix-toast-queue", Title: "fix-toast-queue", Hint: m.agentNamesHint()},
+		{ID: agentNamePfx + "thread-safe-toasts", Title: "thread-safe-toasts", Hint: m.agentNamesHint()},
+		{ID: agentNamePfx + "toast-queue-mutex", Title: "toast-queue-mutex", Hint: m.agentNamesHint()},
+	}, "quick-1 · $0.0001")
+}
+
+// agentNamesHint is what Enter on a slug does.
+func (m *Model) agentNamesHint() string {
+	if m.agentNamesOnPick != nil {
+		return "Enter uses it"
+	}
+	return "Enter copies it"
 }
