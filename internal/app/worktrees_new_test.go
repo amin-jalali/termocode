@@ -68,7 +68,7 @@ func wtDrive(t *testing.T, m *Model, cmd tea.Cmd) []tea.Msg {
 		}
 		out = append(out, msg)
 		switch msg.(type) {
-		case connectcard.ButtonMsg, connectcard.CloseMsg, wtCreatedMsg, wtNewPrepMsg:
+		case connectcard.ButtonMsg, connectcard.CloseMsg, wtCreatedMsg, wtNewPrepMsg, wtSetupDoneMsg:
 			next, _ := m.handleWTMsg(msg)
 			queue = append(queue, next)
 		}
@@ -108,7 +108,7 @@ func TestWTFormCardSafeFirst(t *testing.T) {
 	wtType(t, m, "feat/pin row")
 	box := ansi.Strip(m.connect.Box())
 	for _, want := range []string{"Name", "From", "main", "Branch", "feat/pin-row", "Agent", "Claude Code", "Task", "/src/app.worktrees/feat-pin-row",
-		"copy .env, .env.local (2 files)", "link node_modules", "both sides see writes", "skip secrets.env (not there)",
+		"copy .env, .env.local (2 files)", "link node_modules", "both sides see writes", "run setup: pnpm install", "asks first", "skip secrets.env (not there)",
 		"Cancel", "Start point…", "Create + Start"} {
 		if !strings.Contains(box, want) {
 			t.Errorf("card lacks %q:\n%s", want, box)
@@ -118,7 +118,7 @@ func TestWTFormCardSafeFirst(t *testing.T) {
 	m.h = 24
 	m.refreshWTForm()
 	box = ansi.Strip(m.connect.Box())
-	for _, want := range []string{"Also: copy 2", "link 1", "skip 1"} {
+	for _, want := range []string{"Also: copy 2", "link 1", "setup asks first", "skip 1"} {
 		if !strings.Contains(box, want) || strings.Contains(box, ".env.local") {
 			t.Errorf("short card lacks %q (or lists names):\n%s", want, box)
 		}
@@ -196,6 +196,10 @@ func TestWTFormCreate(t *testing.T) {
 	}
 	if tt := wtLastToast(m); !strings.Contains(tt, "pin-row is ready") || !strings.Contains(tt, "x (not there)") {
 		t.Errorf("toast %q", tt)
+	}
+	// The setup of the demo config asks first (not trusted).
+	if !m.confirmOpen || m.confirmKind != confirmKindWTSetupTrust {
+		t.Error("no setup trust card after create")
 	}
 }
 
