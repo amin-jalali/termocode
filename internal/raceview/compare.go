@@ -324,7 +324,7 @@ func (c Compare) Box() string {
 		status = c.busy
 	}
 	if status == "" && len(r.Summary) == 0 {
-		status = "s " + spark + " summarize asks the quick model how the lanes differ (the cost is shown)"
+		status = "s " + spark + " summarize: the quick model says how the lanes differ (cost shown)"
 	}
 	bottom = append(bottom, paint([]seg{{" " + status, bg.Foreground(p.muted)}}, iw, bg), hairline(p, iw))
 	if wide {
