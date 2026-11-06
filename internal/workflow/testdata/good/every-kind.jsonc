@@ -1,0 +1,27 @@
+{
+  /* Every step kind and every source and write target once. */
+  "version": 1,
+  "name": "every-kind",
+  "schedule": { "cron": "0 9 * * 1-5" },
+  "resume_on_start": false,
+  "on_error": "stop",
+  "steps": [
+    { "id": "files", "type": "source", "from": "files", "glob": "docs/**/*.md", "changed_since": "{{run.last_ok_at}}" },
+    { "id": "gh", "type": "each", "items": "steps.files.items", "steps": [
+      { "id": "prs", "type": "source", "from": "github", "what": "pulls", "args": { "review_requested": "me" } },
+      { "id": "inner", "type": "each", "items": "steps.prs.items", "cleanup": "discard", "steps": [
+        { "id": "vulns", "type": "source", "from": "shell", "argv": ["govulncheck", "-json", "./..."], "parse": "jsonl", "items": "$.finding", "cwd": "." },
+        { "id": "review", "type": "ai", "profile": "reviewer", "prompt": "Review {{item.title}}.",
+          "tools": { "preset": "all", "deny": ["git_push", "run_command"] }, "approve_plan": true, "budget_usd": 1.0 },
+        { "id": "pipe", "type": "pipeline", "profile": "review-then-fix", "prompt": "{{item.title}}" },
+        { "id": "fmt", "type": "shell", "argv": ["gofmt", "-l", "."], "cwd": ".", "env": { "TOKEN": "${secret:FMT_TOKEN}" } },
+        { "id": "commit", "type": "write", "to": "commit", "message": "chore: fmt" },
+        { "id": "comment", "type": "write", "to": "github.comment", "pr": "{{item.number}}", "body": "{{steps.review.text}}" }
+      ] }
+    ] },
+    { "id": "unique", "type": "filter", "dedupe": "item.key" },
+    { "id": "report", "type": "write", "to": "file", "path": "reports/{{run.date}}.md", "content": "{{steps.sum.text}}", "mode": "create", "gate": "dry" },
+    { "id": "post", "type": "write", "to": "http", "request": "requests/post-result.http", "body": "{{steps.sum.json}}" },
+    { "id": "ping", "type": "write", "to": "message", "via": "https://hooks.example/${secret:HOOK}", "text": "done", "timeout": "30s", "retries": { "max": 2, "backoff": "1m" } }
+  ]
+}
