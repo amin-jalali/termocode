@@ -14,9 +14,11 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/agentrun"
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/ghci"
+	"github.com/amin-jalali/termocode/internal/workflow/aistep"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
 	"github.com/amin-jalali/termocode/internal/workflow/source"
@@ -573,6 +575,17 @@ func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd
 			return block(ctx, wfxLineMsg{id: id, text: "message (" + via + "): " + text})
 		},
 		OnEvent: func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
+		OnAgent: func(step, item string, ev ai.Event) {
+			if ev.Kind == ai.EventToolStart && ev.Detail != "" {
+				l.addLine(step + " " + item + ": " + lastLine(ev.Detail))
+				send(wfxLineMsg{id: id})
+			}
+		},
+		AllowFlagged: func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error) {
+			d, err := ask(ctx, wire.GateAsk{Step: step, Item: item, Target: "agent step " + step + " · item " + item,
+				Preview: chip.Text + ": " + strings.Join(chip.Reasons, ", ") + ". The agent gets this item only if you allow it."}, true)
+			return d != wire.GateDeny, err
+		},
 		OnAI: func(step, item string, ev agentrun.Event) {
 			if ev.Tail != "" {
 				l.addLine(step + " " + item + ": " + lastLine(ev.Tail))
@@ -580,6 +593,9 @@ func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd
 			}
 		},
 	}
+	gh := newWFXGitHub(st.ws)
+	cfg.PR, cfg.GitHubComment, cfg.Find = gh.PR, gh.Comment, gh.Find
+	cfg.ParallelMax, cfg.AgentSandbox = wfxRunSettings()
 	h, err := wire.Start(context.Background(), cfg)
 	if err != nil {
 		return "", nil, nil, err
