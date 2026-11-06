@@ -2,7 +2,6 @@ package app
 
 import (
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -40,5 +39,4 @@ func TestGitxCopyPermalinks(t *testing.T) {
 			t.Errorf("%s: no AI policy", id)
 		}
 	}
-	_ = strings.TrimSpace
 }
