@@ -14,7 +14,7 @@ func (r *gitTestRepo) commitAll(t *testing.T, msg string) string {
 	return strings.TrimSpace(r.git(t, "rev-parse", "HEAD"))
 }
 
-func (r *gitTestRepo) read(t *testing.T, name string) string {
+func (r *gitTestRepo) readOr(t *testing.T, name string) string {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join(r.dir, name))
 	if err != nil {
@@ -82,7 +82,7 @@ func TestRevertMergeParent(t *testing.T) {
 	if _, err := RevertMerge(r.dir, merge, 1); err != nil {
 		t.Fatal(err)
 	}
-	if r.read(t, "s1.txt") != "<missing>" || r.read(t, "m.txt") != "m\n" {
+	if r.readOr(t, "s1.txt") != "<missing>" || r.readOr(t, "m.txt") != "m\n" {
 		t.Error("revert -m 1 did not drop the side's files")
 	}
 	if _, err := RevertMerge(r.dir, merge, 3); err == nil {
@@ -106,8 +106,8 @@ func TestApplyFileFromCommit(t *testing.T) {
 	if err := ApplyFileFromCommit(r.dir, both, "f1.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if r.read(t, "f1.txt") != "file 1\nfrom side\n" || r.read(t, "s3.txt") != "<missing>" {
-		t.Errorf("f1 %q s3 %q", r.read(t, "f1.txt"), r.read(t, "s3.txt"))
+	if r.readOr(t, "f1.txt") != "file 1\nfrom side\n" || r.readOr(t, "s3.txt") != "<missing>" {
+		t.Errorf("f1 %q s3 %q", r.readOr(t, "f1.txt"), r.readOr(t, "s3.txt"))
 	}
 	if strings.TrimSpace(r.git(t, "rev-parse", "HEAD")) != head {
 		t.Error("a commit was made")
@@ -128,8 +128,8 @@ func TestRestoreFileFrom(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.read(t, "f1.txt") != "file 1\n" {
-		t.Errorf("f1 %q", r.read(t, "f1.txt"))
+	if r.readOr(t, "f1.txt") != "file 1\n" {
+		t.Errorf("f1 %q", r.readOr(t, "f1.txt"))
 	}
 	if backup == "" || !strings.Contains(r.git(t, "stash", "list"), "before restoring f1.txt") {
 		t.Errorf("no safety copy: %q\n%s", backup, r.git(t, "stash", "list"))
@@ -208,7 +208,7 @@ func TestRewordDropSquashCommit(t *testing.T) {
 	if got := strings.Join(subjects(t, r), " "); got != "c1 c2 new" {
 		t.Errorf("after squash %s", got)
 	}
-	if r.read(t, "f4.txt") != "file 4\n" {
+	if r.readOr(t, "f4.txt") != "file 4\n" {
 		t.Error("the squashed change is gone")
 	}
 	root := strings.TrimSpace(r.git(t, "rev-list", "--max-parents=0", "HEAD"))
@@ -263,7 +263,7 @@ func TestPatches(t *testing.T) {
 	if err := ApplyPatch(r.dir, ch); err != nil {
 		t.Fatal(err)
 	}
-	if r.read(t, "f1.txt") != "changed\n" {
+	if r.readOr(t, "f1.txt") != "changed\n" {
 		t.Error("not applied")
 	}
 	if _, err := CheckPatch(r.dir, ch); err == nil {
