@@ -88,7 +88,7 @@ func TestWebParityGate(t *testing.T) {
 		}
 		want[name] = true
 	}
-	cmds := srcText(t, "lib/commands.ts", "views/git/gitcommands.ts")
+	cmds := srcText(t, "lib/commands.ts", "views/git/gitcommands.ts", "lib/morecmds.ts")
 	bar := srcText(t, "ui/ActivityBar.tsx")
 	ops := map[string]bool{}
 	for _, p := range webproto.Ops() {

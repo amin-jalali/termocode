@@ -33,3 +33,26 @@ func TestCommandOpensLaunchJSON(t *testing.T) {
 	p.WaitJS(`location.hash === "#/files/.termocode/launch.json"`)
 	expectReq(t, c, "buf.open")
 }
+
+// Testing: Collapse All folds the TESTING tree, as its head button does.
+func TestCommandCollapsesTheTestTree(t *testing.T) {
+	p, c := openRunView(t, Desktop, "testing", "testing", "tests")
+	c.Send(t, Snap("tests", 1, testsTree("idle", 1)))
+	p.WaitJS(`document.querySelectorAll(".tx-row").length === 4`)
+	runCmd(t, p, c, "testing collapse", "Testing: Collapse All")
+	p.WaitJS(`document.querySelectorAll(".tx-row").length === 1 && !!` + txRow("p:pkg"))
+}
+
+// Output: Clear empties the OUTPUT panel's lines; the channel stays.
+func TestCommandClearsTheOutput(t *testing.T) {
+	p, c := deskLogin(t, nil)
+	Eval[bool](p, `(location.hash = "#/more/containers", true)`)
+	reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+	const side = `document.querySelector('.wb-side [data-view="containers"]')`
+	p.WaitJS(side + `?.querySelectorAll(".tr[data-id]").length === 2`)
+	p.TapJS(side + `.querySelector('.tr[data-id="9f3c2e1a1234"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpContainersLogs, `{"id":"9f3c2e1a1234"}`), webproto.ContainerLogs{ID: "9f3c2e1a1234", Lines: []string{"start", "ready"}})
+	p.WaitJS(`document.querySelectorAll('.wb-panel [data-view="output"] .outv-line').length === 2`)
+	runCmd(t, p, c, "output clear", "Output: Clear")
+	p.WaitJS(`document.querySelectorAll('.wb-panel [data-view="output"] .outv-line').length === 0 && !!document.querySelector(".outv-channel")`)
+}
