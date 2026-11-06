@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "worktrees";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees";
 
 export interface Bye {
   t: "bye";
@@ -396,6 +396,10 @@ export interface TestIDArgs {
   id: string;
 }
 
+export interface WorkflowRunArgs {
+  run: string;
+}
+
 export interface WorkspacePathArgs {
   folder: string;
 }
@@ -754,6 +758,10 @@ export interface GitCloneArgs {
   url: string;
 }
 
+export interface ItermocAskArgs {
+  action: "ai-add" | "ai-model-slot-add" | "ai-models-edit" | "ai-profile-edit" | "ai-profile-new" | "ai-profile-form";
+}
+
 export interface ItemArgs {
   path: string;
 }
@@ -982,7 +990,7 @@ export interface CardsSnap {
 
 export interface Card {
   id: string;
-  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop";
+  kind: "tool" | "mcp" | "plan" | "review" | "trust" | "laptop" | "workflow";
   title: string;
   body?: string;
   choices: CardChoice[];
@@ -1467,6 +1475,36 @@ export interface AIProfile {
   hint?: string;
 }
 
+export interface WorkflowsSnap {
+  workflows: WorkflowItem[];
+  runs: WorkflowRun[];
+}
+
+export interface WorkflowItem {
+  name: string;
+  title?: string;
+  state: "running" | "on" | "off" | "untrusted" | "broken";
+  when?: string;
+  next?: number;
+  last?: string;
+}
+
+export interface WorkflowRun {
+  id: string;
+  workflow: string;
+  state: string;
+  dry?: boolean;
+  started: number;
+  ended?: number;
+  items?: number;
+  failed?: number;
+  wrote?: number;
+  resumed?: number;
+  waiting?: string;
+  tail?: string[];
+  stopping?: boolean;
+}
+
 export interface WorktreesSnap {
   state: "none" | "loading" | "ready";
   worktrees: WorktreeItem[];
@@ -1696,6 +1734,10 @@ export interface DebugSource {
   name: string;
   path?: string;
   outside?: boolean;
+}
+
+export interface DebugLaunch {
+  path: string;
 }
 
 export interface LspLocations {
@@ -2449,6 +2491,55 @@ export interface GitRebaseState {
   conflicts?: string[];
 }
 
+export interface Itermoc {
+  profiles: ItermocProfile[];
+  slots: ItermocSlot[];
+  providers: ItermocProvider[];
+  services: ItermocService[];
+  listening: boolean;
+  agents: ItermocAgent[];
+  problems?: number;
+}
+
+export interface ItermocProfile {
+  name: string;
+  title?: string;
+  source: "builtin" | "user" | "project";
+  trust: "use" | "ask" | "refused";
+  active?: boolean;
+  steps: number;
+  model?: string;
+}
+
+export interface ItermocSlot {
+  name: string;
+  provider?: string;
+  model?: string;
+  hasKey: "ok" | "missing" | "none" | "unset";
+  user?: boolean;
+}
+
+export interface ItermocProvider {
+  kind: string;
+  name: string;
+  label?: string;
+  cost?: string;
+  models: number;
+  signedOut?: boolean;
+}
+
+export interface ItermocService {
+  name: string;
+  state: string;
+  tools: number;
+}
+
+export interface ItermocAgent {
+  name: string;
+  since: string;
+  calls: number;
+}
+
 export interface TreeChanged {
   path: string;
 }
@@ -2629,6 +2720,20 @@ export interface CIRun {
   url?: string;
 }
 
+export interface MCPItems {
+  items: MCPItem[];
+}
+
+export interface MCPItem {
+  text: string;
+  title: string;
+  hint?: string;
+}
+
+export interface ChatSide {
+  answer: string;
+}
+
 export interface AutoApprove {
   rows: AutoApproveRow[];
 }
@@ -2702,6 +2807,7 @@ export interface OpArgs {
   "debug.bp": DebugBpArgs;
   "debug.watch": DebugWatchArgs;
   "debug.eval": DebugEvalArgs;
+  "debug.open_launch": EmptyArgs;
   "debug.frame": DebugFrameArgs;
   "lsp.type_definition": LspPosArgs;
   "lsp.implementation": LspPosArgs;
@@ -2742,6 +2848,7 @@ export interface OpArgs {
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
   "workspace.remove_folder": IDArgs;
@@ -2848,6 +2955,8 @@ export interface OpArgs {
   "git.rebase": GitRebaseArgs;
   "git.rebase_ctl": GitRebaseCtlArgs;
   "git.clone": GitCloneArgs;
+  "itermoc.state": EmptyArgs;
+  "itermoc.ask": ItermocAskArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -2884,6 +2993,8 @@ export interface OpArgs {
   "pr.merge": PRMergeArgs;
   "pr.review": PRReviewArgs;
   "pr.checkout": PRNumberArgs;
+  "ai.mcp_items": EmptyArgs;
+  "chat.side": ChatSendArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
@@ -2914,6 +3025,7 @@ export interface TopicData {
   "debug": { snap: DebugSnap; delta: DebugSnap };
   "services": { snap: ServicesSnap; delta: ServicesSnap };
   "ai": { snap: AISnap; delta: AISnap };
+  "workflows": { snap: WorkflowsSnap; delta: WorkflowsSnap };
   "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
 }
 
@@ -2955,6 +3067,7 @@ export interface OpResult {
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;
   "debug.sources": DebugSources;
+  "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;
   "lsp.implementation": LspLocations;
   "buf.format": EditRes;
@@ -3087,6 +3200,8 @@ export interface OpResult {
   "git.rebase": AskRef;
   "git.rebase_ctl": AskRef;
   "git.clone": AskRef;
+  "itermoc.state": Itermoc;
+  "itermoc.ask": AskRef;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;
@@ -3121,6 +3236,8 @@ export interface OpResult {
   "pr.merge": AskRef;
   "pr.review": AskRef;
   "pr.checkout": AskRef;
+  "ai.mcp_items": MCPItems;
+  "chat.side": ChatSide;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;

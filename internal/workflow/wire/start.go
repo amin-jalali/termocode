@@ -25,6 +25,9 @@ type Config struct {
 	NoPlan    bool
 	Vars      map[string]any
 	LastOKAt  string
+	// Resume continues this run file (run.Recover'd): its id, finished
+	// steps and write records are kept.
+	Resume *run.RunFile
 	// ParallelMax is workflows_parallel_max (0: no cap).
 	ParallelMax int
 
@@ -43,6 +46,8 @@ type Config struct {
 	PR      func(ctx context.Context, p PRCall) (ledger.Result, error)
 	OnEvent func(run.Event)
 	OnAI    func(step, item string, e agentrun.Event)
+	// OnAuditError hears a line of audit.jsonl that could not be written.
+	OnAuditError func(error)
 
 	// AgentSandbox is workflows_agent_sandbox; OnAgent gets the agent
 	// steps' events; AllowFlagged asks before an agent gets an item that
@@ -71,12 +76,27 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 		return nil, err
 	}
 	id := cfg.RunID
+	if cfg.Resume != nil {
+		id = cfg.Resume.ID
+	}
 	if id == "" {
 		id = NewRunID()
 	}
 	l, err := ledger.Open(cfg.Root, f.Name, id)
 	if err != nil {
 		return nil, err
+	}
+	audit, err := ledger.OpenAudit(cfg.Root, f.Name, id)
+	if err != nil {
+		return nil, err
+	}
+	onEvent := func(e run.Event) {
+		if err := audit.Add(ledger.AuditLine{At: e.At, Kind: string(e.Kind), Step: e.Step, Item: e.Item, Attempt: e.Attempt, Err: e.Err}); err != nil && cfg.OnAuditError != nil {
+			cfg.OnAuditError(err)
+		}
+		if cfg.OnEvent != nil {
+			cfg.OnEvent(e)
+		}
 	}
 	ev := Eval{Seen: func(k string) (bool, error) { return seen.Has(k), nil }}
 	tools := source.ToolCaller(nil)
@@ -86,13 +106,13 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 	steps := &Steps{Env: cfg.AI, RunID: id, Dir: filepath.Dir(e.Path), Workspace: cfg.Workspace, Exec: cfg.Exec, TestArgv: cfg.TestArgv, OnEvent: cfg.OnAI,
 		AgentSandbox: cfg.AgentSandbox, OnAgent: cfg.OnAgent, AllowFlagged: cfg.AllowFlagged}
 	w := &Writer{Root: cfg.Root, Workflow: f.Name, Hash: f.Hash, Ledger: l, Workspace: cfg.Workspace, Tools: tools,
-		Ask: cfg.Gate, Notify: cfg.Notify, GitHubComment: cfg.GitHubComment, Find: cfg.Find, PR: cfg.PR, Dir: filepath.Dir(e.Path)}
+		Ask: cfg.Gate, Audit: audit, Notify: cfg.Notify, GitHubComment: cfg.GitHubComment, Find: cfg.Find, PR: cfg.PR, Dir: filepath.Dir(e.Path)}
 	store := &seenStore{RunFiles: RunFiles{Root: cfg.Root}, seen: seen, file: f}
 	opts := run.Options{
 		RunID: id, Dry: cfg.Dry, NoPlan: cfg.NoPlan, Vars: cfg.Vars, LastOKAt: cfg.LastOKAt,
 		Eval: ev, Source: &Sources{Src: cfg.Src, Eval: ev}, Plan: steps, Run: steps, Write: w,
 		Each: &Worktrees{Workspace: cfg.Workspace, RunID: id}, ParallelMax: cfg.ParallelMax,
-		Tools: cfg.Tools, Ask: cfg.AskTool, OnEvent: cfg.OnEvent, Store: store,
+		Tools: cfg.Tools, Ask: cfg.AskTool, OnEvent: onEvent, Store: store, Resume: cfg.Resume,
 	}
 	return run.Start(ctx, f, opts), nil
 }

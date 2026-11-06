@@ -112,3 +112,39 @@ func writeAtomic(path string, data []byte) (err error) {
 
 // NewRunID is a run id from the clock: 20260106-090000-123.
 func NewRunID() string { return time.Now().UTC().Format("20060102-150405.000") }
+
+// Prune deletes the runs that ended (an interrupted one: started)
+// before cut: the run file and the run's folder (write ledger, logs,
+// audit). Running runs stay. It returns how many runs it removed.
+func (s RunFiles) Prune(cut time.Time) (int, error) {
+	all, err := s.List("", 0)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	var first error
+	for _, rf := range all {
+		end := rf.EndedAt
+		if end.IsZero() { // interrupted: it never ended
+			end = rf.StartedAt
+		}
+		if rf.State == run.RunRunning || end.IsZero() || !end.Before(cut) {
+			continue
+		}
+		p, err := s.path(rf.ID)
+		if err != nil {
+			continue
+		}
+		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+			if first == nil {
+				first = err
+			}
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(s.Root, "runs", rf.ID)); err != nil && first == nil {
+			first = err
+		}
+		n++
+	}
+	return n, first
+}

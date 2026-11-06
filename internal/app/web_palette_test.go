@@ -37,7 +37,9 @@ func TestWebPaletteListIsTheSafeAllowList(t *testing.T) {
 	for _, it := range res.Items {
 		byID[it.ID] = it
 		p, ok := aiActionPolicyFor(it.ID)
-		if _, user := webPaletteUserOnly[it.ID]; !ok || p.Gate == aiGateNever && !user {
+		_, form := webPaletteLaptopForms[it.ID]
+		_, user := webPaletteUserOnly[it.ID]
+		if !ok || p.Gate == aiGateNever && !form && !user {
 			t.Errorf("%s offered, but the AI policy is %+v", it.ID, p)
 		}
 		if p.Gate == aiGateConfirm && p.Class == "" && !it.Ask {
@@ -140,7 +142,7 @@ func TestWebPaletteOffersTheUsersAICommands(t *testing.T) {
 			t.Errorf("%s: offered=%v, it runs at once: %+v", id, ok, it)
 		}
 	}
-	for _, id := range []string{"ai-configure", "ai-history-delete", "ai-credentials", "ai-mcp-connect"} {
+	for _, id := range []string{"ai-configure", "ai-history-delete", "ai-credentials"} { // ai-mcp-connect opens its form on the laptop (web_palette_forms.go)
 		if _, ok := byID[id]; ok {
 			t.Errorf("%s offered to the web", id)
 		}

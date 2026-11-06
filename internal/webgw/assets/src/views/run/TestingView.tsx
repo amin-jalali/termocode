@@ -54,6 +54,13 @@ function openTest(it: TestItem): void {
   else if (it.kind === "file" && it.path) showFile(it.path);
 }
 
+/** collapseTests folds every package and file of the tree (Testing:
+ * Collapse All). */
+export function collapseTests(): void {
+  const s = readTestsSnap(store.topic("tests").peek()?.data);
+  folded.value = new Set(s?.items.filter((x) => x.kind !== "case").map((x) => x.id));
+}
+
 function toggle(id: string): void {
   const n = new Set(folded.peek());
   if (n.has(id)) n.delete(id);
@@ -135,7 +142,7 @@ export function TestingView() {
         <IconBtn icon="run-all" act="run-all" label={t("test.run_all")} onClick={() => ask("tests.run", {})} off={!s || s.items.length === 0} />
       )}
       <IconBtn icon="run-errors" act="run-failed" label={t("test.run_failed")} onClick={() => ask("tests.run", { failed: true })} off={running || !c || c.failed === 0} />
-      <IconBtn icon="collapse-all" act="collapse" label={t("sv.collapse")} onClick={() => (folded.value = new Set(s?.items.filter((x) => x.kind !== "case").map((x) => x.id)))} />
+      <IconBtn icon="collapse-all" act="collapse" label={t("sv.collapse")} onClick={collapseTests} />
     </span>
   );
   return (

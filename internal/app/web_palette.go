@@ -91,6 +91,10 @@ func init() {
 func (m *Model) webPaletteEntries() []webproto.PaletteItem {
 	var out []webproto.PaletteItem
 	for _, it := range withKeyHints(paletteItems(), m.keys) {
+		if _, form := webPaletteLaptopForms[it.ID]; form { // its form opens on the laptop (web_palette_forms.go)
+			out = append(out, webproto.PaletteItem{ID: it.ID, Title: it.Title, Keys: it.Hint, Ask: true})
+			continue
+		}
 		card, ok := webPaletteAllow[it.ID]
 		if !ok {
 			continue
@@ -140,10 +144,14 @@ func (m *Model) webPaletteAsk(call *webCall) *webAsk {
 		call.fail(webproto.CodeForbidden, "This command does not need the laptop.")
 		return nil
 	}
+	body := "Run “" + it.Title + "” on the laptop?"
+	if what, form := webPaletteLaptopForms[it.ID]; form {
+		body += "\n\nIt will " + what + ". " + webPaletteFormNote
+	}
 	return &webAsk{
 		summary: it.ID,
 		title:   "Run " + it.Title + "?",
-		body:    "Run “" + it.Title + "” on the laptop?",
+		body:    body,
 		action:  "Run",
 		run:     func(m *Model) tea.Cmd { return webPaletteDispatch(m, it.ID) },
 	}

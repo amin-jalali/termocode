@@ -293,6 +293,15 @@
       ]
     },
     {
+      "name": "workflows",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "WorkflowsSnap",
+      "deltas": [
+        "WorkflowsSnap"
+      ]
+    },
+    {
       "name": "worktrees",
       "keyed": false,
       "phase": "v2",
@@ -1189,6 +1198,20 @@
       "phase": "v2"
     },
     {
+      "op": "debug.open_launch",
+      "args": "EmptyArgs",
+      "result": "DebugLaunch",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "debug.frame",
       "args": "DebugFrameArgs",
       "role": "controller",
@@ -1736,6 +1759,19 @@
       "role": "controller",
       "rate": {
         "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workflows.stop",
+      "args": "WorkflowRunArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
         "per_ms": 1000
       },
       "max_bytes": 1024,
@@ -3255,6 +3291,35 @@
       "phase": "v2"
     },
     {
+      "op": "itermoc.state",
+      "args": "EmptyArgs",
+      "result": "Itermoc",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "itermoc.ask",
+      "args": "ItermocAskArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "tree.new_file",
       "args": "ItemArgs",
       "result": "TreeChanged",
@@ -3763,6 +3828,36 @@
       },
       "max_bytes": 1024,
       "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.mcp_items",
+      "args": "EmptyArgs",
+      "result": "MCPItems",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "chat.side",
+      "args": "ChatSendArgs",
+      "result": "ChatSide",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 73728,
+      "live": 1,
+      "laptop_card": false,
       "audit": "yes",
       "phase": "v2"
     },
@@ -4893,7 +4988,8 @@
             "plan",
             "review",
             "trust",
-            "laptop"
+            "laptop",
+            "workflow"
           ]
         },
         "read_only": {
@@ -5298,6 +5394,18 @@
         "text"
       ],
       "additionalProperties": false
+    },
+    "ChatSide": {
+      "type": "object",
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "additionalProperties": true
     },
     "ChatSnap": {
       "type": "object",
@@ -6662,6 +6770,18 @@
         "id"
       ],
       "additionalProperties": false
+    },
+    "DebugLaunch": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": true
     },
     "DebugLine": {
       "type": "object",
@@ -9286,6 +9406,215 @@
       ],
       "additionalProperties": false
     },
+    "Itermoc": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/ItermocAgent"
+          },
+          "type": "array"
+        },
+        "listening": {
+          "type": "boolean"
+        },
+        "problems": {
+          "type": "integer"
+        },
+        "profiles": {
+          "items": {
+            "$ref": "#/defs/ItermocProfile"
+          },
+          "type": "array"
+        },
+        "providers": {
+          "items": {
+            "$ref": "#/defs/ItermocProvider"
+          },
+          "type": "array"
+        },
+        "services": {
+          "items": {
+            "$ref": "#/defs/ItermocService"
+          },
+          "type": "array"
+        },
+        "slots": {
+          "items": {
+            "$ref": "#/defs/ItermocSlot"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "profiles",
+        "slots",
+        "providers",
+        "services",
+        "listening",
+        "agents"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocAgent": {
+      "type": "object",
+      "properties": {
+        "calls": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "since": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "since",
+        "calls"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocAskArgs": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "ai-add",
+            "ai-model-slot-add",
+            "ai-models-edit",
+            "ai-profile-edit",
+            "ai-profile-new",
+            "ai-profile-form"
+          ]
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    "ItermocProfile": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "builtin",
+            "user",
+            "project"
+          ]
+        },
+        "steps": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "trust": {
+          "enum": [
+            "use",
+            "ask",
+            "refused"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "trust",
+        "steps"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocProvider": {
+      "type": "object",
+      "properties": {
+        "cost": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "models": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "signedOut": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "models"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocService": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "tools": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "state",
+        "tools"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocSlot": {
+      "type": "object",
+      "properties": {
+        "hasKey": {
+          "enum": [
+            "ok",
+            "missing",
+            "none",
+            "unset"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "user": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "hasKey"
+      ],
+      "additionalProperties": true
+    },
     "KeyArgs": {
       "type": "object",
       "properties": {
@@ -10041,6 +10370,40 @@
         "since",
         "calls",
         "asked"
+      ],
+      "additionalProperties": true
+    },
+    "MCPItem": {
+      "type": "object",
+      "properties": {
+        "hint": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "MCPItems": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/MCPItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
       ],
       "additionalProperties": true
     },
@@ -12925,6 +13288,128 @@
       },
       "required": [],
       "additionalProperties": false
+    },
+    "WorkflowItem": {
+      "type": "object",
+      "properties": {
+        "last": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "next": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "on",
+            "off",
+            "untrusted",
+            "broken"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "when": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "WorkflowRun": {
+      "type": "object",
+      "properties": {
+        "dry": {
+          "type": "boolean"
+        },
+        "ended": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "items": {
+          "type": "integer"
+        },
+        "resumed": {
+          "type": "integer"
+        },
+        "started": {
+          "type": "integer"
+        },
+        "state": {
+          "type": "string"
+        },
+        "stopping": {
+          "type": "boolean"
+        },
+        "tail": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "waiting": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        },
+        "wrote": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "workflow",
+        "state",
+        "started"
+      ],
+      "additionalProperties": true
+    },
+    "WorkflowRunArgs": {
+      "type": "object",
+      "properties": {
+        "run": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "run"
+      ],
+      "additionalProperties": false
+    },
+    "WorkflowsSnap": {
+      "type": "object",
+      "properties": {
+        "runs": {
+          "items": {
+            "$ref": "#/defs/WorkflowRun"
+          },
+          "type": "array"
+        },
+        "workflows": {
+          "items": {
+            "$ref": "#/defs/WorkflowItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "workflows",
+        "runs"
+      ],
+      "additionalProperties": true
     },
     "WorkspaceEntry": {
       "type": "object",

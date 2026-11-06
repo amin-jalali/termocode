@@ -180,5 +180,9 @@ func (m *Model) applyWorkflowSetting(id, value string) (tea.Cmd, bool) {
 	if err := saveHTTPSetting(r.key, v); err != nil {
 		return m.pushToastDetail(toast.Errr, "Settings error", err.Error()), true
 	}
-	return m.pushToastDetail(toast.Info, r.key+" = "+value, ""), true
+	var sync tea.Cmd
+	if r.key == "workflows_enabled" && m.wfx != nil {
+		sync = m.wfxSchedSync()
+	}
+	return tea.Batch(sync, m.pushToastDetail(toast.Info, r.key+" = "+value, "")), true
 }
