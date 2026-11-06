@@ -2437,6 +2437,14 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindStashMode: // git_stash_reset.go
+		return m.onStashModePicked(msg.ID)
+	case pickerKindStashPick:
+		return m.onStashPicked(msg.ID)
+	case pickerKindStashAction:
+		return m.onStashActionPicked(msg.ID)
+	case pickerKindResetMode:
+		return m.onResetModePicked(msg.ID)
 	case pickerKindBlameOptions: // git_blame_view.go
 		return m.onBlameOptionPicked(msg.ID)
 	case pickerKindDeleteBranch: // git_branch_ops.go

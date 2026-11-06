@@ -2193,11 +2193,14 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |
 | `git-stage-lines` | Git: Stage Line (or Selected Lines) | confirm (git) |   |
 | `git-stash` | Git: Stash Changes | confirm (git) |   |
+| `git-stash-actions` | Git: Stash Actions… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_stash) |
 | `git-stash-list` | Git: Show Stash List... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_stash list) |
+| `git-stash-options` | Git: Stash… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_stash) |
 | `git-stash-pop` | Git: Pop Latest Stash | confirm (git) |   |
 | `git-status-blame` | Git: Toggle Blame in Status Bar | auto |   |
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-uncommit` | Git: Uncommit Last Commit (Keep Changes) | confirm (git) |   |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-unstage-all` | Git: Unstage All Changes | confirm (git) |   |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |

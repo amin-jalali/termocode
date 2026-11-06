@@ -457,7 +457,10 @@ missing	git-publish	Git|S
 missing	git-rebase-onto	Git|S
 missing	git-rev-next	Git|S
 missing	git-rev-prev	Git|S
+missing	git-stash-actions	Git|S
+missing	git-stash-options	Git|S
 missing	git-status-blame	Git|S
+missing	git-uncommit	Git|S
 missing	git-unstage-all	Git|S
 web	view/Databases	view:db
 web	view/Files	view:files

@@ -216,6 +216,8 @@ func goldenExtras() []Scene {
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
+		// Stash… (GITX-10): what to stash.
+		{Name: "stash-mode-picker", Steps: WithEditor(Act("palette:git-stash-options"), Pause(600*time.Millisecond))},
 		// Bisect and compare (GITX-19, GITX-24): the good-commit picker that
 		// starts a bisect, and what Compare Branches… offers.
 		{Name: "bisect-start", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-bisect"), Pause(600 * time.Millisecond)}},

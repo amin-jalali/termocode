@@ -256,6 +256,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitStashOps is what a stash or reset picker, card or prompt is
+	// about (git_stash_reset.go).
+	gitStashOps gitStashOpsState
 	// gitBlame is the current file's blame and the blame settings
 	// (git_blame_view.go).
 	gitBlame gitBlameState

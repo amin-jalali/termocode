@@ -141,6 +141,36 @@ blame skips the commits it lists (for example a big formatting commit).
 - **Git: Open Next Revision of File** steps forward again. After the newest
   commit you are back at the working file.
 
+## Stash with options
+
+**Git: Stash…** asks what to stash: **All changes**, **All changes and new
+files**, **Staged changes only**, or **Only the current file**. Then type a
+message, or leave it empty.
+
+**Git: Stash Actions…** lists your stashes. Pick one to **Apply** it (it
+stays), **Pop** it (apply, then drop), **View Changes**, **Create Branch
+from Stash…** (the stash is applied on the new branch, then dropped), or
+**Drop…** it. Drop asks first, and **Cancel** is ready. The toast says how
+to bring a dropped stash back (`git stash store …`).
+
+## Reset and uncommit
+
+Right-click a commit in the **GRAPH** and pick **Reset Current Branch to
+Here…**:
+
+| Mode | Your changes |
+|---|---|
+| **Soft** | The commits after it are undone; their changes stay, staged |
+| **Mixed** | The same, but the changes are not staged |
+| **Keep** | Your local changes stay; git stops if one is in the way |
+| **Hard…** | The changes in your files go. termocode first saves them as a stash and the old commit as a backup ref (`refs/termocode/backup/…`). |
+
+A card says how many commits leave the branch and how to bring them back;
+**Cancel** is ready. For **Hard…** you also type the branch name.
+
+**Git: Uncommit Last Commit (Keep Changes)** undoes the last commit. Its
+changes stay staged, so you can change them and commit again.
+
 ## The GRAPH
 
 **GRAPH** lists the commits, newest first. Each row shows a node, the
