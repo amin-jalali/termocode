@@ -39,7 +39,7 @@ func TestRCWorkspaceRootsCheckedOnHost(t *testing.T) {
 }
 
 // Spec (FIX-3): Add Folder to Workspace in a container workspace adds a
-// container folder (listed through the Host FS) and refuses a folder that
+// container folder (checked through the Host FS) and refuses a folder that
 // only exists on the local disk.
 func TestRCAddRootUsesHost(t *testing.T) {
 	withConfigDir(t)
@@ -52,8 +52,8 @@ func TestRCAddRootUsesHost(t *testing.T) {
 	if got, want := m.explorer.Roots(), []string{ws.Root, libs}; !slices.Equal(got, want) {
 		t.Fatalf("roots %q, want %q", got, want)
 	}
-	if !slices.Contains(h.calls(), "readdir "+libs) {
-		t.Errorf("libs was not listed through the Host: %q", h.calls())
+	if !slices.Contains(h.calls(), "stat "+libs) {
+		t.Errorf("libs was not checked through the Host: %q", h.calls())
 	}
 	m.addRootFromPrompt(filepath.Join(ws.Root, "localdir"))
 	if got := m.explorer.Roots(); len(got) != 2 {
