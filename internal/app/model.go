@@ -115,6 +115,8 @@ type Model struct {
 	agentSessions       []agentlog.Summary
 	agentSessIndex      *agentlog.Index
 	agentSessionsResume map[agentlog.CLI]bool
+	agentHits           []agentlog.Hit // the search inside sessions (agent_sessions_search.go)
+	agentHitsCapped     bool
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process

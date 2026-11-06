@@ -176,6 +176,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentSessionsPaletteID { // Agent: Sessions… (agent_sessions.go)
 		return m.openAgentSessions(), true
 	}
+	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
+		return m.openAgentSessionsSearch(), true
+	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
 		return nil, false

@@ -248,3 +248,12 @@ func claudeCwd(path string) string {
 	}
 	return ""
 }
+
+// statFile is a file's size (not observed: no file is opened).
+func statFile(path string) (int64, error) {
+	st, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return st.Size(), nil
+}

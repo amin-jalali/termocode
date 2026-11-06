@@ -32,7 +32,7 @@ const (
 	agentSessionsPaletteID                  = "agent-sessions"
 	agentSessionsPfx                        = "sess:"
 	agentSessionsWidth                      = 110
-	agentSessionsNote                       = "Enter resumes it in a new terminal tab · → reads it here"
+	agentSessionsNote                       = "Enter resumes it in a new terminal tab · → reads it here · / searches inside"
 	agentChatPendingSessions                = -1 // agentChatPendingBuf: the card was for Agent: Sessions…
 )
 

@@ -1121,6 +1121,9 @@ func (m Model) routeToPicker(msg tea.Msg) (Model, tea.Cmd) {
 		if c, ok := m.mcpServeStatusKey(k); ok { // "?" on the MCP server status screen
 			return m, c
 		}
+		if c, ok := m.agentSessionsPickerKey(k); ok { // "/" in Agent: Sessions… (agent_sessions_search.go)
+			return m, c
+		}
 	}
 	var cmd tea.Cmd
 	m.picker, cmd = m.picker.Update(msg)
