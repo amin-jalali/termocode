@@ -51,6 +51,7 @@ var helpContexts = map[string]string{
 	"databases":     databasesGuidePage + "#open-the-view",
 	"db-result":     databasesGuidePage + "#results",
 	"kubernetes":    kubeGuidePage + "#what-you-see",
+	"worktrees":     worktreesGuidePage + "#worktrees",
 }
 
 // settingsTopic is the row of setting key in the settings reference:
@@ -215,6 +216,8 @@ func (m Model) sidebarHelpTopic() string {
 		return activityHelp["Runs"]
 	case activity.ViewKubernetes:
 		return helpContexts["kubernetes"]
+	case activity.ViewWorktrees:
+		return helpContexts["worktrees"]
 	}
 	return ""
 }

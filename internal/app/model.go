@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/addai"
+	"github.com/amin-jalali/termocode/internal/agentlog"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -105,6 +106,18 @@ type Model struct {
 	// ai_agent_rollup.go).
 	agentRollSig string
 
+	// agentChat is the open Agent: Chat View (agent_chat.go, AGX-8);
+	// agentChatPendingBuf the tab the transcripts card asks for.
+	agentChat           *agentChatState
+	agentChatPendingBuf int
+	// Agent: Sessions… (agent_sessions.go, AGX-9): the rows, the cached
+	// index and the resume check of each CLI.
+	agentSessions       []agentlog.Summary
+	agentSessIndex      *agentlog.Index
+	agentSessionsResume map[agentlog.CLI]bool
+	agentHits           []agentlog.Hit // the search inside sessions (agent_sessions_search.go)
+	agentHitsCapped     bool
+
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process
 	// workspace. Read it through m.workspace() / m.rootDir().
@@ -176,6 +189,7 @@ type Model struct {
 	gitRemoteBusy string // running push/pull/fetch/sync note, "" when idle
 	gitBranch     git.Branch
 	gitRebase     git.RebaseState // a stopped interactive rebase (git_rebase.go)
+	gitStopped    string          // a stopped merge / cherry-pick / revert (git_merge_branch.go)
 	gitFiles      []git.FileStatus
 	gitCursor     int // index into gitVisibleRows() for the ViewGit sidebar
 
@@ -231,6 +245,12 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitBranchRef is the branch / start ref a branch card or prompt is
+	// about (git_branch_ops.go).
+	gitBranchRef string
+	// gitCommitAfter is what follows the commit the stage-all card waits
+	// for: gitAfterPush, gitAfterSync or "" (GITX-7).
+	gitCommitAfter string
 
 	// VSCode-style mouse hover. hoverX/hoverY are the absolute screen cell
 	// under the pointer (or -1 when unknown). mouseAllMotion mirrors the live
@@ -542,6 +562,8 @@ type Model struct {
 	services *servicesState
 	// kube is the Kubernetes view state (kube_state.go); idle until shown.
 	kube *kubeState
+	// wt is the WORKTREES view (worktrees_state.go).
+	wt *wtState
 	// databases is lazy and holds idle sessions only while the view is open.
 	databases *dbState
 	// itermoc is the Itermoc view (profiles, models, services, outside
@@ -716,6 +738,10 @@ type Model struct {
 	importOpen bool
 	imp        *importState
 
+	// race is the agent race flow (agent_race.go): the Agent: Race…
+	// card, the compare page and the lanes; nil until first used.
+	race *raceState
+
 	// themePromptKey is the palette field the user is editing in the
 	// custom-theme editor (BgEditor, SyntaxKeyword, etc.). Mirrors
 	// settingPromptID's usage.
@@ -801,6 +827,8 @@ type Model struct {
 	// setup is the first-run setup card on the Welcome page
 	// (setup_card*.go); shared by Model copies.
 	setup *setupState
+	// gitx is the open GITX picker, card or prompt (gitx_hub.go).
+	gitx gitxState
 
 	// lastLineCopy is the text of the last whole-line Ctrl+C / Ctrl+X (no
 	// selection). While the OS clipboard still holds it, Ctrl+V pastes it
@@ -922,6 +950,7 @@ func New() Model {
 		testView:         newTestsState(),    // Group E
 		services:         newServicesState(),
 		kube:             newKubeState(),
+		wt:               newWTState(),
 		databases:        newDBState(),
 		ext:              newExtState(),    // Group I
 		ai:               newAIState(),     // Group A

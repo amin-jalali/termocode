@@ -14,7 +14,7 @@ import { diff } from "../lib/textdiff";
 import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
-import type { AiAt, AiKind, FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
+import type { AiAt, AiKind, EditAct, FrameBlame, FrameGlyph, FrameHint, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -203,7 +203,7 @@ interface Api {
   languages: Languages;
   Uri: { from(c: { scheme: string; path: string }): Uri };
   KeyMod: { CtrlCmd: number; Shift: number; Alt: number };
-  KeyCode: { KeyZ: number; KeyY: number; KeyS: number; KeyI: number; F12: number; F7: number; F5: number; Tab: number; Escape: number };
+  KeyCode: { KeyZ: number; KeyY: number; KeyS: number; KeyI: number; F12: number; F7: number; F5: number; Tab: number; Escape: number; Slash: number };
 }
 
 const mod = (globalThis as unknown as { termocodeModule: (n: string) => unknown }).termocodeModule;
@@ -321,13 +321,18 @@ function caretRefs(): void {
 }
 
 /** goDef: the menu's Go to Definition, the same lsp.definition read as
- * F12: a place in this file gets the caret, one in another file opens
- * there (the page opens its tab). */
-async function goDef(): Promise<void> {
+ * F12 (or the type definition, the implementation): a place in this
+ * file gets the caret, one in another file opens there (the page opens
+ * its tab). */
+async function goDef(kind: "definition" | NavKind = "definition"): Promise<void> {
   const p = ed?.getPosition();
-  if (!p || !lspOn) return;
-  const d = (await ask("definition", p)) as LspLocations | null;
+  if (!p || !lspOn) {
+    if (kind !== "definition") post({ t: "navNone", kind });
+    return;
+  }
+  const d = (await ask(kind, p)) as LspLocations | null;
   const l = d && Array.isArray(d.locs) ? d.locs.find((x) => !x.outside && x.path) : undefined;
+  if (!l?.path && kind !== "definition") post({ t: "navNone", kind });
   if (!l?.path || !ed) return;
   if (l.path !== myPath) {
     post({ t: "open", path: l.path, line: l.line, col: l.col });
@@ -352,12 +357,122 @@ function onMenu(e: MouseEvent): void {
   post({ t: "menu", x: e.clientX, y: e.clientY, sel: sel.length > MENU_SEL_MAX ? "" : sel, readOnly, can: can(), at: aiAt() });
 }
 
+/** ACTS are the line and text commands the editor has itself. */
+const ACTS: Partial<Record<EditAct, string>> = {
+  copyLinesDown: "editor.action.copyLinesDownAction",
+  foldAll: "editor.foldAll",
+  unfoldAll: "editor.unfoldAll",
+  toggleFold: "editor.toggleFold",
+  joinLines: "editor.action.joinLines",
+  sortLinesAsc: "editor.action.sortLinesAscending",
+  sortLinesDesc: "editor.action.sortLinesDescending",
+  reverseLines: "editor.action.reverseLines",
+  upperCase: "editor.action.transformToUppercase",
+  lowerCase: "editor.action.transformToLowercase",
+  trimWhitespace: "editor.action.trimTrailingWhitespace",
+  tabsToSpaces: "editor.action.indentationToSpaces",
+  spacesToTabs: "editor.action.indentationToTabs",
+  replaceInFile: "editor.action.startFindReplaceAction",
+};
+
+/** inlayDecos are the inlay hints the page sent. */
+let inlayDecos: Collection | null = null;
+
+/** setHints shows the inlay hints at their places (the text after them
+ * moves right, as in the laptop's editor). */
+function setHints(items: readonly FrameHint[]): void {
+  const n = model?.getLineCount() ?? 0;
+  inlayDecos?.set(
+    items
+      .filter((h) => h.line >= 1 && h.line <= n)
+      .map((h) => ({
+        range: oneLineAt(h.line, h.col, h.col),
+        options: { after: { content: (h.padLeft ? " " : "") + h.label + (h.padRight ? " " : ""), inlineClassName: "tc-inlay" }, showIfCollapsed: true },
+      })),
+  );
+}
+
+/** lineComment is the file type's line comment ("": none). */
+let lineComment = "";
+
+/** runAct runs a line or text command; the edits are the user's own. */
+function runAct(id: EditAct): void {
+  if (!ed || diffEd) return;
+  ed.focus();
+  if (id === "commentLine") return toggleComment();
+  if (id === "collapseBlankLines") return collapseBlanks();
+  const a = ACTS[id];
+  if (a) void ed.getAction(a)?.run();
+}
+
+/** selRows are the rows of the selections (a selection that ends at a
+ * row's start leaves that row out), each once, in order. */
+function selRows(): number[] {
+  const rows = new Set<number>();
+  for (const s of ed?.getSelections() ?? []) {
+    let end = s.endLineNumber;
+    if (end > s.startLineNumber && s.endColumn === 1) end--;
+    for (let i = s.startLineNumber; i <= end; i++) rows.add(i);
+  }
+  return [...rows].sort((a, b) => a - b);
+}
+
+const indentOf = (s: string) => s.length - s.trimStart().length;
+
+/** toggleComment comments the selected rows (at their least indent),
+ * or takes the comment away when every row with text has one. */
+function toggleComment(): void {
+  const m = model;
+  if (!ed || !m || readOnly || !lineComment) return;
+  const c = lineComment;
+  const rows = selRows().filter((i) => m.getLineContent(i).trim() !== "");
+  if (rows.length === 0) return;
+  const on = rows.every((i) => m.getLineContent(i).trimStart().startsWith(c));
+  const ops: EditOp[] = [];
+  if (on) {
+    for (const i of rows) {
+      const s = m.getLineContent(i);
+      const at = indentOf(s);
+      const n = c.length + (s[at + c.length] === " " ? 1 : 0);
+      ops.push({ range: oneLineAt(i, at + 1, at + 1 + n), text: "" });
+    }
+  } else {
+    const at = Math.min(...rows.map((i) => indentOf(m.getLineContent(i))));
+    for (const i of rows) ops.push({ range: oneLineAt(i, at + 1, at + 1), text: c + " " });
+  }
+  ed.pushUndoStop();
+  ed.executeEdits("comment", ops);
+  ed.pushUndoStop();
+}
+
+/** collapseBlanks leaves one blank row where there were more (rows of
+ * spaces count as blank), as the laptop's Collapse Blank Lines does. */
+function collapseBlanks(): void {
+  const m = model;
+  if (!ed || !m || readOnly) return;
+  const n = m.getLineCount();
+  const blank = (i: number) => m.getLineContent(i).trim() === "";
+  const ops: EditOp[] = [];
+  for (let i = 1; i <= n; i++) {
+    if (!blank(i)) continue;
+    let j = i;
+    while (j < n && blank(j + 1)) j++;
+    if (j > i) ops.push({ range: { startLineNumber: i, startColumn: m.getLineMaxColumn(i), endLineNumber: j, endColumn: m.getLineMaxColumn(j) }, text: "" });
+    i = j;
+  }
+  if (ops.length === 0) return;
+  ed.pushUndoStop();
+  ed.executeEdits("collapse", ops);
+  ed.pushUndoStop();
+}
+
 /** menuEdit runs a context menu choice. */
 function menuEdit(m: Extract<ToFrame, { t: "edit" }>): void {
   if (!ed) return;
-  if (m.op === "def" || m.op === "refs" || m.op === "format") {
+  if (m.op === "def" || m.op === "refs" || m.op === "format" || m.op === "typedef" || m.op === "impl") {
     ed.focus();
     if (m.op === "def") void goDef();
+    else if (m.op === "typedef" || m.op === "impl") void goDef(m.op);
     else if (m.op === "refs") caretRefs();
     else void ed.getAction(FORMAT)?.run();
     return;
@@ -823,6 +938,7 @@ function setOpts(o: FrameOpts): void {
     api.editor.defineTheme("termocode", { base: o.dark === false ? "vs" : "vs-dark", inherit: true, rules: [], colors: colors(o.colors) });
     api.editor.setTheme("termocode");
   }
+  if (o.comment !== undefined) lineComment = o.comment;
   if (!ed) return;
   const u = dict<unknown>();
   if (o.readOnly !== undefined) {
@@ -937,6 +1053,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   if (!m.diff) watchGlyphs(ed);
   lineDecos = ed.createDecorationsCollection();
   blameDecos = ed.createDecorationsCollection();
+  inlayDecos = ed.createDecorationsCollection();
   model?.onDidChangeContent((e) => {
     const specs: { from: number; to: number; insert: string }[] = e.changes.map((c) => ({ from: c.rangeOffset, to: c.rangeOffset + c.rangeLength, insert: c.text }));
     const cs = ChangeSet.of(specs, cur.length);
@@ -959,6 +1076,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   ed.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyZ, () => undoRedo(true));
   ed.addCommand(KeyMod.CtrlCmd | KeyCode.KeyY, () => undoRedo(true));
   ed.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => post({ t: "save" }));
+  ed.addCommand(KeyMod.CtrlCmd | KeyCode.Slash, toggleComment);
   if (diffEd) {
     const d = diffEd;
     for (const side of [ed, d.getOriginalEditor()]) {
@@ -1127,6 +1245,22 @@ function onMessage(e: MessageEvent): void {
     case "aiAct":
       if (ed && !diffEd) post({ t: "aiAct", kind: m.kind, at: aiAt() });
       return;
+    case "act":
+      runAct(m.id);
+      return;
+    case "hints":
+      setHints(m.items);
+      return;
+    case "snippet": {
+      if (!ed || readOnly || diffEd) return;
+      const sc = (ed as unknown as { getContribution(id: string): { insert(body: string): void } | null }).getContribution("snippetController2");
+      ed.focus();
+      ed.pushUndoStop();
+      if (sc) sc.insert(m.body);
+      else ed.executeEdits("snippet", (ed.getSelections() ?? []).map((range) => ({ range, text: m.body, forceMoveMarkers: true })));
+      ed.pushUndoStop();
+      return;
+    }
   }
 }
 

@@ -78,6 +78,12 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIWebToolsPicked(id), true
 	case pickerKindAgentHooks: // agent_hooks_ui.go
 		return m.onAgentHooksPicked(id), true
+	case pickerKindAgentPicker: // agent_picker.go
+		return m.onAgentPicked(id), true
+	case pickerKindAgentSessions: // agent_sessions.go
+		return m.onAgentSessionPicked(id), true
+	case pickerKindAgentSessionsHits: // agent_sessions_search.go
+		return m.onAgentSearchPicked(id), true
 	case pickerKindRunsMore: // runs_state.go
 		return m.onRunsMorePicked(id), true
 	case pickerKindAIWorktrees: // ai_worktree_list.go
@@ -102,6 +108,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIEditInstruction(value), true
 	case promptKindAIKey:
 		return m.onAIKeyEntered(value), true
+	case promptKindAgentSessionsSearch: // agent_sessions_search.go
+		return m.onAgentSessionsSearch(value), true
 	case promptKindAIWebKey: // ai_web_tools.go
 		return m.onAIWebKeyEntered(value), true
 	case promptKindAIModel:
@@ -203,10 +211,16 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentCtlPrompt(id), true
 	case confirmKindAgentHooks: // agent_hooks_ui.go
 		return m.answerAgentHooks(id), true
+	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard: // agent_race_compare.go
+		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
 	case confirmKindWorkflowRun, confirmKindWorkflowDry, confirmKindWorkflowTrust, confirmKindWorkflowOnOff, confirmKindWorkflowStop: // workflows_state.go
 		return m.answerWorkflowCard(id), true
+	case confirmKindAgentTranscripts: // agent_chat.go
+		return m.answerAgentTranscripts(id), true
+	case confirmKindAgentInstall, confirmKindAgentSignIn: // agent_install.go
+		return m.answerAgentPickCard(m.confirmKind, id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go
 		return m.answerAIMemoryCard(m.confirmKind, id), true
 	case confirmKindAIProfileSave:
@@ -502,6 +516,21 @@ func (m *Model) saveAIModel(id string) tea.Cmd {
 // ── Auto-approve ───────────────────────────────────────────────────────
 
 func (m *Model) openAIAutoApprovePicker() tea.Cmd {
+	items := m.aiAutoApproveItems()
+	// The title is the palette title (with the theme's AI glyph, "*" in ASCII);
+	// the box follows the window so the rows are not cut at 80 columns.
+	m.picker = picker.NewItems(" "+theme.GlyphAI.String()+" AI: Agent Auto-Approve… ", items)
+	m.picker.SetWidth(mcpServeStatusWidth(m.w))
+	m.picker.SetNote([]string{"Enter switches ask and AUTO; on an agent it revokes."})
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = pickerKindAIAutoApprove
+	return nil
+}
+
+// aiAutoApproveItems are the auto-approve rows (the picker's and the
+// web's): each class ask or AUTO, then the outside agents' Always allow.
+func (m *Model) aiAutoApproveItems() []picker.Item {
 	s := m.aiS()
 	desc := map[string]string{
 		ai.ClassFileWrite: "write / create / delete / rename files",
@@ -537,15 +566,7 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 	}
 	items = append(items, m.dbAutoApproveItems(s.settings.AutoApprove)...)
 	items = append(items, mcpServeAllowItems()...) // outside agents: their own list
-	// The title is the palette title (with the theme's AI glyph, "*" in ASCII);
-	// the box follows the window so the rows are not cut at 80 columns.
-	m.picker = picker.NewItems(" "+theme.GlyphAI.String()+" AI: Agent Auto-Approve… ", items)
-	m.picker.SetWidth(mcpServeStatusWidth(m.w))
-	m.picker.SetNote([]string{"Enter switches ask and AUTO; on an agent it revokes."})
-	m.picker.SetSize(m.w, m.h)
-	m.pickerOpen = true
-	m.pickerKind = pickerKindAIAutoApprove
-	return nil
+	return items
 }
 
 func (m *Model) onAIAutoApproveToggled(class string) tea.Cmd {
