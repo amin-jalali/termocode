@@ -83,6 +83,20 @@ type Handle struct {
 // cancelled. Safe to call more than once and after the end.
 func (h *Handle) Cancel() { h.cancel() }
 
+// Pause holds the run: the step that works now finishes, and no new
+// step starts until Continue. Safe after the end (nothing happens).
+func (h *Handle) Pause() { h.r.hold(true) }
+
+// Continue lets a held run go on.
+func (h *Handle) Continue() { h.r.hold(false) }
+
+// Held reports whether the user paused the run.
+func (h *Handle) Held() bool {
+	h.r.mu.Lock()
+	defer h.r.mu.Unlock()
+	return h.r.rf.Held
+}
+
 // Done is closed when the run has ended.
 func (h *Handle) Done() <-chan struct{} { return h.done }
 
@@ -131,7 +145,7 @@ func Start(ctx context.Context, file *workflow.File, opts Options) *Handle {
 		if rf.Hash != file.Hash {
 			resumeErr = errors.New("the workflow file changed since this run started; start a new run")
 		}
-		rf.State, rf.EndedAt, rf.Error = RunRunning, time.Time{}, ""
+		rf.State, rf.EndedAt, rf.Error, rf.Held = RunRunning, time.Time{}, "", false
 		rf.Resumed++
 		if rf.Vars == nil {
 			rf.Vars = map[string]any{}
@@ -186,8 +200,51 @@ type runner struct {
 	emitMu  sync.Mutex // one OnEvent call at a time
 	saveErr error      // the first failed save; the run stops at the next step (under mu)
 
-	mu sync.Mutex
-	rf *RunFile
+	mu      sync.Mutex
+	rf      *RunFile
+	release chan struct{} // closed by Continue; nil while not held (under mu)
+}
+
+// hold pauses (on) or continues the run.
+func (r *runner) hold(on bool) {
+	changed := false
+	r.edit(func() {
+		if r.rf.State != RunRunning || r.rf.Held == on {
+			return
+		}
+		changed, r.rf.Held = true, on
+		if on {
+			r.release = make(chan struct{})
+		} else {
+			close(r.release)
+			r.release = nil
+		}
+	})
+	if !changed {
+		return
+	}
+	r.save()
+	if on {
+		r.emit(Event{Kind: RunHeld})
+	} else {
+		r.emit(Event{Kind: RunContinued})
+	}
+}
+
+// waitHeld waits while the user holds the run.
+func (r *runner) waitHeld(ctx context.Context) error {
+	r.mu.Lock()
+	ch := r.release
+	r.mu.Unlock()
+	if ch == nil {
+		return nil
+	}
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // save writes the run file (a boundary).
@@ -255,6 +312,11 @@ func (r *runner) end(state string, err error) {
 	}
 	r.rf.State = state
 	r.rf.EndedAt = r.opts.Now()
+	if r.release != nil { // a held run that ended: nothing waits any more
+		close(r.release)
+		r.release = nil
+	}
+	r.rf.Held = false
 	if err != nil {
 		r.rf.Error = err.Error()
 	}
@@ -351,6 +413,9 @@ func (r *runner) state(f *frame, key string) *StepState {
 }
 
 func (r *runner) runStep(ctx context.Context, s *workflow.Step, f *frame) error {
+	if err := r.waitHeld(ctx); err != nil {
+		return err
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}

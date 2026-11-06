@@ -20,6 +20,8 @@ const (
 	RunFailed    Kind = "run_failed"
 	RunCancelled Kind = "run_cancelled"
 	RunPaused    Kind = "run_paused"
+	RunHeld      Kind = "run_held"      // the user paused the run (Handle.Pause)
+	RunContinued Kind = "run_continued" // the user let it go on (Handle.Continue)
 )
 
 // Event is one thing that happened in a run. Options.OnEvent gets them
