@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/addai"
+	"github.com/amin-jalali/termocode/internal/agentlog"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -104,6 +105,18 @@ type Model struct {
 	// agentRollSig is the agent roll-up this window wrote last (OMX-35,
 	// ai_agent_rollup.go).
 	agentRollSig string
+
+	// agentChat is the open Agent: Chat View (agent_chat.go, AGX-8);
+	// agentChatPendingBuf the tab the transcripts card asks for.
+	agentChat           *agentChatState
+	agentChatPendingBuf int
+	// Agent: Sessions… (agent_sessions.go, AGX-9): the rows, the cached
+	// index and the resume check of each CLI.
+	agentSessions       []agentlog.Summary
+	agentSessIndex      *agentlog.Index
+	agentSessionsResume map[agentlog.CLI]bool
+	agentHits           []agentlog.Hit // the search inside sessions (agent_sessions_search.go)
+	agentHitsCapped     bool
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process

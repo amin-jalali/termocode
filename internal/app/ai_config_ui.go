@@ -80,6 +80,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAgentHooksPicked(id), true
 	case pickerKindAgentPicker: // agent_picker.go
 		return m.onAgentPicked(id), true
+	case pickerKindAgentSessions: // agent_sessions.go
+		return m.onAgentSessionPicked(id), true
+	case pickerKindAgentSessionsHits: // agent_sessions_search.go
+		return m.onAgentSearchPicked(id), true
 	case pickerKindRunsMore: // runs_state.go
 		return m.onRunsMorePicked(id), true
 	case pickerKindAIWorktrees: // ai_worktree_list.go
@@ -104,6 +108,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIEditInstruction(value), true
 	case promptKindAIKey:
 		return m.onAIKeyEntered(value), true
+	case promptKindAgentSessionsSearch: // agent_sessions_search.go
+		return m.onAgentSessionsSearch(value), true
 	case promptKindAIWebKey: // ai_web_tools.go
 		return m.onAIWebKeyEntered(value), true
 	case promptKindAIModel:
@@ -205,6 +211,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentCtlPrompt(id), true
 	case confirmKindAgentHooks: // agent_hooks_ui.go
 		return m.answerAgentHooks(id), true
+	case confirmKindAgentTranscripts: // agent_chat.go
+		return m.answerAgentTranscripts(id), true
 	case confirmKindAgentInstall, confirmKindAgentSignIn: // agent_install.go
 		return m.answerAgentPickCard(m.confirmKind, id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go

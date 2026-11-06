@@ -1762,6 +1762,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | ID | Title | Gate | Reason |
 | --- | --- | --- | --- |
+| `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
+| `agent-sessions` | Agent: Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; it reads the outside agents' own session files (owner decision D1) |
+| `agent-sessions-search` | Agent: Search Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
 | `agent-start` | Agent: Start… | never | opens a picker or prompt that only the user can answer; use a typed tool (outside_agent_start) |
 | `agent-start-claude` | Agent: Start Claude Code | confirm (run) |   |
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
@@ -2210,6 +2213,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | Key | Gate | Reason |
 | --- | --- | --- |
+| `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
 | `ai_categories` | never | AI provider, credentials and approvals stay with the user |
