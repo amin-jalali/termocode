@@ -62,6 +62,14 @@ func parseStrings(t *testing.T, file, name string) []entry {
 	return nil
 }
 
+// englishStrings are all English strings: the page's (strings.ts) and
+// the ones only the desktop workbench shows (strings.desk.ts, bundled
+// into workbench.js so the phone never loads them).
+func englishStrings(t *testing.T) []entry {
+	t.Helper()
+	return append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
+}
+
 // bodyKeys may run to 40 words; every other string stays at 12 (P6).
 func isBody(key string) bool {
 	if strings.HasPrefix(key, "e.") || strings.HasPrefix(key, "err.") || strings.Contains(key, "body") {
@@ -161,7 +169,7 @@ func TestStringsLintCatchesEachRule(t *testing.T) {
 }
 
 func TestStringsFollowTheVoice(t *testing.T) {
-	entries := parseStrings(t, "src/strings.ts", "S")
+	entries := englishStrings(t)
 	if len(entries) < 150 {
 		t.Fatalf("only %d strings; web UX 7.4 lists more", len(entries))
 	}
@@ -175,7 +183,7 @@ var keyLiteral = regexp.MustCompile(`"([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)"`)
 var tCall = regexp.MustCompile(`\btn?\(\s*"([^"]+)"`)
 
 func TestEveryUsedStringKeyExists(t *testing.T) {
-	entries := parseStrings(t, "src/strings.ts", "S")
+	entries := englishStrings(t)
 	keys, spaces := map[string]bool{}, map[string]bool{}
 	for _, e := range entries {
 		keys[e.key] = true
@@ -184,7 +192,7 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 	exists := func(k string) bool { return keys[k] || (keys[k+".one"] && keys[k+".other"]) }
 	n := 0
 	err := filepath.WalkDir("src", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || filepath.Base(path) == "strings.ts" || !strings.HasSuffix(path, "x") && !strings.HasSuffix(path, ".ts") {
+		if err != nil || d.IsDir() || filepath.Base(path) == "strings.ts" || filepath.Base(path) == "strings.desk.ts" || !strings.HasSuffix(path, "x") && !strings.HasSuffix(path, ".ts") {
 			return err
 		}
 		b, err := os.ReadFile(path)
@@ -221,7 +229,7 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 // The Persian file (WEB-UX-5 fills it) has exactly the English keys, so
 // a new string cannot be forgotten there.
 func TestPersianStringsHaveTheSameKeys(t *testing.T) {
-	en := parseStrings(t, "src/strings.ts", "S")
+	en := englishStrings(t)
 	fa := parseStrings(t, "src/strings.fa.ts", "FA")
 	enKeys := map[string]bool{}
 	for _, e := range en {
@@ -316,7 +324,7 @@ func TestComponentsHaveNoHardcodedText(t *testing.T) {
 // the placeholders of its English text, so t() fills the same values.
 func TestPersianStringsAreCompleteAndKeepPlaceholders(t *testing.T) {
 	en := map[string]string{}
-	for _, e := range parseStrings(t, "src/strings.ts", "S") {
+	for _, e := range englishStrings(t) {
 		en[e.key] = e.text
 	}
 	same := map[string]bool{"connect.title": true, "toast.more": true, "more.lang.en": true, "more.lang.fa": true}
@@ -355,7 +363,7 @@ func TestStringsNameRealWebCommands(t *testing.T) {
 		t.Fatal("no Web: palette commands found in web_tui.go")
 	}
 	named := regexp.MustCompile(`Web: [A-Z]\w*(?: (?:in|on|to|[A-Z]\w*))*`)
-	for _, f := range []struct{ file, name string }{{"src/strings.ts", "S"}, {"src/strings.fa.ts", "FA"}} {
+	for _, f := range []struct{ file, name string }{{"src/strings.ts", "S"}, {"src/strings.desk.ts", "SD"}, {"src/strings.fa.ts", "FA"}} {
 		for _, e := range parseStrings(t, f.file, f.name) {
 			for _, cmd := range named.FindAllString(e.text, -1) {
 				if !real[cmd] {
