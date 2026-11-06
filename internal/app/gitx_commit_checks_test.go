@@ -228,3 +228,86 @@ func TestGitxCommitChecksProblems(t *testing.T) {
 		t.Fatalf("report:\n%s", m.gitx.checks.report)
 	}
 }
+
+// gitxFailingHook adds a pre-commit hook that prints a line and fails.
+func gitxFailingHook(t *testing.T, dir string) {
+	t.Helper()
+	hook := filepath.Join(dir, ".git", "hooks", "pre-commit")
+	_ = os.MkdirAll(filepath.Dir(hook), 0o755)
+	if err := os.WriteFile(hook, []byte("#!/bin/sh\necho 'lint: 2 problems in a.txt'\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// GITX-27 (B23, P5): a commit a git hook stops opens a Cancel-first card
+// with the hook's output (Show Hook Output opens it as a page) and Commit
+// Without Hooks (--no-verify). Git: Toggle Skip Hooks on Commit skips
+// them for this session; Git: Show Last Hook Output shows the output
+// again.
+func TestGitxHookFailure(t *testing.T) {
+	gitxChecksReset(t)
+	m, dir := covGitRepo(t)
+	for _, id := range []string{"git-skip-hooks", "git-hook-output"} {
+		if _, ok := aiActionPolicies[id]; !ok {
+			t.Fatalf("no AI policy for %s", id)
+		}
+	}
+	gitxFailingHook(t, dir)
+	covWrite(t, dir, "a.txt", "changed\n")
+	covGit(t, dir, "add", "a.txt")
+	covRefresh(m)
+
+	gitxCommitRun(t, m, "hooked")
+	if !m.confirmOpen || m.confirmKind != confirmKindGitx || m.confirm.SafeID() != "cancel" || gitxCardIDList(m) != "cancel,output,noverify" {
+		t.Fatalf("card %v ids %q", m.confirmOpen, gitxCardIDList(m))
+	}
+	if !strings.Contains(m.gitx.hookOutput, "lint: 2 problems in a.txt") || !strings.Contains(m.gitx.checks.card, "lint: 2 problems") {
+		t.Fatalf("hook output %q card %q", m.gitx.hookOutput, m.gitx.checks.card)
+	}
+	if gitxCommitCount(t, dir) != 1 {
+		t.Fatal("the hook did not stop the commit")
+	}
+	m.confirmOpen = false
+	m.handleGitxConfirm("output")
+	if gitxCommitCount(t, dir) != 1 {
+		t.Fatal("Show Hook Output committed")
+	}
+	if m.dispatchPaletteAction("git-hook-output"); m.gitx.hookOutput == "" {
+		t.Fatal("the last hook output is gone")
+	}
+
+	gitxCommitRun(t, m, "hooked")
+	m.confirmOpen = false
+	m.handleGitxConfirm("noverify")
+	if got := covGit(t, dir, "log", "-1", "--format=%s"); got != "hooked" {
+		t.Fatalf("Commit Without Hooks: HEAD is %q", got)
+	}
+
+	// The session toggle.
+	m.dispatchPaletteAction("git-skip-hooks")
+	if !m.gitx.skipHooks {
+		t.Fatal("the toggle did not turn skipping on")
+	}
+	covWrite(t, dir, "a.txt", "changed twice\n")
+	covGit(t, dir, "add", "a.txt")
+	covRefresh(m)
+	gitxCommitRun(t, m, "skipped")
+	if m.confirmOpen {
+		t.Fatal("the hooks ran while skipped")
+	}
+	if got := covGit(t, dir, "log", "-1", "--format=%s"); got != "skipped" {
+		t.Fatalf("skip hooks: HEAD is %q", got)
+	}
+	m.dispatchPaletteAction("git-skip-hooks")
+	if m.gitx.skipHooks {
+		t.Fatal("the toggle did not turn skipping off")
+	}
+
+	// Without hooks a failure stays a toast.
+	_ = os.Remove(filepath.Join(dir, ".git", "hooks", "pre-commit"))
+	covRefresh(m)
+	gitxCommitRun(t, m, "nothing staged")
+	if m.confirmOpen {
+		t.Fatal("a failure without hooks opened the hook card")
+	}
+}
