@@ -518,6 +518,10 @@ export interface AIUseArgs {
   name: string;
 }
 
+export interface AutoApproveArgs {
+  id: string;
+}
+
 export interface StatusSnap {
   root: string;
   workspace_label: string;
@@ -1853,6 +1857,17 @@ export interface CIRun {
   url?: string;
 }
 
+export interface AutoApprove {
+  rows: AutoApproveRow[];
+}
+
+export interface AutoApproveRow {
+  id?: string;
+  title: string;
+  on?: boolean;
+  header?: boolean;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -2000,6 +2015,8 @@ export interface OpArgs {
   "pr.checkout": PRNumberArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
+  "ai.auto_approve": EmptyArgs;
+  "ai.set_auto_approve": AutoApproveArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -2142,4 +2159,6 @@ export interface OpResult {
   "pr.checkout": AskRef;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
+  "ai.auto_approve": AutoApprove;
+  "ai.set_auto_approve": AskRef;
 }

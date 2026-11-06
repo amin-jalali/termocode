@@ -1,6 +1,8 @@
 package app
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/mcp"
@@ -67,4 +69,43 @@ func (m *Model) webAIUseMCPProfile(call *webCall) *webAsk {
 		action:  "Use",
 		run:     func(m *Model) tea.Cmd { return m.onMCPProfilePicked(name) },
 	}
+}
+
+// The agent's auto-approve rows from the web (web parity: AI: Agent
+// Auto-Approve…): the laptop picker's rows, and a switch of one of them
+// after a laptop card.
+
+func init() {
+	webOps[webproto.OpAIAutoApprove] = (*Model).webAIAutoApprove
+	webAskOps[webproto.OpAISetAutoApprove] = (*Model).webAISetAutoApprove
+}
+
+func (m *Model) webAIAutoApprove(call *webCall) tea.Cmd {
+	out := webproto.AutoApprove{Rows: []webproto.AutoApproveRow{}}
+	for _, it := range m.aiAutoApproveItems() {
+		row := webproto.AutoApproveRow{Title: webName(strings.TrimSpace(it.Title)), Header: it.Header}
+		if !it.Header {
+			row.ID, row.On = webName(it.ID), it.Hint == "AUTO"
+		}
+		out.Rows = append(out.Rows, row)
+	}
+	call.reply(out)
+	return nil
+}
+
+func (m *Model) webAISetAutoApprove(call *webCall) *webAsk {
+	id := call.args.(*webproto.AutoApproveArgs).ID
+	for _, it := range m.aiAutoApproveItems() {
+		if it.Header || it.ID != id {
+			continue
+		}
+		title, body, action := "Ask before "+id+"?", "The AI asks before it does this again: "+it.Title+".", "Ask First"
+		if it.Hint != "AUTO" {
+			title, body, action = "Run "+id+" without asking?", "The AI does this without asking you: "+it.Title+".", "Turn On AUTO"
+		}
+		return &webAsk{summary: id, title: title, body: body, action: action,
+			run: func(m *Model) tea.Cmd { return m.onAIAutoApproveToggled(id) }}
+	}
+	call.fail(webproto.CodeNotFound, "There is no such row.")
+	return nil
 }

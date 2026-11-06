@@ -2387,6 +2387,34 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "ai.auto_approve",
+      "args": "EmptyArgs",
+      "result": "AutoApprove",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.set_auto_approve",
+      "args": "AutoApproveArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -2957,6 +2985,54 @@
       },
       "required": [
         "kind"
+      ],
+      "additionalProperties": true
+    },
+    "AutoApprove": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "items": {
+            "$ref": "#/defs/AutoApproveRow"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "rows"
+      ],
+      "additionalProperties": true
+    },
+    "AutoApproveArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "AutoApproveRow": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
       ],
       "additionalProperties": true
     },
