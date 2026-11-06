@@ -404,7 +404,7 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		d.CredID, d.PublicKey, d.SignCount, d.AAGUID, d.UserID, d.RPID = key.CredID, key.PublicKey, key.SignCount, key.AAGUID, key.UserID, key.RPID
 	}
 	devKey := ""
-	if origin := r.Header.Get("Origin"); req.Remember && origin != "" {
+	if origin := r.Header.Get("Origin"); req.Remember && !pp.guest && origin != "" { // a guest is for one visit
 		k, h, err := NewDeviceKey(id)
 		if err == nil {
 			devKey, d.Bookmark = k, rotated(nil, h, origin, now)

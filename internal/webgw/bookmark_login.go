@@ -182,11 +182,16 @@ func rememberDevice(st *webdevices.Store, dev, origin string, now time.Time) (st
 	if err != nil {
 		return "", err
 	}
-	found, err := st.Change(dev, func(d *webdevices.Device) { d.Bookmark = rotated(d.Bookmark, h, origin, now) })
+	guest := false
+	found, err := st.Change(dev, func(d *webdevices.Device) {
+		if guest = d.Guest; !guest { // a guest is for one visit: never a bookmark
+			d.Bookmark = rotated(d.Bookmark, h, origin, now)
+		}
+	})
 	if err != nil {
 		return "", err
 	}
-	if !found {
+	if !found || guest {
 		return "", errBookmarkGone
 	}
 	return key, nil
