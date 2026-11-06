@@ -313,6 +313,8 @@ func (m Model) usageBuild(width int) aiAgentsCache {
 
 	var sums []aiUsageSum
 	blank := agRow("", width)
+	out.body = append(out.body, m.usagePlansBlock(width)...) // AGX-12 (agent_usage.go)
+	out.body = append(out.body, blank)
 	if haveRun {
 		entries := s.runUsage(idx)
 		if len(entries) == 0 {

@@ -92,7 +92,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Agent: Accounts… | `agent-account-use` |   | `Claude Code / Codex accounts, own folders` |
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
+| Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
@@ -103,6 +105,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start OpenCode | `agent-start-opencode` |   |   |
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
+| Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
+| Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
 
 ## Bookmarks
 
@@ -348,6 +352,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
 | Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
 | Git: Autosquash fixup! Commits… | `git-autosquash` |   |   |
+| Git: Bisect (Find the Commit That Broke It)… | `git-bisect` |   |   |
 | Git: Blame Before This Change | `git-blame-before` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
 | Git: Blame Options… | `git-blame-options` |   |   |
@@ -357,6 +362,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Commit and Push | `git-commit-push` |   |   |
 | Git: Commit and Sync | `git-commit-sync` |   |   |
 | Git: Commit... | `git-commit` |   |   |
+| Git: Compare Branches… | `git-compare-branches` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
 | Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
@@ -374,7 +380,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
+| Git: Initialize Repository | `git-init` |   |   |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
+| Git: Issues… (Start Work on One) | `git-issues` |   |   |
 | Git: Merge Branch… | `git-merge-branch` |   |   |
 | Git: Merge View: Close | `git-merge-close` |   | `Esc` |
 | Git: Merge View: Mark as Resolved | `git-merge-resolve` |   | `r` |
@@ -394,6 +402,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Open Next Revision of File | `git-rev-next` |   |   |
 | Git: Open Previous Revision of File | `git-rev-prev` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
+| Git: Publish to GitHub… | `git-publish` |   |   |
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Push | `git-push` |   |   |
@@ -414,13 +423,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stage Current File | `git-stage` |   |   |
 | Git: Stage Hunk (at cursor) | `git-stage-hunk` | `Alt+S` | `Alt+S` |
 | Git: Stage Line (or Selected Lines) | `git-stage-lines` | `Alt+Shift+S` | `Alt+Shift+S` |
+| Git: Stash Actions… | `git-stash-actions` |   |   |
 | Git: Stash Changes | `git-stash` |   |   |
+| Git: Stash… | `git-stash-options` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle Blame Annotations | `git-blame-annotate` |   |   |
 | Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
 | Git: Toggle Inline Blame | `git-inline-blame` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
+| Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
 | Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
@@ -678,6 +690,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workflows: Run Selected… | `workflow-run` |   |   |
 | Workflows: Stop Selected Run… | `workflow-stop` |   |   |
 | Workflows: Turn Selected On/Off… | `workflow-enable` |   |   |
+| Workflows: Undo a Write of Selected Run… | `workflow-undo-write` |   |   |
 
 ## Workspace
 
@@ -707,6 +720,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 | Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
+| Worktree: Suggest a Name… | `worktree-suggest-name` |   | `quick model drafts branch names` |
 
 ## termocode
 

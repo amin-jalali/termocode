@@ -125,3 +125,65 @@ func TestWorkflowsDayBudgetPauses(t *testing.T) {
 		t.Fatalf("Stop on the budget card: %s", rf.State)
 	}
 }
+
+// Spec (WFX-20): a write whose undo needs a secret that was not kept is
+// shown as "undo by hand" on the run page; u explains that and opens no
+// card (it never guesses the value).
+func TestWorkflowsUndoRedactedExplains(t *testing.T) {
+	m, _ := wfxRig(t)
+	root := m.wfxS().root
+	rf := run.RunFile{Version: 1, ID: "x1", Workflow: "mine", State: run.RunOK, StartedAt: wfxTestNow.Add(-time.Hour), EndedAt: wfxTestNow.Add(-50 * time.Minute)}
+	b, _ := json.Marshal(rf)
+	if err := (wire.RunFiles{Root: root}).WriteRunFile("x1", b); err != nil {
+		t.Fatal(err)
+	}
+	l, err := ledger.Open(root, "mine", "x1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ok := func(context.Context, string) (ledger.Result, error) { return ledger.Result{}, nil }
+	if _, _, err := l.Do(context.Background(), ledger.Write{Step: "hook", Target: "slack · set_topic",
+		Undo: &ledger.Undo{Title: "topic back", Tool: "set_topic", Args: map[string]string{"api_key": "sk-" + "test0123456789abcdefghij"}}}, ok, nil); err != nil {
+		t.Fatal(err)
+	}
+	m.wfxLoad("")
+	m.wfxShowPage("run:x1", false)
+	if page := wfxPage(m, 120, 40); !strings.Contains(page, "undo by hand") {
+		t.Fatalf("the run page does not say the undo is by hand:\n%s", page)
+	}
+	m.handleWorkflowsPageKey(wfxKey('u'))
+	if m.confirmOpen {
+		t.Fatal("u opened a card for an undo that needs a secret that was not kept")
+	}
+	if txt := toastText(*m); !strings.Contains(txt, "api_key") || !strings.Contains(txt, "by hand") {
+		t.Fatalf("toast %q", txt)
+	}
+}
+
+// Spec (plan §5.8): "Workflows: Undo a Write of Selected Run…"
+// (workflow-undo-write) asks on the undo card for the selected
+// workflow's newest ended run, Cancel first; the AI may only ask for it
+// (confirm, class "").
+func TestWorkflowsUndoWritePaletteID(t *testing.T) {
+	m, _ := wfxRig(t)
+	found := false
+	for _, it := range workflowsPaletteItems() {
+		found = found || it.ID == "workflow-undo-write"
+	}
+	if !found {
+		t.Fatal("workflow-undo-write is not in the palette")
+	}
+	p, ok := aiActionPolicies["workflow-undo-write"]
+	if !ok || p.Gate != aiGateConfirm || p.Class != "" {
+		t.Fatalf("AI policy %+v %v: want confirm with class \"\"", p, ok)
+	}
+	wfxStoredRun(t, m, "u1", "mine", 0, wfxTestNow.Add(-time.Hour))
+	m.wfxLoad("")
+	m.wfxS().sel = "mine"
+	if _, ok := m.dispatchWorkflowsPalette("workflow-undo-write"); !ok {
+		t.Fatal("workflow-undo-write does not dispatch")
+	}
+	if !m.confirmOpen || m.confirmKind != confirmKindWorkflowUndo || m.confirm.SafeID() != "cancel" {
+		t.Fatalf("undo card: open %v kind %v safe %q", m.confirmOpen, m.confirmKind, m.confirm.SafeID())
+	}
+}
