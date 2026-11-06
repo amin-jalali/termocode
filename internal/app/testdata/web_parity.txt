@@ -28,6 +28,8 @@ web	bookmark-list	cmd:bookmarkList
 web	bookmark-toggle	cmd:bookmarkToggle
 web	close-buffer	cmd:closeEditor
 web	close-split	cmd:closeSplit
+web	code-action-apply-preferred	cmd:quickFixPreferred
+web	code-actions	cmd:quickFix
 web	containers-focus	view:containers
 web	containers-logs	op:containers.logs
 web	containers-refresh	op:containers.list
@@ -167,6 +169,7 @@ web	toggle-comment	cmd:commentLine
 web	toggle-explorer	cmd:sidebar
 web	toggle-fold	cmd:toggleFold
 web	toggle-hidden	cmd:toggleHidden
+web	toggle-inlay-hints	cmd:inlayHints
 web	toggle-terminal	cmd:terminal
 web	toggle-wrap	cmd:wrap
 web	transfer-download	op:file.download
@@ -310,8 +313,6 @@ missing	ai-until-done	AI chat and agents|M
 missing	ai-usage	AI chat and agents|M
 missing	ai-web-tools	AI chat and agents|M
 missing	ai-worktrees-toggle	AI chat and agents|M
-missing	code-action-apply-preferred	Editor and files|S
-missing	code-actions	Editor and files|S
 missing	containers-attach	Containers|M
 missing	containers-browse-tags	Containers|M
 missing	containers-compose-down	Containers|M
@@ -428,7 +429,6 @@ missing	services-start-all	Containers|S
 missing	services-stop-all	Containers|S
 missing	snippets-manage	Editor and files|S
 missing	testing-collapse	Testing and web access|S
-missing	toggle-inlay-hints	Editor and files|S
 missing	web-devices	Testing and web access|S
 missing	workspace-add-folder	Editor and files|S
 missing	workspace-remove-folder	Editor and files|S
