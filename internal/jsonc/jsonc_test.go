@@ -2,6 +2,7 @@ package jsonc
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 )
 
@@ -37,5 +38,39 @@ func TestStripCases(t *testing.T) {
 				t.Fatalf("Strip(%q) = %q, want %q", c.in, got, c.want)
 			}
 		})
+	}
+}
+
+// Blank removes the same comments and trailing commas as Strip, but puts
+// spaces in their place (newlines stay), so an offset in the result is
+// the same offset in the source: a parser error can name the real line.
+func TestBlankKeepsOffsets(t *testing.T) {
+	cases := []string{
+		"{// comment\n\"url\":\"https://x/*y*/\", \"n\": [1,],}",
+		"{/* a\nb\nc */\"a\":1,\n}",
+		`[1] /* never closed`,
+		"{\"a\":\"x\\\"//y\", // c\n\"b\": [\n 1,\n ],\n}",
+		`{"a":",]",}`,
+	}
+	for _, in := range cases {
+		out := Blank([]byte(in))
+		if len(out) != len(in) {
+			t.Errorf("%q: length %d, want %d", in, len(out), len(in))
+			continue
+		}
+		for i := range in {
+			if (in[i] == '\n') != (out[i] == '\n') {
+				t.Errorf("%q: newline moved at %d", in, i)
+			}
+		}
+		var a, b any
+		errA := json.Unmarshal(Strip([]byte(in)), &a)
+		errB := json.Unmarshal(out, &b)
+		if (errA == nil) != (errB == nil) {
+			t.Errorf("%q: Strip err %v, Blank err %v", in, errA, errB)
+		}
+		if errA == nil && !reflect.DeepEqual(a, b) {
+			t.Errorf("%q: Blank %v, Strip %v", in, b, a)
+		}
 	}
 }

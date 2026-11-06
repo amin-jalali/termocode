@@ -90,6 +90,18 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | --- | --- | --- | --- |
 | `update_check` | bool | `true` | Look for a newer termocode release once a day, in the background (GitHub, no account needed). A newer one shows a quiet ⬆ chip in the status bar and one toast. Dev builds never look. termocode: Check for Updates works with it off too. |
 
+## Workflows
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `workflows_enabled` | bool | `true` | Workflows can run: by hand, from the CLI and on their schedules. false stops every schedule and refuses new runs. |
+| `workflows_parallel_max` | int | `2` | Most workflow runs at the same time, across all workflows (1-16). A workflow's own parallel setting splits its items inside one run. |
+| `workflows_day_budget_usd` | number | `0` | US dollars all workflows may spend on AI in one day; a run that reaches it pauses and asks. 0 means no day budget. |
+| `workflows_missed_grace_min` | int | `30` | A scheduled run that was missed (termocode was not running) still runs once if it was due at most this many minutes ago; older ones are recorded as missed. 0 never runs a missed one. |
+| `workflows_history_days` | int | `30` | Days a finished workflow run (its file and logs) is kept before it is deleted at start. |
+| `workflows_wait_hours` | int | `12` | Hours a run waits for an answer on a card (a write to allow, a budget pause) before the step is marked waiting too long. |
+| `workflows_agent_sandbox` | enum | `worktree` | Where an outside agent step works: worktree (it may change files in its own git worktree) or read-only (it may only read). |
+
 ## Git (file only)
 
 | Key | Type | Default | Description |
