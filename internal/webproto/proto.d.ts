@@ -316,6 +316,10 @@ export interface AIActionArgs {
   instruction?: string;
 }
 
+export interface AIInfoArgs {
+  kind: "usage" | "rules" | "memory" | "skills" | "hooks" | "web-tools" | "mcp-log" | "serve-status" | "serve-config" | "configure" | "bug-report";
+}
+
 export interface GitFileLogArgs {
   path: string;
 }
@@ -1403,6 +1407,21 @@ export interface AIAction {
   lines: string[];
 }
 
+export interface AIInfo {
+  title: string;
+  note?: string;
+  rows: AIInfoRow[];
+  text?: string;
+  copy?: boolean;
+  save?: string;
+}
+
+export interface AIInfoRow {
+  title: string;
+  hint?: string;
+  header?: boolean;
+}
+
 export interface GitFileLog {
   path: string;
   log: GitCommit[];
@@ -1891,6 +1910,7 @@ export interface OpArgs {
   "ai.complete": AICompleteArgs;
   "ai.next_edit": AINextEditArgs;
   "ai.action": AIActionArgs;
+  "ai.info": AIInfoArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -2034,6 +2054,7 @@ export interface OpResult {
   "ai.complete": AICompletion;
   "ai.next_edit": AINextEdit;
   "ai.action": AIAction;
+  "ai.info": AIInfo;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;

@@ -56,7 +56,7 @@ func TestWebAIInfoScreens(t *testing.T) {
 	if s := webAIInfoText(webAIInfo(t, r, webproto.AIInfoWebTools)); !strings.Contains(s, "Web fetch") {
 		t.Errorf("web tools:\n%s", s)
 	}
-	if s := webAIInfoText(webAIInfo(t, r, webproto.AIInfoServeStatus)); !strings.Contains(s, "Listening") && !strings.Contains(s, "not") {
+	if s := webAIInfoText(webAIInfo(t, r, webproto.AIInfoServeStatus)); !strings.Contains(strings.ToLower(s), "listening") {
 		t.Errorf("serve status:\n%s", s)
 	}
 	cfg := webAIInfo(t, r, webproto.AIInfoServeConfig)
@@ -83,6 +83,9 @@ func TestWebAIInfoKeepsSecretsOnTheLaptop(t *testing.T) {
 	}
 	if !strings.Contains(s, "llm.example.com") || !strings.Contains(s, "gpt-test") || !strings.Contains(s, "set") {
 		t.Errorf("configure:\n%s", s)
+	}
+	if r.m.output == nil {
+		r.m.output = newOutputStore()
 	}
 	r.m.output.Append(mcpLogChannel, "  github: started with token "+key)
 	if s := webAIInfoText(webAIInfo(t, r, webproto.AIInfoMCPLog)); strings.Contains(s, key) || !strings.Contains(s, "github: started") {

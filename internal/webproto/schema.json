@@ -1318,6 +1318,21 @@
       "phase": "v2"
     },
     {
+      "op": "ai.info",
+      "args": "AIInfoArgs",
+      "result": "AIInfo",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.file_log",
       "args": "GitFileLogArgs",
       "result": "GitFileLog",
@@ -2494,6 +2509,79 @@
         "from",
         "to",
         "text"
+      ],
+      "additionalProperties": true
+    },
+    "AIInfo": {
+      "type": "object",
+      "properties": {
+        "copy": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/defs/AIInfoRow"
+          },
+          "type": "array"
+        },
+        "save": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "rows"
+      ],
+      "additionalProperties": true
+    },
+    "AIInfoArgs": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "usage",
+            "rules",
+            "memory",
+            "skills",
+            "hooks",
+            "web-tools",
+            "mcp-log",
+            "serve-status",
+            "serve-config",
+            "configure",
+            "bug-report"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "AIInfoRow": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "boolean"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
       ],
       "additionalProperties": true
     },
