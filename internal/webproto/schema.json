@@ -1018,6 +1018,49 @@
       "phase": "v2"
     },
     {
+      "op": "lsp.code_actions",
+      "args": "LspRangeArgs",
+      "result": "LspActions",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.code_action_apply",
+      "args": "LspApplyArgs",
+      "result": "EditRes",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.inlay_hints",
+      "args": "LspRowsArgs",
+      "result": "LspHints",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "debug.expand",
       "args": "DebugExpandArgs",
       "role": "viewer",
@@ -6414,6 +6457,59 @@
       ],
       "additionalProperties": true
     },
+    "LspAction": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "preferred": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "LspActions": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/LspAction"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "LspApplyArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "index"
+      ],
+      "additionalProperties": false
+    },
     "LspCompletion": {
       "type": "object",
       "properties": {
@@ -6460,6 +6556,50 @@
         "endLine",
         "endCol",
         "text"
+      ],
+      "additionalProperties": true
+    },
+    "LspHint": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "label": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "padLeft": {
+          "type": "boolean"
+        },
+        "padRight": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "line",
+        "col",
+        "label"
+      ],
+      "additionalProperties": true
+    },
+    "LspHints": {
+      "type": "object",
+      "properties": {
+        "cut": {
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/LspHint"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
       ],
       "additionalProperties": true
     },
@@ -6599,6 +6739,62 @@
         "tick",
         "line",
         "col"
+      ],
+      "additionalProperties": false
+    },
+    "LspRangeArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "col": {
+          "type": "integer"
+        },
+        "end_col": {
+          "type": "integer"
+        },
+        "end_line": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "line",
+        "col",
+        "end_line",
+        "end_col"
+      ],
+      "additionalProperties": false
+    },
+    "LspRowsArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "first": {
+          "type": "integer"
+        },
+        "last": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "first",
+        "last"
       ],
       "additionalProperties": false
     },

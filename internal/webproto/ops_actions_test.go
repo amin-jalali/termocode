@@ -15,7 +15,7 @@ func TestCodeActionAndHintOps(t *testing.T) {
 		audit Audit
 		args  string
 	}{
-		OpLspCodeActions:     {RoleViewer, AuditNo, `{"buf":2,"tick":5,"line":3,"col":1,"endLine":3,"endCol":4}`},
+		OpLspCodeActions:     {RoleViewer, AuditNo, `{"buf":2,"tick":5,"line":3,"col":1,"end_line":3,"end_col":4}`},
 		OpLspCodeActionApply: {RoleController, AuditYes, `{"buf":2,"tick":5,"index":0}`},
 		OpLspInlayHints:      {RoleViewer, AuditNo, `{"buf":2,"tick":5,"first":0,"last":40}`},
 	} {
@@ -31,7 +31,7 @@ func TestCodeActionAndHintOps(t *testing.T) {
 		}
 	}
 	for op, bad := range map[string][]string{
-		OpLspCodeActions:     {`{"buf":2,"tick":5,"line":3,"col":1,"endLine":2,"endCol":0}`, `{"buf":2,"tick":-1,"line":0,"col":0,"endLine":0,"endCol":0}`},
+		OpLspCodeActions:     {`{"buf":2,"tick":5,"line":3,"col":1,"end_line":2,"end_col":0}`, `{"buf":2,"tick":-1,"line":0,"col":0,"end_line":0,"end_col":0}`},
 		OpLspCodeActionApply: {`{"buf":2,"tick":5,"index":-1}`, `{"buf":2,"tick":0,"index":0}`},
 		OpLspInlayHints:      {`{"buf":2,"tick":5,"first":4,"last":3}`, `{"buf":2,"tick":5,"first":0,"last":100000}`},
 	} {

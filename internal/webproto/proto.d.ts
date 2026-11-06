@@ -236,6 +236,28 @@ export interface ControlAskArgs {
   credential: string;
 }
 
+export interface LspRangeArgs {
+  buf: number;
+  tick: number;
+  line: number;
+  col: number;
+  end_line: number;
+  end_col: number;
+}
+
+export interface LspApplyArgs {
+  buf: number;
+  tick: number;
+  index: number;
+}
+
+export interface LspRowsArgs {
+  buf: number;
+  tick: number;
+  first: number;
+  last: number;
+}
+
 export interface DebugExpandArgs {
   key: string;
   open: boolean;
@@ -1312,6 +1334,29 @@ export interface ControlChallenge {
   options: unknown;
 }
 
+export interface LspActions {
+  items: LspAction[];
+}
+
+export interface LspAction {
+  title: string;
+  kind?: string;
+  preferred?: boolean;
+}
+
+export interface LspHints {
+  items: LspHint[];
+  cut?: boolean;
+}
+
+export interface LspHint {
+  line: number;
+  col: number;
+  label: string;
+  padLeft?: boolean;
+  padRight?: boolean;
+}
+
 export interface DebugSources {
   sources: DebugSource[];
   unsupported?: boolean;
@@ -1918,6 +1963,9 @@ export interface OpArgs {
   "runs.resume": KeyArgs;
   "control.challenge": EmptyArgs;
   "control.ask": ControlAskArgs;
+  "lsp.code_actions": LspRangeArgs;
+  "lsp.code_action_apply": LspApplyArgs;
+  "lsp.inlay_hints": LspRowsArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -2080,6 +2128,9 @@ export interface OpResult {
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
+  "lsp.code_actions": LspActions;
+  "lsp.code_action_apply": EditRes;
+  "lsp.inlay_hints": LspHints;
   "debug.sources": DebugSources;
   "lsp.type_definition": LspLocations;
   "lsp.implementation": LspLocations;
