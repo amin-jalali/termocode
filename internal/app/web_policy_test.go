@@ -119,7 +119,8 @@ func TestPolicyTableEnforcedInHub(t *testing.T) {
 }
 
 // Spec (3.2, 3.9): an op whose row says LaptopCard can only run through
-// a laptop card: its handler is a card builder (webAskOps), never a plain
+// a laptop card: its handler is a card builder (webAskOps, or
+// webAskLaterOps when the card needs a read first), never a plain
 // op handler, and the hub routes it through the card even if a plain
 // handler were registered by mistake. Every such browser op has one.
 func TestLaptopCardOpsOnlyThroughTheCard(t *testing.T) {
@@ -127,8 +128,11 @@ func TestLaptopCardOpsOnlyThroughTheCard(t *testing.T) {
 		if !p.LaptopCard || p.Role == webproto.RoleCtl {
 			continue
 		}
-		if webAskOps[p.Op] == nil {
+		if webAskOps[p.Op] == nil && webAskLaterOps[p.Op] == nil {
 			t.Errorf("%s needs a laptop card but has no card builder", p.Op)
+		}
+		if webAskOps[p.Op] != nil && webAskLaterOps[p.Op] != nil {
+			t.Errorf("%s has two card builders", p.Op)
 		}
 		if webOps[p.Op] != nil {
 			t.Errorf("%s needs a laptop card but has a plain handler", p.Op)

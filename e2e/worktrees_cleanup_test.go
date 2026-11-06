@@ -44,8 +44,8 @@ func TestWorktreeSleepEndsTheAgentTab(t *testing.T) {
 	ws := NewRepo(t)
 	t.Cleanup(func() { _ = os.RemoveAll(ws + ".worktrees") })
 	bin := t.TempDir()
-	bye := filepath.Join(bin, "bye.txt")
-	script := "#!/bin/sh\ntrap 'echo bye > \"" + bye + "\"; exit 0' HUP TERM INT\necho \"CWD=$(pwd)\"\nprintf '  ? for shortcuts\\n'\nwhile :; do sleep 1; done\n"
+	bye, cwd := filepath.Join(bin, "bye.txt"), filepath.Join(bin, "cwd.txt")
+	script := "#!/bin/sh\ntrap 'echo bye > \"" + bye + "\"; exit 0' HUP TERM INT\npwd > '" + cwd + "'\necho \"CWD=$(pwd)\"\nprintf '  ? for shortcuts\\n'\nwhile :; do sleep 1; done\n"
 	if err := os.WriteFile(filepath.Join(bin, "claude"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestWorktreeSleepEndsTheAgentTab(t *testing.T) {
 	tm.settle()
 	tm.Send(KeyEnter)
 	wt := filepath.Join(ws+".worktrees", "feat-nap")
-	tm.WaitText("CWD="+wt, 30*time.Second)
+	wtWaitCwd(t, tm, cwd, wt)
 	if err := os.WriteFile(filepath.Join(wt, "keep.txt"), []byte("mine\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

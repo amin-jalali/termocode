@@ -61,3 +61,25 @@ func TestAIToolsBackgroundCancel(t *testing.T) {
 		t.Fatal("a stopped turn's call did not end")
 	}
 }
+
+// A call is in Running before it starts, so a Ctrl+B pressed as soon as
+// the call runs finds it (the activity line's hint checks Running).
+func TestAIToolsBackgroundRunningBeforeTheCallStarts(t *testing.T) {
+	bg := NewBackground()
+	missed := 0
+	call := func(ctx context.Context, _, _ string, _ map[string]any) (CallResult, error) {
+		if len(bg.Running()) != 1 {
+			missed++
+		}
+		return CallResult{Content: []Content{{Type: "text", Text: "ok"}}}, nil
+	}
+	tool := AITools(Server{Name: "ci"}, []Tool{{Name: "build"}}, call, AdapterOptions{Background: bg})[0]
+	for range 3000 {
+		if _, err := tool.Run(context.Background(), nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if missed != 0 {
+		t.Fatalf("the call ran %d of 3000 times before it was in Running", missed)
+	}
+}

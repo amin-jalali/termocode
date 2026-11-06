@@ -50,20 +50,31 @@ func FuzzStrip(f *testing.F) {
 			return
 		}
 		var want any
-		if err := json.Unmarshal(src, &want); err != nil {
+		if err := unmarshalNumbers(src, &want); err != nil {
 			t.Fatal(err)
 		}
 		mixed := append([]byte("// lead\n"), trimmed[:len(trimmed)-1]...)
 		mixed = append(mixed, ",/* tail */"...)
 		mixed = append(mixed, last)
 		var back any
-		if err := json.Unmarshal(Strip(mixed), &back); err != nil {
+		if err := unmarshalNumbers(Strip(mixed), &back); err != nil {
 			t.Fatalf("Strip(%q) is not JSON: %v (%q)", mixed, err, Strip(mixed))
 		}
 		if !reflect.DeepEqual(back, want) {
 			t.Fatalf("value changed: %#v != %#v", back, want)
 		}
 	})
+}
+
+// unmarshalNumbers decodes with numbers kept as text: valid JSON may
+// hold a number too big for a float64 (1e400).
+func unmarshalNumbers(b []byte, v any) error {
+	if !json.Valid(b) {
+		return json.Unmarshal(b, v) // its syntax error
+	}
+	d := json.NewDecoder(bytes.NewReader(b))
+	d.UseNumber()
+	return d.Decode(v)
 }
 
 // FuzzBlank: Blank keeps the length and the newlines of any input, and

@@ -15,7 +15,7 @@ func TestGitCompareWithRevision(t *testing.T) {
 	p, c := openFiles(t, Desktop)
 	c.Send(t, Snap("git", 1, webproto.GitSnap{Repo: true, Branch: webproto.GitBranch{Name: "main"}, Files: []webproto.GitFile{}}))
 	openDesk(t, p, c, 2, "a.txt", "one", "TWO")
-	runCmd(t, p, c, "Git: Compare with Revision…", true)
+	runGitCmd(t, p, c, "Git: Compare with Revision…", true)
 	reply(t, c, waitReq(t, c, "git.graph"), graphRows())
 	p.WaitJS(`document.querySelectorAll(".quick-row").length === 4`)
 	if got := Eval[string](p, `[...document.querySelectorAll(".quick-row")].find((r) => r.querySelector(".quick-label")?.textContent === "Feature work")?.querySelector(".quick-detail")?.textContent ?? ""`); !strings.Contains(got, "cccc333") || !strings.Contains(got, "feature") {
