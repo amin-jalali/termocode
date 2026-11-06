@@ -51,8 +51,8 @@ type Writer struct {
 	Tools source.ToolCaller
 	// Ask shows the gate card and waits (nil: every write is denied).
 	Ask func(ctx context.Context, a GateAsk) (GateDecision, error)
-	// Notify sends a message write via os / web (nil: not available).
-	Notify func(ctx context.Context, via, text string) error
+	// Notify sends a message write (nil: not available).
+	Notify func(ctx context.Context, m Message) error
 	// GitHubComment comments on a PR (nil: not available).
 	GitHubComment func(ctx context.Context, pr, body string) (ledger.Result, error)
 	// Find looks a write up by its marker (a resumed run); nil: a write
@@ -291,7 +291,7 @@ func (w *Writer) send(ctx context.Context, spec workflow.WriteSpec, env run.Item
 		if w.Notify == nil {
 			return ledger.Result{}, run.Permanent(fmt.Errorf("message via %q is not available here", spec.Via))
 		}
-		return ledger.Result{}, w.Notify(ctx, spec.Via, spec.Text)
+		return ledger.Result{}, w.Notify(ctx, Message{Via: spec.Via, Channel: spec.Channel, Tool: spec.Tool, Text: spec.Text})
 	case "github.comment":
 		if w.GitHubComment == nil {
 			return ledger.Result{}, run.Permanent(errors.New("github: gh is not available"))
@@ -354,6 +354,12 @@ func describe(s workflow.WriteSpec) (target, preview, undo string) {
 		target, preview = "file "+s.Path+" ("+mode+")", s.Content
 	case "message":
 		target, preview = "message · "+s.Via, s.Text
+		if s.Channel != "" {
+			target += " · " + s.Channel
+		}
+		if s.Tool != "" {
+			target += " (" + s.Tool + ")"
+		}
 	case "github.comment":
 		target, preview = "GitHub comment on PR #"+s.PR, s.Body
 	case "pr":

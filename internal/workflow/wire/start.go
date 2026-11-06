@@ -38,7 +38,7 @@ type Config struct {
 	Exec     func(ctx context.Context, argv []string, dir string) (string, int, error)
 	TestArgv []string
 	Gate     func(ctx context.Context, a GateAsk) (GateDecision, error)
-	Notify   func(ctx context.Context, via, text string) error
+	Notify   func(ctx context.Context, m Message) error
 	// GitHubComment and FindComment back github.comment writes.
 	GitHubComment func(ctx context.Context, pr, body string) (ledger.Result, error)
 	Find          func(ctx context.Context, spec workflow.WriteSpec, marker string) (ledger.Result, bool, error)
