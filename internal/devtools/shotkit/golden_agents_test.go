@@ -54,3 +54,11 @@ func agentUsagePlansCases() []goldenCase {
 	sc := Scene{Name: "agent-usage-plans", Steps: WithEditor(Act("agentusagedemo"), Pause(600*time.Millisecond))}
 	return []goldenCase{{"agent-usage-plans-150x42", sc, 150, 42}, {"agent-usage-plans-80x24", sc, 80, 24}}
 }
+
+// agentNamesCases are Worktree: Suggest a Name… with made-up slugs from
+// the quick model (AGX-16; app agentNamesDemo, no model is called) at
+// 150x42 and 80x24.
+func agentNamesCases() []goldenCase {
+	sc := Scene{Name: "worktree-suggest-name", Steps: WithEditor(Act("agentnamesdemo"), Pause(600*time.Millisecond))}
+	return []goldenCase{{"worktree-suggest-name-150x42", sc, 150, 42}, {"worktree-suggest-name-80x24", sc, 80, 24}}
+}
