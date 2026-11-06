@@ -438,6 +438,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Open Previous Revision of File | `git-rev-prev` |   |   |
 | Git: Peek Change Under Cursor | `git-peek-change` |   |   |
 | Git: Pick Recent Commit Message… | `git-commit-history` |   |   |
+| Git: Plan Commits for My Changes with AI | `git-ai-compose` |   | `split the uncommitted work into small commits` |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Publish to GitHub… | `git-publish` |   |   |
 | Git: Pull | `git-pull` |   |   |
@@ -498,6 +499,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
+| Git: Write Changelog with AI… | `git-ai-changelog` |   | `from the commits since a tag` |
 | Git: Write Pull Request Description with AI | `git-ai-pr-text` |   |   |
 
 ## HTTP

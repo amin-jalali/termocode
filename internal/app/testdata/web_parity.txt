@@ -434,7 +434,9 @@ excluded	web-devices	laptop only: the paired devices (list, rename, revoke) are 
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
+missing	git-ai-changelog	Git|S
 missing	git-ai-commit-msg	Git|S
+missing	git-ai-compose	Git|S
 missing	git-ai-explain-changes	Git|S
 missing	git-ai-explain-line	Git|S
 missing	git-ai-pr-text	Git|S

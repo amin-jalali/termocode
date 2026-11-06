@@ -205,3 +205,36 @@ func LFSFiles(dir string) ([]LFSFile, error) {
 	sort.Slice(files, func(a, b int) bool { return files[a].Path < files[b].Path })
 	return files, nil
 }
+
+// LatestTag is the newest tag reachable from HEAD ("" when none).
+func LatestTag(dir string) string {
+	out, err := runOut(dir, "git", "describe", "--tags", "--abbrev=0")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// SubjectsSince is the subjects of the commits on HEAD after from (all
+// of them when from is ""), newest first, merges left out, at most max.
+func SubjectsSince(dir, from string, max int) ([]string, error) {
+	rng := "HEAD"
+	if strings.TrimSpace(from) != "" {
+		full, err := ResolveCommit(dir, from)
+		if err != nil {
+			return nil, err
+		}
+		rng = full + "..HEAD"
+	}
+	out, err := runCombined(dir, "git", "log", "--no-merges", "--format=%s", "-n", strconv.Itoa(max), rng, "--")
+	if err != nil {
+		return nil, err
+	}
+	var subjects []string
+	for _, s := range strings.Split(strings.TrimSpace(out), "\n") {
+		if s = strings.TrimSpace(s); s != "" {
+			subjects = append(subjects, s)
+		}
+	}
+	return subjects, nil
+}

@@ -2118,7 +2118,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `focus-explorer` | View: Focus Explorer | auto |   |
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
+| `git-ai-changelog` | Git: Write Changelog with AI… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-commit-msg` | Git: Generate Commit Message with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-compose` | Git: Plan Commits for My Changes with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-explain-changes` | Git: Explain Changes with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-explain-line` | Git: Explain Line's Commit with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-pr-text` | Git: Write Pull Request Description with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
