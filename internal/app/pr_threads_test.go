@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/amin-jalali/termocode/internal/ghci"
+	"github.com/amin-jalali/termocode/internal/prompt"
 )
 
 const prThreadsText14 = `{"data":{"repository":{"pullRequest":{"reviewThreads":{"nodes":[
@@ -142,5 +145,29 @@ func TestPRThreadReplyAndResolve(t *testing.T) {
 	cmd()
 	if !f.called("api graphql -f query=mutation($id:ID!){unresolveReviewThread") {
 		t.Errorf("reopen not sent: %v", f.calls)
+	}
+}
+
+// Esc on the reply prompt brings the thread back; Esc on the reviewers
+// prompt brings the create card back (nothing is lost).
+func TestPRPromptEscReturns(t *testing.T) {
+	m, _ := prThreadsModel(t)
+	m.prOpenThreads()
+	m.handlePRPickerSelect("thread-PRRT_1")
+	m.handlePRConfirm("reply")
+	m.confirmOpen = false
+	nm, _ := m.Update(prompt.CloseMsg{})
+	got := nm.(Model)
+	if got.promptOpen || !got.confirmOpen || got.confirmKind != confirmKindPRThread {
+		t.Errorf("after Esc: prompt %v confirm %v kind %v", got.promptOpen, got.confirmOpen, got.confirmKind)
+	}
+
+	c := prModel(&prFakeGH{})
+	c.prS().create = &ghci.NewPR{Title: "t", Branch: "feat/x", Base: "main"}
+	c.prAskNames(false)
+	nm, _ = c.Update(prompt.CloseMsg{})
+	got = nm.(Model)
+	if !got.confirmOpen || got.confirmKind != confirmKindPRCreate {
+		t.Errorf("create card not back: %v %v", got.confirmOpen, got.confirmKind)
 	}
 }
