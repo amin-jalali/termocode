@@ -10,20 +10,29 @@ web	ai-agents	cmd:agents
 web	ai-apply-code	palette
 web	ai-apply-proposal	op:cards.answer
 web	ai-cancel	op:chat.stop
+web	ai-configure	op:ai.info
 web	ai-discard-proposal	op:cards.answer
 web	ai-doc	cmd:aiDoc
 web	ai-edit	cmd:aiEdit
 web	ai-edit-review	palette
 web	ai-explain	cmd:aiExplain
+web	ai-export-chat	op:chat.export
 web	ai-fix	cmd:aiFix
+web	ai-fork-chat	op:chat.fork
 web	ai-handoff	palette
 web	ai-history	op:chat.open
+web	ai-history-clear	op:chat.clear
+web	ai-history-delete	op:chat.delete
+web	ai-history-rename	op:chat.rename
+web	ai-hooks	op:ai.info
 web	ai-keep-going	palette
 web	ai-mcp-background	palette
+web	ai-mcp-log	op:ai.info
 web	ai-mcp-reconnect-all	palette
 web	ai-mcp-reset-cache	palette
 web	ai-mcp-servers	view:mcp
 web	ai-mcp-updates	palette
+web	ai-memory	op:ai.info
 web	ai-memory-toggle	palette
 web	ai-new-chat	op:chat.new
 web	ai-open-chat	cmd:chat
@@ -34,13 +43,17 @@ web	ai-plan-worktree	palette
 web	ai-profile-switch	op:ai.use_profile
 web	ai-reasoning-next	palette
 web	ai-review	op:cards.answer
+web	ai-rules	op:ai.info
 web	ai-runs	cmd:runs
 web	ai-ship	palette
+web	ai-skills	op:ai.info
 web	ai-toggle-inline	op:ai.complete
 web	ai-toggle-next-edit	op:ai.next_edit
 web	ai-trigger-inline	op:ai.complete
 web	ai-undo-turn	palette
 web	ai-until-done	palette
+web	ai-usage	op:ai.info
+web	ai-web-tools	op:ai.info
 web	ai-worktrees	op:ai.worktrees
 web	ai-worktrees-toggle	palette
 web	close-buffer	cmd:closeEditor
@@ -115,11 +128,14 @@ web	git-sync	palette
 web	git-unstage-hunk	op:git.unstage_hunk
 web	goto-line	cmd:gotoLine
 web	goto-symbol-file	op:buf.symbols
+web	help-bug-report	op:ai.info
 web	hover	op:lsp.hover
 web	kubernetes-context	op:kube.contexts
 web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
 web	kubernetes-show	view:kube
+web	mcp-serve-copy-config	op:ai.info
+web	mcp-serve-status	op:ai.info
 web	next-buffer	cmd:nextEditor
 web	next-diagnostic	cmd:problems
 web	open-settings-ui	cmd:settings
@@ -247,20 +263,11 @@ excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
 missing	ai-add	Itermoc and AI setup|M
 missing	ai-attach	AI chat and agents|M
 missing	ai-auto-approve	AI chat and agents|M
-missing	ai-configure	AI chat and agents|M
-missing	ai-export-chat	AI chat and agents|M
-missing	ai-fork-chat	AI chat and agents|M
-missing	ai-history-clear	AI chat and agents|M
-missing	ai-history-delete	AI chat and agents|M
-missing	ai-history-rename	AI chat and agents|M
-missing	ai-hooks	AI chat and agents|M
 missing	ai-mcp-bundle	AI chat and agents|M
 missing	ai-mcp-catalog	AI chat and agents|M
 missing	ai-mcp-connect	AI chat and agents|M
 missing	ai-mcp-insert	AI chat and agents|M
-missing	ai-mcp-log	AI chat and agents|M
 missing	ai-mcp-profile	AI chat and agents|M
-missing	ai-memory	AI chat and agents|M
 missing	ai-model-slot-add	Itermoc and AI setup|M
 missing	ai-models-edit	Itermoc and AI setup|M
 missing	ai-profile-edit	Itermoc and AI setup|M
@@ -268,11 +275,7 @@ missing	ai-profile-form	Itermoc and AI setup|M
 missing	ai-profile-new	Itermoc and AI setup|M
 missing	ai-profile-next	Itermoc and AI setup|M
 missing	ai-profile-show	Itermoc and AI setup|M
-missing	ai-rules	AI chat and agents|M
 missing	ai-side	AI chat and agents|M
-missing	ai-skills	AI chat and agents|M
-missing	ai-usage	AI chat and agents|M
-missing	ai-web-tools	AI chat and agents|M
 missing	alternate-file	Editor and files|S
 missing	bookmark-clear	Editor and files|S
 missing	bookmark-list	Editor and files|S
@@ -368,7 +371,6 @@ missing	git-view-toggle	Git|S
 missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
 missing	goto-type-def	Editor and files|S
-missing	help-bug-report	AI chat and agents|M
 missing	http-cancel	HTTP client|L
 missing	http-copy-curl	HTTP client|L
 missing	http-env-open	HTTP client|L
@@ -392,8 +394,6 @@ missing	itermoc-services	Itermoc and AI setup|M
 missing	join-lines	Editor and files|S
 missing	lowercase	Editor and files|S
 missing	mcp-import-other	AI chat and agents|M
-missing	mcp-serve-copy-config	AI chat and agents|M
-missing	mcp-serve-status	AI chat and agents|M
 missing	next-hunk	Git|S
 missing	open-recent	Editor and files|S
 missing	open-url	Editor and files|S

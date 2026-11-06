@@ -82,8 +82,8 @@ func TestChatMoreLaptopCommandsAndScreens(t *testing.T) {
 	p.TapJS(ButtonByText("Ask the laptop"))
 	reply(t, c, expectOp(t, c, "palette.ask", `{"id":"ai-plan-approval"}`), webproto.AskRef{Card: "card-2"})
 	p.WaitJS(`document.querySelector(".waiting")`)
-	p.TapJS(`document.querySelector(".waiting button")`)
-	reply(t, c, expectOp(t, c, "cards.answer", ""), nil)
+	c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "card-2", By: "laptop", Choice: "confirm"})})
+	p.WaitJS(`!document.querySelector(".waiting") && (` + toastsJS + `).includes("Done on the laptop.")`)
 
 	pickMore(t, p, c, "AI: MCP: Reconnect All Servers", false)
 	reply(t, c, expectOp(t, c, "palette.run", `{"id":"ai-mcp-reconnect-all"}`), nil)

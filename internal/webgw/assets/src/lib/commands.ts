@@ -13,6 +13,7 @@ import { toast } from "./toasts";
 import { activeDesk } from "./deskeditor";
 import { saveLive } from "../views/LiveEditor";
 import { newChat } from "../views/Chat";
+import { chatFlow, exportChat, INFO_KINDS, moreChat, openInfo, startFork } from "../views/ChatMore";
 import { newTerm } from "../views/Term";
 import { showOnLaptop } from "../views/FileView";
 import { modKey } from "./platform";
@@ -80,10 +81,34 @@ export function commands(): Command[] {
     { id: "newTerminal", label: "cmd.new_terminal", run: newTerm },
     { id: "chat", label: "cmd.chat", run: () => go({ tab: "chat", rest: "", query: {} }) },
     { id: "newChat", label: "cmd.new_chat", run: newChat },
+    ...chatCommands(),
     { id: "themeDark", label: "cmd.theme_dark", run: () => setPref("theme", "dark") },
     { id: "themeLight", label: "cmd.theme_light", run: () => setPref("theme", "light") },
     { id: "themeSystem", label: "cmd.theme_system", run: () => setPref("theme", "system") },
     ...gitCommands(),
+  ];
+}
+
+const isController = () => link.meta.peek()?.role === "controller";
+
+/** chatCommands act on the laptop's open chat and read the laptop's AI
+ * screens (the chat column shows their questions). */
+function chatCommands(): Command[] {
+  const show = () => setPanes({ chat: true });
+  const withChat = (fn: (c: NonNullable<ReturnType<typeof moreChat>>) => void) => () => {
+    const c = moreChat();
+    if (!c) return;
+    show();
+    fn(c);
+  };
+  const hasChat = () => isController() && moreChat() !== null;
+  return [
+    { id: "chatRename", label: "chat.rename", when: hasChat, run: withChat((c) => (chatFlow.value = { s: "rename", id: c.id, title: c.title })) },
+    { id: "chatFork", label: "chat.fork", when: hasChat, run: withChat((c) => startFork(c.msgs)) },
+    { id: "chatExport", label: "chat.export", when: hasChat, run: withChat((c) => exportChat(c.id)) },
+    { id: "chatDelete", label: "chat.delete", when: hasChat, run: withChat((c) => (chatFlow.value = { s: "delete", id: c.id, title: c.title })) },
+    { id: "chatClear", label: "chat.clear", when: isController, run: () => (show(), (chatFlow.value = { s: "clear" })) },
+    ...INFO_KINDS.map(([kind, key]) => ({ id: "aiInfo:" + kind, label: key, when: isController, run: () => (show(), openInfo(kind)) })),
   ];
 }
 
