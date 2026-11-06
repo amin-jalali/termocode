@@ -109,13 +109,19 @@ func (m *Model) handleSaveConflictConfirm(id string) (tea.Cmd, bool) {
 		return nil, true
 	}
 	var c tea.Cmd
+	// The name first: a failed write still says which file, in short words.
+	name, _ := m.nvim.EvalLuaStringArgs(`local b = ...
+if not vim.api.nvim_buf_is_valid(b) then return '' end
+return vim.api.nvim_buf_get_name(b)`, m.confirmTargetID)
 	path, err := m.nvim.EvalLuaStringArgs(`local b = ...
 if not vim.api.nvim_buf_is_valid(b) then return '' end
 vim.api.nvim_buf_call(b, function() vim.cmd('silent write!') end)
 return vim.api.nvim_buf_get_name(b)`, m.confirmTargetID)
 	switch {
 	case err != nil:
-		m.toast, c = m.toast.PushDetail(toast.Errr, "Save failed", err.Error())
+		text := saveFailText(name, err)
+		m.err = text
+		m.toast, c = m.toast.PushDetail(toast.Errr, "Save failed", text)
 	case path != "":
 		m.toast, c = m.toast.PushDetail(toast.Info, "Saved", saveDetail(path))
 	}

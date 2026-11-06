@@ -205,3 +205,51 @@ func TestSaveAllResumesAcrossDiskConflicts(t *testing.T) {
 		}
 	}
 }
+
+// Overwrite on the card writes like Ctrl+S: a failed write says why in
+// short words (the disk is full), not nvim's raw Lua exception.
+func TestSaveConflictOverwriteFailureIsPlain(t *testing.T) {
+	if _, err := os.Stat("/dev/full"); err != nil {
+		t.Skip("no /dev/full on this system (Linux only)")
+	}
+	c, err := nvim.New()
+	if err != nil {
+		t.Skipf("nvim not available: %v", err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := c.Attach(80, 24); err != nil {
+		t.Fatalf("Attach: %v", err)
+	}
+	_ = c.Command("set cmdheight=0")
+	if err := c.ExecLua(fileReloadLua); err != nil {
+		t.Fatal(err)
+	}
+	m := Model{nvim: c, editor: editor.New(c), w: 120, h: 40, toast: toast.New()}
+	p := filepath.Join(t.TempDir(), "full.txt")
+	if err := os.WriteFile(p, []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Command("edit " + p); err != nil {
+		t.Fatal(err)
+	}
+	_ = c.ExecLua(`vim.api.nvim_buf_set_lines(0, 0, 0, false, {'mine'})`)
+	if err := os.Remove(p); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/dev/full", p); err != nil {
+		t.Fatal(err)
+	}
+	m.saveActiveFile()
+	if !m.confirmOpen || m.confirmKind != confirmKindSaveConflict {
+		t.Fatalf("no card: open=%v kind=%v", m.confirmOpen, m.confirmKind)
+	}
+	m.confirmOpen = false
+	m.handleConfirmSelect("overwrite")
+	live := m.toast.Live()
+	if len(live) == 0 || live[len(live)-1].Title != "Save failed" {
+		t.Fatalf("toasts %+v", live)
+	}
+	if d := live[len(live)-1].Detail; d != "The disk is full: full.txt was not saved. Your changes are still in the editor." {
+		t.Errorf("detail %q", d)
+	}
+}

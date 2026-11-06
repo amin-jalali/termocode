@@ -43,6 +43,16 @@ func wtRepoWithConfig(t *testing.T) string {
 	return ws
 }
 
+// wtWaitCwd waits for the folder the fake agent wrote to path and checks
+// it is wt (read from a file: a long macOS temp path wraps on the screen).
+func wtWaitCwd(t *testing.T, tm *Term, path, wt string) {
+	t.Helper()
+	got := strings.TrimSpace(string(wtWaitFile(t, tm, path, 30*time.Second)))
+	if real, _ := filepath.EvalSymlinks(wt); got != wt && got != real {
+		t.Fatalf("the agent started in %q, want %q", got, wt)
+	}
+}
+
 func wtWaitFile(t *testing.T, tm *Term, path string, timeout time.Duration) []byte {
 	t.Helper()
 	end := time.Now().Add(timeout)
@@ -113,8 +123,8 @@ func TestWorktreeNewStartsAgentWithTask(t *testing.T) {
 	ws := NewRepo(t)
 	t.Cleanup(func() { _ = os.RemoveAll(ws + ".worktrees") })
 	bin := t.TempDir()
-	rec := filepath.Join(bin, "got.txt")
-	script := "#!/bin/sh\necho \"CWD=$(pwd)\"\nprintf '  ? for shortcuts\\n'\nIFS= read -r line\nprintf '%s\\n' \"$line\" > '" + rec + "'\necho \"GOT: $line\"\nsleep 30\n"
+	rec, cwd := filepath.Join(bin, "got.txt"), filepath.Join(bin, "cwd.txt")
+	script := "#!/bin/sh\npwd > '" + cwd + "'\necho \"CWD=$(pwd)\"\nprintf '  ? for shortcuts\\n'\nIFS= read -r line\nprintf '%s\\n' \"$line\" > '" + rec + "'\necho \"GOT: $line\"\nsleep 30\n"
 	if err := os.WriteFile(filepath.Join(bin, "claude"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -132,8 +142,7 @@ func TestWorktreeNewStartsAgentWithTask(t *testing.T) {
 	tm.Send(keyRight + keyRight + keyRight) // → Create + Start
 	tm.settle()
 	tm.Send(KeyEnter)
-	wt := filepath.Join(ws+".worktrees", "feat-agent")
-	tm.WaitText("CWD="+wt, 30*time.Second)
+	wtWaitCwd(t, tm, cwd, filepath.Join(ws+".worktrees", "feat-agent"))
 	if b := wtWaitFile(t, tm, rec, 30*time.Second); strings.TrimSpace(string(b)) != "say hello" {
 		t.Errorf("the agent got %q", b)
 	}
