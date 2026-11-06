@@ -103,7 +103,8 @@ export function QuickInput() {
   const box = useRef<HTMLInputElement | null>(null);
 
   const ask = q0?.mode === "ask" ? (q0.ask ?? null) : null;
-  const wantFiles = !ask && !text.startsWith(">") && !text.startsWith(":");
+  const choose = q0?.mode === "pick" ? (q0.pick ?? null) : null;
+  const wantFiles = !ask && !choose && !text.startsWith(">") && !text.startsWith(":");
   const wantCmds = text.startsWith(">");
   useLayoutEffect(() => box.current?.focus(), []);
   useEffect(() => {
@@ -128,6 +129,10 @@ export function QuickInput() {
     // A question (Edit with AI): Enter sends what was typed.
     rows = text.trim() ? [{ key: "ask", label: text.trim(), at: [], detail: t("quick.ask_go"), run: () => ask.run(text.trim()) }] : [];
     placeholder = ask.title;
+  } else if (choose) {
+    // A list from the laptop (MCP prompts and resources): Enter picks.
+    rows = rank(text, choose.items, (x) => x.label, MAX_ROWS).map(({ item, hit }) => ({ key: item.id, label: item.label, at: hit.at, detail: item.detail, run: () => choose.run(item.id) }));
+    placeholder = choose.title;
   } else if (text.startsWith(">")) {
     rows = commandRows(text.slice(1));
     placeholder = t("quick.commands");
@@ -212,7 +217,7 @@ export function QuickInput() {
           ))}
           {!rows.length && (
             <li class="quick-empty" role="presentation">
-              {ask ? t("quick.ask_type") : note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
+              {ask ? t("quick.ask_type") : choose ? t("quick.none") : note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
             </li>
           )}
         </ul>

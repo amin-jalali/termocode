@@ -14,6 +14,28 @@ import (
 
 func init() {
 	webOps[webproto.OpChatSide] = (*Model).webChatSide
+	webOps[webproto.OpAIMCPItems] = (*Model).webAIMCPItems
+}
+
+// webAIMCPItems is AI: MCP Prompts and Resources… for the page: the list
+// the laptop's picker shows (servers start, so off the UI thread). The
+// servers' names, titles and hints are data from outside: cleaned and
+// redacted; the page only puts a pick in its chat draft.
+func (m *Model) webAIMCPItems(call *webCall) tea.Cmd {
+	mgr := m.aiMCP()
+	call.later()
+	return func() tea.Msg {
+		items := aiMCPInsertItems(mgr)
+		if len(items) > webproto.MaxMCPItems {
+			items = items[:webproto.MaxMCPItems]
+		}
+		out := make([]webproto.MCPItem, 0, len(items))
+		for _, it := range items {
+			out = append(out, webproto.MCPItem{Text: webClean(it.ID), Title: webText(it.Title), Hint: webText(it.Hint)})
+		}
+		call.reply(webproto.MCPItems{Items: out})
+		return nil
+	}
 }
 
 func (m *Model) webChatSide(call *webCall) tea.Cmd {

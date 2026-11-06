@@ -2262,6 +2262,21 @@
       "phase": "v2"
     },
     {
+      "op": "ai.mcp_items",
+      "args": "EmptyArgs",
+      "result": "MCPItems",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "chat.side",
       "args": "ChatSendArgs",
       "result": "ChatSide",
@@ -6408,6 +6423,40 @@
         "since",
         "calls",
         "asked"
+      ],
+      "additionalProperties": true
+    },
+    "MCPItem": {
+      "type": "object",
+      "properties": {
+        "hint": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "MCPItems": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/MCPItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
       ],
       "additionalProperties": true
     },

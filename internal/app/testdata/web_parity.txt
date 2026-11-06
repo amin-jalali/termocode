@@ -12,6 +12,7 @@ web	ai-doc	cmd:aiDoc
 web	ai-edit	cmd:aiEdit
 web	ai-explain	cmd:aiExplain
 web	ai-fix	cmd:aiFix
+web	ai-mcp-insert	op:ai.mcp_items
 web	ai-mcp-servers	view:mcp
 web	ai-new-chat	op:chat.new
 web	ai-open-chat	cmd:chat
@@ -249,7 +250,6 @@ missing	ai-mcp-background	AI chat and agents|M
 missing	ai-mcp-bundle	AI chat and agents|M
 missing	ai-mcp-catalog	AI chat and agents|M
 missing	ai-mcp-connect	AI chat and agents|M
-missing	ai-mcp-insert	AI chat and agents|M
 missing	ai-mcp-log	AI chat and agents|M
 missing	ai-mcp-profile	AI chat and agents|M
 missing	ai-mcp-reconnect-all	AI chat and agents|M
