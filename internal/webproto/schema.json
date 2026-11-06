@@ -1485,6 +1485,62 @@
       "phase": "v2"
     },
     {
+      "op": "workspace.list",
+      "args": "EmptyArgs",
+      "result": "WorkspaceList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "workspace.add_folder",
+      "args": "WorkspacePathArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workspace.remove_folder",
+      "args": "IDArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workspace.open",
+      "args": "IDArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.complete",
       "args": "AICompleteArgs",
       "result": "AICompletion",
@@ -6117,6 +6173,18 @@
       ],
       "additionalProperties": true
     },
+    "IDArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
     "ImageRes": {
       "type": "object",
       "properties": {
@@ -9368,6 +9436,56 @@
         }
       },
       "required": [],
+      "additionalProperties": false
+    },
+    "WorkspaceEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "WorkspaceList": {
+      "type": "object",
+      "properties": {
+        "folders": {
+          "items": {
+            "$ref": "#/defs/WorkspaceEntry"
+          },
+          "type": "array"
+        },
+        "recent": {
+          "items": {
+            "$ref": "#/defs/WorkspaceEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "folders",
+        "recent"
+      ],
+      "additionalProperties": true
+    },
+    "WorkspacePathArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
       "additionalProperties": false
     }
   }

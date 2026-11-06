@@ -328,6 +328,14 @@ export interface TestIDArgs {
   id: string;
 }
 
+export interface WorkspacePathArgs {
+  path: string;
+}
+
+export interface IDArgs {
+  id: number;
+}
+
 export interface AICompleteArgs {
   buf: number;
   tick: number;
@@ -1479,6 +1487,16 @@ export interface TestOutput {
   truncated?: boolean;
 }
 
+export interface WorkspaceList {
+  folders: WorkspaceEntry[];
+  recent: WorkspaceEntry[];
+}
+
+export interface WorkspaceEntry {
+  id: number;
+  name: string;
+}
+
 export interface AICompletion {
   none?: boolean;
   why?: string;
@@ -2004,6 +2022,10 @@ export interface OpArgs {
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "workspace.list": EmptyArgs;
+  "workspace.add_folder": WorkspacePathArgs;
+  "workspace.remove_folder": IDArgs;
+  "workspace.open": IDArgs;
   "ai.complete": AICompleteArgs;
   "ai.next_edit": AINextEditArgs;
   "ai.action": AIActionArgs;
@@ -2156,6 +2178,10 @@ export interface OpResult {
   "lsp.workspace_symbols": LspSymbols;
   "snippets.list": SnippetList;
   "tests.output": TestOutput;
+  "workspace.list": WorkspaceList;
+  "workspace.add_folder": AskRef;
+  "workspace.remove_folder": AskRef;
+  "workspace.open": AskRef;
   "ai.complete": AICompletion;
   "ai.next_edit": AINextEdit;
   "ai.action": AIAction;
