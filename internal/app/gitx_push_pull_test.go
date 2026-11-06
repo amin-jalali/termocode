@@ -23,7 +23,7 @@ func gitxUpstreamRepo(t *testing.T) (*Model, string, string) {
 	t.Helper()
 	m, dir := covGitRepo(t)
 	bare := t.TempDir()
-	covGit(t, dir, "init", "-q", "--bare", bare)
+	covGit(t, dir, "init", "-q", "--bare", "-b", "main", bare)
 	covGit(t, dir, "remote", "add", "origin", bare)
 	covGit(t, dir, "push", "-q", "-u", "origin", "main")
 	covRefresh(m)

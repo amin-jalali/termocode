@@ -14,7 +14,7 @@ func remoteRepo(t *testing.T) (*gitTestRepo, string) {
 	r.git(t, "add", "-A")
 	r.git(t, "commit", "-q", "-m", "first")
 	bare := t.TempDir()
-	r.git(t, "init", "-q", "--bare", bare)
+	r.git(t, "init", "-q", "--bare", "-b", "main", bare)
 	r.git(t, "remote", "add", "origin", bare)
 	r.git(t, "push", "-q", "-u", "origin", "main")
 	return r, bare
