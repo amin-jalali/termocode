@@ -20,15 +20,22 @@ concurrency:
 
 # Required checks (CONTRIBUTING.md): keep these job names stable.
 #   test (ubuntu-latest), test (macos-latest), golden screens (ubuntu-latest),
-#   e2e (ubuntu-latest), e2e (macos-latest), coverage (ubuntu-latest)
+#   e2e (ubuntu-latest), e2e (macos-latest), web-e2e (ubuntu-latest),
+#   web-e2e (macos-latest), coverage (ubuntu-latest)
 # The slow jobs run as parallel shards ("test (ubuntu-latest, 2/4)"); a
 # small job with the old name waits for all shards and fails if one did.
-# A skipped job counts as passed, so docs-only changes skip the heavy jobs
-# through the "changes" job (a workflow-level paths-ignore would leave the
-# required checks waiting forever).
+# A skipped job counts as passed, so a PR skips the jobs its files do not
+# need through the "changes" job (scripts/ci-changes.sh; a workflow-level
+# paths filter would leave the required checks waiting forever). Pushes
+# (main) and runs started by hand always run every job.
+#
+# Caches: .github/actions/go-cache restores the newest Go build + module
+# cache of its kind that main saved (one job per kind saves it on main);
+# .github/actions/setup-nvim keeps the pinned Neovim tarball. Chrome ships
+# with both runner images, so nothing is downloaded for it.
 
 jobs:
-  # code=false when the push or PR only touches docs that no test reads.
+  # Which jobs the change needs (scripts/ci-changes.sh).
   changes:
     name: changes
     # Draft PRs get no CI. Every other job needs this one, so they skip too.
@@ -38,6 +45,8 @@ jobs:
     outputs:
       code: ${{ steps.diff.outputs.code }}
       web: ${{ steps.diff.outputs.web }}
+      heavy: ${{ steps.diff.outputs.heavy }}
+      e2e: ${{ steps.diff.outputs.e2e }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,7 +54,7 @@ jobs:
           fetch-depth: 0
           filter: blob:none
 
-      - name: Docs-only change?
+      - name: Changed files
         id: diff
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
@@ -53,31 +62,15 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          # Docs no test reads: top-level *.md, ADRs, concept pages, media.
-          # docs/guides, docs/reference … are embedded in the app (docs/embed.go).
-          docs='^([^/]+\.md|docs/(adr|concepts)/.*|assets/(gifs|screenshots)/.*|\.github/PULL_REQUEST_TEMPLATE\.md|LICENSE.*|requirements-docs\.txt)$'
-          # web=false: a PR that touches no web code skips the macOS web-e2e
-          # run (main and every push still run it).
-          web_paths='^(internal/web[^/]*/|cmd/web[^/]*/|e2e/web|e2e/ssh_web|\.github/workflows/|scripts/ci-)'
-          code=true
-          web=true
+          files=""
           if [ -n "$BASE" ] && [ "$BASE" != 0000000000000000000000000000000000000000 ] \
             && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             files=$(git diff --name-only "$BASE...$HEAD")
-            if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE "$docs"; then
-              code=false
-            fi
-            if [ "$EVENT" = pull_request ] && [ -n "$files" ] \
-              && ! printf '%s\n' "$files" | grep -qE "$web_paths"; then
-              web=false
-            fi
           fi
-          [ "$code" = true ] || web=false
-          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
-          echo "web=$web" | tee -a "$GITHUB_OUTPUT"
+          printf '%s\n' "$files" | scripts/ci-changes.sh "$EVENT" | tee -a "$GITHUB_OUTPUT"
 
-  # Build, vet and the "generated files up to date" checks, once, beside
-  # the test shards (they used to run before the tests in the test job).
+  # Build, vet, the "generated files up to date" checks and the CI script
+  # tests, once, beside the test shards.
   checks:
     name: checks (ubuntu-latest)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
@@ -96,15 +89,11 @@ jobs:
       - name: Install X11 dev headers
         run: sudo apt-get update && sudo apt-get install -y libx11-dev
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          kind: plain
+          save: "true"
 
       - name: Download modules
         run: go mod download
@@ -145,7 +134,25 @@ jobs:
           git diff --exit-code -- internal/webgw/assets
 
       - name: Shellcheck release, install and CI scripts
-        run: shellcheck scripts/install.sh scripts/build-release.sh scripts/release.sh scripts/ci-test-shard.sh
+        run: shellcheck scripts/install.sh scripts/build-release.sh scripts/release.sh scripts/ci-test-shard.sh scripts/ci-changes.sh scripts/ci-changes_test.sh
+
+      - name: CI job picker tests
+        run: scripts/ci-changes_test.sh
+
+      # A PR that changes a package the browser suite builds on must run
+      # the web jobs: every such package must be in WEB_DEPS.
+      - name: Web job filter knows every web dependency
+        run: |
+          set -euo pipefail
+          M=github.com/amin-jalali/termocode
+          bad=0
+          for d in $(cd e2e && go list -tags browser,webdev -deps -test ./web/ | grep "^$M/" | grep -v '\.test\|\[' | sed "s|^$M/||"); do
+            if ! echo "$d/x.go" | scripts/ci-changes.sh pull_request | grep -q '^web=true$'; then
+              echo "e2e/web builds on $d: add it to WEB_DEPS in scripts/ci-changes.sh" >&2
+              bad=1
+            fi
+          done
+          exit "$bad"
 
       # The test shards must run every package and every test exactly once.
       - name: Test shards cover everything once
@@ -168,9 +175,15 @@ jobs:
           [ "$(grep -c '^test ' "$RUNNER_TEMP/web.txt")" -gt 100 ] || { echo "too few web e2e tests" >&2; exit 1; }
           ! sort "$RUNNER_TEMP/web.txt" | uniq -d | grep .
 
+      - name: Save the Go cache (main)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/go-cache-save
+
   # go test ./... -race in parallel shards (scripts/ci-test-shard.sh): the
   # small packages are dealt out whole, internal/app, testkit, mdview and
-  # git are split by test name.
+  # git are split by test name. nvim is on PATH, so the nvim-based tests
+  # run too; the golden screens have their own job. On main (and runs
+  # started by hand) the shards also write the coverage profiles.
   test-linux:
     name: test (ubuntu-latest, ${{ matrix.shard }}/4)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
@@ -180,6 +193,8 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
+    env:
+      COVER: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref_name, 'land-') || startsWith(github.ref_name, 'feat/land-'))) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -195,30 +210,54 @@ jobs:
       - name: Install X11 dev headers and sqlite3
         run: sudo apt-get update && sudo apt-get install -y libx11-dev sqlite3
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          kind: race
+          save: ${{ matrix.shard == 1 }}
+
+      # The same nvim as the golden screens (the coverage numbers count
+      # the nvim-based tests).
+      - name: Neovim
+        uses: ./.github/actions/setup-nvim
+        with:
+          version: v0.12.2
 
       - name: Download modules
         run: go mod download
 
       - name: Test
-        run: scripts/ci-test-shard.sh ${{ matrix.shard }} 4 -race -count=1 -timeout 25m
+        run: |
+          set -euo pipefail
+          if [ "$COVER" = true ]; then
+            export CI_COVER_DIR="$RUNNER_TEMP/cov" CI_COVERPKG="$(go run ./cmd/covreport -print-coverpkg)"
+          fi
+          scripts/ci-test-shard.sh ${{ matrix.shard }} 4 -race -count=1 -timeout 25m -skip '^TestGoldenScreens$'
 
       # The patched Bubble Tea renderer (third_party/bubbletea/PATCHES.md).
       - name: Test the renderer patch
         if: matrix.shard == 1
         run: go -C third_party/bubbletea test -race -count=1 -run TestRendererIdlesAndWakes .
 
+      - name: Upload the cover profiles
+        if: ${{ !cancelled() && env.COVER == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cover-test-${{ matrix.shard }}
+          path: ${{ runner.temp }}/cov/*.out
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Save the Go cache (main)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/go-cache-save
+
   test-macos:
     name: test (macos-latest, ${{ matrix.shard }}/3)
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    needs: changes
+    # Docs-only changes still run it (code=false), as before; a PR with
+    # only browser sources or e2e files skips it (heavy=false).
+    if: needs.changes.outputs.heavy == 'true' || needs.changes.outputs.code == 'false'
     runs-on: macos-latest
     timeout-minutes: 40
     strategy:
@@ -235,15 +274,11 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/Library/Caches/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          kind: race
+          save: ${{ matrix.shard == 1 }}
 
       - name: Download modules
         run: go mod download
@@ -258,6 +293,10 @@ jobs:
       - name: Test the renderer patch
         if: matrix.shard == 1
         run: go -C third_party/bubbletea test -race -count=1 -run TestRendererIdlesAndWakes .
+
+      - name: Save the Go cache (main)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/go-cache-save
 
   # The old one-job names: green only when every shard (and the checks) is.
   test-linux-result:
@@ -276,26 +315,26 @@ jobs:
 
   test-macos-result:
     name: test (macos-latest)
-    needs: test-macos
+    needs: [changes, test-macos]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: All shards passed
+      - name: All shards passed (or skipped)
         env:
+          CHANGES: ${{ needs.changes.result }}
           RESULT: ${{ needs.test-macos.result }}
         run: |
-          echo "shards: $RESULT"
-          [ "$RESULT" = success ]
+          echo "changes: $CHANGES, shards: $RESULT"
+          [ "$CHANGES" = success ] && { [ "$RESULT" = success ] || [ "$RESULT" = skipped ]; }
 
-  # Golden screens (internal/devtools/shotkit): they start nvim, so the
-  # test job above (no nvim) skips them and a stale golden went unseen.
-  # The harness fixes TZ, locale, clock, PATH and HOME for every case.
-  # Four shards (SHOTKIT_GOLDEN_SHARD=i/4): every case runs in one of them.
+  # Golden screens (internal/devtools/shotkit): they start nvim. The
+  # harness fixes TZ, locale, clock, PATH and HOME for every case. Four
+  # shards (SHOTKIT_GOLDEN_SHARD=i/4): every case runs in one of them.
   golden:
     name: golden screens (ubuntu-latest, ${{ matrix.shard }}/4)
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -304,9 +343,7 @@ jobs:
         shard: [1, 2, 3, 4]
     env:
       SHOTKIT_GOLDEN_SHARD: ${{ matrix.shard }}/4
-      # The nvim the golden frames were made with: editor screens can
-      # change between nvim releases.
-      NVIM_VERSION: v0.12.2
+      COVER: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref_name, 'land-') || startsWith(github.ref_name, 'feat/land-'))) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -320,30 +357,31 @@ jobs:
       - name: Install X11 dev headers
         run: sudo apt-get update && sudo apt-get install -y libx11-dev
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-golden-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-golden-
-            ${{ runner.os }}-go-
+          kind: plain
 
-      - name: Install Neovim (pinned release)
-        run: |
-          set -euo pipefail
-          curl -fsSL -o /tmp/nvim.tar.gz \
-            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
-          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
-          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+      # The nvim the golden frames were made with: editor screens can
+      # change between nvim releases.
+      - name: Neovim
+        uses: ./.github/actions/setup-nvim
+        with:
+          version: v0.12.2
 
       - name: Golden screens
         # ~540 cases (a quarter per shard), each a child app with its own nvim.
         env:
           SHOTKIT_GOLDEN_JOBS: "4"
-        run: go test ./internal/devtools/shotkit -run 'Golden' -count=1 -timeout 45m
+        run: |
+          set -euo pipefail
+          cover=()
+          if [ "$COVER" = true ]; then
+            mkdir -p "$RUNNER_TEMP/cov"
+            cover=("-coverpkg=$(go run ./cmd/covreport -print-coverpkg)" "-coverprofile=$RUNNER_TEMP/cov/golden.out")
+          fi
+          go test ./internal/devtools/shotkit -run 'Golden' -count=1 -timeout 45m "${cover[@]+"${cover[@]}"}" \
+            | sed -E 's/(of statements in ).*/\1-coverpkg/'
 
       - name: Upload changed frames
         if: failure()
@@ -353,6 +391,15 @@ jobs:
           path: internal/devtools/shotkit/testdata/golden/*_actual.*
           if-no-files-found: ignore
 
+      - name: Upload the cover profile
+        if: ${{ !cancelled() && env.COVER == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cover-golden-${{ matrix.shard }}
+          path: ${{ runner.temp }}/cov/*.out
+          if-no-files-found: ignore
+          retention-days: 3
+
   golden-result:
     name: golden screens (ubuntu-latest)
     needs: [changes, golden]
@@ -360,7 +407,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: All shards passed (or skipped for a docs-only change)
+      - name: All shards passed (or skipped)
         env:
           CHANGES: ${{ needs.changes.result }}
           RESULT: ${{ needs.golden.result }}
@@ -373,10 +420,10 @@ jobs:
   e2e:
     name: e2e (ubuntu-latest)
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     env:
-      NVIM_VERSION: v0.11.4
       E2E_DUMP_DIR: ${{ github.workspace }}/e2e-dumps
     steps:
       - name: Checkout
@@ -391,27 +438,15 @@ jobs:
       - name: Install X11 dev headers and sqlite3
         run: sudo apt-get update && sudo apt-get install -y libx11-dev sqlite3
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-e2e-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-e2e-
-            ${{ runner.os }}-go-
+          kind: plain
 
-      - name: Install Neovim (pinned release)
-        run: |
-          set -euo pipefail
-          curl -fsSL -o /tmp/nvim.tar.gz \
-            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
-          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
-          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
-
-      - name: Neovim version
-        run: nvim --version | head -1
+      - name: Neovim
+        uses: ./.github/actions/setup-nvim
+        with:
+          version: v0.11.4
 
       - name: E2E tests
         run: go -C e2e test -tags e2e -count=1 -v ./...
@@ -431,12 +466,11 @@ jobs:
     name: e2e (macos-latest)
     needs: changes
     if: >-
-      needs.changes.outputs.code == 'true' &&
+      needs.changes.outputs.e2e == 'true' &&
       (github.event_name != 'push' || github.ref == 'refs/heads/main' || startsWith(github.ref_name, 'land-') || startsWith(github.ref_name, 'feat/land-'))
     runs-on: macos-latest
     timeout-minutes: 40
     env:
-      NVIM_VERSION: v0.11.4
       E2E_DUMP_DIR: ${{ github.workspace }}/e2e-dumps
     steps:
       - name: Checkout
@@ -448,33 +482,19 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/Library/Caches/go-build
-          key: ${{ runner.os }}-go-e2e-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-e2e-
-            ${{ runner.os }}-go-
+          kind: plain
+          save: "true"
 
-      - name: Install Neovim (pinned release)
-        run: |
-          set -euo pipefail
-          case "$(uname -m)" in
-            arm64) arch=arm64 ;;
-            *) arch=x86_64 ;;
-          esac
-          curl -fsSL -o "$RUNNER_TEMP/nvim.tar.gz" \
-            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-macos-${arch}.tar.gz"
-          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/nvim-macos-${arch}/bin" >> "$GITHUB_PATH"
+      - name: Neovim
+        uses: ./.github/actions/setup-nvim
+        with:
+          version: v0.11.4
 
-      - name: Neovim and sqlite3 versions
-        run: |
-          nvim --version | head -1
-          sqlite3 --version
+      - name: sqlite3 version
+        run: sqlite3 --version
 
       - name: E2E tests
         run: go -C e2e test -tags e2e -count=1 -timeout 30m -v ./...
@@ -487,26 +507,27 @@ jobs:
           path: e2e-dumps/
           if-no-files-found: ignore
 
+      - name: Save the Go cache (main)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/go-cache-save
+
   # Coverage per system (cmd/covreport, scripts/coverage-systems.txt). It
   # fails when a system is below its floor in scripts/coverage-floors.txt.
-  # Unit tests only: the e2e suite adds ~0.5 points and 5+ minutes, and a
-  # flaky e2e test would move the numbers. Only for main (and land
-  # branches, and runs started by hand): it is the slowest job and the
-  # test jobs already run every test on a PR, so a PR does not wait for it.
+  # No test run of its own: it merges the profiles the test and golden
+  # shards wrote (unit tests only: the e2e suite adds ~0.5 points and 5+
+  # minutes, and a flaky e2e test would move the numbers). Only for main
+  # (and land branches, and runs started by hand): a PR does not wait for
+  # it. Failing tests do not stop it: the test jobs catch those.
   coverage:
     name: coverage (ubuntu-latest)
-    needs: changes
+    needs: [changes, test-linux, golden]
     if: >-
-      needs.changes.outputs.code == 'true' &&
+      always() && needs.changes.outputs.code == 'true' &&
+      needs.test-linux.result != 'cancelled' && needs.test-linux.result != 'skipped' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref_name, 'land-') || startsWith(github.ref_name, 'feat/land-'))))
     runs-on: ubuntu-latest
-    timeout-minutes: 75
-    env:
-      # The golden screens run here too (no -short): same nvim as the
-      # golden job, or they fail and the numbers drop.
-      NVIM_VERSION: v0.12.2
-      SHOTKIT_GOLDEN_JOBS: "4"
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -517,31 +538,31 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Install X11 dev headers and sqlite3
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev sqlite3
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-cov-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-cov-
-            ${{ runner.os }}-go-
+          kind: plain
 
-      - name: Install Neovim (pinned release)
+      - name: Download the shard profiles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cover-*
+          path: ${{ runner.temp }}/shards
+
+      # covreport skips every "mode:" line and adds up blocks seen twice.
+      - name: Merge the profiles
         run: |
           set -euo pipefail
-          curl -fsSL -o /tmp/nvim.tar.gz \
-            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
-          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
-          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
-
-      # Failing tests do not stop it: the test jobs catch those.
-      - name: Unit tests with coverage
-        run: scripts/coverage.sh -out "$RUNNER_TEMP/cov" -top 0
+          mkdir -p "$RUNNER_TEMP/cov"
+          ls -R "$RUNNER_TEMP/shards"
+          n=$(find "$RUNNER_TEMP/shards" -name '*.out' | wc -l)
+          echo "$n profiles"
+          # 4 test shards x 2 + 4 golden shards; fewer means a shard died.
+          [ "$n" -ge 12 ] || { echo "expected 12 profiles, got $n" >&2; exit 1; }
+          { echo "mode: count"; find "$RUNNER_TEMP/shards" -name '*.out' -exec grep -hv '^mode:' {} +; } > "$RUNNER_TEMP/cov/merged.out"
 
       - name: Table and floors
         run: |
@@ -593,13 +614,12 @@ jobs:
   # the embedded page behind the real gateway guard, CSP and /auth, with a
   # fake hub on /ws; then the real-binary walk (WEB-28). Both runner
   # images ship Chrome; a missing Chrome fails here instead of skipping.
-  # Screenshots of failures are uploaded. Two shards per system. On a PR
-  # that touches no web code (changes.web) the macOS run is skipped; main
-  # and pushes always run both.
+  # Screenshots of failures are uploaded. Two shards per system, split by
+  # test name. A PR that touches no web code skips them (changes.web).
   web-e2e:
     name: web-e2e (ubuntu-latest, ${{ matrix.shard }}/2)
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -609,7 +629,6 @@ jobs:
     env:
       TERMOCODE_WEB_E2E: require
       WEB_E2E_DUMP_DIR: ${{ github.workspace }}/web-e2e-dumps
-      NVIM_VERSION: v0.11.4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -620,16 +639,11 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-web-e2e-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-web-e2e-
-            ${{ runner.os }}-go-
+          kind: web-e2e
+          save: ${{ matrix.shard == 1 }}
 
       # Half of the e2e/web tests per shard, split by test name.
       - name: Web e2e tests
@@ -648,19 +662,11 @@ jobs:
         if: runner.os == 'Linux' && matrix.shard == 2
         run: sudo apt-get update && sudo apt-get install -y libx11-dev
 
-      - name: Install Neovim (pinned release)
+      - name: Neovim
         if: matrix.shard == 2
-        run: |
-          set -euo pipefail
-          if [ "$RUNNER_OS" = Linux ]; then
-            name=nvim-linux-x86_64
-          else
-            case "$(uname -m)" in arm64) name=nvim-macos-arm64 ;; *) name=nvim-macos-x86_64 ;; esac
-          fi
-          curl -fsSL -o "$RUNNER_TEMP/nvim.tar.gz" \
-            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/${name}.tar.gz"
-          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/${name}/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/setup-nvim
+        with:
+          version: v0.11.4
 
       - name: Web e2e tests against the real binary
         if: matrix.shard == 2
@@ -676,6 +682,10 @@ jobs:
           path: web-e2e-dumps/
           if-no-files-found: ignore
 
+      - name: Save the Go cache (main)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/go-cache-save
+
   web-e2e-macos:
     name: web-e2e (macos-latest, ${{ matrix.shard }}/2)
     needs: changes
@@ -689,7 +699,6 @@ jobs:
     env:
       TERMOCODE_WEB_E2E: require
       WEB_E2E_DUMP_DIR: ${{ github.workspace }}/web-e2e-dumps
-      NVIM_VERSION: v0.11.4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -700,16 +709,11 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/Library/Caches/go-build
-          key: ${{ runner.os }}-go-web-e2e-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-web-e2e-
-            ${{ runner.os }}-go-
+          kind: web-e2e
+          save: ${{ matrix.shard == 1 }}
 
       # Half of the e2e/web tests per shard, split by test name.
       - name: Web e2e tests
@@ -728,19 +732,11 @@ jobs:
         if: runner.os == 'Linux' && matrix.shard == 2
         run: sudo apt-get update && sudo apt-get install -y libx11-dev
 
-      - name: Install Neovim (pinned release)
+      - name: Neovim
         if: matrix.shard == 2
-        run: |
-          set -euo pipefail
-          if [ "$RUNNER_OS" = Linux ]; then
-            name=nvim-linux-x86_64
-          else
-            case "$(uname -m)" in arm64) name=nvim-macos-arm64 ;; *) name=nvim-macos-x86_64 ;; esac
-          fi
-          curl -fsSL -o "$RUNNER_TEMP/nvim.tar.gz" \
-            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/${name}.tar.gz"
-          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/${name}/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/setup-nvim
+        with:
+          version: v0.11.4
 
       - name: Web e2e tests against the real binary
         if: matrix.shard == 2
@@ -755,6 +751,10 @@ jobs:
           name: web-e2e-dumps-macos-latest-${{ matrix.shard }}
           path: web-e2e-dumps/
           if-no-files-found: ignore
+
+      - name: Save the Go cache (main)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/go-cache-save
 
   web-e2e-result:
     name: web-e2e (ubuntu-latest)
@@ -809,15 +809,10 @@ jobs:
       - name: Install X11 dev headers
         run: sudo apt-get update && sudo apt-get install -y libx11-dev
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Go cache
+        uses: ./.github/actions/go-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          kind: plain
 
       - name: Web packages (must be clean)
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./internal/webgw/... ./internal/webproto/...
