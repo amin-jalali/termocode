@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/picker"
 )
 
 // GITX-39 (B10): Commit Empty… asks the message (the commit box text
@@ -202,5 +203,58 @@ func TestGitxLFSPage(t *testing.T) {
 	m.dispatchPaletteAction("git-lfs-files")
 	if p := aiActionPolicies["git-lfs-files"]; p.Gate != aiGateAuto {
 		t.Error("reading the LFS list is not auto for the AI")
+	}
+}
+
+// GITX-39 (O26): Git: Create Gist from File… asks secret or public, then
+// asks on a Cancel-first card before gh creates the gist; a file that may
+// hold secrets (by name or by a secret-looking line) is refused.
+func TestGitxCreateGist(t *testing.T) {
+	m, dir := covGitRepo(t)
+	f := &prFakeGH{answers: map[string]string{"gist create": "https://gist.github.com/me/abc123\n"}}
+	m.ciW().run = f.run
+	m.dispatchPaletteAction("git-gist")
+	if !toastHas(m, "Open the file") {
+		t.Fatal("no note without a file")
+	}
+	covWrite(t, dir, ".env", "TOKEN=x\n")
+	m.editor.SetMeta(filepath.Join(dir, ".env"), false, "")
+	m.dispatchPaletteAction("git-gist")
+	if m.pickerOpen || !toastHas(m, "may hold secrets") {
+		t.Fatal(".env offered for a gist")
+	}
+	covWrite(t, dir, "key.go", "const k = \"sk-"+"test0123456789abcdefghijklmnop\"\n")
+	m.editor.SetMeta(filepath.Join(dir, "key.go"), false, "")
+	m.dispatchPaletteAction("git-gist")
+	if m.pickerOpen {
+		t.Fatal("a file with a secret-looking line offered for a gist")
+	}
+	m.editor.SetMeta(filepath.Join(dir, "a.txt"), false, "")
+	m.dispatchPaletteAction("git-gist")
+	if !m.pickerOpen || strings.Join(gitxPickerIDs(m), ",") != "gist-secret,gist-public" {
+		t.Fatalf("picker %v", gitxPickerIDs(m))
+	}
+	m.pickerOpen = false
+	m.handlePickerSelect(picker.SelectMsg{ID: "gist-public"})
+	if !m.confirmOpen || gitxCardIDList(m) != "cancel,gist" || m.confirm.SafeID() != "cancel" {
+		t.Fatalf("card %q", gitxCardIDList(m))
+	}
+	m.confirmOpen = false
+	if m.handleConfirmSelect("cancel") != nil || f.called("gist") {
+		t.Fatal("Cancel made a gist")
+	}
+	m.dispatchPaletteAction("git-gist")
+	m.pickerOpen = false
+	m.handlePickerSelect(picker.SelectMsg{ID: "gist-public"})
+	m.confirmOpen = false
+	covMsg[gitxDoneMsg](t, m.handleConfirmSelect("gist")).apply(m)
+	if !f.called("gist create --desc a.txt --public -- a.txt") {
+		t.Errorf("gh calls %v", f.calls)
+	}
+	if !toastHas(m, "https://gist.github.com/me/abc123") {
+		t.Error("no gist link")
+	}
+	if p := aiActionPolicies["git-gist"]; p.Gate != aiGateNever {
+		t.Error("the AI may publish a file")
 	}
 }
