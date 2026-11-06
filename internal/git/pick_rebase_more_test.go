@@ -152,6 +152,12 @@ func TestRestoreFileFrom(t *testing.T) {
 func TestRebaseOnto(t *testing.T) {
 	r := sideRepo(t)
 	r.git(t, "checkout", "-q", "side")
+	if es, err := CommitsNotOn(r.dir, "main", 10); err != nil || logSubjectsOf(es) != "s1|s2" {
+		t.Errorf("commits not on main %q %v", logSubjectsOf(es), err)
+	}
+	if _, err := CommitsNotOn(r.dir, "--all", 10); err == nil {
+		t.Error("an option as branch")
+	}
 	if _, err := RebaseOnto(r.dir, "main", false, RebaseOptions{}); err != nil {
 		t.Fatal(err)
 	}
