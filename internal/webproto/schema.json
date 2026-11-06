@@ -1296,6 +1296,46 @@
       "phase": "v2"
     },
     {
+      "op": "ext.panel",
+      "args": "ExtIDArgs",
+      "result": "ExtPanelView",
+      "role": "viewer",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ext.select",
+      "args": "ExtSelectArgs",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ext.status_run",
+      "args": "ExtIDArgs",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "file.text",
       "args": "PathArgs",
       "result": "FileText",
@@ -7527,6 +7567,67 @@
       ],
       "additionalProperties": false
     },
+    "ExtIDArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ExtPanelView": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "items": {
+            "items": {
+              "$ref": "#/defs/ExtSpan"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "ExtSelectArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "row": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "row"
+      ],
+      "additionalProperties": false
+    },
+    "ExtSpan": {
+      "type": "object",
+      "properties": {
+        "s": {
+          "type": "string"
+        },
+        "t": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "t"
+      ],
+      "additionalProperties": true
+    },
     "FileChunk": {
       "type": "object",
       "properties": {
@@ -12519,6 +12620,67 @@
       ],
       "additionalProperties": true
     },
+    "StatusExt": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/StatusExtItem"
+          },
+          "type": "array"
+        },
+        "panels": {
+          "items": {
+            "$ref": "#/defs/StatusExtPanel"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "panels",
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "StatusExtItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "run": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "StatusExtPanel": {
+      "type": "object",
+      "properties": {
+        "ext": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "ext"
+      ],
+      "additionalProperties": true
+    },
     "StatusRuns": {
       "type": "object",
       "properties": {
@@ -12552,6 +12714,9 @@
         },
         "dirty_files": {
           "type": "integer"
+        },
+        "ext": {
+          "$ref": "#/defs/StatusExt"
         },
         "root": {
           "type": "string"

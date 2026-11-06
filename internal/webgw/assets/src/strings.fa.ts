@@ -1551,4 +1551,8 @@ export const FA: Record<StringKey, string> = {
   "lay.replace_ask": "چیدمانی به نام {name} هست. با چیدمان کنونی لپ‌تاپ جایگزین شود؟",
   "lay.saved": "چیدمان {name} ذخیره شد.",
   "lay.delete_ask": "چیدمان {name} روی لپ‌تاپ پاک شود؟ آنجا برگرداندنی نیست.",
+  "act.extensions": "افزونه‌ها",
+  "extv.none": "هیچ افزونهٔ لپ‌تاپ پنلی ندارد.",
+  "extv.empty": "این پنل اکنون چیزی نشان نمی‌دهد.",
+  "extv.run": "اجرای فرمان {id} روی لپ‌تاپ",
 };

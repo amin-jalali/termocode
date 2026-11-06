@@ -305,6 +305,15 @@ export interface BufTickArgs {
   tick: number;
 }
 
+export interface ExtIDArgs {
+  id: string;
+}
+
+export interface ExtSelectArgs {
+  id: string;
+  row: number;
+}
+
 export interface HTTPSendArgs {
   path?: string;
   index?: number;
@@ -884,6 +893,7 @@ export interface StatusSnap {
   runs: StatusRuns;
   web: StatusWeb;
   theme: StatusTheme;
+  ext?: StatusExt;
 }
 
 export interface StatusAI {
@@ -911,6 +921,23 @@ export interface StatusTheme {
   name: string;
   light?: boolean;
   colors: Record<string, string>;
+}
+
+export interface StatusExt {
+  panels: StatusExtPanel[];
+  items: StatusExtItem[];
+}
+
+export interface StatusExtPanel {
+  id: string;
+  title: string;
+  ext: string;
+}
+
+export interface StatusExtItem {
+  id: string;
+  text: string;
+  run?: boolean;
 }
 
 export interface ToastsSnap {
@@ -1789,6 +1816,15 @@ export interface LspLoc {
 export interface BufMarkdown {
   md?: MdNode;
   cut?: boolean;
+}
+
+export interface ExtPanelView {
+  lines: ExtSpan[][];
+}
+
+export interface ExtSpan {
+  t: string;
+  s?: string;
 }
 
 export interface FileText {
@@ -2914,6 +2950,9 @@ export interface OpArgs {
   "buf.format": BufTickArgs;
   "buf.reload": BufArgs;
   "buf.markdown": BufArgs;
+  "ext.panel": ExtIDArgs;
+  "ext.select": ExtSelectArgs;
+  "ext.status_run": ExtIDArgs;
   "file.text": PathArgs;
   "http.files": EmptyArgs;
   "http.send": HTTPSendArgs;
@@ -3186,6 +3225,7 @@ export interface OpResult {
   "buf.format": EditRes;
   "buf.reload": EditRes;
   "buf.markdown": BufMarkdown;
+  "ext.panel": ExtPanelView;
   "file.text": FileText;
   "http.files": HTTPFiles;
   "http.send": HTTPSent;

@@ -780,6 +780,11 @@ export const SD = {
   "lay.replace_ask": "A layout named {name} exists. Replace it with the laptop's layout now?",
   "lay.saved": "Layout {name} saved.",
   "lay.delete_ask": "Delete the layout {name} on the laptop? It cannot be restored there.",
+  // Lua extension panels and status items (WEBP-7)
+  "act.extensions": "Extensions",
+  "extv.none": "No laptop extension has a panel.",
+  "extv.empty": "This panel shows nothing now.",
+  "extv.run": "Run the command of {id} on the laptop",
 } as const;
 
 addStrings(SD);

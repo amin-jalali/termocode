@@ -17,6 +17,7 @@ import { Cod } from "./icons";
 import { readGit } from "../state/git";
 import { syncMenu } from "../views/desk/DeskSCM";
 import { Comet, rttLevel } from "./Strip";
+import { ExtStatusItems } from "../views/desk/DeskExtensions";
 
 // Filetypes as people name them; others show as nvim names them.
 const LANGS: ReadonlyMap<string, string> = new Map([
@@ -146,6 +147,7 @@ export function StatusBar() {
         {ai === "working" && <Comet />}
       </span>
       <span class="strip-gap" />
+      <ExtStatusItems />
       <FileFacts />
       {s.webClients > 0 && (
         <span class="strip-item web" title={t("strip.web", { n: s.webClients })}>

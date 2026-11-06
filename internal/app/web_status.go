@@ -90,7 +90,7 @@ func (m *Model) webPublishStatus(msg tea.Msg) tea.Cmd {
 func webStatusSame(a, b webproto.StatusSnap) bool {
 	return a.Root == b.Root && a.Workspace == b.Workspace && a.Branch == b.Branch &&
 		a.Ahead == b.Ahead && a.Behind == b.Behind && a.DirtyFiles == b.DirtyFiles &&
-		a.AI == b.AI && a.Terminals == b.Terminals && a.Runs == b.Runs && a.Web == b.Web &&
+		a.AI == b.AI && a.Terminals == b.Terminals && a.Runs == b.Runs && a.Web == b.Web && webExtSame(a.Ext, b.Ext) &&
 		a.Theme.Name == b.Theme.Name && a.Theme.Light == b.Theme.Light && len(a.Theme.Colors) == len(b.Theme.Colors) && webSameMap(a.Theme.Colors, b.Theme.Colors)
 }
 
@@ -120,6 +120,7 @@ func (m *Model) webStatus(p *webStatusPub) webproto.StatusSnap {
 		},
 		Terminals: webproto.StatusTerms{Count: len(m.terminalTabs)},
 		Theme:     p.themeOf(m.themeID),
+		Ext:       m.webExtStatus(),
 	}
 	for _, t := range m.terminalTabs {
 		if t.Busy || t.Running {

@@ -11,11 +11,12 @@ import { go, route } from "../lib/router";
 import { activeFile, panes, setPanes } from "../lib/workbench";
 import { status, store, waiting } from "../session";
 import { workflowsBadge } from "../state/workflows";
+import { hasExtPanels } from "../views/desk/DeskExtensions";
 import type { Route } from "../state/route";
 import { t, type StringKey } from "../strings";
 import { Cod } from "./icons";
 
-export type Activity = "files" | "search" | "git" | "run" | "testing" | "agents" | "itermoc" | "worktrees" | "db" | "containers" | "services" | "http" | "kube" | "mcp" | "workflows" | "chat" | "device" | "settings";
+export type Activity = "files" | "search" | "git" | "run" | "testing" | "agents" | "itermoc" | "worktrees" | "db" | "containers" | "services" | "http" | "kube" | "mcp" | "workflows" | "extensions" | "chat" | "device" | "settings";
 
 interface Item {
   id: Activity;
@@ -45,6 +46,8 @@ export const ACTIVITIES: readonly Item[] = [
   { id: "kube", label: "act.kube", icon: "cloud", side: false, to: () => more("kube") },
   { id: "mcp", label: "more.mcp", icon: "plug", side: true, to: () => more("mcp") },
   { id: "workflows", label: "more.workflows", icon: "type-hierarchy", side: true, to: () => more("workflows") },
+  // Only while a laptop extension has a panel (views/desk/DeskExtensions.tsx).
+  { id: "extensions", label: "act.extensions", icon: "extensions", side: true, to: () => more("extensions") },
   { id: "chat", label: "tab.chat", icon: "comment-discussion", side: false, to: () => ({ tab: "chat", rest: "", query: {} }) },
 ];
 
@@ -76,6 +79,7 @@ export function activityOf(r: Route): Activity | null {
       if (sub === "containers") return "containers";
       if (sub === "mcp") return "mcp";
       if (sub === "workflows") return "workflows";
+      if (sub === "extensions") return "extensions";
       if (sub === "agents") return "agents";
       if (sub === "itermoc") return "itermoc";
       if (sub === "worktrees") return "worktrees";
@@ -171,7 +175,7 @@ export function ActivityBar() {
   const cur = shownActivity(route.value);
   return (
     <nav class="rail act-bar" aria-label={t("tabs.label")}>
-      {ACTIVITIES.map((x) => (
+      {ACTIVITIES.filter((x) => x.id !== "extensions" || hasExtPanels()).map((x) => (
         <ActItem key={x.id} x={x} cur={cur} />
       ))}
       <span class="act-gap" />

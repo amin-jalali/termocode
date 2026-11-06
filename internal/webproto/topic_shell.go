@@ -24,6 +24,7 @@ type StatusSnap struct {
 	Runs       StatusRuns  `json:"runs"`
 	Web        StatusWeb   `json:"web"`
 	Theme      StatusTheme `json:"theme"`
+	Ext        *StatusExt  `json:"ext,omitempty"` // extension panels and status items (data_ext.go)
 }
 
 // StatusAI is the AI chip.
