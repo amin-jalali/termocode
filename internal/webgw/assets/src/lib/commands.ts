@@ -23,6 +23,7 @@ import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
+import { dbCommands } from "../views/desk/dbcommands";
 import { ctrFilter, ctrSearch, ctrSel, openPort } from "../views/desk/DeskContainers";
 import { configureServices, openCompose } from "../views/run/ServicesView";
 import { activeFile, alternateFile, closeGroup, closeTab, cursorAt, focusedGroup, focusGroup, groups, panes, previewTabs, quick, reopenClosed, setPanes, showFile, splitEditor, tabsIn, togglePin, wordWrap } from "./workbench";
@@ -108,6 +109,7 @@ export function commands(): Command[] {
     { id: "servicesOpenCompose", label: "svc.open_compose", run: openCompose },
     { id: "servicesConfigure", label: "svc.configure", when: canAct, run: configureServices },
     ...gitCommands(),
+    ...dbCommands(),
     ...editCommands(),
     { id: "lastFile", label: "cmd.last_file", when: () => activeFile.peek() !== null, run: () => alternateFile() || toast("info", t("cmd.no_last_file")) },
     { id: "reopenClosed", label: "cmd.reopen_closed", run: () => reopenClosed() || toast("info", t("cmd.no_closed")) },

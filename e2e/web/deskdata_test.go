@@ -45,8 +45,8 @@ func TestDeskDBTreeGridAndQuery(t *testing.T) {
 	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), dbConns())
 	const side = `document.querySelector('.wb-side [data-view="db"]')`
 	p.WaitJS(side + `?.querySelectorAll(".tr[data-conn]").length === 3`)
-	if Eval[bool](p, `!!`+side+`.querySelector('.tr[data-conn="cache"][data-twist]')`) {
-		t.Error("a Redis connection opens here")
+	if !Eval[bool](p, `!!`+side+`.querySelector('.tr[data-conn="cache"][data-twist]')`) {
+		t.Error("a Redis connection does not open (its keys)")
 	}
 	if s := Eval[string](p, side+`.querySelector('.tr[data-conn="prod"] .db-env.is-prod')?.textContent ?? ""`); s != "production" {
 		t.Errorf("prod mark %q", s)

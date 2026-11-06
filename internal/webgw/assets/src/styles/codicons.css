@@ -42,6 +42,7 @@
 .cod-cloud::before { content: "\ebaa"; }
 .cod-cloud-download::before { content: "\eac2"; }
 .cod-cloud-upload::before { content: "\eac3"; }
+.cod-code::before { content: "\eac4"; }
 .cod-collapse-all::before { content: "\eac5"; }
 .cod-comment::before { content: "\ea6b"; }
 .cod-comment-discussion::before { content: "\eac7"; }
@@ -68,12 +69,14 @@
 .cod-debug-step-over::before { content: "\ead6"; }
 .cod-debug-stop::before { content: "\ead7"; }
 .cod-device-desktop::before { content: "\ea7a"; }
+.cod-diff::before { content: "\eae1"; }
 .cod-diff-single::before { content: "\ec22"; }
 .cod-discard::before { content: "\eae2"; }
 .cod-edit::before { content: "\ea73"; }
 .cod-ellipsis::before { content: "\ea7c"; }
 .cod-error::before { content: "\ea87"; }
 .cod-expand-all::before { content: "\eb95"; }
+.cod-export::before { content: "\ebac"; }
 .cod-eye::before { content: "\ea70"; }
 .cod-file::before { content: "\ea7b"; }
 .cod-file-code::before { content: "\eae9"; }
@@ -123,6 +126,7 @@
 .cod-pass::before { content: "\eba4"; }
 .cod-pass-filled::before { content: "\ebb3"; }
 .cod-person::before { content: "\ea67"; }
+.cod-pin::before { content: "\eb2b"; }
 .cod-pinned::before { content: "\eba0"; }
 .cod-play::before { content: "\eb2c"; }
 .cod-play-circle::before { content: "\eba6"; }
@@ -143,6 +147,7 @@
 .cod-run-all::before { content: "\eb9e"; }
 .cod-run-errors::before { content: "\ebde"; }
 .cod-save::before { content: "\eb4b"; }
+.cod-screen-full::before { content: "\eb4c"; }
 .cod-search::before { content: "\ea6d"; }
 .cod-send::before { content: "\ec0f"; }
 .cod-server::before { content: "\eb50"; }
@@ -154,7 +159,6 @@
 .cod-sign-out::before { content: "\ea6e"; }
 .cod-source-control::before { content: "\ea68"; }
 .cod-sparkle::before { content: "\ec10"; }
-.cod-screen-full::before { content: "\eb4c"; }
 .cod-split-horizontal::before { content: "\eb56"; }
 .cod-stop-circle::before { content: "\eba5"; }
 .cod-symbol-class::before { content: "\eb5b"; }
@@ -162,6 +166,7 @@
 .cod-symbol-enum::before { content: "\ea95"; }
 .cod-symbol-field::before { content: "\eb5f"; }
 .cod-symbol-interface::before { content: "\eb61"; }
+.cod-symbol-key::before { content: "\ea93"; }
 .cod-symbol-method::before { content: "\ea8c"; }
 .cod-symbol-misc::before { content: "\eb63"; }
 .cod-symbol-namespace::before { content: "\ea8b"; }

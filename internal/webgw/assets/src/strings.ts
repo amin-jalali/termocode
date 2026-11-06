@@ -555,6 +555,8 @@ export const S = {
   "sv.collapse": "Collapse All",
   "scm.more_actions": "More Actions…",
   "dbv.query_tab": "Query: {conn}",
+  "dbv.ddl_tab": "DDL: {table}",
+  "dbv.history": "SQL History",
   "mcpv.running": "Running",
   "chat.insert": "Insert into the Editor",
   "chat.agent": "The agent profile and model of this chat",

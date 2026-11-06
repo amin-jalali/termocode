@@ -2434,6 +2434,263 @@
       "phase": "v2"
     },
     {
+      "op": "db.ddl",
+      "args": "DBTableArgs",
+      "result": "DBText",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "db.explain",
+      "args": "DBExplainArgs",
+      "result": "DBPlan",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 73728,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.test",
+      "args": "DBConnArgs",
+      "result": "DBDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.compare",
+      "args": "DBCompareArgs",
+      "result": "DBCompare",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "db.history",
+      "args": "DBHistoryArgs",
+      "result": "DBHistory",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "db.csv_files",
+      "args": "EmptyArgs",
+      "result": "DBFiles",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "db.cancel",
+      "args": "DBConnArgs",
+      "result": "DBDone",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "db.connect",
+      "args": "DBConnArgs",
+      "result": "DBDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.config",
+      "args": "EmptyArgs",
+      "result": "DBConfigFile",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "redis.keys",
+      "args": "RedisKeysArgs",
+      "result": "RedisKeys",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "db.edit",
+      "args": "DBEditArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 262144,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.import",
+      "args": "DBImportArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 2048,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "redis.key",
+      "args": "RedisKeyArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 2048,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.add",
+      "args": "DBAddArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.ssh",
+      "args": "DBSSHArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.ssl",
+      "args": "DBSSLArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.disconnect",
+      "args": "DBConnArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "db.tx",
+      "args": "DBTxArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ci.fix_prompt",
       "args": "EmptyArgs",
       "result": "CIFixPrompt",
@@ -5305,6 +5562,54 @@
       ],
       "additionalProperties": false
     },
+    "DBAddArgs": {
+      "type": "object",
+      "properties": {
+        "database": {
+          "type": "string"
+        },
+        "db": {
+          "type": "integer"
+        },
+        "driver": {
+          "enum": [
+            "postgres",
+            "mysql",
+            "sqlite",
+            "redis"
+          ]
+        },
+        "env": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "readonly": {
+          "type": "boolean"
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "driver"
+      ],
+      "additionalProperties": false
+    },
     "DBCell": {
       "type": "object",
       "properties": {
@@ -5324,9 +5629,83 @@
       "required": [],
       "additionalProperties": true
     },
+    "DBColValue": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "string"
+        },
+        "n": {
+          "type": "boolean"
+        },
+        "v": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "col"
+      ],
+      "additionalProperties": false
+    },
+    "DBCompare": {
+      "type": "object",
+      "properties": {
+        "changes": {
+          "type": "integer"
+        },
+        "destructive": {
+          "type": "integer"
+        },
+        "script": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "script",
+        "changes"
+      ],
+      "additionalProperties": true
+    },
+    "DBCompareArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "target"
+      ],
+      "additionalProperties": false
+    },
+    "DBConfigFile": {
+      "type": "object",
+      "properties": {
+        "created": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": true
+    },
     "DBConn": {
       "type": "object",
       "properties": {
+        "connected": {
+          "type": "boolean"
+        },
         "database": {
           "type": "string"
         },
@@ -5345,6 +5724,9 @@
         "id": {
           "type": "string"
         },
+        "manual": {
+          "type": "boolean"
+        },
         "name": {
           "type": "string"
         },
@@ -5356,6 +5738,12 @@
         },
         "sql": {
           "type": "boolean"
+        },
+        "tx": {
+          "type": "boolean"
+        },
+        "writes": {
+          "type": "integer"
         }
       },
       "required": [
@@ -5392,6 +5780,242 @@
       ],
       "additionalProperties": true
     },
+    "DBDone": {
+      "type": "object",
+      "properties": {
+        "ms": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "DBEdit": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "items": {
+            "$ref": "#/defs/DBColValue"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "update",
+            "insert",
+            "delete"
+          ]
+        },
+        "old": {
+          "items": {
+            "$ref": "#/defs/DBColValue"
+          },
+          "type": "array"
+        },
+        "set": {
+          "items": {
+            "$ref": "#/defs/DBColValue"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "DBEditArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "edits": {
+          "items": {
+            "$ref": "#/defs/DBEdit"
+          },
+          "type": "array"
+        },
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "table",
+        "edits"
+      ],
+      "additionalProperties": false
+    },
+    "DBExplainArgs": {
+      "type": "object",
+      "properties": {
+        "analyze": {
+          "type": "boolean"
+        },
+        "conn": {
+          "type": "string"
+        },
+        "sql": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "sql"
+      ],
+      "additionalProperties": false
+    },
+    "DBFiles": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "files"
+      ],
+      "additionalProperties": true
+    },
+    "DBHistory": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/defs/DBHistoryEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": true
+    },
+    "DBHistoryArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "DBHistoryEntry": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "integer"
+        },
+        "conn": {
+          "type": "string"
+        },
+        "ms": {
+          "type": "integer"
+        },
+        "rows": {
+          "type": "integer"
+        },
+        "sql": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "sql",
+        "at"
+      ],
+      "additionalProperties": true
+    },
+    "DBImportArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "noheader": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "table",
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "DBPlan": {
+      "type": "object",
+      "properties": {
+        "analyze": {
+          "type": "boolean"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/defs/DBPlanLine"
+          },
+          "type": "array"
+        },
+        "ms": {
+          "type": "integer"
+        },
+        "summary": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "lines",
+        "ms"
+      ],
+      "additionalProperties": true
+    },
+    "DBPlanLine": {
+      "type": "object",
+      "properties": {
+        "costly": {
+          "type": "boolean"
+        },
+        "depth": {
+          "type": "integer"
+        },
+        "detail": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "depth",
+        "text"
+      ],
+      "additionalProperties": true
+    },
     "DBRows": {
       "type": "object",
       "properties": {
@@ -5403,6 +6027,12 @@
         },
         "from": {
           "type": "integer"
+        },
+        "key": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "masked": {
           "type": "integer"
@@ -5469,6 +6099,76 @@
       ],
       "additionalProperties": false
     },
+    "DBSSHArgs": {
+      "type": "object",
+      "properties": {
+        "auth": {
+          "enum": [
+            "agent",
+            "key",
+            "password"
+          ]
+        },
+        "conn": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "jump": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "keyfile": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "remove": {
+          "type": "boolean"
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn"
+      ],
+      "additionalProperties": false
+    },
+    "DBSSLArgs": {
+      "type": "object",
+      "properties": {
+        "ca": {
+          "type": "string"
+        },
+        "cert": {
+          "type": "string"
+        },
+        "conn": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "disable",
+            "require",
+            "verify-ca",
+            "verify-full"
+          ]
+        }
+      },
+      "required": [
+        "conn",
+        "mode"
+      ],
+      "additionalProperties": false
+    },
     "DBTable": {
       "type": "object",
       "properties": {
@@ -5483,6 +6183,22 @@
         "name"
       ],
       "additionalProperties": true
+    },
+    "DBTableArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn",
+        "table"
+      ],
+      "additionalProperties": false
     },
     "DBTables": {
       "type": "object",
@@ -5508,6 +6224,39 @@
         "tables"
       ],
       "additionalProperties": true
+    },
+    "DBText": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "DBTxArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "verb": {
+          "enum": [
+            "commit",
+            "rollback",
+            "manual",
+            "auto"
+          ]
+        }
+      },
+      "required": [
+        "conn",
+        "verb"
+      ],
+      "additionalProperties": false
     },
     "DebugBpArgs": {
       "type": "object",
@@ -9259,6 +10008,95 @@
       },
       "required": [
         "kind"
+      ],
+      "additionalProperties": false
+    },
+    "RedisKey": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "ttl"
+      ],
+      "additionalProperties": true
+    },
+    "RedisKeyArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "db": {
+          "type": "integer"
+        },
+        "key": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer"
+        },
+        "verb": {
+          "enum": [
+            "delete",
+            "ttl"
+          ]
+        }
+      },
+      "required": [
+        "conn",
+        "key",
+        "verb"
+      ],
+      "additionalProperties": false
+    },
+    "RedisKeys": {
+      "type": "object",
+      "properties": {
+        "db": {
+          "type": "integer"
+        },
+        "keys": {
+          "items": {
+            "$ref": "#/defs/RedisKey"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "db",
+        "keys"
+      ],
+      "additionalProperties": true
+    },
+    "RedisKeysArgs": {
+      "type": "object",
+      "properties": {
+        "conn": {
+          "type": "string"
+        },
+        "db": {
+          "type": "integer"
+        },
+        "pattern": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conn"
       ],
       "additionalProperties": false
     },
