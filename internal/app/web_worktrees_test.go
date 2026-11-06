@@ -161,3 +161,25 @@ func TestWorktreesArchiveNeedsLaptopCard(t *testing.T) {
 		}
 	}
 }
+
+// Spec (WTX-16): the worktrees replay golden: a pin and a sleep replay to
+// the final snapshot.
+func TestWorktreesReplayGolden(t *testing.T) {
+	m := aiTestModel(t)
+	h := webTestHub(t, &m)
+	st := webTestWT(t, &m)
+	c := webReplayRecord(t, &m, h, "worktrees", func() {
+		for i := range st.entries {
+			switch st.entries[i].Path {
+			case "/elsewhere/api-v2":
+				st.entries[i].Meta.Pinned = true
+			case "/src/app.worktrees/toast":
+				st.entries[i].Meta.State = worktrees.StateAsleep
+			}
+		}
+		st.touch()
+		m.webAfterUpdate(nil)
+	})
+	webReplayCheck(t, h.topics["worktrees"], c)
+	webReplayGolden(t, webReplayPath("worktrees", "pin_sleep"), c)
+}

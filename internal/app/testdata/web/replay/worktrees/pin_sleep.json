@@ -1,0 +1,295 @@
+{
+  "topic": "worktrees",
+  "snap0": {
+    "state": "ready",
+    "worktrees": [
+      {
+        "ahead": 3,
+        "branch": "feat/wt-sidebar",
+        "dirty": 4,
+        "group": "pinned",
+        "id": "e545144ff4bc",
+        "kind": "user",
+        "last_seen": 1793966280000,
+        "link": "#412",
+        "note": "adding the pin row",
+        "pinned": true,
+        "state": "idle",
+        "status": true,
+        "title": "feat/wt-sidebar",
+        "where": "/src/app.worktrees/wt-sidebar"
+      },
+      {
+        "agent": "Codex",
+        "agents": 1,
+        "ahead": 1,
+        "branch": "fix/toast-race",
+        "dirty": 2,
+        "group": "active",
+        "id": "81018e165c69",
+        "kind": "user",
+        "state": "working",
+        "status": true,
+        "title": "fix/toast-race",
+        "where": "/src/app.worktrees/toast"
+      },
+      {
+        "branch": "main",
+        "group": "active",
+        "here": true,
+        "id": "c0167fc91cc6",
+        "kind": "main",
+        "state": "idle",
+        "status": true,
+        "title": "main",
+        "where": "/src/app"
+      },
+      {
+        "branch": "termocode/agent-r9-a",
+        "group": "active",
+        "id": "c35cb262fe29",
+        "kind": "agent",
+        "state": "idle",
+        "title": "agent r9-a",
+        "where": "/src/app/.git/termocode/worktrees/r9-a"
+      },
+      {
+        "branch": "spike/grpc",
+        "group": "asleep",
+        "id": "a17a36f334d7",
+        "kind": "user",
+        "last_seen": 1793707200000,
+        "state": "asleep",
+        "title": "spike/grpc",
+        "where": "/src/app.worktrees/grpc"
+      },
+      {
+        "behind": 12,
+        "branch": "api-v2",
+        "group": "external",
+        "id": "4c74ca1fcad0",
+        "kind": "external",
+        "locked": true,
+        "state": "idle",
+        "status": true,
+        "title": "api-v2",
+        "where": "/elsewhere/api-v2"
+      },
+      {
+        "branch": "gone",
+        "gone": true,
+        "group": "external",
+        "id": "fb76ad0a1be6",
+        "kind": "external",
+        "state": "gone",
+        "title": "gone",
+        "where": "/tmp/deleted"
+      },
+      {
+        "branch": "old",
+        "group": "archived",
+        "id": "fc0446e3acde",
+        "kind": "user",
+        "state": "archived",
+        "title": "old",
+        "where": "/src/app.worktrees/old"
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "state": "ready",
+      "worktrees": [
+        {
+          "ahead": 3,
+          "branch": "feat/wt-sidebar",
+          "dirty": 4,
+          "group": "pinned",
+          "id": "e545144ff4bc",
+          "kind": "user",
+          "last_seen": 1793966280000,
+          "link": "#412",
+          "note": "adding the pin row",
+          "pinned": true,
+          "state": "idle",
+          "status": true,
+          "title": "feat/wt-sidebar",
+          "where": "/src/app.worktrees/wt-sidebar"
+        },
+        {
+          "behind": 12,
+          "branch": "api-v2",
+          "group": "pinned",
+          "id": "4c74ca1fcad0",
+          "kind": "external",
+          "locked": true,
+          "pinned": true,
+          "state": "idle",
+          "status": true,
+          "title": "api-v2",
+          "where": "/elsewhere/api-v2"
+        },
+        {
+          "branch": "main",
+          "group": "active",
+          "here": true,
+          "id": "c0167fc91cc6",
+          "kind": "main",
+          "state": "idle",
+          "status": true,
+          "title": "main",
+          "where": "/src/app"
+        },
+        {
+          "branch": "termocode/agent-r9-a",
+          "group": "active",
+          "id": "c35cb262fe29",
+          "kind": "agent",
+          "state": "idle",
+          "title": "agent r9-a",
+          "where": "/src/app/.git/termocode/worktrees/r9-a"
+        },
+        {
+          "agent": "Codex",
+          "agents": 1,
+          "ahead": 1,
+          "branch": "fix/toast-race",
+          "dirty": 2,
+          "group": "asleep",
+          "id": "81018e165c69",
+          "kind": "user",
+          "state": "working",
+          "status": true,
+          "title": "fix/toast-race",
+          "where": "/src/app.worktrees/toast"
+        },
+        {
+          "branch": "spike/grpc",
+          "group": "asleep",
+          "id": "a17a36f334d7",
+          "kind": "user",
+          "last_seen": 1793707200000,
+          "state": "asleep",
+          "title": "spike/grpc",
+          "where": "/src/app.worktrees/grpc"
+        },
+        {
+          "branch": "gone",
+          "gone": true,
+          "group": "external",
+          "id": "fb76ad0a1be6",
+          "kind": "external",
+          "state": "gone",
+          "title": "gone",
+          "where": "/tmp/deleted"
+        },
+        {
+          "branch": "old",
+          "group": "archived",
+          "id": "fc0446e3acde",
+          "kind": "user",
+          "state": "archived",
+          "title": "old",
+          "where": "/src/app.worktrees/old"
+        }
+      ]
+    }
+  ],
+  "snapn": {
+    "state": "ready",
+    "worktrees": [
+      {
+        "id": "e545144ff4bc",
+        "title": "feat/wt-sidebar",
+        "branch": "feat/wt-sidebar",
+        "where": "/src/app.worktrees/wt-sidebar",
+        "kind": "user",
+        "group": "pinned",
+        "state": "idle",
+        "pinned": true,
+        "status": true,
+        "ahead": 3,
+        "dirty": 4,
+        "note": "adding the pin row",
+        "link": "#412",
+        "last_seen": 1793966280000
+      },
+      {
+        "id": "4c74ca1fcad0",
+        "title": "api-v2",
+        "branch": "api-v2",
+        "where": "/elsewhere/api-v2",
+        "kind": "external",
+        "group": "pinned",
+        "state": "idle",
+        "pinned": true,
+        "locked": true,
+        "status": true,
+        "behind": 12
+      },
+      {
+        "id": "c0167fc91cc6",
+        "title": "main",
+        "branch": "main",
+        "where": "/src/app",
+        "kind": "main",
+        "group": "active",
+        "state": "idle",
+        "here": true,
+        "status": true
+      },
+      {
+        "id": "c35cb262fe29",
+        "title": "agent r9-a",
+        "branch": "termocode/agent-r9-a",
+        "where": "/src/app/.git/termocode/worktrees/r9-a",
+        "kind": "agent",
+        "group": "active",
+        "state": "idle"
+      },
+      {
+        "id": "81018e165c69",
+        "title": "fix/toast-race",
+        "branch": "fix/toast-race",
+        "where": "/src/app.worktrees/toast",
+        "kind": "user",
+        "group": "asleep",
+        "state": "working",
+        "agent": "Codex",
+        "agents": 1,
+        "status": true,
+        "ahead": 1,
+        "dirty": 2
+      },
+      {
+        "id": "a17a36f334d7",
+        "title": "spike/grpc",
+        "branch": "spike/grpc",
+        "where": "/src/app.worktrees/grpc",
+        "kind": "user",
+        "group": "asleep",
+        "state": "asleep",
+        "last_seen": 1793707200000
+      },
+      {
+        "id": "fb76ad0a1be6",
+        "title": "gone",
+        "branch": "gone",
+        "where": "/tmp/deleted",
+        "kind": "external",
+        "group": "external",
+        "state": "gone",
+        "gone": true
+      },
+      {
+        "id": "fc0446e3acde",
+        "title": "old",
+        "branch": "old",
+        "where": "/src/app.worktrees/old",
+        "kind": "user",
+        "group": "archived",
+        "state": "archived"
+      }
+    ]
+  }
+}
