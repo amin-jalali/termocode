@@ -429,6 +429,7 @@ func OpenTunnel(ctx context.Context, cfg SSHConfig, opts TunnelOptions) (*Tunnel
 		var auth []ssh.AuthMethod
 		var authErr *jumpAuthState
 		cleanup := func() {}
+		began := time.Now()
 		if jump {
 			auth, authErr, cleanup = jumpAuth(ctx, hop, opts)
 		} else {
@@ -437,6 +438,12 @@ func OpenTunnel(ctx context.Context, cfg SSHConfig, opts TunnelOptions) (*Tunnel
 				return fail(err)
 			}
 		}
+		// Reading and decrypting the keys is local work (a passphrase
+		// key's rounds take seconds on a slow machine): the servers get
+		// that time back.
+		var stopShift func()
+		ctx, stopShift = shiftDeadline(ctx, time.Since(began))
+		defer stopShift()
 		var conn net.Conn
 		addr := hop.Addr()
 		if i == 0 {
@@ -467,6 +474,23 @@ func OpenTunnel(ctx context.Context, cfg SSHConfig, opts TunnelOptions) (*Tunnel
 		crash.Go("the SSH tunnel", func() { t.watch(i) })
 	}
 	return t, nil
+}
+
+// shiftDeadline is ctx with its deadline moved later by d (the local work
+// done under it). A cancel of ctx itself still ends it; only ctx's own
+// deadline is moved.
+func shiftDeadline(ctx context.Context, d time.Duration) (context.Context, func()) {
+	dl, ok := ctx.Deadline()
+	if !ok || d <= 0 {
+		return ctx, func() {}
+	}
+	moved, cancel := context.WithDeadline(context.WithoutCancel(ctx), dl.Add(d))
+	stop := context.AfterFunc(ctx, func() {
+		if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			cancel()
+		}
+	})
+	return moved, func() { stop(); cancel() }
 }
 
 // sshHandshake checks hop's host key and logs in over conn. A host key
