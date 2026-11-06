@@ -404,3 +404,5 @@
 .layout-desktop .cb-head button:hover { background: var(--wb-toolbar-hover); }
 .layout-desktop .cb-head button:disabled { opacity: 0.4; }
 .layout-desktop .cb-pre { margin: 0; padding: 8px 10px; background: transparent; }
+.wt-filter { margin: 4px 12px 6px; }
+.wt-note .pv-input { margin-bottom: 6px; }

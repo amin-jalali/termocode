@@ -52,6 +52,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Move Secrets to a Safer Store… | `secrets-migrate` |   |   |
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
+| AI: New Workflow… | `workflow-new` |   |   |
 | AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` / `Alt+N` | `Alt+Shift+P / Alt+N` |
 | AI: Next Reasoning Level | `ai-reasoning-next` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
@@ -682,6 +683,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Worktree: Add Selected as Folder | `worktree-add-folder` |   |   |
 | Worktree: Adopt Selected | `worktree-adopt` |   |   |
+| Worktree: Archive or Restore Selected… | `worktree-archive` |   |   |
+| Worktree: Clean Up… | `worktree-cleanup` |   |   |
+| Worktree: Delete Selected… | `worktree-delete` |   |   |
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
 | Worktree: Link Issue or PR… | `worktree-link` |   |   |
@@ -693,6 +697,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
+| Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
 
 ## termocode
 

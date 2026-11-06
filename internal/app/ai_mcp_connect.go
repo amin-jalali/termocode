@@ -1144,6 +1144,9 @@ func (m Model) routeToConnect(msg tea.Msg) (Model, tea.Cmd) {
 	if k, key := msg.(tea.KeyMsg); key && k.Type == tea.KeyEnter && m.wtLinkOpen() && m.connect.FocusedID() == "ref" {
 		return m, m.wtLinkStart() // Enter in the field links (worktrees_link.go)
 	}
+	if k, key := msg.(tea.KeyMsg); key && k.Type == tea.KeyEnter && m.wtDeleteTypeOpen() && m.connect.FocusedID() == "name" {
+		return m, nil // Enter never deletes: only the Delete button does (worktrees_delete.go)
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height

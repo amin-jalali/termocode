@@ -80,10 +80,12 @@ func (m *Model) wfxVerb(key string) (tea.Cmd, bool) {
 		return m.wfxEdit(), true
 	case "x":
 		return m.wfxAskStop(), true
+	case "p":
+		return m.wfxTogglePause(), true
 	case "c":
-		return m.aiInfo("Changing a workflow by chat comes with the next version; e opens the file"), true
+		return m.wfxChatTarget(), true
 	case "n":
-		return m.aiInfo("Add a file .termocode/workflows/<name>.jsonc (docs: guides/workflows.md); building by chat comes next"), true
+		return m.wfxChat(nil), true
 	case "?":
 		return m.wfxKeyCard(), true
 	case "R":
@@ -207,10 +209,13 @@ func wfxKeyRowsList() [][]string {
 		{"d", "dry run: read for real, write nothing (asks)"},
 		{"o", "schedule on / off (asks)"},
 		{"e", "open the file (at the first problem)"},
+		{"n", "new workflow by chat (AI: New Workflow…)"},
+		{"c", "change it by chat (the file attached)"},
 		{"h", "history: the newest run"},
 		{"R", "read the files again"},
 		{"Run"},
 		{"x", "stop the run (asks; Keep running is first)"},
+		{"p", "pause the run before its next step; p again continues"},
 		{"l", "jump to the live output"},
 	}
 }
@@ -224,6 +229,7 @@ func (m *Model) wfxKeyCard() tea.Cmd {
 func workflowsPaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "workflows", Title: "Workflows: Open"},
+		{ID: "workflow-new", Title: "AI: New Workflow…"},
 		{ID: "workflow-run", Title: "Workflows: Run Selected…"},
 		{ID: "workflow-dry-run", Title: "Workflows: Dry Run Selected…"},
 		{ID: "workflow-enable", Title: "Workflows: Turn Selected On/Off…"},
@@ -236,6 +242,9 @@ func workflowsPaletteItems() []picker.Item {
 func (m *Model) dispatchWorkflowsPalette(id string) (tea.Cmd, bool) {
 	if !strings.HasPrefix(id, "workflow") {
 		return nil, false
+	}
+	if id == "workflow-new" { // a chat, not the view
+		return m.wfxChat(nil), true
 	}
 	open := m.revealWorkflows(true)
 	switch id {

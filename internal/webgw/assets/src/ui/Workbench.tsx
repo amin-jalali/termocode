@@ -61,6 +61,7 @@ import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, openSide, routeSide, sideView, type Activity } from "./ActivityBar";
 import type { StringKey } from "../strings";
 import { DeskSearch } from "../views/desk/DeskSearch";
+import { DeskWorktrees } from "../views/desk/DeskWorktrees";
 import { DeskDB } from "../views/desk/DeskDB";
 import { DeskDevice, DeskSettings } from "../views/desk/DeskSettings";
 import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
@@ -476,6 +477,8 @@ function SideView({ id }: { id: Activity }) {
       return <DeskContainers />;
     case "agents":
       return <AgentsView />;
+    case "worktrees":
+      return <DeskWorktrees />;
     default:
       return (
         <div class="side-stack ex-stack">

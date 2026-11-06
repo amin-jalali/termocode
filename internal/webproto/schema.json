@@ -291,6 +291,15 @@
       "deltas": [
         "AISnap"
       ]
+    },
+    {
+      "name": "worktrees",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "WorktreesSnap",
+      "deltas": [
+        "WorktreesSnap"
+      ]
     }
   ],
   "events": {
@@ -1846,6 +1855,89 @@
     {
       "op": "services.stop",
       "args": "ServiceArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.refresh",
+      "args": "EmptyArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.pin",
+      "args": "WorktreeOnArgs",
+      "result": "WorktreeDone",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.sleep",
+      "args": "WorktreeOnArgs",
+      "result": "WorktreeDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.note",
+      "args": "WorktreeNoteArgs",
+      "result": "WorktreeDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 2048,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.archive",
+      "args": "WorktreeArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.delete",
+      "args": "WorktreeArgs",
       "result": "AskRef",
       "role": "controller",
       "rate": {
@@ -12187,6 +12279,191 @@
         "folder"
       ],
       "additionalProperties": false
+    },
+    "WorktreeArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "WorktreeDone": {
+      "type": "object",
+      "properties": {
+        "asked": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "WorktreeItem": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "agents": {
+          "type": "integer"
+        },
+        "ahead": {
+          "type": "integer"
+        },
+        "behind": {
+          "type": "integer"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "checkpoint": {
+          "type": "string"
+        },
+        "depth": {
+          "type": "integer"
+        },
+        "dirty": {
+          "type": "integer"
+        },
+        "gone": {
+          "type": "boolean"
+        },
+        "group": {
+          "enum": [
+            "pinned",
+            "active",
+            "asleep",
+            "external",
+            "archived"
+          ]
+        },
+        "here": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "main",
+            "user",
+            "agent",
+            "external"
+          ]
+        },
+        "last_seen": {
+          "type": "integer"
+        },
+        "link": {
+          "type": "string"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "working",
+            "waiting",
+            "done",
+            "idle",
+            "asleep",
+            "gone",
+            "archived"
+          ]
+        },
+        "status": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "where": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "where",
+        "kind",
+        "group",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "WorktreeNoteArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "WorktreeOnArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "on"
+      ],
+      "additionalProperties": false
+    },
+    "WorktreesSnap": {
+      "type": "object",
+      "properties": {
+        "more": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "none",
+            "loading",
+            "ready"
+          ]
+        },
+        "worktrees": {
+          "items": {
+            "$ref": "#/defs/WorktreeItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "state",
+        "worktrees"
+      ],
+      "additionalProperties": true
     }
   }
 }

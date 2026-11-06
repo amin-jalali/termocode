@@ -14,9 +14,11 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/agentrun"
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/ghci"
+	"github.com/amin-jalali/termocode/internal/workflow/aistep"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
 	"github.com/amin-jalali/termocode/internal/workflow/source"
@@ -493,6 +495,25 @@ func (m *Model) wfxAskStop() tea.Cmd {
 	return nil
 }
 
+// wfxTogglePause pauses the target's live run before its next step, or
+// lets a paused one go on. No card: a pause only waits.
+func (m *Model) wfxTogglePause() tea.Cmd {
+	e, ok := m.wfxTarget()
+	if !ok {
+		return nil
+	}
+	l := m.wfxRunning(e.Name)
+	if l == nil {
+		return m.aiInfo(e.Name + " is not running")
+	}
+	if l.h.Held() {
+		l.h.Continue()
+		return m.aiInfo(e.Name + ": continues")
+	}
+	l.h.Pause()
+	return m.aiInfo(e.Name + ": paused before its next step (p continues)")
+}
+
 // wfxEdit opens the workflow file in the editor.
 func (m *Model) wfxEdit() tea.Cmd {
 	e, ok := m.wfxTarget()
@@ -511,6 +532,16 @@ func (m *Model) wfxEdit() tea.Cmd {
 
 // wfxStart starts a run of e with every adapter of the app.
 func (m *Model) wfxStart(e wire.Entry, dry bool) tea.Cmd {
+	_, _, cmd, err := m.wfxStartID(e, dry)
+	if err != nil {
+		return m.aiInfo(e.Name + ": " + agentCtlShort(err.Error()))
+	}
+	return cmd
+}
+
+// wfxStartID is wfxStart that also gives the run id and handle (the AI's
+// workflow tools wait on it).
+func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd, error) {
 	st := m.wfxS()
 	id := wire.NewRunID()
 	l := &wfxLive{id: id, name: e.Name, dry: dry, ch: make(chan tea.Msg, 64)}
@@ -563,6 +594,17 @@ func (m *Model) wfxStart(e wire.Entry, dry bool) tea.Cmd {
 			return block(ctx, wfxLineMsg{id: id, text: "message (" + via + "): " + text})
 		},
 		OnEvent: func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
+		OnAgent: func(step, item string, ev ai.Event) {
+			if ev.Kind == ai.EventToolStart && ev.Detail != "" {
+				l.addLine(step + " " + item + ": " + lastLine(ev.Detail))
+				send(wfxLineMsg{id: id})
+			}
+		},
+		AllowFlagged: func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error) {
+			d, err := ask(ctx, wire.GateAsk{Step: step, Item: item, Target: "agent step " + step + " · item " + item,
+				Preview: chip.Text + ": " + strings.Join(chip.Reasons, ", ") + ". The agent gets this item only if you allow it."}, true)
+			return d != wire.GateDeny, err
+		},
 		OnAI: func(step, item string, ev agentrun.Event) {
 			if ev.Tail != "" {
 				l.addLine(step + " " + item + ": " + wfxLastLine(ev.Tail))
@@ -570,9 +612,12 @@ func (m *Model) wfxStart(e wire.Entry, dry bool) tea.Cmd {
 			}
 		},
 	}
+	gh := newWFXGitHub(st.ws)
+	cfg.PR, cfg.GitHubComment, cfg.Find = gh.PR, gh.Comment, gh.Find
+	cfg.ParallelMax, cfg.AgentSandbox = wfxRunSettings()
 	h, err := wire.Start(context.Background(), cfg)
 	if err != nil {
-		return m.aiInfo(e.Name + ": " + agentCtlShort(err.Error()))
+		return "", nil, nil, err
 	}
 	l.h = h
 	st.live[id] = l
@@ -581,7 +626,7 @@ func (m *Model) wfxStart(e wire.Entry, dry bool) tea.Cmd {
 		l.ch <- wfxDoneMsg{id: id}
 	})
 	m.wfxPutRun(h.Snapshot())
-	return tea.Batch(m.wfxShowPage("run:"+id, true), wfxListen(l.ch))
+	return id, h, tea.Batch(m.wfxShowPage("run:"+id, true), wfxListen(l.ch)), nil
 }
 
 func wfxLastLine(s string) string {

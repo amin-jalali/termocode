@@ -463,11 +463,15 @@ missing	workflow-dry-run	Workflows|M
 missing	workflow-edit-file	Workflows|M
 missing	workflow-enable	Workflows|M
 missing	workflow-history	Workflows|M
+missing	workflow-new	Workflows|M
 missing	workflow-run	Workflows|M
 missing	workflow-stop	Workflows|M
 missing	workflows	Workflows|M
 missing	worktree-add-folder	Worktrees|M
 missing	worktree-adopt	Worktrees|M
+missing	worktree-archive	Worktrees|M
+missing	worktree-cleanup	Worktrees|M
+missing	worktree-delete	Worktrees|M
 missing	worktree-filter	Worktrees|M
 missing	worktree-forget	Worktrees|M
 missing	worktree-jump	Worktrees|M
@@ -478,4 +482,5 @@ missing	worktree-notes	Worktrees|M
 missing	worktree-open	Worktrees|M
 missing	worktree-pin	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
+missing	worktree-sleep	Worktrees|M
 missing	worktree-view	Worktrees|M
