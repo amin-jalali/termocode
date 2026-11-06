@@ -8,7 +8,8 @@ import (
 // Source Control: log search and filters (GITX-9).
 
 // Spec: Search Log… takes one line of text and filters; the list shows
-// only the matching commits, and Enter opens the picked one.
+// only the matching commits, and Enter opens the picked one in the
+// commit view.
 func TestSCMSearchLog(t *testing.T) {
 	d, r := scmDriver(t, func(r *repo) {
 		r.write("b.txt", "b\n")
@@ -27,7 +28,7 @@ func TestSCMSearchLog(t *testing.T) {
 		t.Errorf("a commit that does not match is listed:%s", dump(d))
 	}
 	d.Key("enter")
-	if !until(d, func() bool { return strings.Contains(text(d), "c.txt") }) {
+	if !until(d, func() bool { return strings.Contains(text(d), "Commit "+fix) }) {
 		t.Errorf("Enter did not open the commit:%s", dump(d))
 	}
 }
