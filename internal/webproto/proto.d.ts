@@ -1556,6 +1556,10 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface CIFixPrompt {
+  prompt: string;
+}
+
 export interface GitTags {
   tags: string[];
   more?: number;
@@ -1962,6 +1966,7 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ci.fix_prompt": EmptyArgs;
   "git.stage_lines": GitLinesArgs;
   "git.unstage_lines": GitLinesArgs;
   "git.discard_lines": GitLinesArgs;
@@ -2113,6 +2118,7 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ci.fix_prompt": CIFixPrompt;
   "git.discard_lines": AskRef;
   "git.discard_hunk": AskRef;
   "git.tags": GitTags;

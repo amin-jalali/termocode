@@ -949,6 +949,8 @@ export const S = {
   "cmd.merge_prev": "Git: Merge View: Previous Conflict",
   "cmd.merge_base": "Git: Merge View: Take Base",
   "cmd.scm_tree": "Git: Toggle Tree/Flat View",
+  "cmd.git_ci_fix": "Git: Fix CI with AI",
+  "ci.fix_check": "Check the message in the chat, then send it.",
   "cmd.git_compare_rev": "Git: Compare with Revision…",
   "gc.pick": "Compare the file with which commit?",
   "cmd.git_fixup": "Git: Fixup Staged Changes Into…",

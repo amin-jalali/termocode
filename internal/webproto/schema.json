@@ -1577,6 +1577,21 @@
       "phase": "v2"
     },
     {
+      "op": "ci.fix_prompt",
+      "args": "EmptyArgs",
+      "result": "CIFixPrompt",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.stage_lines",
       "args": "GitLinesArgs",
       "role": "controller",
@@ -3192,6 +3207,18 @@
         "t"
       ],
       "additionalProperties": false
+    },
+    "CIFixPrompt": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "additionalProperties": true
     },
     "CIRun": {
       "type": "object",

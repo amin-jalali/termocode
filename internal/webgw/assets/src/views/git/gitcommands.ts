@@ -6,7 +6,7 @@
 // staging, unstaging or discarding the selected rows or the change at
 // the caret; the tags (check one out) and the stash (apply an entry);
 // undo, redo, the reflog and a fixup (each after the laptop's card);
-// the file compared with a revision.
+// the file compared with a revision; Fix CI with AI (into the chat input).
 import type { Command } from "../../lib/commands";
 import { blameOn } from "../../lib/blame";
 import { GRAPH_TAB, PRS_TAB } from "../../lib/gittab";
@@ -18,7 +18,10 @@ import { conflictRows, gitAsk, mergeActs, nextRow, scmTree } from "../../lib/git
 import { toast } from "../../lib/toasts";
 import { t } from "../../strings";
 import { gitFailed } from "./errors";
-import type { GitFixupPlan, GitGraph, GitReflog, GitStashList, GitTags, GitUndoPlan } from "../../../../../webproto/proto";
+import { pendingDraft } from "../../lib/drafts";
+import { readChat } from "../../state/chat";
+import { newChat } from "../Chat";
+import type { CIFixPrompt, GitFixupPlan, GitGraph, GitReflog, GitStashList, GitTags, GitUndoPlan } from "../../../../../webproto/proto";
 import { age } from "../../state/git";
 import { activeFile, cursorAt, focusSlot, quick, setPanes, showFile, type PickItem } from "../../lib/workbench";
 import { link, store } from "../../session";
@@ -142,6 +145,20 @@ function compareRev(): void {
   }, gitFailed);
 }
 
+/** fixCI puts the laptop's Fix with AI message (the failed run's log)
+ * in the chat input, in a new chat when the open one has messages, as
+ * the laptop does; the user reads it and sends it. */
+function fixCI(): void {
+  link.request("ci.fix_prompt", {}).then((r) => {
+    const cur = readChat(store.topic("chat").peek()?.data);
+    const fresh = (cur?.messages.length ?? 0) > 0;
+    pendingDraft.value = { text: (r as CIFixPrompt).prompt, notChat: fresh ? (cur?.id ?? "") : "" };
+    if (fresh) newChat();
+    setPanes({ chat: true });
+    toast("info", t("ci.fix_check"));
+  }, gitFailed);
+}
+
 export function gitCommands(): Command[] {
   return [
     { id: "gitGraph", label: "cmd.git_graph", when: repo, run: () => showFile(GRAPH_TAB) },
@@ -167,6 +184,7 @@ export function gitCommands(): Command[] {
     { id: "gitReflog", label: "cmd.git_reflog", when: repo, run: reflog },
     { id: "gitFixup", label: "cmd.git_fixup", when: () => repo() && canAct(), run: fixup },
     { id: "gitCompareRev", label: "cmd.git_compare_rev", when: () => repo() && fileNow() !== null, run: compareRev },
+    { id: "gitCIFix", label: "cmd.git_ci_fix", when: () => repo() && canAct(), run: fixCI },
     { id: "scmViewToggle", label: "cmd.scm_tree", when: repo, run: () => (scmTree.value = !scmTree.peek()) },
   ];
 }
