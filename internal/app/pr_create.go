@@ -25,6 +25,8 @@ const (
 	promptKindPRCreateTitle promptKindEnum  = 3201
 	confirmKindPRCreate     confirmKindEnum = 3202
 	confirmKindPRPush       confirmKindEnum = 3203
+	promptKindPRReviewers   promptKindEnum  = 3214 // GITX-23
+	promptKindPRLabels      promptKindEnum  = 3215
 )
 
 func prCreatePaletteItems() []picker.Item {
@@ -36,7 +38,9 @@ type prCreatePrepMsg struct {
 	branch, base string
 	subjects     []string
 	unpushed     int
-	pushed       bool // the branch has an upstream
+	pushed       bool   // the branch has an upstream
+	template     string // the repository's pull request template ("" none)
+	templateName string
 	err          error
 }
 
@@ -54,7 +58,9 @@ func (m *Model) prCreateCmd() tea.Cmd {
 		}
 		n, pushed := git.Unpushed(dir)
 		subjects, err := git.BranchSubjects(dir, base)
-		return prCreatePrepMsg{branch: branch, base: base, subjects: subjects, unpushed: n, pushed: pushed, err: err}
+		tpl, tplName, _ := ghci.PRTemplate(dir)
+		return prCreatePrepMsg{branch: branch, base: base, subjects: subjects, unpushed: n, pushed: pushed, err: err,
+			template: tpl, templateName: tplName}
 	})
 }
 
@@ -72,7 +78,8 @@ func (m *Model) onPRCreatePrep(msg prCreatePrepMsg) tea.Cmd {
 		return m.aiInfo("No commits on " + msg.branch + " that " + msg.base + " does not have: nothing to propose")
 	}
 	title, body := ghci.Compose(msg.subjects)
-	m.prS().create = &ghci.NewPR{Title: title, Body: body, Base: msg.base, Branch: msg.branch}
+	m.prS().create = &ghci.NewPR{Title: title, Body: ghci.WithTemplate(msg.template, body), Base: msg.base, Branch: msg.branch}
+	m.prS().createTemplate = msg.templateName
 	m.prompt = prompt.New("Create Pull Request", "Title:", title)
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
@@ -98,6 +105,9 @@ func (m *Model) prAskPush(msg prCreatePrepMsg) tea.Cmd {
 
 // handlePRCreatePromptSubmit takes the title and shows the card.
 func (m *Model) handlePRCreatePromptSubmit(value string) (tea.Cmd, bool) {
+	if cmd, ok := m.handlePRNamesSubmit(value); ok {
+		return cmd, true
+	}
 	if m.promptKind != promptKindPRCreateTitle {
 		return nil, false
 	}
@@ -106,7 +116,22 @@ func (m *Model) handlePRCreatePromptSubmit(value string) (tea.Cmd, bool) {
 		return nil, true
 	}
 	p.Title = strings.TrimSpace(value)
+	m.showPRCreateCard()
+	return nil, true
+}
+
+// showPRCreateCard (re)draws the card of the pull request being created.
+func (m *Model) showPRCreateCard() {
+	p := m.prS().create
+	if p == nil {
+		return
+	}
 	text := "Title: " + p.Title + "\n" + p.Branch + " → " + p.Base + "\n"
+	text += "Reviewers: " + orNone(strings.Join(p.Reviewers, ", ")) + "\n"
+	text += "Labels: " + orNone(strings.Join(p.Labels, ", ")) + "\n"
+	if t := m.prS().createTemplate; t != "" {
+		text += "Template: " + t + "\n"
+	}
 	if p.Body != "" {
 		text += "\nDescription\n" + p.Body + "\n"
 	}
@@ -114,10 +139,56 @@ func (m *Model) handlePRCreatePromptSubmit(value string) (tea.Cmd, bool) {
 	m.confirm = confirm.Risky("Create Pull Request", text,
 		confirm.Button{ID: "cancel", Title: "Cancel"},
 		confirm.Button{ID: "create", Title: "Create", Style: confirm.StylePrimary},
-		confirm.Button{ID: "draft", Title: "Create as Draft"}).WithScrollText().WithWideText()
+		confirm.Button{ID: "draft", Title: "Create as Draft"},
+		confirm.Button{ID: "reviewers", Title: "Reviewers…"},
+		confirm.Button{ID: "labels", Title: "Labels…"}).WithScrollText().WithWideText()
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindPRCreate
+}
+
+// orNone is s, or "none" when empty.
+func orNone(s string) string {
+	if s == "" {
+		return "none"
+	}
+	return s
+}
+
+// prAskNames opens the reviewers or labels prompt of the create card.
+func (m *Model) prAskNames(labels bool) {
+	p := m.prS().create
+	if p == nil {
+		return
+	}
+	if labels {
+		m.prompt = prompt.New("Labels", "Labels, comma separated (empty: none):", strings.Join(p.Labels, ", "))
+		m.promptKind = promptKindPRLabels
+	} else {
+		m.prompt = prompt.New("Reviewers", "GitHub logins or org/team, comma separated (empty: none):", strings.Join(p.Reviewers, ", "))
+		m.promptKind = promptKindPRReviewers
+	}
+	m.prompt.SetAllowEmpty(true)
+	m.prompt.SetSize(m.w, m.h)
+	m.promptOpen = true
+}
+
+// handlePRNamesSubmit takes reviewers or labels and shows the card again.
+// ok=false: not ours.
+func (m *Model) handlePRNamesSubmit(value string) (tea.Cmd, bool) {
+	if m.promptKind != promptKindPRReviewers && m.promptKind != promptKindPRLabels {
+		return nil, false
+	}
+	p := m.prS().create
+	if p == nil {
+		return nil, true
+	}
+	if m.promptKind == promptKindPRLabels {
+		p.Labels = ghci.ParseNames(value, false)
+	} else {
+		p.Reviewers = ghci.ParseNames(value, true)
+	}
+	m.showPRCreateCard()
 	return nil, true
 }
 
@@ -130,6 +201,11 @@ func (m *Model) handlePRCreateConfirm(id string) (tea.Cmd, bool) {
 		}
 		return nil, true
 	case confirmKindPRCreate:
+		if id == "reviewers" || id == "labels" {
+			m.confirmOpen = false
+			m.prAskNames(id == "labels")
+			return nil, true
+		}
 		p := m.prS().create
 		m.prS().create = nil
 		if p == nil || (id != "create" && id != "draft") {

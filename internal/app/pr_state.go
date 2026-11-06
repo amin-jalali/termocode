@@ -23,6 +23,8 @@ type prState struct {
 	busy   bool            // an action runs: a second click waits
 	review ghci.ReviewKind // the review the open prompt sends
 	create *ghci.NewPR     // the pull request being created
+	// createTemplate is the template file the description started from
+	createTemplate string
 
 	threads    []ghci.Thread // the review threads of detail, open first (pr_threads.go)
 	thread     string        // the id of the thread on the card
