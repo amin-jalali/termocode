@@ -338,8 +338,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
+| Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
+| Git: Autosquash fixup! Commits… | `git-autosquash` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
 | Git: CI and Pull Request… | `git-ci` |   |   |
+| Git: Cherry-pick from Branch… | `git-cherry-pick-branch` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
 | Git: Commit... | `git-commit` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
@@ -373,10 +377,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Push | `git-push` |   |   |
+| Git: Rebase Current Branch onto… | `git-rebase-onto` |   |   |
 | Git: Rebase in Progress (Continue / Skip / Abort)… | `git-rebase-status` |   |   |
 | Git: Redo Undone Git Action | `git-redo` |   |   |
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
+| Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |

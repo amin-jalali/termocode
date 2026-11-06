@@ -1972,8 +1972,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `focus-explorer` | View: Focus Explorer | auto |   |
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
+| `git-autosquash` | Git: Autosquash fixup! Commits… | never | rewrites the branch history; only the user starts a rebase |
 | `git-blame` | Git: Blame Current Line | auto |   |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
+| `git-cherry-pick-branch` | Git: Cherry-pick from Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci` | Git: CI and Pull Request… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
@@ -2006,11 +2008,15 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-merge-take-ours` | Git: Merge View: Take Ours | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-theirs` | Git: Merge View: Take Theirs | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-undo` | Git: Merge View: Undo Last Change | never | resolves the user's merge conflict in the merge view; user only |
+| `git-patch-apply-clip` | Git: Apply Patch from Clipboard… | never | applies text from the user's clipboard to the files; user only |
+| `git-patch-apply-file` | Git: Apply Patch from File… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-patch-save` | Git: Save Changes as Patch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-pr-create` | Git: Create Pull Request… | never | publishes a pull request in the user's name; only the user creates one |
 | `git-pr-list` | Git: Pull Requests… | auto |   |
 | `git-pull` | Git: Pull | confirm (git) |   |
 | `git-push` | Git: Push | confirm (always asks) |   |
 | `git-rebase` | Git: Interactive Rebase… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-rebase-onto` | Git: Rebase Current Branch onto… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-rebase-status` | Git: Rebase in Progress (Continue / Skip / Abort)… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-redo` | Git: Redo Undone Git Action | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
