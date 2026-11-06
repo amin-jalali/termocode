@@ -102,3 +102,22 @@ func TestChatMoreLaptopCommandsAndScreens(t *testing.T) {
 	p.TapJS(ButtonByText("Copy"))
 	p.WaitJS(`(` + toastsJS + `).includes("Copied")`)
 }
+
+// AI: MCP: Switch Profile… lists the profiles (the chat's own marked);
+// using one asks here first (Cancel first), then the laptop.
+func TestChatMoreMCPProfile(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openChat(t, vp, chatWith(false, userMsg(0, "hi")))
+			pickMore(t, p, c, "AI: MCP: Switch Profile…", true)
+			reply(t, c, expectOp(t, c, "ai.mcp_profiles", `{}`), webproto.MCPProfiles{Current: "", Profiles: []webproto.MCPProfileItem{{Name: "review", Hint: "user · 1 server: github"}}})
+			p.WaitJS(moreItem("● All servers and tools") + ` && ` + moreItem("review"))
+			p.TapJS(moreItem("review"))
+			p.WaitJS(`document.querySelector(".ask") && document.activeElement === document.querySelector(".ask .choices button")`)
+			p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
+			p.TapJS(ButtonByText("Ask the laptop"))
+			reply(t, c, expectOp(t, c, "ai.use_mcp_profile", `{"name":"review"}`), webproto.AskRef{Card: "card-6"})
+			p.WaitJS(`document.querySelector(".waiting")`)
+		})
+	}
+}
