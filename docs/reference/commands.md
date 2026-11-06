@@ -91,8 +91,11 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
+| Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
+| Agent: Sessions… | `agent-sessions` |   | `resume or read a past session` |
 | Agent: Start Claude Code | `agent-start-claude` |   |   |
 | Agent: Start Codex | `agent-start-codex` |   |   |
 | Agent: Start Gemini CLI | `agent-start-gemini` |   |   |
@@ -341,12 +344,20 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
+| Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
+| Git: Autosquash fixup! Commits… | `git-autosquash` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
 | Git: CI and Pull Request… | `git-ci` |   |   |
+| Git: Cherry-pick from Branch… | `git-cherry-pick-branch` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
+| Git: Commit and Push | `git-commit-push` |   |   |
+| Git: Commit and Sync | `git-commit-sync` |   |   |
 | Git: Commit... | `git-commit` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
+| Git: Delete Untracked Files… | `git-clean-untracked` |   |   |
+| Git: Discard All Changes… | `git-discard-all` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
@@ -376,10 +387,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Push | `git-push` |   |   |
+| Git: Rebase Current Branch onto… | `git-rebase-onto` |   |   |
 | Git: Rebase in Progress (Continue / Skip / Abort)… | `git-rebase-status` |   |   |
 | Git: Redo Undone Git Action | `git-redo` |   |   |
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
+| Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |
@@ -394,6 +407,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
+| Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
 
@@ -644,6 +658,17 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Workspace: Add Folder... | `workspace-add-folder` |   |   |
 | Workspace: Remove Folder... | `workspace-remove-folder` |   |   |
+
+## Worktree
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Worktree: Add Selected as Folder | `worktree-add-folder` |   |   |
+| Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
+| Worktree: Next Filter | `worktree-filter` |   |   |
+| Worktree: Open Selected | `worktree-open` |   |   |
+| Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
+| Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 
 ## termocode
 

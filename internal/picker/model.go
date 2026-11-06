@@ -100,6 +100,9 @@ func (m Model) rowAction() tea.Cmd {
 	return func() tea.Msg { return ActionMsg{Key: key, ID: it.ID, Title: it.Title} }
 }
 
+// Query is the text typed into the search field.
+func (m Model) Query() string { return m.input }
+
 // SetWidth asks for a wider box (rows with a hint column, like the
 // Connect-a-service list); it still fits the window.
 func (m *Model) SetWidth(w int) { m.width = w }

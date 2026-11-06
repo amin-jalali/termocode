@@ -52,12 +52,19 @@ func TestRebaseTabOrdersAndAsksLaptop(t *testing.T) {
 	Eval[bool](p, `(document.querySelector('li.gr-row[data-hash="cccc333"]').focus(), true)`)
 	p.Key("f")
 	p.Do(chromedp.KeyEvent(kb.ArrowUp, chromedp.KeyModifiers(chromedp.ModifierAlt)))
-	p.WaitJS(`document.activeElement?.dataset?.hash === "cccc333"`)
+	// The focused row keeps focus while it moves, so wait for the new
+	// order and for the frame in which the view refocuses the moved row;
+	// a key pressed before that runs with the old row index.
+	p.WaitJS(`[...document.querySelectorAll('[data-view="rebase"] li.gr-row')].map((r) => r.dataset.hash).join() === "aaaa111,cccc333,bbbb222"`)
+	Eval[bool](p, `(window.__rebaseFrame = false, requestAnimationFrame(() => requestAnimationFrame(() => (window.__rebaseFrame = true))), true)`)
+	p.WaitJS(`window.__rebaseFrame === true && document.activeElement?.dataset?.hash === "cccc333"`)
 	if got := rebaseRows(p); got != "pick aaaa111,fixup cccc333,pick bbbb222" {
 		t.Fatalf("rows %s", got)
 	}
 	// r on "two" makes a reword with its message to edit.
+	// Press r only once "two" really has focus.
 	Eval[bool](p, `(document.querySelector('li.gr-row[data-hash="bbbb222"]').focus(), true)`)
+	p.WaitJS(`document.activeElement?.dataset?.hash === "bbbb222" || (document.querySelector('li.gr-row[data-hash="bbbb222"]').focus(), false)`)
 	p.Key("r")
 	p.WaitJS(`document.querySelector('li.gr-row[data-hash="bbbb222"] textarea.gr-msg')?.value === "two\n\nwhy two"`)
 	Eval[bool](p, `(() => { const a = document.querySelector('li.gr-row[data-hash="bbbb222"] textarea.gr-msg'); a.value = "two, better"; a.dispatchEvent(new Event("input", {bubbles: true})); return true; })()`)

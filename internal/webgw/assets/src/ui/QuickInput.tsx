@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { FilesListRes } from "../../../../webproto/proto";
 import { allCommands, cmdTitle, gotoLine, loadLaptopCmds, noteRun, recentCmds, type Command } from "../lib/commands";
 import { rank, type Hit } from "../lib/fuzzy";
-import { quick, showFile } from "../lib/workbench";
+import { quick, showFile, type Pick, type PickItem } from "../lib/workbench";
 import { link } from "../session";
 import { t } from "../strings";
 import { FileIcon } from "./icons";
@@ -50,6 +50,8 @@ interface Row {
   /** tag starts a group on the right: "recently used", "other commands". */
   tag?: string;
   file?: boolean;
+  /** icon is the file whose icon shows (key, when not given). */
+  icon?: string;
   run: () => void;
 }
 
@@ -66,6 +68,17 @@ function fileRows(q: string, list: readonly string[]): Row[] {
       run: () => showFile(item),
     };
   });
+}
+
+/** PICK_MS is the pause in typing before a picker asks again. */
+const PICK_MS = 150;
+
+/** pickRows: a picker's items that match q (its own list), or the rows
+ * it loaded for what is typed (in the order they came). */
+function pickRows(q: string, pk: Pick, loaded: readonly PickItem[] | null): Row[] {
+  const row = (it: PickItem, i: number, at: number[]): Row => ({ key: String(i) + "#" + it.label, label: it.label, at, detail: it.detail, file: it.file !== undefined, icon: it.file, run: it.run });
+  if (pk.items) return rank(q, pk.items, (it) => it.label, MAX_ROWS).map(({ item, hit }, i) => row(item, i, hit.at));
+  return (loaded ?? []).slice(0, MAX_ROWS).map((it, i) => row(it, i, []));
 }
 
 /** commandRows: the commands that match q, the recently used ones first
@@ -103,7 +116,9 @@ export function QuickInput() {
   const box = useRef<HTMLInputElement | null>(null);
 
   const ask = q0?.mode === "ask" ? (q0.ask ?? null) : null;
-  const wantFiles = !ask && !text.startsWith(">") && !text.startsWith(":");
+  const pk = q0?.mode === "pick" ? (q0.pick ?? null) : null;
+  const [loaded, setLoaded] = useState<{ q: string; items: readonly PickItem[] } | null>(null);
+  const wantFiles = !ask && !pk && !text.startsWith(">") && !text.startsWith(":");
   const wantCmds = text.startsWith(">");
   useLayoutEffect(() => box.current?.focus(), []);
   useEffect(() => {
@@ -121,10 +136,32 @@ export function QuickInput() {
     );
   }, [wantFiles]);
 
+  // A picker that asks for what is typed: once typing pauses.
+  useEffect(() => {
+    const load = pk?.load;
+    if (!load) return;
+    let stop = false;
+    const timer = setTimeout(
+      () =>
+        load(text).then(
+          (items) => !stop && setLoaded({ q: text, items }),
+          (e: unknown) => !stop && (setLoaded({ q: text, items: [] }), setNote(e instanceof Error ? e.message : "")),
+        ),
+      PICK_MS,
+    );
+    return () => {
+      stop = true;
+      clearTimeout(timer);
+    };
+  }, [pk, text]);
+
   const close = () => (quick.value = null);
   let rows: Row[] = [];
   let placeholder = t("quick.files");
-  if (ask) {
+  if (pk) {
+    rows = pickRows(text, pk, loaded?.items ?? null);
+    placeholder = pk.title;
+  } else if (ask) {
     // A question (Edit with AI): Enter sends what was typed.
     rows = text.trim() ? [{ key: "ask", label: text.trim(), at: [], detail: t("quick.ask_go"), run: () => ask.run(text.trim()) }] : [];
     placeholder = ask.title;
@@ -193,7 +230,7 @@ export function QuickInput() {
               }}
               onMouseMove={() => i !== cur && setSel(i)}
             >
-              {r.file && <FileIcon path={r.key} />}
+              {r.file && <FileIcon path={r.icon ?? r.key} />}
               <span class="quick-label" dir="auto">
                 <Marked text={r.label} at={r.at} />
               </span>
@@ -212,7 +249,7 @@ export function QuickInput() {
           ))}
           {!rows.length && (
             <li class="quick-empty" role="presentation">
-              {ask ? t("quick.ask_type") : note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
+              {ask ? t("quick.ask_type") : pk ? note || (pk.load && loaded?.q !== text ? t("quick.loading") : t("quick.none")) : note || (list === null && !text.startsWith(">") && !text.startsWith(":") ? t("quick.loading") : t("quick.none"))}
             </li>
           )}
         </ul>

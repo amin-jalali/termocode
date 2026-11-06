@@ -1,15 +1,20 @@
 package app
 
 import (
+	"context"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // Multi-root workspace plumbing for the app layer.
@@ -38,15 +43,12 @@ func (m *Model) openAddRootPrompt() {
 // the user gets feedback (tilde expansion failure, missing dir, file not
 // dir, etc.) without losing their typed input.
 func (m *Model) addRootFromPrompt(value string) tea.Cmd {
-	expanded, err := expandUser(value)
+	ws := m.workspace()
+	abs, err := rootPathOn(ws, value)
 	if err != nil {
 		return m.pushToastDetail(toast.Errr, "Add folder failed", err.Error())
 	}
-	abs, err := filepath.Abs(expanded)
-	if err != nil {
-		return m.pushToastDetail(toast.Errr, "Add folder failed", err.Error())
-	}
-	info, err := os.Stat(abs)
+	info, err := statOn(ws, abs)
 	if err != nil {
 		return m.pushToastDetail(toast.Errr, "Add folder failed", err.Error())
 	}
@@ -130,13 +132,14 @@ func (m *Model) loadAndApplyWorkspaceRoots() tea.Cmd {
 		return nil
 	}
 	var gone []string
+	ws := m.workspace()
 	primary := m.explorer.PrimaryRoot()
 	kept := make([]string, 0, len(sess.Roots))
 	for _, p := range sess.Roots {
 		if p == "" {
 			continue
 		}
-		abs, err := filepath.Abs(p)
+		abs, err := rootPathOn(ws, p)
 		if err != nil {
 			continue
 		}
@@ -145,7 +148,7 @@ func (m *Model) loadAndApplyWorkspaceRoots() tea.Cmd {
 		if abs == primary {
 			continue
 		}
-		info, err := os.Stat(abs)
+		info, err := statOn(ws, abs)
 		if err != nil || !info.IsDir() {
 			// Path no longer exists / isn't a dir — drop it.
 			gone = append(gone, filepath.Base(abs))
@@ -170,6 +173,38 @@ func (m *Model) loadAndApplyWorkspaceRoots() tea.Cmd {
 	}
 	return m.pushToastDetail(toast.Warn, "Workspace folder not found", what+"; removed from the workspace.")
 }
+
+// rootPathOn makes a typed or saved folder path absolute where ws lives:
+// on this machine ("~" is the home folder), or in the container (FIX-3:
+// relative to the workspace root; the local home means nothing there).
+func rootPathOn(ws workspace.Workspace, p string) (string, error) {
+	if _, ok := remoteFS(ws); ok {
+		if !path.IsAbs(p) {
+			p = path.Join(ws.Root, p)
+		}
+		return path.Clean(p), nil
+	}
+	expanded, err := expandUser(p)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Abs(expanded)
+}
+
+// statOn stats p where ws lives: the local disk, or the Host FS of a
+// container workspace (never the local disk, FIX-3).
+func statOn(ws workspace.Workspace, p string) (fs.FileInfo, error) {
+	if fsys, ok := remoteFS(ws); ok {
+		ctx, cancel := context.WithTimeout(context.Background(), remoteStatTimeout)
+		defer cancel()
+		return fsys.Stat(ctx, p)
+	}
+	return os.Stat(p)
+}
+
+// remoteStatTimeout caps one folder check in a container (plan: 10 s per
+// FS call).
+const remoteStatTimeout = 10 * time.Second
 
 // expandUser expands a leading "~" or "~/..." into the user's home dir.
 // Anything else is returned unchanged.
