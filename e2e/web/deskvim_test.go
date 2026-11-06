@@ -122,3 +122,50 @@ func TestDeskVimBasicMotions(t *testing.T) {
 		t.Errorf("problems (CSP, console): %v", probs)
 	}
 }
+
+// Spec (WEBP-1): the . repeat, counts on an insert, macros and
+// registers. . does the last change again (an insert with its typed
+// text too); 2ia<Esc> types the text twice; qa … q records the keys into
+// register a (the status bar says "recording @a"), @a plays them, @@
+// plays the last one again; "ayy yanks into a, "0 keeps the last yank
+// after a delete, "_ deletes without touching any register.
+func TestDeskVimRepeatMacrosRegisters(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "one two three", "four", "five")
+	toggleVim(t, p, c, true)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+
+	v.keys("dw", "two three", "four", "five")
+	v.keys(".", "three", "four", "five")
+	v.keys("A!", "three!", "four", "five")
+	realKeys(p, string(kb.Escape))
+	v.mode("-- NORMAL --")
+	v.keys("j.", "three!", "four!", "five")
+	v.keys("j02ia", "three!", "four!", "afive")
+	realKeys(p, string(kb.Escape))
+	v.settle("three!", "four!", "aafive")
+	v.mode("-- NORMAL --")
+
+	// A macro: recorded, played, played again.
+	v.keys("ggqa", "three!", "four!", "aafive")
+	p.WaitJS(`(document.querySelector(".statusbar .sb-vim-rec")?.textContent ?? "") === "recording @a"`)
+	v.keys("0i-", "-three!", "four!", "aafive")
+	realKeys(p, string(kb.Escape))
+	v.keys("jq", "-three!", "four!", "aafive")
+	p.WaitJS(`!document.querySelector(".statusbar .sb-vim-rec")`)
+	v.keys("@a", "-three!", "-four!", "aafive")
+	v.keys("@@", "-three!", "-four!", "-aafive")
+
+	// Registers: the yank register, a named one, the black hole.
+	v.keys("ggyyjdd", "-three!", "-aafive")
+	v.keys(`"0p`, "-three!", "-aafive", "-three!")
+	v.keys(`"_dd`, "-three!", "-aafive")
+	v.keys("p", "-three!", "-aafive", "-four!")
+	v.keys(`gg"byyG"bP`, "-three!", "-aafive", "-three!", "-four!")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
