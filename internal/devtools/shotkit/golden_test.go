@@ -271,6 +271,8 @@ func goldenCases() []goldenCase {
 	out = append(out, worktreesCases()...)     // golden_worktrees_test.go
 	out = append(out, agentChatCases()...)     // golden_agents_test.go
 	out = append(out, agentSessionsCases()...) // golden_agents_test.go
+	out = append(out, agentUsagePlansCases()...)
+	out = append(out, agentNamesCases()...)
 	// A terminal tab split into three panes (G-SPL).
 	{
 		sc := TerminalSplit()

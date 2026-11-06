@@ -1265,7 +1265,7 @@ No arguments.
 
 ### usage_summary
 
-This session's AI usage, as the USAGE view shows it: per model and per agent step, the calls, input and output token counts (fields input, output) and the cost in USD (only where the price is known). Subscription steps (a Claude sign-in, Claude Code, Codex) say "subscription" and have no dollar cost. Numbers and names only.
+This session's AI usage, as the USAGE view shows it: per model and per agent step, the calls, input and output token counts (fields input, output) and the cost in USD (only where the price is known). Subscription steps (a Claude sign-in, Claude Code, Codex) say "subscription" and have no dollar cost. plans: per outside agent account (Claude Code, Codex) the used share of the plan window when known, whether a usage limit is on, the reset time, the last limit and today's tokens, from the agents' own screens and (when the user allows it) their session files; never from a vendor endpoint. Numbers and names only.
 
 **Gate:** auto
 
@@ -1897,7 +1897,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | ID | Title | Gate | Reason |
 | --- | --- | --- | --- |
+| `agent-account-use` | Agent: Accounts… | never | AI provider, credentials and approvals stay with the user; opens a picker or prompt that only the user can answer; use a typed tool |
+| `agent-auto-continue-toggle` | Agent: Toggle Auto-Continue | never | AI provider, credentials and approvals stay with the user; it lets termocode type into an outside agent's tab |
 | `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
+| `agent-hibernate-toggle` | Agent: Hibernate or Wake | never | AI provider, credentials and approvals stay with the user; it stops or starts an outside agent's process |
 | `agent-race` | Agent: Race… | never | opens a picker or prompt that only the user can answer; use a typed tool (agent_race_start) |
 | `agent-race-compare` | Agent: Race Compare | auto |   |
 | `agent-sessions` | Agent: Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; it reads the outside agents' own session files (owner decision D1) |
@@ -1907,6 +1910,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
 | `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
 | `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
+| `agent-usage-plans` | Agent: Usage Plans | never | a read-only screen for the user; the AI reads the numbers through usage_summary |
 | `ai-add` | AI: Add AI… | never | a card for the user; keys and connected AIs stay with the user (the AI shows them with ai_view_open) |
 | `ai-agent-hooks` | Agent: State Hooks… (exact working / waiting / done) | never | it changes other apps' config files: the user decides after the preview |
 | `ai-agents` | AI: Toggle Agents Panel | auto |   |
@@ -2391,6 +2395,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
 | `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |
+| `worktree-suggest-name` | Worktree: Suggest a Name… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the name |
 | `worktree-view` | Worktree: Show | auto |   |
 | `zen-mode` | View: Toggle Zen Mode | auto |   |
 
@@ -2400,6 +2405,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 
 | Key | Gate | Reason |
 | --- | --- | --- |
+| `agent_accounts` | never | AI provider, credentials and approvals stay with the user; the labels of the outside agents' account folders |
+| `agent_auto_continue` | never | AI provider, credentials and approvals stay with the user; it lets termocode type continue into an outside agent's tab after its usage limit resets |
+| `agent_hibernate_minutes` | never | AI provider, credentials and approvals stay with the user; it lets termocode stop idle outside agents |
 | `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |

@@ -81,7 +81,7 @@ func buildBugReport(settings []byte, logs, chat string) string {
 	for _, secret := range secrets {
 		body = strings.ReplaceAll(body, secret, "[REDACTED]")
 	}
-	return ai.Redact(aiCleanText(body))
+	return ai.Redact(aiCleanText(agentAccountsRedact(body))) // AGX-13: the account folders hold the CLIs' sign-in
 }
 
 // Bounded reads keep large logs from blocking the report screen.
