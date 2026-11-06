@@ -143,8 +143,11 @@ func TestCovGitEditorConflicts(t *testing.T) {
 	}
 	covRefresh(m)
 	covCursorTo(t, m, func(r gitPanelRow) bool { return r.kind == gitRowFile && r.section == gitSecConflicts })
-	covKey(m, tea.KeyMsg{Type: tea.KeyEnter})
-	if covNvimLine(t, m) != "2" || m.focus != FocusEditor {
+	// Enter opens the merge view: its stages are read off the loop, then
+	// the result opens in the editor at the first marker.
+	cmd, _ := covKey(m, tea.KeyMsg{Type: tea.KeyEnter})
+	m.onMergeMsg(covMsg[mergeStagesMsg](t, cmd))
+	if covNvimLine(t, m) != "2" || m.focus != FocusEditor || !m.mergeViewShown() {
 		t.Fatalf("conflict file not opened at the marker: line %s", covNvimLine(t, m))
 	}
 
