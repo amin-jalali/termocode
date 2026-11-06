@@ -737,6 +737,21 @@ export const SD = {
   "lspm.busy": "{name} is installing on the laptop now.",
   "lspm.install_ask": "Install {name} on the laptop? The laptop card shows what runs there.",
   "lspm.uninstall_ask": "Uninstall {name} from the laptop? Only termocode's own copy is removed.",
+  // Preferences: Color Theme… and Edit Custom Theme (WEBP-7)
+  "cmd.pick_theme": "Preferences: Color Theme…",
+  "cmd.edit_theme": "Preferences: Edit Custom Theme",
+  "thm.title": "Color theme of the laptop (this page follows it)",
+  "thm.active": "shown now",
+  "thm.light": "light",
+  "thm.set": "Color theme: {name}.",
+  "thm.colors": "Colors of the custom theme (Enter: change one)",
+  "thm.custom": "custom",
+  "thm.ask": "{key}: a color like #1e1e2e",
+  "thm.bad": "A color is # and 3 or 6 hex digits, like #1e1e2e.",
+  "thm.change": "Change Color…",
+  "thm.reset": "Back to the Theme's Color",
+  "thm.color_set": "{key} is {color} now.",
+  "thm.color_reset": "{key} is back to the theme's color.",
 } as const;
 
 addStrings(SD);

@@ -15,7 +15,7 @@ fonts/nf-seti.woff2 sha384-SIRO07PrKQGKqZz8AqBLr5pTSfSdjHR93D+woV27NzC1QnmdQf6bY
 icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 icons/codicon.ttf sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N 125828
-index.html sha384-Y8LJld1FuPX/pgeRV86i+GlY2odXXhnBZeoYJV3hQfGW8QIiC7UE7wKYU0ZzKm4q 1274
+index.html sha384-B87Vfshxzb/GNE63uZplFCUEYeTxzi/rLKfkNgBZSMJ2Tog62s3gCvYkBGbhfw0t 1274
 kit.css sha384-7WHeFdiodusvQPgKcbACG91UfM/irxKZ4JGOuwXSpfUFFislX5uTaJ+hNpywIlLk 34402
 kit.html sha384-lc8cFbKFrcPTm2RF/nx1G2xEP4c1a8CE0aJ5rIyTEUTPG7KJ/7cj786YQkhfWQYE 719
 kit.js sha384-IFNcnH9BXbWLs5sbz9iM6z3aR9/XARbucP/xnw5Oq6/QON/eBDHZHnjkSkvGUSk4 113039
@@ -29,5 +29,5 @@ monaco/editor-contrib.js sha384-zovZc9/8c8IF6IlccJXAp+iG87TnOpWjJGqruAwc0mBMA0kL
 monaco/editor-host.js sha384-rIPG+WRVloxnbIjzdw7y2Okz9CDO0u8Vi8Gp09YBtnrkMwRn5dEhgAkE5greTXHf 361750
 monaco/editor.css sha384-h3Pml8012xDelgjWIfvjv8T/9ptDUnH1yJrSjj78OtB8P1yT/3pmrp6Y7S2cNUV4 390829
 monaco/editor.js sha384-n5VxbIFjdhl1sERXQHN52h87EGviSdsndgKg9eRxZVuVsFtoxtLJDuY2UxnnGx/r 2472349
-strings-fa.js sha384-Um3shBqXl9QTN4AIgKzke3hIN8pAeG+nlT2v8hpMqzKNcuNIKaLQ3gV0oz0SvER4 90570
-workbench.js sha384-BTUZWW88RdmHiqiUrGENuaLFO866rm1gVQxNB3KKmfREwgaGZOC/YQDiIb2wJWll 238166
+strings-fa.js sha384-BiZ/ByAE7Kf/k/IjmTdHdZJhyIzSUw6R8XI+EOk8BntPLurBdVZ39sVsevqTahb0 91364
+workbench.js sha384-cLW+b6XriYC2c2QFMMhEAF5+gz4XDOPFwaScu1EM7YgXhygsEQhc3dfcK69D34kq 240007

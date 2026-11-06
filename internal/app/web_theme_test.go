@@ -3,6 +3,7 @@ package app
 import (
 	"testing"
 
+	"github.com/amin-jalali/termocode/internal/editor"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -12,6 +13,7 @@ import (
 func webThemeRig(t *testing.T) *webFilesRig {
 	t.Helper()
 	r := newWebFilesRig(t)
+	r.m.editor = editor.New(nil) // the laptop's terminals follow the theme
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	was := r.m.themeID
 	if was == "" {

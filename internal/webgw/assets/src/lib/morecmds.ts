@@ -1,7 +1,7 @@
 // More commands of the workbench's command list (WEBP-9): laptop palette
 // commands the page does too, each through its own op or on the page.
 // Only the desktop workbench loads this file (lib/commands.ts).
-import type { DebugLaunch, LSPServer, LSPServerList, MCPItems } from "../../../../webproto/proto";
+import type { DebugLaunch, LSPServer, LSPServerList, MCPItems, ThemeColor, ThemeColors, ThemeList } from "../../../../webproto/proto";
 import { link } from "../session";
 import { t } from "../strings";
 import { toast } from "./toasts";
@@ -118,6 +118,91 @@ export function manageLSP(): void {
   }, failed);
 }
 
+/** pickTheme lists the laptop's color themes (Preferences: Color
+ * Theme…); the one picked shows on the laptop, and this page follows
+ * the laptop's colors. */
+export function pickTheme(): void {
+  link.request("theme.list").then((r) => {
+    const l = r as ThemeList;
+    const detail = (id: string, light?: boolean) => [id === l.active ? t("thm.active") : "", light ? t("thm.light") : ""].filter(Boolean).join(" · ") || undefined;
+    quick.value = {
+      mode: "pick",
+      pick: {
+        title: t("thm.title"),
+        items: (l.themes ?? []).map((th) => ({
+          label: th.name,
+          detail: detail(th.id, th.light),
+          run: () => link.request("theme.set", { id: th.id }).then(() => toast("ok", t("thm.set", { name: th.name })), failed),
+        })),
+      },
+    };
+  }, failed);
+}
+
+/** setThemeColor sends one custom color ("" gives it back to the theme). */
+function setThemeColor(key: string, color: string): void {
+  link
+    .request("theme.color_set", { key, color })
+    .then(() => toast("ok", color ? t("thm.color_set", { key, color }) : t("thm.color_reset", { key })), failed);
+}
+
+/** askThemeColor asks the new color of key here. */
+function askThemeColor(key: string): void {
+  setTimeout(
+    () =>
+      (quick.value = {
+        mode: "ask",
+        ask: {
+          title: t("thm.ask", { key }),
+          run: (raw) => {
+            const color = raw.trim();
+            if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color)) {
+              toast("warn", t("thm.bad"));
+              return;
+            }
+            setThemeColor(key, color);
+          },
+        },
+      }),
+    0,
+  );
+}
+
+/** pickThemeColor is a color picked: a new color, or (a custom one) back
+ * to the theme's own. */
+function pickThemeColor(c: ThemeColor): void {
+  if (!c.custom) {
+    askThemeColor(c.key);
+    return;
+  }
+  setTimeout(
+    () =>
+      (quick.value = {
+        mode: "pick",
+        pick: {
+          title: c.key,
+          items: [
+            { label: t("thm.change"), run: () => askThemeColor(c.key) },
+            { label: t("thm.reset"), run: () => setThemeColor(c.key, "") },
+          ],
+        },
+      }),
+    0,
+  );
+}
+
+/** editTheme lists the custom theme's colors (Preferences: Edit Custom
+ * Theme); a change shows the custom theme on the laptop. */
+export function editTheme(): void {
+  link.request("theme.colors").then((r) => {
+    const items = (r as ThemeColors).colors ?? [];
+    quick.value = {
+      mode: "pick",
+      pick: { title: t("thm.colors"), items: items.map((c) => ({ label: c.key, detail: c.custom ? c.color + " · " + t("thm.custom") : c.color, run: () => pickThemeColor(c) })) },
+    };
+  }, failed);
+}
+
 /** moreCommands are this file's commands. */
 export function moreCommands(): Command[] {
   return [
@@ -125,6 +210,8 @@ export function moreCommands(): Command[] {
     { id: "testingCollapse", label: "cmd.testing_collapse", run: collapseTests },
     { id: "aiSide", label: "cmd.ai_side", when: canAct, run: askSide },
     { id: "aiMcpInsert", label: "cmd.ai_mcp_insert", when: canAct, run: pickMCP },
+    { id: "pickTheme", label: "cmd.pick_theme", when: canAct, run: pickTheme },
+    { id: "editTheme", label: "cmd.edit_theme", when: canAct, run: editTheme },
     { id: "lspManage", label: "cmd.lsp_manage", when: canAct, run: manageLSP },
     { id: "outputClear", label: "cmd.output_clear", when: () => logs.peek() !== null, run: clearOutput },
   ];

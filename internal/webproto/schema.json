@@ -1767,6 +1767,62 @@
       "phase": "v2"
     },
     {
+      "op": "theme.list",
+      "args": "EmptyArgs",
+      "result": "ThemeList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "theme.set",
+      "args": "ThemeArgs",
+      "result": "ThemeList",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "theme.colors",
+      "args": "EmptyArgs",
+      "result": "ThemeColors",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "theme.color_set",
+      "args": "ThemeColorArgs",
+      "result": "ThemeColors",
+      "role": "controller",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "workflows.stop",
       "args": "WorkflowRunArgs",
       "role": "controller",
@@ -12949,6 +13005,106 @@
         "state",
         "counts",
         "items"
+      ],
+      "additionalProperties": true
+    },
+    "ThemeArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ThemeColor": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string"
+        },
+        "custom": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "color"
+      ],
+      "additionalProperties": true
+    },
+    "ThemeColorArgs": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "color"
+      ],
+      "additionalProperties": false
+    },
+    "ThemeColors": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "items": {
+            "$ref": "#/defs/ThemeColor"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "colors"
+      ],
+      "additionalProperties": true
+    },
+    "ThemeInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "light": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "ThemeList": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "string"
+        },
+        "themes": {
+          "items": {
+            "$ref": "#/defs/ThemeInfo"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "themes",
+        "active"
       ],
       "additionalProperties": true
     },

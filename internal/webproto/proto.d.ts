@@ -396,6 +396,15 @@ export interface TestIDArgs {
   id: string;
 }
 
+export interface ThemeArgs {
+  id: string;
+}
+
+export interface ThemeColorArgs {
+  key: string;
+  color: string;
+}
+
 export interface WorkflowRunArgs {
   run: string;
 }
@@ -1970,6 +1979,27 @@ export interface TestOutput {
   truncated?: boolean;
 }
 
+export interface ThemeList {
+  themes: ThemeInfo[];
+  active: string;
+}
+
+export interface ThemeInfo {
+  id: string;
+  name: string;
+  light?: boolean;
+}
+
+export interface ThemeColors {
+  colors: ThemeColor[];
+}
+
+export interface ThemeColor {
+  key: string;
+  color: string;
+  custom?: boolean;
+}
+
 export interface WorkspaceList {
   folders: WorkspaceEntry[];
   recent: WorkspaceEntry[];
@@ -2868,6 +2898,10 @@ export interface OpArgs {
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "theme.list": EmptyArgs;
+  "theme.set": ThemeArgs;
+  "theme.colors": EmptyArgs;
+  "theme.color_set": ThemeColorArgs;
   "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
@@ -3121,6 +3155,10 @@ export interface OpResult {
   "snippets.save": SnippetSaved;
   "snippets.delete": SnippetSaved;
   "tests.output": TestOutput;
+  "theme.list": ThemeList;
+  "theme.set": ThemeList;
+  "theme.colors": ThemeColors;
+  "theme.color_set": ThemeColors;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
