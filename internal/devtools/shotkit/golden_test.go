@@ -216,6 +216,14 @@ func goldenExtras() []Scene {
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
+		// Log search and push preview (GITX-9, GITX-12): the results of a
+		// Search Log… query, and the Cancel-first Push… card.
+		{Name: "log-search-results", Steps: append(append([]Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-log-search"), Pause(400 * time.Millisecond)}, TypeKeys("all")...), Key("enter"), Pause(600*time.Millisecond))},
+		{Name: "push-preview-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-push-preview"), Pause(600 * time.Millisecond)}},
+		// Diff options (GITX-26): the parents of the demo merge, then the
+		// merge against parent 2 (what it brought from toast-slide).
+		{Name: "merge-parent-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("commit:HEAD"), Pause(1200 * time.Millisecond), Act("palette:git-diff-merge-parent"), Pause(500 * time.Millisecond)}},
+		{Name: "merge-parent-diff", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("commit:HEAD"), Pause(1200 * time.Millisecond), Act("palette:git-diff-merge-parent"), Pause(500 * time.Millisecond), Key("down"), Key("enter"), Pause(1200 * time.Millisecond)}},
 		// Commit box helpers (GITX-6): the recent messages and the
 		// co-author pickers.
 		{Name: "commit-history-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-commit-history"), Pause(600 * time.Millisecond)}},
