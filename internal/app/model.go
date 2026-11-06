@@ -256,6 +256,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitRef is what a tag, remote or force-push card or prompt is about
+	// (git_tags_remotes.go).
+	gitRef gitRefOpsState
 	// Commit box extras (git_commit_msg.go): the recent messages Up / Down
 	// step through (pos 0 = the draft), the template, the editor file.
 	gitCommitHist       []string

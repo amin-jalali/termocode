@@ -216,6 +216,10 @@ func goldenExtras() []Scene {
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
+		// Tags and remotes (GITX-11, GITX-13): the remotes manager, and the
+		// Cancel-first card of Delete Tag….
+		{Name: "remotes-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-remotes"), Pause(600 * time.Millisecond)}},
+		{Name: "tag-delete-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-tag-delete"), Pause(600 * time.Millisecond), Key("enter"), Pause(600 * time.Millisecond)}},
 		// Log search and push preview (GITX-9, GITX-12): the results of a
 		// Search Log… query, and the Cancel-first Push… card.
 		{Name: "log-search-results", Steps: append(append([]Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-log-search"), Pause(400 * time.Millisecond)}, TypeKeys("all")...), Key("enter"), Pause(600*time.Millisecond))},

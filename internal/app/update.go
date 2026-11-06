@@ -2440,6 +2440,14 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindGitTagDelete, pickerKindGitTagPush, pickerKindGitTagDeleteRemote, pickerKindGitTagDetails: // git_tags_remotes.go
+		return m.onGitTagPicked(m.pickerKind, msg.ID)
+	case pickerKindGitRemotes:
+		return m.onRemotePicked(msg.ID)
+	case pickerKindGitRemoteAction:
+		return m.onRemoteActionPicked(msg.ID)
+	case pickerKindGitUpstream:
+		return m.onUpstreamPicked(msg.ID)
 	case pickerKindCommitHistory: // git_commit_msg.go
 		return m.onCommitHistoryPicked(msg.ID)
 	case pickerKindCoAuthor:

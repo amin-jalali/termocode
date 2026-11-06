@@ -174,6 +174,35 @@ blame skips the commits it lists (for example a big formatting commit).
 - **Git: Open Next Revision of File** steps forward again. After the newest
   commit you are back at the working file.
 
+## Tags
+
+| Command | What it does |
+|---|---|
+| **Git: Create Tag…** | Tags `HEAD`. Type a name, then a message. An empty message makes a lightweight tag; a message makes an annotated one. Right-click a **GRAPH** commit for **Create Tag Here…**. |
+| **Git: Show Tag Details…** | Kind, tagger, date, message and commit of a tag |
+| **Git: Push Tag…** | Pushes one tag, or **All tags**, to the branch's remote (else `origin`) |
+| **Git: Delete Tag…** | Deletes a local tag after a card where **Cancel** is ready. The toast names the commit, so `git tag <name> <hash>` brings it back. |
+| **Git: Delete Remote Tag…** | Deletes a tag on the remote. A card asks first (**Cancel** is ready), then you type the tag name. Your local tag stays. |
+
+## Remotes and the upstream
+
+**Git: Manage Remotes…** lists the remotes with their URL. Pick **+ Add
+Remote…** to add one, or pick a remote to **Rename…**, **Change URL…** or
+**Remove…** it. Remove asks first; it only changes this repository, not the
+server.
+
+**Git: Set Upstream Branch…** picks the remote branch the current branch
+tracks. **Git: Unset Upstream Branch** stops that.
+
+## Force push
+
+**Git: Force Push (with Lease)…** replaces the branch on the remote with
+yours, for example after an amend or a rebase. A card says how many remote
+commits your branch does not have; **Cancel** is ready. Then you type the
+branch name. termocode uses `--force-with-lease`: if someone pushed after
+your last fetch, git refuses and nothing changes. Fetch, look, and try
+again.
+
 ## Stash with options
 
 **Git: Stash…** asks what to stash: **All changes**, **All changes and new

@@ -371,7 +371,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Copy Remote Link to Line | `git-copy-line-link` |   |   |
 | Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
+| Git: Create Tag… | `git-tag-create` |   |   |
 | Git: Delete Branch… | `git-branch-delete` |   |   |
+| Git: Delete Remote Tag… | `git-tag-delete-remote` |   |   |
+| Git: Delete Tag… | `git-tag-delete` |   |   |
 | Git: Delete Untracked Files… | `git-clean-untracked` |   |   |
 | Git: Diff Merge Commit Against Parent… | `git-diff-merge-parent` |   |   |
 | Git: Discard All Changes… | `git-discard-all` |   |   |
@@ -386,6 +389,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
+| Git: Force Push (with Lease)… | `git-push-force` |   |   |
 | Git: Generate Commit Message with AI | `git-ai-commit-msg` |   |   |
 | Git: Go to Commit… | `git-goto-commit` |   |   |
 | Git: Go to HEAD in GRAPH | `git-graph-head` |   | `@` |
@@ -396,6 +400,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Initialize Repository | `git-init` |   |   |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
 | Git: Issues… (Start Work on One) | `git-issues` |   |   |
+| Git: Manage Remotes… | `git-remotes` |   |   |
 | Git: Merge Branch… | `git-merge-branch` |   |   |
 | Git: Merge View: Close | `git-merge-close` |   | `Esc` |
 | Git: Merge View: Mark as Resolved | `git-merge-resolve` |   | `r` |
@@ -422,6 +427,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Pull… | `git-pull-options` |   |   |
 | Git: Push | `git-push` |   |   |
+| Git: Push Tag… | `git-tag-push` |   |   |
 | Git: Push to… | `git-push-to` |   |   |
 | Git: Push… (Show Outgoing Commits First) | `git-push-preview` |   |   |
 | Git: Rebase Current Branch onto… | `git-rebase-onto` |   |   |
@@ -433,6 +439,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Search Log… | `git-log-search` |   |   |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
+| Git: Set Upstream Branch… | `git-upstream-set` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Folder History… | `git-log-folder` |   |   |
@@ -442,6 +449,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Show Log... | `git-log` |   |   |
 | Git: Show Outgoing Commits… | `git-outgoing` |   |   |
 | Git: Show Stash List... | `git-stash-list` |   |   |
+| Git: Show Tag Details… | `git-tag-details` |   |   |
 | Git: Show Tags... | `git-tags` |   |   |
 | Git: Stage All Changes | `git-stage-all` |   |   |
 | Git: Stage Current File | `git-stage` |   |   |
@@ -462,6 +470,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
+| Git: Unset Upstream Branch | `git-upstream-unset` |   |   |
 | Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
