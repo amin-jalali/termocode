@@ -10,6 +10,7 @@ web	ai-agents	cmd:agents
 web	ai-apply-code	palette
 web	ai-apply-proposal	op:cards.answer
 web	ai-attach	cmd:aiAttach
+web	ai-auto-approve	op:ai.set_auto_approve
 web	ai-cancel	op:chat.stop
 web	ai-configure	op:ai.info
 web	ai-discard-proposal	op:cards.answer
@@ -263,7 +264,6 @@ excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
 excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
 missing	ai-add	Itermoc and AI setup|M
-missing	ai-auto-approve	AI chat and agents|M
 missing	ai-mcp-bundle	AI chat and agents|M
 missing	ai-mcp-catalog	AI chat and agents|M
 missing	ai-mcp-connect	AI chat and agents|M

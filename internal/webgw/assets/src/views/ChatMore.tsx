@@ -9,7 +9,7 @@
 import { Fragment, h } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { AIInfo, ChatExport, ChatMsg, MCPProfiles, MdNode, PaletteItem, PaletteList } from "../../../../webproto/proto";
+import type { AIInfo, AutoApprove, AutoApproveRow, ChatExport, ChatMsg, MCPProfiles, MdNode, PaletteItem, PaletteList } from "../../../../webproto/proto";
 import { copyText } from "../lib/clip";
 import { layout } from "../lib/layout";
 import { toast } from "../lib/toasts";
@@ -51,6 +51,8 @@ type Flow =
   | { s: "info"; kind: string; info: AIInfo | null }
   | { s: "mcp"; list: MCPProfiles }
   | { s: "mcpask"; name: string }
+  | { s: "auto"; rows: readonly AutoApproveRow[] }
+  | { s: "autoask"; row: AutoApproveRow }
   | { s: "menu"; title: string; items: MenuItems };
 
 /** chatFlow is the open step of More Actions (null: none). */
@@ -115,6 +117,11 @@ export function openMCPProfiles(): void {
   link.request("ai.mcp_profiles").then((data) => (chatFlow.value = { s: "mcp", list: data as MCPProfiles }), fail);
 }
 
+/** openAutoApprove lists the agent's auto-approve rows. */
+export function openAutoApprove(): void {
+  link.request("ai.auto_approve").then((data) => (chatFlow.value = { s: "auto", rows: (data as AutoApprove).rows ?? [] }), fail);
+}
+
 /** exportChat saves the chat as markdown in the browser. */
 export function exportChat(id: string): void {
   link.request("chat.export", { id }).then((data) => {
@@ -143,7 +150,7 @@ function moreItems(chat: MoreChat, cmds: readonly PaletteItem[]): MenuItems {
     { label: t("chat.clear"), run: () => (chatFlow.value = { s: "clear" }) },
   ];
   if (cmds.length > 0) items.push(null, ...cmds.map((it) => ({ label: it.title, run: () => runLaptop(it) })));
-  items.push(null, { label: t("mcp.switch"), run: openMCPProfiles });
+  items.push(null, { label: t("mcp.switch"), run: openMCPProfiles }, { label: t("auto.title"), run: openAutoApprove });
   items.push(null, ...INFO_KINDS.map(([kind, key]) => ({ label: t(key), run: () => openInfo(kind) })));
   return items;
 }
@@ -359,6 +366,27 @@ export function ChatMoreFlows() {
         />
       );
     }
+    case "auto":
+      return (
+        <RowMenu
+          title={t("auto.title")}
+          items={f.rows
+            .filter((r) => !r.header && r.id)
+            .map((r) => ({ label: r.title + " · " + t(r.on ? "auto.on" : "auto.off"), pick: () => (chatFlow.value = { s: "autoask", row: r }) }))}
+          onClose={() => {
+            if (chatFlow.peek() === f) done();
+          }}
+        />
+      );
+    case "autoask":
+      return (
+        <AskLaptop
+          label={t("auto.title")}
+          text={t(f.row.on ? "auto.ask_off" : "auto.ask_on", { name: f.row.title })}
+          send={() => link.request("ai.set_auto_approve", { id: f.row.id })}
+          onDone={done}
+        />
+      );
     case "info":
       return <InfoSheet info={f.info} kind={f.kind} onDone={done} />;
   }

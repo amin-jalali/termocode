@@ -1009,6 +1009,11 @@ export const S = {
   "mcp.in_use": "This chat uses it already.",
   "mcp.use": "Use MCP profile {name} here? The AI calls only its tools.",
   "mcp.use_all": "Let this chat use every MCP server and tool again?",
+  "auto.title": "AI: Agent Auto-Approve…",
+  "auto.on": "AUTO",
+  "auto.off": "ask",
+  "auto.ask_on": "Let the AI do this without asking: {name}?",
+  "auto.ask_off": "Make the AI ask first again: {name}?",
 } as const;
 
 export type StringKey = keyof typeof S;
