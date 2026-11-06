@@ -6,7 +6,6 @@
 // banned words, every key the code uses exists.
 import { signal } from "@preact/signals";
 import { has } from "./state/dict";
-import { FA } from "./strings.fa";
 
 export const S = {
   // Shell and connect
@@ -991,8 +990,14 @@ export type StringKey = keyof typeof S;
 export type Lang = "en" | "fa";
 
 /** lang is the language of the UI. t() reads it, so every view that
- * shows a string draws again when it changes. */
+ * shows a string draws again when it changes. main.tsx sets it to "fa"
+ * only once the Persian strings are loaded. */
 export const lang = signal<Lang>("en");
+
+/** persian holds the Persian strings (strings.fa.ts) once loaded: they
+ * are their own file, strings-fa.js (lib/lazy.ts loads it), so the
+ * phone's first files carry English only. */
+export const persian = signal<Readonly<Partial<Record<StringKey, string>>> | null>(null);
 
 const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 
@@ -1010,7 +1015,8 @@ export function localDigits(v: number, l: Lang): string {
  * stay as they are. */
 export function t(key: StringKey, vars?: Record<string, string | number>): string {
   const l = lang.value;
-  const text: string = (l === "fa" && FA[key]) || S[key];
+  const fa = l === "fa" ? persian.value : null;
+  const text: string = (fa && fa[key]) || S[key];
   if (!vars) return text;
   return text.replace(/\{([a-z_]+)\}/g, (m, name: string) => {
     if (!has(vars, name)) return m;
