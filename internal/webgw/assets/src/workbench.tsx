@@ -2,4 +2,5 @@
 // layout and the views only a wide screen shows. app.js loads it on a
 // desktop only (lib/lazy.ts); it shares app.js's modules through
 // app-chunk.js.
+import "./strings.desk"; // the workbench's strings, in this file only
 export { StatusBar, Workbench } from "./ui/Workbench";
