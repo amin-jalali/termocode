@@ -3,6 +3,7 @@
 package web
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -51,6 +52,47 @@ func waitDeskText(t *testing.T, p *Page, lines ...string) {
 	}
 }
 
+// deskLaptopGets answers the page's buf.set_text for buf (from tick 3)
+// as the laptop does until the laptop's text, from was, is want.
+func deskLaptopGets(t *testing.T, c *HubConn, buf int, was []string, want ...string) {
+	t.Helper()
+	lines, tick := append([]string(nil), was...), 3
+	end := time.Now().Add(wait)
+	for strings.Join(lines, "\n") != strings.Join(want, "\n") {
+		if time.Now().After(end) {
+			t.Fatalf("the laptop has %q, want %q", lines, want)
+		}
+		var m webproto.Msg
+		select {
+		case m = <-c.in:
+		case <-time.After(time.Until(end)):
+			continue
+		}
+		r, ok := m.(*webproto.Req)
+		if !ok || paintOps[r.Op] {
+			continue
+		}
+		if r.Op != "buf.set_text" {
+			t.Fatalf("page sent %s; want buf.set_text", show(m))
+		}
+		var a webproto.SetTextArgs
+		if err := json.Unmarshal(r.Args, &a); err != nil {
+			t.Fatal(err)
+		}
+		if a.Buf != buf || a.Tick != tick {
+			t.Fatalf("set_text for buffer %d at tick %d, want %d at %d", a.Buf, a.Tick, buf, tick)
+		}
+		head := lines[a.Start.Row][:a.Start.Col]
+		tail := lines[a.End.Row][a.End.Col:]
+		mid := append([]string(nil), a.Lines...)
+		mid[0] = head + mid[0]
+		mid[len(mid)-1] += tail
+		lines = append(append(append([]string(nil), lines[:a.Start.Row]...), mid...), lines[a.End.Row+1:]...)
+		tick++
+		reply(t, c, r, webproto.EditRes{Tick: tick, Dirty: true})
+	}
+}
+
 // openDeskTabs opens path on the desktop and waits for its rows (a tab
 // shows as spaces, so the text is not compared).
 func openDeskTabs(t *testing.T, p *Page, c *HubConn, buf int, path string, lines ...string) {
@@ -77,6 +119,9 @@ func TestDeskEditorLineCommands(t *testing.T) {
 	waitDeskText(t, p, "c", "", "", "a", "b")
 	runCmd(t, p, c, false, "collapse blank", "Edit: Collapse Blank Lines")
 	waitDeskText(t, p, "c", "", "a", "b")
+	// The changes go to the laptop like typing, after a pause (they may
+	// come after the next file's buf.open asks on a slow machine).
+	deskLaptopGets(t, c, 2, []string{"c  ", "", "", "a", "b"}, "c", "", "a", "b")
 	openDesk(t, p, c, 3, "s.go", "b", "c", "a")
 	runCmd(t, p, c, false, "sort lines asc", "Edit: Sort Lines Ascending")
 	waitDeskText(t, p, "a", "b", "c")
