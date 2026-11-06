@@ -245,6 +245,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitBranchRef is the branch / start ref a branch card or prompt is
+	// about (git_branch_ops.go).
+	gitBranchRef string
 	// gitCommitAfter is what follows the commit the stage-all card waits
 	// for: gitAfterPush, gitAfterSync or "" (GITX-7).
 	gitCommitAfter string

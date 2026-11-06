@@ -243,7 +243,10 @@ func paletteItems() []picker.Item {
 		{ID: "git-fetch", Title: "Git: Fetch"},
 		{ID: "git-sync", Title: "Git: Sync (Pull, then Push)"},
 		{ID: "git-branch", Title: "Git: Switch Branch..."},
-		{ID: "problems", Title: "Go to Problem..."}, // Group C: "View: Problems" opens the panel now
+		{ID: "git-branch-rename", Title: "Git: Rename Branch…"},    // git_branch_ops.go
+		{ID: "git-branch-delete", Title: "Git: Delete Branch…"},    // git_branch_ops.go
+		{ID: "git-branch-from", Title: "Git: Create Branch From…"}, // git_branch_ops.go
+		{ID: "problems", Title: "Go to Problem..."},                // Group C: "View: Problems" opens the panel now
 		{ID: "code-actions", Title: "Edit: Quick Fix...", Hint: "Ctrl+. / Alt+Enter"},
 		{ID: "code-action-apply-preferred", Title: "Edit: Apply Preferred Quick Fix", Hint: "Ctrl+Shift+."},
 		{ID: "goto-symbol-file", Title: "Go to Symbol in File...", Hint: "Ctrl+Shift+O"},
@@ -632,6 +635,12 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.gitSync()
 	case "git-branch":
 		return m.openBranchPicker()
+	case "git-branch-rename":
+		return m.openRenameBranchPrompt()
+	case "git-branch-delete":
+		return m.openDeleteBranchPicker()
+	case "git-branch-from":
+		return m.openBranchFromPicker()
 	case "problems":
 		return m.openProblemsPicker()
 	case "code-actions":

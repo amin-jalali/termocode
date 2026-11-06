@@ -355,7 +355,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Commit and Sync | `git-commit-sync` |   |   |
 | Git: Commit... | `git-commit` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
+| Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
+| Git: Delete Branch… | `git-branch-delete` |   |   |
 | Git: Delete Untracked Files… | `git-clean-untracked` |   |   |
 | Git: Discard All Changes… | `git-discard-all` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
@@ -394,6 +396,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Redo Undone Git Action | `git-redo` |   |   |
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
+| Git: Rename Branch… | `git-branch-rename` |   |   |
 | Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |

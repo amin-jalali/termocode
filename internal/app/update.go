@@ -2410,6 +2410,10 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindReflog:
 		return m.onReflogPicked(msg.ID)
+	case pickerKindDeleteBranch: // git_branch_ops.go
+		return m.onDeleteBranchPicked(msg.ID)
+	case pickerKindBranchFrom:
+		return m.onBranchFromPicked(msg.ID)
 	case pickerKindMergeBranch:
 		return m.onMergeBranchPicked(msg.ID)
 	case pickerKindTags:

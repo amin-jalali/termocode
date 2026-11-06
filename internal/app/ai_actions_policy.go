@@ -192,6 +192,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-fetch":           aiConfirm(ai.ClassGit),
 	"git-sync":            aiDestructive(), // pushes too
 	"git-branch":          aiNever(aiNoPicker + " (git_branch, git_checkout)"),
+	"git-branch-rename":   aiNever(aiNoPicker),
+	"git-branch-delete":   aiNever(aiNoPicker),
+	"git-branch-from":     aiNever(aiNoPicker + " (git_branch)"),
 	"git-stash":           aiConfirm(ai.ClassGit),
 	"git-stash-pop":       aiConfirm(ai.ClassGit),
 	"git-stash-list":      aiNever(aiNoPicker + " (git_stash list)"),
