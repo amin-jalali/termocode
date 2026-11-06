@@ -23,13 +23,48 @@ web	ai-toggle-next-edit	op:ai.next_edit
 web	ai-trigger-inline	op:ai.complete
 web	ai-worktrees	op:ai.worktrees
 web	close-buffer	cmd:closeEditor
+web	containers-attach	op:containers.exec
+web	containers-browse-tags	op:containers.tags
+web	containers-compose-down	op:containers.compose_ask
+web	containers-compose-restart	op:containers.compose
+web	containers-compose-stop	op:containers.compose_ask
+web	containers-compose-up	op:containers.compose
+web	containers-context-default	op:containers.context_default
+web	containers-context-use	op:containers.context
+web	containers-filter	cmd:containersFilter
 web	containers-focus	view:containers
+web	containers-image-history	op:containers.history
+web	containers-image-inspect	op:containers.inspect
+web	containers-image-prune	op:containers.prune
+web	containers-image-pull	op:containers.image
+web	containers-image-push	op:containers.image
+web	containers-image-remove	op:containers.image
+web	containers-image-run	op:containers.image
+web	containers-image-tag	op:containers.tag
+web	containers-inspect	op:containers.inspect
 web	containers-logs	op:containers.logs
+web	containers-network-create	op:containers.create
+web	containers-network-prune	op:containers.prune
+web	containers-network-remove	op:containers.storage_remove
+web	containers-open-databases	op:containers.open_db
+web	containers-open-port	cmd:containersOpenPort
+web	containers-pause	op:containers.pause
+web	containers-prune	op:containers.prune
 web	containers-refresh	op:containers.list
+web	containers-registry-connect	op:containers.registry
+web	containers-registry-signout	op:containers.registry
 web	containers-remove	op:containers.remove
 web	containers-restart	op:containers.restart
+web	containers-search	op:containers.search
+web	containers-shell	op:containers.exec
 web	containers-start	op:containers.start
+web	containers-stats	op:containers.stats
 web	containers-stop	op:containers.stop
+web	containers-system-prune	op:containers.prune
+web	containers-volume-create	op:containers.create
+web	containers-volume-disk-usage	op:containers.disk_usage
+web	containers-volume-prune	op:containers.prune
+web	containers-volume-remove	op:containers.storage_remove
 web	db-count-rows	op:db.query
 web	db-data	op:db.rows
 web	db-describe	op:db.tables
@@ -112,12 +147,16 @@ web	run-doctor	palette
 web	run-tests	palette
 web	save	op:buf.save
 web	save-all	palette
+web	services-configure	op:services.configure
 web	services-focus	view:services
 web	services-logs	op:services.logs
+web	services-open-compose	cmd:servicesOpenCompose
 web	services-refresh	op:services.refresh
 web	services-restart	op:services.restart
 web	services-start	op:services.start
+web	services-start-all	op:services.start_all
 web	services-stop	op:services.stop
+web	services-stop-all	op:services.stop_all
 web	split-horizontal	cmd:splitDown
 web	split-vertical	cmd:splitRight
 web	terminal-close-tab	op:term.close
@@ -280,41 +319,6 @@ missing	bookmark-toggle	Editor and files|S
 missing	close-split	Editor and files|S
 missing	code-action-apply-preferred	Editor and files|S
 missing	code-actions	Editor and files|S
-missing	containers-attach	Containers|M
-missing	containers-browse-tags	Containers|M
-missing	containers-compose-down	Containers|M
-missing	containers-compose-restart	Containers|M
-missing	containers-compose-stop	Containers|M
-missing	containers-compose-up	Containers|M
-missing	containers-context-default	Containers|M
-missing	containers-context-use	Containers|M
-missing	containers-filter	Containers|M
-missing	containers-image-history	Containers|M
-missing	containers-image-inspect	Containers|M
-missing	containers-image-prune	Containers|M
-missing	containers-image-pull	Containers|M
-missing	containers-image-push	Containers|M
-missing	containers-image-remove	Containers|M
-missing	containers-image-run	Containers|M
-missing	containers-image-tag	Containers|M
-missing	containers-inspect	Containers|M
-missing	containers-network-create	Containers|M
-missing	containers-network-prune	Containers|M
-missing	containers-network-remove	Containers|M
-missing	containers-open-databases	Containers|M
-missing	containers-open-port	Containers|M
-missing	containers-pause	Containers|M
-missing	containers-prune	Containers|M
-missing	containers-registry-connect	Containers|M
-missing	containers-registry-signout	Containers|M
-missing	containers-search	Containers|M
-missing	containers-shell	Containers|M
-missing	containers-stats	Containers|M
-missing	containers-system-prune	Containers|M
-missing	containers-volume-create	Containers|M
-missing	containers-volume-disk-usage	Containers|M
-missing	containers-volume-prune	Containers|M
-missing	containers-volume-remove	Containers|M
 missing	db-add	Databases|L
 missing	db-add-tunnel	Databases|L
 missing	db-cancel	Databases|L
@@ -410,10 +414,6 @@ missing	replace-in-file	Editor and files|S
 missing	replace-workspace	Editor and files|S
 missing	reveal-file	Editor and files|S
 missing	reverse-lines	Editor and files|S
-missing	services-configure	Containers|S
-missing	services-open-compose	Containers|S
-missing	services-start-all	Containers|S
-missing	services-stop-all	Containers|S
 missing	snippet-picker	Editor and files|S
 missing	snippets-manage	Editor and files|S
 missing	sort-asc	Editor and files|S
