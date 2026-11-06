@@ -549,6 +549,7 @@ export const S = {
   "dv.tab_wt": "{name} (Working Tree)",
   "dv.tab_idx": "{name} (Index)",
   "dv.tab_commit": "{name} ({hash}^ ↔ {hash})",
+  "dv.tab_rev": "{name} ({hash} ↔ Working Tree)",
   "dv.tab_review": "{name} (AI Change)",
   "card.open_diff": "Open Changes",
   "sv.collapse": "Collapse All",

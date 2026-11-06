@@ -72,6 +72,7 @@ import { MDPreview } from "../views/MDPreview";
 import { CompareView } from "../views/CompareView";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
+import { GitAskHost } from "../views/git/GitAsk";
 import { AgentsView } from "../views/AgentsView";
 import { QuickInput } from "./QuickInput";
 import { RefsPeek } from "./RefsPeek";
@@ -545,6 +546,7 @@ export function Workbench() {
           {askHere.value && <AskHere ask={askHere.value} />}
           {askLaptop.value && <AskLaptop key={askLaptop.value.text} label={askLaptop.value.label} text={askLaptop.value.text} send={askLaptop.value.send} onDone={() => (askLaptop.value = null)} />}
           <RemoteAskHost />
+          <GitAskHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
             {all.map((g, i) => (

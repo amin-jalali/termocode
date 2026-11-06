@@ -151,6 +151,10 @@ type GitConflictPart struct {
 	Ours        string `json:"ours"`
 	Theirs      string `json:"theirs"`
 	Both        string `json:"both"`
+	// Base is the common ancestor's text, when the file has its section
+	// (merge.conflictStyle diff3): Take Base puts it in place of Raw.
+	Base    string `json:"base,omitempty"`
+	HasBase bool   `json:"hasBase,omitempty"`
 }
 
 // GitResolveArgs saves Text as the merged file and marks it resolved, if

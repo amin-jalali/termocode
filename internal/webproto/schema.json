@@ -2342,6 +2342,217 @@
       "phase": "v2"
     },
     {
+      "op": "ci.fix_prompt",
+      "args": "EmptyArgs",
+      "result": "CIFixPrompt",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stage_lines",
+      "args": "GitLinesArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.unstage_lines",
+      "args": "GitLinesArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.discard_lines",
+      "args": "GitLinesArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 8192,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.discard_hunk",
+      "args": "GitHunkArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 8192,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.tags",
+      "args": "EmptyArgs",
+      "result": "GitTags",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.checkout_tag",
+      "args": "GitTagArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stash_list",
+      "args": "EmptyArgs",
+      "result": "GitStashList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stash_apply",
+      "args": "GitStashRefArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.reflog",
+      "args": "EmptyArgs",
+      "result": "GitReflog",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.undo_plan",
+      "args": "GitUndoPlanArgs",
+      "result": "GitUndoPlan",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.undo",
+      "args": "GitUndoArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.redo",
+      "args": "EmptyArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.fixup_plan",
+      "args": "GitFixupArgs",
+      "result": "GitFixupPlan",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.fixup",
+      "args": "GitFixupArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.graph",
       "args": "GitGraphArgs",
       "result": "GitGraph",
@@ -4023,6 +4234,18 @@
         "t"
       ],
       "additionalProperties": false
+    },
+    "CIFixPrompt": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "additionalProperties": true
     },
     "CIRun": {
       "type": "object",
@@ -6336,8 +6559,14 @@
     "GitConflictPart": {
       "type": "object",
       "properties": {
+        "base": {
+          "type": "string"
+        },
         "both": {
           "type": "string"
+        },
+        "hasBase": {
+          "type": "boolean"
         },
         "line": {
           "type": "integer"
@@ -6511,6 +6740,34 @@
       ],
       "additionalProperties": false
     },
+    "GitFixupArgs": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "hash"
+      ],
+      "additionalProperties": false
+    },
+    "GitFixupPlan": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "action"
+      ],
+      "additionalProperties": true
+    },
     "GitGraph": {
       "type": "object",
       "properties": {
@@ -6644,6 +6901,29 @@
       "required": [
         "path",
         "hunk"
+      ],
+      "additionalProperties": false
+    },
+    "GitLinesArgs": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer"
+        },
+        "index": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "to": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "from",
+        "to"
       ],
       "additionalProperties": false
     },
@@ -6814,6 +7094,41 @@
       ],
       "additionalProperties": true
     },
+    "GitReflog": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/defs/GitReflogEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": true
+    },
+    "GitReflogEntry": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "when": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "summary",
+        "when"
+      ],
+      "additionalProperties": true
+    },
     "GitResolveArgs": {
       "type": "object",
       "properties": {
@@ -6939,6 +7254,79 @@
       "required": [],
       "additionalProperties": false
     },
+    "GitStashEntry": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "message"
+      ],
+      "additionalProperties": true
+    },
+    "GitStashList": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/defs/GitStashEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": true
+    },
+    "GitStashRefArgs": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "GitTagArgs": {
+      "type": "object",
+      "properties": {
+        "tag": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tag"
+      ],
+      "additionalProperties": false
+    },
+    "GitTags": {
+      "type": "object",
+      "properties": {
+        "more": {
+          "type": "integer"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "tags"
+      ],
+      "additionalProperties": true
+    },
     "GitText": {
       "type": "object",
       "properties": {
@@ -6982,6 +7370,55 @@
         "path",
         "rev"
       ],
+      "additionalProperties": false
+    },
+    "GitUndoArgs": {
+      "type": "object",
+      "properties": {
+        "move": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "GitUndoPlan": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "move": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "text",
+        "action"
+      ],
+      "additionalProperties": true
+    },
+    "GitUndoPlanArgs": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "reflog": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
       "additionalProperties": false
     },
     "GoneDelta": {
