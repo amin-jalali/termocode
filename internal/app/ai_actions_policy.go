@@ -349,6 +349,12 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
 	"containers-focus":             aiAuto(),
 	"kubernetes-show":              aiAuto(), // read only (kube_actions.go)
+	"worktree-view":                aiAuto(), // read only (worktrees_keys.go)
+	"worktree-open":                aiNever(aiNoSession),
+	"worktree-jump":                aiNever(aiNoPicker),
+	"worktree-pin":                 aiAuto(), // a pin in worktrees.json, undone with the same command
+	"worktree-filter":              aiAuto(),
+	"worktree-add-folder":          aiNever("acts on the worktree the user selected in the WORKTREES view"),
 	"kubernetes-refresh":           aiAuto(),
 	"kubernetes-context":           aiNever(aiNoPicker + "; the context is the user's choice"),
 	"kubernetes-namespace":         aiNever(aiNoPicker),

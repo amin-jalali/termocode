@@ -425,6 +425,42 @@ run. It picks the plan profile; then you type the task in the AI chat.
 Run the command again before you send the task to turn it off. It needs
 a git repository with at least one commit.
 
+## Worktrees
+
+The **WORKTREES** view lists every worktree of the repository in the
+sidebar: the main checkout, the worktrees you made in `<repo>.worktrees/`,
+the agent lanes termocode made, and worktrees made outside termocode.
+Open it with **Alt+Shift+W** or **Worktree: Show**. It lives under the
+Source Control icon, which is lit while it shows.
+
+- Groups: **PINNED**, **ACTIVE**, **ASLEEP** and **EXTERNAL**.
+- Each card shows the name, the agent's state (working, waiting for you,
+  done), the branch, commits ahead and behind its upstream, and the
+  count of changed files. A coding agent in a terminal tab of this or
+  another termocode window shows on the worktree its folder is in.
+- A worktree whose folder was deleted shows as **gone**.
+- In a short window each worktree is one line; Enter shows its card.
+- The list is read again every 10 seconds while it is on screen. Git
+  runs in the background, at most 4 calls at once.
+
+Pins and names are stored in `termocode/worktrees.json` inside the
+repository's git folder, never in your project.
+
+| Key | What it does |
+|---|---|
+| `↑` `↓` `j` `k` | Move (`g` `G` top, end) |
+| `Enter` | Open the worktree in this window; the old session keeps running |
+| `a` | Add the worktree as a folder of this window |
+| `p` | Pin or unpin |
+| `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
+| `/` | Filter by name (`Esc` clears) |
+| `R` | Read every worktree again |
+| `?` | Show these keys |
+
+**Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
+agents in them, from every termocode window, with the ones that wait for
+you first.
+
 ## Cherry-pick, revert and restore
 
 | Command | What it does |

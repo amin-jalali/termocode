@@ -558,6 +558,8 @@ type Model struct {
 	services *servicesState
 	// kube is the Kubernetes view state (kube_state.go); idle until shown.
 	kube *kubeState
+	// wt is the WORKTREES view (worktrees_state.go).
+	wt *wtState
 	// databases is lazy and holds idle sessions only while the view is open.
 	databases *dbState
 	// itermoc is the Itermoc view (profiles, models, services, outside
@@ -938,6 +940,7 @@ func New() Model {
 		testView:         newTestsState(),    // Group E
 		services:         newServicesState(),
 		kube:             newKubeState(),
+		wt:               newWTState(),
 		databases:        newDBState(),
 		ext:              newExtState(),    // Group I
 		ai:               newAIState(),     // Group A

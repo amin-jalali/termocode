@@ -259,6 +259,7 @@ func goldenCases() []goldenCase {
 	}
 	out = append(out, keyHintCases()...)
 	out = append(out, kubeCases()...)          // golden_kube_test.go
+	out = append(out, worktreesCases()...)     // golden_worktrees_test.go
 	out = append(out, webCases()...)           // golden_web_test.go
 	out = append(out, agentPickerCases()...)   // golden_agents_test.go
 	out = append(out, agentChatCases()...)     // golden_agents_test.go

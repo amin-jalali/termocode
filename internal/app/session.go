@@ -100,6 +100,10 @@ type SessionState struct {
 	ServicesLocalOK     []string `json:"services_local_ok,omitempty"`
 	ContainersCollapsed []string `json:"containers_collapsed,omitempty"`
 
+	// WORKTREES view (worktrees_filter.go): the f filter and the / text.
+	WorktreesKind   string `json:"worktrees_kind,omitempty"`
+	WorktreesFilter string `json:"worktrees_filter,omitempty"`
+
 	// Terminals are the terminal tabs, split panes and folders of this
 	// workspace, opened again after a restart (terminal_restore.go).
 	Terminals *savedTerminals `json:"terminals,omitempty"`
@@ -222,6 +226,8 @@ func workspacePart(s SessionState) SessionState {
 		ServicesStarted:     s.ServicesStarted,
 		ServicesLocalOK:     s.ServicesLocalOK,
 		ContainersCollapsed: s.ContainersCollapsed,
+		WorktreesKind:       s.WorktreesKind,
+		WorktreesFilter:     s.WorktreesFilter,
 
 		Terminals: s.Terminals,
 	}

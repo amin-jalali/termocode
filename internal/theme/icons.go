@@ -343,6 +343,10 @@ var (
 	// GlyphAgents marks outside agents connected to termocode's MCP
 	// server (status-bar chip).
 	GlyphAgents = Icon{NerdFont: "\uf0ec", Unicode: "⇄", ASCII: "="} // nf-fa-exchange
+	// WORKTREES view (WTX-2): a worktree (nf-fa-code_fork) and one put
+	// to sleep (nf-md-sleep).
+	GlyphWorktree = Icon{NerdFont: "\uf126", Unicode: "⑂", ASCII: "Y"}
+	GlyphAsleep   = Icon{NerdFont: "\U000f04b2", Unicode: "☾", ASCII: "z"}
 	// GlyphWeb marks the running web panel (status-bar chip).
 	GlyphWeb = Icon{NerdFont: "\U000f059f", Unicode: "◉", ASCII: "@"} // nf-md-web
 )
