@@ -443,7 +443,7 @@ double quotes for spaces (`author:"Ann Lee"`):
 | **Git: Fetch All Remotes (Prune)** | Fetches every remote and drops remote branches that are gone |
 | **Git: Show Incoming Commits…** | Commits a pull brings, as of the last fetch |
 | **Git: Show Outgoing Commits…** | Commits a push sends |
-| **Git: Toggle Auto Fetch** | Fetches every 3 minutes until termocode closes. Off by default. A failed fetch turns it off and says why. |
+| **Git: Toggle Auto Fetch** | Fetches every 3 minutes. Off by default. The choice is saved (setting `git_auto_fetch`), so it comes back at the next start. A failed fetch turns it off for this session and says why. |
 
 ## Ignore files and set your identity
 
@@ -456,6 +456,48 @@ on disk.
 
 **Git: Set Identity (Name and E-mail)…** asks the name and the e-mail on
 your commits, then **This repository only** or **All repositories**.
+
+## Diff options
+
+| Command or key | What it does |
+|---|---|
+| `w` in a diff card | Hides changes that are only spaces and tabs (like `git diff -b`), in the commit view, a compare and **Compare Two Files**. The hint bar says **whitespace hidden**. Press `w` again to show them. A review card always shows every change. |
+| **Git: Diff Merge Commit Against Parent…** | On a merge commit (in the commit view, or `HEAD`), pick a parent. The compare card shows the merge against that parent. Parent 2 shows what the merge brought in. |
+| **Git: Compare Active File with Clipboard** | Diffs the clipboard text (left) with the active file (right) |
+
+## Share links
+
+| Command | What it does |
+|---|---|
+| **Git: Copy Remote Link to Line** | Copies the web link of the cursor line at `HEAD` (GitHub form; GitLab form on a GitLab host) |
+| **Git: Copy Remote Link to Commit** | Copies the web link of the commit in the commit view, or of `HEAD` |
+
+A commit that is not pushed yet gives a link that does not open. The
+toast says so: push first.
+
+## Git command log
+
+**Git: Show Git Command Log** opens a page with the last 500 git commands
+termocode ran, newest first, with their time. The panel's status reads
+(every few seconds) are not listed. A user name or token in a URL shows as
+`***`, and a long argument (a commit message) is cut.
+
+## Signed commits
+
+The commit view shows the signature of a signed commit next to the file
+count:
+
+| Badge | Means |
+|---|---|
+| **✓ Verified · name** | git checked the signature and trusts the key |
+| **✓ Signed, key not trusted** | the signature is good; the key is not marked as trusted |
+| **✗ Bad signature** / **✗ Signed, key revoked** | do not trust this commit |
+| **Signed (not checked…)** | git cannot check it here: no key, or no `gpg.ssh.allowedSignersFile` for ssh keys |
+
+**Git: Toggle Commit Signing (This Repository)** sets `commit.gpgsign` for
+this repository. git signs with `user.signingkey` and `gpg.format`
+(`openpgp` or `ssh`). When a commit cannot be signed, the toast says why
+and how to fix it.
 
 ## Keys at a glance
 

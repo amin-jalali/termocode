@@ -344,8 +344,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
 | Git: Commit... | `git-commit` |   |   |
+| Git: Compare Active File with Clipboard | `git-diff-clipboard` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
+| Git: Copy Remote Link to Commit | `git-copy-commit-link` |   |   |
+| Git: Copy Remote Link to Line | `git-copy-line-link` |   |   |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
+| Git: Diff Merge Commit Against Parent… | `git-diff-merge-parent` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
@@ -391,6 +395,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Folder History… | `git-log-folder` |   |   |
+| Git: Show Git Command Log | `git-cmd-log` |   |   |
 | Git: Show Incoming Commits… | `git-incoming` |   |   |
 | Git: Show Log... | `git-log` |   |   |
 | Git: Show Outgoing Commits… | `git-outgoing` |   |   |
@@ -405,6 +410,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle All Branches in GRAPH | `git-graph-all` |   |   |
 | Git: Toggle Auto Fetch | `git-auto-fetch` |   |   |
+| Git: Toggle Commit Signing (This Repository) | `git-signing-toggle` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |

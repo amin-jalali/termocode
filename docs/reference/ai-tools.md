@@ -1979,6 +1979,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-ci` | Git: CI and Pull Request… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
+| `git-cmd-log` | Git: Show Git Command Log | auto |   |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
 | `git-compare-rev` | Git: Compare with Revision... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-conflict-both` | Git: Accept Both Changes (Conflict at Cursor) | confirm (fileWrite) |   |
@@ -1986,7 +1987,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-conflict-ours` | Git: Accept Current Change (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-conflict-prev` | Git: Go to Previous Merge Conflict | auto |   |
 | `git-conflict-theirs` | Git: Accept Incoming Change (Conflict at Cursor) | confirm (fileWrite) |   |
+| `git-copy-commit-link` | Git: Copy Remote Link to Commit | confirm (ide) |   |
+| `git-copy-line-link` | Git: Copy Remote Link to Line | confirm (ide) |   |
 | `git-diff` | Git: Show Diff for Current File | auto |   |
+| `git-diff-clipboard` | Git: Compare Active File with Clipboard | never | reads the user's clipboard; only the user does that |
+| `git-diff-merge-parent` | Git: Diff Merge Commit Against Parent… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-discard` | Git: Discard Changes in Current File | confirm (always asks) |   |
 | `git-discard-hunk` | Git: Discard Hunk (at cursor) | confirm (always asks) |   |
 | `git-discard-lines` | Git: Discard Line (or Selected Lines) | confirm (always asks) |   |
@@ -2031,6 +2036,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-redo` | Git: Redo Undone Git Action | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-refresh` | Git: Refresh Status | auto |   |
+| `git-signing-toggle` | Git: Toggle Commit Signing (This Repository) | never | changes how the user's commits are signed; only the user does that |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |
