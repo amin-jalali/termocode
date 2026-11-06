@@ -25,7 +25,7 @@ func TestDeskZenMode(t *testing.T) {
 	}
 	deskFocus(p)
 	p.Do(chromedp.KeyEvent("k", modKey()))
-	p.Do(chromedp.KeyEvent("z"))
+	realKeys(p, "z")
 	p.WaitJS(`document.documentElement.dataset.zen === "on"`)
 	p.WaitJS(`!(` + zenChrome + `)`)
 	if !Eval[bool](p, deskDoc+`?.querySelector(".view-lines") !== null`) {
