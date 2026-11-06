@@ -2524,6 +2524,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git_commit_large_mb` | never | changes what runs before the user's commits; only the user does that |
 | `git_commit_task` | never | sets a shell command that runs before each commit; only the user does that |
 | `git_inline_blame` | confirm (settings) |   |
+| `git_issue_link` | never | sets the page a click on an issue key opens; only the user does that |
 | `git_status_blame` | confirm (settings) |   |
 | `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
 | `http_cookie_jar` | confirm (settings) |   |
