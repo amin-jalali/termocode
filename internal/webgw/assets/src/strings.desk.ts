@@ -26,7 +26,6 @@ export const SD = {
   "wfv.last_lines": "Last lines",
   "wfv.body_laptop": "Run, turn on or off, edit and allow a workflow on the laptop.",
   "wfv.gone": "This run is no longer in the list.",
-  "wfv.tab": "{name} (Run)",
   // Terminal
   "term.close": "Close this shell…",
   "term.close_body": "Close terminal {n}? Anything running in it stops. This asks the laptop.",

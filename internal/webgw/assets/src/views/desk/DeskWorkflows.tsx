@@ -40,8 +40,11 @@ const wfIcon: Record<WorkflowItem["state"], [string, string]> = {
   broken: ["error", "c-err"],
 };
 
+/** runKey names the run word the phone's runs view shows too (views/more/RunsView.tsx). */
+const runKey = (state: string) => `runs.state.${state}` as StringKey;
+
 const wfWord: Record<WorkflowItem["state"], StringKey> = {
-  running: "runs.state.running",
+  running: runKey("running"),
   on: "wfv.on",
   off: "wfv.off",
   untrusted: "wfv.untrusted",
@@ -65,16 +68,11 @@ function runIcon(r: WorkflowRun): [string, string] {
   return ["circle-slash", ""];
 }
 
+const RUN_STATES: ReadonlySet<string> = new Set(["running", "done", "failed", "cancelled", "paused"]);
+
 function runWord(r: WorkflowRun): string {
-  const k: Record<string, StringKey> = {
-    running: "runs.state.running",
-    done: "runs.state.done",
-    failed: "runs.state.failed",
-    cancelled: "runs.state.cancelled",
-    paused: "runs.state.paused",
-    interrupted: "wfv.interrupted",
-  };
-  return k[r.state] ? t(k[r.state]) : r.state;
+  if (r.state === "interrupted") return t("wfv.interrupted");
+  return RUN_STATES.has(r.state) ? t(runKey(r.state)) : r.state;
 }
 
 /** runCounts is "3 items · 1 failed · wrote 1". */
