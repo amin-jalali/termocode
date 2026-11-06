@@ -7,6 +7,8 @@ import { t } from "../strings";
 import { toast } from "./toasts";
 import { showFile } from "./workbench";
 import type { Command } from "./commands";
+import { collapseTests } from "../views/run/TestingView";
+import { logs } from "../views/desk/DeskContainers";
 
 const canAct = () => link.meta.peek()?.role === "controller";
 
@@ -19,7 +21,17 @@ export function openLaunch(): void {
   link.request("debug.open_launch").then((r) => showFile((r as DebugLaunch).path), failed);
 }
 
+/** clearOutput empties the OUTPUT panel's lines (its channel stays). */
+export function clearOutput(): void {
+  const l = logs.peek();
+  if (l) logs.value = { ...l, lines: [], redacted: 0, truncated: false };
+}
+
 /** moreCommands are this file's commands. */
 export function moreCommands(): Command[] {
-  return [{ id: "debugOpenLaunch", label: "cmd.debug_open_launch", when: canAct, run: openLaunch }];
+  return [
+    { id: "debugOpenLaunch", label: "cmd.debug_open_launch", when: canAct, run: openLaunch },
+    { id: "testingCollapse", label: "cmd.testing_collapse", run: collapseTests },
+    { id: "outputClear", label: "cmd.output_clear", when: () => logs.peek() !== null, run: clearOutput },
+  ];
 }

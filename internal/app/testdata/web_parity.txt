@@ -103,6 +103,7 @@ web	kubernetes-show	view:kube
 web	next-buffer	cmd:nextEditor
 web	next-diagnostic	cmd:problems
 web	open-settings-ui	cmd:settings
+web	output-clear	cmd:outputClear
 web	pick-theme	cmd:themeDark
 web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
@@ -124,6 +125,7 @@ web	split-vertical	cmd:splitRight
 web	terminal-close-tab	op:term.close
 web	terminal-maximize	cmd:panelMax
 web	terminal-new-tab	op:term.new
+web	testing-collapse	cmd:testingCollapse
 web	testing-debug-cursor	op:tests.debug
 web	testing-focus	view:testing
 web	testing-refresh	palette
@@ -220,6 +222,7 @@ excluded	transfer-reveal	laptop only: shows a folder on the laptop disk
 excluded	update-check	laptop only: updates the termocode binary, never from a remote page
 excluded	update-rollback	laptop only: updates the termocode binary, never from a remote page
 excluded	web-copy-link	laptop only: copies to the laptop clipboard
+excluded	web-devices	laptop only: the paired devices (list, rename, revoke) are managed on the laptop; a web page never sees or changes who may come in
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
@@ -398,7 +401,6 @@ missing	next-hunk	Git|S
 missing	open-recent	Editor and files|S
 missing	open-url	Editor and files|S
 missing	open-workspace	Editor and files|S
-missing	output-clear	Testing and web access|S
 missing	pin-tab	Editor and files|S
 missing	prev-hunk	Git|S
 missing	preview-md	Editor and files|S
@@ -420,7 +422,6 @@ missing	sort-asc	Editor and files|S
 missing	sort-desc	Editor and files|S
 missing	spaces-to-tabs	Editor and files|S
 missing	tabs-to-spaces	Editor and files|S
-missing	testing-collapse	Testing and web access|S
 missing	toggle-comment	Editor and files|S
 missing	toggle-fold	Editor and files|S
 missing	toggle-hidden	Editor and files|S
@@ -429,7 +430,6 @@ missing	trim-blanks	Editor and files|S
 missing	trim-whitespace	Editor and files|S
 missing	unfold-all	Editor and files|S
 missing	uppercase	Editor and files|S
-missing	web-devices	Testing and web access|S
 missing	workspace-add-folder	Editor and files|S
 missing	workspace-remove-folder	Editor and files|S
 web	view/Files	view:files

@@ -985,6 +985,8 @@ export const S = {
   "quick.ask_type": "Type what should change.",
   "cmd.agents": "View: Show Agent Worktrees",
   "cmd.debug_open_launch": "Debug: Open launch.json",
+  "cmd.testing_collapse": "Testing: Collapse All",
+  "cmd.output_clear": "Output: Clear",
 } as const;
 
 export type StringKey = keyof typeof S;
