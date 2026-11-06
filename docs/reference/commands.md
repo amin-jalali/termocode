@@ -338,6 +338,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Add to .gitignore… | `git-ignore-file` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
 | Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
@@ -385,6 +386,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
 | Git: Search Log… | `git-log-search` |   |   |
+| Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Folder History… | `git-log-folder` |   |   |

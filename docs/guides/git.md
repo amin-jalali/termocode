@@ -445,6 +445,18 @@ double quotes for spaces (`author:"Ann Lee"`):
 | **Git: Show Outgoing Commits…** | Commits a push sends |
 | **Git: Toggle Auto Fetch** | Fetches every 3 minutes until termocode closes. Off by default. A failed fetch turns it off and says why. |
 
+## Ignore files and set your identity
+
+**Git: Add to .gitignore…** works on the active file. Pick **This file**,
+**All .ext files** or **Its folder**; the pattern goes at the end of the
+`.gitignore` at the top of the repository. A tracked file asks first
+(**Cancel** is ready): git keeps showing changes of a tracked file, so
+**Ignore and Stop Tracking** also runs `git rm --cached`. The file stays
+on disk.
+
+**Git: Set Identity (Name and E-mail)…** asks the name and the e-mail on
+your commits, then **This repository only** or **All repositories**.
+
 ## Keys at a glance
 
 In the Source Control panel:

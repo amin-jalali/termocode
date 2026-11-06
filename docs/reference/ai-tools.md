@@ -1997,6 +1997,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
 | `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-identity` | Git: Set Identity (Name and E-mail)… | never | sets the name and e-mail on the user's commits; only the user does that |
+| `git-ignore-file` | Git: Add to .gitignore… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-incoming` | Git: Show Incoming Commits… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-folder` | Git: Show Folder History… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
