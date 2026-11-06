@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -32,8 +33,15 @@ func (m *Model) wfxAskUndo(id string) tea.Cmd {
 	if st.live[id] != nil {
 		return m.aiInfo("Undo works once the run has ended")
 	}
+	blocked := ""
 	for _, u := range wire.Undoable(st.root, rf) {
 		if u.Undone {
+			continue
+		}
+		if u.Blocked != "" { // say so; never guess the value
+			if blocked == "" {
+				blocked = "Cannot undo " + u.Step + " " + u.Item + ": " + u.Blocked
+			}
 			continue
 		}
 		st.pendingRun, st.pendingStep, st.pendingItem = id, u.Step, u.Item
@@ -45,6 +53,9 @@ func (m *Model) wfxAskUndo(id string) tea.Cmd {
 			"\nIt runs once; what was written stays in the run's history.",
 			confirm.Button{ID: "cancel", Title: "Cancel"}, confirm.Button{ID: "undo", Title: "Undo", Style: confirm.StyleDestructive})
 		return nil
+	}
+	if blocked != "" {
+		return m.aiInfo(strings.Replace(blocked, " :", ":", 1))
 	}
 	return m.aiInfo("Nothing to undo in this run")
 }

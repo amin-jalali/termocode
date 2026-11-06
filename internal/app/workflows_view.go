@@ -647,6 +647,8 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 				tint := ""
 				if u.Undone {
 					row, tint = row+"  ↶ undone", "dim"
+				} else if u.Blocked != "" {
+					row, tint = row+"  ✗ undo by hand (a secret it needs was not kept)", "warn"
 				}
 				out = append(out, wfxLine{row, tint})
 			}
