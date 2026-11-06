@@ -11,9 +11,9 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentlog"
 	"github.com/amin-jalali/termocode/internal/agents"
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/cfgfile"
 	"github.com/amin-jalali/termocode/internal/confirm"
-	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -109,23 +109,28 @@ func (m *Model) openAgentChatView() tea.Cmd {
 	}
 	if !agentTranscriptsOn() {
 		m.agentChatPendingBuf = t.BufID
-		title := t.agentTitle()
 		home := "~/.claude"
 		if agentCLI(t.Agent) == agentlog.Codex {
 			home = "~/.codex"
 		}
-		body := "Chat View draws this tab from the session file that " + title + " writes for itself in " + home + ".\n\n" +
-			"Read only: termocode never writes there. Secrets are hidden before anything is drawn. Nothing goes to the AI or the web panel.\n\n" +
-			"Turn on sets agent_transcripts to read in config.json (also for Agent: Sessions…). Set it to off to stop."
-		m.confirm = confirm.Risky("Read "+title+"'s session files?", body,
-			confirm.Button{ID: "cancel", Title: "Not now"},
-			confirm.Button{ID: "on", Title: "Turn on", Style: confirm.StylePrimary}).WithWideText()
-		m.confirm.SetSize(m.w, m.h)
-		m.confirmOpen = true
-		m.confirmKind = confirmKindAgentTranscripts
+		m.openAgentTranscriptsCard(t.agentTitle(), home)
 		return nil
 	}
 	return m.openAgentChatFor(*t)
+}
+
+// openAgentTranscriptsCard asks to turn agent_transcripts on (Not now
+// first; Esc and Enter keep it off).
+func (m *Model) openAgentTranscriptsCard(who, home string) {
+	body := "termocode can show the session files that " + who + " write for themselves in " + home + ": as a chat (Agent: Chat View), as a history (Agent: Sessions…) and in a search.\n\n" +
+		"Read only: termocode never writes there. Secrets are hidden before anything is drawn. Nothing goes to the AI or the web panel.\n\n" +
+		"Turn on sets agent_transcripts to read in config.json. Set it to off to stop."
+	m.confirm = confirm.Risky("Read "+who+"'s session files?", body,
+		confirm.Button{ID: "cancel", Title: "Not now"},
+		confirm.Button{ID: "on", Title: "Turn on", Style: confirm.StylePrimary}).WithWideText()
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindAgentTranscripts
 }
 
 // answerAgentTranscripts is the card's answer: Turn on writes the
@@ -138,6 +143,9 @@ func (m *Model) answerAgentTranscripts(id string) tea.Cmd {
 	}
 	if err := saveAgentTranscripts("read"); err != nil {
 		return m.pushToastDetail(toast.Errr, "agent_transcripts not saved", err.Error())
+	}
+	if buf == agentChatPendingSessions {
+		return m.openAgentSessions()
 	}
 	if t, _ := m.termTabByBuf(buf); t != nil {
 		return m.openAgentChatFor(*t)

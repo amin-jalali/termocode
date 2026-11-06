@@ -136,6 +136,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.agentPickerDemo()
 	case "agentchatdemo": // Agent: Chat View over a made-up session (agent_chat_demo.go)
 		m.agentChatDemo(arg)
+	case "agentsessionsdemo": // Agent: Sessions… with made-up sessions (agent_chat_demo.go)
+		m.agentSessionsDemo()
 	case "webdemo": // the web start card or chip, made-up state (web_tui.go)
 		m.webDemo(arg)
 	case "secretsdemo":

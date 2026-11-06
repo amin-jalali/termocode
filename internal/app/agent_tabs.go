@@ -173,6 +173,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentChatPaletteID { // Agent: Chat View (agent_chat.go)
 		return m.toggleAgentChatView(), true
 	}
+	if id == agentSessionsPaletteID { // Agent: Sessions… (agent_sessions.go)
+		return m.openAgentSessions(), true
+	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
 		return nil, false

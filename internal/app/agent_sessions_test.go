@@ -82,8 +82,8 @@ func TestAgentSessionsPicker(t *testing.T) {
 	}
 	runApply(m, cmd)
 	rows := agentPickRowsText(m.agentSessionItems())
-	if !strings.Contains(rows, "| Add the pinned row as in the issue. Run go test. | Claude Code · 1 prompt · 103 k tokens") ||
-		!strings.Contains(rows, "| Fix the failing test in queue.go | Codex · 1 prompt · 20 k tokens") {
+	if !strings.Contains(rows, "| Add the pinned row as in the issue. Run go test. | ") || !strings.Contains(rows, " · Claude Code · 1 prompt · 103 k tok\n") ||
+		!strings.Contains(rows, "| Fix the failing test in queue.go | ") || !strings.Contains(rows, " · Codex · 1 prompt · 20 k tok\n") {
 		t.Errorf("rows:\n%s", rows)
 	}
 }
