@@ -468,14 +468,14 @@ excluded	view/Search	removed from the laptop activity bar (the enum value is kep
 missing	git-branch-delete	Git|S
 missing	git-branch-from	Git|S
 missing	git-branch-rename	Git|S
-missing	workflow-dry-run	Workflows|M
-missing	workflow-edit-file	Workflows|M
-missing	workflow-enable	Workflows|M
-missing	workflow-history	Workflows|M
-missing	workflow-new	Workflows|M
-missing	workflow-run	Workflows|M
-missing	workflow-stop	Workflows|M
-missing	workflows	Workflows|M
+missing	workflow-dry-run	Workflows|S
+excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
+excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
+missing	workflow-history	Workflows|S
+missing	workflow-new	Workflows|S
+missing	workflow-run	Workflows|S
+web	workflow-stop	op:workflows.stop
+missing	workflows	Workflows|S
 missing	worktree-add-folder	Worktrees|M
 missing	worktree-adopt	Worktrees|M
 missing	worktree-archive	Worktrees|M

@@ -40,8 +40,8 @@ func wfxRig(t *testing.T) (*Model, string) {
 	proj := filepath.Join(ws, ".termocode", "workflows")
 	priv := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "workflows")
 	for dir, files := range map[string]map[string]string{
-		proj: {"docs-report": fmt.Sprintf(wfxSample, "docs-report"), "broken": `{ "version": 1, "name": "broken", "steps": [ { "type": "nope" } ] }`},
-		priv: {"mine": fmt.Sprintf(wfxSample, "mine")},
+		proj:                      {"docs-report": fmt.Sprintf(wfxSample, "docs-report"), "broken": `{ "version": 1, "name": "broken", "steps": [ { "type": "nope" } ] }`},
+		priv:                      {"mine": fmt.Sprintf(wfxSample, "mine")},
 		filepath.Join(ws, "docs"): {},
 	} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {

@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t, type StringKey } from "../strings";
 import { useArming } from "./arming";
 
-export type CardKind = "tool" | "review" | "plan" | "mcp" | "trust";
+export type CardKind = "tool" | "review" | "plan" | "mcp" | "trust" | "workflow";
 
 /** open: waiting for an answer. answered: the laptop answered first.
  * offline: no answer without a live link. gone: the card no longer
@@ -22,6 +22,7 @@ const titles: Record<CardKind, StringKey> = {
   plan: "card.plan.title",
   mcp: "card.mcp.title",
   trust: "card.trust.title",
+  workflow: "card.workflow.title",
 };
 
 const choices: Record<Exclude<CardKind, "trust">, { safe: StringKey; risky: StringKey }> = {
@@ -29,6 +30,7 @@ const choices: Record<Exclude<CardKind, "trust">, { safe: StringKey; risky: Stri
   mcp: { safe: "card.deny", risky: "card.allow_once" },
   review: { safe: "card.reject", risky: "card.accept" },
   plan: { safe: "card.deny", risky: "card.approve" },
+  workflow: { safe: "card.deny", risky: "card.allow_once" },
 };
 
 export interface CardProps {

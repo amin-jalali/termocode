@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,9 +19,11 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/ghci"
+	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/aistep"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
+	"github.com/amin-jalali/termocode/internal/workflow/schedule"
 	"github.com/amin-jalali/termocode/internal/workflow/source"
 	"github.com/amin-jalali/termocode/internal/workflow/wire"
 )
@@ -42,6 +45,9 @@ const (
 	confirmKindWorkflowTrust confirmKindEnum = 3502
 	confirmKindWorkflowOnOff confirmKindEnum = 3503
 	confirmKindWorkflowStop  confirmKindEnum = 3504
+	// workflows_trust.go
+	confirmKindWorkflowUndo   confirmKindEnum = 3505
+	confirmKindWorkflowBudget confirmKindEnum = 3506
 )
 
 // wfxNarrowW: a window narrower than this shows the view as one page.
@@ -70,7 +76,18 @@ type wfxState struct {
 	live       map[string]*wfxLive // by run id
 	pending    string              // the workflow a card is about
 	pendingDry bool
-	problemSig string // the Problems rows last sent
+	// pendingRun, pendingStep, pendingItem: the run (and write) the
+	// undo or budget card is about.
+	pendingRun, pendingStep, pendingItem string
+	problemSig                           string // the Problems rows last sent
+	// sched is the scheduler (workflows_sched.go; nil until a workflow
+	// is on); schedClock is its clock (nil: the real one).
+	sched      *wfxSchedHost
+	schedClock schedule.Clock
+	// owner is this process's claim of the workspace's workflows;
+	// notOwner: another process has it (no schedules, no resume here).
+	owner    *ledger.Owner
+	notOwner bool
 }
 
 // wfxLive is a run of this process.
@@ -82,6 +99,11 @@ type wfxLive struct {
 	mu       sync.Mutex
 	lines    []string // live output (AI tails, step lines)
 	waiting  string   // what the run waits for ("" = nothing)
+	// scheduled: the scheduler started it (no page is opened for it).
+	scheduled bool
+	// budget: paused by the day budget; budgetOK: the user let it go on
+	// past it (it is not paused again).
+	budget, budgetOK bool
 }
 
 func (l *wfxLive) addLine(s string) {
@@ -125,6 +147,12 @@ func (m *Model) wfxS() *wfxState {
 		m.wfx = &wfxState{runs: map[string][]*run.RunFile{}, live: map[string]*wfxLive{}}
 	}
 	return m.wfx
+}
+
+// wfxPolicy is the admin policy (workflows-policy.json), read each time
+// so an admin's change counts at once.
+func wfxPolicy() workflow.Policy {
+	return workflow.LoadPolicy(workflow.SystemPolicyPath, workflow.UserPolicyPath(filepath.Dir(filepath.Dir(wfxPrivateDir()))))
 }
 
 // wfxPrivateDir is the user's own workflow folder.
@@ -401,6 +429,9 @@ func wfxCounts(e wire.Entry) (reads, writes int) {
 func (m *Model) answerWorkflowCard(id string) tea.Cmd {
 	st := m.wfxS()
 	kind := m.confirmKind
+	if cmd, ok := m.answerWorkflowTrustCard(kind, id); ok {
+		return cmd
+	}
 	name, dry := st.pending, st.pendingDry
 	st.pending = ""
 	e, ok := wire.Find(st.list, name)
@@ -473,10 +504,15 @@ func (m *Model) wfxToggle(e wire.Entry) tea.Cmd {
 		return m.aiInfo("Could not save: " + agentCtlShort(err.Error()))
 	}
 	m.wfxLoad("")
+	cmd := m.wfxSchedSync()
 	if s.Enabled {
-		return m.aiInfo(e.Name + " is on (the scheduler comes with a later version; runs by hand work now)")
+		word := e.Name + " is on"
+		if next, ok := m.wfxNextRun(e.Name); ok {
+			word += "; next run " + next.In(wfxLoc).Format("Mon Jan 2 15:04")
+		}
+		return tea.Batch(cmd, m.aiInfo(word))
 	}
-	return m.aiInfo(e.Name + " is off")
+	return tea.Batch(cmd, m.aiInfo(e.Name+" is off"))
 }
 
 // wfxAskStop asks before the live run of the target stops.
@@ -542,8 +578,26 @@ func (m *Model) wfxStart(e wire.Entry, dry bool) tea.Cmd {
 // wfxStartID is wfxStart that also gives the run id and handle (the AI's
 // workflow tools wait on it).
 func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd, error) {
+	return m.wfxStartRun(e, dry, true)
+}
+
+// wfxStartRun starts a run; show opens its page.
+func (m *Model) wfxStartRun(e wire.Entry, dry, show bool) (string, *run.Handle, tea.Cmd, error) {
+	return m.wfxStartRunFrom(e, dry, show, nil)
+}
+
+// wfxStartRunFrom is wfxStartRun that may continue a recovered run file.
+func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFile) (string, *run.Handle, tea.Cmd, error) {
 	st := m.wfxS()
+	if !dry && e.File != nil {
+		if why := wfxPolicy().Blocked(e.File); why != "" {
+			return "", nil, nil, errors.New("blocked: " + why)
+		}
+	}
 	id := wire.NewRunID()
+	if resume != nil {
+		id = resume.ID
+	}
 	l := &wfxLive{id: id, name: e.Name, dry: dry, ch: make(chan tea.Msg, 64)}
 	send := func(msg tea.Msg) {
 		select {
@@ -582,7 +636,7 @@ func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd
 		src.Secrets = s
 	}
 	cfg := wire.Config{
-		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry,
+		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume,
 		Src: src, Tools: check, AI: m.wfxAIEnv(), Exec: wfxExec,
 		Gate: func(ctx context.Context, a wire.GateAsk) (wire.GateDecision, error) { return ask(ctx, a, false) },
 		AskTool: func(ctx context.Context, c run.AskCall) (bool, error) {
@@ -593,7 +647,8 @@ func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd
 		Notify: func(ctx context.Context, via, text string) error {
 			return block(ctx, wfxLineMsg{id: id, text: "message (" + via + "): " + text})
 		},
-		OnEvent: func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
+		OnEvent:      func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
+		OnAuditError: func(err error) { recordError("workflow " + e.Name + ": audit: " + err.Error()) },
 		OnAgent: func(step, item string, ev ai.Event) {
 			if ev.Kind == ai.EventToolStart && ev.Detail != "" {
 				l.addLine(step + " " + item + ": " + lastLine(ev.Detail))
@@ -626,6 +681,10 @@ func (m *Model) wfxStartID(e wire.Entry, dry bool) (string, *run.Handle, tea.Cmd
 		l.ch <- wfxDoneMsg{id: id}
 	})
 	m.wfxPutRun(h.Snapshot())
+	m.wfxCheckBudget(l)
+	if !show {
+		return id, h, wfxListen(l.ch), nil
+	}
 	return id, h, tea.Batch(m.wfxShowPage("run:"+id, true), wfxListen(l.ch)), nil
 }
 
@@ -644,6 +703,9 @@ func wfxListen(ch chan tea.Msg) tea.Cmd {
 
 // handleWfxMsg handles the run messages. ok=false: not ours.
 func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
+	if cmd, ok := m.handleWfxSchedMsg(msg); ok {
+		return cmd, true
+	}
 	switch msg := msg.(type) {
 	case wfxEventMsg:
 		l := m.wfxS().live[msg.id]
@@ -654,6 +716,9 @@ func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
 			l.addLine(msg.ev.Step + " " + msg.ev.Item + ": " + string(msg.ev.Kind) + " " + msg.ev.Err)
 		}
 		m.wfxPutRun(l.h.Snapshot())
+		if msg.ev.Kind == run.StepDone {
+			m.wfxCheckBudget(l)
+		}
 		return wfxListen(l.ch), true
 	case wfxLineMsg:
 		l := m.wfxS().live[msg.id]
@@ -708,7 +773,7 @@ func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
 		if rf.Dry {
 			kind = "dry run"
 		}
-		return m.aiInfo(l.name + ": " + kind + " " + word), true
+		return tea.Batch(m.wfxNotifyDone(l, rf), m.aiInfo(l.name+": "+kind+" "+word)), true
 	}
 	return nil, false
 }

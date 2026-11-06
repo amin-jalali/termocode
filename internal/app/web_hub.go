@@ -66,6 +66,7 @@ type webHub struct {
 	search webSearches                // the running searches by connection (web_search.go; own lock)
 	tasks  webTasksPub                // Update only: what the tasks topic sent (web_tasks.go)
 	runs   webRunsPub                 // Update only: what the runs topic sent (web_runs.go)
+	wfx    webWorkflowsPub            // Update only: what the workflows topic sent (web_workflows.go)
 	run    webRunPub                  // Update only: the Test, Debug and Services topics (web_tests.go)
 	wt     webWTPub                   // Update only: what the worktrees topic sent (web_worktrees.go)
 	more   webMorePub                 // Update only: the v2 More views (web_more.go)
