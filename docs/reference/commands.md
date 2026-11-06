@@ -465,6 +465,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Show Folder History… | `git-log-folder` |   |   |
 | Git: Show Git Command Log | `git-cmd-log` |   |   |
 | Git: Show Incoming Commits… | `git-incoming` |   |   |
+| Git: Show LFS Files | `git-lfs-files` |   | `the files Git LFS tracks; which ones are only pointers` |
 | Git: Show Last Hook Output | `git-hook-output` |   |   |
 | Git: Show Line History | `git-line-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |

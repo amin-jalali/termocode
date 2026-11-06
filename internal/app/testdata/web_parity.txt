@@ -479,6 +479,7 @@ missing	git-incoming	Git|S
 missing	git-init	Git|S
 missing	git-inline-blame	Git|S
 missing	git-issues	Git|S
+missing	git-lfs-files	Git|S
 missing	git-line-history	Git|S
 missing	git-log-folder	Git|S
 missing	git-log-search	Git|S

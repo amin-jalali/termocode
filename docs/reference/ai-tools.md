@@ -2186,6 +2186,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-init` | Git: Initialize Repository | never | makes a new git repository in the user's folder; user only |
 | `git-inline-blame` | Git: Toggle Inline Blame | auto |   |
 | `git-issues` | Git: Issues… (Start Work on One) | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-lfs-files` | Git: Show LFS Files | auto |   |
 | `git-line-history` | Git: Show Line History | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-folder` | Git: Show Folder History… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |

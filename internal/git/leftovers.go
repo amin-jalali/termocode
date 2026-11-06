@@ -1,9 +1,15 @@
 package git
 
 import (
+	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // GITX-39: the small git leftovers (docs-local/plans/git-gap.md).
@@ -119,4 +125,83 @@ func StagedCRLF(dir string) ([]string, error) {
 		}
 	}
 	return paths, nil
+}
+
+// lfsPointerMax is the size above which a file is never an LFS pointer.
+const lfsPointerMax = 1024
+
+// ParseLFSPointer reads a Git LFS pointer file: its oid and the size of
+// the real file.
+func ParseLFSPointer(data []byte) (oid string, size int64, ok bool) {
+	if len(data) > lfsPointerMax || !bytes.HasPrefix(data, []byte("version https://git-lfs.github.com/spec/")) {
+		return "", 0, false
+	}
+	hasSize := false
+	for _, l := range strings.Split(string(data), "\n") {
+		k, v, _ := strings.Cut(l, " ")
+		switch k {
+		case "oid":
+			oid = v
+		case "size":
+			n, err := strconv.ParseInt(v, 10, 64)
+			if err != nil || n < 0 {
+				return "", 0, false
+			}
+			size, hasSize = n, true
+		}
+	}
+	if oid == "" || !hasSize {
+		return "", 0, false
+	}
+	return oid, size, true
+}
+
+// LFSFile is a tracked file that .gitattributes sends to Git LFS.
+type LFSFile struct {
+	Path    string
+	Pointer bool  // only the pointer is on disk: the real file is not downloaded
+	Size    int64 // of the real file (from the pointer), else on disk
+}
+
+// LFSFiles lists the tracked files with the filter=lfs attribute, in
+// path order.
+func LFSFiles(dir string) ([]LFSFile, error) {
+	ls, err := runCombined(dir, "git", "ls-files", "-z")
+	if err != nil {
+		return nil, err
+	}
+	if ls == "" {
+		return nil, nil
+	}
+	cmd := spawn.Command("git", "check-attr", "-z", "--stdin", "filter")
+	cmd.Dir = dir
+	cmd.Stdin = strings.NewReader(ls)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, cmdError(err, []byte(stderr.String()))
+	}
+	f := strings.Split(string(out), "\x00")
+	var files []LFSFile
+	for i := 0; i+2 < len(f); i += 3 {
+		if f[i+2] != "lfs" {
+			continue
+		}
+		lf := LFSFile{Path: f[i]}
+		p := filepath.Join(dir, filepath.FromSlash(f[i]))
+		if st, err := os.Stat(p); err == nil {
+			lf.Size = st.Size()
+			if st.Size() <= lfsPointerMax {
+				if b, err := os.ReadFile(p); err == nil {
+					if _, n, ok := ParseLFSPointer(b); ok {
+						lf.Pointer, lf.Size = true, n
+					}
+				}
+			}
+		}
+		files = append(files, lf)
+	}
+	sort.Slice(files, func(a, b int) bool { return files[a].Path < files[b].Path })
+	return files, nil
 }
