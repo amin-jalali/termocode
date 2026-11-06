@@ -204,11 +204,13 @@ func TestWebHTTPOtherHostNeedsLaptopCardOnce(t *testing.T) {
 	if last.Status != 204 || last.By != "web" {
 		t.Fatalf("last %+v", last)
 	}
+	sent = webproto.HTTPSent{}
 	webTestData(t, r.do(webproto.OpHTTPSend, `{"method":"DELETE","url":"https://api.example.com/v1/x"}`), &sent)
 	if sent.Card != "" || sent.Run == 0 || len(hits) != 2 || r.m.confirmOpen {
 		t.Fatalf("second send to the host %+v hits %v", sent, hits)
 	}
 	// Another host asks again; a private one asks every time.
+	sent = webproto.HTTPSent{}
 	webTestData(t, r.do(webproto.OpHTTPSend, `{"url":"https://other.example.org/"}`), &sent)
 	if sent.Card == "" || len(hits) != 2 {
 		t.Fatalf("other host %+v", sent)
@@ -218,6 +220,7 @@ func TestWebHTTPOtherHostNeedsLaptopCardOnce(t *testing.T) {
 		t.Fatalf("sent after cancel: %v", hits)
 	}
 	for i := 0; i < 2; i++ {
+		sent = webproto.HTTPSent{}
 		webTestData(t, r.do(webproto.OpHTTPSend, `{"url":"http://192.168.1.20/status"}`), &sent)
 		if sent.Card == "" {
 			t.Fatalf("private host, try %d: %+v", i, sent)
@@ -265,6 +268,7 @@ func TestWebHTTPCancel(t *testing.T) {
 		t.Fatalf("cancel: %v", f)
 	}
 	webDrain(t, r.m, func() tea.Msg { return <-done })
+	run = webproto.HTTPResponse{}
 	webTestData(t, r.do(webproto.OpHTTPResponse, `{}`), &run)
 	if run.Running || run.Err == "" {
 		t.Fatalf("after cancel: %+v", run)
@@ -399,7 +403,10 @@ func TestWebHTTPImportNewFileSaveBody(t *testing.T) {
 	if f := r.do(webproto.OpHTTPImportCurl, `{"curl":"wget x"}`); webTestErr(f) != "bad_request" {
 		t.Fatalf("not curl: %v", f)
 	}
-	webTestData(t, r.do(webproto.OpHTTPNewFile, `{"path":"api/orders"}`), &p)
+	if f := r.do(webproto.OpHTTPNewFile, `{"path":"api/orders"}`); webTestErr(f) != "bad_request" {
+		t.Fatalf("not a .http name: %v", f)
+	}
+	webTestData(t, r.do(webproto.OpHTTPNewFile, `{"path":"api/orders.http"}`), &p)
 	b, _ = os.ReadFile(filepath.Join(r.root, "api", "orders.http"))
 	if p.Path != "api/orders.http" || !strings.Contains(string(b), "{{host}}") {
 		t.Fatalf("new file %+v:\n%s", p, b)
