@@ -136,7 +136,7 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 
 | Command | What it does |
 |---|---|
-| **Git: Switch Branch...** | Pick a branch. The first row creates a new one. |
+| **Git: Switch Branch...** | Pick a branch. The first row creates a new one. See below. |
 | **Git: Show Log...** | Pick a commit to see its full diff |
 | **Git: Show File History...** | Commits that changed this file |
 | **Git: Compare with Revision...** | Diff against a branch, tag, `HEAD~3` or a SHA |
@@ -146,6 +146,23 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 | **Git: Rename Branch…** | Give the current branch a new name |
 | **Git: Create Branch From…** | Start a new branch at another branch or a tag |
 | **Git: Delete Branch…** | Delete a local or a remote branch (see below) |
+
+### The branch picker
+
+**Git: Switch Branch...** shows your branches in this order:
+
+- **Recent**: the branches you used last. The current one is on top.
+- **Branches**, then one group per prefix, such as `feat/` or `fix/`.
+- **Remote**: remote branches you do not have yet. Pick one and you get a
+  local branch that tracks it.
+
+Each row shows `current`, and `↑2 ↓1` when the branch is ahead of or behind
+its upstream. `upstream gone` means the remote branch was deleted.
+
+Sometimes your local changes block the switch. Then a card asks first.
+**Cancel** has the focus and changes nothing. **Stash and Switch** saves your
+changes (new files too) in the stash and switches. **Git: Pop Latest Stash**
+brings them back.
 
 **Git: Delete Branch…** asks first, and **Cancel** is the choice that is
 ready. A local branch is only deleted when its commits are on another
