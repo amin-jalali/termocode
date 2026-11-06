@@ -1,0 +1,24 @@
+ ◉ Dry run · mine · 09:21                       ✓ done · read 2 · would write 1
+ ──────────────────────────────────────────────────────────────────────────────
+ docs ✓ 2  →  rep would write
+ STEPS
+   docs     source  ✓ → 2 items
+   rep      write   would write
+ WOULD WRITE  (a dry run never sends)
+   rep      would write file reports/docs.md  "2 docs"
+ ──────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [Run for real (r)] [Dry run again (d)] [Back (Esc)]

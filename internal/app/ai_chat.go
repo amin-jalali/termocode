@@ -196,6 +196,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, aiHelpTools()...)               // U21: the built-in guide (ai_help_tools.go)
 	tools = append(tools, aiItermocTools(call)...)        // AH-7: profiles, models, MCP services, outside agents (ai_itermoc_tools.go)
 	tools = append(tools, m.aiItermocWriteTools(call)...) // AH-8: switch, drafts, connect, access, start (ai_itermoc_write_tools.go)
+	tools = append(tools, m.aiRaceTools(call)...)         // AGX-4: agent_race_start (agent_race_tool.go)
 	tools = append(tools, aiMCPAddTools()...)             // MCPX-37: propose an MCP server (ai_mcp_add_tool.go)
 	tools = append(tools, m.aiAgentRunTools(call, c)...)  // G-API: agents start agent runs (ai_agent_run_tools.go)
 	if m.aiReviewEdits() {                                // Group R2: file changes become diffs to review

@@ -30,6 +30,7 @@ const (
 	gitRowNote                      // empty-section note ("No changes") (not selectable)
 	gitRowSpacer                    // blank separator between sections (not selectable)
 	gitRowRebase                    // the "rebase in progress" banner (git_rebase.go)
+	gitRowStopped                   // the stopped merge / cherry-pick / revert banner (git_merge_branch.go)
 )
 
 type gitSection int
@@ -126,6 +127,9 @@ func (m Model) gitFileRows() []gitPanelRow {
 	// The rebase banner — only while an interactive rebase is stopped.
 	if m.gitRebase.InProgress {
 		rows = append(rows, gitPanelRow{kind: gitRowRebase}, gitPanelRow{kind: gitRowSpacer})
+	}
+	if m.gitStopped != "" {
+		rows = append(rows, gitPanelRow{kind: gitRowStopped}, gitPanelRow{kind: gitRowSpacer})
 	}
 
 	// CONFLICTS — only during a merge/rebase with unmerged paths.

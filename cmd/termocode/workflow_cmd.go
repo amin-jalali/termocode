@@ -1,0 +1,398 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/amin-jalali/termocode/internal/workflow"
+	"github.com/amin-jalali/termocode/internal/workflow/ledger"
+	wfrun "github.com/amin-jalali/termocode/internal/workflow/run"
+	"github.com/amin-jalali/termocode/internal/workflow/source"
+	"github.com/amin-jalali/termocode/internal/workflow/wire"
+)
+
+// termocode workflow … (WFX-8, plan §5.9). list, show, validate, runs,
+// logs and run --dry-run work without a session (a dry run never
+// writes); a real run, stop, pause and resume go through the IDE.
+
+const workflowUsage = `usage: termocode workflow <command>
+  list [--json]                     the workflows of this folder
+  show <name> [--json]              one workflow's steps
+  validate [<file>…]                check files (all of this folder by default)
+  run <name> --dry-run [--var k=v]  read for real, write nothing (no plan steps)
+  runs [<name>] [--json] [--limit N]
+  logs <run id>                     what a run did
+  stop <run id>                     (in the IDE: Workflows, x)
+Exit codes: 0 ok, 1 failed, 2 usage, 3 needs the IDE session.`
+
+func runWorkflow(args []string) int {
+	ws, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "termocode:", err)
+		return 1
+	}
+	return runWorkflowIn(args, ws, os.Stdout, os.Stderr)
+}
+
+func workflowPrivateDir() string {
+	dir := os.Getenv("XDG_CONFIG_HOME")
+	if dir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		dir = filepath.Join(home, ".config")
+	}
+	return filepath.Join(dir, "termocode", "workflows")
+}
+
+func runWorkflowIn(args []string, ws string, out, errw io.Writer) int {
+	if len(args) == 0 {
+		fmt.Fprintln(errw, workflowUsage)
+		return 2
+	}
+	root, err := ledger.Root(ws)
+	if err != nil {
+		fmt.Fprintln(errw, "termocode:", err)
+		return 1
+	}
+	load := func() []wire.Entry { return wire.Load(ws, workflowPrivateDir(), root) }
+	fs := flag.NewFlagSet("workflow "+args[0], flag.ContinueOnError)
+	fs.SetOutput(errw)
+	asJSON := fs.Bool("json", false, "print JSON")
+	dry := fs.Bool("dry-run", false, "dry run")
+	limit := fs.Int("limit", 20, "most runs")
+	var vars kvFlags
+	fs.Var(&vars, "var", "k=v (repeat)")
+	cmd := args[0]
+	if err := fs.Parse(reorderFlags(args[1:])); err != nil {
+		return 2
+	}
+	rest := fs.Args()
+	switch cmd {
+	case "list":
+		return wfList(load(), root, *asJSON, out)
+	case "show":
+		if len(rest) != 1 {
+			fmt.Fprintln(errw, "usage: termocode workflow show <name>")
+			return 2
+		}
+		e, ok := wire.Find(load(), rest[0])
+		if !ok {
+			fmt.Fprintf(errw, "termocode: no workflow %q\n", rest[0])
+			return 1
+		}
+		return wfShow(e, *asJSON, out, errw)
+	case "validate":
+		return wfValidate(rest, load(), out, errw)
+	case "run":
+		if len(rest) != 1 {
+			fmt.Fprintln(errw, "usage: termocode workflow run <name> --dry-run")
+			return 2
+		}
+		if !*dry {
+			fmt.Fprintln(errw, "termocode: a real run writes to outside systems and asks on cards: start it in the IDE (Workflows, r)")
+			return 3
+		}
+		e, ok := wire.Find(load(), rest[0])
+		if !ok {
+			fmt.Fprintf(errw, "termocode: no workflow %q\n", rest[0])
+			return 1
+		}
+		return wfDryRun(ws, root, e, map[string]any(vars), out, errw)
+	case "runs":
+		name := ""
+		if len(rest) > 0 {
+			name = rest[0]
+		}
+		return wfRuns(root, name, *limit, *asJSON, out, errw)
+	case "logs":
+		if len(rest) != 1 {
+			fmt.Fprintln(errw, "usage: termocode workflow logs <run id>")
+			return 2
+		}
+		rf, err := wire.RunFiles{Root: root}.Load(rest[0])
+		if err != nil {
+			fmt.Fprintln(errw, "termocode:", err)
+			return 1
+		}
+		wfPrintRun(rf, out)
+		return 0
+	case "stop", "pause", "resume":
+		fmt.Fprintf(errw, "termocode: %s works on a live run in the IDE (Workflows, x)\n", cmd)
+		return 3
+	}
+	fmt.Fprintln(errw, workflowUsage)
+	return 2
+}
+
+// reorderFlags puts flags before the other arguments (flag stops at the
+// first non-flag).
+func reorderFlags(args []string) []string {
+	var flags, rest []string
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if strings.HasPrefix(a, "-") {
+			flags = append(flags, a)
+			if (a == "--var" || a == "--limit" || a == "-var" || a == "-limit") && i+1 < len(args) {
+				flags = append(flags, args[i+1])
+				i++
+			}
+			continue
+		}
+		rest = append(rest, a)
+	}
+	return append(flags, rest...)
+}
+
+type kvFlags map[string]any
+
+func (k *kvFlags) String() string { return "" }
+func (k *kvFlags) Set(v string) error {
+	key, val, ok := strings.Cut(v, "=")
+	if !ok || key == "" {
+		return fmt.Errorf("want k=v, not %q", v)
+	}
+	if *k == nil {
+		*k = kvFlags{}
+	}
+	(*k)[key] = val
+	return nil
+}
+
+func wfState(e wire.Entry) string {
+	switch {
+	case e.Broken():
+		return "file error"
+	case !e.Trusted:
+		return "not trusted"
+	case e.Enabled:
+		return "on"
+	}
+	return "off"
+}
+
+func wfList(list []wire.Entry, root string, asJSON bool, out io.Writer) int {
+	type row struct {
+		Name    string `json:"name"`
+		Title   string `json:"title,omitempty"`
+		State   string `json:"state"`
+		Path    string `json:"path"`
+		LastRun string `json:"last_run,omitempty"`
+	}
+	rows := []row{}
+	for _, e := range list {
+		r := row{Name: e.Name, State: wfState(e), Path: e.Path}
+		if e.File != nil {
+			r.Title = e.File.Title
+		}
+		if runs, _ := (wire.RunFiles{Root: root}).List(e.Name, 1); len(runs) > 0 {
+			r.LastRun = runs[0].ID + " " + runs[0].State
+		}
+		rows = append(rows, r)
+	}
+	if asJSON {
+		b, _ := json.MarshalIndent(rows, "", "  ")
+		fmt.Fprintln(out, string(b))
+		return 0
+	}
+	for _, r := range rows {
+		fmt.Fprintf(out, "%-24s %-12s %s\n", r.Name, r.State, r.Title)
+	}
+	return 0
+}
+
+func wfShow(e wire.Entry, asJSON bool, out, errw io.Writer) int {
+	if e.Broken() {
+		wfProblems(e, errw)
+		return 1
+	}
+	type step struct {
+		ID, Type, What string
+		Depth          int
+	}
+	var steps []step
+	var add func([]workflow.Step, int)
+	add = func(list []workflow.Step, d int) {
+		for i := range list {
+			s := &list[i]
+			steps = append(steps, step{s.ID, s.Type, wfWhat(s), d})
+			if s.Each != nil {
+				add(s.Each.Steps, d+1)
+			}
+		}
+	}
+	add(e.File.Steps, 0)
+	if asJSON {
+		b, _ := json.MarshalIndent(map[string]any{"name": e.Name, "title": e.File.Title, "state": wfState(e), "hash": e.Hash, "steps": steps}, "", "  ")
+		fmt.Fprintln(out, string(b))
+		return 0
+	}
+	fmt.Fprintf(out, "%s · %s · %s\n", e.Name, e.File.Title, wfState(e))
+	for _, s := range steps {
+		fmt.Fprintf(out, "  %s%-10s %-8s %s\n", strings.Repeat("  ", s.Depth), s.ID, s.Type, s.What)
+	}
+	return 0
+}
+
+func wfWhat(s *workflow.Step) string {
+	switch {
+	case s.Source != nil:
+		return s.Source.From + " " + strings.TrimSpace(s.Source.Server+" "+s.Source.Tool+" "+s.Source.Glob+strings.Join(s.Source.Argv, " ")+s.Source.Request+s.Source.Connection+s.Source.What)
+	case s.Write != nil:
+		switch s.Write.To {
+		case "file":
+			return "file " + s.Write.Path
+		case "mcp", "status":
+			return s.Write.Server + " " + s.Write.Tool
+		}
+		return s.Write.To
+	case s.Each != nil:
+		return s.Each.Items
+	case s.Filter != nil:
+		return s.When
+	}
+	return ""
+}
+
+func wfProblems(e wire.Entry, errw io.Writer) {
+	for _, p := range e.Problems {
+		fmt.Fprintf(errw, "%s: %s\n", e.Path, p.String())
+	}
+}
+
+func wfValidate(files []string, list []wire.Entry, out, errw io.Writer) int {
+	bad := false
+	check := func(path string, data []byte) {
+		if _, warns, err := workflow.Parse(path, data); err != nil {
+			bad = true
+			if pe, ok := err.(*workflow.ParseError); ok {
+				for _, p := range pe.Problems {
+					fmt.Fprintf(errw, "%s: %s\n", path, p.String())
+				}
+			} else {
+				fmt.Fprintf(errw, "%s: %v\n", path, err)
+			}
+		} else {
+			for _, w := range warns {
+				fmt.Fprintf(errw, "%s: warning: %s\n", path, w.String())
+			}
+			fmt.Fprintf(out, "%s: ok\n", path)
+		}
+	}
+	if len(files) == 0 {
+		if len(list) == 0 {
+			fmt.Fprintln(out, "no workflow files in "+wire.ProjectDir)
+		}
+		for _, e := range list {
+			check(e.Path, e.Data)
+		}
+	}
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			fmt.Fprintln(errw, "termocode:", err)
+			bad = true
+			continue
+		}
+		check(f, b)
+	}
+	if bad {
+		return 1
+	}
+	return 0
+}
+
+func wfDryRun(ws, root string, e wire.Entry, vars map[string]any, out, errw io.Writer) int {
+	if e.Broken() {
+		wfProblems(e, errw)
+		return 1
+	}
+	if !e.Trusted {
+		fmt.Fprintln(errw, "termocode: "+e.Name+" is a repo file and is not trusted yet: open it in the IDE (Workflows, d) to read and trust it")
+		return 1
+	}
+	h, err := wire.Start(context.Background(), wire.Config{Workspace: ws, Root: root, Entry: e, Dry: true, NoPlan: true, Vars: vars,
+		Src: &source.Sources{Workspace: ws}})
+	if err != nil {
+		fmt.Fprintln(errw, "termocode:", err)
+		return 1
+	}
+	select {
+	case <-h.Done():
+	case <-time.After(30 * time.Minute):
+		h.Cancel()
+		<-h.Done()
+	}
+	rf := h.Snapshot()
+	wfPrintRun(rf, out)
+	if rf.State != wfrun.RunOK {
+		return 1
+	}
+	return 0
+}
+
+func wfPrintRun(rf *wfrun.RunFile, out io.Writer) {
+	kind := "run"
+	if rf.Dry {
+		kind = "dry run"
+	}
+	fmt.Fprintf(out, "%s · %s %s · %s\n", rf.Workflow, kind, rf.ID, rf.State)
+	if rf.Error != "" {
+		fmt.Fprintln(out, "  error: "+rf.Error)
+	}
+	keys := make([]string, 0, len(rf.Steps))
+	for k := range rf.Steps {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		s := rf.Steps[k]
+		line := fmt.Sprintf("  %-10s %s", k, s.State)
+		if len(s.Items) > 0 {
+			line += " · " + strconv.Itoa(len(s.Items)) + " items"
+		}
+		if s.Error != "" {
+			line += " · " + s.Error
+		}
+		fmt.Fprintln(out, line)
+	}
+	for _, w := range rf.Writes {
+		verb := w.State
+		if w.State == wfrun.StateRecorded {
+			verb = "would write"
+		}
+		text := strings.TrimSpace(w.Spec.Content + w.Spec.Body + w.Spec.Text)
+		fmt.Fprintf(out, "  %-10s %s %s %s\n", w.Step, verb, w.To, strconv.Quote(text))
+	}
+}
+
+func wfRuns(root, name string, limit int, asJSON bool, out, errw io.Writer) int {
+	runs, err := wire.RunFiles{Root: root}.List(name, limit)
+	if err != nil {
+		fmt.Fprintln(errw, "termocode:", err)
+		return 1
+	}
+	if asJSON {
+		b, _ := json.MarshalIndent(runs, "", "  ")
+		fmt.Fprintln(out, string(b))
+		return 0
+	}
+	for _, rf := range runs {
+		kind := ""
+		if rf.Dry {
+			kind = "dry"
+		}
+		fmt.Fprintf(out, "%s  %-20s %-11s %s\n", rf.ID, rf.Workflow, rf.State, kind)
+	}
+	return 0
+}

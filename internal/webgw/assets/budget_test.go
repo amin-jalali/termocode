@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io/fs"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -22,7 +24,7 @@ const (
 	// services, the commit graph, merge, rebase, pull requests, agent
 	// worktrees, the data grid, settings). Only screens 1200 px and wider
 	// load it, after the page; about 39 KiB today.
-	budgetWorkbench = 56 << 10
+	budgetWorkbench = 60 << 10 // 56 KiB until the worktrees view and the main work met (58 KiB)
 )
 
 func gzSize(t *testing.T, name string) int {
@@ -80,4 +82,37 @@ func TestPerfGuardDesktopEditorSize(t *testing.T) {
 			t.Errorf("%s loads the desktop editor itself", name)
 		}
 	}
+}
+
+// The phone's first files carry English only: the Persian strings are
+// strings-fa.js, which the page loads when the UI language is Persian.
+func TestPhoneBundleHoldsNoPersianStrings(t *testing.T) {
+	page := readBuilt(t, "app.js") + readBuilt(t, "app-chunk.js")
+	fa := readBuilt(t, "strings-fa.js")
+	persian := regexp.MustCompile(`[\x{0600}-\x{06FF}]`)
+	n := 0
+	for _, e := range parseStrings(t, "src/strings.fa.ts", "FA") {
+		if !persian.MatchString(e.text) || len(e.text) < 12 {
+			continue // a symbol, a key name or a short word the code may hold
+		}
+		n++
+		if strings.Contains(page, e.text) {
+			t.Errorf("the phone's first files hold the Persian text of %s", e.key)
+		}
+		if !strings.Contains(fa, e.text) {
+			t.Errorf("strings-fa.js has no Persian text of %s", e.key)
+		}
+	}
+	if n < 100 {
+		t.Fatalf("only %d Persian strings checked", n)
+	}
+}
+
+func readBuilt(t *testing.T, name string) string {
+	t.Helper()
+	b, err := fs.ReadFile(FS(), name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }

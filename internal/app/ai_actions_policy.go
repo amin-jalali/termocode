@@ -167,6 +167,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// ── Git ──
 	"git-stage":           aiConfirm(ai.ClassGit),
 	"git-stage-all":       aiConfirm(ai.ClassGit),
+	"git-unstage-all":     aiConfirm(ai.ClassGit),
+	"git-discard-all":     aiDestructive(), // its card is Cancel-first; a safety stash is kept
+	"git-clean-untracked": aiDestructive(), // deletes new files (a safety stash is kept)
+	"git-commit-push":     aiNever("commits the message the user typed in the box, then pushes; use git_commit, then git_push"),
+	"git-commit-sync":     aiNever("commits the message the user typed in the box, then pushes; use git_commit, then git_push"),
 	"git-stage-hunk":      aiConfirm(ai.ClassGit),
 	"git-unstage-hunk":    aiConfirm(ai.ClassGit),
 	"git-discard-hunk":    aiDestructive(),
@@ -187,6 +192,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-fetch":           aiConfirm(ai.ClassGit),
 	"git-sync":            aiDestructive(), // pushes too
 	"git-branch":          aiNever(aiNoPicker + " (git_branch, git_checkout)"),
+	"git-branch-rename":   aiNever(aiNoPicker),
+	"git-branch-delete":   aiNever(aiNoPicker),
+	"git-branch-from":     aiNever(aiNoPicker + " (git_branch)"),
 	"git-stash":           aiConfirm(ai.ClassGit),
 	"git-stash-pop":       aiConfirm(ai.ClassGit),
 	"git-stash-list":      aiNever(aiNoPicker + " (git_stash list)"),
@@ -220,6 +228,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// ── Merge view (git_merge_view.go): opening and moving around are
 	// UI only; each Take changes the user's merge result, so the user
 	// decides it. ──
+	"git-merge-branch":                 aiNever(aiNoPicker),
+	"git-merge-status":                 aiNever("its card asks the user to abort or continue a stopped merge"),
 	"git-merge-open":                   aiAuto(),
 	"git-merge-next":                   aiAuto(),
 	"git-merge-prev":                   aiAuto(),
@@ -482,6 +492,16 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"itermoc-agents":    aiNever(itermocNoOpen),
 	"ai-model-slot-add": aiNever(itermocNoSlotEdit),
 	"ai-add":            aiNever(addAINoAI),
+	// Workflows view (workflows_keys.go, plan §5.8): opening and reading
+	// are free; a run reads outside systems and may write (its writes ask
+	// again on the gate card); on/off changes what runs unattended.
+	"workflows":          aiAuto(),
+	"workflow-run":       aiConfirm(ai.ClassRun),
+	"workflow-dry-run":   aiConfirm(ai.ClassRun),
+	"workflow-enable":    aiDestructive(),
+	"workflow-stop":      aiConfirm(ai.ClassRun),
+	"workflow-edit-file": aiAuto(),
+	"workflow-history":   aiAuto(),
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),
@@ -687,6 +707,15 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"web_max_hours":    aiNever(aiNoWeb),
 	"web_open_browser": aiNever(aiNoWeb),
 	"web_max_viewers":  aiNever(aiNoWeb),
+	// Workflows (ADR 0021): the AI may change a limit after its card; it
+	// never turns workflows on or off and never widens the agent sandbox.
+	"workflows_enabled":          aiNever("workflows run unattended and write to outside systems; only the user turns them on or off"),
+	"workflows_parallel_max":     aiConfirm(ai.ClassSettings),
+	"workflows_day_budget_usd":   aiConfirm(ai.ClassSettings),
+	"workflows_missed_grace_min": aiConfirm(ai.ClassSettings),
+	"workflows_history_days":     aiConfirm(ai.ClassSettings),
+	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
+	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
 }
 
 // aiNoWeb is why the AI never touches the web panel.

@@ -144,19 +144,7 @@ func BranchUnmerged(dir, branch, base string) (int, error) {
 	return strconv.Atoi(strings.TrimSpace(out))
 }
 
-// DeleteBranch deletes a local branch: `git branch -d` (merged only), or
-// -D with force.
-func DeleteBranch(dir, branch string, force bool) error {
-	if branch == "" || strings.HasPrefix(branch, "-") {
-		return fmt.Errorf("%q is not a branch name", branch)
-	}
-	flag := "-d"
-	if force {
-		flag = "-D"
-	}
-	_, err := gitRetry(dir, "branch", flag, "--", branch)
-	return err
-}
+// DeleteBranch lives in branch_ops.go (shared with the branch actions).
 
 // PruneWorktrees drops git's records of worktrees whose folders are gone
 // (`git worktree prune`); it never touches a folder.

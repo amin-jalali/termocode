@@ -150,7 +150,7 @@ export function DeskWorktrees() {
             actions={
               canAct && (
                 <>
-                  {!archived && <Act icon={w.pinned ? "pinned" : "pin"} act="pin" label={t(w.pinned ? "wt.unpin" : "wt.pin")} onClick={() => pin(w)} />}
+                  {!archived && <Act icon={w.pinned ? "pinned" : "pin"} act="pin" label={t(w.pinned ? "menu.unpin" : "menu.pin")} onClick={() => pin(w)} />}
                   {!archived && !w.gone && <Act icon="comment" act="note" label={t("wt.note")} onClick={() => setPending({ id: w.id, op: "note" })} />}
                   {can && !archived && !w.gone && (asleep ? <Act icon="play" act="wake" label={t("wt.wake")} onClick={() => sleep(w, false)} /> : <Act icon="debug-pause" act="sleep" label={t("wt.sleep")} onClick={() => setPending({ id: w.id, op: "sleep" })} />)}
                   {can && (!w.gone || archived) && <Act icon={archived ? "history" : "archive"} act="archive" label={t(archived ? "wt.restore" : "wt.archive")} onClick={() => setLaptop({ w, op: "archive" })} />}

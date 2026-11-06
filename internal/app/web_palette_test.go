@@ -37,7 +37,7 @@ func TestWebPaletteListIsTheSafeAllowList(t *testing.T) {
 	for _, it := range res.Items {
 		byID[it.ID] = it
 		p, ok := aiActionPolicyFor(it.ID)
-		if !ok || p.Gate == aiGateNever {
+		if _, user := webPaletteUserOnly[it.ID]; !ok || p.Gate == aiGateNever && !user {
 			t.Errorf("%s offered, but the AI policy is %+v", it.ID, p)
 		}
 		if p.Gate == aiGateConfirm && p.Class == "" && !it.Ask {
@@ -109,5 +109,55 @@ func TestWebPaletteAskWaitsForTheLaptop(t *testing.T) {
 		if f := r.call(webproto.OpPaletteAsk, &webproto.PaletteArgs{ID: id}); webErrCode(f) != "forbidden" {
 			t.Errorf("%s: %v", id, f)
 		}
+	}
+}
+
+// Spec (web parity, AI chat and agents): the user's own AI commands that
+// the AI may never run (they change the user's AI setup, spend the
+// user's tokens or start work that pushes) are offered to the web, the
+// web user being the user: each is on webPaletteUserOnly with its reason,
+// and each that changes a setting, spends money or touches files waits
+// for a laptop card (Cancel first). The harmless MCP ones run at once.
+// Other never commands (configure the provider, delete chats) are not
+// offered.
+func TestWebPaletteOffersTheUsersAICommands(t *testing.T) {
+	r := newWebFilesRig(t)
+	var res webproto.PaletteList
+	webResData(t, r.call(webproto.OpPaletteList, &webproto.EmptyArgs{}), &res)
+	byID := map[string]webproto.PaletteItem{}
+	for _, it := range res.Items {
+		byID[it.ID] = it
+	}
+	ask := []string{"ai-until-done", "ai-plan-approval", "ai-reasoning-next", "ai-keep-going", "ai-edit-review", "ai-worktrees-toggle",
+		"ai-memory-toggle", "ai-undo-turn", "ai-apply-code", "ai-handoff", "ai-ship", "ai-plan-worktree"}
+	for _, id := range ask {
+		if it, ok := byID[id]; !ok || !it.Ask {
+			t.Errorf("%s: offered=%v, it must wait for a laptop card: %+v", id, ok, it)
+		}
+	}
+	for _, id := range []string{"ai-mcp-background", "ai-mcp-reset-cache", "ai-mcp-updates", "ai-mcp-reconnect-all"} {
+		if it, ok := byID[id]; !ok || it.Ask {
+			t.Errorf("%s: offered=%v, it runs at once: %+v", id, ok, it)
+		}
+	}
+	for _, id := range []string{"ai-configure", "ai-history-delete", "ai-credentials", "ai-mcp-connect"} {
+		if _, ok := byID[id]; ok {
+			t.Errorf("%s offered to the web", id)
+		}
+	}
+	for id, why := range webPaletteUserOnly {
+		if p, _ := aiActionPolicyFor(id); p.Gate != aiGateNever {
+			t.Errorf("%s is user-only but the AI policy is %+v (put it on webPaletteAllow alone)", id, p)
+		}
+		if _, ok := webPaletteAllow[id]; !ok || len(why) < 12 {
+			t.Errorf("%s: user-only needs a webPaletteAllow entry and a reason, got %q", id, why)
+		}
+	}
+	ran := webPaletteRan(t)
+	if f := r.call(webproto.OpPaletteRun, &webproto.PaletteArgs{ID: "ai-ship"}); webErrCode(f) != "forbidden" {
+		t.Errorf("ai-ship ran without a card: %v", f)
+	}
+	if len(*ran) != 0 {
+		t.Fatalf("ran %v", *ran)
 	}
 }
