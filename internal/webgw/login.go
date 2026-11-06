@@ -50,6 +50,9 @@ type totpTicket struct {
 	dev   webdevices.Device
 	until time.Time
 	tries int
+	// remember: the token comes with a (new) bookmark key for origin.
+	remember bool
+	origin   string
 }
 
 // TOTP ticket limits.
@@ -65,6 +68,9 @@ type LoginConfig struct {
 	Passkeys *Passkeys
 	Audit    *Audit
 	Now      func() time.Time
+	// Store is the device list (nil: the passkeys' one); bookmark keys
+	// live there as hashes (WEBP-12).
+	Store *webdevices.Store
 	// RequireTOTP asks for a one-time code after the passkey; CheckTOTP
 	// asks the laptop to check it for a device (nil error: right).
 	RequireTOTP bool
@@ -115,6 +121,10 @@ func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		l.finish(w, r)
 	case "/login/totp":
 		l.totp(w, r)
+	case "/login/device":
+		l.device(w, r)
+	case "/login/forget":
+		l.forget(w, r)
 	default:
 		writeJSON(w, http.StatusNotFound, errorReply("not_found"))
 	}
@@ -140,6 +150,8 @@ func (l *Login) start(w http.ResponseWriter, r *http.Request) {
 type loginFinishReq struct {
 	LoginID    string          `json:"login_id"`
 	Credential json.RawMessage `json:"credential"`
+	// Remember: "Remember this browser" was ticked (WEBP-12).
+	Remember bool `json:"remember,omitempty"`
 }
 
 func (l *Login) finish(w http.ResponseWriter, r *http.Request) {
@@ -160,8 +172,12 @@ func (l *Login) finish(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnauthorized, errorReply(reply))
 		return
 	}
+	origin := ""
+	if req.Remember {
+		origin = r.Header.Get("Origin")
+	}
 	if l.totpOn.Load() {
-		tk, err := l.newTicket(d)
+		tk, err := l.newTicket(d, req.Remember, origin)
 		if err != nil {
 			writeJSON(w, http.StatusServiceUnavailable, errorReply("busy"))
 			return
@@ -169,11 +185,21 @@ func (l *Login) finish(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"totp": true, "ticket": tk})
 		return
 	}
-	l.issue(w, d)
+	l.issueRemember(w, r, d, req.Remember, origin)
+}
+
+// issueRemember issues a token and, when asked, a new bookmark key. A key
+// that cannot be made leaves the sign-in good, without a key.
+func (l *Login) issueRemember(w http.ResponseWriter, r *http.Request, d webdevices.Device, remember bool, origin string) {
+	key := ""
+	if remember {
+		key, _ = rememberDevice(l.store(), d.ID, origin, l.cfg.Now())
+	}
+	l.issueWith(w, r, d, key, "passkey")
 }
 
 // newTicket keeps a device that passed its passkey until its code comes.
-func (l *Login) newTicket(d webdevices.Device) (string, error) {
+func (l *Login) newTicket(d webdevices.Device, remember bool, origin string) (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
@@ -190,7 +216,7 @@ func (l *Login) newTicket(d webdevices.Device) (string, error) {
 	if len(l.tickets) >= maxTickets {
 		return "", ErrTooManyLogins
 	}
-	l.tickets[id] = &totpTicket{dev: d, until: now.Add(TOTPTicketTTL)}
+	l.tickets[id] = &totpTicket{dev: d, until: now.Add(TOTPTicketTTL), remember: remember, origin: origin}
 	return id, nil
 }
 
@@ -233,7 +259,7 @@ func (l *Login) totp(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusGone, errorReply("expired"))
 		return
 	}
-	l.issue(w, tk.dev)
+	l.issueRemember(w, r, tk.dev, tk.remember, tk.origin)
 }
 
 // sixDigits: exactly six ASCII digits.
@@ -249,14 +275,22 @@ func sixDigits(s string) bool {
 	return true
 }
 
-// issue logs a device in: a token with the device's role.
-func (l *Login) issue(w http.ResponseWriter, d webdevices.Device) {
+// issueWith logs a device in: a token with the device's role, and the
+// bookmark key (when not "") in its httpOnly cookie; how names the way in
+// for the audit log. False: no token (too many sessions).
+func (l *Login) issueWith(w http.ResponseWriter, r *http.Request, d webdevices.Device, key, how string) bool {
 	tok, sess, err := l.cfg.Tokens.Issue(d.ID, sessionRole(d.Role), l.cfg.Now())
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, errorReply("too_many_sessions"))
-		return
+		return false
 	}
-	_ = l.cfg.Audit.Log(Event{Kind: EvLoginOK, Conn: sess.ID, Device: d.ID, Summary: d.Name + " as " + d.Role})
-	writeJSON(w, http.StatusOK, map[string]any{"token": tok, "role": d.Role, "device": d.ID,
-		"idle_s": int(l.cfg.Tokens.idle / time.Second), "max_s": int(l.cfg.Tokens.max / time.Second)})
+	_ = l.cfg.Audit.Log(Event{Kind: EvLoginOK, Conn: sess.ID, Device: d.ID, Summary: d.Name + " as " + d.Role + " by " + how})
+	reply := map[string]any{"token": tok, "role": d.Role, "device": d.ID,
+		"idle_s": int(l.cfg.Tokens.idle / time.Second), "max_s": int(l.cfg.Tokens.max / time.Second)}
+	if key != "" {
+		setDeviceCookie(w, r, key)
+		reply["remembered"] = true
+	}
+	writeJSON(w, http.StatusOK, reply)
+	return true
 }

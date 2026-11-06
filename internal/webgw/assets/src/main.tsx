@@ -30,17 +30,19 @@ import { TABS } from "./state/route";
 import { openCards } from "./ui/CardSheet";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
 import { PairScreen } from "./ui/PairScreen";
-import { SignInScreen } from "./ui/SignInScreen";
+import { SignInScreen, signInWithBookmark } from "./ui/SignInScreen";
 import { passkeysHere } from "./net/passkey";
+import { isRemembered } from "./net/devicekey";
 import { lang, persian, type Lang } from "./strings";
 
 const RTL_LANGS = /^(fa|ar|he|ur|ps|ckb|dv|yi|sd|ug)\b/i;
 
 // Where the page starts: a launch link opens the workspace, a pairing link
 // pairs this device, and a page with neither offers the passkey sign-in
-// of a paired device (where the browser can) or says to use the link.
+// of a paired device (where the browser can, or with the bookmark key of
+// a remembered browser, WEBP-12) or says to use the link.
 const phase = signal<"connect" | "pair" | "signin" | "shell">(
-  secret ? "connect" : pairSecret ? "pair" : passkeysHere() ? "signin" : "connect",
+  secret ? "connect" : pairSecret ? "pair" : passkeysHere() || isRemembered() ? "signin" : "connect",
 );
 const connect = signal<ConnectState>(secret ? "ready" : "nolink");
 
@@ -165,6 +167,13 @@ setOnOpen((kind) => (kind === "card" ? openCards() : goTab("more")));
 if (soloBuf(route.peek()) !== null && window.opener) window.opener = null;
 
 if (!secret && !pairSecret && token()) startShell();
+else if (!secret && !pairSecret && isRemembered()) {
+  // A bookmark: sign in with the kept key; when it is refused here and
+  // no passkey can be used, the page says to use the laptop's link.
+  void signInWithBookmark(startShell).then((going) => {
+    if (!going && !passkeysHere()) phase.value = "connect";
+  });
+}
 
 // A Persian page draws first in Persian: it waits for strings-fa.js (or
 // its failure) before the first render.
