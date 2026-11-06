@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -399,10 +400,88 @@ func (m *Model) raceOnVerifyExit(buf, code int) (tea.Cmd, bool) {
 	return m.raceSave(), true
 }
 
-// raceSummary asks for the AI summary of the lanes (AGX-6).
+// ── Summary (AGX-6) ──────────────────────────────────────────────────────
+
+// raceSummaryCap is how many bytes of the lanes' diffs go to the model.
+const raceSummaryCap = 24 << 10
+
+// raceQuickSlot is the model of the summary (a var for tests).
+var raceQuickSlot = func(s *aiState) (aiSlot, error) { return s.resolveSlot(ai.SlotQuick) }
+
+// raceSummaryMsg is the quick model's answer.
+type raceSummaryMsg struct {
+	race  string
+	lines []string
+	cost  string
+	err   error
+}
+
+// raceSummary asks the quick model for a 3-line difference summary of
+// the finished lanes (s on the page: the user asks, every time).
 func (m *Model) raceSummary(r *agentrace.Race) tea.Cmd {
-	m.raceMessage("The AI summary of the lanes comes in the next step")
-	return nil
+	var ids []string
+	for _, l := range r.Lanes {
+		if l.Finished() || l.State == agentrace.Merged {
+			ids = append(ids, l.ID)
+		}
+	}
+	if len(ids) < 2 {
+		m.raceMessage("A summary needs two finished lanes to compare")
+		return nil
+	}
+	s := m.aiS()
+	slot, err := raceQuickSlot(s)
+	if err != nil {
+		m.raceMessage("To summarize the lanes, set a quick model (AI: Models); nothing was sent")
+		return nil
+	}
+	pricing := ai.NewPricing(s.settings.Prices)
+	root, race := aiWorkspaceRoot(), *r
+	race.Lanes = append([]agentrace.Lane(nil), r.Lanes...)
+	m.raceS().page.SetBusy("✦ summarizing with " + slot.cfg.Model + "…")
+	return func() tea.Msg {
+		diffs := map[string]string{}
+		for _, id := range ids {
+			if d, err := git.AgentDiff(root, id); err == nil {
+				diffs[id] = d
+			}
+		}
+		sys, user := agentrace.SummaryPrompt(race, diffs, raceSummaryCap, func(s string) string { return ai.Redact(ai.RedactSecrets(s)) })
+		ctx, cancel := context.WithTimeout(context.Background(), aiMemoryTimeout)
+		defer cancel()
+		text, last := ai.Collect(slot.p.Stream(ctx, ai.Request{Model: slot.cfg.Model, Messages: []ai.Message{
+			{Role: ai.RoleSystem, Content: sys}, {Role: ai.RoleUser, Content: user}}}))
+		if last.Err != nil {
+			return raceSummaryMsg{race: race.ID, err: last.Err}
+		}
+		cost := "cost unknown"
+		if last.Usage != nil {
+			if usd, ok := pricing.Cost(slot.cfg.Kind, *last.Usage); ok {
+				cost = aiDollars(usd)
+			}
+		}
+		return raceSummaryMsg{race: race.ID, lines: agentrace.ParseSummary(ai.Redact(text)), cost: slot.cfg.Model + " · " + cost}
+	}
+}
+
+func (m *Model) onRaceSummary(msg raceSummaryMsg) tea.Cmd {
+	s := m.raceS()
+	s.page.SetBusy("")
+	r := s.find(msg.race)
+	if r == nil {
+		return nil
+	}
+	if msg.err != nil {
+		m.raceMessage("The summary failed: " + aiOneLine(ai.Redact(msg.err.Error())))
+		return nil
+	}
+	if len(msg.lines) == 0 {
+		m.raceMessage("The model gave no summary")
+		return nil
+	}
+	r.Summary, r.SummaryCost = msg.lines, msg.cost
+	m.raceRefreshPage()
+	return m.raceSave()
 }
 
 func (m *Model) handleRaceCompareMsg(msg tea.Msg) (tea.Cmd, bool) {
@@ -428,6 +507,8 @@ func (m *Model) handleRaceCompareMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onRaceMerged(msg), true
 	case raceDiscardedMsg:
 		return m.onRaceDiscarded(msg), true
+	case raceSummaryMsg:
+		return m.onRaceSummary(msg), true
 	}
 	return nil, false
 }
