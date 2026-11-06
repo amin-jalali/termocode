@@ -80,6 +80,8 @@ web	close-buffer	cmd:closeEditor
 web	close-split	cmd:closeSplit
 web	code-action-apply-preferred	cmd:quickFixPreferred
 web	code-actions	cmd:quickFix
+web	config-commands	cmd:configCommands
+web	config-theme	cmd:configTheme
 web	containers-attach	op:containers.exec
 web	containers-browse-tags	op:containers.tags
 web	containers-compose-down	op:containers.compose_ask
@@ -368,8 +370,6 @@ excluded	ai-sign-out-claude	security: credentials are managed on the laptop
 excluded	buffer-info	laptop only: TUI status overlay
 excluded	cheat-sheet	laptop only: TUI shortcut sheet (the web has its own keys sheet)
 excluded	clipboard-history	laptop only: the laptop clipboard is never shared with the web
-excluded	config-commands	laptop only: opens a laptop config file in the TUI
-excluded	config-theme	laptop only: opens a laptop config file in the TUI
 excluded	containers-copy-id	laptop only: copies to the laptop clipboard
 excluded	containers-help	laptop only: opens the TUI guide
 excluded	copy-file-ref	laptop only: copies to the laptop clipboard
