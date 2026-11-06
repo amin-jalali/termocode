@@ -41,7 +41,7 @@ func TestCommitTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != "feat: \n\nRefs:" {
+	if got != "feat: \n\nRefs: " { // the space after the prefix stays: the caret goes there
 		t.Errorf("template %q", got)
 	}
 	home := t.TempDir()
@@ -50,7 +50,7 @@ func TestCommitTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	r.git(t, "config", "commit.template", "~/tpl.txt")
-	if got, _ := CommitTemplate(r.dir); got != "fix:" {
+	if got, _ := CommitTemplate(r.dir); got != "fix: " {
 		t.Errorf("home template %q", got)
 	}
 	r.git(t, "config", "commit.template", "missing.txt")
@@ -60,7 +60,8 @@ func TestCommitTemplate(t *testing.T) {
 }
 
 // GITX-6 (B15): CleanMessage drops comment lines and the scissors part,
-// and trims blank lines at the ends.
+// and trims blank lines at the ends (spaces at the end of the last line
+// stay).
 func TestCleanMessage(t *testing.T) {
 	in := "\n# top\nfeat: x\n\nbody\n# note\n\n# ------------------------ >8 ------------------------\ndiff --git a b\n"
 	if got := CleanMessage(in); got != "feat: x\n\nbody" {
