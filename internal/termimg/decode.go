@@ -2,6 +2,7 @@ package termimg
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"image"
 	_ "image/gif" // register decoders
@@ -46,6 +47,16 @@ func Decode(path string, maxBytes int64) (image.Image, error) {
 			return nil, fmt.Errorf("image too large (%d bytes, limit %d)", st.Size(), maxBytes)
 		}
 	}
+	return decode(f)
+}
+
+// DecodeBytes is Decode for an image already in memory (a file read
+// through a workspace FS). The caller caps its size.
+func DecodeBytes(data []byte) (image.Image, error) {
+	return decode(bytes.NewReader(data))
+}
+
+func decode(f io.ReadSeeker) (image.Image, error) {
 	r := bufio.NewReader(f)
 	// Read the size from the header first: a small file can claim a
 	// picture that would take gigabytes to hold.

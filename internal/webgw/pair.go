@@ -401,17 +401,21 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		}
 		d.CredID, d.PublicKey, d.SignCount, d.AAGUID, d.UserID, d.RPID = key.CredID, key.PublicKey, key.SignCount, key.AAGUID, key.UserID, key.RPID
 	}
+	// The session first, the device after (WEB-F5): a pairing either
+	// ends with a saved device and its token, or with neither. The token
+	// leaves this handler only once the device is saved.
+	tok, sess, err := p.cfg.Tokens.Issue(id, sessionRole(pp.role), now)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorReply("too_many_sessions"))
+		return
+	}
 	if err := p.cfg.Store.Add(d); err != nil {
+		p.cfg.Tokens.RevokeDevice(id)
 		code := "internal"
 		if errors.Is(err, webdevices.ErrFull) {
 			code = "full"
 		}
 		writeJSON(w, http.StatusServiceUnavailable, errorReply(code))
-		return
-	}
-	tok, sess, err := p.cfg.Tokens.Issue(id, sessionRole(pp.role), now)
-	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, errorReply("too_many_sessions"))
 		return
 	}
 	_ = p.cfg.Audit.Log(Event{Kind: EvPairOK, Conn: sess.ID, Device: id, Summary: pp.name + " as " + pp.role})

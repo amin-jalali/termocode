@@ -16,6 +16,7 @@ import type { TermItem, TermNewRes } from "../../../../webproto/proto";
 import { rang } from "../lib/attention";
 import { isMac } from "../lib/platform";
 import { route } from "../lib/router";
+import { popOut } from "../lib/popout";
 import { BROWSER_KEYS, canLock, fullScreenKeys, inApp, install, installAsk, keysWin } from "../lib/keylock";
 import { prefs, setPref } from "../lib/prefs";
 import { loadingOlder, loadOlder, older, stitch } from "../lib/term";
@@ -529,6 +530,19 @@ export function DeskTerm() {
             ⓘ
           </button>
         )}
+        {focus !== null && (
+          <button
+            type="button"
+            class="tb tb-icon dterm-popout"
+            aria-label={t("dterm.popout")}
+            title={t("dterm.popout")}
+            onClick={() => {
+              if (!popOut(focus)) toast("warn", t("dterm.popout_blocked"));
+            }}
+          >
+            <Cod name="link-external" />
+          </button>
+        )}
         {controller && (
           <>
             <button type="button" class="tb tb-icon dterm-new" aria-label={t("dterm.new")} title={`${t("dterm.new")} (Ctrl+Shift+\`)`} disabled={!live.value} onClick={() => newDesk(false)}>
@@ -584,6 +598,28 @@ export function DeskTerm() {
           onConfirmed={() => (panes.value = panes.peek().filter((b) => b !== kill.buf))}
         />
       )}
+    </section>
+  );
+}
+
+/** SoloTerm is a popped-out tab (WEBP-13): one shell, the whole page.
+ * It shows the shell at once and names it once the list comes. */
+export function SoloTerm({ buf }: { buf: number }) {
+  useEffect(() => link.subscribe("terms"), []);
+  const terms = readTerms(store.topic("terms").value?.data);
+  const controller = link.meta.value?.role === "controller";
+  const i = terms.findIndex((x) => x.buf === buf);
+  const item = i >= 0 ? terms[i] : undefined;
+  useEffect(() => {
+    focusBuf.value = buf;
+  }, [buf]);
+  return (
+    <section class="view dterm dterm-solo" data-view="term" aria-label={t("tab.term")}>
+      <div class="dterm-body">
+        <div class="dterm-panes">
+          <Pane key={buf} buf={buf} n={i + 1 || 1} item={item} focused={true} controller={controller} />
+        </div>
+      </div>
     </section>
   );
 }

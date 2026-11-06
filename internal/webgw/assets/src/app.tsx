@@ -21,6 +21,7 @@ import { Toasts } from "./ui/Toasts";
 import { ViewerBar } from "./ui/ViewerBar";
 import { TitleBar } from "./ui/TitleBar";
 import { desk, deskFailed, loadDesk } from "./lib/lazy";
+import { soloBuf } from "./lib/popout";
 import { ChatView, FilesView, GitView, MoreView, TermView } from "./views/views";
 
 effect(() => {
@@ -70,9 +71,34 @@ function ViewFor({ tab }: { tab: Tab }) {
   }
 }
 
+/** Solo is a popped-out terminal tab (WEBP-13): that shell and nothing
+ * else but the link's bars, the cards and the toasts. A desktop shows
+ * the workbench's terminal, a narrower window the phone's. */
+function Solo({ buf }: { buf: number }) {
+  const r = route.value;
+  const l = layout.value;
+  const d = desk.value;
+  return (
+    <div class={`shell layout-${l} layout-solo`}>
+      <div class="bars">
+        <OfflineBar />
+        <ViewerBar />
+      </div>
+      <main class="main" id="main" tabIndex={-1}>
+        {l !== "desktop" ? <TermView /> : d ? <d.SoloTerm buf={buf} /> : <p class="empty">{t(deskFailed.value ? "retry" : "loading")}</p>}
+      </main>
+      {r.card && <CardSheet key={r.card} id={r.card} />}
+      {linkAsk.value && <LinkSheet href={linkAsk.value} />}
+      <Toasts />
+    </div>
+  );
+}
+
 export function App() {
   const r = route.value;
   const l = layout.value;
+  const solo = soloBuf(r);
+  if (solo !== null) return <Solo buf={solo} />;
   if (l === "desktop") {
     // The desktop is the workbench: the TUI's layout, the status bar at
     // the bottom as on the laptop.

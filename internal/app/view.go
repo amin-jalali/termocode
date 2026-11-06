@@ -1278,6 +1278,8 @@ func (m Model) renderSidebar(h int) string {
 		content = m.renderServicesSidebar(contentW, h)
 	case activity.ViewKubernetes: // kube_view.go
 		content = m.renderKubeSidebar(contentW, h)
+	case activity.ViewWorktrees: // worktrees_view.go
+		content = m.renderWorktreesSidebar(contentW, h)
 	case activity.ViewDatabases: // db_view.go
 		content = m.renderDatabasesSidebar(contentW, h)
 	case activity.ViewItermoc: // itermoc_view.go
