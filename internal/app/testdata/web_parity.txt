@@ -63,6 +63,7 @@ web	debug-step-over	op:debug.control
 web	debug-stop	op:debug.control
 web	debug-toggle-breakpoint	op:debug.bp
 web	debug-view	view:run
+web	diff-files	cmd:compareFiles
 web	duplicate-line	cmd:copyLinesDown
 web	explorer-rename-selected	cmd:renameFile
 web	explorer-toggle-preview	cmd:togglePreview
@@ -373,7 +374,6 @@ missing	db-submit-changes	Databases|L
 missing	db-test-connection	Databases|L
 missing	db-transaction-mode	Databases|L
 missing	debug-open-launch	Debug|S
-missing	diff-files	Editor and files|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
 missing	git-conflict-next	Git|S
