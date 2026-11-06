@@ -90,7 +90,7 @@ func (m *Model) webPublishStatus(msg tea.Msg) tea.Cmd {
 func webStatusSame(a, b webproto.StatusSnap) bool {
 	return a.Root == b.Root && a.Workspace == b.Workspace && a.Branch == b.Branch &&
 		a.Ahead == b.Ahead && a.Behind == b.Behind && a.DirtyFiles == b.DirtyFiles &&
-		a.AI == b.AI && a.Terminals == b.Terminals && a.Runs == b.Runs && a.Web == b.Web &&
+		a.AI == b.AI && a.Terminals == b.Terminals && a.Runs == b.Runs && a.Web == b.Web && a.Update == b.Update &&
 		a.Theme.Name == b.Theme.Name && a.Theme.Light == b.Theme.Light && len(a.Theme.Colors) == len(b.Theme.Colors) && webSameMap(a.Theme.Colors, b.Theme.Colors)
 }
 
@@ -136,6 +136,9 @@ func (m *Model) webStatus(p *webStatusPub) webproto.StatusSnap {
 	}
 	if m.web != nil {
 		s.Web.Clients = len(m.web.live)
+	}
+	if m.upd != nil && m.upd.installed == "" { // as fillUpdateStatus
+		s.Update = m.upd.state.Available(termocodeVersion)
 	}
 	return s
 }

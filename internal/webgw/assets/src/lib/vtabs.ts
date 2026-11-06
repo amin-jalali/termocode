@@ -122,7 +122,8 @@ export function vtabName(v: VTab): string {
   if (v.kind === "ctr") return v.label;
   if (v.kind === "cmp") return v.a.slice(v.a.lastIndexOf("/") + 1) + " ↔ " + v.b.slice(v.b.lastIndexOf("/") + 1);
   if (v.kind === "md") return t("md.preview_tab", { name: v.path.slice(v.path.lastIndexOf("/") + 1) });
-  return v.name || t("mcp.no_name");
+  if (v.kind === "mcp") return v.name || t("mcp.no_name");
+  return "";
 }
 
 /** vtabIcon is the codicon of the tab. */

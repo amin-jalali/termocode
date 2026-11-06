@@ -80,7 +80,8 @@ export function openFile(path: string): void {
 }
 
 interface TreeData {
-  label: string;
+  /** roots: the workspace's folder ("") first, then each added folder (":name"). */
+  roots: { path: string; label: string }[];
   hidden: boolean;
   dirs: Record<string, TreeDir>;
 }
@@ -88,10 +89,13 @@ interface TreeData {
 function readTree(data: unknown): TreeData | null {
   if (typeof data !== "object" || data === null) return null;
   const d = data as Record<string, unknown>;
-  const roots = Array.isArray(d.roots) ? d.roots : [];
-  const root = roots[0] as { label?: unknown } | undefined;
+  const roots = (Array.isArray(d.roots) ? d.roots : [])
+    .map((r) => r as { path?: unknown; label?: unknown })
+    .filter((r) => typeof r.path === "string")
+    .map((r) => ({ path: r.path as string, label: typeof r.label === "string" ? r.label : "" }));
+  if (!roots.some((r) => r.path === "")) roots.unshift({ path: "", label: "" });
   const dirs = typeof d.dirs === "object" && d.dirs !== null ? (d.dirs as Record<string, TreeDir>) : {};
-  return { label: typeof root?.label === "string" ? root.label : "", hidden: d.hidden === true, dirs };
+  return { roots, hidden: d.hidden === true, dirs };
 }
 
 /** StatusRow is a one-line row inside a folder: loading, offline, empty, failed. */
@@ -197,18 +201,20 @@ function Tree() {
   const tree = readTree(st?.data);
   // Ask for every open folder the topic does not have (start, new connection).
   useEffect(() => {
-    if (tree) reconcile(tree.dirs, st?.stale === true);
+    if (tree) reconcile(tree.dirs, st?.stale === true, tree.roots.map((r) => r.path));
   }, [st?.data, st?.stale, live.value, expanded.value]);
   if (!tree) return null;
   return (
     <div class="tree">
       <OpenOnLaptop />
-      <section class="tree-group" aria-labelledby="g-tree">
-        <h2 class="group-title trunc" id="g-tree" dir="auto">
-          {tree.label || t("tab.files")}
-        </h2>
-        <Folder path="" depth={0} tree={tree} />
-      </section>
+      {tree.roots.map((r, i) => (
+        <section key={r.path} class="tree-group" aria-labelledby={`g-tree${i || ""}`}>
+          <h2 class="group-title trunc" id={`g-tree${i || ""}`} dir="auto">
+            {r.label || t("tab.files")}
+          </h2>
+          <Folder path={r.path} depth={0} tree={tree} />
+        </section>
+      ))}
     </div>
   );
 }

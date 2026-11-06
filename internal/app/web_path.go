@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -47,6 +48,9 @@ func (m *Model) webResolve(rel string) (string, error) {
 	if _, ok := m.remoteFS(); ok { // a container: names only (ADR 0018)
 		return path.Join(root, rel), nil
 	}
+	if r, sub, ok := m.webExtraRootOf(rel); ok {
+		root, rel = r.abs, sub
+	}
 	abs := filepath.Join(root, filepath.FromSlash(rel))
 	realRoot, err := filepath.EvalSymlinks(root)
 	if err != nil {
@@ -88,6 +92,9 @@ func (m *Model) webRel(abs string) (string, bool) {
 	}
 	root, abs = filepath.Clean(root), filepath.Clean(abs)
 	if !webInside(root, abs) {
+		if rel, ok := m.webRelExtra(abs); ok {
+			return rel, true
+		}
 		// nvim may name a file by its resolved path (/private/var on macOS).
 		if rr, err := filepath.EvalSymlinks(root); err == nil {
 			if ra, err := filepath.EvalSymlinks(abs); err == nil && webInside(rr, ra) {
@@ -107,4 +114,80 @@ func (m *Model) webRel(abs string) (string, bool) {
 		rel = ""
 	}
 	return filepath.ToSlash(rel), true
+}
+
+// The workspace's added folders (WEBP-8): the page names a file of an
+// added folder ":<name>/<path inside it>", <name> being the folder's
+// name ("lib", then "lib~2" for a second folder of that name). Its
+// absolute path never goes out. A container workspace has none here.
+
+// webRootMark starts the name of an added folder.
+const webRootMark = ":"
+
+// webAddedRoot is one added folder: its name on the page and its path.
+type webAddedRoot struct {
+	key, label, abs string
+}
+
+// webExtraRoots lists the added folders in the explorer's order.
+func (m *Model) webExtraRoots() []webAddedRoot {
+	if _, remote := m.remoteFS(); remote {
+		return nil
+	}
+	primary := m.explorer.PrimaryRoot()
+	root, _ := m.rootDir()
+	var out []webAddedRoot
+	used := map[string]bool{}
+	for _, r := range m.explorer.Roots() {
+		if r == primary || r == root {
+			continue
+		}
+		label := webName(filepath.Base(r))
+		key := webRootMark + strings.ReplaceAll(label, "/", "_")
+		for n := 2; used[key]; n++ {
+			key = webRootMark + strings.ReplaceAll(label, "/", "_") + "~" + strconv.Itoa(n)
+		}
+		used[key] = true
+		out = append(out, webAddedRoot{key: key, label: label, abs: filepath.Clean(r)})
+	}
+	return out
+}
+
+// webExtraRootOf splits a clean page path that names an added folder
+// into the folder and the path inside it.
+func (m *Model) webExtraRootOf(rel string) (webAddedRoot, string, bool) {
+	if !strings.HasPrefix(rel, webRootMark) {
+		return webAddedRoot{}, "", false
+	}
+	head, sub, _ := strings.Cut(rel, "/")
+	for _, r := range m.webExtraRoots() {
+		if r.key == head {
+			return r, sub, true
+		}
+	}
+	return webAddedRoot{}, "", false
+}
+
+// webRelExtra is abs as a page path inside an added folder.
+func (m *Model) webRelExtra(abs string) (string, bool) {
+	for _, r := range m.webExtraRoots() {
+		root, a := r.abs, abs
+		if !webInside(root, a) {
+			rr, err1 := filepath.EvalSymlinks(root)
+			ra, err2 := filepath.EvalSymlinks(a)
+			if err1 != nil || err2 != nil || !webInside(rr, ra) {
+				continue
+			}
+			root, a = rr, ra
+		}
+		rel, err := filepath.Rel(root, a)
+		if err != nil {
+			continue
+		}
+		if rel == "." {
+			return r.key, true
+		}
+		return r.key + "/" + filepath.ToSlash(rel), true
+	}
+	return "", false
 }
