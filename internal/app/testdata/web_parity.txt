@@ -142,6 +142,7 @@ web	view-output	cmd:tasks
 web	web-pair	op:web.pair_ask
 web	web-share	op:web.grant_ask
 web	web-totp	op:web.totp_check
+web	zen-mode	cmd:zen
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
 excluded	ai-credentials	security: credentials file is laptop only
 excluded	ai-doctor	laptop only: checks the laptop setup
@@ -222,7 +223,6 @@ excluded	web-copy-link	laptop only: copies to the laptop clipboard
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
-excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
 missing	ai-add	Itermoc and AI setup|M
 missing	ai-apply-code	AI chat and agents|M
 missing	ai-apply-proposal	AI chat and agents|M

@@ -183,7 +183,11 @@ export type FromFrame =
   /** glyph: a click in the glyph margin on a 1-based row; menu: a right
    * click at (x, y) in the frame. */
   | { t: "glyph"; line: number; menu: boolean; x: number; y: number }
-  /** key: a workbench key pressed in the editor (Ctrl/Cmd+P, +B, +J …). */
+  /** esc: Escape was pressed in the editor (it still does its own work
+   * there; two in a row leave Zen). */
+  | { t: "esc" }
+  /** key: a workbench key pressed in the editor (Ctrl/Cmd+P, +B, +J …;
+   * after Ctrl/Cmd+K, the chord's next key too). */
   | { t: "key"; key: string; code: string; ctrl: boolean; meta: boolean; shift: boolean; alt: boolean };
 
 /** FRAME_PATH is where the gateway serves the frame. */

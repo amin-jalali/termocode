@@ -77,6 +77,29 @@ export const closed = signal<ReadonlySet<string>>(new Set());
  * off on a desktop, as the laptop's editor has it). */
 export const wordWrap = signal<boolean>(!matchMedia("(min-width: 1200px)").matches);
 
+/** zen: Zen mode (WEBP-1): only the editor shows; the page marks it on
+ * <html data-zen="on"> so the status bar hides too. */
+export const zen = signal(false);
+effect(() => {
+  if (zen.value) document.documentElement.dataset.zen = "on";
+  else delete document.documentElement.dataset.zen;
+});
+
+let lastEsc = 0;
+const ESC_TWICE_MS = 600;
+
+/** escapeKey counts an Escape (also one in the editor's frame): two in a
+ * row leave Zen. */
+export function escapeKey(): void {
+  const now = Date.now();
+  if (zen.peek() && now - lastEsc < ESC_TWICE_MS) {
+    zen.value = false;
+    lastEsc = 0;
+    return;
+  }
+  lastEsc = now;
+}
+
 /** QuickMode is what the quick input lists: files, commands, a line, or
  * a question the page asks (ask: its title, and what Enter does). */
 export type QuickMode = "files" | "commands" | "line" | "ask";

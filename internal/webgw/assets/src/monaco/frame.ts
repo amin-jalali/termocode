@@ -690,6 +690,8 @@ function nesLater(): void {
 /** nesHint is the next edit's key hint (the page's words); tabWidth the
  * editor's tab size (the new rows line up with the text). */
 let nesHint = "Tab";
+/** chordUntil: the Ctrl/Cmd+K chord waits for its next key until then. */
+let chordUntil = 0;
 let tabWidth = 4;
 
 function sendText(user: boolean): void {
@@ -995,6 +997,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   }
   ed.onKeyDown((e) => {
     const b = e.browserEvent;
+    if (b.key === "Escape") post({ t: "esc" });
     if (!workbenchKey(b)) return;
     e.preventDefault();
     e.stopPropagation();
@@ -1009,6 +1012,23 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   viewport();
   sendText(false);
 }
+
+// After Ctrl/Cmd+K the next key is the chord's (Ctrl/Cmd+K Z: Zen): the
+// page's, never the text's. It is taken before the editor sees it (the
+// editor has chords of its own on Ctrl/Cmd+K).
+addEventListener(
+  "keydown",
+  (b: KeyboardEvent) => {
+    const k = (b.ctrlKey || b.metaKey) && !b.shiftKey && !b.altKey && b.key.toLowerCase() === "k";
+    if (k) chordUntil = Date.now() + 1500;
+    else if (Date.now() >= chordUntil || ["Control", "Meta", "Shift", "Alt"].includes(b.key)) return;
+    else chordUntil = 0;
+    b.preventDefault();
+    b.stopImmediatePropagation();
+    post({ t: "key", key: b.key, code: b.code, ctrl: b.ctrlKey, meta: b.metaKey, shift: b.shiftKey, alt: b.altKey });
+  },
+  true,
+);
 
 function onMessage(e: MessageEvent): void {
   if (e.source !== parent || e.origin !== location.origin) return;

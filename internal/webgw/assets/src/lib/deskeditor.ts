@@ -9,7 +9,7 @@ import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
 import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
-import { cursorAt, focusSlot, quick } from "./workbench";
+import { cursorAt, escapeKey, focusSlot, quick } from "./workbench";
 import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
 
@@ -212,6 +212,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       }
       case "open":
         host.onOpen?.(m.path, m.line, m.col);
+        return;
+      case "esc":
+        escapeKey();
         return;
       case "key":
         // The workbench's keys work while the editor has the focus.

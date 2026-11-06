@@ -588,6 +588,7 @@ export const S = {
   "cmd.next_editor": "Next Editor",
   "cmd.prev_editor": "Previous Editor",
   "cmd.wrap": "View: Toggle Word Wrap",
+  "cmd.zen": "View: Toggle Zen Mode",
   "cmd.show_on_laptop": "File: Show on the Laptop",
   "cmd.toggle_side": "View: Toggle Side Bar",
   "cmd.toggle_panel": "View: Toggle Panel",

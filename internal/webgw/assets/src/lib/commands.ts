@@ -21,7 +21,7 @@ import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
-import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
+import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap, zen } from "./workbench";
 
 export interface Command {
   id: string;
@@ -57,6 +57,7 @@ export function commands(): Command[] {
     { id: "focusGroup1", label: "cmd.focus_group1", keys: `${mod}+1`, run: () => focusGroup(0) },
     { id: "focusGroup2", label: "cmd.focus_group2", keys: `${mod}+2`, when: () => groups.peek().length > 1 || hasFile(), run: focusSecond },
     { id: "wrap", label: "cmd.wrap", keys: "Alt+Z", run: () => (wordWrap.value = !wordWrap.peek()) },
+    { id: "zen", label: "cmd.zen", keys: `${mod}+K Z`, run: () => (zen.value = !zen.peek()) },
     { id: "aiExplain", label: "ai.explain", when: hasFile, run: () => activeDesk.peek()?.aiAct("explain") },
     { id: "aiFix", label: "ai.fix", when: hasFile, run: () => activeDesk.peek()?.aiAct("fix") },
     { id: "aiEdit", label: "ai.edit", keys: `${mod}+I`, when: hasFile, run: () => activeDesk.peek()?.aiAct("edit") },

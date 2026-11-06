@@ -585,6 +585,7 @@ export const FA: Record<StringKey, string> = {
   "cmd.next_editor": "ویرایشگر بعدی",
   "cmd.prev_editor": "ویرایشگر قبلی",
   "cmd.wrap": "نما: شکستن خط‌های بلند",
+  "cmd.zen": "نما: حالت ذن",
   "cmd.show_on_laptop": "فایل: نشان دادن روی لپ‌تاپ",
   "cmd.toggle_side": "نما: نمایش یا پنهان کردن پنل کناری",
   "cmd.toggle_panel": "نما: نمایش یا پنهان کردن پنل پایین",
