@@ -153,6 +153,7 @@
 .cod-sign-out::before { content: "\ea6e"; }
 .cod-source-control::before { content: "\ea68"; }
 .cod-sparkle::before { content: "\ec10"; }
+.cod-screen-full::before { content: "\eb4c"; }
 .cod-split-horizontal::before { content: "\eb56"; }
 .cod-stop-circle::before { content: "\eba5"; }
 .cod-symbol-class::before { content: "\eb5b"; }

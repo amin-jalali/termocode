@@ -35,3 +35,7 @@
 .dterm-paste-text { max-height: 12rem; overflow: auto; margin: 0 0 var(--s3); padding: var(--s2); background: var(--bg-panel); font-family: var(--font-mono); font-size: 0.8125rem; white-space: pre; unicode-bidi: isolate; }
 .dterm .term-screen-box { margin: 0; }
 .dterm-actions .tb { min-width: 24px; height: 24px; }
+/* The one-time line about the keys the browser keeps (WEBP-11). */
+.dterm-keyhint { flex: none; gap: var(--s2); flex-wrap: wrap; }
+.dterm-keyhint .hint-text { flex: 1 1 16rem; }
+.dterm-keyhint .btn-small { min-height: 22px; padding: 0 var(--s2); font-size: 0.8125rem; }

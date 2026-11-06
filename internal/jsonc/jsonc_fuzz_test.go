@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -61,6 +62,26 @@ func FuzzStrip(f *testing.F) {
 		}
 		if !reflect.DeepEqual(back, want) {
 			t.Fatalf("value changed: %#v != %#v", back, want)
+		}
+	})
+}
+
+// FuzzBlank: Blank keeps the length and the newlines of any input, and
+// gives the same JSON value as Strip whenever either parses.
+func FuzzBlank(f *testing.F) {
+	for _, s := range []string{`{}`, "{// c\n\"a\":[1,],}", "/* a\nb */[1,\n]", `{"s":"a\"b//c",}`, `/* open`} {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, in string) {
+		out := Blank([]byte(in))
+		if len(out) != len(in) || bytes.Count(out, []byte("\n")) != strings.Count(in, "\n") {
+			t.Fatalf("offsets changed: %q → %q", in, out)
+		}
+		var a, b any
+		errA := json.Unmarshal(Strip([]byte(in)), &a)
+		errB := json.Unmarshal(out, &b)
+		if (errA == nil) != (errB == nil) || (errA == nil && !reflect.DeepEqual(a, b)) {
+			t.Fatalf("%q: Strip %v/%v, Blank %v/%v", in, a, errA, b, errB)
 		}
 	})
 }
