@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -35,8 +36,11 @@ func PeekHunk(dir, file string, line int) (HunkPeek, error) {
 			return p, nil
 		}
 	}
-	return HunkPeek{}, fmt.Errorf("no change on line %d", line)
+	return HunkPeek{}, fmt.Errorf("%w on line %d", ErrNoHunk, line)
 }
+
+// ErrNoHunk: no change of the file covers the line.
+var ErrNoHunk = errors.New("no change")
 
 // peekIn reads the hunks of one file's diff and picks the one whose new
 // side holds line (the extractHunkPatch rule: an empty side counts as one

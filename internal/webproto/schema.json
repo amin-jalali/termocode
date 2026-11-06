@@ -2048,6 +2048,20 @@
       "phase": "v2"
     },
     {
+      "op": "git.peek",
+      "args": "GitPeekArgs",
+      "result": "GitPeek",
+      "role": "viewer",
+      "rate": {
+        "n": 4,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "git.file_log",
       "args": "GitFileLogArgs",
       "result": "GitFileLog",
@@ -8390,6 +8404,67 @@
         "path",
         "from",
         "to"
+      ],
+      "additionalProperties": false
+    },
+    "GitPeek": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "header": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "staged": {
+          "type": "boolean"
+        },
+        "starts": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "line",
+        "header",
+        "lines",
+        "index",
+        "count",
+        "starts"
+      ],
+      "additionalProperties": true
+    },
+    "GitPeekArgs": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "line"
       ],
       "additionalProperties": false
     },

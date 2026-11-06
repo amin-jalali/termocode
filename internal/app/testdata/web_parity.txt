@@ -216,6 +216,7 @@ web	git-merge-take-both	op:git.resolve_side
 web	git-merge-take-both-theirs-first	op:git.resolve_side
 web	git-merge-take-ours	op:git.resolve_side
 web	git-merge-take-theirs	op:git.resolve_side
+web	git-peek-change	cmd:gitPeekChange
 web	git-pr-create	op:pr.view
 web	git-pr-list	cmd:gitPRs
 web	git-pull	palette
@@ -485,7 +486,6 @@ missing	git-outgoing	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S
 missing	git-patch-save	Git|S
-missing	git-peek-change	Git|S
 missing	git-pr-filter	Git|S
 missing	git-pr-mine	Git|S
 missing	git-publish	Git|S
