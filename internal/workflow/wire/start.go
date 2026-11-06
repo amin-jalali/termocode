@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/amin-jalali/termocode/internal/agentrun"
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/aistep"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
@@ -24,6 +25,8 @@ type Config struct {
 	NoPlan    bool
 	Vars      map[string]any
 	LastOKAt  string
+	// ParallelMax is workflows_parallel_max (0: no cap).
+	ParallelMax int
 
 	Src      *source.Sources
 	Tools    run.ToolCheck
@@ -36,8 +39,17 @@ type Config struct {
 	// GitHubComment and FindComment back github.comment writes.
 	GitHubComment func(ctx context.Context, pr, body string) (ledger.Result, error)
 	Find          func(ctx context.Context, spec workflow.WriteSpec, marker string) (ledger.Result, bool, error)
-	OnEvent       func(run.Event)
-	OnAI          func(step, item string, e agentrun.Event)
+	// PR pushes an item's branch and opens its pull request (pr writes).
+	PR      func(ctx context.Context, p PRCall) (ledger.Result, error)
+	OnEvent func(run.Event)
+	OnAI    func(step, item string, e agentrun.Event)
+
+	// AgentSandbox is workflows_agent_sandbox; OnAgent gets the agent
+	// steps' events; AllowFlagged asks before an agent gets an item that
+	// looks like an injection (nil: skipped).
+	AgentSandbox string
+	OnAgent      func(step, item string, e ai.Event)
+	AllowFlagged func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error)
 }
 
 // ErrUntrusted is returned for a repo file the user has not trusted.
@@ -71,13 +83,15 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 	if cfg.Src != nil {
 		tools = cfg.Src.Tools
 	}
-	steps := &Steps{Env: cfg.AI, RunID: id, Dir: filepath.Dir(e.Path), Workspace: cfg.Workspace, Exec: cfg.Exec, TestArgv: cfg.TestArgv, OnEvent: cfg.OnAI}
+	steps := &Steps{Env: cfg.AI, RunID: id, Dir: filepath.Dir(e.Path), Workspace: cfg.Workspace, Exec: cfg.Exec, TestArgv: cfg.TestArgv, OnEvent: cfg.OnAI,
+		AgentSandbox: cfg.AgentSandbox, OnAgent: cfg.OnAgent, AllowFlagged: cfg.AllowFlagged}
 	w := &Writer{Root: cfg.Root, Workflow: f.Name, Hash: f.Hash, Ledger: l, Workspace: cfg.Workspace, Tools: tools,
-		Ask: cfg.Gate, Notify: cfg.Notify, GitHubComment: cfg.GitHubComment, Find: cfg.Find}
+		Ask: cfg.Gate, Notify: cfg.Notify, GitHubComment: cfg.GitHubComment, Find: cfg.Find, PR: cfg.PR, Dir: filepath.Dir(e.Path)}
 	store := &seenStore{RunFiles: RunFiles{Root: cfg.Root}, seen: seen, file: f}
 	opts := run.Options{
 		RunID: id, Dry: cfg.Dry, NoPlan: cfg.NoPlan, Vars: cfg.Vars, LastOKAt: cfg.LastOKAt,
 		Eval: ev, Source: &Sources{Src: cfg.Src, Eval: ev}, Plan: steps, Run: steps, Write: w,
+		Each: &Worktrees{Workspace: cfg.Workspace, RunID: id}, ParallelMax: cfg.ParallelMax,
 		Tools: cfg.Tools, Ask: cfg.AskTool, OnEvent: cfg.OnEvent, Store: store,
 	}
 	return run.Start(ctx, f, opts), nil

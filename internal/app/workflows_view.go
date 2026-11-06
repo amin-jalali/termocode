@@ -631,6 +631,9 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 		}
 	}
 	if l != nil {
+		if l.h.Held() {
+			out = append(out, wfxLine{" PAUSED", "head"}, wfxLine{"   by you: the working step finishes, the next one waits (p continues)", "warn"})
+		}
 		if l.waiting != "" {
 			out = append(out, wfxLine{" NEEDS YOU", "head"}, wfxLine{"   " + l.waiting + " waits for your answer on the card (Deny is first)", "warn"})
 		}
@@ -643,7 +646,10 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 	}
 	verbs := " [Back (Esc)] [Logs (l)]"
 	if l != nil {
-		verbs = " [Stop (x)] [Logs (l)] [Back (Esc)]"
+		verbs = " [Stop (x)] [Pause (p)] [Logs (l)] [Back (Esc)]"
+		if l.h.Held() {
+			verbs = " [Stop (x)] [Continue (p)] [Logs (l)] [Back (Esc)]"
+		}
 	} else if rf.Dry {
 		verbs = " [Run for real (r)] [Dry run again (d)] [Back (Esc)]"
 	}

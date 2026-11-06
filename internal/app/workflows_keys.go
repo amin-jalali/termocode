@@ -80,6 +80,8 @@ func (m *Model) wfxVerb(key string) (tea.Cmd, bool) {
 		return m.wfxEdit(), true
 	case "x":
 		return m.wfxAskStop(), true
+	case "p":
+		return m.wfxTogglePause(), true
 	case "c":
 		return m.wfxChatTarget(), true
 	case "n":
@@ -213,6 +215,7 @@ func wfxKeyRowsList() [][]string {
 		{"R", "read the files again"},
 		{"Run"},
 		{"x", "stop the run (asks; Keep running is first)"},
+		{"p", "pause the run before its next step; p again continues"},
 		{"l", "jump to the live output"},
 	}
 }

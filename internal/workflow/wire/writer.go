@@ -8,8 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
@@ -53,8 +56,22 @@ type Writer struct {
 	// GitHubComment comments on a PR (nil: not available).
 	GitHubComment func(ctx context.Context, pr, body string) (ledger.Result, error)
 	// Find looks a write up by its marker (a resumed run); nil: a write
-	// that may have been sent is not sent again.
+	// that may have been sent is not sent again. Commits are looked up in
+	// the item's branch without it.
 	Find func(ctx context.Context, spec workflow.WriteSpec, marker string) (ledger.Result, bool, error)
+	// PR pushes an item's branch and opens its pull request (the app:
+	// git push + gh pr create); nil: pr writes are not available.
+	PR func(ctx context.Context, p PRCall) (ledger.Result, error)
+	// Dir is the workflow file's folder; body_file stays inside it.
+	Dir string
+}
+
+// PRCall is one pull request a pr write opens: Branch (pushed by PR)
+// from the item's worktree Dir into Base.
+type PRCall struct {
+	Dir, Branch, Base string
+	Title, Body       string // Body ends with the run marker
+	Draft             bool
 }
 
 // Write passes one write through the gate and the ledger.
@@ -63,19 +80,39 @@ func (w *Writer) Write(ctx context.Context, c run.WriteCall) (run.Output, error)
 		return run.Output{}, run.Permanent(errors.New("the write is not set up"))
 	}
 	spec := c.Spec
+	if spec.BodyFile != "" && (spec.To == "pr" || spec.To == "github.comment") {
+		body, err := w.bodyFile(spec.BodyFile, c.Render)
+		if err != nil {
+			return run.Output{}, err
+		}
+		spec.Body = body
+	}
+	env := c.Env
+	if (spec.To == "pr" || spec.To == "commit") && (env.ID == "" || env.Branch == "") {
+		return run.Output{}, run.Permanent(fmt.Errorf(`a %s write needs the item's worktree: put it in an each with "worktree": true`, spec.To))
+	}
 	item := ""
 	if c.Item != nil {
 		item = c.Item.Key
 	}
 	target, preview, undo := describe(spec)
+	if spec.To == "pr" || spec.To == "commit" {
+		target, undo = describeGit(spec, env)
+	}
+	find := w.Find
+	if spec.To == "commit" {
+		find = func(_ context.Context, _ workflow.WriteSpec, marker string) (ledger.Result, bool, error) {
+			return findCommit(w.Workspace, env, marker)
+		}
+	}
 	if old, ok := w.Ledger.Get(c.Step.ID, item); ok {
 		if old.State == ledger.Done {
-			return run.Output{URL: old.ExternalID, Text: preview}, nil
+			return output(spec, old.ExternalID, preview), nil
 		}
-		if w.Find == nil {
+		if find == nil {
 			return run.Output{}, run.Permanent(ledger.ErrMaybeSent)
 		}
-		res, found, err := w.Find(ctx, spec, old.Marker)
+		res, found, err := find(ctx, spec, old.Marker)
 		if err != nil {
 			return run.Output{}, err
 		}
@@ -83,23 +120,93 @@ func (w *Writer) Write(ctx context.Context, c run.WriteCall) (run.Output, error)
 			e, _, err := w.Ledger.Do(ctx, ledger.Write{Step: c.Step.ID, Item: item, Target: target, Args: spec.Args},
 				func(context.Context, string) (ledger.Result, error) { return res, nil },
 				func(context.Context, string) (ledger.Result, bool, error) { return res, true, nil })
-			return run.Output{URL: e.ExternalID, Text: preview}, err
+			return output(spec, e.ExternalID, preview), err
 		}
 	}
 	if err := w.gate(ctx, c, target, preview, undo, item); err != nil {
 		return run.Output{}, err
 	}
-	send := func(ctx context.Context, marker string) (ledger.Result, error) { return w.send(ctx, spec, marker) }
+	send := func(ctx context.Context, marker string) (ledger.Result, error) { return w.send(ctx, spec, env, marker) }
 	notFound := func(context.Context, string) (ledger.Result, bool, error) { return ledger.Result{}, false, nil }
 	var u *ledger.Undo
-	if spec.Undo != nil {
+	switch {
+	case spec.Undo != nil:
 		u = &ledger.Undo{Title: undo, Tool: spec.Undo.Tool, Args: textArgs(spec.Undo.Args)}
+	case spec.To == "pr":
+		u = &ledger.Undo{Title: undo, Tool: "github.pr.close", Args: map[string]string{"branch": env.Branch, "delete_branch": "true"}}
+	case spec.To == "commit":
+		u = &ledger.Undo{Title: undo, Tool: "git.reset", Args: map[string]string{"branch": env.Branch, "to": "HEAD~1", "mode": "soft"}}
 	}
 	e, _, err := w.Ledger.Do(ctx, ledger.Write{Step: c.Step.ID, Item: item, Target: target, Args: spec.Args, Undo: u}, send, notFound)
 	if err != nil {
 		return run.Output{}, err
 	}
-	return run.Output{URL: e.ExternalID, Text: preview, Path: filePath(spec)}, nil
+	return output(spec, e.ExternalID, preview), nil
+}
+
+// output is a write's steps.<id>: url (a PR's link), json.number (a
+// PR's number), path (a file), text (what was written).
+func output(spec workflow.WriteSpec, external, preview string) run.Output {
+	o := run.Output{URL: external, Text: preview, Path: filePath(spec)}
+	switch spec.To {
+	case "pr":
+		if n := prNumber(external); n > 0 {
+			o.JSON = map[string]any{"number": float64(n)}
+		}
+	case "commit":
+		o.URL = ""
+		if external != "" {
+			o.Text = "committed " + external
+		} else {
+			o.Text = "nothing to commit"
+		}
+		o.JSON = map[string]any{"sha": external}
+	}
+	return o
+}
+
+// prNumber is the number at the end of a pull request link (0: none).
+func prNumber(url string) int {
+	i := strings.LastIndex(url, "/pull/")
+	if i < 0 {
+		return 0
+	}
+	n, err := strconv.Atoi(strings.TrimRight(url[i+len("/pull/"):], "/"))
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+// bodyFile reads a body_file from the workflow folder and fills it.
+func (w *Writer) bodyFile(rel string, render func(string) (string, error)) (string, error) {
+	b, err := (&Steps{Dir: w.Dir}).readPrompt(rel)
+	if err != nil {
+		return "", err
+	}
+	body := string(b)
+	if render != nil {
+		if body, err = render(body); err != nil {
+			return "", run.Permanent(fmt.Errorf("body_file: %w", err))
+		}
+	}
+	return body, nil
+}
+
+// describeGit is the card's target and undo of a pr or commit write.
+func describeGit(s workflow.WriteSpec, env run.ItemEnv) (target, undo string) {
+	if s.To == "commit" {
+		return "commit on " + env.Branch, "git reset --soft HEAD~1 on branch " + env.Branch
+	}
+	base := s.Base
+	if base == "" {
+		base = "the default branch"
+	}
+	target = "pull request " + env.Branch + " → " + base
+	if s.Draft {
+		target += " (draft)"
+	}
+	return target, "close the pull request and delete branch " + env.Branch
 }
 
 func (w *Writer) gate(ctx context.Context, c run.WriteCall, target, preview, undo, item string) error {
@@ -130,8 +237,25 @@ func (w *Writer) gate(ctx context.Context, c run.WriteCall, target, preview, und
 
 var errNotYet = errors.New("this write target comes with a later version of workflows")
 
-func (w *Writer) send(ctx context.Context, spec workflow.WriteSpec, marker string) (ledger.Result, error) {
+func (w *Writer) send(ctx context.Context, spec workflow.WriteSpec, env run.ItemEnv, marker string) (ledger.Result, error) {
 	switch spec.To {
+	case "commit":
+		ok, err := git.CommitAgentWorktree(w.Workspace, env.ID, spec.Message+"\n\n"+marker)
+		if err != nil || !ok {
+			return ledger.Result{}, err
+		}
+		sha, err := git.HeadSHA(env.Worktree)
+		return ledger.Result{ExternalID: sha}, err
+	case "pr":
+		if w.PR == nil {
+			return ledger.Result{}, run.Permanent(errors.New("pull requests: gh is not available"))
+		}
+		// The agent's work goes on the item's branch first.
+		if _, err := git.CommitAgentWorktree(w.Workspace, env.ID, spec.Title+"\n\n"+marker); err != nil {
+			return ledger.Result{}, err
+		}
+		return w.PR(ctx, PRCall{Dir: env.Worktree, Branch: env.Branch, Base: spec.Base, Title: spec.Title,
+			Body: strings.TrimRight(spec.Body, "\n") + "\n\n<!-- " + marker + " -->", Draft: spec.Draft})
 	case "mcp", "status":
 		if w.Tools == nil {
 			return ledger.Result{}, fmt.Errorf("mcp: %w", source.ErrNotConnected)
@@ -272,3 +396,19 @@ func filePath(s workflow.WriteSpec) string {
 // Describe is what the gate card shows for a write spec: where it
 // writes, what it writes and how to undo it ("" when it cannot be).
 func Describe(s workflow.WriteSpec) (target, preview, undo string) { return describe(s) }
+
+// findCommit looks for a commit with marker in its message on the item's
+// branch (a resumed commit write).
+func findCommit(repo string, env run.ItemEnv, marker string) (ledger.Result, bool, error) {
+	if env.Branch == "" || marker == "" {
+		return ledger.Result{}, false, nil
+	}
+	cmd := spawn.Command("git", "log", "-n1", "--format=%H", "-F", "--grep="+marker, "refs/heads/"+env.Branch, "--")
+	cmd.Dir = repo
+	out, err := cmd.Output()
+	if err != nil {
+		return ledger.Result{}, false, fmt.Errorf("git log: %w", err)
+	}
+	sha := strings.TrimSpace(string(out))
+	return ledger.Result{ExternalID: sha}, sha != "", nil
+}

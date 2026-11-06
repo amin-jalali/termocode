@@ -11,6 +11,9 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/agentrun"
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clistep"
+	"github.com/amin-jalali/termocode/internal/tasks"
 	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/aistep"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
@@ -30,10 +33,27 @@ type Steps struct {
 	// Exec runs argv in dir (internal/spawn in the app): its output and
 	// exit code. nil: shell and tests steps fail.
 	Exec func(ctx context.Context, argv []string, dir string) (out string, exit int, err error)
-	// TestArgv is the project's test task (a tests step without argv).
+	// TestArgv is the test command when the project has no test task (a
+	// tests step without argv).
 	TestArgv []string
+	// Tasks lists the project's tasks in dir (nil: tasks.json and the
+	// detected ones, internal/tasks).
+	Tasks func(dir string) []tasks.Task
 	// OnEvent gets the AI runs' events (live output); may be nil.
 	OnEvent func(step, item string, e agentrun.Event)
+
+	// Agent runs an outside agent CLI (nil: clistep.Run).
+	Agent func(ctx context.Context, s clistep.Spec, prompt string, emit func(ai.Event)) (clistep.Result, error)
+	// AgentEnv is the agents' environment before CleanEnv (nil: the
+	// user's, with termocode's tools first).
+	AgentEnv []string
+	// AgentSandbox is workflows_agent_sandbox ("": worktree).
+	AgentSandbox string
+	// AllowFlagged asks the user before an agent works on an item that
+	// looks like an injection (nil: the item is skipped).
+	AllowFlagged func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error)
+	// OnAgent gets the agents' events (live output); may be nil.
+	OnAgent func(step, item string, e ai.Event)
 }
 
 // Plan runs a plan step over every item.
@@ -71,6 +91,14 @@ func (s *Steps) Run(ctx context.Context, c run.RunCall) (run.Output, error) {
 	switch c.Step.Type {
 	case workflow.TypeAI:
 		return s.runAI(ctx, c)
+	case workflow.TypeAgent:
+		return s.runAgent(ctx, c)
+	case workflow.TypePipeline:
+		sp := c.Step.Pipeline
+		if sp == nil || sp.Profile == "" {
+			return run.Output{}, run.Permanent(errors.New("a pipeline step needs a profile"))
+		}
+		return s.runAgentRun(ctx, c, aistep.Step{ID: c.Step.ID, Profile: sp.Profile}, sp.PromptFile)
 	case workflow.TypeShell:
 		if c.Step.Shell == nil {
 			return run.Output{}, run.Permanent(errors.New("the step has no argv"))
@@ -80,16 +108,94 @@ func (s *Steps) Run(ctx context.Context, c run.RunCall) (run.Output, error) {
 		}
 		return s.exec(ctx, c, c.Step.Shell.Argv, c.Step.Shell.Cwd)
 	case workflow.TypeTests:
-		argv := s.TestArgv
-		if c.Step.Tests != nil && len(c.Step.Tests.Argv) > 0 {
-			argv = c.Step.Tests.Argv
+		argv, cwd, err := s.testArgv(c)
+		if err != nil {
+			return run.Output{}, err
 		}
-		if len(argv) == 0 {
-			return run.Output{}, run.Permanent(errors.New("tests: the project has no test task; give the step an argv"))
-		}
-		return s.exec(ctx, c, argv, "")
+		return s.exec(ctx, c, argv, cwd)
 	}
 	return run.Output{}, run.Permanent(fmt.Errorf("%s steps: %w", c.Step.Type, errNotYet))
+}
+
+// testArgv is what a tests step runs: its argv, else the project's task
+// (by label; "" or "test": the default test task) through sh -c in the
+// item's folder, else TestArgv.
+func (s *Steps) testArgv(c run.RunCall) (argv []string, cwd string, err error) {
+	sp := c.Step.Tests
+	if sp != nil && len(sp.Argv) > 0 {
+		return sp.Argv, "", nil
+	}
+	name := ""
+	if sp != nil {
+		name = sp.Task
+	}
+	dir := s.Workspace
+	if c.Env.Worktree != "" {
+		dir = c.Env.Worktree
+	}
+	list := s.Tasks
+	if list == nil {
+		list = projectTasks
+	}
+	all := list(dir)
+	pick := findTask(all, name)
+	if pick == nil {
+		if (name == "" || name == "test") && len(s.TestArgv) > 0 {
+			return s.TestArgv, "", nil
+		}
+		var labels []string
+		for _, t := range all {
+			labels = append(labels, t.Label)
+		}
+		if len(labels) == 0 {
+			return nil, "", run.Permanent(errors.New("tests: the project has no test task; give the step an argv"))
+		}
+		return nil, "", run.Permanent(fmt.Errorf("tests: no task %q; the project has: %s", name, strings.Join(labels, ", ")))
+	}
+	if len(pick.Env) > 0 {
+		return nil, "", run.Permanent(fmt.Errorf("tests: task %q sets env, which a workflow cannot pass yet; give the step an argv", pick.Label))
+	}
+	v := tasks.Vars{WorkspaceFolder: dir}
+	if d := pick.Dir(v); d != dir {
+		rel, rerr := filepath.Rel(dir, d)
+		if rerr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return nil, "", run.Permanent(fmt.Errorf("tests: task %q runs outside the workspace", pick.Label))
+		}
+		cwd = rel
+	}
+	return []string{"sh", "-c", pick.CommandLine(v)}, cwd, nil
+}
+
+// findTask is the task labelled name; for "" or "test" without one, the
+// default test task (else the first test task). nil: none.
+func findTask(all []tasks.Task, name string) *tasks.Task {
+	for i := range all {
+		if all[i].Label == name {
+			return &all[i]
+		}
+	}
+	if name != "" && name != "test" {
+		return nil
+	}
+	var first *tasks.Task
+	for i := range all {
+		if all[i].Group != tasks.GroupTest {
+			continue
+		}
+		if all[i].IsDefault {
+			return &all[i]
+		}
+		if first == nil {
+			first = &all[i]
+		}
+	}
+	return first
+}
+
+// projectTasks is tasks.json (when it reads) and the detected tasks.
+func projectTasks(dir string) []tasks.Task {
+	list, _ := tasks.Load(dir)
+	return append(list, tasks.Detect(dir)...)
 }
 
 func (s *Steps) exec(ctx context.Context, c run.RunCall, argv []string, cwd string) (run.Output, error) {
@@ -123,9 +229,20 @@ func (s *Steps) runAI(ctx context.Context, c run.RunCall) (run.Output, error) {
 	if sp == nil {
 		return run.Output{}, run.Permanent(errors.New("the step has no ai spec"))
 	}
+	st := aistep.Step{ID: c.Step.ID, Profile: sp.Profile, Model: sp.Model,
+		ApprovePlan: sp.ApprovePlan, BudgetUSD: sp.BudgetUSD}
+	if sp.Tools != nil {
+		st.Tools = agentdag.ToolRule{Preset: sp.Tools.Preset, Deny: sp.Tools.Deny}
+	}
+	return s.runAgentRun(ctx, c, st, sp.PromptFile)
+}
+
+// runAgentRun runs an ai or pipeline step as one agentrun run (the
+// step's prompt, or its prompt file filled).
+func (s *Steps) runAgentRun(ctx context.Context, c run.RunCall, st aistep.Step, promptFile string) (run.Output, error) {
 	prompt := c.Prompt
-	if sp.PromptFile != "" {
-		b, err := s.readPrompt(sp.PromptFile)
+	if promptFile != "" {
+		b, err := s.readPrompt(promptFile)
 		if err != nil {
 			return run.Output{}, err
 		}
@@ -136,11 +253,7 @@ func (s *Steps) runAI(ctx context.Context, c run.RunCall) (run.Output, error) {
 			}
 		}
 	}
-	st := aistep.Step{ID: c.Step.ID, Profile: sp.Profile, Model: sp.Model, Prompt: prompt,
-		ApprovePlan: sp.ApprovePlan, BudgetUSD: sp.BudgetUSD}
-	if sp.Tools != nil {
-		st.Tools = agentdag.ToolRule{Preset: sp.Tools.Preset, Deny: sp.Tools.Deny}
-	}
+	st.Prompt = prompt
 	var it aistep.Item
 	key := ""
 	if c.Item != nil {
