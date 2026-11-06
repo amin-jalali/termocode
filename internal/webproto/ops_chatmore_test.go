@@ -45,3 +45,27 @@ func TestChatHistoryOps(t *testing.T) {
 		}
 	}
 }
+
+// Spec (web parity, AI screens): ai.info reads one of the laptop's AI
+// screens (usage, rules, memory, skills, hooks, web tools, the MCP log,
+// the MCP server's status and config, the provider's setup, a bug report)
+// for a controller; it changes nothing. An unknown kind is refused.
+func TestAIInfoOp(t *testing.T) {
+	p, ok := Lookup(OpAIInfo)
+	if !ok || p.Role != RoleController || p.LaptopCard || p.Audit != AuditYes {
+		t.Fatalf("ai.info: %+v", p)
+	}
+	for _, k := range AIInfoKinds {
+		if _, err := DecodeArgs(OpAIInfo, []byte(`{"kind":"`+k+`"}`)); err != nil {
+			t.Errorf("%s: %v", k, err)
+		}
+	}
+	if len(AIInfoKinds) != 11 {
+		t.Errorf("kinds %v", AIInfoKinds)
+	}
+	for _, args := range []string{`{"kind":""}`, `{"kind":"secrets"}`, `{}`} {
+		if _, err := DecodeArgs(OpAIInfo, []byte(args)); err == nil {
+			t.Errorf("%s accepted", args)
+		}
+	}
+}
