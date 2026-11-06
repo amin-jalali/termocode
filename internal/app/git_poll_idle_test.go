@@ -191,7 +191,8 @@ func TestGitPollRefreshesTheIndexAboutOnceAMinute(t *testing.T) {
 }
 
 // waitTreeSeen waits until the work tree watch has seen a change (file
-// events come a moment after the write); the stat scan sees it at once.
+// events come a moment after the write) and has handled all its events
+// (one write gives several); the stat scan sees it at once.
 func waitTreeSeen(t *testing.T, m *Model) {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
@@ -201,6 +202,7 @@ func waitTreeSeen(t *testing.T, m *Model) {
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
+	gitTreeEventsDrained(t)
 }
 
 // gitTreeEventsDrained waits until the file event reader has handled
