@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -87,7 +88,7 @@ func TestWebItermocAskOpensTheLaptopFormAfterItsCard(t *testing.T) {
 		if f["t"] != "res" || !m.confirmOpen || m.confirmKind != confirmKindWebAsk || m.confirm.Buttons()[0].ID != webproto.ChoiceCancel {
 			t.Fatalf("%s: asked %v, card open %v", a, f, m.confirmOpen)
 		}
-		if !strings.Contains(m.confirm.View(), "on the laptop") {
+		if card := strings.Join(strings.Fields(strings.ReplaceAll(ansi.Strip(m.confirm.View()), "│", " ")), " "); !strings.Contains(card, "on the laptop") {
 			t.Errorf("%s: the card does not say the form opens on the laptop:\n%s", a, m.confirm.View())
 		}
 		m.confirmOpen = false
