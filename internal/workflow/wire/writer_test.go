@@ -153,3 +153,24 @@ func TestWriterFile(t *testing.T) {
 		t.Fatal("pr writes come later; a clear error now")
 	}
 }
+
+// Spec (WFX-18): a message write hands its channel and tool to Notify,
+// and the card names the channel.
+func TestWriterMessageViaServer(t *testing.T) {
+	var asked []GateAsk
+	w, _, _ := newWriter(t, func(a GateAsk) GateDecision { asked = append(asked, a); return GateAllowOnce })
+	var got []Message
+	w.Notify = func(_ context.Context, m Message) error { got = append(got, m); return nil }
+	st := &workflow.Step{ID: "sum", Type: workflow.TypeWrite}
+	c := run.WriteCall{Step: st, Marker: ledger.Marker("r1", "sum", ""),
+		Spec: workflow.WriteSpec{To: "message", Via: "slack", Channel: "C0123", Tool: "post", Text: "2 done"}}
+	if _, err := w.Write(context.Background(), c); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != (Message{Via: "slack", Channel: "C0123", Tool: "post", Text: "2 done"}) {
+		t.Fatalf("notify %+v", got)
+	}
+	if len(asked) != 1 || !strings.Contains(asked[0].Target, "slack") || !strings.Contains(asked[0].Target, "C0123") {
+		t.Fatalf("card %+v", asked)
+	}
+}

@@ -159,6 +159,9 @@ var badCases = []struct {
 	{"each unknown ref", `{"version":1,"name":"bad","steps":[{"id":"e","type":"each","items":"steps.nope.items","steps":[{"type":"tests"}]}]}`, `step "e".items: no step has the id "nope"`},
 	{"write no to", `{"version":1,"name":"bad","steps":[{"type":"write"}]}`, `"to" is missing`},
 	{"write bad gate", `{"version":1,"name":"bad","steps":[{"type":"write","to":"message","via":"os","gate":"always"}]}`, `gate: "always" is not allowed; use one of: ask, allow, dry`},
+	{"message mcp channel", `{"version":1,"name":"bad","steps":[{"type":"write","to":"message","via":"slack","text":"x"}]}`, `a message via the MCP server "slack" needs "channel"`},
+	{"message via name", `{"version":1,"name":"bad","steps":[{"type":"write","to":"message","via":"my server","channel":"c","text":"x"}]}`, `via: use "os", "web", ${secret:NAME} (a webhook) or an MCP server name`},
+	{"message channel os", `{"version":1,"name":"bad","steps":[{"type":"write","to":"message","via":"os","channel":"c","text":"x"}]}`, `"channel" and "tool" are only for a message via an MCP server`},
 	{"write pr title", `{"version":1,"name":"bad","steps":[{"type":"write","to":"pr"}]}`, `"title" is missing`},
 	{"write comment body", `{"version":1,"name":"bad","steps":[{"type":"write","to":"github.comment","pr":"1"}]}`, `needs "body" or "body_file"`},
 	{"write file mode", `{"version":1,"name":"bad","steps":[{"type":"write","to":"file","path":"a.md","mode":"truncate"}]}`, `mode: "truncate" is not allowed`},
@@ -291,5 +294,22 @@ func TestParseDefaults(t *testing.T) {
 	}
 	if w := f.Steps[1].Write; w.Gate != GateAsk || w.Mode != "create" {
 		t.Errorf("write defaults %+v", w)
+	}
+}
+
+// Spec (WFX-18): a message via an MCP server takes a channel (a
+// template) and an optional send tool.
+func TestMessageViaServerParses(t *testing.T) {
+	f, warns, err := Parse("m.jsonc", []byte(`{"version":1,"name":"m","vars":{"ch":"C0123"},"steps":[
+	  {"id":"sum","type":"write","to":"message","via":"slack","channel":"{{vars.ch}}","tool":"slack_send_message","text":"hi"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warns) != 0 {
+		t.Errorf("warnings %+v", warns)
+	}
+	w := f.Steps[0].Write
+	if w.Via != "slack" || w.Channel != "{{vars.ch}}" || w.Tool != "slack_send_message" {
+		t.Fatalf("write %+v", w)
 	}
 }
