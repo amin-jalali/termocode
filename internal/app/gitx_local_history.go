@@ -106,14 +106,14 @@ func localHistOn() bool {
 
 func localHistSettingValue(id string) (string, bool) {
 	if id != localHistRowID {
-		return "", false
+		return gitxIssueLinkValue(id) // GITX-29 (gitx_autolink.go)
 	}
 	return strconv.FormatBool(localHistOn()), true
 }
 
 func (m *Model) applyLocalHistSetting(id, value string) (tea.Cmd, bool) {
 	if id != localHistRowID {
-		return nil, false
+		return m.applyGitxIssueLink(id, value) // GITX-29 (gitx_autolink.go)
 	}
 	b, err := parseBoolLoose(strings.TrimSpace(value))
 	if err != nil {

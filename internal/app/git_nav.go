@@ -100,8 +100,8 @@ var urlPattern = lazyre.New(`https?://[^\s)\]'""\x60>]+`)
 
 // openURLUnderCursor reads the current line, finds the first URL on it,
 // and opens it in the system browser via the same xdg-open / open / start
-// dispatcher as `revealInFileSystem`. No URL on the line ⇒ a "no URL"
-// toast.
+// dispatcher as `revealInFileSystem`. No URL on the line: the GITX-29
+// autolink under the cursor, else a "no URL" toast.
 func (m *Model) openURLUnderCursor() tea.Cmd {
 	if m.nvim == nil {
 		return nil
@@ -109,6 +109,13 @@ func (m *Model) openURLUnderCursor() tea.Cmd {
 	line, _ := m.nvim.EvalLuaString(`return vim.api.nvim_get_current_line()`)
 	url := urlPattern.FindString(line)
 	if url == "" {
+		// GITX-29: a commit hash, #123 or an issue key under the cursor.
+		var col int
+		if err := m.nvim.EvalLuaArgs(`return vim.fn.col('.') - 1`, &col); err == nil {
+			if cmd, ok := m.gitAutoLinkAt(line, col, m.gitAutoLinkDir()); ok {
+				return cmd
+			}
+		}
 		var toastCmd tea.Cmd
 		m.toast, toastCmd = m.toast.Push(toast.Info, "No URL on this line")
 		return toastCmd
