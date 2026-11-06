@@ -684,6 +684,14 @@ export const S = {
   "ai.model": "AI model",
   "ai.use_profile": "Use profile {name} for the next chat messages?",
   "ai.use_model": "Use model {name} for the AI chat?",
+  "files.no_rename": "No rename to undo.",
+  "files.renamed_back": "Renamed back to {name}.",
+  "cmd.no_typedef": "No type definition found.",
+  "cmd.no_impl": "No implementation found.",
+  "cmd.format_wait": "Your typing is still on its way. Try again.",
+  "cmd.formatted": "Formatted.",
+  "md.preview_tab": "Preview {name}",
+  "cmd.failed": "The command did not run.",
 } as const;
 
 /** StringKey is a key of the page's strings or of the workbench's

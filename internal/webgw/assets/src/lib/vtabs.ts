@@ -3,10 +3,12 @@
 //   "@db:" + conn + "/" + table   a table's rows (both parts URI-encoded)
 //   "@sql:" + conn                 a query editor on a connection
 //   "@mcp:" + agent                an MCP agent's details
+//   "@md:" + path                  a Markdown file's preview
+//   "@cmp:" + a + "/" + b          two files side by side (both URI-encoded)
 // (Diff tabs are lib/difftab.ts.)
 import { t } from "../strings";
 
-export type VTab = { kind: "db"; conn: string; table: string } | { kind: "sql"; conn: string } | { kind: "mcp"; name: string };
+export type VTab = { kind: "db"; conn: string; table: string } | { kind: "sql"; conn: string } | { kind: "mcp"; name: string } | { kind: "md"; path: string } | { kind: "cmp"; a: string; b: string };
 
 const enc = encodeURIComponent;
 
@@ -33,6 +35,16 @@ export function mcpTab(name: string): string {
   return "@mcp:" + enc(name);
 }
 
+/** mdTab names the preview tab of a Markdown file. */
+export function mdTab(path: string): string {
+  return "@md:" + enc(path);
+}
+
+/** cmpTab names the tab that compares file a (left) with file b. */
+export function cmpTab(a: string, b: string): string {
+  return "@cmp:" + enc(a) + "/" + enc(b);
+}
+
 /** vtabOf reads a tab's name (null: not one of these). */
 export function vtabOf(tab: string): VTab | null {
   if (tab.startsWith("@db:")) {
@@ -46,6 +58,17 @@ export function vtabOf(tab: string): VTab | null {
     const conn = dec(tab.slice(5));
     return conn ? { kind: "sql", conn } : null;
   }
+  if (tab.startsWith("@cmp:")) {
+    const rest = tab.slice(5);
+    const i = rest.indexOf("/");
+    const a = i > 0 ? dec(rest.slice(0, i)) : null;
+    const b = i > 0 ? dec(rest.slice(i + 1)) : null;
+    return a && b ? { kind: "cmp", a, b } : null;
+  }
+  if (tab.startsWith("@md:")) {
+    const path = dec(tab.slice(4));
+    return path ? { kind: "md", path } : null;
+  }
   if (tab.startsWith("@mcp:")) {
     const name = dec(tab.slice(5));
     return name !== null ? { kind: "mcp", name } : null;
@@ -57,10 +80,12 @@ export function vtabOf(tab: string): VTab | null {
 export function vtabName(v: VTab): string {
   if (v.kind === "db") return v.table;
   if (v.kind === "sql") return t("dbv.query_tab", { conn: v.conn });
+  if (v.kind === "cmp") return v.a.slice(v.a.lastIndexOf("/") + 1) + " ↔ " + v.b.slice(v.b.lastIndexOf("/") + 1);
+  if (v.kind === "md") return t("md.preview_tab", { name: v.path.slice(v.path.lastIndexOf("/") + 1) });
   return v.name || t("mcp.no_name");
 }
 
 /** vtabIcon is the codicon of the tab. */
 export function vtabIcon(v: VTab): string {
-  return v.kind === "db" ? "table" : v.kind === "sql" ? "database" : "plug";
+  return v.kind === "db" ? "table" : v.kind === "sql" ? "database" : v.kind === "md" ? "open-preview" : v.kind === "cmp" ? "compare-changes" : "plug";
 }

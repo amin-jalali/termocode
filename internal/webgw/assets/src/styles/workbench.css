@@ -503,6 +503,8 @@ html.is-resizing-y, html.is-resizing-y * { cursor: ns-resize !important; user-se
 .ed-tab.is-dirty .ed-tab-x .cod-circle-filled { display: inline-block; }
 .ed-tab.is-dirty .ed-tab-x .cod-close { opacity: 0; }
 .ed-tab.is-dirty:hover .ed-tab-x .cod-circle-filled { display: none; }
+.ed-tab-pin .cod-pinned { font-size: 14px; }
+.ed-tab-pin:hover .cod-pinned { background: var(--wb-toolbar-hover); }
 .ed-tab.is-dirty:hover .ed-tab-x .cod-close { opacity: 1; }
 
 /* ---- Editor: the file (breadcrumbs, rows, gutter) ---- */
