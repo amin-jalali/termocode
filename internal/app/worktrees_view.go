@@ -360,7 +360,11 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 		titleFg = theme.TextMuted
 	}
 	right := []wtSeg{{g.String(), gc}, {" " + word, theme.TextMuted}}
-	if it.state == wtStateIdle {
+	hereUp := it.here && it.state == wtStateIdle // "you are here" on line 1, where it always fits
+	switch {
+	case hereUp:
+		right = []wtSeg{{"you are here", theme.AccentGreen}}
+	case it.state == wtStateIdle:
 		right = []wtSeg{{g.String(), gc}}
 	}
 	out := []string{wtPaint([]wtSeg{wtPinGlyph(it), {" " + wtTitle(it), titleFg}}, right, active, focused, w)}
@@ -379,11 +383,11 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 		}
 		if s.Dirty > 0 {
 			tail = append(tail, wtSeg{dot + strconv.Itoa(s.Dirty) + " dirty", theme.GitModified})
-		} else if !it.here { // "you are here" says more than "clean"
+		} else {
 			tail = append(tail, wtSeg{dot + "clean", theme.TextDim})
 		}
 	}
-	if it.here {
+	if it.here && !hereUp {
 		tail = append(tail, wtSeg{dot + "you are here", theme.AccentGreen})
 	}
 	line2 := append([]wtSeg{{"  " + theme.GlyphWorktree.String() + " ", theme.TextDim}, {wtBranch(it.e), theme.TextSecondary}}, tail...)
