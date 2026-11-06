@@ -258,3 +258,60 @@ func TestGitxCreateGist(t *testing.T) {
 		t.Error("the AI may publish a file")
 	}
 }
+
+// GITX-39 (Q4): Git: Write Changelog with AI… asks where to start (the
+// latest tag first) and puts the commit subjects since then into the
+// chat box; nothing is sent before Enter.
+func TestGitxAIChangelog(t *testing.T) {
+	m, dir := covGitRepo(t)
+	gitxWithAI(m, "")
+	covGit(t, dir, "tag", "v1.0")
+	covWrite(t, dir, "a.txt", "x\n")
+	covCommit(t, dir, "feat: add the parser")
+	covWrite(t, dir, "a.txt", "y\n")
+	covCommit(t, dir, "fix: empty lines")
+	covRefresh(m)
+	m.dispatchPaletteAction("git-ai-changelog")
+	if !m.promptOpen || m.prompt.Value() != "v1.0" {
+		t.Fatalf("prompt %v %q", m.promptOpen, m.prompt.Value())
+	}
+	m.promptOpen = false
+	m.handlePromptSubmit("v1.0")
+	in := string(m.aiS().input)
+	if !strings.Contains(in, "changelog") || !strings.Contains(in, "v1.0") || !strings.Contains(in, "- feat: add the parser") || !strings.Contains(in, "- fix: empty lines") || strings.Contains(in, "- first") {
+		t.Errorf("changelog prompt %q", in)
+	}
+	if m.aiS().streaming {
+		t.Error("sent without Enter")
+	}
+	m.aiS().input = nil
+	m.dispatchPaletteAction("git-ai-changelog")
+	m.promptOpen = false
+	m.handlePromptSubmit("no-such-ref")
+	if len(m.aiS().input) != 0 || !toastHas(m, "no-such-ref") {
+		t.Error("a bad start was taken")
+	}
+}
+
+// GITX-39 (Q8, J14): Git: Plan Commits for My Changes with AI puts the
+// changed and new files with their diff into the chat box and asks for
+// small commits with messages; nothing runs or is sent before Enter.
+func TestGitxAIComposeCommits(t *testing.T) {
+	m, dir := covGitRepo(t)
+	gitxWithAI(m, "")
+	m.dispatchPaletteAction("git-ai-compose")
+	if !toastHas(m, "No changes") {
+		t.Fatal("no note without changes")
+	}
+	covWrite(t, dir, "a.txt", "ONE\ntwo\nthree\n")
+	covWrite(t, dir, "b.txt", "new\n")
+	covRefresh(m)
+	m.dispatchPaletteAction("git-ai-compose")
+	in := string(m.aiS().input)
+	if !strings.Contains(in, "commits") || !strings.Contains(in, "a.txt") || !strings.Contains(in, "+ONE") || !strings.Contains(in, "b.txt") {
+		t.Errorf("compose prompt %q", in)
+	}
+	if m.aiS().streaming {
+		t.Error("sent without Enter")
+	}
+}
