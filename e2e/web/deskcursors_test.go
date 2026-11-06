@@ -20,7 +20,7 @@ func runCmd(t *testing.T, p *Page, c *HubConn, first bool, search, label string)
 	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box")`)
 	p.Key(search)
 	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === ` + jsq(label))
-	p.Key("\r")
+	realKeys(p, "\r") // one keydown, as a keyboard sends it
 	p.WaitJS(`!document.querySelector(".quick")`)
 }
 
