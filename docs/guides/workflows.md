@@ -137,6 +137,7 @@ termocode workflow validate [<file>…]
 termocode workflow run <name> --dry-run [--var k=v]
 termocode workflow runs [<name>] [--json] [--limit N]
 termocode workflow logs <run id>
+termocode workflow again <name> <key>    # forget a seen item: the next run handles it again
 ```
 
 A dry run from the command line skips plan steps (no AI is used). A real
