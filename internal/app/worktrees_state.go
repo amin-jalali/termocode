@@ -64,6 +64,7 @@ type wtState struct {
 
 	link        *wtLinkForm // the open link card (worktrees_link.go)
 	linkReading bool        // due links are being read again
+	ctlLink     *wtCtlPending // the open card of a CLI link (worktrees_notes.go)
 
 	seq    uint64
 	render struct {
@@ -220,6 +221,9 @@ func wtTick(gen uint64) tea.Cmd {
 // handleWTMsg routes the WORKTREES messages. ok=false: not ours.
 func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	st := m.wt
+	if c, ok := m.handleWTCtlMsg(msg); ok { // the control socket (worktrees_notes.go)
+		return c, true
+	}
 	if c, ok := m.handleWTLinkMsg(msg); ok { // the link card (worktrees_link.go)
 		return c, true
 	}

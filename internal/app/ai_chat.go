@@ -187,6 +187,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiLSPTools(root, call)...)    // Group K5: LSP hover, symbols, rename, code actions
 	tools = append(tools, aiGitTools(root, call)...)      // Group K4
 	tools = append(tools, aiTasksTools(root, call)...)    // Group K6: tasks and tests
+	tools = append(tools, aiWorktreeTools(root)...)        // WTX-12: worktrees_list, worktree_note
 	tools = append(tools, aiAdminTools(root, call)...)    // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...)    // Group K7
 	tools = append(tools, m.aiServicesTools(call)...)     // the Services view (ai_services_tools.go)

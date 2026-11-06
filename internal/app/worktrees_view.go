@@ -425,6 +425,9 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	}
 	// 4: links · last seen · locked.
 	var links []string
+	if c := it.e.Meta.Checkpoint; c != "" {
+		links = append(links, c)
+	}
 	if l := wtLinkLine(it.e.Meta); l != "" {
 		links = append(links, l)
 	}

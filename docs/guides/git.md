@@ -441,6 +441,7 @@ repository's git folder, never in your project.
 | `a` | Add the worktree as a folder of this window |
 | `p` | Pin or unpin |
 | `i` | Link an issue or pull request (see below) |
+| `N` | The notes agents left on it, with their times |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
 | `L` | Open the setup log of a new worktree |
@@ -461,6 +462,24 @@ URL must be `https` on the repository's own GitHub host. termocode asks
 20 seconds while checks run, else every 5 minutes. Without `gh`, or when
 it is not signed in, the number is kept without its title. **Unlink**
 on the same card takes it off. The AI can read links but never set one.
+
+### Notes and status from agents
+
+An agent (or a script) in a worktree can say what it does there:
+
+```sh
+termocode worktree note "adding the pin row"
+termocode worktree status blocked     # working, blocked or done
+termocode worktree list               # every worktree with its status and last note
+termocode worktree link 412           # asks you first
+```
+
+The worktree is the one the current folder is in. The AI chat and outside
+agents have the same through the `worktrees_list` and `worktree_note`
+tools. A note is one line of plain text, at most 500 characters, with
+secrets hidden; the 50 newest are kept. The card shows the last note and
+the status; `N` lists all notes with their times. A link from the command
+line shows a card first (**Deny** comes first).
 
 ### Child worktrees
 
