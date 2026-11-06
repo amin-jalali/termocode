@@ -4,6 +4,7 @@ package web
 
 import (
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -46,9 +47,21 @@ func TestDeskInlayHints(t *testing.T) {
 	p, c := openFiles(t, Desktop)
 	openDesk(t, p, c, 2, "a.go", "package a", "x := f(1)")
 	runCmd(t, p, c, true, "inlay hints", "LSP: Toggle Inlay Hints")
-	r := waitReq(t, c, webproto.OpLspInlayHints)
-	reply(t, c, r, webproto.LspHints{Items: []webproto.LspHint{{Line: 1, Col: 1, Label: ": int", PadLeft: true}}})
-	p.WaitJS(deskDoc + `.querySelector(".tc-inlay")?.textContent.includes(": int")`)
+	// Each ask (the view may settle once more) gets the same hint.
+	hints := webproto.LspHints{Items: []webproto.LspHint{{Line: 1, Col: 1, Label: ": int", PadLeft: true}}}
+	shown := deskDoc + `.querySelector(".tc-inlay")?.textContent.replace(/\u00a0/g, " ").includes(": int")`
+	for end := time.Now().Add(wait); !Eval[bool](p, `!!(`+shown+`)`); {
+		if time.Now().After(end) {
+			t.Fatal("the hint does not show")
+		}
+		select {
+		case m := <-c.in:
+			if r, ok := m.(*webproto.Req); ok && r.Op == webproto.OpLspInlayHints {
+				reply(t, c, r, hints)
+			}
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
 	runCmd(t, p, c, false, "inlay hints", "LSP: Toggle Inlay Hints")
 	p.WaitJS(`!` + deskDoc + `.querySelector(".tc-inlay")`)
 }

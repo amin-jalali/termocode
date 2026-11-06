@@ -119,6 +119,16 @@ export interface FrameDiff {
   revert?: boolean;
 }
 
+/** FrameHint is one inlay hint: its place (1-based row and column, in
+ * the editor's units) and its text, with the space around it. */
+export interface FrameHint {
+  line: number;
+  col: number;
+  label: string;
+  padLeft?: boolean;
+  padRight?: boolean;
+}
+
 /** GlyphKind is what the editor's glyph margin shows on a row: a
  * breakpoint (conditional, logpoint, not verified) or a test's state. */
 export type GlyphKind = "bp" | "bp-cond" | "bp-log" | "bp-off" | "test-pending" | "test-passed" | "test-failed" | "test-running" | "test-skipped";
@@ -175,6 +185,8 @@ export type ToFrame =
   /** aiAct: run an AI action on the selection (the frame answers with
    * its own aiAct, which names the rows). */
   | { t: "aiAct"; kind: AiAct }
+  /** hints: the inlay hints to show (all of them, each time; [] hides them). */
+  | { t: "hints"; items: FrameHint[] }
   /** snippet: insert a snippet at the cursor (the protocol's snippet
    * syntax: $1, ${2:name}, $0) as the user's own edit. */
   | { t: "snippet"; body: string }

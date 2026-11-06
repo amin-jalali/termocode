@@ -1042,4 +1042,10 @@ export const FA: Record<StringKey, string> = {
   "cmd.ws_symbol_type": "نام یک نماد را بنویسید",
   "cmd.snippets": "قطعه‌کدها: مرور…",
   "cmd.no_snippets": "برای این نوع فایل قطعه‌کدی نیست.",
+  "cmd.quick_fix": "ویرایش: رفع سریع…",
+  "cmd.quick_fix_pref": "ویرایش: اعمال رفع سریع پیشنهادی",
+  "cmd.no_fix": "اینجا رفع سریعی نیست.",
+  "cmd.no_pref_fix": "اینجا رفع سریع پیشنهادی نیست.",
+  "cmd.fix_preferred": "پیشنهادی",
+  "cmd.inlay_hints": "LSP: نمایش یا پنهان کردن راهنماهای درون‌خطی",
 };

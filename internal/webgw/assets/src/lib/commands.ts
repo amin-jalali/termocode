@@ -29,7 +29,7 @@ import { sideView } from "../ui/ActivityBar";
 import { renameFile } from "../views/Files";
 import { undoRename } from "../views/files/FileActions";
 import { fileOfTab } from "./difftab";
-import { formatBuf, goTo } from "./lsp";
+import { applyFix, formatBuf, goTo, inlayHints, quickFixes } from "./lsp";
 import { session } from "./live";
 import { askHere } from "../ui/AskHere";
 import { gitFailed } from "../views/git/errors";
@@ -109,7 +109,7 @@ export function commands(): Command[] {
     { id: "renameFile", label: "cmd.rename_file", when: () => realFile() !== null && link.meta.peek()?.role === "controller", run: () => { const f = realFile(); if (f) { showSide(); renameFile(f); } } },
     { id: "gotoTypeDef", label: "cmd.goto_typedef", when: hasDesk, run: () => activeDesk.peek()?.nav("typedef") },
     { id: "gotoImpl", label: "cmd.goto_impl", when: hasDesk, run: () => activeDesk.peek()?.nav("impl") },
-    { id: "formatDocument", label: "menu.format", keys: "Shift+Alt+F", when: () => hasDesk() && canWrite(), run: () => void formatBuf() },
+    { id: "formatDocument", label: "menu.format", when: () => hasDesk() && canWrite(), run: () => void formatBuf() },
     { id: "revertFile", label: "cmd.revert_file", when: () => hasDesk() && canWrite(), run: askRevert },
     { id: "markdownPreview", label: "cmd.md_preview", when: () => hasDesk() && /\.(md|markdown|mdx)$/i.test(activeFile.peek() ?? ""), run: openPreview },
     { id: "bookmarkToggle", label: "cmd.bm_toggle", when: () => hasDesk() && canWrite(), run: toggleBookmark },
@@ -118,6 +118,9 @@ export function commands(): Command[] {
     { id: "openRecent", label: "cmd.open_recent", run: openRecent },
     { id: "workspaceSymbol", label: "cmd.ws_symbol", when: hasDesk, run: workspaceSymbols },
     { id: "snippetPicker", label: "cmd.snippets", when: () => hasDesk() && canWrite(), run: pickSnippet },
+    { id: "quickFix", label: "cmd.quick_fix", when: () => hasDesk() && canWrite(), run: () => void pickFix() },
+    { id: "quickFixPreferred", label: "cmd.quick_fix_pref", when: () => hasDesk() && canWrite(), run: () => void preferredFix() },
+    { id: "inlayHints", label: "cmd.inlay_hints", when: hasDesk, run: () => (inlayHints.value = !inlayHints.peek()) },
     { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
   ];
 }
@@ -235,6 +238,32 @@ function pickSnippet(): void {
     }
     quick.value = { mode: "pick", pick: { title: t("cmd.snippets"), items: items.map((x) => ({ label: x.trigger, detail: x.body.split("\n")[0], run: () => activeDesk.peek()?.snippet(x.body) })) } };
   }, failToast);
+}
+
+/** pickFix lists the quick fixes at the caret; the one picked is applied on the laptop. */
+async function pickFix(): Promise<void> {
+  const r = await quickFixes();
+  if (!r) return;
+  if (r.items.length === 0) {
+    toast("info", t("cmd.no_fix"));
+    return;
+  }
+  quick.value = {
+    mode: "pick",
+    pick: { title: t("cmd.quick_fix"), items: r.items.map((a, i) => ({ label: a.title, detail: a.preferred ? t("cmd.fix_preferred") : a.kind, run: () => applyFix(r.buf, r.tick, i) })) },
+  };
+}
+
+/** preferredFix applies the preferred quick fix at the caret at once. */
+async function preferredFix(): Promise<void> {
+  const r = await quickFixes();
+  if (!r) return;
+  const i = r.items.findIndex((a) => a.preferred);
+  if (i < 0) {
+    toast("info", t("cmd.no_pref_fix"));
+    return;
+  }
+  applyFix(r.buf, r.tick, i);
 }
 
 /** realFile is the workspace file of the active tab (null: none, or a tab

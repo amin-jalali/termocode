@@ -14,7 +14,7 @@ import { diff } from "../lib/textdiff";
 import type { AICompletion, AINextEdit, LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { esc, md } from "./mdtext";
-import type { AiAt, AiKind, EditAct, FrameBlame, FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
+import type { AiAt, AiKind, EditAct, FrameBlame, FrameGlyph, FrameHint, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, NavKind, ToFrame } from "./protocol";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -374,6 +374,23 @@ const ACTS: Partial<Record<EditAct, string>> = {
   spacesToTabs: "editor.action.indentationToTabs",
   replaceInFile: "editor.action.startFindReplaceAction",
 };
+
+/** inlayDecos are the inlay hints the page sent. */
+let inlayDecos: Collection | null = null;
+
+/** setHints shows the inlay hints at their places (the text after them
+ * moves right, as in the laptop's editor). */
+function setHints(items: readonly FrameHint[]): void {
+  const n = model?.getLineCount() ?? 0;
+  inlayDecos?.set(
+    items
+      .filter((h) => h.line >= 1 && h.line <= n)
+      .map((h) => ({
+        range: oneLineAt(h.line, h.col, h.col),
+        options: { after: { content: (h.padLeft ? " " : "") + h.label + (h.padRight ? " " : ""), inlineClassName: "tc-inlay" }, showIfCollapsed: true },
+      })),
+  );
+}
 
 /** lineComment is the file type's line comment ("": none). */
 let lineComment = "";
@@ -1036,6 +1053,7 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   if (!m.diff) watchGlyphs(ed);
   lineDecos = ed.createDecorationsCollection();
   blameDecos = ed.createDecorationsCollection();
+  inlayDecos = ed.createDecorationsCollection();
   model?.onDidChangeContent((e) => {
     const specs: { from: number; to: number; insert: string }[] = e.changes.map((c) => ({ from: c.rangeOffset, to: c.rangeOffset + c.rangeLength, insert: c.text }));
     const cs = ChangeSet.of(specs, cur.length);
@@ -1229,6 +1247,9 @@ function onMessage(e: MessageEvent): void {
       return;
     case "act":
       runAct(m.id);
+      return;
+    case "hints":
+      setHints(m.items);
       return;
     case "snippet": {
       if (!ed || readOnly || diffEd) return;

@@ -1046,6 +1046,12 @@ export const S = {
   "cmd.ws_symbol_type": "Type the name of a symbol",
   "cmd.snippets": "Snippets: Browse…",
   "cmd.no_snippets": "No snippets for this file type.",
+  "cmd.quick_fix": "Edit: Quick Fix…",
+  "cmd.quick_fix_pref": "Edit: Apply Preferred Quick Fix",
+  "cmd.no_fix": "No quick fixes here.",
+  "cmd.no_pref_fix": "No preferred quick fix here.",
+  "cmd.fix_preferred": "preferred",
+  "cmd.inlay_hints": "LSP: Toggle Inlay Hints",
 } as const;
 
 export type StringKey = keyof typeof S;

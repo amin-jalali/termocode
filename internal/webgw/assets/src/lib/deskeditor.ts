@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type EditAct, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameHint, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type NavKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
@@ -113,6 +113,8 @@ export interface DeskHandle extends EditorHandle {
   nav(kind: NavKind): void;
   /** snippet inserts a snippet at the cursor. */
   snippet(body: string): void;
+  /** hints shows the inlay hints ([] hides them). */
+  hints(items: FrameHint[]): void;
 }
 
 /** COMMENTS are the line comments of file types by extension (or name). */
@@ -328,6 +330,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     snippet(body) {
       send({ t: "snippet", body });
+    },
+    hints(items) {
+      send({ t: "hints", items });
     },
     destroy() {
       removeEventListener("message", onMessage);
