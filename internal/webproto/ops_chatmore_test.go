@@ -81,3 +81,25 @@ func TestAIActionAttachKind(t *testing.T) {
 		t.Fatal("attach took an instruction")
 	}
 }
+
+// Spec (web parity: ai-mcp-profile): the MCP profiles are a read; using
+// one (or all servers again) changes the chat's tools, so it waits for a
+// laptop card. A profile is named, or All is set, never both.
+func TestAIMCPProfileOps(t *testing.T) {
+	if p, ok := Lookup(OpAIMCPProfiles); !ok || p.Role != RoleController || p.LaptopCard {
+		t.Errorf("ai.mcp_profiles: %+v", p)
+	}
+	if p, ok := Lookup(OpAIUseMCPProfile); !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+		t.Errorf("ai.use_mcp_profile: %+v", p)
+	}
+	for _, b := range []string{`{"name":"review"}`, `{"all":true}`} {
+		if _, err := DecodeArgs(OpAIUseMCPProfile, []byte(b)); err != nil {
+			t.Errorf("%s: %v", b, err)
+		}
+	}
+	for _, b := range []string{`{}`, `{"name":"x","all":true}`, `{"name":"a\nb"}`} {
+		if _, err := DecodeArgs(OpAIUseMCPProfile, []byte(b)); err == nil {
+			t.Errorf("%s accepted", b)
+		}
+	}
+}
