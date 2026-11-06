@@ -267,6 +267,7 @@ web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
 web	kubernetes-show	view:kube
 web	lowercase	cmd:lowerCase
+web	lsp-manage	op:lsp.servers
 web	mcp-import-other	palette
 web	mcp-serve-copy-config	op:ai.info
 web	mcp-serve-status	op:ai.info
@@ -392,7 +393,6 @@ excluded	layout-delete	laptop only: TUI pane layouts
 excluded	layout-open	laptop only: TUI pane layouts
 excluded	layout-reset	laptop only: TUI pane layouts
 excluded	layout-save	laptop only: TUI pane layouts
-excluded	lsp-manage	laptop only: installs language servers on the laptop disk
 excluded	open-docs	laptop only: opens docs in the laptop browser
 excluded	open-shell	laptop only: opens an external shell window on the laptop
 excluded	prefs-import-editor	laptop only: imports from other editors on the laptop disk
