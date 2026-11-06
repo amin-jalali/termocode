@@ -1,0 +1,44 @@
+//go:build browser
+
+package web
+
+import (
+	"testing"
+
+	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
+)
+
+// Spec (WEBP-1): clipboard history of the desktop editor: what is copied
+// or cut in this tab's editors is kept (in memory only, newest first);
+// Edit: Paste from Clipboard History… lists it and puts the chosen text
+// at the caret, as the user's own edit. Nothing reads the system
+// clipboard.
+func TestDeskClipboardHistory(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "alpha", "beta")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+	p.Do(chromedp.KeyEvent(kb.End, chromedp.KeyModifiers(chromedp.ModifierShift)))
+	p.Do(chromedp.KeyEvent("c", modKey()))
+	p.Do(deskTextEnd(true))
+	p.Do(chromedp.KeyEvent(kb.Home, chromedp.KeyModifiers(chromedp.ModifierShift)))
+	p.Do(chromedp.KeyEvent("c", modKey()))
+	p.Do(chromedp.KeyEvent(kb.End))
+
+	wbKey(p, "P", true, true)
+	reply(t, c, expectOp(t, c, "palette.list", `{}`), nil)
+	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box")`)
+	p.Key("clipboard history")
+	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === "Edit: Paste from Clipboard History…"`)
+	realKeys(p, "\r")
+	p.WaitJS(`[...document.querySelectorAll(".quick-row .quick-label")].map((e) => e.textContent).join("|") === "beta|alpha"`)
+	realKeys(p, string(kb.ArrowDown))
+	realKeys(p, "\r")
+	p.WaitJS(`!document.querySelector(".quick")`)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.settle("alpha", "betaalpha")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
