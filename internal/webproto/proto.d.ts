@@ -363,6 +363,108 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface DBTableArgs {
+  conn: string;
+  table: string;
+}
+
+export interface DBExplainArgs {
+  conn: string;
+  sql: string;
+  analyze?: boolean;
+}
+
+export interface DBConnArgs {
+  conn: string;
+}
+
+export interface DBCompareArgs {
+  conn: string;
+  target: string;
+}
+
+export interface DBHistoryArgs {
+  conn?: string;
+}
+
+export interface RedisKeysArgs {
+  conn: string;
+  db?: number;
+  pattern?: string;
+}
+
+export interface DBEditArgs {
+  conn: string;
+  table: string;
+  edits: DBEdit[];
+}
+
+export interface DBEdit {
+  kind: "update" | "insert" | "delete";
+  key?: DBColValue[];
+  set?: DBColValue[];
+  old?: DBColValue[];
+}
+
+export interface DBColValue {
+  col: string;
+  v?: string;
+  n?: boolean;
+}
+
+export interface DBImportArgs {
+  conn: string;
+  table: string;
+  path: string;
+  noheader?: boolean;
+}
+
+export interface RedisKeyArgs {
+  conn: string;
+  db?: number;
+  key: string;
+  verb: "delete" | "ttl";
+  ttl?: number;
+}
+
+export interface DBAddArgs {
+  id: string;
+  name?: string;
+  driver: "postgres" | "mysql" | "sqlite" | "redis";
+  host?: string;
+  port?: number;
+  user?: string;
+  database?: string;
+  path?: string;
+  db?: number;
+  env?: string;
+  readonly?: boolean;
+}
+
+export interface DBSSHArgs {
+  conn: string;
+  host?: string;
+  port?: number;
+  user?: string;
+  auth?: "agent" | "key" | "password";
+  keyfile?: string;
+  jump?: string[];
+  remove?: boolean;
+}
+
+export interface DBSSLArgs {
+  conn: string;
+  mode: "disable" | "require" | "verify-ca" | "verify-full";
+  ca?: string;
+  cert?: string;
+  key?: string;
+}
+
+export interface DBTxArgs {
+  conn: string;
+  verb: "commit" | "rollback" | "manual" | "auto";
+}
+
 export interface GitGraphArgs {
   skip?: number;
   head?: boolean;
@@ -431,10 +533,6 @@ export interface GitCheckoutArgs {
 
 export interface GitStashArgs {
   message?: string;
-}
-
-export interface DBConnArgs {
-  conn: string;
 }
 
 export interface DBRowsArgs {
@@ -1527,6 +1625,71 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface DBText {
+  text: string;
+}
+
+export interface DBPlan {
+  lines: DBPlanLine[];
+  summary?: string[];
+  analyze?: boolean;
+  truncated?: boolean;
+  ms: number;
+}
+
+export interface DBPlanLine {
+  depth: number;
+  text: string;
+  detail?: boolean;
+  costly?: boolean;
+}
+
+export interface DBDone {
+  text: string;
+  ms?: number;
+}
+
+export interface DBCompare {
+  script: string;
+  changes: number;
+  destructive?: number;
+  truncated?: boolean;
+}
+
+export interface DBHistory {
+  entries: DBHistoryEntry[];
+}
+
+export interface DBHistoryEntry {
+  conn: string;
+  sql: string;
+  at: number;
+  ms?: number;
+  rows?: number;
+}
+
+export interface DBFiles {
+  files: string[];
+  more?: number;
+}
+
+export interface DBConfigFile {
+  path: string;
+  created?: boolean;
+}
+
+export interface RedisKeys {
+  db: number;
+  keys: RedisKey[];
+  more?: boolean;
+}
+
+export interface RedisKey {
+  key: string;
+  type: string;
+  ttl: number;
+}
+
 export interface GitGraph {
   skip: number;
   rows: GitGraphRow[];
@@ -1650,6 +1813,10 @@ export interface DBConn {
   readonly?: boolean;
   problem?: string;
   sql: boolean;
+  connected?: boolean;
+  manual?: boolean;
+  tx?: boolean;
+  writes?: number;
 }
 
 export interface DBTables {
@@ -1672,6 +1839,7 @@ export interface DBRows {
   truncated?: boolean;
   masked?: number;
   ms: number;
+  key?: string[];
 }
 
 export interface DBCell {
@@ -1895,6 +2063,24 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "db.ddl": DBTableArgs;
+  "db.explain": DBExplainArgs;
+  "db.test": DBConnArgs;
+  "db.compare": DBCompareArgs;
+  "db.history": DBHistoryArgs;
+  "db.csv_files": EmptyArgs;
+  "db.cancel": DBConnArgs;
+  "db.connect": DBConnArgs;
+  "db.config": EmptyArgs;
+  "redis.keys": RedisKeysArgs;
+  "db.edit": DBEditArgs;
+  "db.import": DBImportArgs;
+  "redis.key": RedisKeyArgs;
+  "db.add": DBAddArgs;
+  "db.ssh": DBSSHArgs;
+  "db.ssl": DBSSLArgs;
+  "db.disconnect": DBConnArgs;
+  "db.tx": DBTxArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2032,6 +2218,24 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "db.ddl": DBText;
+  "db.explain": DBPlan;
+  "db.test": DBDone;
+  "db.compare": DBCompare;
+  "db.history": DBHistory;
+  "db.csv_files": DBFiles;
+  "db.cancel": DBDone;
+  "db.connect": DBDone;
+  "db.config": DBConfigFile;
+  "redis.keys": RedisKeys;
+  "db.edit": AskRef;
+  "db.import": AskRef;
+  "redis.key": AskRef;
+  "db.add": AskRef;
+  "db.ssh": AskRef;
+  "db.ssl": AskRef;
+  "db.disconnect": AskRef;
+  "db.tx": AskRef;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;
