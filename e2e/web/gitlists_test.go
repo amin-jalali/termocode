@@ -12,7 +12,7 @@ import (
 // here (Cancel first), then the laptop checks it out.
 func TestGitTagsPick(t *testing.T) {
 	p, c := openDeskSCM(t, nil)
-	runCmd(t, p, c, "Git: Show Tags…", true)
+	runGitCmd(t, p, c, "Git: Show Tags…", true)
 	reply(t, c, waitReq(t, c, "git.tags"), map[string]any{"tags": []string{"v2", "v1"}})
 	p.WaitJS(`[...document.querySelectorAll(".quick-row .quick-label")].map((e) => e.textContent).join(",") === "v2,v1"`)
 	p.Key("v1")
@@ -28,7 +28,7 @@ func TestGitTagsPick(t *testing.T) {
 // Git: Show Stash List… lists the entries; picking one asks to apply it.
 func TestGitStashListPick(t *testing.T) {
 	p, c := openDeskSCM(t, nil)
-	runCmd(t, p, c, "Git: Show Stash List…", true)
+	runGitCmd(t, p, c, "Git: Show Stash List…", true)
 	reply(t, c, waitReq(t, c, "git.stash_list"), map[string]any{"entries": []map[string]string{{"ref": "stash@{0}", "message": "wip toast"}, {"ref": "stash@{1}", "message": "old try"}}})
 	p.WaitJS(`document.querySelectorAll(".quick-row").length === 2`)
 	p.Key("old")
