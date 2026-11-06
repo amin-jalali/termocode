@@ -465,6 +465,7 @@ missing	git-fetch-all	Git|S
 missing	git-goto-commit	Git|S
 missing	git-graph-all	Git|S
 missing	git-graph-head	Git|S
+missing	git-hook-output	Git|S
 missing	git-identity	Git|S
 missing	git-ignore-file	Git|S
 missing	git-incoming	Git|S
@@ -495,6 +496,7 @@ missing	git-remotes	Git|S
 missing	git-rev-next	Git|S
 missing	git-rev-prev	Git|S
 missing	git-signing-toggle	Git|S
+missing	git-skip-hooks	Git|S
 missing	git-stash-actions	Git|S
 missing	git-stash-options	Git|S
 missing	git-status-blame	Git|S

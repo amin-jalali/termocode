@@ -932,8 +932,13 @@ func (m *Model) gitCommitStaged(cwd, msg string, amend, signoff bool, after stri
 		return c
 	}
 	var toastCmd tea.Cmd
-	if err := git.CommitWith(cwd, msg, amend, signoff); err != nil {
+	noVerify := m.gitx.skipHooks || m.gitx.noVerifyOnce
+	m.gitx.noVerifyOnce = false
+	if err := git.CommitOpts(cwd, msg, git.CommitOptions{Amend: amend, Signoff: signoff, NoVerify: noVerify}); err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Commit failed", err.Error())
+		if !noVerify && git.HasCommitHooks(cwd) { // GITX-27 (gitx_commit_hooks.go)
+			return tea.Batch(fetchGitCmd(), toastCmd, m.gitxHookCard(err, cwd, msg, amend, signoff, after))
+		}
 		return tea.Batch(fetchGitCmd(), toastCmd)
 	}
 	m.clearCommitBox()

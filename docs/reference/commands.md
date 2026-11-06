@@ -452,6 +452,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Show Folder History… | `git-log-folder` |   |   |
 | Git: Show Git Command Log | `git-cmd-log` |   |   |
 | Git: Show Incoming Commits… | `git-incoming` |   |   |
+| Git: Show Last Hook Output | `git-hook-output` |   |   |
 | Git: Show Line History | `git-line-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |
 | Git: Show Outgoing Commits… | `git-outgoing` |   |   |
@@ -474,6 +475,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
 | Git: Toggle Commit Signing (This Repository) | `git-signing-toggle` |   |   |
 | Git: Toggle Inline Blame | `git-inline-blame` |   |   |
+| Git: Toggle Skip Hooks on Commit (--no-verify) | `git-skip-hooks` |   | `this session only` |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |

@@ -2173,6 +2173,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
 | `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-hook-output` | Git: Show Last Hook Output | auto |   |
 | `git-identity` | Git: Set Identity (Name and E-mail)… | never | sets the name and e-mail on the user's commits; only the user does that |
 | `git-ignore-file` | Git: Add to .gitignore… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-incoming` | Git: Show Incoming Commits… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2226,6 +2227,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-rev-next` | Git: Open Next Revision of File | auto |   |
 | `git-rev-prev` | Git: Open Previous Revision of File | auto |   |
 | `git-signing-toggle` | Git: Toggle Commit Signing (This Repository) | never | changes how the user's commits are signed; only the user does that |
+| `git-skip-hooks` | Git: Toggle Skip Hooks on Commit (--no-verify) | never | turns off the checks the repository runs on each commit; only the user does that |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |

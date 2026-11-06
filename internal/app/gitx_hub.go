@@ -54,6 +54,11 @@ type gitxState struct {
 	onPrompt  func(m *Model, value string) tea.Cmd
 	items     []picker.Item // the rows of the last GITX picker (tests read them)
 	checks    gitxChecks    // the before-commit checks (gitx_commit_checks.go)
+	// The commit hooks (gitx_commit_hooks.go): skipHooks is the session
+	// toggle, noVerifyOnce the answer of the hook card, hookOutput the
+	// last output of a hook that stopped a commit.
+	skipHooks, noVerifyOnce bool
+	hookOutput              string
 }
 
 // gitxDoneMsg carries the end of work done off the UI loop; apply runs
