@@ -64,7 +64,9 @@ web	git-ci	op:ci.status
 web	git-clone	cmd:gitClone
 web	git-commit	op:git.commit
 web	git-conflict-both	op:git.resolve_side
+web	git-conflict-next	cmd:nextConflict
 web	git-conflict-ours	op:git.resolve_side
+web	git-conflict-prev	cmd:prevConflict
 web	git-conflict-theirs	op:git.resolve_side
 web	git-diff	op:git.diff
 web	git-discard	op:git.discard
@@ -72,7 +74,9 @@ web	git-fetch	palette
 web	git-focus	view:git
 web	git-history	op:git.file_log
 web	git-log	cmd:gitGraph
+web	git-merge-next	cmd:mergeNext
 web	git-merge-open	op:git.conflict
+web	git-merge-prev	cmd:mergePrev
 web	git-merge-resolve	op:git.resolve
 web	git-merge-take-both	op:git.resolve_side
 web	git-merge-take-both-theirs-first	op:git.resolve_side
@@ -92,6 +96,7 @@ web	git-stash	palette
 web	git-stash-pop	palette
 web	git-sync	palette
 web	git-unstage-hunk	op:git.unstage_hunk
+web	git-view-toggle	cmd:scmViewToggle
 web	goto-line	cmd:gotoLine
 web	goto-symbol-file	op:buf.symbols
 web	hover	op:lsp.hover
@@ -101,10 +106,12 @@ web	kubernetes-refresh	op:kube.list
 web	kubernetes-show	view:kube
 web	next-buffer	cmd:nextEditor
 web	next-diagnostic	cmd:problems
+web	next-hunk	cmd:nextChange
 web	open-settings-ui	cmd:settings
 web	pick-theme	cmd:themeDark
 web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
+web	prev-hunk	cmd:prevChange
 web	problems	cmd:problems
 web	quick-open	cmd:quickOpen
 web	reveal-fs	op:tree.reveal_on_laptop
@@ -349,13 +356,9 @@ missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
-missing	git-conflict-next	Git|S
-missing	git-conflict-prev	Git|S
 missing	git-discard-hunk	Git|S
 missing	git-discard-lines	Git|S
 missing	git-fixup	Git|S
-missing	git-merge-next	Git|S
-missing	git-merge-prev	Git|S
 missing	git-merge-take-base	Git|S
 missing	git-redo	Git|S
 missing	git-reflog	Git|S
@@ -364,7 +367,6 @@ missing	git-stash-list	Git|S
 missing	git-tags	Git|S
 missing	git-undo	Git|S
 missing	git-unstage-lines	Git|S
-missing	git-view-toggle	Git|S
 missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
 missing	goto-type-def	Editor and files|S
@@ -394,13 +396,11 @@ missing	lowercase	Editor and files|S
 missing	mcp-import-other	AI chat and agents|M
 missing	mcp-serve-copy-config	AI chat and agents|M
 missing	mcp-serve-status	AI chat and agents|M
-missing	next-hunk	Git|S
 missing	open-recent	Editor and files|S
 missing	open-url	Editor and files|S
 missing	open-workspace	Editor and files|S
 missing	output-clear	Testing and web access|S
 missing	pin-tab	Editor and files|S
-missing	prev-hunk	Git|S
 missing	preview-md	Editor and files|S
 missing	redis-delete-key	Databases|L
 missing	redis-set-ttl	Databases|L
