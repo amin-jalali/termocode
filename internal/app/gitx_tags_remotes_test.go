@@ -162,7 +162,7 @@ func TestGitxTagDetails(t *testing.T) {
 	m.dispatchPaletteAction("git-tag-details")
 	m.pickerOpen = false
 	m.handlePickerSelect(picker.SelectMsg{ID: "tag-v1"})
-	page := m.gitTagPage
+	page := m.gitRef.page
 	for _, want := range []string{"v1", "annotated", "Tess", "Release one", "first"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("page has no %q:\n%s", want, page)
