@@ -85,3 +85,6 @@ func LineHistory(dir, path string, start, end int) ([]CommitHead, error) {
 	}
 	return cs, nil
 }
+
+// Ago is a Unix time as "3 days ago" (as the log shows it).
+func Ago(when int64) string { return relativeDate(strconv.FormatInt(when, 10)) }

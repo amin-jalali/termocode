@@ -1973,6 +1973,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
 | `git-blame` | Git: Blame Current Line | auto |   |
+| `git-blame-annotate` | Git: Toggle Blame Annotations | auto |   |
+| `git-blame-before` | Git: Blame Before This Change | auto |   |
+| `git-blame-commit` | Git: Open Commit of Line | auto |   |
+| `git-blame-options` | Git: Blame Options… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
 | `git-ci` | Git: CI and Pull Request… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
@@ -1992,6 +1996,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-fixup` | Git: Fixup Staged Changes Into… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-focus` | Git: Focus Source Control | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-inline-blame` | Git: Toggle Inline Blame | auto |   |
+| `git-line-history` | Git: Show Line History | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-merge-close` | Git: Merge View: Close | auto |   |
 | `git-merge-focus` | Git: Merge View: Merge Keys | auto |   |
@@ -2015,6 +2021,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-redo` | Git: Redo Undone Git Action | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-refresh` | Git: Refresh Status | auto |   |
+| `git-rev-next` | Git: Open Next Revision of File | auto |   |
+| `git-rev-prev` | Git: Open Previous Revision of File | auto |   |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |
@@ -2022,6 +2030,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-stash` | Git: Stash Changes | confirm (git) |   |
 | `git-stash-list` | Git: Show Stash List... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_stash list) |
 | `git-stash-pop` | Git: Pop Latest Stash | confirm (git) |   |
+| `git-status-blame` | Git: Toggle Blame in Status Bar | auto |   |
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |

@@ -261,6 +261,10 @@ type SettingEntry struct {
 // fileOnlySettings are config.json keys with no row in the Settings modal.
 // They are set by other UI (named in the description) or by hand.
 var fileOnlySettings = []SettingEntry{
+	{Key: "git_status_blame", Type: "bool", Default: "false", Category: "Git (file only)", Description: "The status bar shows who last changed the cursor line, and when. Click it to open the commit. Toggle with Git: Toggle Blame in Status Bar."},
+	{Key: "git_inline_blame", Type: "bool", Default: "false", Category: "Git (file only)", Description: "Author, age and subject of the cursor line's commit at the end of the line. Toggle with Git: Toggle Inline Blame."},
+	{Key: "git_blame_ignore_whitespace", Type: "bool", Default: "false", Category: "Git (file only)", Description: "Blame ignores whitespace-only changes (git blame -w). Set with Git: Blame Options…."},
+	{Key: "git_blame_detect_moves", Type: "bool", Default: "false", Category: "Git (file only)", Description: "Blame keeps the first commit of lines that were moved or copied (git blame -M -C). Set with Git: Blame Options…."},
 	{Key: "db_max_rows", Type: "int", Default: "10000", Category: "Databases (file only)", Description: "Maximum loaded rows per SQL result (1–100000). Larger results are cut and marked."},
 	{Key: "db_page_rows", Type: "int", Default: "100", Category: "Databases (file only)", Description: "Rows per SQL result page (1–1000)."},
 	{Key: "db_timeout", Type: "int", Default: "30", Category: "Databases (file only)", Description: "Maximum seconds for a console statement. The session also enforces its own timeout."},

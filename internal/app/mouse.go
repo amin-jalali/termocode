@@ -138,6 +138,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:update" { // G-UPD
 			return m, m.openUpdateCard()
 		}
+		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:blame" { // git_blame_view.go
+			return m, m.gitOpenLineCommit()
+		}
 		// Group I: extension status items.
 		if msg.Type == tea.MouseLeft {
 			if cmd, ok := m.hitExtStatusItem(msg.X, msg.Y); ok {

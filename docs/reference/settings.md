@@ -90,6 +90,15 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | --- | --- | --- | --- |
 | `update_check` | bool | `true` | Look for a newer termocode release once a day, in the background (GitHub, no account needed). A newer one shows a quiet ⬆ chip in the status bar and one toast. Dev builds never look. termocode: Check for Updates works with it off too. |
 
+## Git (file only)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `git_status_blame` | bool | `false` | The status bar shows who last changed the cursor line, and when. Click it to open the commit. Toggle with Git: Toggle Blame in Status Bar. |
+| `git_inline_blame` | bool | `false` | Author, age and subject of the cursor line's commit at the end of the line. Toggle with Git: Toggle Inline Blame. |
+| `git_blame_ignore_whitespace` | bool | `false` | Blame ignores whitespace-only changes (git blame -w). Set with Git: Blame Options…. |
+| `git_blame_detect_moves` | bool | `false` | Blame keeps the first commit of lines that were moved or copied (git blame -M -C). Set with Git: Blame Options…. |
+
 ## Databases (file only)
 
 | Key | Type | Default | Description |

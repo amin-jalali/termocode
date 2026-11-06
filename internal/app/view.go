@@ -2305,7 +2305,8 @@ func (m Model) statusState() statusbar.State {
 		LSP:         m.lspClients(),
 		Ext:         append(append(m.extStatusTexts(), m.httpStatusTexts()...), m.aiNESStatusTexts()...), // Group I, HTTP client, AI next edit
 	}
-	if m.layoutHint != "" { // G-LAY: the layout just opened
+	st.Ext = append(st.Ext, m.gitBlameStatusTexts()...) // last: statusSpans finds it there (git_blame_view.go)
+	if m.layoutHint != "" {                             // G-LAY: the layout just opened
 		st.Ext = append(st.Ext, "Layout: "+m.layoutHint)
 	}
 	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)

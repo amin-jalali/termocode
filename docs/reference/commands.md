@@ -338,7 +338,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
+| Git: Blame Before This Change | `git-blame-before` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
+| Git: Blame Options… | `git-blame-options` |   |   |
 | Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
 | Git: Commit... | `git-commit` |   |   |
@@ -368,7 +370,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Merge View: Take Ours | `git-merge-take-ours` |   | `o` |
 | Git: Merge View: Take Theirs | `git-merge-take-theirs` |   | `t` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
+| Git: Open Commit of Line | `git-blame-commit` |   |   |
 | Git: Open Merge View | `git-merge-open` |   |   |
+| Git: Open Next Revision of File | `git-rev-next` |   |   |
+| Git: Open Previous Revision of File | `git-rev-prev` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
@@ -379,6 +384,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Refresh Status | `git-refresh` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
+| Git: Show Line History | `git-line-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |
 | Git: Show Stash List... | `git-stash-list` |   |   |
 | Git: Show Tags... | `git-tags` |   |   |
@@ -389,6 +395,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stash Changes | `git-stash` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
+| Git: Toggle Blame Annotations | `git-blame-annotate` |   |   |
+| Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
+| Git: Toggle Inline Blame | `git-inline-blame` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |

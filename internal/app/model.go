@@ -231,6 +231,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitBlame is the current file's blame and the blame settings
+	// (git_blame_view.go).
+	gitBlame gitBlameState
 
 	// VSCode-style mouse hover. hoverX/hoverY are the absolute screen cell
 	// under the pointer (or -1 when unknown). mouseAllMotion mirrors the live
