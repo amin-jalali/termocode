@@ -7,6 +7,25 @@
 import { addStrings } from "./strings";
 
 export const SD = {
+  // Workflows (desktop side bar and run tab)
+  "wfv.list": "All workflows",
+  "wfv.no_runs": "No runs yet.",
+  "wfv.on": "on",
+  "wfv.off": "off",
+  "wfv.untrusted": "not trusted yet",
+  "wfv.broken": "the file has problems",
+  "wfv.interrupted": "stopped by a restart",
+  "wfv.dry": "dry run",
+  "wfv.items": "{n} items",
+  "wfv.item_one": "1 item",
+  "wfv.failed": "{n} failed",
+  "wfv.wrote": "wrote {n}",
+  "wfv.resumed": "resumed after a restart",
+  "wfv.started": "started {time}",
+  "wfv.needs": "Needs you",
+  "wfv.last_lines": "Last lines",
+  "wfv.body_laptop": "Run, turn on or off, edit and allow a workflow on the laptop.",
+  "wfv.gone": "This run is no longer in the list.",
   // Terminal
   "term.close": "Close this shell…",
   "term.close_body": "Close terminal {n}? Anything running in it stops. This asks the laptop.",

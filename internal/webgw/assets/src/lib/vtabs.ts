@@ -10,6 +10,7 @@
 //   "@ddl:" + conn + "/" + table  a table's DDL
 //   "@scmp:" + conn + "/" + target a schema compare's script
 //   "@dbh:"                        the SQL history
+//   "@wf:" + workflow + "/" + run  a workflow run's page (both URI-encoded)
 // (Diff tabs are lib/difftab.ts.)
 import { t } from "../strings";
 
@@ -24,7 +25,8 @@ export type VTab =
   | { kind: "ctr"; what: CtrWhat; arg: string; label: string }
   | { kind: "md"; path: string }
   | { kind: "cmp"; a: string; b: string }
-  | { kind: "dbh" };
+  | { kind: "dbh" }
+  | { kind: "wf"; workflow: string; run: string };
 
 const enc = encodeURIComponent;
 
@@ -54,6 +56,11 @@ export function sqlTab(conn: string): string {
 /** mcpTab names the tab of an MCP agent's details. */
 export function mcpTab(name: string): string {
   return "@mcp:" + enc(name);
+}
+
+/** wfTab names the tab of a workflow run's page. */
+export function wfTab(workflow: string, run: string): string {
+  return "@wf:" + enc(workflow) + "/" + enc(run);
 }
 
 /** ctrTab names the tab of a container read; label is the tab's name. */
@@ -95,6 +102,13 @@ export function vtabOf(tab: string): VTab | null {
     const path = dec(tab.slice(4));
     return path ? { kind: "md", path } : null;
   }
+  if (tab.startsWith("@wf:")) {
+    const rest = tab.slice(4);
+    const i = rest.indexOf("/");
+    const workflow = i > 0 ? dec(rest.slice(0, i)) : null;
+    const run = i > 0 ? dec(rest.slice(i + 1)) : null;
+    return workflow && run ? { kind: "wf", workflow, run } : null;
+  }
   if (tab.startsWith("@mcp:")) {
     const name = dec(tab.slice(5));
     return name !== null ? { kind: "mcp", name } : null;
@@ -119,6 +133,7 @@ export function vtabName(v: VTab): string {
   if (v.kind === "scmp") return v.table + " ↔ " + v.conn;
   if (v.kind === "dbh") return t("dbv.history");
   if (v.kind === "sql") return t("dbv.query_tab", { conn: v.conn });
+  if (v.kind === "wf") return t("wfv.tab", { name: v.workflow });
   if (v.kind === "ctr") return v.label;
   if (v.kind === "cmp") return v.a.slice(v.a.lastIndexOf("/") + 1) + " ↔ " + v.b.slice(v.b.lastIndexOf("/") + 1);
   if (v.kind === "md") return t("md.preview_tab", { name: v.path.slice(v.path.lastIndexOf("/") + 1) });
@@ -129,5 +144,5 @@ export function vtabName(v: VTab): string {
 /** vtabIcon is the codicon of the tab. */
 export function vtabIcon(v: VTab): string {
   if (v.kind === "ctr") return v.what === "stats" ? "pulse" : v.what === "history" ? "history" : v.what === "search" || v.what === "tags" ? "search" : v.what === "df" ? "graph" : "json";
-  return v.kind === "db" ? "table" : v.kind === "sql" ? "database" : v.kind === "ddl" ? "code" : v.kind === "scmp" ? "diff" : v.kind === "dbh" ? "history" : v.kind === "md" ? "open-preview" : v.kind === "cmp" ? "compare-changes" : "plug";
+  return v.kind === "db" ? "table" : v.kind === "sql" ? "database" : v.kind === "ddl" ? "code" : v.kind === "scmp" ? "diff" : v.kind === "dbh" ? "history" : v.kind === "md" ? "open-preview" : v.kind === "cmp" ? "compare-changes" : v.kind === "wf" ? "type-hierarchy" : "plug";
 }

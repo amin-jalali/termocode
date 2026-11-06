@@ -95,6 +95,13 @@ type State struct {
 	// "⬆ v0.2.0" before the cursor position (G-UPD, UpdateChipSpan for
 	// the click). "" hides it.
 	Update string
+
+	// AGX-12: the plan pill of the outside agents "✦ Claude 62% ↻14:30"
+	// and its narrow form "✦62%" ("" hides it). PlanLimited: a limit is
+	// on (amber). It shrinks, then goes, when the bar is narrow
+	// (PlanChipSpan for the click).
+	Plan, PlanShort string
+	PlanLimited     bool
 }
 
 // AIState is the status-bar AI badge look (Group A).
@@ -177,7 +184,7 @@ type barLayout struct {
 // priority): low-value right items go first, then the center cluster,
 // then the language and TERM. Items are dropped whole, never cut, so the
 // "Ln, Col" pill (and the DEBUG badge) always show complete.
-var dropOrder = []rightItem{itemUpdate, itemAI, itemLSP, itemEncoding, itemIndent, itemLang, itemCenter, itemTermLabel}
+var dropOrder = []rightItem{itemUpdate, itemPlanLong, itemAI, itemLSP, itemEncoding, itemIndent, itemPlan, itemLang, itemCenter, itemTermLabel}
 
 // layout fits left / center / right into the bar width (see View).
 func (m Model) layout(s State) barLayout {
@@ -548,8 +555,10 @@ const (
 	itemTermLabel
 	itemPos
 	itemDebug
-	itemUpdate // G-UPD: "⬆ v0.2.0"
-	itemCenter // the whole center cluster (only used in dropOrder)
+	itemUpdate   // G-UPD: "⬆ v0.2.0"
+	itemPlan     // AGX-12: the plan pill
+	itemPlanLong // only in dropOrder: dropping it shows the narrow form
+	itemCenter   // the whole center cluster (only used in dropOrder)
 )
 
 // renderRight shows cursor position, indent style, encoding, language,
@@ -579,6 +588,9 @@ func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, map[r
 		}
 		if s.AIState != AIOff {
 			add(itemAI, renderAIBadge(s.AI, s.AIState))
+		}
+		if p := renderPlanPill(s, drop[itemPlanLong]); p != "" {
+			add(itemPlan, p)
 		}
 		if s.Update != "" {
 			add(itemUpdate, renderUpdateChip(s))
@@ -610,6 +622,9 @@ func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, map[r
 	}
 	if s.AIState != AIOff {
 		add(itemAI, renderAIBadge(s.AI, s.AIState))
+	}
+	if p := renderPlanPill(s, drop[itemPlanLong]); p != "" {
+		add(itemPlan, p)
 	}
 	if s.Update != "" {
 		add(itemUpdate, renderUpdateChip(s))
@@ -669,6 +684,36 @@ func (m Model) ItemSpans(s State) []ItemSpan {
 		}
 	}
 	return out
+}
+
+// renderPlanPill is the AGX-12 plan pill, its narrow form when short.
+func renderPlanPill(s State, short bool) string {
+	text := s.Plan
+	if short {
+		text = s.PlanShort
+	}
+	if text == "" {
+		return ""
+	}
+	fg := theme.AIAccent
+	if s.PlanLimited {
+		fg = theme.AccentAmber
+	}
+	return barFg(fg).Render(text)
+}
+
+// PlanChipSpan returns the [x0, x1) cell range of the plan pill.
+func (m Model) PlanChipSpan(s State) (x0, x1 int, ok bool) {
+	if m.w <= 0 || s.Plan == "" {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	sp, shown := l.spans[itemPlan]
+	if !shown || sp[1] == 0 {
+		return 0, 0, false
+	}
+	rightX := 1 + l.leftW + l.gapL + l.centerW + l.gapR
+	return rightX + sp[0], rightX + sp[0] + sp[1], true
 }
 
 // renderAIBadge draws the Group A "✦ <model>" badge.

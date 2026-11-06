@@ -2330,6 +2330,7 @@ func (m Model) statusState() statusbar.State {
 	m.fillServicesStatus(&st)
 	m.fillCIStatus(&st)
 	m.fillUpdateStatus(&st)            // G-UPD: ⬆ v0.2.0
+	m.fillPlanStatus(&st)              // AGX-12: ✦ Claude 62% ↻14:30 (agent_usage.go)
 	st.Agents = m.mcpServeAgentCount() // ⇄ n agents: outside agents on the MCP server
 	st.AgentsReady = m.mcpServe != nil // ⇄ ready: it listens, nobody is connected
 	// ◉ web on / web connected (web_tui.go)
