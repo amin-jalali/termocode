@@ -11,6 +11,8 @@ import { keepIssuedToken, postJSON, type Reply } from "../net/auth";
 import { createPasskey, deviceName, passkeysHere } from "../net/passkey";
 import { t, type StringKey } from "../strings";
 import { Button } from "./Button";
+import { RememberBox, remember } from "./RememberBox";
+import { keepDeviceKey } from "../net/devicekey";
 
 /** Done opens the workspace once this device has a session. */
 type Done = () => void;
@@ -95,11 +97,12 @@ async function save(onDone: Done) {
     state.value = "cancelled"; // the user may tap Save passkey again
     return;
   }
-  const r = await postJSON("/pair/finish", { pair_id: pairID, credential });
+  const r = await postJSON("/pair/finish", { pair_id: pairID, credential, remember: remember.value && !guest.value });
   if (!keepIssuedToken(r)) {
     state.value = failState(r);
     return;
   }
+  keepDeviceKey(r);
   onDone();
 }
 
@@ -137,6 +140,7 @@ export function PairScreen({ secret, onDone }: { secret: string; onDone: Done })
       )}
       {(s === "approved" || s === "saving" || s === "cancelled") && (
         <div class="connect-foot">
+          {!guest.value && <RememberBox />}
           <Button kind="primary" wide autoFocus disabled={s === "saving"} onClick={() => void save(onDone)}>
             {t("pair.save")}
           </Button>
