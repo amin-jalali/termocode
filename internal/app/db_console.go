@@ -289,6 +289,13 @@ func (m *Model) titledBufs(bufs []nvim.BufferInfo) []nvim.BufferInfo {
 			out[i].Title = m.runsPageTitle()
 			continue
 		}
+		if isWfxPagePath(b.Path) && m.wfx != nil {
+			if out == nil {
+				out = append([]nvim.BufferInfo(nil), bufs...)
+			}
+			out[i].Title = m.wfxPageTitle()
+			continue
+		}
 		if isItermocPagePath(b.Path) && m.itermocPage != nil {
 			if out == nil {
 				out = append([]nvim.BufferInfo(nil), bufs...)

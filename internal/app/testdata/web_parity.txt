@@ -8,43 +8,146 @@
 
 web	ai-add	cmd:aiAdd
 web	ai-agents	cmd:agents
+web	ai-apply-code	palette
+web	ai-apply-proposal	op:cards.answer
+web	ai-attach	cmd:aiAttach
+web	ai-auto-approve	op:ai.set_auto_approve
 web	ai-cancel	op:chat.stop
+web	ai-configure	op:ai.info
+web	ai-discard-proposal	op:cards.answer
 web	ai-doc	cmd:aiDoc
 web	ai-edit	cmd:aiEdit
+web	ai-edit-review	palette
 web	ai-explain	cmd:aiExplain
+web	ai-export-chat	op:chat.export
 web	ai-fix	cmd:aiFix
+web	ai-fork-chat	op:chat.fork
+web	ai-handoff	palette
+web	ai-history	op:chat.open
+web	ai-history-clear	op:chat.clear
+web	ai-history-delete	op:chat.delete
+web	ai-history-rename	op:chat.rename
+web	ai-hooks	op:ai.info
+web	ai-keep-going	palette
+web	ai-mcp-background	palette
+web	ai-mcp-log	op:ai.info
+web	ai-mcp-profile	op:ai.use_mcp_profile
+web	ai-mcp-reconnect-all	palette
+web	ai-mcp-reset-cache	palette
 web	ai-mcp-servers	view:mcp
+web	ai-mcp-updates	palette
+web	ai-memory	op:ai.info
+web	ai-memory-toggle	palette
 web	ai-model-slot-add	cmd:aiModelSlotAdd
 web	ai-models-edit	cmd:aiModelsEdit
 web	ai-new-chat	op:chat.new
 web	ai-open-chat	cmd:chat
 web	ai-pick-model	op:ai.use_model
+web	ai-plan-approval	palette
+web	ai-plan-review	op:cards.answer
+web	ai-plan-worktree	palette
 web	ai-profile-edit	cmd:aiProfileEdit
 web	ai-profile-form	cmd:aiProfileForm
 web	ai-profile-new	cmd:aiProfileNew
 web	ai-profile-next	cmd:aiProfileNext
 web	ai-profile-show	cmd:aiProfileShow
 web	ai-profile-switch	op:ai.use_profile
+web	ai-reasoning-next	palette
+web	ai-review	op:cards.answer
+web	ai-rules	op:ai.info
 web	ai-runs	cmd:runs
+web	ai-ship	palette
+web	ai-skills	op:ai.info
 web	ai-toggle-inline	op:ai.complete
 web	ai-toggle-next-edit	op:ai.next_edit
 web	ai-trigger-inline	op:ai.complete
+web	ai-undo-turn	palette
+web	ai-until-done	palette
+web	ai-usage	op:ai.info
+web	ai-web-tools	op:ai.info
 web	ai-worktrees	op:ai.worktrees
+web	ai-worktrees-toggle	palette
+web	alternate-file	cmd:lastFile
+web	bookmark-clear	cmd:bookmarkClear
+web	bookmark-list	cmd:bookmarkList
+web	bookmark-toggle	cmd:bookmarkToggle
 web	close-buffer	cmd:closeEditor
+web	close-split	cmd:closeSplit
+web	code-action-apply-preferred	cmd:quickFixPreferred
+web	code-actions	cmd:quickFix
+web	containers-attach	op:containers.exec
+web	containers-browse-tags	op:containers.tags
+web	containers-compose-down	op:containers.compose_ask
+web	containers-compose-restart	op:containers.compose
+web	containers-compose-stop	op:containers.compose_ask
+web	containers-compose-up	op:containers.compose
+web	containers-context-default	op:containers.context_default
+web	containers-context-use	op:containers.context
+web	containers-filter	cmd:containersFilter
 web	containers-focus	view:containers
+web	containers-image-history	op:containers.history
+web	containers-image-inspect	op:containers.inspect
+web	containers-image-prune	op:containers.prune
+web	containers-image-pull	op:containers.image
+web	containers-image-push	op:containers.image
+web	containers-image-remove	op:containers.image
+web	containers-image-run	op:containers.image
+web	containers-image-tag	op:containers.tag
+web	containers-inspect	op:containers.inspect
 web	containers-logs	op:containers.logs
+web	containers-network-create	op:containers.create
+web	containers-network-prune	op:containers.prune
+web	containers-network-remove	op:containers.storage_remove
+web	containers-open-databases	op:containers.open_db
+web	containers-open-port	cmd:containersOpenPort
+web	containers-pause	op:containers.pause
+web	containers-prune	op:containers.prune
 web	containers-refresh	op:containers.list
+web	containers-registry-connect	op:containers.registry
+web	containers-registry-signout	op:containers.registry
 web	containers-remove	op:containers.remove
 web	containers-restart	op:containers.restart
+web	containers-search	op:containers.search
+web	containers-shell	op:containers.exec
 web	containers-start	op:containers.start
+web	containers-stats	op:containers.stats
 web	containers-stop	op:containers.stop
+web	containers-system-prune	op:containers.prune
+web	containers-volume-create	op:containers.create
+web	containers-volume-disk-usage	op:containers.disk_usage
+web	containers-volume-prune	op:containers.prune
+web	containers-volume-remove	op:containers.storage_remove
+web	db-add	op:db.add
+web	db-add-tunnel	op:db.ssh
+web	db-cancel	op:db.cancel
+web	db-commit	op:db.tx
+web	db-compare-schemas	op:db.compare
+web	db-configure	op:db.config
+web	db-connect	op:db.connect
 web	db-count-rows	op:db.query
 web	db-data	op:db.rows
+web	db-ddl	op:db.ddl
 web	db-describe	op:db.tables
+web	db-disconnect	op:db.disconnect
+web	db-explain	op:db.explain
+web	db-explain-analyze	op:db.explain
+web	db-export	cmd:dbExport
+web	db-filter	cmd:dbFilter
 web	db-focus	view:db
+web	db-history	op:db.history
+web	db-import-csv	op:db.import
+web	db-new-console	cmd:dbNewConsole
 web	db-refresh	op:db.conns
+web	db-result-pin	cmd:dbResultPin
+web	db-revert-changes	cmd:dbRevertChanges
+web	db-rollback	op:db.tx
 web	db-run	op:db.query
+web	db-run-file	cmd:dbRunFile
 web	db-select	op:db.query
+web	db-ssl	op:db.ssl
+web	db-submit-changes	op:db.edit
+web	db-test-connection	op:db.test
+web	db-transaction-mode	op:db.tx
 web	debug-add-watch	op:debug.watch
 web	debug-clear-bps	op:debug.bp
 web	debug-conditional-bp	op:debug.bp
@@ -64,24 +167,41 @@ web	debug-step-over	op:debug.control
 web	debug-stop	op:debug.control
 web	debug-toggle-breakpoint	op:debug.bp
 web	debug-view	view:run
+web	diff-files	cmd:compareFiles
+web	duplicate-line	cmd:copyLinesDown
+web	explorer-rename-selected	cmd:renameFile
+web	explorer-toggle-preview	cmd:togglePreview
+web	explorer-undo-rename	cmd:undoRename
 web	find-files	cmd:search
 web	find-references	op:lsp.references
+web	fold-all	cmd:foldAll
+web	format-document	cmd:formatDocument
 web	git-blame	cmd:gitBlame
 web	git-branch	op:git.branches
 web	git-ci	op:ci.status
+web	git-ci-fix	op:ci.fix_prompt
 web	git-clone	cmd:gitClone
 web	git-commit	op:git.commit
+web	git-compare-rev	cmd:gitCompareRev
 web	git-conflict-both	op:git.resolve_side
+web	git-conflict-next	cmd:nextConflict
 web	git-conflict-ours	op:git.resolve_side
+web	git-conflict-prev	cmd:prevConflict
 web	git-conflict-theirs	op:git.resolve_side
 web	git-diff	op:git.diff
 web	git-discard	op:git.discard
+web	git-discard-hunk	op:git.discard_hunk
+web	git-discard-lines	op:git.discard_lines
 web	git-fetch	palette
+web	git-fixup	op:git.fixup
 web	git-focus	view:git
 web	git-history	op:git.file_log
 web	git-log	cmd:gitGraph
+web	git-merge-next	cmd:mergeNext
 web	git-merge-open	op:git.conflict
+web	git-merge-prev	cmd:mergePrev
 web	git-merge-resolve	op:git.resolve
+web	git-merge-take-base	cmd:mergeTakeBase
 web	git-merge-take-both	op:git.resolve_side
 web	git-merge-take-both-theirs-first	op:git.resolve_side
 web	git-merge-take-ours	op:git.resolve_side
@@ -92,48 +212,103 @@ web	git-pull	palette
 web	git-push	palette
 web	git-rebase	op:git.rebase_plan
 web	git-rebase-status	op:git.rebase_state
+web	git-redo	op:git.redo
+web	git-reflog	op:git.reflog
 web	git-refresh	palette
 web	git-stage	op:git.stage
 web	git-stage-all	palette
 web	git-stage-hunk	op:git.stage_hunk
+web	git-stage-lines	op:git.stage_lines
 web	git-stash	palette
+web	git-stash-list	op:git.stash_list
 web	git-stash-pop	palette
 web	git-sync	palette
+web	git-tags	op:git.tags
+web	git-undo	op:git.undo
 web	git-unstage-hunk	op:git.unstage_hunk
+web	git-unstage-lines	op:git.unstage_lines
+web	git-view-toggle	cmd:scmViewToggle
+web	goto-impl	cmd:gotoImpl
 web	goto-line	cmd:gotoLine
 web	goto-symbol-file	op:buf.symbols
+web	goto-symbol-workspace	cmd:workspaceSymbol
+web	goto-type-def	cmd:gotoTypeDef
+web	help-bug-report	op:ai.info
 web	hover	op:lsp.hover
+web	http-cancel	op:http.cancel
+web	http-copy-curl	op:http.curl
+web	http-env-open	op:http.env_file
+web	http-env-select	op:http.env_select
+web	http-history	op:http.history
+web	http-import-curl	op:http.import_curl
+web	http-last-response	op:http.response
+web	http-new-file	op:http.new_file
+web	http-quick	cmd:httpQuick
+web	http-save	op:http.save
+web	http-save-body	op:http.save_body
+web	http-saved	op:http.saved
+web	http-send	op:http.send
+web	http-send-pick	cmd:httpSendPick
 web	itermoc-agents	cmd:itermocAgents
 web	itermoc-models	cmd:itermocModels
 web	itermoc-open	cmd:itermoc
 web	itermoc-open-ai	cmd:itermoc
 web	itermoc-profiles	cmd:itermocProfiles
 web	itermoc-services	cmd:itermocServices
+web	join-lines	cmd:joinLines
 web	kubernetes-context	op:kube.contexts
 web	kubernetes-namespace	op:kube.namespaces
 web	kubernetes-refresh	op:kube.list
 web	kubernetes-show	view:kube
+web	lowercase	cmd:lowerCase
+web	mcp-serve-copy-config	op:ai.info
+web	mcp-serve-status	op:ai.info
 web	next-buffer	cmd:nextEditor
 web	next-diagnostic	cmd:problems
+web	next-hunk	cmd:nextChange
+web	open-recent	cmd:openRecent
 web	open-settings-ui	cmd:settings
+web	open-url	cmd:openUrl
+web	open-workspace	cmd:openWorkspace
 web	pick-theme	cmd:themeDark
+web	pin-tab	cmd:pinTab
 web	prev-buffer	cmd:prevEditor
 web	prev-diagnostic	cmd:problems
+web	prev-hunk	cmd:prevChange
+web	preview-md	cmd:markdownPreview
 web	problems	cmd:problems
 web	quick-open	cmd:quickOpen
+web	redis-delete-key	op:redis.key
+web	redis-set-ttl	op:redis.key
+web	reload-buffer	cmd:revertFile
+web	reopen-closed	cmd:reopenClosed
+web	replace-in-file	cmd:replaceInFile
+web	replace-workspace	cmd:replaceWorkspace
+web	reveal-file	cmd:revealFile
 web	reveal-fs	op:tree.reveal_on_laptop
+web	reverse-lines	cmd:reverseLines
 web	run-doctor	palette
 web	run-tests	palette
 web	save	op:buf.save
 web	save-all	palette
+web	services-configure	op:services.configure
 web	services-focus	view:services
 web	services-logs	op:services.logs
+web	services-open-compose	cmd:servicesOpenCompose
 web	services-refresh	op:services.refresh
 web	services-restart	op:services.restart
 web	services-start	op:services.start
+web	services-start-all	op:services.start_all
 web	services-stop	op:services.stop
+web	services-stop-all	op:services.stop_all
+web	snippet-picker	cmd:snippetPicker
+web	snippets-manage	cmd:manageSnippets
+web	sort-asc	cmd:sortLinesAsc
+web	sort-desc	cmd:sortLinesDesc
+web	spaces-to-tabs	cmd:spacesToTabs
 web	split-horizontal	cmd:splitDown
 web	split-vertical	cmd:splitRight
+web	tabs-to-spaces	cmd:tabsToSpaces
 web	terminal-close-tab	op:term.close
 web	terminal-maximize	cmd:panelMax
 web	terminal-new-tab	op:term.new
@@ -147,15 +322,25 @@ web	testing-run-cursor	op:tests.run
 web	testing-run-file	op:tests.run
 web	testing-stop	palette
 web	toggle-auto-save	palette
+web	toggle-comment	cmd:commentLine
 web	toggle-explorer	cmd:sidebar
+web	toggle-fold	cmd:toggleFold
+web	toggle-hidden	cmd:toggleHidden
+web	toggle-inlay-hints	cmd:inlayHints
 web	toggle-terminal	cmd:terminal
 web	toggle-wrap	cmd:wrap
 web	transfer-download	op:file.download
 web	transfer-upload	op:file.upload_begin
+web	trim-blanks	cmd:collapseBlankLines
+web	trim-whitespace	cmd:trimWhitespace
+web	unfold-all	cmd:unfoldAll
+web	uppercase	cmd:upperCase
 web	view-output	cmd:tasks
 web	web-pair	op:web.pair_ask
 web	web-share	op:web.grant_ask
 web	web-totp	op:web.totp_check
+web	workspace-add-folder	cmd:addFolder
+web	workspace-remove-folder	cmd:removeFolder
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
 excluded	ai-credentials	security: credentials file is laptop only
 excluded	ai-doctor	laptop only: checks the laptop setup
@@ -237,209 +422,74 @@ excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
 excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
-missing	ai-apply-code	AI chat and agents|M
-missing	ai-apply-proposal	AI chat and agents|M
-missing	ai-attach	AI chat and agents|M
-missing	ai-auto-approve	AI chat and agents|M
-missing	ai-configure	AI chat and agents|M
-missing	ai-discard-proposal	AI chat and agents|M
-missing	ai-edit-review	AI chat and agents|M
-missing	ai-export-chat	AI chat and agents|M
-missing	ai-fork-chat	AI chat and agents|M
-missing	ai-handoff	AI chat and agents|M
-missing	ai-history	AI chat and agents|M
-missing	ai-history-clear	AI chat and agents|M
-missing	ai-history-delete	AI chat and agents|M
-missing	ai-history-rename	AI chat and agents|M
-missing	ai-hooks	AI chat and agents|M
-missing	ai-keep-going	AI chat and agents|M
-missing	ai-mcp-background	AI chat and agents|M
 missing	ai-mcp-bundle	AI chat and agents|M
 missing	ai-mcp-catalog	AI chat and agents|M
 missing	ai-mcp-connect	AI chat and agents|M
 missing	ai-mcp-insert	AI chat and agents|M
-missing	ai-mcp-log	AI chat and agents|M
-missing	ai-mcp-profile	AI chat and agents|M
-missing	ai-mcp-reconnect-all	AI chat and agents|M
-missing	ai-mcp-reset-cache	AI chat and agents|M
-missing	ai-mcp-updates	AI chat and agents|M
-missing	ai-memory	AI chat and agents|M
-missing	ai-memory-toggle	AI chat and agents|M
-missing	ai-plan-approval	AI chat and agents|M
-missing	ai-plan-review	AI chat and agents|M
-missing	ai-plan-worktree	AI chat and agents|M
-missing	ai-reasoning-next	AI chat and agents|M
-missing	ai-review	AI chat and agents|M
-missing	ai-rules	AI chat and agents|M
-missing	ai-ship	AI chat and agents|M
 missing	ai-side	AI chat and agents|M
-missing	ai-skills	AI chat and agents|M
-missing	ai-undo-turn	AI chat and agents|M
-missing	ai-until-done	AI chat and agents|M
-missing	ai-usage	AI chat and agents|M
-missing	ai-web-tools	AI chat and agents|M
-missing	ai-worktrees-toggle	AI chat and agents|M
-missing	alternate-file	Editor and files|S
-missing	bookmark-clear	Editor and files|S
-missing	bookmark-list	Editor and files|S
-missing	bookmark-toggle	Editor and files|S
-missing	close-split	Editor and files|S
-missing	code-action-apply-preferred	Editor and files|S
-missing	code-actions	Editor and files|S
-missing	containers-attach	Containers|M
-missing	containers-browse-tags	Containers|M
-missing	containers-compose-down	Containers|M
-missing	containers-compose-restart	Containers|M
-missing	containers-compose-stop	Containers|M
-missing	containers-compose-up	Containers|M
-missing	containers-context-default	Containers|M
-missing	containers-context-use	Containers|M
-missing	containers-filter	Containers|M
-missing	containers-image-history	Containers|M
-missing	containers-image-inspect	Containers|M
-missing	containers-image-prune	Containers|M
-missing	containers-image-pull	Containers|M
-missing	containers-image-push	Containers|M
-missing	containers-image-remove	Containers|M
-missing	containers-image-run	Containers|M
-missing	containers-image-tag	Containers|M
-missing	containers-inspect	Containers|M
-missing	containers-network-create	Containers|M
-missing	containers-network-prune	Containers|M
-missing	containers-network-remove	Containers|M
-missing	containers-open-databases	Containers|M
-missing	containers-open-port	Containers|M
-missing	containers-pause	Containers|M
-missing	containers-prune	Containers|M
-missing	containers-registry-connect	Containers|M
-missing	containers-registry-signout	Containers|M
-missing	containers-search	Containers|M
-missing	containers-shell	Containers|M
-missing	containers-stats	Containers|M
-missing	containers-system-prune	Containers|M
-missing	containers-volume-create	Containers|M
-missing	containers-volume-disk-usage	Containers|M
-missing	containers-volume-prune	Containers|M
-missing	containers-volume-remove	Containers|M
-missing	db-add	Databases|L
-missing	db-add-tunnel	Databases|L
-missing	db-cancel	Databases|L
-missing	db-commit	Databases|L
-missing	db-compare-schemas	Databases|L
-missing	db-configure	Databases|L
-missing	db-connect	Databases|L
-missing	db-ddl	Databases|L
-missing	db-disconnect	Databases|L
-missing	db-explain	Databases|L
-missing	db-explain-analyze	Databases|L
-missing	db-export	Databases|L
-missing	db-filter	Databases|L
-missing	db-history	Databases|L
-missing	db-import-csv	Databases|L
-missing	db-new-console	Databases|L
-missing	db-result-pin	Databases|L
-missing	db-revert-changes	Databases|L
-missing	db-rollback	Databases|L
-missing	db-run-file	Databases|L
-missing	db-ssl	Databases|L
-missing	db-submit-changes	Databases|L
-missing	db-test-connection	Databases|L
-missing	db-transaction-mode	Databases|L
 missing	debug-open-launch	Debug|S
-missing	diff-files	Editor and files|S
-missing	duplicate-line	Editor and files|S
-missing	explorer-rename-selected	Editor and files|S
-missing	explorer-toggle-preview	Editor and files|S
-missing	explorer-undo-rename	Editor and files|S
-missing	fold-all	Editor and files|S
-missing	format-document	Editor and files|S
-missing	git-ci-fix	Git|S
-missing	git-compare-rev	Git|S
-missing	git-conflict-next	Git|S
-missing	git-conflict-prev	Git|S
-missing	git-discard-hunk	Git|S
-missing	git-discard-lines	Git|S
-missing	git-fixup	Git|S
-missing	git-merge-next	Git|S
-missing	git-merge-prev	Git|S
-missing	git-merge-take-base	Git|S
-missing	git-redo	Git|S
-missing	git-reflog	Git|S
-missing	git-stage-lines	Git|S
-missing	git-stash-list	Git|S
-missing	git-tags	Git|S
-missing	git-undo	Git|S
-missing	git-unstage-lines	Git|S
-missing	git-view-toggle	Git|S
-missing	goto-impl	Editor and files|S
-missing	goto-symbol-workspace	Editor and files|S
-missing	goto-type-def	Editor and files|S
-missing	help-bug-report	AI chat and agents|M
-missing	http-cancel	HTTP client|L
-missing	http-copy-curl	HTTP client|L
-missing	http-env-open	HTTP client|L
-missing	http-env-select	HTTP client|L
-missing	http-history	HTTP client|L
-missing	http-import-curl	HTTP client|L
-missing	http-last-response	HTTP client|L
-missing	http-new-file	HTTP client|L
-missing	http-quick	HTTP client|L
-missing	http-save	HTTP client|L
-missing	http-save-body	HTTP client|L
-missing	http-saved	HTTP client|L
-missing	http-send	HTTP client|L
-missing	http-send-pick	HTTP client|L
-missing	join-lines	Editor and files|S
-missing	lowercase	Editor and files|S
+missing	git-autosquash	Git|S
+missing	git-blame-annotate	Git|S
+missing	git-blame-before	Git|S
+missing	git-blame-commit	Git|S
+missing	git-blame-options	Git|S
+missing	git-cherry-pick-branch	Git|S
+missing	git-clean-untracked	Git|S
+missing	git-commit-push	Git|S
+missing	git-commit-sync	Git|S
+missing	git-discard-all	Git|S
+missing	git-inline-blame	Git|S
+missing	git-line-history	Git|S
+missing	git-merge-branch	Git|S
+missing	git-merge-status	Git|S
+missing	git-patch-apply-clip	Git|S
+missing	git-patch-apply-file	Git|S
+missing	git-patch-save	Git|S
+missing	git-rebase-onto	Git|S
+missing	git-rev-next	Git|S
+missing	git-rev-prev	Git|S
+missing	git-status-blame	Git|S
+missing	git-unstage-all	Git|S
 missing	mcp-import-other	AI chat and agents|M
-missing	mcp-serve-copy-config	AI chat and agents|M
-missing	mcp-serve-status	AI chat and agents|M
-missing	next-hunk	Git|S
-missing	open-recent	Editor and files|S
-missing	open-url	Editor and files|S
-missing	open-workspace	Editor and files|S
 missing	output-clear	Testing and web access|S
-missing	pin-tab	Editor and files|S
-missing	prev-hunk	Git|S
-missing	preview-md	Editor and files|S
-missing	redis-delete-key	Databases|L
-missing	redis-set-ttl	Databases|L
-missing	reload-buffer	Editor and files|S
-missing	reopen-closed	Editor and files|S
-missing	replace-in-file	Editor and files|S
-missing	replace-workspace	Editor and files|S
-missing	reveal-file	Editor and files|S
-missing	reverse-lines	Editor and files|S
-missing	services-configure	Containers|S
-missing	services-open-compose	Containers|S
-missing	services-start-all	Containers|S
-missing	services-stop-all	Containers|S
-missing	snippet-picker	Editor and files|S
-missing	snippets-manage	Editor and files|S
-missing	sort-asc	Editor and files|S
-missing	sort-desc	Editor and files|S
-missing	spaces-to-tabs	Editor and files|S
-missing	tabs-to-spaces	Editor and files|S
 missing	testing-collapse	Testing and web access|S
-missing	toggle-comment	Editor and files|S
-missing	toggle-fold	Editor and files|S
-missing	toggle-hidden	Editor and files|S
-missing	toggle-inlay-hints	Editor and files|S
-missing	trim-blanks	Editor and files|S
-missing	trim-whitespace	Editor and files|S
-missing	unfold-all	Editor and files|S
-missing	uppercase	Editor and files|S
 missing	web-devices	Testing and web access|S
-missing	workspace-add-folder	Editor and files|S
-missing	workspace-remove-folder	Editor and files|S
+web	view/Databases	view:db
 web	view/Files	view:files
 web	view/Git	view:git
 web	view/Itermoc	view:itermoc
+web	view/Kubernetes	view:kube
 web	view/Run	view:run
+web	view/Runs	cmd:runs
+web	view/Services	view:services
 web	view/Settings	view:settings
 web	view/Tests	view:testing
-web	view/Services	view:services
-web	view/Databases	view:db
-web	view/Runs	cmd:runs
-web	view/Kubernetes	view:kube
 excluded	view/Search	removed from the laptop activity bar (the enum value is kept for back-compat only)
+missing	git-branch-delete	Git|S
+missing	git-branch-from	Git|S
+missing	git-branch-rename	Git|S
+missing	workflow-dry-run	Workflows|M
+missing	workflow-edit-file	Workflows|M
+missing	workflow-enable	Workflows|M
+missing	workflow-history	Workflows|M
+missing	workflow-new	Workflows|M
+missing	workflow-run	Workflows|M
+missing	workflow-stop	Workflows|M
+missing	workflows	Workflows|M
+missing	worktree-add-folder	Worktrees|M
+missing	worktree-adopt	Worktrees|M
+missing	worktree-archive	Worktrees|M
+missing	worktree-cleanup	Worktrees|M
+missing	worktree-delete	Worktrees|M
+missing	worktree-filter	Worktrees|M
+missing	worktree-forget	Worktrees|M
+missing	worktree-jump	Worktrees|M
+missing	worktree-link	Worktrees|M
+missing	worktree-new	Worktrees|M
+missing	worktree-new-child	Worktrees|M
+missing	worktree-notes	Worktrees|M
+missing	worktree-open	Worktrees|M
+missing	worktree-pin	Worktrees|M
+missing	worktree-setup-log	Worktrees|M
+missing	worktree-sleep	Worktrees|M
+missing	worktree-view	Worktrees|M

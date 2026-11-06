@@ -1,0 +1,24 @@
+ ◉ broken                                                ✗ file error · by hand
+ ──────────────────────────────────────────────────────────────────────────────
+ PROBLEMS  (e opens the file at the first one)
+   line 1: steps[0].type: "nope" is not a step type; use one of: source, plan, ~
+ FILE      .termocode/workflows/broken.jsonc
+ ──────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [Edit file (e)] [Back (Esc)]

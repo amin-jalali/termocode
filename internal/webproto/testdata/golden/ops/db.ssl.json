@@ -1,0 +1,1 @@
+{"t":"req","id":71,"op":"db.ssl","args":{"conn":"local","mode":"verify-full","ca":"certs/ca.pem","cert":"certs/client.pem","key":"certs/client.key"}}

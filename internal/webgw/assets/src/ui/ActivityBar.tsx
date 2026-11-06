@@ -14,7 +14,7 @@ import type { Route } from "../state/route";
 import { t, type StringKey } from "../strings";
 import { Cod } from "./icons";
 
-export type Activity = "files" | "search" | "git" | "run" | "testing" | "agents" | "itermoc" | "db" | "containers" | "services" | "kube" | "mcp" | "chat" | "device" | "settings";
+export type Activity = "files" | "search" | "git" | "run" | "testing" | "agents" | "itermoc" | "worktrees" | "db" | "containers" | "services" | "http" | "kube" | "mcp" | "chat" | "device" | "settings";
 
 interface Item {
   id: Activity;
@@ -36,9 +36,11 @@ export const ACTIVITIES: readonly Item[] = [
   { id: "testing", label: "act.testing", icon: "beaker", side: true, to: () => more("testing") },
   { id: "agents", label: "ai.wt_title", icon: "worktree", side: true, to: () => more("agents") },
   { id: "itermoc", label: "im.title", icon: "sparkle", side: true, to: () => more("itermoc") },
+  { id: "worktrees", label: "wt.title", icon: "repo-forked", side: true, to: () => more("worktrees") },
   { id: "db", label: "more.db", icon: "database", side: true, to: () => more("db") },
   { id: "containers", label: "more.containers", icon: "package", side: true, to: () => more("containers") },
   { id: "services", label: "act.services", icon: "server-process", side: true, to: () => more("services") },
+  { id: "http", label: "act.http", icon: "globe", side: true, to: () => more("http") },
   { id: "kube", label: "act.kube", icon: "cloud", side: false, to: () => more("kube") },
   { id: "mcp", label: "more.mcp", icon: "plug", side: true, to: () => more("mcp") },
   { id: "chat", label: "tab.chat", icon: "comment-discussion", side: false, to: () => ({ tab: "chat", rest: "", query: {} }) },
@@ -67,11 +69,13 @@ export function activityOf(r: Route): Activity | null {
       if (sub === "testing") return "testing";
       if (sub === "services") return "services";
       if (sub === "kube") return "kube";
+      if (sub === "http") return "http";
       if (sub === "db") return "db";
       if (sub === "containers") return "containers";
       if (sub === "mcp") return "mcp";
       if (sub === "agents") return "agents";
       if (sub === "itermoc") return "itermoc";
+      if (sub === "worktrees") return "worktrees";
       if (sub === "settings") return "settings";
       return "device";
     }

@@ -211,6 +211,12 @@ type httpState struct {
 	copyRun     *httpRun
 	importInto  string // .http file the next curl import appends to
 	bufCache    *httpBufCache
+
+	// The web's request (one at a time) and the hosts the laptop allowed
+	// the web to send to in this session (web_http.go).
+	webRun    *httpRun
+	webCancel context.CancelFunc
+	webHosts  map[string]bool
 }
 
 type httpLens struct {
@@ -225,7 +231,7 @@ type httpPickReq struct {
 }
 
 func newHTTPState() *httpState {
-	return &httpState{lens: map[string]httpLens{}, insecure: map[string]bool{}, gitWarned: map[string]bool{}}
+	return &httpState{lens: map[string]httpLens{}, insecure: map[string]bool{}, gitWarned: map[string]bool{}, webHosts: map[string]bool{}}
 }
 
 // httpS returns the HTTP state, made on first use.
@@ -511,13 +517,17 @@ func (m *Model) httpFinish(run *httpRun) tea.Cmd {
 		prev.resp = &r
 		s.remember(run)
 		m.httpRecordLens(run)
+		cmd := m.httpShowRun(&prev, false)
 		m.httpRefreshLens(run.file)
-		return m.httpShowRun(&prev, false)
+		return cmd
 	}
 	s.remember(run)
 	m.httpRecordLens(run)
+	// The page first: it is what the user waits for. The lens redraw
+	// (three editor calls) comes after it (FIX-48).
+	cmd := m.httpShowRun(run, false)
 	m.httpRefreshLens(run.file)
-	return m.httpShowRun(run, false)
+	return cmd
 }
 
 // httpRecordLens remembers the result shown in the lens of the request.

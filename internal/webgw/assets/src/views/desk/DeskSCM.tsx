@@ -10,11 +10,13 @@
 // state are in the status bar. The title bar opens the commit graph and
 // the pull requests; its … menu adds Commit (Amend) and Clone; a
 // conflicted file opens the merge editor and a stopped rebase shows
-// Continue, Skip and Abort (each asked on the laptop).
+// Continue, Skip and Abort (each asked on the laptop). Git: Toggle
+// Tree/Flat View groups the files under their folders.
 import { Fragment, h, type ComponentChildren } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { diffTab } from "../../lib/difftab";
+import { scmTree } from "../../lib/gitnav";
 import { GRAPH_TAB, mergeTab, PRS_TAB } from "../../lib/gittab";
 import { modKey } from "../../lib/platform";
 import { route } from "../../lib/router";
@@ -119,17 +121,34 @@ function toggle(id: string): void {
   shut.value = n;
 }
 
-function FileRow({ f, g, canAct, onDiscard }: { f: GitFile; g: Group; canAct: boolean; onDiscard: (p: string[]) => void }) {
+/** FileRows are a group's files: one row each, or (tree view) under a
+ * row per folder, as the laptop's Toggle Tree/Flat View shows them. */
+function FileRows({ files, g, canAct, onDiscard }: { files: GitFile[]; g: Group; canAct: boolean; onDiscard: (p: string[]) => void }) {
+  if (!scmTree.value) return <>{files.map((f) => <FileRow key={g + f.path} f={f} g={g} canAct={canAct} onDiscard={onDiscard} />)}</>;
+  const dirs = new Map<string, GitFile[]>();
+  for (const f of files) {
+    const d = splitPath(f.path).dir;
+    dirs.set(d, [...(dirs.get(d) ?? []), f]);
+  }
+  const out = [];
+  for (const d of [...dirs.keys()].sort()) {
+    if (d) out.push(<Row key={g + "/" + d} level={1} icon={<Cod name="folder" />} label={d} data={{ dir: d }} />);
+    for (const f of dirs.get(d) ?? []) out.push(<FileRow key={g + f.path} f={f} g={g} canAct={canAct} onDiscard={onDiscard} tree={d !== "" ? 2 : 1} />);
+  }
+  return <>{out}</>;
+}
+
+function FileRow({ f, g, canAct, onDiscard, tree }: { f: GitFile; g: Group; canAct: boolean; onDiscard: (p: string[]) => void; tree?: number }) {
   const { name, dir } = splitPath(f.path);
   const st = letter(f, g);
   const del = st.l === "D";
   return (
     <Row
-      level={1}
+      level={tree ?? 1}
       icon={<FileIcon path={f.path} />}
       label={name}
       labelClass={`${st.c}${del ? " is-del" : ""}`}
-      desc={dir}
+      desc={tree ? undefined : dir}
       title={`${f.path} • ${t(g === "staged" ? "scm.staged" : g === "merge" ? "scm.merge" : "git.changes")}`}
       data={{ path: f.path, group: g }}
       onClick={() => open(f, g)}
@@ -277,7 +296,7 @@ export function DeskSCM() {
             {groups.conflicts.length > 0 && (
               <GroupRow id="merge" title={t("scm.merge")} n={groups.conflicts.length} />
             )}
-            {!shut.value.has("merge") && groups.conflicts.map((f) => <FileRow key={"m" + f.path} f={f} g="merge" canAct={false} onDiscard={setDiscard} />)}
+            {!shut.value.has("merge") && <FileRows files={groups.conflicts} g="merge" canAct={false} onDiscard={setDiscard} />}
             {staged.length > 0 && (
               <GroupRow
                 id="staged"
@@ -286,7 +305,7 @@ export function DeskSCM() {
                 actions={canAct && <Act icon="remove" label={t("scm.unstage_all")} onClick={() => stage(staged.map((f) => f.path), false)} />}
               />
             )}
-            {staged.length > 0 && !shut.value.has("staged") && staged.map((f) => <FileRow key={"s" + f.path} f={f} g="staged" canAct={canAct} onDiscard={setDiscard} />)}
+            {staged.length > 0 && !shut.value.has("staged") && <FileRows files={staged} g="staged" canAct={canAct} onDiscard={setDiscard} />}
             {(changes.length > 0 || staged.length === 0) && (
               <GroupRow
                 id="changes"
@@ -303,7 +322,7 @@ export function DeskSCM() {
                 }
               />
             )}
-            {!shut.value.has("changes") && changes.map((f) => <FileRow key={"c" + f.path} f={f} g="changes" canAct={canAct} onDiscard={setDiscard} />)}
+            {!shut.value.has("changes") && <FileRows files={changes} g="changes" canAct={canAct} onDiscard={setDiscard} />}
           </Tree>
           {g.more > 0 && <p class="pv-msg">{t("git.many", { n: g.more })}</p>}
         </div>

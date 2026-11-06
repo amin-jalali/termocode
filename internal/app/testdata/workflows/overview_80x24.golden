@@ -1,0 +1,24 @@
+ ◉ Workflows                                            3 workflows · 0 running
+ ──────────────────────────────────────────────────────────────────────────────
+ NOW
+   nothing runs
+ RECENT
+   09:30  mine               ✓ done       1 m
+   09:21  mine               ✓ done       2s · dry run
+ WORKFLOWS
+ ▸ broken       ✗ file error  —
+   docs-report  ◌ not trusted —
+   mine         ○ off         ✓ 09:30
+ ──────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+ [Open (Enter)] [Run (r)] [Dry run (d)] [On/Off (o)] [Edit (e)] [Keys (?)]
