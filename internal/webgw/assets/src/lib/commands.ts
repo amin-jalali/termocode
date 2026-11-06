@@ -125,6 +125,7 @@ export function commands(): Command[] {
     { id: "addFolder", label: "cmd.add_folder", when: canWrite, run: addFolder },
     { id: "removeFolder", label: "cmd.remove_folder", when: canWrite, run: removeFolder },
     { id: "openWorkspace", label: "cmd.open_workspace", when: canWrite, run: openWorkspace },
+    { id: "replaceWorkspace", label: "cmd.replace_ws", when: canWrite, run: replaceWorkspace },
     { id: "undoRename", label: "cmd.undo_rename", when: () => link.meta.peek()?.role === "controller", run: undoRename },
   ];
 }
@@ -337,6 +338,29 @@ function openWorkspace(): void {
       },
     };
   });
+}
+
+/** replaceWorkspace asks for the text and its replacement here, then the
+ * laptop's card counts the matches; its yes writes the files. */
+function replaceWorkspace(): void {
+  quick.value = {
+    mode: "ask",
+    ask: {
+      title: t("cmd.replace_find"),
+      run: (find) =>
+        setTimeout(() => {
+          quick.value = {
+            mode: "ask",
+            ask: {
+              title: t("cmd.replace_with", { find }),
+              run: (replace) => {
+                askLaptop.value = { label: t("cmd.replace_ws"), text: t("cmd.replace_ws_ask", { find, replace }), send: () => link.request("search.replace", { find, replace }) };
+              },
+            },
+          };
+        }, 0),
+    },
+  };
 }
 
 /** realFile is the workspace file of the active tab (null: none, or a tab

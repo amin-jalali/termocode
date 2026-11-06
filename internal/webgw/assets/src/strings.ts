@@ -1065,6 +1065,10 @@ export const S = {
   "cmd.open_workspace_body": "Open the workspace {name} on the laptop? termocode restarts there and this web session ends.",
   "cmd.no_folders": "This workspace has no added folders.",
   "cmd.no_workspaces": "No other recent workspaces.",
+  "cmd.replace_ws": "Search: Replace in Workspace…",
+  "cmd.replace_find": "Find in every file",
+  "cmd.replace_with": "Replace {find} with",
+  "cmd.replace_ws_ask": "Replace {find} with {replace} in every file of the workspace?",
 } as const;
 
 export type StringKey = keyof typeof S;

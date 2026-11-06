@@ -1061,4 +1061,8 @@ export const FA: Record<StringKey, string> = {
   "cmd.open_workspace_body": "فضای کار {name} روی لپ‌تاپ باز شود؟ termocode آنجا دوباره راه می‌افتد و این نشست وب تمام می‌شود.",
   "cmd.no_folders": "این فضای کار پوشه افزوده‌ای ندارد.",
   "cmd.no_workspaces": "فضای کار اخیر دیگری نیست.",
+  "cmd.replace_ws": "جستجو: جایگزینی در فضای کار…",
+  "cmd.replace_find": "یافتن در همه فایل‌ها",
+  "cmd.replace_with": "جایگزین {find} شود با",
+  "cmd.replace_ws_ask": "{find} در همه فایل‌های فضای کار با {replace} جایگزین شود؟",
 };

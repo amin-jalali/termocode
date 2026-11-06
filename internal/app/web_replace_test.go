@@ -22,8 +22,8 @@ func TestWebSearchReplace(t *testing.T) {
 	}
 	var ref webproto.AskRef
 	webTestData(t, r.call(webproto.OpSearchReplace, &webproto.SearchReplaceArgs{Find: "oldName", Replace: "newName"}), &ref)
-	if v := r.m.confirm.View(); !strings.Contains(v, "3 matches") || !strings.Contains(v, "2 files") {
-		t.Errorf("card:\n%s", v)
+	if a := r.m.web.asks.shown; a == nil || !strings.Contains(a.body, "3 matches") || !strings.Contains(a.body, "2 files") {
+		t.Errorf("card %+v", a)
 	}
 	if b, _ := os.ReadFile(filepath.Join(r.root, "a.go")); string(b) != "oldName oldName\n" {
 		t.Fatal("replaced before the laptop said yes")

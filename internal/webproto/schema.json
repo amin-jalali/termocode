@@ -1419,6 +1419,20 @@
       "phase": "v2"
     },
     {
+      "op": "search.replace",
+      "args": "SearchReplaceArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 12288,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "tests.output",
       "args": "TestOutputArgs",
       "result": "TestOutput",
@@ -7861,6 +7875,22 @@
       "required": [
         "path",
         "line"
+      ],
+      "additionalProperties": false
+    },
+    "SearchReplaceArgs": {
+      "type": "object",
+      "properties": {
+        "find": {
+          "type": "string"
+        },
+        "replace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "find",
+        "replace"
       ],
       "additionalProperties": false
     },

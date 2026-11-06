@@ -315,6 +315,11 @@ export interface SymbolQueryArgs {
   query: string;
 }
 
+export interface SearchReplaceArgs {
+  find: string;
+  replace: string;
+}
+
 export interface TestOutputArgs {
   id?: string;
 }
@@ -2017,6 +2022,7 @@ export interface OpArgs {
   "files.recent": EmptyArgs;
   "lsp.workspace_symbols": SymbolQueryArgs;
   "snippets.list": BufArgs;
+  "search.replace": SearchReplaceArgs;
   "tests.output": TestOutputArgs;
   "tests.refresh": EmptyArgs;
   "tests.run": TestRunArgs;
@@ -2177,6 +2183,7 @@ export interface OpResult {
   "files.recent": FilesRecent;
   "lsp.workspace_symbols": LspSymbols;
   "snippets.list": SnippetList;
+  "search.replace": AskRef;
   "tests.output": TestOutput;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;

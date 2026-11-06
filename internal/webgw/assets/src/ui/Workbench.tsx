@@ -538,7 +538,7 @@ export function Workbench() {
       {p.side && <Sash axis="x" size={p.sideW} min={SIDE_MIN} max={SIDE_MAX} dir={1} label={t("wb.resize_side")} def={PANE_DEFAULTS.sideW} onSize={(n) => setPanes({ sideW: n })} />}
       <div class="wb-center">
         <div class="wb-editor">
-          {quick.value && <QuickInput key={quick.value.mode} />}
+          {quick.value && <QuickInput key={quick.value.mode + (quick.value.ask?.title ?? quick.value.pick?.title ?? "")} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
           {askHere.value && <AskHere ask={askHere.value} />}
           {askLaptop.value && <AskLaptop key={askLaptop.value.text} label={askLaptop.value.label} text={askLaptop.value.text} send={askLaptop.value.send} onDone={() => (askLaptop.value = null)} />}
