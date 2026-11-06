@@ -623,6 +623,7 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 			return block(ctx, wfxLineMsg{id: id, text: "message (" + via + "): " + text})
 		},
 		OnEvent: func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
+		OnAuditError: func(err error) { recordError("workflow " + e.Name + ": audit: " + err.Error()) },
 		OnAgent: func(step, item string, ev ai.Event) {
 			if ev.Kind == ai.EventToolStart && ev.Detail != "" {
 				l.addLine(step + " " + item + ": " + lastLine(ev.Detail))
