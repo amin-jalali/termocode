@@ -18,7 +18,10 @@ func TestDeskManageSnippets(t *testing.T) {
 	r := waitReq(t, c, webproto.OpSnippetsUser)
 	reply(t, c, r, webproto.UserSnippetList{Items: []webproto.UserSnippet{{Scope: "*", Trigger: "todo", Body: "// TODO"}}})
 	p.WaitJS(`[...document.querySelectorAll(".quick-row .quick-label")].map((e) => e.textContent).join() === "+ New Snippet…,todo"`)
-	pickRow(p, "+ New Snippet…")
+	// + New Snippet… opens the name box in the same quick input, so it
+	// never closes in between (pickRow would wait for that gap).
+	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === "+ New Snippet…"`)
+	p.Key("\r")
 	p.WaitJS(`document.querySelector(".quick-box")?.placeholder === "Name: scope:trigger (go:iferr), or a trigger for every file type" && document.activeElement === document.querySelector(".quick-box")`)
 	p.Key("go:iferr")
 	p.Key("\r")
