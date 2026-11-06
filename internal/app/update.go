@@ -337,6 +337,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		if m.pickerKind == pickerKindMCPTools { // ai_mcp_tools.go: Space turns a tool off or on
 			return m, m.onMCPToolToggle(msg.ID)
 		}
+		if m.pickerKind == pickerKindWTCleanup { // worktrees_cleanup.go: Space ticks
+			return m, m.onWTCleanupToggle(msg.ID)
+		}
 		cmd, ok := m.handleAIProfilePickerAction(msg.ID)
 		if ok && m.confirmOpen {
 			m.pickerOpen = false
@@ -2405,6 +2408,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.openWorkspace(msg.ID)
 	case pickerKindWorktreeJump: // worktrees_jump.go
 		return m.onWorktreeJumpPicked(msg.ID)
+	case pickerKindWTCleanup: // worktrees_cleanup.go: a row ticks, the first row goes on
+		return m.onWTCleanupPicked(msg.ID)
 	case pickerKindWTRef: // worktrees_new.go: back to the dialog with the start point
 		m.reopenWTForm(msg.ID)
 		return nil

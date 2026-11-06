@@ -82,7 +82,7 @@ func wtJumpRows(items []wtItem, tabs []wtTabAgent, others []agentroll.Rollup) []
 		out = append(out, a.item)
 	}
 	for _, it := range items {
-		if it.e.Gone {
+		if it.e.Gone || it.state == wtStateArchived {
 			continue
 		}
 		hint := wtBranch(it.e)

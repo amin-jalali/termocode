@@ -67,6 +67,7 @@ type webHub struct {
 	tasks  webTasksPub                // Update only: what the tasks topic sent (web_tasks.go)
 	runs   webRunsPub                 // Update only: what the runs topic sent (web_runs.go)
 	run    webRunPub                  // Update only: the Test, Debug and Services topics (web_tests.go)
+	wt     webWTPub                   // Update only: what the worktrees topic sent (web_worktrees.go)
 	more   webMorePub                 // Update only: the v2 More views (web_more.go)
 	ai     webAICalls                 // Update only: the page's AI calls (web_ai.go)
 	ups    webUploads                 // staged uploads (web_transfer.go; own lock)
