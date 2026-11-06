@@ -49,7 +49,7 @@ func TestCardPutsTheSafeChoiceFirst(t *testing.T) {
 
 func TestNoAlwaysAllowAnywhere(t *testing.T) {
 	re := regexp.MustCompile(`(?i)always[ _.-]*allow|allow[ _.-]*always`)
-	for _, f := range []string{"src/strings.ts", "src/ui/Card.tsx"} {
+	for _, f := range []string{"src/strings.ts", "src/strings.desk.ts", "src/ui/Card.tsx"} {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			t.Fatal(err)
