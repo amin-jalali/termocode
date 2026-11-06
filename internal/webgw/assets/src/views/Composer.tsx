@@ -7,8 +7,8 @@
 import { aiSnap } from "../lib/ai";
 import { AIPicker } from "./AIPicker";
 import { h } from "preact";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
-import { getDraft, setDraft } from "../lib/drafts";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { getDraft, pendingDraft, setDraft, takePending } from "../lib/drafts";
 import { layout } from "../lib/layout";
 import { OfflineError, ReqError } from "../net/link";
 import { link, live } from "../session";
@@ -21,6 +21,7 @@ const MAX_ROWS_PX = 160;
 
 export function Composer({ chat, busy, profile = "", model = "" }: { chat: string; busy: boolean; profile?: string; model?: string }) {
   const desk = layout.value === "desktop";
+  useEffect(() => takePending(chat), [chat, pendingDraft.value]);
   const text = getDraft(chat);
   const [note, setNote] = useState<string | null>(null);
   const [sending, setSending] = useState(false);

@@ -45,8 +45,8 @@ func TestDeskDBTreeGridAndQuery(t *testing.T) {
 	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), dbConns())
 	const side = `document.querySelector('.wb-side [data-view="db"]')`
 	p.WaitJS(side + `?.querySelectorAll(".tr[data-conn]").length === 3`)
-	if Eval[bool](p, `!!`+side+`.querySelector('.tr[data-conn="cache"][data-twist]')`) {
-		t.Error("a Redis connection opens here")
+	if !Eval[bool](p, `!!`+side+`.querySelector('.tr[data-conn="cache"][data-twist]')`) {
+		t.Error("a Redis connection does not open (its keys)")
 	}
 	if s := Eval[string](p, side+`.querySelector('.tr[data-conn="prod"] .db-env.is-prod')?.textContent ?? ""`); s != "production" {
 		t.Errorf("prod mark %q", s)
@@ -112,6 +112,7 @@ func TestDeskContainers(t *testing.T) {
 	p, c := deskLogin(t, nil)
 	Eval[bool](p, `(location.hash = "#/more/containers", true)`)
 	reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+	reply(t, c, expectOp(t, c, webproto.OpContainersHost, `{}`), ctrHost())
 	const side = `document.querySelector('.wb-side [data-view="containers"]')`
 	p.WaitJS(side + `?.querySelectorAll(".tr[data-id]").length === 2`)
 	if !Eval[bool](p, `!!`+side+`.querySelector('.tr[data-project="shop"]') && !!`+side+`.querySelector('.tr[data-id="9f3c2e1a1234"] .c-ok .cod-vm-running') && !!`+side+`.querySelector('.tr[data-id="aabbccdd1122"] .c-err')`) {

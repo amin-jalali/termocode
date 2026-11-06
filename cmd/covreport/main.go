@@ -31,7 +31,18 @@ func main() {
 	top := flag.Int("top", 20, "uncovered functions to list per system")
 	out := flag.String("out", "", "folder for the profiles (default: a new temp folder)")
 	profile := flag.String("profile", "", "report this existing profile instead of running tests")
+	printPkgs := flag.Bool("print-coverpkg", false, "print the -coverpkg value (the measured packages) and exit; CI shards use it")
 	flag.Parse()
+
+	if *printPkgs {
+		pkgs, err := measuredPkgs(*root, *systemsFile)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "covreport:", err)
+			os.Exit(2)
+		}
+		fmt.Println(pkgs)
+		return
+	}
 
 	fail, err := run(*root, *systemsFile, *out, *profile, *floorsFile, *e2e, *top, *minPct, *minTotal)
 	if err != nil {
@@ -139,6 +150,38 @@ func modulePath(gomod []byte) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("go.mod has no module line")
+}
+
+// measuredPkgs is the -coverpkg value for the repo at root.
+func measuredPkgs(root, systemsFile string) (string, error) {
+	gomod, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		return "", err
+	}
+	module, err := modulePath(gomod)
+	if err != nil {
+		return "", err
+	}
+	f, err := os.Open(filepath.Join(root, systemsFile))
+	if err != nil {
+		return "", err
+	}
+	sys, err := ParseSystems(f)
+	f.Close()
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", systemsFile, err)
+	}
+	var listOut bytes.Buffer
+	list := goCmd(root, nil, "list", "./...")
+	list.Stdout = &listOut
+	if err := list.Run(); err != nil {
+		return "", fmt.Errorf("go list: %w", err)
+	}
+	pkgs := coverPkgs(strings.Fields(listOut.String()), module, sys)
+	if pkgs == "" {
+		return "", fmt.Errorf("no measured packages found")
+	}
+	return pkgs, nil
 }
 
 // coverPkgs is the -coverpkg value: the measured packages of list.

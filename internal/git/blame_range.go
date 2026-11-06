@@ -17,6 +17,14 @@ type BlameRangeLine struct {
 	Date    string // author date, YYYY-MM-DD ("" when uncommitted)
 	When    int64  // author date, Unix seconds (0 when uncommitted)
 	Subject string
+	// Full is the full sha ("" when uncommitted). OrigLine / OrigPath are
+	// the line number and path in that commit; PrevHash / PrevPath name
+	// the commit (and path) before the change, "" for a file's first
+	// commit (BlameFile: "blame before this change").
+	Full               string
+	OrigLine           int
+	OrigPath           string
+	PrevHash, PrevPath string
 }
 
 // BlameRange runs one `git blame --porcelain` for lines start..end
@@ -48,6 +56,7 @@ func parseBlameRange(s string) []BlameRangeLine {
 	type info struct {
 		author, date, subject string
 		when                  int64
+		path, prev, prevPath  string
 	}
 	commits := map[string]*info{}
 	var out []BlameRangeLine
@@ -61,6 +70,7 @@ func parseBlameRange(s string) []BlameRangeLine {
 					cur.Hash = "uncommitted"
 				} else if c != nil {
 					cur.Author, cur.Date, cur.Subject, cur.When = c.author, c.date, c.subject, c.when
+					cur.Full, cur.OrigPath, cur.PrevHash, cur.PrevPath = sha, c.path, c.prev, c.prevPath
 				}
 				out = append(out, *cur)
 				cur = nil
@@ -76,6 +86,7 @@ func parseBlameRange(s string) []BlameRangeLine {
 				}
 				sha = f[0]
 				cur = &BlameRangeLine{Line: n, Hash: sha[:7]}
+				cur.OrigLine, _ = strconv.Atoi(f[1])
 				if commits[sha] == nil {
 					commits[sha] = &info{}
 				}
@@ -92,6 +103,10 @@ func parseBlameRange(s string) []BlameRangeLine {
 			}
 		case strings.HasPrefix(line, "summary "):
 			c.subject = strings.TrimPrefix(line, "summary ")
+		case strings.HasPrefix(line, "filename "):
+			c.path = strings.TrimPrefix(line, "filename ")
+		case strings.HasPrefix(line, "previous "):
+			c.prev, c.prevPath, _ = strings.Cut(strings.TrimPrefix(line, "previous "), " ")
 		}
 	}
 	return out
