@@ -235,15 +235,21 @@ they can be marked as required checks in the branch protection of `main`:
 
 | Check | Runs on | What it does |
 |---|---|---|
-| `test (ubuntu-latest)` | every CI run | build, vet, unit tests with `-race`, Android build, docgen check |
-| `test (macos-latest)` | every CI run | the same on macOS |
-| `golden screens (ubuntu-latest)` | every CI run | golden screens with a pinned nvim |
+| `test (ubuntu-latest)` | every CI run | build, vet, unit tests with `-race` (4 shards), Android build, docgen check |
+| `test (macos-latest)` | every CI run; a PR with only browser sources or e2e files skips it | vet and unit tests with `-race` on macOS (3 shards) |
+| `golden screens (ubuntu-latest)` | every CI run; a PR with only browser sources or e2e files skips it | golden screens with a pinned nvim (4 shards) |
 | `e2e (ubuntu-latest)` | every CI run | the e2e suite (real binary in a PTY) |
 | `e2e (macos-latest)` | every CI run except plain feature-branch pushes | the e2e suite on macOS |
-| `coverage (ubuntu-latest)` | every CI run except plain feature-branch pushes | coverage per system against `scripts/coverage-floors.txt`; table in the job summary, profile as an artifact |
+| `web-e2e (ubuntu-latest)`, `web-e2e (macos-latest)` | every CI run; a PR runs them only when it touches web code | the web page in a real Chrome (2 shards each) |
+| `coverage (ubuntu-latest)` | `main`, land branches and runs started by hand | merges the cover profiles of the test and golden shards; coverage per system against `scripts/coverage-floors.txt`; table in the job summary, profile as an artifact |
 
-- A new push to a branch or PR cancels the older run of it. Runs on `main`
-  are never cancelled.
+- The slow jobs run as parallel shards named like `test (ubuntu-latest, 2/4)`
+  (`scripts/ci-test-shard.sh`, `SHOTKIT_GOLDEN_SHARD=i/n`). The job with the
+  plain name waits for its shards and fails when one failed.
+- A new push to a branch, PR or `main` cancels the older run of it, so only
+  the newest commit is tested.
+- A PR runs only the jobs its files need (`scripts/ci-changes.sh`); pushes
+  to `main` and runs started by hand run every job.
 - A change that only touches docs no test reads (top-level `*.md`,
   `docs/adr/`, `docs/concepts/`, screenshots and GIFs) skips the golden,
   e2e and coverage jobs. Skipped jobs count as passed. The `test` jobs always
