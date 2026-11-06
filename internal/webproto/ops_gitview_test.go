@@ -196,3 +196,19 @@ func TestGitUndoOps(t *testing.T) {
 		}
 	}
 }
+
+// Spec (fixup): git.fixup_plan reads, git.fixup waits for a laptop
+// card; both take a commit hash only.
+func TestGitFixupOps(t *testing.T) {
+	if p, ok := Lookup("git.fixup_plan"); !ok || p.Role != RoleController || p.LaptopCard {
+		t.Errorf("git.fixup_plan row %+v", p)
+	}
+	if p, ok := Lookup("git.fixup"); !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+		t.Errorf("git.fixup row %+v", p)
+	}
+	for _, bad := range []string{`{"hash":"main"}`, `{"hash":"--all"}`, `{"hash":"abc"}`} {
+		if _, err := DecodeArgs("git.fixup", json.RawMessage(bad)); !errors.Is(err, ErrInvalid) {
+			t.Errorf("%s: %v", bad, err)
+		}
+	}
+}

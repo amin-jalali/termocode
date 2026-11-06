@@ -73,6 +73,7 @@ web	git-discard	op:git.discard
 web	git-discard-hunk	op:git.discard_hunk
 web	git-discard-lines	op:git.discard_lines
 web	git-fetch	palette
+web	git-fixup	op:git.fixup
 web	git-focus	view:git
 web	git-history	op:git.file_log
 web	git-log	cmd:gitGraph
@@ -366,7 +367,6 @@ missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
-missing	git-fixup	Git|S
 missing	goto-impl	Editor and files|S
 missing	goto-symbol-workspace	Editor and files|S
 missing	goto-type-def	Editor and files|S

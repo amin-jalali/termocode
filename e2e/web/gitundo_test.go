@@ -52,3 +52,23 @@ func TestGitReflogPick(t *testing.T) {
 	reply(t, c, expectOp(t, c, "git.undo", `{"move":true}`), webproto.AskRef{Card: "card-10"})
 	p.WaitJS(`document.querySelector(".waiting")`)
 }
+
+// Git: Fixup Staged Changes Into… lists HEAD's commits; picking one
+// shows the laptop's plan, then asks.
+func TestGitFixupPick(t *testing.T) {
+	p, c := openDeskSCM(t, nil)
+	runCmd(t, p, c, "Git: Fixup Staged Changes Into…", true)
+	g := graphRows()
+	reply(t, c, expectOp(t, c, "git.graph", `{"head":true}`), g)
+	p.WaitJS(`document.querySelectorAll(".quick-row").length === ` + itoa(len(g.Rows)))
+	want := g.Rows[1]
+	p.Key(want.Subject)
+	p.WaitJS(`document.querySelector(".quick-row.is-on .quick-label")?.textContent === ` + jsq(want.Subject))
+	p.Key("\r")
+	reply(t, c, expectOp(t, c, "git.fixup_plan", `{"hash":"`+want.Hash+`"}`), map[string]any{"text": "Fold the staged changes (1 file) into " + want.Hash + "."})
+	p.WaitJS(`document.querySelector(".ask-text")?.textContent.includes("Fold the staged changes")`)
+	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
+	p.TapJS(ButtonByText("Ask the laptop"))
+	reply(t, c, expectOp(t, c, "git.fixup", `{"hash":"`+want.Hash+`"}`), webproto.AskRef{Card: "card-11"})
+	p.WaitJS(`document.querySelector(".waiting")`)
+}
