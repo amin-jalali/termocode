@@ -2241,6 +2241,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
+| `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |
 | `worktree-view` | Worktree: Show | auto |   |
 | `zen-mode` | View: Toggle Zen Mode | auto |   |
 

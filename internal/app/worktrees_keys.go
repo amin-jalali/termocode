@@ -37,6 +37,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
 		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
 		[]string{"F", "forget a worktree whose folder is gone"},
+		[]string{"s", "sleep: end its agent tabs and move it under ASLEEP (with its children if you say so) · s again wakes it"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
 		[]string{"/", "filter by name · Esc clears"},
@@ -63,6 +64,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtNotesPaletteID, Title: "Worktree: Show Notes of Selected"},
 		{ID: wtAdoptPaletteID, Title: "Worktree: Adopt Selected"},
 		{ID: wtForgetPaletteID, Title: "Worktree: Forget Gone Selected"},
+		{ID: wtSleepPaletteID, Title: "Worktree: Sleep or Wake Selected"},
 	}
 }
 
@@ -96,6 +98,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeAdopt(), true
 	case wtForgetPaletteID:
 		return m.worktreeForget(), true
+	case wtSleepPaletteID:
+		return m.worktreeSleep(), true
 	}
 	return nil, false
 }
@@ -163,6 +167,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeAdopt()
 	case "F":
 		return m, m.worktreeForget()
+	case "s":
+		return m, m.worktreeSleep()
 	case "f":
 		m.worktreeNextFilter()
 	case "R":

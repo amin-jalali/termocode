@@ -66,6 +66,8 @@ type wtState struct {
 	linkReading bool          // due links are being read again
 	ctlLink     *wtCtlPending // the open card of a CLI link (worktrees_notes.go)
 
+	sleepAsk *wtSleepPending // the open sleep card (worktrees_sleep.go)
+
 	seq    uint64
 	render struct {
 		sync.Mutex
