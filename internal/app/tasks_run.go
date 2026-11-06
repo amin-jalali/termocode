@@ -845,10 +845,6 @@ func tasksPaletteItems() []picker.Item {
 		{ID: agentChatPaletteID, Title: "Agent: Chat View", Hint: "chat / terminal of an agent tab"},                        // AGX-8 (agent_chat.go)
 		{ID: agentSessionsPaletteID, Title: "Agent: Sessions…", Hint: "resume or read a past session"},                      // AGX-9 (agent_sessions.go)
 		{ID: agentSessionsSearchID, Title: "Agent: Search Sessions…", Hint: "words in this project's agent sessions"},       // AGX-10
-		{ID: agentPickerPaletteID, Title: "Agent: Start…"},                                                                  // AGX-1 (agent_picker.go)
-		{ID: agentChatPaletteID, Title: "Agent: Chat View", Hint: "chat / terminal of an agent tab"},                        // AGX-8 (agent_chat.go)
-		{ID: agentSessionsPaletteID, Title: "Agent: Sessions…", Hint: "resume or read a past session"},                      // AGX-9 (agent_sessions.go)
-		{ID: agentSessionsSearchID, Title: "Agent: Search Sessions…", Hint: "words in this project's agent sessions"},       // AGX-10
 		{ID: agentNamesPaletteID, Title: "Worktree: Suggest a Name…", Hint: "quick model drafts branch names"},              // AGX-16
 		{ID: agentHibernatePaletteID, Title: "Agent: Hibernate or Wake", Hint: "stop an idle agent tab, keep its session"},  // AGX-15
 		{ID: agentAccountsPaletteID, Title: "Agent: Accounts…", Hint: "Claude Code / Codex accounts, own folders"},          // AGX-13
