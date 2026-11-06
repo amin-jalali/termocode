@@ -102,7 +102,7 @@ func TestUnsupportedSystems(t *testing.T) {
 // com.termux.
 func TestInTermux(t *testing.T) {
 	for env, want := range map[string]bool{
-		"TERMUX_VERSION=0.118.0":                true,
+		"TERMUX_VERSION=0.118.0":                 true,
 		"PREFIX=/data/data/com.termux/files/usr": true,
 		"PREFIX=/usr/local":                      false,
 		"":                                       false,

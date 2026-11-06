@@ -135,7 +135,11 @@ it will run by itself; Cancel is first.
   `termocode service install` in the folder. It shows the service file
   (a systemd user unit on Linux, a launchd agent on macOS) and asks
   before it writes it. `termocode service status` and
-  `termocode service uninstall` check and remove it.
+  `termocode service uninstall` check and remove it. On Linux it starts
+  at login; when it should also start at boot without a login, it tells
+  you to run `loginctl enable-linger $USER` once. Termux on Android has
+  no user services: there the command says so and writes nothing (use
+  `termux-wake-lock` to keep the session alive).
 - Every write still asks on its card, unless you allowed it for this
   version of the file.
 
