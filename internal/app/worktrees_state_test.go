@@ -124,8 +124,8 @@ func TestWorktreeShowLoadsTheList(t *testing.T) {
 		t.Errorf("Alt+Shift+W runs %v", a)
 	}
 	m.activity.SetActive(activity.ViewWorktrees)
-	if !strings.HasSuffix(m.sidebarHelpTopic(), "#worktrees") {
-		t.Errorf("guide section %q", m.sidebarHelpTopic())
+	if got := m.sidebarHelpTopic(); got != "guides/worktrees.md#worktrees" { // WTX-17: the view has its own guide
+		t.Errorf("guide section %q", got)
 	}
 }
 
