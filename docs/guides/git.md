@@ -113,6 +113,34 @@ Right-click a commit in the **GRAPH** for **Create Branch Here…** and
 
 | **Git: Merge Branch…** | Merge another branch into this one (see [Merge a branch](#merge-a-branch)) |
 
+## Blame
+
+Blame shows who last changed a line, and when.
+
+| Command | What it does |
+|---|---|
+| **Git: Toggle Blame in Status Bar** | The status bar shows the cursor line's author and age, for example `Tess, 3 days ago`. Click it to open the commit. |
+| **Git: Toggle Inline Blame** | The same, plus the commit subject, in dim text at the end of the cursor line |
+| **Git: Toggle Blame Annotations** | Every line gets the hash, author and age of its commit at its start. A run of lines from one commit names it once. The colour shows the age: amber is new, blue is old. |
+| **Git: Open Commit of Line** | Opens the commit that last changed the cursor line |
+| **Git: Blame Before This Change** | Opens the file as it was before the line's commit, with annotations. Run it again to go further back. |
+| **Git: Blame Options…** | Ignore whitespace changes (`-w`), detect moved or copied lines (`-M -C`), and the two toggles above |
+
+The two toggles and the options are saved. Blame reads the saved file, so
+save first after an edit. A line you changed and did not commit says **Not
+committed yet**. When the repository has a `.git-blame-ignore-revs` file,
+blame skips the commits it lists (for example a big formatting commit).
+
+## Line history and older revisions
+
+- **Git: Show Line History** lists the commits that changed the cursor line,
+  or the selected lines. `Enter` opens a commit.
+- **Git: Open Previous Revision of File** opens the file as it was one commit
+  earlier, read-only. Run it again to step further back. The toast says
+  which commit it is and how many there are. Renames are followed.
+- **Git: Open Next Revision of File** steps forward again. After the newest
+  commit you are back at the working file.
+
 ## The GRAPH
 
 **GRAPH** lists the commits, newest first. Each row shows a node, the

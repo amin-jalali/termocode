@@ -43,6 +43,11 @@ func (m Model) statusSpans() []statusSpan {
 	add("status:ci", x0, x1, ok)
 	x0, x1, ok = sb.UpdateChipSpan(st)
 	add("status:update", x0, x1, ok)
+	if len(m.gitBlameStatusTexts()) > 0 { // last of st.Ext; tested before the extension items
+		for _, sp := range sb.ExtItemSpans(st) {
+			add("status:blame", sp.X0, sp.X1, sp.Index == len(st.Ext)-1)
+		}
+	}
 	if m.ext != nil && len(st.Ext) > 0 {
 		for _, sp := range sb.ExtItemSpans(st) {
 			add("status:ext:"+strconv.Itoa(sp.Index), sp.X0, sp.X1, true)
