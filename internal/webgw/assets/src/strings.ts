@@ -865,6 +865,7 @@ export const S = {
   "gm.none_left": "No conflicts left",
   "gm.prev": "Previous Conflict",
   "gm.next": "Next Conflict",
+  "gm.accept_base": "Accept Base",
   "gm.complete": "Complete Merge",
   "gm.complete_ask": "Save the result and mark {name} as resolved?",
   "gm.resolved": "Resolved {name}",
@@ -945,6 +946,7 @@ export const S = {
   "cmd.prev_conflict": "Git: Go to Previous Merge Conflict",
   "cmd.merge_next": "Git: Merge View: Next Conflict",
   "cmd.merge_prev": "Git: Merge View: Previous Conflict",
+  "cmd.merge_base": "Git: Merge View: Take Base",
   "cmd.scm_tree": "Git: Toggle Tree/Flat View",
   // The laptop's AI in the editor, agent worktrees, profile and model (WEBP-3)
   "ai.explain": "Explain with AI",

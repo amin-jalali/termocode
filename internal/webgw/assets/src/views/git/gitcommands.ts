@@ -58,6 +58,7 @@ export function gitCommands(): Command[] {
     { id: "nextConflict", label: "cmd.next_conflict", when: () => desk() && !merge(), run: () => conflict(1) },
     { id: "prevConflict", label: "cmd.prev_conflict", when: () => desk() && !merge(), run: () => conflict(-1) },
     { id: "mergeNext", label: "cmd.merge_next", when: () => merge() !== null, run: () => merge()?.go(1) },
+    { id: "mergeTakeBase", label: "cmd.merge_base", when: () => merge() !== null && canAct(), run: () => merge()?.base() },
     { id: "mergePrev", label: "cmd.merge_prev", when: () => merge() !== null, run: () => merge()?.go(-1) },
     { id: "scmViewToggle", label: "cmd.scm_tree", when: repo, run: () => (scmTree.value = !scmTree.peek()) },
   ];

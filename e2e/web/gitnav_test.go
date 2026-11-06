@@ -131,6 +131,7 @@ func TestGitNavMergeTakeBase(t *testing.T) {
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "Conflict 1 of 1 remaining" && ` + mergeView + `.querySelector('[data-act="base"]')`)
 	runCmd(t, p, c, "Git: Merge View: Take Base", true)
 	p.WaitJS(`document.querySelector(".gm-left")?.textContent === "No conflicts left"`)
+	p.WaitJS(`[...(` + mergeView + `.querySelector(".gm-result .desk-editor")?.contentDocument?.querySelectorAll(".view-lines .view-line") ?? [])].map((l) => l.textContent).join("|").includes("base") && !` + mergeView + `.querySelector(".gm-result .desk-editor").contentDocument.querySelector(".tc-mg-marker")`)
 	if got := strings.TrimSuffix(paneText(p, "result"), "\n"); got != "package a\nbase\nend" {
 		t.Errorf("result %q", got)
 	}

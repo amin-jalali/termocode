@@ -5005,8 +5005,14 @@
     "GitConflictPart": {
       "type": "object",
       "properties": {
+        "base": {
+          "type": "string"
+        },
         "both": {
           "type": "string"
+        },
+        "hasBase": {
+          "type": "boolean"
         },
         "line": {
           "type": "integer"

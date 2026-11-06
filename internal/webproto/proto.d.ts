@@ -1598,6 +1598,8 @@ export interface GitConflictPart {
   ours: string;
   theirs: string;
   both: string;
+  base?: string;
+  hasBase?: boolean;
 }
 
 export interface GitResolved {

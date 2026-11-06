@@ -861,6 +861,7 @@ export const FA: Record<StringKey, string> = {
   "gm.none_left": "تداخلی نمانده",
   "gm.prev": "تداخل قبلی",
   "gm.next": "تداخل بعدی",
+  "gm.accept_base": "پذیرفتن نسخه پایه",
   "gm.complete": "پایان ادغام",
   "gm.complete_ask": "نتیجه ذخیره شود و {name} حل‌شده علامت بخورد؟",
   "gm.resolved": "{name} حل شد",
@@ -941,6 +942,7 @@ export const FA: Record<StringKey, string> = {
   "cmd.prev_conflict": "گیت: رفتن به تداخل ادغام قبلی",
   "cmd.merge_next": "گیت: نمای ادغام: تداخل بعدی",
   "cmd.merge_prev": "گیت: نمای ادغام: تداخل قبلی",
+  "cmd.merge_base": "گیت: نمای ادغام: برداشتن نسخه پایه",
   "cmd.scm_tree": "گیت: نمای درختی یا فهرستی",
   // The laptop's AI in the editor, agent worktrees, profile and model (WEBP-3)
   "ai.explain": "توضیح با هوش مصنوعی",
