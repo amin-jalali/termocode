@@ -55,7 +55,7 @@ func TestTabContextMenu(t *testing.T) {
 	openBufAs(t, p, c, 4, "src/b.txt", nil, "b")
 	openDesk(t, p, c, 6, "c.txt", "c")
 	rightClick(p, tabEl("src/b.txt"))
-	if got := menuLabels(p); got != "Close|Close Others|Close to the Right|Close Saved|Copy Path|Copy Relative Path|Split Right|Split Down" {
+	if got := menuLabels(p); got != "Close|Close Others|Close to the Right|Close Saved|Pin|Copy Path|Copy Relative Path|Split Right|Split Down" {
 		t.Errorf("tab menu %q", got)
 	}
 	// Esc closes it and nothing happens.

@@ -126,11 +126,11 @@ func runDetachable(ctx context.Context, b *Background, label string, run func(ct
 		})
 	}
 	done := make(chan callOut, 1)
+	id, c := b.add(label) // before the call runs: Ctrl+B finds it at once
 	crash.GoWith("mcp.call", func() {
 		res, err := run(cctx)
 		done <- callOut{res, err}
 	}, func() { done <- callOut{err: errors.New("the tool call crashed")} })
-	id, c := b.add(label)
 	select {
 	case o := <-done:
 		b.remove(id)

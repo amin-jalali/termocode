@@ -273,6 +273,8 @@ func termHostLocal(host string) bool {
 
 func init() {
 	registerNotifyHandler("termocode_term_osc", func(m *Model, args []any) tea.Cmd {
-		return m.onTermOSC(notifyArgInt(args, 0), notifyArgString(args, 1))
+		c := m.onTermOSC(notifyArgInt(args, 0), notifyArgString(args, 1))
+		m.observeTerminals() // terminal_restore.go: a command started or ended, the folder moved
+		return c
 	})
 }

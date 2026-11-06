@@ -899,6 +899,22 @@ func webDBDefaultPort(driver string) int {
 	return 0
 }
 
+// webDBFileInside checks a sqlite file a browser names: it, or (a new
+// file) its folder, resolves inside the workspace with links followed.
+func (m *Model) webDBFileInside(rel string) error {
+	_, err := m.webResolve(rel)
+	var we *webError
+	if err == nil || !errors.As(err, &we) || we.code != webproto.CodeNotFound {
+		return err
+	}
+	dir := filepath.ToSlash(filepath.Dir(filepath.FromSlash(webCleanRel(rel))))
+	if dir == "." {
+		dir = ""
+	}
+	_, err = m.webResolve(dir)
+	return err
+}
+
 func (m *Model) webDBAdd(call *webCall) *webAsk {
 	a := call.args.(*webproto.DBAddArgs)
 	root, err := m.rootDir()
@@ -921,6 +937,12 @@ func (m *Model) webDBAdd(call *webCall) *webAsk {
 	if err := dbclient.Validate(c); err != nil {
 		call.fail(webproto.CodeBadRequest, sanitizeDBText(err.Error()))
 		return nil
+	}
+	if c.Driver == "sqlite" {
+		if err := m.webDBFileInside(c.Path); err != nil {
+			webFailErr(call, err, "The database file cannot be used.")
+			return nil
+		}
 	}
 	var b strings.Builder
 	b.WriteString("Save this connection to .termocode/databases.json?\n\n")
