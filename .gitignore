@@ -8,7 +8,8 @@ coverage.txt
 
 .idea/
 .vscode/
-.claude/
+.claude/*
+!.claude/agents/
 *.swp
 .DS_Store
 
