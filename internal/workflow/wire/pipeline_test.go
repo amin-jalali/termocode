@@ -99,7 +99,7 @@ func TestTestsStepUsesTheProjectTask(t *testing.T) {
 func TestTestsStepWithoutTasksFallsBackToTestArgv(t *testing.T) {
 	var got []string
 	s := &Steps{Workspace: "/ws", TestArgv: []string{"go", "test", "./..."},
-		Exec: func(_ context.Context, argv []string, _ string) (string, int, error) { got = argv; return "", 0, nil },
+		Exec:  func(_ context.Context, argv []string, _ string) (string, int, error) { got = argv; return "", 0, nil },
 		Tasks: func(string) []tasks.Task { return nil }}
 	if _, err := s.Run(context.Background(), run.RunCall{Step: &workflow.Step{ID: "t", Type: workflow.TypeTests, Tests: &workflow.TestsSpec{}}}); err != nil {
 		t.Fatal(err)
