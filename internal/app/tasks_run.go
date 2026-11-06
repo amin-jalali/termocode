@@ -518,6 +518,9 @@ func (m *Model) onTaskExit(buf, code int) tea.Cmd {
 	if service != "" {
 		return m.onServiceJobExit(service, code)
 	}
+	if c, ok := m.raceOnVerifyExit(buf, code); ok { // a race lane's verify (agent_race_compare.go)
+		return c
+	}
 	r := tr.runs[buf]
 	if r == nil || !r.Running {
 		return nil
@@ -829,7 +832,12 @@ func tasksPaletteItems() []picker.Item {
 		{ID: "problems-panel", Title: "View: Problems", Hint: "Ctrl+Shift+M / Alt+M"},
 		// U9b (term_fix.go) and U8 (agent_tabs.go).
 		{ID: "terminal-fix-ai", Title: "Terminal: Fix Last Command with AI", Hint: "Alt+\\ in the terminal"},
-		{ID: agentPickerPaletteID, Title: "Agent: Start…"}, // AGX-1 (agent_picker.go)
+		{ID: agentPickerPaletteID, Title: "Agent: Start…"},                                                            // AGX-1 (agent_picker.go)
+		{ID: agentRacePaletteID, Title: "Agent: Race…"},                                                               // AGX-4 (agent_race.go)
+		{ID: agentRaceComparePaletteID, Title: "Agent: Race Compare"},                                                 // AGX-5
+		{ID: agentChatPaletteID, Title: "Agent: Chat View", Hint: "chat / terminal of an agent tab"},                  // AGX-8 (agent_chat.go)
+		{ID: agentSessionsPaletteID, Title: "Agent: Sessions…", Hint: "resume or read a past session"},                // AGX-9 (agent_sessions.go)
+		{ID: agentSessionsSearchID, Title: "Agent: Search Sessions…", Hint: "words in this project's agent sessions"}, // AGX-10
 	}, agentPaletteItems()...)
 }
 

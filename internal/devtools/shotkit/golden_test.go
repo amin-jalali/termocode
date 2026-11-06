@@ -222,6 +222,9 @@ func goldenExtras() []Scene {
 		{Name: "editor-blame", Steps: WithEditor(Act("palette:git-blame-annotate"), Pause(600*time.Millisecond),
 			Act("palette:git-inline-blame"), Pause(400*time.Millisecond), Act("palette:git-status-blame"), Pause(1500*time.Millisecond))},
 		{Name: "blame-options", Steps: WithEditor(Act("palette:git-blame-options"), Pause(600*time.Millisecond))},
+		// History edits from the GRAPH (GITX-17): D on the oldest commit
+		// opens the Cancel-first Drop card.
+		{Name: "drop-commit-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-focus"), Key("G"), Key("D"), Pause(600 * time.Millisecond)}},
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
@@ -261,9 +264,13 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
 	out = append(out, keyHintCases()...)
-	out = append(out, kubeCases()...)        // golden_kube_test.go
-	out = append(out, webCases()...)         // golden_web_test.go
-	out = append(out, agentPickerCases()...) // golden_agents_test.go
+	out = append(out, kubeCases()...)          // golden_kube_test.go
+	out = append(out, webCases()...)           // golden_web_test.go
+	out = append(out, agentPickerCases()...)   // golden_agents_test.go
+	out = append(out, raceCases()...)          // golden_race_test.go
+	out = append(out, worktreesCases()...)     // golden_worktrees_test.go
+	out = append(out, agentChatCases()...)     // golden_agents_test.go
+	out = append(out, agentSessionsCases()...) // golden_agents_test.go
 	// A terminal tab split into three panes (G-SPL).
 	{
 		sc := TerminalSplit()

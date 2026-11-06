@@ -54,13 +54,38 @@ func ExtIndex(v View) (int, bool) {
 	return i, true
 }
 
-// topAll is the built-in top group plus the extension items.
+// workflowsItem is the Workflows icon; workflowsShown puts it after Runs
+// (the workspace has workflows). Package-level like extraItems.
+var (
+	workflowsItem  = item{view: ViewWorkflows, icon: theme.IconWorkflows, label: "Workflows"}
+	workflowsShown bool
+)
+
+// SetWorkflowsShown shows or hides the Workflows icon.
+func SetWorkflowsShown(on bool) {
+	if on == workflowsShown {
+		return
+	}
+	viewCache.Lock()
+	viewCache.out = "" // the cache key does not cover the item list
+	viewCache.Unlock()
+	workflowsShown = on
+}
+
+// WorkflowsShown reports whether the Workflows icon is in the bar.
+func WorkflowsShown() bool { return workflowsShown }
+
+// topAll is the built-in top group (with Workflows when shown) plus the
+// extension items.
 func topAll() []item {
-	if len(extraItems) == 0 {
+	if len(extraItems) == 0 && !workflowsShown {
 		return topItems
 	}
-	out := make([]item, 0, len(topItems)+len(extraItems))
+	out := make([]item, 0, len(topItems)+len(extraItems)+1)
 	out = append(out, topItems...)
+	if workflowsShown {
+		out = append(out, workflowsItem)
+	}
 	return append(out, extraItems...)
 }
 

@@ -480,6 +480,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 			return m.handleServicesSidebarMouse(x, msg.Y, msg.Type)
 		case activity.ViewKubernetes: // kube_mouse.go
 			return m.handleKubeSidebarMouse(x, msg.Y, msg.Type)
+		case activity.ViewWorktrees: // worktrees_mouse.go
+			return m.handleWTSidebarMouse(x, msg.Y, msg.Type)
 		case activity.ViewDatabases:
 			return m.handleDatabasesSidebarMouse(x, msg.Y, msg.Type)
 		case activity.ViewItermoc: // itermoc_actions.go

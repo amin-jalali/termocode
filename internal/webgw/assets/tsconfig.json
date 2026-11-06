@@ -26,7 +26,8 @@
       "style-mod": ["./vendor/style-mod@4.1.4/src/style-mod.d.ts"],
       "w3c-keyname": ["./vendor/w3c-keyname@2.2.8/index.d.ts"],
       "/assets/editor.js": ["./src/editor/main.ts"],
-      "/assets/workbench.js": ["./src/workbench.tsx"]
+      "/assets/workbench.js": ["./src/workbench.tsx"],
+      "/assets/strings-fa.js": ["./src/strings.fa.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]

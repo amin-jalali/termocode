@@ -308,8 +308,12 @@ func run(argv []string) int {
 			return runMCPTop(args[1:])
 		case "agent":
 			return runAgent(args[1:])
+		case "workflow", "workflows":
+			return runWorkflow(args[1:])
 		case "web":
 			return runWeb(args[1:])
+		case "service":
+			return runService(args[1:])
 		case "attach", "kill":
 			dir := "."
 			if len(args) > 1 {
@@ -400,7 +404,7 @@ func tuiCommand(args []string) bool {
 		return true
 	}
 	switch args[0] {
-	case serverArg, "sessions", "ssh", "mcp", "attach", "kill", "setup", "-h", "--help", "help":
+	case serverArg, "sessions", "ssh", "mcp", "service", "attach", "kill", "setup", "-h", "--help", "help":
 		return false
 	}
 	return !isVersionArg(args[0])
@@ -425,6 +429,8 @@ func printUsage() {
 	fmt.Println("                             drive the agents in termocode's terminal tabs")
 	fmt.Println("  termocode web [start|stop|status]")
 	fmt.Println("                             open or stop the web panel of the running termocode")
+	fmt.Println("  termocode service install|uninstall|status")
+	fmt.Println("                             start the session of this folder at login")
 	fmt.Println("  termocode setup            install JetBrainsMono Nerd Font and check prerequisites")
 	fmt.Println("  termocode --version        print the version")
 	fmt.Println("  termocode -h               show this help")
