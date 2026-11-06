@@ -70,6 +70,8 @@ func TestWorktreeLinkNoteForget(t *testing.T) {
 	tm.WaitText("blocked", uiTimeout)
 
 	// Forget the gone one.
+	tm.Send(KeyCtrlT) // the panel closes; the keys go back to the view
+	tm.WaitGone("NOTED", uiTimeout)
 	tm.Palette("Worktree: Show")
 	tm.Send(KeyEsc) // clears the name filter
 	tm.settle()

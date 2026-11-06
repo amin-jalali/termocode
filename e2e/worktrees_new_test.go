@@ -125,8 +125,8 @@ func TestWorktreeNewStartsAgentWithTask(t *testing.T) {
 	tm.WaitText("Claude Code", uiTimeout)
 	tm.Type("feat/agent")
 	tm.Send(keyTab + keyTab + keyTab + keyTab) // Issue, From, Branch → Agent
-	tm.Send(keyRight)                 // none → Claude Code
-	tm.Send(keyTab)                   // → Task
+	tm.Send(keyRight)                          // none → Claude Code
+	tm.Send(keyTab)                            // → Task
 	tm.Type("say hello")
 	tm.Send(keyTab)                         // → the buttons (Cancel lit)
 	tm.Send(keyRight + keyRight + keyRight) // → Create + Start
