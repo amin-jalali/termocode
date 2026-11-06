@@ -9,7 +9,7 @@ import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
 import { FRAME_PATH, type AiAct, type AiAt, type AiKind, type FrameBlame, type FrameDiff, type FrameGlyph, type FrameLines, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame, type CursorOp } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
-import { cursorAt, escapeKey, focusSlot, quick, vimMode } from "./workbench";
+import { cursorAt, escapeKey, focusSlot, noteClip, quick, vimMode } from "./workbench";
 import { prefs } from "./prefs";
 import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
@@ -218,6 +218,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         return;
       case "esc":
         escapeKey();
+        return;
+      case "copied":
+        if (typeof m.text === "string") noteClip(m.text);
         return;
       case "vim":
         if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending };

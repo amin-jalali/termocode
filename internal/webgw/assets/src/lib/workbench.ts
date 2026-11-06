@@ -106,10 +106,31 @@ export function escapeKey(): void {
 
 /** QuickMode is what the quick input lists: files, commands, a line, or
  * a question the page asks (ask: its title, and what Enter does). */
-export type QuickMode = "files" | "commands" | "line" | "ask";
+export type QuickMode = "files" | "commands" | "line" | "ask" | "pick";
+
+/** QuickPick is a list to choose from (mode "pick"): its title and items. */
+export interface QuickPick {
+  title: string;
+  items: { label: string; detail?: string; run(): void }[];
+}
 
 /** quick is the open quick input (Go to file, the command list), or null. */
-export const quick = signal<{ mode: QuickMode; ask?: { title: string; run(text: string): void } } | null>(null);
+export const quick = signal<{ mode: QuickMode; ask?: { title: string; run(text: string): void }; pick?: QuickPick } | null>(null);
+
+/** CLIP_MAX texts of CLIP_TEXT_MAX chars at most are kept. */
+const CLIP_MAX = 20;
+const CLIP_TEXT_MAX = 64 * 1024;
+
+/** clips is the clipboard history of this tab (WEBP-1): what was copied or
+ * cut in its editors, newest first. In memory only: never stored, gone
+ * with the tab; the system clipboard is never read. */
+export const clips = signal<readonly string[]>([]);
+
+/** noteClip keeps a copied text at the top of the history. */
+export function noteClip(text: string): void {
+  if (!text || text.length > CLIP_TEXT_MAX) return;
+  clips.value = [text, ...clips.peek().filter((c) => c !== text)].slice(0, CLIP_MAX);
+}
 
 /** cursorAt is the desktop editor's cursor (1-based), for the status bar. */
 export const cursorAt = signal<{ line: number; col: number } | null>(null);

@@ -193,6 +193,9 @@ export type FromFrame =
   /** vim: Vim mode's mode now ("": off) and the keys of a command not
    * finished yet. */
   | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline"; pending: string }
+  /** copied: the user copied or cut text in the editor (the clipboard
+   * history of the tab keeps it). */
+  | { t: "copied"; text: string }
   /** esc: Escape was pressed in the editor (it still does its own work
    * there; two in a row leave Zen). */
   | { t: "esc" }

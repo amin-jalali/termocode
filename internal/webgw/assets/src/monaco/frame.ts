@@ -1085,6 +1085,17 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   if (m.vim) vimOn(true);
 }
 
+// What is copied or cut goes to the page's clipboard history too (the
+// editor's own selections; the system clipboard is never read).
+function onCopy(): void {
+  if (!ed || !model) return;
+  const m = model;
+  const parts = (ed.getSelections() ?? []).map((r) => m.getValueInRange(r)).filter((s) => s !== "");
+  if (parts.length) post({ t: "copied", text: parts.join("\n") });
+}
+addEventListener("copy", onCopy, true);
+addEventListener("cut", onCopy, true);
+
 // After Ctrl/Cmd+K the next key is the chord's (Ctrl/Cmd+K Z: Zen): the
 // page's, never the text's. It is taken before the editor sees it (the
 // editor has chords of its own on Ctrl/Cmd+K).

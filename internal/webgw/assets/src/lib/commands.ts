@@ -21,7 +21,7 @@ import { toggleProblems } from "./lsp";
 import { go, route } from "./router";
 import { openSide } from "../ui/ActivityBar";
 import { gitCommands } from "../views/git/gitcommands";
-import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap, zen } from "./workbench";
+import { clips, activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap, zen } from "./workbench";
 
 export interface Command {
   id: string;
@@ -35,6 +35,35 @@ export interface Command {
   /** when: shown only when it can run now. */
   when?: () => boolean;
   run: () => void;
+}
+
+/** pasteHistory lists the tab's clipboard history; the pick goes in at
+ * the focused editor's caret as the user's own edit. */
+function pasteHistory(): void {
+  const list = clips.peek();
+  if (!list.length) {
+    toast("info", t("clip.empty"));
+    return;
+  }
+  const one = (s: string) => (s.length > 80 ? s.slice(0, 79) + "…" : s).replace(/\s+/g, " ");
+  quick.value = {
+    mode: "pick",
+    pick: {
+      title: t("clip.title"),
+      items: list.map((s) => ({
+        label: one(s),
+        detail: s.includes("\n") ? t("clip.lines", { n: s.split("\n").length }) : undefined,
+        run: () => {
+          const d = activeDesk.peek();
+          if (!d) return;
+          setTimeout(() => {
+            d.insert(s);
+            d.focus();
+          }, 0);
+        },
+      })),
+    },
+  };
 }
 
 /** cursors runs a multi-cursor command in the focused editor. */
@@ -67,6 +96,7 @@ export function commands(): Command[] {
     { id: "cursorBelow", label: "cmd.cursor_below", keys: isMac() ? "⌥⌘↓" : "Ctrl+Alt+Down", when: hasFile, run: () => cursors("below") },
     { id: "nextMatch", label: "cmd.next_match", keys: `${mod}+D`, when: hasFile, run: () => cursors("next") },
     { id: "allMatches", label: "cmd.all_matches", keys: `${mod}+Shift+L`, when: hasFile, run: () => cursors("all") },
+    { id: "pasteHistory", label: "cmd.paste_history", when: hasFile, run: pasteHistory },
     { id: "vim", label: "cmd.vim", run: () => setPref("vim", !prefs.peek().vim) },
     { id: "zen", label: "cmd.zen", keys: `${mod}+K Z`, run: () => (zen.value = !zen.peek()) },
     { id: "aiExplain", label: "ai.explain", when: hasFile, run: () => activeDesk.peek()?.aiAct("explain") },

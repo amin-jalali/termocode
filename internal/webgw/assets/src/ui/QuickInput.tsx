@@ -103,7 +103,8 @@ export function QuickInput() {
   const box = useRef<HTMLInputElement | null>(null);
 
   const ask = q0?.mode === "ask" ? (q0.ask ?? null) : null;
-  const wantFiles = !ask && !text.startsWith(">") && !text.startsWith(":");
+  const pickList = q0?.mode === "pick" ? (q0.pick ?? null) : null;
+  const wantFiles = !ask && !pickList && !text.startsWith(">") && !text.startsWith(":");
   const wantCmds = text.startsWith(">");
   useLayoutEffect(() => box.current?.focus(), []);
   useEffect(() => {
@@ -124,7 +125,14 @@ export function QuickInput() {
   const close = () => (quick.value = null);
   let rows: Row[] = [];
   let placeholder = t("quick.files");
-  if (ask) {
+  if (pickList) {
+    // A list to choose from (the clipboard history): what was typed filters it.
+    const f = text.trim().toLowerCase();
+    rows = pickList.items
+      .map((it, i) => ({ key: "pick" + i, label: it.label, at: [] as number[], detail: it.detail, run: it.run }))
+      .filter((r) => !f || r.label.toLowerCase().includes(f));
+    placeholder = pickList.title;
+  } else if (ask) {
     // A question (Edit with AI): Enter sends what was typed.
     rows = text.trim() ? [{ key: "ask", label: text.trim(), at: [], detail: t("quick.ask_go"), run: () => ask.run(text.trim()) }] : [];
     placeholder = ask.title;
