@@ -18,6 +18,9 @@ func covNvimRepo(t *testing.T, rel string) (*Model, string) {
 	t.Helper()
 	m, dir := covGitRepo(t)
 	c := aiTestNvim(t, m)
+	// The app marks the editor attached when nvim's attach message comes;
+	// the merge view only drives an attached editor.
+	m.nvimAttached = true
 	if err := c.ExecLua(conflictLua()); err != nil {
 		t.Fatal(err)
 	}
