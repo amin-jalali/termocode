@@ -53,11 +53,6 @@ func TestWebBookmarks(t *testing.T) {
 	}
 }
 
-func itoa(n int) string {
-	b, _ := json.Marshal(n)
-	return string(b)
-}
-
 // Spec (WEBP-9): files.recent lists the laptop's recent files that are
 // in the workspace and still there, newest first, workspace-relative.
 func TestWebFilesRecent(t *testing.T) {

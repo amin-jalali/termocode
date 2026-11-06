@@ -283,6 +283,16 @@ export interface BufTickArgs {
   tick: number;
 }
 
+export interface BufLineArgs {
+  buf: number;
+  line: number;
+}
+
+export interface SymbolQueryArgs {
+  buf: number;
+  query: string;
+}
+
 export interface TestOutputArgs {
   id?: string;
 }
@@ -1368,6 +1378,49 @@ export interface LspEdit {
   text: string;
 }
 
+export interface BookmarkToggle {
+  on: boolean;
+  mark?: string;
+}
+
+export interface BookmarkList {
+  items: Bookmark[];
+}
+
+export interface Bookmark {
+  mark: string;
+  path: string;
+  line: number;
+  text?: string;
+}
+
+export interface FilesRecent {
+  paths: string[];
+}
+
+export interface LspSymbols {
+  items: LspSymbol[];
+  cut?: boolean;
+}
+
+export interface LspSymbol {
+  name: string;
+  kind: number;
+  path: string;
+  line: number;
+  col: number;
+  container?: string;
+}
+
+export interface SnippetList {
+  items: Snippet[];
+}
+
+export interface Snippet {
+  trigger: string;
+  body: string;
+}
+
 export interface TestOutput {
   id?: string;
   lines: string[];
@@ -1884,6 +1937,12 @@ export interface OpArgs {
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
   "lsp.references": LspPosArgs;
+  "bookmarks.toggle": BufLineArgs;
+  "bookmarks.list": EmptyArgs;
+  "bookmarks.clear": EmptyArgs;
+  "files.recent": EmptyArgs;
+  "lsp.workspace_symbols": SymbolQueryArgs;
+  "snippets.list": BufArgs;
   "tests.output": TestOutputArgs;
   "tests.refresh": EmptyArgs;
   "tests.run": TestRunArgs;
@@ -2031,6 +2090,11 @@ export interface OpResult {
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;
   "lsp.references": LspLocations;
+  "bookmarks.toggle": BookmarkToggle;
+  "bookmarks.list": BookmarkList;
+  "files.recent": FilesRecent;
+  "lsp.workspace_symbols": LspSymbols;
+  "snippets.list": SnippetList;
   "tests.output": TestOutput;
   "ai.complete": AICompletion;
   "ai.next_edit": AINextEdit;

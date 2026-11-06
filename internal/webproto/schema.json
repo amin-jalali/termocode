@@ -1278,6 +1278,90 @@
       "phase": "v2"
     },
     {
+      "op": "bookmarks.toggle",
+      "args": "BufLineArgs",
+      "result": "BookmarkToggle",
+      "role": "controller",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "bookmarks.list",
+      "args": "EmptyArgs",
+      "result": "BookmarkList",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "bookmarks.clear",
+      "args": "EmptyArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "files.recent",
+      "args": "EmptyArgs",
+      "result": "FilesRecent",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.workspace_symbols",
+      "args": "SymbolQueryArgs",
+      "result": "LspSymbols",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 2048,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "snippets.list",
+      "args": "BufArgs",
+      "result": "SnippetList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "tests.output",
       "args": "TestOutputArgs",
       "result": "TestOutput",
@@ -2830,6 +2914,59 @@
       ],
       "additionalProperties": true
     },
+    "Bookmark": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer"
+        },
+        "mark": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mark",
+        "path",
+        "line"
+      ],
+      "additionalProperties": true
+    },
+    "BookmarkList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/Bookmark"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "BookmarkToggle": {
+      "type": "object",
+      "properties": {
+        "mark": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "on"
+      ],
+      "additionalProperties": true
+    },
     "BufArgs": {
       "type": "object",
       "properties": {
@@ -2892,6 +3029,22 @@
         "active"
       ],
       "additionalProperties": true
+    },
+    "BufLineArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "line"
+      ],
+      "additionalProperties": false
     },
     "BufMarkdown": {
       "type": "object",
@@ -4822,6 +4975,21 @@
       ],
       "additionalProperties": true
     },
+    "FilesRecent": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "paths"
+      ],
+      "additionalProperties": true
+    },
     "GitAmendArgs": {
       "type": "object",
       "properties": {
@@ -6434,6 +6602,55 @@
       ],
       "additionalProperties": false
     },
+    "LspSymbol": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "container": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "path",
+        "line",
+        "col"
+      ],
+      "additionalProperties": true
+    },
+    "LspSymbols": {
+      "type": "object",
+      "properties": {
+        "cut": {
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/LspSymbol"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
     "MCPAgent": {
       "type": "object",
       "properties": {
@@ -7733,6 +7950,37 @@
       ],
       "additionalProperties": true
     },
+    "Snippet": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "trigger",
+        "body"
+      ],
+      "additionalProperties": true
+    },
+    "SnippetList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/Snippet"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
     "StatusAI": {
       "type": "object",
       "properties": {
@@ -7896,6 +8144,22 @@
       "required": [
         "t",
         "topics"
+      ],
+      "additionalProperties": false
+    },
+    "SymbolQueryArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "buf",
+        "query"
       ],
       "additionalProperties": false
     },

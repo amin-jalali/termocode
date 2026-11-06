@@ -34,6 +34,7 @@ func init() {
 	for op, kind := range webLspKinds {
 		webOps[op] = func(m *Model, call *webCall) tea.Cmd { return m.webOpLsp(call, kind) }
 	}
+	webOps[webproto.OpLspWorkspaceSymbols] = (*Model).webOpLspSymbols
 	registerNotifyHandler("termocode_web_lsp", func(m *Model, a []any) tea.Cmd {
 		m.webLspDone(notifyArgInt(a, 0), notifyArgString(a, 1))
 		return nil
@@ -67,15 +68,15 @@ type webLspCall struct {
 // answer it and returns at once: {ok}, or {err = gone | stale (with the
 // buffer's tick) | nolsp | nocap}.
 const webLuaLsp = `
-local id, kind, b, tick, line, col16, maxn, maxtext = ...
+local id, kind, b, tick, line, col16, maxn, maxtext, query = ...
 local api = vim.api
 if not api.nvim_buf_is_valid(b) or not api.nvim_buf_is_loaded(b) then return { err = 'gone' } end
 local cur = api.nvim_buf_get_changedtick(b)
-if cur ~= tick then return { err = 'stale', tick = cur } end
+if tick >= 0 and cur ~= tick then return { err = 'stale', tick = cur } end
 local caps = { hover = 'hoverProvider', complete = 'completionProvider', definition = 'definitionProvider', references = 'referencesProvider',
-  typedef = 'typeDefinitionProvider', impl = 'implementationProvider' }
+  typedef = 'typeDefinitionProvider', impl = 'implementationProvider', wsymbols = 'workspaceSymbolProvider' }
 local methods = { hover = 'textDocument/hover', complete = 'textDocument/completion', definition = 'textDocument/definition', references = 'textDocument/references',
-  typedef = 'textDocument/typeDefinition', impl = 'textDocument/implementation' }
+  typedef = 'textDocument/typeDefinition', impl = 'textDocument/implementation', wsymbols = 'workspace/symbol' }
 local get = vim.lsp.get_clients or vim.lsp.get_active_clients
 local all = get({ bufnr = b })
 if #all == 0 then return { err = 'nolsp' } end
@@ -206,6 +207,24 @@ local function finish()
       end
     end
     out.items = items
+  elseif kind == 'wsymbols' then
+    local syms = {}
+    for _, r in ipairs(results) do
+      if type(r.res) == 'table' then
+        for _, s in ipairs(r.res) do
+          if #syms >= maxn then out.cut = true break end
+          local loc = s.location or {}
+          local st = (loc.range or {}).start or { line = 0, character = 0 }
+          if type(loc.uri) == 'string' and type(s.name) == 'string' then
+            local ok, f = pcall(vim.uri_to_fname, loc.uri)
+            if ok then
+              syms[#syms + 1] = { name = cut(s.name), kind = s.kind, container = cut(s.containerName), file = f, line = st.line, col = st.character }
+            end
+          end
+        end
+      end
+    end
+    out.syms = syms
   else
     local seen, locs = {}, {}
     for _, r in ipairs(results) do
@@ -253,6 +272,7 @@ local sent = 0
 for _, c in ipairs(cs) do
   local enc = c.offset_encoding or 'utf-16'
   local params = { textDocument = { uri = uri }, position = { line = line, character = units(text, bcol, enc) } }
+  if kind == 'wsymbols' then params = { query = query } end
   if kind == 'references' then params.context = { includeDeclaration = true } end
   if kind == 'complete' then params.context = { triggerKind = 1 } end
   local ok, r
@@ -276,6 +296,7 @@ type webLspOut struct {
 	Items      []webLspOutItem `json:"items"`
 	Incomplete bool            `json:"incomplete"`
 	Locs       []webLspOutLoc  `json:"locs"`
+	Syms       []webLspOutSym  `json:"syms"`
 	Cut        bool            `json:"cut"`
 }
 
@@ -293,6 +314,15 @@ type webLspOutItem struct {
 	Edits   []webproto.LspEdit `json:"edits"`
 }
 
+type webLspOutSym struct {
+	Name      string `json:"name"`
+	Kind      int    `json:"kind"`
+	Container string `json:"container"`
+	File      string `json:"file"`
+	Line      int    `json:"line"`
+	Col       int    `json:"col"`
+}
+
 type webLspOutLoc struct {
 	File    string `json:"file"`
 	Line    int    `json:"line"`
@@ -305,6 +335,19 @@ type webLspOutLoc struct {
 // webOpLsp sends the request; the answer comes with the notification.
 func (m *Model) webOpLsp(call *webCall, kind string) tea.Cmd {
 	a := call.args.(*webproto.LspPosArgs)
+	return m.webLspSend(call, kind, a.Buf, a.Tick, a.Line, a.Col, "")
+}
+
+// webOpLspSymbols asks for the workspace symbols of a query (at the
+// buffer's tick now: a query has no position).
+func (m *Model) webOpLspSymbols(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.SymbolQueryArgs)
+	return m.webLspSend(call, "wsymbols", a.Buf, -1, 0, 0, a.Query)
+}
+
+// webLspSend sends one request to the servers of buffer n.
+func (m *Model) webLspSend(call *webCall, kind string, n, tick, line, col int, query string) tea.Cmd {
+	a := struct{ Buf, Tick, Line, Col int }{n, tick, line, col}
 	if m.web == nil || m.nvim == nil {
 		call.fail(webproto.CodeGone, "The editor is not running.")
 		return nil
@@ -325,8 +368,11 @@ func (m *Model) webOpLsp(call *webCall, kind string) tea.Cmd {
 	if kind == "complete" {
 		maxn, maxText = webproto.MaxCompletions, webproto.MaxCompleteDoc
 	}
+	if kind == "wsymbols" {
+		maxn, maxText = webproto.MaxWorkspaceSymbols, webproto.MaxCompleteText
+	}
 	var res webLuaLspRes
-	if err := m.nvim.ExecLuaResult(webLuaLsp, &res, id, kind, b.buf, a.Tick, a.Line, a.Col, maxn, maxText); err != nil {
+	if err := m.nvim.ExecLuaResult(webLuaLsp, &res, id, kind, b.buf, a.Tick, a.Line, a.Col, maxn, maxText, query); err != nil {
 		webFail(call, err)
 		return nil
 	}
@@ -393,9 +439,32 @@ func (m *Model) webLspDone(id int, raw string) {
 		w.call.reply(webLspHover(out.MD))
 	case "complete":
 		w.call.reply(webLspCompletion(out))
+	case "wsymbols":
+		w.call.reply(webLspSymbols(out, m.webRel))
 	default:
 		w.call.reply(webLspLocations(out, m.webRel, w.kind == "references"))
 	}
+}
+
+// webLspSymbols keeps the symbols in the workspace, paths relative.
+func webLspSymbols(out webLspOut, rel func(string) (string, bool)) webproto.LspSymbols {
+	res := webproto.LspSymbols{Items: []webproto.LspSymbol{}, Cut: out.Cut}
+	for _, s := range out.Syms {
+		if len(res.Items) == webproto.MaxWorkspaceSymbols {
+			res.Cut = true
+			break
+		}
+		p, in := rel(s.File)
+		if !in || p == "" || s.Name == "" || s.Line < 0 || s.Col < 0 {
+			continue
+		}
+		it := webproto.LspSymbol{Name: webDiagCut(s.Name, webproto.MaxCompleteText), Path: p, Line: s.Line, Col: s.Col, Container: webDiagCut(s.Container, webproto.MaxCompleteText)}
+		if s.Kind >= 1 && s.Kind <= 26 {
+			it.Kind = s.Kind
+		}
+		res.Items = append(res.Items, it)
+	}
+	return res
 }
 
 // webLspHover makes the hover's markdown an AST.
