@@ -305,6 +305,58 @@ export interface BufTickArgs {
   tick: number;
 }
 
+export interface HTTPSendArgs {
+  path?: string;
+  index?: number;
+  method?: string;
+  url?: string;
+  headers?: HTTPHeader[];
+  body?: string;
+  env?: string;
+  history?: string;
+  saved?: number;
+}
+
+export interface HTTPHeader {
+  name: string;
+  value: string;
+}
+
+export interface HTTPRunArgs {
+  run?: number;
+}
+
+export interface HTTPEnvArgs {
+  name: string;
+}
+
+export interface HTTPSaveArgs {
+  run?: number;
+  path?: string;
+  index?: number;
+  name: string;
+}
+
+export interface HTTPCurlArgs {
+  run?: number;
+  path?: string;
+  index?: number;
+}
+
+export interface HTTPImportArgs {
+  curl: string;
+  path?: string;
+}
+
+export interface HTTPNewFileArgs {
+  path: string;
+}
+
+export interface HTTPSaveBodyArgs {
+  run?: number;
+  path: string;
+}
+
 export interface BufLineArgs {
   buf: number;
   line: number;
@@ -522,6 +574,108 @@ export interface RegistryArgs {
   host: string;
 }
 
+export interface DBTableArgs {
+  conn: string;
+  table: string;
+}
+
+export interface DBExplainArgs {
+  conn: string;
+  sql: string;
+  analyze?: boolean;
+}
+
+export interface DBConnArgs {
+  conn: string;
+}
+
+export interface DBCompareArgs {
+  conn: string;
+  target: string;
+}
+
+export interface DBHistoryArgs {
+  conn?: string;
+}
+
+export interface RedisKeysArgs {
+  conn: string;
+  db?: number;
+  pattern?: string;
+}
+
+export interface DBEditArgs {
+  conn: string;
+  table: string;
+  edits: DBEdit[];
+}
+
+export interface DBEdit {
+  kind: "update" | "insert" | "delete";
+  key?: DBColValue[];
+  set?: DBColValue[];
+  old?: DBColValue[];
+}
+
+export interface DBColValue {
+  col: string;
+  v?: string;
+  n?: boolean;
+}
+
+export interface DBImportArgs {
+  conn: string;
+  table: string;
+  path: string;
+  noheader?: boolean;
+}
+
+export interface RedisKeyArgs {
+  conn: string;
+  db?: number;
+  key: string;
+  verb: "delete" | "ttl";
+  ttl?: number;
+}
+
+export interface DBAddArgs {
+  id: string;
+  name?: string;
+  driver: "postgres" | "mysql" | "sqlite" | "redis";
+  host?: string;
+  port?: number;
+  user?: string;
+  database?: string;
+  path?: string;
+  db?: number;
+  env?: string;
+  readonly?: boolean;
+}
+
+export interface DBSSHArgs {
+  conn: string;
+  host?: string;
+  port?: number;
+  user?: string;
+  auth?: "agent" | "key" | "password";
+  keyfile?: string;
+  jump?: string[];
+  remove?: boolean;
+}
+
+export interface DBSSLArgs {
+  conn: string;
+  mode: "disable" | "require" | "verify-ca" | "verify-full";
+  ca?: string;
+  cert?: string;
+  key?: string;
+}
+
+export interface DBTxArgs {
+  conn: string;
+  verb: "commit" | "rollback" | "manual" | "auto";
+}
+
 export interface GitLinesArgs {
   path: string;
   from: number;
@@ -619,10 +773,6 @@ export interface GitCheckoutArgs {
 
 export interface GitStashArgs {
   message?: string;
-}
-
-export interface DBConnArgs {
-  conn: string;
 }
 
 export interface DBRowsArgs {
@@ -1610,6 +1760,107 @@ export interface FileText {
   truncated?: boolean;
 }
 
+export interface HTTPFiles {
+  files: HTTPFile[];
+  env?: string;
+  envs: string[];
+  more?: number;
+}
+
+export interface HTTPFile {
+  path: string;
+  requests: HTTPReqItem[];
+  err?: string;
+}
+
+export interface HTTPReqItem {
+  index: number;
+  name?: string;
+  method: string;
+  url: string;
+  line?: number;
+}
+
+export interface HTTPSent {
+  run?: number;
+  card?: string;
+  host?: string;
+}
+
+export interface HTTPResponse {
+  run: number;
+  running?: boolean;
+  by?: string;
+  label: string;
+  method: string;
+  url: string;
+  file?: string;
+  env?: string;
+  req_headers: HTTPHeader[];
+  status?: number;
+  status_text?: string;
+  proto?: string;
+  elapsed_ms?: number;
+  size?: number;
+  content_type?: string;
+  headers: HTTPHeader[];
+  body?: string;
+  binary?: boolean;
+  truncated?: boolean;
+  hops?: string[];
+  err?: string;
+}
+
+export interface HTTPHistory {
+  entries: HTTPHistItem[];
+}
+
+export interface HTTPHistItem {
+  id: string;
+  at: number;
+  method: string;
+  url: string;
+  status?: number;
+  err?: string;
+  elapsed_ms?: number;
+  size?: number;
+  file?: string;
+  name?: string;
+  env?: string;
+  by?: string;
+}
+
+export interface HTTPEnvs {
+  selected?: string;
+  files: string[];
+  envs: HTTPEnv[];
+}
+
+export interface HTTPEnv {
+  name: string;
+  vars: HTTPVar[];
+}
+
+export interface HTTPVar {
+  name: string;
+  value?: string;
+  hidden?: boolean;
+}
+
+export interface HTTPPath {
+  path: string;
+  line?: number;
+  size?: number;
+}
+
+export interface HTTPSaved {
+  requests: HTTPReqItem[];
+}
+
+export interface HTTPCurl {
+  curl: string;
+}
+
 export interface LspHover {
   md?: MdNode;
   none?: boolean;
@@ -2027,6 +2278,71 @@ export interface ServicesConfig {
   created?: boolean;
 }
 
+export interface DBText {
+  text: string;
+}
+
+export interface DBPlan {
+  lines: DBPlanLine[];
+  summary?: string[];
+  analyze?: boolean;
+  truncated?: boolean;
+  ms: number;
+}
+
+export interface DBPlanLine {
+  depth: number;
+  text: string;
+  detail?: boolean;
+  costly?: boolean;
+}
+
+export interface DBDone {
+  text: string;
+  ms?: number;
+}
+
+export interface DBCompare {
+  script: string;
+  changes: number;
+  destructive?: number;
+  truncated?: boolean;
+}
+
+export interface DBHistory {
+  entries: DBHistoryEntry[];
+}
+
+export interface DBHistoryEntry {
+  conn: string;
+  sql: string;
+  at: number;
+  ms?: number;
+  rows?: number;
+}
+
+export interface DBFiles {
+  files: string[];
+  more?: number;
+}
+
+export interface DBConfigFile {
+  path: string;
+  created?: boolean;
+}
+
+export interface RedisKeys {
+  db: number;
+  keys: RedisKey[];
+  more?: boolean;
+}
+
+export interface RedisKey {
+  key: string;
+  type: string;
+  ttl: number;
+}
+
 export interface CIFixPrompt {
   prompt: string;
 }
@@ -2192,6 +2508,10 @@ export interface DBConn {
   readonly?: boolean;
   problem?: string;
   sql: boolean;
+  connected?: boolean;
+  manual?: boolean;
+  tx?: boolean;
+  writes?: number;
 }
 
 export interface DBTables {
@@ -2214,6 +2534,7 @@ export interface DBRows {
   truncated?: boolean;
   masked?: number;
   ms: number;
+  key?: string[];
 }
 
 export interface DBCell {
@@ -2422,6 +2743,20 @@ export interface OpArgs {
   "buf.reload": BufArgs;
   "buf.markdown": BufArgs;
   "file.text": PathArgs;
+  "http.files": EmptyArgs;
+  "http.send": HTTPSendArgs;
+  "http.cancel": EmptyArgs;
+  "http.response": HTTPRunArgs;
+  "http.history": EmptyArgs;
+  "http.envs": EmptyArgs;
+  "http.env_select": HTTPEnvArgs;
+  "http.env_file": EmptyArgs;
+  "http.saved": EmptyArgs;
+  "http.save": HTTPSaveArgs;
+  "http.curl": HTTPCurlArgs;
+  "http.import_curl": HTTPImportArgs;
+  "http.new_file": HTTPNewFileArgs;
+  "http.save_body": HTTPSaveBodyArgs;
   "lsp.hover": LspPosArgs;
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
@@ -2504,6 +2839,24 @@ export interface OpArgs {
   "services.start_all": EmptyArgs;
   "services.stop_all": EmptyArgs;
   "services.configure": EmptyArgs;
+  "db.ddl": DBTableArgs;
+  "db.explain": DBExplainArgs;
+  "db.test": DBConnArgs;
+  "db.compare": DBCompareArgs;
+  "db.history": DBHistoryArgs;
+  "db.csv_files": EmptyArgs;
+  "db.cancel": DBConnArgs;
+  "db.connect": DBConnArgs;
+  "db.config": EmptyArgs;
+  "redis.keys": RedisKeysArgs;
+  "db.edit": DBEditArgs;
+  "db.import": DBImportArgs;
+  "redis.key": RedisKeyArgs;
+  "db.add": DBAddArgs;
+  "db.ssh": DBSSHArgs;
+  "db.ssl": DBSSLArgs;
+  "db.disconnect": DBConnArgs;
+  "db.tx": DBTxArgs;
   "ci.fix_prompt": EmptyArgs;
   "git.stage_lines": GitLinesArgs;
   "git.unstage_lines": GitLinesArgs;
@@ -2644,6 +2997,17 @@ export interface OpResult {
   "buf.reload": EditRes;
   "buf.markdown": BufMarkdown;
   "file.text": FileText;
+  "http.files": HTTPFiles;
+  "http.send": HTTPSent;
+  "http.response": HTTPResponse;
+  "http.history": HTTPHistory;
+  "http.envs": HTTPEnvs;
+  "http.env_file": HTTPPath;
+  "http.saved": HTTPSaved;
+  "http.curl": HTTPCurl;
+  "http.import_curl": HTTPPath;
+  "http.new_file": HTTPPath;
+  "http.save_body": HTTPPath;
   "lsp.hover": LspHover;
   "lsp.complete": LspCompletion;
   "lsp.definition": LspLocations;
@@ -2717,6 +3081,24 @@ export interface OpResult {
   "services.start_all": HostDone;
   "services.stop_all": AskRef;
   "services.configure": ServicesConfig;
+  "db.ddl": DBText;
+  "db.explain": DBPlan;
+  "db.test": DBDone;
+  "db.compare": DBCompare;
+  "db.history": DBHistory;
+  "db.csv_files": DBFiles;
+  "db.cancel": DBDone;
+  "db.connect": DBDone;
+  "db.config": DBConfigFile;
+  "redis.keys": RedisKeys;
+  "db.edit": AskRef;
+  "db.import": AskRef;
+  "redis.key": AskRef;
+  "db.add": AskRef;
+  "db.ssh": AskRef;
+  "db.ssl": AskRef;
+  "db.disconnect": AskRef;
+  "db.tx": AskRef;
   "ci.fix_prompt": CIFixPrompt;
   "git.discard_lines": AskRef;
   "git.discard_hunk": AskRef;

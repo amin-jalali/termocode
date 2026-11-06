@@ -216,6 +216,12 @@ func goldenExtras() []Scene {
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
+		// Blame (GITX-3, GITX-4): annotations beside every line, the
+		// cursor line's blame at its end and in the status bar; the
+		// Blame Options picker.
+		{Name: "editor-blame", Steps: WithEditor(Act("palette:git-blame-annotate"), Pause(600*time.Millisecond),
+			Act("palette:git-inline-blame"), Pause(400*time.Millisecond), Act("palette:git-status-blame"), Pause(1500*time.Millisecond))},
+		{Name: "blame-options", Steps: WithEditor(Act("palette:git-blame-options"), Pause(600*time.Millisecond))},
 		// History edits from the GRAPH (GITX-17): D on the oldest commit
 		// opens the Cancel-first Drop card.
 		{Name: "drop-commit-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-focus"), Key("G"), Key("D"), Pause(600 * time.Millisecond)}},

@@ -66,7 +66,7 @@ import { DeskDB } from "../views/desk/DeskDB";
 import { DeskDevice, DeskSettings } from "../views/desk/DeskSettings";
 import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
 import { CtrTab } from "../views/desk/CtrTab";
-import { DBQueryTab, DBTableTab } from "../views/desk/DBTabs";
+import { DBHistoryTab, DBQueryTab, DBTableTab, DBTextTab } from "../views/desk/DBTabs";
 import { DeskMCP, MCPAgentTab } from "../views/desk/DeskMCP";
 import { vtabIcon, vtabOf } from "../lib/vtabs";
 import { MDPreview } from "../views/MDPreview";
@@ -82,6 +82,7 @@ import { ProblemsView } from "../views/ProblemsView";
 import { StatusBar } from "./StatusBar";
 import { panelsAround, panelViews, sideView as registeredSideView, type PanelDef } from "../lib/views";
 import "../views/run/index";
+import "../views/http/index";
 
 /** Sash is a drag handle between two panes. It reports the new size from
  * the size at the start plus the pointer's move (dir -1: the pane is on
@@ -340,6 +341,8 @@ function EditorBody({ more, file, slot }: { more: boolean; file: string | null; 
   const v = file ? vtabOf(file) : null;
   if (v?.kind === "db") return <DBTableTab key={file} conn={v.conn} table={v.table} slot={slot} />;
   if (v?.kind === "sql") return <DBQueryTab key={file} conn={v.conn} slot={slot} />;
+  if (v?.kind === "ddl" || v?.kind === "scmp") return <DBTextTab key={file} kind={v.kind} conn={v.conn} table={v.table} slot={slot} />;
+  if (v?.kind === "dbh") return <DBHistoryTab key={file} />;
   if (v?.kind === "mcp") return <MCPAgentTab key={file} name={v.name} slot={slot} />;
   if (v?.kind === "ctr") return <CtrTab key={file} what={v.what} arg={v.arg} label={v.label} slot={slot} />;
   if (v?.kind === "md") return <MDPreview key={file} path={v.path} />;

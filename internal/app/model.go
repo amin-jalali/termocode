@@ -245,6 +245,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitBlame is the current file's blame and the blame settings
+	// (git_blame_view.go).
+	gitBlame gitBlameState
 	// gitBranchRef is the branch / start ref a branch card or prompt is
 	// about (git_branch_ops.go).
 	gitBranchRef string

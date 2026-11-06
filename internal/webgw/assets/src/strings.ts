@@ -560,6 +560,8 @@ export const S = {
   "sv.collapse": "Collapse All",
   "scm.more_actions": "More Actions…",
   "dbv.query_tab": "Query: {conn}",
+  "dbv.ddl_tab": "DDL: {table}",
+  "dbv.history": "SQL History",
   "mcpv.running": "Running",
   "chat.insert": "Insert into the Editor",
   "chat.agent": "The agent profile and model of this chat",
@@ -698,6 +700,7 @@ export const S = {
   "ai.model": "AI model",
   "ai.use_profile": "Use profile {name} for the next chat messages?",
   "ai.use_model": "Use model {name} for the AI chat?",
+  // HTTP client (WEBP-HTTP)
   "chat.rename": "Rename Chat…",
   "chat.rename_to": "New title",
   "chat.renamed": "Chat renamed",

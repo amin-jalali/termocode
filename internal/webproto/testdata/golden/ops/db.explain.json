@@ -1,0 +1,1 @@
+{"t":"req","id":71,"op":"db.explain","args":{"conn":"local","sql":"select * from users where id = 7","analyze":true}}

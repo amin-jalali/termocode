@@ -21,5 +21,6 @@ type webMorePub struct {
 	host     *webHostSeen                      // what containers.host listed last (the image, storage, context and registry actions take one)
 	rebase   *webRebasePlan                    // the list git.rebase_plan gave last (git.rebase takes its rows)
 	prs      map[int]ghci.PRDetail             // the pull requests pr.view read last (the action cards name them)
+	db       *webDBState                       // the Databases ops' state (web_db_more.go)
 	gitLists webGitLists                       // the tags, stash entries and reflog the git lists gave last (web_git_lists.go)
 }
