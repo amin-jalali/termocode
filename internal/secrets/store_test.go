@@ -307,3 +307,31 @@ func TestOpenKeepsExistingPlainFile(t *testing.T) {
 		}
 	}
 }
+
+// An MCP account label is not a secret on any backend: the plain one
+// keeps it in the old file, but Get must not register it for redaction
+// (the chat showed a GitHub login as [REDACTED]).
+func TestStoreNeverRegistersAccountLabels(t *testing.T) {
+	dir := t.TempDir()
+	var registered []string
+	s, err := Open(Options{Dir: dir, Backend: "plain", PlainPath: filepath.Join(dir, "credentials.json"),
+		Register: func(v string) { registered = append(registered, v) }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Set("mcp.account.github", "perkino-deals"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Set("mcp.secret.github", "gho_"+"fake-token-value"); err != nil {
+		t.Fatal(err)
+	}
+	if v, ok, err := s.Get("mcp.account.github"); v != "perkino-deals" || !ok || err != nil {
+		t.Fatalf("Get account = %q %v %v", v, ok, err)
+	}
+	if _, _, err := s.Get("mcp.secret.github"); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(registered, []string{"gho_" + "fake-token-value"}) {
+		t.Fatalf("registered %q, want only the token", registered)
+	}
+}

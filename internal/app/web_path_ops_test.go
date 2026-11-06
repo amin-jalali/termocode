@@ -25,6 +25,12 @@ func webPathFields(v any) []reflect.Value {
 	return out
 }
 
+// webPathOpArgs are args of ops whose golden request has no use for its
+// path field: db.add takes a path only for a sqlite file (no host).
+var webPathOpArgs = map[string]string{
+	webproto.OpDBAdd: `{"id":"app","driver":"sqlite","path":"app.db"}`,
+}
+
 // Spec (T40): every op that takes a path resolves it inside the
 // workspace with symlinks followed: a path that passes the wire rules
 // (relative, no "..") but leads outside through a symlink is refused by
@@ -70,7 +76,11 @@ func TestEveryPathOpUsesResolve(t *testing.T) {
 			continue // no handler yet: the hub answers not_found
 		}
 		for _, bad := range []string{"out/secret.txt", "out"} {
-			args, err := webproto.DecodeArgs(p.Op, webGoldenArgs(t, p.Op))
+			golden := webGoldenArgs(t, p.Op)
+			if a, ok := webPathOpArgs[p.Op]; ok {
+				golden = json.RawMessage(a) // the golden's shape takes no path
+			}
+			args, err := webproto.DecodeArgs(p.Op, golden)
 			if err != nil {
 				t.Fatal(err)
 			}

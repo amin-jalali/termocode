@@ -12,7 +12,7 @@ import (
 // (Cancel first), then the laptop.
 func TestGitUndoAsks(t *testing.T) {
 	p, c := openDeskSCM(t, nil)
-	runCmd(t, p, c, "Git: Undo Last Git Action…", true)
+	runGitCmd(t, p, c, "Git: Undo Last Git Action…", true)
 	reply(t, c, expectOp(t, c, "git.undo_plan", `{}`), map[string]any{"title": "Undo the last git action?", "text": "Last action: commit 'fix x'.\n\nHEAD (main) goes back to a1b2c3d 'first'.", "action": "Undo"})
 	p.WaitJS(`document.querySelector(".ask-text")?.textContent.includes("HEAD (main) goes back to a1b2c3d") && document.activeElement === document.querySelector(".ask .choices button")`)
 	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
@@ -24,7 +24,7 @@ func TestGitUndoAsks(t *testing.T) {
 // Git: Redo Undone Git Action asks here, then the laptop.
 func TestGitRedoAsks(t *testing.T) {
 	p, c := openDeskSCM(t, nil)
-	runCmd(t, p, c, "Git: Redo Undone Git Action", true)
+	runGitCmd(t, p, c, "Git: Redo Undone Git Action", true)
 	p.WaitJS(`document.querySelector(".ask") && document.activeElement === document.querySelector(".ask .choices button")`)
 	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
 	p.TapJS(ButtonByText("Ask the laptop"))
@@ -36,7 +36,7 @@ func TestGitRedoAsks(t *testing.T) {
 // HEAD back there, then asks.
 func TestGitReflogPick(t *testing.T) {
 	p, c := openDeskSCM(t, nil)
-	runCmd(t, p, c, "Git: Reflog…", true)
+	runGitCmd(t, p, c, "Git: Reflog…", true)
 	reply(t, c, waitReq(t, c, "git.reflog"), map[string]any{"entries": []map[string]any{
 		{"hash": "c3c3c3c", "summary": "commit 'add c'", "when": 1700000300000},
 		{"hash": "b2b2b2b", "summary": "commit 'add b'", "when": 1700000200000},
@@ -57,7 +57,7 @@ func TestGitReflogPick(t *testing.T) {
 // shows the laptop's plan, then asks.
 func TestGitFixupPick(t *testing.T) {
 	p, c := openDeskSCM(t, nil)
-	runCmd(t, p, c, "Git: Fixup Staged Changes Into…", true)
+	runGitCmd(t, p, c, "Git: Fixup Staged Changes Into…", true)
 	g := graphRows()
 	reply(t, c, expectOp(t, c, "git.graph", `{"head":true}`), g)
 	p.WaitJS(`document.querySelectorAll(".quick-row").length === ` + itoa(len(g.Rows)))
