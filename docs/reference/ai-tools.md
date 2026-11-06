@@ -2121,6 +2121,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-ai-explain-changes` | Git: Explain Changes with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-explain-line` | Git: Explain Line's Commit with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-pr-text` | Git: Write Pull Request Description with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-review-branch` | Git: AI Review Branch (Pull Request) | never | fills the user's chat box; the user reads it and sends it |
+| `git-ai-review-changes` | Git: AI Review My Changes | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-stash` | Git: Stash with AI Message | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-auto-fetch` | Git: Toggle Auto Fetch | never | starts a timer that talks to the remote; only the user turns it on |
 | `git-autosquash` | Git: Autosquash fixup! Commits… | never | rewrites the branch history; only the user starts a rebase |
@@ -2180,6 +2182,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-folder` | Git: Show Folder History… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-search` | Git: Search Log… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
+| `git-merge-ai-resolve` | Git: Merge View: AI Resolve Conflict… | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-branch` | Git: Merge Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-merge-close` | Git: Merge View: Close | auto |   |
 | `git-merge-focus` | Git: Merge View: Merge Keys | auto |   |
@@ -2188,7 +2191,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-merge-pane` | Git: Merge View: Show Next Pane | auto |   |
 | `git-merge-prev` | Git: Merge View: Previous Conflict | auto |   |
 | `git-merge-resolve` | Git: Merge View: Mark as Resolved | never | resolves the user's merge conflict in the merge view; user only |
+| `git-merge-resolve-simple` | Git: Merge View: Resolve Simple Conflicts | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-status` | Git: Merge in Progress (Continue / Abort)… | never | its card asks the user to abort or continue a stopped merge |
+| `git-merge-take-all-ours` | Git: Merge View: Take Ours for the Whole File | never | resolves the user's merge conflict in the merge view; user only |
+| `git-merge-take-all-theirs` | Git: Merge View: Take Theirs for the Whole File | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-base` | Git: Merge View: Take Base | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-both` | Git: Merge View: Take Both (Ours, Then Theirs) | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-both-theirs-first` | Git: Merge View: Take Both (Theirs, Then Ours) | never | resolves the user's merge conflict in the merge view; user only |

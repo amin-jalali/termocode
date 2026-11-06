@@ -346,6 +346,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Git: AI Review Branch (Pull Request) | `git-ai-review-branch` |   |   |
+| Git: AI Review My Changes | `git-ai-review-changes` |   |   |
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
@@ -402,17 +404,21 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Issues… (Start Work on One) | `git-issues` |   |   |
 | Git: Manage Remotes… | `git-remotes` |   |   |
 | Git: Merge Branch… | `git-merge-branch` |   |   |
+| Git: Merge View: AI Resolve Conflict… | `git-merge-ai-resolve` |   | `i` |
 | Git: Merge View: Close | `git-merge-close` |   | `Esc` |
 | Git: Merge View: Mark as Resolved | `git-merge-resolve` |   | `r` |
 | Git: Merge View: Merge Keys | `git-merge-focus` |   | `F6` |
 | Git: Merge View: Next Conflict | `git-merge-next` |   | `n` |
 | Git: Merge View: Previous Conflict | `git-merge-prev` |   | `p` |
+| Git: Merge View: Resolve Simple Conflicts | `git-merge-resolve-simple` |   | `s` |
 | Git: Merge View: Show Next Pane | `git-merge-pane` |   | `v` |
 | Git: Merge View: Take Base | `git-merge-take-base` |   | `a` |
 | Git: Merge View: Take Both (Ours, Then Theirs) | `git-merge-take-both` |   | `b` |
 | Git: Merge View: Take Both (Theirs, Then Ours) | `git-merge-take-both-theirs-first` |   | `B` |
 | Git: Merge View: Take Ours | `git-merge-take-ours` |   | `o` |
+| Git: Merge View: Take Ours for the Whole File | `git-merge-take-all-ours` |   | `O` |
 | Git: Merge View: Take Theirs | `git-merge-take-theirs` |   | `t` |
+| Git: Merge View: Take Theirs for the Whole File | `git-merge-take-all-theirs` |   | `T` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
 | Git: Merge in Progress (Continue / Abort)… | `git-merge-status` |   |   |
 | Git: Open Commit of Line | `git-blame-commit` |   |   |

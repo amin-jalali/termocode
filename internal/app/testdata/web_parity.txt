@@ -436,6 +436,8 @@ missing	git-ai-commit-msg	Git|S
 missing	git-ai-explain-changes	Git|S
 missing	git-ai-explain-line	Git|S
 missing	git-ai-pr-text	Git|S
+missing	git-ai-review-branch	Git|S
+missing	git-ai-review-changes	Git|S
 missing	git-ai-stash	Git|S
 missing	git-auto-fetch	Git|S
 missing	git-autosquash	Git|S
@@ -471,8 +473,12 @@ missing	git-issues	Git|S
 missing	git-line-history	Git|S
 missing	git-log-folder	Git|S
 missing	git-log-search	Git|S
+missing	git-merge-ai-resolve	Git|S
 missing	git-merge-branch	Git|S
+missing	git-merge-resolve-simple	Git|S
 missing	git-merge-status	Git|S
+missing	git-merge-take-all-ours	Git|S
+missing	git-merge-take-all-theirs	Git|S
 missing	git-outgoing	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S
