@@ -1,0 +1,445 @@
+# Web parity gate (WEBP-9). One line per laptop palette command or activity view.
+# kind <TAB> id <TAB> detail. Sorted inside each kind. Reviewed by hand: a new laptop id
+# must be added to exactly one kind, or TestWebParityGate fails.
+#
+# web      id  ref    the web does it: palette (web allow-list), op:<webproto op>, cmd:<workbench command id>, view:<activity id>
+# excluded id  reason why the web will never have it (one line)
+# missing  id  area|size  a gap the web should close; NOT an exclusion
+
+web	ai-agents	cmd:agents
+web	ai-cancel	op:chat.stop
+web	ai-doc	cmd:aiDoc
+web	ai-edit	cmd:aiEdit
+web	ai-explain	cmd:aiExplain
+web	ai-fix	cmd:aiFix
+web	ai-mcp-servers	view:mcp
+web	ai-new-chat	op:chat.new
+web	ai-open-chat	cmd:chat
+web	ai-pick-model	op:ai.use_model
+web	ai-profile-switch	op:ai.use_profile
+web	ai-runs	cmd:runs
+web	ai-toggle-inline	op:ai.complete
+web	ai-toggle-next-edit	op:ai.next_edit
+web	ai-trigger-inline	op:ai.complete
+web	ai-worktrees	op:ai.worktrees
+web	close-buffer	cmd:closeEditor
+web	containers-focus	view:containers
+web	containers-logs	op:containers.logs
+web	containers-refresh	op:containers.list
+web	containers-remove	op:containers.remove
+web	containers-restart	op:containers.restart
+web	containers-start	op:containers.start
+web	containers-stop	op:containers.stop
+web	db-count-rows	op:db.query
+web	db-data	op:db.rows
+web	db-describe	op:db.tables
+web	db-focus	view:db
+web	db-refresh	op:db.conns
+web	db-run	op:db.query
+web	db-select	op:db.query
+web	debug-add-watch	op:debug.watch
+web	debug-clear-bps	op:debug.bp
+web	debug-conditional-bp	op:debug.bp
+web	debug-console	op:debug.eval
+web	debug-continue	op:debug.control
+web	debug-logpoint	op:debug.bp
+web	debug-pause	op:debug.control
+web	debug-restart	op:debug.control
+web	debug-run-nodebug	op:debug.run
+web	debug-select-config	op:debug.select
+web	debug-show-stack	op:debug.frame
+web	debug-show-vars	op:debug.expand
+web	debug-start	op:debug.start
+web	debug-step-into	op:debug.control
+web	debug-step-out	op:debug.control
+web	debug-step-over	op:debug.control
+web	debug-stop	op:debug.control
+web	debug-toggle-breakpoint	op:debug.bp
+web	debug-view	view:run
+web	find-files	cmd:search
+web	find-references	op:lsp.references
+web	git-blame	cmd:gitBlame
+web	git-branch	op:git.branches
+web	git-ci	op:ci.status
+web	git-clone	cmd:gitClone
+web	git-commit	op:git.commit
+web	git-conflict-both	op:git.resolve_side
+web	git-conflict-ours	op:git.resolve_side
+web	git-conflict-theirs	op:git.resolve_side
+web	git-diff	op:git.diff
+web	git-discard	op:git.discard
+web	git-fetch	palette
+web	git-focus	view:git
+web	git-history	op:git.file_log
+web	git-log	cmd:gitGraph
+web	git-merge-open	op:git.conflict
+web	git-merge-resolve	op:git.resolve
+web	git-merge-take-both	op:git.resolve_side
+web	git-merge-take-both-theirs-first	op:git.resolve_side
+web	git-merge-take-ours	op:git.resolve_side
+web	git-merge-take-theirs	op:git.resolve_side
+web	git-pr-create	op:pr.view
+web	git-pr-list	cmd:gitPRs
+web	git-pull	palette
+web	git-push	palette
+web	git-rebase	op:git.rebase_plan
+web	git-rebase-status	op:git.rebase_state
+web	git-refresh	palette
+web	git-stage	op:git.stage
+web	git-stage-all	palette
+web	git-stage-hunk	op:git.stage_hunk
+web	git-stash	palette
+web	git-stash-pop	palette
+web	git-sync	palette
+web	git-unstage-hunk	op:git.unstage_hunk
+web	goto-line	cmd:gotoLine
+web	goto-symbol-file	op:buf.symbols
+web	hover	op:lsp.hover
+web	kubernetes-context	op:kube.contexts
+web	kubernetes-namespace	op:kube.namespaces
+web	kubernetes-refresh	op:kube.list
+web	kubernetes-show	view:kube
+web	next-buffer	cmd:nextEditor
+web	next-diagnostic	cmd:problems
+web	open-settings-ui	cmd:settings
+web	pick-theme	cmd:themeDark
+web	prev-buffer	cmd:prevEditor
+web	prev-diagnostic	cmd:problems
+web	problems	cmd:problems
+web	quick-open	cmd:quickOpen
+web	reveal-fs	op:tree.reveal_on_laptop
+web	run-doctor	palette
+web	run-tests	palette
+web	save	op:buf.save
+web	save-all	palette
+web	services-focus	view:services
+web	services-logs	op:services.logs
+web	services-refresh	op:services.refresh
+web	services-restart	op:services.restart
+web	services-start	op:services.start
+web	services-stop	op:services.stop
+web	split-horizontal	cmd:splitDown
+web	split-vertical	cmd:splitRight
+web	terminal-close-tab	op:term.close
+web	terminal-maximize	cmd:panelMax
+web	terminal-new-tab	op:term.new
+web	testing-debug-cursor	op:tests.debug
+web	testing-focus	view:testing
+web	testing-refresh	palette
+web	testing-rerun-failed	palette
+web	testing-results	op:tests.output
+web	testing-run-all	palette
+web	testing-run-cursor	op:tests.run
+web	testing-run-file	op:tests.run
+web	testing-stop	palette
+web	toggle-auto-save	palette
+web	toggle-explorer	cmd:sidebar
+web	toggle-terminal	cmd:terminal
+web	toggle-wrap	cmd:wrap
+web	transfer-download	op:file.download
+web	transfer-upload	op:file.upload_begin
+web	view-output	cmd:tasks
+web	web-pair	op:web.pair_ask
+web	web-share	op:web.grant_ask
+web	web-totp	op:web.totp_check
+excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
+excluded	ai-credentials	security: credentials file is laptop only
+excluded	ai-doctor	laptop only: checks the laptop setup
+excluded	ai-mcp-config	laptop only: edits the MCP config file
+excluded	ai-profile-trust	security: trust decisions are made on the laptop
+excluded	ai-sign-in-claude	security: OAuth sign-in happens on the laptop
+excluded	ai-sign-out-claude	security: credentials are managed on the laptop
+excluded	buffer-info	laptop only: TUI status overlay
+excluded	cheat-sheet	laptop only: TUI shortcut sheet (the web has its own keys sheet)
+excluded	clipboard-history	laptop only: the laptop clipboard is never shared with the web
+excluded	config-commands	laptop only: opens a laptop config file in the TUI
+excluded	config-theme	laptop only: opens a laptop config file in the TUI
+excluded	containers-copy-id	laptop only: copies to the laptop clipboard
+excluded	containers-help	laptop only: opens the TUI guide
+excluded	copy-file-ref	laptop only: copies to the laptop clipboard
+excluded	customize-keybindings	laptop only: edits laptop key bindings
+excluded	dap-install	laptop only: installs a debug adapter on the laptop disk
+excluded	db-guide	laptop only: opens the TUI guide
+excluded	detach-session	laptop only: detaches the laptop terminal; the web has its own connection
+excluded	edit-custom-theme	laptop only: edits a laptop config file
+excluded	error-log	laptop only: TUI error log overlay
+excluded	ext-manage-install-samples	laptop only: extensions run on the laptop
+excluded	ext-manage-log	laptop only: extensions run on the laptop
+excluded	ext-manage-new	laptop only: extensions run on the laptop
+excluded	ext-manage-new-process	laptop only: extensions run on the laptop
+excluded	ext-manage-open-folder	laptop only: extensions run on the laptop
+excluded	ext-manage-reload	laptop only: extensions run on the laptop
+excluded	find-files-overlay	laptop only: a TUI overlay; the web has the Search view
+excluded	focus-editor	laptop only: moves keyboard focus between laptop panes
+excluded	focus-explorer	laptop only: moves keyboard focus between laptop panes
+excluded	git-merge-close	laptop only: closes the TUI merge view
+excluded	git-merge-focus	laptop only: TUI merge pane keys
+excluded	git-merge-pane	laptop only: TUI merge pane focus
+excluded	git-merge-undo	laptop only: TUI merge view undo (web editor has its own undo)
+excluded	help-context	laptop only: explains TUI widgets
+excluded	help-guide	laptop only: opens the TUI guide
+excluded	http-env-open-private	security: private environment file stays on the laptop
+excluded	layout-delete	laptop only: TUI pane layouts
+excluded	layout-open	laptop only: TUI pane layouts
+excluded	layout-reset	laptop only: TUI pane layouts
+excluded	layout-save	laptop only: TUI pane layouts
+excluded	lsp-manage	laptop only: installs language servers on the laptop disk
+excluded	open-docs	laptop only: opens docs in the laptop browser
+excluded	open-shell	laptop only: opens an external shell window on the laptop
+excluded	prefs-import-editor	laptop only: imports from other editors on the laptop disk
+excluded	prefs-import-undo	laptop only: undo of a laptop import
+excluded	quit	laptop only: ends the IDE the page is talking to
+excluded	reload-window	laptop only: restarts the IDE process the web depends on
+excluded	reset-session	laptop only: clears the laptop tabs and cursor history
+excluded	search-next-result	laptop only: moves the TUI search cursor
+excluded	search-prev-result	laptop only: moves the TUI search cursor
+excluded	secrets-lock	security: secrets stay on the laptop
+excluded	secrets-migrate	security: secrets stay on the laptop
+excluded	secrets-passphrase	security: the passphrase is never typed in a browser
+excluded	secrets-store	security: secrets stay on the laptop
+excluded	secrets-unlock	security: secrets stay on the laptop, never typed in a browser
+excluded	services-trust	security: trust decisions are made on the laptop
+excluded	settings-export	laptop only: writes a settings file on the laptop
+excluded	settings-import	laptop only: reads a settings file from the laptop
+excluded	setup-show-card	laptop only: first-run setup card
+excluded	terminal-close-pane	laptop only: laptop terminal pane layout
+excluded	terminal-focus-next-pane	laptop only: laptop terminal pane focus
+excluded	terminal-focus-prev-pane	laptop only: laptop terminal pane focus
+excluded	terminal-grow-pane	laptop only: laptop terminal pane size
+excluded	terminal-minimize	laptop only: terminal panel sizing (web has panel max/toggle)
+excluded	terminal-next-tab	laptop only: tab cycling by laptop keys; the web has tabs to click
+excluded	terminal-prev-tab	laptop only: tab cycling by laptop keys; the web has tabs to click
+excluded	terminal-shrink-pane	laptop only: laptop terminal pane size
+excluded	terminal-split-down	laptop only: laptop terminal pane layout
+excluded	terminal-split-right	laptop only: laptop terminal pane layout
+excluded	toggle-actions-panel	laptop only: toggles the laptop actions panel
+excluded	toggle-key-hints	laptop only: key hints of the TUI
+excluded	transfer-cancel	covered by the page: cancel is a button on the web transfer
+excluded	transfer-reveal	laptop only: shows a folder on the laptop disk
+excluded	update-check	laptop only: updates the termocode binary, never from a remote page
+excluded	update-rollback	laptop only: updates the termocode binary, never from a remote page
+excluded	web-copy-link	laptop only: copies to the laptop clipboard
+excluded	web-start	laptop only: starts the web panel itself
+excluded	web-start-panel	laptop only: starts the web panel itself
+excluded	web-stop	laptop only: stops the web panel itself
+excluded	zen-mode	laptop only: hides laptop chrome; the web has its own panels
+missing	ai-add	Itermoc and AI setup|M
+missing	ai-apply-code	AI chat and agents|M
+missing	ai-apply-proposal	AI chat and agents|M
+missing	ai-attach	AI chat and agents|M
+missing	ai-auto-approve	AI chat and agents|M
+missing	ai-configure	AI chat and agents|M
+missing	ai-discard-proposal	AI chat and agents|M
+missing	ai-edit-review	AI chat and agents|M
+missing	ai-export-chat	AI chat and agents|M
+missing	ai-fork-chat	AI chat and agents|M
+missing	ai-handoff	AI chat and agents|M
+missing	ai-history	AI chat and agents|M
+missing	ai-history-clear	AI chat and agents|M
+missing	ai-history-delete	AI chat and agents|M
+missing	ai-history-rename	AI chat and agents|M
+missing	ai-hooks	AI chat and agents|M
+missing	ai-keep-going	AI chat and agents|M
+missing	ai-mcp-background	AI chat and agents|M
+missing	ai-mcp-bundle	AI chat and agents|M
+missing	ai-mcp-catalog	AI chat and agents|M
+missing	ai-mcp-connect	AI chat and agents|M
+missing	ai-mcp-insert	AI chat and agents|M
+missing	ai-mcp-log	AI chat and agents|M
+missing	ai-mcp-profile	AI chat and agents|M
+missing	ai-mcp-reconnect-all	AI chat and agents|M
+missing	ai-mcp-reset-cache	AI chat and agents|M
+missing	ai-mcp-updates	AI chat and agents|M
+missing	ai-memory	AI chat and agents|M
+missing	ai-memory-toggle	AI chat and agents|M
+missing	ai-model-slot-add	Itermoc and AI setup|M
+missing	ai-models-edit	Itermoc and AI setup|M
+missing	ai-plan-approval	AI chat and agents|M
+missing	ai-plan-review	AI chat and agents|M
+missing	ai-plan-worktree	AI chat and agents|M
+missing	ai-profile-edit	Itermoc and AI setup|M
+missing	ai-profile-form	Itermoc and AI setup|M
+missing	ai-profile-new	Itermoc and AI setup|M
+missing	ai-profile-next	Itermoc and AI setup|M
+missing	ai-profile-show	Itermoc and AI setup|M
+missing	ai-reasoning-next	AI chat and agents|M
+missing	ai-review	AI chat and agents|M
+missing	ai-rules	AI chat and agents|M
+missing	ai-ship	AI chat and agents|M
+missing	ai-side	AI chat and agents|M
+missing	ai-skills	AI chat and agents|M
+missing	ai-undo-turn	AI chat and agents|M
+missing	ai-until-done	AI chat and agents|M
+missing	ai-usage	AI chat and agents|M
+missing	ai-web-tools	AI chat and agents|M
+missing	ai-worktrees-toggle	AI chat and agents|M
+missing	alternate-file	Editor and files|S
+missing	bookmark-clear	Editor and files|S
+missing	bookmark-list	Editor and files|S
+missing	bookmark-toggle	Editor and files|S
+missing	close-split	Editor and files|S
+missing	code-action-apply-preferred	Editor and files|S
+missing	code-actions	Editor and files|S
+missing	containers-attach	Containers|M
+missing	containers-browse-tags	Containers|M
+missing	containers-compose-down	Containers|M
+missing	containers-compose-restart	Containers|M
+missing	containers-compose-stop	Containers|M
+missing	containers-compose-up	Containers|M
+missing	containers-context-default	Containers|M
+missing	containers-context-use	Containers|M
+missing	containers-filter	Containers|M
+missing	containers-image-history	Containers|M
+missing	containers-image-inspect	Containers|M
+missing	containers-image-prune	Containers|M
+missing	containers-image-pull	Containers|M
+missing	containers-image-push	Containers|M
+missing	containers-image-remove	Containers|M
+missing	containers-image-run	Containers|M
+missing	containers-image-tag	Containers|M
+missing	containers-inspect	Containers|M
+missing	containers-network-create	Containers|M
+missing	containers-network-prune	Containers|M
+missing	containers-network-remove	Containers|M
+missing	containers-open-databases	Containers|M
+missing	containers-open-port	Containers|M
+missing	containers-pause	Containers|M
+missing	containers-prune	Containers|M
+missing	containers-registry-connect	Containers|M
+missing	containers-registry-signout	Containers|M
+missing	containers-search	Containers|M
+missing	containers-shell	Containers|M
+missing	containers-stats	Containers|M
+missing	containers-system-prune	Containers|M
+missing	containers-volume-create	Containers|M
+missing	containers-volume-disk-usage	Containers|M
+missing	containers-volume-prune	Containers|M
+missing	containers-volume-remove	Containers|M
+missing	db-add	Databases|L
+missing	db-add-tunnel	Databases|L
+missing	db-cancel	Databases|L
+missing	db-commit	Databases|L
+missing	db-compare-schemas	Databases|L
+missing	db-configure	Databases|L
+missing	db-connect	Databases|L
+missing	db-ddl	Databases|L
+missing	db-disconnect	Databases|L
+missing	db-explain	Databases|L
+missing	db-explain-analyze	Databases|L
+missing	db-export	Databases|L
+missing	db-filter	Databases|L
+missing	db-history	Databases|L
+missing	db-import-csv	Databases|L
+missing	db-new-console	Databases|L
+missing	db-result-pin	Databases|L
+missing	db-revert-changes	Databases|L
+missing	db-rollback	Databases|L
+missing	db-run-file	Databases|L
+missing	db-ssl	Databases|L
+missing	db-submit-changes	Databases|L
+missing	db-test-connection	Databases|L
+missing	db-transaction-mode	Databases|L
+missing	debug-open-launch	Debug|S
+missing	diff-files	Editor and files|S
+missing	duplicate-line	Editor and files|S
+missing	explorer-rename-selected	Editor and files|S
+missing	explorer-toggle-preview	Editor and files|S
+missing	explorer-undo-rename	Editor and files|S
+missing	fold-all	Editor and files|S
+missing	format-document	Editor and files|S
+missing	git-ci-fix	Git|S
+missing	git-compare-rev	Git|S
+missing	git-conflict-next	Git|S
+missing	git-conflict-prev	Git|S
+missing	git-discard-hunk	Git|S
+missing	git-discard-lines	Git|S
+missing	git-fixup	Git|S
+missing	git-merge-next	Git|S
+missing	git-merge-prev	Git|S
+missing	git-merge-take-base	Git|S
+missing	git-redo	Git|S
+missing	git-reflog	Git|S
+missing	git-stage-lines	Git|S
+missing	git-stash-list	Git|S
+missing	git-tags	Git|S
+missing	git-undo	Git|S
+missing	git-unstage-lines	Git|S
+missing	git-view-toggle	Git|S
+missing	goto-impl	Editor and files|S
+missing	goto-symbol-workspace	Editor and files|S
+missing	goto-type-def	Editor and files|S
+missing	help-bug-report	AI chat and agents|M
+missing	http-cancel	HTTP client|L
+missing	http-copy-curl	HTTP client|L
+missing	http-env-open	HTTP client|L
+missing	http-env-select	HTTP client|L
+missing	http-history	HTTP client|L
+missing	http-import-curl	HTTP client|L
+missing	http-last-response	HTTP client|L
+missing	http-new-file	HTTP client|L
+missing	http-quick	HTTP client|L
+missing	http-save	HTTP client|L
+missing	http-save-body	HTTP client|L
+missing	http-saved	HTTP client|L
+missing	http-send	HTTP client|L
+missing	http-send-pick	HTTP client|L
+missing	itermoc-agents	Itermoc and AI setup|M
+missing	itermoc-models	Itermoc and AI setup|M
+missing	itermoc-open	Itermoc and AI setup|M
+missing	itermoc-open-ai	Itermoc and AI setup|M
+missing	itermoc-profiles	Itermoc and AI setup|M
+missing	itermoc-services	Itermoc and AI setup|M
+missing	join-lines	Editor and files|S
+missing	lowercase	Editor and files|S
+missing	mcp-import-other	AI chat and agents|M
+missing	mcp-serve-copy-config	AI chat and agents|M
+missing	mcp-serve-status	AI chat and agents|M
+missing	next-hunk	Git|S
+missing	open-recent	Editor and files|S
+missing	open-url	Editor and files|S
+missing	open-workspace	Editor and files|S
+missing	output-clear	Testing and web access|S
+missing	pin-tab	Editor and files|S
+missing	prev-hunk	Git|S
+missing	preview-md	Editor and files|S
+missing	redis-delete-key	Databases|L
+missing	redis-set-ttl	Databases|L
+missing	reload-buffer	Editor and files|S
+missing	reopen-closed	Editor and files|S
+missing	replace-in-file	Editor and files|S
+missing	replace-workspace	Editor and files|S
+missing	reveal-file	Editor and files|S
+missing	reverse-lines	Editor and files|S
+missing	services-configure	Containers|S
+missing	services-open-compose	Containers|S
+missing	services-start-all	Containers|S
+missing	services-stop-all	Containers|S
+missing	snippet-picker	Editor and files|S
+missing	snippets-manage	Editor and files|S
+missing	sort-asc	Editor and files|S
+missing	sort-desc	Editor and files|S
+missing	spaces-to-tabs	Editor and files|S
+missing	tabs-to-spaces	Editor and files|S
+missing	testing-collapse	Testing and web access|S
+missing	toggle-comment	Editor and files|S
+missing	toggle-fold	Editor and files|S
+missing	toggle-hidden	Editor and files|S
+missing	toggle-inlay-hints	Editor and files|S
+missing	trim-blanks	Editor and files|S
+missing	trim-whitespace	Editor and files|S
+missing	unfold-all	Editor and files|S
+missing	uppercase	Editor and files|S
+missing	web-devices	Testing and web access|S
+missing	workspace-add-folder	Editor and files|S
+missing	workspace-remove-folder	Editor and files|S
+web	view/Files	view:files
+web	view/Git	view:git
+web	view/Run	view:run
+web	view/Settings	view:settings
+web	view/Tests	view:testing
+web	view/Services	view:services
+web	view/Databases	view:db
+web	view/Runs	cmd:runs
+web	view/Kubernetes	view:kube
+excluded	view/Search	removed from the laptop activity bar (the enum value is kept for back-compat only)
+missing	view/Itermoc	Itermoc and AI setup|M

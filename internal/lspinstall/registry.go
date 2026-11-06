@@ -26,8 +26,9 @@ type Category int
 const (
 	CategoryLSP Category = iota
 	CategoryDAP
-	// CategoryAgentCLI: the subscription agent CLIs (Claude Code, Codex)
-	// the Add AI card installs; never listed with the language tools.
+	// CategoryAgentCLI: the agent CLIs the Add AI card (Claude Code,
+	// Codex) and Agent: Start… install; never listed with the language
+	// tools.
 	CategoryAgentCLI
 	// CategoryCodeTool: helper tools the AI uses (ast-grep), installed
 	// from the AI's install card; never listed with the language tools.
@@ -263,6 +264,26 @@ var tools = []Tool{
 		InstallKind: KindNpm, Spec: "@openai/codex", Version: "latest",
 		Needs: []string{"node"},
 	},
+	// The other agent presets of Agent: Start… (internal/agents Tool).
+	// Package managers only: no install script, no shell pipe.
+	{Name: "gemini-cli", Label: "Gemini CLI", Category: CategoryAgentCLI, Bin: "gemini",
+		InstallKind: KindNpm, Spec: "@google/gemini-cli", Version: "latest", Needs: []string{"node"}},
+	{Name: "opencode", Label: "OpenCode", Category: CategoryAgentCLI, Bin: "opencode",
+		InstallKind: KindNpm, Spec: "opencode-ai", Version: "latest", Needs: []string{"node"}},
+	{Name: "aider", Label: "Aider", Category: CategoryAgentCLI, Bin: "aider",
+		InstallKind: KindPip, Spec: "aider-chat", Version: "latest"},
+	{Name: "amp", Label: "Amp", Category: CategoryAgentCLI, Bin: "amp",
+		InstallKind: KindNpm, Spec: "@sourcegraph/amp", Version: "latest", Needs: []string{"node"}},
+	{Name: "qwen-code", Label: "Qwen Code", Category: CategoryAgentCLI, Bin: "qwen",
+		InstallKind: KindNpm, Spec: "@qwen-code/qwen-code", Version: "latest", Needs: []string{"node"}},
+	{Name: "crush", Label: "Crush", Category: CategoryAgentCLI, Bin: "crush",
+		InstallKind: KindNpm, Spec: "@charmland/crush", Version: "latest", Needs: []string{"node"}},
+	{Name: "copilot-cli", Label: "Copilot CLI", Category: CategoryAgentCLI, Bin: "copilot",
+		InstallKind: KindNpm, Spec: "@github/copilot", Version: "latest", Needs: []string{"node"}},
+	{Name: "kimi-cli", Label: "Kimi CLI", Category: CategoryAgentCLI, Bin: "kimi",
+		InstallKind: KindPip, Spec: "kimi-cli", Version: "latest"},
+	{Name: "pi", Label: "Pi", Category: CategoryAgentCLI, Bin: "pi",
+		InstallKind: KindNpm, Spec: "@mariozechner/pi-coding-agent", Version: "latest", Needs: []string{"node"}},
 	// ── Code tools ──────────────────────────────────────────────────────
 	{
 		Name: "ast-grep", Label: "Structural search", Category: CategoryCodeTool,
