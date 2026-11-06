@@ -6,6 +6,7 @@ import { prefs, setPref, type Direction, type Language, type Theme } from "../li
 import { go, route } from "../lib/router";
 import { t } from "../strings";
 import { NotifyField } from "../ui/NotifyField";
+import { BookmarkField } from "../ui/BookmarkField";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
 import { RunsView } from "./more/RunsView";
@@ -121,6 +122,7 @@ export function MoreView() {
             <Segmented<Direction> label={t("more.dir")} value={p.dir} choices={dirs} onChange={(v) => setPref("dir", v)} />
           </div>
           <NotifyField />
+          <BookmarkField />
         </section>
         <section class="group" aria-labelledby="g-about">
           <h2 class="group-title" id="g-about">
