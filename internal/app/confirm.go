@@ -242,6 +242,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		if id == "discard" {
 			return m.gitDiscardConfirmed()
 		}
+	case confirmKindGitDiscardAll, confirmKindGitCleanUntracked:
+		return m.onGitBulkConfirm(m.confirmKind, id) // git_bulk.go
 	case confirmKindGitDiscardLines:
 		if id == "discard" {
 			return m.gitDiscardLinesConfirmed()

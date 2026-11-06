@@ -54,6 +54,12 @@ const (
 	gitMenuPull      = "git-pull"
 	gitMenuFetch     = "git-fetch"
 	gitMenuSync      = "git-sync"
+	// GITX-7, GITX-20 (git_bulk.go).
+	gitMenuCommitPush     = "git-commit-push"
+	gitMenuCommitSync     = "git-commit-sync"
+	gitMenuUnstageAll     = "git-unstage-all"
+	gitMenuDiscardAll     = "git-discard-all"
+	gitMenuCleanUntracked = "git-clean-untracked"
 )
 
 // gitFileMenuItems builds the right-click menu for a changed file. willStage
@@ -167,11 +173,17 @@ func gitActionsMenuItems() []menu.Item {
 		{ID: gitMenuAmend, Title: "Commit (Amend)", Icon: "✎"},
 		{ID: gitMenuSignoff, Title: "Commit (Sign-off)", Icon: "✍"},
 		{ID: gitMenuCommitMsg, Title: "Commit Message…", Icon: "≡"},
+		{ID: gitMenuCommitPush, Title: "Commit and Push", Icon: "↑"},
+		{ID: gitMenuCommitSync, Title: "Commit and Sync", Icon: "⟳"},
 		{Sep: true},
 		{ID: gitMenuSync, Title: "Sync", Icon: "⟳"},
 		{ID: gitMenuPush, Title: "Push", Icon: "↑"},
 		{ID: gitMenuPull, Title: "Pull", Icon: "↓"},
 		{ID: gitMenuFetch, Title: "Fetch", Icon: "⇊"},
+		{Sep: true},
+		{ID: gitMenuUnstageAll, Title: "Unstage All", Icon: "−"},
+		{ID: gitMenuDiscardAll, Title: "Discard All Changes…", Icon: "↩"},
+		{ID: gitMenuCleanUntracked, Title: "Delete Untracked Files…", Icon: "✕"},
 		{Sep: true},
 		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
 	}
@@ -209,6 +221,8 @@ func (m *Model) handleGitActionsMenuSelect(id string) tea.Cmd {
 		return m.gitSync()
 	case gitMenuPush:
 		return m.gitPush()
+	case gitMenuCommitPush, gitMenuCommitSync, gitMenuUnstageAll, gitMenuDiscardAll, gitMenuCleanUntracked:
+		return m.dispatchPaletteAction(id)
 	case gitMenuPull:
 		return m.gitPull()
 	case gitMenuFetch:

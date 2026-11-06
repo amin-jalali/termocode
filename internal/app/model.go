@@ -231,6 +231,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitCommitAfter is what follows the commit the stage-all card waits
+	// for: gitAfterPush, gitAfterSync or "" (GITX-7).
+	gitCommitAfter string
 
 	// VSCode-style mouse hover. hoverX/hoverY are the absolute screen cell
 	// under the pointer (or -1 when unknown). mouseAllMotion mirrors the live

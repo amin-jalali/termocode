@@ -167,6 +167,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// ── Git ──
 	"git-stage":           aiConfirm(ai.ClassGit),
 	"git-stage-all":       aiConfirm(ai.ClassGit),
+	"git-unstage-all":     aiConfirm(ai.ClassGit),
+	"git-discard-all":     aiDestructive(), // its card is Cancel-first; a safety stash is kept
+	"git-clean-untracked": aiDestructive(), // deletes new files (a safety stash is kept)
+	"git-commit-push":     aiNever("commits the message the user typed in the box, then pushes; use git_commit, then git_push"),
+	"git-commit-sync":     aiNever("commits the message the user typed in the box, then pushes; use git_commit, then git_push"),
 	"git-stage-hunk":      aiConfirm(ai.ClassGit),
 	"git-unstage-hunk":    aiConfirm(ai.ClassGit),
 	"git-discard-hunk":    aiDestructive(),

@@ -1976,8 +1976,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
 | `git-ci` | Git: CI and Pull Request… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-clean-untracked` | Git: Delete Untracked Files… | confirm (always asks) |   |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
+| `git-commit-push` | Git: Commit and Push | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
+| `git-commit-sync` | Git: Commit and Sync | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-compare-rev` | Git: Compare with Revision... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-conflict-both` | Git: Accept Both Changes (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-conflict-next` | Git: Go to Next Merge Conflict | auto |   |
@@ -1986,6 +1989,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-conflict-theirs` | Git: Accept Incoming Change (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-diff` | Git: Show Diff for Current File | auto |   |
 | `git-discard` | Git: Discard Changes in Current File | confirm (always asks) |   |
+| `git-discard-all` | Git: Discard All Changes… | confirm (always asks) |   |
 | `git-discard-hunk` | Git: Discard Hunk (at cursor) | confirm (always asks) |   |
 | `git-discard-lines` | Git: Discard Line (or Selected Lines) | confirm (always asks) |   |
 | `git-fetch` | Git: Fetch | confirm (git) |   |
@@ -2025,6 +2029,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
+| `git-unstage-all` | Git: Unstage All Changes | confirm (git) |   |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |
 | `git-unstage-lines` | Git: Unstage Line (or Selected Lines) | confirm (git) |   |
 | `git-view-toggle` | Git: Toggle Tree/Flat View | auto |   |

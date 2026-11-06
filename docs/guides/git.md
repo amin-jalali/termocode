@@ -28,8 +28,25 @@ The panel refreshes by itself every two seconds.
 
 If nothing is staged, termocode asks: *Stage all changes?*
 
-The **▾** menu has **Commit (Amend)**, **Commit (Sign-off)**, **Push**,
-**Pull**, **Fetch** and **Refresh**.
+The **▾** menu has **Commit (Amend)**, **Commit (Sign-off)**, **Commit and
+Push**, **Commit and Sync**, **Push**, **Pull**, **Fetch**, **Unstage All**,
+**Discard All Changes…**, **Delete Untracked Files…** and **Refresh**.
+
+**Commit and Push** commits, then pushes. **Commit and Sync** commits, then
+pulls and pushes. Nothing is pushed when the commit fails.
+
+## Throw away all changes
+
+**Git: Discard All Changes…** asks first, and **Cancel** is the choice that
+is ready. **Discard Changes** takes back every change to tracked files,
+staged ones too. New files stay, unless you press **Discard and Delete New
+Files**. **Git: Delete Untracked Files…** removes only the new files.
+Ignored files always stay.
+
+Nothing is lost for good: termocode first saves a safety copy in the stash
+list. The toast names it (for example `stash@{0}`). Open **Git: Show Stash
+List…** and apply it to get your work back. **Git: Unstage All Changes**
+takes every file out of the index and keeps your edits.
 
 Press `t` to switch between a tree view and a flat list. termocode remembers
 your choice.
