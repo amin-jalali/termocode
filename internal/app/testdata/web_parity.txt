@@ -347,6 +347,8 @@ missing	explorer-toggle-preview	Editor and files|S
 missing	explorer-undo-rename	Editor and files|S
 missing	fold-all	Editor and files|S
 missing	format-document	Editor and files|S
+missing	git-ai-review-branch	Git|S
+missing	git-ai-review-changes	Git|S
 missing	git-auto-fetch	Git|S
 missing	git-ci-fix	Git|S
 missing	git-compare-rev	Git|S
@@ -364,8 +366,12 @@ missing	git-ignore-file	Git|S
 missing	git-incoming	Git|S
 missing	git-log-folder	Git|S
 missing	git-log-search	Git|S
+missing	git-merge-ai-resolve	Git|S
 missing	git-merge-next	Git|S
 missing	git-merge-prev	Git|S
+missing	git-merge-resolve-simple	Git|S
+missing	git-merge-take-all-ours	Git|S
+missing	git-merge-take-all-theirs	Git|S
 missing	git-merge-take-base	Git|S
 missing	git-outgoing	Git|S
 missing	git-pull-options	Git|S
