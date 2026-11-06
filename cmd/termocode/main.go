@@ -308,6 +308,8 @@ func run(argv []string) int {
 			return runMCPTop(args[1:])
 		case "agent":
 			return runAgent(args[1:])
+		case "workflow", "workflows":
+			return runWorkflow(args[1:])
 		case "web":
 			return runWeb(args[1:])
 		case "service":

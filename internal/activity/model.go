@@ -30,6 +30,9 @@ const (
 	// ViewKubernetes has no icon: it lives under Containers, whose icon
 	// is lit while it shows (kube_*.go in app).
 	ViewKubernetes
+	// ViewWorkflows is the Workflows view (workflows_*.go in app). Its icon
+	// sits after Runs and shows only while SetWorkflowsShown(true).
+	ViewWorkflows
 	// ViewWorktrees has no icon either: it lives under Source Control,
 	// whose icon is lit while it shows (worktrees_*.go in app).
 	ViewWorktrees
