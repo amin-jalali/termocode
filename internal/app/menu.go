@@ -36,15 +36,16 @@ const (
 
 // Source Control context-menu action IDs.
 const (
-	gitMenuDiff     = "git-diff"
-	gitMenuStage    = "git-stage"
-	gitMenuDiscard  = "git-discard"
-	gitMenuCommit   = "git-commit"
-	gitMenuCopyHash = "git-copy-hash"
-	gitMenuCopyMsg  = "git-copy-message"
-	gitMenuRefresh  = "git-refresh"
-	gitMenuShowRaw  = "git-show-raw"
-	gitMenuRebase   = "git-rebase-from" // git_rebase.go
+	gitMenuDiff      = "git-diff"
+	gitMenuStage     = "git-stage"
+	gitMenuDiscard   = "git-discard"
+	gitMenuCommit    = "git-commit"
+	gitMenuCopyHash  = "git-copy-hash"
+	gitMenuCopyMsg   = "git-copy-message"
+	gitMenuRefresh   = "git-refresh"
+	gitMenuShowRaw   = "git-show-raw"
+	gitMenuRebase    = "git-rebase-from" // git_rebase.go
+	gitMenuResetHere = "git-reset-here"  // git_stash_reset.go
 
 	// Action-bar overflow (⋯) menu.
 	gitMenuAmend     = "git-amend"
@@ -82,6 +83,7 @@ func gitCommitMenuItems() []menu.Item {
 		{ID: gitMenuCopyMsg, Title: "Copy Commit Message", Icon: "⎘"},
 		{ID: gitMenuShowRaw, Title: "Show Raw (git show)", Icon: "≢"},
 		{ID: gitMenuRebase, Title: "Rebase from Here…", Icon: "⇅"},
+		{ID: gitMenuResetHere, Title: "Reset Current Branch to Here…", Icon: "↶"},
 		{Sep: true},
 		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
 	}
@@ -154,6 +156,8 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
 			return m.gitRebaseFromCmd(m.gitCommits[cur.ci].FullHash)
 		}
+	case gitMenuResetHere:
+		return m.gitResetFromRow()
 	case gitMenuRefresh:
 		return fetchGitCmd()
 	}

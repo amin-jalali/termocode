@@ -231,6 +231,9 @@ type Model struct {
 	gitCommitMsg     string
 	gitCommitFocused bool
 	gitCommitCaret   int
+	// gitStashOps is what a stash or reset picker, card or prompt is
+	// about (git_stash_reset.go).
+	gitStashOps gitStashOpsState
 
 	// VSCode-style mouse hover. hoverX/hoverY are the absolute screen cell
 	// under the pointer (or -1 when unknown). mouseAllMotion mirrors the live

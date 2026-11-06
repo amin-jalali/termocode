@@ -286,6 +286,9 @@ func paletteItems() []picker.Item {
 		{ID: "git-log", Title: "Git: Show Log..."},
 		{ID: "git-compare-rev", Title: "Git: Compare with Revision..."},
 		{ID: "git-blame", Title: "Git: Blame Current Line", Hint: "Alt+B"},
+		{ID: "git-stash-options", Title: "Git: Stash…"},                         // git_stash_reset.go
+		{ID: "git-stash-actions", Title: "Git: Stash Actions…"},                 // git_stash_reset.go
+		{ID: "git-uncommit", Title: "Git: Uncommit Last Commit (Keep Changes)"}, // git_stash_reset.go
 		{ID: "git-history", Title: "Git: Show File History..."},
 		{ID: "git-tags", Title: "Git: Show Tags..."},
 		{ID: "zen-mode", Title: "View: Toggle Zen Mode", Hint: "Alt+Z"},
@@ -720,6 +723,12 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.openCompareWithRevisionPrompt()
 	case "git-blame":
 		return m.gitBlameCurrentLine()
+	case "git-stash-options":
+		return m.openStashModePicker()
+	case "git-stash-actions":
+		return m.openStashActionsPicker()
+	case "git-uncommit":
+		return m.gitUncommit()
 	case "git-history":
 		return m.gitFileHistoryPicker()
 	case "git-tags":

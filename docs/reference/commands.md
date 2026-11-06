@@ -386,10 +386,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stage Current File | `git-stage` |   |   |
 | Git: Stage Hunk (at cursor) | `git-stage-hunk` | `Alt+S` | `Alt+S` |
 | Git: Stage Line (or Selected Lines) | `git-stage-lines` | `Alt+Shift+S` | `Alt+Shift+S` |
+| Git: Stash Actions… | `git-stash-actions` |   |   |
 | Git: Stash Changes | `git-stash` |   |   |
+| Git: Stash… | `git-stash-options` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
+| Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |
 | Git: Undo Last Git Action… | `git-undo` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
