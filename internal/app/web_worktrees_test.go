@@ -141,7 +141,7 @@ func TestWorktreesArchiveNeedsLaptopCard(t *testing.T) {
 	m.output = newOutputStore()
 	webTestHub(t, &m)
 	st := webTestWT(t, &m)
-	st.off = true // no git: the laptop's flow shows its card
+	st.off = true      // no git: the laptop's flow shows its card
 	st.filter = "grpc" // the laptop's list hides toast
 	c := webTestSub(t, &m)
 	var ref webproto.AskRef
