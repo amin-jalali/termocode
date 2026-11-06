@@ -1577,6 +1577,60 @@
       "phase": "v2"
     },
     {
+      "op": "git.stage_lines",
+      "args": "GitLinesArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.unstage_lines",
+      "args": "GitLinesArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.discard_lines",
+      "args": "GitLinesArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 8192,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.discard_hunk",
+      "args": "GitHunkArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 8192,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.graph",
       "args": "GitGraphArgs",
       "result": "GitGraph",
@@ -5319,6 +5373,29 @@
       "required": [
         "path",
         "hunk"
+      ],
+      "additionalProperties": false
+    },
+    "GitLinesArgs": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer"
+        },
+        "index": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "to": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "from",
+        "to"
       ],
       "additionalProperties": false
     },

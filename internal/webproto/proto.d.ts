@@ -363,6 +363,13 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface GitLinesArgs {
+  path: string;
+  from: number;
+  to: number;
+  index?: boolean;
+}
+
 export interface GitGraphArgs {
   skip?: number;
   head?: boolean;
@@ -1897,6 +1904,10 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "git.stage_lines": GitLinesArgs;
+  "git.unstage_lines": GitLinesArgs;
+  "git.discard_lines": GitLinesArgs;
+  "git.discard_hunk": GitHunkArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -2034,6 +2045,8 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "git.discard_lines": AskRef;
+  "git.discard_hunk": AskRef;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;

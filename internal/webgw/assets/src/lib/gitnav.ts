@@ -45,3 +45,17 @@ export function setMergeActs(slot: string, a: MergeActs | null): void {
 
 /** scmTree: source control groups the changed files under their folders. */
 export const scmTree = signal(false);
+
+/** GitAsk is a git request that waits for the laptop's card, asked here
+ * first (Cancel first): a discard of rows or a change, an undo, a move
+ * in the reflog, a fixup, a stash entry dropped. */
+export interface GitAsk {
+  op: string;
+  args: Record<string, unknown>;
+  /** label names the action; text says what happens. */
+  label: string;
+  text: string;
+}
+
+/** gitAsk is the open question (views/git/GitAsk.tsx shows it). */
+export const gitAsk = signal<GitAsk | null>(null);

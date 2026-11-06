@@ -1001,7 +1001,8 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     post({ t: "key", key: b.key, code: b.code, ctrl: b.ctrlKey, meta: b.metaKey, shift: b.shiftKey, alt: b.altKey });
   });
   ed.onDidChangeCursorPosition((e) => {
-    post({ t: "cursor", line: e.position.lineNumber, col: e.position.column });
+    const a = aiAt();
+    post({ t: "cursor", line: e.position.lineNumber, col: e.position.column, from: a.start + 1, to: Math.max(a.start + 1, a.end === a.start ? a.end + 1 : a.end) });
     blamePaint();
   });
   ed.onDidScrollChange(viewport);

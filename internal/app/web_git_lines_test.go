@@ -24,31 +24,33 @@ func TestGitStageLinesFromWeb(t *testing.T) {
 	m.output = newOutputStore()
 	webTestHub(t, &m)
 	dir, run := webTestRepo(t, &m)
-	webTestWrite(t, dir, "a.txt", "ONE\nTWO\n")
+	webTestWrite(t, dir, "a.txt", "one\ntwo\nthree\nfour\nfive\n")
+	run("commit", "-q", "-am", "five rows")
+	webTestWrite(t, dir, "a.txt", "ONE\ntwo\nthree\nfour\nFIVE\n")
 	webTestGitLoad(&m)
 	c := webTestSub(t, &m)
 	if f := webTestCallBg(t, &m, c, "git.stage_lines", `{"path":"b.txt","from":1,"to":1}`); webTestErr(f) != "not_found" {
 		t.Fatalf("a file with no changes: %v", f)
 	}
-	if f := webTestCallBg(t, &m, c, "git.stage_lines", `{"path":"a.txt","from":2,"to":2}`); webTestErr(f) != "" {
+	if f := webTestCallBg(t, &m, c, "git.stage_lines", `{"path":"a.txt","from":5,"to":5}`); webTestErr(f) != "" {
 		t.Fatalf("stage lines: %v", f)
 	}
-	if got := webTestIndex(run, "a.txt"); got != "one\nTWO\n" {
-		t.Fatalf("index after staging row 2: %q", got)
+	if got := webTestIndex(run, "a.txt"); got != "one\ntwo\nthree\nfour\nFIVE\n" {
+		t.Fatalf("index after staging row 5: %q", got)
 	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(b) != "ONE\nTWO\n" {
+	if b, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(b) != "ONE\ntwo\nthree\nfour\nFIVE\n" {
 		t.Fatalf("the working file changed: %q", b)
 	}
-	if f := webTestCallBg(t, &m, c, "git.unstage_lines", `{"path":"a.txt","from":2,"to":2}`); webTestErr(f) != "" {
+	if f := webTestCallBg(t, &m, c, "git.unstage_lines", `{"path":"a.txt","from":5,"to":5,"index":true}`); webTestErr(f) != "" {
 		t.Fatalf("unstage lines: %v", f)
 	}
-	if got := webTestIndex(run, "a.txt"); got != "one\ntwo\n" {
-		t.Fatalf("index after unstaging row 2: %q", got)
+	if got := webTestIndex(run, "a.txt"); got != "one\ntwo\nthree\nfour\nfive\n" {
+		t.Fatalf("index after unstaging row 5: %q", got)
 	}
 	if f := webTestCallBg(t, &m, c, "git.unstage_lines", `{"path":"a.txt","from":1,"to":1}`); webTestErr(f) != "conflict" {
 		t.Fatalf("unstage with nothing staged: %v", f)
 	}
-	if a := webTestAudit(&m); !strings.Contains(a, "git.stage_lines  a.txt 2-2") {
+	if a := webTestAudit(&m); !strings.Contains(a, "git.stage_lines  a.txt 5-5") {
 		t.Errorf("audit:\n%s", a)
 	}
 }
@@ -60,8 +62,10 @@ func TestGitDiscardLinesNeedsLaptopCard(t *testing.T) {
 	m := aiTestModel(t)
 	m.output = newOutputStore()
 	webTestHub(t, &m)
-	dir, _ := webTestRepo(t, &m)
-	webTestWrite(t, dir, "a.txt", "ONE\nTWO\n")
+	dir, run := webTestRepo(t, &m)
+	webTestWrite(t, dir, "a.txt", "one\ntwo\nthree\nfour\nfive\n")
+	run("commit", "-q", "-am", "five rows")
+	webTestWrite(t, dir, "a.txt", "ONE\ntwo\nthree\nfour\nFIVE\n")
 	webTestGitLoad(&m)
 	c := webTestSub(t, &m)
 	var ref webproto.AskRef
@@ -72,11 +76,11 @@ func TestGitDiscardLinesNeedsLaptopCard(t *testing.T) {
 	if v := m.confirm.View(); !strings.Contains(v, "line 1 of a.txt") {
 		t.Errorf("card:\n%s", v)
 	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(b) != "ONE\nTWO\n" {
+	if b, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(b) != "ONE\ntwo\nthree\nfour\nFIVE\n" {
 		t.Fatalf("discarded before the laptop said so: %q", b)
 	}
 	webTestLaptopSelect(t, &m, "confirm")
-	if b, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(b) != "one\nTWO\n" {
+	if b, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(b) != "one\ntwo\nthree\nfour\nFIVE\n" {
 		t.Fatalf("after the laptop's yes: %q", b)
 	}
 }

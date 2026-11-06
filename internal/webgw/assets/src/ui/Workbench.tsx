@@ -66,6 +66,7 @@ import { DeskMCP, MCPAgentTab } from "../views/desk/DeskMCP";
 import { vtabIcon, vtabOf } from "../lib/vtabs";
 import { DeskRun } from "../views/desk/DeskRun";
 import { DeskSCM, RemoteAskHost } from "../views/desk/DeskSCM";
+import { GitAskHost } from "../views/git/GitAsk";
 import { AgentsView } from "../views/AgentsView";
 import { QuickInput } from "./QuickInput";
 import { RefsPeek } from "./RefsPeek";
@@ -525,6 +526,7 @@ export function Workbench() {
           {quick.value && <QuickInput key={quick.value.mode} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
           <RemoteAskHost />
+          <GitAskHost />
           <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
             {all.map((g, i) => (

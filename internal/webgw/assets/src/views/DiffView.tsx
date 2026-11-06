@@ -2,6 +2,8 @@
 // left, read only, and the newer on the right, side by side (or inline),
 // with the changed rows and words marked, an overview ruler, unchanged
 // regions folded, and Previous / Next Change (F7, Shift+F7, Alt+F5).
+// A change of the working tree stages or discards its selected rows; a
+// staged change unstages them.
 // The working tree's side is the laptop's live buffer: typing there edits
 // the file through the same tick-guarded sync as the file editor. Every
 // other side is git's text (git.text), read only.
@@ -11,6 +13,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { BufSnap, GitSnap, GitText } from "../../../../webproto/proto";
 import { desks, mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
 import { applyRows, diffOf, revs, type DiffTab } from "../lib/difftab";
+import { discardLines, stageLines } from "../lib/gitlines";
 import { go as goRoute, route } from "../lib/router";
 import { closePath, fileOf, holdPath } from "../lib/file";
 import { showFile, wordWrap } from "../lib/workbench";
@@ -180,6 +183,8 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
   const cut = leftSide?.cut || rightSide?.cut;
   const err = left.err || right.err;
   const onCount = () => undefined;
+  // Rows of a tracked file's change, for a controller.
+  const canLines = link.meta.value?.role === "controller" && live.value && !!entry && !entry.untracked && !entry.conflict;
   return (
     <View
       tab="files"
@@ -194,6 +199,21 @@ function GitDiff({ tab, slot }: { tab: string; slot: string }) {
           {d.kind === "review" && cards.value.some((c) => c.id === d.hash) && (
             <button type="button" class="tb" data-act="review" title={t("dv.review")} onClick={() => goRoute({ ...route.peek(), card: d.hash })}>
               {t("dv.review")}
+            </button>
+          )}
+          {canLines && d.kind === "wt" && !deleted && (
+            <>
+              <button type="button" class="tb tb-icon" data-act="stage-lines" aria-label={t("gl.stage")} title={t("gl.stage")} onClick={() => stageLines(true)}>
+                <Cod name="add" />
+              </button>
+              <button type="button" class="tb tb-icon" data-act="discard-lines" aria-label={t("gl.discard")} title={t("gl.discard")} onClick={discardLines}>
+                <Cod name="discard" />
+              </button>
+            </>
+          )}
+          {canLines && d.kind === "idx" && (
+            <button type="button" class="tb tb-icon" data-act="unstage-lines" aria-label={t("gl.unstage")} title={t("gl.unstage")} onClick={() => stageLines(false)}>
+              <Cod name="remove" />
             </button>
           )}
           <button type="button" class="tb tb-icon" data-act="prev" aria-label={t("dv.prev")} title={`${t("dv.prev")} (Shift+F7)`} onClick={() => go(-1)}>

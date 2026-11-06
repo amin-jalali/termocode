@@ -88,6 +88,9 @@ export interface DeskHandle extends EditorHandle {
   gutter(marks: Mark[]): void;
   /** marks are the git change marks the gutter shows now. */
   marks(): readonly Mark[];
+  /** rows are the rows the selection covers (1-based; the caret's row
+   * when nothing is selected; 0 before the caret moved). */
+  rows(): { from: number; to: number };
   /** lines colours whole rows (the merge editor's conflicts). */
   lines(items: FrameLines[]): void;
   /** blame sets each line's blame (null: off). */
@@ -132,6 +135,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
   let seen = 0;
   let canUndo = false, canRedo = false;
   let marks: readonly Mark[] = [];
+  let rows = { from: 0, to: 0 };
   let ready = false;
   const queue: ToFrame[] = [];
 
@@ -177,6 +181,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         host.onDiff?.(m.changes, m.added, m.removed);
         return;
       case "cursor":
+        rows = { from: m.from ?? m.line, to: m.to ?? m.line };
         if ((host.slot ?? "g0") === focusSlot.peek()) cursorAt.value = { line: m.line, col: m.col };
         return;
       case "save":
@@ -262,6 +267,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       send({ t: "gutter", marks: m });
     },
     marks: () => marks,
+    rows: () => rows,
     lines(items) {
       send({ t: "lines", items });
     },

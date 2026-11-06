@@ -2,13 +2,16 @@
 // graph, the pull requests, line blame, Commit (Amend) and Clone
 // Repository (the last two through source control's own flow); the next
 // and previous change or merge conflict of the file, the merge editor's
-// Next and Previous Conflict, and source control's tree or flat list.
+// Next and Previous Conflict, source control's tree or flat list, and
+// staging, unstaging or discarding the selected rows or the change at
+// the caret.
 import type { Command } from "../../lib/commands";
 import { blameOn } from "../../lib/blame";
 import { GRAPH_TAB, PRS_TAB } from "../../lib/gittab";
 import { go } from "../../lib/router";
 import { activeDesk } from "../../lib/deskeditor";
 import { diffOf } from "../../lib/difftab";
+import { discardHunk, discardLines, lineTarget, stageLines } from "../../lib/gitlines";
 import { conflictRows, mergeActs, nextRow, scmTree } from "../../lib/gitnav";
 import { activeFile, cursorAt, focusSlot, setPanes, showFile } from "../../lib/workbench";
 import { link, store } from "../../session";
@@ -60,6 +63,10 @@ export function gitCommands(): Command[] {
     { id: "mergeNext", label: "cmd.merge_next", when: () => merge() !== null, run: () => merge()?.go(1) },
     { id: "mergeTakeBase", label: "cmd.merge_base", when: () => merge() !== null && canAct(), run: () => merge()?.base() },
     { id: "mergePrev", label: "cmd.merge_prev", when: () => merge() !== null, run: () => merge()?.go(-1) },
+    { id: "stageLines", label: "cmd.stage_lines", when: () => canAct() && lineTarget()?.index === false, run: () => stageLines(true) },
+    { id: "unstageLines", label: "cmd.unstage_lines", when: () => canAct() && lineTarget() !== null, run: () => stageLines(false) },
+    { id: "discardLines", label: "cmd.discard_lines", when: () => canAct() && lineTarget()?.index === false, run: discardLines },
+    { id: "discardHunk", label: "cmd.discard_hunk", when: () => canAct() && lineTarget()?.index === false, run: discardHunk },
     { id: "scmViewToggle", label: "cmd.scm_tree", when: repo, run: () => (scmTree.value = !scmTree.peek()) },
   ];
 }
