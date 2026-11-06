@@ -74,6 +74,8 @@ type broker struct {
 	exit  chan struct{}   // closed when the server process exited
 	done  chan struct{}   // closed when the broker is finished
 
+	statusMu sync.Mutex // sendStatus, one at a time
+
 	mu      sync.Mutex
 	clients map[uint64]*shareClient
 	nextID  uint64
@@ -332,8 +334,12 @@ func (b *broker) watch(c *shareClient) {
 // sends (tests hold a status there).
 var shareStatusCounted atomic.Pointer[func(n int)]
 
-// sendStatus tells every session how many sessions use the server.
+// sendStatus tells every session how many sessions use the server. One
+// status at a time, counted and sent in turn: an older count never
+// reaches a session after a newer one.
 func (b *broker) sendStatus() {
+	b.statusMu.Lock()
+	defer b.statusMu.Unlock()
 	b.mu.Lock()
 	n := len(b.clients)
 	b.mu.Unlock()
