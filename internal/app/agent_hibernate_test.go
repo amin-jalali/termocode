@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentctl"
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/clock"
 )
@@ -234,5 +235,26 @@ func TestAgentHibernatePolicy(t *testing.T) {
 	h.m.dispatchTasksPalette(agentHibernatePaletteID)
 	if h.m.terminalTabs[0].Hibernated || len(*h.typed) == 0 {
 		t.Errorf("wake: %v %q", h.m.terminalTabs[0].Hibernated, *h.typed)
+	}
+}
+
+// Spec (AGX-15): a prompt sent to a hibernated tab (termocode agent
+// prompt, the outside agents' control socket) is never typed into the
+// bare shell: the tab resumes and the sender is told to send it again.
+func TestAgentHibernatePromptWakesFirst(t *testing.T) {
+	h := newHibTest(t, "")
+	tab := &h.m.terminalTabs[0]
+	tab.Hibernated, tab.HibSession = true, hibSessionID
+	rep := h.m.agentCtlSend(agentCtlTab{t: tab, id: "1"}, agentctl.Request{Text: "rm -rf build"})
+	if !strings.Contains(rep.Error, "hibernated") {
+		t.Errorf("reply %+v", rep)
+	}
+	for _, s := range *h.typed {
+		if strings.Contains(s, "rm -rf") {
+			t.Fatalf("the prompt went into the shell: %q", *h.typed)
+		}
+	}
+	if tab.Hibernated || len(*h.typed) == 0 || (*h.typed)[0] != "codex resume "+hibSessionID {
+		t.Errorf("not resumed: %v %q", tab.Hibernated, *h.typed)
 	}
 }
