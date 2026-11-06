@@ -28,12 +28,13 @@ type PRDetail struct {
 	State     string // OPEN, CLOSED, MERGED
 	Body      string
 	Mergeable string // MERGEABLE, CONFLICTING, UNKNOWN
+	HeadSHA   string // the head commit (line comments are left on it)
 	Files     []PRFile
 	Reviews   []PRReview // reviews and comments, oldest first
 }
 
 const prViewFields = "number,title,body,author,state,isDraft,url,reviewDecision,statusCheckRollup," +
-	"headRefName,baseRefName,mergeable,files,reviews,comments"
+	"headRefName,headRefOid,baseRefName,mergeable,files,reviews,comments"
 
 // ViewPR reads one pull request (`gh pr view N`).
 func ViewPR(ctx context.Context, run Runner, dir string, number int) (PRDetail, error) {
@@ -48,6 +49,7 @@ func ViewPR(ctx context.Context, run Runner, dir string, number int) (PRDetail, 
 			Login string `json:"login"`
 		} `json:"author"`
 		Head      string `json:"headRefName"`
+		HeadSHA   string `json:"headRefOid"`
 		Base      string `json:"baseRefName"`
 		Mergeable string `json:"mergeable"`
 		Files     []struct {
@@ -73,7 +75,7 @@ func ViewPR(ctx context.Context, run Runner, dir string, number int) (PRDetail, 
 	d := PRDetail{
 		PRItem: PRItem{Number: r.Number, Title: r.Title, Author: r.Author.Login, Branch: r.Head, Base: r.Base, URL: r.URL,
 			Draft: r.IsDraft, Review: r.ReviewDecision, Checks: checksOf(r.Rollup)},
-		State: r.State, Body: r.Body, Mergeable: r.Mergeable,
+		State: r.State, Body: r.Body, Mergeable: r.Mergeable, HeadSHA: r.HeadSHA,
 	}
 	for _, f := range r.Files {
 		d.Files = append(d.Files, PRFile{Path: f.Path, Additions: f.Additions, Deletions: f.Deletions})

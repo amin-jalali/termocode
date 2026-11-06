@@ -23,6 +23,14 @@ type prState struct {
 	busy   bool            // an action runs: a second click waits
 	review ghci.ReviewKind // the review the open prompt sends
 	create *ghci.NewPR     // the pull request being created
+	// createTemplate is the template file the description started from
+	createTemplate string
+
+	threads    []ghci.Thread // the review threads of detail, open first (pr_threads.go)
+	thread     string        // the id of the thread on the card
+	wantThread string        // show this thread again once the PR is read again
+	line       *prLineTarget // the line the open comment prompt is for (pr_line_comment.go)
+	editBody   *prBodyEdit   // the open description file (pr_edit_body.go)
 }
 
 // prS returns the state, creating it on first use.
@@ -84,6 +92,19 @@ func (m *Model) handlePRMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onPRDiff(msg), true
 	}
 	return nil, false
+}
+
+// prPromptClosed brings back the card a cancelled PR prompt came from.
+func (m *Model) prPromptClosed() {
+	if m.pr == nil || m.confirmOpen {
+		return
+	}
+	switch m.promptKind {
+	case promptKindPRReply:
+		m.showPRThread()
+	case promptKindPRReviewers, promptKindPRLabels:
+		m.showPRCreateCard()
+	}
 }
 
 // prDoneMsg is a finished change through gh (check out, review, merge…).

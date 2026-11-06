@@ -2,6 +2,8 @@ package ghci
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -53,5 +55,73 @@ func TestCreateRefuses(t *testing.T) {
 	}
 	if len(f.calls) != 0 {
 		t.Errorf("gh called %d times", len(f.calls))
+	}
+}
+
+// Reviewers and labels go as one comma list each; a name that looks like
+// a flag or holds a space is refused before gh runs.
+func TestCreateReviewersLabels(t *testing.T) {
+	f := &fakeGH{answers: map[string]fakeAnswer{"pr create": {out: "https://github.com/o/r/pull/16\n"}}}
+	_, err := Create(context.Background(), f.run, "/r", NewPR{Title: "t", Branch: "feat/x", Base: "main",
+		Reviewers: []string{"ann", "org/team"}, Labels: []string{"bug", "needs review"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(f.calls[0], "\x00")
+	if !strings.Contains(got, "--reviewer\x00ann,org/team") || !strings.Contains(got, "--label\x00bug,needs review") {
+		t.Errorf("args %q", f.calls[0])
+	}
+	for _, p := range []NewPR{
+		{Title: "t", Branch: "x", Reviewers: []string{"-x"}},
+		{Title: "t", Branch: "x", Reviewers: []string{"a b"}},
+		{Title: "t", Branch: "x", Labels: []string{"a,b"}},
+	} {
+		g := &fakeGH{}
+		if _, err := Create(context.Background(), g.run, "/r", p); err == nil || len(g.calls) != 0 {
+			t.Errorf("%+v accepted", p)
+		}
+	}
+}
+
+// ParseNames splits a typed list on commas (and spaces for logins) and
+// drops a leading @.
+func TestParseNames(t *testing.T) {
+	if got := strings.Join(ParseNames(" @ann, bob  cy,,", true), "|"); got != "ann|bob|cy" {
+		t.Errorf("logins %q", got)
+	}
+	if got := strings.Join(ParseNames("bug, needs review ,", false), "|"); got != "bug|needs review" {
+		t.Errorf("labels %q", got)
+	}
+}
+
+// PRTemplate finds the repository's pull request template in the places
+// GitHub looks, in any case.
+func TestPRTemplate(t *testing.T) {
+	dir := t.TempDir()
+	if _, _, ok := PRTemplate(dir); ok {
+		t.Error("a template in an empty folder")
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".github"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".github", "PULL_REQUEST_TEMPLATE.md"), []byte("## Summary\n\n## Tests\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	text, name, ok := PRTemplate(dir)
+	if !ok || text != "## Summary\n\n## Tests\n" || name != ".github/PULL_REQUEST_TEMPLATE.md" {
+		t.Errorf("%q %q %v", text, name, ok)
+	}
+}
+
+// WithTemplate puts the template first and the commit list under it.
+func TestWithTemplate(t *testing.T) {
+	if got := WithTemplate("## Summary\n\n", "- a\n- b"); got != "## Summary\n\n- a\n- b" {
+		t.Errorf("%q", got)
+	}
+	if got := WithTemplate("", "- a"); got != "- a" {
+		t.Errorf("%q", got)
+	}
+	if got := WithTemplate("## S", ""); got != "## S" {
+		t.Errorf("%q", got)
 	}
 }

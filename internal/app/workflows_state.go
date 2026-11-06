@@ -651,6 +651,7 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 		src.Secrets = s
 	}
 	ms := wfxMessenger(id, block)
+	ms.Tools = tools
 	cfg := wire.Config{
 		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume,
 		Src: src, Tools: check, AI: m.wfxAIEnv(), Exec: wfxExec,
@@ -660,14 +661,18 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 				Preview: "This source step calls a tool that is not marked read-only. It may change things there."}, true)
 			return d != wire.GateDeny, err
 		},
-		Notify: func(ctx context.Context, via, text string) error {
-			if err := ms.Send(ctx, via, text); err != nil {
+		Notify: func(ctx context.Context, msg wire.Message) error {
+			if err := ms.Deliver(ctx, msg); err != nil {
 				return err
 			}
-			if via == "os" || via == "web" {
+			via := strings.TrimSpace(msg.Via)
+			switch {
+			case via == "os" || via == "web":
 				return nil // the line comes with the message
+			case strings.HasPrefix(via, "${"):
+				via = "webhook"
 			}
-			return block(ctx, wfxLineMsg{id: id, text: "message (webhook): " + text})
+			return block(ctx, wfxLineMsg{id: id, text: "message (" + via + "): " + wire.RedactOutside(msg.Text)})
 		},
 		OnEvent:      func(ev run.Event) { send(wfxEventMsg{id: id, ev: ev}) },
 		OnAuditError: func(err error) { recordError("workflow " + e.Name + ": audit: " + err.Error()) },
