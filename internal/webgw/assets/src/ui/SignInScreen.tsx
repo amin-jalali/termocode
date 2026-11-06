@@ -4,15 +4,17 @@
 // PIN is the browser's own step.
 import { h } from "preact";
 import { signal } from "@preact/signals";
-import { keepIssuedToken, postJSON } from "../net/auth";
-import { usePasskey } from "../net/passkey";
+import { keepIssuedToken, postJSON, type Reply } from "../net/auth";
+import { keepDeviceKey, useDeviceKey } from "../net/devicekey";
+import { passkeysHere, usePasskey } from "../net/passkey";
 import { t, type StringKey } from "../strings";
 import { Button } from "./Button";
+import { RememberBox, remember } from "./RememberBox";
 
 /** Done opens the workspace once this device has a session. */
 type Done = () => void;
 
-type SignInState = "ready" | "busy" | "failed" | "removed" | "clone" | "expired" | "code" | "checking" | "wrong";
+type SignInState = "ready" | "busy" | "failed" | "removed" | "clone" | "expired" | "code" | "checking" | "wrong" | "bookmark" | "bookmark_gone";
 
 const state = signal<SignInState>("ready");
 const code = signal("");
@@ -24,7 +26,42 @@ const errorText: Partial<Record<SignInState, StringKey>> = {
   clone: "signin.body_clone",
   expired: "signin.expired",
   wrong: "signin.wrong_code",
+  bookmark_gone: "signin.body_bookmark_gone",
 };
+
+/** done keeps what a good reply brought (the session token, and the next
+ * bookmark key) and opens the workspace; false: no token in it. */
+function done(r: Reply, onDone: Done): boolean {
+  if (!keepIssuedToken(r)) return false;
+  keepDeviceKey(r);
+  onDone();
+  return true;
+}
+
+/** askCode moves to the code step when the reply wants one (WEB-48). */
+function askCode(r: Reply): boolean {
+  if (r.status !== 200 || r.data.totp !== true || typeof r.data.ticket !== "string") return false;
+  ticket = r.data.ticket;
+  code.value = "";
+  state.value = "code";
+  return true;
+}
+
+/** signInWithBookmark opens the workspace with the kept bookmark key
+ * (WEBP-12), still asking for the code when the laptop wants it. A key
+ * the laptop refused is gone; the passkey button stays. False: not
+ * signed in and no code step. */
+export async function signInWithBookmark(onDone: Done): Promise<boolean> {
+  state.value = "bookmark";
+  const r = await useDeviceKey();
+  if (r === null) {
+    state.value = "ready";
+    return false;
+  }
+  if (done(r, onDone) || askCode(r)) return true;
+  state.value = r.status === 401 || r.status === 400 ? "bookmark_gone" : "ready";
+  return false;
+}
 
 async function signIn(onDone: Done) {
   state.value = "busy";
@@ -40,17 +77,8 @@ async function signIn(onDone: Done) {
     state.value = "ready"; // cancelled: nothing happened
     return;
   }
-  const r = await postJSON("/login/finish", { login_id: start.data.login_id, credential });
-  if (keepIssuedToken(r)) {
-    onDone();
-    return;
-  }
-  if (r.status === 200 && r.data.totp === true && typeof r.data.ticket === "string") {
-    ticket = r.data.ticket; // the laptop wants a sign-in code too (WEB-48)
-    code.value = "";
-    state.value = "code";
-    return;
-  }
+  const r = await postJSON("/login/finish", { login_id: start.data.login_id, credential, remember: remember.value });
+  if (done(r, onDone) || askCode(r)) return;
   const e = r.data.error;
   state.value = e === "removed" ? "removed" : e === "clone_suspected" ? "clone" : e === "expired" ? "expired" : "failed";
 }
@@ -60,10 +88,7 @@ async function sendCode(onDone: Done) {
   if (!/^[0-9]{6}$/.test(code.value)) return;
   state.value = "checking";
   const r = await postJSON("/login/totp", { ticket, code: code.value });
-  if (keepIssuedToken(r)) {
-    onDone();
-    return;
-  }
+  if (done(r, onDone)) return;
   code.value = "";
   state.value = r.status === 401 ? "wrong" : "expired";
 }
@@ -112,13 +137,14 @@ export function SignInScreen({ onDone }: { onDone: Done }) {
           <span class="cursor" aria-hidden="true">▍</span>
         </h1>
         <p class={`connect-line${err ? " is-error" : ""}`} role={err ? "alert" : undefined}>
-          {t(err ?? "signin.body_hint")}
+          {t(err ?? (s === "bookmark" ? "signin.bookmark" : "signin.body_hint"))}
         </p>
       </div>
-      {s !== "removed" && s !== "clone" && (
+      {s !== "removed" && s !== "clone" && passkeysHere() && (
         <div class="connect-foot">
-          <Button kind="primary" wide autoFocus disabled={s === "busy"} onClick={() => void signIn(onDone)}>
-            {s === "busy" ? t("signin.busy") : t("signin.button")}
+          <RememberBox />
+          <Button kind="primary" wide autoFocus disabled={s === "busy" || s === "bookmark"} onClick={() => void signIn(onDone)}>
+            {s === "busy" || s === "bookmark" ? t("signin.busy") : t("signin.button")}
           </Button>
         </div>
       )}

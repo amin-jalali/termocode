@@ -354,6 +354,8 @@ func (p *Pairing) wait(w http.ResponseWriter, r *http.Request) {
 type pairFinishReq struct {
 	PairID     string          `json:"pair_id"`
 	Credential json.RawMessage `json:"credential,omitempty"`
+	// Remember: "Remember this browser" was ticked (WEBP-12).
+	Remember bool `json:"remember,omitempty"`
 }
 
 func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
@@ -401,6 +403,13 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		}
 		d.CredID, d.PublicKey, d.SignCount, d.AAGUID, d.UserID, d.RPID = key.CredID, key.PublicKey, key.SignCount, key.AAGUID, key.UserID, key.RPID
 	}
+	devKey := ""
+	if origin := r.Header.Get("Origin"); req.Remember && !pp.guest && origin != "" { // a guest is for one visit
+		k, h, err := NewDeviceKey(id)
+		if err == nil {
+			devKey, d.Bookmark = k, rotated(nil, h, origin, now)
+		}
+	}
 	if err := p.cfg.Store.Add(d); err != nil {
 		code := "internal"
 		if errors.Is(err, webdevices.ErrFull) {
@@ -415,8 +424,12 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = p.cfg.Audit.Log(Event{Kind: EvPairOK, Conn: sess.ID, Device: id, Summary: pp.name + " as " + pp.role})
-	writeJSON(w, http.StatusOK, map[string]any{"token": tok, "role": pp.role, "device": id,
-		"idle_s": int(p.cfg.Tokens.idle / time.Second), "max_s": int(p.cfg.Tokens.max / time.Second)})
+	reply := map[string]any{"token": tok, "role": pp.role, "device": id,
+		"idle_s": int(p.cfg.Tokens.idle / time.Second), "max_s": int(p.cfg.Tokens.max / time.Second)}
+	if devKey != "" {
+		reply["device_key"] = devKey
+	}
+	writeJSON(w, http.StatusOK, reply)
 }
 
 // sessionRole is the session role of a device role.
