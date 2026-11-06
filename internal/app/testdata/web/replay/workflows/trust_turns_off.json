@@ -1,0 +1,62 @@
+{
+  "topic": "workflows",
+  "snap0": {
+    "runs": [],
+    "workflows": [
+      {
+        "name": "broken",
+        "state": "broken"
+      },
+      {
+        "name": "docs-report",
+        "state": "untrusted",
+        "title": "Docs report"
+      },
+      {
+        "name": "mine",
+        "state": "off",
+        "title": "Docs report"
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "runs": [],
+      "workflows": [
+        {
+          "name": "broken",
+          "state": "broken"
+        },
+        {
+          "name": "docs-report",
+          "state": "off",
+          "title": "Docs report"
+        },
+        {
+          "name": "mine",
+          "state": "off",
+          "title": "Docs report"
+        }
+      ]
+    }
+  ],
+  "snapn": {
+    "workflows": [
+      {
+        "name": "broken",
+        "state": "broken"
+      },
+      {
+        "name": "docs-report",
+        "title": "Docs report",
+        "state": "off"
+      },
+      {
+        "name": "mine",
+        "title": "Docs report",
+        "state": "off"
+      }
+    ],
+    "runs": []
+  }
+}

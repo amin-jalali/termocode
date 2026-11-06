@@ -1,0 +1,1 @@
+{"t":"req","id":92,"op":"http.import_curl","args":{"curl":"curl -X POST https://api.example.com/items -d a=1","path":"api/scratch.http"}}

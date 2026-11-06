@@ -108,6 +108,16 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `workflows_wait_hours` | int | `12` | Hours a run waits for an answer on a card (a write to allow, a budget pause) before the step is marked waiting too long. |
 | `workflows_agent_sandbox` | enum | `worktree` | Where an outside agent step works: worktree (it may change files in its own git worktree) or read-only (it may only read). |
 
+## Git (file only)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `git_status_blame` | bool | `false` | The status bar shows who last changed the cursor line, and when. Click it to open the commit. Toggle with Git: Toggle Blame in Status Bar. |
+| `git_inline_blame` | bool | `false` | Author, age and subject of the cursor line's commit at the end of the line. Toggle with Git: Toggle Inline Blame. |
+| `git_blame_ignore_whitespace` | bool | `false` | Blame ignores whitespace-only changes (git blame -w). Set with Git: Blame Options…. |
+| `git_blame_detect_moves` | bool | `false` | Blame keeps the first commit of lines that were moved or copied (git blame -M -C). Set with Git: Blame Options…. |
+| `worktree_dir` | string | `""` | The folder Worktree: New… puts new worktrees in, one folder per branch. Empty: `<repo>.worktrees` next to the repository. `~` is your home folder; a relative path is relative to the repository. Read when the form opens. |
+
 ## Databases (file only)
 
 | Key | Type | Default | Description |
@@ -160,6 +170,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_trusted` | object | `{}` | Project MCP servers you allowed with "Always allow": server name → hash of its mcp.json entry. A changed entry asks again. Written by the trust dialog and AI: MCP Servers…. |
 | `mcp_disabled_tools` | object | `{}` | MCP tools you turned off: server name → tool names. Off tools are not sent to the AI. Turn them off or on with Space in AI: MCP Servers… → a server → Show tools. |
 | `mcp_server` | enum | `auto` | termocode as an MCP server: outside agents (Claude Code, Codex, …) reach a short list of IDE tools (open files, diagnostics, tests, debugger, terminal and git reads) over a private socket in the session folder, open only to your own user. Tools that change something ask on a card first; files, settings, git writes and your own MCP servers are never offered. auto: serve once you start an agent tab (F1 → Agent: Start …). on: serve from start. off: never. Applied when you save config.json. |
+| `agent_transcripts` | enum | `off` | read: termocode may read the session files that Claude Code and Codex write for themselves (~/.claude/projects, ~/.codex/sessions, or CLAUDE_CONFIG_DIR / CODEX_HOME) for Agent: Chat View, Agent: Sessions… and the search inside them. Read only: termocode never writes there. Secrets are hidden before anything is drawn, and nothing from them goes to the AI or the web panel unless you send it. A file in a format termocode does not know shows "cannot read this session". off (the default): no file there is opened. |
 | `mcp_server_auto_approve` | object | `{}` | The "Always allow" answers you gave on an outside agent's card (see mcp_server): agent name → tool names that run without asking for that agent. Separate from ai_auto_approve, which never applies to outside agents. The name is the agent's own claim. See and revoke them in AI: Agent Auto-Approve…. |
 | `mcp_trusted_tools` | object | `{}` | The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first. |
 

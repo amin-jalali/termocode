@@ -125,6 +125,11 @@ export interface DBConnView {
   readonly: boolean;
   problem: string;
   sql: boolean;
+  /** the laptop's own session: connected, manual commit, an open transaction and its writes */
+  connected: boolean;
+  manual: boolean;
+  tx: boolean;
+  writes: number;
 }
 
 /** readDBConns reads the answer of db.conns. */
@@ -141,6 +146,10 @@ export function readDBConns(data: unknown): DBConnView[] {
       readonly: c.readonly === true,
       problem: str(c.problem),
       sql: c.sql === true,
+      connected: c.connected === true,
+      manual: c.manual === true,
+      tx: c.tx === true,
+      writes: num(c.writes),
     }));
 }
 
@@ -171,6 +180,8 @@ export interface DBRowsView {
   truncated: boolean;
   masked: number;
   ms: number;
+  /** key names the columns that find a row (db.rows): rows are edited only with it */
+  key: string[];
 }
 
 /** readDBRows reads the answer of db.rows and db.query. */
@@ -187,5 +198,6 @@ export function readDBRows(data: unknown): DBRowsView {
     truncated: d.truncated === true,
     masked: num(d.masked),
     ms: num(d.ms),
+    key: list(d.key).map(str),
   };
 }

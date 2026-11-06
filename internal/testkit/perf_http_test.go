@@ -68,15 +68,17 @@ func httpEchoServer(t *testing.T) *httptest.Server {
 	return srv
 }
 
-// The send key on a request to its answer on the page: the median of 7
-// sends of different requests.
+// The send key on a request to its answer on the page: one warm-up send
+// (it opens the page), then the median of 9 sends of different requests
+// (was 7: on a busy CI runner one or two slow wake-ups of nvim moved the
+// median; FIX-48).
 func TestPerfHTTPSendToPage(t *testing.T) {
 	perfbudget.Require(t)
 	srv := httpEchoServer(t)
 	d := httpPerfDriver(t, srv.URL)
 	var took []time.Duration
-	for i := 0; i < 8; i++ {
-		n := 20 + 20*i
+	for i := 0; i < 10; i++ {
+		n := 10 + 19*i
 		open(d, "api/users.http")
 		httpCursor(d, 6+8*n) // the request line of r<n>
 		want := `"path": "/users/` + strconv.Itoa(n) + `"`

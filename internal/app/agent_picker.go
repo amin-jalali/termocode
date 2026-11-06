@@ -49,7 +49,7 @@ type agentPickInput struct {
 }
 
 // agentPickStart starts an installed agent (a var for tests).
-var agentPickStart = func(m *Model, a agents.Agent) tea.Cmd { return m.startAgent(a) }
+var agentPickStart = func(m *Model, a agents.Agent) tea.Cmd { return m.startAgentIn(a, m.agentPickDir, "") }
 
 // agentInstalled says whether a's program can be started.
 func agentInstalled(a agents.Agent) bool {
@@ -133,8 +133,18 @@ func (m *Model) agentPickInputNow() agentPickInput {
 // openAgentPicker opens Agent: Start… and checks the CLIs' sign-in in
 // the background (the rows update when the answer comes).
 func (m *Model) openAgentPicker() tea.Cmd {
+	// From the WORKTREES view the agent starts in the selected worktree
+	// (AGX-2); anywhere else in the workspace.
+	m.agentPickDir = ""
+	note := agentPickerNote
+	if m.worktreesVisible() && m.focus == FocusExplorer {
+		if it, ok := m.wtSelected(); ok && wtUsable(it) == "" && !it.here {
+			m.agentPickDir = it.e.Path
+			note = "Enter starts it in " + wtShortPath(it.e.Path) + " in a new terminal tab; a profile opens the AI chat."
+		}
+	}
 	m.picker = picker.NewItems(" Start an agent ", agentPickerItems(m.agentPickInputNow()))
-	m.picker.SetNote([]string{agentPickerNote})
+	m.picker.SetNote([]string{note})
 	m.picker.SetWidth(agentPickerWidth)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true

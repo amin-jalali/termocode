@@ -59,7 +59,7 @@
 .db-conn, .db-table { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); min-height: var(--tap); padding: var(--s2) var(--s3); text-align: start; }
 .db-conn + .db-conn, .db-table + .db-table { border-top: 1px solid var(--border); }
 .db-conn:hover, .db-table:hover { background: var(--bg-hover); }
-.db-conn:disabled { cursor: default; opacity: 0.75; }
+.db-conn:disabled { cursor: default; color: var(--muted); }
 .db-name { font-weight: 600; overflow-wrap: anywhere; }
 .db-table .db-name { font-family: var(--font-mono); font-weight: 400; }
 .db-meta { color: var(--text-2); font-family: var(--font-mono); font-size: var(--fs-hint); }
@@ -147,3 +147,18 @@
   .kb-bar .tb.is-on { background: var(--sel); }
   .kb-text { font-family: var(--font-mono); font-size: 0.8125rem; overflow-x: auto; }
 }
+
+/* Itermoc: the laptop's AI setup (WEBP-ITERMOC). */
+.im-sec { padding: 8px 12px; }
+.im-sec.is-target .im-sec-title { color: var(--blue); }
+.im-sec-title { margin: 0 0 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.8; }
+.im-sub { margin: 8px 0 2px; font-size: 0.75rem; font-weight: 600; opacity: 0.8; }
+.im-list { margin: 0; padding: 0; list-style: none; }
+.im-row { display: flex; align-items: center; gap: 6px; min-height: 28px; }
+.im-name { flex: none; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.im-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8125rem; color: var(--muted); }
+.im-key { flex: none; width: 1.2em; text-align: center; font-weight: 700; }
+.im-key.is-ok { color: var(--green); }
+.im-key.is-off { color: var(--red); }
+.im-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.im-note { margin: 0 0 4px; font-size: 0.8125rem; opacity: 0.8; }

@@ -32,6 +32,13 @@ const (
 	OpPrompt = "prompt"
 	OpWait   = "wait"
 	OpReport = "report"
+
+	// Worktree ops (WTX-12): the worktree is the one Dir is in (else the
+	// tab's folder).
+	OpWorktreeList   = "worktree-list"
+	OpWorktreeNote   = "worktree-note"   // Text
+	OpWorktreeStatus = "worktree-status" // State: working | blocked | done
+	OpWorktreeLink   = "worktree-link"   // Text: a number, #N or URL; asks the user first
 )
 
 // States an agent reports or a wait waits for.
@@ -56,7 +63,22 @@ type Request struct {
 	Until    string `json:"until,omitempty"`     // wait: a state (default done)
 	TimeoutS int    `json:"timeout_s,omitempty"` // wait
 	Agent    string `json:"agent,omitempty"`     // report: claude, codex, …
-	State    string `json:"state,omitempty"`     // report
+	State    string `json:"state,omitempty"`     // report, worktree-status
+	Dir      string `json:"dir,omitempty"`       // worktree ops: the caller's folder
+}
+
+// Worktree is one worktree in a worktree-list reply.
+type Worktree struct {
+	Path       string `json:"path"`
+	Branch     string `json:"branch,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Kind       string `json:"kind"` // main, user, agent, external
+	Gone       bool   `json:"gone,omitempty"`
+	Parent     string `json:"parent,omitempty"`
+	Link       string `json:"link,omitempty"` // "#412 open", "PR #12 merged · CI ✓"
+	Checkpoint string `json:"checkpoint,omitempty"`
+	Note       string `json:"note,omitempty"` // the last note
+	Here       bool   `json:"here,omitempty"` // the caller's folder is in it
 }
 
 // Tab is one terminal tab in a list.
@@ -75,6 +97,8 @@ type Reply struct {
 	Error string `json:"error,omitempty"`
 	Tabs  []Tab  `json:"tabs,omitempty"`
 	State string `json:"state,omitempty"` // wait: the state reached
+
+	Worktrees []Worktree `json:"worktrees,omitempty"` // worktree-list
 }
 
 // MaxLine caps one request line.

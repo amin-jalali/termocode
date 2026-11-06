@@ -105,3 +105,13 @@
 .step-body { padding: 0 var(--s3) var(--s2); display: flex; flex-direction: column; gap: var(--s1); font-size: var(--fs-body); }
 .step-error { margin: 0; color: var(--red); }
 .msg-extras { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s1); unicode-bidi: isolate; }
+
+/* An AI screen of the laptop, read only (ChatMore.tsx). */
+.ai-info { display: flex; flex-direction: column; gap: var(--s2); padding: 0 var(--s4) var(--s3); max-height: 80vh; }
+.ai-info-title { padding: var(--s2) 0 0; font-size: var(--fs-body); font-weight: 600; unicode-bidi: isolate; }
+.ai-info-note { margin: 0; color: var(--muted); font-size: var(--fs-hint); }
+.ai-info-rows { list-style: none; margin: 0; padding: 0; overflow: auto; border-top: 1px solid var(--border); }
+.ai-info-head { padding: var(--s2) 0 var(--s1); font-size: var(--fs-hint); font-weight: 600; color: var(--muted); text-transform: uppercase; }
+.ai-info-row { display: flex; flex-wrap: wrap; gap: 0 var(--s2); padding: var(--s1) 0; border-bottom: 1px solid var(--border); }
+.ai-info-hint { color: var(--muted); font-size: var(--fs-hint); }
+.ai-info-text { margin: 0; padding: var(--s2); overflow: auto; max-height: 50vh; background: var(--bg-panel); font-family: var(--font-mono); font-size: var(--fs-hint); white-space: pre; }
