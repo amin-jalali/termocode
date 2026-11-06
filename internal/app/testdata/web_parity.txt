@@ -469,6 +469,7 @@ missing	git-diff-clipboard	Git|S
 missing	git-diff-merge-parent	Git|S
 missing	git-discard-all	Git|S
 missing	git-fetch-all	Git|S
+missing	git-gist	Git|S
 missing	git-goto-commit	Git|S
 missing	git-graph-all	Git|S
 missing	git-graph-head	Git|S

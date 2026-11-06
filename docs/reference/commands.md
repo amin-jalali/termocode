@@ -380,6 +380,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Copy Remote Link to Commit | `git-copy-commit-link` |   |   |
 | Git: Copy Remote Link to Line | `git-copy-line-link` |   |   |
 | Git: Create Branch From… | `git-branch-from` |   |   |
+| Git: Create Gist from File… | `git-gist` |   | `share the active file as a GitHub gist (gh)` |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
 | Git: Create Tag… | `git-tag-create` |   |   |
 | Git: Delete Branch… | `git-branch-delete` |   |   |
