@@ -9,6 +9,7 @@ import { NotifyField } from "../ui/NotifyField";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
 import { RunsView } from "./more/RunsView";
+import { WorkflowsView } from "./more/WorkflowsView";
 import { SettingsView } from "./more/SettingsView";
 import { AgentsView } from "./AgentsView";
 import { MCPView } from "./more/MCPView";
@@ -40,6 +41,7 @@ export function MoreView() {
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
   if (sub === "runs") return <RunsView />;
+  if (sub === "workflows") return <WorkflowsView />;
   if (sub === "settings") return <SettingsView />;
   if (sub === "mcp") return <MCPView />;
   if (sub === "agents") return <AgentsView />;
@@ -78,6 +80,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "runs", query: {} })}>
             {t("more.runs")}
+          </button>
+          <button type="button" class="more-link" data-sub="workflows" onClick={() => go({ tab: "more", rest: "workflows", query: {} })}>
+            {t("more.workflows")}
           </button>
           <button type="button" class="more-link" data-sub="settings" onClick={() => go({ tab: "more", rest: "settings", query: {} })}>
             {t("more.settings")}
