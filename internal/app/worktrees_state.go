@@ -50,6 +50,7 @@ type wtState struct {
 	filter       string
 	filterTyping bool
 	kind         wtKind // the f filter
+	sessLoaded   bool   // the filters were read from the session
 	detail       bool   // the compact layout shows the cursor's card
 	lastClick    time.Time
 
@@ -97,6 +98,9 @@ func (m *Model) worktreesSync() tea.Cmd {
 	if vis := m.worktreesVisible(); vis != st.visible {
 		st.visible = vis
 		st.touch()
+		if vis {
+			m.worktreesLoadSession()
+		}
 	}
 	want := st.visible && !m.termBlurred && !st.off
 	switch {
