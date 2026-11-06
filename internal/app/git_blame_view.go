@@ -456,7 +456,7 @@ func (m *Model) toggleBlameAnnotate() tea.Cmd {
 		return m.gitBlameToast(toast.Warn, "No file in the repository to blame", "")
 	}
 	return tea.Batch(m.gitBlameShowCmd(), m.gitBlameToast(toast.Info, "Blame annotations on",
-		"Git: Open Commit of Line opens a line's commit"))
+		"Open Commit of Line opens its commit"))
 }
 
 // gitBlameShowCmd loads the blame, or paints the loaded one.
