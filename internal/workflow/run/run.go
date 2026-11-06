@@ -45,6 +45,10 @@ type Options struct {
 	Run    Runner
 	Write  Writer
 
+	// ParallelMax caps the items an each runs at once
+	// (workflows_parallel_max; 0: no cap beyond the file's).
+	ParallelMax int
+
 	// Tools tells whether an MCP tool is read-only, before any mcp source
 	// or write calls it (nil: never known, so a source asks).
 	Tools ToolCheck
@@ -52,8 +56,9 @@ type Options struct {
 	// read-only; true runs it (nil: no).
 	Ask func(ctx context.Context, c AskCall) (bool, error)
 
-	// OnEvent gets every event, in order, on the run's goroutine. It must
-	// not block for long.
+	// OnEvent gets every event, one at a time and in order per item (the
+	// items of a parallel each run on their own goroutines). It must not
+	// block for long.
 	OnEvent func(Event)
 	// Now is the clock (nil: time.Now).
 	Now func() time.Time
@@ -175,8 +180,11 @@ type runner struct {
 	runCtx  context.Context // user + limits.timeout
 	vars    map[string]any
 	runInfo map[string]any
-	resume  bool  // continuing a run file: finished states are kept
-	saveErr error // the first failed save; the run stops at the next step
+	resume  bool // continuing a run file: finished states are kept
+
+	saveMu  sync.Mutex // one save at a time (parallel items)
+	emitMu  sync.Mutex // one OnEvent call at a time
+	saveErr error      // the first failed save; the run stops at the next step (under mu)
 
 	mu sync.Mutex
 	rf *RunFile
@@ -184,9 +192,11 @@ type runner struct {
 
 // save writes the run file (a boundary).
 func (r *runner) save() {
-	if r.opts.Store == nil || r.saveErr != nil {
+	if r.opts.Store == nil || r.failedSave() != nil {
 		return
 	}
+	r.saveMu.Lock()
+	defer r.saveMu.Unlock()
 	r.mu.Lock()
 	b, err := json.Marshal(r.rf)
 	r.mu.Unlock()
@@ -194,8 +204,19 @@ func (r *runner) save() {
 		err = r.opts.Store.WriteRunFile(r.rf.ID, b)
 	}
 	if err != nil {
-		r.saveErr = fmt.Errorf("run file: %w", err)
+		r.edit(func() {
+			if r.saveErr == nil {
+				r.saveErr = fmt.Errorf("run file: %w", err)
+			}
+		})
 	}
+}
+
+// failedSave is the first failed save (nil: none).
+func (r *runner) failedSave() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.saveErr
 }
 
 func (r *runner) main(ctx context.Context) {
@@ -253,6 +274,8 @@ func (r *runner) end(state string, err error) {
 
 func (r *runner) emit(e Event) {
 	e.Run = r.rf.ID
+	r.emitMu.Lock()
+	defer r.emitMu.Unlock()
 	e.At = r.opts.Now()
 	if r.opts.OnEvent != nil {
 		r.opts.OnEvent(e)
@@ -305,8 +328,8 @@ func (r *runner) onError(s *workflow.Step) string {
 // a *stepFailure, or the context's error when the run was cancelled.
 func (r *runner) runList(ctx context.Context, steps []workflow.Step, f *frame) error {
 	for i := range steps {
-		if r.saveErr != nil {
-			return &stepFailure{Step: stepKey(&steps[i]), Err: r.saveErr, Stop: true}
+		if err := r.failedSave(); err != nil {
+			return &stepFailure{Step: stepKey(&steps[i]), Err: err, Stop: true}
 		}
 		if err := r.runStep(ctx, &steps[i], f); err != nil {
 			return err

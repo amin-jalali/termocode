@@ -28,7 +28,9 @@ type gauge struct {
 	once    sync.Once
 }
 
-func newGauge(f *fakes, meet int) *gauge { return &gauge{fakes: f, meet: meet, all: make(chan struct{})} }
+func newGauge(f *fakes, meet int) *gauge {
+	return &gauge{fakes: f, meet: meet, all: make(chan struct{})}
+}
 
 func (g *gauge) Run(ctx context.Context, c RunCall) (Output, error) {
 	g.mu.Lock()
