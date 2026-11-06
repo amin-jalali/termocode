@@ -3277,6 +3277,35 @@
       "phase": "v2"
     },
     {
+      "op": "itermoc.state",
+      "args": "EmptyArgs",
+      "result": "Itermoc",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "itermoc.ask",
+      "args": "ItermocAskArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "tree.new_file",
       "args": "ItemArgs",
       "result": "TreeChanged",
@@ -9308,6 +9337,215 @@
         "path"
       ],
       "additionalProperties": false
+    },
+    "Itermoc": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/ItermocAgent"
+          },
+          "type": "array"
+        },
+        "listening": {
+          "type": "boolean"
+        },
+        "problems": {
+          "type": "integer"
+        },
+        "profiles": {
+          "items": {
+            "$ref": "#/defs/ItermocProfile"
+          },
+          "type": "array"
+        },
+        "providers": {
+          "items": {
+            "$ref": "#/defs/ItermocProvider"
+          },
+          "type": "array"
+        },
+        "services": {
+          "items": {
+            "$ref": "#/defs/ItermocService"
+          },
+          "type": "array"
+        },
+        "slots": {
+          "items": {
+            "$ref": "#/defs/ItermocSlot"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "profiles",
+        "slots",
+        "providers",
+        "services",
+        "listening",
+        "agents"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocAgent": {
+      "type": "object",
+      "properties": {
+        "calls": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "since": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "since",
+        "calls"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocAskArgs": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "ai-add",
+            "ai-model-slot-add",
+            "ai-models-edit",
+            "ai-profile-edit",
+            "ai-profile-new",
+            "ai-profile-form"
+          ]
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    "ItermocProfile": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "builtin",
+            "user",
+            "project"
+          ]
+        },
+        "steps": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "trust": {
+          "enum": [
+            "use",
+            "ask",
+            "refused"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "trust",
+        "steps"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocProvider": {
+      "type": "object",
+      "properties": {
+        "cost": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "models": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "signedOut": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "models"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocService": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "tools": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "state",
+        "tools"
+      ],
+      "additionalProperties": true
+    },
+    "ItermocSlot": {
+      "type": "object",
+      "properties": {
+        "hasKey": {
+          "enum": [
+            "ok",
+            "missing",
+            "none",
+            "unset"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "user": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "hasKey"
+      ],
+      "additionalProperties": true
     },
     "KeyArgs": {
       "type": "object",

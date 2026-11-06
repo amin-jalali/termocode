@@ -700,6 +700,41 @@ export const S = {
   "ai.model": "AI model",
   "ai.use_profile": "Use profile {name} for the next chat messages?",
   "ai.use_model": "Use model {name} for the AI chat?",
+  // Itermoc: the laptop's AI setup (WEBP-ITERMOC)
+  "im.title": "Itermoc",
+  "im.loading": "Reading the AI setup…",
+  "im.profiles": "Profiles",
+  "im.models": "AI Providers",
+  "im.slots": "Model slots",
+  "im.services": "AI services",
+  "im.agents": "Outside agents",
+  "im.use": "Use this profile",
+  "im.key_ok": "Key set",
+  "im.key_missing": "No key",
+  "im.key_none": "No key needed",
+  "im.key_unset": "No key (optional)",
+  "im.models_n.one": "{n} model",
+  "im.models_n.other": "{n} models",
+  "im.tools_n.one": "{n} tool",
+  "im.tools_n.other": "{n} tools",
+  "im.signed_out": "signed out",
+  "im.not_listening": "Not listening for outside agents.",
+  "im.agent_desc": "since {since} · {n} calls",
+  "im.no_agents": "No outside agent is connected.",
+  "im.no_services": "No AI services yet.",
+  "im.no_providers": "No AI is connected yet.",
+  "im.no_next": "No other profile can be used now.",
+  "im.problems": "{n} profile files cannot be read. Fix them on the laptop.",
+  "im.src_builtin": "built in",
+  "im.src_user": "yours",
+  "im.src_project": "this project",
+  "im.add_ai": "Add AI…",
+  "im.add_slot": "Add model slot…",
+  "im.edit_slots": "Edit model slots…",
+  "im.edit_profiles": "Edit profiles…",
+  "im.new_profile": "New profile from current…",
+  "im.edit_profile": "Edit a profile…",
+  "im.body_ask": "The laptop opens {name} on the laptop. You fill it in there; keys are typed only on the laptop.",
   // HTTP client (WEBP-HTTP)
   "chat.rename": "Rename Chat…",
   "chat.rename_to": "New title",
@@ -800,7 +835,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   });
 }
 
-type Plural = "pill.cards" | "edit.sent" | "git.commit" | "e.idle" | "e.max" | "gg.files";
+type Plural = "pill.cards" | "edit.sent" | "git.commit" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
 
 /** tn picks the .one or .other form of a plural key by n. */
 export function tn(key: Plural, n: number, vars?: Record<string, string | number>): string {

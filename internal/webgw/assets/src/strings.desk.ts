@@ -664,6 +664,19 @@ export const SD = {
   "http.saved_as": "Saved {name}.",
   "http.headers_tab": "Headers",
   "http.binary": "The body is binary. Save it to a file to open it.",
+  "cmd.itermoc": "Itermoc: Open",
+  "cmd.itermoc_profiles": "Itermoc: Profiles",
+  "cmd.itermoc_models": "Itermoc: AI Providers",
+  "cmd.itermoc_services": "Itermoc: Services",
+  "cmd.itermoc_agents": "Itermoc: Outside Agents",
+  "cmd.ai_profile_show": "AI: Show Profile",
+  "cmd.ai_profile_next": "AI: Next Profile",
+  "cmd.ai_add": "AI: Add AI…",
+  "cmd.ai_slot_add": "AI: Add Model Slot…",
+  "cmd.ai_slots_edit": "AI: Edit Model Slots…",
+  "cmd.ai_profiles_edit": "AI: Edit Profiles…",
+  "cmd.ai_profile_new": "AI: New Profile from Current…",
+  "cmd.ai_profile_form": "AI: Edit Profile…",
 } as const;
 
 addStrings(SD);

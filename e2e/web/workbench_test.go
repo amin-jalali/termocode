@@ -164,7 +164,7 @@ func waitSubSkipping(t *testing.T, c *HubConn, topic string) {
 func TestWorkbenchActivityBar(t *testing.T) {
 	p, c := openFiles(t, Desktop)
 	ids := Eval[[]string](p, `[...document.querySelectorAll("nav.act-bar .act-item")].map((e) => e.dataset.act)`)
-	if got := strings.Join(ids, ","); got != "files,search,git,run,testing,agents,worktrees,db,containers,services,http,kube,mcp,chat,device,settings" {
+	if got := strings.Join(ids, ","); got != "files,search,git,run,testing,agents,itermoc,worktrees,db,containers,services,http,kube,mcp,chat,device,settings" {
 		t.Errorf("activity bar items %s", got)
 	}
 	if tip := Eval[string](p, `document.querySelector('.act-item[data-act="files"]').title`); !strings.HasSuffix(tip, "+Shift+E)") || !strings.HasPrefix(tip, "Explorer (") {
