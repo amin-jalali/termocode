@@ -320,3 +320,37 @@ func TestWebConnectToastNamesThePairedDevice(t *testing.T) {
 		}
 	}
 }
+
+// Spec (WEBP-12): a device with a remembered browser says so in the list
+// and on its card; Forget bookmark (no card: the safe direction) ends the
+// key on the laptop, and the device stays paired.
+func TestWebDeviceForgetBookmark(t *testing.T) {
+	r := newAccessRig(t)
+	dir, _ := webDevicesDir()
+	st := webdevices.Open(dir)
+	now := time.Now()
+	_ = st.Add(webdevices.Device{ID: "dev-1a2b3c4d", Name: "iPad", Role: webdevices.RoleViewer, Created: now,
+		Bookmark: &webdevices.Bookmark{Hash: make([]byte, 32), Origin: "https://box.tail1234.ts.net", Created: now, Used: now}})
+	d, _, _ := st.Get("dev-1a2b3c4d")
+	if h := webDeviceHint(d, false, now); !strings.Contains(h, "bookmark") {
+		t.Fatalf("hint %q", h)
+	}
+	r.m.openWebDeviceCard("dev-1a2b3c4d")
+	ids := []string{}
+	for _, b := range r.m.confirm.Buttons() {
+		ids = append(ids, b.ID)
+	}
+	if strings.Join(ids, ",") != "close,forget-bookmark,remove" {
+		t.Fatalf("buttons %v", ids)
+	}
+	webAccessSelect(r.m, "forget-bookmark")
+	if d, ok, _ := st.Get("dev-1a2b3c4d"); !ok || d.Bookmark != nil {
+		t.Fatalf("after Forget bookmark: %v %+v", ok, d.Bookmark)
+	}
+	r.m.openWebDeviceCard("dev-1a2b3c4d")
+	for _, b := range r.m.confirm.Buttons() {
+		if b.ID == "forget-bookmark" {
+			t.Fatal("Forget bookmark offered with no bookmark")
+		}
+	}
+}

@@ -155,6 +155,26 @@ make a new one.
 A paired phone needs no new link. Open the panel's address and tap
 **Sign in with passkey**. There are no passwords.
 
+### Open from a bookmark
+
+Tick **Remember this browser** before you sign in (or before you save
+the passkey when you pair). Next time, a bookmark of the panel's address
+opens it without the passkey. The address must stay the same: use tailnet
+mode, or set `web_port` for the panel on this computer. If a sign-in code
+is on, the phone still types it.
+
+- Only this browser on this one address is remembered. termocode keeps
+  only a fingerprint (hash) of its key, never the key.
+- The browser keeps the key in a locked cookie (httpOnly, SameSite=Strict,
+  Secure over https). Scripts on the page cannot read it.
+- The key changes each time it is used. If an old copy is used again,
+  termocode ends the bookmark at once.
+- Not used for 30 days, it ends.
+- To end it: **Forget this browser** in **This device** (or **This
+  phone** in More), or on the laptop **Web: Devices…** → the device →
+  **Forget bookmark**. **Remove device** ends it too.
+- A guest from **Share as Viewer** is never remembered.
+
 ### A sign-in code as well (optional)
 
 For a second step after the passkey, run **Web: Set Up Sign-in Code…**.
@@ -234,7 +254,9 @@ In simple words:
   any SQL that may change data ask on the laptop first.
 - **Passkeys, no passwords.** A paired device signs in with a passkey
   that needs your face, finger or PIN. A copied passkey is noticed and
-  blocked. A removed device is out at once.
+  blocked. A removed device is out at once. A remembered browser
+  (bookmark) keeps a key that works on its one address only, changes
+  each use and can be forgotten from either side.
 - **Your yes, on the laptop.** Pairing a device, letting someone watch
   and giving control each need a card on the laptop, with **Not now**
   first. The phone and the card show the same code, so you know which

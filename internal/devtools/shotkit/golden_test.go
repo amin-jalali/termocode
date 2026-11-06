@@ -220,6 +220,10 @@ func goldenExtras() []Scene {
 		// Cancel-first card of Delete Tag….
 		{Name: "remotes-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-remotes"), Pause(600 * time.Millisecond)}},
 		{Name: "tag-delete-card", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-tag-delete"), Pause(600 * time.Millisecond), Key("enter"), Pause(600 * time.Millisecond)}},
+		// Commit box helpers (GITX-6): the recent messages and the
+		// co-author pickers.
+		{Name: "commit-history-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-commit-history"), Pause(600 * time.Millisecond)}},
+		{Name: "co-author-picker", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond), Act("palette:git-co-author"), Pause(600 * time.Millisecond)}},
 		// Stash… (GITX-10): what to stash.
 		{Name: "stash-mode-picker", Steps: WithEditor(Act("palette:git-stash-options"), Pause(600*time.Millisecond))},
 		// Bisect and compare (GITX-19, GITX-24): the good-commit picker that

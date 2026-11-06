@@ -164,3 +164,8 @@
 .row-menu-item { display: flex; align-items: center; width: 100%; min-height: var(--tap); padding: 0 var(--s2); text-align: start; font-weight: 550; }
 .row-menu-item:hover { background: var(--bg-hover); }
 .row-menu-cancel { justify-content: center; margin-top: var(--s2); color: var(--muted); }
+.remember { display: flex; gap: var(--s3); align-items: flex-start; margin-bottom: var(--s3); cursor: pointer; }
+.remember input { margin-top: 0.2rem; width: 1.1rem; height: 1.1rem; flex: none; accent-color: var(--strip); }
+.remember-text { display: flex; flex-direction: column; gap: 2px; }
+.remember-label { color: var(--text); }
+.remember-hint { color: var(--muted); font-size: 0.875rem; }

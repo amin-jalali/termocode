@@ -51,6 +51,39 @@ takes every file out of the index and keeps your edits.
 Press `t` to switch between a tree view and a flat list. termocode remembers
 your choice.
 
+## Write a better commit message
+
+- **History.** In the message box, `↑` shows your older messages and `↓`
+  goes back to the newer ones and then to your draft. **Git: Pick Recent
+  Commit Message…** lists them.
+- **Template.** When git has a `commit.template`, an empty box starts with
+  its text (without the `#` lines).
+- **Length.** While you type, the box shows how long the first line is. It
+  turns amber past 50 characters, or when the second line is not blank, and
+  red past 72.
+- **Full editor.** **Git: Edit Commit Message in Editor** opens the message
+  in an editor tab. Save the file and the box takes the text. Lines that
+  start with `#` are left out. A new line shows as `⏎` in the box.
+- **Co-authors.** **Git: Add Co-Author…** lists the people who committed in
+  this repository and adds a `Co-authored-by:` line.
+
+The **▾** menu has these too.
+
+## AI help for git
+
+These need an AI provider (**AI: Configure Provider…**). termocode never
+commits, stashes or sends a chat message for you: you check the text first.
+
+| Command | What it does |
+|---|---|
+| **Git: Generate Commit Message with AI** | The AI reads the staged changes (or all changes when nothing is staged) and writes a message in the box. `↑` brings your old text back. |
+| **Git: Stash with AI Message** | The AI names the stash. You can change the name, then `Enter` stashes; `Esc` keeps the changes as they are. |
+| **Git: Explain Changes with AI** | Puts your uncommitted changes in the chat box with a question. Press `Enter` to send. |
+| **Git: Explain Line's Commit with AI** | The same for the commit that last changed the cursor line. In the **GRAPH**, right-click a commit for **Explain with AI**. |
+| **Git: Write Pull Request Description with AI** | Puts the branch's commits and files in the chat box and asks for a title and a description. |
+
+Only the changes (at most 48 KB) and your recent commit subjects go to the AI.
+
 ## Stage one hunk
 
 You do not have to stage the whole file.
