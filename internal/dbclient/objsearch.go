@@ -27,6 +27,39 @@ func (h ObjectHit) Path() string {
 	return h.Name
 }
 
+// ListObjects is every table, view, column and routine of sources,
+// sorted by connection, schema and path: the list a picker filters.
+func ListObjects(sources []ObjectSource) []ObjectHit {
+	var out []ObjectHit
+	for _, src := range sources {
+		for _, s := range src.Schemas {
+			for _, t := range s.Tables {
+				out = append(out, ObjectHit{Conn: src.Conn, Schema: s.Schema, Kind: "table", Name: t.Name})
+				for _, c := range t.Columns {
+					out = append(out, ObjectHit{Conn: src.Conn, Schema: s.Schema, Kind: "column", Name: c.Name, Parent: t.Name})
+				}
+			}
+			for _, v := range s.Views {
+				out = append(out, ObjectHit{Conn: src.Conn, Schema: s.Schema, Kind: "view", Name: v.Name})
+			}
+			for _, r := range s.Routines {
+				out = append(out, ObjectHit{Conn: src.Conn, Schema: s.Schema, Kind: "routine", Name: r.Name})
+			}
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		a, b := out[i], out[j]
+		if a.Conn != b.Conn {
+			return a.Conn < b.Conn
+		}
+		if a.Schema != b.Schema {
+			return a.Schema < b.Schema
+		}
+		return a.Path() < b.Path()
+	})
+	return out
+}
+
 // SearchObjects finds the objects of sources whose name holds query (any
 // case): exact names first, then names that start with it, then the
 // rest; ties by connection, schema and path. limit <= 0 means no limit.

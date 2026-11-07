@@ -943,6 +943,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseERPicker(id); ok { // db_er.go
 		return cmd, true
 	}
+	if cmd, ok := m.databaseFindObjectPicker(id); ok { // db_findobj.go
+		return cmd, true
+	}
 	switch m.pickerKind {
 	case pickerKindDBAttach, pickerKindDBHistory, pickerKindDBSort:
 	case pickerKindDBHistoryDelete:

@@ -2070,6 +2070,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-explain-analyze` | Databases: Explain Analyze Statement… | never | executes the statement; use db_explain |
 | `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
 | `db-filter` | Databases: Filter… | never | the filter is typed by the user; the AI uses db_schema |
+| `db-find-object` | Databases: Find Object… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_schema) |
 | `db-find-usages` | Databases: Find Usages | auto |   |
 | `db-focus` | Databases: Focus | auto |   |
 | `db-format` | Databases: Format Statement or Selection | confirm (fileWrite) |   |

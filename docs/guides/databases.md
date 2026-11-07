@@ -219,6 +219,8 @@ The data page asks the server for one page at a time (`db_page_rows`, default 10
 
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
+**Find Object.** **Databases: Find Object…** searches every connected database at once. It reads the schemas in the background on the read-only session (up to 50 schemas per connection) and lists their tables, views, columns and routines; type to filter. Enter moves the tree cursor to the object (a column goes to its table). When the object's schema is not expanded in the tree yet, Enter shows the table's description instead.
+
 **From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line.
 
 ## Completion

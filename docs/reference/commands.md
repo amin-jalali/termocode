@@ -219,6 +219,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Export ER Diagram… | `db-er-diagram` |   |   |
 | Databases: Export Result… | `db-export` |   |   |
 | Databases: Filter… | `db-filter` |   |   |
+| Databases: Find Object… | `db-find-object` |   |   |
 | Databases: Find Usages | `db-find-usages` |   |   |
 | Databases: Focus | `db-focus` |   |   |
 | Databases: Format File | `db-format-file` |   |   |
