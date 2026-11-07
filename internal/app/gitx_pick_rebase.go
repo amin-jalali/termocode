@@ -219,7 +219,7 @@ func (m *Model) gitxPickDone(verb string, conflicts []string, err error, ok stri
 		m.toast, c = m.toast.PushDetail(toast.Info, ok, "Undo: u / Git: Undo Last Git Action")
 	}
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(c, fetchGitCmd())
 }
@@ -359,7 +359,7 @@ func (m *Model) gitxRestoreFileFrom(full string) tea.Cmd {
 				var c tea.Cmd
 				m.toast, c = m.toast.PushDetail(toast.Info, "Restored "+path+" from "+short, detail)
 				if m.nvim != nil {
-					_ = m.nvim.Command("silent! checktime")
+					m.nvimCheckTimeAll()
 				}
 				return tea.Batch(c, fetchGitCmd())
 			}, confirm.Button{ID: "restore", Title: "Restore"})
@@ -629,7 +629,7 @@ func (m *Model) gitxCheckPatch(from, patch string) tea.Cmd {
 			return m.gitxFail("Apply failed", err)
 		}
 		if m.nvim != nil {
-			_ = m.nvim.Command("silent! checktime")
+			m.nvimCheckTimeAll()
 		}
 		return tea.Batch(fetchGitCmd(), m.gitxInfo("Applied the patch from "+from))
 	}, confirm.Button{ID: "apply", Title: "Apply"})

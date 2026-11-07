@@ -168,7 +168,7 @@ func (m *Model) onGitMergeDone(msg gitMergeDoneMsg) tea.Cmd {
 		m.toast, c = m.toast.Push(toast.Info, "Merged "+msg.ref+" into "+msg.into)
 	}
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(fetchGitCmd(), c)
 }
@@ -273,7 +273,7 @@ func (m *Model) onGitOpDone(msg gitOpDoneMsg) tea.Cmd {
 		m.toast, c = m.toast.Push(toast.Info, name+" finished")
 	}
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(fetchGitCmd(), c)
 }

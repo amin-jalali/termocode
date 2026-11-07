@@ -86,7 +86,7 @@ func (m *Model) openBisect() tea.Cmd {
 // the step picker.
 func (m *Model) onBisectState(st git.BisectState) tea.Cmd {
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	refresh := fetchGitCmd()
 	if st.Done {
@@ -138,7 +138,7 @@ func (m *Model) gitxBisectReset() tea.Cmd {
 		return m.gitxFail("End Bisect failed", err)
 	}
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(fetchGitCmd(), m.gitxInfo("Bisect ended: back where you started"))
 }

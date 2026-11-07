@@ -165,7 +165,7 @@ func (m *Model) gitDiscardLinesConfirmed() tea.Cmd {
 	}
 	// The file on disk changed: let the editor reload it.
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Discarded "+gitLineLabel(from, to), filepath.Base(rel))
 	return tea.Batch(fetchGitCmd(), toastCmd)

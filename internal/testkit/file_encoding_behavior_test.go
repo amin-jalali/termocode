@@ -38,7 +38,7 @@ func TestFileEncodingRoundTrip(t *testing.T) {
 		{"crlf.txt", `return vim.bo.fileformat`, "dos", "one"},
 		{"bom.txt", `return tostring(vim.bo.bomb)`, "true", "hello"},
 		{"latin1.txt", `return vim.bo.fileencoding`, "latin1", "café"},
-		{"binary.txt", `return vim.bo.fileformat`, "unix", "head\ntail"},
+		{"binary.txt", `return vim.bo.fileformat`, "unix", "head\x00tail"},
 	}
 	for _, c := range cases {
 		orig := files[c.name]
@@ -46,7 +46,7 @@ func TestFileEncodingRoundTrip(t *testing.T) {
 		if got := lua(d, c.lua); got != c.want {
 			t.Errorf("%s: %s = %q, want %q", c.name, c.lua, got, c.want)
 		}
-		// nvim keeps a NUL as "\n" inside a line.
+		// nvim keeps a NUL as "\n" inside a line; the API gives it back as NUL.
 		if got := lua(d, `return vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]`); got != c.line {
 			t.Errorf("%s: first line = %q, want %q", c.name, got, c.line)
 		}

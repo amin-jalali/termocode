@@ -54,7 +54,7 @@ func (m *Model) gitOpsToast(err error, fail, ok, detail string) tea.Cmd {
 		m.toast, c = m.toast.Push(toast.Info, ok)
 	}
 	if err == nil && m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(fetchGitCmd(), c)
 }

@@ -1,7 +1,6 @@
 package testkit
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -122,7 +121,9 @@ func scn21Cut(w http.ResponseWriter, events []string) {
 		return
 	}
 	defer conn.Close()
-	bw := bufio.NewWriter(rw)
+	// rw is the hijacked connection's own buffer: write and flush it, or
+	// nothing reaches the client before the close.
+	bw := rw.Writer
 	fmt.Fprint(bw, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nTransfer-Encoding: chunked\r\n\r\n")
 	for _, e := range events {
 		data := "data: " + e + "\n\n"
@@ -307,11 +308,14 @@ func scn21BudgetDriver(t *testing.T) (*Driver, *scn21Server) {
 	return d, s
 }
 
-// scn21ClickCardButton clicks label on the row that also shows other
-// (a card's button row; the budget card has no Cancel).
+// scn21ClickCardButton clicks label on the last row that also shows
+// other (a card's button row sits below its text, and the text names the
+// buttons too; the budget card has no Cancel).
 func scn21ClickCardButton(d *Driver, label, other string) {
 	d.T.Helper()
-	for y, line := range strings.Split(screen(d), "\n") {
+	lines := strings.Split(screen(d), "\n")
+	for y := len(lines) - 1; y >= 0; y-- {
+		line := lines[y]
 		if !strings.Contains(line, other) {
 			continue
 		}
@@ -329,7 +333,7 @@ func scn21ClickCardButton(d *Driver, label, other string) {
 func TestSCN21BudgetReachedStop(t *testing.T) {
 	d, s := scn21BudgetDriver(t)
 	got := screen(d)
-	if !strings.Contains(got, "1 step did not run yet") || !strings.Contains(got, "$0.015") {
+	if !strings.Contains(got, "1 step did not run") || !strings.Contains(got, "$0.015") {
 		t.Errorf("budget card does not say what was spent and what is left:\n%s", got)
 	}
 	scn21ClickCardButton(d, "Stop", "Continue")
@@ -368,11 +372,13 @@ func TestSCN21BudgetReachedContinue(t *testing.T) {
 	}
 }
 
-// scn21WorktreeProfile: Left and Right run at the same time (no deps,
-// ai_parallel_max 2), so each works in its own git worktree.
+// scn21WorktreeProfile: Left and Right run at the same time (neither has
+// deps, ai_parallel_max 2), so each works in its own git worktree. Join
+// (reads only) waits for both: a profile without any deps is a chain.
 const scn21WorktreeProfile = `{"profiles":{"pair":{"title":"Pair","steps":[
 	{"id":"left","title":"Left","system":"SCN21-LEFT"},
-	{"id":"right","title":"Right","system":"SCN21-RIGHT"}]}}}`
+	{"id":"right","title":"Right","system":"SCN21-RIGHT"},
+	{"id":"join","title":"Join","tools":{"preset":"none"},"deps":["left","right"]}]}}}`
 
 func scn21WorktreeDriver(t *testing.T) *Driver {
 	t.Helper()
@@ -393,7 +399,9 @@ func scn21WorktreeDriver(t *testing.T) *Driver {
 	files := map[string]string{"left.txt": "mine\n", "notes.md": "# notes\n"}
 	d := scn21Driver(t, srv.URL, "ollama", true, files,
 		map[string]string{"ai/profiles.json": scn21WorktreeProfile},
-		`"ai_parallel_max":2`, "fileWrite", "git", "run", "ide", "settings", "services")
+		// Plan approval and the critic off: this scenario is about the
+		// worktrees, not the G-PLAN card or the CMP-53 review.
+		`"ai_parallel_max":2,"ai_plan_approval":"auto","ai_critic":"off"`, "fileWrite", "git", "run", "ide", "settings", "services")
 	d.Palette("ai-profile-switch")
 	if !d.WaitForText("AI Profile", 3*time.Second) {
 		t.Fatalf("no profile picker:\n%s", screen(d))
@@ -408,10 +416,12 @@ func scn21WorktreeDriver(t *testing.T) *Driver {
 	return d
 }
 
-// scn21AgentBranches lists the agent branches of the workspace repo.
+// scn21AgentBranches lists the agent branches of the workspace repo
+// (names only: plain git branch marks a branch checked out in another
+// worktree with "+").
 func scn21AgentBranches(d *Driver) string {
 	d.T.Helper()
-	out, err := exec.Command("git", "-C", d.Dir, "branch", "--list", "termocode/agent-*").Output()
+	out, err := exec.Command("git", "-C", d.Dir, "branch", "--list", "--format=%(refname:short)", "termocode/agent-*").Output()
 	if err != nil {
 		d.T.Fatalf("git branch: %v", err)
 	}

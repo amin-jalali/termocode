@@ -227,6 +227,9 @@ func TestAIMCPToolsChangedBehavior(t *testing.T) {
 	if !strings.Contains(screen(d), "Show tools") {
 		t.Errorf("dialog does not say how to review:\n%s", screen(d))
 	}
+	// Under load the card's first frame can come before its buttons
+	// take clicks: let it settle first.
+	d.Settle(300 * time.Millisecond)
 	clickTextOn(d, "Not now")
 	if !d.WaitForText("AI wants to: mcp.fake.echo", 15*time.Second) {
 		t.Fatalf("a read-only tool of a changed server did not ask:\n%s", screen(d))

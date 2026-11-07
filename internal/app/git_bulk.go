@@ -146,7 +146,7 @@ func (m *Model) onGitBulkConfirm(kind confirmKindEnum, id string) tea.Cmd {
 		m.toast, c = m.toast.PushDetail(toast.Info, "Discarded all changes", "safety copy: "+ref)
 	}
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(fetchGitCmd(), c)
 }

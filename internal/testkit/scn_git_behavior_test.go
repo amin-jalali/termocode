@@ -81,6 +81,9 @@ func TestSCN23IndexLockHeld(t *testing.T) {
 func TestSCN23Submodules(t *testing.T) {
 	d, r := scmDriver(t, func(r *repo) {
 		lib := filepath.Join(looseTempDir(r.t), "lib")
+		if err := os.Mkdir(lib, 0o755); err != nil {
+			r.t.Fatal(err)
+		}
 		l := newRepo(r.t, lib)
 		l.write("lib.txt", "1\n")
 		l.commit("lib one")

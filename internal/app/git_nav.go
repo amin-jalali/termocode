@@ -84,7 +84,7 @@ func (m *Model) reloadBuffer() tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
-	_ = m.nvim.Command("silent! checktime")
+	m.nvimCheckTimeAll()
 	_ = m.nvim.Command("if &buftype == '' && !empty(expand('%')) | silent! edit! | endif")
 	var toastCmd tea.Cmd
 	m.toast, toastCmd = m.toast.Push(toast.Info, "Buffer reloaded from disk")

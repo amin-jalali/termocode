@@ -31,14 +31,14 @@ func TestStartWithACorruptConfig(t *testing.T) {
 	if !d.WaitForText("Settings file is broken", 3*time.Second) {
 		t.Fatalf("no toast about the broken config.json:\n%s", screen(d))
 	}
-	s := screen(d)
+	// The toast row is cut to the width; its full text is the detail.
 	for _, want := range []string{"line 3", "default settings"} {
-		if !strings.Contains(s, want) {
-			t.Errorf("the toast does not say %q:\n%s", want, s)
+		if !toastsSay(d, want) {
+			t.Errorf("the toast does not say %q: %q\n%s", want, d.Model().ToastTexts(), screen(d))
 		}
 	}
 	if cardShown(d) {
-		t.Errorf("the first-run card shows over a broken config.json:\n%s", s)
+		t.Errorf("the first-run card shows over a broken config.json:\n%s", screen(d))
 	}
 	d.Action("toasts:clear")
 	d.Action("setting:setting-tab-size=8")
@@ -128,16 +128,16 @@ func TestCustomThemeJourney(t *testing.T) {
 func TestCustomThemeOverACorruptFile(t *testing.T) {
 	const broken = `{"BgEditor": "#101010",,}`
 	d := New(t, Options{W: 150, H: 50, Config: map[string]string{"user_theme.json": broken}})
-	setCustomColor(d, "AccentBlue", "#0000ff")
-	if !d.WaitForText("user_theme.json.broken", 2*time.Second) {
-		t.Errorf("no toast naming the kept file:\n%s", screen(d))
+	setCustomColor(d, "AIAccent", "#0000ff")
+	if !d.WaitFor(func() bool { return toastsSay(d, "user_theme.json.broken") }, 2*time.Second) {
+		t.Errorf("no toast naming the kept file: %q\n%s", d.Model().ToastTexts(), screen(d))
 	}
 	if b, err := os.ReadFile(cfgPath("user_theme.json.broken")); err != nil || string(b) != broken {
 		t.Errorf("old file not kept: %q %v", b, err)
 	}
 	var saved map[string]string
 	b, _ := os.ReadFile(cfgPath("user_theme.json"))
-	if err := json.Unmarshal(b, &saved); err != nil || saved["AccentBlue"] != "#0000ff" {
+	if err := json.Unmarshal(b, &saved); err != nil || saved["AIAccent"] != "#0000ff" {
 		t.Errorf("user_theme.json = %q (%v)", b, err)
 	}
 }
