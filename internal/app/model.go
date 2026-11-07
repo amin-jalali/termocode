@@ -771,6 +771,11 @@ type Model struct {
 	dragKind   dragKind
 	dragStartX int
 
+	// expDrag is a drag and drop in the Files tree (explorer_drag.go);
+	// expMoves are the moves its card asks about.
+	expDrag  explorerDrag
+	expMoves []git.Move
+
 	// dapSessionActive flips true when a Debug Adapter Protocol session is
 	// running (driven by Debug: Start / Debug: Stop palette commands). It
 	// gates step-* keybindings (so F10/F11 don't toast spam without a

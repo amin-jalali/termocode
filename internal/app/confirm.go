@@ -208,6 +208,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return cmd
 	}
 	switch m.confirmKind {
+	case confirmKindExplorerMove: // explorer_drag.go
+		return m.answerExplorerMove(id)
 	case confirmKindBulkRename:
 		if id == "apply" {
 			return m.applyBulkRename()
