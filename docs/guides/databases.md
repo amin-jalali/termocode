@@ -162,6 +162,7 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `f` | show only rows that contain a text |
 | `v` or `Enter` | open the cell under the cursor (JSON is pretty-printed); `q` goes back |
 | `y` | copy the cell |
+| `Y` | copy the column, one value per line |
 | `c` / `C` | copy the loaded rows as CSV / JSON |
 | `S` | export the rows to a file (CSV, TSV, JSON, SQL INSERTs or Markdown) |
 | `r` | run again (writes ask again) |

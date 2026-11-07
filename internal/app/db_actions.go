@@ -910,6 +910,7 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"t", "flip rows and columns (table data)"},
 		[]string{"v", "open the cell"},
 		[]string{"y", "copy the cell"},
+		[]string{"Y", "copy the column, one value per line"},
 		[]string{"c / C", "copy the rows as CSV / JSON"},
 		[]string{"S", "export the rows to a file"},
 		[]string{"Run"},
