@@ -444,11 +444,7 @@ func (m Model) boxWidth() int {
 		boxW = max(boxW, min(lipgloss.Width(m.code)+10, 110))
 	}
 	// Room for the button row on one line (four buttons need more than 60).
-	btnW := 2 * max(len(m.buttons)-1, 0)
-	for _, b := range m.buttons {
-		btnW += lipgloss.Width(m.buttonLabel(b))
-	}
-	boxW = max(boxW, min(btnW+4, 110))
+	boxW = max(boxW, min(m.buttonRowWidth(2, 2)+4, 110))
 	if maxW := m.w - 8; boxW > maxW {
 		boxW = maxW
 	}
@@ -519,7 +515,7 @@ func (m Model) layoutRest(boxW, innerW, bodyW int, bodyLines []string) confirmDi
 		labels[i] = m.buttonLabel(b)
 		totalLabelW += lipgloss.Width(labels[i])
 	}
-	const gap = 2
+	gap := m.buttonGap()
 	if len(m.buttons) > 1 {
 		totalLabelW += gap * (len(m.buttons) - 1)
 	}
@@ -753,14 +749,43 @@ func (m Model) renderButtonsRow(w int, buttonXs []int) string {
 // buttonLabel returns the rendered-width label for a button — used for
 // layout calculations without paying for the full styled render.
 func (m Model) buttonLabel(b Button) string {
-	return "  " + b.Title + "  "
+	pad := "  "
+	if m.compactButtons() {
+		pad = " "
+	}
+	return pad + b.Title + pad
+}
+
+// buttonRowWidth is the width of the button row with pad cells on each
+// side of a title and gap cells between buttons.
+func (m Model) buttonRowWidth(pad, gap int) int {
+	w := gap * max(len(m.buttons)-1, 0)
+	for _, b := range m.buttons {
+		w += lipgloss.Width(b.Title) + 2*pad
+	}
+	return w
+}
+
+// compactButtons is true when the roomy row (two cells of padding and
+// gap) is wider than the card, which the window caps: the buttons then
+// take one cell each, so every button still sits whole inside the card.
+func (m Model) compactButtons() bool {
+	return m.buttonRowWidth(2, 2) > m.boxWidth()-2
+}
+
+// buttonGap is the panel-bg gap between adjacent buttons.
+func (m Model) buttonGap() int {
+	if m.compactButtons() {
+		return 1
+	}
+	return 2
 }
 
 // renderButton paints one button. Active uses the soft selection bar
 // (cmSelBg); inactive uses an accent bg derived from the button's style
 // (default → panel bg, primary → cmPrimaryBg, destructive → cmDestructiveBg).
 func (m Model) renderButton(b Button, active bool) string {
-	label := "  " + b.Title + "  "
+	label := m.buttonLabel(b)
 	f := theme.Float()
 	if active {
 		// The focused button is a solid fill: accent for primary / plain,
