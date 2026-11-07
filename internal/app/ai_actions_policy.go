@@ -733,6 +733,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-proofs": aiNever(aiNoPicker),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
+	"acp-thread":       aiNever("it starts an outside agent program: the user starts and ends it"),
+	"acp-agents-edit":  aiNever("the list names programs termocode starts: only the user edits it"),
 	"ai-plan-worktree": aiNever("it leads to a push and a pull request: the user starts it"),
 	// It edits other apps' config files: only the user, after the preview.
 	"ai-agent-hooks": aiNever("it changes other apps' config files: the user decides after the preview"),
@@ -747,7 +749,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// AI: Usage (AU-4) is the user's own view of tokens and money.
 	"ai-usage": aiNever("a read-only screen for the user; the AI cannot read its own bill"),
 	// Runs is the user's monitoring page (stop, pause and resume are theirs).
-	"ai-runs": aiNever("the user's monitoring page; it holds Stop, Pause and Resume"),
+	"ai-runs":  aiNever("the user's monitoring page; it holds Stop, Pause and Resume"),
+	"ai-board": aiNever("the user's board of agent work; it opens a picker and holds Resume"),
 
 	// ── HTTP client ──
 	"http-send":              aiNever("sends a network request; use http_send (gated by host and method)"),

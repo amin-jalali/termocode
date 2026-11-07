@@ -128,13 +128,13 @@ func TestRegistry(t *testing.T) {
 		}
 		ids = append(ids, a.ID)
 	}
-	if strings.Join(ids, ",") != "claude,codex,gemini,opencode,aider,cursor,amp,goose,qwen,crush,copilot,kimi,droid,pi" {
+	if strings.Join(ids, ",") != "claude,codex,gemini,opencode,aider,cursor,amp,goose,qwen,crush,copilot,kimi,droid,pi,kiro,auggie,grok,cline,continue,vibe" {
 		t.Errorf("ids %v", ids)
 	}
 	if a, _ := ByID("claude"); a.Title != "Claude Code" || !a.Palette {
 		t.Errorf("claude %+v", a)
 	}
-	for _, id := range []string{"aider", "cursor", "amp", "goose", "qwen", "crush", "copilot", "kimi", "droid", "pi"} {
+	for _, id := range []string{"aider", "cursor", "amp", "goose", "qwen", "crush", "copilot", "kimi", "droid", "pi", "kiro", "auggie", "grok", "cline", "continue", "vibe"} {
 		if a, _ := ByID(id); a.Palette {
 			t.Errorf("%s is not a palette entry (Agent: Start… lists it)", id)
 		}
@@ -149,6 +149,7 @@ func TestMCPLineGolden(t *testing.T) {
 	want := map[string]string{
 		"claude": `claude --mcp-config /run/tc/k.mcp-claude.json`,
 		"codex":  `codex -c 'mcp_servers.termocode.command="/opt/tc/termocode"' -c 'mcp_servers.termocode.args=["mcp", "--dir", "/home/u/proj"]'`,
+		"kimi":   `kimi --mcp-config-file /run/tc/k.mcp-claude.json`,
 	}
 	for _, a := range Registry {
 		line, ok := a.MCPLine(exe, root, file)
@@ -163,7 +164,7 @@ func TestMCPLineGolden(t *testing.T) {
 	if a, _ := ByID("opencode"); a.MCP.Kind != MCPProjectFile || a.MCP.ProjectFile != "opencode.json" {
 		t.Errorf("opencode: %+v", a.MCP)
 	}
-	for _, id := range []string{"gemini", "aider", "cursor", "amp", "goose", "qwen", "crush", "copilot", "kimi", "droid", "pi"} {
+	for _, id := range []string{"gemini", "aider", "cursor", "amp", "goose", "qwen", "crush", "copilot", "droid", "pi", "kiro", "auggie", "grok", "cline", "continue", "vibe"} {
 		if a, _ := ByID(id); a.MCP.Kind != MCPNone || a.MCP.NoteTitle == "" || a.MCP.Note == "" {
 			t.Errorf("%s: %+v", id, a.MCP)
 		}

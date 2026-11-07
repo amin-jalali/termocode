@@ -60,6 +60,7 @@ type wtItem struct {
 	state  string
 	group  string
 	setup  string // the setup state of a new worktree (worktrees_setup.go)
+	runURL string // the address of its running dev server (worktrees_run.go)
 	depth  int    // drawn under its parent (WTX-11); set when drawn
 	waits  string // what it waits for (CMP-80): "waits for a" | "ready: …" | ""
 }
@@ -76,6 +77,8 @@ type wtRow struct {
 type wtTabAgent struct {
 	name, cwd string
 	state     agents.State
+	buf       int  // its nvim buffer (the live preview reads it, CMP-8)
+	asleep    bool // hibernated (AGX-15)
 }
 
 // wtOwner is the worktree a folder belongs to: the deepest worktree

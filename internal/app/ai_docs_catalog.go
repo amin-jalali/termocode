@@ -66,6 +66,7 @@ var aiGateNotes = map[string]string{
 	"service_set_access":  "confirm (always asks): Deny (first) · Change",
 	"outside_agent_start": "confirm (always asks): Deny (first) · Start",
 	"agent_race_start":    "confirm (always asks): Deny (first) · Start race",
+	"agent_split_start":   "confirm (always asks): Deny (first) · Start split",
 	"agent_run_start":     "confirm (always asks): Deny (first) · Start run",
 	// WFX-9: workflows by chat.
 	"workflow_draft":   "confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version)",
@@ -159,12 +160,13 @@ func AIToolCatalog() []AIToolDoc {
 	kept := tools[:0]
 	for _, t := range tools {
 		switch t.Name {
-		case "skill_load", "web_fetch", "web_search":
+		case "skill_load", "rule_load", "web_fetch", "web_search":
 		default:
 			kept = append(kept, t)
 		}
 	}
 	tools = append(kept, aiSkillLoadTool("."))                                                                     // listed only where a skill is offered
+	tools = append(tools, aiRuleLoadTool(ai.Rules{}, nil))                                                         // CMP-82: only with a trusted auto rule
 	tools = append(tools, aiRedactResults([]ai.Tool{aiWebFetchTool(), aiWebSearchTool(webtools.Providers[0])})...) // only when turned on (OMX-13)
 	out := make([]AIToolDoc, 0, len(tools))
 	for _, t := range tools {

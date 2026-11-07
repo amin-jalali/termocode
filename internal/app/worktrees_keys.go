@@ -36,16 +36,27 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"d", "diff vs base: what it changed since it left its base · keep or revert each change"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
 		[]string{"c", "new child worktree: from this one's branch, listed under it"},
+		[]string{"H", "hand off: a new agent goes on with a note of this work, here or in a child"},
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
+		[]string{"r", "run the dev server on the worktree's own port ($PORT) · again: show its tab"},
+		[]string{"o", "open the running dev server's address in the browser"},
 		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
 		[]string{"F", "forget a worktree whose folder is gone"},
 		[]string{"x", "archive: remove the folder, keep the branch · on an archived row: restore"},
 		[]string{"D", "delete the worktree and its branch (asks, step by step)"},
 		[]string{"C", "clean up: tick merged and old worktrees, archive them together"},
+		[]string{"M", "move to another machine: pack it into one file (commits, changes, new files, notes)"},
+		[]string{"U", "unpack a moved lane as a new worktree, or pull one from a host over ssh"},
 		[]string{"s", "sleep: end its agent tabs, move it under ASLEEP · again: wake it"},
+		[]string{"b", "background task: an agent works on it alone in a sandbox container (asks first)"},
+		[]string{"B", "background tasks: state, follow output, stop, remove"},
 		[]string{"Sessions"},
 		[]string{"T", "its agent sessions: Enter shows the tab"},
 		[]string{"S", "new agent session: one more agent in it, its own tab"},
+		[]string{"Watch"},
+		[]string{"v", "preview: its agent's live screen in the panel, the list keeps the keys · again: close"},
+		[]string{"V", "agent grid: up to 4 agent screens of this window side by side"},
+		[]string{"Enter", "in the preview: jump into the selected agent's tab · Tab picks a tile · g grid"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
 		[]string{"/", "filter by name · Esc clears"},
@@ -70,7 +81,10 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtResetOrderPaletteID, Title: "Worktree: Reset Order"},
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
 		{ID: wtChildPaletteID, Title: "Worktree: New Child of Selected…"},
+		{ID: wtHandoffPaletteID, Title: "Worktree: Hand Off Selected…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
+		{ID: wtRunPaletteID, Title: "Worktree: Run Dev Server of Selected"},
+		{ID: wtRunOpenPaletteID, Title: "Worktree: Open Dev Server of Selected"},
 		{ID: wtLinkPaletteID, Title: "Worktree: Link Issue or PR…"},
 		{ID: wtNotesPaletteID, Title: "Worktree: Show Notes of Selected"},
 		{ID: wtDiffPaletteID, Title: "Worktree: Review Changes vs Base of Selected"},
@@ -83,6 +97,13 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtArchivePaletteID, Title: "Worktree: Archive or Restore Selected…"},
 		{ID: wtDeletePaletteID, Title: "Worktree: Delete Selected…"},
 		{ID: wtCleanupPaletteID, Title: "Worktree: Clean Up…"},
+		{ID: wtBgTaskPaletteID, Title: "Worktree: Run Agent Task in Background…"},
+		{ID: wtBgTasksPaletteID, Title: "Worktree: Background Tasks…"},
+		{ID: wtMovePaletteID, Title: "Worktree: Move Selected to Another Machine…"},
+		{ID: wtUnpackPaletteID, Title: "Worktree: Unpack a Moved Lane…"},
+		{ID: wtPullPaletteID, Title: "Worktree: Pull a Lane from a Host…"},
+		{ID: wtPreviewPaletteID, Title: "Worktree: Preview Agent Screen"},
+		{ID: wtPreviewGridPaletteID, Title: "Worktree: Preview Agent Grid"},
 	}
 }
 
@@ -112,8 +133,14 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.openWorktreeNew(), true
 	case wtChildPaletteID:
 		return m.openWorktreeNewChild(), true
+	case wtHandoffPaletteID:
+		return m.worktreeHandoff(), true
 	case wtSetupLogPaletteID:
 		return m.worktreeSetupLog(), true
+	case wtRunPaletteID:
+		return m.worktreeRun(), true
+	case wtRunOpenPaletteID:
+		return m.worktreeRunOpen(), true
 	case wtLinkPaletteID:
 		return m.worktreeLink(), true
 	case wtNotesPaletteID:
@@ -138,6 +165,20 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeDelete(), true
 	case wtCleanupPaletteID:
 		return m.worktreeCleanup(), true
+	case wtBgTaskPaletteID:
+		return m.worktreeBgTask(), true
+	case wtBgTasksPaletteID:
+		return m.worktreeBgTasks(), true
+	case wtMovePaletteID:
+		return m.worktreeMove(), true
+	case wtUnpackPaletteID:
+		return m.worktreeUnpack(), true
+	case wtPullPaletteID:
+		return m.worktreePull(), true
+	case wtPreviewPaletteID:
+		return m.worktreePreview(false), true
+	case wtPreviewGridPaletteID:
+		return m.worktreePreview(true), true
 	}
 	return nil, false
 }
@@ -199,8 +240,14 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.openWorktreeNew()
 	case "c":
 		return m, m.openWorktreeNewChild()
+	case "H":
+		return m, m.worktreeHandoff()
 	case "L":
 		return m, m.worktreeSetupLog()
+	case "r":
+		return m, m.worktreeRun()
+	case "o":
+		return m, m.worktreeRunOpen()
 	case "i":
 		return m, m.worktreeLink()
 	case "N":
@@ -223,6 +270,18 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeDelete()
 	case "C":
 		return m, m.worktreeCleanup()
+	case "b":
+		return m, m.worktreeBgTask()
+	case "B":
+		return m, m.worktreeBgTasks()
+	case "M":
+		return m, m.worktreeMove()
+	case "U":
+		return m, m.worktreeUnpack()
+	case "v":
+		return m, m.worktreePreview(false)
+	case "V":
+		return m, m.worktreePreview(true)
 	case "f":
 		m.worktreeNextFilter()
 	case "R":
@@ -256,4 +315,5 @@ func (m *Model) wtMove(items []wtItem, rows []wtRow, cur, d int) {
 	st.cursorPath = items[rows[cards[at]].item].e.Path
 	st.detail = false
 	st.touch()
+	m.wtPreviewMoved() // CMP-8: the preview follows the cursor
 }

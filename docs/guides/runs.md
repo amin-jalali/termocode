@@ -38,6 +38,23 @@ its log name the chat that asked (see
 [Let the AI start a run](ai-profiles.md#let-the-ai-start-a-run)). Type
 `by AI` in the filter to see only those.
 
+### The run tree
+
+A step of a run can start more runs (sub-runs). Runs shows each sub-run
+under the run that started it, one step to the right, with a branch line:
+
+```
+◉ fix the toast flicker          $0.009
+  review ●─◉ Fixer · 41 s
+  └ ✓ why does the toast …         done
+      review ●─● 58 s
+```
+
+A family stays together in the group of its most urgent run. A finished
+run with a sub-run that still goes is in **NOW**. Press `t` for the flat
+list by time; press `t` again for the tree. The filter keeps the tree for
+the runs it shows.
+
 Colour is state only:
 
 | Colour | Means |
@@ -81,6 +98,9 @@ a known price adds nothing.
 - **BUDGET**: the run against its profile's `budget_usd`, and today
   against your day budget (below).
 - **WHAT HAPPENED**: when each step started and ended.
+- **RUN TREE** (only for a run with a parent or sub-runs): the run that
+  started it (`↑`), this run, and its sub-runs (`└`). Click a row to open
+  that run's page.
 
 The numbers move once a second while a run goes and Runs is on screen.
 Nothing ticks when no run goes.
@@ -112,6 +132,7 @@ profile still has the same steps. Otherwise send the message again.
 | `x` `p` `r` `c` | Stop, Pause, Resume, Open in chat |
 | `a` `u` `i` `y` | AGENTS, usage by model, the profile in Itermoc, copy the run id |
 | `/` | Filter by task, profile or chat title |
+| `t` | The run tree on or off (sub-runs under their parent) |
 | `?` | The keys card |
 
 ## Day budget
@@ -133,6 +154,36 @@ show their tokens, and **subscription** where the cost goes. They count
 in no budget. When such a CLI reaches its usage limit, the run shows
 **paused** with `usage limit · resumes at 16:00` and goes on by itself
 then; **Resume** (`r`) goes on at once.
+
+## Agent Board
+
+**AI: Agent Board…** (command palette, `F1`) puts all agent work of the
+window in one list. It joins three places: AI runs (this view), agent
+lanes in worktrees (the [WORKTREES view](worktrees.md)) and AI setup that
+waits for you ([Itermoc](itermoc.md)).
+
+The list has four columns, the most urgent first:
+
+| Column | What is in it |
+|---|---|
+| **NEEDS YOU** | An agent waits for your answer, a lane's checkpoint says **blocked**, a lane's PR has red CI, a run is stalled, paused, stopped with steps left or failed, or an AI sign-in or key is missing. |
+| **WORKING** | An agent works in a lane, or a run goes now. |
+| **REVIEW** | An agent is done, a lane's PR is open, or a run finished in the last 24 hours. |
+| **DONE** | A lane's PR is merged or closed, a run finished more than 24 hours ago, or a run was cancelled. |
+
+Each card shows why it is in its column, where it is (the profile and
+chat, or the branch and PR number), the CI state and its age.
+
+- Type to search. Every word must match: the task, the branch, the
+  column (`needs`, `review` …), `run`, `lane`, or `CI failed`.
+- `Enter` opens the card where its work lives: a run's page in Runs, the
+  agent's terminal tab, the worktree, or the Itermoc page that fixes it.
+- A run that can go on (paused, or stopped with steps left) asks first:
+  **Cancel** has the focus, **Resume** goes on, **Open its page** shows
+  the run. A resume uses tokens like any run.
+
+The board reads the worktrees again when it opens. The AI cannot open it.
+The browser does not have the board yet.
 
 ## What Runs does not show
 

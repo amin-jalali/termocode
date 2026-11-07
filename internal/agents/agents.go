@@ -1,6 +1,6 @@
 // Package agents knows the external AI coding CLIs that run in terminal
 // tabs (Claude Code, Codex, Gemini CLI, OpenCode, Aider and the AGX-1
-// presets): how to find
+// and CMP-3 presets): how to find
 // them in a command line, and what their screen says — working, waiting
 // for the user (a permission prompt or a question) or done (back at
 // their input box). The screen rules are small regex tables tested on
@@ -37,6 +37,10 @@ type Agent struct {
 	// ConfigEnv is the CLI's documented config-folder variable (AGX-13
 	// accounts: CLAUDE_CONFIG_DIR, CODEX_HOME); "" = no accounts.
 	ConfigEnv string
+	// InstallURL is the CLI's own install page (CMP-3), for a preset with
+	// no Tool: Enter on it offers to open the page (termocode never runs
+	// an install script or a shell pipe).
+	InstallURL string
 }
 
 // handNote is the MCP note of a preset whose per-launch MCP flag is not
@@ -72,15 +76,29 @@ var Registry = []Agent{
 			Note:      "Aider has no MCP support"}},
 	// AGX-1 presets: listed in Agent: Start… (not one palette row each).
 	// No sample screens yet, so no screen rules: their state is Unknown.
-	{ID: "cursor", Title: "Cursor CLI", Bin: "cursor-agent", Login: "cursor-agent login", MCP: handNote},
+	{ID: "cursor", Title: "Cursor CLI", Bin: "cursor-agent", Login: "cursor-agent login", MCP: handNote,
+		InstallURL: "https://cursor.com/cli"},
 	{ID: "amp", Title: "Amp", Bin: "amp", Packages: []string{"@sourcegraph/amp"}, Tool: "amp", Login: "amp login", MCP: handNote},
-	{ID: "goose", Title: "Goose", Bin: "goose", Login: "goose configure", MCP: handNote},
+	{ID: "goose", Title: "Goose", Bin: "goose", Login: "goose configure", MCP: handNote,
+		InstallURL: "https://block.github.io/goose/docs/getting-started/installation"},
 	{ID: "qwen", Title: "Qwen Code", Bin: "qwen", Packages: []string{"@qwen-code/qwen-code"}, Tool: "qwen-code", MCP: handNote},
 	{ID: "crush", Title: "Crush", Bin: "crush", Packages: []string{"@charmland/crush"}, Tool: "crush", MCP: handNote},
 	{ID: "copilot", Title: "Copilot CLI", Bin: "copilot", Packages: []string{"@github/copilot"}, Tool: "copilot-cli", MCP: handNote},
-	{ID: "kimi", Title: "Kimi CLI", Bin: "kimi", Packages: []string{"kimi-cli"}, Tool: "kimi-cli", MCP: handNote},
-	{ID: "droid", Title: "Droid", Bin: "droid", MCP: handNote},
+	{ID: "kimi", Title: "Kimi CLI", Bin: "kimi", Packages: []string{"kimi-cli"}, Tool: "kimi-cli",
+		MCP: MCPRecipe{Kind: MCPFlag, TempFile: "kimi.json", Args: func(_, _, file string) []string {
+			return []string{"--mcp-config-file", file} // the same mcpServers JSON as Claude Code
+		}}},
+	{ID: "droid", Title: "Droid", Bin: "droid", MCP: handNote,
+		InstallURL: "https://docs.factory.ai/cli/getting-started/quickstart"},
 	{ID: "pi", Title: "Pi", Bin: "pi", Packages: []string{"@mariozechner/pi-coding-agent"}, Tool: "pi", MCP: handNote},
+	// CMP-3 presets: also listed in Agent: Start… only, state Unknown.
+	{ID: "kiro", Title: "Kiro CLI", Bin: "kiro-cli", Login: "kiro-cli login", MCP: handNote,
+		InstallURL: "https://kiro.dev/cli/"},
+	{ID: "auggie", Title: "Auggie", Bin: "auggie", Packages: []string{"@augmentcode/auggie"}, Tool: "auggie", Login: "auggie login", MCP: handNote},
+	{ID: "grok", Title: "Grok CLI", Bin: "grok", Packages: []string{"@vibe-kit/grok-cli"}, Tool: "grok-cli", MCP: handNote},
+	{ID: "cline", Title: "Cline CLI", Bin: "cline", Packages: []string{"cline"}, Tool: "cline", MCP: handNote},
+	{ID: "continue", Title: "Continue CLI", Bin: "cn", Packages: []string{"@continuedev/cli"}, Tool: "continue-cli", MCP: handNote},
+	{ID: "vibe", Title: "Mistral Vibe", Bin: "vibe", Tool: "mistral-vibe", MCP: handNote},
 }
 
 // ByID returns the agent with id.

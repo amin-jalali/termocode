@@ -139,17 +139,52 @@ func TestAgentInstallThenStart(t *testing.T) {
 	}
 }
 
-// Spec (AGX-3): an agent with no package-manager install (Cursor CLI)
-// opens no card and runs nothing: a toast says to install it by hand.
+// Spec (AGX-3, CMP-3): an agent with no package-manager install (Cursor
+// CLI) installs nothing: a card (Not now first) names its own install
+// page; Not now opens nothing, Open install page opens it.
 func TestAgentWithoutOneClickInstall(t *testing.T) {
-	m, installed, _ := agentInstallModel(t)
+	m, installed, lines := agentInstallModel(t)
+	t.Setenv("SSH_CONNECTION", "")
+	t.Setenv("SSH_TTY", "")
+	var opened []string
+	old := osOpen
+	osOpen = func(u string) error { opened = append(opened, u); return nil }
+	t.Cleanup(func() { osOpen = old })
+	cursor, _ := agents.ByID("cursor")
 	m.onAgentPicked("agent:cursor")
-	if m.confirmOpen || len(*installed) != 0 {
-		t.Fatal("a card or an install for cursor")
+	if !m.confirmOpen || m.confirmKind != confirmKindAgentInstallPage || m.confirm.SafeID() != "cancel" {
+		t.Fatalf("no install-page card: open %v kind %v", m.confirmOpen, m.confirmKind)
 	}
-	got := strings.Join(strings.Fields(ansi.Strip(strings.Join(m.toast.View(200, 40), " "))), " ")
-	if !strings.Contains(got, "Cursor CLI has no one-click install") {
-		t.Errorf("toast %q", got)
+	box := ansi.Strip(m.confirm.Box())
+	for _, want := range []string{"Cursor CLI has no one-click install", cursor.InstallURL} {
+		if !strings.Contains(strings.Join(strings.Fields(box), " "), want) {
+			t.Errorf("card has no %q:\n%s", want, box)
+		}
+	}
+	m.answerAIRulesForTest("cancel")
+	if len(opened) != 0 || len(*installed) != 0 || len(*lines) != 0 {
+		t.Fatalf("Not now did something: opened %v installed %v lines %v", opened, *installed, *lines)
+	}
+	m.onAgentPicked("agent:cursor")
+	m.answerAIRulesForTest("open")
+	if strings.Join(opened, ",") != cursor.InstallURL || len(*installed) != 0 || len(*lines) != 0 {
+		t.Errorf("opened %v installed %v lines %v", opened, *installed, *lines)
+	}
+}
+
+// Spec (CMP-3): every preset without a one-click install gets the
+// install-page card, never a dead end.
+func TestEveryManualPresetHasInstallPageCard(t *testing.T) {
+	m, _, _ := agentInstallModel(t)
+	for _, a := range agents.Registry {
+		if a.Tool != "" {
+			continue
+		}
+		m.confirmOpen = false
+		m.onAgentPicked("agent:" + a.ID)
+		if !m.confirmOpen || m.confirmKind != confirmKindAgentInstallPage {
+			t.Errorf("%s: no install-page card", a.ID)
+		}
 	}
 }
 

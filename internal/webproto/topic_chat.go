@@ -59,6 +59,12 @@ type ChatSnap struct {
 	Model    string    `json:"model,omitempty"`
 	Busy     bool      `json:"busy"` // the AI is answering
 	Messages []ChatMsg `json:"messages"`
+	// CtxPct is how full the model's context window was on the chat's
+	// newest turn, in percent; CtxTokens and CtxWindow are the counts
+	// behind it. All 0 while unknown (CMP-7).
+	CtxPct    int `json:"ctx_pct,omitempty"`
+	CtxTokens int `json:"ctx_tokens,omitempty"`
+	CtxWindow int `json:"ctx_window,omitempty"`
 }
 
 // ChatMsg is one message, trimmed for the page.
@@ -103,7 +109,7 @@ const (
 	ChatAppend   = "append"   // Text goes at the end of message I's text (a streaming answer)
 	ChatMessage  = "message"  // Msg is new (Msg.I == len(messages)) or replaces message Msg.I
 	ChatTruncate = "truncate" // only the first N messages stay
-	ChatState    = "state"    // Busy and / or Title changed
+	ChatState    = "state"    // Busy, Title and / or the context use changed
 	ChatSwitched = "switched" // the laptop opened another chat: Chat is all of it
 )
 
@@ -117,6 +123,11 @@ type ChatDelta struct {
 	Busy  *bool     `json:"busy,omitempty"`  // state
 	Title string    `json:"title,omitempty"` // state
 	Chat  *ChatSnap `json:"chat,omitempty"`  // switched
+	// CtxPct, CtxTokens and CtxWindow are the chat's new context use
+	// (state; 0 = unknown again).
+	CtxPct    *int `json:"ctx_pct,omitempty"`
+	CtxTokens *int `json:"ctx_tokens,omitempty"`
+	CtxWindow *int `json:"ctx_window,omitempty"`
 }
 
 // ChatRef is the result of chat.new and chat.send: the chat it went to.

@@ -117,6 +117,7 @@ type aiState struct {
 	webPreset      string          // the server the open add card is for (ai_web_presets.go)
 	recall         *aiRecallState  // lesson recall per chat (ai_recall.go)
 	ship           *aiShip         // the running ship loop (ai_ship.go)
+	acp            *acpThread      // CMP-83: the chat's ACP agent thread (acp_thread.go)
 	ctl            *agentCtlState  // the agent control socket's UI side (agent_ctl.go)
 	diffNotes      *diffNotesState // diff comments → agent (diff_comments.go, CMP-51)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
@@ -207,6 +208,9 @@ type aiState struct {
 	// usageGen changes with it.
 	usageLog []aiUsageEntry
 	usageGen int
+	// ctxUse is the context use of the open chat's newest turn, for the
+	// header's context chip (CMP-7, ai_context_chip.go).
+	ctxUse aiCtxUse
 
 	// inline ghost text
 	inlineCancel context.CancelFunc
@@ -578,6 +582,7 @@ func aiPaletteItems() []paletteEntry {
 		{aiTaskListPaletteID, "AI: Run Task List in Waves…", ""},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
+		{agentBoardPaletteID, "AI: Agent Board…", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
 		{"ai-profile-form", "AI: Edit Profile…", ""},
@@ -762,6 +767,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIUsage(""), true
 	case "ai-runs": // runs_state.go
 		return m.revealRuns(true), true
+	case agentBoardPaletteID: // CMP-2 (agent_board.go)
+		return m.openAgentBoardLoad(), true
 	case "ai-profile-edit":
 		return m.editAIProfiles(), true
 	case "ai-profile-new":

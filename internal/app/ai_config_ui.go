@@ -82,6 +82,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIProofsPicked(id), true
 	case pickerKindAgentHooks: // agent_hooks_ui.go
 		return m.onAgentHooksPicked(id), true
+	case pickerKindACPAgents: // acp_thread.go
+		return m.onACPAgentPicked(id), true
 	case pickerKindAgentPacks: // agent_packs_ui.go
 		return m.onAgentPacksPicked(id), true
 	case pickerKindAgentPacksTarget:
@@ -104,6 +106,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onRunsMorePicked(id), true
 	case pickerKindAIWorktrees: // ai_worktree_list.go
 		return m.onAIWorktreePicked(id), true
+	case pickerKindWTBgTasks: // worktrees_bgtask.go
+		return m.onWTBgTaskPicked(id), true
 	}
 	if cmd, ok := m.handleWebAccessPicker(id); ok { // web_access.go
 		return cmd, true
@@ -126,12 +130,16 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIKeyEntered(value), true
 	case promptKindAgentNames: // agent_names.go
 		return m.onAgentNamesTask(value), true
+	case promptKindWTBgTask: // worktrees_bgtask.go
+		return m.onWTBgTask(value), true
 	case promptKindBugspecTitle: // bugspec_ui.go
 		return m.onBugspecTitle(value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
 		return m.onAgentSessionsSearch(value), true
+	case promptKindWTPull: // worktrees_move.go
+		return m.onWTPullEntered(value), true
 	case promptKindAIChatSearch: // ai_chat_search.go
 		return m.onAIChatSearch(value), true
 	case promptKindRaceRestackMsg: // agent_race_restack.go
@@ -180,6 +188,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAISide(id), true
 	case confirmKindRunsStop: // runs_state.go
 		return m.answerRunsStop(id), true
+	case confirmKindAgentBoardResume: // agent_board.go (CMP-2)
+		return m.answerAgentBoardResume(id), true
 	case confirmKindAgentsStop: // agents_node_ctl.go
 		return m.answerAgentsStop(id), true
 	case confirmKindAIOAuth:
@@ -229,12 +239,24 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIRulesTrust(id), true
 	case confirmKindWTSetupTrust: // worktrees_setup.go
 		return m.answerWTSetupTrust(id), true
+	case confirmKindWTRunTrust: // worktrees_run.go
+		return m.answerWTRunTrust(id), true
 	case confirmKindWTCtlLink: // worktrees_notes.go
 		return m.answerWTCtlLink(id), true
 	case confirmKindWTSleep: // worktrees_sleep.go
 		return m.answerWTSleep(id), true
 	case confirmKindWTArchive: // worktrees_archive.go
 		return m.answerWTArchive(id), true
+	case confirmKindWTBgTask: // worktrees_bgtask.go
+		return m.answerWTBgTask(id), true
+	case confirmKindWTBgTaskAct:
+		return m.answerWTBgTaskAct(id), true
+	case confirmKindWTMove: // worktrees_move.go
+		return m.answerWTMove(id), true
+	case confirmKindWTUnpack:
+		return m.answerWTUnpack(id), true
+	case confirmKindWTPull:
+		return m.answerWTPull(id), true
 	case confirmKindAITaskList: // ai_task_list.go
 		return m.answerAITaskList(id), true
 	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
@@ -253,6 +275,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIShipCard(m.confirmKind, id), true
 	case confirmKindAIPlanShip: // ai_plan_worktree.go
 		return m.answerAIPlanShip(id), true
+	case confirmKindACPPermission, confirmKindACPWrite: // acp_thread.go
+		return m.answerACPCard(id), true
 	case confirmKindAgentCtlPrompt: // agent_ctl.go
 		return m.answerAgentCtlPrompt(id), true
 	case confirmKindAgentHooks: // agent_hooks_ui.go
@@ -263,7 +287,7 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentPackUndo(id), true
 	case confirmKindAIPowerInstall, confirmKindAIPowerRemove: // ai_powers.go
 		return m.answerAIPowerCard(m.confirmKind, id), true
-	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard: // agent_race_compare.go
+	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard, confirmKindRaceJudgePick: // agent_race_compare.go, agent_race_judge.go
 		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindRaceRestack: // agent_race_restack.go
 		return m.answerRaceRestack(id), true
@@ -278,7 +302,7 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentHibernate(id), true
 	case confirmKindAgentAccountSignIn: // agent_accounts.go
 		return m.answerAgentAccountCard(id), true
-	case confirmKindAgentInstall, confirmKindAgentSignIn: // agent_install.go
+	case confirmKindAgentInstall, confirmKindAgentSignIn, confirmKindAgentInstallPage: // agent_install.go
 		return m.answerAgentPickCard(m.confirmKind, id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go
 		return m.answerAIMemoryCard(m.confirmKind, id), true
@@ -370,12 +394,24 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIRulesTrust("") // Esc: no answer, the message goes back
 	case confirmKindWTSetupTrust:
 		return m.answerWTSetupTrust("") // Esc: no answer, nothing runs
+	case confirmKindWTRunTrust:
+		return m.answerWTRunTrust("") // Esc: no answer, nothing runs
 	case confirmKindWTCtlLink:
 		return m.answerWTCtlLink("") // Esc: Deny
 	case confirmKindWTSleep:
 		return m.answerWTSleep("") // Esc: Keep running
 	case confirmKindWTArchive:
 		return m.answerWTArchive("") // Esc: Cancel
+	case confirmKindWTBgTask:
+		return m.answerWTBgTask("") // Esc: Cancel, nothing starts
+	case confirmKindWTBgTaskAct:
+		return m.answerWTBgTaskAct("") // Esc: Close
+	case confirmKindWTMove:
+		return m.answerWTMove("") // Esc: Cancel
+	case confirmKindWTUnpack:
+		return m.answerWTUnpack("") // Esc: Cancel
+	case confirmKindWTPull:
+		return m.answerWTPull("") // Esc: Cancel
 	case confirmKindAITaskList:
 		return m.answerAITaskList("") // Esc: Cancel
 	case confirmKindWTDelete, confirmKindWTDeleteDirty:
@@ -390,6 +426,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIShipCard(m.confirmKind, "") // Esc: the ship stops
 	case confirmKindAIPlanShip:
 		return m.answerAIPlanShip("") // Esc: Not now
+	case confirmKindACPPermission, confirmKindACPWrite:
+		return m.answerACPCard("") // Esc: no
 	case confirmKindAgentCtlPrompt:
 		return m.answerAgentCtlPrompt("") // Esc: Deny
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll:
@@ -479,14 +517,37 @@ func (m *Model) onAIProviderPicked(kind string) tea.Cmd {
 	switch kind {
 	case ai.KindOllama, ai.KindLMStudio:
 		return m.openAIModelPicker()
-	case ai.KindCompatible:
-		m.prompt = prompt.New("✦ AI base URL", "OpenAI-compatible base URL (…/v1):", s.settings.BaseURL)
+	case ai.KindCompatible, ai.KindVertex, ai.KindBedrock:
+		m.prompt = prompt.New("✦ AI base URL", aiBaseURLLabel(kind), s.settings.BaseURL)
 		m.prompt.SetSize(m.w, m.h)
 		m.promptOpen = true
 		m.promptKind = promptKindAIBaseURL
 		return nil
 	}
 	return m.openAIKeyPrompt(kind)
+}
+
+// aiBaseURLLabel is the base URL prompt's label for kind (CMP-85: the
+// cloud kinds say what the URL looks like).
+func aiBaseURLLabel(kind string) string {
+	switch kind {
+	case ai.KindVertex:
+		return "Vertex AI base URL (https://<region>-aiplatform.googleapis.com/v1/projects/<project>/locations/<region>):"
+	case ai.KindBedrock:
+		return "Bedrock base URL (empty = AWS_REGION or us-east-1; https://bedrock-runtime.<region>.amazonaws.com):"
+	}
+	return "OpenAI-compatible base URL (…/v1):"
+}
+
+// aiKeyLabel is the key prompt's label for kind.
+func aiKeyLabel(kind, home string) string {
+	switch kind {
+	case ai.KindVertex:
+		return "Access token or service-account JSON on one line, e.g. ${cmd:jq -c . key.json} (" + home + "; empty = keep):"
+	case ai.KindBedrock:
+		return "Bedrock API key (" + home + "; AWS_BEARER_TOKEN_BEDROCK wins; empty = keep):"
+	}
+	return "API key (" + home + "; empty = keep):"
 }
 
 func (m *Model) openAIKeyPrompt(kind string) tea.Cmd {
@@ -496,7 +557,7 @@ func (m *Model) openAIKeyPrompt(kind string) tea.Cmd {
 		return c
 	}
 	m.aiS().cfgKind = kind
-	m.prompt = prompt.New("✦ "+ai.KindLabel(kind)+" API key", "API key ("+m.aiKeyHome()+"; empty = keep):", "")
+	m.prompt = prompt.New("✦ "+ai.KindLabel(kind)+" API key", aiKeyLabel(kind, m.aiKeyHome()), "")
 	m.prompt.SetMasked(true)
 	m.prompt.SetNote(secretPromptNote(""))
 	m.prompt.SetSize(m.w, m.h)
@@ -507,10 +568,16 @@ func (m *Model) openAIKeyPrompt(kind string) tea.Cmd {
 
 func (m *Model) onAIBaseURLEntered(v string) tea.Cmd {
 	v = strings.TrimSpace(v)
+	kind := m.aiS().cfgKind
+	if kind != ai.KindVertex && kind != ai.KindBedrock {
+		kind = ai.KindCompatible
+	} else if err := ai.CheckSlotBaseURL(v); err != nil { // a cloud URL never holds a user or password
+		return m.aiToastErr("Base URL", err)
+	}
 	if err := m.saveAISettings(func(st *ai.Settings) { st.BaseURL = v }); err != nil {
 		return m.aiToastErr("Settings error", err)
 	}
-	return m.openAIKeyPrompt(ai.KindCompatible)
+	return m.openAIKeyPrompt(kind)
 }
 
 func (m *Model) onAIKeyEntered(v string) tea.Cmd {

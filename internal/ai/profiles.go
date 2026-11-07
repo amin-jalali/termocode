@@ -176,6 +176,10 @@ func ProviderName(kind string) string {
 		return "Anthropic"
 	case KindClaudeOAuth:
 		return "Claude"
+	case KindVertex:
+		return "Vertex AI"
+	case KindBedrock:
+		return "Bedrock"
 	case KindOpenAI:
 		return "OpenAI"
 	case KindOpenRouter:

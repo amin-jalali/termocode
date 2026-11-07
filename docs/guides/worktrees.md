@@ -40,19 +40,54 @@ repository's git folder, never in your project.
 | `d` | Diff vs base: what it changed since it left its base; keep or revert each change |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
+| `H` | Hand off: a new agent goes on with a note of this work (see below) |
 | `L` | Show the setup of a new worktree (its terminal tab) |
+| `r` | Run the dev server on the worktree's own port (`$PORT`); again: show its tab |
+| `o` | Open the running dev server's address in the browser |
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
 | `s` | Sleep: end its agent tabs and move it under ASLEEP; again: wake it |
 | `T` | Its agent sessions; `Enter` shows the session's tab |
 | `S` | New agent session: one more agent in it, in its own tab |
+| `v` | Preview: the agent's live screen in the panel (see below); again: close |
+| `V` | Agent grid: up to 4 agent screens side by side |
 | `x` | Archive: remove the folder, keep the branch; on an archived row: restore |
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
+| `b` | Background task: an agent works on it alone in a sandbox container (asks first) |
+| `B` | Background tasks: state, follow output, stop, remove |
+| `M` | Move to another machine: pack it into one file (see below) |
+| `U` | Unpack a moved lane as a new worktree, or pull one from a host |
 | `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
 | `?` | Show these keys |
+
+## Watch agents: preview and grid
+
+`v` (**Worktree: Preview Agent Screen**) opens a **PREVIEW** tab in the
+bottom panel. It shows the live screen of the agent that works in the
+selected worktree, read only. The list keeps the keys: move with `j` and
+`k` and the preview follows the cursor.
+
+`V` (**Worktree: Preview Agent Grid**) shows an **AGENT GRID** instead:
+up to 4 agent screens of this window side by side (2 by 2 when there are
+3 or 4), the selected worktree's agent first.
+
+| Key in the panel | What it does |
+|---|---|
+| `Tab` `←` `→` | Pick a tile |
+| `Enter` or a click | Jump into that agent's terminal tab |
+| `g` | Switch between one screen and the grid |
+| `r` | Read the screens again now |
+| `Esc` | Give the keys back |
+
+- The screens are read twice a second while the tab is on show, never
+  while it is hidden. Nothing is typed into the agents.
+- An agent of another termocode window has no screen here; the preview
+  says so, and **Ctrl+Shift+J** jumps to it.
+- A hibernated agent tab shows as **asleep**; `Enter` wakes it.
+- `v` or `V` again (the same way) closes the tab.
 
 ## New worktree
 
@@ -110,6 +145,36 @@ A repository can list files for each new worktree in
   watch them, with your environment minus termocode's secrets. The card
   shows `setup ● running`, `✓` or `✗`; `L` shows the tab.
 
+## A dev server per worktree
+
+Parallel worktrees of a web app fight for the same port. Give the
+repository one run line in `.termocode/worktrees.json`, and each
+worktree gets a port of its own:
+
+```jsonc
+{
+  "run": "pnpm dev --port $PORT",   // the dev server; reads $PORT
+  "ports": "3000-3099",             // where ports come from (default 3001-3099)
+  "url": "http://localhost:$PORT"   // what o opens (this is the default)
+}
+```
+
+- `r` (**Worktree: Run Dev Server of Selected**) picks the lowest port of
+  the range that no other worktree holds and nothing listens on. The
+  worktree keeps it (in `worktrees.json` in the git folder), so it gets
+  the same port next time.
+- The line runs in a terminal tab inside the worktree, with `PORT` set
+  and your environment minus termocode's secrets. It comes from the
+  repository, so it needs the same trust as **setup**: a card shows the
+  line and the port, **Not now** comes first, and a changed file asks
+  again.
+- The card shows `▶ localhost:3004 (o opens)` while it runs, and
+  `port 3004 · r runs` when it does not. `o` (**Worktree: Open Dev Server
+  of Selected**) opens the address; `r` again shows the tab. Close the
+  tab to stop the server.
+- When every port of the range is held or in use, nothing starts and a
+  message says to stop a server or widen `ports`.
+
 ## Child worktrees
 
 `c` (**Worktree: New Child of Selected…**) opens the New worktree form
@@ -120,6 +185,35 @@ show as `└ …`). A child whose parent is gone moves up to the top level.
 **Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
 agents in them, from every termocode window, with the ones that wait for
 you first.
+
+## Hand off to a new agent
+
+`H` (**Worktree: Hand Off Selected…**) passes the selected worktree's
+work to a new agent, for example when the old one runs out of context
+or you want another agent to finish it. termocode writes a short note
+from what git already knows; no AI request runs:
+
+- the branch and the branch it started from (the parent's branch for a
+  child, else the main checkout's branch),
+- the commits since then and the changed files,
+- the files not committed yet,
+- the notes and the status agents left on the worktree, and its linked
+  issue or pull request,
+- one line you add on the card.
+
+The card shows a preview. **Cancel** comes first. Pick **Where**:
+
+- **this worktree**: the agent starts in the same folder. Its first task
+  is one line that names the note. The worktree gets the note
+  "Handed off to …". The old agent keeps running; `s` puts it to sleep.
+  The same agent kind cannot start twice in one worktree.
+- **new child worktree**: the New worktree form opens for a child, with
+  the agent picked and the task typed in. Type a name, then
+  **Create + Start**.
+
+The note is saved in `termocode/handoff/` inside the repository's git
+folder, never in your project, with secrets hidden. The AI never starts
+a handoff. The AI chat has its own **AI: Handoff to a New Chat**.
 
 ## Link an issue or pull request
 
@@ -213,6 +307,35 @@ the same files, each in its own terminal tab.
   `Enter` shows the tab; the last row starts one more session.
 - The card counts every session. Close a session like any terminal tab.
 
+## A task list shared with agents
+
+The repository has one task list that you and every agent share. Each
+task is a plain Markdown file in `.termocode/tasks/` of the main
+checkout (like `0007-fix-the-login.md`), so all worktrees see the same
+tasks and you can edit them in any editor or commit them.
+
+**Tracker: Show Tasks…** lists them: doing first, then blocked, todo and
+done, with the owner. Pick one to open its file, set another status, or
+copy `termocode task claim 7` for an agent. **Tracker: Add Task…** adds a
+todo.
+
+An agent (or a script) uses the same files from its terminal; no running
+termocode is needed:
+
+```sh
+termocode task list                  # open tasks (--all: done too, --json)
+termocode task add Fix the login     # prints the new id
+termocode task claim 7               # doing, owned by you, in this worktree
+termocode task note 7 "found it in auth.go"
+termocode task status 7 done         # todo, doing, blocked or done
+termocode task show 7
+```
+
+A task someone else is doing can not be claimed. Two agents that add at
+the same time never get the same id. The owner is `--as <name>`, else
+`$TERMOCODE_TASK_OWNER`, else the termocode tab (`agent t3`), else your
+user name. Task text is shown as plain text and never runs.
+
 ## Sleep and wake
 
 `s` (**Worktree: Sleep or Wake Selected**) puts a worktree to sleep: the
@@ -282,6 +405,89 @@ opens one card that lists every worktree that will be archived
 its own card: **Keep it** comes first. Clean up archives, so the
 branches stay and `x` restores any of them.
 
+## Background tasks
+
+`b` (**Worktree: Run Agent Task in Background…**) gives the selected
+worktree to an agent that works on its own. You type the task; a card
+shows everything before anything starts (**Cancel** first):
+
+- the agent runs in its headless mode (Claude Code, Codex, Gemini CLI,
+  Qwen Code, OpenCode or Aider): the worktree's own agent when it has
+  one, else the first one you have installed;
+- it runs in a throwaway docker or podman container (`node:22-bookworm`;
+  npm agents start through `npx`, so the image needs no install);
+- the container sees only the worktree and the repository's git folder,
+  at their own paths. Its edits land in the worktree. It runs as your
+  user, with every capability dropped;
+- the agent's own approval prompts are off, because nobody is there to
+  answer them: the container is the sandbox. The network stays on, for
+  the agent's API;
+- API key variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+  `GEMINI_API_KEY` and a few more) are passed by name only; the value
+  never is part of a command line or the card.
+
+**Start in background** starts the container detached. It keeps working
+when termocode or the session ends. When termocode runs on your own
+server (over SSH, with the persistent session), the laptop can be off.
+A container engine on another machine (a remote context) is refused:
+its folders are not this host's.
+
+`B` (**Worktree: Background Tasks…**) lists every task with its state
+(working, done, failed with its exit code), agent and worktree. Enter on
+one opens its card: **Follow output** opens a terminal tab with its log,
+**Stop the task** ends a running one, **Remove container** clears an
+ended one. The worktree and its changes always stay; review them as
+usual (diff, commit, pull request).
+## Move a lane to another machine
+
+Start a lane on your laptop and let it go on on a server, or bring a
+server's lane to your laptop to test it. The repository must be on both
+machines; termocode too.
+
+`M` (**Worktree: Move Selected to Another Machine…**) packs the worktree
+into one `.tlane` file in `~/.local/share/termocode/lanes/`:
+
+- the commits the remotes do not have yet (a git bundle),
+- the changes not committed (staged and not staged),
+- the new files git does not track yet (ignored files stay; files over
+  10 MB are left out and listed),
+- its notes, its name and its agent,
+- its Claude Code chats, while **agent transcripts** is allowed in
+  Settings, so `claude --resume` goes on there.
+
+A card asks first; **Cancel** comes first. **Pack and download** also
+sends the file to your own computer (over ssh: through the terminal).
+Nothing in the worktree changes. Once the lane runs on the other
+machine, archive it here (`x`). If an agent still runs in it, `s` puts
+it to sleep first.
+
+`U` (**Worktree: Unpack a Moved Lane…**) lists the packs in the lanes
+folder and in `~/Downloads`. Its card shows where the lane comes from,
+the new folder and branch, and what comes with it. Unpack always makes
+a **new** worktree next to the others: a free branch name (`-moved` is
+added when the name is taken), a new folder, and it never writes over a
+file. When the changes do not apply, the worktree stays on its commit
+and the changes are kept next to it as `<folder>.lane.patch`. When the
+repository here lacks the commits the lane is built on, `git fetch`
+first.
+
+**Pull a lane from a host…** (the first row of `U`, or **Worktree: Pull
+a Lane from a Host…**) asks for `host:folder`, then a card, then packs
+the lane there over your own ssh (keys, agent, `~/.ssh/config`; no
+password is asked) and opens the unpack card.
+
+The same from a shell:
+
+```sh
+termocode lane pack [--out FILE|-] [--chats] [DIR]   # pack the worktree DIR is in
+termocode lane info FILE                             # what a pack holds
+termocode lane unpack [--repo DIR] [--name BRANCH] FILE|-
+termocode lane pull [--chats] host:~/src/app.worktrees/fix-login
+termocode lane push [--chats] [DIR] host:~/src/app   # pack here, unpack there
+```
+
+The AI never moves, unpacks or pulls a lane.
+
 ## From the web page
 
 The web panel's desktop page has a **Worktrees** item in its activity bar
@@ -296,3 +502,5 @@ list by group, with a filter of its own.
   name).
 - The page names a worktree by an id the laptop made; it never sends a
   folder path.
+- A worktree's card data carries its dev server port, and the address
+  while it runs. Starting it stays on the laptop (`r`).
