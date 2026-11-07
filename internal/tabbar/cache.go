@@ -17,6 +17,7 @@ type cellsKey struct {
 	b       nvim.BufferInfo
 	active  bool
 	suffix  string
+	badge   string
 	welcome bool
 	maxW    int
 	rk      theme.RenderKey
@@ -33,8 +34,8 @@ var cellsCache struct {
 
 // tabCellsCached is renderTabCellsSfx through the cache. The returned
 // slice is shared: callers must not modify it.
-func tabCellsCached(b nvim.BufferInfo, active bool, suffix string, welcome bool, maxW int) []string {
-	k := cellsKey{b: b, active: active, suffix: suffix, welcome: welcome, maxW: maxW, rk: theme.CurrentRenderKey()}
+func tabCellsCached(b nvim.BufferInfo, active bool, suffix, badge string, welcome bool, maxW int) []string {
+	k := cellsKey{b: b, active: active, suffix: suffix, badge: badge, welcome: welcome, maxW: maxW, rk: theme.CurrentRenderKey()}
 	cellsCache.Lock()
 	defer cellsCache.Unlock()
 	if c, ok := cellsCache.m[k]; ok {
@@ -43,7 +44,7 @@ func tabCellsCached(b nvim.BufferInfo, active bool, suffix string, welcome bool,
 	if cellsCache.m == nil || len(cellsCache.m) >= maxCellsCache {
 		cellsCache.m = make(map[cellsKey][]string)
 	}
-	c := renderTabCellsSfx(b, active, suffix, welcome, maxW)
+	c := renderTabCellsSfx(b, active, suffix, badge, welcome, maxW)
 	cellsCache.m[k] = c
 	return c
 }
@@ -55,11 +56,12 @@ type viewKey struct {
 	w        int
 	first    int
 	blurred  bool
+	git      string // gitBadges
 	rk       theme.RenderKey
 }
 
 func (a *viewKey) equal(b *viewKey) bool {
-	if a.activeID != b.activeID || a.w != b.w || a.first != b.first || a.blurred != b.blurred ||
+	if a.activeID != b.activeID || a.w != b.w || a.first != b.first || a.blurred != b.blurred || a.git != b.git ||
 		a.rk != b.rk || len(a.bufs) != len(b.bufs) {
 		return false
 	}
