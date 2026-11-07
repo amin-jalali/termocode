@@ -139,3 +139,42 @@ func TestWebNoBrowserShowsAndCopiesLink(t *testing.T) {
 		t.Fatal("the click copied nothing")
 	}
 }
+
+// Spec (WEBP-10): `termocode web` on a running panel. Typed by the user
+// (or --yes with "web_panel": "on") it opens a new one-time link, as Web:
+// Open in Browser does; from a script it opens nothing and its answer
+// says the panel already runs, so the CLI no longer claims a link opened
+// when none did.
+func TestWebCLIOnRunningPanelOpensANewLinkOrSaysSo(t *testing.T) {
+	r := newWebPanelRig(t)
+	writeUserConfig(t, `{}`)
+	opened := webOpenedLinks(t, nil)
+	r.m.dispatchWebPalette("web-start")
+	r.pumpUntil("the panel up", func() bool { return r.m.webPanel != nil && r.m.webPanel.up })
+	first := <-opened
+	ctl := r.dial(`{"t":"ctl"}`)
+	res := r.ctlRes(ctl, `{"t":"req","id":1,"op":"web.open","args":{"yes":true}}`, 1)
+	if data, _ := res["data"].(map[string]any); res["t"] != "res" || data["port"] != float64(r.m.webPanel.port) || data["already"] == true {
+		t.Fatalf("typed: res %v", res)
+	}
+	select {
+	case again := <-opened:
+		if again == first || !strings.Contains(again, "#s=") {
+			t.Fatal("typed: no new one-time link")
+		}
+	default:
+		t.Fatal("typed: nothing opened on a running panel")
+	}
+	res = r.ctlRes(ctl, `{"t":"req","id":2,"op":"web.open"}`, 2)
+	if data, _ := res["data"].(map[string]any); res["t"] != "res" || data["already"] != true {
+		t.Fatalf("script: res %v", res)
+	}
+	select {
+	case <-opened:
+		t.Fatal("script: a link opened without the laptop")
+	default:
+	}
+	if r.m.confirmOpen {
+		t.Fatal("script: a card came up on a running panel")
+	}
+}
