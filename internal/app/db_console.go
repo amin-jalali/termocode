@@ -69,6 +69,7 @@ type dbConsoleState struct {
 	shown    *dbRun // the result on the page
 	stopConn string // the connection Cancel / End Session asks an id for
 	stopEnd  bool   // End Session (else Cancel Session Query)
+	aiConn   string // the connection AI Generate SQL asks about (db_ai.go)
 	cancel   context.CancelFunc
 	gen      uint64         // bumps on each run; stale results are dropped
 	pageGen  uint64         // bumps on each page write; stale batches are dropped

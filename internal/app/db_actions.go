@@ -23,7 +23,7 @@ import (
 )
 
 func databasesPaletteItems() []picker.Item {
-	return []picker.Item{
+	return append([]picker.Item{
 		{ID: "db-focus", Title: "Databases: Focus"},
 		{ID: "db-new-console", Title: "Databases: New Console"},
 		{ID: "db-run", Title: "Databases: Run Statement or Selection"},
@@ -66,7 +66,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
-	}
+	}, dbAIPaletteItems()...)
 }
 
 func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
@@ -75,6 +75,9 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	}
 	if !strings.HasPrefix(id, "db-") {
 		return nil, false
+	}
+	if cmd, ok := m.dispatchDBAIPalette(id); ok {
+		return cmd, true
 	}
 	switch id {
 	case "db-run":
