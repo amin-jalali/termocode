@@ -66,7 +66,10 @@ Alternatives on the table:
   imports `internal/secrets`.
 - **Both at the same time.** The browser never resizes the TUI, nvim
   windows or PTYs. Buffers are shared; a web edit carries nvim's
-  `changedtick` and a conflict changes nothing. Cards have one id; the
+  `changedtick`. A laptop edit in between that did not touch the
+  web edit's range is stepped over: the range moves with it and the
+  edit lands (G-COL, `internal/coedit`). A real overlap is a conflict
+  and changes nothing. Cards have one id; the
   first answer wins. Terminal keys from both sides arrive in order.
   Opening a file on the phone does not move the laptop.
 - **Access, in phases.** v1: loopback and SSH, a one-time secret in the
