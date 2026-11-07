@@ -1,0 +1,10 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "data-db-0", "namespace": "shop", "creationTimestamp": "2026-10-20T09:00:00Z"},
+     "spec": {"accessModes": ["ReadWriteOnce"], "storageClassName": "standard", "volumeName": "pvc-1a2b"},
+     "status": {"phase": "Bound", "capacity": {"storage": "10Gi"}, "accessModes": ["ReadWriteOnce"]}},
+    {"metadata": {"name": "scratch", "namespace": "shop", "creationTimestamp": "2026-10-21T09:00:00Z"},
+     "spec": {"accessModes": ["ReadWriteMany", "ReadOnlyMany"]}, "status": {"phase": "Pending"}}
+  ]
+}

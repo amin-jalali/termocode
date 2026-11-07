@@ -1,0 +1,11 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "api-7d9f8c6b5", "namespace": "shop", "creationTimestamp": "2026-10-27T10:00:00Z",
+                  "ownerReferences": [{"kind": "Deployment", "name": "api"}]},
+     "spec": {"replicas": 3}, "status": {"replicas": 3, "readyReplicas": 3}},
+    {"metadata": {"name": "api-55f6d8c7", "namespace": "shop", "creationTimestamp": "2026-10-20T10:00:00Z",
+                  "ownerReferences": [{"kind": "Deployment", "name": "api"}]},
+     "spec": {"replicas": 0}, "status": {"replicas": 0}}
+  ]
+}

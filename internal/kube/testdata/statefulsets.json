@@ -1,0 +1,9 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "db", "namespace": "shop", "creationTimestamp": "2026-10-20T09:00:00Z"},
+     "spec": {"replicas": 3}, "status": {"readyReplicas": 2, "currentReplicas": 3, "updatedReplicas": 3}},
+    {"metadata": {"name": "queue", "namespace": "shop", "creationTimestamp": "2026-10-21T09:00:00Z"},
+     "spec": {}, "status": {}}
+  ]
+}

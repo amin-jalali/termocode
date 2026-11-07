@@ -1,0 +1,12 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "web", "namespace": "shop", "creationTimestamp": "2026-10-20T09:00:00Z"},
+     "spec": {"ingressClassName": "nginx",
+              "rules": [{"host": "shop.example.com"}, {"host": "api.example.com"}],
+              "tls": [{"hosts": ["shop.example.com"]}]},
+     "status": {"loadBalancer": {"ingress": [{"ip": "203.0.113.7"}, {"hostname": "lb.example.com"}]}}},
+    {"metadata": {"name": "internal", "namespace": "shop", "creationTimestamp": "2026-10-20T09:00:00Z"},
+     "spec": {"rules": [{}]}, "status": {}}
+  ]
+}
