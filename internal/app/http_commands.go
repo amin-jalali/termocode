@@ -657,6 +657,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind == promptKindDBStopSession {
 		return m.databaseStopSessionTyped(value), true
 	}
+	if m.promptKind == promptKindKubeSaveScreen { // kube_nav.go
+		return m.kubeSaveScreen(value), true
+	}
 	if m.promptKind == promptKindDBEditCell {
 		return m.databaseSetCell(value, false), true
 	}

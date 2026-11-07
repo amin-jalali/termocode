@@ -68,7 +68,9 @@ kubeconfig, so other terminals keep their context.
 | `s` | Deployment: scale it (asks the number, then asks first). |
 | `d` | Delete the row's object (asks first). |
 | `c` / `n` | Pick the context / the namespace. |
+| `[` / `]` | Back / forward to the context and namespace you had before. |
 | `R` | Load the lists now. |
+| `w` | Save the screen as a text file (asks for the name; never overwrites a file). |
 | `?` | Show these keys. |
 | `Esc` | Back to the editor. |
 
