@@ -24,6 +24,9 @@ type PlanLine struct {
 	Text   string
 	Detail bool // a condition or sort key of the node above, not a node
 	Costly bool // this node takes the biggest share of the cost or time
+	// Share is the node's own part (without its children) of the whole
+	// cost or time, 0..1; 0 when unknown (DBX-39).
+	Share float64
 }
 
 // Nodes is the number of plan nodes (the details do not count).
@@ -136,14 +139,26 @@ func (n *planNode) emit(p *Plan, depth int, nodes *[]*planNode) {
 
 // costRoots flags the costly nodes of every tree in roots.
 func (p *Plan) costRoots(roots []*planNode, all []*planNode) {
-	if len(all) < 2 {
-		return
-	}
 	var rootTotal float64
 	for _, r := range roots {
 		rootTotal += r.total
 	}
 	if rootTotal <= 0 {
+		return
+	}
+	for _, n := range all {
+		if n.total <= 0 {
+			continue
+		}
+		own := n.total
+		for _, c := range n.children {
+			own -= c.total
+		}
+		if own > 0 {
+			p.Lines[n.line].Share = own / rootTotal
+		}
+	}
+	if len(all) < 2 {
 		return
 	}
 	for _, n := range all {
