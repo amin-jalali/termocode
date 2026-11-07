@@ -154,7 +154,10 @@
   border-radius: var(--r-card);
   background: var(--bg-hover);
 }
-.is-stale {
+/* Scoped: a bare .is-stale faded every stale view of the page offline
+   (terminal rows, chat) below the contrast floor. */
+.hcat .is-stale,
+.hcat-tools.is-stale {
   opacity: 0.7;
 }
 .htrack-list {

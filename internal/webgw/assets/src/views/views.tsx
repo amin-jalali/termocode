@@ -174,16 +174,16 @@ export function MoreView() {
               {t("key.home")}
             </button>
           )}
-          <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "search", query: {} })}>
+          <button type="button" class="more-link" data-sub="search" onClick={() => go({ tab: "more", rest: "search", query: {} })}>
             {t("more.search")}
           </button>
           <button type="button" class="more-link" data-sub="new-task" onClick={() => go({ tab: "more", rest: "new-task", query: {} })}>
             {t("nt.title")}
           </button>
-          <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "tasks", query: {} })}>
+          <button type="button" class="more-link" data-sub="tasks" onClick={() => go({ tab: "more", rest: "tasks", query: {} })}>
             {t("more.tasks")}
           </button>
-          <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "runs", query: {} })}>
+          <button type="button" class="more-link" data-sub="runs" onClick={() => go({ tab: "more", rest: "runs", query: {} })}>
             {t("more.runs")}
           </button>
           <button type="button" class="more-link" data-sub="workflows" onClick={() => go({ tab: "more", rest: "workflows", query: {} })}>

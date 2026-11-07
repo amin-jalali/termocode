@@ -5,6 +5,7 @@
 // never waits: a missing or failing bridge is no haptic, not an error.
 // The Haptics switch on This phone turns every buzz off (MOBUX-22); this
 // is the one module that may call vibrate (phone_a11y_test.go).
+import { layout } from "./layout";
 import { prefs } from "./prefs";
 
 type Impact = "light" | "medium";
@@ -26,6 +27,7 @@ function bridge(): HapticsBridge | undefined {
 export function haptic(k: Impact | Buzz = "light"): void {
   const kind: Impact = k === "risky" || k === "medium" ? "medium" : "light";
   if (!prefs.peek().haptics) return; // MOBUX-22: Haptics off
+  if (layout.peek() !== "phone") return; // a desktop or tablet never buzzes
   try {
     const b = bridge();
     if (b?.impact) {

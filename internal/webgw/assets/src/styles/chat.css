@@ -50,6 +50,7 @@
 .head-btn:hover { background: var(--bg-hover); }
 .composer { padding: var(--s2) var(--gutter) var(--s2); border-top: 1px solid var(--border); background: var(--bg); }
 .composer-row { display: flex; align-items: flex-end; gap: var(--s2); }
+.composer-row .mic .btn { min-width: var(--tap); padding: 0; }
 /* MOB-5: the items sent back with the next message, one chip each */
 .composer-attach { display: flex; gap: var(--s1); margin: 0 0 var(--s2); padding: 0; list-style: none; overflow-x: auto; }
 .composer-attach .chat-chip { height: auto; min-height: 32px; padding: 0 0 0 var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-2); color: var(--text-2); }

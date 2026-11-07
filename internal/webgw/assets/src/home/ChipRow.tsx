@@ -7,7 +7,7 @@
 // shape (StatusMark), never colour alone.
 import { h } from "preact";
 import { signal } from "@preact/signals";
-import { useEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { useLongPress } from "../lib/longpress";
 import { toast } from "../lib/toasts";
 import { StatusMark } from "../phone/Mark";
@@ -75,8 +75,9 @@ export function ChipRow({ state, defs = CHIPS, onPick }: { state: ChipState; def
   const editing = pinMode.value;
 
   // Something new waits: bring the row back to its start, where
-  // "Needs you" now is.
-  useEffect(() => {
+  // "Needs you" now is. Before the paint: after it the row has already
+  // kept its old place among the moved chips.
+  useLayoutEffect(() => {
     if (waits && row.current) row.current.scrollLeft = 0;
   }, [waits]);
 

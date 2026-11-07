@@ -8,6 +8,7 @@ import { computed, effect, signal } from "@preact/signals";
 import type { HomeHost } from "./home/api";
 import { setDraft } from "./lib/drafts";
 import { addAttach } from "./lib/attach";
+import { homeCardsHost } from "./lib/homecards";
 import { layout } from "./lib/layout";
 import { prefs, setPref } from "./lib/prefs";
 import { go, goTab, route } from "./lib/router";
@@ -36,6 +37,7 @@ export function homeHost(): HomeHost {
     live,
     status,
     cards,
+    cardsHost: homeCardsHost(),
     layout,
     route,
     go,

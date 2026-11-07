@@ -31,6 +31,8 @@
 .btn-small { min-height: 2.25rem; padding: 0 var(--s3); font-size: 0.875rem; }
 .btn[aria-disabled="true"] { opacity: 0.5; }
 .btn.is-offline { font-family: var(--font-mono); font-weight: 500; }
+/* iconOnly: the text stays for screen readers, out of sight. */
+.btn.is-icon .btn-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---- Loading ---- */
 .loading { display: flex; flex-direction: column; gap: var(--s2); }

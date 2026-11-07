@@ -16,6 +16,7 @@ import type { Link } from "../net/link";
 import type { Route, Tab } from "../state/route";
 import type { StatusView } from "../state/status";
 import type { Store } from "../state/store";
+import type { HomeCardsHost } from "./cardshost";
 
 export interface HomeHost {
   h: typeof PH;
@@ -34,6 +35,9 @@ export interface HomeHost {
   live: ReadonlySignal<boolean>;
   status: ReadonlySignal<StatusView>;
   cards: ReadonlySignal<Card[]>;
+  /** cardsHost draws the waiting cards inline in the stream (MOB-6,
+   * home/cards.ts; the page's side is lib/homecards.ts). */
+  cardsHost: HomeCardsHost;
   layout: ReadonlySignal<Layout>;
   route: ReadonlySignal<Route>;
   go(r: Route, replace?: boolean): void;

@@ -1,7 +1,7 @@
 // The page's side of the Home's inline cards (MOB-6): home.js is built
 // alone, so the page hands it its own Preact, hooks, kit Card, cards
 // topic, link and strings (home/cardshost.ts). MOB-4's HomeHost carries
-// this as `cards`.
+// this as `cardsHost`.
 import { h } from "preact";
 import { useRef, useState } from "preact/hooks";
 import type { HomeCardsHost } from "../home/cardshost";

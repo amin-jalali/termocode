@@ -82,17 +82,19 @@ export const homeFailed = signal(false);
 
 let homeLoading: Promise<HomeModule> | null = null;
 
-/** loadHome loads home.js once. host (MOB-4's Home) is built on the
- * first load only and handed to init, so the Home and the page share one
- * store and one link; This phone (MOBUX-20) needs no host. */
+/** homeHosted: home.js has the Home's host (init ran); the Home draws
+ * only then. */
+export const homeHosted = signal(false);
+
+/** loadHome loads home.js once. host (MOB-4's Home) is built once, on
+ * the first call that brings one, and handed to init, so the Home and the
+ * page share one store and one link; This phone (MOBUX-20) and All tools
+ * need no host, and a Home opened after them still gets it. */
 export function loadHome(host?: () => HomeHost): Promise<HomeModule> {
   if (!homeLoading) {
     homeFailed.value = false;
     homeLoading = import("/assets/home.js").then(
-      (m: HomeModule) => {
-        if (host) m.init(host());
-        return (home.value = m);
-      },
+      (m: HomeModule) => m,
       (e: unknown) => {
         homeLoading = null;
         homeFailed.value = true;
@@ -100,5 +102,11 @@ export function loadHome(host?: () => HomeHost): Promise<HomeModule> {
       },
     );
   }
-  return homeLoading;
+  return homeLoading.then((m) => {
+    if (host && !homeHosted.peek()) {
+      m.init(host());
+      homeHosted.value = true;
+    }
+    return (home.value = m);
+  });
 }

@@ -23,7 +23,7 @@ import { Strip } from "./ui/Strip";
 import { Toasts } from "./ui/Toasts";
 import { ViewerBar } from "./ui/ViewerBar";
 import { TitleBar } from "./ui/TitleBar";
-import { desk, deskFailed, home, homeFailed, loadDesk, loadHome } from "./lib/lazy";
+import { desk, deskFailed, home, homeFailed, homeHosted, loadDesk, loadHome } from "./lib/lazy";
 import { soloBuf } from "./lib/popout";
 import { ChatView, FilesView, GitView, MoreView, TermView } from "./views/views";
 
@@ -49,9 +49,10 @@ effect(() => {
 /** HomeView is the phone's Home, from home.js (loaded on first use; Try
  * again after a failed load). */
 function HomeView() {
-  const m = home.value;
+  // home.js may be in already (This phone, All tools) without the host.
+  const m = homeHosted.value ? home.value : null;
   useEffect(() => {
-    if (!home.peek()) loadHome(homeHost).catch(() => undefined);
+    if (!homeHosted.peek()) loadHome(homeHost).catch(() => undefined);
   }, []);
   if (!m) {
     return (

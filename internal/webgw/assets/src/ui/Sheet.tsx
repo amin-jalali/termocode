@@ -16,8 +16,29 @@ export function Sheet({ onLater, children, label }: { onLater: () => void; child
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
     const p = panel.current;
-    if (p && !p.contains(document.activeElement)) p.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    // Nothing to focus yet (a diff still loading): the panel itself, so
+    // Esc and Tab stay with the sheet.
+    if (p && !p.contains(document.activeElement)) (p.querySelector<HTMLElement>(FOCUSABLE) ?? p).focus();
     return () => before?.focus?.();
+  }, []);
+
+  // Esc still means Later when the focus fell out to the page (the
+  // focused row was drawn anew, as a field moving between lists): the
+  // top sheet takes it.
+  const later = useRef(onLater);
+  later.current = onLater;
+  useEffect(() => {
+    const onDoc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (e.target !== document.body && e.target !== document.documentElement) return;
+      const layer = panel.current?.parentElement;
+      const layers = document.querySelectorAll(".sheet-layer");
+      if (!layer || layers[layers.length - 1] !== layer) return;
+      e.preventDefault();
+      later.current();
+    };
+    document.addEventListener("keydown", onDoc);
+    return () => document.removeEventListener("keydown", onDoc);
   }, []);
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -60,6 +81,7 @@ export function Sheet({ onLater, children, label }: { onLater: () => void; child
         ref={panel}
         class={`sheet${drag > 0 ? " is-dragging" : ""}`}
         role="presentation"
+        tabIndex={-1}
         aria-label={label}
         style={drag > 0 ? { transform: `translateY(${drag}px)` } : undefined}
       >

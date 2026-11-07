@@ -224,6 +224,7 @@ button.ph-row:active { background: var(--bg-hover); }
   padding: var(--p-s1) var(--p-gutter);
   overflow-x: auto;
   scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--p-gutter);
   scrollbar-width: none;
 }
 .ph-chips::-webkit-scrollbar { display: none; }

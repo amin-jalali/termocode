@@ -56,7 +56,7 @@ function InlineCard({ host, c }: { host: HomeCardsHost; c: CardData }) {
   // namespace is in scope here.
   return h(
     "li",
-    { class: "home-card" },
+    { class: "home-waiting-card" },
     h(
       host.Card,
       {
@@ -85,7 +85,7 @@ export function HomeCards({ host }: { host: HomeCardsHost }) {
   if (list.length === 0) return null;
   return h(
     "ul",
-    { class: "home-cards", "aria-label": host.cardsWaiting(list.length) },
+    { class: "home-waiting", "aria-label": host.cardsWaiting(list.length) },
     list.map((c) => h(InlineCard, { key: c.id, host, c })),
   );
 }
