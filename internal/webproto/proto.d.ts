@@ -838,7 +838,8 @@ export interface RenameArgs {
 }
 
 export interface GitCheckoutArgs {
-  branch: string;
+  branch?: string;
+  remote?: string;
 }
 
 export interface GitStashArgs {
@@ -2745,6 +2746,7 @@ export interface TreeChanged {
 export interface GitBranches {
   current: string;
   branches: string[];
+  remotes?: string[];
   more?: number;
   stashes: number;
   upstream: boolean;

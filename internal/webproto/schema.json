@@ -7921,6 +7921,12 @@
         "more": {
           "type": "integer"
         },
+        "remotes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "stashes": {
           "type": "integer"
         },
@@ -7941,11 +7947,12 @@
       "properties": {
         "branch": {
           "type": "string"
+        },
+        "remote": {
+          "type": "string"
         }
       },
-      "required": [
-        "branch"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "GitCloneArgs": {
