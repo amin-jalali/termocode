@@ -67,6 +67,10 @@ when something changed. When you hide the view (another activity item,
 | `s` / `x` / `r` | start / stop / restart the selected container; on a project group, start / stop / restart that project |
 | `a` / `A` | start all / stop all of the project's services (the **Start all** and **Stop all** buttons); off while the engine is down |
 | `p` | pause or unpause the selected container |
+| `K` | kill the selected container (asks first: Cancel, Stop gently with TERM, or Kill) |
+| `N` | rename the selected container |
+| `w` | change the selected container: restart policy, CPU and memory limits, connect to or disconnect from a network (each asks first) |
+| `O` | sort the containers (name, image, state, created, size) inside each project; turn the SIZE column on or off |
 | `e` | shell in the selected container (terminal tab) |
 | `E` | exec with options: shell or command, user, start folder |
 | `t` | attach to a container; on an image, tag it |
@@ -81,10 +85,12 @@ when something changed. When you hide the view (another activity item,
 | `b` | on an image: show its remote tags; in REGISTRIES: browse the tags of a repository |
 | `s` | in REGISTRIES: search Docker Hub |
 | `P` / `h` | push an image (asks first) / image history |
+| `c` / `C` | on an image: scan it for vulnerabilities / make its SBOM (needs docker scout, trivy, grype or syft) |
 | `n` | create a network or volume; connect a registry |
 | `d` | read volume disk usage (on VOLUMES) |
 | `z` | prune what the section heading offers (asks first) |
 | `D` | remove, sign out or make default (asks first) |
+| `n` / `i` / `x` | on CONTEXTS: create a context (name, host, TLS files; asks first) / inspect it / remove it (asks first) |
 | `R` | refresh all |
 | `m` | choose the sections (the **⋯** menu) |
 | `Esc` | clear the filter; without a filter, focus the editor |
@@ -95,7 +101,21 @@ double-click on a container opens its logs, on a context uses it; right
 click opens the menu of the row; the wheel scrolls.
 
 Right-click a row for the same actions as its keys; items that ask first end with `…`.
+On a container the menu also holds Kill…, Rename…, Restart policy…, CPU and
+memory limits…, Connect to network… and Disconnect from network…. Limits are
+typed as `CPUs memory swap`, like `1.5 512m 1g`; `-` keeps a value. Every
+change but the rename shows the exact command on a card with Cancel first.
 Closing a logs tab stops only `logs -f`, never the container.
+
+## Sort and size
+
+`O` (or **Containers: Sort Containers…**) picks how containers are ordered:
+project order (the default), name, image, state (running first), created
+(newest first) or size (largest first). Containers stay in their compose
+project; the order applies inside each group, and the CONTAINERS line
+shows `by <key>`. The last line of the list shows or hides the SIZE
+column. Sizes come from `ps --size`, which is slower on big hosts, so the
+column is off until you ask; sorting by size turns it on.
 
 ## Filter
 
@@ -217,6 +237,14 @@ command before opening a terminal tab. `h` opens image history, `i` opens
 read-only image details, and `D` removes an image only when no container uses
 it. `z` on the IMAGES heading asks before pruning dangling images; it never
 removes tagged images.
+
+`c` on an image scans it for known vulnerabilities with the scanner you
+have installed (trivy, then grype, then docker scout). The findings open as
+a read-only page, most severe first, and a toast gives the count per
+severity. `C` makes a CycloneDX SBOM (the list of software in the image)
+with syft, trivy or docker scout and opens it as read-only JSON. Both only
+read the image. With no scanner installed, a toast says what to install.
+The first scan can take minutes while the scanner downloads its database.
 
 NETWORKS and VOLUMES show their driver and scope. `Space` expands a row and
 checks which containers use it. `n` asks for a name and creates a network or
@@ -391,6 +419,17 @@ CONTEXTS lists your Docker contexts: `◉ default`, `◦ prod`. The endpoint
 only when a second context exists; with just `default` it stays out of the
 way. With Podman, CONTEXTS lists the Podman connections (see
 [Podman connections](#podman-connections)).
+
+`n` on CONTEXTS (or **Containers: Create Context…**, which works also while
+only `default` exists) asks for a name and a host: `ssh://user@host`,
+`tcp://host:2376` or `unix:///path`. A `tcp://` host also asks for the TLS
+files (CA, cert and key paths, or none); with Podman an `ssh://` host asks
+for the identity file. A card shows the exact `docker context create`
+command, Cancel first. Only the paths go into the context: termocode does
+not read the files. A new context is not used until you press `Enter` on it.
+`i` opens `docker context inspect` as read-only JSON. `x` removes a context
+after a card; `default`, the machine default and the context this session
+uses cannot be removed.
 
 | Key | Action |
 |---|---|

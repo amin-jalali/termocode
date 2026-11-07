@@ -414,6 +414,10 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		}, true
 	case confirmKindContainerBulk:
 		return m.runContainerBulk(id), true
+	case confirmKindContainerWrite: // containers_write.go
+		return m.runContainerWrite(id), true
+	case confirmKindContextManage: // containers_context_manage.go
+		return m.runContextManage(id), true
 	case confirmKindContainerRemove:
 		if id == "remove" {
 			return m.runContainerRemove(false), true
@@ -710,6 +714,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.servicesNoteCmd(note, cmd)
 		}
 	case "x":
+		if name, ok := m.selectedContext(); ok {
+			return m, m.askContextRemove(name)
+		}
 		if _, _, ok := m.selectedProjectGroup(); ok {
 			return m, m.projectGroupAction("stop")
 		}
@@ -848,7 +855,28 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.showContainerDetail(c)
 		}
+	case "K":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.containerWritePick("ctr-kill", c)
+		}
+	case "N":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.containerWritePick("ctr-rename", c)
+		}
+	case "w":
+		if c, ok := m.selectedContainer(); ok {
+			m.openContainerWriteList(c)
+			return m, nil
+		}
+	case "O":
+		if st.containerDetected {
+			m.openContainerSort()
+			return m, nil
+		}
 	case "i":
+		if name, ok := m.selectedContext(); ok {
+			return m, m.inspectContext(name)
+		}
 		if _, ref, ok := m.selectedImage(); ok {
 			return m, m.imageInspect(ref)
 		}
@@ -891,6 +919,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil
 		}
 	case "n":
+		if have && ((r.kind == svcRowSection && r.section == hostSection("contexts")) || (r.kind == svcRowHostItem && r.host == hostContext)) {
+			return m, m.askContextCreate()
+		}
 		if have && r.kind == svcRowSection && (r.section == hostSection("networks") || r.section == hostSection("volumes")) {
 			m.storageCreatePrompt(strings.TrimPrefix(r.section, "host/"))
 			return m, nil
@@ -902,6 +933,14 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case "h":
 		if _, ref, ok := m.selectedImage(); ok {
 			return m, m.imageHistory(ref)
+		}
+	case "c":
+		if _, ref, ok := m.selectedImage(); ok {
+			return m, m.imageScan("scan", ref)
+		}
+	case "C":
+		if _, ref, ok := m.selectedImage(); ok {
+			return m, m.imageScan("sbom", ref)
 		}
 
 	case "tab":
@@ -966,6 +1005,10 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"o", "open a port in the browser"},
 			[]string{"y", "copy the id"},
 			[]string{"D", "remove (asks first)"},
+			[]string{"K", "kill (asks first)"},
+			[]string{"N", "rename"},
+			[]string{"w", "change: restart policy, limits, networks (asks first)"},
+			[]string{"O", "sort the containers; show the SIZE column"},
 			[]string{"v / V", "mark for a bulk action / clear marks (s x r D then ask once for all)"})
 	case r.kind == svcRowGroup && r.hostSectionID() == "containers":
 		return with("Project keys",
@@ -979,6 +1022,8 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"P", "push (asks first)"},
 			[]string{"t", "tag"},
 			[]string{"h", "history"},
+			[]string{"c", "scan for vulnerabilities"},
+			[]string{"C", "SBOM (software list)"},
 			[]string{"i", "inspect"},
 			[]string{"y", "copy the id"},
 			[]string{"D", "remove (asks first)"})
@@ -1003,7 +1048,10 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 		return with("Context keys",
 			[]string{"Enter", "use it here"},
 			[]string{"D", "make it the default"},
-			[]string{"y", "copy the endpoint"})
+			[]string{"y", "copy the endpoint"},
+			[]string{"i", "inspect"},
+			[]string{"n", "create a new one (asks first)"},
+			[]string{"x", "remove (asks first)"})
 	case r.kind == svcRowHostItem && (r.host == hostRegistry || r.host == hostRegistryImage || r.host == hostRegistryConnect):
 		return with("Registry keys",
 			[]string{"Enter", "open"},
@@ -1396,16 +1444,27 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-engine-config", Title: "Containers: Open Engine Config"},
 		{ID: "containers-context-use", Title: "Containers: Switch Context…"},
 		{ID: "containers-context-default", Title: "Containers: Make Context Default…"},
+		{ID: "containers-context-create", Title: "Containers: Create Context…"},
+		{ID: "containers-context-inspect", Title: "Containers: Inspect Context…"},
+		{ID: "containers-context-remove", Title: "Containers: Remove Context…"},
 		{ID: "containers-registry-connect", Title: "Containers: Connect Registry…"},
 		{ID: "containers-registry-signout", Title: "Containers: Sign Out of Registry…"},
 		{ID: "containers-search", Title: "Containers: Search Docker Hub…"},
 		{ID: "containers-browse-tags", Title: "Containers: Browse Remote Tags…"},
 		{ID: "containers-filter", Title: "Containers: Filter Rows…"},
+		{ID: "containers-sort", Title: "Containers: Sort Containers…"},
+		{ID: "containers-toggle-size", Title: "Containers: Show or Hide the Size Column"},
 		{ID: "containers-start", Title: "Containers: Start Selected"},
 		{ID: "containers-stop", Title: "Containers: Stop Selected"},
 		{ID: "containers-restart", Title: "Containers: Restart Selected"},
 		{ID: "containers-pause", Title: "Containers: Pause or Unpause Selected"},
 		{ID: "containers-remove", Title: "Containers: Remove Selected…"},
+		{ID: "containers-kill", Title: "Containers: Kill Selected…"},
+		{ID: "containers-rename", Title: "Containers: Rename Selected…"},
+		{ID: "containers-restart-policy", Title: "Containers: Set Restart Policy…"},
+		{ID: "containers-resources", Title: "Containers: Set CPU and Memory Limits…"},
+		{ID: "containers-network-connect", Title: "Containers: Connect Selected to Network…"},
+		{ID: "containers-network-disconnect", Title: "Containers: Disconnect Selected from Network…"},
 		{ID: "containers-logs", Title: "Containers: Follow Logs"},
 		{ID: "containers-logs-options", Title: "Containers: Logs with Options…"},
 		{ID: "containers-shell", Title: "Containers: Open Shell"},
@@ -1425,6 +1484,8 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-image-run", Title: "Containers: Run Selected Image…"},
 		{ID: "containers-image-history", Title: "Containers: Show Image History"},
 		{ID: "containers-image-inspect", Title: "Containers: Inspect Image"},
+		{ID: "containers-image-scan", Title: "Containers: Scan Selected Image for Vulnerabilities"},
+		{ID: "containers-image-sbom", Title: "Containers: Make SBOM of Selected Image"},
 		{ID: "containers-image-remove", Title: "Containers: Remove Selected Image…"},
 		{ID: "containers-prune", Title: "Containers: Prune Stopped Containers…"},
 		{ID: "containers-image-prune", Title: "Containers: Prune Dangling Images…"},
@@ -1648,6 +1709,17 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
 			}
 			switch id {
+			case "containers-context-create":
+				return m.askContextCreate()
+			case "containers-context-inspect", "containers-context-remove":
+				name, note := m.contextForPalette()
+				if name == "" {
+					return note
+				}
+				if id == "containers-context-inspect" {
+					return m.inspectContext(name)
+				}
+				return m.askContextRemove(name)
 			case "containers-context-use", "containers-context-default":
 				name, note := m.contextForPalette()
 				if name == "" {
@@ -1667,6 +1739,11 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return nil
 			case "containers-browse-tags":
 				return m.browseFromPalette()
+			case "containers-sort":
+				m.openContainerSort()
+				return nil
+			case "containers-toggle-size":
+				return m.onContainerSortPicked("list-size", "toggle")
 			case "containers-filter":
 				m.focus = FocusExplorer
 				m.services.filterTyping = true
@@ -1704,6 +1781,11 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				if _, ref, ok := m.selectedImage(); ok {
 					return m.imageInspect(ref)
 				}
+			case "containers-image-scan", "containers-image-sbom":
+				if _, ref, ok := m.selectedImage(); ok {
+					return m.imageScan(strings.TrimPrefix(id, "containers-image-"), ref)
+				}
+				return m.servicesToast(toast.Info, "Select an image row first", "")
 			case "containers-image-remove":
 				if im, ref, ok := m.selectedImage(); ok {
 					return m.askImageRemoveRef(im, ref)
@@ -1747,6 +1829,9 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 			c, ok := m.selectedContainer()
 			if !ok {
 				return m.servicesToast(toast.Info, "Select a container row first", "")
+			}
+			if cmd, ok := m.containerWritePalette(id, c); ok { // CTX-19
+				return cmd
 			}
 			switch id {
 			case "containers-start":
@@ -1856,6 +1941,12 @@ func (m *Model) handleServicesPickerSelect(id string) tea.Cmd {
 	verb, key, _ := strings.Cut(rest, ":")
 	if verb == "envfile" {
 		return m.onComposeEnvFile(key)
+	}
+	if verb == "list-sort" || verb == "list-size" { // containers_sort.go
+		return m.onContainerSortPicked(verb, key)
+	}
+	if strings.HasPrefix(verb, "ctr-") { // containers_write.go
+		return m.onContainerWritePicked(verb, key)
 	}
 	section, name, _ := strings.Cut(key, "/")
 	switch verb {

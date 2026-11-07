@@ -2,6 +2,7 @@ package containers
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -88,6 +89,23 @@ func TestSortContainers(t *testing.T) {
 		SortContainers(cs, by)
 		if got := ids(); got != want {
 			t.Errorf("sort by %s = %s, want %s", by, got, want)
+		}
+	}
+}
+
+func TestListContainersArgv(t *testing.T) {
+	if a := ListContainersArgs(false); strings.Join(a, " ") != "ps --all --no-trunc --format {{json .}}" {
+		t.Fatalf("plain argv: %v", a)
+	}
+	if a := ListContainersArgs(true); strings.Join(a, " ") != "ps --all --no-trunc --size --format {{json .}}" {
+		t.Fatalf("sized argv: %v", a)
+	}
+}
+
+func TestShortSize(t *testing.T) {
+	for in, want := range map[string]string{"12.3kB (virtual 100MB)": "12.3kB", "": "", "0B": "0B"} {
+		if got := ShortSize(in); got != want {
+			t.Errorf("ShortSize(%q) = %q, want %q", in, got, want)
 		}
 	}
 }

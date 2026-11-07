@@ -167,3 +167,86 @@ func TestScanImage(t *testing.T) {
 		t.Fatalf("exit code error: %v", err)
 	}
 }
+
+func TestFindScannersDockerScout(t *testing.T) {
+	got := FindScanners(lookOnly("docker", "docker-scout"))
+	if len(got) != 1 || got[0].Name != "scout" || got[0].Binary != "/usr/bin/docker" {
+		t.Fatalf("scout: %+v", got)
+	}
+	if s, ok := PickScanner(got, ""); !ok || s.Name != "scout" {
+		t.Fatalf("scout pick: %v %v", s, ok)
+	}
+	// The plugin without the docker CLI cannot run.
+	if len(FindScanners(lookOnly("docker-scout"))) != 0 {
+		t.Fatal("scout found without docker")
+	}
+	if !strings.Contains(NoScannerHint, "docker scout") {
+		t.Fatalf("hint: %q", NoScannerHint)
+	}
+}
+
+func TestScoutArgvAndSBOM(t *testing.T) {
+	sc := Scanner{Name: "scout", Binary: "/usr/bin/docker"}
+	a, err := ScanArgv(sc, "nginx:1.27")
+	if err != nil || !reflect.DeepEqual(a, []string{"/usr/bin/docker", "scout", "cves", "--format", "gitlab", "--", "nginx:1.27"}) {
+		t.Fatalf("scout argv %v %v", a, err)
+	}
+	a, err = SBOMArgv([]Scanner{sc}, "alpine")
+	if err != nil || !reflect.DeepEqual(a, []string{"/usr/bin/docker", "scout", "sbom", "--format", "cyclonedx", "--", "alpine"}) {
+		t.Fatalf("scout sbom %v %v", a, err)
+	}
+}
+
+func TestPluginLookPath(t *testing.T) {
+	look := PluginLookPath(lookOnly("docker"), func(p string) bool { return p == "/home/u/.docker/cli-plugins/docker-scout" }, "/home/u")
+	if p, err := look("docker-scout"); err != nil || p != "/home/u/.docker/cli-plugins/docker-scout" {
+		t.Fatalf("plugin dir: %q %v", p, err)
+	}
+	if p, err := look("docker"); err != nil || p != "/usr/bin/docker" {
+		t.Fatalf("plain look: %q %v", p, err)
+	}
+	if _, err := look("trivy"); err == nil {
+		t.Fatal("trivy found in plugin dirs")
+	}
+}
+
+const scoutGitlabJSON = `{"vulnerabilities":[
+{"id":"x1","name":"CVE-9","severity":"Medium","solution":"Upgrade to 1.1","location":{"dependency":{"package":{"name":"curl"},"version":"1.0"}},"identifiers":[{"value":"CVE-9"}]},
+{"id":"x2","name":"CVE-8","severity":"Critical","location":{"dependency":{"package":{"name":"libc"},"version":"2.3"}}}]}`
+
+func TestParseScoutReport(t *testing.T) {
+	v, err := ParseVulnReport("scout", []byte(scoutGitlabJSON))
+	if err != nil || len(v) != 2 {
+		t.Fatalf("scout: %v %v", v, err)
+	}
+	if v[0] != (Vuln{ID: "CVE-9", Package: "curl", Installed: "1.0", FixedIn: "Upgrade to 1.1", Severity: "medium"}) {
+		t.Fatalf("scout row: %+v", v[0])
+	}
+	if v[1].Severity != "critical" {
+		t.Fatalf("severity: %q", v[1].Severity)
+	}
+}
+
+func TestGenerateSBOM(t *testing.T) {
+	x := &scanExec{out: `{"bomFormat":"CycloneDX"}`}
+	out, err := GenerateSBOM(context.Background(), x, FindScanners(lookOnly("syft")), "alpine")
+	if err != nil || !strings.Contains(out, "CycloneDX") || x.argv[0] != "/usr/bin/syft" {
+		t.Fatalf("sbom: %q %v %v", out, err, x.argv)
+	}
+	if _, err := GenerateSBOM(context.Background(), &scanExec{code: 1}, FindScanners(lookOnly("syft")), "alpine"); err == nil {
+		t.Fatal("exit code ignored")
+	}
+}
+
+func TestFormatVulnReport(t *testing.T) {
+	v := []Vuln{{ID: "CVE-1", Package: "openssl", Installed: "3.0", FixedIn: "3.1", Severity: "critical", Title: "bad"}}
+	s := FormatVulnReport("alpine", "trivy", v)
+	for _, want := range []string{"alpine", "trivy", "1 critical", "CVE-1", "openssl", "3.1"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("report misses %q:\n%s", want, s)
+		}
+	}
+	if s := FormatVulnReport("alpine", "grype", nil); !strings.Contains(s, "no known vulnerabilities") {
+		t.Fatalf("empty report: %s", s)
+	}
+}
