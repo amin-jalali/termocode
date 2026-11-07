@@ -32,6 +32,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"p", "pin or unpin"},
 		[]string{"i", "link an issue or pull request (its state and CI show on the card)"},
 		[]string{"N", "the notes agents left on it, with their times"},
+		[]string{"d", "diff vs base: what it changed since it left its base · keep or revert each change"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
 		[]string{"c", "new child worktree: from this one's branch, listed under it"},
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
@@ -65,6 +66,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
 		{ID: wtLinkPaletteID, Title: "Worktree: Link Issue or PR…"},
 		{ID: wtNotesPaletteID, Title: "Worktree: Show Notes of Selected"},
+		{ID: wtDiffPaletteID, Title: "Worktree: Review Changes vs Base of Selected"},
 		{ID: wtAdoptPaletteID, Title: "Worktree: Adopt Selected"},
 		{ID: wtForgetPaletteID, Title: "Worktree: Forget Gone Selected"},
 		{ID: wtSleepPaletteID, Title: "Worktree: Sleep or Wake Selected"},
@@ -100,6 +102,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeLink(), true
 	case wtNotesPaletteID:
 		return m.worktreeNotes(), true
+	case wtDiffPaletteID:
+		return m.worktreeDiff(), true
 	case wtAdoptPaletteID:
 		return m.worktreeAdopt(), true
 	case wtForgetPaletteID:
@@ -175,6 +179,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeLink()
 	case "N":
 		return m, m.worktreeNotes()
+	case "d":
+		return m, m.worktreeDiff()
 	case "A":
 		return m, m.worktreeAdopt()
 	case "F":

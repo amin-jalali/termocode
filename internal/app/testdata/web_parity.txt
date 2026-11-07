@@ -707,6 +707,7 @@ missing	worktree-adopt	Worktrees|M
 missing	worktree-archive	Worktrees|M
 missing	worktree-cleanup	Worktrees|M
 missing	worktree-delete	Worktrees|M
+missing	worktree-diff	Worktrees|M
 missing	worktree-filter	Worktrees|M
 missing	worktree-forget	Worktrees|M
 missing	worktree-jump	Worktrees|M
