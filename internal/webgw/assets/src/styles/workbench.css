@@ -759,9 +759,12 @@ kbd {
 
 /* ---- Activity bar items (codicons, 24 px) and their badges ---- */
 .act-bar { display: flex; flex-direction: column; }
+/* The bar never scrolls: the items with no room wait in its "…" menu. */
+.layout-desktop .act-bar { overflow: hidden; }
+.act-bar .act-item[hidden] { display: none; }
 .act-gap { flex: 1 1 auto; }
 .layout-desktop .act-item { position: relative; }
-.layout-desktop .act-item .cod { color: inherit; }
+.layout-desktop .act-item .cod, .layout-desktop .act-more .cod { color: inherit; }
 .act-badge {
   position: absolute;
   top: 24px;

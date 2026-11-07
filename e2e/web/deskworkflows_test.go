@@ -42,7 +42,7 @@ func wfCard(id string) map[string]any {
 
 func TestDeskWorkflows(t *testing.T) {
 	p, c := deskLogin(t, nil)
-	p.TapJS(`document.querySelector('nav.act-bar .act-item[data-act="workflows"]')`)
+	p.TapAct("workflows")
 	c.WaitSub(t, "workflows")
 	c.Send(t, Snap("workflows", 1, wfSnap()))
 	const side = `document.querySelector('.wb-side [data-view="workflows"]')`

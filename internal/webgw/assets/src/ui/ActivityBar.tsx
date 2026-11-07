@@ -3,9 +3,14 @@
 // with a side view open it in the side bar (a second click hides the
 // side bar); Databases, Containers, Settings and This device open in the
 // editor area, where their tables have room. Badges: git changes, cards
-// waiting for an answer, runs that are live or need you.
+// waiting for an answer, runs that are live or need you. A bar too short
+// for every item never scrolls: the last ones of the top group wait in a
+// "…" menu (Additional Views), as on the laptop's editor, and the open
+// view's item always stays in the bar.
 import { h } from "preact";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
+import { openMenu } from "./ContextMenu";
 import { modKey } from "../lib/platform";
 import { go, route } from "../lib/router";
 import { activeFile, panes, setPanes } from "../lib/workbench";
@@ -150,7 +155,7 @@ function tap(x: Item): void {
   openSide(x.id);
 }
 
-function ActItem({ x, cur }: { x: Item; cur: Activity | null }) {
+function ActItem({ x, cur, hide }: { x: Item; cur: Activity | null; hide?: boolean }) {
   const b = badge(x.id);
   const on = cur === x.id;
   const name = t(x.label);
@@ -160,6 +165,7 @@ function ActItem({ x, cur }: { x: Item; cur: Activity | null }) {
       type="button"
       class={`nav-item act-item${on ? " is-active" : ""}`}
       data-act={x.id}
+      hidden={hide}
       aria-current={on ? "page" : undefined}
       aria-label={b && b.tone === "count" ? `${name} (${b.n})` : name}
       title={tip}
@@ -171,13 +177,66 @@ function ActItem({ x, cur }: { x: Item; cur: Activity | null }) {
   );
 }
 
+/** ITEM_PX is an item's height (3rem) until the bar has measured one. */
+const ITEM_PX = 48;
+
+/** shownTop is the top items the bar has room for (slots: how many item
+ * heights fit above the bottom group). Too many: the first slots-1 and a
+ * "…"; the open view's item takes the last of them when it would hide. */
+export function shownTop(ids: readonly Activity[], slots: number, cur: Activity | null): Set<Activity> {
+  if (ids.length <= slots) return new Set(ids);
+  const keep = ids.slice(0, Math.max(0, slots - 1));
+  if (cur && keep.length && ids.includes(cur) && !keep.includes(cur)) keep[keep.length - 1] = cur;
+  return new Set(keep);
+}
+
+function openMore(e: MouseEvent, hidden: readonly Item[]): void {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  openMenu(
+    r.right,
+    r.top,
+    t("act.more"),
+    hidden.map((x) => ({ id: x.id, label: t(x.label), keys: x.keys ? `${modKey()}+${x.keys}` : undefined, run: () => openSide(x.id) })),
+  );
+}
+
 export function ActivityBar() {
   const cur = shownActivity(route.value);
+  const nav = useRef<HTMLElement | null>(null);
+  const [slots, setSlots] = useState(Infinity);
+  // The room is the bar's height less the bottom group (This device,
+  // Settings), counted in item heights; it follows the window and zoom.
+  useLayoutEffect(() => {
+    const el = nav.current;
+    if (!el) return;
+    const fit = () => {
+      const px = el.querySelector<HTMLElement>(".act-item:not([hidden])")?.offsetHeight || ITEM_PX;
+      setSlots(Math.max(0, Math.floor(el.clientHeight / px) - ACTIVITIES_BOTTOM.length));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const top = ACTIVITIES.filter((x) => x.id !== "extensions" || hasExtPanels());
+  const shown = shownTop(
+    top.map((x) => x.id),
+    slots,
+    cur,
+  );
+  const hidden = top.filter((x) => !shown.has(x.id));
+  const more = t("act.more");
   return (
-    <nav class="rail act-bar" aria-label={t("tabs.label")}>
-      {ACTIVITIES.filter((x) => x.id !== "extensions" || hasExtPanels()).map((x) => (
-        <ActItem key={x.id} x={x} cur={cur} />
+    <nav ref={nav} class="rail act-bar" aria-label={t("tabs.label")}>
+      {top.map((x) => (
+        <ActItem key={x.id} x={x} cur={cur} hide={!shown.has(x.id)} />
       ))}
+      {hidden.length > 0 && (
+        <button type="button" class="nav-item act-more" aria-label={more} aria-haspopup="menu" title={more} onClick={(e) => openMore(e, hidden)}>
+          <Cod name="ellipsis" big />
+          {hidden.some((x) => badge(x.id)) && <span class="act-badge is-dot" />}
+        </button>
+      )}
       <span class="act-gap" />
       {ACTIVITIES_BOTTOM.map((x) => (
         <ActItem key={x.id} x={x} cur={cur} />

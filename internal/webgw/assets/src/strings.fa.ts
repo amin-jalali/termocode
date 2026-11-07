@@ -774,6 +774,7 @@ export const FA: Record<StringKey, string> = {
   "act.scm": "کنترل نسخه",
   "act.run": "اجرا و اشکال‌زدایی",
   "act.device": "این دستگاه",
+  "act.more": "نماهای بیشتر",
   "dv.tab_wt": "{name} (درخت کاری)",
   "dv.tab_idx": "{name} (ایندکس)",
   "dv.tab_commit": "{name} (کامیت {hash}^ ↔ {hash})",
