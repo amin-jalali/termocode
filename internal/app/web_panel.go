@@ -43,7 +43,8 @@ var webStopGrace = time.Second
 type webPanelState struct {
 	proc     *webGatewayProc
 	port     int
-	url      string // the browser's address when it is not 127.0.0.1 (tailnet mode)
+	url      string // the browser's address when it is not 127.0.0.1 (tailnet or LAN mode)
+	fp       string // LAN mode: the certificate's fingerprint, for the pairing link
 	up       bool
 	stopping bool
 	plain    string // the newest launch secret, for the browser link
@@ -74,7 +75,8 @@ type webPanelUpMsg struct {
 	hub  *webHub
 	proc *webGatewayProc
 	port int
-	url  string // tailnet mode: https://<machine>.<tailnet>.ts.net/
+	url  string // tailnet mode: https://<machine>.<tailnet>.ts.net/; LAN: https://<ip>:<port>/
+	fp   string // LAN mode: the certificate's fingerprint
 }
 
 type webPanelFailMsg struct {
@@ -202,7 +204,7 @@ func (m *Model) onWebPanelUp(msg webPanelUpMsg) tea.Cmd {
 	}
 	st.up, st.port = true, msg.port
 	if strings.HasPrefix(msg.url, "https://") {
-		st.url = msg.url
+		st.url, st.fp = msg.url, msg.fp
 	}
 	for _, w := range st.waiters {
 		m.webCtlReply(w)
@@ -227,7 +229,10 @@ func (m *Model) webDeliverLink(open, copyLink bool) tea.Cmd {
 	link := base + "#s=" + st.plain
 	st.plain = "" // used once here; a new link makes a new secret
 	where := ""
-	if st.url != "" {
+	switch {
+	case st.fp != "":
+		where = " Devices on this Wi-Fi reach it at " + st.url + " (pair them with Web: Pair a Device…)"
+	case st.url != "":
 		where = " Your tailnet devices reach it at " + st.url
 	}
 	switch {
@@ -564,6 +569,10 @@ func webGatewayReason(stderr string) string {
 	return last
 }
 
+// webLANPort is LAN mode's port when web_port is not set: fixed, so a
+// paired tablet finds the laptop again after a restart.
+const webLANPort = 47443
+
 // webGatewayArgs are the gateway's arguments for cfg; sshPort > 0 is SSH
 // mode. They hold paths and limits only, never a secret.
 func webGatewayArgs(cfg webConfig, dir, audit, devices string, sshPort int) []string {
@@ -584,6 +593,12 @@ func webGatewayArgs(cfg webConfig, dir, audit, devices string, sshPort int) []st
 		args = append(args, "--ssh-port", strconv.Itoa(sshPort))
 	case cfg.Tailnet:
 		args = append(args, "--tailnet")
+	case cfg.LAN:
+		port := cfg.Port
+		if port == 0 {
+			port = webLANPort // the tablet saves the origin with its port
+		}
+		args = append(args, "--lan", "--port", strconv.Itoa(port))
 	default:
 		args = append(args, "--port", strconv.Itoa(cfg.Port))
 	}

@@ -22,6 +22,7 @@ type webConfig struct {
 	OpenBrowser bool
 	MaxViewers  int
 	Tailnet     bool     // web_listen: "tailnet" (WEB-31)
+	LAN         bool     // web_listen: "lan": https on this Wi-Fi, pinned certificate
 	RequireTOTP bool     // web_require_totp (WEB-48)
 	AppKeyLogin bool     // web_app_key_login (MOB-27)
 	PushDetail  string   // web_push_detail (MOB-30): none, count or title
@@ -51,8 +52,10 @@ func webSettings() webConfig {
 	case "", "loopback":
 	case "tailnet":
 		c.Tailnet = true
+	case "lan":
+		c.LAN = true
 	default:
-		c.Problems = append(c.Problems, fmt.Sprintf("web_listen %q: use \"loopback\" or \"tailnet\"", s.WebListen))
+		c.Problems = append(c.Problems, fmt.Sprintf("web_listen %q: use \"loopback\", \"tailnet\" or \"lan\"", s.WebListen))
 	}
 	switch strings.ToLower(strings.TrimSpace(s.WebPhone)) {
 	case "", "off":

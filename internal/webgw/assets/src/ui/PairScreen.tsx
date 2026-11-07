@@ -30,13 +30,22 @@ export type PairState =
   | "nopasskey"
   | "cancelled";
 
-const state = signal<PairState>(passkeysHere() || inApp() ? "ready" : "nopasskey");
+/** lanHere: the page is on a LAN gateway (https on a private IPv4
+ * address, "web_listen": "lan"), which has no passkeys: an address has
+ * no name for them. The pairing ends with the owner's yes alone. */
+function lanHere(): boolean {
+  return location.protocol === "https:" && /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/.test(location.hostname);
+}
+
+const state = signal<PairState>(passkeysHere() || inApp() || lanHere() ? "ready" : "nopasskey");
 const code = signal("");
 const guest = signal(false);
 let pairID = "";
 let options: unknown = null;
 /** appKeys: the laptop lets the termocode app pair with its key (MOB-27). */
 let appKeys = false;
+/** plain: the laptop asks for no passkey (LAN mode): Finish ends it. */
+const plain = signal(false);
 
 const lineFor: Record<PairState, StringKey> = {
   ready: "pair.body_intro",
@@ -84,7 +93,9 @@ async function wait(): Promise<void> {
     if (r.status === 200 && r.data.state === "approved") {
       options = r.data.options;
       appKeys = r.data.app_keys === true && inApp();
-      state.value = appKeys || passkeysHere() ? "approved" : "nopasskey";
+      plain.value = !appKeys && (options === undefined || options === null) && lanHere();
+      if (plain.value) remember.value = true; // with no passkey, the remembered key is how it signs in again
+      state.value = appKeys || plain.value || passkeysHere() ? "approved" : "nopasskey";
       return;
     }
     state.value = r.status === 0 ? "failed" : failState(r);
@@ -95,7 +106,9 @@ async function wait(): Promise<void> {
 async function save(onDone: Done) {
   state.value = "saving";
   let proof: Record<string, unknown>;
-  if (appKeys) {
+  if (plain.value) {
+    proof = {};
+  } else if (appKeys) {
     const k = await appKeyPair(pairID);
     if (k === null) {
       state.value = "cancelled"; // the user may tap Save again
@@ -127,7 +140,8 @@ export function spaced(c: string): string {
 export function PairScreen({ secret, onDone }: { secret: string; onDone: Done }) {
   const s = state.value;
   const err = isError(s);
-  const line: StringKey = s === "code" && guest.value ? "pair.body_check_guest" : lineFor[s];
+  const line: StringKey =
+    s === "code" && guest.value ? "pair.body_check_guest" : s === "approved" && plain.value ? "pair.body_approved_plain" : lineFor[s];
   return (
     <main class="connect pair">
       <div class="connect-top" />
@@ -155,7 +169,7 @@ export function PairScreen({ secret, onDone }: { secret: string; onDone: Done })
         <div class="connect-foot">
           {!guest.value && <RememberBox />}
           <Button kind="primary" wide autoFocus disabled={s === "saving"} onClick={() => void save(onDone)}>
-            {t("pair.save")}
+            {t(plain.value ? "pair.finish" : "pair.save")}
           </Button>
         </div>
       )}

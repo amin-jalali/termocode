@@ -44,6 +44,9 @@ var (
 	ErrCloneSuspected = errors.New("this passkey looks copied; the device must pair again")
 	ErrDeviceRemoved  = errors.New("this device is not paired (any more); pair it again")
 	ErrTooManyLogins  = errors.New("too many sign-ins at once; try again in a minute")
+	// ErrNoPasskeys: this gateway has no passkeys (LAN mode: an IP
+	// address has no name for them).
+	ErrNoPasskeys = errors.New("passkeys are off here")
 )
 
 // Passkeys runs registrations and logins for one site.
@@ -170,6 +173,9 @@ func (p *Passkeys) FinishRegistration(reg *passkeyReg, answer json.RawMessage) (
 // BeginLogin starts a sign-in with any passkey of this site: the
 // options for navigator.credentials.get() and the id to finish it with.
 func (p *Passkeys) BeginLogin() (string, json.RawMessage, error) {
+	if p == nil {
+		return "", nil, ErrNoPasskeys
+	}
 	assertion, data, err := p.wa.BeginDiscoverableLogin(webauthn.WithUserVerification(protocol.VerificationRequired))
 	if err != nil {
 		return "", nil, err
@@ -202,6 +208,9 @@ func (p *Passkeys) BeginLogin() (string, json.RawMessage, error) {
 // it signs in. A sign count that went back marks the device for
 // re-pairing (clone suspected).
 func (p *Passkeys) FinishLogin(id string, answer json.RawMessage) (webdevices.Device, error) {
+	if p == nil {
+		return webdevices.Device{}, ErrNoPasskeys
+	}
 	p.mu.Lock()
 	s := p.logins[id]
 	delete(p.logins, id) // one use, whatever the answer

@@ -25,6 +25,8 @@ export const S = {
   "pair.body_check_guest": "Tell the person who shared the link this code. They let you in.",
   "pair.body_approved": "The laptop said yes. Save a passkey on this device to finish.",
   "pair.save": "Save passkey",
+  "pair.body_approved_plain": "The laptop said yes. Tap Finish to open the workspace.",
+  "pair.finish": "Finish",
   "pair.saving": "Saving the passkey…",
   "pair.denied": "Not paired: the laptop said Not now.",
   "pair.body_expired": "This pairing link expired or was already used. Make a new one on the laptop.",

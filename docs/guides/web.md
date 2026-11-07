@@ -177,6 +177,34 @@ toast and `termocode web status` show it.
 - On Linux, Tailscale may refuse a normal user. Run once:
   `sudo tailscale set --operator=$USER`.
 
+### Or: LAN mode (same Wi-Fi, no Tailscale)
+
+When the phone or tablet is on the same Wi-Fi as this computer, you do
+not need Tailscale or any cloud. Add to `config.json`:
+
+```json
+{ "web_panel": "on", "web_listen": "lan" }
+```
+
+- The panel listens with **https** on this computer's private address
+  only (`192.168.x.x`, `10.x.x.x` or `172.16-31.x.x`), on `web_port`
+  (`47443` when not set). Never on a public address, never on all
+  addresses.
+- termocode makes a certificate once and keeps it, with its key (`0600`),
+  in the `web/lan` folder next to `config.json`. The key never leaves
+  this computer.
+- The pairing QR code also carries the certificate's **fingerprint**
+  (`#p=…&fp=…`). The termocode app trusts exactly that certificate for
+  that address, and nothing else.
+- Passkeys need a name, not a number, so LAN mode has none. After the
+  laptop says yes, the page shows **Finish**. Keep **Remember this
+  browser** ticked (it is ticked for you); the device then signs in
+  again by itself.
+- A normal browser shows a certificate warning on this address. Use the
+  termocode app.
+- Share as Viewer needs tailnet mode.
+- The AI can never change `web_listen`.
+
 ### Pair your phone
 
 1. In termocode, run **Web: Pair a Device…**. A QR code shows. It works
@@ -566,7 +594,7 @@ issue.
 | `web_open_browser` | `true` | Open the link in this computer's browser on start. |
 | `web_max_viewers` | `4` | Browsers at once (1..8). |
 | `web_push_detail` | `count` | What a phone push says: `none`, `count` or `title` (a fixed text per kind). |
-| `web_listen` | `loopback` | `tailnet`: also reach it from your tailnet devices. |
+| `web_listen` | `loopback` | `tailnet`: also reach it from your tailnet devices. `lan`: from devices on the same Wi-Fi (https, pinned certificate). |
 | `web_require_totp` | `false` | A paired device also types a code from an authenticator app. |
 | `web_app_key_login` | `false` | The Android app may pair and sign in with its own keystore key (when passkeys fail in the app). |
 | `web_phone` | `off` | `on`: a paired phone with the panel open keeps it running, screen off too (not guests). `web_max_hours` still applies. |
