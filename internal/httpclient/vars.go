@@ -106,18 +106,38 @@ func (rv *Resolver) Resolve(req Request) (Resolved, []Unresolved) {
 		out.Body = &b
 		un = appendUnresolved(un, b, "body")
 	}
-	if v, ok := req.Directives[SigV4Directive]; ok {
-		d := make(map[string]string, len(req.Directives))
-		for k, dv := range req.Directives {
-			d[k] = dv
-		}
-		d[SigV4Directive] = sc.expand(v)
-		un = appendUnresolved(un, d[SigV4Directive], "directive:"+SigV4Directive)
-		out.Directives = d
+	out.Directives = sc.directives(req.Directives)
+	if v, ok := out.Directives[SigV4Directive]; ok {
+		un = appendUnresolved(un, v, "directive:"+SigV4Directive)
 	}
 	un = sc.applyAuth(req, &out, un)
 	out.Secrets = sc.secrets
 	return out, un
+}
+
+// directives expands {{names}} in directive values into a new map (the
+// template keeps its own) and adds the environment's $proxy when the
+// request has no `# @proxy`.
+func (sc *sendScope) directives(in map[string]string) map[string]string {
+	var envProxy string
+	var envPrivate, hasEnv bool
+	if _, own := in["proxy"]; !own && sc.rv.Envs != nil {
+		envProxy, envPrivate, hasEnv = sc.rv.Envs.Lookup(sc.rv.Env, EnvProxyKey)
+	}
+	if len(in) == 0 && !hasEnv {
+		return in
+	}
+	out := make(map[string]string, len(in)+1)
+	for k, v := range in {
+		out[k] = sc.expand(v)
+	}
+	if hasEnv {
+		if envPrivate {
+			sc.secret(envProxy)
+		}
+		out["proxy"] = sc.expand(envProxy)
+	}
+	return out
 }
 
 func appendUnresolved(un []Unresolved, s, field string) []Unresolved {
