@@ -325,12 +325,27 @@ func (d *Docker) run(ctx context.Context, args []string, input []byte) result {
 		return d.exec(ctx, args[1:], input)
 	case "inspect":
 		return d.inspect(args[1:])
+	case "start":
+		return d.start(args[1:])
 	case "image":
 		if len(args) > 1 && args[1] == "inspect" {
 			return d.imageInspect(args[2:])
 		}
 	}
 	return fail("fakedocker: unknown command %q", args[0])
+}
+
+// start is `docker start <name>`: the container runs again.
+func (d *Docker) start(args []string) result {
+	if len(args) != 1 {
+		return fail("fakedocker: start wants one container")
+	}
+	c, ok := d.container(args[0])
+	if !ok {
+		return fail("Error response from daemon: No such container: %s", args[0])
+	}
+	c.Start()
+	return result{out: args[0] + "\n"}
 }
 
 func (d *Docker) cp(args []string, input []byte) result {
