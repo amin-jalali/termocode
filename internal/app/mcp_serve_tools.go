@@ -143,13 +143,18 @@ func mcpServeTools(all []ai.Tool, root string, call aiIDECaller) []ai.Tool {
 	return out
 }
 
+// errMCPServeListOnly is what a catalog tool gets from the UI: the
+// catalog has no UI, so a Validate that reads the editor (aiPrecheck)
+// fails with it there; tools/call builds the live tool instead.
+var errMCPServeListOnly = errors.New("list only")
+
 // mcpServeCatalog is every exposed tool as the docs see it: built on a
 // model with an (unstarted) editor client, so the LSP and editor tools are
 // there whatever runs now. tools/list answers from it; tools/call builds
 // the live tool on the UI goroutine.
 func mcpServeCatalog() []ai.Tool {
 	m := &Model{nvim: &nvim.Client{}}
-	call := func(context.Context, aiIDEFunc) (string, error) { return "", errors.New("list only") }
+	call := func(context.Context, aiIDEFunc) (string, error) { return "", errMCPServeListOnly }
 	all := m.aiChatTools(".", call)
 	if _, ok := ai.FindTool(all, "redis_keys"); !ok {
 		all = append(all, aiRedactResults(aiRedisTools(".", call))...) // listed only where a Redis connection exists
