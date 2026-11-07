@@ -45,6 +45,23 @@ func ParseURL(raw string) (Conn, error) {
 		c.Driver = "redis"
 	case "sqlite", "file":
 		c.Driver = "sqlite"
+	case "libsql":
+		// A remote libSQL server; the token moves from ?authToken= into
+		// the password (kept as a secret, never in the saved URL).
+		c.Driver = "libsql"
+		q := u.Query()
+		if tok := q.Get("authToken"); tok != "" {
+			c.Password = tok
+			q.Del("authToken")
+			u.RawQuery = q.Encode()
+			raw = u.String()
+		}
+		c.URL = raw
+		c.Host = u.Hostname()
+		if u.Port() != "" {
+			c.Port, _ = strconv.Atoi(u.Port())
+		}
+		return c, nil
 	default:
 		if !isPreset {
 			return Conn{}, fmt.Errorf("unsupported database URL scheme %q", u.Scheme)

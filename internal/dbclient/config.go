@@ -70,7 +70,7 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		if source == SourceProject && literalPassword(c.Password) {
 			c.Problem = "literal password in project config"
 		}
-		if source == SourceProject && urlHasPassword(c.URL) {
+		if source == SourceProject && (urlHasPassword(c.URL) || urlHasToken(c.URL)) {
 			c.Problem = "literal password in project config"
 		}
 		if source == SourceProject && (secrets.HasCmdRef(c.Password) || secrets.HasCmdRef(c.URL)) {
@@ -79,7 +79,7 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		if source == SourceUser && (literalPassword(c.Password) || urlHasPassword(c.URL)) {
 			c.Warning = "literal password in user config; use the secret store"
 		}
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" {
 			c.Problem = "unsupported database driver"
 		}
 		if c.Options != nil && c.Problem == "" {
@@ -141,8 +141,19 @@ func Validate(c Conn) error {
 		return fmt.Errorf("invalid connection id")
 	}
 	driver := normDriver(c.Driver)
-	if driver != "postgres" && driver != "mysql" && driver != "sqlite" && driver != "redis" && driver != "clickhouse" && driver != "cassandra" {
+	if driver != "postgres" && driver != "mysql" && driver != "sqlite" && driver != "redis" && driver != "clickhouse" && driver != "cassandra" && driver != "libsql" {
 		return fmt.Errorf("unsupported database driver")
+	}
+	if driver == "libsql" {
+		// A remote libSQL server: a host (or URL) is enough, the port is
+		// the HTTPS default unless the URL names one.
+		if c.Host == "" && c.URL == "" {
+			return fmt.Errorf("libsql server URL is required")
+		}
+		if c.Source == SourceProject && (literalPassword(c.Password) || urlHasPassword(c.URL) || urlHasToken(c.URL)) {
+			return fmt.Errorf("password must be a reference")
+		}
+		return nil
 	}
 	if driver == "sqlite" && c.Path == "" {
 		return fmt.Errorf("sqlite path is required")
@@ -175,6 +186,16 @@ func literalPassword(p string) bool {
 		}
 	}
 	return true
+}
+
+// urlHasToken reports a literal ?authToken= (libsql URLs).
+func urlHasToken(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	tok := u.Query().Get("authToken")
+	return tok != "" && literalPassword(tok)
 }
 
 func urlHasPassword(raw string) bool {

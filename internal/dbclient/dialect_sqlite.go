@@ -28,6 +28,16 @@ func (d SQLiteDialect) DDL(table string) (string, []any) {
 func (SQLiteDialect) Explain(sql string, _ bool) string { return "EXPLAIN QUERY PLAN " + sql }
 
 func (s *SQLiteSession) Introspect(ctx context.Context, req IntrospectionRequest) (IntrospectionResult, error) {
+	return introspectSQLite(ctx, s, req)
+}
+
+// sqliteRunner runs one statement (a local sqlite3 session or a remote
+// libSQL one: both read the same catalog).
+type sqliteRunner interface {
+	Run(context.Context, string, RunOptions) Result
+}
+
+func introspectSQLite(ctx context.Context, s sqliteRunner, req IntrospectionRequest) (IntrospectionResult, error) {
 	if req.Object == "" {
 		dbs := s.Run(ctx, "PRAGMA database_list", RunOptions{})
 		if dbs.Err != nil {
