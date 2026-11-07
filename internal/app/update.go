@@ -294,6 +294,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBTxDone(msg)
 	case dbMetaMsg:
 		return m, m.onDBMeta(msg)
+	case dbGenMsg:
+		return m, m.onDBGen(msg)
 	case dbCountMsg:
 		return m, m.onDBCount(msg)
 	case dbColsMsg:

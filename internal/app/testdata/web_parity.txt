@@ -463,6 +463,7 @@ missing	db-end-session	Databases|S
 missing	db-find-usages	Databases|S
 missing	db-format	Databases|S
 missing	db-format-file	Databases|S
+missing	db-generate-data	Databases|M
 missing	db-goto-definition	Databases|S
 missing	db-open-sessions	Databases|S
 missing	db-server-info	Databases|S

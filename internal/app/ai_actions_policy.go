@@ -398,6 +398,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-result-pin":                aiAuto(),
 	"db-export":                    aiNever(aiNoPicker + " (db_query + write_file)"),
 	"db-import-csv":                aiNever("importing rows is a write the user confirms (db_query)"),
+	"db-generate-data":             aiNever("it writes a script of rows the user reviews and runs"),
 	"db-compare-schemas":           aiNever(aiNoPicker),
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),

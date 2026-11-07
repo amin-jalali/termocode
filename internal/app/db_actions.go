@@ -59,6 +59,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
+		{ID: "db-generate-data", Title: "Databases: Generate Test Data…"},
 		{ID: "db-compare-schemas", Title: "Databases: Compare Schemas…"},
 		{ID: "db-sessions", Title: "Databases: Show Sessions and Locks"},
 		{ID: "db-server-info", Title: "Databases: Show Server Info"},
@@ -147,6 +148,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseCountFromTree()), true
 	case "db-import-csv":
 		return tea.Batch(open, m.databaseImportStart()), true
+	case "db-generate-data":
+		return tea.Batch(open, m.databaseGenerateStart()), true
 	case "db-new-console":
 		if r, ok := m.databaseCurrentRow(); ok {
 			return m.databaseNewConsole(r.conn), true
