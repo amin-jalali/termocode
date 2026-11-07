@@ -158,6 +158,7 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold,nam
   for _,k in ipairs({'e','+','-'}) do vim.keymap.set('x',k,function() notify_range_edit(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
   vim.keymap.set('n','g=',function() notify('g=') end,{buffer=b,silent=true,nowait=true})
+  vim.keymap.set('n','gc',function() notify('gc') end,{buffer=b,silent=true,nowait=true})
   vim.keymap.set('n','<LeftMouse>',function() on_mouse(b,'press') end,{buffer=b,silent=true})
   vim.keymap.set('n','<LeftDrag>',function() on_mouse(b,'drag') end,{buffer=b,silent=true})
   vim.keymap.set('n','<LeftRelease>',function() on_mouse(b,'release') end,{buffer=b,silent=true})

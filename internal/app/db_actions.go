@@ -984,6 +984,7 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"Y", "copy the column, one value per line"},
 		[]string{"c / C", "copy the rows as CSV / JSON"},
 		[]string{"S", "export the rows to a file"},
+		[]string{"gc", "mark as the source, then on another result: compare the rows"},
 		[]string{"Columns"},
 		[]string{"H", "hide the column"},
 		[]string{"O", "show or hide columns"},

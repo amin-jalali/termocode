@@ -122,6 +122,8 @@ type dbConsoleState struct {
 	fk dbFKState
 	// the filter builder (db_where_builder.go)
 	whereDraft *dbWhereDraft
+	// data compare (db_data_compare.go)
+	dataCmp dbDataCompareState
 }
 
 func (m *Model) dbConsole() *dbConsoleState {

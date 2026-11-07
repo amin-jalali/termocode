@@ -293,6 +293,12 @@ termocode reads both schemas in read-only sessions and writes each one as clean 
 
 Very large schemas are compared up to 2,000 tables; the card and the script say so when a schema is bigger.
 
+## Compare data
+
+Compare two results, two tables, or one table on two connections. On the first result page press `gc`: it is marked as the **source** (the rows you want). Show the other result or open the other table (another tab, table or connection) and press `gc` again: that is the **target**. `gc` twice on the same result removes the mark.
+
+A table's data page counts as the whole table with its filter (up to 10,000 rows, read again on a read-only session); a console result counts as the rows it loaded. Rows match on the source table's key. When there is no key, termocode asks for the key columns. The card lists the rows that differ, one line per row (`−` the target's, `+` the source's), and counts the added, changed, removed and same rows; columns that only one side has are listed and not compared. When the target is table data, **Copy sync script** (`y`) and **Open script** (`o`) give the `DELETE`, `UPDATE` and `INSERT` statements, in one transaction, that make the target hold the source's rows. termocode never runs the script: review it, then run it yourself in a console.
+
 ## Query parameters
 
 A statement with parameters asks for each value before it runs: `?`, `:name`, `$1` (PostgreSQL, SQLite) and `@name` (not MySQL, where `@name` is a server variable). The values are bound, never pasted into the SQL. Type `NULL` for a null; a whole number is sent as a number. The console remembers the last values for this session and offers them next time. `Esc` runs nothing. Text in quotes and comments, `::` casts and the PostgreSQL `?` operator are not parameters.

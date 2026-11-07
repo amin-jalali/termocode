@@ -1022,6 +1022,8 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.databaseQuickFilter(tv, row, col)
 	case "b":
 		return m.databaseWhereBuilder()
+	case "gc":
+		return m.databaseDataCompareKey()
 	case "f":
 		if tv != nil {
 			cmd := m.openHTTPPrompt(promptKindDBResultFilter, "Filter rows", "WHERE condition (empty: all rows):", tv.where)
