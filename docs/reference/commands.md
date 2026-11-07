@@ -560,6 +560,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | HTTP: Select Environment… | `http-env-select` |   |   |
 | HTTP: Send Request at Cursor | `http-send` | `Ctrl+Alt+R` / `Ctrl+Enter` | `Ctrl+Alt+R / Ctrl+Enter` |
 | HTTP: Send Request… | `http-send-pick` |   |   |
+| HTTP: Set Request Proxy… | `http-proxy-set` |   |   |
 | HTTP: Show Last Response | `http-last-response` |   |   |
 | HTTP: Validate GraphQL Query | `http-gql-validate` |   |   |
 

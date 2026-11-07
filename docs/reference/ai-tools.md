@@ -2323,6 +2323,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `http-import-openapi` | HTTP: Import OpenAPI… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |
 | `http-last-response` | HTTP: Show Last Response | auto |   |
 | `http-new-file` | HTTP: New .http File… | never | opens a picker or prompt that only the user can answer; use a typed tool (create_file) |
+| `http-proxy-set` | HTTP: Set Request Proxy… | never | opens a picker or prompt that only the user can answer; use a typed tool (read_file, write_file) |
 | `http-quick` | HTTP: Quick Request… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_send with method and url) |
 | `http-save` | HTTP: Save Request to Saved… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |
 | `http-save-body` | HTTP: Save Response Body… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_get_last_response, write_file) |

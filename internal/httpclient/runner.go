@@ -40,6 +40,9 @@ type RunOptions struct {
 	Data []map[string]string
 	// Delay is the pause between two requests.
 	Delay time.Duration
+	// Rate caps how many requests start per second (0 = no cap): two
+	// starts are at least 1/Rate apart, on top of Delay.
+	Rate float64
 	// StopOnFail stops the run at the first failed request.
 	StopOnFail bool
 	// NewResolver makes the resolver for a file; nil = file variables
@@ -85,6 +88,7 @@ func Run(ctx context.Context, c *Client, files []RunFile, opts RunOptions) RunRe
 		}
 	}
 	sent := 0
+	var lastStart time.Time
 	for it := 0; it < iters; it++ {
 		var row map[string]string
 		if len(opts.Data) > 0 {
@@ -102,11 +106,19 @@ func Run(ctx context.Context, c *Client, files []RunFile, opts RunOptions) RunRe
 					rep.Elapsed = time.Since(start)
 					return rep
 				}
+				if sent > 0 {
+					if wait := RateWait(opts.Rate, lastStart, time.Now()); wait > 0 && !sleepCtx(ctx, wait) {
+						rep.Stopped = true
+						rep.Elapsed = time.Since(start)
+						return rep
+					}
+				}
 				if ctx.Err() != nil {
 					rep.Stopped = true
 					rep.Elapsed = time.Since(start)
 					return rep
 				}
+				lastStart = time.Now()
 				res := runOne(ctx, c, rv, rf.Path, req, opts.Hooks)
 				res.Iteration = it + 1
 				sent++
@@ -126,6 +138,19 @@ func Run(ctx context.Context, c *Client, files []RunFile, opts RunOptions) RunRe
 	}
 	rep.Elapsed = time.Since(start)
 	return rep
+}
+
+// RateWait is how long to wait at now before the next start so that
+// starts stay 1/rate apart (0 when rate is 0 or the gap is already big).
+func RateWait(rate float64, last, now time.Time) time.Duration {
+	if rate <= 0 || last.IsZero() {
+		return 0
+	}
+	gap := time.Duration(float64(time.Second) / rate)
+	if d := last.Add(gap).Sub(now); d > 0 {
+		return d
+	}
+	return 0
 }
 
 func withRow(vars []Var, row map[string]string) []Var {

@@ -89,7 +89,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
 		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
 		{ID: "http-api-docs", Title: "HTTP: Open API Docs"},
-	}, httpGQLPaletteItems()...)
+	}, append(httpGQLPaletteItems(), httpProxyPaletteItems()...)...)
 }
 
 // dispatchHTTPPalette runs an "http-…" palette id. ok=false: not ours.
@@ -142,6 +142,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.openHTTPFields(0, 0), true
 	case "http-api-docs":
 		return m.httpOpenAPIDocs(), true
+	case "http-proxy-set":
+		return m.openHTTPProxyPrompt(), true
 	}
 	return nil, false
 }
@@ -649,6 +651,9 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 // handleHTTPPromptSubmit routes the HTTP prompts. ok=false: not ours.
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.httpCookiesPrompt(value); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.httpProxyPrompt(value); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseTransferPrompt(m.promptKind, value); ok {

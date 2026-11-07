@@ -165,7 +165,14 @@ Messages use QoS 0 and MQTT 3.1.1.
 | HTTP: Fetch GraphQL Schema | sends the introspection query to the GraphQL request at the cursor (same URL and headers) and keeps the schema for this session |
 | HTTP: Complete GraphQL Field… | the fields that fit at the cursor, with their types; Enter types the rest of the name. Fetches the schema first when there is none |
 | HTTP: Validate GraphQL Query | checks every field of the query against the schema and that the braces match |
+| HTTP: Set Request Proxy… | writes `# @proxy URL` above the request at the cursor (`http://`, `https://`, `socks5://`, or `none` to go direct); empty removes it. The title shows the proxy the request uses now |
 | HTTP: GraphQL Schema Docs… | the schema's types (root types first); Enter opens one as read-only SDL |
+
+Proxy and retries per request: `# @proxy URL|none` above the request
+line, or `"$proxy"` in an environment of `http-client.env.json` for every
+request sent with it (the request's own `@proxy` wins). `# @retry 3`
+retries on 5xx, 429 and network errors, waiting `# @retry-delay 500ms`
+and twice as long each time.
 
 Settings: `http_timeout`, `http_max_redirects`, `http_max_body_mb`,
 `http_cookie_jar`, `http_history_max`, `http_tls_insecure`,
@@ -189,6 +196,7 @@ termocode http run --env dev --data users.csv --junit report.xml api/
 | `--iterations N` | run the whole set N times (default once, or once per data row) |
 | `--data FILE` | a `.csv` (first line = names) or `.json` (array of objects) file; each iteration uses one row, its values win over `@vars` |
 | `--delay 200ms` | wait between two requests |
+| `--rate 2` | at most 2 requests per second (`0.5` = one every 2 s) |
 | `--stop-on-fail` | stop at the first failed request |
 | `--json FILE`, `--junit FILE` | also write the report as JSON or JUnit XML |
 | `--timeout 10s` | the timeout per request |

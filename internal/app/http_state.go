@@ -231,7 +231,8 @@ type httpState struct {
 	gqlPrefix  string
 	gqlDocs    *httpclient.GQLSchema
 
-	mqttRunning bool // an MQTT session runs (http_mqtt.go)
+	mqttRunning bool        // an MQTT session runs (http_mqtt.go)
+	proxyReq    httpPickReq // the request HTTP: Set Request Proxy… edits
 
 	// The web's request (one at a time) and the hosts the laptop allowed
 	// the web to send to in this session (web_http.go).
