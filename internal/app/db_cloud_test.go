@@ -71,7 +71,10 @@ func TestDBKubeOpen(t *testing.T) {
 		t.Fatalf("failed connect: %v stopped %d", err, stopped)
 	}
 	plain := dbclient.Conn{ID: "p", Driver: "postgres", Host: "db", Port: 5432}
-	if _, err := dbKubeOpen(context.Background(), plain, func(c dbclient.Conn) (dbclient.Session, error) { seen = c; return kubeFakeSession{closed: &closed}, nil }); err != nil || seen.Host != "db" || stopped != 2 {
+	if _, err := dbKubeOpen(context.Background(), plain, func(c dbclient.Conn) (dbclient.Session, error) {
+		seen = c
+		return kubeFakeSession{closed: &closed}, nil
+	}); err != nil || seen.Host != "db" || stopped != 2 {
 		t.Fatalf("plain conn went through kube: %+v", seen)
 	}
 }

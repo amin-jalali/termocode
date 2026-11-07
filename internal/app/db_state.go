@@ -119,6 +119,7 @@ type dbState struct {
 	er                  dbERTarget                  // Export ER Diagram (db_er.go)
 	queryLog            *dbclient.QueryLog          // every statement sent this run (db_query_log.go)
 	cloud               *dbCloudState               // containers, cloud discovery, IAM login (db_cloud.go)
+	manage              *dbManageState              // Manage Connection, templates (db_connmanage.go)
 	erPath              *dbERPathState              // Diagram Path Between Tables (db_er_path.go)
 	lastClickAt         time.Time                   // double-click detection (db_view.go)
 	lastClickPath       string
@@ -309,6 +310,9 @@ func (s *dbState) load(root string) {
 	s.conns = conns
 	for _, c := range conns {
 		n := dbNode{kind: dbNodeConnection, name: dbConnName(c), path: c.ID, conn: c.ID, detail: dbConnDetail(c)}
+		if c.Comment != "" { // DBX-50
+			n.detail += "  · " + sanitizeDBText(c.Comment)
+		}
 		if c.Problem != "" {
 			n.problem = dbFriendlyProblem(c.Problem)
 		}

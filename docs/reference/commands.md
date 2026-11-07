@@ -229,9 +229,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Go to Definition | `db-goto-definition` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
+| Databases: Manage Connection… | `db-manage-connection` |   | `edit, comment, rename, duplicate, copy, delete` |
+| Databases: New Connection from Template… | `db-new-from-template` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
 | Databases: Open Guide | `db-guide` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |
+| Databases: Paste Connection from Clipboard | `db-paste-connection` |   | `connection JSON copied with Copy as JSON` |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |

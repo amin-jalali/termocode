@@ -72,6 +72,9 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-run-container", Title: "Databases: Run New Database Container…", Hint: "PostgreSQL, MySQL, MariaDB or Redis in Docker"},
 		{ID: "db-cloud-discover", Title: "Databases: Discover Cloud Databases…", Hint: "through the installed aws, gcloud or az CLI"},
 		{ID: "db-iam-auth", Title: "Databases: Use Cloud IAM Token Login…", Hint: "a fresh token from the cloud CLI at each connect"},
+		{ID: "db-manage-connection", Title: "Databases: Manage Connection…", Hint: "edit, comment, rename, duplicate, copy, delete"},
+		{ID: "db-paste-connection", Title: "Databases: Paste Connection from Clipboard", Hint: "connection JSON copied with Copy as JSON"},
+		{ID: "db-new-from-template", Title: "Databases: New Connection from Template…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -140,6 +143,12 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCloudStart(), true
 	case "db-iam-auth":
 		return m.databaseIAMStart(), true
+	case "db-manage-connection":
+		return m.databaseManageStart(), true
+	case "db-paste-connection":
+		return m.databasePasteConn(), true
+	case "db-new-from-template":
+		return m.databaseTemplateStart(), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":
@@ -386,6 +395,9 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseCloudConfirm(id); ok { // db_cloud.go
+		return cmd, true
+	}
+	if cmd, ok := m.databaseManageConfirm(id); ok { // db_connmanage.go
 		return cmd, true
 	}
 	if m.confirmKind == confirmKindDBMovePassword {

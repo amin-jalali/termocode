@@ -32,6 +32,14 @@ func cloneConn(c Conn) Conn {
 		s.Jump = append([]string(nil), s.Jump...)
 		c.SSH = &s
 	}
+	if c.Kube != nil {
+		k := *c.Kube
+		c.Kube = &k
+	}
+	if c.Options != nil {
+		o := *c.Options
+		c.Options = &o
+	}
 	if c.Params != nil {
 		p := make(map[string]string, len(c.Params))
 		for k, v := range c.Params {

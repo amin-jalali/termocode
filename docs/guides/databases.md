@@ -296,6 +296,23 @@ Very large schemas are compared up to 2,000 tables; the card and the script say 
 
 **Databases: Diagram Path Between Tables…** starts at the table under the cursor. Pick the other table; tables with no foreign-key path say "no path". termocode finds the shortest path along foreign keys (in either direction) and opens a Mermaid diagram of only those tables, with both ends highlighted. The first line names the path. The schema is read in a read-only session.
 
+## Manage connections
+
+**Databases: Manage Connection…** opens the actions of the connection under the cursor:
+
+- **Edit…** asks for the name, host, port, user and database, one after the other, with the current value filled in.
+- **Comment…** adds a note; the row shows it after the address.
+- **Rename…** changes the id. The saved password moves with it.
+- **Duplicate** makes a copy (without the password). For a project connection it is the only way to change it: the copy goes to your own list.
+- **Copy as JSON** copies the connection without any password. **Databases: Paste Connection from Clipboard** adds it again, here or on another computer.
+- **Copy SSL Settings from…** takes the SSL settings of another connection.
+- **Save SSH as Profile…** keeps the SSH tunnel under a name; **Use SSH Profile…** puts it on another connection. Profiles are in `db/ssh_profiles.json` next to your connections file.
+- **Save as Template…** keeps the connection (no id, no password) as a template; **Databases: New Connection from Template…** starts a new connection from it or from a built-in template (local PostgreSQL, MySQL, Redis, a SQLite file, PostgreSQL through SSH or in Kubernetes).
+- **Show Driver and Server Version** reads the version from a connected server.
+- **Delete…** asks first (**Cancel** is the default). It removes the connection from your file, closes its sessions and deletes its saved passwords. The database is not touched.
+
+Without the UI, `termocode db list`, `termocode db show <id>`, `termocode db add` (JSON on stdin) and `termocode db remove <id>` work on the same file. They never print a password.
+
 ## Containers, Kubernetes and the cloud
 
 **Databases: Run New Database Container…** runs PostgreSQL 17, MySQL 8.4, MariaDB 11 or Redis 7 in Docker (or Podman). A card shows the whole `docker run` command first; **Cancel** is the default. The port is open on `127.0.0.1` only. termocode makes a random password, passes it in the environment (never on the command line) and keeps it in the secret store. The new connection is added to your list; press `Enter` on it when the container is ready.

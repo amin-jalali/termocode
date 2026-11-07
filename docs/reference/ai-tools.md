@@ -2083,8 +2083,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-iam-auth` | Databases: Use Cloud IAM Token Login… | never | makes a connection run a command at each connect; only the user chooses it |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
+| `db-manage-connection` | Databases: Manage Connection… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-new-from-template` | Databases: New Connection from Template… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
+| `db-paste-connection` | Databases: Paste Connection from Clipboard | never | adds a connection from the clipboard; only the user does that |
 | `db-query-log` | Databases: Show Query Log | never | the log holds the literal values of every statement; only the user opens it |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
