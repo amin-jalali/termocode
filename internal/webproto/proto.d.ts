@@ -1038,6 +1038,7 @@ export interface MdNode {
   href?: string;
   start?: number;
   rows?: MdNode[][];
+  diagram?: string;
 }
 
 export interface ChatRun {

@@ -25,9 +25,15 @@ export function textOf(n: MdNode): string {
   return (n.c ?? []).map(textOf).join("");
 }
 
-export function CodeBlock({ text, lang }: { text: string; lang?: string }) {
+/** CodeBlock is a fenced block with Copy (and Insert on the desktop). A
+ * diagram block (CMP-70: mermaid, csv, tsv, excalidraw) shows the hub's
+ * drawing first, with a toggle to its source; Copy and Insert always
+ * take the source. */
+export function CodeBlock({ text, lang, diagram }: { text: string; lang?: string; diagram?: string }) {
   const [all, setAll] = useState(false);
-  const lines = text.replace(/\n$/, "").split("\n");
+  const [source, setSource] = useState(false);
+  const drawn = !!diagram && !source;
+  const lines = (drawn ? diagram! : text).replace(/\n$/, "").split("\n");
   const cut = !all && lines.length > CODE_ROWS;
   const copy = () => {
     const done = () => toast("ok", t("copied"));
@@ -43,7 +49,26 @@ export function CodeBlock({ text, lang }: { text: string; lang?: string }) {
   return (
     <div class="codeblock" dir="ltr">
       <div class="cb-head">
-        <span class="cb-lang">{lang}</span>
+        <span class="cb-lang">{diagram && !source ? t("chat.diagram_lang", { lang: lang ?? "" }) : lang}</span>
+        {diagram && (
+          <button
+            type="button"
+            class="cb-toggle"
+            aria-pressed={source}
+            aria-label={desk ? t(source ? "chat.show_diagram" : "chat.show_source") : undefined}
+            title={desk ? t(source ? "chat.show_diagram" : "chat.show_source") : undefined}
+            onClick={() => setSource(!source)}
+          >
+            {desk ? (
+              <>
+                <Cod name={source ? "type-hierarchy" : "code"} />
+                <span class="sr-only">{t(source ? "chat.show_diagram" : "chat.show_source")}</span>
+              </>
+            ) : (
+              t(source ? "chat.show_diagram" : "chat.show_source")
+            )}
+          </button>
+        )}
         {desk && (
           <button type="button" class="cb-insert" aria-label={t("chat.insert")} title={t("chat.insert")} disabled={!ed} onClick={() => ed?.insert(text.replace(/\n$/, ""))}>
             <Cod name="insert" />
@@ -61,7 +86,7 @@ export function CodeBlock({ text, lang }: { text: string; lang?: string }) {
           )}
         </button>
       </div>
-      <pre class="cb-pre">
+      <pre class={drawn ? "cb-pre cb-diagram" : "cb-pre"}>
         <code>{cut ? lines.slice(0, CODE_ROWS).join("\n") : lines.join("\n")}</code>
       </pre>
       {cut && (
@@ -108,7 +133,7 @@ function node(n: MdNode, d: number, key: number): ComponentChildren {
         </code>
       );
     case "codeblock":
-      return <CodeBlock key={key} text={n.text ?? ""} lang={n.lang} />;
+      return <CodeBlock key={key} text={n.text ?? ""} lang={n.lang} diagram={n.diagram} />;
     case "ul":
       return <ul key={key}>{kids(n, d)}</ul>;
     case "ol":

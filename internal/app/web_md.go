@@ -13,6 +13,7 @@ import (
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 
+	"github.com/amin-jalali/termocode/internal/diagram"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -34,6 +35,9 @@ var webMdCache = struct {
 }{m: map[string]*webproto.MdNode{}}
 
 const webMdCacheMax = 256
+
+// webMdDiagramWidth is the widest diagram drawn for the page.
+const webMdDiagramWidth = 160
 
 // webMarkdown returns the AST of a markdown text (cleaned like all chat
 // text). The result is shared: callers must not change it.
@@ -102,7 +106,14 @@ func (w *webMdWalker) node(out []webproto.MdNode, n gast.Node, d int) []webproto
 	case *gast.CodeBlock:
 		return append(out, webproto.MdNode{K: webproto.MdCodeBlock, Text: w.lines(n)})
 	case *gast.FencedCodeBlock:
-		return append(out, webproto.MdNode{K: webproto.MdCodeBlock, Lang: webMdLang(string(n.Language(w.src))), Text: w.lines(n)})
+		lang, body := string(n.Language(w.src)), w.lines(n)
+		cb := webproto.MdNode{K: webproto.MdCodeBlock, Lang: webMdLang(lang), Text: body}
+		// The page shows a drawn diagram (CMP-70) in a scrolling pre, so
+		// it gets the widest drawing the terminal views allow.
+		if rows, ok := diagram.Render(lang, body, webMdDiagramWidth); ok {
+			cb.Diagram = strings.Join(rows, "\n")
+		}
+		return append(out, cb)
 	case *gast.Blockquote:
 		return add(webproto.MdQuote)
 	case *gast.List:
