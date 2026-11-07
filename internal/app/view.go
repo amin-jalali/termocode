@@ -283,6 +283,11 @@ func (m Model) toastPlaces() []toastPlace {
 		limit = 80
 	}
 	w := m.toast.FitWidth(min(limit, edPaneW-6))
+	// Never so narrow that a title is cut (an instruction such as "edit
+	// the question and press Enter"), as the compact card.
+	if need := m.toast.TitleWidth(); need > w {
+		w = min(need, edPaneW-6)
+	}
 	cards := m.toast.Cards(w)
 	x := editorStart + edPaneW - w - 2
 	y := m.h - 3 // the shadow row of the newest card sits just above the status bar

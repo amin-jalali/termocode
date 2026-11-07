@@ -1048,7 +1048,7 @@ func New() Model {
 		keymapProblems:   keymapProblems,
 		focus:            FocusEditor,
 		gate:             &frameGate{on: throttleFrames},
-		showExp:          true,
+		showExp:          !sess.ExplorerHidden,
 		inlayHintsOn:     true,
 		lineNumbersOn:    true,
 		gitViewTree:      gitViewTree,

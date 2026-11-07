@@ -42,6 +42,9 @@ type SessionState struct {
 	TerminalRows int `json:"terminal_rows,omitempty"`
 	// ExplorerWidth is the sidebar width the user dragged (0 = default).
 	ExplorerWidth int `json:"explorer_width,omitempty"`
+	// ExplorerHidden: the side bar was hidden at quit (View: Toggle
+	// Explorer, a layout); the workspace starts that way (SCN-5).
+	ExplorerHidden bool `json:"explorer_hidden,omitempty"`
 
 	// Right-side Actions panel state. Pointers for the booleans so an
 	// unset field (nil) is distinguishable from explicitly-false — on first
@@ -209,6 +212,7 @@ func layoutPart(s SessionState) SessionState {
 func workspacePart(s SessionState) SessionState {
 	return SessionState{
 		Workspace:           s.Workspace,
+		ExplorerHidden:      s.ExplorerHidden,
 		OpenFiles:           s.OpenFiles,
 		ActivePath:          s.ActivePath,
 		ExpandedDirs:        s.ExpandedDirs,

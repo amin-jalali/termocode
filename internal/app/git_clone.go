@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -209,12 +210,31 @@ func (m *Model) handleCloneDone(msg cloneDoneMsg) tea.Cmd {
 		if errors.Is(msg.err, git.ErrCloneAuth) {
 			title = "Clone failed: authentication"
 		}
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, title, msg.err.Error())
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, title, cloneFailDetail(msg.err))
 		return toastCmd
 	}
 	m.clone = cloneState{}
 	// Same re-exec path as Open Recent Workspace.
 	return m.openWorkspace(msg.dest)
+}
+
+// cloneFailDetail is git's reason for a failed clone, first: the last
+// stderr line without "exit status N:", "fatal:" and the URL it could not
+// access, which otherwise fill the card and cut the reason off.
+func cloneFailDetail(err error) string {
+	s := err.Error()
+	if i := strings.LastIndexByte(s, '\n'); i >= 0 {
+		s = s[i+1:]
+	} else if _, rest, ok := strings.Cut(s, ": "); ok && strings.HasPrefix(s, "exit status ") {
+		s = rest
+	}
+	s = strings.TrimPrefix(strings.TrimSpace(s), "fatal: ")
+	if strings.HasPrefix(s, "unable to access '") {
+		if i := strings.Index(s, "': "); i >= 0 {
+			s = s[i+3:]
+		}
+	}
+	return s
 }
 
 // welcomeCardClone is the dashboard card id for "Clone repository".

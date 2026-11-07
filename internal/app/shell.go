@@ -841,6 +841,17 @@ func (m *Model) persistExplorerWidth() {
 	saveSession(existing)
 }
 
+// persistExplorerShown saves whether the side bar is hidden (this
+// workspace's part of the session), at quit.
+func (m *Model) persistExplorerShown() {
+	existing := loadSession()
+	if existing.ExplorerHidden == !m.showExp {
+		return
+	}
+	existing.ExplorerHidden = !m.showExp
+	saveSession(existing)
+}
+
 // terminalTabBarRowAbsolute returns the screen-space Y coordinate of the
 // terminal tab-bar row, or -1 when the panel isn't open. Used by the mouse
 // router to hit-test tab clicks, "+", and the right-side controls.
