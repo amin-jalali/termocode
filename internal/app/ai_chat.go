@@ -185,6 +185,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai.Tool {
 	aws := m.aiWorkspaceAt(root) // a container workspace: its Host FS + Exec (RC-5)
 	tools := append(ai.WorkspaceTools(aws), m.aiEditorTools()...)
+	tools = aiAttributionTools(tools, root) // CMP-100: who is named on git_commit
 	if aws.FS != nil {
 		tools = aiSyncHostTools(tools, aws, call) // the IDE follows, the files stay in the container
 	} else {

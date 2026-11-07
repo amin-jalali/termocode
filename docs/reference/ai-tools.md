@@ -2921,6 +2921,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `db_time_zone` | confirm (settings) |   |
 | `db_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `font_delta` | confirm (settings) |   |
+| `git_ai_attribution` | never | who is named on the AI's commits is the user's choice |
 | `git_auto_fetch` | never | starts a timer that talks to the remote; only the user turns it on |
 | `git_blame_detect_moves` | confirm (settings) |   |
 | `git_blame_ignore_whitespace` | confirm (settings) |   |

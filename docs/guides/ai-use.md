@@ -631,6 +631,22 @@ Every tool call of the agent is one line in the **Output** panel, channel
 **AI: Undo Last Turn** adds a line too. The log is kept while termocode
 runs (the last 5000 lines).
 
+### Who is named on the AI's commits
+
+The setting `git_ai_attribution` (Settings, group **Git**) says who is
+named on a commit the AI makes: `git_commit` in the chat and the commit
+of a plan run in a worktree.
+
+| Value | Author | Committer | Added to the message |
+|---|---|---|---|
+| `user` (default) | you | you | nothing |
+| `co-author` | you | you | `Co-authored-by: termocode AI <ai@termocode.invalid>` |
+| `ai` | termocode AI | you | nothing |
+
+The commit card shows the choice before you allow it, for example
+`Commit: "fix typo" (author: termocode AI)`. Only you can change the
+setting; the AI cannot. Commits you make yourself are never changed.
+
 ## Agent: let the chat use tools
 
 The chat is an agent. It can call tools to answer you:
