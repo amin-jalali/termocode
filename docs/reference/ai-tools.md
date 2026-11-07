@@ -2064,6 +2064,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-filter` | Databases: Filter… | never | the filter is typed by the user; the AI uses db_schema |
 | `db-find-usages` | Databases: Find Usages | auto |   |
 | `db-focus` | Databases: Focus | auto |   |
+| `db-format` | Databases: Format Statement or Selection | confirm (fileWrite) |   |
+| `db-format-file` | Databases: Format File | confirm (fileWrite) |   |
 | `db-goto-definition` | Databases: Go to Definition | auto |   |
 | `db-guide` | Databases: Open Guide | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |

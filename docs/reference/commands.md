@@ -209,6 +209,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Filter… | `db-filter` |   |   |
 | Databases: Find Usages | `db-find-usages` |   |   |
 | Databases: Focus | `db-focus` |   |   |
+| Databases: Format File | `db-format-file` |   |   |
+| Databases: Format Statement or Selection | `db-format` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
