@@ -371,6 +371,8 @@ web	view/Tests	view:testing
 web	web-pair	op:web.pair_ask
 web	web-share	op:web.grant_ask
 web	web-totp	op:web.totp_check
+web	workflow-dry-run	op:workflows.dry_run
+web	workflow-run	op:workflows.run
 web	workflow-stop	op:workflows.stop
 web	workflows	view:workflows
 web	workspace-add-folder	cmd:addFolder
@@ -696,10 +698,8 @@ missing	services-compose-run	Containers|S
 missing	services-compose-watch	Containers|S
 missing	services-deploy-git	Containers|S
 missing	services-env-file	Containers|S
-missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
-missing	workflow-run	Workflows|S
 missing	workspace-open-container	Workspace|M
 missing	workspace-reopen-devcontainer	Workspace|M
 missing	worktree-add-folder	Worktrees|M
