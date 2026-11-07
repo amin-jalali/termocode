@@ -42,8 +42,21 @@ type dbImport struct {
 	mapCol  int   // the table column the mapping picker is changing
 	files   []string
 	sessKey string
-	skipBad bool   // Bad rows: skip (left out and logged) instead of stop
-	tmp     string // the CSV a JSON file was turned into (removed at the end)
+	skipBad bool // Bad rows: skip (left out and logged) instead of stop
+	// the private file to remove when the import ends: the CSV a JSON file
+	// was turned into, or a copy from another table (db_copy_table.go);
+	// where the rows came from, and whether the export mask changed some
+	tmp      string
+	copyFrom string
+	masked   bool
+	// more are the other files of a several-files import (absolute; the
+	// first is path); records then counts the records of all of them.
+	more []string
+	// opts are the reading options (Options… on the card) and formats the
+	// per-column formats, one per table column.
+	opts    dbclient.CSVOptions
+	formats []dbclient.ColumnFormat
+	fmtCol  int // the table column the format picker is changing
 }
 
 // dbImportIsJSON: a JSON array of objects or JSON lines (DBX-19), turned
@@ -58,13 +71,16 @@ func dbImportIsJSON(name string) bool {
 
 // dbImportDropTmp removes the converted CSV of a JSON import.
 func dbImportDropTmp(imp *dbImport) {
-	if imp != nil && imp.tmp != "" {
-		_ = os.Remove(imp.tmp)
-		imp.tmp = ""
-	}
+	imp.dropTemp()
 }
 
-const dbImportTypePath = "\x00path"
+// files is how many files the import reads.
+func (imp *dbImport) fileCount() int { return 1 + len(imp.more) }
+
+const (
+	dbImportTypePath = "\x00path"
+	dbImportTypeGlob = "\x00glob"
+)
 
 var (
 	dbGlyphFrom = theme.Icon{NerdFont: "←", Unicode: "←", ASCII: "<-"}
@@ -142,7 +158,8 @@ func (m *Model) onDBImportFiles(msg dbImportFilesMsg) tea.Cmd {
 	for _, f := range msg.files {
 		items = append(items, picker.Item{ID: f, Title: sanitizeDBText(f)})
 	}
-	items = append(items, picker.Item{ID: dbImportTypePath, Title: "Type a path…"})
+	items = append(items, picker.Item{ID: dbImportTypePath, Title: "Type a path…"},
+		picker.Item{ID: dbImportTypeGlob, Title: "Several files (a pattern)…", Hint: "for example data/*.csv, one transaction"})
 	m.picker = picker.NewItems("Import CSV into "+imp.t.label(), items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerKind = pickerKindDBImportFile
@@ -157,6 +174,7 @@ type dbImportPreviewMsg struct {
 	cols    []string
 	csvPath string // the converted CSV of a JSON file
 	err     error
+	reload  bool // Options… changed: keep the columns and the mapping
 }
 
 // databaseImportLoad reads the start of the file, counts its rows and reads
@@ -169,19 +187,35 @@ func (m *Model) databaseImportLoad(value string) tea.Cmd {
 	}
 	abs, display, err := m.dbResolvePath(value)
 	if err != nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "Cannot import", err.Error())
 	}
 	sess := m.databases.sessions[imp.sessKey]
 	if sess == nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Info, "Not connected", "Connect first: Enter on the connection.")
 	}
-	imp.path, imp.display = abs, display
+	imp.path, imp.display, imp.more = abs, display, nil
+	return m.databaseImportRead(imp, sess, nil)
+}
+
+// databaseImportRead sniffs the first file with the import's options,
+// counts the records of every file and (the first time) reads the table's
+// columns, off the UI goroutine. header != nil keeps the user's header
+// choice (a reload after Options…).
+func (m *Model) databaseImportRead(imp *dbImport, sess dbclient.Session, header *bool) tea.Cmd {
 	req := imp.t.request()
-	return tea.Batch(m.pushToast(toast.Info, "Reading "+sanitizeDBText(display)+"…"), func() tea.Msg {
-		msg := dbImportPreviewMsg{imp: imp}
-		if dbImportIsJSON(abs) {
+	paths := append([]string{imp.path}, imp.more...)
+	opts := imp.opts
+	needCols := len(imp.cols) == 0
+	copied := imp.copyFrom != "" // a copy from another table: exact text
+	reading := "Reading " + sanitizeDBText(imp.display) + "…"
+	if copied {
+		reading = "Reading the copied rows…"
+	}
+	return tea.Batch(m.pushToast(toast.Info, reading), func() tea.Msg {
+		msg := dbImportPreviewMsg{imp: imp, reload: !needCols}
+		if !copied && dbImportIsJSON(paths[0]) {
 			f, err := os.CreateTemp("", "termocode-import-*.csv")
 			if err != nil {
 				msg.err = err
@@ -189,23 +223,45 @@ func (m *Model) databaseImportLoad(value string) tea.Cmd {
 			}
 			f.Close()
 			msg.csvPath = f.Name()
-			if _, err := dbclient.JSONToCSV(abs, msg.csvPath); err != nil {
+			if _, err := dbclient.JSONToCSV(paths[0], msg.csvPath); err != nil {
 				_ = os.Remove(msg.csvPath)
 				msg.csvPath, msg.err = "", err
 				return msg
 			}
-			abs = msg.csvPath
+			paths[0] = msg.csvPath
 		}
-		sn, err := dbclient.SniffCSV(abs)
+		var sn dbclient.CSVSniff
+		var err error
+		if copied {
+			sn, err = dbclient.SniffCopyCSV(paths[0])
+		} else {
+			sn, err = dbclient.SniffCSVWith(paths[0], opts)
+		}
 		if err != nil {
 			msg.err = err
 			return msg
 		}
+		if header != nil {
+			sn = sn.WithHeader(*header)
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
-		n, err := dbclient.CountCSVRows(ctx, abs, sn)
-		if err != nil {
-			msg.err = err
+		for _, p := range paths {
+			n, err := dbclient.CountCSVRows(ctx, p, sn)
+			if err != nil {
+				if len(paths) > 1 {
+					err = fmt.Errorf("%s: %w", filepath.Base(p), err)
+				}
+				msg.err = err
+				return msg
+			}
+			msg.records += n
+			if sn.Header {
+				msg.records++
+			}
+		}
+		msg.sniff = sn
+		if !needCols {
 			return msg
 		}
 		mctx, mcancel := context.WithTimeout(context.Background(), dbMetaTimeout)
@@ -217,10 +273,6 @@ func (m *Model) databaseImportLoad(value string) tea.Cmd {
 		}
 		for _, c := range ir.Columns {
 			msg.cols = append(msg.cols, c.Name)
-		}
-		msg.sniff, msg.records = sn, n
-		if sn.Header {
-			msg.records++
 		}
 		return msg
 	})
@@ -235,25 +287,37 @@ func (m *Model) onDBImportPreview(msg dbImportPreviewMsg) tea.Cmd {
 	if msg.csvPath != "" {
 		imp.path, imp.tmp = msg.csvPath, msg.csvPath
 	}
+	if msg.err != nil && msg.reload {
+		// The options do not fit the file: say so and keep the old ones.
+		imp.opts = imp.sniff.Options
+		return tea.Batch(m.pushToastDetail(toast.Warn, "Cannot read "+sanitizeDBText(imp.display)+" that way", dbErrorText(msg.err)), m.databaseImportCard())
+	}
 	if msg.err != nil {
-		dbImportDropTmp(imp)
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "Cannot import "+sanitizeDBText(imp.display), dbErrorText(msg.err))
 	}
+	if msg.reload {
+		sameCols := msg.sniff.Fields == imp.sniff.Fields && strings.Join(msg.sniff.Columns, "\x00") == strings.Join(imp.sniff.Columns, "\x00")
+		imp.sniff, imp.records = msg.sniff, msg.records
+		if !sameCols {
+			imp.mapping = dbclient.AutoMap(imp.cols, imp.sniff)
+		}
+		return m.databaseImportCard()
+	}
 	if len(msg.cols) == 0 {
-		dbImportDropTmp(imp)
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "Cannot import", "The columns of "+imp.t.label()+" could not be read.")
 	}
 	imp.sniff, imp.records, imp.cols = msg.sniff, msg.records, msg.cols
 	imp.mapping = dbclient.AutoMap(imp.cols, imp.sniff)
+	imp.formats = make([]dbclient.ColumnFormat, len(imp.cols))
 	return m.databaseImportCard()
 }
 
 func (imp *dbImport) rows() int {
 	n := imp.records
 	if imp.sniff.Header {
-		n--
+		n -= imp.fileCount()
 	}
 	return max(n, 0)
 }
@@ -284,7 +348,19 @@ func (m *Model) dbImportCardText(imp *dbImport) string {
 		header = "header row"
 	}
 	fmt.Fprintf(&b, "%s · %s · delimiter %s · %s · %s\n", sanitizeDBText(imp.display), imp.sniff.Encoding, dbCSVDelimiter(imp.sniff.Delimiter), header, dbPlural(imp.rows(), "row"))
+	if imp.fileCount() > 1 {
+		fmt.Fprintf(&b, "%s, read one after another; the delimiter, header and options of the first apply to all\n", dbPlural(imp.fileCount(), "file"))
+	}
+	if o := dbImportOptionsText(imp.sniff.Options); o != "" {
+		b.WriteString("Options: " + o + "\n")
+	}
 	fmt.Fprintf(&b, "Into %s on %s\n", imp.t.label(), sanitizeDBText(dbConnName(imp.conn)))
+	if imp.copyFrom != "" {
+		b.WriteString("Copied from " + imp.copyFrom + " (read-only); empty text arrives as NULL.\n")
+		if imp.masked {
+			b.WriteString("The export mask is on: masked columns arrive masked.\n")
+		}
+	}
 	if imp.skipBad {
 		b.WriteString("Rows are inserted in groups, in one transaction.\nRows that fail are skipped and listed in an error log. Empty cells become NULL.\n")
 	} else {
@@ -321,7 +397,11 @@ func (m *Model) dbImportCardText(imp *dbImport) string {
 			from = dbOneLine(imp.sniff.Columns[imp.mapping[i]])
 		}
 		name := ansi.Truncate(dbOneLine(c), width, "…")
-		fmt.Fprintf(&b, "  %s%s %s %s\n", name, strings.Repeat(" ", width-ansi.StringWidth(name)), dbGlyphFrom.String(), from)
+		format := ""
+		if i < len(imp.formats) && !imp.formats[i].IsZero() && imp.mapping[i] >= 0 {
+			format = "  [" + dbOneLine(imp.formats[i].Describe()) + "]"
+		}
+		fmt.Fprintf(&b, "  %s%s %s %s%s\n", name, strings.Repeat(" ", width-ansi.StringWidth(name)), dbGlyphFrom.String(), from, format)
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -335,6 +415,10 @@ func (m *Model) databaseImportCard() tea.Cmd {
 	}
 	name := sanitizeDBText(dbConnName(imp.conn))
 	title := fmt.Sprintf("Import %s into %s", dbPlural(imp.rows(), "row"), imp.t.label())
+	if imp.fileCount() > 1 {
+		title = fmt.Sprintf("Import %s from %s into %s", dbPlural(imp.rows(), "row"), dbPlural(imp.fileCount(), "file"), imp.t.label())
+	}
+	opts := confirm.Button{ID: "options", Title: "Options…"}
 	hdr := "Header: off"
 	if imp.sniff.Header {
 		hdr = "Header: on"
@@ -344,14 +428,14 @@ func (m *Model) databaseImportCard() tea.Cmd {
 		bad.Title = "Bad rows: skip"
 	}
 	importBtn := confirm.Button{ID: "import", Title: "Import", Style: confirm.StylePrimary}
-	buttons := []confirm.Button{importBtn, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}, bad, {ID: "cancel", Title: "Cancel"}}
+	buttons := []confirm.Button{importBtn, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}, bad, opts, {ID: "cancel", Title: "Cancel"}}
 	if imp.mapped() == 0 {
 		buttons = buttons[1:]
 	}
 	if imp.conn.Environment == "production" {
 		title = "Write to production (" + name + ")? " + title
 		importBtn.Style = confirm.StyleDestructive
-		buttons = []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}, bad}
+		buttons = []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}, bad, opts}
 		if imp.mapped() > 0 {
 			buttons = append(buttons, importBtn)
 		}
@@ -381,9 +465,10 @@ func (m *Model) databaseImportConfirm(id string) tea.Cmd {
 	case "bad-rows":
 		imp.skipBad = !imp.skipBad
 		return m.databaseImportCard()
+	case "options":
+		return m.databaseImportOptionsPicker()
 	}
-	dbImportDropTmp(imp)
-	s.imp = nil
+	s.dbImportEnd()
 	return nil
 }
 
@@ -414,6 +499,9 @@ func (m *Model) databaseImportPicker(id string) tea.Cmd {
 	case pickerKindDBImportFile:
 		if id == dbImportTypePath {
 			return m.openHTTPPrompt(promptKindDBImportPath, "Import CSV into "+imp.t.label(), "CSV or JSON file (in the workspace, or a full path):", "")
+		}
+		if id == dbImportTypeGlob {
+			return m.openHTTPPrompt(promptKindDBImportGlob, "Import CSV files into "+imp.t.label(), "Files (a pattern like data/*.csv; * and ? match):", "")
 		}
 		return m.databaseImportLoad(id)
 	case pickerKindDBImportMapCol:
@@ -462,27 +550,33 @@ func (m *Model) databaseImportRun() tea.Cmd {
 		return nil
 	}
 	if s.job != nil || s.running != nil || s.submitting != nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "A query or transfer is running", "Esc cancels it.")
 	}
 	sess := m.databases.sessions[imp.sessKey]
 	if sess == nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Info, "Not connected", "Connect first: Enter on the connection.")
 	}
 	d := dbclient.DialectFor(imp.t.driver)
 	if d == nil {
-		s.imp = nil
+		s.dbImportEnd()
 		return m.pushToastDetail(toast.Warn, "Cannot import", "This connection does not use SQL.")
 	}
 	var targets []string
 	var sources []int
+	var formats []dbclient.ColumnFormat
 	for i, c := range imp.cols {
 		if imp.mapping[i] >= 0 {
 			targets, sources = append(targets, c), append(sources, imp.mapping[i])
+			var f dbclient.ColumnFormat
+			if i < len(imp.formats) {
+				f = imp.formats[i]
+			}
+			formats = append(formats, f)
 		}
 	}
-	spec := dbclient.ImportSpec{Path: imp.path, Sniff: imp.sniff, Dialect: d, Schema: imp.t.schema, Table: imp.t.name, Targets: targets, Sources: sources, SkipBad: imp.skipBad}
+	spec := dbclient.ImportSpec{Path: imp.path, MorePaths: imp.more, Sniff: imp.sniff, Dialect: d, Schema: imp.t.schema, Table: imp.t.name, Targets: targets, Sources: sources, SkipBad: imp.skipBad, Formats: formats}
 	manual := m.databases.manualMode(imp.t.conn)
 	open := m.databases.txOpen(imp.sessKey)
 	spec.InTx = manual
@@ -514,8 +608,9 @@ func (m *Model) onDBImportDone(msg dbImportDoneMsg) tea.Cmd {
 	if s.job != msg.job {
 		return nil
 	}
-	dbImportDropTmp(s.imp)
-	s.job, s.imp = nil, nil
+	s.job = nil
+	s.dbImportEnd()
+	msg.imp.dropTemp()
 	m.closeJobCard()
 	if msg.began {
 		m.databases.tx(msg.key).open = true
@@ -529,6 +624,9 @@ func (m *Model) onDBImportDone(msg dbImportDoneMsg) tea.Cmd {
 		title := "Import failed"
 		if res.FailedRow > 0 {
 			title = fmt.Sprintf("Import failed: row %d (line %d)", res.FailedRow, res.FailedLine)
+			if res.FailedFile != "" {
+				title = fmt.Sprintf("Import failed: %s row %d (line %d)", sanitizeDBText(filepath.Base(res.FailedFile)), res.FailedRow, res.FailedLine)
+			}
 		}
 		m.confirm = confirm.New(title, dbSafeMultiline(dbErrorText(res.Err))+"\n\nNothing was imported.", []confirm.Button{{ID: "close", Title: "Close", Style: confirm.StylePrimary}}).WithScrollText()
 		m.confirm.SetSize(m.w, m.h)

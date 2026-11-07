@@ -244,7 +244,7 @@ func (m *Model) webDBRows(call *webCall) tea.Cmd {
 	if w.c.Driver == "postgres" {
 		from = d.QuoteIdent(webDBSchema(w.c)) + "." + from
 	}
-	sql := "SELECT * FROM " + from + d.Limit(webproto.DBPageRows+1, a.From)
+	sql := "SELECT * FROM " + from + dbclient.OrderedLimit(d, webproto.DBPageRows+1, a.From)
 	view := m.webDB().views[a.Conn][a.Table]
 	t := webDBTableOf(w.c, a.Table, view)
 	ctx, stop := m.webDBCtx(call, w.c.ID)

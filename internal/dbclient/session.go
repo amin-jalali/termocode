@@ -40,6 +40,9 @@ type IntrospectionResult struct {
 	Keys        []string
 	Routines    []string
 	Sequences   []string
+	// Packages are Oracle PL/SQL packages (DBX-63), schema level and
+	// optional.
+	Packages []string
 	// Triggers and Extensions are schema level, Checks object level
 	// (DBX-13). They are optional: a server that cannot list them
 	// leaves them empty.

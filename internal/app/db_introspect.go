@@ -16,7 +16,8 @@ import (
 // only) and a load that differs from the cached one marks the row
 // "changed since …"; Databases: Show Schema Cache Info says when a
 // connection was last loaded; db_complete_catalogs adds the system
-// catalogs to completion.
+// catalogs to completion. When the server is down the tree is built from
+// the cache and the connection row says "offline · cached …".
 
 func (s dbConsoleSettings) introspectLevel(objects int) dbclient.IntrospectLevel {
 	if s.IntrospectLevel != nil && !strings.EqualFold(strings.TrimSpace(*s.IntrospectLevel), "auto") {
@@ -175,4 +176,66 @@ func (m *Model) databaseSchemaCacheInfo() tea.Cmd {
 	}
 	ago := time.Since(at).Round(time.Minute)
 	return m.pushToastDetail(toast.Info, "Schema of "+name+" last loaded "+at.Local().Format("Jan 2 15:04"), ago.String()+" ago. r in the tree reloads one object, R everything.")
+}
+
+// dbOfflineDetail starts the detail of a connection row whose tree comes
+// from the schema cache because the server could not be reached.
+const dbOfflineDetail = "offline · cached "
+
+type dbOfflineTreeMsg struct {
+	path       string
+	generation uint64
+	entry      dbclient.SchemaCacheEntry
+	found      bool
+	err        error
+}
+
+// databaseOfflineTree reads the cached schema of one tree row (off the UI
+// goroutine) so the tree can be browsed while the server is down.
+func (m *Model) databaseOfflineTree(path string) tea.Cmd {
+	s := m.databases
+	if s == nil {
+		return nil
+	}
+	n, ok := s.nodes[path]
+	if !ok || !dbNodeExpandable(n.kind) {
+		return nil
+	}
+	c := m.dbSchemaCache()
+	k := dbSchemaKey(path, n.conn)
+	gen := s.generation
+	return func() tea.Msg {
+		e, found, err := c.Get(k)
+		return dbOfflineTreeMsg{path: path, generation: gen, entry: e, found: found, err: err}
+	}
+}
+
+func (m *Model) onDBOfflineTree(msg dbOfflineTreeMsg) tea.Cmd {
+	s := m.databases
+	if s == nil || msg.generation != s.generation {
+		return nil
+	}
+	n, ok := s.nodes[msg.path]
+	if !ok || s.sessions[n.conn] != nil {
+		return nil // gone, or the server came back meanwhile
+	}
+	if msg.err != nil || !msg.found {
+		if msg.path == n.conn {
+			return nil // the connect error toast already explains it
+		}
+		return m.pushToastDetail(toast.Info, "Not in the schema cache", "This object was never loaded while the server was up. r on the connection tries again.")
+	}
+	if s.offline == nil {
+		s.offline = map[string]time.Time{}
+	}
+	if _, was := s.offline[n.conn]; !was || msg.path == n.conn {
+		s.offline[n.conn] = msg.entry.RefreshedAt
+	}
+	s.addIntrospection(msg.path, sanitizeDBIntrospection(msg.entry.Result))
+	if c, ok := s.nodes[n.conn]; ok {
+		c.detail = dbOfflineDetail + s.offline[n.conn].Local().Format("Jan 2 15:04")
+		s.nodes[n.conn] = c
+	}
+	s.touch()
+	return nil
 }

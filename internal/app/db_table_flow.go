@@ -138,7 +138,7 @@ func (m *Model) onDBTableMeta(msg dbTableMetaMsg) tea.Cmd {
 		}
 	}
 	tv.unique = dbUniqueSets(ir)
-	tv.fks = ir.ForeignKeys
+	tv.fks = m.databaseTableFKs(tv, ir) // with the virtual keys (db_virtual.go)
 	tv.rowid = ""
 	if _, lite := dbclient.DialectFor(tv.driver).(dbclient.SQLiteDialect); lite && !tv.view && len(tv.keys) == 0 && len(tv.unique) == 0 {
 		tv.rowid = dbSQLiteRowid(tv.cols, ir.DDL) // no key: the rowid finds the row
@@ -399,7 +399,7 @@ func (m *Model) databaseSelectInConsole() tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
-	stmt := fmt.Sprintf("SELECT *%s FROM %s LIMIT %d;", m.databaseVirtualSelectList(t), t.qualified(), loadDBConsoleSettings().pageRows())
+	stmt := dbConsoleSelect(t.driver, m.databaseVirtualSelectList(t), t.qualified(), loadDBConsoleSettings().pageRows())
 	return m.databaseConsoleRun(t.conn, t.driver, t.sessKey, stmt)
 }
 
@@ -486,4 +486,13 @@ func (m *Model) databaseQuickFilter(tv *dbTableView, row, col int) tea.Cmd {
 		return m.pushToastDetail(toast.Warn, "Filter refused", sanitizeDBText(err.Error()))
 	}
 	return m.databaseUnlessDirty(func() tea.Cmd { return m.databaseTableWhere(tv, where) })
+}
+
+// dbConsoleSelect is the first-rows query of a table in the console:
+// SELECT TOP n on SQL Server (T-SQL has no LIMIT), LIMIT n elsewhere.
+func dbConsoleSelect(driver, extra, table string, n int) string {
+	if driver == "sqlserver" {
+		return fmt.Sprintf("SELECT TOP %d *%s FROM %s;", n, extra, table)
+	}
+	return fmt.Sprintf("SELECT *%s FROM %s LIMIT %d;", extra, table, n)
 }

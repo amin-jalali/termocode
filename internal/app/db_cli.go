@@ -49,6 +49,9 @@ func (m *Model) databaseOpenCLI(id string) tea.Cmd {
 		return nil
 	}
 	tool := dbclient.CLITool(c.Driver)
+	if dbclient.IsSQLCipher(c) {
+		tool = "sqlcipher"
+	}
 	if tool == "" {
 		return m.pushToastDetail(toast.Info, "No command line client", "termocode knows psql, mysql, sqlite3 and redis-cli.")
 	}
@@ -71,6 +74,9 @@ func (m *Model) databaseOpenCLI(id string) tea.Cmd {
 	}
 	if _, err := m.spawnTerminalJob(j); err != nil {
 		return m.pushToastDetail(toast.Errr, "Cannot open "+tool, sanitizeDBText(err.Error()))
+	}
+	if dbclient.IsSQLCipher(c) {
+		return tea.Batch(m.fetchStateCmd(), m.pushToastDetail(toast.Info, "Opened sqlcipher for "+dbConnName(c), "In a terminal tab. Type PRAGMA key = '…'; first; the key is never put on the command line."))
 	}
 	return tea.Batch(m.fetchStateCmd(), m.pushToastDetail(toast.Info, "Opened "+tool+" for "+dbConnName(c), "In a terminal tab; the password is in its environment only."))
 }

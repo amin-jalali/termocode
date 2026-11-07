@@ -18,7 +18,8 @@ import (
 // cursor of a SQL buffer, or about the tree node. It reads only what the
 // tree has loaded: no query runs. Databases: Show INSERT Column Hints puts
 // the target column before each value of INSERT … VALUES (inline virtual
-// text; they clear on the next edit, run it again after).
+// text; they clear on the next edit, run it again after). Parameter info,
+// JOIN cardinality hints, cell docs and first rows: db_quickdoc_more.go.
 
 // dbQualName is name with the schema (or MySQL database) of its tree path.
 func dbQualName(path, name string) string {
@@ -233,17 +234,28 @@ type dbHintPos struct {
 // dbHintPositions turns the byte offsets of the hints into buffer rows
 // and columns.
 func dbHintPositions(lines []string, hints []dbclient.InsertHint) []dbHintPos {
-	out := make([]dbHintPos, 0, len(hints))
+	offs := make([]int, len(hints))
+	texts := make([]string, len(hints))
+	for i, h := range hints {
+		offs[i], texts[i] = h.Offset, h.Column+":"
+	}
+	return dbOffsetPositions(lines, offs, texts)
+}
+
+// dbOffsetPositions puts texts[i] at byte offset offs[i] (ascending) of
+// the buffer lines joined with "\n".
+func dbOffsetPositions(lines []string, offs []int, texts []string) []dbHintPos {
+	out := make([]dbHintPos, 0, len(offs))
 	row, start := 0, 0
-	for _, h := range hints {
-		for row < len(lines) && h.Offset > start+len(lines[row]) {
+	for i, off := range offs {
+		for row < len(lines) && off > start+len(lines[row]) {
 			start += len(lines[row]) + 1
 			row++
 		}
 		if row >= len(lines) {
 			break
 		}
-		out = append(out, dbHintPos{Row: row, Col: h.Offset - start, Text: h.Column + ":"})
+		out = append(out, dbHintPos{Row: row, Col: off - start, Text: texts[i]})
 	}
 	return out
 }
@@ -304,10 +316,21 @@ func (m *Model) databaseQuickDocTree() tea.Cmd {
 	if title == "" {
 		return nil
 	}
-	return m.databaseQuickDocCard(title, body)
+	if n := m.databases.nodes[r.path]; n.kind == dbNodeTable || n.kind == dbNodeView {
+		t, ok := m.databaseTableAt(r.path)
+		if ok && m.databases.sessions[t.sessKey] == nil {
+			body = append(body, "", "Connect to see the first rows.")
+		}
+	}
+	m.databases.docTitle, m.databases.docBody = title, append([]string(nil), body...)
+	m.databaseQuickDocCard(title, body)
+	return m.databaseQuickDocRowsLoad(r.path) // DBX-30: first rows (db_quickdoc_more.go)
 }
 
 func (m *Model) databaseQuickDocCard(title string, body []string) tea.Cmd {
+	if m.databases != nil {
+		m.databases.docGen++ // a late answer for an older card is dropped
+	}
 	for i, l := range body {
 		body[i] = sanitizeDBText(l)
 	}
@@ -318,10 +341,11 @@ func (m *Model) databaseQuickDocCard(title string, body []string) tea.Cmd {
 	return nil
 }
 
-// dbInsertHintsLua draws the hints as inline virtual text; they clear on
-// the next change of the buffer.
-const dbInsertHintsLua = `local hints=...
-local ns=vim.api.nvim_create_namespace('termocode_db_insert_hints')
+// dbInsertHintsLua draws the hints as inline virtual text in the
+// namespace named by the second argument (INSERT and JOIN hints each have
+// their own); they clear on the next change of the buffer.
+const dbInsertHintsLua = `local hints,name=...
+local ns=vim.api.nvim_create_namespace(name or 'termocode_db_insert_hints')
 local buf=vim.api.nvim_get_current_buf()
 vim.api.nvim_buf_clear_namespace(buf,ns,0,-1)
 for _,h in ipairs(hints) do
@@ -342,6 +366,6 @@ func (m *Model) databaseInsertHints() tea.Cmd {
 		return m.pushToastDetail(toast.Info, "No INSERT column hints", "Hints need INSERT INTO t (columns…) VALUES (…).")
 	}
 	var n int
-	_ = m.nvim.ExecLuaResult(dbInsertHintsLua, &n, pos)
+	_ = m.nvim.ExecLuaResult(dbInsertHintsLua, &n, pos, "termocode_db_insert_hints")
 	return m.pushToast(toast.Info, "INSERT column hints shown (they clear when you edit)")
 }

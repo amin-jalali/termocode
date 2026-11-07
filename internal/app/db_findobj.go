@@ -61,8 +61,8 @@ func (m *Model) databaseFindObjectStart() tea.Cmd {
 	}
 	var srcs []dbFindSource
 	for key, sess := range s.sessions {
-		if sess == nil {
-			continue
+		if sess == nil || dbIsExtraSession(key) {
+			continue // a console's own session repeats its connection (DBX-40)
 		}
 		conn := s.nodes[key].conn
 		if conn == "" {

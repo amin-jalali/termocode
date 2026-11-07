@@ -402,6 +402,7 @@ func localWorkspaceTools(w Workspace) []Tool {
 			Name:     "list_dir", Description: "List the entries of a directory.",
 			Params:   map[string]any{"path": strParam("directory, relative to the workspace (default: root)")},
 			Describe: func(a map[string]any) string { return "List " + orDot(path(a)) },
+			View:     ListDirView,
 			Run: func(_ context.Context, a map[string]any) (string, error) {
 				abs, err := w.Resolve(path(a))
 				if err != nil {
@@ -442,6 +443,7 @@ func localWorkspaceTools(w Workspace) []Tool {
 				}
 				return s
 			},
+			View: SearchView,
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				q := ArgString(a, "query")
 				if q == "" {

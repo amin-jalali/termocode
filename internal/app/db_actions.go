@@ -35,12 +35,22 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-page-size", Title: "Databases: Set Result Page Size…"},
 		{ID: "db-result-goto-row", Title: "Databases: Go to Result Row…"},
 		{ID: "db-result-load-all", Title: "Databases: Load All Result Rows"},
+		{ID: "db-result-row-numbers", Title: "Databases: Toggle Result Row Numbers"},
+		{ID: "db-result-column-types", Title: "Databases: Toggle Result Column Types"},
+		{ID: "db-result-cell-menu", Title: "Databases: Result Cell Menu…"},
+		{ID: "db-result-create-table", Title: "Databases: Copy Result Columns as CREATE TABLE"},
+		{ID: "db-inline-clear", Title: "Databases: Clear Inline Results"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
+		{ID: dbSQLRunPaletteID, Title: dbSQLRunPaletteTitle},
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
 		{ID: "db-sql-outline", Title: "Databases: Go to Statement…"},
 		{ID: "db-switch-connection", Title: "Databases: Switch File Connection…"},
+		{ID: "db-sql-folder-dialect", Title: "Databases: Set Folder SQL Dialect…"},
+		{ID: "db-highlight-usages", Title: "Databases: Highlight Usages in File"},
+		{ID: "db-embedded-sql", Title: "Databases: Go to SQL in Strings…"},
 		{ID: "db-format", Title: "Databases: Format Statement or Selection"},
 		{ID: "db-format-file", Title: "Databases: Format File"},
+		{ID: "db-sql-intentions", Title: "Databases: SQL Intentions…"},
 		{ID: "db-explain-analyze", Title: "Databases: Explain Analyze Statement…"},
 		{ID: "db-history", Title: "Databases: History…"},
 		{ID: "db-history-connection", Title: "Databases: History of This Connection…"},
@@ -67,6 +77,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-find-usages", Title: "Databases: Find Usages"},
 		{ID: "db-quick-doc", Title: "Databases: Quick Documentation"},
 		{ID: "db-insert-hints", Title: "Databases: Show INSERT Column Hints"},
+		{ID: "db-param-info", Title: "Databases: Show Parameter Info"},
+		{ID: "db-join-hints", Title: "Databases: Show JOIN Cardinality Hints"},
 		{ID: "db-quick-fix", Title: "Databases: Apply SQL Quick Fix"},
 		{ID: "db-rename", Title: "Databases: Rename in SQL…"},
 		{ID: "db-count-rows", Title: "Databases: Count Rows"},
@@ -74,6 +86,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-commit", Title: "Databases: Commit"},
 		{ID: "db-rollback", Title: "Databases: Roll Back"},
 		{ID: "db-open-sessions", Title: "Databases: Sessions…"},
+		{ID: "db-console-session", Title: "Databases: Console Session…"},
 		{ID: "db-savepoint", Title: "Databases: Set Savepoint…"},
 		{ID: "db-rollback-savepoint", Title: "Databases: Roll Back to Savepoint…"},
 		{ID: "db-submit-changes", Title: "Databases: Submit Pending Changes…"},
@@ -82,6 +95,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
 		{ID: "db-import-new-table", Title: "Databases: Import CSV as New Table…"},
+		{ID: "db-copy-table-data", Title: "Databases: Copy Table Data to Another Connection…", Hint: "the rows go through the import card"},
 		{ID: "db-run-dump", Title: "Databases: Run SQL Dump File…"},
 		{ID: "db-open-csv", Title: "Databases: Open CSV/TSV as Table…"},
 		{ID: "db-generate-data", Title: "Databases: Generate Test Data…"},
@@ -91,6 +105,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-chart", Title: "Databases: Chart Result…"},
 		{ID: "db-copy-as", Title: "Databases: Copy Result As…"},
 		{ID: "db-export-tables", Title: "Databases: Export Tables to Folder…"},
+		{ID: "db-run-to-file", Title: "Databases: Run Query to File…", Hint: "every row of the SELECT at the cursor, straight into a file"},
 		{ID: "db-sessions", Title: "Databases: Show Sessions and Locks"},
 		{ID: "db-server-info", Title: "Databases: Show Server Info"},
 		{ID: "db-cancel-session", Title: "Databases: Cancel Session Query…"},
@@ -131,7 +146,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "redis-rename-key", Title: "Databases: Rename Redis Key…"},
 		{ID: "redis-copy-key", Title: "Databases: Copy Redis Key…"},
 		{ID: "redis-slowlog", Title: "Databases: Show Redis Slow Log"},
-	}, dbAIPaletteItems()...)
+	}, append(dbRedisMorePaletteItems(), dbAIPaletteItems()...)...)
 }
 
 func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
@@ -140,6 +155,9 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == "redis-rename-key" || id == "redis-copy-key" || id == "redis-slowlog" {
 		return m.databaseRedisPaletteAdmin(id), true
+	}
+	if dbRedisMoreID(id) {
+		return m.databaseRedisMorePalette(id), true
 	}
 	if !strings.HasPrefix(id, "db-") {
 		return nil, false
@@ -152,6 +170,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseSend(false), true
 	case "db-run-file":
 		return m.databaseSend(true), true
+	case dbSQLRunPaletteID:
+		return m.databaseSavedRuns(), true
 	case "db-run-from-caret":
 		return m.databaseSendExec(false, nil, dbclient.ExecFromCaret.String()), true
 	case "db-run-smallest":
@@ -164,6 +184,16 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseGotoRowPrompt(), true
 	case "db-result-load-all":
 		return m.databaseLoadAll(), true
+	case "db-result-row-numbers":
+		return m.databaseToggleRowNums(), true
+	case "db-result-column-types":
+		return m.databaseToggleColTypes(), true
+	case "db-result-cell-menu":
+		return m.databaseCellMenuAtCursor(), true
+	case "db-result-create-table":
+		return m.databaseCopyColumnDDL(true, -1, -1), true
+	case "db-inline-clear":
+		return m.databaseClearInline(), true
 	case "db-exec-mode":
 		return m.databaseExecModePicker(), true
 	case "db-explain":
@@ -172,6 +202,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseFormat(false), true
 	case "db-format-file":
 		return m.databaseFormat(true), true
+	case "db-sql-intentions":
+		return m.databaseSQLIntentions(), true
 	case "db-explain-analyze":
 		return m.databaseExplainKey(true), true
 	case "db-history":
@@ -194,10 +226,18 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCommitKey(false), true
 	case "db-open-sessions":
 		return m.databaseSessionsPicker(), true
+	case "db-console-session":
+		return m.databaseConsoleSessionPicker(), true
 	case "db-sql-outline":
 		return m.databaseSQLOutline(), true
 	case "db-switch-connection":
 		return m.databaseSQLSwitchPicker(), true
+	case "db-sql-folder-dialect":
+		return m.databaseSQLFolderDialectPicker(), true
+	case "db-highlight-usages":
+		return m.databaseHighlightUsages(), true
+	case "db-embedded-sql":
+		return m.databaseEmbeddedSQL(), true
 	case "db-savepoint":
 		return m.databaseSavepointStart(), true
 	case "db-rollback-savepoint":
@@ -275,6 +315,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseQuickDoc(), true
 	case "db-insert-hints":
 		return m.databaseInsertHints(), true
+	case "db-param-info":
+		return m.databaseParamInfo(), true
+	case "db-join-hints":
+		return m.databaseJoinHints(), true
 	case "db-rename":
 		return m.databaseRenameStart(), true
 	case "db-quick-fix":
@@ -326,8 +370,12 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseSearchStart()), true
 	case "db-export-tables":
 		return tea.Batch(open, m.databaseExportTablesStart()), true
+	case "db-run-to-file":
+		return m.databaseRunToFileStart(), true
 	case "db-import-new-table":
 		return tea.Batch(open, m.databaseNewTableStart()), true
+	case "db-copy-table-data":
+		return tea.Batch(open, m.databaseCopyTableStart()), true
 	case "db-run-dump":
 		return tea.Batch(open, m.databaseDumpStart()), true
 	case "db-new-console":
@@ -395,6 +443,11 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	if have {
 		if cmd, ok := m.databaseRedisSidebarKey(k.String(), row); ok {
 			return m, cmd
+		}
+		if row.kind == dbNodeFolderHeader {
+			if handled := s.folderKey(k.String(), row.path); handled {
+				return m, nil
+			}
 		}
 	}
 	if have && row.kind == dbNodeVirtualView {
@@ -572,6 +625,9 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databasePgTAPConfirm(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseSQLRunConfirm(id); ok { // db_sqlruns.go
+		return cmd, true
+	}
 	if cmd, ok := m.databaseConsoleConfirm(id); ok {
 		return cmd, true
 	}
@@ -653,7 +709,7 @@ func (m *Model) databaseDisconnectNow(connID string) tea.Cmd {
 	m.databases.console.stop(connID)
 	m.databases.connectionEpochs[connID]++
 	for key, sess := range m.databases.sessions {
-		if key == connID || strings.HasPrefix(key, connID+"/db/") {
+		if key == connID || strings.HasPrefix(key, connID+"/db/") || strings.HasPrefix(key, connID+dbExtraSessionTag) {
 			_ = sess.Close()
 			delete(m.databases.sessions, key)
 		}
@@ -747,7 +803,7 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 		return dbTestCommandSSH(c, password, s.root, s.generation, sec, true)
 	}
 	for key, old := range s.sessions {
-		if key == id || strings.HasPrefix(key, id+"/db/") {
+		if key == id || strings.HasPrefix(key, id+"/db/") || strings.HasPrefix(key, id+dbExtraSessionTag) {
 			_ = old.Close()
 			delete(s.sessions, key)
 		}
@@ -874,6 +930,9 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 		sess = s.sessions[n.conn]
 	}
 	if sess == nil {
+		if _, off := s.offline[n.conn]; off && path != n.conn {
+			return m.databaseOfflineTree(path) // DBX-29: server down, read the cache
+		}
 		if _, ok := s.nodes[n.conn]; ok {
 			return m.databaseConnect(n.conn)
 		}
@@ -887,10 +946,11 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 		req.Database = ""
 	}
 	if n.kind == dbNodeDatabase {
-		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse" || dbclient.IsHTTPEngine(c.Driver)) {
+		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse" || c.Driver == "duckdb" || c.Driver == "trino" || c.Driver == "presto" || c.Driver == "mongodb" || dbclient.IsHTTPEngine(c.Driver)) {
 			req.Database, req.Schema = n.name, n.name
-		} else if ok && c.Driver == "sqlite" {
+		} else if ok && (c.Driver == "sqlite" || c.Driver == "oracle") {
 			// One file, one session: main and attached databases share it.
+			// Oracle shows the one database of its service (DBX-63).
 			req.Database = n.name
 		} else {
 			req.Database = n.name
@@ -1021,13 +1081,18 @@ func dbTypePickerItems(remote bool) []picker.Item {
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
+		{ID: "sqlserver", Title: "SQL Server / Azure SQL", Hint: "default port 1433"},
+		{ID: "oracle", Title: "Oracle Database", Hint: "default port 1521 · a service name"},
+		{ID: "trino", Title: "Trino", Hint: "REST protocol, default port 8080"},
+		{ID: "presto", Title: "Presto", Hint: "REST protocol, default port 8080"},
+		{ID: "duckdb", Title: "DuckDB", Hint: "a file on this computer, needs the duckdb client"},
 		{ID: "cassandra", Title: "Cassandra / ScyllaDB", Hint: "CQL, default port 9042"},
 		{ID: "clickhouse", Title: "ClickHouse", Hint: "HTTP interface, default port 8123"},
 		{ID: "libsql", Title: "libSQL / Turso", Hint: "a remote libsql:// server"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
 	if remote {
-		items = []picker.Item{items[0], items[1], items[3]}
+		items = []picker.Item{items[0], items[1], items[3], items[4], items[5], items[6], items[7]}
 	}
 	for _, p := range dbclient.PGPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Label, Hint: fmt.Sprintf("PostgreSQL family · port %d", p.Port)})
@@ -1036,8 +1101,13 @@ func dbTypePickerItems(remote bool) []picker.Item {
 	for _, e := range dbclient.HTTPEngines() {
 		items = append(items, picker.Item{ID: "engine:" + e.ID, Title: e.Title, Hint: e.Hint})
 	}
+	items = append(items, picker.Item{ID: "mongodb", Title: "MongoDB", Hint: "default port 27017"})
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
+	}
+	// Firebird, Vertica, Exasol, SAP HANA (DBX-71), also over SSH.
+	for _, e := range dbclient.ExtraSQLEngines() {
+		items = append(items, picker.Item{ID: "engine:" + e.ID, Title: e.Title, Hint: e.Hint})
 	}
 	return items
 }
@@ -1078,6 +1148,15 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
 	if id, ok := strings.CutPrefix(kind, "engine:"); ok {
+		if e, known := dbclient.ExtraSQLEngineByID(id); known {
+			// Firebird, Vertica, Exasol, SAP HANA (DBX-71).
+			s.addFromURL = false
+			s.remoteAdd, s.remoteNext = s.remoteNext, false
+			s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User = e.ID, e.Port, e.User
+			cmd := m.databaseAddPrompt(promptKindDBHost, e.Title+": server address", "Host name or address:", "localhost", false)
+			m.prompt.SetNote(e.Hint)
+			return cmd
+		}
 		e, found := dbclient.HTTPEngineByID(id)
 		if !found {
 			return nil
@@ -1089,7 +1168,7 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	}
 	s.addFromURL = kind == "url" || kind == "libsql"
 	s.addLibSQL = kind == "libsql"
-	s.remoteAdd, s.remoteNext = s.remoteNext && kind != "sqlite" && kind != "url" && kind != "libsql", false
+	s.remoteAdd, s.remoteNext = s.remoteNext && kind != "sqlite" && kind != "duckdb" && kind != "url" && kind != "libsql", false
 	switch kind {
 	case "postgres":
 		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "postgres", 5432, "postgres", "postgres"
@@ -1135,6 +1214,34 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 		cmd := m.databaseAddPrompt(promptKindDBAdd, "libSQL / Turso server", "Server URL:", "libsql://my-db.turso.io", false)
 		m.prompt.SetNote("The auth token is asked next and kept in the secret store.")
 		return cmd
+	case "sqlserver":
+		// DBX-62: a *.database.windows.net host turns on TLS (SQLServerDSN).
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "sqlserver", 1433, "sa", "master"
+		cmd := m.databaseAddPrompt(promptKindDBHost, "SQL Server: server address", "Host name or address:", "localhost", false)
+		m.prompt.SetNote("Azure SQL: use the *.database.windows.net name (TLS is turned on). Windows sign-in: DOMAIN\\user as the user.")
+		return cmd
+	case "oracle":
+		// DBX-63: the database is a service name; a TNS alias or a wallet
+		// goes in the config ("params": {"tns": …, "wallet": …}).
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "oracle", 1521, "system", "FREEPDB1"
+		return m.databaseAddPrompt(promptKindDBHost, "Oracle: server address", "Host name or address:", "localhost", false)
+	case "duckdb":
+		s.pendingConn.Driver = "duckdb"
+		cmd := m.databaseAddPrompt(promptKindDBSQLitePath, "DuckDB file", "Database file:", "data.duckdb", false)
+		m.prompt.SetNote("Runs the duckdb command line client; each run stands alone (no transactions).")
+		return cmd
+	case "trino", "presto":
+		title := "Trino coordinator"
+		if kind == "presto" {
+			title = "Presto coordinator"
+		}
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User = kind, 8080, "termocode"
+		return m.databaseAddPrompt(promptKindDBHost, title, "Host name or address:", "localhost", false)
+	case "mongodb":
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.Database = "mongodb", 27017, "test"
+		cmd := m.databaseAddPrompt(promptKindDBHost, "MongoDB: server address", "Host name or address:", "localhost", false)
+		m.prompt.SetNote("A replica set or a mongodb+srv:// address: use From a URL.")
+		return cmd
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)
 	}
@@ -1157,6 +1264,10 @@ func (m *Model) databasePromptPasswordForPending() tea.Cmd {
 	if m.databases != nil && m.databases.pendingConn.Driver == "libsql" {
 		return m.databaseAddPrompt(promptKindDBPassword, "libSQL auth token", "Auth token (leave blank if none):", "", true)
 	}
+	if m.databases != nil && dbclient.IsSQLCipher(m.databases.pendingConn) {
+		// An encrypted SQLite file (DBX-64): the password is its key.
+		return m.databaseAddPrompt(promptKindDBPassword, "Database key", "SQLCipher key (kept in the secret store):", "", true)
+	}
 	return m.databaseAddPrompt(promptKindDBPassword, "Database password", "Password (leave blank if none):", "", true)
 }
 
@@ -1171,9 +1282,17 @@ func (m *Model) databaseRetestPending() tea.Cmd {
 	return dbTestCommandSSH(m.databases.pendingConn, m.databases.pendingPassword, m.databases.root, m.databases.generation, m.databases.pendingSSH, false)
 }
 
+// dbFileEngineName is the display name of a file database driver.
+func dbFileEngineName(driver string) string {
+	if driver == "duckdb" {
+		return "DuckDB"
+	}
+	return "SQLite"
+}
+
 func dbConnectionID(c dbclient.Conn) string {
 	base := c.Database
-	if c.Driver == "sqlite" {
+	if c.Driver == "sqlite" || c.Driver == "duckdb" {
 		base = strings.TrimSuffix(filepath.Base(c.Path), filepath.Ext(c.Path))
 	}
 	if base == "" {
@@ -1243,7 +1362,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"#", "count the rows"},
 		[]string{"i", "import a CSV file"},
 		[]string{"y", "copy the name"},
-		[]string{"K", "quick documentation (columns, keys; also on a column or routine)"},
+		[]string{"K", "quick documentation (columns, keys, first rows; also on a column or routine)"},
 		[]string{"A", "object actions: drop (shows dependents), truncate, copy table, create schema or database, make PK from a column"},
 		[]string{"On a view, routine or trigger"},
 		[]string{"E", "edit its source in a buffer (submit with Databases: Submit Object Source…)"},
@@ -1260,12 +1379,16 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"] / [", "next / previous page"},
 		[]string{"N", "go to row N"},
 		[]string{"L", "load all rows (past db_max_rows)"},
+		[]string{"I", "row numbers (on / off)"},
+		[]string{"T", "column types in the header (on / off)"},
+		[]string{"m", "cell menu: open, copy, column definition (DDL), filter, …"},
 		[]string{"o", "sort by a column"},
 		[]string{"f", "show only some rows"},
 		[]string{"*", "show only rows with this cell's value (table data)"},
 		[]string{"b", "build a filter or sort: column, operator, value (table data)"},
 		[]string{"t", "flip rows and columns (table data)"},
 		[]string{"v", "open the cell (hex for binary, XML and JSON pretty, geometry as WKT and GeoJSON)"},
+		[]string{"gK", "quick documentation of the cell: its whole value, type and row"},
 		[]string{"=", "count, sum, avg, min, max of the column (visual: the selected rows)"},
 		[]string{"y", "copy the cell"},
 		[]string{"Y", "copy the column, one value per line"},
@@ -1288,6 +1411,8 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"x / X", "explain / explain analyze"},
 		[]string{"b", "plan: bar view of each step's share"},
 		[]string{"C", "plan: copy the server's own plan (JSON)"},
+		[]string{"Enter", "plan: details of the step"},
+		[]string{"i", "plan: doc of the step's table"},
 		[]string{"h", "SQL history"},
 		[]string{"gd", "go to the statement"},
 		[]string{"Esc", "cancel a running query"},
@@ -1308,6 +1433,8 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"P", "paste rows from the clipboard (tab separated)"},
 		[]string{"D", "set the cell to its DEFAULT"},
 		[]string{"U", "put a new random UUID in the cell"},
+		[]string{"gL / gS", "load the cell from a file / save its value to a new file"},
+		[]string{"Tab (while editing)", "complete from the values of the column"},
 		[]string{"u", "undo a change"},
 		[]string{"w", "submit the changes"},
 		[]string{"Transactions"},
@@ -1527,6 +1654,9 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		}
 		return nil
 	}
+	if dbIsExtraSession(msg.id) {
+		return m.onDBExtraSessionConnect(msg) // a console's own session: no tree node (DBX-40)
+	}
 	n := s.nodes[msg.id]
 	n.loading = false
 	if msg.err != nil {
@@ -1559,12 +1689,22 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		if cmd, ok := m.dbReconnectFailed(msg.id); ok {
 			return cmd
 		}
-		return m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
+		fail := m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
+		if _, isConn := s.connection(msg.id); isConn && !n.loaded {
+			return tea.Batch(fail, m.databaseOfflineTree(msg.id)) // DBX-29: show the cached tree
+		}
+		return fail
 	}
 	if old := s.sessions[msg.id]; old != nil && dbclient.UnwrapSession(old) != dbclient.UnwrapSession(msg.session) {
 		_ = old.Close()
 	}
 	s.sessions[msg.id] = s.loggedSession(msg.session, msg.id) // db_query_log.go
+	if _, was := s.offline[n.conn]; was && n.conn != "" {
+		delete(s.offline, n.conn) // DBX-29: back online
+		if strings.HasPrefix(n.detail, dbOfflineDetail) {
+			n.detail = ""
+		}
+	}
 	n.problem = ""
 	n.loaded = false
 	s.nodes[msg.id] = n
@@ -1651,6 +1791,9 @@ func sanitizeDBIntrospection(in dbclient.IntrospectionResult) dbclient.Introspec
 	for i := range in.Sequences {
 		in.Sequences[i] = sanitizeDBText(in.Sequences[i])
 	}
+	for i := range in.Packages {
+		in.Packages[i] = sanitizeDBText(in.Packages[i])
+	}
 	for i := range in.Triggers {
 		in.Triggers[i] = sanitizeDBText(in.Triggers[i])
 	}
@@ -1715,6 +1858,11 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			m.prompt.SetAllowEmpty(true)
 			return cmd
 		}
+		if s.pendingConn.Driver == "mongodb" {
+			cmd := m.databaseAddPrompt(promptKindDBUser, "Database user", "User name (empty: no sign-in):", s.pendingConn.User, false)
+			m.prompt.SetAllowEmpty(true)
+			return cmd
+		}
 		if s.pendingConn.Driver == "redis" {
 			cmd := m.databaseAddPrompt(promptKindDBUser, "ACL user", "User name (empty: the default user):", s.pendingConn.User, false)
 			m.prompt.SetAllowEmpty(true)
@@ -1742,6 +1890,17 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			m.prompt.SetAllowEmpty(true)
 			return cmd
 		}
+		if s.pendingConn.Driver == "oracle" {
+			return m.databaseAddPrompt(promptKindDBName, "Oracle service name", "Service name (for example FREEPDB1 or ORCLPDB1):", s.pendingConn.Database, false)
+		}
+		if d := s.pendingConn.Driver; d == "trino" || d == "presto" {
+			return m.databaseAddPrompt(promptKindDBName, "Catalog", "Catalog (for example hive or iceberg):", s.pendingConn.Database, false)
+		}
+		if e, ok := dbclient.ExtraSQLEngineByID(s.pendingConn.Driver); ok { // DBX-71
+			cmd := m.databaseAddPrompt(promptKindDBName, e.Title+": database", e.DBLabel, s.pendingConn.Database, false)
+			m.prompt.SetAllowEmpty(e.DBOptional)
+			return cmd
+		}
 		return m.databaseAddPrompt(promptKindDBName, "Database name", "Database:", s.pendingConn.Database, false)
 	case promptKindDBName:
 		if s.pendingConn.Driver == "redis" {
@@ -1755,6 +1914,11 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			return m.databasePromptPasswordForPending()
 		}
 		s.pendingConn.Database = strings.TrimSpace(value)
+		if e, ok := dbclient.ExtraSQLEngineByID(s.pendingConn.Driver); ok && e.DBOptional && s.pendingConn.Database == "" {
+			s.pendingConn.ID = dbConnectionID(s.pendingConn)
+			s.pendingConn.Name = s.pendingConn.ID
+			return m.databasePromptPasswordForPending()
+		}
 		if s.pendingConn.Database == "" && s.pendingConn.Driver != "cassandra" {
 			return m.pushToastDetail(toast.Warn, "Database name is needed", "Enter the database to connect to.")
 		}
@@ -1764,7 +1928,7 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 	case promptKindDBSQLitePath:
 		path := strings.TrimSpace(value)
 		if path == "" {
-			return m.pushToastDetail(toast.Warn, "Database file is needed", "Enter a path to a SQLite file.")
+			return m.pushToastDetail(toast.Warn, "Database file is needed", "Enter a path to a "+dbFileEngineName(s.pendingConn.Driver)+" file.")
 		}
 		if !filepath.IsAbs(path) {
 			path = filepath.Clean(filepath.Join(s.root, path))

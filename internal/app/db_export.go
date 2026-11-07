@@ -57,6 +57,7 @@ type dbExport struct {
 	res       dbclient.Result
 	all       bool
 	overwrite bool
+	toFile    bool // Run Query to File: the query's rows, not the grid's (db_run_to_file.go)
 	// what Export all re-runs (sql == "": not possible)
 	sql, reason, driver, conn, sessKey string
 	partial                            string // "": the rows are everything; else why they are not
@@ -261,7 +262,11 @@ func (m *Model) databaseExportFormatPicked(id string) tea.Cmd {
 		return nil
 	}
 	e.format = info.Format
-	e.opts = m.dbExportPrepare(e.opts) // CSV settings, keys, shown columns (DBX-36)
+	if e.toFile {
+		e.opts = loadDBConsoleSettings().exportOptions(e.opts) // the grid's keys and columns are not this query's
+	} else {
+		e.opts = m.dbExportPrepare(e.opts) // CSV settings, keys, shown columns (DBX-36)
+	}
 	if e.format == dbclient.FormatSQLUpdate && len(e.opts.KeyColumns) == 0 {
 		s.exp = nil
 		return m.pushToastDetail(toast.Warn, "Cannot export SQL UPDATEs", errDBUpdateNoKey.Error())
@@ -319,6 +324,9 @@ func (m *Model) databaseExportPathTyped(value string) tea.Cmd {
 		return m.pushToastDetail(toast.Warn, "Cannot export", sanitizeDBText(display)+" is a folder.")
 	}
 	e.path, e.display = abs, display
+	if e.toFile {
+		return m.databaseRunToFileCard()
+	}
 	if e.partial == "" {
 		return m.databaseExportCheckPath()
 	}
@@ -475,6 +483,12 @@ func (m *Model) databaseTransferPicker(id string) (tea.Cmd, bool) {
 		return m.databaseExportFormatPicked(id), true
 	case pickerKindDBImportFile, pickerKindDBImportMapCol, pickerKindDBImportMapSrc:
 		return m.databaseImportPicker(id), true
+	case pickerKindDBCopyTarget:
+		return m.databaseCopyTargetPicked(id), true
+	case pickerKindDBImportOpts: // db_import_options.go
+		return m.databaseImportOptionsPicked(id), true
+	case pickerKindDBImportFmtCol, pickerKindDBImportFmtKind:
+		return m.databaseImportFormatPicked(id), true
 	case pickerKindDBSearchHits:
 		return m.databaseSearchOpenHit(id), true
 	case pickerKindDBChart:
@@ -498,6 +512,8 @@ func (m *Model) databaseTransferConfirm(id string) (tea.Cmd, bool) {
 		return nil, true
 	case confirmKindDBExportFolder:
 		return m.databaseExportFolderConfirm(id), true
+	case confirmKindDBRunToFile:
+		return m.databaseRunToFileConfirm(id), true
 	case confirmKindDBDump:
 		return m.databaseDumpConfirm(id), true
 	case confirmKindDBNewTable:
@@ -510,11 +526,16 @@ func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.C
 	if cmd, ok := m.databaseObjActionPrompt(kind, value); ok { // db_objactions.go
 		return cmd, true
 	}
+	if cmd, ok := m.databaseImportPrompt(kind, value); ok { // db_import_options.go
+		return cmd, true
+	}
 	switch kind {
 	case promptKindDBExportPath:
 		return m.databaseExportPathTyped(value), true
 	case promptKindDBImportPath:
 		return m.databaseImportLoad(value), true
+	case promptKindDBCopyTable:
+		return m.databaseCopyTableTyped(value), true
 	case promptKindDBGenRows:
 		return m.databaseGenerateRows(value), true
 	case promptKindDBSearchValue:
@@ -545,11 +566,10 @@ func (m *Model) databaseTransferClosed() {
 	switch m.confirmKind {
 	case confirmKindDBJob:
 		m.databaseJobCancel()
-	case confirmKindDBExportScope, confirmKindDBExportOverwrite:
+	case confirmKindDBExportScope, confirmKindDBExportOverwrite, confirmKindDBRunToFile:
 		s.exp = nil
 	case confirmKindDBImport:
-		dbImportDropTmp(s.imp)
-		s.imp = nil
+		s.dbImportEnd()
 	case confirmKindDBExportFolder:
 		s.folder = nil
 	case confirmKindDBDump:
@@ -569,10 +589,17 @@ func (m *Model) databaseTransferPickerClosed() (tea.Cmd, bool) {
 	}
 	s := m.databases.console
 	switch m.pickerKind {
-	case pickerKindDBImportMapCol, pickerKindDBImportMapSrc:
+	case pickerKindDBImportMapCol, pickerKindDBImportMapSrc, pickerKindDBImportOpts:
 		return m.databaseImportCard(), true
+	case pickerKindDBImportFmtCol:
+		return m.databaseImportOptionsPicker(), true
+	case pickerKindDBImportFmtKind:
+		return m.databaseImportFormatColPicker(), true
 	case pickerKindDBImportFile:
-		s.imp = nil
+		s.dbImportEnd()
+		return nil, true
+	case pickerKindDBCopyTarget:
+		s.copyTbl = nil
 		return nil, true
 	case pickerKindDBExportFormat:
 		s.exp = nil

@@ -240,13 +240,13 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 // MOB/MOBUX branch: ph.* (phone shell, This phone), chips.* (Home chips),
 // cust.* (Customize), item.* (Home item sheets), tools.* (All tools),
 // race.* and more.races (the phone's race compare, MOB-61), lane.*
-// (New lane, MOB-65).
+// (New lane, MOB-65), board.* and more.board (live board, MOB-18).
 // strings.ts PhoneOnlyKey lists the same prefixes.
 func englishOnly(key string) bool {
-	if key == "more.races" {
+	if key == "more.races" || key == "more.board" {
 		return true
 	}
-	for _, p := range []string{"ph.", "chips.", "cust.", "item.", "tools.", "race.", "lane."} {
+	for _, p := range []string{"ph.", "chips.", "cust.", "item.", "tools.", "race.", "lane.", "board."} {
 		if strings.HasPrefix(key, p) {
 			return true
 		}

@@ -2405,12 +2405,15 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `db-commit` | Databases: Commit | never | the user's transaction |
 | `db-compare-schemas` | Databases: Compare Schemas… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
+| `db-copy-table-data` | Databases: Copy Table Data to Another Connection… | never | copying rows into another table is a write the user confirms (db_query) |
 | `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-console-session` | Databases: Console Session… | never | the user's sessions and transactions |
 | `db-count-rows` | Databases: Count Rows | never | Table rows are read with the database tools |
 | `db-data` | Databases: Open Table Data | never | Table rows are read with the database tools |
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
+| `db-embedded-sql` | Databases: Go to SQL in Strings… | never | moves the user's cursor; the AI reads files with its own tools |
 | `db-edit-source` | Databases: Edit Object Source | auto |   |
 | `db-end-session` | Databases: End Session… | never | ends another session and rolls back its transaction; only the user can choose it |
 | `db-er-diagram` | Databases: Export ER Diagram… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2426,31 +2429,42 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `db-generate-data` | Databases: Generate Test Data… | never | it writes a script of rows the user reviews and runs |
 | `db-goto-definition` | Databases: Go to Definition | auto |   |
 | `db-guide` | Databases: Open Guide | auto |   |
+| `db-highlight-usages` | Databases: Highlight Usages in File | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
+| `db-inline-clear` | Databases: Clear Inline Results | auto |   |
 | `db-insert-hints` | Databases: Show INSERT Column Hints | auto |   |
+| `db-join-hints` | Databases: Show JOIN Cardinality Hints | auto |   |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-object-actions` | Databases: Object Actions… | never | drops, empties or creates database objects; only the user can confirm the card |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
+| `db-param-info` | Databases: Show Parameter Info | auto |   |
 | `db-pending-sources` | Databases: Pending Source Changes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-quick-doc` | Databases: Quick Documentation | auto |   |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-refresh-object` | Databases: Refresh Selected Object | auto |   |
+| `db-result-cell-menu` | Databases: Result Cell Menu… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-result-column-types` | Databases: Toggle Result Column Types | auto |   |
+| `db-result-create-table` | Databases: Copy Result Columns as CREATE TABLE | never | writes the user's clipboard |
 | `db-result-goto-row` | Databases: Go to Result Row… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-result-load-all` | Databases: Load All Result Rows | never | SQL runs require the database query tool and its guard |
 | `db-result-page-size` | Databases: Set Result Page Size… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
+| `db-result-row-numbers` | Databases: Toggle Result Row Numbers | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
 | `db-rollback` | Databases: Roll Back | never | the user's transaction |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-ask` | Databases: Run… (Choose Statement or Subquery) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
+| `db-saved-runs` | Databases: Saved SQL Runs… | never | a saved run plays SQL and shell steps from a project file; only the user starts it |
 | `db-run-from-caret` | Databases: Run From Caret to End of File | never | SQL runs require the database query tool and its guard |
 | `db-run-smallest` | Databases: Run Smallest Statement (Subquery) at Caret | never | SQL runs require the database query tool and its guard |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
 | `db-schema-cache-info` | Databases: Show Schema Cache Info | auto |   |
 | `db-server-info` | Databases: Show Server Info | never | SQL runs require the database query tool and its guard |
 | `db-sessions` | Databases: Show Sessions and Locks | never | SQL runs require the database query tool and its guard |
+| `db-sql-folder-dialect` | Databases: Set Folder SQL Dialect… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-sql-intentions` | Databases: SQL Intentions… | never | opens a picker or prompt that only the user can answer; use a typed tool (read_file + write_file) |
 | `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
 | `db-submit-source` | Databases: Submit Object Source… | never | changes a database object; only the user can confirm the card |
@@ -3006,20 +3020,24 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `db_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
 | `db_alternate_rows` | confirm (settings) |   |
 | `db_auto_transpose` | confirm (settings) |   |
+| `db_column_types` | confirm (settings) |   |
 | `db_complete_catalogs` | confirm (settings) |   |
 | `db_bool_style` | confirm (settings) |   |
 | `db_date_format` | confirm (settings) |   |
 | `db_exec_mode` | confirm (settings) |   |
 | `db_geometry_format` | confirm (settings) |   |
 | `db_history_max` | never | AI provider, credentials and approvals stay with the user |
+| `db_inline_result` | confirm (settings) |   |
 | `db_introspect_level` | confirm (settings) |   |
 | `db_lob_bytes` | confirm (settings) |   |
 | `db_max_rows` | never | AI provider, credentials and approvals stay with the user |
 | `db_number_format` | confirm (settings) |   |
 | `db_page_rows` | never | AI provider, credentials and approvals stay with the user |
+| `db_sql_syntax_off` | never | AI provider, credentials and approvals stay with the user |
 | `db_redis_max_keys` | never | AI provider, credentials and approvals stay with the user |
 | `db_redis_separator` | confirm (settings) |   |
 | `db_result_new_tab` | confirm (settings) |   |
+| `db_row_numbers` | confirm (settings) |   |
 | `db_selection_split` | confirm (settings) |   |
 | `db_time_format` | confirm (settings) |   |
 | `db_time_zone` | confirm (settings) |   |

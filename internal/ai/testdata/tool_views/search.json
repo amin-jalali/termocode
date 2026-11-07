@@ -1,0 +1,11 @@
+{
+  "id": "",
+  "kind": "list",
+  "title": "Search \"Tool\" · 9",
+  "items": [
+    {"id": "i0", "title": "internal/ai/tools.go:25", "sub": "type Tool struct {", "ref": {"kind": "lines", "path": "internal/ai/tools.go", "line": 25}},
+    {"id": "i1", "title": "cmd/x/main.go:7", "sub": "tools := ai.Tool{}", "ref": {"kind": "lines", "path": "cmd/x/main.go", "line": 7}}
+  ],
+  "total": 9,
+  "truncated": true
+}

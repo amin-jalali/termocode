@@ -21,7 +21,8 @@ import (
 // table, a Virtual Views group under the connection), in completion (the
 // virtual column names), in Describe and Quick Documentation, and in
 // "Select 100 rows" (the virtual columns are added to the SELECT). Nothing
-// is ever written to the database. Databases: Edit Virtual Objects… opens
+// is ever written to the database. The virtual keys are also followed by
+// gf / gr in a table's data view and drawn (dashed) in the ER diagrams. Databases: Edit Virtual Objects… opens
 // the file (a commented template the first time).
 
 // dbNodeVirtualView is a saved SELECT under a connection's Virtual Views.
@@ -154,6 +155,21 @@ func (m *Model) databaseWithVirtual(path string, r dbclient.IntrospectionResult)
 	}
 	v, _ := s.dbVirtual(n.conn)
 	return dbApplyVirtual(v, n.kind, n.name, s.dbTableNames(n.conn), r)
+}
+
+// databaseTableFKs are the keys gf follows in the data view of tv: the
+// table's own and its virtual ones.
+func (m *Model) databaseTableFKs(tv *dbTableView, ir dbclient.IntrospectionResult) []dbclient.SchemaForeignKey {
+	s := m.databases
+	if s == nil {
+		return ir.ForeignKeys
+	}
+	kind := dbNodeTable
+	if tv.view {
+		kind = dbNodeView
+	}
+	v, _ := s.dbVirtual(tv.conn)
+	return dbApplyVirtual(v, kind, tv.name, s.dbTableNames(tv.conn), ir).ForeignKeys
 }
 
 // databaseVirtualOnConnection adds the Virtual Views of the connection

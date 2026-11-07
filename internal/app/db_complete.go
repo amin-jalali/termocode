@@ -86,7 +86,11 @@ func (s *dbState) schemaPayload(conn dbclient.Conn) map[string]any {
 	cols := map[string][]string{}
 	types := map[string]map[string]string{}
 	fks := []map[string]any{}
-	if full := s.full[conn.ID]; full != nil {
+	fkSeen := map[string]bool{}
+	for _, full := range []*dbclient.CompletionSchema{s.full[conn.ID], s.ddl[conn.ID]} {
+		if full == nil {
+			continue
+		}
 		have := map[string]bool{}
 		for _, t := range tables {
 			have[t.K+"\x00"+t.N] = true
@@ -102,6 +106,9 @@ func (s *dbState) schemaPayload(conn dbclient.Conn) map[string]any {
 			}
 		}
 		for table, list := range full.Cols {
+			if _, known := cols[table]; known {
+				continue // the live schema (loaded first) wins
+			}
 			names := make([]string, 0, len(list))
 			tm := map[string]string{}
 			for _, c := range list {
@@ -115,6 +122,11 @@ func (s *dbState) schemaPayload(conn dbclient.Conn) map[string]any {
 			types[table] = tm
 		}
 		for _, f := range full.FKs {
+			key := f.Table + "\x00" + f.Column + "\x00" + f.RefTable + "\x00" + f.RefColumn
+			if fkSeen[key] {
+				continue
+			}
+			fkSeen[key] = true
 			fks = append(fks, map[string]any{"t": sanitizeDBText(f.Table), "c": sanitizeDBText(f.Column), "rt": sanitizeDBText(f.RefTable), "rc": sanitizeDBText(f.RefColumn)})
 		}
 	}
@@ -155,6 +167,16 @@ func (s *dbState) setFullSchema(conn string, full dbclient.CompletionSchema) {
 		s.full = map[string]*dbclient.CompletionSchema{}
 	}
 	s.full[conn] = &full
+	s.schemaVer++
+}
+
+// setDDLSchema stores the schema read from a DDL folder as a completion
+// source for conn (DBX-46). It only adds names the live schema lacks.
+func (s *dbState) setDDLSchema(conn string, ddl dbclient.CompletionSchema) {
+	if s.ddl == nil {
+		s.ddl = map[string]*dbclient.CompletionSchema{}
+	}
+	s.ddl[conn] = &ddl
 	s.schemaVer++
 }
 

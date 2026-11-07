@@ -130,6 +130,7 @@ func (m *Model) aiRaceTools(call aiIDECaller) []ai.Tool {
 		Mutating: true,
 		Validate: checkRaceStart,
 		Describe: describeRaceStart,
+		View:     raceStartView,
 		Run: func(ctx context.Context, a map[string]any) (string, error) {
 			task, verify, lanes, err := aiRaceArgs(a)
 			if err != nil {

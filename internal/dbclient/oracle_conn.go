@@ -1,6 +1,9 @@
 package dbclient
 
 import (
+	"context"
+	"database/sql/driver"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -8,11 +11,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	go_ora "github.com/sijms/go-ora/v2"
 )
 
 // Oracle connections (DBX-63): tnsnames.ora, wallets and the go-ora URL.
-// The go-ora driver is a new module the owner has to approve, so a
-// session says so instead of connecting (DriverMissing).
+// The pure-Go go-ora driver opens the session (openOracleDB).
 
 // TNSEntry is one net service name of a tnsnames.ora file.
 type TNSEntry struct {
@@ -188,4 +192,67 @@ func OracleDSN(c Conn, password string, tns []TNSEntry) string {
 	}
 	u.RawQuery = q.Encode()
 	return u.String()
+}
+
+// oracleConnString is the go-ora URL of c. A "tns" alias is looked up in
+// the tnsnames.ora of the wallet folder, $TNS_ADMIN or $ORACLE_HOME; an
+// alias that is not there is an error, not a silent localhost.
+func oracleConnString(c Conn, password string) (string, error) {
+	var tns []TNSEntry
+	if alias := strings.TrimSpace(c.Params["tns"]); alias != "" {
+		path := TNSNamesPath(c.Params["wallet"])
+		if path == "" {
+			return "", fmt.Errorf("TNS name %s: no tnsnames.ora in the wallet folder, $TNS_ADMIN or $ORACLE_HOME/network/admin", strings.ToUpper(alias))
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", fmt.Errorf("read tnsnames.ora: %w", err)
+		}
+		tns = ParseTNSNames(string(data))
+		if _, ok := LookupTNS(tns, alias); !ok {
+			return "", fmt.Errorf("TNS name %s is not in %s", strings.ToUpper(alias), path)
+		}
+	}
+	if mode, err := EffectiveSSLMode(c.SSL); err == nil && c.SSL != nil && mode != SSLDisable && c.Params["SSL"] == "" {
+		p := make(map[string]string, len(c.Params)+1)
+		for k, v := range c.Params {
+			p[k] = v
+		}
+		p["SSL"] = "true" // the "ssl" block turns TLS on (TCPS)
+		c.Params = p
+	}
+	return OracleDSN(c, password, tns), nil
+}
+
+// oracleConnector is the go-ora connector of c: TLS from c.SSL, the SSH
+// tunnel from c.Dial. Nothing connects until the first ping.
+func oracleConnector(c Conn, password string) (driver.Connector, error) {
+	dsn, err := oracleConnString(c, password)
+	if err != nil {
+		return nil, err
+	}
+	connector, ok := go_ora.NewConnector(dsn).(*go_ora.OracleConnector)
+	if !ok {
+		return nil, fmt.Errorf("the Oracle driver gave no connector")
+	}
+	if c.SSL != nil {
+		tlsCfg, err := TLSConfig(c.SSL, c.Host)
+		if err != nil {
+			return nil, err
+		}
+		if tlsCfg != nil {
+			connector.WithTLSConfig(tlsCfg)
+		}
+	}
+	if c.Dial != nil {
+		connector.Dialer(oracleDialer(c.Dial))
+	}
+	return connector, nil
+}
+
+// oracleDialer adapts the tunnel dial func to go-ora's dialer.
+type oracleDialer func(ctx context.Context, network, addr string) (net.Conn, error)
+
+func (d oracleDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	return d(ctx, network, addr)
 }

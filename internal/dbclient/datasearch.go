@@ -121,7 +121,7 @@ func DataSearchQueries(driver string, tables []DataSearchTable, opt DataSearchOp
 		out = append(out, DataSearchQuery{
 			Schema: t.Schema,
 			Table:  t.Table,
-			SQL:    "SELECT * FROM " + name + " WHERE " + strings.Join(conds, " OR ") + d.Limit(rows, 0),
+			SQL:    "SELECT * FROM " + name + " WHERE " + strings.Join(conds, " OR ") + OrderedLimit(d, rows, 0),
 			Args:   args,
 		})
 	}

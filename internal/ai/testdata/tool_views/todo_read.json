@@ -1,0 +1,10 @@
+{
+  "id": "",
+  "kind": "list",
+  "title": "Todos · 1 of 3 done",
+  "items": [
+    {"id": "i0", "title": "read the plan", "tone": "ok", "badge": "done"},
+    {"id": "i1", "title": "write the views", "tone": "busy", "badge": "doing"},
+    {"id": "i2", "title": "mark the task", "tone": "idle"}
+  ]
+}

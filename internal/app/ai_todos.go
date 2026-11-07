@@ -64,6 +64,7 @@ func aiTodoTools(call aiIDECaller) []ai.Tool {
 		Description: "Read the todo list of this chat: [x] done, [~] in progress, [ ] pending.",
 		Params:      map[string]any{},
 		Describe:    func(map[string]any) string { return "Read todos" },
+		View:        ai.TodosTextView,
 		Run: func(ctx context.Context, _ map[string]any) (string, error) {
 			return call(ctx, func(m *Model) (string, tea.Cmd, error) {
 				ts := m.aiS().conv.Todos

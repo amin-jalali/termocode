@@ -151,3 +151,23 @@ func TestERDiagramStyled(t *testing.T) {
 		t.Errorf("plain diagram has colours:\n%s", plain)
 	}
 }
+
+// DBX-31: a virtual foreign key is drawn as a dashed line in every format.
+func TestERDiagramVirtualKeysAreDashed(t *testing.T) {
+	s := erSchema()
+	s.Tables[1].Constraints[1].Virtual = true
+	cases := map[string]string{
+		"mermaid":  `  users ||..o{ order_items : "oi_user"`,
+		"plantuml": "t0 ||..o{ t1 : oi_user",
+		"dot":      `"order items" -> "users" [label="oi_user", style=dashed];`,
+	}
+	for format, want := range cases {
+		got, err := ERDiagram(s, format)
+		if err != nil {
+			t.Fatalf("%s: %v", format, err)
+		}
+		if !strings.Contains(got, want) {
+			t.Errorf("%s: missing %q in\n%s", format, want, got)
+		}
+	}
+}

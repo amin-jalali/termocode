@@ -214,6 +214,7 @@ export interface CardsAnswerArgs {
   id: string;
   choice: string;
   hunks?: number[];
+  form?: Record<string, string>;
 }
 
 export interface SetTextArgs {
@@ -651,9 +652,31 @@ export interface AILaneStartArgs {
   from?: string;
 }
 
+export interface AIWorktreeNotesArgs {
+  id: string;
+  chat_id?: string;
+  notes: ReviewNote[];
+}
+
+export interface ReviewNote {
+  path: string;
+  line: number;
+  side: "new" | "old";
+  text: string;
+}
+
 export interface AIMCPProfileArgs {
   name?: string;
   all?: boolean;
+}
+
+export interface AICatalogArgs {
+  feature?: string;
+  query?: string;
+}
+
+export interface TrackerIDArgs {
+  id: string;
 }
 
 export interface ChatRenameArgs {
@@ -1358,6 +1381,7 @@ export interface Card {
   read_only?: boolean;
   file?: string;
   diff?: CardDiff;
+  form?: BlockFormField[];
 }
 
 export interface CardChoice {
@@ -2230,6 +2254,38 @@ export interface LspHint {
   padRight?: boolean;
 }
 
+export interface Board {
+  items: BoardItem[];
+  counts: BoardCounts;
+  today_usd?: number;
+  more?: number;
+  built: number;
+}
+
+export interface BoardItem {
+  id: string;
+  kind: "card" | "run" | "lane" | "workflow";
+  column: "needs_you" | "working" | "review" | "done";
+  state: "wait" | "run" | "ok" | "fail" | "idle";
+  title: string;
+  sub?: string;
+  why?: string;
+  step?: number;
+  steps?: number;
+  cost_usd?: number;
+  ahead?: number;
+  dirty?: number;
+  since?: number;
+  ref: string;
+}
+
+export interface BoardCounts {
+  needs_you: number;
+  working: number;
+  review: number;
+  done: number;
+}
+
 export interface BoardProjects {
   home: string;
   projects: BoardProject[];
@@ -2907,6 +2963,73 @@ export interface MCPProfileItem {
   hint?: string;
 }
 
+export interface AICatalog {
+  features: CatalogFeature[];
+  servers: CatalogServer[];
+  note?: string;
+  truncated?: boolean;
+}
+
+export interface CatalogFeature {
+  id: string;
+  title: string;
+  hint: string;
+  tools: number;
+  asks: number;
+  try: string[];
+  view?: string;
+}
+
+export interface CatalogServer {
+  name: string;
+  state: string;
+  trusted: boolean;
+  cached?: boolean;
+  known: boolean;
+  prompts?: boolean;
+  resources?: boolean;
+  tools: CatalogTool[];
+}
+
+export interface CatalogTool {
+  name: string;
+  title?: string;
+  hint?: string;
+  gate: "runs" | "asks" | "off";
+  text: string;
+}
+
+export interface TrackerPins {
+  pins: TrackerPin[];
+}
+
+export interface TrackerPin {
+  id: string;
+  title: string;
+  server: string;
+  tool: string;
+  args?: string;
+  refresh: number;
+  runs: boolean;
+  why?: string;
+}
+
+export interface TrackerBlock {
+  id: string;
+  title: string;
+  rows: TrackerRow[];
+  text?: string;
+  error?: string;
+  truncated?: boolean;
+  at: number;
+}
+
+export interface TrackerRow {
+  title: string;
+  hint?: string;
+  ref?: string;
+}
+
 export interface ChatExport {
   name: string;
   text: string;
@@ -3578,6 +3701,7 @@ export interface OpArgs {
   "lsp.code_actions": LspRangeArgs;
   "lsp.code_action_apply": LspApplyArgs;
   "lsp.inlay_hints": LspRowsArgs;
+  "board.get": EmptyArgs;
   "board.projects": EmptyArgs;
   "ai.run_start": AIRunStartArgs;
   "runs.send": RunsSendArgs;
@@ -3706,8 +3830,13 @@ export interface OpArgs {
   "ai.race_stop": AIRaceArgs;
   "ai.lane_agents": EmptyArgs;
   "ai.lane_start": AILaneStartArgs;
+  "ai.worktree_notes": AIWorktreeNotesArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
+  "ai.catalog": AICatalogArgs;
+  "ai.tracker_pins": EmptyArgs;
+  "ai.tracker_run": TrackerIDArgs;
+  "ai.tracker_unpin": TrackerIDArgs;
   "chat.rename": ChatRenameArgs;
   "chat.fork": ChatForkArgs;
   "chat.delete": ChatOpenArgs;
@@ -3904,6 +4033,7 @@ export interface OpResult {
   "lsp.code_actions": LspActions;
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;
+  "board.get": Board;
   "board.projects": BoardProjects;
   "ai.run_start": AskRef;
   "debug.sources": DebugSources;
@@ -4007,8 +4137,13 @@ export interface OpResult {
   "ai.race_stop": AIRaceDone;
   "ai.lane_agents": AILaneAgents;
   "ai.lane_start": AskRef;
+  "ai.worktree_notes": ChatRef;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;
+  "ai.catalog": AICatalog;
+  "ai.tracker_pins": TrackerPins;
+  "ai.tracker_run": TrackerBlock;
+  "ai.tracker_unpin": TrackerPins;
   "chat.fork": ChatRef;
   "chat.delete": AskRef;
   "chat.clear": AskRef;

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -236,49 +235,9 @@ func (m *Model) mcpElicitAskField(errText string) {
 	m.promptKind = promptKindMCPElicit
 }
 
-// elicitValue checks and converts one typed value ("" skips).
-func elicitValue(f mcp.ElicitField, v string) (any, bool, error) {
-	if !f.Secret() {
-		v = strings.TrimSpace(v)
-	}
-	if v == "" {
-		if f.Required {
-			return nil, false, fmt.Errorf("%s is required", f.Label())
-		}
-		return nil, false, nil
-	}
-	if len(f.Enum) > 0 {
-		for _, e := range f.Enum {
-			if strings.EqualFold(e, v) {
-				return e, true, nil
-			}
-		}
-		return nil, false, fmt.Errorf("one of: %s", strings.Join(f.Enum, ", "))
-	}
-	switch f.Type {
-	case "integer":
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, false, fmt.Errorf("a whole number, please")
-		}
-		return n, true, nil
-	case "number":
-		n, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			return nil, false, fmt.Errorf("a number, please")
-		}
-		return n, true, nil
-	case "boolean":
-		switch strings.ToLower(v) {
-		case "y", "yes", "true", "1":
-			return true, true, nil
-		case "n", "no", "false", "0":
-			return false, true, nil
-		}
-		return nil, false, fmt.Errorf("yes or no, please")
-	}
-	return v, true, nil
-}
+// elicitValue checks and converts one typed value ("" skips); the
+// phone's form answers use the same rules (mcp.FormValues).
+func elicitValue(f mcp.ElicitField, v string) (any, bool, error) { return mcp.ElicitValue(f, v) }
 
 // onMCPElicitField takes one field's value and asks the next.
 func (m *Model) onMCPElicitField(v string) tea.Cmd {

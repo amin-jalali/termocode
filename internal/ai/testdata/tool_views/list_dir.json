@@ -1,0 +1,10 @@
+{
+  "id": "",
+  "kind": "list",
+  "title": "Files in internal/ai · 3",
+  "items": [
+    {"id": "i0", "title": "testdata/", "badge": "dir", "ref": {"kind": "file", "path": "internal/ai/testdata"}},
+    {"id": "i1", "title": "tools.go", "ref": {"kind": "file", "path": "internal/ai/tools.go"}},
+    {"id": "i2", "title": "todos.go", "ref": {"kind": "file", "path": "internal/ai/todos.go"}}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "",
+  "kind": "list",
+  "title": "Tests: 5 passed, 2 failed, 0 skipped",
+  "items": [
+    {"id": "i0", "title": "TestA", "sub": "want 1 got 2", "tone": "bad", "badge": "a_test.go:12", "ref": {"kind": "lines", "path": "internal/x/a_test.go", "line": 12}},
+    {"id": "i1", "title": "TestB/case", "tone": "bad", "badge": "b_test.go:3", "ref": {"kind": "lines", "path": "b_test.go", "line": 3}},
+    {"id": "i2", "title": "internal/y", "sub": "undefined: z", "tone": "bad", "badge": "build", "ref": {"kind": "lines", "path": "internal/y/y.go", "line": 4}}
+  ]
+}

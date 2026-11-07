@@ -1,0 +1,13 @@
+{
+  "id": "",
+  "kind": "card",
+  "title": "Created workflow ship",
+  "fields": [
+    {"label": "File", "value": ".termocode/workflows/ship.jsonc", "kind": "mono"},
+    {"label": "Steps", "value": "3", "kind": "num"},
+    {"label": "Writes", "value": "1", "kind": "num"},
+    {"label": "Trust", "value": "trusted for this version", "kind": "tone", "tone": "ok"},
+    {"label": "Ran", "value": "nothing ran", "kind": "tone", "tone": "idle"}
+  ],
+  "ref": {"kind": "workflow", "id": "ship", "path": ".termocode/workflows/ship.jsonc"}
+}

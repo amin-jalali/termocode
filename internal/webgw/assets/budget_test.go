@@ -160,3 +160,16 @@ func readBuilt(t *testing.T, name string) string {
 	}
 	return string(b)
 }
+
+// The phone's live board (MOB-18) is in the one phone chunk (home.js,
+// budgetHome; it was its own board.js before the merge): the page's first
+// files never hold its view.
+func TestPerfGuardBoardChunk(t *testing.T) {
+	page := readBuilt(t, "app.js") + readBuilt(t, "app-chunk.js")
+	if strings.Contains(page, "board-cols") {
+		t.Error("the page's first files hold the board's view: it belongs in home.js")
+	}
+	if !strings.Contains(readBuilt(t, "home.js"), "board-cols") {
+		t.Error("home.js does not hold the board's view")
+	}
+}

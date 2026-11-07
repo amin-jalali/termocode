@@ -370,6 +370,30 @@ func TestBuildPutsAllToolsInTheHomeChunk(t *testing.T) {
 	}
 }
 
+// The phone's live board (MOB-18) is in the one phone chunk (home.js; it
+// was its own board.js before the merge), loaded by the page when the
+// board opens; it shares the page's modules through app-chunk.js (one
+// Preact), and the page's first files do not hold the board's view.
+func TestBuildPutsTheBoardInTheHomeChunk(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, chunk, board := string(out["app.js"]), string(out["app-chunk.js"]), string(out["home.js"])
+	if board == "" {
+		t.Fatal("build wrote no home.js")
+	}
+	if !strings.Contains(board, `from"./app-chunk.js"`) || strings.Contains(board, "__H") {
+		t.Error("home.js does not share the page's chunk (or has its own Preact)")
+	}
+	if !strings.Contains(app+chunk, `import("/assets/home.js")`) {
+		t.Error("the page does not load /assets/home.js")
+	}
+	if strings.Contains(app+chunk, "board-cols") {
+		t.Error("the page's first files hold the board's view")
+	}
+}
+
 // The Persian strings are their own file (strings-fa.js), loaded only
 // when the UI language is Persian: the phone's first files carry one
 // language, English. strings-fa.js is the strings alone (no Preact).

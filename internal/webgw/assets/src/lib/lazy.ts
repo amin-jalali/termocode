@@ -1,4 +1,4 @@
-// Loads the page's three lazy files on first use, each a fixed same-origin
+// Loads the page's lazy files on first use, each a fixed same-origin
 // path built beside app.js (cmd/webbuild) and listed with its hash in
 // assets.lock; these are the page's only dynamic imports (lint_test.go
 // allows exactly these). A failed load can be tried again.
@@ -7,7 +7,8 @@
 //                 never loads it); index.html preloads it there with its SRI
 //   strings-fa.js the Persian strings, when the UI language is Persian
 //   home.js       the phone's own views (This phone, MOBUX-20; the Home of
-//                 MOB-4), on a phone only, when one opens
+//                 MOB-4; All tools, MOBUX-5; review, MOB-14), on a phone
+//                 only, when one opens
 import { signal } from "@preact/signals";
 import type { EditorModule } from "../editor/api";
 import type { HomeHost } from "../home/api";

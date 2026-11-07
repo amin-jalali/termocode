@@ -454,6 +454,25 @@ export const S = {
   "nt.viewer_body": "You can only watch. Ask the laptop for control to start a task.",
   "more.runs": "Runs",
   "more.workflows": "Workflows",
+  // The phone's live board (MOB-18); English only, no Persian text.
+  "more.board": "Live board",
+  "wfv.needs": "Needs you",
+  "board.col.working": "Working",
+  "board.col.done": "Done today",
+  "board.columns": "Board columns",
+  "board.today": "{s} today",
+  "board.empty_col": "Nothing in this column.",
+  "board.empty_body": "Nothing is going on now. AI runs, lanes, workflows and questions show here.",
+  "board.load_failed": "The board did not open.",
+  "board.stale": "Offline. This is the last board the laptop sent.",
+  "board.ahead": "{n} ahead",
+  "board.dirty": "{n} changed",
+  "board.more": "{n} more on the laptop",
+  "board.st.wait": "waits for you",
+  "board.kind.card": "question",
+  "board.kind.run": "AI run",
+  "board.kind.lane": "lane",
+  "board.kind.workflow": "workflow run",
   "wf.none": "No workflows in this folder.",
   "wf.stop_confirm": "Stop this workflow run? Finished items keep their results.",
   "wf.waiting": "waits for you: {s}",
@@ -668,6 +687,13 @@ export const S = {
   "card.open_diff": "Open Changes",
   "card.keep_change": "Keep change {n}",
   "card.keep_none": "No change is kept. Keep one, or press Reject.",
+  "card.send": "Send",
+  "card.form_required": "required",
+  "card.form_missing": "Fill in {name} first.",
+  "card.form_yes": "Yes",
+  "card.form_no": "No",
+  "card.form_pick": "Pick one",
+  "toast.sent": "Sent. The laptop gives it to the server.",
   "sv.collapse": "Collapse All",
   "scm.more_actions": "More Actions…",
   "dbv.query_tab": "Query: {conn}",
@@ -1068,6 +1094,17 @@ export const S = {
   "tools.v.settings": "Settings, read only",
   "tools.v.itermoc": "The laptop's AI setup",
   "tools.v.mcpserver": "termocode as a server for outside agents",
+  // Phone projects list (MOBUX-6)
+  "ph.proj.title": "Projects",
+  "ph.proj.none": "No projects yet. Open a folder in termocode on the laptop.",
+  "ph.proj.here": "this one",
+  "ph.proj.waiting": "{n} wait",
+  "ph.proj.working": "{n} working",
+  "ph.proj.tasks.one": "{n} task",
+  "ph.proj.tasks.other": "{n} tasks",
+  "ph.proj.ci_passed": "CI passed",
+  "ph.proj.ci_failed": "CI failed",
+  "ph.proj.ci_running": "CI running",
 } as const;
 
 /** StringKey is a key of the page's strings, of the workbench's
@@ -1077,11 +1114,15 @@ export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP;
 
 /** PhoneOnlyKey is a phone app key: English only (owner 2026-11-07), the
  * same prefixes as strings_test.go englishOnly. */
-type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` | `cust.${string}` | `item.${string}` | `tools.${string}` | `race.${string}` | `lane.${string}` | "more.races">;
+type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` | `cust.${string}` | `item.${string}` | `tools.${string}` | `board.${string}` | `race.${string}` | `lane.${string}` | "more.board" | "more.races">;
 
 /** TranslatedKey is a key strings.fa.ts translates: the phone app's
  * strings are English only (owner 2026-11-07). */
 export type TranslatedKey = Exclude<keyof typeof S, PhoneOnlyKey> | keyof typeof SD;
+
+/** PhoneOnly keys are English only (the same set as PhoneOnlyKey): the
+ * phone app UI is English (owner 2026-11-07), so strings.fa.ts has none. */
+export type PhoneOnly = PhoneOnlyKey;
 
 const desk = dict<string>();
 
@@ -1132,7 +1173,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   });
 }
 
-type Plural = "pill.cards" | "edit.sent" | "git.commit" | "git.commit_confirm" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
+type Plural = "pill.cards" | "ph.proj.tasks" | "edit.sent" | "git.commit" | "git.commit_confirm" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
 
 /** tn picks the .one or .other form of a plural key by n. */
 export function tn(key: Plural, n: number, vars?: Record<string, string | number>): string {

@@ -44,9 +44,10 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | --- | --- |
 | `id` | Required. Lower-case letters, digits, `_` and `-`. |
 | `name` | Label in the tree. |
-| `driver` | `postgres`, `mysql` (also `mariadb`), `sqlite` or `redis`. |
+| `driver` | `postgres`, `mysql` (also `mariadb`), `sqlite`, `redis`, `firebird`, `vertica`, `exasol` or `hana` (SAP HANA). |
 | `host`, `port`, `user`, `database` | Network connections. The port defaults to 5432, 3306 or 6379. |
 | `path` | SQLite file. In a project file it must stay inside the workspace. |
+| `preset` | Server family, for example `tidb`. On `sqlite`, `"preset": "sqlcipher"` opens an encrypted file (see [Encrypted SQLite](#encrypted-sqlite-sqlcipher)). |
 | `db` | Redis database index. |
 | `url` | A connection URL instead of the single fields. |
 | `params` | Extra driver parameters. |
@@ -55,6 +56,8 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `readOnly` | `true` makes the AI refuse writes. Your own writes ask with a warning. |
 | `ssh`, `ssl`, `tls` | See [SSH tunnels](#ssh-tunnels) and [SSL and TLS](#ssl-and-tls). |
 | `options` | Session options, see below. |
+| `folder` | Groups the connection under a heading in the tree (`team/prod`). Connections without a folder come first. Click a heading, or press `Enter` / `Space` on it, to fold or unfold it (`←` folds, `→` unfolds); termocode remembers folded headings. A filter still shows matches inside a folded heading. |
+| `color` | A bar in front of the connection's row: `red`, `orange`, `yellow`, `green`, `blue`, `purple` or `gray`. The same colour marks the start of the result page's first row (with the connection name in it) and sits before the database item in the status bar, so you always see which server you are on. |
 
 **Connection options** (`"options": {…}`), checked when the file loads:
 
@@ -70,14 +73,15 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `databases`, `schemas` | Globs: the tree shows only these. |
 | `objects` | Globs that show tables, views and routines; `!glob` hides them. |
 | `readOnlyTables` | `schema.table` or `table` globs that the grid refuses to edit. |
+| `keepAliveSeconds` | Pings the connected session this often (at least 5 s) so idle firewalls do not drop it. |
+| `autoReconnect` | `true`: when a ping fails, the session is dropped and connects again after 1 s, 2 s, 4 s … (at most 30 s, 8 tries). The row shows the next try. Pings every 30 s when `keepAliveSeconds` is not set. An open transaction is lost with the connection. Disconnect stops it. |
 
 Every pooled connection runs the schema, time zone, isolation and `initSQL` statements first; a failing one fails the connection with its reason.
 
-**Schema loading.** `db_introspect_level` sets how much a table row loads (`auto` loads less in big schemas). `r` in the tree reloads only the object under the cursor; `R` reloads everything. Each load is kept in `db/schema-cache.json` (names and types, never data); when a load differs from the cached one the row says `changed since …`. **Databases: Show Schema Cache Info** tells when a connection was last loaded. `db_complete_catalogs` adds the system catalogs to SQL completion.
-| `folder` | Groups the connection under a heading in the tree (`team/prod`). Connections without a folder come first. |
-| `color` | A bar in front of the connection's row: `red`, `orange`, `yellow`, `green`, `blue`, `purple` or `gray`. |
-| `options.keepAliveSeconds` | Pings the connected session this often (at least 5 s) so idle firewalls do not drop it. |
-| `options.autoReconnect` | `true`: when a ping fails, the session is dropped and connects again after 1 s, 2 s, 4 s … (at most 30 s, 8 tries). The row shows the next try. Pings every 30 s when `keepAliveSeconds` is not set. An open transaction is lost with the connection. Disconnect stops it. |
+To change them without editing the file, run **Databases: Manage Connection…** on one of your own connections and pick **Connection Options…**. The list shows every option with its value. Pick one, type the new value (lists are comma lists, empty clears it) and press Enter. A bad value keeps the prompt open with the reason and saves nothing. An open session uses the new options after you connect again.
+
+**Schema loading.** `db_introspect_level` sets how much a table row loads (`auto` loads less in big schemas). `r` in the tree reloads only the object under the cursor; `R` reloads everything. Each load is kept in `db/schema-cache.json` (names and types, never data); when a load differs from the cached one the row says `changed since …`. **Databases: Show Schema Cache Info** tells when a connection was last loaded. When the server cannot be reached, the tree is built from this cache instead: the connection row says `offline · cached …`, cached rows still open, and `r` on the connection tries the server again. `db_complete_catalogs` adds the system catalogs to SQL completion.
+
 **Import connections.** **Databases: Import Connections…** offers `~/.pgpass` and `~/.my.cnf` when they exist, or a path you type: a PostgreSQL password file, a MySQL option file (`.cnf` / `.ini`; each `[client…]` group is one connection) or a file with one connection URL per line. A card lists what it found (id, driver, address, and whether a password comes with it; never the password itself) with **Cancel** first. **Import** adds them to your own connections file; each password goes into the secret store as `${secret:db.<id>}`. Ids that are taken get a number. Lines with a wildcard host are skipped.
 
 A row with a problem shows the reason, for example `literal password in project config`, `duplicate connection id` or `sqlite path is outside the workspace`. Fix the file and press `R`.
@@ -97,14 +101,14 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Mouse
 
-- Click a row to select it. Double-click a connection to connect or expand it, a folder to fold or unfold it, and a table or view to open its data.
+- Click a row to select it. Click a folder heading to fold or unfold it. Double-click a connection to connect or expand it, and a table or view to open its data.
 - On a suggestion, click to select and double-click to add it.
 - Click **a add**, **R refresh** or **/ filter** in the header. In the empty view, click **a add** or **Add remote…**.
 - Right-click a row for its menu.
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Trino, Presto, DuckDB, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, MongoDB, Firebird, Vertica, Exasol, SAP HANA, or **From a URL**.
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
@@ -114,16 +118,35 @@ The PostgreSQL family has presets on the PostgreSQL driver: CockroachDB (port 26
 - Amazon Redshift: no materialized views or sequences in the tree, and no EXPLAIN ANALYZE (`x`/analyze shows the plan only).
 - CockroachDB and Redshift: the plan is the server's text plan (plain `EXPLAIN`).
 
-SQL Server / Azure SQL (`"driver": "sqlserver"`, also `mssql` or `azuresql`; port 1433) and Oracle (`"driver": "oracle"`) can be saved in the config, but their drivers are not built in yet: connecting says so. A `*.database.windows.net` host turns on TLS (`encrypt=true`); `"params": {"fedauth": "ActiveDirectoryDefault"}` asks for Microsoft Entra (AD) sign-in once the driver is in.
-For Oracle (port 1521; `ora` works too) the database is the service name. `"params": {"tns": "PROD"}` takes host, port, service (or SID) and TCPS from `tnsnames.ora` (in `$TNS_ADMIN`, else `$ORACLE_HOME/network/admin`), and `"wallet": "/path/to/wallet"` uses a wallet folder with TLS.
+SQL Server / Azure SQL (`"driver": "sqlserver"`, also `mssql` or `azuresql`; port 1433) uses the built-in go-mssqldb driver. The tree shows databases, schemas, tables, views, procedures and sequences; table data pages with `OFFSET … FETCH` (the console's first-rows query is `SELECT TOP n`). A `*.database.windows.net` host turns on TLS (`encrypt=true`). Sign-in:
+
+- **SQL login**: user and password, as for the other servers.
+- **Windows (NTLM)**: write the user as `DOMAIN\user`.
+- **Microsoft Entra (AD)**: `"params": {"fedauth": "ActiveDirectoryDefault"}` (or another `ActiveDirectory…` mode); the password, if any, is the secret of the account or service principal.
+
+The plan (`x`) is the server's SHOWPLAN XML: the statement does not run. Analyze uses STATISTICS XML and runs the statement, after the same Cancel-first card as on the other servers. Read-only sessions run in a transaction that is always rolled back.
+
+For Oracle (port 1521; `ora` works too) the database is the service name. `"params": {"tns": "PROD"}` takes host, port, service (or SID) and TCPS from `tnsnames.ora` (in `$TNS_ADMIN`, else `$ORACLE_HOME/network/admin`), and `"wallet": "/path/to/wallet"` uses a wallet folder with TLS. A TNS name that is not in `tnsnames.ora` stops the connect with its name, so it never falls back to localhost. Pick **Oracle Database** in the add picker (it asks for the host, port, user and service name, for example `FREEPDB1`), or write `"driver": "oracle"` in the config. The tree shows the database, its schemas (users) and, per schema, Tables, Views, Routines, Sequences, Triggers and **Packages**. `D` on a routine or a package shows its DDL from `DBMS_METADATA` (a package shows its spec and body). Editing PL/SQL source (`E`) and query plans (`x`) are not offered for Oracle yet.
 
 - **A server type** asks for the host, port, user and database. Then it asks for a masked password.
-- **Cassandra / ScyllaDB** asks for a contact point (port 9042), an optional user and an optional keyspace. Its console is a `.cql` file; the send key runs the CQL statement at the cursor and results come a page at a time.
+- **Cassandra / ScyllaDB** asks for a contact point (port 9042), an optional user and an optional keyspace. Its console is a `.cql` file; the send key runs the CQL statement at the cursor and results come a page at a time. Any `.cql` file you open gets the same run lens above each statement (SQL inspections stay off, since CQL is not SQL). In the web app, **Add connection** offers Cassandra too (port 9042, optional keyspace); browsing its tables on the web is not there yet.
 - **ClickHouse** uses its HTTP interface (port 8123, user and database `default`). The password goes in a header, read-only runs use `readonly=2`, and there are no transactions.
 - **libSQL / Turso** asks for a `libsql://` server URL (for Turso: `libsql://<db>-<org>.turso.io`), then a masked auth token kept in the secret store. A token in the URL (`?authToken=`) is taken out the same way. Add `?tls=0` for a local server without TLS.
-- **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
+- **DuckDB** asks for a database file, like SQLite. It runs the `duckdb` command line client (install it and put it on `PATH`); each run stands alone, so there are no transactions and `:memory:` keeps nothing between runs. Read-only runs use `-readonly`. The tree shows the schemas of the file.
+- **Trino** and **Presto** use the coordinator's REST protocol (port 8080). The database step asks for the **catalog** (for example `hive`); the tree shows its schemas. A password is sent only over TLS. `USE` changes the catalog and schema for the next runs, transactions use `START TRANSACTION`, and read-only runs use `START TRANSACTION READ ONLY`.
+- **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `mongodb`, `mongodb+srv`, `sqlite`, `sqlcipher`, `file`, `firebird`, `vertica`, `exasol` and `hdb` (SAP HANA) work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
 
 Termocode tests the connection first. If the test works, choose **Save to project** (no password in the file) or **Save for me only**. If it fails, a list offers **Set password…**, **Use an SSH tunnel…**, **SSL settings…**, **Test again** or **Cancel**.
+
+### Encrypted SQLite (SQLCipher)
+
+An encrypted SQLite file opens with the `sqlcipher` command line tool, which must be on your PATH. Paste `sqlcipher:///path/to/file.db` in **From a URL**, or save a connection like this:
+
+```json
+{"id": "vault", "driver": "sqlite", "preset": "sqlcipher", "path": "vault.db", "password": "${secret:vault-key}"}
+```
+
+The password is the key. Termocode asks for it masked and keeps it in the secret store. It goes to `sqlcipher` on its input only, never on the command line. A raw hex key `x'…'` is passed to SQLCipher as a raw key. A wrong key shows `wrong key, or not a SQLCipher file`. The AI uses the key for its own read-only session and never sees it. Press `$` to open `sqlcipher` in a terminal tab; there, type `PRAGMA key = '…';` first, because the key is never put on that command line.
 
 Run **Databases: Test Connection** or press `T` on a row to test a saved connection again. The test goes through its tunnel and SSL settings and does not touch an open session.
 
@@ -182,6 +205,31 @@ When the container or service behind a saved connection is stopped, the footer s
 
 Press `$` on a connection to open its own client in a terminal tab: `psql`, `mysql`, `sqlite3` or `redis-cli` (it must be on your PATH). The host, port, user and database come from the connection, and a read-only connection opens the client read-only too. The password and SSL settings go in the tab's environment only, never on the command line, so they do not show in the process list. A connection through an SSH tunnel cannot use this: the tunnel lives inside termocode.
 
+### Saved SQL runs
+
+A saved run plays one SQL file on one or more connections with their command line clients. Write the runs in `.termocode/sql-runs.json`:
+
+```json
+{
+  "runs": [
+    {
+      "name": "nightly report",
+      "script": "sql/report.sql",
+      "connections": ["local", "staging"],
+      "before": ["make seed"],
+      "log": "logs/report.log"
+    }
+  ]
+}
+```
+
+- `script` is the SQL file. A relative path starts at the workspace root.
+- `connections` are connection ids (or names) from the Databases view. They run in this order.
+- `before` (optional) are shell commands that run first, in the workspace root.
+- `log` (optional) is a file. All output is also added to its end.
+
+Run **Databases: Saved SQL Runs…** and pick a run. A card shows the script, the connections, the before steps and the log file. Cancel is first. **Run** opens one terminal tab for the whole run. The first error stops it. Passwords go in the tab's environment only, never on the command line. The same limits as `$` apply: the client must be on your PATH, and a connection through an SSH tunnel cannot be used. **Edit sql-runs.json** at the end of the list opens the file. The AI cannot start a saved run.
+
 ## Disconnect
 
 Press `x` on a connection and choose **Disconnect** to close all its sessions. Sessions also close when you leave the Databases view, so a hidden view keeps no database process. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` then asks **Cancel**, **Commit** or **Roll back** (**Cancel** has the focus).
@@ -195,6 +243,8 @@ Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statem
 **Execution modes.** `db_exec_mode` sets what the run key sends: `largest` (the whole statement, the default), `smallest` (the innermost subquery around the caret), `from-caret` (the statement and every one after it) or `ask` (a list to choose from, innermost first). **Databases: Choose Execution Mode…** saves it. **Databases: Run From Caret to End of File**, **Run Smallest Statement (Subquery) at Caret** and **Run… (Choose Statement or Subquery)** do one run in that mode. `db_selection_split` set to `false` sends a selection to the server as one text instead of splitting it.
 
 **Result page.** `N` goes to row N (it opens that page and puts the cursor on the row). `L` loads all rows when the result was cut at `db_max_rows` (it runs the statement again, up to 100000 rows). **Databases: Set Result Page Size…** changes the rows per page of the shown result at once. `db_result_new_tab` keeps every result in its own tab; `db_auto_transpose` opens a one-row result flipped (one line per column).
+
+`I` shows row numbers and `T` shows each column's type after its name (`db_row_numbers` and `db_column_types` turn them on for every result). `m` opens the cell menu: open or copy the cell, copy the column, copy the column definition (`"name" type`) or all columns as a `CREATE TABLE`, the column stats, edit, hide or sort. With `db_inline_result` set to `true`, the first five rows of a console result also show under the statement in the `.sql` file; **Databases: Clear Inline Results** removes them.
 
 A read runs at once. Any other statement asks first, and the card shows the exact SQL (use Up/Down to read a long one). The title says what is special: `DELETE` or `UPDATE` without `WHERE`, `DROP`, `TRUNCATE`, `ALTER`, a production connection, or a read-only connection. There is no "always allow". In a file run, each write gets its own card.
 
@@ -276,9 +326,11 @@ PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the
 
 **From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. On `alias.column` (`u.email`) it opens the table's DDL with the cursor on the column; on a function or procedure name it opens its stored source. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line. **Databases: Rename in SQL…** asks for a new name, then a card (Cancel first) says how many places change in this buffer and in the other project `.sql` files; Rename replaces the whole name (plain or quoted) and leaves strings and comments alone. Only the SQL text changes, never the database; files open with unsaved changes are left alone.
 
-**Quick documentation.** **Databases: Quick Documentation** shows a card about the table, column or routine under the cursor of a SQL buffer: its columns with types, the primary key, keys, indexes and foreign keys. In the Databases tree, press `K` (or right-click → Quick documentation) on a table, view, column, routine or schema. It reads only what the tree has loaded, so no query runs. **Databases: Show INSERT Column Hints** writes the target column before each value of `INSERT INTO t (a, b) VALUES (…)`; the hints clear on your next edit.
+**Quick documentation.** **Databases: Quick Documentation** shows a card about the table, column or routine under the cursor of a SQL buffer: its columns with types, the primary key, keys, indexes and foreign keys. In the Databases tree, press `K` (or right-click → Quick documentation) on a table, view, column, routine or schema. It reads only what the tree has loaded, so no query runs. **Databases: Show INSERT Column Hints** writes the target column before each value of `INSERT INTO t (a, b) VALUES (…)`; the hints clear on your next edit. On a table or view, `K` also shows its first 5 rows when the connection is open (one read-only `SELECT … LIMIT 5`).
 
-**Virtual objects.** **Databases: Edit Virtual Objects…** opens `.termocode/virtual/<connection>.jsonc` (a commented template the first time). It holds foreign keys the database does not declare (`foreignKeys`, or `nameRules` such as the suffix `_id`), computed columns (`columns`: a read-only expression) and saved SELECTs (`views`). After you save, Refresh (`R`): virtual keys and columns show under the table and in Quick Documentation, completion offers the virtual column names, Select 100 rows adds the computed columns, and a **Virtual Views** group under the connection runs a saved SELECT with Enter. Nothing is written to the database; a broken entry is skipped with a warning.
+**Parameter info, JOIN hints and cell docs.** **Databases: Show Parameter Info** lists the parameters of the function call around the cursor and marks the one you are typing (▸): a routine of the Databases tree reads its signature (read-only), and common built-in functions such as `coalesce`, `substr` or `date_trunc` come from a built-in list. **Databases: Show JOIN Cardinality Hints** writes `1:1`, `N:1`, `1:N` or `N:M` before each joined table of `JOIN … ON a.x = b.y` or `USING (…)`. It reads the primary keys, unique indexes and foreign keys of the tables you have expanded in the tree, so no query runs; the hints clear on your next edit. On a result page, `gK` shows the cell under the cursor: its type, length, whole value and the whole row.
+
+**Virtual objects.** **Databases: Edit Virtual Objects…** opens `.termocode/virtual/<connection>.jsonc` (a commented template the first time). It holds foreign keys the database does not declare (`foreignKeys`, or `nameRules` such as the suffix `_id`), computed columns (`columns`: a read-only expression) and saved SELECTs (`views`). After you save, Refresh (`R`): virtual keys and columns show under the table and in Quick Documentation, completion offers the virtual column names, Select 100 rows adds the computed columns, and a **Virtual Views** group under the connection runs a saved SELECT with Enter. In a table's data view, `gf` follows a virtual key like a real one, and `gr` lists the tables whose virtual keys point at the row (marked `· virtual`). **Export ER Diagram…** and the path diagram draw virtual keys as dashed lines. Nothing is written to the database; a broken entry is skipped with a warning.
 
 **Edit object source.** Press `E` on a view, routine or trigger (or **Databases: Edit Object Source**): its stored CREATE statement opens in a buffer, read on a read-only session. Edit and save, then run **Databases: Submit Object Source…** from that buffer. termocode reads the stored source again and shows a card with the diff and the exact script; Cancel comes first. The card warns when someone else changed the object since you opened it, and when the engine cannot replace it in one transaction (MySQL drops the old routine first). The source must stay one CREATE statement for the same object. **Databases: Pending Source Changes…** lists the saved sources you have not submitted; Enter opens one.
 
@@ -297,7 +349,7 @@ While you type, a SQL console or file is checked against the schema already load
 
 ## Edit rows
 
-You can change the rows of a table's data page, and of a console result that is a plain `SELECT` from one table (columns named as they are in the table, no `DISTINCT`, `JOIN`, `GROUP BY` or `UNION`). The table needs a primary key or a unique key, and the result must contain its columns: each change finds its row by the full key. A SQLite table with neither is edited by its hidden `rowid` on the data page (not in a console result); a table that has columns named `rowid`, `_rowid_` and `oid` stays read-only. Otherwise the page says **read-only** and why (for example `read-only: no key`); `e` then shows the reason. Views, AI results, table descriptions and read-only connections cannot be edited.
+You can change the rows of a table's data page, and of a console result that is a plain `SELECT` from one table (columns named as they are in the table, no `DISTINCT`, `GROUP BY` or `UNION`). The table needs a primary key or a unique key, and the result must contain its columns: each change finds its row by the full key. A SQLite table with neither is edited by its hidden `rowid` on the data page (not in a console result); a table that has columns named `rowid`, `_rowid_` and `oid` stays read-only. Otherwise the page says **read-only** and why (for example `read-only: no key`); `e` then shows the reason. Views, AI results, table descriptions and read-only connections cannot be edited.
 
 | Key | Action |
 | --- | --- |
@@ -311,10 +363,20 @@ You can change the rows of a table's data page, and of a console result that is 
 | `P` | paste rows from the clipboard: tab-separated values go from the cursor cell to the right and down, extra lines become new rows (`\N` is NULL); values past the last column, in a binary column or on a deleted row are skipped |
 | `D` | set the cell back to its column's `DEFAULT` (the SQL says `= DEFAULT`; on a new row the cell is left out). SQLite cannot do this in an `UPDATE`, so it says so |
 | `U` | put a new random UUID (version 4) in the cell |
+| `gL` | load the cell from a file: a binary column gets the file's bytes, another column its text (up to 16 MB). The value is bound as a parameter when you submit |
+| `gS` | save the value of the cell to a new file (a binary value as its bytes); it never replaces a file. Works on read-only results too |
 | `u` | undo the change of the cell under the cursor, else of the row; on a row without changes it asks to undo all changes |
 | `w` | submit the changes |
 
-A typed value is checked against the column type before it is kept: whole numbers for integer columns, numbers for `numeric` and `float`, `true` / `false` for booleans, a UUID for `uuid`, valid JSON for `json` and `jsonb`, and `YYYY-MM-DD` for `date`. A value that does not fit is not kept, and a message says what fits. Other types (and arrays) are checked by the server when you submit.
+A typed value is checked against the column type before it is kept: whole numbers for integer columns, numbers for `numeric` and `float`, `true` / `false` for booleans, a UUID for `uuid`, valid JSON for `json` and `jsonb`, and `YYYY-MM-DD` for `date`; in an array each element is checked against the element type. A value that does not fit is not kept, and a message says what fits. Other types are checked by the server when you submit.
+
+**Completion.** In the edit prompt, `Tab` completes what you typed from the values already in that column of the loaded rows (`true` / `false` first in a boolean column); `Tab` again goes to the next value that starts the same way. Nothing is asked of the server.
+
+**Arrays.** `e` on a PostgreSQL array cell opens it in a buffer with one element per line. `\N` alone is a NULL element, a line in double quotes keeps its text as it is (an empty text, spaces, the word `NULL`), and empty lines are left out. `:w` writes the lines back as an array. Arrays in arrays keep the one-line prompt.
+
+**Record view.** In the Transposed view (`t`), `e`, `D`, `U`, `gL` and `-` work on the line under the cursor. `+` adds a new row and shows it there: each line is a column, `(default)` until you set it, and `]` / `[` step through the loaded rows and then the new ones.
+
+**JOIN results.** A console result of a `SELECT` over joined tables (`JOIN … ON`, `USING` or a comma; no subquery in `FROM`, `NATURAL` or `LATERAL` join) can change the cells of one of its tables: the first table in `FROM` whose key is in the result. A column counts as that table's when the select list names it with the table (`o.status`), or only that table has a column of that name; the other columns stay read-only. Rows are not added or deleted in a JOIN result.
 
 Changes stay on the page until you submit them. The left margin marks each row: `*` changed, `+` new, `-` to be deleted, and the page says how many changes wait. Anything that loads the rows again (another data page, a sort or a filter on a data page, `r`) asks **Keep** or **Discard** first; switching tabs or closing the page keeps the changes.
 
@@ -327,6 +389,8 @@ Each connection starts in auto-commit mode: every statement is saved at once. Pr
 - `K` on the result page or **Databases: Commit** saves the changes; `Z` or **Databases: Roll Back** drops them.
 - The status bar and the result page show `manual commit · 2 not committed` while changes wait. Typed `BEGIN`, `COMMIT` or `ROLLBACK` statements are not sent in manual mode; use `K` and `Z`.
 - **Savepoints.** With a transaction open, **Databases: Set Savepoint…** asks for a name (letters, digits and `_`) and sends `SAVEPOINT name`. **Databases: Roll Back to Savepoint…** lists them (newest first); a card asks first (Cancel is the default), then `ROLLBACK TO SAVEPOINT name` drops every change after it. The transaction stays open, and the later savepoints are forgotten. **Databases: Sessions…** lists the open sessions and closes one.
+- **Several sessions per connection.** By default every console of a connection shares its main session. **Databases: Console Session…** (PostgreSQL and MySQL) picks another one for the open `.sql` file: **Main session**, an open **Session 2**, … or **New session**. A console on its own session keeps its own transaction, temp tables and `SET` values; the lens shows `· session 2`. The session opens on the console's next run, after the main one. **Databases: Sessions…** lists it and closes it; Disconnect closes them all.
+- **Temp tables.** A temp table lives in one server session. In auto-commit the next statement may run on another session of the pool and not find it, so the first `CREATE TEMP TABLE` of a session shows a hint: switch to manual commit to keep one session. Other consoles never see it.
 - Submitted row changes join the open transaction; data pages read inside it, so they show your own changes.
 - Quitting, disconnecting, or switching back to auto-commit with changes waiting asks **Cancel**, **Commit** or **Roll back**.
 
@@ -347,7 +411,13 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 
 **Bad rows: skip.** The card's **Bad rows** button switches from **stop** (the default above) to **skip**: a row that cannot be read, has the wrong number of fields or fails its INSERT is left out (it is rolled back alone), and the other rows are saved. The done toast says how many rows were skipped and names an error log (row, line and the server's error for each) in the termocode config folder.
 
+**Import options.** The card's **Options…** button opens a short list. **Lines to skip at the start** drops lines before the header (a title line or a comment from the tool that wrote the file). **Quote character** switches between `"`, `'` and none (with none, a `"` is plain text). **Quote inside a quoted field** switches between a doubled quote (`""`, the default) and a backslash (`\"`). Each change reads the file again and brings back the card, with an **Options** line; line numbers in errors still count from the top of the file. **Column formats…** sets, for each mapped column: **Trim spaces**, a **Text that means NULL** (for example `\N`; an empty cell is always NULL), a **Date format** written with `YYYY YY MM DD HH mm ss` (for example `DD/MM/YYYY`; the value is sent as `YYYY-MM-DD`, with the time when the format has one) and **Decimal comma** (`1.234,5` is sent as `1234.5`). The mapping lines show each format in `[ ]`. A cell that does not fit its format is a bad row: it stops the import, or is skipped with **Bad rows: skip**.
+
+**Several files.** In the file list, **Several files (a pattern)…** asks for a pattern such as `data/*.csv` (`*` and `?` match; at most 200 files). The files are read one after another, sorted by name, into the same table in one transaction; the delimiter, header and options of the first file apply to all. The card says how many files and rows, and an error names the file, row and line.
+
 **Import as a new table.** **Databases: Import CSV as New Table…** on a schema, a database or a table in the tree asks for a CSV file and shows the `CREATE TABLE` it would run (Cancel first): the table is named after the file (lower case, `_` for other characters) and every column is `TEXT`, named like the header (a repeated name gets `_2`). **Create and import** makes the table, then the usual import card opens for it. Change the column types later with `ALTER TABLE`.
+
+**Copy table data between connections.** **Databases: Copy Table Data to Another Connection…** on a table (or a view) in the tree lists the connected SQL databases you can write to (read-only connections are left out; the same database is there too), then asks for the target table (`schema.table` or `table`; it must exist). The rows are read on a read-only session into a private file in the termocode config folder, exactly as the server sent them (no formula quote; NULL stays an empty cell, so empty text arrives as NULL; the export mask is applied). Then the usual import card opens for the target: it names the source, maps the columns by name, and keeps Cancel first (the strong card on production). **Import** writes all rows in one transaction. The file is removed when the import ends or you cancel. `Esc` while the rows are read stops the copy. The AI cannot copy rows.
 
 **Run a SQL dump.** **Databases: Run SQL Dump File…** on a connection asks for a `.sql` file (up to 64 MB), splits it into statements and shows one card (Cancel first): the file, the statement count, how many delete objects or rows (`DROP`, `TRUNCATE`, `DELETE`) and a PRODUCTION line on a production connection. **Run** sends the statements one by one in the connection's session, with no card for each. A progress card shows `N / total statements`; `Esc` or **Cancel** stops it. The first failing statement stops the run and is named with its error; what ran before it stays, unless the file has its own `BEGIN` / `COMMIT`. A read-only connection never runs a dump. Press `R` in the tree afterwards to see new or dropped objects.
 
@@ -360,12 +430,37 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 **Copy as.** `A` on a result page (or **Databases: Copy Result As…**) copies the loaded rows in any of the export formats.
 
 **Export tables to a folder.** **Databases: Export Tables to Folder…** on a schema, a database or a table in the tree asks for a folder (made when missing), then shows a card (**Cancel** first). Every table is written as `<table>.csv` and the tables' DDL as `schema.sql`, in a read-only session. A file that is already there is kept and named in the final message. A card shows the progress; `Esc` or **Cancel** stops it.
+
+**Run a query to a file.** **Databases: Run Query to File…** in a SQL console takes the `SELECT` under the cursor, asks for a format (every export format but SQL UPDATEs) and a file, then shows one card (**Cancel** first) with the query. **Run** sends it in a read-only session and writes every row to the file as it arrives: no row limit, the grid is not changed, and the file replaces the path only when it is complete (an existing file is named on the card and the button is **Run and Replace**). Only one plain read runs this way, never a write. The CSV settings and `db_export_mask` apply. A card shows the progress; `Esc` or **Cancel** stops it and writes no file.
 **SQL files.** **Databases: Go to Statement…** lists the statements of the `.sql` file in the editor, with their line and kind (read, write, DDL); Enter jumps there. The statements are split in the file's dialect: the driver of its connection, else a `-- @dialect postgres` (or `mysql`, `sqlite`) line, else the dialect the text shows (`::` or `RETURNING` for PostgreSQL, backticks or `AUTO_INCREMENT` for MySQL, `PRAGMA` for SQLite); the picker title says which. **Databases: Switch File Connection…** picks the connection the file runs on (or detaches it). The choice is saved in `.termocode/sql-connections.json` with paths relative to the workspace, so it is kept after a restart; a `-- @conn id` line in the file still wins.
 **Dump and restore.** **Databases: Dump Database…** writes the whole database with the server's own tool: `pg_dump` (a `.dump` file is its archive format, a `.sql` file plain SQL) or `mysqldump` (SQL). **Databases: Restore Database…** loads a file back: `pg_restore` for an archive, `psql` (stops at the first error, in one transaction) or `mysql` for a `.sql` file. The tools must be on `PATH`, and the connection must be connected (so its password is known); over an SSH or Kubernetes tunnel they are not offered. Both show the command on a card with **Cancel** first; the password is never on the card nor in the process arguments (it goes in the tool's environment). A restore says that it can replace or drop tables and cannot be undone, and a read-only connection never restores. `Esc` on the progress card stops the tool. The AI cannot dump or restore.
+
+**Folder dialect.** **Databases: Set Folder SQL Dialect…** gives the folder of the `.sql` file (and every folder below it) a dialect: PostgreSQL, MySQL / MariaDB or SQLite. It is saved in `.termocode/sql-dialects.json`. The order is: the file's connection, a `-- @dialect` line, the folder, the hints in the text. **Clear** in the same picker removes it.
+
+**Highlight usages.** **Databases: Highlight Usages in File** marks every place the name under the cursor is used as a name (strings and comments do not count; `"quoted"`, `` `back quoted` `` and `[bracketed]` names do). An alias (`FROM orders o`) or a CTE name (`WITH recent AS (…)`) is marked only in its own statement; a table name in the whole file. The toast says which. The marks clear when you edit the file or leave it.
+
+**SQL in strings.** **Databases: Go to SQL in Strings…** lists the strings of the Go, Python or JavaScript/TypeScript file in the editor that hold a SQL statement (`SELECT … FROM`, `INSERT INTO`, `UPDATE … SET`, `DELETE FROM`, `WITH … AS (`, `CREATE TABLE` and the like), with their line and kind. Comments and plain text such as "Update available" are left out. Enter jumps to the string.
+
+**Syntax errors off.** `db_sql_syntax_off` in `config.json` lists dialects whose syntax errors the live inspections do not show, for example `["mysql"]`. Unknown tables and columns are still marked.
+
+**SQL intentions.** **Databases: SQL Intentions…** lists the rewrites that fit the statement at the cursor; Enter rewrites it in one undo step (`u` undoes it). Everything else in the statement, comments too, stays as you wrote it.
+
+- **Introduce alias** for the table at the cursor (`orders` gets `o`, and `orders.id` becomes `o.id`).
+- **Qualify column names**: a column that only one table of the `FROM` has gets that table's alias.
+- **Expand `*`** (or `o.*`) into the column list.
+- **Wrap a table in a subquery**: `orders o` becomes `(SELECT * FROM orders) o`.
+- **Extract subquery as CTE**: a subquery in `FROM` moves to a `WITH` entry named after its alias.
+- **Inline CTE**: a CTE used once goes back into the `FROM` as a subquery (not for `WITH RECURSIVE`).
+- **Replace a literal with a parameter**: `status = 'open'` becomes `status = :status` (the same string everywhere in the statement); the run asks for the value.
+- **DISTINCT ↔ GROUP BY**, when the select list has no aggregate and no `*`.
+
+Qualify and Expand `*` use the columns the editor already knows for completion; connect the file's connection first. A rewrite is only offered when the statement is read clearly; nothing is sent to the server.
 
 ## EXPLAIN and ANALYZE
 
 **Explain.** In a SQL console press `\x` (leader, then `x`) on a statement, or use **Databases: Explain Statement**. On a result page `x` explains the statement that made the result. The plan opens on the result page as the **Plan** view: one line per step, indented, with the cost and row estimates. The step that takes most of the cost (at least 40 % of the whole plan, without its children) is marked with `!` and `<- costly` and coloured. Details such as `Filter:` and `Hash Cond:` sit under their step. Folds follow the indent: `za` folds a step, `zR` opens all. `y` copies the plan, `C` copies the server's own answer (the native JSON on PostgreSQL and MySQL), `Tab` shows that raw answer, `r` plans again. `b` switches to the bar view: one bar per step for its own share of the whole cost (or of the real time after an analyze), so the slow step stands out; `b` again goes back to the tree.
+
+**One step.** `Enter` on a step (or on one of its details) opens a card with everything about that step: its share of the whole plan, the table it reads, the step it sits in, how many steps are under it, its details, and every field the server sent for it. **Copy** puts the card on the clipboard. `i` (or **Table doc** on the card) shows the quick documentation of the step's table: its columns, keys and indexes from the Databases tree, with no query run. On a step that reads no table, `i` shows the doc of every table the plan reads. A table whose schema is not expanded in the Databases view says so.
 
 A plain plan never runs the statement. It uses `EXPLAIN (FORMAT JSON)` on PostgreSQL, `EXPLAIN FORMAT=JSON` on MySQL / MariaDB (the table form on a server without JSON), and `EXPLAIN QUERY PLAN` on SQLite, always in the read-only session.
 
@@ -402,7 +497,8 @@ A table's data page counts as the whole table with its filter (up to 10,000 rows
 Press `F` on a schema (or a database, or any row under it) and choose:
 
 - **Dump to a folder…** writes the schema as clean SQL, one file per object: `tables/<name>.sql` (with its keys and indexes), `views/<name>.sql` and `routines/<name>.sql` (not SQLite). The folder is relative to the workspace (`schema/<connection>-<schema>` is offered). A file that is already up to date is not touched, so the folder diffs well in git. When the folder holds files with other text, a card asks first (**Cancel** has the focus). Files of dropped objects stay; Compare shows them.
-- **Compare with a folder…** lists every object under **Changed**, **Only in the database**, **Only in the folder** and **Identical**. `Space` selects rows; `Enter` takes the selected rows (or the row under the cursor) to a card: **Cancel**, **Update the folder** (write the database's version and remove the files of objects the database no longer has) or **Open the folder's SQL** (the folder's text of those objects in a read-only buffer, to review and run by hand; a changed table needs ALTER statements, not CREATE).
+- **Compare with a folder…** lists every object under **Changed**, **Only in the database**, **Only in the folder** and **Identical**. `Space` selects rows; `Enter` takes the selected rows (or the row under the cursor) to a card: **Cancel**, **Update the folder** (write the database's version and remove the files of objects the database no longer has) or **Open the migration script**: a script that makes the database match the folder for those objects (`ALTER TABLE … ADD COLUMN`, `CREATE` for objects only in the folder, `DROP` for objects only in the database, marked `-- DESTRUCTIVE`; other differences are `-- REVIEW` notes). It opens in a read-only buffer, to review and run by hand.
+- **Use a folder for completion…** reads a DDL folder (`tables/`, `views/`, `routines/` `.sql` files: a dump, or `CREATE TABLE` / `CREATE INDEX` / `CREATE VIEW` written by hand) as one more source for SQL completion of that connection: its tables, columns and foreign keys are offered too. Names the live schema has win. It stays until termocode restarts, also after a reconnect. A statement the parser cannot read is named in the message and skipped.
 
 The schema is read on a read-only session; nothing here changes the database. When the project uses a migration tool (Flyway, Liquibase, Alembic, Prisma, Rails, golang-migrate or dbmate), the menu says so: the folder is a snapshot next to the migrations, not a migration.
 
@@ -479,7 +575,7 @@ Nothing polls while you wait: an idle console or result page uses no CPU. Hiding
 
 A Redis or Valkey connection (`"driver": "redis"`) takes a host, a port (6379 by default), an optional ACL `user`, a database index `db`, and a password from the secret store. Use `"tls": true` or a `rediss://` URL for TLS; `"ssl": {"ca": "…", "cert": "…", "key": "…"}` adds a CA and a client certificate. Containers and compose services built from `redis`, `valkey`, `keydb` or `dragonfly` images, and `REDIS_URL` in `.env`, are suggested.
 
-For **Sentinel**, point the connection at a sentinel (port 26379) and set `"params": {"sentinel": "mymaster"}`; more sentinels go in `"sentinels": "s2:26379,s3:26379"`. Each connect asks a sentinel for the master's address, so a failover is followed. On a **Redis Cluster** node, a command whose key lives on another node (`MOVED` or `ASK`) moves the session to that node and is sent once more; the key list shows the keys of the node you are on.
+For **Redis Sentinel**, point the host and port at a Sentinel (26379 by default) and add `"params": {"sentinel": "mymaster"}` (`"sentinelMaster"` works too); more Sentinels go in `"sentinels": "s2:26379,s3:26379"`. termocode asks the Sentinels for the current master at each connect (they are asked without the password), so a failover is followed. For a **Redis Cluster**, connect to any node: a command for a key on another node gets `MOVED` or `ASK` from the server, and termocode runs it once on the node that owns the key (with the same user, password and TLS). The key list scans every master of the cluster (read from `CLUSTER NODES`; replicas and failed nodes are skipped), so you see the whole key space, and the key cap counts all nodes together. **Databases: Show Redis Cluster Nodes** runs `CLUSTER NODES` and shows each node with its address, role, master, link state and slots.
 
 Expanding a connection lists its databases (`db0 (1234 keys)`). Expanding a database lists its keys with `SCAN`, grouped into namespaces by `db_redis_separator` (`:` by default): `session:ab12` sits under `session:`. The app never sends `KEYS`. One row loads at most `db_redis_max_keys` keys (10000); past that the row says so, and opening a namespace scans only its keys. Each key shows its type: `"` string, `{` hash, `[` list, `(` set, `⇅` sorted set, `≋` stream (ASCII: `s h l S z x`).
 
@@ -487,7 +583,7 @@ Expanding a connection lists its databases (`db0 (1234 keys)`). Expanding a data
 
 On the value page, `e` edits the value or the field under the cursor, `+` adds a field, item, member or entry, `-` deletes the one under the cursor, `t` sets the TTL (seconds or `30m`, `2h`, `1d`; empty removes it) and `D` deletes the key. Every change shows a card with the exact command, such as `HSET session:ab12 plan pro`, before it runs. On a production connection the card says so; on a read-only connection it asks **Run anyway?**. In the tree, `t`, `D` and `y` (copy the key name) work on a key row. `M` renames a key and `C` copies it to a new key (also **Databases: Rename Redis Key…** and **Databases: Copy Redis Key…** in the palette, on the open key or the selected row). The card shows `RENAMENX` or `COPY`: an existing key with the new name is never replaced, and the app says so when the name is taken. `D` on a namespace row deletes every key under it: the keys are found with `SCAN`, a card shows how many and a few of their names, and they are removed in batches with `UNLINK` (`DEL` on servers older than 4.0). If a namespace has more keys than one scan loads, run it again for the rest.
 
-Press `n` on a Redis connection to open its console, a `.redis` file that starts with `# @conn <id>`. Write one command per line and press the send key on a line (or select several lines). Read commands run at once; other commands show a card first. Commands that can wipe data, stop the server or run code (`FLUSHALL`, `FLUSHDB`, `CONFIG SET`, `SHUTDOWN`, `DEBUG`, `MODULE`, `EVAL`, `FCALL`, `MIGRATE`, `REPLICAOF`, `ACL SETUSER`, …) show a strong warning card. `MONITOR`, `SUBSCRIBE`, `SELECT` and `MULTI` are not sent. `KEYS pattern` runs as `SCAN` with a note. An `AUTH` line is masked in the card, the page and the history. Console runs go to the same history as SQL.
+Press `n` on a Redis connection to open its console, a `.redis` file that starts with `# @conn <id>`. Write one command per line and press the send key on a line (or select several lines). Read commands run at once; other commands show a card first. Commands that can wipe data, stop the server or run code (`FLUSHALL`, `FLUSHDB`, `CONFIG SET`, `SHUTDOWN`, `DEBUG`, `MODULE LOAD`, `EVAL`, `FCALL`, `MIGRATE`, `REPLICAOF`, `ACL SETUSER`, …) show a strong warning card. `MONITOR`, `SUBSCRIBE`, `SELECT` and `MULTI` are not sent. `KEYS pattern` runs as `SCAN` with a note. An `AUTH` line is masked in the card, the page and the history. Console runs go to the same history as SQL.
 
 **Databases: Show Server Info** on a Redis connection runs `INFO` and shows it as a section, field and value grid (server, clients, memory, persistence, stats, replication, keyspace). **Databases: Show Sessions and Locks** runs `CLIENT LIST`. **Databases: Show Redis Slow Log** runs `SLOWLOG GET 128` and shows each slow command with its id, time, duration in µs, client and name. Typing `INFO` or `SLOWLOG GET` in the console gives the same grids.
 ## Servers over HTTP
@@ -499,6 +595,53 @@ Some servers are not SQL databases. Termocode talks to them over their own HTTP 
 - **InfluxDB** (`"driver": "influxdb"`, `influxdb://`): port 8086. InfluxQL goes to `/query` on the connection's `database`: `SELECT`, `SHOW` and `EXPLAIN` use `GET`, which the server refuses for anything else; other statements use `POST` after a card. Flux (a query with `|>`, or that starts with `from(` or `import`) goes to `/api/v2/query` and needs `"params": {"org": "…"}`; a Flux query that calls `to()`, `wideTo()`, `sql.to()` or `http.post()` asks first. A user signs in with basic auth; a password without a user is a v2 API token. The tree lists databases, measurements, and a measurement's tags and fields.
 - **Prometheus** (`"driver": "prometheus"`, `prometheus://`): a PromQL console, port 9090. Every request is a `GET`, so it can only read. An expression is an instant query: one row per sample, a column per label. `range 1h [30s] EXPR` asks for the last hour (step 30s, or 1/60 of the window) and draws a terminal chart over a table of each series' last, min and max value. The tree lists the metric names, and a metric's labels as columns.
 - **Neo4j** (`"driver": "neo4j"`, `neo4j://`, `neo4j+s://`, `bolt://`): a Cypher console over the HTTP API, port 7474 (7473 with TLS; a bolt port 7687 in a URL is moved to it), database `neo4j` unless the connection names another. Rows show as a grid; the nodes and relationships of the answer are also drawn as text under it, such as `(1:Person {name: Ann})` and `(1)-[:KNOWS]->(2)`, and the change counters show as a note. The tree lists the databases, their labels (`:Person`) and relationship types (`[:KNOWS]`), and the property keys of the first 50 nodes or relationships. Reads run at once; `CREATE`, `MERGE`, `SET`, `DELETE` and the like ask first. The AI's read-only session sends `access-mode: READ`, so the server refuses writes.
+
+More Redis commands in the palette (they work on the selected connection, or on the open or selected key):
+
+- **Databases: Search Redis Keys by Pattern…** asks for a pattern (`user:*`, `session:??`, `[ab]*`) and lists the matching keys. The server does the matching with `SCAN MATCH`; `KEYS` is never sent.
+- **Databases: New Redis Key…** asks for the type (string, hash, list, set, zset, stream or json), the key name and the first value: a string, `field value` pairs for a hash or a stream, one item for a list or a set, `score member` for a sorted set, or a JSON document. termocode first checks that the name is free, then shows the card with the exact command (`SET … NX`, `HSET`, `RPUSH`, `SADD`, `ZADD … NX`, `XADD … *`, `JSON.SET … $ … NX`). Cancel is the default. An existing key is never changed.
+- **Databases: Read RedisJSON Path…** runs `JSON.GET key path` on a RedisJSON key (`$` is the whole document; `$.items[0].name` reads one value).
+- **Databases: Show Redis Key Module Info** shows the module info of the key: `TS.INFO` (TimeSeries), `BF.INFO` (Bloom), `CF.INFO` (Cuckoo), `TOPK.INFO`, `CMS.INFO`, the JSON document, or the consumer groups of a stream. **Databases: Show Redis Stream Groups** runs `XINFO GROUPS` on a stream key.
+- **Databases: Show Redis Modules** runs `MODULE LIST`; **Databases: Show RediSearch Indexes** runs `FT._LIST`. `FT.INFO`, `FT.SEARCH`, `TS.RANGE`, `BF.EXISTS` and the other module reads run at once in the console; module writes show a card.
+- **Databases: Show Redis Memory Stats** runs `MEMORY STATS` as a field and value grid.
+- **Databases: Show Redis Pub/Sub Channels** runs `PUBSUB CHANNELS`. **Databases: Listen to Redis Channels…** asks for a channel pattern and collects the messages for 10 seconds (at most 200) on a connection of its own, then shows them with their channel. The console never sends `SUBSCRIBE`.
+- **Databases: Export Redis Keys…** asks for a key pattern and a file (`redis-export-<connection>.json` in the workspace). It finds the keys with `SCAN` (at most `db_redis_max_keys`), shows a card with the count and the file first (Cancel is the default; **Replace** when the file exists), and writes one JSON entry per key with its type, TTL in milliseconds and value. The file is private to you (0600) and holds the values in plain text. Module types other than JSON are listed without a value.
+
+`XINFO GROUPS`, `XINFO CONSUMERS`, `XINFO STREAM`, `MODULE LIST`, `MEMORY STATS`, `PUBSUB NUMSUB`, `CLUSTER NODES` and the module `INFO` commands give readable grids in the console too.
+
+## MongoDB
+
+A MongoDB connection (`"driver": "mongodb"`) takes a host and port (27017 by default), an optional user, a database and a password from the secret store. A user signs in against `admin` unless `"params": {"authSource": "…"}` says otherwise. For a replica set, Atlas or other options, paste a `mongodb://` or `mongodb+srv://` URL: it is saved as it is, but the password moves to the secret store. `"tls": true` or `"ssl"` turn on TLS. An SSH tunnel works with one server's host and port (not with `mongodb+srv://`).
+
+Expanding a connection lists its databases, then their collections and views. A collection shows the fields of its first 20 documents with the type seen first (`objectId`, `string`, `int`, `object`, …), its indexes, and, as its definition, the `createIndex` lines that build them.
+
+Press `n` to open the console. It is a SQL console file that holds shell commands, one per statement, `;` between them:
+
+- Reads: `db.users.find({age: {$gt: 30}}, {name: 1}).sort({name: -1}).skip(10).limit(20)`, `findOne`, `aggregate([...])`, `countDocuments`, `estimatedDocumentCount`, `distinct("city")`, `getIndexes()`, `stats()`, `show collections`. `use logs` switches the database for the next commands.
+- Writes: `insertOne`, `insertMany`, `updateOne`, `updateMany`, `replaceOne`, `deleteOne`, `deleteMany`, `findOneAndUpdate`, `findOneAndReplace`, `findOneAndDelete`. Index and collection changes: `createIndex`, `createIndexes`, `dropIndex`, `dropIndexes`, `drop`.
+- Values: relaxed JSON (bare keys, single quotes), plus `ObjectId("…")` and `ISODate("…")`.
+
+Reads run at once. A write, an index change or an `aggregate` with `$out` or `$merge` shows a card first, like SQL. A read-only connection and the AI tools send reads only. Add `.explain()` (or `.explain("executionStats")`) to see the plan as JSON; the server plans an explained write but never applies it.
+
+Documents show as rows: `_id` first, then every top-level field in the order first seen; nested objects and arrays as compact JSON, an ObjectId as `ObjectId("…")` so you can paste it into a filter. One batch is read (up to `db_max_rows` documents, or your `limit`); when the server has more, the page says so and the cursor is closed. `bulkWrite` and `renameCollection` are not supported in the console. There are no SQL transactions: each command commits on its own.
+
+## Firebird, Vertica, Exasol and SAP HANA
+
+These four engines use the SQL console, result pages, tree, history and exports like PostgreSQL. Their drivers are built in (pure Go). IBM Db2 is not available: its only driver needs C libraries.
+
+| Engine | `driver` | Port | `database` means | URL |
+| --- | --- | --- | --- | --- |
+| Firebird 3+ | `firebird` | 3050 | a path on the server (`/var/lib/firebird/data/app.fdb`) or an alias (`employee`) | `firebird://SYSDBA@host/employee` |
+| Vertica | `vertica` | 5433 | the database | `vertica://dbadmin@host:5433/vmart` |
+| Exasol | `exasol` | 8563 | the schema to open (optional) | `exasol://sys@host:8563/RETAIL` |
+| SAP HANA | `hana` | 39017 | the default schema (optional); the tenant is `params.databaseName` | `hdb://SYSTEM@host:39017?databaseName=HXE` |
+
+- **Tree.** Schemas, tables and views, columns, primary keys, foreign keys, and (where the engine has them) indexes, routines, sequences and triggers. Firebird has no schemas, so it shows one schema named `default`. Firebird, Exasol and SAP HANA have no SQL function for a table's CREATE statement: termocode builds a simple one from the columns. Vertica asks the server (`EXPORT_TABLES`).
+- **EXPLAIN.** Only Vertica: `EXPLAIN`, and ANALYZE runs `PROFILE` (a write is rolled back). The other three say they have no EXPLAIN statement.
+- **TLS.** Vertica and SAP HANA use the `ssl` block like PostgreSQL. Exasol encrypts by default; `ssl.mode` `disable` turns it off, `require` does not check the server, and a pinned certificate goes in `params.certificatefingerprint` (a CA file is not supported). Firebird has no TLS: its `wire_crypt` (on by default since Firebird 3) encrypts the link, and an `ssl` block is refused.
+- **SSH tunnels** work for all four. For Firebird, Vertica and Exasol, termocode opens a local port on `127.0.0.1` that only forwards to the tunnel. With Exasol's server check on, use `params.certificatefingerprint` over a tunnel, because the host name is `127.0.0.1`.
+- **Options.** `options.schema` sets the search path (Vertica), `OPEN SCHEMA` (Exasol) or `SET SCHEMA` (SAP HANA); `options.timeZone` works on Vertica, Exasol and Firebird 4+; `options.isolation` works on Vertica. The init SQL runs on every new connection.
+- **Read-only.** A read-only session opens a read-only transaction on Firebird, Vertica and SAP HANA. Exasol has none, so its read-only session only checks each statement before it runs, and the AI tools do not work on Exasol connections.
 
 ## AI tools and their rules
 
@@ -528,6 +671,8 @@ The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_que
 ## Troubleshooting
 
 **`sqlite3` is not installed.** The view shows an install command for your system, for example `sudo apt install sqlite3` or `brew install sqlite`. Press `y` on that row to copy it. Then press `R`.
+
+**`sqlcipher` is not installed.** The message shows an install command, for example `sudo apt install sqlcipher` or `brew install sqlcipher`.
 
 **`sqlite3` is too old.** The message says `version 3.33 or newer is needed`. The AI tools need 3.37 or newer. Update `sqlite3` and press `R`.
 

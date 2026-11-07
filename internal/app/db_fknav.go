@@ -124,7 +124,7 @@ func dbCanonFKs(cs dbclient.CanonSchema) map[string][]dbclient.SchemaForeignKey 
 				name = fmt.Sprintf("%s#%d", t.Name, n)
 			}
 			for i, col := range c.Columns {
-				out[t.Name] = append(out[t.Name], dbclient.SchemaForeignKey{Name: name, Column: col, RefTable: c.RefTable, RefColumn: c.RefColumns[i]})
+				out[t.Name] = append(out[t.Name], dbclient.SchemaForeignKey{Name: name, Column: col, RefTable: c.RefTable, RefColumn: c.RefColumns[i], Virtual: c.Virtual})
 			}
 		}
 	}
@@ -311,8 +311,11 @@ func dbFKRefChoices(driver, table string, all map[string][]dbclient.SchemaForeig
 		if err != nil {
 			continue
 		}
-		out = append(out, dbFKRef{table: in.Table, where: where,
-			label: sanitizeDBText(in.Table) + " (" + sanitizeDBText(strings.Join(cols, ", ")) + " → " + sanitizeDBText(strings.Join(refs, ", ")) + ")"})
+		label := sanitizeDBText(in.Table) + " (" + sanitizeDBText(strings.Join(cols, ", ")) + " → " + sanitizeDBText(strings.Join(refs, ", ")) + ")"
+		if in.Key[0].Virtual {
+			label += " · virtual" // from the virtual objects file (DBX-31)
+		}
+		out = append(out, dbFKRef{table: in.Table, where: where, label: label})
 	}
 	return out
 }
@@ -324,7 +327,8 @@ func (m *Model) onDBFKReferencing(gen uint64, from *dbTableView, orig int, cells
 	if err != nil {
 		return m.pushToastDetail(toast.Errr, "Could not read the foreign keys", dbclient.Redact(sanitizeDBText(err.Error())))
 	}
-	refs := dbFKRefChoices(from.driver, from.name, dbCanonFKs(cs), cells)
+	v, _ := m.databases.dbVirtual(from.conn) // virtual keys point here too (db_virtual.go)
+	refs := dbFKRefChoices(from.driver, from.name, dbCanonFKs(v.WithForeignKeys(cs)), cells)
 	if len(refs) == 0 {
 		return m.pushToastDetail(toast.Info, "No table points here", "No foreign key of this schema references "+from.label()+".")
 	}

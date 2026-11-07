@@ -93,6 +93,7 @@ type dbState struct {
 	addLibSQL           bool // the add flow started from the libSQL row: only libsql:// URLs
 	menuRow             dbTreeRow
 	pendingDisconnectID string
+	sqlRunPending       string                  // DBX-45: the saved run the card asks about
 	closeSessionKey     string                  // the session Databases: Sessions… asks to close
 	savepointKey        string                  // the session Set / Roll Back to Savepoint acts on
 	savepointName       string                  // the savepoint the rollback card is for
@@ -118,6 +119,7 @@ type dbState struct {
 	cols                map[string]map[string][]string        // connection -> lower-case table -> columns (completion)
 	full                map[string]*dbclient.CompletionSchema // connection -> whole schema loaded in the background (DBX-3)
 	fullLoad            map[string]bool                       // connection -> a background schema load is running or done
+	ddl                 map[string]*dbclient.CompletionSchema // connection -> schema read from a DDL folder (DBX-46); kept on reconnect
 	manual              map[string]bool                       // connection -> manual transaction mode
 	txModeApplied       map[string]bool                       // connections whose saved txMode was applied (DBX-28)
 	txs                 map[string]*dbTxState                 // session key -> its transaction
@@ -125,6 +127,7 @@ type dbState struct {
 	txCardConn          string                                // the uncommitted-changes card
 	txCardAfter         func(*Model) tea.Cmd
 	tunnels             map[string]*dbclient.Tunnel // connection -> its SSH tunnel (db_ssh.go)
+	offline             map[string]time.Time        // connection -> cache time of the offline tree (DBX-29)
 	pendingSSH          dbSSHSecrets                // the SSH secrets of the connection being added
 	hostAsk             *dbHostAsk                  // the unknown-host card
 	secretAsk           *dbSecretAsk                // the SSH password / passphrase prompt
@@ -147,6 +150,17 @@ type dbState struct {
 	discoverDone        bool
 	discovered          []containers.Container // the container list it read
 	discoveredPorts     []int                  // local ports that answered
+	uniques             map[string][][]string  // table path -> unique index columns (JOIN hints, DBX-30)
+	docGen              uint64                 // the open quick doc card; late answers for older ones drop
+	docTitle            string                 // the tree doc card the first rows join
+	docBody             []string
+
+	// Several sessions per connection (db_sessions_multi.go, DBX-40).
+	consoleSess  map[string]string // .sql file -> the extra session it runs on
+	sessionSeq   map[string]int    // connection -> the last extra session number given
+	sessPickFile string            // the console the session picker is for
+	sessPickConn string
+	tempHinted   map[string]bool // session key -> the temp-table hint was shown
 }
 
 type dbRenderCache struct {
@@ -203,7 +217,11 @@ func (s *dbState) rows() []dbTreeRow {
 	}
 	for _, folder := range dbclient.Folders(s.conns) {
 		at := len(out)
-		out = append(out, dbTreeRow{kind: dbNodeFolderHeader, path: "\x00folder/" + folder, name: folder})
+		head := dbFolderPath(folder)
+		out = append(out, dbTreeRow{kind: dbNodeFolderHeader, path: head, name: folder, selectable: true})
+		if s.folded[head] && filter == "" {
+			continue // folded: the heading only (a filter still shows matches)
+		}
 		for _, c := range s.conns {
 			if c.Folder == folder {
 				walk(c.ID, 1)
@@ -277,6 +295,9 @@ func (m *Model) ensureDatabasesLoaded() {
 		for _, path := range stored.DBHiddenSuggestions {
 			m.databases.hidden[path] = true
 		}
+		for _, folder := range stored.DBFoldedFolders {
+			m.databases.folded[dbFolderPath(folder)] = true
+		}
 	}
 }
 
@@ -288,6 +309,12 @@ func (m *Model) databasesSaveSession() {
 	sess.DBFilter = m.databases.filter
 	sess.DBExpanded = nil
 	sess.DBHiddenSuggestions = nil
+	sess.DBFoldedFolders = nil
+	for _, folder := range dbclient.Folders(m.databases.conns) {
+		if m.databases.folded[dbFolderPath(folder)] {
+			sess.DBFoldedFolders = append(sess.DBFoldedFolders, folder)
+		}
+	}
 	for path, n := range m.databases.nodes {
 		if len(n.children) > 0 && !m.databases.folded[path] {
 			sess.DBExpanded = append(sess.DBExpanded, path)
@@ -386,8 +413,11 @@ func dbConnName(c dbclient.Conn) string {
 	return c.ID
 }
 func dbConnDetail(c dbclient.Conn) string {
-	if c.Driver == "sqlite" {
-		return "sqlite"
+	if dbclient.IsSQLCipher(c) {
+		return "sqlcipher"
+	}
+	if c.Driver == "sqlite" || c.Driver == "duckdb" {
+		return c.Driver
 	}
 	d := c.Driver
 	if _, ok := dbclient.PresetByID(c.Preset); ok {
@@ -659,6 +689,16 @@ var dbCassandraSessionFactory = func(ctx context.Context, c dbclient.Conn, passw
 	return sess, nil
 }
 
+// dbMongoSessionFactory opens a MongoDB session (DBX-68; replaceable for
+// tests, which never reach a real server).
+var dbMongoSessionFactory = func(ctx context.Context, c dbclient.Conn, password string) (dbclient.Session, error) {
+	sess, err := dbclient.NewMongoSession(ctx, c, password)
+	if err != nil {
+		return nil, err
+	}
+	return sess, nil
+}
+
 // A disconnect invalidates only this connection's outstanding commands.
 // Other connections can finish loading without having their results discarded.
 func (s *dbState) connectionCommand(id string, cmd tea.Cmd) tea.Cmd {
@@ -691,7 +731,7 @@ func dbConnectCommand(c dbclient.Conn, root, password string, generation uint64,
 func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, sec dbSSHSecrets) (dbclient.Session, *dbclient.Tunnel, error) {
 	c = dbResolveConnPaths(c, root, dbSSHHome())
 	var tun *dbclient.Tunnel
-	if c.SSH != nil && c.Driver != "sqlite" {
+	if c.SSH != nil && c.Driver != "sqlite" && c.Driver != "duckdb" {
 		var err error
 		tun, err = dbOpenTunnel(ctx, c, sec)
 		if err != nil {
@@ -716,27 +756,46 @@ func dbOpenDriverSession(ctx context.Context, c dbclient.Conn, root, password st
 	var sess dbclient.Session
 	var err error
 	switch c.Driver {
-	case "postgres", "mysql":
+	case "postgres", "mysql", "sqlserver", "oracle": // SQL Server through go-mssqldb (DBX-62), Oracle through go-ora (DBX-63)
 		sess, err = dbSQLSessionFactory(ctx, c, password)
 	case "sqlite":
 		if !filepath.IsAbs(c.Path) {
 			c.Path = filepath.Join(root, c.Path)
 		}
-		sess, err = dbclient.NewSQLiteSession(ctx, c)
+		if dbclient.IsSQLCipher(c) {
+			// An encrypted file (DBX-64): the password is its key.
+			sess, err = dbclient.NewSQLCipherSession(ctx, c, password)
+		} else {
+			sess, err = dbclient.NewSQLiteSession(ctx, c)
+		}
 	case "redis":
 		sess, err = dbRedisSessionFactory(ctx, c, password)
 	case "clickhouse":
 		sess, err = dbclient.NewClickHouseSession(ctx, c, password)
 	case "cassandra":
 		sess, err = dbCassandraSessionFactory(ctx, c, password)
+	case "mongodb":
+		sess, err = dbMongoSessionFactory(ctx, c, password)
 	case "libsql":
 		// A remote libSQL server (DBX-64): the password is its token.
 		sess, err = dbclient.NewLibSQLSession(c, password)
+	case "duckdb":
+		// The duckdb client on a local file (DBX-65), like sqlite3.
+		if !filepath.IsAbs(c.Path) {
+			c.Path = filepath.Join(root, c.Path)
+		}
+		sess, err = dbclient.NewDuckDBSession(ctx, c)
+	case "trino", "presto":
+		// The coordinator's REST protocol (DBX-65); Database is the catalog.
+		sess, err = dbclient.NewTrinoSession(ctx, c, password)
 	default:
 		if dbclient.IsHTTPEngine(c.Driver) {
 			// Couchbase, search, time-series, graph and key-value
 			// servers over their own HTTP API (DBX-68..71).
 			sess, err = dbclient.OpenHTTPEngine(c, password)
+		} else if dbclient.IsExtraSQL(c.Driver) {
+			// Firebird, Vertica, Exasol, SAP HANA run on the SQL session (DBX-71).
+			sess, err = dbSQLSessionFactory(ctx, c, password)
 		} else {
 			err = os.ErrInvalid
 		}
@@ -785,7 +844,7 @@ func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64,
 		defer cancel()
 		start := time.Now()
 		var err error
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && !dbclient.IsHTTPEngine(c.Driver) {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && c.Driver != "sqlserver" && c.Driver != "duckdb" && c.Driver != "trino" && c.Driver != "presto" && c.Driver != "mongodb" && !dbclient.IsHTTPEngine(c.Driver) && !dbclient.IsExtraSQL(c.Driver) {
 			err = fmt.Errorf("this connection type is not available yet")
 		}
 		var sess dbclient.Session
@@ -937,6 +996,13 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 			s.nodes[child] = dbNode{kind: dbNodeDetail, name: "Key · " + key, path: child, conn: n.conn}
 			n.children = append(n.children, child)
 		}
+		var uniques [][]string
+		for _, idx := range result.Indexes {
+			if idx.Unique && len(idx.Columns) > 0 {
+				uniques = append(uniques, idx.Columns)
+			}
+		}
+		s.setUniqueIndexes(path, uniques)
 		for _, idx := range result.Indexes {
 			child := path + "/index/" + idx.Name
 			s.nodes[child] = dbNode{kind: dbNodeDetail, name: "Index · " + idx.Name, path: child, conn: n.conn}
@@ -1021,6 +1087,21 @@ func (s *dbState) addObjects(path, conn string, r dbclient.IntrospectionResult) 
 		s.nodes[child] = dbNode{kind: dbNodeSequence, name: name, path: child, conn: conn}
 		appendDBChild(s.nodes, gpath, child)
 	}
+	// Oracle PL/SQL packages (DBX-63): a group only when there are some;
+	// a package is a routine row (Show DDL reads its spec and body).
+	for _, name := range r.Packages {
+		if !opts.ShowObject(name) {
+			continue
+		}
+		gpath := path + "/Packages"
+		if _, ok := s.nodes[gpath]; !ok {
+			s.nodes[gpath] = dbNode{kind: dbNodeGroup, name: "Packages", path: gpath, conn: conn, loaded: true}
+			appendDBChild(s.nodes, path, gpath)
+		}
+		child := gpath + "/" + name
+		s.nodes[child] = dbNode{kind: dbNodeRoutine, name: name, path: child, conn: conn}
+		appendDBChild(s.nodes, gpath, child)
+	}
 	// Triggers and Extensions get a group only when there are some.
 	for _, g := range []struct {
 		name  string
@@ -1049,4 +1130,27 @@ func sortedDBConnIDs(nodes map[string]dbNode) []string {
 	}
 	sort.Strings(ids)
 	return ids
+}
+
+// dbFolderPath is the tree path of a connection folder heading (DBX-21);
+// the NUL keeps it apart from every node path.
+func dbFolderPath(folder string) string { return "\x00folder/" + folder }
+
+// folderKey handles a key on a folder heading (DBX-21): left folds, right
+// unfolds, Enter and Space toggle. Moving, adding, refreshing, the history
+// and help fall through; a key meant for a connection does nothing here.
+// It reports whether the key is done.
+func (s *dbState) folderKey(key, path string) bool {
+	switch key {
+	case "left", "h":
+		s.folded[path] = true
+	case "right", "l":
+		s.folded[path] = false
+	case "enter", " ":
+		s.folded[path] = !s.folded[path]
+	case "up", "k", "down", "j", "home", "g", "end", "G", "H", "a", "e", "R", "?", "esc":
+		return false
+	}
+	s.touch()
+	return true
 }

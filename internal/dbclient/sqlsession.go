@@ -50,11 +50,17 @@ func NewSQLSession(ctx context.Context, conn Conn, password string) (*SQLSession
 		dialect = PostgresDialect{}
 	case "mysql":
 		dialect = MySQLDialect{}
+	case "sqlserver":
+		dialect = SQLServerDialect{} // DBX-62: go-mssqldb
+	case "oracle":
+		dialect = OracleDialect{}
 	default:
-		if err := DriverMissing(driver); err != nil {
-			return nil, err
+		if dialect = extraSQLDialect(driver); dialect == nil { // DBX-71
+			if err := DriverMissing(driver); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 		}
-		return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 	}
 	db, release, err := openSQLDB(conn, password)
 	if err != nil {
@@ -109,6 +115,9 @@ func newSQLSession(db *sql.DB, dialect Dialect, name string, conn Conn, readonly
 // registration; call it after db.Close.
 func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 	noop := func() {}
+	if IsExtraSQL(conn.Driver) {
+		return openExtraSQLDB(conn, password) // extra_sql.go (DBX-71)
+	}
 	switch normDriver(conn.Driver) {
 	case "postgres":
 		cfg, err := pgx.ParseConfig(pgDSN(conn, password))
@@ -203,6 +212,21 @@ func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 			return sql.OpenDB(startSQLConnector{Connector: connector, stmts: stmts}), release, nil
 		}
 		return sql.OpenDB(connector), release, nil
+	case "sqlserver":
+		connector, err := sqlServerConnector(conn, password) // mssql_conn.go
+		if err != nil {
+			return nil, noop, err
+		}
+		return sql.OpenDB(connector), noop, nil
+	case "oracle":
+		connector, err := oracleConnector(conn, password)
+		if err != nil {
+			return nil, noop, fmt.Errorf("invalid Oracle connection settings: %s", Redact(err.Error()))
+		}
+		if stmts := connStartSQL(conn); len(stmts) > 0 {
+			return sql.OpenDB(startSQLConnector{Connector: connector, stmts: stmts}), noop, nil
+		}
+		return sql.OpenDB(connector), noop, nil
 	default:
 		return nil, noop, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 	}
@@ -289,6 +313,17 @@ func (s *SQLSession) ReadOnlySession() (Session, error) {
 }
 
 func (s *SQLSession) Run(ctx context.Context, statement string, opts RunOptions) (result Result) {
+	if s.name == "sqlserver" {
+		if stmt, analyze, ok := sqlServerPlanTarget(statement); ok {
+			return s.runSQLServerPlan(ctx, stmt, analyze) // mssql_conn.go
+		}
+		if q, ok := sqlServerSavepoint(statement); ok {
+			if q == "" {
+				return Result{}
+			}
+			statement = q
+		}
+	}
 	start := time.Now()
 	defer func() { result.Elapsed = time.Since(start) }()
 	_, statements := Classify(statement, s.name)
@@ -323,6 +358,9 @@ func (s *SQLSession) Run(ctx context.Context, statement string, opts RunOptions)
 // Explain runs an explain form and guarantees that ANALYZE side effects are
 // rolled back when the analyzed statement is not read-only.
 func (s *SQLSession) Explain(ctx context.Context, statement string, analyze bool) Result {
+	if s.dialect.Explain(statement, analyze) == "" {
+		return Result{Err: errNoExplain(s.conn.EngineLabel())} // DBX-71: no SQL form
+	}
 	if p, ok := s.conn.PGPreset(); analyze && ok && p.Quirks.NoExplainAnalyze {
 		analyze = false // DBX-60: Redshift has no EXPLAIN ANALYZE
 	}
@@ -400,6 +438,20 @@ func (s *SQLSession) runOne(ctx context.Context, query string, kind Kind, maxRow
 			if _, err = conn.ExecContext(ctx, timeoutSetting); err == nil {
 				_, err = conn.ExecContext(ctx, "START TRANSACTION READ ONLY")
 			}
+		} else if s.name == "sqlserver" {
+			// T-SQL has no read-only transaction or statement timeout: the
+			// classifier refuses writes, the ROLLBACK below undoes the rest
+			// and a lock wait stops after 30 s.
+			_, err = conn.ExecContext(ctx, s.dialect.ReadOnlyBegin())
+			if err == nil {
+				_, err = conn.ExecContext(ctx, "SET LOCK_TIMEOUT 30000")
+			}
+		} else if IsExtraSQL(s.name) {
+			// DBX-71: the engine's own read-only begin, no PostgreSQL
+			// statement_timeout (Exasol has no read-only transaction).
+			if begin := s.dialect.ReadOnlyBegin(); begin != "" {
+				_, err = conn.ExecContext(ctx, begin)
+			}
 		} else {
 			_, err = conn.ExecContext(ctx, s.dialect.ReadOnlyBegin())
 			if err == nil {
@@ -466,6 +518,11 @@ func (s *SQLSession) runOne(ctx context.Context, query string, kind Kind, maxRow
 					typ = out.Columns[i].Type
 				}
 				row[i] = sqlCell(v, typ)
+				if s.name == "sqlserver" {
+					if c, ok := sqlServerCell(v, typ); ok {
+						row[i] = c
+					}
+				}
 				if row[i].Kind == "binary" && !containsString(out.Notices, "Binary values are shown as hexadecimal.") {
 					out.Notices = append(out.Notices, "Binary values are shown as hexadecimal.")
 				}
@@ -585,6 +642,8 @@ func queryReturnsRows(query, dialect string) bool {
 		return true
 	case "ANALYZE":
 		return len(words) > 1 && (words[1] == "SELECT" || words[1] == "WITH")
+	case "EXEC", "EXECUTE":
+		return normDriver(dialect) == "sqlserver" // a procedure may send rows
 	}
 	return false
 }
@@ -725,9 +784,9 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 	}
 	result := IntrospectionResult{}
 	if req.Object != "" && req.Schema == "" {
-		currentSchema := "SELECT current_schema()"
-		if normDriver(s.name) == "mysql" {
-			currentSchema = "SELECT DATABASE()"
+		currentSchema := currentSchemaQuery(s.name)
+		if q, ok := s.dialect.(currentSchemaQuerier); ok {
+			currentSchema = q.CurrentSchemaQuery() // DBX-71
 		}
 		if err := s.readCatalog(ctx, currentSchema, &result.Schemas); err != nil {
 			return result, err
@@ -769,7 +828,7 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 				dst = &result.Sequences
 			}
 			args := []any(nil)
-			if queries[key] != "" && (strings.Contains(queries[key], "$1") || strings.Contains(queries[key], "?")) {
+			if catalogTakesSchema(queries[key]) {
 				args = []any{req.Schema}
 			}
 			if err := s.readCatalog(ctx, queries[key], dst, args...); err != nil {
@@ -785,9 +844,37 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 		if s.readCatalog(ctx, queries["extensions"], &ex, req.Schema) == nil {
 			result.Extensions = ex
 		}
+		var pk []string
+		if s.readCatalog(ctx, queries["packages"], &pk, req.Schema) == nil {
+			result.Packages = pk // Oracle PL/SQL packages (DBX-63)
+		}
 		return result, nil
 	}
 	return s.introspectObject(ctx, req, queries, result)
+}
+
+// currentSchemaQuery reads the session's schema.
+func currentSchemaQuery(driver string) string {
+	switch normDriver(driver) {
+	case "mysql":
+		return "SELECT DATABASE()"
+	case "oracle":
+		return "SELECT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') FROM dual"
+	case "sqlserver":
+		return "SELECT SCHEMA_NAME()"
+	}
+	return "SELECT current_schema()"
+}
+
+// catalogTakesSchema reports a catalog query that binds the schema
+// ($1, ?, :1 or @p1).
+func catalogTakesSchema(q string) bool {
+	for _, p := range []string{"$1", "?", ":1", "@p1"} {
+		if strings.Contains(q, p) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *SQLSession) readCatalog(ctx context.Context, query string, dst *[]string, args ...any) error {
@@ -883,6 +970,11 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 	ddlSQL, ddlArgs := s.dialect.DDL(req.Object)
 	ddl := s.Run(ctx, ddlSQL, RunOptions{Args: ddlArgs})
 	if ddl.Err != nil {
+		if _, ora := s.dialect.(OracleDialect); ora {
+			// DBMS_METADATA needs rights on another user's table: the
+			// columns and keys are still worth showing (DBX-63).
+			return out, nil
+		}
 		return out, ddl.Err
 	}
 	if len(ddl.Rows) > 0 && len(ddl.Rows[0]) > 0 {
@@ -899,7 +991,8 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 // names with a unit separator (a name may hold spaces and commas); the
 // other servers join with commas.
 func splitIndexColumns(list string, d Dialect) []string {
-	if _, pg := d.(PostgresDialect); pg {
+	switch d.(type) {
+	case PostgresDialect, OracleDialect: // LISTAGG(…, CHR(31))
 		return strings.Split(list, "\x1f")
 	}
 	return strings.FieldsFunc(list, func(r rune) bool { return r == ',' || r == ' ' })

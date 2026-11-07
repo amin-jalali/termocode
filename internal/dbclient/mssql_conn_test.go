@@ -45,8 +45,11 @@ func TestSQLServerDialectWired(t *testing.T) {
 	if _, ok := DialectFor("mssql").(SQLServerDialect); !ok {
 		t.Fatal("no SQL Server dialect")
 	}
-	if err := DriverMissing("sqlserver"); err == nil || !strings.Contains(err.Error(), "go-mssqldb") {
-		t.Fatalf("DriverMissing = %v", err)
+	if err := DriverMissing("sqlserver"); err != nil {
+		t.Fatalf("SQL Server driver reported missing: %v", err) // go-mssqldb is built in (DBX-62)
+	}
+	if err := DriverMissing("oracle"); err != nil {
+		t.Fatalf("oracle reported missing: %v", err) // go-ora is built in (DBX-63)
 	}
 	if DriverMissing("postgres") != nil {
 		t.Fatal("postgres reported missing")

@@ -1,0 +1,38 @@
+/* The phone's live board (MOB-18, MOBUX-9): column tabs with counts,
+   then the columns side by side, one screen wide each, swiped sideways
+   (scroll snap). A tile's state is a shape and a color. */
+
+.board { display: flex; flex-direction: column; gap: var(--s2); }
+.board.is-stale .board-cols { opacity: 0.6; }
+.board-stale { color: var(--amber); padding: 0 var(--s4); font-size: var(--fs-hint); }
+.board-cost { font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--text-2); }
+.board-tabs { display: flex; gap: var(--s2); overflow-x: auto; padding: 0 var(--s4); scrollbar-width: none; }
+.board-tab { flex: none; display: inline-flex; align-items: center; gap: var(--s1); min-height: var(--tap); padding: 0 var(--s3); border: 1px solid var(--border); border-radius: var(--r-pill); font-weight: 600; color: var(--text-2); }
+.board-tab.is-on { background: var(--sel); border-color: var(--focus); color: var(--text); }
+.board-tab.col-needs_you .board-n { color: var(--amber); }
+.board-n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.board-cols { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
+.board-col { flex: 0 0 100%; scroll-snap-align: start; padding: 0 var(--s4); min-width: 0; }
+.board-list { display: flex; flex-direction: column; gap: var(--s2); }
+.board-tile { border: 1px solid var(--border); border-inline-start: 3px solid var(--dim); border-radius: var(--r-card); background: var(--bg-panel); }
+.board-tile.st-wait { border-inline-start-color: var(--amber); }
+.board-tile.st-run { border-inline-start-color: var(--blue); }
+.board-tile.st-ok { border-inline-start-color: var(--green); }
+.board-tile.st-fail { border-inline-start-color: var(--red); }
+.board-open { display: flex; align-items: flex-start; gap: var(--s3); width: 100%; min-height: var(--tap); padding: var(--s3); text-align: start; }
+.board-open:hover { background: var(--bg-hover); }
+.board-shape { flex: none; width: 1.25em; text-align: center; font-weight: 700; color: var(--dim); }
+.st-wait .board-shape { color: var(--amber); }
+.st-run .board-shape { color: var(--blue); animation: breathe var(--t-pulse) ease-in-out infinite; }
+.st-ok .board-shape { color: var(--green); }
+.st-fail .board-shape { color: var(--red); }
+.board-text { display: flex; flex-direction: column; gap: var(--s1); min-width: 0; }
+.board-title { font-weight: 600; overflow-wrap: anywhere; }
+.board-meta { color: var(--text-2); font-family: var(--font-mono); font-size: var(--fs-hint); overflow-wrap: anywhere; }
+.board-why { color: var(--amber); font-size: var(--fs-hint); }
+.board-more { color: var(--muted); font-size: var(--fs-hint); padding: 0 var(--s4); }
+.board-failed { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); padding: 0 var(--s4); }
+@media (prefers-reduced-motion: reduce) {
+  .st-run .board-shape { animation: none; }
+  .board-cols { scroll-behavior: auto; }
+}

@@ -36,8 +36,8 @@ func TestDBTreeGroupsConnectionsByFolder(t *testing.T) {
 		t.Errorf("rows = %v", got)
 	}
 	for _, r := range s.rows() {
-		if r.kind == dbNodeFolderHeader && r.selectable {
-			t.Error("a folder heading is selectable")
+		if r.kind == dbNodeFolderHeader && !r.selectable {
+			t.Error("a folder heading is not selectable (it folds)")
 		}
 		if r.name == "p1" && r.depth != 1 {
 			t.Errorf("p1 depth = %d", r.depth)

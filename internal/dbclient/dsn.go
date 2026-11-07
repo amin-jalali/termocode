@@ -46,6 +46,16 @@ func ParseURL(raw string) (Conn, error) {
 		c.Driver = "redis"
 	case "sqlite", "file":
 		c.Driver = "sqlite"
+	case "sqlcipher":
+		// An encrypted SQLite file (DBX-64): the key is the connection
+		// password, asked for and kept as a secret, never in the URL.
+		c.Driver, c.Preset = "sqlite", SQLCipherPreset
+		u.Scheme = "sqlite"
+		raw = "sqlite" + strings.TrimPrefix(raw, "sqlcipher")
+		c.URL = ""
+	case "firebird", "firebirdsql", "vertica", "hdb", "hana", "saphana", "exasol", "exa":
+		// DBX-71: c.Driver is the engine id (normDriver); the database is
+		// the path (Firebird: a server path or alias; Exasol: the schema).
 	case "libsql":
 		// A remote libSQL server; the token moves from ?authToken= into
 		// the password (kept as a secret, never in the saved URL).
@@ -61,6 +71,36 @@ func ParseURL(raw string) (Conn, error) {
 		c.Host = u.Hostname()
 		if u.Port() != "" {
 			c.Port, _ = strconv.Atoi(u.Port())
+		}
+		return c, nil
+	case "mongodb", "mongodb+srv":
+		// MongoDB (DBX-68). The URL is kept (hosts, replica set and
+		// options stay in it) but without the password, which moves
+		// into the secret store. A +srv address has no port.
+		c.Driver = "mongodb"
+		if u.User != nil {
+			c.User = u.User.Username()
+			c.Password, _ = u.User.Password()
+			u.User = url.User(c.User)
+			if c.User == "" {
+				u.User = nil
+			}
+		}
+		c.URL = u.String()
+		c.Host = u.Hostname()
+		if u.Scheme == "mongodb" {
+			c.Port = 27017
+			if p := u.Port(); p != "" {
+				if c.Port, e = strconv.Atoi(p); e != nil {
+					return Conn{}, fmt.Errorf("invalid port")
+				}
+			}
+		}
+		c.Database = strings.TrimPrefix(u.Path, "/")
+		for k, v := range u.Query() {
+			if len(v) > 0 {
+				c.Params[k] = v[len(v)-1]
+			}
 		}
 		return c, nil
 	default:
@@ -125,6 +165,9 @@ func ParseURL(raw string) (Conn, error) {
 		return c, nil
 	}
 	c.Database = strings.TrimPrefix(u.Path, "/")
+	if c.Driver == "firebird" && strings.Contains(c.Database, "/") {
+		c.Database = u.Path // an absolute server path keeps its first slash
+	}
 	if c.Driver == "redis" && c.Database != "" {
 		c.DB, e = strconv.Atoi(c.Database)
 		if e != nil {

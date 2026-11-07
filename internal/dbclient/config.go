@@ -34,7 +34,7 @@ func kubeProblem(c Conn) string {
 		return ""
 	}
 	switch {
-	case normDriver(c.Driver) == "sqlite":
+	case normDriver(c.Driver) == "sqlite" || normDriver(c.Driver) == "duckdb":
 		return "kube port-forward needs a server database"
 	case c.SSH != nil:
 		return "use ssh or kube, not both"
@@ -79,7 +79,11 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		normFolderColor(c)
 		if c.Preset != "" {
 			c.Preset = strings.ToLower(c.Preset)
-			if mp, ok := PresetByID(c.Preset); ok { // MySQL family (DBX-61)
+			if c.Preset == SQLCipherPreset { // encrypted SQLite (DBX-64)
+				if c.Driver != "sqlite" {
+					c.Problem = "preset needs the sqlite driver"
+				}
+			} else if mp, ok := PresetByID(c.Preset); ok { // MySQL family (DBX-61)
 				if c.Driver != mp.Driver {
 					c.Problem = "preset needs the " + mp.Driver + " driver"
 				} else if c.Port == 0 {
@@ -111,7 +115,7 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		if source == SourceUser && (literalPassword(c.Password) || urlHasPassword(c.URL)) {
 			c.Warning = "literal password in user config; use the secret store"
 		}
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && !IsHTTPEngine(c.Driver) {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && c.Driver != "sqlserver" && c.Driver != "oracle" && c.Driver != "duckdb" && c.Driver != "trino" && c.Driver != "presto" && c.Driver != "mongodb" && !IsHTTPEngine(c.Driver) && !IsExtraSQL(c.Driver) {
 			c.Problem = "unsupported database driver"
 		}
 		if c.Options != nil && c.Problem == "" {
@@ -127,7 +131,7 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 				c.Problem = p
 			}
 		}
-		if c.Driver == "sqlite" && c.Path != "" {
+		if (c.Driver == "sqlite" || c.Driver == "duckdb") && c.Path != "" {
 			p := c.Path
 			if !filepath.IsAbs(p) {
 				p = filepath.Join(root, p)
@@ -136,7 +140,7 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 			base, _ := filepath.Abs(root)
 			rel, e := filepath.Rel(base, abs)
 			if e != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-				c.Problem = "sqlite path is outside the workspace"
+				c.Problem = c.Driver + " path is outside the workspace"
 			}
 		}
 	}
@@ -185,8 +189,25 @@ func Validate(c Conn) error {
 		return fmt.Errorf("invalid connection id")
 	}
 	driver := normDriver(c.Driver)
-	if driver != "postgres" && driver != "mysql" && driver != "sqlite" && driver != "redis" && driver != "clickhouse" && driver != "cassandra" && driver != "libsql" && !IsHTTPEngine(driver) {
+	if driver != "postgres" && driver != "mysql" && driver != "sqlite" && driver != "redis" && driver != "clickhouse" && driver != "cassandra" && driver != "libsql" && driver != "sqlserver" && driver != "oracle" && driver != "duckdb" && driver != "trino" && driver != "presto" && driver != "mongodb" && !IsHTTPEngine(driver) && !IsExtraSQL(driver) {
 		return fmt.Errorf("unsupported database driver")
+	}
+	if driver == "mongodb" {
+		// A MongoDB server: a host (port 27017 when left out) or a
+		// mongodb:// / mongodb+srv:// URL.
+		if c.Host == "" && c.URL == "" {
+			return fmt.Errorf("mongodb host or URL is required")
+		}
+		if c.Port < 0 || c.Port > 65535 {
+			return fmt.Errorf("invalid port")
+		}
+		if c.Source == SourceProject && (literalPassword(c.Password) || urlHasPassword(c.URL)) {
+			return fmt.Errorf("password must be a reference")
+		}
+		if p := kubeProblem(c); p != "" {
+			return fmt.Errorf("%s", p)
+		}
+		return nil
 	}
 	if driver == "libsql" {
 		// A remote libSQL server: a host (or URL) is enough, the port is
@@ -216,6 +237,9 @@ func Validate(c Conn) error {
 	if driver == "sqlite" && c.Path == "" {
 		return fmt.Errorf("sqlite path is required")
 	}
+	if driver == "duckdb" && c.Path == "" {
+		return fmt.Errorf("duckdb path is required")
+	}
 	if c.Options != nil {
 		if e := c.Options.Check(driver); e != nil {
 			return fmt.Errorf("invalid options: %v", e)
@@ -225,7 +249,7 @@ func Validate(c Conn) error {
 		return fmt.Errorf("%s", p)
 	}
 	socket := c.Options != nil && c.Options.Socket != ""
-	if c.Driver != "sqlite" && !socket && c.Kube == nil && (c.Host == "" || c.Port < 1 || c.Port > 65535) {
+	if c.Driver != "sqlite" && c.Driver != "duckdb" && !socket && c.Kube == nil && (c.Host == "" || c.Port < 1 || c.Port > 65535) {
 		return fmt.Errorf("host and valid port are required")
 	}
 	if c.Source == SourceProject && (literalPassword(c.Password) || urlHasPassword(c.URL)) {

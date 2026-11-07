@@ -64,9 +64,9 @@ func TestVirtualForeignKeysForMergesExplicitAndNameRules(t *testing.T) {
 	tables := []string{"orders", "users", "Products", "shops"}
 	got := v.ForeignKeysFor("ORDERS", cols, real, tables)
 	want := []SchemaForeignKey{
-		{Name: "virtual", Column: "buyer", RefTable: "users", RefColumn: "id", Virtual: true},
-		{Name: "virtual", Column: "user_id", RefTable: "users", RefColumn: "id", Virtual: true},
-		{Name: "virtual", Column: "product_id", RefTable: "Products", RefColumn: "id", Virtual: true},
+		{Name: "virtual:buyer", Column: "buyer", RefTable: "users", RefColumn: "id", Virtual: true},
+		{Name: "virtual:user_id", Column: "user_id", RefTable: "users", RefColumn: "id", Virtual: true},
+		{Name: "virtual:product_id", Column: "product_id", RefTable: "Products", RefColumn: "id", Virtual: true},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("ForeignKeysFor =\n%+v\nwant\n%+v", got, want)
@@ -99,5 +99,50 @@ func TestVirtualColumnsAndViews(t *testing.T) {
 	}
 	if _, ok := v.ViewSQL("nope"); ok {
 		t.Error("unknown view found")
+	}
+}
+
+// Each virtual FK is its own key: following one column must not pull in
+// the other virtual keys of the table.
+func TestVirtualForeignKeysAreOneKeyEach(t *testing.T) {
+	v, _, _ := ParseVirtualObjects([]byte(virtualSample), "postgres")
+	cols := []Column{{Name: "id"}, {Name: "buyer"}, {Name: "user_id"}}
+	fks := v.ForeignKeysFor("orders", cols, nil, []string{"orders", "users"})
+	key, ok := FKForColumn(fks, "buyer")
+	if !ok || len(key) != 1 || key[0].RefTable != "users" {
+		t.Fatalf("FKForColumn(buyer) = %+v, %v", key, ok)
+	}
+}
+
+// DBX-31: virtual FKs join the schema the ER diagram and gr read, as
+// FOREIGN KEY constraints marked Virtual; the input schema is not changed.
+func TestVirtualWithForeignKeysAddsCanonConstraints(t *testing.T) {
+	v, _, _ := ParseVirtualObjects([]byte(`{
+  "foreignKeys": [{"table": "orders", "column": "buyer", "refTable": "USERS", "refColumn": "id"}],
+  "nameRules": [{"suffix": "_id"}]
+}`), "postgres")
+	cs := CanonSchema{Tables: []CanonTable{
+		{Name: "users", Columns: []CanonColumn{{Name: "id"}}},
+		{Name: "shops", Columns: []CanonColumn{{Name: "id"}}},
+		{Name: "orders", Columns: []CanonColumn{{Name: "id"}, {Name: "buyer"}, {Name: "shop_id"}, {Name: "user_id"}},
+			Constraints: []CanonConstraint{{Kind: "FOREIGN KEY", Name: "fk_user", Columns: []string{"user_id"}, RefTable: "users", RefColumns: []string{"id"}}}},
+	}}
+	got := v.WithForeignKeys(cs)
+	if len(cs.Tables[2].Constraints) != 1 {
+		t.Fatalf("the input schema changed: %+v", cs.Tables[2].Constraints)
+	}
+	want := []CanonConstraint{
+		{Kind: "FOREIGN KEY", Name: "fk_user", Columns: []string{"user_id"}, RefTable: "users", RefColumns: []string{"id"}},
+		{Kind: "FOREIGN KEY", Name: "virtual:buyer", Columns: []string{"buyer"}, RefTable: "users", RefColumns: []string{"id"}, Virtual: true},
+		{Kind: "FOREIGN KEY", Name: "virtual:shop_id", Columns: []string{"shop_id"}, RefTable: "shops", RefColumns: []string{"id"}, Virtual: true},
+	}
+	if !reflect.DeepEqual(got.Tables[2].Constraints, want) {
+		t.Errorf("orders constraints =\n%+v\nwant\n%+v", got.Tables[2].Constraints, want)
+	}
+	if len(got.Tables[0].Constraints) != 0 {
+		t.Errorf("users got keys: %+v", got.Tables[0].Constraints)
+	}
+	if out := (VirtualObjects{}).WithForeignKeys(cs); !reflect.DeepEqual(out, cs) {
+		t.Errorf("no virtual objects must keep the schema")
 	}
 }

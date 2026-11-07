@@ -895,6 +895,8 @@ func webDBDefaultPort(driver string) int {
 		return 3306
 	case "redis":
 		return 6379
+	case "cassandra":
+		return 9042
 	}
 	return 0
 }
@@ -960,7 +962,11 @@ func (m *Model) webDBAdd(call *webCall) *webAsk {
 		line("Server", c.Host+":"+strconv.Itoa(c.Port))
 	}
 	line("User", c.User)
-	line("Database", c.Database)
+	if c.Driver == "cassandra" {
+		line("Keyspace", c.Database)
+	} else {
+		line("Database", c.Database)
+	}
 	if c.Driver == "redis" {
 		line("Database number", strconv.Itoa(c.DB))
 	}

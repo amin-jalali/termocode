@@ -783,6 +783,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind == promptKindDBEditCell {
 		return m.databaseSetCell(value, false), true
 	}
+	if cmd, ok := m.databaseLOBPrompt(m.promptKind, value); ok { // db_edit_lob.go
+		return cmd, true
+	}
 	if m.promptKind == promptKindDBGotoRow {
 		return m.databaseGotoRow(value), true
 	}

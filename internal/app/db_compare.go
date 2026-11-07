@@ -92,6 +92,17 @@ func dbDriverTitle(driver string) string {
 		return "MySQL"
 	case "sqlite":
 		return "SQLite"
+	case "oracle":
+		return "Oracle"
+	case "duckdb":
+		return "DuckDB"
+	case "trino":
+		return "Trino"
+	case "presto":
+		return "Presto"
+	}
+	if e, ok := dbclient.ExtraSQLEngineByID(driver); ok {
+		return e.Title // DBX-71
 	}
 	return driver
 }
@@ -119,6 +130,9 @@ func (m *Model) databaseCompareStart() tea.Cmd {
 		}
 		sort.Strings(keys)
 		for _, key := range keys {
+			if dbIsExtraSession(key) {
+				continue // a console's own session: the main one stands for it (DBX-40)
+			}
 			conn := key
 			if n, ok := s.nodes[key]; ok && n.conn != "" {
 				conn = n.conn
