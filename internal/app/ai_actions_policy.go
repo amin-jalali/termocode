@@ -939,6 +939,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"workflows_history_days":     aiConfirm(ai.ClassSettings),
 	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
 	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
+	"agent_os_sandbox":           aiNever("the OS sandbox around outside agents; only the user changes it"),
 
 	// Git blame (GITX-3..5)
 	"git_status_blame":            aiConfirm(ai.ClassSettings),

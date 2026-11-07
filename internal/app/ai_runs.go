@@ -400,7 +400,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				return "", nil, err
 			}
 			prompt := aiCLIPrompt(ctx, dir, sys, input+wts.othersNote(n.ID), handoff)
-			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir}, prompt, emit)
+			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir, OSSandbox: agentOSSandboxOn()}, prompt, emit)
 			return res.Text, res.Usage, err
 		},
 		Build: func(ctx context.Context, n agentdag.Node, input string) (*ai.Agent, []ai.Message, error) {
