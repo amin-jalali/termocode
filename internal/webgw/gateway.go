@@ -67,6 +67,9 @@ type RunConfig struct {
 	// RequireTOTP asks a paired device for a one-time code after its
 	// passkey (WEB-48); the UI checks it (web.totp_check).
 	RequireTOTP bool
+	// AppKeyLogin lets the Android app pair and sign in with its keystore
+	// key when passkeys fail in its WebView (web_app_key_login, MOB-27).
+	AppKeyLogin bool
 	// Tailnet, when set, is tailnet mode (WEB-31): still 127.0.0.1 only,
 	// reached from the user's tailnet through tailscale serve on
 	// https://<machine>.<tailnet>.ts.net/; Funnel is refused.
@@ -179,11 +182,11 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		if err != nil {
 			return 0, fmt.Errorf("passkeys: %w", err)
 		}
-		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: devices, Audit: audit, Now: now, Passkeys: pk,
+		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: devices, Audit: audit, Now: now, Passkeys: pk, AppKeys: cfg.AppKeyLogin,
 			Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) {
 				return askPair(ctx, ctlRef.Load(), a)
 			}})
-		login = NewLogin(LoginConfig{Tokens: tokens, Passkeys: pk, Audit: audit, Now: now, RequireTOTP: cfg.RequireTOTP,
+		login = NewLogin(LoginConfig{Tokens: tokens, Passkeys: pk, Audit: audit, Now: now, RequireTOTP: cfg.RequireTOTP, AppKeys: cfg.AppKeyLogin,
 			CheckTOTP: func(ctx context.Context, device, code string) error {
 				c := ctlRef.Load()
 				if c == nil {

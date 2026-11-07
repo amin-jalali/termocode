@@ -2919,6 +2919,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `terminal_skip_shell` | never | decides which keys reach the shell; a file-only list the user edits in config.json |
 | `theme` | confirm (settings) |   |
 | `update_check` | confirm (settings) |   |
+| `web_app_key_login` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_idle_minutes` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_listen` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_max_hours` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |

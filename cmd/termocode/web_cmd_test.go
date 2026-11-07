@@ -351,3 +351,18 @@ func TestWebGatewayDevicesDir(t *testing.T) {
 		t.Fatalf("ok %v devices %q: %s", ok, cfg.DevicesDir, errb.String())
 	}
 }
+
+// Spec (MOB-27): --app-key turns on app key sign-in; it is off without it.
+func TestWebGatewayAppKeyFlag(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	var errb bytes.Buffer
+	cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/cfg/web"}, &errb)
+	if !ok || cfg.AppKeyLogin {
+		t.Fatalf("ok %v app key %v: %s", ok, cfg.AppKeyLogin, errb.String())
+	}
+	cfg, ok = webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/cfg/web", "--app-key"}, &errb)
+	if !ok || !cfg.AppKeyLogin {
+		t.Fatalf("ok %v app key %v: %s", ok, cfg.AppKeyLogin, errb.String())
+	}
+}

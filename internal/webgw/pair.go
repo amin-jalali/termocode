@@ -73,6 +73,9 @@ type PairingConfig struct {
 	// (WEB-33): /pair/wait hands out its options once the owner said
 	// yes, and /pair/finish needs the browser's answer.
 	Passkeys *Passkeys
+	// AppKeys (web_app_key_login, MOB-27): the Android app may end a
+	// pairing with its keystore key instead of a passkey.
+	AppKeys bool
 }
 
 // Pairing serves /pair/start, /pair/wait and /pair/finish.
@@ -329,6 +332,9 @@ func (p *Pairing) wait(w http.ResponseWriter, r *http.Request) {
 			if pp.options != nil {
 				out["options"] = pp.options
 			}
+			if p.cfg.AppKeys && !pp.guest {
+				out["app_keys"] = true
+			}
 			writeJSON(w, http.StatusOK, out)
 			return
 		case pairDenied:
@@ -356,6 +362,10 @@ type pairFinishReq struct {
 	Credential json.RawMessage `json:"credential,omitempty"`
 	// Remember: "Remember this browser" was ticked (WEBP-12).
 	Remember bool `json:"remember,omitempty"`
+	// AppKey and AppSig: the Android app's public key and its signature
+	// of the pair id (MOB-27), only with AppKeys on.
+	AppKey string `json:"app_key,omitempty"`
+	AppSig string `json:"app_sig,omitempty"`
 }
 
 func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
@@ -371,9 +381,22 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusGone, errorReply("expired"))
 		return
 	}
-	if p.cfg.Passkeys != nil && len(req.Credential) == 0 {
+	useAppKey := p.cfg.AppKeys && !pp.guest && req.AppKey != "" // a guest is for one visit
+	if p.cfg.Passkeys != nil && len(req.Credential) == 0 && !useAppKey {
 		writeJSON(w, http.StatusBadRequest, errorReply("need_passkey"))
 		return
+	}
+	var appKey *webdevices.AppKey
+	if useAppKey {
+		// Checked before the pairing is used up: a bad try leaves it open
+		// for the real app.
+		k, ok := checkAppPairing(req.AppKey, req.AppSig, r.Header.Get("Origin"), pp.id, p.cfg.Now())
+		if !ok {
+			_ = p.cfg.Audit.Log(Event{Kind: EvPairFail, Device: pp.name, Why: "app_key"})
+			writeJSON(w, http.StatusUnauthorized, errorReply("app_key"))
+			return
+		}
+		appKey = k
 	}
 	p.mu.Lock()
 	if pp.state != pairApproved {
@@ -393,8 +416,8 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, errorReply("internal"))
 		return
 	}
-	d := webdevices.Device{ID: id, Name: pp.name, Role: pp.role, Guest: pp.guest, Created: now.UTC(), LastSeen: now.UTC()}
-	if p.cfg.Passkeys != nil {
+	d := webdevices.Device{ID: id, Name: pp.name, Role: pp.role, Guest: pp.guest, Created: now.UTC(), LastSeen: now.UTC(), AppKey: appKey}
+	if p.cfg.Passkeys != nil && len(req.Credential) > 0 {
 		key, err := p.cfg.Passkeys.FinishRegistration(pp.reg, req.Credential)
 		if err != nil {
 			_ = p.cfg.Audit.Log(Event{Kind: EvPairFail, Device: pp.name, Why: passkeyWhy(err)})

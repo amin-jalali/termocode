@@ -386,6 +386,7 @@ issue.
 | `web_max_viewers` | `4` | Browsers at once (1..8). |
 | `web_listen` | `loopback` | `tailnet`: also reach it from your tailnet devices. |
 | `web_require_totp` | `false` | A paired device also types a code from an authenticator app. |
+| `web_app_key_login` | `false` | The Android app may pair and sign in with its own keystore key (when passkeys fail in the app). |
 
 These settings live only in your own `config.json`. A project's settings
 cannot change them.

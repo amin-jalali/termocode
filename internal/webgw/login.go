@@ -34,6 +34,8 @@ type Login struct {
 
 	mu      sync.Mutex
 	tickets map[string]*totpTicket
+	// appChallenges: app key sign-ins waiting for their signature (MOB-27).
+	appChallenges map[string]*appChallenge
 }
 
 // SetRequireTOTP turns the sign-in code step on or off for the next
@@ -75,6 +77,9 @@ type LoginConfig struct {
 	// asks the laptop to check it for a device (nil error: right).
 	RequireTOTP bool
 	CheckTOTP   func(ctx context.Context, device, code string) error
+	// AppKeys turns on /login/app/* (web_app_key_login, MOB-27): the
+	// Android app signs in with its keystore key.
+	AppKeys bool
 }
 
 // loginRatePerSecond caps /login/* requests for the whole gateway.
@@ -86,7 +91,8 @@ func NewLogin(cfg LoginConfig) *Login {
 		cfg.Now = time.Now
 	}
 	l := &Login{cfg: cfg, limit: NewBucket(loginRatePerSecond, 2*loginRatePerSecond),
-		noisy: NewBucket(blockedAuditPerSecond, blockedAuditBurst), tickets: map[string]*totpTicket{}}
+		noisy: NewBucket(blockedAuditPerSecond, blockedAuditBurst), tickets: map[string]*totpTicket{},
+		appChallenges: map[string]*appChallenge{}}
 	l.totpOn.Store(cfg.RequireTOTP)
 	return l
 }
@@ -125,6 +131,16 @@ func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		l.device(w, r)
 	case "/login/forget":
 		l.forget(w, r)
+	case "/login/app/start", "/login/app/finish":
+		if !l.cfg.AppKeys {
+			writeJSON(w, http.StatusNotFound, errorReply("not_found"))
+			return
+		}
+		if r.URL.Path == "/login/app/start" {
+			l.appStart(w, r)
+		} else {
+			l.appFinish(w, r)
+		}
 	default:
 		writeJSON(w, http.StatusNotFound, errorReply("not_found"))
 	}
