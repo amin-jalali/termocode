@@ -31,6 +31,8 @@ repository's git folder, never in your project.
 | `a` | Add the worktree as a folder of this window |
 | `p` | Pin or unpin |
 | `i` | Link an issue or pull request (see below) |
+| `r` | Send PR feedback to its agent: review comments, `@termocode` mentions, failing CI (asks first) |
+| `w` | Follow its PR: new feedback asks to go to the agent; again: stop |
 | `N` | The notes agents left on it, with their times |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
@@ -112,6 +114,28 @@ URL must be `https` on the repository's own GitHub host. termocode asks
 20 seconds while checks run, else every 5 minutes. Without `gh`, or when
 it is not signed in, the number is kept without its title. **Unlink**
 on the same card takes it off. The AI can read links but never set one.
+
+## Send PR feedback to the agent
+
+`r` (**Worktree: Send PR Feedback to Agent…**) reads the worktree's pull
+request with `gh`: the open review threads, comments in the PR
+conversation that call the agent (`@termocode` or `@agent`), and a
+failed CI run with its failing log. A card shows a short preview;
+**Cancel** is first. **Send** writes all of it to a file in the
+repository's git folder (secrets are hidden, the file is never part of
+your project) and types one line into the agent tab of that worktree:
+read the file, fix it, commit, do not push. You push when you are happy.
+When no agent works in the worktree, the feedback goes into the AI chat
+input instead, and you press Enter to send it.
+
+`w` (**Worktree: Follow PR Feedback**) follows a linked pull request
+(link it with `i` first; the card then says `· following`). While the
+view shows, termocode reads the PR every 2 minutes. When there are new
+review comments, new mentions or a new failing run, the same card asks
+before anything is sent. **Skip** (or `Esc`) marks them as seen, so it
+does not ask about them again; `r` still sends everything open at any
+time. `w` again stops following. The AI can never send feedback or turn
+following on.
 
 ## Notes and status from agents
 

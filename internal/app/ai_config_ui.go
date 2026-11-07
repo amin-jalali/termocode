@@ -219,6 +219,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTCtlLink(id), true
 	case confirmKindWTSleep: // worktrees_sleep.go
 		return m.answerWTSleep(id), true
+	case confirmKindWTFeedback: // worktrees_followup.go
+		return m.answerWTFeedback(id), true
 	case confirmKindWTArchive: // worktrees_archive.go
 		return m.answerWTArchive(id), true
 	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
@@ -346,6 +348,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTCtlLink("") // Esc: Deny
 	case confirmKindWTSleep:
 		return m.answerWTSleep("") // Esc: Keep running
+	case confirmKindWTFeedback:
+		return m.answerWTFeedback("") // Esc: Cancel (the follow loop: Skip)
 	case confirmKindWTArchive:
 		return m.answerWTArchive("") // Esc: Cancel
 	case confirmKindWTDelete, confirmKindWTDeleteDirty:

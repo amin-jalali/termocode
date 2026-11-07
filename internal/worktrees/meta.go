@@ -51,6 +51,47 @@ type Meta struct {
 	Link LinkInfo `json:"link,omitzero"` // what gh last said about Issue / PR (WTX-9)
 
 	Adopted bool `json:"adopted,omitempty"` // an external worktree the user adopted (WTX-10)
+
+	// The PR follow-up loop (CMP-31): Follow asks to send new PR
+	// feedback to the worktree's agent; FollowSeen are the comment ids
+	// sent or skipped (newest last, capped), FollowRun the failed CI run
+	// sent or skipped last.
+	Follow     bool    `json:"follow,omitempty"`
+	FollowSeen []int64 `json:"follow_seen,omitempty"`
+	FollowRun  int64   `json:"follow_run,omitempty"`
+}
+
+// MaxFollowSeen caps Meta.FollowSeen.
+const MaxFollowSeen = 500
+
+// MarkFollowSeen adds ids to FollowSeen (no doubles, oldest dropped
+// past MaxFollowSeen) and sets FollowRun when run > 0.
+func (m *Meta) MarkFollowSeen(ids []int64, run int64) {
+	have := make(map[int64]bool, len(m.FollowSeen))
+	for _, id := range m.FollowSeen {
+		have[id] = true
+	}
+	for _, id := range ids {
+		if !have[id] {
+			have[id] = true
+			m.FollowSeen = append(m.FollowSeen, id)
+		}
+	}
+	if n := len(m.FollowSeen) - MaxFollowSeen; n > 0 {
+		m.FollowSeen = append([]int64(nil), m.FollowSeen[n:]...)
+	}
+	if run > 0 {
+		m.FollowRun = run
+	}
+}
+
+// FollowSeenSet is FollowSeen as a set.
+func (m Meta) FollowSeenSet() map[int64]bool {
+	out := make(map[int64]bool, len(m.FollowSeen))
+	for _, id := range m.FollowSeen {
+		out[id] = true
+	}
+	return out
 }
 
 // Empty: termocode knows nothing about the worktree.
