@@ -80,6 +80,7 @@ type aiState struct {
 	kwProfile string
 	side      aiSideChat // OMX-30: the side chat (ai_side.go)
 	home      aiHomeChat // MOB-16: the phone's background chat (web_chat_home.go)
+	dictate   *aiDictate // CMP-48: the running voice input (ai_dictate.go)
 	cfg       ai.Config
 	provider  ai.Provider
 	loadErr   string
@@ -606,6 +607,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-follow-agent", "AI: Toggle Follow Agent", ""},
 		{"ai-configure", "AI: Configure Provider…", ""},
 		{"ai-pick-model", "AI: Pick Model…", ""},
+		{"ai-auto-model", "AI: Toggle Auto Model Pick (quick / main per turn)", ""},
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
 		{"ai-profile-switch", "AI: Switch Profile…", ""},
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
@@ -614,6 +616,8 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-plan-approval", "AI: Toggle Plan Approval", ""},
 		{"ai-autopilot", "AI: Autopilot Level… (off / low / medium risk)", ""},
 		{"ai-reasoning-next", "AI: Next Reasoning Level", ""},
+		{"ai-dial", "AI: Effort Dial… (low / medium / high / ultra, plan, fast)", ""},
+		{"ai-dial-next", "AI: Next Effort Mode", ""},
 		{"ai-keep-going", "AI: Toggle Keep Going While Todos Are Open", ""},
 		{"ai-handoff", "AI: Handoff to a New Chat", ""},
 		{chatDocsPaletteID, "AI: Chat Docs…", ""},
@@ -621,6 +625,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-chat-schedule", "AI: Schedule This Chat…", ""},
 		{"ai-chat-unschedule", "AI: Stop Chat Schedule", ""},
 		{"ai-side", "AI: Side Question…", ""},
+		{"ai-dictate", "AI: Dictate into Chat… (voice input)", ""},
 		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
@@ -772,6 +777,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIConfigure(), true
 	case "ai-pick-model":
 		return m.openAIModelPicker(), true
+	case "ai-auto-model": // CMP-25 (ai_router.go)
+		return m.toggleAIRouter(), true
 	case "ai-auto-approve":
 		return m.openAIAutoApprovePicker(), true
 	case "ai-sign-in-claude":
@@ -821,12 +828,18 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.toggleAIUntilDone(), true
 	case "ai-reasoning-next": // OMX-5 (ai_reasoning.go)
 		return m.cycleAIReasoning(), true
+	case "ai-dial": // CMP-24 (ai_dial.go)
+		return m.openAIDialPicker(), true
+	case "ai-dial-next":
+		return m.cycleAIDial(), true
 	case "ai-side": // OMX-30 (ai_side.go)
 		return m.openAISide(), true
 	case aiChatSchedPaletteID: // CMP-43 (ai_chat_sched.go)
 		return m.openAIChatSchedule(), true
 	case aiChatUnschedPaletteID:
 		return m.openAIChatUnschedule(), true
+	case "ai-dictate": // CMP-48 (ai_dictate.go)
+		return m.openAIDictate(), true
 	case "ai-handoff": // OMX-21 (ai_session_tools.go)
 		return m.aiHandoff(), true
 	case chatDocsPaletteID: // CMP-94 (ai_chat_docs.go)

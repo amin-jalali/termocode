@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/workflow"
+	"github.com/amin-jalali/termocode/internal/workflow/score"
 )
 
 // RunFileVersion is the version of the run file format.
@@ -64,12 +65,13 @@ type RunFile struct {
 
 // StepState is one step of one list (the run's, or an item's).
 type StepState struct {
-	State    string     `json:"state"`
-	Attempts int        `json:"attempts,omitempty"`
-	Error    string     `json:"error,omitempty"`
-	Output   *Output    `json:"output,omitempty"`
-	Items    []Item     `json:"items,omitempty"` // source, plan, filter: the list it made
-	Each     *EachState `json:"each,omitempty"`
+	State    string        `json:"state"`
+	Attempts int           `json:"attempts,omitempty"`
+	Error    string        `json:"error,omitempty"`
+	Output   *Output       `json:"output,omitempty"`
+	Items    []Item        `json:"items,omitempty"` // source, plan, filter: the list it made
+	Each     *EachState    `json:"each,omitempty"`
+	Score    *score.Result `json:"score,omitempty"` // a score step's grade (CMP-23)
 	// Loop holds the rounds of a loop step.
 	Loop *LoopState `json:"loop,omitempty"`
 	// Branches holds the lists of a branch step by branch name.

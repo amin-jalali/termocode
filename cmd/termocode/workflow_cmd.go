@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	wfrun "github.com/amin-jalali/termocode/internal/workflow/run"
+	"github.com/amin-jalali/termocode/internal/workflow/score"
 	"github.com/amin-jalali/termocode/internal/workflow/source"
 	"github.com/amin-jalali/termocode/internal/workflow/wire"
 )
@@ -31,6 +32,7 @@ const workflowUsage = `usage: termocode workflow <command>
   run <name> --dry-run [--var k=v]  read for real, write nothing (no plan steps)
   runs [<name>] [--json] [--limit N]
   logs <run id>                     what a run did
+  scores [<name>] [--json] [--limit N]  score steps per run, and runs compared by their vars
   again <name> <key>                forget a seen item: the next run handles it again
   stop <run id>                     (in the IDE: Workflows, x)
 Exit codes: 0 ok, 1 failed, 2 usage, 3 needs the IDE session.`
@@ -116,6 +118,12 @@ func runWorkflowIn(args []string, ws string, out, errw io.Writer) int {
 			name = rest[0]
 		}
 		return wfRuns(root, name, *limit, *asJSON, out, errw)
+	case "scores":
+		name := ""
+		if len(rest) > 0 {
+			name = rest[0]
+		}
+		return wfScores(root, name, *limit, *asJSON, out, errw)
 	case "logs":
 		if len(rest) != 1 {
 			fmt.Fprintln(errw, "usage: termocode workflow logs <run id>")
@@ -378,10 +386,17 @@ func wfPrintRun(rf *wfrun.RunFile, out io.Writer) {
 		if len(s.Items) > 0 {
 			line += " · " + strconv.Itoa(len(s.Items)) + " items"
 		}
+		if s.Score != nil {
+			line += " · " + wfScoreText(*s.Score)
+		}
 		if s.Error != "" {
 			line += " · " + s.Error
 		}
 		fmt.Fprintln(out, line)
+	}
+	if all := rf.Scores(); len(all) > 0 {
+		sum := score.Summarize(all)
+		fmt.Fprintf(out, "  scores     mean %.2f · %d of %d passed\n", sum.Mean, sum.Passed, sum.Count)
 	}
 	for _, w := range rf.Writes {
 		verb := w.State
@@ -412,6 +427,89 @@ func wfRuns(root, name string, limit int, asJSON bool, out, errw io.Writer) int 
 		fmt.Fprintf(out, "%s  %-20s %-11s %s\n", rf.ID, rf.Workflow, rf.State, kind)
 	}
 	return 0
+}
+
+// wfScoreText is one score result in short: "score 0.83 ✓ (pass 0.70)".
+func wfScoreText(r score.Result) string {
+	mark := "✗"
+	if r.Passed {
+		mark = "✓"
+	}
+	return fmt.Sprintf("score %.2f %s (pass %.2f)", r.Score, mark, r.Pass)
+}
+
+// wfScoreRow is one run in the scores table (CMP-23).
+type wfScoreRow struct {
+	ID       string         `json:"id"`
+	Workflow string         `json:"workflow"`
+	State    string         `json:"state"`
+	Dry      bool           `json:"dry,omitempty"`
+	Variant  string         `json:"variant"`
+	Summary  score.Summary  `json:"summary"`
+	Results  []score.Result `json:"results"`
+}
+
+// wfScores lists the score steps of the last runs, then compares the
+// runs by their vars (the model, prompt or profile a run was given), the
+// best first. Runs without a score step are left out.
+func wfScores(root, name string, limit int, asJSON bool, out, errw io.Writer) int {
+	runs, err := wire.RunFiles{Root: root}.List(name, limit)
+	if err != nil {
+		fmt.Fprintln(errw, "termocode:", err)
+		return 1
+	}
+	var rows []wfScoreRow
+	for _, rf := range runs {
+		res := rf.Scores()
+		if len(res) == 0 {
+			continue
+		}
+		rows = append(rows, wfScoreRow{ID: rf.ID, Workflow: rf.Workflow, State: rf.State, Dry: rf.Dry,
+			Variant: score.Variant(rf.Vars), Summary: score.Summarize(res), Results: res})
+	}
+	variants := make([]string, len(rows))
+	sums := make([]score.Summary, len(rows))
+	for i, r := range rows {
+		variants[i], sums[i] = r.Workflow+" "+r.Variant, r.Summary
+	}
+	groups := score.Compare(variants, sums)
+	if asJSON {
+		if rows == nil {
+			rows = []wfScoreRow{}
+		}
+		if groups == nil {
+			groups = []score.Group{}
+		}
+		b, _ := json.MarshalIndent(map[string]any{"runs": rows, "compare": groups}, "", "  ")
+		fmt.Fprintln(out, string(b))
+		return 0
+	}
+	if len(rows) == 0 {
+		fmt.Fprintln(out, "no scored runs: add a score step to a workflow (see docs/guides/workflows.md, Score agent output)")
+		return 0
+	}
+	for _, r := range rows {
+		kind := ""
+		if r.Dry {
+			kind = " dry"
+		}
+		fmt.Fprintf(out, "%s  %-20s mean %.2f  %d/%d passed  %s%s\n", r.ID, r.Workflow, r.Summary.Mean, r.Summary.Passed, r.Summary.Count,
+			wfFirstOr(r.Variant, "(no vars)"), kind)
+	}
+	if len(groups) > 1 {
+		fmt.Fprintln(out, "compare (best first):")
+		for _, g := range groups {
+			fmt.Fprintf(out, "  mean %.2f  %d runs  %d/%d passed  %s\n", g.Mean, g.Runs, g.Passed, g.Count, strings.TrimSpace(g.Variant))
+		}
+	}
+	return 0
+}
+
+func wfFirstOr(s, def string) string {
+	if s == "" {
+		return def
+	}
+	return s
 }
 
 // wfAgain forgets key in the seen ledger of workflow name.

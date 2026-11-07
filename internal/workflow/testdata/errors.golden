@@ -31,9 +31,9 @@ steps not list:
 step not object:
   bad.jsonc: line 1: steps[0]: must be an object { … }, not a number
 no type:
-  bad.jsonc: line 1: steps[0] (x): "type" is missing; use one of: source, plan, filter, each, ai, agent, pipeline, tests, shell, write, loop, branch, wait
+  bad.jsonc: line 1: steps[0] (x): "type" is missing; use one of: source, plan, filter, each, ai, agent, pipeline, tests, shell, score, write, loop, branch, wait
 bad type:
-  bad.jsonc: line 1: steps[0].type: "sourse" is not a step type; use one of: source, plan, filter, each, ai, agent, pipeline, tests, shell, write, loop, branch, wait (did you mean "source"?)
+  bad.jsonc: line 1: steps[0].type: "sourse" is not a step type; use one of: source, plan, filter, each, ai, agent, pipeline, tests, shell, score, write, loop, branch, wait (did you mean "source"?)
 bad id:
   bad.jsonc: line 1: steps[0].id: use a-z, 0-9, _ and -, starting with a letter, at most 40 characters
 dup id:

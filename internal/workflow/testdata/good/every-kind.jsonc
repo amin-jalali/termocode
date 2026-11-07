@@ -15,6 +15,9 @@
           "tools": { "preset": "all", "deny": ["git_push", "run_command"] }, "approve_plan": true, "budget_usd": 1.0 },
         { "id": "pipe", "type": "pipeline", "profile": "review-then-fix", "prompt": "{{item.title}}" },
         { "id": "fmt", "type": "shell", "argv": ["gofmt", "-l", "."], "cwd": ".", "env": { "TOKEN": "${secret:FMT_TOKEN}" } },
+        { "id": "grade", "type": "score", "pass": 0.5, "checks": [
+          { "name": "fmt clean", "test": "steps.fmt.ok", "weight": 2 },
+          { "name": "review", "value": "steps.review.json.rating", "max": 10 } ] },
         { "id": "commit", "type": "write", "to": "commit", "message": "chore: fmt" },
         { "id": "comment", "type": "write", "to": "github.comment", "pr": "{{item.number}}", "body": "{{steps.review.text}}" }
       ] }

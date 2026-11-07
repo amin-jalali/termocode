@@ -723,13 +723,18 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Plan approval (G-PLAN): the AI can never approve its own plan or
 	// turn the question off.
 	"ai-reasoning-next": aiNever(aiNoAIConfig + "; more thinking costs the user more"),
-	"ai-plan-approval":  aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
-	"ai-autopilot":      aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
-	"ai-plan-review":    aiNever("the plan card is the user's answer; the AI never approves its own plan"),
-	"ai-profile-edit":   aiNever(aiNoAIConfig),
-	"ai-profile-new":    aiNever(aiNoAIConfig),
-	"ai-profile-form":   aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
-	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),
+	// The effort dial (CMP-24) sets a profile and a reasoning level at
+	// once: the user's own setup, and more effort costs the user more.
+	"ai-dial":          aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-dial-next":     aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-plan-approval": aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai-auto-model":    aiNever(aiNoAIConfig + "; the AI never picks its own model"),
+	"ai-autopilot":     aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
+	"ai-plan-review":   aiNever("the plan card is the user's answer; the AI never approves its own plan"),
+	"ai-profile-edit":  aiNever(aiNoAIConfig),
+	"ai-profile-new":   aiNever(aiNoAIConfig),
+	"ai-profile-form":  aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
+	"ai-profile-trust": aiNever("trusting a project's prompts is the user's decision"),
 	// Keep going (OMX-7) sends model turns that cost money: only the
 	// user turns it on.
 	"ai-keep-going": aiNever(aiNoAIConfig + "; extra paid turns are the user's choice"),
@@ -739,6 +744,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-chat-unschedule": aiNever("the user's own command (chat_schedule_clear)"),
 	// The side chat (OMX-30) is the user's own question.
 	"ai-side": aiNever("the side chat is the user's own question beside the AI's turn"),
+	// Voice input (CMP-48) listens on the user's microphone: only the user starts it.
+	"ai-dictate": aiNever("it listens on the user's microphone; only the user starts it"),
 	// Handoff (OMX-21) ends the AI's own chat; the user starts it.
 	"ai-handoff": aiNever("it ends the AI's own chat; the user starts a handoff"),
 	// Project rules (OM-1): the AI only gets the text in its prompt.
@@ -879,6 +886,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_prompt_cache":       aiNever(aiNoAIConfig),
 	"ai_reasoning":          aiNever(aiNoAIConfig),
 	"ai_fallback":           aiNever(aiNoAIConfig),
+	"ai_router":             aiNever(aiNoAIConfig),
 	"ai_concurrency":        aiNever(aiNoAIConfig),
 	"ai_parallel_max":       aiNever(aiNoAIConfig),
 	"ai_worktrees":          aiNever(aiNoAIConfig),
@@ -890,6 +898,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_approval_rules":     aiNever(aiNoAIConfig + "; the AI never writes its own approval rules"),
 	"ai_guardian":           aiNever(aiNoAIConfig + "; the AI never picks its own reviewer"),
 	"ai_categories":         aiNever(aiNoAIConfig),
+	"ai_dial":               aiNever(aiNoAIConfig),
 	"ai_step_escalate":      aiNever(aiNoAIConfig),
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
 	"ai_plan_file":          aiNever(aiNoAIConfig),

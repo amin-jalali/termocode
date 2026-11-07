@@ -2232,6 +2232,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai-auto-approve` | AI: Agent Auto-Approve… | never | AI provider, credentials and approvals stay with the user |
 | `ai-board` | AI: Agent Board… | never | the user's board of agent work; it opens a picker and holds Resume |
 | `ai-autopilot` | AI: Autopilot Level… (off / low / medium risk) | never | AI provider, credentials and approvals stay with the user; the AI never lowers its own approval cards |
+| `ai-auto-model` | AI: Toggle Auto Model Pick (quick / main per turn) | never | AI provider, credentials and approvals stay with the user; the AI never picks its own model |
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
 | `ai-checkpoint-restore` | AI: Restore Code Checkpoint… | never | the user rolls code back to a checkpoint |
 | `ai-checkpoint-save` | AI: Save Code Checkpoint | auto |   |
@@ -2243,6 +2244,8 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai-configure` | AI: Configure Provider… | never | AI provider, credentials and approvals stay with the user |
 | `ai-critic-toggle` | AI: Toggle Critic Review | never | AI provider, credentials and approvals stay with the user |
 | `ai-credentials` | Open Config: AI Credentials | never | AI provider, credentials and approvals stay with the user |
+| `ai-dial` | AI: Effort Dial… (low / medium / high / ultra, plan, fast) | never | AI provider, credentials and approvals stay with the user; more effort costs the user more |
+| `ai-dial-next` | AI: Next Effort Mode | never | AI provider, credentials and approvals stay with the user; more effort costs the user more |
 | `ai-discard-proposal` | AI: Discard Proposed Edit | never | the user reviews proposed edits |
 | `ai-doc` | AI: Generate Doc Comment | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-doctor` | AI: Doctor | never | a local diagnostic page for the user |
@@ -2920,6 +2923,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `worktree-new` | Worktree: New… | never | opens a picker or prompt that only the user can answer; use a typed tool (worktree_create comes later) |
 | `worktree-new-child` | Worktree: New Child of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-new-session` | Worktree: New Agent Session in Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the agent |
+| `worktree-new-multi` | Worktree: New in Each Repository… | never | opens a picker or prompt that only the user can answer; use a typed tool (makes branches and folders in several repositories) |
 | `worktree-notes` | Worktree: Show Notes of Selected | auto |   |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
@@ -2961,6 +2965,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
 | `ai_critic` | never | AI provider, credentials and approvals stay with the user |
 | `ai_critic_slot` | never | AI provider, credentials and approvals stay with the user |
+| `ai_dial` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_fallback` | never | AI provider, credentials and approvals stay with the user |
 | `ai_guardian` | never | AI provider, credentials and approvals stay with the user; the AI never picks its own reviewer |
@@ -2982,6 +2987,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `ai_reasoning` | never | AI provider, credentials and approvals stay with the user |
 | `ai_review_order` | never | AI provider, credentials and approvals stay with the user |
+| `ai_router` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_escalate` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_stall_minutes` | never | AI provider, credentials and approvals stay with the user |
 | `ai_team_mode` | never | AI provider, credentials and approvals stay with the user |

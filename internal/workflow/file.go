@@ -24,6 +24,7 @@ const (
 	MaxPromptBytes  = 32 << 10  // prompt, text, body, content
 	MaxExprBytes    = 1 << 10   // an expression (when, sort, dedupe, items)
 	MaxErrorChars   = 512       // ParseError.Error()
+	MaxScoreChecks  = 20        // checks of one score step
 )
 
 // Ext is the workflow file extension.
@@ -40,6 +41,7 @@ const (
 	TypePipeline = "pipeline"
 	TypeTests    = "tests"
 	TypeShell    = "shell"
+	TypeScore    = "score"
 	TypeWrite    = "write"
 	TypeLoop     = "loop"   // repeat steps until they pass, with a round cap
 	TypeBranch   = "branch" // run step lists side by side, then join
@@ -47,7 +49,7 @@ const (
 )
 
 // StepTypes lists every step type, in the order of the plan.
-var StepTypes = []string{TypeSource, TypePlan, TypeFilter, TypeEach, TypeAI, TypeAgent, TypePipeline, TypeTests, TypeShell, TypeWrite, TypeLoop, TypeBranch, TypeWait}
+var StepTypes = []string{TypeSource, TypePlan, TypeFilter, TypeEach, TypeAI, TypeAgent, TypePipeline, TypeTests, TypeShell, TypeScore, TypeWrite, TypeLoop, TypeBranch, TypeWait}
 
 // Agent graph limits (CMP-42).
 const (
@@ -194,7 +196,7 @@ type Retries struct {
 
 // Step is one step. ID, Type and the common fields are on every step;
 // exactly one of the spec pointers is set, the one for Type (Run steps:
-// AI, Agent, Pipeline, Tests or Shell).
+// AI, Agent, Pipeline, Tests or Shell; Score for a score step).
 type Step struct {
 	ID    string // optional; unique in the file; steps.<id> in expressions
 	Type  string // one of StepTypes
@@ -220,6 +222,7 @@ type Step struct {
 	Pipeline *PipelineSpec
 	Tests    *TestsSpec
 	Shell    *ShellSpec
+	Score    *ScoreSpec
 	Write    *WriteSpec
 	Loop     *LoopSpec
 	Branch   *BranchSpec
@@ -377,6 +380,26 @@ type ShellSpec struct {
 	Argv []string
 	Cwd  string
 	Env  map[string]string // ${secret:NAME} allowed
+}
+
+// ScoreSpec grades what earlier steps made (CMP-23): every check gives
+// 0..1 and the score is their weighted mean. It runs no AI and no
+// command itself; an AI judge is an ai step before it whose JSON a
+// check reads ("value": "steps.judge.json.rating", "max": 10).
+type ScoreSpec struct {
+	Checks   []ScoreCheck
+	Pass     float64 // the pass mark, 0..1 (score.DefaultPass when not set)
+	MustPass bool    // below Pass the step fails, so its else runs
+}
+
+// ScoreCheck is one check: exactly one of Test and Value is set.
+type ScoreCheck struct {
+	Name   string
+	Test   string  // an expression: true gives 1, false 0
+	Value  string  // an expression: a number, divided by Max, kept in 0..1
+	Max    float64 // the best Value (a rating "out of 10"); 1 when not set
+	Weight float64 // > 0; 1 when not set
+	Line   int
 }
 
 // UndoSpec is the MCP call that undoes a write.

@@ -46,6 +46,7 @@ repository's git folder, never in your project.
 | `I` | Start from an issue: pick an open issue, the New worktree form fills in |
 | `e` | Restack a child: replay its commits onto its parent's branch (asks first) |
 | `H` | Hand off: a new agent goes on with a note of this work (see below) |
+| `E` | New worktree in each repository of this window (see below) |
 | `L` | Show the setup of a new worktree (its terminal tab) |
 | `r` | Run the dev server on the worktree's own port (`$PORT`); again: show its tab |
 | `o` | Open the running dev server's address in the browser |
@@ -295,6 +296,31 @@ The card shows a preview. **Cancel** comes first. Pick **Where**:
 The note is saved in `termocode/handoff/` inside the repository's git
 folder, never in your project, with secrets hidden. The AI never starts
 a handoff. The AI chat has its own **AI: Handoff to a New Chat**.
+## A worktree in each repository
+
+A task often needs a change in more than one repository: a frontend and
+a backend, or several services in one folder. When the folders of this
+window hold two or more git repositories (a folder of projects, or
+repositories added with **File: Add Folder…**),
+**Worktree: New in Each Repository…** (`E` in the view) makes one
+worktree in each of them, on the same branch, in one step.
+
+- The card lists every repository with a **yes** / **no** row and the
+  folder its worktree goes to (`<repo>.worktrees/<branch>`, or setting
+  `worktree_dir`; when two repositories would share a folder, the
+  repository's name is added). **From** is empty for each repository's
+  current branch, or a branch or tag they all have.
+- **Cancel** comes first; nothing is made until **Create**. Create
+  checks every repository first and says which one is in the way (the
+  branch or the folder is there already).
+- All or nothing: when git fails in one repository, the worktrees made
+  before go again, branch and folder, and the card says why.
+- **Create + Add Folders** also adds the new worktrees as folders of
+  this window.
+- Each repository keeps its own git state. termocode tags the worktrees
+  with their branch (`group` in each repository's `worktrees.json`), so
+  they read as one task.
+- The AI cannot use this card.
 
 ## Link an issue or pull request
 
@@ -682,3 +708,29 @@ list by group, with a filter of its own.
   folder path.
 - A worktree's card data carries its dev server port, and the address
   while it runs. Starting it stays on the laptop (`r`).
+
+### Start a new task from the phone or the page
+
+**New task** (the **+** at the top of the page's Worktrees list, or
+**More → New task** on a phone) starts a background task on the laptop
+while you are away from it:
+
+1. Type the **Task** (one line). The agent gets it typed in once it is
+   ready.
+2. Pick the **Agent**. Only agents installed on the laptop are listed.
+3. **Name** is optional. With no name the branch comes from the task's
+   first words, under `task/` (for example `task/fix-the-login-bug`).
+4. **From** is the start point; it is the laptop's current branch until
+   you pick another one.
+5. **Start task** asks on the page first, with **Cancel** first.
+
+The laptop then does what **Create + Start** does in **Worktree: New…**:
+it makes the worktree and its branch, copies and links the files of
+`.termocode/worktrees.json`, and starts the agent there. A note on the
+new worktree says which device asked and the task. The task only adds a
+new branch and folder, so no card waits on the laptop. The repository's
+setup commands run only when the laptop trusts them already; if not,
+the laptop asks first, and the page says so.
+
+Follow the agent in the Worktrees list and in its terminal tab. When it
+is done, open a pull request from the branch as usual.

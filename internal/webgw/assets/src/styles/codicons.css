@@ -119,6 +119,8 @@
 .cod-list-tree::before { content: "\eb86"; }
 .cod-loading::before { content: "\eb19"; }
 .cod-lock::before { content: "\ea75"; }
+.cod-mic::before { content: "\ec12"; }
+.cod-mic-filled::before { content: "\ec1c"; }
 .cod-new-file::before { content: "\ea7f"; }
 .cod-new-folder::before { content: "\ea80"; }
 .cod-open-preview::before { content: "\eb28"; }
