@@ -5,7 +5,7 @@
 // project opened on the laptop says "Close it there". English only.
 import { h } from "preact";
 import { useState } from "preact/hooks";
-import type { ProjectItem } from "../../../../webproto/proto";
+import type { ProjectItem } from "../../../../../webproto/proto";
 import type { Door } from "../../net/door";
 import { toast } from "../../lib/toasts";
 import { link } from "../../session";
