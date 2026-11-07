@@ -734,6 +734,11 @@ missing	lsp-mirror-refresh	Workspace|S
 missing	preview-dev-servers	Preview|L
 missing	preview-open-newest	Preview|S
 missing	output-save-audit	Output|S
+missing	prompt-actions	AI|S
+missing	prompt-actions-edit	AI|S
+missing	prompt-actions-export	AI|S
+missing	prompt-actions-import	AI|S
+missing	prompt-actions-new	AI|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
 missing	redis-slowlog	Databases|S

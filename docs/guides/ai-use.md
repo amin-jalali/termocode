@@ -410,6 +410,30 @@ To get files out:
 - **AI: Export Chat as Markdown** writes the chat to
   `ai-chat-<date>.md` in the workspace and opens it.
 
+### Prompt actions (saved prompts)
+
+Save a prompt you send often and run it again with one pick.
+
+- **Prompt Actions: Run…** lists your saved prompts by group. Enter
+  runs the one you pick.
+- An action runs in the **AI chat**, or it is typed into the **active
+  terminal tab** and Enter is pressed. Use the terminal for a coding
+  agent that waits in that tab.
+- **Prompt Actions: New…** asks a name (`Group/Name`; the group is
+  optional), the prompt and where it runs. The prompt starts with what
+  is in the chat input. Write `\n` for a new line. The same name
+  changes that action.
+- **Prompt Actions: Export…** writes them to a JSON file. It asks before
+  it replaces a file.
+- **Prompt Actions: Import…** reads such a file. A card shows what is
+  new and what replaces an action with the same name. **Cancel** is
+  first; nothing is written until you pick **Import**. Nothing runs
+  when you import.
+- **Prompt Actions: Edit File** opens `prompt-actions.json` in the
+  termocode config folder. Edit or delete actions there.
+
+The AI never runs a prompt action by itself.
+
 ## Bugfix specs
 
 A bugfix spec says what a fix must do and what it must not break.

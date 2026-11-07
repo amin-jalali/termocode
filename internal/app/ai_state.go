@@ -128,6 +128,7 @@ type aiState struct {
 	acp            *acpThread      // CMP-83: the chat's ACP agent thread (acp_thread.go)
 	ctl            *agentCtlState  // the agent control socket's UI side (agent_ctl.go)
 	diffNotes      *diffNotesState // diff comments → agent (diff_comments.go, CMP-51)
+	promptActs     *paState        // the open prompt-action flow (prompt_actions.go)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).

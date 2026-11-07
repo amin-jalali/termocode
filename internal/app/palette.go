@@ -468,6 +468,7 @@ func paletteItems() []picker.Item {
 	// RC-6: where a container workspace's language servers run (container_lsp.go).
 	items = append(items, containerLSPPaletteItems()...)
 	items = append(items, codebaseSearchPaletteItems()...) // CMP-69 (codebase_search.go)
+	items = append(items, promptActionsPaletteItems()...)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -1052,6 +1053,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchCanvasPalette(id); ok { // CMP-92: canvas_ui.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchPromptActionsPalette(id); ok { // prompt_actions.go (CMP-74)
 			return cmd
 		}
 		if cmd, ok := m.dispatchDatabasesPalette(id); ok { // db_actions.go
