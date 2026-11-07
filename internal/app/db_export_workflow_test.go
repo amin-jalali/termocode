@@ -31,7 +31,7 @@ func exportAs(t *testing.T, d *testkit.Driver, pos int) string {
 	if !d.WaitForText("Markdown table", 2*time.Second) {
 		t.Fatalf("no export picker:\n%s", frameText(d))
 	}
-	for _, f := range []string{"CSV", "TSV", "JSON", "SQL INSERTs", "Markdown table"} {
+	for _, f := range []string{"CSV", "TSV", "JSON", "SQL INSERTs", "Markdown table", "HTML table"} {
 		if !strings.Contains(frameText(d), f) {
 			t.Fatalf("picker lacks %s:\n%s", f, frameText(d))
 		}

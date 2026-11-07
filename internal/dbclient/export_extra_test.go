@@ -42,7 +42,11 @@ func TestExportHTMLEscapesCellsAndMarksNull(t *testing.T) {
 		Columns: []Column{{Name: "<b>"}, {Name: "n"}},
 		Rows:    [][]Cell{{{Text: `<script>&"`}, {Null: true}}},
 	}
-	got := exportString(t, FormatHTML, ExportOptions{}, r)
+	var b bytes.Buffer
+	if err := WriteResult(&htmlWriter{w: &b}, r); err != nil {
+		t.Fatal(err)
+	}
+	got := b.String()
 	want := "<table>\n<thead><tr><th>&lt;b&gt;</th><th>n</th></tr></thead>\n<tbody>\n" +
 		"<tr><td>&lt;script&gt;&amp;&#34;</td><td class=\"null\">NULL</td></tr>\n</tbody>\n</table>\n"
 	if got != want {

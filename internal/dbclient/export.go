@@ -39,6 +39,7 @@ var ExportFormats = []ExportFormatInfo{
 	{FormatJSON, "JSON", ".json"},
 	{FormatSQL, "SQL INSERTs", ".sql"},
 	{FormatMarkdown, "Markdown table", ".md"},
+	{FormatHTML, "HTML table", ".html"},
 }
 
 // ExportOptions says where INSERT / UPDATE statements go: the dialect of
@@ -103,14 +104,18 @@ func newFormatWriter(f ExportFormat, w io.Writer, o ExportOptions) (RowWriter, e
 		return &jsonLinesWriter{w: w}, nil
 	case FormatYAML:
 		return &yamlWriter{w: w}, nil
-	case FormatHTML:
-		return &htmlWriter{w: w}, nil
 	case FormatXML:
 		return &xmlWriter{w: w}, nil
 	case FormatJSON:
 		return &jsonWriter{w: w}, nil
 	case FormatMarkdown:
 		return &markdownWriter{w: w}, nil
+	case FormatHTML:
+		title := o.Table
+		if strings.TrimSpace(title) == "" {
+			title = "Export"
+		}
+		return &htmlPageWriter{w: w, title: title}, nil
 	case FormatSQL, FormatSQLUpdate:
 		d := DialectFor(o.Driver)
 		if d == nil {

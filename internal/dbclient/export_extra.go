@@ -21,10 +21,11 @@ const (
 )
 
 // MoreExportFormats are the formats the writer knows beyond the picker list.
+// HTML is in the picker (DBX-19, a full page); htmlWriter (a bare table) stays
+// for callers that embed the table.
 var MoreExportFormats = []ExportFormatInfo{
 	{FormatJSONLines, "JSON lines", ".jsonl"},
 	{FormatYAML, "YAML", ".yaml"},
-	{FormatHTML, "HTML table", ".html"},
 	{FormatXML, "XML", ".xml"},
 	{FormatSQLUpdate, "SQL UPDATEs", ".sql"},
 }
