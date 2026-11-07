@@ -17,7 +17,8 @@ import (
 
 // The HTTP Response page (plan 2.6): a scratch nvim buffer like Find
 // Results. Row 1 is the request line, row 2 the status summary, row 3 the
-// hairline; from row 4 one of three views (Body, Headers, Raw). Real text
+// hairline; from row 4 one of eight views (Body, Headers, Raw, Cookies,
+// Timing, Wire, Diff, Text; http_views.go has the last five). Real text
 // is what the buffer holds, so /, n, yank and zc work; the chrome is
 // virtual text drawn by httpPageLua from the head and the row table.
 
@@ -26,9 +27,14 @@ const (
 	httpViewBody = iota
 	httpViewHeaders
 	httpViewRaw
+	httpViewCookies
+	httpViewTiming
+	httpViewWire
+	httpViewDiff
+	httpViewText
 )
 
-var httpViewNames = []string{"Body", "Headers", "Raw"}
+var httpViewNames = []string{"Body", "Headers", "Raw", "Cookies", "Timing", "Wire", "Diff", "Text"}
 
 func init() {
 	registerNotifyHandler("termocode_http_key", func(m *Model, args []any) tea.Cmd {
@@ -166,6 +172,17 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 			break
 		}
 		lines = appendTextLines(lines, resp.TextBytes())
+	case httpViewCookies, httpViewTiming, httpViewWire, httpViewDiff, httpViewText:
+		for _, r := range httpInspectRows(run, view, reveal) {
+			switch {
+			case r.k == "":
+				plain(r.text)
+			case r.n > 0:
+				add(r.k, r.text, "n", r.n)
+			default:
+				add(r.k, r.text)
+			}
+		}
 	default:
 		if resp.Err == "" {
 			for _, h := range resp.Hops {
@@ -181,6 +198,8 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 			b := run.bodyLines()
 			if b.json && len(resp.Body) <= 1<<20 {
 				head["syntax"] = "json"
+			} else if b.markup != "" && len(resp.Body) <= 1<<20 {
+				head["syntax"] = b.markup
 			}
 			lines = append(slices.Grow(lines, len(b.lines)), b.lines...)
 		}
@@ -195,6 +214,9 @@ type httpBody struct {
 	resp  *httpclient.Response // the answer it was made from
 	lines []string
 	json  bool // pretty-printed JSON
+	// markup is "xml" or "html" when the body was laid out as markup
+	// (indented, so zc folds an element).
+	markup string
 }
 
 func layoutHTTPBody(resp *httpclient.Response) *httpBody {
@@ -202,6 +224,10 @@ func layoutHTTPBody(resp *httpclient.Response) *httpBody {
 	b := &httpBody{resp: resp}
 	if pretty, ok := httpclient.PrettyJSON(text); ok {
 		text, b.json = pretty, true
+	} else if resp.IsMarkup() && len(text) <= 4<<20 {
+		if pretty, ok := httpclient.PrettyMarkup(text); ok {
+			text, b.markup = pretty, resp.Kind()
+		}
 	}
 	b.lines = appendTextLines(nil, text)
 	return b
@@ -458,7 +484,7 @@ func (m *Model) httpPageKey(key string) tea.Cmd {
 	case key == "tab":
 		s.view = (s.view + 1) % len(httpViewNames)
 		return m.httpRedrawPage()
-	case key == "1" || key == "2" || key == "3":
+	case len(key) == 1 && key[0] >= '1' && int(key[0]-'1') < len(httpViewNames):
 		s.view = int(key[0] - '1')
 		return m.httpRedrawPage()
 	case strings.HasPrefix(key, "view:"):
