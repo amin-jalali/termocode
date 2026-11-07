@@ -119,6 +119,31 @@ Settings: `http_timeout`, `http_max_redirects`, `http_max_body_mb`,
 and `NO_PROXY` work like in curl. History keeps the request as written
 (never the resolved token) and lives in `http/history.jsonl` (mode 0600).
 
+## Run files for CI
+
+`termocode http run` sends every request of `.http` / `.rest` files (or
+of every such file below a folder) in order, without the UI, and prints a
+report. It exits 0 when all passed, 1 when a request failed.
+
+```sh
+termocode http run --env dev --data users.csv --junit report.xml api/
+```
+
+| Option | What it does |
+|---|---|
+| `--env NAME` | the environment from `http-client.env.json` |
+| `--iterations N` | run the whole set N times (default once, or once per data row) |
+| `--data FILE` | a `.csv` (first line = names) or `.json` (array of objects) file; each iteration uses one row, its values win over `@vars` |
+| `--delay 200ms` | wait between two requests |
+| `--stop-on-fail` | stop at the first failed request |
+| `--json FILE`, `--junit FILE` | also write the report as JSON or JUnit XML |
+| `--timeout 10s` | the timeout per request |
+
+A request passes when it was sent and answered with a status below 400.
+A placeholder that stays unknown fails the request without sending it.
+Reports show the URL as written (`{{base}}/users`), never the resolved
+tokens.
+
 ## With the AI
 
 Ask "test createUser and tell me why it returns 500". The agent lists
