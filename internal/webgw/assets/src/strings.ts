@@ -810,6 +810,17 @@ export const S = {
   "ph.ask": "What do you want?",
   "ph.checks": "Checks: {state}",
   "ph.ci": "CI",
+  // Phone projects list (MOBUX-6)
+  "ph.proj.title": "Projects",
+  "ph.proj.none": "No projects yet. Open a folder in termocode on the laptop.",
+  "ph.proj.here": "this one",
+  "ph.proj.waiting": "{n} wait",
+  "ph.proj.working": "{n} working",
+  "ph.proj.tasks.one": "{n} task",
+  "ph.proj.tasks.other": "{n} tasks",
+  "ph.proj.ci_passed": "CI passed",
+  "ph.proj.ci_failed": "CI failed",
+  "ph.proj.ci_running": "CI running",
 } as const;
 
 /** StringKey is a key of the page's strings, of the workbench's
@@ -820,6 +831,10 @@ export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP;
 /** PhoneKey is a key of the phone views' strings: English only, so the
  * Persian file has none of them. */
 export type PhoneKey = keyof typeof SP;
+
+/** PhoneOnly keys are English only: the phone app UI is English (owner
+ * 2026-11-07), so strings.fa.ts has none of them. */
+export type PhoneOnly = Extract<StringKey, `ph.proj.${string}`>;
 
 const desk = dict<string>();
 
@@ -870,7 +885,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   });
 }
 
-type Plural = "pill.cards" | "edit.sent" | "git.commit" | "git.commit_confirm" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
+type Plural = "pill.cards" | "ph.proj.tasks" | "edit.sent" | "git.commit" | "git.commit_confirm" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
 
 /** tn picks the .one or .other form of a plural key by n. */
 export function tn(key: Plural, n: number, vars?: Record<string, string | number>): string {

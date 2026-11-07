@@ -3,9 +3,9 @@
 // empty text falls back to English. Simple, everyday Persian; product
 // and command names (termocode, Web: Open in Browser) and key names stay
 // as they are.
-import type { PhoneKey, StringKey } from "./strings";
+import type { PhoneKey, PhoneOnly, StringKey } from "./strings";
 
-export const FA: Record<Exclude<StringKey, PhoneKey>, string> = {
+export const FA: Record<Exclude<StringKey, PhoneKey | PhoneOnly>, string> = {
   // Shell and connect
   "connect.title": "termocode",
   "connect.once": "این پیوند فقط یک بار و تا ۵ دقیقه کار می‌کند.",
