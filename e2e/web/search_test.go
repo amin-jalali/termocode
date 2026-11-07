@@ -5,6 +5,7 @@ package web
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
@@ -149,4 +150,47 @@ func TestDeskSearchTree(t *testing.T) {
 	p.TapJS(view + `.querySelector('.tr[data-line="2"]')`)
 	p.WaitJS(`location.hash === "#/files/src/a.go"`)
 	reqSkipping(t, c, "buf.open")
+}
+
+// The desktop's Search view searches as you type, as the laptop's editor
+// does: a short pause after the last key runs the search (no Enter), a
+// new key runs it again for the new text (the old batches are ignored),
+// an empty box clears the results, and a half-typed regex the laptop
+// refuses shows its words under the box, not as a toast.
+func TestDeskSearchAsYouType(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-search")
+	Eval[bool](p, `(location.hash = "#/more/search", true)`)
+	const view = `document.querySelector('.wb-side [data-view="search"]')`
+	const box = `.wb-side [data-view="search"] input`
+	p.WaitJS(view + `?.querySelector("input") === document.activeElement`)
+
+	p.Do(chromedp.SendKeys(box, "nee"))
+	r := expectOp(t, c, webproto.OpSearchRun, `{"query":"nee"}`)
+	p.Do(chromedp.SendKeys(box, "dle"))
+	r2 := expectOp(t, c, webproto.OpSearchRun, `{"query":"needle"}`)
+	c.Send(t, batch(r.ID, webproto.SearchHit{Path: "old.go", Line: 1, Text: "nee", Marks: []webproto.SearchMark{{S: 0, E: 3}}}))
+	c.Send(t, batch(r2.ID, webproto.SearchHit{Path: "a.go", Line: 3, Text: "needle", Marks: []webproto.SearchMark{{S: 0, E: 6}}}))
+	reply(t, c, r2, webproto.SearchSummary{Files: 1, Matches: 1})
+	p.WaitJS(view + `.querySelector(".sv-note")?.textContent === "1 result in 1 file"`)
+	if Eval[bool](p, view+`.querySelector('.tr[data-file="old.go"]') !== null`) {
+		t.Fatal("a batch of the older search shows")
+	}
+
+	// Empty box: the results go, no search runs.
+	Eval[bool](p, `(() => { const i = document.querySelector('`+box+`'); i.value = ""; i.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`)
+	p.WaitJS(`!` + view + `.querySelector(".sv-note") && ` + view + `.querySelectorAll('.tr[data-file]').length === 0`)
+	noOp(t, c, webproto.OpSearchRun, 600*time.Millisecond)
+
+	// A half-typed regex: the laptop's words show under the box.
+	p.TapJS(view + `.querySelector('[data-opt="regex"]')`)
+	p.Do(chromedp.SendKeys(box, "("))
+	r3 := expectOp(t, c, webproto.OpSearchRun, `{"query":"(","regex":true}`)
+	c.Send(t, &webproto.ErrMsg{T: webproto.KindErr, ID: r3.ID, Code: webproto.CodeBadRequest, Msg: "The regular expression is not valid."})
+	p.WaitJS(view + `.querySelector(".sv-note")?.textContent === "The regular expression is not valid."`)
+	if Eval[bool](p, `!!document.querySelector(".toasts")?.textContent.includes("The regular expression is not valid.")`) {
+		t.Fatal("a typed search's error is a toast")
+	}
 }
