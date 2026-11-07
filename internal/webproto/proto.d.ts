@@ -607,6 +607,13 @@ export interface WorktreeTaskArgs {
   task: string;
 }
 
+export interface AIRaceModelsArgs {
+  task: string;
+  agent: string;
+  models: string[];
+  verify?: string;
+}
+
 export interface AIWorktreeTextArgs {
   id: string;
   path: string;
@@ -2797,6 +2804,22 @@ export interface WorktreeTaskDone {
   note?: string;
 }
 
+export interface AIRaceModelList {
+  agents: AIRaceModelAgent[];
+}
+
+export interface AIRaceModelAgent {
+  id: string;
+  title: string;
+  installed?: boolean;
+  models: AIRaceModelEntry[];
+}
+
+export interface AIRaceModelEntry {
+  id: string;
+  title?: string;
+}
+
 export interface AIWorktrees {
   off?: boolean;
   noRepo?: boolean;
@@ -3634,6 +3657,8 @@ export interface OpArgs {
   "worktrees.link": WorktreeLinkArgs;
   "worktrees.task_form": EmptyArgs;
   "worktrees.new_task": WorktreeTaskArgs;
+  "ai.race_models": AIRaceModelsArgs;
+  "ai.race_model_list": EmptyArgs;
   "ai.worktrees": EmptyArgs;
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
@@ -3930,6 +3955,8 @@ export interface OpResult {
   "worktrees.link": WorktreeDone;
   "worktrees.task_form": WorktreeTaskForm;
   "worktrees.new_task": WorktreeTaskDone;
+  "ai.race_models": AskRef;
+  "ai.race_model_list": AIRaceModelList;
   "ai.worktrees": AIWorktrees;
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;

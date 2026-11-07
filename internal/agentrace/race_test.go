@@ -137,3 +137,34 @@ func laneIDs(ls []*Lane) string {
 	}
 	return strings.Join(ids, " ")
 }
+
+// Spec (MOB-63): a Compare models race gives each lane a model; the lane
+// keeps it (the agent starts on it). A model must be safe to type after
+// --model: no space, quote, shell character or leading dash.
+func TestNewRaceModels(t *testing.T) {
+	r, err := New(1, "fix it", "", []LaneSpec{
+		{Agent: "claude", Title: "Claude Code · opus", Model: "opus"},
+		{Agent: "claude", Title: "Claude Code · sonnet", Model: "sonnet"}}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Lanes[0].Model != "opus" || r.Lanes[1].Model != "sonnet" || r.Lanes[0].ID == r.Lanes[1].ID {
+		t.Errorf("lanes %+v", r.Lanes)
+	}
+	for _, m := range []string{"opus", "gpt-6.1-sol", "claude-opus-5-5", "openai/gpt-5", "a:b@c+d_e"} {
+		if !ModelWord(m) {
+			t.Errorf("%q refused", m)
+		}
+	}
+	for _, m := range []string{"", "-x", "--help", "a b", "a;rm", "a'b", "$(x)", "a\nb", strings.Repeat("a", MaxModel+1)} {
+		if ModelWord(m) {
+			t.Errorf("%q accepted", m)
+		}
+		if m == "" {
+			continue
+		}
+		if _, err := New(1, "x", "", []LaneSpec{{Agent: "claude", Model: m}, {Agent: "claude", Model: "opus"}}, 1); err == nil {
+			t.Errorf("race with model %q made", m)
+		}
+	}
+}

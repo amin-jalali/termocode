@@ -315,6 +315,7 @@ func (m *Model) raceLaunchTab(l agentrace.Lane, a agents.Agent) (int, error) {
 	if !m.termOpen {
 		m.openTerminalPanel()
 	}
+	a.Bin = raceModelBin(a.Bin, l.Model) // MOB-63: a Compare models lane starts on its model
 	line, _, err := raceAgentLine(a, l.Worktree)
 	if err != nil {
 		return 0, err

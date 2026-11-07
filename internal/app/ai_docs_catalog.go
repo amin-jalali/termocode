@@ -67,6 +67,7 @@ var aiGateNotes = map[string]string{
 	"outside_agent_start": "confirm (always asks): Deny (first) · Start",
 	"agent_race_start":    "confirm (always asks): Deny (first) · Start race",
 	"agent_split_start":   "confirm (always asks): Deny (first) · Start split",
+	"agent_race_models":   "confirm (always asks): Deny (first) · Start race",
 	"agent_run_start":     "confirm (always asks): Deny (first) · Start run",
 	// WFX-9: workflows by chat.
 	"workflow_draft":   "confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version)",
