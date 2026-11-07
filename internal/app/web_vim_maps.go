@@ -32,27 +32,36 @@ type nvimVimMap struct {
 	Noremap int    `json:"noremap"`
 }
 
-const webVimMapsLua = `
+const webVimMapsLua = webVimMapKeysLua + `
 local out = {}
 for _, mode in ipairs({ 'n', 'x', 'o', 'i' }) do
   for _, k in ipairs(vim.api.nvim_get_keymap(mode)) do
     if type(k.rhs) == 'string' then
-      out[#out + 1] = { mode = mode, lhs = k.lhs, rhs = k.rhs, desc = k.desc or '', expr = k.expr or 0, script = k.script or 0, sid = k.sid or 0, noremap = k.noremap or 0 }
+      out[#out + 1] = { mode = mode, lhs = keys(k), rhs = k.rhs, desc = k.desc or '', expr = k.expr or 0, script = k.script or 0, sid = k.sid or 0, noremap = k.noremap or 0 }
     end
   end
 end
 if #out == 0 then out = vim.NIL end
 return vim.json.encode({ maps = out, timeout = vim.o.timeout and vim.o.timeoutlen or 0 })`
 
+// webVimMapKeysLua: keys(k) is a mapping's keys in <> notation. lhs
+// keeps a space as a bare " " (nvim 0.12 does), so it is made from lhsraw:
+// <Space>t, not " t".
+const webVimMapKeysLua = `
+local function keys(k)
+  if k.lhsraw then return vim.fn.keytrans(k.lhsraw) end
+  return k.lhs
+end`
+
 // webVimBufMapsLua is webVimMapsLua for one buffer (nvim_buf_get_keymap).
-const webVimBufMapsLua = `
+const webVimBufMapsLua = webVimMapKeysLua + `
 local b = ...
 if not vim.api.nvim_buf_is_valid(b) or not vim.api.nvim_buf_is_loaded(b) then return '{"gone":true}' end
 local out = {}
 for _, mode in ipairs({ 'n', 'x', 'o', 'i' }) do
   for _, k in ipairs(vim.api.nvim_buf_get_keymap(b, mode)) do
     if type(k.rhs) == 'string' then
-      out[#out + 1] = { mode = mode, lhs = k.lhs, rhs = k.rhs, desc = k.desc or '', expr = k.expr or 0, script = k.script or 0, sid = k.sid or 0, noremap = k.noremap or 0 }
+      out[#out + 1] = { mode = mode, lhs = keys(k), rhs = k.rhs, desc = k.desc or '', expr = k.expr or 0, script = k.script or 0, sid = k.sid or 0, noremap = k.noremap or 0 }
     end
   end
 end
