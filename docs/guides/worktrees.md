@@ -17,11 +17,15 @@ Source Control icon, which is lit while it shows.
 - A worktree made outside termocode shows in **EXTERNAL** with
   `no meta`. Open, add, pin and link work on it. `A` adopts it, so
   termocode keeps its notes; it stays in EXTERNAL.
+- Put the cards of a group in your own order with `K` and `J`
+  (**Worktree: Move Selected Up** / **Down**). The order is kept after a
+  restart. New worktrees come after the ones you placed. A pin or unpin
+  drops a card's place; **Worktree: Reset Order** drops every place.
 - In a short window each worktree is one line; Enter shows its card.
 - The list is read again every 10 seconds while it is on screen. Git
   runs in the background, at most 4 calls at once.
 
-Pins and names are stored in `termocode/worktrees.json` inside the
+Pins, names and your own order are stored in `termocode/worktrees.json` inside the
 repository's git folder, never in your project.
 
 | Key | What it does |
@@ -30,6 +34,7 @@ repository's git folder, never in your project.
 | `Enter` | Open the worktree in this window; the old session keeps running |
 | `a` | Add the worktree as a folder of this window |
 | `p` | Pin or unpin |
+| `K` `J` | Move the worktree up or down in its group (`Shift+↑` `Shift+↓` too) |
 | `i` | Link an issue or pull request (see below) |
 | `N` | The notes agents left on it, with their times |
 | `d` | Diff vs base: what it changed since it left its base; keep or revert each change |
@@ -39,6 +44,8 @@ repository's git folder, never in your project.
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
 | `s` | Sleep: end its agent tabs and move it under ASLEEP; again: wake it |
+| `T` | Its agent sessions; `Enter` shows the session's tab |
+| `S` | New agent session: one more agent in it, in its own tab |
 | `x` | Archive: remove the folder, keep the branch; on an archived row: restore |
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
@@ -55,6 +62,13 @@ them), **Branch** (made from the name; type to change it), **Agent** and
 **Task**. **Issue** is optional: give an issue number or URL and leave
 the name empty, and the branch is made from its title
 (`412-pinned-row-in-worktrees`); the new worktree is linked to it.
+Type only a **Task** and the name and the branch come from its first
+line: `Please fix the login timeout on Safari` gives the name `Fix the
+login timeout on Safari` and the branch `fix/login-timeout-safari`.
+Polite words and small words are dropped, at most five words stay, and a
+first verb such as fix, add, refactor, document or test gives the
+`fix/`, `feat/`, `refactor/`, `docs/` or `test/` prefix. The card shows
+both before anything is made; a typed name, branch or issue always wins.
 Nothing is made until you press **Create**; **Cancel** comes
 first. The worktree goes to `<repo>.worktrees/<branch>` next to the
 repository (setting `worktree_dir`). When git refuses (the branch or the
@@ -76,9 +90,13 @@ A repository can list files for each new worktree in
 {
   "include": [".env", ".env.local"], // copied
   "shared": ["node_modules"],        // linked to the main checkout's folder
-  "setup": ["pnpm install"]          // run in the new worktree
+  "setup": ["pnpm install"],         // run in the new worktree
+  "branch_prefix": "amin/"           // starts a branch made from the task
 }
 ```
+
+- **branch_prefix** is used for a branch made from the task, in place
+  of the `fix/` or `feat/` prefix (`amin/fix-login-timeout`).
 
 - **include** files are copied (at most 20 MB each). **shared** files and
   folders are links, so both worktrees see each other's writes.
@@ -153,6 +171,22 @@ file again while you looked, or the file has unsaved edits in the
 editor, nothing is written and a note says why; press `d` again to read
 it anew. Binary files, files over 1 MB and links are left out (the count
 is shown). At most 200 files are listed.
+
+## Several agent sessions
+
+One worktree can have more than one agent at work: separate sessions on
+the same files, each in its own terminal tab.
+
+- `S` (**Worktree: New Agent Session in Selected…**) lists the installed
+  agents. The one you pick starts in the worktree in a new tab, even
+  when the same agent already runs there. **Agent: Start…** shows the
+  running tab instead.
+- A second session of the same agent gets a number in the tab bar:
+  **Claude Code 2**.
+- `T` (**Worktree: Agent Sessions of Selected…**) lists the sessions of
+  the worktree: the ones waiting for you first, then the working ones.
+  `Enter` shows the tab; the last row starts one more session.
+- The card counts every session. Close a session like any terminal tab.
 
 ## Sleep and wake
 

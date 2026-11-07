@@ -37,6 +37,9 @@ type wtState struct {
 	visible  bool
 	off      bool         // a demo: never call git
 	demoTabs []wtTabAgent // a demo's terminal tabs
+	// sessionsPath is the worktree the sessions list shows; sessionDir
+	// is where a new session starts ("" = the workspace; CMP-28).
+	sessionsPath, sessionDir string
 
 	loaded  bool
 	err     string // why the list could not be read

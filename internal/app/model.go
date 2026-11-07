@@ -116,9 +116,13 @@ type Model struct {
 	// index and the resume check of each CLI.
 	agentSessions       []agentlog.Summary
 	agentSessIndex      *agentlog.Index
+	agentSessIndexAll   *agentlog.Index // Agent: Search All Sessions… (CMP-30)
+	agentSearchAll      bool            // the open search is over every project
 	agentSessionsResume map[agentlog.CLI]bool
 	agentHits           []agentlog.Hit // the search inside sessions (agent_sessions_search.go)
 	agentHitsCapped     bool
+	aiChatHits          []aiChatHit // AI: Search Chat History… (ai_chat_search.go, CMP-30)
+	aiChatHitsCapped    bool
 	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
 	// AGX-15 (agent_hibernate.go): the tab the hibernate card is about,
 	// "Always for this session", and commands queued by a tab switch.
@@ -327,6 +331,8 @@ type Model struct {
 	// draw for (TerminalChangedMsg); View marks every frame with it so
 	// the session server knows where output for that terminal starts.
 	termGen int
+	// recap is what happened while the user was away (session_recap.go).
+	recap *sessionRecap
 
 	// Source Control commit hover card: the SHA the pointer is over and a
 	// cache of fetched commit metadata (author/date/body/stat) keyed by SHA.
@@ -1039,6 +1045,7 @@ func New() Model {
 	}
 	m.clipRing = clipring.New()
 	m.gitGate = &gitPollGate{}
+	m.recap = &sessionRecap{} // shared by every copy of the model (session_recap.go)
 	m.primeLiveSettings()
 	return m
 }

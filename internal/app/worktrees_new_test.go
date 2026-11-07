@@ -302,3 +302,66 @@ func TestWTNewRealRepo(t *testing.T) {
 		t.Errorf("branch %q", out)
 	}
 }
+
+// Only a task typed (CMP-26): the branch and the worktree's name come
+// from it, a typed name or branch still wins, a linked issue is left to
+// its title, and the repo's branch_prefix is used.
+func TestWTFormDraftFromTask(t *testing.T) {
+	f := &wtForm{base: "/src/app.worktrees"}
+	task := "Please fix the login timeout on Safari"
+	if b, d := f.draft(wtFormVals{task: task}); b != "fix/login-timeout-safari" || d != "/src/app.worktrees/fix-login-timeout-safari" {
+		t.Errorf("task draft %q %q", b, d)
+	}
+	if got := f.autoTitle(wtFormVals{task: task}); got != "Fix the login timeout on Safari" {
+		t.Errorf("title %q", got)
+	}
+	if b, _ := f.draft(wtFormVals{name: "pin row", task: task}); b != "pin-row" {
+		t.Errorf("a typed name lost to the task: %q", b)
+	}
+	if got := f.autoTitle(wtFormVals{name: "pin row", task: task}); got != "" {
+		t.Errorf("title with a typed name %q", got)
+	}
+	if b, _ := f.draft(wtFormVals{branch: "x/y", task: task}); b != "x/y" {
+		t.Errorf("a typed branch lost to the task: %q", b)
+	}
+	if b, _ := f.draft(wtFormVals{issue: "412", task: task}); b != "" {
+		t.Errorf("an issue should name the branch, not the task: %q", b)
+	}
+	f.cfg.BranchPrefix = "amin/"
+	if b, _ := f.draft(wtFormVals{task: task}); b != "amin/fix-login-timeout-safari" {
+		t.Errorf("prefix draft %q", b)
+	}
+}
+
+// Create with only a task: the card shows the drafted name and branch
+// before anything is made, the worktree is made on that branch and the
+// name is saved for the list.
+func TestWTFormCreateFromTask(t *testing.T) {
+	m := wtFormModel(t)
+	var got []string
+	old := wtCreateRun
+	wtCreateRun = func(f *wtForm, folder, branch, ref string) ([]worktreeform.File, error) {
+		got = append(got, folder+"|"+branch+"|"+ref)
+		return nil, nil
+	}
+	t.Cleanup(func() { wtCreateRun = old })
+	m.connect.SetInputValue("task", "Can you add a dark mode toggle?")
+	m.refreshWTForm()
+	box := ansi.Strip(m.connect.Box())
+	for _, want := range []string{"Add a dark mode toggle", "feat/add-dark-mode-toggle", "/src/app.worktrees/feat-add-dark-mode-toggle"} {
+		if !strings.Contains(box, want) {
+			t.Errorf("card lacks %q:\n%s", want, box)
+		}
+	}
+	if len(got) != 0 {
+		t.Fatal("typing made a worktree")
+	}
+	wtDrive(t, m, func() tea.Msg { return connectcard.ButtonMsg{ID: "create"} })
+	if len(got) != 1 || got[0] != "/src/app.worktrees/feat-add-dark-mode-toggle|feat/add-dark-mode-toggle|main" {
+		t.Fatalf("create %v", got)
+	}
+	metas, err := worktrees.Load(m.wt.common)
+	if err != nil || metas["/src/app.worktrees/feat-add-dark-mode-toggle"].Name != "Add a dark mode toggle" {
+		t.Errorf("meta %+v %v", metas, err)
+	}
+}

@@ -84,6 +84,10 @@ func (f *wtForm) draft(v wtFormVals) (branch, folder string) {
 	if branch == "" {
 		branch = worktreeform.BranchFromName(v.name)
 	}
+	if branch == "" && strings.TrimSpace(v.issue) == "" {
+		// Only a task typed (CMP-26): the branch comes from it.
+		branch = worktreeform.BranchFromTask(v.task, f.cfg.BranchPrefix)
+	}
 	if branch == "" && f.issueTitle != "" {
 		branch = worktreeform.BranchFromIssue(f.issueNum, f.issueTitle)
 	}
@@ -91,6 +95,15 @@ func (f *wtForm) draft(v wtFormVals) (branch, folder string) {
 		return "", ""
 	}
 	return branch, worktreeform.Folder(f.base, branch)
+}
+
+// autoTitle is the worktree name drafted from the task (CMP-26): only
+// when no name, branch or issue is typed ("" otherwise).
+func (f *wtForm) autoTitle(v wtFormVals) string {
+	if strings.TrimSpace(v.name) != "" || strings.TrimSpace(v.branch) != "" || strings.TrimSpace(v.issue) != "" {
+		return ""
+	}
+	return worktreeform.TitleFromTask(v.task)
 }
 
 // wtNewPrepMsg is the repository read for a new dialog.
@@ -256,6 +269,10 @@ func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 	case strings.TrimSpace(v.issue) != "":
 		ph = "from the issue title"
 	}
+	namePH := "feat/my-change"
+	if t := f.autoTitle(v); t != "" {
+		namePH = t
+	}
 	opts := []string{"none"}
 	for _, a := range f.agents {
 		opts = append(opts, a.Title)
@@ -265,7 +282,7 @@ func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Child of " + f.parentTitle + " (starts from its branch)"})
 	}
 	rows = append(rows, []connectcard.Row{
-		{Kind: connectcard.Input, ID: "name", Text: "Name", Inline: true, Placeholder: "feat/my-change", Value: v.name},
+		{Kind: connectcard.Input, ID: "name", Text: "Name", Inline: true, Placeholder: namePH, Value: v.name},
 		{Kind: connectcard.Input, ID: "issue", Text: "Issue", Inline: true, Placeholder: "optional: number or URL, linked to it", Value: v.issue},
 		{Kind: connectcard.Input, ID: "from", Text: "From", Inline: true, Value: v.from},
 		{Kind: connectcard.Input, ID: "branch", Text: "Branch", Inline: true, Placeholder: ph, Value: v.branch},
@@ -486,6 +503,7 @@ type wtCreatedMsg struct {
 	start          bool
 	agent          agents.Agent
 	task           string
+	title          string        // the name drafted from the task (CMP-26)
 	link           *ghci.Link    // the linked issue / PR as gh read it
 	linkRef        *ghci.LinkRef // linked without a read (no gh)
 }
@@ -510,7 +528,7 @@ func (m *Model) wtCreate(start bool) tea.Cmd {
 	case refErr != nil:
 		f.fail = "Issue: " + refErr.Error()
 	case branch == "" && !hasRef:
-		f.fail = "Type a name (or a branch)."
+		f.fail = "Type a name, a branch or a task."
 	case v.from == "":
 		f.fail = "Type where it starts from, or pick a start point."
 	}
@@ -531,9 +549,10 @@ func (m *Model) wtCreate(start bool) tea.Cmd {
 	m.refreshWTForm()
 	from := v.from
 	task := v.task
+	title := f.autoTitle(v)
 	run := wtGHRun()
 	return func() tea.Msg {
-		msg := wtCreatedMsg{gen: gen, start: start, agent: ag, task: task}
+		msg := wtCreatedMsg{gen: gen, start: start, agent: ag, task: task, title: title}
 		if hasRef {
 			l, err := ghci.ViewLink(context.Background(), run, f.root, ref)
 			switch {
@@ -577,6 +596,9 @@ func (m *Model) onWTCreated(msg wtCreatedMsg) tea.Cmd {
 		md := mm[msg.folder]
 		if md.Name == "" && name != worktreeform.FolderName(msg.branch) {
 			md.Name = name
+		}
+		if md.Name == "" && msg.title != "" {
+			md.Name = msg.title
 		}
 		md.Created, md.LastSeen = clock.Now(), clock.Now()
 		if f.parent != "" {
