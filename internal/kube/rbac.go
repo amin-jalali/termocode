@@ -100,7 +100,11 @@ func ParseCanIList(out string) ([]Permission, error) {
 // bracketList reads "[a b c]" ("[]" is nil).
 func bracketList(s string) []string {
 	s = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(s), "["), "]")
-	return strings.Fields(s)
+	f := strings.Fields(s)
+	if len(f) == 0 {
+		return nil
+	}
+	return f
 }
 
 // ParseRoleBindings reads `get rolebindings -o json`.
