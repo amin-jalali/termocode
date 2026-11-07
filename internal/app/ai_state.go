@@ -563,6 +563,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
 		{"ai-worktrees-toggle", "AI: Toggle Agent Worktrees", ""},
+		{"ai-critic-toggle", "AI: Toggle Critic Review", ""},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
@@ -634,6 +635,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIWorktrees(), true
 	case "ai-worktrees-toggle":
 		return m.toggleAIWorktrees(), true
+	case "ai-critic-toggle": // CMP-53 (ai_critic.go)
+		return m.toggleAICritic(), true
 	case "ai-history-rename":
 		return m.openAIHistoryFor(pickerKindAIHistoryRename, " Rename Chat "), true
 	case "ai-fork-chat":

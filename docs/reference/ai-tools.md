@@ -1922,6 +1922,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-auto-approve` | AI: Agent Auto-Approve… | never | AI provider, credentials and approvals stay with the user |
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
 | `ai-configure` | AI: Configure Provider… | never | AI provider, credentials and approvals stay with the user |
+| `ai-critic-toggle` | AI: Toggle Critic Review | never | AI provider, credentials and approvals stay with the user |
 | `ai-credentials` | Open Config: AI Credentials | never | AI provider, credentials and approvals stay with the user |
 | `ai-discard-proposal` | AI: Discard Proposed Edit | never | the user reviews proposed edits |
 | `ai-doc` | AI: Generate Doc Comment | never | starts or changes an AI chat or edit; answer in this chat instead |
@@ -2563,6 +2564,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_compact` | never | AI provider, credentials and approvals stay with the user |
 | `ai_concurrency` | never | AI provider, credentials and approvals stay with the user |
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
+| `ai_critic` | never | AI provider, credentials and approvals stay with the user |
+| `ai_critic_slot` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_fallback` | never | AI provider, credentials and approvals stay with the user |
 | `ai_inline` | confirm (settings) |   |

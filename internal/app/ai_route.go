@@ -30,6 +30,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIWorktree(msg), true
 	case aiWorktreeReviewMsg: // ai_worktree_actions.go
 		return m.onAIWorktreeReview(msg), true
+	case aiCriticMsg: // ai_critic.go (CMP-53)
+		return m.onAICritic(msg), true
 	case aiWorktreeMergedMsg:
 		return m.onAIWorktreeMerged(msg), true
 	case aiWorktreeDiscardedMsg:

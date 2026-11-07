@@ -286,6 +286,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIWorktreeCard(m.confirmKind, id), true
 	case confirmKindAIWorktreeLeft: // ai_worktree_list.go
 		return m.answerAIWorktreeLeft(id), true
+	case confirmKindAICriticNotes, confirmKindAICriticMerge: // ai_critic.go
+		return m.answerAICriticCard(m.confirmKind, id), true
 	case confirmKindWebStart: // web_tui.go
 		return m.answerWebStart(id), true
 	case confirmKindWebAsk: // web_ask.go
@@ -312,6 +314,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIWorktreeCard(m.confirmKind, "") // Esc: Cancel
 	case confirmKindAIWorktreeLeft:
 		return m.answerAIWorktreeLeft("")
+	case confirmKindAICriticNotes, confirmKindAICriticMerge:
+		return m.answerAICriticCard(m.confirmKind, "") // Esc: Cancel
 	case confirmKindMCPTrust:
 		return m.answerMCPTrust("deny")
 	case confirmKindMCPImportOther:

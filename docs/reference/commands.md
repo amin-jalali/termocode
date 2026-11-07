@@ -76,6 +76,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Switch Profile… | `ai-profile-switch` |   |   |
 | AI: Toggle Agent Worktrees | `ai-worktrees-toggle` |   |   |
 | AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` / `Alt+G` | `Alt+Shift+A / Alt+G` |
+| AI: Toggle Critic Review | `ai-critic-toggle` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Toggle Keep Going While Todos Are Open | `ai-keep-going` |   |   |

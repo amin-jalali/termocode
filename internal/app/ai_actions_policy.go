@@ -738,6 +738,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// turning the feature off are the user's.
 	"ai-worktrees":        aiNever(aiNoPicker),
 	"ai-worktrees-toggle": aiNever(aiNoAIConfig),
+	"ai-critic-toggle":    aiNever(aiNoAIConfig),
 	// AI: Usage (AU-4) is the user's own view of tokens and money.
 	"ai-usage": aiNever("a read-only screen for the user; the AI cannot read its own bill"),
 	// Runs is the user's monitoring page (stop, pause and resume are theirs).
@@ -834,6 +835,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_concurrency":        aiNever(aiNoAIConfig),
 	"ai_parallel_max":       aiNever(aiNoAIConfig),
 	"ai_worktrees":          aiNever(aiNoAIConfig),
+	"ai_critic":             aiNever(aiNoAIConfig),
+	"ai_critic_slot":        aiNever(aiNoAIConfig),
 	"ai_compact":            aiNever(aiNoAIConfig),
 	"ai_plan_approval":      aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
 	"ai_categories":         aiNever(aiNoAIConfig),
