@@ -179,7 +179,7 @@ func (m *Model) onWTBgTask(value string) tea.Cmd {
 	b.WriteString("Key variables passed by name (values never shown): " + strings.Join(bgtask.KeyEnv, ", ") + ".\n\n")
 	b.WriteString("Runs: " + wtBgPreview(p.engine.Binary, argv))
 	m.confirm = confirm.Risky("Start "+wtBgAgentTitle(p.agent)+" in the background?", b.String(),
-		confirm.Button{ID: "cancel", Title: "Cancel"}, confirm.Button{ID: "start", Title: "Start in background", Style: confirm.StylePrimary})
+		confirm.Button{ID: "cancel", Title: "Cancel"}, confirm.Button{ID: "start", Title: "Start in background", Style: confirm.StylePrimary}).WithWideText().WithScrollText() // the whole command stays readable
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindWTBgTask

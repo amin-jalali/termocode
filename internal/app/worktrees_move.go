@@ -130,7 +130,7 @@ func (m *Model) worktreeMove() tea.Cmd {
 	m.confirm = confirm.Risky("Move "+title+" to another machine?", b.String(),
 		confirm.Button{ID: "cancel", Title: "Cancel"},
 		confirm.Button{ID: "pack", Title: "Pack lane", Style: confirm.StylePrimary},
-		confirm.Button{ID: "download", Title: "Pack and download"})
+		confirm.Button{ID: "download", Title: "Pack and download"}).WithWideText().WithScrollText() // paths and the pull command stay readable
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindWTMove

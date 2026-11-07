@@ -219,7 +219,7 @@ func (m *Model) onWTArchivePrep(msg wtArchivePrepMsg) tea.Cmd {
 		buttons = append(buttons, tb)
 	}
 	m.wt.archiveAsk = p
-	m.confirm = confirm.Risky(title, b.String(), confirm.Button{ID: "cancel", Title: "Cancel"}, buttons...)
+	m.confirm = confirm.Risky(title, b.String(), confirm.Button{ID: "cancel", Title: "Cancel"}, buttons...).WithWideText().WithScrollText() // the folder and script stay readable
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindWTArchive
