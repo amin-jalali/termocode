@@ -175,12 +175,23 @@ func HasCommitHooks(dir string) bool {
 // CommitOptions are the switches of CommitOpts.
 type CommitOptions struct {
 	Amend, Signoff bool
-	NoVerify       bool // skip the pre-commit and commit-msg hooks
+	NoVerify       bool   // skip the pre-commit and commit-msg hooks
+	AllowEmpty     bool   // a commit without changes (--allow-empty)
+	Author         string // "Name <e-mail>" from ParseAuthor (--author); "" = the user
 }
 
 // CommitOpts commits the index. An empty message is an error unless
 // Amend keeps the old one.
 func CommitOpts(dir, message string, o CommitOptions) error {
+	args, err := commitArgs(message, o)
+	if err != nil {
+		return err
+	}
+	return commitRun(dir, args)
+}
+
+// commitArgs is the git commit command line for message and o.
+func commitArgs(message string, o CommitOptions) ([]string, error) {
 	args := []string{"commit"}
 	if o.Amend {
 		args = append(args, "--amend")
@@ -191,14 +202,28 @@ func CommitOpts(dir, message string, o CommitOptions) error {
 	if o.NoVerify {
 		args = append(args, "--no-verify")
 	}
+	if o.AllowEmpty {
+		args = append(args, "--allow-empty")
+	}
+	if o.Author != "" {
+		a, err := ParseAuthor(o.Author)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, "--author="+a)
+	}
 	if strings.TrimSpace(message) == "" {
 		if !o.Amend {
-			return errEmptyMessage
+			return nil, errEmptyMessage
 		}
 		args = append(args, "--no-edit")
 	} else {
 		args = append(args, "-m", message)
 	}
+	return args, nil
+}
+
+func commitRun(dir string, args []string) error {
 	cmd := spawn.Command("git", args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()

@@ -401,6 +401,8 @@
 .layout-desktop .chatcol .composer-hint { display: none; }
 .layout-desktop .chatcol .head-btn .cod { font-size: 16px; }
 .layout-desktop .chatcol .head-btn { width: 22px; padding: 0; }
+/* The one text button there (Follow the laptop, on a pinned chat). */
+.layout-desktop .chatcol .head-btn.chat-follow { width: auto; padding: 0 6px; }
 .layout-desktop .chatcol .msg-user .bubble { padding: 6px 10px; border-radius: 6px; background: var(--wb-list-active); }
 .layout-desktop .chatcol .msg-label { color: var(--wb-side-fg); font-size: 12px; font-weight: 600; }
 .layout-desktop .chatcol .msg-model { color: var(--wb-desc); font-weight: 400; }
