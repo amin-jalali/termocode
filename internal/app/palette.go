@@ -205,6 +205,7 @@ func paletteItems() []picker.Item {
 		// Bottom panel tabs (panel.go / output.go).
 		{ID: "view-output", Title: "View: Output"},
 		{ID: "output-clear", Title: "Output: Clear Channel"},
+		{ID: auditSavePaletteID, Title: "Output: Save Audit Log"}, // audit_save.go
 		{ID: "quick-open", Title: "Go to File...", Hint: "Ctrl+P"},
 		{ID: "duplicate-line", Title: "Edit: Duplicate Line", Hint: "Shift+Alt+Down"},
 		{ID: "toggle-comment", Title: "Edit: Toggle Line Comment", Hint: "Ctrl+/"},
@@ -560,6 +561,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.showPanelTab(panelKindOutput)
 	case "output-clear":
 		m.output.Clear(m.output.Active())
+	case auditSavePaletteID: // audit_save.go
+		return m.auditSave()
 	case "quick-open":
 		m.picker = picker.NewWith(" Go to file ", func() []picker.Item { return loadFiles() })
 		m.picker.SetSize(m.w, m.h)
