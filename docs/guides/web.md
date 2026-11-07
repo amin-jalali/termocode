@@ -338,6 +338,7 @@ issue.
 | `web_max_viewers` | `4` | Browsers at once (1..8). |
 | `web_listen` | `loopback` | `tailnet`: also reach it from your tailnet devices. |
 | `web_require_totp` | `false` | A paired device also types a code from an authenticator app. |
+| `web_phone` | `off` | `on`: a paired phone with the panel open keeps it running, screen off too (not guests). `web_max_hours` still applies. |
 
 These settings live only in your own `config.json`. A project's settings
 cannot change them.

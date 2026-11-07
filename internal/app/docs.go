@@ -385,6 +385,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Open the one-time link in the browser of this computer when the panel starts. false: only Web: Copy Link."},
 	{Key: "web_max_viewers", Type: "int", Default: "4", Category: "Web (file only)",
 		Description: "How many browsers may be connected at once (1..8). One more is turned away."},
+	{Key: "web_phone", Type: "enum", Default: "off", Category: "Web (file only)", Choices: []string{"off", "on"},
+		Description: "on: a paired phone or tablet that has the panel open keeps it running, even with its screen off, as long as its link answers. Guests and the one-time link do not. It still stops after web_max_hours, with Web: Stop Panel, or when termocode closes. off: only real use counts (web_idle_minutes)."},
 	{Key: "mcp_trusted_tools", Type: "object", Default: "{}", Category: "AI (file only)",
 		Description: "The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first."},
 	{Key: "mouse_hover", Type: "enum", Default: "auto", Category: "Appearance (file only)", Choices: []string{"auto", "off"},
