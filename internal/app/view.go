@@ -2364,7 +2364,7 @@ func (m Model) statusState() statusbar.State {
 		BusyStep:    m.aiStreamSteps(),
 		Debug:       m.dapSessionActive,
 		ShowLSP:     m.editor.Path() != "",
-		LSP:         m.lspClients(),
+		LSP:         m.lspChipClients(),
 		Ext:         append(append(m.extStatusTexts(), m.httpStatusTexts()...), m.aiNESStatusTexts()...), // Group I, HTTP client, AI next edit
 	}
 	st.Ext = append(st.Ext, m.gitBlameStatusTexts()...) // last: statusSpans finds it there (git_blame_view.go)

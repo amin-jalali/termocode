@@ -697,6 +697,9 @@ type Model struct {
 	pendingContainerOpen containerRef
 	containerOffline     bool
 	containerStarting    bool
+	// RC-6 (container_lsp.go): where the language servers of a
+	// container workspace run, and the local mirror.
+	containerLSP *containerLSPState
 	// RC-7 (devcontainer_open.go): the setup the trust card asks about,
 	// and the one running.
 	devcontainerPending *devcontainerRun
@@ -988,6 +991,7 @@ func New() Model {
 		toast:            toast.New(),
 		status:           statusbar.New(),
 		lspMgr:           newLSPInstallState(),
+		containerLSP:     &containerLSPState{},
 		themeID:          named.ID,
 		keys:             keys,
 		keymapProblems:   keymapProblems,
@@ -1070,6 +1074,9 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, m.explorer.ScheduleLoads())   // FIX-2: a container root's first listing
 	cmds = append(cmds, wfxBootCmd())                 // WFX-15: the workflow scheduler (workflows_sched.go)
 	if cmd := m.containerWatchInitCmd(); cmd != nil { // RC-4: is the container still running? (container_workspace.go)
+		cmds = append(cmds, cmd)
+	}
+	if cmd := m.containerLSPInitCmd(); cmd != nil { // RC-6: language servers in the image? (container_lsp.go)
 		cmds = append(cmds, cmd)
 	}
 	// The card about a crash of the last run; with nvim it comes once
@@ -1240,6 +1247,9 @@ func (m Model) attachCmd() tea.Cmd {
 		// theme, so opening files later triggers Tree-sitter + LSP under the
 		// final palette.
 		_ = m.nvim.ExecLua(lspSetupLua)
+		// RC-6: a container workspace's servers wait for their plan
+		// (container_lsp.go), never a local server on container paths.
+		m.containerLSPPending(m.nvim.ExecLuaArgs)
 		// Snippets: must come AFTER lspSetupLua so its <Tab>/<S-Tab> remaps
 		// override the popup-completion handlers defined there. (Trying to
 		// load both via the same chunk would force a single keymap, losing

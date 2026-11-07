@@ -690,6 +690,10 @@ missing	kubernetes-top	Kubernetes|S
 missing	local-history	Git|S
 missing	local-history-deleted	Git|S
 missing	local-history-label	Git|S
+missing	lsp-container-diagnostics	Workspace|S
+missing	lsp-container-where	Workspace|S
+missing	lsp-mirror-clear	Workspace|S
+missing	lsp-mirror-refresh	Workspace|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
 missing	redis-slowlog	Databases|S

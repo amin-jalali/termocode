@@ -292,6 +292,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onWorkspaceGoneConfirm(id)
 	case confirmKindContainerOffline: // container_workspace.go
 		return m.onContainerOfflineConfirm(id)
+	case confirmKindContainerMirrorClear: // container_lsp.go
+		return m.answerMirrorClear(id)
 	case confirmKindDevContainerTrust: // devcontainer_open.go
 		return m.onDevContainerTrustConfirm(id)
 	case confirmKindCrash:

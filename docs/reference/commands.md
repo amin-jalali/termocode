@@ -619,12 +619,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| LSP: Choose Where the Language Server Runs… | `lsp-container-where` |   |   |
+| LSP: Clear Container Mirror… | `lsp-mirror-clear` |   |   |
 | LSP: Find All References | `find-references` | `Shift+F12` | `Shift+F12` |
 | LSP: Go to Implementation | `goto-impl` |   |   |
 | LSP: Go to Type Definition | `goto-type-def` | `Ctrl+F12` | `Ctrl+F12` |
 | LSP: Manage Language Servers... | `lsp-manage` |   |   |
+| LSP: Refresh Container Mirror | `lsp-mirror-refresh` |   |   |
 | LSP: Show Hover Documentation | `hover` |   |   |
 | LSP: Toggle Inlay Hints | `toggle-inlay-hints` | `Alt+L` | `Alt+L` |
+| LSP: Toggle Local Diagnostics in Container Workspace | `lsp-container-diagnostics` |   |   |
 
 ## Layout
 
