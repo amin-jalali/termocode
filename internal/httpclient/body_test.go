@@ -21,7 +21,7 @@ func bodyReq(method, body string, headers ...Header) Request {
 	return r
 }
 
-func writeFile(t *testing.T, dir, name string, data []byte) {
+func writeBodyFile(t *testing.T, dir, name string, data []byte) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), data, 0o600); err != nil {
 		t.Fatal(err)
@@ -45,7 +45,7 @@ func TestBuildBodyPlainUnchanged(t *testing.T) {
 func TestBuildBodyFileRef(t *testing.T) {
 	dir := t.TempDir()
 	data := []byte{0, 1, 2, 0xff, '\n', 'x'}
-	writeFile(t, dir, "data.bin", data)
+	writeBodyFile(t, dir, "data.bin", data)
 	for _, body := range []string{"< ./data.bin", "<  data.bin  "} {
 		wb, err := BuildBody(bodyReq("PUT", body, Header{"Content-Type", "application/octet-stream"}), dir)
 		if err != nil {
@@ -63,7 +63,7 @@ func TestBuildBodyFileRefStaysInDir(t *testing.T) {
 	if err := os.Mkdir(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, root, "secret.txt", []byte("no"))
+	writeBodyFile(t, root, "secret.txt", []byte("no"))
 	outside := filepath.Join(root, "secret.txt")
 	if err := os.Symlink(outside, filepath.Join(dir, "link.txt")); err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func TestBuildBodyFileRefStaysInDir(t *testing.T) {
 
 func TestBuildBodyMultipart(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "a.txt", []byte("file text\n"))
+	writeBodyFile(t, dir, "a.txt", []byte("file text\n"))
 	body := strings.Join([]string{
 		"--B",
 		`Content-Disposition: form-data; name="title"`,
@@ -166,7 +166,7 @@ func TestSendFileBodyAndGraphQL(t *testing.T) {
 	}))
 	defer srv.Close()
 	dir := t.TempDir()
-	writeFile(t, dir, "up.bin", []byte{9, 8, 7})
+	writeBodyFile(t, dir, "up.bin", []byte{9, 8, 7})
 	c := New(Options{})
 	body := "< ./up.bin"
 	r := Request{Method: "PUT", URL: srv.URL, Body: &body}

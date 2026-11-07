@@ -122,16 +122,17 @@ func webHTTPItem(i int, r httpclient.Request) webproto.HTTPReqItem {
 // webHTTPResolver resolves against the workspace's environment files and
 // the selected environment (env "": the selected one, "-": none).
 func webHTTPResolver(root, file string, vars []httpclient.Var, env string) *httpclient.Resolver {
-	dir := root
+	dir, base := root, ""
 	if file != "" {
 		dir = filepath.Dir(file)
+		base = dir
 	}
 	if env == "" {
 		env = httpSelectedEnv(root)
 	} else if env == "-" {
 		env = ""
 	}
-	return &httpclient.Resolver{FileVars: vars, Env: env, Envs: httpclient.LoadEnvs(dir, root), Secret: httpSecretLookup(), OnSecret: ai.RegisterSecret}
+	return &httpclient.Resolver{FileVars: vars, Env: env, Envs: httpclient.LoadEnvs(dir, root), Secret: httpSecretLookup(), OnSecret: ai.RegisterSecret, BaseDir: base}
 }
 
 // webHTTPFileReq is request index (1-based) of a workspace .http file,

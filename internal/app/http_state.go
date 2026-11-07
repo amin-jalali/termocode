@@ -349,9 +349,10 @@ func httpSecretLookup() func(name string) (string, bool) {
 // root and the selected environment. env "" uses the selected one;
 // "-" means none.
 func httpResolver(file string, fileVars []httpclient.Var, env string) *httpclient.Resolver {
-	dir := aiWorkspaceRoot()
+	dir, base := aiWorkspaceRoot(), ""
 	if file != "" {
 		dir = filepath.Dir(file)
+		base = dir
 	}
 	root := httpRootFor(dir)
 	if env == "" {
@@ -365,6 +366,7 @@ func httpResolver(file string, fileVars []httpclient.Var, env string) *httpclien
 		Envs:     httpclient.LoadEnvs(dir, root),
 		Secret:   httpSecretLookup(),
 		OnSecret: ai.RegisterSecret,
+		BaseDir:  base,
 	}
 }
 
