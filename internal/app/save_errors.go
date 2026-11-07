@@ -71,9 +71,15 @@ func (m *Model) saveAll() tea.Cmd {
 	if m.askSaveConflict(0, saveEveryFile) {
 		return nil
 	}
+	m.nvim.Unblock()
 	_ = m.nvim.Command("silent! wall")
 	var cmd tea.Cmd
-	if left := m.unsavedFiles(); len(left) > 0 {
+	left, ok := m.unsavedFiles()
+	if !ok {
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Save failed", "The editor did not answer. Your changes are still in the editor.")
+		return cmd
+	}
+	if len(left) > 0 {
 		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Save failed", saveAllFailText(left))
 		return cmd
 	}

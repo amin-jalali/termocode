@@ -155,7 +155,7 @@ func TestBulkSaveAsksWhenFileChangedOnDisk(t *testing.T) {
 				if b, _ := os.ReadFile(p); string(b) != want {
 					t.Fatalf("after %s: %q", answer, b)
 				}
-				if answer == "cancel" && len(m.unsavedFiles()) != 1 {
+				if left, _ := m.unsavedFiles(); answer == "cancel" && len(left) != 1 {
 					t.Fatal("cancel lost unsaved edits")
 				}
 				if action == "close" && answer == "overwrite" {
@@ -196,7 +196,7 @@ func TestSaveAllResumesAcrossDiskConflicts(t *testing.T) {
 		m.confirmOpen = false
 		m.handleConfirmSelect("overwrite")
 	}
-	if len(m.unsavedFiles()) != 0 {
+	if left, _ := m.unsavedFiles(); len(left) != 0 {
 		t.Fatal("Save All did not finish")
 	}
 	for p, want := range map[string]string{first: "one\nmine\n", second: "two\nmine\n"} {

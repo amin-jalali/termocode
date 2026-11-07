@@ -15,12 +15,20 @@ import (
 // buffer switch unless auto_save is on), so quitting must not drop edits
 // silently either.
 func (m *Model) quit() tea.Cmd {
-	if names := m.unsavedFiles(); len(names) > 0 {
+	names, ok := m.unsavedFiles()
+	if !ok { // the editor did not answer: ask rather than drop edits
+		m.showQuitCard(quitUnsureText)
+		return nil
+	}
+	if len(names) > 0 {
 		m.promptQuit(names)
 		return nil
 	}
 	return m.quitNow()
 }
+
+// quitUnsureText is the quit question when the editor could not be asked.
+const quitUnsureText = "The editor did not say whether files have unsaved changes."
 
 // quitNow closes nvim and quits without asking.
 func (m *Model) quitNow() tea.Cmd {
@@ -45,12 +53,14 @@ func (m *Model) quitNow() tea.Cmd {
 }
 
 // unsavedFiles lists the modified file buffers, asked from nvim (the
-// tab bar's copy of the modified flags can lag a redraw behind).
-func (m *Model) unsavedFiles() []string {
+// tab bar's copy of the modified flags can lag a redraw behind). A key
+// nvim still waits for is ended first; ok is false when nvim gave no
+// answer, so the caller never takes that as "nothing unsaved".
+func (m *Model) unsavedFiles() (names []string, ok bool) {
 	if m.nvim == nil {
-		return nil
+		return nil, true
 	}
-	var names []string
+	m.nvim.Unblock()
 	err := m.nvim.EvalLuaArgs(`local out = {}
 for _, b in ipairs(vim.api.nvim_list_bufs()) do
   if vim.bo[b].buflisted and vim.bo[b].buftype == '' and vim.bo[b].modified then
@@ -60,9 +70,9 @@ for _, b in ipairs(vim.api.nvim_list_bufs()) do
 end
 return out`, &names)
 	if err != nil {
-		return nil
+		return nil, false
 	}
-	return names
+	return names, true
 }
 
 // promptQuit opens the unsaved-changes question for quitting.
@@ -106,11 +116,17 @@ func (m *Model) onQuitConfirm(id string) tea.Cmd {
 			return nil
 		}
 		if m.nvim != nil {
+			m.nvim.Unblock()
 			_ = m.nvim.Command("silent! wall")
 		}
 		// A file that could not be written (read-only, deleted folder)
 		// is still modified: ask again instead of losing it.
-		if left := m.unsavedFiles(); len(left) > 0 {
+		left, ok := m.unsavedFiles()
+		if !ok {
+			m.showQuitCard(quitUnsureText)
+			return nil
+		}
+		if len(left) > 0 {
 			m.showQuitCard(saveAllFailText(left)) // say why it asks again
 			return nil
 		}

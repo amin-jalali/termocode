@@ -68,3 +68,24 @@ func (c *Client) execLua(code string, result any, args ...any) error {
 	}
 	return err
 }
+
+// Unblock ends a key sequence nvim still waits for (the char after f, a
+// leader mapping with timeout off) with <Esc>, so the calls that follow
+// get an answer. Quitting and saving call it first: their checks must not
+// act on a call that failed with ErrBlocked. It waits up to ~200 ms for
+// nvim to take the key.
+func (c *Client) Unblock() {
+	if c == nil || c.nv == nil {
+		return
+	}
+	for i := 0; i < 20; i++ {
+		m, err := c.nv.Mode()
+		if err != nil || !m.Blocking {
+			return
+		}
+		if i == 0 {
+			_, _ = c.nv.Input("<Esc>")
+		}
+		time.Sleep(blockedPoll)
+	}
+}
