@@ -354,6 +354,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-run-file":                  aiNever("SQL runs require the database query tool and its guard"),
 	"db-explain":                   aiNever(aiNoPicker + " (db_explain)"),
 	"db-explain-analyze":           aiNever("executes the statement; use db_explain"),
+	"db-format":                    aiConfirm(ai.ClassFileWrite),
+	"db-format-file":               aiConfirm(ai.ClassFileWrite),
 	"db-history":                   aiNever(aiNoPicker),
 	"db-cancel":                    aiAuto(),
 	"db-focus":                     aiAuto(),
