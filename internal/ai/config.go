@@ -36,6 +36,11 @@ type Settings struct {
 	// diff to accept or reject) or "auto" (they are written after the
 	// confirm dialog, or at once when fileWrite is auto-approved).
 	EditReview string `json:"ai_edit_review,omitempty"`
+	// ReviewOrder is "explain" (default: the review card puts the files
+	// that explain a change first: docs, then definitions, then the code
+	// that uses them, tests last) or "proposed" (the order the agent
+	// proposed them in). CMP-58.
+	ReviewOrder string `json:"ai_review_order,omitempty"`
 	// Prices override or add model prices ($ per million tokens, by
 	// model id prefix) over the built-in table (pricing.go).
 	// ContextWindows do the same for context windows (tokens). Both are
@@ -190,6 +195,16 @@ const (
 	EditReviewOn   = "review"
 	EditReviewAuto = "auto"
 )
+
+// Values of ai_review_order.
+const (
+	ReviewOrderExplain  = "explain"
+	ReviewOrderProposed = "proposed"
+)
+
+// ExplainFirst reports whether the review card orders its files
+// explain-first (ai_review_order, default explain).
+func (s Settings) ExplainFirst() bool { return s.ReviewOrder != ReviewOrderProposed }
 
 // InlineEnabled reports the ai_inline setting (default on).
 func (s Settings) InlineEnabled() bool { return s.Inline == nil || *s.Inline }
@@ -370,6 +385,7 @@ func SaveSettings(path string, s Settings) error {
 		set("ai_base_url", s.BaseURL)
 		set("ai_inline_model", s.InlineModel)
 		set("ai_edit_review", s.EditReview)
+		set("ai_review_order", s.ReviewOrder)
 		set("ai_worktrees", s.Worktrees)
 		set("ai_critic", s.Critic)
 		set("ai_plan_approval", s.PlanApproval)

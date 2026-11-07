@@ -110,7 +110,8 @@ func (m *Model) SetFileText(i int, old, new string) {
 		return
 	}
 	f := newFileStateOpt(File{Name: m.files[i].Name, Tag: m.files[i].Tag, Status: m.files[i].Status,
-		Add: m.files[i].Add, Del: m.files[i].Del, Old: old, New: new}, m.ignoreSpace)
+		Add: m.files[i].Add, Del: m.files[i].Del, Old: old, New: new, Why: m.files[i].Why}, m.ignoreSpace)
+	f.id = m.files[i].id
 	m.files[i] = f
 	m.cache.reset()
 }

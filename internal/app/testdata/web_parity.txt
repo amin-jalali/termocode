@@ -59,6 +59,7 @@ web	ai-profile-show	cmd:aiProfileShow
 web	ai-profile-switch	op:ai.use_profile
 web	ai-reasoning-next	palette
 web	ai-review	op:cards.answer
+web	ai-review-order	palette
 web	ai-rules	op:ai.info
 web	ai-runs	cmd:runs
 web	ai-ship	palette

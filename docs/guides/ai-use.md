@@ -445,6 +445,24 @@ set `"ai_edit_review": "auto"` in `config.json`. Then file changes ask with
 the dialog as before. Auto-approving *fileWrite* (**AI: Agent
 Auto-Approve…**) also skips the review: changes are written at once.
 
+#### Explain-first order
+
+When the agent changes several files, the card lists them in the order
+that explains the change best:
+
+1. Notes and docs (`*.md`, `docs/`): what the change is for.
+2. Schemas, protos, migrations, types and `go.mod`-like files: its shape.
+3. Code. A file that defines a new name (a function, a type, a class)
+   comes before the files that use that name.
+4. Tests last: the proof.
+
+Next to the file name the card says why the file is there, for example
+*"defines ParseQuery, used by handler.go"*. Files the rules can not tell
+apart keep the agent's order. The web's review cards follow the same
+order. To keep the agent's order, run **AI: Toggle Review Order (explain
+first / as proposed)**, or set `"ai_review_order": "proposed"` in
+`config.json`.
+
 **File: Compare Two Files…** uses the same card, read-only.
 
 ### Undo a whole AI turn
