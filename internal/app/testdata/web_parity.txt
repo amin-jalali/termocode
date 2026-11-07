@@ -200,6 +200,7 @@ web	git-conflict-prev	cmd:prevConflict
 web	git-conflict-theirs	op:git.resolve_side
 web	git-diff	op:git.diff
 web	git-discard	op:git.discard
+web	git-discard-all	op:git.discard
 web	git-discard-hunk	op:git.discard_hunk
 web	git-discard-lines	op:git.discard_lines
 web	git-fetch	palette
@@ -231,11 +232,13 @@ web	git-stage-all	palette
 web	git-stage-hunk	op:git.stage_hunk
 web	git-stage-lines	op:git.stage_lines
 web	git-stash	palette
+web	git-stash-actions	op:git.stash_act
 web	git-stash-list	op:git.stash_list
 web	git-stash-pop	palette
 web	git-sync	palette
 web	git-tags	op:git.tags
 web	git-undo	op:git.undo
+web	git-unstage-all	op:git.unstage
 web	git-unstage-hunk	op:git.unstage_hunk
 web	git-unstage-lines	op:git.unstage_lines
 web	git-view-toggle	cmd:scmViewToggle
@@ -462,7 +465,6 @@ missing	git-copy-commit-link	Git|S
 missing	git-copy-line-link	Git|S
 missing	git-diff-clipboard	Git|S
 missing	git-diff-merge-parent	Git|S
-missing	git-discard-all	Git|S
 missing	git-fetch-all	Git|S
 missing	git-goto-commit	Git|S
 missing	git-graph-all	Git|S
@@ -501,7 +503,6 @@ missing	git-rev-next	Git|S
 missing	git-rev-prev	Git|S
 missing	git-signing-toggle	Git|S
 missing	git-skip-hooks	Git|S
-missing	git-stash-actions	Git|S
 missing	git-stash-options	Git|S
 missing	git-status-blame	Git|S
 missing	git-tag-create	Git|S
@@ -510,7 +511,6 @@ missing	git-tag-delete-remote	Git|S
 missing	git-tag-details	Git|S
 missing	git-tag-push	Git|S
 missing	git-uncommit	Git|S
-missing	git-unstage-all	Git|S
 web	view/Databases	view:db
 web	view/Files	view:files
 web	view/Git	view:git

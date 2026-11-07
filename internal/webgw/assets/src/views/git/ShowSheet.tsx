@@ -1,5 +1,6 @@
 // One commit of the log: its subject, author and time, and its diff in
-// pages, a file row before each file.
+// pages, a file row before each file. With stash, hash is a stash entry
+// ("stash@{0}") and the sheet shows its changes (git.stash_show).
 import { h } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { link, live } from "../../session";
@@ -11,7 +12,9 @@ import { SkeletonRows } from "../../ui/Skeleton";
 import { t } from "../../strings";
 import { gitFailed } from "./errors";
 
-export function ShowSheet({ hash, onClose }: { hash: string; onClose: () => void }) {
+export function ShowSheet({ hash, stash, onClose }: { hash: string; stash?: boolean; onClose: () => void }) {
+  const op = stash ? "git.stash_show" : "git.show";
+  const args = (from?: number) => ({ ...(stash ? { ref: hash } : { hash }), ...(from ? { from } : {}) });
   const [page, setPage] = useState<DiffPage | null>(null);
   const [err, setErr] = useState("");
   const [more, setMore] = useState(false);
@@ -19,20 +22,20 @@ export function ShowSheet({ hash, onClose }: { hash: string; onClose: () => void
   useEffect(() => {
     if (!live.value) return;
     let stop = false;
-    link.request("git.show", { hash }).then(
+    link.request(op, args()).then(
       (r) => !stop && setPage(readDiff(r)),
       (e: unknown) => !stop && setErr(e instanceof Error ? e.message : ""),
     );
     return () => {
       stop = true;
     };
-  }, [hash, live.value]);
+  }, [hash, stash, live.value]);
 
   const loadMore = () => {
     if (!page || !page.next || more) return;
     setMore(true);
     link
-      .request("git.show", { hash, from: page.next })
+      .request(op, args(page.next))
       .then((r) => {
         const p = readDiff(r);
         setPage({ ...page, rows: [...page.rows, ...p.rows], next: p.next });

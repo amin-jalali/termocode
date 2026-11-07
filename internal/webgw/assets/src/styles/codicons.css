@@ -92,6 +92,7 @@
 .cod-git-commit::before { content: "\eafc"; }
 .cod-git-compare::before { content: "\eafd"; }
 .cod-git-merge::before { content: "\eafe"; }
+.cod-git-stash::before { content: "\ec26"; }
 .cod-git-pull-request::before { content: "\ea64"; }
 .cod-globe::before { content: "\eb01"; }
 .cod-go-to-file::before { content: "\ea94"; }
