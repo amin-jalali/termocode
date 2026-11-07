@@ -20,7 +20,7 @@ func TestWebSettingsListen(t *testing.T) {
 	if c := webSettings(); !c.Tailnet || len(c.Problems) != 0 {
 		t.Fatalf("tailnet: %+v", c)
 	}
-	writeUserConfig(t, `{"web_listen":"lan"}`)
+	writeUserConfig(t, `{"web_listen":"bogus"}`)
 	if c := webSettings(); c.Tailnet || len(c.Problems) != 1 {
 		t.Fatalf("bad value: %+v", c)
 	}

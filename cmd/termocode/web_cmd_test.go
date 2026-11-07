@@ -329,6 +329,27 @@ func TestWebGatewayTailnetMode(t *testing.T) {
 	}
 }
 
+// Spec (LAN mode): --lan needs the paired-device folder (its cert lives
+// in <devices>/lan) and mixes with neither tailnet nor SSH mode.
+func TestWebGatewayLANMode(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	var errb bytes.Buffer
+	cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/cfg/web", "--lan", "--port", "47443"}, &errb)
+	if !ok || cfg.LAN == nil || cfg.LAN.CertDir != "/cfg/web/lan" || cfg.Tailnet != nil || cfg.Port != 47443 {
+		t.Fatalf("ok %v lan %+v: %s", ok, cfg.LAN, errb.String())
+	}
+	for _, bad := range [][]string{
+		{"--dir", ws, "--audit", "/a.jsonl", "--lan"},
+		{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/cfg/web", "--lan", "--tailnet"},
+		{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/cfg/web", "--lan", "--ssh-port", "41237"},
+	} {
+		if _, ok := webGatewayConfig(bad, &errb); ok {
+			t.Errorf("accepted %q", bad)
+		}
+	}
+}
+
 // Spec (WEB-31): in tailnet mode `termocode web start` names the tailnet
 // URL, not 127.0.0.1.
 func TestWebStartNamesTheTailnetURL(t *testing.T) {
