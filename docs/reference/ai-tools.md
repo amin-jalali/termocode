@@ -2399,7 +2399,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `prev-buffer` | View: Previous Editor | auto |   |
 | `prev-diagnostic` | Go to Previous Problem | auto |   |
 | `prev-hunk` | Git: Go to Previous Change | auto |   |
+| `preview-dev-servers` | Preview: Dev Server URLs… | never | opens a picker or prompt that only the user can answer; use a typed tool; the agent reads its dev server address with terminal_read |
 | `preview-md` | Markdown: Open Preview | auto |   |
+| `preview-open-newest` | Preview: Open Newest Dev Server | never | acts outside the IDE (OS shell, file manager or browser) |
 | `problems` | Go to Problem... | never | opens a picker or prompt that only the user can answer; use a typed tool (diagnostics) |
 | `problems-panel` | View: Problems | auto |   |
 | `quick-open` | Go to File... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file) |

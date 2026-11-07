@@ -688,6 +688,8 @@ missing	kubernetes-top	Kubernetes|S
 missing	local-history	Git|S
 missing	local-history-deleted	Git|S
 missing	local-history-label	Git|S
+missing	preview-dev-servers	Preview|L
+missing	preview-open-newest	Preview|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
 missing	redis-slowlog	Databases|S
