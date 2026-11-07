@@ -1062,6 +1062,26 @@ they go into a prompt. A lesson that still holds a secret is dropped.
 Lesson text never goes to the logs or the AI audit channel; the audit line
 only says `memory · 2 lessons saved`.
 
+**Kinds.** Each lesson has a kind: a plain **lesson**, a **decision** (a
+choice you made for the project, like a library or a style) or a
+**correction** (you told the AI it was wrong and what to do instead).
+Corrections are saved by themselves after the turn, like other lessons.
+The kind shows in **AI: Memory…** and in the prompt, and it is one
+`kind:` line in `lessons.md` (you can add or change it by hand).
+
+**Levels.** Memory has three levels per workspace: **use and learn** (on),
+**use only** and **off**. **Use only** keeps sending the saved lessons and
+recalls them, but writes no new ones and makes no quick model request.
+**AI: Memory: Learn New Lessons On/Off (use only)** switches between use
+and learn and use only; from off it turns memory on in use only. **AI:
+Memory: Turn On/Off** turns it off from either level.
+
+**Shared with outside agents.** termocode's MCP server offers the lessons
+as a read-only resource, `termocode://memory/lessons` (Markdown), so Claude
+Code, Codex or another agent connected to termocode reads the same notes
+(see [Agents](agents.md)). It is redacted like the prompt, and while memory
+is off it holds only a note. Outside agents can not write lessons.
+
 The AI has no memory tool: it can not turn memory on or off or forget a
 lesson. It can change `lessons.md` only like any file, through the review
 card.

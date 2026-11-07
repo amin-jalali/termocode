@@ -27,7 +27,7 @@ const Redacted = "[REDACTED]"
 var ErrNoLessons = errors.New("the reply has no lessons JSON")
 
 // ParseReply reads the lessons of a model reply: the first fenced code
-// block (or the whole reply) must be {"lessons":[{"title","text","paths"}]}.
+// block (or the whole reply) must be {"lessons":[{"title","text","paths","kind"}]}.
 // At most three are kept; titles and texts are made one clean line and
 // cut; paths must stay inside the repository; a lesson that is empty or
 // holds [REDACTED] is dropped. The lessons have no id and no date.
@@ -41,6 +41,7 @@ func ParseReply(text string) ([]Lesson, error) {
 			Title string   `json:"title"`
 			Text  string   `json:"text"`
 			Paths []string `json:"paths"`
+			Kind  string   `json:"kind"`
 		} `json:"lessons"`
 	}
 	dec := json.NewDecoder(strings.NewReader(body))
@@ -52,9 +53,9 @@ func ParseReply(text string) ([]Lesson, error) {
 	}
 	var out []Lesson
 	for _, r := range reply.Lessons {
-		l := Lesson{Title: CleanLine(r.Title, MaxTitleRunes), Text: CleanLine(r.Text, MaxTextRunes)}
+		l := Lesson{Title: CleanLine(r.Title, MaxTitleRunes), Text: CleanLine(r.Text, MaxTextRunes), Kind: NormKind(r.Kind)}
 		l.Title = strings.ReplaceAll(l.Title, "{#", "{ #") // never a fake id
-		if l.Title == "" || l.Text == "" || strings.HasPrefix(l.Text, "paths:") ||
+		if l.Title == "" || l.Text == "" || strings.HasPrefix(l.Text, "paths:") || strings.HasPrefix(l.Text, "kind:") ||
 			strings.Contains(l.Title, Redacted) || strings.Contains(l.Text, Redacted) {
 			continue
 		}

@@ -642,6 +642,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
 		{"ai-agent-packs", "Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex)", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
+		{"ai-memory-learn", "AI: Memory: Learn New Lessons On/Off (use only)", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
 		{"ai-sign-out-claude", "AI: Sign out of Claude", ""},
@@ -876,6 +877,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAgentPacks(), true
 	case "ai-memory-toggle":
 		return m.toggleAIMemory(), true
+	case "ai-memory-learn":
+		return m.toggleAIMemoryLearn(), true
 	case "ai-models-edit":
 		return m.editAIModelSlots(), true
 	}
