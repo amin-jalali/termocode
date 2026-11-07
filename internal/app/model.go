@@ -1069,6 +1069,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, agentCtlInitCmd())            // OMX-33: the agent control socket (agent_ctl.go)
 	cmds = append(cmds, m.explorer.ScheduleLoads())   // FIX-2: a container root's first listing
 	cmds = append(cmds, wfxBootCmd())                 // WFX-15: the workflow scheduler (workflows_sched.go)
+	cmds = append(cmds, aiChatSchedBootCmd())         // CMP-43: scheduled chats (ai_chat_sched.go)
 	if cmd := m.containerWatchInitCmd(); cmd != nil { // RC-4: is the container still running? (container_workspace.go)
 		cmds = append(cmds, cmd)
 	}

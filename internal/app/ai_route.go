@@ -96,6 +96,9 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	if cmd, ok := m.handleAIBgMsg(msg); ok { // ai_bg_runs.go
 		return cmd, true
 	}
+	if cmd, ok := m.handleAIChatSchedMsg(msg); ok { // ai_chat_sched.go
+		return cmd, true
+	}
 	if cmd, ok := m.handleWfxMsg(msg); ok { // workflows_state.go
 		return cmd, true
 	}

@@ -248,6 +248,34 @@ is set per chat.
   next message starts it again.
 - The AI can not turn it on. Each auto turn costs like a normal one.
 
+### Schedule a chat
+
+A chat can run again by itself at set times, for example "rerun this
+chat at 9:00" to check a build or a queue each morning.
+
+1. Run **AI: Schedule This Chat…**.
+2. Say when: `at 09:00` (every day), `weekdays 09:00`,
+   `weekly mon 09:00`, `monthly 1 09:00`, `hourly :15`, or 5 cron
+   fields.
+3. Check the message it sends. Your last message is filled in.
+4. A card shows the time of the next run and the message. **Cancel** is
+   first; press **Schedule** to save it.
+
+- At each run the message is sent as your message, with an
+  **⏰ Scheduled run** note. The chat's tools and approvals apply as
+  usual.
+- It runs only while termocode is open and the AI is idle. If you are
+  typing in another chat, the run is skipped. A slot missed by up to 30
+  minutes (termocode closed or the laptop asleep) runs once, late.
+- At most once an hour: each run is a paid turn. Up to 20 chats can
+  have a schedule. A scheduled chat is never removed from the history.
+- **AI: Chat History…** shows ⏰ and the schedule next to the chat.
+- Stop it with **AI: Stop Chat Schedule** (a card asks first).
+- The AI can propose a schedule for its own chat with the
+  `chat_schedule_set` tool. You always see the same Cancel-first card;
+  nothing is saved without your yes. It can read the schedule
+  (`chat_schedule_read`) and stop it (`chat_schedule_clear`).
+
 ### Old chats and handoff
 
 The AI can look at your saved chats when you ask, for example "what did

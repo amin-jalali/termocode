@@ -195,6 +195,8 @@ type Conversation struct {
 	// "keep going" message by itself (AI: Toggle Keep Going).
 	Todos     []Todo `json:"todos,omitempty"`
 	KeepGoing bool   `json:"keep_going,omitempty"`
+	// Schedule makes the chat run again by itself (CMP-43, chatsched.go).
+	Schedule *ChatSchedule `json:"schedule,omitempty"`
 }
 
 const (
@@ -426,8 +428,9 @@ func (s ChatStore) prune() {
 		return
 	}
 	type head struct {
-		ID          string `json:"id"`
-		UpdatedAtMs int64  `json:"updated_at_ms"`
+		ID          string          `json:"id"`
+		UpdatedAtMs int64           `json:"updated_at_ms"`
+		Schedule    json.RawMessage `json:"schedule"`
 	}
 	var list []head
 	for _, e := range entries {
@@ -441,6 +444,9 @@ func (s ChatStore) prune() {
 		var h head
 		if json.Unmarshal(b, &h) != nil || h.ID == "" {
 			continue
+		}
+		if len(h.Schedule) > 0 && string(h.Schedule) != "null" {
+			continue // a scheduled chat (CMP-43) stays until its schedule is removed
 		}
 		list = append(list, h)
 	}

@@ -64,6 +64,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Review Waiting Plan | `ai-plan-review` |   |   |
 | AI: Run Next Plan in a Worktree, Then Ship… / Off | `ai-plan-worktree` |   |   |
 | AI: Runs | `ai-runs` |   |   |
+| AI: Schedule This Chat… | `ai-chat-schedule` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
 | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | `ai-ship` |   |   |
@@ -72,6 +73,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
 | AI: Skills… | `ai-skills` |   |   |
+| AI: Stop Chat Schedule | `ai-chat-unschedule` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |
 | AI: Switch Profile… | `ai-profile-switch` |   |   |
 | AI: Toggle Agent Worktrees | `ai-worktrees-toggle` |   |   |
