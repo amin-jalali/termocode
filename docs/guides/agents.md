@@ -211,6 +211,10 @@ also edit `config.json`.
   disconnect it. Both ask first. Press `?` on the screen for its keys.
 - Every call, allowed or not, is in the AI audit log (**Output: AI**) as
   `mcp:<agent name>`.
+- **Output: Save Audit Log** saves the **AI** and **Web** audit channels
+  to a new private file: `audit/audit-<time>.log` in termocode's config
+  folder (only you can read it). It never overwrites a saved log, and it
+  blanks secrets once more. Workflow runs keep their own `audit.jsonl`.
 
 The chat AI can not run the status and config commands. They are for you.
 

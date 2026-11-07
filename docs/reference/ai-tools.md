@@ -2392,6 +2392,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `open-url` | View: Open URL on Current Line | never | acts outside the IDE (OS shell, file manager or browser) |
 | `open-workspace` | File: Open Recent Workspace... | never | restarts termocode in another folder and ends this chat (workspace_folders adds a folder) |
 | `output-clear` | Output: Clear Channel | confirm (ide) |   |
+| `output-save-audit` | Output: Save Audit Log | never | the audit log is the user's record of what the AI and the web page did |
 | `pick-theme` | Preferences: Color Theme… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `pin-tab` | Tab: Toggle Pinned | auto |   |
 | `prefs-import-editor` | Preferences: Import from Another Editor… | never | importing another editor's settings stays with the user |
