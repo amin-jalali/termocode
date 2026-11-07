@@ -109,6 +109,7 @@ current number. A number from 0 to 1000 opens a card with the change
 scale`). 0 stops every pod, and the card says so. **Cancel** is the
 first button and has the focus, so `Enter` or `Esc` alone never scales
 anything. The same number as now changes nothing.
+
 ## Delete an object
 
 `d` on a pod, deployment, service or job asks first. The card shows the
@@ -117,6 +118,14 @@ object, the context, the namespace and the command (`kubectl delete`).
 alone never deletes anything. **Delete** does not wait: the list shows
 the object as it goes. A pod that belongs to a deployment or a job is
 made again; deleting a deployment or a job deletes its pods too.
+
+## New manifest from a snippet
+
+**Kubernetes: New Manifest from Snippet…** opens a new YAML buffer with a
+Deployment, Service, Ingress, ConfigMap, Secret, Job, CronJob,
+PersistentVolumeClaim or StatefulSet. The name is `my-app` and the
+namespace is the view's namespace; change them and save the file. Nothing
+is sent to the cluster.
 
 ## The AI
 
