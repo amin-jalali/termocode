@@ -49,6 +49,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-ddl", Title: "Databases: Show DDL"},
 		{ID: "db-goto-definition", Title: "Databases: Go to Definition"},
 		{ID: "db-find-usages", Title: "Databases: Find Usages"},
+		{ID: "db-quick-fix", Title: "Databases: Apply SQL Quick Fix"},
 		{ID: "db-count-rows", Title: "Databases: Count Rows"},
 		{ID: "db-transaction-mode", Title: "Databases: Transaction Mode…"},
 		{ID: "db-commit", Title: "Databases: Commit"},
@@ -128,6 +129,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseGotoDefinition(), true
 	case "db-find-usages":
 		return m.databaseFindUsages(), true
+	case "db-quick-fix":
+		return m.databaseQuickFix(), true
 	case "db-sessions":
 		return m.databaseShowActivity(false), true
 	case "db-server-info":

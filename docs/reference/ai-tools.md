@@ -2081,6 +2081,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
+| `db-quick-fix` | Databases: Apply SQL Quick Fix | confirm (fileWrite) |   |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |

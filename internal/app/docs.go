@@ -598,6 +598,7 @@ func EditorKeyCatalog() []EditorKey {
 		{"<leader> (wait)", "Normal", "Key hints: a box lists the next keys after the leader key (setting key_hints; Esc closes it)."},
 		{"<leader>f", "Normal", "Format the buffer (LSP)."},
 		{"<leader>x / <leader>X", "Normal", "In a SQL console: show the query plan of the statement at the cursor / EXPLAIN ANALYZE it (asks first, the statement runs)."},
+		{"<leader>.", "Normal", "In a SQL console or file: apply the quick fix of the underlined name at the cursor (\"Did you mean …?\")."},
 		{"Tab / Enter", "Insert", "Accept the completion item. Tab also accepts AI ghost text and jumps to the next snippet field."},
 		{"Shift+Tab", "Insert", "Previous completion item, or previous snippet field."},
 		{"Tab", "Normal, Insert", "AI next edit (marker \"⇥ next edit\"): the first Tab goes to the suggested edit and shows it, the next Tab applies it (one undo step)."},

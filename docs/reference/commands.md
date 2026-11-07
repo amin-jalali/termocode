@@ -203,6 +203,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: AI Generate SQL from Schema… | `db-ai-generate-sql` |   |   |
 | Databases: Add Connection… | `db-add` |   |   |
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
+| Databases: Apply SQL Quick Fix | `db-quick-fix` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
 | Databases: Commit | `db-commit` |   |   |

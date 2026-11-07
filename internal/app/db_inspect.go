@@ -1,9 +1,13 @@
 package app
 
 import (
+	"encoding/json"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // Live SQL inspections (DBX-4): on each buffer notify (150 ms debounce,
@@ -114,4 +118,58 @@ func (m *Model) databaseInspectBuffer(buf int, lines []string, c *dbclient.Conn)
 		diags = dbInspectDiagnostics(strings.Join(lines, "\n"), c.Driver, m.databases.inspectSchema(c.ID))
 	}
 	_ = m.nvim.ExecLuaArgs(`local b,d=...;if vim.api.nvim_buf_is_valid(b) then vim.diagnostic.set(vim.api.nvim_create_namespace('termocode_sql_inspect'),b,d) end`, buf, diags)
+}
+
+// dbQuickFixLua applies the fix of the inspection diagnostic under the
+// cursor (else the first fixable one on the cursor line): the name is
+// replaced in place, its quote kept. It returns {old=, fix=} or {}.
+const dbQuickFixLua = `local ns=vim.api.nvim_create_namespace('termocode_sql_inspect')
+local b=vim.api.nvim_get_current_buf()
+local c=vim.api.nvim_win_get_cursor(0)
+local row,col=c[1]-1,c[2]
+local hit,line
+for _,d in ipairs(vim.diagnostic.get(b,{namespace=ns})) do
+ local f=d.user_data and d.user_data.fix
+ if f and f~='' and d.lnum==row and (d.end_lnum or d.lnum)==d.lnum then
+  if col>=d.col and col<=(d.end_col or d.col) then hit=d;break end
+  line=line or d
+ end
+end
+hit=hit or line
+if not hit then return vim.fn.json_encode({}) end
+local text=vim.api.nvim_buf_get_lines(b,hit.lnum,hit.lnum+1,false)[1] or ''
+local old=text:sub(hit.col+1,hit.end_col)
+local fix=hit.user_data.fix
+local q=old:sub(1,1)
+if (q=='"' or q=='\96') and old:sub(-1)==q then fix=q..fix:gsub(q,q..q)..q end
+vim.api.nvim_buf_set_text(b,hit.lnum,hit.col,hit.lnum,hit.end_col,{fix})
+vim.api.nvim_win_set_cursor(0,{hit.lnum+1,hit.col})
+vim.diagnostic.set(ns,b,vim.tbl_filter(function(d) return not (d.lnum==hit.lnum and d.col==hit.col) end,vim.diagnostic.get(b,{namespace=ns})))
+return vim.fn.json_encode({old=old,fix=fix})`
+
+// databaseQuickFix applies the quick fix of the inspection under the
+// cursor (DBX-4): "Did you mean email?" becomes the text. One undo step.
+func (m *Model) databaseQuickFix() tea.Cmd {
+	if m.nvim == nil {
+		return nil
+	}
+	file, _, ok := m.httpBufText(0)
+	if !ok || !strings.EqualFold(lastExt(file), ".sql") {
+		return m.pushToastDetail(toast.Info, "Open a SQL file", "Quick fixes are for SQL consoles and files.")
+	}
+	var raw string
+	_ = m.nvim.ExecLuaResult(dbQuickFixLua, &raw)
+	var res struct {
+		Old string `json:"old"`
+		Fix string `json:"fix"`
+	}
+	_ = json.Unmarshal([]byte(raw), &res)
+	if res.Fix == "" {
+		return m.pushToastDetail(toast.Info, "No quick fix here", "Put the cursor on an underlined name that says \"Did you mean …?\".")
+	}
+	return tea.Batch(m.pushToast(toast.Info, "Replaced "+sanitizeDBText(res.Old)+" with "+sanitizeDBText(res.Fix)), m.fetchStateCmd())
+}
+
+func init() {
+	registerNotifyHandler("termocode_db_quickfix", func(m *Model, _ []any) tea.Cmd { return m.databaseQuickFix() })
 }

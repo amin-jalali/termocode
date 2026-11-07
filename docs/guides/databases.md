@@ -225,6 +225,10 @@ In a SQL buffer, `Ctrl+X Ctrl+O` (and the pop-up that opens while you type) offe
 
 Once a console's connection is connected, the whole schema is loaded once in the background (every schema of the database, the columns of up to 400 tables with their types, and the foreign keys), so you do not need to open the tree first. Columns of a `WITH name AS (…)` CTE or a `(SELECT …) alias` subquery come from its select list. After `JOIN orders o ON` the pop-up offers whole conditions from the foreign keys, such as `o.user_id = u.id`. Each column shows its type family (`column num`, `column text`, `column time`); after `u.created = o.` the columns of the same type come first.
 
+## Inspections and quick fixes
+
+While you type, a SQL console or file is checked against the schema already loaded: syntax errors are underlined as errors, unknown tables and `alias.column` names as warnings, with a hint such as *Unknown column u.emial. Did you mean email?* Put the cursor on the underlined name and press `<leader>.` (or run **Databases: Apply SQL Quick Fix**) to replace it with the suggested name; a quoted name stays quoted, and `u` undoes it. Nothing is asked of the server.
+
 ## Edit rows
 
 You can change the rows of a table's data page, and of a console result that is a plain `SELECT` from one table (columns named as they are in the table, no `DISTINCT`, `JOIN`, `GROUP BY` or `UNION`). The table needs a primary key or a unique key, and the result must contain its columns: each change finds its row by the full key. A SQLite table with neither is edited by its hidden `rowid` on the data page (not in a console result); a table that has columns named `rowid`, `_rowid_` and `oid` stays read-only. Otherwise the page says **read-only** and why (for example `read-only: no key`); `e` then shows the reason. Views, AI results, table descriptions and read-only connections cannot be edited.
