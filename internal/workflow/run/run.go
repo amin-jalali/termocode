@@ -44,6 +44,8 @@ type Options struct {
 	Each   Each   // nil: no item environment
 	Run    Runner
 	Write  Writer
+	// Wait backs wait steps (nil: they fail).
+	Wait Waiter
 
 	// ParallelMax caps the items an each runs at once
 	// (workflows_parallel_max; 0: no cap beyond the file's).
@@ -482,7 +484,7 @@ func (r *runner) attempts(ctx context.Context, s *workflow.Step, f *frame, st *S
 
 // try runs one try under the step's timeout.
 func (r *runner) try(ctx context.Context, s *workflow.Step, f *frame, st *StepState, attempt int) (string, error) {
-	if s.Timeout <= 0 || s.Type == workflow.TypeEach {
+	if s.Timeout <= 0 || s.Type == workflow.TypeEach || s.Type == workflow.TypeWait {
 		return r.exec(ctx, s, f, st, attempt)
 	}
 	tctx, cancel := context.WithTimeout(ctx, s.Timeout)

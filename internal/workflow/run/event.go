@@ -22,6 +22,8 @@ const (
 	RunPaused    Kind = "run_paused"
 	RunHeld      Kind = "run_held"      // the user paused the run (Handle.Pause)
 	RunContinued Kind = "run_continued" // the user let it go on (Handle.Continue)
+	LoopRound    Kind = "loop_round"    // a loop step starts a round (Attempt is the round)
+	WaitPoll     Kind = "wait_poll"     // a wait step looked and waits on (Err is the detail)
 )
 
 // Event is one thing that happened in a run. Options.OnEvent gets them

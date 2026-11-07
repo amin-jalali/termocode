@@ -106,6 +106,45 @@ The AI never saves a file by itself:
   to undo it.
 - `p` pauses a running workflow before its next step; `p` again goes on.
 
+## Agent graphs: loops, branches, waits and handoffs
+
+Four parts let one workflow chain agents like a team.
+
+- A `loop` step runs its `steps` again until a round passes. A round
+  passes when all its steps pass and `until` (an expression, optional)
+  is true. `"max"` caps the rounds (at most 20). `"budget_usd"` stops the
+  loop when its steps spent that much. Inside, `{{loop.round}}` and
+  `{{loop.max}}` tell the round. The steps see the outputs of the round
+  before, so a fix agent can read the last test output.
+- A `branch` step runs two to eight lists at the same time and then
+  joins them. With `"join": "all"` (the default) it fails when any
+  branch fails; with `"any"` it fails only when every branch fails.
+  After the join, every step inside is in `steps.<id>`, so one step can
+  sum up all the reviews.
+- A `wait` step waits for a pull request: `"for": "ci"` (every check
+  passed), `"merged"` or `"approved"`. `"pr"` is a number or a link,
+  often `{{steps.open.url}}`. It looks every `"every"` (default 1m, at
+  least 10s) and gives up after the step's `timeout`, else
+  `limits.wait`, else 6h. It only reads, so it shows no card. A dry run
+  does not wait.
+- `"handoff": "<step id>"` on an `ai`, `agent` or `pipeline` step adds
+  that step's output to the prompt, marked as data, never as orders.
+
+```jsonc
+{"id": "fix", "type": "loop", "max": 3, "budget_usd": 2, "steps": [
+  {"id": "code", "type": "agent", "agent": "codex", "prompt": "Fix the failing tests (round {{loop.round}}).", "handoff": "t"},
+  {"id": "t", "type": "tests"}
+]},
+{"id": "review", "type": "branch", "branches": [
+  {"name": "security", "steps": [{"id": "sec", "type": "ai", "model": "quick", "prompt": "Review for security."}]},
+  {"name": "style", "steps": [{"id": "sty", "type": "ai", "model": "quick", "prompt": "Review for style."}]}
+]},
+{"id": "open", "type": "write", "to": "pr", "title": "Fix tests"},
+{"id": "ci", "type": "wait", "for": "ci", "pr": "{{steps.open.url}}", "timeout": "2h"}
+```
+
+The run view shows each loop round and each branch under its step.
+
 ## Schedules
 
 Add a `schedule` to the file and press `o` to turn it on. The card says

@@ -43,7 +43,11 @@ type Config struct {
 	GitHubComment func(ctx context.Context, pr, body string) (ledger.Result, error)
 	Find          func(ctx context.Context, spec workflow.WriteSpec, marker string) (ledger.Result, bool, error)
 	// PR pushes an item's branch and opens its pull request (pr writes).
-	PR      func(ctx context.Context, p PRCall) (ledger.Result, error)
+	PR func(ctx context.Context, p PRCall) (ledger.Result, error)
+	// Wait backs wait steps: one read-only look at a pull request (pr is
+	// a number, #N or its link; what is one of workflow.WaitFors). Nil:
+	// wait steps fail.
+	Wait    func(ctx context.Context, pr, what string) (run.WaitStatus, error)
 	OnEvent func(run.Event)
 	OnAI    func(step, item string, e agentrun.Event)
 	// OnAuditError hears a line of audit.jsonl that could not be written.
@@ -114,7 +118,17 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 		Each: &Worktrees{Workspace: cfg.Workspace, RunID: id}, ParallelMax: cfg.ParallelMax,
 		Tools: cfg.Tools, Ask: cfg.AskTool, OnEvent: onEvent, Store: store, Resume: cfg.Resume,
 	}
+	if cfg.Wait != nil {
+		opts.Wait = waitFunc(cfg.Wait)
+	}
 	return run.Start(ctx, f, opts), nil
+}
+
+// waitFunc is a run.Waiter from Config.Wait.
+type waitFunc func(ctx context.Context, pr, what string) (run.WaitStatus, error)
+
+func (w waitFunc) Check(ctx context.Context, c run.WaitCall) (run.WaitStatus, error) {
+	return w(ctx, c.PR, c.For)
 }
 
 // seenStore saves run files; when a real run ends well it marks the

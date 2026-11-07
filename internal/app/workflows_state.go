@@ -695,7 +695,7 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 		},
 	}
 	gh := newWFXGitHub(st.ws)
-	cfg.PR, cfg.GitHubComment, cfg.Find = gh.PR, gh.Comment, gh.Find
+	cfg.PR, cfg.GitHubComment, cfg.Find, cfg.Wait = gh.PR, gh.Comment, gh.Find, gh.Wait
 	cfg.ParallelMax, cfg.AgentSandbox = wfxRunSettings()
 	h, err := wire.Start(context.Background(), cfg)
 	if err != nil {

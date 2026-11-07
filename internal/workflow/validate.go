@@ -289,9 +289,15 @@ func (c *checker) notify(o *obj, f *File) []string {
 	return list
 }
 
-// checkRefs: steps.<id> in an each's items must name a step.
+// checkRefs: steps.<id> in an each's items, and a handoff, must name a
+// step.
 func (c *checker) checkRefs(f *File) {
 	Walk(f.Steps, func(s *Step) bool {
+		if s.Handoff != "" && s.Handoff != s.ID {
+			if _, known := c.ids[s.Handoff]; !known {
+				c.errs = append(c.errs, Problem{Line: s.Line, Where: "step " + quote(s.ID) + ".handoff", Msg: fmt.Sprintf("no step has the id %s", quote(s.Handoff))})
+			}
+		}
 		if s.Each == nil {
 			return true
 		}
@@ -307,7 +313,7 @@ func (c *checker) checkRefs(f *File) {
 
 // ── steps ───────────────────────────────────────────────────────────────
 
-var commonStepKeys = []string{"id", "type", "title", "when", "else", "retries", "timeout", "on_error"}
+var commonStepKeys = []string{"id", "type", "title", "when", "else", "retries", "timeout", "on_error", "handoff"}
 
 func (c *checker) stepList(n *node, where string, eachDepth, maxItems int) []Step {
 	out := make([]Step, 0, len(n.vals))
@@ -370,6 +376,14 @@ func (c *checker) step(n *node, where string, eachDepth, maxItems int) (Step, bo
 	s.Retries = c.retries(o, "retries")
 	s.Timeout = o.dur("timeout")
 	s.OnError = o.enum("on_error", "", OnErrorContinue, OnErrorStop)
+	s.Handoff = o.str("handoff")
+	switch {
+	case s.Handoff == "":
+	case s.Type != TypeAI && s.Type != TypeAgent && s.Type != TypePipeline:
+		c.errAt(o.off("handoff"), where+".handoff", `"handoff" is only for ai, agent and pipeline steps`)
+	case s.Handoff == s.ID:
+		c.errAt(o.off("handoff"), where+".handoff", "a step cannot hand off to itself")
+	}
 	if en := o.get("else"); en != nil {
 		if en.kind != kArray {
 			c.errAt(en.off, where+".else", "must be a list of steps")
@@ -441,6 +455,12 @@ func (c *checker) step(n *node, where string, eachDepth, maxItems int) (Step, bo
 		keys = []string{"argv", "cwd", "env"}
 	case TypeWrite:
 		s.Write, keys = c.write(o, n, where)
+	case TypeLoop:
+		s.Loop, keys = c.loop(o, n, where, eachDepth, maxItems)
+	case TypeBranch:
+		s.Branch, keys = c.branch(o, n, where, eachDepth, maxItems)
+	case TypeWait:
+		s.Wait, keys = c.wait(o, n, where)
 	}
 	o.finish(append(append([]string(nil), commonStepKeys...), keys...))
 	return s, true
@@ -520,6 +540,93 @@ func (c *checker) each(o *obj, n *node, where string, depth, maxItems int) (*Eac
 		}
 	}
 	return e, []string{"items", "parallel", "worktree", "base", "cleanup", "steps"}
+}
+
+// nested checks the depth of a loop or a branch (each, loop and branch
+// count together).
+func (c *checker) nested(n *node, where, what string, depth int) bool {
+	if depth+1 > MaxEachDepth {
+		c.errAt(n.off, where, "%s is nested %d deep; the most is %d", what, depth+1, MaxEachDepth)
+		return false
+	}
+	return true
+}
+
+// subSteps reads the "steps" list of o (a loop, or one branch).
+func (c *checker) subSteps(o *obj, where string, depth, maxItems int, deepOK bool) []Step {
+	sn := o.get("steps")
+	switch {
+	case sn == nil:
+		o.missing("steps")
+	case sn.kind != kArray || len(sn.vals) == 0:
+		c.errAt(sn.off, where+".steps", "must be a list with at least one step")
+	case deepOK:
+		return c.stepList(sn, where+".steps", depth+1, maxItems)
+	}
+	return nil
+}
+
+func (c *checker) loop(o *obj, n *node, where string, depth, maxItems int) (*LoopSpec, []string) {
+	l := &LoopSpec{Max: o.intIn("max", 1, MaxLoopRounds, 0), Until: o.expr("until"), BudgetUSD: o.num("budget_usd", 0, 1e6)}
+	if o.get("max") == nil {
+		o.missing("max")
+	}
+	ok := c.nested(n, where, "loop", depth)
+	l.Steps = c.subSteps(o, where, depth, maxItems, ok)
+	return l, []string{"max", "until", "budget_usd", "steps"}
+}
+
+func (c *checker) branch(o *obj, n *node, where string, depth, maxItems int) (*BranchSpec, []string) {
+	b := &BranchSpec{Join: o.enum("join", JoinAll, JoinAll, JoinAny)}
+	ok := c.nested(n, where, "branch", depth)
+	bn := o.get("branches")
+	switch {
+	case bn == nil:
+		o.missing("branches")
+	case bn.kind != kArray:
+		c.errAt(bn.off, where+".branches", `must be a list of { "name": …, "steps": [ … ] }`)
+	default:
+		if len(bn.vals) < MinBranches || len(bn.vals) > MaxBranches {
+			c.errAt(bn.off, where+".branches", "needs %d to %d branches; it has %d", MinBranches, MaxBranches, len(bn.vals))
+		}
+		names := map[string]bool{}
+		for i, v := range bn.vals {
+			w := fmt.Sprintf("%s.branches[%d]", where, i)
+			bo := c.object(v, w)
+			if bo == nil {
+				continue
+			}
+			br := Branch{Name: bo.req("name")}
+			switch {
+			case br.Name == "":
+			case !idRe.MatchString(br.Name):
+				c.errAt(bo.off("name"), w+".name", "use a-z, 0-9, _ and -, starting with a letter, at most 40 characters")
+			case names[br.Name]:
+				c.errAt(bo.off("name"), w+".name", "%s is already the name of a branch in this step", quote(br.Name))
+			default:
+				names[br.Name] = true
+			}
+			br.Steps = c.subSteps(bo, w, depth, maxItems, ok)
+			bo.finish([]string{"name", "steps"})
+			b.Branches = append(b.Branches, br)
+		}
+	}
+	return b, []string{"join", "branches"}
+}
+
+func (c *checker) wait(o *obj, n *node, where string) (*WaitSpec, []string) {
+	w := &WaitSpec{For: o.enum("for", "", WaitFors...), PR: o.req("pr"), Every: o.dur("every")}
+	if o.get("for") == nil {
+		c.errAt(n.off, where, `"for" is missing; use one of: %s`, strings.Join(WaitFors, ", "))
+	}
+	switch {
+	case w.Every == 0:
+		w.Every = DefaultWaitEvery
+	case w.Every < MinWaitEvery:
+		c.errAt(o.off("every"), o.at("every"), "must be at least %s", MinWaitEvery)
+		w.Every = DefaultWaitEvery
+	}
+	return w, []string{"for", "pr", "every"}
 }
 
 func (c *checker) tools(o *obj) *ToolRules {
