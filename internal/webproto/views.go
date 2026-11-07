@@ -456,7 +456,7 @@ type ViewUpdate struct {
 }
 
 var opViewRows = []Policy{
-	{Op: OpViewRun, New: newOf[ViewRunArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Live: 2, Audit: AuditCounted, Phase: PhaseV2},
+	{Op: OpViewRun, New: newOf[ViewRunArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Live: 2, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpViewStop, New: newOf[ViewStopArgs](), Role: RoleViewer, Rate: perSec(10), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpViewCatalog, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: Rate{N: 1, Per: 5 * time.Second}, MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 }
