@@ -571,6 +571,8 @@ missing	git-ai-explain-line	Git|S
 missing	git-ai-pr-text	Git|S
 missing	git-ai-review-branch	Git|S
 missing	git-ai-review-changes	Git|S
+missing	git-ai-security-branch	Git|S
+missing	git-ai-security-changes	Git|S
 missing	git-ai-stash	Git|S
 missing	git-auto-fetch	Git|S
 missing	git-autosquash	Git|S
@@ -660,6 +662,7 @@ missing	git-tag-delete	Git|S
 missing	git-tag-delete-remote	Git|S
 missing	git-tag-details	Git|S
 missing	git-tag-push	Git|S
+missing	git-threat-model	Git|S
 missing	git-uncommit	Git|S
 missing	git-unshallow	Git|S
 missing	git-upstream-set	Git|S
