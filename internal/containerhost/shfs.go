@@ -23,6 +23,12 @@ var ErrNoShell = errors.New("the image has no shell (sh)")
 
 // sh runs script with args as $1… in the container, as the host's user.
 func (h *Host) sh(ctx context.Context, op, p, script string, args ...string) (string, error) {
+	if out, stderr, code, ok := h.viaMux(ctx, script, args); ok {
+		if code != 0 {
+			return "", h.engineErr(op, p, stderr, code)
+		}
+		return out, nil
+	}
 	argv := append([]string{"sh", "-c", script, "sh"}, args...)
 	out, stderr, code, err := h.call(ctx, nil, h.execArgs("-i", "/", argv)...)
 	if err != nil {

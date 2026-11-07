@@ -546,6 +546,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			m.databases.console.pending = nil
 		}
 		m.databaseTransferClosed()
+		if m.confirmKind == confirmKindContainerWSUpload { // transfer_container.go: Esc = Cancel
+			m.onContainerWSUploadConfirm("cancel")
+		}
 		if m.nvimDead {
 			// Esc: the editor is gone, so the question stays.
 			m.promptNvimExited()

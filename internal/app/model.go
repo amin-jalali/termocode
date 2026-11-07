@@ -423,6 +423,9 @@ type Model struct {
 
 	// xfer is the running download (transfer.go), nil when none.
 	xfer *xferRun
+	// ctrXfer is the transfer stage of a container workspace
+	// (transfer_container.go).
+	ctrXfer ctrXferState
 
 	// Markdown live preview: when on, a scratch buffer named
 	// "<basename> PREVIEW" carries the glamour-rendered output and lives
