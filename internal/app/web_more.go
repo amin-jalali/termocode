@@ -15,6 +15,7 @@ type webMorePub struct {
 	mcp      webMCPPub
 	ai       webAIPub                          // the ai topic (web_ai_topic.go)
 	branches []string                          // the local branches git.branches listed last (git.checkout takes one of them)
+	remotes  []string                          // the remote branches git.branches listed last (git.checkout's remote takes one of them)
 	dbTables map[string]map[string]bool        // the tables db.tables listed last, by connection (db.rows takes one)
 	ctrs     map[string]webproto.ContainerItem // the containers containers.list gave last, by id (stop and remove take one)
 	ctrRaw   map[string]containers.Container   // the same, as the engine listed them (compose folder, image, ports)

@@ -3,6 +3,7 @@ package app
 import (
 	"slices"
 	"strconv"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -28,8 +29,9 @@ func init() {
 	webAskOps[webproto.OpGitStashPop] = (*Model).webGitStashPop
 }
 
-// webGitBranches lists the local branches (off the UI thread) and keeps
-// them for git.checkout.
+// webGitBranches lists the local branches and the remote branches with
+// no local branch of the same name (off the UI thread) and keeps them for
+// git.checkout.
 func (m *Model) webGitBranches(call *webCall) tea.Cmd {
 	root, ok := m.webGitRoot(call)
 	if !ok {
@@ -43,11 +45,13 @@ func (m *Model) webGitBranches(call *webCall) tea.Cmd {
 			webGitFail(call, err)
 			return nil
 		}
+		remotes := webGitRemoteOnly(names, root)
 		stashes, _ := git.StashList(root)
 		up := git.HasUpstream(root)
 		return applyMsg(func(m *Model) tea.Cmd {
 			if m.web != nil {
 				m.web.more.branches = names
+				m.web.more.remotes = remotes
 			}
 			out := webproto.GitBranches{Current: webName(current), Branches: []string{}, Stashes: len(stashes), Upstream: up}
 			for i, n := range names {
@@ -57,10 +61,34 @@ func (m *Model) webGitBranches(call *webCall) tea.Cmd {
 				}
 				out.Branches = append(out.Branches, n)
 			}
+			for i, r := range remotes {
+				if len(out.Branches)+i == webproto.MaxGitBranches {
+					out.More += len(remotes) - i
+					break
+				}
+				out.Remotes = append(out.Remotes, r)
+			}
 			call.reply(out)
 			return nil
 		})
 	}
+}
+
+// webGitRemoteOnly lists the remote branches ("origin/x") whose short
+// name x has no local branch: the ones a checkout can track (the laptop's
+// branch picker shows the same "Remote" group).
+func webGitRemoteOnly(local []string, root string) []string {
+	all, err := git.RemoteBranches(root)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, r := range all {
+		if _, short, ok := strings.Cut(r, "/"); ok && short != "" && !slices.Contains(local, short) {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // webGitLaptopRun is the run of a git card: the laptop's own command.
@@ -127,10 +155,14 @@ func (m *Model) webGitPull(call *webCall) *webAsk {
 }
 
 func (m *Model) webGitCheckout(call *webCall) *webAsk {
-	to := call.args.(*webproto.GitCheckoutArgs).Branch
+	args := call.args.(*webproto.GitCheckoutArgs)
 	if _, ok := m.webGitRoot(call); !ok {
 		return nil
 	}
+	if args.Remote != "" {
+		return m.webGitCheckoutRemote(call, args.Remote)
+	}
+	to := args.Branch
 	if !slices.Contains(m.web.more.branches, to) {
 		call.fail(webproto.CodeNotFound, "That branch is not in the list. Open the list again.")
 		return nil
@@ -147,6 +179,26 @@ func (m *Model) webGitCheckout(call *webCall) *webAsk {
 		run: webGitLaptopRun(func(m *Model) tea.Cmd {
 			return m.gitRemoteOp("Switching branch…", func(cwd string) gitRemoteDoneMsg {
 				return gitRemoteDoneMsg{failTitle: "Checkout failed", okText: "Switched to " + to, err: git.Checkout(cwd, to), reload: true}
+			})
+		})}
+}
+
+// webGitCheckoutRemote asks to make a local branch that tracks a listed
+// remote branch (git checkout --track origin/x) and switch to it.
+func (m *Model) webGitCheckoutRemote(call *webCall, remote string) *webAsk {
+	if !slices.Contains(m.web.more.remotes, remote) {
+		call.fail(webproto.CodeNotFound, "That branch is not in the list. Open the list again.")
+		return nil
+	}
+	_, to, _ := strings.Cut(remote, "/")
+	body := "Switch to " + to + "? A new local branch " + to + " tracks " + remote + "."
+	if len(m.gitFiles) > 0 {
+		body += " " + m.webGitChanged() + " go with you; git stops if they would be lost."
+	}
+	return &webAsk{summary: remote, title: "Switch branch?", body: body, action: "Switch",
+		run: webGitLaptopRun(func(m *Model) tea.Cmd {
+			return m.gitRemoteOp("Switching branch…", func(cwd string) gitRemoteDoneMsg {
+				return gitRemoteDoneMsg{failTitle: "Checkout failed", okText: "Switched to " + to, err: git.CheckoutTracking(cwd, remote), reload: true}
 			})
 		})}
 }
