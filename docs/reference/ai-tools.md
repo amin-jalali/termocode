@@ -2552,6 +2552,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-archive` | Worktree: Archive or Restore Selected… | confirm (always asks) |   |
 | `worktree-cleanup` | Worktree: Clean Up… | confirm (always asks) |   |
 | `worktree-delete` | Worktree: Delete Selected… | confirm (always asks) |   |
+| `worktree-diff` | Worktree: Review Changes vs Base of Selected | auto |   |
 | `worktree-filter` | Worktree: Next Filter | auto |   |
 | `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
