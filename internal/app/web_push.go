@@ -10,7 +10,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/amin-jalali/termocode/internal/secrets"
 	"github.com/amin-jalali/termocode/internal/webdevices"
 	"github.com/amin-jalali/termocode/internal/webproto"
 	"github.com/amin-jalali/termocode/internal/webpush"
@@ -66,9 +65,6 @@ type webPushState struct {
 // webPushTickMsg brings a check that was too early back.
 type webPushTickMsg struct{}
 
-// webPushStore is the secret store of the push parts (a seam for tests).
-var webPushStore = func() (secrets.Store, error) { return configureSecretStore() }
-
 // webPushDevices lists the paired devices (a seam for tests).
 var webPushDevices = func() ([]webdevices.Device, error) {
 	dir, err := webDevicesDir()
@@ -119,7 +115,7 @@ func webPushKey(create bool) (*webpush.Key, string) {
 // webPushDevice says whether dev is a paired device that may get pushes:
 // not a launch-link tab, not a shared view.
 func webPushDevice(dev string) bool {
-	if !strings.HasPrefix(dev, "dev-") || secrets.ValidName(webPushSubPrefix+dev) != nil {
+	if !strings.HasPrefix(dev, "dev-") || !webPushValidName(webPushSubPrefix+dev) {
 		return false
 	}
 	ds, err := webPushDevices()
@@ -135,7 +131,7 @@ func webPushDevice(dev string) bool {
 }
 
 // webPushHasSub says whether dev has a subscription.
-func webPushHasSub(s secrets.Store, dev string) bool {
+func webPushHasSub(s webSecretStore, dev string) bool {
 	for _, n := range s.Names() {
 		if n == webPushSubPrefix+dev {
 			return true
@@ -145,7 +141,7 @@ func webPushHasSub(s secrets.Store, dev string) bool {
 }
 
 // webPushAny says whether some device has a subscription.
-func webPushAny(s secrets.Store) bool {
+func webPushAny(s webSecretStore) bool {
 	for _, n := range s.Names() {
 		if strings.HasPrefix(n, webPushSubPrefix) {
 			return true
@@ -241,7 +237,7 @@ func (m *Model) webPushUnsubscribe(call *webCall) tea.Cmd {
 			call.reply(webproto.PushState{State: webPushOff})
 			return nil
 		}
-		if strings.HasPrefix(dev, "dev-") && secrets.ValidName(webPushSubPrefix+dev) == nil {
+		if strings.HasPrefix(dev, "dev-") && webPushValidName(webPushSubPrefix+dev) {
 			if err := s.Delete(webPushSubPrefix + dev); err != nil {
 				call.fail(webproto.CodeInternal, "Could not change it on the laptop.")
 				return nil

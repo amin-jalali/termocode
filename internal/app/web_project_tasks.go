@@ -13,7 +13,6 @@ import (
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/gitlab"
 	"github.com/amin-jalali/termocode/internal/projtasks"
-	"github.com/amin-jalali/termocode/internal/secrets"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -42,8 +41,8 @@ type webPTasksIn struct {
 	only    string
 	done    bool
 	run     ghci.Runner
-	store   secrets.Store // open store, or nil
-	storeNo string        // why there is no open store
+	store   webSecretStore // open store, or nil
+	storeNo string         // why there is no open store
 }
 
 func (m *Model) webProjectTasks(call *webCall) tea.Cmd {
@@ -247,14 +246,10 @@ func webMRSection(ctx context.Context, in webPTasksIn, p gitlab.Project) webprot
 		s.Note = "Set a GitLab token on the laptop (Git: Set GitLab Token…)."
 		return s
 	}
-	token := stored
-	if ref, err := secrets.ParseRef(stored); err == nil {
-		v, rerr := newRefResolver(in.repo).Resolve(ref)
-		if rerr != nil {
-			s.Note = "Could not read the GitLab token on the laptop."
-			return s
-		}
-		token = v
+	token, rerr := webSecretValue(stored, in.repo)
+	if rerr != nil {
+		s.Note = "Could not read the GitLab token on the laptop."
+		return s
 	}
 	ai.RegisterSecret(token)
 	mrs, err := gitlab.New(gitlabAPI(p.Host), token).ListMRs(ctx, p.Path)
