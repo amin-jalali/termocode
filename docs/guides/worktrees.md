@@ -17,11 +17,15 @@ Source Control icon, which is lit while it shows.
 - A worktree made outside termocode shows in **EXTERNAL** with
   `no meta`. Open, add, pin and link work on it. `A` adopts it, so
   termocode keeps its notes; it stays in EXTERNAL.
+- Put the cards of a group in your own order with `K` and `J`
+  (**Worktree: Move Selected Up** / **Down**). The order is kept after a
+  restart. New worktrees come after the ones you placed. A pin or unpin
+  drops a card's place; **Worktree: Reset Order** drops every place.
 - In a short window each worktree is one line; Enter shows its card.
 - The list is read again every 10 seconds while it is on screen. Git
   runs in the background, at most 4 calls at once.
 
-Pins and names are stored in `termocode/worktrees.json` inside the
+Pins, names and your own order are stored in `termocode/worktrees.json` inside the
 repository's git folder, never in your project.
 
 | Key | What it does |
@@ -30,6 +34,7 @@ repository's git folder, never in your project.
 | `Enter` | Open the worktree in this window; the old session keeps running |
 | `a` | Add the worktree as a folder of this window |
 | `p` | Pin or unpin |
+| `K` `J` | Move the worktree up or down in its group (`Shift+↑` `Shift+↓` too) |
 | `i` | Link an issue or pull request (see below) |
 | `N` | The notes agents left on it, with their times |
 | `n` | New worktree (see below) |

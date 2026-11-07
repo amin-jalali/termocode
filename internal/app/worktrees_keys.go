@@ -30,6 +30,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"Enter", "open it in this window (the old session keeps running)"},
 		[]string{"a", "add it as a folder of this window"},
 		[]string{"p", "pin or unpin"},
+		[]string{"K J", "move it up or down in its group (Shift+↑ ↓ too) · the order is kept"},
 		[]string{"i", "link an issue or pull request (its state and CI show on the card)"},
 		[]string{"N", "the notes agents left on it, with their times"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
@@ -60,6 +61,9 @@ func worktreePaletteItems() []picker.Item {
 		{ID: "worktree-jump", Title: "Worktree: Jump…"},
 		{ID: "worktree-pin", Title: "Worktree: Pin or Unpin Selected"},
 		{ID: "worktree-filter", Title: "Worktree: Next Filter"},
+		{ID: wtMoveUpPaletteID, Title: "Worktree: Move Selected Up"},
+		{ID: wtMoveDownPaletteID, Title: "Worktree: Move Selected Down"},
+		{ID: wtResetOrderPaletteID, Title: "Worktree: Reset Order"},
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
 		{ID: wtChildPaletteID, Title: "Worktree: New Child of Selected…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
@@ -90,6 +94,12 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 	case "worktree-filter":
 		m.worktreeNextFilter()
 		return m.revealWorktrees(), true
+	case wtMoveUpPaletteID:
+		return m.worktreeReorder(-1), true
+	case wtMoveDownPaletteID:
+		return m.worktreeReorder(1), true
+	case wtResetOrderPaletteID:
+		return m.worktreeResetOrder(), true
 	case wtNewPaletteID:
 		return m.openWorktreeNew(), true
 	case wtChildPaletteID:
@@ -165,6 +175,10 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeAddFolder()
 	case "p":
 		return m, m.worktreePin()
+	case "K", "shift+up":
+		return m, m.worktreeReorder(-1)
+	case "J", "shift+down":
+		return m, m.worktreeReorder(1)
 	case "n":
 		return m, m.openWorktreeNew()
 	case "c":

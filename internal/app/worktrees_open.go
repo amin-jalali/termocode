@@ -117,7 +117,7 @@ func (m *Model) worktreePin() tea.Cmd {
 		return m.revealWorktrees()
 	}
 	pin := !it.e.Meta.Pinned
-	if err := m.wtTouchMeta(it.e.Path, func(md *worktrees.Meta) { md.Pinned = pin }); err != nil {
+	if err := m.wtTouchMeta(it.e.Path, func(md *worktrees.Meta) { md.Pinned, md.Order = pin, 0 }); err != nil {
 		return m.pushToastDetail(toast.Warn, "The pin could not be saved", err.Error())
 	}
 	m.wt.cursorPath = it.e.Path
