@@ -1934,6 +1934,20 @@
       "phase": "v2"
     },
     {
+      "op": "editor.vim_buf_maps",
+      "args": "BufArgs",
+      "result": "VimMapList",
+      "role": "viewer",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "workflows.stop",
       "args": "WorkflowRunArgs",
       "role": "controller",
