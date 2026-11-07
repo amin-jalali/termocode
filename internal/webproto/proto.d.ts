@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "projects";
 
 export interface Bye {
   t: "bye";
@@ -36,16 +36,19 @@ export interface Req {
   id: number;
   op: string;
   args?: unknown;
+  ws?: string;
 }
 
 export interface Sub {
   t: "sub";
   topics: string[];
+  ws?: string;
 }
 
 export interface Unsub {
   t: "unsub";
   topics: string[];
+  ws?: string;
 }
 
 export interface ServerBye {
@@ -58,6 +61,7 @@ export interface Delta {
   topic: string;
   seq: number;
   data: unknown;
+  ws?: string;
 }
 
 export interface ErrMsg {
@@ -66,12 +70,14 @@ export interface ErrMsg {
   code: ErrCode;
   msg: string;
   data?: unknown;
+  ws?: string;
 }
 
 export interface Event {
   t: "ev";
   kind: string;
   data?: unknown;
+  ws?: string;
 }
 
 export interface Meta {
@@ -85,6 +91,7 @@ export interface Meta {
   viewers: number;
   ui: MetaUI;
   caps: string[];
+  ws?: string;
 }
 
 export interface MetaUI {
@@ -103,11 +110,13 @@ export interface Res {
   t: "res";
   id: number;
   data?: unknown;
+  ws?: string;
 }
 
 export interface Resync {
   t: "resync";
   topic: string;
+  ws?: string;
 }
 
 export interface Snap {
@@ -115,6 +124,7 @@ export interface Snap {
   topic: string;
   seq: number;
   data: unknown;
+  ws?: string;
 }
 
 export interface ChatOpenArgs {
@@ -1641,6 +1651,28 @@ export interface WorktreeItem {
   last_seen?: number;
 }
 
+export interface ProjectsSnap {
+  state: "loading" | "ready";
+  projects: ProjectItem[];
+  working?: number;
+  waiting?: number;
+  more?: number;
+}
+
+export interface ProjectItem {
+  id: string;
+  name: string;
+  where: string;
+  state: "here" | "running" | "asleep";
+  attached?: boolean;
+  service?: boolean;
+  recent?: boolean;
+  working?: number;
+  waiting?: number;
+  opened_at?: number;
+  ws?: string;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -1665,6 +1697,10 @@ export interface SearchHit {
   marks?: SearchMark[];
   before?: string[];
   after?: string[];
+}
+
+export interface WSGone {
+  why: "closed" | "not_running" | "busy" | "limit" | "off" | "bad";
 }
 
 export interface SearchMark {
@@ -3257,6 +3293,7 @@ export interface TopicData {
   "ai": { snap: AISnap; delta: AISnap };
   "workflows": { snap: WorkflowsSnap; delta: WorkflowsSnap };
   "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
+  "projects": { snap: ProjectsSnap; delta: ProjectsSnap };
 }
 
 // The data of an ev message, by kind.
@@ -3264,6 +3301,7 @@ export interface EventData {
   "answered": Answered;
   "attention": Attention;
   "search.batch": SearchBatch;
+  "ws.gone": WSGone;
 }
 
 // The data of a res message, by op (ops not listed answer without data).

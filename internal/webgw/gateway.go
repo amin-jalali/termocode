@@ -35,6 +35,13 @@ import (
 type RunConfig struct {
 	// Dial opens a connection to the hub (<key>.web.sock).
 	Dial func(ctx context.Context) (net.Conn, error)
+	// Home and DialWS make the gateway the door to the user's other
+	// running workspaces (MOB-50): Home is this workspace's key, DialWS
+	// opens another workspace's hub by key (nil: home only). MaxHubs caps
+	// them per browser (0: webproto.MaxHubs).
+	Home    string
+	DialWS  func(ctx context.Context, ws string) (net.Conn, error)
+	MaxHubs int
 	// AuditPath is the JSONL audit log (0600). A log that cannot be
 	// opened stops the start.
 	AuditPath string
@@ -215,7 +222,8 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			}}
 	}
 	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices, Control: control,
-		MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) }})
+		MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) },
+		Home: cfg.Home, DialWS: cfg.DialWS, MaxHubs: cfg.MaxHubs})
 	wsRef.Store(ws)
 	mux := siteMux(site, auth, ws, cfg.Assets)
 	if pairing != nil {

@@ -164,7 +164,7 @@ function TasksPanel({ p }: { p: ProjectInfo }) {
     if (!live.value) return;
     let stop = false;
     setSt({ kind: "loading" });
-    link.requestIn(ws, "project.tasks", {}).then(
+    link.requestWithID("project.tasks", {}, ws).result.then(
       (r) => !stop && setSt({ kind: "ok", sections: readProjectTasks(r) }),
       (e: unknown) => !stop && setSt({ kind: "err", why: e instanceof ReqError ? e.message : "" }),
     );
