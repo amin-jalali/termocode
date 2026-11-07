@@ -103,6 +103,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Accounts… | `agent-account-use` |   | `Claude Code / Codex accounts, own folders` |
 | Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex) | `ai-agent-packs` |   |   |
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
+| Agent: Chat with an ACP Agent… / End | `acp-thread` |   |   |
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
@@ -661,6 +662,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Open Config: ACP Agents | `acp-agents-edit` |   |   |
 | Open Config: AI Credentials | `ai-credentials` |   |   |
 | Open Config: MCP Servers | `ai-mcp-config` |   |   |
 | Open Config: Theme | `config-theme` |   |   |
@@ -774,6 +776,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Testing: Run Test at Cursor | `testing-run-cursor` |   |   |
 | Testing: Run Tests in Current File | `testing-run-file` |   |   |
 | Testing: Stop Test Run | `testing-stop` |   |   |
+
+## Tracker
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Tracker: Add Task… | `tracker-add` |   |   |
+| Tracker: Show Tasks… | `tracker-show` |   | `shared with agents` |
 
 ## View
 

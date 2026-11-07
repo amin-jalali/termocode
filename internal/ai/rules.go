@@ -66,7 +66,7 @@ func LoadProjectRules(root string) Rules {
 		add(name, text, size)
 	}
 	for _, cr := range loadClaudeRules(root, realRoot) {
-		if len(cr.Globs) == 0 {
+		if len(cr.Globs) == 0 && cr.Mode == "" {
 			add(cr.File, cr.Text, cr.size)
 		} else {
 			r.Scoped = append(r.Scoped, cr.ScopedRule)
@@ -103,6 +103,9 @@ func LoadProjectRules(root string) Rules {
 	h.Write([]byte(r.Text))
 	for _, sr := range r.Scoped {
 		h.Write([]byte("\x00" + sr.File + "\x00" + strings.Join(sr.Globs, ",") + "\x00" + sr.Text))
+		if sr.Mode != "" { // CMP-82; other rules keep their old hash
+			h.Write([]byte("\x00" + sr.Mode + "\x00" + sr.Name + "\x00" + sr.Description))
+		}
 	}
 	r.Hash = hex.EncodeToString(h.Sum(nil))
 	return r

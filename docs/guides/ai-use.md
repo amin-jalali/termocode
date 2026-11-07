@@ -715,6 +715,32 @@ These rules are not in the system prompt. When the AI reads a matching file
 with `read_file`, the rules are added to the result, once per chat (at most
 4 KB per file and 16 KB per chat).
 
+### Rules you name, rules the AI picks
+
+A `.claude/rules` file can also say *when* it is used, with `inclusion:` in
+its front matter:
+
+```markdown
+---
+inclusion: manual
+---
+Tag the release by hand, then write the notes.
+```
+
+- `inclusion: manual`: used only when you name it in a message, as
+  `#release` (the file name without `.md`, or `name:` in the front matter).
+  The rule's text is added to that message, once per chat.
+- `inclusion: auto` with a `description:`: the AI sees only the name and the
+  description. When the task matches, it loads the text with the
+  `rule_load` tool. An auto rule without a description works like a manual
+  one.
+- Neither goes into the system prompt or into `read_file` results. The AI
+  cannot load a manual rule.
+- `fileMatchPattern:` works like `globs:`.
+
+These rules are in the same trust card and the same 16 KB per chat. They
+work in plain chat turns; pipeline runs get only the other rules.
+
 The text steers the AI, so it is used only when you say so:
 
 - The first message in a workspace with a rules file opens a card **Use this
@@ -898,6 +924,23 @@ The same screen can add servers (MCP) for this work. Each shows the exact
 
 The `visual-qa` skill tells the AI how to check a page in the browser:
 phone and desktop widths, console errors, the main buttons.
+
+## Use termocode as the agent of another editor (ACP)
+
+`termocode acp` runs termocode's AI as an agent for any editor that
+speaks the Agent Client Protocol. It talks JSON-RPC on stdin and stdout.
+
+1. Set up AI in termocode first: **AI: Configure Provider…**.
+2. In the other editor, add a custom agent. Use the command
+   `termocode acp`.
+3. Open the agent's chat there and ask. The answer streams in as it is
+   written. Stop cancels the turn.
+
+Files the editor attaches to the message go in with the question. Each
+chat keeps its own history (the last 40 messages).
+
+This mode is chat only for now. The agent does not run tools, read or
+change files by itself, or ask for permissions.
 
 ## Proof of work screenshots
 

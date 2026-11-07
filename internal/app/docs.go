@@ -454,6 +454,8 @@ func EnvCatalog() []EnvVar {
 		{"ANTHROPIC_API_KEY", "Anthropic API key. Also selects Anthropic when no provider is set."},
 		{"OPENAI_API_KEY", "OpenAI API key. Also selects OpenAI when no provider is set."},
 		{"OPENROUTER_API_KEY", "OpenRouter API key."},
+		{"AWS_BEARER_TOKEN_BEDROCK", "Bedrock API key for the bedrock provider; wins over the saved key."},
+		{"AWS_REGION", "AWS region of the bedrock provider when `ai_base_url` is empty (default us-east-1)."},
 		{"OLLAMA_HOST", "Ollama host, used for the base URL of the ollama provider."},
 		{"XDG_STATE_HOME", "Moves the hot-exit backups of unsaved files to `$XDG_STATE_HOME/termocode/backup` and the local history of saved files to `$XDG_STATE_HOME/termocode/history`."},
 		{"TERMOCODE_NO_SESSION", "Any value: run without a persistent session, like `--no-session`."},

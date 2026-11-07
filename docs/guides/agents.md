@@ -466,6 +466,34 @@ opens the **Undo** card, which puts your old files back and removes the
 added ones. A file you changed after the install is kept. To install
 another version of the same pack, undo the first one.
 
+## Chat with an ACP agent
+
+Some coding agents speak the Agent Client Protocol (ACP). termocode can
+run such an agent as the AI chat's thread.
+
+1. Run **Open Config: ACP Agents**. The first time, it writes a small
+   example. List each agent with a `name`, its `command` and `args`
+   (and `env` if it needs some). Save the file.
+2. Run **Agent: Chat with an ACP Agent…** and pick one. termocode starts
+   the program in the workspace folder and opens a new chat for it.
+3. Type as usual. Your message goes to the agent, not to your AI
+   provider. Its answer, its tool calls (one `⚙` line each), its plan
+   and a short `±` line per edit stream into the chat.
+
+The agent runs its own tools, but it asks you first:
+
+- **Permission card.** When the agent asks before a step, the card shows
+  the step. The agent's reject choice (or **Cancel**) is first. Esc is
+  no.
+- **Write card.** Before the agent writes a file, the card shows the
+  diff. **Cancel** is first; **Write** writes it.
+- The agent reads and writes files only inside the workspace. Paths
+  outside it, also through links, are refused.
+
+Run **Agent: Chat with an ACP Agent…** again to end the thread. The
+program stops; the chat stays in Chat History. The AI can never start an
+agent thread. On the web, this is not there yet.
+
 ## If something does not work
 
 | What you see | Try this |

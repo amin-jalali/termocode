@@ -24,6 +24,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAINESResult(msg), true
 	case aiChatEventMsg:
 		return m.onAIChatEvent(msg), true
+	case acpStartedMsg, acpAskMsg, acpEndedMsg: // acp_thread.go
+		return m.handleACPMsg(msg)
 	case aiRunEventMsg:
 		return m.onAIRunEvent(msg), true
 	case aiWorktreeMsg: // ai_worktrees.go

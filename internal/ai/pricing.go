@@ -115,7 +115,7 @@ func (p Pricing) Cost(kind string, u Usage) (float64, bool) {
 	case KindClaudeOAuth:
 		return 0, false
 	}
-	pr, ok := p.Lookup(u.Model)
+	pr, ok := p.Lookup(cloudPriceModel(kind, u.Model))
 	if !ok {
 		return 0, false
 	}
