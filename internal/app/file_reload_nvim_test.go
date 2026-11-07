@@ -60,3 +60,48 @@ func TestFileChangedOnDiskDoesNotBlockNvim(t *testing.T) {
 		t.Fatal("nvim blocked on checktime (W12 prompt)")
 	}
 }
+
+// A clean file that grew past the reload cap on disk (a 300 MB log, a
+// dump) is not read into the editor by the 2 s reload check: reading it
+// kept nvim busy for many seconds (20 s for 300 MB), the whole app hung
+// and even Ctrl+Q waited. The buffer keeps its text instead.
+func TestFileTooBigOnDiskNotReloaded(t *testing.T) {
+	c, err := nvim.New()
+	if err != nil {
+		t.Skipf("nvim not available: %v", err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := c.Attach(80, 24); err != nil {
+		t.Fatalf("Attach: %v", err)
+	}
+	for _, cmd := range []string{"set cmdheight=0", "set autoread"} {
+		_ = c.Command(cmd)
+	}
+	if err := c.ExecLua(notifyLua); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.ExecLua(fileReloadLua); err != nil {
+		t.Fatal(err)
+	}
+	big := filepath.Join(t.TempDir(), "huge.txt")
+	_ = os.WriteFile(big, []byte("head\n"), 0o644)
+	_ = c.Command("edit " + big)
+	time.Sleep(1100 * time.Millisecond) // a new mtime second
+	if err := os.Truncate(big, 300<<20); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan string, 1)
+	go func() {
+		_ = c.ExecLua(checkTimeAllLua)
+		a, _ := c.EvalLuaString(`return vim.fn.getbufline(vim.fn.bufnr('huge.txt'), 1)[1]`)
+		done <- a
+	}()
+	select {
+	case got := <-done:
+		if got != "head" {
+			t.Errorf("buffer text = %q, want the old text kept", got)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("the reload check read the 300 MB file into the editor")
+	}
+}
