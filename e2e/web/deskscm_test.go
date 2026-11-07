@@ -3,6 +3,7 @@
 package web
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -106,6 +107,25 @@ func TestDeskSCMDiscardAndSync(t *testing.T) {
 	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
 	p.TapJS(ButtonByText("Ask the laptop"))
 	reply(t, c, expectOp(t, c, webproto.OpGitPush, `{}`), webproto.AskRef{Card: "card-9"})
+	p.WaitJS(`document.querySelector(".waiting")`)
+}
+
+// The sync menu offers the remote branches with no local branch after
+// the local ones; one asks to switch with a new tracking branch.
+func TestDeskSCMRemoteBranch(t *testing.T) {
+	p, c := openDeskSCM(t, nil)
+	p.TapJS(`document.querySelector(".statusbar .sb-sync")`)
+	reply(t, c, expectOp(t, c, webproto.OpGitBranches, `{}`), webproto.GitBranches{Current: "main", Branches: []string{"feat/web", "main"}, Remotes: []string{"origin/feat/far"}})
+	item := `[...document.querySelectorAll('[role="menuitem"]')]`
+	p.WaitJS(item + `.some((b) => b.textContent.includes("Checkout to origin/feat/far (remote)"))`)
+	if got := Eval[string](p, item+`.filter((b) => b.textContent.includes("Checkout to")).map((b) => b.textContent).join("|")`); !strings.Contains(got, "feat/web") || strings.Index(got, "feat/web") > strings.Index(got, "origin/feat/far") {
+		t.Errorf("checkout items %q: local first, then remote", got)
+	}
+	p.TapJS(item + `.find((b) => b.textContent.includes("origin/feat/far"))`)
+	p.WaitJS(`document.querySelector(".ask-text")?.textContent === "Switch to feat/far? A new local branch tracks origin/feat/far."`)
+	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
+	p.TapJS(ButtonByText("Ask the laptop"))
+	reply(t, c, expectOp(t, c, webproto.OpGitCheckout, `{"remote":"origin/feat/far"}`), webproto.AskRef{Card: "card-10"})
 	p.WaitJS(`document.querySelector(".waiting")`)
 }
 
