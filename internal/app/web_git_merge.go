@@ -59,7 +59,7 @@ func (m *Model) webGitResolveSide(call *webCall) *webAsk {
 		body:   "Settle the conflict in " + a.Path + " with the " + side + " file? Your other changes to it are lost. If that side deleted the file, it is deleted.",
 		action: "Keep " + a.Side,
 		run: func(m *Model) tea.Cmd {
-			cwd, err := m.rootDir()
+			cwd, err := m.gitRootDir()
 			if err != nil {
 				return nil
 			}

@@ -62,7 +62,7 @@ func (m *Model) gitLineTarget() (cwd, rel string, ok bool) {
 	if path == "" {
 		return "", "", false
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return "", "", false
 	}
@@ -153,7 +153,7 @@ func (m *Model) openGitDiscardLinesConfirm(rel string, from, to int) {
 
 // gitDiscardLinesConfirmed runs the discard once the user said yes.
 func (m *Model) gitDiscardLinesConfirmed() tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

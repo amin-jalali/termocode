@@ -180,7 +180,7 @@ func (m *Model) gitSelClick(idx int, ctrl, shift bool) bool {
 // marked STAGED rows.
 func (m *Model) gitStageSelected() tea.Cmd {
 	sel := m.gitSelRows()
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil || len(sel) == 0 {
 		return nil
 	}
@@ -257,7 +257,7 @@ func (m *Model) openGitDiscardSelectedCard() {
 // gitDiscardPaths moves the changes of paths (new files too) into a
 // safety stash, which takes them out of the work tree.
 func (m *Model) gitDiscardPaths(paths []string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

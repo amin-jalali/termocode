@@ -51,6 +51,8 @@ type webGitKey struct {
 	loaded, repo     bool
 	files, commits   unsafe.Pointer
 	nfiles, ncommits int
+	stashes          unsafe.Pointer // the laptop's stash list (a new slice per read)
+	nstashes         int
 	branch           git.Branch
 	rebase           bool
 }
@@ -62,6 +64,7 @@ func (m *Model) webGitKey() webGitKey {
 	return webGitKey{loaded: m.gitLoaded, repo: m.gitIsRepo,
 		files: unsafe.Pointer(unsafe.SliceData(m.gitFiles)), nfiles: len(m.gitFiles),
 		commits: unsafe.Pointer(unsafe.SliceData(m.gitCommits)), ncommits: len(m.gitCommits),
+		stashes: unsafe.Pointer(unsafe.SliceData(m.gitStashes)), nstashes: len(m.gitStashes),
 		branch: m.gitBranch, rebase: m.gitRebase.InProgress}
 }
 
@@ -143,6 +146,7 @@ func (m *Model) webGitBuild() webproto.GitSnap {
 		s.Log = append(s.Log, webproto.GitCommit{Hash: c.Hash, Subject: webName(c.Subject), Author: webName(c.Author),
 			When: c.Committed * 1000, Unpushed: c.Unpushed})
 	}
+	s.Stashes = m.webGitStashes()
 	return s
 }
 

@@ -193,6 +193,24 @@ func TestAgentChatLoadsAndFollows(t *testing.T) {
 	}
 }
 
+// Spec (AGX-8): a shell without shell integration (sh, dash) never
+// reports its folder, so the tab's folder is nvim's buffer name
+// term://DIR//PID:CMD (from b:term_title). The chat view still finds the
+// session of DIR, never "No session file yet".
+func TestAgentChatFindsSessionOfANvimTermName(t *testing.T) {
+	m, _ := chatTestModel(t)
+	setAgentTranscripts(t, "read")
+	m.terminalTabs[0].Cwd = "term://" + agentlogtest.Folder + "//4242:/bin/sh"
+	runApply(m, m.openAgentChatView())
+	c := m.agentChat
+	if c == nil {
+		t.Fatal("no chat state")
+	}
+	if c.missing || c.err != nil || c.sess.Prompts() != 1 {
+		t.Fatalf("cwd %q: missing %v err %v prompts %d", c.cwd, c.missing, c.err, c.sess.Prompts())
+	}
+}
+
 // Spec (AGX-8): a file the reader does not understand shows "cannot
 // read this session" (the terminal is one key away), never a wrong chat.
 func TestAgentChatUnknownFormat(t *testing.T) {

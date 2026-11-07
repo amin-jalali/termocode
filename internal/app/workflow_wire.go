@@ -50,6 +50,26 @@ func (c *wfMCP) tool(server, tool string) (exposed, readOnly bool, err error) {
 	return false, false, fmt.Errorf("%s has no tool %q", server, tool)
 }
 
+// ListTools is source.ToolLister: the tools the server listed (its
+// tools/list, as the MCP manager keeps it), without the ones turned off
+// for termocode.
+func (c *wfMCP) ListTools(_ context.Context, server string) ([]source.ToolInfo, error) {
+	if c == nil || c.known == nil {
+		return nil, source.ErrNotConnected
+	}
+	srv, tools, ok := c.known(server)
+	if !ok {
+		return nil, fmt.Errorf("%s: %w (connect it in Itermoc → Services)", server, source.ErrNotConnected)
+	}
+	out := make([]source.ToolInfo, 0, len(tools))
+	for _, t := range tools {
+		if exposed, _, _ := mcp.Gate(srv, t, c.trust); exposed {
+			out = append(out, source.ToolInfo{Name: t.Name, InputSchema: t.InputSchema})
+		}
+	}
+	return out, nil
+}
+
 // ReadOnly is run.ToolCheck.
 func (c *wfMCP) ReadOnly(_ context.Context, server, tool string) (bool, error) {
 	_, ro, err := c.tool(server, tool)

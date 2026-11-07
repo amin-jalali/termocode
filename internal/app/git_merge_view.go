@@ -120,7 +120,7 @@ func (m *Model) onMergeMsg(msg tea.Msg) tea.Cmd {
 // gitOpenMergeView reads rel's stages off the loop; the view opens when
 // they come back (onMergeStages).
 func (m *Model) gitOpenMergeView(rel string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil || rel == "" {
 		return nil
 	}
@@ -148,7 +148,7 @@ func (m *Model) mergePaletteTarget() string {
 			conflicted = append(conflicted, f.Path)
 		}
 	}
-	if root, err := m.rootDir(); err == nil && m.editor.Path() != "" {
+	if root, err := m.gitRootDir(); err == nil && m.editor.Path() != "" {
 		if rel, err := filepath.Rel(root, m.editor.Path()); err == nil && slices.Contains(conflicted, filepath.ToSlash(rel)) {
 			return filepath.ToSlash(rel)
 		}
@@ -178,7 +178,7 @@ func (m *Model) onMergeStages(msg mergeStagesMsg) tea.Cmd {
 		m.openMergeWholeCard(msg.st)
 		return nil
 	}
-	root, err := m.rootDir()
+	root, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -544,7 +544,7 @@ func (m *Model) mergeMarkResolved() tea.Cmd {
 			if b >= 0 then vim.api.nvim_buf_call(b, function() vim.cmd('silent update') end) end
 		`, m.merge.abs)
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -638,7 +638,7 @@ func (m *Model) onMergeWholeCard(id string) tea.Cmd {
 	if verb != "keep-ours" && verb != "keep-theirs" && verb != "delete" {
 		return nil // Cancel, Esc
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
