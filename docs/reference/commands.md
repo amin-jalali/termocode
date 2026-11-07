@@ -837,11 +837,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
 | Worktree: Link Issue or PR… | `worktree-link` |   |   |
+| Worktree: Move Selected Down | `worktree-move-down` |   |   |
+| Worktree: Move Selected Up | `worktree-move-up` |   |   |
 | Worktree: New Child of Selected… | `worktree-new-child` |   |   |
 | Worktree: New… | `worktree-new` |   |   |
 | Worktree: Next Filter | `worktree-filter` |   |   |
 | Worktree: Open Selected | `worktree-open` |   |   |
 | Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
+| Worktree: Reset Order | `worktree-reset-order` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |

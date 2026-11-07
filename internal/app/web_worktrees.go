@@ -203,7 +203,11 @@ func (m *Model) webWorktreesPin(call *webCall) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	if err := m.wtTouchMeta(it.e.Path, func(md *worktrees.Meta) { md.Pinned = a.On }); err != nil {
+	if err := m.wtTouchMeta(it.e.Path, func(md *worktrees.Meta) {
+		if md.Pinned != a.On {
+			md.Pinned, md.Order = a.On, 0 // it joins the other group in the automatic sort
+		}
+	}); err != nil {
 		call.fail(webproto.CodeConflict, "The pin could not be saved: "+err.Error())
 		return nil
 	}
