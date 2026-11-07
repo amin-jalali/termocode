@@ -997,6 +997,8 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"Run"},
 		[]string{"r", "run again"},
 		[]string{"x / X", "explain / explain analyze"},
+		[]string{"b", "plan: bar view of each step's share"},
+		[]string{"C", "plan: copy the server's own plan (JSON)"},
 		[]string{"h", "SQL history"},
 		[]string{"gd", "go to the statement"},
 		[]string{"Esc", "cancel a running query"},

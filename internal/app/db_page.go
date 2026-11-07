@@ -359,7 +359,7 @@ func (m *Model) databasePage() dbPage {
 			case r.redis != nil:
 				hints = dbRedisHints(width, r.redis)
 			case plan:
-				hints = dbFitHints(width, "za fold", "x plan", "X analyze", "y copy", "Tab raw", "r rerun", "q close")
+				hints = dbFitHints(width, "za fold", "b bars", "x plan", "X analyze", "y copy", "C copy JSON", "Tab raw", "r rerun", "q close")
 			case s.curTab().dirty():
 				hints = dbFitHints(width, append(m.dbTxHints(r.conn), "w submit", "u revert", "e edit", "+ row", "- delete", "]/[ page", "Tab view", "q close")...)
 			case len(m.dbTxHints(r.conn)) > 0:
@@ -1055,9 +1055,18 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return nil
 	case "S":
 		return m.databaseExportStart()
+	case "b":
+		if canPlan(s.shown) {
+			s.shown.plan.bars = !s.shown.plan.bars
+			return m.databaseShowPage()
+		}
+		return nil
 	case "c":
 		return m.copyWithToast(dbRedact(dbclient.ToCSV(s.displayedResult())), "Copied rows as CSV")
 	case "C":
+		if canPlan(s.shown) {
+			return m.copyWithToast(dbPlanNative(s.shown.plan), "Copied the server's plan")
+		}
 		return m.copyWithToast(dbRedact(dbclient.ToJSON(s.displayedResult())), "Copied rows as JSON")
 	case "Y":
 		if !canGrid || s.view != dbViewGrid {
