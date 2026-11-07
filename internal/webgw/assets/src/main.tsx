@@ -16,6 +16,7 @@ import "./styles/files.css";
 import "./styles/fonts.css";
 import "./styles/hl.css";
 import "./styles/media.css";
+import "./styles/saved.css";
 import { App } from "./app";
 import { loadPersian } from "./lib/lazy";
 import { prefs } from "./lib/prefs";

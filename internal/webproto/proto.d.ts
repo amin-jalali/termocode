@@ -1027,6 +1027,7 @@ export interface ChatMsg {
   rules?: string;
   run?: ChatRun;
   steps?: ChatStep[];
+  blocks?: Block[];
 }
 
 export interface MdNode {
@@ -1058,6 +1059,158 @@ export interface ChatStep {
   text?: string;
   md?: MdNode;
   error?: string;
+  blocks?: Block[];
+}
+
+export interface Block {
+  id: string;
+  kind: "list" | "table" | "diff" | "card" | "detail" | "chart" | "status" | "form" | "json" | "text" | "board";
+  title: string;
+  source?: string;
+  ws?: string;
+  spec?: ViewSpec;
+  live?: boolean;
+  items?: BlockItem[];
+  columns?: BlockColumn[];
+  rows?: string[][];
+  groups?: BlockGroup[];
+  diff?: BlockDiff;
+  fields?: BlockField[];
+  bars?: BlockBar[];
+  state?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  form?: BlockFormField[];
+  json?: string;
+  md?: MdNode;
+  board?: BlockBoard;
+  for_you?: string;
+  ref?: BlockRef;
+  actions?: BlockAction[];
+  total?: number;
+  truncated?: boolean;
+  stale?: boolean;
+}
+
+export interface ViewSpec {
+  view: string;
+  ws?: string;
+  args?: Record<string, string>;
+  fields?: string[];
+  filter?: ViewCond[];
+  sort?: ViewSort[];
+  group?: string;
+  limit?: number;
+  layout?: string;
+  density?: "compact" | "detailed";
+  title?: string;
+  refresh?: number;
+}
+
+export interface ViewCond {
+  field: string;
+  op: "eq" | "ne" | "gt" | "lt" | "ge" | "le" | "contains" | "starts" | "in" | "empty" | "not_empty";
+  value?: string;
+  in?: string[];
+}
+
+export interface ViewSort {
+  field: string;
+  desc?: boolean;
+}
+
+export interface BlockItem {
+  id: string;
+  title: string;
+  sub?: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  badge?: string;
+  time?: number;
+  ref?: BlockRef;
+  actions?: BlockAction[];
+}
+
+export interface BlockRef {
+  kind: string;
+  id?: string;
+  path?: string;
+  line?: number;
+}
+
+export interface BlockAction {
+  id: string;
+  label: string;
+  kind: "op" | "attach" | "view" | "laptop";
+  op?: string;
+  ref?: BlockRef;
+  spec?: ViewSpec;
+  risky?: boolean;
+}
+
+export interface BlockColumn {
+  id: string;
+  label: string;
+  kind?: "text" | "num" | "time" | "cost" | "tone" | "mono";
+}
+
+export interface BlockGroup {
+  label: string;
+  count: number;
+  items?: BlockItem[];
+  rows?: string[][];
+}
+
+export interface BlockDiff {
+  path: string;
+  old?: string;
+  adds?: number;
+  dels?: number;
+  hunks: BlockHunk[];
+}
+
+export interface BlockHunk {
+  header: string;
+  lines: BlockDiffLine[];
+}
+
+export interface BlockDiffLine {
+  k: "add" | "del" | "ctx";
+  a?: number;
+  b?: number;
+  text: string;
+}
+
+export interface BlockField {
+  label: string;
+  value: string;
+  kind?: "text" | "num" | "time" | "cost" | "tone" | "mono";
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+}
+
+export interface BlockBar {
+  label: string;
+  value: number;
+  text?: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+}
+
+export interface BlockFormField {
+  id: string;
+  label: string;
+  kind: "text" | "num" | "bool" | "choice" | "long";
+  value?: string;
+  choices?: string[];
+  required?: boolean;
+  hint?: string;
+}
+
+export interface BlockBoard {
+  columns: BlockBoardColumn[];
+}
+
+export interface BlockBoardColumn {
+  id: string;
+  label: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  items?: BlockItem[];
 }
 
 export interface ChatDelta {
@@ -2130,6 +2283,48 @@ export interface VimMap {
   noremap?: boolean;
 }
 
+export interface ViewSaveArgs {
+  spec: ViewSpec;
+  name: string;
+  pin?: boolean;
+}
+
+export interface ViewRefArgs {
+  id: string;
+}
+
+export interface ViewRenameArgs {
+  id: string;
+  name: string;
+}
+
+export interface ViewPinArgs {
+  id: string;
+  on: boolean;
+  order?: number;
+}
+
+export interface SavedViewList {
+  items: SavedView[];
+  max: number;
+  max_pinned: number;
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  spec: ViewSpec;
+  pinned?: boolean;
+  order?: number;
+  saved: number;
+  by?: string;
+}
+
+export interface ViewSaved {
+  id: string;
+  replaced?: boolean;
+}
+
 export interface WorkspaceList {
   folders: WorkspaceEntry[];
   recent: WorkspaceEntry[];
@@ -3068,6 +3263,11 @@ export interface OpArgs {
   "usercmds.save": UserCmdSaveArgs;
   "editor.vim_maps": EmptyArgs;
   "editor.vim_buf_maps": BufArgs;
+  "view.list": EmptyArgs;
+  "view.save": ViewSaveArgs;
+  "view.rename": ViewRenameArgs;
+  "view.delete": ViewRefArgs;
+  "view.pin": ViewPinArgs;
   "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
@@ -3264,6 +3464,7 @@ export interface EventData {
   "answered": Answered;
   "attention": Attention;
   "search.batch": SearchBatch;
+  "views_saved": SavedViewList;
 }
 
 // The data of a res message, by op (ops not listed answer without data).
@@ -3340,6 +3541,11 @@ export interface OpResult {
   "usercmds.save": UserCmdList;
   "editor.vim_maps": VimMapList;
   "editor.vim_buf_maps": VimMapList;
+  "view.list": SavedViewList;
+  "view.save": ViewSaved;
+  "view.rename": SavedViewList;
+  "view.delete": SavedViewList;
+  "view.pin": SavedViewList;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
