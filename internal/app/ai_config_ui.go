@@ -78,6 +78,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIWebToolsPicked(id), true
 	case pickerKindAgentHooks: // agent_hooks_ui.go
 		return m.onAgentHooksPicked(id), true
+	case pickerKindACPAgents: // acp_thread.go
+		return m.onACPAgentPicked(id), true
 	case pickerKindAgentPacks: // agent_packs_ui.go
 		return m.onAgentPacksPicked(id), true
 	case pickerKindAgentPacksTarget:
@@ -235,6 +237,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIShipCard(m.confirmKind, id), true
 	case confirmKindAIPlanShip: // ai_plan_worktree.go
 		return m.answerAIPlanShip(id), true
+	case confirmKindACPPermission, confirmKindACPWrite: // acp_thread.go
+		return m.answerACPCard(id), true
 	case confirmKindAgentCtlPrompt: // agent_ctl.go
 		return m.answerAgentCtlPrompt(id), true
 	case confirmKindAgentHooks: // agent_hooks_ui.go
@@ -360,6 +364,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIShipCard(m.confirmKind, "") // Esc: the ship stops
 	case confirmKindAIPlanShip:
 		return m.answerAIPlanShip("") // Esc: Not now
+	case confirmKindACPPermission, confirmKindACPWrite:
+		return m.answerACPCard("") // Esc: no
 	case confirmKindAgentCtlPrompt:
 		return m.answerAgentCtlPrompt("") // Esc: Deny
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll:
