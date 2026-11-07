@@ -23,9 +23,9 @@ func (f *searchSession) Introspect(_ context.Context, r dbclient.IntrospectionRe
 	case "":
 		return dbclient.IntrospectionResult{Objects: []dbclient.SchemaObject{{Name: "users", Kind: "BASE TABLE"}, {Name: "orders", Kind: "BASE TABLE"}, {Name: "v_users", Kind: "VIEW"}}}, nil
 	case "users":
-		return dbclient.IntrospectionResult{Columns: []dbclient.Column{{Name: "id"}, {Name: "email"}}}, nil
+		return dbclient.IntrospectionResult{Columns: []dbclient.Column{{Name: "id"}, {Name: "email"}}, DDL: "CREATE TABLE users (id int, email text);"}, nil
 	case "orders":
-		return dbclient.IntrospectionResult{Columns: []dbclient.Column{{Name: "id"}, {Name: "note"}}}, nil
+		return dbclient.IntrospectionResult{Columns: []dbclient.Column{{Name: "id"}, {Name: "note"}}, DDL: "CREATE TABLE orders (id int, note text);"}, nil
 	}
 	return dbclient.IntrospectionResult{}, nil
 }

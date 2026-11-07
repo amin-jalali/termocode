@@ -50,7 +50,7 @@ func TestFeaturePaletteTitlesEllipsisAndCase(t *testing.T) {
 		}
 		for i, w := range strings.Fields(strings.TrimRight(rest, "…")) {
 			r, _ := utf8.DecodeRuneInString(w)
-			if (i == 0 || !titleSmallWords[w]) && unicode.IsLower(r) && w != "termocode" && w != "curl" && w != "(services.json)" {
+			if (i == 0 || !titleSmallWords[w]) && unicode.IsLower(r) && w != "termocode" && w != "curl" && w != "pgTAP" && w != "(services.json)" { // names written in their own case
 				t.Errorf("%s: %q is not in Title Case (%q)", id, title, w)
 			}
 		}

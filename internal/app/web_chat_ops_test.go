@@ -16,6 +16,13 @@ import (
 // and the op's Cmd.
 func webTestCall(t *testing.T, m *Model, c *webConn, op, args string) (map[string]any, tea.Cmd) {
 	t.Helper()
+	return webTestCallSeen(t, m, c, op, args, nil)
+}
+
+// webTestCallSeen is webTestCall that also hands back every frame the
+// call sent (answers of other calls among them).
+func webTestCallSeen(t *testing.T, m *Model, c *webConn, op, args string, seen *[]map[string]any) (map[string]any, tea.Cmd) {
+	t.Helper()
 	webTestNow(t, c) // what was queued before
 	a, err := webproto.DecodeArgs(op, json.RawMessage(args))
 	if err != nil {
@@ -29,7 +36,11 @@ func webTestCall(t *testing.T, m *Model, c *webConn, op, args string) (map[strin
 		t.Fatalf("no handler for %s", op)
 	}
 	cmd := m.webRunOp(fn, call)
-	for _, f := range webTestTake(t, c) {
+	frames := webTestTake(t, c)
+	if seen != nil {
+		*seen = frames
+	}
+	for _, f := range frames {
 		if f["id"] == float64(call.id) {
 			return f, cmd
 		}

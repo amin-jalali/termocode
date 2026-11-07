@@ -28,9 +28,9 @@ func TestDBConnOptionsFormSaves(t *testing.T) {
 	withConfigDir(t)
 	m := &Model{w: 120, h: 40, databases: newDBState()}
 	c := dbclient.Conn{ID: "pg", Driver: "postgres", Host: "h", Port: 5432, Source: dbclient.SourceUser}
+	m.dbManage().id = "pg" // loads the (empty) connections first
 	m.databases.conns = []dbclient.Conn{c}
 	m.databases.userConns = []dbclient.Conn{c}
-	m.dbManage().id = "pg"
 	m.databaseManagePick("options")
 	if !m.pickerOpen || m.pickerKind != pickerKindDBOptions {
 		t.Fatalf("options picker not open: %v %v", m.pickerOpen, m.pickerKind)

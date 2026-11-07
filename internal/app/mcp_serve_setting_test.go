@@ -100,14 +100,14 @@ func TestMCPServeSettingStartStop(t *testing.T) {
 	}
 }
 
-// Spec (MS-1): mcp_server is a documented file-only setting the AI may
-// never change.
+// Spec (MS-1, AH-9): mcp_server is a documented setting (a Settings row
+// in the MCP group) the AI may never change.
 func TestMCPServeSettingDocumented(t *testing.T) {
 	found := false
 	for _, s := range SettingsCatalog() {
 		if s.Key == "mcp_server" {
 			found = true
-			if s.Default != "auto" || s.ID != "" || len(s.Choices) != 3 || s.Description == "" {
+			if s.Default != "auto" || s.ID != "setting-mcp-server" || len(s.Choices) != 3 || s.Description == "" { // a Settings row since AH-9
 				t.Errorf("catalog entry: %+v", s)
 			}
 		}

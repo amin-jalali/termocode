@@ -147,8 +147,10 @@ func TestChatSendAttachCaps(t *testing.T) {
 	if n := len(um.Context); n > webproto.MaxAttachTotal+4096 {
 		t.Fatalf("context %d bytes", n)
 	}
-	if !strings.Contains(um.Context, "(cut)") || !strings.Contains(um.Context, "Issue 12") || !strings.Contains(um.Context, `"view":"runs"`) {
-		t.Fatalf("context misses parts")
+	for _, want := range []string{"(cut)", "Issue 12", `"view":"runs"`} {
+		if !strings.Contains(um.Context, want) {
+			t.Errorf("context misses %q (%d bytes, ends %q)", want, len(um.Context), um.Context[max(0, len(um.Context)-300):])
+		}
 	}
 }
 

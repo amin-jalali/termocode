@@ -58,8 +58,8 @@ func TestKubeKeysMoveFoldAndJump(t *testing.T) {
 	if got := kubeCursorName(m); got != "#services" {
 		t.Errorf("j past a folded section = %q", got)
 	}
-	kubeKey(t, m, "G")
-	if got := kubeCursorName(m); got != "broken" {
+	kubeKey(t, m, "G") // the last row: the folded NODES heading (CTX-1)
+	if got := kubeCursorName(m); got != "#nodes" {
 		t.Errorf("G = %q", got)
 	}
 	kubeKey(t, m, "esc")

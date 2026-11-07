@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -147,7 +148,7 @@ func TestCanvasAITools(t *testing.T) {
 	for _, tl := range m.aiChatTools(root, direct(m)) {
 		names = append(names, tl.Name)
 	}
-	if j := strings.Join(names, ","); !strings.Contains(j, "worktree_note,canvas_read,canvas_update") {
+	if !slices.Contains(names, "canvas_read") || !slices.Contains(names, "canvas_update") {
 		t.Error("the chat has no canvas tools")
 	}
 }

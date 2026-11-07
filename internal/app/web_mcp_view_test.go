@@ -50,7 +50,9 @@ func TestMCPStatusTopic(t *testing.T) {
 		}
 	}
 	for _, p := range webproto.Ops() {
-		if strings.HasPrefix(p.Op, "mcp.") {
+		// MOBUX-14: the default views list and run read-only, trusted tools
+		// only; nothing connects, disconnects or allows.
+		if strings.HasPrefix(p.Op, "mcp.") && p.Op != webproto.OpMCPViews && p.Op != webproto.OpMCPViewRun {
 			t.Errorf("%s: the web cannot act on MCP", p.Op)
 		}
 	}

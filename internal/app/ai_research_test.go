@@ -158,8 +158,8 @@ func TestResearchViewsCut(t *testing.T) {
 	if b.Items[0].Ref != nil {
 		t.Errorf("a long url got a ref %+v", b.Items[0].Ref)
 	}
-	if b.Validate() != nil {
-		t.Error(b.Validate())
+	if err := viewFilled(b).Validate(); err != nil {
+		t.Error(err)
 	}
 	if researchSearchView(map[string]any{"query": "q"}, "1. Bad\n   javascript:alert(1)\n").Items[0].Ref != nil {
 		t.Error("a non-http url got a ref")

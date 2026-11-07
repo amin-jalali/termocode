@@ -58,10 +58,9 @@ func TestKubePodRowAndFooterShowMetrics(t *testing.T) {
 }
 
 func TestKubeTopPageListsNodesAndPods(t *testing.T) {
-	f := kubeFake(t)
+	f, m := kubeLoaded(t, 150, 42) // kubeLoaded makes the fake kubectl
 	f.Set(t, "top-pods.txt", "web-0 12m 64Mi\n")
 	f.Set(t, "top-nodes.txt", "node-1 500m 25% 2Gi 50%\nnode-2 <unknown> <unknown> <unknown> <unknown>\n")
-	_, m := kubeLoaded(t, 150, 42)
 	cmd := kubeKey(t, m, "t")
 	if cmd == nil {
 		t.Fatal("t ran nothing")
@@ -71,7 +70,7 @@ func TestKubeTopPageListsNodesAndPods(t *testing.T) {
 		t.Fatal("not a top result")
 	}
 	text := kubeTopText(msg, m.kube.metrics)
-	for _, want := range []string{"NODES", "node-1", "500m", "25%", "2Gi", "node-2", "unknown", "PODS", "web-0", "12m", "64Mi"} {
+	for _, want := range []string{"NODES", "node-1", "500m", "25%", "2.0Gi", "node-2", "unknown", "PODS", "web-0", "12m", "64Mi"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("page lacks %q:\n%s", want, text)
 		}

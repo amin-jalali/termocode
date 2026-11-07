@@ -128,11 +128,21 @@ func TestWebChatHomeOneTurnAtATime(t *testing.T) {
 	if len(m.ai.conv.Messages) != n {
 		t.Fatal("the laptop started a second turn")
 	}
-	if f, _ := webTestCall(t, &m, c, webproto.OpChatStop, `{}`); f["t"] != "res" || m.ai.home.busy {
+	var frames []map[string]any
+	if f, _ := webTestCallSeen(t, &m, c, webproto.OpChatStop, `{}`, &frames); f["t"] != "res" || m.ai.home.busy {
 		t.Fatalf("stop: %v busy=%v", f, m.ai.home.busy)
 	}
+	var stopped map[string]any // Stop fails the phone's call at once
+	for _, f := range frames {
+		if f["id"] == float64(call.id) {
+			stopped = f
+		}
+	}
+	if stopped == nil || stopped["t"] == "res" {
+		t.Fatalf("the stopped turn's call: %v", stopped)
+	}
 	m.handleAIMsg(runHomeWork(t, work)) // the stopped turn's answer is dropped
-	if f := webTestAnswer(t, c, call); f == nil || f["t"] == "res" {
+	if f := webTestAnswer(t, c, call); f != nil {
 		t.Fatalf("a stopped turn answered: %v", f)
 	}
 }

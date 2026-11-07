@@ -159,7 +159,7 @@ func TestMCPToolsListHasNoWeb(t *testing.T) {
 	var call aiIDECaller = func(context.Context, aiIDEFunc) (string, error) { return "", nil }
 	all := m.aiChatTools(root, call)
 	for _, tl := range append(all, mcpServeTools(all, root, call)...) {
-		if strings.Contains(strings.ToLower(tl.Name), "web") {
+		if strings.Contains(strings.ToLower(tl.Name), "web") && tl.Name != "http_websocket" { // a WebSocket client request, not the panel
 			t.Errorf("tool %q reaches the web panel", tl.Name)
 		}
 	}

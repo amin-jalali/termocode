@@ -96,7 +96,7 @@ func TestDBEmbeddedSQLItems(t *testing.T) {
 			t.Fatalf("%s has no AI policy", id)
 		}
 	}
-	if _, ok := aiActionPolicies["db_sql_syntax_off"]; !ok {
+	if _, ok := aiSettingPolicies["db_sql_syntax_off"]; !ok {
 		t.Fatal("db_sql_syntax_off has no AI policy")
 	}
 }

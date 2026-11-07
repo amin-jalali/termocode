@@ -71,12 +71,15 @@ func TestWebMsgRoutedByUpdate(t *testing.T) {
 	r := newWebRig(t, nil)
 	c := r.dial(webTestOpen)
 	c.send(`{"t":"hello","v":2,"token":"x"}`)
-	msg := <-r.hub.ch
-	next, cmd := r.m.Update(msg)
-	if cmd == nil {
-		t.Fatal("no wait re-armed")
+	for hello := false; !hello; { // the hub's own push-store load may come first
+		msg := <-r.hub.ch
+		_, hello = msg.(webHelloMsg)
+		next, cmd := r.m.Update(msg)
+		if cmd == nil {
+			t.Fatalf("no wait re-armed after %T", msg)
+		}
+		*r.m = next.(Model)
 	}
-	*r.m = next.(Model)
 	select {
 	case line, ok := <-c.lines:
 		if !ok || !strings.Contains(line, `"t":"meta"`) {

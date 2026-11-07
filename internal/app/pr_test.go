@@ -781,8 +781,11 @@ func TestPRAIPolicy(t *testing.T) {
 	if p := aiActionPolicies["git-pr-create"]; p.Gate != aiGateNever || p.Reason == "" {
 		t.Errorf("git-pr-create: %+v", p)
 	}
+	if p := aiActionPolicies["git-pr-review-bot"]; p.Gate != aiGateNever || p.Reason == "" { // GITX: writes a CI workflow
+		t.Errorf("git-pr-review-bot: %+v", p)
+	}
 	for id := range aiActionPolicies {
-		if strings.HasPrefix(id, "git-pr-") && id != "git-pr-list" && id != "git-pr-create" && id != "git-pr-filter" && id != "git-pr-mine" {
+		if strings.HasPrefix(id, "git-pr-") && id != "git-pr-list" && id != "git-pr-create" && id != "git-pr-filter" && id != "git-pr-mine" && id != "git-pr-review-bot" {
 			t.Errorf("unexpected PR command %q: classify it on purpose", id)
 		}
 	}

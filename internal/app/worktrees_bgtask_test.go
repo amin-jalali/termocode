@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/containers"
 )
@@ -71,7 +72,7 @@ func TestWorktreeBgTaskCardThenStart(t *testing.T) {
 	if !m.confirmOpen || m.confirmKind != confirmKindWTBgTask || m.confirm.SafeID() != "cancel" {
 		t.Fatalf("no Cancel-first card: open %v kind %d safe %q", m.confirmOpen, m.confirmKind, m.confirm.SafeID())
 	}
-	box := strings.Join(strings.Fields(wtBox(m)), " ")
+	box := wtCardAll(m)
 	for _, want := range []string{"Start in background", "sandbox", "ANTHROPIC_API_KEY", "laptop can be off", "run -d"} {
 		if !strings.Contains(box, want) {
 			t.Errorf("card lacks %q:\n%s", want, box)
@@ -173,4 +174,16 @@ func TestWorktreeBgTaskPaletteAndPolicy(t *testing.T) {
 			t.Errorf("%s: gate %q", id, p.Gate)
 		}
 	}
+}
+
+// wtCardAll is the whole text of a scrolling card: every scroll step's
+// box, borders and line breaks gone (the card itself is not changed).
+func wtCardAll(m *Model) string {
+	c := m.confirm
+	var parts []string
+	for i := 0; i < 60; i++ {
+		parts = append(parts, strings.Join(strings.Fields(strings.ReplaceAll(ansi.Strip(c.Box()), "│", " ")), " "))
+		c, _ = c.Update(tea.KeyMsg{Type: tea.KeyDown})
+	}
+	return strings.Join(parts, " ")
 }

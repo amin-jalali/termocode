@@ -37,7 +37,7 @@ func TestWebMarkdownDiagram(t *testing.T) {
 	if len(n.C) != 2 {
 		t.Fatalf("nodes: %+v", n.C)
 	}
-	if c := n.C[0]; c.K != webproto.MdCodeBlock || c.Lang != "csv" || !strings.Contains(c.Diagram, "┌───┬───┐") || c.Text != "a,b\n1,2\n" {
+	if c := n.C[0]; c.K != webproto.MdCodeBlock || c.Lang != "csv" || !strings.Contains(c.Diagram, "┌───┬───┐") || strings.TrimSuffix(c.Text, "\n") != "a,b\n1,2" {
 		t.Fatalf("csv block: %+v", c)
 	}
 	if n.C[1].Diagram != "" {

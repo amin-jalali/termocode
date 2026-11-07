@@ -23,7 +23,7 @@ func kubeKindAsk(t *testing.T, m *Model) {
 	}
 	m.onKubeKinds(msg)
 	if !m.promptOpen || m.promptKind != promptKindKubeKind {
-		t.Fatal("no kind prompt")
+		t.Fatalf("no kind prompt (api-resources: %v)", msg.err)
 	}
 	m.promptOpen = false
 }

@@ -47,7 +47,7 @@ func TestKubeNamespacePicker(t *testing.T) {
 	}
 	m.onKubePick(msg)
 	kubeRunLoad(t, m, m.handleTasksPickerSelect("k8s:ns:kube-system"))
-	if m.kube.namespace != "kube-system" || f.Count("--context dev --namespace kube-system") != 4 {
+	if m.kube.namespace != "kube-system" || f.Count("--context dev --namespace kube-system") != 5 { // the four lists and top pods (metrics)
 		t.Errorf("namespace %q calls %v", m.kube.namespace, f.Calls())
 	}
 	// Picking the current one does nothing.

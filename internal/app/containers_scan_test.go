@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -20,7 +21,11 @@ func cursorOnHost(t *testing.T, m *Model, kind hostKind) {
 			return
 		}
 	}
-	t.Fatalf("no row of kind %v", kind)
+	var got []string
+	for _, r := range m.services.rows() {
+		got = append(got, fmt.Sprintf("%d/%d:%s%s", r.kind, r.host, r.name, r.text))
+	}
+	t.Fatalf("no row of kind %v in %v", kind, got)
 }
 
 func withScanners(t *testing.T, names ...string) {
