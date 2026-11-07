@@ -473,6 +473,12 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		return m.runHostAction(id), true
 	case confirmKindServicesQuit:
 		return m.answerServicesQuit(id), true
+	case confirmKindRegistryAuth: // containers_registry_more.go
+		return m.answerRegistryAuth(id), true
+	case confirmKindRegistryDeleteTag:
+		return m.answerRegistryDeleteTag(id), true
+	case confirmKindRegistryCloudHint:
+		return m.answerCloudHint(id), true
 	case confirmKindContainerClone: // containers_clone.go
 		return m.answerContainerClone(id), true
 	case confirmKindServicesDeployGit: // services_deploy_git.go
@@ -1396,6 +1402,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-registry-signout", Title: "Containers: Sign Out of Registry…"},
 		{ID: "containers-search", Title: "Containers: Search Docker Hub…"},
 		{ID: "containers-browse-tags", Title: "Containers: Browse Remote Tags…"},
+		{ID: "containers-registry-catalog", Title: "Containers: Browse Registry Catalog…"},
 		{ID: "containers-filter", Title: "Containers: Filter Rows…"},
 		{ID: "containers-start", Title: "Containers: Start Selected"},
 		{ID: "containers-stop", Title: "Containers: Stop Selected"},
@@ -1657,6 +1664,8 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return nil
 			case "containers-browse-tags":
 				return m.browseFromPalette()
+			case "containers-registry-catalog": // containers_registry_more.go
+				return m.catalogFromPalette()
 			case "containers-filter":
 				m.focus = FocusExplorer
 				m.services.filterTyping = true

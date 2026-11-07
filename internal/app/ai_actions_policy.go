@@ -423,6 +423,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-registry-signout":  aiNever("signing out of a registry is the user's"),
 	"containers-search":            aiNever(aiNoPicker + "; it asks Docker Hub on the user's behalf"),
 	"containers-browse-tags":       aiNever(aiNoPicker + "; it asks a registry over the network on the user's behalf"),
+	"containers-registry-catalog":  aiNever(aiNoPicker + "; it asks a registry over the network, maybe with the user's saved token"),
 	"containers-filter":            aiNever("the filter is typed by the user; the AI uses containers_list / images_list"),
 	"containers-refresh":           aiAuto(),
 	"containers-help":              aiAuto(),

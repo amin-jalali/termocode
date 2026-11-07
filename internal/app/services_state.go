@@ -168,6 +168,17 @@ type servicesState struct {
 	// Duplicate / Recreate plan; never in argv.
 	runEnv       map[string]string
 	clonePending clonePending
+
+	// CTX-35 (containers_registry_more.go): hosts the user opted in to
+	// use the saved token for (host -> user; never the token), and the
+	// open cards' state.
+	regAuthOK      map[string]string
+	regAuth        regAuthPending
+	regDelete      regDeletePending
+	regCatalogHost string
+	regHint        string // the cloud hint card's command
+	regHintHost    string
+	regHostNote    string // a note for the next user prompt
 }
 
 func newServicesState() *servicesState {
@@ -606,6 +617,12 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainerGroupDone(msg), true
 	case imagePageMsg:
 		return m.onImagePage(msg), true
+	case registryCatalogMsg:
+		return m.onRegistryCatalog(msg), true
+	case registryDigestMsg:
+		return m.onRegistryDigest(msg), true
+	case registryDeleteDoneMsg:
+		return m.onRegistryDeleteDone(msg), true
 	case containerCloneMsg:
 		return m.onContainerClone(msg), true
 	case composeConfigMsg:

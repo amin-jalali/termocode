@@ -359,6 +359,40 @@ How termocode asks the registry:
   logged or saved.
 - Hiding the view stops a request that is still running.
 
+### Private tags, catalog and deleting a tag
+
+When a repository needs a login and termocode has a token saved for that
+host (**Connect registry…** with **Remember**, stored as
+`registry.<host>`), a card asks first: **Cancel** or **Use saved token**.
+After **Use saved token** termocode sends that token, for this session
+only, to the token server the registry names (HTTPS, as HTTP Basic) and
+lists the private tags. It is never shown or logged, and the AI never gets
+it. Without a saved token the row keeps `needs sign-in; pull by name still
+works`.
+
+**Containers: Browse Registry Catalog…** (or **Browse catalog…** in a
+registry row's menu) asks for a host and lists its repositories
+(`/v2/_catalog`, at most 500) in a picker. Pick one to list its tags.
+Docker Hub has no catalog: use search.
+
+`D` on a remote tag (or **Delete tag from registry…** in its menu) reads
+the tag's manifest digest with your saved token and shows a card with
+**Cancel** first. The registry deletes by digest, so every tag on that
+manifest goes too. Local images stay. Many registries turn deletes off;
+then the card's action says so.
+
+### Cloud registries
+
+**Connect registry…** also lists **AWS ECR…**, **Azure Container
+Registry…** and **Google Artifact Registry…**. These sign in with their own
+CLI, so the card shows the command to run in a terminal (`aws ecr
+get-login-password … | docker login …`, `az acr login --name …`,
+`gcloud auth configure-docker …`) with **Copy command**. termocode never
+runs a cloud CLI. Typing such a host (`*.dkr.ecr.*.amazonaws.com`,
+`*.azurecr.io`, `*-docker.pkg.dev`, `gcr.io`) shows the same card with
+your host filled in, and **Use a token instead…** goes on to the normal
+sign-in. For `ghcr.io` the user prompt says which GitHub token to use.
+
 ### Search Docker Hub
 
 `s` in REGISTRIES (or **Containers: Search Docker Hub…**) asks for a word
@@ -368,10 +402,6 @@ The results open in a picker with the stars and the description. Pick one
 for a card: **Pull…** opens the pull prompt with its name, **Browse tags**
 lists its remote tags in REGISTRIES. The word may use letters, digits and
 `. _ - / :`.
-
-termocode does not keep registry tokens itself yet. A "remember in
-termocode" option needs the locked, encrypted secret store, which is not
-built yet.
 
 The AI cannot sign in or out: there is no tool for it, and both palette
 commands are closed to it.

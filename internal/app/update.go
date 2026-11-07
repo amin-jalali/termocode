@@ -2501,6 +2501,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onSecretsStoreSelected(msg.ID)
 	case pickerKindContainerSearch: // containers_remote.go
 		return m.onSearchPicked(msg.ID)
+	case pickerKindRegistryCatalog: // containers_registry_more.go
+		return m.onCatalogPicked(msg.ID)
 	default:
 		if cmd, ok := m.handleGitxPickerSelect(msg.ID); ok { // gitx_hub.go
 			return cmd

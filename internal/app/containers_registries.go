@@ -264,8 +264,9 @@ func (m *Model) startRegistryConnect(host string) {
 		{ID: "docker.io", Title: "docker.io", Hint: "the default public registry"},
 		{ID: "ghcr.io", Title: "ghcr.io"},
 		{ID: "registry.gitlab.com", Title: "registry.gitlab.com"},
-		{ID: "other", Title: "Other host…", Hint: "host or host:port"},
 	}
+	items = append(items, cloudHintItems()...) // CTX-35
+	items = append(items, picker.Item{ID: "other", Title: "Other host…", Hint: "host or host:port"})
 	m.picker = picker.NewItems(" Connect registry ", items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen, m.pickerKind = true, pickerKindRegistryProvider
@@ -273,6 +274,12 @@ func (m *Model) startRegistryConnect(host string) {
 
 // onRegistryPicked asks for the host, prefilled with the picked one.
 func (m *Model) onRegistryPicked(id string) tea.Cmd {
+	if cloud, ok := strings.CutPrefix(id, "cloud:"); ok { // CTX-35
+		if h, ok := cloudHintTemplates[cloud]; ok {
+			return m.showCloudHint(h, "")
+		}
+		return nil
+	}
 	value := id
 	if id == "other" {
 		value = ""
@@ -288,6 +295,10 @@ func (m *Model) askRegistryUser() {
 	host := m.services.regPending.host
 	m.prompt = prompt.New("Connect registry · user", "User name for "+sanitizeOutputLine(host)+":",
 		m.services.registryUsers[containers.RegistryDisplayHost(host)])
+	if note := m.services.regHostNote; note != "" {
+		m.prompt.SetNote(note)
+		m.services.regHostNote = ""
+	}
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen, m.promptKind = true, promptKindRegistryUser
 }
@@ -395,6 +406,9 @@ func (m *Model) onRegistryPrompt(kind promptKindEnum, value string) tea.Cmd {
 		host := strings.TrimSpace(value)
 		if err := containers.ValidRegistryHost(host); err != nil {
 			return m.servicesToast(toast.Errr, "Not a registry host", err.Error())
+		}
+		if cmd, ok := m.registryHostHint(host); ok { // CTX-35: a cloud CLI login
+			return cmd
 		}
 		st.regPending = registryPending{host: host}
 		m.askRegistryUser()
@@ -653,6 +667,7 @@ func (m *Model) openRegistryMenu(r svcRow, x, y int) {
 			{ID: "connect", Title: "Sign in again…", Hint: "n"},
 			{ID: "pull", Title: "Pull image…", Hint: "u"},
 			{ID: "browse", Title: "Browse tags…", Hint: "b"},
+			{ID: "catalog", Title: "Browse catalog…"},
 			{ID: "search", Title: "Search Docker Hub…", Hint: "s"},
 		}
 		if r.current {
@@ -663,6 +678,7 @@ func (m *Model) openRegistryMenu(r svcRow, x, y int) {
 	default:
 		items = []menu.Item{{ID: "connect", Title: "Connect registry…", Hint: "n"},
 			{ID: "browse", Title: "Browse tags…", Hint: "b"},
+			{ID: "catalog", Title: "Browse catalog…"},
 			{ID: "search", Title: "Search Docker Hub…", Hint: "s"}}
 	}
 	m.menu = menu.New(items, x, y)
@@ -694,6 +710,12 @@ func (m *Model) handleRegistryMenuSelect(id string, r svcRow) tea.Cmd {
 		m.askBrowse(prefill)
 	case "search":
 		m.askSearch()
+	case "catalog": // containers_registry_more.go
+		prefill := ""
+		if r.host == hostRegistry {
+			prefill = r.name
+		}
+		m.askCatalog(prefill)
 	}
 	return nil
 }
