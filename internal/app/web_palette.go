@@ -39,6 +39,7 @@ var webPaletteAllow = map[string]bool{
 	"ai-until-done":        true,
 	"ai-plan-approval":     true,
 	"ai-reasoning-next":    true,
+	"ai-dial-next":         true,
 	"ai-keep-going":        true,
 	"ai-edit-review":       true,
 	"ai-worktrees-toggle":  true,
@@ -63,6 +64,7 @@ var webPaletteAllow = map[string]bool{
 var webPaletteUserOnly = map[string]string{
 	"ai-plan-approval":    "the user's own chat setting, after a laptop card",
 	"ai-reasoning-next":   "the user's own chat setting (more thinking costs more), after a laptop card",
+	"ai-dial-next":        "the user's own profile and chat setting (more effort costs more), after a laptop card",
 	"ai-keep-going":       "the user's own chat setting (extra paid turns), after a laptop card",
 	"ai-edit-review":      "the user's own review setting, after a laptop card",
 	"ai-worktrees-toggle": "the user's own agent setting, after a laptop card",

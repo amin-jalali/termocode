@@ -698,12 +698,16 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Plan approval (G-PLAN): the AI can never approve its own plan or
 	// turn the question off.
 	"ai-reasoning-next": aiNever(aiNoAIConfig + "; more thinking costs the user more"),
-	"ai-plan-approval":  aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
-	"ai-plan-review":    aiNever("the plan card is the user's answer; the AI never approves its own plan"),
-	"ai-profile-edit":   aiNever(aiNoAIConfig),
-	"ai-profile-new":    aiNever(aiNoAIConfig),
-	"ai-profile-form":   aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
-	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),
+	// The effort dial (CMP-24) sets a profile and a reasoning level at
+	// once: the user's own setup, and more effort costs the user more.
+	"ai-dial":          aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-dial-next":     aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-plan-approval": aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai-plan-review":   aiNever("the plan card is the user's answer; the AI never approves its own plan"),
+	"ai-profile-edit":  aiNever(aiNoAIConfig),
+	"ai-profile-new":   aiNever(aiNoAIConfig),
+	"ai-profile-form":  aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
+	"ai-profile-trust": aiNever("trusting a project's prompts is the user's decision"),
 	// Keep going (OMX-7) sends model turns that cost money: only the
 	// user turns it on.
 	"ai-keep-going": aiNever(aiNoAIConfig + "; extra paid turns are the user's choice"),
@@ -837,6 +841,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_compact":            aiNever(aiNoAIConfig),
 	"ai_plan_approval":      aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
 	"ai_categories":         aiNever(aiNoAIConfig),
+	"ai_dial":               aiNever(aiNoAIConfig),
 	"ai_step_escalate":      aiNever(aiNoAIConfig),
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
 	"ai_plan_file":          aiNever(aiNoAIConfig),

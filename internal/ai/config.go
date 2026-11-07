@@ -84,6 +84,9 @@ type Settings struct {
 	// leaves it out of the main Config, so ghost text never thinks; the
 	// chat sends it per request. Edited by hand.
 	Reasoning string `json:"ai_reasoning,omitempty"`
+	// Dial is ai_dial (CMP-24, dial.go): changes to the effort dial's
+	// modes (low, medium, high, ultra) by name. Edited by hand.
+	Dial map[string]DialSetting `json:"ai_dial,omitempty"`
 	// Fallback is ai_fallback: the main slot's backup models (slot names
 	// or "<provider>/<model>"; fallback.go). Edited by hand.
 	Fallback []string `json:"ai_fallback,omitempty"`

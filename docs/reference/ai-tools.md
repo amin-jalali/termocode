@@ -1923,6 +1923,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
 | `ai-configure` | AI: Configure Provider… | never | AI provider, credentials and approvals stay with the user |
 | `ai-credentials` | Open Config: AI Credentials | never | AI provider, credentials and approvals stay with the user |
+| `ai-dial` | AI: Effort Dial… (low / medium / high / ultra, plan, fast) | never | AI provider, credentials and approvals stay with the user; more effort costs the user more |
+| `ai-dial-next` | AI: Next Effort Mode | never | AI provider, credentials and approvals stay with the user; more effort costs the user more |
 | `ai-discard-proposal` | AI: Discard Proposed Edit | never | the user reviews proposed edits |
 | `ai-doc` | AI: Generate Doc Comment | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-doctor` | AI: Doctor | never | a local diagnostic page for the user |
@@ -2563,6 +2565,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_compact` | never | AI provider, credentials and approvals stay with the user |
 | `ai_concurrency` | never | AI provider, credentials and approvals stay with the user |
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
+| `ai_dial` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_fallback` | never | AI provider, credentials and approvals stay with the user |
 | `ai_inline` | confirm (settings) |   |
