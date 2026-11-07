@@ -1024,6 +1024,8 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"V then e", "set one value in the selected rows"},
 		[]string{"V then + / -", "copy the selected rows / mark them for deletion"},
 		[]string{"P", "paste rows from the clipboard (tab separated)"},
+		[]string{"D", "set the cell to its DEFAULT"},
+		[]string{"U", "put a new random UUID in the cell"},
 		[]string{"u", "undo a change"},
 		[]string{"w", "submit the changes"},
 		[]string{"Transactions"},

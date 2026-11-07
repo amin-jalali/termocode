@@ -237,8 +237,12 @@ You can change the rows of a table's data page, and of a console result that is 
 | `V` then `+` | add a copy of each selected row; key columns get their default and binary values are left out |
 | `V` then `-` | mark every selected row for deletion (again: keep them); new rows in the selection are removed |
 | `P` | paste rows from the clipboard: tab-separated values go from the cursor cell to the right and down, extra lines become new rows (`\N` is NULL); values past the last column, in a binary column or on a deleted row are skipped |
+| `D` | set the cell back to its column's `DEFAULT` (the SQL says `= DEFAULT`; on a new row the cell is left out). SQLite cannot do this in an `UPDATE`, so it says so |
+| `U` | put a new random UUID (version 4) in the cell |
 | `u` | undo the change of the cell under the cursor, else of the row; on a row without changes it asks to undo all changes |
 | `w` | submit the changes |
+
+A typed value is checked against the column type before it is kept: whole numbers for integer columns, numbers for `numeric` and `float`, `true` / `false` for booleans, a UUID for `uuid`, valid JSON for `json` and `jsonb`, and `YYYY-MM-DD` for `date`. A value that does not fit is not kept, and a message says what fits. Other types (and arrays) are checked by the server when you submit.
 
 Changes stay on the page until you submit them. The left margin marks each row: `*` changed, `+` new, `-` to be deleted, and the page says how many changes wait. Anything that loads the rows again (another data page, a sort or a filter on a data page, `r`) asks **Keep** or **Discard** first; switching tabs or closing the page keeps the changes.
 

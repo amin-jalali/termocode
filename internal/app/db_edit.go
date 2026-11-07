@@ -376,6 +376,8 @@ func (m *Model) databaseEditKey(key string, row, col int) tea.Cmd {
 		return m.pushToastDetail(toast.Info, "Move to a row first", "The cursor is not on a cell of the grid.")
 	}
 	switch key {
+	case "D", "U":
+		return m.databaseSpecialKey(key, t, tg, []dbEditPos{pos})
 	case "P":
 		return m.databasePasteRows(t, tg, row, pos.col)
 	case "-":
@@ -452,6 +454,9 @@ func (m *Model) databaseSetCell(value string, fromBuffer bool) tea.Cmd {
 	}
 	if t == nil || t.run == nil || s.tabIndex(t) < 0 {
 		return nil
+	}
+	if cmd, ok := m.databaseCheckTyped(t, pos, value); !ok {
+		return cmd
 	}
 	if !dbSetCellValue(t, pos, value, fromBuffer) {
 		return nil
@@ -597,7 +602,7 @@ func (m *Model) databaseEditStatements(t *dbTab) ([]dbclient.EditStatement, erro
 			if col < len(res.Rows[orig]) {
 				old = res.Rows[orig][col]
 			}
-			e.Values = append(e.Values, dbclient.EditValue{Column: res.Columns[col].Name, Value: t.edits.cells[dbCellRef{orig, col}], Old: old, Check: dbComparable(tg.driver, res.Columns[col], old)})
+			e.Values = append(e.Values, dbEditValue(res.Columns[col].Name, t.edits.cells[dbCellRef{orig, col}], old, dbComparable(tg.driver, res.Columns[col], old)))
 		}
 		edits = append(edits, e)
 	}
@@ -609,7 +614,7 @@ func (m *Model) databaseEditStatements(t *dbTab) ([]dbclient.EditStatement, erro
 		}
 		sort.Ints(cols)
 		for _, col := range cols {
-			e.Values = append(e.Values, dbclient.EditValue{Column: res.Columns[col].Name, Value: nr.set[col]})
+			e.Values = append(e.Values, dbEditValue(res.Columns[col].Name, nr.set[col], dbclient.Cell{}, false))
 		}
 		edits = append(edits, e)
 	}
