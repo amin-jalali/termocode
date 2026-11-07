@@ -50,6 +50,12 @@ type Options struct {
 type Hooks struct {
 	// Progress is called with the bytes read so far, every 256 KB.
 	Progress func(n int64)
+	// Live, when set, is called after every read of a streamed answer
+	// (an event stream, NDJSON, or a body without a length) with the
+	// body so far. body is only valid during the call (API-16). With
+	// Live set, an event stream or NDJSON answer keeps the timeout only
+	// until its headers came; the caller stops it with ctx.
+	Live func(body []byte)
 	// AllowIP, when set, is asked for every IP the send connects to
 	// (also redirect hops and new connections); a refused IP fails the
 	// send with "blocked: private address". AI sends set it.
@@ -226,8 +232,12 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 			timeout = d
 		}
 	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	// The timeout is a timer, not a deadline: an event stream stops it
+	// once its headers came (API-16). Its cause says "timed out".
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	timer := time.AfterFunc(timeout, func() { cancel(context.DeadlineExceeded) })
+	defer timer.Stop()
 
 	u, err := url.Parse(r.URL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
@@ -298,6 +308,9 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 
 	hr, err := hc.Do(req)
 	if err != nil {
+		if ctx.Err() != nil {
+			err = context.Cause(ctx)
+		}
 		resp.Timing = tm.result(start)
 		resp.failErr(err, start, timeout, c.opts.MaxRedirects)
 		return resp
@@ -312,6 +325,21 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	resp.Proto = hr.Proto
 	resp.Headers = headerList(hr.Header)
 	resp.ContentType, resp.Charset = parseContentType(hr.Header.Get("Content-Type"))
+	if isStreamType(resp.ContentType) {
+		if h.Live != nil {
+			// Someone watches it live and can stop it (Esc): it runs
+			// until the server ends it or the body cap. Sends nobody
+			// watches (AI tools) keep the timeout.
+			timer.Stop()
+		}
+		resp.Streamed = true
+	} else if hr.ContentLength < 0 && !hr.Uncompressed {
+		resp.Streamed = true
+	}
+	live := h.Live
+	if !resp.Streamed {
+		live = nil
+	}
 
 	var buf bytes.Buffer
 	limited := io.LimitReader(hr.Body, c.opts.MaxBody+1)
@@ -320,6 +348,9 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	for {
 		n, rerr := limited.Read(chunk)
 		buf.Write(chunk[:n])
+		if live != nil && n > 0 {
+			live(buf.Bytes())
+		}
 		if h.Progress != nil && int64(buf.Len()) >= next {
 			h.Progress(int64(buf.Len()))
 			for next <= int64(buf.Len()) {
@@ -333,9 +364,10 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 			resp.Body = buf.Bytes()
 			resp.Size = int64(buf.Len())
 			resp.Timing = tm.result(start)
-			if cerr := ctx.Err(); cerr != nil {
-				rerr = cerr
+			if ctx.Err() != nil {
+				rerr = context.Cause(ctx)
 			}
+			resp.markEvents()
 			resp.failErr(rerr, start, timeout, c.opts.MaxRedirects)
 			return resp
 		}
@@ -349,9 +381,20 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	resp.Size = int64(len(b))
 	resp.IsJSON = isJSONType(resp.ContentType)
 	resp.IsBinary = isBinary(resp.ContentType, b)
+	resp.markEvents()
 	resp.Elapsed = time.Since(start)
 	resp.Timing = tm.result(start)
 	return resp
+}
+
+// markEvents parses the body of an event stream into Events.
+func (r *Response) markEvents() {
+	if r.ContentType == "text/event-stream" {
+		r.Events = ParseSSE(r.Body)
+		if r.Events == nil {
+			r.Events = []SSEEvent{}
+		}
+	}
 }
 
 func (r *Response) fail(kind ErrKind, msg string, start time.Time) {

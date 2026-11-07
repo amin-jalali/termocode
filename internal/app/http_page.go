@@ -47,6 +47,8 @@ type httpPage struct {
 func httpPageHints(run *httpRun, sending bool) [][]string {
 	var pairs [][2]string
 	switch {
+	case sending && run != nil && run.live != nil:
+		pairs = [][2]string{{"esc", "stop"}}
 	case sending:
 		pairs = [][2]string{{"esc", "cancel"}}
 	case run != nil && run.resp != nil && run.resp.ErrKind == httpclient.ErrKindTLS && run.by == "user":
@@ -89,6 +91,9 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 	switch {
 	case sending:
 		summary = httpGlyphFlight.String() + " sending…"
+		if run.live != nil {
+			summary = httpGlyphFlight.String() + " streaming…"
+		}
 		if run.progress > 0 {
 			summary += " · " + httpclient.FormatSize(run.progress) + " received"
 		}
@@ -116,6 +121,11 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 		rows = append(rows, r)
 	}
 	plain := func(text string) { lines = append(lines, text) }
+	if sending && run.live != nil {
+		// API-16: the newest text of the stream, as it comes.
+		lines = appendTextLines(lines, run.live)
+		return httpPage{head: head, lines: lines, rows: rows}
+	}
 	if resp == nil {
 		return httpPage{head: head, lines: lines, rows: rows}
 	}
@@ -175,6 +185,20 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 		switch {
 		case resp.IsBinary:
 			add("note", httpBinaryNote(resp)+" — s save"+map[bool]string{true: ", o preview", false: ""}[httpIsImage(resp)])
+		case len(resp.Events) > 0:
+			for i, ev := range resp.Events {
+				if i > 0 {
+					plain("")
+				}
+				title := ev.Event
+				if ev.ID != "" {
+					title += " · id " + ev.ID
+				}
+				add("t", title, "n", len(ev.Event))
+				for _, l := range strings.Split(ev.Data, "\n") {
+					plain("  " + l)
+				}
+			}
 		case len(resp.Body) == 0:
 			add("note", "(empty body)")
 		default:
@@ -333,6 +357,19 @@ if _G._termocode_http_head then _G._termocode_http_head(h) end`, page.head)
 	}
 	page := buildHTTPPage(run, s.view, s.reveal, sending)
 	return m.httpOpenPage(page)
+}
+
+// httpShowLive redraws the page with a stream's newest text (API-16).
+func (m *Model) httpShowLive() tea.Cmd {
+	s := m.httpS()
+	if m.nvim == nil || s.running == nil {
+		return nil
+	}
+	m.ensureHTTPLua() // the Lua skips a page that is closed or hidden
+	p := buildHTTPPage(s.running, s.view, s.reveal, true)
+	_ = m.nvim.ExecLuaArgs(`local h, l = ...
+if _G._termocode_http_live then _G._termocode_http_live(h, l) end`, p.head, p.lines)
+	return nil
 }
 
 // httpUpdateHead rewrites rows 1-2 (progress while sending).
