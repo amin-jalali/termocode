@@ -189,10 +189,14 @@ const answerToast: Record<CardKind, { safe: StringKey; risky: StringKey }> = {
 
 const sheetKinds: CardKind[] = ["tool", "review", "plan", "mcp", "trust"];
 
+/** SheetOpen is what the sheet demo shows: a kind, a destructive tool
+ * card (MOBUX-12: Approve on laptop only), or Waiting for the laptop. */
+type SheetOpen = "" | CardKind | "destructive" | "wait";
+
 /** SheetDemo opens a real card dialog of each kind in a sheet: a fresh
  * card each time, so its arming starts over (the e2e card pack drives it). */
 function SheetDemo() {
-  const [open, setOpen] = useState<"" | CardKind | "wait">("");
+  const [open, setOpen] = useState<SheetOpen>("");
   const close = (msg: StringKey) => {
     setOpen("");
     toast("info", t(msg));
@@ -204,20 +208,22 @@ function SheetDemo() {
           {`Open a ${k} card`}
         </Button>
       ))}
+      <Button onClick={() => setOpen("destructive")}>Open a destructive card</Button>
       <Button onClick={() => setOpen("wait")}>Open Waiting for the laptop</Button>
       {open !== "" && open !== "wait" && (
         <Sheet onLater={() => close("card.later")}>
           <Card
             id={`sheet-${open}`}
-            kind={open}
-            subject={subjects[open]}
-            where={open === "tool" ? "terminal 2 · ~/termocode" : undefined}
-            onAnswer={(c) => close(answerToast[open][c])}
+            kind={open === "destructive" ? "tool" : open}
+            destructive={open === "destructive"}
+            subject={open === "destructive" ? "git clean -fd" : subjects[open]}
+            where={open === "tool" || open === "destructive" ? "terminal 2 · ~/termocode" : undefined}
+            onAnswer={(c) => close(answerToast[open === "destructive" ? "tool" : open][c])}
             onLater={() => close("card.later")}
             onCancel={() => close("card.cancelled")}
             onLaptop={() => close("laptop.shown")}
           >
-            {cardBody(open)}
+            {cardBody(open === "destructive" ? "tool" : open)}
           </Card>
         </Sheet>
       )}

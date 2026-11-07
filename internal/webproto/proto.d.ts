@@ -1085,6 +1085,7 @@ export interface Card {
   read_only?: boolean;
   file?: string;
   diff?: CardDiff;
+  destructive?: boolean;
 }
 
 export interface CardChoice {

@@ -214,6 +214,14 @@ func (p *webCardsPub) id(obj any) (string, int64) {
 	return id, p.since[id]
 }
 
+// webToolDestructive reports whether a tool card's call cannot be undone:
+// a mutating call with no "Always allow" class (aiDestructive and the
+// like), or a database write (its laptop button is styled the danger).
+// The phone answers such a card only on the laptop (MOBUX-12).
+func webToolDestructive(t ai.Tool) bool {
+	return (t.Mutating && t.Class == "") || strings.HasPrefix(t.Name, "db_")
+}
+
 func webSameCard(a, b webproto.Card) bool {
 	x, _ := json.Marshal(a)
 	y, _ := json.Marshal(b)
@@ -235,7 +243,8 @@ func (m *Model) webCards(p *webCardsPub, diffs bool) []webCardRef {
 	if s != nil && s.confirm != nil {
 		c := s.confirm
 		add(c, webproto.Card{Kind: webproto.CardTool, Title: "AI wants to: " + c.tool.Label(),
-			Body: ai.Redact(aiCleanText(c.human)), Choices: []webproto.CardChoice{deny, allow}})
+			Body: ai.Redact(aiCleanText(c.human)), Choices: []webproto.CardChoice{deny, allow},
+			Destructive: webToolDestructive(c.tool)})
 	}
 	if st := m.mcpServe; st != nil {
 		asks := append([]*mcpServeAsk(nil), st.queue...)
