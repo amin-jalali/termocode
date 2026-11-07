@@ -118,7 +118,8 @@ func TestEditFieldHeaders(t *testing.T) {
 		t.Fatalf("first header:\n%s", got)
 	}
 	// The body is never touched.
-	if r := Parse(apply(t, fieldsSrc, 4, FieldEdit{Kind: FieldHeader, Index: 0, Name: "Accept", Value: "text/plain"})).AtLine(4); r.BodyText() != `{"a":1}` {
+	pf := Parse(apply(t, fieldsSrc, 4, FieldEdit{Kind: FieldHeader, Index: 0, Name: "Accept", Value: "text/plain"}))
+	if r := pf.AtLine(4); r.BodyText() != `{"a":1}` {
 		t.Fatalf("body changed: %q", r.BodyText())
 	}
 }
