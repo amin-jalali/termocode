@@ -1,0 +1,13 @@
+{"apiVersion": "v1", "kind": "List", "items": [
+  {"apiVersion": "cert-manager.io/v1", "kind": "Certificate",
+   "metadata": {"name": "web-tls", "namespace": "shop", "creationTimestamp": "2026-10-01T10:00:00Z"},
+   "status": {"conditions": [{"type": "Ready", "status": "True"}]}},
+  {"apiVersion": "cert-manager.io/v1", "kind": "Certificate",
+   "metadata": {"name": "api-tls", "namespace": "billing", "creationTimestamp": "2026-10-02T10:00:00Z"},
+   "status": {"conditions": [{"type": "Ready", "status": "False"}]}},
+  {"apiVersion": "example.com/v1alpha1", "kind": "Certificate",
+   "metadata": {"name": "odd", "namespace": "shop", "creationTimestamp": "2026-10-03T10:00:00Z"},
+   "status": {"phase": "Pending"}},
+  {"apiVersion": "cert-manager.io/v1", "kind": "Certificate",
+   "metadata": {"name": "bare", "namespace": "shop", "creationTimestamp": "2026-10-04T10:00:00Z"}}
+]}

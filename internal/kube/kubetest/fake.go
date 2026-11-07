@@ -17,6 +17,7 @@
 //	fail-<ctx>.err       every call with --context <ctx> fails with this
 //	                     stderr (an unreachable cluster)
 //	describe.txt         answer of `describe …`
+//	api-resources.txt    answer of `api-resources …` (.err: it fails)
 //	restart.err          `rollout restart` fails with this stderr
 //	logs.txt             answer of `logs …`
 //	pf-port.txt          the local port `port-forward` reports (43123)
@@ -69,6 +70,9 @@ get)
   if [ -f "$D/$kind.err" ]; then cat "$D/$kind.err" >&2; exit 1; fi
   cat "$D/$kind.json" 2>/dev/null; exit 0 ;;
 describe) cat "$D/describe.txt" 2>/dev/null; exit 0 ;;
+api-resources)
+  if [ -f "$D/api-resources.err" ]; then cat "$D/api-resources.err" >&2; exit 1; fi
+  cat "$D/api-resources.txt" 2>/dev/null; exit 0 ;;
 rollout)
   if [ -f "$D/restart.err" ]; then cat "$D/restart.err" >&2; exit 1; fi
   echo "deployment.apps/$3 restarted"; exit 0 ;;
