@@ -524,6 +524,7 @@ missing	db-result-column-types	Databases|S
 missing	db-result-create-table	Databases|S
 missing	db-result-row-numbers	Databases|S
 missing	db-run-container	Databases|S
+missing	db-saved-runs	Databases|M
 missing	db-cloud-discover	Databases|S
 missing	db-iam-auth	Databases|S
 missing	db-manage-connection	Databases|S

@@ -250,6 +250,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
+| Databases: Saved SQL Runs… | `db-saved-runs` |   |   |
 | Databases: Run From Caret to End of File | `db-run-from-caret` |   |   |
 | Databases: Run Smallest Statement (Subquery) at Caret | `db-run-smallest` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |

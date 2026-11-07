@@ -93,6 +93,7 @@ type dbState struct {
 	addLibSQL           bool // the add flow started from the libSQL row: only libsql:// URLs
 	menuRow             dbTreeRow
 	pendingDisconnectID string
+	sqlRunPending       string                  // DBX-45: the saved run the card asks about
 	closeSessionKey     string                  // the session Databases: Sessions… asks to close
 	savepointKey        string                  // the session Set / Roll Back to Savepoint acts on
 	savepointName       string                  // the savepoint the rollback card is for

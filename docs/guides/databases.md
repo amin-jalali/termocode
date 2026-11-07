@@ -185,6 +185,31 @@ When the container or service behind a saved connection is stopped, the footer s
 
 Press `$` on a connection to open its own client in a terminal tab: `psql`, `mysql`, `sqlite3` or `redis-cli` (it must be on your PATH). The host, port, user and database come from the connection, and a read-only connection opens the client read-only too. The password and SSL settings go in the tab's environment only, never on the command line, so they do not show in the process list. A connection through an SSH tunnel cannot use this: the tunnel lives inside termocode.
 
+### Saved SQL runs
+
+A saved run plays one SQL file on one or more connections with their command line clients. Write the runs in `.termocode/sql-runs.json`:
+
+```json
+{
+  "runs": [
+    {
+      "name": "nightly report",
+      "script": "sql/report.sql",
+      "connections": ["local", "staging"],
+      "before": ["make seed"],
+      "log": "logs/report.log"
+    }
+  ]
+}
+```
+
+- `script` is the SQL file. A relative path starts at the workspace root.
+- `connections` are connection ids (or names) from the Databases view. They run in this order.
+- `before` (optional) are shell commands that run first, in the workspace root.
+- `log` (optional) is a file. All output is also added to its end.
+
+Run **Databases: Saved SQL Runs…** and pick a run. A card shows the script, the connections, the before steps and the log file. Cancel is first. **Run** opens one terminal tab for the whole run. The first error stops it. Passwords go in the tab's environment only, never on the command line. The same limits as `$` apply: the client must be on your PATH, and a connection through an SSH tunnel cannot be used. **Edit sql-runs.json** at the end of the list opens the file. The AI cannot start a saved run.
+
 ## Disconnect
 
 Press `x` on a connection and choose **Disconnect** to close all its sessions. Sessions also close when you leave the Databases view, so a hidden view keeps no database process. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` then asks **Cancel**, **Commit** or **Roll back** (**Cancel** has the focus).
