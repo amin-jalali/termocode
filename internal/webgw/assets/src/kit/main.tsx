@@ -37,7 +37,7 @@ import { Progress, SkeletonBubbles, SkeletonRows } from "../ui/Skeleton";
 import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
-import { Block as PhoneBlock, BoardTile, Composer, ConnLine, ErrorLine, PhoneCard, PhoneSkeleton, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, Row, Rows, StatusMark, STATUS, StreamMsg, type Status } from "../phone/index";
+import { Block as PhoneBlock, BoardTile, Composer, ConnLine, ErrorLine, PhoneCard, PhoneSkeleton, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, RaceCompare, readRaces, Row, Rows, StatusMark, STATUS, StreamMsg, type Status } from "../phone/index";
 import { ChipRow } from "../home/ChipRow";
 import type { ChipState } from "../home/chips";
 import { KitCustomize } from "./customize";
@@ -367,6 +367,14 @@ function PhoneKit() {
         onRemove={(id) => setAttached(attached.filter((a) => a.id !== id))}
       />
       <Composer value="" onInput={() => undefined} onSend={() => undefined} offline />
+      <RaceCompare
+        race={kitRace}
+        canAct
+        onMerge={(l) => toast("info", "Asked the laptop to merge " + l.title)}
+        onReview={(l) => toast("info", "Review " + l.title)}
+        onSummarise={() => toast("info", "Summarise")}
+        onVerify={() => toast("info", "Verify")}
+      />
       <ConnLine conn="offline" text={t("ph.conn_offline")} />
       <ConnLine conn="asleep" text={t("ph.conn_asleep", { time: "10:42" })} onTry={() => toast("info", "Try now")} />
       <ConnLine conn="final" text={t("e.ended")} />
@@ -447,6 +455,25 @@ function ShellDemo() {
     </div>
   );
 }
+
+// A sample race for the phone race compare (MOBUX-10).
+const kitRace = readRaces({
+  races: [
+    {
+      id: "race-3",
+      number: 3,
+      name: "race/fix-the-login-redirect",
+      prompt: "Fix the login redirect",
+      verify: "go test ./internal/auth/...",
+      summary: ["opus changes the handler and adds a test.", "codex is the most complete: it also fixes the cookie path.", "gemini only edits the template."],
+      lanes: [
+        { id: "race-3-1-claude", agent: "claude", title: "opus", branch: "race/fix-the-login-redirect-1", state: "done", stats: true, files: [{ status: "M", path: "internal/auth/login.go", add: 18, del: 4 }, { status: "A", path: "internal/auth/login_test.go", add: 40, del: 0 }], verify: { state: "pass" }, cost: 0.62 },
+        { id: "race-3-2-codex", agent: "codex", title: "codex", branch: "race/fix-the-login-redirect-2", state: "done", stats: true, files: [{ status: "M", path: "internal/auth/login.go", add: 22, del: 6 }, { status: "M", path: "internal/auth/cookie.go", add: 5, del: 2 }, { status: "A", path: "internal/auth/login_test.go", add: 51, del: 0 }], verify: { state: "pass" }, cost: 0.48 },
+        { id: "race-3-3-gemini", agent: "gemini", title: "gemini", state: "working", files: [], verify: {} },
+      ],
+    },
+  ],
+})[0];
 
 function PhoneSheetDemo() {
   const [open, setOpen] = useState(false);

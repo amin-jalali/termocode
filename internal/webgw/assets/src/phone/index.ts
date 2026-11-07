@@ -10,6 +10,8 @@ export { Row, Rows } from "./Row";
 export { PhoneShell, ProjectSwitcher, Stream, StreamMsg, TopBar, type LinkState, type ShellComposer, type ShellProject } from "./Shell";
 export { PhoneSheet, safeFirst, type SheetAction } from "./Sheet";
 export { ProjectTasksView, taskStatus } from "./ProjectTasks";
+export { RaceCompare } from "./RaceCompare";
+export { readRaces, type Race, type RaceLane } from "./race";
 export { StatusMark } from "./Mark";
 export { BOARD_ORDER, STATUS, type Status, type StatusLook } from "./status";
 export { ASLEEP_AFTER_MS, SHOW_AFTER_MS, barShown, canAnswer, lastSeen, phoneConn, phoneOnline, type ConnInput, type PhoneConn } from "./conn";
