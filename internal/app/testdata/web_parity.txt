@@ -494,6 +494,9 @@ missing	git-diff-clipboard	Git|S
 missing	git-diff-merge-parent	Git|S
 missing	git-fetch-all	Git|S
 missing	git-gist	Git|S
+missing	git-gitlab-mr-create	Git|S
+missing	git-gitlab-mrs	Git|S
+missing	git-gitlab-token	Git|S
 missing	git-goto-commit	Git|S
 missing	git-graph-all	Git|S
 missing	git-graph-col-author	Git|S
