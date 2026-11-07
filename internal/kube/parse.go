@@ -10,7 +10,8 @@
 //     respected because kubectl reads it from the environment.
 //   - Errors are one quiet line (ErrorLine): no kubectl, no cluster,
 //     forbidden, a timeout.
-//   - The only write is Client.RolloutRestart (the app asks first).
+//   - The only writes are Client.RolloutRestart and Client.Delete (the
+//     app asks first).
 package kube
 
 import (

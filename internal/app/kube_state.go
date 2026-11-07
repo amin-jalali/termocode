@@ -68,6 +68,7 @@ type kubeState struct {
 
 	pendingRestart kubeRestartTarget // the restart card's deployment (kube_restart.go)
 	pendingScale   kubeScaleTarget   // the scale prompt's and card's deployment (kube_scale.go)
+	pendingDelete  kubeDeleteTarget  // the delete card's object (kube_delete.go)
 
 	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
@@ -352,6 +353,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeScale(msg), true
 	case kubeRestartMsg:
 		return m.onKubeRestart(msg), true
+	case kubeDeleteMsg:
+		return m.onKubeDelete(msg), true
 	}
 	return nil, false
 }
