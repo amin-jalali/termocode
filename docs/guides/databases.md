@@ -54,6 +54,10 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `environment` | `development` (default), or `production` for the stricter cards. |
 | `readOnly` | `true` makes the AI refuse writes. Your own writes ask with a warning. |
 | `ssh`, `ssl`, `tls` | See [SSH tunnels](#ssh-tunnels) and [SSL and TLS](#ssl-and-tls). |
+| `folder` | Groups the connection under a heading in the tree (`team/prod`). Connections without a folder come first. |
+| `color` | A bar in front of the connection's row: `red`, `orange`, `yellow`, `green`, `blue`, `purple` or `gray`. |
+| `options.keepAliveSeconds` | Pings the connected session this often (at least 5 s) so idle firewalls do not drop it. |
+| `options.autoReconnect` | `true`: when a ping fails, the session is dropped and connects again after 1 s, 2 s, 4 s … (at most 30 s, 8 tries). The row shows the next try. Pings every 30 s when `keepAliveSeconds` is not set. An open transaction is lost with the connection. Disconnect stops it. |
 
 A row with a problem shows the reason, for example `literal password in project config`, `duplicate connection id` or `sqlite path is outside the workspace`. Fix the file and press `R`.
 

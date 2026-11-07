@@ -469,6 +469,7 @@ func (m *Model) databaseDisconnectNow(connID string) tea.Cmd {
 		}
 	}
 	delete(m.databases.passwords, connID)
+	delete(m.databases.keepAlive, connID) // the user's disconnect ends keep-alive and reconnect
 	m.databases.closeTunnel(connID)
 	if m.databases.activeID == connID {
 		m.databases.activeID = ""
@@ -1279,6 +1280,9 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		}
 		s.nodes[msg.id] = n
 		s.touch()
+		if cmd, ok := m.dbReconnectFailed(msg.id); ok {
+			return cmd
+		}
 		return m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
 	}
 	if old := s.sessions[msg.id]; old != nil && old != msg.session {
@@ -1300,10 +1304,11 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 	}
 	s.activeID = msg.id
 	s.touch()
+	keep := m.dbKeepAliveStart(msg.id)
 	if s.console != nil && s.console.waiting != nil && s.console.waiting.conn == msg.id {
-		return tea.Batch(m.databaseExpand(msg.id), m.databaseStartRun(s.console.waiting))
+		return tea.Batch(keep, m.databaseExpand(msg.id), m.databaseStartRun(s.console.waiting))
 	}
-	return m.databaseExpand(msg.id)
+	return tea.Batch(keep, m.databaseExpand(msg.id))
 }
 
 func (m *Model) onDBIntrospect(msg dbIntrospectMsg) tea.Cmd {

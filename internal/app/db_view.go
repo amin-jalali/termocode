@@ -84,6 +84,11 @@ func (m Model) renderDatabasesSidebarRows(w, h int, focused bool, rows []dbTreeR
 			lines = append(lines, testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Bold(true).Render("  SUGGESTED"), w))
 			continue
 		}
+		if r.kind == dbNodeFolderHeader {
+			head := "  " + theme.IconFolderOpen.String() + " " + runewidth.Truncate(sanitizeDBText(r.name), max(w-5, 1), "…")
+			lines = append(lines, theme.FgBg(theme.TextSecondary, theme.BgSidebar).Bold(true).Render(testsPad(head, w)))
+			continue
+		}
 		glyph := dbNodeGlyph(r.kind)
 		if r.kind == dbNodeRedisKey {
 			glyph = dbRedisTypeGlyph(s.nodes[r.path].rtype)
@@ -119,18 +124,30 @@ func (m Model) renderDatabasesSidebarRows(w, h int, focused bool, rows []dbTreeR
 				more = append(more, indent+"   "+l)
 			}
 		}
-		if i == s.cursor && focused {
-			line = theme.FgBg(theme.TextPrimary, theme.BgSelection).Render(testsPad(line, w))
-		} else if r.kind == dbNodeNote {
-			line = theme.FgBg(theme.DiagError, theme.BgSidebar).Render(testsPad(line, w))
-		} else if r.kind == dbNodeRedisMore || r.kind == dbNodeLoading {
-			line = theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(testsPad(line, w))
-		} else if r.kind == dbNodeCode {
-			line = theme.FgBg(theme.TextSecondary, theme.BgPanel).Render(testsPad(line, w))
-		} else {
-			line = theme.FgBg(theme.TextPrimary, theme.BgSidebar).Render(testsPad(line, w))
+		// The connection's colour (DBX-21) is a bar in the first column.
+		lw, prefix := w, ""
+		if c, ok := s.connection(r.conn); ok && r.kind == dbNodeConnection && w > 4 {
+			if col, ok := dbConnTint(c.Color); ok {
+				bg := theme.BgSidebar
+				if i == s.cursor && focused {
+					bg = theme.BgSelection
+				}
+				lw, prefix = w-1, theme.FgBg(col, bg).Render("▌")
+				line = runewidth.Truncate(line, lw, "")
+			}
 		}
-		lines = append(lines, line)
+		if i == s.cursor && focused {
+			line = theme.FgBg(theme.TextPrimary, theme.BgSelection).Render(testsPad(line, lw))
+		} else if r.kind == dbNodeNote {
+			line = theme.FgBg(theme.DiagError, theme.BgSidebar).Render(testsPad(line, lw))
+		} else if r.kind == dbNodeRedisMore || r.kind == dbNodeLoading {
+			line = theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(testsPad(line, lw))
+		} else if r.kind == dbNodeCode {
+			line = theme.FgBg(theme.TextSecondary, theme.BgPanel).Render(testsPad(line, lw))
+		} else {
+			line = theme.FgBg(theme.TextPrimary, theme.BgSidebar).Render(testsPad(line, lw))
+		}
+		lines = append(lines, prefix+line)
 		for _, l := range more {
 			if len(lines) >= 4+available {
 				break

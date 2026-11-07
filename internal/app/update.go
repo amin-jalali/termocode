@@ -282,6 +282,12 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBSubmit(msg)
 	case dbJobTickMsg:
 		return m, m.onDBJobTick(msg)
+	case dbKeepAliveMsg:
+		return m, m.onDBKeepAlive(msg)
+	case dbPingDoneMsg:
+		return m, m.onDBPingDone(msg)
+	case dbReconnectMsg:
+		return m, m.onDBReconnect(msg)
 	case dbToolDoneMsg:
 		return m, m.onDBToolDone(msg)
 	case dbExportDoneMsg:
