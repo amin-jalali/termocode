@@ -17,6 +17,7 @@
 //	fail-<ctx>.err       every call with --context <ctx> fails with this
 //	                     stderr (an unreachable cluster)
 //	describe.txt         answer of `describe …`
+//	api-resources.txt    answer of `api-resources …` (.err: it fails)
 //	restart.err          `rollout restart` fails with this stderr
 //	rollout-status.txt   answer of `rollout status …`
 //	rollout-history.txt  answer of `rollout history …`
@@ -75,6 +76,9 @@ get)
   if [ -f "$D/$kind.err" ]; then cat "$D/$kind.err" >&2; exit 1; fi
   cat "$D/$kind.json" 2>/dev/null; exit 0 ;;
 describe) cat "$D/describe.txt" 2>/dev/null; exit 0 ;;
+api-resources)
+  if [ -f "$D/api-resources.err" ]; then cat "$D/api-resources.err" >&2; exit 1; fi
+  cat "$D/api-resources.txt" 2>/dev/null; exit 0 ;;
 rollout)
   case "$2" in
   status) cat "$D/rollout-status.txt" 2>/dev/null; exit 0 ;;
