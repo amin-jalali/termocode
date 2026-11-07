@@ -223,6 +223,60 @@ func TestSaveUserOverridesOverACorruptFile(t *testing.T) {
 	}
 }
 
+// SCN-30: a hand-edited user_theme.json that is not valid JSON is not
+// lost on the next color change: it is kept next to the new file.
+func TestSaveOverACorruptUserThemeKeepsTheOldFile(t *testing.T) {
+	path := writeUserTheme(t, nil)
+	if err := os.WriteFile(path, []byte("{\"BgEditor\": \"#101010\",,}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	note, err := SaveUserOverridesNote(map[string]string{"AccentBlue": "#0000ff"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kept, rerr := os.ReadFile(path + ".broken")
+	if rerr != nil || string(kept) != "{\"BgEditor\": \"#101010\",,}" {
+		t.Errorf("old file not kept: %q %v", kept, rerr)
+	}
+	if !strings.Contains(note, "user_theme.json.broken") {
+		t.Errorf("note = %q, want it to name the kept file", note)
+	}
+	if got := LoadUserOverrides(); got["AccentBlue"] != "#0000ff" {
+		t.Errorf("after save = %v", got)
+	}
+	if note, err := SaveUserOverridesNote(map[string]string{"AccentBlue": "#0000aa"}); err != nil || note != "" {
+		t.Errorf("save over a good file: note %q err %v, want none", note, err)
+	}
+}
+
+// The file is written through a temp file and a rename: no temp file is
+// left and a read-only file is not replaced.
+func TestSaveUserOverridesLeavesNoTempFile(t *testing.T) {
+	path := writeUserTheme(t, map[string]string{"BgEditor": "#111111"})
+	if err := SaveUserOverrides(map[string]string{"TextPrimary": "#eeeeee"}); err != nil {
+		t.Fatal(err)
+	}
+	ents, _ := os.ReadDir(filepath.Dir(path))
+	for _, e := range ents {
+		if strings.HasSuffix(e.Name(), ".tmp") {
+			t.Errorf("temp file left: %s", e.Name())
+		}
+	}
+	if os.Geteuid() == 0 {
+		return
+	}
+	if err := os.Chmod(path, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o644) })
+	if err := SaveUserOverrides(map[string]string{"TextPrimary": "#dddddd"}); err == nil {
+		t.Error("save over a read-only user_theme.json: want an error")
+	}
+	if got := LoadUserOverrides(); got["TextPrimary"] != "#eeeeee" {
+		t.Errorf("read-only file changed: %v", got)
+	}
+}
+
 func TestUserThemeErrorsWhenTheFolderCannotBeMade(t *testing.T) {
 	blocker := filepath.Join(t.TempDir(), "file")
 	if err := os.WriteFile(blocker, nil, 0o644); err != nil {
