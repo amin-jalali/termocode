@@ -46,8 +46,8 @@ import { SubView } from "../more/SubView";
 import { View } from "../View";
 import { door } from "./door";
 
-const TAB_LABEL: Record<ProjectTab, StringKey> = { tasks: "more.tasks", runs: "more.runs", git: "tab.git", board: "pp.board" };
-const COL_LABEL: Record<BoardCol, StringKey> = { needs: "wfv.needs", working: "pp.col.working", review: "pill.review", done: "done" };
+const TAB_LABEL: Record<ProjectTab, StringKey> = { tasks: "more.tasks", runs: "more.runs", git: "tab.git", board: "chips.board" };
+const COL_LABEL: Record<BoardCol, StringKey> = { needs: "wfv.needs", working: "board.col.working", review: "pill.review", done: "done" };
 const COL_MARK: Record<BoardCol, string> = { needs: "●", working: "◐", review: "◆", done: "✓" };
 
 function backToProjects(): void {
@@ -266,7 +266,7 @@ export function ProjectPage({ id }: { id: string }) {
 export function ProjectsPage() {
   useEffect(() => link.subscribe("projects"), []);
   return (
-    <SubView title={t("ph.proj.title")} name="projects">
+    <SubView title={t("ph.switch_title")} name="projects">
       <ProjectsList onOpen={(p) => go({ tab: "more", rest: "projects/" + p.id, query: {} })} />
     </SubView>
   );

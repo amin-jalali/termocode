@@ -46,7 +46,7 @@ func TestPhoneStatesExported(t *testing.T) {
 // the asleep bar gives the last seen time, the error line has Retry.
 func TestPhoneStatesStrings(t *testing.T) {
 	en := map[string]string{}
-	for _, e := range parseStrings(t, "src/strings.ts", "S") {
+	for _, e := range allEnglishStrings(t) {
 		en[e.key] = e.text
 	}
 	want := map[string]string{
@@ -65,7 +65,7 @@ func TestPhoneStatesStrings(t *testing.T) {
 	}
 	for _, k := range []string{"ph.offline_sr", "ph.asleep_sr", "ph.loading"} {
 		if en[k] == "" {
-			t.Errorf("strings.ts has no %s", k)
+			t.Errorf("strings.ts / strings.phone.ts has no %s", k)
 		}
 	}
 }

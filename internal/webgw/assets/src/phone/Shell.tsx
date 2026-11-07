@@ -107,7 +107,7 @@ export function TopBar({ project, link, onSwitch, onMenu }: { project: string; l
         </span>
         <span class="ph-live-word">{t(look.label)}</span>
       </span>
-      <button type="button" class="ph-top-btn is-menu" aria-label={t("ph.menu")} aria-haspopup="dialog" onClick={onMenu}>
+      <button type="button" class="ph-top-btn is-menu" aria-label={t("tools.title")} aria-haspopup="dialog" onClick={onMenu}>
         <span aria-hidden="true">☰</span>
       </button>
     </header>

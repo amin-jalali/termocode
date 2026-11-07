@@ -103,7 +103,7 @@ function WorkflowStep({ ref_, onRun }: { ref_: string; onRun(name: string): void
                 {t("wf.dry_run")}
               </button>
               <button type="button" class="ph-pick" onClick={() => onRun(w.name)}>
-                {t("wf.run")}
+                {t("tasks.run")}
               </button>
             </li>
           ))}
@@ -125,7 +125,7 @@ function AgentsStep({ picked, setPicked }: { picked: string[]; setPicked(p: stri
   const size = (k: number) => setPicked(resizeLanes(picked, ids, clampLanes(k)));
   return (
     <>
-      <div class="ph-lanes" role="group" aria-label={t("ph.task.lanes_label")}>
+      <div class="ph-lanes" role="group" aria-label={t("ph.race.lanes")}>
         <button type="button" class="ph-lane-step" aria-label={t("ph.task.lanes_fewer")} aria-disabled={n <= RACE_MIN_LANES ? "true" : undefined} onClick={() => n > RACE_MIN_LANES && size(n - 1)}>
           −
         </button>

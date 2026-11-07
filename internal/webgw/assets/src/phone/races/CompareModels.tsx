@@ -80,7 +80,7 @@ export function CompareModels({ task = "", onDone, onStarted }: Props) {
   };
 
   if (err) return <p class="empty refused">{err}</p>;
-  if (!list) return <p class="empty">{t("models.loading")}</p>;
+  if (!list) return <p class="empty">{t("lane.loading")}</p>;
   const known = new Set((cur?.models ?? []).map((m) => m.id));
   const typed = picks.filter((p) => !known.has(p));
 
@@ -91,8 +91,8 @@ export function CompareModels({ task = "", onDone, onStarted }: Props) {
         <textarea rows={3} maxLength={MODELS_TASK_MAX} value={text} onInput={(e) => setText((e.target as HTMLTextAreaElement).value)} />
       </label>
       <fieldset class="race-field">
-        <legend>{t("models.agent")}</legend>
-        <div class="race-row" role="radiogroup" aria-label={t("models.agent")}>
+        <legend>{t("lane.agent")}</legend>
+        <div class="race-row" role="radiogroup" aria-label={t("lane.agent")}>
           {list.map((a) => (
             <button
               type="button"

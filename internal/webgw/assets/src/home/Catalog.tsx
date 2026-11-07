@@ -23,7 +23,7 @@ function ErrorLine({ text, retry, host }: { text: string; retry: () => void; hos
 
 function Skeleton() {
   return (
-    <div class="hcat-skel" aria-busy="true" aria-label="Loading">
+    <div class="hcat-skel" aria-busy="true" aria-label={STR.loading}>
       <span />
       <span />
       <span />
