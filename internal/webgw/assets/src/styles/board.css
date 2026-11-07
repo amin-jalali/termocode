@@ -21,7 +21,7 @@
 .board-tile.st-fail { border-inline-start-color: var(--red); }
 .board-open { display: flex; align-items: flex-start; gap: var(--s3); width: 100%; min-height: var(--tap); padding: var(--s3); text-align: start; }
 .board-open:hover { background: var(--bg-hover); }
-.board-shape { flex: none; width: 1.25em; text-align: center; font-weight: 700; color: var(--dim); }
+.board-shape { flex: none; width: 1.25em; text-align: center; font-weight: 700; color: var(--muted); }
 .st-wait .board-shape { color: var(--amber); }
 .st-run .board-shape { color: var(--blue); animation: breathe var(--t-pulse) ease-in-out infinite; }
 .st-ok .board-shape { color: var(--green); }
