@@ -2195,6 +2195,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai-auto-approve` | AI: Agent Auto-Approve… | never | AI provider, credentials and approvals stay with the user |
 | `ai-board` | AI: Agent Board… | never | the user's board of agent work; it opens a picker and holds Resume |
 | `ai-autopilot` | AI: Autopilot Level… (off / low / medium risk) | never | AI provider, credentials and approvals stay with the user; the AI never lowers its own approval cards |
+| `ai-auto-model` | AI: Toggle Auto Model Pick (quick / main per turn) | never | AI provider, credentials and approvals stay with the user; the AI never picks its own model |
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
 | `ai-checkpoint-restore` | AI: Restore Code Checkpoint… | never | the user rolls code back to a checkpoint |
 | `ai-checkpoint-save` | AI: Save Code Checkpoint | auto |   |
@@ -2944,6 +2945,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `ai_reasoning` | never | AI provider, credentials and approvals stay with the user |
 | `ai_review_order` | never | AI provider, credentials and approvals stay with the user |
+| `ai_router` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_escalate` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_stall_minutes` | never | AI provider, credentials and approvals stay with the user |
 | `ai_team_mode` | never | AI provider, credentials and approvals stay with the user |

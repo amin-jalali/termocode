@@ -604,6 +604,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-follow-agent", "AI: Toggle Follow Agent", ""},
 		{"ai-configure", "AI: Configure Provider…", ""},
 		{"ai-pick-model", "AI: Pick Model…", ""},
+		{"ai-auto-model", "AI: Toggle Auto Model Pick (quick / main per turn)", ""},
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
 		{"ai-profile-switch", "AI: Switch Profile…", ""},
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
@@ -769,6 +770,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIConfigure(), true
 	case "ai-pick-model":
 		return m.openAIModelPicker(), true
+	case "ai-auto-model": // CMP-25 (ai_router.go)
+		return m.toggleAIRouter(), true
 	case "ai-auto-approve":
 		return m.openAIAutoApprovePicker(), true
 	case "ai-sign-in-claude":

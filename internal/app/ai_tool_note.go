@@ -17,8 +17,10 @@ const aiMaxToolNote = 2000
 func aiToolNoteLine(text string) bool { return strings.HasPrefix(text, aiToolNoteMark) }
 
 // aiForUserOnly reports a stored tool line that is for the user, not the
-// model (a fallback line, a tool note).
-func aiForUserOnly(text string) bool { return aiFallbackLine(text) || aiToolNoteLine(text) }
+// model (a fallback line, a tool note, an auto model pick line).
+func aiForUserOnly(text string) bool {
+	return aiFallbackLine(text) || aiToolNoteLine(text) || aiRouteLine(text)
+}
 
 // aiAddToolNote keeps a note of the running tool.
 func (s *aiState) aiAddToolNote(text string) {

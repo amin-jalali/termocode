@@ -97,6 +97,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Stop Generating | `ai-cancel` |   |   |
 | AI: Switch Profile… | `ai-profile-switch` |   |   |
 | AI: Toggle Agent Worktrees | `ai-worktrees-toggle` |   |   |
+| AI: Toggle Auto Model Pick (quick / main per turn) | `ai-auto-model` |   |   |
 | AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` / `Alt+G` | `Alt+Shift+A / Alt+G` |
 | AI: Toggle Critic Review | `ai-critic-toggle` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
