@@ -1,8 +1,6 @@
 package dbclient
 
 import (
-	"context"
-	"database/sql/driver"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -150,6 +148,41 @@ func (o ConnOptions) StartSQL(driver string) []string {
 		if level != "" {
 			out = append(out, "SET SESSION TRANSACTION ISOLATION LEVEL "+level)
 		}
+	case "sqlserver":
+		// The default schema belongs to the database user in T-SQL; only
+		// the isolation level is a session setting.
+		if level != "" {
+			out = append(out, "SET TRANSACTION ISOLATION LEVEL "+level)
+		}
+	case "vertica": // DBX-71
+		if list := schemaList(o.Schema); len(list) > 0 {
+			q := make([]string, len(list))
+			for i, s := range list {
+				q[i] = d.QuoteIdent(s)
+			}
+			out = append(out, "SET SEARCH_PATH TO "+strings.Join(q, ", "))
+		}
+		if o.TimeZone != "" {
+			out = append(out, "SET TIME ZONE TO '"+o.TimeZone+"'")
+		}
+		if level != "" {
+			out = append(out, "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL "+level)
+		}
+	case "exasol":
+		if list := schemaList(o.Schema); len(list) > 0 {
+			out = append(out, "OPEN SCHEMA "+d.QuoteIdent(list[0]))
+		}
+		if o.TimeZone != "" {
+			out = append(out, "ALTER SESSION SET TIME_ZONE = '"+o.TimeZone+"'")
+		}
+	case "hana":
+		if list := schemaList(o.Schema); len(list) > 0 {
+			out = append(out, "SET SCHEMA "+d.QuoteIdent(list[0]))
+		}
+	case "firebird":
+		if o.TimeZone != "" {
+			out = append(out, "SET TIME ZONE '"+o.TimeZone+"'") // Firebird 4+
+		}
 	}
 	if strings.TrimSpace(o.InitSQL) != "" {
 		stmts, err := Split(o.InitSQL, driver)
@@ -228,33 +261,6 @@ func (o *ConnOptions) TableReadOnly(schema, table string) bool {
 		}
 	}
 	return false
-}
-
-// startSQLConnector runs the connection's start SQL on every new pooled
-// connection, so each one gets the schema, time zone, isolation level and
-// init SQL (DBX-28). A failing statement fails the connection.
-type startSQLConnector struct {
-	driver.Connector
-	stmts []string
-}
-
-func (c startSQLConnector) Connect(ctx context.Context) (driver.Conn, error) {
-	conn, err := c.Connector.Connect(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ex, ok := conn.(driver.ExecerContext)
-	if !ok && len(c.stmts) > 0 {
-		_ = conn.Close()
-		return nil, fmt.Errorf("the driver cannot run the start SQL")
-	}
-	for _, s := range c.stmts {
-		if _, err := ex.ExecContext(ctx, s, nil); err != nil {
-			_ = conn.Close()
-			return nil, fmt.Errorf("start SQL %q: %s", sanitizeLine(firstLine(s)), Redact(err.Error()))
-		}
-	}
-	return conn, nil
 }
 
 func firstLine(s string) string {

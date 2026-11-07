@@ -77,8 +77,11 @@ func VerifyResult(code int) Verify {
 
 // Lane is one agent of a race.
 type Lane struct {
-	ID       string     `json:"id"` // also the agent worktree id
-	Agent    string     `json:"agent"`
+	ID    string `json:"id"` // also the agent worktree id
+	Agent string `json:"agent"`
+	// Model is the model the lane's agent was started on ("" its own
+	// default); a Compare models race (MOB-63) gives each lane another.
+	Model    string     `json:"model,omitempty"`
 	Title    string     `json:"title"`
 	Worktree string     `json:"worktree,omitempty"` // the agent's folder in its worktree
 	Branch   string     `json:"branch,omitempty"`
@@ -129,8 +132,9 @@ type Race struct {
 }
 
 // LaneSpec is a lane asked for in the race card; Prompt is a split
-// part's own task (CMP-4).
-type LaneSpec struct{ Agent, Title, Prompt string }
+// part's own task (CMP-4). Model is the model the agent starts on (""
+// its default, MOB-63).
+type LaneSpec struct{ Agent, Title, Prompt, Model string }
 
 // New makes race number n. The task becomes one line; 2–8 lanes. An
 // agent that runs in more than one lane gets "#k" in each lane's title.
@@ -152,11 +156,14 @@ func New(n int, prompt, verify string, lanes []LaneSpec, nowMs int64) (Race, err
 		if !word(s.Agent) {
 			return Race{}, fmt.Errorf("agent %q is not known", s.Agent)
 		}
+		if s.Model != "" && !ModelWord(s.Model) {
+			return Race{}, fmt.Errorf("model %q cannot be passed to an agent", s.Model)
+		}
 		title := s.Title
-		if seen[s.Agent]++; total[s.Agent] > 1 && title != "" {
+		if seen[s.Agent]++; total[s.Agent] > 1 && title != "" && s.Model == "" { // a model lane's title already names its model
 			title += " #" + strconv.Itoa(seen[s.Agent])
 		}
-		r.Lanes = append(r.Lanes, Lane{ID: LaneID(n, k+1, s.Agent), Agent: s.Agent, Title: title, State: Starting})
+		r.Lanes = append(r.Lanes, Lane{ID: LaneID(n, k+1, s.Agent), Agent: s.Agent, Model: s.Model, Title: title, State: Starting})
 	}
 	return r, nil
 }
@@ -168,6 +175,28 @@ func word(s string) bool {
 	}
 	for _, r := range s {
 		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-') {
+			return false
+		}
+	}
+	return true
+}
+
+// MaxModel is the longest model id a lane takes.
+const MaxModel = 128
+
+// ModelWord: a model id that is safe to type after an agent's --model
+// flag: it starts with a letter or digit and holds only letters, digits
+// and . _ : / @ + - (no space, quote or shell character).
+func ModelWord(s string) bool {
+	if s == "" || len(s) > MaxModel {
+		return false
+	}
+	for i, r := range s {
+		alnum := r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9'
+		if i == 0 && !alnum {
+			return false
+		}
+		if !alnum && !strings.ContainsRune("._:/@+-", r) {
 			return false
 		}
 	}

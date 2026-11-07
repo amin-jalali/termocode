@@ -52,6 +52,12 @@
 .run-why { color: var(--amber); font-size: 0.875rem; }
 .run .choices { padding-top: var(--s2); }
 .run .btn, .task-line .btn { min-height: var(--tap); }
+.runs-top { display: flex; justify-content: flex-end; padding: 0 var(--s4) var(--s2); }
+.runs-top .btn { min-height: var(--tap); }
+.coord { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3); }
+.coord .btn { min-height: var(--tap); }
+.run-text { width: 100%; min-height: calc(var(--tap) * 2); padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg); color: var(--text); font: inherit; resize: vertical; }
+.run-text:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
 .notify { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); }
 
 /* All tools (MOBUX-5): one searchable list, 44 px rows, one column. */
@@ -72,3 +78,33 @@
 .tools-failed { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 .tools-back { align-self: flex-start; }
 .tools-server { display: flex; flex-direction: column; gap: var(--s2); padding: 0 var(--s4) var(--s6); }
+/* New lane (MOB-65): the agent list and the task box; 44px targets. */
+.lane-agents {
+  border: 0;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.lane-agent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap);
+}
+.lane-sign {
+  margin-inline-start: auto;
+  opacity: 0.8;
+}
+.lane-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.lane-field textarea,
+.lane-field input {
+  min-height: var(--tap);
+  font: inherit;
+}
+.lane-new {
+  min-height: var(--tap);
+}

@@ -225,6 +225,16 @@ func ServerVersionQuery(driver string) string {
 		return "SELECT sqlite_version()"
 	case "cassandra":
 		return "SELECT release_version FROM system.local"
+	case "sqlserver":
+		return "SELECT @@VERSION"
+	case "firebird":
+		return "SELECT rdb$get_context('SYSTEM', 'ENGINE_VERSION') FROM rdb$database"
+	case "vertica":
+		return "SELECT version()"
+	case "exasol":
+		return "SELECT PARAM_VALUE FROM SYS.EXA_METADATA WHERE PARAM_NAME = 'databaseProductVersion'"
+	case "hana":
+		return "SELECT VERSION FROM SYS.M_DATABASE"
 	}
 	return ""
 }

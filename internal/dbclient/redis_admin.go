@@ -141,11 +141,19 @@ func RedisSlowlogResult(reply any) Result {
 	return res
 }
 
-// RedisAdminGrid is the readable grid of INFO and SLOWLOG GET replies;
-// ok=false for every other command (the generic reply grid).
+// RedisAdminGrid is the readable grid of INFO, SLOWLOG GET and the
+// replies of redisMoreGrid; ok=false for every other command (the
+// generic reply grid).
 func RedisAdminGrid(args []string, reply any) (Result, bool) {
 	if len(args) == 0 {
 		return Result{}, false
+	}
+	sub := ""
+	if len(args) > 1 {
+		sub = strings.ToUpper(args[1])
+	}
+	if res, ok := redisMoreGrid(strings.ToUpper(args[0]), sub, reply); ok {
+		return res, true
 	}
 	switch strings.ToUpper(args[0]) {
 	case "INFO":

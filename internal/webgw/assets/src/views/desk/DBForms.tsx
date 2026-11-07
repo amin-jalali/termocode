@@ -25,7 +25,7 @@ interface Field {
   when?: (v: Vals) => boolean;
 }
 
-const DRIVERS = ["postgres", "mysql", "sqlite", "redis"] as const;
+const DRIVERS = ["postgres", "mysql", "sqlite", "redis", "cassandra"] as const;
 const net = (v: Vals) => v.driver !== "sqlite";
 
 function fieldsOf(f: DBForm): Field[] {
@@ -38,7 +38,8 @@ function fieldsOf(f: DBForm): Field[] {
         { k: "host", label: "dbv.f_host", when: net },
         { k: "port", label: "dbv.f_port", num: true, when: net },
         { k: "user", label: "dbv.f_user", when: (v) => v.driver !== "sqlite" && v.driver !== "redis" },
-        { k: "database", label: "dbv.f_db", when: (v) => v.driver !== "sqlite" && v.driver !== "redis" },
+        { k: "database", label: "dbv.f_db", when: (v) => v.driver !== "sqlite" && v.driver !== "redis" && v.driver !== "cassandra" },
+        { k: "database", label: "dbv.f_keyspace", when: (v) => v.driver === "cassandra" },
         { k: "path", label: "dbv.f_path", when: (v) => v.driver === "sqlite" },
         { k: "db", label: "dbv.f_db", num: true, when: (v) => v.driver === "redis" },
         { k: "env", label: "dbv.f_env", opts: ["", "development", "staging", "production"] },

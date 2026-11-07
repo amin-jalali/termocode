@@ -1,0 +1,39 @@
+/* Compare models on the phone (MOB-63): the agent choice and the model
+   chips. It builds on race.css (MOB-62: .race-start, .race-field,
+   .race-row, .race-btn). Web tokens only, so dark, light and more
+   contrast follow the panel. A pick shows ● or ✓ as well as its color.
+   Every target is at least 44 px. */
+.race-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.race-models .chip {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.race-models .is-on {
+  border-color: var(--ai);
+  background: var(--sel);
+}
+.race-models .chip:focus-visible,
+.race-models .race-btn:focus-visible {
+  outline: 2px solid var(--focus);
+}
+.race-models button:disabled {
+  opacity: 0.5;
+}
+.race-models .race-lane {
+  display: flex;
+  gap: 8px;
+}
+.race-models .race-lane input {
+  flex: 1;
+  min-height: 44px;
+}

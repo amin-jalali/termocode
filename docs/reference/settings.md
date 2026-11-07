@@ -138,6 +138,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | --- | --- | --- | --- |
 | `db_max_rows` | int | `10000` | Maximum loaded rows per SQL result (1–100000). Larger results are cut and marked. |
 | `db_page_rows` | int | `100` | Rows per SQL result page (1–1000). |
+| `db_sql_syntax_off` | string[] | `[]` | SQL dialects whose syntax errors the live inspections do not show, for example ["mysql"]. Unknown names and other warnings stay. |
 | `db_timeout` | int | `30` | Maximum seconds for a console statement. The session also enforces its own timeout. |
 | `db_history_max` | int | `500` | Maximum SQL history entries kept in db/history.jsonl. |
 | `db_ai_max_kb` | int | `32` | Maximum size in KB of one AI database tool answer (1–1024). Longer results are cut and marked. |
@@ -155,6 +156,9 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `db_selection_split` | bool | `true` | Split a selection into statements (true) or send it to the server as one text (false). |
 | `db_result_new_tab` | bool | `false` | Each run opens a new result tab and keeps the old ones (up to 9) instead of replacing the tabs that are not pinned. |
 | `db_auto_transpose` | bool | `false` | A console result with one row opens flipped: one line per column (t flips it back). |
+| `db_row_numbers` | bool | `false` | The result grid shows the row number in front of each row (I on the page turns it on or off). |
+| `db_column_types` | bool | `false` | The result grid shows each column's type after its name (T on the page turns it on or off). |
+| `db_inline_result` | bool | `false` | After a console run, the first rows of the result show under the statement in the .sql file (Databases: Clear Inline Results removes them). |
 | `db_introspect_level` | enum | `auto` | How much a table row in the tree loads: names only, columns, or columns with indexes and foreign keys. auto loads less in schemas with many objects. |
 | `db_complete_catalogs` | bool | `false` | SQL completion also offers the system catalogs (pg_catalog, information_schema, sqlite_master…). |
 

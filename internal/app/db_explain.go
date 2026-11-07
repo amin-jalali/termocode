@@ -35,7 +35,9 @@ type dbPlanRun struct {
 	target  string // the statement that is explained (as typed, without ";")
 	wrap    bool   // an analyzed write: begin … always roll back
 	parsed  dbclient.Plan
-	bars    bool // b: the bar view of each node's share (DBX-39)
+	bars    bool  // b: the bar view of each node's share (DBX-39)
+	rows    []int // page row (from the first plan row) → index in parsed.Lines
+	step    int   // the step whose details card is open
 }
 
 func (p *dbPlanRun) label() string {
@@ -243,12 +245,17 @@ func dbExplainExec(ctx context.Context, sess dbclient.Session, driver string, pl
 // (nvim folds by indent), the costly node marked and coloured.
 func (m *Model) databasePlanView(p *dbPage, pl *dbPlanRun, width int) {
 	p.fold = true
+	pl.rows = pl.rows[:0]
+	if len(pl.parsed.Lines) > 0 {
+		p.first = len(p.lines) + 1 // the cursor row names a step (Enter, i)
+	}
 	if pl.bars && len(pl.parsed.Lines) > 0 {
 		databasePlanBars(p, pl, width)
 		return
 	}
 	costly := "  <- costly"
-	for _, l := range pl.parsed.Lines {
+	for i, l := range pl.parsed.Lines {
+		pl.rows = append(pl.rows, i)
 		text := dbSafeMultiline(strings.ReplaceAll(strings.TrimSpace(l.Text), "\n", " "))
 		line := " " + strings.Repeat("  ", l.Depth) + text
 		group := ""
@@ -282,7 +289,7 @@ func (m *Model) databasePlanView(p *dbPage, pl *dbPlanRun, width int) {
 // share of the cost or time, the biggest coloured.
 func databasePlanBars(p *dbPage, pl *dbPlanRun, width int) {
 	bw := min(max(width/4, 10), 30)
-	for _, l := range pl.parsed.Lines {
+	for i, l := range pl.parsed.Lines {
 		if l.Detail {
 			continue
 		}
@@ -291,6 +298,7 @@ func databasePlanBars(p *dbPage, pl *dbPlanRun, width int) {
 			continue
 		}
 		line := " " + dbSafeMultiline(strings.ReplaceAll(bar[0], "\n", " "))
+		pl.rows = append(pl.rows, i)
 		n := p.add(line)
 		if l.Costly {
 			p.hl(n, 0, len(line), "TermocodeHttpStatusWarn")

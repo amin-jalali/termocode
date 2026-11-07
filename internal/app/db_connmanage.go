@@ -40,6 +40,8 @@ const (
 	promptKindDBSSHProfileAs promptKindEnum  = 3926
 	promptKindDBTemplateAs   promptKindEnum  = 3927
 	confirmKindDBDeleteConn  confirmKindEnum = 3928
+	pickerKindDBOptions      pickerKindEnum  = 3930
+	promptKindDBOptionField  promptKindEnum  = 3931
 )
 
 // dbManageState is the connection being managed and the edit form draft.
@@ -49,6 +51,8 @@ type dbManageState struct {
 	step  int
 	tpls  []dbclient.Conn
 	profs []dbclient.SSHProfile
+	// optField is the option the field prompt edits (DBX-28).
+	optField string
 }
 
 type dbVersionMsg struct {
@@ -70,6 +74,7 @@ func dbManageItems(user bool) []picker.Item {
 		{ID: "edit", Title: "Edit…", Hint: "name, host, port, user, database"},
 		{ID: "comment", Title: "Comment…", Hint: "a note shown on the row"},
 		{ID: "rename", Title: "Rename…", Hint: "change the id"},
+		{ID: "options", Title: "Connection Options…", Hint: "schema, time zone, start SQL, filters"},
 		{ID: "duplicate", Title: "Duplicate"},
 		{ID: "copy-json", Title: "Copy as JSON", Hint: "no password"},
 		{ID: "copy-ssl", Title: "Copy SSL Settings from…"},
@@ -184,6 +189,9 @@ func (m *Model) databaseManagePick(id string) tea.Cmd {
 		ms.edit = dbclient.ConnEdit{Name: c.Name, Comment: c.Comment, Host: c.Host, Port: c.Port, User: c.User, Database: c.Database}
 		ms.step = 0
 		return m.dbEditAsk()
+	case "options":
+		m.dbOpenOptions(c)
+		return nil
 	case "comment":
 		return m.dbManagePrompt(promptKindDBComment, "Comment on "+sanitizeDBText(dbConnName(c)), "Comment (empty removes it):", c.Comment)
 	case "rename":
@@ -368,6 +376,8 @@ func (m *Model) dbApplyEdit() tea.Cmd {
 // databaseManagePrompt routes the prompts of this file.
 func (m *Model) databaseManagePrompt(kind promptKindEnum, value string) (tea.Cmd, bool) {
 	switch kind {
+	case promptKindDBOptionField:
+		return m.dbApplyOption(value), true
 	case promptKindDBEditField, promptKindDBComment, promptKindDBRename, promptKindDBSSHProfileAs, promptKindDBTemplateAs:
 	default:
 		return nil, false
@@ -587,6 +597,8 @@ func (m *Model) databaseManagePicker(id string) (tea.Cmd, bool) {
 		return m.databaseManagePick(id), true
 	case pickerKindDBTemplate:
 		return m.databaseTemplatePick(id), true
+	case pickerKindDBOptions:
+		return m.dbOptionAsk(id), true
 	case pickerKindDBCopySSL, pickerKindDBSSHProfile:
 	default:
 		return nil, false

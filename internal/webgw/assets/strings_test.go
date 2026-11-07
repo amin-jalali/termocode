@@ -247,15 +247,19 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 // 2026-11-07, MOBUX rules): they have no Persian text. One rule for every
 // MOB/MOBUX branch: ph.* (phone shell, This phone), chips.* (Home chips),
 // cust.* (Customize), item.* (Home item sheets), tools.* (All tools),
-// board.* and more.board (live board, MOB-18).
+// race.* and more.races (the phone's race compare, MOB-61), lane.*
+// (New lane, MOB-65), board.* and more.board (live board, MOB-18).
 // strings.ts PhoneOnlyKey lists the same prefixes.
 func englishOnly(key string) bool {
-	for _, p := range []string{"ph.", "chips.", "cust.", "item.", "tools.", "board."} {
+	if key == "more.races" || key == "more.board" {
+		return true
+	}
+	for _, p := range []string{"ph.", "chips.", "cust.", "item.", "tools.", "race.", "lane.", "board."} {
 		if strings.HasPrefix(key, p) {
 			return true
 		}
 	}
-	return key == "more.board"
+	return false
 }
 
 // The Persian file (WEB-UX-5 fills it) has exactly the English keys, so
@@ -351,6 +355,15 @@ func TestComponentsHaveNoHardcodedText(t *testing.T) {
 	}
 }
 
+// phoneEnglishOnly are the mobile app's strings (Group MOB): the app is
+// English only (owner 2026-11-07), so strings.fa.ts keeps their English
+// text, only to have the same keys.
+var phoneEnglishOnly = map[string]bool{
+	"coord.title": true, "coord.task": true, "coord.profile": true, "coord.plan": true, "coord.until_done": true,
+	"coord.note": true, "coord.next": true, "coord.ask": true,
+	"runs.message": true, "runs.message_hint": true, "runs.to_step": true, "runs.sent": true,
+}
+
 // Every Persian text is filled in, is Persian (but for the few that are
 // key names, symbols or names that stay as they are), and keeps exactly
 // the placeholders of its English text, so t() fills the same values.
@@ -367,7 +380,7 @@ func TestPersianStringsAreCompleteAndKeepPlaceholders(t *testing.T) {
 			t.Errorf("strings.fa.ts:%d: %s is empty", e.line, e.key)
 			continue
 		}
-		if !same[e.key] && !strings.HasPrefix(e.key, "key.") && !persian.MatchString(e.text) {
+		if !same[e.key] && !phoneEnglishOnly[e.key] && !strings.HasPrefix(e.key, "key.") && !persian.MatchString(e.text) {
 			t.Errorf("strings.fa.ts:%d: %s is not Persian: %q", e.line, e.key, e.text)
 		}
 		got, want := ph.FindAllString(e.text, -1), ph.FindAllString(en[e.key], -1)

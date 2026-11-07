@@ -20,6 +20,7 @@ const pickerKindDBERFormat pickerKindEnum = 3847
 // dbERTarget is the schema the diagram is of.
 type dbERTarget struct {
 	sessKey, driver, schema, label string
+	conn                           string // whose virtual keys are drawn too
 }
 
 type dbERReadyMsg struct {
@@ -71,7 +72,7 @@ func (m *Model) databaseERStart() tea.Cmd {
 	if s.sessions[key] == nil {
 		return m.pushToastDetail(toast.Info, "Not connected", "Press Enter on the connection in the Databases view first.")
 	}
-	s.er = dbERTarget{sessKey: key, driver: dbDriverFamily(c.Driver), schema: schema, label: sanitizeDBText(dbConnName(c) + " · " + schema)}
+	s.er = dbERTarget{sessKey: key, driver: dbDriverFamily(c.Driver), schema: schema, label: sanitizeDBText(dbConnName(c) + " · " + schema), conn: r.conn}
 	items := []picker.Item{
 		{ID: "mermaid", Title: "Mermaid", Hint: "erDiagram"},
 		{ID: "plantuml", Title: "PlantUML", Hint: "@startuml"},
@@ -103,6 +104,7 @@ func (m *Model) databaseERPicker(id string) (tea.Cmd, bool) {
 	}
 	format, color := dbERFormatID(id)
 	title := "ER Diagram: " + t.label + " (" + format + ")"
+	virtual, _ := s.dbVirtual(t.conn) // virtual keys are dashed lines (db_virtual.go)
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), dbCompareTimeout)
 		defer cancel()
@@ -115,7 +117,7 @@ func (m *Model) databaseERPicker(id string) (tea.Cmd, bool) {
 		if err != nil {
 			return dbERReadyMsg{title: title, err: err}
 		}
-		text, err := dbclient.ERDiagramStyled(cs, format, dbclient.ERStyle{Colors: color})
+		text, err := dbclient.ERDiagramStyled(virtual.WithForeignKeys(cs), format, dbclient.ERStyle{Colors: color})
 		return dbERReadyMsg{title: title, text: text, err: err}
 	}, true
 }

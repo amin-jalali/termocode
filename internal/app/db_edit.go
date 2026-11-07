@@ -83,6 +83,7 @@ type dbEditTarget struct {
 	key           []int        // result columns of the key
 	editable      map[int]bool // result columns that are table columns
 	tv            *dbTableView // the data view whose hidden rowids are the row keys (key is then empty)
+	join          bool         // a JOIN result: only the cells of table change (DBX-55)
 }
 
 // dbEditPos is the row and column under the cursor: a loaded row (orig)
@@ -201,8 +202,13 @@ func (m *Model) databaseEditTargetOf(t *dbTab) (*dbEditTarget, tea.Cmd) {
 		return tg, nil
 	}
 	sel, why := dbclient.SimpleSelect(dbStripComments(r.sql), c.Driver)
+	var join *dbclient.JoinTarget
 	if why != "" {
-		return ro("read-only query", strings.ToUpper(why[:1])+why[1:]+".")
+		jt, jwhy := dbclient.JoinSelect(dbStripComments(r.sql), c.Driver) // DBX-55: one table of a JOIN
+		if jwhy != "" {
+			return ro("read-only query", strings.ToUpper(why[:1])+why[1:]+".")
+		}
+		join = &jt
 	}
 	key := r.sessKey
 	if key == "" {
@@ -214,6 +220,9 @@ func (m *Model) databaseEditTargetOf(t *dbTab) (*dbEditTarget, tea.Cmd) {
 	}
 	t.target = &dbEditTarget{loading: true}
 	run := r
+	if join != nil {
+		return t.target, dbEditJoinKeysCmd(sess, t, run, c, key, join)
+	}
 	req := dbclient.IntrospectionRequest{Schema: sel.Schema, Object: sel.Table, Kind: "table"}
 	return t.target, func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), dbMetaTimeout)
@@ -234,6 +243,9 @@ type dbEditKeysMsg struct {
 	// the key that asked, done again once the key is known
 	key      string
 	row, col int
+	// a JOIN result (DBX-55): its tables, each one's columns and keys
+	join *dbclient.JoinTarget
+	irs  []dbclient.IntrospectionResult
 }
 
 func (m *Model) onDBEditKeys(msg dbEditKeysMsg) tea.Cmd {
@@ -243,6 +255,8 @@ func (m *Model) onDBEditKeys(msg dbEditKeysMsg) tea.Cmd {
 	t := msg.tab
 	cols := msg.run.result.Columns
 	switch {
+	case msg.join != nil && msg.err == nil:
+		t.target = dbJoinEditTarget(cols, *msg.join, msg.irs, msg.run.conn, msg.conn.Driver, msg.sessKey)
 	case msg.err != nil:
 		t.target = &dbEditTarget{why: "read-only", detail: dbErrorText(msg.err)}
 	case len(msg.ir.Columns) == 0:
@@ -296,10 +310,16 @@ func (m *Model) databaseEditPos(t *dbTab, row, col int) (dbEditPos, bool) {
 	page := s.pageResult()
 	idx := s.pageIdx()
 	if s.trans {
-		if s.trow >= len(page.Rows) || row < 0 || row >= len(page.Columns) {
+		if row < 0 || row >= len(page.Columns) {
 			return dbEditPos{}, false
 		}
-		return dbEditPos{orig: idx[s.trow], added: -1, col: row}, true
+		if s.trow < len(page.Rows) {
+			return dbEditPos{orig: idx[s.trow], added: -1, col: row}, true
+		}
+		if a := s.trow - len(page.Rows); t.edits != nil && a < len(t.edits.added) { // a new row in the record view (DBX-55)
+			return dbEditPos{orig: -1, added: a, col: row}, true
+		}
+		return dbEditPos{}, false
 	}
 	if row < 0 || col < 0 || col >= len(page.Columns) {
 		return dbEditPos{}, false
@@ -356,15 +376,19 @@ func (m *Model) databaseEditKey(key string, row, col int) tea.Cmd {
 		s.keepCursor = true
 		return tea.Batch(m.databaseShowPage(), m.pushToastDetail(toast.Info, "This result cannot be edited", tg.detail))
 	}
+	if tg.join && (key == "+" || key == "-" || key == "P") {
+		return m.pushToastDetail(toast.Info, "In a JOIN result only cells change", "e edits the cells of "+sanitizeDBText(tg.table)+"; add and delete rows in a result of that table alone.")
+	}
 	if key == "+" {
-		if s.trans {
-			return m.pushToastDetail(toast.Info, "Add rows in the grid", "t goes back to the grid.")
-		}
 		if t.edits == nil {
 			t.edits = newDBEdits()
 		}
 		t.edits.added = append(t.edits.added, &dbNewRow{set: map[int]dbclient.Cell{}})
 		t.edits.note = ""
+		if s.trans { // the record view shows the new row (DBX-55)
+			s.trow = len(s.pageResult().Rows) + len(t.edits.added) - 1
+			return tea.Batch(m.databaseShowPage(), m.pushToastDetail(toast.Info, "New row added", "e on a line sets that value; empty lines get their default · ]/[ other rows."))
+		}
 		s.cursorNewRow = true
 		return tea.Batch(m.databaseShowPage(), m.pushToastDetail(toast.Info, "New row added", "e sets a value; empty cells get their default."))
 	}
@@ -378,6 +402,8 @@ func (m *Model) databaseEditKey(key string, row, col int) tea.Cmd {
 	switch key {
 	case "D", "U":
 		return m.databaseSpecialKey(key, t, tg, []dbEditPos{pos})
+	case "gL":
+		return m.databaseLOBLoadStart(t, tg, pos)
 	case "P":
 		return m.databasePasteRows(t, tg, row, pos.col)
 	case "-":
@@ -403,15 +429,23 @@ func (m *Model) databaseEditKey(key string, row, col int) tea.Cmd {
 		}
 		cur, has := dbCellNow(t, pos)
 		if has && cur.Kind == "binary" {
-			return m.pushToastDetail(toast.Info, "Binary values cannot be edited here", "Use an UPDATE in the console.")
+			return m.pushToastDetail(toast.Info, "Binary values cannot be edited here", "gL loads the value from a file · gS saves it to one.")
 		}
-		s.editAt, s.editTab, s.editMore = pos, t, nil
+		s.editAt, s.editTab, s.editMore, s.editArray = pos, t, nil, false
+		colType := t.run.result.Columns[pos.col].Type
 		name := dbOneLine(t.run.result.Columns[pos.col].Name)
 		text := cur.Text
 		if !has {
 			text = ""
 		} else if cur.Null {
 			text = `\N`
+		}
+		// An array opens in a buffer with one element per line (DBX-55).
+		if lines, ok := dbArrayLines(colType, cur, has); ok && m.nvim != nil {
+			s.editArray = true
+			label := "SQL Edit Array: " + sanitizeDBText(tg.table) + "." + name
+			_ = m.nvim.ExecLuaArgs(`_G._termocode_db_edit(...)`, label, lines)
+			return tea.Batch(m.fetchStateCmd(), m.pushToastDetail(toast.Info, "One element per line, then :w", `\N alone is a NULL element · "…" keeps spaces or an empty text · q leaves without a change`))
 		}
 		// A long or multi-line value, or one with control bytes (the prompt
 		// would show them raw), opens in a buffer instead.
@@ -429,6 +463,10 @@ func (m *Model) databaseEditKey(key string, row, col int) tea.Cmd {
 		}
 		cmd := m.openHTTPPrompt(promptKindDBEditCell, "Edit cell", label, text)
 		m.prompt.SetAllowEmpty(true)
+		if cands := dbCellCompletions(t, pos.col); len(cands) > 0 { // DBX-55
+			m.prompt.SetCompleter(dbCycleCompleter(cands))
+			m.prompt.SetNote("Tab completes from the values of this column")
+		}
 		return cmd
 	}
 	return nil
@@ -447,8 +485,11 @@ func (m *Model) databaseSetCell(value string, fromBuffer bool) tea.Cmd {
 	if fromBuffer && s.redisEdit != nil {
 		return m.databaseRedisBufferDone(value)
 	}
-	t, pos, more := s.editTab, s.editAt, s.editMore
-	s.editTab, s.editMore = nil, nil
+	t, pos, more, array := s.editTab, s.editAt, s.editMore, s.editArray
+	s.editTab, s.editMore, s.editArray = nil, nil, false
+	if fromBuffer && array {
+		value = dbArrayLiteral(strings.Split(value, "\n")) // DBX-55: one element per line
+	}
 	if fromBuffer && m.nvim != nil {
 		_ = m.nvim.ExecLua(`_G._termocode_db_edit_close()`)
 	}

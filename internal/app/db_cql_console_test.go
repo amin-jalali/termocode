@@ -56,3 +56,26 @@ func TestDBAddCassandraAsksKeyspace(t *testing.T) {
 		t.Fatalf("an empty keyspace was refused: kind=%v id=%q toast=%q", m.promptKind, s.pendingConn.ID, covSvcToast(m))
 	}
 }
+
+func TestDBLensCoversCQLFiles(t *testing.T) {
+	for p, want := range map[string]bool{"q.sql": true, "ring.cql": true, "R.CQL": true, "c.redis": false, "a.txt": false} {
+		if got := isDBLensExt(p); got != want {
+			t.Errorf("isDBLensExt(%q) = %v", p, got)
+		}
+	}
+	if !strings.Contains(dbConsoleLua, "cql='sql'") {
+		t.Error("an opened .cql file does not get the sql filetype, so it has no statement lens")
+	}
+}
+
+func TestDBInspectionsSkipCQL(t *testing.T) {
+	if dbInspectsFile("ring.cql") || !dbInspectsFile("q.sql") {
+		t.Fatal("SQL inspections must run on .sql files only (CQL is a different language)")
+	}
+}
+
+func TestWebDBAddDefaultsCassandraPort(t *testing.T) {
+	if p := webDBDefaultPort("cassandra"); p != 9042 {
+		t.Fatalf("cassandra default port = %d", p)
+	}
+}

@@ -258,10 +258,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
 | Databases: Choose Execution Mode… | `db-exec-mode` |   |   |
+| Databases: Clear Inline Results | `db-inline-clear` |   |   |
 | Databases: Commit | `db-commit` |   |   |
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
+| Databases: Copy Table Data to Another Connection… | `db-copy-table-data` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
+| Databases: Copy Result Columns as CREATE TABLE | `db-result-create-table` |   |   |
+| Databases: Console Session… | `db-console-session` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
@@ -279,6 +283,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
 | Databases: Go to Result Row… | `db-result-goto-row` |   |   |
+| Databases: Go to SQL in Strings… | `db-embedded-sql` |   |   |
+| Databases: Highlight Usages in File | `db-highlight-usages` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: Load All Result Rows | `db-result-load-all` |   |   |
@@ -288,16 +294,20 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
 | Databases: Refresh Selected Object | `db-refresh-object` |   |   |
+| Databases: Result Cell Menu… | `db-result-cell-menu` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
+| Databases: Saved SQL Runs… | `db-saved-runs` |   |   |
 | Databases: Run From Caret to End of File | `db-run-from-caret` |   |   |
 | Databases: Run Smallest Statement (Subquery) at Caret | `db-run-smallest` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: Run… (Choose Statement or Subquery) | `db-run-ask` |   |   |
+| Databases: SQL Intentions… | `db-sql-intentions` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |
+| Databases: Set Folder SQL Dialect… | `db-sql-folder-dialect` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Set Result Page Size… | `db-result-page-size` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
@@ -306,6 +316,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
+| Databases: Toggle Result Column Types | `db-result-column-types` |   |   |
+| Databases: Toggle Result Row Numbers | `db-result-row-numbers` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |
 
 ## Debug

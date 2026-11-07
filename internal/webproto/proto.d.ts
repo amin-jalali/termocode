@@ -7,6 +7,7 @@ export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
 export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "inbox" | "projects";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "races";
 
 export interface Bye {
   t: "bye";
@@ -288,6 +289,18 @@ export interface LspRowsArgs {
   tick: number;
   first: number;
   last: number;
+}
+
+export interface AIRunStartArgs {
+  task: string;
+  profile?: string;
+  ref?: string;
+}
+
+export interface RunsSendArgs {
+  key: string;
+  step?: string;
+  text: string;
 }
 
 export interface DebugExpandArgs {
@@ -607,6 +620,13 @@ export interface WorktreeTaskArgs {
   task: string;
 }
 
+export interface AIRaceModelsArgs {
+  task: string;
+  agent: string;
+  models: string[];
+  verify?: string;
+}
+
 export interface AIWorktreeTextArgs {
   id: string;
   path: string;
@@ -614,6 +634,22 @@ export interface AIWorktreeTextArgs {
 
 export interface AIWorktreeArgs {
   id: string;
+}
+
+export interface AIRaceStartArgs {
+  task: string;
+  agents: string[];
+  verify?: string;
+}
+
+export interface AIRaceArgs {
+  race: string;
+}
+
+export interface AILaneStartArgs {
+  agent: string;
+  task: string;
+  from?: string;
 }
 
 export interface AIWorktreeNotesArgs {
@@ -1611,6 +1647,12 @@ export interface RunItem {
   parent?: string;
   depth?: number;
   kids?: number;
+  running?: RunStepRef[];
+}
+
+export interface RunStepRef {
+  id: string;
+  title?: string;
 }
 
 export interface MCPSnap {
@@ -1963,6 +2005,50 @@ export interface ProjectItem {
   waiting?: number;
   opened_at?: number;
   ws?: string;
+}
+
+export interface RacesSnap {
+  state: "none" | "loading" | "error" | "ready";
+  races: RaceItem[];
+}
+
+export interface RaceItem {
+  id: string;
+  number: number;
+  name: string;
+  prompt: string;
+  verify?: boolean;
+  started: number;
+  state: "working" | "done" | "closed";
+  lanes: RaceLane[];
+  summary?: string[];
+  summary_cost?: string;
+  winner?: string;
+}
+
+export interface RaceLane {
+  id: string;
+  agent: string;
+  title: string;
+  state: "starting" | "working" | "waiting" | "done" | "stopped" | "failed" | "merged" | "discarded";
+  branch?: string;
+  stats?: boolean;
+  files?: number;
+  add?: number;
+  del?: number;
+  changed?: RaceFile[];
+  verify?: "running" | "pass" | "fail";
+  exit?: number;
+  cost?: string;
+  note?: string;
+}
+
+export interface RaceFile {
+  status: "A" | "M" | "D";
+  path: string;
+  add?: number;
+  del?: number;
+  binary?: boolean;
 }
 
 export interface Answered {
@@ -2805,6 +2891,22 @@ export interface WorktreeTaskDone {
   note?: string;
 }
 
+export interface AIRaceModelList {
+  agents: AIRaceModelAgent[];
+}
+
+export interface AIRaceModelAgent {
+  id: string;
+  title: string;
+  installed?: boolean;
+  models: AIRaceModelEntry[];
+}
+
+export interface AIRaceModelEntry {
+  id: string;
+  title?: string;
+}
+
 export interface AIWorktrees {
   off?: boolean;
   noRepo?: boolean;
@@ -2833,6 +2935,29 @@ export interface AIWorktreeText {
   binary?: boolean;
   secret?: boolean;
   truncated?: boolean;
+}
+
+export interface AIRaceSummary {
+  race: string;
+  lines: string[];
+  cost?: string;
+}
+
+export interface AIRaceDone {
+  race: string;
+  lanes: number;
+  message: string;
+}
+
+export interface AILaneAgents {
+  noRepo?: boolean;
+  items: AILaneAgent[];
+}
+
+export interface AILaneAgent {
+  id: string;
+  title: string;
+  state: "ready" | "signin" | "unknown";
 }
 
 export interface MCPProfiles {
@@ -3585,6 +3710,8 @@ export interface OpArgs {
   "lsp.inlay_hints": LspRowsArgs;
   "board.get": EmptyArgs;
   "board.projects": EmptyArgs;
+  "ai.run_start": AIRunStartArgs;
+  "runs.send": RunsSendArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -3698,10 +3825,18 @@ export interface OpArgs {
   "worktrees.link": WorktreeLinkArgs;
   "worktrees.task_form": EmptyArgs;
   "worktrees.new_task": WorktreeTaskArgs;
+  "ai.race_models": AIRaceModelsArgs;
+  "ai.race_model_list": EmptyArgs;
   "ai.worktrees": EmptyArgs;
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.race_start": AIRaceStartArgs;
+  "ai.race_summary": AIRaceArgs;
+  "ai.race_verify": AIRaceArgs;
+  "ai.race_stop": AIRaceArgs;
+  "ai.lane_agents": EmptyArgs;
+  "ai.lane_start": AILaneStartArgs;
   "ai.worktree_notes": AIWorktreeNotesArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
@@ -3862,6 +3997,7 @@ export interface TopicData {
   "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
   "inbox": { snap: InboxSnap; delta: InboxSnap };
   "projects": { snap: ProjectsSnap; delta: ProjectsSnap };
+  "races": { snap: RacesSnap; delta: RacesSnap };
 }
 
 // The data of an ev message, by kind.
@@ -3906,6 +4042,7 @@ export interface OpResult {
   "lsp.inlay_hints": LspHints;
   "board.get": Board;
   "board.projects": BoardProjects;
+  "ai.run_start": AskRef;
   "debug.sources": DebugSources;
   "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;
@@ -3995,10 +4132,18 @@ export interface OpResult {
   "worktrees.link": WorktreeDone;
   "worktrees.task_form": WorktreeTaskForm;
   "worktrees.new_task": WorktreeTaskDone;
+  "ai.race_models": AskRef;
+  "ai.race_model_list": AIRaceModelList;
   "ai.worktrees": AIWorktrees;
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.race_start": AskRef;
+  "ai.race_summary": AIRaceSummary;
+  "ai.race_verify": AIRaceDone;
+  "ai.race_stop": AIRaceDone;
+  "ai.lane_agents": AILaneAgents;
+  "ai.lane_start": AskRef;
   "ai.worktree_notes": ChatRef;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;

@@ -120,7 +120,9 @@ func oneRead(sql, dialect string) bool {
 
 // ForeignKeysFor returns the virtual FKs of table: explicit ones first, then
 // name-rule matches whose target is in tables. A column that already has a
-// real or explicit FK gets no rule match. Results are marked Virtual.
+// real or explicit FK gets no rule match. Results are marked Virtual and
+// each is its own key (named "virtual:<column>"), so following one column
+// never pulls in the table's other virtual keys.
 func (v VirtualObjects) ForeignKeysFor(table string, cols []Column, real []SchemaForeignKey, tables []string) []SchemaForeignKey {
 	var out []SchemaForeignKey
 	taken := map[string]bool{}
@@ -132,7 +134,7 @@ func (v VirtualObjects) ForeignKeysFor(table string, cols []Column, real []Schem
 			continue
 		}
 		taken[strings.ToLower(fk.Column)] = true
-		out = append(out, SchemaForeignKey{Name: "virtual", Column: fk.Column, RefTable: fk.RefTable, RefColumn: fk.RefColumn, Virtual: true})
+		out = append(out, SchemaForeignKey{Name: "virtual:" + fk.Column, Column: fk.Column, RefTable: fk.RefTable, RefColumn: fk.RefColumn, Virtual: true})
 	}
 	byName := map[string]string{}
 	for _, t := range tables {
@@ -156,9 +158,55 @@ func (v VirtualObjects) ForeignKeysFor(table string, cols []Column, real []Schem
 				continue
 			}
 			taken[low] = true
-			out = append(out, SchemaForeignKey{Name: "virtual", Column: c.Name, RefTable: ref, RefColumn: r.RefColumn, Virtual: true})
+			out = append(out, SchemaForeignKey{Name: "virtual:" + c.Name, Column: c.Name, RefTable: ref, RefColumn: r.RefColumn, Virtual: true})
 			break
 		}
+	}
+	return out
+}
+
+// WithForeignKeys is cs with every table's virtual FKs added as FOREIGN
+// KEY constraints marked Virtual (one per column), for the ER diagram and
+// the "rows that point here" list. A reference names the table as cs
+// spells it. cs itself is not changed.
+func (v VirtualObjects) WithForeignKeys(cs CanonSchema) CanonSchema {
+	if len(v.ForeignKeys) == 0 && len(v.NameRules) == 0 {
+		return cs
+	}
+	names := make([]string, len(cs.Tables))
+	byName := map[string]string{}
+	for i, t := range cs.Tables {
+		names[i] = t.Name
+		byName[strings.ToLower(t.Name)] = t.Name
+	}
+	out := cs
+	out.Tables = make([]CanonTable, len(cs.Tables))
+	for i, t := range cs.Tables {
+		cols := make([]Column, len(t.Columns))
+		for j, c := range t.Columns {
+			cols[j] = Column{Name: c.Name}
+		}
+		var real []SchemaForeignKey
+		for _, c := range t.Constraints {
+			if c.Kind == "FOREIGN KEY" {
+				for _, n := range c.Columns {
+					real = append(real, SchemaForeignKey{Column: n})
+				}
+			}
+		}
+		add := v.ForeignKeysFor(t.Name, cols, real, names)
+		if len(add) > 0 {
+			t.Constraints = append([]CanonConstraint(nil), t.Constraints...)
+			for _, fk := range add {
+				ref := fk.RefTable
+				if n, ok := byName[strings.ToLower(ref)]; ok {
+					ref = n
+				}
+				t.Constraints = append(t.Constraints, CanonConstraint{Kind: "FOREIGN KEY", Name: fk.Name,
+					Columns: []string{fk.Column}, RefTable: ref, RefColumns: []string{fk.RefColumn}, Virtual: true})
+			}
+		}
+		out.Tables[i] = t
 	}
 	return out
 }

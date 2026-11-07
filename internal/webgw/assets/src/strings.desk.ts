@@ -653,6 +653,7 @@ export const SD = {
   "dbv.f_ca": "CA file",
   "dbv.f_cert": "Client certificate file",
   "dbv.f_db": "Database",
+  "dbv.f_keyspace": "Keyspace (optional)",
   "dbv.f_driver": "Type",
   "dbv.f_env": "Environment",
   "dbv.f_host": "Host",

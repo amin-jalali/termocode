@@ -70,6 +70,7 @@ type dbConsoleState struct {
 	lens       map[string]string // file + "\x00" + SQL → the lens status
 	attached   map[string]string // project .sql file → connection (saved ones from .termocode/sql-connections.json)
 	switchFile string            // the file Switch File Connection… is for (db_sqllang.go)
+	intent     *dbIntentTarget   // the statement SQL Intentions… was opened on (db_sqlintent.go)
 	pending    *dbRun            // waits for the attach picker or the guard card
 	waiting    *dbRun            // waits for its connection
 	running    *dbRun
@@ -117,14 +118,23 @@ type dbConsoleState struct {
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
 	batchSeq     uint64
-	keepCursor   bool // the next page write keeps the cursor where it is
-	cursorNewRow bool // the next page write puts the cursor on the last new row
-	gotoRow      int  // the next page write puts the cursor on this page row + 1 (0: no)
+	keepCursor   bool                // the next page write keeps the cursor where it is
+	cursorNewRow bool                // the next page write puts the cursor on the last new row
+	gotoRow      int                 // the next page write puts the cursor on this page row + 1 (0: no)
+	rowNums      *bool               // I: row numbers on/off (nil: db_row_numbers) (db_result_extra.go)
+	colTypes     *bool               // T: column types in the header (nil: db_column_types)
+	inline       map[string][]string // file + "\x00" + SQL → the inline result lines (db_inline_result)
+	inlineSeen   bool                // an inline result was drawn once (the lens refresh then redraws them)
+	menuRow      int                 // the cell the cell menu is for (m)
+	menuCol      int
 	// editing (db_edit.go)
 	editTab                         *dbTab
 	editAt                          dbEditPos
 	editMore                        []dbEditPos // V then e: the other cells that get the same value
-	pendingKey                      string      // an edit key waiting for the key lookup
+	editArray                       bool        // the buffer holds an array, one element per line (DBX-55)
+	lobTab                          *dbTab      // gS / gL: the cell whose value goes to or comes from a file (db_edit_lob.go)
+	lobAt                           dbEditPos
+	pendingKey                      string // an edit key waiting for the key lookup
 	pendingRow, pendingCol          int
 	submitTab, submitting, staleTab *dbTab
 	submitStmts                     []dbclient.EditStatement
@@ -134,11 +144,14 @@ type dbConsoleState struct {
 	exp *dbExport
 	imp *dbImport
 	job *dbJob
+	// copy table data between connections (db_copy_table.go)
+	copyTbl *dbCopyTable
 	// Redis value page writes (db_redis.go)
 	redisEdit  *dbRedisEdit
 	redisWrite *dbRedisWrite
-	pgtapConn  string      // the connection a pgTAP pattern prompt is for (DBX-52)
-	pgtapRun   *dbPgTAPRun // the pgTAP run waiting for its card
+	redisMore  *dbRedisMore // a new-key / export / listen flow in progress (DBX-51)
+	pgtapConn  string       // the connection a pgTAP pattern prompt is for (DBX-52)
+	pgtapRun   *dbPgTAPRun  // the pgTAP run waiting for its card
 	// query parameters (db_params.go)
 	paramAsk *dbParamAsk
 	params   map[string]map[string]string // console file → name → last value
@@ -208,6 +221,9 @@ type dbConsoleSettings struct {
 	// Result page (db_result_more.go, DBX-26)
 	ResultNewTab  *bool `json:"db_result_new_tab"`
 	AutoTranspose *bool `json:"db_auto_transpose"`
+	RowNumbers    *bool `json:"db_row_numbers"`
+	ColumnTypes   *bool `json:"db_column_types"`
+	InlineResult  *bool `json:"db_inline_result"`
 	// Introspection (db_introspect.go, DBX-29)
 	IntrospectLevel  *string `json:"db_introspect_level"`
 	CompleteCatalogs *bool   `json:"db_complete_catalogs"`
@@ -216,6 +232,8 @@ type dbConsoleSettings struct {
 	CSVHeader    *bool    `json:"db_csv_header"`
 	CSVNull      *string  `json:"db_csv_null"`
 	ExportMask   []string `json:"db_export_mask"`
+	// SQL files (db_sqllang_more.go, DBX-41)
+	SyntaxOff []string `json:"db_sql_syntax_off"`
 }
 
 // exportMask is the column name patterns whose values exports and copies hide.
@@ -337,6 +355,10 @@ func dbConsoleFile(driver, id string) (ext, header, filetype string) {
 		return ".redis", "# @conn " + id + "\n# One command per line; the send key runs the line at the cursor.\n\n", "redis"
 	case "cassandra":
 		return ".cql", "-- @conn " + id + "\n-- CQL: the send key runs the statement at the cursor; results come a page at a time.\n\n", "sql"
+	case "mongodb":
+		// Shell lines in the SQL console file (DBX-68): one command per
+		// statement, ";" between them.
+		return ".sql", "-- @conn " + id + "\n-- One shell command per statement, for example: db.users.find({age: {$gt: 30}}).limit(20);\n\n", "sql"
 	}
 	return ".sql", "-- @conn " + id + "\n\n", "sql"
 }
@@ -556,6 +578,7 @@ func (m *Model) databaseSendExec(all bool, plan *dbPlanRun, mode string) tea.Cmd
 	if _, ok := m.databases.connection(r.conn); !ok {
 		r.conn = ""
 	}
+	r.sessKey = m.databases.consoleSessionKey(file, r.conn) // its own session (DBX-40)
 	if r.conn == "" {
 		var items []picker.Item
 		for _, c := range m.databases.conns {
@@ -786,6 +809,10 @@ func (m *Model) databaseStartRunRevealed(r *dbRun) tea.Cmd {
 	if r.sessKey != "" {
 		sess = m.databases.sessions[r.sessKey]
 	}
+	if sess == nil && dbIsExtraSession(r.sessKey) && m.databases.sessions[r.conn] != nil {
+		s.waiting = r // the console's own session opens first (DBX-40)
+		return m.databaseOpenExtraSession(r.sessKey)
+	}
 	if sess == nil {
 		s.waiting = r
 		cmd := m.databaseConnect(r.conn)
@@ -920,8 +947,9 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 	if msg.manual {
 		status += m.dbTxStatus(msg.run.conn)
 	}
+	m.databaseSetInline(msg.run) // before the lens refresh draws it (DBX-26)
 	m.databaseRefreshLens(msg.run.file, msg.run.sql, status)
-	cmds := []tea.Cmd{m.databaseShowPage(), txCmd}
+	cmds := []tea.Cmd{m.databaseShowPage(), txCmd, m.databaseTempTableHint(msg)}
 	if msg.run.tv == nil && msg.run.redis == nil { // a data view or a value page is not something the user typed
 		cmds = append(cmds, m.databaseAppendHistory(msg.run))
 	}
@@ -1069,6 +1097,8 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 		return m.databaseDesignConfirm(id), true
 	case confirmKindDBExplain:
 		return m.databaseExplainConfirm(id), true
+	case confirmKindDBPlanStep:
+		return m.databasePlanStepConfirm(id), true
 	case confirmKindDBRun:
 		s := m.dbConsole()
 		r := s.pending
@@ -1104,7 +1134,13 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseGeneratePicker(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseSQLRunPicked(id); ok { // db_sqlruns.go
+		return cmd, true
+	}
 	if cmd, ok := m.databaseSessionsPick(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseConsoleSessionPick(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseOpenCSVPicked(id); ok {
@@ -1114,6 +1150,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseSQLPicked(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseSQLMorePicked(id); ok { // db_sqllang_more.go
 		return cmd, true
 	}
 	if cmd, ok := m.databaseTransferPicker(id); ok {
@@ -1161,6 +1200,8 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindDBPageSize:
 		return m.databaseSetPageSize(id), true
+	case pickerKindDBCellMenu:
+		return m.databaseCellMenuPick(id), true
 	case pickerKindDBExecMode:
 		return m.databaseExecModeSet(id), true
 	case pickerKindDBExecAsk:

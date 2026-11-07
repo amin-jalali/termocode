@@ -349,7 +349,7 @@ func (a *DBAddArgs) validate(int) error {
 		if !validPath(a.Path, false) || a.Host != "" || a.Port != 0 {
 			return invalid("a sqlite connection needs a workspace file")
 		}
-	case "postgres", "mysql", "redis":
+	case "postgres", "mysql", "redis", "cassandra":
 		if !validDBHost(a.Host) || a.Port < 0 || a.Port > 65535 || a.Path != "" {
 			return invalid("bad host or port")
 		}

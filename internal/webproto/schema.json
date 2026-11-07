@@ -328,6 +328,15 @@
       "deltas": [
         "ProjectsSnap"
       ]
+    },
+    {
+      "name": "races",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "RacesSnap",
+      "deltas": [
+        "RacesSnap"
+      ]
     }
   ],
   "events": {
@@ -4663,6 +4672,159 @@
       "max_bytes": 1024,
       "laptop_card": false,
       "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "cards.answer",
+      "args": "CardsAnswerArgs",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v1"
+    },
+    {
+      "op": "ai.race_start",
+      "args": "AIRaceStartArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_summary",
+      "args": "AIRaceArgs",
+      "result": "AIRaceSummary",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_verify",
+      "args": "AIRaceArgs",
+      "result": "AIRaceDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_stop",
+      "args": "AIRaceArgs",
+      "result": "AIRaceDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_models",
+      "args": "AIRaceModelsArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_model_list",
+      "args": "EmptyArgs",
+      "result": "AIRaceModelList",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.run_start",
+      "args": "AIRunStartArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 40960,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "runs.send",
+      "args": "RunsSendArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 20480,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.lane_agents",
+      "args": "EmptyArgs",
+      "result": "AILaneAgents",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.lane_start",
+      "args": "AILaneStartArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
       "phase": "v2"
     }
   ],
@@ -13646,6 +13808,12 @@
         },
         "why": {
           "type": "string"
+        },
+        "running": {
+          "items": {
+            "$ref": "#/defs/RunStepRef"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -17313,6 +17481,458 @@
         "title"
       ],
       "additionalProperties": true
+    },
+    "AIRaceArgs": {
+      "type": "object",
+      "properties": {
+        "race": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "race"
+      ],
+      "additionalProperties": false
+    },
+    "AIRaceDone": {
+      "type": "object",
+      "properties": {
+        "lanes": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "race": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "race",
+        "lanes",
+        "message"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceStartArgs": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "task": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "agents"
+      ],
+      "additionalProperties": false
+    },
+    "AIRaceSummary": {
+      "type": "object",
+      "properties": {
+        "cost": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "race": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "race",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "RaceFile": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "integer"
+        },
+        "binary": {
+          "type": "boolean"
+        },
+        "del": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "A",
+            "M",
+            "D"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "path"
+      ],
+      "additionalProperties": true
+    },
+    "RaceItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lanes": {
+          "items": {
+            "$ref": "#/defs/RaceLane"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "started": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "working",
+            "done",
+            "closed"
+          ]
+        },
+        "summary": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary_cost": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "boolean"
+        },
+        "winner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "number",
+        "name",
+        "prompt",
+        "started",
+        "state",
+        "lanes"
+      ],
+      "additionalProperties": true
+    },
+    "RaceLane": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "integer"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "changed": {
+          "items": {
+            "$ref": "#/defs/RaceFile"
+          },
+          "type": "array"
+        },
+        "cost": {
+          "type": "string"
+        },
+        "del": {
+          "type": "integer"
+        },
+        "exit": {
+          "type": "integer"
+        },
+        "files": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "starting",
+            "working",
+            "waiting",
+            "done",
+            "stopped",
+            "failed",
+            "merged",
+            "discarded"
+          ]
+        },
+        "stats": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "verify": {
+          "enum": [
+            "running",
+            "pass",
+            "fail"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "agent",
+        "title",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "RacesSnap": {
+      "type": "object",
+      "properties": {
+        "races": {
+          "items": {
+            "$ref": "#/defs/RaceItem"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "none",
+            "loading",
+            "error",
+            "ready"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "races"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "models": {
+          "items": {
+            "$ref": "#/defs/AIRaceModelEntry"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "models"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelList": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/AIRaceModelAgent"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "agents"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelsArgs": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "models": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "task": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "agent",
+        "models"
+      ],
+      "additionalProperties": false
+    },
+    "AIRunStartArgs": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task"
+      ],
+      "additionalProperties": false
+    },
+    "RunStepRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "RunsSendArgs": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "AILaneAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "ready",
+            "signin",
+            "unknown"
+          ]
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "AILaneAgents": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/AILaneAgent"
+          },
+          "type": "array"
+        },
+        "noRepo": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "AILaneStartArgs": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent",
+        "task"
+      ],
+      "additionalProperties": false
     }
   }
 }

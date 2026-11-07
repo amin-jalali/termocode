@@ -101,3 +101,47 @@ func TestDBCompletionSystemCatalogs(t *testing.T) {
 		t.Fatal("pg_catalog.pg_class missing from completion")
 	}
 }
+
+// DBX-29: when the server is down the tree is built from the schema cache
+// (marked offline), and expanding a cached child reads the cache too.
+func TestDBOfflineTreeFromCache(t *testing.T) {
+	withConfigDir(t)
+	m := &Model{w: 120, h: 40, databases: newDBState()}
+	s := m.databases
+	s.conns = []dbclient.Conn{{ID: "pg", Driver: "postgres"}}
+	s.nodes["pg"] = dbNode{kind: dbNodeConnection, name: "pg", path: "pg", conn: "pg"}
+	c := m.dbSchemaCache()
+	if err := c.Put(dbclient.SchemaKey{Conn: "pg"}, dbclient.LevelFull, dbclient.IntrospectionResult{Databases: []string{"app"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Put(dbclient.SchemaKey{Conn: "pg", Database: "app"}, dbclient.LevelFull, dbclient.IntrospectionResult{Schemas: []string{"public"}}); err != nil {
+		t.Fatal(err)
+	}
+	cmd := m.databaseOfflineTree("pg")
+	if cmd == nil {
+		t.Fatal("no offline tree command")
+	}
+	m.onDBOfflineTree(cmd().(dbOfflineTreeMsg))
+	if _, ok := s.nodes["pg/db/app"]; !ok {
+		t.Fatal("cached database row missing")
+	}
+	if d := s.nodes["pg"].detail; !strings.Contains(d, "offline") {
+		t.Fatalf("connection detail %q, want offline mark", d)
+	}
+	exp := m.databaseExpand("pg/db/app")
+	if exp == nil {
+		t.Fatal("expanding a cached row while offline did nothing")
+	}
+	msg, ok := exp().(dbOfflineTreeMsg)
+	if !ok {
+		t.Fatalf("offline expand tried the server: %T", exp())
+	}
+	m.onDBOfflineTree(msg)
+	if _, ok := s.nodes["pg/db/app/schema/public"]; !ok {
+		t.Fatal("cached schema row missing")
+	}
+	// No cache for this row: nothing to show, no command.
+	if m.databaseOfflineTree("pg/db/other") != nil {
+		t.Fatal("command for a missing node")
+	}
+}

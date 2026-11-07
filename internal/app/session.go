@@ -59,6 +59,7 @@ type SessionState struct {
 	GitViewTree         *bool    `json:"git_view_tree,omitempty"`
 	DBExpanded          []string `json:"db_expanded,omitempty"`
 	DBHiddenSuggestions []string `json:"db_hidden_suggestions,omitempty"`
+	DBFoldedFolders     []string `json:"db_folded_folders,omitempty"` // connection folders folded in the tree (DBX-21)
 	DBFilter            string   `json:"db_filter,omitempty"`
 
 	// Group A: the AI chat shown on reopen + its scroll offset (lines up
@@ -215,6 +216,7 @@ func workspacePart(s SessionState) SessionState {
 		Roots:               s.Roots,
 		DBExpanded:          s.DBExpanded,
 		DBHiddenSuggestions: s.DBHiddenSuggestions,
+		DBFoldedFolders:     s.DBFoldedFolders,
 		DBFilter:            s.DBFilter,
 		AILastChat:          s.AILastChat,
 		AIChatScroll:        s.AIChatScroll,

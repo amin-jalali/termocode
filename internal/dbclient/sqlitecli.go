@@ -110,6 +110,9 @@ type SQLiteSession struct {
 	transaction   bool
 	txBegun       bool // the open transaction began with BEGIN (not a savepoint)
 	restartNotice string
+	// cipherKey unlocks a SQLCipher file (DBX-64); "" = plain sqlite3.
+	// It is sent on stdin only, never on the command line or in history.
+	cipherKey string
 }
 
 type sqliteProcess struct {
@@ -197,6 +200,16 @@ func (s *SQLiteSession) start(path string, readonly bool) error {
 	s.proc = p
 	s.readonly = readonly
 	s.stateMu.Unlock()
+	if s.cipherKey != "" {
+		// The key must be the first statement; a read of sqlite_master
+		// then proves it is right.
+		for _, setup := range []string{SQLCipherKeyPragma(s.cipherKey), "SELECT count(*) AS n FROM sqlite_master;"} {
+			if _, _, err := s.exchangeLocked(context.Background(), setup); err != nil {
+				s.stop(p)
+				return sqlcipherKeyError(err)
+			}
+		}
+	}
 	for _, setup := range []string{".changes on", ".timeout 5000", ".bail off", "PRAGMA foreign_keys = ON;"} {
 		if _, _, err := s.exchangeLocked(context.Background(), setup); err != nil {
 			s.stop(p)
@@ -360,7 +373,11 @@ func (s *SQLiteSession) restartProcess(p *sqliteProcess, cancelled bool) error {
 	s.stateMu.Unlock()
 	s.stop(p)
 	s.markSessionRestarted(cancelled)
-	path, err := lookupSQLite()
+	lookup := lookupSQLite
+	if s.cipherKey != "" {
+		lookup = lookupSQLCipher
+	}
+	path, err := lookup()
 	if err != nil {
 		return err
 	}
@@ -791,6 +808,9 @@ func (s *SQLiteSession) Rollback(ctx context.Context) error {
 func (s *SQLiteSession) ReadOnlySession() (Session, error) {
 	c := s.conn
 	c.ReadOnly = true
+	if s.cipherKey != "" {
+		return NewSQLCipherSession(context.Background(), c, s.cipherKey)
+	}
 	return NewSQLiteSession(context.Background(), c)
 }
 func (s *SQLiteSession) Cancel() {

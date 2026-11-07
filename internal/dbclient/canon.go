@@ -57,6 +57,9 @@ type CanonConstraint struct {
 	RefColumns         []string
 	OnUpdate, OnDelete string // "" or NO ACTION: the default
 	Check              string // CHECK (…) text
+	// Virtual marks a key from the user's virtual objects (DBX-31): it is
+	// drawn and followed, never written to the database.
+	Virtual bool
 }
 
 // CanonIndex is an index that is not a constraint's own. Exprs are SQL

@@ -309,6 +309,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBVersion(msg)
 	case dbEditKeysMsg:
 		return m, m.onDBEditKeys(msg)
+	case dbLOBSavedMsg: // db_edit_lob.go
+		return m, m.onDBLOBSaved(msg)
+	case dbLOBLoadedMsg:
+		return m, m.onDBLOBLoaded(msg)
 	case dbSubmitMsg:
 		return m, m.onDBSubmit(msg)
 	case dbJobTickMsg:
@@ -335,6 +339,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBImportPreview(msg)
 	case dbImportDoneMsg:
 		return m, m.onDBImportDone(msg)
+	case dbCopyReadMsg: // db_copy_table.go
+		return m, m.onDBCopyRead(msg)
 	case dbRefreshMsg:
 		return m, m.onDBRefresh(msg)
 	case dbSavepointMsg:
@@ -347,6 +353,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBSchemaFiles(msg)
 	case dbRoutineMsg: // db_generate_routine.go
 		return m, m.onDBRoutine(msg)
+	case dbParamInfoMsg: // db_quickdoc_more.go
+		return m, m.onDBParamInfo(msg)
+	case dbQuickDocRowsMsg: // db_quickdoc_more.go
+		return m, m.onDBQuickDocRows(msg)
 	case dbGenMsg:
 		return m, m.onDBGen(msg)
 	case dbSearchDoneMsg:
@@ -371,12 +381,24 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBConnect(msg)
 	case dbSchemaCacheMsg:
 		return m, m.onDBSchemaCache(msg)
+	case dbOfflineTreeMsg:
+		return m, m.onDBOfflineTree(msg)
 	case dbRedisTreeMsg:
 		return m, m.onDBRedisTree(msg)
 	case dbRedisNSScanMsg:
 		return m, m.onDBRedisNSScan(msg)
 	case dbRedisWriteMsg:
 		return m, m.onDBRedisWrite(msg)
+	case dbRedisReadMsg:
+		return m, m.onDBRedisRead(msg)
+	case dbRedisNewKeyCheckMsg:
+		return m, m.onDBRedisNewKeyCheck(msg)
+	case dbRedisListenMsg:
+		return m, m.onDBRedisListen(msg)
+	case dbRedisExportScanMsg:
+		return m, m.onDBRedisExportScan(msg)
+	case dbRedisExportDoneMsg:
+		return m, m.onDBRedisExportDone(msg)
 	case dbPgTAPDoneMsg:
 		return m, m.onDBPgTAPDone(msg)
 	case dbIntrospectMsg:
@@ -641,7 +663,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		m.promptOpen = false
 		// Group G / Group I / secret store: no-op unless theirs
 		m.prPromptClosed() // pr_state.go: back to the thread or create card
-		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.secretsPromptClosed(), m.aiMCPElicitPromptClosed())
+		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.secretsPromptClosed(), m.aiMCPElicitPromptClosed(), m.databaseImportPromptClosed())
 	case secretsUnlockDoneMsg:
 		return m, m.onSecretsUnlockDone(msg)
 	case secretsMigrateCheckMsg: // secrets_migrate.go

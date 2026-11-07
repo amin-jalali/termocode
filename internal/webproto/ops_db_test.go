@@ -58,9 +58,10 @@ func TestDBMoreLaptopOps(t *testing.T) {
 		[]string{`{"conn":"cache","key":"session:ab12","verb":"delete"}`, `{"conn":"cache","db":2,"key":"k","verb":"ttl","ttl":3600}`, `{"conn":"cache","key":"k","verb":"ttl","ttl":0}`})
 	checkRow(t, OpRedisKey, RoleController, true, AuditYes)
 	checkArgs(t, OpDBAdd, []string{`{"id":"x","driver":"oracle"}`, `{"id":"","driver":"postgres","host":"h"}`, `{"id":"a b","driver":"postgres","host":"h"}`,
-		`{"id":"pg","driver":"postgres","host":"h","port":70000}`, `{"id":"lite","driver":"sqlite"}`, `{"id":"lite","driver":"sqlite","path":"../a.db"}`},
+		`{"id":"pg","driver":"postgres","host":"h","port":70000}`, `{"id":"lite","driver":"sqlite"}`, `{"id":"lite","driver":"sqlite","path":"../a.db"}`, `{"id":"ring","driver":"cassandra","host":"h","db":1}`},
 		[]string{`{"id":"pg","name":"App","driver":"postgres","host":"localhost","port":5432,"user":"app","database":"app","env":"development"}`,
-			`{"id":"lite","driver":"sqlite","path":"data/app.db","readonly":true}`, `{"id":"cache","driver":"redis","host":"localhost","db":2}`})
+			`{"id":"lite","driver":"sqlite","path":"data/app.db","readonly":true}`, `{"id":"cache","driver":"redis","host":"localhost","db":2}`,
+			`{"id":"ring","driver":"cassandra","host":"localhost","port":9042,"database":"shop"}`})
 	checkRow(t, OpDBAdd, RoleController, true, AuditYes)
 	checkArgs(t, OpDBSSH, []string{`{"conn":"local","host":""}`, `{"conn":"local","host":"bastion","auth":"magic"}`, `{"conn":"local","host":"-oProxy","auth":"agent"}`},
 		[]string{`{"conn":"local","host":"bastion","user":"me","port":22,"auth":"agent"}`, `{"conn":"local","host":"bastion","auth":"key","keyfile":"~/.ssh/id_ed25519","jump":["jump.example"]}`, `{"conn":"local","remove":true}`})

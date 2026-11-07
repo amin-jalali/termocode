@@ -78,3 +78,31 @@ func TestDBVirtualTemplateParses(t *testing.T) {
 		t.Fatalf("template: %v %v", err, problems)
 	}
 }
+
+// DBX-31: the data view's FK navigation knows the virtual keys: gf follows
+// one virtual column alone, and gr lists the tables whose virtual keys
+// point at the row (marked virtual).
+func TestDBVirtualKeysInFKNavigation(t *testing.T) {
+	v, _, err := dbclient.ParseVirtualObjects([]byte(`{
+		"foreignKeys": [{"table":"orders","column":"buyer","refTable":"users","refColumn":"id"}],
+		"nameRules": [{"suffix":"_id"}]
+	}`), "postgres")
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := dbclient.IntrospectionResult{Columns: []dbclient.Column{{Name: "id"}, {Name: "buyer"}, {Name: "shop_id"}}}
+	fks := dbApplyVirtual(v, dbNodeTable, "orders", []string{"users", "shops", "orders"}, in).ForeignKeys
+	key, ok := dbclient.FKForColumn(fks, "buyer")
+	if !ok || len(key) != 1 || key[0].RefTable != "users" {
+		t.Fatalf("gf on buyer: %+v %v", key, ok)
+	}
+	cs := dbclient.CanonSchema{Tables: []dbclient.CanonTable{
+		{Name: "users", Columns: []dbclient.CanonColumn{{Name: "id"}}},
+		{Name: "orders", Columns: []dbclient.CanonColumn{{Name: "id"}, {Name: "buyer"}}},
+	}}
+	cells := map[string]dbclient.Cell{"id": {Text: "5", Kind: "number"}}
+	refs := dbFKRefChoices("postgres", "users", dbCanonFKs(v.WithForeignKeys(cs)), cells)
+	if len(refs) != 1 || refs[0].table != "orders" || refs[0].where != `"buyer" = 5` || refs[0].label != "orders (buyer → id) · virtual" {
+		t.Fatalf("gr refs %+v", refs)
+	}
+}

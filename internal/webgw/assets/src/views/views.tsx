@@ -15,6 +15,7 @@ import { SkeletonRows } from "../ui/Skeleton";
 import { Button } from "../ui/Button";
 import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
+import { RacesView } from "./more/RacesView";
 import { BoardRoute } from "./more/BoardRoute";
 import { layout } from "../lib/layout";
 import { SettingsView } from "./more/SettingsView";
@@ -125,6 +126,7 @@ export function MoreView() {
   if (sub === "new-task") return <NewTaskView />;
   if (sub === "runs") return <RunsView />;
   if (sub === "workflows") return <WorkflowsView />;
+  if (sub === "races") return <RacesView />;
   if (sub === "board") return <BoardRoute />;
   if (sub === "settings") return <SettingsView />;
   if (sub === "mcp") return <MCPView />;
@@ -188,6 +190,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" data-sub="workflows" onClick={() => go({ tab: "more", rest: "workflows", query: {} })}>
             {t("more.workflows")}
+          </button>
+          <button type="button" class="more-link" data-sub="races" onClick={() => go({ tab: "more", rest: "races", query: {} })}>
+            {t("more.races")}
           </button>
           {layout.value !== "desktop" && (
             <button type="button" class="more-link" data-sub="board" onClick={() => go({ tab: "more", rest: "board", query: {} })}>

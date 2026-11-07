@@ -425,6 +425,18 @@ own part of one goal, so several agents build one feature side by side.
 Workers cannot start more workers: the split tools are only for termocode's
 own AI chat, never for outside agents.
 
+**Compare models** is a race of one agent on 2–4 different models. Every
+lane runs the same agent (Claude Code or Codex) with `--model <id>`, in its
+own worktree. The lane's name shows its model, for example
+`Claude Code · opus`. The compare page works as for any race. The AI chat
+asks with `agent_race_models` (**Deny** first); the phone page asks with
+**Compare models**, and the laptop shows a card (**Cancel** first).
+
+From your phone, the races view shows the same lanes. You can start a
+race (a card on the laptop, **Cancel** first), ask for the summary, run
+verify and stop the lanes. Merge and discard stay on the laptop. See
+[the web panel](web.md#workflows-and-agents-from-the-phone).
+
 ## Chat view and sessions
 
 With `agent_transcripts` on:

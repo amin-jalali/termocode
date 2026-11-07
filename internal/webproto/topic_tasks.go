@@ -81,11 +81,15 @@ type RunItem struct {
 	Live      bool     `json:"live,omitempty"`     // elapsed grows: the page adds the time since
 	CostUSD   float64  `json:"cost_usd,omitempty"` // known step costs
 	NeedsYou  bool     `json:"needs_you,omitempty"`
-	Can       []string `json:"can,omitempty"` // what the web may do now: "stop", "pause", "resume"
+	Can       []string `json:"can,omitempty"` // what the web may do now: "stop", "pause", "resume", "send"
 	// The run tree (CMP-10): the rows come in tree order; a run the AI
 	// started from a step of another run has that run's Key as Parent and
 	// one more Depth; Kids counts the sub-runs listed under it.
 	Parent string `json:"parent,omitempty"`
 	Depth  int    `json:"depth,omitempty"`
 	Kids   int    `json:"kids,omitempty"`
+
+	// Running are the steps that run now and can get a message
+	// (runs.send, MOB-64); at most MaxRunLive.
+	Running []RunStepRef `json:"running,omitempty"`
 }

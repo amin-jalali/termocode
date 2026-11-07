@@ -1,7 +1,8 @@
 // Runs (WEB-25, web UX 5.8): the AI runs with their state, step, time
 // and cost. Stop asks inside the card first ("Stop this run? It can be
 // started again from the laptop.", Cancel first and focused); Pause and
-// Resume act at once. A run lists what the web may do with it. #/more/runs
+// Resume act at once. A run lists what the web may do with it. "Plan and
+// run" and a step's "Message" are MOB-64 (RunsCoord.tsx). #/more/runs
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useNow } from "../../lib/time";
@@ -11,11 +12,13 @@ import { Button } from "../../ui/Button";
 import { SkeletonRows } from "../../ui/Skeleton";
 import { t, type StringKey } from "../../strings";
 import { gitFailed as failed } from "../git/errors";
+import { CoordStart, RunSend } from "./RunsCoord";
 import { SubView } from "./SubView";
 
 /** RunCard is one run with its actions (the phone's project page shows it too). */
 export function RunCard({ run, since, now, canAct }: { run: RunView; since: number; now: number; canAct: boolean }) {
   const [asking, setAsking] = useState(false);
+  const [writing, setWriting] = useState(false);
   const safe = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     if (asking) safe.current?.focus();
@@ -55,6 +58,8 @@ export function RunCard({ run, since, now, canAct }: { run: RunView; since: numb
             </Button>
           </div>
         </div>
+      ) : writing ? (
+        <RunSend runKey={run.key} steps={run.running} onDone={() => setWriting(false)} />
       ) : (
         can.length > 0 && (
           <div class="choices">
@@ -66,6 +71,11 @@ export function RunCard({ run, since, now, canAct }: { run: RunView; since: numb
             {can.includes("pause") && (
               <Button small needsLink onClick={() => act("runs.pause")}>
                 {t("runs.pause")}
+              </Button>
+            )}
+            {can.includes("send") && run.running.length > 0 && (
+              <Button small needsLink onClick={() => setWriting(true)}>
+                {t("runs.message")}
               </Button>
             )}
             {can.includes("resume") && (
@@ -89,8 +99,17 @@ export function RunsView() {
   const [since, setSince] = useState(() => Date.now());
   useEffect(() => setSince(Date.now()), [st?.seq]); // a new list: its clocks are fresh
   const canAct = link.meta.value?.role !== "viewer";
+  const [starting, setStarting] = useState(false);
   return (
     <SubView title={t("more.runs")}>
+      {canAct && (
+        <div class="runs-top">
+          <Button kind="primary" needsLink onClick={() => setStarting(true)}>
+            {t("coord.title")}
+          </Button>
+        </div>
+      )}
+      {starting && <CoordStart onDone={() => setStarting(false)} />}
       {!st ? (
         <SkeletonRows rows={6} />
       ) : runs.length === 0 ? (
