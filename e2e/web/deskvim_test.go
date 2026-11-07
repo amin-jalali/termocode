@@ -319,7 +319,7 @@ func TestDeskVimVisualBlock(t *testing.T) {
 	// c changes the box on every line.
 	v.keys("gg0")
 	ctrlV()
-	v.keys("jjcZ", "Zabcd!Xa", "Xefgh!Xe", "Xijkl!")
+	v.keys("jjcZ", "Zabcd!Xa", "efgh!Xe", "ijkl!")
 	realKeys(p, string(kb.Escape))
 	v.settle("Zabcd!Xa", "Zefgh!Xe", "Zijkl!")
 
