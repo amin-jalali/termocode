@@ -38,6 +38,7 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		}
 		seen[c.ID] = true
 		c.Driver = normDriver(c.Driver)
+		normFolderColor(c)
 		if c.Port == 0 {
 			c.Port = defaultPort(c.Driver)
 		}

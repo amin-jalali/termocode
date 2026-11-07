@@ -29,6 +29,10 @@ type Conn struct {
 	SSH         *SSHConfig        `json:"ssh,omitempty"`
 	SSL         *SSLConfig        `json:"ssl,omitempty"`
 	TLS         bool              `json:"tls,omitempty"`
+	// Folder groups the connection in the tree ("team/prod"); Color is
+	// one of ConnColors (DBX-21).
+	Folder string `json:"folder,omitempty"`
+	Color  string `json:"color,omitempty"`
 	Source      string            `json:"-"`
 	Problem     string            `json:"-"`
 	Warning     string            `json:"-"`
