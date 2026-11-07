@@ -40,6 +40,14 @@ export class Store {
     this.reducers.set(name, fn);
   }
 
+  /** fork makes an empty store with the same reducers: the copy of
+   * another workspace's topics behind the door (MOB-50). */
+  fork(): Store {
+    const s = new Store();
+    for (const [name, fn] of this.reducers) s.reducer(name, fn);
+    return s;
+  }
+
   /** topic returns the live state of one topic (undefined until its first snap). */
   topic(name: string): ReadonlySignal<TopicState | undefined> {
     let s = this.topics.get(name);
