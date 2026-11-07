@@ -207,7 +207,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Explain Statement | `db-explain` |   |   |
 | Databases: Export Result… | `db-export` |   |   |
 | Databases: Filter… | `db-filter` |   |   |
+| Databases: Find Usages | `db-find-usages` |   |   |
 | Databases: Focus | `db-focus` |   |   |
+| Databases: Go to Definition | `db-goto-definition` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: New Console | `db-new-console` |   |   |

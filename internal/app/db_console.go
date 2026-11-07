@@ -908,6 +908,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseComparePicker(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseUsagesPicker(id); ok {
+		return cmd, true
+	}
 	switch m.pickerKind {
 	case pickerKindDBAttach, pickerKindDBHistory, pickerKindDBSort:
 	case pickerKindDBTxMode:

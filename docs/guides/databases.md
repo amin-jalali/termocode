@@ -198,6 +198,8 @@ The data page asks the server for one page at a time (`db_page_rows`, default 10
 
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
+**From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line.
+
 ## Completion
 
 In a SQL buffer, `Ctrl+X Ctrl+O` (and the pop-up that opens while you type) offers keywords, tables, views, routines, sequences and schemas from the tree you have already opened. After `alias.` or `table.` it offers that table's columns; the alias comes from the statement at the cursor (`FROM users u`, `JOIN orders AS o`). The first time a table's columns are needed they are read once and the pop-up opens again. Completion reads a cached copy: it never asks the server while you type.
