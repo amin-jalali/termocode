@@ -37,6 +37,7 @@ type Attach struct {
 	To    int    `json:"to,omitempty"`
 	Label string `json:"label,omitempty"`
 	Spec  string `json:"spec,omitempty"`
+	WS    string `json:"ws,omitempty"` // MOB-55: the project it was picked in ("" = this hub's own)
 }
 
 // The attach kinds.
@@ -99,6 +100,9 @@ func validAttaches(list []Attach) error {
 
 // check refuses an attach whose fields do not fit its kind.
 func (a *Attach) check() error {
+	if err := a.checkProject(); err != nil { // MOB-55 (args_attach_ws.go)
+		return err
+	}
 	if a.Label != "" && !validName(a.Label, MaxAttachLabel) {
 		return invalid("bad attach label")
 	}

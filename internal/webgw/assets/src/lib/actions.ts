@@ -74,6 +74,7 @@ export function refAttach(ref: Ref): Attach {
   }
   if (ref.kind === "view" && ref.spec) out.spec = ref.spec;
   if (ref.label) out.label = ref.label.slice(0, 120);
+  if (ref.ws) out.ws = ref.ws; // MOB-55: the project it was picked in
   return out;
 }
 

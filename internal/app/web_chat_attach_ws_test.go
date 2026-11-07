@@ -99,3 +99,35 @@ func TestWebAttachGHText(t *testing.T) {
 		t.Errorf("no GitHub remote: %v", err)
 	}
 }
+
+// Spec (MOB-55): a send through the door with an item of another
+// project fails before anything is read; this project's items go.
+func TestChatSendAttachOtherProject(t *testing.T) {
+	const own, other = "0123456789abcdef", "fedcba9876543210"
+	old := webOwnWS
+	webOwnWS = func() string { return own }
+	t.Cleanup(func() { webOwnWS = old })
+	m, c, dir := webTestAttachModel(t)
+	webTestWrite(t, dir, "b.txt", "bee\n")
+	f := webTestSendAttached(t, m, c, `{"text":"x","attach":[{"kind":"file","path":"b.txt","ws":"`+other+`"}]}`)
+	if webTestErr(f) != "forbidden" || len(m.ai.conv.Messages) != 0 {
+		t.Fatalf("other project: %v", f)
+	}
+	f = webTestSendAttached(t, m, c, `{"text":"x","attach":[{"kind":"file","path":"b.txt","ws":"`+own+`"},{"kind":"pr","id":"#7"}]}`)
+	if f["t"] != "res" {
+		t.Fatalf("own project: %v", f)
+	}
+	// gh never runs in tests: the pr still goes as its reference.
+	if um := m.ai.conv.Messages[0]; !strings.Contains(um.Context, "bee") || !strings.Contains(um.Context, "Pull request 7") {
+		t.Fatalf("context %q", um.Context)
+	}
+}
+
+func TestWebAttachGHRef(t *testing.T) {
+	if got := webAttachGHRef(webproto.AttachIssue, 3, ""); !strings.HasPrefix(got, "Issue 3 of this repository") || strings.Contains(got, "could not") {
+		t.Errorf("no repo: %q", got)
+	}
+	if got := webAttachGHRef(webproto.AttachPR, 9, "gh is not installed"); !strings.Contains(got, "Pull request 9") || !strings.Contains(got, "gh is not installed") {
+		t.Errorf("gh missing: %q", got)
+	}
+}
