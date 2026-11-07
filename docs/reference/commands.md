@@ -432,6 +432,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Merge View: Take Theirs for the Whole File | `git-merge-take-all-theirs` |   | `T` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
 | Git: Merge in Progress (Continue / Abort)… | `git-merge-status` |   |   |
+| Git: Move Last Commit to Another Branch… | `git-move-commit` |   | `a commit made on the wrong branch; a pushed one is copied` |
 | Git: My Pull Requests… | `git-pr-mine` |   |   |
 | Git: Open Commit of Line | `git-blame-commit` |   |   |
 | Git: Open Merge View | `git-merge-open` |   |   |

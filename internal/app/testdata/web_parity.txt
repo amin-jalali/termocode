@@ -492,6 +492,7 @@ missing	git-merge-resolve-simple	Git|S
 missing	git-merge-status	Git|S
 missing	git-merge-take-all-ours	Git|S
 missing	git-merge-take-all-theirs	Git|S
+missing	git-move-commit	Git|S
 missing	git-outgoing	Git|S
 missing	git-patch-apply-clip	Git|S
 missing	git-patch-apply-file	Git|S
