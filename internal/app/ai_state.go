@@ -198,6 +198,9 @@ type aiState struct {
 	// usageGen changes with it.
 	usageLog []aiUsageEntry
 	usageGen int
+	// ctxUse is the context use of the open chat's newest turn, for the
+	// header's context chip (CMP-7, ai_context_chip.go).
+	ctxUse aiCtxUse
 
 	// inline ghost text
 	inlineCancel context.CancelFunc

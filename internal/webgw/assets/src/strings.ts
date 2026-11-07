@@ -582,6 +582,8 @@ export const S = {
   "mcpv.running": "Running",
   "chat.insert": "Insert into the Editor",
   "chat.agent": "The agent profile and model of this chat",
+  "chat.ctx": "ctx {pct}%",
+  "chat.ctx_title": "Context: {tokens} of {window} tokens ({pct}%) on the newest turn",
   "chat.default_profile": "default",
   // Run, Test and Debug (WEBP-4)
   "act.testing": "Testing",

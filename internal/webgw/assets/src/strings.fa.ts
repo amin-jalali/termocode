@@ -941,6 +941,8 @@ export const FA: Record<StringKey, string> = {
   "dev.controller": "خواندن و تغییر",
   "chat.insert": "گذاشتن در جای مکان‌نما",
   "chat.agent": "نمایه و مدل عامل این گفت‌وگو",
+  "chat.ctx": "زمینه {pct}٪",
+  "chat.ctx_title": "زمینه: {tokens} از {window} توکن ({pct}٪) در تازه‌ترین نوبت",
   "chat.default_profile": "پیش‌فرض",
   "act.testing": "آزمون‌ها",
   "test.run": "اجرای آزمون",
