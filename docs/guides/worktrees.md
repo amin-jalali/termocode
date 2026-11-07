@@ -39,7 +39,8 @@ repository's git folder, never in your project.
 | `N` | The notes agents left on it, with their times |
 | `d` | Diff vs base: what it changed since it left its base; keep or revert each change |
 | `n` | New worktree (see below) |
-| `c` | New child worktree: it starts from the selected one's branch |
+| `c` | New child worktree: it starts from the selected one's branch; its PR targets that branch |
+| `e` | Restack a child: replay its commits onto its parent's branch (asks first) |
 | `H` | Hand off: a new agent goes on with a note of this work (see below) |
 | `L` | Show the setup of a new worktree (its terminal tab) |
 | `r` | Run the dev server on the worktree's own port (`$PORT`); again: show its tab |
@@ -190,6 +191,25 @@ worktree gets a port of its own:
 for a child of the selected worktree: it starts from that worktree's
 branch, and the list draws it under its parent (`└`; deeper children
 show as `└ …`). A child whose parent is gone moves up to the top level.
+
+### Stacked pull requests
+
+A child is stacked on its parent. termocode keeps the parent's branch
+as the child's base, so **Git: Create Pull Request…** and the ship loop,
+run inside the child, target the parent's branch instead of the default
+branch. The card shows it: `feat/child → feat/parent (stacked: the
+branch of the parent worktree)`. When the parent is archived, its kept
+branch is still the target; when the parent is gone, the branch kept at
+creation is.
+
+When the parent moves on (new commits, or it was rebased), `e`
+(**Worktree: Restack Selected onto Parent…**) replays the child's
+commits onto the parent's branch with `git rebase`. A card names both
+branches first; **Cancel** is first and focused, `Esc` cancels.
+Uncommitted changes stop it before anything runs. A conflict leaves the
+rebase open in the child: open it to continue or abort. A child that was
+pushed before needs a force-with-lease push afterwards. The AI may ask
+for a restack only through the same card.
 
 **Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
 agents in them, from every termocode window, with the ones that wait for

@@ -758,6 +758,7 @@ missing	worktree-reset-order	Worktrees|M
 missing	worktree-sessions	Worktrees|M
 missing	worktree-preview	Worktrees|M
 missing	worktree-preview-grid	Worktrees|M
+missing	worktree-restack	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
 missing	worktree-sleep	Worktrees|M
 missing	worktree-unpack	Worktrees|M

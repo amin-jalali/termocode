@@ -263,6 +263,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTPull(id), true
 	case confirmKindAITaskList: // ai_task_list.go
 		return m.answerAITaskList(id), true
+	case confirmKindWTRestack: // worktrees_stack.go
+		return m.answerWTRestack(id), true
 	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
 		return m.answerWTDelete(m.confirmKind, id), true
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty: // worktrees_cleanup.go
@@ -426,6 +428,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTPull("") // Esc: Cancel
 	case confirmKindAITaskList:
 		return m.answerAITaskList("") // Esc: Cancel
+	case confirmKindWTRestack:
+		return m.answerWTRestack("") // Esc: Cancel
 	case confirmKindWTDelete, confirmKindWTDeleteDirty:
 		return m.answerWTDelete(m.confirmKind, "") // Esc: Cancel
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty:

@@ -889,6 +889,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Reset Order | `worktree-reset-order` |   |   |
 | Worktree: Preview Agent Grid | `worktree-preview-grid` |   |   |
 | Worktree: Preview Agent Screen | `worktree-preview` |   |   |
+| Worktree: Restack Selected onto Parent… | `worktree-restack` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
