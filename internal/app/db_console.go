@@ -142,6 +142,12 @@ type dbConsoleState struct {
 	saved     *dbclient.SavedQueries
 	savedList []dbclient.SavedQuery // what the saved-queries picker shows
 	saveDraft *dbSaveDraft          // the query waiting for its name
+	// foreign key navigation (db_fknav.go)
+	fk dbFKState
+	// the filter builder (db_where_builder.go)
+	whereDraft *dbWhereDraft
+	// data compare (db_data_compare.go)
+	dataCmp dbDataCompareState
 }
 
 func (m *Model) dbConsole() *dbConsoleState {
@@ -1055,6 +1061,12 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseColumnsPicker(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseFKPicker(id); ok { // db_fknav.go
+		return cmd, true
+	}
+	if cmd, ok := m.databaseWherePicker(id); ok { // db_where_builder.go
 		return cmd, true
 	}
 	if cmd, ok := m.databaseERPicker(id); ok { // db_er.go

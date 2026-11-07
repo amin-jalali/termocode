@@ -759,6 +759,12 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind == promptKindDBGotoRow {
 		return m.databaseGotoRow(value), true
 	}
+	if m.promptKind == promptKindDBDataCompareKey { // db_data_compare.go
+		return m.databaseDataCompareKeyTyped(value), true
+	}
+	if m.promptKind == promptKindDBWhereValue { // db_where_builder.go
+		return m.databaseWhereApply(value), true
+	}
 	if m.promptKind == promptKindDBResultFilter {
 		s := m.dbConsole()
 		if s.shown != nil && s.shown.tv != nil {

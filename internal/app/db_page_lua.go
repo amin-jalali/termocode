@@ -36,6 +36,16 @@ local function notify(k)
  for i,b in ipairs(D.bounds) do if x>=b-1 then col=i-1 end end
  if _G.termocode_notify then _G.termocode_notify('termocode_db_key',k,row,col) end
 end
+-- gf, gb, gr, gl: foreign key navigation (db_fknav.go).
+local function notify_fk(k)
+ local pos=api.nvim_win_get_cursor(0)
+ local row=-1
+ if D.first>0 and pos[1]>=D.first then row=pos[1]-D.first end
+ local x=vim.fn.virtcol('.')-1
+ local col=-1
+ for i,b in ipairs(D.bounds) do if x>=b-1 then col=i-1 end end
+ if _G.termocode_notify then _G.termocode_notify('termocode_db_fk',k,row,col) end
+end
 -- = in visual mode: the selected rows (row of the first and last line).
 local function notify_range(k)
  local a,b=vim.fn.line('v'),vim.fn.line('.')
@@ -61,6 +71,45 @@ local function notify_range_edit(k)
  local r1,r2=-1,-1
  if D.first>0 then r1=a-D.first;r2=z-D.first end
  if _G.termocode_notify then _G.termocode_notify('termocode_db_range',k,r1,r2,col) end
+end
+-- Mouse resize (DBX-8): press on a column's right edge in the two header
+-- lines, drag, release; Go gets the display column and the cells moved.
+local function mouse_x(mp)
+ local info=vim.fn.getwininfo(mp.winid)[1]
+ local left=api.nvim_win_call(mp.winid,function() return vim.fn.winsaveview().leftcol end)
+ return mp.wincol-1-(info and info.textoff or 0)+left
+end
+local function edge_at(b,mp)
+ if D.first<3 or mp.line<D.first-2 or mp.line>=D.first then return nil end
+ local x=mouse_x(mp)
+ local n=#D.bounds
+ for i=1,n do
+  local e
+  if i<n then e=D.bounds[i+1]-2 else
+   e=vim.fn.strdisplaywidth(api.nvim_buf_get_lines(b,D.first-2,D.first-1,false)[1] or '')
+  end
+  if math.abs(x-e)<=1 then return i-1,x end
+ end
+end
+local drag
+local function on_mouse(b,ev)
+ local mp=vim.fn.getmousepos()
+ if ev=='press' then
+  drag=nil
+  if mp.winid~=0 and api.nvim_win_get_buf(mp.winid)==b then
+   local col,x=edge_at(b,mp)
+   if col then drag={col=col,x=x,win=mp.winid};return end
+  end
+  api.nvim_feedkeys(api.nvim_replace_termcodes('<LeftMouse>',true,false,true),'n',false)
+ elseif ev=='drag' then
+  if not drag then api.nvim_feedkeys(api.nvim_replace_termcodes('<LeftDrag>',true,false,true),'n',false) end
+ else
+  if not drag then api.nvim_feedkeys(api.nvim_replace_termcodes('<LeftRelease>',true,false,true),'n',false);return end
+  local d=drag;drag=nil
+  if mp.winid~=d.win then return end
+  local dx=mouse_x(mp)-d.x
+  if dx~=0 and _G.termocode_notify then _G.termocode_notify('termocode_db_resize',d.col,dx) end
+ end
 end
 local function set_win(win)
  local o=vim.wo[win]
@@ -106,8 +155,15 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold,nam
   vim.b[b].termocode_no_guides=true -- right-aligned numbers are not indentation
   vim.bo[b].bufhidden='hide';vim.bo[b].swapfile=false
   for _,k in ipairs({']','[','r','h','f','o','b','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','P','K','Z','x','X','D','1','2','3','4','5','6','7','8','9','?','=','H','O','<','>','F','(',')','{','}','Y','N','L','M','B','A'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
+  for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','P','K','Z','x','X','D','1','2','3','4','5','6','7','8','9','?','=','H','O','<','>','F','(',')','{','}','Y','*','b'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
   for _,k in ipairs({'e','+','-'}) do vim.keymap.set('x',k,function() notify_range_edit(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
+  vim.keymap.set('n','g=',function() notify('g=') end,{buffer=b,silent=true,nowait=true})
+  vim.keymap.set('n','gc',function() notify('gc') end,{buffer=b,silent=true,nowait=true})
+  vim.keymap.set('n','<LeftMouse>',function() on_mouse(b,'press') end,{buffer=b,silent=true})
+  vim.keymap.set('n','<LeftDrag>',function() on_mouse(b,'drag') end,{buffer=b,silent=true})
+  vim.keymap.set('n','<LeftRelease>',function() on_mouse(b,'release') end,{buffer=b,silent=true})
+  for _,k in ipairs({'gf','gb','gr','gl'}) do vim.keymap.set('n',k,function() notify_fk(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('x','=',function() notify_range('=') end,{buffer=b,silent=true,nowait=true})
   vim.keymap.set('n','<Tab>',function() notify('tab') end,{buffer=b,silent=true})
   vim.keymap.set('n','<Esc>',function() notify('esc') end,{buffer=b,silent=true})

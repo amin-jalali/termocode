@@ -206,7 +206,7 @@ func (s *dbConsoleState) visPos(i int) int {
 // display column under the cursor.
 func (m *Model) databaseColumnsKey(key string, col int) (tea.Cmd, bool) {
 	switch key {
-	case "H", "O", "<", ">", "F", "(", ")", "{", "}", "=":
+	case "H", "O", "<", ">", "F", "(", ")", "{", "}", "g=":
 	default:
 		return nil, false
 	}
@@ -219,7 +219,7 @@ func (m *Model) databaseColumnsKey(key string, col int) (tea.Cmd, bool) {
 	if key == "O" {
 		return m.databaseColumnsPickerOpen(), true
 	}
-	if key == "=" {
+	if key == "g=" {
 		k, table := dbColKey(r)
 		if l := s.colLayout(false); l == nil || l.empty() && l.off == 0 {
 			return nil, true
@@ -289,21 +289,59 @@ func (m *Model) databaseColumnsKey(key string, col int) (tea.Cmd, bool) {
 		l.off++
 		return m.databaseShowPage(), true
 	case "(", ")":
-		w := l.Width[name]
-		if w == 0 {
-			w = m.databaseNaturalWidth(vis[pos])
-		}
+		step := dbColWidthStep
 		if key == "(" {
-			w -= dbColWidthStep
-		} else {
-			w += dbColWidthStep
+			step = -step
 		}
-		if l.Width == nil {
-			l.Width = map[string]int{}
-		}
-		l.Width[name] = min(max(w, dbColMinWidth), dbColMaxWidth)
+		m.databaseColumnGrow(l, name, vis[pos], step)
 	}
 	return m.databaseColumnsChanged(table), true
+}
+
+// databaseColumnGrow changes the width of result column i (named name) by
+// delta cells, from the width the page gives it now; the width stays in
+// dbColMinWidth … dbColMaxWidth.
+func (m *Model) databaseColumnGrow(l *dbColLayout, name string, i, delta int) {
+	w := l.Width[name]
+	if w == 0 {
+		w = m.databaseNaturalWidth(i)
+	}
+	if l.Width == nil {
+		l.Width = map[string]int{}
+	}
+	l.Width[name] = dbClampColWidth(w + delta)
+}
+
+func dbClampColWidth(w int) int { return min(max(w, dbColMinWidth), dbColMaxWidth) }
+
+func init() {
+	registerNotifyHandler("termocode_db_resize", func(m *Model, args []any) tea.Cmd {
+		return m.databaseColumnResize(notifyArgInt(args, 0), notifyArgInt(args, 1))
+	})
+}
+
+// databaseColumnResize is a mouse drag of the right edge of display
+// column col by dx cells (DBX-8).
+func (m *Model) databaseColumnResize(col, dx int) tea.Cmd {
+	s := m.dbConsole()
+	r := s.shown
+	if dx == 0 || s.running != nil || r == nil || r.redis != nil || r.plan != nil || r.result.Err != nil || len(r.result.Columns) == 0 || s.trans || s.view != dbViewGrid {
+		return nil
+	}
+	cols := r.result.Columns
+	vis := s.visibleCols(cols)
+	if col < 0 || col >= len(s.drawnCols(cols)) {
+		return nil
+	}
+	pos := s.visPos(col)
+	if pos >= len(vis) {
+		return nil
+	}
+	l := s.colLayout(true)
+	_, table := dbColKey(r)
+	m.databaseColumnGrow(l, cols[vis[pos]].Name, vis[pos], dx)
+	s.keepCursor = true
+	return m.databaseColumnsChanged(table)
 }
 
 // databaseNaturalWidth is the width the grid gives result column i on

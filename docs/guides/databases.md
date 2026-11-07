@@ -212,7 +212,8 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `F` | freeze the columns up to this one on the left (again: unfreeze) |
 | `{` / `}` | scroll the columns after the frozen ones |
 | `(` / `)` | make the column narrower / wider |
-| `=` | reset the column layout |
+| drag | drag a column's right edge in the two header lines to resize it |
+| `g=` | reset the column layout |
 
 The layout of a table is saved per connection and table, so it comes back the next time you open the table. A column the table gains shows at the end. A query result keeps its layout until you quit.
 
@@ -237,9 +238,11 @@ Move to a table or view in the tree and press:
 | `i` | import a CSV file into the table (not for views) |
 | `y` | copy the quoted table name |
 
-The data page asks the server for one page at a time (`db_page_rows`, default 100) in the table's key order, so a big table stays cheap. `]` and `[` fetch the next and previous page. `o` on the page sorts by a column on the server (again: reverse). `f` asks for a `WHERE` condition, for example `plan = 'pro' AND id > 100`; an empty text shows all rows. A condition is one plain read: a `;`, a comment (`--`, `/* */`, and `#` on MySQL), a dollar quote, unbalanced brackets or a word such as `DELETE` or `INTO` is refused, and nothing is sent. Names of tables and columns are always quoted for the connection's database. The row count is never automatic: `#` counts the rows the current `WHERE` keeps and shows `of N` in the summary.
+The data page asks the server for one page at a time (`db_page_rows`, default 100) in the table's key order, so a big table stays cheap. `]` and `[` fetch the next and previous page. `o` on the page sorts by a column on the server (again: reverse). `f` asks for a `WHERE` condition, for example `plan = 'pro' AND id > 100`; an empty text shows all rows. A condition is one plain read: a `;`, a comment (`--`, `/* */`, and `#` on MySQL), a dollar quote, unbalanced brackets or a word such as `DELETE` or `INTO` is refused, and nothing is sent. Names of tables and columns are always quoted for the connection's database. `*` on a cell shows only the rows whose column holds the same value, added to the filter already set. `b` opens the filter builder next to the raw text: **Add a condition** asks for a column, an operator (`=`, `<>`, `<`, `<=`, `>`, `>=`, `LIKE`, `NOT LIKE`, `IN`, `IS NULL`, `IS NOT NULL`) and a value, and adds it with `AND` (or with `OR`: **Add an alternative condition**); **Sort by a column** asks for the column and the direction; **Edit the WHERE text** is `f`; **Clear the filter** shows all rows. The builder writes the same `WHERE` text you could type (names quoted, values as text literals), and it is checked the same way. The row count is never automatic: `#` counts the rows the current `WHERE` keeps and shows `of N` in the summary.
 
 `t` flips the page to the Transposed view: one row as `column | value` lines, which suits narrow windows and wide tables. `]` and `[` step through the rows (and the pages), `v` opens the value under the cursor, `t` goes back to the grid.
+
+**Foreign keys.** On a table's data page, `gf` on a foreign key cell opens the row it points to (the other table's data page, filtered to that key). `gb` goes back to the page the jump started from; the trail keeps the last 64 jumps. `gr` lists the tables whose foreign keys point at the row under the cursor; pick one to open its rows. `gl` on a foreign key cell lists the values of the referenced column (the first 500, sorted); the one you pick becomes a pending change, like `e`, so `w` shows the SQL and `u` undoes it. A NULL key points to no row, and a new row must be saved before you can follow it.
 
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
@@ -355,6 +358,9 @@ Very large schemas are compared up to 2,000 tables; the card and the script say 
 The search runs in a read-only session. Each table gets one `SELECT` with a row limit (50 per table, 200 tables at most, 2,000 matching rows in all), and the value is a bound parameter, never part of the SQL. Views are skipped. A card shows how many tables are done; `Esc` or **Cancel** stops it. At the end a list shows the tables with matching rows; `Enter` opens the table's data view with a filter that shows those rows. A table that cannot be read is counted and skipped.
 
 The AI has the same search as `db_search_data` (read-only, runs at once).
+## Compare data
+Compare two results, two tables, or one table on two connections. On the first result page press `gc`: it is marked as the **source** (the rows you want). Show the other result or open the other table (another tab, table or connection) and press `gc` again: that is the **target**. `gc` twice on the same result removes the mark.
+A table's data page counts as the whole table with its filter (up to 10,000 rows, read again on a read-only session); a console result counts as the rows it loaded. Rows match on the source table's key. When there is no key, termocode asks for the key columns. The card lists the rows that differ, one line per row (`−` the target's, `+` the source's), and counts the added, changed, removed and same rows; columns that only one side has are listed and not compared. When the target is table data, **Copy sync script** (`y`) and **Open script** (`o`) give the `DELETE`, `UPDATE` and `INSERT` statements, in one transaction, that make the target hold the source's rows. termocode never runs the script: review it, then run it yourself in a console.
 
 ## Query parameters
 
