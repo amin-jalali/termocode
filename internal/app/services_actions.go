@@ -418,6 +418,8 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		return m.runContainerWrite(id), true
 	case confirmKindContextManage: // containers_context_manage.go
 		return m.runContextManage(id), true
+	case confirmKindContainersExtra: // containers_system.go
+		return m.onContainersExtraConfirm(id), true
 	case confirmKindContainerRemove:
 		if id == "remove" {
 			return m.runContainerRemove(false), true
@@ -1511,7 +1513,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "services-configure", Title: "Containers: Configure Services (services.json)"},
 		{ID: "services-open-compose", Title: "Containers: Open Compose File"},
 		{ID: "services-trust", Title: "AI: Services Trust…"},
-	}, composeExtrasPaletteItems()...)
+	}, append(composeExtrasPaletteItems(), containersExtraPaletteItems()...)...)
 }
 
 func containerAITargetRequired(id string) bool {
@@ -1691,6 +1693,9 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == "containers-engine-config" {
 		return m.openEngineConfig(), true
+	}
+	if cmd, ok := m.dispatchContainersExtra(id); ok { // containers_system.go
+		return cmd, true
 	}
 	if id == "containers-open-databases" {
 		open := m.revealServicesView(false)

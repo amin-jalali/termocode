@@ -113,6 +113,10 @@ type servicesState struct {
 	render svcRenderCache
 
 	containerEngine containers.Engine
+	recentEvents    []containers.Event            // CTX-25: newest engine events (System page)
+	actionLog       []svcActionEntry              // CTX-25: this session's finished actions
+	pendingExtra    map[string]containersExtraJob // the open extra containers card: button → job
+	pendingArchive  string                        // CTX-31: the image ref or container id of the open archive prompt
 	// sessionContext is the DOCKER_CONTEXT of this termocode session
 	// ("" = the user's own setting). Never written to the shell or the
 	// global default.
@@ -589,7 +593,18 @@ func (m *Model) servicesWaitNext(gen uint64) tea.Cmd {
 
 // handleServicesMsg routes the services messages. ok=false: not ours.
 func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
+	if m.services != nil {
+		m.services.noteActionMsg(msg, time.Now()) // containers_system.go
+	}
 	switch msg := msg.(type) {
+	case containersPageMsg: // containers_system.go
+		return m.onContainersPage(msg), true
+	case containersExtraDoneMsg:
+		return m.onContainersExtraDone(msg), true
+	case buildsListMsg: // containers_builds.go
+		return m.onBuildsList(msg), true
+	case buildCacheUsageMsg:
+		return m.onBuildCacheUsage(msg), true
 	case servicesSnapshotMsg:
 		return m.onServicesSnapshot(msg), true
 	case containerHostMsg:
@@ -625,6 +640,9 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case storagePrunePreviewMsg:
 		return m.onStoragePrunePreview(msg), true
 	case containerEventMsg:
+		if m.services != nil {
+			m.services.noteEvents(msg.events)
+		}
 		return m.onContainerEvent(msg), true
 	case statsTickMsg:
 		return m.onStatsTick(msg), true

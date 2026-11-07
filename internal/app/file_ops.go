@@ -164,6 +164,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if m.refusePromptSecret(value) { // secret_refs.go: a malformed reference stays in the prompt
 		return nil
 	}
+	if cmd, ok := m.handleContainersExtraPrompt(value); ok { // containers_archive.go
+		return cmd
+	}
 	if cmd, ok := m.handleGitxPromptSubmit(value); ok { // gitx_hub.go
 		return cmd
 	}

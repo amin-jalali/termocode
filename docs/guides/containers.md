@@ -283,6 +283,76 @@ the engine's own error. Every prune has a two minute limit.
 The AI cannot prune: there is no tool, and every prune palette command is
 closed to it.
 
+## System page
+
+**Containers: Show System Page** opens a read-only page about the engine:
+
+- the engine: version, OS, kernel, CPUs, memory, storage driver, runtime
+  and cgroup, with the container and image counts and the engine's warnings;
+- the disk summary of `docker system df` (images, containers, volumes,
+  build cache, and what can be reclaimed);
+- the recent events (newest first, up to 50) seen while the view was open;
+- the action log: every container action of this session (start, stop,
+  remove, prune, tag …) with its time and whether it worked.
+
+The page only reads. The AI may open it.
+
+## Builds
+
+- **Containers: Show Builds (History, Builders, Cache)** opens a read-only
+  page: the recent builds (newest first, with time, length, cached steps and
+  the error of a failed build), the buildx builders (`*` marks the current
+  one, with driver, status and platforms) and the build cache usage.
+- **Containers: Show Build Detail…** lists the recent builds; pick one to see
+  `docker buildx history inspect` in a terminal tab.
+- **Containers: Prune Build Cache…** first reads the cache size, then shows a
+  card: `Cancel` (first), `Prune unused`, and `Prune all` (the next builds
+  start cold). The card names the command. The AI cannot prune.
+- **Containers: Check Dockerfile (Build Checks)** runs `docker build --check .`
+  in the workspace folder in a terminal tab. No image is built.
+
+Build history and builders need docker buildx; with podman the page says so.
+
+## Archive: save, load, import, commit, export
+
+Select an image or a container row, then use the palette. A file path may be
+relative: it is read from the workspace folder.
+
+| Palette command | What it does |
+|---|---|
+| **Save Selected Image to File…** | `docker save -o <file> <image>`. If the file exists, a card asks first (`Cancel` is first). |
+| **Load Images from File…** | `docker load -i <file>`, after a card: an image with the same tag is replaced. |
+| **Import Image from File System Tar…** | Type the tar file, then the new image name (optional): `docker import`. |
+| **Commit Selected Container to Image…** | Type the new image name, then a message (optional): `docker commit`. |
+| **Export Selected Container to File…** | `docker export -o <file> <container>`; a card asks if the file exists. |
+| **Show Selected Container Changes (Diff)** | A read-only page of the files the container added (`+`), changed (`~`) and deleted (`-`). |
+| **Show Selected Image Layer Sizes** | A read-only page of the layers that add bytes, largest first, with their share of the image. |
+| **Show Containers Using Selected Image** | A read-only page of the containers made from the image. |
+
+A save, load, import or export may take up to 30 minutes. A toast says when it
+is done; the IMAGES section lists again after a load, import or commit. The AI
+may open the three read-only pages; it cannot save, load, import, commit or
+export.
+
+## Volume files, backup, restore and clone
+
+Select a VOLUMES row, then use the palette. These jobs run a small helper
+container (`busybox:stable`, no network); the engine pulls it the first time.
+
+| Palette command | What it does |
+|---|---|
+| **Browse Selected Volume Files…** | Type a folder inside the volume (`/` is the top). A read-only page lists its folders and files. The volume is mounted read-only. |
+| **Back Up Selected Volume…** | Type a folder; the backup is written there as `<volume>-<date>-<time>.tar.gz`. |
+| **Restore Selected Volume from Backup…** | Type the `.tar.gz` file. A card asks first (`Cancel` is first): files with the same name are overwritten. |
+| **Clone Selected Volume…** | Type the new volume name. A card asks first; if that volume exists, the card says so. |
+| **Create Volume with Options…** | `name driver=local opt.type=tmpfs opt.device=tmpfs label.team=web` |
+| **Create Network with Options…** | `name driver=bridge subnet=10.5.0.0/16 gateway=10.5.0.1 ip-range=10.5.1.0/24 internal attachable ipv6 label.app=web` |
+
+A relative path is read from the workspace folder. With a remote context, the
+backup folder is a folder on the engine's machine. A backup, restore or clone
+may take up to 30 minutes; a toast says when it is done. The AI cannot run
+any of these commands.
+
 ## Registries
 
 REGISTRIES lists the registry hosts from your engine's own login file:
