@@ -70,7 +70,7 @@ func TestDBFolderHeadingFolds(t *testing.T) {
 
 	// A key for a connection does nothing on a heading.
 	m, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
-	if cmd != nil || m.confirm != nil {
+	if cmd != nil || m.confirmOpen {
 		t.Error("x on a heading asked something")
 	}
 

@@ -38,7 +38,7 @@ func wtStackFixture(t *testing.T) (m *Model, feat, ext string) {
 	}
 	m = wtTestModel(t, root)
 	cmd, _ := m.dispatchWorktreePalette("worktree-view")
-	wtRun(t, m, cmd)
+	wtRunLoad(t, m, cmd)
 	return m, feat, ext
 }
 
@@ -49,7 +49,7 @@ func TestWorktreeChildKeepsStackBase(t *testing.T) {
 	root := wtRepo(t)
 	m := wtTestModel(t, root)
 	cmd, _ := m.dispatchWorktreePalette("worktree-view")
-	wtRun(t, m, cmd)
+	wtRunLoad(t, m, cmd)
 	for _, e := range m.wt.entries {
 		if e.Branch == "feat/x" {
 			m.wt.cursorPath = e.Path

@@ -11,9 +11,9 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
-// importModel is a model with an empty chat store and a read-only agent
+// agentImportModel is a model with an empty chat store and a read-only agent
 // chat view of a two-turn Claude Code session.
-func importModel(t *testing.T) (*Model, ai.ChatStore) {
+func agentImportModel(t *testing.T) (*Model, ai.ChatStore) {
 	t.Helper()
 	m := &Model{w: 120, h: 40}
 	s := m.aiS()
@@ -48,7 +48,7 @@ func TestAgentImportPaletteAndPolicy(t *testing.T) {
 // copied; Cancel writes nothing; Import saves a new AI chat with the
 // prompts and answers and opens it, and the session file is not touched.
 func TestAgentImportSessionCard(t *testing.T) {
-	m, store := importModel(t)
+	m, store := agentImportModel(t)
 	m.dispatchTasksPalette(agentImportPaletteID)
 	if !m.confirmOpen || m.confirmKind != confirmKindAgentImport || m.confirm.SafeID() != "cancel" {
 		t.Fatalf("no card: open %v kind %v", m.confirmOpen, m.confirmKind)
@@ -82,7 +82,7 @@ func TestAgentImportSessionCard(t *testing.T) {
 // no session view open (or an empty session) nothing is imported and a
 // toast says what to do.
 func TestAgentImportKeyAndNoSession(t *testing.T) {
-	m, store := importModel(t)
+	m, store := agentImportModel(t)
 	if _, ok := agentChatKey(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("i")}); !ok || !m.confirmOpen || m.confirmKind != confirmKindAgentImport {
 		t.Fatalf("i: handled %v card %v kind %v", ok, m.confirmOpen, m.confirmKind)
 	}
@@ -95,7 +95,7 @@ func TestAgentImportKeyAndNoSession(t *testing.T) {
 	if got := ansi.Strip(strings.Join(m.toast.View(200, 40), " ")); !strings.Contains(got, "Agent: Sessions…") {
 		t.Errorf("toast %q", got)
 	}
-	m2, store2 := importModel(t)
+	m2, store2 := agentImportModel(t)
 	m2.agentChat.sess.Turns = nil
 	m2.dispatchTasksPalette(agentImportPaletteID)
 	if m2.confirmOpen || len(store2.List()) != 0 {

@@ -71,7 +71,7 @@ func TestWorktreeAutoCleanArchivesIdle(t *testing.T) {
 	}
 	wtGitClean(t, x, "add", "big.bin")
 	wtGitClean(t, x, "commit", "-q", "-m", "big")
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 	if c := m.wtAutoClean(); c != nil {
 		t.Fatal("the auto clean-up ran while it is off")
 	}
@@ -116,7 +116,7 @@ func TestWorktreeAutoCleanArchivesIdle(t *testing.T) {
 		t.Fatal("ran twice in one hour")
 	}
 
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 	it, ok := wtItemAt(m, x)
 	if !ok || it.e.Meta.State != worktrees.StateArchived || it.e.Meta.Branch != "feat/x" {
 		t.Fatalf("x is not archived with its branch: %+v", it.e.Meta)

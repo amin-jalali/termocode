@@ -22,14 +22,14 @@ import (
 //	TERMOCODE_UPDATE_FEATURE_RULE=1 go test ./internal/app -run TestFeatureRuleGate
 const featureRuleBaseline = "testdata/feature_rule_untested.txt"
 
-// feature is one user-facing thing and the strings that, found in a test
+// featureRule is one user-facing thing and the strings that, found in a test
 // file, count as a test of it.
-type feature struct {
+type featureRule struct {
 	ID      string
 	Needles []string
 }
 
-func untestedFeatures(features []feature, tests string) []string {
+func untestedFeatures(features []featureRule, tests string) []string {
 	var out []string
 	for _, f := range features {
 		hit := false
@@ -49,7 +49,7 @@ func untestedFeatures(features []feature, tests string) []string {
 
 // featureRuleProblems returns the untested features not on the baseline
 // (new gaps) and the baseline ids that are tested now or gone (stale).
-func featureRuleProblems(features []feature, tests string, baseline []string) (newGaps, stale []string) {
+func featureRuleProblems(features []featureRule, tests string, baseline []string) (newGaps, stale []string) {
 	untested := map[string]bool{}
 	for _, id := range untestedFeatures(features, tests) {
 		untested[id] = true
@@ -71,10 +71,10 @@ func featureRuleProblems(features []feature, tests string, baseline []string) (n
 }
 
 // appFeatures lists every palette command, Settings row and key action.
-func appFeatures() []feature {
-	var out []feature
+func appFeatures() []featureRule {
+	var out []featureRule
 	seen := map[string]bool{}
-	add := func(f feature) {
+	add := func(f featureRule) {
 		if !seen[f.ID] {
 			seen[f.ID] = true
 			out = append(out, f)
@@ -82,15 +82,15 @@ func appFeatures() []feature {
 	}
 	for _, it := range paletteItems() {
 		if !it.File && it.ID != "" {
-			add(feature{ID: "palette/" + it.ID, Needles: []string{`"` + it.ID + `"`}})
+			add(featureRule{ID: "palette/" + it.ID, Needles: []string{`"` + it.ID + `"`}})
 		}
 	}
 	for _, r := range settingsRows {
-		add(feature{ID: "setting/" + r.ID, Needles: []string{`"` + r.ID + `"`, `"` + r.Label + `"`}})
+		add(featureRule{ID: "setting/" + r.ID, Needles: []string{`"` + r.ID + `"`, `"` + r.Label + `"`}})
 	}
 	for a := keymap.Action(1); a < 2000; a++ {
 		if name := keymap.ActionName(a); name != "" {
-			add(feature{ID: "key/" + name, Needles: []string{"Action" + name, `"` + name + `"`}})
+			add(featureRule{ID: "key/" + name, Needles: []string{"Action" + name, `"` + name + `"`}})
 		}
 	}
 	return out

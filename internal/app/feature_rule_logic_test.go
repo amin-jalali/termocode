@@ -10,7 +10,7 @@ import (
 // baseline of old gaps. The baseline only shrinks: a baseline id that has
 // a test now, or that no longer exists, must be removed from it.
 func TestFeatureRuleProblems(t *testing.T) {
-	features := []feature{
+	features := []featureRule{
 		{ID: "palette/new-cmd", Needles: []string{`"new-cmd"`}},
 		{ID: "palette/tested", Needles: []string{`"tested"`}},
 		{ID: "palette/old-gap", Needles: []string{`"old-gap"`}},
@@ -36,7 +36,7 @@ k := keymap.ActionQuit`
 // Spec (STAB-1): untestedFeatures lists the ids with no needle in the test
 // text, sorted, so the baseline file is stable.
 func TestUntestedFeaturesSorted(t *testing.T) {
-	features := []feature{
+	features := []featureRule{
 		{ID: "palette/b", Needles: []string{`"b"`}},
 		{ID: "palette/a", Needles: []string{`"a"`}},
 		{ID: "palette/c", Needles: []string{`"c"`}},

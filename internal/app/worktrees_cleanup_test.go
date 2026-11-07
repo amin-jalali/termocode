@@ -60,7 +60,7 @@ func TestWorktreeBulkCleanup(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(ext, "draft.txt"), []byte("d\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 
 	wtStep(t, m, wtKey(t, m, "C"))
 	if !m.pickerOpen || m.pickerKind != pickerKindWTCleanup {

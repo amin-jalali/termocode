@@ -56,8 +56,8 @@ func TestWebAttachProjectText(t *testing.T) {
 	}
 }
 
-// fakeGH answers gh calls by their first two args.
-func fakeGH(answers map[string]string, fail error) ghci.Runner {
+// fakeGHRunner answers gh calls by their first two args.
+func fakeGHRunner(answers map[string]string, fail error) ghci.Runner {
 	return func(_ context.Context, _ string, args ...string) (string, string, error) {
 		if fail != nil {
 			return "", "", fail
@@ -74,7 +74,7 @@ func fakeGH(answers map[string]string, fail error) ghci.Runner {
 }
 
 func TestWebAttachGHText(t *testing.T) {
-	run := fakeGH(map[string]string{
+	run := fakeGHRunner(map[string]string{
 		"issue view": `{"number":12,"title":"Login breaks","state":"OPEN","url":"https://github.com/o/r/issues/12"}`,
 		"pr view": `{"number":7,"title":"Fix login","state":"OPEN","isDraft":false,"url":"https://github.com/o/r/pull/7",` +
 			`"body":"Closes #12","author":{"login":"amin"},"headRefName":"fix/login","baseRefName":"main",` +
@@ -93,7 +93,7 @@ func TestWebAttachGHText(t *testing.T) {
 			t.Errorf("pr text misses %q:\n%s", want, pr)
 		}
 	}
-	_, err = webAttachGHText(context.Background(), fakeGH(nil, ghci.ErrNoGitHub), "/w", webproto.AttachPR, 7)
+	_, err = webAttachGHText(context.Background(), fakeGHRunner(nil, ghci.ErrNoGitHub), "/w", webproto.AttachPR, 7)
 	var we *webError
 	if !errors.As(err, &we) || we.code != webproto.CodeConflict {
 		t.Errorf("no GitHub remote: %v", err)

@@ -35,7 +35,7 @@ func wtRealModel(t *testing.T) (m *Model, root, x, ext string) {
 	root = wtRepo(t)
 	m = wtTestModel(t, root)
 	cmd, _ := m.dispatchWorktreePalette("worktree-view")
-	wtRun(t, m, cmd)
+	wtRunLoad(t, m, cmd)
 	base := filepath.Dir(root)
 	x, ext = filepath.Join(base, "app.worktrees", "x"), filepath.Join(base, "ext")
 	if real, err := filepath.EvalSymlinks(base); err == nil {
@@ -98,7 +98,7 @@ func TestWorktreeArchiveDirtyAndRestore(t *testing.T) {
 	if !git.BranchExists(root, "feat/x") {
 		t.Fatal("archive deleted the branch")
 	}
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 	it, ok := wtItemAt(m, x)
 	if !ok || it.group != "ARCHIVED" || it.state != wtStateArchived {
 		t.Fatalf("archived row: %v %+v", ok, it)
@@ -116,7 +116,7 @@ func TestWorktreeArchiveDirtyAndRestore(t *testing.T) {
 	if br, _ := git.GetBranch(x); br.Name != "feat/x" {
 		t.Fatalf("restored on %q", br.Name)
 	}
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 	if it, _ := wtItemAt(m, x); it.group != "ACTIVE" || it.e.Gone {
 		t.Errorf("restored row in %s gone %v", it.group, it.e.Gone)
 	}
@@ -146,7 +146,7 @@ func TestWorktreeArchiveCleanAndRefusals(t *testing.T) {
 		t.Errorf("main: card %v toast %q cmd %v", m.confirmOpen, wtLastToast(m), c != nil)
 	}
 	wtGitClean(t, root, "worktree", "lock", "--reason", "usb disk", x)
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 	m.wt.cursorPath = x
 	wtKey(t, m, "x")
 	if m.confirmOpen || !strings.Contains(wtLastToast(m), "usb disk") {
