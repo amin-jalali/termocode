@@ -1,0 +1,1 @@
+{"t":"req","id":1101,"op":"ai.race_start","args":{"task":"fix the login bug","agents":["claude","codex"],"verify":"go test ./..."}}

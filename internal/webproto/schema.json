@@ -2795,6 +2795,63 @@
       "phase": "v2"
     },
     {
+      "op": "ai.race_start",
+      "args": "AIRaceStartArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_summary",
+      "args": "AIRaceArgs",
+      "result": "AIRaceSummary",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_verify",
+      "args": "AIRaceArgs",
+      "result": "AIRaceDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_stop",
+      "args": "AIRaceArgs",
+      "result": "AIRaceDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.mcp_profiles",
       "args": "EmptyArgs",
       "result": "MCPProfiles",
@@ -4911,6 +4968,82 @@
         "name",
         "source",
         "trust"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceArgs": {
+      "type": "object",
+      "properties": {
+        "race": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "race"
+      ],
+      "additionalProperties": false
+    },
+    "AIRaceDone": {
+      "type": "object",
+      "properties": {
+        "lanes": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "race": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "race",
+        "lanes",
+        "message"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceStartArgs": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "task": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "agents"
+      ],
+      "additionalProperties": false
+    },
+    "AIRaceSummary": {
+      "type": "object",
+      "properties": {
+        "cost": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "race": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "race",
+        "lines"
       ],
       "additionalProperties": true
     },

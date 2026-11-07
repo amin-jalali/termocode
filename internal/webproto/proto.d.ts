@@ -616,6 +616,16 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface AIRaceStartArgs {
+  task: string;
+  agents: string[];
+  verify?: string;
+}
+
+export interface AIRaceArgs {
+  race: string;
+}
+
 export interface AIMCPProfileArgs {
   name?: string;
   all?: boolean;
@@ -2817,6 +2827,18 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface AIRaceSummary {
+  race: string;
+  lines: string[];
+  cost?: string;
+}
+
+export interface AIRaceDone {
+  race: string;
+  lanes: number;
+  message: string;
+}
+
 export interface MCPProfiles {
   current: string;
   profiles: MCPProfileItem[];
@@ -3616,6 +3638,10 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.race_start": AIRaceStartArgs;
+  "ai.race_summary": AIRaceArgs;
+  "ai.race_verify": AIRaceArgs;
+  "ai.race_stop": AIRaceArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
   "chat.rename": ChatRenameArgs;
@@ -3908,6 +3934,10 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.race_start": AskRef;
+  "ai.race_summary": AIRaceSummary;
+  "ai.race_verify": AIRaceDone;
+  "ai.race_stop": AIRaceDone;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;
   "chat.fork": ChatRef;
