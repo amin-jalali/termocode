@@ -94,7 +94,7 @@ func TestAgentRunningTab(t *testing.T) {
 	}
 }
 
-// T lists the cursor's sessions; S opens the list of installed agents
+// T lists the cursor's sessions; O opens the list of installed agents
 // for one more session there (the worktree you are in starts in the
 // workspace); a gone worktree only says why not. The palette rows do
 // the same and the AI never runs them.
@@ -116,7 +116,7 @@ func TestWorktreeSessionKeys(t *testing.T) {
 		t.Fatalf("T: open %v kind %v path %q", m.pickerOpen, m.pickerKind, st.sessionsPath)
 	}
 	m.pickerOpen = false
-	wtKey(t, m, "S")
+	wtKey(t, m, "O")
 	if !m.pickerOpen || m.pickerKind != pickerKindWTSessionAgent || st.sessionDir != "/src/app.worktrees/toast" {
 		t.Fatalf("S: open %v kind %v dir %q", m.pickerOpen, m.pickerKind, st.sessionDir)
 	}
@@ -129,13 +129,13 @@ func TestWorktreeSessionKeys(t *testing.T) {
 	}
 	m.pickerOpen = false
 	st.cursorPath = "/src/app"
-	wtKey(t, m, "S")
+	wtKey(t, m, "O")
 	if !m.pickerOpen || st.sessionDir != "" {
 		t.Errorf("here: open %v dir %q", m.pickerOpen, st.sessionDir)
 	}
 	m.pickerOpen = false
 	st.cursorPath = "/tmp/deleted"
-	wtKey(t, m, "S")
+	wtKey(t, m, "O")
 	if m.pickerOpen || !strings.Contains(wtLastToast(m), "gone") {
 		t.Errorf("gone: open %v toast %q", m.pickerOpen, wtLastToast(m))
 	}
@@ -158,7 +158,7 @@ func TestWorktreeSessionKeys(t *testing.T) {
 	}
 	agentLookPath = func(string) (string, error) { return "", errors.New("not found") }
 	m.pickerOpen = false
-	wtKey(t, m, "S")
+	wtKey(t, m, "O")
 	if m.pickerOpen || !strings.Contains(wtLastToast(m), "No agent is installed") {
 		t.Errorf("none installed: open %v toast %q", m.pickerOpen, wtLastToast(m))
 	}

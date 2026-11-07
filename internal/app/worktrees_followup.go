@@ -39,7 +39,7 @@ import (
 // any time. The AI can never start either one.
 
 const (
-	confirmKindWTFeedback confirmKindEnum = 4731
+	confirmKindWTFeedback confirmKindEnum = 4734
 	wtFeedbackPaletteID                   = "worktree-feedback"
 	wtFollowPaletteID                     = "worktree-follow"
 	wtFollowEvery                         = 2 * time.Minute

@@ -44,10 +44,11 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"x", "archive: remove the folder, keep the branch · on an archived row: restore"},
 		[]string{"D", "delete the worktree and its branch (asks, step by step)"},
 		[]string{"C", "clean up: tick merged and old worktrees, archive them together"},
+		[]string{"S", "ship: commit (AI message), push, pull request (AI text), CI fixes, merge, archive · each step asks"},
 		[]string{"s", "sleep: end its agent tabs, move it under ASLEEP · again: wake it"},
 		[]string{"Sessions"},
 		[]string{"T", "its agent sessions: Enter shows the tab"},
-		[]string{"S", "new agent session: one more agent in it, its own tab"},
+		[]string{"O", "new agent session: one more agent in it, its own tab"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
 		[]string{"/", "filter by name · Esc clears"},
@@ -85,6 +86,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtArchivePaletteID, Title: "Worktree: Archive or Restore Selected…"},
 		{ID: wtDeletePaletteID, Title: "Worktree: Delete Selected…"},
 		{ID: wtCleanupPaletteID, Title: "Worktree: Clean Up…"},
+		{ID: wtShipPaletteID, Title: "Worktree: Ship Selected (commit, push, PR, merge, archive)…"},
 	}
 }
 
@@ -140,6 +142,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeDelete(), true
 	case wtCleanupPaletteID:
 		return m.worktreeCleanup(), true
+	case wtShipPaletteID:
+		return m.worktreeShip(), true
 	}
 	return nil, false
 }
@@ -221,7 +225,7 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeSleep()
 	case "T":
 		return m, m.worktreeSessions()
-	case "S":
+	case "O":
 		return m, m.worktreeNewSession()
 	case "x":
 		return m, m.worktreeArchive()
@@ -229,6 +233,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeDelete()
 	case "C":
 		return m, m.worktreeCleanup()
+	case "S":
+		return m, m.worktreeShip()
 	case "f":
 		m.worktreeNextFilter()
 	case "R":

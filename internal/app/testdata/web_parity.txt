@@ -728,5 +728,6 @@ missing	worktree-pin	Worktrees|M
 missing	worktree-reset-order	Worktrees|M
 missing	worktree-sessions	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
+missing	worktree-ship	Worktrees|M
 missing	worktree-sleep	Worktrees|M
 missing	worktree-view	Worktrees|M
