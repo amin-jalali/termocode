@@ -230,9 +230,10 @@ func gitGraphHead(g []git.GraphCommit) string {
 	return g[0].Hash
 }
 
-// gitFileAbsPath returns the absolute path of a git status entry.
+// gitFileAbsPath returns the absolute path of a git status entry. Git
+// paths are relative to the active repository (gitx_multirepo.go).
 func gitFileAbsPath(rel string) string {
-	cwd, err := procRootDir()
+	cwd, err := procGitRootDir()
 	if err != nil {
 		return rel
 	}
