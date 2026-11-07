@@ -826,6 +826,27 @@ The same screen can add servers (MCP) for this work. Each shows the exact
 The `visual-qa` skill tells the AI how to check a page in the browser:
 phone and desktop widths, console errors, the main buttons.
 
+## Image generation
+
+The AI can make PNG images for your project: an app icon, a placeholder,
+a picture for the docs. It is off until you turn it on. Run **AI: Toggle
+Image Generation** (run it again to turn it off).
+
+- It needs a main model on **OpenAI** or an **OpenAI-compatible**
+  endpoint with an images API (`/images/generations`). The same key is
+  used. Other providers do not get the tool.
+- The model is `gpt-image-1`. Set `ai_image_model` in `config.json` to use
+  another one. It must return image data, not a link.
+- The AI calls `generate_image` with a prompt and a new `.png` path in the
+  workspace. Each call is a paid request, so each one asks first; there
+  is no **Always allow**. The card shows the path, the model and the
+  prompt.
+- It never overwrites a file. The new file shows in the explorer.
+  **AI: Undo Last Turn** deletes it again.
+- The AI cannot turn the tool on by itself.
+
+The web panel cannot turn image generation on yet.
+
 ## Keys at a glance
 
 | Key | Action |

@@ -155,6 +155,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`skill_load`](#skill_load) | auto | no | Load one skill (a knowledge file from the "Skills you can load" list) by name and return its full text. |
 | [`web_fetch`](#web_fetch) | auto | no | Read one web page (http or https, GET only) and return its title and text. |
 | [`web_search`](#web_search) | auto | no | Search the web (Brave Search) and return titles, urls and short snippets. |
+| [`generate_image`](#generate_image) | confirm (always asks) | no | Generate one PNG image from a text prompt (an icon, a placeholder, an illustration) and save it as a NEW file in the workspace. |
 
 ## Tools
 
@@ -1892,6 +1893,20 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `query` | string | yes | what to search for |
 | `count` | integer |   | how many results (1-10, default 5) |
 
+### generate_image
+
+Generate one PNG image from a text prompt (an icon, a placeholder, an illustration) and save it as a NEW file in the workspace. Each call is a paid request and the user confirms it. Never overwrites a file.
+
+**Gate:** confirm (always asks)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `prompt` | string | yes | what the image shows, in detail (style, colors, background) |
+| `path` | string | yes | new file path in the workspace, ending in .png |
+| `size` | string |   | one of auto, 1024x1024, 1536x1024, 1024x1536 (default auto) |
+
 ## Palette actions
 
 `execute_action` runs a command palette command by id, and `list_actions` finds the ids. This table says what the AI may run. Extension commands (`ext-<command id>`) and your own commands (`user-<name>`) always ask (class `run`).
@@ -1938,6 +1953,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-history-delete` | AI: Delete Chat… | never | deletes saved chats; only the user may |
 | `ai-history-rename` | AI: Rename Chat… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-hooks` | AI: Hooks… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `ai-image-gen` | AI: Toggle Image Generation | never | image generation is paid; only the user turns it on |
 | `ai-keep-going` | AI: Toggle Keep Going While Todos Are Open | never | AI provider, credentials and approvals stay with the user; extra paid turns are the user's choice |
 | `ai-mcp-background` | AI: Move MCP Call to Background (Ctrl+B in the chat) | never | moves the model's own running call; the user decides |
 | `ai-mcp-bundle` | AI: MCP: Install Bundle (.mcpb)… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2565,6 +2581,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_fallback` | never | AI provider, credentials and approvals stay with the user |
+| `ai_image_gen` | never | AI provider, credentials and approvals stay with the user; image generation is paid |
+| `ai_image_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_inline` | confirm (settings) |   |
 | `ai_inline_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_max_steps` | never | AI provider, credentials and approvals stay with the user |
