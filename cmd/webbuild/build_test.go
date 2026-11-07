@@ -315,6 +315,34 @@ func TestBuildSplitsTheWorkbench(t *testing.T) {
 	}
 }
 
+// Spec (MOBUX-20, mobile plan Q4): the phone's own views are their own
+// file (home.js), loaded by the page with a dynamic import; they share
+// Preact and the session through app-chunk.js, and app.js carries none of
+// their code or texts (This phone's strings live in home.js).
+func TestBuildWritesTheHomeChunk(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page, hm := string(out["app.js"])+string(out["app-chunk.js"]), string(out["home.js"])
+	if hm == "" {
+		t.Fatal("build wrote no home.js")
+	}
+	if !strings.Contains(page, `import("/assets/home.js")`) {
+		t.Error("the page does not load /assets/home.js")
+	}
+	const forget = "Forget this phone" // strings.phone.ts
+	if strings.Contains(page, forget) || strings.Contains(page, `"phone.forget"`) {
+		t.Error("the phone's first files hold This phone")
+	}
+	if !strings.Contains(hm, forget) || !strings.Contains(hm, `from"./app-chunk.js"`) || strings.Contains(hm, "__H") {
+		t.Error("home.js is not This phone alone (no screen, or its own Preact)")
+	}
+	if strings.Contains(string(out["index.html"]), "/assets/home.js") {
+		t.Error("index.html preloads home.js; only a phone loads it, on use")
+	}
+}
+
 // The Persian strings are their own file (strings-fa.js), loaded only
 // when the UI language is Persian: the phone's first files carry one
 // language, English. strings-fa.js is the strings alone (no Preact).
