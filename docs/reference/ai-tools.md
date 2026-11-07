@@ -1920,6 +1920,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-apply-proposal` | AI: Apply Proposed Edit | never | the user reviews proposed edits |
 | `ai-attach` | AI: Add File / Selection to Chat | never | adds to the chat input; read the file with read_file |
 | `ai-auto-approve` | AI: Agent Auto-Approve… | never | AI provider, credentials and approvals stay with the user |
+| `ai-board` | AI: Agent Board… | never | the user's board of agent work; it opens a picker and holds Resume |
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
 | `ai-configure` | AI: Configure Provider… | never | AI provider, credentials and approvals stay with the user |
 | `ai-credentials` | Open Config: AI Credentials | never | AI provider, credentials and approvals stay with the user |

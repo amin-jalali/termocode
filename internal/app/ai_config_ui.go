@@ -170,6 +170,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAISide(id), true
 	case confirmKindRunsStop: // runs_state.go
 		return m.answerRunsStop(id), true
+	case confirmKindAgentBoardResume: // agent_board.go (CMP-2)
+		return m.answerAgentBoardResume(id), true
 	case confirmKindAgentsStop: // agents_node_ctl.go
 		return m.answerAgentsStop(id), true
 	case confirmKindAIOAuth:
