@@ -14,7 +14,7 @@ import (
 // digits), never by its folder.
 func TestProjectsTopicIsReadOnly(t *testing.T) {
 	tp, err := ParseTopic("projects")
-	if err != nil || tp.Name != "projects" || tp.Keyed {
+	if err != nil || tp.Name != "projects" || tp.Key != "" {
 		t.Fatalf("projects: %v %+v", err, tp)
 	}
 	if d, ok := topicDef("projects"); !ok || d.Phase != PhaseV2 {

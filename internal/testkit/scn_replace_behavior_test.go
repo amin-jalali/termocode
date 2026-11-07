@@ -3,7 +3,6 @@ package testkit
 import (
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -31,19 +30,6 @@ func replaceAll(t *testing.T, d *Driver, find, repl, want string) {
 		t.Fatalf("confirm dialog does not say %q:\n%s", want, screen(d))
 	}
 	clickButton(d, "Replace")
-}
-
-// bufText is the text of the loaded buffer for a workspace file ("" when
-// it is not loaded).
-func bufText(d *Driver, rel string) string {
-	d.T.Helper()
-	return lua(d, `local p = ...
-for _, b in ipairs(vim.api.nvim_list_bufs()) do
-  if vim.api.nvim_buf_is_loaded(b) and vim.api.nvim_buf_get_name(b) == p then
-    return table.concat(vim.api.nvim_buf_get_lines(b, 0, -1, false), '\n')
-  end
-end
-return ''`, filepath.Join(d.Dir, rel))
 }
 
 // Spec: Given b.txt open and clean and a.txt open with an unsaved edit,

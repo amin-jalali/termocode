@@ -11,7 +11,6 @@ import (
 	"crypto/hkdf"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"io"
@@ -23,8 +22,6 @@ import (
 	"testing"
 	"time"
 )
-
-var b64 = base64.RawURLEncoding
 
 // browser is the phone's side of a subscription: its key pair and auth
 // secret, as PushManager.subscribe makes them.
