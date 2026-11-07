@@ -726,6 +726,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Tasks: Run Build Task | `tasks-build` |   |   |
 | Tasks: Run Task... | `tasks-run` | `Alt+R` | `Alt+R` |
 | Tasks: Run Test Task | `tasks-test` |   |   |
+| Tasks: Suggested Tasks… | `tasks-suggest` |   | `TODO / FIXME comments and slow code` |
 | Tasks: Terminate Task | `tasks-terminate` |   |   |
 
 ## Terminal

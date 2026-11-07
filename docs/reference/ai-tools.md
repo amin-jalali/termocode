@@ -2458,6 +2458,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `tasks-configure` | Tasks: Configure Tasks | confirm (ide) |   |
 | `tasks-rerun` | Tasks: Rerun Last Task | confirm (run) |   |
 | `tasks-run` | Tasks: Run Task... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `tasks-suggest` | Tasks: Suggested Tasks… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `tasks-terminate` | Tasks: Terminate Task | confirm (ide) |   |
 | `tasks-test` | Tasks: Run Test Task | confirm (run) |   |
 | `terminal-close-pane` | Terminal: Close Pane | confirm (always asks) |   |
