@@ -606,15 +606,12 @@ func DiscardHunk(dir, file string, line int) error {
 // to `git apply`. diffCached reads the staged diff (index-vs-HEAD); applyCached
 // targets the index (vs worktree); applyReverse reverses the patch.
 func applyOneHunk(dir, file string, line int, diffCached, applyCached, applyReverse bool) error {
-	if _, ok := remoteFor(dir); ok {
-		return ErrRemoteUnsupported
-	}
 	diffArgs := []string{"diff", "--no-color"}
 	if diffCached {
 		diffArgs = append(diffArgs, "--cached")
 	}
 	diffArgs = append(diffArgs, "--", file)
-	diff, err := runOut(dir, "git", diffArgs...)
+	diff, err := gitOutAt(dir, diffArgs...)
 	if err != nil {
 		return err
 	}
@@ -629,7 +626,7 @@ func applyOneHunk(dir, file string, line int, diffCached, applyCached, applyReve
 	if applyReverse {
 		applyArgs = append(applyArgs, "--reverse")
 	}
-	return runStdin(dir, patch, "git", append(applyArgs, "-")...)
+	return gitStdin(dir, patch, append(applyArgs, "-")...)
 }
 
 // extractHunkPatch returns a one-hunk patch (file header + the single hunk

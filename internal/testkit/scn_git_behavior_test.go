@@ -14,8 +14,8 @@ import (
 // folder with no git, a held .git/index.lock, submodules, a rebase that
 // is still in progress after a restart, and a branch switch with open
 // tabs (one unsaved). The large-repo case is TestScaleSCM50kChanges and
-// TestSCMGraphBigHistoryFast. The language server refresh after a switch
-// needs a fake language server (SCN-15) and is not covered here.
+// TestSCMGraphBigHistoryFast. TestSCN23BranchSwitchRefreshesLSP checks that
+// an attached language server gets the new text after a switch.
 
 // Spec: Given a folder that is not a git repository, when the user opens
 // Source Control, then it says "Not a git repository" with how to start
@@ -170,5 +170,82 @@ func TestSCN23BranchSwitchWithDirtyTabs(t *testing.T) {
 	}
 	if got, _ := tabs(d); len(got) != 2 || got[1] != "README.md*" {
 		t.Errorf("tabs after switch %v, want README.md still unsaved", got)
+	}
+}
+
+// recordLSPLua attaches a fake language server to the current buffer. It
+// keeps the last full text it was sent (didOpen, or didChange with full
+// sync) in _G._scn23_lsp_text, so a test can see what the server knows.
+const recordLSPLua = `
+local root = ...
+_G._scn23_lsp_text = ''
+local function server(dispatchers)
+  local closing = false
+  return {
+    request = function(method, params, callback)
+      local res = nil
+      if method == 'initialize' then
+        res = { capabilities = { textDocumentSync = 1 } }
+      end
+      vim.schedule(function() callback(nil, res) end)
+      return true, 1
+    end,
+    notify = function(method, params)
+      if method == 'textDocument/didOpen' then
+        _G._scn23_lsp_text = params.textDocument.text
+      elseif method == 'textDocument/didChange' then
+        local c = params.contentChanges or {}
+        if c[#c] and c[#c].text then _G._scn23_lsp_text = c[#c].text end
+      end
+      return true
+    end,
+    is_closing = function() return closing end,
+    terminate = function() closing = true end,
+  }
+end
+vim.lsp.start({ name = 'scn23lsp', cmd = server, root_dir = root })
+local ok = vim.wait(2000, function()
+  local get = vim.lsp.get_clients or vim.lsp.get_active_clients
+  return #get({ bufnr = 0 }) > 0
+end)
+return tostring(ok)
+`
+
+// Spec: Given main.go open (clean) with a language server attached, when
+// the user switches to a branch where main.go differs, then the language
+// server is sent the new branch's text (its answers are not about the
+// old file).
+func TestSCN23BranchSwitchRefreshesLSP(t *testing.T) {
+	d, r := scmNvimDriver(t, func(r *repo) {
+		r.git("checkout", "-q", "-b", "dev")
+		r.write("main.go", "package main\n\n// dev\nfunc main() {}\n")
+		r.commit("feat: dev")
+		r.git("checkout", "-q", "main")
+	})
+	open(d, "main.go")
+	if got := lua(d, recordLSPLua, d.Dir); got != "true" {
+		t.Fatalf("fake LSP did not attach: %q", got)
+	}
+	seen := func() string { return lua(d, `return _G._scn23_lsp_text or ''`) }
+	if !eventually(d, func() bool { return strings.Contains(seen(), "package main") }) {
+		t.Fatalf("server never got main.go: %q", seen())
+	}
+	if strings.Contains(seen(), "// dev") {
+		t.Fatalf("server has the dev text before the switch: %q", seen())
+	}
+	d.Palette("git-branch")
+	d.Type("dev")
+	d.Key("enter")
+	if !until(d, func() bool { return strings.Contains(statusBar(d), "dev") }) {
+		t.Fatalf("branch did not switch:%s", dump(d))
+	}
+	if got := r.git("branch", "--show-current"); got != "dev" {
+		t.Fatalf("current branch %q, want dev", got)
+	}
+	if !eventually(d, func() bool { return strings.Contains(bufText(d, "main.go"), "// dev") }) {
+		t.Fatalf("main.go tab did not reload the dev text: %q", bufText(d, "main.go"))
+	}
+	if !eventually(d, func() bool { return strings.Contains(seen(), "// dev") }) {
+		t.Errorf("language server still has the old main.go after the switch: %q", seen())
 	}
 }

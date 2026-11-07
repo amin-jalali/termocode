@@ -179,8 +179,13 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:
 // agent_run_start knows how deep it is and the run's budget).
 func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai.Tool {
-	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
-	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	aws := m.aiWorkspaceAt(root) // a container workspace: its Host FS + Exec (RC-5)
+	tools := append(ai.WorkspaceTools(aws), m.aiEditorTools()...)
+	if aws.FS != nil {
+		tools = aiSyncHostTools(tools, aws, call) // the IDE follows, the files stay in the container
+	} else {
+		tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	}
 	tools = append(tools, aiIDETools(root, call)...)
 	// Group K2: settings, layout and IDE state.
 	tools = append(tools, aiSettingsTools(root, call)...)

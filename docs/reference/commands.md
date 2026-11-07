@@ -48,6 +48,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: MCP: Reset Tool Lists | `ai-mcp-reset-cache` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: MCP: Switch Profile… (servers and tools for this chat) | `ai-mcp-profile` |   |   |
+| AI: MCP: Signed-in Services… (one list, sign out) | `ai-mcp-accounts` |   |   |
 | AI: Memory: Turn On/Off | `ai-memory-toggle` |   |   |
 | AI: Memory… | `ai-memory` |   |   |
 | AI: Move MCP Call to Background (Ctrl+B in the chat) | `ai-mcp-background` |   |   |
@@ -633,12 +634,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| LSP: Choose Where the Language Server Runs… | `lsp-container-where` |   |   |
+| LSP: Clear Container Mirror… | `lsp-mirror-clear` |   |   |
 | LSP: Find All References | `find-references` | `Shift+F12` | `Shift+F12` |
 | LSP: Go to Implementation | `goto-impl` |   |   |
 | LSP: Go to Type Definition | `goto-type-def` | `Ctrl+F12` | `Ctrl+F12` |
 | LSP: Manage Language Servers... | `lsp-manage` |   |   |
+| LSP: Refresh Container Mirror | `lsp-mirror-refresh` |   |   |
 | LSP: Show Hover Documentation | `hover` |   |   |
 | LSP: Toggle Inlay Hints | `toggle-inlay-hints` | `Alt+L` | `Alt+L` |
+| LSP: Toggle Local Diagnostics in Container Workspace | `lsp-container-diagnostics` |   |   |
 
 ## Layout
 
@@ -820,6 +825,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Web: Copy Link | `web-copy-link` |   |   |
 | Web: Devices… | `web-devices` |   |   |
+| Web: Forward Port… | `web-forward-port` |   |   |
+| Web: Forwarded Ports… | `web-forwarded-ports` |   |   |
 | Web: Open in Browser | `web-start` |   |   |
 | Web: Pair a Device… | `web-pair` |   |   |
 | Web: Set Up Sign-in Code… | `web-totp` |   |   |

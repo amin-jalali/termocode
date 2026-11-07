@@ -45,6 +45,10 @@ type Model struct {
 	selected   map[string]struct{}
 	anchorPath string
 
+	// dropTarget is the folder row a drag in the tree would drop into
+	// (drop.go); "" when no drag is over a folder.
+	dropTarget string
+
 	// scroll animates the drawn window toward top (smooth wheel / page
 	// scrolling); see AnimStep.
 	scroll                   anim.Value

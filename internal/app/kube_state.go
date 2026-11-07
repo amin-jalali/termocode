@@ -75,6 +75,9 @@ type kubeState struct {
 	pendingRestart kubeRestartTarget // the restart card's deployment (kube_restart.go)
 	pendingScale   kubeScaleTarget   // the scale prompt's and card's deployment (kube_scale.go)
 	pendingDelete  kubeDeleteTarget  // the delete card's object (kube_delete.go)
+	revealSecret   string            // CTX-40: the secret whose key is being picked (kube_secret.go)
+	pendingReveal  kubeRevealTarget  // CTX-40: the reveal card's secret and key
+	revealedValue  string            // CTX-40: the value on screen; wiped when its card closes
 	pendingLogs    kubeLogsTarget    // the save-logs prompt's pod (kube_logs.go)
 	pendingUndo    kubeUndoTarget    // the rollback card's revision (kube_rollout.go)
 	pendingImage   kubeImageTarget   // the set image prompt's and card's change
@@ -454,6 +457,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeRestart(msg), true
 	case kubeDeleteMsg:
 		return m.onKubeDelete(msg), true
+	case kubeSecretValueMsg:
+		return m.onKubeSecretValue(msg), true
 	case kubeLogsSavedMsg:
 		return m.onKubeLogsSaved(msg), true
 	case kubeTopMsg:

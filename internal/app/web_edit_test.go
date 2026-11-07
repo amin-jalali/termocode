@@ -183,3 +183,51 @@ func TestEditReplayGolden(t *testing.T) {
 	}
 	webReplayGolden(t, webReplayPath(topic, "web_edit_undo_save"), c)
 }
+
+// Spec (G-COL): the laptop and the page edit at the same time. A page
+// edit on an older tick whose text the laptop did not touch is moved
+// over the laptop's edits and applied; it is no conflict any more.
+func TestSetTextRebasesOverADisjointLaptopEdit(t *testing.T) {
+	r, b := webEditRig(t, "one\ntwo\nthree\n")
+	r.lua(`local b = ... vim.api.nvim_buf_set_lines(b, 0, 0, false, { "zero" })`, nil, b.Buf)
+	r.lua(`local b = ... vim.api.nvim_buf_set_text(b, 3, 5, 3, 5, { "!" })`, nil, b.Buf)
+	f := webSetText(r, r.c, b.Buf, b.Tick, 1, 0, 1, 3, "TWO")
+	var res webproto.EditRes
+	webResData(t, f, &res)
+	if got := webBufLines(r, b.Buf); got != "zero|one|TWO|three!" {
+		t.Fatalf("rebased edit: %q", got)
+	}
+	if res.Tick <= b.Tick+1 || !res.Dirty {
+		t.Fatalf("result: %+v", res)
+	}
+}
+
+// Spec (G-COL): two inserts at one point both land; the page's text
+// comes after the laptop's.
+func TestSetTextRebaseTwoInsertsAtOnePoint(t *testing.T) {
+	r, b := webEditRig(t, "ab\n")
+	r.lua(`local b = ... vim.api.nvim_buf_set_text(b, 0, 1, 0, 1, { "L" })`, nil, b.Buf)
+	f := webSetText(r, r.c, b.Buf, b.Tick, 0, 1, 0, 1, "P")
+	if f["t"] != "res" || webBufLines(r, b.Buf) != "aLPb" {
+		t.Fatalf("two inserts: %v %q", f, webBufLines(r, b.Buf))
+	}
+}
+
+// Spec (G-COL): the rebase glue reads nvim's on_bytes rows and moves the
+// page's range; a row of the wrong size refuses the rebase.
+func TestWebRebaseSetText(t *testing.T) {
+	a := &webproto.SetTextArgs{Buf: 1, Tick: 4, Start: webproto.Pos{Row: 2, Col: 1}, End: webproto.Pos{Row: 2, Col: 3}, Lines: []string{"x"}}
+	got, ok := webRebaseSetText(a, 9, [][]int{{0, 0, 0, 0, 1, 0}})
+	if !ok || got.Tick != 9 || got.Start != (webproto.Pos{Row: 3, Col: 1}) || got.End != (webproto.Pos{Row: 3, Col: 3}) || got.Lines[0] != "x" {
+		t.Fatalf("rebase: %+v %v", got, ok)
+	}
+	if a.Tick != 4 || a.Start.Row != 2 {
+		t.Fatalf("the page's args changed: %+v", a)
+	}
+	if _, ok := webRebaseSetText(a, 9, [][]int{{0, 0, 0}}); ok {
+		t.Fatal("a short row must refuse the rebase")
+	}
+	if _, ok := webRebaseSetText(a, 9, [][]int{{2, 0, 0, 5, 0, 0}}); ok {
+		t.Fatal("an overlapping laptop edit must refuse the rebase")
+	}
+}

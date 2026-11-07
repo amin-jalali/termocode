@@ -130,6 +130,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIKeyEntered(value), true
 	case promptKindAgentNames: // agent_names.go
 		return m.onAgentNamesTask(value), true
+	case promptKindWebForwardTo: // web_forward.go
+		return m.onWebForwardPort(value), true
 	case promptKindWTBgTask: // worktrees_bgtask.go
 		return m.onWTBgTask(value), true
 	case promptKindBugspecTitle: // bugspec_ui.go
@@ -213,6 +215,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerMCPRemove(id), true
 	case confirmKindMCPUntrust: // ai_mcp_untrust.go
 		return m.answerMCPUntrust(id), true
+	case confirmKindMCPAccountSignOut: // mcp_accounts.go
+		return m.answerMCPAccountSignOut(id), true
 	case confirmKindMCPDisable:
 		return m.answerMCPDisable(id), true
 	case confirmKindMCPShareStop: // mcp_share.go
@@ -374,6 +378,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerMCPRemove("keep")
 	case confirmKindMCPUntrust:
 		return m.answerMCPUntrust("cancel")
+	case confirmKindMCPAccountSignOut:
+		return m.answerMCPAccountSignOut("cancel")
 	case confirmKindMCPDisable:
 		return m.answerMCPDisable("keep")
 	case confirmKindMCPShareStop:

@@ -90,6 +90,7 @@ func (r *remoteFiles) writeFile(p string, data []byte) (warn string, err error) 
 	if err := r.fs.WriteFile(ctx, p, data, 0o644); err != nil {
 		return "", err
 	}
+	noteMirrorWrite(p, data) // RC-6: the local server sees the save (container_lsp.go)
 	if asRoot && r.rootWarned.CompareAndSwap(false, true) {
 		warn = "New files in " + r.label + " are owned by root."
 	}

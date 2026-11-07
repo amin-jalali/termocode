@@ -333,6 +333,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "true: a planned run writes its plan to .termocode/plans/<slug>.md in the workspace: the steps with their tasks, the review rounds, the verify step's evidence and how the run ended (secrets hidden). The file shows as untracked in git unless you ignore it. false (the default): no file."},
 	{Key: "ai_step_stall_minutes", Type: "int", Default: "10", Category: "AI (file only)",
 		Description: "An agent step whose model sends nothing for this many minutes is stopped and started once more; a second stall fails the step. A running tool call (a build, a card that waits for you) is no stall. 0 turns it off; at most 120."},
+	{Key: "ai_team_mode", Type: "bool", Default: "false", Category: "AI (file only)",
+		Description: "true: agent steps that run at the same time (ai_parallel_max above 1) get team tools: team_send leaves a short note for another running step, team_claim / team_release / team_claims keep a shared list of claimed files or work, so two steps do not work on the same thing. A step's claims end with it. Notes that look like secrets are refused. Experimental; false (the default): off."},
 	{Key: "worktree_dir", Type: "string", Default: "\"\"", Category: "Git (file only)",
 		Description: "The folder Worktree: New… puts new worktrees in, one folder per branch. Empty: `<repo>.worktrees` next to the repository. `~` is your home folder; a relative path is relative to the repository. Read when the form opens."},
 	{Key: "ai_worktrees", Type: "enum", Default: "auto", Category: "AI (file only)", Choices: []string{"auto", "off"},

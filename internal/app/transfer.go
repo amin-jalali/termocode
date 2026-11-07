@@ -119,8 +119,11 @@ func xferSupport() transfer.Support {
 // xferRun is the running download.
 type xferRun struct {
 	name   string
+	method transfer.Method // Local copies go on across a re-attach
 	cancel context.CancelFunc
 	ch     chan tea.Msg
+	// dropped: stopped because the terminal it talked to went away.
+	dropped bool
 }
 
 // xferPending is a request waiting on a dialog.
@@ -262,6 +265,14 @@ func (m *Model) downloadPath(path string) tea.Cmd {
 	if path == "" {
 		return m.pushToastDetail(toast.Warn, "Nothing to download", "Pick a file or folder in the explorer.")
 	}
+	if h, _, ok := m.containerXfer(); ok { // transfer_container.go
+		return m.containerDownload(h, path)
+	}
+	return m.downloadLocal(path)
+}
+
+// downloadLocal is downloadPath for a path on this computer.
+func (m *Model) downloadLocal(path string) tea.Cmd {
 	if m.xfer != nil {
 		return m.pushToastDetail(toast.Warn, "A download is running", "Wait for it, or run File: Cancel Download.")
 	}
@@ -314,7 +325,7 @@ func (m *Model) startDownload(p xferPending) tea.Cmd {
 	if p.dir {
 		name += ".tar.gz"
 	}
-	run := &xferRun{name: name, cancel: cancel, ch: make(chan tea.Msg, 16)}
+	run := &xferRun{name: name, method: p.method, cancel: cancel, ch: make(chan tea.Msg, 16)}
 	m.xfer = run
 	crash.Go("the download", func() { runDownload(ctx, p, name, run.ch) })
 	detail := "iTerm2 saves it in your Downloads folder."
@@ -412,6 +423,9 @@ func (m *Model) uploadTo(dir string) tea.Cmd {
 	if dir == "" {
 		return nil
 	}
+	if h, fsys, ok := m.containerXfer(); ok { // transfer_container.go
+		return m.containerUpload(h, fsys, dir)
+	}
 	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
 		return m.pushToastDetail(toast.Warn, "Upload needs a folder", dir)
 	}
@@ -423,16 +437,21 @@ func (m *Model) uploadTo(dir string) tea.Cmd {
 	case transfer.Local:
 		return m.localUpload(dir)
 	case transfer.Kitty:
-		m.extras.xfer = xferPending{path: dir, upload: true, method: transfer.Kitty}
-		m.prompt = prompt.New("Upload with kitty", "File or folder on your computer:", "~/")
-		m.prompt.SetSize(m.w, m.h)
-		m.promptOpen = true
-		m.promptKind = promptKindUploadSource
-		return nil
+		return m.kittyUploadPrompt(dir)
 	case transfer.ITerm2:
 		return uploadExecCmd(transfer.ITerm2, "", dir)
 	}
 	return m.openXferFallback(xferPending{path: dir, upload: true}, sup.Terminal, sup.Why)
+}
+
+// kittyUploadPrompt asks which file kitty should send into dir.
+func (m *Model) kittyUploadPrompt(dir string) tea.Cmd {
+	m.extras.xfer = xferPending{path: dir, upload: true, method: transfer.Kitty}
+	m.prompt = prompt.New("Upload with kitty", "File or folder on your computer:", "~/")
+	m.prompt.SetSize(m.w, m.h)
+	m.promptOpen = true
+	m.promptKind = promptKindUploadSource
+	return nil
 }
 
 // onUploadSource is the kitty prompt's answer.
@@ -665,9 +684,24 @@ func (m *Model) cancelDownload() tea.Cmd {
 	return nil
 }
 
+// dropTerminalDownload stops a kitty or iTerm2 download when another
+// terminal attaches (SCN-27: the link dropped and came back). The new
+// terminal knows nothing of the transfer, so waiting would only end in a
+// timeout; the end message says the connection dropped.
+func (m *Model) dropTerminalDownload() {
+	if m.xfer == nil || (m.xfer.method != transfer.Kitty && m.xfer.method != transfer.ITerm2) {
+		return
+	}
+	m.xfer.dropped = true
+	m.xfer.cancel()
+}
+
 // handleXferMsg handles the transfer messages.
 func (m *Model) handleXferMsg(msg tea.Msg) (tea.Cmd, bool) {
 	var c tea.Cmd
+	if c, ok := m.handleCtrXferMsg(msg); ok {
+		return c, true
+	}
 	switch msg := msg.(type) {
 	case xferProgressMsg:
 		if m.xfer == nil {
@@ -682,9 +716,14 @@ func (m *Model) handleXferMsg(msg tea.Msg) (tea.Cmd, bool) {
 			humanBytes(msg.done)+" of "+humanBytes(msg.total))
 		return tea.Batch(c, waitXfer(m.xfer.ch)), true
 	case xferDoneMsg:
+		dropped := m.xfer != nil && m.xfer.dropped
 		m.xfer = nil
+		m.dropCtrDownloadStage() // transfer_container.go
 		m.toast = m.toast.Dismiss(xferToastKey)
 		switch {
+		case dropped:
+			m.toast, c = m.toast.PushDetail(toast.Warn, "Download stopped: the connection dropped",
+				"Run File: Download to This Computer again for "+msg.name+".")
 		case errors.Is(msg.err, transfer.ErrCanceled), errors.Is(msg.err, context.Canceled):
 			m.toast, c = m.toast.Push(toast.Info, "Download canceled")
 		case msg.err != nil:
@@ -714,6 +753,9 @@ func (m *Model) handleXferMsg(msg tea.Msg) (tea.Cmd, bool) {
 		}
 		return localUploadCmd(msg.dir, msg.paths), true
 	case xferUploadDoneMsg:
+		if c, ok := m.onCtrUploadStaged(msg); ok { // transfer_container.go
+			return c, true
+		}
 		m.explorer.Reload()
 		switch {
 		case errors.Is(msg.err, transfer.ErrCanceled), errors.Is(msg.err, context.Canceled):
