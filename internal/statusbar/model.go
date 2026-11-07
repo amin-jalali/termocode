@@ -178,6 +178,18 @@ type barLayout struct {
 	aiStart, aiW           int                  // Group A: AI badge offset inside right (aiW 0 = none)
 	spans                  map[rightItem][2]int // offset, width of each right item shown
 	debug                  bool                 // the DEBUG badge is shown (last in right)
+	compact                bool                 // AH-9: center is only the short agents chip
+}
+
+// fullCenter: the whole centre cluster is on show (not dropped, not just
+// the short agents chip), so the centre chips' spans can be measured.
+func (l barLayout) fullCenter() bool { return l.centerW > 0 && !l.compact }
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // Drop order when the bar is too narrow (VSCode-like status-item
@@ -237,9 +249,16 @@ func (m Model) layout(s State) barLayout {
 		drop[it] = true
 		render()
 	}
+	// AH-9: no room for the centre: the short agents chip ("⇄ 2") takes
+	// its place, so the ⇄ glyph shows at any width.
+	if l.centerW == 0 && s.Err == "" {
+		if short := renderAgentsChipShort(s); short != "" {
+			l.center, l.centerW, l.compact = short, lipgloss.Width(short), true
+		}
+	}
 	// Still too wide: shorten the left (project) cluster.
-	if l.leftW+l.rightW+minClusterGap > innerW {
-		avail := innerW - l.rightW - minClusterGap
+	if extra := l.centerW + boolInt(l.compact)*minClusterGap; l.leftW+l.rightW+minClusterGap+extra > innerW {
+		avail := innerW - l.rightW - minClusterGap - extra
 		if avail < 0 {
 			avail = 0
 		}
@@ -253,6 +272,9 @@ func (m Model) layout(s State) barLayout {
 		}
 		drop[it] = true
 		render()
+	}
+	if l.compact && need() > innerW { // a bar too small even for "⇄"
+		l.center, l.centerW, l.compact = "", 0, false
 	}
 
 	l.debug = s.Debug && !drop[itemDebug]
@@ -314,7 +336,7 @@ func (m Model) DiagSpan(s State) (x0, x1 int, ok bool) {
 		return 0, 0, false
 	}
 	l := m.layout(s)
-	if l.centerW == 0 {
+	if !l.fullCenter() {
 		return 0, 0, false
 	}
 	_, start, w := m.renderCenterDiag(s)
@@ -710,7 +732,7 @@ func (m Model) ItemSpans(s State) []ItemSpan {
 	}
 	l := m.layout(s)
 	var out []ItemSpan
-	if l.centerW > 0 && s.Err == "" && s.Branch != "" {
+	if l.fullCenter() && s.Err == "" && s.Branch != "" {
 		// The branch is always the first part of the center cluster.
 		cx := 1 + l.leftW + l.gapL
 		w := lipgloss.Width(branchText(s))
@@ -798,7 +820,7 @@ func (m Model) TestsChipSpan(s State) (x0, x1 int, ok bool) {
 		return 0, 0, false
 	}
 	l := m.layout(s)
-	if l.centerW == 0 {
+	if !l.fullCenter() {
 		return 0, 0, false
 	}
 	cw := lipgloss.Width(chip)
@@ -822,14 +844,33 @@ func renderAgentsChip(s State) string {
 	return barFg(theme.TextSecondary).Render(fmt.Sprintf("%s %d %s", theme.GlyphAgents.String(), s.Agents, noun))
 }
 
+// renderAgentsChipShort is the agents chip for a bar with no room for the
+// centre: "⇄ 2" with agents, a dim "⇄" while the server listens, else
+// nothing (AH-9).
+func renderAgentsChipShort(s State) string {
+	g := theme.GlyphAgents.String()
+	if s.Agents <= 0 {
+		if !s.AgentsReady {
+			return ""
+		}
+		return barFg(theme.TextDim).Render(g)
+	}
+	return barFg(theme.TextSecondary).Render(fmt.Sprintf("%s %d", g, s.Agents))
+}
+
 // AgentsChipSpan returns the [x0, x1) cell range of the agents chip: it
-// sits right before the services, database and test chips.
+// sits right before the services, database and test chips, or alone in
+// the centre's place on a narrow bar.
 func (m Model) AgentsChipSpan(s State) (x0, x1 int, ok bool) {
 	chip := renderAgentsChip(s)
 	if m.w <= 0 || chip == "" || s.Err != "" {
 		return 0, 0, false
 	}
 	l := m.layout(s)
+	if l.compact {
+		x0 = 1 + l.leftW + l.gapL
+		return x0, x0 + l.centerW, true
+	}
 	if l.centerW == 0 {
 		return 0, 0, false
 	}
@@ -867,7 +908,7 @@ func (m Model) WebChipSpan(s State) (x0, x1 int, ok bool) {
 		return 0, 0, false
 	}
 	l := m.layout(s)
-	if l.centerW == 0 {
+	if !l.fullCenter() {
 		return 0, 0, false
 	}
 	end := 1 + l.leftW + l.gapL + l.centerW
@@ -914,7 +955,7 @@ func (m Model) CIChipSpan(s State) (x0, x1 int, ok bool) {
 		return 0, 0, false
 	}
 	l := m.layout(s)
-	if l.centerW == 0 {
+	if !l.fullCenter() {
 		return 0, 0, false
 	}
 	x0 = 1 + l.leftW + l.gapL
@@ -948,7 +989,7 @@ func (m Model) ServicesChipSpan(s State) (x0, x1 int, ok bool) {
 		return 0, 0, false
 	}
 	l := m.layout(s)
-	if l.centerW == 0 {
+	if !l.fullCenter() {
 		return 0, 0, false
 	}
 	end := 1 + l.leftW + l.gapL + l.centerW
