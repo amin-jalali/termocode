@@ -133,7 +133,7 @@ func (m *Model) onPRDone(msg prDoneMsg) tea.Cmd {
 	cmds := []tea.Cmd{m.prInfo(msg.ok, msg.detail)}
 	if msg.refresh {
 		if m.nvim != nil {
-			_ = m.nvim.Command("silent! checktime")
+			m.nvimCheckTimeAll()
 		}
 		cmds = append(cmds, fetchGitCmd())
 	}

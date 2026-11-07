@@ -11,17 +11,28 @@ package app
 //     modified ones keep the user's edits and get a warning toast.
 //   - FileChangedShellPost records the reloaded path so the Go side can
 //     toast "Reloaded <file>".
-//   - A timer runs :checktime every 2 s. nvim checks files only on focus,
+//   - _G._termocode_checktime_all checks every loaded file buffer one by
+//     one. A plain :checktime looks only at buffers shown in a window and
+//     waits while an RPC call runs, so the other tabs kept the old text
+//     after a branch switch or Replace in Workspace.
+//   - A timer runs it every 2 s. nvim checks files only on focus,
 //     buffer enter and idle after a key, and termocode gets no focus
 //     events, so an idle file stayed stale after a pull in another
 //     terminal; the user's next key then edited the old text, which a
 //     save wrote over the new one.
 const fileReloadLua = `
+_G._termocode_checktime_all = function()
+	for _, b in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == '' and vim.api.nvim_buf_get_name(b) ~= '' then
+			pcall(vim.cmd, 'silent! checktime ' .. b)
+		end
+	end
+end
 if _G._termocode_reload_timer then _G._termocode_reload_timer:stop() end
 _G._termocode_reload_timer = (vim.uv or vim.loop).new_timer()
 _G._termocode_reload_timer:start(2000, 2000, vim.schedule_wrap(function()
 	if vim.fn.getcmdwintype() == '' and vim.fn.mode() ~= 'c' then
-		pcall(vim.cmd, 'silent! checktime')
+		_G._termocode_checktime_all()
 	end
 end))
 vim.g.termocode_last_reload = ''
@@ -75,3 +86,16 @@ vim.api.nvim_create_autocmd('FileChangedShellPost', {
 	end,
 })
 `
+
+// checkTimeAllLua reloads every open file that changed on disk (see
+// _G._termocode_checktime_all above; a plain :checktime before the
+// handlers are in).
+const checkTimeAllLua = `if _G._termocode_checktime_all then _G._termocode_checktime_all() else pcall(vim.cmd, 'silent! checktime') end`
+
+// nvimCheckTimeAll reloads the open files a git op, a replace or another
+// program changed on disk, the hidden tabs too.
+func (m *Model) nvimCheckTimeAll() {
+	if m.nvim != nil {
+		_ = m.nvim.ExecLua(checkTimeAllLua)
+	}
+}

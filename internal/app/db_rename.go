@@ -323,7 +323,7 @@ func (m *Model) databaseRenameApply(id string) tea.Cmd {
 		places += f.count
 		files++
 	}
-	_ = m.nvim.ExecLua(`pcall(vim.cmd,'checktime')`)
+	m.nvimCheckTimeAll()
 	msg := fmt.Sprintf("Renamed %s to %s in %d places (%d files)", sanitizeDBText(r.old), sanitizeDBText(r.new), places, files)
 	if len(skipped)+len(failed) > 0 {
 		var detail []string

@@ -176,7 +176,7 @@ func (m *Model) applyReplaceInWorkspace() tea.Cmd {
 		}
 	}
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	var toastCmd tea.Cmd
 	switch {

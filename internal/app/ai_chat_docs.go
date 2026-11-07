@@ -238,7 +238,7 @@ func (m *Model) chatDocRestoreAsk(st chatdocs.Store, name string, n int) {
 			return m.pushToastDetail(toast.Warn, "Not restored", err.Error())
 		}
 		if m.nvim != nil {
-			_ = m.nvim.Command("silent! checktime")
+			m.nvimCheckTimeAll()
 		}
 		return m.pushToastDetail(toast.Info, "Restored "+name, "It is revision "+strconv.Itoa(rev)+" now.")
 	}, confirm.Button{ID: "restore", Title: "Restore"})

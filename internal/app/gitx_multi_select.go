@@ -270,7 +270,7 @@ func (m *Model) gitDiscardPaths(paths []string) tea.Cmd {
 		m.toast, c = m.toast.PushDetail(toast.Info, fmt.Sprintf("Discarded %d file%s", len(paths), plural(len(paths))), "safety copy: stash@{0}")
 	}
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(fetchGitCmd(), c)
 }

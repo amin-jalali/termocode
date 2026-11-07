@@ -152,7 +152,7 @@ func (m *Model) gitPeekDone(err error, verb, rel string, reload bool) tea.Cmd {
 		return c
 	}
 	if reload && m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	m.toast, c = m.toast.PushDetail(toast.Info, verb, filepath.Base(rel))
 	return tea.Batch(fetchGitCmd(), c)

@@ -247,7 +247,7 @@ func (m *Model) gitHunkOp(kind gitHunkKind) tea.Cmd {
 	// buffer + signs reflect the revert. Stage/unstage only touch the index,
 	// which the HEAD-relative editor signs don't show, so no reload is needed.
 	if kind == gitHunkDiscard && m.nvim != nil {
-		_ = m.nvim.Command("checktime")
+		m.nvimCheckTimeAll()
 	}
 	m.toast, toastCmd = m.toast.PushDetail(toast.Info, verb, filepath.Base(rel))
 	return tea.Batch(fetchGitCmd(), toastCmd)
@@ -679,7 +679,7 @@ func (m *Model) gitDiscardConfirmed() tea.Cmd {
 	// Buffer that file may now be stale on disk — nudge nvim to checktime so
 	// the editor picks up the reverted contents (autoread is on).
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
 }
@@ -826,7 +826,7 @@ func (m *Model) gitRemoteDone(msg gitRemoteDoneMsg) tea.Cmd {
 	// A pull (even a failed one: it may stop half-way in a merge) can
 	// rewrite files on disk — nudge nvim to reload them.
 	if msg.reload && m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
 }
@@ -1181,7 +1181,7 @@ func (m *Model) gitCheckoutSelected(id string) tea.Cmd {
 	default:
 		m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Switched to", branch)
 		if m.nvim != nil {
-			_ = m.nvim.Command("silent! checktime")
+			m.nvimCheckTimeAll()
 		}
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
@@ -1202,7 +1202,7 @@ func (m *Model) openStashAndSwitchCard(cwd, branch string) {
 				return tea.Batch(fetchGitCmd(), c)
 			}
 			if m.nvim != nil {
-				_ = m.nvim.Command("silent! checktime")
+				m.nvimCheckTimeAll()
 			}
 			m.toast, c = m.toast.PushDetail(toast.Info, "Switched to "+branch, "Your changes are in the stash")
 			return tea.Batch(fetchGitCmd(), c)
@@ -1251,7 +1251,7 @@ func (m *Model) gitStash() tea.Cmd {
 	} else {
 		m.toast, toastCmd = m.toast.Push(toast.Info, "Stashed changes")
 		if m.nvim != nil {
-			_ = m.nvim.Command("silent! checktime")
+			m.nvimCheckTimeAll()
 		}
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
@@ -1275,7 +1275,7 @@ func (m *Model) gitStashPop() tea.Cmd {
 	} else {
 		m.toast, toastCmd = m.toast.Push(toast.Info, "Popped latest stash")
 		if m.nvim != nil {
-			_ = m.nvim.Command("silent! checktime")
+			m.nvimCheckTimeAll()
 		}
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
@@ -1336,7 +1336,7 @@ func (m *Model) applyStashSelected(ref string) tea.Cmd {
 	} else {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Applied", ref)
 		if m.nvim != nil {
-			_ = m.nvim.Command("silent! checktime")
+			m.nvimCheckTimeAll()
 		}
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
@@ -1469,7 +1469,7 @@ func (m *Model) checkoutTagSelected(id string) tea.Cmd {
 	} else {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Checked out tag (detached HEAD)", tag)
 		if m.nvim != nil {
-			_ = m.nvim.Command("silent! checktime")
+			m.nvimCheckTimeAll()
 		}
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)

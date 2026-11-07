@@ -171,7 +171,7 @@ func (m *Model) handleGitAIPromptSubmit(value string) (tea.Cmd, bool) {
 	}
 	m.toast, c = m.toast.PushDetail(toast.Info, "Stashed changes", strings.TrimSpace(value))
 	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
+		m.nvimCheckTimeAll()
 	}
 	return tea.Batch(fetchGitCmd(), c), true
 }
