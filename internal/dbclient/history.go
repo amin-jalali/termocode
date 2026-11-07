@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -113,4 +114,29 @@ func (h *History) write(a []HistoryEntry) error {
 		return e
 	}
 	return os.Rename(tmp, h.Path)
+}
+
+// Find is the history of connection conn ("" = every connection) whose
+// SQL holds every word of query (any case), newest first (DBX-6).
+func (h *History) Find(conn, query string) ([]HistoryEntry, error) {
+	all, err := h.List()
+	words := strings.Fields(strings.ToLower(query))
+	out := all[:0]
+	for _, e := range all {
+		if conn != "" && e.Conn != conn {
+			continue
+		}
+		low := strings.ToLower(e.SQL)
+		ok := true
+		for _, w := range words {
+			if !strings.Contains(low, w) {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			out = append(out, e)
+		}
+	}
+	return out, err
 }
