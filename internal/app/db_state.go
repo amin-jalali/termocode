@@ -152,6 +152,13 @@ type dbState struct {
 	docGen              uint64                 // the open quick doc card; late answers for older ones drop
 	docTitle            string                 // the tree doc card the first rows join
 	docBody             []string
+
+	// Several sessions per connection (db_sessions_multi.go, DBX-40).
+	consoleSess  map[string]string // .sql file -> the extra session it runs on
+	sessionSeq   map[string]int    // connection -> the last extra session number given
+	sessPickFile string            // the console the session picker is for
+	sessPickConn string
+	tempHinted   map[string]bool // session key -> the temp-table hint was shown
 }
 
 type dbRenderCache struct {

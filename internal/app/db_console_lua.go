@@ -428,6 +428,9 @@ func (m *Model) databaseBufferLens(buf int) {
 			label += " " + k
 		}
 		label += " · " + id
+		if key := m.databases.consoleSessionKey(file, id); key != "" {
+			label += " " + dbConsoleSessionName(key) // its own session (DBX-40)
+		}
 		text := strings.Join(lines, "\n")
 		spans := dbStatementSpans(text, c.Driver)
 		inline = s.dbInlineMarks(file, text, spans)

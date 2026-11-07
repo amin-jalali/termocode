@@ -119,6 +119,9 @@ func (m *Model) databaseCompareStart() tea.Cmd {
 		}
 		sort.Strings(keys)
 		for _, key := range keys {
+			if dbIsExtraSession(key) {
+				continue // a console's own session: the main one stands for it (DBX-40)
+			}
 			conn := key
 			if n, ok := s.nodes[key]; ok && n.conn != "" {
 				conn = n.conn

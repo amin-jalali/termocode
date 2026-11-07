@@ -2066,6 +2066,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
 | `db-copy-table-data` | Databases: Copy Table Data to Another Connection… | never | copying rows into another table is a write the user confirms (db_query) |
 | `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-console-session` | Databases: Console Session… | never | the user's sessions and transactions |
 | `db-count-rows` | Databases: Count Rows | never | Table rows are read with the database tools |
 | `db-data` | Databases: Open Table Data | never | Table rows are read with the database tools |
 | `db-ddl` | Databases: Show DDL | auto |   |
