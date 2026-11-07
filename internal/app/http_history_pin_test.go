@@ -60,7 +60,7 @@ func TestHTTPHistoryPickerGroupsByDay(t *testing.T) {
 }
 
 // Ctrl+T pins the row: it moves to a Pinned group on top and keeps the
-// cursor; Ctrl+T again unpins.
+// cursor; Ctrl+T again unpins. Group labels are drawn in capitals.
 func TestHTTPHistoryPickerPin(t *testing.T) {
 	m, es := httpHistoryPinModel(t)
 	old := es[0]
@@ -79,7 +79,7 @@ func TestHTTPHistoryPickerPin(t *testing.T) {
 		t.Fatalf("cursor moved to %+v", it)
 	}
 	view := ansi.Strip(m.picker.View())
-	pin, today := strings.Index(view, "Pinned"), strings.Index(view, "Today")
+	pin, today := strings.Index(view, "PINNED"), strings.Index(view, "TODAY")
 	if pin < 0 || today < 0 || pin > today || strings.Index(view, "/old") > today {
 		t.Fatalf("pinned group must come first with the old row:\n%s", view)
 	}
@@ -87,7 +87,7 @@ func TestHTTPHistoryPickerPin(t *testing.T) {
 	if e, _ := httpHistoryStore().Get(old.ID); e.Pinned {
 		t.Fatal("second ctrl+t must unpin")
 	}
-	if strings.Contains(ansi.Strip(m.picker.View()), "Pinned") {
+	if strings.Contains(ansi.Strip(m.picker.View()), "PINNED") {
 		t.Fatal("empty Pinned group still shown")
 	}
 }
