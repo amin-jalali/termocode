@@ -310,6 +310,15 @@
       "deltas": [
         "WorktreesSnap"
       ]
+    },
+    {
+      "name": "inbox",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "InboxSnap",
+      "deltas": [
+        "InboxSnap"
+      ]
     }
   ],
   "events": {
@@ -9895,6 +9904,112 @@
         "tag"
       ],
       "additionalProperties": false
+    },
+    "InboxCounts": {
+      "type": "object",
+      "properties": {
+        "done": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "needs_you": {
+          "type": "integer"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "needs_you",
+        "working",
+        "failed",
+        "done"
+      ],
+      "additionalProperties": true
+    },
+    "InboxItem": {
+      "type": "object",
+      "properties": {
+        "can": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "chat": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "card",
+            "run",
+            "lane",
+            "workflow",
+            "task",
+            "ci",
+            "race"
+          ]
+        },
+        "lane": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "since": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "needs_you",
+            "working",
+            "failed",
+            "done"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "ref",
+        "title",
+        "since",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "InboxSnap": {
+      "type": "object",
+      "properties": {
+        "counts": {
+          "$ref": "#/defs/InboxCounts"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/InboxItem"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "counts"
+      ],
+      "additionalProperties": true
     },
     "InspectArgs": {
       "type": "object",
