@@ -26,6 +26,11 @@ sleeps:
   toast after the reconnect tells you so.
 - When the server answers again you see the **same** editor, fully
   redrawn, and a toast like **Reconnected after 12 s**.
+- Work on the server goes on while you are offline: a container log tab
+  keeps the lines written meanwhile, and a running SQL query shows its
+  result when you are back. A download through the terminal (kitty or
+  iTerm2) can not go on: it stops, and a toast says
+  **Download stopped: the connection dropped**. Run it again.
 
 A dead link is found fast: termocode checks the link every 5 s and gives it
 up after 15 s of silence. After the laptop wakes up it checks at once and
@@ -175,7 +180,8 @@ the terminal that attached last decides.
 
 The file goes through the terminal. A folder comes as one `.tar.gz`.
 A download runs in the background, with a progress toast. Stop it with
-**File: Cancel Download**. A file over 50 MB asks first.
+**File: Cancel Download**. A file over 50 MB asks first. If the link
+drops, the download stops; run it again after the reconnect.
 
 | Terminal | Download | Upload |
 | --- | --- | --- |

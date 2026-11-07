@@ -124,7 +124,7 @@ func tildePath(p string) string {
 func (m *Model) startLocalDownload(path string, size int64) tea.Cmd {
 	ctx, cancel := context.WithCancel(context.Background())
 	name := filepath.Base(path)
-	run := &xferRun{name: name, cancel: cancel, ch: make(chan tea.Msg, 16)}
+	run := &xferRun{name: name, method: transfer.Local, cancel: cancel, ch: make(chan tea.Msg, 16)}
 	m.xfer = run
 	crash.Go("the download", func() {
 		var last time.Time
