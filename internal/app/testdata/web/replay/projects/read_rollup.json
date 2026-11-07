@@ -1,0 +1,134 @@
+{
+  "topic": "projects",
+  "snap0": {
+    "projects": [
+      {
+        "id": "bb40879b7896",
+        "name": "app",
+        "state": "here",
+        "where": "~/src/app"
+      }
+    ],
+    "state": "loading"
+  },
+  "deltas": [
+    {
+      "projects": [
+        {
+          "id": "bb40879b7896",
+          "name": "app",
+          "opened_at": 1700000000000,
+          "recent": true,
+          "state": "here",
+          "where": "~/src/app"
+        },
+        {
+          "id": "85c426b072ad",
+          "name": "api",
+          "opened_at": 1710000000000,
+          "recent": true,
+          "service": true,
+          "state": "running",
+          "where": "~/src/api",
+          "working": 1
+        },
+        {
+          "id": "1b90dbd2d3bc",
+          "name": "web",
+          "state": "running",
+          "where": "web"
+        },
+        {
+          "id": "3f34b27d8967",
+          "name": "notes",
+          "opened_at": 1690000000000,
+          "recent": true,
+          "state": "asleep",
+          "where": "notes"
+        }
+      ],
+      "state": "ready",
+      "working": 1
+    },
+    {
+      "projects": [
+        {
+          "id": "bb40879b7896",
+          "name": "app",
+          "opened_at": 1700000000000,
+          "recent": true,
+          "state": "here",
+          "where": "~/src/app"
+        },
+        {
+          "id": "85c426b072ad",
+          "name": "api",
+          "opened_at": 1710000000000,
+          "recent": true,
+          "service": true,
+          "state": "running",
+          "waiting": 1,
+          "where": "~/src/api",
+          "working": 1
+        },
+        {
+          "id": "1b90dbd2d3bc",
+          "name": "web",
+          "state": "running",
+          "where": "web"
+        },
+        {
+          "id": "3f34b27d8967",
+          "name": "notes",
+          "opened_at": 1690000000000,
+          "recent": true,
+          "state": "asleep",
+          "where": "notes"
+        }
+      ],
+      "state": "ready",
+      "waiting": 1,
+      "working": 1
+    }
+  ],
+  "snapn": {
+    "state": "ready",
+    "projects": [
+      {
+        "id": "bb40879b7896",
+        "name": "app",
+        "where": "~/src/app",
+        "state": "here",
+        "recent": true,
+        "opened_at": 1700000000000
+      },
+      {
+        "id": "85c426b072ad",
+        "name": "api",
+        "where": "~/src/api",
+        "state": "running",
+        "service": true,
+        "recent": true,
+        "working": 1,
+        "waiting": 1,
+        "opened_at": 1710000000000
+      },
+      {
+        "id": "1b90dbd2d3bc",
+        "name": "web",
+        "where": "web",
+        "state": "running"
+      },
+      {
+        "id": "3f34b27d8967",
+        "name": "notes",
+        "where": "notes",
+        "state": "asleep",
+        "recent": true,
+        "opened_at": 1690000000000
+      }
+    ],
+    "working": 1,
+    "waiting": 1
+  }
+}
