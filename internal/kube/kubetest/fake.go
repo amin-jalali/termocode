@@ -25,6 +25,8 @@
 //	logs.txt             answer of `logs …`
 //	pf-port.txt          the local port `port-forward` reports (43123)
 //	pf.err               `port-forward` fails with this stderr
+//	top-<what>.txt       answer of `top <what>` (pods, nodes)
+//	top-<what>.err       `top <what>` fails with this stderr (exit 1)
 //
 // Written by the script: argv.log (one call per line), env.log
 // (KUBECONFIG of each call, "|", then its argv), pf.pid (the pid of a
@@ -87,6 +89,9 @@ set)
   if [ -f "$D/set-image.err" ]; then cat "$D/set-image.err" >&2; exit 1; fi
   echo "$3 image updated"; exit 0 ;;
 logs) cat "$D/logs.txt" 2>/dev/null; exit 0 ;;
+top)
+  if [ -f "$D/top-$2.err" ]; then cat "$D/top-$2.err" >&2; exit 1; fi
+  cat "$D/top-$2.txt" 2>/dev/null; exit 0 ;;
 port-forward)
   if [ -f "$D/pf.err" ]; then cat "$D/pf.err" >&2; exit 1; fi
   echo $$ > "$D/pf.pid"
