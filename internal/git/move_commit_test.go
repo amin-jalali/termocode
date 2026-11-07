@@ -49,7 +49,8 @@ func TestMoveLastCommitToExistingBranch(t *testing.T) {
 	r.git(t, "checkout", "-q", "main")
 	r.write(t, "b.txt", "b\n")
 	r.git(t, "add", "b.txt")
-	r.git(t, "-c", "user.name=Ann", "-c", "user.email=ann@example.com", "commit", "-q", "-m", "feat: b\n\nbody line")
+	// --author: TestMain's GIT_AUTHOR_* env wins over -c user.name.
+	r.git(t, "commit", "-q", "--author=Ann <ann@example.com>", "-m", "feat: b\n\nbody line")
 	in, _ := LastCommitForMove(r.dir)
 	if err := MoveLastCommit(r.dir, in.Hash, "other", false, false); err != nil {
 		t.Fatal(err)
