@@ -274,6 +274,7 @@ them on.
 | `agent_auto_continue` | termocode types `continue` into an agent tab once its usage limit resets. | `false` |
 | `agent_hibernate_minutes` | termocode stops an idle agent and starts it again when you come back. | `0` (off) |
 | `agent_accounts` | Named accounts of Claude Code and Codex, each in its own folder. Labels only. | `{}` |
+| `agent_profiles` | Launch profiles: model, mode and env per agent. No secrets. | `{}` |
 
 termocode never writes into `~/.claude` or `~/.codex` for these features,
 and it never calls a vendor's usage service.
@@ -374,6 +375,31 @@ sign-in files and never copies or swaps them. Your default
 `~/.claude` and `~/.codex` stay as they are. Agents without such a
 variable (Gemini CLI, OpenCode, …) have no accounts. The account folders
 are hidden in bug reports.
+
+## Profiles
+
+**Agent: Profiles…** saves named ways to start an agent, like `review`
+(plan mode) or `fast` (a smaller model):
+
+- **Add a … profile…** asks for a name, then the **mode**, the **model**
+  and extra **env** variables (`NAME=value`, space between). Blank keeps
+  the CLI's default.
+- The modes are the CLI's own flags. Claude Code: plan, accept edits, no
+  permission checks. Codex: plan (read-only sandbox), edit the
+  workspace, no sandbox. Gemini CLI and Qwen Code: accept edits, yolo.
+  Aider: yes to every question. OpenCode has the model only.
+- A card shows the whole launch line before you save (**Cancel** first).
+- **Agent: Start…** shows `profile review` rows under the agent. A safe
+  mode starts at once. A mode without permission checks shows its card
+  (**Cancel** first) at every start.
+- In **Agent: Profiles…**, `Enter` on a profile shows its line, with
+  **Start** and **Delete**.
+
+termocode never edits the agents' own config files for this. Variables
+that look like secrets (`…_KEY`, `…_TOKEN`, `PASSWORD`, …) are refused:
+keep keys in **AI: Secret Store…**. Variables that change which programs
+run (`PATH`, `LD_*`) are refused too. A hibernated tab wakes with the
+same profile.
 
 ## Hibernate idle agents
 

@@ -96,6 +96,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex) | `ai-agent-packs` |   |   |
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
+| Agent: Profiles… | `agent-profiles` |   | `model, plan mode, permissions, env` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |

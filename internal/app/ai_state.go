@@ -123,7 +123,11 @@ type aiState struct {
 	agentPickPending string
 	// agentAccountPending is the sign-in line of the open account card (agent_accounts.go).
 	agentAccountPending string
-	shipGen             int
+	// agentProfileDraft is the profile being added, agentProfileOpen the
+	// one whose card is open (agent_profiles.go, CMP-21).
+	agentProfileDraft *agentProfileRef
+	agentProfileOpen  *agentProfileRef
+	shipGen           int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the

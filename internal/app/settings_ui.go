@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/cfgfile"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/prompt"
@@ -92,6 +93,9 @@ type settingsConfig struct {
 	// AgentAccounts: agent id → account labels (agent_accounts.go,
 	// AGX-13). Labels only; each has its own config folder. File only.
 	AgentAccounts map[string][]string `json:"agent_accounts,omitempty"`
+	// AgentProfiles: agent id → launch profiles (model, mode, env;
+	// agent_profiles.go, CMP-21). File only.
+	AgentProfiles map[string][]agents.LaunchProfile `json:"agent_profiles,omitempty"`
 	// AgentHibernateMinutes: stop a Claude Code / Codex tab idle this
 	// long, resume it on return (agent_hibernate.go, AGX-15). 0 / unset
 	// = off. File only.

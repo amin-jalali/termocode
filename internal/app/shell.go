@@ -122,6 +122,9 @@ type terminalTab struct {
 	// Account is the agent account label the tab runs as ("" = the
 	// CLI's own default folder; agent_accounts.go, AGX-13).
 	Account string
+	// Profile is the launch profile the tab was started with ("" = none;
+	// agent_profiles.go, CMP-21).
+	Profile string
 
 	// Splits are the panes after the first (terminal_pane.go); BufID is
 	// pane 0. PaneFocus is the focused pane (0 = BufID).
