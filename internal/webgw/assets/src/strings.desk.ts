@@ -124,6 +124,7 @@ export const SD = {
   "cmd.scm": "View: Show Git",
   "cmd.search": "Search: Find in Files",
   "cmd.tasks": "Tasks: Show Tasks",
+  "cmd.new_task": "Worktrees: New Task",
   "cmd.runs": "Runs: Show Runs",
   "cmd.settings": "Preferences: Open Settings",
   "cmd.terminal": "Terminal: Show Terminal",
