@@ -116,6 +116,9 @@ func (m *Model) databaseInspectBuffer(buf int, lines []string, c *dbclient.Conn)
 	diags := []map[string]any{}
 	if c != nil {
 		diags = dbInspectDiagnostics(strings.Join(lines, "\n"), c.Driver, m.databases.inspectSchema(c.ID))
+		if loadDBConsoleSettings().syntaxOff(c.Driver) { // db_sql_syntax_off (DBX-41)
+			diags = dbDropSyntaxDiags(diags)
+		}
 	}
 	_ = m.nvim.ExecLuaArgs(`local b,d=...;if vim.api.nvim_buf_is_valid(b) then vim.diagnostic.set(vim.api.nvim_create_namespace('termocode_sql_inspect'),b,d) end`, buf, diags)
 }

@@ -575,6 +575,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-run-to-file":                    aiNever(aiNoPicker + " (db_query + write_file)"),
 	"db-sql-outline":                    aiNever("moves the user's cursor; the AI reads files with its own tools"),
 	"db-switch-connection":              aiNever(aiNoAIConfig),
+	"db-sql-folder-dialect":             aiNever(aiNoPicker),
+	"db-highlight-usages":               aiAuto(),
+	"db-embedded-sql":                   aiNever("moves the user's cursor; the AI reads files with its own tools"),
 	"db-savepoint":                      aiNever("the user's sessions and transactions"),
 	"db-rollback-savepoint":             aiNever("the user's sessions and transactions"),
 	"db-open-csv":                       aiNever("the user picks the file; the AI reads files with its own tools"),
@@ -913,6 +916,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"db_csv_header":        aiConfirm(ai.ClassSettings),
 	"db_csv_null":          aiConfirm(ai.ClassSettings),
 	"db_export_mask":       aiNever(aiNoAIConfig), // the AI never unmasks data
+	"db_sql_syntax_off":    aiNever(aiNoAIConfig), // the AI never silences the user's SQL checks
 	"http_timeout":         aiConfirm(ai.ClassSettings),
 	"http_max_redirects":   aiConfirm(ai.ClassSettings),
 	"http_cookie_jar":      aiConfirm(ai.ClassSettings),

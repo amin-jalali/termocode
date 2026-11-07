@@ -2072,6 +2072,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
+| `db-embedded-sql` | Databases: Go to SQL in Strings… | never | moves the user's cursor; the AI reads files with its own tools |
 | `db-edit-source` | Databases: Edit Object Source | auto |   |
 | `db-end-session` | Databases: End Session… | never | ends another session and rolls back its transaction; only the user can choose it |
 | `db-er-diagram` | Databases: Export ER Diagram… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2087,6 +2088,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-generate-data` | Databases: Generate Test Data… | never | it writes a script of rows the user reviews and runs |
 | `db-goto-definition` | Databases: Go to Definition | auto |   |
 | `db-guide` | Databases: Open Guide | auto |   |
+| `db-highlight-usages` | Databases: Highlight Usages in File | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-inline-clear` | Databases: Clear Inline Results | auto |   |
@@ -2119,6 +2121,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-schema-cache-info` | Databases: Show Schema Cache Info | auto |   |
 | `db-server-info` | Databases: Show Server Info | never | SQL runs require the database query tool and its guard |
 | `db-sessions` | Databases: Show Sessions and Locks | never | SQL runs require the database query tool and its guard |
+| `db-sql-folder-dialect` | Databases: Set Folder SQL Dialect… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
 | `db-submit-source` | Databases: Submit Object Source… | never | changes a database object; only the user can confirm the card |
@@ -2619,6 +2622,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db_max_rows` | never | AI provider, credentials and approvals stay with the user |
 | `db_number_format` | confirm (settings) |   |
 | `db_page_rows` | never | AI provider, credentials and approvals stay with the user |
+| `db_sql_syntax_off` | never | AI provider, credentials and approvals stay with the user |
 | `db_redis_max_keys` | never | AI provider, credentials and approvals stay with the user |
 | `db_redis_separator` | confirm (settings) |   |
 | `db_result_new_tab` | confirm (settings) |   |

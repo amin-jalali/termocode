@@ -32,13 +32,7 @@ const dbSQLDetach = "\x00detach"
 // dbSQLFileDialect is the dialect of a SQL file: the attached connection's
 // driver, else "-- @dialect" or the hints in the text. how says which.
 func dbSQLFileDialect(src, driver string) (dialect, how string) {
-	if d, ok := dbclient.DialectByName(driver); ok {
-		return string(d), "connection"
-	}
-	if d, ok := dbclient.DetectDialect(src); ok {
-		return string(d), "detected"
-	}
-	return "", "generic"
+	return dbSQLDialectFor(src, driver, "") // db_sqllang_more.go
 }
 
 // dbSQLOutlineItems are the picker rows of the outline: ID is the line.
@@ -69,7 +63,7 @@ func (m *Model) databaseSQLOutline() tea.Cmd {
 	if c, ok := m.databases.connection(m.dbConsole().consoleConn(file, strings.Split(src, "\n"))); ok {
 		driver = c.Driver
 	}
-	dialect, how := dbSQLFileDialect(src, driver)
+	dialect, how := dbSQLDialectFor(src, driver, dbSQLFolderDialect(m.databaseWorkspaceRoot(), file))
 	items := dbSQLOutlineItems(src, dialect)
 	if len(items) == 0 {
 		return m.pushToastDetail(toast.Info, "No statements", "The file is empty or a quote is not closed.")
