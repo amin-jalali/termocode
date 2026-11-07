@@ -469,14 +469,37 @@ func (m *Model) onAIProviderPicked(kind string) tea.Cmd {
 	switch kind {
 	case ai.KindOllama, ai.KindLMStudio:
 		return m.openAIModelPicker()
-	case ai.KindCompatible:
-		m.prompt = prompt.New("✦ AI base URL", "OpenAI-compatible base URL (…/v1):", s.settings.BaseURL)
+	case ai.KindCompatible, ai.KindVertex, ai.KindBedrock:
+		m.prompt = prompt.New("✦ AI base URL", aiBaseURLLabel(kind), s.settings.BaseURL)
 		m.prompt.SetSize(m.w, m.h)
 		m.promptOpen = true
 		m.promptKind = promptKindAIBaseURL
 		return nil
 	}
 	return m.openAIKeyPrompt(kind)
+}
+
+// aiBaseURLLabel is the base URL prompt's label for kind (CMP-85: the
+// cloud kinds say what the URL looks like).
+func aiBaseURLLabel(kind string) string {
+	switch kind {
+	case ai.KindVertex:
+		return "Vertex AI base URL (https://<region>-aiplatform.googleapis.com/v1/projects/<project>/locations/<region>):"
+	case ai.KindBedrock:
+		return "Bedrock base URL (empty = AWS_REGION or us-east-1; https://bedrock-runtime.<region>.amazonaws.com):"
+	}
+	return "OpenAI-compatible base URL (…/v1):"
+}
+
+// aiKeyLabel is the key prompt's label for kind.
+func aiKeyLabel(kind, home string) string {
+	switch kind {
+	case ai.KindVertex:
+		return "Access token or service-account JSON on one line, e.g. ${cmd:jq -c . key.json} (" + home + "; empty = keep):"
+	case ai.KindBedrock:
+		return "Bedrock API key (" + home + "; AWS_BEARER_TOKEN_BEDROCK wins; empty = keep):"
+	}
+	return "API key (" + home + "; empty = keep):"
 }
 
 func (m *Model) openAIKeyPrompt(kind string) tea.Cmd {
@@ -486,7 +509,7 @@ func (m *Model) openAIKeyPrompt(kind string) tea.Cmd {
 		return c
 	}
 	m.aiS().cfgKind = kind
-	m.prompt = prompt.New("✦ "+ai.KindLabel(kind)+" API key", "API key ("+m.aiKeyHome()+"; empty = keep):", "")
+	m.prompt = prompt.New("✦ "+ai.KindLabel(kind)+" API key", aiKeyLabel(kind, m.aiKeyHome()), "")
 	m.prompt.SetMasked(true)
 	m.prompt.SetNote(secretPromptNote(""))
 	m.prompt.SetSize(m.w, m.h)
@@ -497,10 +520,16 @@ func (m *Model) openAIKeyPrompt(kind string) tea.Cmd {
 
 func (m *Model) onAIBaseURLEntered(v string) tea.Cmd {
 	v = strings.TrimSpace(v)
+	kind := m.aiS().cfgKind
+	if kind != ai.KindVertex && kind != ai.KindBedrock {
+		kind = ai.KindCompatible
+	} else if err := ai.CheckSlotBaseURL(v); err != nil { // a cloud URL never holds a user or password
+		return m.aiToastErr("Base URL", err)
+	}
 	if err := m.saveAISettings(func(st *ai.Settings) { st.BaseURL = v }); err != nil {
 		return m.aiToastErr("Settings error", err)
 	}
-	return m.openAIKeyPrompt(ai.KindCompatible)
+	return m.openAIKeyPrompt(kind)
 }
 
 func (m *Model) onAIKeyEntered(v string) tea.Cmd {

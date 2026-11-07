@@ -676,6 +676,8 @@ func envKeyFor(kind string) string {
 		return "OPENAI_API_KEY"
 	case KindOpenRouter:
 		return "OPENROUTER_API_KEY"
+	case KindBedrock:
+		return "AWS_BEARER_TOKEN_BEDROCK"
 	}
 	return ""
 }
@@ -684,7 +686,8 @@ func envKeyFor(kind string) string {
 // provider Config. Environment variables win over files:
 //
 //	TERMOCODE_AI_PROVIDER / _MODEL / _BASE_URL / _API_KEY
-//	ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, OLLAMA_HOST
+//	ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, OLLAMA_HOST,
+//	AWS_BEARER_TOKEN_BEDROCK, AWS_REGION (bedrock)
 //
 // With no provider set anywhere, an Anthropic or OpenAI key (env first)
 // selects that provider. getenv is os.Getenv in production.
@@ -735,6 +738,8 @@ func Resolve(s Settings, c Credentials, getenv func(string) string) Config {
 		cfg.BaseURL = v
 	} else if kind == KindOllama && getenv("OLLAMA_HOST") != "" {
 		cfg.BaseURL = ollamaHostURL(getenv("OLLAMA_HOST"))
+	} else if kind == KindBedrock && cfg.BaseURL == "" && getenv("AWS_REGION") != "" {
+		cfg.BaseURL = bedrockBaseURL(getenv("AWS_REGION"))
 	}
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL(kind)
