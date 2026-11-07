@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,6 +28,12 @@ type PlanLine struct {
 	// Share is the node's own part (without its children) of the whole
 	// cost or time, 0..1; 0 when unknown (DBX-39).
 	Share float64
+	// Table is the table this node reads ("schema.table" when the server
+	// names the schema), "" when none (DBX-39: quick doc from the plan).
+	Table string
+	// Fields is every field the server sent for this node, "Name: value"
+	// (the step details panel).
+	Fields []string
 }
 
 // Nodes is the number of plan nodes (the details do not count).
@@ -127,11 +134,13 @@ type planNode struct {
 	children []*planNode
 	total    float64 // cost or time including the children (0: unknown)
 	line     int     // index in Plan.Lines
+	table    string
+	fields   []string
 }
 
 func (n *planNode) emit(p *Plan, depth int, nodes *[]*planNode) {
 	n.line = len(p.Lines)
-	p.Lines = append(p.Lines, PlanLine{Depth: depth, Text: n.text})
+	p.Lines = append(p.Lines, PlanLine{Depth: depth, Text: n.text, Table: n.table, Fields: n.fields})
 	*nodes = append(*nodes, n)
 	for _, d := range n.details {
 		p.Lines = append(p.Lines, PlanLine{Depth: depth + 1, Text: d, Detail: true})
@@ -229,6 +238,10 @@ func parsePGJSON(p *Plan, text string) bool {
 			typ = j + " " + typ
 		}
 		if rel := scalar(m["Relation Name"]); rel != "" {
+			n.table = rel
+			if sch := scalar(m["Schema"]); sch != "" {
+				n.table = sch + "." + rel
+			}
 			typ += " on " + rel
 			if a := scalar(m["Alias"]); a != "" && a != rel {
 				typ += " " + a
@@ -257,6 +270,7 @@ func parsePGJSON(p *Plan, text string) bool {
 			n.total = at * loops // time beats cost when the statement ran
 		}
 		n.text = strings.TrimSpace(typ + "  " + cost)
+		n.fields = planFields(m, nil, "Plans")
 		keys := make([]string, 0, len(m))
 		for k := range m {
 			switch k {
@@ -318,6 +332,8 @@ func parseMySQLJSON(p *Plan, text string) bool {
 		if tn := scalar(m["table_name"]); tn != "" {
 			isTable = true
 			n.text = tn
+			n.table = tn
+			n.fields = planFields(m, map[string]bool{"cost_info": true})
 			if at := scalar(m["access_type"]); at != "" {
 				n.text += "  " + at
 			}
@@ -451,6 +467,14 @@ func parseMySQLTable(p *Plan, res Result) {
 			text += " | actual rows=" + r
 		}
 		line := PlanLine{Text: text}
+		if t := get(row, "table"); t != "" && !strings.HasPrefix(t, "<") {
+			line.Table = t // "<derived2>", "<union1,2>" are not tables
+		}
+		for _, c := range res.Columns {
+			if v := get(row, strings.ToLower(c.Name)); v != "" {
+				line.Fields = append(line.Fields, c.Name+": "+v)
+			}
+		}
 		if len(res.Rows) > 1 && total > 0 && rowsOf[i]/total >= costlyShare && strings.EqualFold(get(row, "type"), "ALL") {
 			line.Costly = true
 		}
@@ -474,7 +498,8 @@ func parseSQLitePlan(p *Plan, res Result) bool {
 			id, parent := row[col["id"]].Text, row[col["parent"]].Text
 			d := depth[parent] + 1
 			depth[id] = d
-			p.Lines = append(p.Lines, PlanLine{Depth: d, Text: row[col["detail"]].Text})
+			text := row[col["detail"]].Text
+			p.Lines = append(p.Lines, PlanLine{Depth: d, Text: text, Table: planTextTable(text)})
 		}
 		sqliteCosts(p)
 		return len(p.Lines) > 0
@@ -499,7 +524,8 @@ func parseSQLitePlan(p *Plan, res Result) bool {
 			}
 			break
 		}
-		p.Lines = append(p.Lines, PlanLine{Depth: depth, Text: strings.TrimSpace(line[i:])})
+		text := strings.TrimSpace(line[i:])
+		p.Lines = append(p.Lines, PlanLine{Depth: depth, Text: text, Table: planTextTable(text)})
 	}
 	sqliteCosts(p)
 	return len(p.Lines) > 0
@@ -546,11 +572,94 @@ func parseIndentedText(p *Plan, texts []string) {
 			line.Depth = len(stack)
 			stack = append(stack, indent)
 			nodeDepth = line.Depth
+			line.Table = planTextTable(body)
 		case len(p.Lines) == 0:
 			stack = append(stack, indent)
+			line.Table = planTextTable(body)
 		default:
 			line.Depth, line.Detail = nodeDepth+1, true
 		}
 		p.Lines = append(p.Lines, line)
 	}
 }
+
+// planFields is every field of the plan node m as "Name: value", sorted
+// by name: scalars, lists of scalars joined with ", ", and the scalars of
+// the objects named in flat as "object.name". Other objects (child nodes)
+// and the skipped keys are left out.
+func planFields(m map[string]any, flat map[string]bool, skip ...string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var out []string
+	add := func(name string, v any) {
+		switch x := v.(type) {
+		case string, float64, bool, json.Number:
+			t := scalar(x)
+			if n, ok := x.(json.Number); ok {
+				t = n.String()
+			}
+			if t != "" {
+				out = append(out, name+": "+t)
+			}
+		case []any:
+			var parts []string
+			for _, e := range x {
+				switch e.(type) {
+				case string, float64, bool:
+					parts = append(parts, scalar(e))
+				}
+			}
+			if len(parts) > 0 {
+				out = append(out, name+": "+strings.Join(parts, ", "))
+			}
+		}
+	}
+outer:
+	for _, k := range keys {
+		for _, s := range skip {
+			if k == s {
+				continue outer
+			}
+		}
+		if sub, ok := m[k].(map[string]any); ok {
+			if !flat[k] {
+				continue
+			}
+			subKeys := make([]string, 0, len(sub))
+			for sk := range sub {
+				subKeys = append(subKeys, sk)
+			}
+			sort.Strings(subKeys)
+			for _, sk := range subKeys {
+				add(k+"."+sk, sub[sk])
+			}
+			continue
+		}
+		add(k, m[k])
+	}
+	return out
+}
+
+// planTextTable is the table a text plan node reads: "Seq Scan on t",
+// "Table scan on t" (PostgreSQL and MySQL text), "SCAN t" / "SEARCH
+// TABLE t USING …" (SQLite); "" when the node names none.
+func planTextTable(text string) string {
+	if m := sqliteTableRE.FindStringSubmatch(text); m != nil {
+		if m[1] == "CONSTANT" { // SCAN CONSTANT ROW
+			return ""
+		}
+		return m[1]
+	}
+	if m := onTableRE.FindStringSubmatch(text); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
+var (
+	sqliteTableRE = regexp.MustCompile(`^(?:SCAN|SEARCH)\s+(?:TABLE\s+)?([A-Za-z_][\w$]*)`)
+	onTableRE     = regexp.MustCompile(`\bon\s+([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)?)`)
+)
