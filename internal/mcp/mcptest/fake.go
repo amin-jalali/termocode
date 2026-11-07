@@ -35,7 +35,11 @@
 // tests); FAKE_MARKER=<file> exists while the server runs;
 // FAKE_INIT_DELAY=<duration> answers initialize that much later; FAKE_TTL_MS adds ttlMs to the last
 // tools/list page; FAKE_MODERN speaks the stateless revision (modern.go);
-// FAKE_DISCOVER_SILENT=1 never answers server/discover.
+// FAKE_DISCOVER_SILENT=1 never answers server/discover;
+// FAKE_CRASH_ONCE=<file>: the first tools/call (while the file does not
+// exist) creates the file and kills the server with no answer (crash and
+// restart tests); FAKE_LEAK=<text> is added to every echo result (a
+// server that repeats a secret it was given).
 package mcptest
 
 import (
@@ -276,6 +280,16 @@ func run() {
 			}
 			_ = json.Unmarshal(m.Params, &p)
 			logf("call " + p.Name)
+			if f := os.Getenv("FAKE_CRASH_ONCE"); f != "" {
+				if _, err := os.Stat(f); err != nil {
+					_ = os.WriteFile(f, []byte("crashed"), 0o644)
+					logf("crash")
+					if mk := os.Getenv("FAKE_MARKER"); mk != "" {
+						_ = os.Remove(mk) // os.Exit skips the defer
+					}
+					os.Exit(3)
+				}
+			}
 			if p.Meta.Traceparent != "" {
 				logf("traceparent " + p.Meta.Traceparent)
 			}
@@ -376,6 +390,9 @@ func Call(ctx context.Context, c Caller, name string, args map[string]any, token
 func call(ctx context.Context, c Caller, name string, args map[string]any, token json.RawMessage) (any, *extproc.Error) {
 	switch name {
 	case "echo":
+		if leak := os.Getenv("FAKE_LEAK"); leak != "" {
+			return text(fmt.Sprintf("echo: %v %s", args["text"], leak)), nil
+		}
 		return text(fmt.Sprintf("echo: %v", args["text"])), nil
 	case "write_note":
 		return text(fmt.Sprintf("wrote %v", args["title"])), nil
