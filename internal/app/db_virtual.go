@@ -25,8 +25,8 @@ import (
 // gf / gr in a table's data view and drawn (dashed) in the ER diagrams. Databases: Edit Virtual Objects… opens
 // the file (a commented template the first time).
 
-// dbNodeVirtualView is a saved SELECT under a connection's Virtual Views.
-const dbNodeVirtualView = dbNodeExtension + 1
+// dbNodeVirtualView (a saved SELECT under Virtual Views) is in the
+// dbNodeKind list in db_state.go.
 
 const dbVirtualGroup = "Virtual Views"
 
