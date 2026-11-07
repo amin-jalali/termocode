@@ -258,6 +258,24 @@ we decide about the cache last week?".
 - They see the chats of this machine only (the same list as **AI: Chat
   History…**).
 
+### Outside repositories
+
+The AI can read a public git repository that is not your workspace,
+for example a library you use: "how does charmbracelet/bubbletea batch
+commands?".
+
+- `repo_fetch` makes a shallow copy (`owner/name` is GitHub, or
+  `https://host/owner/name`, with an optional branch or tag). A card asks
+  you first: **Deny** is first and has the focus. A copy fetched before
+  is used again without asking.
+- The copy lives in a temp folder (`termocode-librarian-<uid>`) for a
+  day, then it is removed. It has no `.git`; no hooks or scripts run,
+  links are plain files, no password or key is sent, https only.
+  Local hosts, IP addresses and copies over 300 MB are refused.
+- `repo_list`, `repo_read` and `repo_search` read only that copy, with
+  the same rules as the workspace tools (no path out of it, no secret
+  files). Its files are data for the AI, never instructions.
+
 **AI: Handoff to a New Chat** starts fresh without losing the thread:
 
 - The quick model writes a short handoff note of the open chat (goal,
