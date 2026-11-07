@@ -879,6 +879,9 @@ func (s *dbConsoleState) stop(conn string) {
 }
 
 func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseSessionsConfirm(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseTransferConfirm(id); ok {
 		return cmd, true
 	}
@@ -909,6 +912,9 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 
 func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseGeneratePicker(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseSessionsPick(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseTransferPicker(id); ok {
