@@ -233,7 +233,19 @@ func TestUnpackMissingBase(t *testing.T) {
 	if !man.Bundle || man.Commits != 1 {
 		t.Fatalf("the bundle should hold only the commit the remote lacks: %+v", man)
 	}
-	other := newRepo(t) // unrelated history
+	// Unrelated history. A second newRepo is not enough: made in the same
+	// second, its first commit has the same hash as origin's.
+	other := filepath.Join(t.TempDir(), "other")
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	run(t, other, "init", "-q", "-b", "main")
+	run(t, other, "config", "user.email", "t@example.com")
+	run(t, other, "config", "user.name", "T")
+	run(t, other, "config", "commit.gpgsign", "false")
+	write(t, filepath.Join(other, "z.txt"), "unrelated\n", 0o644)
+	run(t, other, "add", "z.txt")
+	run(t, other, "commit", "-q", "-m", "unrelated")
 	_, err = Unpack(bytes.NewReader(buf.Bytes()), UnpackOptions{Repo: other, Folder: other + ".worktrees/x", Branch: "x"})
 	if !errors.Is(err, ErrMissingBase) {
 		t.Fatalf("err %v", err)
