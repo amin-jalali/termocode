@@ -166,6 +166,14 @@ func (a *CardsAnswerArgs) validate(int) error {
 			return invalid("bad change")
 		}
 	}
+	if len(a.Form) > MaxCardForm {
+		return invalid("too many answers")
+	}
+	for k, v := range a.Form {
+		if !validName(k, MaxID) || len(v) > MaxCardFormValue || !utf8.ValidString(v) {
+			return invalid("bad answer")
+		}
+	}
 	return nil
 }
 

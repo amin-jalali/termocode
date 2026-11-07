@@ -3,9 +3,9 @@
 // empty text falls back to English. Simple, everyday Persian; product
 // and command names (termocode, Web: Open in Browser) and key names stay
 // as they are.
-import type { StringKey } from "./strings";
+import type { TranslatedKey } from "./strings";
 
-export const FA: Record<StringKey, string> = {
+export const FA: Record<TranslatedKey, string> = {
   // Shell and connect
   "connect.title": "termocode",
   "connect.once": "این پیوند فقط یک بار و تا ۵ دقیقه کار می‌کند.",
@@ -792,6 +792,14 @@ export const FA: Record<StringKey, string> = {
   "card.open_diff": "باز کردن تغییرها",
   "card.keep_change": "نگه داشتن تغییر {n}",
   "card.keep_none": "هیچ تغییری نگه داشته نشده. یکی را نگه دارید، یا نپذیرفتن را بزنید.",
+  // MOB-12: English only (an empty text falls back to English)
+  "card.send": "",
+  "card.form_required": "",
+  "card.form_missing": "",
+  "card.form_yes": "",
+  "card.form_no": "",
+  "card.form_pick": "",
+  "toast.sent": "",
   "wb.panel_max": "بزرگ‌ترین اندازهٔ پنل",
   "wb.panel_restore": "برگرداندن اندازهٔ پنل",
   "wb.panel_more": "نماها و کارهای بیشتر…",
