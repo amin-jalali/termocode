@@ -350,7 +350,7 @@ func (m *Model) openTerminalPanel() {
 			pcall(vim.cmd, 'startinsert')
 		end
 		return tostring(termWin) .. ':' .. tostring(buf)
-	`, m.integratedTerminalRows(), termShellSpecJSON(shell))
+	`, m.integratedTerminalRows(), m.termShellSpecFor(shell, ""))
 	out, err := m.nvim.EvalLuaString(luaOpen)
 	if err != nil {
 		m.err = "terminal: " + err.Error()
@@ -459,7 +459,7 @@ func (m *Model) newTerminalTabIn(dir string) {
 	if shell == "" {
 		shell = "/bin/bash"
 	}
-	dirJSON, _ := json.Marshal(dir)
+	dirJSON, _ := json.Marshal(m.termLocalCwd(dir))
 	luaNew := fmt.Sprintf(termExitedLua+termShellIntLua+`
 		local termWin = %d
 		if not vim.api.nvim_win_is_valid(termWin) then return '0' end
@@ -497,7 +497,7 @@ func (m *Model) newTerminalTabIn(dir string) {
 			pcall(vim.cmd, 'startinsert')
 		end
 		return tostring(buf)
-	`, m.terminalWinID, termShellSpecJSON(shell), dirJSON)
+	`, m.terminalWinID, m.termShellSpecFor(shell, dir), dirJSON)
 	out, err := m.nvim.EvalLuaString(luaNew)
 	if err != nil {
 		m.err = "terminal: " + err.Error()
