@@ -41,15 +41,6 @@ const (
 	msgDetached  = "termocode: detached, the session keeps running. Run `termocode attach` to go back."
 )
 
-// Info describes a running session (`termocode sessions`).
-type Info struct {
-	Workspace string    `json:"workspace"`
-	PID       int       `json:"pid"`
-	UIPID     int       `json:"ui_pid,omitempty"`
-	Started   time.Time `json:"started"`
-	Attached  bool      `json:"attached"`
-}
-
 // Server owns the PTY the UI runs in and relays it to one client at a
 // time.
 type Server struct {
