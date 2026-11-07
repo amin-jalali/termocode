@@ -101,6 +101,9 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		return tea.Batch(limit, m.raceOnAgentState(buf, st))
 	}
 	if st == agents.Done {
+		if t.Goal != nil { // a check loop runs the check, then says its own news (agent_goal.go)
+			return tea.Batch(limit, m.agentGoalTurnEnded(buf))
+		}
 		return tea.Batch(limit, m.notifyOSFor("Agent run ended", t.agentTitle()))
 	}
 	if st != agents.Waiting {
@@ -137,6 +140,9 @@ func (t terminalTab) agentTabName() string {
 	}
 	if l := t.agentLimitLabel(); l != "" {
 		return l
+	}
+	if l := t.agentGoalLabel(); l != "" { // CMP-19
+		return t.agentTitle() + " " + l
 	}
 	if t.Account != "" { // AGX-13
 		return t.agentSessionTitle() + " " + t.Account
@@ -247,6 +253,12 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == diffCommentsPaletteID { // Agent: Send Diff Comments… (diff_comments.go)
 		return m.openDiffCommentsSend(m.reviewOpen), true
+	}
+	if id == agentGoalPaletteID { // Agent: Loop Until Check Passes… (agent_goal.go)
+		return m.openAgentGoal(), true
+	}
+	if id == agentGoalStopPaletteID { // Agent: Stop Check Loop (agent_goal.go)
+		return m.stopAgentGoal(), true
 	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {

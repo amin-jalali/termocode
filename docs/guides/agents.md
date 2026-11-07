@@ -434,6 +434,26 @@ the tab. When another account is free, the limit toast already names it.
   files: each account keeps its own folder.
 - Only Claude Code and Codex have accounts. The AI cannot run this
   command.
+## Loop until a check passes
+
+**Agent: Loop Until Check Passes…** on an agent tab asks for a check
+command, for example `go test ./...`. A card shows what will happen.
+`Cancel` is first. Pick 3, 5 or 10 rounds to start.
+
+- Each time the agent ends its turn, termocode runs the check in a task
+  tab (`check · Claude Code`), in the agent's worktree or the workspace.
+- Exit 0: the loop ends. A toast says how many rounds it took.
+- Any other exit: termocode types the last 30 lines of the output into
+  the agent, as one line, with secrets hidden. It asks the agent to fix
+  the cause. The tab is named `Claude Code goal 2/5`.
+- The loop stops after the rounds you picked, after 20 minutes a round,
+  or after `agent_goal_max_tokens` tokens (counted only with
+  `agent_transcripts` = read). A toast says why.
+- It never types while the agent works, while a question is on its
+  screen, or while a usage limit is on.
+
+**Agent: Stop Check Loop** ends the loop at any time. The AI cannot start
+or stop a loop.
 
 ## Usage and plan limits
 

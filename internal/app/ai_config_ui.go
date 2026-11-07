@@ -148,6 +148,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onRaceRestackMessage(value), true
 	case promptKindAgentPacksSource: // agent_packs_ui.go
 		return m.onAgentPackSource(value), true
+	case promptKindAgentGoalVerify: // agent_goal.go
+		return m.onAgentGoalVerify(value), true
 	case promptKindAIWebKey: // ai_web_tools.go
 		return m.onAIWebKeyEntered(value), true
 	case promptKindAIModel:
@@ -293,6 +295,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentPackUndo(id), true
 	case confirmKindAIPowerInstall, confirmKindAIPowerRemove: // ai_powers.go
 		return m.answerAIPowerCard(m.confirmKind, id), true
+	case confirmKindAgentGoalStart: // agent_goal.go
+		return m.answerAgentGoalStart(id), true
 	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard, confirmKindRaceJudgePick: // agent_race_compare.go, agent_race_judge.go
 		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindRaceRestack: // agent_race_restack.go

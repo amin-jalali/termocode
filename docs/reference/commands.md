@@ -107,6 +107,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
 | Agent: Chat with an ACP Agent… / End | `acp-thread` |   |   |
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
+| Agent: Loop Until Check Passes… | `agent-goal-loop` |   | `run a check after each turn, retry` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search All Sessions… | `agent-sessions-search-all` |   | `words in every project's agent sessions` |
@@ -120,6 +121,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
 | Agent: Switch Account… | `agent-account-switch` |   | `go on as another account after a limit` |
+| Agent: Stop Check Loop | `agent-goal-stop` |   | `end the running check loop` |
 | Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
 | Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
 

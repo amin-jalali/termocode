@@ -89,6 +89,9 @@ type settingsConfig struct {
 	// type "continue" once into its tab (agent_limit.go, AGX-11). Off by
 	// default; File only.
 	AgentAutoContinue *bool `json:"agent_auto_continue,omitempty"`
+	// AgentGoalMaxTokens: the token cap of a check loop (agent_goal.go,
+	// CMP-19). 0 / unset = no token cap. File only.
+	AgentGoalMaxTokens *int `json:"agent_goal_max_tokens,omitempty"`
 	// AgentAccounts: agent id → account labels (agent_accounts.go,
 	// AGX-13). Labels only; each has its own config folder. File only.
 	AgentAccounts map[string][]string `json:"agent_accounts,omitempty"`

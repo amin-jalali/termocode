@@ -2000,6 +2000,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-auto-continue-toggle` | Agent: Toggle Auto-Continue | never | AI provider, credentials and approvals stay with the user; it lets termocode type into an outside agent's tab |
 | `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
 | `agent-diff-comments` | Agent: Send Diff Comments… | never | it sends the user's own review comments to an agent: only the user sends them, after the preview |
+| `agent-goal-loop` | Agent: Loop Until Check Passes… | never | AI provider, credentials and approvals stay with the user; it lets termocode run a command and type into an outside agent's tab |
+| `agent-goal-stop` | Agent: Stop Check Loop | never | AI provider, credentials and approvals stay with the user; the check loop is the user's own |
 | `agent-hibernate-toggle` | Agent: Hibernate or Wake | never | AI provider, credentials and approvals stay with the user; it stops or starts an outside agent's process |
 | `agent-race` | Agent: Race… | never | opens a picker or prompt that only the user can answer; use a typed tool (agent_race_start) |
 | `agent-race-compare` | Agent: Race Compare | auto |   |
@@ -2692,6 +2694,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | --- | --- | --- |
 | `agent_accounts` | never | AI provider, credentials and approvals stay with the user; the labels of the outside agents' account folders |
 | `agent_auto_continue` | never | AI provider, credentials and approvals stay with the user; it lets termocode type continue into an outside agent's tab after its usage limit resets |
+| `agent_goal_max_tokens` | never | AI provider, credentials and approvals stay with the user; it caps the user's own check loop |
 | `agent_hibernate_minutes` | never | AI provider, credentials and approvals stay with the user; it lets termocode stop idle outside agents |
 | `agent_os_sandbox` | never | the OS sandbox around outside agents; only the user changes it |
 | `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
