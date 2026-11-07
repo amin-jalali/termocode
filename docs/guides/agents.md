@@ -286,6 +286,19 @@ of Claude Code and Codex), **BUILT-IN** (termocode's own AI profiles) and
 into termocode's tools folder, after a card (**Not now** first). Then a
 second card runs the CLI's own sign-in command in a terminal tab.
 
+An agent that installs only with its own installer (Cursor CLI, Goose,
+Droid, Kiro CLI) gets a card with its install page instead (**Not now**
+first). **Open install page** opens it in your browser; over SSH the link
+is copied. termocode never runs an install script.
+
+The list has Claude Code, Codex, Gemini CLI, OpenCode, Aider, Cursor CLI,
+Amp, Goose, Qwen Code, Crush, Copilot CLI, Kimi CLI, Droid, Pi, Kiro CLI,
+Auggie, Grok CLI, Cline CLI, Continue CLI and Mistral Vibe. Claude Code,
+Codex and Kimi CLI get termocode's tools on their command line; OpenCode
+asks before it writes `opencode.json`; for the others, add termocode's
+server by hand (**MCP: Copy termocode Server Config**). Any other CLI
+works in a plain terminal tab.
+
 From the **WORKTREES** view, **Agent: Start…** starts the agent in the
 selected worktree, and the agent shows on that worktree's card.
 

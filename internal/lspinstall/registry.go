@@ -318,6 +318,17 @@ var tools = []Tool{
 		InstallKind: KindPip, Spec: "kimi-cli", Version: "latest"},
 	{Name: "pi", Label: "Pi", Category: CategoryAgentCLI, Bin: "pi",
 		InstallKind: KindNpm, Spec: "@mariozechner/pi-coding-agent", Version: "latest", Needs: []string{"node"}},
+	// CMP-3 presets.
+	{Name: "auggie", Label: "Auggie", Category: CategoryAgentCLI, Bin: "auggie",
+		InstallKind: KindNpm, Spec: "@augmentcode/auggie", Version: "latest", Needs: []string{"node"}},
+	{Name: "grok-cli", Label: "Grok CLI", Category: CategoryAgentCLI, Bin: "grok",
+		InstallKind: KindNpm, Spec: "@vibe-kit/grok-cli", Version: "latest", Needs: []string{"node"}},
+	{Name: "cline", Label: "Cline CLI", Category: CategoryAgentCLI, Bin: "cline",
+		InstallKind: KindNpm, Spec: "cline", Version: "latest", Needs: []string{"node"}},
+	{Name: "continue-cli", Label: "Continue CLI", Category: CategoryAgentCLI, Bin: "cn",
+		InstallKind: KindNpm, Spec: "@continuedev/cli", Version: "latest", Needs: []string{"node"}},
+	{Name: "mistral-vibe", Label: "Mistral Vibe", Category: CategoryAgentCLI, Bin: "vibe",
+		InstallKind: KindPip, Spec: "mistral-vibe", Version: "latest"},
 	// ── Code tools ──────────────────────────────────────────────────────
 	{
 		Name: "ast-grep", Label: "Structural search", Category: CategoryCodeTool,
