@@ -458,6 +458,8 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		return m.runHostAction(id), true
 	case confirmKindServicesQuit:
 		return m.answerServicesQuit(id), true
+	case confirmKindServicesDownVolumes: // services_compose_more.go
+		return m.answerDownVolumes(id), true
 	case confirmKindContainerSearchResult:
 		return m.answerSearchResult(id), true
 	}
@@ -1282,9 +1284,12 @@ func (m *Model) openServicesMenu(r svcRow, x, y int) {
 		items = append(items, menu.Item{ID: "databases", Title: dbOpenInDatabasesTitle, Icon: theme.IconDatabases.String()})
 	}
 	if r.section == svcSecCompose {
-		items = append(items, menu.Item{Sep: true},
+		items = append(items, menu.Item{Sep: true})
+		items = append(items, composeMoreMenuItems()...) // CTX-8
+		items = append(items,
 			menu.Item{ID: "recreate", Title: "Recreate (up --force-recreate)", Icon: "⊘"},
-			menu.Item{ID: "down", Title: "Down (remove containers)…", Icon: "✕"})
+			menu.Item{ID: "down", Title: "Down (remove containers)…", Icon: "✕"},
+			menu.Item{ID: "down-volumes", Title: "Down and remove volumes…", Icon: "✕"})
 	}
 	m.menu = menu.New(items, x, y)
 	m.menu.SetScreenSize(m.w, m.h)
@@ -1310,6 +1315,11 @@ func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 	}
 	if r.kind == svcRowHostItem {
 		return m.handleContainerRowMenuSelect(id, r)
+	}
+	if r.section == svcSecCompose {
+		if cmd, ok := m.handleComposeMoreMenu(id, r); ok { // services_compose_more.go
+			return cmd
+		}
 	}
 	switch id {
 	case "start":
