@@ -137,11 +137,14 @@ func withRow(vars []Var, row map[string]string) []Var {
 		names = append(names, k)
 	}
 	sort.Strings(names)
+	// Lookup takes the last definition, so the row goes after the file
+	// variables to win over them.
 	out := make([]Var, 0, len(row)+len(vars))
+	out = append(out, vars...)
 	for _, k := range names {
 		out = append(out, Var{Name: k, Value: row[k]})
 	}
-	return append(out, vars...)
+	return out
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) bool {
