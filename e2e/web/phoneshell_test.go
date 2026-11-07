@@ -14,7 +14,7 @@ import (
 
 const shell = `document.querySelector("#shell .ph-shell")`
 
-func openShell(t *testing.T) *Page {
+func openPhoneShell(t *testing.T) *Page {
 	t.Helper()
 	p := openKit(t, Phone)
 	p.WaitJS(shell)
@@ -27,12 +27,10 @@ func shellRect(p *Page, sel string) [3]float64 {
 	return Eval[[3]float64](p, `(() => { const r = `+shell+`.querySelector(`+jsq(sel)+`).getBoundingClientRect(); return [r.top, r.bottom, r.height]; })()`)
 }
 
-func jsq(s string) string { return "`" + s + "`" }
-
 // The top bar holds the switcher with ▾, the live mark (shape + word)
 // and ☰, every one a 44 px target.
 func TestPhoneShellTopBar(t *testing.T) {
-	p := openShell(t)
+	p := openPhoneShell(t)
 	if got := Eval[string](p, shell+`.querySelector(".ph-switch").textContent`); !strings.Contains(got, "shop") || !strings.Contains(got, "▾") {
 		t.Errorf("switcher reads %q, want shop ▾", got)
 	}
@@ -51,7 +49,7 @@ func TestPhoneShellTopBar(t *testing.T) {
 // The dock sits at the bottom: chips above the composer, Send in the
 // lowest quarter of the shell (the thumb zone), the stream between.
 func TestPhoneShellThumbZone(t *testing.T) {
-	p := openShell(t)
+	p := openPhoneShell(t)
 	sh := shellRect(p, ".ph-dock")
 	all := Eval[[3]float64](p, `(() => { const r = `+shell+`.getBoundingClientRect(); return [r.top, r.bottom, r.height]; })()`)
 	if d := all[1] - sh[1]; d > 1 || d < -1 {
@@ -77,7 +75,7 @@ func TestPhoneShellThumbZone(t *testing.T) {
 // The switcher opens a sheet of projects, the current one marked ✓ and
 // aria-current; a pick changes the bar.
 func TestPhoneShellProjectSwitcher(t *testing.T) {
-	p := openShell(t)
+	p := openPhoneShell(t)
 	p.TapJS(shell + `.querySelector(".ph-switch")`)
 	p.WaitJS(`document.querySelector(".ph-switch-list")`)
 	cur := Eval[string](p, `document.querySelector(".ph-switch-row[aria-current='true']").textContent`)
@@ -94,7 +92,7 @@ func TestPhoneShellProjectSwitcher(t *testing.T) {
 // Offline: the mark says it with its own shape, Send is greyed and does
 // nothing, the draft stays.
 func TestPhoneShellOffline(t *testing.T) {
-	p := openShell(t)
+	p := openPhoneShell(t)
 	p.TapJS(ButtonByText("Shell offline"))
 	p.WaitJS(shell + `.querySelector(".ph-live").textContent.includes("Offline")`)
 	if got := Eval[string](p, shell+`.querySelector(".ph-live").textContent`); strings.Contains(got, "●") {
@@ -108,7 +106,7 @@ func TestPhoneShellOffline(t *testing.T) {
 // 🎤 puts the cursor in the box and says to use the keyboard's own
 // dictation (no audio leaves the phone through the page).
 func TestPhoneShellMic(t *testing.T) {
-	p := openShell(t)
+	p := openPhoneShell(t)
 	p.TapJS(shell + `.querySelector(".ph-composer-mic")`)
 	p.WaitJS(`document.activeElement === ` + shell + `.querySelector(".ph-composer-box")`)
 	p.WaitJS(shell + `.querySelector(".ph-composer-hint")`)
@@ -119,7 +117,7 @@ func TestPhoneShellMic(t *testing.T) {
 
 // A new message keeps the stream at its end while the reader is there.
 func TestPhoneShellStreamSticks(t *testing.T) {
-	p := openShell(t)
+	p := openPhoneShell(t)
 	for i := 0; i < 6; i++ {
 		p.TapJS(ButtonByText("Shell: add a message"))
 	}
