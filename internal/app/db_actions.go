@@ -100,6 +100,15 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-object-actions", Title: "Databases: Object Actions…"},
 		{ID: "db-submit-source", Title: "Databases: Submit Object Source…"},
 		{ID: "db-pending-sources", Title: "Databases: Pending Source Changes…"},
+		{ID: "db-er-path", Title: "Databases: Diagram Path Between Tables…"},
+		{ID: "db-query-log", Title: "Databases: Show Query Log", Hint: "every statement sent this run, internal ones too"},
+		{ID: "db-console-history", Title: "Databases: Show Console Version History", Hint: "a version of the console on every run"},
+		{ID: "db-run-container", Title: "Databases: Run New Database Container…", Hint: "PostgreSQL, MySQL, MariaDB or Redis in Docker"},
+		{ID: "db-cloud-discover", Title: "Databases: Discover Cloud Databases…", Hint: "through the installed aws, gcloud or az CLI"},
+		{ID: "db-iam-auth", Title: "Databases: Use Cloud IAM Token Login…", Hint: "a fresh token from the cloud CLI at each connect"},
+		{ID: "db-manage-connection", Title: "Databases: Manage Connection…", Hint: "edit, comment, rename, duplicate, copy, delete"},
+		{ID: "db-paste-connection", Title: "Databases: Paste Connection from Clipboard", Hint: "connection JSON copied with Copy as JSON"},
+		{ID: "db-new-from-template", Title: "Databases: New Connection from Template…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -204,6 +213,24 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databasePendingSources(), true
 	case "db-virtual-objects":
 		return tea.Batch(m.revealDatabasesView(false), m.databaseEditVirtual()), true
+	case "db-er-path":
+		return m.databaseERPathStart(), true
+	case "db-query-log":
+		return m.databaseQueryLog(), true
+	case "db-console-history":
+		return m.databaseConsoleHistory(), true
+	case "db-run-container":
+		return m.databaseRunContainerStart(), true
+	case "db-cloud-discover":
+		return m.databaseCloudStart(), true
+	case "db-iam-auth":
+		return m.databaseIAMStart(), true
+	case "db-manage-connection":
+		return m.databaseManageStart(), true
+	case "db-paste-connection":
+		return m.databasePasteConn(), true
+	case "db-new-from-template":
+		return m.databaseTemplateStart(), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":
@@ -487,6 +514,12 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseConsoleConfirm(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseCloudConfirm(id); ok { // db_cloud.go
+		return cmd, true
+	}
+	if cmd, ok := m.databaseManageConfirm(id); ok { // db_connmanage.go
 		return cmd, true
 	}
 	if m.confirmKind == confirmKindDBMovePassword {
@@ -1412,10 +1445,10 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		s.touch()
 		return m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
 	}
-	if old := s.sessions[msg.id]; old != nil && old != msg.session {
+	if old := s.sessions[msg.id]; old != nil && dbclient.UnwrapSession(old) != dbclient.UnwrapSession(msg.session) {
 		_ = old.Close()
 	}
-	s.sessions[msg.id] = msg.session
+	s.sessions[msg.id] = s.loggedSession(msg.session, msg.id) // db_query_log.go
 	n.problem = ""
 	n.loaded = false
 	s.nodes[msg.id] = n

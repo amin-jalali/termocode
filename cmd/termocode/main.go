@@ -314,6 +314,8 @@ func run(argv []string) int {
 			return runWorkflow(args[1:])
 		case "http":
 			return runHTTP(args[1:])
+		case "db":
+			return runDB(args[1:])
 		case "web":
 			return runWeb(args[1:])
 		case "service":
@@ -414,7 +416,7 @@ func tuiCommand(args []string) bool {
 		return true
 	}
 	switch args[0] {
-	case serverArg, "sessions", "ssh", "mcp", "http", "service", "attach", "kill", "setup", "-h", "--help", "help":
+	case serverArg, "sessions", "ssh", "mcp", "http", "db", "service", "attach", "kill", "setup", "-h", "--help", "help":
 		return false
 	}
 	return !isVersionArg(args[0])
@@ -443,6 +445,8 @@ func printUsage() {
 	fmt.Println("                             notes and status for the worktree you are in")
 	fmt.Println("  termocode http run [options] <file|folder>…")
 	fmt.Println("                             run .http files for CI (http run --help)")
+	fmt.Println("  termocode db list|show|add|remove")
+	fmt.Println("                             manage your database connections (db --help)")
 	fmt.Println("  termocode web [start|stop|status]")
 	fmt.Println("                             open or stop the web panel of the running termocode")
 	fmt.Println("  termocode service install|uninstall|status")

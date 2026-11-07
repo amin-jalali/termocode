@@ -305,7 +305,7 @@ func (m *Model) databaseEndTx(conn string, commit bool, after func(*Model) tea.C
 	msg := dbTxDoneMsg{conn: conn, commit: commit, keys: keys, errs: make([]error, len(keys)), sqlite: make([]bool, len(keys)), after: after}
 	for i, k := range keys {
 		sessions[i] = s.sessions[k]
-		_, msg.sqlite[i] = sessions[i].(*dbclient.SQLiteSession)
+		_, msg.sqlite[i] = dbclient.UnwrapSession(sessions[i]).(*dbclient.SQLiteSession)
 	}
 	timeout := loadDBConsoleSettings().timeout()
 	return func() tea.Msg {

@@ -737,6 +737,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind == promptKindDBRoutineArg { // db_generate_routine.go
 		return m.databaseRoutineArgEntered(value), true
 	}
+	if cmd, ok := m.databaseManagePrompt(m.promptKind, value); ok { // db_connmanage.go
+		return cmd, true
+	}
 	if m.promptKind == promptKindDBParam { // db_params.go
 		return m.databaseParamEntered(value), true
 	}

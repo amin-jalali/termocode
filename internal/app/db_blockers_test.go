@@ -111,7 +111,7 @@ func TestDatabaseExpandOtherDatabaseOpensOneSessionAndReuses(t *testing.T) {
 	if s.activeID != c.ID {
 		t.Fatalf("activeID = %q, want the connection id", s.activeID)
 	}
-	if s.sessions[dbPath] != opened[0] || s.sessions[c.ID] != base || base.closed.Load() != 0 {
+	if dbclient.UnwrapSession(s.sessions[dbPath]) != opened[0] || dbclient.UnwrapSession(s.sessions[c.ID]) != base || base.closed.Load() != 0 {
 		t.Fatal("sessions were overwritten or the base session was closed")
 	}
 
@@ -133,7 +133,7 @@ func TestDatabaseExpandOtherDatabaseOpensOneSessionAndReuses(t *testing.T) {
 	// A late duplicate connect closes the session it replaces.
 	dup := &fakeDBSession{}
 	_ = m.onDBConnect(dbConnectMsg{id: dbPath, generation: s.generation, session: dup, password: "pw"})
-	if opened[0].closed.Load() != 1 || s.sessions[dbPath] != dup {
+	if opened[0].closed.Load() != 1 || dbclient.UnwrapSession(s.sessions[dbPath]) != dup {
 		t.Fatalf("replaced session closed %d times", opened[0].closed.Load())
 	}
 

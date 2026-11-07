@@ -76,6 +76,9 @@ func (m *Model) databaseERStart() tea.Cmd {
 		{ID: "mermaid", Title: "Mermaid", Hint: "erDiagram"},
 		{ID: "plantuml", Title: "PlantUML", Hint: "@startuml"},
 		{ID: "dot", Title: "Graphviz DOT", Hint: "digraph"},
+		{ID: "mermaid+color", Title: "Mermaid · coloured", Hint: "tables coloured by name prefix"},
+		{ID: "plantuml+color", Title: "PlantUML · coloured", Hint: "tables coloured by name prefix"},
+		{ID: "dot+color", Title: "Graphviz DOT · coloured", Hint: "tables coloured by name prefix"},
 	}
 	m.picker = picker.NewItems(" ER diagram of "+s.er.label+" ", items)
 	m.picker.SetSize(m.w, m.h)
@@ -98,7 +101,8 @@ func (m *Model) databaseERPicker(id string) (tea.Cmd, bool) {
 	if sess == nil {
 		return m.pushToastDetail(toast.Warn, "Not connected any more", ""), true
 	}
-	title := "ER Diagram: " + t.label + " (" + id + ")"
+	format, color := dbERFormatID(id)
+	title := "ER Diagram: " + t.label + " (" + format + ")"
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), dbCompareTimeout)
 		defer cancel()
@@ -111,9 +115,16 @@ func (m *Model) databaseERPicker(id string) (tea.Cmd, bool) {
 		if err != nil {
 			return dbERReadyMsg{title: title, err: err}
 		}
-		text, err := dbclient.ERDiagram(cs, id)
+		text, err := dbclient.ERDiagramStyled(cs, format, dbclient.ERStyle{Colors: color})
 		return dbERReadyMsg{title: title, text: text, err: err}
 	}, true
+}
+
+// dbERFormatID splits a format picker id ("dot+color") into the format
+// and whether tables are coloured.
+func dbERFormatID(id string) (string, bool) {
+	f, color := strings.CutSuffix(id, "+color")
+	return f, color
 }
 
 func (m *Model) onDBERReady(msg dbERReadyMsg) tea.Cmd {

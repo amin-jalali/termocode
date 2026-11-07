@@ -294,7 +294,7 @@ func TestCovSvcDBMovePasswordToStore(t *testing.T) {
 	if v, ok, _ := databaseSecretStore().Get("db.mine"); !ok || v != "hunter22" {
 		t.Errorf("store = %q %v", v, ok)
 	}
-	if m.databases.sessions["mine"] != fake {
+	if dbclient.UnwrapSession(m.databases.sessions["mine"]) != fake {
 		t.Error("not connected after the move")
 	}
 	if p, _ := databaseLiteralPassword(dbclient.Conn{URL: "postgres://u:pw@h/d"}); p != "pw" {
@@ -315,7 +315,7 @@ func TestCovSvcDBSetPassword(t *testing.T) {
 	if v, ok, _ := databaseSecretStore().Get("db.pg"); !ok || v != "s3cret-pass" {
 		t.Errorf("store = %q %v", v, ok)
 	}
-	if m.databases.sessions["pg"] != fake {
+	if dbclient.UnwrapSession(m.databases.sessions["pg"]) != fake {
 		t.Error("not connected")
 	}
 	if m.onDBPrompt(promptKindDBPassword, "x") != nil {

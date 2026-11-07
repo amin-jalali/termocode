@@ -375,6 +375,45 @@ Press `F` on a schema (or a database, or any row under it) and choose:
 
 The schema is read on a read-only session; nothing here changes the database. When the project uses a migration tool (Flyway, Liquibase, Alembic, Prisma, Rails, golang-migrate or dbmate), the menu says so: the folder is a snapshot next to the migrations, not a migration.
 
+## ER diagrams
+
+**Databases: Export ER Diagram…** writes the schema under the cursor as Mermaid, PlantUML or Graphviz DOT text in a new buffer. Every table lists its columns (PK and FK marked); every foreign key is one line. The **· coloured** formats give tables with the same name prefix (the part before the first `_`) the same colour.
+
+**Databases: Diagram Path Between Tables…** starts at the table under the cursor. Pick the other table; tables with no foreign-key path say "no path". termocode finds the shortest path along foreign keys (in either direction) and opens a Mermaid diagram of only those tables, with both ends highlighted. The first line names the path. The schema is read in a read-only session.
+
+## Manage connections
+
+**Databases: Manage Connection…** opens the actions of the connection under the cursor:
+
+- **Edit…** asks for the name, host, port, user and database, one after the other, with the current value filled in.
+- **Comment…** adds a note; the row shows it after the address.
+- **Rename…** changes the id. The saved password moves with it.
+- **Duplicate** makes a copy (without the password). For a project connection it is the only way to change it: the copy goes to your own list.
+- **Copy as JSON** copies the connection without any password. **Databases: Paste Connection from Clipboard** adds it again, here or on another computer.
+- **Copy SSL Settings from…** takes the SSL settings of another connection.
+- **Save SSH as Profile…** keeps the SSH tunnel under a name; **Use SSH Profile…** puts it on another connection. Profiles are in `db/ssh_profiles.json` next to your connections file.
+- **Save as Template…** keeps the connection (no id, no password) as a template; **Databases: New Connection from Template…** starts a new connection from it or from a built-in template (local PostgreSQL, MySQL, Redis, a SQLite file, PostgreSQL through SSH or in Kubernetes).
+- **Show Driver and Server Version** reads the version from a connected server.
+- **Delete…** asks first (**Cancel** is the default). It removes the connection from your file, closes its sessions and deletes its saved passwords. The database is not touched.
+
+Without the UI, `termocode db list`, `termocode db show <id>`, `termocode db add` (JSON on stdin) and `termocode db remove <id>` work on the same file. They never print a password.
+
+## Containers, Kubernetes and the cloud
+
+**Databases: Run New Database Container…** runs PostgreSQL 17, MySQL 8.4, MariaDB 11 or Redis 7 in Docker (or Podman). A card shows the whole `docker run` command first; **Cancel** is the default. The port is open on `127.0.0.1` only. termocode makes a random password, passes it in the environment (never on the command line) and keeps it in the secret store. The new connection is added to your list; press `Enter` on it when the container is ready.
+
+A server inside Kubernetes is reached through `kubectl port-forward`. Add a `kube` block to the connection: `"kube": { "context": "dev", "namespace": "shop", "pod": "pg-0", "port": 5432 }`. termocode starts the forward when you connect and ends it when the session closes.
+
+**Databases: Discover Cloud Databases…** asks the installed `aws`, `gcloud` or `az` CLI for its PostgreSQL and MySQL instances. Pick one; termocode asks for the password, tests the connection and saves it like any new connection (with SSL `require`).
+
+**Databases: Use Cloud IAM Token Login…** makes one of your own connections log in with a fresh token at each connect, from `aws rds generate-db-auth-token`, `gcloud sql generate-login-token` or `az account get-access-token`. A card shows the command first. The CLI must be signed in. Project files cannot use this, because they cannot run commands.
+
+## Query log and console versions
+
+**Databases: Show Query Log** opens every statement termocode sent to your SQL databases in this run (the newest 1,000) in a new buffer. Each statement has a `--` line above it: the time, the connection, how long it took and the result (rows, affected rows or the error). Statements termocode sends for itself (catalog reads, read-only sessions for compare and diagrams) end with `· internal`. The log stays in memory and is gone when termocode quits, because statements can hold real values.
+
+Every run from a console saves the console first, so the local history keeps a version of it. **Databases: Show Console Version History** lists those versions for the active console, or for the console of the connection under the cursor. Pick one to compare it with the console now or to restore it. To delete one entry of the SQL history, open **Databases: History…** and pick **Delete an entry…**.
+
 ## Query parameters
 
 A statement with parameters asks for each value before it runs: `?`, `:name`, `$1` (PostgreSQL, SQLite) and `@name` (not MySQL, where `@name` is a server variable). The values are bound, never pasted into the SQL. Type `NULL` for a null; a whole number is sent as a number. The console remembers the last values for this session and offers them next time. `Esc` runs nothing. Text in quotes and comments, `::` casts and the PostgreSQL `?` operator are not parameters.

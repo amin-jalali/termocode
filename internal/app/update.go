@@ -292,6 +292,12 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBObjDeps(msg)
 	case dbObjDoneMsg:
 		return m, m.onDBObjDone(msg)
+	case dbERPathSchemaMsg:
+		return m, m.onDBERPathSchema(msg)
+	case dbCloudFoundMsg:
+		return m, m.onDBCloudFound(msg)
+	case dbVersionMsg:
+		return m, m.onDBVersion(msg)
 	case dbEditKeysMsg:
 		return m, m.onDBEditKeys(msg)
 	case dbSubmitMsg:

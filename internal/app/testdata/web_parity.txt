@@ -514,6 +514,15 @@ missing	db-exec-mode	Databases|S
 missing	db-chart	Databases|S
 missing	db-copy-as	Databases|S
 missing	db-export-tables	Databases|M
+missing	db-er-path	Databases|S
+missing	db-query-log	Databases|S
+missing	db-console-history	Databases|S
+missing	db-run-container	Databases|S
+missing	db-cloud-discover	Databases|S
+missing	db-iam-auth	Databases|S
+missing	db-manage-connection	Databases|S
+missing	db-paste-connection	Databases|S
+missing	db-new-from-template	Databases|S
 missing	db-find-usages	Databases|S
 missing	db-format	Databases|S
 missing	db-format-file	Databases|S

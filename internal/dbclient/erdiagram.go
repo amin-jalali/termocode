@@ -95,9 +95,131 @@ func erModel(s CanonSchema) ([][]erColumn, []erEdge) {
 	return cols, edges
 }
 
+// ERStyle changes what a diagram shows. Colors gives every table a fill
+// colour by its name prefix (the part before the first "_"), so related
+// tables stand out; Highlight tables get the highlight colour; Only, when
+// set, keeps just those tables and the keys between them.
+type ERStyle struct {
+	Colors    bool
+	Highlight []string
+	Only      []string
+}
+
+// erColors are the prefix fills, light enough for dark text.
+var erColors = []string{"#cfe8ff", "#d8f5d0", "#ffe7c2", "#f3d6ff", "#ffd6d6", "#d6fff6", "#fff6c2", "#e2e2e2"}
+
+const erHighlight = "#ffcc66"
+
+// erPrefix is the colour group of a table name.
+func erPrefix(name string) string {
+	if i := strings.Index(name, "_"); i > 0 {
+		return name[:i]
+	}
+	return name
+}
+
+// erFills is the fill of each table ("" none).
+func erFills(s CanonSchema, st ERStyle) []string {
+	hi := map[string]bool{}
+	for _, n := range st.Highlight {
+		hi[n] = true
+	}
+	group := map[string]int{}
+	fills := make([]string, len(s.Tables))
+	for i, t := range s.Tables {
+		if st.Colors {
+			g, ok := group[erPrefix(t.Name)]
+			if !ok {
+				g = len(group)
+				group[erPrefix(t.Name)] = g
+			}
+			fills[i] = erColors[g%len(erColors)]
+		}
+		if hi[t.Name] {
+			fills[i] = erHighlight
+		}
+	}
+	return fills
+}
+
+// erOnly is s with only the named tables (all when names is empty).
+func erOnly(s CanonSchema, names []string) CanonSchema {
+	if len(names) == 0 {
+		return s
+	}
+	keep := map[string]bool{}
+	for _, n := range names {
+		keep[n] = true
+	}
+	out := s
+	out.Tables = nil
+	for _, t := range s.Tables {
+		if keep[t.Name] {
+			out.Tables = append(out.Tables, t)
+		}
+	}
+	return out
+}
+
+// ERPath is the shortest foreign-key path from table from to table to,
+// following keys in either direction; ok is false when there is none.
+func ERPath(s CanonSchema, from, to string) ([]string, bool) {
+	index := map[string]int{}
+	for i, t := range s.Tables {
+		index[t.Name] = i
+	}
+	a, okA := index[from]
+	z, okZ := index[to]
+	if !okA || !okZ {
+		return nil, false
+	}
+	_, edges := erModel(s)
+	next := make([][]int, len(s.Tables))
+	for _, e := range edges {
+		if e.child != e.parent {
+			next[e.child] = append(next[e.child], e.parent)
+			next[e.parent] = append(next[e.parent], e.child)
+		}
+	}
+	prev := make([]int, len(s.Tables))
+	for i := range prev {
+		prev[i] = -1
+	}
+	prev[a] = a
+	queue := []int{a}
+	for len(queue) > 0 && prev[z] < 0 {
+		n := queue[0]
+		queue = queue[1:]
+		for _, x := range next[n] {
+			if prev[x] < 0 {
+				prev[x] = n
+				queue = append(queue, x)
+			}
+		}
+	}
+	if prev[z] < 0 {
+		return nil, false
+	}
+	var path []string
+	for n := z; ; n = prev[n] {
+		path = append([]string{s.Tables[n].Name}, path...)
+		if n == a {
+			break
+		}
+	}
+	return path, true
+}
+
 // ERDiagram writes the schema's ER diagram in format (see ERFormats).
 func ERDiagram(s CanonSchema, format string) (string, error) {
+	return ERDiagramStyled(s, format, ERStyle{})
+}
+
+// ERDiagramStyled is ERDiagram with colours and a table filter.
+func ERDiagramStyled(s CanonSchema, format string, st ERStyle) (string, error) {
+	s = erOnly(s, st.Only)
 	cols, edges := erModel(s)
+	fills := erFills(s, st)
 	var b strings.Builder
 	switch format {
 	case "mermaid":
@@ -121,10 +243,19 @@ func ERDiagram(s CanonSchema, format string) (string, error) {
 		for _, e := range edges {
 			fmt.Fprintf(&b, "  %s ||--o{ %s : \"%s\"\n", erIdent(s.Tables[e.parent].Name), erIdent(s.Tables[e.child].Name), erQuote(e.name))
 		}
+		for i, t := range s.Tables {
+			if fills[i] != "" {
+				fmt.Fprintf(&b, "  style %s fill:%s\n", erIdent(t.Name), fills[i])
+			}
+		}
 	case "plantuml":
 		b.WriteString("@startuml\n")
 		for i, t := range s.Tables {
-			fmt.Fprintf(&b, "entity \"%s\" as t%d {\n", erQuote(t.Name), i)
+			fill := ""
+			if fills[i] != "" {
+				fill = " " + fills[i]
+			}
+			fmt.Fprintf(&b, "entity \"%s\" as t%d%s {\n", erQuote(t.Name), i, fill)
 			for _, c := range cols[i] {
 				b.WriteString("  ")
 				if c.pk {
@@ -159,7 +290,11 @@ func ERDiagram(s CanonSchema, format string) (string, error) {
 				}
 				label += `\l`
 			}
-			fmt.Fprintf(&b, "  \"%s\" [shape=box, label=\"%s\"];\n", erDot(t.Name), label)
+			fill := ""
+			if fills[i] != "" {
+				fill = `style=filled, fillcolor="` + fills[i] + `", `
+			}
+			fmt.Fprintf(&b, "  \"%s\" [shape=box, %slabel=\"%s\"];\n", erDot(t.Name), fill, label)
 		}
 		for _, e := range edges {
 			fmt.Fprintf(&b, "  \"%s\" -> \"%s\" [label=\"%s\"];\n", erDot(s.Tables[e.child].Name), erDot(s.Tables[e.parent].Name), erDot(e.name))

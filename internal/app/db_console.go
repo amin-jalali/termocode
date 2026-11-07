@@ -553,6 +553,7 @@ func (m *Model) databaseSendExec(all bool, plan *dbPlanRun, mode string) tea.Cmd
 // the statement under the cursor (line > 0), the selection (line < 0) or
 // all of them (line 0).
 func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
+	m.databaseConsoleVersion(r.file) // db_query_log.go
 	c, ok := m.databases.connection(r.conn)
 	if !ok {
 		return m.pushToastDetail(toast.Warn, "Connection not found", sanitizeDBText(r.conn))
@@ -1082,6 +1083,15 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseObjActionPicker(id); ok { // db_objactions.go
+		return cmd, true
+	}
+	if cmd, ok := m.databaseERPathPicker(id); ok { // db_er_path.go
+		return cmd, true
+	}
+	if cmd, ok := m.databaseCloudPicker(id); ok { // db_cloud.go
+		return cmd, true
+	}
+	if cmd, ok := m.databaseManagePicker(id); ok { // db_connmanage.go
 		return cmd, true
 	}
 	switch m.pickerKind {
