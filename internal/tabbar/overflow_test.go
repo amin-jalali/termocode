@@ -76,3 +76,34 @@ func TestLongActiveTabTruncatesAtEnd(t *testing.T) {
 		t.Fatalf("long name should show its start and end with …: %q", row)
 	}
 }
+
+// Spec: Given the last tab is wider than the bar (here its git badge
+// makes it too wide)
+// When it is the active tab
+// Then no ▶ shows, since no tab sits to its right, and the badge is
+// dropped before the name is cut.
+func TestWideLastTabShowsNoRightArrow(t *testing.T) {
+	name := "exactly_twenty_c.go"
+	for _, bufs := range [][]nvim.BufferInfo{
+		{{ID: 1, Path: "/repo/" + name}},
+		{{ID: 1, Path: "/repo/a.go"}, {ID: 2, Path: "/repo/" + name}},
+	} {
+		active := bufs[len(bufs)-1].ID
+		m := New()
+		m.SetBuffers(bufs, active)
+		plainW := ansi.StringWidth(ansi.Strip(renderTabCellsJoined(bufs[len(bufs)-1])))
+		m.SetWidth(plainW + 1) // fits without the badge, not with it
+		m.SetGitStatus(map[string]string{"/repo/" + name: "U"})
+		row := ansi.Strip(m.View())
+		if strings.Contains(row, "▶") {
+			t.Errorf("%d tabs: ▶ shows with no tab to the right: %q", len(bufs), row)
+		}
+		if !strings.Contains(row, name) {
+			t.Errorf("%d tabs: name cut although it fits without the badge: %q", len(bufs), row)
+		}
+	}
+}
+
+func renderTabCellsJoined(b nvim.BufferInfo) string {
+	return strings.Join(renderTabCells(b, true), "")
+}

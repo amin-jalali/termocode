@@ -189,8 +189,10 @@ func (m Model) layoutFrom(first int, widths []int) strip {
 		last = fits(avail - 1)
 	}
 	if last < first {
-		// The first tab alone is too wide: show it shortened.
+		// The first tab alone is too wide: show it shortened. ▶ only
+		// when tabs follow it (fits found none, so it was set blindly).
 		last = first
+		st.rightOver = first < n-1
 		st.fitW = avail
 		if st.rightOver {
 			st.fitW--
