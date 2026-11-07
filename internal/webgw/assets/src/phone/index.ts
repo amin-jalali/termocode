@@ -21,3 +21,6 @@ export { ASLEEP_AFTER_MS, SHOW_AFTER_MS, barShown, canAnswer, lastSeen, phoneCon
 export { ConnLine, ErrorLine, PhoneSkeleton, type SkeletonShape } from "./States";
 // live.tsx reads the session: the phone chunk imports it as
 // "./phone/live" (startPhoneConn, ConnBar, ConnScope); the kit never does.
+export { SpecChip } from "./SpecChip";
+export { labelsOf, specSummary } from "./specsummary";
+export { customizing, phoneToolBlocks, type Customizing } from "./toolblocks";

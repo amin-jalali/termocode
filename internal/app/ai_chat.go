@@ -178,6 +178,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, m.aiChatSchedTools(call)...)        // CMP-43: the chat schedules itself (always asks)
 	tools = append(tools, m.aiSessionTools()...)              // OMX-21: old chats, read only
 	tools = append(tools, aiTrackerTools(m.aiS().mcpProfile)...) // MOB-13: pin a read-only MCP call to the phone's Home
+	tools = append(tools, aiViewShowTools(m.viewRun)...) // MOBUX-17: views built from a chat command (ai_view_show_tool.go)
 	tools = append(tools, aiLibrarianTools()...)              // CMP-91: outside repositories, read only
 	return append(tools, aiChatDocTools(m.chatDocStore())...) // CMP-94: the chat's docs
 }

@@ -918,6 +918,10 @@ type Model struct {
 	// web is the web hub (web_hub.go): the web gateway's way into this
 	// UI; nil unless the web side is on.
 	web *webHub
+	// viewRun is the phone's view registry and in-process view.run (MOB-9
+	// sets it with the web hub); view_show is offered only while it is set
+	// (ai_view_show_tool.go, MOBUX-17).
+	viewRun aiViewRunner
 	// webPanel is the web gateway the user started (web_panel.go).
 	webPanel *webPanelState
 	// webStartCall is the `termocode web` request the start card answers.

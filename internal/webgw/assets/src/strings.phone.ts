@@ -127,6 +127,9 @@ export const SP = {
   "ph.forget_yes": "Forget",
   "ph.forget_arming": "The Forget button wakes up in a moment.",
   "ph.forget_failed": "Not forgotten. Try again.",
+  // A view the AI built from a chat command (MOBUX-17)
+  "ph.spec.built": "Built",
+  "ph.spec.open": "Built {what}. Change it",
 } as const;
 
 addStrings(SP);
