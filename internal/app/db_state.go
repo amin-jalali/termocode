@@ -148,6 +148,10 @@ type dbState struct {
 	discoverDone        bool
 	discovered          []containers.Container // the container list it read
 	discoveredPorts     []int                  // local ports that answered
+	uniques             map[string][][]string  // table path -> unique index columns (JOIN hints, DBX-30)
+	docGen              uint64                 // the open quick doc card; late answers for older ones drop
+	docTitle            string                 // the tree doc card the first rows join
+	docBody             []string
 }
 
 type dbRenderCache struct {
@@ -951,6 +955,13 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 			s.nodes[child] = dbNode{kind: dbNodeDetail, name: "Key · " + key, path: child, conn: n.conn}
 			n.children = append(n.children, child)
 		}
+		var uniques [][]string
+		for _, idx := range result.Indexes {
+			if idx.Unique && len(idx.Columns) > 0 {
+				uniques = append(uniques, idx.Columns)
+			}
+		}
+		s.setUniqueIndexes(path, uniques)
 		for _, idx := range result.Indexes {
 			child := path + "/index/" + idx.Name
 			s.nodes[child] = dbNode{kind: dbNodeDetail, name: "Index · " + idx.Name, path: child, conn: n.conn}

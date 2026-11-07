@@ -72,6 +72,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-find-usages", Title: "Databases: Find Usages"},
 		{ID: "db-quick-doc", Title: "Databases: Quick Documentation"},
 		{ID: "db-insert-hints", Title: "Databases: Show INSERT Column Hints"},
+		{ID: "db-param-info", Title: "Databases: Show Parameter Info"},
+		{ID: "db-join-hints", Title: "Databases: Show JOIN Cardinality Hints"},
 		{ID: "db-quick-fix", Title: "Databases: Apply SQL Quick Fix"},
 		{ID: "db-rename", Title: "Databases: Rename in SQL…"},
 		{ID: "db-count-rows", Title: "Databases: Count Rows"},
@@ -291,6 +293,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseQuickDoc(), true
 	case "db-insert-hints":
 		return m.databaseInsertHints(), true
+	case "db-param-info":
+		return m.databaseParamInfo(), true
+	case "db-join-hints":
+		return m.databaseJoinHints(), true
 	case "db-rename":
 		return m.databaseRenameStart(), true
 	case "db-quick-fix":
@@ -1269,7 +1275,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"#", "count the rows"},
 		[]string{"i", "import a CSV file"},
 		[]string{"y", "copy the name"},
-		[]string{"K", "quick documentation (columns, keys; also on a column or routine)"},
+		[]string{"K", "quick documentation (columns, keys, first rows; also on a column or routine)"},
 		[]string{"A", "object actions: drop (shows dependents), truncate, copy table, create schema or database, make PK from a column"},
 		[]string{"On a view, routine or trigger"},
 		[]string{"E", "edit its source in a buffer (submit with Databases: Submit Object Source…)"},
@@ -1295,6 +1301,7 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"b", "build a filter or sort: column, operator, value (table data)"},
 		[]string{"t", "flip rows and columns (table data)"},
 		[]string{"v", "open the cell (hex for binary, XML and JSON pretty, geometry as WKT and GeoJSON)"},
+		[]string{"gK", "quick documentation of the cell: its whole value, type and row"},
 		[]string{"=", "count, sum, avg, min, max of the column (visual: the selected rows)"},
 		[]string{"y", "copy the cell"},
 		[]string{"Y", "copy the column, one value per line"},

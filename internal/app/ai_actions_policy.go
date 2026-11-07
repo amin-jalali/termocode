@@ -556,6 +556,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-network-create-options": aiNever(aiNoPicker + " (containers-network-create)"),
 	"db-quick-doc":                      aiAuto(),
 	"db-insert-hints":                   aiAuto(),
+	"db-param-info":                     aiAuto(),
+	"db-join-hints":                     aiAuto(),
 	"db-edit-source":                    aiAuto(),
 	"db-object-actions":                 aiNever("drops, empties or creates database objects; only the user can confirm the card"),
 	"db-submit-source":                  aiNever("changes a database object; only the user can confirm the card"),

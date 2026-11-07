@@ -2090,9 +2090,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-inline-clear` | Databases: Clear Inline Results | auto |   |
 | `db-insert-hints` | Databases: Show INSERT Column Hints | auto |   |
+| `db-join-hints` | Databases: Show JOIN Cardinality Hints | auto |   |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-object-actions` | Databases: Object Actions… | never | drops, empties or creates database objects; only the user can confirm the card |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
+| `db-param-info` | Databases: Show Parameter Info | auto |   |
 | `db-pending-sources` | Databases: Pending Source Changes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-quick-doc` | Databases: Quick Documentation | auto |   |
 | `db-refresh` | Databases: Refresh | auto |   |
