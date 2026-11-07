@@ -111,6 +111,7 @@ type settingsConfig struct {
 	GitStatusBlame      *bool `json:"git_status_blame,omitempty"`
 	GitBlameIgnoreWS    *bool `json:"git_blame_ignore_whitespace,omitempty"`
 	GitBlameDetectMoves *bool `json:"git_blame_detect_moves,omitempty"`
+	GitLineLens         *bool `json:"git_line_lens,omitempty"` // git_line_lens.go
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't

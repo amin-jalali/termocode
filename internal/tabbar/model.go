@@ -42,6 +42,9 @@ type Model struct {
 	first    int // index of the first visible tab when the strip overflows
 	regions  []tabRegion
 	blurred  bool // the editor does not have focus (see SetFocused)
+	// gitStatus maps an absolute file path to its git status letter
+	// (see SetGitStatus); the tab shows it as a badge after the name.
+	gitStatus map[string]string
 }
 
 func New() Model { return Model{} }
@@ -67,6 +70,35 @@ func (m Model) Buffers() ([]nvim.BufferInfo, int) {
 // accent always marks the pane that takes the keys.
 func (m *Model) SetFocused(f bool) { m.blurred = !f }
 
+// SetGitStatus sets the git status letters of open files (absolute path
+// → "M", "A", "D", "R", "U" …, the explorer's map). Callers must not
+// change the map afterwards. nil clears every badge.
+func (m *Model) SetGitStatus(gs map[string]string) {
+	m.gitStatus = gs
+	m.EnsureVisible(m.activeID)
+}
+
+// gitBadge is the status letter tab b shows: "" for a clean or ignored
+// file and for buffers without a file.
+func (m Model) gitBadge(b nvim.BufferInfo) string {
+	if b.Path == "" || m.gitStatus == nil {
+		return ""
+	}
+	return badgeLetter(m.gitStatus[b.Path])
+}
+
+// badgeLetter turns a git status code into the one letter a tab shows.
+func badgeLetter(code string) string {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	switch code {
+	case "", "I", "!!":
+		return ""
+	case "??":
+		return "U"
+	}
+	return code[:1]
+}
+
 func (m *Model) SetWidth(w int) {
 	m.w = w
 	m.EnsureVisible(m.activeID)
@@ -81,7 +113,7 @@ func (m Model) Height() int { return 1 }
 // tabCells renders tab i at its full width.
 func (m Model) tabCells(i int) []string {
 	b := m.bufs[i]
-	return tabCellsCached(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), 0)
+	return tabCellsCached(b, b.ID == m.activeID, m.suffix(b), m.gitBadge(b), m.isWelcome(b), 0)
 }
 
 // tabWidths returns each tab's full width in cells.
@@ -228,7 +260,7 @@ func (m Model) View() string {
 	if m.w <= 0 {
 		return ""
 	}
-	k := viewKey{bufs: m.bufs, activeID: m.activeID, w: m.w, first: m.first, blurred: m.blurred, rk: theme.CurrentRenderKey()}
+	k := viewKey{bufs: m.bufs, activeID: m.activeID, w: m.w, first: m.first, blurred: m.blurred, git: m.gitBadges(), rk: theme.CurrentRenderKey()}
 	viewCache.Lock()
 	defer viewCache.Unlock()
 	if viewCache.ok && viewCache.key.equal(&k) {
@@ -238,6 +270,20 @@ func (m Model) View() string {
 	k.bufs = append([]nvim.BufferInfo(nil), m.bufs...)
 	viewCache.ok, viewCache.key, viewCache.out = true, k, out
 	return out
+}
+
+// gitBadges is the badge of every tab in order, joined: the part of the
+// view key the git status adds.
+func (m Model) gitBadges() string {
+	if m.gitStatus == nil {
+		return ""
+	}
+	var sb strings.Builder
+	for _, b := range m.bufs {
+		sb.WriteString(m.gitBadge(b))
+		sb.WriteByte('|')
+	}
+	return sb.String()
 }
 
 func (m Model) draw() string {
@@ -262,7 +308,7 @@ func (m Model) draw() string {
 			used++
 		}
 		b := m.bufs[i]
-		cells := tabCellsCached(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), st.fitW)
+		cells := tabCellsCached(b, b.ID == m.activeID, m.suffix(b), m.gitBadge(b), m.isWelcome(b), st.fitW)
 		if b.ID == m.activeID && m.blurred && len(cells) > 0 {
 			cells = append([]string(nil), cells...) // shared by the cache
 			cells[0] = theme.FgBg(theme.TextDimmer, theme.BgEditor).Render("▎")
@@ -324,7 +370,7 @@ func (m *Model) rebuildRegions() {
 		w := widths[i]
 		if st.fitW > 0 {
 			b := m.bufs[i]
-			w = len(tabCellsCached(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), st.fitW))
+			w = len(tabCellsCached(b, b.ID == m.activeID, m.suffix(b), m.gitBadge(b), m.isWelcome(b), st.fitW))
 		}
 		m.regions = append(m.regions, tabRegion{
 			start:  x,
@@ -449,7 +495,7 @@ func renderTab(b nvim.BufferInfo, active bool) (string, int) {
 // Width = len(returned slice). Used by View() to enable cell-level
 // clipping at viewport edges.
 func renderTabCells(b nvim.BufferInfo, active bool) []string {
-	return renderTabCellsSfx(b, active, "", isWelcomeBuf(b), 0)
+	return renderTabCellsSfx(b, active, "", "", isWelcomeBuf(b), 0)
 }
 
 // suffix is the dim parent-folder hint shown after a tab name when
@@ -492,10 +538,11 @@ func isWelcomeBuf(b nvim.BufferInfo) bool {
 	return isDir
 }
 
-// renderTabCellsSfx renders one tab. maxW > 0 is the most cells it may
-// take: the folder hint goes first, then the name is shortened with "…"
-// at its end.
-func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bool, maxW int) []string {
+// renderTabCellsSfx renders one tab. badge is the git status letter shown
+// after the name ("" = none). maxW > 0 is the most cells it may take: the
+// folder hint goes first, then the badge, then the name is shortened with
+// "…" at its end.
+func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix, badge string, welcome bool, maxW int) []string {
 	name := filepath.Base(b.Path)
 	if b.Title != "" {
 		name = b.Title
@@ -509,12 +556,15 @@ func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bo
 	name = ansi.Truncate(name, 40, "…")
 	suffix = ansi.Truncate(suffix, 16, "…")
 	if maxW > 0 {
-		cells := renderTabCellsSfx(b, active, suffix, welcome, 0)
+		cells := renderTabCellsSfx(b, active, suffix, badge, welcome, 0)
 		if len(cells) <= maxW {
 			return cells
 		}
 		if suffix != "" {
-			return renderTabCellsSfx(b, active, "", welcome, maxW)
+			return renderTabCellsSfx(b, active, "", badge, welcome, maxW)
+		}
+		if badge != "" {
+			return renderTabCellsSfx(b, active, "", "", welcome, maxW)
 		}
 		over := len(cells) - maxW
 		keep := ansi.StringWidth(name) - over
@@ -564,6 +614,12 @@ func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bo
 		dim := theme.FgBg(theme.TextDim, bg)
 		cells = append(cells, bgStyle.Render(" "))
 		cells = appendGlyphCells(cells, suffix, dim)
+	}
+	if badge != "" {
+		// The git status letter in the explorer's git color (VSCode
+		// editor decorations).
+		_, c := theme.GitStatusGlyph(badge)
+		cells = append(cells, bgStyle.Render(" "), theme.FgBg(c, bg).Render(badge))
 	}
 	cells = append(cells, bgStyle.Render(" "))
 	// A modified buffer shows the dirty dot where the close glyph sits
