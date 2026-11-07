@@ -436,6 +436,15 @@ export interface WorkflowRunArgs {
   run: string;
 }
 
+export interface WorkflowNameArgs {
+  name: string;
+}
+
+export interface WorkflowSaveArgs {
+  name: string;
+  content: string;
+}
+
 export interface WorkspacePathArgs {
   folder: string;
 }
@@ -3069,6 +3078,9 @@ export interface OpArgs {
   "editor.vim_maps": EmptyArgs;
   "editor.vim_buf_maps": BufArgs;
   "workflows.stop": WorkflowRunArgs;
+  "workflows.dry_run": WorkflowNameArgs;
+  "workflows.run": WorkflowNameArgs;
+  "workflows.save": WorkflowSaveArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
   "workspace.remove_folder": IDArgs;
@@ -3340,6 +3352,9 @@ export interface OpResult {
   "usercmds.save": UserCmdList;
   "editor.vim_maps": VimMapList;
   "editor.vim_buf_maps": VimMapList;
+  "workflows.dry_run": WorkflowRunArgs;
+  "workflows.run": AskRef;
+  "workflows.save": AskRef;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
