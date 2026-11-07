@@ -115,7 +115,7 @@ var opAIWorktreeRows = []Policy{
 	{Op: OpAIWorktreeDiscard, New: newOf[AIWorktreeArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 }
 
-var _ = func() bool { opTable = append(opTable, opAIWorktreeRows...); return true }()
+var _ = func() bool { opTable = append(append(opTable, opAIWorktreeRows...), opAILaneRows...); return true }()
 
 func init() {
 	registerResult(OpAIWorktrees, AIWorktrees{})

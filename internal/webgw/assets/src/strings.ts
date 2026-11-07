@@ -494,6 +494,23 @@ export const S = {
   "race.no_changes": "No changes.",
   "race.more_files": "{n} more files",
   "race.binary": "binary",
+  "lane.new": "New lane",
+  "lane.start": "Start an agent in a new lane",
+  "lane.what": "The laptop makes a new git worktree and starts the agent there with your task.",
+  "lane.loading": "Reading the agents…",
+  "lane.no_repo": "A lane needs a git repository on the laptop.",
+  "lane.no_agents": "No agent can start here. Install one on the laptop (Agent: Start…).",
+  "lane.agent": "Agent",
+  "lane.sign.ready": "signed in",
+  "lane.sign.signin": "sign in on the laptop",
+  "lane.sign.unknown": "sign-in not known",
+  "lane.sign_note": "This agent is not signed in. Sign in on the laptop first, or it will ask there.",
+  "lane.task": "Task",
+  "lane.from": "Start from (optional)",
+  "lane.from_hint": "current branch",
+  "lane.next": "Next",
+  "lane.ask": "Start {agent} in a new worktree from the current branch, with the task: {task}. Your files change only when you merge its branch.",
+  "lane.ask_from": "Start {agent} in a new worktree from {from}, with the task: {task}. Your files change only when you merge its branch.",
   "more.settings": "Settings",
   "settings.readonly": "Read only. Change settings on the laptop.",
   "settings.none": "No settings to show.",
@@ -1060,7 +1077,7 @@ export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP;
 
 /** PhoneOnlyKey is a phone app key: English only (owner 2026-11-07), the
  * same prefixes as strings_test.go englishOnly. */
-type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` | `cust.${string}` | `item.${string}` | `tools.${string}` | `race.${string}` | "more.races">;
+type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` | `cust.${string}` | `item.${string}` | `tools.${string}` | `race.${string}` | `lane.${string}` | "more.races">;
 
 /** TranslatedKey is a key strings.fa.ts translates: the phone app's
  * strings are English only (owner 2026-11-07). */

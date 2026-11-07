@@ -3,14 +3,18 @@
 // compare block: one row per lane with a state shape, files, lines,
 // verify and cost; ★ marks the merged lane. A tap on a lane shows the
 // files it changed. Read only: merge and discard stay on the laptop.
+// On the phone, "New lane" starts one agent in a new worktree (MOB-65,
+// LaneStart.tsx) after the laptop's card.
 // #/more/races
 import { h } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { RaceItem } from "../../../../../webproto/proto";
+import { layout } from "../../lib/layout";
 import { link, store } from "../../session";
 import { SkeletonRows } from "../../ui/Skeleton";
 import { t } from "../../strings";
 import { compareRows, raceMark, readRaces, type CompareRow } from "../../state/races";
+import { LaneStart } from "./LaneStart";
 import { SubView } from "./SubView";
 
 function verifyText(r: CompareRow): string {
@@ -103,8 +107,21 @@ export function RacesView() {
   useEffect(() => link.subscribe("races"), []);
   const st = store.topic("races").value;
   const { state, races } = readRaces(st?.data);
+  const [lane, setLane] = useState(false);
+  // Phone layout only; a viewer cannot start one.
+  const canLane = layout.value !== "desktop" && link.meta.value?.role === "controller";
   return (
-    <SubView title={t("more.races")}>
+    <SubView
+      title={t("more.races")}
+      actions={
+        canLane ? (
+          <button type="button" class="btn lane-new" data-act="lane" onClick={() => setLane(true)}>
+            {t("lane.new")}
+          </button>
+        ) : undefined
+      }
+    >
+      {lane && <LaneStart onDone={() => setLane(false)} />}
       {!st || state === "loading" ? (
         <SkeletonRows rows={4} />
       ) : state === "none" ? (

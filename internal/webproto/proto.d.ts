@@ -645,6 +645,12 @@ export interface AIRaceArgs {
   race: string;
 }
 
+export interface AILaneStartArgs {
+  agent: string;
+  task: string;
+  from?: string;
+}
+
 export interface AIMCPProfileArgs {
   name?: string;
   all?: boolean;
@@ -2880,6 +2886,17 @@ export interface AIRaceDone {
   message: string;
 }
 
+export interface AILaneAgents {
+  noRepo?: boolean;
+  items: AILaneAgent[];
+}
+
+export interface AILaneAgent {
+  id: string;
+  title: string;
+  state: "ready" | "signin" | "unknown";
+}
+
 export interface MCPProfiles {
   current: string;
   profiles: MCPProfileItem[];
@@ -3687,6 +3704,8 @@ export interface OpArgs {
   "ai.race_summary": AIRaceArgs;
   "ai.race_verify": AIRaceArgs;
   "ai.race_stop": AIRaceArgs;
+  "ai.lane_agents": EmptyArgs;
+  "ai.lane_start": AILaneStartArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
   "chat.rename": ChatRenameArgs;
@@ -3986,6 +4005,8 @@ export interface OpResult {
   "ai.race_summary": AIRaceSummary;
   "ai.race_verify": AIRaceDone;
   "ai.race_stop": AIRaceDone;
+  "ai.lane_agents": AILaneAgents;
+  "ai.lane_start": AskRef;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;
   "chat.fork": ChatRef;

@@ -4698,6 +4698,34 @@
       "laptop_card": false,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "ai.lane_agents",
+      "args": "EmptyArgs",
+      "result": "AILaneAgents",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.lane_start",
+      "args": "AILaneStartArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -17263,6 +17291,67 @@
       "required": [
         "key",
         "text"
+      ],
+      "additionalProperties": false
+    },
+    "AILaneAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "ready",
+            "signin",
+            "unknown"
+          ]
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "AILaneAgents": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/AILaneAgent"
+          },
+          "type": "array"
+        },
+        "noRepo": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "AILaneStartArgs": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent",
+        "task"
       ],
       "additionalProperties": false
     }

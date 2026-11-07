@@ -67,27 +67,27 @@ type RunsSnap struct {
 
 // RunItem is one AI run.
 type RunItem struct {
-	Key       string  `json:"key"`               // its id for runs.stop / pause / resume
-	Title     string  `json:"title"`             // the user's request, one line
-	Chat      string  `json:"chat,omitempty"`    // its chat's title
-	Profile   string  `json:"profile,omitempty"` // the agent profile
-	State     string  `json:"state" enum:"running|stalled|pausing|paused|resumable|done|failed|cancelled"`
-	Why       string  `json:"why,omitempty"` // why it waits or stopped
-	Step      int     `json:"step"`          // 1-based step it is on (0: none)
-	Steps     int     `json:"steps"`
-	StepTitle string  `json:"step_title,omitempty"`
-	Started   int64   `json:"started"`            // Unix ms
-	ElapsedMs int64   `json:"elapsed_ms"`         // at the time of the snap
-	Live      bool    `json:"live,omitempty"`     // elapsed grows: the page adds the time since
-	CostUSD   float64 `json:"cost_usd,omitempty"` // known step costs
-	NeedsYou  bool    `json:"needs_you,omitempty"`
+	Key       string   `json:"key"`               // its id for runs.stop / pause / resume
+	Title     string   `json:"title"`             // the user's request, one line
+	Chat      string   `json:"chat,omitempty"`    // its chat's title
+	Profile   string   `json:"profile,omitempty"` // the agent profile
+	State     string   `json:"state" enum:"running|stalled|pausing|paused|resumable|done|failed|cancelled"`
+	Why       string   `json:"why,omitempty"` // why it waits or stopped
+	Step      int      `json:"step"`          // 1-based step it is on (0: none)
+	Steps     int      `json:"steps"`
+	StepTitle string   `json:"step_title,omitempty"`
+	Started   int64    `json:"started"`            // Unix ms
+	ElapsedMs int64    `json:"elapsed_ms"`         // at the time of the snap
+	Live      bool     `json:"live,omitempty"`     // elapsed grows: the page adds the time since
+	CostUSD   float64  `json:"cost_usd,omitempty"` // known step costs
+	NeedsYou  bool     `json:"needs_you,omitempty"`
+	Can       []string `json:"can,omitempty"` // what the web may do now: "stop", "pause", "resume", "send"
 	// The run tree (CMP-10): the rows come in tree order; a run the AI
 	// started from a step of another run has that run's Key as Parent and
 	// one more Depth; Kids counts the sub-runs listed under it.
-	Parent string   `json:"parent,omitempty"`
-	Depth  int      `json:"depth,omitempty"`
-	Kids   int      `json:"kids,omitempty"`
-	Can    []string `json:"can,omitempty"` // what the web may do now: "stop", "pause", "resume", "send"
+	Parent string `json:"parent,omitempty"`
+	Depth  int    `json:"depth,omitempty"`
+	Kids   int    `json:"kids,omitempty"`
 
 	// Running are the steps that run now and can get a message
 	// (runs.send, MOB-64); at most MaxRunLive.
