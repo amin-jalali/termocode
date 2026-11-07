@@ -53,3 +53,34 @@
 .run .choices { padding-top: var(--s2); }
 .run .btn, .task-line .btn { min-height: var(--tap); }
 .notify { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); }
+
+/* New lane (MOB-65): the agent list and the task box; 44px targets. */
+.lane-agents {
+  border: 0;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.lane-agent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap);
+}
+.lane-sign {
+  margin-inline-start: auto;
+  opacity: 0.8;
+}
+.lane-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.lane-field textarea,
+.lane-field input {
+  min-height: var(--tap);
+  font: inherit;
+}
+.lane-new {
+  min-height: var(--tap);
+}

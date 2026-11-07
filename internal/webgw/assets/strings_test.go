@@ -230,7 +230,7 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 // board, MOB-18), whose UI is English only (owner 2026-11-07): it has no
 // Persian text.
 func englishOnly(key string) bool {
-	return strings.HasPrefix(key, "board.") || key == "more.board"
+	return strings.HasPrefix(key, "board.") || key == "more.board" || strings.HasPrefix(key, "lane.") // lane.*: MOB-65
 }
 
 // The Persian file (WEB-UX-5 fills it) has exactly the English keys, so

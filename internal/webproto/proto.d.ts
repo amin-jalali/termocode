@@ -554,6 +554,12 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface AILaneStartArgs {
+  agent: string;
+  task: string;
+  from?: string;
+}
+
 export interface AIMCPProfileArgs {
   name?: string;
   all?: boolean;
@@ -2413,6 +2419,17 @@ export interface AIWorktreeText {
   truncated?: boolean;
 }
 
+export interface AILaneAgents {
+  noRepo?: boolean;
+  items: AILaneAgent[];
+}
+
+export interface AILaneAgent {
+  id: string;
+  title: string;
+  state: "ready" | "signin" | "unknown";
+}
+
 export interface MCPProfiles {
   current: string;
   profiles: MCPProfileItem[];
@@ -3153,6 +3170,8 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.lane_agents": EmptyArgs;
+  "ai.lane_start": AILaneStartArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
   "chat.rename": ChatRenameArgs;
@@ -3423,6 +3442,8 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.lane_agents": AILaneAgents;
+  "ai.lane_start": AskRef;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;
   "chat.fork": ChatRef;
