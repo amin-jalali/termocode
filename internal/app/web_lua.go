@@ -22,8 +22,8 @@ package app
 
 const webLuaPrelude = `
 local W = _G.termocode_web
-if not W or W.v ~= 4 then
-  W = { v = 4, bufs = (W and W.bufs) or {} }
+if not W or W.v ~= 5 then
+  W = { v = 5, bufs = (W and W.bufs) or {} }
   _G.termocode_web = W
   local api = vim.api
   W.LOGMAX = 512
@@ -35,7 +35,9 @@ if not W or W.v ~= 4 then
     if not st or not st.log or tick < st.since then return nil end
     local out = {}
     for _, e in ipairs(st.log) do
-      if e[1] > tick then out[#out + 1] = { e[2], e[3], e[4], e[5], e[6], e[7] } end
+      -- e[1] is the tick before that edit (on_bytes runs before the
+      -- changedtick moves), so an edit made on tick itself came after it.
+      if e[1] >= tick then out[#out + 1] = { e[2], e[3], e[4], e[5], e[6], e[7] } end
     end
     return out
   end
@@ -67,7 +69,7 @@ if not W or W.v ~= 4 then
           local log = st.log
           log[#log + 1] = { tick, sr, sc, oer, oec, ner, nec }
           if #log > W.LOGMAX then
-            st.since = log[1][1]
+            st.since = log[1][1] + 1 -- a page on that edit's tick needs it
             table.remove(log, 1)
           end
         end,
