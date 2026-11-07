@@ -17,11 +17,13 @@ func init() {
 
 func (m *Model) webSearchReplace(call *webCall) *webAsk {
 	a := call.args.(*webproto.SearchReplaceArgs)
-	counts, err := search.CountLiteral(workspaceRoots(), a.Find)
+	roots := workspaceRoots()
+	counts, err := search.CountLiteral(roots, a.Find)
 	if err != nil {
 		call.fail(webproto.CodeInternal, "The workspace could not be searched.")
 		return nil
 	}
+	counts = m.withBufferCounts(counts, roots, a.Find)
 	if len(counts) == 0 {
 		call.fail(webproto.CodeNotFound, "No matches in the workspace.")
 		return nil
