@@ -56,6 +56,9 @@ type webCall struct {
 
 	answered atomic.Bool
 	deferred bool // Update only: the handler answers later
+	// sink takes the answer of an in-process call (a view's source op,
+	// webInnerCall) instead of the connection; it may run on any goroutine.
+	sink func(webproto.Msg)
 }
 
 // later says the handler answers after it returned.
@@ -85,6 +88,11 @@ func (c *webCall) fail(code webproto.ErrCode, msg string) {
 
 func (c *webCall) answer(m webproto.Msg) {
 	if !c.answered.CompareAndSwap(false, true) {
+		return
+	}
+	if c.sink != nil { // in-process: audited as the op's own row says, never sent
+		c.audited(m)
+		c.sink(m)
 		return
 	}
 	c.conn.inflight.Add(-1)
