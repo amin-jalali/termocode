@@ -20,7 +20,7 @@ func DialectFor(driver string) Dialect {
 		return PostgresDialect{}
 	case "mysql":
 		return MySQLDialect{}
-	case "sqlite":
+	case "sqlite", "libsql":
 		return SQLiteDialect{}
 	case "clickhouse":
 		return ClickHouseDialect{}

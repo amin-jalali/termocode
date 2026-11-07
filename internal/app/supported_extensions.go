@@ -41,7 +41,7 @@ var supportedExtensions = map[string]struct{}{
 	".sh": {}, ".bash": {}, ".zsh": {}, ".fish": {}, ".ps1": {}, ".bat": {}, ".cmd": {},
 
 	// query / schema
-	".sql": {}, ".graphql": {}, ".gql": {}, ".proto": {}, ".thrift": {},
+	".sql": {}, ".cql": {}, ".graphql": {}, ".gql": {}, ".proto": {}, ".thrift": {},
 
 	// build / infra
 	".dockerfile": {}, ".cmake": {}, ".gradle": {}, ".pom": {}, ".bazel": {},

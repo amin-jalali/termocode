@@ -104,7 +104,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, or **From a URL**.
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
@@ -118,6 +118,9 @@ SQL Server / Azure SQL (`"driver": "sqlserver"`, also `mssql` or `azuresql`; por
 For Oracle (port 1521; `ora` works too) the database is the service name. `"params": {"tns": "PROD"}` takes host, port, service (or SID) and TCPS from `tnsnames.ora` (in `$TNS_ADMIN`, else `$ORACLE_HOME/network/admin`), and `"wallet": "/path/to/wallet"` uses a wallet folder with TLS.
 
 - **A server type** asks for the host, port, user and database. Then it asks for a masked password.
+- **Cassandra / ScyllaDB** asks for a contact point (port 9042), an optional user and an optional keyspace. Its console is a `.cql` file; the send key runs the CQL statement at the cursor and results come a page at a time.
+- **ClickHouse** uses its HTTP interface (port 8123, user and database `default`). The password goes in a header, read-only runs use `readonly=2`, and there are no transactions.
+- **libSQL / Turso** asks for a `libsql://` server URL (for Turso: `libsql://<db>-<org>.turso.io`), then a masked auth token kept in the secret store. A token in the URL (`?authToken=`) is taken out the same way. Add `?tls=0` for a local server without TLS.
 - **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
 
 Termocode tests the connection first. If the test works, choose **Save to project** (no password in the file) or **Save for me only**. If it fails, a list offers **Set password…**, **Use an SSH tunnel…**, **SSL settings…**, **Test again** or **Cancel**.
