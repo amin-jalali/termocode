@@ -131,6 +131,7 @@ would commit it).
 | HTTP: Cookies… | the cookies of the active environment (each environment has its own jar); Enter edits the value; Ctrl+D deletes; Clear all cookies… asks first |
 | HTTP: Saved Requests… | requests saved with `S` (`~/.config/termocode/http/saved.http`) |
 | HTTP: Copy as curl | one line; secrets stay as `{{templates}}` unless you choose "Copy with secrets" |
+| HTTP: Open API Docs | the open .http file as a read-only Markdown page: a table of requests, then headers, bodies and variables; secrets are hidden |
 | HTTP: Import from curl… | `-X`, `-H`, `-d`, `--json`, `-u`, `-G` … become a new `###` block |
 | HTTP: Import OpenAPI… | an OpenAPI 3.x or Swagger 2.0 file (YAML or JSON) becomes `<title>.http` next to it: one `###` block per operation with example bodies; `{{baseUrl}}` goes into a new `http-client.env.json`; put `token` / `apiKey` / `basicAuth` in the private env file |
 | HTTP: New .http File… | a file with two example requests |

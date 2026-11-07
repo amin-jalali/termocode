@@ -88,6 +88,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-new-file", Title: "HTTP: New .http File…"},
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
 		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
+		{ID: "http-api-docs", Title: "HTTP: Open API Docs"},
 	}
 }
 
@@ -136,6 +137,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.httpSaveBodyPrompt(), true
 	case "http-fields":
 		return m.openHTTPFields(0, 0), true
+	case "http-api-docs":
+		return m.httpOpenAPIDocs(), true
 	}
 	return nil, false
 }
@@ -1291,5 +1294,25 @@ func (m *Model) httpCopySnippet(r *httpRun, lang string) tea.Cmd {
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindHTTPCopySecrets
+	return nil
+}
+
+// httpOpenAPIDocs shows the open .http file (unsaved edits count) as
+// read-only Markdown API docs. Secrets are hidden by httpclient.APIDocs.
+func (m *Model) httpOpenAPIDocs() tea.Cmd {
+	file := m.httpCurrentFile()
+	if file == "" {
+		return m.pushToast(toast.Info, "Open an .http file first")
+	}
+	f, ok := m.httpReadFile(file)
+	if !ok {
+		return m.pushToast(toast.Errr, "Could not read "+filepath.Base(file))
+	}
+	name := filepath.Base(file)
+	m.ensureEditorWindowCurrent()
+	if err := m.openReadOnlyPage("API docs: "+name, httpclient.APIDocs(f, name), "", "markdown"); err != nil {
+		return m.pushToastDetail(toast.Errr, "Could not open the API docs", err.Error())
+	}
+	m.focus = FocusEditor
 	return nil
 }
