@@ -577,6 +577,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
+		{"ai-ship-merge", "AI: Ship and Merge When Green (CI fixes, conflicts, merge card) / Stop", ""},
 		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
 		{"ai-agent-packs", "Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex)", ""},
@@ -763,6 +764,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIWebTools(), true
 	case "ai-ship":
 		return m.toggleAIShip(), true
+	case "ai-ship-merge":
+		return m.toggleAIShipMerge(), true
 	case "ai-plan-worktree":
 		return m.toggleAIPlanWorktree(), true
 	case "ai-agent-hooks":
