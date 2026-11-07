@@ -128,6 +128,7 @@ type Model struct {
 	// AGX-16 (agent_names.go): what Enter on a suggested name does, and
 	// the request in flight.
 	agentNamesOnPick agentNamesPick
+	canvasSel        string // CMP-92: the shared plan card whose actions are open (canvas_ui.go)
 	agentNamesGen    int
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
