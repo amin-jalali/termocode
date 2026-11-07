@@ -242,9 +242,20 @@ project folder mounted, runs the commands, then opens the folder in it.
 forwarded ports listen on 127.0.0.1 only.
 
 The container is named `termocode-dc-<id>` and found again next time: an
-existing one is only started, the commands do not run again. Files with
-`dockerComposeFile` or `features` need the devcontainer CLI; create the
-container with it, then open it with `W` in Containers.
+existing one is only started, the commands do not run again.
+
+Files with `dockerComposeFile` or `features` use the devcontainer CLI
+(`npm install -g @devcontainers/cli`); termocode says so when it is not
+installed. The card then also lists every feature (each one runs its own
+install script in the container), and one `devcontainer up` makes the
+container and runs the commands. termocode marks that container with the
+`termocode.devcontainer` label, so next time it is only started. A
+changed command or feature asks again.
+
+When you open a local folder with a devcontainer.json, one quiet toast
+offers to reopen it in a dev container. A click shows **Not now** (first),
+**Never for this project** and **Reopen in Dev Container**, which goes on
+to the card above. Nothing is made from the toast itself.
 
 The right-click menu of a container also has **Duplicate…** and
 **Recreate (pull, same settings)…**. Both read the container's settings

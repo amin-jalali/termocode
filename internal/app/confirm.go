@@ -294,6 +294,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onContainerOfflineConfirm(id)
 	case confirmKindDevContainerTrust: // devcontainer_open.go
 		return m.onDevContainerTrustConfirm(id)
+	case confirmKindDevContainerOffer: // devcontainer_offer.go
+		return m.onDevContainerOfferConfirm(id)
 	case confirmKindCrash:
 		return m.onCrashConfirm(id)
 	case confirmKindNvimExited:
