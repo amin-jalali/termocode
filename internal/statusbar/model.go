@@ -184,7 +184,9 @@ type barLayout struct {
 // priority): low-value right items go first, then the center cluster,
 // then the language and TERM. Items are dropped whole, never cut, so the
 // "Ln, Col" pill (and the DEBUG badge) always show complete.
-var dropOrder = []rightItem{itemUpdate, itemPlanLong, itemAI, itemLSP, itemEncoding, itemIndent, itemPlan, itemLang, itemCenter, itemTermLabel}
+// The terminal's folder is shortened (itemTermShort) before the plan pill
+// goes: a long folder never pushes the pill off the bar.
+var dropOrder = []rightItem{itemUpdate, itemPlanLong, itemAI, itemLSP, itemEncoding, itemIndent, itemTermShort, itemPlan, itemLang, itemCenter, itemTermLabel}
 
 // layout fits left / center / right into the bar width (see View).
 func (m Model) layout(s State) barLayout {
@@ -223,6 +225,13 @@ func (m Model) layout(s State) barLayout {
 		}
 		if it == itemCenter {
 			l.center, l.centerW = "", 0
+			continue
+		}
+		if it == itemTermShort {
+			if s.TermFocused && s.TermLabel != "" {
+				s.TermLabel = shortenTermLabel(s.TermLabel, lipgloss.Width(s.TermLabel)-(need()-innerW))
+				render()
+			}
 			continue
 		}
 		drop[it] = true
@@ -555,11 +564,44 @@ const (
 	itemTermLabel
 	itemPos
 	itemDebug
-	itemUpdate   // G-UPD: "⬆ v0.2.0"
-	itemPlan     // AGX-12: the plan pill
-	itemPlanLong // only in dropOrder: dropping it shows the narrow form
-	itemCenter   // the whole center cluster (only used in dropOrder)
+	itemUpdate    // G-UPD: "⬆ v0.2.0"
+	itemPlan      // AGX-12: the plan pill
+	itemPlanLong  // only in dropOrder: dropping it shows the narrow form
+	itemCenter    // the whole center cluster (only used in dropOrder)
+	itemTermShort // only in dropOrder: shortens the terminal's folder
 )
+
+// termLabelMin is the fewest cells shortenTermLabel cuts the label to.
+const termLabelMin = 12
+
+// shortenTermLabel fits "zsh · /a/long/folder" into n cells (termLabelMin
+// at least): the shell stays, the folder loses its start ("zsh · …/folder"),
+// so its last part, the one that tells folders apart, still shows.
+func shortenTermLabel(label string, n int) string {
+	n = max(n, termLabelMin)
+	if ansi.StringWidth(label) <= n {
+		return label
+	}
+	head, dir := "", label
+	if i := strings.Index(label, " · "); i >= 0 {
+		head, dir = label[:i+len(" · ")], label[i+len(" · "):]
+	}
+	keep := n - ansi.StringWidth(head) - 1 // 1 for "…"
+	if keep < 1 {
+		return truncate(label, n)
+	}
+	r := []rune(dir)
+	w, i := 0, len(r)
+	for i > 0 {
+		cw := ansi.StringWidth(string(r[i-1]))
+		if w+cw > keep {
+			break
+		}
+		w += cw
+		i--
+	}
+	return head + "…" + string(r[i:])
+}
 
 // renderRight shows cursor position, indent style, encoding, language,
 // the LSP chip, and (if active) the DEBUG pill; with the terminal focused,

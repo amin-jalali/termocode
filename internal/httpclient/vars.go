@@ -25,7 +25,8 @@ const maxNesting = 5
 // file variables, the selected environment (private file wins over the
 // public one), $shared, then the $-functions ($dotenv, $processEnv,
 // $secret, $guid, $uuid, $timestamp, $isoTimestamp, $datetime,
-// $localDatetime, $randomInt).
+// $localDatetime with iso8601, rfc1123 or a quoted custom format,
+// $randomInt, $random.email/firstName/lastName/fullName/words).
 type Resolver struct {
 	FileVars []Var
 	Env      string
@@ -43,6 +44,9 @@ type Resolver struct {
 	// Responses returns the last response of the request called name,
 	// for {{name.response.body.$.token}} (chain.go); nil = no chaining.
 	Responses func(name string) (*Response, bool)
+	// BaseDir is the .http file's folder: `< ./file` bodies are read
+	// there ("" = unsaved request, no file bodies).
+	BaseDir string
 }
 
 // Unresolved is one placeholder that is still raw after resolving.
@@ -62,6 +66,8 @@ type Resolved struct {
 	// Secrets lists the private / $secret values that were substituted,
 	// so callers can hide them again.
 	Secrets []string
+	// Dir is the folder `< ./file` bodies are read from ("" = none).
+	Dir string
 }
 
 // sendScope keeps the values of the dynamic functions for one send, so
@@ -79,7 +85,7 @@ type sendScope struct {
 // as-is (mobocode behaviour) and are listed in the result.
 func (rv *Resolver) Resolve(req Request) (Resolved, []Unresolved) {
 	sc := &sendScope{rv: rv, dynamic: map[string]string{}}
-	out := Resolved{Template: req, Env: rv.Env}
+	out := Resolved{Template: req, Env: rv.Env, Dir: rv.BaseDir}
 	out.Request = req
 	var un []Unresolved
 	out.URL = sc.expand(req.URL)
@@ -280,6 +286,12 @@ func (rv *Resolver) now() time.Time {
 
 // dynamicValue evaluates the $-functions that need no outside source.
 func dynamicValue(fn, arg string, now time.Time) (string, bool) {
+	if v, ok, handled := fakeValue(fn, arg); handled {
+		return v, ok
+	}
+	if (fn == "$datetime" || fn == "$localDatetime") && arg != "" && (arg[0] == '"' || arg[0] == '\'') {
+		return customDatetime(fn, arg, now)
+	}
 	args := strings.Fields(arg)
 	switch fn {
 	case "$guid", "$uuid", "$random.uuid":

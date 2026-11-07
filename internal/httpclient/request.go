@@ -41,6 +41,9 @@ type Request struct {
 	// (no-redirect, no-cookie-jar, timeout). mobocode reads them as
 	// plain comments.
 	Directives map[string]string `json:"directives,omitempty"`
+	// Asserts holds the `# @assert <check>` lines in order (see
+	// RunAsserts); they are not in Directives.
+	Asserts []string `json:"asserts,omitempty"`
 }
 
 // File is a parsed `.http` file.

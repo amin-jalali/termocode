@@ -234,12 +234,18 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 		resp.fail(ErrKindOther, fmt.Sprintf("not an http(s) URL: %s", RedactURL(r.URL)), start)
 		return resp
 	}
+	wb, err := BuildBody(r, rr.Dir)
+	if err != nil {
+		resp.fail(ErrKindOther, err.Error(), start)
+		return resp
+	}
+	resp.Method = wb.Method
 	var body io.Reader
 	bodyText := r.BodyText()
-	if r.Body != nil {
-		body = strings.NewReader(bodyText)
+	if wb.HasBody {
+		body = bytes.NewReader(wb.Body)
 	}
-	req, err := http.NewRequestWithContext(ctx, r.Method, u.String(), body)
+	req, err := http.NewRequestWithContext(ctx, wb.Method, u.String(), body)
 	if err != nil {
 		resp.fail(ErrKindOther, err.Error(), start)
 		return resp
@@ -251,7 +257,9 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 		}
 		req.Header.Add(hd.Name, hd.Value)
 	}
-	if !r.HasHeader("Content-Type") && looksJSON(bodyText) {
+	if wb.ContentType != "" {
+		req.Header.Set("Content-Type", wb.ContentType)
+	} else if !r.HasHeader("Content-Type") && looksJSON(bodyText) {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if !r.HasHeader("User-Agent") && c.opts.UserAgent != "" {
@@ -259,7 +267,7 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	}
 	resp.ReqHeaders = headerList(req.Header)
 	if r.Body != nil {
-		resp.ReqHeaders = append(resp.ReqHeaders, Header{Name: "content-length", Value: fmt.Sprint(len(bodyText))})
+		resp.ReqHeaders = append(resp.ReqHeaders, Header{Name: "content-length", Value: fmt.Sprint(len(wb.Body))})
 		sortHeaders(resp.ReqHeaders)
 	}
 

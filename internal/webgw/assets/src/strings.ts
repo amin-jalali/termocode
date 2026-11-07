@@ -130,7 +130,8 @@ export const S = {
   "chat.gone": "That chat is gone.",
   "chat.new": "New chat",
   "chat.new_busy": "The AI is answering. Stop it first.",
-  "chat.conflict": "This chat is not open on the laptop. Open it there first.",
+  "chat.conflict": "The laptop cannot send in this chat now.",
+  "chat.continue": "Sending opens this chat on the laptop.",
   "chat.busy": "The AI is still answering. Stop it or wait.",
   "copy": "Copy",
   "copied": "Copied",
@@ -355,6 +356,8 @@ export const S = {
   "git.stash_q": "Stash all changes? Pop brings them back.",
   "git.pop_q": "Bring back the newest stashed changes?",
   "git.checkout_q": "Switch to {branch}? Changed files go with you.",
+  "git.remote_branches": "Remote branches",
+  "git.track_q": "Switch to {branch}? A new local branch tracks {remote}.",
 
   // Search, tasks, runs
   "search.placeholder": "Search in files",

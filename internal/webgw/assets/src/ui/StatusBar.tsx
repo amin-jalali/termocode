@@ -55,7 +55,7 @@ function FileFacts() {
   const col = at ? at.col : 1;
   const ts = d.ts ?? 0;
   const vm = vimMode.value;
-  const vimKey = vm.mode === "normal" ? "sb.vim_normal" : vm.mode === "insert" ? "sb.vim_insert" : vm.mode === "visual" ? "sb.vim_visual" : vm.mode === "vline" ? "sb.vim_vline" : null;
+  const vimKey = vm.mode === "normal" ? "sb.vim_normal" : vm.mode === "insert" ? "sb.vim_insert" : vm.mode === "visual" ? "sb.vim_visual" : vm.mode === "vline" ? "sb.vim_vline" : vm.mode === "vblock" ? "sb.vim_vblock" : null;
   return (
     <>
       {vimKey && (

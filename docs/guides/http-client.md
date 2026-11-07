@@ -83,6 +83,8 @@ token / secret / password) show as `[REDACTED]`.
 | `{{$processEnv NAME}}` | from the environment |
 | `{{$secret NAME}}` | from `ai/credentials.json` (the store MCP uses) |
 | `{{$guid}}`, `{{$timestamp -1 d}}`, `{{$datetime iso8601}}`, `{{$randomInt 1 10}}` | dynamic values |
+| `{{$datetime "YYYY-MM-DD HH:mm" 1 d}}` | a custom date format (also `$localDatetime`; text in `[ ]` stays as written) |
+| `{{$random.email}}`, `{{$random.fullName}}`, `{{$random.firstName}}`, `{{$random.lastName}}`, `{{$random.words 5}}` | fake test data |
 
 Unknown names stay as written and get a wavy underline; sending asks
 "Send anyway?". **HTTP: Select Environment…** picks the environment (per
@@ -90,6 +92,15 @@ workspace). **HTTP: Open Environment File** and **HTTP: Open Private
 Environment File** create the files; the private one is for tokens and
 termocode offers to add it to `.gitignore` (it also warns once when git
 would commit it).
+
+## Request bodies
+
+| Body | How to write it |
+|---|---|
+| a file's bytes | the body is one line `< ./photo.png` (the path is next to the `.http` file and must stay in its folder) |
+| multipart/form-data | `Content-Type: multipart/form-data; boundary=B`, then the parts; a `< ./file` line inside a part is replaced by the file. Lines are sent with CRLF |
+| form fields | `Content-Type: application/x-www-form-urlencoded` and one `key = value` per line (a leading `&` is fine); termocode encodes and joins them. One line is sent as written |
+| GraphQL | `GRAPHQL https://…` (or the header `X-Request-Type: GraphQL`), the query, a blank line, then the variables as a JSON object; it is sent as POST JSON |
 
 ## More commands
 

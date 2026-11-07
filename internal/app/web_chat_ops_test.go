@@ -47,7 +47,7 @@ func webTestFakeAI(m *Model, reply string) {
 // Spec (WEB-13): chat.send types into the laptop's open chat; the fake
 // provider's answer streams to the page as chat deltas and ends with the
 // whole message and busy off. While it answers a second send is busy;
-// a send to another chat is a conflict; an empty one bad_request.
+// a send to a chat that is gone is not_found; an empty one bad_request.
 func TestChatSendStreamsToPage(t *testing.T) {
 	m := webTestChatModel(t)
 	webTestFakeAI(&m, "Hello **web**")
@@ -83,11 +83,40 @@ func TestChatSendStreamsToPage(t *testing.T) {
 	if last.Op != "message" || last.Msg.MD == nil || last.Msg.Role != "assistant" || state.Op != "state" || *state.Busy {
 		t.Fatalf("end of the turn: %+v %+v", last, state)
 	}
-	if f, _ := webTestCall(t, &m, c, webproto.OpChatSend, `{"text":"x","chat_id":"c-other"}`); f["code"] != "conflict" {
-		t.Fatalf("other chat: %v", f)
+	if f, _ := webTestCall(t, &m, c, webproto.OpChatSend, `{"text":"x","chat_id":"c-other"}`); f["code"] != "not_found" || m.ai.conv.ID != "c-1" {
+		t.Fatalf("gone chat: %v (open %s)", f, m.ai.conv.ID)
 	}
 	if f, _ := webTestCall(t, &m, c, webproto.OpChatSend, `{"text":"   "}`); f["code"] != "bad_request" {
 		t.Fatalf("empty: %v", f)
+	}
+}
+
+// Spec (WEBP-10): an old chat read on the web can go on. chat.send to a
+// stored chat opens it on the laptop (without moving the laptop's focus)
+// and sends there; the answer names that chat. While the AI answers in
+// the open chat the send is busy and the open chat stays.
+func TestChatSendContinuesStoredChat(t *testing.T) {
+	m := webTestChatModel(t, ai.StoredMessage{Role: ai.StoredUser, Text: "a"})
+	webTestFakeAI(&m, "ok")
+	webTestHub(t, &m)
+	webTestStoreChat(t, m.ai.store, "c-old", "Old chat", 1000)
+	c := webTestSub(t, &m, "chat")
+	m.ai.streaming = true
+	if f, _ := webTestCall(t, &m, c, webproto.OpChatSend, `{"text":"go on","chat_id":"c-old"}`); f["code"] != "busy" || m.ai.conv.ID != "c-1" {
+		t.Fatalf("busy: %v (open %s)", f, m.ai.conv.ID)
+	}
+	m.ai.streaming = false
+	m.ai.focused = false
+	f, _ := webTestCall(t, &m, c, webproto.OpChatSend, `{"text":"go on","chat_id":"c-old"}`)
+	if f["t"] != "res" || f["data"].(map[string]any)["id"] != "c-old" {
+		t.Fatalf("send: %v", f)
+	}
+	msgs := m.ai.conv.Messages
+	if m.ai.conv.ID != "c-old" || len(msgs) < 2 || msgs[0].Text != "Old chat" || msgs[1].Text != "go on" {
+		t.Fatalf("not continued: %s %+v", m.ai.conv.ID, msgs)
+	}
+	if m.ai.focused || !m.ai.streaming {
+		t.Fatalf("focused=%v streaming=%v", m.ai.focused, m.ai.streaming)
 	}
 }
 

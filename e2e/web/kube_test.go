@@ -69,7 +69,7 @@ func TestKubeViewReadsAndRestarts(t *testing.T) {
 			p := NewPage(t, s, vp)
 			c := p.Login("c-kube")
 			if vp.W >= 1200 {
-				p.Tap(`nav .act-item[data-act="kube"]`)
+				p.TapAct("kube")
 			} else {
 				p.GoTab("more")
 				p.Tap(`.more-link[data-sub="kube"]`)

@@ -111,7 +111,7 @@ func (p *Page) goActivity(tab string) {
 	if Eval[bool](p, open) {
 		return
 	}
-	p.Tap(fmt.Sprintf(`nav .act-item[data-act="%s"]`, act))
+	p.TapAct(act)
 	p.WaitJS(open)
 }
 

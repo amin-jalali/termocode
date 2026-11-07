@@ -906,6 +906,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)
 		m.startLocalHistory() // GITX-35 (gitx_local_history.go)
+		m.refreshOpenPalette() // opened before ready: rows may be stale
 		return m, tea.Batch(cmds...), true
 	case hotExitFoundMsg:
 		// Another dialog open: wait until it closes (Update shows it).
@@ -1098,7 +1099,7 @@ end })`)
 		if m.nvim != nil {
 			text, _ := m.nvim.EvalLuaString(`local s = vim.trim(vim.fn.execute('messages')); return s:match('[^\n]*$') or ''`)
 			if text = strings.TrimSpace(text); text != "" {
-				m.toast, cmd = m.toast.Push(toast.Warn, text)
+				m.toast, cmd = m.toast.Push(nvimPromptToast(text))
 			}
 			cmd = tea.Batch(m.nvim.Next(), cmd)
 		}
@@ -1846,18 +1847,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.pickerKind = pickerKindFiles
 		return m, m.picker.Init()
 	case keymap.ActionCommandPalette:
-		// Splice user-defined commands at the bottom so they're visible but
-		// don't push built-ins down the fuzzy-match list.
-		items := updatePaletteFilter(paletteItems())                      // G-UPD: Roll Back only with termocode.old
-		items = append(items, agentPaletteFilter(tasksPaletteItems())...) // Group C; agents only when installed
-		// Hints come from the live keymap (keymap.json overrides too).
-		items = withKeyHints(items, m.keys)
-		items = append(items, userCommandsItems()...)
-		items = append(items, m.extPaletteItems()...) // Group I
-		// Promote frequently-used commands to the front so muscle memory
-		// works: type a few letters and the right command is already
-		// near the cursor.
-		items = promoteRecents(items, loadPaletteRecents())
+		items := m.commandPaletteItems() // palette_refresh.go
 		m.picker = picker.NewItems(" Command Palette ", items)
 		m.picker.SetSize(m.w, m.h)
 		m.pickerOpen = true

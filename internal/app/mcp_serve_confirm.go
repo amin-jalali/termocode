@@ -262,8 +262,11 @@ func (m *Model) mcpServePump() tea.Cmd {
 		// Deny is the safe answer (confirm.Risky): first, plain and the
 		// button Enter picks. A card can open while the user types, and an
 		// Enter meant for something else must not allow an outside agent.
-		m.confirm = confirm.Risky(mcpServeCardTitle(a.client, a.tool.Name, a.human), body,
-			confirm.Button{ID: "deny", Title: "Deny"}, actions...)
+		safe := confirm.Button{ID: "deny", Title: "Deny"}
+		if aiStashLosesData(a.tool) { // stash drop / pop: Cancel first
+			safe.Title = "Cancel"
+		}
+		m.confirm = confirm.Risky(mcpServeCardTitle(a.client, a.tool.Name, a.human), body, safe, actions...)
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
 		m.confirmKind = confirmKindMCPServe

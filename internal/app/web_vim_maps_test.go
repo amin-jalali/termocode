@@ -66,3 +66,38 @@ func TestWebVimMapsWithoutTheEditor(t *testing.T) {
 		t.Fatalf("list %+v", list)
 	}
 }
+
+// Spec (WEBP-1): editor.vim_buf_maps gives the mappings of one open
+// file's buffer in the laptop's editor: the ones made for that file
+// (<buffer>) and the ones its language's settings make (a FileType
+// autocmd, an ftplugin), kept as for editor.vim_maps. A file not open
+// on the web is not found.
+func TestWebVimBufMapsPerFileAndLanguage(t *testing.T) {
+	r := newWebFilesRig(t)
+	r.withNvim()
+	r.lua(`vim.api.nvim_create_autocmd('FileType', { pattern = 'go', callback = function(a)
+  vim.keymap.set('n', '<Space>t', ':w<CR>', { buffer = a.buf })
+  vim.keymap.set('n', '<Space>q', function() end, { buffer = a.buf })
+end })
+vim.keymap.set('n', '<Space>g', 'dd')`, nil)
+	r.write("a.go", "package a\n")
+	r.write("b.txt", "b\n")
+	a := webBufOpen(t, r, r.c, "a.go")
+	b := webBufOpen(t, r, r.c, "b.txt")
+	r.lua(`local a, b = ...
+vim.bo[a].filetype = 'go'
+vim.keymap.set('i', 'jj', '<Esc>', { buffer = b, noremap = true })`, nil, a.Buf, b.Buf)
+
+	var la, lb webproto.VimMapList
+	webResData(t, r.call(webproto.OpEditorVimBufMaps, &webproto.BufArgs{Buf: a.Buf}), &la)
+	if len(la.Items) != 1 || la.Items[0] != (webproto.VimMap{Mode: "n", LHS: "<Space>t", RHS: ":w<CR>", Noremap: true}) {
+		t.Errorf("the Go file's maps %+v", la.Items)
+	}
+	webResData(t, r.call(webproto.OpEditorVimBufMaps, &webproto.BufArgs{Buf: b.Buf}), &lb)
+	if len(lb.Items) != 1 || lb.Items[0] != (webproto.VimMap{Mode: "i", LHS: "jj", RHS: "<Esc>", Noremap: true}) {
+		t.Errorf("the text file's maps %+v", lb.Items)
+	}
+	if f := r.call(webproto.OpEditorVimBufMaps, &webproto.BufArgs{Buf: 999}); webErrCode(f) != "not_found" {
+		t.Errorf("a file not open: %v", f)
+	}
+}

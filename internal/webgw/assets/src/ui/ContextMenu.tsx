@@ -10,6 +10,8 @@ import { signal } from "@preact/signals";
 
 export interface MenuEntry {
   label: string;
+  /** id names the row (data-id), for a test or a style. */
+  id?: string;
   /** keys is the shortcut shown on the right ("Ctrl+W"). */
   keys?: string;
   disabled?: boolean;
@@ -122,6 +124,7 @@ export function ContextMenu() {
               type="button"
               role="menuitem"
               class="ctx-item"
+              data-id={it.id}
               disabled={it.disabled}
               onClick={() => {
                 closeMenu(true);
