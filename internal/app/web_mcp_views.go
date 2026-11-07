@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sort"
 	"time"
-	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 

@@ -108,7 +108,8 @@ type wtWebTaskMsg struct {
 	files          []worktreeform.File
 	agent          agents.Agent
 	task, device   string
-	code, err      string // a failure: the answer's code and text
+	code           webproto.ErrCode // a failure: the answer's code …
+	err            string           // … and text
 }
 
 // webWorktreesNewTask checks the task and makes the worktree off the UI
