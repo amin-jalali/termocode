@@ -119,8 +119,11 @@ func xferSupport() transfer.Support {
 // xferRun is the running download.
 type xferRun struct {
 	name   string
+	method transfer.Method // Local copies go on across a re-attach
 	cancel context.CancelFunc
 	ch     chan tea.Msg
+	// dropped: stopped because the terminal it talked to went away.
+	dropped bool
 }
 
 // xferPending is a request waiting on a dialog.
@@ -322,7 +325,7 @@ func (m *Model) startDownload(p xferPending) tea.Cmd {
 	if p.dir {
 		name += ".tar.gz"
 	}
-	run := &xferRun{name: name, cancel: cancel, ch: make(chan tea.Msg, 16)}
+	run := &xferRun{name: name, method: p.method, cancel: cancel, ch: make(chan tea.Msg, 16)}
 	m.xfer = run
 	crash.Go("the download", func() { runDownload(ctx, p, name, run.ch) })
 	detail := "iTerm2 saves it in your Downloads folder."
@@ -681,6 +684,18 @@ func (m *Model) cancelDownload() tea.Cmd {
 	return nil
 }
 
+// dropTerminalDownload stops a kitty or iTerm2 download when another
+// terminal attaches (SCN-27: the link dropped and came back). The new
+// terminal knows nothing of the transfer, so waiting would only end in a
+// timeout; the end message says the connection dropped.
+func (m *Model) dropTerminalDownload() {
+	if m.xfer == nil || (m.xfer.method != transfer.Kitty && m.xfer.method != transfer.ITerm2) {
+		return
+	}
+	m.xfer.dropped = true
+	m.xfer.cancel()
+}
+
 // handleXferMsg handles the transfer messages.
 func (m *Model) handleXferMsg(msg tea.Msg) (tea.Cmd, bool) {
 	var c tea.Cmd
@@ -701,10 +716,14 @@ func (m *Model) handleXferMsg(msg tea.Msg) (tea.Cmd, bool) {
 			humanBytes(msg.done)+" of "+humanBytes(msg.total))
 		return tea.Batch(c, waitXfer(m.xfer.ch)), true
 	case xferDoneMsg:
+		dropped := m.xfer != nil && m.xfer.dropped
 		m.xfer = nil
 		m.dropCtrDownloadStage() // transfer_container.go
 		m.toast = m.toast.Dismiss(xferToastKey)
 		switch {
+		case dropped:
+			m.toast, c = m.toast.PushDetail(toast.Warn, "Download stopped: the connection dropped",
+				"Run File: Download to This Computer again for "+msg.name+".")
 		case errors.Is(msg.err, transfer.ErrCanceled), errors.Is(msg.err, context.Canceled):
 			m.toast, c = m.toast.Push(toast.Info, "Download canceled")
 		case msg.err != nil:
