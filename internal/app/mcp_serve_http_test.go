@@ -234,7 +234,7 @@ func TestMCPServeHTTPSendAlwaysPerHost(t *testing.T) {
 func TestMCPServeHTTPSendNoStaleRequest(t *testing.T) {
 	e := newMCPServeHTTPEnv(t)
 	args := map[string]any{"url": e.srv.URL + "/fresh"}
-	httpAICache.Store(httpAIKey(args), httpAIBuild(e.root, map[string]any{"url": e.srv.URL + "/stale"}))
+	httpAICache.Store(httpAIKey(args), httpAIBuild(e.root, map[string]any{"url": e.srv.URL + "/stale"}, nil))
 	if r, err := e.call(t, "codex", args); err != nil || r.IsError {
 		t.Fatalf("send: %+v %v", r, err)
 	}

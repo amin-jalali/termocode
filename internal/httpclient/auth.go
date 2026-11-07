@@ -23,6 +23,7 @@ const (
 	AuthBearer = "bearer"
 	AuthAPIKey = "apikey"
 	AuthDigest = "digest"
+	AuthOAuth1 = "oauth1"
 )
 
 // AuthEnvVar is the env variable (http-client.env.json, per env or
@@ -53,7 +54,7 @@ type DigestAuth struct {
 	Pass string
 }
 
-var errAuthSpec = errors.New("@auth: use basic USER PASS, bearer TOKEN, apikey header|query NAME VALUE, digest USER PASS or none")
+var errAuthSpec = errors.New("@auth: use basic USER PASS, bearer TOKEN, apikey header|query NAME VALUE, digest USER PASS, oauth1 KEY SECRET [TOKEN TOKEN_SECRET], ntlm [DOMAIN\\]USER PASS or none")
 
 // ParseAuth reads an auth spec. Errors never echo the values.
 func ParseAuth(spec string) (Auth, error) {
@@ -70,6 +71,18 @@ func ParseAuth(spec string) (Auth, error) {
 	case AuthBasic, AuthDigest:
 		if len(f) >= 2 {
 			return Auth{Scheme: s, User: f[1], Pass: rest(2)}, nil
+		}
+	case AuthNTLM:
+		if len(f) >= 2 {
+			return Auth{Scheme: AuthNTLM, User: f[1], Pass: rest(2)}, nil
+		}
+	case AuthOAuth1:
+		if len(f) == 3 || len(f) == 5 {
+			a := Auth{Scheme: AuthOAuth1, User: f[1], Pass: f[2]}
+			if len(f) == 5 {
+				a.Token, a.Name = f[3], f[4]
+			}
+			return a, nil
 		}
 	case AuthBearer:
 		if len(f) >= 2 {
@@ -179,6 +192,19 @@ func (sc *sendScope) applyAuth(req Request, out *Resolved, un []Unresolved) []Un
 		if !out.HasHeader("Authorization") {
 			out.Digest = &DigestAuth{User: a.User, Pass: a.Pass}
 		}
+	case AuthNTLM:
+		if !out.HasHeader("Authorization") {
+			d, u := splitNTLMUser(a.User)
+			out.NTLM = &NTLMAuth{Domain: d, User: u, Pass: a.Pass}
+		}
+	case AuthOAuth1:
+		// User/Pass: consumer key/secret; Token/Name: token/secret.
+		var form url.Values
+		if out.Body != nil && strings.HasPrefix(strings.ToLower(out.Header("Content-Type")), "application/x-www-form-urlencoded") {
+			form, _ = url.ParseQuery(*out.Body)
+		}
+		o := OAuth1{ConsumerKey: a.User, ConsumerSecret: a.Pass, Token: a.Token, TokenSecret: a.Name}
+		addHeader("Authorization", o.Header(out.Method, out.URL, form, oauth1Nonce(), sc.rv.now()))
 	}
 	return un
 }

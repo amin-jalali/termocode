@@ -351,7 +351,7 @@ func TestHTTPAICacheNeverServesARecycledMap(t *testing.T) {
 	var old []uintptr
 	describe := func() {
 		a := map[string]any{"path": "a.txt"}
-		_ = httpAIGet(root, a) // cached, never released
+		_ = httpAIGet(root, a, nil) // cached, never released
 		old = append(old, httpAIKey(a))
 	}
 	t.Cleanup(func() {
@@ -364,7 +364,7 @@ func TestHTTPAICacheNeverServesARecycledMap(t *testing.T) {
 		runtime.GC()
 		for j := 0; j < 64; j++ {
 			b := map[string]any{"url": "http://127.0.0.1/x"}
-			if r := httpAIGet(root, b); r.err != nil {
+			if r := httpAIGet(root, b, nil); r.err != nil {
 				t.Fatalf("a new map got another map's request: %v", r.err)
 			}
 			httpAIForget(b)

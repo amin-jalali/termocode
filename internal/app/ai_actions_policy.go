@@ -637,6 +637,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"http-env-select":       aiNever(aiNoPicker + " (http_set_environment)"),
 	"http-env-open":         aiAuto(),
 	"http-env-open-private": aiNever("opens the file that holds the user's secrets"),
+	"http-globals-open":     aiNever("opens the global variables file, which may hold the user's tokens"),
 	"http-saved":            aiNever(aiNoPicker + " (http_list_requests on http/saved.http)"),
 	"http-save":             aiNever(aiNoPicker + " (http_save_request)"),
 	"http-copy-curl":        aiConfirm(ai.ClassIDE), // overwrites the system clipboard

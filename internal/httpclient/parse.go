@@ -92,6 +92,13 @@ func parseBlock(lines []string, first int, name string, vars *[]Var) (Request, b
 				name = strings.TrimSpace(c[5:])
 			} else if strings.HasPrefix(c, "@") && len(c) > 1 {
 				word, val, _ := strings.Cut(c[1:], " ")
+				if word == "prompt" {
+					pn, label, _ := strings.Cut(strings.TrimSpace(val), " ")
+					if isPlainName(pn) {
+						r.Prompts = append(r.Prompts, Prompt{Name: pn, Label: strings.TrimSpace(label)})
+					}
+					break
+				}
 				if word == "assert" {
 					r.Asserts = append(r.Asserts, strings.TrimSpace(val))
 					break

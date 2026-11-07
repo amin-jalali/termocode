@@ -49,7 +49,8 @@ The format (same as mobocode, so one file works in both apps):
 | the rest of the block | the body (JSON gets `Content-Type: application/json` when you set none) |
 | `# @no-redirect`, `# @no-cookie-jar`, `# @timeout 10s` | per-request options |
 | `# @aws-sigv4 {{key}} {{$secret AWS_SECRET}} us-east-1 execute-api` | sign the request with AWS Signature V4 (access key, secret key, region, service, optional session token) |
-| `# @auth basic USER PASS`, `bearer TOKEN`, `apikey header\|query NAME VALUE`, `digest USER PASS`, `none` | auth helper; values may use `{{vars}}` and `{{$secret name}}`. `"$auth"` in `http-client.env.json` (an env or `$shared`; the nearest folder wins) sets the default; a header you write yourself wins |
+| `# @auth basic USER PASS`, `bearer TOKEN`, `apikey header\|query NAME VALUE`, `digest USER PASS`, `oauth1 KEY SECRET [TOKEN TOKEN_SECRET]` (OAuth 1.0a, HMAC-SHA1), `ntlm DOMAIN\USER PASS` (NTLMv2 handshake), `none` | auth helper; values may use `{{vars}}` and `{{$secret name}}`. `"$auth"` in `http-client.env.json` (an env or `$shared`; the nearest folder wins) sets the default; a header you write yourself wins |
+| `# @oauth2 grant=client_credentials token_url={{tokenUrl}} client_id={{id}} client_secret={{$secret api}} scope="read write"` | get an OAuth 2.0 token first and send with `Authorization: Bearer …`. Grants: `client_credentials`, `password` (`username=` `password=`), `refresh_token` (`refresh_token=`), `authorization_code` (`auth_url=`; opens the browser, PKCE, loopback redirect on 127.0.0.1) and `device_code` (`device_url=`; a card shows the code to enter). The token is cached in your secret store and refreshed when it runs out; Cancel on the card stops the wait. AI sends do not get tokens |
 | `# @insecure` | skip TLS certificate checks for this request |
 | `# @ca-cert ca.pem` | also trust the CAs in this PEM file |
 | `# @client-cert me.crt`, `# @client-key me.key` | send a client certificate (mTLS); one PEM file with both works too |
@@ -97,14 +98,29 @@ token / secret / password) show as `[REDACTED]`.
 
 | Source | Example |
 |---|---|
+| values you type: `# @prompt user` (or `# @prompt password Your password`) above the request asks for each one when you send; a name like password or token is typed hidden | `# @prompt user` |
 | file variables | `@host = http://localhost:8080` |
 | the selected environment in `http-client.private.env.json`, then `http-client.env.json` (next to the file or in a parent folder up to the workspace root), then their `$shared` | `{"dev": {"host": "…"}}` |
+| folder variables: `http-client.vars.json` (a flat map) in the file's folder or a parent up to the workspace root; the nearest folder wins | `{"tenant": "acme"}` |
+| global variables for every workspace: **HTTP: Open Global Variables File** (`http/globals.json` in the config folder, 0600) | `{"region": "eu"}` |
 | `{{$dotenv NAME}}` | from `.env` |
 | `{{$processEnv NAME}}` | from the environment |
 | `{{$secret NAME}}` | from `ai/credentials.json` (the store MCP uses) |
 | `{{$guid}}`, `{{$timestamp -1 d}}`, `{{$datetime iso8601}}`, `{{$randomInt 1 10}}` | dynamic values |
 | `{{$datetime "YYYY-MM-DD HH:mm" 1 d}}` | a custom date format (also `$localDatetime`; text in `[ ]` stays as written) |
 | `{{$random.email}}`, `{{$random.fullName}}`, `{{$random.firstName}}`, `{{$random.lastName}}`, `{{$random.words 5}}` | fake test data |
+
+### Use one answer in the next request
+
+`{{login.response.body.$.token}}` reads the last answer of the request
+named `login` (`# @name login`) in the same file. Also
+`{{login.response.status}}`, `{{login.response.headers.Location}}`,
+`{{login.response.body.*}}` (the whole body) and XPath for XML
+(`{{login.response.body.//user/@id}}`). If `login` has no answer yet,
+sending asks **Send login first?**: yes sends `login`, then your request
+with the fresh value; **Send without it** keeps the placeholder as
+written. The AI's `http_send` reads the same answers and tells the agent
+which request to send first.
 
 Unknown names stay as written and get a wavy underline; sending asks
 "Send anyway?". **HTTP: Select Environment…** picks the environment (per

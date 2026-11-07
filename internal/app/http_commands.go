@@ -79,6 +79,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-env-select", Title: "HTTP: Select Environment…"},
 		{ID: "http-env-open", Title: "HTTP: Open Environment File"},
 		{ID: "http-env-open-private", Title: "HTTP: Open Private Environment File"},
+		{ID: "http-globals-open", Title: "HTTP: Open Global Variables File"},
 		{ID: "http-saved", Title: "HTTP: Saved Requests…"},
 		{ID: "http-save", Title: "HTTP: Save Request to Saved…"},
 		{ID: "http-copy-curl", Title: "HTTP: Copy as curl"},
@@ -118,6 +119,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.httpOpenEnvFile(false), true
 	case "http-env-open-private":
 		return m.httpOpenEnvFile(true), true
+	case "http-globals-open":
+		return m.httpOpenGlobals(), true
 	case "http-saved":
 		return m.openHTTPSaved(), true
 	case "http-save":
@@ -197,9 +200,31 @@ func (m *Model) httpSendRequest(file string, vars []httpclient.Var, req httpclie
 	if s.running != nil {
 		return m.pushToastDetail(toast.Warn, "A request is still running", "Esc on the response page, or HTTP: Cancel Request")
 	}
+	if deps := m.httpMissingDeps(file, req); len(deps) > 0 {
+		m.httpAskChainDep(httpChainStep{file: file, vars: vars, req: req, env: env}, deps)
+		return nil
+	}
+	return m.httpAskPrompts(httpChainStep{file: file, vars: vars, req: req, env: env}, false)
+}
+
+// httpSendResolved resolves and sends req. skipChain: the user chose
+// to send without the missing answers, so {{x.response...}} names do
+// not ask "Send anyway?" again.
+func (m *Model) httpSendResolved(file string, vars []httpclient.Var, req httpclient.Request, env string, skipChain bool, prompted map[string]string) tea.Cmd {
+	s := m.httpS()
 	rv := httpResolver(file, vars, env)
+	rv.Prompted = prompted
 	rv.Responses = s.chainSource(file)
 	rr, un := rv.Resolve(req)
+	if skipChain {
+		keep := un[:0]
+		for _, u := range un {
+			if !strings.Contains(u.Name, ".response.") {
+				keep = append(keep, u)
+			}
+		}
+		un = keep
+	}
 	label := req.Label()
 	run := &httpRun{rr: rr, file: file, line: req.Line, label: label, env: rv.Env}
 	if len(un) > 0 {
@@ -642,6 +667,9 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 
 // handleHTTPPromptSubmit routes the HTTP prompts. ok=false: not ours.
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
+	if cmd, ok := m.httpPromptVarSubmit(value); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.httpCookiesPrompt(value); ok {
 		return cmd, true
 	}
@@ -1160,12 +1188,18 @@ func (m *Model) handleHTTPConfirm(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.httpCookiesConfirm(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.httpOAuthConfirm(id); ok {
+		return cmd, true
+	}
 	s := m.httpS()
 	switch m.confirmKind {
+	case confirmKindHTTPChainDep:
+		return m.httpChainDepConfirm(id), true
 	case confirmKindHTTPUnresolved:
 		run := s.pending
 		s.pending = nil
 		if id != "send" || run == nil {
+			s.chainNext = nil // a dependency that is not sent: drop the queue
 			return nil, true
 		}
 		return m.startHTTPRun(run, httpclient.Hooks{}), true

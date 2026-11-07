@@ -253,6 +253,15 @@ func (m *Model) httpRefreshBuf(buf int) string {
 	rv := httpResolver(name, f.Vars, "")
 	s := m.httpS()
 	rv.Responses = s.chainSource(name)
+	// `# @prompt` names are typed at send time: no wavy underline.
+	for _, r := range f.Requests {
+		for _, p := range r.Prompts {
+			if rv.Prompted == nil {
+				rv.Prompted = map[string]string{}
+			}
+			rv.Prompted[p.Name] = ""
+		}
+	}
 	rows := httpBufRows(f, lines, rv.Known, func(r *httpclient.Request) [][]string {
 		label := r.Label()
 		sending := s.running != nil && s.running.file == name && s.running.label == label

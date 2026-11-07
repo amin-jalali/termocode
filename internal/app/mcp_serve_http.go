@@ -36,7 +36,7 @@ func mcpServeHTTPSend(t ai.Tool, root string) ai.Tool {
 		if describe != nil {
 			text = describe(a)
 		}
-		if n := len(httpAIGet(root, a).rr.Secrets); n > 0 {
+		if n := len(httpAIGet(root, a, nil).rr.Secrets); n > 0 {
 			text += fmt.Sprintf("\nSends %d secret value%s from your env files or secret store (hidden here).", n, plurals(n))
 		}
 		return text
@@ -48,7 +48,7 @@ func mcpServeHTTPSend(t ai.Tool, root string) ai.Tool {
 				return err
 			}
 		}
-		r := httpAIGet(root, a)
+		r := httpAIGet(root, a, nil)
 		if len(r.rr.Secrets) == 0 {
 			return nil
 		}

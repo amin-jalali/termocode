@@ -142,6 +142,7 @@ func httpConfigDir() string {
 func httpHistoryPath() string { return filepath.Join(httpConfigDir(), "history.jsonl") }
 func httpStatePath() string   { return filepath.Join(httpConfigDir(), "state.json") }
 func httpSavedPath() string   { return filepath.Join(httpConfigDir(), "saved.http") }
+func httpGlobalsPath() string { return filepath.Join(httpConfigDir(), "globals.json") }
 
 // httpHistoryStore is the history file with the current cap; every text
 // passes ai.Redact before it reaches the disk.
@@ -212,6 +213,20 @@ type httpState struct {
 	shown   *httpRun
 
 	pending     *httpRun // waits for "Send anyway?"
+	// oauthWait is the run that waits for its OAuth 2.0 token.
+	oauthWait *httpOAuthWait
+	// promptWait collects the `# @prompt` values of a request.
+	promptWait *httpPromptWait
+
+	// chainWait waits for the "Send login first?" card; chainNext are
+	// the requests to send once their dependency answered (a stack:
+	// the top waits for the run that is sending now).
+	chainWait *httpChainStep
+	chainNext []httpChainStep
+	// chainSnap holds the newest good answer per file + request name,
+	// for the AI tools (read off the Update goroutine; guarded).
+	chainMu   sync.Mutex
+	chainSnap map[string]*httpclient.Response
 	pendingHook httpclient.Hooks
 	gitWarned   map[string]bool
 	histIDs     map[string]string // picker item → history entry id
@@ -287,6 +302,14 @@ func (s *httpState) remember(r *httpRun) {
 	}
 	s.last = r
 	s.ring = append(s.ring, r)
+	if r.rr.Template.Name != "" && r.resp != nil && r.resp.Err == "" {
+		s.chainMu.Lock()
+		if s.chainSnap == nil {
+			s.chainSnap = map[string]*httpclient.Response{}
+		}
+		s.chainSnap[r.file+"\x00"+r.rr.Template.Name] = r.resp
+		s.chainMu.Unlock()
+	}
 	if len(s.ring) > httpRingMax {
 		s.ring = s.ring[len(s.ring)-httpRingMax:]
 	}
@@ -327,6 +350,17 @@ func (s *httpState) chainSource(file string) func(string) (*httpclient.Response,
 			}
 		}
 		return nil, false
+	}
+}
+
+// chainSnapshot is chainSource for the AI tools: safe on any
+// goroutine (it reads the guarded copy, not the ring).
+func (s *httpState) chainSnapshot(file string) func(string) (*httpclient.Response, bool) {
+	return func(name string) (*httpclient.Response, bool) {
+		s.chainMu.Lock()
+		defer s.chainMu.Unlock()
+		r, ok := s.chainSnap[file+"\x00"+name]
+		return r, ok && r != nil
 	}
 }
 
@@ -394,7 +428,12 @@ func httpResolver(file string, fileVars []httpclient.Var, env string) *httpclien
 	} else if env == "-" {
 		env = ""
 	}
+	globals, err := httpclient.LoadGlobals(httpGlobalsPath())
+	if err != nil {
+		recordError("http globals: " + err.Error())
+	}
 	return &httpclient.Resolver{
+		Globals:  globals,
 		FileVars: fileVars,
 		Env:      env,
 		Envs:     httpclient.LoadEnvs(dir, root),
@@ -473,6 +512,9 @@ func httpUserTLS(run *httpRun, hooks *httpclient.Hooks) {
 // startHTTPRun sends run as the user's request: the lens and the status
 // chip say "sending", the page opens on the answer.
 func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
+	if cmd, wait := m.httpOAuthGate(run, hooks); wait {
+		return cmd
+	}
 	s := m.httpS()
 	set := loadHTTPSettings()
 	client := s.httpClient(set)
@@ -528,6 +570,9 @@ func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
 
 // handleHTTPMsg handles the HTTP client's messages. ok=false: not ours.
 func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
+	if cmd, ok := m.handleHTTPOAuthMsg(msg); ok {
+		return cmd, true
+	}
 	switch msg := msg.(type) {
 	case httpEventMsg:
 		s := m.httpS()
@@ -577,6 +622,9 @@ func (m *Model) httpFinish(run *httpRun) tea.Cmd {
 		m.httpRecordLens(run)
 		cmd := m.httpShowRun(&prev, false)
 		m.httpRefreshLens(run.file)
+		if next := m.httpChainContinue(run); next != nil {
+			return tea.Batch(cmd, next)
+		}
 		return cmd
 	}
 	s.remember(run)
@@ -585,6 +633,9 @@ func (m *Model) httpFinish(run *httpRun) tea.Cmd {
 	// (three editor calls) comes after it (FIX-48).
 	cmd := m.httpShowRun(run, false)
 	m.httpRefreshLens(run.file)
+	if next := m.httpChainContinue(run); next != nil {
+		return tea.Batch(cmd, next)
+	}
 	return cmd
 }
 

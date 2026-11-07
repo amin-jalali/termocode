@@ -20,6 +20,10 @@ const (
 	PrivateEnvFile = "http-client.private.env.json"
 	DotenvFile     = ".env"
 	SharedEnv      = "$shared"
+	// FolderVarsFile holds folder (collection) variables: a flat
+	// {"name": value} map for every .http file in that folder and below
+	// (the nearest folder wins).
+	FolderVarsFile = "http-client.vars.json"
 )
 
 // Envs holds every environment file found between a `.http` file's
@@ -35,6 +39,8 @@ type Envs struct {
 	private map[string]map[string]string
 	// Dotenv is the merged .env content for {{$dotenv NAME}}.
 	Dotenv map[string]string
+	// Folder is the merged FolderVarsFile content.
+	Folder map[string]string
 }
 
 // LoadEnvs walks from dir up to root (both included; dir outside root
@@ -78,7 +84,7 @@ var (
 func envPaths(dir, root string) []string {
 	var out []string
 	for _, d := range envDirs(dir, root) {
-		out = append(out, filepath.Join(d, EnvFile), filepath.Join(d, PrivateEnvFile), filepath.Join(d, DotenvFile))
+		out = append(out, filepath.Join(d, EnvFile), filepath.Join(d, PrivateEnvFile), filepath.Join(d, DotenvFile), filepath.Join(d, FolderVarsFile))
 	}
 	return out
 }
@@ -121,6 +127,7 @@ func loadEnvs(dir, root string) *Envs {
 		public:  map[string]map[string]string{},
 		private: map[string]map[string]string{},
 		Dotenv:  map[string]string{},
+		Folder:  map[string]string{},
 	}
 	dirs := envDirs(dir, root)
 	// Farthest first, so nearer folders overwrite.
@@ -129,6 +136,7 @@ func loadEnvs(dir, root string) *Envs {
 		e.loadJSON(filepath.Join(d, EnvFile), e.public)
 		e.loadJSON(filepath.Join(d, PrivateEnvFile), e.private)
 		e.loadDotenv(filepath.Join(d, DotenvFile))
+		e.loadFolderVars(filepath.Join(d, FolderVarsFile))
 	}
 	// Report nearest first.
 	for l, r := 0, len(e.Files)-1; l < r; l, r = l+1, r-1 {
@@ -186,6 +194,60 @@ func (e *Envs) loadJSON(path string, into map[string]map[string]string) {
 			m[k] = jsonScalar(v)
 		}
 	}
+}
+
+// loadFolderVars reads one FolderVarsFile into e.Folder.
+func (e *Envs) loadFolderVars(path string) {
+	b, err := envReadFile(path)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			e.Errs = append(e.Errs, fmt.Errorf("%s: %w", path, err))
+		}
+		return
+	}
+	e.Files = append(e.Files, path)
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		e.Errs = append(e.Errs, fmt.Errorf("%s: %w", path, err))
+		return
+	}
+	for k, v := range raw {
+		e.Folder[k] = jsonScalar(v)
+	}
+}
+
+// FolderVarNames lists the folder variable names, sorted.
+func (e *Envs) FolderVarNames() []string {
+	if e == nil {
+		return nil
+	}
+	out := make([]string, 0, len(e.Folder))
+	for k := range e.Folder {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// LoadGlobals reads a globals file (a flat {"name": value} map); a
+// missing file is no globals.
+func LoadGlobals(path string) (map[string]string, error) {
+	b, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	out := make(map[string]string, len(raw))
+	for k, v := range raw {
+		out[k] = jsonScalar(v)
+	}
+	return out, nil
 }
 
 // jsonScalar turns a JSON value into the text that is substituted:
