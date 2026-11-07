@@ -262,9 +262,9 @@ func dbGenPython(t dbTable, cols []dbColInfo) string {
 	return strings.Join(lines, "\n")
 }
 
-// databaseGenerateStart is c in the tree: the Generate code picker for the
+// databaseCodeGenStart is c in the tree: the Generate code picker for the
 // table under the cursor.
-func (m *Model) databaseGenerateStart() tea.Cmd {
+func (m *Model) databaseCodeGenStart() tea.Cmd {
 	t, cmd, ok := m.databaseTableTarget()
 	if !ok {
 		return cmd
