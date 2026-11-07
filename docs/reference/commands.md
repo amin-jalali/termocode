@@ -738,6 +738,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Terminal: Focus Next Pane | `terminal-focus-next-pane` | `Alt+Right` | `Alt+Right` |
 | Terminal: Focus Previous Pane | `terminal-focus-prev-pane` | `Alt+Left` | `Alt+Left` |
 | Terminal: Grow Pane | `terminal-grow-pane` |   |   |
+| Terminal: Hand Back to the AI | `terminal-ai-hand-back` |   |   |
 | Terminal: Maximize Panel | `terminal-maximize` |   |   |
 | Terminal: Minimize Panel | `terminal-minimize` |   |   |
 | Terminal: New Tab | `terminal-new-tab` | <code>Ctrl+Shift+&#96;</code> | <code>Ctrl+Shift+&#96;</code> |
@@ -748,6 +749,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Terminal: Shrink Pane | `terminal-shrink-pane` |   |   |
 | Terminal: Split Down | `terminal-split-down` | `Alt+-` | `Alt+-` |
 | Terminal: Split Right | `terminal-split-right` | `Alt+/` | `Alt+/` |
+| Terminal: Take Over from the AI | `terminal-ai-take-over` |   |   |
 | Terminal: Toggle Integrated Panel | `toggle-terminal` | <code>Alt+&#96;</code> / <code>Ctrl+&#96;</code> / `Ctrl+T` | <code>Ctrl+T / Alt+&#96;</code> |
 
 ## Testing

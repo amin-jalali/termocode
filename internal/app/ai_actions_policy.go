@@ -107,6 +107,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"terminal-prev-tab":  aiAuto(),
 	"terminal-maximize":  aiAuto(),
 	"terminal-minimize":  aiAuto(),
+	// CMP-67: only the user decides who types in a terminal.
+	"terminal-ai-take-over": aiNever(aiNoTermDrive),
+	"terminal-ai-hand-back": aiNever(aiNoTermDrive),
 	// terminal splits (terminal_split.go)
 	"terminal-split-right":     aiAuto(),
 	"explorer-toggle-preview":  aiAuto(), // UI only: shows or hides the preview pane

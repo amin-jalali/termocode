@@ -570,6 +570,9 @@ type Model struct {
 	// shells keep running until the panel shows again (terminal_hide.go).
 	hiddenTerminalTabs   []terminalTab
 	hiddenTerminalActive int
+	// aiTermDrive are the terminal tabs (by buffer) the AI agent typed in
+	// and whether the user took them over (CMP-67, ai_terminal_drive.go).
+	aiTermDrive map[int]*aiTermDriveState
 	// termRestorePending are saved terminals of a panel that was hidden at
 	// the last quit: they come back on the next Ctrl+T (terminal_restore.go).
 	termRestorePending *savedTerminals

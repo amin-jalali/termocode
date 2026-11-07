@@ -1732,7 +1732,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+shift+v":
 			m.terminalPasteFromClipboard()
-			return m, nil
+			return m, m.aiTermNoteUserKey() // pasting is typing: it takes the tab over from the AI
 		case "ctrl+shift+c":
 			lines := m.terminalCopyToClipboard()
 			if lines <= 0 {
@@ -1749,9 +1749,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	}
 
 	if m.inTerminal && shouldPassToTerminal(msg) && !m.skipsShell(msg) {
+		driveCmd := m.aiTermNoteUserKey() // typing in a tab the AI drives takes it over (CMP-67)
 		var cmd tea.Cmd
 		m.editor, cmd = m.editor.Update(msg)
-		return m, cmd
+		return m, tea.Batch(cmd, driveCmd)
 	}
 
 	// Bottom panel: a focused non-terminal tab (Output, Problems, …) gets
