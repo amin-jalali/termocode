@@ -356,7 +356,9 @@ func (m *Model) databaseBufferLens(buf int) {
 	s := m.dbConsole()
 	id := s.consoleConn(file, lines)
 	rows := []map[string]any{}
+	var inspectConn *dbclient.Conn
 	if c, ok := m.databases.connection(id); ok {
+		inspectConn = &c
 		m.databasePushSchema(buf, c)
 		label := dbGlyphRun() + " run"
 		if k := m.httpSendKeyLabel(); k != "" {
@@ -372,6 +374,7 @@ func (m *Model) databaseBufferLens(buf int) {
 		}
 	}
 	_ = m.nvim.ExecLuaArgs(`local b,rows=...;local out={};for _,r in ipairs(rows) do out[r.line]=r.text end;_G._termocode_sql.rows[b]=out;vim.cmd('redraw')`, buf, rows)
+	m.databaseInspectBuffer(buf, lines, inspectConn)
 }
 
 func lastExt(p string) string {
