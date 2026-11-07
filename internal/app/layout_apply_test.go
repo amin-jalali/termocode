@@ -149,3 +149,25 @@ func TestResetLayoutIsTheFirstStartLook(t *testing.T) {
 		t.Errorf("status bar: %q", statusLine(m))
 	}
 }
+
+// A side bar hidden at quit (here by a layout) stays hidden at the next
+// start of the workspace (SCN-5); shown again, it is saved shown.
+func TestHiddenExplorerSurvivesARestart(t *testing.T) {
+	withConfigDir(t)
+	layoutProject(t)
+	m := panelTestModel()
+	m.openLayout(layout.Layout{Sidebar: &layout.Sidebar{Open: false}})
+	m.persistExplorerShown() // what quitNow does
+	if s := loadSession(); !s.ExplorerHidden {
+		t.Fatalf("session = %+v, want explorer_hidden", s)
+	}
+	t.Setenv("TERMOCODE_NO_NVIM", "1")
+	if next := New(); next.showExp {
+		t.Error("the next start shows the explorer the layout hid")
+	}
+	m.showExp = true
+	m.persistExplorerShown()
+	if s := loadSession(); s.ExplorerHidden {
+		t.Error("shown again but saved hidden")
+	}
+}
