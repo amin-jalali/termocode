@@ -123,6 +123,10 @@ type Config struct {
 	Include []string `json:"include,omitempty"` // files copied into each new worktree
 	Shared  []string `json:"shared,omitempty"`  // files or folders linked to the main checkout's
 	Setup   []string `json:"setup,omitempty"`   // shell lines run in the new worktree (after trust)
+	// Env adds plain variables to the setup (warm.go).
+	Env map[string]string `json:"env,omitempty"`
+	// Warm keeps a copy of what the setup made for the next worktree (warm.go).
+	Warm *WarmConfig `json:"warm,omitempty"`
 }
 
 // LoadConfig reads the config of the main checkout top (comments

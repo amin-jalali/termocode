@@ -91,6 +91,36 @@ A repository can list files for each new worktree in
   watch them, with your environment minus termocode's secrets. The card
   shows `setup ● running`, `✓` or `✗`; `L` shows the tab.
 
+### Warm setup and env vars
+
+Two more keys make a new worktree ready faster:
+
+```jsonc
+{
+  "setup": ["npm ci"],
+  "env": { "PORT": "3001" },                // added to the setup
+  "warm": {
+    "paths": ["node_modules"],              // what the setup makes
+    "key": ["package-lock.json"]            // when it changes, set up again
+  }
+}
+```
+
+- **env** adds plain variables to the setup. Names must be shell names.
+  A `${secret:NAME}` value is dropped: secrets never come from a file in
+  the repository.
+- **warm**: after a setup that worked, termocode keeps a copy of the
+  **paths** in the git folder (`termocode/warm/`). The next new worktree
+  whose **key** files have the same bytes gets that copy and skips the
+  setup; a toast says so. A changed key file, setup line or config file
+  runs the setup again. The newest 3 copies are kept, each at most 4 GB.
+- A path the new worktree has already is kept as it is. Every path must
+  stay inside the worktree.
+- The trust card names the env variables and the warm paths. A warm copy
+  is only used after you trust the file.
+- Use warm paths that still work when moved, like `node_modules`. A
+  Python `.venv` holds its own folder path, so leave it out.
+
 ## Child worktrees
 
 `c` (**Worktree: New Child of Selected…**) opens the New worktree form
