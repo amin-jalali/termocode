@@ -365,6 +365,9 @@ func dbConnName(c dbclient.Conn) string {
 	return c.ID
 }
 func dbConnDetail(c dbclient.Conn) string {
+	if dbclient.IsSQLCipher(c) {
+		return "sqlcipher"
+	}
 	if c.Driver == "sqlite" {
 		return "sqlite"
 	}
@@ -699,7 +702,12 @@ func dbOpenDriverSession(ctx context.Context, c dbclient.Conn, root, password st
 		if !filepath.IsAbs(c.Path) {
 			c.Path = filepath.Join(root, c.Path)
 		}
-		sess, err = dbclient.NewSQLiteSession(ctx, c)
+		if dbclient.IsSQLCipher(c) {
+			// An encrypted file (DBX-64): the password is its key.
+			sess, err = dbclient.NewSQLCipherSession(ctx, c, password)
+		} else {
+			sess, err = dbclient.NewSQLiteSession(ctx, c)
+		}
 	case "redis":
 		sess, err = dbRedisSessionFactory(ctx, c, password)
 	case "clickhouse":

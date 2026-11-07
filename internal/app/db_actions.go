@@ -1078,6 +1078,10 @@ func (m *Model) databaseAddPrompt(kind promptKindEnum, title, label, value strin
 }
 
 func (m *Model) databasePromptPasswordForPending() tea.Cmd {
+	if m.databases != nil && dbclient.IsSQLCipher(m.databases.pendingConn) {
+		// An encrypted SQLite file (DBX-64): the password is its key.
+		return m.databaseAddPrompt(promptKindDBPassword, "Database key", "SQLCipher key (kept in the secret store):", "", true)
+	}
 	return m.databaseAddPrompt(promptKindDBPassword, "Database password", "Password (leave blank if none):", "", true)
 }
 
