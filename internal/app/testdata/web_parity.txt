@@ -715,10 +715,12 @@ missing	worktree-move-down	Worktrees|M
 missing	worktree-move-up	Worktrees|M
 missing	worktree-new	Worktrees|M
 missing	worktree-new-child	Worktrees|M
+missing	worktree-new-session	Worktrees|M
 missing	worktree-notes	Worktrees|M
 missing	worktree-open	Worktrees|M
 missing	worktree-pin	Worktrees|M
 missing	worktree-reset-order	Worktrees|M
+missing	worktree-sessions	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
 missing	worktree-sleep	Worktrees|M
 missing	worktree-view	Worktrees|M
