@@ -198,6 +198,16 @@ func until(d *Driver, cond func() bool) bool {
 	return d.WaitFor(func() bool { d.render(); return cond() }, 3*time.Second)
 }
 
+// untilGit is until with room for a real git run (commit + rebase -i,
+// several git processes): 3s was too short on a slow macOS runner
+// (STAB-10). The done toast cannot be missed by waiting longer: every
+// message is rendered and checked as it comes, and the toast lives 3s
+// from the moment it shows.
+func untilGit(d *Driver, cond func() bool) bool {
+	d.T.Helper()
+	return d.WaitFor(func() bool { d.render(); return cond() }, 15*time.Second)
+}
+
 // text is the current frame without ANSI codes.
 func text(d *Driver) string { return ansi.Strip(d.Frame()) }
 
