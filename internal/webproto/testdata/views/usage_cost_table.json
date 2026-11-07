@@ -1,0 +1,9 @@
+{
+  "note": "AI usage by model, the lines paid per token, with their dollar cost (MOB-73)",
+  "spec": {"view": "usage", "layout": "table", "fields": ["name", "cost", "billing"], "filter": [{"field": "billing", "op": "eq", "value": "per token"}]},
+  "src": {"scope": "this session", "by_model": [
+    {"name": "claude-code", "calls": 1, "input": 500, "output": 50, "billing": "subscription"},
+    {"name": "gpt-x", "calls": 2, "input": 1000, "output": 200, "cost_usd": 1.2, "priced": true, "billing": "per token"}
+  ], "by_agent": [], "total": {"name": "total", "calls": 3, "input": 1500, "output": 250}},
+  "want": {"kind": "table", "total": 1, "rows": [["gpt-x", "$1.20", "per token"]]}
+}
