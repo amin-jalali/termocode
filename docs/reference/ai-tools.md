@@ -2104,6 +2104,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-ask` | Databases: Run… (Choose Statement or Subquery) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
+| `db-saved-runs` | Databases: Saved SQL Runs… | never | a saved run plays SQL and shell steps from a project file; only the user starts it |
 | `db-run-from-caret` | Databases: Run From Caret to End of File | never | SQL runs require the database query tool and its guard |
 | `db-run-smallest` | Databases: Run Smallest Statement (Subquery) at Caret | never | SQL runs require the database query tool and its guard |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |

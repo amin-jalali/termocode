@@ -1048,6 +1048,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseGeneratePicker(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseSQLRunPicked(id); ok { // db_sqlruns.go
+		return cmd, true
+	}
 	if cmd, ok := m.databaseSessionsPick(id); ok {
 		return cmd, true
 	}

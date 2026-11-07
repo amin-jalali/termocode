@@ -35,6 +35,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-goto-row", Title: "Databases: Go to Result Row…"},
 		{ID: "db-result-load-all", Title: "Databases: Load All Result Rows"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
+		{ID: dbSQLRunPaletteID, Title: dbSQLRunPaletteTitle},
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
 		{ID: "db-sql-outline", Title: "Databases: Go to Statement…"},
 		{ID: "db-switch-connection", Title: "Databases: Switch File Connection…"},
@@ -142,6 +143,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseSend(false), true
 	case "db-run-file":
 		return m.databaseSend(true), true
+	case dbSQLRunPaletteID:
+		return m.databaseSavedRuns(), true
 	case "db-run-from-caret":
 		return m.databaseSendExec(false, nil, dbclient.ExecFromCaret.String()), true
 	case "db-run-smallest":
@@ -542,6 +545,9 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databasePgTAPConfirm(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseSQLRunConfirm(id); ok { // db_sqlruns.go
 		return cmd, true
 	}
 	if cmd, ok := m.databaseConsoleConfirm(id); ok {
