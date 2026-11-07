@@ -26,6 +26,7 @@ import type { CIFixPrompt, GitFixupPlan, GitGraph, GitReflog, GitStashList, GitT
 import { age } from "../../state/git";
 import { activeFile, cursorAt, focusSlot, quick, setPanes, showFile } from "../../lib/workbench";
 import { link, store } from "../../session";
+import { ReqError } from "../../net/link";
 import { readGit } from "../../state/git";
 import { gitAction, type GitAction } from "./GitMore";
 
@@ -171,7 +172,11 @@ function fixCI(): void {
     if (fresh) newChat();
     setPanes({ chat: true });
     toast("info", t("ci.fix_check"));
-  }, gitFailed);
+  }, (e) => {
+    // "CI is not red on …" is a note, not an error: it hides by itself.
+    if (e instanceof ReqError && e.code === "conflict") toast("info", e.message);
+    else gitFailed(e);
+  });
 }
 
 export function gitCommands(): Command[] {
