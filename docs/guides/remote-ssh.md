@@ -109,6 +109,7 @@ terminal panel): the session would show inside itself.
 | `termocode ssh [--dir dir] [--web] [ssh options] host` | Open termocode on `host` (in `dir`) over `ssh`; reconnects by itself when the link drops. `--web` also opens its [web panel](web.md) here |
 | `termocode mcp [--dir dir]` | Run as a stdio MCP server for an agent CLI; it relays to the termocode open in `dir` (default: the current folder or the nearest parent). Without a running termocode the tool list answers and calls fail with a clear message |
 | `termocode --no-session` | Run without a session (the old way) |
+| `termocode runner serve\|add\|list` | Let this machine serve agent tasks that you queue over SSH. See [Serve tasks from this machine](runner.md) |
 
 ## Two terminals, one session
 
