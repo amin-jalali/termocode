@@ -242,6 +242,7 @@ local function changed(buf)
   if api.nvim_buf_is_valid(buf) and _G.termocode_notify then _G.termocode_notify('termocode_db_buf',buf) end
  end,150)
 end
+vim.filetype.add({extension={cql='sql'}})
 local g=api.nvim_create_augroup('termocode_sql',{clear=true})
 api.nvim_create_autocmd('FileType',{group=g,pattern='sql',callback=function(args)
  local buf=args.buf
@@ -349,7 +350,7 @@ func (m *Model) databaseBufferLens(buf int) {
 		return
 	}
 	file, lines, ok := m.httpBufText(buf)
-	if !ok || !strings.EqualFold(lastExt(file), ".sql") {
+	if !ok || !isDBLensExt(file) {
 		return
 	}
 	m.ensureDatabasesLoaded()
@@ -374,8 +375,24 @@ func (m *Model) databaseBufferLens(buf int) {
 		}
 	}
 	_ = m.nvim.ExecLuaArgs(`local b,rows=...;local out={};for _,r in ipairs(rows) do out[r.line]=r.text end;_G._termocode_sql.rows[b]=out;vim.cmd('redraw')`, buf, rows)
+	if !dbInspectsFile(file) {
+		inspectConn = nil // clears old marks; SQL rules do not fit CQL
+	}
 	m.databaseInspectBuffer(buf, lines, inspectConn)
 }
+
+// isDBLensExt reports a file whose statements get the run lens: .sql and
+// Cassandra's .cql.
+func isDBLensExt(p string) bool {
+	switch strings.ToLower(lastExt(p)) {
+	case ".sql", ".cql":
+		return true
+	}
+	return false
+}
+
+// dbInspectsFile reports a file the SQL inspections check (.sql only).
+func dbInspectsFile(p string) bool { return strings.EqualFold(lastExt(p), ".sql") }
 
 func lastExt(p string) string {
 	if i := strings.LastIndexByte(p, '.'); i >= 0 && !strings.ContainsAny(p[i:], `/\`) {
