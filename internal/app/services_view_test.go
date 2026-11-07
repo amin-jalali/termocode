@@ -74,8 +74,11 @@ func TestServicesRows(t *testing.T) {
 		t.Errorf("folded rows = %s", got)
 	}
 	st.collapsed[svcSecCompose] = false
+	// CTX-42: the banner shows the start command (Linux: systemctl).
+	defer func(g string) { engineGOOS = g }(engineGOOS)
+	engineGOOS = "linux"
 	st.problem = services.Problem{Kind: services.ProblemDaemonDown}
-	if got := svcRowsText(st); !strings.HasPrefix(got, "#compose,!Docker is not running,!Start it, then try again.,!Retry,postgres") {
+	if got := svcRowsText(st); !strings.HasPrefix(got, "#compose,!Docker is not running,!sudo systemctl start docker,!y copies it, then Retry,!Retry,postgres") {
 		t.Errorf("daemon down rows = %s", got)
 	}
 	if s := st.statusOf(svcSecCompose, "postgres"); s.State != services.Unknown {
