@@ -43,18 +43,6 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | --- | --- | --- | --- |
 | `search_max_results` | int | `2000` | Most results Find in Files shows. 0 means no limit. |
 
-## AI
-
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `ai_inline` | bool | `true` | Show AI ghost-text completions while typing (needs a configured provider). |
-| `ai_next_edit` | bool | `true` | After an edit, show where the AI thinks the next related edit goes (Tab: go there, Tab: apply, Esc: dismiss). Not set: same as ai_inline. |
-| `ai_provider` | string | `(auto)` | AI provider: anthropic, openai, openrouter, ollama, lmstudio, openai-compatible, claude-oauth, vertex, bedrock or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it. |
-| `ai_model` | string | `(default)` | Chat model ID. Empty uses the provider's default model. |
-| `ai_base_url` | string | `(default)` | API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default. |
-| `ai_until_done_rounds` | int | `3` | Work until done (the until-done profile, /done, AI: Work Until Done): how many times verify runs at most (1 to 10). A profile's loop.max_rounds wins over it. |
-| `ai_until_done_budget_usd` | number | `2.00` | Work until done: the run pauses and asks once its steps have cost this many US dollars. 0 means no budget. A profile's budget_usd wins over it. |
-
 ## Git
 
 | Key | Type | Default | Description |
@@ -68,6 +56,18 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `git_commit_large_mb` | int | `5` | git_commit_checks: a staged file bigger than this many MB is a finding. |
 | `worktree_auto_archive_days` | int | `0` | Archive a worktree with no activity for this many days by itself: its folder goes (git-ignored files like build output too), its branch stays, and x on its row under ARCHIVED brings it back. Only clean worktrees termocode made or you adopted; never pinned ones, ones with changed files or ones an agent works in. Checked when the worktree list is read, at most once an hour. 0 turns it off. |
 | `worktree_max` | int | `0` | Most worktrees to keep (the main checkout does not count). When there are more, the oldest clean ones are archived by themselves, by the same rules as worktree_auto_archive_days; one used in the last day is never taken. 0 means no limit. |
+
+## AI
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `ai_inline` | bool | `true` | Show AI ghost-text completions while typing (needs a configured provider). |
+| `ai_next_edit` | bool | `true` | After an edit, show where the AI thinks the next related edit goes (Tab: go there, Tab: apply, Esc: dismiss). Not set: same as ai_inline. |
+| `ai_provider` | string | `(auto)` | AI provider: anthropic, openai, openrouter, ollama, lmstudio, openai-compatible, claude-oauth, vertex, bedrock or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it. |
+| `ai_model` | string | `(default)` | Chat model ID. Empty uses the provider's default model. |
+| `ai_base_url` | string | `(default)` | API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default. |
+| `ai_until_done_rounds` | int | `3` | Work until done (the until-done profile, /done, AI: Work Until Done): how many times verify runs at most (1 to 10). A profile's loop.max_rounds wins over it. |
+| `ai_until_done_budget_usd` | number | `2.00` | Work until done: the run pauses and asks once its steps have cost this many US dollars. 0 means no budget. A profile's budget_usd wins over it. |
 
 ## HTTP
 
@@ -138,7 +138,6 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | --- | --- | --- | --- |
 | `db_max_rows` | int | `10000` | Maximum loaded rows per SQL result (1–100000). Larger results are cut and marked. |
 | `db_page_rows` | int | `100` | Rows per SQL result page (1–1000). |
-| `db_sql_syntax_off` | string[] | `[]` | SQL dialects whose syntax errors the live inspections do not show, for example ["mysql"]. Unknown names and other warnings stay. |
 | `db_timeout` | int | `30` | Maximum seconds for a console statement. The session also enforces its own timeout. |
 | `db_history_max` | int | `500` | Maximum SQL history entries kept in db/history.jsonl. |
 | `db_ai_max_kb` | int | `32` | Maximum size in KB of one AI database tool answer (1–1024). Longer results are cut and marked. |
@@ -161,6 +160,11 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `db_inline_result` | bool | `false` | After a console run, the first rows of the result show under the statement in the .sql file (Databases: Clear Inline Results removes them). |
 | `db_introspect_level` | enum | `auto` | How much a table row in the tree loads: names only, columns, or columns with indexes and foreign keys. auto loads less in schemas with many objects. |
 | `db_complete_catalogs` | bool | `false` | SQL completion also offers the system catalogs (pg_catalog, information_schema, sqlite_master…). |
+| `db_csv_separator` | string | `,` | Separator of CSV exports: one character, or \t for a tab. |
+| `db_csv_header` | bool | `true` | CSV and TSV exports start with a row of column names. |
+| `db_csv_null` | string | `(empty)` | Text a NULL cell gets in CSV and TSV exports. |
+| `db_export_mask` | string[] | `[]` | Column names (any case; * and ? match) whose values exports, Copy As and Export Tables to Folder write as ••••, for example ["*password*", "email"]. |
+| `db_sql_syntax_off` | string[] | `[]` | SQL dialects whose syntax errors the live inspections do not show, for example ["mysql"]. Unknown names and other warnings stay. |
 
 ## Containers (file only)
 
@@ -201,7 +205,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_plan_approval` | enum | `ask` | ask: before an agent run starts a step that changes files or runs commands, the chat shows the plan (steps, models, budget) with Deny, Approve and Edit; a read-only plan runs at once. auto: plans run without asking. always: every plan asks, read-only ones too. AI: Toggle Plan Approval turns it on or off for one chat. |
 | `ai_autopilot` | enum | `off` | off: every mutating agent action asks (classes set to Always allow still run). low: read-only commands (ls, cat, grep, git status / diff / log) run without a card. medium: also file edits in the project, builds, tests and other local commands. High-risk actions always ask at every level: deletes, git push / pull, rm, sudo, network commands, writes outside the project or to .env, .git and key files. Step it with AI: Autopilot Level…; raising it asks on a card first. |
 | `ai_approval_rules` | object[] | `[]` | Your own approval rules, checked before autopilot, first match wins: a list of {"tool": name or glob, "match": optional glob over the card text such as "Run: go test *", "action": allow, deny or ask}. deny refuses the call without a card; allow skips the card (not for a high-risk call); ask always shows it. |
-| `ai_guardian` | string | `` | A model slot (for example quick) that checks each medium-risk action autopilot would run. It answers allow or sends the action back to you with a reason on the card. It never allows what a rule denies or a high-risk action. Empty or off: no guardian. |
+| `ai_guardian` | string |   | A model slot (for example quick) that checks each medium-risk action autopilot would run. It answers allow or sends the action back to you with a reason on the card. It never allows what a rule denies or a high-risk action. Empty or off: no guardian. |
 | `ai_compact` | enum | `auto` | auto: when a chat fills about 80% of the model's context window, or the provider says the context is too long, the older turns are summarised by the quick model (one extra request) and the chat shows "Earlier chat summarised". The model then gets the summary instead of those turns; rules, memory and todos are kept. off: never summarise (a long chat can fail with "context too long"). |
 | `ai_memory_recall` | enum | `on` | While memory is on: after each AI tool call of a chat, a saved lesson about the call's file or words that this chat has not seen yet is added to the tool result and the chat shows recalled: <title> (local matching, no extra request). check: the quick model is asked first if the lesson applies (one small request per new match). off: no recall. |
 | `ai_web_fetch` | bool | `false` | true gives the AI the web_fetch tool: it reads one http(s) page as text (GET only, at most 2 MB read and 20000 characters returned, no private or local addresses, secrets blanked). Turn it on in AI: Web Tools…. |
