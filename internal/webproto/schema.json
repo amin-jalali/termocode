@@ -12138,17 +12138,26 @@
         "cost_usd": {
           "type": "number"
         },
+        "depth": {
+          "type": "integer"
+        },
         "elapsed_ms": {
           "type": "integer"
         },
         "key": {
           "type": "string"
         },
+        "kids": {
+          "type": "integer"
+        },
         "live": {
           "type": "boolean"
         },
         "needs_you": {
           "type": "boolean"
+        },
+        "parent": {
+          "type": "string"
         },
         "profile": {
           "type": "string"

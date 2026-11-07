@@ -1346,6 +1346,9 @@ export interface RunItem {
   cost_usd?: number;
   needs_you?: boolean;
   can?: string[];
+  parent?: string;
+  depth?: number;
+  kids?: number;
 }
 
 export interface MCPSnap {

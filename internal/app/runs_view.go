@@ -46,8 +46,8 @@ func (m Model) runsDrawKey(w, h int, focused bool, now time.Time, extra string) 
 	if stream {
 		secs = now.Unix()
 	}
-	return fmt.Sprintf("%d|%d|%s|%t|%d|%s|%s|%s|%t|%t|%d|%d|%d|%t|%v|%d|%s|%d", gen, usage, conv, stream, secs, st.sel, st.filter,
-		st.profile, st.typing, st.older, st.scroll, w, h, focused, theme.CurrentRenderKey(), len(st.chats), extra, st.pageScroll)
+	return fmt.Sprintf("%d|%d|%s|%t|%d|%s|%s|%s|%t|%t|%d|%d|%d|%t|%v|%d|%s|%d|%t", gen, usage, conv, stream, secs, st.sel, st.filter,
+		st.profile, st.typing, st.older, st.scroll, w, h, focused, theme.CurrentRenderKey(), len(st.chats), extra, st.pageScroll, st.flat)
 }
 
 // renderRunsSidebar draws the view in the sidebar (w×h).
@@ -280,7 +280,11 @@ func (m *Model) drawRunsRow(cv *rcCanvas, y, w int, it runsItem, sel, narrow, fo
 		*hits = append(*hits, runsHit{x0: 0, x1: w, y: y + 1, id: "run:" + it.key})
 	}
 	g, col, word := it.look(c)
-	cv.text(3, y, g, rcSt{fg: col})
+	off := runsIndent(it.depth) // CMP-10: a sub-run sits under its parent
+	if it.depth > 0 {
+		cv.text(1+off, y, runsBranch(), rcSt{fg: c.dimmer})
+	}
+	cv.text(3+off, y, g, rcSt{fg: col})
 	wordCol := c.muted
 	if it.kind.needsYou() || it.kind == runsFailed {
 		wordCol = col
@@ -290,7 +294,7 @@ func (m *Model) drawRunsRow(cv *rcCanvas, y, w int, it runsItem, sel, narrow, fo
 		title = title.B()
 	}
 	if narrow {
-		cv.textMax(5, y, it.task, min(24, w-6), title)
+		cv.textMax(5+off, y, it.task, max(min(24, w-6)-off, 1), title)
 		px := 30
 		prof := it.run.Profile
 		if it.run.By != nil { // G-API: by AI
@@ -335,8 +339,8 @@ func (m *Model) drawRunsRow(cv *rcCanvas, y, w int, it runsItem, sel, narrow, fo
 		return
 	}
 	wx := cv.textR(w-1, y, word, rcSt{fg: wordCol})
-	cv.textMax(5, y, it.task, wx-5-1, title)
-	x := cv.textMax(5, y+1, it.run.Profile, 10, rcSt{fg: c.dim})
+	cv.textMax(5+off, y, it.task, max(wx-5-off-1, 1), title)
+	x := cv.textMax(5+off, y+1, it.run.Profile, 10, rcSt{fg: c.dim})
 	if chip := aiRunByChip(&it.run); chip != "" { // G-API
 		x = cv.textMax(x+1, y+1, chip, 5, rcSt{fg: c.accent})
 	}
