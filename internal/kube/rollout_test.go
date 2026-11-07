@@ -27,7 +27,7 @@ func TestRolloutHistoryParsesRevisions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []kube.Revision{{Number: 1}, {Number: 2, Cause: "kubectl set image deployment/api api=shop/api:2"}, {Number: 3}}
+	want := []kube.RolloutRevision{{Number: 1}, {Number: 2, Cause: "kubectl set image deployment/api api=shop/api:2"}, {Number: 3}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("history = %+v", got)
 	}
