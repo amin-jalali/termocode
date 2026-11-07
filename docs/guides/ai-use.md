@@ -136,6 +136,10 @@ The setting is read when termocode starts.
 Chats are saved. Run **AI: Chat History…** to open an old one, and
 **AI: New Chat** to start fresh. The last 50 chats are kept.
 
+Run **AI: Search Chat History…** to find words in your saved chats. It
+looks in every title and message, on this computer only. Each row shows
+the matching line, with secrets hidden. `Enter` opens the chat.
+
 ### Reasoning level
 
 Some models can think longer before they answer. More thinking gives

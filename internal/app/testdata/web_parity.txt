@@ -458,6 +458,8 @@ excluded	web-stop	laptop only: stops the web panel itself
 excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
+missing	agent-sessions-search-all	AI|S
+missing	ai-history-search	AI|S
 missing	ai-mcp-accounts	AI|S
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
@@ -703,6 +705,7 @@ missing	services-compose-run	Containers|S
 missing	services-compose-watch	Containers|S
 missing	services-deploy-git	Containers|S
 missing	services-env-file	Containers|S
+missing	session-recap	Session|S
 missing	web-forward-port	Web|M
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
@@ -719,11 +722,16 @@ missing	worktree-filter	Worktrees|M
 missing	worktree-forget	Worktrees|M
 missing	worktree-jump	Worktrees|M
 missing	worktree-link	Worktrees|M
+missing	worktree-move-down	Worktrees|M
+missing	worktree-move-up	Worktrees|M
 missing	worktree-new	Worktrees|M
 missing	worktree-new-child	Worktrees|M
+missing	worktree-new-session	Worktrees|M
 missing	worktree-notes	Worktrees|M
 missing	worktree-open	Worktrees|M
 missing	worktree-pin	Worktrees|M
+missing	worktree-reset-order	Worktrees|M
+missing	worktree-sessions	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
 missing	worktree-sleep	Worktrees|M
 missing	worktree-view	Worktrees|M

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -18,11 +19,16 @@ import (
 // capped: 200 files, 50 MB, the first 3 hits per file). The text searched
 // is already redacted. Owner decision D1b (default no): the AI gets no
 // tool over these files.
+//
+// Agent: Search All Sessions… (CMP-30) is the same search over the
+// sessions of every project on this computer (agentSearchAll); each hit
+// names its project folder.
 
 const (
 	pickerKindAgentSessionsHits   pickerKindEnum = 3742
 	promptKindAgentSessionsSearch promptKindEnum = 3743
 	agentSessionsSearchID                        = "agent-sessions-search"
+	agentSessionsSearchAllID                     = "agent-sessions-search-all"
 	agentSearchPfx                               = "hit:"
 )
 
@@ -38,12 +44,29 @@ func (m *Model) agentSessionsPickerKey(k tea.KeyMsg) (tea.Cmd, bool) {
 // openAgentSessionsSearch asks for the words (asking for the setting
 // first while it is off).
 func (m *Model) openAgentSessionsSearch() tea.Cmd {
+	m.agentSearchAll = false
+	return m.askAgentSessionsSearch()
+}
+
+// openAgentSessionsSearchAll asks for the words to find in the sessions
+// of every project.
+func (m *Model) openAgentSessionsSearchAll() tea.Cmd {
+	m.agentSearchAll = true
+	return m.askAgentSessionsSearch()
+}
+
+// askAgentSessionsSearch is the words prompt of both scopes.
+func (m *Model) askAgentSessionsSearch() tea.Cmd {
 	if !agentTranscriptsOn() {
 		m.agentChatPendingBuf = agentChatPendingSessions
 		m.openAgentTranscriptsCard("Claude Code and Codex", "~/.claude and ~/.codex")
 		return nil
 	}
-	m.prompt = prompt.New(" Search agent sessions ", "Words to find in this project's Claude Code and Codex sessions:", "")
+	title, ask := " Search agent sessions ", "Words to find in this project's Claude Code and Codex sessions:"
+	if m.agentSearchAll {
+		title, ask = " Search all agent sessions ", "Words to find in the Claude Code and Codex sessions of every project:"
+	}
+	m.prompt = prompt.New(title, ask, "")
 	m.prompt.SetNote("Searched here, on this computer; secrets are hidden first.")
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
@@ -68,6 +91,12 @@ func (m *Model) onAgentSessionsSearch(q string) tea.Cmd {
 		m.agentSessIndex = agentlog.NewIndex()
 	}
 	x, root, homes := m.agentSessIndex, agentSessionsRoot(), agentlogHomes()
+	if m.agentSearchAll { // its own cache: "" is every project
+		if m.agentSessIndexAll == nil {
+			m.agentSessIndexAll = agentlog.NewIndex()
+		}
+		x, root = m.agentSessIndexAll, ""
+	}
 	return func() tea.Msg {
 		hits, capped := agentlog.Search(x.Build(homes, root), q, agentlog.DefaultSearchLimits)
 		return applyMsg(func(m *Model) tea.Cmd {
@@ -92,6 +121,9 @@ func (m *Model) agentSearchItems() []picker.Item {
 			name = a.Title
 		}
 		hint := h.Time.Local().Format("Jan 2 15:04") + " · " + name
+		if m.agentSearchAll && h.Session.Cwd != "" {
+			hint += " · " + filepath.Base(h.Session.Cwd)
+		}
 		if fp := h.Session.FirstPrompt; fp != "" && fp != h.Snippet {
 			hint += " · " + fp
 		}
@@ -119,4 +151,5 @@ func (m *Model) onAgentSearchPicked(id string) tea.Cmd {
 
 func init() {
 	aiActionPolicies[agentSessionsSearchID] = aiNever(aiNoPicker + "; owner decision D1b: the AI gets no search over the agents' session files")
+	aiActionPolicies[agentSessionsSearchAllID] = aiNever(aiNoPicker + "; owner decision D1b: the AI gets no search over the agents' session files")
 }

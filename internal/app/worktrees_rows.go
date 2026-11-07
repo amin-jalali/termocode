@@ -169,10 +169,21 @@ func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Ro
 		}
 		out = append(out, it)
 	}
-	// In a group: agents that wait for you, then working ones, then the
-	// last seen; git's order (the main checkout first) breaks ties.
+	// In a group: the cards the user put in order (Shift+J/K) first, in
+	// that order; then agents that wait for you, then working ones, then
+	// the last seen; git's order (the main checkout first) breaks ties.
 	sort.SliceStable(out, func(i, j int) bool {
 		a, b := out[i], out[j]
+		if oa, ob := a.e.Meta.Order, b.e.Meta.Order; oa > 0 || ob > 0 {
+			switch {
+			case oa > 0 && ob > 0 && oa != ob:
+				return oa < ob
+			case oa > 0 && ob == 0:
+				return true
+			case oa == 0 && ob > 0:
+				return false
+			}
+		}
 		if ra, rb := wtStateRank(a.state), wtStateRank(b.state); ra != rb {
 			return ra < rb
 		}

@@ -123,6 +123,9 @@ type Config struct {
 	Include []string `json:"include,omitempty"` // files copied into each new worktree
 	Shared  []string `json:"shared,omitempty"`  // files or folders linked to the main checkout's
 	Setup   []string `json:"setup,omitempty"`   // shell lines run in the new worktree (after trust)
+	// BranchPrefix starts a branch drafted from the agent task (CMP-26),
+	// e.g. "amin/"; "" = the kind of the task (fix/, feat/, …).
+	BranchPrefix string `json:"branch_prefix,omitempty"`
 }
 
 // LoadConfig reads the config of the main checkout top (comments
