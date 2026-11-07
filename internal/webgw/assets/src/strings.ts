@@ -424,6 +424,25 @@ export const S = {
   "more.tasks": "Tasks",
   "more.runs": "Runs",
   "more.workflows": "Workflows",
+  // The phone's live board (MOB-18); English only, no Persian text.
+  "more.board": "Live board",
+  "wfv.needs": "Needs you",
+  "board.col.working": "Working",
+  "board.col.done": "Done today",
+  "board.columns": "Board columns",
+  "board.today": "{s} today",
+  "board.empty_col": "Nothing in this column.",
+  "board.empty_body": "Nothing is going on now. AI runs, lanes, workflows and questions show here.",
+  "board.load_failed": "The board did not open.",
+  "board.stale": "Offline. This is the last board the laptop sent.",
+  "board.ahead": "{n} ahead",
+  "board.dirty": "{n} changed",
+  "board.more": "{n} more on the laptop",
+  "board.st.wait": "waits for you",
+  "board.kind.card": "question",
+  "board.kind.run": "AI run",
+  "board.kind.lane": "lane",
+  "board.kind.workflow": "workflow run",
   "wf.none": "No workflows in this folder.",
   "wf.stop_confirm": "Stop this workflow run? Finished items keep their results.",
   "wf.waiting": "waits for you: {s}",
@@ -985,7 +1004,7 @@ export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP;
 
 /** PhoneOnlyKey is a phone app key: English only (owner 2026-11-07), the
  * same prefixes as strings_test.go englishOnly. */
-type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` | `cust.${string}` | `item.${string}` | `tools.${string}`>;
+type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` | `cust.${string}` | `item.${string}` | `tools.${string}` | `board.${string}` | "more.board">;
 
 /** TranslatedKey is a key strings.fa.ts translates: the phone app's
  * strings are English only (owner 2026-11-07). */

@@ -2122,6 +2122,38 @@ export interface LspHint {
   padRight?: boolean;
 }
 
+export interface Board {
+  items: BoardItem[];
+  counts: BoardCounts;
+  today_usd?: number;
+  more?: number;
+  built: number;
+}
+
+export interface BoardItem {
+  id: string;
+  kind: "card" | "run" | "lane" | "workflow";
+  column: "needs_you" | "working" | "review" | "done";
+  state: "wait" | "run" | "ok" | "fail" | "idle";
+  title: string;
+  sub?: string;
+  why?: string;
+  step?: number;
+  steps?: number;
+  cost_usd?: number;
+  ahead?: number;
+  dirty?: number;
+  since?: number;
+  ref: string;
+}
+
+export interface BoardCounts {
+  needs_you: number;
+  working: number;
+  review: number;
+  done: number;
+}
+
 export interface DebugSources {
   sources: DebugSource[];
   unsupported?: boolean;
@@ -3415,6 +3447,7 @@ export interface OpArgs {
   "lsp.code_actions": LspRangeArgs;
   "lsp.code_action_apply": LspApplyArgs;
   "lsp.inlay_hints": LspRowsArgs;
+  "board.get": EmptyArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -3723,6 +3756,7 @@ export interface OpResult {
   "lsp.code_actions": LspActions;
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;
+  "board.get": Board;
   "debug.sources": DebugSources;
   "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;

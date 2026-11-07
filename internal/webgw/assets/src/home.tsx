@@ -10,3 +10,5 @@ export { AllToolsView } from "./home/AllToolsView";
 // strings come with it.
 import "./strings.phone";
 export { ReviewView } from "./views/phone/Review";
+// The live board (MOB-18, once its own board.js).
+export { BoardView } from "./views/board/main";

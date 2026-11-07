@@ -13,6 +13,8 @@ import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
 import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
+import { BoardRoute } from "./more/BoardRoute";
+import { layout } from "../lib/layout";
 import { SettingsView } from "./more/SettingsView";
 import { AgentsView } from "./AgentsView";
 import { ItermocView } from "./ItermocView";
@@ -93,6 +95,7 @@ export function MoreView() {
   if (sub === "tasks") return <TasksView />;
   if (sub === "runs") return <RunsView />;
   if (sub === "workflows") return <WorkflowsView />;
+  if (sub === "board") return <BoardRoute />;
   if (sub === "settings") return <SettingsView />;
   if (sub === "mcp") return <MCPView />;
   if (sub === "agents") return <AgentsView />;
@@ -145,6 +148,11 @@ export function MoreView() {
           <button type="button" class="more-link" data-sub="workflows" onClick={() => go({ tab: "more", rest: "workflows", query: {} })}>
             {t("more.workflows")}
           </button>
+          {layout.value !== "desktop" && (
+            <button type="button" class="more-link" data-sub="board" onClick={() => go({ tab: "more", rest: "board", query: {} })}>
+              {t("more.board")}
+            </button>
+          )}
           <button type="button" class="more-link" data-sub="settings" onClick={() => go({ tab: "more", rest: "settings", query: {} })}>
             {t("more.settings")}
           </button>
