@@ -17,6 +17,7 @@ const (
 	ErrNoCluster         // the API server does not answer
 	ErrForbidden         // RBAC says no
 	ErrTimeout           // the call ran out of time
+	ErrNoHelm            // helm is not installed
 )
 
 // Error is a failed call as one short line for the view.
@@ -32,6 +33,8 @@ func (e *Error) Error() string {
 	switch e.Kind {
 	case ErrNoKubectl:
 		return "kubectl is not installed"
+	case ErrNoHelm:
+		return "helm is not installed"
 	case ErrNoConfig:
 		return "No cluster set up: kubeconfig has no current context"
 	case ErrNoCluster:
