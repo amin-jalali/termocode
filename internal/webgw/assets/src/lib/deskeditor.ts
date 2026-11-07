@@ -16,6 +16,7 @@ import { aiSnap } from "./ai";
 import { toast } from "./toasts";
 import { t } from "../strings";
 import { vimBufMaps, vimMaps } from "./vimmaps";
+import { jumpGo, noteCaret, noteJump } from "./jumplist";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -223,6 +224,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         return;
       case "cursor":
         rows = { from: m.from ?? m.line, to: m.to ?? m.line };
+        if (host.path && !host.diff) noteCaret(host.path, m.line, m.col);
         if ((host.slot ?? "g0") === focusSlot.peek()) cursorAt.value = { line: m.line, col: m.col };
         return;
       case "save":
@@ -277,6 +279,17 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "vim":
         if ((host.slot ?? "g0") === focusSlot.peek()) vimMode.value = { mode: m.mode, pending: m.pending, rec: typeof m.rec === "string" ? m.rec : "", msg: typeof m.msg === "string" ? m.msg : "" };
         return;
+      case "vimJump":
+        if (host.path) noteJump(host.path, m.line, m.col);
+        return;
+      case "vimJumpGo": {
+        // Ctrl+O, Ctrl+I: a place here, or another file opened there.
+        const to = host.path ? jumpGo(host.path, m.line, m.col, m.dir, m.n) : null;
+        if (!to) return;
+        if (to.path === host.path) send({ t: "reveal", line: to.line, col: to.col });
+        else host.onOpen?.(to.path, to.line - 1, to.col - 1);
+        return;
+      }
       case "vimQuit": {
         // :q closes the editor's tab (as File: Close Editor does).
         const f = activeFile.peek();

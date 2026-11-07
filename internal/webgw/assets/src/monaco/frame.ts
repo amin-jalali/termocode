@@ -915,6 +915,14 @@ function vimStart(mod: typeof VimModule): void {
       else if (cmd) e.trigger("keyboard", cmd, null);
     },
     show: (mode, pending, rec, msg) => vimShow(mode, pending, rec, msg),
+    jump: (off) => {
+      const p = at(off);
+      post({ t: "vimJump", line: p.lineNumber, col: p.column });
+    },
+    jumpGo: (dir, n, off) => {
+      const p = at(off);
+      post({ t: "vimJumpGo", dir, n, line: p.lineNumber, col: p.column });
+    },
     save: () => post({ t: "save" }),
     close: () => post({ t: "vimQuit" }),
     indent: () => (spaces ? " ".repeat(tabWidth) : "\t"),
