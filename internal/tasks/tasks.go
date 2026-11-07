@@ -69,6 +69,12 @@ type rawTask struct {
 	Env            map[string]string `json:"env"`
 	Group          json.RawMessage   `json:"group"`
 	ProblemMatcher json.RawMessage   `json:"problemMatcher"`
+	// Type "docker-build" / "docker-run" / "docker-compose" builds the
+	// command from the matching block when command is empty (docker.go).
+	Type          string            `json:"type"`
+	DockerBuild   *rawDockerBuild   `json:"dockerBuild"`
+	DockerRun     *rawDockerRun     `json:"dockerRun"`
+	DockerCompose *rawDockerCompose `json:"dockerCompose"`
 }
 
 type rawFile struct {
@@ -109,7 +115,7 @@ func Parse(data []byte) ([]Task, error) {
 	}
 	out := make([]Task, 0, len(raws))
 	for _, r := range raws {
-		if strings.TrimSpace(r.Label) == "" || strings.TrimSpace(r.Command) == "" {
+		if strings.TrimSpace(r.Label) == "" {
 			continue
 		}
 		t := Task{
@@ -122,6 +128,9 @@ func Parse(data []byte) ([]Task, error) {
 		}
 		t.Group, t.IsDefault = parseGroup(r.Group)
 		t.ProblemMatcher = parseMatchers(r.ProblemMatcher)
+		if strings.TrimSpace(r.Command) == "" && !dockerTask(r, &t) {
+			continue
+		}
 		out = append(out, t)
 	}
 	return out, nil

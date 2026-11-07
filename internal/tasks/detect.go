@@ -23,6 +23,7 @@ func Detect(root string) []Task {
 	out = append(out, detectPytest(root)...)
 	out = append(out, detectMake(root)...)
 	out = append(out, detectJust(root)...)
+	out = append(out, detectDocker(root)...)
 	return out
 }
 
