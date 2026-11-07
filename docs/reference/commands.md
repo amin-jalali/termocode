@@ -14,6 +14,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Agent Auto-Approve… | `ai-auto-approve` |   |   |
 | AI: Agent Board… | `ai-board` |   |   |
 | AI: Autopilot Level… (off / low / medium risk) | `ai-autopilot` |   |   |
+| AI: Agent Environment… (setup, secrets, network rule for workflow agents) | `ai-agent-env` |   |   |
 | AI: Agent Worktrees… | `ai-worktrees` |   |   |
 | AI: Agents & Connections | `itermoc-open-ai` |   |   |
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |

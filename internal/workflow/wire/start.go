@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/amin-jalali/termocode/internal/agentenv"
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/workflow"
@@ -57,6 +58,11 @@ type Config struct {
 	AgentOSSandbox bool
 	OnAgent        func(step, item string, e ai.Event)
 	AllowFlagged   func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error)
+	// AgentEnvFile is the trusted project agent environment (nil: none);
+	// AgentSecrets backs its setup secrets; OnNetwork hears blocked hosts.
+	AgentEnvFile *agentenv.Env
+	AgentSecrets agentenv.Getter
+	OnNetwork    func(step, item string, blocked []string)
 }
 
 // ErrUntrusted is returned for a repo file the user has not trusted.
@@ -106,7 +112,8 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 		tools = cfg.Src.Tools
 	}
 	steps := &Steps{Env: cfg.AI, RunID: id, Dir: filepath.Dir(e.Path), Workspace: cfg.Workspace, Exec: cfg.Exec, TestArgv: cfg.TestArgv, OnEvent: cfg.OnAI,
-		AgentSandbox: cfg.AgentSandbox, AgentOSSandbox: cfg.AgentOSSandbox, OnAgent: cfg.OnAgent, AllowFlagged: cfg.AllowFlagged}
+		AgentSandbox: cfg.AgentSandbox, AgentOSSandbox: cfg.AgentOSSandbox, OnAgent: cfg.OnAgent, AllowFlagged: cfg.AllowFlagged,
+		AgentEnvFile: cfg.AgentEnvFile, AgentSecrets: cfg.AgentSecrets, OnNetwork: cfg.OnNetwork}
 	w := &Writer{Root: cfg.Root, Workflow: f.Name, Hash: f.Hash, Ledger: l, Workspace: cfg.Workspace, Tools: tools,
 		Ask: cfg.Gate, Audit: audit, Notify: cfg.Notify, GitHubComment: cfg.GitHubComment, Find: cfg.Find, PR: cfg.PR, Dir: filepath.Dir(e.Path)}
 	store := &seenStore{RunFiles: RunFiles{Root: cfg.Root}, seen: seen, file: f}

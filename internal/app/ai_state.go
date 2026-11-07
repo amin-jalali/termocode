@@ -110,8 +110,9 @@ type aiState struct {
 	// (OMX-28), so a missing ast-grep does not open it again.
 	astGrepAsked bool
 	// skillsTrust is the open project-skills card (ai_skills.go).
-	skillsTrust *aiSkillsTrustPending
-	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
+	skillsTrust  *aiSkillsTrustPending
+	hooksTrust   *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
+	agentEnvHash string               // the agent environment the open trust card shows (ai_agent_env.go)
 	// stopHookPushes counts the turns in a row a stop hook sent the
 	// agent on (CMP-59, ai_hooks.go).
 	stopHookPushes int
@@ -614,6 +615,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-skills", "AI: Skills…", ""},
 		{"ai-powers", "AI: Powers Catalog…", ""},
 		{"ai-hooks", "AI: Hooks…", ""},
+		{"ai-agent-env", "AI: Agent Environment… (setup, secrets, network rule for workflow agents)", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-proofs", "AI: Proof of Work… (screenshots the AI took)", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
@@ -823,6 +825,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIPowers(), true
 	case "ai-hooks":
 		return m.openAIHooks(), true
+	case "ai-agent-env":
+		return m.openAgentEnv(), true
 	case "ai-web-tools":
 		return m.openAIWebTools(), true
 	case "ai-proofs":

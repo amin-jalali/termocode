@@ -737,6 +737,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"help-bug-report": aiNever("only the user chooses what to export"),
 	"ai-doctor":       aiNever("a local diagnostic page for the user"),
 	"ai-hooks":        aiNever(aiNoPicker),
+	"ai-agent-env":    aiNever(aiNoPicker),
 	// Web tools reach the internet and add servers: the user turns them on.
 	"ai-web-tools": aiNever(aiNoPicker),
 	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
