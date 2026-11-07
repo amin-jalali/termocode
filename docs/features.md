@@ -70,6 +70,7 @@ its name and key.
 - Schedules keep going after a restart; `termocode service install` starts the session at login. Results come as a desktop note, on the phone, to a webhook or to Slack. → [Schedules](guides/workflows.md#schedules) · [Notifications](guides/workflows.md#notifications-and-history)
 - Undo a write from the run page, day / run / item AI budgets, an audit file per run and an admin policy file. → [Undo and budgets](guides/workflows.md#undo-budgets-and-the-audit-file)
 - Follow a run and answer its cards from the phone. → [On your phone](guides/workflows.md#on-your-phone)
+- Let one machine serve agent tasks: `termocode runner serve` takes queued tasks (`termocode runner add`, also over SSH) and runs a few at once, each in its own worktree. → [Serve tasks from this machine](guides/runner.md)
 
 ## Run, test and debug
 
