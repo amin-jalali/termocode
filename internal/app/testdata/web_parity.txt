@@ -454,6 +454,9 @@ excluded	web-stop	laptop only: stops the web panel itself
 excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
+missing	containers-context-create	Containers|S
+missing	containers-context-inspect	Containers|S
+missing	containers-context-remove	Containers|S
 missing	containers-image-build	Containers|M
 missing	containers-image-sbom	Containers|S
 missing	containers-image-scan	Containers|S

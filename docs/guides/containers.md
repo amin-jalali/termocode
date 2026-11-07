@@ -86,6 +86,7 @@ when something changed. When you hide the view (another activity item,
 | `d` | read volume disk usage (on VOLUMES) |
 | `z` | prune what the section heading offers (asks first) |
 | `D` | remove, sign out or make default (asks first) |
+| `n` / `i` / `x` | on CONTEXTS: create a context (name, host, TLS files; asks first) / inspect it / remove it (asks first) |
 | `R` | refresh all |
 | `m` | choose the sections (the **⋯** menu) |
 | `Esc` | clear the filter; without a filter, focus the editor |
@@ -376,6 +377,17 @@ CONTEXTS lists your Docker contexts: `◉ default`, `◦ prod`. The endpoint
 only when a second context exists; with just `default` it stays out of the
 way. With Podman, CONTEXTS lists the Podman connections (see
 [Podman connections](#podman-connections)).
+
+`n` on CONTEXTS (or **Containers: Create Context…**, which works also while
+only `default` exists) asks for a name and a host: `ssh://user@host`,
+`tcp://host:2376` or `unix:///path`. A `tcp://` host also asks for the TLS
+files (CA, cert and key paths, or none); with Podman an `ssh://` host asks
+for the identity file. A card shows the exact `docker context create`
+command, Cancel first. Only the paths go into the context: termocode does
+not read the files. A new context is not used until you press `Enter` on it.
+`i` opens `docker context inspect` as read-only JSON. `x` removes a context
+after a card; `default`, the machine default and the context this session
+uses cannot be removed.
 
 | Key | Action |
 |---|---|

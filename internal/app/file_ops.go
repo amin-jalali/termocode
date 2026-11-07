@@ -307,6 +307,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.onContainerBuildPrompt(m.promptKind, value)
 	case promptKindContainerRename, promptKindContainerResources: // containers_write.go
 		return m.onContainerWritePrompt(m.promptKind, value)
+	case promptKindContextName, promptKindContextHost, promptKindContextTLS: // containers_context_manage.go
+		return m.onContextPrompt(m.promptKind, value)
 	case promptKindComposeRun: // services_compose_extras.go
 		return m.onComposeRunPrompt(value)
 	case promptKindRegistryHost, promptKindRegistryUser, promptKindRegistryToken: // containers_registries.go

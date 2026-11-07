@@ -129,6 +129,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Connect Registry… | `containers-registry-connect` |   |   |
 | Containers: Connect Selected to Network… | `containers-network-connect` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
+| Containers: Create Context… | `containers-context-create` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
 | Containers: Disconnect Selected from Network… | `containers-network-disconnect` |   |   |
@@ -138,6 +139,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Follow Logs | `containers-logs` |   |   |
 | Containers: Follow Stats | `containers-stats` |   |   |
 | Containers: Inspect | `containers-inspect` |   |   |
+| Containers: Inspect Context… | `containers-context-inspect` |   |   |
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
 | Containers: Kill Selected… | `containers-kill` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
@@ -159,6 +161,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Read Volume Disk Usage | `containers-volume-disk-usage` |   |   |
 | Containers: Refresh | `containers-refresh` |   |   |
 | Containers: Refresh Project Services | `services-refresh` |   |   |
+| Containers: Remove Context… | `containers-context-remove` |   |   |
 | Containers: Remove Project Containers… | `containers-compose-down` |   |   |
 | Containers: Remove Selected Image… | `containers-image-remove` |   |   |
 | Containers: Remove Selected Network… | `containers-network-remove` |   |   |

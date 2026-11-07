@@ -186,6 +186,10 @@ func (m *Model) openContextMenu(r svcRow, x, y int) {
 		{ID: "default", Title: "Make default…", Hint: "D"},
 		{Sep: true},
 		{ID: "copy", Title: "Copy endpoint", Hint: "y"},
+		{ID: "inspect", Title: "Inspect", Hint: "i"},
+		{Sep: true},
+		{ID: "create", Title: "Create context…", Hint: "n"},
+		{ID: "remove", Title: "Remove…", Hint: "x"},
 	}
 	m.menu = menu.New(items, x, y)
 	m.menu.SetScreenSize(m.w, m.h)
@@ -201,6 +205,12 @@ func (m *Model) handleContextRowMenuSelect(id string, r svcRow) tea.Cmd {
 		return m.askContextDefault(r.hostID)
 	case "copy":
 		return m.copyContextEndpoint(r.hostID)
+	case "inspect":
+		return m.inspectContext(r.hostID)
+	case "create":
+		return m.askContextCreate()
+	case "remove":
+		return m.askContextRemove(r.hostID)
 	}
 	return nil
 }

@@ -2005,7 +2005,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-compose-restart` | Containers: Restart Project | confirm (always asks) |   |
 | `containers-compose-stop` | Containers: Stop Project | confirm (always asks) |   |
 | `containers-compose-up` | Containers: Start Project | confirm (always asks) |   |
+| `containers-context-create` | Containers: Create Context… | never | a new context points every terminal at another host; it is the user's |
 | `containers-context-default` | Containers: Make Context Default… | never | changes the machine-wide Docker default |
+| `containers-context-inspect` | Containers: Inspect Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the AI uses containers_list |
+| `containers-context-remove` | Containers: Remove Context… | never | removing a context is the user's; it asks on a card |
 | `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
 | `containers-engine-config` | Containers: Open Engine Config | auto |   |

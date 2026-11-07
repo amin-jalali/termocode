@@ -603,6 +603,10 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onImagePage(msg), true
 	case imageScanMsg:
 		return m.onImageScan(msg), true
+	case contextManageDoneMsg:
+		return m.onContextManageDone(msg), true
+	case contextInspectMsg:
+		return m.onContextInspect(msg), true
 	case composeConfigMsg:
 		return m.onComposeConfig(msg), true
 	case hostActionDoneMsg:

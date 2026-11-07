@@ -416,6 +416,8 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		return m.runContainerBulk(id), true
 	case confirmKindContainerWrite: // containers_write.go
 		return m.runContainerWrite(id), true
+	case confirmKindContextManage: // containers_context_manage.go
+		return m.runContextManage(id), true
 	case confirmKindContainerRemove:
 		if id == "remove" {
 			return m.runContainerRemove(false), true
@@ -712,6 +714,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.servicesNoteCmd(note, cmd)
 		}
 	case "x":
+		if name, ok := m.selectedContext(); ok {
+			return m, m.askContextRemove(name)
+		}
 		if _, _, ok := m.selectedProjectGroup(); ok {
 			return m, m.projectGroupAction("stop")
 		}
@@ -852,6 +857,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil
 		}
 	case "i":
+		if name, ok := m.selectedContext(); ok {
+			return m, m.inspectContext(name)
+		}
 		if _, ref, ok := m.selectedImage(); ok {
 			return m, m.imageInspect(ref)
 		}
@@ -894,6 +902,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil
 		}
 	case "n":
+		if have && ((r.kind == svcRowSection && r.section == hostSection("contexts")) || (r.kind == svcRowHostItem && r.host == hostContext)) {
+			return m, m.askContextCreate()
+		}
 		if have && r.kind == svcRowSection && (r.section == hostSection("networks") || r.section == hostSection("volumes")) {
 			m.storageCreatePrompt(strings.TrimPrefix(r.section, "host/"))
 			return m, nil
@@ -1016,7 +1027,10 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 		return with("Context keys",
 			[]string{"Enter", "use it here"},
 			[]string{"D", "make it the default"},
-			[]string{"y", "copy the endpoint"})
+			[]string{"y", "copy the endpoint"},
+			[]string{"i", "inspect"},
+			[]string{"n", "create a new one (asks first)"},
+			[]string{"x", "remove (asks first)"})
 	case r.kind == svcRowHostItem && (r.host == hostRegistry || r.host == hostRegistryImage || r.host == hostRegistryConnect):
 		return with("Registry keys",
 			[]string{"Enter", "open"},
@@ -1409,6 +1423,9 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-engine-config", Title: "Containers: Open Engine Config"},
 		{ID: "containers-context-use", Title: "Containers: Switch Context…"},
 		{ID: "containers-context-default", Title: "Containers: Make Context Default…"},
+		{ID: "containers-context-create", Title: "Containers: Create Context…"},
+		{ID: "containers-context-inspect", Title: "Containers: Inspect Context…"},
+		{ID: "containers-context-remove", Title: "Containers: Remove Context…"},
 		{ID: "containers-registry-connect", Title: "Containers: Connect Registry…"},
 		{ID: "containers-registry-signout", Title: "Containers: Sign Out of Registry…"},
 		{ID: "containers-search", Title: "Containers: Search Docker Hub…"},
@@ -1665,6 +1682,17 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
 			}
 			switch id {
+			case "containers-context-create":
+				return m.askContextCreate()
+			case "containers-context-inspect", "containers-context-remove":
+				name, note := m.contextForPalette()
+				if name == "" {
+					return note
+				}
+				if id == "containers-context-inspect" {
+					return m.inspectContext(name)
+				}
+				return m.askContextRemove(name)
 			case "containers-context-use", "containers-context-default":
 				name, note := m.contextForPalette()
 				if name == "" {

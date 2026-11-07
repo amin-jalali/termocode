@@ -418,6 +418,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"kubernetes-snippet":            aiNever(aiNoPicker), // kube_snippet.go
 	"containers-context-use":        aiNever("a context switch is the user's choice; it moves every container action to another host"),
 	"containers-context-default":    aiNever("changes the machine-wide Docker default"),
+	"containers-context-create":     aiNever("a new context points every terminal at another host; it is the user's"),
+	"containers-context-inspect":    aiNever(aiNoPicker + "; the AI uses containers_list"),
+	"containers-context-remove":     aiNever("removing a context is the user's; it asks on a card"),
 	"containers-registry-connect":   aiNever("signing in to a registry takes the user's token; it is the user's"),
 	"containers-registry-signout":   aiNever("signing out of a registry is the user's"),
 	"containers-search":             aiNever(aiNoPicker + "; it asks Docker Hub on the user's behalf"),

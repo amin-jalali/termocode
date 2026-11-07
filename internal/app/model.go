@@ -153,6 +153,8 @@ type Model struct {
 	pendingContainerDir     string
 	pendingContainerFiles   []string
 	pendingHostArgs         []string
+	pendingContextSpec      containers.ContextSpec // CTX-24: the context on the create / remove steps
+	pendingContextVerb      string                 // CTX-24: create | remove
 	pendingContextName      string
 	pendingHostOperation    string
 	pendingHostTarget       string
