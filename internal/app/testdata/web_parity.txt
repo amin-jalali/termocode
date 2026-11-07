@@ -529,6 +529,7 @@ missing	git-branch-from	Git|S
 missing	git-branch-rename	Git|S
 missing	git-upstream-set	Git|S
 missing	git-upstream-unset	Git|S
+missing	http-copy-snippet	HTTP|S
 missing	local-history	Git|S
 missing	local-history-deleted	Git|S
 missing	local-history-label	Git|S

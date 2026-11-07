@@ -2270,6 +2270,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `hover` | LSP: Show Hover Documentation | auto |   |
 | `http-cancel` | HTTP: Cancel Request | confirm (ide) |   |
 | `http-copy-curl` | HTTP: Copy as curl | confirm (ide) |   |
+| `http-copy-snippet` | HTTP: Copy as Code… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests, then write the snippet) |
 | `http-env-open` | HTTP: Open Environment File | auto |   |
 | `http-env-open-private` | HTTP: Open Private Environment File | never | opens the file that holds the user's secrets |
 | `http-env-select` | HTTP: Select Environment… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_set_environment) |

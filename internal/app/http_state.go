@@ -209,6 +209,7 @@ type httpState struct {
 	envRoot     string
 	saveBody    []byte
 	copyRun     *httpRun
+	copyLang    string // Copy as Code… language of copyRun ("" = curl)
 	importInto  string // .http file the next curl import appends to
 	bufCache    *httpBufCache
 
