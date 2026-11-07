@@ -41,10 +41,18 @@ var ExportFormats = []ExportFormatInfo{
 	{FormatMarkdown, "Markdown table", ".md"},
 }
 
-// ExportOptions says where INSERT statements go: the dialect of Driver and
-// the table (Schema may be empty).
+// ExportOptions says where INSERT / UPDATE statements go: the dialect of
+// Driver and the table (Schema may be empty). KeyColumns are the WHERE
+// columns of an UPDATE export. Separator (CSV only; 0 = comma), NoHeader and
+// NullText (CSV and TSV) shape a delimited file. Columns, when set, keeps
+// only those result columns, in that order.
 type ExportOptions struct {
 	Driver, Schema, Table string
+	KeyColumns            []string
+	Separator             rune
+	NoHeader              bool
+	NullText              string
+	Columns               []string
 }
 
 // RowSink receives a result one row at a time, so nothing has to hold the
@@ -71,16 +79,39 @@ var ErrExportExists = errors.New("the file already exists")
 
 // NewRowWriter returns the writer of format f on w.
 func NewRowWriter(f ExportFormat, w io.Writer, o ExportOptions) (RowWriter, error) {
+	rw, err := newFormatWriter(f, w, o)
+	if err != nil || len(o.Columns) == 0 {
+		return rw, err
+	}
+	return &columnFilter{w: rw, names: o.Columns}, nil
+}
+
+func newFormatWriter(f ExportFormat, w io.Writer, o ExportOptions) (RowWriter, error) {
 	switch f {
 	case FormatCSV:
-		return newDelimitedWriter(w, ','), nil
+		if err := checkSeparator(o.Separator); err != nil {
+			return nil, err
+		}
+		sep := o.Separator
+		if sep == 0 {
+			sep = ','
+		}
+		return newDelimitedWriter(w, sep, o), nil
 	case FormatTSV:
-		return newDelimitedWriter(w, '\t'), nil
+		return newDelimitedWriter(w, '\t', o), nil
+	case FormatJSONLines:
+		return &jsonLinesWriter{w: w}, nil
+	case FormatYAML:
+		return &yamlWriter{w: w}, nil
+	case FormatHTML:
+		return &htmlWriter{w: w}, nil
+	case FormatXML:
+		return &xmlWriter{w: w}, nil
 	case FormatJSON:
 		return &jsonWriter{w: w}, nil
 	case FormatMarkdown:
 		return &markdownWriter{w: w}, nil
-	case FormatSQL:
+	case FormatSQL, FormatSQLUpdate:
 		d := DialectFor(o.Driver)
 		if d == nil {
 			return nil, errors.New("this connection does not use SQL")
@@ -91,6 +122,12 @@ func NewRowWriter(f ExportFormat, w io.Writer, o ExportOptions) (RowWriter, erro
 		table := d.QuoteIdent(o.Table)
 		if o.Schema != "" {
 			table = d.QuoteIdent(o.Schema) + "." + d.QuoteIdent(o.Table)
+		}
+		if f == FormatSQLUpdate {
+			if len(o.KeyColumns) == 0 {
+				return nil, errors.New("UPDATE statements need key columns")
+			}
+			return &sqlUpdateWriter{w: w, d: d, table: table, keys: o.KeyColumns}, nil
 		}
 		return &sqlWriter{w: w, d: d, table: table}, nil
 	}
@@ -141,19 +178,24 @@ func protectCell(c Cell) string {
 }
 
 type delimitedWriter struct {
-	w    *csv.Writer
-	cols int
+	w        *csv.Writer
+	cols     int
+	noHeader bool
+	nullText string
 }
 
-func newDelimitedWriter(w io.Writer, comma rune) *delimitedWriter {
+func newDelimitedWriter(w io.Writer, comma rune, o ExportOptions) *delimitedWriter {
 	cw := csv.NewWriter(w)
 	cw.Comma = comma
 	cw.UseCRLF = true
-	return &delimitedWriter{w: cw}
+	return &delimitedWriter{w: cw, noHeader: o.NoHeader, nullText: o.NullText}
 }
 
 func (d *delimitedWriter) Columns(cols []Column) error {
 	d.cols = len(cols)
+	if d.noHeader {
+		return nil
+	}
 	names := make([]string, len(cols))
 	for i, c := range cols {
 		names[i] = ProtectFormula(c.Name)
@@ -165,7 +207,11 @@ func (d *delimitedWriter) Row(row []Cell) error {
 	rec := make([]string, d.cols)
 	for i := range rec {
 		if i < len(row) {
-			rec[i] = protectCell(row[i])
+			if row[i].Null && d.nullText != "" {
+				rec[i] = d.nullText
+			} else {
+				rec[i] = protectCell(row[i])
+			}
 		}
 	}
 	return d.w.Write(rec)
