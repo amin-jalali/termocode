@@ -58,6 +58,22 @@ var deliverOSNotification = func(body string) {
 }
 
 func (m *Model) notifyOS(body string) tea.Cmd {
+	m.recapAdd(body) // kept for the recap, focused or not (session_recap.go)
+	return m.deliverNotice(body)
+}
+
+// notifyOSFor is notifyOS with who it is about ("Claude Code"): the recap
+// keeps the name, the desktop notice stays generic.
+func (m *Model) notifyOSFor(body, who string) tea.Cmd {
+	if who = recapClean(who); who != "" {
+		m.recapAdd(body + " · " + who)
+	} else {
+		m.recapAdd(body)
+	}
+	return m.deliverNotice(body)
+}
+
+func (m *Model) deliverNotice(body string) tea.Cmd {
 	if !m.termBlurred {
 		return nil
 	}

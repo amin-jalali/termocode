@@ -130,6 +130,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
 		return m.onAgentSessionsSearch(value), true
+	case promptKindAIChatSearch: // ai_chat_search.go
+		return m.onAIChatSearch(value), true
 	case promptKindAgentPacksSource: // agent_packs_ui.go
 		return m.onAgentPackSource(value), true
 	case promptKindAIWebKey: // ai_web_tools.go
@@ -272,7 +274,7 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIMemoryCard(m.confirmKind, id), true
 	case confirmKindAIProfileSave:
 		return m.onAIProfileSaveChoice(id), true
-	case confirmKindAIProfileShow, confirmKindBuiltinSkill, confirmKindSharedMemory: // read-only: Close
+	case confirmKindAIProfileShow, confirmKindBuiltinSkill, confirmKindSharedMemory, confirmKindSessionRecap: // read-only: Close
 		return nil, true
 	case confirmKindAIProfileFormStep, confirmKindAIProfileFormDelete, confirmKindAIProfileFormDiscard:
 		return m.answerAIProfileFormConfirm(id)

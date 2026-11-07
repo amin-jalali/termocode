@@ -43,14 +43,19 @@ func NewIndex() *Index { return &Index{cache: map[string]indexEntry{}} }
 
 // Build lists the sessions of the project at root from both CLIs,
 // newest first. Only folders are listed for a file that did not change.
+// An empty root lists the sessions of every project (CMP-30).
 func (x *Index) Build(h Homes, root string) []Summary {
-	root = filepath.Clean(root)
-	slug := Slug(root)
+	all := root == ""
+	slug := ""
+	if !all {
+		root = filepath.Clean(root)
+		slug = Slug(root)
+	}
 	var refs []Ref
 	projects := filepath.Join(h.Claude, "projects")
 	if ents, err := readDir(projects); err == nil {
 		for _, e := range ents {
-			if n := e.Name(); e.IsDir() && (n == slug || strings.HasPrefix(n, slug+"-")) {
+			if n := e.Name(); e.IsDir() && (all || n == slug || strings.HasPrefix(n, slug+"-")) {
 				refs = append(refs, claudeDirFiles(filepath.Join(projects, n))...)
 			}
 		}
@@ -69,14 +74,14 @@ func (x *Index) Build(h Homes, root string) []Summary {
 		e, ok := x.cache[r.Path]
 		if !ok || !e.mod.Equal(r.ModTime) || e.size != r.Size {
 			e = indexEntry{mod: r.ModTime, size: r.Size}
-			if r.CLI == Codex { // another project's file: its first line says so
+			if r.CLI == Codex && !all { // another project's file: its first line says so
 				if c := codexCwd(r.Path); c != "" && !InProject(root, c) {
 					x.cache[r.Path] = e
 					continue
 				}
 			}
 			e.sum = summarize(r)
-			e.keep = e.sum.Cwd == "" && r.CLI == Claude && filepath.Base(filepath.Dir(r.Path)) == slug ||
+			e.keep = all || e.sum.Cwd == "" && r.CLI == Claude && filepath.Base(filepath.Dir(r.Path)) == slug ||
 				e.sum.Cwd != "" && InProject(root, e.sum.Cwd)
 			x.cache[r.Path] = e
 		}
