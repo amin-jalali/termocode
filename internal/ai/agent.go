@@ -114,6 +114,10 @@ type Agent struct {
 	// Compact (optional) summarises older messages when the provider
 	// says the context is too long; once per turn (compact.go, OMX-3).
 	Compact func(ctx context.Context, older []Message) (string, error)
+	// Policy (optional) is the safe auto-approve setup (CMP-61,
+	// autopilot.go): rules, the risk classifier, autopilot and the
+	// guardian decide mutating calls. nil: AutoApprove and Confirm only.
+	Policy *ApprovalPolicy
 }
 
 // DefaultRetries is how often a request is tried again when the server
@@ -441,6 +445,23 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	case t.Class == ClassReview:
 		// The tool shows the change as a diff and waits for the user.
 		gate, decision = GateReview, "user (review)"
+	case t.Mutating && a.Policy != nil: // CMP-61 (autopilot.go)
+		verdict, why, risk := a.Policy.Decide(ctx, t, args, human, t.Class != "" && a.AutoApprove[t.Class])
+		gate = GateConfirm
+		switch verdict {
+		case VerdictDeny:
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: "refused: " + why, Gate: gate, Decision: "rule denied"})
+			return t.Name + ": an approval rule of the user denies this action. Do not retry it; continue without it or ask what to do instead."
+		case VerdictAllow:
+			decision = why
+		default:
+			cctx := context.WithValue(ctx, approvalNoteKey{}, ApprovalNote{Risk: risk, Why: why})
+			if a.Confirm == nil || !a.Confirm(cctx, t, human) {
+				emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: "declined by user", Gate: gate, Decision: "user denied"})
+				return t.Name + ": the user declined this action. Do not retry it; continue without it or ask what to do instead."
+			}
+			decision = "user allowed"
+		}
 	case t.Mutating && t.Class != "" && a.AutoApprove[t.Class]:
 		gate, decision = GateConfirm, "auto-approved ("+t.Class+")"
 	case t.Mutating:

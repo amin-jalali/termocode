@@ -1920,6 +1920,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-apply-proposal` | AI: Apply Proposed Edit | never | the user reviews proposed edits |
 | `ai-attach` | AI: Add File / Selection to Chat | never | adds to the chat input; read the file with read_file |
 | `ai-auto-approve` | AI: Agent Auto-Approve… | never | AI provider, credentials and approvals stay with the user |
+| `ai-autopilot` | AI: Autopilot Level… (off / low / medium risk) | never | AI provider, credentials and approvals stay with the user; the AI never lowers its own approval cards |
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
 | `ai-configure` | AI: Configure Provider… | never | AI provider, credentials and approvals stay with the user |
 | `ai-credentials` | Open Config: AI Credentials | never | AI provider, credentials and approvals stay with the user |
@@ -2557,7 +2558,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent_auto_continue` | never | AI provider, credentials and approvals stay with the user; it lets termocode type continue into an outside agent's tab after its usage limit resets |
 | `agent_hibernate_minutes` | never | AI provider, credentials and approvals stay with the user; it lets termocode stop idle outside agents |
 | `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
+| `ai_approval_rules` | never | AI provider, credentials and approvals stay with the user; the AI never writes its own approval rules |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
+| `ai_autopilot` | never | AI provider, credentials and approvals stay with the user; the AI never lowers its own approval cards |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
 | `ai_categories` | never | AI provider, credentials and approvals stay with the user |
 | `ai_compact` | never | AI provider, credentials and approvals stay with the user |
@@ -2565,6 +2568,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_fallback` | never | AI provider, credentials and approvals stay with the user |
+| `ai_guardian` | never | AI provider, credentials and approvals stay with the user; the AI never picks its own reviewer |
 | `ai_inline` | confirm (settings) |   |
 | `ai_inline_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_max_steps` | never | AI provider, credentials and approvals stay with the user |

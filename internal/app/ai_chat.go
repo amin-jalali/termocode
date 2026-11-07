@@ -41,6 +41,8 @@ type aiChatConfirmMsg struct {
 	// step is the title of the pipeline step that asks ("" in a plain
 	// chat turn).
 	step string
+	// note is the approval policy's risk line (CMP-61; "": none).
+	note string
 }
 
 type aiChatDoneMsg struct {
@@ -334,7 +336,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHooks(root, tools, m.output)), // OMX-12, OMX-18
 		Native:      native,
 		AutoApprove: auto,
-		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
+		Policy:      s.aiApprovalPolicy(), // CMP-61 (ai_autopilot.go)
+		MaxSteps:    s.settings.MaxSteps,  // 0: ai.DefaultMaxSteps
 		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
@@ -428,7 +431,7 @@ func aiChatConfirmFunc(gen uint64, ch chan tea.Msg, auto map[string]bool, step s
 	return func(ctx context.Context, t ai.Tool, human string) bool {
 		reply := make(chan bool, 1)
 		select {
-		case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch, step: step}:
+		case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch, step: step, note: aiApprovalNoteText(ai.ApprovalNoteFrom(ctx))}:
 		case <-ctx.Done():
 			return false
 		}
@@ -568,7 +571,11 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	if msg.step != "" {
 		who = aiOneLine(aiCleanText(msg.step)) // which step of the run asks
 	}
-	m.confirm = confirm.New("✦ "+who+" wants to: "+msg.tool.Label(), msg.human, buttons)
+	body := msg.human
+	if msg.note != "" { // CMP-61: why the policy asks
+		body += "\n\n" + msg.note
+	}
+	m.confirm = confirm.New("✦ "+who+" wants to: "+msg.tool.Label(), body, buttons)
 	if strings.HasPrefix(msg.tool.Name, "db_") {
 		m.confirm = m.confirm.WithScrollText() // the whole SQL, Up/Down scroll
 	}

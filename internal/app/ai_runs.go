@@ -297,6 +297,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		mcpLines = m.mcpPromptLines()
 	}
 	auto := s.settings.AutoApprove
+	policy := s.aiApprovalPolicy() // CMP-61: every step follows the same policy
 	maxSteps := s.settings.MaxSteps
 	acts := func(n agentdag.Node) (bool, bool) { return aiNodeActs(tools, aiCategoryNode(n, cats)) } // G-PLAN
 	// Step numbers of the profile's steps (read-only below). A planned
@@ -448,7 +449,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 			k := aiBgStepKey(run.ID, n.ID) // OMX-6: background runs this step starts hand their answers in
 			mail.openKey(k)
-			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHooks(dir, ts, out), Native: native, AutoApprove: own, MaxSteps: maxSteps,
+			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHooks(dir, ts, out), Native: native, AutoApprove: own, Policy: policy, MaxSteps: maxSteps,
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
 				Reasoning: aiCategoryReasoning(n, cats, reasoning(n.Slot, sl.cfg), think), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: aiFallbacksWithTemp(fallbacks[n.Slot], aiCategoryTemp(n, cats)),
 				ContextWindow: windowOf(sl.cfg.Model), Inbox: mail.inbox(k)}, msgs, nil

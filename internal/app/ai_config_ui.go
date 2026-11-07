@@ -162,6 +162,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIBudget(id), true
 	case confirmKindAIPlan: // G-PLAN (ai_plan_approval.go)
 		return m.answerAIPlan(id), true
+	case confirmKindAIAutopilot: // CMP-61 (ai_autopilot.go)
+		return m.answerAIAutopilot(id), true
 	case confirmKindAISide: // OMX-30 (ai_side.go)
 		return m.answerAISide(id), true
 	case confirmKindRunsStop: // runs_state.go
