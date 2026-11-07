@@ -484,3 +484,25 @@ func stripLineComments(s string) string {
 	}
 	return strings.TrimSpace(strings.Join(out, "\n"))
 }
+
+// authClient is a client that adds the session's headers and basic auth
+// to every request, for helpers that take a plain *http.Client.
+func (e *httpEngine) authClient() *http.Client {
+	return &http.Client{Transport: authTransport{e: e, next: e.client.Transport}}
+}
+
+type authTransport struct {
+	e    *httpEngine
+	next http.RoundTripper
+}
+
+func (a authTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	for k, v := range a.e.header {
+		r.Header[k] = v
+	}
+	if (a.e.user != "" || a.e.password != "") && r.Header.Get("Authorization") == "" {
+		r.SetBasicAuth(a.e.user, a.e.password)
+	}
+	return a.next.RoundTrip(r)
+}
