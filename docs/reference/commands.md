@@ -675,6 +675,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preferences: Open Settings (UI) | `open-settings-ui` |   |   |
 | Preferences: Undo Last Import… | `prefs-import-undo` |   |   |
 
+## Prompt Actions
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Prompt Actions: Edit File | `prompt-actions-edit` |   |    |
+| Prompt Actions: Export… | `prompt-actions-export` |   |    |
+| Prompt Actions: Import… | `prompt-actions-import` |   |    |
+| Prompt Actions: New… | `prompt-actions-new` |   |    |
+| Prompt Actions: Run… | `prompt-actions` |   | `saved prompts` |
+
 ## Run
 
 | Title | ID | Key | Hint |

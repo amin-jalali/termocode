@@ -115,6 +115,7 @@ type aiState struct {
 	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
 	ship        *aiShip              // the running ship loop (ai_ship.go)
 	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
+	promptActs  *paState             // the open prompt-action flow (prompt_actions.go)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).

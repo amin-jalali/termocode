@@ -74,6 +74,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIMemoryPicked(id), true
 	case pickerKindAISkills: // ai_skills.go
 		return m.onAISkillsPicked(id), true
+	case pickerKindPromptActions: // prompt_actions.go (CMP-74)
+		return m.onPromptActionPicked(id), true
+	case pickerKindPromptActionTarget:
+		return m.onPromptActionTarget(id), true
 	case pickerKindAIWebTools: // ai_web_tools.go
 		return m.onAIWebToolsPicked(id), true
 	case pickerKindAgentHooks: // agent_hooks_ui.go
@@ -145,6 +149,14 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return tea.Batch(m.aiInfo("Side question sent (one request to the quick model)"), m.onAISideQuestion(value)), true
 	case promptKindAgentsSend: // agents_node_ctl.go
 		return m.onAgentsSend(value), true
+	case promptKindPromptActionName: // prompt_actions.go (CMP-74)
+		return m.onPromptActionName(value), true
+	case promptKindPromptActionBody:
+		return m.onPromptActionBody(value), true
+	case promptKindPromptActionImport:
+		return m.onPromptActionImportPath(value), true
+	case promptKindPromptActionExport:
+		return m.onPromptActionExportPath(value), true
 	}
 	return m.handleMCPPromptSubmit(value)
 }
@@ -227,6 +239,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTCleanup(m.confirmKind, id), true
 	case confirmKindAISkillsTrust: // ai_skills.go
 		return m.answerAISkillsTrust(id), true
+	case confirmKindPromptActionsImport: // prompt_actions.go (CMP-74)
+		return m.answerPromptActionsImport(id), true
+	case confirmKindPromptActionsExport:
+		return m.answerPromptActionsExport(id), true
 	case confirmKindAIHooksTrust: // ai_hooks.go
 		return m.answerAIHooksTrust(id), true
 	case confirmKindAIWebAdd: // ai_web_presets.go
@@ -354,6 +370,10 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTCleanup(m.confirmKind, "") // Esc: Cancel / Keep it
 	case confirmKindAISkillsTrust:
 		return m.answerAISkillsTrust("") // Esc: no answer, the message goes back
+	case confirmKindPromptActionsImport:
+		return m.answerPromptActionsImport("") // Esc: Cancel
+	case confirmKindPromptActionsExport:
+		return m.answerPromptActionsExport("") // Esc: Cancel
 	case confirmKindAIHooksTrust:
 		return m.answerAIHooksTrust("") // Esc: no answer, the message goes back
 	case confirmKindAIShipPush, confirmKindAIShipPR:

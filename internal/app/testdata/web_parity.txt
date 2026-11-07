@@ -688,6 +688,11 @@ missing	kubernetes-top	Kubernetes|S
 missing	local-history	Git|S
 missing	local-history-deleted	Git|S
 missing	local-history-label	Git|S
+missing	prompt-actions	AI|S
+missing	prompt-actions-edit	AI|S
+missing	prompt-actions-export	AI|S
+missing	prompt-actions-import	AI|S
+missing	prompt-actions-new	AI|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
 missing	redis-slowlog	Databases|S

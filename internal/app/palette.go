@@ -456,6 +456,7 @@ func paletteItems() []picker.Item {
 	items = append(items, prPaletteItems()...)        // G-PR (pr_list.go)
 	items = append(items, termPanePaletteItems()...)  // terminal splits (terminal_split.go)
 	items = append(items, gitxPaletteItems()...)      // GITX features (gitx_hub.go)
+	items = append(items, promptActionsPaletteItems()...)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -1015,6 +1016,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchWorktreePalette(id); ok { // worktrees_keys.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchPromptActionsPalette(id); ok { // prompt_actions.go (CMP-74)
 			return cmd
 		}
 		if cmd, ok := m.dispatchDatabasesPalette(id); ok { // db_actions.go

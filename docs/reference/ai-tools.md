@@ -2402,6 +2402,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `preview-md` | Markdown: Open Preview | auto |   |
 | `problems` | Go to Problem... | never | opens a picker or prompt that only the user can answer; use a typed tool (diagnostics) |
 | `problems-panel` | View: Problems | auto |   |
+| `prompt-actions` | Prompt Actions: Run… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-edit` | Prompt Actions: Edit File | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-export` | Prompt Actions: Export… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-import` | Prompt Actions: Import… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-new` | Prompt Actions: New… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
 | `quick-open` | Go to File... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file) |
 | `quit` | File: Quit | never | quits termocode |
 | `redis-delete-key` | Databases: Delete Redis Key… | never | opens a picker or prompt that only the user can answer; use a typed tool (redis_command) |
