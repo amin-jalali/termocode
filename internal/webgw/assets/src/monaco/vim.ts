@@ -5,7 +5,7 @@
 // it, I and A type on every line of it, p puts a yanked box) modes; counts; the motions h j k l w b e W B E 0 ^ $ gg G
 // f F t T ; , { }; the operators d c y (with a motion, doubled for whole
 // lines, or the text objects iw aw); x X D C s S Y p P J r ~ i a I A o O;
-// u and Ctrl+R; the . repeat; macros (q, @, @@); the registers a-z (A-Z
+// u and Ctrl+R; the jump list (Ctrl+O, Ctrl+I); the . repeat; macros (q, @, @@); the registers a-z (A-Z
 // appends), the unnamed one, 0 (the last yank), 1-9 (deletes of lines),
 // - (small deletes), _ (the black hole) and . (the last insert; Ctrl+R
 // in insert mode puts a register); search (/ ? n N * #); ex commands
@@ -44,6 +44,11 @@ export interface VimHost {
    * a macro is being recorded into ("": none) and a message ("": none;
    * else its code, a NUL and its argument: "notfound\x00foo"). */
   show(mode: VimMode, pending: string, rec: string, msg: string): void;
+  /** jump: a jump leaves off (the page keeps the jump list, across
+   * files); jumpGo walks it n places back (-1, Ctrl+O) or forward (1,
+   * Ctrl+I) from the caret at off. */
+  jump(off: number): void;
+  jumpGo(dir: 1 | -1, n: number, off: number): void;
   /** save writes the file (:w); close closes its tab (:q). */
   save(): void;
   close(): void;
@@ -658,6 +663,13 @@ export class Vim {
         this.after();
         return true;
       }
+      case "<C-o>":
+      case "<C-i>":
+        if (visual) return false;
+        this.pending = "";
+        this.h.jumpGo(tok === "<C-o>" ? -1 : 1, Math.max(1, n), this.pos());
+        this.after();
+        return true;
       case "<C-a>":
       case "<C-x>":
         if (visual) return false;
@@ -736,6 +748,7 @@ export class Vim {
   private setMark(c: string, at: number): void {
     const { n, col } = this.lineCol(Math.min(at, this.d.length));
     this.marks.set(c, { line: n, col });
+    if (c === "'") this.h.jump(Math.min(at, this.d.length));
   }
 
   /** markAt is where mark c is now (null: not set, or its line is gone). */

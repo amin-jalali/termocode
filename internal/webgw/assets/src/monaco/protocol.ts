@@ -252,6 +252,11 @@ export type FromFrame =
    * finished yet, the register a macro is being recorded into and a
    * message (its code, a NUL, its argument: "notfound\x00foo"). */
   | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline" | "vblock"; pending: string; rec?: string; msg?: string }
+  /** vimJump: a Vim jump left this place (1-based); the page keeps the
+   * jump list, across files. */
+  | { t: "vimJump"; line: number; col: number }
+  /** vimJumpGo: Ctrl+O (dir -1) or Ctrl+I (1), n places, from the caret. */
+  | { t: "vimJumpGo"; dir: 1 | -1; n: number; line: number; col: number }
   /** vimQuit: Vim's :q (the page closes the editor's tab). */
   | { t: "vimQuit" }
   /** copied: the user copied or cut text in the editor (the clipboard
