@@ -15,17 +15,12 @@ import (
 // errNoMSSQLDriver is the reason a SQL Server session does not open.
 var errNoMSSQLDriver = errors.New("SQL Server support needs the go-mssqldb driver, which is not built in yet")
 
-// errNoOracleDriver is the reason an Oracle session does not open (DBX-63).
-var errNoOracleDriver = errors.New("Oracle support needs the go-ora driver, which is not built in yet")
-
 // DriverMissing is the error of a known engine whose driver is not built
 // in; nil for the others.
 func DriverMissing(driver string) error {
 	switch normDriver(driver) {
 	case "sqlserver":
 		return errNoMSSQLDriver
-	case "oracle":
-		return errNoOracleDriver
 	}
 	return nil
 }

@@ -50,6 +50,8 @@ func NewSQLSession(ctx context.Context, conn Conn, password string) (*SQLSession
 		dialect = PostgresDialect{}
 	case "mysql":
 		dialect = MySQLDialect{}
+	case "oracle":
+		dialect = OracleDialect{}
 	default:
 		if err := DriverMissing(driver); err != nil {
 			return nil, err
@@ -203,6 +205,15 @@ func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 			return sql.OpenDB(startSQLConnector{Connector: connector, stmts: stmts}), release, nil
 		}
 		return sql.OpenDB(connector), release, nil
+	case "oracle":
+		connector, err := oracleConnector(conn, password)
+		if err != nil {
+			return nil, noop, fmt.Errorf("invalid Oracle connection settings: %s", Redact(err.Error()))
+		}
+		if stmts := connStartSQL(conn); len(stmts) > 0 {
+			return sql.OpenDB(startSQLConnector{Connector: connector, stmts: stmts}), noop, nil
+		}
+		return sql.OpenDB(connector), noop, nil
 	default:
 		return nil, noop, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 	}
@@ -710,11 +721,7 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 	queries := s.dialect.CatalogQueries()
 	result := IntrospectionResult{}
 	if req.Object != "" && req.Schema == "" {
-		currentSchema := "SELECT current_schema()"
-		if normDriver(s.name) == "mysql" {
-			currentSchema = "SELECT DATABASE()"
-		}
-		if err := s.readCatalog(ctx, currentSchema, &result.Schemas); err != nil {
+		if err := s.readCatalog(ctx, currentSchemaQuery(s.name), &result.Schemas); err != nil {
 			return result, err
 		}
 		if len(result.Schemas) > 0 {
@@ -749,7 +756,7 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 				dst = &result.Sequences
 			}
 			args := []any(nil)
-			if queries[key] != "" && (strings.Contains(queries[key], "$1") || strings.Contains(queries[key], "?")) {
+			if catalogTakesSchema(queries[key]) {
 				args = []any{req.Schema}
 			}
 			if err := s.readCatalog(ctx, queries[key], dst, args...); err != nil {
@@ -765,9 +772,35 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 		if s.readCatalog(ctx, queries["extensions"], &ex, req.Schema) == nil {
 			result.Extensions = ex
 		}
+		var pk []string
+		if s.readCatalog(ctx, queries["packages"], &pk, req.Schema) == nil {
+			result.Packages = pk // Oracle PL/SQL packages (DBX-63)
+		}
 		return result, nil
 	}
 	return s.introspectObject(ctx, req, queries, result)
+}
+
+// currentSchemaQuery reads the session's schema.
+func currentSchemaQuery(driver string) string {
+	switch normDriver(driver) {
+	case "mysql":
+		return "SELECT DATABASE()"
+	case "oracle":
+		return "SELECT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') FROM dual"
+	}
+	return "SELECT current_schema()"
+}
+
+// catalogTakesSchema reports a catalog query that binds the schema
+// ($1, ?, :1 or @p1).
+func catalogTakesSchema(q string) bool {
+	for _, p := range []string{"$1", "?", ":1", "@p1"} {
+		if strings.Contains(q, p) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *SQLSession) readCatalog(ctx context.Context, query string, dst *[]string, args ...any) error {
@@ -863,6 +896,11 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 	ddlSQL, ddlArgs := s.dialect.DDL(req.Object)
 	ddl := s.Run(ctx, ddlSQL, RunOptions{Args: ddlArgs})
 	if ddl.Err != nil {
+		if _, ora := s.dialect.(OracleDialect); ora {
+			// DBMS_METADATA needs rights on another user's table: the
+			// columns and keys are still worth showing (DBX-63).
+			return out, nil
+		}
 		return out, ddl.Err
 	}
 	if len(ddl.Rows) > 0 && len(ddl.Rows[0]) > 0 {
@@ -879,7 +917,8 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 // names with a unit separator (a name may hold spaces and commas); the
 // other servers join with commas.
 func splitIndexColumns(list string, d Dialect) []string {
-	if _, pg := d.(PostgresDialect); pg {
+	switch d.(type) {
+	case PostgresDialect, OracleDialect: // LISTAGG(…, CHR(31))
 		return strings.Split(list, "\x1f")
 	}
 	return strings.FieldsFunc(list, func(r rune) bool { return r == ',' || r == ' ' })

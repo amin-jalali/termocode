@@ -860,8 +860,9 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 	if n.kind == dbNodeDatabase {
 		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse") {
 			req.Database, req.Schema = n.name, n.name
-		} else if ok && c.Driver == "sqlite" {
+		} else if ok && (c.Driver == "sqlite" || c.Driver == "oracle") {
 			// One file, one session: main and attached databases share it.
+			// Oracle shows the one database of its service (DBX-63).
 			req.Database = n.name
 		} else {
 			req.Database = n.name
@@ -992,10 +993,11 @@ func dbTypePickerItems(remote bool) []picker.Item {
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
+		{ID: "oracle", Title: "Oracle Database", Hint: "default port 1521 · a service name"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
 	if remote {
-		items = []picker.Item{items[0], items[1], items[3]}
+		items = []picker.Item{items[0], items[1], items[3], items[4]}
 	}
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
@@ -1059,6 +1061,11 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	case "redis":
 		s.pendingConn.Driver, s.pendingConn.Port = "redis", 6379
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
+	case "oracle":
+		// DBX-63: the database is a service name; a TNS alias or a wallet
+		// goes in the config ("params": {"tns": …, "wallet": …}).
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "oracle", 1521, "system", "FREEPDB1"
+		return m.databaseAddPrompt(promptKindDBHost, "Oracle: server address", "Host name or address:", "localhost", false)
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)
 	}
@@ -1568,6 +1575,9 @@ func sanitizeDBIntrospection(in dbclient.IntrospectionResult) dbclient.Introspec
 	for i := range in.Sequences {
 		in.Sequences[i] = sanitizeDBText(in.Sequences[i])
 	}
+	for i := range in.Packages {
+		in.Packages[i] = sanitizeDBText(in.Packages[i])
+	}
 	for i := range in.Triggers {
 		in.Triggers[i] = sanitizeDBText(in.Triggers[i])
 	}
@@ -1634,6 +1644,9 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		s.pendingConn.User = strings.TrimSpace(value)
 		if s.pendingConn.Driver == "redis" {
 			return m.databaseAddPrompt(promptKindDBName, "Database index", "Database index (0-15 on most servers):", strconv.Itoa(s.pendingConn.DB), false)
+		}
+		if s.pendingConn.Driver == "oracle" {
+			return m.databaseAddPrompt(promptKindDBName, "Oracle service name", "Service name (for example FREEPDB1 or ORCLPDB1):", s.pendingConn.Database, false)
 		}
 		return m.databaseAddPrompt(promptKindDBName, "Database name", "Database:", s.pendingConn.Database, false)
 	case promptKindDBName:
