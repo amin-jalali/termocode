@@ -50,6 +50,13 @@ The format (same as mobocode, so one file works in both apps):
 | `# @no-redirect`, `# @no-cookie-jar`, `# @timeout 10s` | per-request options |
 | `# @aws-sigv4 {{key}} {{$secret AWS_SECRET}} us-east-1 execute-api` | sign the request with AWS Signature V4 (access key, secret key, region, service, optional session token) |
 | `# @auth basic USER PASS`, `bearer TOKEN`, `apikey header\|query NAME VALUE`, `digest USER PASS`, `none` | auth helper; values may use `{{vars}}` and `{{$secret name}}`. `"$auth"` in `http-client.env.json` (an env or `$shared`; the nearest folder wins) sets the default; a header you write yourself wins |
+| `# @insecure` | skip TLS certificate checks for this request |
+| `# @ca-cert ca.pem` | also trust the CAs in this PEM file |
+| `# @client-cert me.crt`, `# @client-key me.key` | send a client certificate (mTLS); one PEM file with both works too |
+
+TLS file paths are read from the `.http` file's folder (`~/` is your home folder).
+Only your own sends read the TLS lines; the AI's sends never skip checks or use your keys.
+An encrypted private key is not supported.
 
 ## The response page
 
