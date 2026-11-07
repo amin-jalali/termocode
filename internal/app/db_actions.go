@@ -1373,6 +1373,8 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"P", "paste rows from the clipboard (tab separated)"},
 		[]string{"D", "set the cell to its DEFAULT"},
 		[]string{"U", "put a new random UUID in the cell"},
+		[]string{"gL / gS", "load the cell from a file / save its value to a new file"},
+		[]string{"Tab (while editing)", "complete from the values of the column"},
 		[]string{"u", "undo a change"},
 		[]string{"w", "submit the changes"},
 		[]string{"Transactions"},

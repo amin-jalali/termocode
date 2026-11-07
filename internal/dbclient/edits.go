@@ -137,7 +137,49 @@ func editArg(c Cell) any {
 	if c.Null {
 		return nil
 	}
+	if b, ok := CellBytes(c); ok {
+		return b // a binary value (a LOB loaded from a file, DBX-55) is bound as bytes
+	}
 	return c.Text
+}
+
+// CellBytes is the bytes of a binary cell ("0x" + hex, Kind "binary").
+// false: not a binary cell.
+func CellBytes(c Cell) ([]byte, bool) {
+	if c.Null || c.Kind != "binary" || !strings.HasPrefix(c.Text, "0x") {
+		return nil, false
+	}
+	b, err := hex.DecodeString(c.Text[2:])
+	if err != nil {
+		return nil, false
+	}
+	return b, true
+}
+
+// CellOfBytes is a binary cell holding b.
+func CellOfBytes(b []byte) Cell { return Cell{Text: "0x" + hex.EncodeToString(b), Kind: "binary"} }
+
+// editBinaryPreview is how many bytes of a binary value the preview spells
+// out before it only says the size.
+const editBinaryPreview = 32
+
+// editBinaryLiteral writes b as the dialect's binary literal, cut after
+// editBinaryPreview bytes (the preview is for people; the value is bound).
+func editBinaryLiteral(d Dialect, b []byte) string {
+	shown, more := b, ""
+	if len(shown) > editBinaryPreview {
+		shown, more = shown[:editBinaryPreview], fmt.Sprintf("… /* %d bytes */", len(b))
+	}
+	h := hex.EncodeToString(shown)
+	switch d.(type) {
+	case PostgresDialect:
+		return `'\x` + h + `'` + more
+	case SQLServerDialect:
+		return "0x" + h + more
+	case OracleDialect:
+		return "HEXTORAW('" + h + "')" + more
+	}
+	return "X'" + h + "'" + more
 }
 
 // keyWhere writes " WHERE k1 = ? AND k2 = ?" (plus the old-value checks).
@@ -263,6 +305,9 @@ var editNumber = lazyre.New(`^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$`)
 func EditLiteral(d Dialect, c Cell) string {
 	if c.Null {
 		return "NULL"
+	}
+	if b, ok := CellBytes(c); ok {
+		return editBinaryLiteral(d, b)
 	}
 	if c.Kind == "number" && editNumber.MatchString(c.Text) {
 		return c.Text

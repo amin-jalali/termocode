@@ -42,10 +42,13 @@ var (
 // it fits, or the type is not checked). The server stays the judge; this
 // only catches typing slips before the card.
 func dbCheckCellType(typ, value string) error {
-	t := strings.ToLower(strings.TrimSpace(dbTypeArgs.ReplaceAllString(typ, "")))
-	if strings.HasSuffix(t, "[]") || strings.HasPrefix(t, "_") {
-		return nil // arrays: the server checks them
+	if base, ok := dbArrayBase(typ); ok { // DBX-55: each element of an array
+		if why := dbCheckArrayType(base, value); why != "" {
+			return errors.New(why)
+		}
+		return nil
 	}
+	t := strings.ToLower(strings.TrimSpace(dbTypeArgs.ReplaceAllString(typ, "")))
 	t = strings.TrimSpace(strings.TrimSuffix(strings.TrimSuffix(t, " unsigned"), " signed"))
 	v := strings.TrimSpace(value)
 	switch t {
@@ -158,4 +161,13 @@ func (m *Model) databaseSpecialKey(key string, t *dbTab, tg *dbEditTarget, poses
 		what += " in " + dbPlural(n, "row")
 	}
 	return tea.Batch(m.databaseShowPage(), m.pushToastDetail(toast.Info, what, "w shows the SQL before it runs · u undoes it."))
+}
+
+// transAdded is the number of new rows of the shown result; the record
+// view shows them after the loaded rows (DBX-55).
+func (s *dbConsoleState) transAdded() int {
+	if t := s.curTab(); t != nil && t.run == s.shown && t.edits != nil {
+		return len(t.edits.added)
+	}
+	return 0
 }

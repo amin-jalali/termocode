@@ -239,6 +239,9 @@ func (m *Model) databaseRangeKey(key string, r1, r2, col int) tea.Cmd {
 	if tg.why != "" {
 		return m.pushToastDetail(toast.Info, "This result cannot be edited", tg.detail)
 	}
+	if tg.join && key != "e" { // DBX-55
+		return m.pushToastDetail(toast.Info, "In a JOIN result only cells change", "e edits the cells of "+sanitizeDBText(tg.table)+"; add and delete rows in a result of that table alone.")
+	}
 	if r2 < r1 {
 		r1, r2 = r2, r1
 	}

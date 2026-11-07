@@ -327,7 +327,7 @@ While you type, a SQL console or file is checked against the schema already load
 
 ## Edit rows
 
-You can change the rows of a table's data page, and of a console result that is a plain `SELECT` from one table (columns named as they are in the table, no `DISTINCT`, `JOIN`, `GROUP BY` or `UNION`). The table needs a primary key or a unique key, and the result must contain its columns: each change finds its row by the full key. A SQLite table with neither is edited by its hidden `rowid` on the data page (not in a console result); a table that has columns named `rowid`, `_rowid_` and `oid` stays read-only. Otherwise the page says **read-only** and why (for example `read-only: no key`); `e` then shows the reason. Views, AI results, table descriptions and read-only connections cannot be edited.
+You can change the rows of a table's data page, and of a console result that is a plain `SELECT` from one table (columns named as they are in the table, no `DISTINCT`, `GROUP BY` or `UNION`). The table needs a primary key or a unique key, and the result must contain its columns: each change finds its row by the full key. A SQLite table with neither is edited by its hidden `rowid` on the data page (not in a console result); a table that has columns named `rowid`, `_rowid_` and `oid` stays read-only. Otherwise the page says **read-only** and why (for example `read-only: no key`); `e` then shows the reason. Views, AI results, table descriptions and read-only connections cannot be edited.
 
 | Key | Action |
 | --- | --- |
@@ -341,10 +341,20 @@ You can change the rows of a table's data page, and of a console result that is 
 | `P` | paste rows from the clipboard: tab-separated values go from the cursor cell to the right and down, extra lines become new rows (`\N` is NULL); values past the last column, in a binary column or on a deleted row are skipped |
 | `D` | set the cell back to its column's `DEFAULT` (the SQL says `= DEFAULT`; on a new row the cell is left out). SQLite cannot do this in an `UPDATE`, so it says so |
 | `U` | put a new random UUID (version 4) in the cell |
+| `gL` | load the cell from a file: a binary column gets the file's bytes, another column its text (up to 16 MB). The value is bound as a parameter when you submit |
+| `gS` | save the value of the cell to a new file (a binary value as its bytes); it never replaces a file. Works on read-only results too |
 | `u` | undo the change of the cell under the cursor, else of the row; on a row without changes it asks to undo all changes |
 | `w` | submit the changes |
 
-A typed value is checked against the column type before it is kept: whole numbers for integer columns, numbers for `numeric` and `float`, `true` / `false` for booleans, a UUID for `uuid`, valid JSON for `json` and `jsonb`, and `YYYY-MM-DD` for `date`. A value that does not fit is not kept, and a message says what fits. Other types (and arrays) are checked by the server when you submit.
+A typed value is checked against the column type before it is kept: whole numbers for integer columns, numbers for `numeric` and `float`, `true` / `false` for booleans, a UUID for `uuid`, valid JSON for `json` and `jsonb`, and `YYYY-MM-DD` for `date`; in an array each element is checked against the element type. A value that does not fit is not kept, and a message says what fits. Other types are checked by the server when you submit.
+
+**Completion.** In the edit prompt, `Tab` completes what you typed from the values already in that column of the loaded rows (`true` / `false` first in a boolean column); `Tab` again goes to the next value that starts the same way. Nothing is asked of the server.
+
+**Arrays.** `e` on a PostgreSQL array cell opens it in a buffer with one element per line. `\N` alone is a NULL element, a line in double quotes keeps its text as it is (an empty text, spaces, the word `NULL`), and empty lines are left out. `:w` writes the lines back as an array. Arrays in arrays keep the one-line prompt.
+
+**Record view.** In the Transposed view (`t`), `e`, `D`, `U`, `gL` and `-` work on the line under the cursor. `+` adds a new row and shows it there: each line is a column, `(default)` until you set it, and `]` / `[` step through the loaded rows and then the new ones.
+
+**JOIN results.** A console result of a `SELECT` over joined tables (`JOIN … ON`, `USING` or a comma; no subquery in `FROM`, `NATURAL` or `LATERAL` join) can change the cells of one of its tables: the first table in `FROM` whose key is in the result. A column counts as that table's when the select list names it with the table (`o.status`), or only that table has a column of that name; the other columns stay read-only. Rows are not added or deleted in a JOIN result.
 
 Changes stay on the page until you submit them. The left margin marks each row: `*` changed, `+` new, `-` to be deleted, and the page says how many changes wait. Anything that loads the rows again (another data page, a sort or a filter on a data page, `r`) asks **Keep** or **Discard** first; switching tabs or closing the page keeps the changes.
 
