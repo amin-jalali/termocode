@@ -61,3 +61,30 @@ func TestEngineDownRowsShowTheStartCommand(t *testing.T) {
 		t.Fatalf("containers rows %+v", body)
 	}
 }
+
+// y on an engine that is not running copies its start command.
+func TestEngineStartCopyText(t *testing.T) {
+	old := engineGOOS
+	engineGOOS = "linux"
+	t.Cleanup(func() { engineGOOS = old })
+	st := svcHostState()
+	if got := st.engineStartCopy(); got != "" {
+		t.Fatalf("engine up: %q", got)
+	}
+	st.problem = services.Problem{Kind: services.ProblemDaemonDown}
+	if got := st.engineStartCopy(); got != "sudo systemctl start docker" {
+		t.Fatalf("compose down: %q", got)
+	}
+	st = svcHostState()
+	st.containerEngine.Reachable = false
+	st.containerEngine.Kind = "podman"
+	st.containerEngine.Problem = services.Problem{Kind: services.ProblemDaemonDown}
+	if got := st.engineStartCopy(); got != "systemctl --user start podman.socket" {
+		t.Fatalf("engine down: %q", got)
+	}
+	engineGOOS = "darwin"
+	st.containerEngine.Kind = "docker"
+	if got := st.engineStartCopy(); got != "" {
+		t.Fatalf("Docker Desktop has no command: %q", got)
+	}
+}
