@@ -1961,6 +1961,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-plan-approval` | AI: Toggle Plan Approval | never | AI provider, credentials and approvals stay with the user; the AI never approves its own plan |
 | `ai-plan-review` | AI: Review Waiting Plan | never | the plan card is the user's answer; the AI never approves its own plan |
 | `ai-plan-worktree` | AI: Run Next Plan in a Worktree, Then Ship… / Off | never | it leads to a push and a pull request: the user starts it |
+| `ai-powers` | AI: Powers Catalog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-profile-edit` | AI: Edit Profiles | never | AI provider, credentials and approvals stay with the user |
 | `ai-profile-form` | AI: Edit Profile… | never | AI provider, credentials and approvals stay with the user (the step form is for the user; a typed tool comes later) |
 | `ai-profile-new` | AI: New Profile from Current… | never | AI provider, credentials and approvals stay with the user |
