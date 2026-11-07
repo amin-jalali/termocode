@@ -893,6 +893,9 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseSessionsConfirm(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseSavepointConfirm(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseTransferConfirm(id); ok {
 		return cmd, true
 	}
@@ -929,6 +932,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseOpenCSVPicked(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseSavepointPicked(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseTransferPicker(id); ok {

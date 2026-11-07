@@ -657,6 +657,13 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind == promptKindDBParam { // db_params.go
 		return m.databaseParamEntered(value), true
 	}
+	if m.promptKind == promptKindDBSavepoint {
+		key := ""
+		if m.databases != nil {
+			key = m.databases.savepointKey
+		}
+		return m.databaseSavepointTyped(key, strings.TrimSpace(value)), true
+	}
 	if m.promptKind == promptKindDBOpenCSV {
 		return m.databaseOpenCSVPath(value), true
 	}

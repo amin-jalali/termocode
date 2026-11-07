@@ -250,6 +250,7 @@ Each connection starts in auto-commit mode: every statement is saved at once. Pr
 
 - `K` on the result page or **Databases: Commit** saves the changes; `Z` or **Databases: Roll Back** drops them.
 - The status bar and the result page show `manual commit · 2 not committed` while changes wait. Typed `BEGIN`, `COMMIT` or `ROLLBACK` statements are not sent in manual mode; use `K` and `Z`.
+- **Savepoints.** With a transaction open, **Databases: Set Savepoint…** asks for a name (letters, digits and `_`) and sends `SAVEPOINT name`. **Databases: Roll Back to Savepoint…** lists them (newest first); a card asks first (Cancel is the default), then `ROLLBACK TO SAVEPOINT name` drops every change after it. The transaction stays open, and the later savepoints are forgotten. **Databases: Sessions…** lists the open sessions and closes one.
 - Submitted row changes join the open transaction; data pages read inside it, so they show your own changes.
 - Quitting, disconnecting, or switching back to auto-commit with changes waiting asks **Cancel**, **Commit** or **Roll back**.
 

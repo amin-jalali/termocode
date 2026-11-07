@@ -2086,8 +2086,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
 | `db-rollback` | Databases: Roll Back | never | the user's transaction |
+| `db-rollback-savepoint` | Databases: Roll Back to Savepoint… | never | the user's sessions and transactions |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
+| `db-savepoint` | Databases: Set Savepoint… | never | the user's sessions and transactions |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
 | `db-server-info` | Databases: Show Server Info | never | SQL runs require the database query tool and its guard |
 | `db-sessions` | Databases: Show Sessions and Locks | never | SQL runs require the database query tool and its guard |

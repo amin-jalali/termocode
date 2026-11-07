@@ -54,6 +54,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-commit", Title: "Databases: Commit"},
 		{ID: "db-rollback", Title: "Databases: Roll Back"},
 		{ID: "db-open-sessions", Title: "Databases: Sessions…"},
+		{ID: "db-savepoint", Title: "Databases: Set Savepoint…"},
+		{ID: "db-rollback-savepoint", Title: "Databases: Roll Back to Savepoint…"},
 		{ID: "db-submit-changes", Title: "Databases: Submit Pending Changes…"},
 		{ID: "db-revert-changes", Title: "Databases: Revert Pending Changes…"},
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
@@ -108,6 +110,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCommitKey(false), true
 	case "db-open-sessions":
 		return m.databaseSessionsPicker(), true
+	case "db-savepoint":
+		return m.databaseSavepointStart(), true
+	case "db-rollback-savepoint":
+		return m.databaseSavepointPicker(), true
 	case "db-open-csv":
 		return m.databaseOpenCSVStart(), true
 	case "db-submit-changes":

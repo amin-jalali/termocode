@@ -235,12 +235,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Refresh | `db-refresh` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
+| Databases: Roll Back to Savepoint… | `db-rollback-savepoint` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
+| Databases: Set Savepoint… | `db-savepoint` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |

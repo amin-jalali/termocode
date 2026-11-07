@@ -88,6 +88,8 @@ type dbState struct {
 	menuRow             dbTreeRow
 	pendingDisconnectID string
 	closeSessionKey     string          // the session Databases: Sessions… asks to close
+	savepointKey        string          // the session Set / Roll Back to Savepoint acts on
+	savepointName       string          // the savepoint the rollback card is for
 	csvConns            []dbclient.Conn // session-only CSV/TSV copies (db_csv_open.go)
 	sessions            map[string]dbclient.Session
 	passwords           map[string]string
