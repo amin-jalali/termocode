@@ -112,13 +112,6 @@ func dbBuildCondition(driver, col, op, value, old string, or bool) (string, erro
 	return cond, nil
 }
 
-func (m *Model) dbOpenPicker(kind pickerKindEnum, title string, items []picker.Item) {
-	m.picker = picker.NewItems(title, items)
-	m.picker.SetSize(m.w, m.h)
-	m.pickerKind = kind
-	m.pickerOpen = true
-}
-
 // databaseWhereBuilder is b on the result page.
 func (m *Model) databaseWhereBuilder() tea.Cmd {
 	s := m.dbConsole()
