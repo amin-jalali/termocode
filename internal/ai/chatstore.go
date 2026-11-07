@@ -183,6 +183,9 @@ type Conversation struct {
 	Folded map[string]bool `json:"folded,omitempty"`
 	// ForkedFrom is set on a chat forked from another one (G-FORK).
 	ForkedFrom *ForkInfo `json:"forked_from,omitempty"`
+	// ImportedFrom is set on a chat imported from an outside agent's
+	// session file (CMP-87).
+	ImportedFrom *ImportInfo `json:"imported_from,omitempty"`
 	// PlanApproval overrides ai_plan_approval for this chat ("": the
 	// setting; AI: Toggle Plan Approval sets it).
 	PlanApproval string `json:"plan_approval,omitempty"`

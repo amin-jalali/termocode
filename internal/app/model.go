@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/agentlog"
 	"github.com/amin-jalali/termocode/internal/agentusage"
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -111,6 +112,7 @@ type Model struct {
 	// agentChat is the open Agent: Chat View (agent_chat.go, AGX-8);
 	// agentChatPendingBuf the tab the transcripts card asks for.
 	agentChat           *agentChatState
+	agentImportPending  *ai.Conversation // the chat the import card shows (agent_import.go)
 	agentChatPendingBuf int
 	// Agent: Sessions… (agent_sessions.go, AGX-9): the rows, the cached
 	// index and the resume check of each CLI.
