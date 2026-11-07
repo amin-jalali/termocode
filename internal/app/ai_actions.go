@@ -70,6 +70,7 @@ func (m *Model) aiCodeActions(path string, line int, add func(title, kind string
 	}
 	add("Edit with AI…", synthKindAIEdit, synthCodeAction{Path: path, Line: line})
 	add("Generate Doc Comment with AI", synthKindAIDoc, synthCodeAction{Path: path, Line: line})
+	add("Generate Property-Based Tests with AI", synthKindAIPropTests, synthCodeAction{Path: path, Line: line})
 }
 
 // applyAICodeAction runs a picked AI code action.
@@ -83,6 +84,8 @@ func (m *Model) applyAICodeAction(a synthCodeAction) tea.Cmd {
 		return m.aiEditSelection()
 	case synthKindAIDoc:
 		return m.aiDocComment()
+	case synthKindAIPropTests:
+		return m.aiPropertyTests()
 	}
 	return nil
 }

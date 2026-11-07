@@ -536,6 +536,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-fix", "AI: Fix Diagnostic at Cursor", ""},
 		{"ai-edit", "AI: Edit Selection…", "Alt+I"},
 		{"ai-doc", "AI: Generate Doc Comment", ""},
+		{"ai-property-tests", "AI: Generate Property-Based Tests for File / Selection", ""},
 		{"ai-attach", "AI: Add File / Selection to Chat", ""},
 		{"ai-apply-code", "AI: Apply Last Code Block to File", ""},
 		{"ai-export-chat", "AI: Export Chat as Markdown", ""},
@@ -650,6 +651,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiEditSelection(), true
 	case "ai-doc":
 		return m.aiDocComment(), true
+	case "ai-property-tests": // CMP-102
+		return m.aiPropertyTests(), true
 	case "ai-attach":
 		return m.aiAttachCurrent(), true
 	case "ai-apply-code":

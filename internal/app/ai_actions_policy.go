@@ -611,6 +611,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-fix":              aiNever(aiNoNested),
 	"ai-edit":             aiNever(aiNoNested),
 	"ai-doc":              aiNever(aiNoNested),
+	"ai-property-tests":   aiNever(aiNoNested),
 	"ai-attach":           aiNever("adds to the chat input; read the file with read_file"),
 	"ai-apply-code":       aiNever("use write_file to change files"),
 	"ai-apply-proposal":   aiNever("the user reviews proposed edits"),
