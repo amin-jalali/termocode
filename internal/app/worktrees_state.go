@@ -70,6 +70,7 @@ type wtState struct {
 	archiveAsk *wtArchivePending // the open archive card (worktrees_archive.go)
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
+	handoff    *wtHandoffForm    // the open handoff card (worktrees_handoff.go)
 
 	seq    uint64
 	render struct {
@@ -237,6 +238,9 @@ func wtTick(gen uint64) tea.Cmd {
 func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	st := m.wt
 	if c, ok := m.handleWTCtlMsg(msg); ok { // the control socket (worktrees_notes.go)
+		return c, true
+	}
+	if c, ok := m.handleWTHandoffMsg(msg); ok { // the handoff card (worktrees_handoff.go)
 		return c, true
 	}
 	if c, ok := m.handleWTDeleteMsg(msg); ok { // the type-the-name card (worktrees_delete.go)

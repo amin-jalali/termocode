@@ -69,6 +69,9 @@ type wtForm struct {
 	// parent / parentTitle: a child worktree (c, WTX-11) starts from the
 	// parent's branch and is stored under it.
 	parent, parentTitle string
+	// preTask / preAgent: a handoff to a child (CMP-11) fills in the
+	// task and picks the agent (by id).
+	preTask, preAgent string
 }
 
 // wtFormVals are the typed values of the card.
@@ -216,7 +219,16 @@ func (m *Model) onWTNewPrep(msg wtNewPrepMsg) tea.Cmd {
 	}
 	f.agents = ags
 	m.wt.form = f
+	if f.preTask != "" || f.preAgent != "" { // a handoff (worktrees_handoff.go)
+		f.vals = map[string]string{"from": f.from, "task": f.preTask}
+		for i, a := range ags {
+			if a.ID == f.preAgent {
+				f.pick = i + 1
+			}
+		}
+	}
 	m.connect = connectcard.New(m.wtFormCard())
+	f.vals = nil
 	m.connect.SetSize(m.w, m.h)
 	m.connectOpen = true
 	return nil

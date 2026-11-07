@@ -34,6 +34,7 @@ repository's git folder, never in your project.
 | `N` | The notes agents left on it, with their times |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
+| `H` | Hand off: a new agent goes on with a note of this work (see below) |
 | `L` | Show the setup of a new worktree (its terminal tab) |
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
@@ -101,6 +102,35 @@ show as `└ …`). A child whose parent is gone moves up to the top level.
 **Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
 agents in them, from every termocode window, with the ones that wait for
 you first.
+
+## Hand off to a new agent
+
+`H` (**Worktree: Hand Off Selected…**) passes the selected worktree's
+work to a new agent, for example when the old one runs out of context
+or you want another agent to finish it. termocode writes a short note
+from what git already knows; no AI request runs:
+
+- the branch and the branch it started from (the parent's branch for a
+  child, else the main checkout's branch),
+- the commits since then and the changed files,
+- the files not committed yet,
+- the notes and the status agents left on the worktree, and its linked
+  issue or pull request,
+- one line you add on the card.
+
+The card shows a preview. **Cancel** comes first. Pick **Where**:
+
+- **this worktree**: the agent starts in the same folder. Its first task
+  is one line that names the note. The worktree gets the note
+  "Handed off to …". The old agent keeps running; `s` puts it to sleep.
+  The same agent kind cannot start twice in one worktree.
+- **new child worktree**: the New worktree form opens for a child, with
+  the agent picked and the task typed in. Type a name, then
+  **Create + Start**.
+
+The note is saved in `termocode/handoff/` inside the repository's git
+folder, never in your project, with secrets hidden. The AI never starts
+a handoff. The AI chat has its own **AI: Handoff to a New Chat**.
 
 ## Link an issue or pull request
 

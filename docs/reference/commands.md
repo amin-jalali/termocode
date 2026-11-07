@@ -835,6 +835,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Clean Up… | `worktree-cleanup` |   |   |
 | Worktree: Delete Selected… | `worktree-delete` |   |   |
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
+| Worktree: Hand Off Selected… | `worktree-handoff` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
 | Worktree: Link Issue or PR… | `worktree-link` |   |   |
 | Worktree: New Child of Selected… | `worktree-new-child` |   |   |
