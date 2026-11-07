@@ -464,6 +464,8 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		unset   map[int]bool // new row: the default
 		deleted bool
 	}
+	settings := loadDBConsoleSettings()
+	disp, alt := settings.display(), settings.alternateRows() // DBX-27
 	grid := make([]gridRow, 0, len(page.Rows))
 	for i, row := range page.Rows {
 		g := gridRow{cells: row, mark: " "}
@@ -487,6 +489,7 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 				g.mark = dbGlyphChanged.String()
 			}
 		}
+		g.cells = dbDisplayRow(disp, page.Columns, g.cells, g.changed)
 		grid = append(grid, g)
 	}
 	if edits != nil {
@@ -558,7 +561,7 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		return
 	}
 	p.first = len(p.lines) + 1
-	for _, g := range grid {
+	for gi, g := range grid {
 		b.Reset()
 		b.WriteString(g.mark)
 		markEnd := b.Len()
@@ -582,6 +585,9 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		}
 		n = p.add(strings.TrimRight(b.String(), " "))
 		end := len(p.lines[n-1])
+		if alt && gi%2 == 1 {
+			p.hl(n, 0, max(end, 1), "TermocodeDbAltRow")
+		}
 		switch {
 		case g.deleted:
 			p.hl(n, 0, end, "TermocodeDbDeleted")
@@ -685,6 +691,7 @@ func (m *Model) databaseTransposed(p *dbPage, s *dbConsoleState, width int) {
 			}
 		}
 	}
+	row = dbDisplayRow(loadDBConsoleSettings().display(), page.Columns, row, changed) // DBX-27
 	nameW := 1
 	names := make([]string, len(page.Columns))
 	for i, c := range page.Columns {
