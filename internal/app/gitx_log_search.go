@@ -100,7 +100,7 @@ func (m *Model) openFolderHistoryPrompt() tea.Cmd {
 
 // gitxSearchLog lists the commits that pass f; Enter opens one.
 func (m *Model) gitxSearchLog(f git.LogFilter) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -136,7 +136,7 @@ func (m *Model) openGotoCommitPrompt() tea.Cmd {
 		return nil
 	}
 	m.gitxPrompt("Go to Commit", "Hash, branch or tag", "", func(m *Model, v string) tea.Cmd {
-		cwd, err := m.rootDir()
+		cwd, err := m.gitRootDir()
 		if err != nil {
 			return nil
 		}

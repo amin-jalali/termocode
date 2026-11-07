@@ -2118,7 +2118,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `focus-explorer` | View: Focus Explorer | auto |   |
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
+| `git-ai-changelog` | Git: Write Changelog with AI… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-commit-msg` | Git: Generate Commit Message with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-compose` | Git: Plan Commits for My Changes with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-explain-changes` | Git: Explain Changes with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-explain-line` | Git: Explain Line's Commit with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-pr-text` | Git: Write Pull Request Description with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
@@ -2142,12 +2144,16 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-clean-untracked` | Git: Delete Untracked Files… | confirm (always asks) |   |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
+| `git-clone-shallow` | Git: Clone Repository (Shallow)… | never | clones into a folder outside the workspace and opens it |
 | `git-cmd-log` | Git: Show Git Command Log | auto |   |
 | `git-co-author` | Git: Add Co-Author… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
+| `git-commit-author` | Git: Commit Staged as Another Author… | never | makes a commit under another person's name; only the user does that |
 | `git-commit-checks` | Git: Run Before-Commit Checks | never | runs the user's before-commit task, a shell command |
 | `git-commit-edit` | Git: Edit Commit Message in Editor | never | opens the commit message for the user to write; use git_commit |
+| `git-commit-empty` | Git: Commit Empty (No Changes)… | never | makes a commit in the user's name; only the user does that |
 | `git-commit-history` | Git: Pick Recent Commit Message… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-commit-marked` | Git: Commit Marked Files Only… | never | makes a commit in the user's name; only the user does that |
 | `git-commit-push` | Git: Commit and Push | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-commit-sync` | Git: Commit and Sync | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-compare-branches` | Git: Compare Branches… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2157,6 +2163,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-conflict-ours` | Git: Accept Current Change (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-conflict-prev` | Git: Go to Previous Merge Conflict | auto |   |
 | `git-conflict-theirs` | Git: Accept Incoming Change (Conflict at Cursor) | confirm (fileWrite) |   |
+| `git-contributors` | Git: Show Contributors | auto |   |
 | `git-copy-commit-link` | Git: Copy Remote Link to Commit | confirm (ide) |   |
 | `git-copy-line-link` | Git: Copy Remote Link to Line | confirm (ide) |   |
 | `git-diff` | Git: Show Diff for Current File | auto |   |
@@ -2170,6 +2177,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-fetch-all` | Git: Fetch All Remotes (Prune) | confirm (git) |   |
 | `git-fixup` | Git: Fixup Staged Changes Into… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-focus` | Git: Focus Source Control | auto |   |
+| `git-gist` | Git: Create Gist from File… | never | publishes a file of the user on GitHub; only the user does that |
 | `git-goto-commit` | Git: Go to Commit… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
 | `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
@@ -2181,6 +2189,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-init` | Git: Initialize Repository | never | makes a new git repository in the user's folder; user only |
 | `git-inline-blame` | Git: Toggle Inline Blame | auto |   |
 | `git-issues` | Git: Issues… (Start Work on One) | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-lfs-files` | Git: Show LFS Files | auto |   |
 | `git-line-history` | Git: Show Line History | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-folder` | Git: Show Folder History… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
@@ -2228,10 +2237,12 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-refresh` | Git: Refresh Status | auto |   |
 | `git-remotes` | Git: Manage Remotes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-repo-pick` | Git: Switch Repository… | auto |   |
 | `git-rev-next` | Git: Open Next Revision of File | auto |   |
 | `git-rev-prev` | Git: Open Previous Revision of File | auto |   |
 | `git-signing-toggle` | Git: Toggle Commit Signing (This Repository) | never | changes how the user's commits are signed; only the user does that |
 | `git-skip-hooks` | Git: Toggle Skip Hooks on Commit (--no-verify) | never | turns off the checks the repository runs on each commit; only the user does that |
+| `git-split-guide` | Git: How to Split a Commit | auto |   |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |
@@ -2242,6 +2253,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-stash-options` | Git: Stash… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_stash) |
 | `git-stash-pop` | Git: Pop Latest Stash | confirm (git) |   |
 | `git-status-blame` | Git: Toggle Blame in Status Bar | auto |   |
+| `git-submodule-update` | Git: Update Submodules… | confirm (git) |   |
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
 | `git-tag-create` | Git: Create Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-tag-delete` | Git: Delete Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2251,6 +2263,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-uncommit` | Git: Uncommit Last Commit (Keep Changes) | confirm (git) |   |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
+| `git-unshallow` | Git: Fetch Full History (Unshallow) | confirm (git) |   |
 | `git-unstage-all` | Git: Unstage All Changes | confirm (git) |   |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |
 | `git-unstage-lines` | Git: Unstage Line (or Selected Lines) | confirm (git) |   |

@@ -746,6 +746,17 @@ export interface GitStashRefArgs {
   ref: string;
 }
 
+export interface GitStashShowArgs {
+  ref: string;
+  from?: number;
+}
+
+export interface GitStashActArgs {
+  ref: string;
+  do: "apply" | "pop" | "drop" | "branch";
+  branch?: string;
+}
+
 export interface GitUndoPlanArgs {
   reflog?: boolean;
   index?: number;
@@ -1254,6 +1265,7 @@ export interface GitSnap {
   files: GitFile[];
   more?: number;
   log: GitCommit[];
+  stashes?: GitStashEntry[];
 }
 
 export interface GitBranch {
@@ -1278,6 +1290,11 @@ export interface GitCommit {
   author: string;
   when: number;
   unpushed?: boolean;
+}
+
+export interface GitStashEntry {
+  ref: string;
+  message: string;
 }
 
 export interface TasksSnap {
@@ -2550,11 +2567,6 @@ export interface GitStashList {
   entries: GitStashEntry[];
 }
 
-export interface GitStashEntry {
-  ref: string;
-  message: string;
-}
-
 export interface GitReflog {
   entries: GitReflogEntry[];
 }
@@ -3144,6 +3156,8 @@ export interface OpArgs {
   "git.checkout_tag": GitTagArgs;
   "git.stash_list": EmptyArgs;
   "git.stash_apply": GitStashRefArgs;
+  "git.stash_show": GitStashShowArgs;
+  "git.stash_act": GitStashActArgs;
   "git.reflog": EmptyArgs;
   "git.undo_plan": GitUndoPlanArgs;
   "git.undo": GitUndoArgs;
@@ -3407,6 +3421,8 @@ export interface OpResult {
   "git.checkout_tag": AskRef;
   "git.stash_list": GitStashList;
   "git.stash_apply": AskRef;
+  "git.stash_show": GitDiff;
+  "git.stash_act": AskRef;
   "git.reflog": GitReflog;
   "git.undo_plan": GitUndoPlan;
   "git.undo": AskRef;

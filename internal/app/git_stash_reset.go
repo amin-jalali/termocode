@@ -128,11 +128,11 @@ func (m *Model) openStashActionsPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	repo, err := m.gitStashRepo()
 	if err != nil {
-		return nil
+		return m.gitOpsToast(err, "Stash list failed", "", "")
 	}
-	entries, err := git.StashList(cwd)
+	entries, err := repo.List()
 	if err != nil {
 		return m.gitOpsToast(err, "Stash list failed", "", "")
 	}
@@ -162,18 +162,18 @@ func (m *Model) onStashPicked(ref string) tea.Cmd {
 }
 
 func (m *Model) onStashActionPicked(id string) tea.Cmd {
-	cwd, err := m.rootDir()
+	repo, err := m.gitStashRepo()
 	if err != nil {
-		return nil
+		return m.gitOpsToast(err, "Stash failed", "", "")
 	}
 	ref := m.gitStashOps.ref
 	switch id {
 	case "sa-apply":
-		return m.gitOpsToast(git.StashApply(cwd, ref), "Apply failed", "Applied "+ref, "The stash stays")
+		return m.gitOpsToast(repo.Apply(ref), "Apply failed", "Applied "+ref, "The stash stays")
 	case "sa-pop":
-		return m.gitOpsToast(gitStashPopRef(cwd, ref), "Pop failed", "Popped "+ref, "")
+		return m.gitOpsToast(repo.Pop(ref), "Pop failed", "Popped "+ref, "")
 	case "sa-diff":
-		d, err := git.StashDiff(cwd, ref)
+		d, err := repo.Diff(ref)
 		if err != nil {
 			return m.gitOpsToast(err, "Could not read the stash", "", "")
 		}
@@ -186,20 +186,12 @@ func (m *Model) onStashActionPicked(id string) tea.Cmd {
 	case "sa-branch":
 		m.gitOpsPrompt(promptKindStashBranch, "Branch from "+ref, "New branch name (the stash is applied there, then dropped):", "")
 	case "sa-drop":
-		hash := git.StashHash(cwd, ref)
+		hash := repo.Hash(ref)
 		m.gitOpsCard(confirmKindStashDrop, "Drop "+ref+"?",
 			fmt.Sprintf("The stash is deleted. Its commit %s stays in git for a while: the toast says how to bring it back.", hash[:min(7, len(hash))]),
 			confirm.Button{ID: "drop", Title: "Drop", Style: confirm.StyleDestructive})
 	}
 	return nil
-}
-
-// gitStashPopRef pops one stash (`git stash pop <ref>`).
-func gitStashPopRef(cwd, ref string) error {
-	if err := git.StashApply(cwd, ref); err != nil {
-		return err
-	}
-	return git.StashDrop(cwd, ref)
 }
 
 // ── reset ─────────────────────────────────────────────────────────────
@@ -233,7 +225,7 @@ func (m *Model) onResetModePicked(id string) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -263,23 +255,27 @@ func (m *Model) onResetModePicked(id string) tea.Cmd {
 
 // onGitOpsConfirm answers this file's cards; Cancel does nothing.
 func (m *Model) onGitOpsConfirm(kind confirmKindEnum, id string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
 	s := m.gitStashOps
 	switch {
 	case kind == confirmKindStashDrop && id == "drop":
-		hash := git.StashHash(cwd, s.ref)
+		repo, err := m.gitStashRepo()
+		if err != nil {
+			return m.gitOpsToast(err, "Drop failed", "", "")
+		}
+		hash := repo.Hash(s.ref)
 		name := ""
-		if es, err := git.StashList(cwd); err == nil {
+		if es, err := repo.List(); err == nil {
 			for _, e := range es {
 				if e.Ref == s.ref {
 					name = e.Message
 				}
 			}
 		}
-		return m.gitOpsToast(git.StashDrop(cwd, s.ref), "Drop failed", "Dropped "+s.ref,
+		return m.gitOpsToast(repo.Drop(s.ref), "Drop failed", "Dropped "+s.ref,
 			fmt.Sprintf("git stash store -m %q %s brings it back", name, hash))
 	case kind == confirmKindGitReset && id == "reset":
 		if s.resetMode == git.ResetHard {
@@ -299,7 +295,7 @@ func (m *Model) gitUncommit() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -327,7 +323,7 @@ func (m *Model) handleGitOpsPromptSubmit(value string) (tea.Cmd, bool) {
 	default:
 		return nil, false
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil, true
 	}
@@ -337,12 +333,20 @@ func (m *Model) handleGitOpsPromptSubmit(value string) (tea.Cmd, bool) {
 	case promptKindStashMessage:
 		o := s.opts
 		o.Message = value
-		return m.gitOpsToast(git.StashPush(cwd, o), "Stash failed", "Stashed changes", value), true
+		repo, err := m.gitStashRepo()
+		if err == nil {
+			err = repo.Push(o)
+		}
+		return m.gitOpsToast(err, "Stash failed", "Stashed changes", value), true
 	case promptKindStashBranch:
 		if value == "" {
 			return nil, true
 		}
-		return m.gitOpsToast(git.StashBranch(cwd, value, s.ref), "Branch from stash failed", "Created branch "+value, "from "+s.ref), true
+		repo, err := m.gitStashRepo()
+		if err == nil {
+			err = repo.Branch(value, s.ref)
+		}
+		return m.gitOpsToast(err, "Branch from stash failed", "Created branch "+value, "from "+s.ref), true
 	}
 	label := gitResetBranchLabel(m)
 	if value != label {
