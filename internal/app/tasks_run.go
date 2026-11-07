@@ -152,6 +152,8 @@ func (m *Model) openTasksPickerItems(title string, items []picker.Item) {
 // handleTasksPickerSelect runs the picked task or opens the picked link.
 func (m *Model) handleTasksPickerSelect(id string) tea.Cmd {
 	switch {
+	case strings.HasPrefix(id, "ctr:"): // CTX-37 docker files / compose services (containers_devrun.go)
+		return m.handleContainersPickerSelect(id)
 	case strings.HasPrefix(id, "svc:"): // the Services pickers (services_actions.go)
 		return m.handleServicesPickerSelect(id)
 	case strings.HasPrefix(id, "k8s:"): // the Kubernetes pickers (kube_scope.go)

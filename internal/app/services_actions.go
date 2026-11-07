@@ -1425,7 +1425,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "services-configure", Title: "Containers: Configure Services (services.json)"},
 		{ID: "services-open-compose", Title: "Containers: Open Compose File"},
 		{ID: "services-trust", Title: "AI: Services Trust…"},
-	}, composeExtrasPaletteItems()...)
+	}, append(composeExtrasPaletteItems(), devrunPaletteItems()...)...)
 }
 
 func containerAITargetRequired(id string) bool {
@@ -1595,6 +1595,16 @@ func (m *Model) dispatchContainerAIAction(id, target string) (tea.Cmd, error) {
 
 // dispatchServicesPalette runs the "Services: …" palette commands.
 func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
+	switch id { // CTX-37 (containers_devrun.go): editor-side, the view stays as it is
+	case "containers-run-at-cursor":
+		return m.runAtCursor(), true
+	case "containers-scaffold":
+		return m.askScaffold(), true
+	case "containers-compose-snippet":
+		return m.askComposeSnippet(), true
+	case "containers-templates-folder":
+		return m.openTemplatesFolder(), true
+	}
 	if id == "containers-focus" {
 		return m.revealServicesView(true), true
 	}

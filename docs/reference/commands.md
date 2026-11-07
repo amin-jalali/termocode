@@ -121,6 +121,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Containers: Add Compose Service… | `containers-compose-snippet` |   |   |
+| Containers: Add Docker Files… | `containers-scaffold` |   |   |
 | Containers: Attach | `containers-attach` |   |   |
 | Containers: Browse Remote Tags… | `containers-browse-tags` |   |   |
 | Containers: Build Image from Dockerfile… | `containers-image-build` |   |   |
@@ -139,6 +141,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
 | Containers: Open Compose File | `services-open-compose` |   |   |
+| Containers: Open Docker Templates Folder | `containers-templates-folder` |   |   |
 | Containers: Open Engine Config | `containers-engine-config` |   |   |
 | Containers: Open Guide | `containers-help` |   |   |
 | Containers: Open Published Port | `containers-open-port` |   |   |
@@ -163,6 +166,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Restart Project | `containers-compose-restart` |   |   |
 | Containers: Restart Selected | `containers-restart` |   |   |
 | Containers: Restart Service… | `services-restart` |   |   |
+| Containers: Run Dockerfile Stage or Compose Service at Cursor | `containers-run-at-cursor` |   |   |
 | Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |

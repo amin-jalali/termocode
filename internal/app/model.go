@@ -1242,6 +1242,8 @@ func (m Model) attachCmd() tea.Cmd {
 		// HTTP client: .http filetype + lens, the HTTP Response page.
 		_ = m.nvim.ExecLua(httpBufferLua)
 		_ = m.nvim.ExecLua(httpPageLua)
+		// Run lens on Dockerfiles / compose files (containers_devrun.go).
+		_ = m.nvim.ExecLua(dockerLensLua)
 		_ = m.nvim.ExecLua(dbConsoleLua)
 		_ = m.nvim.ExecLua(dbPageLua)
 		// Inline git diff gutter signs: green +, blue ~, red −. Refreshes

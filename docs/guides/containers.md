@@ -184,6 +184,35 @@ asks before pruning. Volume pruning lists only unnamed volumes (their data
 is deleted); volumes with a name are kept. On VOLUMES, `d` reads disk usage once and fills in the
 reported sizes. Disk usage is not queried in the background.
 
+## Dockerfiles and compose files
+
+In a Dockerfile every `FROM` line shows a **▸ build** lens at the right
+edge (**▸ build to <stage>** on a named stage that is not the last one).
+In a compose file every service shows **▸ up <service>**. Click the lens,
+or run **Containers: Run Dockerfile Stage or Compose Service at Cursor**
+with the cursor anywhere in that block. A card shows the full command
+first (**Cancel** is the default); **Build** or **Start** runs it in a
+terminal tab.
+
+**Containers: Add Docker Files…** writes a starter `Dockerfile`,
+`compose.yaml` and `.dockerignore`. The template that fits the folder
+(Go, Node.js, Python, static site, or a plain Alpine shell) is listed
+first. The card lists the files it creates and the files that already
+exist; existing files are never overwritten.
+
+Your own templates: **Containers: Open Docker Templates Folder** opens
+`docker-templates/` in the config folder. Each sub-folder there is one
+template; its files are copied as they are.
+
+**Containers: Add Compose Service…** adds a service (PostgreSQL, MySQL,
+Redis, MongoDB, RabbitMQ, nginx) to the end of the `services:` block of
+the workspace compose file, or creates `compose.yaml`. The card shows the
+service first; a name that is already there is refused.
+
+`tasks.json` also takes `"type": "docker-build"`, `"docker-run"` and
+`"docker-compose"` tasks, and **Run Task…** offers docker build and
+compose up / down when the folder has a Dockerfile or compose file.
+
 ## Pruning
 
 Pruning always asks first. Every prune card names what goes (counts from the

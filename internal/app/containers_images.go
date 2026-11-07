@@ -299,7 +299,12 @@ func (m *Model) runHostAction(id string) tea.Cmd {
 	if id == "cancel" {
 		m.pendingHostArgs, m.pendingHostOperation, m.pendingHostTarget = nil, "", ""
 		m.pendingBuild = containers.BuildOptions{}
+		m.services.devrun = devrunPending{}
 		return nil
+	}
+	if cmd, ok := m.runDevrunHostAction(m.pendingHostOperation); ok { // containers_devrun.go
+		m.pendingHostArgs, m.pendingHostOperation, m.pendingHostTarget = nil, "", ""
+		return cmd
 	}
 	args := append([]string(nil), m.pendingHostArgs...)
 	operation, section := m.pendingHostOperation, m.pendingHostTarget

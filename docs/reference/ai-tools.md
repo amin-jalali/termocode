@@ -2003,6 +2003,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-browse-tags` | Containers: Browse Remote Tags… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks a registry over the network on the user's behalf |
 | `containers-compose-down` | Containers: Remove Project Containers… | never | project removal requires the user's confirm card |
 | `containers-compose-restart` | Containers: Restart Project | confirm (always asks) |   |
+| `containers-compose-snippet` | Containers: Add Compose Service… | never | adding a compose service is the user's; the AI writes files with its own file tools |
 | `containers-compose-stop` | Containers: Stop Project | confirm (always asks) |   |
 | `containers-compose-up` | Containers: Start Project | confirm (always asks) |   |
 | `containers-context-default` | Containers: Make Context Default… | never | changes the machine-wide Docker default |
@@ -2035,12 +2036,15 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-registry-signout` | Containers: Sign Out of Registry… | never | signing out of a registry is the user's |
 | `containers-remove` | Containers: Remove Selected… | never | container removal requires the user's confirm card |
 | `containers-restart` | Containers: Restart Selected | confirm (always asks) |   |
+| `containers-run-at-cursor` | Containers: Run Dockerfile Stage or Compose Service at Cursor | never | running a build or a compose service is the user's; nothing is offered to the model |
+| `containers-scaffold` | Containers: Add Docker Files… | never | adding docker files is the user's; the AI writes files with its own file tools |
 | `containers-search` | Containers: Search Docker Hub… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks Docker Hub on the user's behalf |
 | `containers-shell` | Containers: Open Shell | never | opens a picker or prompt that only the user can answer; use a typed tool (container shell) |
 | `containers-start` | Containers: Start Selected | confirm (always asks) |   |
 | `containers-stats` | Containers: Follow Stats | auto |   |
 | `containers-stop` | Containers: Stop Selected | confirm (always asks) |   |
 | `containers-system-prune` | Containers: Prune System… | never | pruning the system is the user's; nothing is offered to the model |
+| `containers-templates-folder` | Containers: Open Docker Templates Folder | auto |   |
 | `containers-volume-create` | Containers: Create Volume… | confirm (always asks) |   |
 | `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | never | disk usage is the user's; nothing is offered to the model |
 | `containers-volume-prune` | Containers: Prune Volumes… | never | pruning volumes is the user's; nothing is offered to the model |
