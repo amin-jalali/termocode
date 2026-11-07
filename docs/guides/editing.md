@@ -138,6 +138,25 @@ to right. The `rtl` setting turns this off; see
 [Persian, Arabic and other right-to-left text](ai-use.md#persian-arabic-and-other-right-to-left-text).
 The editor itself shows the text as Neovim and your terminal do.
 
+### Diagrams in Markdown
+
+Some fenced code blocks are drawn as text diagrams, in the Markdown
+preview, in the AI chat and on the web page:
+
+| Fence | Drawn as |
+|---|---|
+| ` ```mermaid ` with `graph` / `flowchart` (`TD`, `TB`, `BT`, `LR`, `RL`) | Boxes in ranks with arrows and link labels |
+| ` ```mermaid ` with `sequenceDiagram` | Participants, lifelines, messages, notes and `loop` / `alt` rows |
+| ` ```csv ` or ` ```tsv ` | A table; number columns are right aligned |
+| ` ```excalidraw ` (the scene JSON) | Rectangles, ellipses, diamonds, arrows, lines and text |
+
+The card label reads `mermaid · diagram`. A link that goes back up (a
+loop) is listed under the drawing with `↺`. When a block does not parse,
+uses another diagram kind, or is too wide for the view, the source shows
+as normal code. **Copy**, **Apply** and **Save as…** in the chat always
+take the source. On the web page, the button in the block header
+switches between the drawing and the source.
+
 ## Key hints
 
 Press the leader key in the editor (Normal mode) and wait a moment. A small

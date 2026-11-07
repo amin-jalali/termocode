@@ -202,6 +202,8 @@ func paletteItems() []picker.Item {
 		{ID: "terminal-prev-tab", Title: "Terminal: Previous Tab", Hint: "Ctrl+Shift+PgUp"},
 		{ID: "terminal-maximize", Title: "Terminal: Maximize Panel"},
 		{ID: "terminal-minimize", Title: "Terminal: Minimize Panel"},
+		{ID: "terminal-ai-take-over", Title: "Terminal: Take Over from the AI"},
+		{ID: "terminal-ai-hand-back", Title: aiTermHandBackTitle},
 		// Bottom panel tabs (panel.go / output.go).
 		{ID: "view-output", Title: "View: Output"},
 		{ID: "output-clear", Title: "Output: Clear Channel"},
@@ -448,6 +450,7 @@ func paletteItems() []picker.Item {
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
 	items = append(items, secretsPaletteItems()...)   // secret store (secrets_ui.go)
 	items = append(items, mcpImportOtherPaletteItems()...)
+	items = append(items, devPreviewPaletteItems()...)
 	items = append(items, mcpServePaletteItems()...)   // termocode as an MCP server (mcp_serve_status.go)
 	items = append(items, webPaletteItems()...)        // the web panel (web_tui.go)
 	items = append(items, webAccessPaletteItems()...)  // pairing and devices (web_access.go)
@@ -464,6 +467,7 @@ func paletteItems() []picker.Item {
 	items = append(items, gitxPaletteItems()...)       // GITX features (gitx_hub.go)
 	// RC-6: where a container workspace's language servers run (container_lsp.go).
 	items = append(items, containerLSPPaletteItems()...)
+	items = append(items, codebaseSearchPaletteItems()...) // CMP-69 (codebase_search.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -481,6 +485,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.runDebugPaletteCmd(id)
 	}
 	if cmd, ok := m.runTermPaneAction(id); ok { // terminal splits (terminal_split.go)
+		return cmd
+	}
+	if cmd, ok := m.runTermDriveAction(id); ok { // AI take over / hand back (ai_terminal_drive.go)
 		return cmd
 	}
 	switch id {
@@ -960,6 +967,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		if cmd, ok := m.dispatchContainerLSPPalette(id); ok { // container_lsp.go
 			return cmd
 		}
+		if cmd, ok := m.dispatchCodebaseSearchPalette(id); ok { // CMP-69 (codebase_search.go)
+			return cmd
+		}
 		if cmd, ok := m.dispatchImportPalette(id); ok { // import_editor.go
 			return cmd
 		}
@@ -1033,6 +1043,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchKubePalette(id); ok { // kube_actions.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchDevPreviewPalette(id); ok { // devpreview_ui.go (CMP-66)
 			return cmd
 		}
 		if cmd, ok := m.dispatchWorktreePalette(id); ok { // worktrees_keys.go

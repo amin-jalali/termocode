@@ -54,6 +54,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`get_ide_state`](#get_ide_state) | auto | yes | Read the whole IDE state as JSON: focus, sidebar view, bottom panel tabs, terminal tabs, layout sizes, zen, theme, icons, git branch and changed files, LSP clients of the active file, problem counts, debug session, running tests and tasks. |
 | [`terminal_send`](#terminal_send) | confirm (run) | no | Type text into the user's VISIBLE integrated terminal (opens the panel and a tab when needed) and press Enter. |
 | [`terminal_read`](#terminal_read) | auto | yes | Read the last lines of an integrated terminal tab and whether its shell is idle or running a command. |
+| [`terminal_keys`](#terminal_keys) | confirm (run) | no | Press keys in an integrated terminal tab, for a program that runs there (psql, gdb, a REPL, a pager). |
 | [`terminal_tabs`](#terminal_tabs) | list, new, focus: auto<br>close: auto for an idle tab, confirm (always asks) while a command runs | yes | Manage the integrated terminal tabs: list (number, name, idle / running), new (open a shell tab), focus (show a tab), close (ends its shell; asks the user). |
 | [`lsp_hover`](#lsp_hover) | auto | yes | Hover information (type, signature, docs) of the symbol at a file position, via the language server. |
 | [`lsp_symbols`](#lsp_symbols) | auto | yes | Symbols via the language server: with path, the outline of that file (name, kind, line); with query, matching symbols in the whole workspace (name, kind, file:line). |
@@ -150,6 +151,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`db_history`](#db_history) | auto | no | List recent SQL runs (the user's and yours), newest first. |
 | [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
 | [`ast_grep`](#ast_grep) | search: auto<br>with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed | no | Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.Println($A)"). |
+| [`codebase_search`](#codebase_search) | auto | no | Find code by meaning: describe what it does in plain words ("where the password is checked") and get the best matching places as file:line with a score, best first. |
 | [`look_at`](#look_at) | auto<br>an image is sent to the main model in one extra request (a PDF is read locally) | no | Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. |
 | [`proof_screenshot`](#proof_screenshot) | a localhost page or an HTML file in the workspace: auto<br>any other address: confirm (run)<br>the shot is sent to the main model when it takes images | no | Take a screenshot of a web page in a headless browser as proof of a UI change: the local dev server (http://localhost:<port>/…) or an HTML file in the workspace. |
 | [`todo_write`](#todo_write) | auto | no | Write the todo list of this chat (the whole list each time; it replaces the old one). |
@@ -596,7 +598,7 @@ Type text into the user's VISIBLE integrated terminal (opens the panel and a tab
 
 ### terminal_read
 
-Read the last lines of an integrated terminal tab and whether its shell is idle or running a command. wait_ms (max 30000) first waits until the command is done and the output is quiet — e.g. after terminal_send of a test run.
+Read the last lines of an integrated terminal tab and whether its shell is idle or running a command. wait_ms (max 30000) first waits until the command is done and the output is quiet — e.g. after terminal_send of a test run. Inside psql, gdb, python or another REPL the wait ends when its prompt is back; until (a regex) ends it on any text.
 
 **Gate:** auto
 
@@ -606,7 +608,21 @@ Read the last lines of an integrated terminal tab and whether its shell is idle 
 | --- | --- | --- | --- |
 | `lines` | integer |   | how many last lines (default 50, max 500) |
 | `tab` | string |   | terminal tab: its number (1 = first) or name; default the active tab |
+| `until` | string |   | with wait_ms: stop as soon as the last lines match this regular expression, e.g. "Listening on" |
 | `wait_ms` | integer |   | wait up to this long for the command to finish (default 0, max 30000) |
+
+### terminal_keys
+
+Press keys in an integrated terminal tab, for a program that runs there (psql, gdb, a REPL, a pager). ctrl-c stops a command, ctrl-d ends input or quits a REPL, up / down walk the history, tab completes; several keys are space-separated, like "up enter". Type text with terminal_send; read the result with terminal_read.
+
+**Gate:** confirm (run)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `keys` | string | yes | keys to press: ctrl-c, ctrl-d, ctrl-a … ctrl-z, enter, tab, esc, up, down, left, right, home, end, pageup, pagedown, backspace, delete, space |
+| `tab` | string |   | terminal tab: its number (1 = first) or name; default the active tab |
 
 ### terminal_tabs
 
@@ -1850,6 +1866,19 @@ Structural code search with ast-grep: pattern is code with $VAR wildcards ("fmt.
 | `path` | string |   | folder or file to search, relative to the workspace (default: root) |
 | `rewrite` | string |   | replacement for each match, may use the pattern's $VARs (optional) |
 
+### codebase_search
+
+Find code by meaning: describe what it does in plain words ("where the password is checked") and get the best matching places as file:line with a score, best first. A local index of the git-tracked files (related words count too; secret files are left out). Use search for exact text, lsp tools for symbols.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `query` | string | yes | what the code does, in plain words |
+| `max` | integer |   | number of results (default 10, max 15) |
+
 ### look_at
 
 Look at an image file (png, jpg, gif, webp) and answer a question about it, or read the text of a PDF file. For an image this sends one extra request to the model. Use read_file for text files.
@@ -2179,6 +2208,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai-explain` | AI: Explain Selection / Line | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-export-chat` | AI: Export Chat as Markdown | confirm (fileWrite) |   |
 | `ai-fix` | AI: Fix Diagnostic at Cursor | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `ai-follow-agent` | AI: Toggle Follow Agent | confirm (ide) |   |
 | `ai-fork-chat` | AI: Fork Chat from Message… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-handoff` | AI: Handoff to a New Chat | never | it ends the AI's own chat; the user starts a handoff |
 | `ai-history` | AI: Chat History… | never | starts or changes an AI chat or edit; answer in this chat instead |
@@ -2259,6 +2289,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `close-split` | Editor: Close Split | auto |   |
 | `code-action-apply-preferred` | Edit: Apply Preferred Quick Fix | never | applies an edit chosen by the language server; the AI uses lsp tools instead |
 | `code-actions` | Edit: Quick Fix... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `codebase-search` | Search: Codebase by Meaning… | never | opens a picker or prompt that only the user can answer; use a typed tool (codebase_search) |
 | `config-commands` | Open Config: User Commands | confirm (ide) |   |
 | `config-theme` | Open Config: Theme | confirm (ide) |   |
 | `containers-attach` | Containers: Attach | never | opens a picker or prompt that only the user can answer; use a typed tool (container attach) |
@@ -2672,7 +2703,9 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `prev-buffer` | View: Previous Editor | auto |   |
 | `prev-diagnostic` | Go to Previous Problem | auto |   |
 | `prev-hunk` | Git: Go to Previous Change | auto |   |
+| `preview-dev-servers` | Preview: Dev Server URLs… | never | opens a picker or prompt that only the user can answer; use a typed tool; the agent reads its dev server address with terminal_read |
 | `preview-md` | Markdown: Open Preview | auto |   |
+| `preview-open-newest` | Preview: Open Newest Dev Server | never | acts outside the IDE (OS shell, file manager or browser) |
 | `problems` | Go to Problem... | never | opens a picker or prompt that only the user can answer; use a typed tool (diagnostics) |
 | `problems-panel` | View: Problems | auto |   |
 | `quick-open` | Go to File... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file) |
@@ -2736,6 +2769,8 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `tasks-run` | Tasks: Run Task... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `tasks-terminate` | Tasks: Terminate Task | confirm (ide) |   |
 | `tasks-test` | Tasks: Run Test Task | confirm (run) |   |
+| `terminal-ai-hand-back` | Terminal: Hand Back to the AI | never | only the user takes a terminal over from the AI or hands it back; if a tab was taken over, ask in chat |
+| `terminal-ai-take-over` | Terminal: Take Over from the AI | never | only the user takes a terminal over from the AI or hands it back; if a tab was taken over, ask in chat |
 | `terminal-close-pane` | Terminal: Close Pane | confirm (always asks) |   |
 | `terminal-close-tab` | Terminal: Close Active Tab | confirm (always asks) |   |
 | `terminal-fix-ai` | Terminal: Fix Last Command with AI | never | starts or changes an AI chat or edit; answer in this chat instead |

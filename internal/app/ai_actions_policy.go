@@ -107,6 +107,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"terminal-prev-tab":  aiAuto(),
 	"terminal-maximize":  aiAuto(),
 	"terminal-minimize":  aiAuto(),
+	// CMP-67: only the user decides who types in a terminal.
+	"terminal-ai-take-over": aiNever(aiNoTermDrive),
+	"terminal-ai-hand-back": aiNever(aiNoTermDrive),
 	// terminal splits (terminal_split.go)
 	"terminal-split-right":     aiAuto(),
 	"explorer-toggle-preview":  aiAuto(), // UI only: shows or hides the preview pane
@@ -465,6 +468,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"kubernetes-hpa":                    aiAuto(),
 	"kubernetes-nodes":                  aiNever(aiNoPicker + "; cordon and drain are the user's choice"),
 	"kubernetes-apply-file":             aiNever("writes to the cluster; only the user applies a file, after the diff"),
+	"preview-dev-servers":               aiNever(aiNoPicker + "; the agent reads its dev server address with terminal_read"), // devpreview_ui.go
+	"preview-open-newest":               aiNever(aiNoOutside),
 	"containers-context-use":            aiNever("a context switch is the user's choice; it moves every container action to another host"),
 	"containers-context-default":        aiNever("changes the machine-wide Docker default"),
 	"containers-context-create":         aiNever("a new context points every terminal at another host; it is the user's"),
@@ -631,6 +636,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
 	"ai-toggle-next-edit": aiConfirm(ai.ClassIDE),
+	"ai-follow-agent":     aiConfirm(ai.ClassIDE),
 	"ai-cancel":           aiNever("stops the model's own turn"),
 	"ai-configure":        aiNever(aiNoAIConfig),
 	"ai-pick-model":       aiNever(aiNoAIConfig),

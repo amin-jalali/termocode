@@ -285,4 +285,7 @@ type MdNode struct {
 	Href  string     `json:"href,omitempty"`  // link
 	Start int        `json:"start,omitempty"` // ol: the first number, when not 1
 	Rows  [][]MdNode `json:"rows,omitempty"`  // table: rows of th / td cells, the header row first
+	// Diagram is a codeblock in a diagram language (mermaid, csv, tsv,
+	// excalidraw) drawn as text rows by internal/diagram; Text keeps the source.
+	Diagram string `json:"diagram,omitempty"`
 }

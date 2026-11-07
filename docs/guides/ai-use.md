@@ -96,6 +96,10 @@ To put code from the answer into your file, run
 **AI: Apply Last Code Block to File**, or click **Apply** on the code
 card. You see the change in the review card first (see below).
 
+Mermaid, CSV / TSV and Excalidraw blocks in an answer are drawn as text
+diagrams once the block is finished; see
+[Diagrams in Markdown](editing.md#diagrams-in-markdown).
+
 | Key (chat focused) | Action |
 |---|---|
 | `Enter` | Send |
@@ -633,6 +637,24 @@ until you save or discard them. The last 50 checkpoints per working tree
 are kept. Checkpoints need git; a folder in a container is not covered
 yet.
 
+### Follow the agent
+
+Run **AI: Toggle Follow Agent** to watch the agent work. While it is on,
+each file the agent writes (`write_file`, `edit_file`) opens in the editor
+at the first changed line, and the explorer shows the file. The keyboard
+stays in the chat, so you can keep typing.
+
+- The status bar shows **◎ Following AI** while it is on.
+- It never pulls the cursor away from you: while you type in the editor
+  or the terminal, it pauses. The next edit after you go back to the chat
+  (or another panel) moves the editor again.
+- It is off by default and lasts until you quit. Run the command again to
+  turn it off.
+- With `ai_edit_review` = `review`, changes open in the review card
+  anyway; Follow Agent moves the editor when a change is written.
+
+The web panel does not follow the agent yet.
+
 ### Audit log
 
 Every tool call of the agent is one line in the **Output** panel, channel
@@ -681,7 +703,7 @@ The chat is an agent. It can call tools to answer you:
 | Write files | write, change part of a file (`edit_file`), create, delete, rename files and folders, format |
 | Git | stage, commit, checkout, push, pull |
 | Run | run a shell command in the workspace (build, test, …); you see only its result |
-| Terminal | type a command in your terminal panel (`terminal_send`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
+| Terminal | type a command in your terminal panel (`terminal_send`), press keys there like Ctrl+C or arrows (`terminal_keys`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
 
 | Read | read a file, list a folder, search (text or regex, with a glob), find files by name (`glob`), look at an image or a PDF (`look_at`), git status / diff / branches / log (`git_log`) / blame (`git_blame`), go to definition, diagnostics |
 | Write files | write, change part of a file (`edit_file`), create, delete, rename files and folders, format |
@@ -757,6 +779,23 @@ a code fence around it) are fixed; a cut call is never run.
 - `terminal_tabs`: list, new and show run at once. Close asks (kind
   *ide*). Closing a tab that still runs a command always asks: there is
   no "Always allow" for it.
+- `terminal_keys` asks first (kind *run*). It presses keys in a tab:
+  Ctrl+C, Ctrl+D, arrows, Tab, Esc.
+
+**The agent in psql, gdb or a REPL.** The agent can work inside a
+program that runs in your terminal, as you do. It starts `psql` (or
+`gdb`, `python`, `redis-cli` …) with `terminal_send`, types queries or
+commands, and `terminal_read` waits until the program shows its prompt
+again. You watch every line.
+
+- **Take over.** The first time the agent types in a tab, a toast says
+  so. Type in that tab, and it is yours: the agent stops typing there
+  and asks you in chat. **Terminal: Take Over from the AI** does the same
+  without typing.
+- **Hand back.** **Terminal: Hand Back to the AI** lets the agent type
+  in those tabs again. Only you run these two commands.
+- **Passwords.** At a password or passphrase prompt the agent stops. You
+  type the secret; the agent never types or reads it.
 
 Language server tools have rules too:
 

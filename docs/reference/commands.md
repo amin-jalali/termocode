@@ -97,6 +97,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` / `Alt+G` | `Alt+Shift+A / Alt+G` |
 | AI: Toggle Critic Review | `ai-critic-toggle` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
+| AI: Toggle Follow Agent | `ai-follow-agent` |   |   |
 | AI: Toggle Image Generation | `ai-image-gen` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Toggle Keep Going While Todos Are Open | `ai-keep-going` |   |   |
@@ -725,6 +726,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preferences: Undo Last Import… | `prefs-import-undo` |   |   |
 | Preferences: Use a Project Setup… | `settings-setup-use` |   |   |
 
+## Preview
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Preview: Dev Server URLs… | `preview-dev-servers` |   |   |
+| Preview: Open Newest Dev Server | `preview-open-newest` |   |   |
+
 ## Run
 
 | Title | ID | Key | Hint |
@@ -735,6 +743,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Search: Codebase by Meaning… | `codebase-search` |   | `plain words, local index` |
 | Search: Find in Files | `find-files` | `Alt+F` / `F8` | `F8 / Alt+F` |
 | Search: Find in Files (Live Overlay) | `find-files-overlay` |   |   |
 | Search: Go to Next Search Result | `search-next-result` | `F4` | `F4` |
@@ -789,6 +798,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Terminal: Focus Next Pane | `terminal-focus-next-pane` | `Alt+Right` | `Alt+Right` |
 | Terminal: Focus Previous Pane | `terminal-focus-prev-pane` | `Alt+Left` | `Alt+Left` |
 | Terminal: Grow Pane | `terminal-grow-pane` |   |   |
+| Terminal: Hand Back to the AI | `terminal-ai-hand-back` |   |   |
 | Terminal: Maximize Panel | `terminal-maximize` |   |   |
 | Terminal: Minimize Panel | `terminal-minimize` |   |   |
 | Terminal: New Tab | `terminal-new-tab` | <code>Ctrl+Shift+&#96;</code> | <code>Ctrl+Shift+&#96;</code> |
@@ -799,6 +809,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Terminal: Shrink Pane | `terminal-shrink-pane` |   |   |
 | Terminal: Split Down | `terminal-split-down` | `Alt+-` | `Alt+-` |
 | Terminal: Split Right | `terminal-split-right` | `Alt+/` | `Alt+/` |
+| Terminal: Take Over from the AI | `terminal-ai-take-over` |   |   |
 | Terminal: Toggle Integrated Panel | `toggle-terminal` | <code>Alt+&#96;</code> / <code>Ctrl+&#96;</code> / `Ctrl+T` | <code>Ctrl+T / Alt+&#96;</code> |
 
 ## Testing

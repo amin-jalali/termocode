@@ -43,6 +43,10 @@ import (
 // aiState is the AI feature state. Held by pointer on Model so Bubble Tea
 // value copies and background goroutines share one instance.
 type aiState struct {
+	// follow is Follow Agent (ai_follow.go): the editor jumps to each
+	// agent edit; followAt is the last "rel:line" it jumped to.
+	follow           bool
+	followAt         string
 	answerCleaner    aiStreamCleaner
 	cleanAnswerIndex int
 	streamTranscript aiStreamTranscript
@@ -592,6 +596,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
 		{"ai-toggle-inline", "AI: Toggle Inline Completions", "Alt+|"},
 		{"ai-toggle-next-edit", "AI: Toggle Next Edit Suggestions", ""},
+		{"ai-follow-agent", "AI: Toggle Follow Agent", ""},
 		{"ai-configure", "AI: Configure Provider…", ""},
 		{"ai-pick-model", "AI: Pick Model…", ""},
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
@@ -750,6 +755,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiToggleInline(), true
 	case "ai-toggle-next-edit": // ai_nextedit.go
 		return m.aiToggleNextEdit(), true
+	case "ai-follow-agent": // ai_follow.go
+		return m.aiToggleFollow(), true
 	case "ai-configure":
 		return m.openAIConfigure(), true
 	case "ai-pick-model":

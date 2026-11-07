@@ -488,6 +488,8 @@ missing	bugfix-spec-new	AI|S
 missing	canvas-add	AI|S
 missing	canvas-copy	AI|S
 missing	canvas-open	AI|M
+missing	ai-follow-agent	AI|M
+missing	codebase-search	Search|M
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S
@@ -730,6 +732,8 @@ missing	lsp-container-diagnostics	Workspace|S
 missing	lsp-container-where	Workspace|S
 missing	lsp-mirror-clear	Workspace|S
 missing	lsp-mirror-refresh	Workspace|S
+missing	preview-dev-servers	Preview|L
+missing	preview-open-newest	Preview|S
 missing	output-save-audit	Output|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
@@ -743,6 +747,8 @@ missing	session-recap	Session|S
 missing	tracker-add	Workspace|S
 missing	tracker-show	Workspace|S
 missing	web-forward-port	Web|M
+missing	terminal-ai-hand-back	Terminal|S
+missing	terminal-ai-take-over	Terminal|S
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S

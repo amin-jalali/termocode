@@ -158,6 +158,8 @@ func (m *Model) handleTasksPickerSelect(id string) tea.Cmd {
 		return m.handleServicesPickerSelect(id)
 	case strings.HasPrefix(id, "ctx-x:"): // the extra Containers pickers (containers_builds.go)
 		return m.handleContainersExtraPick(id)
+	case strings.HasPrefix(id, devPreviewPrefix): // Preview: Dev Server URLs… (devpreview_ui.go)
+		return m.handleDevPreviewPick(id)
 	case strings.HasPrefix(id, "k8s:"): // the Kubernetes pickers (kube_scope.go)
 		return m.handleKubePickerSelect(id)
 	case strings.HasPrefix(id, "svc-trust:"): // AI: Services Trust… (ai_services_tools.go)

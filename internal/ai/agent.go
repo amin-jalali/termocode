@@ -188,6 +188,11 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 	if _, ok := FindTool(tools, "terminal_send"); ok {
 		ide += " run_command runs hidden and returns the output; terminal_send types into the user's visible terminal " +
 			"(dev servers, watchers, tests they want to watch) and terminal_read(wait_ms) reads the result."
+		if _, ok := FindTool(tools, "terminal_keys"); ok {
+			ide += " Inside psql, gdb or a REPL, terminal_read(wait_ms) returns when its prompt is back and terminal_keys " +
+				"presses ctrl-c, ctrl-d, arrows or tab. At a password prompt stop and ask the user to type it. When a tool " +
+				"says the user took over a terminal, do not type there again; ask in chat."
+		}
 	}
 	if _, ok := FindTool(tools, "tests_run"); ok {
 		ide += " To run tests, call tests_run(scope) and then tests_results(wait_ms): it lists each failure with file:line. " +
