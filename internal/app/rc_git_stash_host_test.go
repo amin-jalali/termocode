@@ -42,7 +42,8 @@ func (s *rcStashRepo) answer(argv []string) (string, int) {
 		}
 		return "", 0
 	case strings.HasPrefix(line, "git stash show"):
-		return "diff --git a/box.go b/box.go\n+in the container\n", 0
+		// A real diff: the web view reads + lines only inside a hunk.
+		return "diff --git a/box.go b/box.go\n--- a/box.go\n+++ b/box.go\n@@ -1,0 +1,1 @@\n+in the container\n", 0
 	case strings.HasPrefix(line, "git stash apply"), strings.HasPrefix(line, "git stash branch"):
 		return "", 0
 	}
