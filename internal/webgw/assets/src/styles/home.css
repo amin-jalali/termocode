@@ -80,3 +80,16 @@
 .home-move .btn, .home-cond .btn { min-width: 44px; min-height: 44px; }
 .home-actions { display: flex; gap: 8px; padding: 8px 16px 0; }
 .home-actions .btn { flex: 1; min-height: 44px; }
+/* The Home's context chips (MOBUX-3), on top of the phone chip
+   (phone.css .ph-chip / .ph-chips): pin mode and the pinned state. */
+.hchips-wrap { display: flex; flex-direction: column; }
+.hchips { overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.hchip { -webkit-user-select: none; user-select: none; touch-action: pan-x; }
+.hchip.is-pinned { border-color: var(--p-focus); }
+.hchip.mark-clear { color: var(--p-text-2); }
+.hchip.is-edit { color: var(--p-text-2); border-style: dashed; }
+.hchip.is-done { border-color: var(--p-focus); background: var(--p-surface-2); }
+.hchips.is-pinning .hchip[aria-pressed="false"] { color: var(--p-text-2); }
+.hchips.is-pinning .hchip[aria-pressed="true"] { background: var(--p-surface-2); }
+.hchip:disabled { opacity: 0.5; }
+.hchips-hint { margin: 0; padding: var(--p-s1) var(--p-gutter) 0; color: var(--p-text-2); font: var(--p-fs-caption) / var(--p-lh-caption) var(--p-font); }

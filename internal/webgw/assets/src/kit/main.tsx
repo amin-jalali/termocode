@@ -13,6 +13,7 @@ import "../styles/shell.css";
 import "../styles/ui.css";
 import "../styles/components.css";
 import "../styles/phone.css";
+import "../styles/home.css";
 import "../styles/chat.css";
 import "../styles/blocks.css";
 import "./kit.css";
@@ -35,6 +36,8 @@ import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
 import { Block as PhoneBlock, BoardTile, Composer, PhoneCard, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, Row, Rows, StatusMark, STATUS, StreamMsg, type Status } from "../phone/index";
+import { ChipRow } from "../home/ChipRow";
+import type { ChipState } from "../home/chips";
 import "./replay";
 import type { Block as ProtoBlock } from "../../../../webproto/proto";
 
@@ -116,6 +119,29 @@ function Pair({ children, tall }: { children: () => ComponentChildren; tall?: bo
         </div>
       ))}
     </div>
+  );
+}
+
+// The Home's chip row (MOBUX-3) in two states of the laptop.
+const chipStates: Record<"calm" | "waits", ChipState> = {
+  calm: { needsYou: 0, working: 0, review: 0, ciRed: 0 },
+  waits: { needsYou: 2, working: 1, review: 3, ciRed: 1 },
+};
+const chipState = signal<"calm" | "waits">("calm");
+
+function KitChips() {
+  return (
+    <>
+      <div class="kit-row">
+        <button type="button" class="btn" onClick={() => (chipState.value = "calm")}>
+          Calm laptop
+        </button>
+        <button type="button" class="btn" onClick={() => (chipState.value = "waits")}>
+          Something waits
+        </button>
+      </div>
+      <Pair>{() => <ChipRow state={chipStates[chipState.value]} onPick={(id) => toast("info", "Chip " + id)} />}</Pair>
+    </>
   );
 }
 
@@ -381,14 +407,7 @@ function ShellDemo() {
         onProject={(id) => (shellProject.value = id)}
         link={shellOffline.value ? "offline" : "live"}
         onMenu={() => toast("info", "All tools")}
-        chips={
-          <PhoneChips label="Shortcuts">
-            <PhoneChip label="Needs you" status="needs" count={2} onClick={() => undefined} />
-            <PhoneChip label="Board" pinned onClick={() => undefined} />
-            <PhoneChip label="Projects" onClick={() => undefined} />
-            <PhoneChip label="Review" onClick={() => undefined} />
-          </PhoneChips>
-        }
+        chips={<ChipRow state={chipStates.waits} onPick={(id) => toast("info", "Chip " + id)} />}
         composer={{
           value: shellDraft.value,
           onInput: (v) => (shellDraft.value = v),
@@ -748,6 +767,10 @@ function Kit() {
               </div>
             )}
           </Pair>
+        </Section>
+
+        <Section id="chips" title="Home chips" note="Needs you first while something waits; up to 3 pins next; the row scrolls sideways.">
+          <KitChips />
         </Section>
 
         <Section id="blocks" title="Blocks" note="MOB-3: one block of each kind from the laptop; unknown kind = title + Open on laptop; tone = colour + shape; 360 px phone.">
