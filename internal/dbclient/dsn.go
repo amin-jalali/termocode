@@ -25,16 +25,30 @@ func ParseURL(raw string) (Conn, error) {
 		return Conn{}, e
 	}
 	c := Conn{URL: raw, Driver: normDriver(u.Scheme), Params: map[string]string{}}
+	preset, isPreset := pgPresetForScheme(u.Scheme)
+	switch {
+	case u.Scheme == "postgres" || u.Scheme == "postgresql":
+		c.Driver = "postgres"
+		if id := DetectPGPreset(u.Hostname(), ""); id != "" {
+			preset, isPreset = PGPresetByID(id)
+		}
+	case isPreset:
+		c.Driver = "postgres"
+	}
+	if isPreset {
+		c.Preset = preset.ID
+	}
 	switch u.Scheme {
 	case "postgres", "postgresql":
-		c.Driver = "postgres"
 	case "mysql", "mariadb":
 	case "redis", "rediss":
 		c.Driver = "redis"
 	case "sqlite", "file":
 		c.Driver = "sqlite"
 	default:
-		return Conn{}, fmt.Errorf("unsupported database URL scheme %q", u.Scheme)
+		if !isPreset {
+			return Conn{}, fmt.Errorf("unsupported database URL scheme %q", u.Scheme)
+		}
 	}
 	if u.User != nil {
 		c.User = u.User.Username()
@@ -50,6 +64,8 @@ func ParseURL(raw string) (Conn, error) {
 		if e != nil {
 			return Conn{}, fmt.Errorf("invalid port")
 		}
+	} else if isPreset {
+		c.Port = preset.Port
 	} else {
 		c.Port = defaultPort(c.Driver)
 	}
