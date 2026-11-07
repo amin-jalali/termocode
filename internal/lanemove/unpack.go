@@ -134,7 +134,9 @@ func Unpack(r io.Reader, opt UnpackOptions) (Result, error) {
 	// The commits.
 	if man.Bundle {
 		bundle := filepath.Join(tmp, bundleName)
-		if _, err := git(opt.Repo, "bundle", "verify", "-q", bundle); err != nil {
+		// No -q: with it, git 2.43 hides the "lacks these prerequisite
+		// commits" line that tells a missing base from a broken pack.
+		if _, err := git(opt.Repo, "bundle", "verify", bundle); err != nil {
 			if strings.Contains(err.Error(), "prerequisite") || strings.Contains(err.Error(), "lacks these") {
 				return Result{}, ErrMissingBase
 			}

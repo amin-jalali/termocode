@@ -379,11 +379,14 @@ func (c Compare) Box() string {
 		status = "s " + spark + " summarize: the quick model says how the lanes differ (cost shown)"
 	}
 	bottom = append(bottom, paint([]seg{{" " + status, bg.Foreground(p.muted)}}, iw, bg), hairline(p, iw))
-	if wide {
-		bottom = append(bottom, hint(p, iw, "enter", "review diff", "m", "merge this lane", "d", "discard lane", "b", "restack", "v", "verify all",
-			"a", "message all", "c", "run in all", "s", spark+" summarize", "p", spark+" judge", "x", "stop all", "r", "refresh", "esc", "close"))
+	// The long hint only when every key fits; else the short one, which
+	// keeps the main keys (judge among them) first.
+	long := []string{"enter", "review diff", "m", "merge this lane", "d", "discard lane", "b", "restack", "v", "verify all",
+		"a", "message all", "c", "run in all", "s", spark + " summarize", "p", spark + " judge", "x", "stop all", "r", "refresh", "esc", "close"}
+	if wide && lipgloss.Width(theme.HintBar(p.bg, long...))+1 <= iw {
+		bottom = append(bottom, hint(p, iw, long...))
 	} else {
-		bottom = append(bottom, hint(p, iw, "enter", "diff", "m", "merge", "d", "discard", "v", "verify", "s", "summary", "p", "judge", "esc", "close", "x", "stop", "a", "message", "c", "run"))
+		bottom = append(bottom, hint(p, iw, "enter", "diff", "m", "merge", "d", "discard", "v", "verify", "s", "summary", "p", "judge", "esc", "close", "x", "stop", "a", "message", "c", "run", "b", "restack"))
 	}
 
 	// Middle: the selected lane's files, as many as fit.

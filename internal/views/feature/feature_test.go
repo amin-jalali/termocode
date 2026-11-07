@@ -327,3 +327,15 @@ func TestLogBlock(t *testing.T) {
 		t.Fatalf("empty %+v", empty)
 	}
 }
+
+// A view with a required param checks with an empty default (the user
+// picks the connection), but a spec run without it is still refused.
+func TestRequiredParamIsTheUsersPick(t *testing.T) {
+	d, _ := Lookup(ViewDBRows)
+	if err := d.Check(); err != nil {
+		t.Fatalf("def: %v", err)
+	}
+	if err := views.CheckSpec(&d, &blocks.ViewSpec{View: ViewDBRows}); err == nil {
+		t.Fatal("a db.rows spec without a connection was taken")
+	}
+}

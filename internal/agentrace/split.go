@@ -20,6 +20,10 @@ const KindSplit = "split"
 // MaxPartChars caps one part's task.
 const MaxPartChars = 2000
 
+// MaxParts caps a split at 4 parts: a race may run up to MaxLanes lanes,
+// but a goal cut finer than 4 parts stops adding up (CMP-4).
+const MaxParts = 4
+
 // Split reports whether r is a split.
 func (r Race) Split() bool { return r.Kind == KindSplit }
 
@@ -30,8 +34,8 @@ func NewSplit(n int, goal, verify string, parts []LaneSpec, nowMs int64) (Race, 
 	if goal == "" {
 		return Race{}, errors.New("say the goal the parts add up to")
 	}
-	if len(parts) < MinLanes || len(parts) > MaxLanes {
-		return Race{}, fmt.Errorf("a split needs %d to %d parts", MinLanes, MaxLanes)
+	if len(parts) < MinLanes || len(parts) > MaxParts {
+		return Race{}, fmt.Errorf("a split needs %d to %d parts", MinLanes, MaxParts)
 	}
 	r := Race{ID: fmt.Sprintf("race-%d", n), Number: n, Kind: KindSplit, Name: "split/" + Slug(goal), Prompt: goal,
 		Verify: strings.TrimSpace(verify), StartedMs: nowMs}
