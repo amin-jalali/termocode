@@ -11,7 +11,7 @@ import (
 func TestLSPSetupFilesSettingsAndHadolint(t *testing.T) {
 	for _, want := range []string{
 		"cfg.files",
-		"vim.json.decode(srv.cfg.settings)",
+		"pcall(vim.json.decode, srv.cfg.settings)",
 		"'hadolint'",
 		"vim.diagnostic.set(",
 		"TermocodeHadolint",
