@@ -138,6 +138,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
 | Containers: Open Compose File | `services-open-compose` |   |   |
+| Containers: Open Engine Config | `containers-engine-config` |   |   |
 | Containers: Open Guide | `containers-help` |   |   |
 | Containers: Open Published Port | `containers-open-port` |   |   |
 | Containers: Open Shell | `containers-shell` |   |   |

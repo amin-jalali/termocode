@@ -102,10 +102,11 @@ func TestContainersErrorStatesAreTitleSentenceButton(t *testing.T) {
 	st = svcHostState()
 	st.problem = services.Problem{Kind: services.ProblemDaemonDown}
 	rows = st.problemRows()
-	if len(rows) != 3 || rows[0].text != "Docker is not running" || rows[1].kind != svcRowHint || rows[2].kind != svcRowRetry {
+	// CTX-42: the start command (y copies it) and a hint come before Retry.
+	if len(rows) != 4 || rows[0].text != "Docker is not running" || rows[1].kind != svcRowCode && rows[1].kind != svcRowHint || rows[3].kind != svcRowRetry {
 		t.Fatalf("daemon down rows: %+v", rows)
 	}
-	if got := ansi.Strip(renderServiceRetry(rows[2], false, true, 29)); !strings.Contains(got, "Retry (R)]") || strings.Contains(got, "[ ") {
+	if got := ansi.Strip(renderServiceRetry(rows[3], false, true, 29)); !strings.Contains(got, "Retry (R)]") || strings.Contains(got, "[ ") {
 		t.Errorf("the Retry button is not a labelled button with its key: %q", got)
 	}
 }

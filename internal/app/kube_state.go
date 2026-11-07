@@ -43,6 +43,8 @@ type kubeState struct {
 
 	context   string // the session's context ("" until known)
 	namespace string // the session's namespace ("" until known)
+	// back / forward places (kube_nav.go)
+	navBack, navFwd []kubePlace
 
 	pods     []kube.Pod
 	deploys  []kube.Deployment
@@ -323,6 +325,12 @@ func (m *Model) kubeReload() tea.Cmd {
 // kubeRescope starts over in another context or namespace: the old rows
 // go (they belong to the old scope) and a load starts now.
 func (m *Model) kubeRescope(context, namespace string) tea.Cmd {
+	m.kube.pushPlace() // kube_nav.go
+	return m.kubeGo(context, namespace)
+}
+
+// kubeGo is kubeRescope without a new history place (back / forward).
+func (m *Model) kubeGo(context, namespace string) tea.Cmd {
 	st := m.kube
 	st.context, st.namespace = context, namespace
 	st.pods, st.deploys, st.services, st.jobs = nil, nil, nil, nil
