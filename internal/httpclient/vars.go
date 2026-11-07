@@ -153,7 +153,7 @@ func appendUnresolved(un []Unresolved, s, field string) []Unresolved {
 func (sc *sendScope) expand(s string) string {
 	for range maxNesting {
 		if !strings.Contains(s, "{{") {
-			return s
+			break
 		}
 		changed := false
 		s = placeholderRe.ReplaceAllStringFunc(s, func(m string) string {
