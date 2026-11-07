@@ -139,6 +139,41 @@ starter file with **AI: Agent Environment…** (a Cancel-first card).
   after you trust its exact content (**AI: Agent Environment…**, *Not in
   this project* is first). A changed file asks again.
 
+## Score agent output
+
+A `score` step grades what the steps before it made. Use it to check an
+agent's work, and to compare models, prompts or profiles over many runs.
+
+```jsonc
+{ "id": "judge", "type": "ai", "model": "quick",
+  "prompt": "Rate this fix from 0 to 10 as JSON {\"rating\": n}: {{steps.code.text}}" },
+{ "id": "grade", "type": "score", "pass": 0.7, "must_pass": true,
+  "checks": [
+    { "name": "tests pass", "test": "steps.tests.ok", "weight": 3 },
+    { "name": "judge",      "value": "steps.judge.json.rating", "max": 10 },
+    { "name": "small diff", "test": "len(steps.code.text) < 4000" }
+  ] }
+```
+
+- Each check gives a value from 0 to 1. A `test` gives 1 when it is true
+  and 0 when it is false. A `value` is a number. It is divided by `max`
+  (1 when not set, 10 for a rating out of 10) and kept in 0..1.
+- The score is the weighted mean of the checks (`weight` is 1 when not
+  set). The step passes when the score reaches `pass` (0.7 when not set).
+- A check that cannot be read (a typo, a missing field) counts 0. Its
+  error is kept, so you see it on the run page.
+- The score step runs no AI and no command itself. For an AI judge, put
+  an `ai` step before it and read its JSON in a check.
+- With `"must_pass": true` a score below `pass` fails the step, so its
+  `else` runs (for example: no pull request, a message instead).
+- Later steps read `steps.<id>.score`, `steps.<id>.ok` (it passed) and
+  `steps.<id>.checks`.
+- The run page shows the score of each step and item, and the low
+  checks. The history list shows the mean score of each run.
+- Compare: give runs other `vars` (`--var model=deep`, or a schedule per
+  variant). `termocode workflow scores <name>` lists the scored runs and
+  then the variants, the best mean first.
+
 ## Schedules
 
 Add a `schedule` to the file and press `o` to turn it on. The card says
@@ -343,6 +378,7 @@ termocode workflow validate [<file>…]
 termocode workflow run <name> --dry-run [--var k=v]
 termocode workflow runs [<name>] [--json] [--limit N]
 termocode workflow logs <run id>
+termocode workflow scores [<name>] [--json] [--limit N]   # scored runs, compared by their vars
 termocode workflow again <name> <key>    # forget a seen item: the next run handles it again
 ```
 

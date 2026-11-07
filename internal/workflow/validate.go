@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/jsonc"
+	"github.com/amin-jalali/termocode/internal/workflow/score"
 )
 
 // Parse reads and checks one workflow file. path is used in messages
@@ -526,6 +527,8 @@ func (c *checker) step(n *node, where string, eachDepth, maxItems int) (Step, bo
 		}
 		s.Shell = sh
 		keys = []string{"argv", "cwd", "env"}
+	case TypeScore:
+		s.Score, keys = c.score(o, n, where)
 	case TypeWrite:
 		s.Write, keys = c.write(o, n, where)
 	}
@@ -607,6 +610,60 @@ func (c *checker) each(o *obj, n *node, where string, depth, maxItems int) (*Eac
 		}
 	}
 	return e, []string{"items", "parallel", "worktree", "base", "cleanup", "steps"}
+}
+
+// score reads a score step (CMP-23): "checks" (each with "name" and one
+// of "test" / "value", maybe "max" and "weight"), "pass" and "must_pass".
+func (c *checker) score(o *obj, n *node, where string) (*ScoreSpec, []string) {
+	sp := &ScoreSpec{Pass: score.DefaultPass, MustPass: o.boolean("must_pass")}
+	if _, _, ok := o.number("pass"); ok {
+		sp.Pass = o.num("pass", 0, 1)
+	}
+	cn := o.get("checks")
+	switch {
+	case cn == nil:
+		o.missing("checks")
+	case cn.kind != kArray || len(cn.vals) == 0:
+		c.errAt(cn.off, where+".checks", "must be a list with at least one check")
+	case len(cn.vals) > MaxScoreChecks:
+		c.errAt(cn.off, where+".checks", "has %d checks; the most is %d", len(cn.vals), MaxScoreChecks)
+	default:
+		names := map[string]bool{}
+		for i, en := range cn.vals {
+			w := fmt.Sprintf("%s.checks[%d]", where, i)
+			co := c.object(en, w)
+			if co == nil {
+				continue
+			}
+			ck := ScoreCheck{Name: co.req("name"), Test: co.expr("test"), Value: co.expr("value"), Max: 1, Weight: 1, Line: c.line(en.off)}
+			if _, _, ok := co.number("weight"); ok {
+				ck.Weight = co.num("weight", 0.01, 100)
+			}
+			if _, _, ok := co.number("max"); ok {
+				if ck.Max = co.num("max", 0.001, 1e9); ck.Max == 0 {
+					ck.Max = 1
+				}
+				if co.get("value") == nil {
+					c.errAt(co.off("max"), w+".max", `"max" is only for a "value" check`)
+				}
+			}
+			switch {
+			case co.get("test") != nil && co.get("value") != nil:
+				c.errAt(en.off, w, `has both "test" and "value"; keep one`)
+			case co.get("test") == nil && co.get("value") == nil:
+				c.errAt(en.off, w, `needs "test" (true or false) or "value" (a number from 0 to 1)`)
+			}
+			if ck.Name != "" {
+				if names[ck.Name] {
+					c.errAt(co.off("name"), w+".name", "%s is already the name of a check", quote(ck.Name))
+				}
+				names[ck.Name] = true
+			}
+			co.finish([]string{"name", "test", "value", "max", "weight"})
+			sp.Checks = append(sp.Checks, ck)
+		}
+	}
+	return sp, []string{"checks", "pass", "must_pass"}
 }
 
 func (c *checker) tools(o *obj) *ToolRules {

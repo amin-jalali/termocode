@@ -128,7 +128,7 @@ var badCases = []struct {
 	{"steps not list", `{"version":1,"name":"bad","steps":{}}`, "steps: must be a list"},
 	{"step not object", `{"version":1,"name":"bad","steps":[1]}`, "steps[0]: must be an object { … }, not a number"},
 	{"no type", `{"version":1,"name":"bad","steps":[{"id":"x"}]}`, `steps[0] (x): "type" is missing`},
-	{"bad type", `{"version":1,"name":"bad","steps":[{"type":"sourse"}]}`, `"sourse" is not a step type; use one of: source, plan, filter, each, ai, agent, pipeline, tests, shell, write (did you mean "source"?)`},
+	{"bad type", `{"version":1,"name":"bad","steps":[{"type":"sourse"}]}`, `"sourse" is not a step type; use one of: source, plan, filter, each, ai, agent, pipeline, tests, shell, score, write (did you mean "source"?)`},
 	{"bad id", `{"version":1,"name":"bad","steps":[{"id":"X","type":"tests"}]}`, "steps[0].id: use a-z"},
 	{"dup id", "{\"version\":1,\"name\":\"bad\",\"steps\":[\n{\"id\":\"t\",\"type\":\"tests\"},\n{\"id\":\"t\",\"type\":\"tests\"}]}", `line 3: steps[1] (t).id: "t" is already the id of the step on line 2`},
 	{"two sources", `{"version":1,"name":"bad","steps":[{"type":"source","from":"files","glob":"a"},{"type":"source","from":"files","glob":"b"}]}`, "a second source in one list"},

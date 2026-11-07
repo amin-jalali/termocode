@@ -23,7 +23,7 @@ func TestWorkflowsGuideCoversKeysAndCLI(t *testing.T) {
 			t.Errorf("guide misses key %q", r[0])
 		}
 	}
-	for _, c := range []string{"workflow list", "workflow show", "workflow validate", "workflow run", "--dry-run", "workflow runs", "workflow logs"} {
+	for _, c := range []string{"workflow list", "workflow show", "workflow validate", "workflow run", "--dry-run", "workflow runs", "workflow logs", "workflow scores"} {
 		if !strings.Contains(g, c) {
 			t.Errorf("guide misses %q", c)
 		}
