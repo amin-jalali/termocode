@@ -160,6 +160,9 @@ func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 	if cfg.RequireTOTP {
 		args = append(args, "--totp")
 	}
+	if cfg.AppKeyLogin {
+		args = append(args, "--app-key")
+	}
 	switch {
 	case sshPort > 0:
 		args = append(args, "--ssh-port", strconv.Itoa(sshPort))

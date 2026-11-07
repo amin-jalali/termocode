@@ -913,14 +913,15 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	// What an outside agent may do without a card: the user's answer only.
 	"mcp_server_auto_approve": aiNever("what outside agents may do without asking; only the user's \"Always allow\" on their card sets it"),
 	// The web panel gives shell access from a browser (web_settings.go).
-	"web_panel":        aiNever(aiNoWeb),
-	"web_port":         aiNever(aiNoWeb),
-	"web_listen":       aiNever(aiNoWeb),
-	"web_require_totp": aiNever(aiNoWeb),
-	"web_idle_minutes": aiNever(aiNoWeb),
-	"web_max_hours":    aiNever(aiNoWeb),
-	"web_open_browser": aiNever(aiNoWeb),
-	"web_max_viewers":  aiNever(aiNoWeb),
+	"web_panel":         aiNever(aiNoWeb),
+	"web_port":          aiNever(aiNoWeb),
+	"web_listen":        aiNever(aiNoWeb),
+	"web_require_totp":  aiNever(aiNoWeb),
+	"web_app_key_login": aiNever(aiNoWeb),
+	"web_idle_minutes":  aiNever(aiNoWeb),
+	"web_max_hours":     aiNever(aiNoWeb),
+	"web_open_browser":  aiNever(aiNoWeb),
+	"web_max_viewers":   aiNever(aiNoWeb),
 	// Workflows (ADR 0021): the AI may change a limit after its card; it
 	// never turns workflows on or off and never widens the agent sandbox.
 	"workflows_enabled":          aiNever("workflows run unattended and write to outside systems; only the user turns them on or off"),

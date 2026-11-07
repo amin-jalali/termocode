@@ -21,6 +21,7 @@ type webConfig struct {
 	MaxViewers  int
 	Tailnet     bool     // web_listen: "tailnet" (WEB-31)
 	RequireTOTP bool     // web_require_totp (WEB-48)
+	AppKeyLogin bool     // web_app_key_login (MOB-27)
 	Problems    []string // one line per bad value, for a warning toast
 }
 
@@ -62,6 +63,9 @@ func webSettings() webConfig {
 	intIn("web_max_viewers", s.WebMaxViewers, 1, 8, &c.MaxViewers)
 	if s.WebRequireTOTP != nil {
 		c.RequireTOTP = *s.WebRequireTOTP
+	}
+	if s.WebAppKeyLogin != nil {
+		c.AppKeyLogin = *s.WebAppKeyLogin
 	}
 	if s.WebOpenBrowser != nil {
 		c.OpenBrowser = *s.WebOpenBrowser
