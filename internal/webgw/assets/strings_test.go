@@ -226,6 +226,13 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 	}
 }
 
+// englishOnly says a key belongs to the phone app's views (the live
+// board, MOB-18), whose UI is English only (owner 2026-11-07): it has no
+// Persian text.
+func englishOnly(key string) bool {
+	return strings.HasPrefix(key, "board.") || key == "more.board"
+}
+
 // The Persian file (WEB-UX-5 fills it) has exactly the English keys, so
 // a new string cannot be forgotten there.
 func TestPersianStringsHaveTheSameKeys(t *testing.T) {
@@ -246,7 +253,7 @@ func TestPersianStringsHaveTheSameKeys(t *testing.T) {
 		}
 	}
 	for k := range enKeys {
-		if !faKeys[k] {
+		if !faKeys[k] && !englishOnly(k) {
 			t.Errorf("strings.fa.ts has no %s", k)
 		}
 	}

@@ -31,7 +31,8 @@ var sourceRules = []rule{
 	{name: "javascript: URL", re: regexp.MustCompile(`(?i)javascript:`)},
 	{name: "external URL", re: regexp.MustCompile(`(?i)\b(https?|wss?)://`)},
 	// The page's dynamic imports (lib/lazy.ts) load the editor file
-	// (WEB-39), the desktop workbench and the Persian strings; the desktop
+	// (WEB-39), the desktop workbench, the Persian strings and the phone's
+	// live board (board.js, MOB-18); the desktop
 	// editor's frame loads its Vim mode (monaco-vim.js, WEBP-1). Each is a
 	// fixed path.
 	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true}},
@@ -189,10 +190,11 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			// load anything. The other rules hold for it too.
 			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
 		}
-		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's three dynamic imports (lib/lazy.ts), fixed paths
+		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's four dynamic imports (lib/lazy.ts), fixed paths
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
+			text = strings.Replace(text, `import("/assets/board.js")`, "", 1)
 		}
 		if e.Path == "monaco-frame.js" { // the frame's one dynamic import: Vim mode (WEBP-1), a fixed path
 			text = strings.Replace(text, `import("/assets/monaco-vim.js")`, "", 1)

@@ -141,3 +141,26 @@ func readBuilt(t *testing.T, name string) string {
 	}
 	return string(b)
 }
+
+// budgetBoard is the phone's live board (board.js, MOB-18), gzipped: its
+// own lazy file, loaded the first time the board opens, so it never
+// counts in the page's first files.
+const budgetBoard = 12 << 10
+
+func TestPerfGuardBoardChunk(t *testing.T) {
+	b := gzSize(t, "board.js")
+	t.Logf("board.js gzipped: %d B", b)
+	if b > budgetBoard {
+		t.Errorf("board.js is %d B gzipped, budget %d B", b, budgetBoard)
+	}
+	page := readBuilt(t, "app.js") + readBuilt(t, "app-chunk.js")
+	if strings.Contains(page, "board-cols") {
+		t.Error("the page's first files hold the board's view: it belongs in board.js")
+	}
+	if !strings.Contains(page, `import("/assets/board.js")`) {
+		t.Error("the page does not load /assets/board.js")
+	}
+	if !strings.Contains(readBuilt(t, "board.js"), "board-cols") {
+		t.Error("board.js does not hold the board's view")
+	}
+}

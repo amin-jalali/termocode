@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "races";
 
 export interface Bye {
   t: "bye";
@@ -1641,6 +1641,50 @@ export interface WorktreeItem {
   last_seen?: number;
 }
 
+export interface RacesSnap {
+  state: "none" | "loading" | "error" | "ready";
+  races: RaceItem[];
+}
+
+export interface RaceItem {
+  id: string;
+  number: number;
+  name: string;
+  prompt: string;
+  verify?: boolean;
+  started: number;
+  state: "working" | "done" | "closed";
+  lanes: RaceLane[];
+  summary?: string[];
+  summary_cost?: string;
+  winner?: string;
+}
+
+export interface RaceLane {
+  id: string;
+  agent: string;
+  title: string;
+  state: "starting" | "working" | "waiting" | "done" | "stopped" | "failed" | "merged" | "discarded";
+  branch?: string;
+  stats?: boolean;
+  files?: number;
+  add?: number;
+  del?: number;
+  changed?: RaceFile[];
+  verify?: "running" | "pass" | "fail";
+  exit?: number;
+  cost?: string;
+  note?: string;
+}
+
+export interface RaceFile {
+  status: "A" | "M" | "D";
+  path: string;
+  add?: number;
+  del?: number;
+  binary?: boolean;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -3257,6 +3301,7 @@ export interface TopicData {
   "ai": { snap: AISnap; delta: AISnap };
   "workflows": { snap: WorkflowsSnap; delta: WorkflowsSnap };
   "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
+  "races": { snap: RacesSnap; delta: RacesSnap };
 }
 
 // The data of an ev message, by kind.
