@@ -6,10 +6,13 @@
 //   workbench.js  the desktop workbench, on a wide screen only (a phone
 //                 never loads it); index.html preloads it there with its SRI
 //   strings-fa.js the Persian strings, when the UI language is Persian
+//   phone.js      phone views the first files do not carry (All tools,
+//                 MOBUX-5), when the user opens one
 import { signal } from "@preact/signals";
 import type { EditorModule } from "../editor/api";
 import { persian } from "../strings";
 import type * as Workbench from "../workbench";
+import type * as Phone from "../phonechunk";
 
 let loading: Promise<EditorModule> | null = null;
 
@@ -65,4 +68,29 @@ export function loadPersian(): Promise<void> {
     );
   }
   return faLoading;
+}
+
+/** PhoneModule is what phone.js gives the page. */
+export type PhoneModule = typeof Phone;
+
+/** phone is the loaded phone chunk (null: not yet); phoneFailed says the
+ * last load failed (loadPhone tries again). */
+export const phone = signal<PhoneModule | null>(null);
+export const phoneFailed = signal(false);
+
+let phoneLoading: Promise<PhoneModule> | null = null;
+
+export function loadPhone(): Promise<PhoneModule> {
+  if (!phoneLoading) {
+    phoneFailed.value = false;
+    phoneLoading = import("/assets/phone.js").then(
+      (m: PhoneModule) => (phone.value = m),
+      (e: unknown) => {
+        phoneLoading = null;
+        phoneFailed.value = true;
+        throw e;
+      },
+    );
+  }
+  return phoneLoading;
 }

@@ -40,7 +40,14 @@ type page struct {
 // through app-chunk.js, which index.html preloads with its SRI.
 var workbenchChunk = page{Name: "workbench", Entry: "workbench.tsx"}
 
-var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html", With: []page{workbenchChunk}}
+// phoneChunk is the phone views the first files do not carry
+// (phone.js): the "All tools" menu (MOBUX-5) and the next phone views.
+// app.js loads it with a dynamic import (lib/lazy.ts) when the user
+// opens one, so app.js stays in its budget. It shares app.js's modules
+// through app-chunk.js and imports no style sheet.
+var phoneChunk = page{Name: "phone", Entry: "phonechunk.tsx"}
+
+var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html", With: []page{workbenchChunk, phoneChunk}}
 
 // editorChunk is the in-page editor (WEB-39): CodeMirror and its glue,
 // built alone (no Preact) into editor.js. app.js loads it with its one
@@ -72,7 +79,7 @@ var monacoVim = page{Name: "monaco-vim", Entry: "monaco/vim.ts"}
 var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + phoneChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -187,7 +194,7 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 			return fmt.Errorf("webbuild: %s built no %s.js", w.Entry, w.Name)
 		}
 		if _, ok := out[w.Name+".css"]; ok {
-			return fmt.Errorf("webbuild: %s imports a style sheet; desk.ts gathers the desktop's", w.Entry)
+			return fmt.Errorf("webbuild: %s imports a style sheet; desk.ts gathers the desktop's, app.css the phone's", w.Entry)
 		}
 	}
 	if p.Template == "" {

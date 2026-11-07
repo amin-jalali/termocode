@@ -2,10 +2,11 @@
 // and every text keeps the English placeholders (strings_test.go). An
 // empty text falls back to English. Simple, everyday Persian; product
 // and command names (termocode, Web: Open in Browser) and key names stay
-// as they are.
+// as they are. The phone app's keys (tools.) are English only (owner
+// 2026-11-07), so they have no Persian text here.
 import type { StringKey } from "./strings";
 
-export const FA: Record<StringKey, string> = {
+export const FA: Partial<Record<StringKey, string>> = {
   // Shell and connect
   "connect.title": "termocode",
   "connect.once": "این پیوند فقط یک بار و تا ۵ دقیقه کار می‌کند.",

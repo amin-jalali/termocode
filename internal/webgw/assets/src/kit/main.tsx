@@ -12,6 +12,7 @@ import "../styles/base.css";
 import "../styles/shell.css";
 import "../styles/ui.css";
 import "../styles/components.css";
+import "../styles/more.css";
 import "./kit.css";
 import { toast } from "../lib/toasts";
 import type { StatusView } from "../state/status";
@@ -30,6 +31,8 @@ import { Progress, SkeletonBubbles, SkeletonRows } from "../ui/Skeleton";
 import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
+import { AllTools } from "../home/AllTools";
+import { readCatalog, viewHash, type Target } from "../home/alltools";
 import "./replay";
 
 installSafety();
@@ -551,6 +554,10 @@ function Kit() {
           </Pair>
         </Section>
 
+        <Section id="tools" title="All tools" note="MOBUX-5: the phone's ☰ menu; catalog read, catalog failed, catalog loading.">
+          <Pair tall>{() => <ToolsDemo />}</Pair>
+        </Section>
+
         <Section id="misc" title="Choices">
           <Pair>
             {() => (
@@ -570,6 +577,51 @@ function Kit() {
       </main>
       <Toasts />
     </div>
+  );
+}
+
+// A view.catalog result as the laptop sends it (sample data): built-in
+// views, two MCP servers (github with a resource view), saved views.
+const toolsCatalog = readCatalog({
+  views: [
+    { id: "git.branches", feature: "git", title: "Branches" },
+    { id: "pr.list", feature: "ci", title: "Pull requests" },
+    { id: "mcp.github.list_issues", feature: "mcp", server: "github", tool: "list_issues", title: "List issues", run: true },
+    { id: "mcp.github.list_pull_requests", feature: "mcp", server: "github", tool: "list_pull_requests", title: "List pull requests", run: true },
+    { id: "mcp.github.create_issue", feature: "mcp", server: "github", tool: "create_issue", title: "Create issue", run: false },
+    { id: "mcp.github.resource", feature: "mcp", server: "github", tool: "resource", title: "Resources", run: true },
+    { id: "mcp.linear.my_issues", feature: "mcp", server: "linear", tool: "my_issues", title: "My issues", run: true },
+  ],
+  servers: ["github", "linear", "sentry"],
+  saved: [
+    { id: "s1", name: "PRs to review", spec: { view: "pr.list", ws: "shop", args: { state: "open" } }, pinned: true },
+    { id: "s2", name: "Failing CI", spec: { view: "ci.checks" } },
+  ],
+});
+
+/** toolsOpened is the last target a kit menu opened (the tests read it). */
+const toolsOpened = signal("");
+
+function openKitTarget(target: Target): void {
+  toolsOpened.value = "route" in target ? `#/${target.route.tab}${target.route.rest ? "/" + target.route.rest : ""}` : viewHash(target);
+}
+
+function ToolsDemo() {
+  return (
+    <>
+      <p class="kit-note kit-opened">{toolsOpened.value}</p>
+      <div class="kit-split">
+        <div data-state="ok">
+          <AllTools cat={{ state: "ok", catalog: toolsCatalog }} onRetry={() => undefined} onOpen={openKitTarget} />
+        </div>
+        <div data-state="failed">
+          <AllTools cat={{ state: "failed" }} onRetry={() => toast("info", t("loading"))} onOpen={openKitTarget} />
+        </div>
+        <div data-state="loading">
+          <AllTools cat={{ state: "loading" }} onRetry={() => undefined} onOpen={openKitTarget} />
+        </div>
+      </div>
+    </>
   );
 }
 
