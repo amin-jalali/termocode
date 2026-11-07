@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/workflow"
 	"github.com/amin-jalali/termocode/internal/workflow/ledger"
 	"github.com/amin-jalali/termocode/internal/workflow/run"
+	"github.com/amin-jalali/termocode/internal/workflow/score"
 	"github.com/amin-jalali/termocode/internal/workflow/wire"
 )
 
@@ -246,7 +247,19 @@ func wfxRunRow(rf *run.RunFile, now time.Time) wfxLine {
 	if !rf.EndedAt.IsZero() {
 		dur = wfxDur(rf.EndedAt.Sub(rf.StartedAt))
 	}
+	if all := rf.Scores(); len(all) > 0 {
+		sum := score.Summarize(all)
+		kind += fmt.Sprintf(" · score %.2f (%d/%d)", sum.Mean, sum.Passed, sum.Count)
+	}
 	return wfxLine{fmt.Sprintf("   %-6s %-18s %-12s %s%s", wfxAgo(rf.StartedAt, now), rcCut(rf.Workflow, 18), word, dur, kind), tint}
+}
+
+// wfxScoreWord is a score result in short: "0.83 ✓" or "0.40 ✗" (CMP-23).
+func wfxScoreWord(r score.Result) string {
+	if r.Passed {
+		return fmt.Sprintf("%.2f ✓", r.Score)
+	}
+	return fmt.Sprintf("%.2f ✗", r.Score)
 }
 
 func wfxStateWord(state string) (string, string) {
@@ -341,6 +354,12 @@ func wfxStepWhat(s *workflow.Step) string {
 		return "tests " + firstNonEmpty(s.Tests.Task, strings.Join(s.Tests.Argv, " "))
 	case s.Shell != nil:
 		return strings.Join(s.Shell.Argv, " ")
+	case s.Score != nil:
+		gate := ""
+		if s.Score.MustPass {
+			gate = " · must pass"
+		}
+		return fmt.Sprintf("%d checks · pass %.2f%s", len(s.Score.Checks), s.Score.Pass, gate)
 	case s.Write != nil:
 		t, _, _ := wfxDescribe(*s.Write)
 		return t
@@ -599,6 +618,12 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 			if ss.Attempts > 1 {
 				row += fmt.Sprintf(" · try %d", ss.Attempts)
 			}
+			if ss.Score != nil {
+				row += " · score " + wfxScoreWord(*ss.Score) + fmt.Sprintf(" (pass %.2f)", ss.Score.Pass)
+				if low := ss.Score.Failed(); len(low) > 0 {
+					row += " · low: " + strings.Join(low, ", ")
+				}
+			}
 			tint := ""
 			if ss.State == run.StateFailed || ss.State == run.StateDenied {
 				tint = "err"
@@ -694,7 +719,11 @@ func wfxItemRow(it *run.ItemState) wfxLine {
 	var parts []string
 	for _, k := range keys {
 		if s := it.Steps[k]; s != nil {
-			parts = append(parts, k+" "+wfxStepMark(s.State))
+			part := k + " " + wfxStepMark(s.State)
+			if s.Score != nil {
+				part += " " + wfxScoreWord(*s.Score)
+			}
+			parts = append(parts, part)
 		}
 	}
 	word, tint := wfxStateWord(it.State)

@@ -24,6 +24,8 @@ func (r *runner) exec(ctx context.Context, s *workflow.Step, f *frame, st *StepS
 		return r.each(ctx, s, f, st)
 	case workflow.TypeAI, workflow.TypeAgent, workflow.TypePipeline, workflow.TypeTests, workflow.TypeShell:
 		return r.runStepCall(ctx, s, f, st, attempt)
+	case workflow.TypeScore:
+		return r.score(s, f, st)
 	case workflow.TypeWrite:
 		return r.write(ctx, s, f, st, attempt)
 	}
@@ -519,6 +521,8 @@ func (r *runner) restore(f *frame, s *workflow.Step, st *StepState) {
 		r.setOutput(f, s, map[string]any{"ok": false, "skipped": true})
 	case st.State == StateWouldRun || st.State == StateRecorded:
 		r.setOutput(f, s, map[string]any{"ok": true, "dry": true})
+	case st.Score != nil:
+		r.setOutput(f, s, scoreScope(*st.Score))
 	case st.Output != nil:
 		o := *st.Output
 		r.setOutput(f, s, map[string]any{"ok": true, "text": o.Text, "json": o.JSON, "url": o.URL,
