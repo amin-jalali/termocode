@@ -46,6 +46,7 @@ repository's git folder, never in your project.
 | `I` | Start from an issue: pick an open issue, the New worktree form fills in |
 | `e` | Restack a child: replay its commits onto its parent's branch (asks first) |
 | `H` | Hand off: a new agent goes on with a note of this work (see below) |
+| `E` | New worktree in each repository of this window (see below) |
 | `L` | Show the setup of a new worktree (its terminal tab) |
 | `r` | Run the dev server on the worktree's own port (`$PORT`); again: show its tab |
 | `o` | Open the running dev server's address in the browser |
@@ -295,6 +296,31 @@ The card shows a preview. **Cancel** comes first. Pick **Where**:
 The note is saved in `termocode/handoff/` inside the repository's git
 folder, never in your project, with secrets hidden. The AI never starts
 a handoff. The AI chat has its own **AI: Handoff to a New Chat**.
+## A worktree in each repository
+
+A task often needs a change in more than one repository: a frontend and
+a backend, or several services in one folder. When the folders of this
+window hold two or more git repositories (a folder of projects, or
+repositories added with **File: Add Folder…**),
+**Worktree: New in Each Repository…** (`E` in the view) makes one
+worktree in each of them, on the same branch, in one step.
+
+- The card lists every repository with a **yes** / **no** row and the
+  folder its worktree goes to (`<repo>.worktrees/<branch>`, or setting
+  `worktree_dir`; when two repositories would share a folder, the
+  repository's name is added). **From** is empty for each repository's
+  current branch, or a branch or tag they all have.
+- **Cancel** comes first; nothing is made until **Create**. Create
+  checks every repository first and says which one is in the way (the
+  branch or the folder is there already).
+- All or nothing: when git fails in one repository, the worktrees made
+  before go again, branch and folder, and the card says why.
+- **Create + Add Folders** also adds the new worktrees as folders of
+  this window.
+- Each repository keeps its own git state. termocode tags the worktrees
+  with their branch (`group` in each repository's `worktrees.json`), so
+  they read as one task.
+- The AI cannot use this card.
 
 ## Link an issue or pull request
 

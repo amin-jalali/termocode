@@ -65,6 +65,7 @@ type wtState struct {
 
 	form     *wtForm                // Worktree: New… (worktrees_new.go)
 	taskAsk  bool                   // a task-start reads the repository for its card (agent_ctl_task.go)
+	multi    *wtMultiForm           // Worktree: New in Each Repository… (worktrees_multi.go)
 	setupAsk *wtSetupPending        // the open setup trust card (worktrees_setup.go)
 	setups   map[string]*wtSetupRun // setups run in this window, by worktree path
 
@@ -277,6 +278,9 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return c, true
 	}
 	if c, ok := m.handleWTLinkMsg(msg); ok { // the link card (worktrees_link.go)
+		return c, true
+	}
+	if c, ok := m.handleWTMultiMsg(msg); ok { // the multi-repo card (worktrees_multi.go)
 		return c, true
 	}
 	if c, ok := m.handleWTFormMsg(msg); ok { // the dialog's buttons (worktrees_new.go)

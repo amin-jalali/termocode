@@ -788,6 +788,7 @@ missing	worktree-move-up	Worktrees|M
 missing	worktree-new	Worktrees|M
 missing	worktree-new-child	Worktrees|M
 missing	worktree-new-session	Worktrees|M
+missing	worktree-new-multi	Worktrees|M
 missing	worktree-notes	Worktrees|M
 missing	worktree-open	Worktrees|M
 missing	worktree-pin	Worktrees|M

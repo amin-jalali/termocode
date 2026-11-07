@@ -42,6 +42,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"I", "start from an issue: pick an open issue, the form fills in branch, agent and task"},
 		[]string{"e", "restack a child: replay its commits onto its parent's branch (asks first)"},
 		[]string{"H", "hand off: a new agent goes on with a note of this work, here or in a child"},
+		[]string{"E", "new worktree in each repository of this window, on one branch"},
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
 		[]string{"r", "run the dev server on the worktree's own port ($PORT) · again: show its tab"},
 		[]string{"o", "open the running dev server's address in the browser"},
@@ -89,6 +90,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtChildPaletteID, Title: "Worktree: New Child of Selected…"},
 		{ID: wtHandoffPaletteID, Title: "Worktree: Hand Off Selected…"},
 		{ID: wtRestackPaletteID, Title: "Worktree: Restack Selected onto Parent…"},
+		{ID: wtMultiPaletteID, Title: "Worktree: New in Each Repository…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
 		{ID: wtRunPaletteID, Title: "Worktree: Run Dev Server of Selected"},
 		{ID: wtRunOpenPaletteID, Title: "Worktree: Open Dev Server of Selected"},
@@ -148,6 +150,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeHandoff(), true
 	case wtRestackPaletteID:
 		return m.worktreeRestack(), true
+	case wtMultiPaletteID:
+		return m.openWorktreeNewMulti(), true
 	case wtSetupLogPaletteID:
 		return m.worktreeSetupLog(), true
 	case wtRunPaletteID:
@@ -267,6 +271,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeHandoff()
 	case "e":
 		return m, m.worktreeRestack()
+	case "E":
+		return m, m.openWorktreeNewMulti()
 	case "L":
 		return m, m.worktreeSetupLog()
 	case "r":

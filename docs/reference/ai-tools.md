@@ -2878,6 +2878,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `worktree-new` | Worktree: New… | never | opens a picker or prompt that only the user can answer; use a typed tool (worktree_create comes later) |
 | `worktree-new-child` | Worktree: New Child of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-new-session` | Worktree: New Agent Session in Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the agent |
+| `worktree-new-multi` | Worktree: New in Each Repository… | never | opens a picker or prompt that only the user can answer; use a typed tool (makes branches and folders in several repositories) |
 | `worktree-notes` | Worktree: Show Notes of Selected | auto |   |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |

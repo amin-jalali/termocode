@@ -940,6 +940,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Move Selected Up | `worktree-move-up` |   |   |
 | Worktree: New Agent Session in Selected… | `worktree-new-session` |   |   |
 | Worktree: New Child of Selected… | `worktree-new-child` |   |   |
+| Worktree: New in Each Repository… | `worktree-new-multi` |   |   |
 | Worktree: New… | `worktree-new` |   |   |
 | Worktree: Next Filter | `worktree-filter` |   |   |
 | Worktree: Open Dev Server of Selected | `worktree-run-open` |   |   |
