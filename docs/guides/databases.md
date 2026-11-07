@@ -54,8 +54,8 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `environment` | `development` (default), or `production` for the stricter cards. |
 | `readOnly` | `true` makes the AI refuse writes. Your own writes ask with a warning. |
 | `ssh`, `ssl`, `tls` | See [SSH tunnels](#ssh-tunnels) and [SSL and TLS](#ssl-and-tls). |
-| `folder` | Groups the connection under a heading in the tree (`team/prod`). Connections without a folder come first. |
-| `color` | A bar in front of the connection's row: `red`, `orange`, `yellow`, `green`, `blue`, `purple` or `gray`. |
+| `folder` | Groups the connection under a heading in the tree (`team/prod`). Connections without a folder come first. Click a heading, or press `Enter` / `Space` on it, to fold or unfold it (`←` folds, `→` unfolds); termocode remembers folded headings. A filter still shows matches inside a folded heading. |
+| `color` | A bar in front of the connection's row: `red`, `orange`, `yellow`, `green`, `blue`, `purple` or `gray`. The same colour marks the start of the result page's first row (with the connection name in it) and sits before the database item in the status bar, so you always see which server you are on. |
 | `options.keepAliveSeconds` | Pings the connected session this often (at least 5 s) so idle firewalls do not drop it. |
 | `options.autoReconnect` | `true`: when a ping fails, the session is dropped and connects again after 1 s, 2 s, 4 s … (at most 30 s, 8 tries). The row shows the next try. Pings every 30 s when `keepAliveSeconds` is not set. An open transaction is lost with the connection. Disconnect stops it. |
 
@@ -76,7 +76,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Mouse
 
-- Click a row to select it. Double-click a connection to connect or expand it, a folder to fold or unfold it, and a table or view to open its data.
+- Click a row to select it. Click a folder heading to fold or unfold it. Double-click a connection to connect or expand it, and a table or view to open its data.
 - On a suggestion, click to select and double-click to add it.
 - Click **a add**, **R refresh** or **/ filter** in the header. In the empty view, click **a add** or **Add remote…**.
 - Right-click a row for its menu.

@@ -2390,6 +2390,7 @@ func (m Model) statusState() statusbar.State {
 				st.DatabaseName += " · " + mk // the transaction state (db_tx.go)
 			}
 			st.DatabaseProd = c.Environment == "production"
+			st.DatabaseTint, st.DatabaseTinted = dbConnTint(c.Color) // DBX-21
 		}
 	}
 	return st

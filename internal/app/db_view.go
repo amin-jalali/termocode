@@ -85,8 +85,16 @@ func (m Model) renderDatabasesSidebarRows(w, h int, focused bool, rows []dbTreeR
 			continue
 		}
 		if r.kind == dbNodeFolderHeader {
-			head := "  " + theme.IconFolderOpen.String() + " " + runewidth.Truncate(sanitizeDBText(r.name), max(w-5, 1), "…")
-			lines = append(lines, theme.FgBg(theme.TextSecondary, theme.BgSidebar).Bold(true).Render(testsPad(head, w)))
+			icon := theme.IconFolderOpen
+			if s.folded[r.path] && s.filter == "" {
+				icon = theme.IconFolderClosed
+			}
+			head := "  " + icon.String() + " " + runewidth.Truncate(sanitizeDBText(r.name), max(w-5, 1), "…")
+			fg, bg := theme.TextSecondary, theme.BgSidebar
+			if i == s.cursor && focused {
+				fg, bg = theme.TextPrimary, theme.BgSelection
+			}
+			lines = append(lines, theme.FgBg(fg, bg).Bold(true).Render(testsPad(head, w)))
 			continue
 		}
 		glyph := dbNodeGlyph(r.kind)
@@ -567,6 +575,15 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 	double := t == tea.MouseLeft && rows[index].path == m.databases.lastClickPath && time.Since(m.databases.lastClickAt) < 400*time.Millisecond
 	m.databases.cursor = index
 	m.databases.touch()
+	if rows[index].kind == dbNodeFolderHeader {
+		// A click on a folder heading folds or unfolds it (DBX-21); it
+		// has no menu.
+		if t == tea.MouseLeft {
+			m.databases.folderKey("enter", rows[index].path)
+			m.databases.lastClickAt = time.Time{}
+		}
+		return m, nil
+	}
 	if t == tea.MouseLeft {
 		m.databases.lastClickPath, m.databases.lastClickAt = rows[index].path, time.Now()
 		if double && rows[index].selectable {

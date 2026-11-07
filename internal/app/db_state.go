@@ -184,7 +184,11 @@ func (s *dbState) rows() []dbTreeRow {
 	}
 	for _, folder := range dbclient.Folders(s.conns) {
 		at := len(out)
-		out = append(out, dbTreeRow{kind: dbNodeFolderHeader, path: "\x00folder/" + folder, name: folder})
+		head := dbFolderPath(folder)
+		out = append(out, dbTreeRow{kind: dbNodeFolderHeader, path: head, name: folder, selectable: true})
+		if s.folded[head] && filter == "" {
+			continue // folded: the heading only (a filter still shows matches)
+		}
 		for _, c := range s.conns {
 			if c.Folder == folder {
 				walk(c.ID, 1)
@@ -258,6 +262,9 @@ func (m *Model) ensureDatabasesLoaded() {
 		for _, path := range stored.DBHiddenSuggestions {
 			m.databases.hidden[path] = true
 		}
+		for _, folder := range stored.DBFoldedFolders {
+			m.databases.folded[dbFolderPath(folder)] = true
+		}
 	}
 }
 
@@ -269,6 +276,12 @@ func (m *Model) databasesSaveSession() {
 	sess.DBFilter = m.databases.filter
 	sess.DBExpanded = nil
 	sess.DBHiddenSuggestions = nil
+	sess.DBFoldedFolders = nil
+	for _, folder := range dbclient.Folders(m.databases.conns) {
+		if m.databases.folded[dbFolderPath(folder)] {
+			sess.DBFoldedFolders = append(sess.DBFoldedFolders, folder)
+		}
+	}
 	for path, n := range m.databases.nodes {
 		if len(n.children) > 0 && !m.databases.folded[path] {
 			sess.DBExpanded = append(sess.DBExpanded, path)
@@ -964,4 +977,27 @@ func sortedDBConnIDs(nodes map[string]dbNode) []string {
 	}
 	sort.Strings(ids)
 	return ids
+}
+
+// dbFolderPath is the tree path of a connection folder heading (DBX-21);
+// the NUL keeps it apart from every node path.
+func dbFolderPath(folder string) string { return "\x00folder/" + folder }
+
+// folderKey handles a key on a folder heading (DBX-21): left folds, right
+// unfolds, Enter and Space toggle. Moving, adding, refreshing, the history
+// and help fall through; a key meant for a connection does nothing here.
+// It reports whether the key is done.
+func (s *dbState) folderKey(key, path string) bool {
+	switch key {
+	case "left", "h":
+		s.folded[path] = true
+	case "right", "l":
+		s.folded[path] = false
+	case "enter", " ":
+		s.folded[path] = !s.folded[path]
+	case "up", "k", "down", "j", "home", "g", "end", "G", "H", "a", "e", "R", "?", "esc":
+		return false
+	}
+	s.touch()
+	return true
 }

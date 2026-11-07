@@ -228,11 +228,25 @@ func (m *Model) databasePage() dbPage {
 	if strip := s.tabStrip(); strip != "" {
 		left = " " + strip + " " + dbGlyphVBar.String() + left
 	}
+	// The connection's colour (DBX-21): a bar in place of the first space
+	// and the connection name in the colour.
+	tint, bar := m.dbRunTint(r.conn), 0
+	if tint != "" {
+		left = dbConnBar() + strings.TrimPrefix(left, " ")
+		bar = len(dbConnBar())
+	}
 	line, at := dbSplitLine(left, who, width)
 	n := p.add(line)
-	p.hl(n, 0, max(at, 0), "TermocodeHttpReq")
+	if bar > 0 {
+		p.hl(n, 0, bar, dbConnTintGroup(tint))
+	}
+	p.hl(n, bar, max(at, bar), "TermocodeHttpReq")
 	if at >= 0 {
-		p.hl(n, at, len(line), "TermocodeHttpName")
+		group := "TermocodeHttpName"
+		if tint != "" {
+			group = dbConnTintGroup(tint)
+		}
+		p.hl(n, at, len(line), group)
 	}
 
 	// Row 2: the summary and the view chips.

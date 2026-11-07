@@ -25,7 +25,7 @@ func themeLua(themeID string, light bool) string {
 		"vim.g.colors_name = 'termocode'\n" +
 		"local c = " + theme.LuaTable(theme.NvimColors(themeID)) + "\n" +
 		"_G.termocode_colors = c\n" +
-		themeLuaBody
+		themeLuaBody + dbConnTintLua()
 }
 
 // applyNvimTheme pushes the active theme into the embedded nvim and
