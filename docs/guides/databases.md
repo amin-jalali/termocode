@@ -219,6 +219,8 @@ PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the
 
 **From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line.
 
+**Quick documentation.** **Databases: Quick Documentation** shows a card about the table, column or routine under the cursor of a SQL buffer: its columns with types, the primary key, keys, indexes and foreign keys. In the Databases tree, press `K` (or right-click → Quick documentation) on a table, view, column, routine or schema. It reads only what the tree has loaded, so no query runs. **Databases: Show INSERT Column Hints** writes the target column before each value of `INSERT INTO t (a, b) VALUES (…)`; the hints clear on your next edit.
+
 ## Completion
 
 In a SQL buffer, `Ctrl+X Ctrl+O` (and the pop-up that opens while you type) offers keywords, tables, views, routines, sequences and schemas from the tree you have already opened. After `alias.` or `table.` it offers that table's columns; the alias comes from the statement at the cursor (`FROM users u`, `JOIN orders AS o`). The first time a table's columns are needed they are read once and the pop-up opens again. Completion reads a cached copy: it never asks the server while you type.

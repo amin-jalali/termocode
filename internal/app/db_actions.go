@@ -49,6 +49,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-ddl", Title: "Databases: Show DDL"},
 		{ID: "db-goto-definition", Title: "Databases: Go to Definition"},
 		{ID: "db-find-usages", Title: "Databases: Find Usages"},
+		{ID: "db-quick-doc", Title: "Databases: Quick Documentation"},
+		{ID: "db-insert-hints", Title: "Databases: Show INSERT Column Hints"},
 		{ID: "db-count-rows", Title: "Databases: Count Rows"},
 		{ID: "db-transaction-mode", Title: "Databases: Transaction Mode…"},
 		{ID: "db-commit", Title: "Databases: Commit"},
@@ -128,6 +130,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseGotoDefinition(), true
 	case "db-find-usages":
 		return m.databaseFindUsages(), true
+	case "db-quick-doc":
+		return m.databaseQuickDoc(), true
+	case "db-insert-hints":
+		return m.databaseInsertHints(), true
 	case "db-sessions":
 		return m.databaseShowActivity(false), true
 	case "db-server-info":
@@ -326,6 +332,8 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseCodeGenStart()
 	case "#":
 		return m, m.databaseCountFromTree()
+	case "K":
+		return m, m.databaseQuickDocTree()
 	case "i":
 		return m, m.databaseImportStart()
 	case "?":
@@ -964,6 +972,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"#", "count the rows"},
 		[]string{"i", "import a CSV file"},
 		[]string{"y", "copy the name"},
+		[]string{"K", "quick documentation (columns, keys; also on a column or routine)"},
 	)
 }
 
