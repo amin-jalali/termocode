@@ -353,6 +353,9 @@ func (c *Client) sendOnce(ctx context.Context, rr Resolved, h Hooks) *Response {
 	if rr.Digest != nil {
 		hc.Transport = &digestTransport{base: tr, cred: *rr.Digest}
 	}
+	if rr.NTLM != nil {
+		hc.Transport = &ntlmTransport{base: tr, cred: *rr.NTLM}
+	}
 	switch {
 	case noJar:
 	case c.opts.CookieJar && c.opts.Cookies != nil:

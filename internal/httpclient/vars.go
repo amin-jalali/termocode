@@ -79,6 +79,8 @@ type Resolved struct {
 	// Digest is set by `# @auth digest` (or $auth): Send answers the
 	// server's Digest challenge with it. Never written to JSON.
 	Digest *DigestAuth `json:"-"`
+	// NTLM is set by `# @auth ntlm`: Send runs the NTLM handshake.
+	NTLM *NTLMAuth `json:"-"`
 }
 
 // sendScope keeps the values of the dynamic functions for one send, so

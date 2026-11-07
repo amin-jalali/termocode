@@ -54,7 +54,7 @@ type DigestAuth struct {
 	Pass string
 }
 
-var errAuthSpec = errors.New("@auth: use basic USER PASS, bearer TOKEN, apikey header|query NAME VALUE, digest USER PASS, oauth1 KEY SECRET [TOKEN TOKEN_SECRET] or none")
+var errAuthSpec = errors.New("@auth: use basic USER PASS, bearer TOKEN, apikey header|query NAME VALUE, digest USER PASS, oauth1 KEY SECRET [TOKEN TOKEN_SECRET], ntlm [DOMAIN\\]USER PASS or none")
 
 // ParseAuth reads an auth spec. Errors never echo the values.
 func ParseAuth(spec string) (Auth, error) {
@@ -71,6 +71,10 @@ func ParseAuth(spec string) (Auth, error) {
 	case AuthBasic, AuthDigest:
 		if len(f) >= 2 {
 			return Auth{Scheme: s, User: f[1], Pass: rest(2)}, nil
+		}
+	case AuthNTLM:
+		if len(f) >= 2 {
+			return Auth{Scheme: AuthNTLM, User: f[1], Pass: rest(2)}, nil
 		}
 	case AuthOAuth1:
 		if len(f) == 3 || len(f) == 5 {
@@ -187,6 +191,11 @@ func (sc *sendScope) applyAuth(req Request, out *Resolved, un []Unresolved) []Un
 	case AuthDigest:
 		if !out.HasHeader("Authorization") {
 			out.Digest = &DigestAuth{User: a.User, Pass: a.Pass}
+		}
+	case AuthNTLM:
+		if !out.HasHeader("Authorization") {
+			d, u := splitNTLMUser(a.User)
+			out.NTLM = &NTLMAuth{Domain: d, User: u, Pass: a.Pass}
 		}
 	case AuthOAuth1:
 		// User/Pass: consumer key/secret; Token/Name: token/secret.
