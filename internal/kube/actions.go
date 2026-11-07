@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -23,6 +24,26 @@ func (c Client) RolloutRestart(ctx context.Context, name string) error {
 		c.Timeout = restartTimeout
 	}
 	_, err := c.capture(ctx, append([]string{"rollout", "restart", "deployment/" + name}, c.scope(true)...)...)
+	return err
+}
+
+// ScaleMax is the most replicas Scale asks for (a typo guard).
+const ScaleMax = 1000
+
+// Scale is `kubectl scale <kind>/<name> --replicas=<n>` for a deployment
+// or a statefulset. The app asks the user first; the AI never runs it.
+func (c Client) Scale(ctx context.Context, kind, name string, replicas int) error {
+	if kind != "deployment" && kind != "statefulset" {
+		return errors.New("only a deployment or a statefulset can be scaled")
+	}
+	if replicas < 0 || replicas > ScaleMax {
+		return errors.New("replicas must be 0 to " + strconv.Itoa(ScaleMax))
+	}
+	if c.Timeout <= 0 || c.Timeout < restartTimeout {
+		c.Timeout = restartTimeout
+	}
+	args := []string{"scale", kind + "/" + name, "--replicas=" + strconv.Itoa(replicas)}
+	_, err := c.capture(ctx, append(args, c.scope(true)...)...)
 	return err
 }
 

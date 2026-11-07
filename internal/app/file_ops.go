@@ -182,6 +182,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if cmd, ok := m.handleBranchPromptSubmit(value); ok { // git_branch_ops.go
 		return cmd
 	}
+	if cmd, ok := m.handleKubePromptSubmit(value); ok { // kube_scale.go
+		return cmd
+	}
 	if cmd, ok := m.handleAIPromptSubmit(value); ok { // Group A
 		return cmd
 	}
