@@ -24,6 +24,8 @@ func DialectFor(driver string) Dialect {
 		return SQLiteDialect{}
 	case "clickhouse":
 		return ClickHouseDialect{}
+	case "sqlserver":
+		return SQLServerDialect{} // DBX-62: the session needs the driver (DriverMissing)
 	}
 	return nil
 }
