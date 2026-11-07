@@ -240,6 +240,8 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 
 **Import** reads the file one row at a time and inserts it with bound values in INSERTs of up to 1,000 rows, all in one transaction: if any row fails, everything is rolled back, nothing is written, and a card names the row and line. A progress card shows `N / total rows`; `Esc` cancels and rolls back. A read-only connection never imports, a production connection gets the strong card, and in manual transaction mode the rows join your open transaction (Commit saves them). The AI cannot import.
 
+**Bad rows: skip.** The card's **Bad rows** button switches from **stop** (the default above) to **skip**: a row that cannot be read, has the wrong number of fields or fails its INSERT is left out (it is rolled back alone), and the other rows are saved. The done toast says how many rows were skipped and names an error log (row, line and the server's error for each) in the termocode config folder.
+
 ## EXPLAIN and ANALYZE
 
 **Explain.** In a SQL console press `\x` (leader, then `x`) on a statement, or use **Databases: Explain Statement**. On a result page `x` explains the statement that made the result. The plan opens on the result page as the **Plan** view: one line per step, indented, with the cost and row estimates. The step that takes most of the cost (at least 40 % of the whole plan, without its children) is marked with `!` and `<- costly` and coloured. Details such as `Filter:` and `Hash Cond:` sit under their step. Folds follow the indent: `za` folds a step, `zR` opens all. `y` copies the plan, `Tab` shows the server's raw answer, `r` plans again.

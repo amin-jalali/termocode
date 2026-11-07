@@ -36,6 +36,10 @@ const (
 	importRowsMax   = 1000
 	importSavepoint = "termocode_import"
 	importBatchSP   = "termocode_import_batch"
+	importRowSP     = "termocode_import_row"
+	// importSkipKeep is how many skipped rows a result lists (the count
+	// has them all).
+	importSkipKeep = 1000
 )
 
 var sniffDelimiters = []rune{',', ';', '\t', '|'}
@@ -350,6 +354,9 @@ type ImportSpec struct {
 	Sources   []int
 	BatchRows int  // rows per INSERT (default and cap 1000)
 	InTx      bool // run inside the user's open transaction (a savepoint)
+	// SkipBad leaves a row that cannot be read or fails its INSERT out
+	// (in ImportResult.Skipped) instead of rolling everything back.
+	SkipBad bool
 }
 
 func (s ImportSpec) pairs() (targets []string, sources []int) {
@@ -419,6 +426,37 @@ type ImportResult struct {
 	Err        error
 	Cancelled  bool
 	Elapsed    time.Duration
+	// SkippedRows counts the rows left out with SkipBad; Skipped lists the
+	// first importSkipKeep of them.
+	SkippedRows int
+	Skipped     []ImportSkip
+}
+
+// ImportSkip is one row a SkipBad import left out.
+type ImportSkip struct {
+	Row, Line int
+	Err       string
+}
+
+func (res *ImportResult) skip(row, line int, err error) {
+	res.SkippedRows++
+	if len(res.Skipped) < importSkipKeep {
+		res.Skipped = append(res.Skipped, ImportSkip{Row: row, Line: line, Err: err.Error()})
+	}
+}
+
+// ImportErrorLog is the text of the error log of a SkipBad import: what
+// was imported where, then one line per skipped row.
+func ImportErrorLog(file, table string, res ImportResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Import of %s into %s\n%d rows imported, %d skipped\n\n", file, table, res.Rows, res.SkippedRows)
+	for _, sk := range res.Skipped {
+		fmt.Fprintf(&b, "row %d (line %d): %s\n", sk.Row, sk.Line, strings.Join(strings.Fields(sk.Err), " "))
+	}
+	if res.SkippedRows > len(res.Skipped) {
+		fmt.Fprintf(&b, "… and %d more rows (only the first %d are listed)\n", res.SkippedRows-len(res.Skipped), len(res.Skipped))
+	}
+	return b.String()
 }
 
 type importRow struct {
@@ -502,14 +540,24 @@ func ImportCSV(ctx context.Context, sess Session, spec ImportSpec, progress func
 			rowNo++
 			line, _ := r.FieldPos(0)
 			if err != nil {
-				return fail(rowNo, line, fmt.Errorf("row %d (line %d) cannot be read: %s", rowNo, line, err))
+				e := fmt.Errorf("row %d (line %d) cannot be read: %s", rowNo, line, err)
+				if spec.SkipBad {
+					res.skip(rowNo, line, e)
+					continue
+				}
+				return fail(rowNo, line, e)
 			}
 			if len(rec) != spec.Sniff.Fields {
 				plural := "s"
 				if len(rec) == 1 {
 					plural = ""
 				}
-				return fail(rowNo, line, fmt.Errorf("row %d (line %d) has %d field%s, expected %d", rowNo, line, len(rec), plural, spec.Sniff.Fields))
+				e := fmt.Errorf("row %d (line %d) has %d field%s, expected %d", rowNo, line, len(rec), plural, spec.Sniff.Fields)
+				if spec.SkipBad {
+					res.skip(rowNo, line, e)
+					continue
+				}
+				return fail(rowNo, line, e)
 			}
 			args := make([]any, len(sources))
 			for i, src := range sources {
@@ -519,7 +567,22 @@ func ImportCSV(ctx context.Context, sess Session, spec ImportSpec, progress func
 			}
 			batch = append(batch, importRow{args: args, line: line, row: rowNo})
 		}
-		if len(batch) > 0 {
+		if len(batch) > 0 && spec.SkipBad {
+			n, err := insertBatchSkip(ctx, sess, spec, batch, &res)
+			if err != nil {
+				undo()
+				if ctx.Err() != nil {
+					res.Rows, res.Cancelled = 0, true
+					return res
+				}
+				res.Rows, res.Err = 0, err
+				return res
+			}
+			done += int64(n)
+			if progress != nil {
+				progress(done)
+			}
+		} else if len(batch) > 0 {
 			if bad, err := insertBatch(ctx, sess, spec, batch); err != nil {
 				if ctx.Err() != nil {
 					undo()
@@ -589,4 +652,53 @@ func insertBatch(ctx context.Context, sess Session, spec ImportSpec, batch []imp
 		return batch[0], rel.Err
 	}
 	return importRow{}, nil
+}
+
+// insertBatchSkip is insertBatch for a SkipBad import: when the batch
+// fails, each row is tried under its own savepoint and a failing row is
+// rolled back alone and recorded in res. It returns the rows inserted; an
+// error means the transaction itself is broken (or cancelled).
+func insertBatchSkip(ctx context.Context, sess Session, spec ImportSpec, batch []importRow, res *ImportResult) (int, error) {
+	if r := sess.Run(ctx, "SAVEPOINT "+importBatchSP, RunOptions{}); r.Err != nil {
+		return 0, r.Err
+	}
+	args := make([]any, 0, len(batch)*len(batch[0].args))
+	for _, row := range batch {
+		args = append(args, row.args...)
+	}
+	if r := sess.Run(ctx, spec.insertSQL(len(batch)), RunOptions{Args: args}); r.Err == nil {
+		if rel := sess.Run(ctx, "RELEASE SAVEPOINT "+importBatchSP, RunOptions{}); rel.Err != nil {
+			return 0, rel.Err
+		}
+		return len(batch), nil
+	} else if ctx.Err() != nil {
+		return 0, r.Err
+	}
+	if back := sess.Run(context.WithoutCancel(ctx), "ROLLBACK TO SAVEPOINT "+importBatchSP, RunOptions{}); back.Err != nil {
+		return 0, back.Err
+	}
+	n := 0
+	for _, row := range batch {
+		if r := sess.Run(ctx, "SAVEPOINT "+importRowSP, RunOptions{}); r.Err != nil {
+			return 0, r.Err
+		}
+		if one := sess.Run(ctx, spec.insertSQL(1), RunOptions{Args: row.args}); one.Err != nil {
+			if ctx.Err() != nil {
+				return 0, one.Err
+			}
+			if back := sess.Run(context.WithoutCancel(ctx), "ROLLBACK TO SAVEPOINT "+importRowSP, RunOptions{}); back.Err != nil {
+				return 0, back.Err
+			}
+			res.skip(row.row, row.line, fmt.Errorf("row %d (line %d): %w", row.row, row.line, one.Err))
+			continue
+		}
+		if rel := sess.Run(ctx, "RELEASE SAVEPOINT "+importRowSP, RunOptions{}); rel.Err != nil {
+			return 0, rel.Err
+		}
+		n++
+	}
+	if rel := sess.Run(ctx, "RELEASE SAVEPOINT "+importBatchSP, RunOptions{}); rel.Err != nil {
+		return 0, rel.Err
+	}
+	return n, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -41,6 +42,7 @@ type dbImport struct {
 	mapCol  int   // the table column the mapping picker is changing
 	files   []string
 	sessKey string
+	skipBad bool // Bad rows: skip (left out and logged) instead of stop
 }
 
 const dbImportTypePath = "\x00path"
@@ -243,7 +245,11 @@ func (m *Model) dbImportCardText(imp *dbImport) string {
 	}
 	fmt.Fprintf(&b, "%s · %s · delimiter %s · %s · %s\n", sanitizeDBText(imp.display), imp.sniff.Encoding, dbCSVDelimiter(imp.sniff.Delimiter), header, dbPlural(imp.rows(), "row"))
 	fmt.Fprintf(&b, "Into %s on %s\n", imp.t.label(), sanitizeDBText(dbConnName(imp.conn)))
-	b.WriteString("Rows are inserted in groups, in one transaction;\nnothing is written if any row fails. Empty cells become NULL.\n")
+	if imp.skipBad {
+		b.WriteString("Rows are inserted in groups, in one transaction.\nRows that fail are skipped and listed in an error log. Empty cells become NULL.\n")
+	} else {
+		b.WriteString("Rows are inserted in groups, in one transaction;\nnothing is written if any row fails. Empty cells become NULL.\n")
+	}
 	if m.databases.manualMode(imp.t.conn) {
 		b.WriteString("The rows join your open transaction: Commit (K) saves them.\n")
 	}
@@ -293,15 +299,19 @@ func (m *Model) databaseImportCard() tea.Cmd {
 	if imp.sniff.Header {
 		hdr = "Header: on"
 	}
+	bad := confirm.Button{ID: "bad-rows", Title: "Bad rows: stop"}
+	if imp.skipBad {
+		bad.Title = "Bad rows: skip"
+	}
 	importBtn := confirm.Button{ID: "import", Title: "Import", Style: confirm.StylePrimary}
-	buttons := []confirm.Button{importBtn, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}, {ID: "cancel", Title: "Cancel"}}
+	buttons := []confirm.Button{importBtn, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}, bad, {ID: "cancel", Title: "Cancel"}}
 	if imp.mapped() == 0 {
 		buttons = buttons[1:]
 	}
 	if imp.conn.Environment == "production" {
 		title = "Write to production (" + name + ")? " + title
 		importBtn.Style = confirm.StyleDestructive
-		buttons = []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}}
+		buttons = []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}, bad}
 		if imp.mapped() > 0 {
 			buttons = append(buttons, importBtn)
 		}
@@ -328,6 +338,9 @@ func (m *Model) databaseImportConfirm(id string) tea.Cmd {
 		return m.databaseImportCard()
 	case "map":
 		return m.databaseImportMapPicker()
+	case "bad-rows":
+		imp.skipBad = !imp.skipBad
+		return m.databaseImportCard()
 	}
 	s.imp = nil
 	return nil
@@ -428,7 +441,7 @@ func (m *Model) databaseImportRun() tea.Cmd {
 			targets, sources = append(targets, c), append(sources, imp.mapping[i])
 		}
 	}
-	spec := dbclient.ImportSpec{Path: imp.path, Sniff: imp.sniff, Dialect: d, Schema: imp.t.schema, Table: imp.t.name, Targets: targets, Sources: sources}
+	spec := dbclient.ImportSpec{Path: imp.path, Sniff: imp.sniff, Dialect: d, Schema: imp.t.schema, Table: imp.t.name, Targets: targets, Sources: sources, SkipBad: imp.skipBad}
 	manual := m.databases.manualMode(imp.t.conn)
 	open := m.databases.txOpen(imp.sessKey)
 	spec.InTx = manual
@@ -490,9 +503,38 @@ func (m *Model) onDBImportDone(msg dbImportDoneMsg) tea.Cmd {
 	if m.databases.manualMode(imp.t.conn) {
 		detail += " · in the open transaction: K commits, Z rolls back"
 	}
-	cmds := []tea.Cmd{m.pushToastDetail(toast.Info, title, detail)}
+	level := toast.Info
+	if res.SkippedRows > 0 {
+		level = toast.Warn
+		title += fmt.Sprintf(", %d skipped", res.SkippedRows)
+		if p, err := dbWriteImportLog(imp, res); err != nil {
+			detail = "The error log could not be written: " + dbErrorText(err)
+		} else {
+			detail = "Error log: " + p
+		}
+	}
+	cmds := []tea.Cmd{m.pushToastDetail(level, title, detail)}
 	if t := s.curTab(); t != nil && t.run != nil && t.run.tv != nil && t.run.tv.conn == imp.t.conn && t.run.tv.schema == imp.t.schema && t.run.tv.name == imp.t.name && !t.dirty() {
 		cmds = append(cmds, m.databaseRefreshTab(t))
 	}
 	return tea.Batch(cmds...)
+}
+
+// dbWriteImportLog writes the skipped rows of an import to a new file
+// (0600) in the config folder and returns its path.
+func dbWriteImportLog(imp *dbImport, res dbclient.ImportResult) (string, error) {
+	dir := dbConfigPath("import-errors")
+	if dir == "" {
+		return "", os.ErrNotExist
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", err
+	}
+	base := strings.TrimSuffix(filepath.Base(imp.path), filepath.Ext(imp.path))
+	p := filepath.Join(dir, base+"-"+time.Now().Format("20060102-150405")+".log")
+	text := dbclient.ImportErrorLog(imp.display, imp.t.label(), res)
+	if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
+		return "", err
+	}
+	return p, nil
 }
