@@ -616,9 +616,16 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 					mark += fmt.Sprintf(" %d", len(ss.Items))
 				}
 			}
+			if st.stepTab == i+1 {
+				chain = append(chain, "‹"+k+" "+mark+"›")
+				continue
+			}
 			chain = append(chain, k+" "+mark)
 		}
 		out = append(out, wfxLine{" " + strings.Join(chain, "  →  "), ""})
+		if i := st.stepTab - 1; i >= 0 && i < len(e.File.Steps) {
+			out = append(out, wfxStepTabLines(&e.File.Steps[i], rf.Steps[wfxStepKey(&e.File.Steps[i])])...)
+		}
 		out = append(out, wfxLine{" STEPS", "head"})
 		for i := range e.File.Steps {
 			s := &e.File.Steps[i]
@@ -721,6 +728,8 @@ func (m *Model) wfxRunLines(id string, w int, now time.Time) []wfxLine {
 		}
 	} else if rf.Dry {
 		verbs = " [Run for real (r)] [Dry run again (d)] [Back (Esc)]"
+	} else if wfxRetryable(e, rf) {
+		verbs = " [Retry (t)]" + verbs
 	}
 	return append(out, wfxRule(w), wfxLine{verbs, "dim"})
 }
@@ -828,7 +837,7 @@ func (m Model) wfxPageTitle() string {
 func (m *Model) wfxShowPage(detail string, focus bool) tea.Cmd {
 	st := m.wfxS()
 	if st.detail != detail {
-		st.pageScroll = 0
+		st.pageScroll, st.stepTab = 0, 0
 	}
 	st.pageOn, st.detail = true, detail
 	if detail != "" && !strings.HasPrefix(detail, "run:") {

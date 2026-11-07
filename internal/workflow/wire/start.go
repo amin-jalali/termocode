@@ -39,7 +39,10 @@ type Config struct {
 	Exec     func(ctx context.Context, argv []string, dir string) (string, int, error)
 	TestArgv []string
 	Gate     func(ctx context.Context, a GateAsk) (GateDecision, error)
-	Notify   func(ctx context.Context, m Message) error
+	// ApprovePlan asks before a plan step with "approve": true goes on
+	// (nil: such a step fails).
+	ApprovePlan func(ctx context.Context, c run.ApproveCall) (bool, error)
+	Notify      func(ctx context.Context, m Message) error
 	// GitHubComment and FindComment back github.comment writes.
 	GitHubComment func(ctx context.Context, pr, body string) (ledger.Result, error)
 	Find          func(ctx context.Context, spec workflow.WriteSpec, marker string) (ledger.Result, bool, error)
@@ -125,7 +128,7 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 		RunID: id, Dry: cfg.Dry, NoPlan: cfg.NoPlan, Vars: cfg.Vars, LastOKAt: cfg.LastOKAt,
 		Eval: ev, Source: &Sources{Src: cfg.Src, Eval: ev}, Plan: steps, Run: steps, Write: w,
 		Each: &Worktrees{Workspace: cfg.Workspace, RunID: id}, ParallelMax: cfg.ParallelMax,
-		Tools: cfg.Tools, Ask: cfg.AskTool, OnEvent: onEvent, Store: store, Resume: cfg.Resume,
+		Tools: cfg.Tools, Ask: cfg.AskTool, Approve: cfg.ApprovePlan, OnEvent: onEvent, Store: store, Resume: cfg.Resume,
 	}
 	if cfg.Wait != nil {
 		opts.Wait = waitFunc(cfg.Wait)

@@ -702,6 +702,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// CMP-38: the list of trigger events only reads; each event's card
 	// is the user's to answer.
 	"workflow-triggers": aiAuto(),
+	"workflow-pause":    aiConfirm(ai.ClassRun),
+	"workflow-retry":    aiConfirm(ai.ClassRun), // runs again; its writes still ask on the gate card
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),
@@ -757,7 +759,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-web-tools": aiNever(aiNoPicker),
 	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
 	// list and deleting the shots are the user's.
-	"ai-proofs": aiNever(aiNoPicker),
+	"ai-proofs":    aiNever(aiNoPicker),
 	"ai-image-gen": aiNever("image generation is paid; only the user turns it on"),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),

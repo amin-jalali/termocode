@@ -885,6 +885,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workflows: Edit Selected File | `workflow-edit-file` |   |   |
 | Workflows: History of Selected | `workflow-history` |   |   |
 | Workflows: Open | `workflows` |   |   |
+| Workflows: Pause / Continue Selected Run | `workflow-pause` |   |   |
+| Workflows: Retry Failed Part of Selected Run… | `workflow-retry` |   |   |
 | Workflows: Run Selected… | `workflow-run` |   |   |
 | Workflows: Stop Selected Run… | `workflow-stop` |   |   |
 | Workflows: Trigger Events… | `workflow-triggers` |   |   |

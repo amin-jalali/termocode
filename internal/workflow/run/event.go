@@ -16,6 +16,7 @@ const (
 	WriteWait    Kind = "write_wait"
 	WriteAllowed Kind = "write_allowed"
 	WriteDenied  Kind = "write_denied"
+	PlanWait     Kind = "plan_wait" // a plan step waits for the user's approval
 	RunDone      Kind = "run_done"
 	RunFailed    Kind = "run_failed"
 	RunCancelled Kind = "run_cancelled"

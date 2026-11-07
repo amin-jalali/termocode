@@ -755,6 +755,8 @@ missing	tasks-suggest	Tasks|S
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
+missing	workflow-pause	Workflows|S
+missing	workflow-retry	Workflows|S
 missing	workflow-run	Workflows|S
 missing	workflow-triggers	Workflows|S
 missing	workspace-open-container	Workspace|M

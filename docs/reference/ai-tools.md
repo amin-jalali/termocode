@@ -2874,6 +2874,8 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `workflow-enable` | Workflows: Turn Selected On/Off… | confirm (always asks) |   |
 | `workflow-history` | Workflows: History of Selected | auto |   |
 | `workflow-new` | AI: New Workflow… | never | starts a chat with the user; the AI drafts workflows with workflow_draft |
+| `workflow-pause` | Workflows: Pause / Continue Selected Run | confirm (run) |   |
+| `workflow-retry` | Workflows: Retry Failed Part of Selected Run… | confirm (run) |   |
 | `workflow-run` | Workflows: Run Selected… | confirm (run) |   |
 | `workflow-stop` | Workflows: Stop Selected Run… | confirm (run) |   |
 | `workflow-triggers` | Workflows: Trigger Events… | auto |   |

@@ -138,6 +138,19 @@ func (r *runner) plan(ctx context.Context, s *workflow.Step, f *frame, st *StepS
 		it.Plan = &PlanMark{Rank: rank[it.Key], Skip: res.Skip[it.Key], Labels: res.Labels[it.Key]}
 		out[i] = it
 	}
+	if s.Plan != nil && s.Plan.Approve && !r.opts.Dry {
+		if r.opts.Approve == nil {
+			return "", Permanent(errors.New("this plan needs your approval and nothing can ask"))
+		}
+		r.emit(Event{Kind: PlanWait, Step: stepKey(s), Item: f.itemPath(), Attempt: attempt})
+		ok, err := r.opts.Approve(ctx, ApproveCall{Step: s, Item: f.itemPath(), Items: out})
+		if err != nil {
+			return "", err
+		}
+		if !ok {
+			return "", fmt.Errorf("plan %s: not approved: %w", stepKey(s), ErrDenied)
+		}
+	}
 	r.setList(f, s, st, out)
 	return StateDone, nil
 }

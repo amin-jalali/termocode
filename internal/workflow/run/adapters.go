@@ -234,3 +234,11 @@ type AskCall struct {
 	Step         *workflow.Step
 	Server, Tool string
 }
+
+// ApproveCall is a plan to approve: the step and its items in their
+// plan order marks (Item.Plan).
+type ApproveCall struct {
+	Step  *workflow.Step
+	Item  string // the item path ("" outside an each)
+	Items []Item
+}

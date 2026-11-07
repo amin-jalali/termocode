@@ -332,7 +332,7 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 	case confirmKindWorkflowTrigger, confirmKindWorkflowTriggerList: // workflows_triggers.go
 		return m.answerWorkflowTrigger(id), true
 	case confirmKindWorkflowRun, confirmKindWorkflowDry, confirmKindWorkflowTrust, confirmKindWorkflowOnOff, confirmKindWorkflowStop,
-		confirmKindWorkflowUndo, confirmKindWorkflowBudget, confirmKindWorkflowOffStop: // workflows_state.go, workflows_trust.go
+		confirmKindWorkflowUndo, confirmKindWorkflowBudget, confirmKindWorkflowOffStop, confirmKindWorkflowRetry: // workflows_state.go, workflows_trust.go, workflows_again.go
 		return m.answerWorkflowCard(id), true
 	case confirmKindAgentTranscripts: // agent_chat.go
 		return m.answerAgentTranscripts(id), true

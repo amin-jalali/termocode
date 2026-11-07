@@ -307,6 +307,9 @@ type PlanSpec struct {
 	Prompt     string
 	PromptFile string            // relative to the workflow folder
 	Output     map[string]string // field → what it holds (for the prompt)
+	// Approve asks the user on a card before the plan's order is used
+	// (a real run only; no = the step is denied).
+	Approve bool
 }
 
 // FilterSpec keeps the items for which Step.When is true.

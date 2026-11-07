@@ -486,7 +486,8 @@ func (c *checker) step(n *node, where string, eachDepth, maxItems int) (Step, bo
 		s.Plan = &PlanSpec{Profile: o.str("profile"), Model: o.str("model")}
 		s.Plan.Prompt, s.Plan.PromptFile = o.prompt()
 		s.Plan.Output = o.strMap("output")
-		keys = []string{"profile", "model", "prompt", "prompt_file", "output"}
+		s.Plan.Approve = o.boolean("approve")
+		keys = []string{"profile", "model", "prompt", "prompt_file", "output", "approve"}
 	case TypeFilter:
 		s.Filter = &FilterSpec{Sort: o.expr("sort"), Take: o.intIn("take", 0, MaxItemsCap, 0), Dedupe: o.expr("dedupe")}
 		if s.When == "" && s.Filter.Dedupe == "" && s.Filter.Take == 0 {
