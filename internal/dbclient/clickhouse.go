@@ -195,7 +195,11 @@ func readClickHouseRows(resp *http.Response, maxRows int) Result {
 		res.Rows = append(res.Rows, row)
 	}
 	if err := sc.Err(); err != nil {
-		res.Err = errors.New(Redact(err.Error()))
+		if connLost(err) {
+			res.Err = lostMidQuery(err, len(res.Rows))
+		} else {
+			res.Err = errors.New(Redact(err.Error()))
+		}
 	}
 	return res
 }
