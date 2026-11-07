@@ -47,6 +47,31 @@ func TestWorktreesTopicAndRows(t *testing.T) {
 	}
 }
 
+// Spec (MOB-17): worktrees.link links an issue or PR number to a lane
+// from the phone (the laptop's Link card without the typing): a
+// controller op, no laptop card, audited; kind "none" with number 0
+// unlinks. No URL, repo or path rides along: only a kind and a number.
+func TestWorktreesLinkRow(t *testing.T) {
+	p, ok := Lookup(OpWorktreesLink)
+	if !ok || p.Role != RoleController || p.LaptopCard || p.Audit != AuditYes || p.Phase != PhaseV2 {
+		t.Fatalf("worktrees.link row %+v", p)
+	}
+	for _, a := range []string{`{"id":"0123456789ab","kind":"issue","number":412}`, `{"id":"0123456789ab","kind":"pr","number":12}`,
+		`{"id":"0123456789ab","kind":"none","number":0}`} {
+		if _, err := DecodeArgs(OpWorktreesLink, json.RawMessage(a)); err != nil {
+			t.Errorf("%s: %v", a, err)
+		}
+	}
+	for _, a := range []string{`{"id":"0123456789ab","kind":"issue","number":0}`, `{"id":"0123456789ab","kind":"pr","number":-3}`,
+		`{"id":"0123456789ab","kind":"none","number":4}`, `{"id":"0123456789ab","kind":"mr","number":4}`,
+		`{"id":"0123456789ab","kind":"issue","number":1000000000}`, `{"id":"/src/app","kind":"issue","number":4}`,
+		`{"id":"0123456789ab","kind":"issue","number":4,"url":"https://example.com/x/y/issues/4"}`} {
+		if _, err := DecodeArgs(OpWorktreesLink, json.RawMessage(a)); err == nil {
+			t.Errorf("%s: accepted", a)
+		}
+	}
+}
+
 // The topic's wire form is pinned by testdata/golden/topics/worktrees.json.
 func TestWorktreesSnapGolden(t *testing.T) {
 	snap := WorktreesSnap{State: "ready", Worktrees: []WorktreeItem{
