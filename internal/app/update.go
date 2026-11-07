@@ -330,6 +330,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBSchemaFiles(msg)
 	case dbRoutineMsg: // db_generate_routine.go
 		return m, m.onDBRoutine(msg)
+	case dbParamInfoMsg: // db_quickdoc_more.go
+		return m, m.onDBParamInfo(msg)
+	case dbQuickDocRowsMsg: // db_quickdoc_more.go
+		return m, m.onDBQuickDocRows(msg)
 	case dbGenMsg:
 		return m, m.onDBGen(msg)
 	case dbSearchDoneMsg:

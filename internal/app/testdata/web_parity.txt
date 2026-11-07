@@ -529,8 +529,10 @@ missing	db-format-file	Databases|S
 missing	db-generate-data	Databases|M
 missing	db-goto-definition	Databases|S
 missing	db-insert-hints	Databases|S
+missing	db-join-hints	Databases|S
 missing	db-object-actions	Databases|S
 missing	db-open-sessions	Databases|S
+missing	db-param-info	Databases|S
 missing	db-pending-sources	Databases|S
 missing	db-quick-doc	Databases|S
 missing	db-refresh-object	Databases|S

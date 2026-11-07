@@ -1128,6 +1128,11 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		text = dbSafeMultiline(dbCellView(cell))
 		_ = m.nvim.ExecLuaArgs(`_G._termocode_db_value(...)`, strings.Split(text, "\n"))
 		return m.fetchStateCmd()
+	case "gK": // DBX-30: the cell's whole value and its row
+		if s.shown.plan != nil {
+			return nil
+		}
+		return m.databaseCellDoc(row, col)
 	case "gd":
 		r := s.shown
 		if r.file == "" {
