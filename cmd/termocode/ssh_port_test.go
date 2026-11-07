@@ -13,7 +13,7 @@ import (
 
 // newPortTestForward is newTestForward with a free port of its own and
 // an opener that records URLs (a port preview opens an address, not a
-// redirect page).
+// redirect page; the panel's page is still recorded in fakeFwd).
 func newPortTestForward(t *testing.T) (*webForward, *fakeFwd, func() []string) {
 	t.Helper()
 	f, ff := newTestForward(t)
@@ -21,7 +21,11 @@ func newPortTestForward(t *testing.T) (*webForward, *fakeFwd, func() []string) {
 	var urls []string
 	next := 50100
 	f.free = func() (int, error) { next++; return next, nil }
+	page := f.open // the panel's redirect page still goes to ff
 	f.open = func(u string) error {
+		if !strings.HasPrefix(u, "http://") {
+			return page(u)
+		}
 		mu.Lock()
 		urls = append(urls, u)
 		mu.Unlock()
