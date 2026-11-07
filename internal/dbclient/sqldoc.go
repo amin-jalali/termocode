@@ -218,7 +218,11 @@ func SQLRefAt(sql string, off int, driver string) (SQLRef, bool) {
 	cur := -1
 	for i, t := range toks {
 		if t.start <= off && off < t.end {
-			cur = i
+			// A caret right after a word belongs to that word, not to
+			// the punctuation that starts there.
+			if cur < 0 || t.kind == tokWord || t.kind == tokQuoted {
+				cur = i
+			}
 			break
 		}
 		if t.end == off && (t.kind == tokWord || t.kind == tokQuoted) {
