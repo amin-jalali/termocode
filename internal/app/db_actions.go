@@ -794,6 +794,7 @@ func dbTypePickerItems(remote bool) []picker.Item {
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
+		{ID: "clickhouse", Title: "ClickHouse", Hint: "HTTP interface, default port 8123"},
 		{ID: "libsql", Title: "libSQL / Turso", Hint: "a remote libsql:// server"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
@@ -863,6 +864,9 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	case "redis":
 		s.pendingConn.Driver, s.pendingConn.Port = "redis", 6379
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
+	case "clickhouse":
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "clickhouse", 8123, "default", "default"
+		return m.databaseAddPrompt(promptKindDBHost, "ClickHouse server", "Host name or address:", "localhost", false)
 	case "libsql":
 		cmd := m.databaseAddPrompt(promptKindDBAdd, "libSQL / Turso server", "Server URL:", "libsql://my-db.turso.io", false)
 		m.prompt.SetNote("The auth token is asked next and kept in the secret store.")
