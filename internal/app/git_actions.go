@@ -1238,6 +1238,9 @@ func (m *Model) gitStash() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
+	if _, err := m.gitRootDir(); err != nil {
+		return nil // no workspace folder: do nothing
+	}
 	repo, err := m.gitStashRepo()
 	if err == nil {
 		err = repo.Push(git.StashOptions{})
@@ -1258,6 +1261,9 @@ func (m *Model) gitStash() tea.Cmd {
 func (m *Model) gitStashPop() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
+	}
+	if _, err := m.gitRootDir(); err != nil {
+		return nil // no workspace folder: do nothing
 	}
 	repo, err := m.gitStashRepo()
 	if err == nil {
@@ -1281,6 +1287,9 @@ func (m *Model) gitStashPop() tea.Cmd {
 func (m *Model) openStashPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
+	}
+	if _, err := m.gitRootDir(); err != nil {
+		return nil // no workspace folder: do nothing
 	}
 	repo, err := m.gitStashRepo()
 	var entries []git.StashEntry
@@ -1314,6 +1323,9 @@ func (m *Model) openStashPicker() tea.Cmd {
 
 // applyStashSelected runs `git stash apply <ref>` for the picked stash.
 func (m *Model) applyStashSelected(ref string) tea.Cmd {
+	if _, err := m.gitRootDir(); err != nil {
+		return nil // no workspace folder: do nothing
+	}
 	repo, err := m.gitStashRepo()
 	if err == nil {
 		err = repo.Apply(ref)
