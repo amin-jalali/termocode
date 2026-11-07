@@ -864,6 +864,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Clean Up… | `worktree-cleanup` |   |   |
 | Worktree: Delete Selected… | `worktree-delete` |   |   |
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
+| Worktree: Hand Off Selected… | `worktree-handoff` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
 | Worktree: Link Issue or PR… | `worktree-link` |   |   |
 | Worktree: Move Selected to Another Machine… | `worktree-move` |   |   |
@@ -881,6 +882,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Pull a Lane from a Host… | `worktree-pull` |   |   |
 | Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
 | Worktree: Reset Order | `worktree-reset-order` |   |   |
+| Worktree: Preview Agent Grid | `worktree-preview-grid` |   |   |
+| Worktree: Preview Agent Screen | `worktree-preview` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |

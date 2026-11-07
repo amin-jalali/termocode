@@ -391,6 +391,8 @@ export const S = {
   "runs.none": "No AI runs yet.",
   "runs.resume": "Resume",
   "runs.step": "step {n} of {m}",
+  "runs.subrun": "{n} sub-run",
+  "runs.subruns": "{n} sub-runs",
   "runs.state.running": "working now",
   "runs.state.stalled": "no output",
   "runs.state.pausing": "pausing",
@@ -582,6 +584,8 @@ export const S = {
   "mcpv.running": "Running",
   "chat.insert": "Insert into the Editor",
   "chat.agent": "The agent profile and model of this chat",
+  "chat.ctx": "ctx {pct}%",
+  "chat.ctx_title": "Context: {tokens} of {window} tokens ({pct}%) on the newest turn",
   "chat.default_profile": "default",
   // Run, Test and Debug (WEBP-4)
   "act.testing": "Testing",

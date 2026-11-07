@@ -1013,6 +1013,9 @@ export interface ChatSnap {
   model?: string;
   busy: boolean;
   messages: ChatMsg[];
+  ctx_pct?: number;
+  ctx_tokens?: number;
+  ctx_window?: number;
 }
 
 export interface ChatMsg {
@@ -1069,6 +1072,9 @@ export interface ChatDelta {
   busy?: boolean;
   title?: string;
   chat?: ChatSnap;
+  ctx_pct?: number;
+  ctx_tokens?: number;
+  ctx_window?: number;
 }
 
 export interface CardsSnap {
@@ -1346,6 +1352,9 @@ export interface RunItem {
   cost_usd?: number;
   needs_you?: boolean;
   can?: string[];
+  parent?: string;
+  depth?: number;
+  kids?: number;
 }
 
 export interface MCPSnap {

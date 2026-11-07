@@ -22,6 +22,7 @@ const (
 	ActDiscard        // d: discard the lane (a card asks)
 	ActVerify         // v: run the verify command in every finished lane
 	ActSummary        // s: ask the quick model for a summary
+	ActJudge          // p: ask the AI judge to rank the lanes and pick one
 	ActStop           // x: stop every lane that still works
 	ActRefresh        // r: read the lanes' files again
 	ActClose          // Esc
@@ -119,6 +120,8 @@ func (c *Compare) Key(k tea.KeyMsg) tea.Cmd {
 		return act(ActVerify, sel)
 	case "s":
 		return act(ActSummary, sel)
+	case "p":
+		return act(ActJudge, sel)
 	case "x":
 		return act(ActStop, sel)
 	case "r":
@@ -262,6 +265,10 @@ func (c Compare) Box() string {
 		head = append(head, seg{fit(cl.name, cl.w), bg.Foreground(p.dim).Bold(true)})
 	}
 	top = append(top, paint(head, iw, bg))
+	star := "★"
+	if ascii() {
+		star = "*"
+	}
 	for i, l := range r.Lanes {
 		row := bg
 		mark := "  "
@@ -289,8 +296,12 @@ func (c Compare) Box() string {
 		if l.Closed() {
 			text = p.dim
 		}
+		title := mark + l.Title
+		if r.Judge != nil && r.Judge.Pick == l.ID {
+			title += " " + star
+		}
 		cells := map[string]seg{
-			"LANE":   {mark + l.Title, row.Foreground(text).Bold(i == c.cursor)},
+			"LANE":   {title, row.Foreground(text).Bold(i == c.cursor)},
 			"STATE":  {StateText(l.State), row.Foreground(p.state(l.State))},
 			"FILES":  {fileText, row.Foreground(text)},
 			"+/-":    {diff, row.Foreground(text)},
@@ -323,6 +334,32 @@ func (c Compare) Box() string {
 			bottom = append(bottom, paint([]seg{{"   " + s, bg.Foreground(p.text)}}, iw, bg))
 		}
 	}
+	if j := r.Judge; j != nil {
+		h := []seg{{" " + spark + " JUDGE", bg.Foreground(p.accent).Bold(true)}}
+		if j.Cost != "" {
+			h = append(h, seg{" · " + j.Cost, bg.Foreground(p.muted)})
+		}
+		pick := "pick: no lane does the task"
+		if l := j.PickLane(r); l != nil {
+			pick = "pick: " + l.Title + " " + star
+		}
+		h = append(h, seg{" · " + pick, bg.Foreground(p.ok)})
+		bottom = append(bottom, paint(h, iw, bg))
+		for k, rk := range j.Ranks {
+			if k == agentrace.MaxLanes {
+				break
+			}
+			name := rk.Lane
+			if l := r.Lane(rk.Lane); l != nil {
+				name = l.Title
+			}
+			line := "   " + strconv.Itoa(k+1) + ". " + name
+			if rk.Reason != "" {
+				line += " — " + rk.Reason
+			}
+			bottom = append(bottom, paint([]seg{{fit(line, iw), bg.Foreground(p.text)}}, iw, bg))
+		}
+	}
 	status := c.msg
 	if status == "" {
 		status = c.busy
@@ -333,9 +370,9 @@ func (c Compare) Box() string {
 	bottom = append(bottom, paint([]seg{{" " + status, bg.Foreground(p.muted)}}, iw, bg), hairline(p, iw))
 	if wide {
 		bottom = append(bottom, hint(p, iw, "enter", "review diff", "m", "merge this lane", "d", "discard lane", "v", "verify all",
-			"s", spark+" summarize", "x", "stop all", "r", "refresh", "esc", "close"))
+			"s", spark+" summarize", "p", spark+" judge", "x", "stop all", "r", "refresh", "esc", "close"))
 	} else {
-		bottom = append(bottom, hint(p, iw, "enter", "diff", "m", "merge", "d", "discard", "v", "verify", "s", "summary", "esc", "close", "x", "stop"))
+		bottom = append(bottom, hint(p, iw, "enter", "diff", "m", "merge", "d", "discard", "v", "verify", "s", "summary", "p", "judge", "esc", "close", "x", "stop"))
 	}
 
 	// Middle: the selected lane's files, as many as fit.

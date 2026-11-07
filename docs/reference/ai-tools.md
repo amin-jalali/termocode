@@ -2654,6 +2654,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-deps` | Worktree: Show Dependency Graph | auto |   |
 | `worktree-filter` | Worktree: Next Filter | auto |   |
 | `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-handoff` | Worktree: Hand Off Selected… | never | a handoff starts a new agent; the user picks it and checks the note |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-link` | Worktree: Link Issue or PR… | never | links are the user's choice; the AI reads them with worktrees_list |
 | `worktree-move-down` | Worktree: Move Selected Down | auto |   |
@@ -2668,6 +2669,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-run-open` | Worktree: Open Dev Server of Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-reset-order` | Worktree: Reset Order | auto |   |
 | `worktree-sessions` | Worktree: Agent Sessions of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-preview` | Worktree: Preview Agent Screen | auto |   |
+| `worktree-preview-grid` | Worktree: Preview Agent Grid | auto |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
 | `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |
 | `worktree-suggest-name` | Worktree: Suggest a Name… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the name |

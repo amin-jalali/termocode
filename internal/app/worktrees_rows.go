@@ -77,6 +77,8 @@ type wtRow struct {
 type wtTabAgent struct {
 	name, cwd string
 	state     agents.State
+	buf       int  // its nvim buffer (the live preview reads it, CMP-8)
+	asleep    bool // hibernated (AGX-15)
 }
 
 // wtOwner is the worktree a folder belongs to: the deepest worktree

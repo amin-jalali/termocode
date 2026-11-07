@@ -31,6 +31,11 @@ export interface RunView {
   cost: number;
   needsYou: boolean;
   can: string[];
+  /** The run tree (CMP-10): the parent run's key ("" for a top-level
+   * run), its level (0 top) and how many sub-runs are listed under it. */
+  parent: string;
+  depth: number;
+  kids: number;
 }
 
 type Obj = Record<string, unknown>;
@@ -82,6 +87,9 @@ export function readRuns(data: unknown): RunView[] {
       cost: num(r.cost_usd),
       needsYou: r.needs_you === true,
       can: list(r.can).map(str),
+      parent: str(r.parent),
+      depth: Math.max(0, Math.min(4, num(r.depth))),
+      kids: num(r.kids),
     }));
 }
 

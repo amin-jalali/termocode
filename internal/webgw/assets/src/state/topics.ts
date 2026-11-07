@@ -120,6 +120,11 @@ export const reduceChat: Reducer = (data, delta) => {
       const out = { ...s };
       if (typeof d.busy === "boolean") out.busy = d.busy;
       if (d.title) out.title = d.title;
+      if (typeof d.ctx_pct === "number") {
+        out.ctx_pct = d.ctx_pct;
+        out.ctx_tokens = typeof d.ctx_tokens === "number" ? d.ctx_tokens : 0;
+        out.ctx_window = typeof d.ctx_window === "number" ? d.ctx_window : 0;
+      }
       return out;
     }
     case "switched":

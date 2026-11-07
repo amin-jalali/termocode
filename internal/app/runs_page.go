@@ -442,6 +442,10 @@ func (m *Model) drawRunDetail(cv *rcCanvas, w int, it runsItem, now time.Time, c
 	m.runsDetailHead(cv, w, it, false, c)
 	y := 3
 	y = m.drawPipeBoxes(cv, y, w, it, now, c)
+	// the run tree (CMP-10): its parent and sub-runs
+	if ny, th := m.drawRunTree(cv, 4, y+1, w, it, now, c); ny > y+1 {
+		y, hits = ny-1, append(hits, th...)
+	}
 	// timeline
 	y++
 	cv.text(4, y, "TIMELINE", rcSt{fg: c.muted}.B())
@@ -481,6 +485,10 @@ func (m *Model) drawRunDetailCompact(cv *rcCanvas, w int, it runsItem, now time.
 		cv.text(x+1, y, runsArrow(2)+" answer", rcSt{fg: c.dimmer})
 	}
 	y += 2
+	var hits []runsHit
+	if ny, th := m.drawRunTree(cv, 2, y, w, it, now, c); ny > y { // CMP-10
+		y, hits = ny, th
+	}
 	cv.text(2, y, "STEPS", rcSt{fg: c.muted}.B())
 	cv.textR(w-2, y, "bar = share of this run's cost", rcSt{fg: c.dim})
 	y++
@@ -489,7 +497,7 @@ func (m *Model) drawRunDetailCompact(cv *rcCanvas, w int, it runsItem, now time.
 	cv.text(2, y, "BUDGET", rcSt{fg: c.muted}.B())
 	y++
 	y = m.drawBudget(cv, y, w, it, now, c, true)
-	return y + 1, nil
+	return y + 1, hits
 }
 
 // drawPipeBoxes draws you → [steps] → answer as boxes (5 rows) and the
@@ -1054,6 +1062,10 @@ func (m *Model) runsClick(id string, page bool) tea.Cmd {
 	case strings.HasPrefix(id, "run:"):
 		key := strings.TrimPrefix(id, "run:")
 		if page && st.sel == key && st.detail == "" { // a second click opens it
+			return m.runsShowPage(key, true)
+		}
+		if page && st.detail != "" && st.detail != key { // CMP-10: a RUN TREE row opens that run
+			st.sel = key
 			return m.runsShowPage(key, true)
 		}
 		st.sel = key

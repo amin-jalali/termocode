@@ -5472,6 +5472,15 @@
         "chat": {
           "$ref": "#/defs/ChatSnap"
         },
+        "ctx_pct": {
+          "type": "integer"
+        },
+        "ctx_tokens": {
+          "type": "integer"
+        },
+        "ctx_window": {
+          "type": "integer"
+        },
         "i": {
           "type": "integer"
         },
@@ -5761,6 +5770,15 @@
       "properties": {
         "busy": {
           "type": "boolean"
+        },
+        "ctx_pct": {
+          "type": "integer"
+        },
+        "ctx_tokens": {
+          "type": "integer"
+        },
+        "ctx_window": {
+          "type": "integer"
         },
         "id": {
           "type": "string"
@@ -12138,17 +12156,26 @@
         "cost_usd": {
           "type": "number"
         },
+        "depth": {
+          "type": "integer"
+        },
         "elapsed_ms": {
           "type": "integer"
         },
         "key": {
           "type": "string"
         },
+        "kids": {
+          "type": "integer"
+        },
         "live": {
           "type": "boolean"
         },
         "needs_you": {
           "type": "boolean"
+        },
+        "parent": {
+          "type": "string"
         },
         "profile": {
           "type": "string"

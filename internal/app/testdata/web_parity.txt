@@ -735,6 +735,7 @@ missing	worktree-diff	Worktrees|M
 missing	worktree-deps	Worktrees|S
 missing	worktree-filter	Worktrees|M
 missing	worktree-forget	Worktrees|M
+missing	worktree-handoff	Worktrees|M
 missing	worktree-jump	Worktrees|M
 missing	worktree-link	Worktrees|M
 missing	worktree-move	Worktrees|M
@@ -751,6 +752,8 @@ missing	worktree-run-open	Worktrees|M
 missing	worktree-pull	Worktrees|M
 missing	worktree-reset-order	Worktrees|M
 missing	worktree-sessions	Worktrees|M
+missing	worktree-preview	Worktrees|M
+missing	worktree-preview-grid	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
 missing	worktree-sleep	Worktrees|M
 missing	worktree-unpack	Worktrees|M
