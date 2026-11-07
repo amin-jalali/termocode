@@ -50,3 +50,14 @@
 .home-panels-close { margin: 8px 16px 0; min-height: 44px; width: calc(100% - 32px); }
 .home-loading { display: flex; align-items: center; justify-content: center; }
 @media (prefers-reduced-motion: reduce) { .home-stream { scroll-behavior: auto; } }
+/* Views menu and Customize (MOB-9): 44 px controls, one column. */
+.home-form { display: flex; flex-direction: column; gap: 8px; }
+.home-field { display: flex; flex-direction: column; gap: 4px; padding: 4px 16px; font-size: 13px; color: var(--text-2); }
+.home-field input, .home-field select, .home-cond select, .home-cond input, .home-fieldset > select { min-height: 44px; font: inherit; font-size: 15px; }
+.home-fieldset { border: 0; margin: 0; padding: 4px 16px; }
+.home-fieldset legend { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0; }
+.home-field-row, .home-cond { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.home-field-row .home-check { flex: 1; padding-left: 0; }
+.home-move .btn, .home-cond .btn { min-width: 44px; min-height: 44px; }
+.home-actions { display: flex; gap: 8px; padding: 8px 16px 0; }
+.home-actions .btn { flex: 1; min-height: 44px; }

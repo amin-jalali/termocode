@@ -62,6 +62,10 @@ export interface Quick {
   from: "view" | "page" | "";
   block?: unknown;
   error?: string;
+  /** spec is what ran (view.run, MOB-9): Customize edits it, a retry re-runs it. */
+  spec?: unknown;
+  /** live is the laptop's live view id: ev view_update replaces block. */
+  live?: string;
 }
 
 export type StreamItem = { kind: "msg"; m: ChatMsg } | { kind: "quick"; q: Quick };

@@ -14,7 +14,7 @@ const TABS: readonly { tab: Tab; label: "panels.files" | "panels.term" | "panels
   { tab: "more", label: "panels.more" },
 ];
 
-export function Panels({ views, onView, onClose }: { views: readonly ChipDef[]; onView: (c: ChipDef) => void; onClose: () => void }) {
+export function Panels({ views, onView, onAll, onClose }: { views: readonly ChipDef[]; onView: (c: ChipDef) => void; onAll: () => void; onClose: () => void }) {
   const S = H.Sheet;
   const start = H.phoneHome.value === "chat";
   const pick = (f: () => void) => {
@@ -39,6 +39,13 @@ export function Panels({ views, onView, onClose }: { views: readonly ChipDef[]; 
                 </button>
               </li>
             ))}
+            <li>
+              <button type="button" class="home-row" onClick={() => pick(onAll)}>
+                <span class="home-row-main">
+                  <span class="home-row-title">{hs("views.all")}</span>
+                </span>
+              </button>
+            </li>
           </ul>
         </section>
         <section aria-labelledby="hp-tabs">
