@@ -72,6 +72,16 @@ func TestGitMoreOps(t *testing.T) {
 			t.Errorf("%s accepted", b)
 		}
 	}
+	// A remote branch ("origin/x") is checked out as a new local branch
+	// that tracks it; it comes alone, never with a local branch name.
+	if _, err := DecodeArgs(OpGitCheckout, []byte(`{"remote":"origin/feat/web"}`)); err != nil {
+		t.Errorf("a remote branch: %v", err)
+	}
+	for _, b := range []string{`{"remote":"origin"}`, `{"remote":"-x/y"}`, `{"remote":"origin/a..b"}`, `{"remote":"origin/"}`, `{"remote":"/x"}`, `{"branch":"main","remote":"origin/main"}`, `{"remote":"origin/x y"}`} {
+		if _, err := DecodeArgs(OpGitCheckout, []byte(b)); err == nil {
+			t.Errorf("%s accepted", b)
+		}
+	}
 	if _, err := DecodeArgs(OpGitStash, []byte(`{"message":"wip\u001b[2J"}`)); err == nil {
 		t.Error("a stash message with a control character")
 	}

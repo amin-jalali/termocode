@@ -1,11 +1,12 @@
 // What the page may do to a file or folder (WEB-41, web design 2.3): new
-// file and new folder in a folder, rename, delete. A name is typed in the
+// file and new folder in a folder, rename, delete. A new file opens. A name is typed in the
 // sheet, which is the in-page confirm (Cancel first and focused; Enter in
 // the field never acts while the name is not valid). Delete asks the
 // laptop. The hub checks every path again.
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { toast } from "../../lib/toasts";
+import { showFile } from "../../lib/workbench";
 import { link, live } from "../../session";
 import { t } from "../../strings";
 import { AskLaptop } from "../../ui/AskLaptop";
@@ -170,7 +171,11 @@ export function FileActions({ target, onDone }: { target: Target; onDone: () => 
             verb={t("files.create")}
             onCancel={onDone}
             onSend={(name) =>
-              run(step.dir ? "tree.new_dir" : "tree.new_file", { path: join(target.path, name) }, (p) => toast("ok", t("files.created", { path: p })))
+              run(step.dir ? "tree.new_dir" : "tree.new_file", { path: join(target.path, name) }, (p) => {
+                toast("ok", t("files.created", { path: p }));
+                // A new file opens in the editor right away (WEBP-10).
+                if (!step.dir) showFile(p || join(target.path, name));
+              })
             }
           />
         )}

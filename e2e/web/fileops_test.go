@@ -33,11 +33,22 @@ func moreOf(path string) string {
 }
 
 // New file in a folder: the name sheet (Cancel first) sends tree.new_file
-// with the folder's path; a name with a slash cannot be sent.
+// with the folder's path; a name with a slash cannot be sent. The new
+// file opens in the editor right away (WEBP-10).
 func TestFilesNewFileInFolder(t *testing.T) {
 	for _, vp := range Both {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openTree(t, vp)
+			p.TapJS(`document.querySelector(".head-new")`)
+			p.TapJS(ButtonByText("New folder"))
+			setInput(p, `document.querySelector(".name-input")`, "pkg")
+			p.TapJS(ButtonByText("Create"))
+			reply(t, c, expectOp(t, c, webproto.OpTreeNewDir, `{"path":"pkg"}`), webproto.TreeChanged{Path: "pkg"})
+			p.WaitJS(`!document.querySelector(".file-actions")`)
+			if h := Eval[string](p, `location.hash`); h == "#/files/pkg" {
+				t.Errorf("a new folder opened as a file: %s", h)
+			}
+
 			p.TapJS(moreOf("src"))
 			p.WaitJS(`document.querySelector(".file-menu")`)
 			if first := p.Text(".file-menu .btn"); first != "Cancel" {
@@ -54,12 +65,7 @@ func TestFilesNewFileInFolder(t *testing.T) {
 			r := expectOp(t, c, webproto.OpTreeNewFile, `{"path":"src/new.go"}`)
 			reply(t, c, r, webproto.TreeChanged{Path: "src/new.go"})
 			p.WaitJS(`!document.querySelector(".file-actions") && document.querySelector(".toasts")?.textContent.includes("Created src/new.go.")`)
-
-			p.TapJS(`document.querySelector(".head-new")`)
-			p.TapJS(ButtonByText("New folder"))
-			setInput(p, `document.querySelector(".name-input")`, "pkg")
-			p.TapJS(ButtonByText("Create"))
-			reply(t, c, expectOp(t, c, webproto.OpTreeNewDir, `{"path":"pkg"}`), webproto.TreeChanged{Path: "pkg"})
+			p.WaitJS(`location.hash === "#/files/src/new.go"`)
 			p.noOverflow("files")
 		})
 	}
