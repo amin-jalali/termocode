@@ -350,6 +350,9 @@ func agentChatKey(m *Model, msg tea.KeyMsg) (tea.Cmd, bool) {
 			m.agentChatShowTerminal()
 			return nil, true
 		}
+		if c.readOnly && s == "i" { // CMP-87: import it into the AI chats (agent_import.go)
+			return m.openAgentImport(), true
+		}
 		if !c.readOnly {
 			c.input += s
 		}
@@ -597,7 +600,7 @@ func (m *Model) agentChatRender(w, h int) []string {
 	// Input.
 	switch {
 	case c.readOnly:
-		rows = append(rows, dim.Render(" read only · ↑↓ scroll · Esc leaves"))
+		rows = append(rows, dim.Render(" read only · ↑↓ scroll · i import into AI chat · Esc leaves"))
 	case c.input == "":
 		hint := " > type a message (Enter sends it to the terminal) · v terminal"
 		if w < 80 {
