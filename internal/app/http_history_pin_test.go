@@ -38,7 +38,7 @@ func httpHistoryPinModel(t *testing.T) (*Model, []httpclient.Entry) {
 }
 
 // The history picker groups rows by day, newest day first; filtering
-// still works on the titles.
+// still works on the titles. The picker draws group labels in capitals.
 func TestHTTPHistoryPickerGroupsByDay(t *testing.T) {
 	m, _ := httpHistoryPinModel(t)
 	m.openHTTPHistory()
@@ -46,8 +46,8 @@ func TestHTTPHistoryPickerGroupsByDay(t *testing.T) {
 		t.Fatal("no history picker")
 	}
 	view := ansi.Strip(m.picker.View())
-	today := strings.Index(view, "Today")
-	old := strings.Index(view, httpclient.DayLabel(time.Now().AddDate(0, 0, -5), time.Now()))
+	today := strings.Index(view, "TODAY")
+	old := strings.Index(view, strings.ToUpper(httpclient.DayLabel(time.Now().AddDate(0, 0, -5), time.Now())))
 	if today < 0 || old < 0 || today > old {
 		t.Fatalf("want Today before the older day:\n%s", view)
 	}
