@@ -178,6 +178,9 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	// file is one per workspace.
 	lockSum := sha256.Sum256([]byte(cfg.LockPath))
 	inbox := NewInboxMux(hex.EncodeToString(lockSum[:webproto.InboxWSLen/2]))
+	var push *UnifiedPush // MOB-32: paired phones' wakes
+	pushCtx, stopPush := context.WithCancel(ctx)
+	defer stopPush()
 	if cfg.DevicesDir != "" {
 		devices = webdevices.Open(cfg.DevicesDir)
 		var werr error
@@ -202,6 +205,21 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 				_, err := c.Call(ctx, webproto.OpWebTotpCheck, webproto.TotpCheckArgs{Code: code, Device: device})
 				return err
 			}})
+		push = NewUnifiedPush(UnifiedPushConfig{Now: now, Audit: audit,
+			Live: func(device string) bool {
+				w := wsRef.Load()
+				return w != nil && w.HasDevice(device)
+			},
+			Watch: func(ctx context.Context, on bool) error {
+				c := ctlRef.Load()
+				if c == nil {
+					return ErrCtlGone
+				}
+				_, err := c.Call(ctx, webproto.OpWebPushWatch, webproto.PushWatchArgs{On: on})
+				return err
+			}})
+		crash.Go("web gateway: the push watch", func() { push.Run(pushCtx) })
+		defer func() { stopPush(); push.Wait() }()
 	}
 	ctl, err := DialCtlWith(ctx, cfg.Dial, CtlHandlers{Link: func(d [sha256.Size]byte) {
 		auth.SetSecretDigest(d)
@@ -215,7 +233,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			Why: n.Why, Summary: n.Summary, By: "web:" + n.Device})
 	}, Event: func(kind string, data json.RawMessage) {
 		onCtlEvent(kind, data, ctlTargets{pairing: pairing, tokens: tokens, ws: wsRef.Load(), audit: audit,
-			watchToks: watchToks, watch: watchRef.Load(), inbox: inbox})
+			watchToks: watchToks, watch: watchRef.Load(), inbox: inbox, push: push, ctx: pushCtx})
 	}})
 	if err != nil {
 		return 0, fmt.Errorf("reach termocode: %w", err)
@@ -238,7 +256,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			}}
 	}
 	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices, Control: control,
-		WatchTokens: watchToks, MaxViewers: cfg.MaxViewers, PhoneWatch: cfg.PhoneWatch, Activity: func() { last.Store(time.Now().UnixNano()) }})
+		Push: push, WatchTokens: watchToks, MaxViewers: cfg.MaxViewers, PhoneWatch: cfg.PhoneWatch, Activity: func() { last.Store(time.Now().UnixNano()) }})
 	wsRef.Store(ws)
 	mux := siteMux(site, auth, ws, cfg.Assets)
 	if pairing != nil {
@@ -346,6 +364,8 @@ type ctlTargets struct {
 	watchToks *WatchTokens
 	watch     *Watch
 	inbox     *InboxMux
+	push      *UnifiedPush    // nil: no paired devices here
+	ctx       context.Context // the wakes' context (ends with the run)
 }
 
 // onCtlEvent handles the hub's other events: a new pairing link
@@ -362,6 +382,9 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 			return
 		}
 		n := t.tokens.RevokeDevice(d.Device)
+		if t.push != nil {
+			t.push.Forget(d.Device)
+		}
 		if t.ws != nil {
 			n += t.ws.CloseDevice(d.Device, webproto.CloseDeviceRevoked)
 		}
@@ -410,6 +433,12 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 		if t.inbox != nil {
 			_ = t.inbox.Set("", data) // a bad snap keeps the last good inbox
 		}
+	case webproto.EvWake: // {count}: more cards wait; the count stays here
+		var d webproto.WakeNote
+		if json.Unmarshal(data, &d) != nil || d.Count <= 0 || t.push == nil || t.ctx == nil {
+			return
+		}
+		t.push.Wake(t.ctx)
 	}
 }
 

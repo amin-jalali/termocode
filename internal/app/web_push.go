@@ -195,6 +195,10 @@ func (m *Model) webPushKeyOp(call *webCall) tea.Cmd {
 
 func (m *Model) webPushSubscribe(call *webCall) tea.Cmd {
 	a := call.args.(*webproto.PushSubArgs)
+	if a.Kind == webproto.PushUnifiedPush { // the gateway's kind (MOB-32); never reaches here from a browser
+		call.fail(webproto.CodeBadRequest, "This push kind is kept by the gateway.")
+		return nil
+	}
 	sub := webpush.Sub{Endpoint: a.Endpoint, P256dh: a.P256dh, Auth: a.Auth}
 	dev := call.conn.device
 	call.later()

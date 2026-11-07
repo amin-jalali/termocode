@@ -76,6 +76,7 @@ type webHub struct {
 	views    webViewsState              // Update only: the live views (web_views.go)
 	ups      webUploads                 // staged uploads (web_transfer.go; own lock)
 	push     webPushState               // Update only: pushes to paired phones (web_push.go)
+	wake     webPushWakeState           // Update only: phones' UnifiedPush wakes (web_push_wake.go, MOB-32)
 	// settled: Update only; the publishers ran once since the hub went
 	// idle (web_after.go).
 	settled bool

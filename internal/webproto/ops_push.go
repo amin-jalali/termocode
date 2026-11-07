@@ -13,6 +13,8 @@ import (
 // subscription for this device, push.unsubscribe forgets it. Both are
 // kept in the laptop's secret store, never in a file of the web panel.
 // A push says only a count (web_push_detail), never content.
+// The same two ops with kind "unifiedpush" are the gateway's (MOB-32,
+// data_push.go): it answers them itself and never forwards them.
 
 // Push op names.
 const (
@@ -26,15 +28,42 @@ type PushKeyArgs struct {
 	Make bool `json:"make,omitempty"`
 }
 
-// PushSubArgs is the browser's PushSubscription.toJSON(): its endpoint
-// and keys (base64url).
+// PushSubArgs is one push subscription of this device. Kind webpush (or
+// none, MOB-30): the browser's PushSubscription.toJSON(), its endpoint
+// and keys (base64url), kept by the hub. Kind unifiedpush (MOB-32): a
+// UnifiedPush endpoint only, kept by the gateway (data_push.go). A new
+// one replaces the device's old one of the same kind.
 type PushSubArgs struct {
+	Kind     string `json:"kind,omitempty" enum:"webpush|unifiedpush"`
 	Endpoint string `json:"endpoint"`
-	P256dh   string `json:"p256dh"`
-	Auth     string `json:"auth"`
+	P256dh   string `json:"p256dh,omitempty"`
+	Auth     string `json:"auth,omitempty"`
+}
+
+// PushUnsubscribeArgs drops this device's subscription of Kind (none:
+// webpush).
+type PushUnsubscribeArgs struct {
+	Kind string `json:"kind,omitempty" enum:"webpush|unifiedpush"`
+}
+
+func (a *PushUnsubscribeArgs) validate(int) error {
+	if a.Kind != "" && a.Kind != PushWebPush && a.Kind != PushUnifiedPush {
+		return invalid("bad push kind")
+	}
+	return nil
 }
 
 func (a *PushSubArgs) validate(int) error {
+	switch a.Kind {
+	case PushUnifiedPush:
+		if !ValidPushEndpoint(a.Endpoint) || a.P256dh != "" || a.Auth != "" {
+			return invalid("bad push endpoint")
+		}
+		return nil
+	case "", PushWebPush:
+	default:
+		return invalid("bad push kind")
+	}
 	if webpush.CheckEndpoint(a.Endpoint, nil) != nil {
 		return invalid("not a push service")
 	}
@@ -61,7 +90,7 @@ type PushState struct {
 var opPushRows = []Policy{
 	{Op: OpPushKey, New: newOf[PushKeyArgs](), Role: RoleViewer, Rate: perSec(1), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpPushSubscribe, New: newOf[PushSubArgs](), Role: RoleViewer, Rate: slow, MaxBytes: 2 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
-	{Op: OpPushUnsubscribe, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: slow, MaxBytes: 1 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpPushUnsubscribe, New: newOf[PushUnsubscribeArgs](), Role: RoleViewer, Rate: slow, MaxBytes: 1 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
 }
 
 var _ = func() bool { opTable = append(opTable, opPushRows...); return true }()

@@ -252,6 +252,25 @@ they are connected now. Pick one to see it, make it a viewer, or
 **Remove device**. A removed device is disconnected at once and its
 passkey works nowhere; it must pair again to come back.
 
+### Wake an Android phone (UnifiedPush)
+
+An Android phone with a UnifiedPush distributor (your own server, or a
+distributor app on the phone) can be woken when a card waits for you.
+No cloud of ours takes part. The phone gives the panel its push address
+when it connects; the address is kept in memory only, until the panel
+stops.
+
+- A wake is sent only when **more** cards wait than before, only to a
+  phone that is **not** connected now, and at most once every 30
+  seconds per phone.
+- The wake says nothing: its whole body is the word `wake`. No count,
+  no title, no card. The phone then connects and shows the cards.
+- Only a paired phone of yours gets wakes, never a shared viewer.
+- The address must be `https`. It may not point at this computer or at
+  a link-local address. Redirects are not followed.
+- The audit log keeps the push host and the result, never the full
+  address.
+
 ### Share with another person
 
 To let someone else watch, run **Web: Share as Viewer…**:

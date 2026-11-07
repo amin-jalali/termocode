@@ -1733,6 +1733,45 @@
       "phase": "v2"
     },
     {
+      "op": "push.subscribe",
+      "args": "PushSubscribeArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 2048,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "push.unsubscribe",
+      "args": "PushUnsubscribeArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "web.push_watch",
+      "args": "PushWatchArgs",
+      "role": "ctl",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "search.replace",
       "args": "SearchReplaceArgs",
       "result": "AskRef",
@@ -12806,6 +12845,50 @@
       },
       "required": [
         "kind"
+      ],
+      "additionalProperties": false
+    },
+    "PushSubscribeArgs": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "unifiedpush"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "endpoint"
+      ],
+      "additionalProperties": false
+    },
+    "PushUnsubscribeArgs": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "unifiedpush"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "PushWatchArgs": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "on"
       ],
       "additionalProperties": false
     },

@@ -85,6 +85,9 @@ type WSConfig struct {
 	// device's link answers is use (its session and Activity), so a phone
 	// that only watches keeps the gateway up. Max still ends the session.
 	PhoneWatch bool
+	// Push keeps the phones' UnifiedPush endpoints (push.subscribe,
+	// MOB-32; nil: not here).
+	Push *UnifiedPush
 }
 
 // Defaults of WSConfig.
@@ -591,7 +594,7 @@ func (c *wsConn) fromBrowser() {
 			if !c.throttle(m.Op, len(m.Args)) {
 				return
 			}
-			if p, _ := webproto.Lookup(m.Op); p.Gateway { // never to the hub
+			if p, _ := webproto.Lookup(m.Op); p.Gateway || isUnifiedPushOp(m) { // never to the hub
 				c.activity()
 				c.gatewayOp(m)
 				continue
@@ -792,4 +795,11 @@ func readLine(br *bufio.Reader, max int) ([]byte, error) {
 			return nil, err
 		}
 	}
+}
+
+// isUnifiedPushOp: push.subscribe / push.unsubscribe of kind unifiedpush
+// are the gateway's (MOB-32); the webpush kind goes to the hub (MOB-30).
+func isUnifiedPushOp(m *webproto.Req) bool {
+	return (m.Op == webproto.OpPushSubscribe || m.Op == webproto.OpPushUnsubscribe) &&
+		webproto.PushKindOf(m.Args) == webproto.PushUnifiedPush
 }

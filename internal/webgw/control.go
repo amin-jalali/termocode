@@ -47,6 +47,10 @@ func (c *wsConn) gatewayOp(r *webproto.Req) {
 		c.watchToken(r)
 		return
 	}
+	if r.Op == webproto.OpPushSubscribe || r.Op == webproto.OpPushUnsubscribe {
+		c.pushOp(r)
+		return
+	}
 	ctrl := c.s.cfg.Control
 	if ctrl == nil {
 		c.refuseReq(r.ID, webproto.CodeNotFound, "This is not available here.")
