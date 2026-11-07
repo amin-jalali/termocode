@@ -15,13 +15,13 @@ import (
 // Tasks and Runs under More (WEB-25, web UX 5.8) against the fake hub.
 
 // openMore logs in and opens More › the n-th link (0 Search, 1 Tasks, 2 Runs).
-func openMore(t *testing.T, vp Viewport, n int, topic string) (*Page, *HubConn) {
+func openMore(t *testing.T, vp Viewport, topic string) (*Page, *HubConn) {
 	t.Helper()
 	s := StartServer(t)
 	p := NewPage(t, s, vp)
 	c := p.Login("c-more")
 	p.GoTab("more")
-	p.TapJS(`document.querySelectorAll(".more-link")[` + string(rune('0'+n)) + `]`)
+	p.TapJS(`document.querySelector('.more-link[data-sub="` + topic + `"]')`)
 	want := []string{topic}
 	if vp.W >= 1200 && topic == "tasks" {
 		// The desktop's Run side bar shows the tasks and the AI runs.
@@ -63,7 +63,7 @@ func tasksSnap(last *webproto.TaskLast) webproto.TasksSnap {
 func TestTaskRunShowsOutput(t *testing.T) {
 	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
-			p, c := openMore(t, vp, 1, "tasks")
+			p, c := openMore(t, vp, "tasks")
 			c.Send(t, Snap("tasks", 1, tasksSnap(nil)))
 			p.WaitJS(`document.querySelectorAll(".task").length === 2`)
 			if txt := p.Text(".tasks-free"); txt != "Use the terminal for a command." {
@@ -127,7 +127,7 @@ func TestTaskRunShowsOutput(t *testing.T) {
 // Runs show their state, step and time; Stop asks first, Pause and
 // Resume follow what the run allows; a run of another chat offers none.
 func TestRunsStopFromPhone(t *testing.T) {
-	p, c := openMore(t, Phone, 2, "runs")
+	p, c := openMore(t, Phone, "runs")
 	c.Send(t, Snap("runs", 1, webproto.RunsSnap{Runs: []webproto.RunItem{
 		{Key: "c1/r1", Title: "fix the toast flicker", Profile: "review", State: "running", Step: 2, Steps: 3, ElapsedMs: 41000, Live: true, Can: []string{"stop", "pause"}},
 		{Key: "c2/r2", Title: "write release notes", State: "resumable", Why: "stopped at 10:02", NeedsYou: true},

@@ -109,6 +109,15 @@ func TestTreeContextMenu(t *testing.T) {
 	p.TapJS(ButtonByText("Create"))
 	reply(t, c, expectOp(t, c, webproto.OpTreeNewFile, `{"path":"src/new.go"}`), webproto.TreeChanged{Path: "src/new.go"})
 	p.WaitJS(`!document.querySelector(".file-actions")`)
+	// The new file opens in the editor right away.
+	if r := nextOpen(t, c); !strings.Contains(string(r.Args), `"src/new.go"`) {
+		t.Fatalf("page opened %s; want src/new.go", show(r))
+	} else {
+		c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"buf": 5, "path": "src/new.go", "tick": 3, "lines": 1, "dirty": false, "ft": "go", "readonly": false})})
+	}
+	waitSubSkipping(t, c, "buf:5")
+	c.Send(t, Snap("buf:5", 1, bufSnap(5, "src/new.go", "")))
+	p.WaitJS(filesView + `.querySelector(".crow, .desk-editor")`)
 
 	// Delete asks here (Cancel first), then the laptop.
 	rightClick(p, row("a.go"))

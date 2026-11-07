@@ -22,7 +22,7 @@ func openSearch(t *testing.T, vp Viewport) (*Page, *HubConn) {
 	p := NewPage(t, s, vp)
 	c := p.Login("c-search")
 	p.GoTab("more")
-	p.TapJS(`document.querySelector(".more-link")`)
+	p.TapJS(`document.querySelector(".more-link[data-sub=\"search\"]")`)
 	p.WaitJS(`location.hash === "#/more/search" && document.querySelector(".search-input")`)
 	return p, c
 }

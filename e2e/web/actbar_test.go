@@ -28,6 +28,9 @@ func (p *Page) TapAct(id string) {
 // A tall screen shows every item and no "…".
 func TestWorkbenchActivityBarOverflow(t *testing.T) {
 	p, _ := openFiles(t, Desktop)
+	// The desktop starts on the chat, whose item the bar always shows:
+	// open the Explorer so the chat can wait in the "…" menu.
+	p.GoTab("files")
 	const bar = `document.querySelector("nav.act-bar")`
 	p.WaitJS(`!!document.querySelector("nav.act-bar .act-more")`)
 	if Eval[bool](p, bar+`.scrollHeight > `+bar+`.clientHeight`) {

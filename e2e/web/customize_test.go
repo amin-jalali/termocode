@@ -251,7 +251,7 @@ func TestCustomizeRefusedRunShowsRetry(t *testing.T) {
 	if !strings.Contains(got, "✗") || !strings.Contains(got, "The laptop did not run this view") || !strings.Contains(got, "Try again") {
 		t.Errorf("error line %q", got)
 	}
-	if !Eval[bool](p, custPreview+`.querySelector(".vp-table")`) {
+	if !Eval[bool](p, `!!`+custPreview+`.querySelector(".vp-table")`) {
 		t.Error("the last good preview is gone")
 	}
 }

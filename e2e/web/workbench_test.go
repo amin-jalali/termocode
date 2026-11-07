@@ -45,6 +45,8 @@ func nextOpen(t *testing.T, c *HubConn) *webproto.Req {
 				return m
 			case "buf.close":
 				c.Send(t, &webproto.Res{T: webproto.KindRes, ID: m.ID})
+			case "editor.vim_buf_maps": // Vim on: the file it leaves asks its maps
+				reply(t, c, m, webproto.VimMapList{})
 			default:
 				if paintOps[m.Op] { // an open file's colours, asked on the way
 					continue

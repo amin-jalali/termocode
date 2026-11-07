@@ -21,7 +21,7 @@ func openRunView(t *testing.T, vp Viewport, act, sub, topic string) (*Page, *Hub
 	p := NewPage(t, s, vp)
 	c := p.Login("c-run")
 	if vp.W >= 1200 {
-		p.Tap(`nav .act-item[data-act="` + act + `"]`)
+		p.TapAct(act) // the icon, or its row in the "…" menu
 	} else {
 		p.GoTab("more")
 		p.Tap(`.more-link[data-sub="` + sub + `"]`)

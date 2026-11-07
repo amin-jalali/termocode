@@ -19,9 +19,9 @@ import (
 // phone has one.
 
 const (
-	homeCard     = `document.querySelector('.home-cards .card-inline')`
-	homeRisky    = `document.querySelector('.home-cards .card-inline .btn-ai')`
-	homeSafe     = `document.querySelector('.home-cards .card-inline .card-foot button')`
+	homeCard     = `document.querySelector('.home-waiting .card-inline')`
+	homeRisky    = `document.querySelector('.home-waiting .card-inline .btn-ai')`
+	homeSafe     = `document.querySelector('.home-waiting .card-inline .card-foot button')`
 	vibrateCount = `(window.__buzz ?? 0)`
 	stubVibrate  = `(window.__buzz = 0, navigator.vibrate = () => { window.__buzz++; return true; }, true)`
 )
@@ -37,6 +37,12 @@ func openHome(t *testing.T, cards ...map[string]any) (*Page, *HubConn) {
 	Eval[bool](p, stubVibrate)
 	Eval[bool](p, `(location.hash = "#/home", true)`)
 	p.WaitJS(homeCard)
+	// The Home asks for the saved views once it is live (MOBUX-18).
+	if r := nextReq(t, c); r.Op != "view.list" {
+		t.Fatalf("page sent %s; want view.list", show(r))
+	} else {
+		c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
+	}
 	return p, c
 }
 
@@ -44,14 +50,14 @@ func openHome(t *testing.T, cards ...map[string]any) (*Page, *HubConn) {
 // the safe choice and buzzes once.
 func TestHomeInlineCardSafeFirstByTouch(t *testing.T) {
 	p, c := openHome(t, toolCard("card-1", "go test ./..."))
-	got := Eval[[]string](p, `[...document.querySelectorAll(".home-cards .card-inline .card-foot button")].map((b) => b.textContent.trim())`)
+	got := Eval[[]string](p, `[...document.querySelectorAll(".home-waiting .card-inline .card-foot button")].map((b) => b.textContent.trim())`)
 	if len(got) == 0 || got[0] != "Deny" {
 		t.Fatalf("inline buttons %q, want Deny first", got)
 	}
 	if Eval[bool](p, `document.activeElement === `+homeSafe) {
 		t.Error("an inline card took the focus; only the sheet does")
 	}
-	p.Tap(".home-cards .card-inline .card-foot button")
+	p.Tap(".home-waiting .card-inline .card-foot button")
 	expectAnswer(t, c, "deny")
 	p.WaitJS(vibrateCount + ` === 1`)
 }
@@ -73,7 +79,7 @@ func TestHomeInlineCardKeyboard(t *testing.T) {
 	p, c := openHome(t, toolCard("card-0", "make lint"), toolCard("card-1", "go test ./..."))
 	Eval[bool](p, homeSafe+`.focus() || true`)
 	p.Key(kb.Escape)
-	p.WaitJS(`document.querySelectorAll(".home-cards .card-inline").length === 1`)
+	p.WaitJS(`document.querySelectorAll(".home-waiting .card-inline").length === 1`)
 	noAnswer(t, c, 300*time.Millisecond)
 	Eval[bool](p, homeSafe+`.focus() || true`)
 	p.Key("\r")
@@ -86,7 +92,7 @@ func TestHomeCardQueryOpensTheSheet(t *testing.T) {
 	p, c := openHome(t, toolCard("card-1", "go test ./..."))
 	Eval[bool](p, `(location.hash = "#/home?card=card-1", true)`)
 	p.WaitJS(dialog + ` && ` + dialog + `.contains(document.activeElement)`)
-	p.WaitJS(`document.querySelector(".home-cards")`)
+	p.WaitJS(`document.querySelector(".home-waiting")`)
 	p.Key(kb.Escape)
 	p.WaitJS(`!` + dialog + ` && location.hash === "#/home"`)
 	noAnswer(t, c, 300*time.Millisecond)
@@ -97,11 +103,11 @@ func TestHomeCardQueryOpensTheSheet(t *testing.T) {
 // with the diff.
 func TestHomeInlineReviewOpensTheSheet(t *testing.T) {
 	p, _ := openHome(t, kindCard("card-1", "review"))
-	got := Eval[[]string](p, `[...document.querySelectorAll(".home-cards .card-inline .card-foot button")].map((b) => b.textContent.trim())`)
+	got := Eval[[]string](p, `[...document.querySelectorAll(".home-waiting .card-inline .card-foot button")].map((b) => b.textContent.trim())`)
 	if len(got) != 2 || got[0] != "Reject" || got[1] != "Open Changes" {
 		t.Fatalf("inline review buttons %q, want Reject, Open Changes", got)
 	}
-	p.TapJS(`[...document.querySelectorAll(".home-cards .card-inline .card-foot button")][1]`)
+	p.TapJS(`[...document.querySelectorAll(".home-waiting .card-inline .card-foot button")][1]`)
 	p.WaitJS(dialog + ` && location.hash === "#/home?card=card-1" && document.querySelector(".sheet .card-diff")`)
 }
 
@@ -109,14 +115,14 @@ func TestHomeInlineReviewOpensTheSheet(t *testing.T) {
 // with Later / Answer on laptop and no answer button.
 func TestHomeInlineCardsFollowTheTopic(t *testing.T) {
 	p, c := openHome(t, toolCard("card-1", "go test ./..."), trustCard("card-2"))
-	if n := Eval[int](p, `document.querySelectorAll(".home-cards .card-inline").length`); n != 2 {
+	if n := Eval[int](p, `document.querySelectorAll(".home-waiting .card-inline").length`); n != 2 {
 		t.Fatalf("%d inline cards, want 2", n)
 	}
-	if txt := p.Text(".home-cards .card-trust .card-foot"); strings.Contains(txt, "Allow") {
+	if txt := p.Text(".home-waiting .card-trust .card-foot"); strings.Contains(txt, "Allow") {
 		t.Errorf("trust card offers %q", txt)
 	}
 	c.Send(t, Delta("cards", 2, map[string]any{"op": "remove", "id": "card-1"}))
-	p.WaitJS(`document.querySelectorAll(".home-cards .card-inline").length === 1`)
+	p.WaitJS(`document.querySelectorAll(".home-waiting .card-inline").length === 1`)
 }
 
 // The Home with inline cards passes the accessibility checks in both themes.

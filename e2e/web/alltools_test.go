@@ -62,7 +62,9 @@ func searchTools(p *Page, q string) {
 	Eval[bool](p, `(() => { const i = document.querySelector(".tools-input"); i.value = `+jsString(q)+`; i.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`)
 }
 
-func jsString(s string) string { return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"` }
+func jsString(s string) string {
+	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
+}
 
 // The whole list: features in the registry's order, then the MCP
 // servers (with their tool and resource counts), then the saved views
@@ -163,7 +165,8 @@ func TestAllToolsRowsOpenTheirView(t *testing.T) {
 		t.Errorf("saved view opens %q", got)
 	}
 
-	p.GoTab("more")
+	// The Home has no tab bar: back to More by its address.
+	Eval[bool](p, `(location.hash = "#/more", true)`)
 	p.TapJS(`document.querySelector('.more-link[data-sub="tools"]')`)
 	r = expectOp(t, c, opViewCatalog, "")
 	reply(t, c, r, toolsCatalog)

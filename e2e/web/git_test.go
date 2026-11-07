@@ -63,6 +63,9 @@ func expectOp(t *testing.T, c *HubConn, op, args string) *webproto.Req {
 		case *webproto.Sub, *webproto.Unsub:
 			continue
 		case *webproto.Req:
+			if v.Op != op && paintOps[v.Op] {
+				continue // a colour request on the way (an open file's)
+			}
 			if v.Op != op {
 				t.Fatalf("page asked %s %s; want %s", v.Op, v.Args, op)
 			}

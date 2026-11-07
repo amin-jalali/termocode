@@ -23,7 +23,7 @@ func chipIDs(p *Page) []string {
 
 // chipByID is a JavaScript expression for the first row's chip id.
 func chipByID(id string) string {
-	return fmt.Sprintf(`%s.querySelector("[data-chip=%q]")`, chipRow, id)
+	return fmt.Sprintf(`%s.querySelector('[data-chip=%q]')`, chipRow, id)
 }
 
 func openChips(t *testing.T) *Page {

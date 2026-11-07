@@ -26,6 +26,9 @@ type vimRig struct {
 func (v *vimRig) keys(s string, want ...string) {
 	v.t.Helper()
 	realKeys(v.p, s)
+	if len(want) == 0 { // a motion: the text stays as it is
+		return
+	}
 	v.settle(want...)
 }
 
