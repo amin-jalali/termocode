@@ -2516,6 +2516,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `toggle-key-hints` | Help: Toggle Key Hints | auto |   |
 | `toggle-terminal` | Terminal: Toggle Integrated Panel | auto |   |
 | `toggle-wrap` | View: Toggle Word Wrap | auto |   |
+| `tracker-add` | Tracker: Add Task… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `tracker-show` | Tracker: Show Tasks… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `transfer-cancel` | File: Cancel Download | never | moves files between the user's machine and the server; user only |
 | `transfer-download` | File: Download to This Computer | never | moves files between the user's machine and the server; user only |
 | `transfer-reveal` | File: Show Last Download in Folder | never | moves files between the user's machine and the server; user only |
