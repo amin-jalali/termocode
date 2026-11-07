@@ -83,3 +83,14 @@ func TestEventsText(t *testing.T) {
 		t.Errorf("empty = %q", got)
 	}
 }
+
+func TestEventKindOfEveryViewKind(t *testing.T) {
+	for kind, want := range map[string]string{
+		"statefulset": "StatefulSet", "daemonset": "DaemonSet", "replicaset": "ReplicaSet", "cronjob": "CronJob",
+		"configmap": "ConfigMap", "secret": "Secret", "ingress": "Ingress", "persistentvolumeclaim": "PersistentVolumeClaim", "node": "Node",
+	} {
+		if got := EventKind(kind); got != want {
+			t.Errorf("EventKind(%s) = %q, want %q", kind, got, want)
+		}
+	}
+}
