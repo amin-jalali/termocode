@@ -146,7 +146,7 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	case "db-describe":
 		return tea.Batch(open, m.databaseTableMeta(false)), true
 	case "db-ddl":
-		return tea.Batch(open, m.databaseTableMeta(true)), true
+		return tea.Batch(open, m.databaseShowDDLKey()), true
 	case "db-count-rows":
 		return tea.Batch(open, m.databaseCountFromTree()), true
 	case "db-import-csv":
@@ -319,7 +319,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case "d":
 		return m, m.databaseTableMeta(false)
 	case "D":
-		return m, m.databaseTableMeta(true)
+		return m, m.databaseShowDDLKey()
 	case "s":
 		return m, m.databaseSelectInConsole()
 	case "c":

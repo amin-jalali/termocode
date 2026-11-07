@@ -32,6 +32,8 @@ func (PostgresDialect) CatalogQueries() map[string]string {
 		"sequences":    `SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema=$1 ORDER BY sequence_name`,
 		"triggers":     `SELECT DISTINCT trigger_name FROM information_schema.triggers WHERE trigger_schema=$1 ORDER BY trigger_name`,
 		"extensions":   `SELECT e.extname FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE n.nspname=$1 ORDER BY e.extname`,
+		"partitions":   `SELECT c.relname FROM pg_inherits i JOIN pg_class c ON c.oid=i.inhrelid JOIN pg_class p ON p.oid=i.inhparent JOIN pg_namespace n ON n.oid=p.relnamespace WHERE n.nspname=$1 AND p.relname = $2 ORDER BY c.relname`,
+		"roles":        `SELECT rolname FROM pg_roles WHERE rolname NOT LIKE 'pg\_%' ORDER BY rolname`,
 		"checks":       `SELECT con.conname, pg_get_constraintdef(con.oid) FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE con.contype='c' AND n.nspname=$1 AND c.relname = $2 ORDER BY con.conname`,
 	}
 }

@@ -46,6 +46,10 @@ type IntrospectionResult struct {
 	Triggers   []string
 	Extensions []string
 	Checks     []SchemaCheck
+	// Partitions (object level) and Roles (connection level) are
+	// optional too (DBX-13).
+	Partitions []string
+	Roles      []string
 }
 
 // SchemaCheck is one check constraint of a table.

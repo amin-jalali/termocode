@@ -215,6 +215,8 @@ The data page asks the server for one page at a time (`db_page_rows`, default 10
 
 `t` flips the page to the Transposed view: one row as `column | value` lines, which suits narrow windows and wide tables. `]` and `[` step through the rows (and the pages), `v` opens the value under the cursor, `t` goes back to the grid.
 
+**Other objects.** `D` (or **Databases: Show DDL**) also works on a routine, a trigger and a sequence: it reads the stored DDL on the read-only session and opens it in the same kind of buffer. PostgreSQL sequences are written as `CREATE SEQUENCE` from `pg_sequences`; MySQL / MariaDB and SQLite have no sequences. A table that has partitions lists them as `Partition · name` rows under it. A PostgreSQL or MySQL / MariaDB connection also shows a **Roles** group with the server's users and roles, when the login may read them.
+
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
 **From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line.
