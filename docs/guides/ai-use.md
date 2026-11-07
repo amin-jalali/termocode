@@ -504,6 +504,49 @@ Shell commands (`run_command`, the terminal) and LSP edits made with
 `ai_edit_review` = `auto` are not part of a restore point: use git for
 those.
 
+### Rewind to any turn
+
+**AI: Rewind Chat to Turn…** lists your questions, newest first. Each row
+says how many files a rewind puts back. Pick one and a card asks first
+(Cancel has the focus):
+
+- **Code only** puts back the files of every AI turn from that question
+  on, newest first. Files those turns created are deleted. The chat stays
+  and gets a line saying what was restored.
+- **Code + chat** does the same, then removes the messages from that
+  question on and puts the question back in the input. Edit it and press
+  Enter to try again.
+
+Like Undo, the card lists files that changed after the AI turn (those
+later changes are lost) and files with unsaved edits (left as they are).
+
+### Code checkpoints (any agent)
+
+Restore points only see the built-in AI's own file tools. Code
+checkpoints cover everything else, also outside CLI agents in a terminal
+tab:
+
+- With the agent hooks installed (**Agent: State Hooks…**), each time
+  an outside agent starts a turn, termocode saves a checkpoint of the
+  folder it works in (its agent worktree, else the tab's folder), named
+  *before &lt;agent&gt; turn*.
+- **AI: Save Code Checkpoint** saves the workspace by hand.
+- **AI: Restore Code Checkpoint…** lists the checkpoints of the workspace
+  and of every agent tab's folder. Picking one shows what a restore
+  changes; Cancel has the focus. Restore puts changed and deleted files
+  back and deletes files made after the checkpoint.
+
+A checkpoint is the whole working tree: tracked files with their staged
+and unstaged edits, and new files that git does not ignore. It is kept as
+a private git ref (`refs/termocode/checkpoints/`), so your index, branch,
+HEAD and stash never change. Restore first saves the files as they are
+now as a new checkpoint, so a restore can be undone the same way. Ignored
+files (build output, `node_modules`, `.env`) are not part of it and stay
+as they are. A file with unsaved edits in an open tab blocks the restore
+until you save or discard them. The last 50 checkpoints per working tree
+are kept. Checkpoints need git; a folder in a container is not covered
+yet.
+
 ### Audit log
 
 Every tool call of the agent is one line in the **Output** panel, channel

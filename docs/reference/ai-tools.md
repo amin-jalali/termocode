@@ -2022,6 +2022,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-board` | AI: Agent Board… | never | the user's board of agent work; it opens a picker and holds Resume |
 | `ai-autopilot` | AI: Autopilot Level… (off / low / medium risk) | never | AI provider, credentials and approvals stay with the user; the AI never lowers its own approval cards |
 | `ai-cancel` | AI: Stop Generating | never | stops the model's own turn |
+| `ai-checkpoint-restore` | AI: Restore Code Checkpoint… | never | the user rolls code back to a checkpoint |
+| `ai-checkpoint-save` | AI: Save Code Checkpoint | auto |   |
 | `ai-configure` | AI: Configure Provider… | never | AI provider, credentials and approvals stay with the user |
 | `ai-critic-toggle` | AI: Toggle Critic Review | never | AI provider, credentials and approvals stay with the user |
 | `ai-credentials` | Open Config: AI Credentials | never | AI provider, credentials and approvals stay with the user |
@@ -2077,6 +2079,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-reasoning-next` | AI: Next Reasoning Level | never | AI provider, credentials and approvals stay with the user; more thinking costs the user more |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-review-order` | AI: Toggle Review Order (explain first / as proposed) | never | AI provider, credentials and approvals stay with the user |
+| `ai-rewind-turn` | AI: Rewind Chat to Turn… | never | the user rewinds the chat and the AI's changes |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
 | `ai-ship` | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | never | it pushes and opens a pull request: the user starts it |

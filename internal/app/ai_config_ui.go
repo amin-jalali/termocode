@@ -62,6 +62,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIHistoryRenamePicked(id), true
 	case pickerKindAIFork: // ai_fork.go
 		return m.onAIForkPicked(id), true
+	case pickerKindAIRewind: // ai_rewind.go (CMP-62)
+		return m.onAIRewindPicked(id), true
+	case pickerKindCheckpoint: // checkpoints_ui.go (CMP-62)
+		return m.onCheckpointPicked(id), true
 	case pickerKindAIAutoApprove:
 		return m.onAIAutoApproveToggled(id), true
 	case pickerKindMCPServeStatus: // mcp_serve_status.go
@@ -182,6 +186,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIToolConfirm(id), true
 	case confirmKindAIUndoTurn:
 		return m.onAIUndoTurnConfirm(id), true
+	case confirmKindAIRewind: // ai_rewind.go (CMP-62)
+		return m.answerAIRewind(id), true
+	case confirmKindCheckpointRestore: // checkpoints_ui.go (CMP-62)
+		return m.answerCheckpointRestore(id), true
 	case confirmKindAIBudget:
 		return m.answerAIBudget(id), true
 	case confirmKindAIPlan: // G-PLAN (ai_plan_approval.go)

@@ -14,6 +14,7 @@ web	ai-attach	cmd:aiAttach
 web	ai-auto-approve	op:ai.set_auto_approve
 web	ai-autopilot	palette
 web	ai-cancel	op:chat.stop
+web	ai-checkpoint-save	palette
 web	ai-configure	op:ai.info
 web	ai-critic-toggle	palette
 web	ai-discard-proposal	op:cards.answer
@@ -472,6 +473,8 @@ missing	ai-powers	AI|S
 missing	ai-run-task-list	AI|M
 missing	bugfix-spec-fix	AI|S
 missing	bugfix-spec-new	AI|S
+missing	ai-checkpoint-restore	AI|S
+missing	ai-rewind-turn	AI|S
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S
