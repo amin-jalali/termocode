@@ -695,6 +695,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
 		"ai-chat-unschedule",               // CMP-43: stopping paid runs needs no provider
 		"ai-agent-hooks", "ai-agent-packs", // agent CLI files need no provider
+		"ai-dictate",                                                    // CMP-48: a local voice program fills the input; nothing is sent
+		"ai-follow-agent",                                               // CMP-68: an editor toggle; it follows any agent's edits
 		"ai-rewind-turn", "ai-checkpoint-save", "ai-checkpoint-restore": // CMP-62: files and chats only
 	default:
 		if c, ok := m.aiReady(); !ok {

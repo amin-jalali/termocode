@@ -60,6 +60,9 @@ func TestAIUnconfiguredEntriesOnlyToast(t *testing.T) {
 			"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all",
 			"ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", // MCP setup works before a provider
 			"ai-agent-hooks", "ai-agent-packs", // agent CLI files need no provider
+			aiHistorySearchID, aiShareChatID, aiChatCommentsID, // saved chats need no provider
+			"ai-checkpoint-save",            // CMP-62: files and chats only
+			"ai-dictate", "ai-follow-agent", // CMP-48 voice input, CMP-68 editor toggle
 			"help-bug-report": // a Help entry: a bug report needs no provider
 			continue
 		}
