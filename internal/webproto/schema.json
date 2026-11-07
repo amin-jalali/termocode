@@ -4888,7 +4888,7 @@
       "max_bytes": 8192,
       "live": 2,
       "laptop_card": false,
-      "audit": "counted",
+      "audit": "no",
       "phase": "v2"
     },
     {

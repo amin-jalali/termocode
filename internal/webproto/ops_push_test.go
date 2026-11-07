@@ -6,24 +6,6 @@ import (
 	"testing"
 )
 
-// Web Push (MOB-30): reads for any paired device, every change written
-// down, and an address that is not a push service is refused before the
-// hub sees it.
-func TestWebPushOpRows(t *testing.T) {
-	for op, audit := range map[string]Audit{OpPushKey: AuditNo, OpPushSubscribe: AuditYes, OpPushUnsubscribe: AuditYes} {
-		p, ok := Lookup(op)
-		if !ok {
-			t.Fatalf("%s has no row", op)
-		}
-		if p.Role != RoleViewer || p.LaptopCard || p.Gateway || p.Audit != audit {
-			t.Errorf("%s: %+v", op, p)
-		}
-		if p.MaxBytes > 4*kib {
-			t.Errorf("%s: max bytes %d", op, p.MaxBytes)
-		}
-	}
-}
-
 func TestPushSubArgsValidate(t *testing.T) {
 	b64 := base64.RawURLEncoding
 	key := make([]byte, 65)

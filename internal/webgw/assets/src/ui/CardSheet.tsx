@@ -175,7 +175,7 @@ export function CardSheet({ id }: { id: string }) {
         }}
         onClose={closeCard}
         onLaptop={closeCard}
-        riskyLabel={shown.form && shown.form.length > 0 ? "card.send" : undefined}
+        riskyLabel={shown.form && shown.form.length > 0 ? "send" : undefined}
       >
         {shown.body && <p class="card-text">{shown.body}</p>}
         {shown.form && shown.form.length > 0 && state === "open" && (

@@ -27,7 +27,7 @@ func readTaskSheetSrc(t *testing.T, file string) string {
 
 // taskActionRe reads one row of TASK_ACTIONS in src/state/taskactions.ts:
 //
-//	{ id: "talk", kind: "ask", label: "ph.task.talk", viewer: true },
+//	{ id: "talk", kind: "ask", label: "pp.talk", viewer: true },
 var taskActionRe = regexp.MustCompile(`(?m)^\s*\{\s*id:\s*"([a-z]+)",\s*kind:\s*"([a-z]+)",\s*label:\s*"([a-z0-9_.]+)"(,\s*viewer:\s*true)?\s*\},?\s*$`)
 
 func TestTaskSheetActionsInOrder(t *testing.T) {
@@ -35,7 +35,7 @@ func TestTaskSheetActionsInOrder(t *testing.T) {
 	rows := taskActionRe.FindAllStringSubmatch(src, -1)
 	var ids []string
 	keys := map[string]bool{}
-	for _, e := range parseStrings(t, "src/strings.ts", "S") {
+	for _, e := range allEnglishStrings(t) { // strings.ts and strings.phone.ts
 		keys[e.key] = true
 	}
 	kinds := map[string]string{"talk": "ask", "workflow": "card", "agents": "card", "models": "ask", "start": "op"}
@@ -46,7 +46,7 @@ func TestTaskSheetActionsInOrder(t *testing.T) {
 			t.Errorf("%s: kind %q, want %q", id, kind, kinds[id])
 		}
 		if !keys[label] {
-			t.Errorf("%s: label %q is not in strings.ts", id, label)
+			t.Errorf("%s: label %q is not in strings.ts or strings.phone.ts", id, label)
 		}
 		if viewer != (id == "talk") {
 			t.Errorf("%s: viewer = %v; a viewer sees only Talk about it", id, viewer)

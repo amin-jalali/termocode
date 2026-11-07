@@ -29,8 +29,9 @@ export function BoardTile({
   live?: boolean;
   onClick?: () => void;
 }) {
-  const inner = (
-    <>
+  const cls = `ph-tile tone-${STATUS[status].tone}`;
+  return onClick ? (
+    <button type="button" class={cls} onClick={onClick}>
       <StatusMark s={status} live={live} />
       <span class="ph-tile-title">{title}</span>
       {cost ? <span class="ph-tile-cost">{cost}</span> : <span />}
@@ -44,16 +45,22 @@ export function BoardTile({
           </span>
         )}
       </span>
-    </>
-  );
-  const cls = `ph-tile tone-${STATUS[status].tone}`;
-  return onClick ? (
-    <button type="button" class={cls} onClick={onClick}>
-      {inner}
     </button>
   ) : (
     <div class={cls} role="group" aria-label={title}>
-      {inner}
+      <StatusMark s={status} live={live} />
+      <span class="ph-tile-title">{title}</span>
+      {cost ? <span class="ph-tile-cost">{cost}</span> : <span />}
+      <span class="ph-tile-facts">
+        {project && <span class="ph-tile-project">{project}</span>}
+        {agent && <span>{agent}</span>}
+        {step && <span>{step}</span>}
+        {ci && (
+          <span aria-label={t("ph.checks", { state: t(STATUS[ci].label) })}>
+            <StatusMark s={ci} hidden /> {t("ph.ci")}
+          </span>
+        )}
+      </span>
     </div>
   );
 }

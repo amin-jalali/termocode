@@ -164,6 +164,29 @@ export function saveLayout(v: Record<string, number | boolean | string>): void {
   }
 }
 
+// The Home's pinned chips on this phone (MOBUX-3): chip ids only, read
+// back through home/chips.ts validPins, never a secret.
+const CHIPS_KEY = "termocode.chips.v1";
+
+/** loadChipPins reads the stored chip pins (null: none or unreadable). */
+export function loadChipPins(): unknown {
+  try {
+    const raw = localStorage.getItem(CHIPS_KEY);
+    return raw ? (JSON.parse(raw) as unknown) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** saveChipPins stores the chip pins; a blocked storage keeps them for this page. */
+export function saveChipPins(ids: readonly string[]): void {
+  try {
+    localStorage.setItem(CHIPS_KEY, JSON.stringify(ids));
+  } catch {
+    // Storage is full or blocked: the pins last for this page.
+  }
+}
+
 // The commands this browser ran last (the command palette's "recently
 // used"): command ids only, newest first, validated on read.
 const CMDS_KEY = "termocode.cmds.v1";

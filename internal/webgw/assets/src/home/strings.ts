@@ -70,6 +70,8 @@ export const HS = {
   "tone.idle": "idle",
   "tone.info": "note",
   "loading": "Loading the Home…",
+  "act.cancel": "Cancel",
+  "act.changes": "This changes something on the laptop.",
   "views.title": "Views",
   "views.all": "All views…",
   "views.search": "Search views",

@@ -1,9 +1,9 @@
 {
-  "note": "problems: errors only, across files (MOB-73)",
+  "note": "problems: errors only, across files, grouped by file (the view's default group, MOB-73)",
   "spec": {"view": "problems", "layout": "table", "fields": ["path", "message"], "filter": [{"field": "severity", "op": "eq", "value": "error"}]},
   "src": {"files": [
     {"path": "a.go", "items": [{"sev": 1, "line": 3, "col": 1, "endLine": 3, "endCol": 4, "message": "undefined: x"}, {"sev": 2, "line": 9, "col": 1, "endLine": 9, "endCol": 2, "message": "unused"}]},
     {"path": "b.go", "items": [{"sev": 1, "line": 1, "col": 1, "endLine": 1, "endCol": 2, "message": "syntax error"}]}
   ], "errors": 2, "warnings": 1, "infos": 0, "hints": 0},
-  "want": {"kind": "table", "total": 2, "rows": [["a.go", "undefined: x"], ["b.go", "syntax error"]]}
+  "want": {"kind": "table", "total": 2, "groups": [{"label": "a.go", "count": 1, "rows": [["a.go", "undefined: x"]]}, {"label": "b.go", "count": 1, "rows": [["b.go", "syntax error"]]}]}
 }

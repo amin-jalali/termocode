@@ -40,10 +40,10 @@ function Table({ rows, current, onPick }: { rows: RaceRow[]; current: number; on
   return (
     <div class="ph-race-table" role="table" aria-label={t("ph.race.table")}>
       <div class="ph-race-row is-head" role="row">
-        <span role="columnheader">{t("ph.race.lane")}</span>
-        <span role="columnheader">{t("ph.race.files")}</span>
-        <span role="columnheader">{t("ph.race.tests")}</span>
-        <span role="columnheader">{t("ph.race.cost")}</span>
+        <span role="columnheader">{t("race.col.lane")}</span>
+        <span role="columnheader">{t("race.col.files")}</span>
+        <span role="columnheader">{t("race.col.tests")}</span>
+        <span role="columnheader">{t("race.col.cost")}</span>
         <span role="columnheader" aria-label={t("ph.race.judge")}>
           ★
         </span>
@@ -114,16 +114,16 @@ function LaneCard({
         )}
       </p>
       <dl class="ph-race-facts">
-        <dt>{t("ph.race.files")}</dt>
+        <dt>{t("race.col.files")}</dt>
         <dd>
           <Counts row={row} />
         </dd>
-        <dt>{t("ph.race.tests")}</dt>
+        <dt>{t("race.col.tests")}</dt>
         <dd>
           <StatusMark s={row.tests} />
           {lane.verify?.state === "fail" && lane.verify.exit !== undefined && <span class="ph-race-num">{t("ph.race.exit", { code: lane.verify.exit })}</span>}
         </dd>
-        <dt>{t("ph.race.cost")}</dt>
+        <dt>{t("race.col.cost")}</dt>
         <dd class="ph-race-num">{row.cost}</dd>
       </dl>
       {lane.note && <p class="ph-race-note">{lane.note}</p>}
@@ -137,10 +137,10 @@ function LaneCard({
               <bdi dir="ltr">{f.path}</bdi>
             </li>
           ))}
-          {files.length > MAX_FILES && <li class="ph-race-more">{t("ph.race.more_files", { n: files.length - MAX_FILES })}</li>}
+          {files.length > MAX_FILES && <li class="ph-race-more">{t("race.more_files", { n: files.length - MAX_FILES })}</li>}
         </ul>
       ) : (
-        lane.stats && <p class="ph-race-note">{t("ph.race.no_changes")}</p>
+        lane.stats && <p class="ph-race-note">{t("race.no_changes")}</p>
       )}
       <div class="ph-race-acts">
         {onReview && files.length > 0 && (

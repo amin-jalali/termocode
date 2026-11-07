@@ -20,6 +20,9 @@ import (
 type entry struct {
 	key, text string
 	line      int
+	// phone: an English-only phone app string (strings.phone.ts, or a
+	// page key with a phone prefix, englishOnly).
+	phone bool
 }
 
 var entryRe = regexp.MustCompile(`^\s*"([^"]+)":\s*"((?:[^"\\]|\\.)*)",\s*$`)
@@ -56,7 +59,7 @@ func parseStrings(t *testing.T, file, name string) []entry {
 			t.Errorf("%s:%d: not one `\"key\": \"text\",` entry: %q", file, i+1, l)
 			continue
 		}
-		out = append(out, entry{key: m[1], text: m[2], line: i + 1})
+		out = append(out, entry{key: m[1], text: m[2], line: i + 1, phone: name == "SP" || englishOnly(m[1])})
 	}
 	t.Fatalf("%s: %s is not closed", file, name)
 	return nil
@@ -84,7 +87,7 @@ func translatedStrings(t *testing.T) []entry {
 // englishStrings.
 func allEnglishStrings(t *testing.T) []entry {
 	t.Helper()
-	return append(englishStrings(t), parseStrings(t, "src/strings.phone.ts", "SP")...)
+	return englishStrings(t) // englishStrings has strings.phone.ts already
 }
 
 // bodyKeys may run to 40 words; every other string stays at 12 (P6).
@@ -94,7 +97,10 @@ func isBody(key string) bool {
 	}
 	switch key {
 	case "firstrun", "chat.empty", "term.info", "term.screen_banner", "file.big", "edit.conflict",
-		"card.viewonly", "runs.stop_confirm", "wait.e14":
+		"card.viewonly", "runs.stop_confirm", "wait.e14",
+		// notes and asks that explain what happens next (MOB-11, MOB-60, MOB-65, MOBUX-10)
+		"chat.comment_note", "runs.message_hint", "wf.dry_note", "lane.what", "lane.sign_note", "lane.ask", "lane.ask_from",
+		"ph.not_paired", "ph.race.merge_note":
 		return true
 	}
 	return false
@@ -130,10 +136,18 @@ func lintEntries(entries []entry) []string {
 			bad = append(bad, where+": key listed twice")
 		}
 		keys[e.key] = e.line
-		if other, dup := texts[e.text]; dup {
+		// One text, one key, within the translated strings and within the
+		// English-only phone strings: a phone view may not borrow a
+		// translated key (its words stay English), so the same word may
+		// be in both.
+		tk := e.text
+		if e.phone {
+			tk = "phone\x00" + e.text
+		}
+		if other, dup := texts[tk]; dup {
 			bad = append(bad, where+": same text as "+other+"; use one key")
 		}
-		texts[e.text] = e.key
+		texts[tk] = e.key
 		if strings.TrimSpace(e.text) == "" {
 			bad = append(bad, where+": empty")
 		}
@@ -172,6 +186,7 @@ func TestStringsLintCatchesEachRule(t *testing.T) {
 		{{key: "a", text: "one two three four five six seven eight nine ten eleven twelve thirteen"}},
 		{{key: "a", text: "x"}, {key: "a", text: "y"}},
 		{{key: "a", text: "x"}, {key: "b", text: "x"}},
+		{{key: "a", text: "x", phone: true}, {key: "b", text: "x", phone: true}},
 		{{key: "A.b", text: "x"}},
 		{{key: "a", text: "Hi {Name}"}},
 		{{key: "a", text: ""}},
@@ -206,6 +221,14 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 		keys[e.key] = true
 		spaces[strings.Split(e.key, ".")[0]] = true
 	}
+	// The feature-local English tables (the Home MOB-4, saved views
+	// MOB-71, MCP views, races) hold keys of their own; a literal may name
+	// one of them. Their keys do not open a namespace of the page's.
+	for _, l := range []struct{ file, name string }{{"src/home/strings.ts", "HS"}, {"src/home/savedstrings.ts", "SV"}, {"src/phone/mcp/strings.ts", "MS"}, {"src/phone/races/strings.ts", "RS"}} {
+		for _, e := range parseStrings(t, l.file, l.name) {
+			keys[e.key] = true
+		}
+	}
 	exists := func(k string) bool { return keys[k] || (keys[k+".one"] && keys[k+".other"]) }
 	n := 0
 	err := filepath.WalkDir("src", func(path string, d fs.DirEntry, err error) error {
@@ -229,7 +252,7 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 			if _, isEv := webproto.EventDataOf(m[1]); isEv {
 				continue // an event kind ("search.batch")
 			}
-			if spaces[strings.Split(m[1], ".")[0]] && !exists(m[1]) {
+			if spaces[strings.Split(m[1], ".")[0]] && !exists(m[1]) && !strings.HasPrefix(path, "src/kit/") { // the kit's sample data names view ids
 				t.Errorf("%s: %q looks like a string key but is not one", path, m[1])
 			}
 		}
@@ -300,7 +323,11 @@ func hardcodedText(src string) []string {
 	// Drop comments and type-only generic angle brackets on one line.
 	src = regexp.MustCompile(`(?m)//.*$|(?s)/\*.*?\*/`).ReplaceAllString(src, "")
 	var out []string
-	for _, m := range jsxText.FindAllStringSubmatch(src, -1) {
+	for _, ix := range jsxText.FindAllStringSubmatchIndex(src, -1) {
+		m := []string{src[ix[0]:ix[1]], src[ix[2]:ix[3]]}
+		if ix[0] > 0 && (src[ix[0]-1] == '=' || src[ix[0]-1] == '"') {
+			continue // the > of an arrow (=> Promise<T>) or of a string (">"), not a tag's end
+		}
 		txt := strings.TrimSpace(m[1])
 		// Generic type arguments like Segmented<Theme> look like text between > and <.
 		if txt == "" || regexp.MustCompile(`^[A-Za-z_][\w.]*$`).MatchString(txt) && !strings.Contains(m[0], " ") {
@@ -323,7 +350,7 @@ func TestHardcodedTextCatches(t *testing.T) {
 			t.Errorf("passed %q", bad)
 		}
 	}
-	for _, ok := range []string{`<p>{t("x.y")}</p>`, `<span>✦</span>`, `<span>×</span>`, `<Segmented<Theme> label={t("theme")} />`, `if (a > b && c < d) {}`} {
+	for _, ok := range []string{`<p>{t("x.y")}</p>`, `<span>✦</span>`, `<span>×</span>`, `<Segmented<Theme> label={t("theme")} />`, `if (a > b && c < d) {}`, "run: (s: Spec) => Promise<Block>;", "const OPS = { gt: \">\",\n  lt: \"<\" };"} {
 		if got := hardcodedText(ok); len(got) != 0 {
 			t.Errorf("refused %q: %v", ok, got)
 		}
@@ -362,6 +389,11 @@ var phoneEnglishOnly = map[string]bool{
 	"coord.title": true, "coord.task": true, "coord.profile": true, "coord.plan": true, "coord.until_done": true,
 	"coord.note": true, "coord.next": true, "coord.ask": true,
 	"runs.message": true, "runs.message_hint": true, "runs.to_step": true, "runs.sent": true,
+	// workflows from the phone (MOB-60) and typed card forms (MOB-12)
+	"wf.dry_run": true, "wf.dry_confirm": true, "wf.dry_note": true, "wf.dry_started": true,
+	"wf.run_label": true, "wf.run_body": true, "wf.trust_laptop": true, "wf.broken": true,
+	"card.form_required": true, "card.form_missing": true, "card.form_yes": true,
+	"card.form_no": true, "card.form_pick": true, "toast.sent": true,
 }
 
 // Every Persian text is filled in, is Persian (but for the few that are
@@ -427,7 +459,7 @@ func TestPhoneStringsAreEnglishOnly(t *testing.T) {
 		t.Fatal("strings.phone.ts has no strings")
 	}
 	other := map[string]bool{}
-	for _, e := range englishStrings(t) {
+	for _, e := range translatedStrings(t) { // strings.ts and strings.desk.ts
 		other[e.key] = true
 	}
 	for _, e := range parseStrings(t, "src/strings.fa.ts", "FA") {

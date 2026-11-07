@@ -538,7 +538,7 @@ export function BlockView({ block, onAction, onLaptop, onForm, now = Date.now() 
             <span class="blk-live-dot" aria-hidden="true">
               ●
             </span>
-            {t("blk.live")}
+            {t("ph.live")}
           </span>
         )}
         {b.stale && <span class="blk-stale">{t("blk.stale")}</span>}

@@ -118,7 +118,7 @@ function WorkflowRow({ w, canAct, onRun }: { w: WorkflowItem; canAct: boolean; o
               {t("wf.dry_run")}
             </Button>
             <Button small needsLink onClick={() => onRun(w)}>
-              {t("wf.run")}
+              {t("tasks.run")}
             </Button>
           </div>
         ))}

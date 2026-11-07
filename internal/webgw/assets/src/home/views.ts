@@ -4,6 +4,8 @@
 // a spec (filter, sort, group, limit, layout); the page only builds one.
 // These mirror webproto/views.go until proto.d.ts is generated again.
 
+import { dict } from "../state/dict";
+
 export type FieldKind = "text" | "num" | "time" | "state" | "path" | "link" | "bool" | "cost" | "md";
 export type CondOp = "eq" | "ne" | "gt" | "lt" | "ge" | "le" | "contains" | "starts" | "in" | "empty" | "not_empty";
 
@@ -181,7 +183,7 @@ export function specFromRoute(rest: string, query: Readonly<Record<string, strin
   const id = rest.slice(5);
   if (!/^[A-Za-z0-9_.:-]{1,64}$/.test(id)) return null;
   const spec: ViewSpec = { view: id };
-  const args: Record<string, string> = {};
+  const args = dict<string>();
   for (const k of Object.keys(query)) {
     if (k === "ws") spec.ws = query[k];
     else if (/^[a-z_]{1,32}$/.test(k)) args[k] = query[k];

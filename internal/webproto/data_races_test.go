@@ -26,7 +26,7 @@ func TestRacesTopic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"races": { snap: RacesSnap; delta: RacesSnap };`, `| "worktrees" | "races";`,
+	for _, want := range []string{`"races": { snap: RacesSnap; delta: RacesSnap };`, `| "races";`,
 		`state: "starting" | "working" | "waiting" | "done" | "stopped" | "failed" | "merged" | "discarded";`,
 		`verify?: "running" | "pass" | "fail";`, `state: "none" | "loading" | "error" | "ready";`} {
 		if !strings.Contains(string(ts), want) {

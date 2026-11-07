@@ -79,17 +79,17 @@ func TestPhoneShellTargetsAndDock(t *testing.T) {
 
 // The shell's words are English only (owner 2026-11-07): each key is in
 // strings.ts and none is in strings.fa.ts.
-var shellStrings = []string{"ph.switch", "ph.switch_title", "ph.menu", "ph.live", "ph.offline", "ph.asleep", "ph.mic", "ph.mic_hint", "ph.attach", "ph.stream", "ph.current"}
+var shellStrings = []string{"ph.switch", "ph.switch_title", "tools.title", "ph.live", "ph.offline", "ph.asleep", "ph.mic", "ph.mic_hint", "ph.attach", "ph.stream", "ph.current"}
 
 func TestPhoneShellStringsEnglishOnly(t *testing.T) {
 	en := map[string]bool{}
-	for _, e := range parseStrings(t, "src/strings.ts", "S") {
+	for _, e := range allEnglishStrings(t) {
 		en[e.key] = true
 	}
 	fa := readSrc(t, "src/strings.fa.ts")
 	for _, k := range shellStrings {
 		if !en[k] {
-			t.Errorf("strings.ts has no %q", k)
+			t.Errorf("strings.ts / strings.phone.ts has no %q", k)
 		}
 		if strings.Contains(fa, `"`+k+`"`) {
 			t.Errorf("strings.fa.ts has %q: the phone app is English only", k)

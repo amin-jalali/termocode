@@ -83,14 +83,14 @@ export function ProjectsList({ onOpen }: { onOpen: (p: ProjectCard) => void }) {
   const data = store.topic("projects").value?.data;
   const cards = useMemo(() => projectCards(data), [data]);
   return (
-    <section class="ph-projs" aria-label={t("ph.proj.title")}>
+    <section class="ph-projs" aria-label={t("ph.switch_title")}>
       <TopicBody topic="projects" empty={<p>{t("ph.proj.none")}</p>}>
         {cards.length === 0 ? (
           <div class="empty">
             <p>{t("ph.proj.none")}</p>
           </div>
         ) : (
-          <ul class="ph-proj-list" aria-label={t("ph.proj.title")}>
+          <ul class="ph-proj-list" aria-label={t("ph.switch_title")}>
             {cards.map((p) => (
               <ProjectCardView key={p.id} p={p} onOpen={onOpen} />
             ))}

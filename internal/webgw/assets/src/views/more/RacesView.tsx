@@ -12,10 +12,18 @@ import type { RaceItem } from "../../../../../webproto/proto";
 import { layout } from "../../lib/layout";
 import { link, store } from "../../session";
 import { SkeletonRows } from "../../ui/Skeleton";
-import { t } from "../../strings";
+import { t, type StringKey } from "../../strings";
 import { compareRows, raceMark, readRaces, type CompareRow } from "../../state/races";
 import { LaneStart } from "./LaneStart";
 import { SubView } from "./SubView";
+
+/** laneStateKey is the string of a lane's state: "working" and "waits
+ * for you" are the race's and the board's own words (one text, one key). */
+function laneStateKey(state: RaceItem["lanes"][number]["state"]): StringKey {
+  if (state === "working") return "race.state.working";
+  if (state === "waiting") return "board.st.wait";
+  return `race.lane.${state}`;
+}
 
 function verifyText(r: CompareRow): string {
   if (r.verify === "pass") return "✓";
@@ -82,7 +90,7 @@ function RaceBlock({ r }: { r: RaceItem }) {
                     type="button"
                     class="more-link"
                     aria-expanded={open === x.id}
-                    aria-label={t("race.lane", { name: x.title, state: t(`race.lane.${x.state}`) })}
+                    aria-label={t("race.lane", { name: x.title, state: t(laneStateKey(x.state)) })}
                     onClick={() => setOpen(open === x.id ? "" : x.id)}
                   >
                     {x.mark} {x.title}

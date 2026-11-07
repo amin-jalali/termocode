@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
@@ -258,7 +260,7 @@ func TestBuildWritesTheEditorChunk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	app, ed := string(out["app.js"])+string(out["app-chunk.js"]), string(out["editor.js"])
+	app, ed := string(out["app.js"])+sharedJS(out), string(out["editor.js"])
 	if ed == "" {
 		t.Fatal("build wrote no editor.js")
 	}
@@ -324,7 +326,7 @@ func TestBuildWritesTheHomeChunk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, hm := string(out["app.js"])+string(out["app-chunk.js"]), string(out["home.js"])
+	page, hm := string(out["app.js"])+sharedJS(out), string(out["home.js"])
 	if hm == "" {
 		t.Fatal("build wrote no home.js")
 	}
@@ -335,7 +337,7 @@ func TestBuildWritesTheHomeChunk(t *testing.T) {
 	if strings.Contains(page, forget) || strings.Contains(page, `"phone.forget"`) {
 		t.Error("the phone's first files hold This phone")
 	}
-	if !strings.Contains(hm, forget) || !strings.Contains(hm, `from"./app-chunk.js"`) || strings.Contains(hm, "__H") {
+	if !strings.Contains(hm, forget) || !importsShared(hm) || strings.Contains(hm, "__H") {
 		t.Error("home.js is not This phone alone (no screen, or its own Preact)")
 	}
 	if strings.Contains(string(out["index.html"]), "/assets/home.js") {
@@ -352,14 +354,14 @@ func TestBuildPutsAllToolsInTheHomeChunk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, ph := string(out["app.js"])+string(out["app-chunk.js"]), string(out["home.js"])
+	page, ph := string(out["app.js"])+sharedJS(out), string(out["home.js"])
 	if ph == "" {
 		t.Fatal("build wrote no home.js")
 	}
 	if _, ok := out["home.css"]; ok {
 		t.Error("home.js brought its own style sheet; the phone's styles are in app.css")
 	}
-	if !strings.Contains(ph, `from"./app-chunk.js"`) || strings.Contains(ph, "__H") {
+	if !importsShared(ph) || strings.Contains(ph, "__H") {
 		t.Error("home.js does not share the page's modules (no app-chunk.js import, or its own Preact)")
 	}
 	if !strings.Contains(ph, "tools-server") || strings.Contains(page, "tools-server") {
@@ -379,11 +381,11 @@ func TestBuildPutsTheBoardInTheHomeChunk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	app, chunk, board := string(out["app.js"]), string(out["app-chunk.js"]), string(out["home.js"])
+	app, chunk, board := string(out["app.js"]), sharedJS(out), string(out["home.js"])
 	if board == "" {
 		t.Fatal("build wrote no home.js")
 	}
-	if !strings.Contains(board, `from"./app-chunk.js"`) || strings.Contains(board, "__H") {
+	if !importsShared(board) || strings.Contains(board, "__H") {
 		t.Error("home.js does not share the page's chunk (or has its own Preact)")
 	}
 	if !strings.Contains(app+chunk, `import("/assets/home.js")`) {
@@ -402,7 +404,7 @@ func TestBuildWritesThePersianChunk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, fa := string(out["app.js"])+string(out["app-chunk.js"]), string(out["strings-fa.js"])
+	page, fa := string(out["app.js"])+sharedJS(out), string(out["strings-fa.js"])
 	if fa == "" {
 		t.Fatal("build wrote no strings-fa.js")
 	}
@@ -436,7 +438,7 @@ func TestBuildHomeChunkHoldsTheHome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, home := string(out["app.js"])+string(out["app-chunk.js"]), string(out["home.js"])
+	page, home := string(out["app.js"])+sharedJS(out), string(out["home.js"])
 	if home == "" {
 		t.Fatal("build wrote no home.js")
 	}
@@ -446,7 +448,7 @@ func TestBuildHomeChunkHoldsTheHome(t *testing.T) {
 	if strings.Contains(page, "home-chips") {
 		t.Error("the phone's first files hold the Home's views")
 	}
-	if !strings.Contains(home, "home-chips") || strings.Contains(home, "__H") || strings.Contains(home, "preact") {
+	if !strings.Contains(home, "home-chips") || strings.Contains(home, "__H") || strings.Contains(noBanner(home), "preact") {
 		t.Error("home.js is not the Home alone (it has no chips, or its own Preact)")
 	}
 	for _, name := range []string{"index.html", "workbench.js"} {
@@ -505,4 +507,40 @@ func TestBuildWritesTheVimChunk(t *testing.T) {
 	if !strings.Contains(frame, `import("/assets/monaco-vim.js")`) {
 		t.Error("the frame does not load /assets/monaco-vim.js")
 	}
+}
+
+// sharedChunkRe names the page's shared chunks: app-chunk.js, app-chunk-2.js, …
+// (sharedChunkNames: the build may split the shared code in more than one).
+var sharedChunkRe = regexp.MustCompile(`^app-chunk(-[0-9]+)?\.js$`)
+
+// sharedJS is the text of all the page's shared chunks.
+func sharedJS(out map[string][]byte) string {
+	var names []string
+	for n := range out {
+		if sharedChunkRe.MatchString(n) {
+			names = append(names, n)
+		}
+	}
+	sort.Strings(names)
+	var b strings.Builder
+	for _, n := range names {
+		b.Write(out[n])
+	}
+	return b.String()
+}
+
+// importsShared says whether code imports one of the page's shared chunks.
+func importsShared(code string) bool {
+	return regexp.MustCompile(`from"\./app-chunk(-[0-9]+)?\.js"`).MatchString(code)
+}
+
+// noBanner is code without its first line, the license banner (which
+// names preact in every file).
+func noBanner(code string) string {
+	if strings.HasPrefix(code, "/* termocode web UI") {
+		if i := strings.IndexByte(code, '\n'); i >= 0 {
+			return code[i+1:]
+		}
+	}
+	return code
 }

@@ -20,25 +20,25 @@ export function PhoneCard({
   detail?: string;
   onClick?: () => void;
 }) {
-  const head = title ?? t(STATUS[status].label);
-  const inner = (
-    <>
-      <span class="ph-card-head">
-        <StatusMark s={status} hidden />
-        <span>{head}</span>
-      </span>
-      {value !== undefined && <span class="ph-card-value">{value}</span>}
-      {detail && <span class="ph-card-detail">{detail}</span>}
-    </>
-  );
+  const label = title ?? t(STATUS[status].label);
   const cls = `ph-card tone-${STATUS[status].tone}`;
   return onClick ? (
     <button type="button" class={cls} onClick={onClick}>
-      {inner}
+      <span class="ph-card-head">
+        <StatusMark s={status} hidden />
+        <span>{label}</span>
+      </span>
+      {value !== undefined && <span class="ph-card-value">{value}</span>}
+      {detail && <span class="ph-card-detail">{detail}</span>}
     </button>
   ) : (
-    <div class={cls} role="group" aria-label={head}>
-      {inner}
+    <div class={cls} role="group" aria-label={label}>
+      <span class="ph-card-head">
+        <StatusMark s={status} hidden />
+        <span>{label}</span>
+      </span>
+      {value !== undefined && <span class="ph-card-value">{value}</span>}
+      {detail && <span class="ph-card-detail">{detail}</span>}
     </div>
   );
 }
