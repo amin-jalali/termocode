@@ -4671,6 +4671,33 @@
       "laptop_card": false,
       "audit": "no",
       "phase": "v2"
+    },
+    {
+      "op": "ai.run_start",
+      "args": "AIRunStartArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 40960,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "runs.send",
+      "args": "RunsSendArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 20480,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -13870,6 +13897,12 @@
         },
         "why": {
           "type": "string"
+        },
+        "running": {
+          "items": {
+            "$ref": "#/defs/RunStepRef"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -17178,6 +17211,58 @@
         "task",
         "agent",
         "models"
+      ],
+      "additionalProperties": false
+    },
+    "AIRunStartArgs": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task"
+      ],
+      "additionalProperties": false
+    },
+    "RunStepRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "RunsSendArgs": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "text"
       ],
       "additionalProperties": false
     }

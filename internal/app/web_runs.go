@@ -125,6 +125,9 @@ func (m *Model) webRunsBuild(now time.Time) webproto.RunsSnap {
 			r.Step = it.cur + 1
 			r.StepTitle = webName(it.steps[it.cur].Title)
 		}
+		if r.Running = m.webRunsLive(it); len(r.Running) > 0 { // MOB-64: runs.send
+			r.Can = append(r.Can, "send")
+		}
 		s.Runs = append(s.Runs, r)
 	}
 	return s

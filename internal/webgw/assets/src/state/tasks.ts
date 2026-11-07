@@ -36,6 +36,8 @@ export interface RunView {
   parent: string;
   depth: number;
   kids: number;
+  /** running are the steps that work now and can get a message (runs.send). */
+  running: { id: string; title: string }[];
 }
 
 type Obj = Record<string, unknown>;
@@ -90,6 +92,10 @@ export function readRuns(data: unknown): RunView[] {
       parent: str(r.parent),
       depth: Math.max(0, Math.min(4, num(r.depth))),
       kids: num(r.kids),
+      running: list(r.running)
+        .map(obj)
+        .filter((x) => str(x.id) !== "")
+        .map((x) => ({ id: str(x.id), title: str(x.title) })),
     }));
 }
 
