@@ -16,6 +16,8 @@ import (
 	"io"
 	"strconv"
 	"sync"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // JSON-RPC error codes the client sends.
@@ -74,7 +76,7 @@ func newConn(w io.Writer) *conn {
 
 // start reads messages until r ends.
 func (c *conn) start(r io.Reader) {
-	go func() {
+	crash.Go("acp.start", func() {
 		sc := bufio.NewScanner(r)
 		sc.Buffer(make([]byte, 64<<10), maxLine)
 		for sc.Scan() {
@@ -89,17 +91,17 @@ func (c *conn) start(r io.Reader) {
 			c.dispatch(m)
 		}
 		c.shutdown()
-	}()
+	})
 }
 
 func (c *conn) dispatch(m wireMsg) {
 	switch {
 	case m.Method != "" && m.ID != nil: // a request from the agent
 		id := *m.ID
-		go func() {
+		crash.Go("acp.dispatch", func() {
 			res, err := c.onRequest(m.Method, m.Params)
 			c.respond(id, res, err)
-		}()
+		})
 	case m.Method != "": // a notification
 		if c.onNotify != nil {
 			c.onNotify(m.Method, m.Params)

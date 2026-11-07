@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/agentctl"
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // State is an agent's state in a tab.
@@ -286,7 +287,7 @@ func (c *Client) Watch(ctx context.Context, every time.Duration) <-chan Event {
 		every = time.Second
 	}
 	ch := make(chan Event, 16)
-	go func() {
+	crash.Go("sdk.Watch", func() {
 		defer close(ch)
 		seen := map[string]Tab{}
 		send := func(ev Event) bool {
@@ -328,7 +329,7 @@ func (c *Client) Watch(ctx context.Context, every time.Duration) <-chan Event {
 			case <-t.C:
 			}
 		}
-	}()
+	})
 	return ch
 }
 

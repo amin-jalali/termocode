@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -184,23 +185,23 @@ func (m *shellMux) run(ctx context.Context, script string, args []string) (strin
 		err       error
 	}
 	done := make(chan answer, 1)
-	go func() {
+	crash.Go("containerhost.run", func() {
 		if _, err := io.WriteString(m.in, muxRequest(nonce, script, args)); err != nil {
 			done <- answer{err: errMux}
 			return
 		}
 		errc := make(chan answer, 1)
-		go func() {
+		crash.Go("containerhost.run", func() {
 			s, _, err := readUntil(m.errR, nonce, false)
 			errc <- answer{errs: s, err: err}
-		}()
+		})
 		out, code, err := readUntil(m.out, nonce, true)
 		e := <-errc
 		if err == nil {
 			err = e.err
 		}
 		done <- answer{out: out, errs: e.errs, code: code, err: err}
-	}()
+	})
 	select {
 	case a := <-done:
 		return a.out, a.errs, a.code, a.err

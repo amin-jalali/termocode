@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/acp"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -70,7 +71,7 @@ var acpStartAgent = func(a acp.Agent, dir string, h acp.Handler) (*acp.Client, f
 		return nil, nil, err
 	}
 	c := acp.NewClient(out, in, h)
-	go func() { _ = cmd.Wait() }()
+	crash.Go("app.acpStartAgent", func() { _ = cmd.Wait() })
 	stop := func() {
 		_ = c.Close()
 		if cmd.Process != nil {

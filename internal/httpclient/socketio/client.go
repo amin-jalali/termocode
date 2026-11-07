@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Options tune a connection.
@@ -96,7 +98,7 @@ func Dial(ctx context.Context, t Target, o Options) (*Client, error) {
 	}
 	rctx, stop := context.WithCancel(context.Background())
 	c.stop = stop
-	go c.read(rctx)
+	crash.Go("socketio.Dial", func() { c.read(rctx) })
 	return c, nil
 }
 

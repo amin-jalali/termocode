@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/jsonc"
 	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -183,7 +184,7 @@ func Start(ctx context.Context, s Settings) (*Session, error) {
 		cancel()
 		return nil, err
 	}
-	go x.wait()
+	crash.Go("voice.Start", func() { x.wait() })
 	return x, nil
 }
 
