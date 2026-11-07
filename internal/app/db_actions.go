@@ -45,6 +45,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-connect", Title: "Databases: Connect Selected"},
 		{ID: "db-disconnect", Title: "Databases: Disconnect Selected…"},
 		{ID: "db-refresh", Title: "Databases: Refresh"},
+		{ID: "db-refresh-object", Title: "Databases: Refresh Selected Object"},
+		{ID: "db-schema-cache-info", Title: "Databases: Show Schema Cache Info"},
 		{ID: "db-filter", Title: "Databases: Filter…"},
 		{ID: "db-configure", Title: "Databases: Configure"},
 		{ID: "db-test-connection", Title: "Databases: Test Connection"},
@@ -187,6 +189,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseConfigure(false)), true
 	case "db-refresh":
 		return tea.Batch(open, m.databaseRefresh()), true
+	case "db-refresh-object":
+		return tea.Batch(open, m.databaseRefreshObjectKey()), true
+	case "db-schema-cache-info":
+		return m.databaseSchemaCacheInfo(), true
 	case "db-filter":
 		open = m.revealDatabasesView(true) // the filter takes the keys: the view needs the focus
 		updated, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
@@ -308,6 +314,8 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "R":
 		return m, m.databaseRefresh()
+	case "r":
+		return m, m.databaseRefreshObjectKey()
 	case "T":
 		if have && row.kind == dbNodeConnection {
 			return m, m.databaseTestConnection(row.conn)
@@ -966,6 +974,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"Enter", "connect, expand or fold"},
 		[]string{"/", "filter by name (Esc clears)"},
 		[]string{"R", "refresh"},
+		[]string{"r", "reload only this object"},
 		[]string{"Esc", "back to the editor"},
 		[]string{"Connections"},
 		[]string{"a", "add a connection"},
@@ -1328,7 +1337,7 @@ func (m *Model) onDBIntrospect(msg dbIntrospectMsg) tea.Cmd {
 	msg.result = sanitizeDBIntrospection(msg.result)
 	s.addIntrospection(msg.path, msg.result)
 	m.databaseSchemaChanged()
-	return nil
+	return m.databaseCacheSchema(msg.path, msg.result) // DBX-29
 }
 
 func sanitizeDBIntrospection(in dbclient.IntrospectionResult) dbclient.IntrospectionResult {

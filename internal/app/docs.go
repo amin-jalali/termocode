@@ -287,6 +287,8 @@ var fileOnlySettings = []SettingEntry{
 	{Key: "db_selection_split", Type: "bool", Default: "true", Category: "Databases (file only)", Description: "Split a selection into statements (true) or send it to the server as one text (false)."},
 	{Key: "db_result_new_tab", Type: "bool", Default: "false", Category: "Databases (file only)", Description: "Each run opens a new result tab and keeps the old ones (up to 9) instead of replacing the tabs that are not pinned."},
 	{Key: "db_auto_transpose", Type: "bool", Default: "false", Category: "Databases (file only)", Description: "A console result with one row opens flipped: one line per column (t flips it back)."},
+	{Key: "db_introspect_level", Type: "enum", Default: "auto", Category: "Databases (file only)", Choices: []string{"auto", "names", "objects", "full"}, Description: "How much a table row in the tree loads: names only, columns, or columns with indexes and foreign keys. auto loads less in schemas with many objects."},
+	{Key: "db_complete_catalogs", Type: "bool", Default: "false", Category: "Databases (file only)", Description: "SQL completion also offers the system catalogs (pg_catalog, information_schema, sqlite_master…)."},
 	{Key: "containers_engine", Type: "enum", Default: "auto", Category: "Containers (file only)", Choices: []string{"auto", "docker", "podman"},
 		Description: "Container engine of the Containers view. auto tries Docker, then Podman; docker or podman uses only that engine. Press R in the view after changing it."},
 	{Key: "containers_sections", Type: "string[]", Default: "all", Category: "Containers (file only)",

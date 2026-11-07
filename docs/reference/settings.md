@@ -148,6 +148,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `db_selection_split` | bool | `true` | Split a selection into statements (true) or send it to the server as one text (false). |
 | `db_result_new_tab` | bool | `false` | Each run opens a new result tab and keeps the old ones (up to 9) instead of replacing the tabs that are not pinned. |
 | `db_auto_transpose` | bool | `false` | A console result with one row opens flipped: one line per column (t flips it back). |
+| `db_introspect_level` | enum | `auto` | How much a table row in the tree loads: names only, columns, or columns with indexes and foreign keys. auto loads less in schemas with many objects. |
+| `db_complete_catalogs` | bool | `false` | SQL completion also offers the system catalogs (pg_catalog, information_schema, sqlite_master…). |
 
 ## Containers (file only)
 

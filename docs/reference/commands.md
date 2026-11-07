@@ -235,6 +235,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Open Table Data | `db-data` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
+| Databases: Refresh Selected Object | `db-refresh-object` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
@@ -248,6 +249,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Set Result Page Size… | `db-result-page-size` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
+| Databases: Show Schema Cache Info | `db-schema-cache-info` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |

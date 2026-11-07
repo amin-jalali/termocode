@@ -176,6 +176,9 @@ type dbConsoleSettings struct {
 	// Result page (db_result_more.go, DBX-26)
 	ResultNewTab  *bool `json:"db_result_new_tab"`
 	AutoTranspose *bool `json:"db_auto_transpose"`
+	// Introspection (db_introspect.go, DBX-29)
+	IntrospectLevel  *string `json:"db_introspect_level"`
+	CompleteCatalogs *bool   `json:"db_complete_catalogs"`
 }
 
 func loadDBConsoleSettings() dbConsoleSettings {

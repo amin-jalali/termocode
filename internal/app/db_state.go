@@ -840,6 +840,7 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 		s.addObjects(path, n.conn, result)
 		n = s.nodes[path]
 	} else if n.kind == dbNodeTable || n.kind == dbNodeView {
+		result = s.tableLevel(path).Trim(result) // db_introspect_level (DBX-29)
 		names := make([]string, 0, len(result.Columns))
 		for _, col := range result.Columns {
 			names = append(names, col.Name)

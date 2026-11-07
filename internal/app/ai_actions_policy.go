@@ -376,6 +376,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-cancel":                    aiAuto(),
 	"db-focus":                     aiAuto(),
 	"db-refresh":                   aiAuto(),
+	"db-refresh-object":            aiAuto(),
+	"db-schema-cache-info":         aiAuto(),
 	"db-filter":                    aiNever("the filter is typed by the user; the AI uses db_schema"),
 	"db-guide":                     aiAuto(),
 	"db-connect":                   aiNever(aiNoPicker),
@@ -767,6 +769,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"db_selection_split":   aiConfirm(ai.ClassSettings),
 	"db_result_new_tab":    aiConfirm(ai.ClassSettings), // DBX-26: display only
 	"db_auto_transpose":    aiConfirm(ai.ClassSettings),
+	"db_introspect_level":  aiConfirm(ai.ClassSettings), // DBX-29
+	"db_complete_catalogs": aiConfirm(ai.ClassSettings),
 	"http_timeout":         aiConfirm(ai.ClassSettings),
 	"http_max_redirects":   aiConfirm(ai.ClassSettings),
 	"http_cookie_jar":      aiConfirm(ai.ClassSettings),
