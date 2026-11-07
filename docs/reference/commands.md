@@ -127,9 +127,11 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Choose Compose Env File… | `services-env-file` |   |   |
 | Containers: Configure Services (services.json) | `services-configure` |   |   |
 | Containers: Connect Registry… | `containers-registry-connect` |   |   |
+| Containers: Connect Selected to Network… | `containers-network-connect` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
+| Containers: Disconnect Selected from Network… | `containers-network-disconnect` |   |   |
 | Containers: Filter Rows… | `containers-filter` |   |   |
 | Containers: Focus | `containers-focus` |   |   |
 | Containers: Focus Project Services | `services-focus` |   |   |
@@ -137,6 +139,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Follow Stats | `containers-stats` |   |   |
 | Containers: Inspect | `containers-inspect` |   |   |
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
+| Containers: Kill Selected… | `containers-kill` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
 | Containers: Make SBOM of Selected Image | `containers-image-sbom` |   |   |
 | Containers: Open Compose File | `services-open-compose` |   |   |
@@ -161,6 +164,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Remove Selected Network… | `containers-network-remove` |   |   |
 | Containers: Remove Selected Volume… | `containers-volume-remove` |   |   |
 | Containers: Remove Selected… | `containers-remove` |   |   |
+| Containers: Rename Selected… | `containers-rename` |   |   |
 | Containers: Restart Project | `containers-compose-restart` |   |   |
 | Containers: Restart Selected | `containers-restart` |   |   |
 | Containers: Restart Service… | `services-restart` |   |   |
@@ -168,6 +172,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
 | Containers: Scan Selected Image for Vulnerabilities | `containers-image-scan` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |
+| Containers: Set CPU and Memory Limits… | `containers-resources` |   |   |
+| Containers: Set Restart Policy… | `containers-restart-policy` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Show Resolved Compose Config | `services-compose-config` |   |   |
 | Containers: Show Service Logs… | `services-logs` |   |   |

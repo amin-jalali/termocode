@@ -364,6 +364,8 @@ func (m *Model) openContainerMenu(r svcRow, x, y int) {
 	if _, ok := m.dbTargetFromRow(r); ok {
 		items = append(items, menu.Item{ID: "databases", Title: dbOpenInDatabasesTitle, Icon: theme.IconDatabases.String()})
 	}
+	items = append(items, menu.Item{Sep: true})
+	items = append(items, containerWriteMenuItems()...) // CTX-19
 	m.menu = menu.New(items, x, y)
 	m.menu.SetScreenSize(m.w, m.h)
 	m.menuOpen = true
@@ -377,6 +379,9 @@ func (m *Model) handleContainerRowMenuSelect(id string, r svcRow) tea.Cmd {
 		return nil
 	}
 	c := st.containerRows[r.idx]
+	if strings.HasPrefix(id, "ctr-") { // containers_write.go
+		return m.containerWritePick(id, c)
+	}
 	switch id {
 	case "start", "stop", "restart":
 		return m.containerAction(id, c)

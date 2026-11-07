@@ -67,6 +67,9 @@ when something changed. When you hide the view (another activity item,
 | `s` / `x` / `r` | start / stop / restart the selected container; on a project group, start / stop / restart that project |
 | `a` / `A` | start all / stop all of the project's services (the **Start all** and **Stop all** buttons); off while the engine is down |
 | `p` | pause or unpause the selected container |
+| `K` | kill the selected container (asks first: Cancel, Stop gently with TERM, or Kill) |
+| `N` | rename the selected container |
+| `w` | change the selected container: restart policy, CPU and memory limits, connect to or disconnect from a network (each asks first) |
 | `e` | shell in the selected container (terminal tab) |
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
@@ -92,6 +95,10 @@ double-click on a container opens its logs, on a context uses it; right
 click opens the menu of the row; the wheel scrolls.
 
 Right-click a row for the same actions as its keys; items that ask first end with `…`.
+On a container the menu also holds Kill…, Rename…, Restart policy…, CPU and
+memory limits…, Connect to network… and Disconnect from network…. Limits are
+typed as `CPUs memory swap`, like `1.5 512m 1g`; `-` keeps a value. Every
+change but the rename shows the exact command on a card with Cancel first.
 Closing a logs tab stops only `logs -f`, never the container.
 
 ## Filter

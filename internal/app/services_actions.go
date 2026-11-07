@@ -414,6 +414,8 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		}, true
 	case confirmKindContainerBulk:
 		return m.runContainerBulk(id), true
+	case confirmKindContainerWrite: // containers_write.go
+		return m.runContainerWrite(id), true
 	case confirmKindContainerRemove:
 		if id == "remove" {
 			return m.runContainerRemove(false), true
@@ -831,6 +833,19 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.openContainerTerminal(c, "stats")
 		}
+	case "K":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.containerWritePick("ctr-kill", c)
+		}
+	case "N":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.containerWritePick("ctr-rename", c)
+		}
+	case "w":
+		if c, ok := m.selectedContainer(); ok {
+			m.openContainerWriteList(c)
+			return m, nil
+		}
 	case "i":
 		if _, ref, ok := m.selectedImage(); ok {
 			return m, m.imageInspect(ref)
@@ -953,6 +968,9 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"o", "open a port in the browser"},
 			[]string{"y", "copy the id"},
 			[]string{"D", "remove (asks first)"},
+			[]string{"K", "kill (asks first)"},
+			[]string{"N", "rename"},
+			[]string{"w", "change: restart policy, limits, networks (asks first)"},
 			[]string{"v / V", "mark for a bulk action / clear marks (s x r D then ask once for all)"})
 	case r.kind == svcRowGroup && r.hostSectionID() == "containers":
 		return with("Project keys",
@@ -1395,6 +1413,12 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-restart", Title: "Containers: Restart Selected"},
 		{ID: "containers-pause", Title: "Containers: Pause or Unpause Selected"},
 		{ID: "containers-remove", Title: "Containers: Remove Selected…"},
+		{ID: "containers-kill", Title: "Containers: Kill Selected…"},
+		{ID: "containers-rename", Title: "Containers: Rename Selected…"},
+		{ID: "containers-restart-policy", Title: "Containers: Set Restart Policy…"},
+		{ID: "containers-resources", Title: "Containers: Set CPU and Memory Limits…"},
+		{ID: "containers-network-connect", Title: "Containers: Connect Selected to Network…"},
+		{ID: "containers-network-disconnect", Title: "Containers: Disconnect Selected from Network…"},
 		{ID: "containers-logs", Title: "Containers: Follow Logs"},
 		{ID: "containers-shell", Title: "Containers: Open Shell"},
 		{ID: "containers-attach", Title: "Containers: Attach"},
@@ -1738,6 +1762,9 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 			if !ok {
 				return m.servicesToast(toast.Info, "Select a container row first", "")
 			}
+			if cmd, ok := m.containerWritePalette(id, c); ok { // CTX-19
+				return cmd
+			}
 			switch id {
 			case "containers-start":
 				return m.containerAction("start", c)
@@ -1837,6 +1864,9 @@ func (m *Model) handleServicesPickerSelect(id string) tea.Cmd {
 	verb, key, _ := strings.Cut(rest, ":")
 	if verb == "envfile" {
 		return m.onComposeEnvFile(key)
+	}
+	if strings.HasPrefix(verb, "ctr-") { // containers_write.go
+		return m.onContainerWritePicked(verb, key)
 	}
 	section, name, _ := strings.Cut(key, "/")
 	switch verb {

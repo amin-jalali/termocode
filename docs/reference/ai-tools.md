@@ -2024,8 +2024,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-image-scan` | Containers: Scan Selected Image for Vulnerabilities | never | a scan runs an outside scanner for minutes and may download its database; it is the user's |
 | `containers-image-tag` | Containers: Tag Selected Image… | never | tagging an image is the user's; nothing is offered to the model |
 | `containers-inspect` | Containers: Inspect | auto |   |
+| `containers-kill` | Containers: Kill Selected… | never | killing a container is the user's; it asks on a card |
 | `containers-logs` | Containers: Follow Logs | auto |   |
+| `containers-network-connect` | Containers: Connect Selected to Network… | never | network changes are the user's; it asks on a card |
 | `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |
+| `containers-network-disconnect` | Containers: Disconnect Selected from Network… | never | network changes are the user's; it asks on a card |
 | `containers-network-prune` | Containers: Prune Networks… | never | pruning networks is the user's; nothing is offered to the model |
 | `containers-network-remove` | Containers: Remove Selected Network… | never | removing is the user's; nothing is offered to the model |
 | `containers-open-databases` | Containers: Open in Databases | never | opens a picker or prompt that only the user can answer; use a typed tool (db_connections) |
@@ -2036,7 +2039,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-registry-connect` | Containers: Connect Registry… | never | signing in to a registry takes the user's token; it is the user's |
 | `containers-registry-signout` | Containers: Sign Out of Registry… | never | signing out of a registry is the user's |
 | `containers-remove` | Containers: Remove Selected… | never | container removal requires the user's confirm card |
+| `containers-rename` | Containers: Rename Selected… | never | renaming a container is the user's |
+| `containers-resources` | Containers: Set CPU and Memory Limits… | never | CPU and memory limits are the user's; it asks on a card |
 | `containers-restart` | Containers: Restart Selected | confirm (always asks) |   |
+| `containers-restart-policy` | Containers: Set Restart Policy… | never | the restart policy is the user's; it asks on a card |
 | `containers-search` | Containers: Search Docker Hub… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks Docker Hub on the user's behalf |
 | `containers-shell` | Containers: Open Shell | never | opens a picker or prompt that only the user can answer; use a typed tool (container shell) |
 | `containers-start` | Containers: Start Selected | confirm (always asks) |   |
