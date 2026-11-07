@@ -33,10 +33,10 @@ const (
 // FocusLane is lane option i.
 func FocusLane(i int) FocusID { return FocusID(i) }
 
-// StartMsg: Start was pressed with a task and 2–4 lanes.
+// StartMsg: Start was pressed with a task and 2–8 lanes.
 type StartMsg struct {
 	Task, Verify string
-	Lanes        []string // option ids, in list order
+	Lanes        []string // option ids, in list order, once per lane (CMP-18)
 }
 
 // CancelMsg: Esc or Cancel; nothing starts.
@@ -45,7 +45,7 @@ type CancelMsg struct{}
 // Form is the Agent: Race… card.
 type Form struct {
 	opts         []Option
-	on           []bool
+	count        []int // lanes per option (CMP-18 fan-out count)
 	task, verify []rune
 	focus        FocusID
 	err          string
@@ -58,7 +58,7 @@ const formMaxW = 76
 
 // NewForm opens the card with the focus on the task.
 func NewForm(opts []Option, task, verify string) Form {
-	return Form{opts: opts, on: make([]bool, len(opts)), task: []rune(task), verify: []rune(verify), focus: FocusTask}
+	return Form{opts: opts, count: make([]int, len(opts)), task: []rune(task), verify: []rune(verify), focus: FocusTask}
 }
 
 func (f *Form) SetSize(w, h int)    { f.w, f.h = w, h }
@@ -67,15 +67,24 @@ func (f *Form) SetFocus(id FocusID) { f.focus = id; f.err = "" }
 func (f Form) Task() string         { return strings.TrimSpace(string(f.task)) }
 func (f Form) Verify() string       { return strings.TrimSpace(string(f.verify)) }
 
-// Chosen are the ticked lanes' ids.
+// Chosen are the lanes' agent ids: each option as often as its count, in
+// list order.
 func (f Form) Chosen() []string {
 	var out []string
 	for i, o := range f.opts {
-		if f.on[i] {
+		for k := 0; k < f.count[i]; k++ {
 			out = append(out, o.ID)
 		}
 	}
 	return out
+}
+
+// Count is how many lanes run option i.
+func (f Form) Count(i int) int {
+	if i < 0 || i >= len(f.count) {
+		return 0
+	}
+	return f.count[i]
 }
 
 // order is the Tab order.
@@ -108,7 +117,22 @@ func (f *Form) field() *[]rune {
 	return nil
 }
 
+// toggle ticks lane i on (one lane) or off (none, whatever its count).
 func (f *Form) toggle(i int) {
+	if i < 0 || i >= len(f.opts) {
+		return
+	}
+	if f.count[i] > 0 {
+		f.err = ""
+		f.count[i] = 0
+		return
+	}
+	f.bump(i, 1)
+}
+
+// bump runs option i in d more lanes (d < 0: fewer), within 0 and the
+// race's lane limit.
+func (f *Form) bump(i, d int) {
 	if i < 0 || i >= len(f.opts) {
 		return
 	}
@@ -117,11 +141,11 @@ func (f *Form) toggle(i int) {
 		f.err = f.opts[i].Title + ": " + f.opts[i].Hint
 		return
 	}
-	if !f.on[i] && len(f.Chosen()) >= agentrace.MaxLanes {
+	if d > 0 && len(f.Chosen()) >= agentrace.MaxLanes {
 		f.err = "A race has at most " + strconv.Itoa(agentrace.MaxLanes) + " lanes"
 		return
 	}
-	f.on[i] = !f.on[i]
+	f.count[i] = max(f.count[i]+d, 0)
 }
 
 func emit(v tea.Msg) tea.Cmd { return func() tea.Msg { return v } }
@@ -159,6 +183,13 @@ func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
 	case tea.KeyUp:
 		f.move(-1)
 	case tea.KeyLeft, tea.KeyRight:
+		if f.focus >= 0 {
+			if k.Type == tea.KeyRight {
+				f.bump(int(f.focus), 1)
+			} else {
+				f.bump(int(f.focus), -1)
+			}
+		}
 		if f.focus == FocusCancel || f.focus == FocusStart {
 			if f.focus == FocusCancel {
 				f.focus = FocusStart
@@ -193,6 +224,14 @@ func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
 			*fld = nil
 		}
 	case tea.KeyRunes:
+		if fld == nil && f.focus >= 0 && len(k.Runes) == 1 {
+			switch k.Runes[0] {
+			case '+', '=':
+				f.bump(int(f.focus), 1)
+			case '-', '_':
+				f.bump(int(f.focus), -1)
+			}
+		}
 		if fld != nil {
 			for _, r := range k.Runes {
 				if r == '\n' || r == '\r' || r == '\t' {
@@ -319,7 +358,8 @@ func (f Form) layout() ([]string, []hit) {
 	input("task", f.task, f.focus == FocusTask, "what every agent should do")
 	space()
 	n := len(f.Chosen())
-	label("Lanes  "+strconv.Itoa(n)+" of "+strconv.Itoa(agentrace.MinLanes)+"–"+strconv.Itoa(agentrace.MaxLanes), f.focus >= 0)
+	label("Lanes  "+strconv.Itoa(n)+" of "+strconv.Itoa(agentrace.MinLanes)+"–"+strconv.Itoa(agentrace.MaxLanes)+
+		"  · +/- sets how many of each agent", f.focus >= 0)
 
 	// The lane rows: as many as fit, scrolled to the focus. fixed is
 	// every other row of the card, the border and a free row each side.
@@ -343,8 +383,11 @@ func (f Form) layout() ([]string, []hit) {
 			row = lipgloss.NewStyle().Background(p.sel)
 		}
 		box := "[ ]"
-		if f.on[i] {
+		switch c := f.count[i]; {
+		case c == 1:
 			box = "[x]"
+		case c > 1:
+			box = "[" + strconv.Itoa(c) + "]"
 		}
 		if o.Disabled {
 			box = "[-]"
