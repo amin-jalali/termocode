@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -786,8 +787,8 @@ func (m *Model) openDatabaseTypePicker() tea.Cmd { return m.databaseTypePicker(f
 // SSH tunnel steps, then the test.
 func (m *Model) databaseAddRemote() tea.Cmd { return m.databaseTypePicker(true) }
 
-// dbTypePickerItems is the add picker: the drivers, then the MySQL
-// family presets (DBX-61).
+// dbTypePickerItems is the add picker: the drivers, then the PostgreSQL
+// family presets (DBX-60) and the MySQL family presets (DBX-61).
 func dbTypePickerItems(remote bool) []picker.Item {
 	items := []picker.Item{
 		{ID: "postgres", Title: "PostgreSQL", Hint: "default port 5432"},
@@ -798,6 +799,9 @@ func dbTypePickerItems(remote bool) []picker.Item {
 	}
 	if remote {
 		items = []picker.Item{items[0], items[1], items[3]}
+	}
+	for _, p := range dbclient.PGPresets() {
+		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Label, Hint: fmt.Sprintf("PostgreSQL family · port %d", p.Port)})
 	}
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
@@ -828,11 +832,15 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 		return nil
 	}
 	preset, isPreset := dbclient.MySQLPreset{}, false
+	pgPreset, isPG := dbclient.PGPreset{}, false
 	if id, ok := strings.CutPrefix(kind, "preset:"); ok {
-		if preset, isPreset = dbclient.PresetByID(id); !isPreset {
+		if pgPreset, isPG = dbclient.PGPresetByID(id); isPG {
+			kind = "postgres"
+		} else if preset, isPreset = dbclient.PresetByID(id); !isPreset {
 			return nil
+		} else {
+			kind = preset.Driver
 		}
-		kind = preset.Driver
 	}
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
@@ -841,6 +849,18 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	switch kind {
 	case "postgres":
 		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "postgres", 5432, "postgres", "postgres"
+		if isPG { // DBX-60: the PG driver with the preset's defaults
+			c := &s.pendingConn
+			c.Preset, c.Port = pgPreset.ID, pgPreset.Port
+			if pgPreset.RequireSSL {
+				c.SSL = &dbclient.SSLConfig{Mode: "require"}
+			}
+			cmd := m.databaseAddPrompt(promptKindDBHost, pgPreset.Label+": server address", "Host name or address:", "localhost", false)
+			if pgPreset.RequireSSL {
+				m.prompt.SetNote(pgPreset.Label + " only takes TLS connections: SSL is set to require.")
+			}
+			return cmd
+		}
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
 	case "mysql":
 		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User = "mysql", 3306, "root"
