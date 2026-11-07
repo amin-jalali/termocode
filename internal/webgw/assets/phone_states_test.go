@@ -11,7 +11,7 @@ import (
 // ("Offline — answers are not saved", answers greyed), the laptop asleep
 // with its last seen time, and an error line with Retry.
 
-func readSrc(t *testing.T, path string) string {
+func readStatesSrc(t *testing.T, path string) string {
 	t.Helper()
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -28,9 +28,9 @@ var phoneStateExports = map[string][]string{
 }
 
 func TestPhoneStatesExported(t *testing.T) {
-	idx := readSrc(t, "src/phone/index.ts")
+	idx := readStatesSrc(t, "src/phone/index.ts")
 	for file, names := range phoneStateExports {
-		src := readSrc(t, file)
+		src := readStatesSrc(t, file)
 		for _, name := range names {
 			if !regexp.MustCompile(`export (function|const|let) ` + name + `\b`).MatchString(src) {
 				t.Errorf("%s does not export %s", file, name)
@@ -73,7 +73,7 @@ func TestPhoneStatesStrings(t *testing.T) {
 // A laptop that stays out of reach while the phone has a network is
 // asleep after 30 s; the bar shows after 1 s, as on the web panel.
 func TestPhoneConnTimes(t *testing.T) {
-	src := readSrc(t, "src/phone/conn.ts")
+	src := readStatesSrc(t, "src/phone/conn.ts")
 	for _, want := range []string{"ASLEEP_AFTER_MS = 30_000", "SHOW_AFTER_MS = 1000"} {
 		if !strings.Contains(src, want) {
 			t.Errorf("conn.ts has no %q", want)
@@ -112,11 +112,11 @@ func TestPhoneStatesCSS(t *testing.T) {
 // the composer, and every sheet action that is not local (Cancel).
 func TestPhoneAnswersGreyOffline(t *testing.T) {
 	for _, f := range []string{"src/phone/Composer.tsx", "src/phone/Sheet.tsx"} {
-		if !strings.Contains(readSrc(t, f), "phoneOnline.value") {
+		if !strings.Contains(readStatesSrc(t, f), "phoneOnline.value") {
 			t.Errorf("%s does not read phoneOnline", f)
 		}
 	}
-	if !regexp.MustCompile(`local\?: boolean`).MatchString(readSrc(t, "src/phone/Sheet.tsx")) {
+	if !regexp.MustCompile(`local\?: boolean`).MatchString(readStatesSrc(t, "src/phone/Sheet.tsx")) {
 		t.Error("SheetAction has no local flag for actions that work offline")
 	}
 }
@@ -124,7 +124,7 @@ func TestPhoneAnswersGreyOffline(t *testing.T) {
 // The error line is an alert with a shape, words and Retry; the bar's
 // changing text is not read again and again by a screen reader.
 func TestPhoneStatesA11y(t *testing.T) {
-	s := readSrc(t, "src/phone/States.tsx")
+	s := readStatesSrc(t, "src/phone/States.tsx")
 	for _, want := range []string{`role="alert"`, `t("ph.retry")`, `aria-hidden="true"`, `aria-busy="true"`, `role="status"`} {
 		if !strings.Contains(s, want) {
 			t.Errorf("States.tsx has no %s", want)
@@ -135,7 +135,7 @@ func TestPhoneStatesA11y(t *testing.T) {
 // The kit shows every state; it never imports the live link (the kit has
 // no session).
 func TestPhoneStatesInKit(t *testing.T) {
-	kit := readSrc(t, "src/kit/main.tsx")
+	kit := readStatesSrc(t, "src/kit/main.tsx")
 	for _, c := range []string{"<PhoneSkeleton", "<ConnLine", "<ErrorLine"} {
 		if !strings.Contains(kit, c) {
 			t.Errorf("the kit does not show %s", c)
@@ -145,7 +145,7 @@ func TestPhoneStatesInKit(t *testing.T) {
 		t.Error("the kit imports phone/live (the live link)")
 	}
 	for _, f := range []string{"src/phone/conn.ts", "src/phone/States.tsx", "src/phone/Composer.tsx", "src/phone/Sheet.tsx"} {
-		if strings.Contains(readSrc(t, f), "../session") {
+		if strings.Contains(readStatesSrc(t, f), "../session") {
 			t.Errorf("%s imports the session; only phone/live.tsx may", f)
 		}
 	}

@@ -16,7 +16,7 @@ import (
 // about it. The sheet is phone code: it comes with the phone's lazy
 // chunk, never app.js.
 
-func readSrc(t *testing.T, file string) string {
+func readTaskSheetSrc(t *testing.T, file string) string {
 	t.Helper()
 	b, err := os.ReadFile(file)
 	if err != nil {
@@ -31,7 +31,7 @@ func readSrc(t *testing.T, file string) string {
 var taskActionRe = regexp.MustCompile(`(?m)^\s*\{\s*id:\s*"([a-z]+)",\s*kind:\s*"([a-z]+)",\s*label:\s*"([a-z0-9_.]+)"(,\s*viewer:\s*true)?\s*\},?\s*$`)
 
 func TestTaskSheetActionsInOrder(t *testing.T) {
-	src := readSrc(t, "src/state/taskactions.ts")
+	src := readTaskSheetSrc(t, "src/state/taskactions.ts")
 	rows := taskActionRe.FindAllStringSubmatch(src, -1)
 	var ids []string
 	keys := map[string]bool{}
@@ -72,11 +72,11 @@ func TestTaskSheetActionsInOrder(t *testing.T) {
 }
 
 func TestTaskSheetSafeAndConfirmed(t *testing.T) {
-	src := readSrc(t, "src/phone/TaskSheet.tsx")
+	src := readTaskSheetSrc(t, "src/phone/TaskSheet.tsx")
 	if !regexp.MustCompile(`export function TaskSheet\b`).MatchString(src) {
 		t.Fatal("TaskSheet.tsx does not export function TaskSheet")
 	}
-	if !regexp.MustCompile(`\bTaskSheet\b`).MatchString(readSrc(t, "src/phone/index.ts")) {
+	if !regexp.MustCompile(`\bTaskSheet\b`).MatchString(readTaskSheetSrc(t, "src/phone/index.ts")) {
 		t.Error("src/phone/index.ts does not export TaskSheet")
 	}
 	// Cancel is the safe action of every step.
