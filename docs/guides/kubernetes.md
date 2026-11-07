@@ -2,8 +2,8 @@
 
 The **Kubernetes** view shows one cluster: the pods, deployments,
 services and jobs of one namespace. It reads the cluster with your own
-`kubectl`, so it sees what `kubectl` sees. It is read-only, with one
-exception: you can restart a deployment, after a question.
+`kubectl`, so it sees what `kubectl` sees. It is read-only, with two
+exceptions: you can restart or scale a deployment, after a question.
 
 ## Open the view
 
@@ -63,6 +63,7 @@ kubeconfig, so other terminals keep their context.
 | `f` | Pod: start or stop a port-forward. |
 | `y` | Copy the name. |
 | `r` | Deployment: restart it (asks first). |
+| `s` | Deployment: scale it (asks the number, then asks first). |
 | `c` / `n` | Pick the context / the namespace. |
 | `R` | Load the lists now. |
 | `?` | Show these keys. |
@@ -90,13 +91,22 @@ context, the namespace and the command (`kubectl rollout restart`).
 **Cancel** is the first button and has the focus, so `Enter` or `Esc`
 alone never restarts anything. **Restart** replaces the pods one by one.
 
+## Scale a deployment
+
+`s` on a deployment asks for the number of replicas; it starts at the
+current number. A number from 0 to 1000 opens a card with the change
+(`2 → 5`), the context, the namespace and the command (`kubectl
+scale`). 0 stops every pod, and the card says so. **Cancel** is the
+first button and has the focus, so `Enter` or `Esc` alone never scales
+anything. The same number as now changes nothing.
+
 ## The AI
 
 The AI can open the view and load it again. It can also read the
 cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
-Secrets in their answers are hidden. The AI can never restart a
-deployment, start a port-forward or switch the context.
+Secrets in their answers are hidden. The AI can never restart or
+scale a deployment, start a port-forward or switch the context.
 
 ## When something is wrong
 

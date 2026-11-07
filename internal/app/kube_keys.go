@@ -75,6 +75,11 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.askKubeRestart(d)
 			return m, nil
 		}
+	case "s":
+		if d, ok := st.selectedDeployment(); ok {
+			m.askKubeScale(d, "", "")
+			return m, nil
+		}
 	case "f":
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubeToggleForward(p, 0)
@@ -121,6 +126,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"E", "events · on a header: the namespace's"},
 		[]string{"y", "copy the name"},
 		[]string{"r", "deployment: restart (asks first)"},
+		[]string{"s", "deployment: scale (asks first)"},
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},
 		[]string{"R", "load now"},

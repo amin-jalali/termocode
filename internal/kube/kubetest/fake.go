@@ -26,6 +26,7 @@
 //	rollout-history.txt  answer of `rollout history …`
 //	undo.err             `rollout undo` fails with this stderr
 //	set-image.err        `set image` fails with this stderr
+//	scale.err            `scale` fails with this stderr
 //	logs.txt             answer of `logs …`
 //	pf-port.txt          the local port `port-forward` reports (43123)
 //	pf.err               `port-forward` fails with this stderr
@@ -102,6 +103,9 @@ logs) cat "$D/logs.txt" 2>/dev/null; exit 0 ;;
 top)
   if [ -f "$D/top-$2.err" ]; then cat "$D/top-$2.err" >&2; exit 1; fi
   cat "$D/top-$2.txt" 2>/dev/null; exit 0 ;;
+scale)
+  if [ -f "$D/scale.err" ]; then cat "$D/scale.err" >&2; exit 1; fi
+  echo "$2 scaled"; exit 0 ;;
 port-forward)
   if [ -f "$D/pf.err" ]; then cat "$D/pf.err" >&2; exit 1; fi
   echo $$ > "$D/pf.pid"
