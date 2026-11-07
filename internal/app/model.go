@@ -704,6 +704,10 @@ type Model struct {
 	// and the one running.
 	devcontainerPending *devcontainerRun
 	devcontainer        *devcontainerRun
+	// devcontainerOffered: the open-project offer showed this session;
+	// dcOfferRoot is the folder its card is about.
+	devcontainerOffered bool
+	dcOfferRoot         string
 	hotExitWaiting      []hotBackup
 	saveAfter           saveContinuation
 	confirmTargetID     int
@@ -1073,6 +1077,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, agentCtlInitCmd())            // OMX-33: the agent control socket (agent_ctl.go)
 	cmds = append(cmds, m.explorer.ScheduleLoads())   // FIX-2: a container root's first listing
 	cmds = append(cmds, wfxBootCmd())                 // WFX-15: the workflow scheduler (workflows_sched.go)
+	cmds = append(cmds, m.devcontainerOfferCmd())     // RC-7: "reopen in a dev container?" (devcontainer_offer.go)
 	if cmd := m.containerWatchInitCmd(); cmd != nil { // RC-4: is the container still running? (container_workspace.go)
 		cmds = append(cmds, cmd)
 	}

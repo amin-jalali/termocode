@@ -167,8 +167,11 @@ func TestReopenInDevContainerStepFailureStops(t *testing.T) {
 
 func TestReopenInDevContainerWithoutFileOrWithCompose(t *testing.T) {
 	m, _, root := dcProject(t, `{"dockerComposeFile": "c.yml", "service": "app"}`)
+	old := devcontainerLookCLI
+	devcontainerLookCLI = func() string { return "" }
+	t.Cleanup(func() { devcontainerLookCLI = old })
 	m.openDevContainerReopen()
-	if m.confirmOpen || !strings.Contains(regToast(m), "Cannot make this dev container") {
+	if m.confirmOpen || !strings.Contains(regToast(m), "devcontainer CLI") {
 		t.Fatalf("compose: card %v toast %q", m.confirmOpen, regToast(m))
 	}
 	_ = os.RemoveAll(filepath.Join(root, ".devcontainer"))
