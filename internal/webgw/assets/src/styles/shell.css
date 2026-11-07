@@ -14,6 +14,9 @@
 /* Without the tab bar (rail layouts) the shell itself keeps above the
    home bar. */
 .shell.layout-tablet, .shell.layout-desktop { padding-bottom: env(safe-area-inset-bottom); }
+/* A focus near the edge never scrolls the desktop sideways (hidden still
+   lets the browser scroll it, which slid the activity bar out of view). */
+.shell.layout-desktop { overflow: clip; }
 html[data-kb="up"] .shell { transform: translateY(var(--vvtop, 0px)); }
 html[data-kb="up"] .layout-phone .tabbar,
 html[data-kb="up"] .layout-phone .pill-wrap { display: none; }

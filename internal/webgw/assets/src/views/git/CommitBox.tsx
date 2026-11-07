@@ -82,7 +82,7 @@ export function CommitBox({ staged, branch }: { staged: number; branch: string }
       )}
       {asking ? (
         <div class="commit-ask" role="group" aria-label={t("git.commit_do")}>
-          <p class="commit-ask-text">{t("git.commit_confirm", { n: staged, branch })}</p>
+          <p class="commit-ask-text">{tn("git.commit_confirm", staged, { branch })}</p>
           <div class="choices">
             <button type="button" class="btn btn-neutral" ref={cancel} onClick={() => setAsking(false)}>
               {t("cancel")}
