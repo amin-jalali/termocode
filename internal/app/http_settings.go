@@ -31,7 +31,7 @@ var httpSettingRows = []httpSettingRow{
 	{"setting-http-tls-insecure", "http_tls_insecure", "bool", "false",
 		"Skip TLS certificate checks for your own HTTP requests (never for the AI's). Prefer the k retry on the response page, which is per host and per session.", 0, 0},
 	{"setting-http-cookie-jar", "http_cookie_jar", "bool", "true",
-		"Keep cookies between HTTP requests (in memory only, per session); # @no-cookie-jar in a request turns it off for that request.", 0, 0},
+		"Keep cookies between HTTP requests, one jar per environment, saved in http/cookies.json (0600); HTTP: Cookies… shows them; # @no-cookie-jar in a request turns it off for that request.", 0, 0},
 	{"setting-http-history-max", "http_history_max", "int", "200",
 		"Most entries kept in http/history.jsonl.", 1, 100000},
 }
@@ -130,6 +130,8 @@ func httpConfigFiles() []ConfigFile {
 			"A normal `.http` file (the format mobocode reads too). File mode 0600.", "Yes. HTTP: Saved Requests… → Open saved.http."},
 		{"config", "http/history.jsonl", "HTTP history: one JSON line per send (yours and the AI's). Holds the request as written (`{{templates}}`, secret headers `[REDACTED]`), never the resolved values; the first 256 KB of a text answer. File mode 0600, folder 0700.",
 			"JSON lines, written by termocode; `http_history_max` trims it.", "No (state). HTTP: History… → Clear history…, or delete it."},
+		{"config", "http/cookies.json", "HTTP cookies, one jar per environment (servers set them; `http_cookie_jar` turns the jar off). File mode 0600, folder 0700.",
+			"JSON, written by termocode.", "No (state). HTTP: Cookies… → Clear all cookies…, or delete it."},
 		{"config", "http/state.json", "The HTTP environment chosen per workspace (HTTP: Select Environment…).",
 			"JSON `{\"envs\": {workspace: env}}`.", "Not needed."},
 		{"workspace", httpclient.EnvFile, "HTTP environments for `{{name}}` in `.http` files, next to them or in a parent folder up to the workspace root (the nearest wins). `$shared` applies to every environment.",

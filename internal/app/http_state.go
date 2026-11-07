@@ -183,6 +183,12 @@ type httpState struct {
 	client    *httpclient.Client
 	clientSig string
 
+	cookieMu   sync.Mutex // guards cookies
+	cookies    *httpclient.CookieStore
+	cookieEnv  string // the cookies picker's environment
+	cookieList []httpclient.Cookie
+	cookieEdit httpclient.Cookie
+
 	gen     int
 	cancel  context.CancelFunc
 	running *httpRun
@@ -242,7 +248,8 @@ func (m *Model) httpS() *httpState {
 	return m.http
 }
 
-// httpClientFor returns the shared client (cookie jar per app session),
+// httpClientFor returns the shared client (cookies per environment,
+// saved in http/cookies.json),
 // rebuilt when the settings change.
 func (s *httpState) httpClient(set httpSettings) *httpclient.Client {
 	sig := fmt.Sprint(set.timeout(), set.maxRedirects(), set.maxBody(), set.cookieJar())
@@ -257,6 +264,7 @@ func (s *httpState) httpClient(set httpSettings) *httpclient.Client {
 			MaxRedirects: set.maxRedirects(),
 			MaxBody:      set.maxBody(),
 			CookieJar:    set.cookieJar(),
+			Cookies:      s.cookieStore(),
 			UserAgent:    "termocode/" + strings.TrimPrefix(termocodeVersion, "v"),
 		})
 		s.clientSig = sig

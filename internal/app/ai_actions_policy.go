@@ -606,6 +606,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"http-cancel":           aiConfirm(ai.ClassIDE), // stops the user's request
 	"http-last-response":    aiAuto(),
 	"http-history":          aiNever(aiNoPicker + " (http_history)"),
+	"http-cookies":          aiNever(aiNoPicker + " (cookies stay with the user)"),
 	"http-env-select":       aiNever(aiNoPicker + " (http_set_environment)"),
 	"http-env-open":         aiAuto(),
 	"http-env-open-private": aiNever("opens the file that holds the user's secrets"),
