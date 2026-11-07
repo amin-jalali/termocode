@@ -80,7 +80,7 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"answerWebUseLAN":          {"web_access.go"}, // Use this Wi-Fi: the owner's button only
 		"webSwitchToLAN":           {"web_pair_lan.go"},
 		"answerWebDeviceRemove":    {"web_access.go"},
-		"openWebPair":              {"web_access.go", "ai_chat_comments.go"}, // CMP-88 Share this chat: the owner's Make link button (ai-share-chat is aiNever)
+		"openWebPair":              {"web_access.go", "ai_chat_comments.go", "web_panel.go"}, // CMP-88 Share this chat: the owner's Make link button (ai-share-chat is aiNever); web_panel.go: the QR once a panel the owner started for pairing is up
 		"webRevokeDevice":          {"web_access.go"},
 		"answerWebGrant":           {"web_access.go"},
 		"webMakeViewer":            {"web_access.go"},

@@ -49,6 +49,7 @@ type webPanelState struct {
 	stopping bool
 	plain    string // the newest launch secret, for the browser link
 	open     bool   // open the link in a browser once up
+	pairOnUp bool   // show the pairing QR code once up (Web: Pair a Device…)
 	copy     bool   // copy the link once up
 	waiters  []*webCall
 	// sshPort (0: plain TCP) is SSH mode (WEB-29): the gateway serves on
@@ -213,6 +214,10 @@ func (m *Model) onWebPanelUp(msg webPanelUpMsg) tea.Cmd {
 	if st.sshPort > 0 {
 		return m.webToast(toast.Info, "Web panel is on, through your ssh connection.")
 	}
+	if st.pairOnUp {
+		st.pairOnUp, st.open, st.copy, st.plain = false, false, false, ""
+		return m.openWebPair(false)
+	}
 	cmd := m.webDeliverLink(st.open, st.copy)
 	st.open, st.copy = false, false
 	return cmd
@@ -333,6 +338,10 @@ func (m *Model) onWebPanelExit(msg webPanelExitMsg) tea.Cmd {
 	for _, w := range st.waiters {
 		w.fail(webproto.CodeInternal, "The web panel stopped.")
 	}
+	if acc := m.webAcc; acc != nil && acc.restartLAN {
+		acc.restartLAN = false
+		return m.startWebPanelForPair() // web_pair_lan.go: Use this Wi-Fi
+	}
 	if st.stopping {
 		return nil // the stop said so already
 	}
@@ -345,6 +354,16 @@ func (m *Model) stopWebPanel() tea.Cmd {
 	if st == nil {
 		return m.webToast(toast.Info, "The web panel is not running.")
 	}
+	if m.webAcc != nil {
+		m.webAcc.restartLAN = false // the kill switch wins over Use this Wi-Fi
+	}
+	m.stopWebPanelQuiet()
+	return m.webToast(toast.Info, "Web panel stopped. All browsers were disconnected.")
+}
+
+// stopWebPanelQuiet is the kill switch without its toast.
+func (m *Model) stopWebPanelQuiet() {
+	st := m.webPanel
 	st.stopping = true
 	m.closeWebForwards() // web_forward.go: before the bye, so the audit lines reach the gateway
 	if m.web != nil {
@@ -356,7 +375,6 @@ func (m *Model) stopWebPanel() tea.Cmd {
 			proc.terminate()
 		}
 	})
-	return m.webToast(toast.Info, "Web panel stopped. All browsers were disconnected.")
 }
 
 // newLink makes a launch secret, remembers its digest for webLinkTTL and

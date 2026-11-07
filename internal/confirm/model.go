@@ -45,6 +45,7 @@ type Model struct {
 	keyRows    []KeyRow // a key card's table (WithKeys)
 	safeID     string   // the safe answer of a Risky card
 	picture    []string // lines shown exactly as given (WithPicture)
+	caption    []string // lines centred under the picture (WithCaption)
 	diff       []string // lines of a change, coloured by their first cell (WithDiff)
 }
 
@@ -80,6 +81,13 @@ func (m Model) WithFocus(n int) Model {
 // fit it.
 func (m Model) WithPicture(lines []string) Model {
 	m.picture = append([]string(nil), lines...)
+	return m
+}
+
+// WithCaption shows lines centred under the picture, in the body's
+// colour (an address under a QR code).
+func (m Model) WithCaption(lines ...string) Model {
+	m.caption = append([]string(nil), lines...)
 	return m
 }
 
@@ -476,6 +484,7 @@ func (m Model) layoutRest(boxW, innerW, bodyW int, bodyLines []string) confirmDi
 	if len(m.picture) > 0 {
 		pictureAt = len(bodyLines) + 1
 		bodyLines = append(append(bodyLines, ""), m.picture...)
+		bodyLines = append(bodyLines, m.caption...)
 	}
 	diffAt, diffN := -1, 0
 	if len(m.diff) > 0 {
@@ -647,6 +656,11 @@ func (m Model) Box() string {
 			pad := max(0, (innerW-lipgloss.Width(line))/2)
 			row := bgFill.Render(strings.Repeat(" ", pad)) + picStyle.Render(line)
 			rows = append(rows, padBg(row, innerW))
+			continue
+		}
+		if at := dims.pictureAt + len(m.picture); dims.pictureAt >= 0 && i >= at && i < at+len(m.caption) {
+			pad := max(0, (innerW-lipgloss.Width(line))/2)
+			rows = append(rows, padBg(bgFill.Render(strings.Repeat(" ", pad))+bodyStyle.Render(line), innerW))
 			continue
 		}
 		if dims.diffAt >= 0 && i >= dims.diffAt && i < dims.diffAt+dims.diffN {
