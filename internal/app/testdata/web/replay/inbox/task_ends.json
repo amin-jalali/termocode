@@ -1,0 +1,68 @@
+{
+  "topic": "inbox",
+  "snap0": {
+    "counts": {
+      "done": 0,
+      "failed": 0,
+      "needs_you": 0,
+      "working": 1
+    },
+    "items": [
+      {
+        "can": [
+          "stop"
+        ],
+        "id": "task:build",
+        "kind": "task",
+        "ref": "build",
+        "since": 1699999940000,
+        "state": "working",
+        "title": "build"
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "counts": {
+        "done": 1,
+        "failed": 0,
+        "needs_you": 0,
+        "working": 0
+      },
+      "items": [
+        {
+          "can": [
+            "run"
+          ],
+          "id": "task:build",
+          "kind": "task",
+          "ref": "build",
+          "since": 1699999940000,
+          "state": "done",
+          "title": "build"
+        }
+      ]
+    }
+  ],
+  "snapn": {
+    "items": [
+      {
+        "id": "task:build",
+        "kind": "task",
+        "ref": "build",
+        "title": "build",
+        "since": 1699999940000,
+        "state": "done",
+        "can": [
+          "run"
+        ]
+      }
+    ],
+    "counts": {
+      "needs_you": 0,
+      "working": 0,
+      "failed": 0,
+      "done": 1
+    }
+  }
+}

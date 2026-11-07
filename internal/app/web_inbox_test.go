@@ -215,3 +215,24 @@ func TestPerfInboxBuild200(t *testing.T) {
 	}
 	perfbudget.Check(t, "web_inbox_build_200", perfMs(perfMedian(ds)))
 }
+
+// Spec (MOB-2, WEB-7): the inbox replay golden: a task run that ends
+// replays to the final snapshot.
+func TestInboxReplayGolden(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	now := webTestClock(t)
+	h := webTestHub(t, &m)
+	m.ws = workspace.Workspace{Root: t.TempDir()}
+	r := webTestTaskRun(&m, "build", now.Add(-time.Minute), true, 0)
+	c := webReplayRecord(t, &m, h, "inbox", func() {
+		r.Running = false
+		*now = now.Add(time.Second)
+		m.webAfterUpdate(nil)
+	})
+	if len(c.Deltas) != 1 {
+		t.Fatalf("deltas %d, want 1", len(c.Deltas))
+	}
+	webReplayCheck(t, h.topics["inbox"], c)
+	webReplayGolden(t, webReplayPath("inbox", "task_ends"), c)
+}
