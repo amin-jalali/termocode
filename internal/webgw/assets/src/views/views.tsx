@@ -26,12 +26,12 @@ import { DebugView } from "./run/DebugView";
 import { ServicesView } from "./run/ServicesView";
 import { KubeView } from "./run/KubeView";
 import { View } from "./View";
+import { SubView } from "./more/SubView";
 import { FileView } from "./FileView";
 import { home as phone, homeFailed as phoneFailed, loadHome } from "../lib/lazy";
 import { Button } from "../ui/Button";
 import { TreeView } from "./Files";
 import { PhoneHost } from "./PhoneHost";
-import { layout } from "../lib/layout";
 
 export { ChatView } from "./Chat";
 
@@ -65,6 +65,27 @@ function ToolsView() {
   );
 }
 
+/** ReviewLazy is #/more/review (MOB-14): the phone views' review, loaded
+ * from home.js on first use. */
+function ReviewLazy() {
+  const m = phone.value;
+  useEffect(() => {
+    if (!m) loadHome().catch(() => undefined);
+  }, [m]);
+  if (m) return <m.ReviewView />;
+  return (
+    <SubView title={t("pill.review")} name="review">
+      {phoneFailed.value ? (
+        <button type="button" class="btn btn-neutral" onClick={() => loadHome().catch(() => undefined)}>
+          {t("retry")}
+        </button>
+      ) : (
+        <p class="empty">{t("loading")}</p>
+      )}
+    </SubView>
+  );
+}
+
 export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
   if (sub === "tools") return <ToolsView />;
@@ -83,6 +104,7 @@ export function MoreView() {
   if (sub === "services") return <ServicesView />;
   if (sub === "kube") return <KubeView />;
   if (sub === "phone" && layout.value !== "desktop") return <PhoneHost />;
+  if (sub === "review") return <ReviewLazy />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -156,6 +178,11 @@ export function MoreView() {
               {t("tools.title")}
             </span>
           </button>
+          {layout.value !== "desktop" && (
+            <button type="button" class="more-link" data-sub="review" onClick={() => go({ tab: "more", rest: "review", query: {} })}>
+              {t("pill.review")}
+            </button>
+          )}
         </nav>
         <section class="group" aria-labelledby="g-phone">
           <h2 class="group-title" id="g-phone">

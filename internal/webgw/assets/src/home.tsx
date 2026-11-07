@@ -6,3 +6,7 @@
 export { ThisPhone } from "./views/phone/ThisPhone";
 export { Home, init } from "./home/main";
 export { AllToolsView } from "./home/AllToolsView";
+// Review in chat (MOB-14, once its own phone.js); its English-only
+// strings come with it.
+import "./strings.phone";
+export { ReviewView } from "./views/phone/Review";

@@ -111,12 +111,18 @@ func keysUsedBy(files map[string]string, keys map[string]bool) map[string][]stri
 func TestDesktopOnlyStringsLiveInTheWorkbench(t *testing.T) {
 	files, _ := loadSources(t)
 	phone := reachable(files, "src/main.tsx")
+	for f := range reachable(files, "src/home.tsx") { // the phone views (home.js: MOB-14 review and the rest)
+		phone[f] = true
+	}
 	desk := reachable(files, "src/workbench.tsx")
 	if !desk["src/strings.desk.ts"] {
 		t.Fatal("the workbench does not import strings.desk.ts")
 	}
 	if phone["src/strings.desk.ts"] {
 		t.Error("the phone's page imports strings.desk.ts; only the workbench may")
+	}
+	if desk["src/strings.phone.ts"] || reachable(files, "src/main.tsx")["src/strings.phone.ts"] {
+		t.Error("strings.phone.ts is imported outside the phone views (phone.tsx)")
 	}
 	page, onlyDesk := map[string]bool{}, map[string]bool{}
 	for _, e := range parseStrings(t, "src/strings.ts", "S") {
