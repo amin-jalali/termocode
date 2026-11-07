@@ -16,6 +16,11 @@ func (e *Engine) action(ctx context.Context, timeout time.Duration, args ...stri
 	if code == 0 {
 		return nil
 	}
+	return actionError(e, stderr, code)
+}
+
+// actionError is the user's reason for a failed engine command.
+func actionError(e *Engine, stderr string, code int) error {
 	p := services.ProblemFromStderr(stderr)
 	if p.Kind != services.ProblemNone {
 		p.Engine = e.Kind
