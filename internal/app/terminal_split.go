@@ -142,7 +142,7 @@ func (m *Model) splitTerminalPaneAt(from int, dir paneDir, cwd string) tea.Cmd {
 			return '0:0'
 		end
 		return tostring(win) .. ':' .. tostring(buf)
-	`, fromWin, dir == paneDown, cwd, intList(tab.paneBufs()), termShellSpecJSON(shell)))
+	`, fromWin, dir == paneDown, m.termLocalCwd(cwd), intList(tab.paneBufs()), m.termShellSpecFor(shell, cwd)))
 	if err != nil {
 		m.err = "terminal: " + err.Error()
 		return nil
@@ -504,7 +504,7 @@ func (m *Model) restartTerminalPane(i int) {
 		if buf > 0 and vim.api.nvim_buf_is_valid(old) then
 			pcall(vim.api.nvim_buf_delete, old, { force = true })
 		end
-		return tostring(buf)`, win, old, tab.paneCwd(i), termShellSpecJSON(shell)))
+		return tostring(buf)`, win, old, m.termLocalCwd(tab.paneCwd(i)), m.termShellSpecFor(shell, tab.paneCwd(i))))
 	buf := parseInt(out)
 	if err != nil || buf <= 0 {
 		m.err = "terminal: failed to restart the shell"

@@ -278,3 +278,33 @@ func init() {
 		return c
 	})
 }
+
+// termShellSpecFor is the spawn spec of a terminal tab of the Model's
+// workspace that starts in dir ("" = the root). A container workspace
+// (RC-5) runs the shell inside the container through the Host
+// (`exec -it -w dir c sh…`), as one quoted command line and without the
+// local shell integration; a local workspace keeps termShellSpecJSON.
+func (m Model) termShellSpecFor(shell, dir string) string {
+	ws := m.workspace()
+	if isLocal(ws) || ws.Host == nil {
+		return termShellSpecJSON(shell)
+	}
+	argv := ws.Host.TermArgv(dir, nil)
+	q := make([]string, len(argv))
+	for i, a := range argv {
+		q[i] = shellQuote(a)
+	}
+	spec := termShellSpec{Plain: strings.Join(q, " "), Tab: agentCtlNextTabID()}
+	spec.Base = agentCtlTabEnv(spec.Tab)
+	b, _ := json.Marshal(spec)
+	return string(b)
+}
+
+// termLocalCwd is the local folder termopen starts in for dir: none for
+// a container workspace, whose folders are not on this machine.
+func (m Model) termLocalCwd(dir string) string {
+	if ws := m.workspace(); !isLocal(ws) && ws.Host != nil {
+		return ""
+	}
+	return dir
+}
