@@ -772,3 +772,30 @@ func TestContainersDemoAICard(t *testing.T) {
 		t.Errorf("card: %s", card)
 	}
 }
+
+// CTX-22: "state:" / "is:" / "image:" words in the filter narrow the
+// container and image lists by state, image and dangling.
+func TestContainersFilterStateAndImageWords(t *testing.T) {
+	m := filterDemo(t)
+	m.setContainersFilter("is:exited")
+	got := rowNames(m.services)
+	joined := strings.Join(got, ",")
+	for _, want := range []string{"api-1", "migrate"} {
+		if !containsString(got, want) {
+			t.Errorf("is:exited: no %q in %s", want, joined)
+		}
+	}
+	for _, gone := range []string{"postgres-1", "nginx", "builder", "16"} {
+		if containsString(got, gone) {
+			t.Errorf("is:exited: %q still shown in %s", gone, joined)
+		}
+	}
+	m.setContainersFilter("is:dangling")
+	got = rowNames(m.services)
+	if containsString(got, "16") || containsString(got, "nginx") {
+		t.Errorf("is:dangling shows tagged images or containers: %s", strings.Join(got, ","))
+	}
+	if !containsString(got, "<none> dangling") {
+		t.Errorf("is:dangling: no dangling group in %s", strings.Join(got, ","))
+	}
+}
