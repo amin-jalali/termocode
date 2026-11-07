@@ -30,6 +30,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIWorktree(msg), true
 	case aiWorktreeReviewMsg: // ai_worktree_actions.go
 		return m.onAIWorktreeReview(msg), true
+	case aiCriticMsg: // ai_critic.go (CMP-53)
+		return m.onAICritic(msg), true
 	case aiWorktreeMergedMsg:
 		return m.onAIWorktreeMerged(msg), true
 	case aiWorktreeDiscardedMsg:
@@ -85,9 +87,15 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case diffview.HideMsg:
 		m.reviewOpen = false
 		if m.ai != nil && m.ai.review != nil && !m.ai.review.card.Review() {
-			m.ai.review = nil // a read-only compare card is done
+			c := m.diffCommentsHidden(m.ai.review.card) // CMP-51: its comments stay
+			m.ai.review = nil                           // a read-only compare card is done
+			return c, true
 		}
 		return nil, true
+	case diffview.CommentAskMsg: // CMP-51 (diff_comments.go)
+		return m.onDiffCommentAsk(msg), true
+	case diffview.SendCommentsMsg:
+		return m.openDiffCommentsSend(true), true
 	case compareReadyMsg:
 		return m.openCompareCard(msg), true
 	case aiOAuthDoneMsg:

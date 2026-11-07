@@ -99,10 +99,11 @@ func (m Model) splitNow() bool { return m.geom().split }
 type vkind uint8
 
 const (
-	vHead vkind = iota // a change header (with Accept / Reject)
-	vLine              // a diff row (unified) or an old/new pair (split)
-	vBand              // a folded run of unchanged lines
-	vNote              // a message row ("No changes")
+	vHead    vkind = iota // a change header (with Accept / Reject)
+	vLine                 // a diff row (unified) or an old/new pair (split)
+	vBand                 // a folded run of unchanged lines
+	vNote                 // a message row ("No changes")
+	vComment              // the user's comment under a change header (CMP-51)
 )
 
 type vrow struct {
@@ -153,7 +154,11 @@ func buildRows(f *fileState, split bool) []vrow {
 	d := f.diff
 	if !d.HasChanges() {
 		if d.EOLOnly() {
-			return []vrow{{kind: vHead, hunk: 0, a: -1, b: -1}, {kind: vNote, n: 1, hunk: 0}}
+			out := []vrow{{kind: vHead, hunk: 0, a: -1, b: -1}}
+			if f.notes[0] != "" {
+				out = append(out, vrow{kind: vComment, hunk: 0, a: -1, b: -1})
+			}
+			return append(out, vrow{kind: vNote, n: 1, hunk: 0})
 		}
 		return []vrow{{kind: vNote, hunk: -1}}
 	}
@@ -163,6 +168,9 @@ func buildRows(f *fileState, split bool) []vrow {
 	for i := 0; i < len(rows); {
 		if rows[i].Kind != textdiff.Context {
 			out = append(out, vrow{kind: vHead, hunk: hunk, a: -1, b: -1})
+			if f.notes[hunk] != "" {
+				out = append(out, vrow{kind: vComment, hunk: hunk, a: -1, b: -1})
+			}
 			end := d.Hunks[hunk].End
 			for i < end {
 				r := rows[i]
@@ -593,6 +601,8 @@ func (m Model) layout(draw bool) layoutOut {
 				addHit(g.diffX, g.diffW/2, y, "hunk:"+strconv.Itoa(row.hunk))
 			case vBand:
 				addHit(g.diffX, g.diffW, y, "band:"+strconv.Itoa(row.key))
+			case vComment:
+				addHit(g.diffX, g.diffW, y, "note:"+strconv.Itoa(row.hunk))
 			}
 			if draw {
 				line += m.renderRow(row, g, f, p, ic)
@@ -704,9 +714,22 @@ func (m Model) layout(draw bool) layoutOut {
 				hints = theme.HintBar(p.bg, "n/p", "change", "y", "copy SHA", "r", "raw", "esc", "close")
 			}
 		} else if m.review {
-			hints = theme.HintBar(p.bg, "a/r", "change", "A/R", "file", "n/p", "next/prev", "enter", "apply", "e", "edit", "esc", "hide")
+			hints = theme.HintBar(p.bg, "a/r", "change", "A/R", "file", "n/p", "next/prev", "enter", "apply", "e", "edit", "c", "comment", "esc", "hide")
+			if lipgloss.Width(hints)+1 > g.iw {
+				hints = theme.HintBar(p.bg, "a/r", "change", "A/R", "file", "n/p", "next/prev", "enter", "apply", "e", "edit", "esc", "hide")
+			}
 		} else {
-			hints = theme.HintBar(p.bg, "n/p", "next/prev change", "t", "split/unified", "z", "unfold", "←→", "scroll", "esc", "close")
+			hints = theme.HintBar(p.bg, "n/p", "next/prev change", "t", "split/unified", "z", "unfold", "c", "comment", "esc", "close")
+			if lipgloss.Width(hints)+1 > g.iw {
+				hints = theme.HintBar(p.bg, "n/p", "next/prev change", "t", "split/unified", "z", "unfold", "←→", "scroll", "esc", "close")
+			}
+		}
+		if n := m.CommentCount(); n > 0 && m.header == nil { // CMP-51: the batch waits for S
+			word := "comments"
+			if n == 1 {
+				word = "comment"
+			}
+			hints = theme.HintBar(p.bg, "S", fmt.Sprintf("send %d %s to an agent", n, word)) + bg.Render("   ") + hints
 		}
 		if len(m.files) > 1 && m.header == nil {
 			hints = theme.HintBar(p.bg, "tab", "next file") + bg.Render("   ") + hints
@@ -884,6 +907,14 @@ func (m Model) renderRow(row vrow, g geom, f *fileState, p pal, ic glyphs) strin
 		}, 0, g.diffW, st)
 	case vHead:
 		return m.renderHead(row, g, f, p, ic)
+	case vComment:
+		st := lipgloss.NewStyle().Background(p.sunken)
+		text := strings.Join(strings.Fields(f.notes[row.hunk]), " ")
+		return paint([]seg{
+			{"    " + ic.bar + " ", st.Foreground(p.accent)},
+			{text, st.Foreground(p.text)},
+			{"   c edit", st.Foreground(p.dim)},
+		}, 0, g.diffW, st)
 	}
 	rej := m.review && row.hunk >= 0 && row.hunk < len(f.dec) && f.dec[row.hunk] == Rejected
 	rows := f.diff.Rows

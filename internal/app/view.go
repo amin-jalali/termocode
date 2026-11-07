@@ -143,6 +143,7 @@ func (m Model) viewFrame() string {
 	if m.promptOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
+		base = m.reviewLayer(base) // a diff comment prompt sits on its card (CMP-51)
 		return modalOverlay(base, m.prompt.Box(), m.w, m.h, m.modalOpts())
 	}
 	if m.confirmOpen {

@@ -37,6 +37,7 @@ repository's git folder, never in your project.
 | `K` `J` | Move the worktree up or down in its group (`Shift+↑` `Shift+↓` too) |
 | `i` | Link an issue or pull request (see below) |
 | `N` | The notes agents left on it, with their times |
+| `d` | Diff vs base: what it changed since it left its base; keep or revert each change |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
 | `L` | Show the setup of a new worktree (its terminal tab) |
@@ -184,6 +185,28 @@ tools. A note is one line of plain text, at most 500 characters, with
 secrets hidden; the 50 newest are kept. The card shows the last note and
 the status; `N` lists all notes with their times. A link from the command
 line shows a card first (**Deny** comes first).
+
+## Review changes vs base
+
+`d` on a card (or **Worktree: Review Changes vs Base of Selected**)
+shows everything the worktree changed since it left its base: its
+commits, edits not committed yet and new files. It does not matter who
+made them: the AI chat, an agent in a terminal tab, or you. The base is
+the parent's branch for a child worktree, else the main branch
+(`origin`'s default, `main` or `master`). Changes made on main after the
+worktree left it are not shown.
+
+The files open in the same review card as AI edits, one hunk at a time:
+
+- **Accept** keeps the change as it is.
+- **Reject** writes the base text back for that hunk only. On a new
+  file, rejecting every hunk removes the file.
+
+Nothing is written until you finish a file. When the agent changed the
+file again while you looked, or the file has unsaved edits in the
+editor, nothing is written and a note says why; press `d` again to read
+it anew. Binary files, files over 1 MB and links are left out (the count
+is shown). At most 200 files are listed.
 
 ## What waits for what
 

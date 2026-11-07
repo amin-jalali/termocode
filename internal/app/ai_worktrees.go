@@ -198,6 +198,10 @@ func (m *Model) onAIWorktree(msg aiWorktreeMsg) tea.Cmd {
 	s := m.aiS()
 	if msg.gen == s.chatGen {
 		m.aiSetStepWorktree(msg.step, msg.wt, msg.note)
+		// CMP-53: a lane that ended with changes goes to the critic.
+		if rm := s.aiRunMessage(); msg.wt.State == ai.WorktreeReady && msg.wt.Files > 0 && s.settings.UseCritic() && rm != nil {
+			return tea.Batch(waitAIChat(msg.ch), m.aiCriticStart(rm.Run.ID+":"+msg.step))
+		}
 	}
 	return waitAIChat(msg.ch)
 }
@@ -222,13 +226,13 @@ func (m *Model) aiSetStepWorktree(id string, wt ai.StoredWorktree, note string) 
 
 // aiWorktreeStatus is the card line of a step's worktree.
 func aiWorktreeStatus(wt *ai.StoredWorktree) string {
-	return theme.IconBranch.String() + " " + wt.Branch + " · " + aiWorktreeState(wt)
+	return theme.IconBranch.String() + " " + wt.Branch + " · " + aiWorktreeState(wt) + aiCriticWord(wt)
 }
 
 // aiWorktreeShort is the worktree line of a narrow AGENTS card (the
 // node details name the branch).
 func aiWorktreeShort(wt *ai.StoredWorktree) string {
-	return theme.IconBranch.String() + " " + aiWorktreeState(wt)
+	return theme.IconBranch.String() + " " + aiWorktreeState(wt) + aiCriticWord(wt)
 }
 
 // aiWorktreeState says what a step's worktree waits for.
