@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "projects";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "inbox" | "projects";
 
 export interface Bye {
   t: "bye";
@@ -195,6 +195,17 @@ export interface HlArgs {
 export interface ChatSendArgs {
   text: string;
   chat_id?: string;
+  attach?: Attach[];
+}
+
+export interface Attach {
+  kind: "task" | "ptask" | "issue" | "pr" | "file" | "lines" | "diff" | "worktree" | "run" | "race" | "workflow" | "card" | "resource" | "block" | "project" | "view";
+  id?: string;
+  path?: string;
+  from?: number;
+  to?: number;
+  label?: string;
+  spec?: string;
 }
 
 export interface CardsAnswerArgs {
@@ -1034,9 +1045,16 @@ export interface ChatMsg {
   truncated?: boolean;
   model?: string;
   images?: string[];
+  attached?: AttachChip[];
   rules?: string;
   run?: ChatRun;
   steps?: ChatStep[];
+  blocks?: Block[];
+}
+
+export interface AttachChip {
+  kind: string;
+  label: string;
 }
 
 export interface MdNode {
@@ -1068,6 +1086,158 @@ export interface ChatStep {
   text?: string;
   md?: MdNode;
   error?: string;
+  blocks?: Block[];
+}
+
+export interface Block {
+  id: string;
+  kind: "list" | "table" | "diff" | "card" | "detail" | "chart" | "status" | "form" | "json" | "text" | "board";
+  title: string;
+  source?: string;
+  ws?: string;
+  spec?: ViewSpec;
+  live?: boolean;
+  items?: BlockItem[];
+  columns?: BlockColumn[];
+  rows?: string[][];
+  groups?: BlockGroup[];
+  diff?: BlockDiff;
+  fields?: BlockField[];
+  bars?: BlockBar[];
+  state?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  form?: BlockFormField[];
+  json?: string;
+  md?: MdNode;
+  board?: BlockBoard;
+  for_you?: string;
+  ref?: BlockRef;
+  actions?: BlockAction[];
+  total?: number;
+  truncated?: boolean;
+  stale?: boolean;
+}
+
+export interface ViewSpec {
+  view: string;
+  ws?: string;
+  args?: Record<string, string>;
+  fields?: string[];
+  filter?: ViewCond[];
+  sort?: ViewSort[];
+  group?: string;
+  limit?: number;
+  layout?: string;
+  density?: "compact" | "detailed";
+  title?: string;
+  refresh?: number;
+}
+
+export interface ViewCond {
+  field: string;
+  op: "eq" | "ne" | "gt" | "lt" | "ge" | "le" | "contains" | "starts" | "in" | "empty" | "not_empty";
+  value?: string;
+  in?: string[];
+}
+
+export interface ViewSort {
+  field: string;
+  desc?: boolean;
+}
+
+export interface BlockItem {
+  id: string;
+  title: string;
+  sub?: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  badge?: string;
+  time?: number;
+  ref?: BlockRef;
+  actions?: BlockAction[];
+}
+
+export interface BlockRef {
+  kind: string;
+  id?: string;
+  path?: string;
+  line?: number;
+}
+
+export interface BlockAction {
+  id: string;
+  label: string;
+  kind: "op" | "attach" | "view" | "laptop";
+  op?: string;
+  ref?: BlockRef;
+  spec?: ViewSpec;
+  risky?: boolean;
+}
+
+export interface BlockColumn {
+  id: string;
+  label: string;
+  kind?: "text" | "num" | "time" | "cost" | "tone" | "mono";
+}
+
+export interface BlockGroup {
+  label: string;
+  count: number;
+  items?: BlockItem[];
+  rows?: string[][];
+}
+
+export interface BlockDiff {
+  path: string;
+  old?: string;
+  adds?: number;
+  dels?: number;
+  hunks: BlockHunk[];
+}
+
+export interface BlockHunk {
+  header: string;
+  lines: BlockDiffLine[];
+}
+
+export interface BlockDiffLine {
+  k: "add" | "del" | "ctx";
+  a?: number;
+  b?: number;
+  text: string;
+}
+
+export interface BlockField {
+  label: string;
+  value: string;
+  kind?: "text" | "num" | "time" | "cost" | "tone" | "mono";
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+}
+
+export interface BlockBar {
+  label: string;
+  value: number;
+  text?: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+}
+
+export interface BlockFormField {
+  id: string;
+  label: string;
+  kind: "text" | "num" | "bool" | "choice" | "long";
+  value?: string;
+  choices?: string[];
+  required?: boolean;
+  hint?: string;
+}
+
+export interface BlockBoard {
+  columns: BlockBoardColumn[];
+}
+
+export interface BlockBoardColumn {
+  id: string;
+  label: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  items?: BlockItem[];
 }
 
 export interface ChatDelta {
@@ -1649,6 +1819,32 @@ export interface WorktreeItem {
   parent?: string;
   depth?: number;
   last_seen?: number;
+}
+
+export interface InboxSnap {
+  items: InboxItem[];
+  counts: InboxCounts;
+  more?: number;
+}
+
+export interface InboxItem {
+  id: string;
+  ws?: string;
+  kind: "card" | "run" | "lane" | "workflow" | "task" | "ci" | "race";
+  ref: string;
+  title: string;
+  lane?: string;
+  chat?: string;
+  since: number;
+  state: "needs_you" | "working" | "failed" | "done";
+  can?: string[];
+}
+
+export interface InboxCounts {
+  needs_you: number;
+  working: number;
+  failed: number;
+  done: number;
 }
 
 export interface ProjectsSnap {
@@ -3293,6 +3489,7 @@ export interface TopicData {
   "ai": { snap: AISnap; delta: AISnap };
   "workflows": { snap: WorkflowsSnap; delta: WorkflowsSnap };
   "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
+  "inbox": { snap: InboxSnap; delta: InboxSnap };
   "projects": { snap: ProjectsSnap; delta: ProjectsSnap };
 }
 
