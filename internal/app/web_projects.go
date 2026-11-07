@@ -104,7 +104,9 @@ func (m *Model) webProjectsBuild() webproto.ProjectsSnap {
 	if m.web != nil {
 		in = m.web.projects.in
 	}
-	return projectsMerge(here, m.agentRollupItems(), in, home)
+	snap := projectsMerge(here, m.agentRollupItems(), in, home)
+	webDoorMarkOpening(&snap) // MOB-51
+	return snap
 }
 
 // webPublishProjects starts a read when the first browser listens or the

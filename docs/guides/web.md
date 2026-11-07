@@ -367,6 +367,35 @@ same viewer link as above, with the chat open.
   **AI: Chat Comments…** and choose **Add to message**. It goes into the
   chat input; nothing is sent until you press `Enter`.
 
+### Several projects from one phone
+
+One paired phone reaches **every project on this computer**, not only
+the one whose panel it paired with. That panel is the **door**: you pair
+once, with one role, and the phone sees all your projects through it.
+
+- The **Projects** list on the phone shows the projects this computer
+  knows: recent folders, projects that run now, service folders and
+  agent runs. You cannot add a folder from the phone; open it on the
+  laptop once and it shows up.
+- A project that **already runs** in termocode on the laptop opens on the
+  phone at once. The door joins it on this computer only, through the
+  project's private session socket. Nothing new listens on the network.
+- A project that **does not run** starts only after **a card on the
+  laptop**: *Open shop for the phone?* **Not now** is first. termocode
+  then starts it without a window (headless). The phone can never start
+  a project by itself, and the AI can never open one.
+- At most **4** projects are open at once (`web_projects_max`, up to 8).
+  The phone shows **Projects open now 2 of 4**. One more is turned
+  away; close one first.
+- A project the phone started stops by itself after **60 minutes** with
+  no use from any phone (`web_project_idle_minutes`). Its views and
+  pinned views then say **asleep**, with **Open**. A project you opened
+  yourself on the laptop never stops this way.
+- Each project keeps its own rules. A card, a review or a laptop-only
+  action of one project stays in that project and is answered on the
+  laptop as always.
+- The phone names a project by its id from the list, never by a path.
+
 ### Without Tailscale
 
 The panel can also be reached through an SSH app on the phone that
@@ -420,6 +449,14 @@ In simple words:
 - **The AI cannot open the door.** The AI can never start the panel,
   pair a device, give control or change its settings. It cannot run or
   type `termocode web` either.
+- **One door, your own projects.** A paired phone reaches only the
+  projects of your own user on this computer, by id from the Projects
+  list, never by a path. The door joins running projects through their
+  private session sockets (open only to your user), so nothing new
+  listens on the network. A project that is not running starts only
+  after your yes on a card on the laptop, and stops again when no phone
+  uses it. The AI cannot open a project, and a project's files cannot
+  raise the limits.
 - **A record.** termocode keeps an audit log of web starts, stops and
   logins in its config folder (`web-audit.jsonl`).
 
@@ -464,6 +501,8 @@ issue.
 - No access from another computer on your network, other than through
   SSH or your own tailnet.
 - At most 32 paired devices.
+- At most **4** projects open at once from a phone (`web_projects_max`,
+  up to 8).
 
 ## Settings
 
@@ -480,6 +519,8 @@ issue.
 | `web_require_totp` | `false` | A paired device also types a code from an authenticator app. |
 | `web_app_key_login` | `false` | The Android app may pair and sign in with its own keystore key (when passkeys fail in the app). |
 | `web_phone` | `off` | `on`: a paired phone with the panel open keeps it running, screen off too (not guests). `web_max_hours` still applies. |
+| `web_projects_max` | `4` | Projects a phone may have open at once (1..8). |
+| `web_project_idle_minutes` | `60` | A project the phone started stops after this many idle minutes (5..240). |
 
 These settings live only in your own `config.json`. A project's settings
 cannot change them.
@@ -525,6 +566,15 @@ cannot change them.
 
 **"Tailscale Serve already uses port 443 on this computer"**
 :   Something else is served on port 443. See `tailscale serve status`.
+
+**"Projects open now 4 of 4"**
+:   The phone has as many projects open as `web_projects_max` allows.
+    Close one on the phone, or raise `web_projects_max`.
+
+**A project says "asleep"**
+:   The project the phone started had no use for
+    `web_project_idle_minutes`, so it stopped. Tap **Open** and say yes
+    on the laptop's card.
 
 **"This device was removed"**
 :   The device was removed on the laptop. Pair it again.

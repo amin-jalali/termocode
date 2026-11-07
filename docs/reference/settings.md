@@ -237,6 +237,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `web_max_viewers` | int | `4` | How many browsers may be connected at once (1..8). One more is turned away. |
 | `web_push_detail` | enum | `count` | What a push to a paired phone says when something waits for you and the web page is closed (Notify me on the phone, over tailnet). none: only "Something needs you". count: how many things wait. title: the count and a fixed text for the kind (an approval, a plan, a review). Never a title, a path or a command. The push is encrypted for the phone and goes through its browser's own push service. |
 | `web_phone` | enum | `off` | on: a paired phone or tablet that has the panel open keeps it running, even with its screen off, as long as its link answers. Guests and the one-time link do not. It still stops after web_max_hours, with Web: Stop Panel, or when termocode closes. off: only real use counts (web_idle_minutes). |
+| `web_projects_max` | int | `4` | How many projects a paired phone may have open at once through the web panel (1..8). The panel is the one door to every project on this computer: it joins projects that already run here, and starts one that does not run only after you say yes on a card on the laptop. One more is turned away; the phone shows Projects open now and the count. |
+| `web_project_idle_minutes` | int | `60` | A project the phone opened (it was not running on the laptop) stops after this many minutes with no use from any phone (5..240). Its views then say asleep, with Open. Projects you opened yourself on the laptop never stop by this setting. |
 
 ## Appearance (file only)
 

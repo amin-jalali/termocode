@@ -16,6 +16,9 @@ type Info struct {
 	UIPID     int       `json:"ui_pid,omitempty"`
 	Started   time.Time `json:"started"`
 	Attached  bool      `json:"attached"`
+	// Headless: the UI was started with no terminal (MOB-51, a project
+	// the phone opened); a later attach shows it as usual.
+	Headless bool `json:"headless,omitempty"`
 }
 
 // ReadInfos reads the Info files in dir (Dir) of the sessions whose

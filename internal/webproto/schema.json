@@ -4449,6 +4449,35 @@
       "audit": "yes",
       "phase": "v2"
     }
+,
+    {
+      "op": "project.open",
+      "args": "ProjectArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "project.close",
+      "args": "ProjectArgs",
+      "result": "ProjectClosed",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    }
   ],
   "defs": {
     "AIAction": {
@@ -12898,6 +12927,30 @@
       ],
       "additionalProperties": false
     },
+    "ProjectArgs": {
+      "type": "object",
+      "properties": {
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ws"
+      ],
+      "additionalProperties": false
+    },
+    "ProjectClosed": {
+      "type": "object",
+      "properties": {
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ws"
+      ],
+      "additionalProperties": true
+    },
     "ProjectItem": {
       "type": "object",
       "properties": {
@@ -12923,6 +12976,7 @@
           "enum": [
             "here",
             "running",
+            "opening",
             "asleep"
           ]
         },

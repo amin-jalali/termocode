@@ -27,12 +27,17 @@ type webConfig struct {
 	PushDetail  string   // web_push_detail (MOB-30): none, count or title
 	PhoneWatch  bool     // web_phone: "on": a paired phone that watches keeps the panel up (MOB-31)
 	Problems    []string // one line per bad value, for a warning toast
+	// The door (MOB-56, plan §3.7): how many projects the paired gateway
+	// keeps open at once, and when a project the phone opened headless
+	// stops again.
+	ProjectsMax        int // web_projects_max
+	ProjectIdleMinutes int // web_project_idle_minutes
 }
 
 // webSettings reads and checks the web settings from config.json.
 func webSettings() webConfig {
 	s := loadSettings()
-	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4, PushDetail: webpush.DetailCount}
+	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4, PushDetail: webpush.DetailCount, ProjectsMax: 4, ProjectIdleMinutes: 60}
 	switch strings.ToLower(strings.TrimSpace(s.WebPanel)) {
 	case "", "auto":
 	case "off":
@@ -79,6 +84,8 @@ func webSettings() webConfig {
 	default:
 		c.Problems = append(c.Problems, fmt.Sprintf("web_push_detail %q: use \"none\", \"count\" or \"title\"", s.WebPushDetail))
 	}
+	intIn("web_projects_max", s.WebProjectsMax, 1, 8, &c.ProjectsMax)
+	intIn("web_project_idle_minutes", s.WebProjectIdleMinutes, 5, 240, &c.ProjectIdleMinutes)
 	if s.WebRequireTOTP != nil {
 		c.RequireTOTP = *s.WebRequireTOTP
 	}
