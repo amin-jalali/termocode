@@ -11880,6 +11880,9 @@
         },
         "working": {
           "type": "integer"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [

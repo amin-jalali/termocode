@@ -1670,6 +1670,7 @@ export interface ProjectItem {
   working?: number;
   waiting?: number;
   opened_at?: number;
+  ws?: string;
 }
 
 export interface Answered {
