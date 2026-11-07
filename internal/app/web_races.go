@@ -230,7 +230,7 @@ func webRaceLaneState(s agentrace.State) string {
 // webRaceText is a line for the page: one line, redacted, at most n
 // bytes (cut on a rune with "…").
 func webRaceText(s string, n int) string {
-	s = ai.RedactSecrets(webName(strings.Join(strings.Fields(s), " ")))
+	s = ai.Redact(webName(strings.Join(strings.Fields(s), " ")))
 	if len(s) > n {
 		s = strings.ToValidUTF8(s[:n], "") + "…"
 	}
