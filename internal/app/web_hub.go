@@ -72,6 +72,7 @@ type webHub struct {
 	more   webMorePub                 // Update only: the v2 More views (web_more.go)
 	ai     webAICalls                 // Update only: the page's AI calls (web_ai.go)
 	ups    webUploads                 // staged uploads (web_transfer.go; own lock)
+	push   webPushState               // Update only: phones' wakes (web_push_wake.go)
 	// settled: Update only; the publishers ran once since the hub went
 	// idle (web_after.go).
 	settled bool

@@ -78,6 +78,9 @@ type WSConfig struct {
 	Devices *webdevices.Store
 	// Control answers control.challenge / control.ask (nil: not here).
 	Control *Control
+	// Push keeps the phones' UnifiedPush endpoints (push.subscribe,
+	// MOB-32; nil: not here).
+	Push *UnifiedPush
 }
 
 // Defaults of WSConfig.

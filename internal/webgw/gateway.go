@@ -161,6 +161,9 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	var devices *webdevices.Store
 	var wsRef atomic.Pointer[WS]
 	var login *Login
+	var push *UnifiedPush // MOB-32: paired phones' wakes
+	pushCtx, stopPush := context.WithCancel(ctx)
+	defer stopPush()
 	if cfg.DevicesDir != "" {
 		devices = webdevices.Open(cfg.DevicesDir)
 		pk, err := NewPasskeys(site, devices, now)
@@ -180,6 +183,21 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 				_, err := c.Call(ctx, webproto.OpWebTotpCheck, webproto.TotpCheckArgs{Code: code, Device: device})
 				return err
 			}})
+		push = NewUnifiedPush(UnifiedPushConfig{Now: now, Audit: audit,
+			Live: func(device string) bool {
+				w := wsRef.Load()
+				return w != nil && w.HasDevice(device)
+			},
+			Watch: func(ctx context.Context, on bool) error {
+				c := ctlRef.Load()
+				if c == nil {
+					return ErrCtlGone
+				}
+				_, err := c.Call(ctx, webproto.OpWebPushWatch, webproto.PushWatchArgs{On: on})
+				return err
+			}})
+		crash.Go("web gateway: the push watch", func() { push.Run(pushCtx) })
+		defer func() { stopPush(); push.Wait() }()
 	}
 	ctl, err := DialCtlWith(ctx, cfg.Dial, CtlHandlers{Link: func(d [sha256.Size]byte) {
 		auth.SetSecretDigest(d)
@@ -192,7 +210,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		_ = audit.Log(Event{Kind: EvOp, Conn: n.Conn, Device: n.Device, Op: n.Op, OK: &ok,
 			Why: n.Why, Summary: n.Summary, By: "web:" + n.Device})
 	}, Event: func(kind string, data json.RawMessage) {
-		onCtlEvent(kind, data, ctlTargets{pairing: pairing, tokens: tokens, ws: wsRef.Load(), audit: audit})
+		onCtlEvent(kind, data, ctlTargets{pairing: pairing, tokens: tokens, ws: wsRef.Load(), audit: audit, push: push, ctx: pushCtx})
 	}})
 	if err != nil {
 		return 0, fmt.Errorf("reach termocode: %w", err)
@@ -214,7 +232,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 				return err
 			}}
 	}
-	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices, Control: control,
+	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices, Control: control, Push: push,
 		MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) }})
 	wsRef.Store(ws)
 	mux := siteMux(site, auth, ws, cfg.Assets)
@@ -305,6 +323,8 @@ type ctlTargets struct {
 	tokens  *Tokens
 	ws      *WS // nil until the WebSocket endpoint is made
 	audit   *Audit
+	push    *UnifiedPush    // nil: no paired devices here
+	ctx     context.Context // the wakes' context (ends with the run)
 }
 
 // onCtlEvent handles the hub's other events: a new pairing link
@@ -321,6 +341,9 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 			return
 		}
 		n := t.tokens.RevokeDevice(d.Device)
+		if t.push != nil {
+			t.push.Forget(d.Device)
+		}
 		if t.ws != nil {
 			n += t.ws.CloseDevice(d.Device, webproto.CloseDeviceRevoked)
 		}
@@ -359,6 +382,12 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 		if pairing != nil {
 			pairing.CloseSecret()
 		}
+	case webproto.EvWake: // {count}: more cards wait; the count stays here
+		var d webproto.WakeNote
+		if json.Unmarshal(data, &d) != nil || d.Count <= 0 || t.push == nil || t.ctx == nil {
+			return
+		}
+		t.push.Wake(t.ctx)
 	}
 }
 

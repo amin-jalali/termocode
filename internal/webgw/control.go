@@ -43,6 +43,10 @@ type Control struct {
 // gatewayOp answers a request the gateway handles itself, on the reader
 // goroutine (the laptop's answer comes on a goroutine of its own).
 func (c *wsConn) gatewayOp(r *webproto.Req) {
+	if r.Op == webproto.OpPushSubscribe || r.Op == webproto.OpPushUnsubscribe {
+		c.pushOp(r)
+		return
+	}
 	ctrl := c.s.cfg.Control
 	if ctrl == nil {
 		c.refuseReq(r.ID, webproto.CodeNotFound, "This is not available here.")

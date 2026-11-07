@@ -44,6 +44,7 @@ const (
 	EvLoginOK       EventKind = "login_ok"       // a paired device signed in with its passkey
 	EvLoginFail     EventKind = "login_fail"     // a passkey sign-in was refused (Why: the rule)
 	EvRole          EventKind = "role"           // a device's role changed (Summary: the new role; By: who)
+	EvPushWake      EventKind = "push_wake"      // a wake was posted to a phone's push endpoint (OK, Code, Summary: its host)
 )
 
 // AllEventKinds lists every kind, for tests and docs.
@@ -52,6 +53,7 @@ var AllEventKinds = []EventKind{
 	EvConnect, EvDisconnect, EvProtoError, EvOriginBlocked, EvHostBlocked,
 	EvIdleStop, EvMaxStop, EvKillSwitch, EvOp, EvFunnelStop, EvServeGone,
 	EvPairStart, EvPairOK, EvPairFail, EvRevoke, EvLoginOK, EvLoginFail, EvRole,
+	EvPushWake,
 }
 
 // Event is one audit line. It has no field for a secret, a token, a

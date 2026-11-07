@@ -383,6 +383,15 @@ export interface SymbolQueryArgs {
   query: string;
 }
 
+export interface PushSubscribeArgs {
+  kind: "unifiedpush";
+  endpoint: string;
+}
+
+export interface PushUnsubscribeArgs {
+  kind: "unifiedpush";
+}
+
 export interface SearchReplaceArgs {
   find: string;
   replace: string;
@@ -3051,6 +3060,8 @@ export interface OpArgs {
   "files.recent": EmptyArgs;
   "lsp.workspace_symbols": SymbolQueryArgs;
   "snippets.list": BufArgs;
+  "push.subscribe": PushSubscribeArgs;
+  "push.unsubscribe": PushUnsubscribeArgs;
   "search.replace": SearchReplaceArgs;
   "snippets.user": EmptyArgs;
   "snippets.save": SnippetSaveArgs;
