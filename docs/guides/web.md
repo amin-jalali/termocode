@@ -339,6 +339,39 @@ stops.
 - The audit log keeps the push host and the result, never the full
   address.
 
+### Workflows and agents from the phone
+
+With control, the phone can start work on the laptop. Anything that
+starts real work waits for a card **on the laptop** (**Cancel** first);
+the phone only asks.
+
+- **Workflows.** A **dry run** starts at once: it reads its sources
+  read only and never writes. Plan steps still cost AI money, and the
+  page says so before it sends. A real **run** and **saving** a
+  workflow the chat drafted are laptop cards. A run's writes still ask
+  on their own card (**Deny** first). An untrusted or broken workflow
+  file is refused before any card; trust stays on the laptop.
+- **Races.** The races view lists each race, its 2 to 4 lanes (agent,
+  state, files and lines changed, verify result, cost) and the AI's
+  short summary of the differences. Starting a race is a laptop card.
+  From the phone you can then ask for the **summary** (it uses your
+  Quick model and shows the cost), run the race's **verify** command
+  (the one on the start card; the phone cannot change it) and **stop**
+  the lanes. **Merge** and **Discard** stay on the laptop.
+- **Compare models.** A race of AI profiles on different models, on the
+  same task. It starts behind the same laptop card.
+- **Coordinator runs.** Ask the laptop to run a task with a planned
+  profile ("Plan, then run in waves" or "Work until done"). The laptop
+  card names the profile, its steps and the task. The plan then comes to
+  the phone as a card (**Reject** first). You can send a running step a
+  short message; it reads it after its current tool call.
+- **A new lane.** Start an agent in a new worktree, behind a laptop
+  card.
+
+The phone never gets a lane's folder, a file's contents or a secret.
+Every one of these is in the audit log; a message to a running step
+keeps only the run and the step, never the text.
+
 ### Share with another person
 
 To let someone else watch, run **Web: Share as Viewer…**:
