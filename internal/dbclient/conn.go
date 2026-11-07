@@ -14,6 +14,7 @@ import (
 type Conn struct {
 	ID          string            `json:"id"`
 	Name        string            `json:"name,omitempty"`
+	Comment     string            `json:"comment,omitempty"`
 	Driver      string            `json:"driver"`
 	Host        string            `json:"host,omitempty"`
 	Port        int               `json:"port,omitempty"`
