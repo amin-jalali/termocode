@@ -845,6 +845,9 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 		sess = s.sessions[n.conn]
 	}
 	if sess == nil {
+		if _, off := s.offline[n.conn]; off && path != n.conn {
+			return m.databaseOfflineTree(path) // DBX-29: server down, read the cache
+		}
 		if _, ok := s.nodes[n.conn]; ok {
 			return m.databaseConnect(n.conn)
 		}
@@ -1477,12 +1480,22 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		}
 		s.nodes[msg.id] = n
 		s.touch()
-		return m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
+		fail := m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
+		if _, isConn := s.connection(msg.id); isConn && !n.loaded {
+			return tea.Batch(fail, m.databaseOfflineTree(msg.id)) // DBX-29: show the cached tree
+		}
+		return fail
 	}
 	if old := s.sessions[msg.id]; old != nil && dbclient.UnwrapSession(old) != dbclient.UnwrapSession(msg.session) {
 		_ = old.Close()
 	}
 	s.sessions[msg.id] = s.loggedSession(msg.session, msg.id) // db_query_log.go
+	if _, was := s.offline[n.conn]; was && n.conn != "" {
+		delete(s.offline, n.conn) // DBX-29: back online
+		if strings.HasPrefix(n.detail, dbOfflineDetail) {
+			n.detail = ""
+		}
+	}
 	n.problem = ""
 	n.loaded = false
 	s.nodes[msg.id] = n
