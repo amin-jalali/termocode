@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/services"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // bulkState is the containers fixture with every section open.
@@ -54,11 +55,14 @@ func TestContainersBulkMarkToggles(t *testing.T) {
 	if st.cursor != before+1 {
 		t.Errorf("cursor %d, want %d (moves down after a mark)", st.cursor, before+1)
 	}
-	line := lineWith(svcRender(st, 60, 40), "postgres")
-	if !strings.Contains(line, "*") {
+	// The mark must differ from every status glyph: in ASCII "*" is
+	// also the running glyph, so a running unmarked row looked marked.
+	mark := theme.GlyphContMarked.String()
+	line := lineWith(svcRender(st, 60, 40), "postgres-1")
+	if !strings.Contains(line, mark) {
 		t.Errorf("marked row has no mark: %q", line)
 	}
-	if other := lineWith(svcRender(st, 60, 40), "redis-1"); strings.Contains(other, "*") {
+	if other := lineWith(svcRender(st, 60, 40), "redis-1"); strings.Contains(other, mark) {
 		t.Errorf("unmarked row shows a mark: %q", other)
 	}
 	bulkCursorOn(t, st, "c1")

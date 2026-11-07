@@ -329,6 +329,9 @@ var (
 
 	// GlyphContPaused — a paused container (containers plan §2.5).
 	GlyphContPaused = Icon{NerdFont: "ǁ", Unicode: "ǁ", ASCII: "\""} // U+01C1: ‖ is ambiguous-width
+	// GlyphContMarked — a container marked for a bulk action (CTX-23).
+	// ASCII is "+" because "*" is GlyphSvcUp there (a running container).
+	GlyphContMarked = Icon{NerdFont: "*", Unicode: "*", ASCII: "+"}
 	// HTTP client (rest-client plan 2.7): the lens' send mark, a request
 	// in flight, a failed send and a redirect hop. Glyphs every common
 	// monospace font has (JetBrains Mono lacks ⇄, ✘ and ↳).
