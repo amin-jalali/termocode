@@ -17,6 +17,11 @@ formatting. Debug adapters let you debug. termocode can install both for you.
 | Lua | `lua_ls` | GitHub release download |
 | Shell | `bashls` | npm |
 | TOML | `taplo` | cargo |
+| Dockerfile | `dockerls` (docker-langserver) | npm |
+| Docker Compose | `docker_compose_language_service` (only on `compose.yaml`, `docker-compose.yml` and `compose.*.yaml` files) | npm |
+| YAML / Kubernetes | `yamlls` (yaml-language-server; Kubernetes schema for files in `k8s/`, `kubernetes/`, `manifests/`, `deploy/` and `*.k8s.yaml`, other files from the schema store) | npm |
+
+**Dockerfile lint.** When `hadolint` is on your PATH (or in termocode's tools folder), its findings show as diagnostics when you open or save a Dockerfile. termocode does not install `hadolint`; without it nothing runs.
 
 **Debug adapters**
 

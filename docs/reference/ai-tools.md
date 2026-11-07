@@ -833,7 +833,7 @@ Leave a short note (one line, at most 500 characters) and / or a status on a wor
 
 ### lsp_servers
 
-Manage the language servers termocode installs (like the manager picker). op list: the language servers for the workspace's languages and their state (installed, on PATH, installing, failed). op install: download and install one (asks the user; runs in the background, the tool waits up to wait_ms, default 60000). op uninstall: remove termocode's copy (always asks). Known: gopls, pyright, pylsp, ts_ls, rust_analyzer, clangd, lua_ls, bashls, taplo.
+Manage the language servers termocode installs (like the manager picker). op list: the language servers for the workspace's languages and their state (installed, on PATH, installing, failed). op install: download and install one (asks the user; runs in the background, the tool waits up to wait_ms, default 60000). op uninstall: remove termocode's copy (always asks). Known: gopls, pyright, pylsp, ts_ls, rust_analyzer, clangd, lua_ls, bashls, taplo, dockerls, docker_compose_language_service, yamlls.
 
 **Gate:** list: auto · install: confirm (run) · uninstall: confirm (always asks)
 

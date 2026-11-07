@@ -118,6 +118,12 @@ type Tool struct {
 	// the root markers.
 	Cmd  []string
 	Root []string
+	// Files, when set, are Lua patterns on the file's base name: the
+	// server starts only on matching files of its filetypes (the compose
+	// server on compose files, not on every YAML file).
+	Files []string
+	// Settings is JSON the server gets as its workspace settings.
+	Settings string
 
 	// Fallback is a manual install hint shown when no automatic recipe fits
 	// this host (e.g. clangd on linux/arm64).
@@ -221,6 +227,34 @@ var tools = []Tool{
 		Extra: []string{"--locked", "--features", "lsp"},
 		Cmd:   []string{"taplo", "lsp", "stdio"},
 		Root:  []string{".taplo.toml", "taplo.toml", ".git"},
+	},
+	{
+		Name: "dockerls", Label: "Dockerfile", Category: CategoryLSP,
+		Filetypes:   []string{"dockerfile"},
+		Bin:         "docker-langserver",
+		InstallKind: KindNpm, Spec: "dockerfile-language-server-nodejs", Version: "latest",
+		Cmd:  []string{"docker-langserver", "--stdio"},
+		Root: []string{".git"},
+	},
+	{
+		Name: "docker_compose_language_service", Label: "Compose", Category: CategoryLSP,
+		Filetypes:   []string{"yaml"},
+		Bin:         "docker-compose-langserver",
+		InstallKind: KindNpm, Spec: "@microsoft/compose-language-service", Version: "latest",
+		Cmd:   []string{"docker-compose-langserver", "--stdio"},
+		Root:  []string{".git"},
+		Files: []string{`^compose%.ya?ml$`, `^docker%-compose%.ya?ml$`, `^compose%..+%.ya?ml$`, `^docker%-compose%..+%.ya?ml$`},
+	},
+	{
+		Name: "yamlls", Label: "YAML / Kubernetes", Category: CategoryLSP,
+		Filetypes:   []string{"yaml"},
+		Bin:         "yaml-language-server",
+		InstallKind: KindNpm, Spec: "yaml-language-server", Version: "latest",
+		Cmd:  []string{"yaml-language-server", "--stdio"},
+		Root: []string{".git"},
+		// Kubernetes manifests in the usual folders (and *.k8s.yaml) get
+		// the Kubernetes schema; other files the schema store's match.
+		Settings: `{"yaml":{"schemaStore":{"enable":true},"schemas":{"kubernetes":["**/k8s/**/*.yaml","**/kubernetes/**/*.yaml","**/manifests/**/*.yaml","**/deploy/**/*.yaml","*.k8s.yaml"]}}}`,
 	},
 
 	// ── Debug adapters ──────────────────────────────────────────────────

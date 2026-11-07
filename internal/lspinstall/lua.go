@@ -24,6 +24,8 @@ func luaList(xs []string) string {
 //
 //	{ gopls = { cmd = {...}, filetypes = {...}, root = {...}, order = 1 }, ... }
 //
+// files (base name patterns) and settings (JSON) are there only when set.
+//
 // `order` keeps the registry's preference order (Lua `pairs` is unordered).
 func LuaServersTable() string {
 	var b strings.Builder
@@ -40,8 +42,16 @@ func LuaServersTable() string {
 		b.WriteString(luaList(t.Cmd))
 		b.WriteString(", filetypes = ")
 		b.WriteString(luaList(t.Filetypes))
+		if len(t.Files) > 0 {
+			b.WriteString(", files = ")
+			b.WriteString(luaList(t.Files))
+		}
 		b.WriteString(", root = ")
 		b.WriteString(luaList(t.Root))
+		if t.Settings != "" {
+			b.WriteString(", settings = ")
+			b.WriteString(luaQuote(t.Settings))
+		}
 		b.WriteString(", order = ")
 		b.WriteString(strconv.Itoa(order))
 		b.WriteString(" },\n")
