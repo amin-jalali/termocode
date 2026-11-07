@@ -108,6 +108,9 @@ type Index struct {
 	root   string
 	opt    Options
 	files  map[string]*fileEntry
+	// unread: binary or empty files seen last Update (size, mod), so an
+	// unchanged one is not read again.
+	unread map[string][2]int64
 	built  time.Time
 	capped bool
 	// derived by finish
@@ -164,6 +167,7 @@ func (x *Index) Update(ctx context.Context) (Stats, error) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	next := make(map[string]*fileEntry, len(list))
+	nextUnread := map[string][2]int64{}
 	reindexed, capped := 0, false
 	for _, rel := range list {
 		if err := ctx.Err(); err != nil {
@@ -186,13 +190,20 @@ func (x *Index) Update(ctx context.Context) (Stats, error) {
 			next[rel] = old
 			continue
 		}
+		stamp := [2]int64{fi.Size(), fi.ModTime().UnixNano()}
+		if old, ok := x.unread[rel]; ok && old == stamp {
+			nextUnread[rel] = stamp
+			continue
+		}
 		e, ok := x.readFile(rel, abs, fi)
 		reindexed++
 		if ok {
 			next[rel] = e
+		} else {
+			nextUnread[rel] = stamp
 		}
 	}
-	x.files, x.capped = next, capped
+	x.files, x.unread, x.capped = next, nextUnread, capped
 	x.built = time.Now()
 	x.finish()
 	st := x.statsLocked()
