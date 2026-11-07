@@ -315,7 +315,8 @@
   "events": {
     "answered": "Answered",
     "attention": "Attention",
-    "search.batch": "SearchBatch"
+    "search.batch": "SearchBatch",
+    "views_saved": "SavedViewList"
   },
   "messages": {
     "client": {
@@ -1945,6 +1946,76 @@
       "max_bytes": 1024,
       "laptop_card": false,
       "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "view.list",
+      "args": "EmptyArgs",
+      "result": "SavedViewList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "view.save",
+      "args": "ViewSaveArgs",
+      "result": "ViewSaved",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 16384,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "view.rename",
+      "args": "ViewRenameArgs",
+      "result": "SavedViewList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "view.delete",
+      "args": "ViewRefArgs",
+      "result": "SavedViewList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "view.pin",
+      "args": "ViewPinArgs",
+      "result": "SavedViewList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
       "phase": "v2"
     },
     {
@@ -12210,6 +12281,62 @@
       ],
       "additionalProperties": true
     },
+    "SavedView": {
+      "type": "object",
+      "properties": {
+        "by": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "saved": {
+          "type": "integer"
+        },
+        "spec": {
+          "$ref": "#/defs/ViewSpec"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "spec",
+        "saved"
+      ],
+      "additionalProperties": true
+    },
+    "SavedViewList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/SavedView"
+          },
+          "type": "array"
+        },
+        "max": {
+          "type": "integer"
+        },
+        "max_pinned": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "max",
+        "max_pinned"
+      ],
+      "additionalProperties": true
+    },
     "SearchBatch": {
       "type": "object",
       "properties": {
@@ -14268,6 +14395,87 @@
       },
       "required": [
         "items"
+      ],
+      "additionalProperties": true
+    },
+    "ViewPinArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        },
+        "order": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "on"
+      ],
+      "additionalProperties": false
+    },
+    "ViewRefArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ViewRenameArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "ViewSaveArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "pin": {
+          "type": "boolean"
+        },
+        "spec": {
+          "$ref": "#/defs/ViewSpec"
+        }
+      },
+      "required": [
+        "spec",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "ViewSaved": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "replaced": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
       ],
       "additionalProperties": true
     },
