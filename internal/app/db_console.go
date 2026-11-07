@@ -1081,6 +1081,8 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 		return m.databaseDesignConfirm(id), true
 	case confirmKindDBExplain:
 		return m.databaseExplainConfirm(id), true
+	case confirmKindDBPlanStep:
+		return m.databasePlanStepConfirm(id), true
 	case confirmKindDBRun:
 		s := m.dbConsole()
 		r := s.pending

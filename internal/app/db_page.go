@@ -373,7 +373,7 @@ func (m *Model) databasePage() dbPage {
 			case r.redis != nil:
 				hints = dbRedisHints(width, r.redis)
 			case plan:
-				hints = dbFitHints(width, "za fold", "b bars", "x plan", "X analyze", "y copy", "C copy JSON", "Tab raw", "r rerun", "q close")
+				hints = dbFitHints(width, "za fold", "Enter step", "i table doc", "b bars", "x plan", "X analyze", "y copy", "C copy JSON", "Tab raw", "r rerun", "q close")
 			case s.curTab().dirty():
 				hints = dbFitHints(width, append(m.dbTxHints(r.conn), "w submit", "u revert", "e edit", "+ row", "- delete", "]/[ page", "Tab view", "q close")...)
 			case len(m.dbTxHints(r.conn)) > 0:
@@ -1185,8 +1185,16 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 			if key == "y" && canPlan(s.shown) {
 				return m.databasePlanCopy(s.shown.plan)
 			}
+			if key == "v" && canPlan(s.shown) && s.view == dbViewGrid {
+				return m.databasePlanStep(row) // Enter: the step's details (DBX-39)
+			}
 			return nil
 		}
+	case "i": // plan page: quick doc of the step's table (DBX-39)
+		if canPlan(s.shown) && s.view == dbViewGrid {
+			return m.databasePlanTableDocKey(row)
+		}
+		return nil
 		page := s.pageResult()
 		if s.trans && s.view == dbViewGrid && s.trow < len(page.Rows) {
 			row, col = s.trow, row // the cursor line is the column
