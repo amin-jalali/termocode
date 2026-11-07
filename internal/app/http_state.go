@@ -438,6 +438,18 @@ func httpRecordHistory(r *httpRun) {
 	}
 }
 
+// httpUserTLS applies the request's TLS directives (`# @insecure`,
+// `# @ca-cert`, `# @client-cert`, `# @client-key`) to the user's own
+// send; paths are read from the .http file's folder. AI sends never
+// call it.
+func httpUserTLS(run *httpRun, hooks *httpclient.Hooks) {
+	dir := ""
+	if run.file != "" {
+		dir = filepath.Dir(run.file)
+	}
+	httpclient.ApplyTLSDirectives(hooks, run.rr.Request.Directives, dir)
+}
+
 // startHTTPRun sends run as the user's request: the lens and the status
 // chip say "sending", the page opens on the answer.
 func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
@@ -451,6 +463,7 @@ func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
 	if set.tlsInsecure() {
 		hooks.Insecure = true
 	}
+	httpUserTLS(run, &hooks)
 	if u := httpclient.HostKey(run.rr.URL); u != "" && s.insecure[u] {
 		hooks.Insecure = true
 	}

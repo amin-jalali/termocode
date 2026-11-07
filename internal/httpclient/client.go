@@ -58,8 +58,14 @@ type Hooks struct {
 	// error stops the send (AI sends re-gate each hop).
 	CheckHop func(url string) error
 	// Insecure skips TLS verification for this send only (the user's
-	// `k` retry; never for AI sends).
+	// `k` retry or `# @insecure`; never for AI sends).
 	Insecure bool
+	// CACert is a PEM file of extra trusted CAs (`# @ca-cert`).
+	CACert string
+	// ClientCert / ClientKey are PEM files for a client certificate
+	// (mTLS, `# @client-cert` / `# @client-key`); ClientKey "" = the key
+	// is in the ClientCert file.
+	ClientCert, ClientKey string
 }
 
 // Client sends requests. It is safe for concurrent use.
@@ -98,15 +104,16 @@ func (c *Client) Close() {
 	}
 }
 
-func (c *Client) transport(h Hooks) (*http.Transport, bool) {
-	if h.AllowIP == nil && !h.Insecure {
-		c.once.Do(func() { c.plain = c.newTransport(h) })
-		return c.plain, false
+func (c *Client) transport(h Hooks) (*http.Transport, bool, error) {
+	if h.AllowIP == nil && !h.Insecure && !h.hasTLSFiles() {
+		c.once.Do(func() { c.plain, _ = c.newTransport(h) })
+		return c.plain, false, nil
 	}
-	return c.newTransport(h), true
+	t, err := c.newTransport(h)
+	return t, true, err
 }
 
-func (c *Client) newTransport(h Hooks) *http.Transport {
+func (c *Client) newTransport(h Hooks) (*http.Transport, error) {
 	d := &net.Dialer{Timeout: connectTimeout, KeepAlive: 30 * time.Second}
 	t := &http.Transport{
 		Proxy:                 c.opts.Proxy,
@@ -117,9 +124,11 @@ func (c *Client) newTransport(h Hooks) *http.Transport {
 		TLSHandshakeTimeout:   connectTimeout,
 		ExpectContinueTimeout: time.Second,
 	}
-	if h.Insecure {
-		t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // the user's one-off `k` retry
+	cfg, err := tlsConfig(h)
+	if err != nil {
+		return nil, err
 	}
+	t.TLSClientConfig = cfg
 	if h.AllowIP != nil {
 		allow := h.AllowIP
 		proxy := c.opts.Proxy
@@ -153,7 +162,7 @@ func (c *Client) newTransport(h Hooks) *http.Transport {
 			return nil, lastErr
 		}
 	}
-	return t
+	return t, nil
 }
 
 // isProxyAddr reports whether addr is the configured proxy (dialing a
@@ -282,7 +291,11 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	var tm timingTrace
 	req = req.WithContext(httptrace.WithClientTrace(ctx, tm.trace()))
 
-	tr, oneOff := c.transport(h)
+	tr, oneOff, err := c.transport(h)
+	if err != nil {
+		resp.fail(ErrKindTLS, "TLS: "+err.Error(), start)
+		return resp
+	}
 	if oneOff {
 		defer tr.CloseIdleConnections()
 	}

@@ -102,3 +102,34 @@ func TestKubeCopyName(t *testing.T) {
 		t.Errorf("copied %q", got)
 	}
 }
+
+func TestKubeYAMLOpensReadOnlyText(t *testing.T) {
+	f, m := kubeLoaded(t, 150, 42)
+	f.Set(t, "deployment.yaml", "apiVersion: apps/v1\nkind: Deployment\nspec:\n  replicas: 2\n")
+	kubeCursorTo(t, m, "deployments", "worker")
+	msg, ok := kubeKey(t, m, "v")().(kubeYAMLMsg)
+	if !ok || msg.err != nil || msg.kind != "deployment" || msg.name != "worker" || !strings.Contains(msg.text, "replicas: 2") {
+		t.Fatalf("yaml = %+v", msg)
+	}
+	if f.Count("get deployment worker -o yaml --context dev --namespace shop") != 1 {
+		t.Errorf("calls = %v", f.Calls())
+	}
+	m.onKubeYAML(msg) // no editor in the test: nothing to open, no panic
+	// Pods have a YAML view too (v is not a pod action).
+	kubeCursorTo(t, m, "pods", "worker-5c4b-77k2p")
+	if msg, ok := kubeKey(t, m, "v")().(kubeYAMLMsg); !ok || msg.kind != "pod" {
+		t.Errorf("v on a pod = %+v", msg)
+	}
+}
+
+func TestKubeKeyCardListsYAML(t *testing.T) {
+	found := false
+	for _, r := range kubeKeyRows() {
+		if r.Key == "v" && strings.Contains(r.What, "YAML") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no v row in %+v", kubeKeyRows())
+	}
+}
