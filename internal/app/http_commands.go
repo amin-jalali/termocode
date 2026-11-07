@@ -393,7 +393,7 @@ func (m *Model) openHTTPHistory() tea.Cmd {
 	}
 	items = append(items, picker.Item{ID: "__clear", Title: "Clear history…"})
 	return m.openHTTPPicker(pickerKindHTTPHistory, " HTTP History ", items,
-		[]string{"Enter sends again · Ctrl+O opens the stored response · Ctrl+T pins · Ctrl+S saves · Ctrl+D deletes"})
+		[]string{"Enter sends again · Ctrl+O opens the answer", "Ctrl+T pins · Ctrl+S saves · Ctrl+D deletes"})
 }
 
 // openHTTPEnvPicker lists the environments of the env files found.
