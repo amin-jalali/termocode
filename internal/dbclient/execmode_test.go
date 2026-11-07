@@ -7,7 +7,7 @@ import (
 
 const execText = "SELECT 1;\nSELECT * FROM t WHERE id IN (SELECT id FROM u WHERE x = ')(');\n-- note\nUPDATE t SET a = 2;\n"
 
-func at(t *testing.T, s, sub string) int {
+func execAt(t *testing.T, s, sub string) int {
 	t.Helper()
 	i := strings.Index(s, sub)
 	if i < 0 {
@@ -29,7 +29,7 @@ func TestStatementSpansCoverTheText(t *testing.T) {
 }
 
 func TestExecCandidatesInnermostFirst(t *testing.T) {
-	cur := at(t, execText, "FROM u") + 2
+	cur := execAt(t, execText, "FROM u") + 2
 	c := ExecCandidates(execText, "postgres", cur)
 	if len(c) != 2 {
 		t.Fatalf("candidates = %+v", c)
@@ -56,8 +56,8 @@ func TestExecCandidatesInnermostFirst(t *testing.T) {
 }
 
 func TestPickStatements(t *testing.T) {
-	sub := at(t, execText, "FROM u") + 2
-	upd := at(t, execText, "UPDATE")
+	sub := execAt(t, execText, "FROM u") + 2
+	upd := execAt(t, execText, "UPDATE")
 	cases := []struct {
 		name     string
 		mode     ExecMode
