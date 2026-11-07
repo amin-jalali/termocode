@@ -570,6 +570,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseSSHPrompt(m.promptKind, value); ok {
 		return cmd, true
 	}
+	if m.promptKind == promptKindDBParam { // db_params.go
+		return m.databaseParamEntered(value), true
+	}
 	if m.promptKind == promptKindDBEditCell {
 		return m.databaseSetCell(value, false), true
 	}
