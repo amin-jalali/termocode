@@ -27,6 +27,8 @@ import { KubeView } from "./run/KubeView";
 import { View } from "./View";
 import { FileView } from "./FileView";
 import { TreeView } from "./Files";
+import { PhoneHost } from "./PhoneHost";
+import { layout } from "../lib/layout";
 
 export { ChatView } from "./Chat";
 
@@ -55,6 +57,7 @@ export function MoreView() {
   if (sub === "debug") return <DebugView />;
   if (sub === "services") return <ServicesView />;
   if (sub === "kube") return <KubeView />;
+  if (sub === "phone" && layout.value !== "desktop") return <PhoneHost />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -127,6 +130,11 @@ export function MoreView() {
           <h2 class="group-title" id="g-phone">
             {t("more.this_phone")}
           </h2>
+          {layout.value !== "desktop" && (
+            <button type="button" class="more-link" data-sub="phone" onClick={() => go({ tab: "more", rest: "phone", query: {} })}>
+              {t("more.this_phone")} ›
+            </button>
+          )}
           <div class="field">
             <span class="field-label">{t("theme")}</span>
             <Segmented<Theme> label={t("theme")} value={p.theme} choices={themes} onChange={(v) => setPref("theme", v)} />

@@ -40,21 +40,20 @@ type page struct {
 // through app-chunk.js, which index.html preloads with its SRI.
 var workbenchChunk = page{Name: "workbench", Entry: "workbench.tsx"}
 
-var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html", With: []page{workbenchChunk}}
+// homeChunk is the phone's own views (home.js, mobile plan Q4): This
+// phone (MOBUX-20) and the Home (MOB-4). app.js loads it with a dynamic
+// import (lib/lazy.ts) on a phone only, when one of them opens, so the
+// desktop never requests it and app.js does not grow. It shares the
+// page's modules through app-chunk.js, like the workbench. MOB-4's Home
+// (src/home/) is in it too; it still gets its views through init(host).
+var homeChunk = page{Name: "home", Entry: "home.tsx"}
+
+var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html", With: []page{workbenchChunk, homeChunk}}
 
 // editorChunk is the in-page editor (WEB-39): CodeMirror and its glue,
 // built alone (no Preact) into editor.js. app.js loads it with its one
 // dynamic import, only when the user starts editing.
 var editorChunk = page{Name: "editor", Entry: "editor/main.ts"}
-
-// homeChunk is the phone's Home (MOB-4, home.js): the chat-first stream,
-// the chips, the quick blocks and the Panels drawer. It is built alone,
-// like the editor: the page hands it Preact, the signals, the link and
-// its views when it loads it (src/home/api.ts), so home.js has no Preact
-// of its own, the shared chunk keeps one partition (app-chunk.js), and
-// app.js and app-chunk.js do not grow with the Home. app.js loads it with
-// a dynamic import on a phone only (lib/lazy.ts).
-var homeChunk = page{Name: "home", Entry: "home/main.tsx"}
 
 // persianChunk is the Persian strings (strings-fa.js), built alone: the
 // page loads them with a dynamic import (lib/lazy.ts) only when the UI
@@ -81,7 +80,7 @@ var monacoVim = page{Name: "monaco-vim", Entry: "monaco/vim.ts"}
 var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -111,7 +110,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{deskChunk, appPage, editorChunk, homeChunk, persianChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appPage, editorChunk, persianChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)

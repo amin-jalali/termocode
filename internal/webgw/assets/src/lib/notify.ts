@@ -70,12 +70,23 @@ export function setOnOpen(f: (kind: NotifyKind) => void): void {
   onOpen = f;
 }
 
-/** notify shows kind's fixed text, if the user turned it on and the page is hidden. */
+/** inQuiet says whether now falls in quiet hours "HH:MM-HH:MM" (MOBUX-20);
+ * a span over midnight (22:00-07:00) counts too. "" is never quiet. */
+export function inQuiet(quiet: string, now: Date): boolean {
+  if (!quiet) return false;
+  const min = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
+  const from = min(quiet.slice(0, 5)), to = min(quiet.slice(6, 11));
+  const m = now.getHours() * 60 + now.getMinutes();
+  return from < to ? m >= from && m < to : m >= from || m < to;
+}
+
+/** notify shows kind's fixed text, if the user turned it on, the page is
+ * hidden and it is not the phone's quiet hours. */
 export function notify(kind: NotifyKind): void {
   if (!document.hidden) return;
   if (kind !== "card") unseen.value = true;
   const N = api();
-  if (!N || !prefs.peek().notify || N.permission !== "granted") return;
+  if (!N || !prefs.peek().notify || N.permission !== "granted" || inQuiet(prefs.peek().quiet, new Date())) return;
   const now = Date.now();
   if (now - (last.get(kind) ?? -AGAIN_MS) < AGAIN_MS) return;
   last.set(kind, now);

@@ -64,6 +64,21 @@ type Device struct {
 	LastSeen    time.Time `json:"last_seen,omitempty"`
 	// Bookmark is the remembered browser's key (WEBP-12), as a hash.
 	Bookmark *Bookmark `json:"bookmark,omitempty"`
+	// Phone is what the device chose on its This phone screen (MOBUX-20).
+	Phone *Phone `json:"phone,omitempty"`
+}
+
+// Phone is a paired phone's own choices, kept on the laptop so every
+// part (the page, a push sender) honours them: OS alerts, quiet hours
+// ("HH:MM" in the phone's time, both empty: none), the phone's offset
+// from UTC, and the app lock. Never a secret.
+type Phone struct {
+	Alerts       bool      `json:"alerts"`
+	QuietFrom    string    `json:"quiet_from,omitempty"`
+	QuietTo      string    `json:"quiet_to,omitempty"`
+	UTCOffsetMin int       `json:"utc_offset_min,omitempty"`
+	Lock         bool      `json:"lock,omitempty"`
+	Changed      time.Time `json:"changed"`
 }
 
 // Bookmark is what the laptop keeps of a device's bookmark key: the
