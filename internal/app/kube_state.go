@@ -86,6 +86,7 @@ type kubeState struct {
 	pendingNode    kubeNodeTarget    // the node card's node and action (kube_nodes.go)
 	nodes          []kube.Node       // the node picker's rows (kube_nodes.go)
 	nodesContext   string            // the context they came from
+	pendingFile    kubeFileTarget    // the pod file / debug prompt's and card's pod (kube_podfiles.go)
 
 	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
@@ -485,6 +486,14 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubePage(msg), true
 	case kubeEditMsg:
 		return m.onKubeEdit(msg), true
+	case kubePodDirMsg:
+		return m.onKubePodDir(msg), true
+	case kubeCopyMsg:
+		return m.onKubeCopy(msg), true
+	case kubeHelmMsg:
+		return m.onKubeHelm(msg), true
+	case kubeKustomizeMsg:
+		return m.onKubeKustomize(msg), true
 	}
 	return nil, false
 }

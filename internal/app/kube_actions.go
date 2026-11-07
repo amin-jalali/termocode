@@ -24,11 +24,17 @@ func kubePaletteItems() []picker.Item {
 		{ID: "kubernetes-rbac", Title: "Kubernetes: Permissions (RBAC)"},
 		{ID: "kubernetes-nodes", Title: "Kubernetes: Nodes…"},
 		{ID: "kubernetes-hpa", Title: "Kubernetes: Autoscalers (HPA)"},
+		{ID: "kubernetes-kustomize", Title: "Kubernetes: Kustomize Preview"},
+		{ID: "kubernetes-helm-repo-add", Title: "Kubernetes: Add Helm Repo…"},
+		{ID: "kubernetes-helm-install", Title: "Kubernetes: Install Helm Chart…"},
 	}
 }
 
 // dispatchKubePalette runs the "Kubernetes: …" palette commands.
 func (m *Model) dispatchKubePalette(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.dispatchKubeInstallPalette(id); ok { // kube_install.go
+		return cmd, true
+	}
 	switch id {
 	case "kubernetes-nodes":
 		return m.kubeNodes(), true

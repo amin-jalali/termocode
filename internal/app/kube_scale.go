@@ -60,6 +60,14 @@ func (m *Model) askKubeScale(kind, name string, replicas int, value, errText str
 
 // handleKubePromptSubmit takes the replicas answer. ok=false: not ours.
 func (m *Model) handleKubePromptSubmit(value string) (tea.Cmd, bool) {
+	if cmd, ok := m.handleKubeInstallPrompt(value); ok { // kube_install.go
+		return cmd, true
+	}
+	if m.kube != nil {
+		if cmd, ok := m.handleKubeFilePrompt(value); ok { // kube_podfiles.go
+			return cmd, true
+		}
+	}
 	if m.promptKind != promptKindKubeScale || m.kube == nil {
 		return nil, false
 	}

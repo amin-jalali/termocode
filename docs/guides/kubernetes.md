@@ -78,6 +78,9 @@ kubeconfig, so other terminals keep their context.
 | `L` | Pod: pick how to show the logs (previous container, last 5 minutes or hour, time stamps, save to a file). Deployment: the logs of all its pods. |
 | `e` | Pod: open a shell in it. |
 | `f` | Pod, service or deployment: start or stop a port-forward. On a **FORWARDS** row: stop it. |
+| `F` | Pod: browse its files; pick a file to download it (asks for a local path). |
+| `U` | Pod: upload a local file into it (asks the paths, then asks first). |
+| `D` | Pod: open a shell in a new debug container (asks first). |
 | `y` | Copy the name. On a **FORWARDS** row: copy the local address. |
 | `!` | Your custom commands for the row (pods, deployments, services, jobs; see the Containers guide, "Custom commands"). Each asks first. |
 | `r` | Deployment: restart it (asks first). |
@@ -121,6 +124,27 @@ first.
 
 `L` on a deployment follows the logs of all its pods and containers in
 one tab; each line starts with its pod and container.
+
+## Pod files and debug
+
+`F` on a pod lists its root folder (`kubectl exec … ls -la`; read only).
+Pick a folder to open it, or `..` to go up. Pick a file to download it:
+termocode asks for a local path (the workspace folder first) and runs
+`kubectl cp`. It never overwrites a file that is there.
+
+`U` on a pod uploads a file: it asks for the local file (the current
+file first), then for the path in the pod (`/tmp/<name>` first). A card
+shows both paths, the context, the namespace and the command.
+**Cancel** is the first button and has the focus. A file at that pod
+path is replaced.
+
+`D` on a pod adds an ephemeral debug container (`busybox`) and opens a
+shell in it, in a terminal tab (`kubectl debug -it`). It shares the
+processes of the pod's first container. This changes the pod spec, so a
+card asks first (**Cancel** has the focus). The debug container stays
+until the pod is gone.
+
+These use the pod's default container. The AI can not run them.
 
 ## Port-forward
 
@@ -319,6 +343,25 @@ PersistentVolumeClaim or StatefulSet. The name is `my-app` and the
 namespace is the view's namespace; change them and save the file. Nothing
 is sent to the cluster.
 
+## Kustomize preview
+
+**Kubernetes: Kustomize Preview** builds the folder of the current file
+with `kubectl kustomize` and shows the result in a read-only YAML page.
+Secret values are masked. Nothing is sent to the cluster.
+
+## Helm repos and charts
+
+**Kubernetes: Add Helm Repo…** asks for a name and a URL
+(`bitnami https://charts.bitnami.com/bitnami`). A card shows the command
+(`helm repo add`); **Cancel** is the first button and has the focus. It
+changes your helm repo list, not the cluster.
+
+**Kubernetes: Install Helm Chart…** asks for a release name, a chart and
+an optional version (`web bitnami/nginx 15.1.0`). The chart goes to the
+view's context and namespace. A card shows the scope and the command
+(`helm install`); **Cancel** has the focus. helm's notes open in a
+read-only page. You need `helm` on your `PATH`.
+
 ## The AI
 
 The AI can open the view, load it again and open the metrics page. It can also read the
@@ -327,7 +370,8 @@ cluster, in the context the view shows: `kube_list` (the four lists),
 Secrets in their answers are hidden. The AI can never restart,
 scale, roll back or change the image of a deployment, delete an
 object, apply a file, cordon or drain a node, start a port-forward,
-use helm or switch the context.
+copy pod files, debug a pod, use helm, add a helm repo, install a
+chart or switch the context.
 
 ## When something is wrong
 

@@ -46,7 +46,7 @@ const customCommandsTemplate = `{
 // may not take them.
 var customTakenKeys = map[string]string{
 	"docker": "k j l s x r t a A R m e o y p z S i D u P n d h b g G v V T F E L I K N w O c C ! ? / enter space esc tab shift+tab",
-	"kube":   "k j l i v E e r s d f y R [ ] w c n g G L o I t H : A N x a O P S ! ? / enter space esc tab shift+tab",
+	"kube":   "k j l i v E e r s d f y R [ ] w c n g G L o I t H : A N x a O P S F U D ! ? / enter space esc tab shift+tab",
 }
 
 func customViewGroup(view string) string {

@@ -108,6 +108,9 @@ func (m *Model) handleKubePickerSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleKubeRolloutPick(kind, value); ok { // kube_rollout.go
 		return cmd
 	}
+	if kind == "pfile" {
+		return m.handleKubeFilePick(value) // kube_podfiles.go
+	}
 	if kind == "snippet" {
 		return m.kubeOpenSnippet(value)
 	}

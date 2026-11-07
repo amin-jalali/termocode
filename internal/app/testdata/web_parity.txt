@@ -675,8 +675,11 @@ missing	http-ws-close	HTTP|S
 missing	http-ws-send	HTTP|S
 missing	kubernetes-apply-file	Kubernetes|M
 missing	kubernetes-helm	Kubernetes|M
+missing	kubernetes-helm-install	Kubernetes|S
+missing	kubernetes-helm-repo-add	Kubernetes|S
 missing	kubernetes-hpa	Kubernetes|S
 missing	kubernetes-kind	Kubernetes|S
+missing	kubernetes-kustomize	Kubernetes|S
 missing	kubernetes-nodes	Kubernetes|M
 missing	kubernetes-rbac	Kubernetes|S
 missing	kubernetes-report	Kubernetes|S
