@@ -1,0 +1,1 @@
+{"t":"req","id":972,"op":"view.save","args":{"name":"PRs to review","spec":{"view":"pr.list","filter":[{"field":"review","op":"eq","value":"me"}],"limit":20},"pin":true}}
