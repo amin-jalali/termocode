@@ -60,3 +60,37 @@ func TestPlainText(t *testing.T) {
 		t.Error("nil block")
 	}
 }
+
+// PlainText walks every part a block may have: for-you line, item tones,
+// groups (items and rows), bars (text or value), state, diff, board,
+// markdown (with a table) and the "only the first are shown" line.
+func TestPlainTextEveryPart(t *testing.T) {
+	md := &MdNode{K: "doc", C: []MdNode{
+		{K: "h", C: []MdNode{{K: "text", Text: "Title"}}},
+		{K: "p", C: []MdNode{{K: "text", Text: "Body"}}},
+		{K: "table", Rows: [][]MdNode{{{K: "text", Text: "a"}, {K: "text", Text: "b"}}}},
+	}}
+	b := &Block{ID: "b", Kind: KindText, Title: "All", ForYou: "Look here.", MD: md, State: ToneOK, Total: 9, Truncated: true,
+		Columns: []BlockColumn{{ID: "c", Label: "C"}},
+		Items:   []BlockItem{{ID: "i", Title: "item", Tone: ToneBad}},
+		Groups:  []BlockGroup{{Label: "G", Count: 2, Items: []BlockItem{{ID: "g", Title: "gi"}}, Rows: [][]string{{"gr"}}}},
+		Bars:    []BlockBar{{Label: "cost", Text: "$1"}, {Label: "n", Value: 3}},
+		Diff:    &BlockDiff{Path: "a.go", Adds: 2, Dels: 1},
+		Board:   &BlockBoard{Columns: []BlockBoardColumn{{ID: "c", Label: "Col", Items: []BlockItem{{ID: "x", Title: "card"}}}}},
+		JSON:    `{"k":1}`}
+	got := b.PlainText(0)
+	for _, want := range []string{"All (text)\nLook here.\n", "- item (bad)", "G (2)\n  - gi\n  gr\n", "cost: $1", "n: 3",
+		"state: ok", "diff a.go +2 −1", "Col\n  - card", "Title\n", "Body\n", "a b \n", `{"k":1}`, "(9 in all; only the first are shown)"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("no %q in:\n%s", want, got)
+		}
+	}
+}
+
+// MapStrings on a nil block is nil, without an error.
+func TestMapStringsNil(t *testing.T) {
+	out, err := (*Block)(nil).MapStrings(strings.ToUpper)
+	if out != nil || err != nil {
+		t.Errorf("nil block: %v %v", out, err)
+	}
+}
