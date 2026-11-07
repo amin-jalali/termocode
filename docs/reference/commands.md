@@ -366,7 +366,11 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Blame Options… | `git-blame-options` |   |   |
 | Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Cherry-pick from Branch… | `git-cherry-pick-branch` |   |   |
+| Git: Clone Repository (Shallow)… | `git-clone-shallow` |   | `only the last commit: fast for big repositories` |
 | Git: Clone Repository... | `git-clone` |   |   |
+| Git: Commit Empty (No Changes)… | `git-commit-empty` |   | `a commit without changes, e.g. to run CI again` |
+| Git: Commit Marked Files Only… | `git-commit-marked` |   | `the files marked in Source Control (Space); c there` |
+| Git: Commit Staged as Another Author… | `git-commit-author` |   | `git commit --author; you stay the committer` |
 | Git: Commit and Push | `git-commit-push` |   |   |
 | Git: Commit and Sync | `git-commit-sync` |   |   |
 | Git: Commit... | `git-commit` |   |   |
@@ -376,6 +380,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Copy Remote Link to Commit | `git-copy-commit-link` |   |   |
 | Git: Copy Remote Link to Line | `git-copy-line-link` |   |   |
 | Git: Create Branch From… | `git-branch-from` |   |   |
+| Git: Create Gist from File… | `git-gist` |   | `share the active file as a GitHub gist (gh)` |
+| Git: Create GitLab Merge Request… | `git-gitlab-mr-create` |   | `from the current branch into the default branch` |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
 | Git: Create Tag… | `git-tag-create` |   |   |
 | Git: Delete Branch… | `git-branch-delete` |   |   |
@@ -392,17 +398,20 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Explain Line's Commit with AI | `git-ai-explain-line` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
 | Git: Fetch All Remotes (Prune) | `git-fetch-all` |   |   |
+| Git: Fetch Full History (Unshallow) | `git-unshallow` |   | `a shallow clone gets all its commits` |
 | Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Fixup Staged Changes Into… | `git-fixup` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
 | Git: Force Push (with Lease)… | `git-push-force` |   |   |
 | Git: Generate Commit Message with AI | `git-ai-commit-msg` |   |   |
+| Git: GitLab Merge Requests… | `git-gitlab-mrs` |   | `the open merge requests of the GitLab remote; Enter opens one` |
 | Git: Go to Commit… | `git-goto-commit` |   |   |
 | Git: Go to HEAD in GRAPH | `git-graph-head` |   | `@` |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
+| Git: How to Split a Commit | `git-split-guide` |   | `step by step, with the commands of this app` |
 | Git: Initialize Repository | `git-init` |   |   |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
 | Git: Issues… (Start Work on One) | `git-issues` |   |   |
@@ -425,6 +434,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Merge View: Take Theirs for the Whole File | `git-merge-take-all-theirs` |   | `T` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
 | Git: Merge in Progress (Continue / Abort)… | `git-merge-status` |   |   |
+| Git: Move Last Commit to Another Branch… | `git-move-commit` |   | `a commit made on the wrong branch; a pushed one is copied` |
 | Git: My Pull Requests… | `git-pr-mine` |   |   |
 | Git: Open Commit of Line | `git-blame-commit` |   |   |
 | Git: Open Merge View | `git-merge-open` |   |   |
@@ -432,6 +442,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Open Previous Revision of File | `git-rev-prev` |   |   |
 | Git: Peek Change Under Cursor | `git-peek-change` |   |   |
 | Git: Pick Recent Commit Message… | `git-commit-history` |   |   |
+| Git: Plan Commits for My Changes with AI | `git-ai-compose` |   | `split the uncommitted work into small commits` |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Publish to GitHub… | `git-publish` |   |   |
 | Git: Pull | `git-pull` |   |   |
@@ -452,13 +463,17 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Run Before-Commit Checks | `git-commit-checks` |   | `the checks of Settings → Git on what is staged; no commit` |
 | Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Search Log… | `git-log-search` |   |   |
+| Git: Set GitLab Token… | `git-gitlab-token` |   | `saved in the secret store for this GitLab host` |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
 | Git: Set Upstream Branch… | `git-upstream-set` |   |   |
+| Git: Show Contributors | `git-contributors` |   | `the authors of this branch and their commit counts` |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Folder History… | `git-log-folder` |   |   |
 | Git: Show Git Command Log | `git-cmd-log` |   |   |
+| Git: Show History of Block | `git-block-history` |   |   |
 | Git: Show Incoming Commits… | `git-incoming` |   |   |
+| Git: Show LFS Files | `git-lfs-files` |   | `the files Git LFS tracks; which ones are only pointers` |
 | Git: Show Last Hook Output | `git-hook-output` |   |   |
 | Git: Show Line History | `git-line-history` |   |   |
 | Git: Show Log... | `git-log` |   |   |
@@ -475,13 +490,18 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stash with AI Message | `git-ai-stash` |   |   |
 | Git: Stash… | `git-stash-options` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
+| Git: Switch Repository… | `git-repo-pick` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle All Branches in GRAPH | `git-graph-all` |   |   |
+| Git: Toggle Author Column in GRAPH | `git-graph-col-author` |   |   |
 | Git: Toggle Auto Fetch | `git-auto-fetch` |   |   |
 | Git: Toggle Blame Annotations | `git-blame-annotate` |   |   |
 | Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
 | Git: Toggle Commit Signing (This Repository) | `git-signing-toggle` |   |   |
+| Git: Toggle Date Column in GRAPH | `git-graph-col-date` |   |   |
 | Git: Toggle Inline Blame | `git-inline-blame` |   |   |
+| Git: Toggle Line History Lens | `git-line-lens` |   |   |
+| Git: Toggle SHA Column in GRAPH | `git-graph-col-sha` |   |   |
 | Git: Toggle Skip Hooks on Commit (--no-verify) | `git-skip-hooks` |   | `this session only` |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |
@@ -490,6 +510,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Unstage All Changes | `git-unstage-all` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
+| Git: Update Submodules… | `git-submodule-update` |   |   |
+| Git: Write Changelog with AI… | `git-ai-changelog` |   | `from the commits since a tag` |
 | Git: Write Pull Request Description with AI | `git-ai-pr-text` |   |   |
 
 ## HTTP

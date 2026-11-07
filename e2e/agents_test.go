@@ -102,6 +102,17 @@ func typedLines(log string) []string {
 
 func agentStart(t *testing.T, cfg string) (*Term, string) {
 	t.Helper()
+	// macOS $TMPDIR is a long /var/folders/… path: as the terminal's
+	// folder it fills the status bar, which drops the plan pill before the
+	// folder, so the pill never shows. A short temp folder, as on Linux.
+	if len(os.TempDir()) > 32 {
+		short, err := shortTempDir("tcagx")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.RemoveAll(short) })
+		t.Setenv("TMPDIR", short)
+	}
 	home, ws := t.TempDir(), NewRepo(t)
 	if cfg != "" {
 		d := filepath.Join(home, ".config", "termocode")
@@ -208,7 +219,11 @@ func TestAgentLimitAutoContinue(t *testing.T) {
 	tm.WaitText("Claude usage limit reached", uiTimeout)
 	tm.WaitText("hit its usage limit", uiTimeout)
 	tm.WaitText("limit ↻", uiTimeout)
-	tm.WaitText("✦ Claude", uiTimeout)
+	// The plan pill: ✦ Claude limit ↻<time>, or its narrow form ✦limit
+	// when the terminal's folder leaves no room for the long one.
+	tm.WaitFor("the plan pill", uiTimeout, func(ls []string) bool {
+		return len(ls) > 0 && (strings.Contains(ls[len(ls)-1], "✦ Claude") || strings.Contains(ls[len(ls)-1], "✦limit"))
+	})
 	tm.step("limit on")
 
 	// Reset in 10 s + the one-minute margin.

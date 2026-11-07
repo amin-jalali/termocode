@@ -88,7 +88,7 @@ func (m *Model) openDeleteBranchPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -140,7 +140,7 @@ func (m *Model) openBranchCard(kind confirmKindEnum, ref string) {
 
 // onBranchConfirm runs a branch card's answer; Cancel does nothing.
 func (m *Model) onBranchConfirm(kind confirmKindEnum, id string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -177,7 +177,7 @@ func (m *Model) openBranchFromPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -228,7 +228,7 @@ func (m *Model) handleBranchPromptSubmit(value string) (tea.Cmd, bool) {
 		return nil, false
 	}
 	value = strings.TrimSpace(value)
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil || value == "" {
 		return nil, true
 	}
@@ -270,7 +270,7 @@ func (m *Model) gitCheckoutCommitFromRow() tea.Cmd {
 	if !ok || cur.kind != gitRowCommit {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

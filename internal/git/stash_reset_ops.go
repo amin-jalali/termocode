@@ -21,6 +21,19 @@ type StashOptions struct {
 // StashPush runs `git stash push` with the options. Nothing to stash is
 // an error.
 func StashPush(dir string, o StashOptions) error {
+	args := stashPushArgs(o)
+	before := StashHash(dir, "stash@{0}")
+	if err := gitRun(dir, args...); err != nil {
+		return err
+	}
+	if StashHash(dir, "stash@{0}") == before {
+		return fmt.Errorf("no local changes to save")
+	}
+	return nil
+}
+
+// stashPushArgs is the `git stash push` argv (without "git") for o.
+func stashPushArgs(o StashOptions) []string {
 	args := []string{"stash", "push"}
 	if o.Message != "" {
 		args = append(args, "-m", o.Message)
@@ -34,14 +47,7 @@ func StashPush(dir string, o StashOptions) error {
 	if len(o.Paths) > 0 {
 		args = append(append(args, "--"), o.Paths...)
 	}
-	before := StashHash(dir, "stash@{0}")
-	if err := gitRun(dir, args...); err != nil {
-		return err
-	}
-	if StashHash(dir, "stash@{0}") == before {
-		return fmt.Errorf("no local changes to save")
-	}
-	return nil
+	return args
 }
 
 // StashHash is the full hash of a stash ("" when there is none).
