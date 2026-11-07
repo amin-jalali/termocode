@@ -52,6 +52,8 @@ type updateWatch struct {
 	busy      bool           // a download runs (update_install.go)
 	staged    *update.Staged // checked, waiting for Install
 	installed string         // the tag Install put in place (no chip then)
+	// restartAfterAI: Restart waits for the running AI turn (SCN-32).
+	restartAfterAI bool
 }
 
 // updateCheckedMsg is a finished check (or the saved state when no check

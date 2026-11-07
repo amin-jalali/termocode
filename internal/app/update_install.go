@@ -99,17 +99,50 @@ func (m *Model) answerUpdateInstall(id string) tea.Cmd {
 		return m.pushToastDetail(toast.Errr, "Update failed: nothing was changed", err.Error())
 	}
 	w.installed = st.Tag
-	body := "Restart termocode to use " + st.Tag + ". Unsaved text is kept, as on Reload Window."
+	m.openUpdateRestartCard(st.Tag)
+	return nil
+}
+
+// openUpdateRestartCard asks to restart into tag (Later first). While
+// an AI turn runs it says Restart waits for the turn (SCN-32).
+func (m *Model) openUpdateRestartCard(tag string) {
+	body := "Restart termocode to use " + tag + ". Unsaved text is kept, as on Reload Window."
 	if os.Getenv(session.EnvSession) != "" {
 		body += "\n\nThis window runs in a background session: Restart starts the new version in it. The small session process keeps the old version until the session ends; it only passes keys and the screen through."
 	}
-	m.confirm = confirm.New("termocode "+st.Tag+" is installed", body, []confirm.Button{
+	if updateAIBusy(m) {
+		body += "\n\nAn AI turn is running: Restart waits until it ends, so the turn is not cut off."
+	}
+	m.confirm = confirm.New("termocode "+tag+" is installed", body, []confirm.Button{
 		{ID: "cancel", Title: "Later"},
 		{ID: "restart", Title: "Restart", Style: confirm.StylePrimary},
 	}).WithWideText()
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen, m.confirmKind = true, confirmKindUpdateRestart
-	return nil
+}
+
+// updateAIBusy: an AI chat turn runs in this window.
+func updateAIBusy(m *Model) bool { return m.ai != nil && m.ai.streaming }
+
+// updateRestartAsked runs Restart: now, or after the running AI turn.
+func (m *Model) updateRestartAsked() tea.Cmd {
+	if updateAIBusy(m) {
+		m.updW().restartAfterAI = true
+		return m.pushToastDetail(toast.Info, "Restarts when the AI turn ends", "termocode then starts the new version")
+	}
+	return updateRestart(m)
+}
+
+// updateRestartAfterAI restarts when Restart waited for an AI turn and
+// no turn runs now (a queued run that started keeps it waiting).
+// ok=false: no restart is due.
+func (m *Model) updateRestartAfterAI() (tea.Cmd, bool) {
+	w := m.upd
+	if w == nil || !w.restartAfterAI || updateAIBusy(m) {
+		return nil, false
+	}
+	w.restartAfterAI = false
+	return updateRestart(m), true
 }
 
 // updateCardClosed runs on Esc: a staged download is thrown away.

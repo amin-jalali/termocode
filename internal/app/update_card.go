@@ -90,7 +90,7 @@ func (m *Model) handleUpdateConfirm(id string) (tea.Cmd, bool) {
 		return m.answerUpdateRollback(id), true
 	case confirmKindUpdateRestart:
 		if id == "restart" {
-			return updateRestart(m), true
+			return m.updateRestartAsked(), true
 		}
 		return nil, true
 	case confirmKindUpdateNotice:
