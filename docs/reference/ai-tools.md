@@ -2010,6 +2010,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-copy-id` | Containers: Copy ID | auto |   |
 | `containers-detail` | Containers: Show Details | auto |   |
 | `containers-engine-config` | Containers: Open Engine Config | auto |   |
+| `containers-exec-options` | Containers: Exec with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (container exec) |
 | `containers-files` | Containers: Browse Files | never | opens a picker or prompt that only the user can answer; use a typed tool (container files) |
 | `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
 | `containers-focus` | Containers: Focus | auto |   |

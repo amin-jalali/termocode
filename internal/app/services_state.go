@@ -52,6 +52,7 @@ func svcLogsTab(name string) string { return "logs:" + name }
 
 type servicesState struct {
 	files    containerFilesState // the open container file browser (containers_files.go)
+	execOpts containerExecState  // the exec options prompts (containers_execui.go)
 	logsOpts containerLogsState  // the logs options picker (containers_logsui.go)
 	opened   bool                // the view was shown once (detection ran)
 	loaded   bool                // a snapshot arrived

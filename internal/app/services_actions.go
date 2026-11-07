@@ -835,6 +835,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.openContainerFiles(c)
 		}
+	case "E":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.askContainerExecOptions(c)
+		}
 	case "L":
 		if c, ok := m.selectedContainer(); ok {
 			m.openContainerLogsOptions(c)
@@ -951,6 +955,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"s / x / r", "start / stop / restart"},
 			[]string{"p", "pause or unpause"},
 			[]string{"e", "shell in the container"},
+			[]string{"E", "exec with options: shell or command, user, folder"},
 			[]string{"t", "attach"},
 			[]string{"Enter", "logs"},
 			[]string{"L", "logs with options: tail, since, timestamps, save, search"},
@@ -1404,6 +1409,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-logs", Title: "Containers: Follow Logs"},
 		{ID: "containers-logs-options", Title: "Containers: Logs with Options…"},
 		{ID: "containers-shell", Title: "Containers: Open Shell"},
+		{ID: "containers-exec-options", Title: "Containers: Exec with Options…"},
 		{ID: "containers-attach", Title: "Containers: Attach"},
 		{ID: "containers-stats", Title: "Containers: Follow Stats"},
 		{ID: "containers-inspect", Title: "Containers: Inspect"},
@@ -1767,6 +1773,8 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return m.openContainerTerminal(c, "stats")
 			case "containers-inspect":
 				return m.inspectContainer(c)
+			case "containers-exec-options":
+				return m.askContainerExecOptions(c)
 			case "containers-logs-options":
 				m.openContainerLogsOptions(c)
 				return nil

@@ -68,6 +68,7 @@ when something changed. When you hide the view (another activity item,
 | `a` / `A` | start all / stop all of the project's services (the **Start all** and **Stop all** buttons); off while the engine is down |
 | `p` | pause or unpause the selected container |
 | `e` | shell in the selected container (terminal tab) |
+| `E` | exec with options: shell or command, user, start folder |
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
 | `i` | inspect: a read-only JSON page in the editor |
@@ -143,6 +144,15 @@ remove it. On a compose project group, `s`, `x`, and `r` run compose up,
 stop, and restart. `D` asks before compose down and names its command.
 Attach uses `--sig-proxy=false`; press `Ctrl+P Ctrl+Q` in its terminal tab
 to detach without stopping the container.
+
+### Exec with options
+
+`E` on a running container (or **Containers: Exec with Options…**) asks
+three short questions; each may stay empty. **Shell or command**: empty
+keeps the bash-or-sh default, one word is a shell (`zsh`, `ash`), more
+words run as a command without a shell (`ps aux`). **User**: a name or
+uid (`root`, `1000:1000`). **Folder**: an absolute path (`/app`). The exec
+opens in a terminal tab. Values that start with `-` are refused.
 
 ### Logs with options
 
