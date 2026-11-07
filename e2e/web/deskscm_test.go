@@ -138,3 +138,114 @@ func TestDeskSCMViewer(t *testing.T) {
 		t.Fatalf("a viewer sees %d actions", n)
 	}
 }
+
+// scmClick clicks a row with the given modifier keys (ctrlKey, shiftKey).
+func scmClick(p *Page, row, mods string) {
+	p.T.Helper()
+	Eval[bool](p, `(`+row+`.dispatchEvent(new MouseEvent("click", {bubbles: true, cancelable: true, `+mods+`})), true)`)
+}
+
+// GITX-20: Ctrl+click marks a row and Shift+click a range; a row action
+// on a marked row acts on every marked row of its group; Esc and a plain
+// click drop the marks; a discard of the marked rows asks the laptop once.
+func TestDeskSCMMultiSelect(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.LoginMeta(Meta("c-scm"))
+	snap := gitSnap()
+	snap.Files = append(snap.Files, webproto.GitFile{Path: "c.go", X: " ", Y: "M", Unstaged: true}, webproto.GitFile{Path: "d.go", X: "M", Y: " ", Staged: true})
+	c.Send(t, Snap("git", 1, snap))
+	Eval[bool](p, `(location.hash = "#/git", true)`)
+	p.WaitJS(scmRow("changes", "src/a.go"))
+	marked := `[...` + scm + `.querySelectorAll('.tr.is-sel[data-path]')].map((e) => e.dataset.group + ":" + e.dataset.path).join(",")`
+	// Changes in order: c.go, new.txt, src/a.go.
+	scmClick(p, scmRow("changes", "c.go"), "ctrlKey: true")
+	scmClick(p, scmRow("changes", "src/a.go"), "shiftKey: true")
+	p.WaitJS(marked + ` === "changes:c.go,changes:new.txt,changes:src/a.go"`)
+	scmClick(p, scmRow("changes", "new.txt"), "ctrlKey: true")
+	p.WaitJS(marked + ` === "changes:c.go,changes:src/a.go"`)
+	Eval[bool](p, scmRow("changes", "c.go")+`.querySelector('[aria-label="Stage Changes"]').click() ?? true`)
+	reply(t, c, expectOp(t, c, webproto.OpGitStage, `{"paths":["c.go","src/a.go"]}`), nil)
+	p.WaitJS(marked + ` === ""`)
+	// Staged rows: mark both, unstage them at once from the right-click menu.
+	scmClick(p, scmRow("staged", "b.go"), "ctrlKey: true")
+	scmClick(p, scmRow("staged", "d.go"), "metaKey: true")
+	p.WaitJS(marked + ` === "staged:b.go,staged:d.go"`)
+	Eval[bool](p, `(`+scmRow("staged", "d.go")+`.dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true, clientX: 40, clientY: 200})), true)`)
+	p.TapJS(`[...document.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.includes("Unstage Changes"))`)
+	reply(t, c, expectOp(t, c, webproto.OpGitUnstage, `{"paths":["b.go","d.go"]}`), nil)
+	p.WaitJS(marked + ` === ""`)
+	// Esc drops the marks; so does a plain click (which opens the change).
+	scmClick(p, scmRow("changes", "c.go"), "ctrlKey: true")
+	p.WaitJS(marked + ` === "changes:c.go"`)
+	Eval[bool](p, `(`+scmRow("changes", "c.go")+`.focus(), true)`)
+	p.Key(kb.Escape)
+	p.WaitJS(marked + ` === ""`)
+	// Discard of marked rows: one question, Cancel first, for all of them.
+	scmClick(p, scmRow("changes", "c.go"), "ctrlKey: true")
+	scmClick(p, scmRow("changes", "src/a.go"), "ctrlKey: true")
+	Eval[bool](p, scmRow("changes", "src/a.go")+`.querySelector('[aria-label="Discard Changes"]').click() ?? true`)
+	p.WaitJS(`document.querySelector(".discard") && document.activeElement === document.querySelector(".discard .choices button")`)
+	p.WaitJS(`document.querySelector(".discard .arm.is-armed")`)
+	p.TapJS(`[...document.querySelectorAll(".discard button")].find((b) => b.textContent === "Ask the laptop")`)
+	reply(t, c, expectOp(t, c, webproto.OpGitDiscard, `{"paths":["c.go","src/a.go"]}`), webproto.AskRef{Card: "card-3"})
+	p.WaitJS(`document.querySelector(".waiting")`)
+}
+
+// GITX-10: STASHES lists the stash, folded at first with its count; a
+// click on an entry offers View Stash Changes (a read) and Drop Stash…,
+// which asks here (Cancel first), then the laptop.
+func TestDeskSCMStashes(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.LoginMeta(Meta("c-scm"))
+	snap := gitSnap()
+	snap.Stashes = []webproto.GitStashEntry{{Ref: "stash@{0}", Message: "On main: wip toast"}, {Ref: "stash@{1}", Message: "On main: old try"}}
+	c.Send(t, Snap("git", 1, snap))
+	Eval[bool](p, `(location.hash = "#/git", true)`)
+	sec := scm + `.querySelector('[data-section="stashes"]')`
+	p.WaitJS(sec + `?.querySelector(".ps-head")?.getAttribute("aria-expanded") === "false"`)
+	if got := Eval[string](p, sec+`.querySelector(".ps-head").textContent`); !strings.Contains(got, "Stashes") || !strings.Contains(got, "2") {
+		t.Errorf("head %q", got)
+	}
+	p.TapJS(sec + `.querySelector(".ps-head")`)
+	row := sec + `.querySelector('.tr[data-stash="stash@{1}"]')`
+	p.WaitJS(row + `?.querySelector(".tr-label")?.textContent === "On main: old try"`)
+	p.TapJS(row)
+	p.TapJS(`[...document.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.includes("View Stash Changes"))`)
+	reply(t, c, expectOp(t, c, webproto.OpGitStashShow, `{"ref":"stash@{1}"}`),
+		webproto.GitDiff{Rows: []webproto.DiffRow{{K: "file", Text: "a.go"}, {K: "add", Text: "stashed line", New: 1}}, Added: 1})
+	p.WaitJS(`[...document.querySelectorAll(".diff-rows *")].some((e) => e.textContent === "stashed line")`)
+	p.Key(kb.Escape)
+	p.WaitJS(`!document.querySelector(".diff-sheet")`)
+	p.TapJS(row)
+	p.TapJS(`[...document.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.includes("Drop Stash"))`)
+	p.WaitJS(`document.querySelector(".ask-text")?.textContent.includes("Drop stash@{1}") && document.activeElement === document.querySelector(".ask .choices button")`)
+	p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
+	p.TapJS(ButtonByText("Ask the laptop"))
+	reply(t, c, expectOp(t, c, webproto.OpGitStashAct, `{"ref":"stash@{1}","do":"drop"}`), webproto.AskRef{Card: "card-8"})
+	p.WaitJS(`document.querySelector(".waiting")`)
+}
+
+// GITX-10: a viewer can view a stash entry but has no actions on it.
+func TestDeskSCMStashesViewer(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	m := Meta("c-v")
+	m.Role = webproto.RoleViewer
+	c := p.LoginMeta(m)
+	snap := gitSnap()
+	snap.Stashes = []webproto.GitStashEntry{{Ref: "stash@{0}", Message: "wip"}}
+	c.Send(t, Snap("git", 1, snap))
+	Eval[bool](p, `(location.hash = "#/git", true)`)
+	sec := scm + `.querySelector('[data-section="stashes"]')`
+	p.TapJS(sec + `?.querySelector(".ps-head")`)
+	p.TapJS(sec + `.querySelector('.tr[data-stash="stash@{0}"]')`)
+	p.WaitJS(`document.querySelectorAll('[role="menuitem"]').length > 0`)
+	if got := Eval[string](p, `[...document.querySelectorAll('[role="menuitem"]')].map((b) => b.textContent).join(",")`); got != "View Stash Changes" {
+		t.Errorf("viewer menu %q", got)
+	}
+}

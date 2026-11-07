@@ -1074,7 +1074,7 @@ end })`)
 		m.syncCommitEditFile() // git_commit_msg.go: a saved message file
 		m.syncPRBodyFile()     // pr_edit_body.go: a saved PR description
 		m.gitBlameInit()
-		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh(), m.gitBlameRefreshCmd(false)), true // blame: again when HEAD or the file changed (gitBlameKey)
+		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh(), m.gitBlameRefreshCmd(false), m.gitReposScanCmd()), true // blame: again when HEAD or the file changed (gitBlameKey)
 	case gitBlameLoadedMsg: // git_blame_view.go
 		m.onGitBlameLoaded(msg)
 		return m, nil, true
@@ -1083,6 +1083,8 @@ end })`)
 	case gitOlderMsg:
 		m.onGitOlder(msg)
 		return m, nil, true
+	case gitReposMsg: // gitx_multirepo.go
+		return m, m.onGitRepos(msg), true
 	case nvim.ErrMsg:
 		m.err = msg.Err.Error()
 		return m, nil, true

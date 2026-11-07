@@ -1,0 +1,1 @@
+{"t":"req","id":72,"op":"git.stash_show","args":{"ref":"stash@{1}"}}

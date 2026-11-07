@@ -12,18 +12,26 @@
 // conflicted file opens the merge editor and a stopped rebase shows
 // Continue, Skip and Abort (each asked on the laptop). Git: Toggle
 // Tree/Flat View groups the files under their folders.
+//
+// Ctrl/Cmd+click marks a file row and Shift+click the rows from the last
+// one (GITX-20); a row action or the right-click menu of a marked row
+// then acts on every marked row of its group at once (a discard still
+// asks the laptop once, for all of them); Esc or a plain click drops the
+// marks. STASHES (GITX-10, folded at first) lists the stash: a click
+// opens View Changes, Apply, Pop, Create Branch from Stash… and Drop…,
+// each but the first asked on the laptop.
 import { Fragment, h, type ComponentChildren } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { diffTab } from "../../lib/difftab";
-import { scmTree } from "../../lib/gitnav";
+import { gitAsk, scmTree } from "../../lib/gitnav";
 import { GRAPH_TAB, mergeTab, PRS_TAB } from "../../lib/gittab";
 import { modKey } from "../../lib/platform";
 import { route } from "../../lib/router";
-import { keep, showFile } from "../../lib/workbench";
+import { keep, quick, showFile } from "../../lib/workbench";
 import { toast } from "../../lib/toasts";
 import { link, live, store } from "../../session";
-import { age, commitMessage, groupFiles, readGit, splitPath, type GitFile } from "../../state/git";
+import { age, commitMessage, groupFiles, readGit, splitPath, type GitFile, type GitStash } from "../../state/git";
 import { t, tn } from "../../strings";
 import { AskLaptop } from "../../ui/AskLaptop";
 import { openMenu, type MenuItems } from "../../ui/ContextMenu";
@@ -123,7 +131,7 @@ function open(f: GitFile, g: Group, pin = false): void {
   if (pin) keep(tab);
 }
 
-const shut = signal<ReadonlySet<string>>(new Set(["log"]));
+const shut = signal<ReadonlySet<string>>(new Set(["log", "stashes"]));
 function toggle(id: string): void {
   const n = new Set(shut.peek());
   if (n.has(id)) n.delete(id);
@@ -131,10 +139,75 @@ function toggle(id: string): void {
   shut.value = n;
 }
 
+/** marks are the marked file rows ("<group>\n<path>"); anchor is the row
+ * a Shift+click marks from. */
+const marks = signal<ReadonlySet<string>>(new Set());
+let anchor = "";
+const markKey = (g: Group, path: string) => g + "\n" + path;
+
+function clearMarks(): void {
+  if (marks.peek().size) marks.value = new Set();
+}
+
+/** RowCtx is what a file row acts with: pick gives the paths an action
+ * on the row takes (the marked rows of its group when it is marked). */
+interface RowCtx {
+  canAct: boolean;
+  onDiscard: (p: string[]) => void;
+  pick: (g: Group, path: string) => string[];
+}
+
+/** clickRow marks (Ctrl/Cmd, Shift) or opens the change. */
+function clickRow(e: MouseEvent, f: GitFile, g: Group): void {
+  const k = markKey(g, f.path);
+  if (g !== "merge" && (e.ctrlKey || e.metaKey)) {
+    const n = new Set(marks.peek());
+    if (n.has(k)) n.delete(k);
+    else n.add(k);
+    marks.value = n;
+    anchor = k;
+    return;
+  }
+  if (g !== "merge" && e.shiftKey) {
+    e.preventDefault();
+    const tree = (e.currentTarget as HTMLElement | null)?.closest(".pv-tree");
+    const keys = [...(tree?.querySelectorAll<HTMLElement>(".tr[data-path][data-group]") ?? [])]
+      .filter((r) => r.dataset.group !== "merge")
+      .map((r) => markKey(r.dataset.group as Group, r.dataset.path ?? ""));
+    const b = keys.indexOf(k);
+    if (b >= 0) {
+      const a = keys.indexOf(anchor);
+      const [lo, hi] = a < 0 ? [b, b] : [Math.min(a, b), Math.max(a, b)];
+      marks.value = new Set(keys.slice(lo, hi + 1));
+      if (a < 0) anchor = k;
+      return;
+    }
+  }
+  clearMarks();
+  anchor = k;
+  open(f, g);
+}
+
+/** rowMenu is a file row's right-click menu: its actions, on the marked
+ * rows when it is marked. */
+function rowMenu(e: MouseEvent, f: GitFile, g: Group, ctx: RowCtx): void {
+  e.preventDefault();
+  const paths = ctx.pick(g, f.path);
+  const many = paths.length > 1;
+  const items: (MenuItems[number])[] = [];
+  if (!many) items.push({ label: t("dv.open_file"), run: () => showFile(f.path) });
+  if (ctx.canAct && g === "changes") {
+    items.push({ label: t("scm.stage"), run: () => (clearMarks(), stage(paths, true)) });
+    items.push({ label: t("scm.discard"), run: () => (clearMarks(), ctx.onDiscard(paths)) });
+  }
+  if (ctx.canAct && g === "staged") items.push({ label: t("scm.unstage"), run: () => (clearMarks(), stage(paths, false)) });
+  if (items.length) openMenu(e.clientX, e.clientY, many ? t("scm.marked", { n: paths.length }) : splitPath(f.path).name, items);
+}
+
 /** FileRows are a group's files: one row each, or (tree view) under a
  * row per folder, as the laptop's Toggle Tree/Flat View shows them. */
-function FileRows({ files, g, canAct, onDiscard }: { files: GitFile[]; g: Group; canAct: boolean; onDiscard: (p: string[]) => void }) {
-  if (!scmTree.value) return <>{files.map((f) => <FileRow key={g + f.path} f={f} g={g} canAct={canAct} onDiscard={onDiscard} />)}</>;
+function FileRows({ files, g, ctx }: { files: GitFile[]; g: Group; ctx: RowCtx }) {
+  if (!scmTree.value) return <>{files.map((f) => <FileRow key={g + f.path} f={f} g={g} ctx={ctx} />)}</>;
   const dirs = new Map<string, GitFile[]>();
   for (const f of files) {
     const d = splitPath(f.path).dir;
@@ -143,13 +216,19 @@ function FileRows({ files, g, canAct, onDiscard }: { files: GitFile[]; g: Group;
   const out = [];
   for (const d of [...dirs.keys()].sort()) {
     if (d) out.push(<Row key={g + "/" + d} level={1} icon={<Cod name="folder" />} label={d} data={{ dir: d }} />);
-    for (const f of dirs.get(d) ?? []) out.push(<FileRow key={g + f.path} f={f} g={g} canAct={canAct} onDiscard={onDiscard} tree={d !== "" ? 2 : 1} />);
+    for (const f of dirs.get(d) ?? []) out.push(<FileRow key={g + f.path} f={f} g={g} ctx={ctx} tree={d !== "" ? 2 : 1} />);
   }
   return <>{out}</>;
 }
 
-function FileRow({ f, g, canAct, onDiscard, tree }: { f: GitFile; g: Group; canAct: boolean; onDiscard: (p: string[]) => void; tree?: number }) {
+function FileRow({ f, g, ctx, tree }: { f: GitFile; g: Group; ctx: RowCtx; tree?: number }) {
   const { name, dir } = splitPath(f.path);
+  const { canAct } = ctx;
+  const act = (run: (paths: string[]) => void) => () => {
+    const paths = ctx.pick(g, f.path);
+    clearMarks();
+    run(paths);
+  };
   const st = letter(f, g);
   const del = st.l === "D";
   return (
@@ -161,15 +240,17 @@ function FileRow({ f, g, canAct, onDiscard, tree }: { f: GitFile; g: Group; canA
       desc={tree ? undefined : dir}
       title={`${f.path} • ${t(g === "staged" ? "scm.staged" : g === "merge" ? "scm.merge" : "git.changes")}`}
       data={{ path: f.path, group: g }}
-      onClick={() => open(f, g)}
+      selected={marks.value.has(markKey(g, f.path))}
+      onClick={(e) => clickRow(e, f, g)}
+      onContextMenu={(e) => rowMenu(e, f, g, ctx)}
       onDblClick={() => open(f, g, true)}
       end={<span class={`tr-letter ${st.c}`}>{st.l}</span>}
       actions={
         <>
           <Act icon="go-to-file" label={t("dv.open_file")} onClick={() => showFile(f.path)} />
-          {canAct && g === "changes" && <Act icon="discard" label={t("scm.discard")} onClick={() => onDiscard([f.path])} />}
-          {canAct && g === "changes" && <Act icon="add" label={t("scm.stage")} onClick={() => stage([f.path], true)} />}
-          {canAct && g === "staged" && <Act icon="remove" label={t("scm.unstage")} onClick={() => stage([f.path], false)} />}
+          {canAct && g === "changes" && <Act icon="discard" label={t("scm.discard")} onClick={act(ctx.onDiscard)} />}
+          {canAct && g === "changes" && <Act icon="add" label={t("scm.stage")} onClick={act((p) => stage(p, true))} />}
+          {canAct && g === "staged" && <Act icon="remove" label={t("scm.unstage")} onClick={act((p) => stage(p, false))} />}
         </>
       }
     />
@@ -187,6 +268,7 @@ export function DeskSCM() {
   const [busy, setBusy] = useState(false);
   const [discard, setDiscard] = useState<string[] | null>(null);
   const [show, setShow] = useState("");
+  const [showStash, setShowStash] = useState("");
   const box = useRef<HTMLTextAreaElement | null>(null);
   const groups = groupFiles(g.files);
   const changes = [...groups.changes, ...groups.untracked].sort((a, b) => a.path.localeCompare(b.path));
@@ -195,6 +277,22 @@ export function DeskSCM() {
   useEffect(() => {
     if (staged.length === 0) setAsking(false);
   }, [staged.length]);
+  // A new git state: the marks of rows that are gone go too.
+  useEffect(() => {
+    const m = marks.peek();
+    if (!m.size) return;
+    const have = new Set([...staged.map((f) => markKey("staged", f.path)), ...changes.map((f) => markKey("changes", f.path))]);
+    if ([...m].some((k) => !have.has(k))) marks.value = new Set([...m].filter((k) => have.has(k)));
+  }, [st]);
+  const ctx: RowCtx = {
+    canAct,
+    onDiscard: setDiscard,
+    pick: (grp, path) => {
+      const m = marks.value;
+      if (!m.has(markKey(grp, path))) return [path];
+      return (grp === "staged" ? staged : changes).filter((f) => m.has(markKey(grp, f.path))).map((f) => f.path);
+    },
+  };
   // A link to a change (#/git/<path>, ?side=staged): its diff editor tab.
   const r = route.value;
   const linked = r.tab === "git" ? r.rest : "";
@@ -301,12 +399,20 @@ export function DeskSCM() {
           </div>
         )}
         {g.op === "rebase" ? <RebaseBanner seq={st?.seq} /> : g.op && <p class="pv-msg c-warn">{t("git.op", { op: g.op })}</p>}
-        <div class="pv-scroll">
+        <div
+          class="pv-scroll"
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && marks.peek().size) {
+              e.stopPropagation();
+              clearMarks();
+            }
+          }}
+        >
           <Tree label={t("act.scm")}>
             {groups.conflicts.length > 0 && (
               <GroupRow id="merge" title={t("scm.merge")} n={groups.conflicts.length} />
             )}
-            {!shut.value.has("merge") && <FileRows files={groups.conflicts} g="merge" canAct={false} onDiscard={setDiscard} />}
+            {!shut.value.has("merge") && <FileRows files={groups.conflicts} g="merge" ctx={{ ...ctx, canAct: false }} />}
             {staged.length > 0 && (
               <GroupRow
                 id="staged"
@@ -315,7 +421,7 @@ export function DeskSCM() {
                 actions={canAct && <Act icon="remove" label={t("scm.unstage_all")} onClick={() => stage(staged.map((f) => f.path), false)} />}
               />
             )}
-            {staged.length > 0 && !shut.value.has("staged") && <FileRows files={staged} g="staged" canAct={canAct} onDiscard={setDiscard} />}
+            {staged.length > 0 && !shut.value.has("staged") && <FileRows files={staged} g="staged" ctx={ctx} />}
             {(changes.length > 0 || staged.length === 0) && (
               <GroupRow
                 id="changes"
@@ -332,10 +438,32 @@ export function DeskSCM() {
                 }
               />
             )}
-            {!shut.value.has("changes") && <FileRows files={changes} g="changes" canAct={canAct} onDiscard={setDiscard} />}
+            {!shut.value.has("changes") && <FileRows files={changes} g="changes" ctx={ctx} />}
           </Tree>
           {g.more > 0 && <p class="pv-msg">{t("git.many", { n: g.more })}</p>}
         </div>
+        {g.stashes.length > 0 && (
+          <PaneSection id="stashes" title={t("scm.stashes")} count={g.stashes.length} open={!shut.value.has("stashes")} onToggle={() => toggle("stashes")} fixed>
+            <Tree label={t("scm.stashes")}>
+              {g.stashes.map((s) => (
+                <Row
+                  key={s.ref}
+                  level={0}
+                  icon={<Cod name="git-stash" />}
+                  label={s.message || s.ref}
+                  desc={s.ref}
+                  title={`${s.ref} ${s.message}`}
+                  data={{ stash: s.ref }}
+                  onClick={(e) => stashMenu(e, s, canAct, setShowStash)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    stashMenu(e, s, canAct, setShowStash);
+                  }}
+                />
+              ))}
+            </Tree>
+          </PaneSection>
+        )}
         {g.log.length > 0 && (
           <PaneSection id="log" title={t("scm.graph")} open={!shut.value.has("log")} onToggle={() => toggle("log")} fixed>
             <Tree label={t("scm.graph")}>
@@ -386,6 +514,7 @@ export function DeskSCM() {
       {body}
       {discard && <DiscardFlow paths={discard} onDone={() => setDiscard(null)} />}
       {show && <ShowSheet hash={show} onClose={() => setShow("")} />}
+      {showStash && <ShowSheet hash={showStash} stash onClose={() => setShowStash("")} />}
       {gitAction.value && <GitActionFlow kind={gitAction.value} onDone={() => (gitAction.value = null)} />}
     </PaneView>
   );
@@ -406,4 +535,37 @@ function GroupRow({ id, title, n, actions }: { id: string; title: string; n: num
       end={<span class="count">{n}</span>}
     />
   );
+}
+
+/** stashMenu is a stash entry's actions: View Changes here; Apply, Pop,
+ * Create Branch from Stash… and Drop… asked here first (Cancel first),
+ * then on the laptop's card. */
+function stashMenu(e: MouseEvent, s: GitStash, canAct: boolean, view: (ref: string) => void): void {
+  const ref = s.ref;
+  const ask = (act: string, label: string, text: string, branch?: string) =>
+    (gitAsk.value = { op: "git.stash_act", args: branch ? { ref, do: act, branch } : { ref, do: act }, label, text });
+  const items: (MenuItems[number])[] = [{ label: t("gs.view"), run: () => view(ref) }];
+  if (canAct)
+    items.push(
+      null,
+      { label: t("gs.apply"), run: () => ask("apply", t("gs.apply"), t("gs.apply_q", { ref })) },
+      { label: t("gs.pop"), run: () => ask("pop", t("gs.pop"), t("gs.pop_q", { ref })) },
+      {
+        label: t("gs.branch") + "…",
+        run: () =>
+          (quick.value = {
+            mode: "ask",
+            ask: {
+              title: t("gs.branch_ask", { ref }),
+              run: (name) => {
+                const b = name.trim();
+                if (b) ask("branch", t("gs.branch"), t("gs.branch_q", { ref, branch: b }), b);
+              },
+            },
+          }),
+      },
+      null,
+      { label: t("gs.drop") + "…", run: () => ask("drop", t("gs.drop"), t("gs.drop_q", { ref })) },
+    );
+  openMenu(e.clientX, e.clientY, ref, items);
 }
