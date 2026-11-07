@@ -808,6 +808,18 @@ export const S = {
   "ph.ask": "What do you want?",
   "ph.checks": "Checks: {state}",
   "ph.ci": "CI",
+  // Phone app shell (MOBUX-2)
+  "ph.switch": "Project: {name}. Change project",
+  "ph.switch_title": "Projects",
+  "ph.current": "Current project",
+  "ph.menu": "All tools",
+  "ph.live": "Live",
+  "ph.offline": "Offline",
+  "ph.asleep": "Laptop asleep",
+  "ph.mic": "Speak",
+  "ph.mic_hint": "Tap the 🎤 on your keyboard to speak.",
+  "ph.attach": "Attach",
+  "ph.stream": "Chat",
 } as const;
 
 /** StringKey is a key of the page's strings or of the workbench's

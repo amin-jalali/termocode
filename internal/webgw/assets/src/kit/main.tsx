@@ -31,7 +31,7 @@ import { Progress, SkeletonBubbles, SkeletonRows } from "../ui/Skeleton";
 import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
-import { Block, BoardTile, Composer, PhoneCard, PhoneChip, PhoneChips, PhoneSheet, Row, Rows, StatusMark, STATUS, type Status } from "../phone/index";
+import { Block, BoardTile, Composer, PhoneCard, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, Row, Rows, StatusMark, STATUS, StreamMsg, type Status } from "../phone/index";
 import "./replay";
 
 installSafety();
@@ -292,6 +292,81 @@ function PhoneKit() {
   );
 }
 
+// The phone app shell (MOBUX-2): one state for both theme frames.
+const shellProjects = [
+  { id: "shop", name: "shop", where: "~/src/shop" },
+  { id: "api", name: "api", where: "~/src/api" },
+  { id: "docs", name: "docs", where: "~/notes/docs" },
+];
+const shellProject = signal("shop");
+const shellOffline = signal(false);
+const shellMsgs = signal<{ from: "you" | "ai"; text: string }[]>([
+  { from: "you", text: "show open PRs as a table, newest first" },
+  { from: "ai", text: "5 open pull requests:" },
+]);
+const shellDraft = signal("");
+
+function ShellControls() {
+  return (
+    <div class="kit-row">
+      <button type="button" class="btn" onClick={() => (shellOffline.value = !shellOffline.value)}>
+        Shell offline
+      </button>
+      <button
+        type="button"
+        class="btn"
+        onClick={() => (shellMsgs.value = [...shellMsgs.value, { from: shellMsgs.value.length % 2 ? "you" : "ai", text: "Message " + (shellMsgs.value.length + 1) + ": the lane fix-login is on step 3 of 5." }])}
+      >
+        Shell: add a message
+      </button>
+    </div>
+  );
+}
+
+function ShellDemo() {
+  const p = shellProjects.find((x) => x.id === shellProject.value) ?? shellProjects[0];
+  return (
+    <div class="ph-kit-shell">
+      <PhoneShell
+        project={p}
+        projects={shellProjects}
+        onProject={(id) => (shellProject.value = id)}
+        link={shellOffline.value ? "offline" : "live"}
+        onMenu={() => toast("info", "All tools")}
+        chips={
+          <PhoneChips label="Shortcuts">
+            <PhoneChip label="Needs you" status="needs" count={2} onClick={() => undefined} />
+            <PhoneChip label="Board" pinned onClick={() => undefined} />
+            <PhoneChip label="Projects" onClick={() => undefined} />
+            <PhoneChip label="Review" onClick={() => undefined} />
+          </PhoneChips>
+        }
+        composer={{
+          value: shellDraft.value,
+          onInput: (v) => (shellDraft.value = v),
+          onSend: () => {
+            shellMsgs.value = [...shellMsgs.value, { from: "you", text: shellDraft.value }];
+            shellDraft.value = "";
+          },
+          onAttach: () => toast("info", "Attach"),
+        }}
+      >
+        {shellMsgs.value.map((m, i) => (
+          <StreamMsg key={i} from={m.from}>
+            {m.text}
+          </StreamMsg>
+        ))}
+        <Block kind="table" title="Pull requests" status="working" live>
+          <Rows label="Pull requests">
+            <Row status="failed" title="#418 fix toast" meta="CI ✗ · 2 h" end="2 h" onClick={() => undefined} />
+            <Row status="working" title="#412 login rate limit" meta="CI ◐ · 1 d" end="1 d" onClick={() => undefined} />
+          </Rows>
+        </Block>
+      </PhoneShell>
+    </div>
+  );
+}
+
 function PhoneSheetDemo() {
   const [open, setOpen] = useState(false);
   return (
@@ -347,7 +422,7 @@ function Kit() {
         </div>
       </header>
       <nav class="kit-nav" aria-label="Sections">
-        {["tokens", "strip", "nav", "pill", "bars", "buttons", "cards", "sheets", "toasts", "chips", "term", "code", "diff", "tree", "loading", "empty", "waiting", "connect", "misc", "phone"].map((s) => (
+        {["tokens", "strip", "nav", "pill", "bars", "buttons", "cards", "sheets", "toasts", "chips", "term", "code", "diff", "tree", "loading", "empty", "waiting", "connect", "misc", "phone", "shell"].map((s) => (
           <a key={s} class="chip" href={`#${s}`}>
             {s}
           </a>
@@ -646,6 +721,10 @@ function Kit() {
         <Section id="phone" title="Phone app" note="Phone tokens are web tokens (both themes, AA); status is a colour and a shape; 44 px targets; the safe choice first. Phone layout only (MOBUX-1).">
           <Pair tall>{() => <PhoneKit />}</Pair>
           <Pair>{() => <PhoneSheetDemo />}</Pair>
+        </Section>
+        <Section id="shell" title="Phone app shell" note="Top bar: project switcher ▾, live mark, ☰. The stream, then the dock in the thumb zone: chips above the composer (+, 🎤, Send). MOBUX-2.">
+          <ShellControls />
+          <Pair tall>{() => <ShellDemo />}</Pair>
         </Section>
       </main>
       <Toasts />
