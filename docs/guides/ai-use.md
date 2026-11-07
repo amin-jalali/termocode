@@ -767,10 +767,11 @@ settings are blanked and keys are removed from logs. You can add the
 current chat. Nothing is sent. **Save report** writes a new
 `termocode-report-*.md` in the workspace. Check it for private text.
 
-## Hooks after AI tool calls
+## Hooks on AI tool calls
 
-A hook is a command that runs after an AI tool call worked, for example a
-formatter after the AI writes a file:
+A hook is a command that runs on an AI event. The most common one runs
+after an AI tool call worked, for example a formatter after the AI writes
+a file:
 
 ```json
 {"post_tool": [
@@ -794,7 +795,47 @@ formatter after the AI writes a file:
   `hook after=write_file run=… by=user → exit 0 · 40ms`.
 - When a hook fails (exit code not 0), its output (at most 4 KB, secrets
   blanked) is added to the tool result, so the AI can fix a lint error.
-- Hooks run only after built-in tools, not after MCP tools.
+- `post_tool` hooks run after built-in tools and after MCP tools.
+
+### More hook events
+
+The same file can hold hooks for other events:
+
+```json
+{"pre_tool":     [{"tools": ["run_command", "mcp__github__*"], "run": "./guard.sh"}],
+ "file_save":    [{"files": ["*.go"], "run": "go vet ./..."}],
+ "stop":         [{"run": "./check-done.sh"}],
+ "pre_compact":  [{"run": "./save-notes.sh"}],
+ "post_compact": [{"run": "./log-summary.sh"}]}
+```
+
+| Event | When it runs | What it can do |
+|---|---|---|
+| `pre_tool` | before an AI tool call, before any approval card | block the call, change its arguments, or allow it without the card |
+| `post_tool` | after a tool call worked | add its output to the result when it fails |
+| `file_save` | after you save a file with Ctrl+S | show a **Save hook failed** toast when it fails |
+| `stop` | when the agent ends a turn | send the agent on (at most 3 turns in a row) |
+| `pre_compact` | before the older chat is summarised | keep the full chat (no summary) |
+| `post_compact` | after the summary is made | read the summary |
+
+- `tools` entries are patterns: `mcp__github__*` matches every tool of the
+  `github` MCP server. `files` entries match the saved file's path in the
+  workspace or its name (`*.go`, `docs/*`).
+- A hook reads the event as JSON on stdin:
+  `{"event", "tool", "path", "args", "workspace", "summary"}`. The event
+  name is also in `TERMOCODE_HOOK_EVENT`.
+- **Exit 2** blocks: the call does not run (or the agent goes on, or the
+  chat is not summarised). The hook's output is the reason the AI gets.
+- **Exit 0 with a JSON object** decides:
+  `{"decision": "deny", "reason": "not on main"}` blocks,
+  `{"decision": "allow"}` runs the call without the approval card, and
+  `{"args": {…}}` runs the call with new arguments.
+- Any other exit code is a failed hook. It never blocks.
+- Only **your** hooks can allow a call without the card. A project hook
+  can block or change a call, but never approve it for you. A file
+  change still shows its review.
+- The audit line says what happened:
+  `hook before=run_command run=./guard.sh by=user → exit 0 · 12ms · allow`.
 
 ## Web tools
 
