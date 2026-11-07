@@ -109,6 +109,15 @@ type Settings struct {
 	// default: summarise them with the quick model near the window limit
 	// or when the provider says the context is too long. Edited by hand.
 	Compact string `json:"ai_compact,omitempty"`
+	// Autopilot is ai_autopilot (CMP-61, autopilot.go): "off" (default),
+	// "low" or "medium": the highest risk the agent runs without a card.
+	// ApprovalRules is ai_approval_rules (allow / deny / ask per tool and
+	// text) and Guardian ai_guardian: a model slot ("quick") that
+	// reviews what autopilot would run ("" or "off": none). Rules and
+	// guardian are edited by hand; SaveSettings leaves them.
+	Autopilot     string         `json:"ai_autopilot,omitempty"`
+	ApprovalRules []ApprovalRule `json:"ai_approval_rules,omitempty"`
+	Guardian      string         `json:"ai_guardian,omitempty"`
 }
 
 // TeamMode reports ai_team_mode (off unless true).
@@ -396,6 +405,10 @@ func SaveSettings(path string, s Settings) error {
 		set("ai_worktrees", s.Worktrees)
 		set("ai_critic", s.Critic)
 		set("ai_plan_approval", s.PlanApproval)
+		if s.Autopilot == AutopilotOff {
+			s.Autopilot = ""
+		}
+		set("ai_autopilot", s.Autopilot)
 		if s.Inline != nil {
 			merged["ai_inline"] = *s.Inline
 		}

@@ -137,8 +137,14 @@ type PR struct {
 	Draft  bool
 	URL    string
 	Review string // APPROVED, CHANGES_REQUESTED, REVIEW_REQUIRED or ""
-	Checks []Check
+	// Mergeable is GitHub's answer: MERGEABLE, CONFLICTING or UNKNOWN
+	// (still computing; "" from an older gh).
+	Mergeable string
+	Checks    []Check
 }
+
+// Conflicting reports merge conflicts with the base branch.
+func (p *PR) Conflicting() bool { return p != nil && p.Mergeable == "CONFLICTING" }
 
 // Snapshot is the CI state of one branch.
 type Snapshot struct {
@@ -239,6 +245,7 @@ type prJSON struct {
 	IsDraft        bool         `json:"isDraft"`
 	URL            string       `json:"url"`
 	ReviewDecision string       `json:"reviewDecision"`
+	Mergeable      string       `json:"mergeable"`
 	Rollup         []rollupJSON `json:"statusCheckRollup"`
 }
 
@@ -274,7 +281,7 @@ func checksOf(rollup []rollupJSON) []Check {
 
 func fetchPR(ctx context.Context, run Runner, dir, branch string) (*PR, error) {
 	out, errOut, err := run(ctx, dir, "pr", "view", branch,
-		"--json", "number,title,state,isDraft,url,reviewDecision,statusCheckRollup")
+		"--json", "number,title,state,isDraft,url,reviewDecision,mergeable,statusCheckRollup")
 	if err != nil {
 		if strings.Contains(strings.ToLower(errOut), "no pull requests found") {
 			return nil, nil
@@ -286,7 +293,7 @@ func fetchPR(ctx context.Context, run Runner, dir, branch string) (*PR, error) {
 		return nil, fmt.Errorf("gh pr view: %w", err)
 	}
 	pr := &PR{Number: p.Number, Title: p.Title, State: p.State, Draft: p.IsDraft, URL: p.URL, Review: p.ReviewDecision,
-		Checks: checksOf(p.Rollup)}
+		Mergeable: p.Mergeable, Checks: checksOf(p.Rollup)}
 	return pr, nil
 }
 

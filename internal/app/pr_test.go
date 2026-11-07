@@ -176,7 +176,7 @@ func TestPRViewCard(t *testing.T) {
 		}
 	}
 	b := m.confirm.Buttons()
-	if len(b) != 3 || b[0].ID != "actions" || b[1].ID != "files" || b[2].ID != "close" {
+	if len(b) != 4 || b[0].ID != "actions" || b[1].ID != "checks" || b[2].ID != "files" || b[3].ID != "close" {
 		t.Errorf("buttons %+v", b)
 	}
 	if !f.called("pr view 14 --json") {

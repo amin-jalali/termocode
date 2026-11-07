@@ -1526,6 +1526,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-stats", Title: "Containers: Follow Stats"},
 		{ID: "containers-inspect", Title: "Containers: Inspect"},
 		{ID: "containers-files", Title: "Containers: Browse Files"},
+		{ID: "containers-pair-sync", Title: "Containers: Pair Sync with Workspace…"},
 		{ID: "containers-detail", Title: "Containers: Show Details"},
 		{ID: "containers-copy-id", Title: "Containers: Copy ID"},
 		{ID: "containers-open-databases", Title: "Containers: Open in Databases"},
@@ -1945,6 +1946,8 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return m.showContainerDetail(c)
 			case "containers-files":
 				return m.openContainerFiles(c)
+			case "containers-pair-sync": // CMP-65
+				return m.askPairSync(c)
 			case "containers-copy-id":
 				m.copyToClipboard(c.ID)
 				return m.servicesToast(toast.Info, "Copied container id", shortImageID(c.ID))

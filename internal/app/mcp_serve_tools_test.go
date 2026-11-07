@@ -26,7 +26,7 @@ func TestMCPServeAllowListGolden(t *testing.T) {
 		"debug_state", "debug_breakpoint", "debug_start", "debug_control", "debug_evaluate",
 		"terminal_tabs", "terminal_read",
 		"git_status", "git_diff", "git_log", "git_blame", "git_branch", "git_stash",
-		"worktrees_list", "worktree_note", "worktree_block",
+		"worktrees_list", "worktree_note", "worktree_block", "agent_task_start",
 		"services_list", "services_status", "services_logs", "http_list_requests", "http_environments", "http_history", "http_send",
 		"db_connections", "db_schema", "db_ddl", "db_query", "redis_keys", "redis_get", "redis_command",
 	}

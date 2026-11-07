@@ -94,6 +94,10 @@ user can open. termocode checks the user of every connection. See
   HTTP request (`http_send`), and save or apply a stash (`git_stash`).
 - **Ask on a Cancel-first card, never "Always allow":** drop or pop a stash.
   The stash list (`git_stash` list) runs at once.
+- **Hand a task to a new agent (`agent_task_start`):** termocode shows its
+  **New worktree** card filled in with the task. Nothing is made until you
+  press **Create + Start**; **Cancel** is first. See
+  [Start a background task](#start-a-background-task).
 
 ### Databases and HTTP
 
@@ -211,6 +215,10 @@ also edit `config.json`.
   disconnect it. Both ask first. Press `?` on the screen for its keys.
 - Every call, allowed or not, is in the AI audit log (**Output: AI**) as
   `mcp:<agent name>`.
+- **Output: Save Audit Log** saves the **AI** and **Web** audit channels
+  to a new private file: `audit/audit-<time>.log` in termocode's config
+  folder (only you can read it). It never overwrites a saved log, and it
+  blanks secrets once more. Workflow runs keep their own `audit.jsonl`.
 
 The chat AI can not run the status and config commands. They are for you.
 
@@ -243,6 +251,35 @@ termocode agent wait t3 --until done --timeout 20m
 - Outside a termocode terminal the command uses the socket of the current
   folder's workspace. The socket is in termocode's private session folder;
   only your own user can connect. Not on Windows.
+- To drive the agents from your own program, see
+  [Build on the agent runtime (SDK)](sdk.md).
+
+### Start a background task
+
+Hand a task to a new agent in its own worktree, from a script or from
+another agent:
+
+```sh
+termocode agent start --agent codex "fix the flaky login test"
+termocode agent tasks                     # BRANCH  AGENT  STATUS  LINK  NOTE  PATH
+```
+
+- `start` shows the **New worktree** card in termocode, filled in: a name
+  drafted from the task (`task/fix the flaky login test`), the agent and
+  the task. The card says who asked. Check it, change what you like, then
+  press **Create + Start**. **Cancel** is first and makes nothing.
+- `start` waits for your answer (up to 10 minutes) and prints the new
+  worktree's path. It exits 1 on **Cancel**. `--json` prints the state
+  (`started`, or `created` when you press **Create** only) and the
+  worktree.
+- `--agent` picks the agent (the first installed one when left out),
+  `--name` the worktree name, `--from` the branch, tag or commit it starts
+  from (the current branch when left out). `-` reads the task from stdin.
+- `tasks` lists the worktrees with an agent: the branch, the agent, the
+  status and the last note the agent left (`termocode worktree note`).
+  `--json` prints JSON.
+- An outside agent does the same with the MCP tool `agent_task_start`.
+  It gets the same card; there is no "Always allow".
 
 ### Exact states with hooks
 
@@ -409,6 +446,12 @@ With `agent_transcripts` on:
   this project's sessions, on this computer only.
 - **Agent: Search All Sessions…** searches the sessions of every project
   on this computer. Each row names its project folder.
+- **Agent: Import Session into AI Chat** (or `i` while you read a past
+  session) copies the open session into a new termocode AI chat, after a
+  card (**Cancel** first). Prompts and answers are copied, tool calls as
+  one line each; tool results are not. Secrets are hidden. The session
+  file is not changed. The chat is in **Chat History**, and termocode's AI
+  can go on from it.
 
 While the setting is off, termocode asks first and opens no file there.
 
@@ -457,6 +500,29 @@ command, for example `go test ./...`. A card shows what will happen.
 
 **Agent: Stop Check Loop** ends the loop at any time. The AI cannot start
 or stop a loop.
+
+## Auto-accept prompts
+
+**Agent: Toggle Auto-Accept** lets an agent tab run without you. It is
+off by default, works per tab, and has no setting.
+
+1. Open the agent's tab and run the command.
+2. A card explains what it does. **Cancel** is first; pick **Turn on**.
+3. The tab is named `Codex · auto-yes`. termocode now answers each
+   permission prompt with "yes, this once" and a toast counts the answers.
+
+It never:
+
+- picks an "always" or "don't ask again" choice;
+- answers a question with its own choices;
+- answers a prompt that shows a risky command (`rm -rf`, `sudo`, a force
+  push, `reset --hard`, a download piped into a shell, SSH keys, `.env`,
+  `kubectl delete`, …). That prompt waits for you, and a toast says why.
+
+It answers each prompt once and turns itself off after 50 answers. Run the
+command again to turn it off. It works for Claude Code, Codex, Gemini CLI,
+OpenCode and Aider. The AI cannot turn it on. Use it on a worktree you can
+throw away: the agent still edits files and runs commands you did not read.
 
 ## Usage and plan limits
 
@@ -609,5 +675,6 @@ agent thread. On the web, this is not there yet.
 | The agent shows no termocode tools | Start it again from the palette, or add the config by hand. |
 | A card never appears | Another dialog may be open. The card waits until it closes. |
 | No plan pill in the status bar | termocode has seen no limit message yet. Turn on `agent_transcripts` to read the numbers from the session files. |
+| Auto-accept did not answer | The prompt showed a risky command, or it was a question with its own choices. Answer it yourself. |
 | Auto-continue did not type | A question was on the screen, or the agent was working again. The toast says why. |
 | A resumed agent starts a new session | No session id was known. Turn on `agent_transcripts` so termocode can keep it. |

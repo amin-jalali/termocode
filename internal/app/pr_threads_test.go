@@ -49,7 +49,7 @@ func TestPRViewShowsThreads(t *testing.T) {
 	for _, b := range m.confirm.Buttons() {
 		ids = append(ids, b.ID)
 	}
-	if strings.Join(ids, " ") != "actions threads files close" {
+	if strings.Join(ids, " ") != "actions threads checks files close" {
 		t.Errorf("buttons %v", ids)
 	}
 

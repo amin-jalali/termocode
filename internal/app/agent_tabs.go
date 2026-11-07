@@ -92,6 +92,10 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		t.FirstTask = "" // at most once
 		m.agentType(t.BufID, task)
 	}
+	acc, answered := m.agentAutoAcceptSee(t, st, lines) // CMP-64 (agent_autoaccept.go)
+	if limit = tea.Batch(limit, acc); answered {
+		return limit
+	}
 	if st == agents.Unknown || st == t.AgentState {
 		return limit
 	}
@@ -133,7 +137,8 @@ func (t terminalTab) agentTitle() string {
 }
 
 // agentTabName is the tab bar name of an agent tab: "limit ↻14:30"
-// while its usage limit is on (AGX-11), else its title.
+// while its usage limit is on (AGX-11), else its title (with
+// " · auto-yes" while auto-accept is on, CMP-64).
 func (t terminalTab) agentTabName() string {
 	if l := t.agentHibernatedLabel(); l != "" { // AGX-15
 		return l
@@ -142,12 +147,16 @@ func (t terminalTab) agentTabName() string {
 		return l
 	}
 	if l := t.agentGoalLabel(); l != "" { // CMP-19
-		return t.agentTitle() + " " + l
+		return t.agentSessionTitle() + " " + l
 	}
+	name := t.agentSessionTitle()
 	if t.Account != "" { // AGX-13
-		return t.agentSessionTitle() + " " + t.Account
+		name += " " + t.Account
 	}
-	return t.agentSessionTitle()
+	if t.AutoAccept { // CMP-64 (agent_autoaccept.go)
+		name += " · auto-yes"
+	}
+	return name
 }
 
 // agentSessionTitle is the agent's title with its session number when
@@ -227,6 +236,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentSessionsPaletteID { // Agent: Sessions… (agent_sessions.go)
 		return m.openAgentSessions(), true
 	}
+	if id == agentImportPaletteID { // Agent: Import Session into AI Chat (agent_import.go)
+		return m.openAgentImport(), true
+	}
 	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
 		return m.openAgentSessionsSearch(), true
 	}
@@ -262,6 +274,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == agentGoalStopPaletteID { // Agent: Stop Check Loop (agent_goal.go)
 		return m.stopAgentGoal(), true
+	}
+	if id == agentAutoAcceptPaletteID { // Agent: Toggle Auto-Accept (agent_autoaccept.go)
+		return m.toggleAgentAutoAccept(), true
 	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {

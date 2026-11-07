@@ -87,6 +87,10 @@ type SessionState struct {
 	// card (OMX-12): the sha256 of .termocode/hooks.json.
 	AIHooksTrusted string `json:"ai_hooks_trusted,omitempty"`
 	AIHooksRefused string `json:"ai_hooks_refused,omitempty"`
+	// AgentEnvTrusted / AgentEnvRefused are the answers of the agent
+	// environment card (CMP-63): the sha256 of .termocode/agent-env.json.
+	AgentEnvTrusted string `json:"agent_env_trusted,omitempty"`
+	AgentEnvRefused string `json:"agent_env_refused,omitempty"`
 	// AIMemory is the memory switch of this workspace (OM-2): "" never
 	// decided (off; the first lesson asks once), "on" or "off".
 	AIMemory string `json:"ai_memory,omitempty"`
@@ -224,6 +228,8 @@ func workspacePart(s SessionState) SessionState {
 		AISkillsRefused:   s.AISkillsRefused,
 		AIHooksTrusted:    s.AIHooksTrusted,
 		AIHooksRefused:    s.AIHooksRefused,
+		AgentEnvTrusted:   s.AgentEnvTrusted,
+		AgentEnvRefused:   s.AgentEnvRefused,
 		AIMemory:          s.AIMemory,
 
 		ServicesAIAllowed:    s.ServicesAIAllowed,

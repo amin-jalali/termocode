@@ -41,6 +41,8 @@ type aiChatConfirmMsg struct {
 	// step is the title of the pipeline step that asks ("" in a plain
 	// chat turn).
 	step string
+	// note is the approval policy's risk line (CMP-61; "": none).
+	note string
 }
 
 type aiChatDoneMsg struct {
@@ -172,8 +174,10 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
-	tools = append(tools, aiTodoTools(call)...) // OMX-7: the chat's todo list (not in run steps)
-	return append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
+	tools = append(tools, aiTodoTools(call)...)                // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, m.aiSessionTools()...)               // OMX-21: old chats, read only
+	tools = append(tools, aiLibrarianTools()...)               // CMP-91: outside repositories, read only
+	return append(tools, aiChatDocTools(m.chatDocStore())...) // CMP-94: the chat's docs
 }
 
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:
@@ -181,6 +185,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai.Tool {
 	aws := m.aiWorkspaceAt(root) // a container workspace: its Host FS + Exec (RC-5)
 	tools := append(ai.WorkspaceTools(aws), m.aiEditorTools()...)
+	tools = aiAttributionTools(tools, root) // CMP-100: who is named on git_commit
 	if aws.FS != nil {
 		tools = aiSyncHostTools(tools, aws, call) // the IDE follows, the files stay in the container
 	} else {
@@ -195,6 +200,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, aiGitTools(root, call)...)        // Group K4
 	tools = append(tools, aiTasksTools(root, call)...)      // Group K6: tasks and tests
 	tools = append(tools, aiWorktreeTools(root)...)         // WTX-12: worktrees_list, worktree_note; CMP-80: worktree_block
+	tools = append(tools, aiCanvasTools(root, call)...)     // CMP-92: canvas_read, canvas_update (canvas_tools.go)
 	tools = append(tools, aiAdminTools(root, call)...)      // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...)      // Group K7
 	tools = append(tools, m.aiServicesTools(call)...)       // the Services view (ai_services_tools.go)
@@ -214,10 +220,12 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
 	tools = append(tools, aiDBTools(root, call)...)            // DB-5: the Databases view (ai_db_tools.go)
 	tools = append(tools, m.aiAstGrepTool(root, call))         // OMX-28: structural search / rewrite
+	tools = append(tools, codebaseSearchTool(root))            // CMP-69: search by meaning (codebase_search.go)
 	tools = append(tools, aiSkillTools(root)...)               // OM-4: only when a skill is offered
 	tools = append(tools, m.aiLookTool(root))                  // OMX-32: images (one extra request) and PDFs
 	tools = append(tools, aiProofTool(root))                   // CMP-52: headless-browser screenshots as proof of work
 	tools = append(tools, aiWebTools()...)                     // OMX-13: only when turned on
+	tools = append(tools, m.aiImageTools(root, call)...)       // CMP-97: generate_image, only when turned on
 	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
 }
 
@@ -363,7 +371,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHookList(root, hooks, tools, out)), // OMX-12, OMX-18
 		Native:      native,
 		AutoApprove: auto,
-		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
+		Policy:      s.aiApprovalPolicy(), // CMP-61 (ai_autopilot.go)
+		MaxSteps:    s.settings.MaxSteps,  // 0: ai.DefaultMaxSteps
 		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
@@ -474,7 +483,7 @@ func aiChatConfirmFunc(gen uint64, ch chan tea.Msg, auto map[string]bool, step s
 	return func(ctx context.Context, t ai.Tool, human string) bool {
 		reply := make(chan bool, 1)
 		select {
-		case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch, step: step}:
+		case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch, step: step, note: aiApprovalNoteText(ai.ApprovalNoteFrom(ctx))}:
 		case <-ctx.Done():
 			return false
 		}
@@ -617,7 +626,11 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	if msg.step != "" {
 		who = aiOneLine(aiCleanText(msg.step)) // which step of the run asks
 	}
-	m.confirm = confirm.New("✦ "+who+" wants to: "+msg.tool.Label(), msg.human, buttons)
+	body := msg.human
+	if msg.note != "" { // CMP-61: why the policy asks
+		body += "\n\n" + msg.note
+	}
+	m.confirm = confirm.New("✦ "+who+" wants to: "+msg.tool.Label(), body, buttons)
 	if strings.HasPrefix(msg.tool.Name, "db_") {
 		m.confirm = m.confirm.WithScrollText() // the whole SQL, Up/Down scroll
 	}

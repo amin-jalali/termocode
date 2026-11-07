@@ -13,11 +13,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Add Model Slot… | `ai-model-slot-add` |   |   |
 | AI: Agent Auto-Approve… | `ai-auto-approve` |   |   |
 | AI: Agent Board… | `ai-board` |   |   |
+| AI: Autopilot Level… (off / low / medium risk) | `ai-autopilot` |   |   |
+| AI: Agent Environment… (setup, secrets, network rule for workflow agents) | `ai-agent-env` |   |   |
 | AI: Agent Worktrees… | `ai-worktrees` |   |   |
 | AI: Agents & Connections | `itermoc-open-ai` |   |   |
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
 | AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
+| AI: Chat Comments… | `ai-chat-comments` |   | `comments from people you shared the chat with` |
+| AI: Chat Doc Revisions… | `ai-chat-doc-revisions` |   |   |
+| AI: Chat Docs… | `ai-chat-docs` |   |   |
 | AI: Chat History… | `ai-history` |   |   |
 | AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |
@@ -35,6 +40,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Fix Diagnostic at Cursor | `ai-fix` |   |   |
 | AI: Fork Chat from Message… | `ai-fork-chat` |   |   |
 | AI: Generate Doc Comment | `ai-doc` |   |   |
+| AI: Generate Property-Based Tests for File / Selection | `ai-property-tests` |   |   |
 | AI: Handoff to a New Chat | `ai-handoff` |   |   |
 | AI: Hooks… | `ai-hooks` |   |   |
 | AI: Lock Secrets | `secrets-lock` |   |   |
@@ -66,15 +72,20 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Project Rules… | `ai-rules` |   |   |
 | AI: Proof of Work… (screenshots the AI took) | `ai-proofs` |   |   |
 | AI: Rename Chat… | `ai-history-rename` |   |   |
+| AI: Restore Code Checkpoint… | `ai-checkpoint-restore` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Review Waiting Plan | `ai-plan-review` |   |   |
+| AI: Rewind Chat to Turn… | `ai-rewind-turn` |   |   |
 | AI: Run Next Plan in a Worktree, Then Ship… / Off | `ai-plan-worktree` |   |   |
 | AI: Run Task List in Waves… | `ai-run-task-list` |   |   |
 | AI: Runs | `ai-runs` |   |   |
 | AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
+| AI: Save Code Checkpoint | `ai-checkpoint-save` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
+| AI: Share Chat by Link… | `ai-share-chat` |   | `a viewer link; they watch and comment` |
 | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | `ai-ship` |   |   |
+| AI: Ship and Merge When Green (CI fixes, conflicts, merge card) / Stop | `ai-ship-merge` |   |   |
 | AI: Show Profile | `ai-profile-show` |   |   |
 | AI: Side Question… | `ai-side` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
@@ -86,6 +97,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` / `Alt+G` | `Alt+Shift+A / Alt+G` |
 | AI: Toggle Critic Review | `ai-critic-toggle` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
+| AI: Toggle Follow Agent | `ai-follow-agent` |   |   |
+| AI: Toggle Image Generation | `ai-image-gen` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Toggle Keep Going While Todos Are Open | `ai-keep-going` |   |   |
 | AI: Toggle Next Edit Suggestions | `ai-toggle-next-edit` |   |   |
@@ -109,6 +122,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
 | Agent: Loop Until Check Passes… | `agent-goal-loop` |   | `run a check after each turn, retry` |
 | Agent: Profiles… | `agent-profiles` |   | `model, plan mode, permissions, env` |
+| Agent: Import Session into AI Chat | `agent-import-session` |   | `the open session view, as a chat` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search All Sessions… | `agent-sessions-search-all` |   | `words in every project's agent sessions` |
@@ -121,6 +135,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start OpenCode | `agent-start-opencode` |   |   |
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
+| Agent: Toggle Auto-Accept | `agent-auto-accept-toggle` |   | `answer its permission prompts: yes, once` |
 | Agent: Switch Account… | `agent-account-switch` |   | `go on as another account after a limit` |
 | Agent: Stop Check Loop | `agent-goal-stop` |   | `end the running check loop` |
 | Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
@@ -133,6 +148,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Bookmarks: Clear All | `bookmark-clear` |   |   |
 | Bookmarks: Show List | `bookmark-list` | `Shift+F3` | `Shift+F3` |
 | Bookmarks: Toggle on Current Line | `bookmark-toggle` | `F3` | `F3` |
+
+## Canvas
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Canvas: Add Card… | `canvas-add` |   |   |
+| Canvas: Copy Plan as Markdown | `canvas-copy` |   |   |
+| Canvas: Open Shared Plan | `canvas-open` |   |   |
 
 ## Containers
 
@@ -164,6 +187,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Open Published Port | `containers-open-port` |   |   |
 | Containers: Open Shell | `containers-shell` |   |   |
 | Containers: Open in Databases | `containers-open-databases` |   |   |
+| Containers: Pair Sync with Workspace… | `containers-pair-sync` |   |   |
 | Containers: Pause or Unpause Selected | `containers-pause` |   |   |
 | Containers: Prune Dangling Images… | `containers-image-prune` |   |   |
 | Containers: Prune Networks… | `containers-network-prune` |   |   |
@@ -408,6 +432,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
 | Git: Add Co-Author… | `git-co-author` |   |   |
+| Git: Add Review Rules to AGENTS.md… | `git-ai-review-rules` |   |   |
 | Git: Add to .gitignore… | `git-ignore-file` |   |   |
 | Git: Apply Patch from Clipboard… | `git-patch-apply-clip` |   |   |
 | Git: Apply Patch from File… | `git-patch-apply-file` |   |   |
@@ -518,6 +543,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Search Log… | `git-log-search` |   |   |
 | Git: Set GitLab Token… | `git-gitlab-token` |   | `saved in the secret store for this GitLab host` |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
+| Git: Set Up PR Review Bot (GitHub)… | `git-pr-review-bot` |   |   |
 | Git: Set Upstream Branch… | `git-upstream-set` |   |   |
 | Git: Show Contributors | `git-contributors` |   | `the authors of this branch and their commit counts` |
 | Git: Show Diff for Current File | `git-diff` |   |   |
@@ -686,6 +712,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Output: Clear Channel | `output-clear` |   |   |
+| Output: Save Audit Log | `output-save-audit` |   |   |
 
 ## Preferences
 
@@ -698,7 +725,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preferences: Import from Another Editor… | `prefs-import-editor` |   |   |
 | Preferences: Import termocode Settings File… | `settings-import` |   |   |
 | Preferences: Open Settings (UI) | `open-settings-ui` |   |   |
+| Preferences: Save Setup to This Project… | `settings-setup-save` |   |   |
 | Preferences: Undo Last Import… | `prefs-import-undo` |   |   |
+| Preferences: Use a Project Setup… | `settings-setup-use` |   |   |
+
+## Preview
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Preview: Dev Server URLs… | `preview-dev-servers` |   |   |
+| Preview: Open Newest Dev Server | `preview-open-newest` |   |   |
 
 ## Run
 
@@ -710,6 +746,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Search: Codebase by Meaning… | `codebase-search` |   | `plain words, local index` |
 | Search: Find in Files | `find-files` | `Alt+F` / `F8` | `F8 / Alt+F` |
 | Search: Find in Files (Live Overlay) | `find-files-overlay` |   |   |
 | Search: Go to Next Search Result | `search-next-result` | `F4` | `F4` |
@@ -764,6 +801,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Terminal: Focus Next Pane | `terminal-focus-next-pane` | `Alt+Right` | `Alt+Right` |
 | Terminal: Focus Previous Pane | `terminal-focus-prev-pane` | `Alt+Left` | `Alt+Left` |
 | Terminal: Grow Pane | `terminal-grow-pane` |   |   |
+| Terminal: Hand Back to the AI | `terminal-ai-hand-back` |   |   |
 | Terminal: Maximize Panel | `terminal-maximize` |   |   |
 | Terminal: Minimize Panel | `terminal-minimize` |   |   |
 | Terminal: New Tab | `terminal-new-tab` | <code>Ctrl+Shift+&#96;</code> | <code>Ctrl+Shift+&#96;</code> |
@@ -774,6 +812,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Terminal: Shrink Pane | `terminal-shrink-pane` |   |   |
 | Terminal: Split Down | `terminal-split-down` | `Alt+-` | `Alt+-` |
 | Terminal: Split Right | `terminal-split-right` | `Alt+/` | `Alt+/` |
+| Terminal: Take Over from the AI | `terminal-ai-take-over` |   |   |
 | Terminal: Toggle Integrated Panel | `toggle-terminal` | <code>Alt+&#96;</code> / <code>Ctrl+&#96;</code> / `Ctrl+T` | <code>Ctrl+T / Alt+&#96;</code> |
 
 ## Testing
@@ -848,6 +887,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workflows: Open | `workflows` |   |   |
 | Workflows: Run Selected… | `workflow-run` |   |   |
 | Workflows: Stop Selected Run… | `workflow-stop` |   |   |
+| Workflows: Trigger Events… | `workflow-triggers` |   |   |
 | Workflows: Turn Selected On/Off… | `workflow-enable` |   |   |
 | Workflows: Undo a Write of Selected Run… | `workflow-undo-write` |   |   |
 
@@ -871,6 +911,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Background Tasks… | `worktree-bg-tasks` |   |   |
 | Worktree: Clean Up… | `worktree-cleanup` |   |   |
 | Worktree: Delete Selected… | `worktree-delete` |   |   |
+| Worktree: Follow PR Feedback (On or Off) | `worktree-follow` |   |   |
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
 | Worktree: Hand Off Selected… | `worktree-handoff` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
@@ -890,14 +931,18 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Pull a Lane from a Host… | `worktree-pull` |   |   |
 | Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
 | Worktree: Reset Order | `worktree-reset-order` |   |   |
+| Worktree: Send PR Feedback to Agent… | `worktree-feedback` |   |   |
+| Worktree: Ship Selected (commit, push, PR, merge, archive)… | `worktree-ship` |   |   |
 | Worktree: Preview Agent Grid | `worktree-preview-grid` |   |   |
 | Worktree: Preview Agent Screen | `worktree-preview` |   |   |
 | Worktree: Restack Selected onto Parent… | `worktree-restack` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
+| Worktree: Show Pull Request of Selected | `worktree-pr` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 | Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
+| Worktree: Start from Issue… | `worktree-from-issue` |   |   |
 | Worktree: Suggest a Name… | `worktree-suggest-name` |   | `quick model drafts branch names` |
 | Worktree: Unpack a Moved Lane… | `worktree-unpack` |   |   |
 

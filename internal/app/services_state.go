@@ -52,6 +52,7 @@ func svcLogsTab(name string) string { return "logs:" + name }
 
 type servicesState struct {
 	files       containerFilesState  // the open container file browser (containers_files.go)
+	pair        pairSyncState        // pair sync with the workspace (container_pairsync.go)
 	execOpts    containerExecState   // the exec options prompts (containers_execui.go)
 	logsOpts    containerLogsState   // the logs options picker (containers_logsui.go)
 	debugTarget containers.Container // CTX-43: the container the toolbox prompt is for (containers_debug.go)

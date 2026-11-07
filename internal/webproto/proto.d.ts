@@ -585,6 +585,11 @@ export interface ChatForkArgs {
   i: number;
 }
 
+export interface ChatCommentArgs {
+  id: string;
+  text: string;
+}
+
 export interface InspectArgs {
   kind: "container" | "image" | "network" | "volume";
   id: string;
@@ -1065,6 +1070,7 @@ export interface MdNode {
   href?: string;
   start?: number;
   rows?: MdNode[][];
+  diagram?: string;
 }
 
 export interface ChatRun {
@@ -3405,6 +3411,7 @@ export interface OpArgs {
   "chat.delete": ChatOpenArgs;
   "chat.clear": EmptyArgs;
   "chat.export": ChatOpenArgs;
+  "chat.comment": ChatCommentArgs;
   "containers.host": EmptyArgs;
   "containers.inspect": InspectArgs;
   "containers.history": RefArgs;

@@ -204,7 +204,8 @@ func checkNvim() {
 		fmt.Printf("✓ neovim: %s\n", path)
 		return
 	}
-	fmt.Println("✗ neovim not found.")
+	fmt.Println("✗ neovim not found. termocode still runs, in Lite mode: terminals,")
+	fmt.Println("  agents, git and worktrees, without the editor (termocode --lite).")
 	switch runtime.GOOS {
 	case "linux":
 		fmt.Println("  Install: sudo apt install neovim")

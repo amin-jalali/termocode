@@ -304,6 +304,18 @@ func snapshotAgent(dir, id string) (top string, w AgentWorktree, base, tip strin
 // identity only when the repository has none). ok=false: nothing to
 // commit.
 func CommitAgentWorktree(dir, id, message string) (ok bool, err error) {
+	return CommitAgentWorktreeAs(dir, id, message, "")
+}
+
+// CommitAgentWorktreeAs is CommitAgentWorktree with author ("Name
+// <e-mail>") as the commit's author; "" = the user. The committer is
+// always the user (or termocode's identity, as above).
+func CommitAgentWorktreeAs(dir, id, message, author string) (ok bool, err error) {
+	if author != "" {
+		if author, err = ParseAuthor(author); err != nil {
+			return false, err
+		}
+	}
 	_, common, err := agentRepo(dir)
 	if err != nil {
 		return false, err
@@ -322,7 +334,11 @@ func CommitAgentWorktree(dir, id, message string) (ok bool, err error) {
 	if e, _ := gitOut(w.Path, "config", "user.email"); strings.TrimSpace(e) == "" {
 		args = append(args, "-c", "user.name=termocode", "-c", "user.email=termocode@localhost")
 	}
-	if _, err := gitOut(w.Path, append(args, "commit", "-q", "-m", message)...); err != nil {
+	args = append(args, "commit", "-q")
+	if author != "" {
+		args = append(args, "--author="+author)
+	}
+	if _, err := gitOut(w.Path, append(args, "-m", message)...); err != nil {
 		return false, err
 	}
 	return true, nil

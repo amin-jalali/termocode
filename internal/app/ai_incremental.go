@@ -78,7 +78,7 @@ func (c *aiStreamTranscript) prepare(m Model, width int, resizing bool) bool {
 		keys[i] = m.aiSegKeyFor(i, width)
 	}
 	keys[last].text = ""
-	match := c.active && c.fork == s.conv.ForkNote() && c.runGen == s.runGen && c.restoreGen == s.restoreGen && len(keys) == len(c.keys)
+	match := c.active && c.fork == s.conv.ForkNote()+s.conv.ImportNote() && c.runGen == s.runGen && c.restoreGen == s.restoreGen && len(keys) == len(c.keys)
 	if match {
 		for i := range keys {
 			if keys[i] != c.keys[i] {
@@ -87,7 +87,7 @@ func (c *aiStreamTranscript) prepare(m Model, width int, resizing bool) bool {
 			}
 		}
 	}
-	c.keys, c.fork, c.runGen, c.restoreGen = keys, s.conv.ForkNote(), s.runGen, s.restoreGen
+	c.keys, c.fork, c.runGen, c.restoreGen = keys, s.conv.ForkNote()+s.conv.ImportNote(), s.runGen, s.restoreGen
 	c.active, c.reused = true, 0
 	return match
 }

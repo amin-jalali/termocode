@@ -72,6 +72,7 @@ var mcpServeGateCases = []mcpServeGateCase{
 	{"worktrees_list", nil, false},
 	{"worktree_note", map[string]any{"text": "a note"}, false},
 	{"worktree_block", map[string]any{"waits_for": "main"}, false},
+	{"agent_task_start", map[string]any{"task": "fix the tests"}, false}, // the New worktree card asks (agent_ctl_task.go)
 	{"services_list", nil, false},
 	{"services_status", nil, false},
 	{"services_logs", map[string]any{"name": "all"}, false},

@@ -82,7 +82,11 @@ type File struct {
 	// ResumeOnStart re-runs interrupted items after a restart (default
 	// true).
 	ResumeOnStart bool
-	Steps         []Step
+	// Triggers ("on") start the workflow on an outside event: a GitHub
+	// issue, label, pull request, mention or failed CI run, or an
+	// inbound webhook (Slack, Linear, Jira, GitHub or any JSON).
+	Triggers []Trigger
+	Steps    []Step
 	// Hash is the sha256 of the file bytes (hex). Trust and the write
 	// allow-list are bound to it.
 	Hash string
@@ -98,6 +102,44 @@ type Schedule struct {
 	TZ       string
 	Precheck []string // argv; a non-zero exit skips the run
 }
+
+// Trigger is one entry of "on". Exactly one of GitHub and Webhook is
+// set.
+type Trigger struct {
+	// GitHub is one of GitHubEvents; the app polls gh for it.
+	GitHub string
+	// Webhook names an inbound hook ([a-z][a-z0-9_-]{0,39}). Its signing
+	// secret is the secret "workflow-hook.<name>" (internal/secrets);
+	// the file never holds it.
+	Webhook string
+	// From is the payload shape of a webhook: one of WebhookFroms
+	// ("generic" when not set).
+	From   string
+	Repo   string   // github: "owner/name"; "" is the workspace's remote
+	Labels []string // issue_opened, issue_labeled, pr_opened: any of these
+	Text   string   // mention: the text to look for ("@termocode" when not set)
+	Branch string   // ci_failed: only runs on this branch ("" any)
+	// Ask shows a card (Cancel first) before each triggered run (default
+	// true). false starts the run like a schedule does; writes still ask.
+	Ask bool
+	// Worktree runs the triggered run in a new agent worktree from Base
+	// (a branch, tag or commit; "" is HEAD).
+	Worktree bool
+	Base     string
+	Line     int // 1-based line of the trigger's "{"
+}
+
+// GitHub trigger events.
+var GitHubEvents = []string{"issue_opened", "issue_labeled", "pr_opened", "mention", "ci_failed"}
+
+// WebhookFroms are the payload shapes an inbound webhook understands.
+var WebhookFroms = []string{"generic", "github", "slack", "linear", "jira"}
+
+// MaxTriggers caps "on".
+const MaxTriggers = 10
+
+// WebhookSecretName is the secret that signs the inbound webhook name.
+func WebhookSecretName(name string) string { return "workflow-hook." + name }
 
 // SchedulePresets are the allowed Schedule.Preset values.
 var SchedulePresets = []string{"hourly", "daily", "weekdays", "weekly", "monthly"}

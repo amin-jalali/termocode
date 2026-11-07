@@ -462,9 +462,9 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 		// About as long as the last build: no regrowing a long transcript.
 		out = make([]aiLine, 0, len(s.transcript.lines)+64)
 	}
-	if s != nil && s.conv.ForkedFrom != nil { // G-FORK: "Forked from <title> at message N"
+	if s != nil && (s.conv.ForkedFrom != nil || s.conv.ImportedFrom != nil) { // G-FORK / CMP-87: where the chat came from
 		out = append(out, aiLine{})
-		for _, l := range wrapPlain(s.conv.ForkNote(), inner) {
+		for _, l := range wrapPlain(s.conv.ForkNote()+s.conv.ImportNote(), inner) {
 			out = append(out, plain(l, theme.TextDim))
 		}
 	}

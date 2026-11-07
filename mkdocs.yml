@@ -102,6 +102,7 @@ nav:
       - Workflows: guides/workflows.md
       - Connect MCP servers: guides/mcp.md
       - Give your agent the IDE's tools: guides/agents.md
+      - Build on the agent runtime (SDK): guides/sdk.md
       - Test an HTTP API (.http files): guides/http-client.md
       - Debug a program: guides/debug.md
       - Run and explore tests: guides/tests.md
@@ -118,6 +119,7 @@ nav:
       - The web panel: guides/web.md
       - Customize termocode: guides/customize.md
       - Import settings from another editor: guides/import-from-another-editor.md
+      - Move in from another agent tool: guides/import-from-another-agent-tool.md
       - Write an extension: extensions.md
   - Reference:
       - reference/index.md

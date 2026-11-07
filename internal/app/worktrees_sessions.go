@@ -136,7 +136,7 @@ func (m *Model) onWTSessionPicked(id string) tea.Cmd {
 }
 
 // worktreeNewSession opens the agents for one more session in the
-// cursor's worktree (S, worktree-new-session).
+// cursor's worktree (O, worktree-new-session).
 func (m *Model) worktreeNewSession() tea.Cmd {
 	it, ok, cmd := m.wtSessionTarget()
 	if !ok {
