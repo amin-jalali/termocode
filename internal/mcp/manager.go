@@ -172,6 +172,11 @@ type serverState struct {
 	authScope string    // scope of the last 401
 	stepUp    bool      // a 403 insufficient_scope asked for more scopes
 	expires   time.Time // the tool list's ttlMs end (zero: none)
+	// views are the shapes learned from the tools' first results
+	// (views.go), kept in the tool cache; viewsRead: the cache's were read.
+	views     map[string]ViewShape
+	viewsRead bool
+	private   bool // the tool list's cacheScope is "private": nothing on disk
 
 	retryN     int         // reconnect tries since the last success
 	retryAt    time.Time   // when the waiting reconnect runs
@@ -608,6 +613,8 @@ type cacheFile struct {
 	Tools   []Tool     `json:"tools"`
 	Caps    ServerCaps `json:"caps"`
 	Expires time.Time  `json:"expires,omitzero"` // from ttlMs (spec2026_ttl.go)
+	// Views are the result shapes learned per tool (views.go, MOB-72).
+	Views map[string]ViewShape `json:"views,omitempty"`
 }
 
 func (m *Manager) cachePath(name string) string {
@@ -638,12 +645,12 @@ func (m *Manager) loadCacheLocked(st *serverState) {
 	st.toolsHash = ToolsHash(c.Tools)
 }
 
-func (m *Manager) saveCache(cfg Server, info ServerInfo, caps ServerCaps, tools []Tool, expires time.Time) {
+func (m *Manager) saveCache(cfg Server, info ServerInfo, caps ServerCaps, tools []Tool, expires time.Time, views map[string]ViewShape) {
 	p := m.cachePath(cfg.Name)
 	if p == "" {
 		return
 	}
-	b, err := json.MarshalIndent(cacheFile{Hash: cfg.Hash(), Server: info, Tools: tools, Caps: caps, Expires: expires}, "", "  ")
+	b, err := json.MarshalIndent(cacheFile{Hash: cfg.Hash(), Server: info, Tools: tools, Caps: caps, Expires: expires, Views: views}, "", "  ")
 	if err != nil {
 		return
 	}
@@ -681,7 +688,9 @@ func (m *Manager) storeTools(st *serverState, p *Process, tools []Tool) {
 	caps := p.Client.Capabilities()
 	st.tools, st.haveTools, st.cached, st.toolsHash, st.caps = tools, true, false, h, caps
 	st.expires = ttlExpiry(p.Client.ToolsTTL())
-	cfg, expires := st.cfg, st.expires
+	st.private = p.Client.ToolsPrivate()
+	m.readViewsLocked(st)
+	cfg, expires, views := st.cfg, st.expires, copyViews(st.views)
 	changed := m.toolsChangedLocked(st)
 	m.mu.Unlock()
 	if p.Client.ToolsPrivate() { // cacheScope "private": never on disk (spec2026_ttl.go)
@@ -689,7 +698,7 @@ func (m *Manager) storeTools(st *serverState, p *Process, tools []Tool) {
 			_ = os.Remove(path)
 		}
 	} else {
-		m.saveCache(cfg, p.Client.ServerInfo(), caps, tools, expires)
+		m.saveCache(cfg, p.Client.ServerInfo(), caps, tools, expires, views)
 	}
 	m.log(cfg.Name, "%d tools", len(tools))
 	if m.opts.TrustedTools != nil && m.opts.SaveTrustedTools != nil && m.opts.TrustedTools(cfg.Name) == "" {
@@ -853,11 +862,16 @@ func (m *Manager) Connect(ctx context.Context, ask AskTrust, name string) error 
 }
 
 // Call runs one tool, starting the server when needed; a trace span
-// covers it when tracing is on (otel.go).
+// covers it when tracing is on (otel.go). A good result teaches the
+// tool's default view its fields (views.go).
 func (m *Manager) Call(ctx context.Context, ask AskTrust, server, tool string, args map[string]any) (CallResult, error) {
-	return traceCall(ctx, server, tool, func() string { return m.serverVersion(server) }, func(ctx context.Context) (CallResult, error) {
+	res, err := traceCall(ctx, server, tool, func() string { return m.serverVersion(server) }, func(ctx context.Context) (CallResult, error) {
 		return m.call(ctx, ask, server, tool, args)
 	})
+	if err == nil {
+		m.LearnViewResult(server, tool, res)
+	}
+	return res, err
 }
 
 func (m *Manager) call(ctx context.Context, ask AskTrust, server, tool string, args map[string]any) (CallResult, error) {
