@@ -292,3 +292,28 @@ func TestDBImportInsideAManualTransactionJoinsIt(t *testing.T) {
 		t.Fatalf("no savepoint around the import: %q", s.log())
 	}
 }
+
+// Bad rows: skip leaves the bad row out, imports the rest and names the
+// error log.
+func TestDBImportSkipBadRowsImportsTheRest(t *testing.T) {
+	s := &importSession{editSession: newEditSession(0)}
+	d := importDriver(t, s, "", map[string]string{"data.csv": "id,email,plan\n1,a,x\n2,b,y\nBAD,c,z\n4,d,w\n"})
+	card := importCard(t, d)
+	if !strings.Contains(card, "Bad rows: stop") {
+		t.Fatalf("no bad rows toggle:\n%s", card)
+	}
+	d.Key("right", "right", "right", "enter") // Bad rows: stop -> skip
+	if !d.WaitForText("Bad rows: skip", 2*time.Second) || !strings.Contains(frameText(d), "Rows that fail are skipped") {
+		t.Fatalf("no toggle:\n%s", frameText(d))
+	}
+	d.Key("left", "left", "left", "enter") // Import
+	if !d.WaitForText("Imported 3 rows", 5*time.Second) {
+		t.Fatalf("no done toast:\n%s", frameText(d))
+	}
+	if f := frameText(d); !strings.Contains(f, "1 skipped") || !strings.Contains(f, "Error log") {
+		t.Fatalf("toast does not name the skipped row:\n%s", f)
+	}
+	if !s.has("COMMIT") {
+		t.Fatalf("server saw: %q", s.log())
+	}
+}
