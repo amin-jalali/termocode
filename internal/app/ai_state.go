@@ -80,6 +80,7 @@ type aiState struct {
 	kwProfile string
 	side      aiSideChat // OMX-30: the side chat (ai_side.go)
 	home      aiHomeChat // MOB-16: the phone's background chat (web_chat_home.go)
+	dictate   *aiDictate // CMP-48: the running voice input (ai_dictate.go)
 	cfg       ai.Config
 	provider  ai.Provider
 	loadErr   string
@@ -621,6 +622,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-chat-schedule", "AI: Schedule This Chat…", ""},
 		{"ai-chat-unschedule", "AI: Stop Chat Schedule", ""},
 		{"ai-side", "AI: Side Question…", ""},
+		{"ai-dictate", "AI: Dictate into Chat… (voice input)", ""},
 		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
@@ -827,6 +829,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIChatSchedule(), true
 	case aiChatUnschedPaletteID:
 		return m.openAIChatUnschedule(), true
+	case "ai-dictate": // CMP-48 (ai_dictate.go)
+		return m.openAIDictate(), true
 	case "ai-handoff": // OMX-21 (ai_session_tools.go)
 		return m.aiHandoff(), true
 	case chatDocsPaletteID: // CMP-94 (ai_chat_docs.go)

@@ -19,6 +19,7 @@ web	ai-chat-schedule	palette
 web	ai-chat-unschedule	palette
 web	ai-configure	op:ai.info
 web	ai-critic-toggle	palette
+web	ai-dictate	cmd:aiDictate
 web	ai-discard-proposal	op:cards.answer
 web	ai-doc	cmd:aiDoc
 web	ai-edit	cmd:aiEdit

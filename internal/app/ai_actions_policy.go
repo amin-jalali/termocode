@@ -739,6 +739,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-chat-unschedule": aiNever("the user's own command (chat_schedule_clear)"),
 	// The side chat (OMX-30) is the user's own question.
 	"ai-side": aiNever("the side chat is the user's own question beside the AI's turn"),
+	// Voice input (CMP-48) listens on the user's microphone: only the user starts it.
+	"ai-dictate": aiNever("it listens on the user's microphone; only the user starts it"),
 	// Handoff (OMX-21) ends the AI's own chat; the user starts it.
 	"ai-handoff": aiNever("it ends the AI's own chat; the user starts a handoff"),
 	// Project rules (OM-1): the AI only gets the text in its prompt.
