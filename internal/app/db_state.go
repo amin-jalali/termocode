@@ -594,6 +594,16 @@ var dbSQLSessionFactory = func(ctx context.Context, c dbclient.Conn, password st
 	return sess, nil
 }
 
+// dbCassandraSessionFactory opens a Cassandra / ScyllaDB session (DBX-67;
+// replaceable for tests, which never reach a real server).
+var dbCassandraSessionFactory = func(ctx context.Context, c dbclient.Conn, password string) (dbclient.Session, error) {
+	sess, err := dbclient.NewCassandraSession(ctx, c, password)
+	if err != nil {
+		return nil, err
+	}
+	return sess, nil
+}
+
 // A disconnect invalidates only this connection's outstanding commands.
 // Other connections can finish loading without having their results discarded.
 func (s *dbState) connectionCommand(id string, cmd tea.Cmd) tea.Cmd {
@@ -646,6 +656,8 @@ func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, 
 		sess, err = dbclient.NewSQLiteSession(ctx, c)
 	case "redis":
 		sess, err = dbRedisSessionFactory(ctx, c, password)
+	case "cassandra":
+		sess, err = dbCassandraSessionFactory(ctx, c, password)
 	default:
 		err = os.ErrInvalid
 	}
@@ -696,7 +708,7 @@ func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64,
 		defer cancel()
 		start := time.Now()
 		var err error
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "cassandra" {
 			err = fmt.Errorf("this connection type is not available yet")
 		}
 		var sess dbclient.Session
