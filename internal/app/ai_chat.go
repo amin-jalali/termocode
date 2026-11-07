@@ -69,7 +69,8 @@ func waitAIChat(ch chan tea.Msg) tea.Cmd {
 const aiChatSystemPrompt = "You are termocode's coding assistant, running inside a terminal IDE built on Neovim. Be concise and concrete.\n" +
 	"When the user asks you to change the OPEN FILE, reply with the COMPLETE updated file in ONE fenced code block " +
 	"(real code, not json) — the user reviews it in a side-by-side diff and applies it with one click. " +
-	"For questions, answer in prose (short code snippets are fine)."
+	"For questions, answer in prose (short code snippets are fine). " +
+	"To show data (lists, tables, status), prefer view_show with a spec from view_catalog over writing it out."
 
 // aiWorkspaceRoot is the root the agent tools operate on.
 func aiWorkspaceRoot() string {
@@ -171,6 +172,7 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
 	tools = append(tools, aiTodoTools(call)...) // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, aiViewTools(call)...) // MOB-70: views for the phone and the chat (ai_view_tools.go)
 	return append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
 }
 
