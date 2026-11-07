@@ -35,6 +35,12 @@ func (m *Model) databaseShowActivity(info bool) tea.Cmd {
 	if !ok {
 		return cmd
 	}
+	if c.Driver == "redis" { // DBX-51: INFO grid, CLIENT LIST
+		if info {
+			return m.databaseRunInConsole(c.ID, "INFO")
+		}
+		return m.databaseRunInConsole(c.ID, "CLIENT LIST")
+	}
 	sql, ok := dbclient.SessionsSQL(c.Driver)
 	if info {
 		sql, ok = dbclient.ServerInfoSQL(c.Driver)

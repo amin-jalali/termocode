@@ -550,6 +550,7 @@ missing	db-sql-outline	Databases|S
 missing	db-switch-connection	Databases|S
 missing	db-rollback-savepoint	Databases|S
 missing	db-open-csv	Databases|S
+missing	db-pgtap-run	Databases|S
 missing	db-server-info	Databases|S
 missing	db-sessions	Databases|S
 missing	db-submit-source	Databases|S
@@ -676,6 +677,9 @@ missing	kubernetes-snippet	Kubernetes|S
 missing	local-history	Git|S
 missing	local-history-deleted	Git|S
 missing	local-history-label	Git|S
+missing	redis-copy-key	Databases|S
+missing	redis-rename-key	Databases|S
+missing	redis-slowlog	Databases|S
 missing	services-compose-config	Containers|S
 missing	services-compose-run	Containers|S
 missing	services-compose-watch	Containers|S

@@ -939,7 +939,7 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.databaseSwitchTab(int(key[0] - '0'))
 	case "p":
 		return m.databasePinTab()
-	case "e", "E", "+", "-", "u", "w", "P":
+	case "e", "E", "+", "-", "u", "w", "P", "D", "U":
 		if s.shown.plan != nil {
 			return m.pushToastDetail(toast.Info, "A plan cannot be edited", "x explains again, r runs the plan again.")
 		}

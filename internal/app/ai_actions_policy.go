@@ -552,6 +552,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-manage-connection":         aiNever(aiNoPicker),
 	"db-paste-connection":          aiNever("adds a connection from the clipboard; only the user does that"),
 	"db-new-from-template":         aiNever(aiNoPicker),
+	"db-pgtap-run":                 aiNever("it runs the user's test functions after a card only the user answers (db_query)"),
+	"redis-rename-key":             aiNever(aiNoPicker + " (redis_command)"),
+	"redis-copy-key":               aiNever(aiNoPicker + " (redis_command)"),
+	"redis-slowlog":                aiNever("it runs in the user's console; use redis_command (SLOWLOG GET)"),
 
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),

@@ -110,14 +110,21 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-paste-connection", Title: "Databases: Paste Connection from Clipboard", Hint: "connection JSON copied with Copy as JSON"},
 		{ID: "db-new-from-template", Title: "Databases: New Connection from Template…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
+		{ID: "db-pgtap-run", Title: "Databases: Run pgTAP Tests…"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
+		{ID: "redis-rename-key", Title: "Databases: Rename Redis Key…"},
+		{ID: "redis-copy-key", Title: "Databases: Copy Redis Key…"},
+		{ID: "redis-slowlog", Title: "Databases: Show Redis Slow Log"},
 	}, dbAIPaletteItems()...)
 }
 
 func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	if id == "redis-set-ttl" || id == "redis-delete-key" {
 		return m.databaseRedisPaletteKey(id), true
+	}
+	if id == "redis-rename-key" || id == "redis-copy-key" || id == "redis-slowlog" {
+		return m.databaseRedisPaletteAdmin(id), true
 	}
 	if !strings.HasPrefix(id, "db-") {
 		return nil, false
@@ -231,6 +238,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databasePasteConn(), true
 	case "db-new-from-template":
 		return m.databaseTemplateStart(), true
+	case "db-pgtap-run":
+		return m.databasePgTAPStart(""), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":
@@ -424,6 +433,10 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && row.kind == dbNodeConnection {
 			return m, m.databaseSetPasswordPrompt(row.conn)
 		}
+	case "U":
+		if have && row.kind == dbNodeConnection {
+			return m, m.databasePgTAPStart(row.conn)
+		}
 	case "R":
 		return m, m.databaseRefresh()
 	case "r":
@@ -511,6 +524,9 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseRedisConfirm(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databasePgTAPConfirm(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseConsoleConfirm(id); ok {
@@ -1119,6 +1135,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"e / F", "edit connection files / schema as files: dump, compare"},
 		[]string{"T", "test the connection"},
 		[]string{"S", "start a stopped service"},
+		[]string{"U", "run pgTAP tests (PostgreSQL)"},
 		[]string{"t", "transaction mode"},
 		[]string{"p", "set the password"},
 		[]string{"n / $", "new SQL console / psql, mysql… in a terminal"},
@@ -1195,6 +1212,8 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"V then e", "set one value in the selected rows"},
 		[]string{"V then + / -", "copy the selected rows / mark them for deletion"},
 		[]string{"P", "paste rows from the clipboard (tab separated)"},
+		[]string{"D", "set the cell to its DEFAULT"},
+		[]string{"U", "put a new random UUID in the cell"},
 		[]string{"u", "undo a change"},
 		[]string{"w", "submit the changes"},
 		[]string{"Transactions"},

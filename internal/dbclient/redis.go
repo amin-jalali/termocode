@@ -705,6 +705,9 @@ func (s *RedisSession) Run(ctx context.Context, line string, opts RunOptions) Re
 	}
 	reply, err := s.Do(ctx, args)
 	res := RedisReplyResult(reply, opts.MaxRows)
+	if grid, ok := RedisAdminGrid(args, reply); ok && err == nil {
+		res = grid
+	}
 	res.Err = err
 	if err != nil {
 		res.Columns, res.Rows = nil, nil

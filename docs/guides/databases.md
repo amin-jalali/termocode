@@ -284,8 +284,12 @@ You can change the rows of a table's data page, and of a console result that is 
 | `V` then `+` | add a copy of each selected row; key columns get their default and binary values are left out |
 | `V` then `-` | mark every selected row for deletion (again: keep them); new rows in the selection are removed |
 | `P` | paste rows from the clipboard: tab-separated values go from the cursor cell to the right and down, extra lines become new rows (`\N` is NULL); values past the last column, in a binary column or on a deleted row are skipped |
+| `D` | set the cell back to its column's `DEFAULT` (the SQL says `= DEFAULT`; on a new row the cell is left out). SQLite cannot do this in an `UPDATE`, so it says so |
+| `U` | put a new random UUID (version 4) in the cell |
 | `u` | undo the change of the cell under the cursor, else of the row; on a row without changes it asks to undo all changes |
 | `w` | submit the changes |
+
+A typed value is checked against the column type before it is kept: whole numbers for integer columns, numbers for `numeric` and `float`, `true` / `false` for booleans, a UUID for `uuid`, valid JSON for `json` and `jsonb`, and `YYYY-MM-DD` for `date`. A value that does not fit is not kept, and a message says what fits. Other types (and arrays) are checked by the server when you submit.
 
 Changes stay on the page until you submit them. The left margin marks each row: `*` changed, `+` new, `-` to be deleted, and the page says how many changes wait. Anything that loads the rows again (another data page, a sort or a filter on a data page, `r`) asks **Keep** or **Discard** first; switching tabs or closing the page keeps the changes.
 
@@ -424,6 +428,12 @@ A statement with parameters asks for each value before it runs: `?`, `:name`, `$
 
 **Databases: Cancel Session Query…** stops the running query of one session. **Databases: End Session…** ends the whole session; its open transaction rolls back. Both ask for the session id (`pid` / `id` column), then show the usual run card first (Cancel is the default). SQLite and Redis have no sessions.
 
+## pgTAP tests
+
+Press `U` on a PostgreSQL connection, or choose **Databases: Run pgTAP Tests…**, to run the database's [pgTAP](https://pgtap.org) test functions. Type a regular expression to run only some test functions, or leave it empty to run all of them. A card shows the exact `SELECT * FROM runtests(…);` statement first; **Cancel** has the focus. The tests run on the connection's session, so connect first, and commit or roll back an open transaction. pgTAP must be installed in the database (`CREATE EXTENSION pgtap;`).
+
+The results open in the **Testing** view under a **pgTAP** node, with one row per connection and one row per test function (✓, ✗ or skipped). A failed test shows the failing assertion and its `have` / `want` lines. Enter on a test shows its TAP output; Run on the pgTAP node, a connection or a test runs it again (one test runs as `runtests('schema'::name, '^name$'::text)`). The results stay when the Testing view refreshes its file tests. **Rerun Failed** runs only file tests.
+
 ## SQL history
 
 Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count. **Databases: History of This Connection…** shows only the runs of the console's connection; type in either picker to search the SQL.
@@ -444,9 +454,11 @@ Expanding a connection lists its databases (`db0 (1234 keys)`). Expanding a data
 
 `Enter` on a key opens its value page: the type, length, TTL and memory, then one page of the value (`]` and `[` move between pages; `db_page_rows` items per page). A whole value is never loaded: strings show their first 64 KB, other types load page by page. Values are shown safely: bytes that are not text and control characters appear as `\xHH`.
 
-On the value page, `e` edits the value or the field under the cursor, `+` adds a field, item, member or entry, `-` deletes the one under the cursor, `t` sets the TTL (seconds or `30m`, `2h`, `1d`; empty removes it) and `D` deletes the key. Every change shows a card with the exact command, such as `HSET session:ab12 plan pro`, before it runs. On a production connection the card says so; on a read-only connection it asks **Run anyway?**. In the tree, `t`, `D` and `y` (copy the key) work on a key row. `D` on a namespace row deletes every key under it: the keys are found with `SCAN`, a card shows how many and a few of their names, and they are removed in batches with `UNLINK` (`DEL` on servers older than 4.0). If a namespace has more keys than one scan loads, run it again for the rest.
+On the value page, `e` edits the value or the field under the cursor, `+` adds a field, item, member or entry, `-` deletes the one under the cursor, `t` sets the TTL (seconds or `30m`, `2h`, `1d`; empty removes it) and `D` deletes the key. Every change shows a card with the exact command, such as `HSET session:ab12 plan pro`, before it runs. On a production connection the card says so; on a read-only connection it asks **Run anyway?**. In the tree, `t`, `D` and `y` (copy the key name) work on a key row. `M` renames a key and `C` copies it to a new key (also **Databases: Rename Redis Key…** and **Databases: Copy Redis Key…** in the palette, on the open key or the selected row). The card shows `RENAMENX` or `COPY`: an existing key with the new name is never replaced, and the app says so when the name is taken. `D` on a namespace row deletes every key under it: the keys are found with `SCAN`, a card shows how many and a few of their names, and they are removed in batches with `UNLINK` (`DEL` on servers older than 4.0). If a namespace has more keys than one scan loads, run it again for the rest.
 
 Press `n` on a Redis connection to open its console, a `.redis` file that starts with `# @conn <id>`. Write one command per line and press the send key on a line (or select several lines). Read commands run at once; other commands show a card first. Commands that can wipe data, stop the server or run code (`FLUSHALL`, `FLUSHDB`, `CONFIG SET`, `SHUTDOWN`, `DEBUG`, `MODULE`, `EVAL`, `FCALL`, `MIGRATE`, `REPLICAOF`, `ACL SETUSER`, …) show a strong warning card. `MONITOR`, `SUBSCRIBE`, `SELECT` and `MULTI` are not sent. `KEYS pattern` runs as `SCAN` with a note. An `AUTH` line is masked in the card, the page and the history. Console runs go to the same history as SQL.
+
+**Databases: Show Server Info** on a Redis connection runs `INFO` and shows it as a section, field and value grid (server, clients, memory, persistence, stats, replication, keyspace). **Databases: Show Sessions and Locks** runs `CLIENT LIST`. **Databases: Show Redis Slow Log** runs `SLOWLOG GET 128` and shows each slow command with its id, time, duration in µs, client and name. Typing `INFO` or `SLOWLOG GET` in the console gives the same grids.
 
 ## AI tools and their rules
 

@@ -148,6 +148,7 @@ func (m *Model) applyTestsDiscovered(msg testsDiscoveredMsg) tea.Cmd {
 			tests.CarryOver(st.tree.Packages, msg.tree.Packages)
 		}
 		if !st.running || st.tree == nil {
+			tests.KeepPgTAP(st.tree, msg.tree)
 			st.tree = msg.tree
 		}
 	}
@@ -197,7 +198,7 @@ func (m *Model) tryTestsRequest(req testsRunRequest) (tea.Cmd, *testsRunProblem)
 	case req.failed:
 		var failed []*tests.Case
 		st.tree.Each(func(_ *tests.Package, _ *tests.File, c *tests.Case) {
-			if c.Status == tests.StatusFailed {
+			if _, db := tests.PgTAPConn(c.File); c.Status == tests.StatusFailed && !db {
 				failed = append(failed, c)
 			}
 		})

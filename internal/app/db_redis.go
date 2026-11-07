@@ -507,6 +507,8 @@ type dbRedisWrite struct {
 	deleted bool // DEL: the key leaves the tree and the page
 	reload  *dbRedisEdit
 	ns      *dbRedisNSDelete // delete namespace: every key under a prefix
+	admin   string           // "rename" | "copy" (DBX-51)
+	dst     string           // the new key of a rename / copy
 }
 
 // dbRedisNSDelete is a namespace delete: the keys the SCAN found under the
@@ -772,6 +774,9 @@ func dbRedisParseTTL(s string) (int64, error) {
 
 // databaseRedisPrompt handles the answers of the value page prompts.
 func (m *Model) databaseRedisPrompt(kind promptKindEnum, value string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseRedisAdminPrompt(kind, value); ok {
+		return cmd, true
+	}
 	switch kind {
 	case promptKindDBRedisValue, promptKindDBRedisAdd, promptKindDBRedisAddValue, promptKindDBRedisTTL:
 	default:
@@ -972,6 +977,9 @@ func (m *Model) onDBRedisWrite(msg dbRedisWriteMsg) tea.Cmd {
 	if msg.err != nil {
 		return tea.Batch(hist, m.pushToastDetail(toast.Errr, "The command failed", dbErrorText(msg.err)))
 	}
+	if w.admin != "" {
+		return m.onDBRedisAdminDone(w, msg.reply, hist)
+	}
 	done := m.pushToastDetail(toast.Info, "Done", dbOneLine(line))
 	if w.deleted {
 		s := m.databases
@@ -1081,6 +1089,11 @@ func (m *Model) databaseRedisSidebarKey(key string, row dbTreeRow) (tea.Cmd, boo
 			return m.databaseRedisNSDelete(n, row.path), true
 		}
 		return nil, true
+	case "M", "C":
+		if n.kind == dbNodeRedisKey {
+			return m.databaseRedisRenameCopyPrompt(&dbRedisEdit{conn: n.conn, db: n.rdb, key: n.key, typ: n.rtype, ttl: n.ttl}, key == "C"), true
+		}
+		return nil, true
 	case "y":
 		if n.kind == dbNodeRedisKey || n.kind == dbNodeRedisNS {
 			m.copyToClipboard(n.key)
@@ -1106,7 +1119,9 @@ func dbRedisKeyRows() []confirm.KeyRow {
 		[]string{"On a key"},
 		[]string{"t", "set the TTL"},
 		[]string{"D", "delete the key"},
-		[]string{"y", "copy the key"},
+		[]string{"M", "rename the key"},
+		[]string{"C", "copy to a new key"},
+		[]string{"y", "copy the key name"},
 		[]string{"On a namespace"},
 		[]string{"D", "delete all its keys"},
 		[]string{"y", "copy the prefix"},
@@ -1121,7 +1136,7 @@ func (s *dbState) dbRedisFooter(n dbNode) string {
 		if ttl := dbRedisTTL(n.ttl); ttl != "" {
 			parts = append(parts, "TTL "+ttl)
 		}
-		return strings.Join(parts, " · ") + " · Enter open · t ttl · D delete"
+		return strings.Join(parts, " · ") + " · Enter open · t ttl · M rename · D delete"
 	case dbNodeRedisNS:
 		return n.detail + " · Enter expand · y copy · D delete all"
 	case dbNodeRedisMore:
