@@ -142,6 +142,35 @@ func (o ConnOptions) StartSQL(driver string) []string {
 		if level != "" {
 			out = append(out, "SET SESSION TRANSACTION ISOLATION LEVEL "+level)
 		}
+	case "vertica": // DBX-71
+		if list := schemaList(o.Schema); len(list) > 0 {
+			q := make([]string, len(list))
+			for i, s := range list {
+				q[i] = d.QuoteIdent(s)
+			}
+			out = append(out, "SET SEARCH_PATH TO "+strings.Join(q, ", "))
+		}
+		if o.TimeZone != "" {
+			out = append(out, "SET TIME ZONE TO '"+o.TimeZone+"'")
+		}
+		if level != "" {
+			out = append(out, "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL "+level)
+		}
+	case "exasol":
+		if list := schemaList(o.Schema); len(list) > 0 {
+			out = append(out, "OPEN SCHEMA "+d.QuoteIdent(list[0]))
+		}
+		if o.TimeZone != "" {
+			out = append(out, "ALTER SESSION SET TIME_ZONE = '"+o.TimeZone+"'")
+		}
+	case "hana":
+		if list := schemaList(o.Schema); len(list) > 0 {
+			out = append(out, "SET SCHEMA "+d.QuoteIdent(list[0]))
+		}
+	case "firebird":
+		if o.TimeZone != "" {
+			out = append(out, "SET TIME ZONE '"+o.TimeZone+"'") // Firebird 4+
+		}
 	}
 	if strings.TrimSpace(o.InitSQL) != "" {
 		stmts, err := Split(o.InitSQL, driver)

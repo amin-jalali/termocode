@@ -166,6 +166,9 @@ func defaultPort(d string) int {
 	case "cassandra":
 		return 9042
 	}
+	if e, ok := ExtraSQLEngineByID(d); ok {
+		return e.Port // DBX-71
+	}
 	return 0
 }
 func normDriver(d string) string {
@@ -174,6 +177,12 @@ func normDriver(d string) string {
 		return "mysql"
 	case "scylla", "scylladb":
 		return "cassandra"
+	case "firebirdsql":
+		return "firebird"
+	case "hdb", "saphana", "sap-hana":
+		return "hana"
+	case "exa":
+		return "exasol"
 	}
 	return d
 }

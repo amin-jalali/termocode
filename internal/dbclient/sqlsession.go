@@ -51,7 +51,9 @@ func NewSQLSession(ctx context.Context, conn Conn, password string) (*SQLSession
 	case "mysql":
 		dialect = MySQLDialect{}
 	default:
-		return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
+		if dialect = extraSQLDialect(driver); dialect == nil { // DBX-71
+			return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
+		}
 	}
 	db, release, err := openSQLDB(conn, password)
 	if err != nil {
@@ -106,6 +108,9 @@ func newSQLSession(db *sql.DB, dialect Dialect, name string, conn Conn, readonly
 // registration; call it after db.Close.
 func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
 	noop := func() {}
+	if IsExtraSQL(conn.Driver) {
+		return openExtraSQLDB(conn, password) // extra_sql.go (DBX-71)
+	}
 	switch normDriver(conn.Driver) {
 	case "postgres":
 		cfg, err := pgx.ParseConfig(pgDSN(conn, password))
@@ -320,6 +325,9 @@ func (s *SQLSession) Run(ctx context.Context, statement string, opts RunOptions)
 // Explain runs an explain form and guarantees that ANALYZE side effects are
 // rolled back when the analyzed statement is not read-only.
 func (s *SQLSession) Explain(ctx context.Context, statement string, analyze bool) Result {
+	if s.dialect.Explain(statement, analyze) == "" {
+		return Result{Err: errNoExplain(s.conn.EngineLabel())} // DBX-71: no SQL form
+	}
 	if !analyze {
 		return s.Run(ctx, s.dialect.Explain(statement, false), RunOptions{})
 	}
@@ -389,6 +397,12 @@ func (s *SQLSession) runOne(ctx context.Context, query string, kind Kind, maxRow
 			}
 			if _, err = conn.ExecContext(ctx, timeoutSetting); err == nil {
 				_, err = conn.ExecContext(ctx, "START TRANSACTION READ ONLY")
+			}
+		} else if IsExtraSQL(s.name) {
+			// DBX-71: the engine's own read-only begin, no PostgreSQL
+			// statement_timeout (Exasol has no read-only transaction).
+			if begin := s.dialect.ReadOnlyBegin(); begin != "" {
+				_, err = conn.ExecContext(ctx, begin)
 			}
 		} else {
 			_, err = conn.ExecContext(ctx, s.dialect.ReadOnlyBegin())
@@ -710,6 +724,9 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 		currentSchema := "SELECT current_schema()"
 		if normDriver(s.name) == "mysql" {
 			currentSchema = "SELECT DATABASE()"
+		}
+		if q, ok := s.dialect.(currentSchemaQuerier); ok {
+			currentSchema = q.CurrentSchemaQuery() // DBX-71
 		}
 		if err := s.readCatalog(ctx, currentSchema, &result.Schemas); err != nil {
 			return result, err

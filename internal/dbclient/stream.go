@@ -36,8 +36,8 @@ func (s *SQLSession) StreamRows(ctx context.Context, query string, args []any, s
 		}
 		defer conn.Close()
 		runner = conn
-		if readonly {
-			if _, err := conn.ExecContext(ctx, s.dialect.ReadOnlyBegin()); err != nil {
+		if begin := s.dialect.ReadOnlyBegin(); readonly && begin != "" { // "" = no read-only transaction (Exasol, DBX-71)
+			if _, err := conn.ExecContext(ctx, begin); err != nil {
 				return safeSQLError(err)
 			}
 			defer func() { _, _ = conn.ExecContext(context.Background(), "ROLLBACK") }()

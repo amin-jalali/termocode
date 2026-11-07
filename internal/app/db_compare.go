@@ -93,6 +93,9 @@ func dbDriverTitle(driver string) string {
 	case "sqlite":
 		return "SQLite"
 	}
+	if e, ok := dbclient.ExtraSQLEngineByID(driver); ok {
+		return e.Title // DBX-71
+	}
 	return driver
 }
 

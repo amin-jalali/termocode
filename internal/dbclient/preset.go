@@ -144,6 +144,9 @@ func (c Conn) EngineLabel() string {
 	case "redis":
 		return "Redis"
 	}
+	if e, ok := ExtraSQLEngineByID(c.Driver); ok {
+		return e.Title
+	}
 	return c.Driver
 }
 

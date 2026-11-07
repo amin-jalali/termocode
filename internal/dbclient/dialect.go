@@ -25,5 +25,5 @@ func DialectFor(driver string) Dialect {
 	case "clickhouse":
 		return ClickHouseDialect{}
 	}
-	return nil
+	return extraSQLDialect(driver) // DBX-71: Firebird, Vertica, Exasol, SAP HANA
 }

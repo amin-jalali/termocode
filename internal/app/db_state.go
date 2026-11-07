@@ -710,6 +710,11 @@ func dbOpenDriverSession(ctx context.Context, c dbclient.Conn, root, password st
 		// A remote libSQL server (DBX-64): the password is its token.
 		sess, err = dbclient.NewLibSQLSession(c, password)
 	default:
+		if dbclient.IsExtraSQL(c.Driver) {
+			// Firebird, Vertica, Exasol, SAP HANA run on the SQL session (DBX-71).
+			sess, err = dbSQLSessionFactory(ctx, c, password)
+			break
+		}
 		err = os.ErrInvalid
 	}
 	if err == nil {
@@ -756,7 +761,7 @@ func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64,
 		defer cancel()
 		start := time.Now()
 		var err error
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "cassandra" && c.Driver != "libsql" {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "cassandra" && c.Driver != "libsql" && !dbclient.IsExtraSQL(c.Driver) {
 			err = fmt.Errorf("this connection type is not available yet")
 		}
 		var sess dbclient.Session
