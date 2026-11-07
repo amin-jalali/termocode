@@ -457,6 +457,7 @@ excluded	workflow-undo-write	laptop only: an undo writes to outside systems agai
 missing	containers-detail	Containers|S
 missing	containers-files	Containers|M
 missing	containers-image-build	Containers|M
+missing	containers-logs-options	Containers|S
 missing	db-ai-explain-query	Databases|S
 missing	db-ai-fix-error	Databases|S
 missing	db-ai-generate-sql	Databases|S

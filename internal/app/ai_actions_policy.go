@@ -439,6 +439,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-attach":            aiNever(aiNoPicker + " (container attach)"),
 	"containers-stats":             aiAuto(),
 	"containers-inspect":           aiAuto(),
+	"containers-logs-options":      aiNever(aiNoPicker + " (container logs options; containers-logs follows logs)"),
 	"containers-detail":            aiAuto(),
 	"containers-files":             aiNever(aiNoPicker + " (container files)"),
 	"containers-copy-id":           aiAuto(),

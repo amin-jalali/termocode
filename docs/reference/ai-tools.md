@@ -2025,6 +2025,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-image-tag` | Containers: Tag Selected Image… | never | tagging an image is the user's; nothing is offered to the model |
 | `containers-inspect` | Containers: Inspect | auto |   |
 | `containers-logs` | Containers: Follow Logs | auto |   |
+| `containers-logs-options` | Containers: Logs with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (container logs options; containers-logs follows logs) |
 | `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |
 | `containers-network-prune` | Containers: Prune Networks… | never | pruning networks is the user's; nothing is offered to the model |
 | `containers-network-remove` | Containers: Remove Selected Network… | never | removing is the user's; nothing is offered to the model |

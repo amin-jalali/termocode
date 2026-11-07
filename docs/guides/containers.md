@@ -71,6 +71,7 @@ when something changed. When you hide the view (another activity item,
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
 | `i` | inspect: a read-only JSON page in the editor |
+| `L` | logs with options: tail, since, timestamps; save to a file; search |
 | `I` | details: status, exit code, restarts, health log, processes, mounts, labels, env names (no values) |
 | `F` | browse the files of a running container: view read-only, download, upload (asks first) |
 | `o` | open the first published port in the browser |
@@ -142,6 +143,16 @@ remove it. On a compose project group, `s`, `x`, and `r` run compose up,
 stop, and restart. `D` asks before compose down and names its command.
 Attach uses `--sig-proxy=false`; press `Ctrl+P Ctrl+Q` in its terminal tab
 to detach without stopping the container.
+
+### Logs with options
+
+`L` on a container (or **Containers: Logs with Options…**) opens a picker:
+follow the last 200 or 1000 lines, all lines, the last 10 minutes or hour,
+since a duration or date you type, or the last N lines you type.
+**Timestamps** switches the engine timestamps on or off for the next
+follow. **Save logs to a file** writes the last 10000 lines to a new file
+in your Downloads folder. **Search the logs…** opens the matching lines of
+the last 10000 in a read-only page (any case).
 
 ### Container details
 

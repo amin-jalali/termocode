@@ -2503,6 +2503,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onSearchPicked(msg.ID)
 	case pickerKindContainerFiles: // containers_files.go
 		return m.onContainerFilePicked(msg.ID)
+	case pickerKindContainerLogs: // containers_logsui.go
+		return m.onContainerLogsPicked(msg.ID)
 	default:
 		if cmd, ok := m.handleGitxPickerSelect(msg.ID); ok { // gitx_hub.go
 			return cmd
