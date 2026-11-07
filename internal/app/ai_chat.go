@@ -286,6 +286,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	memBlock, lessons := m.aiMemoryTurn(root, text) // OM-2: before the attachments are taken
 	ctxText, images := s.takeAttachments()
+	if blk := aiRulesMentionBlock(rules, text, s.rulesInjector()); blk != "" { // CMP-82: #name rules
+		ctxText = strings.TrimLeft(ctxText+"\n\n"+blk, "\n")
+	}
 	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
 	model := slot.cfg.Model
 	if model == s.cfg.Model {
@@ -306,8 +309,12 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if len(rules.Scoped) > 0 && aiRulesTrust(rules) == aiTrustUse {
 		tools = aiRulesOnRead(tools, root, rules, s.rulesInjector())
 	}
+	autoRules := ""
+	if rt := aiRuleTools(rules, s.rulesInjector()); len(rt) > 0 { // CMP-82: auto rules by description
+		tools, autoRules = append(tools, rt...), aiRulesAutoPrompt(rules)
+	}
 	native := slot.p.SupportsTools()
-	base := m.aiChatBasePrompt(root, rules, memBlock) + aiStepSystem(step.System)
+	base := m.aiChatBasePrompt(root, rules, memBlock) + autoRules + aiStepSystem(step.System)
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
