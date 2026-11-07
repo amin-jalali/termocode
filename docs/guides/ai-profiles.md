@@ -909,6 +909,35 @@ These tools touch no files, so they ask no card. A note that looks like
 a secret is refused. Claims and notes show as tool calls in each step's
 transcript in AGENTS. Subscription steps (Claude Code, Codex) do not get
 the tools.
+### Critic review
+
+When a step's worktree ends with changed files, a second model (the
+**critic**) reads its diff before you merge it. It gets the diff as text
+only: no tools, no files, known secrets hidden. It answers with a
+verdict, and the card shows it:
+
+```text
+ ▸ 3 · Speed up lexer · gpt-5-mini · 14 s · 2 tools
+     ⑂ termocode/agent-r1-lexer · 3 files changed · critic: problems
+      Review   Merge   Discard   Critic
+```
+
+- **critic reviewing…** while it reads, then **critic ok** or
+  **critic: problems**. **critic: no verdict** means it could not answer
+  (no model, an error); Critic on the card asks again.
+- **Critic** shows its notes on a card: **Cancel**, **Ask Again** or
+  **Send to Chat** (the problems go to the chat box; nothing is sent
+  until you press Enter).
+- **Merge** while the critic lists problems asks first. **Cancel** is
+  first; **Merge Anyway** merges as usual; **Send to Chat** puts the
+  problems in the chat box. Nothing is written before you answer. Merge
+  does not wait while the critic still reads.
+- **Which model.** The other built-in model than the step's: quick for a
+  step on main, main for every other step. Set `"ai_critic_slot"` in
+  `config.json` to a model slot of your own. Its tokens show in
+  **AI: Usage** as `critic`.
+- **Turn it off.** **AI: Toggle Critic Review**, or `"ai_critic": "off"`
+  in `config.json`.
 
 ## Budget pause
 

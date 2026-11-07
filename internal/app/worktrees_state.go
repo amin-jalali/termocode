@@ -242,6 +242,9 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	if c, ok := m.handleWTCtlMsg(msg); ok { // the control socket (worktrees_notes.go)
 		return c, true
 	}
+	if c, ok := m.handleWTDiffMsg(msg); ok { // the diff vs base (worktrees_diff.go)
+		return c, true
+	}
 	if c, ok := m.handleWTDeleteMsg(msg); ok { // the type-the-name card (worktrees_delete.go)
 		return c, true
 	}

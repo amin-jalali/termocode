@@ -78,6 +78,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIPowersPicked(id), true
 	case pickerKindAIWebTools: // ai_web_tools.go
 		return m.onAIWebToolsPicked(id), true
+	case pickerKindAIProofs: // ai_proof.go
+		return m.onAIProofsPicked(id), true
 	case pickerKindAgentHooks: // agent_hooks_ui.go
 		return m.onAgentHooksPicked(id), true
 	case pickerKindAgentPacks: // agent_packs_ui.go
@@ -155,6 +157,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return tea.Batch(m.aiInfo("Side question sent (one request to the quick model)"), m.onAISideQuestion(value)), true
 	case promptKindAgentsSend: // agents_node_ctl.go
 		return m.onAgentsSend(value), true
+	case promptKindDiffComment: // diff_comments.go (CMP-51)
+		return m.onDiffCommentEntered(value), true
 	}
 	return m.handleMCPPromptSubmit(value)
 }
@@ -245,6 +249,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIHooksTrust(id), true
 	case confirmKindAIWebAdd: // ai_web_presets.go
 		return m.answerAIWebPreset(id), true
+	case confirmKindAIProofClear: // ai_proof.go
+		return m.answerAIProofClear(id), true
 	case confirmKindAIShipPush, confirmKindAIShipPR: // ai_ship.go
 		return m.answerAIShipCard(m.confirmKind, id), true
 	case confirmKindAIPlanShip: // ai_plan_worktree.go
@@ -302,6 +308,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIWorktreeCard(m.confirmKind, id), true
 	case confirmKindAIWorktreeLeft: // ai_worktree_list.go
 		return m.answerAIWorktreeLeft(id), true
+	case confirmKindDiffComments: // diff_comments.go (CMP-51)
+		return m.answerDiffComments(id), true
+	case confirmKindAICriticNotes, confirmKindAICriticMerge: // ai_critic.go
+		return m.answerAICriticCard(m.confirmKind, id), true
 	case confirmKindWebStart: // web_tui.go
 		return m.answerWebStart(id), true
 	case confirmKindWebAsk: // web_ask.go
@@ -328,6 +338,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIWorktreeCard(m.confirmKind, "") // Esc: Cancel
 	case confirmKindAIWorktreeLeft:
 		return m.answerAIWorktreeLeft("")
+	case confirmKindAICriticNotes, confirmKindAICriticMerge:
+		return m.answerAICriticCard(m.confirmKind, "") // Esc: Cancel
 	case confirmKindMCPTrust:
 		return m.answerMCPTrust("deny")
 	case confirmKindMCPImportOther:

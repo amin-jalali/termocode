@@ -14,6 +14,7 @@ web	ai-attach	cmd:aiAttach
 web	ai-auto-approve	op:ai.set_auto_approve
 web	ai-cancel	op:chat.stop
 web	ai-configure	op:ai.info
+web	ai-critic-toggle	palette
 web	ai-discard-proposal	op:cards.answer
 web	ai-doc	cmd:aiDoc
 web	ai-edit	cmd:aiEdit
@@ -458,6 +459,7 @@ excluded	web-stop	laptop only: stops the web panel itself
 excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
+missing	ai-proofs	AI|S
 missing	agent-sessions-search-all	AI|S
 missing	ai-history-search	AI|S
 missing	ai-mcp-accounts	AI|S
@@ -722,6 +724,7 @@ missing	worktree-adopt	Worktrees|M
 missing	worktree-archive	Worktrees|M
 missing	worktree-cleanup	Worktrees|M
 missing	worktree-delete	Worktrees|M
+missing	worktree-diff	Worktrees|M
 missing	worktree-deps	Worktrees|S
 missing	worktree-filter	Worktrees|M
 missing	worktree-forget	Worktrees|M

@@ -240,6 +240,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentAutoContinuePaletteID { // Agent: Toggle Auto-Continue (agent_limit.go)
 		return m.toggleAgentAutoContinue(), true
 	}
+	if id == diffCommentsPaletteID { // Agent: Send Diff Comments… (diff_comments.go)
+		return m.openDiffCommentsSend(m.reviewOpen), true
+	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
 		return nil, false

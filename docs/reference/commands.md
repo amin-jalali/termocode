@@ -63,6 +63,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Powers Catalog… | `ai-powers` |   |   |
 | AI: Project Profiles Trust… | `ai-profile-trust` |   |   |
 | AI: Project Rules… | `ai-rules` |   |   |
+| AI: Proof of Work… (screenshots the AI took) | `ai-proofs` |   |   |
 | AI: Rename Chat… | `ai-history-rename` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Review Waiting Plan | `ai-plan-review` |   |   |
@@ -82,6 +83,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Switch Profile… | `ai-profile-switch` |   |   |
 | AI: Toggle Agent Worktrees | `ai-worktrees-toggle` |   |   |
 | AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` / `Alt+G` | `Alt+Shift+A / Alt+G` |
+| AI: Toggle Critic Review | `ai-critic-toggle` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Toggle Keep Going While Todos Are Open | `ai-keep-going` |   |   |
@@ -106,6 +108,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search All Sessions… | `agent-sessions-search-all` |   | `words in every project's agent sessions` |
 | Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
+| Agent: Send Diff Comments… | `agent-diff-comments` |   | `c on a change, S sends them all` |
 | Agent: Sessions… | `agent-sessions` |   | `resume or read a past session` |
 | Agent: Start Claude Code | `agent-start-claude` |   |   |
 | Agent: Start Codex | `agent-start-codex` |   |   |
@@ -860,6 +863,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Next Filter | `worktree-filter` |   |   |
 | Worktree: Open Selected | `worktree-open` |   |   |
 | Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
+| Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
 | Worktree: Reset Order | `worktree-reset-order` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Dependency Graph | `worktree-deps` |   |   |

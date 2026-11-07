@@ -115,6 +115,7 @@ type aiState struct {
 	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
 	ship        *aiShip              // the running ship loop (ai_ship.go)
 	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
+	diffNotes   *diffNotesState      // diff comments → agent (diff_comments.go, CMP-51)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).
@@ -572,6 +573,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
 		{"ai-worktrees-toggle", "AI: Toggle Agent Worktrees", ""},
+		{"ai-critic-toggle", "AI: Toggle Critic Review", ""},
 		{aiTaskListPaletteID, "AI: Run Task List in Waves…", ""},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
@@ -587,6 +589,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-powers", "AI: Powers Catalog…", ""},
 		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
+		{"ai-proofs", "AI: Proof of Work… (screenshots the AI took)", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
 		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
@@ -650,6 +653,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiRunTaskList(), true
 	case "ai-worktrees-toggle":
 		return m.toggleAIWorktrees(), true
+	case "ai-critic-toggle": // CMP-53 (ai_critic.go)
+		return m.toggleAICritic(), true
 	case "ai-history-rename":
 		return m.openAIHistoryFor(pickerKindAIHistoryRename, " Rename Chat "), true
 	case "ai-fork-chat":
@@ -781,6 +786,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIHooks(), true
 	case "ai-web-tools":
 		return m.openAIWebTools(), true
+	case "ai-proofs":
+		return m.openAIProofs(), true
 	case "ai-ship":
 		return m.toggleAIShip(), true
 	case "ai-plan-worktree":
