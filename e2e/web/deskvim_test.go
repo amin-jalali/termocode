@@ -122,3 +122,330 @@ func TestDeskVimBasicMotions(t *testing.T) {
 		t.Errorf("problems (CSP, console): %v", probs)
 	}
 }
+
+// Spec (WEBP-1): the . repeat, counts on an insert, macros and
+// registers. . does the last change again (an insert with its typed
+// text too); 2ia<Esc> types the text twice; qa … q records the keys into
+// register a (the status bar says "recording @a"), @a plays them, @@
+// plays the last one again; "ayy yanks into a, "0 keeps the last yank
+// after a delete, "_ deletes without touching any register.
+func TestDeskVimRepeatMacrosRegisters(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "one two three", "four", "five")
+	toggleVim(t, p, c, true)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+
+	v.keys("dw", "two three", "four", "five")
+	v.keys(".", "three", "four", "five")
+	v.keys("A!", "three!", "four", "five")
+	realKeys(p, string(kb.Escape))
+	v.mode("-- NORMAL --")
+	v.keys("j.", "three!", "four!", "five")
+	v.keys("j02ia", "three!", "four!", "afive")
+	realKeys(p, string(kb.Escape))
+	v.settle("three!", "four!", "aafive")
+	v.mode("-- NORMAL --")
+
+	// A macro: recorded, played, played again.
+	v.keys("ggqa", "three!", "four!", "aafive")
+	p.WaitJS(`(document.querySelector(".statusbar .sb-vim-rec")?.textContent ?? "") === "recording @a"`)
+	v.keys("0i-", "-three!", "four!", "aafive")
+	realKeys(p, string(kb.Escape))
+	v.keys("jq", "-three!", "four!", "aafive")
+	p.WaitJS(`!document.querySelector(".statusbar .sb-vim-rec")`)
+	v.keys("@a", "-three!", "-four!", "aafive")
+	v.keys("@@", "-three!", "-four!", "-aafive")
+
+	// Registers: the yank register, a named one, the black hole.
+	v.keys("ggyyjdd", "-three!", "-aafive")
+	v.keys(`"0p`, "-three!", "-aafive", "-three!")
+	v.keys(`"_dd`, "-three!", "-aafive")
+	v.keys("p", "-three!", "-aafive", "-four!")
+	v.keys(`gg"byyG"bP`, "-three!", "-aafive", "-three!", "-four!")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
+
+// Spec (WEBP-1): search, ex commands, text objects and marks. /foo<CR>
+// goes to the next foo (the status bar shows the search as it is
+// typed), n to the one after (round the end); :3 goes to line 3; di(
+// deletes inside the brackets; :%s/o/0/g changes every o; gUiw makes
+// the word upper case; ma marks a line and d'a deletes up to it; an
+// unknown command and a search with no match say so in the status bar;
+// :w saves through the laptop.
+func TestDeskVimSearchExMarks(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "foo bar", "baz foo", "qux (a, b) end", "last")
+	toggleVim(t, p, c, true)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+	keysShown := `(document.querySelector(".statusbar .sb-vim-keys")?.textContent ?? "")`
+	msg := `(document.querySelector(".statusbar .sb-vim-msg")?.textContent ?? "")`
+
+	v.keys("/fo", "foo bar", "baz foo", "qux (a, b) end", "last")
+	p.WaitJS(keysShown + ` === "/fo"`)
+	v.keys("o\rdw", "foo bar", "baz ", "qux (a, b) end", "last")
+	v.keys("nx", "oo bar", "baz ", "qux (a, b) end", "last")
+	v.keys(":3\rf(di(", "oo bar", "baz ", "qux () end", "last")
+	v.keys(":%s/o/0/g\r", "00 bar", "baz ", "qux () end", "last")
+	v.keys("GgUiw", "00 bar", "baz ", "qux () end", "LAST")
+	v.keys("3Gmaggd'a", "LAST")
+
+	v.keys(":foo\r", "LAST")
+	p.WaitJS(msg + ` === "Not an editor command: foo"`)
+	v.keys("/zzz\r", "LAST")
+	p.WaitJS(msg + ` === "Pattern not found: zzz"`)
+	// A key clears the message.
+	v.keys("l", "LAST")
+	p.WaitJS(`!document.querySelector(".statusbar .sb-vim-msg")`)
+
+	realKeys(p, ":w\r")
+	r := expectReq(t, c, "buf.save")
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"tick": v.tick + 1, "dirty": false})})
+	p.WaitJS(`(` + toastsJS + `).includes("Saved. The laptop's on-save hooks ran.")`)
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
+
+// Spec (WEBP-1): Vim mode follows the user's own mappings. Turned on,
+// the page asks the laptop once for its editor's mappings
+// (editor.vim_maps) and the keys do what they say: <Space>d deletes the
+// line, jk in insert mode is Escape (j alone, then another key, types
+// both), Q plays the macro in q. :nnoremap adds one in the browser.
+func TestDeskVimUserMappings(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "abc", "def", "ghi")
+	toggleVim(t, p, c, true)
+	for {
+		r := nextReq(t, c)
+		if r.Op == webproto.OpEditorVimMaps {
+			reply(t, c, r, webproto.VimMapList{Items: []webproto.VimMap{
+				{Mode: "i", LHS: "jk", RHS: "<Esc>", Noremap: true},
+				{Mode: "n", LHS: "<Space>d", RHS: "dd", Noremap: true},
+				{Mode: "n", LHS: "Q", RHS: "@q"},
+			}})
+			break
+		}
+	}
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+
+	v.keys(" d", "def", "ghi")
+	v.keys("ix", "xdef", "ghi")
+	v.mode("-- INSERT --")
+	v.keys("jk", "xdef", "ghi")
+	v.mode("-- NORMAL --")
+	v.keys("ajy", "xjydef", "ghi")
+	realKeys(p, string(kb.Escape))
+	v.mode("-- NORMAL --")
+
+	// Q is @q: the macro recorded in q.
+	v.keys("qqI-", "-xjydef", "ghi")
+	realKeys(p, string(kb.Escape))
+	v.keys("jq", "-xjydef", "ghi")
+	v.keys("Q", "-xjydef", "-ghi")
+
+	// A mapping made here.
+	v.keys(":nnoremap ,a A!<Esc>\rgg,a", "-xjydef!", "-ghi")
+	v.mode("-- NORMAL --")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
+
+// Spec (WEBP-1): visual block mode in the desktop editor. Ctrl+V starts
+// it (the status bar says -- VISUAL BLOCK --; the browser never pastes),
+// the motions grow a box of columns, d deletes the box, y yanks it and p
+// puts it back as a box (each line its own piece), I and A type on the
+// first line and Escape puts the same text on every line of the box ($
+// makes A append at each line's own end), c changes the box, r replaces
+// every char in it and Ctrl+V again (or Escape) is back to normal.
+func TestDeskVimVisualBlock(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "abcd", "efgh", "ijkl")
+	toggleVim(t, p, c, true)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+	ctrlV := func() { v.p.Do(chromedp.KeyEvent("v", chromedp.KeyModifiers(chromedp.ModifierCtrl))) }
+
+	// Ctrl+V twice: in and out again, nothing pasted.
+	ctrlV()
+	v.mode("-- VISUAL BLOCK --")
+	ctrlV()
+	v.mode("-- NORMAL --")
+	v.settle("abcd", "efgh", "ijkl")
+
+	// d deletes the box; u brings it back.
+	ctrlV()
+	v.mode("-- VISUAL BLOCK --")
+	v.keys("jld", "cd", "gh", "ijkl")
+	v.mode("-- NORMAL --")
+	v.keys("u", "abcd", "efgh", "ijkl")
+
+	// I types on every line of the box at Escape.
+	v.keys("gg0")
+	ctrlV()
+	v.keys("jjIX", "Xabcd", "efgh", "ijkl")
+	v.mode("-- INSERT --")
+	realKeys(p, string(kb.Escape))
+	v.settle("Xabcd", "Xefgh", "Xijkl")
+	v.mode("-- NORMAL --")
+
+	// $A appends at each line's end.
+	v.keys("gg0")
+	ctrlV()
+	v.keys("jj$A!", "Xabcd!", "Xefgh", "Xijkl")
+	realKeys(p, string(kb.Escape))
+	v.settle("Xabcd!", "Xefgh!", "Xijkl!")
+
+	// y yanks a box, p puts it after the caret on each line.
+	v.keys("gg0")
+	ctrlV()
+	v.keys("jly", "Xabcd!", "Xefgh!", "Xijkl!")
+	v.mode("-- NORMAL --")
+	v.keys("$p", "Xabcd!Xa", "Xefgh!Xe", "Xijkl!")
+
+	// c changes the box on every line.
+	v.keys("gg0")
+	ctrlV()
+	v.keys("jjcZ", "Zabcd!Xa", "efgh!Xe", "ijkl!")
+	realKeys(p, string(kb.Escape))
+	v.settle("Zabcd!Xa", "Zefgh!Xe", "Zijkl!")
+
+	// r replaces every char of the box; Escape leaves block mode.
+	v.keys("gg0l")
+	ctrlV()
+	v.keys("jlrQ", "ZQQcd!Xa", "ZQQgh!Xe", "Zijkl!")
+	ctrlV()
+	v.mode("-- VISUAL BLOCK --")
+	realKeys(p, string(kb.Escape))
+	v.mode("-- NORMAL --")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
+
+// Spec (WEBP-1): Vim mode follows the open file's own mappings too. The
+// page asks the laptop for this file's buffer (editor.vim_buf_maps):
+// the mappings made for the file or for its language win over the
+// global ones there. :nnoremap <buffer> made in the browser is this
+// file's.
+func TestDeskVimBufferMappings(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.go", "abc", "def", "ghi")
+	toggleVim(t, p, c, true)
+	for global, local := false, false; !global || !local; {
+		r := nextReq(t, c)
+		switch r.Op {
+		case webproto.OpEditorVimMaps:
+			global = true
+			reply(t, c, r, webproto.VimMapList{Items: []webproto.VimMap{
+				{Mode: "n", LHS: "<Space>d", RHS: "dd", Noremap: true},
+				{Mode: "n", LHS: "Q", RHS: "x", Noremap: true},
+			}})
+		case webproto.OpEditorVimBufMaps:
+			local = true
+			if string(r.Args) != `{"buf":2}` {
+				t.Errorf("asked for %s", r.Args)
+			}
+			reply(t, c, r, webproto.VimMapList{Items: []webproto.VimMap{
+				{Mode: "n", LHS: "<Space>d", RHS: "x", Noremap: true},
+				{Mode: "i", LHS: "jj", RHS: "<Esc>", Noremap: true},
+			}})
+		}
+	}
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+
+	// The file's <Space>d (x) wins over the global one (dd); Q is global.
+	v.keys(" d", "bc", "def", "ghi")
+	v.keys("Q", "c", "def", "ghi")
+	v.keys("iz", "zc", "def", "ghi")
+	v.keys("jj", "zc", "def", "ghi")
+	v.mode("-- NORMAL --")
+
+	// A mapping made here for this file; :nunmap <buffer> drops it and
+	// the global <Space>d is back.
+	v.keys(":nnoremap <buffer> ,b A?<Esc>\r,b", "zc?", "def", "ghi")
+	v.keys(":nunmap <buffer> <Space>d\r d", "def", "ghi")
+	v.mode("-- NORMAL --")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
+
+// Spec (WEBP-1): Vim's jump list, across files. A jump (G, :N, a search,
+// a mark …) keeps where the caret was; Ctrl+O goes back along the list,
+// Ctrl+I forward again, a count goes that many; at the list's end
+// nothing moves. Going to another file is a jump too: Ctrl+O there opens
+// the file it came from with the caret where it was, Ctrl+I goes back.
+func TestDeskVimJumpList(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "a1", "a2", "a3", "a4")
+	toggleVim(t, p, c, true)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+	pos := func(want string) {
+		t.Helper()
+		p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent === ` + jsq(want))
+	}
+	ctrl := func(k string) {
+		t.Helper()
+		p.Do(chromedp.KeyEvent(k, chromedp.KeyModifiers(chromedp.ModifierCtrl)))
+	}
+
+	realKeys(p, "l")
+	pos("Ln 1, Col 2")
+	realKeys(p, "G")
+	pos("Ln 4, Col 1")
+	realKeys(p, ":2\r")
+	pos("Ln 2, Col 1")
+	ctrl("o")
+	pos("Ln 4, Col 1")
+	ctrl("o")
+	pos("Ln 1, Col 2")
+	// The list's start: nothing moves.
+	ctrl("o")
+	ctrl("i")
+	pos("Ln 4, Col 1")
+	ctrl("i")
+	pos("Ln 2, Col 1")
+	realKeys(p, "2")
+	ctrl("o")
+	pos("Ln 1, Col 2")
+	v.settle("a1", "a2", "a3", "a4")
+
+	// Another file: Ctrl+O comes back to a.txt where the caret was.
+	openDesk(t, p, c, 3, "b.txt", "b1", "b2")
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	realKeys(p, "j")
+	pos("Ln 2, Col 1")
+	ctrl("o")
+	p.WaitJS(`location.hash === "#/files/a.txt"`)
+	answerOpen(t, p, c, 2, "a.txt", "a1", "a2", "a3", "a4")
+	pos("Ln 1, Col 2")
+	v.mode("-- NORMAL --")
+	ctrl("i")
+	p.WaitJS(`location.hash === "#/files/b.txt"`)
+	answerOpen(t, p, c, 3, "b.txt", "b1", "b2")
+	pos("Ln 2, Col 1")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}

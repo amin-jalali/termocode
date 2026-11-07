@@ -112,7 +112,7 @@ func (m *Model) openIssueActions(is gitxIssue) tea.Cmd {
 		case "start":
 			m.gitxPrompt("Start Work on "+ref, "New branch (from "+m.gitBranch.Name+")", issueBranch(is), func(m *Model, name string) tea.Cmd {
 				name = strings.TrimSpace(name)
-				cwd, err := m.rootDir()
+				cwd, err := m.gitRootDir()
 				if err != nil || name == "" {
 					return nil
 				}
@@ -185,7 +185,7 @@ func (m *Model) openPublish() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
