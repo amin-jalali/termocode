@@ -276,6 +276,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBCompareReady(msg)
 	case dbERReadyMsg:
 		return m, m.onDBERReady(msg)
+	case dbERPathSchemaMsg:
+		return m, m.onDBERPathSchema(msg)
 	case dbEditKeysMsg:
 		return m, m.onDBEditKeys(msg)
 	case dbSubmitMsg:

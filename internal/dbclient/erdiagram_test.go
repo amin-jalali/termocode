@@ -101,7 +101,7 @@ func TestERPath(t *testing.T) {
 	s := erChain()
 	cases := []struct {
 		from, to, want string
-		ok           bool
+		ok             bool
 	}{
 		{"shop_users", "items", "shop_users,shop_orders,lines,items", true},
 		{"items", "shop_users", "items,lines,shop_orders,shop_users", true},

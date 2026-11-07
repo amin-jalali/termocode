@@ -212,6 +212,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Count Rows | `db-count-rows` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
+| Databases: Diagram Path Between Tables… | `db-er-path` |   |   |
 | Databases: Disconnect Selected… | `db-disconnect` |   |   |
 | Databases: End Session… | `db-end-session` |   |   |
 | Databases: Explain Analyze Statement… | `db-explain-analyze` |   |   |
