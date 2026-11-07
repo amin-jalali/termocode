@@ -56,19 +56,19 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil // nothing to describe; f stops it
 		}
 		if have && r.kind == kubeRowItem && k.String() == "enter" {
-			return m, m.kubeDescribe(kubeKindOf(r.section), r.name)
+			return m, m.kubeDescribe(st.rowTarget(r))
 		}
 	case "i":
 		if have && r.kind == kubeRowItem && r.section != kubeForwardsSection {
-			return m, m.kubeDescribe(kubeKindOf(r.section), r.name)
+			return m, m.kubeDescribe(st.rowTarget(r))
 		}
 	case "v":
 		if have && r.kind == kubeRowItem {
-			return m, m.kubeYAML(kubeKindOf(r.section), r.name)
+			return m, m.kubeYAML(st.rowTarget(r))
 		}
 	case "E":
 		if have && r.kind == kubeRowItem {
-			return m, m.kubeEvents(kubeKindOf(r.section), r.name)
+			return m, m.kubeEvents(st.rowTarget(r))
 		}
 		return m, m.kubeEvents("", "")
 	case "e":
@@ -88,6 +88,9 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case "d":
 		if have && r.kind == kubeRowItem && r.section == "nodes" {
 			return m, m.servicesToast(toast.Info, "Nodes are not deleted here", "Use kubectl for that")
+		}
+		if have && r.kind == kubeRowItem && r.section == "events" {
+			return m, m.servicesToast(toast.Info, "Events are not deleted", "d works on the object's own row")
 		}
 		if have && r.kind == kubeRowItem {
 			m.askKubeDelete(kubeKindOf(r.section), r.name)
@@ -146,6 +149,8 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"i", "describe (read only)"},
 		[]string{"v", "YAML (read only, secrets masked)"},
 		[]string{"E", "events · on a header: the namespace's"},
+		[]string{"Events"},
+		[]string{"i v E", "act on the event's object"},
 		[]string{"y", "copy the name"},
 		[]string{"r", "deployment: restart (asks first)"},
 		[]string{"s", "deployment: scale (asks first)"},

@@ -89,7 +89,7 @@ func TestEventKindOfEveryViewKind(t *testing.T) {
 		"statefulset": "StatefulSet", "daemonset": "DaemonSet", "replicaset": "ReplicaSet", "cronjob": "CronJob",
 		"configmap": "ConfigMap", "secret": "Secret", "ingress": "Ingress", "persistentvolumeclaim": "PersistentVolumeClaim", "node": "Node",
 	} {
-		if got := EventKind(kind); got != want {
+		if got := kube.EventKind(kind); got != want {
 			t.Errorf("EventKind(%s) = %q, want %q", kind, got, want)
 		}
 	}

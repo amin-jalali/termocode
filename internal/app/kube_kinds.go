@@ -23,7 +23,7 @@ import (
 // scoped (no --namespace).
 
 // kubeExtraSections are the folded sections, in order.
-var kubeExtraSections = []string{"statefulsets", "daemonsets", "replicasets", "cronjobs", "configmaps", "secrets", "ingresses", "pvcs", "nodes"}
+var kubeExtraSections = []string{"events", "statefulsets", "daemonsets", "replicasets", "cronjobs", "configmaps", "secrets", "ingresses", "pvcs", "nodes"}
 
 func kubeIsExtra(sec string) bool {
 	for _, s := range kubeExtraSections {
@@ -91,6 +91,23 @@ func joinOr(xs []string, none string) string {
 func kubeLoadExtra(ctx context.Context, c kube.Client, sec string, now time.Time) ([]kubeObj, error) {
 	var out []kubeObj
 	switch sec {
+	case "events":
+		// The namespace's newest events, live while the section is open
+		// (CTX-3). A row is named after its object: keys act on that.
+		xs, err := c.Events(ctx, "", "")
+		for _, x := range xs[:min(len(xs), kubeEventsMax)] {
+			o := kubeObj{Name: x.Object, Created: x.Last, Right: x.Reason}
+			if x.Type == "Warning" {
+				o.Mark = kubeMarkBad
+			}
+			msg := strings.Join(strings.Fields(x.Message), " ")
+			if x.Count > 1 {
+				msg = "x" + strconv.Itoa(x.Count) + " " + msg
+			}
+			o.Detail = x.Type + " · " + msg
+			out = append(out, o)
+		}
+		return out, err
 	case "statefulsets":
 		xs, err := c.StatefulSets(ctx)
 		for _, x := range xs {
@@ -197,6 +214,19 @@ func orStr(s, none string) string {
 		return none
 	}
 	return s
+}
+
+// kubeEventsMax bounds the EVENTS rows (E on a header shows them all).
+const kubeEventsMax = 50
+
+// rowTarget is the kind and name the keys act on: the row's object, or
+// an event row's involved object.
+func (st *kubeState) rowTarget(r kubeRow) (string, string) {
+	if r.section == "events" {
+		kind, name, _ := strings.Cut(r.name, "/")
+		return kind, name
+	}
+	return kubeKindOf(r.section), r.name
 }
 
 func kubeKeyCount(n int) string {

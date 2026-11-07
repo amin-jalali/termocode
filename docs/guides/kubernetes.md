@@ -29,6 +29,7 @@ context and that context's namespace (`default` when it names none).
 | **DEPLOYMENTS** | ready pods (`1/2`) and age. A wide view also shows updated and available pods. |
 | **SERVICES** | the type (`ClusterIP`, `NodePort`, …). A wide view also shows the ports. |
 | **JOBS** | finished runs (`2/5`) and age. |
+| **EVENTS** | the namespace's newest 50 events: the object (`pod/api-1`), the reason (`BackOff`) and when it last happened. A warning has a red mark. The footer shows the message. `i`, `v` and `E` on an event act on its object. |
 | **STATEFULSETS** | ready pods (`1/2`) and age. |
 | **DAEMONSETS** | ready pods of the wanted ones (`3/3`) and age. A wide view also shows updated and available pods. |
 | **REPLICASETS** | ready pods (`2/2`) and age. The footer shows the owner (`Deployment/api`). |
@@ -40,7 +41,7 @@ context and that context's namespace (`default` when it names none).
 | **NODES** | the status (`Ready`, `NotReady`, `SchedulingDisabled`). A wide view also shows the version. Nodes belong to the whole cluster, not to the namespace. |
 | **FORWARDS** | only while a port-forward runs: each forward (`svc/web`), its local port and the remote port (`:43123 → 80`). |
 
-The sections from **STATEFULSETS** to **NODES** start folded. A folded
+The sections from **EVENTS** to **NODES** start folded. A folded
 section does not load; open it (`Space`, `Enter` or a click) and it
 loads now and then with the others. Fold it again and it stops loading.
 
@@ -79,7 +80,7 @@ kubeconfig, so other terminals keep their context.
 | `y` | Copy the name. On a **FORWARDS** row: copy the local address. |
 | `r` | Deployment: restart it (asks first). |
 | `s` | Deployment: scale it (asks the number, then asks first). |
-| `d` | Delete the row's object (asks first). Not on a node. |
+| `d` | Delete the row's object (asks first). Not on a node or an event. |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
 | `R` | Load the lists now. |
