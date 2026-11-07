@@ -27,6 +27,186 @@ type CSVSniff struct {
 	Columns   []string   // header names, or "column N"
 	Sample    [][]string // the first five data rows
 	head      [][]string // the first six records, for WithHeader
+	// Options are the reading options the user chose (lines to skip,
+	// quote and escape characters); the zero value is plain CSV.
+	Options CSVOptions
+}
+
+// QuoteNone is CSVOptions.Quote for a file without quoting: a " is
+// text like any other character.
+const QuoteNone rune = -1
+
+// CSVOptions change how a file is read. Quote 0 is the double quote;
+// Escape 0 means a quote inside a quoted field is doubled ("").
+type CSVOptions struct {
+	SkipLines int  // lines dropped before the header (or the first row)
+	Quote     rune // 0 ("), '\'', or QuoteNone
+	Escape    rune // 0 (doubled quote) or '\\' (backslash)
+}
+
+// quotePlaceholder stands for a literal " while a QuoteNone file is
+// parsed; it is turned back into " in every field.
+const quotePlaceholder = "\uE000"
+
+func (o CSVOptions) quote() byte {
+	if o.Quote == 0 || o.Quote == QuoteNone {
+		return '"'
+	}
+	return byte(o.Quote)
+}
+
+// transforms reports whether the stream must be rewritten before the CSV
+// reader sees it.
+func (o CSVOptions) transforms() bool {
+	return o.Quote == QuoteNone || o.Quote != 0 && o.Quote != '"' || o.Escape != 0
+}
+
+// Valid says what is wrong with the options, or nil.
+func (o CSVOptions) Valid(delim rune) error {
+	switch {
+	case o.SkipLines < 0:
+		return errors.New("lines to skip cannot be negative")
+	case o.Quote != 0 && o.Quote != QuoteNone && (o.Quote < 0x21 || o.Quote > 0x7e):
+		return errors.New("the quote must be one visible ASCII character")
+	case o.Escape != 0 && (o.Escape < 0x21 || o.Escape > 0x7e):
+		return errors.New("the escape must be one visible ASCII character")
+	case o.Quote != QuoteNone && o.Quote != 0 && o.Quote == delim, o.Escape != 0 && o.Escape == delim:
+		return errors.New("the quote and escape must differ from the delimiter")
+	case o.Escape != 0 && rune(o.quote()) == o.Escape:
+		return errors.New("an escape the same as the quote is the default (doubled quote)")
+	}
+	return nil
+}
+
+// mapByte is what one byte of the file becomes for the CSV reader: the
+// chosen quote becomes " (and a real " takes its place), or with
+// QuoteNone a " becomes the placeholder. Quote and escape are ASCII, so a
+// byte of a multi-byte UTF-8 character never matches.
+func (o CSVOptions) mapByte(out []byte, b byte) []byte {
+	switch {
+	case o.Quote == QuoteNone:
+		if b == '"' {
+			return append(out, quotePlaceholder...)
+		}
+	case o.Quote != 0 && o.Quote != '"':
+		if b == byte(o.Quote) {
+			return append(out, '"')
+		}
+		if b == '"' {
+			return append(out, byte(o.Quote))
+		}
+	}
+	return append(out, b)
+}
+
+// Restore turns a parsed field back into the file's text (it undoes what
+// mapByte did).
+func (o CSVOptions) Restore(field string) string {
+	switch {
+	case o.Quote == QuoteNone:
+		return strings.ReplaceAll(field, quotePlaceholder, `"`)
+	case o.Quote != 0 && o.Quote != '"':
+		q := o.Quote
+		return strings.Map(func(r rune) rune {
+			switch r {
+			case q:
+				return '"'
+			case '"':
+				return q
+			}
+			return r
+		}, field)
+	}
+	return field
+}
+
+// quoteReader rewrites the decoded stream for the CSV reader: an escaped
+// quote (\" with a backslash escape) becomes a doubled one, and the quote
+// character is swapped as mapByte says. Newlines are never changed, so
+// line numbers stay right.
+type quoteReader struct {
+	r    *bufio.Reader
+	o    CSVOptions
+	pend []byte
+}
+
+func (q *quoteReader) Read(p []byte) (int, error) {
+	n := 0
+	for n < len(p) {
+		if len(q.pend) > 0 {
+			c := copy(p[n:], q.pend)
+			q.pend = q.pend[c:]
+			n += c
+			continue
+		}
+		b, err := q.r.ReadByte()
+		if err != nil {
+			if n > 0 {
+				return n, nil
+			}
+			return 0, err
+		}
+		out := make([]byte, 0, 4)
+		if q.o.Escape != 0 && b == byte(q.o.Escape) {
+			nx, nerr := q.r.ReadByte()
+			switch {
+			case nerr != nil:
+				out = q.o.mapByte(out, b)
+			case q.o.Quote != QuoteNone && nx == q.o.quote():
+				out = append(out, '"', '"')
+			case nx == b:
+				out = q.o.mapByte(out, b)
+			default:
+				_ = q.r.UnreadByte()
+				out = q.o.mapByte(out, b)
+			}
+		} else {
+			out = q.o.mapByte(out, b)
+		}
+		q.pend = out
+	}
+	return n, nil
+}
+
+// transformText is quoteReader for text already in memory (the sniff).
+func (o CSVOptions) transformText(text string) string {
+	if !o.transforms() {
+		return text
+	}
+	out, _ := io.ReadAll(&quoteReader{r: bufio.NewReader(strings.NewReader(text)), o: o})
+	return string(out)
+}
+
+// dropLines removes the first n lines of text.
+func dropLines(text string, n int) string {
+	for ; n > 0 && text != ""; n-- {
+		i := strings.IndexByte(text, '\n')
+		if i < 0 {
+			return ""
+		}
+		text = text[i+1:]
+	}
+	return text
+}
+
+// skipLines reads and drops the first n lines of br.
+func skipLines(br *bufio.Reader, n int) error {
+	for ; n > 0; n-- {
+		for {
+			_, err := br.ReadSlice('\n')
+			if err == nil {
+				break
+			}
+			if err == bufio.ErrBufferFull {
+				continue
+			}
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 const (
@@ -47,6 +227,12 @@ var sniffDelimiters = []rune{',', ';', '\t', '|'}
 // SniffCSV reads the start of the file at path and guesses its encoding,
 // delimiter and header. It reads at most 256 KB.
 func SniffCSV(path string) (CSVSniff, error) {
+	return SniffCSVWith(path, CSVOptions{})
+}
+
+// SniffCSVWith is SniffCSV with reading options: the skipped lines and the
+// quote and escape characters are applied before the guesses.
+func SniffCSVWith(path string, opts CSVOptions) (CSVSniff, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return CSVSniff{}, fmt.Errorf("cannot open the file: %s", pathErr(err))
@@ -65,18 +251,36 @@ func SniffCSV(path string) (CSVSniff, error) {
 	if strings.TrimSpace(text) == "" {
 		return CSVSniff{}, errors.New("the file is empty")
 	}
+	if opts.SkipLines > 0 {
+		text = dropLines(text, opts.SkipLines)
+		if strings.TrimSpace(text) == "" {
+			return CSVSniff{}, fmt.Errorf("nothing is left after skipping %d lines", opts.SkipLines)
+		}
+	}
+	text = opts.transformText(text)
 	best, bestScore := ',', -1
 	for _, d := range sniffDelimiters {
+		if opts.Valid(d) != nil {
+			continue
+		}
 		recs := readRecords(text, d, sniffRecords, truncated)
 		if score := delimiterScore(recs); score > bestScore {
 			best, bestScore = d, score
 		}
 	}
+	if err := opts.Valid(best); err != nil {
+		return CSVSniff{}, err
+	}
 	recs := readRecords(text, best, sampleRows+1, truncated)
 	if len(recs) == 0 {
 		return CSVSniff{}, errors.New("the file has no rows")
 	}
-	sn := CSVSniff{Delimiter: best, Encoding: enc, Fields: len(recs[0]), head: recs}
+	for _, rec := range recs {
+		for i := range rec {
+			rec[i] = opts.Restore(rec[i])
+		}
+	}
+	sn := CSVSniff{Delimiter: best, Encoding: enc, Fields: len(recs[0]), head: recs, Options: opts}
 	return sn.WithHeader(looksLikeHeader(recs[0])), nil
 }
 
@@ -284,7 +488,19 @@ func openCSV(path string, sn CSVSniff) (*csv.Reader, func(), error) {
 		}
 	}
 	_, _ = br.Discard(skip)
-	r := csv.NewReader(decodeReader(br, sn.Encoding))
+	var src io.Reader = decodeReader(br, sn.Encoding)
+	if sn.Options.SkipLines > 0 || sn.Options.transforms() {
+		dr := bufio.NewReaderSize(src, 64<<10)
+		if err := skipLines(dr, sn.Options.SkipLines); err != nil {
+			_ = f.Close()
+			return nil, nil, fmt.Errorf("cannot read the file: %s", pathErr(err))
+		}
+		src = dr
+		if sn.Options.transforms() {
+			src = &quoteReader{r: dr, o: sn.Options}
+		}
+	}
+	r := csv.NewReader(src)
 	r.Comma, r.FieldsPerRecord, r.LazyQuotes, r.ReuseRecord = sn.Delimiter, -1, true, true
 	return r, func() { _ = f.Close() }, nil
 }
@@ -357,6 +573,11 @@ type ImportSpec struct {
 	// SkipBad leaves a row that cannot be read or fails its INSERT out
 	// (in ImportResult.Skipped) instead of rolling everything back.
 	SkipBad bool
+	// MorePaths are more files read after Path into the same table, in
+	// the same transaction (Sniff applies to all of them).
+	MorePaths []string
+	// Formats[i] says how the cells of Targets[i] are read (none: as is).
+	Formats []ColumnFormat
 }
 
 func (s ImportSpec) pairs() (targets []string, sources []int) {
@@ -366,6 +587,182 @@ func (s ImportSpec) pairs() (targets []string, sources []int) {
 		}
 	}
 	return targets, sources
+}
+
+// pairFormats is Formats in the order of pairs.
+func (s ImportSpec) pairFormats() []ColumnFormat {
+	var out []ColumnFormat
+	for i := range s.Targets {
+		if i < len(s.Sources) && s.Sources[i] >= 0 {
+			var f ColumnFormat
+			if i < len(s.Formats) {
+				f = s.Formats[i]
+			}
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// Paths are all the files of the import, Path first.
+func (s ImportSpec) Paths() []string {
+	return append([]string{s.Path}, s.MorePaths...)
+}
+
+// ColumnFormat says how the cells of one column are turned into values.
+// An empty cell is always NULL.
+type ColumnFormat struct {
+	Trim     bool   // drop spaces around the text
+	NullText string // this text (exactly) is NULL too, for example \N or NULL
+	// DateLayout is the date format of the file, written with YYYY YY MM
+	// DD HH mm ss (for example DD/MM/YYYY); the value is sent as
+	// YYYY-MM-DD (with HH:mm:ss when the format has a time).
+	DateLayout   string
+	DecimalComma bool // 1.234,5 is sent as 1234.5
+}
+
+// IsZero reports whether the format leaves the cells as they are.
+func (f ColumnFormat) IsZero() bool { return f == ColumnFormat{} }
+
+// Describe is a short text of the format for a card ("" when IsZero).
+func (f ColumnFormat) Describe() string {
+	var parts []string
+	if f.Trim {
+		parts = append(parts, "trim")
+	}
+	if f.NullText != "" {
+		parts = append(parts, "NULL = "+strconv.Quote(f.NullText))
+	}
+	if f.DateLayout != "" {
+		parts = append(parts, "date "+f.DateLayout)
+	}
+	if f.DecimalComma {
+		parts = append(parts, "decimal comma")
+	}
+	return strings.Join(parts, " · ")
+}
+
+var dateTokens = strings.NewReplacer("YYYY", "2006", "YY", "06", "MM", "01", "DD", "02", "HH", "15", "mm", "04", "ss", "05")
+
+// goDateLayout turns DD/MM/YYYY style into a Go layout, and says whether
+// it has a time part.
+func goDateLayout(layout string) (string, bool, error) {
+	if strings.TrimSpace(layout) == "" {
+		return "", false, errors.New("type a date format like DD/MM/YYYY")
+	}
+	for _, c := range layout {
+		if c >= '0' && c <= '9' {
+			return "", false, errors.New("write the date format with YYYY, MM, DD, HH, mm and ss, not digits")
+		}
+	}
+	g := dateTokens.Replace(layout)
+	if !strings.Contains(g, "2006") && !strings.Contains(g, "06") || !strings.Contains(g, "01") || !strings.Contains(g, "02") {
+		return "", false, errors.New("the date format needs a year (YYYY), a month (MM) and a day (DD)")
+	}
+	return g, strings.Contains(g, "15"), nil
+}
+
+// CheckDateLayout says what is wrong with a date format, or nil.
+func CheckDateLayout(layout string) error {
+	_, _, err := goDateLayout(layout)
+	return err
+}
+
+// Apply turns one cell into the value bound for it (nil is NULL).
+func (f ColumnFormat) Apply(v string) (any, error) {
+	if f.Trim {
+		v = strings.TrimSpace(v)
+	}
+	if v == "" || f.NullText != "" && v == f.NullText {
+		return nil, nil
+	}
+	if f.DecimalComma {
+		n := strings.NewReplacer(".", "", " ", "", "\u00a0", "", "'", "").Replace(v)
+		n = strings.Replace(n, ",", ".", 1)
+		if _, err := strconv.ParseFloat(n, 64); err != nil {
+			return nil, fmt.Errorf("%q is not a number with a decimal comma", v)
+		}
+		v = n
+	}
+	if f.DateLayout != "" {
+		g, withTime, err := goDateLayout(f.DateLayout)
+		if err != nil {
+			return nil, err
+		}
+		t, err := time.Parse(g, v)
+		if err != nil {
+			return nil, fmt.Errorf("%q does not match the date format %s", v, f.DateLayout)
+		}
+		if withTime {
+			return t.Format("2006-01-02 15:04:05"), nil
+		}
+		return t.Format("2006-01-02"), nil
+	}
+	return v, nil
+}
+
+// csvSource reads the records of one or more files in turn; the header
+// row of each file is dropped.
+type csvSource struct {
+	paths []string
+	sn    CSVSniff
+	idx   int
+	r     *csv.Reader
+	close func()
+	row   int // data row in the current file
+}
+
+func (c *csvSource) file() string {
+	if c.idx < len(c.paths) {
+		return c.paths[c.idx]
+	}
+	return ""
+}
+
+// next is the next record, its data row and line in its file, or io.EOF
+// after the last file.
+func (c *csvSource) next() (rec []string, row, line int, err error) {
+	for {
+		if c.r == nil {
+			if c.idx >= len(c.paths) {
+				return nil, 0, 0, io.EOF
+			}
+			r, closeFile, err := openCSV(c.paths[c.idx], c.sn)
+			if err != nil {
+				return nil, 0, 0, err
+			}
+			c.r, c.close, c.row = r, closeFile, 0
+			if c.sn.Header {
+				if _, err := r.Read(); err != nil && err != io.EOF {
+					return nil, 0, 0, fmt.Errorf("the file cannot be read as CSV: %s", err)
+				}
+			}
+		}
+		rec, err := c.r.Read()
+		if err == io.EOF {
+			c.close()
+			c.r, c.close = nil, nil
+			c.idx++
+			continue
+		}
+		c.row++
+		var pe *csv.ParseError
+		switch {
+		case err == nil:
+			line, _ = c.r.FieldPos(0)
+		case errors.As(err, &pe):
+			line = pe.StartLine
+		}
+		line += c.sn.Options.SkipLines
+		return rec, c.row, line, err
+	}
+}
+
+func (c *csvSource) done() {
+	if c.close != nil {
+		c.close()
+		c.r, c.close = nil, nil
+	}
 }
 
 // rowsPerBatch keeps a statement under the bound-value limit of the dialect.
@@ -423,6 +820,7 @@ type ImportResult struct {
 	Rows       int64
 	FailedRow  int
 	FailedLine int
+	FailedFile string // set when the import has more than one file
 	Err        error
 	Cancelled  bool
 	Elapsed    time.Duration
@@ -432,16 +830,18 @@ type ImportResult struct {
 	Skipped     []ImportSkip
 }
 
-// ImportSkip is one row a SkipBad import left out.
+// ImportSkip is one row a SkipBad import left out. File is set when the
+// import read more than one file.
 type ImportSkip struct {
 	Row, Line int
 	Err       string
+	File      string
 }
 
-func (res *ImportResult) skip(row, line int, err error) {
+func (res *ImportResult) skip(row, line int, file string, err error) {
 	res.SkippedRows++
 	if len(res.Skipped) < importSkipKeep {
-		res.Skipped = append(res.Skipped, ImportSkip{Row: row, Line: line, Err: err.Error()})
+		res.Skipped = append(res.Skipped, ImportSkip{Row: row, Line: line, Err: err.Error(), File: file})
 	}
 }
 
@@ -451,7 +851,11 @@ func ImportErrorLog(file, table string, res ImportResult) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Import of %s into %s\n%d rows imported, %d skipped\n\n", file, table, res.Rows, res.SkippedRows)
 	for _, sk := range res.Skipped {
-		fmt.Fprintf(&b, "row %d (line %d): %s\n", sk.Row, sk.Line, strings.Join(strings.Fields(sk.Err), " "))
+		where := ""
+		if sk.File != "" {
+			where = sk.File + ": "
+		}
+		fmt.Fprintf(&b, "%srow %d (line %d): %s\n", where, sk.Row, sk.Line, strings.Join(strings.Fields(sk.Err), " "))
 	}
 	if res.SkippedRows > len(res.Skipped) {
 		fmt.Fprintf(&b, "… and %d more rows (only the first %d are listed)\n", res.SkippedRows-len(res.Skipped), len(res.Skipped))
@@ -463,6 +867,16 @@ type importRow struct {
 	args []any
 	line int
 	row  int
+	file string // "" when the import has one file
+}
+
+// where names the row in errors: "row 3 (line 4)", with the file first
+// when the import has more than one.
+func (r importRow) where() string {
+	if r.file != "" {
+		return fmt.Sprintf("%s: row %d (line %d)", r.file, r.row, r.line)
+	}
+	return fmt.Sprintf("row %d (line %d)", r.row, r.line)
 }
 
 // ImportCSV reads the file one row at a time and inserts it with bound
@@ -479,18 +893,35 @@ func ImportCSV(ctx context.Context, sess Session, spec ImportSpec, progress func
 		res.Err = errors.New("map at least one column")
 		return res
 	}
-	r, closeFile, err := openCSV(spec.Path, spec.Sniff)
-	if err != nil {
+	if err := spec.Sniff.Options.Valid(spec.Sniff.Delimiter); err != nil {
 		res.Err = err
 		return res
 	}
-	defer closeFile()
-	if spec.Sniff.Header {
-		if _, err := r.Read(); err != nil && err != io.EOF {
-			res.Err = fmt.Errorf("the file cannot be read as CSV: %s", err)
-			return res
+	formats := spec.pairFormats()
+	for _, f := range formats {
+		if f.DateLayout != "" {
+			if err := CheckDateLayout(f.DateLayout); err != nil {
+				res.Err = err
+				return res
+			}
 		}
 	}
+	paths := spec.Paths()
+	multi := len(paths) > 1
+	// Every file must open before anything is written.
+	for _, p := range paths {
+		f, err := os.Open(p)
+		if err != nil {
+			res.Err = fmt.Errorf("cannot open the file: %s", pathErr(err))
+			if multi {
+				res.Err = fmt.Errorf("cannot open the file %s: %s", p, pathErr(err))
+			}
+			return res
+		}
+		_ = f.Close()
+	}
+	src := &csvSource{paths: paths, sn: spec.Sniff}
+	defer src.done()
 	if err := ctx.Err(); err != nil {
 		res.Cancelled = true
 		return res
@@ -506,9 +937,9 @@ func ImportCSV(ctx context.Context, sess Session, spec ImportSpec, progress func
 		}
 		_ = sess.Rollback(cctx)
 	}
-	fail := func(row, line int, err error) ImportResult {
+	fail := func(row, line int, file string, err error) ImportResult {
 		undo()
-		res.Rows, res.FailedRow, res.FailedLine, res.Err = 0, row, line, err
+		res.Rows, res.FailedRow, res.FailedLine, res.FailedFile, res.Err = 0, row, line, file, err
 		return res
 	}
 	if spec.InTx {
@@ -522,7 +953,6 @@ func ImportCSV(ctx context.Context, sess Session, spec ImportSpec, progress func
 	}
 	perBatch := spec.rowsPerBatch()
 	var done int64
-	rowNo := 0
 	for {
 		if ctx.Err() != nil {
 			undo()
@@ -531,41 +961,60 @@ func ImportCSV(ctx context.Context, sess Session, spec ImportSpec, progress func
 		}
 		var batch []importRow
 		eof := false
+	readRows:
 		for len(batch) < perBatch {
-			rec, err := r.Read()
+			rec, rowNo, line, err := src.next()
 			if err == io.EOF {
 				eof = true
 				break
 			}
-			rowNo++
-			line, _ := r.FieldPos(0)
-			if err != nil {
-				e := fmt.Errorf("row %d (line %d) cannot be read: %s", rowNo, line, err)
+			file := ""
+			if multi {
+				file = src.file()
+			}
+			at := importRow{row: rowNo, line: line, file: file}
+			if rowNo == 0 { // the file itself could not be opened or read
+				return fail(0, 0, file, err)
+			}
+			bad := func(e error) bool { // true: the import stops
 				if spec.SkipBad {
-					res.skip(rowNo, line, e)
-					continue
+					res.skip(rowNo, line, file, e)
+					return false
 				}
-				return fail(rowNo, line, e)
+				return true
+			}
+			if err != nil {
+				e := fmt.Errorf("%s cannot be read: %s", at.where(), err)
+				if bad(e) {
+					return fail(rowNo, line, file, e)
+				}
+				continue
 			}
 			if len(rec) != spec.Sniff.Fields {
 				plural := "s"
 				if len(rec) == 1 {
 					plural = ""
 				}
-				e := fmt.Errorf("row %d (line %d) has %d field%s, expected %d", rowNo, line, len(rec), plural, spec.Sniff.Fields)
-				if spec.SkipBad {
-					res.skip(rowNo, line, e)
-					continue
+				e := fmt.Errorf("%s has %d field%s, expected %d", at.where(), len(rec), plural, spec.Sniff.Fields)
+				if bad(e) {
+					return fail(rowNo, line, file, e)
 				}
-				return fail(rowNo, line, e)
+				continue
 			}
 			args := make([]any, len(sources))
-			for i, src := range sources {
-				if rec[src] != "" {
-					args[i] = rec[src]
+			for i, si := range sources {
+				v, err := formats[i].Apply(spec.Sniff.Options.Restore(rec[si]))
+				if err != nil {
+					e := fmt.Errorf("%s, column %s: %s", at.where(), targets[i], err)
+					if bad(e) {
+						return fail(rowNo, line, file, e)
+					}
+					continue readRows
 				}
+				args[i] = v
 			}
-			batch = append(batch, importRow{args: args, line: line, row: rowNo})
+			at.args = args
+			batch = append(batch, at)
 		}
 		if len(batch) > 0 && spec.SkipBad {
 			n, err := insertBatchSkip(ctx, sess, spec, batch, &res)
@@ -589,7 +1038,7 @@ func ImportCSV(ctx context.Context, sess Session, spec ImportSpec, progress func
 					res.Rows, res.Cancelled = 0, true
 					return res
 				}
-				return fail(bad.row, bad.line, fmt.Errorf("row %d (line %d): %w", bad.row, bad.line, err))
+				return fail(bad.row, bad.line, bad.file, fmt.Errorf("%s: %w", bad.where(), err))
 			}
 			done += int64(len(batch))
 			if progress != nil {
@@ -689,7 +1138,7 @@ func insertBatchSkip(ctx context.Context, sess Session, spec ImportSpec, batch [
 			if back := sess.Run(context.WithoutCancel(ctx), "ROLLBACK TO SAVEPOINT "+importRowSP, RunOptions{}); back.Err != nil {
 				return 0, back.Err
 			}
-			res.skip(row.row, row.line, fmt.Errorf("row %d (line %d): %w", row.row, row.line, one.Err))
+			res.skip(row.row, row.line, row.file, fmt.Errorf("%s: %w", row.where(), one.Err))
 			continue
 		}
 		if rel := sess.Run(ctx, "RELEASE SAVEPOINT "+importRowSP, RunOptions{}); rel.Err != nil {

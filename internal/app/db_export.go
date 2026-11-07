@@ -485,6 +485,10 @@ func (m *Model) databaseTransferPicker(id string) (tea.Cmd, bool) {
 		return m.databaseImportPicker(id), true
 	case pickerKindDBCopyTarget:
 		return m.databaseCopyTargetPicked(id), true
+	case pickerKindDBImportOpts: // db_import_options.go
+		return m.databaseImportOptionsPicked(id), true
+	case pickerKindDBImportFmtCol, pickerKindDBImportFmtKind:
+		return m.databaseImportFormatPicked(id), true
 	case pickerKindDBSearchHits:
 		return m.databaseSearchOpenHit(id), true
 	case pickerKindDBChart:
@@ -520,6 +524,9 @@ func (m *Model) databaseTransferConfirm(id string) (tea.Cmd, bool) {
 
 func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseObjActionPrompt(kind, value); ok { // db_objactions.go
+		return cmd, true
+	}
+	if cmd, ok := m.databaseImportPrompt(kind, value); ok { // db_import_options.go
 		return cmd, true
 	}
 	switch kind {
@@ -582,8 +589,12 @@ func (m *Model) databaseTransferPickerClosed() (tea.Cmd, bool) {
 	}
 	s := m.databases.console
 	switch m.pickerKind {
-	case pickerKindDBImportMapCol, pickerKindDBImportMapSrc:
+	case pickerKindDBImportMapCol, pickerKindDBImportMapSrc, pickerKindDBImportOpts:
 		return m.databaseImportCard(), true
+	case pickerKindDBImportFmtCol:
+		return m.databaseImportOptionsPicker(), true
+	case pickerKindDBImportFmtKind:
+		return m.databaseImportFormatColPicker(), true
 	case pickerKindDBImportFile:
 		s.dbImportEnd()
 		return nil, true
