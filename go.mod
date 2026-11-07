@@ -24,6 +24,7 @@ require (
 	github.com/muesli/termenv v0.16.0
 	github.com/neovim/go-client v1.2.1
 	github.com/sahilm/fuzzy v0.1.1
+	github.com/sijms/go-ora/v2 v2.9.0
 	github.com/yuin/goldmark v1.7.17
 	github.com/zalando/go-keyring v0.2.6
 	go.yaml.in/yaml/v3 v3.0.5

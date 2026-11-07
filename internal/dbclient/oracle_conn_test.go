@@ -73,7 +73,7 @@ func TestOracleWired(t *testing.T) {
 	if _, ok := DialectFor("oracle").(OracleDialect); !ok {
 		t.Fatal("no Oracle dialect")
 	}
-	if DriverMissing("oracle") == nil {
-		t.Fatal("oracle driver reported present")
+	if err := DriverMissing("oracle"); err != nil {
+		t.Fatalf("go-ora is built in now: %v", err)
 	}
 }

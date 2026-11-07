@@ -743,7 +743,7 @@ func dbOpenDriverSession(ctx context.Context, c dbclient.Conn, root, password st
 	var sess dbclient.Session
 	var err error
 	switch c.Driver {
-	case "postgres", "mysql", "sqlserver":
+	case "postgres", "mysql", "sqlserver", "oracle": // SQL Server through go-mssqldb (DBX-62), Oracle through go-ora (DBX-63)
 		sess, err = dbSQLSessionFactory(ctx, c, password)
 	case "sqlite":
 		if !filepath.IsAbs(c.Path) {
@@ -1053,6 +1053,21 @@ func (s *dbState) addObjects(path, conn string, r dbclient.IntrospectionResult) 
 		gpath := path + "/Sequences"
 		child := gpath + "/" + name
 		s.nodes[child] = dbNode{kind: dbNodeSequence, name: name, path: child, conn: conn}
+		appendDBChild(s.nodes, gpath, child)
+	}
+	// Oracle PL/SQL packages (DBX-63): a group only when there are some;
+	// a package is a routine row (Show DDL reads its spec and body).
+	for _, name := range r.Packages {
+		if !opts.ShowObject(name) {
+			continue
+		}
+		gpath := path + "/Packages"
+		if _, ok := s.nodes[gpath]; !ok {
+			s.nodes[gpath] = dbNode{kind: dbNodeGroup, name: "Packages", path: gpath, conn: conn, loaded: true}
+			appendDBChild(s.nodes, path, gpath)
+		}
+		child := gpath + "/" + name
+		s.nodes[child] = dbNode{kind: dbNodeRoutine, name: name, path: child, conn: conn}
 		appendDBChild(s.nodes, gpath, child)
 	}
 	// Triggers and Extensions get a group only when there are some.

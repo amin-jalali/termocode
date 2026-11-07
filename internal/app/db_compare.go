@@ -92,6 +92,8 @@ func dbDriverTitle(driver string) string {
 		return "MySQL"
 	case "sqlite":
 		return "SQLite"
+	case "oracle":
+		return "Oracle"
 	}
 	return driver
 }

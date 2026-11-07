@@ -948,8 +948,9 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 	if n.kind == dbNodeDatabase {
 		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse" || dbclient.IsHTTPEngine(c.Driver)) {
 			req.Database, req.Schema = n.name, n.name
-		} else if ok && c.Driver == "sqlite" {
+		} else if ok && (c.Driver == "sqlite" || c.Driver == "oracle") {
 			// One file, one session: main and attached databases share it.
+			// Oracle shows the one database of its service (DBX-63).
 			req.Database = n.name
 		} else {
 			req.Database = n.name
@@ -1081,13 +1082,14 @@ func dbTypePickerItems(remote bool) []picker.Item {
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
 		{ID: "sqlserver", Title: "SQL Server / Azure SQL", Hint: "default port 1433"},
+		{ID: "oracle", Title: "Oracle Database", Hint: "default port 1521 · a service name"},
 		{ID: "cassandra", Title: "Cassandra / ScyllaDB", Hint: "CQL, default port 9042"},
 		{ID: "clickhouse", Title: "ClickHouse", Hint: "HTTP interface, default port 8123"},
 		{ID: "libsql", Title: "libSQL / Turso", Hint: "a remote libsql:// server"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
 	if remote {
-		items = []picker.Item{items[0], items[1], items[3], items[4]}
+		items = []picker.Item{items[0], items[1], items[3], items[4], items[5]}
 	}
 	for _, p := range dbclient.PGPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Label, Hint: fmt.Sprintf("PostgreSQL family · port %d", p.Port)})
@@ -1201,6 +1203,11 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 		cmd := m.databaseAddPrompt(promptKindDBHost, "SQL Server: server address", "Host name or address:", "localhost", false)
 		m.prompt.SetNote("Azure SQL: use the *.database.windows.net name (TLS is turned on). Windows sign-in: DOMAIN\\user as the user.")
 		return cmd
+	case "oracle":
+		// DBX-63: the database is a service name; a TNS alias or a wallet
+		// goes in the config ("params": {"tns": …, "wallet": …}).
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "oracle", 1521, "system", "FREEPDB1"
+		return m.databaseAddPrompt(promptKindDBHost, "Oracle: server address", "Host name or address:", "localhost", false)
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)
 	}
@@ -1738,6 +1745,9 @@ func sanitizeDBIntrospection(in dbclient.IntrospectionResult) dbclient.Introspec
 	for i := range in.Sequences {
 		in.Sequences[i] = sanitizeDBText(in.Sequences[i])
 	}
+	for i := range in.Packages {
+		in.Packages[i] = sanitizeDBText(in.Packages[i])
+	}
 	for i := range in.Triggers {
 		in.Triggers[i] = sanitizeDBText(in.Triggers[i])
 	}
@@ -1828,6 +1838,9 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			cmd := m.databaseAddPrompt(promptKindDBName, "Keyspace", "Keyspace (empty: list them all):", s.pendingConn.Database, false)
 			m.prompt.SetAllowEmpty(true)
 			return cmd
+		}
+		if s.pendingConn.Driver == "oracle" {
+			return m.databaseAddPrompt(promptKindDBName, "Oracle service name", "Service name (for example FREEPDB1 or ORCLPDB1):", s.pendingConn.Database, false)
 		}
 		return m.databaseAddPrompt(promptKindDBName, "Database name", "Database:", s.pendingConn.Database, false)
 	case promptKindDBName:

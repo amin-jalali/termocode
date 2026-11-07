@@ -22,16 +22,10 @@ import (
 // when "fedauth" is set, Windows (NTLM) sign-in with a DOMAIN\user name,
 // and the SHOWPLAN XML plan on one connection.
 
-// errNoOracleDriver is the reason an Oracle session does not open (DBX-63).
-var errNoOracleDriver = errors.New("Oracle support needs the go-ora driver, which is not built in yet")
-
 // DriverMissing is the error of a known engine whose driver is not built
 // in; nil for the others.
 func DriverMissing(driver string) error {
-	switch normDriver(driver) {
-	case "oracle":
-		return errNoOracleDriver
-	}
+	_ = driver // SQL Server (go-mssqldb) and Oracle (go-ora) are built in now
 	return nil
 }
 

@@ -3,7 +3,7 @@ package dbclient
 import "fmt"
 
 // OracleDialect contains Oracle Database syntax and catalog queries.
-// DialectFor returns it; the driver is not built in yet (DriverMissing).
+// DialectFor returns it; go-ora opens the session (DBX-63).
 type OracleDialect struct{}
 
 // OracleShowPlan reads the plan that EXPLAIN PLAN FOR wrote.
@@ -20,6 +20,7 @@ func (OracleDialect) Limit(limit, offset int) string {
 func (OracleDialect) ReadOnlyBegin() string { return "SET TRANSACTION READ ONLY" }
 func (OracleDialect) CatalogQueries() map[string]string {
 	return map[string]string{
+		"databases":    `SELECT SYS_CONTEXT('USERENV', 'DB_NAME') FROM dual`,
 		"schemas":      `SELECT username FROM all_users WHERE oracle_maintained = 'N' ORDER BY username`,
 		"objects":      `SELECT object_name, CASE object_type WHEN 'TABLE' THEN 'BASE TABLE' ELSE 'VIEW' END FROM all_objects WHERE owner = :1 AND object_type IN ('TABLE', 'VIEW') ORDER BY object_name`,
 		"columns":      `SELECT column_name, data_type FROM all_tab_columns WHERE owner = :1 AND table_name = :2 ORDER BY column_id`,
@@ -29,6 +30,7 @@ func (OracleDialect) CatalogQueries() map[string]string {
 		"routines":     `SELECT object_name FROM all_objects WHERE owner = :1 AND object_type IN ('PROCEDURE', 'FUNCTION') ORDER BY object_name`,
 		"sequences":    `SELECT sequence_name FROM all_sequences WHERE sequence_owner = :1 ORDER BY sequence_name`,
 		"packages":     `SELECT object_name FROM all_objects WHERE owner = :1 AND object_type = 'PACKAGE' ORDER BY object_name`,
+		"triggers":     `SELECT trigger_name FROM all_triggers WHERE owner = :1 ORDER BY trigger_name`,
 	}
 }
 

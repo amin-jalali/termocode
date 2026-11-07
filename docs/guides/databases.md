@@ -107,7 +107,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, SQL Server / Azure SQL, Oracle Database, Cassandra / ScyllaDB, ClickHouse, libSQL / Turso, or **From a URL**.
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
@@ -125,7 +125,7 @@ SQL Server / Azure SQL (`"driver": "sqlserver"`, also `mssql` or `azuresql`; por
 
 The plan (`x`) is the server's SHOWPLAN XML: the statement does not run. Analyze uses STATISTICS XML and runs the statement, after the same Cancel-first card as on the other servers. Read-only sessions run in a transaction that is always rolled back.
 
-Oracle (`"driver": "oracle"`) can be saved in the config, but its driver is not built in yet: connecting says so. For Oracle (port 1521; `ora` works too) the database is the service name. `"params": {"tns": "PROD"}` takes host, port, service (or SID) and TCPS from `tnsnames.ora` (in `$TNS_ADMIN`, else `$ORACLE_HOME/network/admin`), and `"wallet": "/path/to/wallet"` uses a wallet folder with TLS.
+For Oracle (port 1521; `ora` works too) the database is the service name. `"params": {"tns": "PROD"}` takes host, port, service (or SID) and TCPS from `tnsnames.ora` (in `$TNS_ADMIN`, else `$ORACLE_HOME/network/admin`), and `"wallet": "/path/to/wallet"` uses a wallet folder with TLS. A TNS name that is not in `tnsnames.ora` stops the connect with its name, so it never falls back to localhost. Pick **Oracle Database** in the add picker (it asks for the host, port, user and service name, for example `FREEPDB1`), or write `"driver": "oracle"` in the config. The tree shows the database, its schemas (users) and, per schema, Tables, Views, Routines, Sequences, Triggers and **Packages**. `D` on a routine or a package shows its DDL from `DBMS_METADATA` (a package shows its spec and body). Editing PL/SQL source (`E`) and query plans (`x`) are not offered for Oracle yet.
 
 - **A server type** asks for the host, port, user and database. Then it asks for a masked password.
 - **Cassandra / ScyllaDB** asks for a contact point (port 9042), an optional user and an optional keyspace. Its console is a `.cql` file; the send key runs the CQL statement at the cursor and results come a page at a time.
