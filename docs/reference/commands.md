@@ -96,6 +96,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex) | `ai-agent-packs` |   |   |
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
+| Agent: Loop Until Check Passes… | `agent-goal-loop` |   | `run a check after each turn, retry` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
@@ -106,6 +107,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start OpenCode | `agent-start-opencode` |   |   |
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
+| Agent: Stop Check Loop | `agent-goal-stop` |   | `end the running check loop` |
 | Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
 | Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
 

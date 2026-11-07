@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/amin-jalali/termocode/internal/agentgoal"
 	"github.com/amin-jalali/termocode/internal/agents"
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/keymap"
@@ -111,6 +112,8 @@ type terminalTab struct {
 	LimitAt      time.Time
 	limitTyped   bool
 	AutoContinue autoContinueMode
+	// Goal is the running check loop of the tab (agent_goal.go, CMP-19).
+	Goal *agentgoal.Goal
 	// AGX-15 (agent_hibernate.go): the idle clock (the last output, one
 	// check in flight, asked for this idle time) and the hibernated
 	// state with the kept session id ("" = not known).

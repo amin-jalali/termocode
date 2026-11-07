@@ -55,7 +55,7 @@ its name and key.
 - Explain / Fix / Edit / Doc actions that open as a diff before they apply.
 - Agent steps that run at the same time work in their own git worktree; review, merge or discard each one. → [Own worktrees](guides/ai-profiles.md#own-worktrees-for-parallel-steps)
 - Anthropic, OpenAI, OpenRouter, Ollama, LM Studio or any OpenAI-compatible server. → [Set up AI](guides/ai-setup.md)
-- Outside agents (Claude Code, Codex, …) in terminal tabs: usage-limit readout, opt-in auto-continue, named accounts in their own folders, and hibernation of idle agents. → [Agents](guides/agents.md#usage-limits-and-auto-continue)
+- Outside agents (Claude Code, Codex, …) in terminal tabs: usage-limit readout, opt-in auto-continue, a loop that re-runs your check after each turn until it passes (with round, time and token caps), named accounts in their own folders, and hibernation of idle agents. → [Agents](guides/agents.md#usage-limits-and-auto-continue)
 - Race one task across 2 to 4 outside agents, each in its own worktree; compare their diffs, verify them and merge the winner. → [Agents](guides/agents.md#race-agents-on-one-task)
 
 ![AI chat with a Markdown answer and a code card](assets/screenshots/ai-chat-answer.png)

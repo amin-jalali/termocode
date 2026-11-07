@@ -120,6 +120,11 @@ type Model struct {
 	agentHits           []agentlog.Hit // the search inside sessions (agent_sessions_search.go)
 	agentHitsCapped     bool
 	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
+	// CMP-19 (agent_goal.go): the tab the start card is about, the last
+	// check command, and check task buffer → agent tab buffer.
+	agentGoalPending int
+	agentGoalLast    string
+	agentGoalVerify  map[int]int
 	// AGX-15 (agent_hibernate.go): the tab the hibernate card is about,
 	// "Always for this session", and commands queued by a tab switch.
 	agentHibernatePending int

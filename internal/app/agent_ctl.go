@@ -300,6 +300,9 @@ func (m *Model) onAgentCtl(call agentCtlCall) tea.Cmd {
 		}
 		rep := m.agentCtlReport(r)
 		answer(rep)
+		if rep.OK && rep.State == "done" && was != agents.Done && t.t != nil && t.t.Goal != nil { // CMP-19 (agent_goal.go)
+			return m.agentGoalTurnEnded(t.t.BufID)
+		}
 		if rep.OK && rep.State == "waiting" && was != agents.Waiting && !m.agentCtlTabShown(t.t) {
 			var c tea.Cmd
 			m.toast, c = m.toast.Push(toast.Info, t.t.agentTitle()+" is waiting for you")
