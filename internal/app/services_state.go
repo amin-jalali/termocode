@@ -113,6 +113,7 @@ type servicesState struct {
 	recentEvents    []containers.Event            // CTX-25: newest engine events (System page)
 	actionLog       []svcActionEntry              // CTX-25: this session's finished actions
 	pendingExtra    map[string]containersExtraJob // the open extra containers card: button → job
+	pendingArchive  string                        // CTX-31: the image ref or container id of the open archive prompt
 	// sessionContext is the DOCKER_CONTEXT of this termocode session
 	// ("" = the user's own setting). Never written to the shell or the
 	// global default.

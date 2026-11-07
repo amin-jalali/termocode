@@ -458,7 +458,15 @@ missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S
 missing	containers-build-detail	Containers|S
 missing	containers-builds	Containers|S
+missing	containers-commit	Containers|S
+missing	containers-diff	Containers|S
+missing	containers-export	Containers|S
 missing	containers-image-build	Containers|M
+missing	containers-image-import	Containers|S
+missing	containers-image-layers	Containers|S
+missing	containers-image-load	Containers|S
+missing	containers-image-save	Containers|S
+missing	containers-image-used-by	Containers|S
 missing	containers-system	Containers|S
 missing	db-ai-explain-query	Databases|S
 missing	db-ai-fix-error	Databases|S

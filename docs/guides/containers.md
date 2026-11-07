@@ -243,6 +243,27 @@ The page only reads. The AI may open it.
 
 Build history and builders need docker buildx; with podman the page says so.
 
+## Archive: save, load, import, commit, export
+
+Select an image or a container row, then use the palette. A file path may be
+relative: it is read from the workspace folder.
+
+| Palette command | What it does |
+|---|---|
+| **Save Selected Image to File…** | `docker save -o <file> <image>`. If the file exists, a card asks first (`Cancel` is first). |
+| **Load Images from File…** | `docker load -i <file>`, after a card: an image with the same tag is replaced. |
+| **Import Image from File System Tar…** | Type the tar file, then the new image name (optional): `docker import`. |
+| **Commit Selected Container to Image…** | Type the new image name, then a message (optional): `docker commit`. |
+| **Export Selected Container to File…** | `docker export -o <file> <container>`; a card asks if the file exists. |
+| **Show Selected Container Changes (Diff)** | A read-only page of the files the container added (`+`), changed (`~`) and deleted (`-`). |
+| **Show Selected Image Layer Sizes** | A read-only page of the layers that add bytes, largest first, with their share of the image. |
+| **Show Containers Using Selected Image** | A read-only page of the containers made from the image. |
+
+A save, load, import or export may take up to 30 minutes. A toast says when it
+is done; the IMAGES section lists again after a load, import or commit. The AI
+may open the three read-only pages; it cannot save, load, import, commit or
+export.
+
 ## Registries
 
 REGISTRIES lists the registry hosts from your engine's own login file:

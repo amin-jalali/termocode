@@ -2005,6 +2005,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-build-check` | Containers: Check Dockerfile (Build Checks) | confirm (run) |   |
 | `containers-build-detail` | Containers: Show Build Detail… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `containers-builds` | Containers: Show Builds (History, Builders, Cache) | auto |   |
+| `containers-commit` | Containers: Commit Selected Container to Image… | never | opens a picker or prompt that only the user can answer; use a typed tool; committing a container is the user's |
 | `containers-compose-down` | Containers: Remove Project Containers… | never | project removal requires the user's confirm card |
 | `containers-compose-restart` | Containers: Restart Project | confirm (always asks) |   |
 | `containers-compose-stop` | Containers: Stop Project | confirm (always asks) |   |
@@ -2012,19 +2013,26 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-context-default` | Containers: Make Context Default… | never | changes the machine-wide Docker default |
 | `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
+| `containers-diff` | Containers: Show Selected Container Changes (Diff) | auto |   |
 | `containers-engine-config` | Containers: Open Engine Config | auto |   |
+| `containers-export` | Containers: Export Selected Container to File… | never | opens a picker or prompt that only the user can answer; use a typed tool; writes a file the user picks |
 | `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
 | `containers-focus` | Containers: Focus | auto |   |
 | `containers-help` | Containers: Open Guide | auto |   |
 | `containers-image-build` | Containers: Build Image from Dockerfile… | never | building an image is the user's; nothing is offered to the model |
 | `containers-image-history` | Containers: Show Image History | auto |   |
+| `containers-image-import` | Containers: Import Image from File System Tar… | never | opens a picker or prompt that only the user can answer; use a typed tool; importing images is the user's |
 | `containers-image-inspect` | Containers: Inspect Image | auto |   |
+| `containers-image-layers` | Containers: Show Selected Image Layer Sizes | auto |   |
+| `containers-image-load` | Containers: Load Images from File… | never | opens a picker or prompt that only the user can answer; use a typed tool; loading images is the user's |
 | `containers-image-prune` | Containers: Prune Dangling Images… | never | pruning images is the user's; nothing is offered to the model |
 | `containers-image-pull` | Containers: Pull Image… | confirm (always asks) |   |
 | `containers-image-push` | Containers: Push Selected Image… | never | pushing an image is the user's; nothing is offered to the model |
 | `containers-image-remove` | Containers: Remove Selected Image… | never | removing is the user's; nothing is offered to the model |
 | `containers-image-run` | Containers: Run Selected Image… | never | running an image is the user's; nothing is offered to the model (containers_control starts existing containers) |
+| `containers-image-save` | Containers: Save Selected Image to File… | never | opens a picker or prompt that only the user can answer; use a typed tool; writes a file the user picks |
 | `containers-image-tag` | Containers: Tag Selected Image… | never | tagging an image is the user's; nothing is offered to the model |
+| `containers-image-used-by` | Containers: Show Containers Using Selected Image | auto |   |
 | `containers-inspect` | Containers: Inspect | auto |   |
 | `containers-logs` | Containers: Follow Logs | auto |   |
 | `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |

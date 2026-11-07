@@ -465,6 +465,14 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-build-detail":      aiNever(aiNoPicker),
 	"containers-build-cache-prune": aiNever("pruning the build cache is the user's; nothing is offered to the model"),
 	"containers-build-check":       aiConfirm(ai.ClassRun),
+	"containers-image-save":        aiNever(aiNoPicker + "; writes a file the user picks"),
+	"containers-image-load":        aiNever(aiNoPicker + "; loading images is the user's"),
+	"containers-image-import":      aiNever(aiNoPicker + "; importing images is the user's"),
+	"containers-image-layers":      aiAuto(), // CTX-31: read-only page of the selected image
+	"containers-image-used-by":     aiAuto(),
+	"containers-commit":            aiNever(aiNoPicker + "; committing a container is the user's"),
+	"containers-export":            aiNever(aiNoPicker + "; writes a file the user picks"),
+	"containers-diff":              aiAuto(), // read-only page of the selected container
 
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),

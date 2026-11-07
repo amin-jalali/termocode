@@ -126,18 +126,22 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Build Image from Dockerfile… | `containers-image-build` |   |   |
 | Containers: Check Dockerfile (Build Checks) | `containers-build-check` |   |   |
 | Containers: Choose Compose Env File… | `services-env-file` |   |   |
+| Containers: Commit Selected Container to Image… | `containers-commit` |   |   |
 | Containers: Configure Services (services.json) | `services-configure` |   |   |
 | Containers: Connect Registry… | `containers-registry-connect` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
+| Containers: Export Selected Container to File… | `containers-export` |   |   |
 | Containers: Filter Rows… | `containers-filter` |   |   |
 | Containers: Focus | `containers-focus` |   |   |
 | Containers: Focus Project Services | `services-focus` |   |   |
 | Containers: Follow Logs | `containers-logs` |   |   |
 | Containers: Follow Stats | `containers-stats` |   |   |
+| Containers: Import Image from File System Tar… | `containers-image-import` |   |   |
 | Containers: Inspect | `containers-inspect` |   |   |
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
+| Containers: Load Images from File… | `containers-image-load` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
 | Containers: Open Compose File | `services-open-compose` |   |   |
 | Containers: Open Engine Config | `containers-engine-config` |   |   |
@@ -167,11 +171,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Restart Service… | `services-restart` |   |   |
 | Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
+| Containers: Save Selected Image to File… | `containers-image-save` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |
 | Containers: Show Build Detail… | `containers-build-detail` |   |   |
 | Containers: Show Builds (History, Builders, Cache) | `containers-builds` |   |   |
+| Containers: Show Containers Using Selected Image | `containers-image-used-by` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Show Resolved Compose Config | `services-compose-config` |   |   |
+| Containers: Show Selected Container Changes (Diff) | `containers-diff` |   |   |
+| Containers: Show Selected Image Layer Sizes | `containers-image-layers` |   |   |
 | Containers: Show Service Logs… | `services-logs` |   |   |
 | Containers: Show System Page | `containers-system` |   |   |
 | Containers: Sign Out of Registry… | `containers-registry-signout` |   |   |

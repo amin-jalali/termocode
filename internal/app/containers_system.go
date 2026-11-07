@@ -35,12 +35,16 @@ func containersExtraPaletteItems() []picker.Item {
 	items := []picker.Item{
 		{ID: "containers-system", Title: "Containers: Show System Page"},
 	}
-	return append(items, containersBuildsPaletteItems()...)
+	items = append(items, containersBuildsPaletteItems()...)
+	return append(items, containersArchivePaletteItems()...)
 }
 
 // dispatchContainersExtra runs one extra containers palette id.
 func (m *Model) dispatchContainersExtra(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.dispatchContainersBuilds(id); ok { // containers_builds.go
+		return cmd, true
+	}
+	if cmd, ok := m.dispatchContainersArchive(id); ok { // containers_archive.go
 		return cmd, true
 	}
 	switch id {
