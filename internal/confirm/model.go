@@ -126,13 +126,14 @@ func (m Model) fullTextLines() []string {
 		for _, r := range line {
 			n := lipgloss.Width(string(r))
 			if cells+n > width && part != "" {
-				if m.wideText && r == ' ' {
+				if r == ' ' {
 					out = append(out, part) // the space ends the line
 					part, cells = "", 0
 					continue
 				}
-				if cut := strings.LastIndexByte(part, ' '); m.wideText && cut > 0 {
-					// A wide card breaks at the last space, not inside a word.
+				if cut := strings.LastIndexByte(part, ' '); cut > 0 {
+					// Break at the last space, not inside a word (a word
+					// longer than the line is cut).
 					out = append(out, part[:cut])
 					part = part[cut+1:]
 					cells = lipgloss.Width(part)

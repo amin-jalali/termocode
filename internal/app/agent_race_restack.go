@@ -43,7 +43,7 @@ func (m *Model) askRaceRestack(r *agentrace.Race, l *agentrace.Lane) tea.Cmd {
 		" The old commits stay in the branch's reflog."
 	m.confirm = confirm.Risky("Restack the lane of "+l.Title+"?", body, confirm.Button{ID: "cancel", Title: "Cancel"},
 		confirm.Button{ID: "squash", Title: "Squash into one commit", Style: confirm.StylePrimary},
-		confirm.Button{ID: "keep", Title: "Keep commits"}).WithWideText().WithScrollText()
+		confirm.Button{ID: "keep", Title: "Keep commits"}).WithScrollText()
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen, m.confirmKind = true, confirmKindRaceRestack
 	return nil
