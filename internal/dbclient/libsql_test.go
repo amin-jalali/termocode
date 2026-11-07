@@ -261,3 +261,19 @@ func TestLibSQLErrorNeverShowsTheToken(t *testing.T) {
 		t.Fatalf("error = %v, want the status", err)
 	}
 }
+
+func TestValidateLibSQLConn(t *testing.T) {
+	ok := Conn{ID: "turso", Driver: "libsql", Host: "db.turso.io", URL: "libsql://db.turso.io"}
+	if err := Validate(ok); err != nil {
+		t.Fatalf("valid libsql conn refused: %v", err)
+	}
+	if err := Validate(Conn{ID: "turso", Driver: "libsql"}); err == nil {
+		t.Fatal("libsql conn without a server accepted")
+	}
+	proj := ok
+	proj.Source = SourceProject
+	proj.URL = "libsql://db.turso.io?authToken=" + "lit" + "eral"
+	if err := Validate(proj); err == nil {
+		t.Fatal("project libsql conn with a literal token in the URL accepted")
+	}
+}
