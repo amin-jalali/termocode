@@ -134,6 +134,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAgentSessionsSearch(value), true
 	case promptKindAIChatSearch: // ai_chat_search.go
 		return m.onAIChatSearch(value), true
+	case promptKindRaceRestackMsg: // agent_race_restack.go
+		return m.onRaceRestackMessage(value), true
 	case promptKindAgentPacksSource: // agent_packs_ui.go
 		return m.onAgentPackSource(value), true
 	case promptKindAIWebKey: // ai_web_tools.go
@@ -263,6 +265,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIPowerCard(m.confirmKind, id), true
 	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard: // agent_race_compare.go
 		return m.answerRaceCard(m.confirmKind, id), true
+	case confirmKindRaceRestack: // agent_race_restack.go
+		return m.answerRaceRestack(id), true
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
 	case confirmKindWorkflowRun, confirmKindWorkflowDry, confirmKindWorkflowTrust, confirmKindWorkflowOnOff, confirmKindWorkflowStop,

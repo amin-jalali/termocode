@@ -25,6 +25,7 @@ const (
 	ActStop           // x: stop every lane that still works
 	ActRefresh        // r: read the lanes' files again
 	ActClose          // Esc
+	ActRestack        // b: put the lane's work on your current commit as clean commits (a card asks)
 )
 
 // ActionMsg is a key's action; Lane is the selected lane's id.
@@ -114,6 +115,10 @@ func (c *Compare) Key(k tea.KeyMsg) tea.Cmd {
 	case "d":
 		if ready("discard it") {
 			return act(ActDiscard, sel)
+		}
+	case "b":
+		if ready("restack it") {
+			return act(ActRestack, sel)
 		}
 	case "v":
 		return act(ActVerify, sel)
@@ -328,7 +333,7 @@ func (c Compare) Box() string {
 	}
 	bottom = append(bottom, paint([]seg{{" " + status, bg.Foreground(p.muted)}}, iw, bg), hairline(p, iw))
 	if wide {
-		bottom = append(bottom, hint(p, iw, "enter", "review diff", "m", "merge this lane", "d", "discard lane", "v", "verify all",
+		bottom = append(bottom, hint(p, iw, "enter", "review diff", "m", "merge this lane", "d", "discard lane", "b", "restack", "v", "verify all",
 			"s", spark+" summarize", "x", "stop all", "r", "refresh", "esc", "close"))
 	} else {
 		bottom = append(bottom, hint(p, iw, "enter", "diff", "m", "merge", "d", "discard", "v", "verify", "s", "summary", "esc", "close", "x", "stop"))
