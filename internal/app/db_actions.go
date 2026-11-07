@@ -59,6 +59,10 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
 		{ID: "db-compare-schemas", Title: "Databases: Compare Schemas…"},
+		{ID: "db-sessions", Title: "Databases: Show Sessions and Locks"},
+		{ID: "db-server-info", Title: "Databases: Show Server Info"},
+		{ID: "db-cancel-session", Title: "Databases: Cancel Session Query…"},
+		{ID: "db-end-session", Title: "Databases: End Session…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -114,6 +118,14 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseGotoDefinition(), true
 	case "db-find-usages":
 		return m.databaseFindUsages(), true
+	case "db-sessions":
+		return m.databaseShowActivity(false), true
+	case "db-server-info":
+		return m.databaseShowActivity(true), true
+	case "db-cancel-session":
+		return m.databaseStopSessionPrompt(false), true
+	case "db-end-session":
+		return m.databaseStopSessionPrompt(true), true
 	}
 	open := m.revealDatabasesView(id == "db-focus")
 	switch id {

@@ -2049,6 +2049,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
 | `db-add` | Databases: Add Connection… | never | AI provider, credentials and approvals stay with the user |
 | `db-add-tunnel` | Databases: Add SSH Tunnel… | never | AI provider, credentials and approvals stay with the user |
+| `db-cancel-session` | Databases: Cancel Session Query… | never | stops another session's work; only the user can choose it |
 | `db-cancel` | Databases: Cancel Query | auto |   |
 | `db-commit` | Databases: Commit | never | the user's transaction |
 | `db-compare-schemas` | Databases: Compare Schemas… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2059,6 +2060,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
+| `db-end-session` | Databases: End Session… | never | ends another session and rolls back its transaction; only the user can choose it |
 | `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
 | `db-explain-analyze` | Databases: Explain Analyze Statement… | never | executes the statement; use db_explain |
 | `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
@@ -2079,6 +2081,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
+| `db-server-info` | Databases: Show Server Info | never | SQL runs require the database query tool and its guard |
+| `db-sessions` | Databases: Show Sessions and Locks | never | SQL runs require the database query tool and its guard |
 | `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
 | `db-test-connection` | Databases: Test Connection | auto |   |

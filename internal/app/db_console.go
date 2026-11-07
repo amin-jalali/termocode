@@ -67,6 +67,8 @@ type dbConsoleState struct {
 	waiting  *dbRun            // waits for its connection
 	running  *dbRun
 	shown    *dbRun // the result on the page
+	stopConn string // the connection Cancel / End Session asks an id for
+	stopEnd  bool   // End Session (else Cancel Session Query)
 	cancel   context.CancelFunc
 	gen      uint64         // bumps on each run; stale results are dropped
 	pageGen  uint64         // bumps on each page write; stale batches are dropped

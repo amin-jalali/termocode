@@ -349,3 +349,59 @@ func TestDatabaseConsoleTabTitleNamesTheConnection(t *testing.T) {
 		t.Error("a normal file got a title")
 	}
 }
+
+// DBX-17: the sessions, server info and stop-session palette entries.
+func TestDatabaseSessionsPalette(t *testing.T) {
+	titles := map[string]string{}
+	for _, it := range databasesPaletteItems() {
+		titles[it.ID] = it.Title
+	}
+	for id, want := range map[string]string{
+		"db-sessions":       "Databases: Show Sessions and Locks",
+		"db-server-info":    "Databases: Show Server Info",
+		"db-cancel-session": "Databases: Cancel Session Query…",
+		"db-end-session":    "Databases: End Session…",
+	} {
+		if titles[id] != want {
+			t.Errorf("palette %s = %q, want %q", id, titles[id], want)
+		}
+		if _, ok := aiActionPolicies[id]; !ok {
+			t.Errorf("%s has no AI policy", id)
+		}
+	}
+	// The stop entries never run for the AI by themselves.
+	for _, id := range []string{"db-cancel-session", "db-end-session"} {
+		if p := aiActionPolicies[id]; p.Gate == aiGateAuto {
+			t.Errorf("%s AI policy is auto", id)
+		}
+	}
+
+	// No connection: a hint, no prompt.
+	m := hoverModel(t)
+	m.databases = newDBState()
+	if _, ok := m.dispatchDatabasesPalette("db-end-session"); !ok || m.promptOpen {
+		t.Fatalf("no connection: ok=%v prompt=%v", ok, m.promptOpen)
+	}
+
+	// SQLite has no sessions to stop.
+	m = hoverModel(t)
+	m.databases = newDBState()
+	m.databases.conns = []dbclient.Conn{{ID: "lite", Name: "lite", Driver: "sqlite"}}
+	m.dbConsole().shown = &dbRun{conn: "lite"}
+	if _, ok := m.dispatchDatabasesPalette("db-cancel-session"); !ok || m.promptOpen {
+		t.Fatalf("sqlite: ok=%v prompt=%v", ok, m.promptOpen)
+	}
+
+	// Postgres: the id prompt opens; a bad id is refused without a run.
+	m = hoverModel(t)
+	m.databases = newDBState()
+	m.databases.conns = []dbclient.Conn{{ID: "pg", Name: "pg", Driver: "postgres"}}
+	m.dbConsole().shown = &dbRun{conn: "pg"}
+	if _, ok := m.dispatchDatabasesPalette("db-end-session"); !ok || !m.promptOpen || m.promptKind != promptKindDBStopSession {
+		t.Fatalf("postgres: ok=%v prompt=%v kind=%v", ok, m.promptOpen, m.promptKind)
+	}
+	m.promptOpen = false
+	if _, ok := m.handleHTTPPromptSubmit("1; DROP TABLE t"); !ok || m.confirmOpen || m.dbConsole().pending != nil {
+		t.Fatalf("bad id ran: ok=%v card=%v", ok, m.confirmOpen)
+	}
+}
