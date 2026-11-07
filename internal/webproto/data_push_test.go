@@ -11,15 +11,20 @@ import (
 // Push (MOB-30, the hub) and UnifiedPush (MOB-32): the gateway routes
 // kind unifiedpush to itself by PushKindOf, so the rows are not Gateway
 // rows. A viewer may call them, slowly, and every call is audited. The gateway
-// tells the hub with a control-only op when wakes are wanted.
+// tells the hub with a control-only op when wakes are wanted. push.key
+// (MOB-30) is a read: no audit line, but no bigger than the others.
+// One limit for all three: at most 2 KiB (a 1 KiB endpoint and its keys).
 func TestPushOpRows(t *testing.T) {
-	for _, op := range []string{OpPushSubscribe, OpPushUnsubscribe} {
+	for op, audit := range map[string]Audit{OpPushKey: AuditNo, OpPushSubscribe: AuditYes, OpPushUnsubscribe: AuditYes} {
 		p, ok := Lookup(op)
-		if !ok || p.Gateway || p.Role != RoleViewer || p.Audit != AuditYes || p.LaptopCard {
+		if !ok || p.Gateway || p.Role != RoleViewer || p.Audit != audit || p.LaptopCard {
 			t.Errorf("%s: row %+v", op, p)
 		}
-		if p.Rate.Per/1e9 < 1 || p.MaxBytes > 2*kib {
-			t.Errorf("%s: too fast or too big: %+v", op, p)
+		if p.MaxBytes > 2*kib {
+			t.Errorf("%s: too big: %+v", op, p)
+		}
+		if op != OpPushKey && p.Rate.Per/1e9 < 1 {
+			t.Errorf("%s: too fast: %+v", op, p)
 		}
 	}
 	if PushKindOf(json.RawMessage(`{"kind":"unifiedpush"}`)) != PushUnifiedPush ||
