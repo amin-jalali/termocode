@@ -1,8 +1,6 @@
 package dbclient
 
 import (
-	"context"
-	"database/sql/driver"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -263,33 +261,6 @@ func (o *ConnOptions) TableReadOnly(schema, table string) bool {
 		}
 	}
 	return false
-}
-
-// startSQLConnector runs the connection's start SQL on every new pooled
-// connection, so each one gets the schema, time zone, isolation level and
-// init SQL (DBX-28). A failing statement fails the connection.
-type startSQLConnector struct {
-	driver.Connector
-	stmts []string
-}
-
-func (c startSQLConnector) Connect(ctx context.Context) (driver.Conn, error) {
-	conn, err := c.Connector.Connect(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ex, ok := conn.(driver.ExecerContext)
-	if !ok && len(c.stmts) > 0 {
-		_ = conn.Close()
-		return nil, fmt.Errorf("the driver cannot run the start SQL")
-	}
-	for _, s := range c.stmts {
-		if _, err := ex.ExecContext(ctx, s, nil); err != nil {
-			_ = conn.Close()
-			return nil, fmt.Errorf("start SQL %q: %s", sanitizeLine(firstLine(s)), Redact(err.Error()))
-		}
-	}
-	return conn, nil
 }
 
 func firstLine(s string) string {

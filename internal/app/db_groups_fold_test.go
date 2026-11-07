@@ -32,7 +32,7 @@ func dbFolderModel(t *testing.T) Model {
 	return m
 }
 
-func dbRowNames(s *dbState) string {
+func dbFoldRowNames(s *dbState) string {
 	var got []string
 	for _, r := range s.rows() {
 		if r.kind == dbNodeFolderHeader {
@@ -47,24 +47,24 @@ func dbRowNames(s *dbState) string {
 func TestDBFolderHeadingFolds(t *testing.T) {
 	m := dbFolderModel(t)
 	s := m.databases
-	if got := dbRowNames(s); got != "a,#prod,p1,p2" {
+	if got := dbFoldRowNames(s); got != "a,#prod,p1,p2" {
 		t.Fatalf("rows = %s", got)
 	}
 	s.cursor = 1 // the "prod" heading
 	m, _ = m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyLeft})
-	if got := dbRowNames(s); got != "a,#prod" {
+	if got := dbFoldRowNames(s); got != "a,#prod" {
 		t.Fatalf("left on the heading: rows = %s", got)
 	}
 	m, _ = m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyEnter})
-	if got := dbRowNames(s); got != "a,#prod,p1,p2" {
+	if got := dbFoldRowNames(s); got != "a,#prod,p1,p2" {
 		t.Fatalf("enter on a folded heading: rows = %s", got)
 	}
 	m, _ = m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}})
-	if got := dbRowNames(s); got != "a,#prod" {
+	if got := dbFoldRowNames(s); got != "a,#prod" {
 		t.Fatalf("space on an open heading: rows = %s", got)
 	}
 	m, _ = m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRight})
-	if got := dbRowNames(s); got != "a,#prod,p1,p2" {
+	if got := dbFoldRowNames(s); got != "a,#prod,p1,p2" {
 		t.Fatalf("right on a folded heading: rows = %s", got)
 	}
 
@@ -78,7 +78,7 @@ func TestDBFolderHeadingFolds(t *testing.T) {
 	s.cursor = 1
 	m, _ = m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyLeft})
 	s.filter = "p2"
-	if got := dbRowNames(s); got != "#prod,p2" {
+	if got := dbFoldRowNames(s); got != "#prod,p2" {
 		t.Fatalf("filter in a folded folder: rows = %s", got)
 	}
 	s.filter = ""
@@ -108,11 +108,11 @@ func TestDBFolderHeadingClickToggles(t *testing.T) {
 	m.explorerWidth = 40
 	// Row 0 of the tree is screen line 4; the heading is the second row.
 	m, _ = m.handleDatabasesSidebarMouse(3, 5, tea.MouseLeft)
-	if got := dbRowNames(m.databases); got != "a,#prod" {
+	if got := dbFoldRowNames(m.databases); got != "a,#prod" {
 		t.Fatalf("click on the heading: rows = %s", got)
 	}
 	m, _ = m.handleDatabasesSidebarMouse(3, 5, tea.MouseLeft)
-	if got := dbRowNames(m.databases); got != "a,#prod,p1,p2" {
+	if got := dbFoldRowNames(m.databases); got != "a,#prod,p1,p2" {
 		t.Fatalf("second click: rows = %s", got)
 	}
 }

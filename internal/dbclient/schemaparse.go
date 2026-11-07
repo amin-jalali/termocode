@@ -70,13 +70,13 @@ func SchemaFolderMigration(driver, schema, folderLabel string, diffs []SchemaFil
 	tgt, w2 := ParseSchemaFolder(driver, schema, live)
 	var b strings.Builder
 	for _, w := range append(w1, w2...) {
-		b.WriteString("-- REVIEW: " + oneLine(w) + "\n")
+		b.WriteString("-- REVIEW: " + schemaOneLine(w) + "\n")
 	}
 	b.WriteString(CompareSchemas(src, tgt).Script)
 	return b.String()
 }
 
-func oneLine(s string) string {
+func schemaOneLine(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
@@ -184,7 +184,7 @@ func (p *folderParser) statement(file, stmt string) {
 }
 
 func clip(s string) string {
-	r := []rune(oneLine(s))
+	r := []rune(schemaOneLine(s))
 	if len(r) > 60 {
 		return string(r[:60]) + "…"
 	}
@@ -441,7 +441,7 @@ func (p *folderParser) routine(kind, rest string) error {
 		if !ok {
 			return fmt.Errorf("function %s has no AS body", name)
 		}
-		if tag, ok := dollarTag(tail, 0); ok && strings.HasSuffix(tail, tag) && len(tail) >= 2*len(tag) {
+		if tag, ok := schemaDollarTag(tail, 0); ok && strings.HasSuffix(tail, tag) && len(tail) >= 2*len(tag) {
 			body := tail[len(tag) : len(tail)-len(tag)]
 			body = strings.TrimPrefix(body, "\n")
 			r.Body = strings.TrimSuffix(body, "\n")
@@ -502,7 +502,7 @@ func sqlMask(s string) []int {
 			i = fill(i, quoteEnd(s, i), maskQuote)
 			continue
 		case c == '$':
-			if tag, ok := dollarTag(s, i); ok {
+			if tag, ok := schemaDollarTag(s, i); ok {
 				end := len(s)
 				if j := strings.Index(s[i+len(tag):], tag); j >= 0 {
 					end = i + len(tag) + j + len(tag)
@@ -545,8 +545,8 @@ func quoteEnd(s string, i int) int {
 	return len(s)
 }
 
-// dollarTag is the $tag$ (or $$) that starts at s[i].
-func dollarTag(s string, i int) (string, bool) {
+// schemaDollarTag is the $tag$ (or $$) that starts at s[i].
+func schemaDollarTag(s string, i int) (string, bool) {
 	if i >= len(s) || s[i] != '$' {
 		return "", false
 	}
@@ -565,10 +565,6 @@ func dollarTag(s string, i int) (string, bool) {
 		}
 	}
 	return "", false
-}
-
-func identByte(c byte) bool {
-	return c == '_' || c == '$' || c >= 0x80 || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
 // blankComments replaces every comment byte with a space (a newline stays).
