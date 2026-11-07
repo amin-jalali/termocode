@@ -335,3 +335,117 @@ func TestDeskVimVisualBlock(t *testing.T) {
 		t.Errorf("problems (CSP, console): %v", probs)
 	}
 }
+
+// Spec (WEBP-1): Vim mode follows the open file's own mappings too. The
+// page asks the laptop for this file's buffer (editor.vim_buf_maps):
+// the mappings made for the file or for its language win over the
+// global ones there. :nnoremap <buffer> made in the browser is this
+// file's.
+func TestDeskVimBufferMappings(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.go", "abc", "def", "ghi")
+	toggleVim(t, p, c, true)
+	for global, local := false, false; !global || !local; {
+		r := nextReq(t, c)
+		switch r.Op {
+		case webproto.OpEditorVimMaps:
+			global = true
+			reply(t, c, r, webproto.VimMapList{Items: []webproto.VimMap{
+				{Mode: "n", LHS: "<Space>d", RHS: "dd", Noremap: true},
+				{Mode: "n", LHS: "Q", RHS: "x", Noremap: true},
+			}})
+		case webproto.OpEditorVimBufMaps:
+			local = true
+			if string(r.Args) != `{"buf":2}` {
+				t.Errorf("asked for %s", r.Args)
+			}
+			reply(t, c, r, webproto.VimMapList{Items: []webproto.VimMap{
+				{Mode: "n", LHS: "<Space>d", RHS: "x", Noremap: true},
+				{Mode: "i", LHS: "jj", RHS: "<Esc>", Noremap: true},
+			}})
+		}
+	}
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+
+	// The file's <Space>d (x) wins over the global one (dd); Q is global.
+	v.keys(" d", "bc", "def", "ghi")
+	v.keys("Q", "c", "def", "ghi")
+	v.keys("iz", "zc", "def", "ghi")
+	v.keys("jj", "zc", "def", "ghi")
+	v.mode("-- NORMAL --")
+
+	// A mapping made here for this file; :nunmap <buffer> drops it and
+	// the global <Space>d is back.
+	v.keys(":nnoremap <buffer> ,b A?<Esc>\r,b", "zc?", "def", "ghi")
+	v.keys(":nunmap <buffer> <Space>d\r d", "def", "ghi")
+	v.mode("-- NORMAL --")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
+
+// Spec (WEBP-1): Vim's jump list, across files. A jump (G, :N, a search,
+// a mark …) keeps where the caret was; Ctrl+O goes back along the list,
+// Ctrl+I forward again, a count goes that many; at the list's end
+// nothing moves. Going to another file is a jump too: Ctrl+O there opens
+// the file it came from with the caret where it was, Ctrl+I goes back.
+func TestDeskVimJumpList(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "a1", "a2", "a3", "a4")
+	toggleVim(t, p, c, true)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+	pos := func(want string) {
+		t.Helper()
+		p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent === ` + jsq(want))
+	}
+	ctrl := func(k string) {
+		t.Helper()
+		p.Do(chromedp.KeyEvent(k, chromedp.KeyModifiers(chromedp.ModifierCtrl)))
+	}
+
+	realKeys(p, "l")
+	pos("Ln 1, Col 2")
+	realKeys(p, "G")
+	pos("Ln 4, Col 1")
+	realKeys(p, ":2\r")
+	pos("Ln 2, Col 1")
+	ctrl("o")
+	pos("Ln 4, Col 1")
+	ctrl("o")
+	pos("Ln 1, Col 2")
+	// The list's start: nothing moves.
+	ctrl("o")
+	ctrl("i")
+	pos("Ln 4, Col 1")
+	ctrl("i")
+	pos("Ln 2, Col 1")
+	realKeys(p, "2")
+	ctrl("o")
+	pos("Ln 1, Col 2")
+	v.settle("a1", "a2", "a3", "a4")
+
+	// Another file: Ctrl+O comes back to a.txt where the caret was.
+	openDesk(t, p, c, 3, "b.txt", "b1", "b2")
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	realKeys(p, "j")
+	pos("Ln 2, Col 1")
+	ctrl("o")
+	p.WaitJS(`location.hash === "#/files/a.txt"`)
+	answerOpen(t, p, c, 2, "a.txt", "a1", "a2", "a3", "a4")
+	pos("Ln 1, Col 2")
+	v.mode("-- NORMAL --")
+	ctrl("i")
+	p.WaitJS(`location.hash === "#/files/b.txt"`)
+	answerOpen(t, p, c, 3, "b.txt", "b1", "b2")
+	pos("Ln 2, Col 1")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
