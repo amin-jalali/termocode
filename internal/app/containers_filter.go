@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -75,7 +76,21 @@ func sameRow(a, b svcRow) bool {
 }
 
 // rowMatches: the row's name contains q (lower case).
+// With "state:", "is:" or "image:" words (CTX-22) only container and
+// image rows can match, by containers.ListQuery.
 func (st *servicesState) rowMatches(r svcRow, q string) bool {
+	if lq := containers.ParseListQuery(q); lq.Tokens {
+		if r.kind != svcRowHostItem || r.idx < 0 {
+			return false
+		}
+		switch {
+		case r.host == hostContainer && r.idx < len(st.containerRows):
+			return lq.MatchContainer(st.containerRows[r.idx])
+		case r.host == hostImage && r.idx < len(st.imageRows):
+			return lq.MatchImage(st.imageRows[r.idx])
+		}
+		return false
+	}
 	has := func(s string) bool { return s != "" && strings.Contains(strings.ToLower(s), q) }
 	switch r.kind {
 	case svcRowService, svcRowGroup:
