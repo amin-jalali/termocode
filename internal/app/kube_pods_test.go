@@ -102,3 +102,41 @@ func TestKubeCopyName(t *testing.T) {
 		t.Errorf("copied %q", got)
 	}
 }
+
+func TestKubeEventsOfTheSelectedObject(t *testing.T) {
+	f, m := kubeLoaded(t, 150, 42)
+	kubeCursorTo(t, m, "deployments", "worker")
+	msg, ok := kubeKey(t, m, "v")().(kubeEventsMsg)
+	if !ok || msg.err != nil || msg.title != "events: deployment/worker" || len(msg.events) == 0 {
+		t.Fatalf("events = %+v", msg)
+	}
+	if f.Count("get events -o json --field-selector involvedObject.kind=Deployment,involvedObject.name=worker --context dev --namespace shop") != 1 {
+		t.Errorf("calls = %v", f.Calls())
+	}
+	m.onKubeEvents(msg) // no editor in the test: nothing to open, no panic
+}
+
+func TestKubeEventsOfTheNamespaceOnASectionRow(t *testing.T) {
+	f, m := kubeLoaded(t, 150, 42)
+	m.kube.cursor = 0 // the PODS header
+	msg, ok := kubeKey(t, m, "v")().(kubeEventsMsg)
+	if !ok || msg.err != nil || msg.title != "events: namespace shop" || len(msg.events) != 3 {
+		t.Fatalf("events = %+v", msg)
+	}
+	if f.Count("get events -o json --context dev --namespace shop") != 1 {
+		t.Errorf("calls = %v", f.Calls())
+	}
+}
+
+func TestKubeEventsFailShowsAToast(t *testing.T) {
+	f, m := kubeLoaded(t, 150, 42)
+	f.Set(t, "events.err", "Error from server (Forbidden): events is forbidden")
+	kubeCursorTo(t, m, "services", "web")
+	msg, ok := kubeKey(t, m, "v")().(kubeEventsMsg)
+	if !ok || msg.err == nil {
+		t.Fatalf("events = %+v", msg)
+	}
+	if m.onKubeEvents(msg) == nil {
+		t.Error("no toast for a failed events call")
+	}
+}
