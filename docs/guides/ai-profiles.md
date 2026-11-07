@@ -580,6 +580,34 @@ the run in the AGENTS panel.
   (a command and its result, or a file:line) before its verdict; the
   list goes into the plan file.
 
+## Run a task list in waves
+
+**AI: Run Task List in Waves…** runs the open file as a task list: one
+agent step per open task, in waves. Write the list as a markdown
+checklist:
+
+```markdown
+- [ ] 1. Add the parser
+  Read docs/grammar.md first.          (indented lines: more about the task)
+- [ ] 2. Add the flag (after: 1)
+- [ ] Write the docs (id: docs) (after: 1, 2)
+- [x] Ticked tasks are skipped, and so is waiting for them
+```
+
+- A task's id is its `(id: …)`, else its number (`2.`), else `task-N`.
+  `(after: …)` names the tasks it waits for. Checkboxes in code blocks
+  are not tasks.
+- A card shows the waves first (**Cancel** comes first; Esc cancels):
+  the tasks of a wave run at the same time, up to `ai_parallel_max`. With
+  `ai_parallel_max` 1 they run one after the other, and the card says so.
+- Each task may change files. Steps that write at the same time work in
+  their own git worktree (see below), so you review and merge each one.
+- A last **Check the tasks** step reads what they did, edits nothing,
+  and answers you with one line per task.
+- One list runs at most 11 open tasks in at most 5 waves. A list that
+  names an unknown task, or whose `after:` tags make a cycle, does not
+  run: a toast says which line is wrong.
+
 ## Approve the plan
 
 Before a run starts a step that **changes files** or **runs commands**,
