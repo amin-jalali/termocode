@@ -160,9 +160,21 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	var pairing *Pairing
 	var devices *webdevices.Store
 	var wsRef atomic.Pointer[WS]
+	var watchRef atomic.Pointer[Watch]
 	var login *Login
+	var watchToks *WatchTokens
+	// The merged inbox the watch socket reads (MOB-23, MOB-53). The home
+	// key only has to be a stable workspace key of this gateway: the lock
+	// file is one per workspace.
+	lockSum := sha256.Sum256([]byte(cfg.LockPath))
+	inbox := NewInboxMux(hex.EncodeToString(lockSum[:webproto.InboxWSLen/2]))
 	if cfg.DevicesDir != "" {
 		devices = webdevices.Open(cfg.DevicesDir)
+		var werr error
+		if watchToks, werr = OpenWatchTokens(cfg.DevicesDir); werr != nil {
+			f := false
+			_ = audit.Log(Event{Kind: EvOp, Op: webproto.OpAppWatchToken, OK: &f, Why: "damaged_file"})
+		}
 		pk, err := NewPasskeys(site, devices, now)
 		if err != nil {
 			return 0, fmt.Errorf("passkeys: %w", err)
@@ -192,7 +204,8 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		_ = audit.Log(Event{Kind: EvOp, Conn: n.Conn, Device: n.Device, Op: n.Op, OK: &ok,
 			Why: n.Why, Summary: n.Summary, By: "web:" + n.Device})
 	}, Event: func(kind string, data json.RawMessage) {
-		onCtlEvent(kind, data, ctlTargets{pairing: pairing, tokens: tokens, ws: wsRef.Load(), audit: audit})
+		onCtlEvent(kind, data, ctlTargets{pairing: pairing, tokens: tokens, ws: wsRef.Load(), audit: audit,
+			watchToks: watchToks, watch: watchRef.Load(), inbox: inbox})
 	}})
 	if err != nil {
 		return 0, fmt.Errorf("reach termocode: %w", err)
@@ -215,12 +228,23 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			}}
 	}
 	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices, Control: control,
-		MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) }})
+		WatchTokens: watchToks, MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) }})
 	wsRef.Store(ws)
 	mux := siteMux(site, auth, ws, cfg.Assets)
 	if pairing != nil {
 		mux.Handle("/pair/", pairing)
 		mux.Handle("/login/", login)
+		watch := &Watch{Tokens: watchToks, Store: devices, Inbox: inbox, Audit: audit, Now: now,
+			Watching: func(ctx context.Context, on bool) error {
+				c := ctlRef.Load()
+				if c == nil {
+					return ErrCtlGone
+				}
+				_, err := c.Call(ctx, webproto.OpWebWatching, webproto.WatchingArgs{On: on})
+				return err
+			}}
+		watchRef.Store(watch)
+		mux.Handle("/watch", watch)
 	}
 	srv := NewServer(site, mux, DefaultLimits, audit)
 	crash.Go("web gateway: the server", func() { _ = srv.Serve(LimitConns(ln, DefaultLimits.MaxConns)) })
@@ -305,6 +329,10 @@ type ctlTargets struct {
 	tokens  *Tokens
 	ws      *WS // nil until the WebSocket endpoint is made
 	audit   *Audit
+	// The watch socket (MOB-23); nil without paired devices.
+	watchToks *WatchTokens
+	watch     *Watch
+	inbox     *InboxMux
 }
 
 // onCtlEvent handles the hub's other events: a new pairing link
@@ -323,6 +351,12 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 		n := t.tokens.RevokeDevice(d.Device)
 		if t.ws != nil {
 			n += t.ws.CloseDevice(d.Device, webproto.CloseDeviceRevoked)
+		}
+		if t.watchToks != nil {
+			t.watchToks.RevokeDevice(d.Device)
+		}
+		if t.watch != nil {
+			n += t.watch.CloseDevice(d.Device)
 		}
 		_ = t.audit.Log(Event{Kind: EvRevoke, Device: d.Device, Summary: fmt.Sprintf("%d sessions closed", n)})
 	case EvRoleChange:
@@ -358,6 +392,10 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 	case EvPairClose:
 		if pairing != nil {
 			pairing.CloseSecret()
+		}
+	case webproto.EvInboxWatch:
+		if t.inbox != nil {
+			_ = t.inbox.Set("", data) // a bad snap keeps the last good inbox
 		}
 	}
 }
