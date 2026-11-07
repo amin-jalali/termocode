@@ -34,6 +34,7 @@
 //	exec.txt             answer of `exec …` (a pod directory listing)
 //	exec.err             `exec …` fails with this stderr
 //	cp.err               `cp …` fails with this stderr
+//	kustomize.txt        answer of `kustomize <dir>` (.err: it fails)
 //	pf-port.txt          the local port `port-forward` reports (43123)
 //	pf.err               `port-forward` fails with this stderr
 //	top-<what>.txt       answer of `top <what>` (pods, nodes)
@@ -138,6 +139,9 @@ cordon|uncordon|drain)
 exec)
   if [ -f "$D/exec.err" ]; then cat "$D/exec.err" >&2; exit 1; fi
   cat "$D/exec.txt" 2>/dev/null; exit 0 ;;
+kustomize)
+  if [ -f "$D/kustomize.err" ]; then cat "$D/kustomize.err" >&2; exit 1; fi
+  cat "$D/kustomize.txt" 2>/dev/null; exit 0 ;;
 cp)
   if [ -f "$D/cp.err" ]; then cat "$D/cp.err" >&2; exit 1; fi
   exit 0 ;;
