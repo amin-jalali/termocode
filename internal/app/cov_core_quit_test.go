@@ -89,6 +89,40 @@ func TestCovCoreQuitWithUnsavedFiles(t *testing.T) {
 	}
 }
 
+// Ctrl+Q while the editor waits for the rest of a key (the char after f,
+// a leader with timeout off) still asks about unsaved files. The check
+// failed with "waiting for input" and the app quit without asking,
+// dropping the edits.
+func TestCovCoreQuitWhileEditorWaitsForKey(t *testing.T) {
+	m := covNvimModel(t, 120, 40)
+	p := filepath.Join(t.TempDir(), "a.txt")
+	_ = os.WriteFile(p, []byte("old\n"), 0o644)
+	covModify(t, m, p, "new")
+	if err := m.nvim.Input("<Esc>f"); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if _, blocking, err := m.nvim.Mode(); err == nil && blocking {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("nvim never waited for the key after f")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	cmd := m.quit()
+	if covIsQuit(cmd) {
+		t.Fatal("quit without asking about a.txt")
+	}
+	if !m.confirmOpen || m.confirmKind != confirmKindQuit {
+		t.Fatalf("no quit question: confirm %v", m.confirmOpen)
+	}
+	if v := ansiPlain(m.confirm.View()); !strings.Contains(v, "a.txt") {
+		t.Errorf("question does not name a.txt:\n%s", v)
+	}
+}
+
 // Quit with nothing unsaved quits at once and drops the live backup.
 func TestCovCoreQuitCleanDropsBackup(t *testing.T) {
 	m := covNvimModel(t, 100, 30)
