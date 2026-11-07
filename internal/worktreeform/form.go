@@ -136,6 +136,11 @@ type Config struct {
 	// BranchPrefix starts a branch drafted from the agent task (CMP-26),
 	// e.g. "amin/"; "" = the kind of the task (fix/, feat/, …).
 	BranchPrefix string `json:"branch_prefix,omitempty"`
+
+	// Env adds plain variables to the setup (warm.go).
+	Env map[string]string `json:"env,omitempty"`
+	// Warm keeps a copy of what the setup made for the next worktree (warm.go).
+	Warm *WarmConfig `json:"warm,omitempty"`
 }
 
 // RunURL is the dev server address on port: URL with $PORT filled in,

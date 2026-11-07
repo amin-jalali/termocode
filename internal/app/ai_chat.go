@@ -174,9 +174,10 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
-	tools = append(tools, aiTodoTools(call)...)  // OMX-7: the chat's todo list (not in run steps)
-	tools = append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
-	return append(tools, aiLibrarianTools()...)  // CMP-91: outside repositories, read only
+	tools = append(tools, aiTodoTools(call)...)                // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, m.aiSessionTools()...)               // OMX-21: old chats, read only
+	tools = append(tools, aiLibrarianTools()...)               // CMP-91: outside repositories, read only
+	return append(tools, aiChatDocTools(m.chatDocStore())...) // CMP-94: the chat's docs
 }
 
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:
@@ -184,6 +185,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai.Tool {
 	aws := m.aiWorkspaceAt(root) // a container workspace: its Host FS + Exec (RC-5)
 	tools := append(ai.WorkspaceTools(aws), m.aiEditorTools()...)
+	tools = aiAttributionTools(tools, root) // CMP-100: who is named on git_commit
 	if aws.FS != nil {
 		tools = aiSyncHostTools(tools, aws, call) // the IDE follows, the files stay in the container
 	} else {
@@ -223,6 +225,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiLookTool(root))                  // OMX-32: images (one extra request) and PDFs
 	tools = append(tools, aiProofTool(root))                   // CMP-52: headless-browser screenshots as proof of work
 	tools = append(tools, aiWebTools()...)                     // OMX-13: only when turned on
+	tools = append(tools, m.aiImageTools(root, call)...)       // CMP-97: generate_image, only when turned on
 	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
 }
 

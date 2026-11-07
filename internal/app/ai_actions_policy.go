@@ -623,6 +623,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-fix":              aiNever(aiNoNested),
 	"ai-edit":             aiNever(aiNoNested),
 	"ai-doc":              aiNever(aiNoNested),
+	"ai-property-tests":   aiNever(aiNoNested),
 	"ai-attach":           aiNever("adds to the chat input; read the file with read_file"),
 	"ai-apply-code":       aiNever("use write_file to change files"),
 	"ai-apply-proposal":   aiNever("the user reviews proposed edits"),
@@ -750,6 +751,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
 	// list and deleting the shots are the user's.
 	"ai-proofs": aiNever(aiNoPicker),
+	"ai-image-gen": aiNever("image generation is paid; only the user turns it on"),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
 	"ai-ship-merge":    aiNever("it pushes, opens and merges a pull request: the user starts it and answers the merge card"),
@@ -886,6 +888,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_memory_recall":      aiNever(aiNoAIConfig),
 	"ai_web_fetch":          aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	"ai_web_search":         aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
+	"ai_image_gen":          aiNever(aiNoAIConfig + "; image generation is paid"),
+	"ai_image_model":        aiNever(aiNoAIConfig),
 	// Work until done: the AI never raises its own rounds or budget.
 	"ai_until_done_rounds":     aiNever(aiNoAIConfig),
 	"ai_until_done_budget_usd": aiNever(aiNoAIConfig),

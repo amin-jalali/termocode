@@ -21,6 +21,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
 | AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
 | AI: Chat Comments… | `ai-chat-comments` |   | `comments from people you shared the chat with` |
+| AI: Chat Doc Revisions… | `ai-chat-doc-revisions` |   |   |
+| AI: Chat Docs… | `ai-chat-docs` |   |   |
 | AI: Chat History… | `ai-history` |   |   |
 | AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |
@@ -38,6 +40,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Fix Diagnostic at Cursor | `ai-fix` |   |   |
 | AI: Fork Chat from Message… | `ai-fork-chat` |   |   |
 | AI: Generate Doc Comment | `ai-doc` |   |   |
+| AI: Generate Property-Based Tests for File / Selection | `ai-property-tests` |   |   |
 | AI: Handoff to a New Chat | `ai-handoff` |   |   |
 | AI: Hooks… | `ai-hooks` |   |   |
 | AI: Lock Secrets | `secrets-lock` |   |   |
@@ -95,6 +98,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Toggle Critic Review | `ai-critic-toggle` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
 | AI: Toggle Follow Agent | `ai-follow-agent` |   |   |
+| AI: Toggle Image Generation | `ai-image-gen` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Toggle Keep Going While Todos Are Open | `ai-keep-going` |   |   |
 | AI: Toggle Next Edit Suggestions | `ai-toggle-next-edit` |   |   |
@@ -703,6 +707,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Output: Clear Channel | `output-clear` |   |   |
+| Output: Save Audit Log | `output-save-audit` |   |   |
 
 ## Preferences
 
@@ -715,7 +720,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preferences: Import from Another Editor… | `prefs-import-editor` |   |   |
 | Preferences: Import termocode Settings File… | `settings-import` |   |   |
 | Preferences: Open Settings (UI) | `open-settings-ui` |   |   |
+| Preferences: Save Setup to This Project… | `settings-setup-save` |   |   |
 | Preferences: Undo Last Import… | `prefs-import-undo` |   |   |
+| Preferences: Use a Project Setup… | `settings-setup-use` |   |   |
 
 ## Preview
 

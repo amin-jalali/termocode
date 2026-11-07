@@ -439,6 +439,8 @@ excluded	secrets-unlock	security: secrets stay on the laptop, never typed in a b
 excluded	services-trust	security: trust decisions are made on the laptop
 excluded	settings-export	laptop only: writes a settings file on the laptop
 excluded	settings-import	laptop only: reads a settings file from the laptop
+excluded	settings-setup-save	laptop only: writes the laptop's settings into the project
+excluded	settings-setup-use	laptop only: replaces the laptop's settings files
 excluded	setup-show-card	laptop only: first-run setup card
 excluded	terminal-close-pane	laptop only: laptop terminal pane layout
 excluded	terminal-focus-next-pane	laptop only: laptop terminal pane focus
@@ -470,15 +472,19 @@ missing	acp-thread	Agents|M
 missing	agent-sessions-search-all	AI|S
 missing	ai-board	AI|M
 missing	ai-chat-comments	AI|S
+missing	ai-chat-doc-revisions	AI|S
+missing	ai-chat-docs	AI|M
+missing	ai-checkpoint-restore	AI|S
 missing	ai-history-search	AI|S
+missing	ai-image-gen	AI|S
 missing	ai-mcp-accounts	AI|S
 missing	ai-powers	AI|S
 missing	ai-proofs	AI|S
+missing	ai-property-tests	AI|S
+missing	ai-rewind-turn	AI|S
 missing	ai-run-task-list	AI|M
 missing	bugfix-spec-fix	AI|S
 missing	bugfix-spec-new	AI|S
-missing	ai-checkpoint-restore	AI|S
-missing	ai-rewind-turn	AI|S
 missing	canvas-add	AI|S
 missing	canvas-copy	AI|S
 missing	canvas-open	AI|M
@@ -726,6 +732,7 @@ missing	lsp-mirror-clear	Workspace|S
 missing	lsp-mirror-refresh	Workspace|S
 missing	preview-dev-servers	Preview|L
 missing	preview-open-newest	Preview|S
+missing	output-save-audit	Output|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
 missing	redis-slowlog	Databases|S
