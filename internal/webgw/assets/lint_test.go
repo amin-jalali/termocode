@@ -318,7 +318,7 @@ func TestStoreAndGuardArePure(t *testing.T) {
 // a second Preact or a second session would split the page's state. So
 // its sources import types only from the page, and code only from each
 // other and from the pure helpers below.
-var homePure = map[string]bool{"state/home.ts": true, "state/dict.ts": true, "state/cards.ts": true, "state/tasks.ts": true, "state/git.ts": true}
+var homePure = map[string]bool{"state/home.ts": true, "state/dict.ts": true, "state/cards.ts": true, "state/tasks.ts": true, "state/git.ts": true, "state/route.ts": true, "lib/actions.ts": true}
 
 var importLine = regexp.MustCompile(`(?m)^\s*(import|export)\s+(type\s+)?[^;]*?\bfrom\s+"([^"]+)"`)
 

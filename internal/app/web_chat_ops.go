@@ -46,11 +46,21 @@ func (m *Model) webChatSend(call *webCall) tea.Cmd {
 	case a.ChatID != "" && a.ChatID != s.conv.ID && !m.webOpenStoredChat(call, a.ChatID):
 		return nil
 	}
-	if cmd, ok := m.aiMCPPromptSubmit(strings.TrimSpace(a.Text)); ok { // "/server.prompt" (MCPX-13), as Enter on the laptop
+	if len(a.Attach) > 0 { // MOB-5: resolved on the laptop first (web_chat_attach.go)
+		return m.webChatSendAttached(call, a)
+	}
+	return m.webChatSendNow(call, a.Text)
+}
+
+// webChatSendNow sends text in the open chat (with the attachments the
+// laptop holds) and answers the chat's id.
+func (m *Model) webChatSendNow(call *webCall, text string) tea.Cmd {
+	s := m.aiS()
+	if cmd, ok := m.aiMCPPromptSubmit(strings.TrimSpace(text)); ok { // "/server.prompt" (MCPX-13), as Enter on the laptop
 		call.reply(webproto.ChatRef{ID: s.conv.ID})
 		return cmd
 	}
-	cmd := m.sendAIChat(a.Text)
+	cmd := m.sendAIChat(text)
 	call.reply(webproto.ChatRef{ID: s.conv.ID})
 	return cmd
 }

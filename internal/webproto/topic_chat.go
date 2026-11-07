@@ -63,18 +63,19 @@ type ChatSnap struct {
 
 // ChatMsg is one message, trimmed for the page.
 type ChatMsg struct {
-	I         int        `json:"i"` // its index in Messages
-	Role      string     `json:"role" enum:"user|assistant|tool|error"`
-	Text      string     `json:"text,omitempty"`      // plain text: tool and error lines, and an answer while it streams
-	MD        *MdNode    `json:"md,omitempty"`        // user and finished assistant messages: the markdown as an AST
-	Streaming bool       `json:"streaming,omitempty"` // the answer is still coming (text grows by append deltas)
-	Truncated bool       `json:"truncated,omitempty"` // cut at MaxChatMsgText; chat.get_message {i} returns more
-	Model     string     `json:"model,omitempty"`     // the model of an answer, when not the chat's own
-	Images    []string   `json:"images,omitempty"`    // attached image file names
-	Rules     string     `json:"rules,omitempty"`     // the project rules the turn used ("AGENTS.md")
-	Run       *ChatRun   `json:"run,omitempty"`
-	Steps     []ChatStep `json:"steps,omitempty"`
-	Blocks    []Block    `json:"blocks,omitempty"` // typed visual blocks after the text, ≤ MaxMsgBlocks
+	I         int          `json:"i"` // its index in Messages
+	Role      string       `json:"role" enum:"user|assistant|tool|error"`
+	Text      string       `json:"text,omitempty"`      // plain text: tool and error lines, and an answer while it streams
+	MD        *MdNode      `json:"md,omitempty"`        // user and finished assistant messages: the markdown as an AST
+	Streaming bool         `json:"streaming,omitempty"` // the answer is still coming (text grows by append deltas)
+	Truncated bool         `json:"truncated,omitempty"` // cut at MaxChatMsgText; chat.get_message {i} returns more
+	Model     string       `json:"model,omitempty"`     // the model of an answer, when not the chat's own
+	Images    []string     `json:"images,omitempty"`    // attached image file names
+	Attached  []AttachChip `json:"attached,omitempty"`  // what the user sent back with it (MOB-5), ≤ MaxAttachedChips
+	Rules     string       `json:"rules,omitempty"`     // the project rules the turn used ("AGENTS.md")
+	Run       *ChatRun     `json:"run,omitempty"`
+	Steps     []ChatStep   `json:"steps,omitempty"`
+	Blocks    []Block      `json:"blocks,omitempty"` // typed visual blocks after the text, ≤ MaxMsgBlocks
 }
 
 // ChatRun is the pipeline run a message shows.

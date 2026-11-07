@@ -4807,6 +4807,69 @@
       ],
       "additionalProperties": true
     },
+    "Attach": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "task",
+            "ptask",
+            "issue",
+            "pr",
+            "file",
+            "lines",
+            "diff",
+            "worktree",
+            "run",
+            "race",
+            "workflow",
+            "card",
+            "resource",
+            "block",
+            "project",
+            "view"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "spec": {
+          "type": "string"
+        },
+        "to": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "AttachChip": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "label"
+      ],
+      "additionalProperties": true
+    },
     "Attention": {
       "type": "object",
       "properties": {
@@ -6126,6 +6189,12 @@
     "ChatMsg": {
       "type": "object",
       "properties": {
+        "attached": {
+          "items": {
+            "$ref": "#/defs/AttachChip"
+          },
+          "type": "array"
+        },
         "blocks": {
           "items": {
             "$ref": "#/defs/Block"
@@ -6273,6 +6342,12 @@
     "ChatSendArgs": {
       "type": "object",
       "properties": {
+        "attach": {
+          "items": {
+            "$ref": "#/defs/Attach"
+          },
+          "type": "array"
+        },
         "chat_id": {
           "type": "string"
         },

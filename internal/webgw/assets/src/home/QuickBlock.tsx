@@ -6,6 +6,7 @@
 // tone has a shape as well as a colour.
 import { h, H } from "./jsx";
 import { hs, type HomeKey } from "./strings";
+import { openRow, refOfRow } from "./ActionSheet";
 import type { HomeBlock, HomeItem, Quick, Tone } from "../state/home";
 
 const SHAPE: Record<Tone, string> = { ok: "✓", warn: "●", bad: "✗", busy: "◐", idle: "○", info: "i" };
@@ -31,8 +32,15 @@ export function ToneMark({ tone }: { tone?: Tone }) {
 
 function Row({ it, onOpen, now }: { it: HomeItem; onOpen: (id: string) => void; now: number }) {
   return (
-    <li>
-      <button type="button" class="home-row" onClick={() => onOpen(it.id)}>
+    <li class="home-row-wrap">
+      <button
+        type="button"
+        class="home-row"
+        onClick={() => onOpen(it.id)}
+        onContextMenu={(e) => {
+          if (openRow(it.id, it.title)) e.preventDefault(); // a long press: the action sheet (MOB-5)
+        }}
+      >
         <ToneMark tone={it.tone} />
         <span class="home-row-main">
           <span class="home-row-title trunc" dir="auto">
@@ -47,6 +55,11 @@ function Row({ it, onOpen, now }: { it: HomeItem; onOpen: (id: string) => void; 
         {it.badge && <span class="home-row-badge mono">{it.badge}</span>}
         {it.time ? <span class="home-row-age">{ago(it.time, now)}</span> : null}
       </button>
+      {refOfRow(it.id, it.title) && (
+        <button type="button" class="home-row-more" aria-label={`Actions for ${it.title}`} onClick={() => openRow(it.id, it.title)}>
+          ⋯
+        </button>
+      )}
     </li>
   );
 }

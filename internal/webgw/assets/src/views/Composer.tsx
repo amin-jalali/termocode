@@ -10,6 +10,7 @@ import { AIPicker } from "./AIPicker";
 import { h } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { getDraft, pendingDraft, setDraft, takePending } from "../lib/drafts";
+import { attachLabel, clearAttaches, getAttaches, removeAttach } from "../lib/attach";
 import { layout } from "../lib/layout";
 import { OfflineError, ReqError } from "../net/link";
 import { link, live } from "../session";
@@ -55,11 +56,13 @@ export function Composer({
     const body = getDraft(chat);
     if (!live.peek() || sending || !body.trim()) return;
     setSending(true);
-    link.request("chat.send", { text: body, ...(chat ? { chat_id: chat } : {}) }).then(
+    const attach = getAttaches(chat); // MOB-5: references only, the laptop reads them
+    link.request("chat.send", { text: body, ...(chat ? { chat_id: chat } : {}), ...(attach.length ? { attach } : {}) }).then(
       () => {
         setSending(false);
         setNote(null);
         if (getDraft(chat) === body) setDraft(chat, "");
+        if (getAttaches(chat) === attach) clearAttaches(chat);
         onSent?.();
       },
       (e: unknown) => {
@@ -94,6 +97,18 @@ export function Composer({
         </p>
       )}
       <div class={desk ? "composer-frame" : "composer-plain"}>
+      {getAttaches(chat).length > 0 && (
+        <ul class="composer-attach" aria-label="Sent with the message">
+          {getAttaches(chat).map((a, i) => (
+            <li class="chat-chip" key={i}>
+              <span dir="auto">{attachLabel(a)}</span>
+              <button type="button" class="chip-x" aria-label={`Remove ${attachLabel(a)}`} onClick={() => removeAttach(chat, i)}>
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <div class="composer-row">
         <textarea
           ref={box}

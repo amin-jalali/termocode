@@ -285,6 +285,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		root, s.turnRoot = s.turnRoot, ""
 	}
 	memBlock, lessons := m.aiMemoryTurn(root, text) // OM-2: before the attachments are taken
+	chips := s.attachChips()
 	ctxText, images := s.takeAttachments()
 	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
 	model := slot.cfg.Model
@@ -292,7 +293,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		model = "" // the chat's own model: stored chats stay as they were
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Attached: chips, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
 		ai.StoredMessage{Role: ai.StoredAssistant, Model: model},
 	)
 	s.scroll = 0
@@ -393,6 +394,18 @@ func (s *aiState) takeAttachments() (string, []string) {
 	}
 	s.attachments = nil
 	return strings.Join(ctxParts, "\n\n"), images
+}
+
+// attachChips are the chips of the web attachments of the next message
+// (MOB-5): the laptop's own attachments show as they always did.
+func (s *aiState) attachChips() []ai.StoredAttach {
+	var out []ai.StoredAttach
+	for _, a := range s.attachments {
+		if a.Kind != "" {
+			out = append(out, ai.StoredAttach{Kind: a.Kind, Label: a.Label})
+		}
+	}
+	return out
 }
 
 // aiChatBasePrompt is the chat's system prompt before the tool protocol.
