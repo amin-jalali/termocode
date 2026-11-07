@@ -1586,6 +1586,10 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 			return renderGitSectionHeader("CONFLICTS", strconv.Itoa(m.gitConflictCount()), !m.gitConflictsCollapsed, active, focused, w)
 		case gitSecStashes:
 			return renderGitSectionHeader("STASHES", strconv.Itoa(len(m.gitStashes)), m.gitStashesOpen, active, focused, w)
+		case gitSecRepos:
+			return renderGitSectionHeader("REPOSITORIES", strconv.Itoa(len(m.gitRepos)), !m.gitReposFolded, active, focused, w)
+		case gitSecSubmodules:
+			return renderGitSectionHeader("SUBMODULES", strconv.Itoa(len(m.gitSubmodules)), !m.gitSubsFolded, active, focused, w)
 		default:
 			n := ""
 			if len(m.gitCommits) > 0 {
@@ -1621,6 +1625,10 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		return m.renderGitStoppedRow(active, focused, w)
 	case gitRowStash:
 		return m.renderGitStashRow(r.stash, active, focused, w)
+	case gitRowRepo:
+		return m.renderGitRepoRow(r.repo, active, focused, w)
+	case gitRowSubmodule:
+		return m.renderGitSubmoduleRow(r.sub, active, focused, w)
 	case gitRowSpacer:
 		return sidebarFill.Render(strings.Repeat(" ", w))
 	}
@@ -2106,13 +2114,27 @@ func renderGitGraphCommitMark(c git.GraphCommit, mark string, active, focused bo
 	sb.WriteString(rowStyle.Render(" "))
 	used := 3
 
-	// The right edge: [ AJ] ⇡ age — age right-aligned in 3 cells.
-	age := git.CompactAge(c.Committed)
-	initials := ""
-	if w >= 40 {
-		initials = git.Initials(c.Author)
+	// The right edge: [ sha][ AJ] ⇡ [age] — age right-aligned in 3 cells.
+	// Each column can be hidden (GITX-39, gitx_graph_columns.go).
+	showDate := gitGraphColOn(gitColDate)
+	age := ""
+	tail := 0
+	if showDate {
+		age = git.CompactAge(c.Committed)
+		tail = 1 + 3 // " " + age
 	}
-	tail := 1 + 3 // " " + age
+	initials, sha := "", ""
+	if w >= 40 {
+		if gitGraphColOn(gitColAuthor) {
+			initials = git.Initials(c.Author)
+		}
+		if gitGraphColOn(gitColSHA) {
+			sha = c.Hash
+		}
+	}
+	if sha != "" {
+		tail += 1 + runewidth.StringWidth(sha)
+	}
 	marked := c.Unpushed || mark != ""
 	if marked {
 		tail += 2 // "⇡ "
@@ -2150,6 +2172,11 @@ func renderGitGraphCommitMark(c git.GraphCommit, mark string, active, focused bo
 		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
 		used += pad
 	}
+	if sha != "" {
+		sb.WriteString(rowStyle.Render(" "))
+		sb.WriteString(fg(theme.LG(theme.TextDimmer)).Render(sha))
+		used += 1 + runewidth.StringWidth(sha)
+	}
 	if initials != "" {
 		sb.WriteString(rowStyle.Render(" "))
 		sb.WriteString(fg(theme.LG(theme.TextDim)).Render(initials))
@@ -2163,9 +2190,11 @@ func renderGitGraphCommitMark(c git.GraphCommit, mark string, active, focused bo
 		sb.WriteString(rowStyle.Render(" "))
 		sb.WriteString(fg(theme.LG(theme.GitAdded)).Render(theme.GlyphUnpushed.String()))
 	}
-	sb.WriteString(rowStyle.Render(" "))
-	sb.WriteString(fg(theme.LG(theme.TextDim)).Render(fmt.Sprintf("%3s", age)))
-	used += 4
+	if showDate {
+		sb.WriteString(rowStyle.Render(" "))
+		sb.WriteString(fg(theme.LG(theme.TextDim)).Render(fmt.Sprintf("%3s", age)))
+		used += 4
+	}
 	if marked {
 		used += 2
 	}
@@ -2374,6 +2403,26 @@ func (m Model) aiStreamSteps() int {
 	return m.ai.streamSteps
 }
 
+// terminalDir is a terminal tab's folder. Until the shell reports one
+// (a shell without integration, like sh or dash, never does) the tab's
+// Cwd is nvim's buffer name term://DIR//PID:CMD, read from b:term_title:
+// this keeps DIR, with a leading ~ made the home folder again.
+func terminalDir(cwd string) string {
+	rest, ok := strings.CutPrefix(cwd, "term://")
+	if !ok {
+		return cwd
+	}
+	if j := strings.Index(rest, "//"); j >= 0 {
+		rest = rest[:j]
+	}
+	if rest == "~" || strings.HasPrefix(rest, "~/") {
+		if home, err := os.UserHomeDir(); err == nil && home != "" {
+			rest = home + rest[1:]
+		}
+	}
+	return rest
+}
+
 // terminalStatusLabel is "zsh · ~/proj" for the active terminal tab.
 func (m Model) terminalStatusLabel() string {
 	if len(m.terminalTabs) == 0 {
@@ -2381,15 +2430,7 @@ func (m Model) terminalStatusLabel() string {
 	}
 	i := min(max(m.terminalActiveTab, 0), len(m.terminalTabs)-1)
 	tab := m.terminalTabs[i]
-	dir := tab.Cwd
-	// Before the shell reports its folder this is nvim's terminal name,
-	// term://DIR//PID:CMD; keep DIR.
-	if rest, ok := strings.CutPrefix(dir, "term://"); ok {
-		if j := strings.Index(rest, "//"); j >= 0 {
-			rest = rest[:j]
-		}
-		dir = rest
-	}
+	dir := terminalDir(tab.Cwd)
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
 		if dir == home {
 			dir = "~"

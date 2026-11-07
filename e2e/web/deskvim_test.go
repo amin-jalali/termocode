@@ -262,6 +262,80 @@ func TestDeskVimUserMappings(t *testing.T) {
 	}
 }
 
+// Spec (WEBP-1): visual block mode in the desktop editor. Ctrl+V starts
+// it (the status bar says -- VISUAL BLOCK --; the browser never pastes),
+// the motions grow a box of columns, d deletes the box, y yanks it and p
+// puts it back as a box (each line its own piece), I and A type on the
+// first line and Escape puts the same text on every line of the box ($
+// makes A append at each line's own end), c changes the box, r replaces
+// every char in it and Ctrl+V again (or Escape) is back to normal.
+func TestDeskVimVisualBlock(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "abcd", "efgh", "ijkl")
+	toggleVim(t, p, c, true)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+	ctrlV := func() { v.p.Do(chromedp.KeyEvent("v", chromedp.KeyModifiers(chromedp.ModifierCtrl))) }
+
+	// Ctrl+V twice: in and out again, nothing pasted.
+	ctrlV()
+	v.mode("-- VISUAL BLOCK --")
+	ctrlV()
+	v.mode("-- NORMAL --")
+	v.settle("abcd", "efgh", "ijkl")
+
+	// d deletes the box; u brings it back.
+	ctrlV()
+	v.mode("-- VISUAL BLOCK --")
+	v.keys("jld", "cd", "gh", "ijkl")
+	v.mode("-- NORMAL --")
+	v.keys("u", "abcd", "efgh", "ijkl")
+
+	// I types on every line of the box at Escape.
+	v.keys("gg0")
+	ctrlV()
+	v.keys("jjIX", "Xabcd", "efgh", "ijkl")
+	v.mode("-- INSERT --")
+	realKeys(p, string(kb.Escape))
+	v.settle("Xabcd", "Xefgh", "Xijkl")
+	v.mode("-- NORMAL --")
+
+	// $A appends at each line's end.
+	v.keys("gg0")
+	ctrlV()
+	v.keys("jj$A!", "Xabcd!", "Xefgh", "Xijkl")
+	realKeys(p, string(kb.Escape))
+	v.settle("Xabcd!", "Xefgh!", "Xijkl!")
+
+	// y yanks a box, p puts it after the caret on each line.
+	v.keys("gg0")
+	ctrlV()
+	v.keys("jly", "Xabcd!", "Xefgh!", "Xijkl!")
+	v.mode("-- NORMAL --")
+	v.keys("$p", "Xabcd!Xa", "Xefgh!Xe", "Xijkl!")
+
+	// c changes the box on every line.
+	v.keys("gg0")
+	ctrlV()
+	v.keys("jjcZ", "Zabcd!Xa", "efgh!Xe", "ijkl!")
+	realKeys(p, string(kb.Escape))
+	v.settle("Zabcd!Xa", "Zefgh!Xe", "Zijkl!")
+
+	// r replaces every char of the box; Escape leaves block mode.
+	v.keys("gg0l")
+	ctrlV()
+	v.keys("jlrQ", "ZQQcd!Xa", "ZQQgh!Xe", "Zijkl!")
+	ctrlV()
+	v.mode("-- VISUAL BLOCK --")
+	realKeys(p, string(kb.Escape))
+	v.mode("-- NORMAL --")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
+
 // Spec (WEBP-1): Vim mode follows the open file's own mappings too. The
 // page asks the laptop for this file's buffer (editor.vim_buf_maps):
 // the mappings made for the file or for its language win over the

@@ -135,7 +135,7 @@ func TestGitCommitBox(t *testing.T) {
 			c.Quiet(t, 300*time.Millisecond) // Enter never commits
 			p.TapJS(ButtonByText("Commit 1 file"))
 			p.WaitJS(`document.activeElement === document.querySelector(".commit-ask button")`)
-			if txt := p.Text(".commit-ask-text"); txt != "Commit 1 staged files to main?" {
+			if txt := p.Text(".commit-ask-text"); txt != "Commit 1 staged file to main?" {
 				t.Errorf("ask %q", txt)
 			}
 			p.Key(kb.Enter) // Cancel has the focus

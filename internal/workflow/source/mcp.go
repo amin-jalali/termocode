@@ -30,6 +30,20 @@ type ToolCaller interface {
 	CallTool(ctx context.Context, server, tool string, args map[string]any) (result json.RawMessage, readOnly bool, err error)
 }
 
+// ToolInfo is one tool a server lists (its tools/list entry): the name
+// and the JSON Schema of its arguments.
+type ToolInfo struct {
+	Name        string
+	InputSchema map[string]any
+}
+
+// ToolLister is an optional part of a ToolCaller: it lists a server's
+// tools, so a message step can find the server's send tool. A server
+// that is not connected gives an error that wraps ErrNotConnected.
+type ToolLister interface {
+	ListTools(ctx context.Context, server string) ([]ToolInfo, error)
+}
+
 // ErrNeedsConfirm is returned for a tool that is not read-only when the
 // step was not confirmed on a card. The tool did not run.
 var ErrNeedsConfirm = errors.New("the tool is not read-only and needs a confirm")

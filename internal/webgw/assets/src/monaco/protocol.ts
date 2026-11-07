@@ -251,7 +251,7 @@ export type FromFrame =
   /** vim: Vim mode's mode now ("": off), the keys of a command not
    * finished yet, the register a macro is being recorded into and a
    * message (its code, a NUL, its argument: "notfound\x00foo"). */
-  | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline"; pending: string; rec?: string; msg?: string }
+  | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline" | "vblock"; pending: string; rec?: string; msg?: string }
   /** vimQuit: Vim's :q (the page closes the editor's tab). */
   | { t: "vimQuit" }
   /** copied: the user copied or cut text in the editor (the clipboard

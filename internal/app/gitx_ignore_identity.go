@@ -69,7 +69,7 @@ func (m *Model) openIgnorePicker() tea.Cmd {
 // gitxIgnore adds pattern. Ignoring a tracked file changes nothing until
 // it stops being tracked, so a card asks (Cancel first).
 func (m *Model) gitxIgnore(rel, pattern string, oneFile bool) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -109,7 +109,7 @@ func (m *Model) openIdentityPrompts() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
