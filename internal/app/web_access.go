@@ -364,6 +364,9 @@ func (m *Model) openWebDeviceCard(id string) tea.Cmd {
 	} else if !d.Guest {
 		body += "\nTo give it control, tap Ask for control on that device."
 	}
+	if pins := webDevicePinNames(dir, d.Pins); pins != "" {
+		body += "\nPinned on its Home: " + pins
+	}
 	if d.Bookmark != nil {
 		body += "\nThis browser opens from a bookmark without its passkey."
 		buttons = append(buttons, confirm.Button{ID: "forget-bookmark", Title: "Forget bookmark"})
@@ -549,4 +552,27 @@ func webConnectText(c *webConn) string {
 		return name + " is watching (view only)."
 	}
 	return name + " connected with control."
+}
+
+// webDevicePinNames names a device's pinned views (MOB-71) for its card,
+// read only: the phone changes them. Pins whose view is gone are left out.
+func webDevicePinNames(dir string, pins []string) string {
+	if len(pins) == 0 {
+		return ""
+	}
+	vs, err := webdevices.OpenViews(dir).List()
+	if err != nil {
+		return ""
+	}
+	name := map[string]string{}
+	for _, v := range vs {
+		name[v.ID] = v.Name
+	}
+	var out []string
+	for _, p := range pins {
+		if n, ok := name[p]; ok {
+			out = append(out, webName(n))
+		}
+	}
+	return strings.Join(out, ", ")
 }

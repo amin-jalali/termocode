@@ -1,0 +1,12 @@
+/* The Home's pinned views (MOB-71): one 44 px row per pin, collapsed. */
+.pinned { display: flex; flex-direction: column; border-bottom: 1px solid var(--border); }
+.pinned-row { display: flex; align-items: stretch; }
+.pinned-head { flex: 1 1 auto; display: flex; align-items: center; gap: var(--s2); min-height: var(--tap); padding: 0 var(--s3); color: var(--text); text-align: start; min-width: 0; }
+.pinned-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pinned-state { font-size: var(--fs-hint); color: var(--text-2); white-space: nowrap; }
+.pinned-state.is-live span { color: var(--green); }
+.pinned-state.is-stale span { color: var(--amber); }
+.pinned-unpin { min-width: var(--tap); min-height: var(--tap); color: var(--text-2); }
+.pinned-unpin:disabled { opacity: 0.5; }
+.pinned-head:focus-visible, .pinned-unpin:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.pinned-body { padding: 0 var(--s3) var(--s2); }
