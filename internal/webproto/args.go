@@ -25,10 +25,12 @@ type ChatPinArgs struct {
 	On bool `json:"on"`
 }
 
-// ChatSendArgs sends a chat message.
+// ChatSendArgs sends a chat message. Attach are items the user sends
+// back with it, by reference (MOB-5): the laptop resolves them.
 type ChatSendArgs struct {
-	Text   string `json:"text"`
-	ChatID string `json:"chat_id,omitempty"`
+	Text   string   `json:"text"`
+	ChatID string   `json:"chat_id,omitempty"`
+	Attach []Attach `json:"attach,omitempty"`
 }
 
 // CardsAnswerArgs answers a card with one of its choices.
@@ -38,6 +40,10 @@ type CardsAnswerArgs struct {
 	// Hunks: with accept on a review card, the changes to keep (indexes
 	// into the card's diff hunks); the rest is rejected. Empty: all.
 	Hunks []int `json:"hunks,omitempty"`
+	// Form: with send on a card that has a form (an MCP server's
+	// question, MOB-12), the answers by field id. Checked and converted
+	// on the laptop against the question; never a secret field.
+	Form map[string]string `json:"form,omitempty"`
 }
 
 // PathArgs names one file or folder.

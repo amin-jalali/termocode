@@ -1,6 +1,6 @@
 // Package worktrees is the worktree model of the WORKTREES view (WTX-1):
 // the worktrees git lists, joined with what termocode keeps about them
-// (name, pin, parent, agent, links, notes, sleep state) in
+// (name, pin, order, parent, agent, links, notes, sleep state, port) in
 // <git-common-dir>/termocode/worktrees.json, and a cache of their status
 // (dirty files, ahead / behind) that worker goroutines fill off the UI
 // thread.
@@ -35,7 +35,9 @@ var ErrBadMeta = errors.New("worktrees.json could not be read")
 type Meta struct {
 	Name     string    `json:"name,omitempty"`
 	Pinned   bool      `json:"pinned,omitempty"`
+	Order    int       `json:"order,omitempty"`  // the user's place in its group, 1 first; 0 = the automatic sort (CMP-27)
 	Parent   string    `json:"parent,omitempty"` // the worktree it was made from (path)
+	Base     string    `json:"base,omitempty"`   // a stacked child: the parent's branch when it was made (CMP-17)
 	Agent    string    `json:"agent,omitempty"`  // the agent preset started in it
 	Issue    int       `json:"issue,omitempty"`
 	PR       int       `json:"pr,omitempty"`
@@ -51,6 +53,54 @@ type Meta struct {
 	Link LinkInfo `json:"link,omitzero"` // what gh last said about Issue / PR (WTX-9)
 
 	Adopted bool `json:"adopted,omitempty"` // an external worktree the user adopted (WTX-10)
+
+	Port      int      `json:"port,omitempty"`       // the dev server port of the worktree (CMP-5, ports.go)
+	BlockedBy []string `json:"blocked_by,omitempty"` // the worktrees (paths) whose work this one waits for (CMP-80, deps.go)
+
+	// Group ties the worktrees of one task across the repositories of a
+	// multi-repo workspace (CMP-22): the branch they share.
+	Group string `json:"group,omitempty"`
+
+	// The PR follow-up loop (CMP-31): Follow asks to send new PR
+	// feedback to the worktree's agent; FollowSeen are the comment ids
+	// sent or skipped (newest last, capped), FollowRun the failed CI run
+	// sent or skipped last.
+	Follow     bool    `json:"follow,omitempty"`
+	FollowSeen []int64 `json:"follow_seen,omitempty"`
+	FollowRun  int64   `json:"follow_run,omitempty"`
+}
+
+// MaxFollowSeen caps Meta.FollowSeen.
+const MaxFollowSeen = 500
+
+// MarkFollowSeen adds ids to FollowSeen (no doubles, oldest dropped
+// past MaxFollowSeen) and sets FollowRun when run > 0.
+func (m *Meta) MarkFollowSeen(ids []int64, run int64) {
+	have := make(map[int64]bool, len(m.FollowSeen))
+	for _, id := range m.FollowSeen {
+		have[id] = true
+	}
+	for _, id := range ids {
+		if !have[id] {
+			have[id] = true
+			m.FollowSeen = append(m.FollowSeen, id)
+		}
+	}
+	if n := len(m.FollowSeen) - MaxFollowSeen; n > 0 {
+		m.FollowSeen = append([]int64(nil), m.FollowSeen[n:]...)
+	}
+	if run > 0 {
+		m.FollowRun = run
+	}
+}
+
+// FollowSeenSet is FollowSeen as a set.
+func (m Meta) FollowSeenSet() map[int64]bool {
+	out := make(map[int64]bool, len(m.FollowSeen))
+	for _, id := range m.FollowSeen {
+		out[id] = true
+	}
+	return out
 }
 
 // Empty: termocode knows nothing about the worktree.

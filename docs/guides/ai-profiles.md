@@ -273,6 +273,47 @@ Now using gpt (gpt-5-mini).` The rest of that turn stays on the backup;
 the next message tries the slot's own model again. The line is for you:
 the model does not see it.
 
+### Auto model pick
+
+With the auto model pick on, each plain chat turn of the **Default**
+profile runs on the model that fits it. termocode guesses on your
+machine, with no extra request:
+
+- a short, simple message runs on the `quick` slot,
+- code, an attached file or image, a long message, `think`, or words
+  like refactor, design, debug or why run on `main`.
+
+When in doubt the turn runs on `main`. Turn it on with **AI: Toggle Auto
+Model Pick (quick / main per turn)**. A card shows the two models first;
+**Cancel** is the first button. The same command turns it off.
+
+The chat shows each pick and why, for example
+`⇢ Auto model: quick (gpt-5-mini) — a short, simple message`. The line
+is for you: the model does not see it. When the picked slot can not run
+(for example it has no key), the turn stays on `main` and the line says
+why.
+
+Your own slots and rules go in `ai_router`. Rules come first, in order:
+a message that holds one of the words (whole words, any case) runs on
+that slot.
+
+```json
+{
+  "ai_router": {
+    "mode": "auto",
+    "quick": "gpt",
+    "deep": "main",
+    "rules": [
+      { "words": ["docs", "readme", "changelog"], "slot": "writer" },
+      { "words": ["sql", "query"], "slot": "local" }
+    ]
+  }
+}
+```
+
+Other profiles, agent runs and steps that name a slot keep their own
+model. The AI can not turn the pick on or off.
+
 ### Keys
 
 No file in this guide holds a key. A step (or slot) uses the key of its
@@ -580,6 +621,34 @@ the run in the AGENTS panel.
   (a command and its result, or a file:line) before its verdict; the
   list goes into the plan file.
 
+## Run a task list in waves
+
+**AI: Run Task List in Waves…** runs the open file as a task list: one
+agent step per open task, in waves. Write the list as a markdown
+checklist:
+
+```markdown
+- [ ] 1. Add the parser
+  Read docs/grammar.md first.          (indented lines: more about the task)
+- [ ] 2. Add the flag (after: 1)
+- [ ] Write the docs (id: docs) (after: 1, 2)
+- [x] Ticked tasks are skipped, and so is waiting for them
+```
+
+- A task's id is its `(id: …)`, else its number (`2.`), else `task-N`.
+  `(after: …)` names the tasks it waits for. Checkboxes in code blocks
+  are not tasks.
+- A card shows the waves first (**Cancel** comes first; Esc cancels):
+  the tasks of a wave run at the same time, up to `ai_parallel_max`. With
+  `ai_parallel_max` 1 they run one after the other, and the card says so.
+- Each task may change files. Steps that write at the same time work in
+  their own git worktree (see below), so you review and merge each one.
+- A last **Check the tasks** step reads what they did, edits nothing,
+  and answers you with one line per task.
+- One list runs at most 11 open tasks in at most 5 waves. A list that
+  names an unknown task, or whose `after:` tags make a cycle, does not
+  run: a toast says which line is wrong.
+
 ## Approve the plan
 
 Before a run starts a step that **changes files** or **runs commands**,
@@ -862,6 +931,55 @@ also ones from other chats. Nothing is deleted without a card that asks.
 
 **Turn it off.** **AI: Toggle Agent Worktrees**, or `"ai_worktrees": "off"`
 in `config.json`. Then every step works in your tree.
+
+### Team mode (experimental)
+
+Steps that run at the same time do not know about each other. With
+`"ai_team_mode": true` in `config.json`, each agent step of a run with
+more than one step at a time gets four extra tools:
+
+- `team_claim` claims a file path or a short name of a piece of work.
+  When another step holds it, the step is told who, and picks other work.
+- `team_release` gives a claim back. All claims of a step end with it.
+- `team_claims` lists the claims and the steps that run now.
+- `team_send` leaves a short note for one running step (its id or title)
+  or for all of them. The step reads it after its current tool call, as
+  with `m` in AGENTS.
+
+These tools touch no files, so they ask no card. A note that looks like
+a secret is refused. Claims and notes show as tool calls in each step's
+transcript in AGENTS. Subscription steps (Claude Code, Codex) do not get
+the tools.
+
+### Critic review
+
+When a step's worktree ends with changed files, a second model (the
+**critic**) reads its diff before you merge it. It gets the diff as text
+only: no tools, no files, known secrets hidden. It answers with a
+verdict, and the card shows it:
+
+```text
+ ▸ 3 · Speed up lexer · gpt-5-mini · 14 s · 2 tools
+     ⑂ termocode/agent-r1-lexer · 3 files changed · critic: problems
+      Review   Merge   Discard   Critic
+```
+
+- **critic reviewing…** while it reads, then **critic ok** or
+  **critic: problems**. **critic: no verdict** means it could not answer
+  (no model, an error); Critic on the card asks again.
+- **Critic** shows its notes on a card: **Cancel**, **Ask Again** or
+  **Send to Chat** (the problems go to the chat box; nothing is sent
+  until you press Enter).
+- **Merge** while the critic lists problems asks first. **Cancel** is
+  first; **Merge Anyway** merges as usual; **Send to Chat** puts the
+  problems in the chat box. Nothing is written before you answer. Merge
+  does not wait while the critic still reads.
+- **Which model.** The other built-in model than the step's: quick for a
+  step on main, main for every other step. Set `"ai_critic_slot"` in
+  `config.json` to a model slot of your own. Its tokens show in
+  **AI: Usage** as `critic`.
+- **Turn it off.** **AI: Toggle Critic Review**, or `"ai_critic": "off"`
+  in `config.json`.
 
 ## Budget pause
 
@@ -1253,8 +1371,10 @@ you change an answer.
 | `ai_models` | `{}` | Your model slots. |
 | `ai_concurrency` | `{}` | Most requests at once per provider or model, for example `{"anthropic": 2, "openai/gpt-5": 1}`. Extra requests wait before they are sent. Use it when parallel steps get rate limit (429) answers. |
 | `ai_fallback` | `[]` | [Backup models](#backup-models-fallback) of the `main` slot. |
+| `ai_router` | `{}` | [Auto model pick](#auto-model-pick) of plain chat turns: `mode` auto or off, `quick` and `deep` slots, word `rules`. |
 | `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. A planned run uses 3 when this is not set. |
 | `ai_worktrees` | `auto` | `auto`: writing steps that run at the same time get [their own worktree](#own-worktrees-for-parallel-steps). `off`: every step works in your tree. |
+| `ai_team_mode` | `false` | [Team mode](#team-mode-experimental): steps that run at the same time get notes between them and a shared claim list. |
 | `ai_plan_approval` | `ask` | [Approve the plan](#approve-the-plan): `ask` before steps that change files or run commands, `always` for every plan, `auto` never. |
 | `ai_prices` | `{}` | Price overrides, $ per million tokens. |
 | `ai_context_windows` | `{}` | Context window overrides, in tokens. |

@@ -31,6 +31,9 @@ func (m *Model) mcpAdapterOptions(set mcp.Settings) mcp.AdapterOptions {
 	out := m.output
 	return mcp.AdapterOptions{TrustAnnotations: set.TrustAnnotations, MaxResult: set.MaxResultKB << 10, Clean: aiCleanText,
 		Spill: mcpSpill(),
+		// MOB-12: a text result's block on the phone uses the chat's
+		// markdown tree (webproto.MdNode is blocks.MdNode).
+		Markdown: webMarkdown,
 		Warn: func(server, tool string, size int) {
 			out.Append(mcpLogChannel, clock.Now().Format("15:04:05")+"  "+server+": "+
 				fmt.Sprintf("%s sent %d KB: the AI got the first part and can read the rest", tool, size>>10))

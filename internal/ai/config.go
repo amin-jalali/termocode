@@ -36,6 +36,11 @@ type Settings struct {
 	// diff to accept or reject) or "auto" (they are written after the
 	// confirm dialog, or at once when fileWrite is auto-approved).
 	EditReview string `json:"ai_edit_review,omitempty"`
+	// ReviewOrder is "explain" (default: the review card puts the files
+	// that explain a change first: docs, then definitions, then the code
+	// that uses them, tests last) or "proposed" (the order the agent
+	// proposed them in). CMP-58.
+	ReviewOrder string `json:"ai_review_order,omitempty"`
 	// Prices override or add model prices ($ per million tokens, by
 	// model id prefix) over the built-in table (pricing.go).
 	// ContextWindows do the same for context windows (tokens). Both are
@@ -57,6 +62,10 @@ type Settings struct {
 	// StepEscalate is ai_step_escalate (OMX-16; nil: on): a step not on
 	// the deep slot may answer ESCALATE to run once more on deep.
 	StepEscalate *bool `json:"ai_step_escalate,omitempty"`
+	// Team is ai_team_mode (OMX-40; nil: off): agent steps that run at
+	// the same time get the team tools (notes between steps, shared
+	// claims). Edited by hand.
+	Team *bool `json:"ai_team_mode,omitempty"`
 	// PlanReviewRounds is ai_plan_review_rounds (OMX-14; 0: off, at most
 	// 5) and PlanFile ai_plan_file (nil: off): .termocode/plans/<slug>.md.
 	PlanReviewRounds int   `json:"ai_plan_review_rounds,omitempty"`
@@ -73,6 +82,12 @@ type Settings struct {
 	// Worktrees is "off" to keep parallel agents in the user's tree
 	// (default: each gets its own git worktree; worktree.go).
 	Worktrees string `json:"ai_worktrees,omitempty"`
+	// Critic is ai_critic (CMP-53): "" (auto, the default) has a second
+	// model review each finished lane before Merge; "off" never does.
+	// CriticSlot is ai_critic_slot: the critic's model slot (empty: the
+	// other built-in model than the step's; critic.go). File only.
+	Critic     string `json:"ai_critic,omitempty"`
+	CriticSlot string `json:"ai_critic_slot,omitempty"`
 	// PlanApproval is ai_plan_approval (G-PLAN): "ask" (default), "auto"
 	// or "always" (planapproval.go).
 	PlanApproval string `json:"ai_plan_approval,omitempty"`
@@ -84,9 +99,16 @@ type Settings struct {
 	// leaves it out of the main Config, so ghost text never thinks; the
 	// chat sends it per request. Edited by hand.
 	Reasoning string `json:"ai_reasoning,omitempty"`
+	// Dial is ai_dial (CMP-24, dial.go): changes to the effort dial's
+	// modes (low, medium, high, ultra) by name. Edited by hand.
+	Dial map[string]DialSetting `json:"ai_dial,omitempty"`
 	// Fallback is ai_fallback: the main slot's backup models (slot names
 	// or "<provider>/<model>"; fallback.go). Edited by hand.
 	Fallback []string `json:"ai_fallback,omitempty"`
+	// Router is ai_router (CMP-25, router.go): the auto model pick of
+	// plain chat turns. AI: Toggle Auto Model Pick sets its mode; the
+	// rest is edited by hand.
+	Router Router `json:"ai_router,omitempty"`
 	// Concurrency is ai_concurrency: most requests at once per provider
 	// kind or "<kind>/<model>" (concurrency.go). Edited by hand.
 	Concurrency map[string]int `json:"ai_concurrency,omitempty"`
@@ -94,7 +116,19 @@ type Settings struct {
 	// default: summarise them with the quick model near the window limit
 	// or when the provider says the context is too long. Edited by hand.
 	Compact string `json:"ai_compact,omitempty"`
+	// Autopilot is ai_autopilot (CMP-61, autopilot.go): "off" (default),
+	// "low" or "medium": the highest risk the agent runs without a card.
+	// ApprovalRules is ai_approval_rules (allow / deny / ask per tool and
+	// text) and Guardian ai_guardian: a model slot ("quick") that
+	// reviews what autopilot would run ("" or "off": none). Rules and
+	// guardian are edited by hand; SaveSettings leaves them.
+	Autopilot     string         `json:"ai_autopilot,omitempty"`
+	ApprovalRules []ApprovalRule `json:"ai_approval_rules,omitempty"`
+	Guardian      string         `json:"ai_guardian,omitempty"`
 }
+
+// TeamMode reports ai_team_mode (off unless true).
+func (s Settings) TeamMode() bool { return s.Team != nil && *s.Team }
 
 // DefaultStepStall is the stall limit when ai_step_stall_minutes is
 // not set.
@@ -184,6 +218,16 @@ const (
 	EditReviewOn   = "review"
 	EditReviewAuto = "auto"
 )
+
+// Values of ai_review_order.
+const (
+	ReviewOrderExplain  = "explain"
+	ReviewOrderProposed = "proposed"
+)
+
+// ExplainFirst reports whether the review card orders its files
+// explain-first (ai_review_order, default explain).
+func (s Settings) ExplainFirst() bool { return s.ReviewOrder != ReviewOrderProposed }
 
 // InlineEnabled reports the ai_inline setting (default on).
 func (s Settings) InlineEnabled() bool { return s.Inline == nil || *s.Inline }
@@ -364,8 +408,14 @@ func SaveSettings(path string, s Settings) error {
 		set("ai_base_url", s.BaseURL)
 		set("ai_inline_model", s.InlineModel)
 		set("ai_edit_review", s.EditReview)
+		set("ai_review_order", s.ReviewOrder)
 		set("ai_worktrees", s.Worktrees)
+		set("ai_critic", s.Critic)
 		set("ai_plan_approval", s.PlanApproval)
+		if s.Autopilot == AutopilotOff {
+			s.Autopilot = ""
+		}
+		set("ai_autopilot", s.Autopilot)
 		if s.Inline != nil {
 			merged["ai_inline"] = *s.Inline
 		}
@@ -676,6 +726,8 @@ func envKeyFor(kind string) string {
 		return "OPENAI_API_KEY"
 	case KindOpenRouter:
 		return "OPENROUTER_API_KEY"
+	case KindBedrock:
+		return "AWS_BEARER_TOKEN_BEDROCK"
 	}
 	return ""
 }
@@ -684,7 +736,8 @@ func envKeyFor(kind string) string {
 // provider Config. Environment variables win over files:
 //
 //	TERMOCODE_AI_PROVIDER / _MODEL / _BASE_URL / _API_KEY
-//	ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, OLLAMA_HOST
+//	ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, OLLAMA_HOST,
+//	AWS_BEARER_TOKEN_BEDROCK, AWS_REGION (bedrock)
 //
 // With no provider set anywhere, an Anthropic or OpenAI key (env first)
 // selects that provider. getenv is os.Getenv in production.
@@ -735,6 +788,8 @@ func Resolve(s Settings, c Credentials, getenv func(string) string) Config {
 		cfg.BaseURL = v
 	} else if kind == KindOllama && getenv("OLLAMA_HOST") != "" {
 		cfg.BaseURL = ollamaHostURL(getenv("OLLAMA_HOST"))
+	} else if kind == KindBedrock && cfg.BaseURL == "" && getenv("AWS_REGION") != "" {
+		cfg.BaseURL = bedrockBaseURL(getenv("AWS_REGION"))
 	}
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL(kind)

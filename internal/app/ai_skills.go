@@ -255,6 +255,7 @@ const (
 	aiSkillsOpenPrefix   = "\x00open:"
 	aiSkillsNewProjectID = "\x00new-project"
 	aiSkillsNewUserID    = "\x00new-user"
+	aiSkillsPowersID     = "\x00powers"
 	aiSkillsTrustID      = "\x00trust"
 )
 
@@ -296,7 +297,8 @@ func (m *Model) openAISkills() tea.Cmd {
 	}
 	items = append(items, picker.Item{Header: true, Title: "Actions", Group: "actions"},
 		picker.Item{ID: aiSkillsNewProjectID, Title: "New project skill…", Hint: ai.SkillsDir, Group: "actions"},
-		picker.Item{ID: aiSkillsNewUserID, Title: "New user skill…", Hint: "your config folder", Group: "actions"})
+		picker.Item{ID: aiSkillsNewUserID, Title: "New user skill…", Hint: "your config folder", Group: "actions"},
+		picker.Item{ID: aiSkillsPowersID, Title: "Powers catalog…", Hint: "ready skills, some with a service", Group: "actions"})
 	if s.ProjectHash != "" {
 		state := "not decided"
 		switch trust {
@@ -336,6 +338,8 @@ func (m *Model) onAISkillsPicked(id string) tea.Cmd {
 		return m.newAISkill(dir)
 	case aiSkillsTrustID:
 		return m.openAISkillsTrust()
+	case aiSkillsPowersID: // ai_powers.go
+		return m.openAIPowers()
 	}
 	path, ok := strings.CutPrefix(id, aiSkillsOpenPrefix)
 	if !ok {

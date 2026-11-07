@@ -39,7 +39,22 @@ const (
 	OpWorktreeNote   = "worktree-note"   // Text
 	OpWorktreeStatus = "worktree-status" // State: working | blocked | done
 	OpWorktreeLink   = "worktree-link"   // Text: a number, #N or URL; asks the user first
+
+	// Task dependencies across worktrees (CMP-80): Text names the other
+	// worktree (a path, branch or name) the caller's worktree waits for.
+	OpWorktreeBlock   = "worktree-block"
+	OpWorktreeUnblock = "worktree-unblock"
+
+	// OpTaskStart (CMP-39) starts a background agent task: a new worktree
+	// of the repository Dir is in, an agent in it and Text typed into it.
+	// termocode shows its New worktree card filled in; nothing is made
+	// until the user presses Create + Start. Agent (optional) picks the
+	// agent, Name the worktree's name, From its start point.
+	OpTaskStart = "task-start"
 )
+
+// TaskStartTimeout is how long a task-start waits for the user's answer.
+const TaskStartTimeout = 10 * time.Minute
 
 // States an agent reports or a wait waits for.
 var States = []string{"working", "waiting", "done"}
@@ -64,7 +79,9 @@ type Request struct {
 	TimeoutS int    `json:"timeout_s,omitempty"` // wait
 	Agent    string `json:"agent,omitempty"`     // report: claude, codex, …
 	State    string `json:"state,omitempty"`     // report, worktree-status
-	Dir      string `json:"dir,omitempty"`       // worktree ops: the caller's folder
+	Dir      string `json:"dir,omitempty"`       // worktree ops, task-start: the caller's folder
+	Name     string `json:"name,omitempty"`      // task-start: the worktree's name
+	From     string `json:"from,omitempty"`      // task-start: the start point (default: the current branch)
 }
 
 // Worktree is one worktree in a worktree-list reply.
@@ -77,8 +94,12 @@ type Worktree struct {
 	Parent     string `json:"parent,omitempty"`
 	Link       string `json:"link,omitempty"` // "#412 open", "PR #12 merged · CI ✓"
 	Checkpoint string `json:"checkpoint,omitempty"`
-	Note       string `json:"note,omitempty"` // the last note
-	Here       bool   `json:"here,omitempty"` // the caller's folder is in it
+	Note       string `json:"note,omitempty"`  // the last note
+	Agent      string `json:"agent,omitempty"` // the agent started in it (New worktree, task-start)
+	Here       bool   `json:"here,omitempty"`  // the caller's folder is in it
+
+	BlockedBy []string `json:"blocked_by,omitempty"` // the titles of the worktrees it waits for (CMP-80)
+	Waits     bool     `json:"waits,omitempty"`      // one of them is not done yet
 }
 
 // Tab is one terminal tab in a list.
@@ -96,7 +117,7 @@ type Reply struct {
 	OK    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
 	Tabs  []Tab  `json:"tabs,omitempty"`
-	State string `json:"state,omitempty"` // wait: the state reached
+	State string `json:"state,omitempty"` // wait: the state reached; task-start: started | created
 
 	Worktrees []Worktree `json:"worktrees,omitempty"` // worktree-list
 }

@@ -1,4 +1,4 @@
-// Loads the page's three lazy files on first use, each a fixed same-origin
+// Loads the page's lazy files on first use, each a fixed same-origin
 // path built beside app.js (cmd/webbuild) and listed with its hash in
 // assets.lock; these are the page's only dynamic imports (lint_test.go
 // allows exactly these). A failed load can be tried again.
@@ -6,10 +6,15 @@
 //   workbench.js  the desktop workbench, on a wide screen only (a phone
 //                 never loads it); index.html preloads it there with its SRI
 //   strings-fa.js the Persian strings, when the UI language is Persian
+//   home.js       the phone's own views (This phone, MOBUX-20; the Home of
+//                 MOB-4; All tools, MOBUX-5; review, MOB-14), on a phone
+//                 only, when one opens
 import { signal } from "@preact/signals";
 import type { EditorModule } from "../editor/api";
+import type { HomeHost } from "../home/api";
 import { persian } from "../strings";
 import type * as Workbench from "../workbench";
+import type * as Home from "../home";
 
 let loading: Promise<EditorModule> | null = null;
 
@@ -65,4 +70,35 @@ export function loadPersian(): Promise<void> {
     );
   }
   return faLoading;
+}
+
+/** HomeModule is what home.js gives the page. */
+export type HomeModule = typeof Home;
+
+/** home is the loaded phone views (null: not yet); homeFailed says the
+ * last load failed (loadHome tries again). */
+export const home = signal<HomeModule | null>(null);
+export const homeFailed = signal(false);
+
+let homeLoading: Promise<HomeModule> | null = null;
+
+/** loadHome loads home.js once. host (MOB-4's Home) is built on the
+ * first load only and handed to init, so the Home and the page share one
+ * store and one link; This phone (MOBUX-20) needs no host. */
+export function loadHome(host?: () => HomeHost): Promise<HomeModule> {
+  if (!homeLoading) {
+    homeFailed.value = false;
+    homeLoading = import("/assets/home.js").then(
+      (m: HomeModule) => {
+        if (host) m.init(host());
+        return (home.value = m);
+      },
+      (e: unknown) => {
+        homeLoading = null;
+        homeFailed.value = true;
+        throw e;
+      },
+    );
+  }
+  return homeLoading;
 }

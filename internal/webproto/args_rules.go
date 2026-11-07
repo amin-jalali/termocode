@@ -151,7 +151,7 @@ func (a *ChatSendArgs) validate(int) error {
 	if a.ChatID != "" && !validName(a.ChatID, MaxID) {
 		return invalid("bad chat id")
 	}
-	return nil
+	return validAttaches(a.Attach)
 }
 
 func (a *CardsAnswerArgs) validate(int) error {
@@ -164,6 +164,14 @@ func (a *CardsAnswerArgs) validate(int) error {
 	for _, h := range a.Hunks {
 		if h < 0 || h >= MaxCardHunks {
 			return invalid("bad change")
+		}
+	}
+	if len(a.Form) > MaxCardForm {
+		return invalid("too many answers")
+	}
+	for k, v := range a.Form {
+		if !validName(k, MaxID) || len(v) > MaxCardFormValue || !utf8.ValidString(v) {
+			return invalid("bad answer")
 		}
 	}
 	return nil

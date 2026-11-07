@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentctl"
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -67,8 +68,16 @@ type wtForm struct {
 	issueNum   int
 	issueTitle string
 	// parent / parentTitle: a child worktree (c, WTX-11) starts from the
-	// parent's branch and is stored under it.
-	parent, parentTitle string
+	// parent's branch and is stored under it; parentBranch is that branch
+	// ("" detached), kept as the base its pull request targets (CMP-17).
+	parent, parentTitle, parentBranch string
+	// preTask / preAgent: a handoff to a child (CMP-11) fills in the
+	// task and picks the agent (by id).
+	preTask, preAgent string
+	// ctl / asker: a task-start (CMP-39) waits for this card; asker says
+	// who asked (agent_ctl_task.go).
+	ctl   *agentCtlCall
+	asker string
 }
 
 // wtFormVals are the typed values of the card.
@@ -84,6 +93,10 @@ func (f *wtForm) draft(v wtFormVals) (branch, folder string) {
 	if branch == "" {
 		branch = worktreeform.BranchFromName(v.name)
 	}
+	if branch == "" && strings.TrimSpace(v.issue) == "" {
+		// Only a task typed (CMP-26): the branch comes from it.
+		branch = worktreeform.BranchFromTask(v.task, f.cfg.BranchPrefix)
+	}
 	if branch == "" && f.issueTitle != "" {
 		branch = worktreeform.BranchFromIssue(f.issueNum, f.issueTitle)
 	}
@@ -93,10 +106,22 @@ func (f *wtForm) draft(v wtFormVals) (branch, folder string) {
 	return branch, worktreeform.Folder(f.base, branch)
 }
 
+// autoTitle is the worktree name drafted from the task (CMP-26): only
+// when no name, branch or issue is typed ("" otherwise).
+func (f *wtForm) autoTitle(v wtFormVals) string {
+	if strings.TrimSpace(v.name) != "" || strings.TrimSpace(v.branch) != "" || strings.TrimSpace(v.issue) != "" {
+		return ""
+	}
+	return worktreeform.TitleFromTask(v.task)
+}
+
 // wtNewPrepMsg is the repository read for a new dialog.
 type wtNewPrepMsg struct {
 	f   *wtForm
 	err error
+	// ctl / pre: a task-start's card (agent_ctl_task.go).
+	ctl *agentCtlCall
+	pre *wtTaskPreset
 }
 
 // wtNewAgents lists the installed agents for the Agent row (a var for
@@ -133,7 +158,7 @@ func worktreeDirSetting() string {
 
 // openWorktreeNew reads the repository off the UI thread, then opens
 // the dialog (Worktree: New…, n in the view).
-func (m *Model) openWorktreeNew() tea.Cmd { return m.openWorktreeNewFrom("", "", "") }
+func (m *Model) openWorktreeNew() tea.Cmd { return m.openWorktreeNewFrom("", "", "", "") }
 
 // openWorktreeNewChild is c: a child of the cursor's worktree, from its
 // branch (or its commit when detached).
@@ -149,10 +174,10 @@ func (m *Model) openWorktreeNewChild() tea.Cmd {
 	if from == "" {
 		from = it.e.Head
 	}
-	return m.openWorktreeNewFrom(it.e.Path, wtTitle(it), from)
+	return m.openWorktreeNewFrom(it.e.Path, wtTitle(it), from, it.e.Branch)
 }
 
-func (m *Model) openWorktreeNewFrom(parent, parentTitle, from string) tea.Cmd {
+func (m *Model) openWorktreeNewFrom(parent, parentTitle, from, parentBranch string) tea.Cmd {
 	if m.wt == nil {
 		return nil
 	}
@@ -164,7 +189,7 @@ func (m *Model) openWorktreeNewFrom(parent, parentTitle, from string) tea.Cmd {
 	return func() tea.Msg {
 		msg := wtNewPrep(root, setting)
 		if msg.f != nil && parent != "" {
-			msg.f.parent, msg.f.parentTitle = parent, parentTitle
+			msg.f.parent, msg.f.parentTitle, msg.f.parentBranch = parent, parentTitle, parentBranch
 			if from != "" {
 				msg.f.from = from
 			}
@@ -203,22 +228,60 @@ func wtNewPrep(root, setting string) wtNewPrepMsg {
 
 // onWTNewPrep opens the dialog.
 func (m *Model) onWTNewPrep(msg wtNewPrepMsg) tea.Cmd {
+	if msg.ctl != nil {
+		m.wt.taskAsk = false
+	}
+	taskFail := func(s string) {
+		if msg.ctl != nil {
+			msg.ctl.reply <- agentctl.Reply{Error: s}
+		}
+	}
 	if msg.err != nil {
+		taskFail("this folder is not in a git repository")
 		return m.pushToastDetail(toast.Info, "No worktree can be made here", "This folder is not in a git repository.")
 	}
-	if m.connectOpen { // another card came first
+	if m.connectOpen || m.confirmOpen && msg.ctl != nil { // another card came first
+		taskFail("termocode is asking something else: try again")
 		return nil
 	}
 	f := msg.f
 	ags := wtNewAgents()
+	if msg.pre != nil {
+		var ok bool
+		if ags, ok = wtTaskAgents(ags, msg.pre.agent); !ok {
+			if msg.pre.agent == "" {
+				taskFail("no coding agent is installed (guides/agents.md)")
+			} else {
+				taskFail(msg.pre.agent + " is not installed (guides/agents.md)")
+			}
+			return nil
+		}
+	}
 	if len(ags) > wtFormAgentsMax {
 		ags = ags[:wtFormAgentsMax]
 	}
 	f.agents = ags
+	if f.pick > len(f.agents) { // a prefill (CMP-32) when no agent is installed
+		f.pick = 0
+	}
+	if msg.pre != nil {
+		wtTaskFill(f, msg.pre)
+		f.ctl = msg.ctl
+	}
 	m.wt.form = f
+	if f.preTask != "" || f.preAgent != "" { // a handoff (worktrees_handoff.go)
+		f.vals = map[string]string{"from": f.from, "task": f.preTask}
+		for i, a := range ags {
+			if a.ID == f.preAgent {
+				f.pick = i + 1
+			}
+		}
+	}
 	m.connect = connectcard.New(m.wtFormCard())
+	f.vals = nil
 	m.connect.SetSize(m.w, m.h)
 	m.connectOpen = true
+	f.vals, f.pick = nil, 0 // a prefill is on the card now
 	return nil
 }
 
@@ -256,16 +319,27 @@ func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 	case strings.TrimSpace(v.issue) != "":
 		ph = "from the issue title"
 	}
+	namePH := "feat/my-change"
+	if t := f.autoTitle(v); t != "" {
+		namePH = t
+	}
 	opts := []string{"none"}
 	for _, a := range f.agents {
 		opts = append(opts, a.Title)
 	}
 	var rows []connectcard.Row
+	if f.asker != "" {
+		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Asked by " + f.asker + ". Check the task, then Create + Start (Cancel makes nothing)."})
+	}
 	if f.parent != "" {
-		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Child of " + f.parentTitle + " (starts from its branch)"})
+		text := "Child of " + f.parentTitle + " (starts from its branch)"
+		if f.parentBranch != "" {
+			text = "Child of " + f.parentTitle + " (stacked: starts from and its PR targets " + f.parentBranch + ")"
+		}
+		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: text})
 	}
 	rows = append(rows, []connectcard.Row{
-		{Kind: connectcard.Input, ID: "name", Text: "Name", Inline: true, Placeholder: "feat/my-change", Value: v.name},
+		{Kind: connectcard.Input, ID: "name", Text: "Name", Inline: true, Placeholder: namePH, Value: v.name},
 		{Kind: connectcard.Input, ID: "issue", Text: "Issue", Inline: true, Placeholder: "optional: number or URL, linked to it", Value: v.issue},
 		{Kind: connectcard.Input, ID: "from", Text: "From", Inline: true, Value: v.from},
 		{Kind: connectcard.Input, ID: "branch", Text: "Branch", Inline: true, Placeholder: ph, Value: v.branch},
@@ -413,6 +487,7 @@ func (m *Model) handleWTFormMsg(msg tea.Msg) (tea.Cmd, bool) {
 func (m *Model) closeWTForm() {
 	m.connectOpen = false
 	if m.wt != nil {
+		m.wt.form.wtTaskReply(agentctl.Reply{Error: "cancelled: the user made nothing"})
 		m.wt.form = nil
 	}
 }
@@ -486,6 +561,8 @@ type wtCreatedMsg struct {
 	start          bool
 	agent          agents.Agent
 	task           string
+	title          string        // the name drafted from the task (CMP-26)
+	from           string        // the start point it was made from
 	link           *ghci.Link    // the linked issue / PR as gh read it
 	linkRef        *ghci.LinkRef // linked without a read (no gh)
 }
@@ -510,7 +587,7 @@ func (m *Model) wtCreate(start bool) tea.Cmd {
 	case refErr != nil:
 		f.fail = "Issue: " + refErr.Error()
 	case branch == "" && !hasRef:
-		f.fail = "Type a name (or a branch)."
+		f.fail = "Type a name, a branch or a task."
 	case v.from == "":
 		f.fail = "Type where it starts from, or pick a start point."
 	}
@@ -531,9 +608,10 @@ func (m *Model) wtCreate(start bool) tea.Cmd {
 	m.refreshWTForm()
 	from := v.from
 	task := v.task
+	title := f.autoTitle(v)
 	run := wtGHRun()
 	return func() tea.Msg {
-		msg := wtCreatedMsg{gen: gen, start: start, agent: ag, task: task}
+		msg := wtCreatedMsg{gen: gen, start: start, agent: ag, task: task, title: title, from: from}
 		if hasRef {
 			l, err := ghci.ViewLink(context.Background(), run, f.root, ref)
 			switch {
@@ -571,6 +649,13 @@ func (m *Model) onWTCreated(msg wtCreatedMsg) tea.Cmd {
 		m.refreshWTForm()
 		return nil
 	}
+	if f.ctl != nil { // a task-start waits for this (CMP-39)
+		rep := agentctl.Reply{OK: true, State: "created", Worktrees: []agentctl.Worktree{{Path: msg.folder, Branch: msg.branch, Kind: "user"}}}
+		if msg.start && msg.agent.ID != "" {
+			rep.State, rep.Worktrees[0].Agent = "started", msg.agent.ID
+		}
+		f.wtTaskReply(rep)
+	}
 	m.closeWTForm()
 	name := strings.TrimSpace(filepath.Base(msg.folder))
 	_ = worktrees.Update(f.common, func(mm map[string]worktrees.Meta) {
@@ -578,11 +663,17 @@ func (m *Model) onWTCreated(msg wtCreatedMsg) tea.Cmd {
 		if md.Name == "" && name != worktreeform.FolderName(msg.branch) {
 			md.Name = name
 		}
+		if md.Name == "" && msg.title != "" {
+			md.Name = msg.title
+		}
 		md.Created, md.LastSeen = clock.Now(), clock.Now()
 		if f.parent != "" {
 			mm[msg.folder] = md
 			_ = worktrees.SetParent(mm, msg.folder, f.parent)
 			md = mm[msg.folder]
+			if f.parentBranch != "" && msg.from == f.parentBranch {
+				md.Base = f.parentBranch // CMP-17: the PR targets the parent
+			}
 		}
 		if msg.start {
 			md.Agent = msg.agent.ID

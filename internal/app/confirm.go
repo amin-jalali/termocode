@@ -171,10 +171,16 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleLayoutConfirm(id); ok { // layout_palette.go
 		return cmd
 	}
+	if cmd, ok := m.handleSpecConfirm(id); ok { // specs_ui.go
+		return cmd
+	}
 	if cmd, ok := m.handleAIConfirm(id); ok { // Group A
 		return cmd
 	}
 	if cmd, ok := m.handleSetupConfirm(id); ok { // setup card: GNOME profile
+		return cmd
+	}
+	if cmd, ok := m.handlePairSyncConfirm(id); ok { // container_pairsync.go
 		return cmd
 	}
 	if cmd, ok := m.handleContainerFilesConfirm(id); ok { // containers_files.go
@@ -208,6 +214,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return cmd
 	}
 	switch m.confirmKind {
+	case confirmKindExplorerMove: // explorer_drag.go
+		return m.answerExplorerMove(id)
 	case confirmKindBulkRename:
 		if id == "apply" {
 			return m.applyBulkRename()
@@ -292,14 +300,20 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onWorkspaceGoneConfirm(id)
 	case confirmKindContainerOffline: // container_workspace.go
 		return m.onContainerOfflineConfirm(id)
+	case confirmKindContainerMirrorClear: // container_lsp.go
+		return m.answerMirrorClear(id)
 	case confirmKindDevContainerTrust: // devcontainer_open.go
 		return m.onDevContainerTrustConfirm(id)
+	case confirmKindDevContainerOffer: // devcontainer_offer.go
+		return m.onDevContainerOfferConfirm(id)
 	case confirmKindCrash:
 		return m.onCrashConfirm(id)
 	case confirmKindNvimExited:
 		return m.onNvimExitedConfirm(id)
 	case confirmKindTransferLarge, confirmKindTransferFallback:
 		return m.onXferConfirm(m.confirmKind, id)
+	case confirmKindContainerWSUpload: // transfer_container.go
+		return m.onContainerWSUploadConfirm(id)
 	}
 	return nil
 }

@@ -42,6 +42,9 @@ type File struct {
 	Name     string // display path
 	Old, New string
 	Tag      string // "new file", "delete" … shown next to the name
+	// Why is the file's place in an explain-first order (CMP-58), shown
+	// dim after the name ("defines Foo, used by bar.go").
+	Why string
 
 	// Commit mode (NewCommit) only.
 	Status   byte   // 'A', 'M', 'D', 'R' (the list's status letter)
@@ -56,7 +59,11 @@ type File struct {
 // change uses index 0). Edit asks the app to open the file afterwards so
 // the user can change it by hand.
 type FinishMsg struct {
-	File     int
+	File int
+	// ID is the file's id (FileID) when the card made the message: the
+	// app finds the file by it, so a reorder between the key and the
+	// message (Reorder) cannot finish the wrong file. 0: use File.
+	ID       int
 	Accepted map[int]bool
 	Edit     bool
 }
@@ -67,6 +74,7 @@ type HideMsg struct{}
 
 type fileState struct {
 	File
+	id      int // FileID: unique in the card, never reused
 	diff    *textdiff.Diff
 	dec     []Decision // per hunk; one entry for an EOL-only change
 	done    bool
@@ -79,6 +87,8 @@ type fileState struct {
 	focus     int // focused hunk
 	// syntax runs per line of Old / New (nil: plain); SetFileSyntax
 	synOld, synNew [][]Tok
+	// notes are the user's comments by change (comments.go, CMP-51)
+	notes map[int]string
 }
 
 // Model is the diff card.
@@ -106,6 +116,9 @@ type Model struct {
 	// ignoreSpace hides whitespace-only changes (w; read-only cards only)
 	ignoreSpace bool
 
+	// nextID numbers the files (fileState.id)
+	nextID int
+
 	// cache of the built display rows of the current file (a pointer:
 	// View runs on value copies)
 	cache *cache
@@ -115,7 +128,7 @@ type Model struct {
 func New(title string, files []File, review bool) Model {
 	m := Model{title: title, review: review, cache: &cache{}}
 	for _, f := range files {
-		m.files = append(m.files, newFileState(f))
+		m.push(newFileState(f))
 	}
 	return m
 }
@@ -142,12 +155,82 @@ func newFileStateOpt(f File, ignoreSpace bool) *fileState {
 // AddFile appends a file (a later proposal of the same review) and
 // returns its index.
 func (m *Model) AddFile(f File) int {
-	m.files = append(m.files, newFileStateOpt(f, m.ignoreSpace))
+	m.push(newFileStateOpt(f, m.ignoreSpace))
 	return len(m.files) - 1
+}
+
+// push appends a file and gives it the next id.
+func (m *Model) push(f *fileState) {
+	m.nextID++
+	f.id = m.nextID
+	m.files = append(m.files, f)
+}
+
+// FileID is the id of file i (0 when there is no file i). Ids stay with
+// their file when the card is reordered.
+func (m Model) FileID(i int) int {
+	if i < 0 || i >= len(m.files) {
+		return 0
+	}
+	return m.files[i].id
+}
+
+// IndexOfID is the index of the file with id (-1 when none).
+func (m Model) IndexOfID(id int) int {
+	for i, f := range m.files {
+		if f.id == id {
+			return i
+		}
+	}
+	return -1
+}
+
+// Reorder puts the files in a new order: perm[k] is the old index of
+// the file shown k-th. The shown file stays shown. A perm that is not a
+// permutation of the files changes nothing and returns false. whys, when
+// not nil, sets each moved file's Why (whys[k] for perm[k]).
+func (m *Model) Reorder(perm []int, whys []string) bool {
+	n := len(m.files)
+	if len(perm) != n || (whys != nil && len(whys) != n) {
+		return false
+	}
+	seen := make([]bool, n)
+	for _, i := range perm {
+		if i < 0 || i >= n || seen[i] {
+			return false
+		}
+		seen[i] = true
+	}
+	cur := m.FileID(m.cur)
+	files := make([]*fileState, n)
+	for k, i := range perm {
+		files[k] = m.files[i]
+		if whys != nil {
+			files[k].Why = whys[k]
+		}
+	}
+	m.files = files
+	if k := m.IndexOfID(cur); k >= 0 {
+		m.cur = k
+	}
+	m.cache.reset()
+	return true
+}
+
+// FileAt returns file i as it was given (with Why), and false when
+// there is no file i.
+func (m Model) FileAt(i int) (File, bool) {
+	if i < 0 || i >= len(m.files) {
+		return File{}, false
+	}
+	return m.files[i].File, true
 }
 
 // SetSize sets the screen size.
 func (m *Model) SetSize(w, h int) { m.w, m.h = w, h }
+
+// Title is the card's title.
+func (m Model) Title() string { return m.title }
 
 // Files is the number of files.
 func (m Model) Files() int { return len(m.files) }
@@ -254,8 +337,8 @@ func (m *Model) finish(acc map[int]bool, edit bool) tea.Cmd {
 	if f == nil || f.done || !m.review {
 		return nil
 	}
-	i := m.cur
-	return func() tea.Msg { return FinishMsg{File: i, Accepted: acc, Edit: edit} }
+	i, id := m.cur, f.id
+	return func() tea.Msg { return FinishMsg{File: i, ID: id, Accepted: acc, Edit: edit} }
 }
 
 // Action runs a named action (keys and buttons share these ids).
@@ -512,6 +595,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.Action("apply")
 	case "e":
 		return m, m.Action("edit")
+	case "c":
+		return m, m.askComment()
+	case "S":
+		return m, m.sendComments()
 	}
 	return m, nil
 }
@@ -574,6 +661,9 @@ func (m *Model) click(id string) tea.Cmd {
 	case scanID(id, "hunk:", &n):
 		m.focusHunk(n)
 		return nil
+	case scanID(id, "note:", &n): // a comment row: edit it (CMP-51)
+		m.focusHunk(n)
+		return m.askComment()
 	}
 	return m.Action(id)
 }
@@ -617,6 +707,8 @@ func (m *Model) toggleIgnoreSpace() {
 		}
 		nf := newFileStateOpt(f.File, m.ignoreSpace)
 		nf.synOld, nf.synNew = f.synOld, f.synNew
+		nf.id = f.id
+		remapNotes(f, nf)
 		m.files[i] = nf
 	}
 	m.cache.reset()

@@ -46,8 +46,14 @@ type webWorkflowsPub struct {
 type webWorkflowsTickMsg struct{}
 
 // webWorkflowCard is the web card of a write gate.
+// A plan approval (a.Plan) is the same card: deny stops the step, allow
+// approves the plan.
 func webWorkflowCard(a *WorkflowWriteAsk, deny, allow webproto.CardChoice) webproto.Card {
-	return webproto.Card{Kind: webproto.CardWorkflow, Title: a.Workflow + " wants to write",
+	if a.Plan {
+		deny.Label, allow.Label = "Stop here", "Approve plan"
+		return webproto.Card{Kind: webproto.CardWorkflow, Title: workflowGateTitle(*a), Body: workflowGateBody(*a), Choices: []webproto.CardChoice{deny, allow}}
+	}
+	return webproto.Card{Kind: webproto.CardWorkflow, Title: workflowGateTitle(*a),
 		Body: workflowGateBody(*a) + "\n\n\"Allow for this workflow\" is on the laptop only.", Choices: []webproto.CardChoice{deny, allow}}
 }
 

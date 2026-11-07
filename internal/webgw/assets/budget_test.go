@@ -25,6 +25,10 @@ const (
 	// worktrees, the data grid, settings, the git commands). Only screens
 	// 1200 px and wider load it, after the page; about 58 KiB today.
 	budgetWorkbench = 80 << 10
+	// budgetHome is the phone's own views (home.js, mobile plan Q4): This
+	// phone (MOBUX-20) and the Home (MOB-4). Only a phone loads it, when
+	// one opens; the desktop never does.
+	budgetHome = 48 << 10
 )
 
 func gzSize(t *testing.T, name string) int {
@@ -45,14 +49,29 @@ func gzSize(t *testing.T, name string) int {
 // JS budget counts both script files.
 func TestPerfGuardBundleSize(t *testing.T) {
 	js, css, html := gzSize(t, "app.js")+gzSize(t, "app-chunk.js"), gzSize(t, "app.css"), gzSize(t, "index.html")
-	wb := gzSize(t, "workbench.js")
+	wb, hm := gzSize(t, "workbench.js"), gzSize(t, "home.js")
 	t.Logf("gzipped: app.js + app-chunk.js %d B, app.css %d B, index.html %d B, total %d B; workbench.js %d B (desktop only)", js, css, html, js+css+html, wb)
 	for _, c := range []struct {
 		name      string
 		got, want int
-	}{{"desk.css", gzSize(t, "desk.css"), budgetDesk}, {"workbench.js", wb, budgetWorkbench}, {"app.js + app-chunk.js", js, budgetJS}, {"app.css", css, budgetCSS}, {"index.html", html, budgetHTML}, {"page total", js + css + html, budgetTotal}} {
+	}{{"desk.css", gzSize(t, "desk.css"), budgetDesk}, {"workbench.js", wb, budgetWorkbench}, {"home.js", hm, budgetHome}, {"app.js + app-chunk.js", js, budgetJS}, {"app.css", css, budgetCSS}, {"index.html", html, budgetHTML}, {"page total", js + css + html, budgetTotal}} {
 		if c.got > c.want {
 			t.Errorf("%s is %d B gzipped, budget %d B", c.name, c.got, c.want)
+		}
+	}
+}
+
+// The phone's Home is home.js alone: within its budget, and the desktop
+// never preloads it (index.html does not name it).
+func TestPerfGuardHomeSize(t *testing.T) {
+	home := gzSize(t, "home.js")
+	t.Logf("gzipped: home.js %d B (phone only)", home)
+	if home > budgetHome {
+		t.Errorf("home.js is %d B gzipped, budget %d B", home, budgetHome)
+	}
+	for _, name := range []string{"index.html", "workbench.js"} {
+		if strings.Contains(readBuilt(t, name), "home.js") {
+			t.Errorf("%s names home.js: only a phone loads it", name)
 		}
 	}
 }
@@ -140,4 +159,17 @@ func readBuilt(t *testing.T, name string) string {
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+// The phone's live board (MOB-18) is in the one phone chunk (home.js,
+// budgetHome; it was its own board.js before the merge): the page's first
+// files never hold its view.
+func TestPerfGuardBoardChunk(t *testing.T) {
+	page := readBuilt(t, "app.js") + readBuilt(t, "app-chunk.js")
+	if strings.Contains(page, "board-cols") {
+		t.Error("the page's first files hold the board's view: it belongs in home.js")
+	}
+	if !strings.Contains(readBuilt(t, "home.js"), "board-cols") {
+		t.Error("home.js does not hold the board's view")
+	}
 }

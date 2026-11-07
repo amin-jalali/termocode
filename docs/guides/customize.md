@@ -8,6 +8,11 @@ Everything is saved in `~/.config/termocode/` (or `$XDG_CONFIG_HOME/termocode/`)
     and starts anyway. Check **Help: Show Error Log** if a change does not
     take effect.
 
+    If `config.json` itself is not valid JSON, termocode starts with the
+    default settings and shows one note with the line of the mistake. It
+    does not change the file and does not show the setup card. Setting
+    changes show an error until you fix it with **Open Config: Theme**.
+
 ## Pick a theme
 
 1. Press `F1` and run **Preferences: Color Theme…**.
@@ -35,6 +40,10 @@ text, debug and test markers, the integrated terminal's colours).
 Your colors are saved in `user_theme.json`, on top of VSCode Dark+. A
 **Custom** entry then appears in the theme list. To edit the file by hand, run
 **Open Config: Theme**.
+
+If you edited `user_theme.json` by hand and it is not valid JSON, your next
+color change still saves. The old file is kept as `user_theme.json.broken`,
+and a note tells you so.
 
 ## Change settings
 
@@ -145,6 +154,27 @@ use [tasks](tasks-problems.md).
 The export holds your config files (settings, theme, keys, snippets,
 commands…). It leaves out session state and **secrets**: API keys, tokens
 and passwords are removed.
+
+## Share a setup with your team
+
+A setup is a named set of your settings that lives in the project, so the
+team can commit it and use it with one command.
+
+1. Run **Preferences: Save Setup to This Project…** and type a name (for
+   example `team`).
+2. A card lists what goes in: settings, keys, snippets, user commands and
+   your custom theme. **Cancel** is first. Pick **Save Setup**.
+3. termocode writes `.termocode/setups/<name>.json`. API keys, tokens and
+   passwords are removed. Check the file, then commit it.
+
+To use a setup, run **Preferences: Use a Project Setup…** and pick it. The
+card lists the files it replaces (**Cancel** is first). termocode saves a
+backup of your settings first. **Use Setup & Reload** applies everything
+at once.
+
+A setup comes from the project. Use it only if you trust its authors:
+user commands in it run shell commands when you pick them. Per-machine
+files (databases, connections, credentials) never go into a setup.
 
 ## Bring your settings from another editor
 

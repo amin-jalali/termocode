@@ -165,6 +165,53 @@ termocode service uninstall
 - `--yes` skips the question; `--dir d` picks another folder.
 - Termux (Android) has no user services; the command says so.
 
+## Sessions in your menu bar
+
+`termocode bar` prints a short summary of all running sessions and the
+agents in their terminal tabs, for a menu bar, tray or status bar. The
+title puts agents that wait for you first:
+
+```
+$ termocode bar
+tc 1 waiting · 1 working
+~/api  attached  claude waiting, codex working
+~/web  detached  no agents
+```
+
+Pick the form your bar tool reads with `--format`:
+
+| Form | For |
+|---|---|
+| `text` (default) | a quick look in a terminal, or any tool that shows the first line |
+| `json` | status-bar modules: one line with `text`, `tooltip`, `class` (`none`, `idle`, `working`, `waiting`) and the `sessions` |
+| `menu` | menu-bar tools that run a script plugin: the title, then per session its agents and an **Attach** item that opens the session in a terminal |
+
+Run it every few seconds from the tool (a 5 s refresh is enough). Example
+for a status-bar module that reads JSON:
+
+```json
+"custom/termocode": {
+  "exec": "termocode bar --format json",
+  "return-type": "json",
+  "interval": 5
+}
+```
+
+For a menu-bar tool with script plugins, save this as an executable
+plugin file named like `termocode.5s.sh`:
+
+```sh
+#!/bin/sh
+exec termocode bar --format menu
+```
+
+- It only reads. Nothing in the menu ends a session; use `termocode kill`
+  in a terminal for that.
+- Agent states come from the hooks (`termocode agent report`), else from
+  the screen. A session that does not answer within 2 s shows "no answer".
+- Only persistent sessions show. A termocode started with `--no-session`
+  is not listed.
+
 ## Start fresh
 
 - **Developer: Reset Session** clears the saved tabs and cursor history of
@@ -222,3 +269,15 @@ name. This also holds for one file or folder renamed with **Rename...**.
 Click **Renamed N files · Undo** to reverse the rename, or run
 **Explorer: Undo Rename**. Undo works while the renamed files are unchanged and
 the old names are free. It covers the last bulk rename in this session.
+
+## Move files by drag and drop
+
+Drag a file or folder in the Files explorer and let go on a folder. Let go on a
+file to move into that file's folder. The folder under the pointer is lit.
+If the row you drag is part of a selection, the whole selection moves.
+A card asks first. Cancel has focus; press Tab to reach Move, or click Move.
+A move never replaces a file: a name that is taken stops it. A folder can not
+move into itself, and a workspace root stays where it is. Let go outside the
+explorer to drop nothing. Open tabs follow the move and keep unsaved text. In a
+git repo, git follows too, as for a rename. Container workspaces move inside
+the container.

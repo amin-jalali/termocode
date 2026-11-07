@@ -154,6 +154,12 @@ A workspace admin may have to approve the app.
 - **Sign out**: forgets the tokens; services that offer it (Atlassian,
   Sentry) are also told to revoke them. For a gh entry gh keeps its own
   login.
+
+**AI: MCP: Signed-in Services…** is one list of every server with a
+stored sign-in, with its account and access. `Enter` on a row asks
+"Sign out of MCP linear?" (Cancel is first and has the focus). With two
+or more there is **Sign out of all…**, which asks once. No token is ever
+shown, and the AI cannot run this command.
 - **Disable** / **Enable**: Disable keeps the entry (it writes
   `"disabled": true`), stops the server and gives the AI none of its
   tools. The row stays in the list, marked `○ ... off`. **Enable** turns

@@ -162,3 +162,29 @@
 .im-key.is-off { color: var(--red); }
 .im-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .im-note { margin: 0 0 4px; font-size: 0.8125rem; opacity: 0.8; }
+
+/* This phone (MOBUX-20): home.js draws it; phone layout only. */
+.phone { display: flex; flex-direction: column; gap: var(--s6); padding-bottom: var(--s6); }
+.phone-laptops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.phone-laptop { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--tap); padding: 0 var(--s3); border: 1px solid var(--border); border-radius: var(--r-card); }
+.phone-laptop-name { font-weight: 600; overflow-wrap: anywhere; }
+.phone-live { color: var(--green); font-size: 0.875rem; }
+.phone-times { display: flex; gap: var(--s3); flex-wrap: wrap; }
+.phone-time { display: flex; flex-direction: column; gap: var(--s1); }
+.phone-time-input { flex: none; min-width: 7.5rem; }
+.phone-line { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; color: var(--text-2); }
+.phone-line.is-error { color: var(--red); }
+.phone-actions { display: flex; flex-direction: column; gap: var(--s3); margin-top: var(--s4); }
+.phone-forget { display: flex; flex-direction: column; gap: var(--s3); }
+.phone-danger { border-top: 1px solid var(--border); padding-top: var(--s4); }
+
+/* New task (CMP-49): a background task on the laptop from the page. */
+.nt-form { display: flex; flex-direction: column; gap: var(--s2, 8px); padding: 12px; }
+.nt-form.is-desk { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.nt-field { display: flex; flex-direction: column; gap: 4px; }
+.nt-label { font-size: 0.8125rem; font-weight: 600; }
+.nt-input input, .nt-sel { width: 100%; min-height: var(--tap, 36px); padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg, transparent); color: inherit; font: inherit; box-sizing: border-box; }
+.nt-form.is-desk .nt-sel { min-height: 26px; }
+.nt-hint, .nt-msg { margin: 0; font-size: 0.8125rem; color: var(--muted); }
+.nt-msg { padding: 12px; }
+.nt-form .choices { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }

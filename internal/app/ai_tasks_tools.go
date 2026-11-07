@@ -652,6 +652,7 @@ func aiTasksTools(root string, call aiIDECaller) []ai.Tool {
 				"wait_ms":     waitParam,
 			},
 			Describe: func(map[string]any) string { return "Read test results" },
+			View:     testsResultsView,
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				return aiTestsResults(ctx, call, root, ai.ArgBool(a, "only_failed"), aiWaitArg(a))
 			},

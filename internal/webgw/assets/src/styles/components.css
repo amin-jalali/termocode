@@ -44,6 +44,10 @@
 .card-body { color: var(--text-2); min-width: 0; }
 .card-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .card-keep { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s2); border-top: 1px solid var(--border); color: var(--text); }
+.card-form { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s2); }
+.card-form .field { display: flex; flex-direction: column; gap: var(--s1); }
+.card-form .field-box { min-height: 44px; width: 100%; }
+.card-form .field-req, .card-form .field-hint { font-size: var(--fs-hint); color: var(--muted); }
 .card-diff { margin-top: var(--s2); max-height: 40dvh; overflow: auto; border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); }
 .card-where { font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--muted); unicode-bidi: isolate; }
 .card-foot { margin-top: var(--s1); }
@@ -58,6 +62,13 @@
   .hint-touch { display: inline; }
 }
 .card.state-answered, .card.state-gone { border-style: dashed; }
+/* Cards inline in the phone's Home (MOB-6): a list in the stream, one
+   card under the other; no swipe there, so no swipe hint; the body opens
+   the sheet with the whole card. */
+.home-cards { display: flex; flex-direction: column; gap: var(--s3); margin: 0; padding: 0; list-style: none; }
+.home-card .card-inline { border-inline-start: 3px solid var(--amber); }
+.home-card .card-inline .card-hint { display: none; }
+.home-card-more { display: block; min-height: var(--tap); padding: var(--s1) 0; text-align: start; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2); }
 
 /* Arming: the risky button fills left to right over 600 ms, then wakes. */
 .arm { position: relative; overflow: hidden; isolation: isolate; }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -18,15 +19,26 @@ import (
 )
 
 // RC-7: "Workspace: Reopen in Dev Container…". termocode makes a
-// container from the project's own devcontainer.json (image or build),
-// after a card that lists every command it will run and where. Only a
-// container termocode makes this way runs the lifecycle commands; an
-// existing one (same name) is only started, the file is not read for it.
+// container from the project's own devcontainer.json (image or build
+// itself; compose or features through the devcontainer CLI), after a
+// card that lists every command it will run and where. Only a container
+// made this way runs the lifecycle commands; an existing one (same name
+// or label) is only started, the file is not read for it.
 
 const confirmKindDevContainerTrust confirmKindEnum = 5419
 
 // devcontainerExec runs the setup steps (tests swap it).
 var devcontainerExec services.Exec = services.SpawnExec{}
+
+// devcontainerLookCLI finds the devcontainer CLI ("" = not installed;
+// tests swap it).
+var devcontainerLookCLI = func() string {
+	p, err := exec.LookPath("devcontainer")
+	if err != nil {
+		return ""
+	}
+	return p
+}
 
 // devcontainerStepTimeout caps one step (a build or npm install can be
 // slow, a hung one must end).
@@ -44,11 +56,15 @@ type devcontainerRun struct {
 	cfg     devcontainer.Config
 }
 
-type devcontainerExistsMsg struct{ exists bool }
+type devcontainerExistsMsg struct {
+	exists bool
+	id     string // the container a label query found (CLI setups)
+}
 
 type devcontainerStepMsg struct {
 	i      int
 	err    error
+	stdout string
 	stderr string
 }
 
@@ -106,16 +122,26 @@ func (m *Model) openDevContainerReopen() tea.Cmd {
 	if err != nil {
 		return m.pushToastDetail(toast.Errr, "devcontainer.json has an error", err.Error())
 	}
-	envText, err := cfg.EnvFileText()
-	if err != nil {
-		return m.pushToastDetail(toast.Errr, "devcontainer.json has an error", err.Error())
-	}
 	engine, _ := m.devcontainerEngine()
-	envFile := ""
-	if envText != "" {
-		envFile = devcontainerEnvPath(devcontainer.ContainerName(root))
+	var setup devcontainer.Setup
+	envText, envFile := "", ""
+	if cfg.NeedsCLI() {
+		// The CLI reads containerEnv itself: no env file here.
+		cli := devcontainerLookCLI()
+		if cli == "" {
+			return m.pushToastDetail(toast.Info, "This dev container needs the devcontainer CLI",
+				"It uses compose or features. Install the CLI (npm install -g @devcontainers/cli), then try again.")
+		}
+		setup, err = cfg.PlanCLISetup(root, cli, engine)
+	} else {
+		if envText, err = cfg.EnvFileText(); err != nil {
+			return m.pushToastDetail(toast.Errr, "devcontainer.json has an error", err.Error())
+		}
+		if envText != "" {
+			envFile = devcontainerEnvPath(devcontainer.ContainerName(root))
+		}
+		setup, err = cfg.PlanSetup(root, file, engine, envFile)
 	}
-	setup, err := cfg.PlanSetup(root, file, engine, envFile)
 	if err != nil {
 		return m.pushToastDetail(toast.Info, "Cannot make this dev container here", err.Error())
 	}
@@ -136,22 +162,38 @@ func (m *Model) openDevContainerReopen() tea.Cmd {
 func devcontainerCardText(cfg devcontainer.Config, s devcontainer.Setup, trusted bool) string {
 	var b strings.Builder
 	what := "image " + cfg.Image
-	if cfg.Kind() == devcontainer.KindBuild {
+	switch cfg.Kind() {
+	case devcontainer.KindBuild:
 		what = "an image built from " + cfg.Dockerfile
-	}
-	fmt.Fprintf(&b, "termocode makes the container %s from %s and opens %s in it.\n", s.Name, what, s.WorkspaceFolder)
-	var cmds []devcontainer.Step
-	for _, st := range append(append([]devcontainer.Step(nil), s.Create...), s.Lifecycle...) {
-		if st.Lifecycle {
-			cmds = append(cmds, st)
+	case devcontainer.KindCompose:
+		what = "the compose file " + strings.Join(cfg.ComposeFiles, ", ")
+		if cfg.Service != "" {
+			what += " (service " + cfg.Service + ")"
 		}
 	}
-	if len(cmds) == 0 {
-		b.WriteString("\nIt runs no setup commands.")
-		return b.String()
+	if s.CLI {
+		fmt.Fprintf(&b, "termocode asks the devcontainer CLI to make the container from %s and opens %s in it.\n", what, s.WorkspaceFolder)
+		if ids := cfg.FeatureIDs(); len(ids) > 0 {
+			b.WriteString("\nFeatures it installs (each runs its own install script in the container):\n")
+			for _, id := range ids {
+				fmt.Fprintf(&b, "• %s\n", id)
+			}
+		}
+	} else {
+		fmt.Fprintf(&b, "termocode makes the container %s from %s and opens %s in it.\n", s.Name, what, s.WorkspaceFolder)
 	}
-	b.WriteString("\nCommands from devcontainer.json it runs:\n")
-	for _, plan := range cfg.Plan() {
+	plans := cfg.Plan()
+	if len(plans) == 0 {
+		if !s.CLI || len(cfg.Features) == 0 {
+			b.WriteString("\nIt runs no setup commands.")
+			return strings.TrimRight(b.String(), "\n")
+		}
+	} else if s.CLI {
+		b.WriteString("\nCommands from devcontainer.json the CLI runs:\n")
+	} else {
+		b.WriteString("\nCommands from devcontainer.json it runs:\n")
+	}
+	for _, plan := range plans {
 		fmt.Fprintf(&b, "• %s on %s: %s\n", plan.Stage, plan.Where(), plan.String())
 	}
 	if trusted {
@@ -181,7 +223,11 @@ func (m *Model) onDevContainerTrustConfirm(id string) tea.Cmd {
 		}
 	}
 	m.devcontainer = run
-	return tea.Batch(m.pushToastDetail(toast.Info, "Making the dev container", run.setup.Name),
+	label := run.setup.Name
+	if run.setup.CLI {
+		label = "with the devcontainer CLI"
+	}
+	return tea.Batch(m.pushToastDetail(toast.Info, "Making the dev container", label),
 		m.devcontainerInspectCmd())
 }
 
@@ -191,10 +237,21 @@ func (m Model) devcontainerInspectCmd() tea.Cmd {
 	if run == nil {
 		return nil
 	}
-	name, engine := run.setup.Name, run.engine
+	name, engine, cli, root := run.setup.Name, run.engine, run.setup.CLI, filepath.Clean(run.root)
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
+		if cli {
+			// The CLI names its containers itself: find ours by label.
+			out, _, code, err := devcontainerExec.Capture(ctx, "", append(append([]string(nil), engine...),
+				"ps", "-a", "-q", "--filter", "label="+devcontainer.Label+"="+root)...)
+			id := ""
+			if err == nil && code == 0 {
+				id, _, _ = strings.Cut(strings.TrimSpace(out), "\n")
+				id = strings.TrimSpace(id)
+			}
+			return devcontainerExistsMsg{exists: id != "", id: id}
+		}
 		_, _, code, err := devcontainerExec.Capture(ctx, "", append(append([]string(nil), engine...), "inspect", "--type", "container", name)...)
 		return devcontainerExistsMsg{exists: err == nil && code == 0}
 	}
@@ -209,6 +266,9 @@ func (m *Model) handleDevContainerMsg(msg tea.Msg) (tea.Cmd, bool) {
 			return nil, true
 		}
 		if msg.exists {
+			if run.setup.CLI {
+				run.setup.Name = msg.id
+			}
 			// Made before: only start it; the file is not run again.
 			eng := append([]string(nil), run.engine...)
 			run.steps = []devcontainer.Step{{Title: "Start the container", Argv: append(eng, "start", run.setup.Name)}}
@@ -217,12 +277,30 @@ func (m *Model) handleDevContainerMsg(msg tea.Msg) (tea.Cmd, bool) {
 		}
 		run.next = 0
 		return m.devcontainerStepCmd(), true
+	case devcontainerOfferMsg:
+		return m.onDevContainerOffer(msg), true
+	case devcontainerOfferClickMsg:
+		return m.openDevContainerOfferCard(msg.root), true
 	case devcontainerStepMsg:
 		run := m.devcontainer
 		if run == nil || msg.i != run.next {
 			return nil, true
 		}
 		st := run.steps[msg.i]
+		if st.Up {
+			// The CLI's JSON result names the container and its folder;
+			// an error outcome says more than the exit code.
+			r, perr := devcontainer.ParseUpResult(msg.stdout)
+			switch {
+			case perr != nil && (msg.err == nil || r.Outcome != ""):
+				msg.err = perr
+			case perr == nil && msg.err == nil:
+				run.setup.Name = r.ContainerID
+				if r.RemoteWorkspaceFolder != "" {
+					run.setup.WorkspaceFolder = r.RemoteWorkspaceFolder
+				}
+			}
+		}
 		if msg.err != nil {
 			m.devcontainer = nil
 			detail := msg.err.Error()
@@ -254,11 +332,14 @@ func (m Model) devcontainerStepCmd() tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), devcontainerStepTimeout)
 		defer cancel()
-		_, stderr, code, err := devcontainerExec.Capture(ctx, st.Dir, st.Argv...)
+		stdout, stderr, code, err := devcontainerExec.Capture(ctx, st.Dir, st.Argv...)
 		if err == nil && code != 0 {
 			err = fmt.Errorf("exited with code %d", code)
 		}
-		return devcontainerStepMsg{i: i, err: err, stderr: stderr}
+		if !st.Up {
+			stdout = "" // only the CLI's result is read
+		}
+		return devcontainerStepMsg{i: i, err: err, stdout: stdout, stderr: stderr}
 	}
 }
 

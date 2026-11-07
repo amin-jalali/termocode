@@ -76,7 +76,7 @@ termocode.
 | **Files** | Browse the workspace, read files, change lines and send them. Each row's **⋯** makes a new file or folder, renames, deletes, downloads a file or uploads into a folder. |
 | **Term** | Watch the terminals and type into them, with a key bar for Esc, Ctrl, Alt and arrows. |
 | **Git** | See changes and diffs, stage and unstage, commit. The **⇅** button pushes, pulls, stashes and switches branch. |
-| **More** | Search, tasks, runs, databases, containers, the MCP server, settings (read only), the theme, text direction and language. |
+| **More** | Search, **New task** (start an agent on the laptop in a new worktree; see [Worktrees](worktrees.md#start-a-new-task-from-the-phone-or-the-page)), tasks, runs, databases, containers, the MCP server, settings (read only), the theme, text direction and language. |
 
 On a phone the tabs are at the bottom. On a wider screen the files and
 the chat sit side by side.
@@ -88,6 +88,12 @@ each change. Clear the boxes of the changes you do not want, then press
 When you change a file in the page, the laptop shows a mark (**▍**) on
 that line with **✎** and your device's name. It moves with your next
 change and goes away after 30 seconds.
+
+You and the laptop can edit one file at the same time. When someone types
+on the laptop while you change other lines in the page, your change still
+lands in the right place. Only when you both changed the same text does
+the page say the file changed on the laptop; your text stays in the page
+to check and send again.
 
 ## Use it from a remote machine: `termocode ssh --web`
 
@@ -111,6 +117,33 @@ your computer to that socket. The link then opens in your browser here.
 - After a reconnect the forward comes back, and the open tab connects
   again by itself.
 - When you leave `termocode ssh`, the forward ends.
+
+## See a dev server in the browser (port preview)
+
+Run **Web: Forward Port…** on the laptop and type the port of a dev
+server on this computer, for example `3000`. A card asks first; **Not
+now** is the first button.
+
+- In `termocode ssh --web` mode, `termocode ssh` on your computer adds
+  one more SSH forward and opens `http://127.0.0.1:<free port>/` in your
+  browser there.
+- In tailnet mode, `tailscale serve` gives the port its own https
+  address on your tailnet (port 8443 and up). Never Funnel, never the
+  internet.
+- When the panel runs on this computer, there is nothing to forward: the
+  browser opens `http://127.0.0.1:<port>/`.
+
+**Web: Forwarded Ports…** lists the open forwards. Press Enter on one to
+stop it.
+
+- You type only a port. The target is always `127.0.0.1` on this
+  computer. There is no host field.
+- The app gets its own address (its own port), never a path under the
+  panel. Its pages cannot open the panel's connection or read its data.
+- Every forward ends when the panel stops, and goes into the panel's
+  audit log (`fwd_open`, `fwd_close`).
+- Only you can start one. AI agents, MCP and project files cannot.
+- The app on that port sees what you type into it.
 
 ## Use it on a phone
 
@@ -219,6 +252,93 @@ they are connected now. Pick one to see it, make it a viewer, or
 **Remove device**. A removed device is disconnected at once and its
 passkey works nowhere; it must pair again to come back.
 
+### Notifications on the phone
+
+A paired phone can hear that something waits for you (a card to
+answer, a plan to approve), even with its screen off. There is no
+cloud of termocode in the way. The laptop sends the push itself, and a
+push carries **no content**: at most a number.
+
+There are three ways. Pick the one that fits your phone:
+
+| Way | Phone | Who carries it | What it carries |
+|---|---|---|---|
+| **Web Push** | iPhone (the page on the Home Screen), Android | the push service of the phone's browser (Apple, Google, Mozilla, Microsoft) | encrypted; inside, a number at most |
+| **UnifiedPush** | Android, with a distributor app or server of your own | your own distributor | the word `wake`, nothing else |
+| **Keep it running** (`web_phone`) | any | nobody | nothing: the open page just stays connected |
+
+- **Web Push.** The laptop signs each push with its own **VAPID** key
+  and encrypts it for that one phone's browser. The push service sees
+  only ciphertext and the time. A push that waits longer than an hour
+  for a phone that is off is dropped: by then, the laptop is the better
+  place to look.
+- **UnifiedPush.** The phone gives the panel the address of its own
+  distributor. When a new card waits and the phone is not connected,
+  the panel posts `wake` to that address, at most once every 30
+  seconds. The phone wakes, connects as usual and reads the card over
+  its own link. The address is kept only while the panel runs; the
+  phone gives it again each time it connects.
+- **Keep it running.** With `"web_phone": "on"` in `config.json`, a
+  paired phone with the panel open keeps the panel from stopping when
+  idle. Guests and the one-time link do not. `web_max_hours` still ends
+  it.
+
+What a Web Push says is set by `web_push_detail` in `config.json`:
+
+| Value | The phone shows |
+|---|---|
+| `none` | "Something needs you" |
+| `count` (default) | how many things wait, such as "2 things need you" |
+| `title` | the number and the kind of the newest one, such as "A plan needs you" |
+
+The kind comes from a short fixed list (tool, MCP, plan, review, trust,
+workflow). The phone shows its own fixed text for it. A push never
+holds a file name, a command, a path or words the AI wrote.
+
+#### What a push can tell
+
+- **On the lock screen:** only the fixed text above. Nothing private.
+- **To the push service or your distributor:** that this phone got a
+  push, and when. With Web Push, how big it was (a few bytes). Not who
+  sent it from where, and not what waits.
+- **To someone who steals the phone:** only the fixed text. To see a
+  card, they still need the phone's passkey or its remembered browser,
+  and a removed device gets no pushes and cannot sign in.
+- **The answer is never in the push.** You answer a card only on the
+  page, after it connects, with the same safe-first rules as always. A
+  push has no buttons that allow or deny anything.
+- **Keys stay on the laptop.** The VAPID private key and each phone's
+  subscription keys live in your
+  [secret store](../reference/config-files.md). They are never sent to a phone,
+  written in a log or shown in an error.
+- **The laptop posts only to push services.** A Web Push address must
+  be an `https` address of a known browser push service. A UnifiedPush
+  address may be your own server, but never this computer, a local
+  link address or a cloud metadata address, and redirects are not
+  followed. The audit log keeps the address's host, never the rest.
+- **Stop it any time:** turn notifications off on the phone, or remove
+  the device in **Web: Devices…**. A push address the service says is
+  gone is dropped at once.
+
+#### UnifiedPush in detail
+
+An Android phone with a UnifiedPush distributor (your own server, or a
+distributor app on the phone) can be woken when a card waits for you.
+No cloud of ours takes part. The phone gives the panel its push address
+when it connects; the address is kept in memory only, until the panel
+stops.
+
+- A wake is sent only when **more** cards wait than before, only to a
+  phone that is **not** connected now, and at most once every 30
+  seconds per phone.
+- The wake says nothing: its whole body is the word `wake`. No count,
+  no title, no card. The phone then connects and shows the cards.
+- Only a paired phone of yours gets wakes, never a shared viewer.
+- The address must be `https`. It may not point at this computer or at
+  a link-local address. Redirects are not followed.
+- The audit log keeps the push host and the result, never the full
+  address.
+
 ### Share with another person
 
 To let someone else watch, run **Web: Share as Viewer…**:
@@ -231,6 +351,50 @@ To let someone else watch, run **Web: Share as Viewer…**:
    same as on your card, pick **Let them watch**.
 4. They save a passkey and can watch. They can never get control. Remove
    them in **Web: Devices…** when you are done.
+
+### Share one AI chat
+
+Run **AI: Share Chat by Link…** to share the chat you have open. A card
+says what they will see. **Cancel** is first. **Make link** opens the
+same viewer link as above, with the chat open.
+
+- They watch the chat live. They see the rest of the panel too, read
+  only.
+- They cannot type into the chat. Under it they get a **Comment** box.
+- A comment comes to you as a toast. Read all of them in
+  **AI: Chat Comments…**.
+- The AI never reads a comment. To use one, pick it in
+  **AI: Chat Comments…** and choose **Add to message**. It goes into the
+  chat input; nothing is sent until you press `Enter`.
+
+### Several projects from one phone
+
+One paired phone reaches **every project on this computer**, not only
+the one whose panel it paired with. That panel is the **door**: you pair
+once, with one role, and the phone sees all your projects through it.
+
+- The **Projects** list on the phone shows the projects this computer
+  knows: recent folders, projects that run now, service folders and
+  agent runs. You cannot add a folder from the phone; open it on the
+  laptop once and it shows up.
+- A project that **already runs** in termocode on the laptop opens on the
+  phone at once. The door joins it on this computer only, through the
+  project's private session socket. Nothing new listens on the network.
+- A project that **does not run** starts only after **a card on the
+  laptop**: *Open shop for the phone?* **Not now** is first. termocode
+  then starts it without a window (headless). The phone can never start
+  a project by itself, and the AI can never open one.
+- At most **4** projects are open at once (`web_projects_max`, up to 8).
+  The phone shows **Projects open now 2 of 4**. One more is turned
+  away; close one first.
+- A project the phone started stops by itself after **60 minutes** with
+  no use from any phone (`web_project_idle_minutes`). Its views and
+  pinned views then say **asleep**, with **Open**. A project you opened
+  yourself on the laptop never stops this way.
+- Each project keeps its own rules. A card, a review or a laptop-only
+  action of one project stays in that project and is answered on the
+  laptop as always.
+- The phone names a project by its id from the list, never by a path.
 
 ### Without Tailscale
 
@@ -272,6 +436,10 @@ In simple words:
   and giving control each need a card on the laptop, with **Not now**
   first. The phone and the card show the same code, so you know which
   phone you let in.
+- **A push says almost nothing.** A notification to a phone holds at
+  most a number (or, if you choose, the kind of card). It comes from the
+  laptop, with no cloud of termocode, and you answer only on the page.
+  See [Notifications on the phone](#notifications-on-the-phone).
 - **Never public.** In tailnet mode the panel refuses to run under
   Tailscale Funnel.
 - **Passwords stay on the laptop.** Git signs in on the laptop. The
@@ -281,6 +449,14 @@ In simple words:
 - **The AI cannot open the door.** The AI can never start the panel,
   pair a device, give control or change its settings. It cannot run or
   type `termocode web` either.
+- **One door, your own projects.** A paired phone reaches only the
+  projects of your own user on this computer, by id from the Projects
+  list, never by a path. The door joins running projects through their
+  private session sockets (open only to your user), so nothing new
+  listens on the network. A project that is not running starts only
+  after your yes on a card on the laptop, and stops again when no phone
+  uses it. The AI cannot open a project, and a project's files cannot
+  raise the limits.
 - **A record.** termocode keeps an audit log of web starts, stops and
   logins in its config folder (`web-audit.jsonl`).
 
@@ -325,6 +501,8 @@ issue.
 - No access from another computer on your network, other than through
   SSH or your own tailnet.
 - At most 32 paired devices.
+- At most **4** projects open at once from a phone (`web_projects_max`,
+  up to 8).
 
 ## Settings
 
@@ -336,8 +514,13 @@ issue.
 | `web_max_hours` | `12` | Stop this many hours after the start (1..24). |
 | `web_open_browser` | `true` | Open the link in this computer's browser on start. |
 | `web_max_viewers` | `4` | Browsers at once (1..8). |
+| `web_push_detail` | `count` | What a phone push says: `none`, `count` or `title` (a fixed text per kind). |
 | `web_listen` | `loopback` | `tailnet`: also reach it from your tailnet devices. |
 | `web_require_totp` | `false` | A paired device also types a code from an authenticator app. |
+| `web_app_key_login` | `false` | The Android app may pair and sign in with its own keystore key (when passkeys fail in the app). |
+| `web_phone` | `off` | `on`: a paired phone with the panel open keeps it running, screen off too (not guests). `web_max_hours` still applies. |
+| `web_projects_max` | `4` | Projects a phone may have open at once (1..8). |
+| `web_project_idle_minutes` | `60` | A project the phone started stops after this many idle minutes (5..240). |
 
 These settings live only in your own `config.json`. A project's settings
 cannot change them.
@@ -383,6 +566,15 @@ cannot change them.
 
 **"Tailscale Serve already uses port 443 on this computer"**
 :   Something else is served on port 443. See `tailscale serve status`.
+
+**"Projects open now 4 of 4"**
+:   The phone has as many projects open as `web_projects_max` allows.
+    Close one on the phone, or raise `web_projects_max`.
+
+**A project says "asleep"**
+:   The project the phone started had no use for
+    `web_project_idle_minutes`, so it stopped. Tap **Open** and say yes
+    on the laptop's card.
 
 **"This device was removed"**
 :   The device was removed on the laptop. Pair it again.

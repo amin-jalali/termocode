@@ -6,6 +6,8 @@ package webproto
 // choices a card lists without needs_laptop: never "Always allow", never
 // a trust choice (trust cards are read-only), never an edit.
 
+import "github.com/amin-jalali/termocode/internal/blocks"
+
 func init() {
 	registerTopic("cards", CardsSnap{}, CardsDelta{})
 	registerEvent(EventAnswered, Answered{})
@@ -31,6 +33,14 @@ const (
 	ChoiceReject  = "reject"
 	ChoiceCancel  = "cancel"  // a laptop card's safe answer
 	ChoiceConfirm = "confirm" // a laptop card's action: the laptop only
+	ChoiceSend    = "send"    // a card with a form: send the answers (CardsAnswerArgs.Form)
+)
+
+// A card's form (MOB-12): at most MaxCardForm answers of at most
+// MaxCardFormValue bytes each.
+const (
+	MaxCardForm      = 20
+	MaxCardFormValue = 1000
 )
 
 // MaxCardDiff caps the text of a review card's diff rows; more is cut and
@@ -58,6 +68,9 @@ type Card struct {
 	ReadOnly bool         `json:"read_only,omitempty"` // answer it on the laptop
 	File     string       `json:"file,omitempty"`      // review: the file (workspace-relative)
 	Diff     *CardDiff    `json:"diff,omitempty"`      // review
+	// Form: an MCP server's question the phone may answer (MOB-12):
+	// plain fields only, never a secret one; sent back with ChoiceSend.
+	Form []blocks.BlockFormField `json:"form,omitempty"`
 }
 
 // CardChoice is one answer of a card.

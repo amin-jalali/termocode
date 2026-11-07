@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/jsonc"
+	"github.com/amin-jalali/termocode/internal/workflow/score"
 )
 
 // Parse reads and checks one workflow file. path is used in messages
@@ -138,6 +139,7 @@ func (c *checker) parse(p string, data []byte) *File {
 	f.Title = o.str("title")
 	f.Description = o.str("description")
 	f.Schedule = c.schedule(o)
+	f.Triggers = c.triggers(o)
 	f.Vars = c.vars(o)
 	f.Limits = c.limits(o)
 	if r := c.retries(o, "retries"); r != nil {
@@ -168,7 +170,7 @@ func (c *checker) parse(p string, data []byte) *File {
 	return f
 }
 
-var topKeys = []string{"$schema", "version", "name", "title", "description", "schedule", "vars", "limits", "retries", "on_error", "notify", "resume_on_start", "steps"}
+var topKeys = []string{"$schema", "version", "name", "title", "description", "schedule", "on", "vars", "limits", "retries", "on_error", "notify", "resume_on_start", "steps"}
 
 func (c *checker) schedule(o *obj) *Schedule {
 	n := o.get("schedule")
@@ -204,6 +206,92 @@ func (c *checker) schedule(o *obj) *Schedule {
 	so.finish([]string{"preset", "time", "cron", "tz", "precheck"})
 	return s
 }
+
+var triggerKeys = []string{"github", "webhook", "from", "repo", "labels", "text", "branch", "ask", "worktree", "base"}
+
+// triggers reads "on": a list of GitHub and webhook triggers.
+func (c *checker) triggers(o *obj) []Trigger {
+	n := o.get("on")
+	if n == nil {
+		return nil
+	}
+	if n.kind != kArray {
+		c.errAt(n.off, "on", "must be a list of triggers, like [{\"github\": \"issue_labeled\", \"labels\": [\"agent\"]}]")
+		return nil
+	}
+	if len(n.vals) > MaxTriggers {
+		c.errAt(n.off, "on", "has %d triggers; the most is %d", len(n.vals), MaxTriggers)
+		return nil
+	}
+	var out []Trigger
+	hooks := map[string]bool{}
+	for i, v := range n.vals {
+		where := fmt.Sprintf("on[%d]", i)
+		to := c.object(v, where)
+		if to == nil {
+			continue
+		}
+		t := Trigger{Line: c.line(v.off), Ask: true}
+		t.GitHub = to.enum("github", "", GitHubEvents...)
+		t.Webhook = to.str("webhook")
+		t.From = to.enum("from", "", WebhookFroms...)
+		t.Repo = to.str("repo")
+		t.Labels = to.strList("labels")
+		t.Text = to.str("text")
+		t.Branch = to.str("branch")
+		if to.get("ask") != nil {
+			t.Ask = to.boolean("ask")
+		}
+		t.Worktree = to.boolean("worktree")
+		t.Base = to.str("base")
+		gh, wh := to.get("github") != nil, to.get("webhook") != nil
+		switch {
+		case !gh && !wh:
+			c.errAt(v.off, where, `needs "github" (%s) or "webhook" (a name)`, strings.Join(GitHubEvents, ", "))
+		case gh && wh:
+			c.errAt(v.off, where, `has both "github" and "webhook"; keep one`)
+		case wh:
+			if !idRe.MatchString(t.Webhook) {
+				c.errAt(to.off("webhook"), where+".webhook", "use a-z, 0-9, _ and -, starting with a letter, at most 40 characters")
+			} else if hooks[t.Webhook] {
+				c.errAt(to.off("webhook"), where+".webhook", "%s is used twice in this file", quote(t.Webhook))
+			}
+			hooks[t.Webhook] = true
+			if t.From == "" {
+				t.From = "generic"
+			}
+			for _, k := range []string{"repo", "labels", "text", "branch"} {
+				if to.get(k) != nil {
+					c.warnAt(to.off(k), where+"."+k, "is for github triggers; a webhook ignores it")
+				}
+			}
+		default:
+			if to.get("from") != nil {
+				c.warnAt(to.off("from"), where+".from", "is for webhook triggers; a github trigger ignores it")
+			}
+			if t.Repo != "" && !triggerRepoRe.MatchString(t.Repo) {
+				c.errAt(to.off("repo"), where+".repo", `must be "owner/name"`)
+			}
+			if t.GitHub == "issue_labeled" && len(t.Labels) == 0 {
+				c.errAt(v.off, where, `issue_labeled needs "labels": the labels that start the workflow`)
+			}
+			if t.GitHub == "mention" && t.Text == "" {
+				t.Text = "@termocode"
+			}
+		}
+		if strings.HasPrefix(t.Base, "-") {
+			c.errAt(to.off("base"), where+".base", "must be a branch, tag or commit, not an option")
+		}
+		if t.Base != "" && !t.Worktree {
+			c.warnAt(to.off("base"), where+".base", `is used only with "worktree": true`)
+		}
+		to.finish(triggerKeys)
+		out = append(out, t)
+	}
+	return out
+}
+
+var triggerRepoRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9._-]{1,100}$`)
 
 func (c *checker) vars(o *obj) map[string]any {
 	n := o.get("vars")
@@ -289,9 +377,15 @@ func (c *checker) notify(o *obj, f *File) []string {
 	return list
 }
 
-// checkRefs: steps.<id> in an each's items must name a step.
+// checkRefs: steps.<id> in an each's items, and a handoff, must name a
+// step.
 func (c *checker) checkRefs(f *File) {
 	Walk(f.Steps, func(s *Step) bool {
+		if s.Handoff != "" && s.Handoff != s.ID {
+			if _, known := c.ids[s.Handoff]; !known {
+				c.errs = append(c.errs, Problem{Line: s.Line, Where: "step " + quote(s.ID) + ".handoff", Msg: fmt.Sprintf("no step has the id %s", quote(s.Handoff))})
+			}
+		}
 		if s.Each == nil {
 			return true
 		}
@@ -307,7 +401,7 @@ func (c *checker) checkRefs(f *File) {
 
 // ── steps ───────────────────────────────────────────────────────────────
 
-var commonStepKeys = []string{"id", "type", "title", "when", "else", "retries", "timeout", "on_error"}
+var commonStepKeys = []string{"id", "type", "title", "when", "else", "retries", "timeout", "on_error", "handoff"}
 
 func (c *checker) stepList(n *node, where string, eachDepth, maxItems int) []Step {
 	out := make([]Step, 0, len(n.vals))
@@ -370,6 +464,14 @@ func (c *checker) step(n *node, where string, eachDepth, maxItems int) (Step, bo
 	s.Retries = c.retries(o, "retries")
 	s.Timeout = o.dur("timeout")
 	s.OnError = o.enum("on_error", "", OnErrorContinue, OnErrorStop)
+	s.Handoff = o.str("handoff")
+	switch {
+	case s.Handoff == "":
+	case s.Type != TypeAI && s.Type != TypeAgent && s.Type != TypePipeline:
+		c.errAt(o.off("handoff"), where+".handoff", `"handoff" is only for ai, agent and pipeline steps`)
+	case s.Handoff == s.ID:
+		c.errAt(o.off("handoff"), where+".handoff", "a step cannot hand off to itself")
+	}
 	if en := o.get("else"); en != nil {
 		if en.kind != kArray {
 			c.errAt(en.off, where+".else", "must be a list of steps")
@@ -385,7 +487,8 @@ func (c *checker) step(n *node, where string, eachDepth, maxItems int) (Step, bo
 		s.Plan = &PlanSpec{Profile: o.str("profile"), Model: o.str("model")}
 		s.Plan.Prompt, s.Plan.PromptFile = o.prompt()
 		s.Plan.Output = o.strMap("output")
-		keys = []string{"profile", "model", "prompt", "prompt_file", "output"}
+		s.Plan.Approve = o.boolean("approve")
+		keys = []string{"profile", "model", "prompt", "prompt_file", "output", "approve"}
 	case TypeFilter:
 		s.Filter = &FilterSpec{Sort: o.expr("sort"), Take: o.intIn("take", 0, MaxItemsCap, 0), Dedupe: o.expr("dedupe")}
 		if s.When == "" && s.Filter.Dedupe == "" && s.Filter.Take == 0 {
@@ -439,8 +542,16 @@ func (c *checker) step(n *node, where string, eachDepth, maxItems int) (Step, bo
 		}
 		s.Shell = sh
 		keys = []string{"argv", "cwd", "env"}
+	case TypeScore:
+		s.Score, keys = c.score(o, n, where)
 	case TypeWrite:
 		s.Write, keys = c.write(o, n, where)
+	case TypeLoop:
+		s.Loop, keys = c.loop(o, n, where, eachDepth, maxItems)
+	case TypeBranch:
+		s.Branch, keys = c.branch(o, n, where, eachDepth, maxItems)
+	case TypeWait:
+		s.Wait, keys = c.wait(o, n, where)
 	}
 	o.finish(append(append([]string(nil), commonStepKeys...), keys...))
 	return s, true
@@ -520,6 +631,147 @@ func (c *checker) each(o *obj, n *node, where string, depth, maxItems int) (*Eac
 		}
 	}
 	return e, []string{"items", "parallel", "worktree", "base", "cleanup", "steps"}
+}
+
+// score reads a score step (CMP-23): "checks" (each with "name" and one
+// of "test" / "value", maybe "max" and "weight"), "pass" and "must_pass".
+func (c *checker) score(o *obj, n *node, where string) (*ScoreSpec, []string) {
+	sp := &ScoreSpec{Pass: score.DefaultPass, MustPass: o.boolean("must_pass")}
+	if _, _, ok := o.number("pass"); ok {
+		sp.Pass = o.num("pass", 0, 1)
+	}
+	cn := o.get("checks")
+	switch {
+	case cn == nil:
+		o.missing("checks")
+	case cn.kind != kArray || len(cn.vals) == 0:
+		c.errAt(cn.off, where+".checks", "must be a list with at least one check")
+	case len(cn.vals) > MaxScoreChecks:
+		c.errAt(cn.off, where+".checks", "has %d checks; the most is %d", len(cn.vals), MaxScoreChecks)
+	default:
+		names := map[string]bool{}
+		for i, en := range cn.vals {
+			w := fmt.Sprintf("%s.checks[%d]", where, i)
+			co := c.object(en, w)
+			if co == nil {
+				continue
+			}
+			ck := ScoreCheck{Name: co.req("name"), Test: co.expr("test"), Value: co.expr("value"), Max: 1, Weight: 1, Line: c.line(en.off)}
+			if _, _, ok := co.number("weight"); ok {
+				ck.Weight = co.num("weight", 0.01, 100)
+			}
+			if _, _, ok := co.number("max"); ok {
+				if ck.Max = co.num("max", 0.001, 1e9); ck.Max == 0 {
+					ck.Max = 1
+				}
+				if co.get("value") == nil {
+					c.errAt(co.off("max"), w+".max", `"max" is only for a "value" check`)
+				}
+			}
+			switch {
+			case co.get("test") != nil && co.get("value") != nil:
+				c.errAt(en.off, w, `has both "test" and "value"; keep one`)
+			case co.get("test") == nil && co.get("value") == nil:
+				c.errAt(en.off, w, `needs "test" (true or false) or "value" (a number from 0 to 1)`)
+			}
+			if ck.Name != "" {
+				if names[ck.Name] {
+					c.errAt(co.off("name"), w+".name", "%s is already the name of a check", quote(ck.Name))
+				}
+				names[ck.Name] = true
+			}
+			co.finish([]string{"name", "test", "value", "max", "weight"})
+			sp.Checks = append(sp.Checks, ck)
+		}
+	}
+	return sp, []string{"checks", "pass", "must_pass"}
+}
+
+// nested checks the depth of a loop or a branch (each, loop and branch
+// count together).
+func (c *checker) nested(n *node, where, what string, depth int) bool {
+	if depth+1 > MaxEachDepth {
+		c.errAt(n.off, where, "%s is nested %d deep; the most is %d", what, depth+1, MaxEachDepth)
+		return false
+	}
+	return true
+}
+
+// subSteps reads the "steps" list of o (a loop, or one branch).
+func (c *checker) subSteps(o *obj, where string, depth, maxItems int, deepOK bool) []Step {
+	sn := o.get("steps")
+	switch {
+	case sn == nil:
+		o.missing("steps")
+	case sn.kind != kArray || len(sn.vals) == 0:
+		c.errAt(sn.off, where+".steps", "must be a list with at least one step")
+	case deepOK:
+		return c.stepList(sn, where+".steps", depth+1, maxItems)
+	}
+	return nil
+}
+
+func (c *checker) loop(o *obj, n *node, where string, depth, maxItems int) (*LoopSpec, []string) {
+	l := &LoopSpec{Max: o.intIn("max", 1, MaxLoopRounds, 0), Until: o.expr("until"), BudgetUSD: o.num("budget_usd", 0, 1e6)}
+	if o.get("max") == nil {
+		o.missing("max")
+	}
+	ok := c.nested(n, where, "loop", depth)
+	l.Steps = c.subSteps(o, where, depth, maxItems, ok)
+	return l, []string{"max", "until", "budget_usd", "steps"}
+}
+
+func (c *checker) branch(o *obj, n *node, where string, depth, maxItems int) (*BranchSpec, []string) {
+	b := &BranchSpec{Join: o.enum("join", JoinAll, JoinAll, JoinAny)}
+	ok := c.nested(n, where, "branch", depth)
+	bn := o.get("branches")
+	switch {
+	case bn == nil:
+		o.missing("branches")
+	case bn.kind != kArray:
+		c.errAt(bn.off, where+".branches", `must be a list of { "name": …, "steps": [ … ] }`)
+	default:
+		if len(bn.vals) < MinBranches || len(bn.vals) > MaxBranches {
+			c.errAt(bn.off, where+".branches", "needs %d to %d branches; it has %d", MinBranches, MaxBranches, len(bn.vals))
+		}
+		names := map[string]bool{}
+		for i, v := range bn.vals {
+			w := fmt.Sprintf("%s.branches[%d]", where, i)
+			bo := c.object(v, w)
+			if bo == nil {
+				continue
+			}
+			br := Branch{Name: bo.req("name")}
+			switch {
+			case br.Name == "":
+			case !idRe.MatchString(br.Name):
+				c.errAt(bo.off("name"), w+".name", "use a-z, 0-9, _ and -, starting with a letter, at most 40 characters")
+			case names[br.Name]:
+				c.errAt(bo.off("name"), w+".name", "%s is already the name of a branch in this step", quote(br.Name))
+			default:
+				names[br.Name] = true
+			}
+			br.Steps = c.subSteps(bo, w, depth, maxItems, ok)
+			bo.finish([]string{"name", "steps"})
+			b.Branches = append(b.Branches, br)
+		}
+	}
+	return b, []string{"join", "branches"}
+}
+
+func (c *checker) wait(o *obj, n *node, where string) (*WaitSpec, []string) {
+	w := &WaitSpec{For: o.enum("for", "", WaitFors...), PR: o.req("pr"), Every: o.dur("every")}
+	if o.get("for") == nil {
+		c.errAt(n.off, where, `"for" is missing; use one of: %s`, strings.Join(WaitFors, ", "))
+	}
+	switch {
+	case w.Every == 0:
+		w.Every = DefaultWaitEvery
+	case w.Every < MinWaitEvery:
+		c.errAt(o.off("every"), o.at("every"), "must be at least %s", MinWaitEvery)
+		w.Every = DefaultWaitEvery
+	}
+	return w, []string{"for", "pr", "every"}
 }
 
 func (c *checker) tools(o *obj) *ToolRules {

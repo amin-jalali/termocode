@@ -86,6 +86,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil // only draws (see frameGate)
 	}
 	m.noteGitActivity(msg)
+	m.noteRecapInput(msg) // session_recap.go
 	m.liveSettingsOnMsg(msg, time.Now())
 	switch msg.(type) {
 	case tea.FocusMsg, tea.BlurMsg:
@@ -106,7 +107,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.afterUpdateAnim(prevKind)
 	}
 	if tc, ok := msg.(TerminalChangedMsg); ok {
-		return m, m.applyTerminalChange(tc)
+		return m, tea.Batch(m.applyTerminalChange(tc), m.recapOnAttach()) // session_recap.go
 	}
 	if c, ok := m.handleXferMsg(msg); ok {
 		return m, c
@@ -120,10 +121,16 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleKubeMsg(msg); ok { // kube_state.go
 		return m, c
 	}
+	if c, ok := m.handleDevPreviewMsg(msg); ok { // devpreview_ui.go
+		return m, c
+	}
 	if c, ok := m.handleWTMsg(msg); ok { // worktrees_state.go
 		return m, c
 	}
 	if c, ok := m.handleContainerWSMsg(msg); ok { // container_workspace.go
+		return m, c
+	}
+	if c, ok := m.handleContainerLSPMsg(msg); ok { // container_lsp.go
 		return m, c
 	}
 	if c, ok := m.handleDevContainerMsg(msg); ok { // devcontainer_open.go
@@ -314,6 +321,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBKeepAlive(msg)
 	case dbPingDoneMsg:
 		return m, m.onDBPingDone(msg)
+	case sessionRecapClickMsg: // session_recap.go
+		return m, m.openSessionRecap()
 	case dbReconnectMsg:
 		return m, m.onDBReconnect(msg)
 	case dbToolDoneMsg:
@@ -565,6 +574,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			m.databases.console.pending = nil
 		}
 		m.databaseTransferClosed()
+		if m.confirmKind == confirmKindContainerWSUpload { // transfer_container.go: Esc = Cancel
+			m.onContainerWSUploadConfirm("cancel")
+		}
 		if m.nvimDead {
 			// Esc: the editor is gone, so the question stays.
 			m.promptNvimExited()
@@ -1754,7 +1766,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+shift+v":
 			m.terminalPasteFromClipboard()
-			return m, nil
+			return m, m.aiTermNoteUserKey() // pasting is typing: it takes the tab over from the AI
 		case "ctrl+shift+c":
 			lines := m.terminalCopyToClipboard()
 			if lines <= 0 {
@@ -1771,9 +1783,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	}
 
 	if m.inTerminal && shouldPassToTerminal(msg) && !m.skipsShell(msg) {
+		driveCmd := m.aiTermNoteUserKey() // typing in a tab the AI drives takes it over (CMP-67)
 		var cmd tea.Cmd
 		m.editor, cmd = m.editor.Update(msg)
-		return m, cmd
+		return m, tea.Batch(cmd, driveCmd)
 	}
 
 	// Bottom panel: a focused non-terminal tab (Output, Problems, …) gets
@@ -2507,8 +2520,18 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.openWorkspace(msg.ID)
 	case pickerKindWorktreeJump: // worktrees_jump.go
 		return m.onWorktreeJumpPicked(msg.ID)
+	case pickerKindAgentBoard: // agent_board.go (CMP-2)
+		return m.onAgentBoardPicked(msg.ID)
+	case pickerKindWTUnpack: // worktrees_move.go
+		return m.onWTUnpackPicked(msg.ID)
+	case pickerKindWTSessions: // worktrees_sessions.go
+		return m.onWTSessionPicked(msg.ID)
+	case pickerKindWTSessionAgent: // worktrees_sessions.go
+		return m.onWTSessionAgentPicked(msg.ID)
 	case pickerKindWTCleanup: // worktrees_cleanup.go: a row ticks, the first row goes on
 		return m.onWTCleanupPicked(msg.ID)
+	case pickerKindSpecOpen: // specs_ui.go
+		return m.openSpecCard(msg.ID)
 	case pickerKindWTRef: // worktrees_new.go: back to the dialog with the start point
 		m.reopenWTForm(msg.ID)
 		return nil
@@ -2582,6 +2605,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onRegistryPicked(msg.ID)
 	case pickerKindLayoutOpen: // layout_palette.go
 		return m.onLayoutOpenPicked(msg.ID)
+	case pickerKindContainerLSPWhere: // container_lsp.go
+		return m.onContainerLSPWherePicked(msg.ID)
 	case pickerKindLayoutDelete: // layout_delete.go
 		return m.onLayoutDeletePicked(msg.ID)
 	case pickerKindSecretStore: // secrets_store_ui.go

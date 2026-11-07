@@ -7,6 +7,7 @@ import { signal } from "@preact/signals";
 import { keepIssuedToken, postJSON, type Reply } from "../net/auth";
 import { keepDeviceKey, useDeviceKey } from "../net/devicekey";
 import { passkeysHere, usePasskey } from "../net/passkey";
+import { appKeyLogin, inApp } from "../net/appkey";
 import { t, type StringKey } from "../strings";
 import { Button } from "./Button";
 import { RememberBox, remember } from "./RememberBox";
@@ -63,8 +64,28 @@ export async function signInWithBookmark(onDone: Done): Promise<boolean> {
   return false;
 }
 
+/** after handles a refused or good sign-in reply (passkey or app key). */
+function after(r: Reply, onDone: Done): void {
+  if (done(r, onDone) || askCode(r)) return;
+  const e = r.data.error;
+  state.value = e === "removed" ? "removed" : e === "clone_suspected" ? "clone" : e === "expired" ? "expired" : "failed";
+}
+
 async function signIn(onDone: Done) {
   state.value = "busy";
+  if (inApp()) {
+    // MOB-27: the app's key first; null (off on the laptop, cancelled)
+    // falls back to the passkey.
+    const a = await appKeyLogin();
+    if (a !== null) {
+      after(a, onDone);
+      return;
+    }
+    if (!passkeysHere()) {
+      state.value = "ready";
+      return;
+    }
+  }
   const start = await postJSON("/login/start", {});
   if (start.status !== 200 || typeof start.data.login_id !== "string") {
     state.value = "failed";
@@ -78,9 +99,7 @@ async function signIn(onDone: Done) {
     return;
   }
   const r = await postJSON("/login/finish", { login_id: start.data.login_id, credential, remember: remember.value });
-  if (done(r, onDone) || askCode(r)) return;
-  const e = r.data.error;
-  state.value = e === "removed" ? "removed" : e === "clone_suspected" ? "clone" : e === "expired" ? "expired" : "failed";
+  after(r, onDone);
 }
 
 /** sendCode sends the authenticator app's code with the ticket. */
@@ -140,7 +159,7 @@ export function SignInScreen({ onDone }: { onDone: Done }) {
           {t(err ?? (s === "bookmark" ? "signin.bookmark" : "signin.body_hint"))}
         </p>
       </div>
-      {s !== "removed" && s !== "clone" && passkeysHere() && (
+      {s !== "removed" && s !== "clone" && (passkeysHere() || inApp()) && (
         <div class="connect-foot">
           <RememberBox />
           <Button kind="primary" wide autoFocus disabled={s === "busy" || s === "bookmark"} onClick={() => void signIn(onDone)}>

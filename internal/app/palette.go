@@ -202,9 +202,12 @@ func paletteItems() []picker.Item {
 		{ID: "terminal-prev-tab", Title: "Terminal: Previous Tab", Hint: "Ctrl+Shift+PgUp"},
 		{ID: "terminal-maximize", Title: "Terminal: Maximize Panel"},
 		{ID: "terminal-minimize", Title: "Terminal: Minimize Panel"},
+		{ID: "terminal-ai-take-over", Title: "Terminal: Take Over from the AI"},
+		{ID: "terminal-ai-hand-back", Title: aiTermHandBackTitle},
 		// Bottom panel tabs (panel.go / output.go).
 		{ID: "view-output", Title: "View: Output"},
 		{ID: "output-clear", Title: "Output: Clear Channel"},
+		{ID: auditSavePaletteID, Title: "Output: Save Audit Log"}, // audit_save.go
 		{ID: "quick-open", Title: "Go to File...", Hint: "Ctrl+P"},
 		{ID: "duplicate-line", Title: "Edit: Duplicate Line", Hint: "Shift+Alt+Down"},
 		{ID: "toggle-comment", Title: "Edit: Toggle Line Comment", Hint: "Ctrl+/"},
@@ -343,6 +346,7 @@ func paletteItems() []picker.Item {
 		{ID: "zen-mode", Title: "View: Toggle Zen Mode", Hint: "Alt+Z"},
 		{ID: "reload-window", Title: "Developer: Reload Window"},
 		{ID: "detach-session", Title: "Session: Detach"},
+		{ID: "session-recap", Title: "Session: Show Recap (While You Were Away)"}, // session_recap.go
 		{ID: "reset-session", Title: "Developer: Reset Session (clears tabs / cursor history)"},
 		{ID: "toggle-auto-save", Title: "File: Toggle Auto Save"},
 		{ID: "next-hunk", Title: "Git: Go to Next Change", Hint: "Alt+]"},
@@ -440,22 +444,32 @@ func paletteItems() []picker.Item {
 	items = append(items, servicesPaletteItems()...)  // services_actions.go
 	items = append(items, kubePaletteItems()...)      // kube_actions.go
 	items = append(items, worktreePaletteItems()...)  // worktrees_keys.go
+	items = append(items, canvasPaletteItems()...)    // CMP-92: the shared plan (canvas_ui.go)
+	items = append(items, specPaletteItems()...)      // specs_ui.go
 	items = append(items, databasesPaletteItems()...) // DB-3
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
 	items = append(items, secretsPaletteItems()...)   // secret store (secrets_ui.go)
 	items = append(items, mcpImportOtherPaletteItems()...)
-	items = append(items, mcpServePaletteItems()...)  // termocode as an MCP server (mcp_serve_status.go)
-	items = append(items, webPaletteItems()...)       // the web panel (web_tui.go)
-	items = append(items, webAccessPaletteItems()...) // pairing and devices (web_access.go)
-	items = append(items, itermocPaletteItems()...)   // the Itermoc view (itermoc_actions.go)
-	items = append(items, workflowsPaletteItems()...) // WFX-7 (workflows_keys.go)
-	items = append(items, ciPaletteItems()...)        // G-CI (ci_card.go)
-	items = append(items, layoutPaletteItems()...)    // G-LAY (layout_palette.go)
-	items = append(items, updatePaletteItems()...)    // G-UPD (update_palette.go)
-	items = append(items, prPaletteItems()...)        // G-PR (pr_list.go)
-	items = append(items, termPanePaletteItems()...)  // terminal splits (terminal_split.go)
-	items = append(items, gitxPaletteItems()...)      // GITX features (gitx_hub.go)
+	items = append(items, devPreviewPaletteItems()...)
+	items = append(items, mcpServePaletteItems()...)   // termocode as an MCP server (mcp_serve_status.go)
+	items = append(items, webPaletteItems()...)        // the web panel (web_tui.go)
+	items = append(items, webAccessPaletteItems()...)  // pairing and devices (web_access.go)
+	items = append(items, webForwardPaletteItems()...) // port preview (web_forward.go)
+	items = append(items, itermocPaletteItems()...)    // the Itermoc view (itermoc_actions.go)
+	items = append(items, workflowsPaletteItems()...)  // WFX-7 (workflows_keys.go)
+	items = append(items, bugspecPaletteItems()...)    // CMP-79 (bugspec_ui.go)
+	items = append(items, ciPaletteItems()...)         // G-CI (ci_card.go)
+	items = append(items, acpPaletteItems()...)        // CMP-83 (acp_thread.go)
+	items = append(items, layoutPaletteItems()...)     // G-LAY (layout_palette.go)
+	items = append(items, updatePaletteItems()...)     // G-UPD (update_palette.go)
+	items = append(items, prPaletteItems()...)         // G-PR (pr_list.go)
+	items = append(items, termPanePaletteItems()...)   // terminal splits (terminal_split.go)
+	items = append(items, gitxPaletteItems()...)       // GITX features (gitx_hub.go)
+	// RC-6: where a container workspace's language servers run (container_lsp.go).
+	items = append(items, containerLSPPaletteItems()...)
+	items = append(items, codebaseSearchPaletteItems()...) // CMP-69 (codebase_search.go)
+	items = append(items, promptActionsPaletteItems()...)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -473,6 +487,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.runDebugPaletteCmd(id)
 	}
 	if cmd, ok := m.runTermPaneAction(id); ok { // terminal splits (terminal_split.go)
+		return cmd
+	}
+	if cmd, ok := m.runTermDriveAction(id); ok { // AI take over / hand back (ai_terminal_drive.go)
 		return cmd
 	}
 	switch id {
@@ -553,6 +570,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.showPanelTab(panelKindOutput)
 	case "output-clear":
 		m.output.Clear(m.output.Active())
+	case auditSavePaletteID: // audit_save.go
+		return m.auditSave()
 	case "quick-open":
 		m.picker = picker.NewWith(" Go to file ", func() []picker.Item { return loadFiles() })
 		m.picker.SetSize(m.w, m.h)
@@ -878,6 +897,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.reloadWindow()
 	case "detach-session":
 		return m.detachSession()
+	case "session-recap":
+		return m.openSessionRecap()
 	case "reset-session":
 		return m.resetSession()
 	case "toggle-auto-save":
@@ -945,6 +966,12 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		if cmd, ok := m.dispatchGitxPalette(id); ok { // gitx_hub.go
 			return cmd
 		}
+		if cmd, ok := m.dispatchContainerLSPPalette(id); ok { // container_lsp.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchCodebaseSearchPalette(id); ok { // CMP-69 (codebase_search.go)
+			return cmd
+		}
 		if cmd, ok := m.dispatchImportPalette(id); ok { // import_editor.go
 			return cmd
 		}
@@ -975,7 +1002,13 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		if cmd, ok := m.dispatchWorkflowsPalette(id); ok { // workflows_keys.go
 			return cmd
 		}
+		if cmd, ok := m.dispatchBugspecPalette(id); ok { // bugspec_ui.go
+			return cmd
+		}
 		if cmd, ok := m.dispatchCIPalette(id); ok { // ci_card.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchACPPalette(id); ok { // acp_thread.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchLayoutPalette(id); ok { // layout_palette.go
@@ -1014,7 +1047,19 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		if cmd, ok := m.dispatchKubePalette(id); ok { // kube_actions.go
 			return cmd
 		}
+		if cmd, ok := m.dispatchDevPreviewPalette(id); ok { // devpreview_ui.go (CMP-66)
+			return cmd
+		}
 		if cmd, ok := m.dispatchWorktreePalette(id); ok { // worktrees_keys.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchCanvasPalette(id); ok { // CMP-92: canvas_ui.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchPromptActionsPalette(id); ok { // prompt_actions.go (CMP-74)
+			return cmd
+		}
+		if cmd, ok := m.dispatchSpecPalette(id); ok { // specs_ui.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchDatabasesPalette(id); ok { // db_actions.go

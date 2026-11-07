@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "inbox" | "projects";
 
 export interface Bye {
   t: "bye";
@@ -36,16 +36,19 @@ export interface Req {
   id: number;
   op: string;
   args?: unknown;
+  ws?: string;
 }
 
 export interface Sub {
   t: "sub";
   topics: string[];
+  ws?: string;
 }
 
 export interface Unsub {
   t: "unsub";
   topics: string[];
+  ws?: string;
 }
 
 export interface ServerBye {
@@ -58,6 +61,7 @@ export interface Delta {
   topic: string;
   seq: number;
   data: unknown;
+  ws?: string;
 }
 
 export interface ErrMsg {
@@ -66,12 +70,14 @@ export interface ErrMsg {
   code: ErrCode;
   msg: string;
   data?: unknown;
+  ws?: string;
 }
 
 export interface Event {
   t: "ev";
   kind: string;
   data?: unknown;
+  ws?: string;
 }
 
 export interface Meta {
@@ -85,6 +91,7 @@ export interface Meta {
   viewers: number;
   ui: MetaUI;
   caps: string[];
+  ws?: string;
 }
 
 export interface MetaUI {
@@ -103,11 +110,13 @@ export interface Res {
   t: "res";
   id: number;
   data?: unknown;
+  ws?: string;
 }
 
 export interface Resync {
   t: "resync";
   topic: string;
+  ws?: string;
 }
 
 export interface Snap {
@@ -115,6 +124,7 @@ export interface Snap {
   topic: string;
   seq: number;
   data: unknown;
+  ws?: string;
 }
 
 export interface ChatOpenArgs {
@@ -185,12 +195,25 @@ export interface HlArgs {
 export interface ChatSendArgs {
   text: string;
   chat_id?: string;
+  attach?: Attach[];
+}
+
+export interface Attach {
+  kind: "task" | "ptask" | "issue" | "pr" | "file" | "lines" | "diff" | "worktree" | "run" | "race" | "workflow" | "card" | "resource" | "block" | "project" | "view";
+  id?: string;
+  path?: string;
+  from?: number;
+  to?: number;
+  label?: string;
+  spec?: string;
+  ws?: string;
 }
 
 export interface CardsAnswerArgs {
   id: string;
   choice: string;
   hunks?: number[];
+  form?: Record<string, string>;
 }
 
 export interface SetTextArgs {
@@ -235,6 +258,14 @@ export interface KeyArgs {
 
 export interface ControlAskArgs {
   credential: string;
+}
+
+export interface PhonePrefsArgs {
+  alerts: boolean;
+  quiet_from?: string;
+  quiet_to?: string;
+  utc_offset_min?: number;
+  lock?: boolean;
 }
 
 export interface LspRangeArgs {
@@ -383,6 +414,15 @@ export interface SymbolQueryArgs {
   query: string;
 }
 
+export interface PushSubscribeArgs {
+  kind: "unifiedpush";
+  endpoint: string;
+}
+
+export interface PushUnsubscribeArgs {
+  kind: "unifiedpush";
+}
+
 export interface SearchReplaceArgs {
   find: string;
   replace: string;
@@ -434,6 +474,15 @@ export interface UserCmd {
 
 export interface WorkflowRunArgs {
   run: string;
+}
+
+export interface WorkflowNameArgs {
+  name: string;
+}
+
+export interface WorkflowSaveArgs {
+  name: string;
+  content: string;
 }
 
 export interface WorkspacePathArgs {
@@ -541,8 +590,21 @@ export interface WorktreeNoteArgs {
   text: string;
 }
 
+export interface WorktreeLinkArgs {
+  id: string;
+  kind: "issue" | "pr" | "none";
+  number: number;
+}
+
 export interface WorktreeArgs {
   id: string;
+}
+
+export interface WorktreeTaskArgs {
+  name?: string;
+  from?: string;
+  agent: string;
+  task: string;
 }
 
 export interface AIWorktreeTextArgs {
@@ -554,9 +616,31 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface AIWorktreeNotesArgs {
+  id: string;
+  chat_id?: string;
+  notes: ReviewNote[];
+}
+
+export interface ReviewNote {
+  path: string;
+  line: number;
+  side: "new" | "old";
+  text: string;
+}
+
 export interface AIMCPProfileArgs {
   name?: string;
   all?: boolean;
+}
+
+export interface AICatalogArgs {
+  feature?: string;
+  query?: string;
+}
+
+export interface TrackerIDArgs {
+  id: string;
 }
 
 export interface ChatRenameArgs {
@@ -566,6 +650,11 @@ export interface ChatRenameArgs {
 
 export interface ChatForkArgs {
   i: number;
+}
+
+export interface ChatCommentArgs {
+  id: string;
+  text: string;
 }
 
 export interface InspectArgs {
@@ -887,6 +976,11 @@ export interface PaletteArgs {
   id: string;
 }
 
+export interface ProjectTasksArgs {
+  only?: "checklist" | "issues" | "prs" | "mrs";
+  done?: boolean;
+}
+
 export interface PRNumberArgs {
   number: number;
 }
@@ -1013,6 +1107,9 @@ export interface ChatSnap {
   model?: string;
   busy: boolean;
   messages: ChatMsg[];
+  ctx_pct?: number;
+  ctx_tokens?: number;
+  ctx_window?: number;
 }
 
 export interface ChatMsg {
@@ -1024,9 +1121,16 @@ export interface ChatMsg {
   truncated?: boolean;
   model?: string;
   images?: string[];
+  attached?: AttachChip[];
   rules?: string;
   run?: ChatRun;
   steps?: ChatStep[];
+  blocks?: Block[];
+}
+
+export interface AttachChip {
+  kind: string;
+  label: string;
 }
 
 export interface MdNode {
@@ -1038,6 +1142,7 @@ export interface MdNode {
   href?: string;
   start?: number;
   rows?: MdNode[][];
+  diagram?: string;
 }
 
 export interface ChatRun {
@@ -1058,6 +1163,158 @@ export interface ChatStep {
   text?: string;
   md?: MdNode;
   error?: string;
+  blocks?: Block[];
+}
+
+export interface Block {
+  id: string;
+  kind: "list" | "table" | "diff" | "card" | "detail" | "chart" | "status" | "form" | "json" | "text" | "board";
+  title: string;
+  source?: string;
+  ws?: string;
+  spec?: ViewSpec;
+  live?: boolean;
+  items?: BlockItem[];
+  columns?: BlockColumn[];
+  rows?: string[][];
+  groups?: BlockGroup[];
+  diff?: BlockDiff;
+  fields?: BlockField[];
+  bars?: BlockBar[];
+  state?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  form?: BlockFormField[];
+  json?: string;
+  md?: MdNode;
+  board?: BlockBoard;
+  for_you?: string;
+  ref?: BlockRef;
+  actions?: BlockAction[];
+  total?: number;
+  truncated?: boolean;
+  stale?: boolean;
+}
+
+export interface ViewSpec {
+  view: string;
+  ws?: string;
+  args?: Record<string, string>;
+  fields?: string[];
+  filter?: ViewCond[];
+  sort?: ViewSort[];
+  group?: string;
+  limit?: number;
+  layout?: string;
+  density?: "compact" | "detailed";
+  title?: string;
+  refresh?: number;
+}
+
+export interface ViewCond {
+  field: string;
+  op: "eq" | "ne" | "gt" | "lt" | "ge" | "le" | "contains" | "starts" | "in" | "empty" | "not_empty";
+  value?: string;
+  in?: string[];
+}
+
+export interface ViewSort {
+  field: string;
+  desc?: boolean;
+}
+
+export interface BlockItem {
+  id: string;
+  title: string;
+  sub?: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  badge?: string;
+  time?: number;
+  ref?: BlockRef;
+  actions?: BlockAction[];
+}
+
+export interface BlockRef {
+  kind: string;
+  id?: string;
+  path?: string;
+  line?: number;
+}
+
+export interface BlockAction {
+  id: string;
+  label: string;
+  kind: "op" | "attach" | "view" | "laptop";
+  op?: string;
+  ref?: BlockRef;
+  spec?: ViewSpec;
+  risky?: boolean;
+}
+
+export interface BlockColumn {
+  id: string;
+  label: string;
+  kind?: "text" | "num" | "time" | "cost" | "tone" | "mono";
+}
+
+export interface BlockGroup {
+  label: string;
+  count: number;
+  items?: BlockItem[];
+  rows?: string[][];
+}
+
+export interface BlockDiff {
+  path: string;
+  old?: string;
+  adds?: number;
+  dels?: number;
+  hunks: BlockHunk[];
+}
+
+export interface BlockHunk {
+  header: string;
+  lines: BlockDiffLine[];
+}
+
+export interface BlockDiffLine {
+  k: "add" | "del" | "ctx";
+  a?: number;
+  b?: number;
+  text: string;
+}
+
+export interface BlockField {
+  label: string;
+  value: string;
+  kind?: "text" | "num" | "time" | "cost" | "tone" | "mono";
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+}
+
+export interface BlockBar {
+  label: string;
+  value: number;
+  text?: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+}
+
+export interface BlockFormField {
+  id: string;
+  label: string;
+  kind: "text" | "num" | "bool" | "choice" | "long";
+  value?: string;
+  choices?: string[];
+  required?: boolean;
+  hint?: string;
+}
+
+export interface BlockBoard {
+  columns: BlockBoardColumn[];
+}
+
+export interface BlockBoardColumn {
+  id: string;
+  label: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  items?: BlockItem[];
 }
 
 export interface ChatDelta {
@@ -1069,6 +1326,9 @@ export interface ChatDelta {
   busy?: boolean;
   title?: string;
   chat?: ChatSnap;
+  ctx_pct?: number;
+  ctx_tokens?: number;
+  ctx_window?: number;
 }
 
 export interface CardsSnap {
@@ -1085,6 +1345,7 @@ export interface Card {
   read_only?: boolean;
   file?: string;
   diff?: CardDiff;
+  form?: BlockFormField[];
 }
 
 export interface CardChoice {
@@ -1346,6 +1607,9 @@ export interface RunItem {
   cost_usd?: number;
   needs_you?: boolean;
   can?: string[];
+  parent?: string;
+  depth?: number;
+  kids?: number;
 }
 
 export interface MCPSnap {
@@ -1570,6 +1834,8 @@ export interface AISnap {
   inline: boolean;
   nextEdit: boolean;
   worktrees: boolean;
+  webFetch?: boolean;
+  webSearch?: string;
 }
 
 export interface AIProfile {
@@ -1639,6 +1905,57 @@ export interface WorktreeItem {
   parent?: string;
   depth?: number;
   last_seen?: number;
+  port?: number;
+  running?: boolean;
+  url?: string;
+}
+
+export interface InboxSnap {
+  items: InboxItem[];
+  counts: InboxCounts;
+  more?: number;
+}
+
+export interface InboxItem {
+  id: string;
+  ws?: string;
+  kind: "card" | "run" | "lane" | "workflow" | "task" | "ci" | "race";
+  ref: string;
+  title: string;
+  lane?: string;
+  chat?: string;
+  since: number;
+  state: "needs_you" | "working" | "failed" | "done";
+  can?: string[];
+}
+
+export interface InboxCounts {
+  needs_you: number;
+  working: number;
+  failed: number;
+  done: number;
+}
+
+export interface ProjectsSnap {
+  state: "loading" | "ready";
+  projects: ProjectItem[];
+  working?: number;
+  waiting?: number;
+  more?: number;
+}
+
+export interface ProjectItem {
+  id: string;
+  name: string;
+  where: string;
+  state: "here" | "running" | "opening" | "asleep";
+  attached?: boolean;
+  service?: boolean;
+  recent?: boolean;
+  working?: number;
+  waiting?: number;
+  opened_at?: number;
+  ws?: string;
 }
 
 export interface Answered {
@@ -1665,6 +1982,10 @@ export interface SearchHit {
   marks?: SearchMark[];
   before?: string[];
   after?: string[];
+}
+
+export interface WSGone {
+  why: "closed" | "not_running" | "busy" | "limit" | "off" | "bad";
 }
 
 export interface SearchMark {
@@ -1805,6 +2126,25 @@ export interface ControlChallenge {
   options: unknown;
 }
 
+export interface PhoneLaptop {
+  name: string;
+  this?: boolean;
+}
+
+export interface PhoneInfo {
+  device: string;
+  name: string;
+  role: Role;
+  guest?: boolean;
+  passkey: boolean;
+  needs_repair?: boolean;
+  remembered?: boolean;
+  paired_ms: number;
+  last_seen_ms?: number;
+  prefs: PhonePrefsArgs;
+  laptops: PhoneLaptop[];
+}
+
 export interface LspActions {
   items: LspAction[];
 }
@@ -1826,6 +2166,62 @@ export interface LspHint {
   label: string;
   padLeft?: boolean;
   padRight?: boolean;
+}
+
+export interface Board {
+  items: BoardItem[];
+  counts: BoardCounts;
+  today_usd?: number;
+  more?: number;
+  built: number;
+}
+
+export interface BoardItem {
+  id: string;
+  kind: "card" | "run" | "lane" | "workflow";
+  column: "needs_you" | "working" | "review" | "done";
+  state: "wait" | "run" | "ok" | "fail" | "idle";
+  title: string;
+  sub?: string;
+  why?: string;
+  step?: number;
+  steps?: number;
+  cost_usd?: number;
+  ahead?: number;
+  dirty?: number;
+  since?: number;
+  ref: string;
+}
+
+export interface BoardCounts {
+  needs_you: number;
+  working: number;
+  review: number;
+  done: number;
+}
+
+export interface BoardProjects {
+  home: string;
+  projects: BoardProject[];
+  more?: number;
+}
+
+export interface BoardProject {
+  ws: string;
+  name: string;
+  where: string;
+  state: "needs" | "working" | "idle";
+  home?: boolean;
+  working?: number;
+  waiting?: number;
+  agents?: BoardAgent[];
+  more?: number;
+  seen?: number;
+}
+
+export interface BoardAgent {
+  name: string;
+  state: "working" | "waiting";
 }
 
 export interface DebugSources {
@@ -2130,6 +2526,48 @@ export interface VimMap {
   noremap?: boolean;
 }
 
+export interface ViewSaveArgs {
+  spec: ViewSpec;
+  name: string;
+  pin?: boolean;
+}
+
+export interface ViewRefArgs {
+  id: string;
+}
+
+export interface ViewRenameArgs {
+  id: string;
+  name: string;
+}
+
+export interface ViewPinArgs {
+  id: string;
+  on: boolean;
+  order?: number;
+}
+
+export interface SavedViewList {
+  items: SavedView[];
+  max: number;
+  max_pinned: number;
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  spec: ViewSpec;
+  pinned?: boolean;
+  order?: number;
+  saved: number;
+  by?: string;
+}
+
+export interface ViewSaved {
+  id: string;
+  replaced?: boolean;
+}
+
 export interface WorkspaceList {
   folders: WorkspaceEntry[];
   recent: WorkspaceEntry[];
@@ -2339,6 +2777,27 @@ export interface WorktreeDone {
   note?: string;
 }
 
+export interface WorktreeTaskForm {
+  state: "none" | "ready";
+  from?: string;
+  refs: string[];
+  agents: WorktreeTaskAgent[];
+  setup?: "trusted" | "asks";
+  base?: string;
+}
+
+export interface WorktreeTaskAgent {
+  id: string;
+  title: string;
+}
+
+export interface WorktreeTaskDone {
+  id: string;
+  branch: string;
+  where: string;
+  note?: string;
+}
+
 export interface AIWorktrees {
   off?: boolean;
   noRepo?: boolean;
@@ -2377,6 +2836,73 @@ export interface MCPProfiles {
 export interface MCPProfileItem {
   name: string;
   hint?: string;
+}
+
+export interface AICatalog {
+  features: CatalogFeature[];
+  servers: CatalogServer[];
+  note?: string;
+  truncated?: boolean;
+}
+
+export interface CatalogFeature {
+  id: string;
+  title: string;
+  hint: string;
+  tools: number;
+  asks: number;
+  try: string[];
+  view?: string;
+}
+
+export interface CatalogServer {
+  name: string;
+  state: string;
+  trusted: boolean;
+  cached?: boolean;
+  known: boolean;
+  prompts?: boolean;
+  resources?: boolean;
+  tools: CatalogTool[];
+}
+
+export interface CatalogTool {
+  name: string;
+  title?: string;
+  hint?: string;
+  gate: "runs" | "asks" | "off";
+  text: string;
+}
+
+export interface TrackerPins {
+  pins: TrackerPin[];
+}
+
+export interface TrackerPin {
+  id: string;
+  title: string;
+  server: string;
+  tool: string;
+  args?: string;
+  refresh: number;
+  runs: boolean;
+  why?: string;
+}
+
+export interface TrackerBlock {
+  id: string;
+  title: string;
+  rows: TrackerRow[];
+  text?: string;
+  error?: string;
+  truncated?: boolean;
+  at: number;
+}
+
+export interface TrackerRow {
+  title: string;
+  hint?: string;
+  ref?: string;
 }
 
 export interface ChatExport {
@@ -2927,6 +3453,36 @@ export interface CIRun {
   url?: string;
 }
 
+export interface ProjectTasks {
+  sections: ProjectTaskSection[];
+}
+
+export interface ProjectTaskSection {
+  kind: "checklist" | "issues" | "prs" | "mrs";
+  title: string;
+  items: ProjectTask[];
+  total: number;
+  open: number;
+  note?: string;
+}
+
+export interface ProjectTask {
+  id: string;
+  kind: "ptask" | "issue" | "pr" | "mr";
+  title: string;
+  state: "open" | "done" | "draft";
+  number?: number;
+  path?: string;
+  line?: number;
+  group?: string;
+  depth?: number;
+  author?: string;
+  labels?: string[];
+  checks?: "none" | "pending" | "pass" | "fail";
+  branch?: string;
+  url?: string;
+}
+
 export interface MCPItems {
   items: MCPItem[];
 }
@@ -2941,6 +3497,10 @@ export interface ChatSide {
   answer: string;
 }
 
+export interface ChatHomeArgs {
+  text?: string;
+}
+
 export interface AutoApprove {
   rows: AutoApproveRow[];
 }
@@ -2950,6 +3510,14 @@ export interface AutoApproveRow {
   title: string;
   on?: boolean;
   header?: boolean;
+}
+
+export interface ProjectArgs {
+  ws: string;
+}
+
+export interface ProjectClosed {
+  ws: string;
 }
 
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
@@ -3002,9 +3570,14 @@ export interface OpArgs {
   "runs.resume": KeyArgs;
   "control.challenge": EmptyArgs;
   "control.ask": ControlAskArgs;
+  "phone.get": EmptyArgs;
+  "phone.prefs": PhonePrefsArgs;
+  "phone.forget": EmptyArgs;
   "lsp.code_actions": LspRangeArgs;
   "lsp.code_action_apply": LspApplyArgs;
   "lsp.inlay_hints": LspRowsArgs;
+  "board.get": EmptyArgs;
+  "board.projects": EmptyArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -3051,6 +3624,8 @@ export interface OpArgs {
   "files.recent": EmptyArgs;
   "lsp.workspace_symbols": SymbolQueryArgs;
   "snippets.list": BufArgs;
+  "push.subscribe": PushSubscribeArgs;
+  "push.unsubscribe": PushUnsubscribeArgs;
   "search.replace": SearchReplaceArgs;
   "snippets.user": EmptyArgs;
   "snippets.save": SnippetSaveArgs;
@@ -3068,7 +3643,15 @@ export interface OpArgs {
   "usercmds.save": UserCmdSaveArgs;
   "editor.vim_maps": EmptyArgs;
   "editor.vim_buf_maps": BufArgs;
+  "view.list": EmptyArgs;
+  "view.save": ViewSaveArgs;
+  "view.rename": ViewRenameArgs;
+  "view.delete": ViewRefArgs;
+  "view.pin": ViewPinArgs;
   "workflows.stop": WorkflowRunArgs;
+  "workflows.dry_run": WorkflowNameArgs;
+  "workflows.run": WorkflowNameArgs;
+  "workflows.save": WorkflowSaveArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
   "workspace.remove_folder": IDArgs;
@@ -3105,17 +3688,26 @@ export interface OpArgs {
   "worktrees.note": WorktreeNoteArgs;
   "worktrees.archive": WorktreeArgs;
   "worktrees.delete": WorktreeArgs;
+  "worktrees.link": WorktreeLinkArgs;
+  "worktrees.task_form": EmptyArgs;
+  "worktrees.new_task": WorktreeTaskArgs;
   "ai.worktrees": EmptyArgs;
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.worktree_notes": AIWorktreeNotesArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
+  "ai.catalog": AICatalogArgs;
+  "ai.tracker_pins": EmptyArgs;
+  "ai.tracker_run": TrackerIDArgs;
+  "ai.tracker_unpin": TrackerIDArgs;
   "chat.rename": ChatRenameArgs;
   "chat.fork": ChatForkArgs;
   "chat.delete": ChatOpenArgs;
   "chat.clear": EmptyArgs;
   "chat.export": ChatOpenArgs;
+  "chat.comment": ChatCommentArgs;
   "containers.host": EmptyArgs;
   "containers.inspect": InspectArgs;
   "containers.history": RefArgs;
@@ -3225,10 +3817,14 @@ export interface OpArgs {
   "pr.checkout": PRNumberArgs;
   "ai.mcp_items": EmptyArgs;
   "chat.side": ChatSendArgs;
+  "chat.home": ChatHomeArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
   "ai.set_auto_approve": AutoApproveArgs;
+  "project.open": ProjectArgs;
+  "project.close": ProjectArgs;
+  "project.tasks": ProjectTasksArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -3257,6 +3853,8 @@ export interface TopicData {
   "ai": { snap: AISnap; delta: AISnap };
   "workflows": { snap: WorkflowsSnap; delta: WorkflowsSnap };
   "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
+  "inbox": { snap: InboxSnap; delta: InboxSnap };
+  "projects": { snap: ProjectsSnap; delta: ProjectsSnap };
 }
 
 // The data of an ev message, by kind.
@@ -3264,6 +3862,8 @@ export interface EventData {
   "answered": Answered;
   "attention": Attention;
   "search.batch": SearchBatch;
+  "views_saved": SavedViewList;
+  "ws.gone": WSGone;
 }
 
 // The data of a res message, by op (ops not listed answer without data).
@@ -3293,9 +3893,12 @@ export interface OpResult {
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
   "control.challenge": ControlChallenge;
+  "phone.get": PhoneInfo;
   "lsp.code_actions": LspActions;
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;
+  "board.get": Board;
+  "board.projects": BoardProjects;
   "debug.sources": DebugSources;
   "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;
@@ -3340,6 +3943,14 @@ export interface OpResult {
   "usercmds.save": UserCmdList;
   "editor.vim_maps": VimMapList;
   "editor.vim_buf_maps": VimMapList;
+  "view.list": SavedViewList;
+  "view.save": ViewSaved;
+  "view.rename": SavedViewList;
+  "view.delete": SavedViewList;
+  "view.pin": SavedViewList;
+  "workflows.dry_run": WorkflowRunArgs;
+  "workflows.run": AskRef;
+  "workflows.save": AskRef;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
@@ -3374,12 +3985,20 @@ export interface OpResult {
   "worktrees.note": WorktreeDone;
   "worktrees.archive": AskRef;
   "worktrees.delete": AskRef;
+  "worktrees.link": WorktreeDone;
+  "worktrees.task_form": WorktreeTaskForm;
+  "worktrees.new_task": WorktreeTaskDone;
   "ai.worktrees": AIWorktrees;
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.worktree_notes": ChatRef;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;
+  "ai.catalog": AICatalog;
+  "ai.tracker_pins": TrackerPins;
+  "ai.tracker_run": TrackerBlock;
+  "ai.tracker_unpin": TrackerPins;
   "chat.fork": ChatRef;
   "chat.delete": AskRef;
   "chat.clear": AskRef;
@@ -3489,8 +4108,12 @@ export interface OpResult {
   "pr.checkout": AskRef;
   "ai.mcp_items": MCPItems;
   "chat.side": ChatSide;
+  "chat.home": ChatSnap;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;
   "ai.set_auto_approve": AskRef;
+  "project.open": AskRef;
+  "project.close": ProjectClosed;
+  "project.tasks": ProjectTasks;
 }

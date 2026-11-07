@@ -31,6 +31,9 @@ type aiReviewItem struct {
 	// user decided.
 	cancel func()
 	done   bool
+	// seq is the order the file was proposed in (CMP-58: the card may
+	// show it elsewhere, ai_review_order = proposed restores this order).
+	seq int
 }
 
 // aiReview is the open review: its files and the card.
@@ -40,6 +43,8 @@ type aiReview struct {
 	// onAction runs the buttons of a read-only card that has its own
 	// (commit-mode) actions: schema compare's Copy / Open script.
 	onAction func(m *Model, id string) tea.Cmd
+	// seq numbers the proposed files (aiReviewItem.seq)
+	seq int
 }
 
 // addAIReview adds a file to the review and shows the card.
@@ -49,12 +54,32 @@ func (m *Model) addAIReview(it *aiReviewItem) {
 		// A read-only card (a compare) gives way to the review.
 		s.review = &aiReview{card: diffview.New("Review AI changes", nil, true)}
 	}
+	s.review.seq++
+	it.seq = s.review.seq
 	s.review.items = append(s.review.items, it)
 	i := s.review.card.AddFile(it.file)
-	if s.review.card.Pending() == 1 || !m.reviewOpen {
-		s.review.card.Select(i)
+	id := s.review.card.FileID(i)
+	show := s.review.card.Pending() == 1 || !m.reviewOpen
+	m.orderAIReview() // CMP-58: explain-first order
+	if show {
+		k := s.review.card.IndexOfID(id)
+		if s.settings.ExplainFirst() {
+			k = firstPendingFile(s.review.card)
+		}
+		s.review.card.Select(k)
 	}
 	m.showAIReview()
+}
+
+// firstPendingFile is the first file of the card not finished yet (0
+// when every file is done).
+func firstPendingFile(c diffview.Model) int {
+	for i := 0; i < c.Files(); i++ {
+		if !c.Done(i) {
+			return i
+		}
+	}
+	return 0
 }
 
 // showAIReview opens the card (when a review is waiting).
@@ -130,7 +155,13 @@ func (m *Model) reviewCardCmd(r *aiReview, cmd tea.Cmd) tea.Cmd {
 func (m *Model) onAIReviewFinish(msg diffview.FinishMsg) tea.Cmd {
 	s := m.aiS()
 	r := s.review
-	if r == nil || msg.File < 0 || msg.File >= len(r.items) {
+	if r == nil {
+		return nil
+	}
+	if msg.ID != 0 { // the card's own message: find the file by its id (it may have moved)
+		msg.File = r.card.IndexOfID(msg.ID)
+	}
+	if msg.File < 0 || msg.File >= len(r.items) {
 		return nil
 	}
 	it := r.items[msg.File]

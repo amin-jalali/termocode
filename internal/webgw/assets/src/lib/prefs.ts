@@ -10,6 +10,9 @@ const KEY = "termocode.prefs.v1";
 export type Theme = "system" | "dark" | "light";
 export type Direction = "auto" | "ltr" | "rtl";
 export type Language = "auto" | "en" | "fa";
+/** PhoneHome is what a phone opens on (MOB-4): the tab bar, or the
+ * chat-first Home (#/home). MOB-7 makes "chat" the default. */
+export type PhoneHome = "tabs" | "chat";
 
 export interface Prefs {
   theme: Theme;
@@ -28,13 +31,21 @@ export interface Prefs {
   keys: KeyId[];
   /** vim: the desktop editor's Vim mode (WEBP-1), off by default. */
   vim: boolean;
+  /** phoneHome: a phone opens on the tabs or on the Home (MOB-4). */
+  phoneHome: PhoneHome;
+  /** quiet: the phone's quiet hours "HH:MM-HH:MM" (MOBUX-20), "" for none;
+   * no notification shows inside them. The laptop keeps a copy. */
+  quiet: string;
 }
+
+/** QUIET is the shape of Prefs.quiet. */
+export const QUIET = /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/;
 
 /** ROW_MIN and ROW_MAX bound rowPx (WEB-36). */
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false, phoneHome: "tabs", quiet: "" };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -60,6 +71,8 @@ function load(): Prefs {
       notify: v.notify === true,
       keys: readKeys(v.keys),
       vim: v.vim === true,
+      phoneHome: pick(v.phoneHome, ["tabs", "chat"], defaults.phoneHome),
+      quiet: typeof v.quiet === "string" && QUIET.test(v.quiet) ? v.quiet : "",
     };
   } catch {
     return defaults;

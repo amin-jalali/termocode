@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/amin-jalali/termocode/internal/agentgoal"
 	"github.com/amin-jalali/termocode/internal/agents"
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/keymap"
@@ -111,6 +112,13 @@ type terminalTab struct {
 	LimitAt      time.Time
 	limitTyped   bool
 	AutoContinue autoContinueMode
+	// Goal is the running check loop of the tab (agent_goal.go, CMP-19).
+	Goal *agentgoal.Goal
+	// CMP-64 (agent_autoaccept.go): the tab's opt-in auto-accept, what it
+	// did with the prompt on screen, and how many it answered.
+	AutoAccept  bool
+	accept      acceptState
+	acceptCount int
 	// AGX-15 (agent_hibernate.go): the idle clock (the last output, one
 	// check in flight, asked for this idle time) and the hibernated
 	// state with the kept session id ("" = not known).
@@ -122,6 +130,13 @@ type terminalTab struct {
 	// Account is the agent account label the tab runs as ("" = the
 	// CLI's own default folder; agent_accounts.go, AGX-13).
 	Account string
+	// SessionNo numbers a second (or later) session of the same agent
+	// in the same folder: the tab bar shows "Claude Code 2" (CMP-28;
+	// 0 = the only one).
+	SessionNo int
+	// Profile is the launch profile the tab was started with ("" = none;
+	// agent_profiles.go, CMP-21).
+	Profile string
 
 	// Splits are the panes after the first (terminal_pane.go); BufID is
 	// pane 0. PaneFocus is the focused pane (0 = BufID).

@@ -393,7 +393,16 @@
 .chat-picks { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
 .chat-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: 4px; color: var(--wb-input-fg); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-chip .cod { font-size: 14px; }
+.ctx-chip { gap: 6px; font-variant-numeric: tabular-nums; }
+.ctx-bar { display: inline-block; width: 28px; height: 4px; border-radius: 2px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden; }
+.ctx-bar > span { display: block; height: 100%; background: var(--ctx-tone, currentColor); }
+.ctx-ok { --ctx-tone: var(--wb-ok); }
+.ctx-warn { --ctx-tone: var(--wb-warn); }
+.ctx-full { --ctx-tone: var(--wb-err); }
 .composer-tools .send, .composer-tools .stop { margin-inline-start: auto; }
+.composer-tools .mic { margin-inline-start: auto; }
+.composer-tools .mic + .send, .composer-tools .mic + .stop { margin-inline-start: 0; }
+.composer .mic .btn[aria-pressed="true"], .layout-desktop .chatcol .composer-tools .mic .btn[aria-pressed="true"] { color: var(--focus); }
 .layout-desktop .chatcol .composer-tools .btn { width: 24px; min-width: 24px; height: 24px; min-height: 24px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--wb-side-fg); }
 .layout-desktop .chatcol .composer-tools .btn:hover { background: var(--wb-toolbar-hover); }
 .layout-desktop .chatcol .composer-tools .btn[aria-disabled="true"] { opacity: 0.4; }

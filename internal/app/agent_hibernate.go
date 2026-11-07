@@ -239,6 +239,12 @@ func agentWakeLine(t terminalTab) (string, bool, error) {
 			return "", false, errors.New(a.Title + " has no resume command")
 		}
 	}
+	if p, ok := agentFindProfile(t.Agent, t.Profile); ok { // CMP-21: the same model and mode
+		var err error
+		if line, err = agents.ProfileLine(a, p, line); err != nil {
+			return "", false, err
+		}
+	}
 	line, err := agentAccountLine(a, t.Account, line)
 	return line, exact, err
 }

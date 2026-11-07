@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -91,6 +92,10 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		t.FirstTask = "" // at most once
 		m.agentType(t.BufID, task)
 	}
+	acc, answered := m.agentAutoAcceptSee(t, st, lines) // CMP-64 (agent_autoaccept.go)
+	if limit = tea.Batch(limit, acc); answered {
+		return limit
+	}
 	if st == agents.Unknown || st == t.AgentState {
 		return limit
 	}
@@ -100,13 +105,16 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		return tea.Batch(limit, m.raceOnAgentState(buf, st))
 	}
 	if st == agents.Done {
-		return tea.Batch(limit, m.notifyOS("Agent run ended"))
+		if t.Goal != nil { // a check loop runs the check, then says its own news (agent_goal.go)
+			return tea.Batch(limit, m.agentGoalTurnEnded(buf))
+		}
+		return tea.Batch(limit, m.notifyOSFor("Agent run ended", t.agentTitle()))
 	}
 	if st != agents.Waiting {
 		return limit
 	}
 	if m.inTerminal && m.termTabVisible(shown) {
-		return tea.Batch(limit, m.notifyOS("Agent needs your input"))
+		return tea.Batch(limit, m.notifyOSFor("Agent needs your input", t.agentTitle()))
 	}
 	title := t.Agent
 	if a, ok := agents.ByID(t.Agent); ok {
@@ -114,7 +122,7 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 	}
 	var c tea.Cmd
 	m.toast, c = m.toast.Push(toast.Info, title+" is waiting for you")
-	return tea.Batch(limit, c, m.notifyOS("Agent needs your input"))
+	return tea.Batch(limit, c, m.notifyOSFor("Agent needs your input", t.agentTitle()))
 }
 
 // agentTitle is the tab name of an agent tab ("" for none).
@@ -129,7 +137,8 @@ func (t terminalTab) agentTitle() string {
 }
 
 // agentTabName is the tab bar name of an agent tab: "limit ↻14:30"
-// while its usage limit is on (AGX-11), else its title.
+// while its usage limit is on (AGX-11), else its title (with
+// " · auto-yes" while auto-accept is on, CMP-64).
 func (t terminalTab) agentTabName() string {
 	if l := t.agentHibernatedLabel(); l != "" { // AGX-15
 		return l
@@ -137,8 +146,24 @@ func (t terminalTab) agentTabName() string {
 	if l := t.agentLimitLabel(); l != "" {
 		return l
 	}
+	if l := t.agentGoalLabel(); l != "" { // CMP-19
+		return t.agentSessionTitle() + " " + l
+	}
+	name := t.agentSessionTitle()
 	if t.Account != "" { // AGX-13
-		return t.agentTitle() + " " + t.Account
+		name += " " + t.Account
+	}
+	if t.AutoAccept { // CMP-64 (agent_autoaccept.go)
+		name += " · auto-yes"
+	}
+	return name
+}
+
+// agentSessionTitle is the agent's title with its session number when
+// it is a second (or later) session in the same folder (CMP-28).
+func (t terminalTab) agentSessionTitle() string {
+	if t.SessionNo > 1 && t.Agent != "" {
+		return t.agentTitle() + " " + strconv.Itoa(t.SessionNo)
 	}
 	return t.agentTitle()
 }
@@ -202,6 +227,8 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 		return m.openRaceForm("", ""), true
 	case agentRaceComparePaletteID:
 		return m.openRaceCompare(), true
+	case agentSplitPaletteID: // Agent: Split Task… (agent_split.go)
+		return m.openSplitDraft(), true
 	}
 	if id == agentChatPaletteID { // Agent: Chat View (agent_chat.go)
 		return m.toggleAgentChatView(), true
@@ -209,8 +236,14 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentSessionsPaletteID { // Agent: Sessions… (agent_sessions.go)
 		return m.openAgentSessions(), true
 	}
+	if id == agentImportPaletteID { // Agent: Import Session into AI Chat (agent_import.go)
+		return m.openAgentImport(), true
+	}
 	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
 		return m.openAgentSessionsSearch(), true
+	}
+	if id == agentSessionsSearchAllID { // Agent: Search All Sessions… (CMP-30)
+		return m.openAgentSessionsSearchAll(), true
 	}
 	if id == agentNamesPaletteID { // Worktree: Suggest a Name… (agent_names.go)
 		return m.openAgentNames(), true
@@ -221,11 +254,29 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentAccountsPaletteID { // Agent: Accounts… (agent_accounts.go)
 		return m.openAgentAccounts(), true
 	}
+	if id == agentSwitchPaletteID { // Agent: Switch Account… (agent_switch.go, CMP-13)
+		return m.openAgentSwitch(), true
+	}
+	if id == agentProfilesPaletteID { // Agent: Profiles… (agent_profiles.go, CMP-21)
+		return m.openAgentProfiles(), true
+	}
 	if id == agentUsagePlansPaletteID { // Agent: Usage Plans (agent_usage.go)
 		return m.showAIUsage(""), true
 	}
 	if id == agentAutoContinuePaletteID { // Agent: Toggle Auto-Continue (agent_limit.go)
 		return m.toggleAgentAutoContinue(), true
+	}
+	if id == diffCommentsPaletteID { // Agent: Send Diff Comments… (diff_comments.go)
+		return m.openDiffCommentsSend(m.reviewOpen), true
+	}
+	if id == agentGoalPaletteID { // Agent: Loop Until Check Passes… (agent_goal.go)
+		return m.openAgentGoal(), true
+	}
+	if id == agentGoalStopPaletteID { // Agent: Stop Check Loop (agent_goal.go)
+		return m.stopAgentGoal(), true
+	}
+	if id == agentAutoAcceptPaletteID { // Agent: Toggle Auto-Accept (agent_autoaccept.go)
+		return m.toggleAgentAutoAccept(), true
 	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
@@ -253,17 +304,32 @@ func (m *Model) agentLaunchLine(a agents.Agent) (string, tea.Cmd) {
 // line starts with a cd into it, so the agent runs there however the tab
 // was opened (AGX-2).
 func (m *Model) agentLaunchLineIn(a agents.Agent, dir string) (string, tea.Cmd) {
+	line, cmd, _ := m.agentProfileLaunchLine(a, dir, nil) // no profile: no error
+	return line, cmd
+}
+
+// agentProfileLaunchLine is agentLaunchLineIn with launch profile p (nil
+// = none; agent_profiles.go, CMP-21): its env before the agent, its model
+// and mode flags after the agent's MCP flags, the cd still first. A bad
+// profile is an error and no line.
+func (m *Model) agentProfileLaunchLine(a agents.Agent, dir string, p *agents.LaunchProfile) (string, tea.Cmd, error) {
 	line, cmd := m.agentLaunchLineAt(a, dir)
+	if p != nil {
+		var err error
+		if line, err = agents.ProfileLine(a, *p, line); err != nil {
+			return "", cmd, err
+		}
+	}
 	if dir == "" {
-		return line, cmd
+		return line, cmd, nil
 	}
 	q, ok := agents.ShellWord(dir)
 	if !ok {
 		var c tea.Cmd
 		m.toast, c = m.toast.PushDetail(toast.Warn, a.Title+" starts in the workspace", "the folder's path has a character the shell line cannot quote")
-		return line, tea.Batch(cmd, c)
+		return line, tea.Batch(cmd, c), nil
 	}
-	return "cd " + q + " && " + line, cmd
+	return "cd " + q + " && " + line, cmd, nil
 }
 
 func (m *Model) agentLaunchLineAt(a agents.Agent, dir string) (string, tea.Cmd) {
@@ -328,6 +394,61 @@ func (m *Model) startAgentAs(a agents.Agent, label string) tea.Cmd {
 // startAgentRun is startAgent in folder dir, with a first task, as
 // account label.
 func (m *Model) startAgentRun(a agents.Agent, dir, task, label string) tea.Cmd {
+	return m.startAgentFull(a, dir, task, label, nil)
+}
+
+// startAgentFull is startAgentRun with launch profile p (nil = none;
+// agent_profiles.go, CMP-21).
+func (m *Model) startAgentFull(a agents.Agent, dir, task, label string, p *agents.LaunchProfile) tea.Cmd {
+	return m.startAgentRunOpt(a, dir, task, label, false, p)
+}
+
+// startAgentSession starts one more session of a in dir, even when a
+// tab already runs it there (CMP-28: several sessions on one worktree).
+func (m *Model) startAgentSession(a agents.Agent, dir string) tea.Cmd {
+	return m.startAgentRunOpt(a, dir, "", "", true, nil)
+}
+
+// agentRunningTab is the tab that already runs agent id in dir as
+// account label, to show instead of a second copy (-1 = start one;
+// always -1 for a new session).
+func agentRunningTab(tabs []terminalTab, id, dir, label string, again bool) int {
+	return agentRunningTabFor(tabs, id, dir, label, "", again)
+}
+
+// agentRunningTabFor is agentRunningTab for launch profile profile
+// ("" = none; CMP-21).
+func agentRunningTabFor(tabs []terminalTab, id, dir, label, profile string, again bool) int {
+	if again {
+		return -1
+	}
+	for i, t := range tabs {
+		if agentStartedIn(t, id, dir) && t.Account == label && t.Profile == profile {
+			return i
+		}
+	}
+	return -1
+}
+
+// agentSessionNo is the number of a new session of agent id in dir as
+// account label: 0 when it is the only one, else one past the highest
+// (the first session counts as 1).
+func agentSessionNo(tabs []terminalTab, id, dir, label string) int {
+	top := 0
+	for _, t := range tabs {
+		if agentStartedIn(t, id, dir) && t.Account == label {
+			top = max(top, t.SessionNo, 1)
+		}
+	}
+	if top == 0 {
+		return 0
+	}
+	return top + 1
+}
+
+// startAgentRunOpt is startAgentFull; again starts a new session even
+// when a tab already runs the agent there.
+func (m *Model) startAgentRunOpt(a agents.Agent, dir, task, label string, again bool, p *agents.LaunchProfile) tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
@@ -339,21 +460,19 @@ func (m *Model) startAgentRun(a agents.Agent, dir, task, label string) tea.Cmd {
 	if !m.termOpen && len(m.hiddenTerminalTabs) > 0 {
 		m.toggleTerminalPanel() // bring the hidden tabs back first
 	}
-	for i, t := range m.terminalTabs {
-		if agentStartedIn(t, a.ID, dir) && t.Account == label {
-			m.showPanelTab(panelKindTerminal)
-			m.switchTerminalTab(i)
-			return nil
-		}
+	if i := agentRunningTabFor(m.terminalTabs, a.ID, dir, label, agentProfileName(p), again); i >= 0 {
+		m.showPanelTab(panelKindTerminal)
+		m.switchTerminalTab(i)
+		return nil
 	}
 	if card, c := m.agentMCPCardIn(a, dir); card != nil {
-		card.task = task
+		card.task, card.profile = task, p
 		m.openAgentMCPCard(card) // OpenCode: a project file, ask first
 		return nil
 	} else if c != nil {
-		return tea.Batch(c, m.launchAgentRun(a, dir, task, label))
+		return tea.Batch(c, m.launchAgentFull(a, dir, task, label, p))
 	}
-	return m.launchAgentRun(a, dir, task, label)
+	return m.launchAgentFull(a, dir, task, label, p)
 }
 
 // launchAgent opens the agent's tab and types its command line.
@@ -372,20 +491,33 @@ func (m *Model) launchAgentAs(a agents.Agent, label string) tea.Cmd {
 // launchAgentRun is launchAgent in folder dir, with a first task, as
 // account label.
 func (m *Model) launchAgentRun(a agents.Agent, dir, task, label string) tea.Cmd {
+	return m.launchAgentFull(a, dir, task, label, nil)
+}
+
+// launchAgentFull is launchAgentRun with launch profile p (nil = none).
+func (m *Model) launchAgentFull(a agents.Agent, dir, task, label string, p *agents.LaunchProfile) tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
 	if _, err := agentAccountLine(a, label, a.Bin); err != nil {
 		return m.pushToastDetail(toast.Errr, a.Title+" not started", err.Error())
 	}
+	if p != nil {
+		if err := agents.CheckProfile(a, *p); err != nil {
+			return m.pushToastDetail(toast.Errr, a.Title+" not started", "profile "+p.Name+": "+err.Error())
+		}
+	}
+	no := agentSessionNo(m.terminalTabs, a.ID, dir, label)
 	m.newTerminalTabIn(dir)
 	t := m.activeTerminalTab()
 	if t == nil {
 		return nil
 	}
+	t.SessionNo = no
 	// Without shell integration the mark stays until the tab closes;
 	// with it, the shell's command-end clears it (term_integration.go).
 	t.Agent, t.AgentState, t.Account = a.ID, agents.StartState(a.ID), label
+	t.Profile = agentProfileName(p)
 	t.Worktree = dir
 	var taskCmd tea.Cmd
 	if task != "" {
@@ -396,9 +528,9 @@ func (m *Model) launchAgentRun(a agents.Agent, dir, task, label string) tea.Cmd 
 		}
 	}
 	// The listener first, then the line: the agent may call at once.
-	serveCmd := m.ensureMCPServeForAgent() // mcp_server auto: the agent may use the IDE's tools
-	line, launchCmd := m.agentLaunchLineIn(a, dir)
-	line, _ = agentAccountLine(a, label, line) // checked above
+	serveCmd := m.ensureMCPServeForAgent()                    // mcp_server auto: the agent may use the IDE's tools
+	line, launchCmd, _ := m.agentProfileLaunchLine(a, dir, p) // the profile is checked above
+	line, _ = agentAccountLine(a, label, line)                // checked above
 	_ = m.nvim.ExecLua(fmt.Sprintf(`
 		local buf = %d
 		local ok, chan = pcall(function() return vim.bo[buf].channel end)

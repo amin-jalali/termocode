@@ -41,8 +41,21 @@ func aiRaceArgs(a map[string]any) (task, verify string, lanes []agents.Agent, er
 		return "", "", nil, fmt.Errorf("verify must be one command line of at most %d characters", aiRaceVerifyMax)
 	}
 	list, _ := a["agents"].([]any)
+	// CMP-18: a fan-out count ("claude:3,codex:2") instead of the list.
+	if spec := strings.TrimSpace(ai.ArgString(a, "fanout")); spec != "" {
+		if len(list) > 0 {
+			return "", "", nil, errors.New("give agents or fanout, not both")
+		}
+		ids, err := agentrace.ParseFanout(spec)
+		if err != nil {
+			return "", "", nil, fmt.Errorf("fanout: %w", err)
+		}
+		for _, id := range ids {
+			list = append(list, id)
+		}
+	}
 	if len(list) < agentrace.MinLanes || len(list) > agentrace.MaxLanes {
-		return "", "", nil, fmt.Errorf("agents must list %d to %d agents", agentrace.MinLanes, agentrace.MaxLanes)
+		return "", "", nil, fmt.Errorf("agents (or fanout) must give %d to %d lanes", agentrace.MinLanes, agentrace.MaxLanes)
 	}
 	for _, v := range list {
 		id, _ := v.(string)
@@ -71,9 +84,18 @@ func describeRaceStart(a map[string]any) string {
 	if err != nil {
 		return "Start an agent race (invalid)"
 	}
-	var names []string
+	var ids []string
 	for _, l := range lanes {
-		names = append(names, l.Title)
+		ids = append(ids, l.ID)
+	}
+	var names []string
+	for _, c := range agentrace.Counts(ids) {
+		ag, _ := agents.ByID(c.Agent)
+		name := ag.Title
+		if c.N > 1 {
+			name += fmt.Sprintf(" ×%d", c.N)
+		}
+		names = append(names, name)
 	}
 	out := fmt.Sprintf("Start a race of %d lanes (%s) on the task %q? Each lane runs its agent in a terminal tab in its own git worktree "+
 		"from your last commit; the task is typed into each once its input box shows. Your files change only when you merge a lane.",
@@ -95,18 +117,20 @@ func (m *Model) aiRaceTools(call aiIDECaller) []ai.Tool {
 	}
 	return []ai.Tool{{
 		Name: "agent_race_start",
-		Description: "Race one task across 2-4 outside coding agents (" + strings.Join(ids, ", ") + "): each works in its own git " +
+		Description: "Race one task across 2-8 lanes of outside coding agents (" + strings.Join(ids, ", ") + "): each works in its own git " +
 			"worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). The user confirms first.",
 		Params: map[string]any{
 			"task":   str("what every agent should do (one paragraph)"),
-			"agents": map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": ids}, "description": "2 to 4 agents, one lane each (an agent may run twice)"},
+			"agents": map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": ids}, "description": "2 to 8 agents, one lane each (an agent may repeat); or use fanout"},
+			"fanout": str("instead of agents: lanes per agent, e.g. claude:3,codex:2 (2 to 8 lanes in all)"),
 			"verify": str("optional command run in each finished lane when the user asks, e.g. go test ./..."),
 		},
-		Required: []string{"task", "agents"},
+		Required: []string{"task"},
 		// No Always allow class: every call asks.
 		Mutating: true,
 		Validate: checkRaceStart,
 		Describe: describeRaceStart,
+		View:     raceStartView,
 		Run: func(ctx context.Context, a map[string]any) (string, error) {
 			task, verify, lanes, err := aiRaceArgs(a)
 			if err != nil {

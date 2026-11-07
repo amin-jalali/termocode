@@ -227,6 +227,7 @@ func (m *Model) startAIRunAs(text string, prof ai.Profile, rules ai.Rules, id st
 	if err != nil {
 		return m.aiProfileProblem(prof.Name, err)
 	}
+	chips := s.attachChips()
 	ctxText, images := s.takeAttachments()
 	s.turnMsg = len(s.conv.Messages) // one restore point for the whole run
 	steps := make([]ai.StoredStep, len(run.Nodes))
@@ -249,7 +250,7 @@ func (m *Model) startAIRunAs(text string, prof ai.Profile, rules ai.Rules, id st
 		sr.Rounds, sr.MaxRounds = 1, run.Loop.MaxRounds
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules)},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Attached: chips, Images: images, Rules: aiRulesLabel(rules)},
 		ai.StoredMessage{Role: ai.StoredAssistant, Run: sr, Steps: steps},
 	)
 	s.scroll = 0
@@ -297,6 +298,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		mcpLines = m.mcpPromptLines()
 	}
 	auto := s.settings.AutoApprove
+	policy := s.aiApprovalPolicy() // CMP-61: every step follows the same policy
 	maxSteps := s.settings.MaxSteps
 	acts := func(n agentdag.Node) (bool, bool) { return aiNodeActs(tools, aiCategoryNode(n, cats)) } // G-PLAN
 	// Step numbers of the profile's steps (read-only below). A planned
@@ -377,6 +379,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		Acts:       acts,
 		StallAfter: s.settings.StepStall(), // OMX-23
 		Escalate:   escalate,               // OMX-16
+		Team:       s.settings.TeamMode(),  // OMX-40
+		TeamCheck:  aiTeamNoteCheck,
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
 			if n.CLI != "" {
 				return 0, false // the subscription: no price, not in the budget
@@ -400,7 +404,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				return "", nil, err
 			}
 			prompt := aiCLIPrompt(ctx, dir, sys, input+wts.othersNote(n.ID), handoff)
-			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir}, prompt, emit)
+			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir, OSSandbox: agentOSSandboxOn()}, prompt, emit)
 			return res.Text, res.Usage, err
 		},
 		Build: func(ctx context.Context, n agentdag.Node, input string) (*ai.Agent, []ai.Message, error) {
@@ -448,7 +452,9 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 			k := aiBgStepKey(run.ID, n.ID) // OMX-6: background runs this step starts hand their answers in
 			mail.openKey(k)
-			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHooks(dir, ts, out), Native: native, AutoApprove: own, MaxSteps: maxSteps,
+			hooks := aiActiveHooks(dir)
+			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHookList(dir, hooks, ts, out), Native: native, AutoApprove: own, Policy: policy, MaxSteps: maxSteps,
+				PreTool:     aiPreToolHooks(dir, hooks, out), // CMP-59
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
 				Reasoning: aiCategoryReasoning(n, cats, reasoning(n.Slot, sl.cfg), think), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: aiFallbacksWithTemp(fallbacks[n.Slot], aiCategoryTemp(n, cats)),
 				ContextWindow: windowOf(sl.cfg.Model), Inbox: mail.inbox(k)}, msgs, nil
@@ -868,6 +874,7 @@ func (m *Model) aiStepFinished(st *ai.StoredStep, ev agentrun.Event) {
 			if pct, ok := ai.ContextPercent(c, w); ok {
 				st.ContextPct = &pct
 			}
+			s.noteContext(c, w) // CMP-7: the newest step is the chat's context chip
 		}
 		m.output.Append(aiAuditChannel, clock.Now().Format("15:04:05")+"  usage  step "+st.ID+" · "+
 			aiUsageText(kind, c, ai.NewPricing(s.settings.Prices), ai.NewContextWindows(s.settings.ContextWindows)))

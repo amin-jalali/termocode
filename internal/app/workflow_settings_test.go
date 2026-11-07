@@ -23,6 +23,8 @@ func TestWorkflowSettingsRows(t *testing.T) {
 		"workflows_history_days":     {"30", aiGateConfirm},
 		"workflows_wait_hours":       {"12", aiGateConfirm},
 		"workflows_agent_sandbox":    {"worktree", aiGateNever},
+		"workflows_trigger_poll_min": {"5", aiGateConfirm},
+		"workflows_webhook_port":     {"0", aiGateNever},
 	}
 	cats := settingsCategories()
 	found := 0

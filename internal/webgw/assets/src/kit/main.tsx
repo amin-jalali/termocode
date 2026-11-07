@@ -12,11 +12,18 @@ import "../styles/base.css";
 import "../styles/shell.css";
 import "../styles/ui.css";
 import "../styles/components.css";
+import "../styles/phone.css";
+import "../styles/home.css";
+import "../styles/chat.css";
+import "../styles/blocks.css";
+import "../styles/customize.css";
+import "../styles/more.css";
 import "./kit.css";
 import { toast } from "../lib/toasts";
 import type { StatusView } from "../state/status";
 import { t, tn, type StringKey } from "../strings";
 import { AttentionView } from "../ui/AttentionPill";
+import { Blocks } from "../ui/Blocks";
 import { Button } from "../ui/Button";
 import { Card, type CardKind, type CardState } from "../ui/Card";
 import { Chip } from "../ui/Chip";
@@ -30,7 +37,58 @@ import { Progress, SkeletonBubbles, SkeletonRows } from "../ui/Skeleton";
 import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
+import { Block as PhoneBlock, BoardTile, Composer, ConnLine, ErrorLine, PhoneCard, PhoneSkeleton, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, Row, Rows, StatusMark, STATUS, StreamMsg, type Status } from "../phone/index";
+import { ChipRow } from "../home/ChipRow";
+import type { ChipState } from "../home/chips";
+import { KitCustomize } from "./customize";
+import { AllTools } from "../home/AllTools";
+import { readCatalog, viewHash, type Target } from "../home/alltools";
 import "./replay";
+import type { Block as ProtoBlock } from "../../../../webproto/proto";
+
+/** blockSamples: one block of each kind (MOB-3), plus one kind this page
+ * does not know. Sample data only. */
+const KIT_NOW = Date.UTC(2026, 10, 7, 12, 0, 0);
+const prRef = { kind: "pr", id: "418" };
+const blockSamples: ProtoBlock[] = [
+  {
+    id: "k1", kind: "list", title: "Open pull requests", live: true, total: 5, truncated: true,
+    items: [
+      { id: "418", title: "fix toast", sub: "main ← fix/toast", tone: "bad", badge: "CI ✗", time: KIT_NOW - 2 * 3600e3, ref: prRef, actions: [{ id: "chat", label: "To chat", kind: "attach", ref: prRef }] },
+      { id: "412", title: "login rate limit", sub: "main ← feat/rate", tone: "busy", badge: "CI ◐", time: KIT_NOW - 86400e3 },
+      { id: "409", title: "docs: pairing", tone: "ok", badge: "CI ✓", time: KIT_NOW - 3 * 86400e3 },
+    ],
+  },
+  {
+    id: "k2", kind: "table", title: "Orders today",
+    columns: [{ id: "n", label: "#", kind: "num" }, { id: "who", label: "customer" }, { id: "st", label: "state", kind: "tone" }, { id: "sum", label: "total", kind: "cost" }],
+    rows: [["1042", "Ada", "ok", "$12.00"], ["1043", "Grace", "warn", "$7.50"], ["1044", "Linus", "bad", "$0.00"]],
+    spec: { view: "db.rows", fields: ["n", "who", "st", "sum"], sort: [{ field: "n", desc: true }], limit: 20 },
+  },
+  {
+    id: "k3", kind: "diff", title: "internal/app/model.go",
+    diff: { path: "internal/app/model.go", adds: 2, dels: 1, hunks: [{ header: "@@ -10,3 +10,4 @@ func (m Model) View()", lines: [{ k: "ctx", a: 10, b: 10, text: "\tvar b strings.Builder" }, { k: "del", a: 11, text: "\tb.WriteString(m.title)" }, { k: "add", b: 11, text: "\tb.WriteString(m.header())" }, { k: "add", b: 12, text: "\tb.WriteString(m.body())" }] }] },
+    actions: [{ id: "laptop", label: "Show on laptop", kind: "laptop" }],
+  },
+  { id: "k4", kind: "card", title: "Run 12 · review", fields: [{ label: "state", value: "running", tone: "busy" }, { label: "step", value: "3/5" }, { label: "cost", value: "$0.42", kind: "cost" }, { label: "model", value: "sonnet", kind: "mono" }] },
+  { id: "k5", kind: "detail", title: "Container web", fields: [{ label: "image", value: "nginx:1.27", kind: "mono" }, { label: "state", value: "up 3 h", tone: "ok" }, { label: "ports", value: "8080 → 80", kind: "mono" }] },
+  { id: "k6", kind: "chart", title: "AI cost today", bars: [{ label: "claude", value: 1.2, text: "$1.20", tone: "info" }, { label: "codex", value: 0.4, text: "$0.40", tone: "info" }, { label: "local", value: 0, text: "$0.00", tone: "idle" }] },
+  { id: "k7", kind: "status", title: "CI on main", state: "ok" },
+  { id: "k8", kind: "form", title: "New issue", form: [{ id: "title", label: "Title", kind: "text", required: true }, { id: "kind", label: "Kind", kind: "choice", choices: ["bug", "idea"] }, { id: "urgent", label: "Urgent", kind: "bool" }, { id: "body", label: "Details", kind: "long", hint: "Plain text" }] },
+  { id: "k9", kind: "json", title: "Raw result", json: '{"ok":true,"items":[1,2,3]}' },
+  { id: "k10", kind: "text", title: "Answer", for_you: "Two files changed; tests pass.", md: { k: "doc", c: [{ k: "p", c: [{ k: "text", text: "The toast now waits for the " }, { k: "code", text: "Esc" }, { k: "text", text: " key." }] }] } },
+  {
+    id: "k11", kind: "board", title: "Board",
+    board: { columns: [
+      { id: "need", label: "Needs you", tone: "warn", items: [{ id: "c1", title: "Allow go test", sub: "termocode · lane 2", tone: "warn" }] },
+      { id: "work", label: "Working", tone: "busy", items: [{ id: "r12", title: "review fix/toast", sub: "step 3/5 · $0.42", tone: "busy" }] },
+      { id: "rev", label: "Review", tone: "info", items: [] },
+      { id: "done", label: "Done", tone: "ok", items: [{ id: "r9", title: "docs: pairing", tone: "ok" }] },
+    ] },
+  },
+  { id: "k12", kind: "map" as ProtoBlock["kind"], title: "A block from a newer laptop" },
+  { id: "k13", kind: "status", title: "Failing CI · shop", state: "bad", stale: true },
+];
 
 installSafety();
 
@@ -66,6 +124,29 @@ function Pair({ children, tall }: { children: () => ComponentChildren; tall?: bo
         </div>
       ))}
     </div>
+  );
+}
+
+// The Home's chip row (MOBUX-3) in two states of the laptop.
+const chipStates: Record<"calm" | "waits", ChipState> = {
+  calm: { needsYou: 0, working: 0, review: 0, ciRed: 0 },
+  waits: { needsYou: 2, working: 1, review: 3, ciRed: 1 },
+};
+const chipState = signal<"calm" | "waits">("calm");
+
+function KitChips() {
+  return (
+    <>
+      <div class="kit-row">
+        <button type="button" class="btn" onClick={() => (chipState.value = "calm")}>
+          Calm laptop
+        </button>
+        <button type="button" class="btn" onClick={() => (chipState.value = "waits")}>
+          Something waits
+        </button>
+      </div>
+      <Pair>{() => <ChipRow state={chipStates[chipState.value]} onPick={(id) => toast("info", "Chip " + id)} />}</Pair>
+    </>
   );
 }
 
@@ -238,6 +319,157 @@ function Connect({ state }: { state: ConnectState }) {
   );
 }
 
+const phoneStatuses = Object.keys(STATUS) as Status[];
+
+/** PhoneKit shows the phone app's base components (MOBUX-1). */
+function PhoneKit() {
+  const [text, setText] = useState("");
+  const [attached, setAttached] = useState([{ id: "task:412", label: "#412 login rate limit" }]);
+  return (
+    <div class="ph-kit">
+      <div class="ph-kit-marks">
+        {phoneStatuses.map((s) => (
+          <span key={s} class="ph-kit-mark">
+            <StatusMark s={s} hidden /> {s}
+          </span>
+        ))}
+      </div>
+      <div class="ph-kit-cards">
+        <PhoneCard status="needs" value={2} detail="run go test · shop" onClick={() => toast("info", "Needs you")} />
+        <PhoneCard status="working" value={3} detail="2 lanes · 1 workflow" onClick={() => toast("info", "Working")} />
+        <PhoneCard status="done" title="Done today" value={7} detail="$4.20" />
+      </div>
+      <PhoneChips label="Chips">
+        <PhoneChip label="Needs you" status="needs" count={2} onClick={() => undefined} />
+        <PhoneChip label="Board" pinned on onClick={() => undefined} />
+        <PhoneChip label="Projects" pinned onClick={() => undefined} />
+        <PhoneChip label="Review" onClick={() => undefined} />
+        <PhoneChip label="Git" onClick={() => undefined} />
+      </PhoneChips>
+      <PhoneBlock kind="table" title="Pull requests" status="working" live onCustomize={() => toast("info", "Customize")} actions={<Button small>Refresh</Button>}>
+        <Rows label="Pull requests">
+          <Row status="failed" title="#418 fix toast" meta="CI ✗ · 2 h" end="2 h" onClick={() => undefined} />
+          <Row status="working" live title="#412 login rate limit" meta="CI ◐ · 1 d" end="1 d" onClick={() => undefined} onLongPress={() => toast("info", "Row menu")} />
+          <Row status="done" title="#409 docs: pairing" meta="CI ✓ · 3 d" end="3 d" />
+        </Rows>
+      </PhoneBlock>
+      <div class="ph-kit-tiles">
+        <BoardTile status="needs" title="card: run go test" project="shop" agent="lane fix-login" ci="failed" onClick={() => undefined} />
+        <BoardTile status="working" live title="rate limit" project="shop" agent="sonnet" step="3/5" cost="$0.80" ci="working" onClick={() => undefined} />
+        <BoardTile status="review" title="race #3" project="api" agent="3 lanes" step="2 done" cost="$1.10" />
+        <BoardTile status="done" title="lane fix-login +41 −9" project="shop" ci="done" />
+      </div>
+      <Composer
+        value={text}
+        onInput={setText}
+        onSend={() => toast("ok", "Sent: " + text)}
+        attached={attached}
+        onRemove={(id) => setAttached(attached.filter((a) => a.id !== id))}
+      />
+      <Composer value="" onInput={() => undefined} onSend={() => undefined} offline />
+      <ConnLine conn="offline" text={t("ph.conn_offline")} />
+      <ConnLine conn="asleep" text={t("ph.conn_asleep", { time: "10:42" })} onTry={() => toast("info", "Try now")} />
+      <ConnLine conn="final" text={t("e.ended")} />
+      <PhoneSkeleton shape="cards" />
+      <PhoneSkeleton shape="block" n={3} />
+      <PhoneSkeleton shape="rows" n={3} />
+      <PhoneSkeleton shape="board" n={2} />
+      <ErrorLine text="The pull requests did not load." onRetry={() => toast("info", "Retry")} />
+      <ErrorLine text="The pull requests did not load." onRetry={() => undefined} offline />
+    </div>
+  );
+}
+
+// The phone app shell (MOBUX-2): one state for both theme frames.
+const shellProjects = [
+  { id: "shop", name: "shop", where: "~/src/shop" },
+  { id: "api", name: "api", where: "~/src/api" },
+  { id: "docs", name: "docs", where: "~/notes/docs" },
+];
+const shellProject = signal("shop");
+const shellOffline = signal(false);
+const shellMsgs = signal<{ from: "you" | "ai"; text: string }[]>([
+  { from: "you", text: "show open PRs as a table, newest first" },
+  { from: "ai", text: "5 open pull requests:" },
+]);
+const shellDraft = signal("");
+
+function ShellControls() {
+  return (
+    <div class="kit-row">
+      <button type="button" class="btn" onClick={() => (shellOffline.value = !shellOffline.value)}>
+        Shell offline
+      </button>
+      <button
+        type="button"
+        class="btn"
+        onClick={() => (shellMsgs.value = [...shellMsgs.value, { from: shellMsgs.value.length % 2 ? "you" : "ai", text: "Message " + (shellMsgs.value.length + 1) + ": the lane fix-login is on step 3 of 5." }])}
+      >
+        Shell: add a message
+      </button>
+    </div>
+  );
+}
+
+function ShellDemo() {
+  const p = shellProjects.find((x) => x.id === shellProject.value) ?? shellProjects[0];
+  return (
+    <div class="ph-kit-shell">
+      <PhoneShell
+        project={p}
+        projects={shellProjects}
+        onProject={(id) => (shellProject.value = id)}
+        link={shellOffline.value ? "offline" : "live"}
+        onMenu={() => toast("info", "All tools")}
+        chips={<ChipRow state={chipStates.waits} onPick={(id) => toast("info", "Chip " + id)} />}
+        composer={{
+          value: shellDraft.value,
+          onInput: (v) => (shellDraft.value = v),
+          onSend: () => {
+            shellMsgs.value = [...shellMsgs.value, { from: "you", text: shellDraft.value }];
+            shellDraft.value = "";
+          },
+          onAttach: () => toast("info", "Attach"),
+        }}
+      >
+        {shellMsgs.value.map((m, i) => (
+          <StreamMsg key={i} from={m.from}>
+            {m.text}
+          </StreamMsg>
+        ))}
+        <PhoneBlock kind="table" title="Pull requests" status="working" live>
+          <Rows label="Pull requests">
+            <Row status="failed" title="#418 fix toast" meta="CI ✗ · 2 h" end="2 h" onClick={() => undefined} />
+            <Row status="working" title="#412 login rate limit" meta="CI ◐ · 1 d" end="1 d" onClick={() => undefined} />
+          </Rows>
+        </PhoneBlock>
+      </PhoneShell>
+    </div>
+  );
+}
+
+function PhoneSheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open phone sheet</Button>
+      {open && (
+        <PhoneSheet
+          title="shop · #412 open"
+          onLater={() => setOpen(false)}
+          actions={[
+            { label: "Just start", risky: true, onClick: () => setOpen(false) },
+            { label: "Talk about it", primary: true, onClick: () => setOpen(false) },
+            { label: "Cancel", safe: true, local: true, onClick: () => setOpen(false) },
+          ]}
+        >
+          <p class="kit-note">Cancel comes first and has focus; Just start wakes after 600 ms.</p>
+        </PhoneSheet>
+      )}
+    </>
+  );
+}
+
 function Kit() {
   const cardKinds: CardKind[] = ["tool", "review", "plan", "mcp", "trust"];
   const cardStates: CardState[] = ["answered", "offline", "gone", "viewonly", "long"];
@@ -271,7 +503,7 @@ function Kit() {
         </div>
       </header>
       <nav class="kit-nav" aria-label="Sections">
-        {["tokens", "strip", "nav", "pill", "bars", "buttons", "cards", "sheets", "toasts", "chips", "term", "code", "diff", "tree", "loading", "empty", "waiting", "connect", "misc"].map((s) => (
+        {["tokens", "strip", "nav", "pill", "bars", "buttons", "cards", "sheets", "toasts", "chips", "term", "code", "diff", "tree", "loading", "empty", "waiting", "connect", "misc", "phone", "shell"].map((s) => (
           <a key={s} class="chip" href={`#${s}`}>
             {s}
           </a>
@@ -551,6 +783,24 @@ function Kit() {
           </Pair>
         </Section>
 
+        <Section id="chips" title="Home chips" note="Needs you first while something waits; up to 3 pins next; the row scrolls sideways.">
+          <KitChips />
+        </Section>
+
+        <Section id="blocks" title="Blocks" note="MOB-3: one block of each kind from the laptop; unknown kind = title + Open on laptop; tone = colour + shape; 360 px phone.">
+          <Pair tall>
+            {() => <Blocks list={blockSamples} now={KIT_NOW} onAction={(a) => toast("info", a.label)} onLaptop={(b) => toast("info", b.title)} onForm={() => toast("ok", t("blk.form_send"))} />}
+          </Pair>
+        </Section>
+
+        <Section id="customize" title="Customize a view" note="⚙ on a view block opens the sheet: fields, filter, sort, group, rows, layout, density; the preview runs the draft. Cancel is first.">
+          <KitCustomize />
+        </Section>
+
+        <Section id="tools" title="All tools" note="MOBUX-5: the phone's ☰ menu; catalog read, catalog failed, catalog loading.">
+          <Pair tall>{() => <ToolsDemo />}</Pair>
+        </Section>
+
         <Section id="misc" title="Choices">
           <Pair>
             {() => (
@@ -567,9 +817,62 @@ function Kit() {
             )}
           </Pair>
         </Section>
+        <Section id="phone" title="Phone app" note="Phone tokens are web tokens (both themes, AA); status is a colour and a shape; 44 px targets; the safe choice first. Phone layout only (MOBUX-1).">
+          <Pair tall>{() => <PhoneKit />}</Pair>
+          <Pair>{() => <PhoneSheetDemo />}</Pair>
+        </Section>
+        <Section id="shell" title="Phone app shell" note="Top bar: project switcher ▾, live mark, ☰. The stream, then the dock in the thumb zone: chips above the composer (+, 🎤, Send). MOBUX-2.">
+          <ShellControls />
+          <Pair tall>{() => <ShellDemo />}</Pair>
+        </Section>
       </main>
       <Toasts />
     </div>
+  );
+}
+
+// A view.catalog result as the laptop sends it (sample data): built-in
+// views, two MCP servers (github with a resource view), saved views.
+const toolsCatalog = readCatalog({
+  views: [
+    { id: "git.branches", feature: "git", title: "Branches" },
+    { id: "pr.list", feature: "ci", title: "Pull requests" },
+    { id: "mcp.github.list_issues", feature: "mcp", server: "github", tool: "list_issues", title: "List issues", run: true },
+    { id: "mcp.github.list_pull_requests", feature: "mcp", server: "github", tool: "list_pull_requests", title: "List pull requests", run: true },
+    { id: "mcp.github.create_issue", feature: "mcp", server: "github", tool: "create_issue", title: "Create issue", run: false },
+    { id: "mcp.github.resource", feature: "mcp", server: "github", tool: "resource", title: "Resources", run: true },
+    { id: "mcp.linear.my_issues", feature: "mcp", server: "linear", tool: "my_issues", title: "My issues", run: true },
+  ],
+  servers: ["github", "linear", "sentry"],
+  saved: [
+    { id: "s1", name: "PRs to review", spec: { view: "pr.list", ws: "shop", args: { state: "open" } }, pinned: true },
+    { id: "s2", name: "Failing CI", spec: { view: "ci.checks" } },
+  ],
+});
+
+/** toolsOpened is the last target a kit menu opened (the tests read it). */
+const toolsOpened = signal("");
+
+function openKitTarget(target: Target): void {
+  toolsOpened.value = "route" in target ? `#/${target.route.tab}${target.route.rest ? "/" + target.route.rest : ""}` : viewHash(target);
+}
+
+function ToolsDemo() {
+  return (
+    <>
+      <p class="kit-note kit-opened">{toolsOpened.value}</p>
+      <div class="kit-split">
+        <div data-state="ok">
+          <AllTools cat={{ state: "ok", catalog: toolsCatalog }} onRetry={() => undefined} onOpen={openKitTarget} />
+        </div>
+        <div data-state="failed">
+          <AllTools cat={{ state: "failed" }} onRetry={() => toast("info", t("loading"))} onOpen={openKitTarget} />
+        </div>
+        <div data-state="loading">
+          <AllTools cat={{ state: "loading" }} onRetry={() => undefined} onOpen={openKitTarget} />
+        </div>
+      </div>
+    </>
   );
 }
 

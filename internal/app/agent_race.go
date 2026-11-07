@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentjail"
 	"github.com/amin-jalali/termocode/internal/agentrace"
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/clock"
@@ -21,7 +23,7 @@ import (
 
 // ── Agent: Race… (AGX-4, plan 2.5) ───────────────────────────────────────
 //
-// One task fanned out to 2–4 outside agents. Each lane gets its own agent
+// One task fanned out to 2–8 lanes of outside agents (an agent may run in several, CMP-18). Each lane gets its own agent
 // worktree from HEAD (hidden in the git dir, like G-WT) and a terminal
 // tab in it that runs the agent. The task is typed into a lane only once
 // the agent's input box is on screen (its screen rules say Done), never
@@ -53,6 +55,7 @@ type raceState struct {
 	worked map[string]bool   // lane id → the agent worked after the task was typed
 	verify map[int][2]string // verify job buffer → race id, lane id
 	target [2]string         // the race and lane a card is about
+	bcast  raceBroadcast     // the message or command a card is about (agent_race_broadcast.go)
 	seq    int               // save generation
 }
 
@@ -193,6 +196,15 @@ type raceStartedMsg struct {
 // raceStartCmd makes the race and its worktrees off the UI goroutine.
 // taken is the highest race number the UI knows.
 func raceStartCmd(root string, have bool, taken int, task, verify string, specs []agentrace.LaneSpec, now int64) tea.Cmd {
+	return raceStartCmdOf(agentrace.New, root, have, taken, task, verify, specs, now)
+}
+
+// raceNewFunc makes the record: agentrace.New (a race) or
+// agentrace.NewSplit (CMP-4).
+type raceNewFunc func(n int, prompt, verify string, lanes []agentrace.LaneSpec, nowMs int64) (agentrace.Race, error)
+
+// raceStartCmdOf is raceStartCmd with the record made by newRace.
+func raceStartCmdOf(newRace raceNewFunc, root string, have bool, taken int, task, verify string, specs []agentrace.LaneSpec, now int64) tea.Cmd {
 	return func() tea.Msg {
 		dir, err := git.AgentStateDir(root)
 		if err != nil {
@@ -208,7 +220,7 @@ func raceStartCmd(root string, have bool, taken int, task, verify string, specs 
 		for raceNumberUsed(dir, n) { // left-over lanes of a lost record
 			n++
 		}
-		r, err := agentrace.New(n, task, verify, specs, now)
+		r, err := newRace(n, task, verify, specs, now)
 		if err != nil {
 			return raceStartedMsg{err: err}
 		}
@@ -271,7 +283,11 @@ func (m *Model) onRaceStarted(msg raceStartedMsg) tea.Cmd {
 		a, _ := agents.ByID(l.Agent)
 		buf, err := raceLaunchLane(m, *l, a)
 		if err != nil {
-			l.State, l.Note = agentrace.Failed, "no tab: "+aiOneLine(err.Error())
+			why := "no tab: "
+			if errors.Is(err, agentjail.ErrNoTool) {
+				why = "not started: "
+			}
+			l.State, l.Note = agentrace.Failed, why+aiOneLine(err.Error())
 			continue
 		}
 		s.bufs[l.ID] = buf
@@ -279,6 +295,12 @@ func (m *Model) onRaceStarted(msg raceStartedMsg) tea.Cmd {
 	}
 	m.openRacePage(r.ID)
 	text := fmt.Sprintf("Race started: %d lane%s. Each agent gets the task when its input box shows", started, plural(started))
+	if r.Split() {
+		text = fmt.Sprintf("Split started: %d part%s. Each agent gets its part when its input box shows", started, plural(started))
+	}
+	if agentOSSandboxOn() {
+		text += ". Each lane runs in its OS sandbox (agent_os_sandbox): only its worktree can be written"
+	}
 	return tea.Batch(m.raceSave(), m.aiInfo(text))
 }
 
@@ -293,6 +315,10 @@ func (m *Model) raceLaunchTab(l agentrace.Lane, a agents.Agent) (int, error) {
 	if !m.termOpen {
 		m.openTerminalPanel()
 	}
+	line, _, err := raceAgentLine(a, l.Worktree)
+	if err != nil {
+		return 0, err
+	}
 	n := len(m.terminalTabs)
 	m.newTerminalTabIn(l.Worktree)
 	t := m.activeTerminalTab()
@@ -300,7 +326,7 @@ func (m *Model) raceLaunchTab(l agentrace.Lane, a agents.Agent) (int, error) {
 		return 0, fmt.Errorf("could not open a terminal tab")
 	}
 	t.Agent, t.AgentState = a.ID, agents.StartState(a.ID)
-	m.raceChansend(t.BufID, a.Bin+"\n")
+	m.raceChansend(t.BufID, line+"\n")
 	m.agentWatch(t.BufID, true)
 	m.applyLayout()
 	m.resizeTerminalSplit()
@@ -339,7 +365,7 @@ func (m *Model) raceOnAgentState(buf int, st agents.State) tea.Cmd {
 	var cmds []tea.Cmd
 	switch {
 	case !l.Typed && st == agents.Done: // the input box: type the task, once
-		raceSendKeys(m, buf, r.Prompt)
+		raceSendKeys(m, buf, r.LaneTask(*l)) // a split lane gets its own part (CMP-4)
 		l.Typed, l.State = true, agentrace.Working
 		s.worked[l.ID] = false
 		if t, _ := m.termTabByBuf(buf); t != nil {
@@ -397,6 +423,10 @@ func (m *Model) raceLaneEnded(r *agentrace.Race, l *agentrace.Lane) tea.Cmd {
 		}
 	}
 	var c tea.Cmd
+	if r.Split() {
+		m.toast, c = m.toast.Push(toast.Info, "Split "+r.Name+" is done: F1 → Agent: Race Compare to merge each part")
+		return tea.Batch(append(cmds, c, m.notifyOS("Agent split done"))...)
+	}
 	m.toast, c = m.toast.Push(toast.Info, "Race "+r.Name+" is done: F1 → Agent: Race Compare")
 	return tea.Batch(append(cmds, c, m.notifyOS("Agent race done"))...)
 }

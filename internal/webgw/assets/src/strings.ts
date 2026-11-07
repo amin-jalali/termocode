@@ -7,6 +7,7 @@
 import { signal } from "@preact/signals";
 import { dict, has } from "./state/dict";
 import type { SD } from "./strings.desk";
+import type { SP } from "./strings.phone";
 
 export const S = {
   // Shell and connect
@@ -113,6 +114,9 @@ export const S = {
   "chat.follow": "Follow the laptop",
   "chat.rest": "Show the rest",
   "chat.more_code": "Show more",
+  "chat.diagram_lang": "{lang} · diagram",
+  "chat.show_source": "Show source",
+  "chat.show_diagram": "Show diagram",
   "chat.error": "The AI stopped: {text}",
   "chat.retry_laptop": "Retry on laptop",
   "chat.steps": "{n} steps · {tok} tok · {time}",
@@ -133,6 +137,10 @@ export const S = {
   "chat.conflict": "The laptop cannot send in this chat now.",
   "chat.continue": "Sending opens this chat on the laptop.",
   "chat.busy": "The AI is still answering. Stop it or wait.",
+  "chat.comment_placeholder": "Leave a comment on this chat…",
+  "chat.comment_send": "Comment",
+  "chat.comment_sent": "Comment sent to the laptop.",
+  "chat.comment_note": "You watch this chat. Your comment goes to the laptop; the AI does not read it.",
   "copy": "Copy",
   "copied": "Copied",
   "copy.failed": "Could not copy. Select the text instead.",
@@ -247,7 +255,7 @@ export const S = {
   "notify.title": "Notifications",
   "notify.on": "Notify me",
   "notify.off": "Stop notifications",
-  "notify.body": "A short fixed text when the AI waits for you or a run ends, while this page is in the background. Never code, paths or commands.",
+  "notify.body": "A short fixed text when the AI waits for you or a run ends, while this page is in the background or, on a paired phone, closed. Never code, paths or commands.",
   "notify.blocked": "This browser blocks notifications for this page.",
   "notify.card": "The AI waits for your approval.",
   "notify.run_done": "A run finished.",
@@ -391,6 +399,8 @@ export const S = {
   "runs.none": "No AI runs yet.",
   "runs.resume": "Resume",
   "runs.step": "step {n} of {m}",
+  "runs.subrun": "{n} sub-run",
+  "runs.subruns": "{n} sub-runs",
   "runs.state.running": "working now",
   "runs.state.stalled": "no output",
   "runs.state.pausing": "pausing",
@@ -412,11 +422,57 @@ export const S = {
   // More
   "more.search": "Search",
   "more.tasks": "Tasks",
+  // New task from the page (CMP-49)
+  "nt.title": "New task",
+  "nt.body": "The laptop makes a worktree and its branch, then starts the agent there with your task.",
+  "nt.task": "Task",
+  "nt.task_ph": "What the agent does, in one line",
+  "nt.agent": "Agent",
+  "nt.name": "Name (optional)",
+  "nt.name_ph": "Empty: the branch comes from the task",
+  "nt.from": "Start from",
+  "nt.start": "Start task",
+  "nt.ask": "Start {agent} on the laptop in a new worktree?",
+  "nt.started": "Task {branch} started on the laptop.",
+  "nt.where": "New worktrees go to {base}.",
+  "nt.setup_trusted": "The repository's setup runs in the new worktree.",
+  "nt.setup_asks": "The repository's setup asks on the laptop first.",
+  "nt.none_body": "A new task needs the laptop's workspace to be a git repository.",
+  "nt.no_agents_body": "No agent is installed on the laptop. Install one there, then come back.",
+  "nt.viewer_body": "You can only watch. Ask the laptop for control to start a task.",
   "more.runs": "Runs",
   "more.workflows": "Workflows",
+  // The phone's live board (MOB-18); English only, no Persian text.
+  "more.board": "Live board",
+  "wfv.needs": "Needs you",
+  "board.col.working": "Working",
+  "board.col.done": "Done today",
+  "board.columns": "Board columns",
+  "board.today": "{s} today",
+  "board.empty_col": "Nothing in this column.",
+  "board.empty_body": "Nothing is going on now. AI runs, lanes, workflows and questions show here.",
+  "board.load_failed": "The board did not open.",
+  "board.stale": "Offline. This is the last board the laptop sent.",
+  "board.ahead": "{n} ahead",
+  "board.dirty": "{n} changed",
+  "board.more": "{n} more on the laptop",
+  "board.st.wait": "waits for you",
+  "board.kind.card": "question",
+  "board.kind.run": "AI run",
+  "board.kind.lane": "lane",
+  "board.kind.workflow": "workflow run",
   "wf.none": "No workflows in this folder.",
   "wf.stop_confirm": "Stop this workflow run? Finished items keep their results.",
   "wf.waiting": "waits for you: {s}",
+  "wf.dry_run": "Dry run",
+  "wf.dry_confirm": "Dry run this workflow?",
+  "wf.dry_note": "It reads its sources (read-only) and writes nothing. Plan steps call the AI, which costs money.",
+  "wf.dry_started": "Dry run of {s} started",
+  "wf.run": "Run",
+  "wf.run_label": "Run {s}",
+  "wf.run_body": "Run {s} for real? It may write to outside systems. Each write still asks you on its own card.",
+  "wf.trust_laptop": "Not trusted yet. Read and trust it on the laptop.",
+  "wf.broken": "Its file has problems. Fix it on the laptop.",
   "more.settings": "Settings",
   "settings.readonly": "Read only. Change settings on the laptop.",
   "settings.none": "No settings to show.",
@@ -574,6 +630,13 @@ export const S = {
   "card.open_diff": "Open Changes",
   "card.keep_change": "Keep change {n}",
   "card.keep_none": "No change is kept. Keep one, or press Reject.",
+  "card.send": "Send",
+  "card.form_required": "required",
+  "card.form_missing": "Fill in {name} first.",
+  "card.form_yes": "Yes",
+  "card.form_no": "No",
+  "card.form_pick": "Pick one",
+  "toast.sent": "Sent. The laptop gives it to the server.",
   "sv.collapse": "Collapse All",
   "scm.more_actions": "More Actions…",
   "dbv.query_tab": "Query: {conn}",
@@ -582,6 +645,8 @@ export const S = {
   "mcpv.running": "Running",
   "chat.insert": "Insert into the Editor",
   "chat.agent": "The agent profile and model of this chat",
+  "chat.ctx": "ctx {pct}%",
+  "chat.ctx_title": "Context: {tokens} of {window} tokens ({pct}%) on the newest turn",
   "chat.default_profile": "default",
   // Run, Test and Debug (WEBP-4)
   "act.testing": "Testing",
@@ -778,6 +843,15 @@ export const S = {
   "aiinfo.bug_report": "Help: Bug Report",
   "ai.attach": "Add to AI Chat",
   "ai.attached": "Added to the AI chat's next message",
+  // Voice input (CMP-48): the browser's speech input into the chat box
+  "dictate.start": "Speak instead of typing",
+  "dictate.stop": "Stop listening",
+  "dictate.listening": "Listening… speak, then press the microphone again to stop.",
+  "dictate.note_body": "Your browser turns speech into text. Some browsers send the audio to their own online speech service. Nothing goes to the AI until you press Send.",
+  "dictate.denied": "The browser did not allow the microphone.",
+  "dictate.none": "No words heard.",
+  "dictate.stopped": "Voice input stopped: {why}",
+  "dictate.unsupported": "This browser has no speech input.",
   "mcp.switch": "AI: MCP: Switch Profile…",
   "mcp.all": "All servers and tools",
   "mcp.in_use": "This chat uses it already.",
@@ -798,16 +872,189 @@ export const S = {
   "cmd.failed": "The command did not run.",
   "cmd.ask_text": "Run “{name}” on the laptop?",
   "cmd.ran_laptop": "Done on the laptop: {name}",
+  // Phone app (MOBUX-1): status words and base components
+  "ph.st.needs": "Waits for you",
+  "ph.st.working": "Working now",
+  "ph.st.review": "Ready for review",
+  "ph.st.idle": "Idle",
+  "ph.st.asleep": "Sleeping",
+  "ph.customize": "Customize",
+  "ph.ask": "What do you want?",
+  "ph.checks": "Checks: {state}",
+  "ph.ci": "CI",
+  // Phone app shell (MOBUX-2)
+  "ph.switch": "Project: {name}. Change project",
+  "ph.switch_title": "Projects",
+  "ph.current": "Current project",
+  "ph.menu": "All tools",
+  "ph.live": "Live",
+  "ph.offline": "Offline",
+  "ph.asleep": "Laptop asleep",
+  "ph.mic": "Speak",
+  "ph.mic_hint": "Tap the 🎤 on your keyboard to speak.",
+  "ph.attach": "Attach",
+  "ph.stream": "Chat",
+  // Lane, run and log actions of the phone's Home (MOB-17)
+  "item.sheet_lane": "Lane {name}",
+  "item.sheet_run": "Run: {name}",
+  "item.sheet_log": "Output: {name}",
+  "item.add_ref": "Add to message",
+  "item.ask_btn_lane": "Ask about this lane",
+  "item.ask_btn_run": "Ask about this run",
+  "item.ask_btn_log": "Explain this output",
+  "item.ask_lane": "What changed in lane {name}, and is it ready?",
+  "item.ask_run": "Summarise the run {name}: what it did and what is left.",
+  "item.ask_run_wait": "Why does the run {name} wait, and what does it need?",
+  "item.ask_log": "Summarise the output of {name}.",
+  "item.ask_log_failed": "Explain why {name} failed and how to fix it.",
+  "item.open_runs": "Open in Runs",
+  "item.open_tasks": "Open in Tasks",
+  "item.pin": "Pin lane",
+  "item.unpin": "Unpin lane",
+  "item.sleep": "Put lane to sleep",
+  "item.sleep_q": "Put lane {name} to sleep? Its agent tabs end, files stay.",
+  "item.wake": "Wake lane",
+  "item.archive": "Archive on the laptop",
+  "item.card_sent": "The laptop asks first. Answer on the laptop.",
+  "item.note": "Leave a note",
+  "item.note_ph": "One line for this lane",
+  "item.note_save": "Save note",
+  "item.noted": "Note saved on the laptop.",
+  "item.link": "Link an issue or PR",
+  "item.link_issue": "Issue",
+  "item.link_pr": "Pull request",
+  "item.link_ph": "Number, like 412",
+  "item.link_bad": "Type a number from 1 up.",
+  "item.link_save": "Link it",
+  "item.linked": "Linked on the laptop.",
+  "item.unlink": "Unlink",
+  "item.run_again": "Run again",
+  // Customize sheet of a phone view (MOBUX-16)
+  "cust.open": "Customize {name}",
+  "cust.title": "{name} · customize",
+  "cust.layout": "Layout",
+  "cust.l_table": "Table",
+  "cust.l_list": "List",
+  "cust.l_card": "Card",
+  "cust.l_detail": "Detail",
+  "cust.density": "Density",
+  "cust.compact": "Compact",
+  "cust.detailed": "Detailed",
+  "cust.fields": "Fields",
+  "cust.fields_shown": "Shown fields, in order",
+  "cust.fields_hidden": "Hidden fields",
+  "cust.fields_max": "A table shows up to 12 fields. Hide one first.",
+  "cust.no_filter": "This view has no field to filter by.",
+  "cust.cond_field": "Filter {n}: field",
+  "cust.cond_op": "Filter {n}: condition",
+  "cust.cond_value": "Filter {n}: value",
+  "cust.remove_filter": "Remove filter {n}",
+  "cust.add_filter": "Add a filter",
+  "cust.in_hint": "a, b, c",
+  "cust.time_hint": "today, -24h, 2026-11-07",
+  "cust.op_eq": "is",
+  "cust.op_ne": "is not",
+  "cust.op_gt": "is over",
+  "cust.op_lt": "is under",
+  "cust.op_ge": "is at least",
+  "cust.op_le": "is at most",
+  "cust.op_contains": "contains",
+  "cust.op_starts": "starts with",
+  "cust.op_in": "is one of",
+  "cust.op_empty": "is empty",
+  "cust.op_not_empty": "is not empty",
+  "cust.sort_group": "Sort and group",
+  "cust.sort": "Sort by",
+  "cust.sort_none": "The view's own order",
+  "cust.sort_dir": "Sort direction",
+  "cust.desc": "↓ High to low",
+  "cust.asc": "↑ Low to high",
+  "cust.group": "Group by",
+  "cust.group_none": "No groups",
+  "cust.limit": "Show up to",
+  "cust.group_head": "{name} · {n}",
+  "cust.rows_of": "{n} of {total} rows",
+  "cust.preview_empty": "No rows match this view.",
+  "cust.preview_busy": "Updating the preview…",
+  "cust.preview_failed": "The laptop did not run this view: {why}",
+  "cust.ask": "Ask the AI to change it…",
+  "cust.ask_text": "Change this view: ",
+  "cust.apply": "Apply",
+  // Phone app (MOBUX-21): states
+  "ph.loading": "Loading",
+  "ph.conn_offline": "Offline — answers are not saved",
+  "ph.offline_sr": "Offline. Answers are not saved until the phone is back online.",
+  "ph.conn_asleep": "Laptop asleep · last seen {time}",
+  "ph.asleep_day": "Laptop asleep · last seen on {time}",
+  "ph.asleep_sr": "The laptop does not answer. Last seen {time}.",
+  "ph.retry": "Retry",
+  // All tools menu on the phone (MOBUX-5); the phone app is English only
+  "tools.title": "All tools",
+  "tools.search": "Search tools, servers and views",
+  "tools.features": "Features",
+  "tools.mcp": "MCP servers",
+  "tools.saved": "Saved views",
+  "tools.none": "No tool matches {query}.",
+  "tools.mcp_none": "No MCP servers on the laptop.",
+  "tools.saved_none": "No saved views yet. Save one with ⚙ on a view.",
+  "tools.unreachable": "The laptop did not send its MCP servers and saved views.",
+  "tools.server_meta": "{tools} tools · {resources} resources",
+  "tools.server_empty": "This server has no tools the laptop knows yet.",
+  "tools.ask_ai": "Opens as Ask the AI",
+  "tools.pinned": "Pinned to Home",
+  "tools.v.chat": "Chats · ask the AI",
+  "tools.v.git": "Status · diff · log · branches · stash",
+  "tools.v.lanes": "Lanes · lane diff · races",
+  "tools.v.runs": "Runs · run steps · usage",
+  "tools.v.workflows": "Workflows · runs · tail",
+  "tools.v.tasks": "Build tasks · project tasks · tail",
+  "tools.v.db": "Connections · tables · rows · query",
+  "tools.v.containers": "Containers · logs",
+  "tools.v.kube": "Contexts · pods · logs · describe",
+  "tools.v.tests": "Tests · output",
+  "tools.v.services": "Services · logs",
+  "tools.v.debug": "Threads · frames · variables",
+  "tools.v.search": "Search in the project",
+  "tools.v.files": "Files and folders",
+  "tools.v.terms": "Terminals on the laptop",
+  "tools.v.settings": "Settings, read only",
+  "tools.v.itermoc": "The laptop's AI setup",
+  "tools.v.mcpserver": "termocode as a server for outside agents",
+  // Phone projects list (MOBUX-6)
+  "ph.proj.title": "Projects",
+  "ph.proj.none": "No projects yet. Open a folder in termocode on the laptop.",
+  "ph.proj.here": "this one",
+  "ph.proj.waiting": "{n} wait",
+  "ph.proj.working": "{n} working",
+  "ph.proj.tasks.one": "{n} task",
+  "ph.proj.tasks.other": "{n} tasks",
+  "ph.proj.ci_passed": "CI passed",
+  "ph.proj.ci_failed": "CI failed",
+  "ph.proj.ci_running": "CI running",
 } as const;
 
-/** StringKey is a key of the page's strings or of the workbench's
- * (strings.desk.ts, in workbench.js). */
-export type StringKey = keyof typeof S | keyof typeof SD;
+/** StringKey is a key of the page's strings, of the workbench's
+ * (strings.desk.ts, in workbench.js) or of the phone app's lazy views
+ * (strings.phone.ts, English only). */
+export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP;
+
+/** PhoneOnlyKey is a phone app key: English only (owner 2026-11-07), the
+ * same prefixes as strings_test.go englishOnly. */
+type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` | `cust.${string}` | `item.${string}` | `tools.${string}` | `board.${string}` | "more.board">;
+
+/** TranslatedKey is a key strings.fa.ts translates: the phone app's
+ * strings are English only (owner 2026-11-07). */
+export type TranslatedKey = Exclude<keyof typeof S, PhoneOnlyKey> | keyof typeof SD;
+
+/** PhoneOnly keys are English only (the same set as PhoneOnlyKey): the
+ * phone app UI is English (owner 2026-11-07), so strings.fa.ts has none. */
+export type PhoneOnly = PhoneOnlyKey;
 
 const desk = dict<string>();
 
 /** addStrings adds the workbench's strings (strings.desk.ts) once
- * workbench.js loads. */
+ * workbench.js loads, and the phone app's (strings.phone.ts) once a
+ * lazy phone view loads. */
 export function addStrings(d: Readonly<Record<string, string>>): void {
   for (const k of Object.keys(d)) desk[k] = d[k];
 }
@@ -852,7 +1099,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   });
 }
 
-type Plural = "pill.cards" | "edit.sent" | "git.commit" | "git.commit_confirm" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
+type Plural = "pill.cards" | "ph.proj.tasks" | "edit.sent" | "git.commit" | "git.commit_confirm" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
 
 /** tn picks the .one or .other form of a plural key by n. */
 export function tn(key: Plural, n: number, vars?: Record<string, string | number>): string {

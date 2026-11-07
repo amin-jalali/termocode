@@ -462,9 +462,9 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 		// About as long as the last build: no regrowing a long transcript.
 		out = make([]aiLine, 0, len(s.transcript.lines)+64)
 	}
-	if s != nil && s.conv.ForkedFrom != nil { // G-FORK: "Forked from <title> at message N"
+	if s != nil && (s.conv.ForkedFrom != nil || s.conv.ImportedFrom != nil) { // G-FORK / CMP-87: where the chat came from
 		out = append(out, aiLine{})
-		for _, l := range wrapPlain(s.conv.ForkNote(), inner) {
+		for _, l := range wrapPlain(s.conv.ForkNote()+s.conv.ImportNote(), inner) {
 			out = append(out, plain(l, theme.TextDim))
 		}
 	}
@@ -1362,7 +1362,7 @@ func (m Model) aiPanelTargetAt(x, y int) string {
 	switch y {
 	case 0:
 		switch id := m.hitActionsButton(x, y); id {
-		case "new", "history", "mcp", "profile", "think", "usage", "chat", "more":
+		case "new", "history", "mcp", "profile", "think", "ctx", "usage", "chat", "more":
 			return "ai:" + id
 		}
 		return ""
@@ -1483,7 +1483,7 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 		return m.onMCPChip(), true
 	case id == "ai:profile":
 		return m.openAIProfilePicker(), true
-	case id == "ai:usage":
+	case id == "ai:usage", id == "ai:ctx": // CMP-7: the context chip opens the same tables
 		return m.showAIUsage(""), true
 	case id == "ai:think":
 		return m.cycleAIReasoning(), true

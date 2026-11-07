@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/aimemory"
+	"github.com/amin-jalali/termocode/internal/checkpoint"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/profileform"
 	"github.com/amin-jalali/termocode/internal/statusbar"
@@ -42,6 +43,10 @@ import (
 // aiState is the AI feature state. Held by pointer on Model so Bubble Tea
 // value copies and background goroutines share one instance.
 type aiState struct {
+	// follow is Follow Agent (ai_follow.go): the editor jumps to each
+	// agent edit; followAt is the last "rel:line" it jumped to.
+	follow           bool
+	followAt         string
 	answerCleaner    aiStreamCleaner
 	cleanAnswerIndex int
 	streamTranscript aiStreamTranscript
@@ -67,11 +72,15 @@ type aiState struct {
 	batch    *aiBatch
 	settings ai.Settings
 	keep     aiKeepGoingRun // OMX-7: the keep-going chain of the open chat
+	// chatSched runs the scheduled chats (CMP-43, ai_chat_sched.go).
+	chatSched aiChatSchedState
 	// OMX-17: kwOff is set when the user removed the keyword chip of the
 	// draft; kwProfile is the profile the next sendAIChat runs.
 	kwOff     bool
 	kwProfile string
 	side      aiSideChat // OMX-30: the side chat (ai_side.go)
+	home      aiHomeChat // MOB-16: the phone's background chat (web_chat_home.go)
+	dictate   *aiDictate // CMP-48: the running voice input (ai_dictate.go)
 	cfg       ai.Config
 	provider  ai.Provider
 	loadErr   string
@@ -109,12 +118,20 @@ type aiState struct {
 	// (OMX-28), so a missing ast-grep does not open it again.
 	astGrepAsked bool
 	// skillsTrust is the open project-skills card (ai_skills.go).
-	skillsTrust *aiSkillsTrustPending
-	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
-	webPreset   string               // the server the open add card is for (ai_web_presets.go)
-	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
-	ship        *aiShip              // the running ship loop (ai_ship.go)
-	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
+	skillsTrust  *aiSkillsTrustPending
+	hooksTrust   *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
+	agentEnvHash string               // the agent environment the open trust card shows (ai_agent_env.go)
+	// stopHookPushes counts the turns in a row a stop hook sent the
+	// agent on (CMP-59, ai_hooks.go).
+	stopHookPushes int
+	webPreset      string          // the server the open add card is for (ai_web_presets.go)
+	recall         *aiRecallState  // lesson recall per chat (ai_recall.go)
+	ship           *aiShip         // the running ship loop (ai_ship.go)
+	shipCommit     *wtShipPending  // the open ship commit card or prompt (ai_ship_full.go)
+	acp            *acpThread      // CMP-83: the chat's ACP agent thread (acp_thread.go)
+	ctl            *agentCtlState  // the agent control socket's UI side (agent_ctl.go)
+	diffNotes      *diffNotesState // diff comments → agent (diff_comments.go, CMP-51)
+	promptActs     *paState        // the open prompt-action flow (prompt_actions.go)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).
@@ -123,12 +140,20 @@ type aiState struct {
 	agentPickPending string
 	// agentAccountPending is the sign-in line of the open account card (agent_accounts.go).
 	agentAccountPending string
-	shipGen             int
+	// agentSwitchBuf is the agent tab of the open Switch Account card (agent_switch.go).
+	agentSwitchBuf int
+	// agentProfileDraft is the profile being added, agentProfileOpen the
+	// one whose card is open (agent_profiles.go, CMP-21).
+	agentProfileDraft *agentProfileRef
+	agentProfileOpen  *agentProfileRef
+	shipGen           int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the
 	// screenshot demo (ai_skills_demo.go).
 	skillsFake *ai.Skills
+	// powerSel is the power an AI: Powers Catalog… card is about (ai_powers.go).
+	powerSel string
 	// memSlotWarned: the "no quick model" toast was shown this session.
 	memSlotWarned bool
 	// memAsk is the turn the open ask-once memory card is for.
@@ -172,7 +197,10 @@ type aiState struct {
 	// planWait is the plan the running run waits on and runActs what
 	// its steps may do (G-PLAN, ai_plan_approval.go).
 	planWait *aiPlanWait
-	runActs  func(agentdag.Node) (writes, exec bool)
+	// autopilotNext is the level the open autopilot card would set
+	// (CMP-61, ai_autopilot.go).
+	autopilotNext string
+	runActs       func(agentdag.Node) (writes, exec bool)
 	// runQueue are the runs the AI started (agent_run_start) that wait
 	// for the chat; runInline the AI's own steps of such a run by run id;
 	// runNotStarted why a queued run never started (G-API,
@@ -180,6 +208,9 @@ type aiState struct {
 	runQueue      []aiQueuedRun
 	runInline     map[string]ai.Profile
 	runNotStarted map[string]string
+	// taskList is the open card of AI: Run Task List in Waves… (CMP-76,
+	// ai_task_list.go).
+	taskList *aiTaskListPending
 	// bgRuns are the AI-started runs that run beside the chat (OMX-6,
 	// ai_bg_runs.go).
 	bgRuns []*aiBgRun
@@ -198,6 +229,9 @@ type aiState struct {
 	// usageGen changes with it.
 	usageLog []aiUsageEntry
 	usageGen int
+	// ctxUse is the context use of the open chat's newest turn, for the
+	// header's context chip (CMP-7, ai_context_chip.go).
+	ctxUse aiCtxUse
 
 	// inline ghost text
 	inlineCancel context.CancelFunc
@@ -254,6 +288,15 @@ type aiState struct {
 	restoreGen int
 	turnMsg    int
 	undoTurn   int
+	// rewindAt is the question the rewind card is about (ai_rewind.go,
+	// CMP-62); rewindSet: the card is open.
+	rewindAt  int
+	rewindSet bool
+	// Code checkpoints (checkpoints_ui.go): the picker's folders and the
+	// checkpoint the restore card is about.
+	cpDirs    []string
+	cpPending *checkpoint.Point
+	cpDir     string
 	// auditPending is the started tool call the audit log waits for
 	// (ai_audit.go).
 	auditPending *aiAuditPending
@@ -269,6 +312,9 @@ type aiState struct {
 	// mcpUntrustTool is the tool the Reset trust card is about ("" = the
 	// whole server; ai_mcp_untrust.go).
 	mcpUntrustTool string
+	// mcpAccountsOut are the servers the Signed-in Services card would
+	// sign out (mcp_accounts.go).
+	mcpAccountsOut []string
 	// mcpLogServer is the server the MCP log shows ("" = all; ai_mcp_log.go).
 	mcpLogServer string
 
@@ -329,6 +375,9 @@ type aiAttachment struct {
 	// text); MediaType its type ("image/png").
 	Image     string
 	MediaType string
+	// Kind is the attach kind of an item the web page sent back (MOB-5,
+	// web_chat_attach.go); "" for what the laptop attached.
+	Kind string
 }
 
 // newAIState loads settings + credentials and builds the provider.
@@ -528,6 +577,9 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-open-chat", "AI: Open Chat", "Alt+A"},
 		{"ai-new-chat", "AI: New Chat", ""},
 		{"ai-history", "AI: Chat History…", ""},
+		{aiHistorySearchID, "AI: Search Chat History…", "words in your saved AI chats"},
+		{aiShareChatID, "AI: Share Chat by Link…", "a viewer link; they watch and comment"},
+		{aiChatCommentsID, "AI: Chat Comments…", "comments from people you shared the chat with"},
 		{"ai-history-rename", "AI: Rename Chat…", ""},
 		{"ai-fork-chat", "AI: Fork Chat from Message…", ""},
 		{"ai-history-delete", "AI: Delete Chat…", ""},
@@ -536,6 +588,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-fix", "AI: Fix Diagnostic at Cursor", ""},
 		{"ai-edit", "AI: Edit Selection…", "Alt+I"},
 		{"ai-doc", "AI: Generate Doc Comment", ""},
+		{"ai-property-tests", "AI: Generate Property-Based Tests for File / Selection", ""},
 		{"ai-attach", "AI: Add File / Selection to Chat", ""},
 		{"ai-apply-code", "AI: Apply Last Code Block to File", ""},
 		{"ai-export-chat", "AI: Export Chat as Markdown", ""},
@@ -543,28 +596,45 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-discard-proposal", "AI: Discard Proposed Edit", ""},
 		{"ai-review", "AI: Review Pending Changes", ""},
 		{"ai-undo-turn", "AI: Undo Last Turn", ""},
+		{"ai-rewind-turn", "AI: Rewind Chat to Turn…", ""},
+		{"ai-checkpoint-save", "AI: Save Code Checkpoint", ""},
+		{"ai-checkpoint-restore", "AI: Restore Code Checkpoint…", ""},
 		{"ai-edit-review", "AI: Toggle Edit Review (diff / auto)", ""},
+		{"ai-review-order", "AI: Toggle Review Order (explain first / as proposed)", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
 		{"ai-toggle-inline", "AI: Toggle Inline Completions", "Alt+|"},
 		{"ai-toggle-next-edit", "AI: Toggle Next Edit Suggestions", ""},
+		{"ai-follow-agent", "AI: Toggle Follow Agent", ""},
 		{"ai-configure", "AI: Configure Provider…", ""},
 		{"ai-pick-model", "AI: Pick Model…", ""},
+		{"ai-auto-model", "AI: Toggle Auto Model Pick (quick / main per turn)", ""},
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
 		{"ai-profile-switch", "AI: Switch Profile…", ""},
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
 		{"ai-profile-show", "AI: Show Profile", ""},
 		{"ai-until-done", "AI: Work Until Done (toggle)", ""},
 		{"ai-plan-approval", "AI: Toggle Plan Approval", ""},
+		{"ai-autopilot", "AI: Autopilot Level… (off / low / medium risk)", ""},
 		{"ai-reasoning-next", "AI: Next Reasoning Level", ""},
+		{"ai-dial", "AI: Effort Dial… (low / medium / high / ultra, plan, fast)", ""},
+		{"ai-dial-next", "AI: Next Effort Mode", ""},
 		{"ai-keep-going", "AI: Toggle Keep Going While Todos Are Open", ""},
 		{"ai-handoff", "AI: Handoff to a New Chat", ""},
+		{chatDocsPaletteID, "AI: Chat Docs…", ""},
+		{chatDocRevsPaletteID, "AI: Chat Doc Revisions…", ""},
+		{"ai-chat-schedule", "AI: Schedule This Chat…", ""},
+		{"ai-chat-unschedule", "AI: Stop Chat Schedule", ""},
 		{"ai-side", "AI: Side Question…", ""},
+		{"ai-dictate", "AI: Dictate into Chat… (voice input)", ""},
 		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
 		{"ai-worktrees-toggle", "AI: Toggle Agent Worktrees", ""},
+		{"ai-critic-toggle", "AI: Toggle Critic Review", ""},
+		{aiTaskListPaletteID, "AI: Run Task List in Waves…", ""},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
+		{agentBoardPaletteID, "AI: Agent Board…", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
 		{"ai-profile-form", "AI: Edit Profile…", ""},
@@ -574,13 +644,19 @@ func aiPaletteItems() []paletteEntry {
 		{"help-bug-report", "Help: Build Bug Report…", ""},
 		{"ai-doctor", "AI: Doctor", ""},
 		{"ai-skills", "AI: Skills…", ""},
+		{"ai-powers", "AI: Powers Catalog…", ""},
 		{"ai-hooks", "AI: Hooks…", ""},
+		{"ai-agent-env", "AI: Agent Environment… (setup, secrets, network rule for workflow agents)", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
+		{"ai-proofs", "AI: Proof of Work… (screenshots the AI took)", ""},
+		{"ai-image-gen", "AI: Toggle Image Generation", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
+		{"ai-ship-merge", "AI: Ship and Merge When Green (CI fixes, conflicts, merge card) / Stop", ""},
 		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
 		{"ai-agent-packs", "Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex)", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
+		{"ai-memory-learn", "AI: Memory: Learn New Lessons On/Off (use only)", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
 		{"ai-sign-out-claude", "AI: Sign out of Claude", ""},
@@ -592,6 +668,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-mcp-updates", "AI: MCP: Check for Updates (catalog servers)", ""},
 		{"ai-mcp-bundle", "AI: MCP: Install Bundle (.mcpb)…", ""},
 		{"ai-mcp-profile", "AI: MCP: Switch Profile… (servers and tools for this chat)", ""},
+		{"ai-mcp-accounts", "AI: MCP: Signed-in Services… (one list, sign out)", ""},
 		{"ai-mcp-log", "AI: MCP: Show Log", ""},
 		{"ai-mcp-reconnect-all", "AI: MCP: Reconnect All Servers", ""},
 		{"ai-mcp-reset-cache", "AI: MCP: Reset Tool Lists", ""},
@@ -613,10 +690,12 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	// the configure / sign-in / credentials entries are the way out.
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
-		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
-		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat",
-		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
-		"ai-agent-hooks", "ai-agent-packs": // agent CLI files need no provider
+		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-review-order", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
+		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID, aiShareChatID, aiChatCommentsID,
+		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
+		"ai-chat-unschedule",               // CMP-43: stopping paid runs needs no provider
+		"ai-agent-hooks", "ai-agent-packs", // agent CLI files need no provider
+		"ai-rewind-turn", "ai-checkpoint-save", "ai-checkpoint-restore": // CMP-62: files and chats only
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -630,10 +709,20 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.newAIChat(), true
 	case "ai-history":
 		return m.openAIHistory(), true
+	case aiHistorySearchID: // CMP-30 (ai_chat_search.go)
+		return m.openAIChatSearch(), true
+	case aiShareChatID: // CMP-88 (ai_chat_comments.go)
+		return m.openAIShareChat(), true
+	case aiChatCommentsID:
+		return m.openAIChatComments(), true
 	case "ai-worktrees": // G-WT (ai_worktree_list.go)
 		return m.openAIWorktrees(), true
+	case aiTaskListPaletteID: // CMP-76 (ai_task_list.go)
+		return m.aiRunTaskList(), true
 	case "ai-worktrees-toggle":
 		return m.toggleAIWorktrees(), true
+	case "ai-critic-toggle": // CMP-53 (ai_critic.go)
+		return m.toggleAICritic(), true
 	case "ai-history-rename":
 		return m.openAIHistoryFor(pickerKindAIHistoryRename, " Rename Chat "), true
 	case "ai-fork-chat":
@@ -650,6 +739,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiEditSelection(), true
 	case "ai-doc":
 		return m.aiDocComment(), true
+	case "ai-property-tests": // CMP-102
+		return m.aiPropertyTests(), true
 	case "ai-attach":
 		return m.aiAttachCurrent(), true
 	case "ai-apply-code":
@@ -660,8 +751,16 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIReview(), true
 	case "ai-undo-turn":
 		return m.aiUndoTurn(-1), true
+	case "ai-rewind-turn": // CMP-62 (ai_rewind.go)
+		return m.openAIRewindPicker(), true
+	case "ai-checkpoint-save": // CMP-62 (checkpoints_ui.go)
+		return m.checkpointSaveNow(), true
+	case "ai-checkpoint-restore":
+		return m.openCheckpointPicker(), true
 	case "ai-edit-review":
 		return m.toggleAIEditReview(), true
+	case "ai-review-order": // ai_review_order.go
+		return m.toggleAIReviewOrder(), true
 	case "ai-apply-proposal":
 		return m.reviewDecideCurrent(true), true
 	case "ai-discard-proposal":
@@ -672,10 +771,14 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiToggleInline(), true
 	case "ai-toggle-next-edit": // ai_nextedit.go
 		return m.aiToggleNextEdit(), true
+	case "ai-follow-agent": // ai_follow.go
+		return m.aiToggleFollow(), true
 	case "ai-configure":
 		return m.openAIConfigure(), true
 	case "ai-pick-model":
 		return m.openAIModelPicker(), true
+	case "ai-auto-model": // CMP-25 (ai_router.go)
+		return m.toggleAIRouter(), true
 	case "ai-auto-approve":
 		return m.openAIAutoApprovePicker(), true
 	case "ai-sign-in-claude":
@@ -697,6 +800,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openMCPInsertPicker(), true
 	case "ai-mcp-profile":
 		return m.openMCPProfiles(), true
+	case "ai-mcp-accounts": // mcp_accounts.go
+		return m.openMCPAccounts(), true
 	case "ai-mcp-catalog":
 		return m.openMCPCatalog(), true
 	case "ai-mcp-bundle":
@@ -723,14 +828,30 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.toggleAIUntilDone(), true
 	case "ai-reasoning-next": // OMX-5 (ai_reasoning.go)
 		return m.cycleAIReasoning(), true
+	case "ai-dial": // CMP-24 (ai_dial.go)
+		return m.openAIDialPicker(), true
+	case "ai-dial-next":
+		return m.cycleAIDial(), true
 	case "ai-side": // OMX-30 (ai_side.go)
 		return m.openAISide(), true
+	case aiChatSchedPaletteID: // CMP-43 (ai_chat_sched.go)
+		return m.openAIChatSchedule(), true
+	case aiChatUnschedPaletteID:
+		return m.openAIChatUnschedule(), true
+	case "ai-dictate": // CMP-48 (ai_dictate.go)
+		return m.openAIDictate(), true
 	case "ai-handoff": // OMX-21 (ai_session_tools.go)
 		return m.aiHandoff(), true
+	case chatDocsPaletteID: // CMP-94 (ai_chat_docs.go)
+		return m.openChatDocs(), true
+	case chatDocRevsPaletteID:
+		return m.openChatDocRevisions(), true
 	case "ai-keep-going": // OMX-7 (ai_keep_going.go)
 		return m.toggleAIKeepGoing(), true
 	case "ai-plan-approval": // G-PLAN (ai_plan_approval.go)
 		return m.toggleAIPlanApproval(), true
+	case "ai-autopilot": // CMP-61 (ai_autopilot.go)
+		return m.cycleAIAutopilot(), true
 	case "ai-plan-review":
 		return m.openAIPlanCard(), true
 	case "ai-agents":
@@ -739,6 +860,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIUsage(""), true
 	case "ai-runs": // runs_state.go
 		return m.revealRuns(true), true
+	case agentBoardPaletteID: // CMP-2 (agent_board.go)
+		return m.openAgentBoardLoad(), true
 	case "ai-profile-edit":
 		return m.editAIProfiles(), true
 	case "ai-profile-new":
@@ -757,12 +880,22 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIDoctor(), true
 	case "ai-skills":
 		return m.openAISkills(), true
+	case aiPowersPaletteID: // ai_powers.go
+		return m.openAIPowers(), true
 	case "ai-hooks":
 		return m.openAIHooks(), true
+	case "ai-image-gen": // ai_image_tool.go
+		return m.aiToggleImageGen(), true
+	case "ai-agent-env":
+		return m.openAgentEnv(), true
 	case "ai-web-tools":
 		return m.openAIWebTools(), true
+	case "ai-proofs":
+		return m.openAIProofs(), true
 	case "ai-ship":
 		return m.toggleAIShip(), true
+	case "ai-ship-merge":
+		return m.toggleAIShipMerge(), true
 	case "ai-plan-worktree":
 		return m.toggleAIPlanWorktree(), true
 	case "ai-agent-hooks":
@@ -771,6 +904,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAgentPacks(), true
 	case "ai-memory-toggle":
 		return m.toggleAIMemory(), true
+	case "ai-memory-learn":
+		return m.toggleAIMemoryLearn(), true
 	case "ai-models-edit":
 		return m.editAIModelSlots(), true
 	}
@@ -796,6 +931,9 @@ func (m *Model) aiCancelAll() tea.Cmd {
 		s.actionGen++
 	}
 	m.cancelAIInline()
+	if m.aiHomeStop() { // MOB-16: and the phone chat's turn
+		stopped = true
+	}
 	if !stopped {
 		return nil
 	}
@@ -835,6 +973,7 @@ func aiSettingsCategories(cats map[string]string) map[string]string {
 	updateSettingsCategories(cats)   // G-UPD (update_settings.go)
 	workflowSettingsCategories(cats) // WFX-0 (workflow_settings.go)
 	gitxSettingsCategories(cats)     // GITX-12 (gitx_autofetch_setting.go)
+	wtAutoSettingsCategories(cats)   // CMP-16 (worktrees_autoclean.go)
 	for _, id := range []string{"setting-ai-inline", "setting-ai-next-edit", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
 		"setting-ai-until-done-rounds", "setting-ai-until-done-budget"} {
 		cats[id] = "AI"
@@ -860,6 +999,9 @@ func aiSettingValue(id string) (string, bool) {
 		return v, true
 	}
 	if v, ok := gitxSettingValue(id); ok { // GITX-12 (gitx_autofetch_setting.go)
+		return v, true
+	}
+	if v, ok := wtAutoSettingValue(id); ok { // CMP-16 (worktrees_autoclean.go)
 		return v, true
 	}
 	path, _ := ai.ConfigPath()
@@ -918,6 +1060,9 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 		return c, true
 	}
 	if c, ok := m.applyGitxSetting(id, value); ok { // GITX-12 (gitx_autofetch_setting.go)
+		return c, true
+	}
+	if c, ok := m.applyWTAutoSetting(id, value); ok { // CMP-16 (worktrees_autoclean.go)
 		return c, true
 	}
 	path, err := ai.ConfigPath()

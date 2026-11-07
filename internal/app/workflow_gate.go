@@ -49,6 +49,10 @@ type WorkflowWriteAsk struct {
 	// hash the card offers only Deny and Allow once. With a root the
 	// card stores the allow-list itself (ledger.AllowStep).
 	StateRoot, FileHash string
+	// Plan: not a write but a plan step that waits for approval (CMP-45).
+	// The card says "approve the plan?", Stop here is first, Approve plan
+	// is the only other answer (never "for this workflow").
+	Plan bool
 	// Answer gets the decision on the UI goroutine; it must not block.
 	Answer func(WorkflowGateDecision)
 }
@@ -98,14 +102,23 @@ func (m *Model) showWaitingWorkflowGate() {
 	a := g.queue[0]
 	g.queue = g.queue[1:]
 	g.cur = a
-	actions := []confirm.Button{{ID: "once", Title: "Allow once"}}
-	if a.FileHash != "" {
+	deny, actions := confirm.Button{ID: "deny", Title: "Deny"}, []confirm.Button{{ID: "once", Title: "Allow once"}}
+	if a.Plan {
+		deny.Title, actions[0].Title = "Stop here", "Approve plan"
+	} else if a.FileHash != "" {
 		actions = append(actions, confirm.Button{ID: "workflow", Title: "Allow for this workflow"})
 	}
-	m.confirm = confirm.Risky(a.Workflow+" wants to write", workflowGateBody(*a),
-		confirm.Button{ID: "deny", Title: "Deny"}, actions...).WithWideText()
+	m.confirm = confirm.Risky(workflowGateTitle(*a), workflowGateBody(*a), deny, actions...).WithWideText()
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen, m.confirmKind = true, confirmKindWorkflowGate
+}
+
+// workflowGateTitle is the card title.
+func workflowGateTitle(a WorkflowWriteAsk) string {
+	if a.Plan {
+		return a.Workflow + ": approve the plan?"
+	}
+	return a.Workflow + " wants to write"
 }
 
 // workflowGateBody is the card text: where, what (redacted, capped) and
@@ -131,9 +144,12 @@ func workflowGateBody(a WorkflowWriteAsk) string {
 			b.WriteString("    … (more in the run page)\n")
 		}
 	}
-	if a.Undo != "" {
+	switch {
+	case a.Plan:
+		b.WriteString("\nStop here ends this step (denied); nothing after it uses the plan.")
+	case a.Undo != "":
 		b.WriteString("\nUndo: " + ai.Redact(a.Undo))
-	} else {
+	default:
 		b.WriteString("\nThis write cannot be undone.")
 	}
 	return b.String()
@@ -159,7 +175,7 @@ func (m *Model) finishWorkflowGate(d WorkflowGateDecision) tea.Cmd {
 	m.wfGate.cur = nil
 	var cmd tea.Cmd
 	if d == WorkflowGateAllowWorkflow {
-		if a.FileHash == "" {
+		if a.FileHash == "" || a.Plan {
 			d = WorkflowGateAllowOnce
 		} else if a.StateRoot != "" {
 			if err := ledger.AllowStep(a.StateRoot, a.Workflow, a.FileHash, a.Step); err != nil {

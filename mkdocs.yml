@@ -100,8 +100,10 @@ nav:
       - Itermoc, the AI home: guides/itermoc.md
       - Watch AI runs (Runs): guides/runs.md
       - Workflows: guides/workflows.md
+      - "Specs: requirements to review": guides/specs.md
       - Connect MCP servers: guides/mcp.md
       - Give your agent the IDE's tools: guides/agents.md
+      - Build on the agent runtime (SDK): guides/sdk.md
       - Test an HTTP API (.http files): guides/http-client.md
       - Debug a program: guides/debug.md
       - Run and explore tests: guides/tests.md
@@ -114,9 +116,11 @@ nav:
       - Install language servers and debuggers: guides/language-servers.md
       - Workspaces and sessions: guides/workspaces.md
       - Remote and SSH: guides/remote-ssh.md
+      - Serve tasks from this machine: guides/runner.md
       - The web panel: guides/web.md
       - Customize termocode: guides/customize.md
       - Import settings from another editor: guides/import-from-another-editor.md
+      - Move in from another agent tool: guides/import-from-another-agent-tool.md
       - Write an extension: extensions.md
   - Reference:
       - reference/index.md
@@ -152,3 +156,4 @@ nav:
           - "0019 AI providers": adr/0019-ai-providers.md
           - "0020 Web UI": adr/0020-web-ui.md
           - "0021 Workflows": adr/0021-workflows.md
+          - "0022 Web relay": adr/0022-web-relay.md

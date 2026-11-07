@@ -13,8 +13,10 @@ export type CardKind = "tool" | "review" | "plan" | "mcp" | "trust" | "workflow"
 /** open: waiting for an answer. answered: the laptop answered first.
  * offline: no answer without a live link. gone: the card no longer
  * exists. viewonly: this browser may not answer. long: a diff too long to
- * read here, so it cannot be accepted here. */
-export type CardState = "open" | "answered" | "offline" | "gone" | "viewonly" | "long";
+ * read here, so it cannot be accepted here. peek: a card with a diff in
+ * a list (the phone's Home, MOB-6): the safe answer, and a button that
+ * opens the sheet to read the change before any Accept. */
+export type CardState = "open" | "answered" | "offline" | "gone" | "viewonly" | "long" | "peek";
 
 const titles: Record<CardKind, StringKey> = {
   tool: "card.tool.title",
@@ -51,11 +53,13 @@ export interface CardProps {
   onLaptop?: () => void;
   /** by names who answered an answered card: "laptop" (the default) or another browser. */
   by?: string;
+  /** riskyLabel replaces the kind's risky answer ("Send" on a form card, MOB-12). */
+  riskyLabel?: StringKey;
 }
 
 const CHECK_MS = 300;
 
-export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onCancel, onClose, onLaptop, by }: CardProps) {
+export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onCancel, onClose, onLaptop, by, riskyLabel }: CardProps) {
   const root = useRef<HTMLElement | null>(null);
   const safeBtn = useRef<HTMLButtonElement | null>(null);
   const arm = useArming(root);
@@ -130,9 +134,9 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
         <button type="button" class="btn btn-neutral" ref={safeBtn} onClick={() => onAnswer?.("safe")}>
           {t(c.safe)}
         </button>
-        {state === "long" ? (
+        {state === "long" || state === "peek" ? (
           <button type="button" class="btn btn-neutral" onClick={onLaptop}>
-            {t("laptop.open")}
+            {t(state === "peek" ? "card.open_diff" : "laptop.open")}
           </button>
         ) : (
           <button
@@ -145,7 +149,7 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
             onClick={risky}
           >
             <span class="arm-fill" aria-hidden="true" />
-            <span class="arm-label">{done ? "✓" : t(c.risky)}</span>
+            <span class="arm-label">{done ? "✓" : t(riskyLabel ?? c.risky)}</span>
             {!arm.armed && (
               <span class="arm-ticks" aria-hidden="true">
                 {["1", "2", "✓"].slice(0, Math.max(arm.tick, 1)).join(" · ")}
@@ -188,7 +192,7 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
         </div>
       )}
       <footer class="card-foot">{foot}</footer>
-      {(state === "open" && kind !== "trust") || state === "long" ? (
+      {(state === "open" && kind !== "trust") || state === "long" || state === "peek" ? (
         <div class="card-hint" aria-hidden="true">
           <span class="hint-keys">{t("card.hint")}</span>
           <span class="hint-touch">{t("card.hint_touch")}</span>

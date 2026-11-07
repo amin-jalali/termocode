@@ -130,8 +130,8 @@ func TestWebPaletteOffersTheUsersAICommands(t *testing.T) {
 	for _, it := range res.Items {
 		byID[it.ID] = it
 	}
-	ask := []string{"ai-until-done", "ai-plan-approval", "ai-reasoning-next", "ai-keep-going", "ai-edit-review", "ai-worktrees-toggle",
-		"ai-memory-toggle", "ai-undo-turn", "ai-apply-code", "ai-handoff", "ai-ship", "ai-plan-worktree"}
+	ask := []string{"ai-until-done", "ai-plan-approval", "ai-reasoning-next", "ai-dial-next", "ai-keep-going", "ai-edit-review", "ai-worktrees-toggle",
+		"ai-memory-toggle", "ai-undo-turn", "ai-apply-code", "ai-handoff", "ai-ship", "ai-ship-merge", "ai-plan-worktree"}
 	for _, id := range ask {
 		if it, ok := byID[id]; !ok || !it.Ask {
 			t.Errorf("%s: offered=%v, it must wait for a laptop card: %+v", id, ok, it)

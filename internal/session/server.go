@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -41,15 +42,6 @@ const (
 	msgDetached  = "termocode: detached, the session keeps running. Run `termocode attach` to go back."
 )
 
-// Info describes a running session (`termocode sessions`).
-type Info struct {
-	Workspace string    `json:"workspace"`
-	PID       int       `json:"pid"`
-	UIPID     int       `json:"ui_pid,omitempty"`
-	Started   time.Time `json:"started"`
-	Attached  bool      `json:"attached"`
-}
-
 // Server owns the PTY the UI runs in and relays it to one client at a
 // time.
 type Server struct {
@@ -73,6 +65,7 @@ type Server struct {
 	holdTimer *time.Timer
 	started   time.Time
 	exiting   bool
+	headless  bool     // the UI was started by frameStart (MOB-51)
 	done      chan int // UI exit code
 }
 
@@ -190,6 +183,14 @@ func (s *Server) handle(c *net.UnixConn) {
 	case frameKill:
 		s.terminate()
 		_ = c.Close()
+	case frameStart:
+		if err := s.startHeadless(decodeCode(payload)); err != nil {
+			_ = writeFrame(c, frameDetached, []byte("termocode: "+err.Error()))
+		} else {
+			b, _ := json.Marshal(s.info())
+			_ = writeFrame(c, frameStatus, b)
+		}
+		_ = c.Close()
 	case frameHello:
 		cols, rows, caps, err := decodeHello(payload)
 		if err != nil {
@@ -215,7 +216,7 @@ func (s *Server) info() Info {
 }
 
 func (s *Server) infoLocked() Info {
-	in := Info{Workspace: s.paths.Workspace, PID: os.Getpid(), Started: s.started, Attached: s.client != nil}
+	in := Info{Workspace: s.paths.Workspace, PID: os.Getpid(), Started: s.started, Attached: s.client != nil, Headless: s.headless}
 	if s.cmd != nil && s.cmd.Process != nil {
 		in.UIPID = s.cmd.Process.Pid
 	}
@@ -286,6 +287,43 @@ func (s *Server) attach(c *net.UnixConn, cols, rows int, caps *ClientCaps) error
 	}
 	// The size may not have changed, so no SIGWINCH: ask for the redraw.
 	_ = s.cmd.Process.Signal(RepaintSignal)
+	crash.Go("the session info", s.writeInfo)
+	return nil
+}
+
+// Headless size: what a UI started with no terminal draws for until a
+// client attaches (then the client's size wins).
+const (
+	headlessCols = 120
+	headlessRows = 40
+)
+
+// startHeadless starts the UI with no client (MOB-51): the phone asked to
+// open this project and the laptop said yes. A UI that runs already is
+// left as it is. idle (5..240, else none) goes to the UI as EnvDoorIdle:
+// it stops by itself after that many minutes with no use.
+func (s *Server) startHeadless(idle int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.exiting {
+		return errors.New("session is ending")
+	}
+	if s.cmd != nil {
+		return nil
+	}
+	cmd := s.uiCmd()
+	if cmd.Env == nil {
+		cmd.Env = os.Environ()
+	}
+	if idle >= DoorIdleMin && idle <= DoorIdleMax {
+		cmd.Env = append(cmd.Env, EnvDoorIdle+"="+strconv.Itoa(idle))
+	}
+	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: headlessCols, Rows: headlessRows})
+	if err != nil {
+		return fmt.Errorf("start UI: %w", err)
+	}
+	s.cmd, s.ptmx, s.headless = cmd, ptmx, true
+	crash.GoWith("the session pump", s.pump, s.pumpFailed)
 	crash.Go("the session info", s.writeInfo)
 	return nil
 }

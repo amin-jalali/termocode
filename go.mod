@@ -39,6 +39,8 @@ require (
 	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.46.0
 	golang.org/x/text v0.43.0
+	google.golang.org/grpc v1.80.0
+	google.golang.org/protobuf v1.36.12
 	rsc.io/qr v0.2.0
 )
 
@@ -110,7 +112,7 @@ require (
 	golang.org/x/mobile v0.0.0-20250606033058-a2a15c67f36f // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
-	google.golang.org/protobuf v1.36.12 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	howett.net/plist v0.0.0-20181124034731-591f970eefbb // indirect
 )

@@ -23,7 +23,9 @@ import (
 // credentials, LSP rename / code actions, service starts, .http file
 // writes, database writes, containers and every tool of the user's own
 // MCP servers (mcp__*: never re-exported, MC-11). The agent has its own
-// shell and editor; we add the IDE, not a second agent.
+// shell and editor; we add the IDE, not a second agent. One tool is the
+// server's own: agent_task_start hands a task to a new background agent
+// in a new worktree, and the user says yes on the New worktree card.
 
 // mcpServeToolRow is one exposed tool. only (optional) narrows a tool
 // with an op argument to these ops.
@@ -79,6 +81,8 @@ var mcpServeAllowList = []mcpServeToolRow{
 	// Worktrees (WTX-12): read, and short notes (text only, redacted)
 	{name: "worktrees_list"},
 	{name: "worktree_note"},
+	{name: "worktree_block"},   // CMP-80: "this worktree waits for that one" (metadata only)
+	{name: "agent_task_start"}, // CMP-39: asks on the filled-in New worktree card (MCP only, not in the chat)
 	// Services and HTTP (read)
 	{name: "services_list"},
 	{name: "services_status"},
@@ -118,6 +122,9 @@ func mcpServeTools(all []ai.Tool, root string, call aiIDECaller) []ai.Tool {
 	out := make([]ai.Tool, 0, len(mcpServeAllowList))
 	for _, r := range mcpServeAllowList {
 		t, ok := ai.FindTool(all, r.name)
+		if !ok && r.name == "agent_task_start" {
+			t, ok = aiTaskStartTool(root), true // agent_ctl_task.go
+		}
 		if !ok || strings.HasPrefix(t.Name, "mcp__") {
 			continue
 		}

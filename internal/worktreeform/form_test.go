@@ -241,3 +241,97 @@ func TestBranchFromIssue(t *testing.T) {
 		}
 	}
 }
+
+// CMP-5: the run line, the port range and the URL come from the same
+// file; the URL fills in $PORT and falls back to localhost when it is
+// not a web address.
+func TestLoadConfigRun(t *testing.T) {
+	top := t.TempDir()
+	write(t, top, ConfigFile, `{
+		"run": "pnpm dev --port $PORT",
+		"ports": "3000-3010",
+		"url": "http://localhost:$PORT/app"
+	}`)
+	c, _, err := LoadConfig(top)
+	if err != nil || c.Run != "pnpm dev --port $PORT" || c.Ports != "3000-3010" {
+		t.Fatalf("config %+v %v", c, err)
+	}
+	if got := c.RunURL(3004); got != "http://localhost:3004/app" {
+		t.Errorf("url %q", got)
+	}
+	for _, u := range []string{"", "javascript:alert(1)", "file:///etc/passwd", "localhost:$PORT"} {
+		if got := (Config{URL: u}).RunURL(3001); got != "http://localhost:3001" {
+			t.Errorf("%q: url %q", u, got)
+		}
+	}
+	if got := (Config{URL: "https://app.test:$PORT"}).RunURL(3002); got != "https://app.test:3002" {
+		t.Errorf("https url %q", got)
+	}
+}
+
+// A worktree made for an agent task gets its branch from the task's
+// first line (CMP-26): filler words go, at most MaxTaskWords words stay,
+// a known first verb gives the kind prefix (fix/, feat/, refactor/,
+// docs/, test/), and a repo prefix (branch_prefix) wins over the kind.
+func TestBranchFromTask(t *testing.T) {
+	for _, c := range []struct{ task, prefix, want string }{
+		{"Please fix the login timeout on Safari", "", "fix/login-timeout-safari"},
+		{"Can you add a dark mode toggle to the settings page?", "", "feat/add-dark-mode-toggle-settings"},
+		{"refactor the session store\nand more lines that do not count", "", "refactor/session-store"},
+		{"\n\n  ## Write docs for the worktree form", "", "write-docs-worktree-form"},
+		{"document the worktree form", "", "docs/worktree-form"},
+		{"tests for the parser", "", "test/parser"},
+		{"I want to make the status bar faster", "", "feat/make-status-bar-faster"},
+		{"Fix the login timeout", "amin/", "amin/fix-login-timeout"},
+		{"Fix the login timeout", "  Team X / ", "team-x/fix-login-timeout"},
+		{"rename Foo.bar to Baz", "", "refactor/rename-foo-bar-baz"},
+		{"please", "", ""},
+		{"", "", ""},
+		{"fix", "", "fix"},
+	} {
+		if got := BranchFromTask(c.task, c.prefix); got != c.want {
+			t.Errorf("BranchFromTask(%q, %q) = %q, want %q", c.task, c.prefix, got, c.want)
+		}
+	}
+	long := "fix " + strings.Repeat("verylongwordhere ", 20)
+	if got := BranchFromTask(long, strings.Repeat("p", 70)); len(got) > MaxBranch || strings.HasSuffix(got, "-") || strings.HasSuffix(got, "/") {
+		t.Errorf("long task: %q (%d)", got, len(got))
+	}
+}
+
+// The worktree's name from a task: the first line without the polite
+// lead-in and the end mark, a capital first letter, cut on a word.
+func TestTitleFromTask(t *testing.T) {
+	for in, want := range map[string]string{
+		"please can you fix the login timeout on Safari?": "Fix the login timeout on Safari",
+		"I want to add a dark mode toggle.\nmore":         "Add a dark mode toggle",
+		"- refactor   the session store":                  "Refactor the session store",
+		"let's make it fast!":                             "Make it fast",
+		"please":                                          "",
+		"":                                                "",
+	} {
+		if got := TitleFromTask(in); got != want {
+			t.Errorf("TitleFromTask(%q) = %q, want %q", in, got, want)
+		}
+	}
+	got := TitleFromTask("Fix " + strings.Repeat("word ", 30))
+	if len(got) > MaxTitle || strings.HasSuffix(got, " ") || !strings.HasPrefix(got, "Fix word") {
+		t.Errorf("long title %q (%d)", got, len(got))
+	}
+}
+
+// branch_prefix in .termocode/worktrees.json is read.
+func TestLoadConfigBranchPrefix(t *testing.T) {
+	top := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(top, ".termocode"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(top, filepath.FromSlash(ConfigFile)), []byte(`{"branch_prefix": "amin/" // mine
+}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c, _, err := LoadConfig(top)
+	if err != nil || c.BranchPrefix != "amin/" {
+		t.Errorf("config %+v %v", c, err)
+	}
+}

@@ -142,11 +142,23 @@ func applyHunkHeader(dir, path, header string, staged bool) error {
 // applyHunkHeaderTo applies the hunk to the index, or reversed to the
 // working file (work).
 func applyHunkHeaderTo(dir, path, header string, staged, work bool) error {
-	if _, ok := remoteFor(dir); ok {
-		return ErrRemoteUnsupported
-	}
 	const maxHunkDiff = 8 << 20
-	diff, cut, err := DiffFile(dir, path, staged, false, maxHunkDiff)
+	var diff string
+	var cut bool
+	var err error
+	if _, ok := remoteFor(dir); ok {
+		// The container's git reads the diff; the cap is applied here.
+		args := []string{"-c", "core.quotepath=off", "diff", "--no-color", "--no-ext-diff", "--no-textconv"}
+		if staged {
+			args = append(args, "--cached")
+		}
+		diff, err = gitOutAt(dir, append(args, "--", path)...)
+		if len(diff) > maxHunkDiff {
+			diff, cut = diff[:maxHunkDiff], true
+		}
+	} else {
+		diff, cut, err = DiffFile(dir, path, staged, false, maxHunkDiff)
+	}
 	if err != nil {
 		return err
 	}
@@ -164,7 +176,7 @@ func applyHunkHeaderTo(dir, path, header string, staged, work bool) error {
 	case staged:
 		args = append(args, "--reverse")
 	}
-	return runStdin(dir, patch, "git", append(args, "-")...)
+	return gitStdin(dir, patch, append(args, "-")...)
 }
 
 // extractHunkBy returns a one-hunk patch (the file header and the first

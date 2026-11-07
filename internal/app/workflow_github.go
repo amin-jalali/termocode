@@ -143,3 +143,77 @@ func wfxRunSettings() (parallelMax int, sandbox string) {
 	sandbox, _ = workflowSettingValue("setting-workflows-agent-sandbox")
 	return parallelMax, sandbox
 }
+
+// ── Workflows: wait steps (CMP-42) ──────────────────────────────────────
+//
+// A wait step looks at a pull request with gh (read only, so no card)
+// until its CI passed, it was merged or its review approved.
+
+// Wait is wire.Config.Wait: one look at the pull request pr.
+func (g *wfxGitHub) Wait(ctx context.Context, pr, what string) (run.WaitStatus, error) {
+	ref := strings.TrimPrefix(strings.TrimSpace(pr), "#")
+	if ref == "" || strings.HasPrefix(ref, "-") || strings.ContainsAny(ref, " \t\n") {
+		return run.WaitStatus{}, run.Permanent(fmt.Errorf("wait: %q is not a pull request number or link", pr))
+	}
+	p, err := ghci.PRByRef(ctx, g.gh, g.dir, ref)
+	if err != nil {
+		return run.WaitStatus{}, err
+	}
+	return wfxWaitStatus(p, what), nil
+}
+
+// wfxWaitStatus decides what a wait step saw on a pull request.
+func wfxWaitStatus(p *ghci.PR, what string) run.WaitStatus {
+	if p == nil {
+		return run.WaitStatus{Done: true, State: "none", Detail: "no pull request found"}
+	}
+	s := run.WaitStatus{URL: p.URL}
+	switch what {
+	case workflow.WaitMerged:
+		switch strings.ToUpper(p.State) {
+		case "MERGED":
+			s.Done, s.OK, s.State, s.Detail = true, true, "merged", "the pull request was merged"
+		case "CLOSED":
+			s.Done, s.State, s.Detail = true, "closed", "the pull request was closed without a merge"
+		default:
+			s.State, s.Detail = "open", "the pull request is still open"
+		}
+	case workflow.WaitApproved:
+		switch strings.ToUpper(p.Review) {
+		case "APPROVED":
+			s.Done, s.OK, s.State, s.Detail = true, true, "approved", "the review is approved"
+		case "CHANGES_REQUESTED":
+			s.Done, s.State, s.Detail = true, "changes", "the review has changes requested"
+		default:
+			if strings.EqualFold(p.State, "CLOSED") {
+				s.Done, s.State, s.Detail = true, "closed", "the pull request was closed before a review"
+				break
+			}
+			s.State, s.Detail = "waiting", "waiting for a review"
+		}
+	default: // ci
+		var failed []string
+		running, passed := 0, 0
+		for _, c := range p.Checks {
+			switch c.State {
+			case ghci.StateFail:
+				failed = append(failed, c.Name)
+			case ghci.StatePending:
+				running++
+			case ghci.StatePass:
+				passed++
+			}
+		}
+		switch {
+		case len(failed) > 0:
+			s.Done, s.State, s.Detail = true, "fail", "CI failed: "+strings.Join(failed, ", ")
+		case len(p.Checks) == 0:
+			s.State, s.Detail = "waiting", "no checks yet"
+		case running > 0:
+			s.State, s.Detail = "running", fmt.Sprintf("%d of %d checks still running", running, len(p.Checks))
+		default:
+			s.Done, s.OK, s.State, s.Detail = true, true, "pass", fmt.Sprintf("%d checks passed", passed)
+		}
+	}
+	return s
+}

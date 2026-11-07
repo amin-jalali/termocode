@@ -62,13 +62,27 @@ If ghost text shows at the cursor, `Tab` accepts the ghost text first.
    tries again up to 3 times). When no text comes for 90 s (or 30 s in
    the middle of an answer) it turns yellow: `no answer for 35 s — Esc
    to stop`. A running tool never shows this warning.
+   When the connection to the model breaks in the middle of an answer,
+   the text that came stays and a red line says `answer stopped in the
+   middle, not complete`. termocode does not send it again by itself:
+   send the message again to retry.
 4. Press `Esc` to go back to the editor. `F6` also moves focus.
 
 The header shows the profile chip, then `⌁ N MCP` (the services the chat
-can use) and `usage` when there is room. In a narrow window a chip that
-does not fit becomes `⋯`: a click opens a small menu with Profile…,
-Services, Usage and Agents, so nothing is only in the palette. Hover a chip
-for its label and key.
+can use), the context chip and `usage` when there is room. In a narrow
+window a chip that does not fit becomes `⋯`: a click opens a small menu
+with Profile…, Services, Usage and Agents, so nothing is only in the
+palette. Hover a chip for its label and key.
+
+The context chip `ctx ▰▰▱▱▱ 42%` shows how full the model's context
+window was on the newest turn of this chat (the biggest prompt of the
+turn; for a run, its newest step). It is green, amber from 70 % and red
+from 90 %; from 80 % the chat summarises older messages (`ai_compact`).
+Hover it for the token counts; a click opens **AI: Usage**. It appears
+after the first turn of a chat whose model has a known window (set more
+windows with `ai_context_windows`), and each chat has its own. The `⋯`
+menu's Usage row names the same number, and the web chat shows it next
+to the composer.
 
 To give the AI context, open a file or select code, then run
 **AI: Add File / Selection to Chat**.
@@ -81,6 +95,10 @@ Copy Message / Copy Selection / Copy Code Block / Fork Chat from Here.
 To put code from the answer into your file, run
 **AI: Apply Last Code Block to File**, or click **Apply** on the code
 card. You see the change in the review card first (see below).
+
+Mermaid, CSV / TSV and Excalidraw blocks in an answer are drawn as text
+diagrams once the block is finished; see
+[Diagrams in Markdown](editing.md#diagrams-in-markdown).
 
 | Key (chat focused) | Action |
 |---|---|
@@ -132,6 +150,10 @@ The setting is read when termocode starts.
 Chats are saved. Run **AI: Chat History…** to open an old one, and
 **AI: New Chat** to start fresh. The last 50 chats are kept.
 
+Run **AI: Search Chat History…** to find words in your saved chats. It
+looks in every title and message, on this computer only. Each row shows
+the matching line, with secrets hidden. `Enter` opens the chat.
+
 ### Reasoning level
 
 Some models can think longer before they answer. More thinking gives
@@ -161,6 +183,27 @@ How the level is sent:
 | Ollama, LM Studio, a custom URL | nothing |
 
 Ghost text and the `quick` slot never use a level.
+
+### Effort dial
+
+One knob for how hard the AI works. **AI: Effort Dial…** lists four modes;
+**AI: Next Effort Mode** steps through them (the web palette has it too,
+after a card on the laptop).
+
+| Mode | Profile | Reasoning |
+|---|---|---|
+| `low` | `fast` | `low` |
+| `medium` | `default` | `medium` |
+| `high` | `default` | `high` |
+| `ultra` | `default` | `max` |
+
+A mode sets the agent profile of this workspace and the reasoning level
+of this chat. Nothing is hidden: the header still shows the profile chip
+and the `think <level>` chip. Higher modes cost more tokens. The dial
+also has two toggles: **Plan first** (profile `plan`: a plan to approve
+before any change) and **Fast** (profile `fast`); pick a toggle again to
+go back to `default`. Change a mode in `config.json`:
+`"ai_dial": {"ultra": {"profile": "until-done"}}`.
 
 ### Fork a chat
 
@@ -248,6 +291,59 @@ is set per chat.
   next message starts it again.
 - The AI can not turn it on. Each auto turn costs like a normal one.
 
+### Shared plan (Canvas)
+
+The shared plan is one list of cards per workspace that you and the AI
+both keep. Use it for work that spans many chats or runs: the AI
+proposes steps, you approve and reorder them, and the AI marks them
+doing and done while it works.
+
+- **Canvas: Open Shared Plan** lists the cards in order: ☐ to do,
+  ◐ doing, ☑ done, with **by AI** and **needs your OK** on the right.
+  `Enter` on a card gives its actions: mark to do / doing / done,
+  **Approve**, move up / down / to the top, edit the title or the note,
+  copy the title, **Delete…** (it asks first; **Cancel** is first).
+- **Canvas: Add Card…** adds a card at the end. Your own cards are
+  approved at once.
+- **Canvas: Copy Plan as Markdown** copies the plan as a checklist.
+- The AI reads the plan with `canvas_read` and changes it with
+  `canvas_update`. It asks nothing, because it can not do harm: a card
+  it adds waits for your OK, editing an approved card's text takes the
+  OK away, it can never approve a card, and it can only remove its own
+  cards that you have not approved. A toast says what it changed.
+- Secrets in a title or note are hidden before the card is saved.
+
+The plan is saved in `.termocode/canvas.json` of the workspace, so it
+stays with the project.
+
+### Schedule a chat
+
+A chat can run again by itself at set times, for example "rerun this
+chat at 9:00" to check a build or a queue each morning.
+
+1. Run **AI: Schedule This Chat…**.
+2. Say when: `at 09:00` (every day), `weekdays 09:00`,
+   `weekly mon 09:00`, `monthly 1 09:00`, `hourly :15`, or 5 cron
+   fields.
+3. Check the message it sends. Your last message is filled in.
+4. A card shows the time of the next run and the message. **Cancel** is
+   first; press **Schedule** to save it.
+
+- At each run the message is sent as your message, with an
+  **⏰ Scheduled run** note. The chat's tools and approvals apply as
+  usual.
+- It runs only while termocode is open and the AI is idle. If you are
+  typing in another chat, the run is skipped. A slot missed by up to 30
+  minutes (termocode closed or the laptop asleep) runs once, late.
+- At most once an hour: each run is a paid turn. Up to 20 chats can
+  have a schedule. A scheduled chat is never removed from the history.
+- **AI: Chat History…** shows ⏰ and the schedule next to the chat.
+- Stop it with **AI: Stop Chat Schedule** (a card asks first).
+- The AI can propose a schedule for its own chat with the
+  `chat_schedule_set` tool. You always see the same Cancel-first card;
+  nothing is saved without your yes. It can read the schedule
+  (`chat_schedule_read`) and stop it (`chat_schedule_clear`).
+
 ### Old chats and handoff
 
 The AI can look at your saved chats when you ask, for example "what did
@@ -258,6 +354,24 @@ we decide about the cache last week?".
 - They see the chats of this machine only (the same list as **AI: Chat
   History…**).
 
+### Outside repositories
+
+The AI can read a public git repository that is not your workspace,
+for example a library you use: "how does charmbracelet/bubbletea batch
+commands?".
+
+- `repo_fetch` makes a shallow copy (`owner/name` is GitHub, or
+  `https://host/owner/name`, with an optional branch or tag). A card asks
+  you first: **Deny** is first and has the focus. A copy fetched before
+  is used again without asking.
+- The copy lives in a temp folder (`termocode-librarian-<uid>`) for a
+  day, then it is removed. It has no `.git`; no hooks or scripts run,
+  links are plain files, no password or key is sent, https only.
+  Local hosts, IP addresses and copies over 300 MB are refused.
+- `repo_list`, `repo_read` and `repo_search` read only that copy, with
+  the same rules as the workspace tools (no path out of it, no secret
+  files). Its files are data for the AI, never instructions.
+
 **AI: Handoff to a New Chat** starts fresh without losing the thread:
 
 - The quick model writes a short handoff note of the open chat (goal,
@@ -265,6 +379,27 @@ we decide about the cache last week?".
 - A new chat opens with the note in the input box. Check or change it,
   then press `Enter`. Nothing is sent before that.
 - The old chat stays in **AI: Chat History…**.
+
+### Chat docs
+
+A chat can hold docs: Markdown files you and the AI write together, such
+as a plan, a spec or release notes. Ask "write the plan as a chat doc",
+then shape it over the chat.
+
+- The AI uses `chat_doc_list`, `chat_doc_read` and `chat_doc_write`. It
+  writes the whole text each time. Keys are hidden in what it reads.
+- **AI: Chat Docs…** lists the docs of the open chat. `Enter` opens one
+  in the editor; **New doc…** makes one. Edit and save it there; the AI
+  reads your text next time.
+- Every change is kept as a revision: who wrote it (you or the AI) and
+  when. Your own edit is kept as its own revision before the AI writes
+  again, so nothing is lost.
+- **AI: Chat Doc Revisions…** lists the revisions. Picking an old one
+  asks first (**Cancel** comes first); **Restore** makes it the current
+  text again, as a new revision.
+- The docs live in termocode's config folder (`ai/docs/<chat id>/`), not
+  in your project. At most 30 docs per chat, 256 KB each, the last 50
+  revisions of each.
 
 ### Side question
 
@@ -281,6 +416,41 @@ mixing it into the chat.
 - Side questions are never added to the chat or sent to its model.
   A new chat starts a new side chat.
 
+### Voice input
+
+Speak your message instead of typing it. The words go into the chat
+input; nothing is sent until you press `Enter`.
+
+- termocode records nothing itself. It runs a local speech-to-text
+  program you choose. Run **AI: Dictate into Chat… (voice input)**; the
+  first time it offers **Open voice.json**.
+- In `voice.json` (in termocode's config folder) name the program in
+  `"command"`. It runs without a shell. `{seconds}` and `{lang}` are
+  filled in from `"max_seconds"` (default 60, at most 600) and
+  `"language"` (empty = `auto`):
+
+  ```json
+  {
+    "command": ["my-dictate", "--seconds", "{seconds}", "--language", "{lang}"],
+    "language": "en",
+    "max_seconds": 60
+  }
+  ```
+
+- The program listens on the microphone and prints the words. Plain
+  text and timestamped lines both work; timestamps and silence marks
+  are removed. It should stop by itself after `{seconds}`, or on an
+  interrupt (Ctrl+C), and print what it heard.
+- Each time a card shows the program and asks first: **Cancel** is
+  first and `Esc` cancels. **Listen** starts it.
+- While it listens, **Stop and use** asks the program to finish; the
+  words go in at the cursor. **Discard** (or `Esc`) throws them away.
+- The AI can never start voice input.
+- On the web page, the microphone button in the chat box uses the
+  browser's own speech input (where the browser has it). Some browsers
+  send the audio to their own online speech service. Click it again to
+  stop. The words go into the box; press Send when you are ready.
+
 ### Files in and out of the chat
 
 Add files to your next message in three ways:
@@ -293,9 +463,26 @@ Add files to your next message in three ways:
 - **`@path`.** Write `@src/main.go` (or `@file src/main.go`) in your
   message. The file is attached when you send.
 
+You can also name other context with an `@` word. termocode reads it when
+you send, shows each read as a tool line, and gives the text to the model
+as data (secrets hidden, up to 60 KB each, at most 8 per message):
+
+| Word | What the model gets |
+|---|---|
+| `@chat:<id>` or `@chat:<words>` | an old chat by its id, or the chats that match the words |
+| `@symbol:<name>` | the workspace symbols with that name (language server) |
+| `@diagnostics` or `@diagnostics:<path>` | the errors and warnings of the open files, or of one file |
+| `@changes` or `@changes:<path>` | your uncommitted changes |
+| `@diff` or `@diff:<base>` | this branch's change since it left its base (`main`, or the base you name) |
+| `@url:<url>` or `@https://…` | the text of one web page (private and local addresses are refused) |
+
+Each word uses the chat's own read-only tool, so a word whose tool is off
+(for example web reading) only adds a short note.
+
 Text files are sent as text (up to 60 KB). Images (PNG, JPEG, GIF, WebP)
 are sent as images to Anthropic, OpenAI and OpenRouter. Other providers
-get a short note instead. Other binary files are refused.
+get a short note instead. PDFs are sent as their text (best effort; a
+scan with no text is refused). Other binary files are refused.
 Click `×` on a chip to remove it, or press `Backspace` in the empty input.
 
 To get files out:
@@ -307,6 +494,51 @@ To get files out:
 - **AI: Export Chat as Markdown** writes the chat to
   `ai-chat-<date>.md` in the workspace and opens it.
 
+### Prompt actions (saved prompts)
+
+Save a prompt you send often and run it again with one pick.
+
+- **Prompt Actions: Run…** lists your saved prompts by group. Enter
+  runs the one you pick.
+- An action runs in the **AI chat**, or it is typed into the **active
+  terminal tab** and Enter is pressed. Use the terminal for a coding
+  agent that waits in that tab.
+- **Prompt Actions: New…** asks a name (`Group/Name`; the group is
+  optional), the prompt and where it runs. The prompt starts with what
+  is in the chat input. Write `\n` for a new line. The same name
+  changes that action.
+- **Prompt Actions: Export…** writes them to a JSON file. It asks before
+  it replaces a file.
+- **Prompt Actions: Import…** reads such a file. A card shows what is
+  new and what replaces an action with the same name. **Cancel** is
+  first; nothing is written until you pick **Import**. Nothing runs
+  when you import.
+- **Prompt Actions: Edit File** opens `prompt-actions.json` in the
+  termocode config folder. Edit or delete actions there.
+
+The AI never runs a prompt action by itself.
+
+## Bugfix specs
+
+A bugfix spec says what a fix must do and what it must not break.
+
+1. **AI: New Bugfix Spec…** asks for the bug in a few words. termocode
+   writes `.termocode/specs/<name>/bugfix.md` and opens it. Nothing goes
+   to a model.
+2. Fill in three sections, one line per item:
+   - **Current behavior**: what happens now.
+   - **Expected behavior**: what should happen. Each line becomes a test
+     that fails before the fix.
+   - **Unchanged behavior**: what must keep working. Each line gets a guard
+     test that passes before and after the fix.
+3. **AI: Fix Bug from Spec…** lists your specs. A spec with an empty
+   section opens at that section. A ready one puts a test-first fix prompt
+   in the chat, with the spec attached. Read it, then press `Enter` to send
+   it.
+
+The AI cannot run these two commands. The spec is a normal file: commit
+it with the fix if you like.
+
 ## AI code actions (review, then apply)
 
 1. Put the cursor on a line, or select some lines.
@@ -315,6 +547,8 @@ To get files out:
     - **Fix with AI** — only on a line with an error or warning.
     - **Edit with AI…** — type an instruction, e.g. *add error handling*.
     - **Generate Doc Comment with AI**
+    - **Generate Property-Based Tests with AI** — see
+      [Property-based tests](#property-based-tests).
 3. For Fix, Edit and Doc, the [review card](#review-ai-changes) opens
    with the proposal.
 4. Accept or reject each change, or the whole file.
@@ -324,6 +558,26 @@ typed it). Press `u` once to undo it. If the file changed while the AI was
 working, termocode does not apply the edit.
 
 Shortcut: `Alt+I` runs **Edit with AI** on the selection or the current line.
+
+### Property-based tests
+
+A property-based test checks a rule for many random inputs, for example
+"decoding what you encoded gives back the input" or "sorting twice is the
+same as sorting once". When a rule breaks, the library shrinks the input
+to the smallest one that fails.
+
+1. Open a file, or select the functions you want tested.
+2. Run **AI: Generate Property-Based Tests for File / Selection** from the
+   palette, or pick **Generate Property-Based Tests with AI** in `Ctrl+.`.
+3. The chat names the rules, writes them to a new test file and runs it.
+   You review the new file like every AI change.
+
+termocode picks the library your project already uses: `testing/quick` or
+`rapid` (Go), Hypothesis (Python), fast-check (JavaScript, TypeScript),
+proptest or quickcheck (Rust), jqwik or Kotest (Java, Kotlin), StreamData
+(Elixir), QuickCheck (Haskell). When the library is missing, the AI tells
+you the command to add it; it never adds a dependency by itself. It does
+not change the code under test.
 
 ### Fix from the Problems panel
 
@@ -356,6 +610,27 @@ over the editor, like in mobocode.
 - `Esc` hides the card. The chat shows "**N files to review**" with a
   **Review** button; **AI: Review Pending Changes** opens it again.
 
+### Comment on changes and send them to an agent
+
+This works in the review card and in every read-only changes card (an
+agent worktree's changes, a file diff, a compare).
+
+- Press `c` on a change to write a comment. It shows under the change
+  header. Press `c` again (or click the comment) to change it. Save an
+  empty comment to remove it.
+- The hint bar counts your comments: **S send 3 comments to an agent**.
+- `S` opens a card with the whole message: each comment with its file,
+  lines and the changed code. **Cancel** is first. Then:
+  - **AI chat** sends it to the built-in chat as one message. While the
+    AI still answers, it waits in the chat input.
+  - an **agent tab** button (Claude Code, Codex, … in a terminal tab)
+    pastes it into that agent's input. You press Enter there to send it.
+  - **Copy** puts it on the clipboard.
+- Sent comments leave the card. `Esc` on a read-only card keeps them:
+  **Agent: Send Diff Comments…** sends them later.
+- Known secrets are masked in the message. The AI cannot send your
+  comments on its own.
+
 ### The agent waits for you
 
 With the default setting, the agent's file changes are not written at
@@ -381,6 +656,24 @@ To turn the review off, run **AI: Toggle Edit Review (diff / auto)**, or
 set `"ai_edit_review": "auto"` in `config.json`. Then file changes ask with
 the dialog as before. Auto-approving *fileWrite* (**AI: Agent
 Auto-Approve…**) also skips the review: changes are written at once.
+
+#### Explain-first order
+
+When the agent changes several files, the card lists them in the order
+that explains the change best:
+
+1. Notes and docs (`*.md`, `docs/`): what the change is for.
+2. Schemas, protos, migrations, types and `go.mod`-like files: its shape.
+3. Code. A file that defines a new name (a function, a type, a class)
+   comes before the files that use that name.
+4. Tests last: the proof.
+
+Next to the file name the card says why the file is there, for example
+*"defines ParseQuery, used by handler.go"*. Files the rules can not tell
+apart keep the agent's order. The web's review cards follow the same
+order. To keep the agent's order, run **AI: Toggle Review Order (explain
+first / as proposed)**, or set `"ai_review_order": "proposed"` in
+`config.json`.
 
 **File: Compare Two Files…** uses the same card, read-only.
 
@@ -409,6 +702,67 @@ Shell commands (`run_command`, the terminal) and LSP edits made with
 `ai_edit_review` = `auto` are not part of a restore point: use git for
 those.
 
+### Rewind to any turn
+
+**AI: Rewind Chat to Turn…** lists your questions, newest first. Each row
+says how many files a rewind puts back. Pick one and a card asks first
+(Cancel has the focus):
+
+- **Code only** puts back the files of every AI turn from that question
+  on, newest first. Files those turns created are deleted. The chat stays
+  and gets a line saying what was restored.
+- **Code + chat** does the same, then removes the messages from that
+  question on and puts the question back in the input. Edit it and press
+  Enter to try again.
+
+Like Undo, the card lists files that changed after the AI turn (those
+later changes are lost) and files with unsaved edits (left as they are).
+
+### Code checkpoints (any agent)
+
+Restore points only see the built-in AI's own file tools. Code
+checkpoints cover everything else, also outside CLI agents in a terminal
+tab:
+
+- With the agent hooks installed (**Agent: State Hooks…**), each time
+  an outside agent starts a turn, termocode saves a checkpoint of the
+  folder it works in (its agent worktree, else the tab's folder), named
+  *before &lt;agent&gt; turn*.
+- **AI: Save Code Checkpoint** saves the workspace by hand.
+- **AI: Restore Code Checkpoint…** lists the checkpoints of the workspace
+  and of every agent tab's folder. Picking one shows what a restore
+  changes; Cancel has the focus. Restore puts changed and deleted files
+  back and deletes files made after the checkpoint.
+
+A checkpoint is the whole working tree: tracked files with their staged
+and unstaged edits, and new files that git does not ignore. It is kept as
+a private git ref (`refs/termocode/checkpoints/`), so your index, branch,
+HEAD and stash never change. Restore first saves the files as they are
+now as a new checkpoint, so a restore can be undone the same way. Ignored
+files (build output, `node_modules`, `.env`) are not part of it and stay
+as they are. A file with unsaved edits in an open tab blocks the restore
+until you save or discard them. The last 50 checkpoints per working tree
+are kept. Checkpoints need git; a folder in a container is not covered
+yet.
+
+### Follow the agent
+
+Run **AI: Toggle Follow Agent** to watch the agent work. While it is on,
+each file the agent writes (`write_file`, `edit_file`) opens in the editor
+at the first changed line, and the explorer shows the file. The keyboard
+stays in the chat, so you can keep typing.
+
+- The status bar shows **◎ Following AI** while it is on.
+- It never pulls the cursor away from you: while you type in the editor
+  or the terminal, it pauses. The next edit after you go back to the chat
+  (or another panel) moves the editor again.
+- It is off by default and lasts until you quit. Run the command again to
+  turn it off.
+- With `ai_edit_review` = `review`, changes open in the review card
+  anyway; Follow Agent moves the editor when a change is written.
+
+The web panel does not follow the agent yet.
+
 ### Audit log
 
 Every tool call of the agent is one line in the **Output** panel, channel
@@ -429,6 +783,22 @@ Every tool call of the agent is one line in the **Output** panel, channel
 **AI: Undo Last Turn** adds a line too. The log is kept while termocode
 runs (the last 5000 lines).
 
+### Who is named on the AI's commits
+
+The setting `git_ai_attribution` (Settings, group **Git**) says who is
+named on a commit the AI makes: `git_commit` in the chat and the commit
+of a plan run in a worktree.
+
+| Value | Author | Committer | Added to the message |
+|---|---|---|---|
+| `user` (default) | you | you | nothing |
+| `co-author` | you | you | `Co-authored-by: termocode AI <ai@termocode.invalid>` |
+| `ai` | termocode AI | you | nothing |
+
+The commit card shows the choice before you allow it, for example
+`Commit: "fix typo" (author: termocode AI)`. Only you can change the
+setting; the AI cannot. Commits you make yourself are never changed.
+
 ## Agent: let the chat use tools
 
 The chat is an agent. It can call tools to answer you:
@@ -441,7 +811,7 @@ The chat is an agent. It can call tools to answer you:
 | Write files | write, change part of a file (`edit_file`), create, delete, rename files and folders, format |
 | Git | stage, commit, checkout, push, pull |
 | Run | run a shell command in the workspace (build, test, …); you see only its result |
-| Terminal | type a command in your terminal panel (`terminal_send`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
+| Terminal | type a command in your terminal panel (`terminal_send`), press keys there like Ctrl+C or arrows (`terminal_keys`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
 
 | Read | read a file, list a folder, search (text or regex, with a glob), find files by name (`glob`), look at an image or a PDF (`look_at`), git status / diff / branches / log (`git_log`) / blame (`git_blame`), go to definition, diagnostics |
 | Write files | write, change part of a file (`edit_file`), create, delete, rename files and folders, format |
@@ -517,6 +887,23 @@ a code fence around it) are fixed; a cut call is never run.
 - `terminal_tabs`: list, new and show run at once. Close asks (kind
   *ide*). Closing a tab that still runs a command always asks: there is
   no "Always allow" for it.
+- `terminal_keys` asks first (kind *run*). It presses keys in a tab:
+  Ctrl+C, Ctrl+D, arrows, Tab, Esc.
+
+**The agent in psql, gdb or a REPL.** The agent can work inside a
+program that runs in your terminal, as you do. It starts `psql` (or
+`gdb`, `python`, `redis-cli` …) with `terminal_send`, types queries or
+commands, and `terminal_read` waits until the program shows its prompt
+again. You watch every line.
+
+- **Take over.** The first time the agent types in a tab, a toast says
+  so. Type in that tab, and it is yours: the agent stops typing there
+  and asks you in chat. **Terminal: Take Over from the AI** does the same
+  without typing.
+- **Hand back.** **Terminal: Hand Back to the AI** lets the agent type
+  in those tabs again. Only you run these two commands.
+- **Passwords.** At a password or passphrase prompt the agent stops. You
+  type the secret; the agent never types or reads it.
 
 Language server tools have rules too:
 
@@ -613,6 +1000,41 @@ arguments and its rule.
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
 
+### Autopilot and approval rules
+
+termocode rates every change the agent wants to make as **low**, **medium**
+or **high** risk. Low: read-only commands (`ls`, `cat`, `grep`, `git status`,
+`git diff`, `git log`). Medium: file edits in the project, builds, tests and
+other local commands. High: deletes, `git push` / `git pull`, `rm`, `sudo`,
+network commands (`curl`, `ssh`, …), writes outside the project or to `.env`,
+`.git` and key files.
+
+**AI: Autopilot Level…** steps the level: *off* → *low* → *medium*. At *low*,
+low-risk actions run without a card; at *medium*, medium-risk ones too.
+Raising the level first shows a card with **Cancel** focused, so Enter alone
+changes nothing. A high-risk action **always** shows the card, even when its
+kind is set to Always allow. The card then names the risk and why it asks.
+
+Your own rules come first. Put them in `ai_approval_rules` in `config.json`:
+
+```json
+"ai_approval_rules": [
+  {"tool": "run_command", "match": "Run: go test *", "action": "allow"},
+  {"tool": "run_command", "match": "*docker*", "action": "deny"},
+  {"tool": "git_*", "action": "ask"}
+]
+```
+
+The first rule that fits wins. `deny` refuses without a card (the agent is
+told so); `allow` skips the card (never for a high-risk action); `ask` always
+shows it. `match` is a pattern over the card text (`*` is any text).
+
+**Guardian.** Set `ai_guardian` to a model slot (for example `"quick"`) and a
+second model checks each medium-risk action autopilot would run. It answers
+allow, or sends the action back to you with its reason on the card. It costs
+one small request per checked action and never allows what a rule denies.
+The AI can never change autopilot, the rules or the guardian.
+
 The IDE follows what the agent does: a new file shows in the explorer at once,
 a renamed open file keeps its tab under the new name, a deleted one closes its
 tab, and a written one shows the new text (undo with `u`). Git and shell tools
@@ -641,6 +1063,32 @@ More rules can apply to some files only:
 These rules are not in the system prompt. When the AI reads a matching file
 with `read_file`, the rules are added to the result, once per chat (at most
 4 KB per file and 16 KB per chat).
+
+### Rules you name, rules the AI picks
+
+A `.claude/rules` file can also say *when* it is used, with `inclusion:` in
+its front matter:
+
+```markdown
+---
+inclusion: manual
+---
+Tag the release by hand, then write the notes.
+```
+
+- `inclusion: manual`: used only when you name it in a message, as
+  `#release` (the file name without `.md`, or `name:` in the front matter).
+  The rule's text is added to that message, once per chat.
+- `inclusion: auto` with a `description:`: the AI sees only the name and the
+  description. When the task matches, it loads the text with the
+  `rule_load` tool. An auto rule without a description works like a manual
+  one.
+- Neither goes into the system prompt or into `read_file` results. The AI
+  cannot load a manual rule.
+- `fileMatchPattern:` works like `globs:`.
+
+These rules are in the same trust card and the same 16 KB per chat. They
+work in plain chat turns; pipeline runs get only the other rules.
 
 The text steers the AI, so it is used only when you say so:
 
@@ -671,6 +1119,34 @@ Limits:
 - The rules are only prompt text. They give the AI no tools and never
   answer a confirm card for you. Pipeline runs ([AI profiles](ai-profiles.md))
   get them in every step.
+
+### Review rules
+
+A section of `AGENTS.md` can be for AI reviews only. Give it the heading
+`## Code Review Rules` (also `Review Rules`, `Code Review` or
+`Review Guidelines`, at any heading level):
+
+```markdown
+## Code Review Rules
+
+- Report only P0 and P1 findings.
+- Every new handler checks the user's rights.
+```
+
+- The chat does not get this section. Its system prompt has the rest of
+  the file.
+- **Git: AI Review My Changes** and **Git: AI Review Branch (Pull Request)**
+  put it into the request, above the diff. You read it in the chat box
+  before you send it.
+- An `AGENTS.md` in a sub folder can have its own section. It is added when
+  the change touches a file in that folder.
+- The section ends at the next heading of the same or a higher level.
+- The review rules are part of the same trust answer as the rest of the
+  file. With **Not in this project**, reviews do not get them either.
+- **Git: Add Review Rules to AGENTS.md…** shows a starter section on a card
+  (**Cancel** is first). **Add Section** adds it to the end of `AGENTS.md`
+  (or creates the file) and opens it. When the file has a section already,
+  the command opens it there.
 
 ## Memory
 
@@ -722,6 +1198,26 @@ they go into a prompt. A lesson that still holds a secret is dropped.
 Lesson text never goes to the logs or the AI audit channel; the audit line
 only says `memory · 2 lessons saved`.
 
+**Kinds.** Each lesson has a kind: a plain **lesson**, a **decision** (a
+choice you made for the project, like a library or a style) or a
+**correction** (you told the AI it was wrong and what to do instead).
+Corrections are saved by themselves after the turn, like other lessons.
+The kind shows in **AI: Memory…** and in the prompt, and it is one
+`kind:` line in `lessons.md` (you can add or change it by hand).
+
+**Levels.** Memory has three levels per workspace: **use and learn** (on),
+**use only** and **off**. **Use only** keeps sending the saved lessons and
+recalls them, but writes no new ones and makes no quick model request.
+**AI: Memory: Learn New Lessons On/Off (use only)** switches between use
+and learn and use only; from off it turns memory on in use only. **AI:
+Memory: Turn On/Off** turns it off from either level.
+
+**Shared with outside agents.** termocode's MCP server offers the lessons
+as a read-only resource, `termocode://memory/lessons` (Markdown), so Claude
+Code, Codex or another agent connected to termocode reads the same notes
+(see [Agents](agents.md)). It is redacted like the prompt, and while memory
+is off it holds only a note. Outside agents can not write lessons.
+
 The AI has no memory tool: it can not turn memory on or off or forget a
 lesson. It can change `lessons.md` only like any file, through the review
 card.
@@ -767,10 +1263,11 @@ settings are blanked and keys are removed from logs. You can add the
 current chat. Nothing is sent. **Save report** writes a new
 `termocode-report-*.md` in the workspace. Check it for private text.
 
-## Hooks after AI tool calls
+## Hooks on AI tool calls
 
-A hook is a command that runs after an AI tool call worked, for example a
-formatter after the AI writes a file:
+A hook is a command that runs on an AI event. The most common one runs
+after an AI tool call worked, for example a formatter after the AI writes
+a file:
 
 ```json
 {"post_tool": [
@@ -794,7 +1291,47 @@ formatter after the AI writes a file:
   `hook after=write_file run=… by=user → exit 0 · 40ms`.
 - When a hook fails (exit code not 0), its output (at most 4 KB, secrets
   blanked) is added to the tool result, so the AI can fix a lint error.
-- Hooks run only after built-in tools, not after MCP tools.
+- `post_tool` hooks run after built-in tools and after MCP tools.
+
+### More hook events
+
+The same file can hold hooks for other events:
+
+```json
+{"pre_tool":     [{"tools": ["run_command", "mcp__github__*"], "run": "./guard.sh"}],
+ "file_save":    [{"files": ["*.go"], "run": "go vet ./..."}],
+ "stop":         [{"run": "./check-done.sh"}],
+ "pre_compact":  [{"run": "./save-notes.sh"}],
+ "post_compact": [{"run": "./log-summary.sh"}]}
+```
+
+| Event | When it runs | What it can do |
+|---|---|---|
+| `pre_tool` | before an AI tool call, before any approval card | block the call, change its arguments, or allow it without the card |
+| `post_tool` | after a tool call worked | add its output to the result when it fails |
+| `file_save` | after you save a file with Ctrl+S | show a **Save hook failed** toast when it fails |
+| `stop` | when the agent ends a turn | send the agent on (at most 3 turns in a row) |
+| `pre_compact` | before the older chat is summarised | keep the full chat (no summary) |
+| `post_compact` | after the summary is made | read the summary |
+
+- `tools` entries are patterns: `mcp__github__*` matches every tool of the
+  `github` MCP server. `files` entries match the saved file's path in the
+  workspace or its name (`*.go`, `docs/*`).
+- A hook reads the event as JSON on stdin:
+  `{"event", "tool", "path", "args", "workspace", "summary"}`. The event
+  name is also in `TERMOCODE_HOOK_EVENT`.
+- **Exit 2** blocks: the call does not run (or the agent goes on, or the
+  chat is not summarised). The hook's output is the reason the AI gets.
+- **Exit 0 with a JSON object** decides:
+  `{"decision": "deny", "reason": "not on main"}` blocks,
+  `{"decision": "allow"}` runs the call without the approval card, and
+  `{"args": {…}}` runs the call with new arguments.
+- Any other exit code is a failed hook. It never blocks.
+- Only **your** hooks can allow a call without the card. A project hook
+  can block or change a call, but never approve it for you. A file
+  change still shows its review.
+- The audit line says what happened:
+  `hook before=run_command run=./guard.sh by=user → exit 0 · 12ms · allow`.
 
 ## Web tools
 
@@ -825,6 +1362,107 @@ The same screen can add servers (MCP) for this work. Each shows the exact
 
 The `visual-qa` skill tells the AI how to check a page in the browser:
 phone and desktop widths, console errors, the main buttons.
+
+## Use termocode as the agent of another editor (ACP)
+
+`termocode acp` runs termocode's AI as an agent for any editor that
+speaks the Agent Client Protocol. It talks JSON-RPC on stdin and stdout.
+
+1. Set up AI in termocode first: **AI: Configure Provider…**.
+2. In the other editor, add a custom agent. Use the command
+   `termocode acp`.
+3. Open the agent's chat there and ask. The answer streams in as it is
+   written. Stop cancels the turn.
+
+Files the editor attaches to the message go in with the question. Each
+chat keeps its own history (the last 40 messages).
+
+This mode is chat only for now. The agent does not run tools, read or
+change files by itself, or ask for permissions.
+
+## Proof of work screenshots
+
+After a UI change the AI can show you that it works. Its tool
+`proof_screenshot` opens a page in a headless browser and saves a PNG:
+
+- It shoots the local dev server (`http://localhost:5173/…`) or an
+  `.html` / `.svg` file in the workspace at once. Any other address asks
+  you first (class `run`).
+- You choose the width and height (default 1280×800; 390 wide for a
+  phone). The AI is told to shoot desktop and phone widths.
+- Shots go to `.termocode/proof/` in the workspace, each with a small
+  `.json` file: the address, the size, the time and a note.
+- When the model takes images, it sees the shot and can fix what looks
+  wrong. Otherwise it can use `look_at` on the file.
+- The browser runs with a new empty profile each time (no cookies, none
+  of your sign-ins) and with its sandbox on. It stops after 60 seconds.
+
+It needs Chrome, Chromium, Edge or Brave on this machine. termocode finds
+it on `PATH` (and in `/Applications` on macOS); set `TERMOCODE_BROWSER`
+to the program path to pick another one. Nothing else is installed.
+
+Run **AI: Proof of Work…** to see the shots, newest first, with the
+address, size and note. Enter opens a shot in the picture preview.
+**Delete all proof screenshots…** asks first (Cancel is the default) and
+removes only the shots and their notes.
+
+## Image generation
+
+The AI can make PNG images for your project: an app icon, a placeholder,
+a picture for the docs. It is off until you turn it on. Run **AI: Toggle
+Image Generation** (run it again to turn it off).
+
+- It needs a main model on **OpenAI** or an **OpenAI-compatible**
+  endpoint with an images API (`/images/generations`). The same key is
+  used. Other providers do not get the tool.
+- The model is `gpt-image-1`. Set `ai_image_model` in `config.json` to use
+  another one. It must return image data, not a link.
+- The AI calls `generate_image` with a prompt and a new `.png` path in the
+  workspace. Each call is a paid request, so each one asks first; there
+  is no **Always allow**. The card shows the path, the model and the
+  prompt.
+- It never overwrites a file. The new file shows in the explorer.
+  **AI: Undo Last Turn** deletes it again.
+- The AI cannot turn the tool on by itself.
+
+The web panel cannot turn image generation on yet.
+
+## Run the AI from scripts and CI
+
+`termocode ai` runs one AI turn without the UI. It uses the same provider
+and model as the chat (config, secret store or environment keys).
+
+```sh
+termocode ai -x "explain the failing test in internal/app"
+git diff | termocode ai -x "review this diff" --stdin
+termocode ai -x "list the TODOs" --output json | jq -r .text
+termocode ai exec --output stream-json --tools all --allow fileWrite "fix the typo in README.md"
+```
+
+- `--output text` (default) prints the answer; tool lines go to stderr.
+  `json` prints one result object (`ok`, `exit_code`, `text`, `error`,
+  `model`, `usage`, `tools`, `duration_ms`). `stream-json` prints one JSON
+  line per event (`start`, `text`, `tool_start`, `tool_result`, `retry`)
+  and the result object last.
+- Nobody can answer a confirm card here. By default the AI only gets tools
+  that read (files, search, git status and diff). `--tools all` adds the
+  tools that change things, but each one is declined unless you name its
+  class with `--allow fileWrite,git,run`. `--tools none` sends no tools.
+- `--rules` adds the project rules file (AGENTS.md, CLAUDE.md,
+  `.termocode/rules.md`). They are off by default, because nobody reviews
+  them in this mode.
+- `--model`, `--dir`, `--max-steps` and `--timeout` (default 10m) change
+  the turn. `-x -` reads the prompt from stdin.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Done |
+| 1 | The model failed (the error is on stderr) |
+| 2 | Bad usage |
+| 3 | AI is not configured (or the secret store is locked and no env key is set) |
+| 4 | Timeout |
+| 5 | Step limit reached: the work is not finished |
+| 130 | Interrupted (Ctrl+C) |
 
 ## Keys at a glance
 

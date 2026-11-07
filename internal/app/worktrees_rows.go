@@ -60,7 +60,9 @@ type wtItem struct {
 	state  string
 	group  string
 	setup  string // the setup state of a new worktree (worktrees_setup.go)
+	runURL string // the address of its running dev server (worktrees_run.go)
 	depth  int    // drawn under its parent (WTX-11); set when drawn
+	waits  string // what it waits for (CMP-80): "waits for a" | "ready: …" | ""
 }
 
 // wtRow is a line of the list model: a group header or a card.
@@ -75,6 +77,8 @@ type wtRow struct {
 type wtTabAgent struct {
 	name, cwd string
 	state     agents.State
+	buf       int  // its nvim buffer (the live preview reads it, CMP-8)
+	asleep    bool // hibernated (AGX-15)
 }
 
 // wtOwner is the worktree a folder belongs to: the deepest worktree
@@ -145,7 +149,7 @@ func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Ro
 			out = append(out, wtItem{e: e, state: wtStateArchived, group: "ARCHIVED"})
 			continue
 		}
-		it := wtItem{e: e, here: e.Path == here, state: wtStateIdle}
+		it := wtItem{e: e, here: e.Path == here, state: wtStateIdle, waits: worktrees.WaitsLine(entries, e)}
 		as := byPath[e.Path]
 		sort.SliceStable(as, func(i, j int) bool { return wtStateRank(as[i].state) < wtStateRank(as[j].state) })
 		if len(as) > 0 {
@@ -169,10 +173,21 @@ func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Ro
 		}
 		out = append(out, it)
 	}
-	// In a group: agents that wait for you, then working ones, then the
-	// last seen; git's order (the main checkout first) breaks ties.
+	// In a group: the cards the user put in order (Shift+J/K) first, in
+	// that order; then agents that wait for you, then working ones, then
+	// the last seen; git's order (the main checkout first) breaks ties.
 	sort.SliceStable(out, func(i, j int) bool {
 		a, b := out[i], out[j]
+		if oa, ob := a.e.Meta.Order, b.e.Meta.Order; oa > 0 || ob > 0 {
+			switch {
+			case oa > 0 && ob > 0 && oa != ob:
+				return oa < ob
+			case oa > 0 && ob == 0:
+				return true
+			case oa == 0 && ob > 0:
+				return false
+			}
+		}
 		if ra, rb := wtStateRank(a.state), wtStateRank(b.state); ra != rb {
 			return ra < rb
 		}

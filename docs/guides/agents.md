@@ -94,6 +94,10 @@ user can open. termocode checks the user of every connection. See
   HTTP request (`http_send`), and save or apply a stash (`git_stash`).
 - **Ask on a Cancel-first card, never "Always allow":** drop or pop a stash.
   The stash list (`git_stash` list) runs at once.
+- **Hand a task to a new agent (`agent_task_start`):** termocode shows its
+  **New worktree** card filled in with the task. Nothing is made until you
+  press **Create + Start**; **Cancel** is first. See
+  [Start a background task](#start-a-background-task).
 
 ### Databases and HTTP
 
@@ -127,10 +131,14 @@ user can open. termocode checks the user of every connection. See
 
 termocode answers the MCP revisions `2025-03-26`, `2025-06-18` and
 `2025-11-25`, and the stateless revision `2026-07-28` (no `initialize`;
-`server/discover` tells what is supported). Besides tools it offers one
-read-only resource, `termocode://editor/state`: the active file, cursor,
-open buffers, git branch and the number of diagnostics. It needs no
-confirmation and is empty when termocode is not open.
+`server/discover` tells what is supported). Besides tools it offers two
+read-only resources. `termocode://editor/state` holds the active file,
+cursor, open buffers, git branch and the number of diagnostics.
+`termocode://memory/lessons` holds the workspace's AI memory (lessons,
+decisions and corrections, Markdown, redacted; only a note while memory
+is off), so the agent learns from the same notes as termocode's own AI
+(see [Memory](ai-use.md#memory)). They need no confirmation and are empty
+when termocode is not open.
 
 ## What the agent can not do
 
@@ -211,6 +219,10 @@ also edit `config.json`.
   disconnect it. Both ask first. Press `?` on the screen for its keys.
 - Every call, allowed or not, is in the AI audit log (**Output: AI**) as
   `mcp:<agent name>`.
+- **Output: Save Audit Log** saves the **AI** and **Web** audit channels
+  to a new private file: `audit/audit-<time>.log` in termocode's config
+  folder (only you can read it). It never overwrites a saved log, and it
+  blanks secrets once more. Workflow runs keep their own `audit.jsonl`.
 
 The chat AI can not run the status and config commands. They are for you.
 
@@ -243,6 +255,35 @@ termocode agent wait t3 --until done --timeout 20m
 - Outside a termocode terminal the command uses the socket of the current
   folder's workspace. The socket is in termocode's private session folder;
   only your own user can connect. Not on Windows.
+- To drive the agents from your own program, see
+  [Build on the agent runtime (SDK)](sdk.md).
+
+### Start a background task
+
+Hand a task to a new agent in its own worktree, from a script or from
+another agent:
+
+```sh
+termocode agent start --agent codex "fix the flaky login test"
+termocode agent tasks                     # BRANCH  AGENT  STATUS  LINK  NOTE  PATH
+```
+
+- `start` shows the **New worktree** card in termocode, filled in: a name
+  drafted from the task (`task/fix the flaky login test`), the agent and
+  the task. The card says who asked. Check it, change what you like, then
+  press **Create + Start**. **Cancel** is first and makes nothing.
+- `start` waits for your answer (up to 10 minutes) and prints the new
+  worktree's path. It exits 1 on **Cancel**. `--json` prints the state
+  (`started`, or `created` when you press **Create** only) and the
+  worktree.
+- `--agent` picks the agent (the first installed one when left out),
+  `--name` the worktree name, `--from` the branch, tag or commit it starts
+  from (the current branch when left out). `-` reads the task from stdin.
+- `tasks` lists the worktrees with an agent: the branch, the agent, the
+  status and the last note the agent left (`termocode worktree note`).
+  `--json` prints JSON.
+- An outside agent does the same with the MCP tool `agent_task_start`.
+  It gets the same card; there is no "Always allow".
 
 ### Exact states with hooks
 
@@ -274,6 +315,7 @@ them on.
 | `agent_auto_continue` | termocode types `continue` into an agent tab once its usage limit resets. | `false` |
 | `agent_hibernate_minutes` | termocode stops an idle agent and starts it again when you come back. | `0` (off) |
 | `agent_accounts` | Named accounts of Claude Code and Codex, each in its own folder. Labels only. | `{}` |
+| `agent_profiles` | Launch profiles: model, mode and env per agent. No secrets. | `{}` |
 
 termocode never writes into `~/.claude` or `~/.codex` for these features,
 and it never calls a vendor's usage service.
@@ -286,13 +328,30 @@ of Claude Code and Codex), **BUILT-IN** (termocode's own AI profiles) and
 into termocode's tools folder, after a card (**Not now** first). Then a
 second card runs the CLI's own sign-in command in a terminal tab.
 
+An agent that installs only with its own installer (Cursor CLI, Goose,
+Droid, Kiro CLI) gets a card with its install page instead (**Not now**
+first). **Open install page** opens it in your browser; over SSH the link
+is copied. termocode never runs an install script.
+
+The list has Claude Code, Codex, Gemini CLI, OpenCode, Aider, Cursor CLI,
+Amp, Goose, Qwen Code, Crush, Copilot CLI, Kimi CLI, Droid, Pi, Kiro CLI,
+Auggie, Grok CLI, Cline CLI, Continue CLI and Mistral Vibe. Claude Code,
+Codex and Kimi CLI get termocode's tools on their command line; OpenCode
+asks before it writes `opencode.json`; for the others, add termocode's
+server by hand (**MCP: Copy termocode Server Config**). Any other CLI
+works in a plain terminal tab.
+
 From the **WORKTREES** view, **Agent: Start…** starts the agent in the
 selected worktree, and the agent shows on that worktree's card.
 
 ## Race agents on one task
 
-**Agent: Race…** gives one task to 2 to 4 agents at once. Tick the lanes,
+**Agent: Race…** gives one task to 2 to 8 lanes at once. Tick the lanes,
 type the task and, if you like, a verify command such as `go test ./...`.
+On a lane, `+` (or `→`) runs that agent once more and `-` (or `←`) once
+less, so three Claude Code lanes and two Codex lanes are `[3]` and `[2]`.
+An agent that runs more than once gets a number in each lane title
+(`Claude Code #2`).
 Each lane gets its own worktree from `HEAD` (hidden in the git folder) and
 its own terminal tab. termocode types the task once, only when the agent's
 input box is on screen, never into a question.
@@ -304,14 +363,67 @@ input box is on screen, never into a question.
 | `Enter` | Review the lane's diff (read only) |
 | `m` | Merge this lane into your folder; a conflict stops first and asks (**Cancel** first) |
 | `d` | Discard one lane (**Cancel** first) |
+| `b` | Restack the lane: put its work on top of your current commit as clean commits (**Cancel** first) |
 | `v` | Run the verify command in every finished lane |
+| `a` | Type one message into every agent that sits at its input box (finished lanes); a card shows who gets it and who is skipped (**Cancel** first) |
+| `c` | Run a command in every open lane's worktree, one task tab each (**Cancel** first) |
 | `s` | Ask your **Quick** model for a 3-line summary of the differences (capped, secrets hidden; the cost is shown) |
+| `p` | Ask your **Main** model to judge: it ranks the finished lanes with one reason each and picks one (★). Verify results count first; diffs are capped and secrets hidden; the cost is shown. A card then offers to merge the pick (**Cancel** first) |
 | `x` | Stop every lane |
 
-After a merge, a card asks about the other lanes: **Keep** is first. A
+Restack (`b`) cleans up a lane before you merge, push or open a pull
+request from its branch. **Squash into one commit** asks for the message
+(the task is filled in) and makes one commit on top of your current
+commit. **Keep commits** replays the lane's commits as they are. Only the
+lane's branch changes: your files, index and branch stay. If the lane
+clashes with your commit, nothing changes and the lane's note names the
+files. The old commits stay in the branch's reflog.
+
+The judge only advises: nothing merges until you press **Merge** on its
+card, and that runs the same merge as `m`. After a merge, a card asks about the other lanes: **Keep** is first. A
 lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
-first).
+first); it takes a list of agents or a fan-out count such as
+`claude:3,codex:2`.
+
+### Each lane in its own sandbox
+
+Turn on `agent_os_sandbox` (Settings, Workflows group) to start every
+lane's agent inside an OS sandbox: **bwrap** on Linux, **sandbox-exec**
+on macOS. Inside it the whole disk is read-only. The agent can write only
+its own worktree, the temp folder and its own config folder (for example
+`~/.claude` or `~/.codex`, where its login lives). It can still commit in
+its lane, but it cannot change git hooks or the repo config. The network
+stays on, so the agent can reach its service.
+
+The same setting covers workflow `agent` steps and AI run steps that use
+Claude Code or Codex. If no sandbox tool is installed, the lane does not
+start and says why; it never runs without the sandbox. The sandbox stops
+writes, not reads: the agent can still read your files. Only you can
+change this setting; the AI chat cannot.
+
+## Split one task between agents
+
+A race gives the same task to every lane. A **split** gives each lane its
+own part of one goal, so several agents build one feature side by side.
+
+1. **Agent: Split Task…** opens the AI chat with a short draft. Finish it
+   with your goal and send it.
+2. The AI (the coordinator) cuts the goal into 2 to 4 parts and picks an
+   agent for each. A card shows every part: **Deny** is first. Nothing
+   starts before you press **Start split**.
+3. Each part gets its own worktree from `HEAD` and its own terminal tab.
+   termocode types the goal and that lane's part, once, when the agent's
+   input box is on screen.
+4. Ask the AI how the parts are going. It reads them with
+   `agent_split_status` (state, files and the diff of a finished part) and
+   can tell you what is left.
+5. **Agent: Race Compare** shows the split (the title says **SPLIT** and
+   each lane shows its part). Press `m` on each part to merge it. There is
+   no winner, so no card asks about the other lanes.
+
+Workers cannot start more workers: the split tools are only for termocode's
+own AI chat, never for outside agents.
 
 ## Chat view and sessions
 
@@ -320,10 +432,30 @@ With `agent_transcripts` on:
 - **Agent: Chat View** (or `v` on an agent tab) shows the session as a
   chat. Tool calls are one line each. What you type goes to the tab. Press
   `v` again for the terminal.
+- When the agent asks something, the chat shows it as a panel above the
+  status line, with the numbered answers from the agent's own menu:
+  - **QUESTION**: the question and its options. A number key picks that
+    answer at once.
+  - **PLAN**: the plan to approve. `o` opens the whole plan in a read-only
+    editor tab.
+  - **NEEDS YOUR OK**: a permission prompt, with the tool call.
+
+  For a plan or a permission, a number opens a card first (Cancel is the
+  default). Send checks the screen again and sends nothing if the question
+  changed. termocode presses the agent's own keys (arrows, then Enter), so
+  the answer is the same as in the terminal. The AI never answers.
 - **Agent: Sessions…** lists this project's past sessions. `Enter` resumes
   one in a new tab with the CLI's own resume command; `→` reads it.
 - `/` in the list, or **Agent: Search Sessions…**, searches the text of
   this project's sessions, on this computer only.
+- **Agent: Search All Sessions…** searches the sessions of every project
+  on this computer. Each row names its project folder.
+- **Agent: Import Session into AI Chat** (or `i` while you read a past
+  session) copies the open session into a new termocode AI chat, after a
+  card (**Cancel** first). Prompts and answers are copied, tool calls as
+  one line each; tool results are not. Secrets are hidden. The session
+  file is not changed. The chat is in **Chat History**, and termocode's AI
+  can go on from it.
 
 While the setting is off, termocode asks first and opens no file there.
 
@@ -337,6 +469,64 @@ Auto-Continue** on the tab, termocode types `continue` (then `Enter`) one
 minute after the reset, **once** per limit, and a toast says so. It never
 types while the agent works, while a y/n or permission question is on the
 screen, or into a closed tab.
+
+### Switch to another account
+
+You do not have to wait for the reset. Run **Agent: Switch Account…** on
+the tab. When another account is free, the limit toast already names it.
+
+- The card offers every other account of that agent (see
+  [Accounts](#accounts)) whose own limit is not on. **Cancel** is first.
+- The pick starts the same agent as that account, in the same folder, in
+  a new tab. When the agent is ready, termocode types one short task: read
+  `git status`, the diff and the recent commits, then go on.
+- The old tab stays as it is. termocode never moves or reads sign-in
+  files: each account keeps its own folder.
+- Only Claude Code and Codex have accounts. The AI cannot run this
+  command.
+## Loop until a check passes
+
+**Agent: Loop Until Check Passes…** on an agent tab asks for a check
+command, for example `go test ./...`. A card shows what will happen.
+`Cancel` is first. Pick 3, 5 or 10 rounds to start.
+
+- Each time the agent ends its turn, termocode runs the check in a task
+  tab (`check · Claude Code`), in the agent's worktree or the workspace.
+- Exit 0: the loop ends. A toast says how many rounds it took.
+- Any other exit: termocode types the last 30 lines of the output into
+  the agent, as one line, with secrets hidden. It asks the agent to fix
+  the cause. The tab is named `Claude Code goal 2/5`.
+- The loop stops after the rounds you picked, after 20 minutes a round,
+  or after `agent_goal_max_tokens` tokens (counted only with
+  `agent_transcripts` = read). A toast says why.
+- It never types while the agent works, while a question is on its
+  screen, or while a usage limit is on.
+
+**Agent: Stop Check Loop** ends the loop at any time. The AI cannot start
+or stop a loop.
+
+## Auto-accept prompts
+
+**Agent: Toggle Auto-Accept** lets an agent tab run without you. It is
+off by default, works per tab, and has no setting.
+
+1. Open the agent's tab and run the command.
+2. A card explains what it does. **Cancel** is first; pick **Turn on**.
+3. The tab is named `Codex · auto-yes`. termocode now answers each
+   permission prompt with "yes, this once" and a toast counts the answers.
+
+It never:
+
+- picks an "always" or "don't ask again" choice;
+- answers a question with its own choices;
+- answers a prompt that shows a risky command (`rm -rf`, `sudo`, a force
+  push, `reset --hard`, a download piped into a shell, SSH keys, `.env`,
+  `kubectl delete`, …). That prompt waits for you, and a toast says why.
+
+It answers each prompt once and turns itself off after 50 answers. Run the
+command again to turn it off. It works for Claude Code, Codex, Gemini CLI,
+OpenCode and Aider. The AI cannot turn it on. Use it on a worktree you can
+throw away: the agent still edits files and runs commands you did not read.
 
 ## Usage and plan limits
 
@@ -374,6 +564,31 @@ sign-in files and never copies or swaps them. Your default
 `~/.claude` and `~/.codex` stay as they are. Agents without such a
 variable (Gemini CLI, OpenCode, …) have no accounts. The account folders
 are hidden in bug reports.
+
+## Profiles
+
+**Agent: Profiles…** saves named ways to start an agent, like `review`
+(plan mode) or `fast` (a smaller model):
+
+- **Add a … profile…** asks for a name, then the **mode**, the **model**
+  and extra **env** variables (`NAME=value`, space between). Blank keeps
+  the CLI's default.
+- The modes are the CLI's own flags. Claude Code: plan, accept edits, no
+  permission checks. Codex: plan (read-only sandbox), edit the
+  workspace, no sandbox. Gemini CLI and Qwen Code: accept edits, yolo.
+  Aider: yes to every question. OpenCode has the model only.
+- A card shows the whole launch line before you save (**Cancel** first).
+- **Agent: Start…** shows `profile review` rows under the agent. A safe
+  mode starts at once. A mode without permission checks shows its card
+  (**Cancel** first) at every start.
+- In **Agent: Profiles…**, `Enter` on a profile shows its line, with
+  **Start** and **Delete**.
+
+termocode never edits the agents' own config files for this. Variables
+that look like secrets (`…_KEY`, `…_TOKEN`, `PASSWORD`, …) are refused:
+keep keys in **AI: Secret Store…**. Variables that change which programs
+run (`PATH`, `LD_*`) are refused too. A hibernated tab wakes with the
+same profile.
 
 ## Hibernate idle agents
 
@@ -426,6 +641,34 @@ opens the **Undo** card, which puts your old files back and removes the
 added ones. A file you changed after the install is kept. To install
 another version of the same pack, undo the first one.
 
+## Chat with an ACP agent
+
+Some coding agents speak the Agent Client Protocol (ACP). termocode can
+run such an agent as the AI chat's thread.
+
+1. Run **Open Config: ACP Agents**. The first time, it writes a small
+   example. List each agent with a `name`, its `command` and `args`
+   (and `env` if it needs some). Save the file.
+2. Run **Agent: Chat with an ACP Agent…** and pick one. termocode starts
+   the program in the workspace folder and opens a new chat for it.
+3. Type as usual. Your message goes to the agent, not to your AI
+   provider. Its answer, its tool calls (one `⚙` line each), its plan
+   and a short `±` line per edit stream into the chat.
+
+The agent runs its own tools, but it asks you first:
+
+- **Permission card.** When the agent asks before a step, the card shows
+  the step. The agent's reject choice (or **Cancel**) is first. Esc is
+  no.
+- **Write card.** Before the agent writes a file, the card shows the
+  diff. **Cancel** is first; **Write** writes it.
+- The agent reads and writes files only inside the workspace. Paths
+  outside it, also through links, are refused.
+
+Run **Agent: Chat with an ACP Agent…** again to end the thread. The
+program stops; the chat stays in Chat History. The AI can never start an
+agent thread. On the web, this is not there yet.
+
 ## If something does not work
 
 | What you see | Try this |
@@ -436,5 +679,6 @@ another version of the same pack, undo the first one.
 | The agent shows no termocode tools | Start it again from the palette, or add the config by hand. |
 | A card never appears | Another dialog may be open. The card waits until it closes. |
 | No plan pill in the status bar | termocode has seen no limit message yet. Turn on `agent_transcripts` to read the numbers from the session files. |
+| Auto-accept did not answer | The prompt showed a risky command, or it was a question with its own choices. Answer it yourself. |
 | Auto-continue did not type | A question was on the screen, or the agent was working again. The toast says why. |
 | A resumed agent starts a new session | No session id was known. Turn on `agent_transcripts` so termocode can keep it. |

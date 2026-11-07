@@ -8,7 +8,7 @@ runs inside Termux: see [Android (Termux)](#android-termux).
 
 | Tool | Why | Needed? |
 |---|---|---|
-| `nvim` 0.10 or newer | the editor engine | yes |
+| `nvim` 0.10 or newer | the editor engine | for the editor — without it termocode runs in [Lite mode](#lite-mode-no-editor) |
 | `git` | Source Control panel, and the first-run plugin download | yes |
 | `rg` (ripgrep) | fast workspace search | no — a slower built-in search is used without it |
 | A truecolor terminal | colors | yes — kitty, WezTerm, Ghostty, Alacritty, iTerm2, Windows Terminal, GNOME Terminal… |
@@ -148,6 +148,14 @@ add `$HOME/go/bin` to your `PATH`. This needs Go 1.26 or newer. No X11
 headers are needed: the Android build leaves the X11 clipboard library
 out.
 
+**Clipboard.** In Termux, copy and paste go through `termux-clipboard-set`
+and `termux-clipboard-get` (package `termux-api`). If those fail, termocode
+falls back to OSC 52. An app shell that has no Termux:API can give
+termocode its own clipboard bridge: it sets `TERMOCODE_APK_CLIP` to the
+absolute path of a small program. `<bridge> set` puts stdin on the Android
+clipboard, and `<bridge> get` prints it. termocode tries the bridge first,
+then `termux-clipboard-*`, then OSC 52.
+
 **Language servers.** Most install from the language server manager as
 on Linux (`gopls` needs `pkg install golang`, the npm ones need
 `pkg install nodejs`, the pip ones need `pkg install python`). A few
@@ -202,6 +210,23 @@ The first launch downloads three small Neovim plugins with `git clone`
 the background: you can work at once, and each feature turns on when its
 plugin arrives. If you are offline, a message says the download failed.
 Those features stay off until the next online start.
+
+## Lite mode (no editor)
+
+Only want terminals and agents? termocode also runs **without Neovim**.
+
+```sh
+termocode --lite           # the current folder, no editor
+TERMOCODE_LITE=1 termocode # the same, as a setting for your shell
+```
+
+In Lite mode you get the terminal tabs, the agent tabs and their states,
+git, worktrees, runs, workflows and the AI chat. The editor area stays
+empty, so you edit files with your own tools in a terminal tab.
+
+When `nvim` is not on your `PATH`, termocode starts in Lite mode by itself
+and says so in a short message. Install Neovim 0.10+ (`termocode setup`
+tells you how), then start termocode again to get the editor.
 
 ## Update termocode
 

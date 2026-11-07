@@ -31,7 +31,8 @@ var sourceRules = []rule{
 	{name: "javascript: URL", re: regexp.MustCompile(`(?i)javascript:`)},
 	{name: "external URL", re: regexp.MustCompile(`(?i)\b(https?|wss?)://`)},
 	// The page's dynamic imports (lib/lazy.ts) load the editor file
-	// (WEB-39), the desktop workbench and the Persian strings; the desktop
+	// (WEB-39), the desktop workbench, the Persian strings and the phone's
+	// Home (MOB-4); the desktop
 	// editor's frame loads its Vim mode (monaco-vim.js, WEBP-1). Each is a
 	// fixed path.
 	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true, "monaco/frame.ts": true}},
@@ -52,9 +53,12 @@ var sourceRules = []rule{
 	// OS notifications come only from lib/notify.ts, which shows fixed
 	// texts from a closed list (WEB-37, never-do 14).
 	{name: "notifications", re: regexp.MustCompile(`\bNotification\b|\brequestPermission\b|\bshowNotification\b`), allow: map[string]bool{"lib/notify.ts": true}},
-	// No service worker, ever (WEB-35): no code of the page may outlive it
-	// in the browser, so an old or poisoned copy can never run.
-	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`)},
+	// No service worker of the page (WEB-35): no code of the page may
+	// outlive it in the browser, so an old or poisoned copy can never run.
+	// The one exception is lib/push.ts (MOB-30): it registers the
+	// gateway's push-only /sw.js, which serves nothing and keeps nothing
+	// (webgw/sw.js, TestServiceWorkerIsPushOnly).
+	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`), allow: map[string]bool{"lib/push.ts": true}},
 	// Messages only between the page and the desktop editor's frame, both
 	// sides checking the other's origin and window (monaco/protocol.ts).
 	// lib/popout.ts opens this page's own terminal route in a new window
@@ -189,10 +193,14 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			// load anything. The other rules hold for it too.
 			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
 		}
-		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's three dynamic imports (lib/lazy.ts), fixed paths
+		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's four dynamic imports (lib/lazy.ts), fixed paths
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
+			text = strings.Replace(text, `import("/assets/home.js")`, "", 1)
+		}
+		if e.Path == "app.js" || e.Path == "app-chunk.js" { // lib/push.ts: the push-only worker (MOB-30)
+			text = strings.ReplaceAll(text, "navigator.serviceWorker", "")
 		}
 		if e.Path == "monaco-frame.js" { // the frame's one dynamic import: Vim mode (WEBP-1), a fixed path
 			text = strings.Replace(text, `import("/assets/monaco-vim.js")`, "", 1)
@@ -308,5 +316,99 @@ func TestStoreAndGuardArePure(t *testing.T) {
 				t.Errorf("%s/%s uses %s; keep state and proto pure", dir, e.Name(), m)
 			}
 		}
+	}
+}
+
+// The phone's Home (home.js, MOB-4) is built alone and gets Preact, the
+// signals, the link and the page's views from the page (src/home/api.ts):
+// a second Preact or a second session would split the page's state. So
+// its sources import types only from the page, and code only from each
+// other and from the pure helpers below.
+var homePure = map[string]bool{"state/home.ts": true, "state/dict.ts": true, "state/cards.ts": true, "state/tasks.ts": true, "state/git.ts": true, "state/route.ts": true, "lib/actions.ts": true}
+
+var importLine = regexp.MustCompile(`(?m)^\s*(import|export)\s+(type\s+)?[^;]*?\bfrom\s+"([^"]+)"`)
+
+// homeImportsBad returns the code imports of a Home source (rel, under
+// src/) that are not allowed.
+func homeImportsBad(rel, text string) []string {
+	var bad []string
+	for _, m := range importLine.FindAllStringSubmatch(text, -1) {
+		if m[2] != "" {
+			continue // types only: nothing of the page's code comes along
+		}
+		target := m[3]
+		if !strings.HasPrefix(target, ".") {
+			bad = append(bad, rel+": imports "+target)
+			continue
+		}
+		to := filepath.ToSlash(filepath.Clean(filepath.Join(filepath.Dir(rel), target)))
+		to = strings.TrimSuffix(strings.TrimSuffix(to, ".ts"), ".tsx")
+		if strings.HasPrefix(to, "home/") || homePure[to+".ts"] {
+			continue
+		}
+		bad = append(bad, rel+": imports "+target)
+	}
+	return bad
+}
+
+func TestHomeImportsCatch(t *testing.T) {
+	for _, bad := range []string{`import { h } from "preact";`, `import { signal } from "@preact/signals";`, `import { link } from "../session";`, `import { t } from "../strings";`, `export { x } from "../lib/router";`} {
+		if len(homeImportsBad("home/x.tsx", bad)) == 0 {
+			t.Errorf("passed %q", bad)
+		}
+	}
+	for _, ok := range []string{`import type { HomeHost } from "./api";`, `import type { Card } from "../../../../webproto/proto";`, `import { h, H } from "./jsx";`, `import { mergeStream } from "../state/home";`, `import { dict } from "../state/dict";`} {
+		if got := homeImportsBad("home/x.tsx", ok); len(got) != 0 {
+			t.Errorf("refused %q: %v", ok, got)
+		}
+	}
+}
+
+func TestHomeChunkImportsNoState(t *testing.T) {
+	n := 0
+	err := filepath.WalkDir("src/home", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel("src", path)
+		for _, bad := range homeImportsBad(filepath.ToSlash(rel), string(b)) {
+			t.Error(bad)
+		}
+		n++
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for f := range homePure {
+		b, err := os.ReadFile(filepath.Join("src", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range importLine.FindAllStringSubmatch(string(b), -1) {
+			if m[2] == "" && !homePure[filepath.ToSlash(filepath.Join(filepath.Dir(f), m[3]))+".ts"] {
+				t.Errorf("%s: a pure helper of the Home imports %s", f, m[3])
+			}
+		}
+	}
+	if n == 0 {
+		t.Fatal("no Home sources scanned")
+	}
+}
+
+// The page registers one worker only, the gateway's push-only /sw.js
+// (MOB-30), with the site as its scope.
+func TestPushRegistersOnlyTheGatewayWorker(t *testing.T) {
+	b, err := os.ReadFile("src/lib/push.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := regexp.MustCompile(`\.register\(([^)]*)\)`).FindAllStringSubmatch(string(b), -1)
+	if len(reg) != 1 || reg[0][1] != `"/sw.js", { scope: "/" }` {
+		t.Errorf("lib/push.ts registers %v, want only /sw.js", reg)
 	}
 }

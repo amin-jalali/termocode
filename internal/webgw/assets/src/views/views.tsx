@@ -2,8 +2,10 @@
 // tasks (chat WEB-14, tree WEB-16, files WEB-18, terminal WEB-20, git
 // WEB-23); until then each shows its loading and empty states.
 import { h } from "preact";
+import { useEffect } from "preact/hooks";
 import { prefs, setPref, type Direction, type Language, type Theme } from "../lib/prefs";
 import { go, route } from "../lib/router";
+import { layout } from "../lib/layout";
 import { t } from "../strings";
 import { NotifyField } from "../ui/NotifyField";
 import { BookmarkField } from "../ui/BookmarkField";
@@ -11,6 +13,8 @@ import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
 import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
+import { BoardRoute } from "./more/BoardRoute";
+import { layout } from "../lib/layout";
 import { SettingsView } from "./more/SettingsView";
 import { AgentsView } from "./AgentsView";
 import { ItermocView } from "./ItermocView";
@@ -19,13 +23,18 @@ import { ContainersView } from "./more/ContainersView";
 import { DBView } from "./more/DBView";
 import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
+import { NewTaskView } from "./more/NewTaskView";
 import { TestingView } from "./run/TestingView";
 import { DebugView } from "./run/DebugView";
 import { ServicesView } from "./run/ServicesView";
 import { KubeView } from "./run/KubeView";
 import { View } from "./View";
+import { SubView } from "./more/SubView";
 import { FileView } from "./FileView";
+import { home as phone, homeFailed as phoneFailed, loadHome } from "../lib/lazy";
+import { Button } from "../ui/Button";
 import { TreeView } from "./Files";
+import { PhoneHost } from "./PhoneHost";
 
 export { ChatView } from "./Chat";
 
@@ -38,12 +47,57 @@ export { TermView } from "./Term";
 
 export { GitView } from "./git/GitView";
 
+/** ToolsView is the "All tools" menu (MOBUX-5), from the phone chunk
+ * (home.js since the merge), loaded on first open. */
+function ToolsView() {
+  const m = phone.value;
+  useEffect(() => {
+    if (!phone.peek()) loadHome().catch(() => undefined);
+  }, []);
+  if (m) return <m.AllToolsView />;
+  return (
+    <View tab="more" name="tools" title={t("tools.title")}>
+      {phoneFailed.value ? (
+        <Button kind="neutral" onClick={() => loadHome().catch(() => undefined)}>
+          {t("retry")}
+        </Button>
+      ) : (
+        <p class="empty">{t("loading")}</p>
+      )}
+    </View>
+  );
+}
+
+/** ReviewLazy is #/more/review (MOB-14): the phone views' review, loaded
+ * from home.js on first use. */
+function ReviewLazy() {
+  const m = phone.value;
+  useEffect(() => {
+    if (!m) loadHome().catch(() => undefined);
+  }, [m]);
+  if (m) return <m.ReviewView />;
+  return (
+    <SubView title={t("pill.review")} name="review">
+      {phoneFailed.value ? (
+        <button type="button" class="btn btn-neutral" onClick={() => loadHome().catch(() => undefined)}>
+          {t("retry")}
+        </button>
+      ) : (
+        <p class="empty">{t("loading")}</p>
+      )}
+    </SubView>
+  );
+}
+
 export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
+  if (sub === "tools") return <ToolsView />;
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
+  if (sub === "new-task") return <NewTaskView />;
   if (sub === "runs") return <RunsView />;
   if (sub === "workflows") return <WorkflowsView />;
+  if (sub === "board") return <BoardRoute />;
   if (sub === "settings") return <SettingsView />;
   if (sub === "mcp") return <MCPView />;
   if (sub === "agents") return <AgentsView />;
@@ -54,6 +108,8 @@ export function MoreView() {
   if (sub === "debug") return <DebugView />;
   if (sub === "services") return <ServicesView />;
   if (sub === "kube") return <KubeView />;
+  if (sub === "phone" && layout.value !== "desktop") return <PhoneHost />;
+  if (sub === "review") return <ReviewLazy />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -75,8 +131,18 @@ export function MoreView() {
     <View tab="more" title={t("tab.more")}>
       <div class="more">
         <nav class="more-links" aria-label={t("tab.more")}>
+          {layout.value === "phone" && (
+            // The phone's chat-first Home (MOB-4); its drawer says whether the page starts there.
+            <button type="button" class="more-link" data-sub="home" onClick={() => go({ tab: "home", rest: "", query: {} })}>
+              <span aria-hidden="true">✦ </span>
+              {t("key.home")}
+            </button>
+          )}
           <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "search", query: {} })}>
             {t("more.search")}
+          </button>
+          <button type="button" class="more-link" data-sub="new-task" onClick={() => go({ tab: "more", rest: "new-task", query: {} })}>
+            {t("nt.title")}
           </button>
           <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "tasks", query: {} })}>
             {t("more.tasks")}
@@ -87,6 +153,11 @@ export function MoreView() {
           <button type="button" class="more-link" data-sub="workflows" onClick={() => go({ tab: "more", rest: "workflows", query: {} })}>
             {t("more.workflows")}
           </button>
+          {layout.value !== "desktop" && (
+            <button type="button" class="more-link" data-sub="board" onClick={() => go({ tab: "more", rest: "board", query: {} })}>
+              {t("more.board")}
+            </button>
+          )}
           <button type="button" class="more-link" data-sub="settings" onClick={() => go({ tab: "more", rest: "settings", query: {} })}>
             {t("more.settings")}
           </button>
@@ -114,11 +185,27 @@ export function MoreView() {
           <button type="button" class="more-link" data-sub="testing" onClick={() => go({ tab: "more", rest: "testing", query: {} })}>
             {t("act.testing")}
           </button>
+          <button type="button" class="more-link more-tools" data-sub="tools" onClick={() => go({ tab: "more", rest: "tools", query: {} })}>
+            <span>
+              <span aria-hidden="true">☰ </span>
+              {t("tools.title")}
+            </span>
+          </button>
+          {layout.value !== "desktop" && (
+            <button type="button" class="more-link" data-sub="review" onClick={() => go({ tab: "more", rest: "review", query: {} })}>
+              {t("pill.review")}
+            </button>
+          )}
         </nav>
         <section class="group" aria-labelledby="g-phone">
           <h2 class="group-title" id="g-phone">
             {t("more.this_phone")}
           </h2>
+          {layout.value !== "desktop" && (
+            <button type="button" class="more-link" data-sub="phone" onClick={() => go({ tab: "more", rest: "phone", query: {} })}>
+              {t("more.this_phone")} ›
+            </button>
+          )}
           <div class="field">
             <span class="field-label">{t("theme")}</span>
             <Segmented<Theme> label={t("theme")} value={p.theme} choices={themes} onChange={(v) => setPref("theme", v)} />

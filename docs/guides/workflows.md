@@ -94,7 +94,9 @@ The AI never saves a file by itself:
 - An `agent` step runs **Codex** or **Claude Code** with your own login,
   in the item's worktree only. With `"sandbox": "worktree"` it may change
   files there; with `"read-only"` it only reads. It never gets push or
-  pull request tools. The item goes to it as marked data, never as
+  pull request tools. With the `agent_os_sandbox` setting on, the agent
+  program itself also runs inside an OS sandbox (bwrap / sandbox-exec):
+  the rest of the disk is read-only. The item goes to it as marked data, never as
   orders. An item that looks like an injection asks you first.
 - A `pipeline` step runs a named AI profile. A `tests` step runs the
   project's test task (or its `argv`) in the item's worktree; when the
@@ -105,6 +107,135 @@ The AI never saves a file by itself:
   run marker, so a resumed run never sends it twice. The run keeps how
   to undo it.
 - `p` pauses a running workflow before its next step; `p` again goes on.
+
+## Agent environment: setup, secrets, network
+
+`.termocode/agent-env.json` sets what the `agent` steps get. Create a
+starter file with **AI: Agent Environment…** (a Cancel-first card).
+
+```jsonc
+{
+  "setup": ["npm ci"],          // once per worktree, before the agent
+  "setup_timeout": "10m",
+  "env": {"NODE_ENV": "test"},  // plain values: setup and agent
+  "secrets": {"NPM_TOKEN": "npm.token"}, // from the secret store: setup only
+  "network": {"mode": "allow", "allow": ["example.com", "*.github.com"], "package_managers": true}
+}
+```
+
+- **Setup** runs in the item's worktree, once per run, before the
+  agent. A failed setup stops that item. Read-only agent steps skip the
+  setup (they run in your own folder).
+- **Secrets** come only from termocode's secret store. Only the setup
+  commands see them; the agent never does. A missing secret stops the
+  item. Values are hidden as `***` in setup output.
+- **Network**: `open` (no rule, the default), `off` (only the agent's
+  own service), `package-managers` (the package registries), or `allow`
+  (your list; `*.example.com` means any sub-domain). A local proxy keeps
+  the rule for the agent and its tools through `HTTP(S)_PROXY`. Blocked
+  hosts show in the run log and in the step's output. A tool that
+  ignores the proxy settings is not held: this is not an OS sandbox.
+- The file is code from the repo. Workflows with agent steps start only
+  after you trust its exact content (**AI: Agent Environment…**, *Not in
+  this project* is first). A changed file asks again.
+
+## Score agent output
+
+A `score` step grades what the steps before it made. Use it to check an
+agent's work, and to compare models, prompts or profiles over many runs.
+
+```jsonc
+{ "id": "judge", "type": "ai", "model": "quick",
+  "prompt": "Rate this fix from 0 to 10 as JSON {\"rating\": n}: {{steps.code.text}}" },
+{ "id": "grade", "type": "score", "pass": 0.7, "must_pass": true,
+  "checks": [
+    { "name": "tests pass", "test": "steps.tests.ok", "weight": 3 },
+    { "name": "judge",      "value": "steps.judge.json.rating", "max": 10 },
+    { "name": "small diff", "test": "len(steps.code.text) < 4000" }
+  ] }
+```
+
+- Each check gives a value from 0 to 1. A `test` gives 1 when it is true
+  and 0 when it is false. A `value` is a number. It is divided by `max`
+  (1 when not set, 10 for a rating out of 10) and kept in 0..1.
+- The score is the weighted mean of the checks (`weight` is 1 when not
+  set). The step passes when the score reaches `pass` (0.7 when not set).
+- A check that cannot be read (a typo, a missing field) counts 0. Its
+  error is kept, so you see it on the run page.
+- The score step runs no AI and no command itself. For an AI judge, put
+  an `ai` step before it and read its JSON in a check.
+- With `"must_pass": true` a score below `pass` fails the step, so its
+  `else` runs (for example: no pull request, a message instead).
+- Later steps read `steps.<id>.score`, `steps.<id>.ok` (it passed) and
+  `steps.<id>.checks`.
+- The run page shows the score of each step and item, and the low
+  checks. The history list shows the mean score of each run.
+- Compare: give runs other `vars` (`--var model=deep`, or a schedule per
+  variant). `termocode workflow scores <name>` lists the scored runs and
+  then the variants, the best mean first.
+
+## Agent graphs: loops, branches, waits and handoffs
+
+Four parts let one workflow chain agents like a team.
+
+- A `loop` step runs its `steps` again until a round passes. A round
+  passes when all its steps pass and `until` (an expression, optional)
+  is true. `"max"` caps the rounds (at most 20). `"budget_usd"` stops the
+  loop when its steps spent that much. Inside, `{{loop.round}}` and
+  `{{loop.max}}` tell the round. The steps see the outputs of the round
+  before, so a fix agent can read the last test output.
+- A `branch` step runs two to eight lists at the same time and then
+  joins them. With `"join": "all"` (the default) it fails when any
+  branch fails; with `"any"` it fails only when every branch fails.
+  After the join, every step inside is in `steps.<id>`, so one step can
+  sum up all the reviews.
+- A `wait` step waits for a pull request: `"for": "ci"` (every check
+  passed), `"merged"` or `"approved"`. `"pr"` is a number or a link,
+  often `{{steps.open.url}}`. It looks every `"every"` (default 1m, at
+  least 10s) and gives up after the step's `timeout`, else
+  `limits.wait`, else 6h. It only reads, so it shows no card. A dry run
+  does not wait.
+- `"handoff": "<step id>"` on an `ai`, `agent` or `pipeline` step adds
+  that step's output to the prompt, marked as data, never as orders.
+
+```jsonc
+{"id": "fix", "type": "loop", "max": 3, "budget_usd": 2, "steps": [
+  {"id": "code", "type": "agent", "agent": "codex", "prompt": "Fix the failing tests (round {{loop.round}}).", "handoff": "t"},
+  {"id": "t", "type": "tests"}
+]},
+{"id": "review", "type": "branch", "branches": [
+  {"name": "security", "steps": [{"id": "sec", "type": "ai", "model": "quick", "prompt": "Review for security."}]},
+  {"name": "style", "steps": [{"id": "sty", "type": "ai", "model": "quick", "prompt": "Review for style."}]}
+]},
+{"id": "open", "type": "write", "to": "pr", "title": "Fix tests"},
+{"id": "ci", "type": "wait", "for": "ci", "pr": "{{steps.open.url}}", "timeout": "2h"}
+```
+
+The run view shows each loop round and each branch under its step.
+
+
+## Step tabs, retry and plan approval
+
+- On a run page, `]` and `[` move through the **step tabs**. The tab of a
+  step shows its state, its tries, its error, its output, the list it
+  made (with the plan's order) and its items. Before the first tab the
+  page shows all steps.
+- `t` **retries** an ended run from its first part that did not end
+  well: a failed, denied, stopped or paused step or item. The card says
+  what runs again and what is kept; **Cancel** is first. The steps
+  before it keep their answers and done items are not run again. A write
+  that went out is found by its marker and never sent twice; a denied
+  write asks again. A changed file or a dry run is not retried (start a
+  new run).
+- A `plan` step with `"approve": true` stops and asks before its order
+  is used. The card shows the order and the items it skips: **Stop
+  here** (first) denies the step, **Approve plan** goes on. The same
+  card shows on the web. A dry run does not ask.
+
+```jsonc
+{ "id": "order", "type": "plan", "model": "quick", "approve": true,
+  "prompt": "Order these bugs by how much they hurt users." }
+```
 
 ## Schedules
 
@@ -140,6 +271,59 @@ it will run by itself; Cancel is first.
   you to run `loginctl enable-linger $USER` once. Termux on Android has
   no user services: there the command says so and writes nothing (use
   `termux-wake-lock` to keep the session alive).
+- Every write still asks on its card, unless you allowed it for this
+  version of the file.
+
+## Triggers
+
+Add `on` to the file to start the workflow when something happens
+outside. Like a schedule, triggers work only while the workflow is
+trusted and on (`o`).
+
+```jsonc
+"on": [
+  { "github": "issue_labeled", "labels": ["agent"], "worktree": true, "base": "main" },
+  { "github": "ci_failed", "branch": "main" },
+  { "github": "mention", "text": "@termocode" },
+  { "webhook": "deploy", "from": "slack" }
+]
+```
+
+- `github` is `issue_opened`, `issue_labeled`, `pr_opened`, `mention`
+  or `ci_failed`. termocode asks `gh` (your own login) every
+  `workflows_trigger_poll_min` (5) minutes. `labels` keeps only items
+  with one of them; `repo` ("owner/name") reads another repo; `branch`
+  keeps only CI runs on that branch. A `mention` looks for its `text`
+  in the text and comments of open issues and pull requests.
+- The first look only notes what is already there. Old issues never
+  start runs when you turn a trigger on.
+- `webhook` takes `POST /hooks/<name>` on
+  `127.0.0.1:workflows_webhook_port`. The port is 0 (off) until you set
+  it. Put a tunnel or a reverse proxy in front to reach it from
+  outside. `from` is `github`, `slack`, `linear`, `jira` or `generic`
+  (any JSON with `title`, `body`, `url`, `key`, `labels`).
+- Every webhook must be signed. Store the signing secret in the secret
+  store as `workflow-hook.<name>` (**AI: Secret Store…**); the workflow file
+  never holds it. GitHub, Slack and Linear use their own signature
+  headers. Jira and other senders use `X-Termocode-Signature:
+  sha256=<hmac of the body>`, or `Authorization: Bearer <secret>` when
+  they cannot sign. A request without a good signature is refused; a
+  hook takes at most 30 requests a minute; a sent-again event runs once.
+- Each event shows a card first: what came in, from whom, and where the
+  run works. Cancel is first. `"ask": false` starts the run without a
+  card, like a schedule does (an admin policy that denies schedules
+  makes it ask again).
+- The run gets the event as vars: `trigger_kind`, `trigger_title`,
+  `trigger_body`, `trigger_url`, `trigger_number`, `trigger_author`,
+  `trigger_labels`, `trigger_branch`, `trigger_repo`, `trigger_key`.
+  Use them in prompts as `{{vars.trigger_title}}`. This text comes from
+  outside: it is never a command.
+- `"worktree": true` runs the whole run in a new agent worktree from
+  `base` (empty: the current commit). The worktree list shows it, and
+  `trigger_worktree` and `trigger_worktree_branch` name it.
+- The workflow's page lists its triggers. **Workflows: Trigger Events…**
+  in the palette shows what came in and what became of it, and answers
+  events that wait while another card was open.
 - Every write still asks on its card, unless you allowed it for this
   version of the file.
 
@@ -242,6 +426,8 @@ workflow.
 | `R` | read the files again |
 | `x` | stop the run (asks; Keep running is first) |
 | `p` | pause the run before its next step; `p` again continues |
+| `[` / `]` | step tabs: the detail of one step (before the first: all steps) |
+| `t` | retry an ended run from its failed part (asks; Cancel is first) |
 | `l` | jump to the live output |
 | `u` | undo a write of the run: it asks first, Cancel is first (a write with an undo recipe, up to 7 days) |
 | `?` | this list |
@@ -257,6 +443,7 @@ termocode workflow validate [<file>…]
 termocode workflow run <name> --dry-run [--var k=v]
 termocode workflow runs [<name>] [--json] [--limit N]
 termocode workflow logs <run id>
+termocode workflow scores [<name>] [--json] [--limit N]   # scored runs, compared by their vars
 termocode workflow again <name> <key>    # forget a seen item: the next run handles it again
 ```
 

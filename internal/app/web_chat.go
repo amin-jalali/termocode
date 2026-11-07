@@ -47,6 +47,7 @@ type webChatPub struct {
 	id     string
 	title  string
 	busy   bool
+	ctx    [3]int // pct, tokens, window (CMP-7)
 	msgs   []webChatSent
 }
 
@@ -68,6 +69,10 @@ func (m *Model) webChatBuild(p *webChatPub) webproto.ChatSnap {
 	snap.ID, snap.Title, snap.Busy = s.conv.ID, webChatTitle(s.conv), s.streaming
 	snap.Profile, snap.Model = s.profile, s.cfg.Model
 	p.id, p.title, p.busy = snap.ID, snap.Title, snap.Busy
+	if tokens, window, pct, ok := s.contextUse(); ok {
+		snap.CtxPct, snap.CtxTokens, snap.CtxWindow = pct, tokens, window
+	}
+	p.ctx = [3]int{snap.CtxPct, snap.CtxTokens, snap.CtxWindow}
 	n := len(s.conv.Messages)
 	full := webChatFullFrom(s.conv.Messages)
 	for i := range s.conv.Messages {
@@ -174,7 +179,11 @@ func (m *Model) webPublishChat(tea.Msg) tea.Cmd {
 		h.publish("chat", webChatDelta{Op: webproto.ChatMessage, Msg: &cm})
 	}
 	title := webChatTitle(s.conv)
-	if s.streaming != p.busy || title != p.title {
+	var ctx [3]int
+	if tokens, window, pct, ok := s.contextUse(); ok {
+		ctx = [3]int{pct, tokens, window}
+	}
+	if s.streaming != p.busy || title != p.title || ctx != p.ctx {
 		d := webChatDelta{Op: webproto.ChatState}
 		if s.streaming != p.busy {
 			busy := s.streaming
@@ -183,7 +192,11 @@ func (m *Model) webPublishChat(tea.Msg) tea.Cmd {
 		if title != p.title {
 			d.Title = title
 		}
-		p.busy, p.title = s.streaming, title
+		if ctx != p.ctx {
+			pct, tokens, window := ctx[0], ctx[1], ctx[2]
+			d.CtxPct, d.CtxTokens, d.CtxWindow = &pct, &tokens, &window
+		}
+		p.busy, p.title, p.ctx = s.streaming, title, ctx
 		h.publish("chat", d)
 	}
 	return nil
@@ -203,11 +216,15 @@ func (w *webChatSent) same(sm *ai.StoredMessage) bool {
 // webChatKey sums up the parts of a message besides its text that the
 // page shows (run, steps, model, images), to see a change cheaply.
 func webChatKey(sm *ai.StoredMessage) string {
-	if sm.Run == nil && len(sm.Steps) == 0 && sm.Model == "" && len(sm.Images) == 0 && sm.Rules == "" {
+	if sm.Run == nil && len(sm.Steps) == 0 && sm.Model == "" && len(sm.Images) == 0 && sm.Rules == "" && sm.Block == nil {
 		return ""
 	}
 	var b strings.Builder
 	b.WriteString(sm.Model + "\x00" + sm.Rules + "\x00" + strconv.Itoa(len(sm.Images)))
+	if sm.Block != nil { // MOB-10: a block arrives with the result
+		bl := sm.Block
+		fmt.Fprintf(&b, "\x00block %s %s %s %d %d %d", bl.ID, bl.Kind, bl.Title, len(bl.Items), len(bl.Rows), len(bl.Fields))
+	}
 	if r := sm.Run; r != nil {
 		fmt.Fprintf(&b, "\x00%s %s %s %d %g %v", r.ID, r.Profile, r.State, r.ElapsedMs, r.Spent, r.PlanWait)
 	}
@@ -284,11 +301,20 @@ func webChatMsgOf(i int, sm *ai.StoredMessage, streaming bool, max int) (webprot
 	for _, img := range sm.Images {
 		cm.Images = append(cm.Images, filepath.Base(img))
 	}
+	for _, a := range sm.Attached {
+		if len(cm.Attached) == webproto.MaxAttachedChips {
+			break
+		}
+		cm.Attached = append(cm.Attached, webproto.AttachChip{Kind: a.Kind, Label: webName(webChatRedact(a.Label))})
+	}
 	if r := sm.Run; r != nil {
 		cm.Run = &webproto.ChatRun{ID: r.ID, Profile: r.Profile, State: webRunState(r.State), ElapsedMs: r.ElapsedMs, CostUSD: r.Spent, PlanWait: r.PlanWait}
 	}
 	for j := range sm.Steps {
 		cm.Steps = append(cm.Steps, webChatStep(&sm.Steps[j]))
+	}
+	if b := webChatBlock(sm.Block); b != nil {
+		cm.Blocks = []webproto.Block{*b}
 	}
 	return cm, sent
 }
@@ -344,6 +370,9 @@ func (d webChatDelta) coalesce(next any) (any, bool) {
 		if n.Title != "" {
 			m.Title = n.Title
 		}
+		if n.CtxPct != nil {
+			m.CtxPct, m.CtxTokens, m.CtxWindow = n.CtxPct, n.CtxTokens, n.CtxWindow
+		}
 		return m, true
 	}
 	return nil, false
@@ -386,6 +415,16 @@ func webApplyChat(snap, delta json.RawMessage) (json.RawMessage, error) {
 		}
 		if d.Title != "" {
 			s.Title = d.Title
+		}
+		if d.CtxPct != nil {
+			s.CtxPct = *d.CtxPct
+			s.CtxTokens, s.CtxWindow = 0, 0
+			if d.CtxTokens != nil {
+				s.CtxTokens = *d.CtxTokens
+			}
+			if d.CtxWindow != nil {
+				s.CtxWindow = *d.CtxWindow
+			}
 		}
 	case webproto.ChatSwitched:
 		if d.Chat == nil {

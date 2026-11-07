@@ -126,8 +126,11 @@ func StopAgentCtl() {
 func agentCtlHandle(req agentctl.Request) agentctl.Reply {
 	call := agentCtlCall{req: req, reply: make(chan agentctl.Reply, 1)}
 	limit := 2 * time.Minute // a prompt may wait for the card
-	if req.Op == agentctl.OpWait {
+	switch req.Op {
+	case agentctl.OpWait:
 		limit = agentCtlWaitTimeout(req) + 10*time.Second
+	case agentctl.OpTaskStart: // the user fills in and answers the New worktree card
+		limit = agentctl.TaskStartTimeout + 10*time.Second
 	}
 	select {
 	case agentCtlReqs <- call:
@@ -299,20 +302,34 @@ func (m *Model) onAgentCtl(call agentCtlCall) tea.Cmd {
 			was = t.t.AgentState
 		}
 		rep := m.agentCtlReport(r)
+		if rep.OK && t.t != nil && agentTurnStarts(was, t.t.AgentState) {
+			// CMP-62: a code checkpoint before the outside agent's turn
+			// (checkpoints_ui.go); the reply follows the save.
+			return m.checkpointAgentTurn(call, rep, t.t)
+		}
 		answer(rep)
+		if rep.OK && rep.State == "done" && was != agents.Done && t.t != nil && t.t.Goal != nil { // CMP-19 (agent_goal.go)
+			return m.agentGoalTurnEnded(t.t.BufID)
+		}
 		if rep.OK && rep.State == "waiting" && was != agents.Waiting && !m.agentCtlTabShown(t.t) {
 			var c tea.Cmd
 			m.toast, c = m.toast.Push(toast.Info, t.t.agentTitle()+" is waiting for you")
 			return c
 		}
 		return nil
-	case agentctl.OpWorktreeList, agentctl.OpWorktreeNote, agentctl.OpWorktreeStatus, agentctl.OpWorktreeLink:
+	case agentctl.OpWorktreeList, agentctl.OpWorktreeNote, agentctl.OpWorktreeStatus, agentctl.OpWorktreeLink,
+		agentctl.OpWorktreeBlock, agentctl.OpWorktreeUnblock:
 		if m.wt == nil {
 			m.wt = newWTState()
 		}
 		return m.onWTCtl(call) // worktrees_notes.go
+	case agentctl.OpTaskStart:
+		if m.wt == nil {
+			m.wt = newWTState()
+		}
+		return m.onTaskStartCtl(call) // agent_ctl_task.go
 	}
-	return fail("unknown op %q (list, prompt, wait, report, worktree-…)", r.Op)
+	return fail("unknown op %q (list, prompt, wait, report, task-start, worktree-…)", r.Op)
 }
 
 // agentCtlPoll is how often the waits look at the tabs.

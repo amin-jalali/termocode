@@ -6,7 +6,8 @@
 // stays). On hover: Pin, Sleep or Wake, Note, Archive (or Restore) and
 // Delete. Pin, Note and Wake run at once; Sleep asks here first, and the
 // laptop asks again when agent tabs would end; Archive and Delete ask
-// the laptop (a card there, then the laptop's own steps).
+// the laptop (a card there, then the laptop's own steps). + opens the
+// New task form (CMP-49): a new worktree with an agent and its task.
 import { Fragment, h } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useState } from "preact/hooks";
@@ -18,6 +19,7 @@ import { AskLaptop } from "../../ui/AskLaptop";
 import { Cod } from "../../ui/icons";
 import { Act, Ask, PaneSection, PaneView, Row, Tree } from "../../ui/pane";
 import { gitFailed as failed } from "../git/errors";
+import { NewTaskForm } from "../NewTask";
 
 const GROUPS: readonly [string, StringKey][] = [
   ["pinned", "chat.pinned"],
@@ -115,6 +117,7 @@ export function DeskWorktrees() {
   const s = readWorktrees(store.topic("worktrees").value?.data);
   const [pending, setPending] = useState<Pending>(null);
   const [laptop, setLaptop] = useState<Laptop>(null);
+  const [newTask, setNewTask] = useState(false);
   const canAct = link.meta.value?.role !== "viewer";
   const q = filter.value;
   const flip = (k: string) => {
@@ -166,7 +169,14 @@ export function DeskWorktrees() {
     });
   const shown = (s?.worktrees ?? []).filter((w) => matchWorktree(w, q));
   return (
-    <PaneView id="worktrees" title={t("wt.title")} actions={<Act icon="refresh" act="refresh" label={t("ctr.refresh")} onClick={() => link.request("worktrees.refresh", {}).catch(failed)} />}>
+    <PaneView id="worktrees" title={t("wt.title")} actions={
+        <>
+          {canAct && s?.state === "ready" && <Act icon="add" act="new-task" label={t("nt.title")} onClick={() => setNewTask(!newTask)} />}
+          <Act icon="refresh" act="refresh" label={t("ctr.refresh")} onClick={() => link.request("worktrees.refresh", {}).catch(failed)} />
+        </>
+      }
+    >
+      {newTask && canAct && <NewTaskForm desk onDone={() => setNewTask(false)} />}
       <div class="pv-input wt-filter">
         <input value={q} placeholder={t("wt.filter")} aria-label={t("wt.filter")} onInput={(e) => (filter.value = (e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => e.key === "Escape" && (filter.value = "")} />
       </div>

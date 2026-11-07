@@ -10,7 +10,9 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/agentroll"
+	"github.com/amin-jalali/termocode/internal/bgtask"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/worktrees"
@@ -37,6 +39,9 @@ type wtState struct {
 	visible  bool
 	off      bool         // a demo: never call git
 	demoTabs []wtTabAgent // a demo's terminal tabs
+	// sessionsPath is the worktree the sessions list shows; sessionDir
+	// is where a new session starts ("" = the workspace; CMP-28).
+	sessionsPath, sessionDir string
 
 	loaded  bool
 	err     string // why the list could not be read
@@ -59,8 +64,13 @@ type wtState struct {
 	polling bool
 
 	form     *wtForm                // Worktree: New… (worktrees_new.go)
+	taskAsk  bool                   // a task-start reads the repository for its card (agent_ctl_task.go)
+	multi    *wtMultiForm           // Worktree: New in Each Repository… (worktrees_multi.go)
 	setupAsk *wtSetupPending        // the open setup trust card (worktrees_setup.go)
 	setups   map[string]*wtSetupRun // setups run in this window, by worktree path
+
+	runAsk *wtRunPending     // the open dev server trust card (worktrees_run.go)
+	runs   map[string]*wtRun // dev servers run in this window, by worktree path
 
 	link        *wtLinkForm   // the open link card (worktrees_link.go)
 	linkReading bool          // due links are being read again
@@ -68,8 +78,23 @@ type wtState struct {
 
 	sleepAsk   *wtSleepPending   // the open sleep card (worktrees_sleep.go)
 	archiveAsk *wtArchivePending // the open archive card (worktrees_archive.go)
+	move       *wtMovePending    // the open move, unpack or pull card (worktrees_move.go)
+	restackAsk *wtRestackPending // the open restack card (worktrees_stack.go)
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
+	preview    *wtPreviewState   // the open agent preview (worktrees_preview.go)
+
+	feedbackAsk     *wtFeedbackPending   // the open PR feedback card (worktrees_followup.go)
+	feedbackReading map[string]bool      // PR feedback reads in flight, by path
+	followAt        map[string]time.Time // the follow loop's last read, by path
+	bgAsk           *wtBgPending         // a background task between prompt and card (worktrees_bgtask.go)
+	bgAct           *wtBgActPending      // the open card of one background task
+	bgTasks         []bgtask.Task        // the last listed background tasks
+	bgEngine        containers.Engine    // the engine they were listed on
+	handoff         *wtHandoffForm       // the open handoff card (worktrees_handoff.go)
+
+	autoAt   time.Time // the last auto clean-up check (worktrees_autoclean.go)
+	autoBusy bool      // an auto clean-up runs
 
 	seq    uint64
 	render struct {
@@ -137,6 +162,7 @@ type wtLoadMsg struct {
 	gen     uint64
 	jump    bool // Worktree: Jump… asked: apply it and open the picker
 	web     bool // the page asked (web_worktrees.go): apply it, no poll tick
+	board   bool // AI: Agent Board… asked (agent_board.go): apply it and open the board
 	root    string
 	common  string
 	list    []git.Worktree
@@ -172,7 +198,7 @@ func (m *Model) worktreesLoadFor(jump bool) tea.Cmd {
 
 func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 	st := m.wt
-	if st == nil || (!msg.jump && !msg.web && (msg.gen != st.gen || !st.polling)) {
+	if st == nil || (!msg.jump && !msg.web && !msg.board && (msg.gen != st.gen || !st.polling)) {
 		return nil
 	}
 	if msg.web && m.web != nil {
@@ -196,12 +222,15 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 			st.badMeta = true
 			cmds = append(cmds, m.pushToastDetail(toast.Warn, "Worktree notes could not be read", "termocode/worktrees.json in the git folder is kept as it is; pins and names are off until it is fixed."))
 		}
-		cmds = append(cmds, st.refreshStatus(), st.wtLinksRefresh(clock.Now()))
+		cmds = append(cmds, st.refreshStatus(), st.wtLinksRefresh(clock.Now()), m.wtFollowRefresh(clock.Now()))
+		cmds = append(cmds, m.wtAutoClean()) // CMP-16: when it is on and due
 	}
 	st.touch()
 	switch {
 	case msg.jump:
 		cmds = append(cmds, m.openWorktreeJump()) // the poll chain (if any) keeps its own tick
+	case msg.board:
+		cmds = append(cmds, m.openAgentBoard()) // the poll chain (if any) keeps its own tick
 	case msg.web: // the page's read: the poll chain (if any) keeps its own tick
 	default:
 		cmds = append(cmds, wtTick(st.gen))
@@ -239,30 +268,47 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	if c, ok := m.handleWTCtlMsg(msg); ok { // the control socket (worktrees_notes.go)
 		return c, true
 	}
+	if c, ok := m.handleWTDiffMsg(msg); ok { // the diff vs base (worktrees_diff.go)
+		return c, true
+	}
+	if c, ok := m.handleWTHandoffMsg(msg); ok { // the handoff card (worktrees_handoff.go)
+		return c, true
+	}
 	if c, ok := m.handleWTDeleteMsg(msg); ok { // the type-the-name card (worktrees_delete.go)
 		return c, true
 	}
 	if c, ok := m.handleWTLinkMsg(msg); ok { // the link card (worktrees_link.go)
 		return c, true
 	}
+	if c, ok := m.handleWTMultiMsg(msg); ok { // the multi-repo card (worktrees_multi.go)
+		return c, true
+	}
 	if c, ok := m.handleWTFormMsg(msg); ok { // the dialog's buttons (worktrees_new.go)
 		return c, true
 	}
 	switch msg := msg.(type) {
+	case wtFeedbackMsg: // worktrees_followup.go
+		return m.onWTFeedback(msg), true
 	case wtNewPrepMsg:
 		return m.onWTNewPrep(msg), true
 	case wtCreatedMsg:
 		return m.onWTCreated(msg), true
+	case wtWebTaskMsg: // a new task from the page (web_worktrees_task.go)
+		return m.onWTWebTask(msg), true
 	case wtForgotMsg:
 		return m.onWTForgot(msg), true
 	case wtArchivePrepMsg:
 		return m.onWTArchivePrep(msg), true
 	case wtArchivedMsg:
 		return m.onWTArchived(msg), true
+	case wtRestackedMsg:
+		return m.onWTRestacked(msg), true
 	case wtCleanupPrepMsg:
 		return m.onWTCleanupPrep(msg), true
 	case wtCleanedMsg:
 		return m.onWTCleaned(msg), true
+	case wtAutoCleanedMsg:
+		return m.onWTAutoCleaned(msg), true
 	case wtDeletePrepMsg:
 		return m.onWTDeletePrep(msg), true
 	case wtDeletedMsg:

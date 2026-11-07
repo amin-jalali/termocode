@@ -21,6 +21,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	// event (motion included); the renderers decide what to highlight. The
 	// event still flows through to the click/drag handlers below.
 	m.hoverX, m.hoverY = msg.X, msg.Y
+	// A drag from the Files tree let go anywhere else drops nothing.
+	m.cancelExplorerDragOutside(msg)
 
 	// A clickable toast ("Saved to …: Show in folder") sits on top of
 	// everything below it.
@@ -452,6 +454,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 			// HeaderChromeRows() / FooterChromeRows() so clicks on
 			// chrome rows are no-ops.
 			localY := msg.Y
+			if cmd, ok := m.explorerDragMouse(localY, msg); ok { // drag and drop (explorer_drag.go)
+				return m, cmd
+			}
 			if msg.Type == tea.MouseRight {
 				m.openExplorerMenu(msg.X, msg.Y, localY)
 				return m, nil

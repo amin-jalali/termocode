@@ -229,43 +229,69 @@ func (m *Model) onMergeAIAnswer(start, end int, text string, err error) tea.Cmd 
 // gitxAIReview puts a review request with the diff (the changes, or the
 // branch since it left its base) in the chat box, unsent.
 func (m *Model) gitxAIReview(branch bool) tea.Cmd {
+	d, c, ok := m.gitxReviewDiff(branch)
+	if !ok {
+		return c
+	}
+	ask := "Review my uncommitted changes: bugs, risks, missing tests and unclear names. List the findings by file, most important first."
+	if branch {
+		ask = "Review this branch as a pull request into " + d.base + ": bugs, risks, missing tests and unclear names. List the findings by file, most important first."
+	}
+	if rules := gitxReviewRules(d.root, d.diff); rules != "" {
+		ask += "\n\n" + rules // CMP-37: the review-only section of AGENTS.md
+	}
+	diff := d.diff
+	if d.cut {
+		diff += "\n[cut here: the rest is longer]"
+	}
+	return m.gitxFillChat(ask + "\n\n```diff\n" + strings.TrimRight(diff, "\n") + "\n```")
+}
+
+// gitxDiff is the diff a review covers.
+type gitxDiff struct {
+	root, base, diff string
+	cut              bool
+}
+
+// gitxReviewDiff reads the diff of the changes or of the branch; ok is
+// false when there is nothing to review (c says why).
+func (m *Model) gitxReviewDiff(branch bool) (d gitxDiff, c tea.Cmd, ok bool) {
 	if !m.gitEnsureLoaded() {
-		return nil
+		return d, nil, false
 	}
 	if !m.aiConfigured() {
-		var c tea.Cmd
 		m.toast, c = m.toast.PushDetail(toast.Warn, "Set up AI first", "Run AI: Configure Provider…, then try again")
-		return c
+		return d, c, false
 	}
 	cwd, err := m.gitRootDir()
 	if err != nil {
-		return nil
+		return d, nil, false
 	}
-	var diff, ask string
-	var cut bool
+	d.root = cwd
 	if branch {
 		base, err := git.DefaultBase(cwd)
 		if err != nil {
-			return m.gitxFail("No base branch", err)
+			return d, m.gitxFail("No base branch", err), false
 		}
-		diff, cut, err = git.BranchDiff(cwd, base, gitxReviewMax)
+		d.base = base
+		d.diff, d.cut, err = git.BranchDiff(cwd, base, gitxReviewMax)
 		if err != nil {
-			return m.gitxFail("Could not read the branch", err)
+			return d, m.gitxFail("Could not read the branch", err), false
 		}
-		ask = "Review this branch as a pull request into " + base + ": bugs, risks, missing tests and unclear names. List the findings by file, most important first."
 	} else {
-		diff, cut, err = git.WorkDiff(cwd, gitxReviewMax)
+		d.diff, d.cut, err = git.WorkDiff(cwd, gitxReviewMax)
 		if err != nil {
-			return m.gitxFail("Could not read the changes", err)
+			return d, m.gitxFail("Could not read the changes", err), false
 		}
-		ask = "Review my uncommitted changes: bugs, risks, missing tests and unclear names. List the findings by file, most important first."
 	}
-	if strings.TrimSpace(diff) == "" {
-		return m.gitxInfo("No changes to review")
+	if strings.TrimSpace(d.diff) == "" {
+		return d, m.gitxInfo("No changes to review"), false
 	}
-	if cut {
-		diff += "\n[cut here: the rest is longer]"
-	}
+	return d, nil, true
+}
+
+// gitxFillChat puts text in the chat box of a fresh chat, unsent.
+func (m *Model) gitxFillChat(text string) tea.Cmd {
 	s := m.aiS()
 	if s.streaming || s.chatCancel != nil {
 		return m.gitxInfo("The AI is still answering: try again when it is done")
@@ -276,7 +302,7 @@ func (m *Model) gitxAIReview(branch bool) tea.Cmd {
 	} else {
 		open = m.openAIPanel(true)
 	}
-	s.input = []rune(ask + "\n\n```diff\n" + strings.TrimRight(diff, "\n") + "\n```")
+	s.input = []rune(text)
 	s.caret = len(s.input)
 	var c tea.Cmd
 	m.toast, c = m.toast.Push(toast.Info, "Check the request in the chat and press Enter to send it")

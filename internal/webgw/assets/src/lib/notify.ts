@@ -2,11 +2,13 @@
 // are ever shown: never words from a terminal, the AI, a path or a
 // command, so a locked screen shows nothing private (never-do 14). The
 // page asks for the permission only from the user's click, shows a
-// notification only while it is in the background, and never uses a
-// service worker or push: no page open, no notification.
+// notification only while it is in the background. On an https site a
+// paired phone also gets a push while the page is closed (lib/push.ts,
+// MOB-30): a count only, shown with the worker's own fixed text.
 import { signal } from "@preact/signals";
 import { t, type StringKey } from "../strings";
 import { prefs, setPref } from "./prefs";
+import { pushOff, pushOn } from "./push";
 
 /** NotifyKind is the closed list of things worth a notification. */
 export type NotifyKind = "card" | "run_done" | "run_failed";
@@ -46,12 +48,16 @@ export function turnOn(): void {
   if (!N) return;
   if (N.permission === "granted") {
     setPref("notify", true);
+    void pushOn();
     return;
   }
   N.requestPermission().then(
     (p) => {
       perm.value = p;
-      if (p === "granted") setPref("notify", true);
+      if (p === "granted") {
+        setPref("notify", true);
+        void pushOn();
+      }
     },
     () => undefined,
   );
@@ -59,6 +65,7 @@ export function turnOn(): void {
 
 export function turnOff(): void {
   setPref("notify", false);
+  void pushOff();
 }
 
 const last = new Map<NotifyKind, number>();
@@ -70,12 +77,23 @@ export function setOnOpen(f: (kind: NotifyKind) => void): void {
   onOpen = f;
 }
 
-/** notify shows kind's fixed text, if the user turned it on and the page is hidden. */
+/** inQuiet says whether now falls in quiet hours "HH:MM-HH:MM" (MOBUX-20);
+ * a span over midnight (22:00-07:00) counts too. "" is never quiet. */
+export function inQuiet(quiet: string, now: Date): boolean {
+  if (!quiet) return false;
+  const min = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
+  const from = min(quiet.slice(0, 5)), to = min(quiet.slice(6, 11));
+  const m = now.getHours() * 60 + now.getMinutes();
+  return from < to ? m >= from && m < to : m >= from || m < to;
+}
+
+/** notify shows kind's fixed text, if the user turned it on, the page is
+ * hidden and it is not the phone's quiet hours. */
 export function notify(kind: NotifyKind): void {
   if (!document.hidden) return;
   if (kind !== "card") unseen.value = true;
   const N = api();
-  if (!N || !prefs.peek().notify || N.permission !== "granted") return;
+  if (!N || !prefs.peek().notify || N.permission !== "granted" || inQuiet(prefs.peek().quiet, new Date())) return;
   const now = Date.now();
   if (now - (last.get(kind) ?? -AGAIN_MS) < AGAIN_MS) return;
   last.set(kind, now);

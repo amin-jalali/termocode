@@ -268,6 +268,7 @@ func run(argv []string) int {
 	if noSession {
 		_ = os.Setenv(envNoSession, "1")
 	}
+	args = applyLiteFlag(args, os.Setenv)
 	if exe, err := spawn.Executable(); err == nil {
 		app.SetMCPShareExe(exe)
 	}
@@ -302,16 +303,33 @@ func run(argv []string) int {
 		switch args[0] {
 		case "sessions":
 			return cmdSessions()
+		case "bar":
+			return runBar(args[1:])
 		case "ssh":
 			return cmdSSH(args[1:])
 		case "mcp":
 			return runMCPTop(args[1:])
 		case "agent":
 			return runAgent(args[1:])
+		case "acp":
+			return runACP(args[1:])
+		case "ai":
+			if fi, err := os.Stat("ai"); len(args) == 1 && err == nil && fi.IsDir() {
+				break // `termocode ai` with a folder named ai opens that folder
+			}
+			return runAI(args[1:])
 		case "worktree":
 			return runWorktree(args[1:])
+		case "task", "tasks":
+			return runTask(args[1:])
+		case "lane":
+			return runLane(args[1:])
 		case "workflow", "workflows":
 			return runWorkflow(args[1:])
+		case "import":
+			return runImport(args[1:])
+		case "review":
+			return runReview(args[1:])
 		case "http":
 			return runHTTP(args[1:])
 		case "db":
@@ -320,6 +338,10 @@ func run(argv []string) int {
 			return runWeb(args[1:])
 		case "service":
 			return runService(args[1:])
+		case "runner":
+			return runRunner(args[1:])
+		case "lsp-proxy":
+			return runLSPProxy(args[1:])
 		case "attach", "kill":
 			dir := "."
 			if len(args) > 1 {
@@ -416,7 +438,7 @@ func tuiCommand(args []string) bool {
 		return true
 	}
 	switch args[0] {
-	case serverArg, "sessions", "ssh", "mcp", "http", "db", "service", "attach", "kill", "setup", "-h", "--help", "help":
+	case serverArg, "sessions", "bar", "import", "ssh", "mcp", "acp", "ai", "http", "db", "service", "runner", "review", "attach", "kill", "setup", "-h", "--help", "help":
 		return false
 	}
 	return !isVersionArg(args[0])
@@ -428,7 +450,11 @@ func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  termocode [dir]            open dir (default: the current folder)")
 	fmt.Println("  termocode --no-session     run without a persistent session")
+	fmt.Println("  termocode --lite [dir]     run without the editor (no Neovim needed):")
+	fmt.Println("                             terminals, agents, git and worktrees")
 	fmt.Println("  termocode sessions         list the running sessions")
+	fmt.Println("  termocode bar [--format text|json|menu]")
+	fmt.Println("                             sessions and agent states for a menu bar")
 	fmt.Println("  termocode --container name [--context c] /folder")
 	fmt.Println("                             open /folder inside a running container")
 	fmt.Println("  termocode attach [dir]     attach to the session of dir")
@@ -439,18 +465,31 @@ func printUsage() {
 	fmt.Println("  termocode mcp [--dir d]    run as an MCP server for an agent CLI (stdio)")
 	fmt.Println("  termocode mcp add|list|get|remove")
 	fmt.Println("                             manage MCP servers without the UI (mcp add --help)")
-	fmt.Println("  termocode agent list|prompt|wait|report")
+	fmt.Println("  termocode agent list|prompt|wait|report|start|tasks")
 	fmt.Println("                             drive the agents in termocode's terminal tabs")
+	fmt.Println("  termocode acp              be the AI agent of another editor (ACP on stdio)")
+	fmt.Println("  termocode ai -x \"<prompt>\" [--output text|json|stream-json]")
+	fmt.Println("                             one AI turn without the UI, for scripts and CI (ai --help)")
 	fmt.Println("  termocode worktree list|note|status|link")
 	fmt.Println("                             notes and status for the worktree you are in")
+	fmt.Println("  termocode task list|add|show|claim|status|note")
+	fmt.Println("                             the task list agents and people share (task --help)")
+	fmt.Println("  termocode lane pack|info|unpack|pull|push")
+	fmt.Println("                             move a lane (worktree and its work) to another machine")
+	fmt.Println("  termocode review [--post auto|N]")
+	fmt.Println("                             short AI review of the branch (P0/P1 only)")
 	fmt.Println("  termocode http run [options] <file|folder>…")
 	fmt.Println("                             run .http files for CI (http run --help)")
 	fmt.Println("  termocode db list|show|add|remove")
 	fmt.Println("                             manage your database connections (db --help)")
 	fmt.Println("  termocode web [start|stop|status]")
 	fmt.Println("                             open or stop the web panel of the running termocode")
+	fmt.Println("  termocode import [--agent a] [--yes] <export>")
+	fmt.Println("                             bring tasks, schedules and notes over from another agent tool")
 	fmt.Println("  termocode service install|uninstall|status")
 	fmt.Println("                             start the session of this folder at login")
+	fmt.Println("  termocode runner serve|add|list|show|cancel")
+	fmt.Println("                             this machine serves agent tasks (runner --help)")
 	fmt.Println("  termocode setup            install JetBrainsMono Nerd Font and check prerequisites")
 	fmt.Println("  termocode --version        print the version")
 	fmt.Println("  termocode -h               show this help")
@@ -655,4 +694,15 @@ func inputOption() tea.ProgramOption {
 	in := transfer.NewInput(os.Stdin)
 	transfer.Use(in)
 	return tea.WithInput(in)
+}
+
+// applyLiteFlag takes --lite out of args (CMP-99) and sets
+// TERMOCODE_LITE=1, so the UI (and a session server started from here)
+// runs Lite mode: no embedded editor, no Neovim needed.
+func applyLiteFlag(args []string, setenv func(k, v string) error) []string {
+	args, lite := extractFlag(args, "--lite")
+	if lite {
+		_ = setenv(app.EnvLite, "1")
+	}
+	return args
 }

@@ -9,13 +9,18 @@ import "./styles/shell.css";
 import "./styles/ui.css";
 import "./styles/components.css";
 import "./styles/chat.css";
+import "./styles/home.css";
 import "./styles/git.css";
 import "./styles/more.css";
 import "./styles/moreviews.css";
+import "./styles/review.css"; // the phone review (phone.js may not import a style sheet)
 import "./styles/files.css";
+import "./styles/board.css";
 import "./styles/fonts.css";
 import "./styles/hl.css";
 import "./styles/media.css";
+import "./styles/saved.css";
+import "./styles/home-catalog.css"; // MOB-13: the Home's catalog and pinned tracker blocks (home.js has no style sheet)
 import { App } from "./app";
 import { loadPersian } from "./lib/lazy";
 import { prefs } from "./lib/prefs";

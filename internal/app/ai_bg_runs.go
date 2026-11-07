@@ -315,6 +315,8 @@ func (m *Model) aiBgStart(prof ai.Profile, run agentdag.Run, task string, by ai.
 		Escalate:   escalate,
 		Budget:     budget,
 		StallAfter: s.settings.StepStall(),
+		Team:       s.settings.TeamMode(), // OMX-40
+		TeamCheck:  aiTeamNoteCheck,
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
 			return pricing.Cost(slots[n.Slot].cfg.Kind, u)
 		},

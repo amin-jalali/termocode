@@ -34,12 +34,16 @@ func (m *Model) webAfterUpdate(msg tea.Msg) tea.Cmd {
 	// The hub runs in every termocode: while nothing is connected or
 	// waiting, the publishers run once more (they forget what they sent)
 	// and then not at all, so an unused hub costs nothing per Update.
+	var cmds []tea.Cmd
+	// Pushes to paired phones matter most while no browser is connected.
+	if c := m.webAfterOne((*Model).webPushAfterUpdate, msg); c != nil {
+		cmds = append(cmds, c)
+	}
 	idle := h.idle()
 	if idle && h.settled {
-		return nil
+		return tea.Batch(cmds...)
 	}
 	h.settled = idle
-	var cmds []tea.Cmd
 	for _, f := range webAfterUpdates {
 		if c := m.webAfterOne(f, msg); c != nil {
 			cmds = append(cmds, c)

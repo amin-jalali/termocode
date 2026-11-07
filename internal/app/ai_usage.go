@@ -22,6 +22,7 @@ func (m *Model) aiAuditUsage(ev ai.Event) {
 	s := m.aiS()
 	text := aiUsageText(s.cfg.Kind, *ev.Usage, ai.NewPricing(s.settings.Prices), ai.NewContextWindows(s.settings.ContextWindows))
 	m.aiRecordTurnUsage(*ev.Usage)
+	s.noteContextOf(*ev.Usage, s.cfg.Model) // CMP-7: the header's context chip
 	m.output.Append(aiAuditChannel, clock.Now().Format("15:04:05")+"  usage  "+text)
 }
 

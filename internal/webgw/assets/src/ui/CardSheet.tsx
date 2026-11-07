@@ -8,15 +8,17 @@ import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Card as CardData } from "../../../../webproto/proto";
 import { diffTab } from "../lib/difftab";
+import { haptic } from "../lib/haptic";
 import { layout } from "../lib/layout";
 import { go, route } from "../lib/router";
 import { showFile } from "../lib/workbench";
 import { toast } from "../lib/toasts";
 import { OfflineError, ReqError } from "../net/link";
 import { answeredBy, cards, link, live, store, waiting } from "../session";
-import { answerable, riskyChoice, safeChoice } from "../state/cards";
+import { answerArgs, cardState } from "../state/cards";
 import { t, type StringKey } from "../strings";
 import { Card, type CardKind, type CardState } from "./Card";
+import { CardForm, formMissing, formStart, type FormValues } from "./CardForm";
 import { DiffRow } from "./rows";
 import { Sheet } from "./Sheet";
 
@@ -33,6 +35,13 @@ export function openCards(): void {
   if (!first) return;
   pushed = true;
   go({ ...route.value, card: first.id });
+}
+
+/** openCard opens the sheet on one card over the current view (the
+ * Home's inline cards, MOB-6: #/home?card=<id>), with a step back. */
+export function openCard(id: string): void {
+  pushed = true;
+  go({ ...route.value, card: id });
 }
 
 /** closeCard closes the sheet: a step back when the sheet added one, so
@@ -95,6 +104,7 @@ export function CardSheet({ id }: { id: string }) {
   const [gone, setGone] = useState(false);
   const [sending, setSending] = useState(false);
   const [drop, setDrop] = useState<Set<number>>(new Set());
+  const [form, setForm] = useState<FormValues | undefined>(undefined);
   const loaded = store.topic("cards").value !== undefined;
   const by = answeredBy.value.get(id);
 
@@ -108,31 +118,33 @@ export function CardSheet({ id }: { id: string }) {
   }, [loaded, shown]);
   if (!shown) return null;
 
-  const web = answerable(shown) && riskyChoice(shown) !== undefined;
-  let state: CardState;
-  if (gone) state = "gone";
-  else if (!card && !sending) state = by === "" ? "gone" : "answered";
-  else if (!live.value) state = "offline";
-  else if (web && shown.diff?.truncated) state = "long";
-  else state = "open";
-  const kind: CardKind = web ? (shown.kind as CardKind) : "trust";
+  const { state, kind } = cardState(shown, { present: card !== undefined, sending, gone, live: live.value, by }) as { state: CardState; kind: CardKind };
 
   const answer = (which: "safe" | "risky") => {
-    const choice = which === "safe" ? safeChoice(shown) : riskyChoice(shown);
-    if (!choice || sending) return;
-    const review = shown.kind === "review";
-    const all = which === "risky" && review ? (shown.diff?.hunks ?? []) : [];
-    const hunks = drop.size > 0 ? all.map((_, k) => k).filter((k) => !drop.has(k)) : [];
-    if (all.length > 0 && drop.size >= all.length) {
+    if (sending) return;
+    const args = answerArgs(shown, which, drop);
+    if (!args) return;
+    if (args === "keep_none") {
       toast("info", t("card.keep_none"));
       return;
     }
+    const review = shown.kind === "review";
+    // A form card (an MCP server's question, MOB-12) sends its answers with Send.
+    const fields = shown.form ?? [];
+    const answers = which === "risky" && fields.length > 0 ? (form ?? formStart(fields)) : undefined;
+    const miss = answers && formMissing(fields, answers);
+    if (miss) {
+      toast("info", t("card.form_missing", { name: miss }));
+      return;
+    }
     setSending(true);
-    link.request("cards.answer", hunks.length > 0 ? { id, choice: choice.id, hunks } : { id, choice: choice.id }).then(
+    const sent = answers ? { id: args.id, choice: args.choice, form: answers } : args;
+    link.request("cards.answer", sent).then(
       () => {
         setSending(false);
+        haptic(which === "safe" ? "light" : "medium");
         if (which === "safe") toast("info", t(review ? "toast.rejected" : "toast.denied"));
-        else toast("ok", t(review ? "toast.accepted" : "toast.allowed"));
+        else toast("ok", t(answers ? "toast.sent" : review ? "toast.accepted" : "toast.allowed"));
         closeCard();
       },
       (e: unknown) => {
@@ -161,8 +173,12 @@ export function CardSheet({ id }: { id: string }) {
         }}
         onClose={closeCard}
         onLaptop={closeCard}
+        riskyLabel={shown.form && shown.form.length > 0 ? "card.send" : undefined}
       >
         {shown.body && <p class="card-text">{shown.body}</p>}
+        {shown.form && shown.form.length > 0 && state === "open" && (
+          <CardForm id={shown.id} fields={shown.form} values={form ?? formStart(shown.form)} onChange={setForm} />
+        )}
         {shown.diff && state !== "long" && <CardDiff c={shown} drop={drop} setDrop={setDrop} />}
         {shown.kind === "review" && shown.diff && !shown.diff.truncated && shown.file && layout.value === "desktop" && !shown.id.includes(":") && (
           <button

@@ -126,7 +126,14 @@ func (m *Model) webAIInfoRules() webproto.AIInfo {
 		rows.row(f, "")
 	}
 	for _, s := range r.Scoped {
-		rows.row(s.File, "for some files only")
+		switch s.Mode { // CMP-82
+		case ai.RuleModeManual:
+			rows.row(s.File, "when you write #"+s.Name)
+		case ai.RuleModeAuto:
+			rows.row(s.File, "the AI loads it by its description")
+		default:
+			rows.row(s.File, "for some files only")
+		}
 	}
 	size := humanSize(int64(r.Bytes))
 	if r.Truncated {
@@ -138,7 +145,7 @@ func (m *Model) webAIInfoRules() webproto.AIInfo {
 }
 
 func (m *Model) webAIInfoMemory() webproto.AIInfo {
-	out := webproto.AIInfo{Title: "AI Memory", Note: "Memory is " + webOnOff(aiMemoryState() == aiMemoryOn) + " in this workspace", Rows: []webproto.AIInfoRow{}}
+	out := webproto.AIInfo{Title: "AI Memory", Note: "Memory is " + aiMemoryLevelText(aiMemoryState()) + " in this workspace", Rows: []webproto.AIInfoRow{}}
 	ls, err := m.aiS().aiMemoryLoad(aiWorkspaceRoot())
 	if err != nil {
 		out.Note = "Could not read " + aiMemoryRel
@@ -219,12 +226,8 @@ func (m *Model) webAIInfoHooks() webproto.AIInfo {
 		}
 	}
 	var user, project []webHookRow
-	for _, h := range s.PostTool {
-		tools := strings.Join(h.Tools, ", ")
-		if tools == "" {
-			tools = "*"
-		}
-		row := webHookRow{run: agentdag.Clean(h.Run), tools: "after " + tools}
+	for _, h := range s.All() {
+		row := webHookRow{run: agentdag.Clean(h.Run), tools: aiHookWhen(h)}
 		if h.Source == aihooks.SourceProject {
 			project = append(project, row)
 		} else {

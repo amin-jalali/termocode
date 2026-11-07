@@ -29,12 +29,20 @@ import (
 // it when the user opens the web panel. It lives while the UI does (the
 // control connection) and stops on the first of: the kill switch on the
 // laptop (4009), the UI going away (4012), no use for Idle (4006), Max
-// after it began (4007), or SIGTERM from the UI (4009).
+// after it began (4007), or SIGTERM from the UI (4009). With PhoneWatch
+// a paired phone that watches is use (MOB-31); nothing else changes.
 
 // RunConfig sets up one gateway run.
 type RunConfig struct {
 	// Dial opens a connection to the hub (<key>.web.sock).
 	Dial func(ctx context.Context) (net.Conn, error)
+	// Home and DialWS make the gateway the door to the user's other
+	// running workspaces (MOB-50): Home is this workspace's key, DialWS
+	// opens another workspace's hub by key (nil: home only). MaxHubs caps
+	// them per browser (0: webproto.MaxHubs).
+	Home    string
+	DialWS  func(ctx context.Context, ws string) (net.Conn, error)
+	MaxHubs int
 	// AuditPath is the JSONL audit log (0600). A log that cannot be
 	// opened stops the start.
 	AuditPath string
@@ -67,6 +75,13 @@ type RunConfig struct {
 	// RequireTOTP asks a paired device for a one-time code after its
 	// passkey (WEB-48); the UI checks it (web.totp_check).
 	RequireTOTP bool
+	// AppKeyLogin lets the Android app pair and sign in with its keystore
+	// key when passkeys fail in its WebView (web_app_key_login, MOB-27).
+	AppKeyLogin bool
+	// PhoneWatch (web_phone "on", MOB-31): a paired, non-guest device
+	// whose link answers the pings counts as use, so a phone that only
+	// watches keeps the gateway up. Max still ends it.
+	PhoneWatch bool
 	// Tailnet, when set, is tailnet mode (WEB-31): still 127.0.0.1 only,
 	// reached from the user's tailnet through tailscale serve on
 	// https://<machine>.<tailnet>.ts.net/; Funnel is refused.
@@ -83,6 +98,8 @@ type Status struct {
 	Started time.Time `json:"started"`
 	IdleS   int       `json:"idle_s"`
 	MaxS    int       `json:"max_s"`
+	// PhoneWatch: a watching phone keeps the gateway up (MOB-31).
+	PhoneWatch bool `json:"phone_watch,omitempty"`
 }
 
 // handoff is what the gateway writes on fd 3 once it serves: the port
@@ -160,18 +177,33 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	var pairing *Pairing
 	var devices *webdevices.Store
 	var wsRef atomic.Pointer[WS]
+	var watchRef atomic.Pointer[Watch]
 	var login *Login
+	var watchToks *WatchTokens
+	// The merged inbox the watch socket reads (MOB-23, MOB-53). The home
+	// key only has to be a stable workspace key of this gateway: the lock
+	// file is one per workspace.
+	lockSum := sha256.Sum256([]byte(cfg.LockPath))
+	inbox := NewInboxMux(hex.EncodeToString(lockSum[:webproto.InboxWSLen/2]))
+	var push *UnifiedPush // MOB-32: paired phones' wakes
+	pushCtx, stopPush := context.WithCancel(ctx)
+	defer stopPush()
 	if cfg.DevicesDir != "" {
 		devices = webdevices.Open(cfg.DevicesDir)
+		var werr error
+		if watchToks, werr = OpenWatchTokens(cfg.DevicesDir); werr != nil {
+			f := false
+			_ = audit.Log(Event{Kind: EvOp, Op: webproto.OpAppWatchToken, OK: &f, Why: "damaged_file"})
+		}
 		pk, err := NewPasskeys(site, devices, now)
 		if err != nil {
 			return 0, fmt.Errorf("passkeys: %w", err)
 		}
-		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: devices, Audit: audit, Now: now, Passkeys: pk,
+		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: devices, Audit: audit, Now: now, Passkeys: pk, AppKeys: cfg.AppKeyLogin,
 			Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) {
 				return askPair(ctx, ctlRef.Load(), a)
 			}})
-		login = NewLogin(LoginConfig{Tokens: tokens, Passkeys: pk, Audit: audit, Now: now, RequireTOTP: cfg.RequireTOTP,
+		login = NewLogin(LoginConfig{Tokens: tokens, Passkeys: pk, Audit: audit, Now: now, RequireTOTP: cfg.RequireTOTP, AppKeys: cfg.AppKeyLogin,
 			CheckTOTP: func(ctx context.Context, device, code string) error {
 				c := ctlRef.Load()
 				if c == nil {
@@ -180,6 +212,21 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 				_, err := c.Call(ctx, webproto.OpWebTotpCheck, webproto.TotpCheckArgs{Code: code, Device: device})
 				return err
 			}})
+		push = NewUnifiedPush(UnifiedPushConfig{Now: now, Audit: audit,
+			Live: func(device string) bool {
+				w := wsRef.Load()
+				return w != nil && w.HasDevice(device)
+			},
+			Watch: func(ctx context.Context, on bool) error {
+				c := ctlRef.Load()
+				if c == nil {
+					return ErrCtlGone
+				}
+				_, err := c.Call(ctx, webproto.OpWebPushWatch, webproto.PushWatchArgs{On: on})
+				return err
+			}})
+		crash.Go("web gateway: the push watch", func() { push.Run(pushCtx) })
+		defer func() { stopPush(); push.Wait() }()
 	}
 	ctl, err := DialCtlWith(ctx, cfg.Dial, CtlHandlers{Link: func(d [sha256.Size]byte) {
 		auth.SetSecretDigest(d)
@@ -192,7 +239,8 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		_ = audit.Log(Event{Kind: EvOp, Conn: n.Conn, Device: n.Device, Op: n.Op, OK: &ok,
 			Why: n.Why, Summary: n.Summary, By: "web:" + n.Device})
 	}, Event: func(kind string, data json.RawMessage) {
-		onCtlEvent(kind, data, ctlTargets{pairing: pairing, tokens: tokens, ws: wsRef.Load(), audit: audit})
+		onCtlEvent(kind, data, ctlTargets{pairing: pairing, tokens: tokens, ws: wsRef.Load(), audit: audit,
+			watchToks: watchToks, watch: watchRef.Load(), inbox: inbox, push: push, ctx: pushCtx})
 	}})
 	if err != nil {
 		return 0, fmt.Errorf("reach termocode: %w", err)
@@ -204,7 +252,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	last.Store(time.Now().UnixNano())
 	var control *Control
 	if pairing != nil {
-		control = &Control{Passkeys: pairing.cfg.Passkeys, Tokens: tokens, Store: devices, Audit: audit, Now: now,
+		control = &Control{Passkeys: pairing.cfg.Passkeys, Tokens: tokens, Store: devices, Audit: audit, Now: now, Laptop: laptopName(),
 			Ask: func(ctx context.Context, a webproto.GrantAskArgs) error {
 				c := ctlRef.Load()
 				if c == nil {
@@ -215,12 +263,24 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			}}
 	}
 	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices, Control: control,
-		MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) }})
+		Push: push, WatchTokens: watchToks, MaxViewers: cfg.MaxViewers, PhoneWatch: cfg.PhoneWatch, Activity: func() { last.Store(time.Now().UnixNano()) },
+		Home: cfg.Home, DialWS: cfg.DialWS, MaxHubs: cfg.MaxHubs})
 	wsRef.Store(ws)
 	mux := siteMux(site, auth, ws, cfg.Assets)
 	if pairing != nil {
 		mux.Handle("/pair/", pairing)
 		mux.Handle("/login/", login)
+		watch := &Watch{Tokens: watchToks, Store: devices, Inbox: inbox, Audit: audit, Now: now,
+			Watching: func(ctx context.Context, on bool) error {
+				c := ctlRef.Load()
+				if c == nil {
+					return ErrCtlGone
+				}
+				_, err := c.Call(ctx, webproto.OpWebWatching, webproto.WatchingArgs{On: on})
+				return err
+			}}
+		watchRef.Store(watch)
+		mux.Handle("/watch", watch)
 	}
 	srv := NewServer(site, mux, DefaultLimits, audit)
 	crash.Go("web gateway: the server", func() { _ = srv.Serve(LimitConns(ln, DefaultLimits.MaxConns)) })
@@ -251,13 +311,16 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	}
 	started := time.Now()
 	st := Status{PID: os.Getpid(), Port: port, URL: url, Sock: cfg.UnixPath, Started: started,
-		IdleS: int(cfg.Idle / time.Second), MaxS: int(cfg.Max / time.Second)}
+		IdleS: int(cfg.Idle / time.Second), MaxS: int(cfg.Max / time.Second), PhoneWatch: cfg.PhoneWatch}
 	if err := writeStatus(cfg.StatusPath, st); err != nil {
 		return 0, err
 	}
 	defer func() { _ = os.Remove(cfg.StatusPath) }()
 	if cfg.UnixPath != "" {
 		where += " over ssh"
+	}
+	if cfg.PhoneWatch {
+		where += ", a watching phone keeps it up"
 	}
 	if err := audit.Log(Event{Kind: EvStart, Summary: where}); err != nil {
 		return 0, err
@@ -305,6 +368,12 @@ type ctlTargets struct {
 	tokens  *Tokens
 	ws      *WS // nil until the WebSocket endpoint is made
 	audit   *Audit
+	// The watch socket (MOB-23); nil without paired devices.
+	watchToks *WatchTokens
+	watch     *Watch
+	inbox     *InboxMux
+	push      *UnifiedPush    // nil: no paired devices here
+	ctx       context.Context // the wakes' context (ends with the run)
 }
 
 // onCtlEvent handles the hub's other events: a new pairing link
@@ -321,8 +390,17 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 			return
 		}
 		n := t.tokens.RevokeDevice(d.Device)
+		if t.push != nil {
+			t.push.Forget(d.Device)
+		}
 		if t.ws != nil {
 			n += t.ws.CloseDevice(d.Device, webproto.CloseDeviceRevoked)
+		}
+		if t.watchToks != nil {
+			t.watchToks.RevokeDevice(d.Device)
+		}
+		if t.watch != nil {
+			n += t.watch.CloseDevice(d.Device)
 		}
 		_ = t.audit.Log(Event{Kind: EvRevoke, Device: d.Device, Summary: fmt.Sprintf("%d sessions closed", n)})
 	case EvRoleChange:
@@ -359,6 +437,16 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 		if pairing != nil {
 			pairing.CloseSecret()
 		}
+	case webproto.EvInboxWatch:
+		if t.inbox != nil {
+			_ = t.inbox.Set("", data) // a bad snap keeps the last good inbox
+		}
+	case webproto.EvWake: // {count}: more cards wait; the count stays here
+		var d webproto.WakeNote
+		if json.Unmarshal(data, &d) != nil || d.Count <= 0 || t.push == nil || t.ctx == nil {
+			return
+		}
+		t.push.Wake(t.ctx)
 	}
 }
 
@@ -456,13 +544,14 @@ func ReadStatus(path string) (Status, error) {
 
 // siteMux routes the gateway's paths: /auth, /ws, the page (assets may
 // be nil: then only /auth and /ws exist) and, on an installable site,
-// the app manifest (WEB-35).
+// the app manifest (WEB-35) and the push-only service worker (MOB-30).
 func siteMux(site Site, auth, ws, assets http.Handler) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.Handle("/auth", auth)
 	mux.Handle("/ws", ws)
 	if site.Installable() {
 		mux.Handle(ManifestPath, Manifest())
+		mux.Handle(SWPath, ServiceWorker())
 	}
 	if assets != nil {
 		mux.Handle("/", assets)

@@ -123,6 +123,35 @@ type Config struct {
 	Include []string `json:"include,omitempty"` // files copied into each new worktree
 	Shared  []string `json:"shared,omitempty"`  // files or folders linked to the main checkout's
 	Setup   []string `json:"setup,omitempty"`   // shell lines run in the new worktree (after trust)
+	Archive []string `json:"archive,omitempty"` // shell lines run in a worktree before its folder goes (after trust)
+
+	// The dev server of a worktree (CMP-5): Run is a shell line that
+	// reads its port from $PORT (after trust, like Setup); Ports the
+	// range ports are taken from ("3000-3099"; empty: the default); URL
+	// the address to open, $PORT filled in (empty: http://localhost:$PORT).
+	Run   string `json:"run,omitempty"`
+	Ports string `json:"ports,omitempty"`
+	URL   string `json:"url,omitempty"`
+
+	// BranchPrefix starts a branch drafted from the agent task (CMP-26),
+	// e.g. "amin/"; "" = the kind of the task (fix/, feat/, …).
+	BranchPrefix string `json:"branch_prefix,omitempty"`
+
+	// Env adds plain variables to the setup (warm.go).
+	Env map[string]string `json:"env,omitempty"`
+	// Warm keeps a copy of what the setup made for the next worktree (warm.go).
+	Warm *WarmConfig `json:"warm,omitempty"`
+}
+
+// RunURL is the dev server address on port: URL with $PORT filled in,
+// or http://localhost:<port> when URL is empty or not an http(s) address.
+func (c Config) RunURL(port int) string {
+	p := strconv.Itoa(port)
+	u := strings.TrimSpace(c.URL)
+	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
+		return "http://localhost:" + p
+	}
+	return strings.ReplaceAll(strings.ReplaceAll(u, "${PORT}", p), "$PORT", p)
 }
 
 // LoadConfig reads the config of the main checkout top (comments

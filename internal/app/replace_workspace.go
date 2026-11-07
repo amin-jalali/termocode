@@ -25,7 +25,9 @@ import (
 // search.CountLiteral finds the files (ripgrep when installed, so
 // .gitignore is honoured; the built-in walker otherwise) and the same exact
 // byte match drives both the counts and the write, so the dialog's numbers
-// are what actually gets replaced.
+// are what actually gets replaced. A file open with unsaved edits is
+// counted and replaced in its editor buffer instead (replace_buffers.go),
+// so the user's edit is kept and Ctrl+Z undoes the replace.
 
 // openReplaceInWorkspacePrompt is step 1 — ask for the search pattern.
 func (m *Model) openReplaceInWorkspacePrompt() {
@@ -61,16 +63,19 @@ func (m *Model) runReplaceInWorkspace(replacement string) tea.Cmd {
 	}
 	var counts []search.FileCount
 	var err error
+	roots := workspaceRoots()
 	if fsys, ok := m.remoteFS(); ok { // RC-5 (4c): a container workspace, through its Host
+		roots = []string{m.workspace().Root}
 		counts, err = search.CountLiteralFS(context.Background(), fsys, m.workspace().Root, find)
 	} else {
-		counts, err = search.CountLiteral(workspaceRoots(), find)
+		counts, err = search.CountLiteral(roots, find)
 	}
 	var toastCmd tea.Cmd
 	if err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Replace failed", err.Error())
 		return toastCmd
 	}
+	counts = m.withBufferCounts(counts, roots, find)
 	if len(counts) == 0 {
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("No matches for %q", find))
 		return toastCmd
@@ -91,8 +96,8 @@ func (m *Model) runReplaceInWorkspace(replacement string) tea.Cmd {
 }
 
 // replaceConfirmMessage builds the dialog text: total matches, file count,
-// and a warning when some target files have unsaved edits in the editor
-// (those buffers will be reloaded from disk by :checktime).
+// and a note when some target files have unsaved edits in the editor
+// (those are changed in the editor, not on disk).
 func replaceConfirmMessage(find, repl string, counts []search.FileCount, dirty int) string {
 	total := 0
 	for _, c := range counts {
@@ -101,8 +106,11 @@ func replaceConfirmMessage(find, repl string, counts []search.FileCount, dirty i
 	msg := fmt.Sprintf("Replace %d match%s of %q with %q in %d file%s?",
 		total, matchPlural(total), find, repl, len(counts), plurals(len(counts)))
 	if dirty > 0 {
-		msg += fmt.Sprintf(" %d of them %s unsaved changes in the editor.",
-			dirty, map[bool]string{true: "has", false: "have"}[dirty == 1])
+		if dirty == 1 {
+			msg += " 1 of them has unsaved changes: it is changed in the editor, not on disk."
+		} else {
+			msg += fmt.Sprintf(" %d of them have unsaved changes: they are changed in the editor, not on disk.", dirty)
+		}
 	}
 	return msg
 }
@@ -122,18 +130,35 @@ func (m *Model) dirtyBufferCount(counts []search.FileCount) int {
 }
 
 // applyReplaceInWorkspace is step 4, run when the confirm dialog's
-// "Replace" button is picked. Rewrites every counted file, reloads open
-// buffers, and toasts the outcome.
+// "Replace" button is picked. Rewrites every counted file (a file with
+// unsaved edits in its editor buffer instead), reloads open buffers, and
+// toasts the outcome.
 func (m *Model) applyReplaceInWorkspace() tea.Cmd {
 	find, repl, targets := m.replaceFind, m.replaceRepl, m.replaceTargets
 	m.replaceFind, m.replaceRepl, m.replaceTargets = "", "", nil
 	if find == "" {
 		return nil
 	}
-	files, matches := 0, 0
+	files, matches, inEditor := 0, 0, 0
 	var failed []string
 	fsys, remote := m.remoteFS()
+	dirty := m.modifiedPaths()
 	for _, t := range targets {
+		if dirty[t.Path] {
+			n, ok, err := m.bufferReplace(t.Path, find, repl, true)
+			if err != nil {
+				failed = append(failed, fmt.Sprintf("%s: %v", t.Path, err))
+				continue
+			}
+			if ok {
+				if n > 0 {
+					files++
+					matches += n
+					inEditor++
+				}
+				continue
+			}
+		}
 		var n int
 		var err error
 		if remote {
@@ -162,8 +187,11 @@ func (m *Model) applyReplaceInWorkspace() tea.Cmd {
 	case files == 0:
 		m.toast, toastCmd = m.toast.Push(toast.Warn, "No files modified")
 	default:
-		m.toast, toastCmd = m.toast.Push(toast.Info,
-			fmt.Sprintf("Replaced %d match%s in %d file%s", matches, matchPlural(matches), files, plurals(files)))
+		msg := fmt.Sprintf("Replaced %d match%s in %d file%s", matches, matchPlural(matches), files, plurals(files))
+		if inEditor > 0 {
+			msg += fmt.Sprintf(" · %d in the editor, not saved yet", inEditor)
+		}
+		m.toast, toastCmd = m.toast.Push(toast.Info, msg)
 	}
 	return toastCmd
 }

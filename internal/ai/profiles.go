@@ -176,6 +176,10 @@ func ProviderName(kind string) string {
 		return "Anthropic"
 	case KindClaudeOAuth:
 		return "Claude"
+	case KindVertex:
+		return "Vertex AI"
+	case KindBedrock:
+		return "Bedrock"
 	case KindOpenAI:
 		return "OpenAI"
 	case KindOpenRouter:
@@ -750,6 +754,9 @@ func ResolveSlots(s Settings, main Config, c Credentials, getenv func(string) st
 	var errs []string
 	if err := CheckFallbacks(SlotMain, s.Fallback); err != nil {
 		errs = append(errs, "ai_fallback: "+err.Error()+"; no fallback is used")
+	}
+	if err := CheckRouter(s.Router); err != nil {
+		errs = append(errs, "ai_router: "+err.Error()+"; no auto model pick is used")
 	}
 	for _, name := range names {
 		sl := s.Models[name]

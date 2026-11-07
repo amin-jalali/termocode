@@ -60,9 +60,10 @@ type wtCleanupPrepMsg struct {
 
 // wtCleanedMsg is the end of a cleanup.
 type wtCleanedMsg struct {
-	archived int
-	pruned   bool
-	err      error
+	archived     int
+	pruned       bool
+	scriptFailed []string // the archive script's failures (CMP-15)
+	err          error
 }
 
 // wtPruneRun drops git's records of gone folders (a var: tests).
@@ -242,6 +243,9 @@ func (m *Model) onWTCleanupPicked(id string) tea.Cmd {
 				map[bool]string{true: "its", false: "their"}[dirty == 1] + " own card.")
 		}
 	}
+	if n > 0 {
+		b.WriteString(wtArchiveScriptNote(m.wtArchiveScriptLoad()))
+	}
 	if c.prune {
 		b.WriteString("\n\ngit forgets " + wtPlural(c.gone, "gone folder") + " (git worktree prune).")
 	}
@@ -310,7 +314,7 @@ func (m *Model) wtCleanupRun(queue []wtArchiveTarget, prune bool) tea.Cmd {
 	root, off := m.wtRootDir(), m.wt.off
 	return func() tea.Msg {
 		a := archive().(wtArchivedMsg)
-		msg := wtCleanedMsg{archived: len(a.paths), err: a.err}
+		msg := wtCleanedMsg{archived: len(a.paths), scriptFailed: a.scriptFailed, err: a.err}
 		if prune && msg.err == nil && !off {
 			if err := wtPruneRun(root); err != nil {
 				msg.err = err
@@ -332,6 +336,9 @@ func (m *Model) onWTCleaned(msg wtCleanedMsg) tea.Cmd {
 	}
 	if msg.err != nil {
 		return tea.Batch(m.pushToastDetail(toast.Warn, "The cleanup stopped", strings.Join(append(parts, msg.err.Error()), "; ")), m.worktreesReload())
+	}
+	if d := wtArchiveScriptToast(msg.scriptFailed); d != "" {
+		return tea.Batch(m.pushToastDetail(toast.Warn, "Cleaned up; an archive script failed", strings.Join(append(parts, d), "; ")+"."), m.worktreesReload())
 	}
 	if len(parts) == 0 {
 		parts = append(parts, "Nothing changed")

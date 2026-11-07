@@ -317,6 +317,8 @@ func (m *Model) handleAIProfilePickerSelect(id string) (tea.Cmd, bool) {
 		return m.selectAIProfile(id), true
 	case pickerKindAIMore:
 		return m.onAIMorePicked(id), true
+	case pickerKindAIDial: // CMP-24 (ai_dial.go)
+		return m.onAIDialPicked(id), true
 	case pickerKindAIProfileEdit:
 		return m.openAIProfileEditForm(id), true
 	case pickerKindAIProfileTrust:

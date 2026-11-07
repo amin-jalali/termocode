@@ -58,6 +58,19 @@ export interface LinkDeps {
   random?: () => number;
 }
 
+/** DoorSink takes the messages of other workspaces' hubs (MOB-50); the
+ * phone's lazy door chunk (net/door.ts) implements it, so the core link
+ * stays small. */
+export interface DoorSink {
+  /** message is one hub message with a ws that is not home (not res, and
+   * not err with an id: those settle here by their unique id). */
+  message(ws: string, msg: ServerMsg): void;
+  /** online: the home link is (back) up; project hubs have no resume. */
+  online(): void;
+  /** down: the link went down; project data may be old. */
+  down(): void;
+}
+
 interface Pending {
   resolve: (v: unknown) => void;
   reject: (e: Error) => void;
@@ -94,6 +107,8 @@ export class Link {
   private readonly resyncing = new Set<string>();
   private readonly pending = new Map<number, Pending>();
   private readonly evHandlers = new Set<(kind: string, data: unknown) => void>();
+  private door: DoorSink | null = null;
+  private metaSeen = false;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private pingTimer: ReturnType<typeof setInterval> | undefined;
   private helloTimer: ReturnType<typeof setTimeout> | undefined;
@@ -148,6 +163,23 @@ export class Link {
     if (this.state.peek() === "online") this.sendSub([topic]);
   }
 
+  /** home is this link's own workspace key (meta.ws), "" while unknown. */
+  home(): string {
+    return this.meta.peek()?.ws ?? "";
+  }
+
+  /** attachDoor routes other workspaces' messages to d (MOB-50). */
+  attachDoor(d: DoorSink): void {
+    this.door = d;
+  }
+
+  /** sendFrame sends one frame now if online (the door's subs); false when offline. */
+  sendFrame(msg: object): boolean {
+    if (this.state.peek() !== "online") return false;
+    this.send(msg);
+    return true;
+  }
+
   /** onEvent registers a handler for ev messages; it returns the undo. */
   onEvent(fn: (kind: string, data: unknown) => void): () => void {
     this.evHandlers.add(fn);
@@ -161,7 +193,7 @@ export class Link {
 
   /** requestWithID is request that also says the request's id (0 when
    * offline), for ops whose events carry it (search.batch). */
-  requestWithID(op: string, args: unknown = {}): { id: number; result: Promise<unknown> } {
+  requestWithID(op: string, args: unknown = {}, ws?: string): { id: number; result: Promise<unknown> } {
     if (this.state.peek() !== "online" || !this.ws) return { id: 0, result: Promise.reject(new OfflineError()) };
     const id = ++this.reqID;
     const result = new Promise((resolve, reject) => {
@@ -170,7 +202,7 @@ export class Link {
         reject(new ReqError("busy", "no answer"));
       }, REQUEST_TIMEOUT_MS);
       this.pending.set(id, { resolve, reject, timer });
-      this.send({ t: "req", id, op, args });
+      this.send(ws ? { t: "req", id, op, args, ws } : { t: "req", id, op, args });
     });
     return { id, result };
   }
@@ -189,6 +221,7 @@ export class Link {
     }
     if (this.state.peek() !== "offline") this.state.value = "connecting";
     this.byeCode = null;
+    this.metaSeen = false;
     let ws: WebSocket;
     try {
       ws = new this.WS(this.deps.url, [SUBPROTOCOL]);
@@ -229,9 +262,19 @@ export class Link {
 
   private handle(msg: ServerMsg): void {
     const store = this.deps.store;
+    // MOB-50: the first meta of a connection is the home hub's (project
+    // hubs open only on frames sent after it); later, another ws is a
+    // project's. Replies settle here by id whatever their ws.
+    const mws = "ws" in msg ? msg.ws : undefined;
+    if (mws && msg.t !== "res" && !(msg.t === "err" && msg.id !== undefined) &&
+        (msg.t === "meta" ? this.metaSeen : mws !== this.home())) {
+      this.door?.message(mws, msg);
+      return;
+    }
     switch (msg.t) {
       case "meta": {
         clearTimeout(this.helloTimer);
+        this.metaSeen = true;
         const resumed = this.conn !== "" && msg.conn === this.conn;
         this.conn = msg.conn;
         this.attempt = 0;
@@ -248,6 +291,7 @@ export class Link {
         clearTimeout(this.freshenTimer);
         this.freshenTimer = setTimeout(() => store.freshen(), FRESHEN_AFTER_MS);
         this.startPings();
+        this.door?.online();
         return;
       }
       case "snap":
@@ -369,7 +413,10 @@ export class Link {
     // wrong with the link: connect again at once and take the new role.
     const delay = code === ROLE_CHANGED ? 0 : backoff(this.attempt++, this.random());
     batch(() => {
-      if (this.state.peek() === "online") this.deps.store.markAllStale();
+      if (this.state.peek() === "online") {
+        this.deps.store.markAllStale();
+        this.door?.down();
+      }
       if (this.downSince.peek() === null) this.downSince.value = this.now();
       this.retryAt.value = this.now() + delay;
       this.state.value = "offline";

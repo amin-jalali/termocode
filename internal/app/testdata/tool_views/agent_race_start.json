@@ -1,0 +1,12 @@
+{
+  "id": "",
+  "kind": "card",
+  "title": "Race started · 2 lanes",
+  "fields": [
+    {"label": "State", "value": "working", "kind": "tone", "tone": "busy"},
+    {"label": "Task", "value": "fix the bug", "kind": "text"},
+    {"label": "Lanes", "value": "claude, codex", "kind": "text"},
+    {"label": "Verify", "value": "go test ./...", "kind": "mono"}
+  ],
+  "ref": {"kind": "race"}
+}

@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/cfgfile"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/prompt"
@@ -89,9 +90,15 @@ type settingsConfig struct {
 	// type "continue" once into its tab (agent_limit.go, AGX-11). Off by
 	// default; File only.
 	AgentAutoContinue *bool `json:"agent_auto_continue,omitempty"`
+	// AgentGoalMaxTokens: the token cap of a check loop (agent_goal.go,
+	// CMP-19). 0 / unset = no token cap. File only.
+	AgentGoalMaxTokens *int `json:"agent_goal_max_tokens,omitempty"`
 	// AgentAccounts: agent id → account labels (agent_accounts.go,
 	// AGX-13). Labels only; each has its own config folder. File only.
 	AgentAccounts map[string][]string `json:"agent_accounts,omitempty"`
+	// AgentProfiles: agent id → launch profiles (model, mode, env;
+	// agent_profiles.go, CMP-21). File only.
+	AgentProfiles map[string][]agents.LaunchProfile `json:"agent_profiles,omitempty"`
 	// AgentHibernateMinutes: stop a Claude Code / Codex tab idle this
 	// long, resume it on return (agent_hibernate.go, AGX-15). 0 / unset
 	// = off. File only.
@@ -102,10 +109,18 @@ type settingsConfig struct {
 	WebPort        *int   `json:"web_port,omitempty"`
 	WebListen      string `json:"web_listen,omitempty"`
 	WebRequireTOTP *bool  `json:"web_require_totp,omitempty"`
+	WebAppKeyLogin *bool  `json:"web_app_key_login,omitempty"`
 	WebIdleMinutes *int   `json:"web_idle_minutes,omitempty"`
 	WebMaxHours    *int   `json:"web_max_hours,omitempty"`
 	WebOpenBrowser *bool  `json:"web_open_browser,omitempty"`
 	WebMaxViewers  *int   `json:"web_max_viewers,omitempty"`
+	// WebPushDetail: what a phone push says (MOB-30, web_push.go).
+	WebPushDetail string `json:"web_push_detail,omitempty"`
+	WebPhone      string `json:"web_phone,omitempty"` // MOB-31
+	// The door (MOB-56): projects open at once from a phone, and the idle
+	// stop of a project the phone opened headless. File only.
+	WebProjectsMax        *int `json:"web_projects_max,omitempty"`
+	WebProjectIdleMinutes *int `json:"web_project_idle_minutes,omitempty"`
 	// Blame (git_blame_view.go). File only; the palette toggles write them.
 	GitInlineBlame      *bool `json:"git_inline_blame,omitempty"`
 	GitStatusBlame      *bool `json:"git_status_blame,omitempty"`

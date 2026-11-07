@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -84,6 +85,8 @@ type aiTermSnap struct {
 	Tick   int      `json:"tick"`
 	Lines  []string `json:"lines"`
 	Hidden bool     `json:"hidden"`
+	// TakenOver: the user took this tab over from the agent (CMP-67).
+	TakenOver bool `json:"taken_over,omitempty"`
 }
 
 // aiTermTabs returns the terminal tabs, also those of a hidden panel.
@@ -272,6 +275,16 @@ func (m *Model) aiTermPick(tabArg string, newTab bool) (buf int, created bool, e
 
 // aiTermType runs on Update: type text into the tab with buffer buf.
 func (m *Model) aiTermType(buf int, text string, turn *aiTermTurn) (string, error) {
+	lines := strings.Split(strings.TrimRight(text, "\r\n"), "\n")
+	out, _, err := m.aiTermTypeAs(buf, text, strings.TrimSpace(lines[len(lines)-1]), false, turn)
+	return out, err
+}
+
+// aiTermTypeAs runs on Update: type text (keys: raw key bytes) into the
+// tab with buffer buf. echo is the line the terminal echoes for it ("" for
+// keys). A tab the user took over and, for text, a password prompt are
+// refused (CMP-67).
+func (m *Model) aiTermTypeAs(buf int, text, echo string, keys bool, turn *aiTermTurn) (string, tea.Cmd, error) {
 	idx := -1
 	for i, t := range m.terminalTabs {
 		if t.BufID == buf {
@@ -279,23 +292,34 @@ func (m *Model) aiTermType(buf int, text string, turn *aiTermTurn) (string, erro
 		}
 	}
 	if idx < 0 || m.nvim == nil {
-		return "", errors.New("that terminal tab was closed")
+		return "", nil, errors.New("that terminal tab was closed")
 	}
 	tab := m.terminalTabs[idx]
+	if err := m.aiTermDriveCheck(buf); err != nil {
+		return "", nil, err
+	}
+	if !keys && aiTermAsksSecret(m.aiTermLastLineOf(buf)) {
+		return "", nil, errors.New("terminal " + aiTermLabel(idx, tab.Name) + " asks for a password or passphrase. " +
+			"The AI never types or reads secrets: ask the user to type it there, then read the terminal again")
+	}
 	var tick int
 	if err := m.nvim.ExecLuaResult(aiTermSendLua, &tick, buf, text); err != nil {
-		return "", err
+		return "", nil, err
 	}
 	if tick < 0 {
-		return "", errors.New("the shell of terminal " + aiTermLabel(idx, tab.Name) + " has exited")
+		return "", nil, errors.New("the shell of terminal " + aiTermLabel(idx, tab.Name) + " has exited")
 	}
 	turn.mu.Lock()
-	lines := strings.Split(strings.TrimRight(text, "\r\n"), "\n")
-	turn.sent[buf] = aiTermSent{tick: tick, line: strings.TrimSpace(lines[len(lines)-1])}
+	turn.sent[buf] = aiTermSent{tick: tick, line: echo}
 	turn.dirty = true
 	turn.mu.Unlock()
-	return "sent to terminal " + aiTermLabel(idx, tab.Name) +
-		"; the user sees it run. Read the output with terminal_read (wait_ms waits until the command is done).", nil
+	cmd := m.aiTermDriveNote(buf)
+	what := "sent to terminal "
+	if keys {
+		what = "pressed the keys in terminal "
+	}
+	return what + aiTermLabel(idx, tab.Name) +
+		"; the user sees it run. Read the output with terminal_read (wait_ms waits until the command is done or a REPL prompt is back).", cmd, nil
 }
 
 // aiTermSend is terminal_send on the tool goroutine. A new shell gets up
@@ -314,9 +338,10 @@ func aiTermSend(ctx context.Context, call aiIDECaller, turn *aiTermTurn, tabArg 
 	if created {
 		aiTermWaitPrompt(ctx, call, buf)
 	}
+	lines := strings.Split(strings.TrimRight(text, "\r\n"), "\n")
+	echo := strings.TrimSpace(lines[len(lines)-1])
 	return call(ctx, func(m *Model) (string, tea.Cmd, error) {
-		out, err := m.aiTermType(buf, text, turn)
-		return out, nil, err
+		return m.aiTermTypeAs(buf, text, echo, false, turn)
 	})
 }
 
@@ -391,6 +416,7 @@ func (m *Model) aiTermSnapshot(tabArg string, n int) (string, error) {
 		return "", err
 	}
 	s.Index, s.Name, s.Hidden = i+1, tabs[i].Name, hidden
+	s.TakenOver = m.aiTermTakenOver(s.Buf)
 	b, err := json.Marshal(s)
 	return string(b), err
 }
@@ -465,7 +491,7 @@ func aiTermTail(lines []string, n int) string {
 }
 
 // aiTermRead is terminal_read on the tool goroutine.
-func aiTermRead(ctx context.Context, call aiIDECaller, turn *aiTermTurn, tabArg string, n int, wait time.Duration) (string, error) {
+func aiTermRead(ctx context.Context, call aiIDECaller, turn *aiTermTurn, tabArg string, n int, wait time.Duration, until *regexp.Regexp) (string, error) {
 	if n <= 0 {
 		n = 50
 	}
@@ -507,7 +533,7 @@ func aiTermRead(ctx context.Context, call aiIDECaller, turn *aiTermTurn, tabArg 
 		turn.mu.Unlock()
 		started := aiTermStarted(sent, ok, snap.Tick, snap.Lines)
 		quiet := now.Sub(stableSince)
-		if started && ((busy == 0 && quiet >= aiTermQuietIdle) || (busy < 0 && quiet >= aiTermQuietUnknown)) {
+		if done, _ := aiTermReadDone(started, busy, quiet, aiTermTail(snap.Lines, 5), until); done {
 			break
 		}
 		if now.After(deadline) {
@@ -521,10 +547,13 @@ func aiTermRead(ctx context.Context, call aiIDECaller, turn *aiTermTurn, tabArg 
 		}
 	}
 	head := fmt.Sprintf("terminal %s, shell %s", aiTermLabel(snap.Index-1, snap.Name), aiTermBusyWord(busy))
+	head += aiTermStateNote(busy, aiTermTail(snap.Lines, 5), snap.TakenOver)
 	if snap.Hidden {
 		head += ", panel hidden"
 	}
-	if timedOut {
+	if timedOut && until != nil {
+		head += fmt.Sprintf(", %q did not show within %s", until.String(), wait)
+	} else if timedOut {
 		head += fmt.Sprintf(", still busy after %s", wait)
 	}
 	out := head + ":\n" + aiTermTail(snap.Lines, n)
@@ -616,7 +645,8 @@ func aiTermTabPid(ctx context.Context, call aiIDECaller, arg string) (int, error
 
 var aiTermOps = []string{"list", "new", "focus", "close"}
 
-// aiTerminalTools are terminal_send, terminal_read and terminal_tabs.
+// aiTerminalTools are terminal_send, terminal_read, terminal_keys and
+// terminal_tabs.
 func aiTerminalTools(call aiIDECaller) []ai.Tool {
 	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
 	num := func(d string) map[string]any { return map[string]any{"type": "integer", "description": d} }
@@ -668,18 +698,29 @@ func aiTerminalTools(call aiIDECaller) []ai.Tool {
 		{
 			Name: "terminal_read",
 			Description: "Read the last lines of an integrated terminal tab and whether its shell is idle or running a command. " +
-				"wait_ms (max 30000) first waits until the command is done and the output is quiet — e.g. after terminal_send of a test run.",
+				"wait_ms (max 30000) first waits until the command is done and the output is quiet — e.g. after terminal_send of a test run. " +
+				"Inside psql, gdb, python or another REPL the wait ends when its prompt is back; until (a regex) ends it on any text.",
 			Params: map[string]any{
 				"tab":     tabParam,
 				"lines":   num("how many last lines (default 50, max 500)"),
 				"wait_ms": num("wait up to this long for the command to finish (default 0, max 30000)"),
+				"until":   str("with wait_ms: stop as soon as the last lines match this regular expression, e.g. \"Listening on\""),
 			},
 			Describe: func(a map[string]any) string { return "Read terminal " + ai.ArgString(a, "tab") },
+			Validate: func(a map[string]any) error {
+				_, err := aiTermUntil(ai.ArgString(a, "until"))
+				return err
+			},
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				wait := time.Duration(ai.ArgInt(a, "wait_ms")) * time.Millisecond
-				return aiTermRead(ctx, call, turn, ai.ArgString(a, "tab"), ai.ArgInt(a, "lines"), wait)
+				until, err := aiTermUntil(ai.ArgString(a, "until"))
+				if err != nil {
+					return "", err
+				}
+				return aiTermRead(ctx, call, turn, ai.ArgString(a, "tab"), ai.ArgInt(a, "lines"), wait, until)
 			},
 		},
+		aiTermKeysTool(call, turn, tabParam),
 		{
 			Name: "terminal_tabs",
 			Description: "Manage the integrated terminal tabs: list (number, name, idle / running), new (open a shell tab), " +
@@ -802,4 +843,16 @@ func (m *Model) aiTermTabOp(op, tab string) (string, error) {
 		return "closed terminal " + aiTermLabel(idx, name), nil
 	}
 	return "", fmt.Errorf("unknown op %q", op)
+}
+
+// aiTermUntil compiles terminal_read's until ("" = none).
+func aiTermUntil(s string) (*regexp.Regexp, error) {
+	if strings.TrimSpace(s) == "" {
+		return nil, nil
+	}
+	re, err := regexp.Compile(s)
+	if err != nil {
+		return nil, fmt.Errorf("until is not a valid regular expression: %v", err)
+	}
+	return re, nil
 }

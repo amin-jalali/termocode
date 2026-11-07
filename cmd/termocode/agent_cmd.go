@@ -27,6 +27,13 @@ const agentUsage = `termocode agent: talk to the agents in termocode's terminal 
         wait until the tab's agent reaches the state (exit 1 on timeout)
   termocode agent report <working|waiting|done> [--agent claude|codex|…]
         an agent's hook says its own state ($TERMOCODE_TAB_ID is the tab)
+  termocode agent start [--agent claude|codex|…] [--name <name>] [--from <ref>] [--json] <task…>
+        a background task: a new worktree with an agent that gets the task
+        (text "-" reads stdin). termocode shows the New worktree card filled
+        in; nothing is made until you press Create + Start there. Prints the
+        worktree's path (exit 1 on Cancel)
+  termocode agent tasks [--json]
+        the worktrees with an agent: branch, agent, status, link, last note
 
 Inside a termocode terminal: TERMOCODE_ENV=1, TERMOCODE_TAB_ID, TERMOCODE_SOCKET.
 `
@@ -138,6 +145,10 @@ func runAgentIn(args []string, in io.Reader, out, errw io.Writer, getenv func(st
 		}
 		fmt.Fprintln(out, rep.State)
 		return 0
+	case "start":
+		return runAgentStart(args[1:], in, out, errw, fail, usage, sock)
+	case "tasks":
+		return runAgentTasks(args[1:], out, fail, usage, sock)
 	case agentctl.OpReport:
 		if len(args) < 2 {
 			return usage()

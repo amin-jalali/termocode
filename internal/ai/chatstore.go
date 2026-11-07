@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/blocks"
 	"github.com/amin-jalali/termocode/internal/crash"
 )
 
@@ -25,6 +26,12 @@ const (
 	StoredNote      = "note" // a status line of termocode (keep going stopped …); only shown
 )
 
+// StoredAttach is one chip of an item sent back with a message.
+type StoredAttach struct {
+	Kind  string `json:"kind"`
+	Label string `json:"label"`
+}
+
 // StoredMessage is one persisted chat line.
 type StoredMessage struct {
 	Role string `json:"role"`
@@ -32,6 +39,10 @@ type StoredMessage struct {
 	// Context is attached file / selection text sent to the model with a
 	// user message but not shown in the transcript.
 	Context string `json:"context,omitempty"`
+	// Attached are the chips of the items the user sent back from the
+	// web page with a user message (MOB-5): kind and label only, their
+	// resolved text is in Context. Only shown.
+	Attached []StoredAttach `json:"attached,omitempty"`
 	// Images are paths of image files sent with a user message. Only the
 	// path is stored; the file is read again for every request.
 	Images []string `json:"images,omitempty"`
@@ -62,6 +73,10 @@ type StoredMessage struct {
 	// KeepGoing is set on a user message the keep-going loop sent
 	// (OMX-7): the push number, from 1.
 	KeepGoing int `json:"keep_going,omitempty"`
+	// Block is the visual block of a tool line (MOB-10): what the tool's
+	// View hook built from the call. Only shown (the phone draws it);
+	// never sent to the model.
+	Block *blocks.Block `json:"block,omitempty"`
 }
 
 // Run states (StoredRun.State).
@@ -183,6 +198,9 @@ type Conversation struct {
 	Folded map[string]bool `json:"folded,omitempty"`
 	// ForkedFrom is set on a chat forked from another one (G-FORK).
 	ForkedFrom *ForkInfo `json:"forked_from,omitempty"`
+	// ImportedFrom is set on a chat imported from an outside agent's
+	// session file (CMP-87).
+	ImportedFrom *ImportInfo `json:"imported_from,omitempty"`
 	// PlanApproval overrides ai_plan_approval for this chat ("": the
 	// setting; AI: Toggle Plan Approval sets it).
 	PlanApproval string `json:"plan_approval,omitempty"`
@@ -195,6 +213,17 @@ type Conversation struct {
 	// "keep going" message by itself (AI: Toggle Keep Going).
 	Todos     []Todo `json:"todos,omitempty"`
 	KeepGoing bool   `json:"keep_going,omitempty"`
+	// Schedule makes the chat run again by itself (CMP-43, chatsched.go).
+	Schedule *ChatSchedule `json:"schedule,omitempty"`
+	// Home marks the background chat of a paired phone (MOB-16: the web's
+	// chat.home): the device id and the workspace root it belongs to.
+	Home *HomeChat `json:"home,omitempty"`
+}
+
+// HomeChat is whose phone chat a conversation is.
+type HomeChat struct {
+	Device string `json:"device"`
+	Root   string `json:"root"`
 }
 
 const (
@@ -426,8 +455,9 @@ func (s ChatStore) prune() {
 		return
 	}
 	type head struct {
-		ID          string `json:"id"`
-		UpdatedAtMs int64  `json:"updated_at_ms"`
+		ID          string          `json:"id"`
+		UpdatedAtMs int64           `json:"updated_at_ms"`
+		Schedule    json.RawMessage `json:"schedule"`
 	}
 	var list []head
 	for _, e := range entries {
@@ -441,6 +471,9 @@ func (s ChatStore) prune() {
 		var h head
 		if json.Unmarshal(b, &h) != nil || h.ID == "" {
 			continue
+		}
+		if len(h.Schedule) > 0 && string(h.Schedule) != "null" {
+			continue // a scheduled chat (CMP-43) stays until its schedule is removed
 		}
 		list = append(list, h)
 	}

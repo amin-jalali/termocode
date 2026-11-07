@@ -41,12 +41,16 @@ type aiChatConfirmMsg struct {
 	// step is the title of the pipeline step that asks ("" in a plain
 	// chat turn).
 	step string
+	// note is the approval policy's risk line (CMP-61; "": none).
+	note string
 }
 
 type aiChatDoneMsg struct {
 	gen uint64
 	// run is the final event of a pipeline run (nil for a plain turn).
 	run *agentrun.Event
+	// stop is the reason a stop hook gives to go on ("" for none, CMP-59).
+	stop string
 }
 
 // aiPendingConfirm is a tool call waiting for the user.
@@ -170,15 +174,25 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
-	tools = append(tools, aiTodoTools(call)...) // OMX-7: the chat's todo list (not in run steps)
-	return append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
+	tools = append(tools, aiTodoTools(call)...)               // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, m.aiChatSchedTools(call)...)        // CMP-43: the chat schedules itself (always asks)
+	tools = append(tools, m.aiSessionTools()...)              // OMX-21: old chats, read only
+	tools = append(tools, aiTrackerTools(m.aiS().mcpProfile)...) // MOB-13: pin a read-only MCP call to the phone's Home
+	tools = append(tools, aiLibrarianTools()...)              // CMP-91: outside repositories, read only
+	return append(tools, aiChatDocTools(m.chatDocStore())...) // CMP-94: the chat's docs
 }
 
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:
 // agent_run_start knows how deep it is and the run's budget).
 func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai.Tool {
-	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
-	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	aws := m.aiWorkspaceAt(root) // a container workspace: its Host FS + Exec (RC-5)
+	tools := append(ai.WorkspaceTools(aws), m.aiEditorTools()...)
+	tools = aiAttributionTools(tools, root) // CMP-100: who is named on git_commit
+	if aws.FS != nil {
+		tools = aiSyncHostTools(tools, aws, call) // the IDE follows, the files stay in the container
+	} else {
+		tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	}
 	tools = append(tools, aiIDETools(root, call)...)
 	// Group K2: settings, layout and IDE state.
 	tools = append(tools, aiSettingsTools(root, call)...)
@@ -187,7 +201,8 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiLSPTools(root, call)...)      // Group K5: LSP hover, symbols, rename, code actions
 	tools = append(tools, aiGitTools(root, call)...)        // Group K4
 	tools = append(tools, aiTasksTools(root, call)...)      // Group K6: tasks and tests
-	tools = append(tools, aiWorktreeTools(root)...)         // WTX-12: worktrees_list, worktree_note
+	tools = append(tools, aiWorktreeTools(root)...)         // WTX-12: worktrees_list, worktree_note; CMP-80: worktree_block
+	tools = append(tools, aiCanvasTools(root, call)...)     // CMP-92: canvas_read, canvas_update (canvas_tools.go)
 	tools = append(tools, aiAdminTools(root, call)...)      // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...)      // Group K7
 	tools = append(tools, m.aiServicesTools(call)...)       // the Services view (ai_services_tools.go)
@@ -197,6 +212,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, aiItermocTools(call)...)          // AH-7: profiles, models, MCP services, outside agents (ai_itermoc_tools.go)
 	tools = append(tools, m.aiItermocWriteTools(call)...)   // AH-8: switch, drafts, connect, access, start (ai_itermoc_write_tools.go)
 	tools = append(tools, m.aiRaceTools(call)...)           // AGX-4: agent_race_start (agent_race_tool.go)
+	tools = append(tools, m.aiSplitTools(call)...)          // CMP-4: the coordinator splits a goal between agents (agent_split.go)
 	tools = append(tools, aiMCPAddTools()...)               // MCPX-37: propose an MCP server (ai_mcp_add_tool.go)
 	tools = append(tools, m.aiAgentRunTools(call, c)...)    // G-API: agents start agent runs (ai_agent_run_tools.go)
 	tools = append(tools, m.aiWorkflowTools(root, call)...) // WFX-9: workflows by chat (ai_workflow_tools.go)
@@ -206,9 +222,12 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
 	tools = append(tools, aiDBTools(root, call)...)            // DB-5: the Databases view (ai_db_tools.go)
 	tools = append(tools, m.aiAstGrepTool(root, call))         // OMX-28: structural search / rewrite
+	tools = append(tools, codebaseSearchTool(root))            // CMP-69: search by meaning (codebase_search.go)
 	tools = append(tools, aiSkillTools(root)...)               // OM-4: only when a skill is offered
 	tools = append(tools, m.aiLookTool(root))                  // OMX-32: images (one extra request) and PDFs
+	tools = append(tools, aiProofTool(root))                   // CMP-52: headless-browser screenshots as proof of work
 	tools = append(tools, aiWebTools()...)                     // OMX-13: only when turned on
+	tools = append(tools, m.aiImageTools(root, call)...)       // CMP-97: generate_image, only when turned on
 	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
 }
 
@@ -217,12 +236,17 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 // (the default profile is exactly today's chat); more steps run as a
 // pipeline (ai_runs.go).
 func (m *Model) sendAIChat(text string) tea.Cmd {
-	if c, ok := m.aiReady(); !ok {
-		return c
+	if m.aiS().acp == nil { // an ACP agent thread needs no provider (CMP-83)
+		if c, ok := m.aiReady(); !ok {
+			return c
+		}
 	}
 	s := m.aiS()
 	if s.streaming {
 		return m.aiInfo("AI is still answering — Ctrl+C to stop")
+	}
+	if s.home.busy { // MOB-16: one AI turn at a time, the phone chat's too
+		return m.aiInfo("The phone chat is answering — wait a moment or Ctrl+C to stop")
 	}
 	if !s.keep.pushing { // OMX-7: a message of the user starts a new keep-going chain
 		s.keep = aiKeepGoingRun{}
@@ -272,29 +296,40 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 			prof = p
 		}
 	}
-	if s.turnRoot == "" && (len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI()) { // a CLI step always runs as a run (CS-1)
+	if s.acp == nil && s.turnRoot == "" && (len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI()) { // a CLI step always runs as a run (CS-1)
 		return m.startAIRun(text, prof, rules)
 	}
 	step := prof.Run("").Nodes[0]
-	slot, err := s.resolveSlot(step.Slot)
-	if err != nil {
-		return m.aiProfileProblem(prof.Name, err)
+	slotName, routeNote := step.Slot, ""
+	slot, isACP := s.acpChatSlot() // CMP-83: the turn goes to the agent thread
+	if !isACP {
+		slotName, routeNote = s.aiRouteTurn(prof, step.Slot, text) // CMP-25: before the attachments are taken
+		var err error
+		if slot, err = s.resolveSlot(slotName); err != nil {
+			return m.aiProfileProblem(prof.Name, err)
+		}
 	}
 	root := aiWorkspaceRoot()
 	if s.turnRoot != "" {
 		root, s.turnRoot = s.turnRoot, ""
 	}
 	memBlock, lessons := m.aiMemoryTurn(root, text) // OM-2: before the attachments are taken
+	chips := s.attachChips()
 	ctxText, images := s.takeAttachments()
+	if blk := aiRulesMentionBlock(rules, text, s.rulesInjector()); blk != "" { // CMP-82: #name rules
+		ctxText = strings.TrimLeft(ctxText+"\n\n"+blk, "\n")
+	}
 	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
 	model := slot.cfg.Model
 	if model == s.cfg.Model {
 		model = "" // the chat's own model: stored chats stay as they were
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
-		ai.StoredMessage{Role: ai.StoredAssistant, Model: model},
-	)
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Attached: chips, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons})
+	if routeNote != "" { // CMP-25: for the user, not the model
+		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: routeNote})
+	}
+	s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredAssistant, Model: model})
 	s.scroll = 0
 
 	s.chatGen++
@@ -306,18 +341,26 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if len(rules.Scoped) > 0 && aiRulesTrust(rules) == aiTrustUse {
 		tools = aiRulesOnRead(tools, root, rules, s.rulesInjector())
 	}
+	autoRules := ""
+	if rt := aiRuleTools(rules, s.rulesInjector()); len(rt) > 0 { // CMP-82: auto rules by description
+		tools, autoRules = append(tools, rt...), aiRulesAutoPrompt(rules)
+	}
 	native := slot.p.SupportsTools()
-	base := m.aiChatBasePrompt(root, rules, memBlock) + aiStepSystem(step.System)
+	base := m.aiChatBasePrompt(root, rules, memBlock) + autoRules + aiStepSystem(step.System)
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
 	mentions := m.aiMCPMentions(gen, ch, text, ai.SupportsImages(slot.p))
+	// "@chat:", "@symbol:", "@diagnostics", "@diff", "@changes", "@url:"
+	// words: read with the turn's own read-only tools (CMP-77).
+	mentions = aiJoinMentions(mentions, aiContextMentions(text, root, tools))
 	mcpLines := ""
 	if mcpTools != nil {
 		mcpLines = m.mcpPromptLines() // "GitHub is connected as … (read only)."
 	}
 
 	auto := s.autoApproveSet()
+	hooks, out := aiActiveHooks(root), m.output // CMP-59: every hook event of this turn
 	ctx, cancel := context.WithCancel(context.Background())
 	s.chatCancel = cancel
 	s.streaming = true
@@ -331,16 +374,18 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	agent := &ai.Agent{
 		Provider:    slot.p,
-		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHooks(root, tools, m.output)), // OMX-12, OMX-18
+		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHookList(root, hooks, tools, out)), // OMX-12, OMX-18
 		Native:      native,
 		AutoApprove: auto,
-		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
+		Policy:      s.aiApprovalPolicy(), // CMP-61 (ai_autopilot.go)
+		MaxSteps:    s.settings.MaxSteps,  // 0: ai.DefaultMaxSteps
 		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
-		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
-		Name:        aiSlotLabel(step.Slot, slot.cfg),
-		Fallbacks:   s.aiFallbacks(step.Slot), // OMX-4
-		Compact:     m.aiCompactor(slot),      // OMX-3
+		Reasoning:   s.reasoningFor(slotName, slot.cfg, s.turnThink),
+		Name:        aiSlotLabel(slotName, slot.cfg),
+		Fallbacks:   s.aiFallbacks(slotName),                                   // OMX-4
+		Compact:     aiWithCompactHooks(root, hooks, out, m.aiCompactor(slot)), // OMX-3, CMP-59
+		PreTool:     aiPreToolHooks(root, hooks, out),                          // CMP-59
 		// OMX-25: tool results are cut to what still fits the window.
 		ContextWindow: aiContextWindow(s.settings, slot.cfg.Model),
 	}
@@ -352,7 +397,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		defer cancel()
 		if mcpTools != nil {
 			if extra := aiFilterTools(mcpTools(ctx), step.Tools); len(extra) > 0 {
-				agent.Tools = append(agent.Tools, extra...)
+				agent.Tools = append(agent.Tools, aiWithHookList(root, hooks, extra, out)...) // CMP-59: MCP matchers
 				b := base
 				if mcpLines != "" {
 					b += "\nConnected services (MCP tools mcp__<server>__*):\n" + mcpLines
@@ -370,7 +415,11 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 			emit(ev)
 		}
 		agent.Run(ctx, history, emit)
-		ch <- aiChatDoneMsg{gen: gen}
+		stop := ""
+		if ctx.Err() == nil { // a turn the user stopped is not asked to go on
+			stop = aiRunStopHooks(root, hooks, out)
+		}
+		ch <- aiChatDoneMsg{gen: gen, stop: stop}
 		close(ch)
 	}, func() { // the chat turn ends instead of waiting for ever
 		ch <- aiChatDoneMsg{gen: gen}
@@ -393,6 +442,18 @@ func (s *aiState) takeAttachments() (string, []string) {
 	}
 	s.attachments = nil
 	return strings.Join(ctxParts, "\n\n"), images
+}
+
+// attachChips are the chips of the web attachments of the next message
+// (MOB-5): the laptop's own attachments show as they always did.
+func (s *aiState) attachChips() []ai.StoredAttach {
+	var out []ai.StoredAttach
+	for _, a := range s.attachments {
+		if a.Kind != "" {
+			out = append(out, ai.StoredAttach{Kind: a.Kind, Label: a.Label})
+		}
+	}
+	return out
 }
 
 // aiChatBasePrompt is the chat's system prompt before the tool protocol.
@@ -428,7 +489,7 @@ func aiChatConfirmFunc(gen uint64, ch chan tea.Msg, auto map[string]bool, step s
 	return func(ctx context.Context, t ai.Tool, human string) bool {
 		reply := make(chan bool, 1)
 		select {
-		case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch, step: step}:
+		case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch, step: step, note: aiApprovalNoteText(ai.ApprovalNoteFrom(ctx))}:
 		case <-ctx.Done():
 			return false
 		}
@@ -493,6 +554,9 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 			}
 			if s.toolArgs != nil && aiMCPTool(msg.ev) {
 				s.aiKeepToolDetail(len(s.conv.Messages)-1, l.Text, s.toolArgs, msg.ev.Detail)
+			}
+			if msg.ev.View != nil { // MOB-10: the phone draws it under the line
+				l.Block = msg.ev.View
 			}
 		}
 		s.toolArgs = nil
@@ -568,7 +632,11 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	if msg.step != "" {
 		who = aiOneLine(aiCleanText(msg.step)) // which step of the run asks
 	}
-	m.confirm = confirm.New("✦ "+who+" wants to: "+msg.tool.Label(), msg.human, buttons)
+	body := msg.human
+	if msg.note != "" { // CMP-61: why the policy asks
+		body += "\n\n" + msg.note
+	}
+	m.confirm = confirm.New("✦ "+who+" wants to: "+msg.tool.Label(), body, buttons)
 	if strings.HasPrefix(msg.tool.Name, "db_") {
 		m.confirm = m.confirm.WithScrollText() // the whole SQL, Up/Down scroll
 	}
@@ -599,6 +667,9 @@ func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	deny := confirm.Button{ID: "deny", Title: "Deny"}
 	if title, ok := aiWorkflowAllow[t.Name]; ok { // WFX-9
 		allow.Title = title
+	}
+	if title, ok := aiChatSchedAllow[t.Name]; ok { // CMP-43: Cancel first
+		allow.Title, deny.Title = title, "Cancel"
 	}
 	if aiWorkflowCancelFirst[t.Name] || aiStashLosesData(t) {
 		deny.Title = "Cancel"
@@ -683,7 +754,9 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	}
 	var more tea.Cmd
 	if msg.run == nil {
-		more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
+		if more = m.aiOnStopHook(msg.stop); more == nil { // CMP-59: a stop hook first
+			more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
+		}
 	}
 	return tea.Batch(cmd, mem, m.notifyOS("AI run ended"), queued, more, m.aiShipOnChatDone()) // OMX-15: ship mode
 }
@@ -786,7 +859,11 @@ func (m *Model) openAIHistory() tea.Cmd {
 	}
 	items := make([]picker.Item, 0, len(list))
 	for _, c := range list {
-		items = append(items, picker.Item{ID: c.ID, Title: c.Title, Hint: aiAge(c.UpdatedAtMs)})
+		hint := aiAge(c.UpdatedAtMs)
+		if c.Schedule != nil { // CMP-43
+			hint += " · ⏰ " + c.Schedule.Label()
+		}
+		items = append(items, picker.Item{ID: c.ID, Title: c.Title, Hint: hint})
 	}
 	m.picker = picker.NewItems(" AI Chat History ", items)
 	m.picker.SetSize(m.w, m.h)

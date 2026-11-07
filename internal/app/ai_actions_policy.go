@@ -107,6 +107,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"terminal-prev-tab":  aiAuto(),
 	"terminal-maximize":  aiAuto(),
 	"terminal-minimize":  aiAuto(),
+	// CMP-67: only the user decides who types in a terminal.
+	"terminal-ai-take-over": aiNever(aiNoTermDrive),
+	"terminal-ai-hand-back": aiNever(aiNoTermDrive),
 	// terminal splits (terminal_split.go)
 	"terminal-split-right":     aiAuto(),
 	"explorer-toggle-preview":  aiAuto(), // UI only: shows or hides the preview pane
@@ -163,6 +166,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"goto-symbol-file":            aiNever(aiNoPicker + " (lsp_nav)"),
 	"goto-symbol-workspace":       aiNever(aiNoPicker + " (lsp_nav)"),
 	"lsp-manage":                  aiNever(aiNoPicker + " (lsp_servers)"),
+	// RC-6: language servers of a container workspace (container_lsp.go).
+	"lsp-container-where":       aiNever(aiNoPicker),
+	"lsp-container-diagnostics": aiConfirm(ai.ClassIDE),
+	"lsp-mirror-refresh":        aiConfirm(ai.ClassIDE), // reads the container's code into the local cache
+	"lsp-mirror-clear":          aiNever("opens a card only the user answers; it deletes the local mirror"),
 
 	// ── Git ──
 	"git-stage":              aiConfirm(ai.ClassGit),
@@ -290,6 +298,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"open-url":                      aiNever(aiNoOutside),
 	"reload-window":                 aiNever(aiNoSession),
 	"detach-session":                aiNever(aiNoSession),
+	"session-recap":                 aiAuto(),
 	"reset-session":                 aiNever(aiNoSession),
 	"pick-theme":                    aiNever(aiNoPicker),
 	"open-settings-ui":              aiNever(aiNoPicker),
@@ -466,6 +475,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"kubernetes-hpa":                    aiAuto(),
 	"kubernetes-nodes":                  aiNever(aiNoPicker + "; cordon and drain are the user's choice"),
 	"kubernetes-apply-file":             aiNever("writes to the cluster; only the user applies a file, after the diff"),
+	"preview-dev-servers":               aiNever(aiNoPicker + "; the agent reads its dev server address with terminal_read"), // devpreview_ui.go
+	"preview-open-newest":               aiNever(aiNoOutside),
 	"containers-context-use":            aiNever("a context switch is the user's choice; it moves every container action to another host"),
 	"containers-context-default":        aiNever("changes the machine-wide Docker default"),
 	"containers-context-create":         aiNever("a new context points every terminal at another host; it is the user's"),
@@ -506,6 +517,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-logs-options":           aiNever(aiNoPicker + " (container logs options; containers-logs follows logs)"),
 	"containers-detail":                 aiAuto(),
 	"containers-files":                  aiNever(aiNoPicker + " (container files)"),
+	"containers-pair-sync":              aiNever("copies and deletes files between the user's container and workspace; the user reads the card"),
 	"containers-copy-id":                aiAuto(),
 	"containers-open-port":              aiAuto(),
 	"containers-open-databases":         aiNever(aiNoPicker + " (db_connections)"),
@@ -638,6 +650,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-fix":              aiNever(aiNoNested),
 	"ai-edit":             aiNever(aiNoNested),
 	"ai-doc":              aiNever(aiNoNested),
+	"ai-property-tests":   aiNever(aiNoNested),
 	"ai-attach":           aiNever("adds to the chat input; read the file with read_file"),
 	"ai-apply-code":       aiNever("use write_file to change files"),
 	"ai-apply-proposal":   aiNever("the user reviews proposed edits"),
@@ -645,10 +658,12 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-discard-proposal": aiNever("the user reviews proposed edits"),
 	"ai-review":           aiNever("the user reviews proposed edits"),
 	"ai-edit-review":      aiNever(aiNoAIConfig),
+	"ai-review-order":     aiNever(aiNoAIConfig),
 	"ai-undo-turn":        aiNever("the user undoes the AI's changes"),
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
 	"ai-toggle-next-edit": aiConfirm(ai.ClassIDE),
+	"ai-follow-agent":     aiConfirm(ai.ClassIDE),
 	"ai-cancel":           aiNever("stops the model's own turn"),
 	"ai-configure":        aiNever(aiNoAIConfig),
 	"ai-pick-model":       aiNever(aiNoAIConfig),
@@ -660,6 +675,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-insert":       aiNever(aiNoPicker),
 	"ai-mcp-background":   aiNever("moves the model's own running call; the user decides"),
 	"ai-mcp-profile":      aiNever(aiNoPicker),
+	"ai-mcp-accounts":     aiNever(aiNoPicker), // signs out: only the user, on a card
 	"ai-mcp-catalog":      aiNever(aiNoPicker),
 	"ai-mcp-bundle":       aiNever(aiNoPicker),
 	"ai-mcp-updates":      aiNever(aiNoAIConfig),
@@ -683,6 +699,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"web-devices":     aiNever(aiNoWeb + " (who may come in)"),
 	"web-totp":        aiNever(aiNoWeb + " (a second factor of the web sign-in)"),
 	"web-share":       aiNever(aiNoWeb + " (lets another person watch)"),
+	// Port preview (web_forward.go): opens a port of this computer to the
+	// browser; only the user asks, never an agent, MCP or a project file.
+	"web-forward-port":    aiNever(aiNoWeb + " (opens a port of this computer to the browser)"),
+	"web-forwarded-ports": aiNever(aiNoWeb + " (the open port forwards)"),
 	// Itermoc (itermoc_actions.go): the user's screen for profiles, models,
 	// services and outside agents. The AI opens it with the typed tool
 	// ai_view_open (ai_itermoc_tools.go); as palette commands they are the user's.
@@ -706,6 +726,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"workflow-edit-file":  aiAuto(),
 	"workflow-history":    aiAuto(),
 	"workflow-undo-write": aiConfirm(""), // writes to outside systems again; the undo card asks
+	// CMP-38: the list of trigger events only reads; each event's card
+	// is the user's to answer.
+	"workflow-triggers": aiAuto(),
+	"workflow-pause":    aiConfirm(ai.ClassRun),
+	"workflow-retry":    aiConfirm(ai.ClassRun), // runs again; its writes still ask on the gate card
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),
@@ -725,17 +750,29 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Plan approval (G-PLAN): the AI can never approve its own plan or
 	// turn the question off.
 	"ai-reasoning-next": aiNever(aiNoAIConfig + "; more thinking costs the user more"),
-	"ai-plan-approval":  aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
-	"ai-plan-review":    aiNever("the plan card is the user's answer; the AI never approves its own plan"),
-	"ai-profile-edit":   aiNever(aiNoAIConfig),
-	"ai-profile-new":    aiNever(aiNoAIConfig),
-	"ai-profile-form":   aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
-	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),
+	// The effort dial (CMP-24) sets a profile and a reasoning level at
+	// once: the user's own setup, and more effort costs the user more.
+	"ai-dial":          aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-dial-next":     aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-plan-approval": aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai-auto-model":    aiNever(aiNoAIConfig + "; the AI never picks its own model"),
+	"ai-autopilot":     aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
+	"ai-plan-review":   aiNever("the plan card is the user's answer; the AI never approves its own plan"),
+	"ai-profile-edit":  aiNever(aiNoAIConfig),
+	"ai-profile-new":   aiNever(aiNoAIConfig),
+	"ai-profile-form":  aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
+	"ai-profile-trust": aiNever("trusting a project's prompts is the user's decision"),
 	// Keep going (OMX-7) sends model turns that cost money: only the
 	// user turns it on.
 	"ai-keep-going": aiNever(aiNoAIConfig + "; extra paid turns are the user's choice"),
+	// Chat schedules (CMP-43): the AI proposes its own with
+	// chat_schedule_set (always a card); the palette is the user's.
+	"ai-chat-schedule":   aiNever("paid turns at set times are the user's choice (chat_schedule_set asks the user)"),
+	"ai-chat-unschedule": aiNever("the user's own command (chat_schedule_clear)"),
 	// The side chat (OMX-30) is the user's own question.
 	"ai-side": aiNever("the side chat is the user's own question beside the AI's turn"),
+	// Voice input (CMP-48) listens on the user's microphone: only the user starts it.
+	"ai-dictate": aiNever("it listens on the user's microphone; only the user starts it"),
 	// Handoff (OMX-21) ends the AI's own chat; the user starts it.
 	"ai-handoff": aiNever("it ends the AI's own chat; the user starts a handoff"),
 	// Project rules (OM-1): the AI only gets the text in its prompt.
@@ -745,16 +782,25 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// forgetting lessons is the user's.
 	"ai-memory":        aiNever(aiNoPicker),
 	"ai-memory-toggle": aiNever(aiNoAIConfig),
+	"ai-memory-learn":  aiNever(aiNoAIConfig),
 	// Skills (OM-4): the AI loads them with skill_load; the picker, new
 	// files and trusting a project's skills are the user's.
 	"ai-skills":       aiNever(aiNoPicker),
 	"help-bug-report": aiNever("only the user chooses what to export"),
 	"ai-doctor":       aiNever("a local diagnostic page for the user"),
 	"ai-hooks":        aiNever(aiNoPicker),
+	"ai-agent-env":    aiNever(aiNoPicker),
 	// Web tools reach the internet and add servers: the user turns them on.
 	"ai-web-tools": aiNever(aiNoPicker),
+	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
+	// list and deleting the shots are the user's.
+	"ai-proofs":    aiNever(aiNoPicker),
+	"ai-image-gen": aiNever("image generation is paid; only the user turns it on"),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
+	"ai-ship-merge":    aiNever("it pushes, opens and merges a pull request: the user starts it and answers the merge card"),
+	"acp-thread":       aiNever("it starts an outside agent program: the user starts and ends it"),
+	"acp-agents-edit":  aiNever("the list names programs termocode starts: only the user edits it"),
 	"ai-plan-worktree": aiNever("it leads to a push and a pull request: the user starts it"),
 	// It edits other apps' config files: only the user, after the preview.
 	"ai-agent-hooks": aiNever("it changes other apps' config files: the user decides after the preview"),
@@ -765,10 +811,17 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// turning the feature off are the user's.
 	"ai-worktrees":        aiNever(aiNoPicker),
 	"ai-worktrees-toggle": aiNever(aiNoAIConfig),
+	"ai-critic-toggle":    aiNever(aiNoAIConfig),
 	// AI: Usage (AU-4) is the user's own view of tokens and money.
 	"ai-usage": aiNever("a read-only screen for the user; the AI cannot read its own bill"),
 	// Runs is the user's monitoring page (stop, pause and resume are theirs).
-	"ai-runs": aiNever("the user's monitoring page; it holds Stop, Pause and Resume"),
+	"ai-runs":  aiNever("the user's monitoring page; it holds Stop, Pause and Resume"),
+	"ai-board": aiNever("the user's board of agent work; it opens a picker and holds Resume"),
+
+	// CMP-62: rewind and code checkpoints (ai_rewind.go, checkpoints_ui.go).
+	"ai-rewind-turn":        aiNever("the user rewinds the chat and the AI's changes"),
+	"ai-checkpoint-save":    aiAuto(), // saves a private git ref; changes no file
+	"ai-checkpoint-restore": aiNever("the user rolls code back to a checkpoint"),
 
 	// ── HTTP client ──
 	"http-send":              aiNever("sends a network request; use http_send (gated by host and method)"),
@@ -802,6 +855,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"http-gql-validate":      aiNever("may fetch the schema over the network; use http_send"),
 	"http-proxy-set":         aiNever(aiNoPicker + " (read_file, write_file)"),
 	"http-gql-docs":          aiNever(aiNoPicker + " (http_send with the introspection query)"),
+	"http-grpc-describe":     aiNever("calls the gRPC server over the network; read the .proto files with read_file"),
 	"http-mock-start":        aiConfirm(ai.ClassIDE), // listens on a 127.0.0.1 port
 	"http-mock-stop":         aiConfirm(ai.ClassIDE), // stops the user's mock server
 }
@@ -852,25 +906,36 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_auto_approve":       aiNever(aiNoAIConfig),
 	"ai_max_steps":          aiNever(aiNoAIConfig),
 	"ai_edit_review":        aiNever(aiNoAIConfig),
+	"ai_review_order":       aiNever(aiNoAIConfig),
 	"ai_prices":             aiNever(aiNoAIConfig),
 	"ai_context_windows":    aiNever(aiNoAIConfig),
 	"ai_models":             aiNever(aiNoAIConfig),
 	"ai_prompt_cache":       aiNever(aiNoAIConfig),
 	"ai_reasoning":          aiNever(aiNoAIConfig),
 	"ai_fallback":           aiNever(aiNoAIConfig),
+	"ai_router":             aiNever(aiNoAIConfig),
 	"ai_concurrency":        aiNever(aiNoAIConfig),
 	"ai_parallel_max":       aiNever(aiNoAIConfig),
 	"ai_worktrees":          aiNever(aiNoAIConfig),
+	"ai_critic":             aiNever(aiNoAIConfig),
+	"ai_critic_slot":        aiNever(aiNoAIConfig),
 	"ai_compact":            aiNever(aiNoAIConfig),
 	"ai_plan_approval":      aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai_autopilot":          aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
+	"ai_approval_rules":     aiNever(aiNoAIConfig + "; the AI never writes its own approval rules"),
+	"ai_guardian":           aiNever(aiNoAIConfig + "; the AI never picks its own reviewer"),
 	"ai_categories":         aiNever(aiNoAIConfig),
+	"ai_dial":               aiNever(aiNoAIConfig),
 	"ai_step_escalate":      aiNever(aiNoAIConfig),
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
 	"ai_plan_file":          aiNever(aiNoAIConfig),
 	"ai_step_stall_minutes": aiNever(aiNoAIConfig),
+	"ai_team_mode":          aiNever(aiNoAIConfig),
 	"ai_memory_recall":      aiNever(aiNoAIConfig),
 	"ai_web_fetch":          aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	"ai_web_search":         aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
+	"ai_image_gen":          aiNever(aiNoAIConfig + "; image generation is paid"),
+	"ai_image_model":        aiNever(aiNoAIConfig),
 	// Work until done: the AI never raises its own rounds or budget.
 	"ai_until_done_rounds":     aiNever(aiNoAIConfig),
 	"ai_until_done_budget_usd": aiNever(aiNoAIConfig),
@@ -944,14 +1009,20 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	// What an outside agent may do without a card: the user's answer only.
 	"mcp_server_auto_approve": aiNever("what outside agents may do without asking; only the user's \"Always allow\" on their card sets it"),
 	// The web panel gives shell access from a browser (web_settings.go).
-	"web_panel":        aiNever(aiNoWeb),
-	"web_port":         aiNever(aiNoWeb),
-	"web_listen":       aiNever(aiNoWeb),
-	"web_require_totp": aiNever(aiNoWeb),
-	"web_idle_minutes": aiNever(aiNoWeb),
-	"web_max_hours":    aiNever(aiNoWeb),
-	"web_open_browser": aiNever(aiNoWeb),
-	"web_max_viewers":  aiNever(aiNoWeb),
+	"web_panel":         aiNever(aiNoWeb),
+	"web_port":          aiNever(aiNoWeb),
+	"web_listen":        aiNever(aiNoWeb),
+	"web_require_totp":  aiNever(aiNoWeb),
+	"web_app_key_login": aiNever(aiNoWeb),
+	"web_idle_minutes":  aiNever(aiNoWeb),
+	"web_max_hours":     aiNever(aiNoWeb),
+	"web_open_browser":  aiNever(aiNoWeb),
+	"web_max_viewers":   aiNever(aiNoWeb),
+	"web_push_detail":   aiNever(aiNoWeb),
+	"web_phone":         aiNever(aiNoWeb),
+	// The door (MOB-56): more open projects = more of the laptop on the phone.
+	"web_projects_max":         aiNever(aiNoWeb),
+	"web_project_idle_minutes": aiNever(aiNoWeb),
 	// Workflows (ADR 0021): the AI may change a limit after its card; it
 	// never turns workflows on or off and never widens the agent sandbox.
 	"workflows_enabled":          aiNever("workflows run unattended and write to outside systems; only the user turns them on or off"),
@@ -961,6 +1032,9 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"workflows_history_days":     aiConfirm(ai.ClassSettings),
 	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
 	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
+	"agent_os_sandbox":           aiNever("the OS sandbox around outside agents; only the user changes it"),
+	"workflows_trigger_poll_min": aiConfirm(ai.ClassSettings),
+	"workflows_webhook_port":     aiNever("opens a port that starts workflows from outside; only the user changes it"),
 
 	// Git blame (GITX-3..5)
 	"git_status_blame":            aiConfirm(ai.ClassSettings),

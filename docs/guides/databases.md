@@ -291,6 +291,8 @@ The layout of a table is saved per connection and table, so it comes back the ne
 
 A result loads at most `db_max_rows` rows (default 10,000); the page says when the limit was reached, so add a `LIMIT` or a `WHERE`. Only one page (`db_page_rows`, default 100) is written to the page at a time. A statement stops after `db_timeout` seconds (default 30). Set these in your user `config.json`.
 
+If the connection drops while rows are arriving (the server restarts, the network or the SSH tunnel goes away), the query ends with an error that says the connection was lost mid-query, how many rows came first, and that the result is not complete, so a short result never looks whole. A local `sqlite3` that stops is started again, so the next statement runs. The AI's `db_query` gets the same message.
+
 ## Result tabs
 
 Every result has a tab. A new run replaces the tabs that are not pinned; a pinned tab and a tab with pending changes stay. When a run has several statements, each statement that returns rows (or fails) gets its own tab. Up to nine tabs are kept. The first row of the page lists them when there is more than one: `1 pinned [2 edited] 3` means tab 1 is pinned, tab 2 is on the page and has pending changes. Press `1` … `9` to switch.

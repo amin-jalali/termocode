@@ -30,7 +30,11 @@ func agentCLI(agent string) (string, bool) {
 // workspace-write on that folder; Claude Code: file tools, no shell),
 // so it can neither push nor open a PR: those are write steps. Sandbox
 // "read-only" only reads. The prompt and the item go on stdin, never in
-// argv; the environment loses every secret (clistep.CleanEnv).
+// argv; the environment loses every secret (clistep.CleanEnv). The
+// project's trusted agent environment (AgentEnvFile) adds its setup,
+// plain values and network rule (agentenv.go). With agent_os_sandbox
+// on, the CLI itself also runs inside the OS sandbox (CMP-60): the disk
+// read-only but its folder (when it may write).
 func (s *Steps) runAgent(ctx context.Context, c run.RunCall) (run.Output, error) {
 	sp := c.Step.Agent
 	if sp == nil {
@@ -89,7 +93,14 @@ func (s *Steps) runAgent(ctx context.Context, c run.RunCall) (run.Output, error)
 		prompt = strings.TrimSpace(prompt) + "\n\n" + aistep.DataSentence + "\n\n" + aistep.Block(it) + "\n"
 	}
 
-	spec := clistep.Spec{CLI: cli, Write: write, Model: sp.Model, Dir: dir, Env: s.AgentEnv}
+	env, px, err := s.agentEnvFor(ctx, sp.Agent, dir, write)
+	if err != nil {
+		return run.Output{}, err
+	}
+	if px != nil {
+		defer px.Close()
+	}
+	spec := clistep.Spec{CLI: cli, Write: write, Model: sp.Model, Dir: dir, Env: env, OSSandbox: s.AgentOSSandbox}
 	runCLI := s.Agent
 	if runCLI == nil {
 		runCLI = clistep.Run
@@ -101,6 +112,14 @@ func (s *Steps) runAgent(ctx context.Context, c run.RunCall) (run.Output, error)
 	}
 	res, err := runCLI(ctx, spec, prompt, emit)
 	out := run.Output{Text: res.Text, Worktree: c.Env.Worktree}
+	if px != nil {
+		if blocked := px.Blocked(); len(blocked) > 0 {
+			out.Text = strings.TrimRight(out.Text, "\n") + "\n\n" + networkNote(blocked)
+			if s.OnNetwork != nil {
+				s.OnNetwork(c.Step.ID, key, blocked)
+			}
+		}
+	}
 	if len(res.Files) > 0 {
 		files := make([]any, len(res.Files))
 		for i, f := range res.Files {

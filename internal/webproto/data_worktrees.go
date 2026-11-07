@@ -1,5 +1,7 @@
 package webproto
 
+import "strings"
+
 // Worktrees (WTX-16): the laptop's WORKTREES view — every git worktree
 // of the repository (the main checkout, the user's worktrees, agent
 // lanes, ones made by hand, archived ones) with its group, agent state,
@@ -19,6 +21,11 @@ const (
 	OpWorktreesNote    = "worktrees.note"
 	OpWorktreesArchive = "worktrees.archive"
 	OpWorktreesDelete  = "worktrees.delete"
+	OpWorktreesLink    = "worktrees.link"
+	// A new task from the page (CMP-49): the form's choices, then a new
+	// worktree with an agent that gets the task.
+	OpWorktreesTaskForm = "worktrees.task_form"
+	OpWorktreesNewTask  = "worktrees.new_task"
 )
 
 var opWorktreesRows = []Policy{
@@ -28,6 +35,9 @@ var opWorktreesRows = []Policy{
 	{Op: OpWorktreesNote, New: newOf[WorktreeNoteArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 2 * kib, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpWorktreesArchive, New: newOf[WorktreeArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpWorktreesDelete, New: newOf[WorktreeArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpWorktreesLink, New: newOf[WorktreeLinkArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpWorktreesTaskForm, New: newOf[EmptyArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpWorktreesNewTask, New: newOf[WorktreeTaskArgs](), Role: RoleController, Rate: slow, MaxBytes: 8 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
 }
 
 var _ = func() bool { opTable = append(opTable, opWorktreesRows...); return true }()
@@ -39,6 +49,9 @@ func init() {
 	registerResult(OpWorktreesNote, WorktreeDone{})
 	registerResult(OpWorktreesArchive, AskRef{})
 	registerResult(OpWorktreesDelete, AskRef{})
+	registerResult(OpWorktreesLink, WorktreeDone{})
+	registerResult(OpWorktreesTaskForm, WorktreeTaskForm{})
+	registerResult(OpWorktreesNewTask, WorktreeTaskDone{})
 }
 
 // Worktree limits.
@@ -46,6 +59,16 @@ const (
 	MaxWorktrees    = 500
 	MaxWorktreeNote = 500
 	WorktreeIDLen   = 12
+	// MaxWorktreeLinkNumber caps an issue or PR number of worktrees.link.
+	MaxWorktreeLinkNumber = 999_999_999
+
+	// A new task (CMP-49).
+	MaxTaskName   = 100
+	MaxTaskText   = 4 * kib
+	MaxTaskRef    = 200
+	MaxTaskRefs   = 200
+	MaxTaskAgents = 8
+	MaxTaskAgent  = 32
 )
 
 // WorktreesSnap is the worktrees topic. State: "none" the workspace is
@@ -59,7 +82,8 @@ type WorktreesSnap struct {
 // WorktreeItem is one worktree card. Where is its folder for people
 // (~ for home); Parent is the id of the worktree it was made from and
 // Depth how deep it is drawn under it. Status: Ahead, Behind and Dirty
-// are known. LastSeen is Unix ms.
+// are known. LastSeen is Unix ms. Port is the worktree's dev server
+// port; Running and URL say it runs now and where.
 type WorktreeItem struct {
 	ID         string `json:"id"`
 	Title      string `json:"title"`
@@ -84,6 +108,9 @@ type WorktreeItem struct {
 	Parent     string `json:"parent,omitempty"`
 	Depth      int    `json:"depth,omitempty"`
 	LastSeen   int64  `json:"last_seen,omitempty"`
+	Port       int    `json:"port,omitempty"`    // the worktree's dev server port (CMP-5)
+	Running    bool   `json:"running,omitempty"` // its dev server runs now
+	URL        string `json:"url,omitempty"`     // the dev server's address while it runs
 }
 
 // WorktreeDone answers pin, sleep and note. Asked: the laptop asks first
@@ -108,6 +135,16 @@ type WorktreeOnArgs struct {
 type WorktreeNoteArgs struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
+}
+
+// WorktreeLinkArgs links an issue or PR of the repository to a worktree
+// (MOB-17, "Link to a lane" on the phone): only a kind and a number,
+// never a URL or a repository, so the laptop reads it with gh on the
+// repository it knows. Kind "none" with number 0 unlinks.
+type WorktreeLinkArgs struct {
+	ID     string `json:"id"`
+	Kind   string `json:"kind" enum:"issue|pr|none"`
+	Number int    `json:"number"`
 }
 
 // validWorktreeHexID: WorktreeIDLen lower-case hex digits.
@@ -145,4 +182,83 @@ func (a *WorktreeNoteArgs) validate(int) error {
 		return invalid("bad note: one line, at most 500 bytes")
 	}
 	return nil
+}
+
+func (a *WorktreeLinkArgs) validate(int) error {
+	if !validWorktreeHexID(a.ID) {
+		return invalid("bad worktree id")
+	}
+	switch a.Kind {
+	case "none":
+		if a.Number != 0 {
+			return invalid("bad link: none takes number 0")
+		}
+	case "issue", "pr":
+		if a.Number < 1 || a.Number > MaxWorktreeLinkNumber {
+			return invalid("bad link: number 1 to 999999999")
+		}
+	default:
+		return invalid("bad link kind: issue, pr or none")
+	}
+	return nil
+}
+
+// WorktreeTaskForm is the result of worktrees.task_form: what the page's
+// "New task" form offers. State "none": the workspace is not a git
+// repository (or worktrees are off here). From is the start point the
+// laptop would use; Refs the branches and tags it can start from (at
+// most MaxTaskRefs, the current branch first). Agents are the installed
+// agent CLIs (id and title). Setup says what the repository's setup
+// commands do: "" none, "trusted" they run, "asks" the laptop asks first.
+// Base is the folder new worktrees go to (~ for home).
+type WorktreeTaskForm struct {
+	State  string              `json:"state" enum:"none|ready"`
+	From   string              `json:"from,omitempty"`
+	Refs   []string            `json:"refs"`
+	Agents []WorktreeTaskAgent `json:"agents"`
+	Setup  string              `json:"setup,omitempty" enum:"trusted|asks"`
+	Base   string              `json:"base,omitempty"`
+}
+
+// WorktreeTaskAgent is one agent CLI the form offers.
+type WorktreeTaskAgent struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+// WorktreeTaskArgs starts a new task: a new worktree named Name (the
+// branch is drafted from it; "" drafts it from the task), from the start
+// point From ("" = the laptop's current branch), with the agent Agent
+// that gets Task typed in once it is ready. One line each.
+type WorktreeTaskArgs struct {
+	Name  string `json:"name,omitempty"`
+	From  string `json:"from,omitempty"`
+	Agent string `json:"agent"`
+	Task  string `json:"task"`
+}
+
+func (a *WorktreeTaskArgs) validate(int) error {
+	if a.Name != "" && !validName(a.Name, MaxTaskName) {
+		return invalid("bad name: one line, at most 100 bytes")
+	}
+	if a.From != "" && (!validName(a.From, MaxTaskRef) || strings.HasPrefix(a.From, "-") || strings.ContainsAny(a.From, " \t")) {
+		return invalid("bad start point")
+	}
+	if !validWorktreeID(a.Agent) || len(a.Agent) > MaxTaskAgent {
+		return invalid("bad agent")
+	}
+	if strings.TrimSpace(a.Task) == "" || !validText(a.Task, MaxTaskText) {
+		return invalid("bad task: one line, at most 4 KiB")
+	}
+	return nil
+}
+
+// WorktreeTaskDone answers worktrees.new_task: the new worktree's id (as
+// in the worktrees topic), its branch and folder (~ for home). Note says
+// what else happens (the setup asks on the laptop first).
+type WorktreeTaskDone struct {
+	ID     string `json:"id"`
+	Branch string `json:"branch"`
+	Where  string `json:"where"`
+	Note   string `json:"note,omitempty"`
 }

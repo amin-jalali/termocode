@@ -65,15 +65,37 @@ function _G._termocode_lsp_start(buf)
   local name = vim.api.nvim_buf_get_name(buf)
   local start_dir = name ~= '' and vim.fn.fnamemodify(name, ':p:h') or vim.fn.getcwd()
   local base = vim.fn.fnamemodify(name, ':t')
+  -- RC-6 (container_lsp.go): a container workspace starts servers only
+  -- from its plan (in the image, or local through lsp-proxy); 'pending'
+  -- = the plan is not there yet.
+  local ctab = _G._termocode_lsp_container
+  if ctab == 'pending' then return end
+  if type(ctab) == 'table' then
+    -- Only files of the container: a local file (a module cache page)
+    -- gets no container server.
+    local pre = ctab.root == '/' and '/' or (ctab.root or '') .. '/'
+    if name:sub(1, #pre) ~= pre then return end
+  end
   for _, srv in ipairs(ft_to_servers(ft)) do
     -- A server with file name patterns (compose) starts only on matching files.
     local match = srv.cfg.files == nil
     for _, p in ipairs(srv.cfg.files or {}) do
       if base:match(p) then match = true; break end
     end
-    local cmd = match and resolve_cmd(srv.cfg.cmd)
+    local cmd, root, handlers, where = nil, nil, nil, nil
+    if type(ctab) == 'table' then
+      local plan = match and ctab.servers and ctab.servers[srv.name]
+      if plan and type(plan.cmd) == 'table' and #plan.cmd > 0 then
+        cmd, root, where = plan.cmd, ctab.root, plan.place
+        if plan.mute then
+          handlers = { ['textDocument/publishDiagnostics'] = function() end }
+        end
+      end
+    else
+      cmd = match and resolve_cmd(srv.cfg.cmd)
+      if cmd then root = find_root(start_dir, srv.cfg.root) end
+    end
     if cmd then
-      local root = find_root(start_dir, srv.cfg.root)
       local settings = nil
       if srv.cfg.settings then
         local ok, v = pcall(vim.json.decode, srv.cfg.settings)
@@ -84,8 +106,13 @@ function _G._termocode_lsp_start(buf)
         cmd = cmd,
         root_dir = root,
         settings = settings,
+        handlers = handlers,
+        _termocode_where = where,
+        _termocode_gen = where and ctab.gen or nil,
         capabilities = vim.lsp.protocol.make_client_capabilities(),
-      }, { bufnr = buf })
+      }, { bufnr = buf, reuse_client = where and function(client, conf)
+        return client.name == conf.name and client.config._termocode_gen == conf._termocode_gen
+      end or nil })
     end
   end
 end

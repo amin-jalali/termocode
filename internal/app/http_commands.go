@@ -99,7 +99,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-ws-close", Title: "HTTP: WebSocket Disconnect"},
 		{ID: "http-mock-start", Title: "HTTP: Start Mock Server"},
 		{ID: "http-mock-stop", Title: "HTTP: Stop Mock Server"},
-	}, append(httpGQLPaletteItems(), httpProxyPaletteItems()...)...)
+	}, append(append(httpGQLPaletteItems(), httpGRPCPaletteItems()...), httpProxyPaletteItems()...)...)
 }
 
 // dispatchHTTPPalette runs an "http-…" palette id. ok=false: not ours.
@@ -108,6 +108,9 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return nil, false
 	}
 	if cmd, ok := m.dispatchHTTPGQL(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.dispatchHTTPGRPC(id); ok {
 		return cmd, true
 	}
 	switch id {

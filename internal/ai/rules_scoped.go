@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +18,22 @@ type ScopedRule struct {
 	Dir   string   // a folder rule: files below this folder ("" for a glob rule)
 	Globs []string // a glob rule: files matching any of these
 	Text  string   // cleaned, front matter removed
+	// Mode is "" for a folder or glob rule, RuleModeManual (used when the
+	// user names it as #Name) or RuleModeAuto (offered to the model by
+	// Description, loaded with rule_load). CMP-82.
+	Mode        string
+	Name        string
+	Description string
+	// Review is a folder file's review-only rules (CMP-37), cut out of Text.
+	Review string
 }
+
+// The inclusion modes of a .claude/rules file (front matter
+// "inclusion: manual" / "inclusion: auto").
+const (
+	RuleModeManual = "manual"
+	RuleModeAuto   = "auto"
+)
 
 // RulesScopedMaxBytes caps one scoped rule's text in a tool result.
 const RulesScopedMaxBytes = 4 << 10
@@ -52,44 +68,94 @@ func loadClaudeRules(root, realRoot string) []claudeRule {
 		if !ok {
 			continue
 		}
-		globs, always, body := rulesFrontMatter(text)
-		if body = strings.Trim(body, " \t\n"); body == "" {
+		fm := rulesFrontMatterAll(text)
+		body := strings.Trim(fm.body, " \t\n")
+		if body == "" {
 			continue
 		}
-		if always {
+		globs := fm.globs
+		if fm.always {
 			globs = nil
 		}
-		out = append(out, claudeRule{ScopedRule{File: ClaudeRulesDir + "/" + n, Globs: globs, Text: body}, size})
+		sr := ScopedRule{File: ClaudeRulesDir + "/" + n, Globs: globs, Text: body}
+		switch fm.inclusion { // CMP-82
+		case RuleModeManual, RuleModeAuto:
+			sr.Globs, sr.Mode, sr.Name = nil, RuleModeManual, ruleName(fm.name, n)
+			if fm.inclusion == RuleModeAuto && fm.desc != "" {
+				sr.Mode, sr.Description = RuleModeAuto, fm.desc
+			}
+		}
+		out = append(out, claudeRule{sr, size})
 	}
 	return out
 }
 
-// rulesFrontMatter splits a "---" front matter off text and reads its
-// globs / paths (a comma list, a [..] list or "- item" lines) and
-// alwaysApply.
-func rulesFrontMatter(text string) (globs []string, always bool, body string) {
+// ruleFront is a rules file's front matter: globs, alwaysApply and the
+// CMP-82 keys inclusion, name and description.
+type ruleFront struct {
+	globs                 []string
+	always                bool
+	inclusion, name, desc string
+	body                  string
+}
+
+var ruleNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,47}$`)
+
+// ruleName is the #name of a rule: the front matter name when it is a
+// short lower-case word, else the file name without its extension
+// (lower case, spaces as -, other characters dropped).
+func ruleName(front, file string) string {
+	if n := strings.ToLower(strings.TrimSpace(front)); ruleNameRe.MatchString(n) {
+		return n
+	}
+	base := strings.TrimSuffix(strings.TrimSuffix(file, ".mdc"), ".md")
+	var b strings.Builder
+	for _, r := range strings.ToLower(base) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '_', r == '-':
+			b.WriteRune(r)
+		case r == ' ' || r == '.':
+			b.WriteByte('-')
+		}
+	}
+	n := strings.Trim(b.String(), "-_")
+	if len(n) > 48 {
+		n = n[:48]
+	}
+	if n == "" {
+		return "rule"
+	}
+	return n
+}
+
+// rulesFrontMatterAll splits a "---" front matter off text and reads its
+// globs / paths / fileMatchPattern (a comma list, a [..] list or "- item"
+// lines), alwaysApply, inclusion, name and description.
+func rulesFrontMatterAll(text string) (fm ruleFront) {
+	fm.body = text
 	rest, ok := strings.CutPrefix(text, "---\n")
 	if !ok {
-		return nil, false, text
+		return fm
 	}
 	head, body, ok := strings.Cut(rest, "\n---")
 	if !ok {
-		return nil, false, text
+		return fm
 	}
 	if i := strings.IndexByte(body, '\n'); i >= 0 {
-		body = body[i+1:]
+		fm.body = body[i+1:]
 	} else {
-		body = ""
+		fm.body = ""
 	}
 	inList := false
 	addGlobs := func(v string) {
 		v = strings.Trim(strings.TrimSpace(v), "[]")
 		for _, g := range strings.Split(v, ",") {
 			if g = strings.Trim(strings.TrimSpace(g), `"'`); g != "" {
-				globs = append(globs, g)
+				fm.globs = append(fm.globs, g)
 			}
 		}
 	}
+	unquote := func(v string) string { return strings.Trim(strings.TrimSpace(v), `"'`) }
 	for _, l := range strings.Split(head, "\n") {
 		t := strings.TrimSpace(l)
 		if item, ok := strings.CutPrefix(t, "- "); ok && inList {
@@ -102,16 +168,22 @@ func rulesFrontMatter(text string) (globs []string, always bool, body string) {
 			continue
 		}
 		switch strings.TrimSpace(k) {
-		case "globs", "paths":
+		case "globs", "paths", "fileMatchPattern":
 			if strings.TrimSpace(v) == "" {
 				inList = true
 			}
 			addGlobs(v)
 		case "alwaysApply":
-			always = strings.TrimSpace(v) == "true"
+			fm.always = strings.TrimSpace(v) == "true"
+		case "inclusion":
+			fm.inclusion = strings.ToLower(unquote(v))
+		case "name":
+			fm.name = unquote(v)
+		case "description":
+			fm.desc = unquote(v)
 		}
 	}
-	return globs, always, body
+	return fm
 }
 
 // loadFolderRules finds AGENTS.md and CLAUDE.md below the root (ignored,
@@ -135,7 +207,8 @@ func loadFolderRules(root, realRoot string, bytes *int) []ScopedRule {
 			continue
 		}
 		*bytes += size
-		out = append(out, ScopedRule{File: f, Dir: dir, Text: text})
+		rest, rev := SplitReviewRules(text)
+		out = append(out, ScopedRule{File: f, Dir: dir, Text: rest, Review: rev})
 	}
 	return out
 }
@@ -146,6 +219,9 @@ func (r Rules) ScopedFor(rel string) []ScopedRule {
 	rel = filepath.ToSlash(rel)
 	var out []ScopedRule
 	for _, s := range r.Scoped {
+		if s.Mode != "" { // named or offered, never by file (CMP-82)
+			continue
+		}
 		if s.Dir != "" {
 			if strings.HasPrefix(rel, s.Dir+"/") {
 				out = append(out, s)
@@ -165,12 +241,24 @@ func (r Rules) ScopedFor(rel string) []ScopedRule {
 // Preview is the rules text the trust card shows: the prompt text, or
 // the scoped rules when there is none.
 func (r Rules) Preview() string {
-	if r.Text != "" {
-		return r.Text
-	}
 	var parts []string
+	if r.Text != "" {
+		parts = append(parts, r.Text)
+	} else {
+		for _, s := range r.Scoped {
+			if s.Text != "" {
+				parts = append(parts, "# "+s.File+"\n"+s.Text)
+			}
+		}
+	}
+	// The review-only rules (CMP-37) are part of the same trust answer.
+	if r.Review != "" {
+		parts = append(parts, "# Review rules\n"+r.Review)
+	}
 	for _, s := range r.Scoped {
-		parts = append(parts, "# "+s.File+"\n"+s.Text)
+		if s.Review != "" {
+			parts = append(parts, "# Review rules, "+s.File+"\n"+s.Review)
+		}
 	}
 	return strings.Join(parts, "\n\n")
 }
@@ -202,7 +290,7 @@ func (j *RulesInjector) Inject(r Rules, rel string) string {
 	defer j.mu.Unlock()
 	var b strings.Builder
 	for _, s := range r.ScopedFor(rel) {
-		if j.seen[s.File] || j.used >= RulesMaxBytes {
+		if s.Text == "" || j.seen[s.File] || j.used >= RulesMaxBytes {
 			continue
 		}
 		if j.seen == nil {

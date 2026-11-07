@@ -1,0 +1,11 @@
+{
+  "id": "",
+  "kind": "detail",
+  "title": "Go docs",
+  "fields": [
+    {"label": "URL", "value": "https://go.dev/doc/", "kind": "mono"},
+    {"label": "Type", "value": "text/html", "kind": "text"},
+    {"label": "Length", "value": "cut (the page was longer than the limit)", "kind": "text", "tone": "warn"},
+    {"label": "Text", "value": "Hello world", "kind": "text"}
+  ]
+}
