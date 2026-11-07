@@ -466,6 +466,8 @@ missing	acp-thread	Agents|M
 missing	agent-sessions-search-all	AI|S
 missing	ai-board	AI|M
 missing	ai-chat-comments	AI|S
+missing	ai-chat-doc-revisions	AI|S
+missing	ai-chat-docs	AI|M
 missing	ai-history-search	AI|S
 missing	ai-mcp-accounts	AI|S
 missing	ai-powers	AI|S

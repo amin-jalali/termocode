@@ -327,6 +327,27 @@ commands?".
   then press `Enter`. Nothing is sent before that.
 - The old chat stays in **AI: Chat History…**.
 
+### Chat docs
+
+A chat can hold docs: Markdown files you and the AI write together, such
+as a plan, a spec or release notes. Ask "write the plan as a chat doc",
+then shape it over the chat.
+
+- The AI uses `chat_doc_list`, `chat_doc_read` and `chat_doc_write`. It
+  writes the whole text each time. Keys are hidden in what it reads.
+- **AI: Chat Docs…** lists the docs of the open chat. `Enter` opens one
+  in the editor; **New doc…** makes one. Edit and save it there; the AI
+  reads your text next time.
+- Every change is kept as a revision: who wrote it (you or the AI) and
+  when. Your own edit is kept as its own revision before the AI writes
+  again, so nothing is lost.
+- **AI: Chat Doc Revisions…** lists the revisions. Picking an old one
+  asks first (**Cancel** comes first); **Restore** makes it the current
+  text again, as a new revision.
+- The docs live in termocode's config folder (`ai/docs/<chat id>/`), not
+  in your project. At most 30 docs per chat, 256 KB each, the last 50
+  revisions of each.
+
 ### Side question
 
 Ask a quick question while the AI works, without waiting and without

@@ -19,6 +19,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
 | AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
 | AI: Chat Comments… | `ai-chat-comments` |   | `comments from people you shared the chat with` |
+| AI: Chat Doc Revisions… | `ai-chat-doc-revisions` |   |   |
+| AI: Chat Docs… | `ai-chat-docs` |   |   |
 | AI: Chat History… | `ai-history` |   |   |
 | AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |
