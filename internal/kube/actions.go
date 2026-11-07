@@ -2,7 +2,9 @@ package kube
 
 import (
 	"context"
+	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/services"
@@ -23,6 +25,21 @@ func (c Client) RolloutRestart(ctx context.Context, name string) error {
 		c.Timeout = restartTimeout
 	}
 	_, err := c.capture(ctx, append([]string{"rollout", "restart", "deployment/" + name}, c.scope(true)...)...)
+	return err
+}
+
+// Delete is `kubectl delete <kind> <name> --wait=false`: one object, in
+// the client's scope. The app asks the user first; the AI never runs it.
+// It does not wait for the object to go (a pod may take its grace
+// period); the next load shows it Terminating, then gone.
+func (c Client) Delete(ctx context.Context, kind, name string) error {
+	if kind == "" || name == "" || strings.HasPrefix(kind, "-") || strings.HasPrefix(name, "-") {
+		return errors.New("nothing to delete")
+	}
+	if c.Timeout <= 0 || c.Timeout < restartTimeout {
+		c.Timeout = restartTimeout
+	}
+	_, err := c.capture(ctx, append([]string{"delete", kind, name, "--wait=false"}, c.scope(true)...)...)
 	return err
 }
 

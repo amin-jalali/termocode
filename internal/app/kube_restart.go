@@ -14,7 +14,8 @@ import (
 //
 // r on a deployment asks first (Cancel is the first button and has the
 // focus; Esc cancels), then runs `kubectl rollout restart`. It is the
-// view's only write; the AI can not reach it (no palette id).
+// view's first write (d deletes, kube_delete.go); the AI can not reach
+// it (no palette id).
 
 // confirmKindKubeRestart is the restart card (kube_restart.go).
 const confirmKindKubeRestart confirmKindEnum = 3470
@@ -55,6 +56,9 @@ func (m *Model) askKubeRestart(d kube.Deployment) {
 
 // handleKubeConfirm runs the restart card's answer.
 func (m *Model) handleKubeConfirm(id string) (tea.Cmd, bool) {
+	if m.confirmKind == confirmKindKubeDelete && m.kube != nil {
+		return m.handleKubeDeleteConfirm(id), true // kube_delete.go
+	}
 	if m.confirmKind != confirmKindKubeRestart || m.kube == nil {
 		return nil, false
 	}

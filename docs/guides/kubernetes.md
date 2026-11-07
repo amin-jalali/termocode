@@ -2,8 +2,9 @@
 
 The **Kubernetes** view shows one cluster: the pods, deployments,
 services and jobs of one namespace. It reads the cluster with your own
-`kubectl`, so it sees what `kubectl` sees. It is read-only, with one
-exception: you can restart a deployment, after a question.
+`kubectl`, so it sees what `kubectl` sees. It is read-only, with two
+exceptions: you can restart a deployment and delete one object, each
+after a question.
 
 ## Open the view
 
@@ -61,6 +62,7 @@ kubeconfig, so other terminals keep their context.
 | `f` | Pod: start or stop a port-forward. |
 | `y` | Copy the name. |
 | `r` | Deployment: restart it (asks first). |
+| `d` | Delete the row's object (asks first). |
 | `c` / `n` | Pick the context / the namespace. |
 | `R` | Load the lists now. |
 | `?` | Show these keys. |
@@ -88,13 +90,22 @@ context, the namespace and the command (`kubectl rollout restart`).
 **Cancel** is the first button and has the focus, so `Enter` or `Esc`
 alone never restarts anything. **Restart** replaces the pods one by one.
 
+## Delete an object
+
+`d` on a pod, deployment, service or job asks first. The card shows the
+object, the context, the namespace and the command (`kubectl delete`).
+**Cancel** is the first button and has the focus, so `Enter` or `Esc`
+alone never deletes anything. **Delete** does not wait: the list shows
+the object as it goes. A pod that belongs to a deployment or a job is
+made again; deleting a deployment or a job deletes its pods too.
+
 ## The AI
 
 The AI can open the view and load it again. It can also read the
 cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
 Secrets in their answers are hidden. The AI can never restart a
-deployment, start a port-forward or switch the context.
+deployment, delete an object, start a port-forward or switch the context.
 
 ## When something is wrong
 

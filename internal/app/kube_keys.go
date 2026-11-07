@@ -66,6 +66,11 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.askKubeRestart(d)
 			return m, nil
 		}
+	case "d":
+		if have && r.kind == kubeRowItem {
+			m.askKubeDelete(kubeKindOf(r.section), r.name)
+			return m, nil
+		}
 	case "f":
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubeToggleForward(p, 0)
@@ -110,6 +115,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"i", "describe (read only)"},
 		[]string{"y", "copy the name"},
 		[]string{"r", "deployment: restart (asks first)"},
+		[]string{"d", "delete (asks first)"},
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},
 		[]string{"R", "load now"},
