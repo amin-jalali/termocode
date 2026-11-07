@@ -20,7 +20,22 @@ import { errText } from "../ui/CardSheet";
 
 const MAX_ROWS_PX = 160;
 
-export function Composer({ chat, busy, profile = "", model = "", onSent }: { chat: string; busy: boolean; profile?: string; model?: string; onSent?: () => void }) {
+export function Composer({
+  chat,
+  busy,
+  profile = "",
+  model = "",
+  onSent,
+  placeholder,
+}: {
+  chat: string;
+  busy: boolean;
+  profile?: string;
+  model?: string;
+  onSent?: () => void;
+  /** placeholder replaces the box's hint (the phone's Home asks "What do you want?"). */
+  placeholder?: string;
+}) {
   const desk = layout.value === "desktop";
   useEffect(() => takePending(chat), [chat, pendingDraft.value]);
   const text = getDraft(chat);
@@ -86,8 +101,8 @@ export function Composer({ chat, busy, profile = "", model = "", onSent }: { cha
           dir="auto"
           rows={1}
           value={text}
-          placeholder={t("chat.placeholder")}
-          aria-label={t("chat.placeholder")}
+          placeholder={placeholder ?? t("chat.placeholder")}
+          aria-label={placeholder ?? t("chat.placeholder")}
           onInput={(e) => {
             setDraft(chat, (e.currentTarget as HTMLTextAreaElement).value);
             if (note) setNote(null);

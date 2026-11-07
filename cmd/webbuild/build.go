@@ -47,6 +47,15 @@ var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML:
 // dynamic import, only when the user starts editing.
 var editorChunk = page{Name: "editor", Entry: "editor/main.ts"}
 
+// homeChunk is the phone's Home (MOB-4, home.js): the chat-first stream,
+// the chips, the quick blocks and the Panels drawer. It is built alone,
+// like the editor: the page hands it Preact, the signals, the link and
+// its views when it loads it (src/home/api.ts), so home.js has no Preact
+// of its own, the shared chunk keeps one partition (app-chunk.js), and
+// app.js and app-chunk.js do not grow with the Home. app.js loads it with
+// a dynamic import on a phone only (lib/lazy.ts).
+var homeChunk = page{Name: "home", Entry: "home/main.tsx"}
+
 // persianChunk is the Persian strings (strings-fa.js), built alone: the
 // page loads them with a dynamic import (lib/lazy.ts) only when the UI
 // language is Persian, so the phone's first files carry English only.
@@ -72,7 +81,7 @@ var monacoVim = page{Name: "monaco-vim", Entry: "monaco/vim.ts"}
 var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + homeChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -102,7 +111,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{deskChunk, appPage, editorChunk, persianChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appPage, editorChunk, homeChunk, persianChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)

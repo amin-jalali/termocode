@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services" | "ai" | "workflows" | "worktrees" | "inbox" | "projects";
 
 export interface Bye {
   t: "bye";
@@ -1794,6 +1794,53 @@ export interface WorktreeItem {
   last_seen?: number;
 }
 
+export interface InboxSnap {
+  items: InboxItem[];
+  counts: InboxCounts;
+  more?: number;
+}
+
+export interface InboxItem {
+  id: string;
+  ws?: string;
+  kind: "card" | "run" | "lane" | "workflow" | "task" | "ci" | "race";
+  ref: string;
+  title: string;
+  lane?: string;
+  chat?: string;
+  since: number;
+  state: "needs_you" | "working" | "failed" | "done";
+  can?: string[];
+}
+
+export interface InboxCounts {
+  needs_you: number;
+  working: number;
+  failed: number;
+  done: number;
+}
+
+export interface ProjectsSnap {
+  state: "loading" | "ready";
+  projects: ProjectItem[];
+  working?: number;
+  waiting?: number;
+  more?: number;
+}
+
+export interface ProjectItem {
+  id: string;
+  name: string;
+  where: string;
+  state: "here" | "running" | "asleep";
+  attached?: boolean;
+  service?: boolean;
+  recent?: boolean;
+  working?: number;
+  waiting?: number;
+  opened_at?: number;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -3457,6 +3504,8 @@ export interface TopicData {
   "ai": { snap: AISnap; delta: AISnap };
   "workflows": { snap: WorkflowsSnap; delta: WorkflowsSnap };
   "worktrees": { snap: WorktreesSnap; delta: WorktreesSnap };
+  "inbox": { snap: InboxSnap; delta: InboxSnap };
+  "projects": { snap: ProjectsSnap; delta: ProjectsSnap };
 }
 
 // The data of an ev message, by kind.
