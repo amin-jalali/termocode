@@ -381,6 +381,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Copy Remote Link to Line | `git-copy-line-link` |   |   |
 | Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Gist from File… | `git-gist` |   | `share the active file as a GitHub gist (gh)` |
+| Git: Create GitLab Merge Request… | `git-gitlab-mr-create` |   | `from the current branch into the default branch` |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
 | Git: Create Tag… | `git-tag-create` |   |   |
 | Git: Delete Branch… | `git-branch-delete` |   |   |
@@ -403,6 +404,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Focus Source Control | `git-focus` |   |   |
 | Git: Force Push (with Lease)… | `git-push-force` |   |   |
 | Git: Generate Commit Message with AI | `git-ai-commit-msg` |   |   |
+| Git: GitLab Merge Requests… | `git-gitlab-mrs` |   | `the open merge requests of the GitLab remote; Enter opens one` |
 | Git: Go to Commit… | `git-goto-commit` |   |   |
 | Git: Go to HEAD in GRAPH | `git-graph-head` |   | `@` |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
@@ -460,6 +462,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Run Before-Commit Checks | `git-commit-checks` |   | `the checks of Settings → Git on what is staged; no commit` |
 | Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Search Log… | `git-log-search` |   |   |
+| Git: Set GitLab Token… | `git-gitlab-token` |   | `saved in the secret store for this GitLab host` |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
 | Git: Set Upstream Branch… | `git-upstream-set` |   |   |
 | Git: Show Contributors | `git-contributors` |   | `the authors of this branch and their commit counts` |

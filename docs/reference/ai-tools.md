@@ -2178,6 +2178,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-fixup` | Git: Fixup Staged Changes Into… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-focus` | Git: Focus Source Control | auto |   |
 | `git-gist` | Git: Create Gist from File… | never | publishes a file of the user on GitHub; only the user does that |
+| `git-gitlab-mr-create` | Git: Create GitLab Merge Request… | never | publishes a merge request in the user's name; only the user creates one |
+| `git-gitlab-mrs` | Git: GitLab Merge Requests… | auto |   |
+| `git-gitlab-token` | Git: Set GitLab Token… | never | a token is typed by the user only |
 | `git-goto-commit` | Git: Go to Commit… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
 | `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
