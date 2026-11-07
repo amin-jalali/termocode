@@ -77,6 +77,7 @@ when something changed. When you hide the view (another activity item,
 | `b` | on an image: show its remote tags; in REGISTRIES: browse the tags of a repository |
 | `s` | in REGISTRIES: search Docker Hub |
 | `P` / `h` | push an image (asks first) / image history |
+| `c` / `C` | on an image: scan it for vulnerabilities / make its SBOM (needs docker scout, trivy, grype or syft) |
 | `n` | create a network or volume; connect a registry |
 | `d` | read volume disk usage (on VOLUMES) |
 | `z` | prune what the section heading offers (asks first) |
@@ -175,6 +176,14 @@ command before opening a terminal tab. `h` opens image history, `i` opens
 read-only image details, and `D` removes an image only when no container uses
 it. `z` on the IMAGES heading asks before pruning dangling images; it never
 removes tagged images.
+
+`c` on an image scans it for known vulnerabilities with the scanner you
+have installed (trivy, then grype, then docker scout). The findings open as
+a read-only page, most severe first, and a toast gives the count per
+severity. `C` makes a CycloneDX SBOM (the list of software in the image)
+with syft, trivy or docker scout and opens it as read-only JSON. Both only
+read the image. With no scanner installed, a toast says what to install.
+The first scan can take minutes while the scanner downloads its database.
 
 NETWORKS and VOLUMES show their driver and scope. `Space` expands a row and
 checks which containers use it. `n` asks for a name and creates a network or

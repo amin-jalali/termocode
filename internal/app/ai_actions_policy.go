@@ -449,6 +449,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-image-run":         aiNever("running an image is the user's; nothing is offered to the model (containers_control starts existing containers)"),
 	"containers-image-history":     aiAuto(),
 	"containers-image-inspect":     aiAuto(),
+	"containers-image-scan":        aiNever("a scan runs an outside scanner for minutes and may download its database; it is the user's"),
+	"containers-image-sbom":        aiNever("an SBOM runs an outside tool for minutes; it is the user's"),
 	"containers-image-remove":      aiNever("removing is the user's; nothing is offered to the model"),
 	"containers-prune":             aiNever("pruning containers is the user's; nothing is offered to the model"),
 	"containers-system-prune":      aiNever("pruning the system is the user's; nothing is offered to the model"),

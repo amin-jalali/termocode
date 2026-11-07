@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/services"
@@ -17,23 +19,34 @@ import (
 const ScanTimeout = 10 * time.Minute
 
 // NoScannerHint is shown when no scanner is installed.
-const NoScannerHint = "No image scanner found. Install trivy or grype (and syft for SBOMs), then try again."
+const NoScannerHint = "No image scanner found. Install docker scout, trivy or grype (and syft for SBOMs), then try again."
 
 // Scanner is one installed image scanner or SBOM tool.
 type Scanner struct {
-	Name   string // trivy, grype or syft
-	Binary string
+	Name   string // trivy, grype, scout or syft
+	Binary string // for scout: the docker CLI that runs the plugin
 }
 
-var scannerOrder = []string{"trivy", "grype", "syft"}
+var scannerOrder = []string{"trivy", "grype", "scout", "syft"}
 
-// FindScanners lists the installed tools in a fixed order.
+// FindScanners lists the installed tools in a fixed order. docker scout
+// is a docker CLI plugin: it counts when "docker-scout" is found and
+// the docker CLI is there to run it.
 func FindScanners(lookPath func(string) (string, error)) []Scanner {
 	if lookPath == nil {
 		lookPath = exec.LookPath
 	}
 	var out []Scanner
 	for _, n := range scannerOrder {
+		if n == "scout" {
+			if _, err := lookPath("docker-scout"); err != nil {
+				continue
+			}
+			if p, err := lookPath("docker"); err == nil {
+				out = append(out, Scanner{Name: n, Binary: p})
+			}
+			continue
+		}
 		if p, err := lookPath(n); err == nil {
 			out = append(out, Scanner{Name: n, Binary: p})
 		}
@@ -41,7 +54,33 @@ func FindScanners(lookPath func(string) (string, error)) []Scanner {
 	return out
 }
 
-func canScan(name string) bool { return name == "trivy" || name == "grype" }
+// PluginLookPath is lookPath that also finds "docker-scout" in the docker
+// CLI plugin folders (~/.docker/cli-plugins and the system ones).
+func PluginLookPath(lookPath func(string) (string, error), exists func(string) bool, home string) func(string) (string, error) {
+	if lookPath == nil {
+		lookPath = exec.LookPath
+	}
+	return func(name string) (string, error) {
+		p, err := lookPath(name)
+		if err == nil || name != "docker-scout" || exists == nil {
+			return p, err
+		}
+		var dirs []string
+		if home != "" {
+			dirs = append(dirs, filepath.Join(home, ".docker", "cli-plugins"))
+		}
+		dirs = append(dirs, "/usr/local/lib/docker/cli-plugins", "/usr/local/libexec/docker/cli-plugins",
+			"/usr/lib/docker/cli-plugins", "/usr/libexec/docker/cli-plugins")
+		for _, d := range dirs {
+			if f := filepath.Join(d, name); exists(f) {
+				return f, nil
+			}
+		}
+		return "", err
+	}
+}
+
+func canScan(name string) bool { return name == "trivy" || name == "grype" || name == "scout" }
 
 // PickScanner picks the vulnerability scanner: the preferred one when
 // installed, else the first one that can scan.
@@ -77,6 +116,8 @@ func ScanArgv(s Scanner, image string) ([]string, error) {
 		return []string{s.Binary, "image", "--format", "json", "--quiet", "--", image}, nil
 	case "grype":
 		return []string{s.Binary, "-o", "json", "-q", "--", image}, nil
+	case "scout":
+		return []string{s.Binary, "scout", "cves", "--format", "gitlab", "--", image}, nil
 	}
 	return nil, fmt.Errorf("%s cannot scan for vulnerabilities", s.Name)
 }
@@ -97,7 +138,12 @@ func SBOMArgv(found []Scanner, image string) ([]string, error) {
 			return []string{s.Binary, "image", "--format", "cyclonedx", "--quiet", "--", image}, nil
 		}
 	}
-	return nil, errors.New("no SBOM tool found: install syft or trivy")
+	for _, s := range found {
+		if s.Name == "scout" {
+			return []string{s.Binary, "scout", "sbom", "--format", "cyclonedx", "--", image}, nil
+		}
+	}
+	return nil, errors.New("no SBOM tool found: install syft, trivy or docker scout")
 }
 
 // Vuln is one finding of a scan.
@@ -164,6 +210,34 @@ func ParseVulnReport(scanner string, data []byte) ([]Vuln, error) {
 				FixedIn: strings.Join(v.Fix.Versions, ", "), Severity: normSeverity(v.Severity), Title: v.Description})
 		}
 		return out, nil
+	case "scout":
+		// docker scout cves --format gitlab: the container scanning report.
+		var r struct {
+			Vulnerabilities []struct {
+				Name, Severity, Solution, Description string
+				Location                              struct {
+					Dependency struct {
+						Package struct{ Name string }
+						Version string
+					}
+				}
+				Identifiers []struct{ Value string }
+			}
+		}
+		if err := json.Unmarshal(data, &r); err != nil {
+			return nil, fmt.Errorf("cannot read docker scout report: %w", err)
+		}
+		var out []Vuln
+		for _, v := range r.Vulnerabilities {
+			id := v.Name
+			if len(v.Identifiers) > 0 && v.Identifiers[0].Value != "" {
+				id = v.Identifiers[0].Value
+			}
+			d := v.Location.Dependency
+			out = append(out, Vuln{ID: id, Package: d.Package.Name, Installed: d.Version,
+				FixedIn: v.Solution, Severity: normSeverity(v.Severity), Title: v.Description})
+		}
+		return out, nil
 	}
 	return nil, fmt.Errorf("unknown scanner %q", scanner)
 }
@@ -221,4 +295,52 @@ func ScanImage(ctx context.Context, x services.Exec, s Scanner, image string) ([
 	}
 	SortVulns(v)
 	return v, nil
+}
+
+// GenerateSBOM runs the SBOM tool on image and returns its CycloneDX JSON.
+func GenerateSBOM(ctx context.Context, x services.Exec, found []Scanner, image string) (string, error) {
+	argv, err := SBOMArgv(found, image)
+	if err != nil {
+		return "", err
+	}
+	if x == nil {
+		x = services.SpawnExec{}
+	}
+	ctx, cancel := context.WithTimeout(ctx, ScanTimeout)
+	defer cancel()
+	out, _, code, err := x.Capture(ctx, "", argv...)
+	if err != nil {
+		return "", err
+	}
+	if code != 0 {
+		return "", fmt.Errorf("%s exited %d", filepath.Base(argv[0]), code)
+	}
+	return out, nil
+}
+
+// FormatVulnReport is the read-only page of a scan: a title, the
+// summary and one table row per finding (most severe first).
+func FormatVulnReport(image, scanner string, v []Vuln) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Vulnerability scan of %s (%s)\n", image, scanner)
+	fmt.Fprintf(&b, "Summary: %s\n", SummarizeVulns(v))
+	if len(v) == 0 {
+		return b.String()
+	}
+	b.WriteString("\n")
+	w := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "SEVERITY\tID\tPACKAGE\tINSTALLED\tFIXED IN\tTITLE")
+	for _, x := range v {
+		title := strings.Join(strings.Fields(x.Title), " ")
+		if r := []rune(title); len(r) > 80 {
+			title = string(r[:79]) + "…"
+		}
+		fixed := x.FixedIn
+		if fixed == "" {
+			fixed = "-"
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", x.Severity, x.ID, x.Package, x.Installed, fixed, title)
+	}
+	_ = w.Flush()
+	return b.String()
 }

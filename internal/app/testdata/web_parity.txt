@@ -455,6 +455,8 @@ excluded	workflow-edit-file	laptop only: workflow files are edited and trusted o
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
 missing	containers-image-build	Containers|M
+missing	containers-image-sbom	Containers|S
+missing	containers-image-scan	Containers|S
 missing	db-ai-explain-query	Databases|S
 missing	db-ai-fix-error	Databases|S
 missing	db-ai-generate-sql	Databases|S

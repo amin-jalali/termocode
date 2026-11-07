@@ -886,6 +886,14 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if _, ref, ok := m.selectedImage(); ok {
 			return m, m.imageHistory(ref)
 		}
+	case "c":
+		if _, ref, ok := m.selectedImage(); ok {
+			return m, m.imageScan("scan", ref)
+		}
+	case "C":
+		if _, ref, ok := m.selectedImage(); ok {
+			return m, m.imageScan("sbom", ref)
+		}
 
 	case "tab":
 		m.servicesJumpSection(1)
@@ -958,6 +966,8 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"P", "push (asks first)"},
 			[]string{"t", "tag"},
 			[]string{"h", "history"},
+			[]string{"c", "scan for vulnerabilities"},
+			[]string{"C", "SBOM (software list)"},
 			[]string{"i", "inspect"},
 			[]string{"y", "copy the id"},
 			[]string{"D", "remove (asks first)"})
@@ -1400,6 +1410,8 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-image-run", Title: "Containers: Run Selected Image…"},
 		{ID: "containers-image-history", Title: "Containers: Show Image History"},
 		{ID: "containers-image-inspect", Title: "Containers: Inspect Image"},
+		{ID: "containers-image-scan", Title: "Containers: Scan Selected Image for Vulnerabilities"},
+		{ID: "containers-image-sbom", Title: "Containers: Make SBOM of Selected Image"},
 		{ID: "containers-image-remove", Title: "Containers: Remove Selected Image…"},
 		{ID: "containers-prune", Title: "Containers: Prune Stopped Containers…"},
 		{ID: "containers-image-prune", Title: "Containers: Prune Dangling Images…"},
@@ -1677,6 +1689,11 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				if _, ref, ok := m.selectedImage(); ok {
 					return m.imageInspect(ref)
 				}
+			case "containers-image-scan", "containers-image-sbom":
+				if _, ref, ok := m.selectedImage(); ok {
+					return m.imageScan(strings.TrimPrefix(id, "containers-image-"), ref)
+				}
+				return m.servicesToast(toast.Info, "Select an image row first", "")
 			case "containers-image-remove":
 				if im, ref, ok := m.selectedImage(); ok {
 					return m.askImageRemoveRef(im, ref)

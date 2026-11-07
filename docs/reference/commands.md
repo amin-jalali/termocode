@@ -138,6 +138,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Inspect | `containers-inspect` |   |   |
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
+| Containers: Make SBOM of Selected Image | `containers-image-sbom` |   |   |
 | Containers: Open Compose File | `services-open-compose` |   |   |
 | Containers: Open Engine Config | `containers-engine-config` |   |   |
 | Containers: Open Guide | `containers-help` |   |   |
@@ -165,6 +166,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Restart Service… | `services-restart` |   |   |
 | Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
+| Containers: Scan Selected Image for Vulnerabilities | `containers-image-scan` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Show Resolved Compose Config | `services-compose-config` |   |   |

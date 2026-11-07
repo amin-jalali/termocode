@@ -122,6 +122,7 @@ type servicesState struct {
 	containerGen        uint64
 	containerRows       []containers.Container
 	containerMarks      map[string]bool // CTX-23: container id → marked for a bulk action
+	imageScanBusy       map[string]bool // CTX-18: "scan:ref" / "sbom:ref" while a scanner runs
 	imageRows           []containers.Image
 	networkRows         []containers.Network
 	volumeRows          []containers.Volume
@@ -598,6 +599,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainerGroupDone(msg), true
 	case imagePageMsg:
 		return m.onImagePage(msg), true
+	case imageScanMsg:
+		return m.onImageScan(msg), true
 	case composeConfigMsg:
 		return m.onComposeConfig(msg), true
 	case hostActionDoneMsg:

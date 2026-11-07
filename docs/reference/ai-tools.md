@@ -2020,6 +2020,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-image-push` | Containers: Push Selected Image… | never | pushing an image is the user's; nothing is offered to the model |
 | `containers-image-remove` | Containers: Remove Selected Image… | never | removing is the user's; nothing is offered to the model |
 | `containers-image-run` | Containers: Run Selected Image… | never | running an image is the user's; nothing is offered to the model (containers_control starts existing containers) |
+| `containers-image-sbom` | Containers: Make SBOM of Selected Image | never | an SBOM runs an outside tool for minutes; it is the user's |
+| `containers-image-scan` | Containers: Scan Selected Image for Vulnerabilities | never | a scan runs an outside scanner for minutes and may download its database; it is the user's |
 | `containers-image-tag` | Containers: Tag Selected Image… | never | tagging an image is the user's; nothing is offered to the model |
 | `containers-inspect` | Containers: Inspect | auto |   |
 | `containers-logs` | Containers: Follow Logs | auto |   |
