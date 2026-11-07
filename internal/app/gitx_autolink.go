@@ -119,7 +119,7 @@ func (m *Model) gitOpenWebLink(link string) tea.Cmd {
 // gitAutoLinkDir is the repo the links are read in: the workspace, so
 // a hash opens in the commit view of the same repo.
 func (m *Model) gitAutoLinkDir() string {
-	dir, err := m.rootDir()
+	dir, err := m.gitRootDir()
 	if err != nil {
 		return ""
 	}

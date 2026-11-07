@@ -67,7 +67,7 @@ func (m *Model) gitLoadCommitHistory() {
 		return
 	}
 	m.gitCommitHistLoaded = true
-	if cwd, err := m.rootDir(); err == nil {
+	if cwd, err := m.gitRootDir(); err == nil {
 		m.gitCommitHist, _ = git.RecentMessages(cwd, gitHistMax)
 	}
 }
@@ -113,7 +113,7 @@ func (m *Model) gitFillCommitTemplate() {
 		return
 	}
 	m.gitCommitTplTried = true
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return
 	}
@@ -180,7 +180,7 @@ func (m *Model) gitOpenCommitEditor() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -250,7 +250,7 @@ func (m *Model) openCoAuthorPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

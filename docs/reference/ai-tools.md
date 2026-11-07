@@ -2237,6 +2237,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-refresh` | Git: Refresh Status | auto |   |
 | `git-remotes` | Git: Manage Remotes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-repo-pick` | Git: Switch Repository… | auto |   |
 | `git-rev-next` | Git: Open Next Revision of File | auto |   |
 | `git-rev-prev` | Git: Open Previous Revision of File | auto |   |
 | `git-signing-toggle` | Git: Toggle Commit Signing (This Repository) | never | changes how the user's commits are signed; only the user does that |
@@ -2252,6 +2253,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-stash-options` | Git: Stash… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_stash) |
 | `git-stash-pop` | Git: Pop Latest Stash | confirm (git) |   |
 | `git-status-blame` | Git: Toggle Blame in Status Bar | auto |   |
+| `git-submodule-update` | Git: Update Submodules… | confirm (git) |   |
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
 | `git-tag-create` | Git: Create Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-tag-delete` | Git: Delete Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |

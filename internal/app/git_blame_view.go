@@ -201,7 +201,7 @@ func (m *Model) gitBlameTarget() (cwd, rel, rev string, ok bool) {
 	if p == "" {
 		return "", "", "", false
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return "", "", "", false
 	}
@@ -524,7 +524,7 @@ func (m *Model) gitBlameBefore() tea.Cmd {
 	if l.PrevHash == "" {
 		return m.gitBlameToast(toast.Info, "This is the line's first commit", l.Hash+" · "+l.Subject)
 	}
-	cwd, _ := m.rootDir()
+	cwd, _ := m.gitRootDir()
 	prev := l.PrevHash[:min(7, len(l.PrevHash))]
 	return gitRevisionCmd(cwd, prev, l.PrevPath, max(l.OrigLine, 1), true, "Before "+l.Hash+" · "+l.Subject)
 }

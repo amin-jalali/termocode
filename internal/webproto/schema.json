@@ -3311,6 +3311,34 @@
       "phase": "v2"
     },
     {
+      "op": "git.stash_show",
+      "args": "GitStashShowArgs",
+      "result": "GitDiff",
+      "role": "viewer",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stash_act",
+      "args": "GitStashActArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.reflog",
       "args": "EmptyArgs",
       "result": "GitReflog",
@@ -8776,6 +8804,12 @@
         },
         "repo": {
           "type": "boolean"
+        },
+        "stashes": {
+          "items": {
+            "$ref": "#/defs/GitStashEntry"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -8785,6 +8819,30 @@
         "log"
       ],
       "additionalProperties": true
+    },
+    "GitStashActArgs": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "do": {
+          "enum": [
+            "apply",
+            "pop",
+            "drop",
+            "branch"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "do"
+      ],
+      "additionalProperties": false
     },
     "GitStashArgs": {
       "type": "object",
@@ -8830,6 +8888,21 @@
     "GitStashRefArgs": {
       "type": "object",
       "properties": {
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "GitStashShowArgs": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer"
+        },
         "ref": {
           "type": "string"
         }
