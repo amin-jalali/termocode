@@ -74,6 +74,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onMCPInsertPicked(id), true
 	case pickerKindAIMemory: // ai_memory_picker.go
 		return m.onAIMemoryPicked(id), true
+	case pickerKindCanvas: // CMP-92: canvas_ui.go
+		return m.onCanvasPicked(id), true
+	case pickerKindCanvasCard:
+		return m.onCanvasActionPicked(id), true
 	case pickerKindAISkills: // ai_skills.go
 		return m.onAISkillsPicked(id), true
 	case pickerKindAIPowers: // ai_powers.go
@@ -136,6 +140,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onWTBgTask(value), true
 	case promptKindBugspecTitle: // bugspec_ui.go
 		return m.onBugspecTitle(value), true
+	case promptKindCanvasAdd, promptKindCanvasTitle, promptKindCanvasNote: // CMP-92: canvas_ui.go
+		return m.onCanvasPrompt(m.promptKind, value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
@@ -243,6 +249,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTRunTrust(id), true
 	case confirmKindWTCtlLink: // worktrees_notes.go
 		return m.answerWTCtlLink(id), true
+	case confirmKindCanvasDelete: // CMP-92: canvas_ui.go
+		return m.answerCanvasDelete(id), true
 	case confirmKindWTSleep: // worktrees_sleep.go
 		return m.answerWTSleep(id), true
 	case confirmKindWTArchive: // worktrees_archive.go
@@ -402,6 +410,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTRunTrust("") // Esc: no answer, nothing runs
 	case confirmKindWTCtlLink:
 		return m.answerWTCtlLink("") // Esc: Deny
+	case confirmKindCanvasDelete:
+		return m.answerCanvasDelete("") // Esc: Cancel
 	case confirmKindWTSleep:
 		return m.answerWTSleep("") // Esc: Keep running
 	case confirmKindWTArchive:

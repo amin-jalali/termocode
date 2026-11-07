@@ -73,6 +73,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`worktrees_list`](#worktrees_list) | auto | yes | List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done), what it waits for and the last note. |
 | [`worktree_note`](#worktree_note) | auto | yes | Leave a short note (one line, at most 500 characters) and / or a status on a worktree, so the user sees what you do there in the WORKTREES view. |
 | [`worktree_block`](#worktree_block) | auto | yes | Record that the work in one worktree waits for the work in another (a task dependency across agents), or drop it with remove. |
+| [`canvas_read`](#canvas_read) | auto | no | Read the shared plan of this workspace: the cards the user and you keep together, in order, with id, status (to do, doing, done), who wrote each, whether the user approved it, its note and files. |
+| [`canvas_update`](#canvas_update) | auto | no | Change the shared plan of this workspace (the user sees it in Canvas: Open Shared Plan). |
 | [`lsp_servers`](#lsp_servers) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the language servers termocode installs (like the manager picker). |
 | [`dap_adapters`](#dap_adapters) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the debug adapters termocode installs (like the manager picker). |
 | [`extensions`](#extensions) | list: auto<br>run: confirm (run)<br>reload: confirm (run)<br>log: auto | no | termocode's Lua extensions (~/.config/termocode/extensions). |
@@ -853,6 +855,28 @@ Record that the work in one worktree waits for the work in another (a task depen
 | `waits_for` | string | yes | the worktree it waits for: a path, branch or name from worktrees_list |
 | `remove` | boolean |   | optional: drop the dependency instead |
 | `worktree` | string |   | optional: the worktree that waits (a path or branch from worktrees_list); the workspace's worktree when left out |
+
+### canvas_read
+
+Read the shared plan of this workspace: the cards the user and you keep together, in order, with id, status (to do, doing, done), who wrote each, whether the user approved it, its note and files.
+
+**Gate:** auto
+
+**MCP server:** no
+
+No arguments.
+
+### canvas_update
+
+Change the shared plan of this workspace (the user sees it in Canvas: Open Shared Plan). Use it to propose steps (add), keep the plan current while you work (status doing / done), refine a card (edit) or reorder (move). A card you add waits for the user's OK; editing an approved card's title or note takes its OK away. You cannot approve cards, and you can only remove cards you added that the user has not approved. Read the plan with canvas_read first.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `changes` | array | yes | the changes, applied in order (at most 30) |
 
 ### lsp_servers
 
@@ -2140,6 +2164,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `buffer-info` | View: Show Buffer Info | auto |   |
 | `bugfix-spec-fix` | AI: Fix Bug from Spec… | never | starts a chat with the user; the user reads the fix prompt and sends it |
 | `bugfix-spec-new` | AI: New Bugfix Spec… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user names the bug and fills in the spec |
+| `canvas-add` | Canvas: Add Card… | never | opens a picker or prompt that only the user can answer; use a typed tool; add cards with canvas_update |
+| `canvas-copy` | Canvas: Copy Plan as Markdown | never | writes the user's clipboard; read the plan with canvas_read |
+| `canvas-open` | Canvas: Open Shared Plan | never | opens a picker or prompt that only the user can answer; use a typed tool; read the plan with canvas_read |
 | `cheat-sheet` | Help: Show Shortcuts | auto |   |
 | `clipboard-history` | Edit: Clipboard History | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `close-buffer` | View: Close Editor | confirm (ide) |   |

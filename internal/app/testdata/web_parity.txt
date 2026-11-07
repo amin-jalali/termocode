@@ -470,6 +470,9 @@ missing	ai-proofs	AI|S
 missing	ai-run-task-list	AI|M
 missing	bugfix-spec-fix	AI|S
 missing	bugfix-spec-new	AI|S
+missing	canvas-add	AI|S
+missing	canvas-copy	AI|S
+missing	canvas-open	AI|M
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S

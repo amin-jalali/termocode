@@ -252,6 +252,31 @@ is set per chat.
   next message starts it again.
 - The AI can not turn it on. Each auto turn costs like a normal one.
 
+### Shared plan (Canvas)
+
+The shared plan is one list of cards per workspace that you and the AI
+both keep. Use it for work that spans many chats or runs: the AI
+proposes steps, you approve and reorder them, and the AI marks them
+doing and done while it works.
+
+- **Canvas: Open Shared Plan** lists the cards in order: ☐ to do,
+  ◐ doing, ☑ done, with **by AI** and **needs your OK** on the right.
+  `Enter` on a card gives its actions: mark to do / doing / done,
+  **Approve**, move up / down / to the top, edit the title or the note,
+  copy the title, **Delete…** (it asks first; **Cancel** is first).
+- **Canvas: Add Card…** adds a card at the end. Your own cards are
+  approved at once.
+- **Canvas: Copy Plan as Markdown** copies the plan as a checklist.
+- The AI reads the plan with `canvas_read` and changes it with
+  `canvas_update`. It asks nothing, because it can not do harm: a card
+  it adds waits for your OK, editing an approved card's text takes the
+  OK away, it can never approve a card, and it can only remove its own
+  cards that you have not approved. A toast says what it changed.
+- Secrets in a title or note are hidden before the card is saved.
+
+The plan is saved in `.termocode/canvas.json` of the workspace, so it
+stays with the project.
+
 ### Old chats and handoff
 
 The AI can look at your saved chats when you ask, for example "what did

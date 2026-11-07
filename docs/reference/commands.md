@@ -131,6 +131,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Bookmarks: Show List | `bookmark-list` | `Shift+F3` | `Shift+F3` |
 | Bookmarks: Toggle on Current Line | `bookmark-toggle` | `F3` | `F3` |
 
+## Canvas
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Canvas: Add Card… | `canvas-add` |   |   |
+| Canvas: Copy Plan as Markdown | `canvas-copy` |   |   |
+| Canvas: Open Shared Plan | `canvas-open` |   |   |
+
 ## Containers
 
 | Title | ID | Key | Hint |
