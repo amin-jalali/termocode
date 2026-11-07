@@ -1,0 +1,10 @@
+{
+  "id": "mcp",
+  "kind": "status",
+  "title": "fake · fails",
+  "source": "mcp.fake.fails",
+  "items": [
+    {"id": "error", "title": "it broke", "tone": "bad"}
+  ],
+  "state": "bad"
+}
