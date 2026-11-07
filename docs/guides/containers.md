@@ -229,6 +229,42 @@ branches all work there (git must be in the image). Staging one hunk is
 not there yet; use the terminal for it. **Replace in Workspace** reads
 and writes the files through the container too.
 
+**File: Download** and **File: Upload** work in a container workspace
+too. A download first copies the file or folder out of the container
+into a private temp folder on this computer, then saves it like any
+download (Downloads folder, kitty, iTerm2, or the scp card); the temp
+copy is removed when the download ends. An upload first takes the files
+from your computer the usual way, then a card with **Cancel** first asks
+before it copies them into the container folder. Nothing in the
+container is replaced: a name that is already there gets ` (1)`. New
+files belong to the user the workspace runs as.
+
+#### Containers on another machine (ssh://)
+
+On an engine context over `ssh://` (or `tcp://`), every engine command
+opens a new connection, so each small file operation is slow. termocode
+then keeps one `sh` open in the container for the workspace and sends
+the short commands (listing a folder, rename, delete, git status…)
+through it. It is the image's own shell; nothing is copied into the
+container, and it is closed when termocode quits. If that shell stops,
+termocode goes back to one command per call, with the same results.
+
+Copies (open, save, download, upload) still open a connection each. To
+make them fast, let ssh reuse one connection. Add this to
+`~/.ssh/config` for the host of the context:
+
+```
+Host prod
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%r@%h:%p
+  ControlPersist 10m
+```
+
+**Help: Run Doctor** lists each docker context over ssh under
+`containers` and says whether ssh reuses its connection, with the lines
+to add when it does not. The check only reads your config; it
+connects to nothing.
+
 ### Reopen in a dev container
 
 **Workspace: Reopen in Dev Container…** reads the project's

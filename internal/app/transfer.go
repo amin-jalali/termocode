@@ -262,6 +262,14 @@ func (m *Model) downloadPath(path string) tea.Cmd {
 	if path == "" {
 		return m.pushToastDetail(toast.Warn, "Nothing to download", "Pick a file or folder in the explorer.")
 	}
+	if h, _, ok := m.containerXfer(); ok { // transfer_container.go
+		return m.containerDownload(h, path)
+	}
+	return m.downloadLocal(path)
+}
+
+// downloadLocal is downloadPath for a path on this computer.
+func (m *Model) downloadLocal(path string) tea.Cmd {
 	if m.xfer != nil {
 		return m.pushToastDetail(toast.Warn, "A download is running", "Wait for it, or run File: Cancel Download.")
 	}
@@ -412,6 +420,9 @@ func (m *Model) uploadTo(dir string) tea.Cmd {
 	if dir == "" {
 		return nil
 	}
+	if h, fsys, ok := m.containerXfer(); ok { // transfer_container.go
+		return m.containerUpload(h, fsys, dir)
+	}
 	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
 		return m.pushToastDetail(toast.Warn, "Upload needs a folder", dir)
 	}
@@ -423,16 +434,21 @@ func (m *Model) uploadTo(dir string) tea.Cmd {
 	case transfer.Local:
 		return m.localUpload(dir)
 	case transfer.Kitty:
-		m.extras.xfer = xferPending{path: dir, upload: true, method: transfer.Kitty}
-		m.prompt = prompt.New("Upload with kitty", "File or folder on your computer:", "~/")
-		m.prompt.SetSize(m.w, m.h)
-		m.promptOpen = true
-		m.promptKind = promptKindUploadSource
-		return nil
+		return m.kittyUploadPrompt(dir)
 	case transfer.ITerm2:
 		return uploadExecCmd(transfer.ITerm2, "", dir)
 	}
 	return m.openXferFallback(xferPending{path: dir, upload: true}, sup.Terminal, sup.Why)
+}
+
+// kittyUploadPrompt asks which file kitty should send into dir.
+func (m *Model) kittyUploadPrompt(dir string) tea.Cmd {
+	m.extras.xfer = xferPending{path: dir, upload: true, method: transfer.Kitty}
+	m.prompt = prompt.New("Upload with kitty", "File or folder on your computer:", "~/")
+	m.prompt.SetSize(m.w, m.h)
+	m.promptOpen = true
+	m.promptKind = promptKindUploadSource
+	return nil
 }
 
 // onUploadSource is the kitty prompt's answer.
@@ -668,6 +684,9 @@ func (m *Model) cancelDownload() tea.Cmd {
 // handleXferMsg handles the transfer messages.
 func (m *Model) handleXferMsg(msg tea.Msg) (tea.Cmd, bool) {
 	var c tea.Cmd
+	if c, ok := m.handleCtrXferMsg(msg); ok {
+		return c, true
+	}
 	switch msg := msg.(type) {
 	case xferProgressMsg:
 		if m.xfer == nil {
@@ -683,6 +702,7 @@ func (m *Model) handleXferMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return tea.Batch(c, waitXfer(m.xfer.ch)), true
 	case xferDoneMsg:
 		m.xfer = nil
+		m.dropCtrDownloadStage() // transfer_container.go
 		m.toast = m.toast.Dismiss(xferToastKey)
 		switch {
 		case errors.Is(msg.err, transfer.ErrCanceled), errors.Is(msg.err, context.Canceled):
@@ -714,6 +734,9 @@ func (m *Model) handleXferMsg(msg tea.Msg) (tea.Cmd, bool) {
 		}
 		return localUploadCmd(msg.dir, msg.paths), true
 	case xferUploadDoneMsg:
+		if c, ok := m.onCtrUploadStaged(msg); ok { // transfer_container.go
+			return c, true
+		}
 		m.explorer.Reload()
 		switch {
 		case errors.Is(msg.err, transfer.ErrCanceled), errors.Is(msg.err, context.Canceled):

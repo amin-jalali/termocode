@@ -300,6 +300,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onNvimExitedConfirm(id)
 	case confirmKindTransferLarge, confirmKindTransferFallback:
 		return m.onXferConfirm(m.confirmKind, id)
+	case confirmKindContainerWSUpload: // transfer_container.go
+		return m.onContainerWSUploadConfirm(id)
 	}
 	return nil
 }
