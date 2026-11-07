@@ -26,6 +26,7 @@ import { ReqError } from "../../net/link";
 import { forgetToken } from "../../net/auth";
 import { forgetThisBrowser } from "../../net/devicekey";
 import { link, live } from "../../session";
+import { t } from "../../strings";
 import { tp } from "../../strings.phone";
 import { useArming } from "../../ui/arming";
 import { Button } from "../../ui/Button";
@@ -126,8 +127,8 @@ function Row({ k, v }: { k: string; v: string }) {
 }
 
 const onOff = [
-  { value: "off", label: tp("ph.phone_off") },
-  { value: "on", label: tp("ph.phone_on") },
+  { value: "off", label: t("ph.off") },
+  { value: "on", label: t("ph.on") },
 ] as const;
 
 function ForgetSheet() {
@@ -327,7 +328,7 @@ export function ThisPhone() {
         <div class="phone-line is-error" role="alert">
           <span>✗ {tp("ph.failed")}</span>{" "}
           <Button small needsLink onClick={() => void read()}>
-            {tp("ph.phone_retry")}
+            {tp("ph.retry")}
           </Button>
         </div>
       )}

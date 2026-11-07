@@ -88,10 +88,10 @@ func TestRaceCompareStyles(t *testing.T) {
 
 // Its words are English only (the phone app is English only).
 func TestRaceCompareStrings(t *testing.T) {
-	en := raceSrc(t, "strings.ts")
-	for _, k := range []string{"ph.race.files", "ph.race.tests", "ph.race.cost", "ph.race.judge", "ph.race.merge", "ph.race.merge_ask", "ph.race.merge_note"} {
+	en := raceSrc(t, "strings.ts") + raceSrc(t, "strings.phone.ts")
+	for _, k := range []string{"race.col.files", "race.col.tests", "race.col.cost", "ph.race.judge", "ph.race.merge", "ph.race.merge_ask", "ph.race.merge_note"} {
 		if !strings.Contains(en, `"`+k+`"`) {
-			t.Errorf("strings.ts has no %s", k)
+			t.Errorf("strings.ts / strings.phone.ts has no %s", k)
 		}
 	}
 	if strings.Contains(raceSrc(t, "strings.fa.ts"), "ph.race.") {

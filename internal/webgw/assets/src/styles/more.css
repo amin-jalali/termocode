@@ -67,7 +67,7 @@
 .tools-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
 .tools-list > li + li { border-top: 1px solid var(--border); }
 .tools-row { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: var(--tap); padding: var(--s2) var(--s4); text-align: start; }
-.tools-row::after { content: "›"; margin-inline-start: auto; color: var(--dim); }
+.tools-row::after { content: "›"; margin-inline-start: auto; color: var(--muted); }
 .tools-row:hover { background: var(--bg-hover); }
 .tools-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .tools-mark { flex: none; color: var(--ai); }

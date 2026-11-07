@@ -23,8 +23,9 @@ const (
 	// layout and the views only a wide screen has (debug, testing,
 	// services, the commit graph, merge, rebase, pull requests, agent
 	// worktrees, the data grid, settings, the git commands). Only screens
-	// 1200 px and wider load it, after the page; about 58 KiB today.
-	budgetWorkbench = 80 << 10
+	// 1200 px and wider load it, after the page; about 82 KiB today
+	// (raised from 80 KiB after merge5 brought its desktop views).
+	budgetWorkbench = 84 << 10
 	// budgetHome is the phone's own views (home.js, mobile plan Q4): This
 	// phone (MOBUX-20) and the Home (MOB-4). Only a phone loads it, when
 	// one opens; the desktop never does.
@@ -44,17 +45,17 @@ func gzSize(t *testing.T, name string) int {
 	return buf.Len()
 }
 
-// The phone's page is index.html, app.css, app.js and the chunk app.js
-// shares with the workbench (app-chunk.js, which every page loads); the
-// JS budget counts both script files.
+// The phone's page is index.html, app.css, app.js and the chunks app.js
+// shares with the workbench and home.js (app-chunk.js, app-chunk-2.js, …,
+// which every page loads); the JS budget counts all these script files.
 func TestPerfGuardBundleSize(t *testing.T) {
-	js, css, html := gzSize(t, "app.js")+gzSize(t, "app-chunk.js"), gzSize(t, "app.css"), gzSize(t, "index.html")
+	js, css, html := gzPage(t), gzSize(t, "app.css"), gzSize(t, "index.html")
 	wb, hm := gzSize(t, "workbench.js"), gzSize(t, "home.js")
-	t.Logf("gzipped: app.js + app-chunk.js %d B, app.css %d B, index.html %d B, total %d B; workbench.js %d B (desktop only)", js, css, html, js+css+html, wb)
+	t.Logf("gzipped: app.js + its shared chunks %d B, app.css %d B, index.html %d B, total %d B; workbench.js %d B (desktop only)", js, css, html, js+css+html, wb)
 	for _, c := range []struct {
 		name      string
 		got, want int
-	}{{"desk.css", gzSize(t, "desk.css"), budgetDesk}, {"workbench.js", wb, budgetWorkbench}, {"home.js", hm, budgetHome}, {"app.js + app-chunk.js", js, budgetJS}, {"app.css", css, budgetCSS}, {"index.html", html, budgetHTML}, {"page total", js + css + html, budgetTotal}} {
+	}{{"desk.css", gzSize(t, "desk.css"), budgetDesk}, {"workbench.js", wb, budgetWorkbench}, {"home.js", hm, budgetHome}, {"app.js + its shared chunks", js, budgetJS}, {"app.css", css, budgetCSS}, {"index.html", html, budgetHTML}, {"page total", js + css + html, budgetTotal}} {
 		if c.got > c.want {
 			t.Errorf("%s is %d B gzipped, budget %d B", c.name, c.got, c.want)
 		}
@@ -121,7 +122,7 @@ func TestPerfGuardVimChunk(t *testing.T) {
 	if !strings.Contains(frame, `import("/assets/monaco-vim.js")`) {
 		t.Error("monaco-frame.js does not load monaco-vim.js")
 	}
-	for _, name := range []string{"app.js", "app-chunk.js", "workbench.js", "index.html", "monaco.html"} {
+	for _, name := range append(pageNames(t), "workbench.js", "index.html", "monaco.html") {
 		if strings.Contains(readBuilt(t, name), "monaco-vim.js") {
 			t.Errorf("%s names monaco-vim.js: only the frame loads it, when Vim mode is on", name)
 		}
@@ -131,7 +132,7 @@ func TestPerfGuardVimChunk(t *testing.T) {
 // The phone's first files carry English only: the Persian strings are
 // strings-fa.js, which the page loads when the UI language is Persian.
 func TestPhoneBundleHoldsNoPersianStrings(t *testing.T) {
-	page := readBuilt(t, "app.js") + readBuilt(t, "app-chunk.js")
+	page := readPage(t)
 	fa := readBuilt(t, "strings-fa.js")
 	persian := regexp.MustCompile(`[\x{0600}-\x{06FF}]`)
 	n := 0
@@ -152,6 +153,46 @@ func TestPhoneBundleHoldsNoPersianStrings(t *testing.T) {
 	}
 }
 
+// pageNames are the page's first script files: app.js and its shared
+// chunks (lint_test.go pageFile).
+func pageNames(t *testing.T) []string {
+	t.Helper()
+	ents, err := fs.ReadDir(FS(), ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, e := range ents {
+		if pageFile(e.Name()) {
+			out = append(out, e.Name())
+		}
+	}
+	if len(out) < 2 {
+		t.Fatalf("page files %v: no app.js or no shared chunk", out)
+	}
+	return out
+}
+
+// readPage is the text of all the page's first script files.
+func readPage(t *testing.T) string {
+	t.Helper()
+	var b strings.Builder
+	for _, n := range pageNames(t) {
+		b.WriteString(readBuilt(t, n))
+	}
+	return b.String()
+}
+
+// gzPage is the gzipped size of the page's first script files.
+func gzPage(t *testing.T) int {
+	t.Helper()
+	n := 0
+	for _, f := range pageNames(t) {
+		n += gzSize(t, f)
+	}
+	return n
+}
+
 func readBuilt(t *testing.T, name string) string {
 	t.Helper()
 	b, err := fs.ReadFile(FS(), name)
@@ -165,7 +206,7 @@ func readBuilt(t *testing.T, name string) string {
 // budgetHome; it was its own board.js before the merge): the page's first
 // files never hold its view.
 func TestPerfGuardBoardChunk(t *testing.T) {
-	page := readBuilt(t, "app.js") + readBuilt(t, "app-chunk.js")
+	page := readPage(t)
 	if strings.Contains(page, "board-cols") {
 		t.Error("the page's first files hold the board's view: it belongs in home.js")
 	}

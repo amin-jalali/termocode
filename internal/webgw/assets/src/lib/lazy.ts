@@ -13,7 +13,6 @@ import { signal } from "@preact/signals";
 import type { EditorModule } from "../editor/api";
 import type { HomeHost } from "../home/api";
 import { persian } from "../strings";
-import type * as Phone from "../phone";
 import type * as Workbench from "../workbench";
 import type * as Home from "../home";
 

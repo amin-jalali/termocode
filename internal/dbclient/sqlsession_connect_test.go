@@ -159,10 +159,10 @@ func TestNewSQLSessionConnectionRefused(t *testing.T) {
 }
 
 func TestNewSQLSessionRejectsUnknownDriver(t *testing.T) {
-	if _, err := NewSQLSession(context.Background(), Conn{Driver: "oracle"}, ""); err == nil || !strings.Contains(err.Error(), `unsupported SQL driver "oracle"`) {
+	if _, err := NewSQLSession(context.Background(), Conn{Driver: "nosuchdb"}, ""); err == nil || !strings.Contains(err.Error(), `unsupported SQL driver "nosuchdb"`) {
 		t.Fatalf("err = %v", err)
 	}
-	if _, _, err := openSQLDB(Conn{Driver: "oracle"}, ""); err == nil {
+	if _, _, err := openSQLDB(Conn{Driver: "nosuchdb"}, ""); err == nil {
 		t.Fatal("openSQLDB took an unknown driver")
 	}
 }

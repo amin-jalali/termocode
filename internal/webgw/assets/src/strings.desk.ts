@@ -842,6 +842,9 @@ export const SD = {
   "extv.none": "No laptop extension has a panel.",
   "extv.empty": "This panel shows nothing now.",
   "extv.run": "Run the command of {id} on the laptop",
+  // Coordinator sub-runs (desktop run view)
+  "runs.subrun": "{n} sub-run",
+  "runs.subruns": "{n} sub-runs",
 } as const;
 
 addStrings(SD);

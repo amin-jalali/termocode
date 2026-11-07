@@ -37,7 +37,7 @@ func sameState(a, b *State) bool {
 		a.ShowDatabase == b.ShowDatabase && a.DatabaseName == b.DatabaseName && a.DatabaseProd == b.DatabaseProd &&
 		a.DatabaseTint == b.DatabaseTint && a.DatabaseTinted == b.DatabaseTinted &&
 		slices.Equal(a.Ext, b.Ext) && a.AI == b.AI && a.AIState == b.AIState &&
-		a.Update == b.Update &&
+		a.Update == b.Update && a.Host == b.Host && a.HostOffline == b.HostOffline &&
 		a.Plan == b.Plan && a.PlanShort == b.PlanShort && a.PlanLimited == b.PlanLimited
 }
 

@@ -10,6 +10,7 @@
 // A viewer sees open and ref only. Cancel is first and closes the sheet;
 // swiping it down or tapping the dim area answers nothing.
 import { h, H } from "./jsx";
+import { hs } from "./strings";
 import { actionsFor, defaultActions, opArgs, refAttach, type Action, type Ref } from "../lib/actions";
 import { parseHash } from "../state/route";
 import type { BlockAction, BlockRef } from "../../../../webproto/proto";
@@ -154,10 +155,10 @@ function ActionSheet({ req, onDone }: { req: SheetReq; onDone: () => void }) {
           <h2 class="actsheet-title" dir="auto">
             {confirm.label}: {req.title}
           </h2>
-          <p class="actsheet-hint">This changes something on the laptop.</p>
+          <p class="actsheet-hint">{hs("act.changes")}</p>
           <div class="actsheet-list">
             <button type="button" class="actsheet-row actsheet-cancel" onClick={() => setConfirm(null)}>
-              Cancel
+              {hs("act.cancel")}
             </button>
             <button type="button" class="actsheet-row actsheet-danger" disabled={busy || !H.live.value} onClick={() => run(confirm)}>
               <span aria-hidden="true">✗ </span>
@@ -182,7 +183,7 @@ function ActionSheet({ req, onDone }: { req: SheetReq; onDone: () => void }) {
         </h2>
         <div class="actsheet-list" role="menu">
           <button type="button" role="menuitem" class="actsheet-row actsheet-cancel" onClick={onDone}>
-            Cancel
+            {hs("act.cancel")}
           </button>
           {list.map((a) => (
             <button

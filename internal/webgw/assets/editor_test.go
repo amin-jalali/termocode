@@ -21,7 +21,7 @@ const (
 
 func TestPerfGuardEditorBudget(t *testing.T) {
 	ed := gzSize(t, "editor.js")
-	all := ed + gzSize(t, "app.js") + gzSize(t, "app-chunk.js") + gzSize(t, "app.css") + gzSize(t, "index.html")
+	all := ed + gzPage(t) + gzSize(t, "app.css") + gzSize(t, "index.html")
 	t.Logf("gzipped: editor.js %d B, page with the editor %d B", ed, all)
 	if ed > budgetEditor {
 		t.Errorf("editor.js is %d B gzipped, budget %d B", ed, budgetEditor)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"sort"
 
 	"google.golang.org/grpc"
@@ -58,7 +59,9 @@ func (v *v1Stream) ask(q reflectAsk) (reflectAnswer, error) {
 	default:
 		req.MessageRequest = &rv1.ServerReflectionRequest_FileByFilename{FileByFilename: q.filename}
 	}
-	if err := v.s.Send(req); err != nil {
+	// Send says io.EOF when the server already ended the stream (say,
+	// Unimplemented); the real status comes from Recv.
+	if err := v.s.Send(req); err != nil && !errors.Is(err, io.EOF) {
 		return reflectAnswer{}, err
 	}
 	resp, err := v.s.Recv()
@@ -93,7 +96,9 @@ func (v *v1alphaStream) ask(q reflectAsk) (reflectAnswer, error) {
 	default:
 		req.MessageRequest = &rv1alpha.ServerReflectionRequest_FileByFilename{FileByFilename: q.filename}
 	}
-	if err := v.s.Send(req); err != nil {
+	// Send says io.EOF when the server already ended the stream (say,
+	// Unimplemented); the real status comes from Recv.
+	if err := v.s.Send(req); err != nil && !errors.Is(err, io.EOF) {
 		return reflectAnswer{}, err
 	}
 	resp, err := v.s.Recv()

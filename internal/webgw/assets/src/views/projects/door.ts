@@ -6,7 +6,7 @@
 // the door and works only for a project the phone opened.
 // Phone only: the projects list (MOBUX-6) imports it into the lazy phone
 // chunk; the desktop app.js does not carry it.
-import type { ProjectItem } from "../../../../webproto/proto";
+import type { ProjectItem } from "../../../../../webproto/proto";
 import type { Door } from "../../net/door";
 import { ReqError } from "../../net/link";
 import { link } from "../../session";

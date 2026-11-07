@@ -193,13 +193,13 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			// load anything. The other rules hold for it too.
 			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
 		}
-		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's four dynamic imports (lib/lazy.ts), fixed paths
+		if pageFile(e.Path) { // the page's four dynamic imports (lib/lazy.ts), fixed paths
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/home.js")`, "", 1)
 		}
-		if e.Path == "app.js" || e.Path == "app-chunk.js" { // lib/push.ts: the push-only worker (MOB-30)
+		if pageFile(e.Path) { // lib/push.ts: the push-only worker (MOB-30)
 			text = strings.ReplaceAll(text, "navigator.serviceWorker", "")
 		}
 		if e.Path == "monaco-frame.js" { // the frame's one dynamic import: Vim mode (WEBP-1), a fixed path
@@ -326,12 +326,24 @@ func TestStoreAndGuardArePure(t *testing.T) {
 // other and from the pure helpers below.
 var homePure = map[string]bool{"state/home.ts": true, "state/dict.ts": true, "state/cards.ts": true, "state/tasks.ts": true, "state/git.ts": true, "state/route.ts": true, "lib/actions.ts": true}
 
+// homeShared are the phone views that came into src/home with the merge
+// into one home.js (All tools MOBUX-5, context chips MOBUX-3, Customize
+// MOBUX-16, Research MOB-11, the view preview MOBUX-15). home.js now
+// shares the page's modules through its shared chunks (cmd/webbuild
+// TestBuild*HomeChunk: one Preact, one session), so these may import the
+// page's code; the MOB-4 Home itself still goes through its host.
+var homeShared = map[string]bool{"home/AllTools.tsx": true, "home/AllToolsView.tsx": true, "home/ChipRow.tsx": true,
+	"home/CustomizeSheet.tsx": true, "home/ResearchSources.tsx": true, "home/ViewPreview.tsx": true}
+
 var importLine = regexp.MustCompile(`(?m)^\s*(import|export)\s+(type\s+)?[^;]*?\bfrom\s+"([^"]+)"`)
 
 // homeImportsBad returns the code imports of a Home source (rel, under
 // src/) that are not allowed.
 func homeImportsBad(rel, text string) []string {
 	var bad []string
+	if homeShared[rel] {
+		return nil
+	}
 	for _, m := range importLine.FindAllStringSubmatch(text, -1) {
 		if m[2] != "" {
 			continue // types only: nothing of the page's code comes along
@@ -411,4 +423,11 @@ func TestPushRegistersOnlyTheGatewayWorker(t *testing.T) {
 	if len(reg) != 1 || reg[0][1] != `"/sw.js", { scope: "/" }` {
 		t.Errorf("lib/push.ts registers %v, want only /sw.js", reg)
 	}
+}
+
+// pageFile is one of the page's first files: app.js and its shared
+// chunks (app-chunk.js, app-chunk-2.js, …: the build may split the shared
+// code in more than one, cmd/webbuild sharedChunkNames).
+func pageFile(p string) bool {
+	return p == "app.js" || regexp.MustCompile(`^app-chunk(-[0-9]+)?\.js$`).MatchString(p)
 }

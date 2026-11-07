@@ -69,8 +69,8 @@ export function viewChips(chips: readonly ChipDef[]): ChipDef[] {
 //   4. every other chip, in its fixed place
 // A chip never spends tokens: tapping one runs its default view on the
 // laptop or fills the composer (MOB-4). Pins are a choice of this phone
-// only (chip ids, never data), kept in localStorage and read through a
-// validator; storage may be missing and the row then has no pins.
+// only (chip ids, never data), kept in the browser's prefs (lib/prefs.ts
+// loadChipPins) and read through validPins; storage may be missing and the row then has no pins.
 
 /** ChipId names one chip of the row. Saved views pinned to the Home
  * (MOBUX-18) come in as "view:<id>". */
@@ -192,22 +192,3 @@ export function togglePin(pins: readonly ChipId[], id: ChipId): PinResult {
   return { pins: [...cur, id], full: false };
 }
 
-const PINS_KEY = "termocode.chips.v1";
-
-/** loadPins reads this phone's pins ([] when none or unreadable). */
-export function loadPins(): ChipId[] {
-  try {
-    return validPins(JSON.parse(localStorage.getItem(PINS_KEY) ?? "[]") as unknown);
-  } catch {
-    return [];
-  }
-}
-
-/** savePins stores this phone's pins; a blocked storage keeps them for this page. */
-export function savePins(pins: readonly ChipId[]): void {
-  try {
-    localStorage.setItem(PINS_KEY, JSON.stringify(validPins(pins)));
-  } catch {
-    // Storage is full or blocked: the pins last for this page.
-  }
-}

@@ -42,6 +42,9 @@ func SourceArgs(d ViewDef, args map[string]string) any {
 	case OpTasksTail:
 		return LabelArgs{Label: args["task"]}
 	}
+	if v, ok := sourceArgsV2(d.Source.Op, args); ok {
+		return v
+	}
 	return EmptyArgs{}
 }
 
@@ -208,6 +211,20 @@ func init() {
 			out = append(out, ViewRow{ID: "w" + strconv.Itoa(len(out)), Cells: vcells("title", vtxt(w.Title), "branch", vtxt(w.Branch), "state", vtxt(w.State),
 				"kind", vtxt(w.Kind), "group", vtxt(w.Group), "agents", vnum(w.Agents), "dirty", vnum(w.Dirty), "ahead", vnum(w.Ahead),
 				"behind", vnum(w.Behind), "where", vtxt(w.Where)), Tone: stateTone(w.State), Ref: &BlockRef{Kind: "lane", ID: w.ID}})
+		}
+		return out
+	})
+	// races (MOB-61): the races and how many lanes each has; a lane's
+	// own rows are the race screen's business.
+	registerViews(ViewDef{ID: "races", Feature: "lanes", Title: "Races", Source: ViewSource{Topic: "races"},
+		Fields: []ViewField{vf("name", "Race", FieldText, "sfd"), vf("state", "State", FieldState, "sfd"),
+			vf("lanes", "Lanes", FieldNum, "sfd"), vf("winner", "Winner", FieldText, "sf")},
+		Layouts: []string{list, table}})
+	viewRows["races"] = rowsOf(func(s RacesSnap, _ map[string]string) []ViewRow {
+		out := make([]ViewRow, 0, len(s.Races))
+		for _, r := range s.Races {
+			out = append(out, ViewRow{ID: "r" + strconv.Itoa(len(out)), Cells: vcells("name", vtxt(r.Name), "state", vtxt(r.State),
+				"lanes", vnum(len(r.Lanes)), "winner", vtxt(r.Winner)), Tone: stateTone(r.State)})
 		}
 		return out
 	})

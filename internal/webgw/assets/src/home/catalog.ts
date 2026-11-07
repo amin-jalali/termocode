@@ -53,6 +53,7 @@ export const STR = {
   offline: "Offline — answers are not saved",
   retry: "Retry",
   empty: "Nothing to show.",
+  loading: "Loading",
   noTitle: "(no title)",
   toChat: "↩ to chat",
 } as const;

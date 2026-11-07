@@ -42,16 +42,16 @@ const COLUMN_STATUS: Readonly<Record<BoardColumn, Status>> = {
 
 const COLUMN_LABEL: Readonly<Record<BoardColumn, StringKey>> = {
   needs_you: "ph.board.needs_you",
-  working: "ph.board.working",
-  review: "ph.board.review",
-  done: "ph.board.done",
+  working: "board.col.working",
+  review: "ph.race.review",
+  done: "board.col.done",
 };
 
 const DRILL_LABEL: Readonly<Record<DrillKind, StringKey>> = {
   card: "ph.board.card",
   logs: "ph.board.logs",
   diff: "ph.board.diff",
-  chat: "ph.board.chat",
+  chat: "ph.stream",
 };
 
 /** useLiveBoard asks for the board when it shows and again when tick
@@ -161,10 +161,10 @@ export function LiveBoard({
     : [];
 
   return (
-    <section class={`ph-board${stale ? " is-stale" : ""}`} aria-label={t("ph.board")}>
+    <section class={`ph-board${stale ? " is-stale" : ""}`} aria-label={t("chips.board")}>
       <header class="ph-board-head">
         <h2 class="ph-board-title">
-          <StatusMark s={online ? "working" : "asleep"} live={online} hidden /> {t("ph.board")}
+          <StatusMark s={online ? "working" : "asleep"} live={online} hidden /> {t("chips.board")}
         </h2>
         {today && <span class="ph-board-today">{t("ph.board.today", { cost: today })}</span>}
       </header>
@@ -179,7 +179,7 @@ export function LiveBoard({
           )}
         </p>
       )}
-      <div class="ph-board-tabs" role="tablist" aria-label={t("ph.board")}>
+      <div class="ph-board-tabs" role="tablist" aria-label={t("chips.board")}>
         {BOARD_COLUMNS.map((c) => (
           <button
             key={c}
@@ -229,7 +229,7 @@ export function LiveBoard({
                 })}
               </ul>
             )}
-            {c === "done" && board?.more ? <p class="ph-board-empty">{t("ph.board.more", { n: String(board.more) })}</p> : null}
+            {c === "done" && board?.more ? <p class="ph-board-empty">{t("board.more", { n: String(board.more) })}</p> : null}
           </div>
         ))}
       </div>

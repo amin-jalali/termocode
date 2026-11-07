@@ -23,7 +23,7 @@ export interface TaskAction {
 
 // phone_tasksheet_test.go reads the rows below, so keep one row per line.
 export const TASK_ACTIONS: readonly TaskAction[] = [
-  { id: "talk", kind: "ask", label: "ph.task.talk", viewer: true },
+  { id: "talk", kind: "ask", label: "pp.talk", viewer: true },
   { id: "workflow", kind: "card", label: "ph.task.workflow" },
   { id: "agents", kind: "card", label: "ph.task.agents" },
   { id: "models", kind: "ask", label: "ph.task.models" },

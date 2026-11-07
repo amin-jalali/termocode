@@ -175,13 +175,13 @@ func TestPhoneBoardCSS(t *testing.T) {
 // strings.ts and not in the Persian file.
 func TestPhoneBoardStringsEnglishOnly(t *testing.T) {
 	keys := map[string]bool{}
-	for _, e := range parseStrings(t, "src/strings.ts", "S") {
+	for _, e := range allEnglishStrings(t) {
 		keys[e.key] = true
 	}
-	for _, k := range []string{"ph.board", "ph.board.needs_you", "ph.board.working", "ph.board.review", "ph.board.done",
-		"ph.board.empty", "ph.board.today", "ph.board.logs", "ph.board.diff", "ph.board.chat", "ph.board.card", "ph.board.stale"} {
+	for _, k := range []string{"chips.board", "ph.board.needs_you", "board.col.working", "ph.race.review", "board.col.done",
+		"ph.board.empty", "ph.board.today", "ph.board.logs", "ph.board.diff", "ph.stream", "ph.board.card", "ph.board.stale"} {
 		if !keys[k] {
-			t.Errorf("strings.ts has no %s", k)
+			t.Errorf("strings.ts / strings.phone.ts has no %s", k)
 		}
 	}
 	if strings.Contains(readBoardSrc(t, "src/strings.fa.ts"), `"ph.board`) {

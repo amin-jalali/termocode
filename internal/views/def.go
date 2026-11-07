@@ -225,7 +225,7 @@ func (d *Def) Check() error {
 	}
 	def := d.Default
 	def.View = d.ID
-	if err := CheckSpec(d, &def); err != nil {
+	if err := checkSpec(d, &def, false); err != nil {
 		return fmt.Errorf("view %s: default spec: %w", d.ID, err)
 	}
 	return nil

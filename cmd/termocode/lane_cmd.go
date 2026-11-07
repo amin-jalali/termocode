@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/agentlog"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/jsonc"
 	"github.com/amin-jalali/termocode/internal/lanemove"
 )
@@ -168,10 +169,10 @@ func runLaneIn(args []string, in io.Reader, out, errw io.Writer, getenv func(str
 			opt.ClaudeHome = claudeHome
 		}
 		pr, pw := io.Pipe()
-		go func() {
+		crash.Go("main.runLaneIn", func() {
 			_, err := lanemove.Pack(dir, opt, pw)
 			pw.CloseWithError(err)
-		}()
+		})
 		said, err := lanemove.Send(ctx, host, remoteRepo, nil, false, pr)
 		_ = pr.Close()
 		if err != nil {

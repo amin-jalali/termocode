@@ -145,7 +145,8 @@ func TestBlockOfShapes(t *testing.T) {
 	}
 }
 
-// Secrets the laptop knows never reach the phone, in any cell or field;
+// Secrets the laptop knows and token-shaped values (ghp_…) never reach
+// the phone, in any cell or field;
 // escape sequences are cleaned and newlines leave the cells.
 func TestBlockOfRedactsAndCleans(t *testing.T) {
 	tok := "ghp_" + strings.Repeat("a", 36)

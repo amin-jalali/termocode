@@ -17,7 +17,6 @@ import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
 import { RacesView } from "./more/RacesView";
 import { BoardRoute } from "./more/BoardRoute";
-import { layout } from "../lib/layout";
 import { SettingsView } from "./more/SettingsView";
 import { AgentsView } from "./AgentsView";
 import { ItermocView } from "./ItermocView";
@@ -35,7 +34,6 @@ import { View } from "./View";
 import { SubView } from "./more/SubView";
 import { FileView } from "./FileView";
 import { home as phone, homeFailed as phoneFailed, loadHome } from "../lib/lazy";
-import { Button } from "../ui/Button";
 import { TreeView } from "./Files";
 import { PhoneHost } from "./PhoneHost";
 
@@ -238,7 +236,7 @@ export function MoreView() {
             </button>
           )}
           <button type="button" class="more-link" data-sub="projects" onClick={() => go({ tab: "more", rest: "projects", query: {} })}>
-            {t("ph.proj.title")}
+            {t("ph.switch_title")}
           </button>
         </nav>
         <section class="group" aria-labelledby="g-phone">

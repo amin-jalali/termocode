@@ -163,7 +163,7 @@ func TestDesktopOnlyStringsLiveInTheWorkbench(t *testing.T) {
 // The phone's files carry none of the desktop-only strings; the
 // workbench's file carries them all.
 func TestPhoneBundleHoldsNoDesktopStrings(t *testing.T) {
-	page := readBuilt(t, "app.js") + readBuilt(t, "app-chunk.js")
+	page := readPage(t)
 	wb := readBuilt(t, "workbench.js")
 	entries := parseStrings(t, "src/strings.desk.ts", "SD")
 	if len(entries) < 100 {

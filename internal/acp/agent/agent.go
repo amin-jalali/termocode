@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // ProtocolVersion is the ACP version this agent speaks.
@@ -253,7 +254,7 @@ func (s *Server) prompt(ctx context.Context, req request) {
 	s.mu.Unlock()
 
 	s.wg.Add(1)
-	go func() {
+	crash.Go("agent.prompt", func() {
 		defer s.wg.Done()
 		defer cancel()
 		var b strings.Builder
@@ -291,7 +292,7 @@ func (s *Server) prompt(ctx context.Context, req request) {
 		default:
 			s.reply(req.ID, map[string]any{"stopReason": "end_turn"}, nil)
 		}
-	}()
+	})
 }
 
 func orEmpty(b json.RawMessage) json.RawMessage {

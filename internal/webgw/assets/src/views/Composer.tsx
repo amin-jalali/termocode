@@ -132,7 +132,7 @@ export function Composer({
       {!desk && <RefChips />}
       <div class={desk ? "composer-frame" : "composer-plain"}>
       {getAttaches(chat).length > 0 && (
-        <ul class="composer-attach" aria-label="Sent with the message">
+        <ul class="composer-attach" aria-label={t("ai.attach_list")}>
           {getAttaches(chat).map((a, i) => (
             <li class="chat-chip" key={i}>
               <span dir="auto">{attachLabel(a)}</span>
