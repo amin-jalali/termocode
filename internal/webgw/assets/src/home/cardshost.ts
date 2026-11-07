@@ -33,5 +33,4 @@ export interface HomeCardsHost {
   failure: (e: unknown) => "gone" | "offline" | string;
   /** openCard opens the sheet over the Home (#/home?card=<id>), with a step back. */
   openCard: (id: string) => void;
-  haptic: (kind: "light" | "medium") => void;
 }

@@ -23,7 +23,6 @@ func TestHomeCardsUseTheSheetRules(t *testing.T) {
 		`answerArgs(`,    // the sheet's cards.answer arguments
 		`"cards.answer"`, // one request per answer
 		`host.openCard(`, // details open the sheet at #/home?card=<id>
-		`host.haptic(`,   // a short buzz on an answer, where there is one
 	} {
 		if !strings.Contains(src, want) {
 			t.Errorf("home/cards.ts lost %q", want)
@@ -36,9 +35,16 @@ func TestHomeCardsUseTheSheetRules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`cardState(`, `answerArgs(`, `haptic(`} {
+	for _, want := range []string{`cardState(`, `answerArgs(`} {
 		if !strings.Contains(string(sheet), want) {
 			t.Errorf("CardSheet.tsx does not use %s: the sheet and the Home must share one rule set", want)
+		}
+	}
+	// One buzz per answer: the kit's Card gives it on the press, so the
+	// sheet and the Home must not buzz again when the hub answers.
+	for name, s := range map[string]string{"home/cards.ts": src, "ui/CardSheet.tsx": string(sheet)} {
+		if strings.Contains(s, "haptic(") {
+			t.Errorf("%s buzzes too; the Card already does (two buzzes per answer)", name)
 		}
 	}
 }

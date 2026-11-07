@@ -36,8 +36,7 @@ function InlineCard({ host, c }: { host: HomeCardsHost; c: CardData }) {
     setSending(true);
     host.request("cards.answer", args).then(
       () => {
-        setSending(false);
-        host.haptic(which === "safe" ? "light" : "medium");
+        setSending(false); // the Card buzzed on the press: once per answer
         if (which === "safe") host.toast("info", host.t(review ? "toast.rejected" : "toast.denied"));
         else host.toast("ok", host.t(review ? "toast.accepted" : "toast.allowed"));
       },

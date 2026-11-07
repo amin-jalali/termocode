@@ -10,7 +10,6 @@ import { answeredBy, cards, link, live } from "../session";
 import { t, tn } from "../strings";
 import { Card } from "../ui/Card";
 import { errText, openCard } from "../ui/CardSheet";
-import { haptic } from "./haptic";
 import { toast } from "./toasts";
 
 export function homeCardsHost(): HomeCardsHost {
@@ -28,6 +27,5 @@ export function homeCardsHost(): HomeCardsHost {
     request: (op, args) => link.request(op, args),
     failure: (e) => (e instanceof ReqError && e.code === "gone" ? "gone" : e instanceof OfflineError ? "offline" : errText(e)),
     openCard,
-    haptic,
   };
 }

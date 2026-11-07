@@ -9,7 +9,6 @@ import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Card as CardData } from "../../../../webproto/proto";
 import { diffTab } from "../lib/difftab";
-import { haptic } from "../lib/haptic";
 import { layout } from "../lib/layout";
 import { go, route } from "../lib/router";
 import { showFile } from "../lib/workbench";
@@ -142,8 +141,7 @@ export function CardSheet({ id }: { id: string }) {
     const sent = answers ? { id: args.id, choice: args.choice, form: answers } : args;
     link.request("cards.answer", sent).then(
       () => {
-        setSending(false);
-        haptic(which === "safe" ? "light" : "medium");
+        setSending(false); // the Card buzzed on the press: once per answer
         if (which === "safe") toast("info", t(review ? "toast.rejected" : "toast.denied"));
         else toast("ok", t(answers ? "toast.sent" : review ? "toast.accepted" : "toast.allowed"));
         closeCard();
