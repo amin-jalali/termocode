@@ -2365,7 +2365,7 @@ func (m Model) statusState() statusbar.State {
 		Debug:       m.dapSessionActive,
 		ShowLSP:     m.editor.Path() != "",
 		LSP:         m.lspClients(),
-		Ext:         append(append(m.extStatusTexts(), m.httpStatusTexts()...), m.aiNESStatusTexts()...), // Group I, HTTP client, AI next edit
+		Ext:         append(append(m.extStatusTexts(), m.httpStatusTexts()...), append(m.aiNESStatusTexts(), m.aiFollowStatusTexts()...)...), // Group I, HTTP client, AI next edit, Follow Agent
 	}
 	st.Ext = append(st.Ext, m.gitBlameStatusTexts()...) // last: statusSpans finds it there (git_blame_view.go)
 	if m.layoutHint != "" {                             // G-LAY: the layout just opened
