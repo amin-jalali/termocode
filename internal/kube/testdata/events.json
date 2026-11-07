@@ -1,0 +1,35 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "metadata": {"name": "api.1", "namespace": "shop", "creationTimestamp": "2026-10-30T10:00:00Z"},
+      "involvedObject": {"kind": "Pod", "name": "api-7d9f8c6b5-x2x4q", "namespace": "shop"},
+      "type": "Normal",
+      "reason": "Scheduled",
+      "message": "Successfully assigned shop/api-7d9f8c6b5-x2x4q to node-1",
+      "firstTimestamp": "2026-10-30T10:00:00Z",
+      "lastTimestamp": "2026-10-30T10:00:00Z",
+      "count": 1
+    },
+    {
+      "metadata": {"name": "api.2", "namespace": "shop", "creationTimestamp": "2026-10-30T10:01:00Z"},
+      "involvedObject": {"kind": "Pod", "name": "api-7d9f8c6b5-x2x4q", "namespace": "shop"},
+      "type": "Warning",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container api",
+      "firstTimestamp": "2026-10-30T10:01:00Z",
+      "lastTimestamp": "2026-10-30T10:09:00Z",
+      "count": 7
+    },
+    {
+      "metadata": {"name": "worker.1", "namespace": "shop", "creationTimestamp": "2026-10-30T10:05:00Z"},
+      "involvedObject": {"kind": "Deployment", "name": "worker", "namespace": "shop"},
+      "type": "Normal",
+      "reason": "ScalingReplicaSet",
+      "message": "Scaled up replica set worker-5c4b to 2",
+      "eventTime": "2026-10-30T10:05:00.000000Z",
+      "series": {"count": 2}
+    }
+  ]
+}

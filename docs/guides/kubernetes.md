@@ -58,6 +58,7 @@ kubeconfig, so other terminals keep their context.
 | `Enter` / `l` | Pod: follow its logs. Other rows: describe. |
 | `i` | Describe the row (a read-only page). |
 | `v` | Show the row as YAML (a read-only page; Secret values are masked). |
+| `E` | Events of the row, newest first (a read-only page). On a section header: all events of the namespace. |
 | `e` | Pod: open a shell in it. |
 | `f` | Pod: start or stop a port-forward. |
 | `y` | Copy the name. |

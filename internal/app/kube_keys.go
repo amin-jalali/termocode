@@ -61,6 +61,11 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && r.kind == kubeRowItem {
 			return m, m.kubeYAML(kubeKindOf(r.section), r.name)
 		}
+	case "E":
+		if have && r.kind == kubeRowItem {
+			return m, m.kubeEvents(kubeKindOf(r.section), r.name)
+		}
+		return m, m.kubeEvents("", "")
 	case "e":
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubePodTerminal("shell", p, "")
@@ -113,6 +118,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"Every row"},
 		[]string{"i", "describe (read only)"},
 		[]string{"v", "YAML (read only, secrets masked)"},
+		[]string{"E", "events · on a header: the namespace's"},
 		[]string{"y", "copy the name"},
 		[]string{"r", "deployment: restart (asks first)"},
 		[]string{"Cluster"},

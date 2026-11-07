@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/kube"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -166,6 +167,36 @@ func (m *Model) onKubeYAML(msg kubeYAMLMsg) tea.Cmd {
 	}
 	if err := m.openReadOnlyPage("yaml: "+msg.kind+"/"+msg.name, msg.text, "", "yaml"); err != nil {
 		return m.servicesToast(toast.Errr, "Cannot open the YAML page", err.Error())
+	}
+	return nil
+}
+
+type kubeEventsMsg struct {
+	title  string
+	events []kube.Event
+	err    error
+}
+
+// kubeEvents reads the events of one object (kind and name), or of the
+// whole namespace when kind is "" (read only).
+func (m *Model) kubeEvents(kind, name string) tea.Cmd {
+	c := m.kube.client()
+	title := "events: namespace " + c.Namespace
+	if kind != "" {
+		title = "events: " + kind + "/" + name
+	}
+	return func() tea.Msg {
+		evs, err := c.Events(context.Background(), kind, name)
+		return kubeEventsMsg{title: title, events: evs, err: err}
+	}
+}
+
+func (m *Model) onKubeEvents(msg kubeEventsMsg) tea.Cmd {
+	if msg.err != nil {
+		return m.servicesToast(toast.Errr, "Cannot read the events", msg.err.Error())
+	}
+	if err := m.openReadOnlyPage(msg.title, kube.EventsText(msg.events, clock.Now()), "", ""); err != nil {
+		return m.servicesToast(toast.Errr, "Cannot open the events page", err.Error())
 	}
 	return nil
 }

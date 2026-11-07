@@ -343,6 +343,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeDescribe(msg), true
 	case kubeYAMLMsg:
 		return m.onKubeYAML(msg), true
+	case kubeEventsMsg:
+		return m.onKubeEvents(msg), true
 	case kubeForwardMsg:
 		return m.onKubeForward(msg), true
 	case kubeRestartMsg:
