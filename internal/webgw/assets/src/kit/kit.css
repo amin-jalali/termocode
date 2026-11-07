@@ -66,3 +66,8 @@ body { background: var(--bg-panel); }
 .ts-body { font-size: var(--fs-body); line-height: var(--lh-body); }
 .ts-row { font-family: var(--font-mono); font-size: var(--fs-row); line-height: var(--lh-row); }
 .ts-hint { font-family: var(--font-mono); font-size: var(--fs-hint); line-height: var(--lh-hint); color: var(--dim); white-space: pre; }
+
+/* The Customize sheet's sample view block (MOBUX-16). */
+.kit-custblock { max-width: 24rem; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--bg-panel); }
+.kit-custhead { display: flex; align-items: center; justify-content: space-between; padding: 0 0 0 var(--s3); border-bottom: 1px solid var(--border); }
+.kit-custasked { margin: 0; padding: var(--s2); font-family: var(--font-mono); font-size: var(--fs-hint); overflow-wrap: anywhere; }

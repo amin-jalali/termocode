@@ -12,6 +12,7 @@ import "../styles/base.css";
 import "../styles/shell.css";
 import "../styles/ui.css";
 import "../styles/components.css";
+import "../styles/customize.css";
 import "./kit.css";
 import { toast } from "../lib/toasts";
 import type { StatusView } from "../state/status";
@@ -30,6 +31,7 @@ import { Progress, SkeletonBubbles, SkeletonRows } from "../ui/Skeleton";
 import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
+import { KitCustomize } from "./customize";
 import "./replay";
 
 installSafety();
@@ -549,6 +551,10 @@ function Kit() {
               </div>
             )}
           </Pair>
+        </Section>
+
+        <Section id="customize" title="Customize a view" note="⚙ on a view block opens the sheet: fields, filter, sort, group, rows, layout, density; the preview runs the draft. Cancel is first.">
+          <KitCustomize />
         </Section>
 
         <Section id="misc" title="Choices">
