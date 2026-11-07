@@ -243,6 +243,8 @@ termocode agent wait t3 --until done --timeout 20m
 - Outside a termocode terminal the command uses the socket of the current
   folder's workspace. The socket is in termocode's private session folder;
   only your own user can connect. Not on Windows.
+- To drive the agents from your own program, see
+  [Build on the agent runtime (SDK)](sdk.md).
 
 ### Exact states with hooks
 
