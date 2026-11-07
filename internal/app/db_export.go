@@ -103,6 +103,9 @@ func (m *Model) databaseJobCard(j *dbJob) {
 	if j.kind == "search" {
 		text = fmt.Sprintf("%d / %d tables searched", j.done.Load(), j.of.Load())
 	}
+	if j.kind == "tool" {
+		text = "Running"
+	}
 	text += " · Esc cancels"
 	if j.kind == "import" {
 		text += " (nothing is kept)"
@@ -545,6 +548,7 @@ func (m *Model) databaseTransferClosed() {
 	case confirmKindDBExportScope, confirmKindDBExportOverwrite:
 		s.exp = nil
 	case confirmKindDBImport:
+		dbImportDropTmp(s.imp)
 		s.imp = nil
 	case confirmKindDBExportFolder:
 		s.folder = nil
@@ -552,6 +556,8 @@ func (m *Model) databaseTransferClosed() {
 		s.dump = nil
 	case confirmKindDBNewTable:
 		s.newTable = nil
+	case confirmKindDBDumpTool, confirmKindDBRestore:
+		s.dumpTool = nil
 	}
 }
 

@@ -42,7 +42,26 @@ type dbImport struct {
 	mapCol  int   // the table column the mapping picker is changing
 	files   []string
 	sessKey string
-	skipBad bool // Bad rows: skip (left out and logged) instead of stop
+	skipBad bool   // Bad rows: skip (left out and logged) instead of stop
+	tmp     string // the CSV a JSON file was turned into (removed at the end)
+}
+
+// dbImportIsJSON: a JSON array of objects or JSON lines (DBX-19), turned
+// into a CSV first so it gets the same preview and insert.
+func dbImportIsJSON(name string) bool {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".json", ".jsonl", ".ndjson":
+		return true
+	}
+	return false
+}
+
+// dbImportDropTmp removes the converted CSV of a JSON import.
+func dbImportDropTmp(imp *dbImport) {
+	if imp != nil && imp.tmp != "" {
+		_ = os.Remove(imp.tmp)
+		imp.tmp = ""
+	}
 }
 
 const dbImportTypePath = "\x00path"
@@ -100,7 +119,7 @@ func dbFindCSV(root string) []string {
 			}
 			return nil
 		}
-		if strings.EqualFold(filepath.Ext(d.Name()), ".csv") {
+		if strings.EqualFold(filepath.Ext(d.Name()), ".csv") || dbImportIsJSON(d.Name()) {
 			out = append(out, rel)
 		}
 		return nil
@@ -117,7 +136,7 @@ func (m *Model) onDBImportFiles(msg dbImportFilesMsg) tea.Cmd {
 	imp := msg.imp
 	imp.files = msg.files
 	if len(msg.files) == 0 {
-		return m.openHTTPPrompt(promptKindDBImportPath, "Import CSV into "+imp.t.label(), "CSV file (in the workspace, or a full path):", "")
+		return m.openHTTPPrompt(promptKindDBImportPath, "Import CSV into "+imp.t.label(), "CSV or JSON file (in the workspace, or a full path):", "")
 	}
 	var items []picker.Item
 	for _, f := range msg.files {
@@ -136,6 +155,7 @@ type dbImportPreviewMsg struct {
 	sniff   dbclient.CSVSniff
 	records int
 	cols    []string
+	csvPath string // the converted CSV of a JSON file
 	err     error
 }
 
@@ -161,6 +181,21 @@ func (m *Model) databaseImportLoad(value string) tea.Cmd {
 	req := imp.t.request()
 	return tea.Batch(m.pushToast(toast.Info, "Reading "+sanitizeDBText(display)+"…"), func() tea.Msg {
 		msg := dbImportPreviewMsg{imp: imp}
+		if dbImportIsJSON(abs) {
+			f, err := os.CreateTemp("", "termocode-import-*.csv")
+			if err != nil {
+				msg.err = err
+				return msg
+			}
+			f.Close()
+			msg.csvPath = f.Name()
+			if _, err := dbclient.JSONToCSV(abs, msg.csvPath); err != nil {
+				_ = os.Remove(msg.csvPath)
+				msg.csvPath, msg.err = "", err
+				return msg
+			}
+			abs = msg.csvPath
+		}
 		sn, err := dbclient.SniffCSV(abs)
 		if err != nil {
 			msg.err = err
@@ -197,11 +232,16 @@ func (m *Model) onDBImportPreview(msg dbImportPreviewMsg) tea.Cmd {
 		return nil
 	}
 	imp := msg.imp
+	if msg.csvPath != "" {
+		imp.path, imp.tmp = msg.csvPath, msg.csvPath
+	}
 	if msg.err != nil {
+		dbImportDropTmp(imp)
 		s.imp = nil
 		return m.pushToastDetail(toast.Warn, "Cannot import "+sanitizeDBText(imp.display), dbErrorText(msg.err))
 	}
 	if len(msg.cols) == 0 {
+		dbImportDropTmp(imp)
 		s.imp = nil
 		return m.pushToastDetail(toast.Warn, "Cannot import", "The columns of "+imp.t.label()+" could not be read.")
 	}
@@ -342,6 +382,7 @@ func (m *Model) databaseImportConfirm(id string) tea.Cmd {
 		imp.skipBad = !imp.skipBad
 		return m.databaseImportCard()
 	}
+	dbImportDropTmp(imp)
 	s.imp = nil
 	return nil
 }
@@ -372,7 +413,7 @@ func (m *Model) databaseImportPicker(id string) tea.Cmd {
 	switch m.pickerKind {
 	case pickerKindDBImportFile:
 		if id == dbImportTypePath {
-			return m.openHTTPPrompt(promptKindDBImportPath, "Import CSV into "+imp.t.label(), "CSV file (in the workspace, or a full path):", "")
+			return m.openHTTPPrompt(promptKindDBImportPath, "Import CSV into "+imp.t.label(), "CSV or JSON file (in the workspace, or a full path):", "")
 		}
 		return m.databaseImportLoad(id)
 	case pickerKindDBImportMapCol:
@@ -473,6 +514,7 @@ func (m *Model) onDBImportDone(msg dbImportDoneMsg) tea.Cmd {
 	if s.job != msg.job {
 		return nil
 	}
+	dbImportDropTmp(s.imp)
 	s.job, s.imp = nil, nil
 	m.closeJobCard()
 	if msg.began {

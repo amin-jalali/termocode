@@ -35,13 +35,20 @@ const (
 	dbNodeSuggestionsHeader
 	dbNodeCode
 	dbNodeNote
-	dbNodeRedisNS   // a key namespace ("session:")
-	dbNodeRedisKey  // a key with its type
-	dbNodeRedisMore // the scan stopped at db_redis_max_keys / no keys
-	dbNodeLoading   // "Loading…": the node's children are on their way (quiet, not a problem)
-	dbNodeTrigger   // a trigger of a schema (DBX-13)
-	dbNodeExtension // an extension installed in a schema (DBX-13)
-	dbNodeRole      // a user or role of the server (DBX-13)
+	dbNodeRedisNS      // a key namespace ("session:")
+	dbNodeRedisKey     // a key with its type
+	dbNodeRedisMore    // the scan stopped at db_redis_max_keys / no keys
+	dbNodeLoading      // "Loading…": the node's children are on their way (quiet, not a problem)
+	dbNodeTrigger      // a trigger of a schema (DBX-13)
+	dbNodeExtension    // an extension installed in a schema (DBX-13)
+	dbNodeRole         // a user or role of the server (DBX-13)
+	dbNodeRedisNS      // a key namespace ("session:")
+	dbNodeRedisKey     // a key with its type
+	dbNodeRedisMore    // the scan stopped at db_redis_max_keys / no keys
+	dbNodeLoading      // "Loading…": the node's children are on their way (quiet, not a problem)
+	dbNodeTrigger      // a trigger of a schema (DBX-13)
+	dbNodeExtension    // an extension installed in a schema (DBX-13)
+	dbNodeFolderHeader // a connection folder heading (DBX-21); not a node
 )
 
 type dbNode struct {
@@ -91,10 +98,13 @@ type dbState struct {
 	addFromURL          bool
 	menuRow             dbTreeRow
 	pendingDisconnectID string
-	closeSessionKey     string          // the session Databases: Sessions… asks to close
-	savepointKey        string          // the session Set / Roll Back to Savepoint acts on
-	savepointName       string          // the savepoint the rollback card is for
-	csvConns            []dbclient.Conn // session-only CSV/TSV copies (db_csv_open.go)
+	closeSessionKey     string                  // the session Databases: Sessions… asks to close
+	savepointKey        string                  // the session Set / Roll Back to Savepoint acts on
+	savepointName       string                  // the savepoint the rollback card is for
+	csvConns            []dbclient.Conn         // session-only CSV/TSV copies (db_csv_open.go)
+	closeSessionKey     string                  // the session Databases: Sessions… asks to close
+	importConns         []dbclient.ImportedConn // Import Connections…: found, waiting for the card (db_importconn.go)
+	keepAlive           map[string]*dbKeepAlive // connection -> its keep-alive / reconnect (db_keepalive.go)
 	sessions            map[string]dbclient.Session
 	passwords           map[string]string
 	connectionEpochs    map[string]uint64
@@ -189,8 +199,25 @@ func (s *dbState) rows() []dbTreeRow {
 			out = append(out, dbTreeRow{kind: dbNodeLoading, path: path + "/loading", name: "Loading…", depth: depth + 1})
 		}
 	}
+	// Connections without a folder first, then one heading per folder
+	// (DBX-21) with its connections under it. A heading with no row left
+	// after the filter is dropped.
 	for _, c := range s.conns {
-		walk(c.ID, 0)
+		if c.Folder == "" {
+			walk(c.ID, 0)
+		}
+	}
+	for _, folder := range dbclient.Folders(s.conns) {
+		at := len(out)
+		out = append(out, dbTreeRow{kind: dbNodeFolderHeader, path: "\x00folder/" + folder, name: folder})
+		for _, c := range s.conns {
+			if c.Folder == folder {
+				walk(c.ID, 1)
+			}
+		}
+		if len(out) == at+1 {
+			out = out[:at]
+		}
 	}
 	var suggestionPaths []string
 	for path, n := range s.nodes {

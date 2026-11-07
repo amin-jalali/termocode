@@ -28,6 +28,11 @@ type ConnOptions struct {
 	TxMode string `json:"txMode,omitempty"`
 	// IdleMinutes closes the session after this many idle minutes (0: never).
 	IdleMinutes int `json:"idleMinutes,omitempty"`
+	// KeepAliveSeconds pings the connected session this often (0: never;
+	// at least 5). AutoReconnect connects again with backoff when a ping
+	// fails (DBX-21).
+	KeepAliveSeconds int  `json:"keepAliveSeconds,omitempty"`
+	AutoReconnect    bool `json:"autoReconnect,omitempty"`
 	// Socket is a unix socket path (PostgreSQL: the socket directory).
 	Socket string `json:"socket,omitempty"`
 	// Databases and Schemas list the only ones shown (globs; empty: all).
@@ -74,6 +79,9 @@ func (o ConnOptions) Check(driver string) error {
 	}
 	if o.IdleMinutes < 0 {
 		return fmt.Errorf("idle minutes must not be negative")
+	}
+	if o.KeepAliveSeconds < 0 {
+		return fmt.Errorf("keep-alive seconds must not be negative")
 	}
 	if o.TimeZone != "" && !timeZonePattern.MatchString(o.TimeZone) {
 		return fmt.Errorf("invalid time zone")

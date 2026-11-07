@@ -722,6 +722,15 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.httpProxyPrompt(value); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseImportConnPrompt(m.promptKind, value); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseDumpToolPrompt(m.promptKind, value); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseRolesPrompt(m.promptKind, value); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseTransferPrompt(m.promptKind, value); ok {
 		return cmd, true
 	}

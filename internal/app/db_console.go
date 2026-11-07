@@ -111,6 +111,9 @@ type dbConsoleState struct {
 	dump     *dbDump
 	newTable *dbNewTable
 
+	roles    dbRolesState // the open users-and-roles flow (DBX-18)
+	dumpTool *dbDumpState // the dump / restore being prepared (DBX-19)
+
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
 	batchSeq     uint64
@@ -997,6 +1000,12 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseSchemaFilesConfirm(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseImportConnConfirm(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseDumpToolConfirm(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseSessionsConfirm(id); ok {
 		return cmd, true
 	}
@@ -1043,6 +1052,12 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 
 func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseSchemaFilesPicker(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseImportConnPick(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseRolesPick(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseGeneratePicker(id); ok {

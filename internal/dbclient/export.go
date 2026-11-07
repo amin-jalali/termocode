@@ -41,6 +41,7 @@ var ExportFormats = []ExportFormatInfo{
 	{FormatMarkdown, "Markdown table", ".md"},
 	{FormatHTML, "HTML table", ".html"},
 	{FormatParquet, "Parquet", ".parquet"},
+	{FormatXLSX, "Excel workbook", ".xlsx"},
 }
 
 // ExportOptions says where INSERT / UPDATE statements go: the dialect of
@@ -113,6 +114,8 @@ func newFormatWriter(f ExportFormat, w io.Writer, o ExportOptions) (RowWriter, e
 		return &markdownWriter{w: w}, nil
 	case FormatParquet:
 		return &parquetWriter{w: w}, nil
+	case FormatXLSX:
+		return newXLSXWriter(w), nil
 	case FormatHTML:
 		title := o.Table
 		if strings.TrimSpace(title) == "" {

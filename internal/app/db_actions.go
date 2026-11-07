@@ -94,6 +94,15 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-server-info", Title: "Databases: Show Server Info"},
 		{ID: "db-cancel-session", Title: "Databases: Cancel Session Query…"},
 		{ID: "db-end-session", Title: "Databases: End Session…"},
+		{ID: "db-roles", Title: "Databases: Show Users and Roles"},
+		{ID: "db-role-grants", Title: "Databases: Show Grants of a Role…"},
+		{ID: "db-role-create", Title: "Databases: Create Role…"},
+		{ID: "db-role-alter", Title: "Databases: Alter Role…"},
+		{ID: "db-grant", Title: "Databases: Grant Privileges…"},
+		{ID: "db-revoke", Title: "Databases: Revoke Privileges…"},
+		{ID: "db-dump", Title: "Databases: Dump Database…"},
+		{ID: "db-import-connections", Title: "Databases: Import Connections…"},
+		{ID: "db-restore", Title: "Databases: Restore Database…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-virtual-objects", Title: "Databases: Edit Virtual Objects…"},
 		{ID: "db-edit-source", Title: "Databases: Edit Object Source"},
@@ -277,6 +286,24 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseStopSessionPrompt(false), true
 	case "db-end-session":
 		return m.databaseStopSessionPrompt(true), true
+	case "db-import-connections":
+		return m.databaseImportConnStart(), true
+	case "db-dump":
+		return m.databaseDumpToolStart(false), true
+	case "db-restore":
+		return m.databaseDumpToolStart(true), true
+	case "db-roles":
+		return m.databaseRolesShow(), true
+	case "db-role-grants":
+		return m.databaseRolesStart(promptKindDBRoleGrants, "Show the grants of a role", false, false), true
+	case "db-role-create":
+		return m.databaseRolesStart(promptKindDBRoleName, "Create a role (the statement is shown before it runs)", false, false), true
+	case "db-role-alter":
+		return m.databaseRolesStart(promptKindDBRoleName, "Alter a role (the statement is shown before it runs)", true, false), true
+	case "db-grant":
+		return m.databaseRolesStart(promptKindDBGrantRole, "Grant privileges", false, false), true
+	case "db-revoke":
+		return m.databaseRolesStart(promptKindDBGrantRole, "Revoke privileges", false, true), true
 	}
 	open := m.revealDatabasesView(id == "db-focus")
 	switch id {
@@ -631,6 +658,7 @@ func (m *Model) databaseDisconnectNow(connID string) tea.Cmd {
 		}
 	}
 	delete(m.databases.passwords, connID)
+	delete(m.databases.keepAlive, connID) // the user's disconnect ends keep-alive and reconnect
 	m.databases.closeTunnel(connID)
 	if m.databases.activeID == connID {
 		m.databases.activeID = ""
@@ -1477,6 +1505,9 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		}
 		s.nodes[msg.id] = n
 		s.touch()
+		if cmd, ok := m.dbReconnectFailed(msg.id); ok {
+			return cmd
+		}
 		return m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
 	}
 	if old := s.sessions[msg.id]; old != nil && dbclient.UnwrapSession(old) != dbclient.UnwrapSession(msg.session) {
@@ -1499,10 +1530,11 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 	s.activeID = msg.id
 	s.applyConnTxMode(msg.id) // DBX-28: txMode saved with the connection
 	s.touch()
+	keep := m.dbKeepAliveStart(msg.id)
 	if s.console != nil && s.console.waiting != nil && s.console.waiting.conn == msg.id {
-		return tea.Batch(m.databaseExpand(msg.id), m.databaseStartRun(s.console.waiting))
+		return tea.Batch(keep, m.databaseExpand(msg.id), m.databaseStartRun(s.console.waiting))
 	}
-	return m.databaseExpand(msg.id)
+	return tea.Batch(keep, m.databaseExpand(msg.id))
 }
 
 func (m *Model) onDBIntrospect(msg dbIntrospectMsg) tea.Cmd {
