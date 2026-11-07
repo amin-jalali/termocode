@@ -12,7 +12,9 @@ web	ai-apply-code	palette
 web	ai-apply-proposal	op:cards.answer
 web	ai-attach	cmd:aiAttach
 web	ai-auto-approve	op:ai.set_auto_approve
+web	ai-autopilot	palette
 web	ai-cancel	op:chat.stop
+web	ai-checkpoint-save	palette
 web	ai-configure	op:ai.info
 web	ai-critic-toggle	palette
 web	ai-discard-proposal	op:cards.answer
@@ -380,6 +382,7 @@ web	workspace-add-folder	cmd:addFolder
 web	workspace-remove-folder	cmd:removeFolder
 web	zen-mode	cmd:zen
 excluded	acp-agents-edit	laptop only: the list names programs the laptop starts
+excluded	ai-agent-env	security: trust decisions are made on the laptop
 excluded	ai-agent-hooks	laptop only: installs hooks into outside agents on the laptop
 excluded	ai-agent-packs	laptop only: installs files into outside agents on the laptop
 excluded	ai-credentials	security: credentials file is laptop only
@@ -436,6 +439,8 @@ excluded	secrets-unlock	security: secrets stay on the laptop, never typed in a b
 excluded	services-trust	security: trust decisions are made on the laptop
 excluded	settings-export	laptop only: writes a settings file on the laptop
 excluded	settings-import	laptop only: reads a settings file from the laptop
+excluded	settings-setup-save	laptop only: writes the laptop's settings into the project
+excluded	settings-setup-use	laptop only: replaces the laptop's settings files
 excluded	setup-show-card	laptop only: first-run setup card
 excluded	terminal-close-pane	laptop only: laptop terminal pane layout
 excluded	terminal-focus-next-pane	laptop only: laptop terminal pane focus
@@ -467,10 +472,16 @@ missing	acp-thread	Agents|M
 missing	agent-sessions-search-all	AI|S
 missing	ai-board	AI|M
 missing	ai-chat-comments	AI|S
+missing	ai-chat-doc-revisions	AI|S
+missing	ai-chat-docs	AI|M
+missing	ai-checkpoint-restore	AI|S
 missing	ai-history-search	AI|S
+missing	ai-image-gen	AI|S
 missing	ai-mcp-accounts	AI|S
 missing	ai-powers	AI|S
 missing	ai-proofs	AI|S
+missing	ai-property-tests	AI|S
+missing	ai-rewind-turn	AI|S
 missing	ai-run-task-list	AI|M
 missing	bugfix-spec-fix	AI|S
 missing	bugfix-spec-new	AI|S
@@ -508,6 +519,7 @@ missing	containers-logs-options	Containers|S
 missing	containers-network-connect	Containers|S
 missing	containers-network-create-options	Containers|S
 missing	containers-network-disconnect	Containers|S
+missing	containers-pair-sync	Containers|M
 missing	containers-registry-catalog	Containers|S
 missing	containers-rename	Containers|S
 missing	containers-resources	Containers|S
@@ -718,6 +730,7 @@ missing	lsp-container-diagnostics	Workspace|S
 missing	lsp-container-where	Workspace|S
 missing	lsp-mirror-clear	Workspace|S
 missing	lsp-mirror-refresh	Workspace|S
+missing	output-save-audit	Output|S
 missing	redis-copy-key	Databases|S
 missing	redis-rename-key	Databases|S
 missing	redis-slowlog	Databases|S

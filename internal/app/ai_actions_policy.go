@@ -505,6 +505,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-logs-options":           aiNever(aiNoPicker + " (container logs options; containers-logs follows logs)"),
 	"containers-detail":                 aiAuto(),
 	"containers-files":                  aiNever(aiNoPicker + " (container files)"),
+	"containers-pair-sync":              aiNever("copies and deletes files between the user's container and workspace; the user reads the card"),
 	"containers-copy-id":                aiAuto(),
 	"containers-open-port":              aiAuto(),
 	"containers-open-databases":         aiNever(aiNoPicker + " (db_connections)"),
@@ -617,6 +618,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-fix":              aiNever(aiNoNested),
 	"ai-edit":             aiNever(aiNoNested),
 	"ai-doc":              aiNever(aiNoNested),
+	"ai-property-tests":   aiNever(aiNoNested),
 	"ai-attach":           aiNever("adds to the chat input; read the file with read_file"),
 	"ai-apply-code":       aiNever("use write_file to change files"),
 	"ai-apply-proposal":   aiNever("the user reviews proposed edits"),
@@ -714,6 +716,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// turn the question off.
 	"ai-reasoning-next": aiNever(aiNoAIConfig + "; more thinking costs the user more"),
 	"ai-plan-approval":  aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai-autopilot":      aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
 	"ai-plan-review":    aiNever("the plan card is the user's answer; the AI never approves its own plan"),
 	"ai-profile-edit":   aiNever(aiNoAIConfig),
 	"ai-profile-new":    aiNever(aiNoAIConfig),
@@ -739,11 +742,13 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"help-bug-report": aiNever("only the user chooses what to export"),
 	"ai-doctor":       aiNever("a local diagnostic page for the user"),
 	"ai-hooks":        aiNever(aiNoPicker),
+	"ai-agent-env":    aiNever(aiNoPicker),
 	// Web tools reach the internet and add servers: the user turns them on.
 	"ai-web-tools": aiNever(aiNoPicker),
 	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
 	// list and deleting the shots are the user's.
 	"ai-proofs": aiNever(aiNoPicker),
+	"ai-image-gen": aiNever("image generation is paid; only the user turns it on"),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
 	"ai-ship-merge":    aiNever("it pushes, opens and merges a pull request: the user starts it and answers the merge card"),
@@ -765,6 +770,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Runs is the user's monitoring page (stop, pause and resume are theirs).
 	"ai-runs":  aiNever("the user's monitoring page; it holds Stop, Pause and Resume"),
 	"ai-board": aiNever("the user's board of agent work; it opens a picker and holds Resume"),
+
+	// CMP-62: rewind and code checkpoints (ai_rewind.go, checkpoints_ui.go).
+	"ai-rewind-turn":        aiNever("the user rewinds the chat and the AI's changes"),
+	"ai-checkpoint-save":    aiAuto(), // saves a private git ref; changes no file
+	"ai-checkpoint-restore": aiNever("the user rolls code back to a checkpoint"),
 
 	// ── HTTP client ──
 	"http-send":              aiNever("sends a network request; use http_send (gated by host and method)"),
@@ -863,6 +873,9 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_critic_slot":        aiNever(aiNoAIConfig),
 	"ai_compact":            aiNever(aiNoAIConfig),
 	"ai_plan_approval":      aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai_autopilot":          aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
+	"ai_approval_rules":     aiNever(aiNoAIConfig + "; the AI never writes its own approval rules"),
+	"ai_guardian":           aiNever(aiNoAIConfig + "; the AI never picks its own reviewer"),
 	"ai_categories":         aiNever(aiNoAIConfig),
 	"ai_step_escalate":      aiNever(aiNoAIConfig),
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
@@ -872,6 +885,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_memory_recall":      aiNever(aiNoAIConfig),
 	"ai_web_fetch":          aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	"ai_web_search":         aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
+	"ai_image_gen":          aiNever(aiNoAIConfig + "; image generation is paid"),
+	"ai_image_model":        aiNever(aiNoAIConfig),
 	// Work until done: the AI never raises its own rounds or budget.
 	"ai_until_done_rounds":     aiNever(aiNoAIConfig),
 	"ai_until_done_budget_usd": aiNever(aiNoAIConfig),

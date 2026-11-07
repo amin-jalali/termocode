@@ -327,6 +327,27 @@ commands?".
   then press `Enter`. Nothing is sent before that.
 - The old chat stays in **AI: Chat History…**.
 
+### Chat docs
+
+A chat can hold docs: Markdown files you and the AI write together, such
+as a plan, a spec or release notes. Ask "write the plan as a chat doc",
+then shape it over the chat.
+
+- The AI uses `chat_doc_list`, `chat_doc_read` and `chat_doc_write`. It
+  writes the whole text each time. Keys are hidden in what it reads.
+- **AI: Chat Docs…** lists the docs of the open chat. `Enter` opens one
+  in the editor; **New doc…** makes one. Edit and save it there; the AI
+  reads your text next time.
+- Every change is kept as a revision: who wrote it (you or the AI) and
+  when. Your own edit is kept as its own revision before the AI writes
+  again, so nothing is lost.
+- **AI: Chat Doc Revisions…** lists the revisions. Picking an old one
+  asks first (**Cancel** comes first); **Restore** makes it the current
+  text again, as a new revision.
+- The docs live in termocode's config folder (`ai/docs/<chat id>/`), not
+  in your project. At most 30 docs per chat, 256 KB each, the last 50
+  revisions of each.
+
 ### Side question
 
 Ask a quick question while the AI works, without waiting and without
@@ -414,6 +435,8 @@ it with the fix if you like.
     - **Fix with AI** — only on a line with an error or warning.
     - **Edit with AI…** — type an instruction, e.g. *add error handling*.
     - **Generate Doc Comment with AI**
+    - **Generate Property-Based Tests with AI** — see
+      [Property-based tests](#property-based-tests).
 3. For Fix, Edit and Doc, the [review card](#review-ai-changes) opens
    with the proposal.
 4. Accept or reject each change, or the whole file.
@@ -423,6 +446,26 @@ typed it). Press `u` once to undo it. If the file changed while the AI was
 working, termocode does not apply the edit.
 
 Shortcut: `Alt+I` runs **Edit with AI** on the selection or the current line.
+
+### Property-based tests
+
+A property-based test checks a rule for many random inputs, for example
+"decoding what you encoded gives back the input" or "sorting twice is the
+same as sorting once". When a rule breaks, the library shrinks the input
+to the smallest one that fails.
+
+1. Open a file, or select the functions you want tested.
+2. Run **AI: Generate Property-Based Tests for File / Selection** from the
+   palette, or pick **Generate Property-Based Tests with AI** in `Ctrl+.`.
+3. The chat names the rules, writes them to a new test file and runs it.
+   You review the new file like every AI change.
+
+termocode picks the library your project already uses: `testing/quick` or
+`rapid` (Go), Hypothesis (Python), fast-check (JavaScript, TypeScript),
+proptest or quickcheck (Rust), jqwik or Kotest (Java, Kotlin), StreamData
+(Elixir), QuickCheck (Haskell). When the library is missing, the AI tells
+you the command to add it; it never adds a dependency by itself. It does
+not change the code under test.
 
 ### Fix from the Problems panel
 
@@ -547,6 +590,49 @@ Shell commands (`run_command`, the terminal) and LSP edits made with
 `ai_edit_review` = `auto` are not part of a restore point: use git for
 those.
 
+### Rewind to any turn
+
+**AI: Rewind Chat to Turn…** lists your questions, newest first. Each row
+says how many files a rewind puts back. Pick one and a card asks first
+(Cancel has the focus):
+
+- **Code only** puts back the files of every AI turn from that question
+  on, newest first. Files those turns created are deleted. The chat stays
+  and gets a line saying what was restored.
+- **Code + chat** does the same, then removes the messages from that
+  question on and puts the question back in the input. Edit it and press
+  Enter to try again.
+
+Like Undo, the card lists files that changed after the AI turn (those
+later changes are lost) and files with unsaved edits (left as they are).
+
+### Code checkpoints (any agent)
+
+Restore points only see the built-in AI's own file tools. Code
+checkpoints cover everything else, also outside CLI agents in a terminal
+tab:
+
+- With the agent hooks installed (**Agent: State Hooks…**), each time
+  an outside agent starts a turn, termocode saves a checkpoint of the
+  folder it works in (its agent worktree, else the tab's folder), named
+  *before &lt;agent&gt; turn*.
+- **AI: Save Code Checkpoint** saves the workspace by hand.
+- **AI: Restore Code Checkpoint…** lists the checkpoints of the workspace
+  and of every agent tab's folder. Picking one shows what a restore
+  changes; Cancel has the focus. Restore puts changed and deleted files
+  back and deletes files made after the checkpoint.
+
+A checkpoint is the whole working tree: tracked files with their staged
+and unstaged edits, and new files that git does not ignore. It is kept as
+a private git ref (`refs/termocode/checkpoints/`), so your index, branch,
+HEAD and stash never change. Restore first saves the files as they are
+now as a new checkpoint, so a restore can be undone the same way. Ignored
+files (build output, `node_modules`, `.env`) are not part of it and stay
+as they are. A file with unsaved edits in an open tab blocks the restore
+until you save or discard them. The last 50 checkpoints per working tree
+are kept. Checkpoints need git; a folder in a container is not covered
+yet.
+
 ### Audit log
 
 Every tool call of the agent is one line in the **Output** panel, channel
@@ -566,6 +652,22 @@ Every tool call of the agent is one line in the **Output** panel, channel
 
 **AI: Undo Last Turn** adds a line too. The log is kept while termocode
 runs (the last 5000 lines).
+
+### Who is named on the AI's commits
+
+The setting `git_ai_attribution` (Settings, group **Git**) says who is
+named on a commit the AI makes: `git_commit` in the chat and the commit
+of a plan run in a worktree.
+
+| Value | Author | Committer | Added to the message |
+|---|---|---|---|
+| `user` (default) | you | you | nothing |
+| `co-author` | you | you | `Co-authored-by: termocode AI <ai@termocode.invalid>` |
+| `ai` | termocode AI | you | nothing |
+
+The commit card shows the choice before you allow it, for example
+`Commit: "fix typo" (author: termocode AI)`. Only you can change the
+setting; the AI cannot. Commits you make yourself are never changed.
 
 ## Agent: let the chat use tools
 
@@ -750,6 +852,41 @@ arguments and its rule.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
+
+### Autopilot and approval rules
+
+termocode rates every change the agent wants to make as **low**, **medium**
+or **high** risk. Low: read-only commands (`ls`, `cat`, `grep`, `git status`,
+`git diff`, `git log`). Medium: file edits in the project, builds, tests and
+other local commands. High: deletes, `git push` / `git pull`, `rm`, `sudo`,
+network commands (`curl`, `ssh`, …), writes outside the project or to `.env`,
+`.git` and key files.
+
+**AI: Autopilot Level…** steps the level: *off* → *low* → *medium*. At *low*,
+low-risk actions run without a card; at *medium*, medium-risk ones too.
+Raising the level first shows a card with **Cancel** focused, so Enter alone
+changes nothing. A high-risk action **always** shows the card, even when its
+kind is set to Always allow. The card then names the risk and why it asks.
+
+Your own rules come first. Put them in `ai_approval_rules` in `config.json`:
+
+```json
+"ai_approval_rules": [
+  {"tool": "run_command", "match": "Run: go test *", "action": "allow"},
+  {"tool": "run_command", "match": "*docker*", "action": "deny"},
+  {"tool": "git_*", "action": "ask"}
+]
+```
+
+The first rule that fits wins. `deny` refuses without a card (the agent is
+told so); `allow` skips the card (never for a high-risk action); `ask` always
+shows it. `match` is a pattern over the card text (`*` is any text).
+
+**Guardian.** Set `ai_guardian` to a model slot (for example `"quick"`) and a
+second model checks each medium-risk action autopilot would run. It answers
+allow, or sends the action back to you with its reason on the card. It costs
+one small request per checked action and never allows what a rule denies.
+The AI can never change autopilot, the rules or the guardian.
 
 The IDE follows what the agent does: a new file shows in the explorer at once,
 a renamed open file keeps its tab under the new name, a deleted one closes its
@@ -1101,6 +1238,27 @@ Run **AI: Proof of Work…** to see the shots, newest first, with the
 address, size and note. Enter opens a shot in the picture preview.
 **Delete all proof screenshots…** asks first (Cancel is the default) and
 removes only the shots and their notes.
+
+## Image generation
+
+The AI can make PNG images for your project: an app icon, a placeholder,
+a picture for the docs. It is off until you turn it on. Run **AI: Toggle
+Image Generation** (run it again to turn it off).
+
+- It needs a main model on **OpenAI** or an **OpenAI-compatible**
+  endpoint with an images API (`/images/generations`). The same key is
+  used. Other providers do not get the tool.
+- The model is `gpt-image-1`. Set `ai_image_model` in `config.json` to use
+  another one. It must return image data, not a link.
+- The AI calls `generate_image` with a prompt and a new `.png` path in the
+  workspace. Each call is a paid request, so each one asks first; there
+  is no **Always allow**. The card shows the path, the model and the
+  prompt.
+- It never overwrites a file. The new file shows in the explorer.
+  **AI: Undo Last Turn** deletes it again.
+- The AI cannot turn the tool on by itself.
+
+The web panel cannot turn image generation on yet.
 
 ## Keys at a glance
 

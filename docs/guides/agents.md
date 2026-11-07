@@ -215,6 +215,10 @@ also edit `config.json`.
   disconnect it. Both ask first. Press `?` on the screen for its keys.
 - Every call, allowed or not, is in the AI audit log (**Output: AI**) as
   `mcp:<agent name>`.
+- **Output: Save Audit Log** saves the **AI** and **Web** audit channels
+  to a new private file: `audit/audit-<time>.log` in termocode's config
+  folder (only you can read it). It never overwrites a saved log, and it
+  blanks secrets once more. Workflow runs keep their own `audit.jsonl`.
 
 The chat AI can not run the status and config commands. They are for you.
 
@@ -469,6 +473,29 @@ the tab. When another account is free, the limit toast already names it.
 - Only Claude Code and Codex have accounts. The AI cannot run this
   command.
 
+## Auto-accept prompts
+
+**Agent: Toggle Auto-Accept** lets an agent tab run without you. It is
+off by default, works per tab, and has no setting.
+
+1. Open the agent's tab and run the command.
+2. A card explains what it does. **Cancel** is first; pick **Turn on**.
+3. The tab is named `Codex · auto-yes`. termocode now answers each
+   permission prompt with "yes, this once" and a toast counts the answers.
+
+It never:
+
+- picks an "always" or "don't ask again" choice;
+- answers a question with its own choices;
+- answers a prompt that shows a risky command (`rm -rf`, `sudo`, a force
+  push, `reset --hard`, a download piped into a shell, SSH keys, `.env`,
+  `kubectl delete`, …). That prompt waits for you, and a toast says why.
+
+It answers each prompt once and turns itself off after 50 answers. Run the
+command again to turn it off. It works for Claude Code, Codex, Gemini CLI,
+OpenCode and Aider. The AI cannot turn it on. Use it on a worktree you can
+throw away: the agent still edits files and runs commands you did not read.
+
 ## Usage and plan limits
 
 The status bar shows a pill like `✦ Claude 62% ↻14:30`: the part of the
@@ -595,5 +622,6 @@ agent thread. On the web, this is not there yet.
 | The agent shows no termocode tools | Start it again from the palette, or add the config by hand. |
 | A card never appears | Another dialog may be open. The card waits until it closes. |
 | No plan pill in the status bar | termocode has seen no limit message yet. Turn on `agent_transcripts` to read the numbers from the session files. |
+| Auto-accept did not answer | The prompt showed a risky command, or it was a question with its own choices. Answer it yourself. |
 | Auto-continue did not type | A question was on the screen, or the agent was working again. The toast says why. |
 | A resumed agent starts a new session | No session id was known. Turn on `agent_transcripts` so termocode can keep it. |

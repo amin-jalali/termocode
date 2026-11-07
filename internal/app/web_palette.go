@@ -38,6 +38,7 @@ var webPaletteAllow = map[string]bool{
 	// The user's own AI commands (webPaletteUserOnly says why the web may).
 	"ai-until-done":        true,
 	"ai-plan-approval":     true,
+	"ai-autopilot":         true,
 	"ai-reasoning-next":    true,
 	"ai-keep-going":        true,
 	"ai-edit-review":       true,
@@ -55,6 +56,7 @@ var webPaletteAllow = map[string]bool{
 	"ai-mcp-background":    false,
 	"ai-mcp-reset-cache":   false,
 	"ai-mcp-updates":       false,
+	"ai-checkpoint-save":   false, // CMP-62: saves a private git ref, changes no file
 }
 
 // webPaletteUserOnly are the commands the AI itself may never run (its
@@ -65,6 +67,7 @@ var webPaletteAllow = map[string]bool{
 // setting, a paid turn or a push changes only after the laptop's yes.
 var webPaletteUserOnly = map[string]string{
 	"ai-plan-approval":    "the user's own chat setting, after a laptop card",
+	"ai-autopilot":        "the user's own approval setting, raised only after a laptop card",
 	"ai-reasoning-next":   "the user's own chat setting (more thinking costs more), after a laptop card",
 	"ai-keep-going":       "the user's own chat setting (extra paid turns), after a laptop card",
 	"ai-edit-review":      "the user's own review setting, after a laptop card",

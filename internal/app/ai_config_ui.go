@@ -64,6 +64,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIHistoryRenamePicked(id), true
 	case pickerKindAIFork: // ai_fork.go
 		return m.onAIForkPicked(id), true
+	case pickerKindAIRewind: // ai_rewind.go (CMP-62)
+		return m.onAIRewindPicked(id), true
+	case pickerKindCheckpoint: // checkpoints_ui.go (CMP-62)
+		return m.onCheckpointPicked(id), true
 	case pickerKindAIAutoApprove:
 		return m.onAIAutoApproveToggled(id), true
 	case pickerKindMCPServeStatus: // mcp_serve_status.go
@@ -190,10 +194,16 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIToolConfirm(id), true
 	case confirmKindAIUndoTurn:
 		return m.onAIUndoTurnConfirm(id), true
+	case confirmKindAIRewind: // ai_rewind.go (CMP-62)
+		return m.answerAIRewind(id), true
+	case confirmKindCheckpointRestore: // checkpoints_ui.go (CMP-62)
+		return m.answerCheckpointRestore(id), true
 	case confirmKindAIBudget:
 		return m.answerAIBudget(id), true
 	case confirmKindAIPlan: // G-PLAN (ai_plan_approval.go)
 		return m.answerAIPlan(id), true
+	case confirmKindAIAutopilot: // CMP-61 (ai_autopilot.go)
+		return m.answerAIAutopilot(id), true
 	case confirmKindAISide: // OMX-30 (ai_side.go)
 		return m.answerAISide(id), true
 	case confirmKindRunsStop: // runs_state.go
@@ -283,6 +293,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAISkillsTrust(id), true
 	case confirmKindAIHooksTrust: // ai_hooks.go
 		return m.answerAIHooksTrust(id), true
+	case confirmKindAgentEnvCreate: // ai_agent_env.go
+		return m.answerAgentEnvCreate(id), true
+	case confirmKindAgentEnvTrust: // ai_agent_env.go
+		return m.answerAgentEnvTrust(id), true
 	case confirmKindAIWebAdd: // ai_web_presets.go
 		return m.answerAIWebPreset(id), true
 	case confirmKindAIProofClear: // ai_proof.go
@@ -352,6 +366,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerSecretsBroken(id), true
 	case confirmKindRegistryRemember: // containers_registries.go
 		return m.answerRegistryRemember(id), true
+	case confirmKindAgentAutoAccept: // agent_autoaccept.go
+		return m.answerAgentAutoAccept(id), true
 	case confirmKindAgentMCP: // agent_mcp_card.go
 		return m.answerAgentMCPCard(id), true
 	case confirmKindAIWorktreeConflict, confirmKindAIWorktreeDiscard: // ai_worktree_actions.go
@@ -462,6 +478,10 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAISkillsTrust("") // Esc: no answer, the message goes back
 	case confirmKindAIHooksTrust:
 		return m.answerAIHooksTrust("") // Esc: no answer, the message goes back
+	case confirmKindAgentEnvCreate:
+		return m.answerAgentEnvCreate("") // Esc: Cancel
+	case confirmKindAgentEnvTrust:
+		return m.answerAgentEnvTrust("") // Esc: the old answer stays
 	case confirmKindAIShipPush, confirmKindAIShipPR, confirmKindAIShipMerge, confirmKindWTShipMerge:
 		return m.answerAIShipCard(m.confirmKind, "") // Esc: the ship stops
 	case confirmKindWTShipCommit:
@@ -486,6 +506,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.openSecretsStore() // Esc: back to the store screen
 	case confirmKindRegistryRemember:
 		return m.registryPromptClosed()
+	case confirmKindAgentAutoAccept:
+		return m.answerAgentAutoAccept("") // Esc: Cancel
 	case confirmKindAgentMCP:
 		return m.answerAgentMCPCard("skip")
 	case confirmKindWebStart:

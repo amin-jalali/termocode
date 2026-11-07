@@ -203,6 +203,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if cmd, ok := m.handleKubePromptSubmit(value); ok { // kube_scale.go
 		return cmd
 	}
+	if m.promptKind == promptKindPairSyncFolder { // container_pairsync.go
+		return m.onPairSyncFolderPrompt(value)
+	}
 	if m.promptKind == promptKindContainerFolder { // container_workspace.go
 		return m.onContainerFolderPrompt(value)
 	}

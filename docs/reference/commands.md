@@ -13,12 +13,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Add Model Slot… | `ai-model-slot-add` |   |   |
 | AI: Agent Auto-Approve… | `ai-auto-approve` |   |   |
 | AI: Agent Board… | `ai-board` |   |   |
+| AI: Autopilot Level… (off / low / medium risk) | `ai-autopilot` |   |   |
+| AI: Agent Environment… (setup, secrets, network rule for workflow agents) | `ai-agent-env` |   |   |
 | AI: Agent Worktrees… | `ai-worktrees` |   |   |
 | AI: Agents & Connections | `itermoc-open-ai` |   |   |
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
 | AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
 | AI: Chat Comments… | `ai-chat-comments` |   | `comments from people you shared the chat with` |
+| AI: Chat Doc Revisions… | `ai-chat-doc-revisions` |   |   |
+| AI: Chat Docs… | `ai-chat-docs` |   |   |
 | AI: Chat History… | `ai-history` |   |   |
 | AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |
@@ -36,6 +40,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Fix Diagnostic at Cursor | `ai-fix` |   |   |
 | AI: Fork Chat from Message… | `ai-fork-chat` |   |   |
 | AI: Generate Doc Comment | `ai-doc` |   |   |
+| AI: Generate Property-Based Tests for File / Selection | `ai-property-tests` |   |   |
 | AI: Handoff to a New Chat | `ai-handoff` |   |   |
 | AI: Hooks… | `ai-hooks` |   |   |
 | AI: Lock Secrets | `secrets-lock` |   |   |
@@ -67,12 +72,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Project Rules… | `ai-rules` |   |   |
 | AI: Proof of Work… (screenshots the AI took) | `ai-proofs` |   |   |
 | AI: Rename Chat… | `ai-history-rename` |   |   |
+| AI: Restore Code Checkpoint… | `ai-checkpoint-restore` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Review Waiting Plan | `ai-plan-review` |   |   |
+| AI: Rewind Chat to Turn… | `ai-rewind-turn` |   |   |
 | AI: Run Next Plan in a Worktree, Then Ship… / Off | `ai-plan-worktree` |   |   |
 | AI: Run Task List in Waves… | `ai-run-task-list` |   |   |
 | AI: Runs | `ai-runs` |   |   |
 | AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
+| AI: Save Code Checkpoint | `ai-checkpoint-save` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
 | AI: Share Chat by Link… | `ai-share-chat` |   | `a viewer link; they watch and comment` |
@@ -89,6 +97,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` / `Alt+G` | `Alt+Shift+A / Alt+G` |
 | AI: Toggle Critic Review | `ai-critic-toggle` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
+| AI: Toggle Image Generation | `ai-image-gen` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Toggle Keep Going While Todos Are Open | `ai-keep-going` |   |   |
 | AI: Toggle Next Edit Suggestions | `ai-toggle-next-edit` |   |   |
@@ -123,6 +132,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start OpenCode | `agent-start-opencode` |   |   |
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
+| Agent: Toggle Auto-Accept | `agent-auto-accept-toggle` |   | `answer its permission prompts: yes, once` |
 | Agent: Switch Account… | `agent-account-switch` |   | `go on as another account after a limit` |
 | Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
 | Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
@@ -173,6 +183,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Open Published Port | `containers-open-port` |   |   |
 | Containers: Open Shell | `containers-shell` |   |   |
 | Containers: Open in Databases | `containers-open-databases` |   |   |
+| Containers: Pair Sync with Workspace… | `containers-pair-sync` |   |   |
 | Containers: Pause or Unpause Selected | `containers-pause` |   |   |
 | Containers: Prune Dangling Images… | `containers-image-prune` |   |   |
 | Containers: Prune Networks… | `containers-network-prune` |   |   |
@@ -697,6 +708,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Output: Clear Channel | `output-clear` |   |   |
+| Output: Save Audit Log | `output-save-audit` |   |   |
 
 ## Preferences
 
@@ -709,7 +721,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preferences: Import from Another Editor… | `prefs-import-editor` |   |   |
 | Preferences: Import termocode Settings File… | `settings-import` |   |   |
 | Preferences: Open Settings (UI) | `open-settings-ui` |   |   |
+| Preferences: Save Setup to This Project… | `settings-setup-save` |   |   |
 | Preferences: Undo Last Import… | `prefs-import-undo` |   |   |
+| Preferences: Use a Project Setup… | `settings-setup-use` |   |   |
 
 ## Run
 

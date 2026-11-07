@@ -302,6 +302,11 @@ func (m *Model) onAgentCtl(call agentCtlCall) tea.Cmd {
 			was = t.t.AgentState
 		}
 		rep := m.agentCtlReport(r)
+		if rep.OK && t.t != nil && agentTurnStarts(was, t.t.AgentState) {
+			// CMP-62: a code checkpoint before the outside agent's turn
+			// (checkpoints_ui.go); the reply follows the save.
+			return m.checkpointAgentTurn(call, rep, t.t)
+		}
 		answer(rep)
 		if rep.OK && rep.State == "waiting" && was != agents.Waiting && !m.agentCtlTabShown(t.t) {
 			var c tea.Cmd
