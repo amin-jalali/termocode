@@ -645,6 +645,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.httpCookiesPrompt(value); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseDumpPrompt(m.promptKind, value); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseRolesPrompt(m.promptKind, value); ok {
 		return cmd, true
 	}

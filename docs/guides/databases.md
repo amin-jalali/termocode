@@ -167,7 +167,7 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `y` | copy the cell |
 | `Y` | copy the column, one value per line |
 | `c` / `C` | copy the loaded rows as CSV / JSON |
-| `S` | export the rows to a file (CSV, TSV, JSON, SQL INSERTs, Markdown or HTML) |
+| `S` | export the rows to a file (CSV, TSV, JSON, SQL INSERTs, Markdown, HTML or Excel) |
 | `r` | run again (writes ask again) |
 | `1` … `9` | show result tab 1 … 9 |
 | `p` | pin the result tab (again: unpin) |
@@ -255,17 +255,19 @@ Each connection starts in auto-commit mode: every statement is saved at once. Pr
 
 ## Export and import
 
-**Export.** `S` (Shift+s) on a result page (or **Databases: Export Result…**) opens a picker: CSV, TSV, JSON, SQL INSERTs, Markdown table, HTML table (one page you can open in a browser; every cell is escaped). Then type a file name; the default is `<table>-<date>.<ext>` in the workspace, and a full path works too. If the file exists, a card asks before it is replaced. The rows go into a temporary file in the same folder, and the file you chose appears only when every row is written, so a cancel or an error leaves no half file and keeps the old one.
+**Export.** `S` (Shift+s) on a result page (or **Databases: Export Result…**) opens a picker: CSV, TSV, JSON, SQL INSERTs, Markdown table, HTML table (one page you can open in a browser; every cell is escaped), Excel workbook (`.xlsx`: numbers stay numbers, NULL is an empty cell, text is never a formula). Then type a file name; the default is `<table>-<date>.<ext>` in the workspace, and a full path works too. If the file exists, a card asks before it is replaced. The rows go into a temporary file in the same folder, and the file you chose appears only when every row is written, so a cancel or an error leaves no half file and keeps the old one.
 
 When the result is only part of the rows (the 10,000-row limit, or one page of a table), a card asks: **Export the loaded rows** or **Export all**. Export all runs the query again, without the row limit, in a read-only session and writes the rows as the server sends them (a page of 1,000 at a time, never all in memory). A progress card shows the count; `Esc` cancels and removes the temporary file. Only a plain `SELECT` can run again, so a write is never repeated; Export all reads committed data, not the changes of your open transaction.
 
 CSV and TSV protect spreadsheets from formula injection: a cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading single quote (`'=SUM(A1)`). A real number such as `-5` keeps its sign. NULL is an empty cell in CSV and TSV, `null` in JSON and `NULL` in Markdown and INSERT files. INSERT files quote names and values for the connection's database (a quote is doubled; MySQL also doubles a backslash) and write binary values in the database's own form. The **Copy** keys `c` / `C` do not add the quote.
 
-**Import.** `i` on a table (or **Databases: Import CSV into Table…**) lists the `.csv` files of the workspace (or asks for a path). A preview card shows what was detected: the encoding (UTF-8, UTF-16 or ISO-8859-1), the delimiter (comma, semicolon, tab or pipe), whether the first row is a header, the row count, the column mapping (file column to table column, matched by name, or by position without a header) and the first rows. **Map columns** changes one table column at a time, and **Header** switches the header guess. Empty cells become NULL.
+**Import.** `i` on a table (or **Databases: Import CSV into Table…**) lists the `.csv` and JSON (`.json`, `.jsonl`, `.ndjson`) files of the workspace (or asks for a path). A JSON file is an array of objects or one object per line; its keys become the columns in the order they first appear, a missing key or `null` is an empty cell, and a nested array or object goes in as its JSON text. It is turned into a temporary CSV (removed at the end) and then gets the same preview and import. A preview card shows what was detected: the encoding (UTF-8, UTF-16 or ISO-8859-1), the delimiter (comma, semicolon, tab or pipe), whether the first row is a header, the row count, the column mapping (file column to table column, matched by name, or by position without a header) and the first rows. **Map columns** changes one table column at a time, and **Header** switches the header guess. Empty cells become NULL.
 
 **Import** reads the file one row at a time and inserts it with bound values in INSERTs of up to 1,000 rows, all in one transaction: if any row fails, everything is rolled back, nothing is written, and a card names the row and line. A progress card shows `N / total rows`; `Esc` cancels and rolls back. A read-only connection never imports, a production connection gets the strong card, and in manual transaction mode the rows join your open transaction (Commit saves them). The AI cannot import.
 
 **Bad rows: skip.** The card's **Bad rows** button switches from **stop** (the default above) to **skip**: a row that cannot be read, has the wrong number of fields or fails its INSERT is left out (it is rolled back alone), and the other rows are saved. The done toast says how many rows were skipped and names an error log (row, line and the server's error for each) in the termocode config folder.
+
+**Dump and restore.** **Databases: Dump Database…** writes the whole database with the server's own tool: `pg_dump` (a `.dump` file is its archive format, a `.sql` file plain SQL) or `mysqldump` (SQL). **Databases: Restore Database…** loads a file back: `pg_restore` for an archive, `psql` (stops at the first error, in one transaction) or `mysql` for a `.sql` file. The tools must be on `PATH`, and the connection must be connected (so its password is known); over an SSH or Kubernetes tunnel they are not offered. Both show the command on a card with **Cancel** first; the password is never on the card nor in the process arguments (it goes in the tool's environment). A restore says that it can replace or drop tables and cannot be undone, and a read-only connection never restores. `Esc` on the progress card stops the tool. The AI cannot dump or restore.
 
 ## EXPLAIN and ANALYZE
 
@@ -299,6 +301,10 @@ A statement with parameters asks for each value before it runs: `?`, `:name`, `$
 **Databases: Show Sessions and Locks** lists the other sessions of the server in the result grid. PostgreSQL shows each `pid`, user, state, wait and `blocked_by` (the pids that hold the lock it waits for). MySQL shows the process list. **Databases: Show Server Info** shows the version, database, user, host and main settings. Both are plain reads: they are written into the connection's console and run there.
 
 **Databases: Cancel Session Query…** stops the running query of one session. **Databases: End Session…** ends the whole session; its open transaction rolls back. Both ask for the session id (`pid` / `id` column), then show the usual run card first (Cancel is the default). SQLite and Redis have no sessions.
+
+## Users and roles
+
+**Databases: Show Users and Roles** lists the roles (PostgreSQL) or accounts (MySQL) in the result grid, and **Databases: Show Grants of a Role…** asks for a role (MySQL: `user@host`) and lists its table and schema grants. **Databases: Create Role…** and **Databases: Alter Role…** ask for the name, then for its kind (login user, group role without login, admin, superuser; MySQL: login user or locked account). **Databases: Grant Privileges…** and **Databases: Revoke Privileges…** ask for the role, then for the rights as `SELECT, INSERT on schema.table` (or `on schema` for every table of it). Every one of these writes the statement into the console and shows it on the run card with **Cancel** first, so nothing changes before you choose **Run**. Passwords are never part of the statement; set one in the console. The AI cannot run these commands.
 
 ## SQL history
 

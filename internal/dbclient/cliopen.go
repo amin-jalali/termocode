@@ -13,6 +13,9 @@ type CLICmd struct {
 	Tool string   // psql, mysql, sqlite3 or redis-cli (looked up on PATH by the caller)
 	Args []string // arguments after Tool
 	Env  []string // KEY=value to add to the environment
+	// Stdin is a file the tool reads on standard input ("" = none): a
+	// MySQL restore feeds the dump file to mysql this way.
+	Stdin string
 }
 
 // CLIOptions change the command. Host/Port, when set, replace the

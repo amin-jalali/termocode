@@ -93,6 +93,9 @@ func (m *Model) databaseJobCard(j *dbJob) {
 	if j.total > 0 {
 		text = fmt.Sprintf("%s / %s rows", dbThousands(int(j.done.Load())), dbThousands(int(j.total)))
 	}
+	if j.kind == "tool" {
+		text = "Running"
+	}
 	text += " · Esc cancels"
 	if j.kind == "import" {
 		text += " (nothing is kept)"
@@ -505,7 +508,10 @@ func (m *Model) databaseTransferClosed() {
 	case confirmKindDBExportScope, confirmKindDBExportOverwrite:
 		s.exp = nil
 	case confirmKindDBImport:
+		dbImportDropTmp(s.imp)
 		s.imp = nil
+	case confirmKindDBDump, confirmKindDBRestore:
+		s.dump = nil
 	}
 }
 

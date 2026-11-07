@@ -71,6 +71,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-role-alter", Title: "Databases: Alter Role…"},
 		{ID: "db-grant", Title: "Databases: Grant Privileges…"},
 		{ID: "db-revoke", Title: "Databases: Revoke Privileges…"},
+		{ID: "db-dump", Title: "Databases: Dump Database…"},
+		{ID: "db-restore", Title: "Databases: Restore Database…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
@@ -142,6 +144,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseStopSessionPrompt(false), true
 	case "db-end-session":
 		return m.databaseStopSessionPrompt(true), true
+	case "db-dump":
+		return m.databaseDumpStart(false), true
+	case "db-restore":
+		return m.databaseDumpStart(true), true
 	case "db-roles":
 		return m.databaseRolesShow(), true
 	case "db-role-grants":

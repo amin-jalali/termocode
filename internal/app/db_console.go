@@ -63,6 +63,7 @@ type dbRun struct {
 
 type dbConsoleState struct {
 	roles    dbRolesState      // the open users-and-roles flow (DBX-18)
+	dump     *dbDumpState      // the dump / restore being prepared (DBX-19)
 	lens     map[string]string // file + "\x00" + SQL → the lens status
 	attached map[string]string // project .sql file → connection (session only)
 	pending  *dbRun            // waits for the attach picker or the guard card
@@ -891,6 +892,9 @@ func (s *dbConsoleState) stop(conn string) {
 }
 
 func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseDumpConfirm(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseSessionsConfirm(id); ok {
 		return cmd, true
 	}

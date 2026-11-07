@@ -282,6 +282,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBSubmit(msg)
 	case dbJobTickMsg:
 		return m, m.onDBJobTick(msg)
+	case dbToolDoneMsg:
+		return m, m.onDBToolDone(msg)
 	case dbExportDoneMsg:
 		return m, m.onDBExportDone(msg)
 	case dbImportFilesMsg:

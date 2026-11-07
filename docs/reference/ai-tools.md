@@ -2064,6 +2064,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
+| `db-dump` | Databases: Dump Database… | never | runs the server's dump tool with the user's password; only the user can choose it |
 | `db-end-session` | Databases: End Session… | never | ends another session and rolls back its transaction; only the user can choose it |
 | `db-er-diagram` | Databases: Export ER Diagram… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
@@ -2083,6 +2084,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
 | `db-refresh` | Databases: Refresh | auto |   |
+| `db-restore` | Databases: Restore Database… | never | replaces tables and rows on the server; only the user can choose it |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
 | `db-revoke` | Databases: Revoke Privileges… | never | changes database rights; only the user can choose it |

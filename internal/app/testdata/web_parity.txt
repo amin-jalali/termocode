@@ -459,6 +459,7 @@ missing	db-ai-explain-query	Databases|S
 missing	db-ai-fix-error	Databases|S
 missing	db-ai-generate-sql	Databases|S
 missing	db-cancel-session	Databases|S
+missing	db-dump	Databases|M
 missing	db-end-session	Databases|S
 missing	db-er-diagram	Databases|S
 missing	db-find-usages	Databases|S
@@ -468,6 +469,7 @@ missing	db-generate-data	Databases|M
 missing	db-goto-definition	Databases|S
 missing	db-grant	Databases|S
 missing	db-open-sessions	Databases|S
+missing	db-restore	Databases|M
 missing	db-revoke	Databases|S
 missing	db-role-alter	Databases|S
 missing	db-role-create	Databases|S

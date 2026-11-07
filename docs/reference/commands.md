@@ -215,6 +215,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected… | `db-disconnect` |   |   |
+| Databases: Dump Database… | `db-dump` |   |   |
 | Databases: End Session… | `db-end-session` |   |   |
 | Databases: Explain Analyze Statement… | `db-explain-analyze` |   |   |
 | Databases: Explain Statement | `db-explain` |   |   |
@@ -235,6 +236,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Open Table Data | `db-data` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
+| Databases: Restore Database… | `db-restore` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Revoke Privileges… | `db-revoke` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
