@@ -25,7 +25,8 @@ const maxNesting = 5
 // file variables, the selected environment (private file wins over the
 // public one), $shared, then the $-functions ($dotenv, $processEnv,
 // $secret, $guid, $uuid, $timestamp, $isoTimestamp, $datetime,
-// $localDatetime, $randomInt).
+// $localDatetime with iso8601, rfc1123 or a quoted custom format,
+// $randomInt, $random.email/firstName/lastName/fullName/words).
 type Resolver struct {
 	FileVars []Var
 	Env      string
@@ -241,6 +242,12 @@ func (rv *Resolver) now() time.Time {
 
 // dynamicValue evaluates the $-functions that need no outside source.
 func dynamicValue(fn, arg string, now time.Time) (string, bool) {
+	if v, ok, handled := fakeValue(fn, arg); handled {
+		return v, ok
+	}
+	if (fn == "$datetime" || fn == "$localDatetime") && arg != "" && (arg[0] == '"' || arg[0] == '\'') {
+		return customDatetime(fn, arg, now)
+	}
 	args := strings.Fields(arg)
 	switch fn {
 	case "$guid", "$uuid", "$random.uuid":

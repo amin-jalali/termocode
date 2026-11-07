@@ -39,7 +39,8 @@ local HEADERS = {
   'Upgrade', 'User-Agent', 'Via', 'X-Api-Key', 'X-Correlation-Id', 'X-Forwarded-For', 'X-Request-Id',
 }
 local DYNAMIC = { '$guid', '$uuid', '$timestamp', '$isoTimestamp', '$datetime iso8601', '$datetime rfc1123',
-  '$randomInt 0 100', '$dotenv ', '$processEnv ', '$secret ' }
+  '$datetime "YYYY-MM-DD"', '$randomInt 0 100', '$random.email', '$random.firstName', '$random.lastName',
+  '$random.fullName', '$random.words 3', '$dotenv ', '$processEnv ', '$secret ' }
 
 function _G._termocode_http_omni(findstart, base)
   local line = api.nvim_get_current_line()
