@@ -63,7 +63,7 @@ Termocode suggests connections it finds. A suggestion row has no password and do
 
 - SQLite files ending in `.db`, `.sqlite` or `.sqlite3`, up to two folders below the workspace root.
 - `DATABASE_URL`, `REDIS_URL` or `MYSQL_URL` in the workspace `.env`. The value is not shown. The saved connection uses a `${dotenv:NAME}` reference.
-- PostgreSQL, MySQL, MariaDB, Redis and Valkey containers and compose services. The Databases view reads the container list itself when it opens and when you press `R`. You do not need to open Services first.
+- PostgreSQL, MySQL, MariaDB, Redis, Valkey, KeyDB and Dragonfly containers and compose services. The Databases view reads the container list itself when it opens and when you press `R`. You do not need to open Services first.
 - A server on this computer that is not in Docker. When the view opens and on `R`, Termocode tries one quick connection to `127.0.0.1` on ports 5432, 3306 and 6379. A port that answers shows as **PostgreSQL on localhost:5432**, **MySQL on localhost:3306** or **Redis on localhost:6379**. Ports that a saved connection or a container already uses are skipped. No other computer is ever tried.
 
 Press `a` on a suggestion (or `Enter`) to add it. Press `x` to hide it. A hidden suggestion stays hidden.
@@ -271,7 +271,7 @@ Nothing polls while you wait: an idle console or result page uses no CPU. Hiding
 
 ## Redis and Valkey
 
-A Redis or Valkey connection (`"driver": "redis"`) takes a host, a port (6379 by default), an optional ACL `user`, a database index `db`, and a password from the secret store. Use `"tls": true` or a `rediss://` URL for TLS; `"ssl": {"ca": "…", "cert": "…", "key": "…"}` adds a CA and a client certificate. Containers and compose services built from `redis` or `valkey` images, and `REDIS_URL` in `.env`, are suggested.
+A Redis or Valkey connection (`"driver": "redis"`) takes a host, a port (6379 by default), an optional ACL `user`, a database index `db`, and a password from the secret store. Use `"tls": true` or a `rediss://` URL for TLS; `"ssl": {"ca": "…", "cert": "…", "key": "…"}` adds a CA and a client certificate. Containers and compose services built from `redis`, `valkey`, `keydb` or `dragonfly` images, and `REDIS_URL` in `.env`, are suggested.
 
 Expanding a connection lists its databases (`db0 (1234 keys)`). Expanding a database lists its keys with `SCAN`, grouped into namespaces by `db_redis_separator` (`:` by default): `session:ab12` sits under `session:`. The app never sends `KEYS`. One row loads at most `db_redis_max_keys` keys (10000); past that the row says so, and opening a namespace scans only its keys. Each key shows its type: `"` string, `{` hash, `[` list, `(` set, `⇅` sorted set, `≋` stream (ASCII: `s h l S z x`).
 

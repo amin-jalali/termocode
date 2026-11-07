@@ -530,8 +530,9 @@ func dbDriverForImage(image string) string {
 	case strings.Contains(v, "mariadb"), strings.Contains(v, "mysql"):
 		return "mysql"
 	}
-	// redis:7, valkey/valkey:8, bitnami/redis, redis/redis-stack-server
-	// (not GUI images such as redis/redisinsight).
+	// redis:7, valkey/valkey:8, bitnami/redis, redis/redis-stack-server,
+	// eqalpha/keydb, dragonflydb/dragonfly (Redis protocol; not GUI or
+	// operator images such as redis/redisinsight).
 	name := v
 	if i := strings.LastIndex(name, "/"); i >= 0 {
 		name = name[i+1:]
@@ -539,7 +540,7 @@ func dbDriverForImage(image string) string {
 	name, _, _ = strings.Cut(name, ":")
 	name, _, _ = strings.Cut(name, "@")
 	switch name {
-	case "redis", "valkey", "redis-stack", "redis-stack-server":
+	case "redis", "valkey", "redis-stack", "redis-stack-server", "keydb", "dragonfly":
 		return "redis"
 	}
 	return ""
