@@ -712,7 +712,7 @@ func (m *Model) aiHTTPTools(root string, call aiIDECaller, base []ai.Tool) []ai.
 		},
 	}
 
-	tools := []ai.Tool{listReqs, envs, send, last, hist, setEnv, httpWSTool(root)}
+	tools := []ai.Tool{listReqs, envs, send, last, hist, setEnv, httpWSTool(root, chain)}
 	if wf, ok := ai.FindTool(base, "write_file"); ok {
 		tools = append(tools, httpSaveRequestTool(root, wf))
 	}
