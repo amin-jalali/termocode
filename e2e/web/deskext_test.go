@@ -28,7 +28,7 @@ func TestDeskExtensionPanelsAndStatusItems(t *testing.T) {
 	p.TapJS(`document.querySelector('.statusbar .sb-ext[data-ext="good.st"]')`)
 	reply(t, c, waitArgs(t, c, webproto.OpExtStatusRun, `{"id":"good.st"}`), nil)
 
-	p.TapJS(`document.querySelector('.act-bar [data-act="extensions"]')`)
+	p.TapAct("extensions")
 	r := waitArgs(t, c, webproto.OpExtPanel, `{"id":"good.main"}`)
 	reply(t, c, r, webproto.ExtPanelView{Lines: [][]webproto.ExtSpan{{{T: "width 60", S: "accent bold"}, {T: " rest"}}, {{T: "row two"}}}})
 	p.WaitJS(`document.querySelector('.wb-side [data-view="extensions"] .ps-title')?.textContent === "Good"`)

@@ -229,7 +229,13 @@ func (p *webPage) goTab(tab string) {
 			p.waitJS(`document.querySelector('.wb-panel [data-view="term"]')`)
 			return
 		}
-		p.tap(fmt.Sprintf(`nav .act-item[data-act="%s"]`, tab))
+		// A short bar keeps the last items in its "…" menu.
+		if webEval[bool](p, fmt.Sprintf(`!!document.querySelector('nav .act-item[data-act="%s"]')?.hidden`, tab)) {
+			p.tap(`nav .act-more`)
+			p.tap(fmt.Sprintf(`.ctx-menu .ctx-item[data-id="%s"]`, tab))
+		} else {
+			p.tap(fmt.Sprintf(`nav .act-item[data-act="%s"]`, tab))
+		}
 		p.waitJS(fmt.Sprintf(`document.querySelector('nav .act-item[data-act="%s"][aria-current="page"]') && document.querySelector('[data-view="%s"]')`, tab, tab))
 		return
 	}
