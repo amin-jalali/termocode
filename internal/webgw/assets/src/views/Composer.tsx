@@ -17,6 +17,8 @@ import { t, type StringKey } from "../strings";
 import { Button } from "../ui/Button";
 import { Cod } from "../ui/icons";
 import { errText } from "../ui/CardSheet";
+import { attachArgs, clearRefs } from "../lib/tochat";
+import { RefChips } from "../ui/RefChips";
 
 const MAX_ROWS_PX = 160;
 
@@ -40,11 +42,14 @@ export function Composer({ chat, busy, profile = "", model = "", onSent }: { cha
     const body = getDraft(chat);
     if (!live.peek() || sending || !body.trim()) return;
     setSending(true);
-    link.request("chat.send", { text: body, ...(chat ? { chat_id: chat } : {}) }).then(
+    // The refs from ↩ go with the text, as references only (MOBUX-19).
+    const attach = attachArgs();
+    link.request("chat.send", { text: body, ...(chat ? { chat_id: chat } : {}), ...(attach ? { attach } : {}) }).then(
       () => {
         setSending(false);
         setNote(null);
         if (getDraft(chat) === body) setDraft(chat, "");
+        if (attach) clearRefs();
         onSent?.();
       },
       (e: unknown) => {
@@ -78,6 +83,7 @@ export function Composer({ chat, busy, profile = "", model = "", onSent }: { cha
           {note}
         </p>
       )}
+      {!desk && <RefChips />}
       <div class={desk ? "composer-frame" : "composer-plain"}>
       <div class="composer-row">
         <textarea
