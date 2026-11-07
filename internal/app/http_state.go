@@ -218,6 +218,7 @@ type httpState struct {
 	copyLang    string // Copy as Code… language of copyRun ("" = curl)
 	importInto  string // .http file the next curl import appends to
 	bufCache    *httpBufCache
+	fields      httpFieldsState // the params and headers table (http_fields.go)
 
 	// The web's request (one at a time) and the hosts the laptop allowed
 	// the web to send to in this session (web_http.go).
