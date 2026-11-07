@@ -313,6 +313,11 @@ lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
 first).
 
+From your phone, the races view shows the same lanes. You can start a
+race (a card on the laptop, **Cancel** first), ask for the summary, run
+verify and stop the lanes. Merge and discard stay on the laptop. See
+[the web panel](web.md#workflows-and-agents-from-the-phone).
+
 ## Chat view and sessions
 
 With `agent_transcripts` on:

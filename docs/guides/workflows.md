@@ -203,6 +203,11 @@ once**. "Allow for this workflow", turning a schedule on and editing a
 file stay on the laptop. You can stop a run from the phone; it asks
 first.
 
+The phone can also start a **dry run** at once (it never writes; plan
+steps still cost AI money, and the page says so first). A real run and
+saving a workflow the chat drafted wait for a card on the laptop
+(**Cancel** first). See [the web panel](web.md#workflows-and-agents-from-the-phone).
+
 In a browser on a wide screen, **Workflows** in the activity bar lists
 the same in the side bar. A run opens as an editor tab with its counts,
 its last lines and the write card that waits for it (**Deny** first).
