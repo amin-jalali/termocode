@@ -2,13 +2,17 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/netmsg"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/update"
@@ -68,7 +72,7 @@ func (m *Model) onUpdatePrepared(msg updatePreparedMsg) tea.Cmd {
 	w.busy = false
 	m.toast = m.toast.Dismiss(updateToastKey)
 	if msg.err != nil {
-		return m.pushToastDetail(toast.Errr, "Update failed: nothing was changed", msg.err.Error())
+		return m.pushToastDetail(toast.Errr, "Update failed: nothing was changed", updateFailDetail(msg.err))
 	}
 	st := msg.staged
 	w.staged = &st
@@ -81,6 +85,23 @@ func (m *Model) onUpdatePrepared(msg updatePreparedMsg) tea.Cmd {
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen, m.confirmKind = true, confirmKindUpdateInstall
 	return nil
+}
+
+// updateFailDetail says in plain words why the download or its check
+// failed: the file and the HTTP status, the network cause, or the check.
+func updateFailDetail(err error) string {
+	var he *update.HTTPError
+	if errors.As(err, &he) {
+		name := he.URL
+		if u, perr := url.Parse(he.URL); perr == nil && u.Path != "" {
+			name = path.Base(u.Path)
+		}
+		return fmt.Sprintf("the download of %s failed: HTTP %d", name, he.Code)
+	}
+	if why, ok := netmsg.Why(err); ok {
+		return "the download failed: " + why
+	}
+	return err.Error()
 }
 
 // answerUpdateInstall runs the confirm card's answer.
