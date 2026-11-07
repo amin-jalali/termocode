@@ -8,6 +8,11 @@ Everything is saved in `~/.config/termocode/` (or `$XDG_CONFIG_HOME/termocode/`)
     and starts anyway. Check **Help: Show Error Log** if a change does not
     take effect.
 
+    If `config.json` itself is not valid JSON, termocode starts with the
+    default settings and shows one note with the line of the mistake. It
+    does not change the file and does not show the setup card. Setting
+    changes show an error until you fix it with **Open Config: Theme**.
+
 ## Pick a theme
 
 1. Press `F1` and run **Preferences: Color Theme…**.
@@ -35,6 +40,10 @@ text, debug and test markers, the integrated terminal's colours).
 Your colors are saved in `user_theme.json`, on top of VSCode Dark+. A
 **Custom** entry then appears in the theme list. To edit the file by hand, run
 **Open Config: Theme**.
+
+If you edited `user_theme.json` by hand and it is not valid JSON, your next
+color change still saves. The old file is kept as `user_theme.json.broken`,
+and a note tells you so.
 
 ## Change settings
 

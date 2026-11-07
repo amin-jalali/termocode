@@ -1076,6 +1076,9 @@ func (m Model) Init() tea.Cmd {
 	if cmd := m.aiProfileErrorsCmd(); cmd != nil { // broken ai/profiles.json
 		cmds = append(cmds, cmd)
 	}
+	if cmd := configBrokenCmd(); cmd != nil { // SCN-30: broken config.json (settings_corrupt.go)
+		cmds = append(cmds, cmd)
+	}
 	cmds = append(cmds, aiRunsStartupCmd())           // prune old agent run snapshots
 	cmds = append(cmds, m.secretsMigrateStartCmd())   // plain credentials.json → safer store (SS-4)
 	cmds = append(cmds, m.updateInitCmd())            // G-UPD: a newer release? (update_check.go)
