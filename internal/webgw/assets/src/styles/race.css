@@ -1,0 +1,67 @@
+/* Agent races on the phone (MOB-62): the race block's buttons and the
+   start form. Web tokens only, so dark, light and more contrast follow
+   the panel. Every target is at least 44 px. */
+.race-acts,
+.race-start {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.race-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.race-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+}
+.race-hint,
+.race-cost {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.race-note {
+  margin: 0;
+  color: var(--text);
+}
+.race-sum {
+  border-left: 3px solid var(--ai);
+  padding: 4px 10px;
+  background: var(--bg-panel);
+}
+.race-sum ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.race-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.race-field textarea,
+.race-field input,
+.race-field select {
+  min-height: 44px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+}
+.race-field :focus-visible {
+  outline: 2px solid var(--focus);
+}
+.race-lane {
+  display: flex;
+  gap: 8px;
+}
+.race-lane select {
+  flex: 1;
+}
