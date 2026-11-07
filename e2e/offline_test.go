@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"net"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -228,6 +229,29 @@ func TestOfflineLSPInstall(t *testing.T) {
 	tm.Send(KeyEnter) // Install
 	tm.WaitText("Offline — can't install lua_ls", 30*time.Second)
 	tm.WaitText("check your network connection", uiTimeout)
+}
+
+// Spec (SCN-13): cloning from a server that refuses ends with one clear
+// "Clone failed" toast that says it could not connect, leaves no
+// half-made folder, and the UI still takes keys.
+func TestOfflineGitClone(t *testing.T) {
+	ws := NewRepo(t)
+	dest := filepath.Join(filepath.Dir(ws), "repo")
+	tm := startOffline(t, ws, "")
+	tm.Palette("Git: Clone Repository...")
+	tm.WaitText("Repository URL", uiTimeout)
+	tm.settle()
+	tm.Type("http://" + refusedAddr(t) + "/repo.git")
+	tm.Send(KeyEnter)
+	tm.WaitText("Clone into folder", uiTimeout)
+	tm.settle()
+	tm.Send(KeyEnter) // the default: a sibling of the workspace
+	tm.WaitText("Clone failed", 30*time.Second)
+	tm.WaitText("Failed to connect", uiTimeout)
+	if _, err := os.Stat(dest); err == nil {
+		t.Fatalf("a failed clone left %s", dest)
+	}
+	tm.paletteWorks()
 }
 
 func gitIn(t *testing.T, dir string, args ...string) {
