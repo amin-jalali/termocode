@@ -122,3 +122,26 @@ func TestCompareKeepsSelection(t *testing.T) {
 		t.Errorf("selected %s", c.Selected())
 	}
 }
+
+// Spec (CMP-9): p asks the AI judge; its ranking, reasons, the pick
+// (★ on its row) and the cost show on the page, and the hint names p.
+func TestCompareJudge(t *testing.T) {
+	r := demoRace()
+	r.Judge = &agentrace.Judgment{Pick: "race-3-1-claude", Cost: "gpt-5 · $0.02", Ranks: []agentrace.Rank{
+		{Lane: "race-3-1-claude", Reason: "tests pass, small change"}, {Lane: "race-3-2-codex", Reason: "verify fails"}}}
+	c := NewCompare(r)
+	c.SetSize(150, 42)
+	out := ansi.Strip(c.Box())
+	for _, want := range []string{"JUDGE", "gpt-5 · $0.02", "1. Claude Code — tests pass, small change", "2. Codex — verify fails",
+		"pick: Claude Code", "Claude Code ★", "p"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("no %q in:\n%s", want, out)
+		}
+	}
+	if !strings.Contains(out, "judge") {
+		t.Errorf("no judge hint:\n%s", out)
+	}
+	if a, _ := run(c.Key(key("p"))).(ActionMsg); a.Action != ActJudge {
+		t.Errorf("p %+v", a)
+	}
+}
