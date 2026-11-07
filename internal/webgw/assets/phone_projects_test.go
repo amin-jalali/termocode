@@ -77,11 +77,15 @@ func TestPhoneProjectsCard(t *testing.T) {
 		`<StatusMark s={p.status}`,
 		`<StatusMark s={CI_LOOK[p.ci]} hidden />`,
 		`tn("ph.proj.tasks", p.tasks)`,
-		`import "../styles/phone-projects.css";`,
 	} {
 		if !strings.Contains(src, want) {
 			t.Errorf("ProjectsList.tsx lost %q", want)
 		}
+	}
+	// A lazy chunk may not bring a style sheet (cmd/webbuild), so the
+	// list's styles are in app.css: main.tsx imports them.
+	if !strings.Contains(phoneProjSrc(t, "src/main.tsx"), `import "./styles/phone-projects.css";`) {
+		t.Error("main.tsx does not import the projects list's styles/phone-projects.css")
 	}
 	if n := strings.Count(src, "<button"); n != 1 {
 		t.Errorf("a project card has %d buttons; want one target per card", n)
@@ -104,7 +108,7 @@ func TestPhoneProjectsCard(t *testing.T) {
 func TestPhoneProjectsNotInPageBundle(t *testing.T) {
 	for _, f := range []string{"src/main.tsx", "src/app.tsx", "src/workbench.tsx"} {
 		s := phoneProjSrc(t, f)
-		if strings.Contains(s, "ProjectsList") || strings.Contains(s, "phone-projects.css") {
+		if strings.Contains(s, "ProjectsList") || f != "src/main.tsx" && strings.Contains(s, "phone-projects.css") {
 			t.Errorf("%s imports the phone projects list", f)
 		}
 	}
@@ -115,7 +119,7 @@ func TestPhoneProjectsNotInPageBundle(t *testing.T) {
 // happens on the laptop.
 func TestPhoneProjectsStrings(t *testing.T) {
 	en := phoneProjSrc(t, "src/strings.ts")
-	for _, k := range []string{"ph.proj.title", "ph.proj.none", "ph.proj.here", "ph.proj.waiting", "ph.proj.working", "ph.proj.tasks.one", "ph.proj.tasks.other", "ph.proj.ci_passed", "ph.proj.ci_failed", "ph.proj.ci_running"} {
+	for _, k := range []string{"ph.switch_title", "ph.proj.none", "ph.proj.here", "ph.proj.waiting", "ph.proj.working", "ph.proj.tasks.one", "ph.proj.tasks.other", "ph.proj.ci_passed", "ph.proj.ci_failed", "ph.proj.ci_running"} {
 		if !strings.Contains(en, `"`+k+`":`) {
 			t.Errorf("strings.ts has no %s", k)
 		}

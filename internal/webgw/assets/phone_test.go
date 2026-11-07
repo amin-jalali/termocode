@@ -128,7 +128,8 @@ func TestPhoneTargetsAndArm(t *testing.T) {
 // ruleBody returns the declarations of the first rule whose selector is
 // exactly sel.
 func ruleBody(css, sel string) string {
-	m := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(sel) + `\s*\{([^}]*)\}`).FindStringSubmatch(css)
+	// sel alone, or one selector of a list (".a,\n.b { … }" is a rule of both).
+	m := regexp.MustCompile(`(?m)^(?:[^{}]*,\s*)?` + regexp.QuoteMeta(sel) + `\s*(?:,[^{}]*)?\{([^}]*)\}`).FindStringSubmatch(css)
 	if m == nil {
 		return ""
 	}
@@ -253,7 +254,9 @@ func TestPhoneKitNotInPageBundle(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(string(b), "/phone") || strings.Contains(string(b), "phone.css") {
+		// The page's style sheets may hold a lazy view's styles (a chunk
+		// brings none, cmd/webbuild), never the kit's phone.css.
+		if regexp.MustCompile(`from "\./phone|"\./phone/|styles/phone\.css`).Match(b) {
 			t.Errorf("%s imports the phone kit; it belongs in the phone's lazy chunk", f)
 		}
 	}

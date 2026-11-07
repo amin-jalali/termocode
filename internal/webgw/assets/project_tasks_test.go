@@ -17,7 +17,8 @@ func TestPhoneProjectTasksView(t *testing.T) {
 		t.Fatal(err)
 	}
 	src := string(b)
-	if !strings.Contains(src, `.request("project.tasks"`) {
+	// requestWithID: the project page (MOBUX-7) sends it to that project's hub.
+	if !regexp.MustCompile(`\.request(WithID)?\("project\.tasks"`).MatchString(src) {
 		t.Error("the view does not read project.tasks")
 	}
 	for _, only := range []string{`"checklist"`, `"issues"`, `"prs"`, `"mrs"`} {
