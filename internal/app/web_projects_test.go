@@ -71,6 +71,10 @@ func TestProjectsMergeDedupesRanksAndHidesPaths(t *testing.T) {
 		app.Where != "~/src/app" || app.ID != webProjectID("/home/u/src/app") || len(app.ID) != webproto.ProjectIDLen {
 		t.Errorf("app %+v", app)
 	}
+	// MOB-50: the row carries the workspace key the door routes by.
+	if app.WS != session.Key("/home/u/src/app") || !webproto.ValidWS(app.WS) {
+		t.Errorf("app ws %q", app.WS)
+	}
 	api, _ := projByName(s, "api")
 	if api.State != "running" || !api.Service || !api.Recent || api.Working != 1 || api.Waiting != 1 || api.OpenedAt != projT2.UnixMilli() || api.Where != "~/src/api" {
 		t.Errorf("api %+v", api)

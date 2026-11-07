@@ -45,6 +45,14 @@ type Control struct {
 // gatewayOp answers a request the gateway handles itself, on the reader
 // goroutine (the laptop's answer comes on a goroutine of its own).
 func (c *wsConn) gatewayOp(r *webproto.Req) {
+	if r.Op == webproto.OpAppWatchToken {
+		c.watchToken(r)
+		return
+	}
+	if r.Op == webproto.OpPushSubscribe || r.Op == webproto.OpPushUnsubscribe {
+		c.pushOp(r)
+		return
+	}
 	ctrl := c.s.cfg.Control
 	if ctrl == nil {
 		c.refuseReq(r.ID, webproto.CodeNotFound, "This is not available here.")
@@ -165,4 +173,30 @@ func (t *Tokens) SetDeviceRole(device string, role Role) int {
 		}
 	}
 	return n
+}
+
+// watchToken answers app.watch_token (MOB-23): a watch token for this
+// session's paired device. A shared viewer, a launch-link tab (no device)
+// and a device no longer paired get none.
+func (c *wsConn) watchToken(r *webproto.Req) {
+	wt, store := c.s.cfg.WatchTokens, c.s.cfg.Devices
+	if wt == nil || store == nil {
+		c.refuseReq(r.ID, webproto.CodeNotFound, "This is not available here.")
+		return
+	}
+	f, t := false, true
+	d, ok, err := store.Get(c.sess.Device)
+	if !strings.HasPrefix(c.sess.Device, "dev-") || err != nil || !ok || d.Guest {
+		_ = c.s.cfg.Audit.Log(Event{Kind: EvOp, Conn: c.id, Device: c.sess.Device, Op: r.Op, OK: &f, Why: "not_paired"})
+		c.refuseReq(r.ID, webproto.CodeForbidden, "Only a paired phone can watch.")
+		return
+	}
+	tok, exp, err := wt.Issue(d.ID, c.s.cfg.Now())
+	if err != nil {
+		_ = c.s.cfg.Audit.Log(Event{Kind: EvOp, Conn: c.id, Device: d.ID, Op: r.Op, OK: &f, Why: "store"})
+		c.refuseReq(r.ID, webproto.CodeBusy, "Try again in a minute.")
+		return
+	}
+	_ = c.s.cfg.Audit.Log(Event{Kind: EvOp, Conn: c.id, Device: d.ID, Op: r.Op, OK: &t})
+	c.answerReq(r.ID, webproto.WatchToken{Token: tok, Path: "/watch", Expires: exp.UnixMilli()})
 }

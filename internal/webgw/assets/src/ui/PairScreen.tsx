@@ -13,6 +13,7 @@ import { t, type StringKey } from "../strings";
 import { Button } from "./Button";
 import { RememberBox, remember } from "./RememberBox";
 import { keepDeviceKey } from "../net/devicekey";
+import { appKeyPair, inApp } from "../net/appkey";
 
 /** Done opens the workspace once this device has a session. */
 type Done = () => void;
@@ -29,11 +30,13 @@ export type PairState =
   | "nopasskey"
   | "cancelled";
 
-const state = signal<PairState>(passkeysHere() ? "ready" : "nopasskey");
+const state = signal<PairState>(passkeysHere() || inApp() ? "ready" : "nopasskey");
 const code = signal("");
 const guest = signal(false);
 let pairID = "";
 let options: unknown = null;
+/** appKeys: the laptop lets the termocode app pair with its key (MOB-27). */
+let appKeys = false;
 
 const lineFor: Record<PairState, StringKey> = {
   ready: "pair.body_intro",
@@ -80,7 +83,8 @@ async function wait(): Promise<void> {
     if (r.status === 200 && r.data.state === "waiting") continue;
     if (r.status === 200 && r.data.state === "approved") {
       options = r.data.options;
-      state.value = "approved";
+      appKeys = r.data.app_keys === true && inApp();
+      state.value = appKeys || passkeysHere() ? "approved" : "nopasskey";
       return;
     }
     state.value = r.status === 0 ? "failed" : failState(r);
@@ -90,14 +94,23 @@ async function wait(): Promise<void> {
 
 async function save(onDone: Done) {
   state.value = "saving";
-  let credential: unknown;
-  try {
-    credential = await createPasskey(options);
-  } catch {
-    state.value = "cancelled"; // the user may tap Save passkey again
-    return;
+  let proof: Record<string, unknown>;
+  if (appKeys) {
+    const k = await appKeyPair(pairID);
+    if (k === null) {
+      state.value = "cancelled"; // the user may tap Save again
+      return;
+    }
+    proof = k;
+  } else {
+    try {
+      proof = { credential: await createPasskey(options) };
+    } catch {
+      state.value = "cancelled"; // the user may tap Save passkey again
+      return;
+    }
   }
-  const r = await postJSON("/pair/finish", { pair_id: pairID, credential, remember: remember.value && !guest.value });
+  const r = await postJSON("/pair/finish", { pair_id: pairID, ...proof, remember: remember.value && !guest.value });
   if (!keepIssuedToken(r)) {
     state.value = failState(r);
     return;

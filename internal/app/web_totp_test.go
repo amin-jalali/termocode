@@ -150,3 +150,20 @@ func TestWebRequireTotpFlag(t *testing.T) {
 		t.Fatal("web_require_totp not read")
 	}
 }
+
+// Spec (MOB-27): web_app_key_login (off by default) starts the gateway
+// with --app-key: the Android app may pair and sign in with its own
+// keystore key when passkeys fail in its WebView.
+func TestWebAppKeyLoginFlag(t *testing.T) {
+	withConfigDir(t)
+	if webSettings().AppKeyLogin {
+		t.Fatal("app key sign-in on by default")
+	}
+	writeUserConfig(t, `{"web_app_key_login":true}`)
+	if !webSettings().AppKeyLogin {
+		t.Fatal("web_app_key_login not read")
+	}
+	if p, ok := aiSettingPolicies["web_app_key_login"]; !ok || p.Gate != aiGateNever {
+		t.Fatalf("the AI may change web_app_key_login: %+v %v", p, ok)
+	}
+}

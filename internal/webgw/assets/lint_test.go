@@ -53,9 +53,12 @@ var sourceRules = []rule{
 	// OS notifications come only from lib/notify.ts, which shows fixed
 	// texts from a closed list (WEB-37, never-do 14).
 	{name: "notifications", re: regexp.MustCompile(`\bNotification\b|\brequestPermission\b|\bshowNotification\b`), allow: map[string]bool{"lib/notify.ts": true}},
-	// No service worker, ever (WEB-35): no code of the page may outlive it
-	// in the browser, so an old or poisoned copy can never run.
-	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`)},
+	// No service worker of the page (WEB-35): no code of the page may
+	// outlive it in the browser, so an old or poisoned copy can never run.
+	// The one exception is lib/push.ts (MOB-30): it registers the
+	// gateway's push-only /sw.js, which serves nothing and keeps nothing
+	// (webgw/sw.js, TestServiceWorkerIsPushOnly).
+	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`), allow: map[string]bool{"lib/push.ts": true}},
 	// Messages only between the page and the desktop editor's frame, both
 	// sides checking the other's origin and window (monaco/protocol.ts).
 	// lib/popout.ts opens this page's own terminal route in a new window
@@ -195,6 +198,9 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/strings-fa.js")`, "", 1)
 			text = strings.Replace(text, `import("/assets/home.js")`, "", 1)
+		}
+		if e.Path == "app.js" || e.Path == "app-chunk.js" { // lib/push.ts: the push-only worker (MOB-30)
+			text = strings.ReplaceAll(text, "navigator.serviceWorker", "")
 		}
 		if e.Path == "monaco-frame.js" { // the frame's one dynamic import: Vim mode (WEBP-1), a fixed path
 			text = strings.Replace(text, `import("/assets/monaco-vim.js")`, "", 1)
@@ -391,5 +397,18 @@ func TestHomeChunkImportsNoState(t *testing.T) {
 	}
 	if n == 0 {
 		t.Fatal("no Home sources scanned")
+	}
+}
+
+// The page registers one worker only, the gateway's push-only /sw.js
+// (MOB-30), with the site as its scope.
+func TestPushRegistersOnlyTheGatewayWorker(t *testing.T) {
+	b, err := os.ReadFile("src/lib/push.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := regexp.MustCompile(`\.register\(([^)]*)\)`).FindAllStringSubmatch(string(b), -1)
+	if len(reg) != 1 || reg[0][1] != `"/sw.js", { scope: "/" }` {
+		t.Errorf("lib/push.ts registers %v, want only /sw.js", reg)
 	}
 }
