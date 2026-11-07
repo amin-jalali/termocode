@@ -558,6 +558,8 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-reasoning-next", "AI: Next Reasoning Level", ""},
 		{"ai-keep-going", "AI: Toggle Keep Going While Todos Are Open", ""},
 		{"ai-handoff", "AI: Handoff to a New Chat", ""},
+		{chatDocsPaletteID, "AI: Chat Docs…", ""},
+		{chatDocRevsPaletteID, "AI: Chat Doc Revisions…", ""},
 		{"ai-side", "AI: Side Question…", ""},
 		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
@@ -727,6 +729,10 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAISide(), true
 	case "ai-handoff": // OMX-21 (ai_session_tools.go)
 		return m.aiHandoff(), true
+	case chatDocsPaletteID: // CMP-94 (ai_chat_docs.go)
+		return m.openChatDocs(), true
+	case chatDocRevsPaletteID:
+		return m.openChatDocRevisions(), true
 	case "ai-keep-going": // OMX-7 (ai_keep_going.go)
 		return m.toggleAIKeepGoing(), true
 	case "ai-plan-approval": // G-PLAN (ai_plan_approval.go)
