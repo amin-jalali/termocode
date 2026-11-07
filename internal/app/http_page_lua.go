@@ -5,7 +5,7 @@ package app
 //
 //   - the buffer holds the real text: row 1 the request line, row 2 the
 //     status summary, row 3 empty (the hairline is drawn on it), then the
-//     view (Body, Headers or Raw). _G._termocode_http.rows[lnum] says what
+//     view (Body, Headers, Raw, Cookies, Timing, Wire, Diff or Text). _G._termocode_http.rows[lnum] says what
 //     a later row is (k = 't' title, 'h' header, 'hop', 'note', 'key').
 //   - a decoration provider draws the chrome (request name, the status
 //     number colour, the view chips, the hairline, the key hints) with
@@ -161,13 +161,17 @@ local function chunks_width(cs)
   return w
 end
 
-local function chips(w)
+-- compact: only the first three views and the current one (the rest
+-- stay on Tab and the number keys) when all of them do not fit.
+local function chips(w, compact)
   local out = {}
   for i, name in ipairs(H.head.chips or {}) do
     local label = name
     if w < 90 and name == 'Headers' then label = 'Hdrs' end
     local on = (H.head.view or 0) + 1 == i
-    out[#out + 1] = { ' ' .. label .. ' ', on and 'TermocodeHttpChipOn' or 'TermocodeHttpChipOff' }
+    if not compact or i <= 3 or on then
+      out[#out + 1] = { ' ' .. label .. ' ', on and 'TermocodeHttpChipOn' or 'TermocodeHttpChipOff' }
+    end
   end
   out[#out + 1] = { ' ', 'Normal' }
   return out
@@ -228,6 +232,7 @@ api.nvim_set_decoration_provider(ns, {
       if (h.st_n or 0) > 0 then E(0, { end_col = math.min(h.st_n, #line), hl_group = h.st_hl, priority = 5000 }) end
       if line ~= '' and h.summary and not h.summary:find('sending', 1, true) then
         local cs = chips(cur_w)
+        if width(line) + chunks_width(cs) + 1 > cur_w then cs = chips(cur_w, true) end
         if width(line) + chunks_width(cs) + 1 <= cur_w then
           E(0, { virt_text = cs, virt_text_pos = 'right_align' })
         end
@@ -256,6 +261,10 @@ api.nvim_set_decoration_provider(ns, {
         E(0, { end_col = #line, hl_group = 'TermocodeHttpHop' })
       elseif r.k == 'note' then
         E(0, { end_col = #line, hl_group = 'TermocodeHttpSummary' })
+      elseif r.k == 'add' then
+        E(0, { end_col = #line, hl_group = 'DiffAdd' })
+      elseif r.k == 'del' then
+        E(0, { end_col = #line, hl_group = 'DiffDelete' })
       elseif r.k == 'key' then
         E(2, { end_col = math.min(2 + (r.n or 1), #line), hl_group = 'TermocodeHttpKeycap' })
         E(math.min(2 + (r.n or 1), #line), { end_col = #line, hl_group = 'TermocodeHttpHint' })
@@ -275,7 +284,7 @@ vim.api.nvim_create_autocmd('FileType', {
     local function map(lhs, key)
       vim.keymap.set('n', lhs, function() notify(key) end, { buffer = buf, silent = true, nowait = true })
     end
-    for _, k in ipairs({ 'r', 'c', 'C', 's', 'S', 'h', 'e', 'k', 'x', 'o', 'q', '1', '2', '3' }) do map(k, k) end
+    for _, k in ipairs({ 'r', 'c', 'C', 's', 'S', 'h', 'e', 'k', 'x', 'o', 'q', '1', '2', '3', '4', '5', '6', '7', '8' }) do map(k, k) end
     map('<Tab>', 'tab')
     map('<Esc>', 'esc')
     -- Mouse: the chips on row 2, the request name on row 1, a redirect
@@ -289,6 +298,8 @@ vim.api.nvim_create_autocmd('FileType', {
       if pos.line == 2 then
         local col = w
         local cs = chips(w)
+        local l2 = api.nvim_buf_get_lines(0, 1, 2, false)[1] or ''
+        if width(l2) + chunks_width(cs) + 1 > w then cs = chips(w, true) end
         for i = #cs, 1, -1 do
           local cw = width(cs[i][1])
           if pos.wincol > col - cw and pos.wincol <= col then

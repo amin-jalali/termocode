@@ -177,6 +177,9 @@ type httpRun struct {
 	progress int64
 	body     *httpBody // the Body view's lines (made once per resp)
 	live     []byte    // the newest text of a stream while it runs (API-16)
+	// prev is the answer the same request got the time before (the
+	// Diff view compares with it); nil when there is none or it was big.
+	prev *httpclient.Response
 }
 
 // httpState is the HTTP client's per-app state (Model.http).
@@ -279,6 +282,9 @@ func (s *httpState) httpClient(set httpSettings) *httpclient.Client {
 // remember puts a finished run in the ring (bodies kept for the newest
 // few only, risk 4 of the plan).
 func (s *httpState) remember(r *httpRun) {
+	if r.prev == nil {
+		r.prev = s.previousAnswer(r)
+	}
 	s.last = r
 	s.ring = append(s.ring, r)
 	if len(s.ring) > httpRingMax {
@@ -291,6 +297,7 @@ func (s *httpState) remember(r *httpRun) {
 			cp.Truncated = true
 			old.resp = &cp
 			old.body = nil
+			old.prev = nil
 		}
 	}
 }
