@@ -2009,6 +2009,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
 | `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
+| `containers-engine-config` | Containers: Open Engine Config | auto |   |
 | `containers-focus` | Containers: Focus | auto |   |
 | `containers-help` | Containers: Open Guide | auto |   |
 | `containers-image-history` | Containers: Show Image History | auto |   |

@@ -1352,6 +1352,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-focus", Title: "Containers: Focus"},
 		{ID: "containers-refresh", Title: "Containers: Refresh"},
 		{ID: "containers-help", Title: "Containers: Open Guide"},
+		{ID: "containers-engine-config", Title: "Containers: Open Engine Config"},
 		{ID: "containers-context-use", Title: "Containers: Switch Context…"},
 		{ID: "containers-context-default", Title: "Containers: Make Context Default…"},
 		{ID: "containers-registry-connect", Title: "Containers: Connect Registry…"},
@@ -1578,6 +1579,9 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == "containers-help" {
 		return m.openContainersGuide(""), true
+	}
+	if id == "containers-engine-config" {
+		return m.openEngineConfig(), true
 	}
 	if id == "containers-open-databases" {
 		open := m.revealServicesView(false)

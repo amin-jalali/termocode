@@ -529,7 +529,8 @@ compose file are masked as `[REDACTED]` in everything the AI reads (logs,
 |---|---|
 | No container engine | Install Docker or Podman, then `R`. |
 | Docker Compose v2 is needed | Update Docker (the `docker compose` plugin). |
-| Docker is not running | Start Docker, then `R`. The rows stay, with `?`. |
+| Docker is not running (or Podman) | The view shows the start command (`y` copies it; termocode never runs it): `sudo systemctl start docker` on Linux, `podman machine start` for Podman on macOS and Windows, `systemctl --user start podman.socket` for Podman on Linux. On macOS and Windows Docker runs in Docker Desktop: open it. Then `R`. The rows stay, with `?`. |
+| Change engine settings | **Containers: Open Engine Config** opens `daemon.json` (Docker: `/etc/docker/daemon.json` on Linux, `~/.docker/daemon.json` with Docker Desktop) or `~/.config/containers/containers.conf` (Podman). Restart the engine after you save it. |
 | No access to the Docker socket | The view shows `sudo usermod -aG docker $USER` (`y` copies it). Members of the `docker` group are root-equal on that machine: think first, or use [rootless Docker](https://docs.docker.com/engine/security/rootless/). termocode never runs `sudo`. |
 | compose.yaml: … | The first error line; `o` opens the file. |
 
