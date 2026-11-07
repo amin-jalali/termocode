@@ -122,6 +122,33 @@ would commit it).
 | form fields | `Content-Type: application/x-www-form-urlencoded` and one `key = value` per line (a leading `&` is fine); termocode encodes and joins them. One line is sent as written |
 | GraphQL | `GRAPHQL https://…` (or the header `X-Request-Type: GraphQL`), the query, a blank line, then the variables as a JSON object; it is sent as POST JSON |
 
+## MQTT
+
+The send key on an `MQTT` request connects to the broker, subscribes,
+publishes and listens, then shows the session as a read-only page.
+
+```http
+### kitchen
+# @subscribe sensors/#
+# @listen 5s
+MQTT mqtts://ann:{{mqttPass}}@broker.local/sensors/kitchen
+
+{"temp": 21}
+===
+second message
+```
+
+| Part | Meaning |
+|---|---|
+| `mqtt://host[:port]/topic` | plain TCP, port 1883; `mqtts://` is TLS on 8883 (`http_tls_insecure` skips the certificate check) |
+| user info in the URL | the user name and password (hidden on the page) |
+| body | messages published to the URL's topic, split by `===` lines |
+| `# @subscribe a/#, b` | topic filters to listen to; with no body and no `@subscribe`, the URL's topic |
+| `# @listen 5s` | how long to listen (default 3 s, at most 60 s) |
+| `# @retain`, `# @client-id x` | publish as retained; a fixed client ID |
+
+Messages use QoS 0 and MQTT 3.1.1.
+
 ## More commands
 
 | Palette | What it does |

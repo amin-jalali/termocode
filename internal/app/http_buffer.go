@@ -332,5 +332,8 @@ func (m *Model) httpSendBufferLine(buf, line int) tea.Cmd {
 	if err != nil {
 		return m.pushToastDetail(toast.Warn, "HTTP: "+err.Error(), "")
 	}
+	if isMQTTRequest(*req) {
+		return m.httpMQTTSend(file, f.Vars, *req)
+	}
 	return m.httpSendRequest(file, f.Vars, *req, "")
 }

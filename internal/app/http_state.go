@@ -231,6 +231,8 @@ type httpState struct {
 	gqlPrefix  string
 	gqlDocs    *httpclient.GQLSchema
 
+	mqttRunning bool // an MQTT session runs (http_mqtt.go)
+
 	// The web's request (one at a time) and the hosts the laptop allowed
 	// the web to send to in this session (web_http.go).
 	webRun    *httpRun
@@ -554,6 +556,8 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.httpFinish(msg.run), true
 	case httpAppendMsg:
 		return m.httpPageAppend(msg), true
+	case httpMQTTDoneMsg:
+		return m.onHTTPMQTTDone(msg), true
 	case httpGQLSchemaMsg:
 		return m.onHTTPGQLSchema(msg), true
 	case httpPrivateEnvCheckMsg:
