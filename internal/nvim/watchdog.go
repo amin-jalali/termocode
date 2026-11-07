@@ -16,6 +16,10 @@ package nvim
 // works even when nvim no longer runs scheduled code; killing nvim there
 // is the last resort. "Kill everything" first kills the processes of
 // nvim's jobs (a killed nvim cannot stop them), then nvim.
+//
+// The timer ticks once per second: every tick wakes nvim, also while
+// nothing happens (PERF-4-2: 250 ms cost 4 idle wakeups per second). The
+// deadlines above are then met within one more second.
 const watchdogLua = `lua do
   local uv = vim.uv or vim.loop
   local parent, me = uv.os_getppid(), uv.os_getpid()
@@ -35,7 +39,7 @@ const watchdogLua = `lua do
     uv.kill(me, 'sigkill')
   end
   local t = uv.new_timer()
-  t:start(250, 250, function()
+  t:start(1000, 1000, function()
     local now = uv.hrtime() / 1e6
     if not orphan_at and uv.os_getppid() ~= parent then orphan_at = now end
     if orphan_at and now - orphan_at >= 3000 then uv.kill(me, 'sigkill') return end
