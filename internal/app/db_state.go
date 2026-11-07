@@ -646,6 +646,9 @@ func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, 
 		sess, err = dbclient.NewSQLiteSession(ctx, c)
 	case "redis":
 		sess, err = dbRedisSessionFactory(ctx, c, password)
+	case "libsql":
+		// A remote libSQL server (DBX-64): the password is its token.
+		sess, err = dbclient.NewLibSQLSession(c, password)
 	default:
 		err = os.ErrInvalid
 	}
@@ -696,7 +699,7 @@ func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64,
 		defer cancel()
 		start := time.Now()
 		var err error
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "libsql" {
 			err = fmt.Errorf("this connection type is not available yet")
 		}
 		var sess dbclient.Session

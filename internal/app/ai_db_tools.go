@@ -364,7 +364,7 @@ func dbAIDialect(driver string) dbclient.Dialect {
 	switch driver {
 	case "mysql":
 		return dbclient.MySQLDialect{}
-	case "sqlite":
+	case "sqlite", "libsql":
 		return dbclient.SQLiteDialect{}
 	}
 	return dbclient.PostgresDialect{}
