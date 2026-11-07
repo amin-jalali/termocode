@@ -212,3 +212,43 @@ func TestGitFixupOps(t *testing.T) {
 		}
 	}
 }
+
+// Spec (GITX-10 web, the STASHES section): the git topic lists the stash
+// entries; git.stash_show reads one entry's changes for viewers;
+// git.stash_act applies, pops, drops or branches from one entry after a
+// laptop card, and takes "stash@{n}", a known action and (branch only) a
+// good branch name.
+func TestGitStashPanelOps(t *testing.T) {
+	if p, ok := Lookup(OpGitStashShow); !ok || p.Role != RoleViewer || p.LaptopCard {
+		t.Errorf("git.stash_show row %+v", p)
+	}
+	if p, ok := Lookup(OpGitStashAct); !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+		t.Errorf("git.stash_act row %+v", p)
+	}
+	for _, good := range []string{`{"ref":"stash@{0}","do":"apply"}`, `{"ref":"stash@{1}","do":"pop"}`, `{"ref":"stash@{0}","do":"drop"}`, `{"ref":"stash@{2}","do":"branch","branch":"feat/x"}`} {
+		if _, err := DecodeArgs(OpGitStashAct, json.RawMessage(good)); err != nil {
+			t.Errorf("%s: %v", good, err)
+		}
+	}
+	for _, bad := range []string{`{"ref":"stash@{0}"}`, `{"ref":"stash@{0}","do":"clear"}`, `{"ref":"HEAD","do":"drop"}`,
+		`{"ref":"stash@{0}","do":"branch"}`, `{"ref":"stash@{0}","do":"branch","branch":"-x"}`, `{"ref":"stash@{0}","do":"drop","branch":"x"}`} {
+		if _, err := DecodeArgs(OpGitStashAct, json.RawMessage(bad)); !errors.Is(err, ErrInvalid) {
+			t.Errorf("%s: %v", bad, err)
+		}
+	}
+	if _, err := DecodeArgs(OpGitStashShow, json.RawMessage(`{"ref":"stash@{3}","from":10}`)); err != nil {
+		t.Errorf("a good show: %v", err)
+	}
+	for _, bad := range []string{`{"ref":"x"}`, `{"ref":"stash@{0}","from":-1}`} {
+		if _, err := DecodeArgs(OpGitStashShow, json.RawMessage(bad)); !errors.Is(err, ErrInvalid) {
+			t.Errorf("show %s: %v", bad, err)
+		}
+	}
+	b, _ := json.Marshal(GitSnap{Repo: true, Stashes: []GitStashEntry{{Ref: "stash@{0}", Message: "On main: wip"}}})
+	if !strings.Contains(string(b), `"stashes":[{"ref":"stash@{0}","message":"On main: wip"}]`) {
+		t.Errorf("snap %s", b)
+	}
+	if b, _ := json.Marshal(GitSnap{Repo: true}); strings.Contains(string(b), "stashes") {
+		t.Errorf("no stash: %s", b)
+	}
+}
