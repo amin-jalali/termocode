@@ -541,6 +541,12 @@ export interface WorktreeNoteArgs {
   text: string;
 }
 
+export interface WorktreeLinkArgs {
+  id: string;
+  kind: "issue" | "pr" | "none";
+  number: number;
+}
+
 export interface WorktreeArgs {
   id: string;
 }
@@ -3105,6 +3111,7 @@ export interface OpArgs {
   "worktrees.note": WorktreeNoteArgs;
   "worktrees.archive": WorktreeArgs;
   "worktrees.delete": WorktreeArgs;
+  "worktrees.link": WorktreeLinkArgs;
   "ai.worktrees": EmptyArgs;
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
@@ -3374,6 +3381,7 @@ export interface OpResult {
   "worktrees.note": WorktreeDone;
   "worktrees.archive": AskRef;
   "worktrees.delete": AskRef;
+  "worktrees.link": WorktreeDone;
   "ai.worktrees": AIWorktrees;
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;

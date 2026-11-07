@@ -33,6 +33,7 @@ func init() {
 	webOps[webproto.OpWorktreesPin] = (*Model).webWorktreesPin
 	webOps[webproto.OpWorktreesSleep] = (*Model).webWorktreesSleep
 	webOps[webproto.OpWorktreesNote] = (*Model).webWorktreesNote
+	webOps[webproto.OpWorktreesLink] = (*Model).webWorktreesLink
 	webAskOps[webproto.OpWorktreesArchive] = func(m *Model, call *webCall) *webAsk { return m.webWorktreesAsk(call, "archive") }
 	webAskOps[webproto.OpWorktreesDelete] = func(m *Model, call *webCall) *webAsk { return m.webWorktreesAsk(call, "delete") }
 }
@@ -209,6 +210,42 @@ func (m *Model) webWorktreesPin(call *webCall) tea.Cmd {
 	}
 	call.reply(webproto.WorktreeDone{})
 	return nil
+}
+
+// webWorktreesLink links an issue or PR number to a worktree, or
+// unlinks it (MOB-17): the laptop's Link card without its gh read. The
+// number replaces the old link and its last read, so the next load of
+// the list reads it with gh (wtLinkDue) and the card shows its title,
+// state and CI.
+func (m *Model) webWorktreesLink(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.WorktreeLinkArgs)
+	it, ok := m.webWorktreeFind(call, a.ID)
+	if !ok {
+		return nil
+	}
+	err := m.wtTouchMeta(it.e.Path, func(md *worktrees.Meta) {
+		md.Issue, md.PR, md.Link = 0, 0, worktrees.LinkInfo{}
+		switch a.Kind {
+		case "issue":
+			md.Issue = a.Number
+		case "pr":
+			md.PR = a.Number
+		}
+	})
+	if err != nil {
+		call.fail(webproto.CodeConflict, "The link could not be saved: "+err.Error())
+		return nil
+	}
+	note := "Unlinked."
+	switch a.Kind {
+	case "issue":
+		note = "Linked #" + strconv.Itoa(a.Number) + "."
+	case "pr":
+		note = "Linked PR #" + strconv.Itoa(a.Number) + "."
+	}
+	m.webAuditOp(call, wtTitle(it), "ok")
+	call.reply(webproto.WorktreeDone{Note: note})
+	return m.webWorktreesReload()
 }
 
 // webWorktreesNote leaves a note (cleaned and redacted as an agent's).

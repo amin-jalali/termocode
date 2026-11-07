@@ -19,6 +19,7 @@ const (
 	OpWorktreesNote    = "worktrees.note"
 	OpWorktreesArchive = "worktrees.archive"
 	OpWorktreesDelete  = "worktrees.delete"
+	OpWorktreesLink    = "worktrees.link"
 )
 
 var opWorktreesRows = []Policy{
@@ -28,6 +29,7 @@ var opWorktreesRows = []Policy{
 	{Op: OpWorktreesNote, New: newOf[WorktreeNoteArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 2 * kib, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpWorktreesArchive, New: newOf[WorktreeArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpWorktreesDelete, New: newOf[WorktreeArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpWorktreesLink, New: newOf[WorktreeLinkArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
 }
 
 var _ = func() bool { opTable = append(opTable, opWorktreesRows...); return true }()
@@ -39,6 +41,7 @@ func init() {
 	registerResult(OpWorktreesNote, WorktreeDone{})
 	registerResult(OpWorktreesArchive, AskRef{})
 	registerResult(OpWorktreesDelete, AskRef{})
+	registerResult(OpWorktreesLink, WorktreeDone{})
 }
 
 // Worktree limits.
@@ -46,6 +49,8 @@ const (
 	MaxWorktrees    = 500
 	MaxWorktreeNote = 500
 	WorktreeIDLen   = 12
+	// MaxWorktreeLinkNumber caps an issue or PR number of worktrees.link.
+	MaxWorktreeLinkNumber = 999_999_999
 )
 
 // WorktreesSnap is the worktrees topic. State: "none" the workspace is
@@ -110,6 +115,16 @@ type WorktreeNoteArgs struct {
 	Text string `json:"text"`
 }
 
+// WorktreeLinkArgs links an issue or PR of the repository to a worktree
+// (MOB-17, "Link to a lane" on the phone): only a kind and a number,
+// never a URL or a repository, so the laptop reads it with gh on the
+// repository it knows. Kind "none" with number 0 unlinks.
+type WorktreeLinkArgs struct {
+	ID     string `json:"id"`
+	Kind   string `json:"kind" enum:"issue|pr|none"`
+	Number int    `json:"number"`
+}
+
 // validWorktreeHexID: WorktreeIDLen lower-case hex digits.
 func validWorktreeHexID(id string) bool {
 	if len(id) != WorktreeIDLen {
@@ -143,6 +158,25 @@ func (a *WorktreeNoteArgs) validate(int) error {
 	}
 	if !validName(a.Text, MaxWorktreeNote) {
 		return invalid("bad note: one line, at most 500 bytes")
+	}
+	return nil
+}
+
+func (a *WorktreeLinkArgs) validate(int) error {
+	if !validWorktreeHexID(a.ID) {
+		return invalid("bad worktree id")
+	}
+	switch a.Kind {
+	case "none":
+		if a.Number != 0 {
+			return invalid("bad link: none takes number 0")
+		}
+	case "issue", "pr":
+		if a.Number < 1 || a.Number > MaxWorktreeLinkNumber {
+			return invalid("bad link: number 1 to 999999999")
+		}
+	default:
+		return invalid("bad link kind: issue, pr or none")
 	}
 	return nil
 }
