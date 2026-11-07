@@ -75,7 +75,7 @@ func dragTree(t *testing.T) (Model, string) {
 }
 
 // rowOf is the panel-local row where the explorer draws path.
-func rowOf(t *testing.T, m Model, path string) int {
+func explorerRowOf(t *testing.T, m Model, path string) int {
 	t.Helper()
 	for y := 0; y < m.h; y++ {
 		if n, ok := m.explorer.VisibleAt(y); ok && n.Path == path {
@@ -101,7 +101,7 @@ func mouseDrag(m Model, y0, y1 int) Model {
 func TestExplorerDragAsksThenMoves(t *testing.T) {
 	m, dir := dragTree(t)
 	a, notes := filepath.Join(dir, "a.txt"), filepath.Join(dir, "notes")
-	m = mouseDrag(m, rowOf(t, m, a), rowOf(t, m, notes))
+	m = mouseDrag(m, explorerRowOf(t, m, a), explorerRowOf(t, m, notes))
 	if !m.confirmOpen || m.confirmKind != confirmKindExplorerMove {
 		t.Fatalf("no move card: open=%v kind=%v", m.confirmOpen, m.confirmKind)
 	}
@@ -133,7 +133,7 @@ func TestExplorerDragAsksThenMoves(t *testing.T) {
 func TestExplorerDragCancelKeepsFiles(t *testing.T) {
 	m, dir := dragTree(t)
 	a, notes := filepath.Join(dir, "a.txt"), filepath.Join(dir, "notes")
-	m = mouseDrag(m, rowOf(t, m, a), rowOf(t, m, notes))
+	m = mouseDrag(m, explorerRowOf(t, m, a), explorerRowOf(t, m, notes))
 	m.confirmOpen = false
 	m.handleConfirmSelect("cancel")
 	if _, err := os.Stat(a); err != nil {
@@ -148,7 +148,7 @@ func TestExplorerDragCancelKeepsFiles(t *testing.T) {
 func TestExplorerMoveRefusesATakenName(t *testing.T) {
 	m, dir := dragTree(t)
 	a, notes := filepath.Join(dir, "a.txt"), filepath.Join(dir, "notes")
-	m = mouseDrag(m, rowOf(t, m, a), rowOf(t, m, notes))
+	m = mouseDrag(m, explorerRowOf(t, m, a), explorerRowOf(t, m, notes))
 	if err := os.WriteFile(filepath.Join(notes, "a.txt"), []byte("keep\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestExplorerMoveRefusesATakenName(t *testing.T) {
 func TestExplorerDropInPlaceDoesNothing(t *testing.T) {
 	m, dir := dragTree(t)
 	a := filepath.Join(dir, "a.txt")
-	m = mouseDrag(m, rowOf(t, m, a), rowOf(t, m, dir))
+	m = mouseDrag(m, explorerRowOf(t, m, a), explorerRowOf(t, m, dir))
 	if m.confirmOpen {
 		t.Errorf("a card opened for a drop into the same folder")
 	}
@@ -184,7 +184,7 @@ func TestExplorerDropInPlaceDoesNothing(t *testing.T) {
 func TestExplorerDragMotionIsNotAClick(t *testing.T) {
 	m, dir := dragTree(t)
 	notes := filepath.Join(dir, "notes")
-	y := rowOf(t, m, notes)
+	y := explorerRowOf(t, m, notes)
 	x := activity.Width + 4
 	m, _ = m.handleMouse(tea.MouseMsg{X: x, Y: y, Type: tea.MouseLeft, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
 	open := strings.Join(m.explorer.ExpandedPaths(), "\n")
