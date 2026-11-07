@@ -36,6 +36,19 @@ local function notify(k)
  for i,b in ipairs(D.bounds) do if x>=b-1 then col=i-1 end end
  if _G.termocode_notify then _G.termocode_notify('termocode_db_key',k,row,col) end
 end
+-- = in visual mode: the selected rows (row of the first and last line).
+local function notify_range(k)
+ local a,b=vim.fn.line('v'),vim.fn.line('.')
+ if a>b then a,b=b,a end
+ local x=vim.fn.virtcol('.')-1
+ local col=-1
+ for i,bd in ipairs(D.bounds) do if x>=bd-1 then col=i-1 end end
+ api.nvim_feedkeys(api.nvim_replace_termcodes('<Esc>',true,false,true),'nx',false)
+ if D.first<=0 then return end
+ local r1,r2=math.max(a-D.first,0),b-D.first
+ if r2<0 then return end
+ if _G.termocode_notify then _G.termocode_notify('termocode_db_key',k,r1,col,r2) end
+end
 local function set_win(win)
  local o=vim.wo[win]
  o.number,o.relativenumber=false,false
@@ -81,6 +94,7 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold,nam
   vim.bo[b].bufhidden='hide';vim.bo[b].swapfile=false
   for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','K','Z','x','X','D','1','2','3','4','5','6','7','8','9','?','='}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
+  vim.keymap.set('x','=',function() notify_range('=') end,{buffer=b,silent=true,nowait=true})
   vim.keymap.set('n','<Tab>',function() notify('tab') end,{buffer=b,silent=true})
   vim.keymap.set('n','<Esc>',function() notify('esc') end,{buffer=b,silent=true})
   vim.keymap.set('n','<CR>',function() notify('v') end,{buffer=b,silent=true})
@@ -183,6 +197,7 @@ function _G._termocode_db_value(lines)
  put(b,0,-1,lines)
  api.nvim_set_current_buf(b)
  set_win(api.nvim_get_current_win())
+ vim.wo.wrap,vim.wo.linebreak=true,true -- long text reads without scrolling sideways
  vim.cmd('stopinsert')
 end
 `
