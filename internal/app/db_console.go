@@ -891,6 +891,9 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 }
 
 func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseGeneratePicker(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseTransferPicker(id); ok {
 		return cmd, true
 	}
