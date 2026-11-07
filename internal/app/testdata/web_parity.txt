@@ -459,6 +459,8 @@ excluded	workflow-enable	laptop only: turning a schedule on changes what runs un
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
 missing	ai-powers	AI|S
 missing	ai-run-task-list	AI|M
+missing	bugfix-spec-fix	AI|S
+missing	bugfix-spec-new	AI|S
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S

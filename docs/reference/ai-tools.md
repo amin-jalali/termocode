@@ -1992,6 +1992,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `bookmark-list` | Bookmarks: Show List | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `bookmark-toggle` | Bookmarks: Toggle on Current Line | auto |   |
 | `buffer-info` | View: Show Buffer Info | auto |   |
+| `bugfix-spec-fix` | AI: Fix Bug from Spec… | never | starts a chat with the user; the user reads the fix prompt and sends it |
+| `bugfix-spec-new` | AI: New Bugfix Spec… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user names the bug and fills in the spec |
 | `cheat-sheet` | Help: Show Shortcuts | auto |   |
 | `clipboard-history` | Edit: Clipboard History | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `close-buffer` | View: Close Editor | confirm (ide) |   |

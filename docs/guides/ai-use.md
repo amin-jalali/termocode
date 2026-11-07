@@ -323,6 +323,27 @@ To get files out:
 - **AI: Export Chat as Markdown** writes the chat to
   `ai-chat-<date>.md` in the workspace and opens it.
 
+## Bugfix specs
+
+A bugfix spec says what a fix must do and what it must not break.
+
+1. **AI: New Bugfix Spec…** asks for the bug in a few words. termocode
+   writes `.termocode/specs/<name>/bugfix.md` and opens it. Nothing goes
+   to a model.
+2. Fill in three sections, one line per item:
+   - **Current behavior**: what happens now.
+   - **Expected behavior**: what should happen. Each line becomes a test
+     that fails before the fix.
+   - **Unchanged behavior**: what must keep working. Each line gets a guard
+     test that passes before and after the fix.
+3. **AI: Fix Bug from Spec…** lists your specs. A spec with an empty
+   section opens at that section. A ready one puts a test-first fix prompt
+   in the chat, with the spec attached. Read it, then press `Enter` to send
+   it.
+
+The AI cannot run these two commands. The spec is a normal file: commit
+it with the fix if you like.
+
 ## AI code actions (review, then apply)
 
 1. Put the cursor on a line, or select some lines.

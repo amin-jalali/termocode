@@ -30,6 +30,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Edit Selection… | `ai-edit` | `Alt+I` | `Alt+I` |
 | AI: Explain Selection / Line | `ai-explain` |   |   |
 | AI: Export Chat as Markdown | `ai-export-chat` |   |   |
+| AI: Fix Bug from Spec… | `bugfix-spec-fix` |   | `test-first fix prompt in the chat` |
 | AI: Fix Diagnostic at Cursor | `ai-fix` |   |   |
 | AI: Fork Chat from Message… | `ai-fork-chat` |   |   |
 | AI: Generate Doc Comment | `ai-doc` |   |   |
@@ -50,6 +51,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Memory… | `ai-memory` |   |   |
 | AI: Move MCP Call to Background (Ctrl+B in the chat) | `ai-mcp-background` |   |   |
 | AI: Move Secrets to a Safer Store… | `secrets-migrate` |   |   |
+| AI: New Bugfix Spec… | `bugfix-spec-new` |   | `current / expected / unchanged behavior` |
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
 | AI: New Workflow… | `workflow-new` |   |   |

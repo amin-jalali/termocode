@@ -450,6 +450,7 @@ func paletteItems() []picker.Item {
 	items = append(items, webAccessPaletteItems()...) // pairing and devices (web_access.go)
 	items = append(items, itermocPaletteItems()...)   // the Itermoc view (itermoc_actions.go)
 	items = append(items, workflowsPaletteItems()...) // WFX-7 (workflows_keys.go)
+	items = append(items, bugspecPaletteItems()...)   // CMP-79 (bugspec_ui.go)
 	items = append(items, ciPaletteItems()...)        // G-CI (ci_card.go)
 	items = append(items, layoutPaletteItems()...)    // G-LAY (layout_palette.go)
 	items = append(items, updatePaletteItems()...)    // G-UPD (update_palette.go)
@@ -973,6 +974,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchWorkflowsPalette(id); ok { // workflows_keys.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchBugspecPalette(id); ok { // bugspec_ui.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchCIPalette(id); ok { // ci_card.go
