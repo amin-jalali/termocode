@@ -37,7 +37,10 @@ type Options struct {
 	MaxRedirects int
 	MaxBody      int64
 	CookieJar    bool
-	UserAgent    string
+	// Cookies, when set with CookieJar, keeps cookies per environment
+	// (Resolved.Env) instead of one in-memory jar (API-11).
+	Cookies   *CookieStore
+	UserAgent string
 	// Proxy picks the proxy per request; nil = HTTP_PROXY / HTTPS_PROXY
 	// / NO_PROXY read when the client is made.
 	Proxy func(*http.Request) (*url.URL, error)
@@ -305,7 +308,11 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	if rr.Digest != nil {
 		hc.Transport = &digestTransport{base: tr, cred: *rr.Digest}
 	}
-	if c.jar != nil && !noJar {
+	switch {
+	case noJar:
+	case c.opts.CookieJar && c.opts.Cookies != nil:
+		hc.Jar = c.opts.Cookies.Jar(rr.Env)
+	case c.jar != nil:
 		hc.Jar = c.jar
 	}
 	hc.CheckRedirect = func(next *http.Request, via []*http.Request) error {

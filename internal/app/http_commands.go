@@ -67,6 +67,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-cancel", Title: "HTTP: Cancel Request"},
 		{ID: "http-last-response", Title: "HTTP: Show Last Response"},
 		{ID: "http-history", Title: "HTTP: History…"},
+		{ID: "http-cookies", Title: "HTTP: Cookies…"},
 		{ID: "http-env-select", Title: "HTTP: Select Environment…"},
 		{ID: "http-env-open", Title: "HTTP: Open Environment File"},
 		{ID: "http-env-open-private", Title: "HTTP: Open Private Environment File"},
@@ -97,6 +98,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.httpShowLast(), true
 	case "http-history":
 		return m.openHTTPHistory(), true
+	case "http-cookies":
+		return m.openHTTPCookies(), true
 	case "http-env-select":
 		return m.openHTTPEnvPicker(), true
 	case "http-env-open":
@@ -425,6 +428,9 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseSSHPicker(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.httpCookiesPickerSelect(id); ok {
+		return cmd, true
+	}
 	s := m.httpS()
 	switch m.pickerKind {
 	case pickerKindDBSave:
@@ -511,6 +517,9 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 // httpPickerKey handles Ctrl+O / Ctrl+T / Ctrl+S / Ctrl+D in the history picker and
 // Ctrl+E in the saved picker. ok=false: not ours.
 func (m *Model) httpPickerKey(k tea.KeyMsg) (tea.Cmd, bool) {
+	if cmd, ok := m.httpCookiesPickerKey(k); ok {
+		return cmd, true
+	}
 	switch m.pickerKind {
 	case pickerKindHTTPHistory:
 		it, ok := m.picker.Current()
@@ -609,6 +618,9 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 
 // handleHTTPPromptSubmit routes the HTTP prompts. ok=false: not ours.
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
+	if cmd, ok := m.httpCookiesPrompt(value); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseTransferPrompt(m.promptKind, value); ok {
 		return cmd, true
 	}
@@ -1027,6 +1039,9 @@ func (m *Model) httpCheckPrivateEnv(file string) tea.Cmd {
 
 // handleHTTPConfirm routes the HTTP confirm cards. ok=false: not ours.
 func (m *Model) handleHTTPConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.httpCookiesConfirm(id); ok {
+		return cmd, true
+	}
 	s := m.httpS()
 	switch m.confirmKind {
 	case confirmKindHTTPUnresolved:
