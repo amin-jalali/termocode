@@ -241,3 +241,22 @@ func TestBranchFromIssue(t *testing.T) {
 		}
 	}
 }
+
+// A task started from the page without a name gets its branch from its
+// first words, under task/ (CMP-49).
+func TestBranchFromTask(t *testing.T) {
+	for in, want := range map[string]string{
+		"Fix the login bug":                          "task/fix-the-login-bug",
+		"  add a/b split to the tree view now please": "task/add-a-b-split-to-the",
+		"!!! ???":                                    "",
+		"":                                           "",
+	} {
+		if got := BranchFromTask(in); got != want {
+			t.Errorf("BranchFromTask(%q) = %q, want %q", in, got, want)
+		}
+	}
+	long := strings.Repeat("abcdefghij", 10)
+	if got := BranchFromTask(long + " more"); len(got) > MaxBranch || !strings.HasPrefix(got, "task/") || strings.HasSuffix(got, "-") {
+		t.Errorf("long task: %q", got)
+	}
+}
