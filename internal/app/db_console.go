@@ -124,7 +124,10 @@ type dbConsoleState struct {
 	editTab                         *dbTab
 	editAt                          dbEditPos
 	editMore                        []dbEditPos // V then e: the other cells that get the same value
-	pendingKey                      string      // an edit key waiting for the key lookup
+	editArray                       bool        // the buffer holds an array, one element per line (DBX-55)
+	lobTab                          *dbTab      // gS / gL: the cell whose value goes to or comes from a file (db_edit_lob.go)
+	lobAt                           dbEditPos
+	pendingKey                      string // an edit key waiting for the key lookup
 	pendingRow, pendingCol          int
 	submitTab, submitting, staleTab *dbTab
 	submitStmts                     []dbclient.EditStatement

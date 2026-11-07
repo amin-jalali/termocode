@@ -263,9 +263,13 @@ func (m *Model) databasePage() dbPage {
 		}
 	case s.trans:
 		page := s.pageResult()
-		s.trow = max(min(s.trow, len(page.Rows)-1), 0)
+		added := s.transAdded()
+		s.trow = max(min(s.trow, len(page.Rows)+added-1), 0)
 		summary = "no rows"
-		if len(page.Rows) > 0 {
+		switch {
+		case s.trow >= len(page.Rows) && added > 0: // DBX-55: a new row in the record view
+			summary = fmt.Sprintf("new row %d of %d", s.trow-len(page.Rows)+1, added)
+		case len(page.Rows) > 0:
 			summary = fmt.Sprintf("row %d of %d", s.trow+1, len(page.Rows))
 		}
 		short = []string{summary + fmt.Sprintf(" · %d ms", res.Elapsed.Milliseconds()), summary}
@@ -364,6 +368,8 @@ func (m *Model) databasePage() dbPage {
 				hints = dbFitHints(width, append(m.dbTxHints(r.conn), "w submit", "u revert", "e edit", "+ row", "- delete", "]/[ page", "Tab view", "q close")...)
 			case len(m.dbTxHints(r.conn)) > 0:
 				hints = dbFitHints(width, append(m.dbTxHints(r.conn), "e edit", "+ row", "- delete", "]/[ page", "o sort", "f filter", "r rerun", "q close")...)
+			case s.trans && m.databaseEditable(s.curTab()):
+				hints = dbFitHints(width, "]/[ row", "e edit", "+ row", "t grid", "v value", "Tab view", "r rerun", "q close")
 			case s.trans:
 				hints = dbFitHints(width, "]/[ row", "t grid", "v value", "Tab view", "r rerun", "q close")
 			case r.tv != nil && m.databaseEditable(s.curTab()):
@@ -676,27 +682,45 @@ func dbTableSummary(tv *dbTableView, n int, ms int64) string {
 // "column | value" lines. ] and [ step through the rows.
 func (m *Model) databaseTransposed(p *dbPage, s *dbConsoleState, width int) {
 	page := s.pageResult()
-	if len(page.Rows) == 0 {
+	newRow := -1 // DBX-55: the record view shows a new row too
+	if t := s.curTab(); t != nil && t.run == s.shown && t.edits != nil && s.trow >= len(page.Rows) && s.trow-len(page.Rows) < len(t.edits.added) {
+		newRow = s.trow - len(page.Rows)
+	}
+	if len(page.Rows) == 0 && newRow < 0 {
 		n := p.add(" (no rows)")
 		p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpSummary")
 		return
 	}
 	more := dbGlyphMore.String()
-	at := min(s.trow, len(page.Rows)-1)
-	row := page.Rows[at]
+	var row []dbclient.Cell
 	var changed map[int]bool
 	deleted := false
-	if t := s.curTab(); t != nil && t.run == s.shown && t.edits != nil {
-		if idx := s.pageIdx(); at < len(idx) {
-			orig := idx[at]
-			deleted = t.edits.deleted[orig]
-			for ref, c := range t.edits.cells {
-				if ref.row == orig && ref.col < len(row) {
-					if changed == nil {
-						row = append([]dbclient.Cell(nil), row...)
-						changed = map[int]bool{}
+	if newRow >= 0 {
+		set := s.curTab().edits.added[newRow].set
+		row = make([]dbclient.Cell, len(page.Columns))
+		changed = map[int]bool{}
+		for i := range row {
+			if c, ok := set[i]; ok {
+				row[i], changed[i] = c, true
+			} else {
+				row[i] = dbclient.Cell{Text: "(default)", Kind: dbDefaultKind}
+			}
+		}
+	} else {
+		at := min(s.trow, len(page.Rows)-1)
+		row = page.Rows[at]
+		if t := s.curTab(); t != nil && t.run == s.shown && t.edits != nil {
+			if idx := s.pageIdx(); at < len(idx) {
+				orig := idx[at]
+				deleted = t.edits.deleted[orig]
+				for ref, c := range t.edits.cells {
+					if ref.row == orig && ref.col < len(row) {
+						if changed == nil {
+							row = append([]dbclient.Cell(nil), row...)
+							changed = map[int]bool{}
+						}
+						row[ref.col], changed[ref.col] = c, true
 					}
-					row[ref.col], changed[ref.col] = c, true
 				}
 			}
 		}
@@ -939,7 +963,12 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.databaseSwitchTab(int(key[0] - '0'))
 	case "p":
 		return m.databasePinTab()
-	case "e", "E", "+", "-", "u", "w", "P", "D", "U":
+	case "gS": // DBX-55: the cell's value to a file
+		if s.shown.plan != nil || !canGrid || s.view != dbViewGrid {
+			return nil
+		}
+		return m.databaseLOBSaveStart(row, col)
+	case "e", "E", "+", "-", "u", "w", "P", "D", "U", "gL":
 		if s.shown.plan != nil {
 			return m.pushToastDetail(toast.Info, "A plan cannot be edited", "x explains again, r runs the plan again.")
 		}
@@ -958,7 +987,7 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.databaseEndTx(s.shown.conn, false, nil)
 	case "]":
 		if s.trans && canGrid {
-			if s.trow+1 < len(s.pageResult().Rows) {
+			if s.trow+1 < len(s.pageResult().Rows)+s.transAdded() {
 				s.trow++
 				return m.databaseShowPage()
 			}

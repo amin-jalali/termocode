@@ -302,6 +302,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBVersion(msg)
 	case dbEditKeysMsg:
 		return m, m.onDBEditKeys(msg)
+	case dbLOBSavedMsg: // db_edit_lob.go
+		return m, m.onDBLOBSaved(msg)
+	case dbLOBLoadedMsg:
+		return m, m.onDBLOBLoaded(msg)
 	case dbSubmitMsg:
 		return m, m.onDBSubmit(msg)
 	case dbJobTickMsg:
