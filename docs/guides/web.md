@@ -89,6 +89,12 @@ When you change a file in the page, the laptop shows a mark (**▍**) on
 that line with **✎** and your device's name. It moves with your next
 change and goes away after 30 seconds.
 
+You and the laptop can edit one file at the same time. When someone types
+on the laptop while you change other lines in the page, your change still
+lands in the right place. Only when you both changed the same text does
+the page say the file changed on the laptop; your text stays in the page
+to check and send again.
+
 ## Use it from a remote machine: `termocode ssh --web`
 
 When termocode runs on a server, open its panel on your own computer:
