@@ -2076,6 +2076,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-compare-schemas` | Databases: Compare Schemas… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
 | `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-copy-as` | Databases: Copy Result As… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-count-rows` | Databases: Count Rows | never | Table rows are read with the database tools |
 | `db-data` | Databases: Open Table Data | never | Table rows are read with the database tools |
 | `db-ddl` | Databases: Show DDL | auto |   |
@@ -2086,6 +2087,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
 | `db-explain-analyze` | Databases: Explain Analyze Statement… | never | executes the statement; use db_explain |
 | `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
+| `db-export-tables` | Databases: Export Tables to Folder… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
 | `db-filter` | Databases: Filter… | never | the filter is typed by the user; the AI uses db_schema |
 | `db-find-usages` | Databases: Find Usages | auto |   |
 | `db-focus` | Databases: Focus | auto |   |
@@ -2580,7 +2582,11 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
 | `db_alternate_rows` | confirm (settings) |   |
 | `db_bool_style` | confirm (settings) |   |
+| `db_csv_header` | confirm (settings) |   |
+| `db_csv_null` | confirm (settings) |   |
+| `db_csv_separator` | confirm (settings) |   |
 | `db_date_format` | confirm (settings) |   |
+| `db_export_mask` | never | AI provider, credentials and approvals stay with the user |
 | `db_geometry_format` | confirm (settings) |   |
 | `db_history_max` | never | AI provider, credentials and approvals stay with the user |
 | `db_lob_bytes` | confirm (settings) |   |

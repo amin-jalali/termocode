@@ -59,9 +59,9 @@ func TestDBExportMaskColumns(t *testing.T) {
 func TestDBCopyAsFormats(t *testing.T) {
 	r := dbclient.Result{Columns: []dbclient.Column{{Name: "id"}, {Name: "name"}}, Rows: [][]dbclient.Cell{{{Text: "1", Kind: "number"}, {Text: "Ann"}}}}
 	for f, want := range map[dbclient.ExportFormat]string{
-		dbclient.FormatYAML:      "name: Ann",
+		dbclient.FormatYAML:      `"name": "Ann"`,
 		dbclient.FormatJSONLines: `"name":"Ann"`,
-		dbclient.FormatXML:       "<name>Ann</name>",
+		dbclient.FormatXML:       `<column name="name">Ann</column>`,
 	} {
 		text, err := dbCopyAsText(r, f, dbclient.ExportOptions{Driver: "postgres", Table: "users"})
 		if err != nil || !strings.Contains(text, want) {

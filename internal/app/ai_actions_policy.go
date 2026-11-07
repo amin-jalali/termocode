@@ -403,6 +403,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-search-data":               aiNever(aiNoPicker + " (db_search_data)"),
 	"db-heatmap":                   aiAuto(),
 	"db-chart":                     aiNever(aiNoPicker),
+	"db-copy-as":                   aiNever(aiNoPicker),
+	"db-export-tables":             aiNever(aiNoPicker + " (db_query + write_file)"),
 	"db-er-diagram":                aiNever(aiNoPicker),
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
@@ -759,6 +761,10 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"db_alternate_rows":    aiConfirm(ai.ClassSettings),
 	"db_lob_bytes":         aiConfirm(ai.ClassSettings),
 	"db_geometry_format":   aiConfirm(ai.ClassSettings),
+	"db_csv_separator":     aiConfirm(ai.ClassSettings), // DBX-36: export shape only
+	"db_csv_header":        aiConfirm(ai.ClassSettings),
+	"db_csv_null":          aiConfirm(ai.ClassSettings),
+	"db_export_mask":       aiNever(aiNoAIConfig), // the AI never unmasks data
 	"http_timeout":         aiConfirm(ai.ClassSettings),
 	"http_max_redirects":   aiConfirm(ai.ClassSettings),
 	"http_cookie_jar":      aiConfirm(ai.ClassSettings),

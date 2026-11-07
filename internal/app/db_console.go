@@ -95,7 +95,8 @@ type dbConsoleState struct {
 	// then the last search's hits (the hit picker opens them).
 	search *dbSearchTarget
 	hits   *dbSearchResult
-	heat   bool // M: the grid colours numeric cells by value (db_visualize.go)
+	heat   bool            // M: the grid colours numeric cells by value (db_visualize.go)
+	folder *dbFolderExport // Export Tables to Folder while the folder is asked (db_export_more.go)
 
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
@@ -171,6 +172,22 @@ type dbConsoleSettings struct {
 	AltRows      *bool   `json:"db_alternate_rows"`
 	LOBBytes     *int    `json:"db_lob_bytes"`
 	GeometryFmt  *string `json:"db_geometry_format"`
+	// Export settings (db_export_more.go, DBX-36)
+	CSVSeparator *string  `json:"db_csv_separator"`
+	CSVHeader    *bool    `json:"db_csv_header"`
+	CSVNull      *string  `json:"db_csv_null"`
+	ExportMask   []string `json:"db_export_mask"`
+}
+
+// exportMask is the column name patterns whose values exports and copies hide.
+func (s dbConsoleSettings) exportMask() []string {
+	var out []string
+	for _, p := range s.ExportMask {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func loadDBConsoleSettings() dbConsoleSettings {

@@ -269,6 +269,16 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 
 **Bad rows: skip.** The card's **Bad rows** button switches from **stop** (the default above) to **skip**: a row that cannot be read, has the wrong number of fields or fails its INSERT is left out (it is rolled back alone), and the other rows are saved. The done toast says how many rows were skipped and names an error log (row, line and the server's error for each) in the termocode config folder.
 
+**Formats.** The export picker (`S`) has CSV, TSV, JSON, SQL INSERTs, Markdown, HTML, JSON lines, YAML, XML and SQL UPDATEs. SQL UPDATEs need a key: the table's primary key in a data view, or the key of the result; without one the export says so and writes nothing. Columns you hid in the grid are left out of the file.
+
+**CSV settings** (in `settings.json`): `db_csv_separator` (one character, `\t` for a tab; default `,`), `db_csv_header` (`false`: no row of column names) and `db_csv_null` (the text of a NULL cell; default empty).
+
+**Masking.** `db_export_mask` is a list of column names (any case; `*` and `?` match), for example `["*password*", "email"]`. Exports, **Copy Result As…** and **Export Tables to Folder…** write `••••` for their values; NULL stays NULL. The grid still shows the real values.
+
+**Copy as.** `A` on a result page (or **Databases: Copy Result As…**) copies the loaded rows in any of the export formats.
+
+**Export tables to a folder.** **Databases: Export Tables to Folder…** on a schema, a database or a table in the tree asks for a folder (made when missing), then shows a card (**Cancel** first). Every table is written as `<table>.csv` and the tables' DDL as `schema.sql`, in a read-only session. A file that is already there is kept and named in the final message. A card shows the progress; `Esc` or **Cancel** stops it.
+
 ## EXPLAIN and ANALYZE
 
 **Explain.** In a SQL console press `\x` (leader, then `x`) on a statement, or use **Databases: Explain Statement**. On a result page `x` explains the statement that made the result. The plan opens on the result page as the **Plan** view: one line per step, indented, with the cost and row estimates. The step that takes most of the cost (at least 40 % of the whole plan, without its children) is marked with `!` and `<- costly` and coloured. Details such as `Filter:` and `Hash Cond:` sit under their step. Folds follow the indent: `za` folds a step, `zR` opens all. `y` copies the plan, `Tab` shows the server's raw answer, `r` plans again.

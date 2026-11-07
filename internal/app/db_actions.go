@@ -64,6 +64,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-search-data", Title: "Databases: Search Data in Schema…"},
 		{ID: "db-heatmap", Title: "Databases: Toggle Result Heatmap"},
 		{ID: "db-chart", Title: "Databases: Chart Result…"},
+		{ID: "db-copy-as", Title: "Databases: Copy Result As…"},
+		{ID: "db-export-tables", Title: "Databases: Export Tables to Folder…"},
 		{ID: "db-sessions", Title: "Databases: Show Sessions and Locks"},
 		{ID: "db-server-info", Title: "Databases: Show Server Info"},
 		{ID: "db-cancel-session", Title: "Databases: Cancel Session Query…"},
@@ -127,6 +129,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseToggleHeat(), true
 	case "db-chart":
 		return m.databaseChartStart(), true
+	case "db-copy-as":
+		return m.databaseCopyAsStart(), true
 	case "db-er-diagram":
 		return m.databaseERStart(), true
 	case "db-guide":
@@ -162,6 +166,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseGenerateStart()), true
 	case "db-search-data":
 		return tea.Batch(open, m.databaseSearchStart()), true
+	case "db-export-tables":
+		return tea.Batch(open, m.databaseExportTablesStart()), true
 	case "db-new-console":
 		if r, ok := m.databaseCurrentRow(); ok {
 			return m.databaseNewConsole(r.conn), true
@@ -991,6 +997,7 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"y", "copy the cell"},
 		[]string{"Y", "copy the column, one value per line"},
 		[]string{"c / C", "copy the rows as CSV / JSON"},
+		[]string{"A", "copy the rows as… (YAML, XML, JSON lines, SQL UPDATEs, …)"},
 		[]string{"S", "export the rows to a file"},
 		[]string{"M", "heatmap: colour numbers by value (on / off)"},
 		[]string{"B", "draw a bar or line chart of a number column"},

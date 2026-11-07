@@ -210,6 +210,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
+| Databases: Copy Result As… | `db-copy-as` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
@@ -219,6 +220,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Explain Statement | `db-explain` |   |   |
 | Databases: Export ER Diagram… | `db-er-diagram` |   |   |
 | Databases: Export Result… | `db-export` |   |   |
+| Databases: Export Tables to Folder… | `db-export-tables` |   |   |
 | Databases: Filter… | `db-filter` |   |   |
 | Databases: Find Usages | `db-find-usages` |   |   |
 | Databases: Focus | `db-focus` |   |   |

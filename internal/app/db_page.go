@@ -947,6 +947,8 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.databaseToggleHeat()
 	case "B":
 		return m.databaseChartStart()
+	case "A":
+		return m.databaseCopyAsStart()
 	case "K":
 		return m.databaseEndTx(s.shown.conn, true, nil)
 	case "Z":
