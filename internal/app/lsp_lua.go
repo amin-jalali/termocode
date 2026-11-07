@@ -64,19 +64,70 @@ function _G._termocode_lsp_start(buf)
   local ft = vim.bo[buf].filetype
   local name = vim.api.nvim_buf_get_name(buf)
   local start_dir = name ~= '' and vim.fn.fnamemodify(name, ':p:h') or vim.fn.getcwd()
+  local base = vim.fn.fnamemodify(name, ':t')
   for _, srv in ipairs(ft_to_servers(ft)) do
-    local cmd = resolve_cmd(srv.cfg.cmd)
+    -- A server with file name patterns (compose) starts only on matching files.
+    local match = srv.cfg.files == nil
+    for _, p in ipairs(srv.cfg.files or {}) do
+      if base:match(p) then match = true; break end
+    end
+    local cmd = match and resolve_cmd(srv.cfg.cmd)
     if cmd then
       local root = find_root(start_dir, srv.cfg.root)
+      local settings = nil
+      if srv.cfg.settings then
+        local ok, v = pcall(vim.json.decode, srv.cfg.settings)
+        if ok then settings = v end
+      end
       vim.lsp.start({
         name = srv.name,
         cmd = cmd,
         root_dir = root,
+        settings = settings,
         capabilities = vim.lsp.protocol.make_client_capabilities(),
       }, { bufnr = buf })
     end
   end
 end
+
+-- Dockerfile lint: when hadolint is installed (PATH or tools/bin), its
+-- findings show as diagnostics after the file is opened or saved. The
+-- buffer text goes on stdin; nothing runs when hadolint is missing.
+local hadolint_ns = vim.api.nvim_create_namespace('termocode_hadolint')
+local hadolint_sev = {
+  error = vim.diagnostic.severity.ERROR, warning = vim.diagnostic.severity.WARN,
+  info = vim.diagnostic.severity.INFO, style = vim.diagnostic.severity.HINT,
+}
+function _G._termocode_hadolint(buf)
+  if not vim.system or not vim.api.nvim_buf_is_loaded(buf) or vim.bo[buf].filetype ~= 'dockerfile' then return end
+  local cmd = resolve_cmd({ 'hadolint', '--no-fail', '--format', 'json', '-' })
+  if not cmd then return end
+  local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), '\n') .. '\n'
+  pcall(vim.system, cmd, { stdin = text, text = true }, function(res)
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(buf) then return end
+      local ok, items = pcall(vim.json.decode, res.stdout or '')
+      if not ok or type(items) ~= 'table' then return end
+      local diags = {}
+      for _, it in ipairs(items) do
+        table.insert(diags, {
+          lnum = math.max((tonumber(it.line) or 1) - 1, 0),
+          col = math.max((tonumber(it.column) or 1) - 1, 0),
+          severity = hadolint_sev[it.level] or vim.diagnostic.severity.WARN,
+          source = 'hadolint', code = it.code,
+          message = tostring(it.message or ''),
+        })
+      end
+      vim.diagnostic.set(hadolint_ns, buf, diags)
+    end)
+  end)
+end
+vim.api.nvim_create_augroup('TermocodeHadolint', { clear = true })
+vim.api.nvim_create_autocmd({ 'FileType', 'BufWritePost' }, {
+  group = 'TermocodeHadolint',
+  pattern = { 'dockerfile', 'Dockerfile', 'Dockerfile.*', '*.dockerfile', 'Containerfile' },
+  callback = function(args) _G._termocode_hadolint(args.buf) end,
+})
 
 vim.api.nvim_create_augroup('TermocodeLSP', { clear = true })
 
@@ -554,7 +605,7 @@ func lspServersPrelude() string {
 	if err != nil {
 		bin = ""
 	}
-	return "\n-- Server registry (generated from internal/lspinstall): name → { cmd, filetypes, root, order }\n" +
+	return "\n-- Server registry (generated from internal/lspinstall): name → { cmd, filetypes, files, root, settings, order }\n" +
 		"local servers = " + lspinstall.LuaServersTable() + "\n" +
 		"local termocode_tools_bin = " + lspinstall.LuaQuote(bin) + "\n"
 }
