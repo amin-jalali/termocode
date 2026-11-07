@@ -352,6 +352,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"services-compose-run":    aiNever(aiNoPicker + " (services tools)"),
 	"services-compose-watch":  aiNever("starts a long-running watch that rebuilds services; the user's"),
 	"services-env-file":       aiNever(aiNoPicker),
+	"services-deploy-git":     aiNever("runs a compose project from a remote repository; the user's choice"),
 	"services-trust":          aiNever(aiNoAIConfig),
 
 	// ── Databases (DB-3: connection management only) ──

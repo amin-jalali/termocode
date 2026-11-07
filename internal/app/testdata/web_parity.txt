@@ -582,6 +582,7 @@ missing	local-history-label	Git|S
 missing	services-compose-config	Containers|S
 missing	services-compose-run	Containers|S
 missing	services-compose-watch	Containers|S
+missing	services-deploy-git	Containers|S
 missing	services-env-file	Containers|S
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S

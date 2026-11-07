@@ -160,6 +160,9 @@ type servicesState struct {
 
 	// CTX-33: the --env-file picked for this session ("" = compose's .env).
 	envFile string
+
+	// CTX-33: the deploy-from-git card's command line and stack name.
+	deployGitLine, deployGitName string
 }
 
 func newServicesState() *servicesState {

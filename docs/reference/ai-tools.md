@@ -2397,6 +2397,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `services-compose-run` | Containers: Run One-Off Command in Service… | never | opens a picker or prompt that only the user can answer; use a typed tool (services tools) |
 | `services-compose-watch` | Containers: Watch Project (Rebuild on Change) | never | starts a long-running watch that rebuilds services; the user's |
 | `services-configure` | Containers: Configure Services (services.json) | confirm (ide) |   |
+| `services-deploy-git` | Containers: Deploy Stack from Git… | never | runs a compose project from a remote repository; the user's choice |
 | `services-env-file` | Containers: Choose Compose Env File… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `services-focus` | Containers: Focus Project Services | auto |   |
 | `services-logs` | Containers: Show Service Logs… | never | opens a picker or prompt that only the user can answer; use a typed tool (services_logs) |

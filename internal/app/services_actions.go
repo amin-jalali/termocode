@@ -460,6 +460,8 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		return m.runHostAction(id), true
 	case confirmKindServicesQuit:
 		return m.answerServicesQuit(id), true
+	case confirmKindServicesDeployGit: // services_deploy_git.go
+		return m.answerDeployGit(id), true
 	case confirmKindServicesDownVolumes: // services_compose_more.go
 		return m.answerDownVolumes(id), true
 	case confirmKindContainerSearchResult:
