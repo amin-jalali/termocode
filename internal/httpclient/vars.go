@@ -59,6 +59,9 @@ type Resolved struct {
 	// Secrets lists the private / $secret values that were substituted,
 	// so callers can hide them again.
 	Secrets []string
+	// Digest is set by `# @auth digest` (or $auth): Send answers the
+	// server's Digest challenge with it. Never written to JSON.
+	Digest *DigestAuth `json:"-"`
 }
 
 // sendScope keeps the values of the dynamic functions for one send, so
@@ -91,6 +94,7 @@ func (rv *Resolver) Resolve(req Request) (Resolved, []Unresolved) {
 		out.Body = &b
 		un = appendUnresolved(un, b, "body")
 	}
+	un = sc.applyAuth(req, &out, un)
 	out.Secrets = sc.secrets
 	return out, un
 }

@@ -48,6 +48,7 @@ The format (same as mobocode, so one file works in both apps):
 | `Name: value` | headers, until the first blank line |
 | the rest of the block | the body (JSON gets `Content-Type: application/json` when you set none) |
 | `# @no-redirect`, `# @no-cookie-jar`, `# @timeout 10s` | per-request options |
+| `# @auth basic USER PASS`, `bearer TOKEN`, `apikey header\|query NAME VALUE`, `digest USER PASS`, `none` | auth helper; values may use `{{vars}}` and `{{$secret name}}`. `"$auth"` in `http-client.env.json` (an env or `$shared`; the nearest folder wins) sets the default; a header you write yourself wins |
 
 ## The response page
 
