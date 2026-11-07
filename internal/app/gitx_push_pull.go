@@ -109,7 +109,7 @@ func (m *Model) openRemotePickerFor(title string, then func(m *Model, remote str
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -149,7 +149,7 @@ func (m *Model) openPushPreview(remote, branch string) tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -248,7 +248,7 @@ func (m *Model) openCommitList(incoming bool) tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -306,7 +306,7 @@ func (m *Model) gitxAutoFetchPoll() tea.Cmd {
 	if !gitxAutoFetch.on || clock.Now().Before(gitxAutoFetch.due) {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil || m.gitRemoteBusy != "" || !m.gitIsRepo {
 		return nil // try again on the next poll
 	}
