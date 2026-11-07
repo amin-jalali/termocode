@@ -61,13 +61,18 @@ var (
 	monacoFrame = page{Name: "monaco-frame", Entry: "monaco/frame.ts", Template: "monaco/frame.html", HTML: "monaco.html"}
 )
 
+// monacoVim is Vim mode of the desktop editor (WEBP-1), built alone into
+// monaco-vim.js: the frame loads it with its one dynamic import only when
+// Vim mode is on, so an editor without Vim mode never loads it.
+var monacoVim = page{Name: "monaco-vim", Entry: "monaco/vim.ts"}
+
 // deskChunk is the desktop workbench's stylesheet (desk.css): index.html
 // links it for wide screens only (media="(min-width: 1200px)"), so a
 // phone neither waits for it nor counts it in its budget.
 var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -97,7 +102,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{deskChunk, appPage, editorChunk, persianChunk, monacoAMD, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appPage, editorChunk, persianChunk, monacoAMD, monacoVim, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)

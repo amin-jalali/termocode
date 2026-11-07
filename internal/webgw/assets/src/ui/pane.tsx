@@ -114,7 +114,7 @@ export interface RowProps {
   selected?: boolean;
   title?: string;
   data?: Record<string, string>;
-  onClick?: () => void;
+  onClick?: (e: MouseEvent) => void;
   onDblClick?: () => void;
   onToggle?: () => void;
   onContextMenu?: (e: MouseEvent) => void;
@@ -134,7 +134,7 @@ export function Row(p: RowProps) {
       aria-selected={p.selected ? "true" : "false"}
       title={p.title}
       style={{ "--lv": String(p.level ?? 0) }}
-      onClick={() => (p.twist && p.onToggle ? p.onToggle() : p.onClick?.())}
+      onClick={(e) => (p.twist && p.onToggle ? p.onToggle() : p.onClick?.(e))}
       onDblClick={p.onDblClick}
       onContextMenu={p.onContextMenu}
       data-twist={p.twist ?? undefined}

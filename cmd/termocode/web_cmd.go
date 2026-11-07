@@ -43,6 +43,10 @@ const webUsage = `Usage: termocode web [start|stop|status] [--yes] [--dir <folde
 
 The web panel listens only on this computer (127.0.0.1). To turn it off,
 set "web_panel": "off" in config.json.
+
+Exit codes: 0 done, or (from a script) the panel already runs; 1 the
+laptop said no, or status found it off; 2 bad arguments, or no termocode
+with the web panel runs in the folder.
 `
 
 // Exit codes of `termocode web`.
@@ -117,6 +121,10 @@ func runWebIn(args []string, out, errw io.Writer, cwd string) int {
 			a = `{"yes":true}`
 			fmt.Fprintln(out, "Opening the web panel in a browser…")
 		} else {
+			if st, err := webgw.ReadStatus(paths.WebStatus); err == nil && webPIDAlive(st.PID) {
+				webAlreadyRuns(out, st.Port, st.URL)
+				return webExitOK
+			}
 			fmt.Fprintln(out, "Asking termocode to open the web panel. Answer on the laptop…")
 		}
 	}
@@ -140,11 +148,7 @@ func runWebIn(args []string, out, errw io.Writer, cwd string) int {
 	}
 	_ = json.Unmarshal(res, &r)
 	if r.Already {
-		at := fmt.Sprintf("http://127.0.0.1:%d/", r.Port)
-		if strings.HasPrefix(r.URL, "https://") {
-			at = cleanLine(r.URL)
-		}
-		fmt.Fprintf(out, "The web panel already runs at %s. No new link was opened: use Web: Open in Browser on the laptop, or run termocode web in your own terminal.\n", at)
+		webAlreadyRuns(out, r.Port, r.URL)
 		return webExitOK
 	}
 	if strings.HasPrefix(r.URL, "https://") {
@@ -153,6 +157,16 @@ func runWebIn(args []string, out, errw io.Writer, cwd string) int {
 	}
 	fmt.Fprintf(out, "The web panel is open at http://127.0.0.1:%d/ (the link opened in a browser on this computer).\n", r.Port)
 	return webExitOK
+}
+
+// webAlreadyRuns is what a script gets when the panel runs already: no
+// card comes on the laptop and no new link opens.
+func webAlreadyRuns(out io.Writer, port int, url string) {
+	at := fmt.Sprintf("http://127.0.0.1:%d/", port)
+	if strings.HasPrefix(url, "https://") {
+		at = cleanLine(url)
+	}
+	fmt.Fprintf(out, "The web panel already runs at %s. No new link was opened: use Web: Open in Browser on the laptop, or run termocode web in your own terminal.\n", at)
 }
 
 // webStatus prints the gateway's status file.
