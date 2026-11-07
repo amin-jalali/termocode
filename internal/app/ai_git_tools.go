@@ -15,8 +15,9 @@ import (
 
 // Group K4: git tools on top of internal/git — log, blame, unstage,
 // fetch, hunks and stash. Read tools run at once; stage / unstage /
-// fetch / stash push|apply|pop ask with class git; hunk discard and
-// stash drop lose data, so they ask with class "" (no "Always allow").
+// fetch / stash save|apply ask with class git; hunk discard and stash
+// drop|pop ask with class "" (no "Always allow"; the stash card says
+// Cancel first). Outside agents get git_stash over MCP too.
 // Ops that rewrite files in the working tree refuse while an affected
 // file has unsaved edits in the editor, before the user is asked.
 // After each change the IDE refreshes (git panel, explorer markers,
@@ -30,7 +31,7 @@ const (
 
 var (
 	aiHunkOps  = []string{"stage", "unstage", "discard"}
-	aiStashOps = []string{"list", "push", "pop", "apply", "drop"}
+	aiStashOps = []string{"list", "save", "apply", "pop", "drop"}
 )
 
 func aiOneOf(what, v string, ok []string) error {
@@ -136,6 +137,29 @@ func aiPrecheck(call aiIDECaller, check func(m *Model) error) error {
 }
 
 func aiStashRef(a map[string]any) string { return fmt.Sprintf("stash@{%d}", ai.ArgInt(a, "index")) }
+
+// aiStashOp is the git_stash op; "push", its old name, is "save".
+func aiStashOp(a map[string]any) string {
+	if op := ai.ArgString(a, "op"); op != "push" {
+		return op
+	}
+	return "save"
+}
+
+// aiStashRepo is where the stash commands of root run: git on this
+// machine for a local workspace, in the container through the Host Exec
+// for a container workspace (never the local disk).
+func (m *Model) aiStashRepo(root string) (git.StashRepo, error) {
+	rd, err := gitReaderOf(m.workspace())
+	if err != nil || !rd.remote {
+		return git.StashAt(root, nil), nil
+	}
+	return rd.stash()
+}
+
+// aiStashLosesData: the git_stash call drops or pops an entry. Its card
+// says Cancel first and has no Always allow (the gate gave no class).
+func aiStashLosesData(t ai.Tool) bool { return t.Name == "git_stash" && t.Mutating && t.Class == "" }
 
 // aiGitTools are the K4 git tools; the IDE part runs on Update via call.
 func aiGitTools(root string, call aiIDECaller) []ai.Tool {
@@ -322,27 +346,28 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 		},
 		{
 			Name: "git_stash",
-			Description: "Stash: list; push (save tracked changes, optional message, and clean the working tree); " +
-				"apply / pop / drop the entry at index (default 0). push/apply/pop are refused while a file has " +
-				"unsaved edits in the editor; drop can not be undone.",
-			Params: map[string]any{"op": enum("what to do", aiStashOps), "message": str("push: stash message"),
-				"index": num("apply/pop/drop: stash index (stash@{index})")},
+			Description: "Stash: list; save (tracked changes, optional message, untracked=true adds new files; " +
+				"cleans the working tree); apply / pop / drop the entry at index (default 0). save/apply/pop are " +
+				"refused while a file has unsaved edits in the editor; drop can not be undone.",
+			Params: map[string]any{"op": enum("what to do", aiStashOps), "message": str("save: stash message"),
+				"untracked": map[string]any{"type": "boolean", "description": "save: stash new (untracked) files too"},
+				"index":     num("apply/pop/drop: stash index (stash@{index})")},
 			Required: []string{"op"},
 			Mutating: true, Class: ai.ClassGit,
 			Gate: func(a map[string]any) (bool, string) {
-				switch ai.ArgString(a, "op") {
+				switch aiStashOp(a) {
 				case "list":
 					return false, ""
-				case "drop":
-					return true, "" // data loss
+				case "drop", "pop":
+					return true, "" // drop loses the entry, pop removes it: Cancel-first, no "Always allow"
 				}
 				return true, ai.ClassGit
 			},
 			Describe: func(a map[string]any) string {
-				switch op := ai.ArgString(a, "op"); op {
+				switch op := aiStashOp(a); op {
 				case "list":
 					return "List stashes"
-				case "push":
+				case "save":
 					if msg := ai.ArgString(a, "message"); msg != "" {
 						return fmt.Sprintf("Stash changes: %q", msg)
 					}
@@ -352,7 +377,7 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 				}
 			},
 			Validate: func(a map[string]any) error {
-				op := ai.ArgString(a, "op")
+				op := aiStashOp(a)
 				if err := aiOneOf("op", op, aiStashOps); err != nil {
 					return err
 				}
@@ -365,9 +390,25 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 				return aiPrecheck(call, func(m *Model) error { return m.aiRefuseUnsaved(root, "stash "+op, rel) })
 			},
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
-				op, ref := ai.ArgString(a, "op"), aiStashRef(a)
+				op, ref := aiStashOp(a), aiStashRef(a)
+				// On Update: the unsaved check and where git runs (this
+				// machine, or the container through the Host Exec). Git
+				// itself runs here, off Update.
+				var repo git.StashRepo
+				if _, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
+					if op != "list" && op != "drop" {
+						if err := m.aiRefuseUnsaved(root, "stash "+op, rel); err != nil {
+							return "", nil, err
+						}
+					}
+					r, err := m.aiStashRepo(root)
+					repo = r
+					return "", nil, err
+				}); err != nil {
+					return "", err
+				}
 				if op == "list" {
-					es, err := git.StashList(root)
+					es, err := repo.List()
 					if err != nil {
 						return "", err
 					}
@@ -380,35 +421,27 @@ func aiGitTools(root string, call aiIDECaller) []ai.Tool {
 					}
 					return strings.Join(lines, "\n"), nil
 				}
-				return call(ctx, func(m *Model) (string, tea.Cmd, error) {
-					if op != "drop" {
-						if err := m.aiRefuseUnsaved(root, "stash "+op, rel); err != nil {
-							return "", nil, err
-						}
-					}
-					var err error
-					var out string
-					lvl := aiSyncDisk
-					switch op {
-					case "push":
-						err, out = git.Stash(root, ai.ArgString(a, "message")), "stashed the changes as stash@{0}; the working tree is clean"
-					case "apply":
-						err, out = git.StashApply(root, ref), "applied "+ref+" (it is kept in the stash list)"
-					case "pop":
-						if err = git.StashApply(root, ref); err == nil {
-							err = git.StashDrop(root, ref)
-						}
-						out = "popped " + ref + ": its changes are back and it is removed from the stash list"
-					case "drop":
-						err, out, lvl = git.StashDrop(root, ref), "dropped "+ref, aiSyncGit
-					}
-					note, cmd := m.aiSyncIDE("", lvl)
-					if err != nil {
-						// a failed apply / pop may still have changed files
-						return "", cmd, fmt.Errorf("stash %s: %v%s", op, err, note)
-					}
-					return out + note, cmd, nil
-				})
+				var err error
+				var out string
+				lvl := aiSyncDisk
+				switch op {
+				case "save":
+					err = repo.Push(git.StashOptions{Message: ai.ArgString(a, "message"), Untracked: ai.ArgBool(a, "untracked")})
+					out = "stashed the changes as stash@{0}; the working tree is clean"
+				case "apply":
+					err, out = repo.Apply(ref), "applied "+ref+" (it is kept in the stash list)"
+				case "pop":
+					err = repo.Pop(ref)
+					out = "popped " + ref + ": its changes are back and it is removed from the stash list"
+				case "drop":
+					err, out, lvl = repo.Drop(ref), "dropped "+ref, aiSyncGit
+				}
+				note := sync(ctx, lvl)
+				if err != nil {
+					// a failed apply / pop may still have changed files
+					return "", fmt.Errorf("stash %s: %v%s", op, err, note)
+				}
+				return out + note, nil
 			},
 		},
 	}

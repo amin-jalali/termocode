@@ -64,7 +64,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`git_unstage`](#git_unstage) | confirm (git) | no | Unstage files (keep their changes in the working tree). |
 | [`git_fetch`](#git_fetch) | confirm (git) | no | Fetch from the remotes (updates remote branches; the working tree is not touched). |
 | [`git_hunk`](#git_hunk) | stage: confirm (git)<br>unstage: confirm (git)<br>discard: confirm (always asks) | no | Stage, unstage or discard the one diff hunk that contains line (1-based; for unstage, the line in the staged version). |
-| [`git_stash`](#git_stash) | list: auto<br>push: confirm (git)<br>pop: confirm (git)<br>apply: confirm (git)<br>drop: confirm (always asks) | no | Stash: list; push (save tracked changes, optional message, and clean the working tree); apply / pop / drop the entry at index (default 0). |
+| [`git_stash`](#git_stash) | list: auto<br>save: confirm (git)<br>apply: confirm (git)<br>pop: confirm (always asks)<br>drop: confirm (always asks) | some ask | Stash: list; save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0). |
 | [`tasks_list`](#tasks_list) | auto | yes | List the workspace tasks (.termocode/tasks.json, user commands, auto-detected build/test tasks): label, group (build/test, default), command and the state of the last run. |
 | [`tasks_run`](#tasks_run) | confirm (run) | asks | Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). |
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
@@ -729,17 +729,18 @@ Stage, unstage or discard the one diff hunk that contains line (1-based; for uns
 
 ### git_stash
 
-Stash: list; push (save tracked changes, optional message, and clean the working tree); apply / pop / drop the entry at index (default 0). push/apply/pop are refused while a file has unsaved edits in the editor; drop can not be undone.
+Stash: list; save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0). save/apply/pop are refused while a file has unsaved edits in the editor; drop can not be undone.
 
-**Gate:** list: auto · push: confirm (git) · pop: confirm (git) · apply: confirm (git) · drop: confirm (always asks)
+**Gate:** list: auto · save: confirm (git) · apply: confirm (git) · pop: confirm (always asks) · drop: confirm (always asks)
 
-**MCP server:** no
+**MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `op` | string | yes | what to do. One of: `list`, `push`, `pop`, `apply`, `drop` |
+| `op` | string | yes | what to do. One of: `list`, `save`, `apply`, `pop`, `drop` |
 | `index` | integer |   | apply/pop/drop: stash index (stash@{index}) |
-| `message` | string |   | push: stash message |
+| `message` | string |   | save: stash message |
+| `untracked` | boolean |   | save: stash new (untracked) files too |
 
 ### tasks_list
 
@@ -2180,6 +2181,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-gist` | Git: Create Gist from File… | never | publishes a file of the user on GitHub; only the user does that |
 | `git-goto-commit` | Git: Go to Commit… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
+| `git-graph-col-author` | Git: Toggle Author Column in GRAPH | auto |   |
+| `git-graph-col-date` | Git: Toggle Date Column in GRAPH | auto |   |
+| `git-graph-col-sha` | Git: Toggle SHA Column in GRAPH | auto |   |
 | `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-hook-output` | Git: Show Last Hook Output | auto |   |
