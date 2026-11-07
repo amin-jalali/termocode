@@ -47,6 +47,10 @@ type Request struct {
 	// Prompts holds the `# @prompt name [label]` lines in order: the
 	// user types each value before the request is sent.
 	Prompts []Prompt `json:"prompts,omitempty"`
+	// Pre and Post hold the `# @pre …` / `# @post …` script lines in
+	// order (script.go); they are not in Directives.
+	Pre  []string `json:"pre,omitempty"`
+	Post []string `json:"post,omitempty"`
 }
 
 // Prompt is one `# @prompt name [label]` line.

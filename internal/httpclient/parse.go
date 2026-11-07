@@ -92,21 +92,24 @@ func parseBlock(lines []string, first int, name string, vars *[]Var) (Request, b
 				name = strings.TrimSpace(c[5:])
 			} else if strings.HasPrefix(c, "@") && len(c) > 1 {
 				word, val, _ := strings.Cut(c[1:], " ")
-				if word == "prompt" {
+				switch word {
+				case "prompt":
 					pn, label, _ := strings.Cut(strings.TrimSpace(val), " ")
 					if isPlainName(pn) {
 						r.Prompts = append(r.Prompts, Prompt{Name: pn, Label: strings.TrimSpace(label)})
 					}
-					break
-				}
-				if word == "assert" {
+				case "assert":
 					r.Asserts = append(r.Asserts, strings.TrimSpace(val))
-					break
+				case "pre":
+					r.Pre = append(r.Pre, strings.TrimSpace(val))
+				case "post":
+					r.Post = append(r.Post, strings.TrimSpace(val))
+				default:
+					if r.Directives == nil {
+						r.Directives = map[string]string{}
+					}
+					r.Directives[word] = strings.TrimSpace(val)
 				}
-				if r.Directives == nil {
-					r.Directives = map[string]string{}
-				}
-				r.Directives[word] = strings.TrimSpace(val)
 			}
 		default:
 			t := strings.TrimSpace(l)

@@ -552,11 +552,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | HTTP: Cancel Request | `http-cancel` |   |   |
+| HTTP: Clear Script Variables | `http-clear-script-vars` |   |   |
 | HTTP: Cookies… | `http-cookies` |   |   |
 | HTTP: Copy as Code… | `http-copy-snippet` |   |   |
 | HTTP: Copy as curl | `http-copy-curl` |   |   |
 | HTTP: Edit Params and Headers… | `http-fields` |   |   |
+| HTTP: Export as HAR… | `http-export-har` |   |   |
 | HTTP: History… | `http-history` |   |   |
+| HTTP: Import Collection (JSON, HAR, Insomnia)… | `http-import-collection` |   |   |
 | HTTP: Import OpenAPI… | `http-import-openapi` |   |   |
 | HTTP: Import from curl… | `http-import-curl` |   |   |
 | HTTP: New .http File… | `http-new-file` |   |   |
@@ -572,6 +575,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | HTTP: Send Request at Cursor | `http-send` | `Ctrl+Alt+R` / `Ctrl+Enter` | `Ctrl+Alt+R / Ctrl+Enter` |
 | HTTP: Send Request… | `http-send-pick` |   |   |
 | HTTP: Show Last Response | `http-last-response` |   |   |
+| HTTP: WebSocket Disconnect | `http-ws-close` |   |   |
+| HTTP: WebSocket Send Message… | `http-ws-send` |   |   |
 
 ## Help
 

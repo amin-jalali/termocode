@@ -595,6 +595,7 @@ func (m *Model) aiHTTPTools(root string, call aiIDECaller, base []ai.Tool) []ai.
 			set := loadHTTPSettings()
 			resp := httpAIClient(set).Send(ctx, r.rr, httpAIHooks(r.rr.Method, r.rr.URL))
 			run := &httpRun{rr: r.rr, resp: resp, file: r.file, line: r.req.Line, label: r.req.Label(), env: r.env, by: "ai", at: time.Now()}
+			run.tests = httpRunTests(r.rr, resp)
 			httpRecordHistory(run)
 			var id int
 			_, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
@@ -604,7 +605,7 @@ func (m *Model) aiHTTPTools(root string, call aiIDECaller, base []ai.Tool) []ai.
 				return "", err
 			}
 			id = run.id
-			return httpAIResultText(id, resp, "body", 0, set.aiMaxBytes()), nil
+			return httpAITestsText(run.tests) + httpAIResultText(id, resp, "body", 0, set.aiMaxBytes()), nil
 		},
 	}
 
@@ -711,7 +712,7 @@ func (m *Model) aiHTTPTools(root string, call aiIDECaller, base []ai.Tool) []ai.
 		},
 	}
 
-	tools := []ai.Tool{listReqs, envs, send, last, hist, setEnv}
+	tools := []ai.Tool{listReqs, envs, send, last, hist, setEnv, httpWSTool(root)}
 	if wf, ok := ai.FindTool(base, "write_file"); ok {
 		tools = append(tools, httpSaveRequestTool(root, wf))
 	}

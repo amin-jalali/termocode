@@ -262,7 +262,12 @@ func (m *Model) httpRefreshBuf(buf int) string {
 			rv.Prompted[p.Name] = ""
 		}
 	}
-	rows := httpBufRows(f, lines, rv.Known, func(r *httpclient.Request) [][]string {
+	known := rv.Known
+	if set := httpScriptNames(f); len(set) > 0 {
+		// A name a `# @pre/@post set` line writes is known (API-8).
+		known = func(expr string) bool { return set[strings.TrimSpace(expr)] || rv.Known(expr) }
+	}
+	rows := httpBufRows(f, lines, known, func(r *httpclient.Request) [][]string {
 		label := r.Label()
 		sending := s.running != nil && s.running.file == name && s.running.label == label
 		return m.httpLensChunks(name, label, rv.Env, sending)

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/httpclient"
@@ -86,10 +88,15 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-copy-snippet", Title: "HTTP: Copy as Code…"},
 		{ID: "http-import-curl", Title: "HTTP: Import from curl…"},
 		{ID: "http-import-openapi", Title: "HTTP: Import OpenAPI…"},
+		{ID: "http-import-collection", Title: "HTTP: Import Collection (JSON, HAR, Insomnia)…"},
+		{ID: "http-export-har", Title: "HTTP: Export as HAR…"},
 		{ID: "http-new-file", Title: "HTTP: New .http File…"},
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
 		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
 		{ID: "http-api-docs", Title: "HTTP: Open API Docs"},
+		{ID: "http-clear-script-vars", Title: "HTTP: Clear Script Variables"},
+		{ID: "http-ws-send", Title: "HTTP: WebSocket Send Message…"},
+		{ID: "http-ws-close", Title: "HTTP: WebSocket Disconnect"},
 	}
 }
 
@@ -133,13 +140,23 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		m.httpS().importInto = m.httpCurrentFile()
 		return m.openHTTPPrompt(promptKindHTTPImport, "HTTP: Import from curl", "curl:", ""), true
 	case "http-import-openapi":
-		return m.openHTTPPrompt(promptKindHTTPImportOpenAPI, "HTTP: Import OpenAPI", "OpenAPI file:", ""), true
+		return m.openHTTPPrompt(promptKindHTTPImportOpenAPI, "HTTP: Import OpenAPI", "OpenAPI file or URL:", ""), true
+	case "http-import-collection":
+		return m.openHTTPPrompt(promptKindHTTPImportCollection, "HTTP: Import Collection", "Collection, HAR or Insomnia file:", ""), true
+	case "http-export-har":
+		return m.httpExportHARPrompt(), true
 	case "http-new-file":
 		return m.openHTTPPrompt(promptKindHTTPNewFile, "HTTP: New .http File", "File:", "requests.http"), true
 	case "http-save-body":
 		return m.httpSaveBodyPrompt(), true
 	case "http-fields":
 		return m.openHTTPFields(0, 0), true
+	case "http-ws-send":
+		return m.httpWSPaletteSend(), true
+	case "http-ws-close":
+		return m.httpWSPaletteClose(), true
+	case "http-clear-script-vars":
+		return m.httpClearScriptVars(), true
 	case "http-api-docs":
 		return m.httpOpenAPIDocs(), true
 	}
@@ -550,6 +567,8 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 		return m.pushToastDetail(toast.Info, "HTTP environment: "+env, ""), true
 	case pickerKindHTTPSnippet:
 		return m.httpCopySnippet(s.copyRun, id), true
+	case pickerKindHTTPWS:
+		return m.httpWSPick(id), true
 	case pickerKindHTTPSaved:
 		if id == "__edit" {
 			return m.httpOpenInEditor(httpSavedPath()), true
@@ -670,6 +689,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.httpPromptVarSubmit(value); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.httpCollectionPrompt(value); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.httpCookiesPrompt(value); ok {
 		return cmd, true
 	}
@@ -711,6 +733,8 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.databaseShowPage(), true
 	}
 	switch m.promptKind {
+	case promptKindHTTPWSType:
+		return m.httpWSSend(value), true
 	case promptKindHTTPQuick:
 		req, err := httpclient.ParseQuick(value)
 		if err != nil {
@@ -957,6 +981,9 @@ func (m *Model) httpImportOpenAPI(name string) tea.Cmd {
 	if name == "" {
 		return nil
 	}
+	if httpclient.IsOpenAPIURL(name) {
+		return m.httpFetchOpenAPI(name)
+	}
 	p := name
 	if !filepath.IsAbs(p) {
 		p = filepath.Join(aiWorkspaceRoot(), p)
@@ -969,7 +996,47 @@ func (m *Model) httpImportOpenAPI(name string) tea.Cmd {
 	if err != nil {
 		return m.pushToastDetail(toast.Warn, "Import OpenAPI: "+err.Error(), "OpenAPI 3.x or Swagger 2.0, YAML or JSON")
 	}
-	dir := filepath.Dir(p)
+	return m.httpWriteOpenAPI(im, filepath.Dir(p))
+}
+
+// httpOpenAPIFetchedMsg carries a downloaded spec back to the UI loop.
+type httpOpenAPIFetchedMsg struct {
+	url  string
+	data []byte
+	err  error
+}
+
+// httpFetchOpenAPI downloads a spec off the UI loop with the user's
+// HTTP client (settings, proxy, timeout); the file lands in the
+// workspace root (API-14).
+func (m *Model) httpFetchOpenAPI(specURL string) tea.Cmd {
+	client := m.httpS().httpClient(loadHTTPSettings())
+	toastCmd := m.pushToastDetail(toast.Info, "Import OpenAPI: downloading…", httpclient.RedactURL(specURL))
+	fetch := func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		data, err := httpclient.FetchOpenAPI(ctx, client, specURL, httpclient.MaxOpenAPIBytes)
+		return httpOpenAPIFetchedMsg{url: specURL, data: data, err: err}
+	}
+	return tea.Batch(toastCmd, fetch)
+}
+
+// httpOpenAPIFetched imports a downloaded spec.
+func (m *Model) httpOpenAPIFetched(msg httpOpenAPIFetchedMsg) tea.Cmd {
+	shown := httpclient.RedactURL(msg.url)
+	if msg.err != nil {
+		return m.pushToastDetail(toast.Warn, "Import OpenAPI: could not download the spec", ai.Redact(msg.err.Error())+" — "+shown)
+	}
+	im, err := httpclient.ImportOpenAPIFrom(msg.data, msg.url)
+	if err != nil {
+		return m.pushToastDetail(toast.Warn, "Import OpenAPI: "+err.Error(), "OpenAPI 3.x or Swagger 2.0, YAML or JSON — "+shown)
+	}
+	return m.httpWriteOpenAPI(im, aiWorkspaceRoot())
+}
+
+// httpWriteOpenAPI writes an import as a new <title>.http in dir (and
+// http-client.env.json when there is none) and opens it.
+func (m *Model) httpWriteOpenAPI(im httpclient.OpenAPIImport, dir string) tea.Cmd {
 	base := strings.TrimSuffix(httpclient.OpenAPIFileName(im.Title), ".http")
 	out := ""
 	for i := 1; i < 1000; i++ {

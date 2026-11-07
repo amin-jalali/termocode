@@ -2320,15 +2320,18 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `hover` | LSP: Show Hover Documentation | auto |   |
 | `http-api-docs` | HTTP: Open API Docs | auto |   |
 | `http-cancel` | HTTP: Cancel Request | confirm (ide) |   |
+| `http-clear-script-vars` | HTTP: Clear Script Variables | confirm (ide) |   |
 | `http-cookies` | HTTP: Cookies… | never | opens a picker or prompt that only the user can answer; use a typed tool (cookies stay with the user) |
 | `http-copy-curl` | HTTP: Copy as curl | confirm (ide) |   |
 | `http-copy-snippet` | HTTP: Copy as Code… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests, then write the snippet) |
 | `http-env-open` | HTTP: Open Environment File | auto |   |
 | `http-env-open-private` | HTTP: Open Private Environment File | never | opens the file that holds the user's secrets |
 | `http-env-select` | HTTP: Select Environment… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_set_environment) |
+| `http-export-har` | HTTP: Export as HAR… | never | opens a picker or prompt that only the user can answer; use a typed tool (writes a file the user names) |
 | `http-fields` | HTTP: Edit Params and Headers… | never | opens a picker or prompt that only the user can answer; use a typed tool (read_file, write_file) |
 | `http-globals-open` | HTTP: Open Global Variables File | never | opens the global variables file, which may hold the user's tokens |
 | `http-history` | HTTP: History… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_history) |
+| `http-import-collection` | HTTP: Import Collection (JSON, HAR, Insomnia)… | never | opens a picker or prompt that only the user can answer; use a typed tool (read the file, then http_save_request) |
 | `http-import-curl` | HTTP: Import from curl… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |
 | `http-import-openapi` | HTTP: Import OpenAPI… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |
 | `http-last-response` | HTTP: Show Last Response | auto |   |
@@ -2339,6 +2342,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `http-saved` | HTTP: Saved Requests… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests on http/saved.http) |
 | `http-send` | HTTP: Send Request at Cursor | never | sends a network request; use http_send (gated by host and method) |
 | `http-send-pick` | HTTP: Send Request… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests, http_send) |
+| `http-ws-close` | HTTP: WebSocket Disconnect | confirm (ide) |   |
+| `http-ws-send` | HTTP: WebSocket Send Message… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_websocket) |
 | `itermoc-agents` | Itermoc: Outside Agents | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-models` | Itermoc: AI Providers | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-open` | Itermoc: Open | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
