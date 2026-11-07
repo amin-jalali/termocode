@@ -20,6 +20,9 @@ const pickerKindDBSessions pickerKindEnum = 1390
 
 const confirmKindDBSessionClose confirmKindEnum = 1390
 
+// dbSessionsPickerWidth gives the session hint room; it still fits the window.
+const dbSessionsPickerWidth = 110
+
 // dbSessionTitle is "local-pg" or "local-pg › audit" for a session key.
 func (s *dbState) dbSessionTitle(key string) string {
 	conn, rest, _ := strings.Cut(key, "/")
@@ -64,6 +67,9 @@ func (m *Model) databaseSessionsPicker() tea.Cmd {
 		items = append(items, picker.Item{ID: key, Title: s.dbSessionTitle(key), Hint: s.dbSessionHint(key)})
 	}
 	m.picker = picker.NewItems("Database sessions · Enter closes one", items)
+	// Wide box: the hint ("manual commit · transaction open · 2 not
+	// committed") is cut at half the row, so the count would be lost.
+	m.picker.SetWidth(dbSessionsPickerWidth)
 	m.picker.HideCountWhenEmpty()
 	m.picker.SetSize(m.w, m.h)
 	m.pickerKind = pickerKindDBSessions
