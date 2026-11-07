@@ -60,6 +60,25 @@ func TestHomeInlineCardSafeFirstByTouch(t *testing.T) {
 	p.Tap(".home-waiting .card-inline .card-foot button")
 	expectAnswer(t, c, "deny")
 	p.WaitJS(vibrateCount + ` === 1`)
+	// Once: the toast comes after the hub's answer, and that answer
+	// buzzed a second time.
+	p.WaitJS(toastsJS + `.includes("Denied.")`)
+	if n := Eval[int](p, vibrateCount); n != 1 {
+		t.Fatalf("one answer buzzed %d times, want 1", n)
+	}
+}
+
+// The sheet over the Home buzzes once per answer too.
+func TestHomeCardSheetAnswerBuzzesOnce(t *testing.T) {
+	p, c := openHome(t, toolCard("card-1", "go test ./..."))
+	Eval[bool](p, `(location.hash = "#/home?card=card-1", true)`)
+	p.WaitJS(dialog)
+	p.TapJS(sheetButton("Deny"))
+	expectAnswer(t, c, "deny")
+	p.WaitJS(toastsJS + `.includes("Denied.")`)
+	if n := Eval[int](p, vibrateCount); n != 1 {
+		t.Fatalf("one answer buzzed %d times, want 1", n)
+	}
 }
 
 // The risky answer of an inline card is inert for 600 ms, as in the sheet.
