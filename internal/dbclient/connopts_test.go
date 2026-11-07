@@ -87,10 +87,10 @@ func TestConnOptionsCheckRefusesBadValues(t *testing.T) {
 }
 
 func TestConnOptionsIdleTimeout(t *testing.T) {
-	if got := (ConnOptions{}).IdleTimeout(); got != 0 {
+	if got := (&ConnOptions{}).IdleTimeout(); got != 0 {
 		t.Fatalf("no idle minutes: %v, want 0 (never)", got)
 	}
-	if got := (ConnOptions{IdleMinutes: 15}).IdleTimeout(); got != 15*time.Minute {
+	if got := (&ConnOptions{IdleMinutes: 15}).IdleTimeout(); got != 15*time.Minute {
 		t.Fatalf("IdleTimeout = %v, want 15m", got)
 	}
 	var nilOpts *ConnOptions
