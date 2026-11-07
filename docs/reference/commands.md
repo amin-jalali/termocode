@@ -84,6 +84,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Runs | `ai-runs` |   |   |
 | AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
 | AI: Save Code Checkpoint | `ai-checkpoint-save` |   |   |
+| AI: Schedule This Chat… | `ai-chat-schedule` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
 | AI: Share Chat by Link… | `ai-share-chat` |   | `a viewer link; they watch and comment` |
@@ -94,6 +95,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
 | AI: Skills… | `ai-skills` |   |   |
+| AI: Stop Chat Schedule | `ai-chat-unschedule` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |
 | AI: Switch Profile… | `ai-profile-switch` |   |   |
 | AI: Toggle Agent Worktrees | `ai-worktrees-toggle` |   |   |
@@ -811,6 +813,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Tasks: Run Build Task | `tasks-build` |   |   |
 | Tasks: Run Task... | `tasks-run` | `Alt+R` | `Alt+R` |
 | Tasks: Run Test Task | `tasks-test` |   |   |
+| Tasks: Suggested Tasks… | `tasks-suggest` |   | `TODO / FIXME comments and slow code` |
 | Tasks: Terminate Task | `tasks-terminate` |   |   |
 
 ## Terminal
@@ -907,6 +910,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workflows: Edit Selected File | `workflow-edit-file` |   |   |
 | Workflows: History of Selected | `workflow-history` |   |   |
 | Workflows: Open | `workflows` |   |   |
+| Workflows: Pause / Continue Selected Run | `workflow-pause` |   |   |
+| Workflows: Retry Failed Part of Selected Run… | `workflow-retry` |   |   |
 | Workflows: Run Selected… | `workflow-run` |   |   |
 | Workflows: Stop Selected Run… | `workflow-stop` |   |   |
 | Workflows: Trigger Events… | `workflow-triggers` |   |   |

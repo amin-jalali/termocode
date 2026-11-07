@@ -3,6 +3,8 @@ package app
 import (
 	"fmt"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/webpush"
 )
 
 // The web panel's settings (ADR 0020, old plan 5.1). They live only in
@@ -21,13 +23,16 @@ type webConfig struct {
 	MaxViewers  int
 	Tailnet     bool     // web_listen: "tailnet" (WEB-31)
 	RequireTOTP bool     // web_require_totp (WEB-48)
+	AppKeyLogin bool     // web_app_key_login (MOB-27)
+	PushDetail  string   // web_push_detail (MOB-30): none, count or title
+	PhoneWatch  bool     // web_phone: "on": a paired phone that watches keeps the panel up (MOB-31)
 	Problems    []string // one line per bad value, for a warning toast
 }
 
 // webSettings reads and checks the web settings from config.json.
 func webSettings() webConfig {
 	s := loadSettings()
-	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4}
+	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4, PushDetail: webpush.DetailCount}
 	switch strings.ToLower(strings.TrimSpace(s.WebPanel)) {
 	case "", "auto":
 	case "off":
@@ -43,6 +48,13 @@ func webSettings() webConfig {
 		c.Tailnet = true
 	default:
 		c.Problems = append(c.Problems, fmt.Sprintf("web_listen %q: use \"loopback\" or \"tailnet\"", s.WebListen))
+	}
+	switch strings.ToLower(strings.TrimSpace(s.WebPhone)) {
+	case "", "off":
+	case "on":
+		c.PhoneWatch = true
+	default:
+		c.Problems = append(c.Problems, fmt.Sprintf("web_phone %q: use \"on\" or \"off\"", s.WebPhone))
 	}
 	intIn := func(key string, v *int, lo, hi int, dst *int) {
 		if v == nil {
@@ -60,8 +72,18 @@ func webSettings() webConfig {
 	intIn("web_idle_minutes", s.WebIdleMinutes, 1, 120, &c.IdleMinutes)
 	intIn("web_max_hours", s.WebMaxHours, 1, 24, &c.MaxHours)
 	intIn("web_max_viewers", s.WebMaxViewers, 1, 8, &c.MaxViewers)
+	switch d := strings.ToLower(strings.TrimSpace(s.WebPushDetail)); d {
+	case "":
+	case webpush.DetailNone, webpush.DetailCount, webpush.DetailTitle:
+		c.PushDetail = d
+	default:
+		c.Problems = append(c.Problems, fmt.Sprintf("web_push_detail %q: use \"none\", \"count\" or \"title\"", s.WebPushDetail))
+	}
 	if s.WebRequireTOTP != nil {
 		c.RequireTOTP = *s.WebRequireTOTP
+	}
+	if s.WebAppKeyLogin != nil {
+		c.AppKeyLogin = *s.WebAppKeyLogin
 	}
 	if s.WebOpenBrowser != nil {
 		c.OpenBrowser = *s.WebOpenBrowser

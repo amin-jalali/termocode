@@ -154,20 +154,9 @@ func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 	if err != nil {
 		return m.webToast(toast.Errr, "Web panel not started: no config folder")
 	}
-	args := []string{"--dir", aiWorkspaceRoot(), "--audit", audit, "--devices", devices,
-		"--idle-min", strconv.Itoa(cfg.IdleMinutes), "--max-hours", strconv.Itoa(cfg.MaxHours),
-		"--viewers", strconv.Itoa(cfg.MaxViewers)}
-	if cfg.RequireTOTP {
-		args = append(args, "--totp")
-	}
-	switch {
-	case sshPort > 0:
-		args = append(args, "--ssh-port", strconv.Itoa(sshPort))
+	args := webGatewayArgs(cfg, aiWorkspaceRoot(), audit, devices, sshPort)
+	if sshPort > 0 {
 		open, copyLink = false, false // the browser is on the user's computer
-	case cfg.Tailnet:
-		args = append(args, "--tailnet")
-	default:
-		args = append(args, "--port", strconv.Itoa(cfg.Port))
 	}
 	proc, err := webGatewayStart(m.web, args)
 	if err != nil {
@@ -573,4 +562,30 @@ func webGatewayReason(stderr string) string {
 		last += ". Pick another web_port in config.json, or 0 for any free port"
 	}
 	return last
+}
+
+// webGatewayArgs are the gateway's arguments for cfg; sshPort > 0 is SSH
+// mode. They hold paths and limits only, never a secret.
+func webGatewayArgs(cfg webConfig, dir, audit, devices string, sshPort int) []string {
+	args := []string{"--dir", dir, "--audit", audit, "--devices", devices,
+		"--idle-min", strconv.Itoa(cfg.IdleMinutes), "--max-hours", strconv.Itoa(cfg.MaxHours),
+		"--viewers", strconv.Itoa(cfg.MaxViewers)}
+	if cfg.RequireTOTP {
+		args = append(args, "--totp")
+	}
+	if cfg.AppKeyLogin {
+		args = append(args, "--app-key") // MOB-27
+	}
+	if cfg.PhoneWatch {
+		args = append(args, "--phone-watch") // MOB-31
+	}
+	switch {
+	case sshPort > 0:
+		args = append(args, "--ssh-port", strconv.Itoa(sshPort))
+	case cfg.Tailnet:
+		args = append(args, "--tailnet")
+	default:
+		args = append(args, "--port", strconv.Itoa(cfg.Port))
+	}
+	return args
 }

@@ -72,6 +72,31 @@ type StepState struct {
 	Items    []Item        `json:"items,omitempty"` // source, plan, filter: the list it made
 	Each     *EachState    `json:"each,omitempty"`
 	Score    *score.Result `json:"score,omitempty"` // a score step's grade (CMP-23)
+	// Loop holds the rounds of a loop step.
+	Loop *LoopState `json:"loop,omitempty"`
+	// Branches holds the lists of a branch step by branch name.
+	Branches map[string]*BranchState `json:"branches,omitempty"`
+	// Wait is the last thing a wait step saw ("" before the first look).
+	Wait string `json:"wait,omitempty"`
+}
+
+// LoopState holds the rounds of a loop step, oldest first.
+type LoopState struct {
+	Rounds []*RoundState `json:"rounds"`
+}
+
+// RoundState is one round of a loop.
+type RoundState struct {
+	State string                `json:"state"`
+	Error string                `json:"error,omitempty"`
+	Steps map[string]*StepState `json:"steps"`
+}
+
+// BranchState is one branch of a branch step.
+type BranchState struct {
+	State string                `json:"state"`
+	Error string                `json:"error,omitempty"`
+	Steps map[string]*StepState `json:"steps"`
 }
 
 // EachState holds the items of an each step.
@@ -180,6 +205,20 @@ func interruptSteps(steps map[string]*StepState) {
 	for _, st := range steps {
 		if st.State == StateRunning {
 			st.State = StateInterrupted
+		}
+		if st.Loop != nil {
+			for _, rs := range st.Loop.Rounds {
+				if rs.State == StateRunning {
+					rs.State = StateInterrupted
+				}
+				interruptSteps(rs.Steps)
+			}
+		}
+		for _, bs := range st.Branches {
+			if bs.State == StateRunning {
+				bs.State = StateInterrupted
+			}
+			interruptSteps(bs.Steps)
 		}
 		if st.Each == nil {
 			continue

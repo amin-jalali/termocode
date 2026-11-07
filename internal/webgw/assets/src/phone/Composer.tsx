@@ -8,6 +8,7 @@
 import { h } from "preact";
 import { useRef, useState } from "preact/hooks";
 import { t } from "../strings";
+import { phoneOnline } from "./conn";
 
 export interface Attached {
   id: string;
@@ -41,7 +42,9 @@ export function Composer({
   const box = useRef<HTMLTextAreaElement | null>(null);
   const [hint, setHint] = useState(false);
   const empty = value.trim() === "" && (!attached || attached.length === 0);
-  const off = offline || empty;
+  // Offline (the prop, or the live link: phoneOnline) Send is greyed:
+  // a send is never queued (MOBUX-21).
+  const off = offline || !phoneOnline.value || empty;
   return (
     <form
       class="ph-composer"
@@ -100,7 +103,7 @@ export function Composer({
             🎤
           </button>
         )}
-        <button type="submit" class="ph-composer-send" aria-disabled={off ? "true" : undefined}>
+        <button type="submit" class="ph-composer-send ph-answer" aria-disabled={off ? "true" : undefined}>
           {t("send")}
         </button>
       </div>

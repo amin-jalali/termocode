@@ -3,6 +3,7 @@ package run
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -24,6 +25,31 @@ type frame struct {
 	lists  map[string][]Item
 	cur    []Item // the current list (the last source / plan / filter)
 	hasCur bool
+	// loop is loop.round / loop.max inside a loop round (nil elsewhere).
+	loop map[string]any
+}
+
+// nearestLoop is the loop scope of the innermost loop round.
+func (f *frame) nearestLoop() map[string]any {
+	for x := f; x != nil; x = x.parent {
+		if x.loop != nil {
+			return x.loop
+		}
+	}
+	return nil
+}
+
+// roundTag names the loop rounds from the top down ("fix.2"; "" outside
+// a loop).
+func (f *frame) roundTag() string {
+	var tags []string
+	for x := f; x != nil; x = x.parent {
+		if x.loop != nil {
+			tags = append(tags, fmt.Sprintf("%v.%v", x.loop["id"], x.loop["round"]))
+		}
+	}
+	slices.Reverse(tags)
+	return strings.Join(tags, "/")
 }
 
 func newFrame(parent *frame, item *Item, states map[string]*StepState) *frame {
@@ -168,6 +194,9 @@ func (r *runner) scope(f *frame) map[string]any {
 	}
 	if f.current() != nil {
 		m["items"] = listScope(f.current())
+	}
+	if l := f.nearestLoop(); l != nil {
+		m["loop"] = l
 	}
 	return m
 }

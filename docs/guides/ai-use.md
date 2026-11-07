@@ -316,6 +316,34 @@ doing and done while it works.
 The plan is saved in `.termocode/canvas.json` of the workspace, so it
 stays with the project.
 
+### Schedule a chat
+
+A chat can run again by itself at set times, for example "rerun this
+chat at 9:00" to check a build or a queue each morning.
+
+1. Run **AI: Schedule This Chat…**.
+2. Say when: `at 09:00` (every day), `weekdays 09:00`,
+   `weekly mon 09:00`, `monthly 1 09:00`, `hourly :15`, or 5 cron
+   fields.
+3. Check the message it sends. Your last message is filled in.
+4. A card shows the time of the next run and the message. **Cancel** is
+   first; press **Schedule** to save it.
+
+- At each run the message is sent as your message, with an
+  **⏰ Scheduled run** note. The chat's tools and approvals apply as
+  usual.
+- It runs only while termocode is open and the AI is idle. If you are
+  typing in another chat, the run is skipped. A slot missed by up to 30
+  minutes (termocode closed or the laptop asleep) runs once, late.
+- At most once an hour: each run is a paid turn. Up to 20 chats can
+  have a schedule. A scheduled chat is never removed from the history.
+- **AI: Chat History…** shows ⏰ and the schedule next to the chat.
+- Stop it with **AI: Stop Chat Schedule** (a card asks first).
+- The AI can propose a schedule for its own chat with the
+  `chat_schedule_set` tool. You always see the same Cancel-first card;
+  nothing is saved without your yes. It can read the schedule
+  (`chat_schedule_read`) and stop it (`chat_schedule_clear`).
+
 ### Old chats and handoff
 
 The AI can look at your saved chats when you ask, for example "what did
@@ -1363,6 +1391,43 @@ Image Generation** (run it again to turn it off).
 - The AI cannot turn the tool on by itself.
 
 The web panel cannot turn image generation on yet.
+
+## Run the AI from scripts and CI
+
+`termocode ai` runs one AI turn without the UI. It uses the same provider
+and model as the chat (config, secret store or environment keys).
+
+```sh
+termocode ai -x "explain the failing test in internal/app"
+git diff | termocode ai -x "review this diff" --stdin
+termocode ai -x "list the TODOs" --output json | jq -r .text
+termocode ai exec --output stream-json --tools all --allow fileWrite "fix the typo in README.md"
+```
+
+- `--output text` (default) prints the answer; tool lines go to stderr.
+  `json` prints one result object (`ok`, `exit_code`, `text`, `error`,
+  `model`, `usage`, `tools`, `duration_ms`). `stream-json` prints one JSON
+  line per event (`start`, `text`, `tool_start`, `tool_result`, `retry`)
+  and the result object last.
+- Nobody can answer a confirm card here. By default the AI only gets tools
+  that read (files, search, git status and diff). `--tools all` adds the
+  tools that change things, but each one is declined unless you name its
+  class with `--allow fileWrite,git,run`. `--tools none` sends no tools.
+- `--rules` adds the project rules file (AGENTS.md, CLAUDE.md,
+  `.termocode/rules.md`). They are off by default, because nobody reviews
+  them in this mode.
+- `--model`, `--dir`, `--max-steps` and `--timeout` (default 10m) change
+  the turn. `-x -` reads the prompt from stdin.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Done |
+| 1 | The model failed (the error is on stderr) |
+| 2 | Bad usage |
+| 3 | AI is not configured (or the secret store is locked and no env key is set) |
+| 4 | Timeout |
+| 5 | Step limit reached: the work is not finished |
+| 130 | Interrupted (Ctrl+C) |
 
 ## Keys at a glance
 

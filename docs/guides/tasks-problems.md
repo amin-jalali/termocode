@@ -104,6 +104,30 @@ Right-click a row for **Go to Problem**, **Fix with AI** and **Copy Message**.
 
 In the editor, `F5` and `Shift+F5` jump to the next and previous problem.
 
+## Suggested tasks
+
+Run **Tasks: Suggested Tasks…** to get a list of small jobs in your
+project. termocode reads your files and lists:
+
+- comments that start with `TODO`, `FIXME`, `BUG`, `HACK`, `XXX`,
+  `PERF` or `OPTIMIZE`,
+- Go code that is likely slow: loops nested three deep, a regexp
+  compiled inside a loop, a `defer` inside a loop, or a string grown
+  with `+=` inside a loop.
+
+`FIXME` and `BUG` come first, then `PERF`, `TODO`, `HACK` / `XXX`, and
+the slow code last. Folders like `.git`, `node_modules`, `vendor` and
+hidden folders are skipped, and so are binary, minified and lock files.
+
+Press `Enter` on a row. A card shows the task, with **Cancel** selected:
+
+- **Open in Editor** jumps to the line.
+- **Ask AI to Do It** writes a request into the AI chat box. Nothing is
+  sent: read it, change it if you like, and press `Enter`.
+- **Cancel** goes back to the list.
+
+The scan only reads files. It runs no code and sends nothing away.
+
 ## Open file links in a terminal
 
 Any `file:line` or `file:line:col` text printed in a terminal tab is a link.

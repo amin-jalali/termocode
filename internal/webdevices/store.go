@@ -1,7 +1,7 @@
 // Package webdevices is the list of browsers paired with the web panel
 // (WEB-32): phones and tablets on the user's tailnet that signed in with
 // a QR code and a passkey. It holds no secret: names, roles, credential
-// ids, passkey public keys and bookmark key hashes only. The file is devices.json, 0600 in a
+// ids, passkey and app key public keys and bookmark key hashes only. The file is devices.json, 0600 in a
 // 0700 folder next to config.json; the gateway adds devices and keeps
 // their sign counts, the UI removes them and changes their roles. Every
 // change is read-change-write under a file lock, written atomically.
@@ -64,6 +64,33 @@ type Device struct {
 	LastSeen    time.Time `json:"last_seen,omitempty"`
 	// Bookmark is the remembered browser's key (WEBP-12), as a hash.
 	Bookmark *Bookmark `json:"bookmark,omitempty"`
+	// AppKey is the Android app's keystore key (MOB-27), public half only.
+	AppKey *AppKey `json:"app_key,omitempty"`
+	// Phone is what the device chose on its This phone screen (MOBUX-20).
+	Phone *Phone `json:"phone,omitempty"`
+}
+
+// AppKey is the public half of a key the termocode Android app made in
+// its keystore (MOB-27), for when passkeys do not work in its WebView:
+// a P-256 key (SPKI DER) and the one origin it signs for. The private
+// half never leaves the phone.
+type AppKey struct {
+	PublicKey []byte    `json:"public_key"`
+	Origin    string    `json:"origin"`
+	Created   time.Time `json:"created"`
+}
+
+// Phone is a paired phone's own choices, kept on the laptop so every
+// part (the page, a push sender) honours them: OS alerts, quiet hours
+// ("HH:MM" in the phone's time, both empty: none), the phone's offset
+// from UTC, and the app lock. Never a secret.
+type Phone struct {
+	Alerts       bool      `json:"alerts"`
+	QuietFrom    string    `json:"quiet_from,omitempty"`
+	QuietTo      string    `json:"quiet_to,omitempty"`
+	UTCOffsetMin int       `json:"utc_offset_min,omitempty"`
+	Lock         bool      `json:"lock,omitempty"`
+	Changed      time.Time `json:"changed"`
 }
 
 // Bookmark is what the laptop keeps of a device's bookmark key: the

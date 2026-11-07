@@ -22,6 +22,11 @@ export interface Route {
 
 export const DEFAULT_ROUTE: Route = { tab: "chat", rest: "", query: {} };
 
+/** CARD_IN_QUERY are the tabs whose open card stays in their own hash as
+ * ?card=<id> (#/home?card=<id>, MOB-6), so the view under the sheet is in
+ * the link too; every other tab uses #/card/<id>. */
+export const CARD_IN_QUERY: readonly string[] = ["home"];
+
 function decode(s: string): string | null {
   try {
     return decodeURIComponent(s);
@@ -50,17 +55,23 @@ export function parseHash(hash: string, under: Tab = "chat"): Route {
   }
   const tab = (TABS as readonly string[]).includes(m[1]) ? (m[1] as Tab) : null;
   if (!tab) return { ...DEFAULT_ROUTE, tab: under };
+  if (CARD_IN_QUERY.includes(tab) && query.card) {
+    const card = query.card;
+    delete query.card;
+    return { tab, rest, query, card };
+  }
   return { tab, rest, query };
 }
 
 /** formatRoute writes a route as a hash; parseHash(formatRoute(r)) gives r back. */
 export function formatRoute(r: Route): string {
-  if (r.card) return "#/card/" + encodeURIComponent(r.card);
+  if (r.card && !CARD_IN_QUERY.includes(r.tab)) return "#/card/" + encodeURIComponent(r.card);
   let h = "#/" + r.tab;
   if (r.rest) h += "/" + r.rest.split("/").map(encodeURIComponent).join("/");
   const q = Object.keys(r.query)
     .sort()
     .map((k) => encodeURIComponent(k) + "=" + encodeURIComponent(r.query[k]))
     .join("&");
+  if (r.card) return h + "?card=" + encodeURIComponent(r.card) + (q ? "&" + q : "");
   return q ? h + "?" + q : h;
 }

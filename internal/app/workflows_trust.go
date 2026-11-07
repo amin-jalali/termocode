@@ -140,28 +140,9 @@ func (m *Model) wfxDaySpent() float64 {
 	return total
 }
 
-// wfxRunCost sums the step costs of a run, items too.
-func wfxRunCost(rf *run.RunFile) float64 {
-	var sum func(map[string]*run.StepState) float64
-	sum = func(steps map[string]*run.StepState) float64 {
-		t := 0.0
-		for _, s := range steps {
-			if s == nil {
-				continue
-			}
-			if s.Output != nil {
-				t += s.Output.CostUSD
-			}
-			if s.Each != nil {
-				for _, it := range s.Each.Items {
-					t += sum(it.Steps)
-				}
-			}
-		}
-		return t
-	}
-	return sum(rf.Steps)
-}
+// wfxRunCost sums the step costs of a run, items, loop rounds and
+// branches too.
+func wfxRunCost(rf *run.RunFile) float64 { return run.StepsCost(rf.Steps) }
 
 // wfxBudgetName names a budget key for the user.
 func wfxBudgetName(key string) string {

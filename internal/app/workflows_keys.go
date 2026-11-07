@@ -82,6 +82,8 @@ func (m *Model) wfxVerb(key string) (tea.Cmd, bool) {
 		return m.wfxAskStop(), true
 	case "p":
 		return m.wfxTogglePause(), true
+	case "t":
+		return m.wfxAskRetry(), true
 	case "c":
 		return m.wfxChatTarget(), true
 	case "n":
@@ -184,6 +186,15 @@ func (m *Model) handleWorkflowsPageKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	case "l":
 		st.pageScroll = 1 << 20 // the bottom: the live output
 		return nil, true
+	case "[", "]":
+		if strings.HasPrefix(st.detail, "run:") {
+			d := 1
+			if key == "[" {
+				d = -1
+			}
+			m.wfxStepTabMove(d)
+		}
+		return nil, true
 	case "u":
 		if strings.HasPrefix(st.detail, "run:") {
 			return m.wfxAskUndo(strings.TrimPrefix(st.detail, "run:")), true
@@ -220,6 +231,8 @@ func wfxKeyRowsList() [][]string {
 		{"Run"},
 		{"x", "stop the run (asks; Keep running is first)"},
 		{"p", "pause the run before its next step; p again continues"},
+		{"[ / ]", "step tabs: the detail of one step (before the first: all steps)"},
+		{"t", "retry an ended run from its failed part (asks; Cancel is first)"},
 		{"l", "jump to the live output"},
 		{"u", "undo a write of the run (asks; Cancel is first)"},
 	}
@@ -243,6 +256,8 @@ func workflowsPaletteItems() []picker.Item {
 		{ID: "workflow-history", Title: "Workflows: History of Selected"},
 		{ID: "workflow-undo-write", Title: "Workflows: Undo a Write of Selected Run…"},
 		{ID: "workflow-triggers", Title: "Workflows: Trigger Events…"},
+		{ID: "workflow-pause", Title: "Workflows: Pause / Continue Selected Run"},
+		{ID: "workflow-retry", Title: "Workflows: Retry Failed Part of Selected Run…"},
 	}
 }
 
@@ -272,6 +287,10 @@ func (m *Model) dispatchWorkflowsPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, cmd), true
 	case "workflow-triggers":
 		return tea.Batch(open, m.wfxTrigList()), true
+	case "workflow-pause":
+		return tea.Batch(open, m.wfxTogglePause()), true
+	case "workflow-retry":
+		return tea.Batch(open, m.wfxAskRetry()), true
 	case "workflow-undo-write":
 		id := m.wfxUndoRun()
 		if id == "" {

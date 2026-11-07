@@ -203,9 +203,42 @@ type ToolCheck interface {
 	ReadOnly(ctx context.Context, server, tool string) (bool, error)
 }
 
+// Waiter looks once at what a wait step waits for (a pull request's CI,
+// merge or review). The engine calls it every Step.Wait.Every until it
+// is done or the step's time is up. It must only read. Nil: wait steps
+// fail with a clear error.
+type Waiter interface {
+	Check(ctx context.Context, c WaitCall) (WaitStatus, error)
+}
+
+// WaitCall is one look of a wait step.
+type WaitCall struct {
+	Step *workflow.Step
+	For  string // one of workflow.WaitFors
+	PR   string // Step.Wait.PR filled
+	Poll int    // 1 on the first look
+}
+
+// WaitStatus is what one look saw.
+type WaitStatus struct {
+	Done   bool   // no need to look again
+	OK     bool   // with Done: what the step waited for happened
+	State  string // a short word for steps.<id>.state ("pass", "fail", "merged", …)
+	Detail string // one line for the user ("1 of 3 checks still running")
+	URL    string // the PR link
+}
+
 // AskCall is a question to the user (a card) before a step calls an MCP
 // tool that is not marked read-only from a source.
 type AskCall struct {
 	Step         *workflow.Step
 	Server, Tool string
+}
+
+// ApproveCall is a plan to approve: the step and its items in their
+// plan order marks (Item.Plan).
+type ApproveCall struct {
+	Step  *workflow.Step
+	Item  string // the item path ("" outside an each)
+	Items []Item
 }

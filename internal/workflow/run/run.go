@@ -44,6 +44,8 @@ type Options struct {
 	Each   Each   // nil: no item environment
 	Run    Runner
 	Write  Writer
+	// Wait backs wait steps (nil: they fail).
+	Wait Waiter
 
 	// ParallelMax caps the items an each runs at once
 	// (workflows_parallel_max; 0: no cap beyond the file's).
@@ -55,6 +57,10 @@ type Options struct {
 	// Ask asks the user before an mcp source calls a tool that is not
 	// read-only; true runs it (nil: no).
 	Ask func(ctx context.Context, c AskCall) (bool, error)
+	// Approve asks the user before the order of a plan step with
+	// "approve": true is used; true goes on, false denies the step (nil:
+	// such a step fails; it never goes on unapproved).
+	Approve func(ctx context.Context, c ApproveCall) (bool, error)
 
 	// OnEvent gets every event, one at a time and in order per item (the
 	// items of a parallel each run on their own goroutines). It must not
@@ -482,7 +488,7 @@ func (r *runner) attempts(ctx context.Context, s *workflow.Step, f *frame, st *S
 
 // try runs one try under the step's timeout.
 func (r *runner) try(ctx context.Context, s *workflow.Step, f *frame, st *StepState, attempt int) (string, error) {
-	if s.Timeout <= 0 || s.Type == workflow.TypeEach {
+	if s.Timeout <= 0 || s.Type == workflow.TypeEach || s.Type == workflow.TypeWait {
 		return r.exec(ctx, s, f, st, attempt)
 	}
 	tctx, cancel := context.WithTimeout(ctx, s.Timeout)

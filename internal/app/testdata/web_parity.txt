@@ -16,6 +16,8 @@ web	ai-autopilot	palette
 web	ai-auto-model	palette
 web	ai-cancel	op:chat.stop
 web	ai-checkpoint-save	palette
+web	ai-chat-schedule	palette
+web	ai-chat-unschedule	palette
 web	ai-configure	op:ai.info
 web	ai-critic-toggle	palette
 web	ai-dial-next	palette
@@ -758,12 +760,15 @@ missing	tracker-show	Workspace|S
 missing	web-forward-port	Web|M
 missing	terminal-ai-hand-back	Terminal|S
 missing	terminal-ai-take-over	Terminal|S
+missing	tasks-suggest	Tasks|S
 missing	spec-new	Specs|M
 missing	spec-new-bugfix	Specs|M
 missing	spec-open	Specs|M
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
+missing	workflow-pause	Workflows|S
+missing	workflow-retry	Workflows|S
 missing	workflow-run	Workflows|S
 missing	workflow-triggers	Workflows|S
 missing	workspace-open-container	Workspace|M

@@ -72,6 +72,8 @@ type aiState struct {
 	batch    *aiBatch
 	settings ai.Settings
 	keep     aiKeepGoingRun // OMX-7: the keep-going chain of the open chat
+	// chatSched runs the scheduled chats (CMP-43, ai_chat_sched.go).
+	chatSched aiChatSchedState
 	// OMX-17: kwOff is set when the user removed the keyword chip of the
 	// draft; kwProfile is the profile the next sendAIChat runs.
 	kwOff     bool
@@ -619,6 +621,8 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-handoff", "AI: Handoff to a New Chat", ""},
 		{chatDocsPaletteID, "AI: Chat Docs…", ""},
 		{chatDocRevsPaletteID, "AI: Chat Doc Revisions…", ""},
+		{"ai-chat-schedule", "AI: Schedule This Chat…", ""},
+		{"ai-chat-unschedule", "AI: Stop Chat Schedule", ""},
 		{"ai-side", "AI: Side Question…", ""},
 		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
@@ -687,6 +691,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-review-order", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID, aiShareChatID, aiChatCommentsID,
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
+		"ai-chat-unschedule",               // CMP-43: stopping paid runs needs no provider
 		"ai-agent-hooks", "ai-agent-packs", // agent CLI files need no provider
 		"ai-rewind-turn", "ai-checkpoint-save", "ai-checkpoint-restore": // CMP-62: files and chats only
 	default:
@@ -827,6 +832,10 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.cycleAIDial(), true
 	case "ai-side": // OMX-30 (ai_side.go)
 		return m.openAISide(), true
+	case aiChatSchedPaletteID: // CMP-43 (ai_chat_sched.go)
+		return m.openAIChatSchedule(), true
+	case aiChatUnschedPaletteID:
+		return m.openAIChatUnschedule(), true
 	case "ai-handoff": // OMX-21 (ai_session_tools.go)
 		return m.aiHandoff(), true
 	case chatDocsPaletteID: // CMP-94 (ai_chat_docs.go)

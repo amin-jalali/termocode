@@ -174,6 +174,69 @@ agent's work, and to compare models, prompts or profiles over many runs.
   variant). `termocode workflow scores <name>` lists the scored runs and
   then the variants, the best mean first.
 
+## Agent graphs: loops, branches, waits and handoffs
+
+Four parts let one workflow chain agents like a team.
+
+- A `loop` step runs its `steps` again until a round passes. A round
+  passes when all its steps pass and `until` (an expression, optional)
+  is true. `"max"` caps the rounds (at most 20). `"budget_usd"` stops the
+  loop when its steps spent that much. Inside, `{{loop.round}}` and
+  `{{loop.max}}` tell the round. The steps see the outputs of the round
+  before, so a fix agent can read the last test output.
+- A `branch` step runs two to eight lists at the same time and then
+  joins them. With `"join": "all"` (the default) it fails when any
+  branch fails; with `"any"` it fails only when every branch fails.
+  After the join, every step inside is in `steps.<id>`, so one step can
+  sum up all the reviews.
+- A `wait` step waits for a pull request: `"for": "ci"` (every check
+  passed), `"merged"` or `"approved"`. `"pr"` is a number or a link,
+  often `{{steps.open.url}}`. It looks every `"every"` (default 1m, at
+  least 10s) and gives up after the step's `timeout`, else
+  `limits.wait`, else 6h. It only reads, so it shows no card. A dry run
+  does not wait.
+- `"handoff": "<step id>"` on an `ai`, `agent` or `pipeline` step adds
+  that step's output to the prompt, marked as data, never as orders.
+
+```jsonc
+{"id": "fix", "type": "loop", "max": 3, "budget_usd": 2, "steps": [
+  {"id": "code", "type": "agent", "agent": "codex", "prompt": "Fix the failing tests (round {{loop.round}}).", "handoff": "t"},
+  {"id": "t", "type": "tests"}
+]},
+{"id": "review", "type": "branch", "branches": [
+  {"name": "security", "steps": [{"id": "sec", "type": "ai", "model": "quick", "prompt": "Review for security."}]},
+  {"name": "style", "steps": [{"id": "sty", "type": "ai", "model": "quick", "prompt": "Review for style."}]}
+]},
+{"id": "open", "type": "write", "to": "pr", "title": "Fix tests"},
+{"id": "ci", "type": "wait", "for": "ci", "pr": "{{steps.open.url}}", "timeout": "2h"}
+```
+
+The run view shows each loop round and each branch under its step.
+
+
+## Step tabs, retry and plan approval
+
+- On a run page, `]` and `[` move through the **step tabs**. The tab of a
+  step shows its state, its tries, its error, its output, the list it
+  made (with the plan's order) and its items. Before the first tab the
+  page shows all steps.
+- `t` **retries** an ended run from its first part that did not end
+  well: a failed, denied, stopped or paused step or item. The card says
+  what runs again and what is kept; **Cancel** is first. The steps
+  before it keep their answers and done items are not run again. A write
+  that went out is found by its marker and never sent twice; a denied
+  write asks again. A changed file or a dry run is not retried (start a
+  new run).
+- A `plan` step with `"approve": true` stops and asks before its order
+  is used. The card shows the order and the items it skips: **Stop
+  here** (first) denies the step, **Approve plan** goes on. The same
+  card shows on the web. A dry run does not ask.
+
+```jsonc
+{ "id": "order", "type": "plan", "model": "quick", "approve": true,
+  "prompt": "Order these bugs by how much they hurt users." }
+```
+
 ## Schedules
 
 Add a `schedule` to the file and press `o` to turn it on. The card says
@@ -363,6 +426,8 @@ workflow.
 | `R` | read the files again |
 | `x` | stop the run (asks; Keep running is first) |
 | `p` | pause the run before its next step; `p` again continues |
+| `[` / `]` | step tabs: the detail of one step (before the first: all steps) |
+| `t` | retry an ended run from its failed part (asks; Cancel is first) |
 | `l` | jump to the live output |
 | `u` | undo a write of the run: it asks first, Cancel is first (a write with an undo recipe, up to 7 days) |
 | `?` | this list |
