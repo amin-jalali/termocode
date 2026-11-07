@@ -86,6 +86,10 @@ type State struct {
 	ShowDatabase bool
 	DatabaseName string
 	DatabaseProd bool
+	// DatabaseTint is the connection's colour (DBX-21), drawn as a bar
+	// before the chip when DatabaseTinted.
+	DatabaseTint   theme.Color256
+	DatabaseTinted bool
 
 	// Ext holds extension status items (Group I), as {{token}} markup.
 	// They render at the end of the center cluster; see ext_items.go.
@@ -577,7 +581,15 @@ func renderDatabaseChip(s State) string {
 	if s.DatabaseProd {
 		fg = theme.DiagError
 	}
-	return barFg(fg).Render(theme.IconDatabases.String() + " " + s.DatabaseName)
+	chip := barFg(fg).Render(theme.IconDatabases.String() + " " + s.DatabaseName)
+	if s.DatabaseTinted {
+		bar := "▌"
+		if theme.CurrentIconMode == theme.IconModeASCII {
+			bar = "|"
+		}
+		chip = barFg(s.DatabaseTint).Render(bar) + chip
+	}
+	return chip
 }
 
 // branchText is the center cluster's branch item ("⌥ main ↑1").

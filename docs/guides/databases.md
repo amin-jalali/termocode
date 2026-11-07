@@ -55,6 +55,8 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `readOnly` | `true` makes the AI refuse writes. Your own writes ask with a warning. |
 | `ssh`, `ssl`, `tls` | See [SSH tunnels](#ssh-tunnels) and [SSL and TLS](#ssl-and-tls). |
 | `options` | Session options, see below. |
+| `folder` | Groups the connection under a heading in the tree (`team/prod`). Connections without a folder come first. Click a heading, or press `Enter` / `Space` on it, to fold or unfold it (`←` folds, `→` unfolds); termocode remembers folded headings. A filter still shows matches inside a folded heading. |
+| `color` | A bar in front of the connection's row: `red`, `orange`, `yellow`, `green`, `blue`, `purple` or `gray`. The same colour marks the start of the result page's first row (with the connection name in it) and sits before the database item in the status bar, so you always see which server you are on. |
 
 **Connection options** (`"options": {…}`), checked when the file loads:
 
@@ -70,14 +72,13 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `databases`, `schemas` | Globs: the tree shows only these. |
 | `objects` | Globs that show tables, views and routines; `!glob` hides them. |
 | `readOnlyTables` | `schema.table` or `table` globs that the grid refuses to edit. |
+| `keepAliveSeconds` | Pings the connected session this often (at least 5 s) so idle firewalls do not drop it. |
+| `autoReconnect` | `true`: when a ping fails, the session is dropped and connects again after 1 s, 2 s, 4 s … (at most 30 s, 8 tries). The row shows the next try. Pings every 30 s when `keepAliveSeconds` is not set. An open transaction is lost with the connection. Disconnect stops it. |
 
 Every pooled connection runs the schema, time zone, isolation and `initSQL` statements first; a failing one fails the connection with its reason.
 
 **Schema loading.** `db_introspect_level` sets how much a table row loads (`auto` loads less in big schemas). `r` in the tree reloads only the object under the cursor; `R` reloads everything. Each load is kept in `db/schema-cache.json` (names and types, never data); when a load differs from the cached one the row says `changed since …`. **Databases: Show Schema Cache Info** tells when a connection was last loaded. `db_complete_catalogs` adds the system catalogs to SQL completion.
-| `folder` | Groups the connection under a heading in the tree (`team/prod`). Connections without a folder come first. |
-| `color` | A bar in front of the connection's row: `red`, `orange`, `yellow`, `green`, `blue`, `purple` or `gray`. |
-| `options.keepAliveSeconds` | Pings the connected session this often (at least 5 s) so idle firewalls do not drop it. |
-| `options.autoReconnect` | `true`: when a ping fails, the session is dropped and connects again after 1 s, 2 s, 4 s … (at most 30 s, 8 tries). The row shows the next try. Pings every 30 s when `keepAliveSeconds` is not set. An open transaction is lost with the connection. Disconnect stops it. |
+
 **Import connections.** **Databases: Import Connections…** offers `~/.pgpass` and `~/.my.cnf` when they exist, or a path you type: a PostgreSQL password file, a MySQL option file (`.cnf` / `.ini`; each `[client…]` group is one connection) or a file with one connection URL per line. A card lists what it found (id, driver, address, and whether a password comes with it; never the password itself) with **Cancel** first. **Import** adds them to your own connections file; each password goes into the secret store as `${secret:db.<id>}`. Ids that are taken get a number. Lines with a wildcard host are skipped.
 
 A row with a problem shows the reason, for example `literal password in project config`, `duplicate connection id` or `sqlite path is outside the workspace`. Fix the file and press `R`.
@@ -97,7 +98,7 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Mouse
 
-- Click a row to select it. Double-click a connection to connect or expand it, a folder to fold or unfold it, and a table or view to open its data.
+- Click a row to select it. Click a folder heading to fold or unfold it. Double-click a connection to connect or expand it, and a table or view to open its data.
 - On a suggestion, click to select and double-click to add it.
 - Click **a add**, **R refresh** or **/ filter** in the header. In the empty view, click **a add** or **Add remote…**.
 - Right-click a row for its menu.
