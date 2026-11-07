@@ -179,3 +179,25 @@ func TestPopupSkippedAfterTimeout(t *testing.T) {
 		t.Error("popup shown for a dropped sequence")
 	}
 }
+
+// Spec: the mappings are read when the leader is pressed, before the key
+// reaches the editor. Once the editor waits for the next key it answers
+// no questions (nvim: "waiting for input"), so a read at popup time gets
+// nothing and the popup never shows.
+func TestMapsLoadedOnLeader(t *testing.T) {
+	tr, ft := newTracker(t)
+	waiting := false
+	tr.Load = func() []Mapping {
+		if waiting {
+			return nil
+		}
+		return testMaps
+	}
+	out := tr.Press("<space>")
+	waiting = true // the leader went on to the editor
+	ft.now = ft.now.Add(Delay)
+	tr.Tick(out.Gen)
+	if c, ok := tr.Content(); !ok || len(c.Entries) != 3 {
+		t.Fatalf("content = %+v ok=%v, want the 3 leader entries", c, ok)
+	}
+}
