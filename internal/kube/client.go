@@ -18,8 +18,11 @@ type Client struct {
 	Binary    string // kubectl's path ("" = not installed)
 	Context   string
 	Namespace string
-	X         services.Exec // nil = services.SpawnExec{}
-	Timeout   time.Duration // per call; 0 = DefaultTimeout
+	// AllNamespaces lists namespaced kinds of every namespace
+	// (--all-namespaces) instead of Namespace (CTX-20).
+	AllNamespaces bool
+	X             services.Exec // nil = services.SpawnExec{}
+	Timeout       time.Duration // per call; 0 = DefaultTimeout
 }
 
 // Find looks kubectl up on PATH. lookPath nil = exec.LookPath.
@@ -47,7 +50,10 @@ func (c Client) scope(namespaced bool) []string {
 	if c.Context != "" {
 		out = append(out, "--context", c.Context)
 	}
-	if namespaced && c.Namespace != "" {
+	switch {
+	case namespaced && c.AllNamespaces:
+		out = append(out, "--all-namespaces")
+	case namespaced && c.Namespace != "":
 		out = append(out, "--namespace", c.Namespace)
 	}
 	return out

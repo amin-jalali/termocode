@@ -61,7 +61,7 @@ func TestResolveKind(t *testing.T) {
 		"deploy": "deployments.apps", "Deployment": "deployments.apps",
 		"cert": "certificates.cert-manager.io", "certificate": "certificates.cert-manager.io",
 		"certificates.cert-manager.io": "certificates.cert-manager.io",
-		"events": "events", "events.events.k8s.io": "events.events.k8s.io", "event.events.k8s.io": "events.events.k8s.io",
+		"events":                       "events", "events.events.k8s.io": "events.events.k8s.io", "event.events.k8s.io": "events.events.k8s.io",
 		"tls": "certificates.cert-manager.io", "w": "widgets.example.com", " crd ": "customresourcedefinitions.apiextensions.k8s.io",
 	} {
 		r, ok := kube.ResolveKind(rs, aliases, q)
