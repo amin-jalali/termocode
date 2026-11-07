@@ -836,6 +836,34 @@ Limits:
   answer a confirm card for you. Pipeline runs ([AI profiles](ai-profiles.md))
   get them in every step.
 
+### Review rules
+
+A section of `AGENTS.md` can be for AI reviews only. Give it the heading
+`## Code Review Rules` (also `Review Rules`, `Code Review` or
+`Review Guidelines`, at any heading level):
+
+```markdown
+## Code Review Rules
+
+- Report only P0 and P1 findings.
+- Every new handler checks the user's rights.
+```
+
+- The chat does not get this section. Its system prompt has the rest of
+  the file.
+- **Git: AI Review My Changes** and **Git: AI Review Branch (Pull Request)**
+  put it into the request, above the diff. You read it in the chat box
+  before you send it.
+- An `AGENTS.md` in a sub folder can have its own section. It is added when
+  the change touches a file in that folder.
+- The section ends at the next heading of the same or a higher level.
+- The review rules are part of the same trust answer as the rest of the
+  file. With **Not in this project**, reviews do not get them either.
+- **Git: Add Review Rules to AGENTS.md…** shows a starter section on a card
+  (**Cancel** is first). **Add Section** adds it to the end of `AGENTS.md`
+  (or creates the file) and opens it. When the file has a section already,
+  the command opens it there.
+
 ## Memory
 
 The AI can keep short lessons from your chats in a project, for example

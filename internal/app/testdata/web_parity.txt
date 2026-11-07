@@ -585,6 +585,7 @@ missing	git-ai-review-branch	Git|S
 missing	git-ai-review-changes	Git|S
 missing	git-ai-security-branch	Git|S
 missing	git-ai-security-changes	Git|S
+missing	git-ai-review-rules	Git|S
 missing	git-ai-stash	Git|S
 missing	git-auto-fetch	Git|S
 missing	git-autosquash	Git|S

@@ -237,6 +237,9 @@ func (m *Model) gitxAIReview(branch bool) tea.Cmd {
 	if branch {
 		ask = "Review this branch as a pull request into " + d.base + ": bugs, risks, missing tests and unclear names. List the findings by file, most important first."
 	}
+	if rules := gitxReviewRules(d.root, d.diff); rules != "" {
+		ask += "\n\n" + rules // CMP-37: the review-only section of AGENTS.md
+	}
 	diff := d.diff
 	if d.cut {
 		diff += "\n[cut here: the rest is longer]"

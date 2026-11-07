@@ -2367,6 +2367,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-ai-review-changes` | Git: AI Review My Changes | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-security-branch` | Git: AI Security Review Branch (Threat Model) | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-security-changes` | Git: AI Security Review My Changes (Threat Model) | never | fills the user's chat box; the user reads it and sends it |
+| `git-ai-review-rules` | Git: Add Review Rules to AGENTS.md… | never | writes the user's AGENTS.md after a card; the user only |
 | `git-ai-stash` | Git: Stash with AI Message | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-auto-fetch` | Git: Toggle Auto Fetch | never | starts a timer that talks to the remote; only the user turns it on |
 | `git-autosquash` | Git: Autosquash fixup! Commits… | never | rewrites the branch history; only the user starts a rebase |
