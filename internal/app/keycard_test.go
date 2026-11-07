@@ -28,6 +28,17 @@ func wantKeyCard(t *testing.T, name string, m Model, want ...string) Model {
 	}
 	m.confirm.SetSize(100, 50)
 	text := keyCardText(m)
+	// A long card scrolls (30 rows at a time): read it to the end.
+	c := m.confirm
+	for i := 0; i < 200; i++ {
+		prev := ansi.Strip(c.View())
+		c, _ = c.Update(tea.KeyMsg{Type: tea.KeyPgDown})
+		next := ansi.Strip(c.View())
+		if next == prev {
+			break
+		}
+		text += "\n" + next
+	}
 	for _, w := range append(want, "Open guide", "Close") {
 		if !strings.Contains(text, w) {
 			t.Errorf("%s: card lacks %q:\n%s", name, w, text)
