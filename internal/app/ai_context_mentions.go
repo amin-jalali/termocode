@@ -35,7 +35,7 @@ type aiMentionFunc func(ctx context.Context, emit func(ai.Event)) (string, []ai.
 type aiCtxMention struct{ kind, arg string }
 
 // aiCtxMentionMax caps the context mentions read for one message.
-const aiCtxMentionMax = 8
+const aiCtxMentionMax = 10
 
 var aiCtxMentionRe = lazyre.New(`(?:^|\s)@([a-z]+)(?::(\S+))?`)
 
@@ -188,7 +188,7 @@ func aiReadContextMention(ctx context.Context, emit func(ai.Event), root string,
 		emit(ai.Event{Kind: ai.EventToolResult, Tool: tool, Label: tool, Detail: msg, Args: args, Gate: ai.GateAuto, Decision: "user (@ mention)"})
 		return fmt.Sprintf("Mention %s could not be read: %s", label, msg)
 	}
-	body = ai.RedactSecrets(aiCleanText(body))
+	body = ai.Redact(aiCleanText(body)) // known keys and key-shaped text (a page may hold one)
 	if len(body) > aiMaxAttach {
 		body = strings.ToValidUTF8(body[:aiMaxAttach], "") + "\n… [truncated]"
 	}
