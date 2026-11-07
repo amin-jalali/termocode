@@ -93,6 +93,8 @@ type servicesState struct {
 	pendingLocal string    // local service waiting for the first-run OK
 	lastClick    time.Time // double-click on the same row = logs
 	menuRow      svcRow    // the row the context menu is for
+	volumes      []string  // the compose project's named volumes (the down --volumes card)
+	scaleName    string    // the service the scale prompt is for
 	cfgCache     *svcConfigCache
 	stale        bool // the view hid: events may have been missed
 	everShown    bool
@@ -450,9 +452,11 @@ func (m *Model) onServicesSnapshot(msg servicesSnapshotMsg) tea.Cmd {
 	if msg.det.Compose && msg.problem.Kind == services.ProblemNone {
 		st.project = msg.cfg.Project
 		st.compose = msg.cfg.Services
+		st.volumes = msg.cfg.Volumes
 		st.status = msg.status
 	} else if !msg.det.Compose {
 		st.project, st.compose, st.status = "", nil, map[string]services.Status{}
+		st.volumes = nil
 	}
 	// A problem keeps the last rows (dimmed by statusOf → Unknown).
 	st.probes = msg.probes

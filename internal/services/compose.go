@@ -149,6 +149,13 @@ func (c *Compose) Down(ctx context.Context) error {
 	return c.action(ctx, "down", nil)
 }
 
+// DownVolumes runs `compose down --volumes`: it also deletes the
+// project's named volumes (their data). The UI asks first with a
+// Cancel-first card; it is never an AI tool.
+func (c *Compose) DownVolumes(ctx context.Context) error {
+	return c.action(ctx, "down", []string{"--volumes"})
+}
+
 // Logs captures the last lines of one service ("" = all), for the AI.
 func (c *Compose) Logs(ctx context.Context, name string, lines int, since time.Duration) (string, error) {
 	args := []string{"logs", "--no-color", "--timestamps", "--tail", strconv.Itoa(lines)}
@@ -168,6 +175,49 @@ func (c *Compose) Logs(ctx context.Context, name string, lines int, since time.D
 // Up is the visible `up -d [names]` job.
 func (c *Compose) Up(names []string) Command {
 	return Command{Label: "services: up", Argv: c.argv(append([]string{"up", "-d"}, names...)...), Dir: c.Root}
+}
+
+// UpOptions are the extra flags of an up job.
+type UpOptions struct {
+	Build         bool // --build: build images first
+	ForceRecreate bool // --force-recreate
+	NoDeps        bool // --no-deps: leave linked services alone
+	PullAlways    bool // --pull always
+}
+
+// UpWith is the visible `up -d [flags] [names]` job.
+func (c *Compose) UpWith(names []string, o UpOptions) Command {
+	args := []string{"up", "-d"}
+	if o.Build {
+		args = append(args, "--build")
+	}
+	if o.ForceRecreate {
+		args = append(args, "--force-recreate")
+	}
+	if o.NoDeps {
+		args = append(args, "--no-deps")
+	}
+	if o.PullAlways {
+		args = append(args, "--pull", "always")
+	}
+	return Command{Label: "services: up", Argv: c.argv(append(args, names...)...), Dir: c.Root}
+}
+
+// Pull is the visible `pull [names]` job.
+func (c *Compose) Pull(names []string) Command {
+	return Command{Label: "services: pull", Argv: c.argv(append([]string{"pull"}, names...)...), Dir: c.Root}
+}
+
+// Build is the visible `build [names]` job.
+func (c *Compose) Build(names []string) Command {
+	return Command{Label: "services: build", Argv: c.argv(append([]string{"build"}, names...)...), Dir: c.Root}
+}
+
+// Scale is the visible `up -d --no-recreate --scale name=n name` job
+// (works on every compose v2; `compose scale` is newer).
+func (c *Compose) Scale(name string, n int) Command {
+	return Command{Label: "services: up",
+		Argv: c.argv("up", "-d", "--no-recreate", "--scale", name+"="+strconv.Itoa(n), name), Dir: c.Root}
 }
 
 // Recreate is the visible `up -d --force-recreate name` job.

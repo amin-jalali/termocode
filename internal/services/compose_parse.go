@@ -239,6 +239,7 @@ func upFor(text string) (time.Duration, bool) {
 type Config struct {
 	Project  string
 	Services []Service // sorted by name
+	Volumes  []string  // top-level named volumes, sorted
 	// SecretValues are env values whose keys look secret (≥ 8 chars), for
 	// ai.RegisterSecret. They never go into a Service.
 	SecretValues []string
@@ -271,11 +272,16 @@ func ParseConfig(data []byte) (Config, error) {
 			} `json:"healthcheck"`
 			Environment map[string]*string `json:"environment"`
 		} `json:"services"`
+		Volumes map[string]json.RawMessage `json:"volumes"`
 	}
 	if err := json.Unmarshal(data, &doc); err != nil {
 		return Config{}, fmt.Errorf("compose config: %w", err)
 	}
 	cfg := Config{Project: doc.Name}
+	for v := range doc.Volumes {
+		cfg.Volumes = append(cfg.Volumes, v)
+	}
+	sort.Strings(cfg.Volumes)
 	seen := map[string]bool{}
 	for name, s := range doc.Services {
 		svc := Service{Name: name, Backend: "compose", Image: s.Image, Profiles: s.Profiles,

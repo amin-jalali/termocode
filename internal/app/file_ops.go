@@ -59,6 +59,7 @@ const (
 	promptKindUploadSource
 	promptKindBulkRename
 	promptKindRebaseReword // a reword row's new subject (git_rebase.go)
+	promptKindComposeScale // CTX-8: replicas of a compose service (services_compose_more.go)
 )
 
 func (m *Model) openRenamePrompt(path string) {
@@ -241,6 +242,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.refreshSearchResults() // an empty file; kept in step (N2)
 	case promptKindUploadSource:
 		return m.onUploadSource(value)
+	case promptKindComposeScale:
+		return m.onComposeScalePrompt(value)
 	case promptKindRebaseReword:
 		m.onRebaseReword(value)
 	case promptKindImportFile:
