@@ -147,6 +147,8 @@ func (m *Model) handlePRPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onPRActionPicked(id), true
 	case pickerKindPRThreads: // pr_threads.go
 		return m.onPRThreadPicked(id), true
+	case pickerKindPRChecks: // worktrees_pr.go
+		return m.onPRCheckPicked(id), true
 	case pickerKindPRFilter: // pr_filter.go
 		return m.onPRFilterPicked(id), true
 	}

@@ -856,6 +856,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Ship Selected (commit, push, PR, merge, archive)… | `worktree-ship` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
+| Worktree: Show Pull Request of Selected | `worktree-pr` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 | Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
 | Worktree: Start from Issue… | `worktree-from-issue` |   |   |

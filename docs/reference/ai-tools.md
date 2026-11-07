@@ -2553,6 +2553,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
 | `worktree-reset-order` | Worktree: Reset Order | auto |   |
 | `worktree-sessions` | Worktree: Agent Sessions of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-pr` | Worktree: Show Pull Request of Selected | auto |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
 | `worktree-ship` | Worktree: Ship Selected (commit, push, PR, merge, archive)… | never | it commits, pushes, opens and merges a pull request: the user starts it |
 | `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |

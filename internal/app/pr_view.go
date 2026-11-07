@@ -89,6 +89,9 @@ func (m *Model) showPRView() {
 	if n := len(m.prS().threads); n > 0 {
 		buttons = append(buttons, confirm.Button{ID: "threads", Title: "Threads…"})
 	}
+	if len(d.Checks) > 0 { // worktrees_pr.go
+		buttons = append(buttons, confirm.Button{ID: "checks", Title: "Checks…"})
+	}
 	if len(d.Files) > 0 {
 		buttons = append(buttons, confirm.Button{ID: "files", Title: "Files…"})
 	}
@@ -207,6 +210,8 @@ func (m *Model) handlePRConfirm(id string) (tea.Cmd, bool) {
 		return m.prOpenFiles(), true
 	case "threads":
 		return m.prOpenThreads(), true
+	case "checks":
+		return m.prOpenChecks(), true
 	case "actions":
 		return m.prOpenActions(), true
 	}
