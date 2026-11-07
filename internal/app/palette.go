@@ -202,6 +202,8 @@ func paletteItems() []picker.Item {
 		{ID: "terminal-prev-tab", Title: "Terminal: Previous Tab", Hint: "Ctrl+Shift+PgUp"},
 		{ID: "terminal-maximize", Title: "Terminal: Maximize Panel"},
 		{ID: "terminal-minimize", Title: "Terminal: Minimize Panel"},
+		{ID: "terminal-ai-take-over", Title: "Terminal: Take Over from the AI"},
+		{ID: "terminal-ai-hand-back", Title: aiTermHandBackTitle},
 		// Bottom panel tabs (panel.go / output.go).
 		{ID: "view-output", Title: "View: Output"},
 		{ID: "output-clear", Title: "Output: Clear Channel"},
@@ -481,6 +483,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.runDebugPaletteCmd(id)
 	}
 	if cmd, ok := m.runTermPaneAction(id); ok { // terminal splits (terminal_split.go)
+		return cmd
+	}
+	if cmd, ok := m.runTermDriveAction(id); ok { // AI take over / hand back (ai_terminal_drive.go)
 		return cmd
 	}
 	switch id {
