@@ -101,6 +101,10 @@ func ParsePlan(driver string, res Result, analyze bool) Plan {
 		if parseSQLitePlan(&p, res) {
 			return p
 		}
+	case "sqlserver", "mssql":
+		if parseSQLServerShowplan(&p, whole) {
+			return p
+		}
 	}
 	parseIndentedText(&p, texts)
 	return p
