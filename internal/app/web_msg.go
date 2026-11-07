@@ -44,6 +44,11 @@ func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case webGoneMsg:
 		m.onWebGone(msg)
 		return waitWeb(msg.hub), true
+	case webViewTickMsg:
+		if msg.hub == m.web {
+			m.onWebViewTick(msg)
+		}
+		return waitWeb(msg.hub), true
 	case webPanelUpMsg, webPanelFailMsg, webPanelExitMsg:
 		return m.handleWebPanelMsg(msg)
 	case webLinkCopyMsg:

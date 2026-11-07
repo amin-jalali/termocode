@@ -56,6 +56,9 @@ type webCall struct {
 
 	answered atomic.Bool
 	deferred bool // Update only: the handler answers later
+	// sink, when set, gets the answer instead of the connection: a view's
+	// source op run in-process (web_views.go). It is still audited.
+	sink func(webproto.Msg)
 }
 
 // later says the handler answers after it returned.
@@ -85,6 +88,11 @@ func (c *webCall) fail(code webproto.ErrCode, msg string) {
 
 func (c *webCall) answer(m webproto.Msg) {
 	if !c.answered.CompareAndSwap(false, true) {
+		return
+	}
+	if c.sink != nil {
+		c.audited(m)
+		c.sink(m)
 		return
 	}
 	c.conn.inflight.Add(-1)

@@ -10,6 +10,9 @@ import { CHIPS, chipOrder, viewChips, type Built, type ChipDef } from "./chips";
 import { QuickBlock } from "./QuickBlock";
 import { ActionSheetHost } from "./ActionSheet";
 import { Panels } from "./Panels";
+import { catalog, ViewsMenu } from "./ViewsMenu";
+import { Customize } from "./Customize";
+import { readLive, readUpdate, specFromRoute, type ViewDef, type ViewSpec } from "./views";
 import { addQuick, boardBlock, dropQuick, gitBlock, lastIndex, mergeStream, needsYouBlock, patchQuick, projectsBlock, readBlock, readInbox, readProjects, runsBlock, tasksBlock, type HomeBlock, type Labels, type Quick } from "../state/home";
 import { readGit } from "../state/git";
 import { readRuns, readTasks } from "../state/tasks";
@@ -65,11 +68,33 @@ export function buildFor(b: Built): HomeBlock {
 /** The Home's state lives for the page's life: leaving the Home for a
  * tab and coming back keeps the stream. */
 let state: { quick: Signal<Quick[]>; panels: Signal<boolean> } | null = null;
+/** rerun runs a view block's spec again (set by Home while it draws). */
+let rerun: ((q: Quick) => void) | null = null;
 function homeState() {
-  if (!state) state = { quick: H.signal<Quick[]>([]), panels: H.signal(false) };
+  if (!state) {
+    const st = { quick: H.signal<Quick[]>([]), panels: H.signal(false) };
+    state = st;
+    // Live views end with the connection on the laptop: after a drop,
+    // each live block runs again so it keeps updating (MOB-9).
+    let down = false;
+    H.effect(() => {
+      if (!H.live.value) {
+        down = true;
+        return;
+      }
+      if (!down) return;
+      down = false;
+      for (const q of st.quick.peek()) if (q.live && rerun) rerun(q);
+    });
+  }
   return state;
 }
 let seq = 0;
+
+/** stopLive ends a block's live view on the laptop (best effort). */
+function stopLive(q: Quick): void {
+  if (q.live) H.link.request("view.stop", { id: q.live }).catch(() => undefined);
+}
 
 /** openItem opens what a row names ("<kind>:<ref>"): a card's sheet, or
  * the view of its source. */
@@ -150,6 +175,19 @@ export function Home() {
   const st = homeState();
   const { quick, panels } = st;
   H.useEffect(() => H.link.subscribe("chat", "cards", "inbox"), []);
+  const [menu, setMenu] = H.useState(false);
+  const [cust, setCust] = H.useState<{ q: Quick; def: ViewDef; spec: ViewSpec } | null>(null);
+  // A live view's new block replaces its block in place (ev view_update).
+  H.useEffect(
+    () =>
+      H.link.onEvent((kind, d) => {
+        if (kind !== "view_update") return;
+        const u = readUpdate(d);
+        const q = u && quick.peek().find((x) => x.live === u.id);
+        if (u && q) quick.value = patchQuick(quick.peek(), q.id, { block: u.block });
+      }),
+    [],
+  );
   const body = H.useRef<HTMLDivElement | null>(null);
   const stick = H.useRef(true);
   const laptop = H.readChat(data("chat"));
@@ -170,15 +208,40 @@ export function Home() {
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   });
 
+  const chipOf = (id: string) => CHIPS.find((c) => c.id === id);
   const fill = (key: HomeKey) => {
     H.setDraft(chatId, hs(key));
     requestAnimationFrame(focusBox);
   };
 
+  /** ask runs spec on the laptop for quick block id. onMissing: the laptop
+   * has no such view (a chip then builds its block or fills the box);
+   * without it the block says why. Past the live views' cap the block is
+   * a one-time answer. */
+  const ask = (id: string, spec: ViewSpec, onMissing?: (e: unknown) => boolean, live = true) => {
+    H.link.request("view.run", { spec, live }).then(
+      (d) => {
+        const b = readBlock(d);
+        if (!b) {
+          if (onMissing?.(null)) return;
+          quick.value = patchQuick(quick.peek(), id, { state: "error", error: hs("block.laptop") });
+          return;
+        }
+        quick.value = patchQuick(quick.peek(), id, { state: "ready", from: "view", block: b, spec, live: readLive(d) || undefined });
+      },
+      (e: unknown) => {
+        const code = H.code(e);
+        if (code === "limit" && live) return ask(id, spec, onMissing, false);
+        if (onMissing?.(e)) return;
+        quick.value = patchQuick(quick.peek(), id, { state: "error", error: H.errText(e) });
+      },
+    );
+  };
+
   const run = (c: ChipDef, retry?: Quick) => {
     if (c.topics) H.link.subscribe(...c.topics);
     const id = retry?.id ?? "q" + ++seq;
-    if (retry) quick.value = patchQuick(quick.peek(), id, { state: "loading", error: undefined });
+    if (retry) quick.value = patchQuick(quick.peek(), id, { state: "loading", error: undefined, live: undefined });
     else quick.value = addQuick(quick.peek(), { id, chip: c.id, chat: chatId, after: lastIndex(msgs), at: Date.now(), state: "loading", from: "" });
     stick.current = true;
     const fallback = () => {
@@ -189,20 +252,59 @@ export function Home() {
       }
     };
     if (!c.view) return fallback();
-    H.link.request("view.run", { view: c.view }).then(
-      (d) => {
-        const b = readBlock(d);
-        if (b) quick.value = patchQuick(quick.peek(), id, { state: "ready", from: "view", block: b });
-        else fallback();
+    const spec = (retry?.spec as ViewSpec | undefined) ?? { view: c.view };
+    // The laptop has no such view yet (bad_request, not_found), or the
+    // link is down and the page has the topic's last copy (marked stale
+    // by the bars): the page builds the block itself or fills the box.
+    ask(id, spec, (e) => {
+      const code = e === null ? "not_found" : H.code(e);
+      if ((e === null || !H.isOffline(e)) && (code === "bad_request" || code === "not_found")) {
+        fallback();
+        return true;
+      }
+      if (e !== null && H.isOffline(e) && c.build) {
+        fallback();
+        return true;
+      }
+      return false;
+    });
+  };
+
+  /** runView puts a view from the menu, a deep link or Customize in the
+   * stream (retry: run it again in the same block). */
+  const runView = (spec: ViewSpec, retry?: Quick) => {
+    const id = retry?.id ?? "q" + ++seq;
+    if (retry) quick.value = patchQuick(quick.peek(), id, { state: "loading", error: undefined, live: undefined, spec });
+    else quick.value = addQuick(quick.peek(), { id, chip: "view:" + spec.view, chat: chatId, after: lastIndex(msgs), at: Date.now(), state: "loading", from: "", spec });
+    stick.current = true;
+    ask(id, spec);
+  };
+  rerun = (q: Quick) => {
+    const c = chipOf(q.chip);
+    if (c) run(c, q);
+    else if (q.spec) runView(q.spec as ViewSpec, q);
+  };
+
+  // #/home/view/<id>?ws=…&<arg>=…: open that view, then drop the link
+  // from the address so a reload does not run it twice.
+  const route = H.route.value;
+  H.useEffect(() => {
+    if (route.tab !== "home") return;
+    const s = specFromRoute(route.rest, route.query);
+    if (!s) return;
+    H.go({ tab: "home", rest: "", query: {} }, true);
+    runView(s);
+  }, [route]);
+
+  const customize = (q: Quick) => {
+    const spec = q.spec as ViewSpec | undefined;
+    if (!spec) return;
+    catalog().then(
+      (cat) => {
+        const def = cat.views.find((v) => v.id === spec.view);
+        if (def) setCust({ q, def, spec });
       },
-      (e: unknown) => {
-        // The laptop has no such view yet (bad_request, not_found): the
-        // page builds the block itself or fills the box.
-        const code = H.code(e);
-        if (!H.isOffline(e) && (code === "bad_request" || code === "not_found")) return fallback();
-        if (H.isOffline(e) && c.build) return fallback(); // the topic's last copy, marked stale by the bars
-        quick.value = patchQuick(quick.peek(), id, { state: "error", error: H.errText(e) });
-      },
+      () => undefined,
     );
   };
 
@@ -215,7 +317,6 @@ export function Home() {
     run(c);
   };
 
-  const chipOf = (id: string) => CHIPS.find((c) => c.id === id);
   const busy = laptop?.busy ?? false;
   return (
     <section class="home" data-view="home" aria-label={hs("title")}>
@@ -237,11 +338,15 @@ export function Home() {
             <QuickBlock
               key={q.id}
               q={q}
-              title={c ? hs(c.label) : ""}
+              title={c ? hs(c.label) : hs("views.title")}
               built={q.from === "page" && c?.build ? buildFor(c.build) : null}
               onOpen={openItem}
-              onClose={() => (quick.value = dropQuick(quick.peek(), q.id))}
-              onRetry={() => c && run(c, q)}
+              onClose={() => {
+                stopLive(q);
+                quick.value = dropQuick(quick.peek(), q.id);
+              }}
+              onRetry={() => (c ? run(c, q) : q.spec && runView(q.spec as ViewSpec, q))}
+              onCustomize={q.spec ? () => customize(q) : undefined}
             />
           );
         })}
@@ -254,7 +359,19 @@ export function Home() {
           <p class="home-status">{hs("loading")}</p>
         )}
       </footer>
-      {panels.value && <Panels views={viewChips(CHIPS)} onView={(c) => run(c)} onClose={() => (panels.value = false)} />}
+      {panels.value && <Panels views={viewChips(CHIPS)} onView={(c) => run(c)} onAll={() => setMenu(true)} onClose={() => (panels.value = false)} />}
+      {menu && <ViewsMenu onRun={(s) => runView(s)} onClose={() => setMenu(false)} />}
+      {cust && (
+        <Customize
+          def={cust.def}
+          spec={cust.spec}
+          onApply={(s) => {
+            stopLive(cust.q);
+            runView(s, cust.q);
+          }}
+          onClose={() => setCust(null)}
+        />
+      )}
       <ActionSheetHost chat={chatId} />
     </section>
   );

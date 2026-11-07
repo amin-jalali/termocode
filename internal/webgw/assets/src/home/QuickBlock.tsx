@@ -121,6 +121,7 @@ export function QuickBlock({
   onOpen,
   onClose,
   onRetry,
+  onCustomize,
 }: {
   q: Quick;
   title: string;
@@ -129,6 +130,8 @@ export function QuickBlock({
   onOpen: (id: string) => void;
   onClose: () => void;
   onRetry: () => void;
+  /** onCustomize opens the Customize sheet (a laptop view block only). */
+  onCustomize?: () => void;
 }) {
   const shownTitle = q.state === "ready" && q.from === "view" ? ((q.block as { title?: string }).title ?? title) : (built?.kind === "list" ? built.title : title);
   return (
@@ -141,6 +144,11 @@ export function QuickBlock({
           {shownTitle}
         </h2>
         <span class="home-block-tag">{hs("block.no_tokens")}</span>
+        {onCustomize && q.state === "ready" && q.from === "view" && (
+          <button type="button" class="home-block-close" aria-label={hs("cust.open")} title={hs("cust.open")} onClick={onCustomize}>
+            <span aria-hidden="true">⚙</span>
+          </button>
+        )}
         <button type="button" class="home-block-close" aria-label={hs("block.close")} title={hs("block.close")} onClick={onClose}>
           <span aria-hidden="true">×</span>
         </button>
