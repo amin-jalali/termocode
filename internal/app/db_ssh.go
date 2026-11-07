@@ -402,8 +402,8 @@ func (m *Model) databaseSSHStart(id string) tea.Cmd {
 	if !ok {
 		return m.pushToastDetail(toast.Info, "Select a connection", "Pick a connection row first.")
 	}
-	if c.Driver == "sqlite" {
-		return m.pushToastDetail(toast.Info, "No tunnel for SQLite", "A SQLite database is a local file.")
+	if c.Driver == "sqlite" || c.Driver == "duckdb" {
+		return m.pushToastDetail(toast.Info, "No tunnel for "+dbFileEngineName(c.Driver), "A "+dbFileEngineName(c.Driver)+" database is a local file.")
 	}
 	e := &dbSSHEdit{conn: id}
 	if c.SSH != nil {
@@ -419,8 +419,8 @@ func (m *Model) databaseSSLStart(id string) tea.Cmd {
 	if !ok {
 		return m.pushToastDetail(toast.Info, "Select a connection", "Pick a connection row first.")
 	}
-	if c.Driver == "sqlite" {
-		return m.pushToastDetail(toast.Info, "No SSL for SQLite", "A SQLite database is a local file.")
+	if c.Driver == "sqlite" || c.Driver == "duckdb" {
+		return m.pushToastDetail(toast.Info, "No SSL for "+dbFileEngineName(c.Driver), "A "+dbFileEngineName(c.Driver)+" database is a local file.")
 	}
 	e := &dbSSHEdit{conn: id}
 	if c.SSL != nil {

@@ -94,6 +94,12 @@ func dbDriverTitle(driver string) string {
 		return "SQLite"
 	case "oracle":
 		return "Oracle"
+	case "duckdb":
+		return "DuckDB"
+	case "trino":
+		return "Trino"
+	case "presto":
+		return "Presto"
 	}
 	return driver
 }

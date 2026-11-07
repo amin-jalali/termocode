@@ -169,6 +169,8 @@ func defaultPort(d string) int {
 		return 1433
 	case "oracle":
 		return 1521
+	case "trino", "presto":
+		return 8080
 	}
 	return httpEngineDefaultPort(d, false)
 }

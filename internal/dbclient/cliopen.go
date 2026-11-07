@@ -10,7 +10,7 @@ import (
 // password and SSL settings are in Env, never in Args, so they do not
 // show in the process list. Nothing here starts a process.
 type CLICmd struct {
-	Tool string   // psql, mysql, sqlite3 or redis-cli (looked up on PATH by the caller)
+	Tool string   // psql, mysql, sqlite3, duckdb or redis-cli (looked up on PATH by the caller)
 	Args []string // arguments after Tool
 	Env  []string // KEY=value to add to the environment
 	// Stdin is a file the tool reads on standard input ("" = none): a
@@ -38,6 +38,8 @@ func CLITool(driver string) string {
 		return "sqlite3"
 	case "redis":
 		return "redis-cli"
+	case "duckdb":
+		return "duckdb"
 	}
 	return ""
 }
@@ -48,7 +50,7 @@ func CLICommand(c Conn, o CLIOptions) (CLICmd, error) {
 	if tool == "" {
 		return CLICmd{}, fmt.Errorf("no command line client for %s", c.Driver)
 	}
-	if c.URL != "" && tool != "sqlite3" {
+	if c.URL != "" && tool != "sqlite3" && tool != "duckdb" {
 		if p, err := ParseURL(c.URL); err == nil {
 			c.Host, c.Port, c.User, c.Database = p.Host, p.Port, p.User, p.Database
 			if p.DB != 0 {
@@ -125,6 +127,18 @@ func CLICommand(c Conn, o CLIOptions) (CLICmd, error) {
 			// shows it): type PRAGMA key = '…'; in the tab first.
 			out.Tool = "sqlcipher"
 		}
+	case "duckdb":
+		p := c.Path
+		if p == "" {
+			return CLICmd{}, fmt.Errorf("duckdb path is required")
+		}
+		if !filepath.IsAbs(p) && o.Root != "" {
+			p = filepath.Join(o.Root, p)
+		}
+		if c.ReadOnly {
+			out.Args = append(out.Args, "-readonly")
+		}
+		out.Args = append(out.Args, p)
 	case "redis-cli":
 		arg("-h", c.Host)
 		arg("-p", port)
