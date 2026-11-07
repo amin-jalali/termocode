@@ -2,11 +2,13 @@
 // are ever shown: never words from a terminal, the AI, a path or a
 // command, so a locked screen shows nothing private (never-do 14). The
 // page asks for the permission only from the user's click, shows a
-// notification only while it is in the background, and never uses a
-// service worker or push: no page open, no notification.
+// notification only while it is in the background. On an https site a
+// paired phone also gets a push while the page is closed (lib/push.ts,
+// MOB-30): a count only, shown with the worker's own fixed text.
 import { signal } from "@preact/signals";
 import { t, type StringKey } from "../strings";
 import { prefs, setPref } from "./prefs";
+import { pushOff, pushOn } from "./push";
 
 /** NotifyKind is the closed list of things worth a notification. */
 export type NotifyKind = "card" | "run_done" | "run_failed";
@@ -46,12 +48,16 @@ export function turnOn(): void {
   if (!N) return;
   if (N.permission === "granted") {
     setPref("notify", true);
+    void pushOn();
     return;
   }
   N.requestPermission().then(
     (p) => {
       perm.value = p;
-      if (p === "granted") setPref("notify", true);
+      if (p === "granted") {
+        setPref("notify", true);
+        void pushOn();
+      }
     },
     () => undefined,
   );
@@ -59,6 +65,7 @@ export function turnOn(): void {
 
 export function turnOff(): void {
   setPref("notify", false);
+  void pushOff();
 }
 
 const last = new Map<NotifyKind, number>();

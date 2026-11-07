@@ -27,8 +27,9 @@ var assetTypes = map[string]string{
 const ManifestPath = "/manifest.webmanifest"
 
 // Manifest serves the app manifest (WEB-35) at ManifestPath and nothing
-// else. The gateway mounts it only on an installable site; there is no
-// service worker, so nothing of the page is kept in the browser.
+// else. The gateway mounts it only on an installable site. The only
+// service worker is the push-only sw.js (MOB-30, push_sw.go): it keeps
+// nothing of the page in the browser.
 func Manifest() http.Handler {
 	b, err := fs.ReadFile(assets.FS(), "manifest.webmanifest")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

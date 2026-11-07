@@ -401,6 +401,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Open the one-time link in the browser of this computer when the panel starts. false: only Web: Copy Link."},
 	{Key: "web_max_viewers", Type: "int", Default: "4", Category: "Web (file only)",
 		Description: "How many browsers may be connected at once (1..8). One more is turned away."},
+	{Key: "web_push_detail", Type: "enum", Default: "count", Category: "Web (file only)", Choices: []string{"none", "count", "title"},
+		Description: "What a push to a paired phone says when something waits for you and the web page is closed (Notify me on the phone, over tailnet). none: only \"Something needs you\". count: how many things wait. title: the count and a fixed text for the kind (an approval, a plan, a review). Never a title, a path or a command. The push is encrypted for the phone and goes through its browser's own push service."},
 	{Key: "mcp_trusted_tools", Type: "object", Default: "{}", Category: "AI (file only)",
 		Description: "The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first."},
 	{Key: "mouse_hover", Type: "enum", Default: "auto", Category: "Appearance (file only)", Choices: []string{"auto", "off"},
