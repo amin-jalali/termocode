@@ -2337,6 +2337,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
 | `kubernetes-show` | Kubernetes: Show | auto |   |
 | `kubernetes-snippet` | Kubernetes: New Manifest from Snippet… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `kubernetes-top` | Kubernetes: Show Metrics | auto |   |
 | `layout-delete` | Layout: Delete… | never | the AI changes the layout with the layout_set tool |
 | `layout-open` | Layout: Open… | never | the AI changes the layout with the layout_set tool |
 | `layout-reset` | Layout: Reset to Default | never | the AI changes the layout with the layout_set tool |

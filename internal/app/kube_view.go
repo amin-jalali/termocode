@@ -227,6 +227,9 @@ func (st *kubeState) itemParts(r kubeRow, w int, now time.Time) (theme.Icon, the
 		if wide {
 			right = p.Status + " " + right
 		}
+		if t, ok := st.podTop(p.Name); ok && w >= 56 {
+			right = kubeCPUText(t.CPUMilli) + " " + kubeMemText(t.MemBytes) + " " + right
+		}
 		return g, c, right + " " + kube.Age(p.Created, now)
 	case "deployments":
 		d := st.deploys[r.idx]
@@ -321,11 +324,11 @@ func (st *kubeState) footer(now time.Time) []string {
 	switch r.section {
 	case "pods":
 		p := st.pods[r.idx]
-		line := fmt.Sprintf("%s · ready %s · %d restarts", p.Status, p.Ready(), p.Restarts)
+		line := fmt.Sprintf("%s · ready %s · %d restarts", p.Status, p.Ready(), p.Restarts) + st.podTopFooter(p.Name)
 		if fw := st.forward(p.Name); fw != nil {
 			line = fmt.Sprintf("127.0.0.1:%d %s %d · %s", fw.Local, kubeArrow(), fw.Remote, line)
 		}
-		return []string{line, "l logs · e shell · f forward · ? keys"}
+		return []string{line, "l logs · e shell · f forward · t metrics · ? keys"}
 	case "deployments":
 		d := st.deploys[r.idx]
 		line := fmt.Sprintf("ready %s · updated %d · available %d", d.Ready(), d.Updated, d.Available)

@@ -413,6 +413,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"worktree-filter":              aiAuto(),
 	"worktree-add-folder":          aiNever("acts on the worktree the user selected in the WORKTREES view"),
 	"kubernetes-refresh":           aiAuto(),
+	"kubernetes-top":               aiAuto(), // read only (kube_top.go)
 	"kubernetes-context":           aiNever(aiNoPicker + "; the context is the user's choice"),
 	"kubernetes-namespace":         aiNever(aiNoPicker),
 	"kubernetes-snippet":           aiNever(aiNoPicker), // kube_snippet.go

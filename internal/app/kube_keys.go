@@ -102,6 +102,8 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && r.kind == kubeRowItem {
 			return m, m.kubeCopyName(r.name)
 		}
+	case "t":
+		return m, m.kubeTop() // kube_top.go
 	case "R":
 		return m, m.kubeReload()
 	case "[":
@@ -151,6 +153,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},
 		[]string{"[ ]", "back, forward (context / namespace)"},
+		[]string{"t", "metrics: CPU and memory of nodes and pods"},
 		[]string{"R", "load now"},
 		[]string{"w", "save the screen as text"},
 	)

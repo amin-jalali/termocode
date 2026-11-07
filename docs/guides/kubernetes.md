@@ -69,6 +69,7 @@ kubeconfig, so other terminals keep their context.
 | `d` | Delete the row's object (asks first). |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
+| `t` | Metrics: CPU and memory of the nodes and the pods (a read-only page). |
 | `R` | Load the lists now. |
 | `w` | Save the screen as a text file (asks for the name; never overwrites a file). |
 | `?` | Show these keys. |
@@ -95,6 +96,21 @@ While a forward runs, the **FORWARDS** section at the end lists every
 active forward, also the ones of another context or namespace. `f` on a
 row there stops it; `y` copies its local address (`127.0.0.1:43123`).
 Every forward stops when you quit termocode.
+
+## Metrics
+
+When the cluster runs the metrics-server, each load also reads
+`kubectl top pods`. A wide pod row shows its CPU and memory (`12m
+64Mi`). The footer of a pod shows them too, with a sparkline of the
+last samples (5 seconds apart).
+
+`t` (or **Kubernetes: Show Metrics** in the palette) opens a read-only
+page: CPU and memory of every node (with the share of the node, `25%`)
+and of every pod in the namespace. A node with no metrics yet says
+`unknown`.
+
+A cluster without the metrics-server is asked once; the rows then show
+no metrics. `R` asks again.
 
 ## Restart a deployment
 
@@ -131,7 +147,7 @@ is sent to the cluster.
 
 ## The AI
 
-The AI can open the view and load it again. It can also read the
+The AI can open the view, load it again and open the metrics page. It can also read the
 cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
 Secrets in their answers are hidden. The AI can never restart or

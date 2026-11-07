@@ -74,6 +74,10 @@ type kubeState struct {
 
 	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
+	top     map[string]kube.PodMetrics // the last `top pods`, by pod name (kube_top.go)
+	topOff  bool                       // no metrics-server: not asked until R
+	metrics *kube.MetricsHistory       // sparkline samples
+
 	seq    uint64 // bumped on every change (render cache)
 	render struct {
 		sync.Mutex
@@ -157,6 +161,9 @@ type kubeLoadMsg struct {
 	deploys   []kube.Deployment
 	services  []kube.Service
 	jobs      []kube.Job
+	top       []kube.PodMetrics // kube_top.go
+	topErr    error
+	topAsked  bool
 	err       error            // the whole load failed
 	errs      map[string]error // one section failed
 }
@@ -177,6 +184,7 @@ func (m *Model) kubeLoad() tea.Cmd {
 	gen := st.gen
 	c := st.client()
 	detected := st.detected
+	askTop := !st.topOff
 	return func() tea.Msg {
 		defer cancel()
 		msg := kubeLoadMsg{gen: gen, errs: map[string]error{}}
@@ -219,6 +227,11 @@ func (m *Model) kubeLoad() tea.Cmd {
 		crash.Go("kubernetes deployments", func() { defer wg.Done(); var err error; msg.deploys, err = c.Deployments(ctx); set("deployments", err) })
 		crash.Go("kubernetes services", func() { defer wg.Done(); var err error; msg.services, err = c.Services(ctx); set("services", err) })
 		crash.Go("kubernetes jobs", func() { defer wg.Done(); var err error; msg.jobs, err = c.Jobs(ctx); set("jobs", err) })
+		if askTop { // not a section: no metrics never fails the load
+			msg.topAsked = true
+			wg.Add(1)
+			crash.Go("kubernetes top", func() { defer wg.Done(); msg.top, msg.topErr = c.TopPods(ctx) })
+		}
 		wg.Wait()
 		// The cluster itself does not answer: one line, not four.
 		if len(msg.errs) == len(kubeSections) {
@@ -269,6 +282,9 @@ func (m *Model) onKubeLoad(msg kubeLoadMsg) tea.Cmd {
 	for sec, err := range msg.errs {
 		st.errs[sec] = err.Error()
 	}
+	if msg.topAsked {
+		st.noteTop(msg.top, msg.topErr)
+	}
 	st.loadedAt = time.Now()
 	st.delay = kubeInterval
 	if len(msg.errs) > 0 {
@@ -317,6 +333,7 @@ func (m *Model) kubeReload() tea.Cmd {
 	if st.binary == "" {
 		st.detected = false
 	}
+	st.topOff = false // R asks for metrics again
 	st.stopPolling()
 	st.delay = 0
 	return m.kubeSync()
@@ -334,6 +351,7 @@ func (m *Model) kubeGo(context, namespace string) tea.Cmd {
 	st := m.kube
 	st.context, st.namespace = context, namespace
 	st.pods, st.deploys, st.services, st.jobs = nil, nil, nil, nil
+	st.top = nil
 	st.errs = map[string]string{}
 	st.err, st.loaded = "", false
 	st.cursor = 0
@@ -363,6 +381,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeRestart(msg), true
 	case kubeDeleteMsg:
 		return m.onKubeDelete(msg), true
+	case kubeTopMsg:
+		return m.onKubeTop(msg), true
 	}
 	return nil, false
 }

@@ -589,6 +589,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Kubernetes: New Manifest from Snippet… | `kubernetes-snippet` |   |   |
 | Kubernetes: Refresh | `kubernetes-refresh` |   |   |
 | Kubernetes: Show | `kubernetes-show` |   |   |
+| Kubernetes: Show Metrics | `kubernetes-top` |   |   |
 | Kubernetes: Switch Context… | `kubernetes-context` |   |   |
 | Kubernetes: Switch Namespace… | `kubernetes-namespace` |   |   |
 
