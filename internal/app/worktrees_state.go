@@ -59,6 +59,7 @@ type wtState struct {
 	polling bool
 
 	form     *wtForm                // Worktree: New… (worktrees_new.go)
+	taskAsk  bool                   // a task-start reads the repository for its card (agent_ctl_task.go)
 	setupAsk *wtSetupPending        // the open setup trust card (worktrees_setup.go)
 	setups   map[string]*wtSetupRun // setups run in this window, by worktree path
 

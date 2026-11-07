@@ -439,7 +439,7 @@ func printUsage() {
 	fmt.Println("  termocode mcp [--dir d]    run as an MCP server for an agent CLI (stdio)")
 	fmt.Println("  termocode mcp add|list|get|remove")
 	fmt.Println("                             manage MCP servers without the UI (mcp add --help)")
-	fmt.Println("  termocode agent list|prompt|wait|report")
+	fmt.Println("  termocode agent list|prompt|wait|report|start|tasks")
 	fmt.Println("                             drive the agents in termocode's terminal tabs")
 	fmt.Println("  termocode worktree list|note|status|link")
 	fmt.Println("                             notes and status for the worktree you are in")

@@ -130,7 +130,7 @@ func wtCtlList(entries []worktrees.Entry, dir string) []agentctl.Worktree {
 	out := make([]agentctl.Worktree, 0, len(entries))
 	for _, e := range entries {
 		w := agentctl.Worktree{Path: e.Path, Branch: e.Branch, Name: e.Meta.Name, Kind: e.Kind.String(), Gone: e.Gone,
-			Parent: e.Meta.Parent, Link: wtLinkLine(e.Meta), Checkpoint: e.Meta.Checkpoint, Here: e.Path == here}
+			Parent: e.Meta.Parent, Link: wtLinkLine(e.Meta), Checkpoint: e.Meta.Checkpoint, Here: e.Path == here, Agent: e.Meta.Agent}
 		if n, ok := e.Meta.LastNote(); ok {
 			w.Note = n.Text
 		}

@@ -94,6 +94,10 @@ user can open. termocode checks the user of every connection. See
   HTTP request (`http_send`), and save or apply a stash (`git_stash`).
 - **Ask on a Cancel-first card, never "Always allow":** drop or pop a stash.
   The stash list (`git_stash` list) runs at once.
+- **Hand a task to a new agent (`agent_task_start`):** termocode shows its
+  **New worktree** card filled in with the task. Nothing is made until you
+  press **Create + Start**; **Cancel** is first. See
+  [Start a background task](#start-a-background-task).
 
 ### Databases and HTTP
 
@@ -243,6 +247,33 @@ termocode agent wait t3 --until done --timeout 20m
 - Outside a termocode terminal the command uses the socket of the current
   folder's workspace. The socket is in termocode's private session folder;
   only your own user can connect. Not on Windows.
+
+### Start a background task
+
+Hand a task to a new agent in its own worktree, from a script or from
+another agent:
+
+```sh
+termocode agent start --agent codex "fix the flaky login test"
+termocode agent tasks                     # BRANCH  AGENT  STATUS  LINK  NOTE  PATH
+```
+
+- `start` shows the **New worktree** card in termocode, filled in: a name
+  drafted from the task (`task/fix the flaky login test`), the agent and
+  the task. The card says who asked. Check it, change what you like, then
+  press **Create + Start**. **Cancel** is first and makes nothing.
+- `start` waits for your answer (up to 10 minutes) and prints the new
+  worktree's path. It exits 1 on **Cancel**. `--json` prints the state
+  (`started`, or `created` when you press **Create** only) and the
+  worktree.
+- `--agent` picks the agent (the first installed one when left out),
+  `--name` the worktree name, `--from` the branch, tag or commit it starts
+  from (the current branch when left out). `-` reads the task from stdin.
+- `tasks` lists the worktrees with an agent: the branch, the agent, the
+  status and the last note the agent left (`termocode worktree note`).
+  `--json` prints JSON.
+- An outside agent does the same with the MCP tool `agent_task_start`.
+  It gets the same card; there is no "Always allow".
 
 ### Exact states with hooks
 
