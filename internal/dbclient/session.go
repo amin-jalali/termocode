@@ -55,4 +55,6 @@ type SchemaIndex struct {
 
 type SchemaForeignKey struct {
 	Name, Column, RefTable, RefColumn string
+	// Virtual marks a key from the user's virtual objects, not the database.
+	Virtual bool
 }
