@@ -29,9 +29,9 @@ func (c *Compose) RunOneOff(service string, args []string) (Command, error) {
 	return Command{Label: "run: " + service, Argv: argv, Dir: c.Root}, nil
 }
 
-// Watch is `compose watch`: rebuild or sync services when their files
+// WatchCommand is `compose watch`: rebuild or sync services when their files
 // change (the develop.watch rules of the compose file).
-func (c *Compose) Watch() Command {
+func (c *Compose) WatchCommand() Command {
 	return Command{Label: "services: watch", Argv: c.argv("watch"), Dir: c.Root}
 }
 

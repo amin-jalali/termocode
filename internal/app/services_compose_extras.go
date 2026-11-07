@@ -184,7 +184,7 @@ func (m *Model) composeWatch() tea.Cmd {
 		m.servicesFocusTab(key)
 		return nil
 	}
-	if err := m.servicesRunCommand(c.Watch(), key); err != nil {
+	if err := m.servicesRunCommand(c.WatchCommand(), key); err != nil {
 		return m.servicesToast(toast.Errr, "Cannot start compose watch", err.Error())
 	}
 	return nil

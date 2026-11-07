@@ -31,7 +31,7 @@ func (e *composeExtrasExec) Stream(context.Context, string, ...string) (io.ReadC
 
 func TestComposeEnvFilesGoBeforeTheVerb(t *testing.T) {
 	c := &Compose{Root: "/p", Files: []string{"compose.yaml"}, EnvFiles: []string{".env.dev"}}
-	got := c.Watch().Argv
+	got := c.WatchCommand().Argv
 	want := []string{"docker", "compose", "-f", "compose.yaml", "--env-file", ".env.dev", "watch"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("got %q want %q", got, want)
