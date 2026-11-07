@@ -51,3 +51,35 @@ func TestClassifyCypherReadsAndWrites(t *testing.T) {
 		t.Errorf("empty query = %s, want unknown", got)
 	}
 }
+
+func TestGraphTextDrawsNodesAndRelationships(t *testing.T) {
+	nodes := []GraphNode{
+		{ID: "2", Labels: []string{"Person"}, Props: map[string]string{"name": "Bob"}},
+		{ID: "1", Labels: []string{"Person", "Admin"}, Props: map[string]string{"name": "Ann", "age": "41"}},
+		{ID: "3", Labels: []string{"City"}, Props: map[string]string{"name": "Rome"}},
+		{ID: "4"},
+	}
+	rels := []GraphRel{
+		{From: "1", To: "3", Type: "LIVES_IN"},
+		{From: "1", To: "2", Type: "KNOWS", Props: map[string]string{"since": "2020"}},
+		{From: "9", To: "2", Type: "LIKES"},
+	}
+	want := "(1:Person:Admin {age: 41, name: Ann})\n" +
+		"(2:Person {name: Bob})\n" +
+		"(3:City {name: Rome})\n" +
+		"(4)\n" +
+		"\n" +
+		"(1)-[:KNOWS {since: 2020}]->(2)\n" +
+		"(1)-[:LIVES_IN]->(3)\n" +
+		"(9)-[:LIKES]->(2)\n"
+	if got := GraphText(nodes, rels); got != want {
+		t.Errorf("GraphText =\n%s\nwant\n%s", got, want)
+	}
+	if got := GraphText(nil, nil); got != "(no nodes)\n" {
+		t.Errorf("empty graph = %q", got)
+	}
+	evil := []GraphNode{{ID: "1", Props: map[string]string{"x": "a\nb\x1b[31m"}}}
+	if got := GraphText(evil, nil); got != "(1 {x: a\\nb\\x1b[31m})\n" {
+		t.Errorf("control characters not escaped: %q", got)
+	}
+}
