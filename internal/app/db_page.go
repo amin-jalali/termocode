@@ -81,7 +81,17 @@ func dbOneLine(s string) string {
 
 func init() {
 	registerNotifyHandler("termocode_db_key", func(m *Model, args []any) tea.Cmd {
-		return m.databasePageKey(notifyArgString(args, 0), notifyArgInt(args, 1), notifyArgInt(args, 2))
+		key, row, col := notifyArgString(args, 0), notifyArgInt(args, 1), notifyArgInt(args, 2)
+		if key == "=" {
+			to := -1 // = in normal mode: the whole page
+			if len(args) > 3 {
+				to = notifyArgInt(args, 3)
+			} else {
+				row = 0
+			}
+			return m.databaseAggregate(row, col, to)
+		}
+		return m.databasePageKey(key, row, col)
 	})
 }
 
@@ -1029,14 +1039,13 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		if s.view != dbViewGrid || row < 0 || row >= len(page.Rows) || col < 0 || col >= len(page.Rows[row]) {
 			return nil
 		}
-		text := dbSafeMultiline(page.Rows[row][col].String())
+		cell := page.Rows[row][col]
+		text := dbSafeMultiline(cell.String())
 		if key == "y" {
 			return m.copyWithToast(text, "Copied cell")
 		}
-		var pretty bytes.Buffer
-		if json.Indent(&pretty, []byte(text), "", "  ") == nil {
-			text = pretty.String()
-		}
+		cell.Text = dbSafeMultiline(cell.Text)
+		text = dbSafeMultiline(dbCellView(cell))
 		_ = m.nvim.ExecLuaArgs(`_G._termocode_db_value(...)`, strings.Split(text, "\n"))
 		return m.fetchStateCmd()
 	case "gd":

@@ -160,7 +160,8 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `]` / `[` | next / previous page |
 | `o` | sort by a column (choose it again to reverse) |
 | `f` | show only rows that contain a text |
-| `v` or `Enter` | open the cell under the cursor (JSON is pretty-printed); `q` goes back |
+| `v` or `Enter` | open the cell under the cursor; `q` goes back. JSON and XML are pretty-printed, long text wraps, a binary value is a hex dump (the first 16 KB), and a PNG, JPEG, GIF or WebP image says its kind and size |
+| `=` | count, sum, avg, min and max of the column under the cursor on this page; select rows with `V` first to sum up only those. Text columns show count, min and max |
 | `y` | copy the cell |
 | `c` / `C` | copy the loaded rows as CSV / JSON |
 | `S` | export the rows to a file (CSV, TSV, JSON, SQL INSERTs or Markdown) |
