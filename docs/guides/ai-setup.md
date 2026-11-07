@@ -309,6 +309,28 @@ The steps: termocode opens the sign-in page in your browser (and copies the
 link). You sign in, copy the code, and paste it back. Run
 **AI: Sign out of Claude** to remove the tokens.
 
+## Claude through your cloud account
+
+Use Claude with your Google Cloud or AWS bill: **AI: Configure
+Provider…** → **Claude on Google Vertex AI** or **Claude on Amazon
+Bedrock**. termocode asks for the base URL, then the key (it goes to the
+secret store, like every key), then the model.
+
+| | Vertex AI (`vertex`) | Bedrock (`bedrock`) |
+|---|---|---|
+| Base URL | `https://<region>-aiplatform.googleapis.com/v1/projects/<project>/locations/<region>` | `https://bedrock-runtime.<region>.amazonaws.com` (empty: `AWS_REGION`, else `us-east-1`) |
+| Key | an access token, or a service-account JSON on one line | a Bedrock API key (`AWS_BEARER_TOKEN_BEDROCK` wins) |
+| Model | for example `claude-opus-5-5` | the model or inference profile id, for example `us.anthropic.claude-…` |
+
+A service-account JSON is traded for a short access token, which is
+kept only in memory and renewed before it ends. To use a key file
+without pasting it, type a reference: `${cmd:jq -c . ~/keys/vertex.json}`.
+An access token from `${cmd:gcloud auth print-access-token}` works too,
+but it ends after about an hour.
+
+Tools, images, thinking and the prompt cache work as with the Anthropic
+API. Costs use the Claude prices.
+
 ## Default models
 
 | Provider | Chat model | Ghost-text model |

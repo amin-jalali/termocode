@@ -49,7 +49,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | --- | --- | --- | --- |
 | `ai_inline` | bool | `true` | Show AI ghost-text completions while typing (needs a configured provider). |
 | `ai_next_edit` | bool | `true` | After an edit, show where the AI thinks the next related edit goes (Tab: go there, Tab: apply, Esc: dismiss). Not set: same as ai_inline. |
-| `ai_provider` | string | `(auto)` | AI provider: anthropic, openai, openrouter, ollama, lmstudio, openai-compatible, claude-oauth or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it. |
+| `ai_provider` | string | `(auto)` | AI provider: anthropic, openai, openrouter, ollama, lmstudio, openai-compatible, claude-oauth, vertex, bedrock or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it. |
 | `ai_model` | string | `(default)` | Chat model ID. Empty uses the provider's default model. |
 | `ai_base_url` | string | `(default)` | API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default. |
 | `ai_until_done_rounds` | int | `3` | Work until done (the until-done profile, /done, AI: Work Until Done): how many times verify runs at most (1 to 10). A profile's loop.max_rounds wins over it. |
@@ -242,6 +242,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Variable | Description |
 | --- | --- |
 | `ANTHROPIC_API_KEY` | Anthropic API key. Also selects Anthropic when no provider is set. |
+| `AWS_BEARER_TOKEN_BEDROCK` | Bedrock API key for the bedrock provider; wins over the saved key. |
+| `AWS_REGION` | AWS region of the bedrock provider when `ai_base_url` is empty (default us-east-1). |
 | `OLLAMA_HOST` | Ollama host, used for the base URL of the ollama provider. |
 | `OPENAI_API_KEY` | OpenAI API key. Also selects OpenAI when no provider is set. |
 | `OPENROUTER_API_KEY` | OpenRouter API key. |

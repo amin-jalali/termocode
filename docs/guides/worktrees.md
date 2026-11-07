@@ -249,6 +249,35 @@ the same files, each in its own terminal tab.
   `Enter` shows the tab; the last row starts one more session.
 - The card counts every session. Close a session like any terminal tab.
 
+## A task list shared with agents
+
+The repository has one task list that you and every agent share. Each
+task is a plain Markdown file in `.termocode/tasks/` of the main
+checkout (like `0007-fix-the-login.md`), so all worktrees see the same
+tasks and you can edit them in any editor or commit them.
+
+**Tracker: Show Tasks…** lists them: doing first, then blocked, todo and
+done, with the owner. Pick one to open its file, set another status, or
+copy `termocode task claim 7` for an agent. **Tracker: Add Task…** adds a
+todo.
+
+An agent (or a script) uses the same files from its terminal; no running
+termocode is needed:
+
+```sh
+termocode task list                  # open tasks (--all: done too, --json)
+termocode task add Fix the login     # prints the new id
+termocode task claim 7               # doing, owned by you, in this worktree
+termocode task note 7 "found it in auth.go"
+termocode task status 7 done         # todo, doing, blocked or done
+termocode task show 7
+```
+
+A task someone else is doing can not be claimed. Two agents that add at
+the same time never get the same id. The owner is `--as <name>`, else
+`$TERMOCODE_TASK_OWNER`, else the termocode tab (`agent t3`), else your
+user name. Task text is shown as plain text and never runs.
+
 ## Sleep and wake
 
 `s` (**Worktree: Sleep or Wake Selected**) puts a worktree to sleep: the
