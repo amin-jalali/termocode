@@ -216,11 +216,11 @@ func identStart(c byte) bool {
 	return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c >= 0x80
 }
 
-// ERDiagram draws the tables as text boxes (PK and FK columns marked,
+// ERDiagramText draws the tables as text boxes (PK and FK columns marked,
 // FK targets shown) and then one line per foreign key. With a focus
 // table only the tables within depth FK hops (either way) are drawn;
 // depth < 1 counts as 1.
-func ERDiagram(s CanonSchema, focus string, depth int) string {
+func ERDiagramText(s CanonSchema, focus string, depth int) string {
 	tables := erTables(s, focus, depth)
 	var b strings.Builder
 	var edges []string
