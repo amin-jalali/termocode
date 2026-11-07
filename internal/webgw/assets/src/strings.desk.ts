@@ -110,6 +110,7 @@ export const SD = {
   "sb.vim_insert": "-- INSERT --",
   "sb.vim_visual": "-- VISUAL --",
   "sb.vim_vline": "-- VISUAL LINE --",
+  "sb.vim_vblock": "-- VISUAL BLOCK --",
   "sb.vim_rec": "recording @{r}",
   "sb.vim_notfound": "Pattern not found: {s}",
   "sb.vim_noecmd": "Not an editor command: {s}",

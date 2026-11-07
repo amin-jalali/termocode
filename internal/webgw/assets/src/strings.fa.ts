@@ -709,6 +709,7 @@ export const FA: Record<StringKey, string> = {
   "sb.vim_insert": "-- درج --",
   "sb.vim_visual": "-- انتخاب --",
   "sb.vim_vline": "-- انتخاب خط --",
+  "sb.vim_vblock": "-- انتخاب ستونی --",
   "sb.vim_rec": "ضبط در @{r}",
   "sb.vim_notfound": "پیدا نشد: {s}",
   "sb.vim_noecmd": "این فرمان ویرایشگر نیست: {s}",
