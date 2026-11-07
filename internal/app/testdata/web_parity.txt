@@ -666,6 +666,7 @@ missing	http-gql-complete	HTTP|S
 missing	http-gql-docs	HTTP|S
 missing	http-gql-schema	HTTP|S
 missing	http-gql-validate	HTTP|S
+missing	http-grpc-describe	HTTP|S
 missing	http-import-collection	HTTP|S
 missing	http-import-openapi	HTTP|S
 missing	http-mock-start	HTTP|S
