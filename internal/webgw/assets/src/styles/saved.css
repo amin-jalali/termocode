@@ -1,0 +1,31 @@
+/* Saved views on the phone (MOBUX-18): the Save as view sheet, the
+   Saved views list and Home's pinned views. Phone layout only; every
+   target is at least 44 px; pinned and live are told by a mark and a
+   word, never by colour alone. Tokens only, so dark and light follow. */
+.sv-form, .sv-list { display: flex; flex-direction: column; gap: var(--s2); }
+.sv-title { font-size: var(--fs-title); line-height: var(--lh-title); margin: 0; }
+.sv-note { color: var(--muted); font-size: var(--fs-hint); line-height: var(--lh-hint); margin: 0; }
+.sv-empty { padding: var(--s3); }
+.sv-err { color: var(--red); font-size: var(--fs-hint); margin: 0; }
+.sv-check { display: flex; align-items: center; gap: var(--s2); min-height: 44px; }
+.sv-check input { width: 22px; height: 22px; }
+.sv-check.is-off { color: var(--dim); }
+.sv-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.sv-row { display: flex; align-items: stretch; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--bg-2); }
+.sv-open { flex: 1; min-width: 0; min-height: 44px; display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3); background: none; border: 0; color: inherit; text-align: start; }
+.sv-more { min-width: 44px; min-height: 44px; background: none; border: 0; border-inline-start: 1px solid var(--border); color: var(--muted); font-size: 20px; }
+.sv-main { display: flex; flex-direction: column; min-width: 0; }
+.sv-name { font-size: var(--fs-row); }
+.sv-sub { color: var(--muted); font-size: var(--fs-hint); }
+.sv-acts { display: flex; flex-wrap: wrap; gap: var(--s2); padding: var(--s2) 0; }
+.sv-acts .btn, .sv-form .btn { min-height: 44px; }
+.sv-pinned { border: 1px solid var(--border); border-radius: var(--r-card); background: var(--bg-2); }
+.sv-pinned-head { width: 100%; min-height: 44px; display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3); background: none; border: 0; color: inherit; text-align: start; }
+.sv-pinned-head .sv-name { flex: 1; min-width: 0; }
+.sv-live { color: var(--green); font-size: var(--fs-hint); }
+.sv-caret { color: var(--muted); }
+.sv-block { padding: 0 var(--s3) var(--s3); }
+.sv-block.is-stale { opacity: 0.75; }
+.sv-refresh { min-height: 44px; margin-top: var(--s2); }
+.sv-pins { margin: var(--s2) 0; }
+@media (prefers-reduced-motion: reduce) { .sv-pinned, .sv-row { transition: none; } }

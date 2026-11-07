@@ -6,8 +6,11 @@
 //   workbench.js  the desktop workbench, on a wide screen only (a phone
 //                 never loads it); index.html preloads it there with its SRI
 //   strings-fa.js the Persian strings, when the UI language is Persian
+//   home.js       the phone's Home (MOB-4), on a phone only; built alone,
+//                 it gets Preact and the page's views from homeHost()
 import { signal } from "@preact/signals";
 import type { EditorModule } from "../editor/api";
+import type { HomeHost, HomeModule } from "../home/api";
 import { persian } from "../strings";
 import type * as Workbench from "../workbench";
 
@@ -65,4 +68,32 @@ export function loadPersian(): Promise<void> {
     );
   }
   return faLoading;
+}
+
+/** home is the loaded Home (null: not yet); homeFailed says the last
+ * load failed (loadHome tries again). */
+export const home = signal<HomeModule | null>(null);
+export const homeFailed = signal(false);
+
+let homeLoading: Promise<HomeModule> | null = null;
+
+/** loadHome loads home.js once and gives it the page's host (built by
+ * host() on the first load only, so the Home and the page share one
+ * Preact, one store and one link). */
+export function loadHome(host: () => HomeHost): Promise<HomeModule> {
+  if (!homeLoading) {
+    homeFailed.value = false;
+    homeLoading = import("/assets/home.js").then(
+      (m: HomeModule) => {
+        m.init(host());
+        return (home.value = m);
+      },
+      (e: unknown) => {
+        homeLoading = null;
+        homeFailed.value = true;
+        throw e;
+      },
+    );
+  }
+  return homeLoading;
 }

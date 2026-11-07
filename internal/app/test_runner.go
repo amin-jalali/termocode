@@ -18,6 +18,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/tests"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // ── Test runner (Group E) ────────────────────────────────────────────────
@@ -44,9 +45,12 @@ type testsState struct {
 	collapsed map[string]bool // row key → collapsed
 	cursor    int
 
-	running  bool
-	runID    int
-	proc     *exec.Cmd
+	running bool
+	runID   int
+	proc    *exec.Cmd
+	// stop ends a run on a workspace host (a container): the engine CLI
+	// stream; nil for a local run.
+	stop     func()
 	parser   tests.LineParser
 	cmd      tests.Command
 	started  time.Time
@@ -107,10 +111,14 @@ type testDoneMsg struct {
 	report []byte
 }
 
-// discoverTestsCmd walks the workspace off the UI goroutine.
-func discoverTestsCmd() tea.Cmd {
+// discoverTestsCmd walks the workspace off the UI goroutine. A container
+// workspace is walked through its Host FS (test_runner_remote.go).
+func discoverTestsCmd(ws workspace.Workspace) tea.Cmd {
+	if fsys, ok := remoteFS(ws); ok {
+		return discoverRemoteTestsCmd(fsys, ws.Root)
+	}
 	return func() tea.Msg {
-		root, err := procRootDir()
+		root, err := rootOf(ws)
 		if err != nil {
 			return testsDiscoveredMsg{err: err}
 		}
@@ -130,7 +138,7 @@ func (m *Model) refreshTests() tea.Cmd {
 		return nil
 	}
 	st.discovering = true
-	return discoverTestsCmd()
+	return discoverTestsCmd(m.workspace())
 }
 
 // applyTestsDiscovered installs a fresh tree, keeping last results, and
@@ -277,6 +285,9 @@ func testsByName(t *tests.Tree, name string) []*tests.Case {
 func (m *Model) startTestRun(scope tests.Scope) tea.Cmd {
 	st := m.testView
 	m.stopTestRun()
+	if x, label, ok := m.remoteTestExec(); ok {
+		return m.startRemoteTestRun(scope, x, label)
+	}
 	report := ""
 	switch st.tree.FW {
 	case tests.FrameworkPytest:
@@ -354,6 +365,8 @@ var liveTestProcs testProcSet
 type testProcSet struct {
 	mu    sync.Mutex
 	procs map[*exec.Cmd]bool
+	// remote are the stop funcs of runs on a workspace host, by run.
+	remote map[int]func()
 }
 
 func (s *testProcSet) add(c *exec.Cmd) {
@@ -379,6 +392,7 @@ func StopTestRuns() {
 	for c := range liveTestProcs.procs {
 		killTestProc(c)
 	}
+	liveTestProcs.stopRemoteLocked()
 }
 
 // waitTestLines returns the next batch of lines (up to 500 already
@@ -423,8 +437,11 @@ func (m *Model) stopTestRun() {
 	if st.proc != nil && st.proc.Process != nil {
 		killTestProc(st.proc)
 	}
+	if st.stop != nil {
+		st.stop()
+	}
 	st.running = false
-	st.proc = nil
+	st.proc, st.stop = nil, nil
 	st.runID++
 	if st.tree != nil {
 		st.tree.FinishRun()
@@ -503,7 +520,7 @@ func (m *Model) finishTestRun(msg testDoneMsg) tea.Cmd {
 		}
 	}
 	st.tree.FinishRun()
-	st.running, st.proc, st.hasRun = false, nil, true
+	st.running, st.proc, st.stop, st.hasRun = false, nil, nil, true
 	st.elapsed = time.Since(st.started).Round(10 * time.Millisecond)
 	c := st.tree.Counts()
 	exit := "exit 0"

@@ -177,6 +177,7 @@ func (m *Model) webPublish(topic string, delta any) {
 
 // publish is webPublish on the hub (Update only).
 func (h *webHub) publish(topic string, delta any) {
+	h.viewsTouch(topic) // live views re-run, coalesced (web_views.go)
 	var subs []*webConn
 	for c := range h.live {
 		if c.subs[topic] != nil {
@@ -241,6 +242,7 @@ func (m *Model) onWebGone(msg webGoneMsg) {
 		return
 	}
 	delete(h.live, msg.conn)
+	h.viewsDrop(msg.conn)
 	h.keepForResume(msg.conn)
 	h.pruneResume()
 }

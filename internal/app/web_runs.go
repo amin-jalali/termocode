@@ -111,7 +111,7 @@ var webRunsState = map[runsKind]string{
 // webRunsBuild lists the runs, newest first.
 func (m *Model) webRunsBuild(now time.Time) webproto.RunsSnap {
 	s := webproto.RunsSnap{Runs: []webproto.RunItem{}}
-	for i, it := range m.runsCollect(now) {
+	for i, it := range runsNest(m.runsCollect(now)) { // CMP-10: the run tree
 		if i == webproto.MaxRuns {
 			break
 		}
@@ -119,7 +119,8 @@ func (m *Model) webRunsBuild(now time.Time) webproto.RunsSnap {
 			State: webRunsState[it.kind], Why: webName(it.why), Steps: len(it.steps),
 			Started: it.started.UnixMilli(), ElapsedMs: it.elapsed.Milliseconds(),
 			Live:    it.kind == runsRunning || it.kind == runsStalled || it.kind == runsPausing,
-			CostUSD: it.cost, NeedsYou: it.kind.needsYou(), Can: m.webRunsCan(it)}
+			CostUSD: it.cost, NeedsYou: it.kind.needsYou(), Can: m.webRunsCan(it),
+			Parent: it.parent, Depth: it.depth, Kids: it.kids}
 		if it.cur >= 0 && it.cur < len(it.steps) {
 			r.Step = it.cur + 1
 			r.StepTitle = webName(it.steps[it.cur].Title)

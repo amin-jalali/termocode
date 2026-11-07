@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/agentjail"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
@@ -46,8 +47,13 @@ type Spec struct {
 	// Model is the model the CLI is asked for (--model / -m); "" runs
 	// the CLI's default. An id that could pass for a flag is left out.
 	Model string
-	Dir   string   // the project root (the CLI's working dir)
-	Env   []string // the environment (nil: os.Environ() with termocode's tools/bin first); CleanEnv is applied
+	Dir   string // the project root (the CLI's working dir)
+	// OSSandbox runs the CLI itself inside an OS sandbox (CMP-60,
+	// internal/agentjail: bwrap / sandbox-exec): the disk read-only but
+	// Dir (when Write), the temp folder and the CLI's own config. No
+	// sandbox tool: the step fails, it never runs outside it.
+	OSSandbox bool
+	Env       []string // the environment (nil: os.Environ() with termocode's tools/bin first); CleanEnv is applied
 	// Timeout ends the run (0: DefaultTimeout).
 	Timeout time.Duration
 	// Now is the clock for reset times ("try again in 2 hours"); nil:
@@ -91,6 +97,25 @@ func Args(s Spec) []string {
 		return append(out, "--sandbox", sandbox, "-C", s.Dir, "-")
 	}
 	return nil
+}
+
+// Command is the program and arguments that run the CLI at bin for s:
+// bin Args(s) as is, or inside the OS sandbox when s.OSSandbox (note is
+// then the sandbox's state text).
+func Command(s Spec, bin string, h agentjail.Host) (prog string, args []string, note string, err error) {
+	if !s.OSSandbox {
+		return bin, Args(s), "", nil
+	}
+	mode := agentjail.ReadOnly
+	if s.Write {
+		mode = agentjail.WorkspaceWrite
+	}
+	p := agentjail.Plan{Mode: mode, Dir: s.Dir, Agent: s.CLI}
+	prog, args, err = agentjail.Wrap(p, h, bin, Args(s))
+	if err != nil {
+		return "", nil, "", err
+	}
+	return prog, args, agentjail.Note(p, h), nil
 }
 
 // CleanEnv drops the vendors' API keys (the step runs on the
@@ -166,7 +191,11 @@ func Run(ctx context.Context, s Spec, prompt string, emit func(ai.Event)) (Resul
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cmd := spawn.Command(bin, Args(s)...)
+	prog, args, _, err := Command(s, bin, agentjail.HostEnv())
+	if err != nil {
+		return Result{}, err
+	}
+	cmd := spawn.Command(prog, args...)
 	cmd.Dir, cmd.Env = s.Dir, env
 	setProcGroup(cmd)
 	cmd.Stdin = strings.NewReader(prompt)

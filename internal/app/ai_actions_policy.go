@@ -163,6 +163,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"goto-symbol-file":            aiNever(aiNoPicker + " (lsp_nav)"),
 	"goto-symbol-workspace":       aiNever(aiNoPicker + " (lsp_nav)"),
 	"lsp-manage":                  aiNever(aiNoPicker + " (lsp_servers)"),
+	// RC-6: language servers of a container workspace (container_lsp.go).
+	"lsp-container-where":       aiNever(aiNoPicker),
+	"lsp-container-diagnostics": aiConfirm(ai.ClassIDE),
+	"lsp-mirror-refresh":        aiConfirm(ai.ClassIDE), // reads the container's code into the local cache
+	"lsp-mirror-clear":          aiNever("opens a card only the user answers; it deletes the local mirror"),
 
 	// ── Git ──
 	"git-stage":              aiConfirm(ai.ClassGit),
@@ -619,6 +624,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-discard-proposal": aiNever("the user reviews proposed edits"),
 	"ai-review":           aiNever("the user reviews proposed edits"),
 	"ai-edit-review":      aiNever(aiNoAIConfig),
+	"ai-review-order":     aiNever(aiNoAIConfig),
 	"ai-undo-turn":        aiNever("the user undoes the AI's changes"),
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
@@ -634,6 +640,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-insert":       aiNever(aiNoPicker),
 	"ai-mcp-background":   aiNever("moves the model's own running call; the user decides"),
 	"ai-mcp-profile":      aiNever(aiNoPicker),
+	"ai-mcp-accounts":     aiNever(aiNoPicker), // signs out: only the user, on a card
 	"ai-mcp-catalog":      aiNever(aiNoPicker),
 	"ai-mcp-bundle":       aiNever(aiNoPicker),
 	"ai-mcp-updates":      aiNever(aiNoAIConfig),
@@ -657,6 +664,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"web-devices":     aiNever(aiNoWeb + " (who may come in)"),
 	"web-totp":        aiNever(aiNoWeb + " (a second factor of the web sign-in)"),
 	"web-share":       aiNever(aiNoWeb + " (lets another person watch)"),
+	// Port preview (web_forward.go): opens a port of this computer to the
+	// browser; only the user asks, never an agent, MCP or a project file.
+	"web-forward-port":    aiNever(aiNoWeb + " (opens a port of this computer to the browser)"),
+	"web-forwarded-ports": aiNever(aiNoWeb + " (the open port forwards)"),
 	// Itermoc (itermoc_actions.go): the user's screen for profiles, models,
 	// services and outside agents. The AI opens it with the typed tool
 	// ai_view_open (ai_itermoc_tools.go); as palette commands they are the user's.
@@ -784,6 +795,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"http-gql-validate":      aiNever("may fetch the schema over the network; use http_send"),
 	"http-proxy-set":         aiNever(aiNoPicker + " (read_file, write_file)"),
 	"http-gql-docs":          aiNever(aiNoPicker + " (http_send with the introspection query)"),
+	"http-grpc-describe":     aiNever("calls the gRPC server over the network; read the .proto files with read_file"),
 	"http-mock-start":        aiConfirm(ai.ClassIDE), // listens on a 127.0.0.1 port
 	"http-mock-stop":         aiConfirm(ai.ClassIDE), // stops the user's mock server
 }
@@ -834,6 +846,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_auto_approve":       aiNever(aiNoAIConfig),
 	"ai_max_steps":          aiNever(aiNoAIConfig),
 	"ai_edit_review":        aiNever(aiNoAIConfig),
+	"ai_review_order":       aiNever(aiNoAIConfig),
 	"ai_prices":             aiNever(aiNoAIConfig),
 	"ai_context_windows":    aiNever(aiNoAIConfig),
 	"ai_models":             aiNever(aiNoAIConfig),
@@ -852,6 +865,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
 	"ai_plan_file":          aiNever(aiNoAIConfig),
 	"ai_step_stall_minutes": aiNever(aiNoAIConfig),
+	"ai_team_mode":          aiNever(aiNoAIConfig),
 	"ai_memory_recall":      aiNever(aiNoAIConfig),
 	"ai_web_fetch":          aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
 	"ai_web_search":         aiNever(aiNoAIConfig + "; the AI never turns on its own web access"),
@@ -941,6 +955,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"workflows_history_days":     aiConfirm(ai.ClassSettings),
 	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
 	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
+	"agent_os_sandbox":           aiNever("the OS sandbox around outside agents; only the user changes it"),
 
 	// Git blame (GITX-3..5)
 	"git_status_blame":            aiConfirm(ai.ClassSettings),

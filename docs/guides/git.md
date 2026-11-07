@@ -515,6 +515,27 @@ put a review request with the diff in the chat box. The branch review
 uses the change since the branch left `origin`'s default branch (or
 `main`). Nothing is sent until you press `Enter`.
 
+### Security review with a threat model
+
+**Git: AI Security Review My Changes (Threat Model)** and **Git: AI
+Security Review Branch (Threat Model)** put a security review request in
+the chat box. It holds:
+
+- the project's threat model from `.termocode/threat-model.md` (when there
+  is none, the request asks the AI to write a short one first);
+- the added lines a quick scan marked (command exec, SQL built from
+  strings, TLS checks turned off, raw HTML, secrets in code and more).
+  The scan never copies a secret's value;
+- the diff.
+
+The AI answers with findings: severity P0 to P3, `file:line`, the STRIDE
+threat, how an attacker would use it, and the fix. Nothing is sent until
+you press `Enter`.
+
+**Git: Edit Threat Model…** opens `.termocode/threat-model.md`. When it is
+not there, a card asks first; **Create File** writes the sections to fill
+in: assets, entry points, trust boundaries and the STRIDE threats.
+
 ## Clone a repository
 
 1. On the welcome screen, pick **Clone repository**. Or run

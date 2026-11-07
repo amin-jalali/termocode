@@ -1,0 +1,30 @@
+/* Research sources (MOB-15): 44 px rows, title / site / snippet; the
+   site badge carries "↗" when the row opens (after a confirm), so the
+   cue is a shape, not color alone. Tokens only: dark and light. */
+.research-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.research-row + .research-row { border-top: 1px solid var(--border); }
+.research-hit {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.125rem var(--s2);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s2) var(--s3);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: start;
+  font: inherit;
+}
+.research-hit:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.research-title { font-weight: 600; overflow-wrap: anywhere; }
+.research-site { color: var(--blue); font-size: var(--fs-hint); white-space: nowrap; }
+.research-sub {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: var(--fs-hint);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

@@ -102,6 +102,7 @@ func FuzzAPCWebFilter(f *testing.F) {
 	f.Add([]byte("a"+WebHandoffAPC(testHandoff)+"b"), 5, 40)
 	f.Add([]byte("\x1b_termocode:web;0;"+strings.Repeat("x", 600)), 1, 2)
 	f.Add([]byte("\x1b_termocode:link;1\x1b\\\x1b_termocode:web;1;1;2;3\x1b\\"), 0, 0)
+	f.Add([]byte("a\x1b_termocode:fwd;1;3000;tc1\x1b\\b\x1b_termocode:fwd;0;tc1\x1b\\"), 4, 30)
 	f.Fuzz(func(t *testing.T, data []byte, a, b int) {
 		whole, wfound := feed(data)
 		i, j := clampSplit(a, len(data)), clampSplit(b, len(data))
@@ -124,12 +125,19 @@ func FuzzAPCWebFilter(f *testing.F) {
 		if !bytes.Equal(out, whole) || !reflect.DeepEqual(found, wfound) {
 			t.Fatalf("split %d,%d differs:\n%q %+v\n%q %+v", i, j, out, found, whole, wfound)
 		}
-		if !bytes.Contains(data, []byte("\x1b_termocode:web;")) {
+		if !bytes.Contains(data, []byte("\x1b_termocode:web;")) && !bytes.Contains(data, []byte(fwdAPCPrefix)) {
 			if !bytes.Equal(out, data) {
 				t.Fatalf("plain input changed: %q -> %q", data, out)
 			}
 		}
 		for _, h := range found {
+			if h.Fwd != nil { // a port forward request (link_fwd.go)
+				_, back := feed([]byte(PortForwardAPC(*h.Fwd)))
+				if len(back) != 1 || back[0].Fwd == nil || *back[0].Fwd != *h.Fwd {
+					t.Fatalf("round trip of %+v gave %+v", *h.Fwd, back)
+				}
+				continue
+			}
 			_, back := feed([]byte(WebHandoffAPC(h)))
 			if len(back) != 1 || back[0] != h {
 				t.Fatalf("round trip of %+v gave %+v", h, back)

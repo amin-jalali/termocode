@@ -62,6 +62,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"ai:mcp":             {name: "Services the chat can use · click: list", help: "guides/itermoc.md#the-view"},
 	"ai:more":            {name: "More: profile, services, usage, agents", help: helpChat},
 	"ai:think":           {name: "Reasoning level of this chat · click: next level (AI: Next Reasoning Level)", help: "guides/ai-use.md#reasoning-level"},
+	"ai:ctx":             {name: "Context use of this chat's newest turn · click: AI: Usage", help: helpChat},
 	"ai:usage":           {name: "Session usage: tokens and cost by model and agent (AI: Usage)", help: helpAgents},
 	"ai:chat":            {name: "Back to the chat", palette: "ai-agents", help: helpAgents},
 	"ai:btn:agents:":     {name: "Show in AGENTS", palette: "ai-agents", help: helpAgents},
@@ -163,6 +164,11 @@ func (m Model) tooltipLabel(id string) (name, key string) {
 			return "Create, prune, or read disk usage", "n · p · d"
 		}
 		return "Fold section", "Space"
+	}
+	if id == "ai:ctx" { // CMP-7: the live token counts
+		if tip := m.aiContextTooltip(); tip != "" {
+			return tip, ""
+		}
 	}
 	if name, key, _, ok := itermocTooltip(id); ok {
 		return name, key

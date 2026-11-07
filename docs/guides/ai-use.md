@@ -62,13 +62,27 @@ If ghost text shows at the cursor, `Tab` accepts the ghost text first.
    tries again up to 3 times). When no text comes for 90 s (or 30 s in
    the middle of an answer) it turns yellow: `no answer for 35 s — Esc
    to stop`. A running tool never shows this warning.
+   When the connection to the model breaks in the middle of an answer,
+   the text that came stays and a red line says `answer stopped in the
+   middle, not complete`. termocode does not send it again by itself:
+   send the message again to retry.
 4. Press `Esc` to go back to the editor. `F6` also moves focus.
 
 The header shows the profile chip, then `⌁ N MCP` (the services the chat
-can use) and `usage` when there is room. In a narrow window a chip that
-does not fit becomes `⋯`: a click opens a small menu with Profile…,
-Services, Usage and Agents, so nothing is only in the palette. Hover a chip
-for its label and key.
+can use), the context chip and `usage` when there is room. In a narrow
+window a chip that does not fit becomes `⋯`: a click opens a small menu
+with Profile…, Services, Usage and Agents, so nothing is only in the
+palette. Hover a chip for its label and key.
+
+The context chip `ctx ▰▰▱▱▱ 42%` shows how full the model's context
+window was on the newest turn of this chat (the biggest prompt of the
+turn; for a run, its newest step). It is green, amber from 70 % and red
+from 90 %; from 80 % the chat summarises older messages (`ai_compact`).
+Hover it for the token counts; a click opens **AI: Usage**. It appears
+after the first turn of a chat whose model has a known window (set more
+windows with `ai_context_windows`), and each chat has its own. The `⋯`
+menu's Usage row names the same number, and the web chat shows it next
+to the composer.
 
 To give the AI context, open a file or select code, then run
 **AI: Add File / Selection to Chat**.
@@ -444,6 +458,24 @@ To turn the review off, run **AI: Toggle Edit Review (diff / auto)**, or
 set `"ai_edit_review": "auto"` in `config.json`. Then file changes ask with
 the dialog as before. Auto-approving *fileWrite* (**AI: Agent
 Auto-Approve…**) also skips the review: changes are written at once.
+
+#### Explain-first order
+
+When the agent changes several files, the card lists them in the order
+that explains the change best:
+
+1. Notes and docs (`*.md`, `docs/`): what the change is for.
+2. Schemas, protos, migrations, types and `go.mod`-like files: its shape.
+3. Code. A file that defines a new name (a function, a type, a class)
+   comes before the files that use that name.
+4. Tests last: the proof.
+
+Next to the file name the card says why the file is there, for example
+*"defines ParseQuery, used by handler.go"*. Files the rules can not tell
+apart keep the agent's order. The web's review cards follow the same
+order. To keep the agent's order, run **AI: Toggle Review Order (explain
+first / as proposed)**, or set `"ai_review_order": "proposed"` in
+`config.json`.
 
 **File: Compare Two Files…** uses the same card, read-only.
 
@@ -856,10 +888,11 @@ settings are blanked and keys are removed from logs. You can add the
 current chat. Nothing is sent. **Save report** writes a new
 `termocode-report-*.md` in the workspace. Check it for private text.
 
-## Hooks after AI tool calls
+## Hooks on AI tool calls
 
-A hook is a command that runs after an AI tool call worked, for example a
-formatter after the AI writes a file:
+A hook is a command that runs on an AI event. The most common one runs
+after an AI tool call worked, for example a formatter after the AI writes
+a file:
 
 ```json
 {"post_tool": [
@@ -883,7 +916,47 @@ formatter after the AI writes a file:
   `hook after=write_file run=… by=user → exit 0 · 40ms`.
 - When a hook fails (exit code not 0), its output (at most 4 KB, secrets
   blanked) is added to the tool result, so the AI can fix a lint error.
-- Hooks run only after built-in tools, not after MCP tools.
+- `post_tool` hooks run after built-in tools and after MCP tools.
+
+### More hook events
+
+The same file can hold hooks for other events:
+
+```json
+{"pre_tool":     [{"tools": ["run_command", "mcp__github__*"], "run": "./guard.sh"}],
+ "file_save":    [{"files": ["*.go"], "run": "go vet ./..."}],
+ "stop":         [{"run": "./check-done.sh"}],
+ "pre_compact":  [{"run": "./save-notes.sh"}],
+ "post_compact": [{"run": "./log-summary.sh"}]}
+```
+
+| Event | When it runs | What it can do |
+|---|---|---|
+| `pre_tool` | before an AI tool call, before any approval card | block the call, change its arguments, or allow it without the card |
+| `post_tool` | after a tool call worked | add its output to the result when it fails |
+| `file_save` | after you save a file with Ctrl+S | show a **Save hook failed** toast when it fails |
+| `stop` | when the agent ends a turn | send the agent on (at most 3 turns in a row) |
+| `pre_compact` | before the older chat is summarised | keep the full chat (no summary) |
+| `post_compact` | after the summary is made | read the summary |
+
+- `tools` entries are patterns: `mcp__github__*` matches every tool of the
+  `github` MCP server. `files` entries match the saved file's path in the
+  workspace or its name (`*.go`, `docs/*`).
+- A hook reads the event as JSON on stdin:
+  `{"event", "tool", "path", "args", "workspace", "summary"}`. The event
+  name is also in `TERMOCODE_HOOK_EVENT`.
+- **Exit 2** blocks: the call does not run (or the agent goes on, or the
+  chat is not summarised). The hook's output is the reason the AI gets.
+- **Exit 0 with a JSON object** decides:
+  `{"decision": "deny", "reason": "not on main"}` blocks,
+  `{"decision": "allow"}` runs the call without the approval card, and
+  `{"args": {…}}` runs the call with new arguments.
+- Any other exit code is a failed hook. It never blocks.
+- Only **your** hooks can allow a call without the card. A project hook
+  can block or change a call, but never approve it for you. A file
+  change still shows its review.
+- The audit line says what happened:
+  `hook before=run_command run=./guard.sh by=user → exit 0 · 12ms · allow`.
 
 ## Web tools
 

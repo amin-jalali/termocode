@@ -62,6 +62,9 @@ func (x containerExec) Capture(ctx context.Context, dir string, argv ...string) 
 	if err != nil {
 		return "", "", -1, err
 	}
+	if out, stderr, code, ok := x.h.viaMux(ctx, muxExecScript, append([]string{x.h.workdir(dir)}, argv...)); ok {
+		return out, stderr, code, nil
+	}
 	out, stderr, code, err := x.h.cfg.X.Capture(ctx, "", a...)
 	x.h.noteStopped(code, stderr)
 	return out, stderr, code, err

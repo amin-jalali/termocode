@@ -189,6 +189,7 @@ var actionsHeaderMemo struct {
 	running bool   // a pipeline run is active (the profile chip's colour)
 	agents  bool   // the slot shows the AGENTS view
 	usage   bool   // ... as the usage tables
+	ctx     string // the context chip (aiContextChipLabel, CMP-7)
 	out     string
 }
 
@@ -202,16 +203,17 @@ func (m Model) actionsHeaderEdged(width int, edge func(string) string) string {
 	think := m.aiReasoningChipLabel()
 	agents := m.agentsShowing()
 	usage := agents && m.ai.agents.usage
+	ctx := m.aiContextChipLabel()
 	c := &actionsHeaderMemo
 	c.Lock()
 	defer c.Unlock()
 	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.focused == focused && c.hover == hover && c.rk == rk && c.mcp == mcpState &&
-		c.profile == profile && c.think == think && c.running == running && c.agents == agents && c.usage == usage {
+		c.profile == profile && c.think == think && c.running == running && c.agents == agents && c.usage == usage && c.ctx == ctx {
 		return c.out
 	}
 	out := edge(m.renderActionsHeader(width))
 	c.ok, c.width, c.pinned, c.focused, c.hover, c.rk, c.mcp, c.out = true, width, m.actionsPinned, focused, hover, rk, mcpState, out
-	c.profile, c.think, c.running, c.agents, c.usage = profile, think, running, agents, usage
+	c.profile, c.think, c.running, c.agents, c.usage, c.ctx = profile, think, running, agents, usage, ctx
 	return out
 }
 
@@ -253,11 +255,15 @@ func (m Model) renderActionsHeader(width int) string {
 	// Chips after the label (actionsHeaderChips): the agent profile
 	// "✦ <profile> ▾" (ai_profiles_ui.go, a click opens the picker) and
 	// MCP "⌁ N MCP" (ai_mcp.go, a click opens AI: MCP Servers…) and
-	// "usage" (a click opens the session's AI: Usage tables).
+	// "ctx ▰▰▱▱▱ 42%" (the open chat's context use, CMP-7) and "usage"
+	// (a click on either opens the session's AI: Usage tables).
 	for _, c := range m.actionsHeaderChips(width) {
 		tok := theme.TextSecondary
-		if c.id == "profile" {
+		switch c.id {
+		case "profile":
 			tok = m.aiProfileChipTok()
+		case "ctx":
+			tok = m.aiContextChipTok()
 		}
 		left += bg.Render(" ") + btn(c.id, c.label, theme.FgBg(tok, theme.BgPanel))
 	}
@@ -395,7 +401,7 @@ type actionsHeaderChip struct {
 }
 
 // actionsHeaderChips lays out the header chips after " ✦ AI CHAT": the
-// profile chip, then the MCP and usage chips (only from
+// profile chip, then the MCP, context and usage chips (only from
 // actionsChipMinWidth on, usage drops first); a chip that does not fit before the buttons (with a 1-cell gap) is left
 // out.
 func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
@@ -426,7 +432,8 @@ func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
 	if width >= actionsChipMinWidth {
 		add("think", m.aiReasoningChipLabel()) // OMX-5: only when a level is set
 		add("mcp", m.mcpChipLabel())
-		add("usage", "usage") // last: the first chip to drop
+		add("ctx", m.aiContextChipLabel()) // CMP-7: only after a turn with a known window
+		add("usage", "usage")              // last: the first chip to drop
 	} else if m.mcpChipLabel() != "" || m.aiProfileChipLabel() != "" || m.aiReasoningChipLabel() != "" {
 		dropped = true
 	}

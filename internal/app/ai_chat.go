@@ -47,6 +47,8 @@ type aiChatDoneMsg struct {
 	gen uint64
 	// run is the final event of a pipeline run (nil for a plain turn).
 	run *agentrun.Event
+	// stop is the reason a stop hook gives to go on ("" for none, CMP-59).
+	stop string
 }
 
 // aiPendingConfirm is a tool call waiting for the user.
@@ -177,8 +179,13 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:
 // agent_run_start knows how deep it is and the run's budget).
 func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai.Tool {
-	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
-	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	aws := m.aiWorkspaceAt(root) // a container workspace: its Host FS + Exec (RC-5)
+	tools := append(ai.WorkspaceTools(aws), m.aiEditorTools()...)
+	if aws.FS != nil {
+		tools = aiSyncHostTools(tools, aws, call) // the IDE follows, the files stay in the container
+	} else {
+		tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	}
 	tools = append(tools, aiIDETools(root, call)...)
 	// Group K2: settings, layout and IDE state.
 	tools = append(tools, aiSettingsTools(root, call)...)
@@ -227,6 +234,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	s := m.aiS()
 	if s.streaming {
 		return m.aiInfo("AI is still answering — Ctrl+C to stop")
+	}
+	if s.home.busy { // MOB-16: one AI turn at a time, the phone chat's too
+		return m.aiInfo("The phone chat is answering — wait a moment or Ctrl+C to stop")
 	}
 	if !s.keep.pushing { // OMX-7: a message of the user starts a new keep-going chain
 		s.keep = aiKeepGoingRun{}
@@ -292,6 +302,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		root, s.turnRoot = s.turnRoot, ""
 	}
 	memBlock, lessons := m.aiMemoryTurn(root, text) // OM-2: before the attachments are taken
+	chips := s.attachChips()
 	ctxText, images := s.takeAttachments()
 	if blk := aiRulesMentionBlock(rules, text, s.rulesInjector()); blk != "" { // CMP-82: #name rules
 		ctxText = strings.TrimLeft(ctxText+"\n\n"+blk, "\n")
@@ -302,7 +313,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		model = "" // the chat's own model: stored chats stay as they were
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Attached: chips, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
 		ai.StoredMessage{Role: ai.StoredAssistant, Model: model},
 	)
 	s.scroll = 0
@@ -335,6 +346,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 
 	auto := s.autoApproveSet()
+	hooks, out := aiActiveHooks(root), m.output // CMP-59: every hook event of this turn
 	ctx, cancel := context.WithCancel(context.Background())
 	s.chatCancel = cancel
 	s.streaming = true
@@ -348,7 +360,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	agent := &ai.Agent{
 		Provider:    slot.p,
-		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHooks(root, tools, m.output)), // OMX-12, OMX-18
+		Tools:       m.aiRecallTurn(root, text).wrap(aiWithHookList(root, hooks, tools, out)), // OMX-12, OMX-18
 		Native:      native,
 		AutoApprove: auto,
 		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
@@ -356,8 +368,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
 		Name:        aiSlotLabel(step.Slot, slot.cfg),
-		Fallbacks:   s.aiFallbacks(step.Slot), // OMX-4
-		Compact:     m.aiCompactor(slot),      // OMX-3
+		Fallbacks:   s.aiFallbacks(step.Slot),                                  // OMX-4
+		Compact:     aiWithCompactHooks(root, hooks, out, m.aiCompactor(slot)), // OMX-3, CMP-59
+		PreTool:     aiPreToolHooks(root, hooks, out),                          // CMP-59
 		// OMX-25: tool results are cut to what still fits the window.
 		ContextWindow: aiContextWindow(s.settings, slot.cfg.Model),
 	}
@@ -369,7 +382,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		defer cancel()
 		if mcpTools != nil {
 			if extra := aiFilterTools(mcpTools(ctx), step.Tools); len(extra) > 0 {
-				agent.Tools = append(agent.Tools, extra...)
+				agent.Tools = append(agent.Tools, aiWithHookList(root, hooks, extra, out)...) // CMP-59: MCP matchers
 				b := base
 				if mcpLines != "" {
 					b += "\nConnected services (MCP tools mcp__<server>__*):\n" + mcpLines
@@ -387,7 +400,11 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 			emit(ev)
 		}
 		agent.Run(ctx, history, emit)
-		ch <- aiChatDoneMsg{gen: gen}
+		stop := ""
+		if ctx.Err() == nil { // a turn the user stopped is not asked to go on
+			stop = aiRunStopHooks(root, hooks, out)
+		}
+		ch <- aiChatDoneMsg{gen: gen, stop: stop}
 		close(ch)
 	}, func() { // the chat turn ends instead of waiting for ever
 		ch <- aiChatDoneMsg{gen: gen}
@@ -410,6 +427,18 @@ func (s *aiState) takeAttachments() (string, []string) {
 	}
 	s.attachments = nil
 	return strings.Join(ctxParts, "\n\n"), images
+}
+
+// attachChips are the chips of the web attachments of the next message
+// (MOB-5): the laptop's own attachments show as they always did.
+func (s *aiState) attachChips() []ai.StoredAttach {
+	var out []ai.StoredAttach
+	for _, a := range s.attachments {
+		if a.Kind != "" {
+			out = append(out, ai.StoredAttach{Kind: a.Kind, Label: a.Label})
+		}
+	}
+	return out
 }
 
 // aiChatBasePrompt is the chat's system prompt before the tool protocol.
@@ -510,6 +539,9 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 			}
 			if s.toolArgs != nil && aiMCPTool(msg.ev) {
 				s.aiKeepToolDetail(len(s.conv.Messages)-1, l.Text, s.toolArgs, msg.ev.Detail)
+			}
+			if msg.ev.View != nil { // MOB-10: the phone draws it under the line
+				l.Block = msg.ev.View
 			}
 		}
 		s.toolArgs = nil
@@ -700,7 +732,9 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	}
 	var more tea.Cmd
 	if msg.run == nil {
-		more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
+		if more = m.aiOnStopHook(msg.stop); more == nil { // CMP-59: a stop hook first
+			more = m.aiKeepGoingNext() // OMX-7: open todos, keep going on
+		}
 	}
 	return tea.Batch(cmd, mem, m.notifyOS("AI run ended"), queued, more, m.aiShipOnChatDone()) // OMX-15: ship mode
 }

@@ -23,7 +23,7 @@ func StageLines(dir, file string, from, to int) error {
 // out of the index. When the file also has unstaged edits, the line numbers
 // are moved to where those lines are in the index.
 func UnstageLines(dir, file string, from, to int) error {
-	unstaged, err := runOut(dir, "git", "diff", "--no-color", "--no-ext-diff", "--", file)
+	unstaged, err := gitOutAt(dir, "diff", "--no-color", "--no-ext-diff", "--", file)
 	if err != nil {
 		return err
 	}
@@ -63,13 +63,13 @@ func DiscardLines(dir, file string, from, to int) error {
 // the chosen lines out of it and hands that patch to `git apply`.
 func applyLines(dir, file string, from, to int, diffCached, applyCached, applyReverse bool) error {
 	if !diffCached {
-		if _, err := runOut(dir, "git", "ls-files", "--error-unmatch", "--", file); err != nil {
+		if _, err := gitOutAt(dir, "ls-files", "--error-unmatch", "--", file); err != nil {
 			if applyReverse {
 				return ErrLineUntracked // nothing in git to go back to
 			}
 			// A new file has no index entry to cut lines from: record it as
 			// "to be added" first, so that its lines show up as a diff.
-			if err := runStdin(dir, "", "git", "add", "-N", "--", file); err != nil {
+			if err := gitStdin(dir, "", "add", "-N", "--", file); err != nil {
 				return err
 			}
 		}
@@ -79,7 +79,7 @@ func applyLines(dir, file string, from, to int, diffCached, applyCached, applyRe
 		diffArgs = append(diffArgs, "--cached")
 	}
 	diffArgs = append(diffArgs, "--", file)
-	diff, err := runOut(dir, "git", diffArgs...)
+	diff, err := gitOutAt(dir, diffArgs...)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func applyLines(dir, file string, from, to int, diffCached, applyCached, applyRe
 	if applyReverse {
 		args = append(args, "--reverse")
 	}
-	if err := runStdin(dir, patch, "git", append(args, "-")...); err != nil {
+	if err := gitStdin(dir, patch, append(args, "-")...); err != nil {
 		return fmt.Errorf("could not apply the lines: %s", strings.TrimPrefix(err.Error(), "exit status 1: "))
 	}
 	return nil
@@ -108,7 +108,7 @@ func applyLines(dir, file string, from, to int, diffCached, applyCached, applyRe
 
 // stagedRename tells if the index holds file as the new name of a rename.
 func stagedRename(dir, file string) bool {
-	out, err := runOut(dir, "git", "diff", "--cached", "--no-color", "--name-status", "-M")
+	out, err := gitOutAt(dir, "diff", "--cached", "--no-color", "--name-status", "-M")
 	if err != nil {
 		return false
 	}

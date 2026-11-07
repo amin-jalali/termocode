@@ -318,6 +318,7 @@ func (m *Model) onWebPanelFail(msg webPanelFailMsg) tea.Cmd {
 		return nil
 	}
 	m.webPanel = nil
+	m.closeWebForwards() // web_forward.go: forwards end with the panel
 	msg.proc.terminate()
 	for _, w := range st.waiters {
 		w.fail(webproto.CodeInternal, "The web panel did not start.")
@@ -334,6 +335,7 @@ func (m *Model) onWebPanelExit(msg webPanelExitMsg) tea.Cmd {
 		return nil
 	}
 	m.webPanel = nil
+	m.closeWebForwards() // web_forward.go: forwards end with the panel
 	for _, w := range st.waiters {
 		w.fail(webproto.CodeInternal, "The web panel stopped.")
 	}
@@ -350,6 +352,7 @@ func (m *Model) stopWebPanel() tea.Cmd {
 		return m.webToast(toast.Info, "The web panel is not running.")
 	}
 	st.stopping = true
+	m.closeWebForwards() // web_forward.go: before the bye, so the audit lines reach the gateway
 	if m.web != nil {
 		m.web.ctlBye(webproto.CloseStopped)
 	}

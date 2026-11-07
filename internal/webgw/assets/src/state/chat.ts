@@ -24,7 +24,15 @@ export function readChat(data: unknown): ChatSnap | null {
     model: typeof data.model === "string" ? data.model : undefined,
     busy: data.busy === true,
     messages: msgs.map(readMsg).filter((m): m is ChatMsg => m !== null),
+    ctx_pct: typeof data.ctx_pct === "number" ? data.ctx_pct : undefined,
+    ctx_tokens: typeof data.ctx_tokens === "number" ? data.ctx_tokens : undefined,
+    ctx_window: typeof data.ctx_window === "number" ? data.ctx_window : undefined,
   };
+}
+
+/** ctxTone is the context chip's level (CMP-7): amber from 70 %, red from 90 %. */
+export function ctxTone(pct: number): "ok" | "warn" | "full" {
+  return pct >= 90 ? "full" : pct >= 70 ? "warn" : "ok";
 }
 
 /** readChats returns the chat list, newest first. */

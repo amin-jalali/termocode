@@ -59,21 +59,29 @@ type ChatSnap struct {
 	Model    string    `json:"model,omitempty"`
 	Busy     bool      `json:"busy"` // the AI is answering
 	Messages []ChatMsg `json:"messages"`
+	// CtxPct is how full the model's context window was on the chat's
+	// newest turn, in percent; CtxTokens and CtxWindow are the counts
+	// behind it. All 0 while unknown (CMP-7).
+	CtxPct    int `json:"ctx_pct,omitempty"`
+	CtxTokens int `json:"ctx_tokens,omitempty"`
+	CtxWindow int `json:"ctx_window,omitempty"`
 }
 
 // ChatMsg is one message, trimmed for the page.
 type ChatMsg struct {
-	I         int        `json:"i"` // its index in Messages
-	Role      string     `json:"role" enum:"user|assistant|tool|error"`
-	Text      string     `json:"text,omitempty"`      // plain text: tool and error lines, and an answer while it streams
-	MD        *MdNode    `json:"md,omitempty"`        // user and finished assistant messages: the markdown as an AST
-	Streaming bool       `json:"streaming,omitempty"` // the answer is still coming (text grows by append deltas)
-	Truncated bool       `json:"truncated,omitempty"` // cut at MaxChatMsgText; chat.get_message {i} returns more
-	Model     string     `json:"model,omitempty"`     // the model of an answer, when not the chat's own
-	Images    []string   `json:"images,omitempty"`    // attached image file names
-	Rules     string     `json:"rules,omitempty"`     // the project rules the turn used ("AGENTS.md")
-	Run       *ChatRun   `json:"run,omitempty"`
-	Steps     []ChatStep `json:"steps,omitempty"`
+	I         int          `json:"i"` // its index in Messages
+	Role      string       `json:"role" enum:"user|assistant|tool|error"`
+	Text      string       `json:"text,omitempty"`      // plain text: tool and error lines, and an answer while it streams
+	MD        *MdNode      `json:"md,omitempty"`        // user and finished assistant messages: the markdown as an AST
+	Streaming bool         `json:"streaming,omitempty"` // the answer is still coming (text grows by append deltas)
+	Truncated bool         `json:"truncated,omitempty"` // cut at MaxChatMsgText; chat.get_message {i} returns more
+	Model     string       `json:"model,omitempty"`     // the model of an answer, when not the chat's own
+	Images    []string     `json:"images,omitempty"`    // attached image file names
+	Attached  []AttachChip `json:"attached,omitempty"`  // what the user sent back with it (MOB-5), ≤ MaxAttachedChips
+	Rules     string       `json:"rules,omitempty"`     // the project rules the turn used ("AGENTS.md")
+	Run       *ChatRun     `json:"run,omitempty"`
+	Steps     []ChatStep   `json:"steps,omitempty"`
+	Blocks    []Block      `json:"blocks,omitempty"` // typed visual blocks after the text, ≤ MaxMsgBlocks
 }
 
 // ChatRun is the pipeline run a message shows.
@@ -88,14 +96,15 @@ type ChatRun struct {
 
 // ChatStep is one step of a run.
 type ChatStep struct {
-	ID    string   `json:"id"`
-	Title string   `json:"title,omitempty"`
-	State string   `json:"state,omitempty"` // pending, running, done, failed, skipped …
-	Model string   `json:"model,omitempty"`
-	Tools []string `json:"tools,omitempty"` // tool lines ("⚙ Read a.go → 10 lines")
-	Text  string   `json:"text,omitempty"`  // plain, while the step runs
-	MD    *MdNode  `json:"md,omitempty"`    // the answer as an AST once the step ended
-	Error string   `json:"error,omitempty"`
+	ID     string   `json:"id"`
+	Title  string   `json:"title,omitempty"`
+	State  string   `json:"state,omitempty"` // pending, running, done, failed, skipped …
+	Model  string   `json:"model,omitempty"`
+	Tools  []string `json:"tools,omitempty"` // tool lines ("⚙ Read a.go → 10 lines")
+	Text   string   `json:"text,omitempty"`  // plain, while the step runs
+	MD     *MdNode  `json:"md,omitempty"`    // the answer as an AST once the step ended
+	Error  string   `json:"error,omitempty"`
+	Blocks []Block  `json:"blocks,omitempty"` // typed visual blocks of the step, ≤ MaxMsgBlocks
 }
 
 // Chat delta ops.
@@ -103,7 +112,7 @@ const (
 	ChatAppend   = "append"   // Text goes at the end of message I's text (a streaming answer)
 	ChatMessage  = "message"  // Msg is new (Msg.I == len(messages)) or replaces message Msg.I
 	ChatTruncate = "truncate" // only the first N messages stay
-	ChatState    = "state"    // Busy and / or Title changed
+	ChatState    = "state"    // Busy, Title and / or the context use changed
 	ChatSwitched = "switched" // the laptop opened another chat: Chat is all of it
 )
 
@@ -117,6 +126,11 @@ type ChatDelta struct {
 	Busy  *bool     `json:"busy,omitempty"`  // state
 	Title string    `json:"title,omitempty"` // state
 	Chat  *ChatSnap `json:"chat,omitempty"`  // switched
+	// CtxPct, CtxTokens and CtxWindow are the chat's new context use
+	// (state; 0 = unknown again).
+	CtxPct    *int `json:"ctx_pct,omitempty"`
+	CtxTokens *int `json:"ctx_tokens,omitempty"`
+	CtxWindow *int `json:"ctx_window,omitempty"`
 }
 
 // ChatRef is the result of chat.new and chat.send: the chat it went to.
@@ -149,15 +163,5 @@ const (
 	MdMaxLangLen = 32
 )
 
-// MdNode is one node of a markdown AST. Raw HTML never becomes a node;
-// a link's Href is http or https only (else the link is its text).
-type MdNode struct {
-	K     string     `json:"k" enum:"doc|p|h|em|strong|code|codeblock|ul|ol|li|blockquote|link|hr|br|table|th|td|text"`
-	Text  string     `json:"text,omitempty"`  // text, code, codeblock
-	C     []MdNode   `json:"c,omitempty"`     // children
-	Level int        `json:"level,omitempty"` // h: 1 to 6
-	Lang  string     `json:"lang,omitempty"`  // codeblock: the info word
-	Href  string     `json:"href,omitempty"`  // link
-	Start int        `json:"start,omitempty"` // ol: the first number, when not 1
-	Rows  [][]MdNode `json:"rows,omitempty"`  // table: rows of th / td cells, the header row first
-}
+// MdNode (a markdown AST node) is defined in internal/blocks and
+// aliased in blocks.go, so a text block carries the same AST.

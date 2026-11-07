@@ -45,6 +45,12 @@ type Config struct {
 	// MaxFileSize is the largest file ReadFile reads (0 =
 	// DefaultMaxFileSize).
 	MaxFileSize int64
+	// Mux runs the short sh one-liners and Exec.Capture calls through one
+	// long `exec -i <c> sh` (shellmux.go). Turn it on for a remote engine
+	// (an ssh:// context, see RemoteEngine), where each call is slow.
+	Mux bool
+	// Pipe starts the shellmux (nil = SpawnPipe{} when Mux is on).
+	Pipe Piper
 }
 
 // DefaultMaxFileSize caps one ReadFile (a slow remote engine cannot
@@ -66,6 +72,8 @@ type Host struct {
 	image  string
 	cuser  string // Config.User of the container
 	mounts []mount
+
+	mux muxState
 
 	fs      workspace.FS
 	caps    workspace.Caps
@@ -100,6 +108,9 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 	}
 	if cfg.MaxFileSize <= 0 {
 		cfg.MaxFileSize = DefaultMaxFileSize
+	}
+	if cfg.Mux && cfg.Pipe == nil {
+		cfg.Pipe = SpawnPipe{}
 	}
 	if cfg.Container == "" || strings.HasPrefix(cfg.Container, "-") || strings.ContainsAny(cfg.Container, ":/ \t\n") {
 		return nil, fmt.Errorf("not a container name: %q", cfg.Container)

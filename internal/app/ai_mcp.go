@@ -747,6 +747,8 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 		return nil, true
 	case pickerKindMCPProfile:
 		return m.onMCPProfilePicked(id), true
+	case pickerKindMCPAccounts: // mcp_accounts.go
+		return m.onMCPAccountPicked(id), true
 	case pickerKindMCPCatalog:
 		return m.onMCPCatalogPicked(id), true
 	}

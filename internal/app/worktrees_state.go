@@ -79,6 +79,7 @@ type wtState struct {
 	move       *wtMovePending    // the open move, unpack or pull card (worktrees_move.go)
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
+	preview    *wtPreviewState   // the open agent preview (worktrees_preview.go)
 
 	feedbackAsk     *wtFeedbackPending   // the open PR feedback card (worktrees_followup.go)
 	feedbackReading map[string]bool      // PR feedback reads in flight, by path
@@ -87,6 +88,7 @@ type wtState struct {
 	bgAct           *wtBgActPending      // the open card of one background task
 	bgTasks         []bgtask.Task        // the last listed background tasks
 	bgEngine        containers.Engine    // the engine they were listed on
+	handoff         *wtHandoffForm       // the open handoff card (worktrees_handoff.go)
 
 	seq    uint64
 	render struct {
@@ -260,6 +262,9 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return c, true
 	}
 	if c, ok := m.handleWTDiffMsg(msg); ok { // the diff vs base (worktrees_diff.go)
+		return c, true
+	}
+	if c, ok := m.handleWTHandoffMsg(msg); ok { // the handoff card (worktrees_handoff.go)
 		return c, true
 	}
 	if c, ok := m.handleWTDeleteMsg(msg); ok { // the type-the-name card (worktrees_delete.go)

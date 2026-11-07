@@ -82,7 +82,7 @@ func (m *Model) openAIMoreMenu() tea.Cmd {
 		{ID: "profile", Title: "Profile…", Hint: "pick the agent profile"},
 		{ID: "services", Title: "Services", Hint: "what the chat can use"},
 		{ID: "think", Title: "Next reasoning level", Hint: "how hard the model thinks"},
-		{ID: "usage", Title: "Usage", Hint: "tokens and cost"},
+		{ID: "usage", Title: "Usage", Hint: aiUsageMoreHint(m.ai)},
 		{ID: "agents", Title: "Agents", Hint: "the steps of the run"},
 	}
 	m.picker = picker.NewItems(" "+aiSpark()+" More ", items)

@@ -44,6 +44,7 @@ repository's git folder, never in your project.
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
 | `I` | Start from an issue: pick an open issue, the New worktree form fills in |
+| `H` | Hand off: a new agent goes on with a note of this work (see below) |
 | `L` | Show the setup of a new worktree (its terminal tab) |
 | `r` | Run the dev server on the worktree's own port (`$PORT`); again: show its tab |
 | `o` | Open the running dev server's address in the browser |
@@ -52,6 +53,8 @@ repository's git folder, never in your project.
 | `s` | Sleep: end its agent tabs and move it under ASLEEP; again: wake it |
 | `T` | Its agent sessions; `Enter` shows the session's tab |
 | `O` | New agent session: one more agent in it, in its own tab |
+| `v` | Preview: the agent's live screen in the panel (see below); again: close |
+| `V` | Agent grid: up to 4 agent screens side by side |
 | `x` | Archive: remove the folder, keep the branch; on an archived row: restore |
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
@@ -64,6 +67,32 @@ repository's git folder, never in your project.
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
 | `?` | Show these keys |
+
+## Watch agents: preview and grid
+
+`v` (**Worktree: Preview Agent Screen**) opens a **PREVIEW** tab in the
+bottom panel. It shows the live screen of the agent that works in the
+selected worktree, read only. The list keeps the keys: move with `j` and
+`k` and the preview follows the cursor.
+
+`V` (**Worktree: Preview Agent Grid**) shows an **AGENT GRID** instead:
+up to 4 agent screens of this window side by side (2 by 2 when there are
+3 or 4), the selected worktree's agent first.
+
+| Key in the panel | What it does |
+|---|---|
+| `Tab` `←` `→` | Pick a tile |
+| `Enter` or a click | Jump into that agent's terminal tab |
+| `g` | Switch between one screen and the grid |
+| `r` | Read the screens again now |
+| `Esc` | Give the keys back |
+
+- The screens are read twice a second while the tab is on show, never
+  while it is hidden. Nothing is typed into the agents.
+- An agent of another termocode window has no screen here; the preview
+  says so, and **Ctrl+Shift+J** jumps to it.
+- A hibernated agent tab shows as **asleep**; `Enter` wakes it.
+- `v` or `V` again (the same way) closes the tab.
 
 ## New worktree
 
@@ -178,6 +207,35 @@ Change any field first. Nothing is made until **Create** or
 as plain text: control bytes are dropped and it is cut at 200 letters.
 **Git: Issues…** has the same row (**Start Work: New Worktree + Agent…**)
 for one issue. The AI can not start it; it is your choice.
+
+## Hand off to a new agent
+
+`H` (**Worktree: Hand Off Selected…**) passes the selected worktree's
+work to a new agent, for example when the old one runs out of context
+or you want another agent to finish it. termocode writes a short note
+from what git already knows; no AI request runs:
+
+- the branch and the branch it started from (the parent's branch for a
+  child, else the main checkout's branch),
+- the commits since then and the changed files,
+- the files not committed yet,
+- the notes and the status agents left on the worktree, and its linked
+  issue or pull request,
+- one line you add on the card.
+
+The card shows a preview. **Cancel** comes first. Pick **Where**:
+
+- **this worktree**: the agent starts in the same folder. Its first task
+  is one line that names the note. The worktree gets the note
+  "Handed off to …". The old agent keeps running; `s` puts it to sleep.
+  The same agent kind cannot start twice in one worktree.
+- **new child worktree**: the New worktree form opens for a child, with
+  the agent picked and the task typed in. Type a name, then
+  **Create + Start**.
+
+The note is saved in `termocode/handoff/` inside the repository's git
+folder, never in your project, with secrets hidden. The AI never starts
+a handoff. The AI chat has its own **AI: Handoff to a New Chat**.
 
 ## Link an issue or pull request
 

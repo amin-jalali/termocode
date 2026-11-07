@@ -310,12 +310,31 @@
       "deltas": [
         "WorktreesSnap"
       ]
+    },
+    {
+      "name": "inbox",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "InboxSnap",
+      "deltas": [
+        "InboxSnap"
+      ]
+    },
+    {
+      "name": "projects",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "ProjectsSnap",
+      "deltas": [
+        "ProjectsSnap"
+      ]
     }
   ],
   "events": {
     "answered": "Answered",
     "attention": "Attention",
-    "search.batch": "SearchBatch"
+    "search.batch": "SearchBatch",
+    "views_saved": "SavedViewList"
   },
   "messages": {
     "client": {
@@ -1948,6 +1967,76 @@
       "phase": "v2"
     },
     {
+      "op": "view.list",
+      "args": "EmptyArgs",
+      "result": "SavedViewList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "view.save",
+      "args": "ViewSaveArgs",
+      "result": "ViewSaved",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 16384,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "view.rename",
+      "args": "ViewRenameArgs",
+      "result": "SavedViewList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "view.delete",
+      "args": "ViewRefArgs",
+      "result": "SavedViewList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "view.pin",
+      "args": "ViewPinArgs",
+      "result": "SavedViewList",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "workflows.stop",
       "args": "WorkflowRunArgs",
       "role": "controller",
@@ -2469,6 +2558,20 @@
       },
       "max_bytes": 1024,
       "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.link",
+      "args": "WorktreeLinkArgs",
+      "result": "WorktreeDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
       "audit": "yes",
       "phase": "v2"
     },
@@ -4183,6 +4286,21 @@
       "phase": "v2"
     },
     {
+      "op": "chat.home",
+      "args": "ChatHomeArgs",
+      "result": "ChatSnap",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 73728,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.use_profile",
       "args": "AIUseArgs",
       "result": "AskRef",
@@ -4598,6 +4716,12 @@
         "provider": {
           "type": "string"
         },
+        "webFetch": {
+          "type": "boolean"
+        },
+        "webSearch": {
+          "type": "string"
+        },
         "worktrees": {
           "type": "boolean"
         }
@@ -4789,6 +4913,69 @@
       ],
       "additionalProperties": true
     },
+    "Attach": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "task",
+            "ptask",
+            "issue",
+            "pr",
+            "file",
+            "lines",
+            "diff",
+            "worktree",
+            "run",
+            "race",
+            "workflow",
+            "card",
+            "resource",
+            "block",
+            "project",
+            "view"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "spec": {
+          "type": "string"
+        },
+        "to": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "AttachChip": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "label"
+      ],
+      "additionalProperties": true
+    },
     "Attention": {
       "type": "object",
       "properties": {
@@ -4855,6 +5042,523 @@
       },
       "required": [
         "title"
+      ],
+      "additionalProperties": true
+    },
+    "Block": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/defs/BlockAction"
+          },
+          "type": "array"
+        },
+        "bars": {
+          "items": {
+            "$ref": "#/defs/BlockBar"
+          },
+          "type": "array"
+        },
+        "board": {
+          "$ref": "#/defs/BlockBoard"
+        },
+        "columns": {
+          "items": {
+            "$ref": "#/defs/BlockColumn"
+          },
+          "type": "array"
+        },
+        "diff": {
+          "$ref": "#/defs/BlockDiff"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/defs/BlockField"
+          },
+          "type": "array"
+        },
+        "for_you": {
+          "type": "string"
+        },
+        "form": {
+          "items": {
+            "$ref": "#/defs/BlockFormField"
+          },
+          "type": "array"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/defs/BlockGroup"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/BlockItem"
+          },
+          "type": "array"
+        },
+        "json": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "list",
+            "table",
+            "diff",
+            "card",
+            "detail",
+            "chart",
+            "status",
+            "form",
+            "json",
+            "text",
+            "board"
+          ]
+        },
+        "live": {
+          "type": "boolean"
+        },
+        "md": {
+          "$ref": "#/defs/MdNode"
+        },
+        "ref": {
+          "$ref": "#/defs/BlockRef"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "source": {
+          "type": "string"
+        },
+        "spec": {
+          "$ref": "#/defs/ViewSpec"
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "BlockAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "op",
+            "attach",
+            "view",
+            "laptop"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "op": {
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/defs/BlockRef"
+        },
+        "risky": {
+          "type": "boolean"
+        },
+        "spec": {
+          "$ref": "#/defs/ViewSpec"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "kind"
+      ],
+      "additionalProperties": true
+    },
+    "BlockBar": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "additionalProperties": true
+    },
+    "BlockBoard": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "items": {
+            "$ref": "#/defs/BlockBoardColumn"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "columns"
+      ],
+      "additionalProperties": true
+    },
+    "BlockBoardColumn": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/BlockItem"
+          },
+          "type": "array"
+        },
+        "label": {
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "additionalProperties": true
+    },
+    "BlockColumn": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "text",
+            "num",
+            "time",
+            "cost",
+            "tone",
+            "mono"
+          ]
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "additionalProperties": true
+    },
+    "BlockDiff": {
+      "type": "object",
+      "properties": {
+        "adds": {
+          "type": "integer"
+        },
+        "dels": {
+          "type": "integer"
+        },
+        "hunks": {
+          "items": {
+            "$ref": "#/defs/BlockHunk"
+          },
+          "type": "array"
+        },
+        "old": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "hunks"
+      ],
+      "additionalProperties": true
+    },
+    "BlockDiffLine": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "integer"
+        },
+        "b": {
+          "type": "integer"
+        },
+        "k": {
+          "enum": [
+            "add",
+            "del",
+            "ctx"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "k",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "BlockField": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "text",
+            "num",
+            "time",
+            "cost",
+            "tone",
+            "mono"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "additionalProperties": true
+    },
+    "BlockFormField": {
+      "type": "object",
+      "properties": {
+        "choices": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "text",
+            "num",
+            "bool",
+            "choice",
+            "long"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "kind"
+      ],
+      "additionalProperties": true
+    },
+    "BlockGroup": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/BlockItem"
+          },
+          "type": "array"
+        },
+        "label": {
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "count"
+      ],
+      "additionalProperties": true
+    },
+    "BlockHunk": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/defs/BlockDiffLine"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "header",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "BlockItem": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/defs/BlockAction"
+          },
+          "type": "array"
+        },
+        "badge": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/defs/BlockRef"
+        },
+        "sub": {
+          "type": "string"
+        },
+        "time": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "BlockRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
       ],
       "additionalProperties": true
     },
@@ -5472,6 +6176,15 @@
         "chat": {
           "$ref": "#/defs/ChatSnap"
         },
+        "ctx_pct": {
+          "type": "integer"
+        },
+        "ctx_tokens": {
+          "type": "integer"
+        },
+        "ctx_window": {
+          "type": "integer"
+        },
         "i": {
           "type": "integer"
         },
@@ -5542,6 +6255,16 @@
       ],
       "additionalProperties": false
     },
+    "ChatHomeArgs": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
     "ChatImageArgs": {
       "type": "object",
       "properties": {
@@ -5591,6 +6314,18 @@
     "ChatMsg": {
       "type": "object",
       "properties": {
+        "attached": {
+          "items": {
+            "$ref": "#/defs/AttachChip"
+          },
+          "type": "array"
+        },
+        "blocks": {
+          "items": {
+            "$ref": "#/defs/Block"
+          },
+          "type": "array"
+        },
         "i": {
           "type": "integer"
         },
@@ -5732,6 +6467,12 @@
     "ChatSendArgs": {
       "type": "object",
       "properties": {
+        "attach": {
+          "items": {
+            "$ref": "#/defs/Attach"
+          },
+          "type": "array"
+        },
         "chat_id": {
           "type": "string"
         },
@@ -5761,6 +6502,15 @@
       "properties": {
         "busy": {
           "type": "boolean"
+        },
+        "ctx_pct": {
+          "type": "integer"
+        },
+        "ctx_tokens": {
+          "type": "integer"
+        },
+        "ctx_window": {
+          "type": "integer"
         },
         "id": {
           "type": "string"
@@ -5792,6 +6542,12 @@
     "ChatStep": {
       "type": "object",
       "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/defs/Block"
+          },
+          "type": "array"
+        },
         "error": {
           "type": "string"
         },
@@ -9896,6 +10652,112 @@
       ],
       "additionalProperties": false
     },
+    "InboxCounts": {
+      "type": "object",
+      "properties": {
+        "done": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "needs_you": {
+          "type": "integer"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "needs_you",
+        "working",
+        "failed",
+        "done"
+      ],
+      "additionalProperties": true
+    },
+    "InboxItem": {
+      "type": "object",
+      "properties": {
+        "can": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "chat": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "card",
+            "run",
+            "lane",
+            "workflow",
+            "task",
+            "ci",
+            "race"
+          ]
+        },
+        "lane": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "since": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "needs_you",
+            "working",
+            "failed",
+            "done"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "ref",
+        "title",
+        "since",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "InboxSnap": {
+      "type": "object",
+      "properties": {
+        "counts": {
+          "$ref": "#/defs/InboxCounts"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/InboxItem"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "counts"
+      ],
+      "additionalProperties": true
+    },
     "InspectArgs": {
       "type": "object",
       "properties": {
@@ -11822,6 +12684,83 @@
       ],
       "additionalProperties": false
     },
+    "ProjectItem": {
+      "type": "object",
+      "properties": {
+        "attached": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "opened_at": {
+          "type": "integer"
+        },
+        "recent": {
+          "type": "boolean"
+        },
+        "service": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "here",
+            "running",
+            "asleep"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "where": {
+          "type": "string"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "where",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectsSnap": {
+      "type": "object",
+      "properties": {
+        "more": {
+          "type": "integer"
+        },
+        "projects": {
+          "items": {
+            "$ref": "#/defs/ProjectItem"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "loading",
+            "ready"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "state",
+        "projects"
+      ],
+      "additionalProperties": true
+    },
     "PruneArgs": {
       "type": "object",
       "properties": {
@@ -12138,17 +13077,26 @@
         "cost_usd": {
           "type": "number"
         },
+        "depth": {
+          "type": "integer"
+        },
         "elapsed_ms": {
           "type": "integer"
         },
         "key": {
           "type": "string"
         },
+        "kids": {
+          "type": "integer"
+        },
         "live": {
           "type": "boolean"
         },
         "needs_you": {
           "type": "boolean"
+        },
+        "parent": {
+          "type": "string"
         },
         "profile": {
           "type": "string"
@@ -12207,6 +13155,62 @@
       },
       "required": [
         "runs"
+      ],
+      "additionalProperties": true
+    },
+    "SavedView": {
+      "type": "object",
+      "properties": {
+        "by": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "saved": {
+          "type": "integer"
+        },
+        "spec": {
+          "$ref": "#/defs/ViewSpec"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "spec",
+        "saved"
+      ],
+      "additionalProperties": true
+    },
+    "SavedViewList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/SavedView"
+          },
+          "type": "array"
+        },
+        "max": {
+          "type": "integer"
+        },
+        "max_pinned": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "max",
+        "max_pinned"
       ],
       "additionalProperties": true
     },
@@ -14271,6 +15275,199 @@
       ],
       "additionalProperties": true
     },
+    "ViewCond": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "in": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "ne",
+            "gt",
+            "lt",
+            "ge",
+            "le",
+            "contains",
+            "starts",
+            "in",
+            "empty",
+            "not_empty"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "op"
+      ],
+      "additionalProperties": true
+    },
+    "ViewPinArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        },
+        "order": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "on"
+      ],
+      "additionalProperties": false
+    },
+    "ViewRefArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ViewRenameArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "ViewSaveArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "pin": {
+          "type": "boolean"
+        },
+        "spec": {
+          "$ref": "#/defs/ViewSpec"
+        }
+      },
+      "required": [
+        "spec",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "ViewSaved": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "replaced": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "ViewSort": {
+      "type": "object",
+      "properties": {
+        "desc": {
+          "type": "boolean"
+        },
+        "field": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "additionalProperties": true
+    },
+    "ViewSpec": {
+      "type": "object",
+      "properties": {
+        "args": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "density": {
+          "enum": [
+            "compact",
+            "detailed"
+          ]
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "filter": {
+          "items": {
+            "$ref": "#/defs/ViewCond"
+          },
+          "type": "array"
+        },
+        "group": {
+          "type": "string"
+        },
+        "layout": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "refresh": {
+          "type": "integer"
+        },
+        "sort": {
+          "items": {
+            "$ref": "#/defs/ViewSort"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        },
+        "view": {
+          "type": "string"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "view"
+      ],
+      "additionalProperties": true
+    },
     "VimMap": {
       "type": "object",
       "properties": {
@@ -14650,6 +15847,30 @@
         "state"
       ],
       "additionalProperties": true
+    },
+    "WorktreeLinkArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "issue",
+            "pr",
+            "none"
+          ]
+        },
+        "number": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "number"
+      ],
+      "additionalProperties": false
     },
     "WorktreeNoteArgs": {
       "type": "object",

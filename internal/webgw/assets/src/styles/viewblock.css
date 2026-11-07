@@ -1,0 +1,49 @@
+/* A view block (MOBUX-15, ui/ViewBlock.tsx): spec chips, the ⚙ and the
+   two densities over ui/Blocks.tsx. Phone layout, tokens only, 44 px
+   targets. Loaded by the phone's lazy views and the kit, not app.css. */
+
+.vblk { display: flex; flex-direction: column; gap: var(--s1); min-width: 0; }
+
+.vblk-spec { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.vblk-chips {
+  display: flex;
+  gap: var(--s1);
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.vblk-chip {
+  flex: 0 0 auto;
+  padding: 2px var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: var(--fs-hint);
+  line-height: var(--lh-hint);
+  white-space: nowrap;
+}
+.vblk-gear {
+  flex: 0 0 auto;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--bg-float);
+  color: var(--text);
+  font-size: var(--fs-title);
+  cursor: pointer;
+}
+.vblk-gear:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.vblk-gear:hover { background: var(--bg-hover); }
+
+/* Compact: one tight line per row. Detailed: roomier rows, sub lines wrap. */
+.vblk.is-compact .blk-table th,
+.vblk.is-compact .blk-td { padding: var(--s1) var(--s2); white-space: nowrap; }
+.vblk.is-detailed .blk-table th,
+.vblk.is-detailed .blk-td { padding: var(--s2) var(--s3); }
+.vblk.is-detailed .blk-td { white-space: normal; overflow-wrap: anywhere; }

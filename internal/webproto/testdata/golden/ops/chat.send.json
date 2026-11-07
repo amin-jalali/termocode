@@ -1,1 +1,1 @@
-{"t":"req","id":4,"op":"chat.send","args":{"text":"Run the tests again, please.","chat_id":"chat-20261030-1"}}
+{"t":"req","id":4,"op":"chat.send","args":{"text":"Explain why the build failed.","chat_id":"chat-20261030-1","attach":[{"kind":"task","id":"build","label":"build"},{"kind":"lines","path":"internal/app/main.go","from":10,"to":24,"label":"main.go:10-24"}]}}
