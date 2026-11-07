@@ -5033,6 +5033,12 @@
         },
         "worktrees": {
           "type": "boolean"
+        },
+        "raceAgents": {
+          "items": {
+            "$ref": "#/defs/AIRaceAgent"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -17289,6 +17295,22 @@
       "required": [
         "home",
         "projects"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
       ],
       "additionalProperties": true
     }

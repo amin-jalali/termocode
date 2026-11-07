@@ -1837,6 +1837,12 @@ export interface AISnap {
   worktrees: boolean;
   webFetch?: boolean;
   webSearch?: string;
+  raceAgents?: AIRaceAgent[];
+}
+
+export interface AIRaceAgent {
+  id: string;
+  title: string;
 }
 
 export interface AIProfile {

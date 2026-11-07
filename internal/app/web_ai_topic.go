@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/webproto"
 	"github.com/amin-jalali/termocode/internal/webtools"
@@ -24,6 +25,10 @@ import (
 // trusted is never offered: trust is the laptop's decision alone.
 
 const webAIEvery = 2 * time.Second
+
+// webAIAgentsEvery is how long the list of installed race agents is kept
+// before the program lookups run again (they read PATH on the UI loop).
+const webAIAgentsEvery = 30 * time.Second
 
 func init() {
 	webTopics["ai"] = webTopicDef{snapshot: webAISnapshot, apply: webApplyReplace[webproto.AISnap]}
@@ -45,6 +50,9 @@ type webAIPub struct {
 	last  *webproto.AISnap
 	key   webAIKeyState
 	built time.Time
+	// agents is the last webAIRaceAgents, looked up at agentsAt.
+	agents   []webproto.AIRaceAgent
+	agentsAt time.Time
 }
 
 // webAIKeyState changes when the AI's setup, profile or toggles change.
@@ -155,6 +163,40 @@ func (m *Model) webAIBuild() webproto.AISnap {
 			src = ai.ProfileSourceBuiltin
 		}
 		out.Profiles = append(out.Profiles, webproto.AIProfile{Name: webName(n), Source: src, Trust: m.aiProfileTrust(p), Hint: webName(s.aiPipelineText(p, 80))})
+	}
+	out.RaceAgents = m.webAIRaceAgentsKept()
+	return out
+}
+
+// webAIRaceAgentsKept is webAIRaceAgents, looked up again at most every
+// webAIAgentsEvery while the hub runs.
+func (m *Model) webAIRaceAgentsKept() []webproto.AIRaceAgent {
+	if m.web == nil {
+		return webAIRaceAgents()
+	}
+	p := &m.web.more.ai
+	if now := webNow(); p.agentsAt.IsZero() || now.Sub(p.agentsAt) >= webAIAgentsEvery {
+		p.agents, p.agentsAt = webAIRaceAgents(), now
+	}
+	return p.agents
+}
+
+// webAIRaceAgents are the agents a race from the phone may use (MOBUX-8):
+// installed on the laptop and with screen rules, in the registry's order
+// (the same check as agent_race_start).
+func webAIRaceAgents() []webproto.AIRaceAgent {
+	var out []webproto.AIRaceAgent
+	for _, a := range agents.Registry {
+		if len(out) == webproto.MaxAIRaceAgents {
+			break
+		}
+		if !agents.HasScreenRules(a.ID) {
+			continue
+		}
+		if _, err := agentLookPath(a.Bin); err != nil {
+			continue
+		}
+		out = append(out, webproto.AIRaceAgent{ID: a.ID, Title: webName(a.Title)})
 	}
 	return out
 }

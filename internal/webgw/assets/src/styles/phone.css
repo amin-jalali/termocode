@@ -762,3 +762,53 @@ button.ph-tile:active { background: var(--bg-hover); }
 @media (prefers-reduced-motion: no-preference) {
   .ph-race-lanes { scroll-behavior: smooth; }
 }
+
+/* Task action sheet (MOBUX-8): each choice with its one-line hint; the
+   rough cost and lane count before a start; lane stepper and pickers. */
+.ph-task-acts { display: flex; flex-direction: column; gap: var(--p-s2); }
+.ph-task-act {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--p-s2) var(--p-s4);
+  text-align: start;
+}
+.ph-task-act-hint { font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font); color: var(--p-text-2); }
+.ph-task-hint { margin: 0 0 var(--p-s2); font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font); color: var(--p-text-2); }
+.ph-task-cost {
+  margin: var(--p-s3) 0 0;
+  font: 600 var(--p-fs-meta) / var(--p-lh-meta) var(--p-mono);
+  color: var(--p-text);
+}
+.ph-task-wfs { margin: var(--p-s2) 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--p-s2); }
+.ph-task-wf { display: flex; align-items: center; gap: var(--p-s2); }
+.ph-task-wf-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--p-fs-body) / var(--p-lh-body) var(--p-mono); }
+.ph-lanes { display: flex; align-items: center; gap: var(--p-s3); margin-bottom: var(--p-s2); }
+.ph-lanes-n { flex: 1; text-align: center; font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font); }
+.ph-lane-step {
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-row);
+  background: var(--p-surface);
+  color: var(--p-text);
+  font: 600 var(--p-fs-title) / 1 var(--p-font);
+}
+.ph-lane-step[aria-disabled="true"] { opacity: 0.55; }
+.ph-lane { display: flex; align-items: center; gap: var(--p-s3); margin-top: var(--p-s2); }
+.ph-lane-label { flex: none; min-width: 4rem; color: var(--p-text-2); font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font); }
+.ph-picks { display: flex; flex-wrap: wrap; gap: var(--p-s2); }
+.ph-pick {
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s3);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-chip);
+  background: var(--p-surface);
+  color: var(--p-text);
+  font: var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+}
+.ph-lane .ph-pick { flex: 1; min-width: 0; }
+.ph-pick.is-on { border-color: var(--p-accent); color: var(--p-accent); }
+.ph-pick:focus-visible,
+.ph-lane-step:focus-visible { outline: 2px solid var(--p-focus); outline-offset: 2px; }

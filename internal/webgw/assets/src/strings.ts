@@ -1055,6 +1055,42 @@ export const S = {
   "ph.race.merge": "Merge",
   "ph.race.merge_ask": "Merge “{name}”?",
   "ph.race.merge_note": "The laptop asks once more before it merges. The other {others} lanes stay until you discard them.",
+  // Phone task action sheet (MOBUX-8)
+  "ph.task.talk": "Talk about it",
+  "ph.task.workflow": "Run a workflow",
+  "ph.task.agents": "Many agents",
+  "ph.task.models": "Many models",
+  "ph.task.start": "Just start",
+  "ph.task.talk_hint": "Puts the task in the chat box.",
+  "ph.task.workflow_hint": "Dry run, run, or let the AI suggest one.",
+  "ph.task.agents_hint": "2 to 4 agents race, each in its own worktree.",
+  "ph.task.models_hint": "The same task on 2 to 4 profiles, side by side.",
+  "ph.task.start_hint": "The AI starts on it now, in the chat.",
+  "ph.task.cost": "About {usd} · {lanes}",
+  "ph.task.cost_unknown": "Cost not known yet · {lanes}",
+  "ph.task.cost_free": "Free until you send",
+  "ph.task.lanes.one": "1 lane",
+  "ph.task.lanes.other": "{n} lanes",
+  "ph.task.lanes_label": "Lanes",
+  "ph.task.lanes_fewer": "Fewer lanes",
+  "ph.task.lanes_more": "More lanes",
+  "ph.task.lane_n": "Lane {n}",
+  "ph.task.no_agents": "No race agent is installed on the laptop.",
+  "ph.task.pick_profiles": "Pick 2 to 4 profiles",
+  "ph.task.no_profiles": "The laptop has fewer than 2 trusted profiles.",
+  "ph.task.suggest": "Ask the AI to suggest one",
+  "ph.task.race": "Start the race",
+  "ph.task.race_body": "Start {lanes} on {task}? Each lane runs its agent in its own worktree and terminal tab on the laptop.",
+  "ph.task.compare": "Put it in the chat",
+  "ph.task.go": "Start now",
+  "ph.task.started": "Started. Follow it in the chat.",
+  "ph.task.draft_talk": "About {task}: ",
+  "ph.task.draft_suggest": "Suggest a workflow for {task}. Draft it, do not run it.",
+  "ph.task.draft_models": "Compare models on {task}: run it on the profiles {list}.",
+  "ph.task.draft_start": "Start on {task}.",
+  "ph.task.ref_issue": "issue #{n}",
+  "ph.task.ref_pr": "pull request #{n}",
+  "ph.task.ref_mr": "merge request !{n}",
 } as const;
 
 /** StringKey is a key of the page's strings, of the workbench's
@@ -1123,7 +1159,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   });
 }
 
-type Plural = "pill.cards" | "ph.proj.tasks" | "edit.sent" | "git.commit" | "git.commit_confirm" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n";
+type Plural = "pill.cards" | "ph.proj.tasks" | "edit.sent" | "git.commit" | "git.commit_confirm" | "e.idle" | "e.max" | "gg.files" | "im.models_n" | "im.tools_n" | "ph.task.lanes";
 
 /** tn picks the .one or .other form of a plural key by n. */
 export function tn(key: Plural, n: number, vars?: Record<string, string | number>): string {
