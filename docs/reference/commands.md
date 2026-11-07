@@ -847,6 +847,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Open Selected | `worktree-open` |   |   |
 | Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
+| Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 | Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |

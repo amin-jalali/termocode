@@ -39,6 +39,11 @@ const (
 	OpWorktreeNote   = "worktree-note"   // Text
 	OpWorktreeStatus = "worktree-status" // State: working | blocked | done
 	OpWorktreeLink   = "worktree-link"   // Text: a number, #N or URL; asks the user first
+
+	// Task dependencies across worktrees (CMP-80): Text names the other
+	// worktree (a path, branch or name) the caller's worktree waits for.
+	OpWorktreeBlock   = "worktree-block"
+	OpWorktreeUnblock = "worktree-unblock"
 )
 
 // States an agent reports or a wait waits for.
@@ -79,6 +84,9 @@ type Worktree struct {
 	Checkpoint string `json:"checkpoint,omitempty"`
 	Note       string `json:"note,omitempty"` // the last note
 	Here       bool   `json:"here,omitempty"` // the caller's folder is in it
+
+	BlockedBy []string `json:"blocked_by,omitempty"` // the titles of the worktrees it waits for (CMP-80)
+	Waits     bool     `json:"waits,omitempty"`      // one of them is not done yet
 }
 
 // Tab is one terminal tab in a list.
