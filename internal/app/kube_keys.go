@@ -144,6 +144,10 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.askKubeDelete(kubeKindOf(r.section), r.name)
 			return m, nil
 		}
+	case "V":
+		if have && r.kind == kubeRowItem && r.section == "secrets" {
+			return m, m.kubeRevealKey(r) // kube_secret.go
+		}
 	case "O":
 		if have && r.kind == kubeRowItem && r.section != kubeForwardsSection {
 			return m, m.kubeEditYAML(kubeKindOf(r.section), r.name)
@@ -221,6 +225,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"Every row"},
 		[]string{"i", "describe (read only)"},
 		[]string{"v", "YAML (read only, secrets masked)"},
+		[]string{"V", "secret: show one value (asks first, never to the AI)"},
 		[]string{"E", "events · on a header: the namespace's"},
 		[]string{"Events"},
 		[]string{"i v E", "act on the event's object"},
