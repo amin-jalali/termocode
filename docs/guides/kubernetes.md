@@ -74,6 +74,7 @@ kubeconfig, so other terminals keep their context.
 | `Enter` / `l` | Pod: follow its logs. Other rows: describe. |
 | `i` | Describe the row (a read-only page). |
 | `v` | Show the row as YAML (a read-only page; Secret values are masked). |
+| `V` | On a secret: show one value. Pick the key, then a card asks first (Cancel is focused). The value is not saved and never sent to the AI. |
 | `E` | Events of the row, newest first (a read-only page). On a section header: all events of the namespace. |
 | `L` | Pod: pick how to show the logs (previous container, last 5 minutes or hour, time stamps, save to a file). Deployment: the logs of all its pods. |
 | `e` | Pod: open a shell in it. |
@@ -213,6 +214,16 @@ container. With one container you can type only the image. A card then
 shows the change (`shop/api:v3 → shop/api:v4`), the context, the
 namespace and the command (`kubectl set image`). **Cancel** is the first
 button and has the focus. The same image as now changes nothing.
+
+## Show a secret value
+
+The SECRETS section lists names, types and key names only. To see one
+value, put the cursor on a secret and press `V`. Pick the key when the
+secret has more than one. A card shows the context, the namespace and the
+kubectl command, with **Cancel** focused. **Show value** reads that one
+key and shows it on a card; **Copy** puts it on the clipboard. The value is
+not cached, not logged and never given to the AI. Closing the card forgets
+it.
 
 ## Delete an object
 
