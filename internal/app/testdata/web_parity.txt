@@ -497,6 +497,7 @@ missing	git-push-preview	Git|S
 missing	git-push-to	Git|S
 missing	git-rebase-onto	Git|S
 missing	git-remotes	Git|S
+missing	git-repo-pick	Git|S
 missing	git-rev-next	Git|S
 missing	git-rev-prev	Git|S
 missing	git-signing-toggle	Git|S
@@ -504,6 +505,7 @@ missing	git-skip-hooks	Git|S
 missing	git-stash-actions	Git|S
 missing	git-stash-options	Git|S
 missing	git-status-blame	Git|S
+missing	git-submodule-update	Git|S
 missing	git-tag-create	Git|S
 missing	git-tag-delete	Git|S
 missing	git-tag-delete-remote	Git|S

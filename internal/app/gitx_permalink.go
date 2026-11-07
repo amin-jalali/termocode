@@ -45,7 +45,7 @@ func (m *Model) copyLineLink() tea.Cmd {
 	if !ok {
 		return m.gitxInfo("Open a file of this repository first")
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -63,7 +63,7 @@ func (m *Model) copyCommitLink() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

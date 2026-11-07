@@ -225,6 +225,14 @@ type Model struct {
 	// unfolds it (folded at start) (gitx_stash_panel.go).
 	gitStashes     []git.StashEntry
 	gitStashesOpen bool
+	// GITX-31 (gitx_multirepo.go): gitRepos are the repositories the
+	// workspace scan found (gitReposScanned once it ran); gitSubmodules
+	// the active repo's submodules. The two sections can be folded.
+	gitRepos        []gitRepoInfo
+	gitReposScanned bool
+	gitReposFolded  bool
+	gitSubmodules   []git.Submodule
+	gitSubsFolded   bool
 	// gitSel is the marked file rows, gitSelAnchor the row a range
 	// starts at (-1 / 0 with no marks) (gitx_multi_select.go).
 	gitSel       map[gitSelKey]bool

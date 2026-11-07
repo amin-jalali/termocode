@@ -225,7 +225,7 @@ func (m *Model) onResetModePicked(id string) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -255,7 +255,7 @@ func (m *Model) onResetModePicked(id string) tea.Cmd {
 
 // onGitOpsConfirm answers this file's cards; Cancel does nothing.
 func (m *Model) onGitOpsConfirm(kind confirmKindEnum, id string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -295,7 +295,7 @@ func (m *Model) gitUncommit() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -323,7 +323,7 @@ func (m *Model) handleGitOpsPromptSubmit(value string) (tea.Cmd, bool) {
 	default:
 		return nil, false
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil, true
 	}

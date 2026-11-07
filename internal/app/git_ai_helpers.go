@@ -99,7 +99,7 @@ func (m *Model) gitAIAsk(kind string, staged bool) tea.Cmd {
 	if !m.aiConfigured() {
 		return m.gitAINeedsSetup()
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -160,7 +160,7 @@ func (m *Model) handleGitAIPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind != promptKindGitAIStash {
 		return nil, false
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil, true
 	}
@@ -208,7 +208,7 @@ func (m *Model) gitAIExplainChanges() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -221,7 +221,7 @@ func (m *Model) gitAIExplainChanges() tea.Cmd {
 
 // gitAIExplainCommit asks the AI to explain one commit.
 func (m *Model) gitAIExplainCommit(hash string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil || hash == "" {
 		return nil
 	}
@@ -278,7 +278,7 @@ func (m *Model) gitAIPRText() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
