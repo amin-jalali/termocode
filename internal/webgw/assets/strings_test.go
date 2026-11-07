@@ -62,10 +62,18 @@ func parseStrings(t *testing.T, file, name string) []entry {
 	return nil
 }
 
-// englishStrings are all English strings: the page's (strings.ts) and
-// the ones only the desktop workbench shows (strings.desk.ts, bundled
-// into workbench.js so the phone never loads them).
+// englishStrings are all English strings: the page's (strings.ts), the
+// ones only the desktop workbench shows (strings.desk.ts, bundled into
+// workbench.js so the phone never loads them) and the phone views'
+// (strings.phone.ts, bundled into phone.js).
 func englishStrings(t *testing.T) []entry {
+	t.Helper()
+	return append(translatedStrings(t), parseStrings(t, "src/strings.phone.ts", "SP")...)
+}
+
+// translatedStrings are the English strings that have a Persian text:
+// all but the phone views' (the phone app is English only).
+func translatedStrings(t *testing.T) []entry {
 	t.Helper()
 	return append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
 }
@@ -192,7 +200,7 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 	exists := func(k string) bool { return keys[k] || (keys[k+".one"] && keys[k+".other"]) }
 	n := 0
 	err := filepath.WalkDir("src", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || filepath.Base(path) == "strings.ts" || filepath.Base(path) == "strings.desk.ts" || !strings.HasSuffix(path, "x") && !strings.HasSuffix(path, ".ts") {
+		if err != nil || d.IsDir() || filepath.Base(path) == "strings.ts" || filepath.Base(path) == "strings.desk.ts" || filepath.Base(path) == "strings.phone.ts" || !strings.HasSuffix(path, "x") && !strings.HasSuffix(path, ".ts") {
 			return err
 		}
 		b, err := os.ReadFile(path)
@@ -229,7 +237,7 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 // The Persian file (WEB-UX-5 fills it) has exactly the English keys, so
 // a new string cannot be forgotten there.
 func TestPersianStringsHaveTheSameKeys(t *testing.T) {
-	en := englishStrings(t)
+	en := translatedStrings(t)
 	fa := parseStrings(t, "src/strings.fa.ts", "FA")
 	enKeys := map[string]bool{}
 	for _, e := range en {
@@ -363,7 +371,7 @@ func TestStringsNameRealWebCommands(t *testing.T) {
 		t.Fatal("no Web: palette commands found in web_tui.go")
 	}
 	named := regexp.MustCompile(`Web: [A-Z]\w*(?: (?:in|on|to|[A-Z]\w*))*`)
-	for _, f := range []struct{ file, name string }{{"src/strings.ts", "S"}, {"src/strings.desk.ts", "SD"}, {"src/strings.fa.ts", "FA"}} {
+	for _, f := range []struct{ file, name string }{{"src/strings.ts", "S"}, {"src/strings.desk.ts", "SD"}, {"src/strings.phone.ts", "SP"}, {"src/strings.fa.ts", "FA"}} {
 		for _, e := range parseStrings(t, f.file, f.name) {
 			for _, cmd := range named.FindAllString(e.text, -1) {
 				if !real[cmd] {

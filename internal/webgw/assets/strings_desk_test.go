@@ -118,6 +118,17 @@ func TestDesktopOnlyStringsLiveInTheWorkbench(t *testing.T) {
 	if phone["src/strings.desk.ts"] {
 		t.Error("the phone's page imports strings.desk.ts; only the workbench may")
 	}
+	// The phone's own views (phone.js) never load the workbench either:
+	// what they use is the page's.
+	if _, ok := files["src/phone.tsx"]; ok {
+		views := reachable(files, "src/phone.tsx")
+		if views["src/strings.desk.ts"] {
+			t.Error("the phone views (phone.tsx) import strings.desk.ts; only the workbench may")
+		}
+		for f := range views {
+			phone[f] = true
+		}
+	}
 	page, onlyDesk := map[string]bool{}, map[string]bool{}
 	for _, e := range parseStrings(t, "src/strings.ts", "S") {
 		page[e.key] = true
