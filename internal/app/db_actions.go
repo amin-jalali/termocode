@@ -310,6 +310,8 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseTableMeta(true)
 	case "s":
 		return m, m.databaseSelectInConsole()
+	case "c":
+		return m, m.databaseGenerateStart()
 	case "#":
 		return m, m.databaseCountFromTree()
 	case "i":
@@ -946,6 +948,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"o", "open the data"},
 		[]string{"d / D", "describe / show the DDL"},
 		[]string{"s", "select 100 rows in the console"},
+		[]string{"c", "generate code: SQL templates, column lists, Go/TS/Python types"},
 		[]string{"#", "count the rows"},
 		[]string{"i", "import a CSV file"},
 		[]string{"y", "copy the name"},

@@ -73,6 +73,7 @@ type dbTreeRow struct {
 
 type dbState struct {
 	console             *dbConsoleState
+	genTable            dbTable // the table of the open Generate code picker (DBX-43)
 	loaded              bool
 	activeID            string
 	generation          uint64

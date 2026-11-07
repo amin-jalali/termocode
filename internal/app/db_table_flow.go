@@ -281,6 +281,7 @@ type dbMetaMsg struct {
 	tbl  dbTable
 	meta dbTableMeta
 	ddl  bool
+	code string // a Generate code kind (DBX-43): copy that text
 	err  error
 }
 
@@ -293,6 +294,12 @@ func (m *Model) databaseTableMeta(ddl bool) tea.Cmd {
 }
 
 func (m *Model) databaseLoadMeta(t dbTable, ddl bool) tea.Cmd {
+	return m.databaseLoadMetaMsg(t, dbMetaMsg{ddl: ddl})
+}
+
+// databaseLoadMetaMsg reads t's columns and keys and sends them in a copy
+// of msg.
+func (m *Model) databaseLoadMetaMsg(t dbTable, msg dbMetaMsg) tea.Cmd {
 	sess := m.databases.sessions[t.sessKey]
 	if sess == nil {
 		return m.pushToastDetail(toast.Info, "Not connected", "Connect first: Enter on the connection.")
@@ -302,7 +309,8 @@ func (m *Model) databaseLoadMeta(t dbTable, ddl bool) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), dbMetaTimeout)
 		defer cancel()
 		meta, err := dbLoadTableMeta(ctx, sess, t, t.request())
-		return dbMetaMsg{gen: gen, tbl: t, meta: meta, ddl: ddl, err: err}
+		msg.gen, msg.tbl, msg.meta, msg.err = gen, t, meta, err
+		return msg
 	}
 }
 
@@ -312,6 +320,9 @@ func (m *Model) onDBMeta(msg dbMetaMsg) tea.Cmd {
 	}
 	if msg.err != nil {
 		return m.dbConsoleError(msg.err)
+	}
+	if msg.code != "" {
+		return m.onDBGenerated(msg)
 	}
 	if msg.ddl {
 		return m.databaseShowDDL(msg.tbl, dbBuildDDL(msg.tbl, msg.meta))
