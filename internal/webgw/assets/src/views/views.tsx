@@ -42,14 +42,15 @@ export { TermView } from "./Term";
 
 export { GitView } from "./git/GitView";
 
-/** PhoneProject is the phone's project page (MOBUX-7), from phone.js:
- * a skeleton while it loads, Try again when the load failed. */
+/** PhoneProject is the phone's projects list or one project's page
+ * (MOBUX-6, MOBUX-7), from phone.js: a skeleton while it loads, Try
+ * again when the load failed. */
 function PhoneProject({ id }: { id: string }) {
   const m = phone.value;
   useEffect(() => {
     if (!phone.peek()) loadPhone().catch(() => undefined);
   }, []);
-  if (m) return <m.ProjectPage id={id} />;
+  if (m) return id ? <m.ProjectPage id={id} /> : <m.ProjectsPage />;
   return (
     <View tab="more" title={t("loading")} name="project-loading">
       {phoneFailed.value ? (
@@ -65,7 +66,7 @@ function PhoneProject({ id }: { id: string }) {
 
 export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
-  if (sub.startsWith("projects/")) return <PhoneProject id={sub.slice("projects/".length)} />;
+  if (sub === "projects" || sub.startsWith("projects/")) return <PhoneProject id={sub.slice("projects/".length)} />;
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
   if (sub === "runs") return <RunsView />;
@@ -139,6 +140,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" data-sub="testing" onClick={() => go({ tab: "more", rest: "testing", query: {} })}>
             {t("act.testing")}
+          </button>
+          <button type="button" class="more-link" data-sub="projects" onClick={() => go({ tab: "more", rest: "projects", query: {} })}>
+            {t("ph.proj.title")}
           </button>
         </nav>
         <section class="group" aria-labelledby="g-phone">

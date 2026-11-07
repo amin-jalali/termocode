@@ -1,48 +1,50 @@
 // The phone's project page (MOBUX-7, mobile plan 2.4 / 3.6): one project
 // of the projects topic with four tabs.
-//   Tasks  its checklists (TASKS.md, TODO.md), issues, pull requests and
-//          merge requests (project.tasks, MOB-52), one section per source;
-//          a task opens in place with "Talk about it", which puts a
-//          reference (where it is, never a file's contents) in the chat box
+//   Tasks  its checklists, issues, pull requests and merge requests (the
+//          project.tasks view, MOB-52); a tapped task opens a sheet, Cancel
+//          first, with "Talk about it", which puts a reference (where it
+//          is, never a file's contents) in the chat box
 //   Runs   the AI runs (runs topic), with their own Stop / Pause / Resume
 //   Git    branch, changed files and the last commits (git topic)
 //   Board  the runs in four columns: needs you · working · review · done
-// Runs, Git and Board are live for the project the laptop window has open
-// ("here"); another project shows its tasks through the door (the frame's
-// ws, MOB-50) and says where to see the rest. Phone layout only; status
-// is always a shape and a colour; every target is 44 px.
-// #/more/projects/<id>?tab=tasks|runs|git|board
+// The project this page talks to uses the link; another running one goes
+// through the door (its ws on every frame, MOB-50); an asleep one shows
+// its tasks request's answer and says the rest shows while it runs.
+// Phone layout only; status is always a shape and a colour; every
+// target is 44 px. #/more/projects/<id>?tab=tasks|runs|git|board, and
+// #/more/projects is the list (MOBUX-6).
 import { Fragment, h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import type { ProjectTask } from "../../../../../webproto/proto";
 import { pendingDraft } from "../../lib/drafts";
 import { go, goTab, route } from "../../lib/router";
 import { useNow } from "../../lib/time";
-import { ReqError } from "../../net/link";
-import { link, live, store } from "../../session";
+import { ProjectsList } from "../../phone/ProjectsList";
+import { ProjectTasksView } from "../../phone/ProjectTasks";
+import { PhoneSheet, safeFirst } from "../../phone/Sheet";
+import { link, store } from "../../session";
 import { age, readGit } from "../../state/git";
 import {
   BOARD_COLS,
   boardCounts,
-  checksMark,
   PROJECT_TABS,
   projectTab,
+  reachable,
   readProject,
-  readProjectTasks,
-  taskMark,
   taskRef,
   validProjectID,
   type BoardCol,
   type ProjectInfo,
-  type ProjectSectionView,
   type ProjectTab,
-  type ProjectTaskView,
 } from "../../state/project";
 import { readRuns } from "../../state/tasks";
 import { t, type StringKey } from "../../strings";
 import { Button } from "../../ui/Button";
 import { SkeletonRows } from "../../ui/Skeleton";
 import { RunCard } from "../more/RunsView";
+import { SubView } from "../more/SubView";
 import { View } from "../View";
+import { door } from "./door";
 
 const TAB_LABEL: Record<ProjectTab, StringKey> = { tasks: "more.tasks", runs: "more.runs", git: "tab.git", board: "pp.board" };
 const COL_LABEL: Record<BoardCol, StringKey> = { needs: "wfv.needs", working: "pp.col.working", review: "pill.review", done: "done" };
@@ -90,132 +92,50 @@ function Tabs({ id, tab }: { id: string; tab: ProjectTab }) {
   );
 }
 
-function taskMeta(task: ProjectTaskView): string {
-  const bits: string[] = [];
-  if (task.kind === "ptask") {
-    if (task.group) bits.push(task.group);
-    bits.push(`${task.path}:${task.line}`);
-  } else {
-    bits.push((task.kind === "mr" ? "!" : "#") + task.number);
-    if (task.branch) bits.push(task.branch);
-    if (task.author) bits.push(t("pp.by", { name: task.author }));
-    if (task.labels.length) bits.push(task.labels.join(", "));
-    const c = checksMark(task.checks);
-    if (c) bits.push(t("pp.checks", { mark: c }));
-  }
-  return bits.join(" · ");
-}
-
-function TaskRow({ project, task, open, onToggle }: { project: string; task: ProjectTaskView; open: boolean; onToggle: () => void }) {
-  const talk = () => {
-    pendingDraft.value = { text: taskRef(project, task), notChat: "" };
+/** TasksPanel is the project.tasks view; a tapped task opens a sheet,
+ * Cancel first: "Talk about it" puts a reference in the chat box. */
+function TasksPanel({ p }: { p: ProjectInfo }) {
+  const [picked, setPicked] = useState<ProjectTask | null>(null);
+  const talk = (task: ProjectTask) => {
+    setPicked(null);
+    pendingDraft.value = { text: taskRef(p.name, task), notChat: "" };
     goTab("chat");
   };
   return (
-    <li class={`ptask pdepth-${task.depth} st-${task.state}`} data-id={task.id}>
-      <button type="button" class="ptask-open" aria-expanded={open ? "true" : "false"} onClick={onToggle}>
-        <span class={`pmark st-${task.state}`} aria-hidden="true">
-          {taskMark(task)}
-        </span>
-        <span class="ptask-name">
-          <bdi class="ptask-title">{task.title}</bdi>
-          <span class="ptask-meta" dir="ltr">
-            {taskMeta(task)}
-          </span>
-        </span>
-      </button>
-      {open && (
-        <div class="choices ptask-acts">
-          <Button small kind="primary" onClick={talk}>
-            {t("pp.talk")}
-          </Button>
-        </div>
+    <>
+      <ProjectTasksView ws={p.ws} onPick={setPicked} />
+      {picked && (
+        <PhoneSheet
+          title={picked.title}
+          onLater={() => setPicked(null)}
+          actions={safeFirst([
+            { label: t("cancel"), safe: true, onClick: () => setPicked(null) },
+            { label: t("pp.talk"), primary: true, onClick: () => talk(picked) },
+          ])}
+        />
       )}
-    </li>
+    </>
   );
 }
 
-function Section({ project, sec, open, setOpen }: { project: string; sec: ProjectSectionView; open: string; setOpen: (id: string) => void }) {
-  return (
-    <section class="psec" data-kind={sec.kind} aria-labelledby={`psec-${sec.kind}`}>
-      <h2 class="psec-title" id={`psec-${sec.kind}`}>
-        {sec.open > 0 ? t("pp.open_n", { title: sec.title, n: sec.open }) : sec.title}
-      </h2>
-      {sec.note && <p class="sheet-note">{sec.note}</p>}
-      {sec.items.length > 0 && (
-        <ul class="ptask-list">
-          {sec.items.map((x) => (
-            <TaskRow key={x.id} project={project} task={x} open={open === x.id} onToggle={() => setOpen(open === x.id ? "" : x.id)} />
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-type TasksState = { kind: "loading" } | { kind: "ok"; sections: ProjectSectionView[] } | { kind: "err"; why: string };
-
-function TasksPanel({ p }: { p: ProjectInfo }) {
-  const [st, setSt] = useState<TasksState>({ kind: "loading" });
-  const [tries, setTries] = useState(0);
-  const [open, setOpen] = useState("");
-  const ws = p.here ? "" : p.id;
+/** useTopic subscribes to a topic of the project (through the door for
+ * another one; that subscription ends with the panel) and gives it. */
+function useTopic(ws: string, topic: string) {
   useEffect(() => {
-    if (!live.value) return;
-    let stop = false;
-    setSt({ kind: "loading" });
-    link.requestWithID("project.tasks", {}, ws).result.then(
-      (r) => !stop && setSt({ kind: "ok", sections: readProjectTasks(r) }),
-      (e: unknown) => !stop && setSt({ kind: "err", why: e instanceof ReqError ? e.message : "" }),
-    );
-    return () => {
-      stop = true;
-    };
-  }, [ws, tries, live.value]);
-  if (st.kind === "loading") return <SkeletonRows rows={6} mono={false} />;
-  if (st.kind === "err") {
-    return (
-      <div class="err-line" role="status">
-        <p dir="auto">{t("pp.tasks_err", { reason: st.why })}</p>
-        <Button small needsLink onClick={() => setTries(tries + 1)}>
-          {t("retry")}
-        </Button>
-      </div>
-    );
-  }
-  if (st.sections.length === 0) return <p class="empty">{t("pp.no_tasks_body")}</p>;
-  return (
-    <div class="ptasks">
-      {st.sections.map((s) => (
-        <Section key={s.kind} project={p.name} sec={s} open={open} setOpen={setOpen} />
-      ))}
-    </div>
-  );
+    door.subscribe(ws, topic);
+    return ws ? () => door.unsubscribe(ws, topic) : undefined;
+  }, [ws, topic]);
+  return door.store(ws).topic(topic).value;
 }
 
-/** Other stands in for Runs, Git and Board of a project the laptop
- * window does not have open: its topics come from its own window. */
-function Other({ p }: { p: ProjectInfo }) {
-  return (
-    <div class="pother">
-      <p class="empty">{t("pp.other_body")}</p>
-      {p.where && (
-        <p class="sheet-note" dir="ltr">
-          {p.where}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function RunsPanel() {
-  useEffect(() => link.subscribe("runs"), []);
-  const st = store.topic("runs").value;
+function RunsPanel({ ws }: { ws: string }) {
+  const st = useTopic(ws, "runs");
   const runs = readRuns(st?.data);
   const now = useNow(runs.some((r) => r.live), 1000);
   const [since, setSince] = useState(() => Date.now());
   useEffect(() => setSince(Date.now()), [st?.seq]);
-  const canAct = link.meta.value?.role !== "viewer";
+  const role = ws ? door.meta.value.get(ws)?.role : link.meta.value?.role;
+  const canAct = role !== undefined && role !== "viewer";
   if (!st) return <SkeletonRows rows={4} mono={false} />;
   if (runs.length === 0) return <p class="empty">{t("pp.no_runs")}</p>;
   return (
@@ -227,9 +147,8 @@ function RunsPanel() {
   );
 }
 
-function GitPanel() {
-  useEffect(() => link.subscribe("git"), []);
-  const st = store.topic("git").value;
+function GitPanel({ ws, here }: { ws: string; here: boolean }) {
+  const st = useTopic(ws, "git");
   const g = readGit(st?.data);
   if (!st || g.loading) return <SkeletonRows rows={4} />;
   if (!g.repo) return <p class="empty">{t("pp.git_none")}</p>;
@@ -248,7 +167,7 @@ function GitPanel() {
           {g.log.slice(0, 5).map((c) => (
             <li key={c.hash} class="pgit-commit">
               <bdi class="pgit-subject">{c.subject}</bdi>
-              <span class="ptask-meta" dir="ltr">
+              <span class="pgit-meta" dir="ltr">
                 {c.hash} · {age(c.when, now)}
                 {c.unpushed && " · ↑"}
               </span>
@@ -256,16 +175,17 @@ function GitPanel() {
           ))}
         </ul>
       )}
-      <Button small onClick={() => goTab("git")}>
-        {t("pp.git_open")}
-      </Button>
+      {here && (
+        <Button small onClick={() => goTab("git")}>
+          {t("pp.git_open")}
+        </Button>
+      )}
     </div>
   );
 }
 
-function BoardPanel() {
-  useEffect(() => link.subscribe("runs"), []);
-  const st = store.topic("runs").value;
+function BoardPanel({ ws, here }: { ws: string; here: boolean }) {
+  const st = useTopic(ws, "runs");
   if (!st) return <SkeletonRows rows={4} mono={false} />;
   const cols = boardCounts(readRuns(st.data));
   return (
@@ -285,9 +205,13 @@ function BoardPanel() {
             <ul class="pboard-list">
               {cols[c].slice(0, 3).map((r) => (
                 <li key={r.key}>
-                  <button type="button" class="pboard-tile" onClick={() => go({ tab: "more", rest: "runs", query: {} })}>
-                    <bdi>{r.title}</bdi>
-                  </button>
+                  {here ? (
+                    <button type="button" class="pboard-tile" onClick={() => go({ tab: "more", rest: "runs", query: {} })}>
+                      <bdi>{r.title}</bdi>
+                    </button>
+                  ) : (
+                    <bdi class="pboard-tile">{r.title}</bdi>
+                  )}
                 </li>
               ))}
             </ul>
@@ -300,10 +224,10 @@ function BoardPanel() {
 
 function Panel({ p, tab }: { p: ProjectInfo; tab: ProjectTab }) {
   if (tab === "tasks") return <TasksPanel key={p.id} p={p} />;
-  if (!p.here) return <Other p={p} />;
-  if (tab === "runs") return <RunsPanel />;
-  if (tab === "git") return <GitPanel />;
-  return <BoardPanel />;
+  if (!reachable(p)) return <p class="empty pother">{t("pp.asleep_body")}</p>;
+  if (tab === "runs") return <RunsPanel key={p.id} ws={p.ws} />;
+  if (tab === "git") return <GitPanel key={p.id} ws={p.ws} here={p.here} />;
+  return <BoardPanel key={p.id} ws={p.ws} here={p.here} />;
 }
 
 function stateLine(p: ProjectInfo): string {
@@ -334,5 +258,16 @@ export function ProjectPage({ id }: { id: string }) {
         )}
       </div>
     </View>
+  );
+}
+
+/** ProjectsPage is the projects list (MOBUX-6) under More; a card opens
+ * its project page. */
+export function ProjectsPage() {
+  useEffect(() => link.subscribe("projects"), []);
+  return (
+    <SubView title={t("ph.proj.title")} name="projects">
+      <ProjectsList onOpen={(p) => go({ tab: "more", rest: "projects/" + p.id, query: {} })} />
+    </SubView>
   );
 }

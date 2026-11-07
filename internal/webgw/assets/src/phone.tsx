@@ -8,4 +8,4 @@ import { SP } from "./strings.phone";
 
 addStrings(SP);
 
-export { ProjectPage } from "./views/phone/ProjectPage";
+export { ProjectPage, ProjectsPage } from "./views/phone/ProjectPage";
