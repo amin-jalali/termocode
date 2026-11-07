@@ -2,8 +2,8 @@ package dbclient
 
 import "fmt"
 
-// OracleDialect contains Oracle Database syntax and catalog queries. It
-// is not returned by DialectFor yet: the driver comes with its own change.
+// OracleDialect contains Oracle Database syntax and catalog queries.
+// DialectFor returns it; the driver is not built in yet (DriverMissing).
 type OracleDialect struct{}
 
 // OracleShowPlan reads the plan that EXPLAIN PLAN FOR wrote.
