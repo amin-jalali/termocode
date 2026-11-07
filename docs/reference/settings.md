@@ -113,6 +113,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `workflows_history_days` | int | `30` | Days a finished workflow run (its file and logs) is kept before it is deleted at start. |
 | `workflows_wait_hours` | int | `12` | Hours a run waits for an answer on a card (a write to allow, a budget pause) before the step is marked waiting too long. |
 | `workflows_agent_sandbox` | enum | `worktree` | Where an outside agent step works: worktree (it may change files in its own git worktree) or read-only (it may only read). |
+| `workflows_trigger_poll_min` | int | `5` | Minutes between two looks at GitHub (through gh) for the github triggers of workflows that are on (1-1440). |
+| `workflows_webhook_port` | int | `0` | Port on 127.0.0.1 for the inbound webhooks of workflows (POST /hooks/<name>, signed with the secret workflow-hook.<name>). 0 means no webhooks. Put a tunnel or a reverse proxy in front to reach it from outside. |
 
 ## Git (file only)
 

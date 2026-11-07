@@ -242,6 +242,7 @@ func workflowsPaletteItems() []picker.Item {
 		{ID: "workflow-edit-file", Title: "Workflows: Edit Selected File"},
 		{ID: "workflow-history", Title: "Workflows: History of Selected"},
 		{ID: "workflow-undo-write", Title: "Workflows: Undo a Write of Selected Run…"},
+		{ID: "workflow-triggers", Title: "Workflows: Trigger Events…"},
 	}
 }
 
@@ -269,6 +270,8 @@ func (m *Model) dispatchWorkflowsPalette(id string) (tea.Cmd, bool) {
 	case "workflow-history":
 		cmd, _ := m.handleWorkflowsPageKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 		return tea.Batch(open, cmd), true
+	case "workflow-triggers":
+		return tea.Batch(open, m.wfxTrigList()), true
 	case "workflow-undo-write":
 		id := m.wfxUndoRun()
 		if id == "" {

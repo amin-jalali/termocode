@@ -138,6 +138,7 @@ func (c *checker) parse(p string, data []byte) *File {
 	f.Title = o.str("title")
 	f.Description = o.str("description")
 	f.Schedule = c.schedule(o)
+	f.Triggers = c.triggers(o)
 	f.Vars = c.vars(o)
 	f.Limits = c.limits(o)
 	if r := c.retries(o, "retries"); r != nil {
@@ -168,7 +169,7 @@ func (c *checker) parse(p string, data []byte) *File {
 	return f
 }
 
-var topKeys = []string{"$schema", "version", "name", "title", "description", "schedule", "vars", "limits", "retries", "on_error", "notify", "resume_on_start", "steps"}
+var topKeys = []string{"$schema", "version", "name", "title", "description", "schedule", "on", "vars", "limits", "retries", "on_error", "notify", "resume_on_start", "steps"}
 
 func (c *checker) schedule(o *obj) *Schedule {
 	n := o.get("schedule")
@@ -204,6 +205,92 @@ func (c *checker) schedule(o *obj) *Schedule {
 	so.finish([]string{"preset", "time", "cron", "tz", "precheck"})
 	return s
 }
+
+var triggerKeys = []string{"github", "webhook", "from", "repo", "labels", "text", "branch", "ask", "worktree", "base"}
+
+// triggers reads "on": a list of GitHub and webhook triggers.
+func (c *checker) triggers(o *obj) []Trigger {
+	n := o.get("on")
+	if n == nil {
+		return nil
+	}
+	if n.kind != kArray {
+		c.errAt(n.off, "on", "must be a list of triggers, like [{\"github\": \"issue_labeled\", \"labels\": [\"agent\"]}]")
+		return nil
+	}
+	if len(n.vals) > MaxTriggers {
+		c.errAt(n.off, "on", "has %d triggers; the most is %d", len(n.vals), MaxTriggers)
+		return nil
+	}
+	var out []Trigger
+	hooks := map[string]bool{}
+	for i, v := range n.vals {
+		where := fmt.Sprintf("on[%d]", i)
+		to := c.object(v, where)
+		if to == nil {
+			continue
+		}
+		t := Trigger{Line: c.line(v.off), Ask: true}
+		t.GitHub = to.enum("github", "", GitHubEvents...)
+		t.Webhook = to.str("webhook")
+		t.From = to.enum("from", "", WebhookFroms...)
+		t.Repo = to.str("repo")
+		t.Labels = to.strList("labels")
+		t.Text = to.str("text")
+		t.Branch = to.str("branch")
+		if to.get("ask") != nil {
+			t.Ask = to.boolean("ask")
+		}
+		t.Worktree = to.boolean("worktree")
+		t.Base = to.str("base")
+		gh, wh := to.get("github") != nil, to.get("webhook") != nil
+		switch {
+		case !gh && !wh:
+			c.errAt(v.off, where, `needs "github" (%s) or "webhook" (a name)`, strings.Join(GitHubEvents, ", "))
+		case gh && wh:
+			c.errAt(v.off, where, `has both "github" and "webhook"; keep one`)
+		case wh:
+			if !idRe.MatchString(t.Webhook) {
+				c.errAt(to.off("webhook"), where+".webhook", "use a-z, 0-9, _ and -, starting with a letter, at most 40 characters")
+			} else if hooks[t.Webhook] {
+				c.errAt(to.off("webhook"), where+".webhook", "%s is used twice in this file", quote(t.Webhook))
+			}
+			hooks[t.Webhook] = true
+			if t.From == "" {
+				t.From = "generic"
+			}
+			for _, k := range []string{"repo", "labels", "text", "branch"} {
+				if to.get(k) != nil {
+					c.warnAt(to.off(k), where+"."+k, "is for github triggers; a webhook ignores it")
+				}
+			}
+		default:
+			if to.get("from") != nil {
+				c.warnAt(to.off("from"), where+".from", "is for webhook triggers; a github trigger ignores it")
+			}
+			if t.Repo != "" && !triggerRepoRe.MatchString(t.Repo) {
+				c.errAt(to.off("repo"), where+".repo", `must be "owner/name"`)
+			}
+			if t.GitHub == "issue_labeled" && len(t.Labels) == 0 {
+				c.errAt(v.off, where, `issue_labeled needs "labels": the labels that start the workflow`)
+			}
+			if t.GitHub == "mention" && t.Text == "" {
+				t.Text = "@termocode"
+			}
+		}
+		if strings.HasPrefix(t.Base, "-") {
+			c.errAt(to.off("base"), where+".base", "must be a branch, tag or commit, not an option")
+		}
+		if t.Base != "" && !t.Worktree {
+			c.warnAt(to.off("base"), where+".base", `is used only with "worktree": true`)
+		}
+		to.finish(triggerKeys)
+		out = append(out, t)
+	}
+	return out
+}
+
+var triggerRepoRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9._-]{1,100}$`)
 
 func (c *checker) vars(o *obj) map[string]any {
 	n := o.get("vars")
