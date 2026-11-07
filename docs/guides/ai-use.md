@@ -826,6 +826,23 @@ The same screen can add servers (MCP) for this work. Each shows the exact
 The `visual-qa` skill tells the AI how to check a page in the browser:
 phone and desktop widths, console errors, the main buttons.
 
+## Use termocode as the agent of another editor (ACP)
+
+`termocode acp` runs termocode's AI as an agent for any editor that
+speaks the Agent Client Protocol. It talks JSON-RPC on stdin and stdout.
+
+1. Set up AI in termocode first: **AI: Configure Provider…**.
+2. In the other editor, add a custom agent. Use the command
+   `termocode acp`.
+3. Open the agent's chat there and ask. The answer streams in as it is
+   written. Stop cancels the turn.
+
+Files the editor attaches to the message go in with the question. Each
+chat keeps its own history (the last 40 messages).
+
+This mode is chat only for now. The agent does not run tools, read or
+change files by itself, or ask for permissions.
+
 ## Keys at a glance
 
 | Key | Action |
