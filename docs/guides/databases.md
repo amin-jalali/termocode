@@ -206,7 +206,7 @@ Move to a table or view in the tree and press:
 | `d` | describe: columns, types, null, defaults, keys, indexes, foreign keys, triggers |
 | `D` | the DDL in a read-only SQL buffer (`q` goes back) |
 | `s` | write `SELECT * FROM <table> LIMIT 100;` at the end of the connection's console and run it there |
-| `c` | generate code from the table's columns and copy it: SELECT, INSERT, UPDATE, DELETE, CREATE or DROP (names quoted, placeholders for values; nothing runs), the column names, qualified column names, a Go struct, a TypeScript interface or a Python dataclass |
+| `c` | generate code from the table's columns and copy it: SELECT, INSERT, UPDATE, DELETE, CREATE or DROP (names quoted, placeholders for values; nothing runs), the column names, qualified column names, a Go struct, a TypeScript interface or a Python dataclass. In the list Enter copies and `→` inserts the text at the editor cursor. On a routine (PostgreSQL, MySQL), `c` offers **Call with arguments…**: it asks for each argument (blank for NULL) and makes `SELECT * FROM f(…)` or `CALL p(…)`, and DROP with the argument types |
 | `#` | count the rows |
 | `i` | import a CSV file into the table (not for views) |
 | `y` | copy the quoted table name |

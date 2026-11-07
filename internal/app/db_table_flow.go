@@ -277,12 +277,13 @@ func (m *Model) onDBCount(msg dbCountMsg) tea.Cmd {
 // ── describe and DDL ────────────────────────────────────────────────────
 
 type dbMetaMsg struct {
-	gen  uint64
-	tbl  dbTable
-	meta dbTableMeta
-	ddl  bool
-	code string // a Generate code kind (DBX-43): copy that text
-	err  error
+	gen    uint64
+	tbl    dbTable
+	meta   dbTableMeta
+	ddl    bool
+	code   string // a Generate code kind (DBX-43): copy that text
+	insert bool   // with code: insert it at the editor cursor instead
+	err    error
 }
 
 func (m *Model) databaseTableMeta(ddl bool) tea.Cmd {

@@ -73,7 +73,9 @@ type dbTreeRow struct {
 
 type dbState struct {
 	console             *dbConsoleState
-	genTable            dbTable // the table of the open Generate code picker (DBX-43)
+	genTable            dbTable         // the table of the open Generate code picker (DBX-43)
+	genRoutine          dbRoutineTarget // the routine of that picker, when it is one
+	routineAsk          *dbRoutineAsk   // the open routine argument form
 	loaded              bool
 	activeID            string
 	generation          uint64

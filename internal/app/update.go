@@ -296,6 +296,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBTxDone(msg)
 	case dbMetaMsg:
 		return m, m.onDBMeta(msg)
+	case dbRoutineMsg: // db_generate_routine.go
+		return m, m.onDBRoutine(msg)
 	case dbGenMsg:
 		return m, m.onDBGen(msg)
 	case dbCountMsg:
@@ -331,6 +333,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case lspUninstallDoneMsg:
 		return m, m.onToolUninstalled(msg)
 	case picker.ActionMsg:
+		if m.pickerKind == pickerKindDBGenerate { // db_generate.go: → inserts at the cursor
+			m.pickerOpen = false
+			return m, m.databaseGeneratePick(msg.ID, true)
+		}
 		if m.pickerKind == pickerKindLayoutOpen { // layout_palette.go: → previews the row
 			cmd := m.onLayoutPickerAction(msg.ID)
 			if m.confirmOpen {
@@ -909,7 +915,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)
-		m.startLocalHistory() // GITX-35 (gitx_local_history.go)
+		m.startLocalHistory()  // GITX-35 (gitx_local_history.go)
 		m.refreshOpenPalette() // opened before ready: rows may be stale
 		return m, tea.Batch(cmds...), true
 	case hotExitFoundMsg:
