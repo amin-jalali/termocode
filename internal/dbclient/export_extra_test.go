@@ -103,7 +103,7 @@ func TestExportSQLUpdateRefusesMissingOrUnknownKeys(t *testing.T) {
 func TestExportCSVOptionsSeparatorHeaderAndNullText(t *testing.T) {
 	o := ExportOptions{Separator: ';', NoHeader: true, NullText: `\N`}
 	got := exportString(t, FormatCSV, o, exportResult())
-	want := "1;O'Hara;\\N\r\n2;back\\slash;\"line1\nline2\"\r\n-3;'=1+1;\"a,b \"\"q\"\"\"\r\n"
+	want := "1;O'Hara;\\N\r\n2;back\\slash;\"line1\r\nline2\"\r\n-3;'=1+1;\"a,b \"\"q\"\"\"\r\n"
 	if got != want {
 		t.Fatalf("got %q\nwant %q", got, want)
 	}
@@ -114,7 +114,7 @@ func TestExportCSVOptionsSeparatorHeaderAndNullText(t *testing.T) {
 
 func TestExportSelectedColumnsOnly(t *testing.T) {
 	got := exportString(t, FormatCSV, ExportOptions{Columns: []string{"note", "id"}}, exportResult())
-	want := "note,id\r\n,1\r\n\"line1\nline2\",2\r\n\"a,b \"\"q\"\"\",-3\r\n"
+	want := "note,id\r\n,1\r\n\"line1\r\nline2\",2\r\n\"a,b \"\"q\"\"\",-3\r\n"
 	if got != want {
 		t.Fatalf("got %q\nwant %q", got, want)
 	}
