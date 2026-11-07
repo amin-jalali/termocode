@@ -187,7 +187,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiLSPTools(root, call)...)      // Group K5: LSP hover, symbols, rename, code actions
 	tools = append(tools, aiGitTools(root, call)...)        // Group K4
 	tools = append(tools, aiTasksTools(root, call)...)      // Group K6: tasks and tests
-	tools = append(tools, aiWorktreeTools(root)...)         // WTX-12: worktrees_list, worktree_note
+	tools = append(tools, aiWorktreeTools(root)...)         // WTX-12: worktrees_list, worktree_note; CMP-80: worktree_block
 	tools = append(tools, aiAdminTools(root, call)...)      // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...)      // Group K7
 	tools = append(tools, m.aiServicesTools(call)...)       // the Services view (ai_services_tools.go)
@@ -313,6 +313,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
 	mentions := m.aiMCPMentions(gen, ch, text, ai.SupportsImages(slot.p))
+	// "@chat:", "@symbol:", "@diagnostics", "@diff", "@changes", "@url:"
+	// words: read with the turn's own read-only tools (CMP-77).
+	mentions = aiJoinMentions(mentions, aiContextMentions(text, root, tools))
 	mcpLines := ""
 	if mcpTools != nil {
 		mcpLines = m.mcpPromptLines() // "GitHub is connected as … (read only)."

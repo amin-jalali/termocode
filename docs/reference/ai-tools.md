@@ -70,8 +70,9 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
 | [`tests_run`](#tests_run) | confirm (run) | asks | Run tests with the IDE's test runner (go test, pytest, cargo, jest, vitest); the Testing view shows progress. |
 | [`tests_results`](#tests_results) | auto | yes | Results of the last test run: pass / fail / skip counts, each failing test with file:line and its message, package (build) errors. |
-| [`worktrees_list`](#worktrees_list) | auto | yes | List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done) and the last note. |
+| [`worktrees_list`](#worktrees_list) | auto | yes | List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done), what it waits for and the last note. |
 | [`worktree_note`](#worktree_note) | auto | yes | Leave a short note (one line, at most 500 characters) and / or a status on a worktree, so the user sees what you do there in the WORKTREES view. |
+| [`worktree_block`](#worktree_block) | auto | yes | Record that the work in one worktree waits for the work in another (a task dependency across agents), or drop it with remove. |
 | [`lsp_servers`](#lsp_servers) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the language servers termocode installs (like the manager picker). |
 | [`dap_adapters`](#dap_adapters) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | no | Manage the debug adapters termocode installs (like the manager picker). |
 | [`extensions`](#extensions) | list: auto<br>run: confirm (run)<br>reload: confirm (run)<br>log: auto | no | termocode's Lua extensions (~/.config/termocode/extensions). |
@@ -811,7 +812,7 @@ Results of the last test run: pass / fail / skip counts, each failing test with 
 
 ### worktrees_list
 
-List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done) and the last note.
+List the git worktrees of this repository: path, branch, kind (main, user, agent, external), parent, the linked issue or PR with its state and CI, the agent status (working, blocked, done), what it waits for and the last note.
 
 **Gate:** auto
 
@@ -832,6 +833,20 @@ Leave a short note (one line, at most 500 characters) and / or a status on a wor
 | `status` | string |   | optional: your status in it. One of: `working`, `blocked`, `done` |
 | `text` | string |   | the note |
 | `worktree` | string |   | optional: a path or branch from worktrees_list; the workspace's worktree when left out |
+
+### worktree_block
+
+Record that the work in one worktree waits for the work in another (a task dependency across agents), or drop it with remove. The WORKTREES view draws the graph; a blocker is settled when its status is done, its PR merged or its issue closed.
+
+**Gate:** auto
+
+**MCP server:** yes
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `waits_for` | string | yes | the worktree it waits for: a path, branch or name from worktrees_list |
+| `remove` | boolean |   | optional: drop the dependency instead |
+| `worktree` | string |   | optional: the worktree that waits (a path or branch from worktrees_list); the workspace's worktree when left out |
 
 ### lsp_servers
 
@@ -1994,6 +2009,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-plan-approval` | AI: Toggle Plan Approval | never | AI provider, credentials and approvals stay with the user; the AI never approves its own plan |
 | `ai-plan-review` | AI: Review Waiting Plan | never | the plan card is the user's answer; the AI never approves its own plan |
 | `ai-plan-worktree` | AI: Run Next Plan in a Worktree, Then Ship… / Off | never | it leads to a push and a pull request: the user starts it |
+| `ai-powers` | AI: Powers Catalog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-profile-edit` | AI: Edit Profiles | never | AI provider, credentials and approvals stay with the user |
 | `ai-profile-form` | AI: Edit Profile… | never | AI provider, credentials and approvals stay with the user (the step form is for the user; a typed tool comes later) |
 | `ai-profile-new` | AI: New Profile from Current… | never | AI provider, credentials and approvals stay with the user |
@@ -2024,6 +2040,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `bookmark-list` | Bookmarks: Show List | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `bookmark-toggle` | Bookmarks: Toggle on Current Line | auto |   |
 | `buffer-info` | View: Show Buffer Info | auto |   |
+| `bugfix-spec-fix` | AI: Fix Bug from Spec… | never | starts a chat with the user; the user reads the fix prompt and sends it |
+| `bugfix-spec-new` | AI: New Bugfix Spec… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user names the bug and fills in the spec |
 | `cheat-sheet` | Help: Show Shortcuts | auto |   |
 | `clipboard-history` | Edit: Clipboard History | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `close-buffer` | View: Close Editor | confirm (ide) |   |
@@ -2568,6 +2586,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-bg-tasks` | Worktree: Background Tasks… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-cleanup` | Worktree: Clean Up… | confirm (always asks) |   |
 | `worktree-delete` | Worktree: Delete Selected… | confirm (always asks) |   |
+| `worktree-deps` | Worktree: Show Dependency Graph | auto |   |
 | `worktree-filter` | Worktree: Next Filter | auto |   |
 | `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |

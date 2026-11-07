@@ -53,7 +53,8 @@ type Meta struct {
 
 	Adopted bool `json:"adopted,omitempty"` // an external worktree the user adopted (WTX-10)
 
-	Port int `json:"port,omitempty"` // the dev server port of the worktree (CMP-5, ports.go)
+	Port      int      `json:"port,omitempty"`       // the dev server port of the worktree (CMP-5, ports.go)
+	BlockedBy []string `json:"blocked_by,omitempty"` // the worktrees (paths) whose work this one waits for (CMP-80, deps.go)
 }
 
 // Empty: termocode knows nothing about the worktree.

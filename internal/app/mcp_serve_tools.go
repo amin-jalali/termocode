@@ -79,6 +79,7 @@ var mcpServeAllowList = []mcpServeToolRow{
 	// Worktrees (WTX-12): read, and short notes (text only, redacted)
 	{name: "worktrees_list"},
 	{name: "worktree_note"},
+	{name: "worktree_block"}, // CMP-80: "this worktree waits for that one" (metadata only)
 	// Services and HTTP (read)
 	{name: "services_list"},
 	{name: "services_status"},
