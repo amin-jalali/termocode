@@ -575,6 +575,9 @@ missing	http-cookies	HTTP|S
 missing	http-copy-snippet	HTTP|S
 missing	http-fields	HTTP|S
 missing	http-import-openapi	HTTP|S
+missing	kubernetes-helm-install	Kubernetes|S
+missing	kubernetes-helm-repo-add	Kubernetes|S
+missing	kubernetes-kustomize	Kubernetes|S
 missing	kubernetes-snippet	Kubernetes|S
 missing	local-history	Git|S
 missing	local-history-deleted	Git|S

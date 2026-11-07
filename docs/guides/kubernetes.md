@@ -153,6 +153,25 @@ PersistentVolumeClaim or StatefulSet. The name is `my-app` and the
 namespace is the view's namespace; change them and save the file. Nothing
 is sent to the cluster.
 
+## Kustomize preview
+
+**Kubernetes: Kustomize Preview** builds the folder of the current file
+with `kubectl kustomize` and shows the result in a read-only YAML page.
+Secret values are masked. Nothing is sent to the cluster.
+
+## Helm repos and charts
+
+**Kubernetes: Add Helm Repo…** asks for a name and a URL
+(`bitnami https://charts.bitnami.com/bitnami`). A card shows the command
+(`helm repo add`); **Cancel** is the first button and has the focus. It
+changes your helm repo list, not the cluster.
+
+**Kubernetes: Install Helm Chart…** asks for a release name, a chart and
+an optional version (`web bitnami/nginx 15.1.0`). The chart goes to the
+view's context and namespace. A card shows the scope and the command
+(`helm install`); **Cancel** has the focus. helm's notes open in a
+read-only page. You need `helm` on your `PATH`.
+
 ## The AI
 
 The AI can open the view and load it again. It can also read the
@@ -160,7 +179,8 @@ cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
 Secrets in their answers are hidden. The AI can never restart or
 scale a deployment, delete an object, start a port-forward, copy pod
-files, debug a pod or switch the context.
+files, debug a pod, add a helm repo, install a chart or switch the
+context.
 
 ## When something is wrong
 

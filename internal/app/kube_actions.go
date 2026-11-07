@@ -16,11 +16,17 @@ func kubePaletteItems() []picker.Item {
 		{ID: "kubernetes-context", Title: "Kubernetes: Switch Context…"},
 		{ID: "kubernetes-namespace", Title: "Kubernetes: Switch Namespace…"},
 		{ID: "kubernetes-snippet", Title: "Kubernetes: New Manifest from Snippet…"},
+		{ID: "kubernetes-kustomize", Title: "Kubernetes: Kustomize Preview"},
+		{ID: "kubernetes-helm-repo-add", Title: "Kubernetes: Add Helm Repo…"},
+		{ID: "kubernetes-helm-install", Title: "Kubernetes: Install Helm Chart…"},
 	}
 }
 
 // dispatchKubePalette runs the "Kubernetes: …" palette commands.
 func (m *Model) dispatchKubePalette(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.dispatchKubeInstallPalette(id); ok { // kube_install.go
+		return cmd, true
+	}
 	switch id {
 	case "kubernetes-snippet":
 		m.openTasksPickerItems(" New Manifest ", kubeSnippetItems())

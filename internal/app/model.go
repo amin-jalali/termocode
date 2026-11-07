@@ -610,6 +610,8 @@ type Model struct {
 	services *servicesState
 	// kube is the Kubernetes view state (kube_state.go); idle until shown.
 	kube *kubeState
+	// pendingKubeHelm is the helm repo / install card's answer (kube_install.go).
+	pendingKubeHelm kubeHelmTarget
 	// wt is the WORKTREES view (worktrees_state.go).
 	wt *wtState
 	// databases is lazy and holds idle sessions only while the view is open.

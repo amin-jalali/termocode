@@ -58,6 +58,9 @@ func (m *Model) askKubeScale(d kube.Deployment, value, errText string) {
 
 // handleKubePromptSubmit takes the replicas answer. ok=false: not ours.
 func (m *Model) handleKubePromptSubmit(value string) (tea.Cmd, bool) {
+	if cmd, ok := m.handleKubeInstallPrompt(value); ok { // kube_install.go
+		return cmd, true
+	}
 	if m.kube != nil {
 		if cmd, ok := m.handleKubeFilePrompt(value); ok { // kube_podfiles.go
 			return cmd, true
