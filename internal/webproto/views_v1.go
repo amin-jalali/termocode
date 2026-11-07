@@ -42,6 +42,9 @@ func SourceArgs(d ViewDef, args map[string]string) any {
 	case OpTasksTail:
 		return LabelArgs{Label: args["task"]}
 	}
+	if v, ok := sourceArgsV2(d.Source.Op, args); ok {
+		return v
+	}
 	return EmptyArgs{}
 }
 
