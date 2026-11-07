@@ -24,7 +24,7 @@ export const SUBPROTOCOL = "termocode.v2";
 
 export const TOPIC_NAMES = [
   "status", "toasts", "chats", "chat", "cards", "tree", "bufs", "buf", "terms", "term",
-  "git", "tasks", "runs", "db", "containers", "mcp", "settings", "diagnostics", "tests", "debug", "services", "ai", "workflows", "worktrees",
+  "git", "tasks", "runs", "db", "containers", "mcp", "settings", "diagnostics", "tests", "debug", "services", "ai", "workflows", "worktrees", "projects",
 ] as const;
 
 export const KEYED_TOPICS = ["buf", "term"] as const;
@@ -81,6 +81,12 @@ export function isTopic(s: string): boolean {
   return i > 0 && /^[1-9][0-9]{0,9}$/.test(s.slice(i + 1));
 }
 
+/** isWS reports whether v is a workspace key on the wire (MOB-50): 16
+ * lower-case hex digits, never a path. */
+export function isWS(v: unknown): v is string {
+  return typeof v === "string" && /^[0-9a-f]{16}$/.test(v);
+}
+
 /** topicName is the name part of a topic: "buf:12" → "buf". */
 export function topicName(s: string): string {
   const i = s.indexOf(":");
@@ -96,6 +102,7 @@ function topic(o: Obj): string {
 /** checkServerMsg checks one decoded message and returns it typed. */
 export function checkServerMsg(v: unknown): ServerMsg {
   if (!isObj(v)) fail("message: want an object");
+  if (v.ws !== undefined && !isWS(v.ws)) fail("ws: want a workspace key");
   switch (v.t) {
     case "meta": {
       if (uint(v, "v") !== PROTOCOL_VERSION) fail("meta.v: unsupported version");

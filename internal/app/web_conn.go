@@ -109,6 +109,12 @@ func (c *webConn) dispatch(line []byte) bool {
 	if !c.hello {
 		return c.protocolError("Say hello first.")
 	}
+	// MOB-50: the gateway strips ws before a frame reaches a hub; a hub
+	// serves only its own workspace, so a frame that still names one is
+	// refused rather than guessed at.
+	if webFrameWS(msg) != "" {
+		return c.protocolError("That message is not valid here.")
+	}
 	switch msg := msg.(type) {
 	case *webproto.Ping:
 		return c.send(&webproto.Pong{T: webproto.KindPong, N: msg.N})
@@ -177,4 +183,17 @@ func (c *webConn) writeLoop() {
 			return
 		}
 	}
+}
+
+// webFrameWS is the ws a browser frame names (MOB-50); "" for none.
+func webFrameWS(m webproto.Msg) string {
+	switch m := m.(type) {
+	case *webproto.Sub:
+		return m.WS
+	case *webproto.Unsub:
+		return m.WS
+	case *webproto.Req:
+		return m.WS
+	}
+	return ""
 }
