@@ -282,6 +282,7 @@ type dbMetaMsg struct {
 	meta dbTableMeta
 	ddl  bool
 	code string // a Generate code kind (DBX-43): copy that text
+	col  string // go to definition of a column (DBX-5): the DDL cursor goes to it
 	err  error
 }
 
@@ -325,7 +326,9 @@ func (m *Model) onDBMeta(msg dbMetaMsg) tea.Cmd {
 		return m.onDBGenerated(msg)
 	}
 	if msg.ddl {
-		return m.databaseShowDDL(msg.tbl, dbBuildDDL(msg.tbl, msg.meta))
+		cmd := m.databaseShowDDL(msg.tbl, dbBuildDDL(msg.tbl, msg.meta))
+		m.databaseFocusColumn(msg.col)
+		return cmd
 	}
 	s := m.dbConsole()
 	if s.running != nil {

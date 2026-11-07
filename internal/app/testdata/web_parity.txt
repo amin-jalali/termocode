@@ -495,6 +495,7 @@ missing	containers-volume-restore	Containers|S
 missing	db-ai-explain-query	Databases|S
 missing	db-ai-fix-error	Databases|S
 missing	db-ai-generate-sql	Databases|S
+missing	db-another-console	Databases|S
 missing	db-cancel-session	Databases|S
 missing	db-edit-source	Databases|S
 missing	db-end-session	Databases|S

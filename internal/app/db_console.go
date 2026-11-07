@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -68,6 +69,7 @@ type dbConsoleState struct {
 	lens     map[string]string // file + "\x00" + SQL → the lens status
 	attached map[string]string // project .sql file → connection (session only)
 	pending  *dbRun            // waits for the attach picker or the guard card
+	rename   *dbRenameState    // the SQL rename being asked for (db_rename.go)
 	waiting  *dbRun            // waits for its connection
 	running  *dbRun
 	shown    *dbRun // the result on the page
@@ -135,6 +137,10 @@ type dbConsoleState struct {
 	params   map[string]map[string]string // console file → name → last value
 	// the grid's column layouts (db_columns.go)
 	colStore *dbColStore
+	// saved queries (db_saved.go, DBX-6)
+	saved     *dbclient.SavedQueries
+	savedList []dbclient.SavedQuery // what the saved-queries picker shows
+	saveDraft *dbSaveDraft          // the query waiting for its name
 }
 
 func (m *Model) dbConsole() *dbConsoleState {
@@ -261,6 +267,12 @@ func (s *dbConsoleState) pageSize() int {
 // databaseNewConsole opens (creates on first use) the console of a
 // connection: db/consoles/<workspace hash>/<connection hash>.sql, 0600.
 func (m *Model) databaseNewConsole(id string) tea.Cmd {
+	return m.databaseNewConsoleAt(id, "")
+}
+
+// databaseNewConsoleAt opens the console file at path ("" = the
+// connection's first console; DBX-6 opens more).
+func (m *Model) databaseNewConsoleAt(id, path string) tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
@@ -269,7 +281,9 @@ func (m *Model) databaseNewConsole(id string) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	path := m.databaseConsolePath(id)
+	if path == "" {
+		path = m.databaseConsolePath(id)
+	}
 	if path == "" {
 		return nil
 	}
@@ -321,7 +335,10 @@ func (m *Model) databaseConsoleCrumbs(path string) ([]string, bool) {
 	if strings.HasSuffix(path, ".redis") {
 		kind = "Redis console"
 	}
-	base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	base, num := dbConsoleNumber(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)))
+	if num > 1 {
+		kind += " " + strconv.Itoa(num)
+	}
 	if m.databases != nil {
 		for _, c := range m.databases.conns {
 			if fmt.Sprintf("%x", sha256.Sum256([]byte(c.ID)))[:12] == base {
@@ -978,6 +995,8 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	switch m.confirmKind {
+	case confirmKindDBRename:
+		return m.databaseRenameApply(id), true
 	case confirmKindDBExplain:
 		return m.databaseExplainConfirm(id), true
 	case confirmKindDBRun:
@@ -1016,6 +1035,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseUsagesPicker(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseSavedPicker(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseColumnsPicker(id); ok {
@@ -1098,9 +1120,13 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 }
 
 // databaseHistory opens the history picker (newest first).
-func (m *Model) databaseHistory() tea.Cmd {
+func (m *Model) databaseHistory() tea.Cmd { return m.databaseHistoryFor("") }
+
+// databaseHistoryFor is the history of one connection ("" = all; DBX-6).
+// Typing in the picker searches it.
+func (m *Model) databaseHistoryFor(conn string) tea.Cmd {
 	s := m.dbConsole()
-	entries, err := s.historyStore().List()
+	entries, err := s.historyStore().Find(conn, "")
 	if err != nil {
 		return m.dbConsoleError(err)
 	}
@@ -1118,7 +1144,11 @@ func (m *Model) databaseHistory() tea.Cmd {
 	if len(items) == 0 {
 		return m.pushToastDetail(toast.Info, "No SQL history yet", "Run a statement from a console first.")
 	}
-	m.picker = picker.NewItems("SQL history · Enter runs again", items)
+	title := "SQL history · Enter runs again"
+	if conn != "" {
+		title = "SQL history of " + sanitizeDBText(conn) + " · Enter runs again"
+	}
+	m.picker = picker.NewItems(title, items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerKind = pickerKindDBHistory
 	m.pickerOpen = true

@@ -40,6 +40,10 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-format-file", Title: "Databases: Format File"},
 		{ID: "db-explain-analyze", Title: "Databases: Explain Analyze Statement…"},
 		{ID: "db-history", Title: "Databases: History…"},
+		{ID: "db-history-connection", Title: "Databases: History of This Connection…"},
+		{ID: "db-save-query", Title: "Databases: Save Query…"},
+		{ID: "db-saved-queries", Title: "Databases: Saved Queries…"},
+		{ID: "db-another-console", Title: "Databases: Another Console"},
 		{ID: "db-cancel", Title: "Databases: Cancel Query"},
 		{ID: "db-add", Title: "Databases: Add Connection…"},
 		{ID: "db-connect", Title: "Databases: Connect Selected"},
@@ -60,6 +64,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-find-usages", Title: "Databases: Find Usages"},
 		{ID: "db-quick-doc", Title: "Databases: Quick Documentation"},
 		{ID: "db-insert-hints", Title: "Databases: Show INSERT Column Hints"},
+		{ID: "db-quick-fix", Title: "Databases: Apply SQL Quick Fix"},
+		{ID: "db-rename", Title: "Databases: Rename in SQL…"},
 		{ID: "db-count-rows", Title: "Databases: Count Rows"},
 		{ID: "db-transaction-mode", Title: "Databases: Transaction Mode…"},
 		{ID: "db-commit", Title: "Databases: Commit"},
@@ -134,6 +140,14 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseExplainKey(true), true
 	case "db-history":
 		return m.databaseHistory(), true
+	case "db-history-connection":
+		return m.databaseHistoryOfConn(), true
+	case "db-save-query":
+		return m.databaseSaveQueryStart(), true
+	case "db-saved-queries":
+		return m.databaseSavedQueries(), true
+	case "db-another-console":
+		return m.databaseAnotherConsole(), true
 	case "db-cancel":
 		return m.databaseCancelRun(), true
 	case "db-transaction-mode":
@@ -185,6 +199,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseQuickDoc(), true
 	case "db-insert-hints":
 		return m.databaseInsertHints(), true
+	case "db-rename":
+		return m.databaseRenameStart(), true
+	case "db-quick-fix":
+		return m.databaseQuickFix(), true
 	case "db-sessions":
 		return m.databaseShowActivity(false), true
 	case "db-server-info":

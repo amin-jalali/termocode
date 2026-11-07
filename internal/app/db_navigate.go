@@ -17,8 +17,9 @@ import (
 
 // SQL navigation (DBX-5): Databases: Go to Definition opens the DDL of
 // the table or view named under the cursor (it must be loaded in the
-// tree); Databases: Find Usages lists the lines of the project's .sql
-// files that name it.
+// tree), the table's DDL on the column for alias.column, or a routine's
+// stored source; Databases: Find Usages lists the lines of the project's
+// .sql files that name it; Databases: Rename in SQL… is db_rename.go.
 
 const pickerKindDBUsages pickerKindEnum = 3856
 
@@ -224,11 +225,50 @@ func (m *Model) databaseGotoDefinition() tea.Cmd {
 		return m.pushToastDetail(toast.Info, "No connection for this file", "Run a statement first to pick its connection.")
 	}
 	path := m.databases.dbFindTablePath(conn, schema, name)
-	t, ok := m.databaseTableAt(path)
-	if !ok {
-		return m.pushToastDetail(toast.Info, "Not in the Databases tree", sanitizeDBText(name)+": expand its schema in the Databases view, or Refresh.")
+	if t, ok := m.databaseTableAt(path); ok {
+		return m.databaseLoadMeta(t, true)
 	}
-	return m.databaseLoadMeta(t, true)
+	// alias.column or table.column: the DDL of the table, on the column.
+	if schema != "" {
+		table := schema
+		if c, ok := m.databases.connection(conn); ok {
+			if a := dbStatementAliases(m.databaseStatementAtCursor(lines, c.Driver)); a[strings.ToLower(schema)] != "" {
+				table = a[strings.ToLower(schema)]
+			}
+		}
+		if t, ok := m.databaseTableAt(m.databases.dbFindTablePath(conn, "", table)); ok {
+			return m.databaseLoadMetaMsg(t, dbMetaMsg{ddl: true, col: name})
+		}
+	}
+	// A routine: its stored source.
+	if cmd, ok := m.databaseGotoRoutine(conn, name); ok {
+		return cmd
+	}
+	return m.pushToastDetail(toast.Info, "Not in the Databases tree", sanitizeDBText(name)+": expand its schema in the Databases view, or Refresh.")
+}
+
+// databaseStatementAtCursor is the statement of lines that holds the
+// cursor (all the text when it cannot be split).
+func (m *Model) databaseStatementAtCursor(lines []string, driver string) string {
+	text := strings.Join(lines, "\n")
+	var pos struct {
+		Row int `json:"row"`
+		Col int `json:"col"`
+	}
+	var raw string
+	_ = m.nvim.ExecLuaResult(`local c=vim.api.nvim_win_get_cursor(0);return vim.fn.json_encode({row=c[1],col=c[2]})`, &raw)
+	_ = json.Unmarshal([]byte(raw), &pos)
+	off := 0
+	for i := 0; i < pos.Row-1 && i < len(lines); i++ {
+		off += len(lines[i]) + 1
+	}
+	off += pos.Col
+	for _, sp := range dbStatementSpans(text, driver) {
+		if off >= sp.start && off <= sp.end {
+			return text[sp.start:sp.end]
+		}
+	}
+	return text
 }
 
 // databaseFindUsages lists the project's SQL lines that name the table

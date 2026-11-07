@@ -167,7 +167,7 @@ Press `x` on a connection and choose **Disconnect** to close all its sessions. S
 
 ## The SQL console
 
-Press `n` on a connection to open its console. Consoles live in your user configuration under `db/consoles/<workspace>/<connection>.sql` (mode 0600) and start with a `-- @conn <id>` line. A project `.sql` file can use the same line; without it, the first run asks which connection to use and remembers the answer until you quit.
+Press `n` on a connection to open its console. Consoles live in your user configuration under `db/consoles/<workspace>/<connection>.sql` (mode 0600) and start with a `-- @conn <id>` line. **Databases: Another Console** opens one more console for the same connection (up to 9; the tab says *SQL console 2*, *3* …). A project `.sql` file can use the same line; without it, the first run asks which connection to use and remembers the answer until you quit.
 
 Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statement under the cursor. In visual mode the selection runs as typed. **Databases: Run File** runs every statement in order. It stops at the first error and asks: **Continue** runs the remaining statements, **Stop** ends the run. A small note at the end of each statement shows the key, the connection and the last result. `Esc` cancels a running query; while it runs the note says `running… · Esc cancels`.
 
@@ -243,7 +243,7 @@ The data page asks the server for one page at a time (`db_page_rows`, default 10
 
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
-**From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line.
+**From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. On `alias.column` (`u.email`) it opens the table's DDL with the cursor on the column; on a function or procedure name it opens its stored source. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line. **Databases: Rename in SQL…** asks for a new name, then a card (Cancel first) says how many places change in this buffer and in the other project `.sql` files; Rename replaces the whole name (plain or quoted) and leaves strings and comments alone. Only the SQL text changes, never the database; files open with unsaved changes are left alone.
 
 **Quick documentation.** **Databases: Quick Documentation** shows a card about the table, column or routine under the cursor of a SQL buffer: its columns with types, the primary key, keys, indexes and foreign keys. In the Databases tree, press `K` (or right-click → Quick documentation) on a table, view, column, routine or schema. It reads only what the tree has loaded, so no query runs. **Databases: Show INSERT Column Hints** writes the target column before each value of `INSERT INTO t (a, b) VALUES (…)`; the hints clear on your next edit.
 
@@ -256,6 +256,12 @@ PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the
 ## Completion
 
 In a SQL buffer, `Ctrl+X Ctrl+O` (and the pop-up that opens while you type) offers keywords, tables, views, routines, sequences and schemas from the tree you have already opened. After `alias.` or `table.` it offers that table's columns; the alias comes from the statement at the cursor (`FROM users u`, `JOIN orders AS o`). The first time a table's columns are needed they are read once and the pop-up opens again. Completion reads a cached copy: it never asks the server while you type.
+
+Once a console's connection is connected, the whole schema is loaded once in the background (every schema of the database, the columns of up to 400 tables with their types, and the foreign keys), so you do not need to open the tree first. Columns of a `WITH name AS (…)` CTE or a `(SELECT …) alias` subquery come from its select list. After `JOIN orders o ON` the pop-up offers whole conditions from the foreign keys, such as `o.user_id = u.id`. Each column shows its type family (`column num`, `column text`, `column time`); after `u.created = o.` the columns of the same type come first.
+
+## Inspections and quick fixes
+
+While you type, a SQL console or file is checked against the schema already loaded: syntax errors are underlined as errors, unknown tables and `alias.column` names as warnings, with a hint such as *Unknown column u.emial. Did you mean email?* Put the cursor on the underlined name and press `<leader>.` (or run **Databases: Apply SQL Quick Fix**) to replace it with the suggested name; a quoted name stays quoted, and `u` undoes it. Nothing is asked of the server.
 
 ## Edit rows
 
@@ -358,7 +364,13 @@ A statement with parameters asks for each value before it runs: `?`, `:name`, `$
 
 ## SQL history
 
-Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count.
+Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count. **Databases: History of This Connection…** shows only the runs of the console's connection; type in either picker to search the SQL.
+
+## Saved queries and live templates
+
+**Databases: Save Query…** saves the statement at the cursor under a name (the same name on the same connection replaces it). **Databases: Saved Queries…** lists them; `Enter` puts the query below the cursor of a console of that connection, or opens its console. **Delete a saved query…** removes one. They are kept in `db/saved-queries.json` in your user configuration (mode 0600), with passwords removed.
+
+In a SQL buffer, completion also offers live templates: type `sel`, `ins`, `upd`, `del`, `jn` or `cnt` and pick the *template* item; the cursor goes where the table name belongs (`SELECT * FROM |;`).
 
 Nothing polls while you wait: an idle console or result page uses no CPU. Hiding the Databases view (another view, a hidden sidebar or zen mode) cancels a running query and closes its sessions, except a session with an open manual transaction. The command palette and other dialogs do not.
 
