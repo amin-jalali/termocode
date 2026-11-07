@@ -313,6 +313,13 @@ lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
 first).
 
+**Compare models** is a race of one agent on 2–4 different models. Every
+lane runs the same agent (Claude Code or Codex) with `--model <id>`, in its
+own worktree. The lane's name shows its model, for example
+`Claude Code · opus`. The compare page works as for any race. The AI chat
+asks with `agent_race_models` (**Deny** first); the phone page asks with
+**Compare models**, and the laptop shows a card (**Cancel** first).
+
 ## Chat view and sessions
 
 With `agent_transcripts` on:

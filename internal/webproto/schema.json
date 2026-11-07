@@ -2473,6 +2473,34 @@
       "phase": "v2"
     },
     {
+      "op": "ai.race_models",
+      "args": "AIRaceModelsArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_model_list",
+      "args": "EmptyArgs",
+      "result": "AIRaceModelList",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "ai.worktrees",
       "args": "EmptyArgs",
       "result": "AIWorktrees",
@@ -4564,6 +4592,88 @@
         "trust"
       ],
       "additionalProperties": true
+    },
+    "AIRaceModelAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "models": {
+          "items": {
+            "$ref": "#/defs/AIRaceModelEntry"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "models"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelList": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/AIRaceModelAgent"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "agents"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelsArgs": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "models": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "task": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "agent",
+        "models"
+      ],
+      "additionalProperties": false
     },
     "AISnap": {
       "type": "object",

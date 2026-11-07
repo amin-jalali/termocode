@@ -300,7 +300,7 @@ func (m *Model) raceLaunchTab(l agentrace.Lane, a agents.Agent) (int, error) {
 		return 0, fmt.Errorf("could not open a terminal tab")
 	}
 	t.Agent, t.AgentState = a.ID, agents.StartState(a.ID)
-	m.raceChansend(t.BufID, a.Bin+"\n")
+	m.raceChansend(t.BufID, raceAgentLine(a.Bin, l.Model)+"\n") // MOB-63: a Compare models lane starts on its model
 	m.agentWatch(t.BufID, true)
 	m.applyLayout()
 	m.resizeTerminalSplit()
