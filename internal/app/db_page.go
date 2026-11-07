@@ -1219,11 +1219,6 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 			}
 			return nil
 		}
-	case "i": // plan page: quick doc of the step's table (DBX-39)
-		if canPlan(s.shown) && s.view == dbViewGrid {
-			return m.databasePlanTableDocKey(row)
-		}
-		return nil
 		page := s.pageResult()
 		if s.trans && s.view == dbViewGrid && s.trow < len(page.Rows) {
 			row, col = s.trow, row // the cursor line is the column
@@ -1240,6 +1235,11 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		text = dbSafeMultiline(dbCellView(cell))
 		_ = m.nvim.ExecLuaArgs(`_G._termocode_db_value(...)`, strings.Split(text, "\n"))
 		return m.fetchStateCmd()
+	case "i": // plan page: quick doc of the step's table (DBX-39)
+		if canPlan(s.shown) && s.view == dbViewGrid {
+			return m.databasePlanTableDocKey(row)
+		}
+		return nil
 	case "gK": // DBX-30: the cell's whole value and its row
 		if s.shown.plan != nil {
 			return nil
