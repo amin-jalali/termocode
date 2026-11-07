@@ -67,6 +67,7 @@ type kubeState struct {
 	filterTyping bool
 
 	pendingRestart kubeRestartTarget // the restart card's deployment (kube_restart.go)
+	pendingScale   kubeScaleTarget   // the scale prompt's and card's deployment (kube_scale.go)
 
 	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
@@ -343,6 +344,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeDescribe(msg), true
 	case kubeForwardMsg:
 		return m.onKubeForward(msg), true
+	case kubeScaleMsg:
+		return m.onKubeScale(msg), true
 	case kubeRestartMsg:
 		return m.onKubeRestart(msg), true
 	}
