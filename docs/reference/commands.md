@@ -544,7 +544,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | HTTP: Copy as Code… | `http-copy-snippet` |   |   |
 | HTTP: Copy as curl | `http-copy-curl` |   |   |
 | HTTP: Edit Params and Headers… | `http-fields` |   |   |
+| HTTP: Export as HAR… | `http-export-har` |   |   |
 | HTTP: History… | `http-history` |   |   |
+| HTTP: Import Collection (JSON, HAR, Insomnia)… | `http-import-collection` |   |   |
 | HTTP: Import OpenAPI… | `http-import-openapi` |   |   |
 | HTTP: Import from curl… | `http-import-curl` |   |   |
 | HTTP: New .http File… | `http-new-file` |   |   |

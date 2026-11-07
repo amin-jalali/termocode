@@ -87,6 +87,8 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-copy-snippet", Title: "HTTP: Copy as Code…"},
 		{ID: "http-import-curl", Title: "HTTP: Import from curl…"},
 		{ID: "http-import-openapi", Title: "HTTP: Import OpenAPI…"},
+		{ID: "http-import-collection", Title: "HTTP: Import Collection (JSON, HAR, Insomnia)…"},
+		{ID: "http-export-har", Title: "HTTP: Export as HAR…"},
 		{ID: "http-new-file", Title: "HTTP: New .http File…"},
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
 		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
@@ -134,6 +136,10 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.openHTTPPrompt(promptKindHTTPImport, "HTTP: Import from curl", "curl:", ""), true
 	case "http-import-openapi":
 		return m.openHTTPPrompt(promptKindHTTPImportOpenAPI, "HTTP: Import OpenAPI", "OpenAPI file or URL:", ""), true
+	case "http-import-collection":
+		return m.openHTTPPrompt(promptKindHTTPImportCollection, "HTTP: Import Collection", "Collection, HAR or Insomnia file:", ""), true
+	case "http-export-har":
+		return m.httpExportHARPrompt(), true
 	case "http-new-file":
 		return m.openHTTPPrompt(promptKindHTTPNewFile, "HTTP: New .http File", "File:", "requests.http"), true
 	case "http-save-body":
@@ -647,6 +653,9 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 
 // handleHTTPPromptSubmit routes the HTTP prompts. ok=false: not ours.
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
+	if cmd, ok := m.httpCollectionPrompt(value); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.httpCookiesPrompt(value); ok {
 		return cmd, true
 	}

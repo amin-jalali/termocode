@@ -628,6 +628,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"http-quick":             aiNever(aiNoPicker + " (http_send with method and url)"),
 	"http-cancel":            aiConfirm(ai.ClassIDE), // stops the user's request
 	"http-last-response":     aiAuto(),
+	"http-import-collection": aiNever(aiNoPicker + " (read the file, then http_save_request)"),
+	"http-export-har":        aiNever(aiNoPicker + " (writes a file the user names)"),
 	"http-clear-script-vars": aiConfirm(ai.ClassIDE), // drops values the user's scripts set
 	"http-history":           aiNever(aiNoPicker + " (http_history)"),
 	"http-cookies":           aiNever(aiNoPicker + " (cookies stay with the user)"),
