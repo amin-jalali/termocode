@@ -59,6 +59,9 @@ type dbRun struct {
 	bound               bool         // its query parameters are filled (db_params.go)
 	boundSQL            string       // sql with the driver's placeholders
 	args                []any        // the values bound to them
+	cursor              int          // caret byte offset + 1 in sql (0: unknown) (DBX-25)
+	mode                string       // execution mode (dbclient.ExecMode names)
+	selOne              bool         // send the selection as one text
 }
 
 type dbConsoleState struct {
@@ -90,6 +93,7 @@ type dbConsoleState struct {
 	cacheKey dbViewKey
 	history  []dbclient.HistoryEntry
 	hist     *dbclient.History
+	askCands []dbclient.StmtSpan // the Run… choices (db_execmode.go)
 
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
@@ -165,6 +169,9 @@ type dbConsoleSettings struct {
 	AltRows      *bool   `json:"db_alternate_rows"`
 	LOBBytes     *int    `json:"db_lob_bytes"`
 	GeometryFmt  *string `json:"db_geometry_format"`
+	// Execution modes (db_execmode.go, DBX-25)
+	ExecMode       *string `json:"db_exec_mode"`
+	SelectionSplit *bool   `json:"db_selection_split"`
 }
 
 func loadDBConsoleSettings() dbConsoleSettings {
@@ -409,6 +416,12 @@ func (m *Model) databaseSend(all bool) tea.Cmd { return m.databaseSendMode(all, 
 // databaseSendMode is databaseSend; a non-nil plan makes it an explain of
 // the statement at the cursor (db_explain.go).
 func (m *Model) databaseSendMode(all bool, plan *dbPlanRun) tea.Cmd {
+	return m.databaseSendExec(all, plan, "")
+}
+
+// databaseSendExec is databaseSendMode with an execution mode (DBX-25);
+// "" uses db_exec_mode.
+func (m *Model) databaseSendExec(all bool, plan *dbPlanRun, mode string) tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
@@ -428,6 +441,7 @@ func (m *Model) databaseSendMode(all bool, plan *dbPlanRun) tea.Cmd {
 	}
 	var pos struct {
 		Line      int    `json:"line"`
+		Col       int    `json:"col"`
 		Selection string `json:"selection"`
 	}
 	var raw string
@@ -440,6 +454,13 @@ func (m *Model) databaseSendMode(all bool, plan *dbPlanRun) tea.Cmd {
 	case strings.TrimSpace(pos.Selection) != "":
 		r.sql = pos.Selection
 		r.line = -r.line
+		r.selOne = !loadDBConsoleSettings().selectionSplit()
+	default:
+		r.cursor = dbCursorOffset(lines, r.line, pos.Col) + 1
+		r.mode = mode
+		if r.mode == "" {
+			r.mode = loadDBConsoleSettings().execMode()
+		}
 	}
 	r.conn = s.consoleConn(file, lines)
 	if _, ok := m.databases.connection(r.conn); !ok {
@@ -479,6 +500,14 @@ func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
 	if c.Driver == "redis" {
 		return m.databaseRedisPrepare(r)
 	}
+	if r.line > 0 && r.cursor > 0 && r.plan == nil {
+		if r.mode == dbclient.ExecAsk.String() {
+			return m.databaseExecAsk(r, c.Driver)
+		}
+		if dbPickByMode(r, c.Driver) {
+			return m.databasePrepareTail(r)
+		}
+	}
 	if r.line > 0 {
 		spans := dbStatementSpans(r.sql, c.Driver)
 		if len(spans) == 0 {
@@ -500,6 +529,9 @@ func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
 		}
 		r.statements = []string{chosen.sql}
 		r.line = chosen.line
+	} else if r.selOne && r.line < 0 {
+		r.statements = []string{strings.TrimSpace(r.sql)}
+		r.line = -r.line
 	} else {
 		sqls, err := dbclient.Split(r.sql, c.Driver)
 		if err != nil {
@@ -512,7 +544,12 @@ func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
 			r.line = spans[0].line
 		}
 	}
-	if len(r.statements) == 0 {
+	return m.databasePrepareTail(r)
+}
+
+// databasePrepareTail starts r once its statements are chosen.
+func (m *Model) databasePrepareTail(r *dbRun) tea.Cmd {
+	if len(r.statements) == 0 || strings.TrimSpace(r.statements[0]) == "" {
 		return m.pushToastDetail(toast.Info, "No SQL to run", "")
 	}
 	r.line = max(r.line, 1)
@@ -666,7 +703,7 @@ func (m *Model) databaseStartRunRevealed(r *dbRun) tea.Cmd {
 	if r.tv == nil || old == nil || old.tv != r.tv {
 		s.trans, s.trow = false, 0
 	}
-	m.databaseRefreshLens(r.file, r.sql, "running…")
+	m.databaseRefreshLens(r.file, r.sql, "running… · Esc cancels")
 	pageCmd := m.databaseShowPage()
 	limit := settings.maxRows()
 	if r.maxRows > 0 {
@@ -944,6 +981,10 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	switch m.pickerKind {
+	case pickerKindDBExecMode:
+		return m.databaseExecModeSet(id), true
+	case pickerKindDBExecAsk:
+		return m.databaseExecAskPick(id), true
 	case pickerKindDBAttach, pickerKindDBHistory, pickerKindDBSort:
 	case pickerKindDBHistoryDelete:
 		return m.databaseHistoryDelete(id), true

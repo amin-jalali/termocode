@@ -27,6 +27,10 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-focus", Title: "Databases: Focus"},
 		{ID: "db-new-console", Title: "Databases: New Console"},
 		{ID: "db-run", Title: "Databases: Run Statement or Selection"},
+		{ID: "db-run-from-caret", Title: "Databases: Run From Caret to End of File"},
+		{ID: "db-run-smallest", Title: "Databases: Run Smallest Statement (Subquery) at Caret"},
+		{ID: "db-run-ask", Title: "Databases: Run… (Choose Statement or Subquery)"},
+		{ID: "db-exec-mode", Title: "Databases: Choose Execution Mode…"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
 		{ID: "db-format", Title: "Databases: Format Statement or Selection"},
@@ -87,6 +91,14 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseSend(false), true
 	case "db-run-file":
 		return m.databaseSend(true), true
+	case "db-run-from-caret":
+		return m.databaseSendExec(false, nil, dbclient.ExecFromCaret.String()), true
+	case "db-run-smallest":
+		return m.databaseSendExec(false, nil, dbclient.ExecSmallest.String()), true
+	case "db-run-ask":
+		return m.databaseSendExec(false, nil, dbclient.ExecAsk.String()), true
+	case "db-exec-mode":
+		return m.databaseExecModePicker(), true
 	case "db-explain":
 		return m.databaseExplainKey(false), true
 	case "db-format":

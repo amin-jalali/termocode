@@ -283,6 +283,8 @@ var fileOnlySettings = []SettingEntry{
 	{Key: "db_alternate_rows", Type: "bool", Default: "false", Category: "Databases (file only)", Description: "Shade every second row of the result grid."},
 	{Key: "db_lob_bytes", Type: "int", Default: "65536", Category: "Databases (file only)", Description: "Most bytes of one long text or binary cell the grid shows; the rest is cut and the full size is shown. 0: no limit. Copy and export keep the whole value."},
 	{Key: "db_geometry_format", Type: "enum", Default: "hex", Category: "Databases (file only)", Choices: []string{"hex", "wkt"}, Description: "How the grid shows geometry columns: hex bytes, or WKT text like SRID=4326;POINT(1 2) (WKB, EWKB and MySQL values)."},
+	{Key: "db_exec_mode", Type: "enum", Default: "largest", Category: "Databases (file only)", Choices: []string{"largest", "smallest", "from-caret", "ask"}, Description: "What the Run key sends from a .sql file: the whole statement at the caret, the smallest one (a subquery too), it and all after it, or a list to choose from. Set with Databases: Choose Execution Mode…."},
+	{Key: "db_selection_split", Type: "bool", Default: "true", Category: "Databases (file only)", Description: "Split a selection into statements (true) or send it to the server as one text (false)."},
 	{Key: "containers_engine", Type: "enum", Default: "auto", Category: "Containers (file only)", Choices: []string{"auto", "docker", "podman"},
 		Description: "Container engine of the Containers view. auto tries Docker, then Podman; docker or podman uses only that engine. Press R in the view after changing it."},
 	{Key: "containers_sections", Type: "string[]", Default: "all", Category: "Containers (file only)",

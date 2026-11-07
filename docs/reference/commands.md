@@ -205,6 +205,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
+| Databases: Choose Execution Mode… | `db-exec-mode` |   |   |
 | Databases: Commit | `db-commit` |   |   |
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
@@ -235,7 +236,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
+| Databases: Run From Caret to End of File | `db-run-from-caret` |   |   |
+| Databases: Run Smallest Statement (Subquery) at Caret | `db-run-smallest` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
+| Databases: Run… (Choose Statement or Subquery) | `db-run-ask` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |

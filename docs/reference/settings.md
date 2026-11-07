@@ -144,6 +144,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `db_alternate_rows` | bool | `false` | Shade every second row of the result grid. |
 | `db_lob_bytes` | int | `65536` | Most bytes of one long text or binary cell the grid shows; the rest is cut and the full size is shown. 0: no limit. Copy and export keep the whole value. |
 | `db_geometry_format` | enum | `hex` | How the grid shows geometry columns: hex bytes, or WKT text like SRID=4326;POINT(1 2) (WKB, EWKB and MySQL values). |
+| `db_exec_mode` | enum | `largest` | What the Run key sends from a .sql file: the whole statement at the caret, the smallest one (a subquery too), it and all after it, or a list to choose from. Set with Databases: Choose Execution Mode…. |
+| `db_selection_split` | bool | `true` | Split a selection into statements (true) or send it to the server as one text (false). |
 
 ## Containers (file only)
 
