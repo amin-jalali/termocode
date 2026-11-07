@@ -865,6 +865,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Pull a Lane from a Host… | `worktree-pull` |   |   |
 | Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
 | Worktree: Reset Order | `worktree-reset-order` |   |   |
+| Worktree: Preview Agent Grid | `worktree-preview-grid` |   |   |
+| Worktree: Preview Agent Screen | `worktree-preview` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |

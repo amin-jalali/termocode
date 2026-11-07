@@ -52,6 +52,10 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"Sessions"},
 		[]string{"T", "its agent sessions: Enter shows the tab"},
 		[]string{"S", "new agent session: one more agent in it, its own tab"},
+		[]string{"Watch"},
+		[]string{"v", "preview: its agent's live screen in the panel, the list keeps the keys · again: close"},
+		[]string{"V", "agent grid: up to 4 agent screens of this window side by side"},
+		[]string{"Enter", "in the preview: jump into the selected agent's tab · Tab picks a tile · g grid"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
 		[]string{"/", "filter by name · Esc clears"},
@@ -96,6 +100,8 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtMovePaletteID, Title: "Worktree: Move Selected to Another Machine…"},
 		{ID: wtUnpackPaletteID, Title: "Worktree: Unpack a Moved Lane…"},
 		{ID: wtPullPaletteID, Title: "Worktree: Pull a Lane from a Host…"},
+		{ID: wtPreviewPaletteID, Title: "Worktree: Preview Agent Screen"},
+		{ID: wtPreviewGridPaletteID, Title: "Worktree: Preview Agent Grid"},
 	}
 }
 
@@ -165,6 +171,10 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeUnpack(), true
 	case wtPullPaletteID:
 		return m.worktreePull(), true
+	case wtPreviewPaletteID:
+		return m.worktreePreview(false), true
+	case wtPreviewGridPaletteID:
+		return m.worktreePreview(true), true
 	}
 	return nil, false
 }
@@ -262,6 +272,10 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeMove()
 	case "U":
 		return m, m.worktreeUnpack()
+	case "v":
+		return m, m.worktreePreview(false)
+	case "V":
+		return m, m.worktreePreview(true)
 	case "f":
 		m.worktreeNextFilter()
 	case "R":
@@ -295,4 +309,5 @@ func (m *Model) wtMove(items []wtItem, rows []wtRow, cur, d int) {
 	st.cursorPath = items[rows[cards[at]].item].e.Path
 	st.detail = false
 	st.touch()
+	m.wtPreviewMoved() // CMP-8: the preview follows the cursor
 }

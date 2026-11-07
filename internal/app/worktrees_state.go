@@ -79,6 +79,7 @@ type wtState struct {
 	move       *wtMovePending    // the open move, unpack or pull card (worktrees_move.go)
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
+	preview    *wtPreviewState   // the open agent preview (worktrees_preview.go)
 
 	bgAsk    *wtBgPending      // a background task between prompt and card (worktrees_bgtask.go)
 	bgAct    *wtBgActPending   // the open card of one background task
