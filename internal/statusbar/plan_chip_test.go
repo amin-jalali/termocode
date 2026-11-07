@@ -66,3 +66,27 @@ func TestPlanPillWidths(t *testing.T) {
 		t.Error("an empty plan shows")
 	}
 }
+
+// Bug: a long terminal folder (macOS $TMPDIR, /var/folders/…) filled the
+// bar and pushed the plan pill off it. The pill stays; the folder is
+// shortened from the left instead ("zsh · …/T/Test/001"), never dropped.
+func TestPlanPillStaysWithLongFolder(t *testing.T) {
+	useUnicodeIcons(t)
+	m := Model{}
+	s := State{Project: "001", Branch: "main", TermFocused: true,
+		TermLabel: "zsh · /var/folders/xy/abcdefghijklmnop_qrstuvwxyz/T/TestAgentLimitAutoContinue1234567890/001",
+		Plan:      "✦ Claude limit ↻14:30", PlanShort: "✦limit", PlanLimited: true}
+	for _, w := range []int{100, 80, 60} {
+		m.SetWidth(w)
+		plain := stripCSI(m.View(s))
+		if !strings.Contains(plain, "✦limit") && !strings.Contains(plain, s.Plan) {
+			t.Errorf("width %d: no plan pill in %q", w, plain)
+		}
+		if !strings.Contains(plain, "zsh · …") || !strings.Contains(plain, "/001") {
+			t.Errorf("width %d: the folder is not shortened from the left: %q", w, plain)
+		}
+		if _, _, ok := m.PlanChipSpan(s); !ok {
+			t.Errorf("width %d: no plan span", w)
+		}
+	}
+}
