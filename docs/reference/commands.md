@@ -685,6 +685,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Search: Codebase by Meaning… | `codebase-search` |   | `plain words, local index` |
 | Search: Find in Files | `find-files` | `Alt+F` / `F8` | `F8 / Alt+F` |
 | Search: Find in Files (Live Overlay) | `find-files-overlay` |   |   |
 | Search: Go to Next Search Result | `search-next-result` | `F4` | `F4` |
