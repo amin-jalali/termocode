@@ -3,10 +3,13 @@
 // columns on tablets; the workbench on desktops (ui/Workbench.tsx: the
 // TUI's layout with editor tabs, panels and a status bar).
 import { h } from "preact";
+import { useEffect } from "preact/hooks";
 import { effect } from "@preact/signals";
 import { bell } from "./lib/attention";
 import { layout } from "./lib/layout";
-import { route } from "./lib/router";
+import { go, route } from "./lib/router";
+import { prefs } from "./lib/prefs";
+import { homeHost } from "./homehost";
 import type { Tab } from "./state/route";
 import { t } from "./strings";
 import { AttentionPill } from "./ui/AttentionPill";
@@ -20,7 +23,7 @@ import { Strip } from "./ui/Strip";
 import { Toasts } from "./ui/Toasts";
 import { ViewerBar } from "./ui/ViewerBar";
 import { TitleBar } from "./ui/TitleBar";
-import { desk, deskFailed, loadDesk } from "./lib/lazy";
+import { desk, deskFailed, home, homeFailed, loadDesk, loadHome } from "./lib/lazy";
 import { soloBuf } from "./lib/popout";
 import { ChatView, FilesView, GitView, MoreView, TermView } from "./views/views";
 
@@ -33,6 +36,42 @@ effect(() => {
 effect(() => {
   if (layout.value === "desktop" && !desk.peek()) loadDesk().catch(() => undefined);
 });
+
+// The phone's Home (MOB-4, #/home) is a phone's only: a wider screen shows
+// the chat. A phone whose This phone choice is the Home starts there.
+if (layout.peek() === "phone" && prefs.peek().phoneHome === "chat" && (location.hash === "" || location.hash === "#")) {
+  go({ tab: "home", rest: "", query: {} }, true);
+}
+effect(() => {
+  if (route.value.tab === "home" && layout.value !== "phone") go({ tab: "chat", rest: "", query: {} }, true);
+});
+
+/** HomeView is the phone's Home, from home.js (loaded on first use; Try
+ * again after a failed load). */
+function HomeView() {
+  const m = home.value;
+  useEffect(() => {
+    if (!home.peek()) loadHome(homeHost).catch(() => undefined);
+  }, []);
+  if (!m) {
+    return (
+      <main class="main home-loading" id="main" tabIndex={-1} aria-busy={!homeFailed.value}>
+        {homeFailed.value ? (
+          <button type="button" class="btn" onClick={() => loadHome(homeHost).catch(() => undefined)}>
+            {t("retry")}
+          </button>
+        ) : (
+          <p class="empty">{t("loading")}</p>
+        )}
+      </main>
+    );
+  }
+  return (
+    <main class="main main-home" id="main" tabIndex={-1}>
+      <m.Home />
+    </main>
+  );
+}
 
 /** DeskLoading stands in for the workbench while workbench.js loads (or
  * after it failed: Try again). */
@@ -68,6 +107,8 @@ function ViewFor({ tab }: { tab: Tab }) {
       return <GitView />;
     case "more":
       return <MoreView />;
+    case "home":
+      return <ChatView />; // a wider screen: the redirect above moves it to the chat
   }
 }
 
@@ -119,6 +160,25 @@ export function App() {
         <AttentionPill />
         <FirstRunHint />
         <StatusBar />
+        {r.card && <CardSheet key={r.card} id={r.card} />}
+        {linkAsk.value && <LinkSheet href={linkAsk.value} />}
+        <Toasts />
+      </div>
+    );
+  }
+  if (l === "phone" && r.tab === "home") {
+    // The Home has its own top bar, chips and box; the old tabs are in
+    // its Panels drawer (≡), so there is no strip and no tab bar.
+    return (
+      <div class="shell layout-phone layout-home">
+        <a class="skip" href="#main" onClick={skipToMain}>
+          {t("a11y.skip")}
+        </a>
+        <div class="bars">
+          <OfflineBar />
+          <ViewerBar />
+        </div>
+        <HomeView />
         {r.card && <CardSheet key={r.card} id={r.card} />}
         {linkAsk.value && <LinkSheet href={linkAsk.value} />}
         <Toasts />

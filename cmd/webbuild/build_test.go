@@ -346,6 +346,42 @@ func TestBuildRefusesAnyOtherDynamicImport(t *testing.T) {
 	}
 }
 
+// The phone's Home (MOB-4) is its own file (home.js), built alone: the
+// page loads it with a dynamic import on a phone only and hands it its
+// Preact, signals and views (src/home/api.ts), so home.js holds no Preact
+// of its own and the phone's first files (app.js, app-chunk.js) do not
+// grow with it. The desktop never names it.
+func TestBuildWritesTheHomeChunk(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page, home := string(out["app.js"])+string(out["app-chunk.js"]), string(out["home.js"])
+	if home == "" {
+		t.Fatal("build wrote no home.js")
+	}
+	if !strings.Contains(page, `import("/assets/home.js")`) {
+		t.Error("the page does not load /assets/home.js")
+	}
+	if strings.Contains(page, "home-chips") {
+		t.Error("the phone's first files hold the Home's views")
+	}
+	if !strings.Contains(home, "home-chips") || strings.Contains(home, "__H") || strings.Contains(home, "preact") {
+		t.Error("home.js is not the Home alone (it has no chips, or its own Preact)")
+	}
+	if strings.Contains(home, `from"./app-chunk.js"`) {
+		t.Error("home.js imports the shared chunk: it gets what it needs from the page")
+	}
+	for _, name := range []string{"index.html", "workbench.js"} {
+		if strings.Contains(string(out[name]), "home.js") {
+			t.Errorf("%s names home.js: only a phone loads it", name)
+		}
+	}
+	if _, ok := out["home.css"]; ok {
+		t.Error("home.js imports a style sheet; the phone's styles are in app.css")
+	}
+}
+
 // The desktop editor: the vendored files a package serves are copied as
 // they are, its frame page gets the SRI values of files in folders too,
 // and licenses.txt carries the package's third-party notices.
