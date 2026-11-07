@@ -318,7 +318,7 @@ export function ThisPhone() {
   return (
     <SubView title={tp("ph.title")} name="phone">
       {s === "loading" && (
-        <div aria-busy="true" aria-label={tp("ph.loading")}>
+        <div aria-busy="true" aria-label={tp("ph.phone_loading")}>
           <SkeletonRows rows={6} mono={false} />
         </div>
       )}
@@ -327,7 +327,7 @@ export function ThisPhone() {
         <div class="phone-line is-error" role="alert">
           <span>✗ {tp("ph.failed")}</span>{" "}
           <Button small needsLink onClick={() => void read()}>
-            {tp("ph.retry")}
+            {tp("ph.phone_retry")}
           </Button>
         </div>
       )}

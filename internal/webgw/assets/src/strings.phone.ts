@@ -48,9 +48,9 @@ export const SP = {
   "chips.pinned_name": "{name}, pinned",
   // This phone (MOBUX-20)
   "ph.title": "This phone",
-  "ph.loading": "Reading this phone from the laptop…",
+  "ph.phone_loading": "Reading this phone from the laptop…",
   "ph.failed": "The laptop did not answer.",
-  "ph.retry": "Retry",
+  "ph.phone_retry": "Retry",
   "ph.not_paired": "This browser is not paired. Pair it from the laptop to see it here.",
   "ph.device": "Device",
   "ph.name": "Name",

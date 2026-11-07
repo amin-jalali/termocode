@@ -6,6 +6,7 @@ import { h, type ComponentChildren } from "preact";
 import { useRef } from "preact/hooks";
 import { useArming } from "../ui/arming";
 import { Sheet } from "../ui/Sheet";
+import { phoneOnline } from "./conn";
 
 export interface SheetAction {
   label: string;
@@ -16,22 +17,31 @@ export interface SheetAction {
   risky?: boolean;
   primary?: boolean;
   disabled?: boolean;
+  /** local: the action changes nothing on the laptop (Cancel, Close), so
+   * it works offline; every other action is an answer and is greyed
+   * while the phone is offline (MOBUX-21: answers are not saved). */
+  local?: boolean;
+}
+
+/** off says an action cannot be used now: disabled, or an answer offline. */
+function off(a: SheetAction): boolean {
+  return a.disabled === true || (!a.local && !phoneOnline.value);
 }
 
 function RiskyAct({ a }: { a: SheetAction }) {
   const ref = useRef<HTMLButtonElement | null>(null);
   const arm = useArming(ref);
-  const off = a.disabled || !arm.armed;
+  const dim = off(a) || !arm.armed;
   return (
     <button
       ref={ref}
       type="button"
-      class="ph-sheet-act is-risky"
-      aria-disabled={off ? "true" : undefined}
+      class="ph-sheet-act ph-answer is-risky"
+      aria-disabled={dim ? "true" : undefined}
       onPointerDown={arm.pressBegan}
       onKeyDown={arm.pressBegan}
       onClick={() => {
-        if (!a.disabled && arm.pressOK()) a.onClick();
+        if (!off(a) && arm.pressOK()) a.onClick();
       }}
     >
       {a.label}
@@ -44,11 +54,11 @@ function Act({ a }: { a: SheetAction }) {
   return (
     <button
       type="button"
-      class={`ph-sheet-act${a.safe ? " is-safe" : ""}${a.primary ? " is-primary" : ""}`}
-      aria-disabled={a.disabled ? "true" : undefined}
+      class={`ph-sheet-act${a.local ? "" : " ph-answer"}${a.safe ? " is-safe" : ""}${a.primary ? " is-primary" : ""}`}
+      aria-disabled={off(a) ? "true" : undefined}
       autoFocus={a.safe}
       onClick={() => {
-        if (!a.disabled) a.onClick();
+        if (!off(a)) a.onClick();
       }}
     >
       {a.label}

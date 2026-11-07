@@ -911,6 +911,14 @@ export const S = {
   "cust.ask": "Ask the AI to change it…",
   "cust.ask_text": "Change this view: ",
   "cust.apply": "Apply",
+  // Phone app (MOBUX-21): states
+  "ph.loading": "Loading",
+  "ph.conn_offline": "Offline — answers are not saved",
+  "ph.offline_sr": "Offline. Answers are not saved until the phone is back online.",
+  "ph.conn_asleep": "Laptop asleep · last seen {time}",
+  "ph.asleep_day": "Laptop asleep · last seen on {time}",
+  "ph.asleep_sr": "The laptop does not answer. Last seen {time}.",
+  "ph.retry": "Retry",
 } as const;
 
 /** StringKey is a key of the page's strings, of the workbench's
