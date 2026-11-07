@@ -2127,6 +2127,30 @@ export interface LspHint {
   padRight?: boolean;
 }
 
+export interface BoardProjects {
+  home: string;
+  projects: BoardProject[];
+  more?: number;
+}
+
+export interface BoardProject {
+  ws: string;
+  name: string;
+  where: string;
+  state: "needs" | "working" | "idle";
+  home?: boolean;
+  working?: number;
+  waiting?: number;
+  agents?: BoardAgent[];
+  more?: number;
+  seen?: number;
+}
+
+export interface BoardAgent {
+  name: string;
+  state: "working" | "waiting";
+}
+
 export interface DebugSources {
   sources: DebugSource[];
   unsupported?: boolean;
@@ -3391,6 +3415,7 @@ export interface OpArgs {
   "lsp.code_actions": LspRangeArgs;
   "lsp.code_action_apply": LspApplyArgs;
   "lsp.inlay_hints": LspRowsArgs;
+  "board.projects": EmptyArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -3700,6 +3725,7 @@ export interface OpResult {
   "lsp.code_actions": LspActions;
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;
+  "board.projects": BoardProjects;
   "debug.sources": DebugSources;
   "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;
