@@ -38,6 +38,8 @@ type Control struct {
 	Now      func() time.Time
 	// Ask shows the laptop's card; nil error is the owner's yes.
 	Ask func(ctx context.Context, a webproto.GrantAskArgs) error
+	// Laptop is this laptop's name, for the This phone screen (MOBUX-20).
+	Laptop string
 }
 
 // gatewayOp answers a request the gateway handles itself, on the reader
@@ -46,6 +48,10 @@ func (c *wsConn) gatewayOp(r *webproto.Req) {
 	ctrl := c.s.cfg.Control
 	if ctrl == nil {
 		c.refuseReq(r.ID, webproto.CodeNotFound, "This is not available here.")
+		return
+	}
+	if isPhoneOp(r.Op) {
+		c.phoneOp(r)
 		return
 	}
 	if c.sess.Role == RoleControl {

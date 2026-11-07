@@ -99,6 +99,9 @@ const (
 	OpWebTotpCheck     = "web.totp_check"
 	OpControlChallenge = "control.challenge"
 	OpControlAsk       = "control.ask"
+	OpPhoneGet         = "phone.get"
+	OpPhonePrefs       = "phone.prefs"
+	OpPhoneForget      = "phone.forget"
 )
 
 const (
@@ -176,6 +179,14 @@ var opTable = []Policy{
 	// passkey (a fresh assertion) and the gateway asks the laptop.
 	{Op: OpControlChallenge, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: Rate{N: 1, Per: 5 * time.Second}, MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2, Gateway: true},
 	{Op: OpControlAsk, New: newOf[ControlAskArgs](), Role: RoleViewer, Rate: Rate{N: 1, Per: 5 * time.Second}, MaxBytes: 16 * kib, Audit: AuditYes, Phase: PhaseV2, Gateway: true},
+
+	// This phone (MOBUX-20): a paired device reads and changes its own
+	// record on the laptop (alerts, quiet hours, app lock) and can forget
+	// itself. Only its own device, never another one; the gateway holds
+	// the device list, so the hub never sees these.
+	{Op: OpPhoneGet, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2, Gateway: true},
+	{Op: OpPhonePrefs, New: newOf[PhonePrefsArgs](), Role: RoleViewer, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2, Gateway: true},
+	{Op: OpPhoneForget, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: Rate{N: 1, Per: 5 * time.Second}, MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2, Gateway: true},
 
 	// Control connection only (same user, never a browser).
 	{Op: OpWebOpen, New: newOf[WebOpenArgs](), Role: RoleCtl, Rate: perSec(1), MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV1},

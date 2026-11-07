@@ -1,0 +1,61 @@
+// The strings only the phone's own views show (home.js: This phone,
+// MOBUX-20). The phone app is English only (owner 2026-11-07), so there
+// is no Persian table for them. Only home.tsx's views import this file,
+// so the texts are bundled into home.js and never grow app.js.
+export const SP = {
+  "ph.title": "This phone",
+  "ph.loading": "Reading this phone from the laptop…",
+  "ph.failed": "The laptop did not answer.",
+  "ph.retry": "Retry",
+  "ph.not_paired": "This browser is not paired. Pair it from the laptop to see it here.",
+  "ph.device": "Device",
+  "ph.name": "Name",
+  "ph.role": "Role",
+  "ph.role_viewer": "◐ Watch only",
+  "ph.role_controller": "● Can act",
+  "ph.guest": "◌ Shared view, for one visit",
+  "ph.paired": "Paired",
+  "ph.last_seen": "Last seen",
+  "ph.passkey": "Passkey",
+  "ph.passkey_ok": "✓ Saved on this phone",
+  "ph.passkey_none": "✗ None",
+  "ph.passkey_repair": "✗ Looks copied: pair again",
+  "ph.remembered": "✓ Opens from a bookmark",
+  "ph.laptops": "Laptops",
+  "ph.laptop_this": "● connected now",
+  "ph.laptops_app": "Other laptops are kept in the termocode app.",
+  "ph.pair": "Pair a laptop",
+  "ph.pair_scan": "Scan QR code",
+  "ph.pair_body": "On the laptop, choose “Pair a phone or tablet”. Point this phone's camera at the QR code. The same 6-digit code shows on both screens: check it, then save a passkey here.",
+  "ph.alerts": "Notifications",
+  "ph.alerts_body": "Short fixed texts only (“A card is waiting”), never code or chat.",
+  "ph.alerts_blocked": "Blocked in this browser's settings.",
+  "ph.alerts_none": "This browser cannot show notifications.",
+  "ph.off": "Off",
+  "ph.on": "On",
+  "ph.quiet": "Quiet hours",
+  "ph.quiet_body": "No notifications between these times.",
+  "ph.quiet_from": "From",
+  "ph.quiet_to": "To",
+  "ph.quiet_same": "Start and end must differ.",
+  "ph.lock": "Lock the app",
+  "ph.lock_body": "Ask for this phone's fingerprint, face or PIN when the app opens.",
+  "ph.lock_app": "Only in the termocode app.",
+  "ph.saved": "✓ Saved on the laptop",
+  "ph.save_failed": "✗ Not saved. Try again.",
+  "ph.guest_no_prefs": "A shared view keeps no choices.",
+  "ph.forget": "Forget this phone…",
+  "ph.forget_title": "Forget this phone?",
+  "ph.forget_body": "The laptop removes this phone. Its sign-in stops at once. To use it again, pair it again from the laptop. The passkey stays in this phone's password manager; you can delete it there.",
+  "ph.forget_cancel": "Cancel",
+  "ph.forget_yes": "Forget",
+  "ph.forget_arming": "The Forget button wakes up in a moment.",
+  "ph.forget_failed": "Not forgotten. Try again.",
+} as const;
+
+export type PhoneKey = keyof typeof SP;
+
+/** tp is the text of a phone-only string. */
+export function tp(key: PhoneKey): string {
+  return SP[key];
+}

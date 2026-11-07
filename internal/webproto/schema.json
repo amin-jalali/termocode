@@ -972,6 +972,46 @@
       "phase": "v2"
     },
     {
+      "op": "phone.get",
+      "args": "EmptyArgs",
+      "result": "PhoneInfo",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "phone.prefs",
+      "args": "PhonePrefsArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "phone.forget",
+      "args": "EmptyArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "web.open",
       "args": "WebOpenArgs",
       "role": "ctl",
@@ -11768,6 +11808,99 @@
       },
       "required": [
         "paths"
+      ],
+      "additionalProperties": false
+    },
+    "PhoneInfo": {
+      "type": "object",
+      "properties": {
+        "device": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "viewer",
+            "controller"
+          ]
+        },
+        "guest": {
+          "type": "boolean"
+        },
+        "passkey": {
+          "type": "boolean"
+        },
+        "needs_repair": {
+          "type": "boolean"
+        },
+        "remembered": {
+          "type": "boolean"
+        },
+        "paired_ms": {
+          "type": "integer"
+        },
+        "last_seen_ms": {
+          "type": "integer"
+        },
+        "prefs": {
+          "$ref": "#/defs/PhonePrefsArgs"
+        },
+        "laptops": {
+          "items": {
+            "$ref": "#/defs/PhoneLaptop"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "device",
+        "name",
+        "role",
+        "passkey",
+        "paired_ms",
+        "prefs",
+        "laptops"
+      ],
+      "additionalProperties": true
+    },
+    "PhoneLaptop": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "this": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "PhonePrefsArgs": {
+      "type": "object",
+      "properties": {
+        "alerts": {
+          "type": "boolean"
+        },
+        "quiet_from": {
+          "type": "string"
+        },
+        "quiet_to": {
+          "type": "string"
+        },
+        "utc_offset_min": {
+          "type": "integer"
+        },
+        "lock": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "alerts"
       ],
       "additionalProperties": false
     },
