@@ -376,6 +376,16 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBRedisNSScan(msg)
 	case dbRedisWriteMsg:
 		return m, m.onDBRedisWrite(msg)
+	case dbRedisReadMsg:
+		return m, m.onDBRedisRead(msg)
+	case dbRedisNewKeyCheckMsg:
+		return m, m.onDBRedisNewKeyCheck(msg)
+	case dbRedisListenMsg:
+		return m, m.onDBRedisListen(msg)
+	case dbRedisExportScanMsg:
+		return m, m.onDBRedisExportScan(msg)
+	case dbRedisExportDoneMsg:
+		return m, m.onDBRedisExportDone(msg)
 	case dbPgTAPDoneMsg:
 		return m, m.onDBPgTAPDone(msg)
 	case dbIntrospectMsg:

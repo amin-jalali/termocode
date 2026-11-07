@@ -86,6 +86,9 @@ func redisTargetOf(c Conn) redisTarget {
 	}
 	if port == 0 {
 		port = 6379
+		if redisSentinelName(c) != "" {
+			port = 26379
+		}
 	}
 	t.addr = net.JoinHostPort(t.host, strconv.Itoa(port))
 	return t
@@ -129,41 +132,15 @@ func (s *RedisSession) connect(ctx context.Context) error {
 		_ = s.conn.Close()
 		s.conn = nil
 	}
-	dial := s.dial
-	if dial == nil && s.cfg.Dial != nil {
-		dial = RedisDialFunc(s.cfg.Dial)
-	}
-	if dial == nil {
-		d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: -1}
-		dial = d.DialContext
-	}
-	opts := []redis.DialOption{redis.DialContextFunc(dial), redis.DialDatabase(s.target.db)}
-	if s.password != "" {
-		opts = append(opts, redis.DialPassword(s.password))
-		if s.target.user != "" {
-			opts = append(opts, redis.DialUsername(s.target.user))
-		}
-	}
-	cfg, err := s.tlsConfig()
+	opts, err := s.dialOpts(s.target.db)
 	if err != nil {
 		return err
 	}
-	if cfg != nil {
-		opts = append(opts, redis.DialUseTLS(true), redis.DialTLSConfig(cfg))
+	addr, err := s.serverAddr(ctx, opts)
+	if err != nil {
+		return err
 	}
-	if name := s.cfg.Params["sentinel"]; name != "" {
-		// Sentinel (DBX-69): ask the sentinels for the master's address
-		// on every connect, so a failover is followed.
-		if s.sentinels == nil {
-			s.sentinels = redisSentinelAddrs(s.target.addr, s.cfg.Params["sentinels"])
-		}
-		addr, err := redisSentinelMaster(ctx, dial, s.sentinels, name)
-		if err != nil {
-			return redisError(err, s.password)
-		}
-		s.target.addr = addr
-	}
-	conn, err := redis.DialContext(ctx, "tcp", s.target.addr, opts...)
+	conn, err := redis.DialContext(ctx, "tcp", addr, opts...)
 	if err != nil {
 		return redisError(err, s.password)
 	}
@@ -183,9 +160,9 @@ func redisError(err error, password string) error {
 	}
 	text = Redact(text)
 	if strings.Contains(text, "MOVED ") || strings.Contains(text, "ASK ") || strings.Contains(text, "CLUSTERDOWN") {
-		// The session follows one redirect (op); a second one, or a
+		// The session follows one redirect (do / op); a second one, or a
 		// cluster that is down, ends here with the reason.
-		text = "this is a cluster node: " + text
+		text = "this is a cluster node and the redirect to the node that owns the key failed (the key tree lists the keys of this node only): " + text
 	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return fmt.Errorf("%s: %w", text, err)
@@ -278,10 +255,10 @@ func redisSentinelAddrs(first, extra string) []string {
 
 // redisSentinelMaster asks each sentinel in turn for the address of the
 // master named name.
-func redisSentinelMaster(ctx context.Context, dial RedisDialFunc, sentinels []string, name string) (string, error) {
+func redisSentinelMaster(ctx context.Context, opts []redis.DialOption, sentinels []string, name string) (string, error) {
 	var last error
 	for _, a := range sentinels {
-		c, err := redis.DialContext(ctx, "tcp", a, redis.DialContextFunc(dial))
+		c, err := redis.DialContext(ctx, "tcp", a, opts...)
 		if err != nil {
 			last = err
 			continue
@@ -311,6 +288,11 @@ func (s *RedisSession) do(ctx context.Context, c redis.Conn, args []string) (any
 		rest[i] = a
 	}
 	reply, err := redis.DoContext(c, ctx, args[0], rest...)
+	// A cluster node answers MOVED / ASK for a key on another node: run
+	// the command there once (DBX-51).
+	if addr, ask, ok := redisRedirectOf(err); ok {
+		return s.doAt(ctx, addr, ask, args)
+	}
 	return reply, redisError(err, s.password)
 }
 
@@ -1190,6 +1172,9 @@ func ClassifyRedis(args []string) (RedisKind, string) {
 	}
 	if why, ok := redisRefused[cmd]; ok {
 		return RedisRefused, why
+	}
+	if cmd == "MODULE" && sub == "LIST" {
+		return RedisRead, ""
 	}
 	if cmd == "CLIENT" && sub == "REPLY" {
 		return RedisRefused, "CLIENT REPLY would hide the replies; it is not sent from the console"

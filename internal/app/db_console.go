@@ -146,8 +146,9 @@ type dbConsoleState struct {
 	// Redis value page writes (db_redis.go)
 	redisEdit  *dbRedisEdit
 	redisWrite *dbRedisWrite
-	pgtapConn  string      // the connection a pgTAP pattern prompt is for (DBX-52)
-	pgtapRun   *dbPgTAPRun // the pgTAP run waiting for its card
+	redisMore  *dbRedisMore // a new-key / export / listen flow in progress (DBX-51)
+	pgtapConn  string       // the connection a pgTAP pattern prompt is for (DBX-52)
+	pgtapRun   *dbPgTAPRun  // the pgTAP run waiting for its card
 	// query parameters (db_params.go)
 	paramAsk *dbParamAsk
 	params   map[string]map[string]string // console file → name → last value
