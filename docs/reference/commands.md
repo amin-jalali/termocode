@@ -195,6 +195,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Add Connection… | `db-add` |   |   |
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
+| Databases: Cancel Session Query… | `db-cancel-session` |   |   |
 | Databases: Commit | `db-commit` |   |   |
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
@@ -203,6 +204,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected… | `db-disconnect` |   |   |
+| Databases: End Session… | `db-end-session` |   |   |
 | Databases: Explain Analyze Statement… | `db-explain-analyze` |   |   |
 | Databases: Explain Statement | `db-explain` |   |   |
 | Databases: Export Result… | `db-export` |   |   |
@@ -223,6 +225,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
+| Databases: Show Server Info | `db-server-info` |   |   |
+| Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |

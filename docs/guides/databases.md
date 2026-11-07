@@ -263,6 +263,12 @@ termocode reads both schemas in read-only sessions and writes each one as clean 
 
 Very large schemas are compared up to 2,000 tables; the card and the script say so when a schema is bigger.
 
+## Sessions, locks and server info
+
+**Databases: Show Sessions and Locks** lists the other sessions of the server in the result grid. PostgreSQL shows each `pid`, user, state, wait and `blocked_by` (the pids that hold the lock it waits for). MySQL shows the process list. **Databases: Show Server Info** shows the version, database, user, host and main settings. Both are plain reads: they are written into the connection's console and run there.
+
+**Databases: Cancel Session Query…** stops the running query of one session. **Databases: End Session…** ends the whole session; its open transaction rolls back. Both ask for the session id (`pid` / `id` column), then show the usual run card first (Cancel is the default). SQLite and Redis have no sessions.
+
 ## SQL history
 
 Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count.
