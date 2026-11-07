@@ -37,8 +37,24 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 			c.Problem = "duplicate connection id"
 		}
 		seen[c.ID] = true
+		if p, ok := pgPresetForScheme(c.Driver); ok { // "driver": "cockroachdb"
+			c.Driver = "postgres"
+			if c.Preset == "" {
+				c.Preset = p.ID
+			}
+		}
 		c.Driver = normDriver(c.Driver)
 		normFolderColor(c)
+		if c.Preset != "" {
+			c.Preset = strings.ToLower(c.Preset)
+			if p, ok := PGPresetByID(c.Preset); !ok {
+				c.Problem = "unknown PostgreSQL preset"
+			} else if c.Driver != "postgres" {
+				c.Problem = "preset needs the postgres driver"
+			} else if c.Port == 0 {
+				c.Port = p.Port
+			}
+		}
 		if c.Port == 0 {
 			c.Port = defaultPort(c.Driver)
 		}
