@@ -25,6 +25,15 @@ export const SP = {
   "blk.raw": "Raw data",
   "blk.form_send": "Send to the laptop",
   "blk.form_laptop": "Fill this in on the laptop",
+  // View blocks: spec chips and the customizer button (MOBUX-15)
+  "view.cond_in": "{field} is one of {values}",
+  "view.cond_empty": "{field} is empty",
+  "view.cond_not_empty": "{field} has a value",
+  "view.sort": "Sort: {field} {dir}",
+  "view.group": "Group: {field}",
+  "view.limit": "Up to {n}",
+  "view.spec_label": "What this view shows",
+  "view.customize": "Customize this view",
 } as const;
 
 addStrings(SP);
