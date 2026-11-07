@@ -847,6 +847,7 @@ func tasksPaletteItems() []picker.Item {
 		{ID: agentPickerPaletteID, Title: "Agent: Start…"},                                                                  // AGX-1 (agent_picker.go)
 		{ID: agentRacePaletteID, Title: "Agent: Race…"},                                                                     // AGX-4 (agent_race.go)
 		{ID: agentRaceComparePaletteID, Title: "Agent: Race Compare"},                                                       // AGX-5
+		{ID: agentSplitPaletteID, Title: "Agent: Split Task…", Hint: "the AI splits a goal into parts for agents"},          // CMP-4
 		{ID: agentChatPaletteID, Title: "Agent: Chat View", Hint: "chat / terminal of an agent tab"},                        // AGX-8 (agent_chat.go)
 		{ID: agentSessionsPaletteID, Title: "Agent: Sessions…", Hint: "resume or read a past session"},                      // AGX-9 (agent_sessions.go)
 		{ID: agentSessionsSearchID, Title: "Agent: Search Sessions…", Hint: "words in this project's agent sessions"},       // AGX-10
