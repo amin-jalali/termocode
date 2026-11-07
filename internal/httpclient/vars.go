@@ -40,6 +40,9 @@ type Resolver struct {
 	OnSecret func(string)
 	// Now is the clock for $timestamp / $datetime; nil = time.Now.
 	Now func() time.Time
+	// Responses returns the last response of the request called name,
+	// for {{name.response.body.$.token}} (chain.go); nil = no chaining.
+	Responses func(name string) (*Response, bool)
 }
 
 // Unresolved is one placeholder that is still raw after resolving.
@@ -150,7 +153,10 @@ func (rv *Resolver) Known(expr string) bool {
 		}
 		return knownDynamic(fn, arg, rv.now)
 	}
-	_, _, ok := rv.named(expr)
+	if _, _, ok := rv.named(expr); ok {
+		return true
+	}
+	_, _, ok := rv.chainValue(expr)
 	return ok
 }
 
@@ -158,6 +164,14 @@ func (sc *sendScope) lookup(expr string) (string, bool) {
 	rv := sc.rv
 	if !strings.HasPrefix(expr, "$") {
 		v, private, ok := rv.named(expr)
+		if !ok {
+			if v, private, ok = rv.chainValue(expr); ok {
+				if private {
+					sc.secret(v)
+				}
+				return v, true
+			}
+		}
 		if ok && private {
 			sc.secret(v)
 		}
