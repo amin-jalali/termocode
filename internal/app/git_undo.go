@@ -71,7 +71,7 @@ type undoDoneMsg struct {
 
 // gitUndoCmd plans the undo of the last git action off the loop.
 func (m *Model) gitUndoCmd() tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -195,7 +195,7 @@ func (m *Model) onUndoConfirm(id string) tea.Cmd {
 		return nil
 	}
 	opt := git.UndoOptions{Stash: id == "undo-stash"}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -242,7 +242,7 @@ func (m *Model) gitRedoCmd() tea.Cmd {
 	}
 	r := *m.gitUndo.redo
 	m.gitUndo.redo = nil
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -321,7 +321,7 @@ func (m *Model) dispatchUndoPalette(id string) (tea.Cmd, bool) {
 		if !m.gitEnsureLoaded() {
 			return nil, true
 		}
-		cwd, err := m.rootDir()
+		cwd, err := m.gitRootDir()
 		if err != nil {
 			return nil, true
 		}
@@ -379,7 +379,7 @@ func (m *Model) onReflogPicked(id string) tea.Cmd {
 		return nil
 	}
 	e := m.gitUndo.reflog[i]
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

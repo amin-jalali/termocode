@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,7 +10,6 @@ import (
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
-	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -225,14 +223,14 @@ func (m *Model) onResetModePicked(id string) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	repo, err := m.gitStashRepo()
 	if err != nil {
-		return nil
+		return m.gitOpsToast(err, "Reset failed", "", "")
 	}
 	s := &m.gitStashOps
 	s.resetMode = mode
-	old := git.StashHash(cwd, "HEAD")
-	n := gitCountCommits(cwd, s.resetTo+"..HEAD")
+	old := repo.Hash("HEAD")
+	n := repo.CountCommits(s.resetTo + "..HEAD")
 	label := gitResetBranchLabel(m)
 	text := fmt.Sprintf("%s moves to %s.", label, s.resetTag)
 	if n > 0 {
@@ -255,10 +253,6 @@ func (m *Model) onResetModePicked(id string) tea.Cmd {
 
 // onGitOpsConfirm answers this file's cards; Cancel does nothing.
 func (m *Model) onGitOpsConfirm(kind confirmKindEnum, id string) tea.Cmd {
-	cwd, err := m.rootDir()
-	if err != nil {
-		return nil
-	}
 	s := m.gitStashOps
 	switch {
 	case kind == confirmKindStashDrop && id == "drop":
@@ -283,8 +277,12 @@ func (m *Model) onGitOpsConfirm(kind confirmKindEnum, id string) tea.Cmd {
 			m.gitOpsPrompt(promptKindResetHardTyped, "Hard reset "+label, "Type "+label+" to reset it hard to "+s.resetTag+":", "")
 			return nil
 		}
-		old := git.StashHash(cwd, "HEAD")
-		return m.gitOpsToast(git.Reset(cwd, s.resetMode, s.resetTo), "Reset failed",
+		repo, err := m.gitStashRepo()
+		if err != nil {
+			return m.gitOpsToast(err, "Reset failed", "", "")
+		}
+		old := repo.Hash("HEAD")
+		return m.gitOpsToast(repo.Reset(s.resetMode, s.resetTo), "Reset failed",
 			"Reset "+gitResetBranchLabel(m)+" to "+s.resetTag+" ("+s.resetMode+")", "git reset "+old[:min(7, len(old))]+" goes back")
 	}
 	return nil
@@ -295,23 +293,15 @@ func (m *Model) gitUncommit() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	repo, err := m.gitStashRepo()
 	if err != nil {
-		return nil
+		return m.gitOpsToast(err, "Uncommit failed", "", "")
 	}
-	old := git.StashHash(cwd, "HEAD")
-	subject, _ := runGitSubject(cwd)
-	err = git.Uncommit(cwd)
+	old := repo.Hash("HEAD")
+	subject := repo.Subject()
+	err = repo.Uncommit()
 	short := old[:min(7, len(old))]
 	return m.gitOpsToast(err, "Uncommit failed", "Undid commit "+short+" "+subject, "Its changes are staged · git reset "+short+" brings it back")
-}
-
-func runGitSubject(cwd string) (string, error) {
-	es, err := git.Log(cwd, 1)
-	if err != nil || len(es) == 0 {
-		return "", err
-	}
-	return es[0].Subject, nil
 }
 
 // ── prompts ───────────────────────────────────────────────────────────
@@ -322,10 +312,6 @@ func (m *Model) handleGitOpsPromptSubmit(value string) (tea.Cmd, bool) {
 	case promptKindStashMessage, promptKindStashBranch, promptKindResetHardTyped:
 	default:
 		return nil, false
-	}
-	cwd, err := m.rootDir()
-	if err != nil {
-		return nil, true
 	}
 	value = strings.TrimSpace(value)
 	s := &m.gitStashOps
@@ -354,26 +340,14 @@ func (m *Model) handleGitOpsPromptSubmit(value string) (tea.Cmd, bool) {
 		m.toast, c = m.toast.PushDetail(toast.Warn, "Name did not match", "Nothing was reset. Type "+label+" exactly.")
 		return c, true
 	}
-	b, err := git.ResetHardSafe(cwd, s.resetTo)
+	repo, err := m.gitStashRepo()
+	if err != nil {
+		return m.gitOpsToast(err, "Hard reset failed", "", ""), true
+	}
+	b, err := repo.ResetHardSafe(s.resetTo)
 	detail := "HEAD was " + b.Old + ", saved as " + b.Ref
 	if b.Stashed {
 		detail += " · your changes are in the stash list"
 	}
 	return m.gitOpsToast(err, "Hard reset failed", "Reset "+label+" hard to "+s.resetTag, detail), true
-}
-
-// gitCountCommits counts the commits of a range ("a..b"); -1 when
-// unknown.
-func gitCountCommits(cwd, rng string) int {
-	cmd := spawn.Command("git", "rev-list", "--count", rng)
-	cmd.Dir = cwd
-	out, err := cmd.Output()
-	if err != nil {
-		return -1
-	}
-	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
-	if err != nil {
-		return -1
-	}
-	return n
 }

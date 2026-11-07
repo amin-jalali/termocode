@@ -106,3 +106,18 @@ func TestCommandListFullNameRunsThatCommand(t *testing.T) {
 	run("View: Toggle Panel")
 	p.WaitJS(`!document.querySelector(".wb-panel") && !document.querySelector(".wb.is-panel-max")`)
 }
+
+// WEBP-10: with the panel maximized (the editor hidden) the command list
+// still shows over it and takes the keys, and its command runs: it was
+// drawn inside the hidden editor, so it opened unseen and kept no focus.
+func TestCommandListShowsOverMaximizedPanel(t *testing.T) {
+	p, _ := openFiles(t, Desktop)
+	wbKey(p, "P", true, true)
+	p.WaitJS(`document.activeElement === document.querySelector(".quick .quick-box")`)
+	p.Key("View: Toggle Maximized Panel\r")
+	p.WaitJS(`document.querySelector(".wb.is-panel-max .wb-panel") && !document.querySelector(".quick")`)
+	wbKey(p, "P", true, true)
+	p.WaitJS(`(() => { const q = document.querySelector(".quick"); if (!q) return false; const r = q.getBoundingClientRect(); return r.width > 200 && r.height > 20 && document.activeElement === q.querySelector(".quick-box"); })()`)
+	p.Key("View: Toggle Maximized Panel\r")
+	p.WaitJS(`!document.querySelector(".wb.is-panel-max") && !document.querySelector(".quick")`)
+}

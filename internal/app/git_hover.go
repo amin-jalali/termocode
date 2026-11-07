@@ -45,7 +45,7 @@ func (m Model) gitCommitAtScreenY(x, y int) (string, bool) {
 
 // fetchCommitDetailCmd loads a commit's metadata off the main loop.
 func (m Model) fetchCommitDetailCmd(hash string) tea.Cmd {
-	cwd, cwdErr := m.rootDir()
+	cwd, cwdErr := m.gitRootDir()
 	return func() tea.Msg {
 		if cwdErr != nil {
 			return nil

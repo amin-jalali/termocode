@@ -60,7 +60,7 @@ func (m *Model) openMergeBranchPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -105,7 +105,7 @@ func (m *Model) onMergeBranchPicked(id string) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -144,7 +144,7 @@ func (m *Model) onMergeBranchConfirm(id string) tea.Cmd {
 	if id != "merge" && id != "merge-no-ff" {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -244,7 +244,7 @@ func (m *Model) onGitOpControl(id string) tea.Cmd {
 	if verb != "continue" && verb != "abort" {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

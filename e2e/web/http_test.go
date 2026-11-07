@@ -60,6 +60,11 @@ func TestHTTPSendShowsTheLaptopsAnswer(t *testing.T) {
 		Body: `{"auth":"Bearer [REDACTED]","html":"<b>x</b>"}`})
 	p.WaitJS(`document.querySelector(".http-resp .http-status")?.textContent.includes("200 OK")`)
 	reply(t, c, expectOp(t, c, webproto.OpHTTPHistory, `{}`), webproto.HTTPHistory{Entries: []webproto.HTTPHistItem{}})
+	// WEBP-10: in a right-to-left page the status, the request and the
+	// time stay left to right ("404 Not Found" read "Not 404 Found").
+	if bad := Eval[string](p, `[".http-status", ".http-what", ".http-bar .tr-age"].filter((s) => document.querySelector(".http-resp " + s)?.getAttribute("dir") !== "ltr").join(" ")`); bad != "" {
+		t.Errorf("not left to right: %s", bad)
+	}
 	body := Eval[string](p, `document.querySelector(".http-resp .http-body-text").textContent`)
 	if !strings.Contains(body, `"auth": "Bearer [REDACTED]"`) || Eval[int](p, `document.querySelectorAll(".http-resp b").length`) != 0 {
 		t.Fatalf("body %q (or it became HTML)", body)

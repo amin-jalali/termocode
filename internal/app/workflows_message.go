@@ -60,7 +60,7 @@ type wfxNoteMsg struct{ text string }
 
 // wfxMessenger is the run's messenger; block hands os / web to Update.
 func wfxMessenger(id string, block func(context.Context, tea.Msg) error) wire.Messenger {
-	ms := wire.Messenger{Post: wfxWebhookPost,
+	ms := wire.Messenger{Post: wfxWebhookPost, Cache: &wire.SendCache{},
 		OS: func(ctx context.Context, text string) error {
 			return block(ctx, wfxMessageMsg{id: id, via: "os", text: text})
 		},
