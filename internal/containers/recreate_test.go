@@ -24,3 +24,13 @@ func TestRecreatePlanPullsRemovesAndRunsTheSameSettings(t *testing.T) {
 		t.Fatal("a flag as the container must be refused")
 	}
 }
+
+func TestImageRepoDigestsFromInspect(t *testing.T) {
+	got := ImageRepoDigests([]byte(`[{"Id":"sha256:1","RepoDigests":["nginx@sha256:aa","ghcr.io/a/b@sha256:bb"]}]`))
+	if !slices.Equal(got, []string{"nginx@sha256:aa", "ghcr.io/a/b@sha256:bb"}) {
+		t.Fatalf("got %q", got)
+	}
+	if ImageRepoDigests([]byte("not json")) != nil {
+		t.Fatal("bad input must give nil")
+	}
+}
