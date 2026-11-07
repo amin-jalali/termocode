@@ -328,6 +328,15 @@
       "deltas": [
         "ProjectsSnap"
       ]
+    },
+    {
+      "name": "races",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "RacesSnap",
+      "deltas": [
+        "RacesSnap"
+      ]
     }
   ],
   "events": {
@@ -16745,6 +16754,187 @@
       "required": [
         "home",
         "projects"
+      ],
+      "additionalProperties": true
+    },
+    "RaceFile": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "integer"
+        },
+        "binary": {
+          "type": "boolean"
+        },
+        "del": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "A",
+            "M",
+            "D"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "path"
+      ],
+      "additionalProperties": true
+    },
+    "RaceItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lanes": {
+          "items": {
+            "$ref": "#/defs/RaceLane"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "started": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "working",
+            "done",
+            "closed"
+          ]
+        },
+        "summary": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary_cost": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "boolean"
+        },
+        "winner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "number",
+        "name",
+        "prompt",
+        "started",
+        "state",
+        "lanes"
+      ],
+      "additionalProperties": true
+    },
+    "RaceLane": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "integer"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "changed": {
+          "items": {
+            "$ref": "#/defs/RaceFile"
+          },
+          "type": "array"
+        },
+        "cost": {
+          "type": "string"
+        },
+        "del": {
+          "type": "integer"
+        },
+        "exit": {
+          "type": "integer"
+        },
+        "files": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "starting",
+            "working",
+            "waiting",
+            "done",
+            "stopped",
+            "failed",
+            "merged",
+            "discarded"
+          ]
+        },
+        "stats": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "verify": {
+          "enum": [
+            "running",
+            "pass",
+            "fail"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "agent",
+        "title",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "RacesSnap": {
+      "type": "object",
+      "properties": {
+        "races": {
+          "items": {
+            "$ref": "#/defs/RaceItem"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "none",
+            "loading",
+            "error",
+            "ready"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "races"
       ],
       "additionalProperties": true
     }

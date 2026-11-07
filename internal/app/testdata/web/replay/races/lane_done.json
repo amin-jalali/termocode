@@ -1,0 +1,300 @@
+{
+  "topic": "races",
+  "snap0": {
+    "races": [
+      {
+        "id": "race-2",
+        "lanes": [
+          {
+            "agent": "claude",
+            "branch": "termocode/agent-race-2-1-claude",
+            "id": "race-2-1-claude",
+            "state": "working",
+            "title": "Claude"
+          },
+          {
+            "add": 35,
+            "agent": "codex",
+            "branch": "termocode/agent-race-2-2-codex",
+            "changed": [
+              {
+                "add": 30,
+                "path": "web/theme.css",
+                "status": "A"
+              },
+              {
+                "add": 5,
+                "del": 2,
+                "path": "web/app.tsx",
+                "status": "M"
+              }
+            ],
+            "cost": "$0.42",
+            "del": 2,
+            "files": 2,
+            "id": "race-2-2-codex",
+            "state": "done",
+            "stats": true,
+            "title": "Codex",
+            "verify": "pass"
+          }
+        ],
+        "name": "race/add-dark-mode",
+        "number": 2,
+        "prompt": "add dark mode",
+        "started": 1793966280000,
+        "state": "working",
+        "verify": true
+      },
+      {
+        "id": "race-1",
+        "lanes": [
+          {
+            "add": 4,
+            "agent": "claude",
+            "branch": "termocode/agent-race-1-1-claude",
+            "changed": [
+              {
+                "add": 4,
+                "del": 1,
+                "path": "internal/auth/login.go",
+                "status": "M"
+              }
+            ],
+            "del": 1,
+            "files": 1,
+            "id": "race-1-1-claude",
+            "state": "merged",
+            "stats": true,
+            "title": "Claude"
+          },
+          {
+            "agent": "codex",
+            "id": "race-1-2-codex",
+            "state": "discarded",
+            "title": "Codex"
+          }
+        ],
+        "name": "race/fix-login",
+        "number": 1,
+        "prompt": "fix login",
+        "started": 1793966000000,
+        "state": "closed",
+        "summary": [
+          "Claude changes one file; Codex changes none"
+        ],
+        "summary_cost": "$0.01",
+        "winner": "race-1-1-claude"
+      }
+    ],
+    "state": "ready"
+  },
+  "deltas": [
+    {
+      "races": [
+        {
+          "id": "race-2",
+          "lanes": [
+            {
+              "add": 12,
+              "agent": "claude",
+              "branch": "termocode/agent-race-2-1-claude",
+              "changed": [
+                {
+                  "add": 12,
+                  "del": 3,
+                  "path": "web/theme.css",
+                  "status": "M"
+                }
+              ],
+              "del": 3,
+              "exit": 1,
+              "files": 1,
+              "id": "race-2-1-claude",
+              "state": "done",
+              "stats": true,
+              "title": "Claude",
+              "verify": "fail"
+            },
+            {
+              "add": 35,
+              "agent": "codex",
+              "branch": "termocode/agent-race-2-2-codex",
+              "changed": [
+                {
+                  "add": 30,
+                  "path": "web/theme.css",
+                  "status": "A"
+                },
+                {
+                  "add": 5,
+                  "del": 2,
+                  "path": "web/app.tsx",
+                  "status": "M"
+                }
+              ],
+              "cost": "$0.42",
+              "del": 2,
+              "files": 2,
+              "id": "race-2-2-codex",
+              "state": "done",
+              "stats": true,
+              "title": "Codex",
+              "verify": "pass"
+            }
+          ],
+          "name": "race/add-dark-mode",
+          "number": 2,
+          "prompt": "add dark mode",
+          "started": 1793966280000,
+          "state": "done",
+          "verify": true
+        },
+        {
+          "id": "race-1",
+          "lanes": [
+            {
+              "add": 4,
+              "agent": "claude",
+              "branch": "termocode/agent-race-1-1-claude",
+              "changed": [
+                {
+                  "add": 4,
+                  "del": 1,
+                  "path": "internal/auth/login.go",
+                  "status": "M"
+                }
+              ],
+              "del": 1,
+              "files": 1,
+              "id": "race-1-1-claude",
+              "state": "merged",
+              "stats": true,
+              "title": "Claude"
+            },
+            {
+              "agent": "codex",
+              "id": "race-1-2-codex",
+              "state": "discarded",
+              "title": "Codex"
+            }
+          ],
+          "name": "race/fix-login",
+          "number": 1,
+          "prompt": "fix login",
+          "started": 1793966000000,
+          "state": "closed",
+          "summary": [
+            "Claude changes one file; Codex changes none"
+          ],
+          "summary_cost": "$0.01",
+          "winner": "race-1-1-claude"
+        }
+      ],
+      "state": "ready"
+    }
+  ],
+  "snapn": {
+    "state": "ready",
+    "races": [
+      {
+        "id": "race-2",
+        "number": 2,
+        "name": "race/add-dark-mode",
+        "prompt": "add dark mode",
+        "verify": true,
+        "started": 1793966280000,
+        "state": "done",
+        "lanes": [
+          {
+            "id": "race-2-1-claude",
+            "agent": "claude",
+            "title": "Claude",
+            "state": "done",
+            "branch": "termocode/agent-race-2-1-claude",
+            "stats": true,
+            "files": 1,
+            "add": 12,
+            "del": 3,
+            "changed": [
+              {
+                "status": "M",
+                "path": "web/theme.css",
+                "add": 12,
+                "del": 3
+              }
+            ],
+            "verify": "fail",
+            "exit": 1
+          },
+          {
+            "id": "race-2-2-codex",
+            "agent": "codex",
+            "title": "Codex",
+            "state": "done",
+            "branch": "termocode/agent-race-2-2-codex",
+            "stats": true,
+            "files": 2,
+            "add": 35,
+            "del": 2,
+            "changed": [
+              {
+                "status": "A",
+                "path": "web/theme.css",
+                "add": 30
+              },
+              {
+                "status": "M",
+                "path": "web/app.tsx",
+                "add": 5,
+                "del": 2
+              }
+            ],
+            "verify": "pass",
+            "cost": "$0.42"
+          }
+        ]
+      },
+      {
+        "id": "race-1",
+        "number": 1,
+        "name": "race/fix-login",
+        "prompt": "fix login",
+        "started": 1793966000000,
+        "state": "closed",
+        "lanes": [
+          {
+            "id": "race-1-1-claude",
+            "agent": "claude",
+            "title": "Claude",
+            "state": "merged",
+            "branch": "termocode/agent-race-1-1-claude",
+            "stats": true,
+            "files": 1,
+            "add": 4,
+            "del": 1,
+            "changed": [
+              {
+                "status": "M",
+                "path": "internal/auth/login.go",
+                "add": 4,
+                "del": 1
+              }
+            ]
+          },
+          {
+            "id": "race-1-2-codex",
+            "agent": "codex",
+            "title": "Codex",
+            "state": "discarded"
+          }
+        ],
+        "summary": [
+          "Claude changes one file; Codex changes none"
+        ],
+        "summary_cost": "$0.01",
+        "winner": "race-1-1-claude"
+      }
+    ]
+  }
+}

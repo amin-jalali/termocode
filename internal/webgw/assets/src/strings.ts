@@ -454,6 +454,34 @@ export const S = {
   "wf.run_body": "Run {s} for real? It may write to outside systems. Each write still asks you on its own card.",
   "wf.trust_laptop": "Not trusted yet. Read and trust it on the laptop.",
   "wf.broken": "Its file has problems. Fix it on the laptop.",
+  "more.races": "Races",
+  "race.none": "No races yet. Start one on the laptop.",
+  "race.no_repo": "Races need a git repository.",
+  "race.read_error": "Could not read the races. See the laptop.",
+  "race.title": "Race {n}",
+  "race.state.working": "working",
+  "race.state.done": "done, ready to compare",
+  "race.state.closed": "closed",
+  "race.verify_set": "verify command set",
+  "race.col.lane": "Lane",
+  "race.col.files": "Files",
+  "race.col.lines": "Lines",
+  "race.col.tests": "Tests",
+  "race.col.cost": "Cost",
+  "race.lane": "{name}: {state}",
+  "race.lane.starting": "starting",
+  "race.lane.working": "working",
+  "race.lane.waiting": "waits for you",
+  "race.lane.done": "done",
+  "race.lane.stopped": "stopped",
+  "race.lane.failed": "failed",
+  "race.lane.merged": "merged",
+  "race.lane.discarded": "discarded",
+  "race.files": "Changed files",
+  "race.files_later": "Files show when this lane is done.",
+  "race.no_changes": "No changes.",
+  "race.more_files": "{n} more files",
+  "race.binary": "binary",
   "more.settings": "Settings",
   "settings.readonly": "Read only. Change settings on the laptop.",
   "settings.none": "No settings to show.",
@@ -1003,7 +1031,7 @@ export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP;
 
 /** PhoneOnlyKey is a phone app key: English only (owner 2026-11-07), the
  * same prefixes as strings_test.go englishOnly. */
-type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` | `cust.${string}` | `item.${string}` | `tools.${string}`>;
+type PhoneOnlyKey = Extract<keyof typeof S, `ph.${string}` | `chips.${string}` | `cust.${string}` | `item.${string}` | `tools.${string}` | `race.${string}` | "more.races">;
 
 /** TranslatedKey is a key strings.fa.ts translates: the phone app's
  * strings are English only (owner 2026-11-07). */

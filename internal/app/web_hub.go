@@ -77,6 +77,7 @@ type webHub struct {
 	ups      webUploads                 // staged uploads (web_transfer.go; own lock)
 	push     webPushState               // Update only: pushes to paired phones (web_push.go)
 	wake     webPushWakeState           // Update only: phones' UnifiedPush wakes (web_push_wake.go, MOB-32)
+	races    webRacesPub                // Update only: what the races topic sent (web_races.go)
 	// settled: Update only; the publishers ran once since the hub went
 	// idle (web_after.go).
 	settled bool

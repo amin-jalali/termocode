@@ -238,10 +238,14 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 // englishOnly keys belong to the phone app, which is English only (owner
 // 2026-11-07, MOBUX rules): they have no Persian text. One rule for every
 // MOB/MOBUX branch: ph.* (phone shell, This phone), chips.* (Home chips),
-// cust.* (Customize), item.* (Home item sheets), tools.* (All tools).
+// cust.* (Customize), item.* (Home item sheets), tools.* (All tools),
+// race.* and more.races (the phone's race compare, MOB-61).
 // strings.ts PhoneOnlyKey lists the same prefixes.
 func englishOnly(key string) bool {
-	for _, p := range []string{"ph.", "chips.", "cust.", "item.", "tools."} {
+	if key == "more.races" {
+		return true
+	}
+	for _, p := range []string{"ph.", "chips.", "cust.", "item.", "tools.", "race."} {
 		if strings.HasPrefix(key, p) {
 			return true
 		}
