@@ -18,6 +18,10 @@
 //	                     stderr (an unreachable cluster)
 //	describe.txt         answer of `describe …`
 //	restart.err          `rollout restart` fails with this stderr
+//	rollout-status.txt   answer of `rollout status …`
+//	rollout-history.txt  answer of `rollout history …`
+//	undo.err             `rollout undo` fails with this stderr
+//	set-image.err        `set image` fails with this stderr
 //	logs.txt             answer of `logs …`
 //	pf-port.txt          the local port `port-forward` reports (43123)
 //	pf.err               `port-forward` fails with this stderr
@@ -70,8 +74,18 @@ get)
   cat "$D/$kind.json" 2>/dev/null; exit 0 ;;
 describe) cat "$D/describe.txt" 2>/dev/null; exit 0 ;;
 rollout)
+  case "$2" in
+  status) cat "$D/rollout-status.txt" 2>/dev/null; exit 0 ;;
+  history) cat "$D/rollout-history.txt" 2>/dev/null; exit 0 ;;
+  undo)
+    if [ -f "$D/undo.err" ]; then cat "$D/undo.err" >&2; exit 1; fi
+    echo "$3 rolled back"; exit 0 ;;
+  esac
   if [ -f "$D/restart.err" ]; then cat "$D/restart.err" >&2; exit 1; fi
   echo "deployment.apps/$3 restarted"; exit 0 ;;
+set)
+  if [ -f "$D/set-image.err" ]; then cat "$D/set-image.err" >&2; exit 1; fi
+  echo "$3 image updated"; exit 0 ;;
 logs) cat "$D/logs.txt" 2>/dev/null; exit 0 ;;
 port-forward)
   if [ -f "$D/pf.err" ]; then cat "$D/pf.err" >&2; exit 1; fi
