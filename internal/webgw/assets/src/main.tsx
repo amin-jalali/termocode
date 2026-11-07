@@ -13,6 +13,7 @@ import "./styles/git.css";
 import "./styles/more.css";
 import "./styles/moreviews.css";
 import "./styles/files.css";
+import "./styles/board.css";
 import "./styles/fonts.css";
 import "./styles/hl.css";
 import "./styles/media.css";

@@ -1080,6 +1080,21 @@
       "phase": "v2"
     },
     {
+      "op": "board.get",
+      "args": "EmptyArgs",
+      "result": "Board",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "debug.expand",
       "args": "DebugExpandArgs",
       "role": "viewer",
@@ -4855,6 +4870,131 @@
       },
       "required": [
         "title"
+      ],
+      "additionalProperties": true
+    },
+    "Board": {
+      "type": "object",
+      "properties": {
+        "built": {
+          "type": "integer"
+        },
+        "counts": {
+          "$ref": "#/defs/BoardCounts"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/BoardItem"
+          },
+          "type": "array"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "today_usd": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "items",
+        "counts",
+        "built"
+      ],
+      "additionalProperties": true
+    },
+    "BoardCounts": {
+      "type": "object",
+      "properties": {
+        "done": {
+          "type": "integer"
+        },
+        "needs_you": {
+          "type": "integer"
+        },
+        "review": {
+          "type": "integer"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "needs_you",
+        "working",
+        "review",
+        "done"
+      ],
+      "additionalProperties": true
+    },
+    "BoardItem": {
+      "type": "object",
+      "properties": {
+        "ahead": {
+          "type": "integer"
+        },
+        "column": {
+          "enum": [
+            "needs_you",
+            "working",
+            "review",
+            "done"
+          ]
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "dirty": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "card",
+            "run",
+            "lane",
+            "workflow"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        },
+        "since": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "wait",
+            "run",
+            "ok",
+            "fail",
+            "idle"
+          ]
+        },
+        "step": {
+          "type": "integer"
+        },
+        "steps": {
+          "type": "integer"
+        },
+        "sub": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "why": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "column",
+        "state",
+        "title",
+        "ref"
       ],
       "additionalProperties": true
     },

@@ -28,6 +28,7 @@
       "/assets/editor.js": ["./src/editor/main.ts"],
       "/assets/workbench.js": ["./src/workbench.tsx"],
       "/assets/strings-fa.js": ["./src/strings.fa.ts"],
+      "/assets/board.js": ["./src/views/board/main.tsx"],
       "/assets/monaco-vim.js": ["./src/monaco/vim.ts"]
     }
   },
