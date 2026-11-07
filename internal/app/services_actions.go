@@ -831,6 +831,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.openContainerTerminal(c, "stats")
 		}
+	case "F":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.openContainerFiles(c)
+		}
 	case "i":
 		if _, ref, ok := m.selectedImage(); ok {
 			return m, m.imageInspect(ref)
@@ -942,6 +946,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"Enter", "logs"},
 			[]string{"S", "live stats"},
 			[]string{"i", "inspect"},
+			[]string{"F", "browse files: view, download, upload (asks first)"},
 			[]string{"o", "open a port in the browser"},
 			[]string{"y", "copy the id"},
 			[]string{"D", "remove (asks first)"},
@@ -1390,6 +1395,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-attach", Title: "Containers: Attach"},
 		{ID: "containers-stats", Title: "Containers: Follow Stats"},
 		{ID: "containers-inspect", Title: "Containers: Inspect"},
+		{ID: "containers-files", Title: "Containers: Browse Files"},
 		{ID: "containers-copy-id", Title: "Containers: Copy ID"},
 		{ID: "containers-open-databases", Title: "Containers: Open in Databases"},
 		{ID: "containers-open-port", Title: "Containers: Open Published Port"},
@@ -1746,6 +1752,8 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return m.openContainerTerminal(c, "stats")
 			case "containers-inspect":
 				return m.inspectContainer(c)
+			case "containers-files":
+				return m.openContainerFiles(c)
 			case "containers-copy-id":
 				m.copyToClipboard(c.ID)
 				return m.servicesToast(toast.Info, "Copied container id", shortImageID(c.ID))

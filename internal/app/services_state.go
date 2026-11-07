@@ -51,8 +51,9 @@ func svcLocalTab(name string) string { return "local:" + name }
 func svcLogsTab(name string) string { return "logs:" + name }
 
 type servicesState struct {
-	opened bool // the view was shown once (detection ran)
-	loaded bool // a snapshot arrived
+	files  containerFilesState // the open container file browser (containers_files.go)
+	opened bool                // the view was shown once (detection ran)
+	loaded bool                // a snapshot arrived
 	root   string
 
 	det      services.Detection
@@ -594,6 +595,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainerBulkDone(msg), true
 	case containerInspectMsg:
 		return m.onContainerInspect(msg), true
+	case containerUIDoneMsg: // containers_files.go
+		return msg.apply(m), true
 	case containerGroupDoneMsg:
 		return m.onContainerGroupDone(msg), true
 	case imagePageMsg:

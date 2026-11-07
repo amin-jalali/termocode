@@ -439,6 +439,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-attach":            aiNever(aiNoPicker + " (container attach)"),
 	"containers-stats":             aiAuto(),
 	"containers-inspect":           aiAuto(),
+	"containers-files":             aiNever(aiNoPicker + " (container files)"),
 	"containers-copy-id":           aiAuto(),
 	"containers-open-port":         aiAuto(),
 	"containers-open-databases":    aiNever(aiNoPicker + " (db_connections)"),

@@ -71,6 +71,7 @@ when something changed. When you hide the view (another activity item,
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
 | `i` | inspect: a read-only JSON page in the editor |
+| `F` | browse the files of a running container: view read-only, download, upload (asks first) |
 | `o` | open the first published port in the browser |
 | `y` | copy the ID, name, host or endpoint of the row |
 | `u` | pull an image |
@@ -140,6 +141,17 @@ remove it. On a compose project group, `s`, `x`, and `r` run compose up,
 stop, and restart. `D` asks before compose down and names its command.
 Attach uses `--sig-proxy=false`; press `Ctrl+P Ctrl+Q` in its terminal tab
 to detach without stopping the container.
+
+### Container files
+
+`F` on a running container (or **Containers: Browse Files**) lists its
+folders in a picker, starting at `/`. Enter opens a folder; `..` goes up.
+A file opens a card: **View** shows it read-only in the editor (the first
+1 MB of text; a binary file is not shown), **Download** saves a copy in your
+Downloads folder and never replaces a file there (`name (1)`, `name (2)`…).
+**Upload a file here…** asks for a local path, then a card with **Cancel**
+first; a file that is already in the container is replaced only after a
+second **Replace** card. Nothing is written in the container without a card.
 
 Logs, shell, attach, stats and pulls run in terminal tabs, so you see
 progress and can type.
