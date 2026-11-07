@@ -130,6 +130,8 @@ type aiState struct {
 	// skillsFake replaces the skill files in AI: Skills… for the
 	// screenshot demo (ai_skills_demo.go).
 	skillsFake *ai.Skills
+	// powerSel is the power an AI: Powers Catalog… card is about (ai_powers.go).
+	powerSel string
 	// memSlotWarned: the "no quick model" toast was shown this session.
 	memSlotWarned bool
 	// memAsk is the turn the open ask-once memory card is for.
@@ -181,6 +183,9 @@ type aiState struct {
 	runQueue      []aiQueuedRun
 	runInline     map[string]ai.Profile
 	runNotStarted map[string]string
+	// taskList is the open card of AI: Run Task List in Waves… (CMP-76,
+	// ai_task_list.go).
+	taskList *aiTaskListPending
 	// bgRuns are the AI-started runs that run beside the chat (OMX-6,
 	// ai_bg_runs.go).
 	bgRuns []*aiBgRun
@@ -566,6 +571,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
 		{"ai-worktrees-toggle", "AI: Toggle Agent Worktrees", ""},
 		{"ai-critic-toggle", "AI: Toggle Critic Review", ""},
+		{aiTaskListPaletteID, "AI: Run Task List in Waves…", ""},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
@@ -577,6 +583,7 @@ func aiPaletteItems() []paletteEntry {
 		{"help-bug-report", "Help: Build Bug Report…", ""},
 		{"ai-doctor", "AI: Doctor", ""},
 		{"ai-skills", "AI: Skills…", ""},
+		{"ai-powers", "AI: Powers Catalog…", ""},
 		{"ai-hooks", "AI: Hooks…", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-proofs", "AI: Proof of Work… (screenshots the AI took)", ""},
@@ -638,6 +645,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIChatSearch(), true
 	case "ai-worktrees": // G-WT (ai_worktree_list.go)
 		return m.openAIWorktrees(), true
+	case aiTaskListPaletteID: // CMP-76 (ai_task_list.go)
+		return m.aiRunTaskList(), true
 	case "ai-worktrees-toggle":
 		return m.toggleAIWorktrees(), true
 	case "ai-critic-toggle": // CMP-53 (ai_critic.go)
@@ -765,6 +774,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIDoctor(), true
 	case "ai-skills":
 		return m.openAISkills(), true
+	case aiPowersPaletteID: // ai_powers.go
+		return m.openAIPowers(), true
 	case "ai-hooks":
 		return m.openAIHooks(), true
 	case "ai-web-tools":

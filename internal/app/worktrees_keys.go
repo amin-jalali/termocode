@@ -74,6 +74,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtLinkPaletteID, Title: "Worktree: Link Issue or PR…"},
 		{ID: wtNotesPaletteID, Title: "Worktree: Show Notes of Selected"},
 		{ID: wtDiffPaletteID, Title: "Worktree: Review Changes vs Base of Selected"},
+		{ID: wtDepsPaletteID, Title: "Worktree: Show Dependency Graph"},
 		{ID: wtAdoptPaletteID, Title: "Worktree: Adopt Selected"},
 		{ID: wtForgetPaletteID, Title: "Worktree: Forget Gone Selected"},
 		{ID: wtSleepPaletteID, Title: "Worktree: Sleep or Wake Selected"},
@@ -119,6 +120,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeNotes(), true
 	case wtDiffPaletteID:
 		return m.worktreeDiff(), true
+	case wtDepsPaletteID:
+		return m.worktreeDeps(), true
 	case wtAdoptPaletteID:
 		return m.worktreeAdopt(), true
 	case wtForgetPaletteID:

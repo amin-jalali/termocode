@@ -74,6 +74,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIMemoryPicked(id), true
 	case pickerKindAISkills: // ai_skills.go
 		return m.onAISkillsPicked(id), true
+	case pickerKindAIPowers: // ai_powers.go
+		return m.onAIPowersPicked(id), true
 	case pickerKindAIWebTools: // ai_web_tools.go
 		return m.onAIWebToolsPicked(id), true
 	case pickerKindAIProofs: // ai_proof.go
@@ -92,6 +94,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAgentSessionPicked(id), true
 	case pickerKindAgentNames: // agent_names.go
 		return m.onAgentNamePicked(id), true
+	case pickerKindBugspec: // bugspec_ui.go
+		return m.onBugspecPicked(id), true
 	case pickerKindAgentAccounts: // agent_accounts.go
 		return m.onAgentAccountPicked(id), true
 	case pickerKindAgentSessionsHits: // agent_sessions_search.go
@@ -122,6 +126,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIKeyEntered(value), true
 	case promptKindAgentNames: // agent_names.go
 		return m.onAgentNamesTask(value), true
+	case promptKindBugspecTitle: // bugspec_ui.go
+		return m.onBugspecTitle(value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
@@ -227,6 +233,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTSleep(id), true
 	case confirmKindWTArchive: // worktrees_archive.go
 		return m.answerWTArchive(id), true
+	case confirmKindAITaskList: // ai_task_list.go
+		return m.answerAITaskList(id), true
 	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
 		return m.answerWTDelete(m.confirmKind, id), true
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty: // worktrees_cleanup.go
@@ -251,6 +259,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentPackInstall(id), true
 	case confirmKindAgentPacksUndo:
 		return m.answerAgentPackUndo(id), true
+	case confirmKindAIPowerInstall, confirmKindAIPowerRemove: // ai_powers.go
+		return m.answerAIPowerCard(m.confirmKind, id), true
 	case confirmKindRaceConflict, confirmKindRaceOthers, confirmKindRaceDiscard: // agent_race_compare.go
 		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindWorkflowGate: // workflow_gate.go
@@ -362,6 +372,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTSleep("") // Esc: Keep running
 	case confirmKindWTArchive:
 		return m.answerWTArchive("") // Esc: Cancel
+	case confirmKindAITaskList:
+		return m.answerAITaskList("") // Esc: Cancel
 	case confirmKindWTDelete, confirmKindWTDeleteDirty:
 		return m.answerWTDelete(m.confirmKind, "") // Esc: Cancel
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty:

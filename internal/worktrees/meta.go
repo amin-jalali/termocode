@@ -52,6 +52,8 @@ type Meta struct {
 	Link LinkInfo `json:"link,omitzero"` // what gh last said about Issue / PR (WTX-9)
 
 	Adopted bool `json:"adopted,omitempty"` // an external worktree the user adopted (WTX-10)
+
+	BlockedBy []string `json:"blocked_by,omitempty"` // the worktrees (paths) whose work this one waits for (CMP-80, deps.go)
 }
 
 // Empty: termocode knows nothing about the worktree.

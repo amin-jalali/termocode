@@ -172,6 +172,31 @@ editor, nothing is written and a note says why; press `d` again to read
 it anew. Binary files, files over 1 MB and links are left out (the count
 is shown). At most 200 files are listed.
 
+## What waits for what
+
+When several agents split one job, one worktree's work often needs
+another's first. An agent (or you) records it from the worktree that
+waits:
+
+```sh
+termocode worktree block feat/api     # this worktree waits for feat/api
+termocode worktree unblock feat/api   # it no longer does
+```
+
+The other worktree is a path, a branch or a name. The AI chat and outside
+agents use the `worktree_block` tool; programs use the control op
+`worktree-block`. A loop (A waits for B, B waits for A) is refused.
+
+A blocker is settled when its status is `done`, its pull request is
+merged, its issue is closed, or the worktree is gone or archived. The
+card's last line says **waits for feat/api** while it is not, and
+**ready: its blockers are done** after. `termocode worktree list` has a
+WAITS FOR column.
+
+**Worktree: Show Dependency Graph** (`F1`) draws the graph in waves:
+wave 1 can start now, wave 2 starts when wave 1 is done, and so on. Each
+row says **done**, **ready** or **waits**, and what it waits for.
+
 ## Several agent sessions
 
 One worktree can have more than one agent at work: separate sessions on

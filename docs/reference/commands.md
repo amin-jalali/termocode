@@ -30,6 +30,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Edit Selection… | `ai-edit` | `Alt+I` | `Alt+I` |
 | AI: Explain Selection / Line | `ai-explain` |   |   |
 | AI: Export Chat as Markdown | `ai-export-chat` |   |   |
+| AI: Fix Bug from Spec… | `bugfix-spec-fix` |   | `test-first fix prompt in the chat` |
 | AI: Fix Diagnostic at Cursor | `ai-fix` |   |   |
 | AI: Fork Chat from Message… | `ai-fork-chat` |   |   |
 | AI: Generate Doc Comment | `ai-doc` |   |   |
@@ -50,6 +51,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Memory… | `ai-memory` |   |   |
 | AI: Move MCP Call to Background (Ctrl+B in the chat) | `ai-mcp-background` |   |   |
 | AI: Move Secrets to a Safer Store… | `secrets-migrate` |   |   |
+| AI: New Bugfix Spec… | `bugfix-spec-new` |   | `current / expected / unchanged behavior` |
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
 | AI: New Workflow… | `workflow-new` |   |   |
@@ -57,6 +59,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Next Reasoning Level | `ai-reasoning-next` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
+| AI: Powers Catalog… | `ai-powers` |   |   |
 | AI: Project Profiles Trust… | `ai-profile-trust` |   |   |
 | AI: Project Rules… | `ai-rules` |   |   |
 | AI: Proof of Work… (screenshots the AI took) | `ai-proofs` |   |   |
@@ -64,6 +67,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Review Waiting Plan | `ai-plan-review` |   |   |
 | AI: Run Next Plan in a Worktree, Then Ship… / Off | `ai-plan-worktree` |   |   |
+| AI: Run Task List in Waves… | `ai-run-task-list` |   |   |
 | AI: Runs | `ai-runs` |   |   |
 | AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
 | AI: Secret Store… | `secrets-store` |   |   |
@@ -855,6 +859,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
 | Worktree: Reset Order | `worktree-reset-order` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
+| Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 | Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
