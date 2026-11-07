@@ -1299,6 +1299,43 @@ Image Generation** (run it again to turn it off).
 
 The web panel cannot turn image generation on yet.
 
+## Run the AI from scripts and CI
+
+`termocode ai` runs one AI turn without the UI. It uses the same provider
+and model as the chat (config, secret store or environment keys).
+
+```sh
+termocode ai -x "explain the failing test in internal/app"
+git diff | termocode ai -x "review this diff" --stdin
+termocode ai -x "list the TODOs" --output json | jq -r .text
+termocode ai exec --output stream-json --tools all --allow fileWrite "fix the typo in README.md"
+```
+
+- `--output text` (default) prints the answer; tool lines go to stderr.
+  `json` prints one result object (`ok`, `exit_code`, `text`, `error`,
+  `model`, `usage`, `tools`, `duration_ms`). `stream-json` prints one JSON
+  line per event (`start`, `text`, `tool_start`, `tool_result`, `retry`)
+  and the result object last.
+- Nobody can answer a confirm card here. By default the AI only gets tools
+  that read (files, search, git status and diff). `--tools all` adds the
+  tools that change things, but each one is declined unless you name its
+  class with `--allow fileWrite,git,run`. `--tools none` sends no tools.
+- `--rules` adds the project rules file (AGENTS.md, CLAUDE.md,
+  `.termocode/rules.md`). They are off by default, because nobody reviews
+  them in this mode.
+- `--model`, `--dir`, `--max-steps` and `--timeout` (default 10m) change
+  the turn. `-x -` reads the prompt from stdin.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Done |
+| 1 | The model failed (the error is on stderr) |
+| 2 | Bad usage |
+| 3 | AI is not configured (or the secret store is locked and no env key is set) |
+| 4 | Timeout |
+| 5 | Step limit reached: the work is not finished |
+| 130 | Interrupted (Ctrl+C) |
+
 ## Keys at a glance
 
 | Key | Action |
