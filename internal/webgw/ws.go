@@ -78,6 +78,17 @@ type WSConfig struct {
 	Devices *webdevices.Store
 	// Control answers control.challenge / control.ask (nil: not here).
 	Control *Control
+
+	// Home is the key of this gateway's own workspace (MOB-50): a frame
+	// with no ws or this ws goes to Dial's hub. "" for none.
+	Home string
+	// DialWS opens a connection to the hub of another running workspace
+	// of the same user, by key (nil: this gateway is not a door; frames
+	// for other workspaces are refused).
+	DialWS func(ctx context.Context, ws string) (net.Conn, error)
+	// MaxHubs caps the other workspaces one browser has open at once
+	// (web_projects_max; 0: webproto.MaxHubs).
+	MaxHubs int
 }
 
 // Defaults of WSConfig.
@@ -135,6 +146,9 @@ func NewWS(cfg WSConfig) *WS {
 	}
 	if cfg.ThrottleMax <= 0 {
 		cfg.ThrottleMax = DefaultThrottleMax
+	}
+	if cfg.MaxHubs <= 0 {
+		cfg.MaxHubs = webproto.MaxHubs
 	}
 	return &WS{cfg: cfg, conns: map[*wsConn]struct{}{}}
 }
@@ -314,6 +328,11 @@ type wsConn struct {
 
 	grantLogin string      // browser reader only: the open control challenge
 	asking     atomic.Bool // the laptop is being asked for control
+
+	name      string              // the device name from hello, for project hubs
+	sideHello []byte              // hello without token or resume, for project hubs
+	sideMu    sync.Mutex          // guards sides
+	sides     map[string]*sideHub // MOB-50: the other workspaces' hubs, by key
 }
 
 // serve runs one connection until it ends.
@@ -494,6 +513,14 @@ func (c *wsConn) openHub(h *webproto.Hello) bool {
 	hello := *h
 	hello.Token = ""
 	fwd, err2 := webproto.Encode(&hello)
+	// A project hub (MOB-50) gets the same hello without the resume:
+	// the seqs are the home hub's.
+	side := hello
+	side.Resume = nil
+	c.name = h.DeviceName
+	if b, err := webproto.Encode(&side); err == nil {
+		c.sideHello = b
+	}
 	if err1 != nil || err2 != nil || !c.toHub(open) || !c.toHub(fwd) {
 		c.close(webproto.CloseHubGone)
 		return false
@@ -542,6 +569,16 @@ func (c *wsConn) fromBrowser() {
 			c.protoError("bad_message", webproto.ClosePolicy)
 			return
 		}
+		// MOB-50: a frame that names a workspace loses the field before
+		// any hub sees it; one for another workspace goes to its hub.
+		ws := c.route(msg)
+		if frameWS(msg) != "" {
+			if b, err = stripWS(msg); err != nil {
+				c.close(closeInternal)
+				return
+			}
+		}
+		var reqID uint64
 		switch m := msg.(type) {
 		case *webproto.Hello:
 			c.protoError("hello_twice", webproto.ClosePolicy)
@@ -576,10 +613,17 @@ func (c *wsConn) fromBrowser() {
 				return
 			}
 			c.activity()
+			reqID = m.ID
 		default:
 			if !c.throttle("", 0) {
 				return
 			}
+		}
+		if ws != "" {
+			if !c.toSide(ws, b, reqID) {
+				return
+			}
+			continue
 		}
 		if !c.toHub(b) {
 			c.close(webproto.CloseHubGone)
@@ -626,10 +670,18 @@ func (c *wsConn) fromHub() {
 			T    string          `json:"t"`
 			ID   uint64          `json:"id"`
 			Code json.RawMessage `json:"code"` // a number in bye, a name in err
+			WS   string          `json:"ws"`
 		}
 		if json.Unmarshal(line, &head) != nil {
 			c.close(closeInternal)
 			return
+		}
+		// MOB-50: the home hub's meta names the home workspace, so the
+		// page knows which ws is "here".
+		if head.T == webproto.KindMeta && head.WS == "" && c.s.cfg.Home != "" {
+			if out, ok := withWS(line, c.s.cfg.Home); ok {
+				line = out
+			}
 		}
 		switch {
 		case head.T == webproto.KindErr && head.ID == 0:
@@ -712,6 +764,7 @@ func (c *wsConn) end(code webproto.CloseCode, handshake bool) {
 			_ = c.hub.Close()
 		}
 		c.hubSetMu.Unlock()
+		c.endSides()
 		c.s.mu.Lock()
 		_, live := c.s.conns[c]
 		delete(c.s.conns, c)

@@ -155,7 +155,7 @@ func projectsMerge(here string, own []agentroll.Item, in *projectsInput, home st
 		if it := by[p]; it != nil {
 			return it
 		}
-		it := &webproto.ProjectItem{ID: webProjectID(p), Name: webName(filepath.Base(p)), Where: webName(projectWhere(p, home)), State: "asleep"}
+		it := &webproto.ProjectItem{ID: webProjectID(p), WS: session.Key(p), Name: webName(filepath.Base(p)), Where: webName(projectWhere(p, home)), State: "asleep"}
 		by[p] = it
 		order = append(order, it)
 		return it

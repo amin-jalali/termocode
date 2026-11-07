@@ -48,4 +48,7 @@ type ProjectItem struct {
 	Working  int    `json:"working,omitempty"`
 	Waiting  int    `json:"waiting,omitempty"`
 	OpenedAt int64  `json:"opened_at,omitempty"`
+	// WS is the project's workspace key (MOB-50): what the page puts in
+	// a frame's ws to reach this project through the door.
+	WS string `json:"ws,omitempty"`
 }
