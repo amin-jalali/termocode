@@ -118,6 +118,7 @@ nav:
       - The web panel: guides/web.md
       - Customize termocode: guides/customize.md
       - Import settings from another editor: guides/import-from-another-editor.md
+      - Move in from another agent tool: guides/import-from-another-agent-tool.md
       - Write an extension: extensions.md
   - Reference:
       - reference/index.md

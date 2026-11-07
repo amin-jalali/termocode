@@ -18,6 +18,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
 | AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
+| AI: Chat Comments… | `ai-chat-comments` |   | `comments from people you shared the chat with` |
 | AI: Chat History… | `ai-history` |   |   |
 | AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |
@@ -74,6 +75,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
+| AI: Share Chat by Link… | `ai-share-chat` |   | `a viewer link; they watch and comment` |
 | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | `ai-ship` |   |   |
 | AI: Ship and Merge When Green (CI fixes, conflicts, merge card) / Stop | `ai-ship-merge` |   |   |
 | AI: Show Profile | `ai-profile-show` |   |   |
@@ -108,6 +110,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
 | Agent: Chat with an ACP Agent… / End | `acp-thread` |   |   |
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
+| Agent: Import Session into AI Chat | `agent-import-session` |   | `the open session view, as a chat` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search All Sessions… | `agent-sessions-search-all` |   | `words in every project's agent sessions` |
@@ -131,6 +134,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Bookmarks: Clear All | `bookmark-clear` |   |   |
 | Bookmarks: Show List | `bookmark-list` | `Shift+F3` | `Shift+F3` |
 | Bookmarks: Toggle on Current Line | `bookmark-toggle` | `F3` | `F3` |
+
+## Canvas
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Canvas: Add Card… | `canvas-add` |   |   |
+| Canvas: Copy Plan as Markdown | `canvas-copy` |   |   |
+| Canvas: Open Shared Plan | `canvas-open` |   |   |
 
 ## Containers
 

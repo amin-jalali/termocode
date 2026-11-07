@@ -401,6 +401,12 @@ With `agent_transcripts` on:
   this project's sessions, on this computer only.
 - **Agent: Search All Sessions…** searches the sessions of every project
   on this computer. Each row names its project folder.
+- **Agent: Import Session into AI Chat** (or `i` while you read a past
+  session) copies the open session into a new termocode AI chat, after a
+  card (**Cancel** first). Prompts and answers are copied, tool calls as
+  one line each; tool results are not. Secrets are hidden. The session
+  file is not changed. The chat is in **Chat History**, and termocode's AI
+  can go on from it.
 
 While the setting is off, termocode asks first and opens no file there.
 

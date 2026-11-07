@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/agentlog"
 	"github.com/amin-jalali/termocode/internal/agentusage"
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -111,6 +112,7 @@ type Model struct {
 	// agentChat is the open Agent: Chat View (agent_chat.go, AGX-8);
 	// agentChatPendingBuf the tab the transcripts card asks for.
 	agentChat           *agentChatState
+	agentImportPending  *ai.Conversation // the chat the import card shows (agent_import.go)
 	agentChatPendingBuf int
 	// Agent: Sessions… (agent_sessions.go, AGX-9): the rows, the cached
 	// index and the resume check of each CLI.
@@ -124,6 +126,10 @@ type Model struct {
 	aiChatHits          []aiChatHit // AI: Search Chat History… (ai_chat_search.go, CMP-30)
 	aiChatHitsCapped    bool
 	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
+	// CMP-88 (ai_chat_comments.go): the chat AI: Chat Comments… lists and
+	// the comment its card is about.
+	aiChatCommentsFor string
+	aiChatCommentPick aiChatComment
 	// AGX-15 (agent_hibernate.go): the tab the hibernate card is about,
 	// "Always for this session", and commands queued by a tab switch.
 	agentHibernatePending int
@@ -132,6 +138,7 @@ type Model struct {
 	// AGX-16 (agent_names.go): what Enter on a suggested name does, and
 	// the request in flight.
 	agentNamesOnPick agentNamesPick
+	canvasSel        string // CMP-92: the shared plan card whose actions are open (canvas_ui.go)
 	agentNamesGen    int
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)

@@ -75,3 +75,27 @@ func copyJSON(src, dst any) {
 		_ = json.Unmarshal(b, dst)
 	}
 }
+
+// ImportInfo says which outside agent session a chat was imported from
+// (CMP-87). Only shown: the session file itself is never changed.
+type ImportInfo struct {
+	CLI     string `json:"cli"`     // "claude", "codex"
+	Agent   string `json:"agent"`   // its title: "Claude Code"
+	Session string `json:"session"` // the CLI's session id
+	// Messages is how many prompts, answers and tool lines were copied.
+	Messages int `json:"messages"`
+}
+
+// ImportNote is the line at the top of an imported chat ("" for any
+// other chat).
+func (c Conversation) ImportNote() string {
+	in := c.ImportedFrom
+	if in == nil {
+		return ""
+	}
+	id := in.Session
+	if r := []rune(id); len(r) > 8 {
+		id = string(r[:8]) + "…"
+	}
+	return "Imported from " + in.Agent + " session " + id + " (" + strconv.Itoa(in.Messages) + " messages; the session file is unchanged)"
+}

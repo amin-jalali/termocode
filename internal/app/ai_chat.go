@@ -172,8 +172,9 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
-	tools = append(tools, aiTodoTools(call)...) // OMX-7: the chat's todo list (not in run steps)
-	return append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
+	tools = append(tools, aiTodoTools(call)...)  // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
+	return append(tools, aiLibrarianTools()...)  // CMP-91: outside repositories, read only
 }
 
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:
@@ -195,6 +196,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, aiGitTools(root, call)...)        // Group K4
 	tools = append(tools, aiTasksTools(root, call)...)      // Group K6: tasks and tests
 	tools = append(tools, aiWorktreeTools(root)...)         // WTX-12: worktrees_list, worktree_note; CMP-80: worktree_block
+	tools = append(tools, aiCanvasTools(root, call)...)     // CMP-92: canvas_read, canvas_update (canvas_tools.go)
 	tools = append(tools, aiAdminTools(root, call)...)      // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...)      // Group K7
 	tools = append(tools, m.aiServicesTools(call)...)       // the Services view (ai_services_tools.go)

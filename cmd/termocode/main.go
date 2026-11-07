@@ -318,6 +318,8 @@ func run(argv []string) int {
 			return runLane(args[1:])
 		case "workflow", "workflows":
 			return runWorkflow(args[1:])
+		case "import":
+			return runImport(args[1:])
 		case "http":
 			return runHTTP(args[1:])
 		case "db":
@@ -426,7 +428,7 @@ func tuiCommand(args []string) bool {
 		return true
 	}
 	switch args[0] {
-	case serverArg, "sessions", "ssh", "mcp", "acp", "http", "db", "service", "runner", "attach", "kill", "setup", "-h", "--help", "help":
+	case serverArg, "sessions", "import", "ssh", "mcp", "acp", "http", "db", "service", "runner", "attach", "kill", "setup", "-h", "--help", "help":
 		return false
 	}
 	return !isVersionArg(args[0])
@@ -464,6 +466,8 @@ func printUsage() {
 	fmt.Println("                             manage your database connections (db --help)")
 	fmt.Println("  termocode web [start|stop|status]")
 	fmt.Println("                             open or stop the web panel of the running termocode")
+	fmt.Println("  termocode import [--agent a] [--yes] <export>")
+	fmt.Println("                             bring tasks, schedules and notes over from another agent tool")
 	fmt.Println("  termocode service install|uninstall|status")
 	fmt.Println("                             start the session of this folder at login")
 	fmt.Println("  termocode runner serve|add|list|show|cancel")

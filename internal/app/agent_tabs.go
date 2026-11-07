@@ -221,6 +221,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentSessionsPaletteID { // Agent: Sessions… (agent_sessions.go)
 		return m.openAgentSessions(), true
 	}
+	if id == agentImportPaletteID { // Agent: Import Session into AI Chat (agent_import.go)
+		return m.openAgentImport(), true
+	}
 	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
 		return m.openAgentSessionsSearch(), true
 	}

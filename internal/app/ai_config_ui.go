@@ -56,6 +56,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIModelPicked(id), true
 	case pickerKindAIHistory:
 		return m.onAIHistoryPicked(id), true
+	case pickerKindAIChatComments: // ai_chat_comments.go
+		return m.onAIChatCommentPicked(id), true
 	case pickerKindAIHistoryDelete:
 		return m.onAIHistoryDeletePicked(id), true
 	case pickerKindAIHistoryRename:
@@ -72,6 +74,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onMCPInsertPicked(id), true
 	case pickerKindAIMemory: // ai_memory_picker.go
 		return m.onAIMemoryPicked(id), true
+	case pickerKindCanvas: // CMP-92: canvas_ui.go
+		return m.onCanvasPicked(id), true
+	case pickerKindCanvasCard:
+		return m.onCanvasActionPicked(id), true
 	case pickerKindAISkills: // ai_skills.go
 		return m.onAISkillsPicked(id), true
 	case pickerKindAIPowers: // ai_powers.go
@@ -136,6 +142,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onWTBgTask(value), true
 	case promptKindBugspecTitle: // bugspec_ui.go
 		return m.onBugspecTitle(value), true
+	case promptKindCanvasAdd, promptKindCanvasTitle, promptKindCanvasNote: // CMP-92: canvas_ui.go
+		return m.onCanvasPrompt(m.promptKind, value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
@@ -247,6 +255,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTRunTrust(id), true
 	case confirmKindWTCtlLink: // worktrees_notes.go
 		return m.answerWTCtlLink(id), true
+	case confirmKindCanvasDelete: // CMP-92: canvas_ui.go
+		return m.answerCanvasDelete(id), true
 	case confirmKindWTSleep: // worktrees_sleep.go
 		return m.answerWTSleep(id), true
 	case confirmKindWTFeedback: // worktrees_followup.go
@@ -312,6 +322,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentHibernate(id), true
 	case confirmKindAgentAccountSignIn: // agent_accounts.go
 		return m.answerAgentAccountCard(id), true
+	case confirmKindAgentImport: // agent_import.go
+		return m.answerAgentImport(id), true
 	case confirmKindAgentAccountSwitch: // agent_switch.go (CMP-13)
 		return m.answerAgentSwitch(id), true
 	case confirmKindAgentInstall, confirmKindAgentSignIn, confirmKindAgentInstallPage: // agent_install.go
@@ -352,6 +364,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWebStart(id), true
 	case confirmKindWebAsk: // web_ask.go
 		return m.answerWebAsk(id), true
+	case confirmKindAIShareChat: // ai_chat_comments.go
+		return m.answerAIShareChat(id), true
+	case confirmKindAIChatComment:
+		return m.answerAIChatComment(id), true
 	}
 	if cmd, ok := m.handleWebAccessConfirm(id); ok { // web_access.go
 		return cmd, true
@@ -414,6 +430,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTRunTrust("") // Esc: no answer, nothing runs
 	case confirmKindWTCtlLink:
 		return m.answerWTCtlLink("") // Esc: Deny
+	case confirmKindCanvasDelete:
+		return m.answerCanvasDelete("") // Esc: Cancel
 	case confirmKindWTSleep:
 		return m.answerWTSleep("") // Esc: Keep running
 	case confirmKindWTFeedback:
@@ -470,6 +488,10 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWebStart("") // Esc: Not now
 	case confirmKindWebAsk:
 		return m.answerWebAsk("") // Esc: Cancel
+	case confirmKindAIShareChat:
+		return m.answerAIShareChat("") // Esc: Cancel
+	case confirmKindAIChatComment:
+		return m.answerAIChatComment("") // Esc: Cancel
 	}
 	if cmd, ok := m.handleWebAccessConfirm(""); ok { // web_access.go: Esc is the safe answer
 		return cmd

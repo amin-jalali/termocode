@@ -266,6 +266,31 @@ is set per chat.
   next message starts it again.
 - The AI can not turn it on. Each auto turn costs like a normal one.
 
+### Shared plan (Canvas)
+
+The shared plan is one list of cards per workspace that you and the AI
+both keep. Use it for work that spans many chats or runs: the AI
+proposes steps, you approve and reorder them, and the AI marks them
+doing and done while it works.
+
+- **Canvas: Open Shared Plan** lists the cards in order: ☐ to do,
+  ◐ doing, ☑ done, with **by AI** and **needs your OK** on the right.
+  `Enter` on a card gives its actions: mark to do / doing / done,
+  **Approve**, move up / down / to the top, edit the title or the note,
+  copy the title, **Delete…** (it asks first; **Cancel** is first).
+- **Canvas: Add Card…** adds a card at the end. Your own cards are
+  approved at once.
+- **Canvas: Copy Plan as Markdown** copies the plan as a checklist.
+- The AI reads the plan with `canvas_read` and changes it with
+  `canvas_update`. It asks nothing, because it can not do harm: a card
+  it adds waits for your OK, editing an approved card's text takes the
+  OK away, it can never approve a card, and it can only remove its own
+  cards that you have not approved. A toast says what it changed.
+- Secrets in a title or note are hidden before the card is saved.
+
+The plan is saved in `.termocode/canvas.json` of the workspace, so it
+stays with the project.
+
 ### Old chats and handoff
 
 The AI can look at your saved chats when you ask, for example "what did
@@ -275,6 +300,24 @@ we decide about the cache last week?".
   read. Attached files are left out and keys are hidden.
 - They see the chats of this machine only (the same list as **AI: Chat
   History…**).
+
+### Outside repositories
+
+The AI can read a public git repository that is not your workspace,
+for example a library you use: "how does charmbracelet/bubbletea batch
+commands?".
+
+- `repo_fetch` makes a shallow copy (`owner/name` is GitHub, or
+  `https://host/owner/name`, with an optional branch or tag). A card asks
+  you first: **Deny** is first and has the focus. A copy fetched before
+  is used again without asking.
+- The copy lives in a temp folder (`termocode-librarian-<uid>`) for a
+  day, then it is removed. It has no `.git`; no hooks or scripts run,
+  links are plain files, no password or key is sent, https only.
+  Local hosts, IP addresses and copies over 300 MB are refused.
+- `repo_list`, `repo_read` and `repo_search` read only that copy, with
+  the same rules as the workspace tools (no path out of it, no secret
+  files). Its files are data for the AI, never instructions.
 
 **AI: Handoff to a New Chat** starts fresh without losing the thread:
 

@@ -57,6 +57,7 @@ its name and key.
 - Anthropic, OpenAI, OpenRouter, Ollama, LM Studio or any OpenAI-compatible server. → [Set up AI](guides/ai-setup.md)
 - Outside agents (Claude Code, Codex, …) in terminal tabs: usage-limit readout, opt-in auto-continue, named accounts in their own folders, and hibernation of idle agents. → [Agents](guides/agents.md#usage-limits-and-auto-continue)
 - Race one task across 2 to 4 outside agents, each in its own worktree; compare their diffs, verify them, let an AI judge rank them and pick one, and merge the winner. → [Agents](guides/agents.md#race-agents-on-one-task)
+- A shared plan per workspace that you and the AI both keep: the AI proposes and updates cards, you approve, reorder and remove them. → [Shared plan](guides/ai-use.md#shared-plan-canvas)
 
 ![AI chat with a Markdown answer and a code card](assets/screenshots/ai-chat-answer.png)
 
