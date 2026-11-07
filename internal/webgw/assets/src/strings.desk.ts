@@ -146,6 +146,7 @@ export const SD = {
   "act.explorer": "Explorer",
   "act.scm": "Source Control",
   "act.device": "This device",
+  "act.more": "Additional Views",
   "dv.prev": "Previous Change",
   "dv.next": "Next Change",
   "dv.inline": "Inline View",
