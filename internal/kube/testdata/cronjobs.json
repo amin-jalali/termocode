@@ -1,0 +1,10 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "nightly", "namespace": "shop", "creationTimestamp": "2026-10-01T00:00:00Z"},
+     "spec": {"schedule": "0 2 * * *", "suspend": false},
+     "status": {"active": [{"name": "nightly-29300"}], "lastScheduleTime": "2026-10-29T02:00:00Z"}},
+    {"metadata": {"name": "report", "namespace": "shop", "creationTimestamp": "2026-10-02T00:00:00Z"},
+     "spec": {"schedule": "@weekly", "suspend": true}, "status": {}}
+  ]
+}

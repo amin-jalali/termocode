@@ -1,0 +1,16 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "cp-1", "creationTimestamp": "2026-09-01T00:00:00Z",
+                  "labels": {"node-role.kubernetes.io/control-plane": "", "node-role.kubernetes.io/master": ""}},
+     "spec": {},
+     "status": {"conditions": [{"type": "MemoryPressure", "status": "False"}, {"type": "Ready", "status": "True"}],
+                "nodeInfo": {"kubeletVersion": "v1.31.2"}}},
+    {"metadata": {"name": "worker-1", "creationTimestamp": "2026-09-02T00:00:00Z", "labels": {}},
+     "spec": {"unschedulable": true},
+     "status": {"conditions": [{"type": "Ready", "status": "True"}], "nodeInfo": {"kubeletVersion": "v1.31.1"}}},
+    {"metadata": {"name": "worker-2", "creationTimestamp": "2026-09-03T00:00:00Z"},
+     "spec": {},
+     "status": {"conditions": [{"type": "Ready", "status": "Unknown"}], "nodeInfo": {"kubeletVersion": "v1.31.1"}}}
+  ]
+}

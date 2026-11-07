@@ -1,0 +1,7 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "log-agent", "namespace": "shop", "creationTimestamp": "2026-10-20T09:00:00Z"},
+     "status": {"desiredNumberScheduled": 4, "currentNumberScheduled": 4, "numberReady": 3, "updatedNumberScheduled": 4, "numberAvailable": 3}}
+  ]
+}

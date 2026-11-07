@@ -10,7 +10,9 @@
 //	namespace.txt        answer of `config view --minify …` (the context's
 //	                     namespace)
 //	<kind>.json          answer of `get <kind>` (pods, deployments,
-//	                     services, jobs, namespaces)
+//	                     services, jobs, namespaces, statefulsets, …)
+//	<kind>.txt           answer of `get <kind>` when a template is used
+//	                     (secrets: names and key names only)
 //	<kind>.err           `get <kind>` fails with this stderr (exit 1)
 //	<kind>.sleep         `get <kind>` sleeps this many seconds first
 //	all.err              every call fails with this stderr (exit 1)
@@ -67,6 +69,7 @@ get)
   kind="$2"
   if [ -f "$D/$kind.sleep" ]; then sleep "$(cat "$D/$kind.sleep")"; fi
   if [ -f "$D/$kind.err" ]; then cat "$D/$kind.err" >&2; exit 1; fi
+  if [ -f "$D/$kind.txt" ]; then cat "$D/$kind.txt"; exit 0; fi
   cat "$D/$kind.json" 2>/dev/null; exit 0 ;;
 describe) cat "$D/describe.txt" 2>/dev/null; exit 0 ;;
 rollout)
@@ -143,7 +146,9 @@ func (f *Fake) PID(name string) int {
 // into the fake and sets one context "dev" with namespace "shop".
 func (f *Fake) Fixtures(t testing.TB, dir string) {
 	t.Helper()
-	for _, name := range []string{"pods.json", "deployments.json", "services.json", "jobs.json", "namespaces.json"} {
+	for _, name := range []string{"pods.json", "deployments.json", "services.json", "jobs.json", "namespaces.json",
+		"statefulsets.json", "daemonsets.json", "replicasets.json", "cronjobs.json", "configmaps.json", "secrets.txt",
+		"ingresses.json", "persistentvolumeclaims.json", "nodes.json"} {
 		b, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			t.Fatal(err)

@@ -143,3 +143,49 @@ func TestCallsTimeOut(t *testing.T) {
 		t.Errorf("the call waited %v", d)
 	}
 }
+
+func TestMoreKindsAreReadOnlyGets(t *testing.T) {
+	f, c := fakeClient(t)
+	ctx := context.Background()
+	check := func(what string, n int, err error, want int) {
+		t.Helper()
+		if err != nil || n != want {
+			t.Errorf("%s = %d, %v (want %d)", what, n, err, want)
+		}
+	}
+	ss, err := c.StatefulSets(ctx)
+	check("statefulsets", len(ss), err, 2)
+	ds, err := c.DaemonSets(ctx)
+	check("daemonsets", len(ds), err, 1)
+	rs, err := c.ReplicaSets(ctx)
+	check("replicasets", len(rs), err, 2)
+	cj, err := c.CronJobs(ctx)
+	check("cronjobs", len(cj), err, 2)
+	cm, err := c.ConfigMaps(ctx)
+	check("configmaps", len(cm), err, 2)
+	sec, err := c.Secrets(ctx)
+	check("secrets", len(sec), err, 3)
+	ing, err := c.Ingresses(ctx)
+	check("ingresses", len(ing), err, 2)
+	pvc, err := c.PVCs(ctx)
+	check("pvcs", len(pvc), err, 2)
+	nodes, err := c.Nodes(ctx)
+	check("nodes", len(nodes), err, 3)
+
+	calls := f.Calls()
+	if len(calls) != 9 {
+		t.Fatalf("calls = %v", calls)
+	}
+	for i, kind := range []string{"statefulsets", "daemonsets", "replicasets", "cronjobs", "configmaps", "secrets",
+		"ingresses", "persistentvolumeclaims"} {
+		if !strings.HasPrefix(calls[i], "get "+kind+" -o ") || !strings.HasSuffix(calls[i], "--context dev --namespace shop") {
+			t.Errorf("call %d = %q", i, calls[i])
+		}
+	}
+	if calls[5] == "get secrets -o json --context dev --namespace shop" || !strings.Contains(calls[5], "-o go-template=") {
+		t.Errorf("secrets must use a names-only template, not JSON: %q", calls[5])
+	}
+	if calls[8] != "get nodes -o json --context dev" {
+		t.Errorf("nodes call = %q (cluster scoped: no --namespace)", calls[8])
+	}
+}

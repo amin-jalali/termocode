@@ -1,0 +1,8 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "app-config", "namespace": "shop", "creationTimestamp": "2026-10-20T09:00:00Z"},
+     "data": {"LOG_LEVEL": "info", "FEATURE_X": "on"}, "binaryData": {"logo.png": "iVBORw0K"}},
+    {"metadata": {"name": "empty", "namespace": "shop", "creationTimestamp": "2026-10-20T09:00:00Z"}}
+  ]
+}
