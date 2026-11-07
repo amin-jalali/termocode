@@ -9,6 +9,8 @@
 //     panel "main" (title "Fake", content "line one" / "line two");
 //   - "hello" pushes a toast "Hello from fake";
 //   - "crash" exits with status 3 at once;
+//   - "hang" (not registered; run it by id "fake.hang") never answers,
+//     but the fake keeps serving every other message;
 //   - "ask" asks prompt{title "Name"} and toasts "Hello, <answer>";
 //   - "read" asks readFile{path: params.args[0]} and toasts the text or
 //     the error;
@@ -105,6 +107,8 @@ func run() {
 				toast("Hello from fake")
 			case "fake.crash":
 				os.Exit(3)
+			case "fake.hang":
+				return // never answers this request
 			case "fake.ask":
 				go func() {
 					r, err := c.Call(context.Background(), "prompt", map[string]any{"title": "Name", "label": "Your name:"})
