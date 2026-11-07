@@ -225,6 +225,8 @@ func ServerVersionQuery(driver string) string {
 		return "SELECT sqlite_version()"
 	case "cassandra":
 		return "SELECT release_version FROM system.local"
+	case "sqlserver":
+		return "SELECT @@VERSION"
 	}
 	return ""
 }

@@ -992,10 +992,11 @@ func dbTypePickerItems(remote bool) []picker.Item {
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
+		{ID: "sqlserver", Title: "SQL Server / Azure SQL", Hint: "default port 1433"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
 	if remote {
-		items = []picker.Item{items[0], items[1], items[3]}
+		items = []picker.Item{items[0], items[1], items[3], items[4]}
 	}
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
@@ -1059,6 +1060,12 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	case "redis":
 		s.pendingConn.Driver, s.pendingConn.Port = "redis", 6379
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
+	case "sqlserver":
+		// DBX-62: a *.database.windows.net host turns on TLS (SQLServerDSN).
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "sqlserver", 1433, "sa", "master"
+		cmd := m.databaseAddPrompt(promptKindDBHost, "SQL Server: server address", "Host name or address:", "localhost", false)
+		m.prompt.SetNote("Azure SQL: use the *.database.windows.net name (TLS is turned on). Windows sign-in: DOMAIN\\user as the user.")
+		return cmd
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)
 	}

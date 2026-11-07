@@ -66,6 +66,8 @@ func ExplainForms(driver, stmt string, analyze, mariadb bool) []string {
 		return []string{"EXPLAIN FORMAT=JSON " + stmt, "EXPLAIN " + stmt}
 	case "sqlite":
 		return []string{"EXPLAIN QUERY PLAN " + stmt}
+	case "sqlserver":
+		return []string{SQLServerPlanForm(stmt, analyze)} // SHOWPLAN XML batches (mssql_conn.go)
 	}
 	return nil
 }

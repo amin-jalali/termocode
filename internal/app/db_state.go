@@ -693,7 +693,7 @@ func dbOpenDriverSession(ctx context.Context, c dbclient.Conn, root, password st
 	var sess dbclient.Session
 	var err error
 	switch c.Driver {
-	case "postgres", "mysql":
+	case "postgres", "mysql", "sqlserver":
 		sess, err = dbSQLSessionFactory(ctx, c, password)
 	case "sqlite":
 		if !filepath.IsAbs(c.Path) {
@@ -756,7 +756,7 @@ func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64,
 		defer cancel()
 		start := time.Now()
 		var err error
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "cassandra" && c.Driver != "libsql" {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "cassandra" && c.Driver != "libsql" && c.Driver != "sqlserver" {
 			err = fmt.Errorf("this connection type is not available yet")
 		}
 		var sess dbclient.Session
