@@ -439,6 +439,8 @@ excluded	secrets-unlock	security: secrets stay on the laptop, never typed in a b
 excluded	services-trust	security: trust decisions are made on the laptop
 excluded	settings-export	laptop only: writes a settings file on the laptop
 excluded	settings-import	laptop only: reads a settings file from the laptop
+excluded	settings-setup-save	laptop only: writes the laptop's settings into the project
+excluded	settings-setup-use	laptop only: replaces the laptop's settings files
 excluded	setup-show-card	laptop only: first-run setup card
 excluded	terminal-close-pane	laptop only: laptop terminal pane layout
 excluded	terminal-focus-next-pane	laptop only: laptop terminal pane focus

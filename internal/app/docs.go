@@ -575,6 +575,8 @@ func ConfigFileCatalog() []ConfigFile {
 			"Same shape as the user mcp.json.", "Yes. termocode asks before it starts a project server the first time (and again when the entry changes)."},
 		{"workspace", ".termocode/ai-profiles.json", "Project agent profiles. A profile with the same name as one of yours replaces it in this project.",
 			"Same shape as ai/profiles.json; a `models` key is ignored (a project can not point you at another server).", "Yes. A broken file is skipped and the error names the line."},
+		{"workspace", ".termocode/setups/<name>.json", "Shared setups: a named set of your shareable settings files (settings, keys, snippets, user commands, custom theme) for the team.",
+			"The settings export format, limited to those five files; API keys, tokens and passwords are removed.", "Yes. Preferences: Save Setup to This Project… writes it; Preferences: Use a Project Setup… asks (Cancel first) before it replaces your files and saves a backup."},
 		{"workspace", "AGENTS.md", "Project rules for the AI chat: they go into its system prompt (see Project rules file in the Use AI guide).",
 			"Plain text or Markdown; at most 16 KB (together with .termocode/rules.md) is used.", "Yes. termocode asks once per workspace before it uses the rules, and again when the text changes."},
 		{"workspace", ".termocode/rules.md", "More project rules for the AI chat, after AGENTS.md when both exist.",

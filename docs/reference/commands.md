@@ -718,7 +718,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preferences: Import from Another Editor… | `prefs-import-editor` |   |   |
 | Preferences: Import termocode Settings File… | `settings-import` |   |   |
 | Preferences: Open Settings (UI) | `open-settings-ui` |   |   |
+| Preferences: Save Setup to This Project… | `settings-setup-save` |   |   |
 | Preferences: Undo Last Import… | `prefs-import-undo` |   |   |
+| Preferences: Use a Project Setup… | `settings-setup-use` |   |   |
 
 ## Run
 
