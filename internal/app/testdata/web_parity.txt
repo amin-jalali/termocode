@@ -714,6 +714,7 @@ missing	worktree-filter	Worktrees|M
 missing	worktree-forget	Worktrees|M
 missing	worktree-jump	Worktrees|M
 missing	worktree-link	Worktrees|M
+missing	worktree-move	Worktrees|M
 missing	worktree-new	Worktrees|M
 missing	worktree-new-child	Worktrees|M
 missing	worktree-notes	Worktrees|M
@@ -721,6 +722,8 @@ missing	worktree-open	Worktrees|M
 missing	worktree-pin	Worktrees|M
 missing	worktree-run	Worktrees|M
 missing	worktree-run-open	Worktrees|M
+missing	worktree-pull	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
 missing	worktree-sleep	Worktrees|M
+missing	worktree-unpack	Worktrees|M
 missing	worktree-view	Worktrees|M
