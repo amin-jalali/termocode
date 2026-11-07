@@ -246,6 +246,7 @@ type tagSession struct {
 	api    *RegistryAPI
 	client *http.Client
 	repo   RemoteRepo
+	scope  string // the token scope when the challenge names none ("" = pull of repo)
 	token  string
 	asked  bool // the token exchange ran
 }
@@ -411,6 +412,9 @@ func (s *tagSession) fetchToken(ctx context.Context, params map[string]string) (
 		q.Set("service", v)
 	}
 	scope := params["scope"]
+	if scope == "" {
+		scope = s.scope
+	}
 	if scope == "" {
 		scope = "repository:" + s.repo.Name + ":pull"
 	}
