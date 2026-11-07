@@ -76,6 +76,12 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "R":
 		return m, m.kubeReload()
+	case "[":
+		return m, m.kubeNav(-1)
+	case "]":
+		return m, m.kubeNav(1)
+	case "w":
+		return m, m.kubeAskSaveScreen()
 	case "c":
 		return m, m.kubePick("ctx")
 	case "n":
@@ -112,7 +118,9 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"r", "deployment: restart (asks first)"},
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},
+		[]string{"[ ]", "back, forward (context / namespace)"},
 		[]string{"R", "load now"},
+		[]string{"w", "save the screen as text"},
 	)
 }
 
