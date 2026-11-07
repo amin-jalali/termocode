@@ -4,7 +4,6 @@
 // without a usable url says so instead. Phone layout only; part of the
 // Home chunk, never app.js.
 import { h } from "preact";
-import "../styles/research.css";
 import { askLink } from "../lib/links";
 import { RESEARCH_TEXT, sourceURL, type SourceRef } from "./research";
 

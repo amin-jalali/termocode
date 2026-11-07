@@ -320,7 +320,6 @@ export function Home() {
     run(c);
   };
 
-  const chipOf = (id: string) => CHIPS.find((c) => c.id === id);
   // A Home card opens the list behind it through its chip (no tokens):
   // needs you → the needs-you list, working and done today → the board.
   const onCard = (card: StartCard) => {

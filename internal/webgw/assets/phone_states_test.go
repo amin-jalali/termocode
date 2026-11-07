@@ -51,7 +51,7 @@ func TestPhoneStatesStrings(t *testing.T) {
 	}
 	want := map[string]string{
 		"ph.conn_offline": "Offline — answers are not saved",
-		"ph.retry":   "Retry",
+		"ph.retry":        "Retry",
 	}
 	for k, v := range want {
 		if en[k] != v {

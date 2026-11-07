@@ -8,7 +8,7 @@ import { link } from "../session";
 import { t } from "../strings";
 import { SubView } from "../views/more/SubView";
 import { AllTools, type CatalogState } from "./AllTools";
-import { readCatalog, viewHash, type Target } from "./alltools";
+import { readCatalog, viewHash, type Target } from "./alltoolsdata";
 
 /** openTarget goes to a row's target. */
 export function openTarget(target: Target): void {

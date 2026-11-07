@@ -119,7 +119,7 @@ func researchFetchView(_ map[string]any, out string) *blocks.Block {
 	if len(doc.C) == 0 {
 		return nil
 	}
-	b := toolBlock("web_fetch", blocks.KindText, title)
+	b := toolBlock(blocks.KindText, title)
 	b.MD, b.Truncated = &doc, cut
 	if ref := researchURLRef(u); ref != nil {
 		b.Ref = ref

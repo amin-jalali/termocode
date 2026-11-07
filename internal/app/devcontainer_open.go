@@ -215,7 +215,8 @@ func (m *Model) onDevContainerTrustConfirm(id string) tea.Cmd {
 		recordError("devcontainer trust: " + err.Error())
 	}
 	if run.envFile != "" {
-		if err := os.MkdirAll(filepath.Dir(run.envFile), 0o700); err == nil {
+		err := os.MkdirAll(filepath.Dir(run.envFile), 0o700)
+		if err == nil {
 			err = os.WriteFile(run.envFile, []byte(run.envText), 0o600)
 		}
 		if err != nil {

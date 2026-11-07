@@ -6,7 +6,6 @@
 // MOB-51). Adding a folder stays on the laptop. Phone layout only: it is
 // part of the phone's lazy chunk, never app.js.
 import { h } from "preact";
-import "../styles/phone-projects.css";
 import { useMemo } from "preact/hooks";
 import { store } from "../session";
 import { t, tn, type StringKey } from "../strings";

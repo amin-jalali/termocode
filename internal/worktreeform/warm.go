@@ -255,13 +255,13 @@ func copyTree(from, to string, budget *int64) error {
 			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 				return err
 			}
-			return copyFile(p, dst, info.Mode().Perm())
+			return warmCopyFile(p, dst, info.Mode().Perm())
 		}
 		return nil // sockets, devices, pipes: left out
 	})
 }
 
-func copyFile(src, dst string, mode fs.FileMode) error {
+func warmCopyFile(src, dst string, mode fs.FileMode) error {
 	in, err := os.Open(src)
 	if err != nil {
 		return err

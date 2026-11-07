@@ -13,7 +13,6 @@
 // Only lazy phone chunks import this file (the Home and its "All tools"
 // menu, MOBUX-5), so app.js does not grow. The page hands it request
 // and the role, so this file holds no link of its own.
-import "../../styles/mcpviews.css";
 import { h, type ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { BlockView } from "../../ui/Blocks";

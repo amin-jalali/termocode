@@ -9,7 +9,7 @@ import (
 // Web Push (MOB-30): reads for any paired device, every change written
 // down, and an address that is not a push service is refused before the
 // hub sees it.
-func TestPushOpRows(t *testing.T) {
+func TestWebPushOpRows(t *testing.T) {
 	for op, audit := range map[string]Audit{OpPushKey: AuditNo, OpPushSubscribe: AuditYes, OpPushUnsubscribe: AuditYes} {
 		p, ok := Lookup(op)
 		if !ok {

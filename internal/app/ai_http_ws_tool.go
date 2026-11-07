@@ -21,7 +21,7 @@ const (
 	httpWSToolMaxSend = 20
 )
 
-func httpWSTool(root string) ai.Tool {
+func httpWSTool(root string, chain httpAIChain) ai.Tool {
 	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
 	num := func(d string) map[string]any { return map[string]any{"type": "integer", "description": d} }
 	gateMethod := func(a map[string]any, r *httpAIReq) string {
@@ -45,12 +45,12 @@ func httpWSTool(root string) ai.Tool {
 			"env":      str("environment for this call (optional; \"none\" for none)"),
 		},
 		Describe: func(a map[string]any) string {
-			r := httpAIGet(root, a)
+			r := httpAIGet(root, a, chain)
 			return fmt.Sprintf("WebSocket %s (%d messages)", httpclient.RedactURL(r.rr.URL), len(httpWSToolMessages(a, r)))
 		},
 		Release: httpAIForget,
 		Validate: func(a map[string]any) error {
-			r := httpAIGet(root, a)
+			r := httpAIGet(root, a, chain)
 			err := httpWSToolValidate(a, r)
 			if err != nil {
 				httpAICache.Delete(httpAIKey(a))
@@ -58,11 +58,11 @@ func httpWSTool(root string) ai.Tool {
 			return err
 		},
 		Gate: func(a map[string]any) (bool, string) {
-			r := httpAIGet(root, a)
+			r := httpAIGet(root, a, chain)
 			return httpAIGate(gateMethod(a, r), r.rr.URL)
 		},
 		Run: func(ctx context.Context, a map[string]any) (string, error) {
-			r := httpAIGet(root, a)
+			r := httpAIGet(root, a, chain)
 			httpAICache.Delete(httpAIKey(a))
 			if err := httpWSToolValidate(a, r); err != nil {
 				return "", err

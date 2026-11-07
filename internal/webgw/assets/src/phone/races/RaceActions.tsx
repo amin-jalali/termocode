@@ -4,7 +4,6 @@
 // focused, Stop armed after 600 ms; the work stays in the worktrees. The
 // summary shows here as soon as it comes back (the races topic brings it
 // too). Offline or as a viewer every button is off. 44 px targets.
-import "../../styles/race.css";
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { link, live } from "../../session";

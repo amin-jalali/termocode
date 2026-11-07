@@ -43,6 +43,7 @@ const (
 	dbNodeExtension    // an extension installed in a schema (DBX-13)
 	dbNodeRole         // a user or role of the server (DBX-13)
 	dbNodeFolderHeader // a connection folder heading (DBX-21); not a node
+	dbNodeVirtualView  // a saved SELECT under a connection's Virtual Views (db_virtual.go)
 )
 
 type dbNode struct {

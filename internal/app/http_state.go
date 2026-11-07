@@ -250,6 +250,7 @@ type httpState struct {
 
 	mqttRunning bool        // an MQTT session runs (http_mqtt.go)
 	grpcRunning bool        // a gRPC call or describe runs (http_grpc.go)
+	sioRunning  bool        // a Socket.IO session runs (http_socketio.go)
 	proxyReq    httpPickReq // the request HTTP: Set Request Proxy… edits
 
 	// The web's request (one at a time) and the hosts the laptop allowed

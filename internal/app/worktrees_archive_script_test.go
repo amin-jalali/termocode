@@ -80,10 +80,10 @@ func TestWorktreeArchiveScriptTrust(t *testing.T) {
 	}
 
 	// Restore, then trust and archive: the script runs first, in the folder.
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 	m.wt.cursorPath = x
 	wtStep(t, m, wtKey(t, m, "x"))
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 	m.wt.cursorPath = x
 	wtStep(t, m, wtKey(t, m, "x"))
 	m.confirmOpen = false
@@ -100,10 +100,10 @@ func TestWorktreeArchiveScriptTrust(t *testing.T) {
 	}
 
 	// Trusted now: the card says it runs and has no trust button.
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 	m.wt.cursorPath = x
 	wtStep(t, m, wtKey(t, m, "x"))
-	wtRun(t, m, m.worktreesReload())
+	wtRunLoad(t, m, m.worktreesReload())
 	m.wt.cursorPath = x
 	wtStep(t, m, wtKey(t, m, "x"))
 	if box := wtBox(m); !strings.Contains(box, "runs first") || strings.Contains(box, "Trust script") {

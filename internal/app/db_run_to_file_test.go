@@ -41,16 +41,16 @@ func TestDBRunToFileFormatsHaveNoUpdate(t *testing.T) {
 	}
 }
 
-// runCmds runs a command and every command a batch holds, feeding the
+// runDBExportCmds runs a command and every command a batch holds, feeding the
 // messages back to the model.
-func runCmds(m *Model, cmd tea.Cmd) {
+func runDBExportCmds(m *Model, cmd tea.Cmd) {
 	if cmd == nil {
 		return
 	}
 	switch msg := cmd().(type) {
 	case tea.BatchMsg:
 		for _, c := range msg {
-			runCmds(m, c)
+			runDBExportCmds(m, c)
 		}
 	case dbExportDoneMsg:
 		m.onDBExportDone(msg)
@@ -92,7 +92,7 @@ func TestDBRunToFileWritesTheQueryRows(t *testing.T) {
 	if !ok {
 		t.Fatal("the card is not routed")
 	}
-	runCmds(m, cmd)
+	runDBExportCmds(m, cmd)
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)

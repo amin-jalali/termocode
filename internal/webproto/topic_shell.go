@@ -28,8 +28,8 @@ type StatusSnap struct {
 	// status-bar chip shows it; "" when there is none (or it is
 	// installed or skipped). The web only shows it: updating is done on
 	// the laptop.
-	Update string `json:"update,omitempty"`
-	Ext        *StatusExt  `json:"ext,omitempty"` // extension panels and status items (data_ext.go)
+	Update string     `json:"update,omitempty"`
+	Ext    *StatusExt `json:"ext,omitempty"` // extension panels and status items (data_ext.go)
 }
 
 // StatusAI is the AI chip.

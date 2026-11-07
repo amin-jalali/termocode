@@ -23,8 +23,8 @@ import (
 // (Cancel first). The database itself is never changed.
 
 const (
-	promptKindDBRename  promptKindEnum  = 4931
-	confirmKindDBRename confirmKindEnum = 4932
+	promptKindDBSQLRename promptKindEnum  = 4931
+	confirmKindDBRename   confirmKindEnum = 4932
 )
 
 // dbRenameState is the rename being asked for.
@@ -222,7 +222,7 @@ func (m *Model) databaseRenameStart() tea.Cmd {
 		return cmd
 	}
 	m.dbConsole().rename = &dbRenameState{old: name, file: file}
-	return m.openHTTPPrompt(promptKindDBRename, "Rename in SQL", "New name for "+sanitizeDBText(name)+":", name)
+	return m.openHTTPPrompt(promptKindDBSQLRename, "Rename in SQL", "New name for "+sanitizeDBText(name)+":", name)
 }
 
 // databaseRenamePlan counts the places and opens the card.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -142,7 +143,7 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 		EntryPointsAdvanced: entries,
 		Outdir:              filepath.Join(abs, "out"),
 		Splitting:           len(p.With) > 0,
-		ChunkNames:          p.Name + "-[name]", // one shared chunk: app-chunk.js
+		ChunkNames:          p.Name + "-[name]-[hash]", // renamed to app-chunk.js, app-chunk-2.js, … (sharedChunkNames)
 		Bundle:              true,
 		Write:               false,
 		Format:              api.FormatESModule,
@@ -171,12 +172,19 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 	if err != nil {
 		return err
 	}
+	rename := sharedChunkNames(p.Name, res.OutputFiles)
 	for _, f := range res.OutputFiles {
 		name := filepath.Base(f.Path)
+		if n, ok := rename[name]; ok {
+			name = n
+		}
 		if _, dup := out[name]; dup {
 			return fmt.Errorf("webbuild: two outputs named %s", name)
 		}
 		body := f.Contents
+		for from, to := range rename {
+			body = bytes.ReplaceAll(body, []byte("./"+from), []byte("./"+to))
+		}
 		if filepath.Ext(name) == ".js" {
 			body = append([]byte(banner(used)+"\n"), body...)
 		}
@@ -444,4 +452,40 @@ func licenses(vendorDir string, pkgs []manifest.Package) []byte {
 		}
 	}
 	return []byte(b.String())
+}
+
+// sharedChunkNames gives the shared chunks of a split build fixed names.
+// With more than one extra entry, esbuild may make more than one shared
+// chunk (one per set of entries that share modules). The biggest one,
+// which every entry imports, becomes <name>-chunk.js (index.html
+// preloads it with its SRI); the others become <name>-chunk-2.js, -3, …
+// in size order, so the names stay the same from build to build.
+func sharedChunkNames(name string, files []api.OutputFile) map[string]string {
+	prefix := name + "-chunk-"
+	type chunk struct {
+		file string
+		size int
+	}
+	var chunks []chunk
+	for _, f := range files {
+		b := filepath.Base(f.Path)
+		if strings.HasPrefix(b, prefix) && filepath.Ext(b) == ".js" {
+			chunks = append(chunks, chunk{b, len(f.Contents)})
+		}
+	}
+	sort.Slice(chunks, func(i, j int) bool {
+		if chunks[i].size != chunks[j].size {
+			return chunks[i].size > chunks[j].size
+		}
+		return chunks[i].file < chunks[j].file
+	})
+	out := map[string]string{}
+	for i, c := range chunks {
+		if i == 0 {
+			out[c.file] = name + "-chunk.js"
+		} else {
+			out[c.file] = fmt.Sprintf("%s-chunk-%d.js", name, i+1)
+		}
+	}
+	return out
 }

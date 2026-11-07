@@ -10,7 +10,6 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/kube"
 	"github.com/amin-jalali/termocode/internal/prompt"
-	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -29,19 +28,9 @@ const (
 	promptKindKubeInstall  promptKindEnum  = 3494
 )
 
-// kubeHelmFind finds helm (tests replace it); kubeHelmExec nil =
-// servicesExec.
-var (
-	kubeHelmFind               = func() string { return kube.FindHelm(nil) }
-	kubeHelmExec services.Exec = nil
-)
-
-// kubeHelmTarget is what the repo or install card asks about.
-type kubeHelmTarget struct {
-	context, namespace      string
-	repo, url               string
-	release, chart, version string
-}
+// kubeHelmFind finds helm (tests replace it). The helm runner seam is
+// kubeHelmExec in kube_helm.go (nil = servicesExec).
+var kubeHelmFind = func() string { return kube.FindHelm(nil) }
 
 type kubeHelmMsg struct {
 	what, out string

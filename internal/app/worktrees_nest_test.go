@@ -57,7 +57,7 @@ func TestWorktreeNewChild(t *testing.T) {
 	root := wtRepo(t)
 	m := wtTestModel(t, root)
 	cmd, _ := m.dispatchWorktreePalette("worktree-view")
-	wtRun(t, m, cmd)
+	wtRunLoad(t, m, cmd)
 	var feat string
 	for _, e := range m.wt.entries {
 		if e.Branch == "feat/x" {

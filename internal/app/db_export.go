@@ -548,7 +548,7 @@ func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.C
 		return m.databaseNewTableLoad(value), true
 	case promptKindDBSaveQuery:
 		return m.databaseSaveQueryNamed(value), true
-	case promptKindDBRename:
+	case promptKindDBSQLRename:
 		return m.databaseRenamePlan(value), true
 	case promptKindDBDesign:
 		return m.databaseDesignSubmit(value), true

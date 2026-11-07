@@ -42,7 +42,7 @@ import { ChipRow } from "../home/ChipRow";
 import type { ChipState } from "../home/chips";
 import { KitCustomize } from "./customize";
 import { AllTools } from "../home/AllTools";
-import { readCatalog, viewHash, type Target } from "../home/alltools";
+import { readCatalog, viewHash, type Target } from "../home/alltoolsdata";
 
 // A sample live board (MOBUX-9) for the kit.
 const KIT_BOARD: Board = {

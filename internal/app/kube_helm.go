@@ -33,11 +33,15 @@ var (
 	kubeFindHelm = func() string { return kube.FindHelm(nil) }
 )
 
-// kubeHelmTarget is the release (and revision) a helm card asks about.
+// kubeHelmTarget is what a helm card asks about: the release (and
+// revision) for roll back / uninstall (CTX-17), or the repo / chart for
+// repo add / install (CTX-39, kube_install.go).
 type kubeHelmTarget struct {
 	action                   string // "rollback" or "uninstall"
 	context, namespace, name string
 	revision, current        int
+	repo, url                string
+	release, chart, version  string
 }
 
 type kubeHelmListMsg struct {

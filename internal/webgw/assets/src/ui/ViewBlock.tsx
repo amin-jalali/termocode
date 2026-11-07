@@ -13,7 +13,6 @@ import type { Block, BlockColumn, ViewCond, ViewSpec } from "../../../../webprot
 import { age } from "../state/git";
 import { t } from "../strings";
 import "../strings.phone";
-import "../styles/viewblock.css";
 import { BlockView, type BlockProps } from "./Blocks";
 
 const OP_SIGN: Record<string, string> = {

@@ -47,9 +47,9 @@ func wtTestModel(t *testing.T, root string) *Model {
 	return m
 }
 
-// wtRun runs the load command and applies it, then waits for the status
+// wtRunLoad runs the load command and applies it, then waits for the status
 // batch it starts.
-func wtRun(t *testing.T, m *Model, cmd tea.Cmd) {
+func wtRunLoad(t *testing.T, m *Model, cmd tea.Cmd) {
 	t.Helper()
 	if cmd == nil {
 		t.Fatal("no load command")
@@ -93,7 +93,7 @@ func TestWorktreeShowLoadsTheList(t *testing.T) {
 	if !ok || m.activity.Active() != activity.ViewWorktrees || m.focus != FocusExplorer || !m.showExp {
 		t.Fatalf("not shown: %v %v %v", ok, m.activity.Active(), m.focus)
 	}
-	wtRun(t, m, cmd)
+	wtRunLoad(t, m, cmd)
 	st := m.wt
 	if st.err != "" || len(st.entries) != 3 {
 		t.Fatalf("err %q entries %+v", st.err, st.entries)
