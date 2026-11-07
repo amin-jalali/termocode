@@ -15,6 +15,8 @@ web	ai-auto-approve	op:ai.set_auto_approve
 web	ai-autopilot	palette
 web	ai-cancel	op:chat.stop
 web	ai-checkpoint-save	palette
+web	ai-chat-schedule	palette
+web	ai-chat-unschedule	palette
 web	ai-configure	op:ai.info
 web	ai-critic-toggle	palette
 web	ai-discard-proposal	op:cards.answer

@@ -731,6 +731,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Keep going (OMX-7) sends model turns that cost money: only the
 	// user turns it on.
 	"ai-keep-going": aiNever(aiNoAIConfig + "; extra paid turns are the user's choice"),
+	// Chat schedules (CMP-43): the AI proposes its own with
+	// chat_schedule_set (always a card); the palette is the user's.
+	"ai-chat-schedule":   aiNever("paid turns at set times are the user's choice (chat_schedule_set asks the user)"),
+	"ai-chat-unschedule": aiNever("the user's own command (chat_schedule_clear)"),
 	// The side chat (OMX-30) is the user's own question.
 	"ai-side": aiNever("the side chat is the user's own question beside the AI's turn"),
 	// Handoff (OMX-21) ends the AI's own chat; the user starts it.

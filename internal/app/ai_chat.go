@@ -174,9 +174,10 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
-	tools = append(tools, aiTodoTools(call)...)                // OMX-7: the chat's todo list (not in run steps)
-	tools = append(tools, m.aiSessionTools()...)               // OMX-21: old chats, read only
-	tools = append(tools, aiLibrarianTools()...)               // CMP-91: outside repositories, read only
+	tools = append(tools, aiTodoTools(call)...)               // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, m.aiChatSchedTools(call)...)        // CMP-43: the chat schedules itself (always asks)
+	tools = append(tools, m.aiSessionTools()...)              // OMX-21: old chats, read only
+	tools = append(tools, aiLibrarianTools()...)              // CMP-91: outside repositories, read only
 	return append(tools, aiChatDocTools(m.chatDocStore())...) // CMP-94: the chat's docs
 }
 
@@ -662,6 +663,9 @@ func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	if title, ok := aiWorkflowAllow[t.Name]; ok { // WFX-9
 		allow.Title = title
 	}
+	if title, ok := aiChatSchedAllow[t.Name]; ok { // CMP-43: Cancel first
+		allow.Title, deny.Title = title, "Cancel"
+	}
 	if aiWorkflowCancelFirst[t.Name] || aiStashLosesData(t) {
 		deny.Title = "Cancel"
 	}
@@ -850,7 +854,11 @@ func (m *Model) openAIHistory() tea.Cmd {
 	}
 	items := make([]picker.Item, 0, len(list))
 	for _, c := range list {
-		items = append(items, picker.Item{ID: c.ID, Title: c.Title, Hint: aiAge(c.UpdatedAtMs)})
+		hint := aiAge(c.UpdatedAtMs)
+		if c.Schedule != nil { // CMP-43
+			hint += " · ⏰ " + c.Schedule.Label()
+		}
+		items = append(items, picker.Item{ID: c.ID, Title: c.Title, Hint: hint})
 	}
 	m.picker = picker.NewItems(" AI Chat History ", items)
 	m.picker.SetSize(m.w, m.h)

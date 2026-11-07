@@ -148,6 +148,10 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onBugspecTitle(value), true
 	case promptKindCanvasAdd, promptKindCanvasTitle, promptKindCanvasNote: // CMP-92: canvas_ui.go
 		return m.onCanvasPrompt(m.promptKind, value), true
+	case promptKindAIChatSchedWhen: // ai_chat_sched.go
+		return m.onAIChatSchedWhen(value), true
+	case promptKindAIChatSchedPrompt:
+		return m.onAIChatSchedPrompt(value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
@@ -336,6 +340,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentChatAnswer(id), true
 	case confirmKindAgentHibernate: // agent_hibernate.go
 		return m.answerAgentHibernate(id), true
+	case confirmKindAIChatSched: // ai_chat_sched.go
+		return m.answerAIChatSchedCard(id), true
+	case confirmKindAIChatUnsched:
+		return m.answerAIChatUnschedCard(id), true
 	case confirmKindAgentAccountSignIn: // agent_accounts.go
 		return m.answerAgentAccountCard(id), true
 	case confirmKindAgentImport: // agent_import.go
