@@ -41,6 +41,7 @@ web	ai-mcp-reset-cache	palette
 web	ai-mcp-servers	view:mcp
 web	ai-mcp-updates	palette
 web	ai-memory	op:ai.info
+web	ai-memory-learn	palette
 web	ai-memory-toggle	palette
 web	ai-model-slot-add	cmd:aiModelSlotAdd
 web	ai-models-edit	cmd:aiModelsEdit
