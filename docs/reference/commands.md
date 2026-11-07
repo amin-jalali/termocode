@@ -525,6 +525,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | HTTP: Cancel Request | `http-cancel` |   |   |
 | HTTP: Cookies… | `http-cookies` |   |   |
+| HTTP: Copy as Code… | `http-copy-snippet` |   |   |
 | HTTP: Copy as curl | `http-copy-curl` |   |   |
 | HTTP: History… | `http-history` |   |   |
 | HTTP: Import from curl… | `http-import-curl` |   |   |
