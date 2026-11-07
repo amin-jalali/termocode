@@ -514,6 +514,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | HTTP: History… | `http-history` |   |   |
 | HTTP: Import from curl… | `http-import-curl` |   |   |
 | HTTP: New .http File… | `http-new-file` |   |   |
+| HTTP: Open API Docs | `http-api-docs` |   |   |
 | HTTP: Open Environment File | `http-env-open` |   |   |
 | HTTP: Open Private Environment File | `http-env-open-private` |   |   |
 | HTTP: Quick Request… | `http-quick` |   |   |

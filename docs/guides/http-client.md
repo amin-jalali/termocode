@@ -99,6 +99,7 @@ would commit it).
 | HTTP: History… | newest first; Enter sends again with today's environment; Ctrl+O opens the stored answer; Ctrl+D deletes |
 | HTTP: Saved Requests… | requests saved with `S` (`~/.config/termocode/http/saved.http`) |
 | HTTP: Copy as curl | one line; secrets stay as `{{templates}}` unless you choose "Copy with secrets" |
+| HTTP: Open API Docs | the open .http file as a read-only Markdown page: a table of requests, then headers, bodies and variables; secrets are hidden |
 | HTTP: Import from curl… | `-X`, `-H`, `-d`, `--json`, `-u`, `-G` … become a new `###` block |
 | HTTP: New .http File… | a file with two example requests |
 
