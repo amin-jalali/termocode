@@ -98,7 +98,7 @@ func (m *Model) databaseSessionsPick(id string) (tea.Cmd, bool) {
 	}
 	s.closeSessionKey = id
 	m.confirm = confirm.New("Close session "+s.dbSessionTitle(id)+"?", body,
-		[]confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "close", Title: "Close Session", Style: confirm.StyleDestructive}})
+		[]confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "close", Title: "Close session", Style: confirm.StyleDestructive}})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindDBSessionClose
