@@ -209,6 +209,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: End Session… | `db-end-session` |   |   |
 | Databases: Explain Analyze Statement… | `db-explain-analyze` |   |   |
 | Databases: Explain Statement | `db-explain` |   |   |
+| Databases: Export ER Diagram… | `db-er-diagram` |   |   |
 | Databases: Export Result… | `db-export` |   |   |
 | Databases: Filter… | `db-filter` |   |   |
 | Databases: Find Usages | `db-find-usages` |   |   |

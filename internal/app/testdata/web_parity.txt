@@ -460,6 +460,7 @@ missing	db-ai-fix-error	Databases|S
 missing	db-ai-generate-sql	Databases|S
 missing	db-cancel-session	Databases|S
 missing	db-end-session	Databases|S
+missing	db-er-diagram	Databases|S
 missing	db-find-usages	Databases|S
 missing	db-format	Databases|S
 missing	db-format-file	Databases|S
