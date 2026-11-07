@@ -32,6 +32,10 @@ var raceModelAgents = []struct{ id, cli string }{
 	{"codex", ai.CLICodex},
 }
 
+// aiRaceModelsMax caps Compare models at 4 models (the tool, the phone
+// form and its strings say "2 to 4"); a plain race may have more lanes.
+const aiRaceModelsMax = 4
+
 func raceModelCLI(id string) (string, bool) {
 	for _, a := range raceModelAgents {
 		if a.id == id {
@@ -89,8 +93,8 @@ func aiRaceModelArgs(a map[string]any) (task, verify string, ag agents.Agent, mo
 		return "", "", agents.Agent{}, nil, fmt.Errorf("%s is not installed (%s is not on PATH); the user installs it first (Agent: Start…)", ag.Title, ag.Bin)
 	}
 	list, _ := a["models"].([]any)
-	if len(list) < agentrace.MinLanes || len(list) > agentrace.MaxLanes {
-		return "", "", agents.Agent{}, nil, fmt.Errorf("models must list %d to %d models", agentrace.MinLanes, agentrace.MaxLanes)
+	if len(list) < agentrace.MinLanes || len(list) > aiRaceModelsMax {
+		return "", "", agents.Agent{}, nil, fmt.Errorf("models must list %d to %d models", agentrace.MinLanes, aiRaceModelsMax)
 	}
 	seen := map[string]bool{}
 	for _, v := range list {
