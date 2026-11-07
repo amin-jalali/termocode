@@ -65,6 +65,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `git_commit_format` | bool | `false` | Before each commit, format the fully staged files that are open in the editor with their language server and stage the result. A file with unstaged changes too is left as it is. |
 | `git_commit_task` | string | `(none)` | Before each commit, run this task (its label, as in Tasks: Run Task). The commit waits; a task that fails asks before the commit. Empty or (none): no task. |
 | `git_commit_large_mb` | int | `5` | git_commit_checks: a staged file bigger than this many MB is a finding. |
+| `worktree_auto_archive_days` | int | `0` | Archive a worktree with no activity for this many days by itself: its folder goes (git-ignored files like build output too), its branch stays, and x on its row under ARCHIVED brings it back. Only clean worktrees termocode made or you adopted; never pinned ones, ones with changed files or ones an agent works in. Checked when the worktree list is read, at most once an hour. 0 turns it off. |
+| `worktree_max` | int | `0` | Most worktrees to keep (the main checkout does not count). When there are more, the oldest clean ones are archived by themselves, by the same rules as worktree_auto_archive_days; one used in the last day is never taken. 0 means no limit. |
 
 ## HTTP
 

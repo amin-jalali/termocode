@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/blocks"
 	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
@@ -42,6 +43,9 @@ type Event struct {
 	Decision string
 	// EventRetry: this is retry Attempt of at most Attempts.
 	Attempt, Attempts int
+	// EventToolResult: the block the tool's View built (MOB-10); nil
+	// when the tool has no View or the call did not succeed.
+	View *blocks.Block
 	// EventDone / EventError: the summed token usage of every request
 	// of the turn (nil when the provider reported none).
 	Usage *Usage
@@ -522,11 +526,57 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	pctx, endProgress := withProgress(context.WithValue(ctx, callIDKey{}, call.ID), t, emit)
 	defer endProgress()
 	out, err := t.Run(pctx, args)
+	var view *blocks.Block
 	if err != nil {
 		out = "error: " + Redact(err.Error())
+	} else {
+		view = toolView(t, call.ID, args, out)
 	}
-	emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: out, Gate: gate, Decision: decision})
+	emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: out, Gate: gate, Decision: decision, View: view})
 	return out
+}
+
+// toolView runs t's View hook for a finished call (MOB-10): it fills an
+// empty id (the call id, else the tool name) and source (the tool's
+// label), redacts every text and checks the caps. A panic, a nil block
+// or a block over the caps is no block.
+func toolView(t Tool, callID string, args map[string]any, result string) (b *blocks.Block) {
+	if t.View == nil {
+		return nil
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			b = nil
+		}
+	}()
+	b = t.View(args, result)
+	if b == nil {
+		return nil
+	}
+	var err error
+	if b, err = b.MapStrings(Redact); err != nil || b == nil {
+		return nil
+	}
+	filled := b.ID == ""
+	if filled {
+		b.ID = callID
+		if b.ID == "" || len(b.ID) > blocks.MaxID {
+			b.ID = t.Name
+		}
+	}
+	if b.Source == "" {
+		b.Source = t.Label()
+	}
+	if b.Validate() == nil {
+		return b
+	}
+	if filled && b.ID != t.Name { // a provider's call id the block ids refuse
+		b.ID = t.Name
+		if b.Validate() == nil {
+			return b
+		}
+	}
+	return nil
 }
 
 var toolFenceRe = lazyre.New("(?s)```(?:json)?\\s*(\\{.*?\\})\\s*```")

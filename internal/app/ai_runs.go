@@ -227,6 +227,7 @@ func (m *Model) startAIRunAs(text string, prof ai.Profile, rules ai.Rules, id st
 	if err != nil {
 		return m.aiProfileProblem(prof.Name, err)
 	}
+	chips := s.attachChips()
 	ctxText, images := s.takeAttachments()
 	s.turnMsg = len(s.conv.Messages) // one restore point for the whole run
 	steps := make([]ai.StoredStep, len(run.Nodes))
@@ -249,7 +250,7 @@ func (m *Model) startAIRunAs(text string, prof ai.Profile, rules ai.Rules, id st
 		sr.Rounds, sr.MaxRounds = 1, run.Loop.MaxRounds
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules)},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Attached: chips, Images: images, Rules: aiRulesLabel(rules)},
 		ai.StoredMessage{Role: ai.StoredAssistant, Run: sr, Steps: steps},
 	)
 	s.scroll = 0

@@ -73,6 +73,7 @@ type aiState struct {
 	kwOff     bool
 	kwProfile string
 	side      aiSideChat // OMX-30: the side chat (ai_side.go)
+	home      aiHomeChat // MOB-16: the phone's background chat (web_chat_home.go)
 	cfg       ai.Config
 	provider  ai.Provider
 	loadErr   string
@@ -119,6 +120,7 @@ type aiState struct {
 	webPreset      string          // the server the open add card is for (ai_web_presets.go)
 	recall         *aiRecallState  // lesson recall per chat (ai_recall.go)
 	ship           *aiShip         // the running ship loop (ai_ship.go)
+	shipCommit     *wtShipPending  // the open ship commit card or prompt (ai_ship_full.go)
 	acp            *acpThread      // CMP-83: the chat's ACP agent thread (acp_thread.go)
 	ctl            *agentCtlState  // the agent control socket's UI side (agent_ctl.go)
 	diffNotes      *diffNotesState // diff comments → agent (diff_comments.go, CMP-51)
@@ -130,7 +132,9 @@ type aiState struct {
 	agentPickPending string
 	// agentAccountPending is the sign-in line of the open account card (agent_accounts.go).
 	agentAccountPending string
-	shipGen             int
+	// agentSwitchBuf is the agent tab of the open Switch Account card (agent_switch.go).
+	agentSwitchBuf int
+	shipGen        int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the
@@ -359,6 +363,9 @@ type aiAttachment struct {
 	// text); MediaType its type ("image/png").
 	Image     string
 	MediaType string
+	// Kind is the attach kind of an item the web page sent back (MOB-5,
+	// web_chat_attach.go); "" for what the laptop attached.
+	Kind string
 }
 
 // newAIState loads settings + credentials and builds the provider.
@@ -559,6 +566,8 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-new-chat", "AI: New Chat", ""},
 		{"ai-history", "AI: Chat History…", ""},
 		{aiHistorySearchID, "AI: Search Chat History…", "words in your saved AI chats"},
+		{aiShareChatID, "AI: Share Chat by Link…", "a viewer link; they watch and comment"},
+		{aiChatCommentsID, "AI: Chat Comments…", "comments from people you shared the chat with"},
 		{"ai-history-rename", "AI: Rename Chat…", ""},
 		{"ai-fork-chat", "AI: Fork Chat from Message…", ""},
 		{"ai-history-delete", "AI: Delete Chat…", ""},
@@ -619,6 +628,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-proofs", "AI: Proof of Work… (screenshots the AI took)", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
+		{"ai-ship-merge", "AI: Ship and Merge When Green (CI fixes, conflicts, merge card) / Stop", ""},
 		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
 		{"ai-agent-hooks", "Agent: State Hooks… (exact working / waiting / done)", ""},
 		{"ai-agent-packs", "Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex)", ""},
@@ -657,7 +667,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-review-order", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
-		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID,
+		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID, aiShareChatID, aiChatCommentsID,
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
 		"ai-agent-hooks", "ai-agent-packs", // agent CLI files need no provider
 		"ai-rewind-turn", "ai-checkpoint-save", "ai-checkpoint-restore": // CMP-62: files and chats only
@@ -676,6 +686,10 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIHistory(), true
 	case aiHistorySearchID: // CMP-30 (ai_chat_search.go)
 		return m.openAIChatSearch(), true
+	case aiShareChatID: // CMP-88 (ai_chat_comments.go)
+		return m.openAIShareChat(), true
+	case aiChatCommentsID:
+		return m.openAIChatComments(), true
 	case "ai-worktrees": // G-WT (ai_worktree_list.go)
 		return m.openAIWorktrees(), true
 	case aiTaskListPaletteID: // CMP-76 (ai_task_list.go)
@@ -833,6 +847,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIProofs(), true
 	case "ai-ship":
 		return m.toggleAIShip(), true
+	case "ai-ship-merge":
+		return m.toggleAIShipMerge(), true
 	case "ai-plan-worktree":
 		return m.toggleAIPlanWorktree(), true
 	case "ai-agent-hooks":
@@ -866,6 +882,9 @@ func (m *Model) aiCancelAll() tea.Cmd {
 		s.actionGen++
 	}
 	m.cancelAIInline()
+	if m.aiHomeStop() { // MOB-16: and the phone chat's turn
+		stopped = true
+	}
 	if !stopped {
 		return nil
 	}
@@ -905,6 +924,7 @@ func aiSettingsCategories(cats map[string]string) map[string]string {
 	updateSettingsCategories(cats)   // G-UPD (update_settings.go)
 	workflowSettingsCategories(cats) // WFX-0 (workflow_settings.go)
 	gitxSettingsCategories(cats)     // GITX-12 (gitx_autofetch_setting.go)
+	wtAutoSettingsCategories(cats)   // CMP-16 (worktrees_autoclean.go)
 	for _, id := range []string{"setting-ai-inline", "setting-ai-next-edit", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
 		"setting-ai-until-done-rounds", "setting-ai-until-done-budget"} {
 		cats[id] = "AI"
@@ -930,6 +950,9 @@ func aiSettingValue(id string) (string, bool) {
 		return v, true
 	}
 	if v, ok := gitxSettingValue(id); ok { // GITX-12 (gitx_autofetch_setting.go)
+		return v, true
+	}
+	if v, ok := wtAutoSettingValue(id); ok { // CMP-16 (worktrees_autoclean.go)
 		return v, true
 	}
 	path, _ := ai.ConfigPath()
@@ -988,6 +1011,9 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 		return c, true
 	}
 	if c, ok := m.applyGitxSetting(id, value); ok { // GITX-12 (gitx_autofetch_setting.go)
+		return c, true
+	}
+	if c, ok := m.applyWTAutoSetting(id, value); ok { // CMP-16 (worktrees_autoclean.go)
 		return c, true
 	}
 	path, err := ai.ConfigPath()

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/blocks"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/search"
 	"github.com/amin-jalali/termocode/internal/services"
@@ -57,6 +58,14 @@ type Tool struct {
 	// map can never meet an old entry.
 	Release func(args map[string]any)
 	Run     func(ctx context.Context, args map[string]any) (string, error)
+	// View (optional, MOB-10) builds the visual block the phone shows
+	// for a finished call from its args and the result text the model
+	// got; nil means no block. It runs only after Run succeeded (never
+	// for a refused, declined or failed call). The agent fills an empty
+	// ID (the call id) and Source (the tool's Label), redacts the
+	// block's text and checks its caps; a block that fails them, or a
+	// View that panics, loses the block, never the result.
+	View func(args map[string]any, result string) *blocks.Block
 	// Hidden (optional) keeps the tool out of the specs and the text
 	// catalog while it returns true (an MCP tool not loaded yet by the
 	// tool search). The model can still call it by name.

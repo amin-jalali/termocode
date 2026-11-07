@@ -24,10 +24,18 @@ import (
 // request) waits on a card whose safe choice is first; a fix turn is a
 // normal chat turn (its edits get the usual review). At most
 // aiShipMaxFixes fix turns; Stop (the palette again) ends the loop.
+//
+// CI babysitter (CMP-34): AI: Ship and Merge When Green… runs the same
+// loop and adds two steps. A pull request with merge conflicts gets an
+// AI turn that merges the base in and commits (it counts toward the fix
+// cap). When CI is green on a mergeable, non-draft pull request without
+// requested changes, a merge card asks (Cancel first); the merge is
+// pinned to the green commit, so a later push makes GitHub refuse it.
 
 const (
-	confirmKindAIShipPush confirmKindEnum = 2904
-	confirmKindAIShipPR   confirmKindEnum = 2905
+	confirmKindAIShipPush  confirmKindEnum = 2904
+	confirmKindAIShipPR    confirmKindEnum = 2905
+	confirmKindAIShipMerge confirmKindEnum = 2909
 )
 
 // aiShipMaxFixes caps the AI fix turns of one ship.
@@ -55,6 +63,7 @@ type aiShipOps interface {
 	Push(ctx context.Context, branch string) error
 	CreatePR(ctx context.Context, p ghci.NewPR) (string, error)
 	FailedLog(ctx context.Context, run ghci.Run) (ghci.FailedLog, error)
+	Merge(ctx context.Context, number int, method ghci.MergeMethod, sha string) error // only that head commit is merged
 }
 
 // aiShipOpsFor builds the real ops (git and gh in dir; "": the
@@ -93,20 +102,31 @@ func (o aiShipReal) CreatePR(ctx context.Context, p ghci.NewPR) (string, error) 
 	return ghci.Create(ctx, o.run, o.dir, p)
 }
 
+func (o aiShipReal) Merge(ctx context.Context, n int, method ghci.MergeMethod, sha string) error {
+	return ghci.MergeHead(ctx, o.run, o.dir, n, method, sha)
+}
+
 func (o aiShipReal) FailedLog(ctx context.Context, r ghci.Run) (ghci.FailedLog, error) {
 	return ghci.FetchFailedLog(ctx, o.run, o.dir, r.ID)
 }
 
 // aiShip is a running ship loop.
 type aiShip struct {
-	gen    int // a newer ship (or Stop) ends older messages
-	branch string
-	dir    string // a plan run's worktree ("": the workspace)
-	ops    aiShipOps
-	fixes  int
-	fixing bool        // a fix turn runs in the chat
-	pr     *ghci.NewPR // the open PR card's request
-	last   aiShipProbe
+	gen      int // a newer ship (or Stop) ends older messages
+	branch   string
+	dir      string // a plan run's worktree ("": the workspace)
+	ops      aiShipOps
+	fixes    int
+	fixing   bool        // a fix turn runs in the chat
+	merge    bool        // CMP-34: offer the merge card when green
+	mergeN   int         // the merge card's pull request
+	mergeSHA string      // the green commit the merge card is for
+	pr       *ghci.NewPR // the open PR card's request
+	last     aiShipProbe
+	// full: a worktree ship (ai_ship_full.go): the PR text comes from
+	// the AI, green CI asks to merge, a merge offers to archive wtPath.
+	full   bool
+	wtPath string
 }
 
 type (
@@ -141,6 +161,17 @@ func (m *Model) toggleAIShip() tea.Cmd {
 		return m.aiInfo("Ship needs a git branch: open a folder with a git repository")
 	}
 	return m.startAIShip(m.gitBranch.Name, "")
+}
+
+// toggleAIShipMerge starts the babysitter (ship, fix conflicts, merge
+// card when green) on the current branch, or stops a running ship.
+func (m *Model) toggleAIShipMerge() tea.Cmd {
+	cmd := m.toggleAIShip()
+	if sh := m.aiS().ship; sh != nil {
+		sh.merge = true
+		return tea.Batch(m.aiInfo("Babysitting "+sh.branch+": CI fixes, conflicts, then a merge card when green · run the command again to stop"), cmd)
+	}
+	return cmd
 }
 
 // startAIShip starts the loop on branch, checked out in dir ("": the
@@ -191,6 +222,9 @@ func (m *Model) handleAIShipMsg(msg tea.Msg) (tea.Cmd, bool) {
 		if msg.err != nil {
 			return m.aiShipStop(msg.what + " failed: " + ai.Redact(msg.err.Error()) + " · ship stopped"), true
 		}
+		if msg.what == "Merge" {
+			return m.aiShipStop("Merged " + msg.detail), true
+		}
 		return tea.Batch(m.aiInfo(msg.what+" done "+msg.detail), m.aiShipProbeCmd()), true
 	case aiShipTickMsg:
 		if !cur(msg.gen) {
@@ -205,7 +239,7 @@ func (m *Model) handleAIShipMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case aiPlanShipMsg: // ai_plan_worktree.go
 		return m.onAIPlanShip(msg), true
 	}
-	return nil, false
+	return m.handleWTShipMsg(msg, cur) // ai_ship_full.go
 }
 
 // onAIShipProbe decides the next step.
@@ -223,7 +257,12 @@ func (m *Model) onAIShipProbe(msg aiShipProbeMsg) tea.Cmd {
 	case !p.pushed || p.unpushed > 0:
 		return m.askAIShipPush(p)
 	case p.snap.PR == nil || p.snap.PR.State != "OPEN":
+		if sh.full {
+			return m.aiShipPRText(p) // ai_ship_full.go: the AI writes it
+		}
 		return m.askAIShipPR(p)
+	case p.snap.PR.Conflicting():
+		return m.aiShipConflictTurn(p)
 	}
 	// CI of the pushed head: runs for an older commit mean it did not start yet.
 	state := p.snap.State()
@@ -232,6 +271,12 @@ func (m *Model) onAIShipProbe(msg aiShipProbeMsg) tea.Cmd {
 	}
 	switch state {
 	case ghci.StatePass:
+		if sh.full {
+			return m.askAIShipMerge(p) // ai_ship_full.go
+		}
+		if sh.merge {
+			return m.aiShipMergeStep(p)
+		}
 		return m.aiShipStop("Merge-ready: CI is green on " + aiShipPRName(p.snap.PR) + ". Merge it yourself when you want.")
 	case ghci.StateFail:
 		if sh.fixes >= aiShipMaxFixes {
@@ -285,6 +330,67 @@ func (m *Model) aiShipOnChatDone() tea.Cmd {
 	return m.aiShipProbeCmd()
 }
 
+// aiShipConflictTurn sends the merge-conflict fix to the AI chat (one
+// fix turn under the cap); the chat busy: ask again soon.
+func (m *Model) aiShipConflictTurn(p aiShipProbe) tea.Cmd {
+	s := m.aiS()
+	sh := s.ship
+	if sh.fixes >= aiShipMaxFixes {
+		return m.aiShipStop(fmt.Sprintf("%s still has merge conflicts after %d AI fixes: ship stopped", aiShipPRName(p.snap.PR), aiShipMaxFixes))
+	}
+	if s.streaming || s.chatCancel != nil {
+		gen := sh.gen
+		return tea.Tick(aiShipPoll, func(time.Time) tea.Msg { return aiShipTickMsg{gen: gen} })
+	}
+	sh.fixes++
+	sh.fixing = true
+	text := ghci.ConflictPrompt(p.branch, p.base, p.snap.PR.Number) + aiShipFixNote
+	s.turnRoot = sh.dir
+	return tea.Batch(m.aiInfo(fmt.Sprintf("Merge conflicts: AI fix %d of %d", sh.fixes, aiShipMaxFixes)), m.openAIPanel(true), m.sendAIChat(text))
+}
+
+// aiShipMergeStep is green CI in babysitter mode: a blocked pull request
+// stops the ship with the reason; GitHub still computing waits; else the
+// merge card.
+func (m *Model) aiShipMergeStep(p aiShipProbe) tea.Cmd {
+	sh := m.aiS().ship
+	pr := p.snap.PR
+	name := aiShipPRName(pr)
+	switch {
+	case pr.Draft:
+		return m.aiShipStop("CI is green, but " + name + " is a draft: mark it ready, then merge it yourself or run the command again")
+	case pr.Review == "CHANGES_REQUESTED":
+		return m.aiShipStop("CI is green, but " + name + " has changes requested: ship stopped, nothing merged")
+	case pr.Mergeable == "UNKNOWN":
+		gen := sh.gen // GitHub is still computing: ask again soon
+		return tea.Tick(aiShipPoll, func(time.Time) tea.Msg { return aiShipTickMsg{gen: gen} })
+	}
+	sha := p.snap.HeadSHA
+	if sha == "" {
+		sha = p.head
+	}
+	sh.mergeN, sh.mergeSHA = pr.Number, sha
+	text := fmt.Sprintf("CI is green on %s", name)
+	if pr.Title != "" {
+		text += " · " + pr.Title
+	}
+	text += "\n" + p.branch + " → " + p.base + " · commit " + shortSHA(sha) + "\n"
+	if r := ciReviewText(pr.Review); r != "" {
+		text += r + "\n"
+	}
+	text += fmt.Sprintf("\nAI fixes used: %d of %d.\n", sh.fixes, aiShipMaxFixes)
+	text += "\nOnly this commit is merged: a newer push makes GitHub refuse. Branch rules are never bypassed and the branch is kept.\nCancel stops the ship."
+	m.confirm = confirm.Risky("Ship: merge the pull request?", text,
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: "squash", Title: "Squash and Merge", Style: confirm.StylePrimary},
+		confirm.Button{ID: "merge", Title: "Merge Commit"},
+		confirm.Button{ID: "rebase", Title: "Rebase and Merge"}).WithWideText()
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindAIShipMerge
+	return nil
+}
+
 // askAIShipPush shows the push card (Not now first).
 func (m *Model) askAIShipPush(p aiShipProbe) tea.Cmd {
 	text := "Push " + p.branch + " to origin"
@@ -312,11 +418,20 @@ func (m *Model) askAIShipPush(p aiShipProbe) tea.Cmd {
 // askAIShipPR shows the pull request card (Cancel first).
 func (m *Model) askAIShipPR(p aiShipProbe) tea.Cmd {
 	title, body := ghci.Compose(p.subjects)
+	return m.askAIShipPRText(p, title, body, "")
+}
+
+// askAIShipPRText shows the pull request card with title and body; note
+// (if any) says where the text came from.
+func (m *Model) askAIShipPRText(p aiShipProbe, title, body, note string) tea.Cmd {
 	req := ghci.NewPR{Title: title, Body: body, Base: p.base, Branch: p.branch}
 	m.aiS().ship.pr = &req
 	text := "Title: " + title + "\n" + p.branch + " → " + p.base + "\n"
 	if body != "" {
 		text += "\nDescription\n" + body + "\n"
+	}
+	if note != "" {
+		text += "\n" + note + "\n"
 	}
 	text += "\nCancel stops the ship."
 	m.confirm = confirm.Risky("Ship: open a pull request?", text,
@@ -352,6 +467,17 @@ func (m *Model) answerAIShipCard(kind confirmKindEnum, id string) tea.Cmd {
 			defer cancel()
 			url, err := ops.CreatePR(ctx, req)
 			return aiShipStepMsg{gen: gen, what: "Pull request", detail: url, err: err}
+		}
+	case kind == confirmKindWTShipMerge:
+		return m.answerAIShipMerge(id) // ai_ship_full.go
+	case kind == confirmKindAIShipMerge && (id == "squash" || id == "merge" || id == "rebase") && sh.mergeN > 0:
+		n, sha, method := sh.mergeN, sh.mergeSHA, ghci.MergeMethod(id)
+		sh.mergeN, sh.mergeSHA = 0, ""
+		return func() tea.Msg {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			err := ops.Merge(ctx, n, method, sha)
+			return aiShipStepMsg{gen: gen, what: "Merge", detail: "pull request #" + strconv.Itoa(n), err: err}
 		}
 	}
 	return m.aiShipStop("Ship stopped")

@@ -231,6 +231,9 @@ func (m *Model) onWTNewPrep(msg wtNewPrepMsg) tea.Cmd {
 		ags = ags[:wtFormAgentsMax]
 	}
 	f.agents = ags
+	if f.pick > len(f.agents) { // a prefill (CMP-32) when no agent is installed
+		f.pick = 0
+	}
 	m.wt.form = f
 	if f.preTask != "" || f.preAgent != "" { // a handoff (worktrees_handoff.go)
 		f.vals = map[string]string{"from": f.from, "task": f.preTask}
@@ -244,6 +247,7 @@ func (m *Model) onWTNewPrep(msg wtNewPrepMsg) tea.Cmd {
 	f.vals = nil
 	m.connect.SetSize(m.w, m.h)
 	m.connectOpen = true
+	f.vals, f.pick = nil, 0 // a prefill is on the card now
 	return nil
 }
 

@@ -36,10 +36,14 @@ repository's git folder, never in your project.
 | `p` | Pin or unpin |
 | `K` `J` | Move the worktree up or down in its group (`Shift+↑` `Shift+↓` too) |
 | `i` | Link an issue or pull request (see below) |
+| `W` | Send PR feedback to its agent: review comments, `@termocode` mentions, failing CI (asks first) |
+| `w` | Follow its PR: new feedback asks to go to the agent; again: stop |
+| `P` | The linked pull request: checks and their logs, review threads, merge |
 | `N` | The notes agents left on it, with their times |
 | `d` | Diff vs base: what it changed since it left its base; keep or revert each change |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
+| `I` | Start from an issue: pick an open issue, the New worktree form fills in |
 | `H` | Hand off: a new agent goes on with a note of this work (see below) |
 | `L` | Show the setup of a new worktree (its terminal tab) |
 | `r` | Run the dev server on the worktree's own port (`$PORT`); again: show its tab |
@@ -48,12 +52,13 @@ repository's git folder, never in your project.
 | `F` | Forget a worktree whose folder is gone |
 | `s` | Sleep: end its agent tabs and move it under ASLEEP; again: wake it |
 | `T` | Its agent sessions; `Enter` shows the session's tab |
-| `S` | New agent session: one more agent in it, in its own tab |
+| `O` | New agent session: one more agent in it, in its own tab |
 | `v` | Preview: the agent's live screen in the panel (see below); again: close |
 | `V` | Agent grid: up to 4 agent screens side by side |
 | `x` | Archive: remove the folder, keep the branch; on an archived row: restore |
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
+| `S` | Ship: commit (AI message), push, pull request (AI text), CI fixes, merge, archive; each step asks (see below) |
 | `b` | Background task: an agent works on it alone in a sandbox container (asks first) |
 | `B` | Background tasks: state, follow output, stop, remove |
 | `M` | Move to another machine: pack it into one file (see below) |
@@ -126,7 +131,8 @@ A repository can list files for each new worktree in
   "include": [".env", ".env.local"], // copied
   "shared": ["node_modules"],        // linked to the main checkout's folder
   "setup": ["pnpm install"],         // run in the new worktree
-  "branch_prefix": "amin/"           // starts a branch made from the task
+  "archive": ["docker compose down"], // run before a worktree's folder goes
+  "branch_prefix": "amin/"            // starts a branch made from the task
 }
 ```
 
@@ -144,6 +150,14 @@ A repository can list files for each new worktree in
   run in a terminal tab of their own inside the new worktree, so you can
   watch them, with your environment minus termocode's secrets. The card
   shows `setup ● running`, `✓` or `✗`; `L` shows the tab.
+- **archive** commands run in a worktree's folder just before Archive,
+  Delete or Clean up removes it, for example to stop its services and
+  free its ports. They share the trust of this file with **setup**. The
+  archive card shows them; while the file is not trusted, **Archive**
+  skips them and **Trust script and archive** runs them first. The delete
+  and clean up cards say whether they run. Each command may take two
+  minutes at most. A failing command never keeps the folder: the removal
+  goes on and a warning names the command and its log file.
 
 ## A dev server per worktree
 
@@ -186,6 +200,23 @@ show as `└ …`). A child whose parent is gone moves up to the top level.
 agents in them, from every termocode window, with the ones that wait for
 you first.
 
+## Start from an issue
+
+`I` (**Worktree: Start from Issue…**) lists the open GitHub issues of the
+repository (read by `gh` with your own sign-in). Pick one, and the New
+worktree form opens filled in:
+
+- **Issue** is `#12`, so the worktree is linked to it;
+- **Branch** comes from the title, like `12-login-crashes-on-empty-password`;
+- **Agent** is the first installed agent;
+- **Task** is `Work on issue #12: <title>. Read it first with gh issue view 12, …`.
+
+Change any field first. Nothing is made until **Create** or
+**Create + Start** (**Cancel** is the first button). The title is shown
+as plain text: control bytes are dropped and it is cut at 200 letters.
+**Git: Issues…** has the same row (**Start Work: New Worktree + Agent…**)
+for one issue. The AI can not start it; it is your choice.
+
 ## Hand off to a new agent
 
 `H` (**Worktree: Hand Off Selected…**) passes the selected worktree's
@@ -225,6 +256,45 @@ URL must be `https` on the repository's own GitHub host. termocode asks
 20 seconds while checks run, else every 5 minutes. Without `gh`, or when
 it is not signed in, the number is kept without its title. **Unlink**
 on the same card takes it off. The AI can read links but never set one.
+
+### The pull request pane
+
+`P` (**Worktree: Show Pull Request of Selected**) opens the linked pull
+request on one card: title, state, checks, changed files, description,
+reviews and review threads. Without a linked pull request a short note
+says to press `i` first.
+
+- **Checks…** lists every check. A failed GitHub Actions check has two
+  rows: **Show Log** opens the failed part of its log in a read-only tab,
+  and **Fix with AI** puts that log in the chat. Nothing is sent until
+  you press Enter. Any other check with a link opens its page.
+- **Threads…** lists the review threads, open ones first. A thread's
+  card shows the code and every comment, with **Reply…** and
+  **Resolve** or **Reopen**.
+- **Actions…** reviews, checks out or merges the pull request. Merge
+  asks first on a card where **Cancel** is ready.
+
+## Send PR feedback to the agent
+
+`W` (**Worktree: Send PR Feedback to Agent…**) reads the worktree's pull
+request with `gh`: the open review threads, comments in the PR
+conversation that call the agent (`@termocode` or `@agent`), and a
+failed CI run with its failing log. A card shows a short preview;
+**Cancel** is first. **Send** writes all of it to a file in the
+repository's git folder (secrets are hidden, the file is never part of
+your project) and types one line into the agent tab of that worktree:
+read the file, fix it, commit, do not push. You push when you are happy.
+When no agent works in the worktree, the feedback goes into the AI chat
+input instead, and you press Enter to send it.
+
+`w` (**Worktree: Follow PR Feedback**) follows a linked pull request
+(link it with `i` first; the card then says `· following`). While the
+view shows, termocode reads the PR every 2 minutes. When there are new
+review comments, new mentions or a new failing run, the same card asks
+before anything is sent. **Skip** (or `Esc`) marks them as seen, so it
+does not ask about them again; `W` still sends everything open at any
+time. `w` again stops following. The AI can never send feedback or turn
+following on.
 
 ## Notes and status from agents
 
@@ -296,7 +366,7 @@ row says **done**, **ready** or **waits**, and what it waits for.
 One worktree can have more than one agent at work: separate sessions on
 the same files, each in its own terminal tab.
 
-- `S` (**Worktree: New Agent Session in Selected…**) lists the installed
+- `O` (**Worktree: New Agent Session in Selected…**) lists the installed
   agents. The one you pick starts in the worktree in a new tab, even
   when the same agent already runs there. **Agent: Start…** shows the
   running tab instead.
@@ -350,6 +420,36 @@ keep running; the card says so.
   children). Their agent tabs end too.
 - A worktree with no agent tab and no child sleeps at once.
 - `s` on an asleep worktree wakes it and its asleep children.
+
+## Ship
+
+`S` (**Worktree: Ship Selected (commit, push, PR, merge, archive)…**)
+takes a worktree from finished work to merged in one flow:
+
+1. **Commit.** A worktree with changed files shows a card with a commit
+   message the AI wrote from the diff. **Cancel** comes first;
+   **Commit and ship** commits all its changes in one commit; **Edit
+   message…** lets you change the text first. Without an AI the message
+   is "Work on <branch>" and the card says so. A clean worktree skips
+   this step.
+2. **Push.** A plain push of the branch, never forced (**Not now**
+   first).
+3. **Pull request.** The AI writes the title and the description from
+   the commits and the changed files; the card shows them (**Cancel**
+   first, then **Create** or **Create as Draft**).
+4. **CI.** termocode waits for CI. When it is red, the failing log goes
+   to the AI chat as a fix turn (at most 3), and the fix is pushed after
+   its card, like **AI: Ship Branch to Merge-Ready**.
+5. **Merge.** On green CI a card asks to merge (`gh pr merge`, never
+   `--admin`): **Cancel** first, then **Merge**, **Squash and merge** or
+   **Rebase and merge**. Cancel stops at merge-ready.
+6. **Archive.** After the merge the archive card of the worktree opens
+   (see below), **Cancel** first. The branch stays.
+
+Cancel or Esc on any card stops the flow there. Agent lanes, archived
+rows and worktrees without a branch are not shipped. Running **AI: Ship
+Branch to Merge-Ready** again stops a running ship. The AI never starts
+it.
 
 ## Archive and restore
 
@@ -487,6 +587,29 @@ termocode lane push [--chats] [DIR] host:~/src/app   # pack here, unpack there
 ```
 
 The AI never moves, unpacks or pulls a lane.
+### Auto clean-up
+
+Two settings (Settings, **Git** group) archive worktrees by themselves.
+Both are off (`0`) until you set them:
+
+- `worktree_auto_archive_days`: a worktree with no activity for this
+  many days is archived.
+- `worktree_max`: when more worktrees than this are live (the main
+  checkout does not count), the oldest ones are archived until it fits.
+
+termocode checks when the worktree list is read (the WORKTREES view,
+Jump, the web page), at most once an hour. It archives like `x`: the
+folder goes and its disk is freed (git-ignored files such as build
+output go too), the branch stays. One toast names each worktree, why it
+went and how much disk was freed. `x` on its row under **ARCHIVED**
+brings it back in one step.
+
+It only takes clean worktrees termocode made or you adopted. It never
+takes the main checkout, the worktree this window is in, an agent lane,
+a locked or pinned worktree, one an agent works in, one with changed
+files, or one used in the last day. A file that changes just before the
+archive stops it: termocode never forces it. The AI can not change these
+settings.
 
 ## From the web page
 

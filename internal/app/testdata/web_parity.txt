@@ -65,6 +65,7 @@ web	ai-review-order	palette
 web	ai-rules	op:ai.info
 web	ai-runs	cmd:runs
 web	ai-ship	palette
+web	ai-ship-merge	palette
 web	ai-side	op:chat.side
 web	ai-skills	op:ai.info
 web	ai-toggle-inline	op:ai.complete
@@ -388,6 +389,7 @@ excluded	ai-credentials	security: credentials file is laptop only
 excluded	ai-doctor	laptop only: checks the laptop setup
 excluded	ai-mcp-config	laptop only: edits the MCP config file
 excluded	ai-profile-trust	security: trust decisions are made on the laptop
+excluded	ai-share-chat	laptop only: the share link and its QR code are made on the laptop, like Web: Share as Viewer
 excluded	ai-sign-in-claude	security: OAuth sign-in happens on the laptop
 excluded	ai-sign-out-claude	security: credentials are managed on the laptop
 excluded	buffer-info	laptop only: TUI status overlay
@@ -465,17 +467,21 @@ excluded	workflow-edit-file	laptop only: workflow files are edited and trusted o
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
 missing	acp-thread	Agents|M
-missing	ai-board	AI|M
-missing	ai-proofs	AI|S
 missing	agent-sessions-search-all	AI|S
+missing	ai-board	AI|M
+missing	ai-chat-comments	AI|S
 missing	ai-history-search	AI|S
 missing	ai-mcp-accounts	AI|S
 missing	ai-powers	AI|S
+missing	ai-proofs	AI|S
 missing	ai-run-task-list	AI|M
 missing	bugfix-spec-fix	AI|S
 missing	bugfix-spec-new	AI|S
 missing	ai-checkpoint-restore	AI|S
 missing	ai-rewind-turn	AI|S
+missing	canvas-add	AI|S
+missing	canvas-copy	AI|S
+missing	canvas-open	AI|M
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S
@@ -741,10 +747,13 @@ missing	worktree-bg-task	Worktrees|M
 missing	worktree-bg-tasks	Worktrees|M
 missing	worktree-cleanup	Worktrees|M
 missing	worktree-delete	Worktrees|M
+missing	worktree-feedback	Worktrees|M
 missing	worktree-diff	Worktrees|M
 missing	worktree-deps	Worktrees|S
 missing	worktree-filter	Worktrees|M
+missing	worktree-follow	Worktrees|M
 missing	worktree-forget	Worktrees|M
+missing	worktree-from-issue	Worktrees|M
 missing	worktree-handoff	Worktrees|M
 missing	worktree-jump	Worktrees|M
 missing	worktree-link	Worktrees|M
@@ -762,9 +771,11 @@ missing	worktree-run-open	Worktrees|M
 missing	worktree-pull	Worktrees|M
 missing	worktree-reset-order	Worktrees|M
 missing	worktree-sessions	Worktrees|M
+missing	worktree-pr	Worktrees|M
 missing	worktree-preview	Worktrees|M
 missing	worktree-preview-grid	Worktrees|M
 missing	worktree-setup-log	Worktrees|M
+missing	worktree-ship	Worktrees|M
 missing	worktree-sleep	Worktrees|M
 missing	worktree-unpack	Worktrees|M
 missing	worktree-view	Worktrees|M

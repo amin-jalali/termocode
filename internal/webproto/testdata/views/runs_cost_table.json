@@ -1,0 +1,9 @@
+{
+  "note": "a typed filter: cost over 0.5 is a number compare, not text",
+  "spec": {"view": "runs", "layout": "table", "fields": ["title", "cost"], "filter": [{"field": "cost", "op": "gt", "value": "0.5"}]},
+  "src": {"runs": [
+    {"key": "r1", "title": "Fix bug", "state": "done", "step": 3, "steps": 3, "started": 1700000000000, "elapsed_ms": 5, "cost_usd": 1.2},
+    {"key": "r2", "title": "Rename", "state": "done", "step": 1, "steps": 1, "started": 1700000100000, "elapsed_ms": 5, "cost_usd": 0.05}
+  ]},
+  "want": {"kind": "table", "total": 1, "rows": [["Fix bug", "$1.20"]]}
+}

@@ -56,6 +56,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIModelPicked(id), true
 	case pickerKindAIHistory:
 		return m.onAIHistoryPicked(id), true
+	case pickerKindAIChatComments: // ai_chat_comments.go
+		return m.onAIChatCommentPicked(id), true
 	case pickerKindAIHistoryDelete:
 		return m.onAIHistoryDeletePicked(id), true
 	case pickerKindAIHistoryRename:
@@ -76,6 +78,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onMCPInsertPicked(id), true
 	case pickerKindAIMemory: // ai_memory_picker.go
 		return m.onAIMemoryPicked(id), true
+	case pickerKindCanvas: // CMP-92: canvas_ui.go
+		return m.onCanvasPicked(id), true
+	case pickerKindCanvasCard:
+		return m.onCanvasActionPicked(id), true
 	case pickerKindAISkills: // ai_skills.go
 		return m.onAISkillsPicked(id), true
 	case pickerKindAIPowers: // ai_powers.go
@@ -140,6 +146,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onWTBgTask(value), true
 	case promptKindBugspecTitle: // bugspec_ui.go
 		return m.onBugspecTitle(value), true
+	case promptKindCanvasAdd, promptKindCanvasTitle, promptKindCanvasNote: // CMP-92: canvas_ui.go
+		return m.onCanvasPrompt(m.promptKind, value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
@@ -257,8 +265,12 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTRunTrust(id), true
 	case confirmKindWTCtlLink: // worktrees_notes.go
 		return m.answerWTCtlLink(id), true
+	case confirmKindCanvasDelete: // CMP-92: canvas_ui.go
+		return m.answerCanvasDelete(id), true
 	case confirmKindWTSleep: // worktrees_sleep.go
 		return m.answerWTSleep(id), true
+	case confirmKindWTFeedback: // worktrees_followup.go
+		return m.answerWTFeedback(id), true
 	case confirmKindWTArchive: // worktrees_archive.go
 		return m.answerWTArchive(id), true
 	case confirmKindWTBgTask: // worktrees_bgtask.go
@@ -289,8 +301,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIWebPreset(id), true
 	case confirmKindAIProofClear: // ai_proof.go
 		return m.answerAIProofClear(id), true
-	case confirmKindAIShipPush, confirmKindAIShipPR: // ai_ship.go
+	case confirmKindAIShipPush, confirmKindAIShipPR, confirmKindAIShipMerge, confirmKindWTShipMerge: // ai_ship.go
 		return m.answerAIShipCard(m.confirmKind, id), true
+	case confirmKindWTShipCommit: // ai_ship_full.go
+		return m.answerWTShipCommit(id), true
 	case confirmKindAIPlanShip: // ai_plan_worktree.go
 		return m.answerAIPlanShip(id), true
 	case confirmKindACPPermission, confirmKindACPWrite: // acp_thread.go
@@ -316,10 +330,16 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWorkflowCard(id), true
 	case confirmKindAgentTranscripts: // agent_chat.go
 		return m.answerAgentTranscripts(id), true
+	case confirmKindAgentChatAnswer: // agent_chat_panel.go
+		return m.answerAgentChatAnswer(id), true
 	case confirmKindAgentHibernate: // agent_hibernate.go
 		return m.answerAgentHibernate(id), true
 	case confirmKindAgentAccountSignIn: // agent_accounts.go
 		return m.answerAgentAccountCard(id), true
+	case confirmKindAgentImport: // agent_import.go
+		return m.answerAgentImport(id), true
+	case confirmKindAgentAccountSwitch: // agent_switch.go (CMP-13)
+		return m.answerAgentSwitch(id), true
 	case confirmKindAgentInstall, confirmKindAgentSignIn, confirmKindAgentInstallPage: // agent_install.go
 		return m.answerAgentPickCard(m.confirmKind, id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go
@@ -360,6 +380,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWebStart(id), true
 	case confirmKindWebAsk: // web_ask.go
 		return m.answerWebAsk(id), true
+	case confirmKindAIShareChat: // ai_chat_comments.go
+		return m.answerAIShareChat(id), true
+	case confirmKindAIChatComment:
+		return m.answerAIChatComment(id), true
 	}
 	if cmd, ok := m.handleWebAccessConfirm(id); ok { // web_access.go
 		return cmd, true
@@ -392,6 +416,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerMCPElicit(m.confirmKind, "") // Esc: cancel
 	case confirmKindMCPRemove:
 		return m.answerMCPRemove("keep")
+	case confirmKindAgentAccountSwitch: // Esc: Cancel (agent_switch.go)
+		return m.answerAgentSwitch("cancel")
 	case confirmKindMCPUntrust:
 		return m.answerMCPUntrust("cancel")
 	case confirmKindMCPAccountSignOut:
@@ -420,8 +446,12 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTRunTrust("") // Esc: no answer, nothing runs
 	case confirmKindWTCtlLink:
 		return m.answerWTCtlLink("") // Esc: Deny
+	case confirmKindCanvasDelete:
+		return m.answerCanvasDelete("") // Esc: Cancel
 	case confirmKindWTSleep:
 		return m.answerWTSleep("") // Esc: Keep running
+	case confirmKindWTFeedback:
+		return m.answerWTFeedback("") // Esc: Cancel (the follow loop: Skip)
 	case confirmKindWTArchive:
 		return m.answerWTArchive("") // Esc: Cancel
 	case confirmKindWTBgTask:
@@ -448,8 +478,10 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAgentEnvCreate("") // Esc: Cancel
 	case confirmKindAgentEnvTrust:
 		return m.answerAgentEnvTrust("") // Esc: the old answer stays
-	case confirmKindAIShipPush, confirmKindAIShipPR:
+	case confirmKindAIShipPush, confirmKindAIShipPR, confirmKindAIShipMerge, confirmKindWTShipMerge:
 		return m.answerAIShipCard(m.confirmKind, "") // Esc: the ship stops
+	case confirmKindWTShipCommit:
+		return m.answerWTShipCommit("") // Esc: Cancel
 	case confirmKindAIPlanShip:
 		return m.answerAIPlanShip("") // Esc: Not now
 	case confirmKindACPPermission, confirmKindACPWrite:
@@ -478,6 +510,10 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWebStart("") // Esc: Not now
 	case confirmKindWebAsk:
 		return m.answerWebAsk("") // Esc: Cancel
+	case confirmKindAIShareChat:
+		return m.answerAIShareChat("") // Esc: Cancel
+	case confirmKindAIChatComment:
+		return m.answerAIChatComment("") // Esc: Cancel
 	}
 	if cmd, ok := m.handleWebAccessConfirm(""); ok { // web_access.go: Esc is the safe answer
 		return cmd

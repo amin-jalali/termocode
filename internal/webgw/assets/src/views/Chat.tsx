@@ -17,11 +17,13 @@ import { BlobImg } from "../ui/BlobImg";
 import { Md } from "../ui/Markdown";
 import { Cod } from "../ui/icons";
 import { layout } from "../lib/layout";
+import { hasBlocks, toolBlocks } from "../lib/toolblocks";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
 import { errText } from "../ui/CardSheet";
 import { ChatList } from "./ChatList";
 import { ChatMoreFlows, openMore } from "./ChatMore";
 import { Composer } from "./Composer";
+import { CommentBox } from "./ChatComment";
 import { Run } from "./Run";
 import { View } from "./View";
 
@@ -56,7 +58,8 @@ function MsgText({ text, streaming }: { text?: string; streaming?: boolean }) {
 function Extras({ m, canFetch }: { m: ChatMsg; canFetch: boolean }) {
   const imgs = m.images ?? [];
   const [open, setOpen] = useState<number | null>(null);
-  if (imgs.length === 0 && !m.rules) return null;
+  const sent = m.attached ?? []; // MOB-5: what came with it, by reference
+  if (imgs.length === 0 && !m.rules && sent.length === 0) return null;
   const canSee = canFetch && link.meta.value?.role === "controller";
   return (
     <div class="msg-extras" dir="ltr">
@@ -71,6 +74,11 @@ function Extras({ m, canFetch }: { m: ChatMsg; canFetch: boolean }) {
           </span>
         ),
       )}
+      {sent.map((a, i) => (
+        <span key={"a" + i} class="chip" dir="auto">
+          ↩ {a.label}
+        </span>
+      ))}
       {m.rules && <span class="chip">{t("chat.rules", { name: m.rules })}</span>}
       {open !== null && imgs[open] !== undefined && (
         <div class="msg-img">
@@ -132,6 +140,7 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
         <div class="msg msg-tool" data-i={m.i} dir="ltr">
           <span class="tool-mark" aria-hidden="true">⚙</span>
           <span class="tool-text">{m.text ?? ""}</span>
+          {hasBlocks(m) && toolBlocks.value?.(m)}
         </div>
       );
     case "error":
@@ -272,7 +281,10 @@ export function ChatView() {
     );
   }
   let foot;
-  if (pin) {
+  if (link.meta.value?.role === "viewer") {
+    // A person the chat was shared with comments instead (CMP-88).
+    foot = <CommentBox chat={pin ? pin.id : laptop?.id ?? ""} />;
+  } else if (pin) {
     // An old chat goes on here: the send opens it on the laptop, then the
     // page follows the laptop again (WEBP-10).
     foot = (

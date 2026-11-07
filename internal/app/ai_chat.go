@@ -174,8 +174,9 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
-	tools = append(tools, aiTodoTools(call)...) // OMX-7: the chat's todo list (not in run steps)
-	return append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
+	tools = append(tools, aiTodoTools(call)...)  // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, m.aiSessionTools()...) // OMX-21: old chats, read only
+	return append(tools, aiLibrarianTools()...)  // CMP-91: outside repositories, read only
 }
 
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:
@@ -197,6 +198,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, aiGitTools(root, call)...)        // Group K4
 	tools = append(tools, aiTasksTools(root, call)...)      // Group K6: tasks and tests
 	tools = append(tools, aiWorktreeTools(root)...)         // WTX-12: worktrees_list, worktree_note; CMP-80: worktree_block
+	tools = append(tools, aiCanvasTools(root, call)...)     // CMP-92: canvas_read, canvas_update (canvas_tools.go)
 	tools = append(tools, aiAdminTools(root, call)...)      // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...)      // Group K7
 	tools = append(tools, m.aiServicesTools(call)...)       // the Services view (ai_services_tools.go)
@@ -236,6 +238,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	s := m.aiS()
 	if s.streaming {
 		return m.aiInfo("AI is still answering — Ctrl+C to stop")
+	}
+	if s.home.busy { // MOB-16: one AI turn at a time, the phone chat's too
+		return m.aiInfo("The phone chat is answering — wait a moment or Ctrl+C to stop")
 	}
 	if !s.keep.pushing { // OMX-7: a message of the user starts a new keep-going chain
 		s.keep = aiKeepGoingRun{}
@@ -301,6 +306,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		root, s.turnRoot = s.turnRoot, ""
 	}
 	memBlock, lessons := m.aiMemoryTurn(root, text) // OM-2: before the attachments are taken
+	chips := s.attachChips()
 	ctxText, images := s.takeAttachments()
 	if blk := aiRulesMentionBlock(rules, text, s.rulesInjector()); blk != "" { // CMP-82: #name rules
 		ctxText = strings.TrimLeft(ctxText+"\n\n"+blk, "\n")
@@ -311,7 +317,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		model = "" // the chat's own model: stored chats stay as they were
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Attached: chips, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
 		ai.StoredMessage{Role: ai.StoredAssistant, Model: model},
 	)
 	s.scroll = 0
@@ -428,6 +434,18 @@ func (s *aiState) takeAttachments() (string, []string) {
 	return strings.Join(ctxParts, "\n\n"), images
 }
 
+// attachChips are the chips of the web attachments of the next message
+// (MOB-5): the laptop's own attachments show as they always did.
+func (s *aiState) attachChips() []ai.StoredAttach {
+	var out []ai.StoredAttach
+	for _, a := range s.attachments {
+		if a.Kind != "" {
+			out = append(out, ai.StoredAttach{Kind: a.Kind, Label: a.Label})
+		}
+	}
+	return out
+}
+
 // aiChatBasePrompt is the chat's system prompt before the tool protocol.
 // rules are the project rules read at the turn's start (added only when
 // the user trusts them); memory is the turn's lessons block (OM-2), after
@@ -526,6 +544,9 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 			}
 			if s.toolArgs != nil && aiMCPTool(msg.ev) {
 				s.aiKeepToolDetail(len(s.conv.Messages)-1, l.Text, s.toolArgs, msg.ev.Detail)
+			}
+			if msg.ev.View != nil { // MOB-10: the phone draws it under the line
+				l.Block = msg.ev.View
 			}
 		}
 		s.toolArgs = nil

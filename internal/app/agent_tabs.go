@@ -230,6 +230,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentSessionsPaletteID { // Agent: Sessions… (agent_sessions.go)
 		return m.openAgentSessions(), true
 	}
+	if id == agentImportPaletteID { // Agent: Import Session into AI Chat (agent_import.go)
+		return m.openAgentImport(), true
+	}
 	if id == agentSessionsSearchID { // Agent: Search Sessions… (agent_sessions_search.go)
 		return m.openAgentSessionsSearch(), true
 	}
@@ -244,6 +247,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == agentAccountsPaletteID { // Agent: Accounts… (agent_accounts.go)
 		return m.openAgentAccounts(), true
+	}
+	if id == agentSwitchPaletteID { // Agent: Switch Account… (agent_switch.go, CMP-13)
+		return m.openAgentSwitch(), true
 	}
 	if id == agentUsagePlansPaletteID { // Agent: Usage Plans (agent_usage.go)
 		return m.showAIUsage(""), true

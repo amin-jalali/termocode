@@ -3,9 +3,9 @@
 // empty text falls back to English. Simple, everyday Persian; product
 // and command names (termocode, Web: Open in Browser) and key names stay
 // as they are.
-import type { StringKey } from "./strings";
+import type { TranslatedKey } from "./strings";
 
-export const FA: Record<StringKey, string> = {
+export const FA: Record<TranslatedKey, string> = {
   // Shell and connect
   "connect.title": "termocode",
   "connect.once": "این پیوند فقط یک بار و تا ۵ دقیقه کار می‌کند.",
@@ -130,6 +130,10 @@ export const FA: Record<StringKey, string> = {
   "chat.conflict": "لپ‌تاپ اکنون نمی‌تواند در این گفتگو بفرستد.",
   "chat.continue": "فرستادن، این گفتگو را روی لپ‌تاپ باز می‌کند.",
   "chat.busy": "هوش مصنوعی هنوز پاسخ می‌دهد. متوقفش کنید یا صبر کنید.",
+  "chat.comment_placeholder": "برای این گفتگو یادداشتی بگذارید…",
+  "chat.comment_send": "یادداشت",
+  "chat.comment_sent": "یادداشت به لپ‌تاپ رسید.",
+  "chat.comment_note": "شما این گفتگو را تماشا می‌کنید. یادداشت شما به لپ‌تاپ می‌رود؛ هوش مصنوعی آن را نمی‌خواند.",
   "copy": "کپی",
   "copied": "کپی شد",
   "copy.failed": "کپی نشد. متن را خودتان انتخاب کنید.",

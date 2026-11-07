@@ -59,6 +59,9 @@ type agentChatState struct {
 	input  string
 	scroll int // rows up from the newest
 
+	choices []agents.Choice // the menu on the tab's screen while it waits (agent_chat_panel.go)
+	ask     *agentChatAsk   // the answer the card asks about
+
 	demo      bool
 	demoState agents.State
 }
@@ -275,6 +278,7 @@ func (m *Model) agentChatPollCmd(gen int) tea.Cmd {
 					m.agentUsageSession(c.agent, m.agentChatAccount(c), sess) // AGX-12 (agent_usage.go)
 				}
 			}
+			m.agentChatSyncChoices(c) // CMP-14 (agent_chat_panel.go)
 			return agentChatTick(gen)
 		})
 	}
@@ -346,9 +350,17 @@ func agentChatKey(m *Model, msg tea.KeyMsg) (tea.Cmd, bool) {
 			return nil, false
 		}
 		s := agentChatClean(string(msg.Runes))
+		if !msg.Paste {
+			if cmd, ok := m.agentChatPanelKey(c, s); ok { // CMP-14: a number answers the panel
+				return cmd, true
+			}
+		}
 		if c.input == "" && s == "v" {
 			m.agentChatShowTerminal()
 			return nil, true
+		}
+		if c.readOnly && s == "i" { // CMP-87: import it into the AI chats (agent_import.go)
+			return m.openAgentImport(), true
 		}
 		if !c.readOnly {
 			c.input += s
@@ -574,7 +586,11 @@ func (m *Model) agentChatRender(w, h int) []string {
 		}
 		body = append(body, agentChatBody(c.sess, w)...)
 	}
-	bodyH := h - 5
+	var panel []string
+	if p := agentChatPanelFor(c); p != nil { // CMP-14 (agent_chat_panel.go)
+		panel = agentChatPanelRows(p, c.sess.Cwd, w, max(h/2, 3))
+	}
+	bodyH := h - 5 - len(panel)
 	if bodyH < 1 {
 		bodyH = 1
 	}
@@ -589,6 +605,7 @@ func (m *Model) agentChatRender(w, h int) []string {
 		rows = append(rows, "")
 	}
 	rows = append(rows, shown...)
+	rows = append(rows, panel...)
 	status := agentChatStatus(c.sess, m.agentChatAgentState(c), c.title)
 	if runewidth.StringWidth(status)+1 > w {
 		status = runewidth.Truncate(status, w-1, "…")
@@ -597,7 +614,9 @@ func (m *Model) agentChatRender(w, h int) []string {
 	// Input.
 	switch {
 	case c.readOnly:
-		rows = append(rows, dim.Render(" read only · ↑↓ scroll · Esc leaves"))
+		rows = append(rows, dim.Render(" read only · ↑↓ scroll · i import into AI chat · Esc leaves"))
+	case c.input == "" && len(panel) > 0:
+		rows = append(rows, dim.Render(" > a number answers above · or type a message · v terminal"))
 	case c.input == "":
 		hint := " > type a message (Enter sends it to the terminal) · v terminal"
 		if w < 80 {

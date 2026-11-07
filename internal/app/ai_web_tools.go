@@ -118,6 +118,7 @@ func aiWebFetchTool() ai.Tool {
 		},
 		Required: []string{"url"},
 		Describe: func(a map[string]any) string { s, _ := a["url"].(string); return "Read " + ai.Redact(s) },
+		View:     researchFetchView, // MOB-15: a text block on the phone
 		Run: func(ctx context.Context, a map[string]any) (string, error) {
 			u, _ := a["url"].(string)
 			o := webtools.Options{AllowPrivate: aiWebAllowPrivate}
@@ -156,6 +157,7 @@ func aiWebSearchTool(p webtools.Provider) ai.Tool {
 			q, _ := a["query"].(string)
 			return "Search the web for " + ai.Redact(q)
 		},
+		View: researchSearchView, // MOB-15: a sources list on the phone
 		Run: func(ctx context.Context, a map[string]any) (string, error) {
 			q, _ := a["query"].(string)
 			n := 5

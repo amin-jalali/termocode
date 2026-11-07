@@ -116,3 +116,15 @@ func TestForkConversationSaved(t *testing.T) {
 		t.Fatalf("loaded %+v %v", got, err)
 	}
 }
+
+// Spec (CMP-87): an imported chat says where it came from in one line;
+// any other chat has no such line.
+func TestImportNote(t *testing.T) {
+	c := Conversation{ImportedFrom: &ImportInfo{CLI: "claude", Agent: "Claude Code", Session: "0123456789abcdef", Messages: 12}}
+	if got := c.ImportNote(); got != "Imported from Claude Code session 01234567… (12 messages; the session file is unchanged)" {
+		t.Errorf("note %q", got)
+	}
+	if (Conversation{}).ImportNote() != "" {
+		t.Error("a plain chat has an import note")
+	}
+}

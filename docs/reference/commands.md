@@ -20,6 +20,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
 | AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
+| AI: Chat Comments… | `ai-chat-comments` |   | `comments from people you shared the chat with` |
 | AI: Chat History… | `ai-history` |   |   |
 | AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |
@@ -79,7 +80,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Save Code Checkpoint | `ai-checkpoint-save` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
+| AI: Share Chat by Link… | `ai-share-chat` |   | `a viewer link; they watch and comment` |
 | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | `ai-ship` |   |   |
+| AI: Ship and Merge When Green (CI fixes, conflicts, merge card) / Stop | `ai-ship-merge` |   |   |
 | AI: Show Profile | `ai-profile-show` |   |   |
 | AI: Side Question… | `ai-side` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
@@ -112,6 +115,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
 | Agent: Chat with an ACP Agent… / End | `acp-thread` |   |   |
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
+| Agent: Import Session into AI Chat | `agent-import-session` |   | `the open session view, as a chat` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search All Sessions… | `agent-sessions-search-all` |   | `words in every project's agent sessions` |
@@ -125,6 +129,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
 | Agent: Toggle Auto-Accept | `agent-auto-accept-toggle` |   | `answer its permission prompts: yes, once` |
+| Agent: Switch Account… | `agent-account-switch` |   | `go on as another account after a limit` |
 | Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
 | Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
 
@@ -135,6 +140,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Bookmarks: Clear All | `bookmark-clear` |   |   |
 | Bookmarks: Show List | `bookmark-list` | `Shift+F3` | `Shift+F3` |
 | Bookmarks: Toggle on Current Line | `bookmark-toggle` | `F3` | `F3` |
+
+## Canvas
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Canvas: Add Card… | `canvas-add` |   |   |
+| Canvas: Copy Plan as Markdown | `canvas-copy` |   |   |
+| Canvas: Open Shared Plan | `canvas-open` |   |   |
 
 ## Containers
 
@@ -874,6 +887,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Background Tasks… | `worktree-bg-tasks` |   |   |
 | Worktree: Clean Up… | `worktree-cleanup` |   |   |
 | Worktree: Delete Selected… | `worktree-delete` |   |   |
+| Worktree: Follow PR Feedback (On or Off) | `worktree-follow` |   |   |
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
 | Worktree: Hand Off Selected… | `worktree-handoff` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
@@ -893,13 +907,17 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Pull a Lane from a Host… | `worktree-pull` |   |   |
 | Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
 | Worktree: Reset Order | `worktree-reset-order` |   |   |
+| Worktree: Send PR Feedback to Agent… | `worktree-feedback` |   |   |
+| Worktree: Ship Selected (commit, push, PR, merge, archive)… | `worktree-ship` |   |   |
 | Worktree: Preview Agent Grid | `worktree-preview-grid` |   |   |
 | Worktree: Preview Agent Screen | `worktree-preview` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
+| Worktree: Show Pull Request of Selected | `worktree-pr` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 | Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
+| Worktree: Start from Issue… | `worktree-from-issue` |   |   |
 | Worktree: Suggest a Name… | `worktree-suggest-name` |   | `quick model drafts branch names` |
 | Worktree: Unpack a Moved Lane… | `worktree-unpack` |   |   |
 

@@ -635,6 +635,26 @@ request:
 5. **Stop.** When CI is green on the pull request, the ship stops with
    **Merge-ready**. It never merges: you merge when you want.
 
+### Ship and merge when green
+
+**AI: Ship and Merge When Green** runs the same loop and watches the
+pull request until it can be merged:
+
+- **Conflicts.** When the pull request has merge conflicts with its base,
+  the AI gets a turn to merge the base in, resolve the conflicts and
+  commit. Then the push card comes again.
+- **Fix cap.** CI fixes and conflict fixes share one cap of 3 AI turns.
+  After that the ship stops and tells you why.
+- **Merge card.** When CI is green, a card shows the pull request, the
+  commit and the fixes used. **Cancel** is first; it stops the ship.
+  **Squash and Merge**, **Merge Commit** or **Rebase and Merge** merges.
+  Only the green commit is merged: if someone pushed after it, GitHub
+  refuses. Branch rules are never bypassed and the branch is kept.
+- **No card** for a draft or a pull request with changes requested: the
+  ship stops and says why.
+
+Run the command again to stop it. The AI can never start it.
+
 At most 3 AI fix turns run; after that the ship stops. Run the command
 again to stop it at any time. The default branch is never shipped.
 
@@ -744,7 +764,7 @@ These use the `gh` command (signed in with `gh auth login`).
 
 | Command | What it does |
 |---|---|
-| **Git: Issues… (Start Work on One)** | Lists the open issues. Pick one: **Start Work: New Branch** makes a branch like `12-login-crashes` (you can change the name) and switches to it; **Copy #12** copies the number. |
+| **Git: Issues… (Start Work on One)** | Lists the open issues. Pick one: **Start Work: New Branch** makes a branch like `12-login-crashes` (you can change the name) and switches to it; **Start Work: New Worktree + Agent…** opens the New worktree form filled in for the issue (see [Worktrees](worktrees.md#start-from-an-issue)); **Copy #12** copies the number. |
 | **Git: Initialize Repository** | Runs `git init` (branch `main`) in a folder that is not a repository yet |
 | **Git: Publish to GitHub…** | For a repository with no remote: type the name, pick **Private** or **Public**, then a card asks (**Cancel** is ready). gh creates the repository, adds it as `origin` and pushes. |
 

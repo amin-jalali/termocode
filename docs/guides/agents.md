@@ -383,12 +383,30 @@ With `agent_transcripts` on:
 - **Agent: Chat View** (or `v` on an agent tab) shows the session as a
   chat. Tool calls are one line each. What you type goes to the tab. Press
   `v` again for the terminal.
+- When the agent asks something, the chat shows it as a panel above the
+  status line, with the numbered answers from the agent's own menu:
+  - **QUESTION**: the question and its options. A number key picks that
+    answer at once.
+  - **PLAN**: the plan to approve. `o` opens the whole plan in a read-only
+    editor tab.
+  - **NEEDS YOUR OK**: a permission prompt, with the tool call.
+
+  For a plan or a permission, a number opens a card first (Cancel is the
+  default). Send checks the screen again and sends nothing if the question
+  changed. termocode presses the agent's own keys (arrows, then Enter), so
+  the answer is the same as in the terminal. The AI never answers.
 - **Agent: Sessions…** lists this project's past sessions. `Enter` resumes
   one in a new tab with the CLI's own resume command; `→` reads it.
 - `/` in the list, or **Agent: Search Sessions…**, searches the text of
   this project's sessions, on this computer only.
 - **Agent: Search All Sessions…** searches the sessions of every project
   on this computer. Each row names its project folder.
+- **Agent: Import Session into AI Chat** (or `i` while you read a past
+  session) copies the open session into a new termocode AI chat, after a
+  card (**Cancel** first). Prompts and answers are copied, tool calls as
+  one line each; tool results are not. Secrets are hidden. The session
+  file is not changed. The chat is in **Chat History**, and termocode's AI
+  can go on from it.
 
 While the setting is off, termocode asks first and opens no file there.
 
@@ -402,6 +420,21 @@ Auto-Continue** on the tab, termocode types `continue` (then `Enter`) one
 minute after the reset, **once** per limit, and a toast says so. It never
 types while the agent works, while a y/n or permission question is on the
 screen, or into a closed tab.
+
+### Switch to another account
+
+You do not have to wait for the reset. Run **Agent: Switch Account…** on
+the tab. When another account is free, the limit toast already names it.
+
+- The card offers every other account of that agent (see
+  [Accounts](#accounts)) whose own limit is not on. **Cancel** is first.
+- The pick starts the same agent as that account, in the same folder, in
+  a new tab. When the agent is ready, termocode types one short task: read
+  `git status`, the diff and the recent commits, then go on.
+- The old tab stays as it is. termocode never moves or reads sign-in
+  files: each account keeps its own folder.
+- Only Claude Code and Codex have accounts. The AI cannot run this
+  command.
 
 ## Auto-accept prompts
 

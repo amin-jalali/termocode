@@ -25,7 +25,7 @@ func TestGitxIssuesStartWork(t *testing.T) {
 	}
 	m.pickerOpen = false
 	m.handlePickerSelect(picker.SelectMsg{ID: "issue-12"})
-	if !m.pickerOpen || strings.Join(gitxPickerIDs(m), ",") != "start,copy" {
+	if !m.pickerOpen || strings.Join(gitxPickerIDs(m), ",") != "start,worktree,copy" {
 		t.Fatalf("actions %v", gitxPickerIDs(m))
 	}
 	m.pickerOpen = false
