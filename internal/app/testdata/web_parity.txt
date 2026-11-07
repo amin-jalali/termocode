@@ -467,7 +467,13 @@ missing	containers-image-layers	Containers|S
 missing	containers-image-load	Containers|S
 missing	containers-image-save	Containers|S
 missing	containers-image-used-by	Containers|S
+missing	containers-network-create-options	Containers|S
 missing	containers-system	Containers|S
+missing	containers-volume-backup	Containers|S
+missing	containers-volume-browse	Containers|S
+missing	containers-volume-clone	Containers|S
+missing	containers-volume-create-options	Containers|S
+missing	containers-volume-restore	Containers|S
 missing	db-ai-explain-query	Databases|S
 missing	db-ai-fix-error	Databases|S
 missing	db-ai-generate-sql	Databases|S

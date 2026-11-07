@@ -147,6 +147,8 @@ func (m *Model) handleContainersExtraPrompt(value string) (tea.Cmd, bool) {
 	switch m.promptKind {
 	case promptKindContainerSave, promptKindContainerLoad, promptKindContainerImport, promptKindContainerCommit, promptKindContainerExport:
 		return m.onArchivePrompt(m.promptKind, value), true
+	case promptKindVolumeBrowse, promptKindVolumeBackup, promptKindVolumeRestore, promptKindVolumeClone, promptKindVolumeCreate, promptKindNetworkCreate:
+		return m.handleVolumePrompt(m.promptKind, value), true // containers_volumes.go
 	}
 	return nil, false
 }

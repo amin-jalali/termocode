@@ -122,15 +122,20 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Containers: Attach | `containers-attach` |   |   |
+| Containers: Back Up Selected Volume… | `containers-volume-backup` |   |   |
 | Containers: Browse Remote Tags… | `containers-browse-tags` |   |   |
+| Containers: Browse Selected Volume Files… | `containers-volume-browse` |   |   |
 | Containers: Build Image from Dockerfile… | `containers-image-build` |   |   |
 | Containers: Check Dockerfile (Build Checks) | `containers-build-check` |   |   |
 | Containers: Choose Compose Env File… | `services-env-file` |   |   |
+| Containers: Clone Selected Volume… | `containers-volume-clone` |   |   |
 | Containers: Commit Selected Container to Image… | `containers-commit` |   |   |
 | Containers: Configure Services (services.json) | `services-configure` |   |   |
 | Containers: Connect Registry… | `containers-registry-connect` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
+| Containers: Create Network with Options… | `containers-network-create-options` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
+| Containers: Create Volume with Options… | `containers-volume-create-options` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
 | Containers: Export Selected Container to File… | `containers-export` |   |   |
 | Containers: Filter Rows… | `containers-filter` |   |   |
@@ -169,6 +174,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Restart Project | `containers-compose-restart` |   |   |
 | Containers: Restart Selected | `containers-restart` |   |   |
 | Containers: Restart Service… | `services-restart` |   |   |
+| Containers: Restore Selected Volume from Backup… | `containers-volume-restore` |   |   |
 | Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
 | Containers: Save Selected Image to File… | `containers-image-save` |   |   |

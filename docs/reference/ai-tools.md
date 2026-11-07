@@ -2036,6 +2036,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-inspect` | Containers: Inspect | auto |   |
 | `containers-logs` | Containers: Follow Logs | auto |   |
 | `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |
+| `containers-network-create-options` | Containers: Create Network with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (containers-network-create) |
 | `containers-network-prune` | Containers: Prune Networks… | never | pruning networks is the user's; nothing is offered to the model |
 | `containers-network-remove` | Containers: Remove Selected Network… | never | removing is the user's; nothing is offered to the model |
 | `containers-open-databases` | Containers: Open in Databases | never | opens a picker or prompt that only the user can answer; use a typed tool (db_connections) |
@@ -2054,10 +2055,15 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-stop` | Containers: Stop Selected | confirm (always asks) |   |
 | `containers-system` | Containers: Show System Page | auto |   |
 | `containers-system-prune` | Containers: Prune System… | never | pruning the system is the user's; nothing is offered to the model |
+| `containers-volume-backup` | Containers: Back Up Selected Volume… | never | opens a picker or prompt that only the user can answer; use a typed tool; writes a backup file the user picks |
+| `containers-volume-browse` | Containers: Browse Selected Volume Files… | never | opens a picker or prompt that only the user can answer; use a typed tool (asks for a folder) |
+| `containers-volume-clone` | Containers: Clone Selected Volume… | never | cloning overwrites volume data; the user's |
 | `containers-volume-create` | Containers: Create Volume… | confirm (always asks) |   |
+| `containers-volume-create-options` | Containers: Create Volume with Options… | never | opens a picker or prompt that only the user can answer; use a typed tool (containers-volume-create) |
 | `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | never | disk usage is the user's; nothing is offered to the model |
 | `containers-volume-prune` | Containers: Prune Volumes… | never | pruning volumes is the user's; nothing is offered to the model |
 | `containers-volume-remove` | Containers: Remove Selected Volume… | never | removing is the user's; nothing is offered to the model |
+| `containers-volume-restore` | Containers: Restore Selected Volume from Backup… | never | restoring overwrites volume data; the user's |
 | `copy-file-ref` | Copy: File:Line Reference | confirm (ide) |   |
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
