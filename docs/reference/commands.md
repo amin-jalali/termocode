@@ -167,6 +167,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |
+| Containers: Show Details | `containers-detail` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Show Resolved Compose Config | `services-compose-config` |   |   |
 | Containers: Show Service Logs… | `services-logs` |   |   |

@@ -71,6 +71,7 @@ when something changed. When you hide the view (another activity item,
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
 | `i` | inspect: a read-only JSON page in the editor |
+| `I` | details: status, exit code, restarts, health log, processes, mounts, labels, env names (no values) |
 | `F` | browse the files of a running container: view read-only, download, upload (asks first) |
 | `o` | open the first published port in the browser |
 | `y` | copy the ID, name, host or endpoint of the row |
@@ -141,6 +142,14 @@ remove it. On a compose project group, `s`, `x`, and `r` run compose up,
 stop, and restart. `D` asks before compose down and names its command.
 Attach uses `--sig-proxy=false`; press `Ctrl+P Ctrl+Q` in its terminal tab
 to detach without stopping the container.
+
+### Container details
+
+`I` on a container (or **Containers: Show Details**) opens a read-only
+page with its status, exit code and restart count, the health check
+state and its last results, the processes (`top`, only while it runs),
+mounts, labels and the names of its env variables. Env values are never
+read into the page; use `i` (inspect) when you need the raw JSON.
 
 ### Container files
 
