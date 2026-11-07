@@ -563,3 +563,26 @@ func TestWorkspaceToolsRefuseOutsidePathsBeforeAsking(t *testing.T) {
 		t.Errorf("a workspace path is refused: %v", err)
 	}
 }
+
+// Spec (SCN-21): an answer that breaks off after some text (the
+// connection to the model dropped) ends the turn with an error that says
+// the answer stopped in the middle and is not complete, keeps the
+// cause, and is not sent again; a stop by the user is still "canceled".
+func TestAgentErrorMidAnswerSaysIncomplete(t *testing.T) {
+	p := &scripted{replies: []Chunk{{Delta: "half an ans", Err: fmt.Errorf("unexpected EOF")}}}
+	evs, _ := collectEvents(&Agent{Provider: p}, []Message{{Role: RoleUser, Content: "q"}})
+	last := evs[len(evs)-1]
+	if last.Kind != EventError || !strings.Contains(last.Detail, "stopped in the middle") ||
+		!strings.Contains(last.Detail, "not complete") || !strings.Contains(last.Detail, "unexpected EOF") {
+		t.Fatalf("error event %+v", last)
+	}
+	if p.calls != 1 {
+		t.Errorf("%d requests, want 1", p.calls)
+	}
+	// Before any text the error stays as it was.
+	p = &scripted{replies: []Chunk{{Err: fmt.Errorf("unexpected EOF")}}}
+	evs, _ = collectEvents(&Agent{Provider: p}, []Message{{Role: RoleUser, Content: "q"}})
+	if last := evs[len(evs)-1]; strings.Contains(last.Detail, "stopped in the middle") {
+		t.Errorf("an error before any text says mid answer: %q", last.Detail)
+	}
+}

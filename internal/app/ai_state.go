@@ -72,6 +72,7 @@ type aiState struct {
 	kwOff     bool
 	kwProfile string
 	side      aiSideChat // OMX-30: the side chat (ai_side.go)
+	home      aiHomeChat // MOB-16: the phone's background chat (web_chat_home.go)
 	cfg       ai.Config
 	provider  ai.Provider
 	loadErr   string
@@ -111,12 +112,15 @@ type aiState struct {
 	// skillsTrust is the open project-skills card (ai_skills.go).
 	skillsTrust *aiSkillsTrustPending
 	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
-	webPreset   string               // the server the open add card is for (ai_web_presets.go)
-	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
-	ship        *aiShip              // the running ship loop (ai_ship.go)
-	acp         *acpThread           // CMP-83: the chat's ACP agent thread (acp_thread.go)
-	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
-	diffNotes   *diffNotesState      // diff comments → agent (diff_comments.go, CMP-51)
+	// stopHookPushes counts the turns in a row a stop hook sent the
+	// agent on (CMP-59, ai_hooks.go).
+	stopHookPushes int
+	webPreset      string          // the server the open add card is for (ai_web_presets.go)
+	recall         *aiRecallState  // lesson recall per chat (ai_recall.go)
+	ship           *aiShip         // the running ship loop (ai_ship.go)
+	acp            *acpThread      // CMP-83: the chat's ACP agent thread (acp_thread.go)
+	ctl            *agentCtlState  // the agent control socket's UI side (agent_ctl.go)
+	diffNotes      *diffNotesState // diff comments → agent (diff_comments.go, CMP-51)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).
@@ -125,7 +129,9 @@ type aiState struct {
 	agentPickPending string
 	// agentAccountPending is the sign-in line of the open account card (agent_accounts.go).
 	agentAccountPending string
-	shipGen             int
+	// agentSwitchBuf is the agent tab of the open Switch Account card (agent_switch.go).
+	agentSwitchBuf int
+	shipGen        int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the
@@ -205,6 +211,9 @@ type aiState struct {
 	// usageGen changes with it.
 	usageLog []aiUsageEntry
 	usageGen int
+	// ctxUse is the context use of the open chat's newest turn, for the
+	// header's context chip (CMP-7, ai_context_chip.go).
+	ctxUse aiCtxUse
 
 	// inline ghost text
 	inlineCancel context.CancelFunc
@@ -276,6 +285,9 @@ type aiState struct {
 	// mcpUntrustTool is the tool the Reset trust card is about ("" = the
 	// whole server; ai_mcp_untrust.go).
 	mcpUntrustTool string
+	// mcpAccountsOut are the servers the Signed-in Services card would
+	// sign out (mcp_accounts.go).
+	mcpAccountsOut []string
 	// mcpLogServer is the server the MCP log shows ("" = all; ai_mcp_log.go).
 	mcpLogServer string
 
@@ -336,6 +348,9 @@ type aiAttachment struct {
 	// text); MediaType its type ("image/png").
 	Image     string
 	MediaType string
+	// Kind is the attach kind of an item the web page sent back (MOB-5,
+	// web_chat_attach.go); "" for what the laptop attached.
+	Kind string
 }
 
 // newAIState loads settings + credentials and builds the provider.
@@ -554,6 +569,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-review", "AI: Review Pending Changes", ""},
 		{"ai-undo-turn", "AI: Undo Last Turn", ""},
 		{"ai-edit-review", "AI: Toggle Edit Review (diff / auto)", ""},
+		{"ai-review-order", "AI: Toggle Review Order (explain first / as proposed)", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
 		{"ai-toggle-inline", "AI: Toggle Inline Completions", "Alt+|"},
 		{"ai-toggle-next-edit", "AI: Toggle Next Edit Suggestions", ""},
@@ -607,6 +623,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-mcp-updates", "AI: MCP: Check for Updates (catalog servers)", ""},
 		{"ai-mcp-bundle", "AI: MCP: Install Bundle (.mcpb)…", ""},
 		{"ai-mcp-profile", "AI: MCP: Switch Profile… (servers and tools for this chat)", ""},
+		{"ai-mcp-accounts", "AI: MCP: Signed-in Services… (one list, sign out)", ""},
 		{"ai-mcp-log", "AI: MCP: Show Log", ""},
 		{"ai-mcp-reconnect-all", "AI: MCP: Reconnect All Servers", ""},
 		{"ai-mcp-reset-cache", "AI: MCP: Reset Tool Lists", ""},
@@ -628,9 +645,9 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	// the configure / sign-in / credentials entries are the way out.
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
-		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
+		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-review-order", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID, aiShareChatID, aiChatCommentsID,
-		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
+		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
 		"ai-agent-hooks", "ai-agent-packs": // agent CLI files need no provider
 	default:
 		if c, ok := m.aiReady(); !ok {
@@ -687,6 +704,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiUndoTurn(-1), true
 	case "ai-edit-review":
 		return m.toggleAIEditReview(), true
+	case "ai-review-order": // ai_review_order.go
+		return m.toggleAIReviewOrder(), true
 	case "ai-apply-proposal":
 		return m.reviewDecideCurrent(true), true
 	case "ai-discard-proposal":
@@ -722,6 +741,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openMCPInsertPicker(), true
 	case "ai-mcp-profile":
 		return m.openMCPProfiles(), true
+	case "ai-mcp-accounts": // mcp_accounts.go
+		return m.openMCPAccounts(), true
 	case "ai-mcp-catalog":
 		return m.openMCPCatalog(), true
 	case "ai-mcp-bundle":
@@ -827,6 +848,9 @@ func (m *Model) aiCancelAll() tea.Cmd {
 		s.actionGen++
 	}
 	m.cancelAIInline()
+	if m.aiHomeStop() { // MOB-16: and the phone chat's turn
+		stopped = true
+	}
 	if !stopped {
 		return nil
 	}
@@ -866,6 +890,7 @@ func aiSettingsCategories(cats map[string]string) map[string]string {
 	updateSettingsCategories(cats)   // G-UPD (update_settings.go)
 	workflowSettingsCategories(cats) // WFX-0 (workflow_settings.go)
 	gitxSettingsCategories(cats)     // GITX-12 (gitx_autofetch_setting.go)
+	wtAutoSettingsCategories(cats)   // CMP-16 (worktrees_autoclean.go)
 	for _, id := range []string{"setting-ai-inline", "setting-ai-next-edit", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
 		"setting-ai-until-done-rounds", "setting-ai-until-done-budget"} {
 		cats[id] = "AI"
@@ -891,6 +916,9 @@ func aiSettingValue(id string) (string, bool) {
 		return v, true
 	}
 	if v, ok := gitxSettingValue(id); ok { // GITX-12 (gitx_autofetch_setting.go)
+		return v, true
+	}
+	if v, ok := wtAutoSettingValue(id); ok { // CMP-16 (worktrees_autoclean.go)
 		return v, true
 	}
 	path, _ := ai.ConfigPath()
@@ -949,6 +977,9 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 		return c, true
 	}
 	if c, ok := m.applyGitxSetting(id, value); ok { // GITX-12 (gitx_autofetch_setting.go)
+		return c, true
+	}
+	if c, ok := m.applyWTAutoSetting(id, value); ok { // CMP-16 (worktrees_autoclean.go)
 		return c, true
 	}
 	path, err := ai.ConfigPath()

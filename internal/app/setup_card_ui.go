@@ -51,7 +51,9 @@ var setupCardOff bool
 
 func newSetupState() *setupState {
 	c := loadSettings()
-	s := &setupState{visible: !setupCardOff && setupCardWanted(c), settled: map[string]bool{}, services: -1}
+	// A broken config.json reads as empty, so the card would come back
+	// and none of its steps could be saved (SCN-30, settings_corrupt.go).
+	s := &setupState{visible: !setupCardOff && setupCardWanted(c) && settingsFileProblem() == "", settled: map[string]bool{}, services: -1}
 	for _, id := range c.SetupSettled {
 		s.settled[id] = true
 	}
@@ -339,7 +341,9 @@ func (m Model) publishSetupCard() {
 	v := m.setupCardView()
 	if v.show && v.allDone && !m.setup.doneSaved {
 		m.setup.doneSaved = true
-		_ = saveSetupConfig(func(c *settingsConfig) { c.SetupDone = boolPtr(true) })
+		if err := saveSetupConfig(func(c *settingsConfig) { c.SetupDone = boolPtr(true) }); err != nil {
+			recordError("setup card: " + err.Error())
+		}
 	}
 	welcomeSetup = v
 }

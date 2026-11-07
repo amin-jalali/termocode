@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -41,10 +42,31 @@ func runClipCommand(ctx context.Context, stdin string, argv []string) (string, e
 // waits forever when the Termux:API app is missing, so never wait long.
 const clipCommandTimeout = 2 * time.Second
 
+// apkClipEnv names the clipboard bridge of the termocode APK shell. An APK
+// has no Termux:API, so the shell (Kotlin or Flutter, it does not matter)
+// ships one small executable and puts its absolute path here. Contract:
+//
+//	<bridge> set   reads stdin and puts it on the Android clipboard
+//	<bridge> get   prints the Android clipboard to stdout
+//
+// Exit code 0 means it worked. Anything else falls back to
+// termux-clipboard-set/-get, then OSC 52.
+const apkClipEnv = "TERMOCODE_APK_CLIP"
+
+// apkBridge is the APK clipboard bridge path, or "" when there is none.
+// Only an absolute path counts: a bare name could be any program on PATH.
+func (h clipHost) apkBridge() string {
+	if p := h.getenv(apkClipEnv); filepath.IsAbs(p) {
+		return p
+	}
+	return ""
+}
+
 // termux reports whether termocode runs in Termux on Android: an android
-// build, TERMUX_VERSION (set by the Termux app) or Termux's PREFIX.
+// build, TERMUX_VERSION (set by the Termux app), Termux's PREFIX, or the
+// APK shell's clipboard bridge (same Android rules apply).
 func (h clipHost) termux() bool {
-	return h.goos == "android" ||
+	return h.goos == "android" || h.apkBridge() != "" ||
 		h.getenv("TERMUX_VERSION") != "" ||
 		strings.Contains(h.getenv("PREFIX"), "com.termux")
 }
@@ -56,6 +78,9 @@ func (h clipHost) termux() bool {
 func (h clipHost) tools() [][]string {
 	termuxSet := []string{"termux-clipboard-set"}
 	var out [][]string
+	if b := h.apkBridge(); b != "" {
+		out = append(out, []string{b, "set"})
+	}
 	if h.termux() {
 		out = append(out, termuxSet)
 	}
@@ -92,11 +117,15 @@ func (h clipHost) toolWrite(s string) bool {
 	return false
 }
 
-// termuxRead reads the Android clipboard with termux-clipboard-get. ok is
-// false outside Termux or when the command is missing or fails.
+// termuxRead reads the Android clipboard: the APK bridge first, then
+// termux-clipboard-get. ok is false outside Android or when both are
+// missing or fail.
 func (h clipHost) termuxRead() (text string, ok bool) {
 	if !h.termux() {
 		return "", false
+	}
+	if out, ok := h.apkRead(); ok {
+		return out, true
 	}
 	if _, err := h.lookPath("termux-clipboard-get"); err != nil {
 		return "", false
@@ -110,11 +139,35 @@ func (h clipHost) termuxRead() (text string, ok bool) {
 	return out, true
 }
 
+// apkRead runs "<bridge> get". ok is false with no bridge or on failure.
+func (h clipHost) apkRead() (string, bool) {
+	b := h.apkBridge()
+	if b == "" {
+		return "", false
+	}
+	if _, err := h.lookPath(b); err != nil {
+		return "", false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), clipCommandTimeout)
+	defer cancel()
+	out, err := h.run(ctx, "", []string{b, "get"})
+	if err != nil {
+		return "", false
+	}
+	return out, true
+}
+
+// apkClipHelp is the fix when the APK shell's bridge did not take the copy.
+const apkClipHelp = "The termocode app's clipboard bridge did not answer. Restart the app; if it still fails, update it."
+
 // termuxHelp is the fix when Termux has no clipboard command.
 const termuxHelp = "Install the Termux:API app (F-Droid or GitHub, same source as Termux) and run `pkg install termux-api`."
 
 // help says how to make copying work on this machine.
 func (h clipHost) help() string {
+	if h.apkBridge() != "" {
+		return apkClipHelp
+	}
 	if h.termux() {
 		if _, err := h.lookPath("termux-clipboard-set"); err != nil {
 			return termuxHelp

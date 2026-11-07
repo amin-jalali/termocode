@@ -49,6 +49,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: MCP: Reset Tool Lists | `ai-mcp-reset-cache` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: MCP: Switch Profile… (servers and tools for this chat) | `ai-mcp-profile` |   |   |
+| AI: MCP: Signed-in Services… (one list, sign out) | `ai-mcp-accounts` |   |   |
 | AI: Memory: Turn On/Off | `ai-memory-toggle` |   |   |
 | AI: Memory… | `ai-memory` |   |   |
 | AI: Move MCP Call to Background (Ctrl+B in the chat) | `ai-mcp-background` |   |   |
@@ -91,6 +92,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Toggle Keep Going While Todos Are Open | `ai-keep-going` |   |   |
 | AI: Toggle Next Edit Suggestions | `ai-toggle-next-edit` |   |   |
 | AI: Toggle Plan Approval | `ai-plan-approval` |   |   |
+| AI: Toggle Review Order (explain first / as proposed) | `ai-review-order` |   |   |
 | AI: Trigger Inline Completion | `ai-trigger-inline` | <code>Alt+&#92;</code> | <code>Alt+&#92;</code> |
 | AI: Undo Last Turn | `ai-undo-turn` |   |   |
 | AI: Unlock Secrets | `secrets-unlock` |   |   |
@@ -120,6 +122,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Start OpenCode | `agent-start-opencode` |   |   |
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
+| Agent: Switch Account… | `agent-account-switch` |   | `go on as another account after a limit` |
 | Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
 | Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
 
@@ -407,6 +410,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Git: AI Review Branch (Pull Request) | `git-ai-review-branch` |   |   |
 | Git: AI Review My Changes | `git-ai-review-changes` |   |   |
+| Git: AI Security Review Branch (Threat Model) | `git-ai-security-branch` |   |   |
+| Git: AI Security Review My Changes (Threat Model) | `git-ai-security-changes` |   |   |
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
@@ -449,6 +454,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
 | Git: Edit Commit Message in Editor | `git-commit-edit` |   |   |
+| Git: Edit Threat Model… | `git-threat-model` |   |   |
 | Git: Explain Changes with AI | `git-ai-explain-changes` |   |   |
 | Git: Explain Line's Commit with AI | `git-ai-explain-line` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
@@ -640,12 +646,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| LSP: Choose Where the Language Server Runs… | `lsp-container-where` |   |   |
+| LSP: Clear Container Mirror… | `lsp-mirror-clear` |   |   |
 | LSP: Find All References | `find-references` | `Shift+F12` | `Shift+F12` |
 | LSP: Go to Implementation | `goto-impl` |   |   |
 | LSP: Go to Type Definition | `goto-type-def` | `Ctrl+F12` | `Ctrl+F12` |
 | LSP: Manage Language Servers... | `lsp-manage` |   |   |
+| LSP: Refresh Container Mirror | `lsp-mirror-refresh` |   |   |
 | LSP: Show Hover Documentation | `hover` |   |   |
 | LSP: Toggle Inlay Hints | `toggle-inlay-hints` | `Alt+L` | `Alt+L` |
+| LSP: Toggle Local Diagnostics in Container Workspace | `lsp-container-diagnostics` |   |   |
 
 ## Layout
 
@@ -827,6 +837,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Web: Copy Link | `web-copy-link` |   |   |
 | Web: Devices… | `web-devices` |   |   |
+| Web: Forward Port… | `web-forward-port` |   |   |
+| Web: Forwarded Ports… | `web-forwarded-ports` |   |   |
 | Web: Open in Browser | `web-start` |   |   |
 | Web: Pair a Device… | `web-pair` |   |   |
 | Web: Set Up Sign-in Code… | `web-totp` |   |   |
@@ -868,6 +880,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Clean Up… | `worktree-cleanup` |   |   |
 | Worktree: Delete Selected… | `worktree-delete` |   |   |
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
+| Worktree: Hand Off Selected… | `worktree-handoff` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
 | Worktree: Link Issue or PR… | `worktree-link` |   |   |
 | Worktree: Move Selected to Another Machine… | `worktree-move` |   |   |
@@ -885,6 +898,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Pull a Lane from a Host… | `worktree-pull` |   |   |
 | Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
 | Worktree: Reset Order | `worktree-reset-order` |   |   |
+| Worktree: Preview Agent Grid | `worktree-preview-grid` |   |   |
+| Worktree: Preview Agent Screen | `worktree-preview` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |

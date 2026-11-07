@@ -70,6 +70,46 @@ termocode never installs anything until you confirm. It asks once per
 project; if you ignore the toast it does not come back. It only reads the
 file: no network, no Docker.
 
+## Folders opened in a container
+
+When you open a folder inside a container (**Workspace: Open Folder in
+Container…**), termocode never installs anything in it. It picks a language
+server like this:
+
+1. **In the container.** If the image already has the server (on `PATH`,
+   in `node_modules/.bin`, `.venv/bin`, `~/go/bin` or `~/.cargo/bin`),
+   termocode runs it there with `docker exec -i`. It sees the same files,
+   packages and toolchain as your code.
+2. **Local.** Otherwise a server on your machine is used through
+   `termocode lsp-proxy`, which rewrites the file paths between the
+   container (`/app`) and your machine. It reads the bind-mounted folder,
+   or, when the folder is not mounted, a read-only local copy of the code
+   (the *mirror*, in `~/.cache/termocode/mirror/`, private to you).
+3. **None** when neither has it.
+
+The status bar chip says where each server runs: `{} gopls · in api-1` or
+`{} ts_ls · local`.
+
+A local server cannot see packages that exist only in the container, so
+its errors are often wrong there. That is why a local server shows **no
+diagnostics** in a container workspace. Completion, hover and go to
+definition still work. To see its diagnostics anyway, run **LSP: Toggle
+Local Diagnostics in Container Workspace**.
+
+| Command | What it does |
+| --- | --- |
+| **LSP: Choose Where the Language Server Runs…** | Auto (container first, then local), in the container only, local only, or off. |
+| **LSP: Toggle Local Diagnostics in Container Workspace** | Show or mute a local server's errors and warnings. Muted by default. |
+| **LSP: Refresh Container Mirror** | Copy the code into the mirror again (after changes made outside termocode). |
+| **LSP: Clear Container Mirror…** | Delete the local copy. Asks first; nothing changes in the container. |
+
+The mirror leaves out `node_modules`, `.venv`, `vendor`, `target`,
+`__pycache__` and `.git/objects`, holds at most 512 MB per folder and
+2 GB in all (the oldest go first). Your saves from termocode update it at
+once. In `config.json` the settings are `container_lsp`
+(`auto`, `image`, `local`, `off`) and `container_local_lsp_diagnostics`
+(`on`, `off`).
+
 ## Where the tools go
 
 termocode puts its tools in its own folder, not in your system:

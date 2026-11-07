@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/blocks"
 	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
@@ -42,6 +43,9 @@ type Event struct {
 	Decision string
 	// EventRetry: this is retry Attempt of at most Attempts.
 	Attempt, Attempts int
+	// EventToolResult: the block the tool's View built (MOB-10); nil
+	// when the tool has no View or the call did not succeed.
+	View *blocks.Block
 	// EventDone / EventError: the summed token usage of every request
 	// of the turn (nil when the provider reported none).
 	Usage *Usage
@@ -53,6 +57,7 @@ const (
 	GateConfirm = "confirm" // mutating: the user allows it (or its class is auto-approved)
 	GateReview  = "review"  // a file change the user reviews as a diff
 	GateInvalid = "invalid" // refused before any gate (bad arguments)
+	GateHook    = "hook"    // refused by a pre_tool hook before any gate (CMP-59)
 )
 
 type callIDKey struct{}
@@ -114,6 +119,18 @@ type Agent struct {
 	// Compact (optional) summarises older messages when the provider
 	// says the context is too long; once per turn (compact.go, OMX-3).
 	Compact func(ctx context.Context, older []Message) (string, error)
+	// PreTool (optional) sees each valid call before its gate (CMP-59:
+	// the user's pre_tool hooks): it can block the call, change its
+	// arguments or allow it without the approval card. Run's goroutine.
+	PreTool func(ctx context.Context, t Tool, args map[string]any) PreToolVerdict
+}
+
+// PreToolVerdict is PreTool's answer for one call.
+type PreToolVerdict struct {
+	Block string         // not "": the call does not run; the reason goes to the model
+	Allow bool           // a mutating call runs without the approval card (a review still shows)
+	Args  map[string]any // not nil: the call runs with these arguments
+	By    string         // who decided, for the audit ("hook")
 }
 
 // DefaultRetries is how often a request is tried again when the server
@@ -271,6 +288,9 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			continue
 		}
 		if last.Err != nil {
+			if buf.Len() > 0 && ctx.Err() == nil {
+				last.Err = midAnswerError(last.Err)
+			}
 			emit(Event{Kind: EventError, Detail: Redact(last.Err.Error()), Usage: total()})
 			return msgs[start:]
 		}
@@ -321,6 +341,14 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
 	emit(Event{Kind: EventDone, Usage: total()})
 	return msgs[start:]
+}
+
+// midAnswerError is err of an answer that broke off after some text (the
+// connection to the model dropped, or the provider sent an error event):
+// it says the text so far is not complete (SCN-21). The turn is not sent
+// again on its own: the user sees the partial text and decides.
+func midAnswerError(err error) error {
+	return fmt.Errorf("answer stopped in the middle, not complete: %w", err)
 }
 
 // promptTokens is the size of the last request: the server's count, else
@@ -423,11 +451,26 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	case t.Validate != nil:
 		invalid = t.Validate(args)
 	}
+	var verdict PreToolVerdict
+	if invalid == nil && a.PreTool != nil {
+		verdict = a.PreTool(ctx, t, args)
+		if verdict.Block == "" && verdict.Args != nil {
+			args = verdict.Args // the hook's change; it must still be valid
+			if t.Validate != nil {
+				invalid = t.Validate(args)
+			}
+		}
+	}
 	human := t.Human(args)
 	if invalid != nil {
 		human = Redact(human)
 	}
 	emit(Event{Kind: EventToolStart, Tool: t.Name, Label: t.Label(), Detail: human, Args: args})
+	if verdict.Block != "" {
+		result = t.Name + ": blocked by a hook: " + Redact(verdict.Block) + " Do not retry the same call; continue without it or ask the user."
+		emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: GateHook, Decision: "hook denied"})
+		return result
+	}
 	if invalid != nil {
 		result = "error: " + Redact(invalid.Error())
 		emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: GateInvalid, Decision: "refused"})
@@ -443,6 +486,8 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 		gate, decision = GateReview, "user (review)"
 	case t.Mutating && t.Class != "" && a.AutoApprove[t.Class]:
 		gate, decision = GateConfirm, "auto-approved ("+t.Class+")"
+	case t.Mutating && verdict.Allow:
+		gate, decision = GateConfirm, "allowed by hook"
 	case t.Mutating:
 		gate = GateConfirm
 		if a.Confirm == nil || !a.Confirm(ctx, t, human) {
@@ -460,11 +505,57 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	pctx, endProgress := withProgress(context.WithValue(ctx, callIDKey{}, call.ID), t, emit)
 	defer endProgress()
 	out, err := t.Run(pctx, args)
+	var view *blocks.Block
 	if err != nil {
 		out = "error: " + Redact(err.Error())
+	} else {
+		view = toolView(t, call.ID, args, out)
 	}
-	emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: out, Gate: gate, Decision: decision})
+	emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: out, Gate: gate, Decision: decision, View: view})
 	return out
+}
+
+// toolView runs t's View hook for a finished call (MOB-10): it fills an
+// empty id (the call id, else the tool name) and source (the tool's
+// label), redacts every text and checks the caps. A panic, a nil block
+// or a block over the caps is no block.
+func toolView(t Tool, callID string, args map[string]any, result string) (b *blocks.Block) {
+	if t.View == nil {
+		return nil
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			b = nil
+		}
+	}()
+	b = t.View(args, result)
+	if b == nil {
+		return nil
+	}
+	var err error
+	if b, err = b.MapStrings(Redact); err != nil || b == nil {
+		return nil
+	}
+	filled := b.ID == ""
+	if filled {
+		b.ID = callID
+		if b.ID == "" || len(b.ID) > blocks.MaxID {
+			b.ID = t.Name
+		}
+	}
+	if b.Source == "" {
+		b.Source = t.Label()
+	}
+	if b.Validate() == nil {
+		return b
+	}
+	if filled && b.ID != t.Name { // a provider's call id the block ids refuse
+		b.ID = t.Name
+		if b.Validate() == nil {
+			return b
+		}
+	}
+	return nil
 }
 
 var toolFenceRe = lazyre.New("(?s)```(?:json)?\\s*(\\{.*?\\})\\s*```")

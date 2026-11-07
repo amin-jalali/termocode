@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/textdiff"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -278,7 +279,7 @@ func (m *Model) webCards(p *webCardsPub, diffs bool) []webCardRef {
 				if it.done || r.card.Done(i) {
 					continue
 				}
-				c := webproto.Card{Kind: webproto.CardReview, Title: "Review AI change: " + it.file.Name, Body: it.file.Tag,
+				c := webproto.Card{Kind: webproto.CardReview, Title: "Review AI change: " + it.file.Name, Body: reviewCardBody(it.file),
 					File: it.file.Name, Choices: []webproto.CardChoice{
 						{ID: webproto.ChoiceReject, Label: "Reject", Safe: true}, {ID: webproto.ChoiceAccept, Label: "Accept"}}}
 				if diffs {
@@ -387,4 +388,16 @@ func webApplyCards(snap, delta json.RawMessage) (json.RawMessage, error) {
 		return nil, fmt.Errorf("cards: unknown op %q", d.Op)
 	}
 	return json.Marshal(s)
+}
+
+// reviewCardBody is a review card's text: the proposal's tag and the
+// file's place in the explain-first order (CMP-58), one per line.
+func reviewCardBody(f diffview.File) string {
+	switch {
+	case f.Tag == "":
+		return f.Why
+	case f.Why == "":
+		return f.Tag
+	}
+	return f.Tag + "\n" + f.Why
 }

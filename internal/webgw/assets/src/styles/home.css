@@ -1,0 +1,95 @@
+/* The phone's Home (MOB-4): top bar, stream, quick blocks, chip row and
+   box. Phone layout only; every target is 44 px; tones come with a shape. */
+.layout-home { display: flex; flex-direction: column; height: 100dvh; }
+.main-home { flex: 1; min-height: 0; display: flex; }
+.home { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
+.home-top { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 4px 0 16px; border-bottom: 1px solid var(--border); }
+.home-name { flex: 1; font-size: 16px; font-weight: 600; margin: 0; }
+.home-ws { color: var(--muted); font-weight: 400; }
+.home-live { font-size: 13px; color: var(--muted); }
+.home-live.is-live > span:first-child { color: var(--green); }
+.home-menu { min-width: 44px; min-height: 44px; font-size: 22px; background: none; border: 0; color: var(--text); border-radius: 8px; }
+.home-menu:focus-visible, .home-row:focus-visible, .home-chip:focus-visible, .home-block-close:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.home-stream { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+.home-hello { color: var(--muted); margin: auto 0 0; padding: 8px 4px; }
+.home-hello .star { color: var(--ai); }
+/* The empty state (MOBUX-4): hello, three cards, pinned views below. */
+.home-start { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
+.home-start .home-hello { margin: 0; }
+.home-hello-hint { display: block; font-size: 13px; }
+.home-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.home-card { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--border); border-inline-start-width: 3px; border-radius: 12px; background: var(--bg-panel); color: var(--text); font: inherit; text-align: start; }
+.home-card:active { background: var(--bg-hover); }
+.home-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.home-card-head { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.home-card-value { font-size: 24px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.home-card-detail, .home-card-extra { font-size: 12px; color: var(--muted); max-width: 100%; }
+.home-card.is-needs .home-card-mark { color: var(--amber); }
+.home-card.is-needs.has-items { border-inline-start-color: var(--amber); }
+.home-card.is-working .home-card-mark { color: var(--blue); }
+.home-card.is-working.has-items { border-inline-start-color: var(--blue); }
+.home-card.is-done .home-card-mark { color: var(--green); }
+.home-card.is-done.has-items { border-inline-start-color: var(--green); }
+.home-card-extra { color: var(--red); }
+@media (max-width: 340px) { .home-cards { grid-template-columns: 1fr; } }
+.home-foot { border-top: 1px solid var(--border); background: var(--bg-2); padding-bottom: env(safe-area-inset-bottom); }
+.home-chips { display: flex; gap: 8px; overflow-x: auto; padding: 8px 12px; scrollbar-width: none; scroll-snap-type: x proximity; }
+.home-chips::-webkit-scrollbar { display: none; }
+.home-chip { flex: none; min-height: 44px; padding: 0 14px; scroll-snap-align: start; white-space: nowrap; }
+.home-chip.is-needs { border-color: var(--amber); font-weight: 600; }
+.home-block { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel); overflow: hidden; }
+.home-block-head { display: flex; align-items: center; gap: 8px; padding: 0 0 0 12px; min-height: 44px; border-bottom: 1px solid var(--border); }
+.home-block-mark { color: var(--muted); }
+.home-block-title { flex: 1; font-size: 14px; font-weight: 600; margin: 0; }
+.home-block-tag { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.home-block-close { min-width: 44px; min-height: 44px; background: none; border: 0; color: var(--muted); font-size: 18px; }
+.home-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; padding: 12px; color: var(--text-2); }
+.home-status .sk-row { width: 40%; }
+.home-rows { list-style: none; margin: 0; padding: 0; }
+.home-rows li + li { border-top: 1px solid var(--border); }
+.home-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 12px; background: none; border: 0; color: inherit; text-align: start; font: inherit; }
+.home-row:active { background: var(--bg-hover); }
+.home-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.home-row-sub { font-size: 12px; color: var(--muted); }
+.home-row-badge { font-size: 12px; color: var(--text-2); }
+.home-row-age { font-size: 12px; color: var(--muted); }
+.home-group-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 0; padding: 10px 12px 4px; }
+.home-count { font-weight: 400; }
+.home-more { margin: 0; padding: 8px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+.home-tone { display: inline-flex; width: 16px; justify-content: center; flex: none; }
+.home-tone.tone-ok { color: var(--green); }
+.home-tone.tone-warn { color: var(--amber); }
+.home-tone.tone-bad { color: var(--red); }
+.home-tone.tone-busy { color: var(--blue); }
+.home-tone.tone-idle, .home-tone.tone-info { color: var(--muted); }
+.home-panels { padding: 8px 0 16px; }
+.home-panels-title { font-size: 16px; margin: 0; padding: 4px 16px 8px; }
+.home-check { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 16px; }
+.home-check input { width: 22px; height: 22px; }
+.home-panels-close { margin: 8px 16px 0; min-height: 44px; width: calc(100% - 32px); }
+.home-loading { display: flex; align-items: center; justify-content: center; }
+@media (prefers-reduced-motion: reduce) { .home-stream { scroll-behavior: auto; } }
+/* Views menu and Customize (MOB-9): 44 px controls, one column. */
+.home-form { display: flex; flex-direction: column; gap: 8px; }
+.home-field { display: flex; flex-direction: column; gap: 4px; padding: 4px 16px; font-size: 13px; color: var(--text-2); }
+.home-field input, .home-field select, .home-cond select, .home-cond input, .home-fieldset > select { min-height: 44px; font: inherit; font-size: 15px; }
+.home-fieldset { border: 0; margin: 0; padding: 4px 16px; }
+.home-fieldset legend { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0; }
+.home-field-row, .home-cond { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.home-field-row .home-check { flex: 1; padding-left: 0; }
+.home-move .btn, .home-cond .btn { min-width: 44px; min-height: 44px; }
+.home-actions { display: flex; gap: 8px; padding: 8px 16px 0; }
+.home-actions .btn { flex: 1; min-height: 44px; }
+/* The Home's context chips (MOBUX-3), on top of the phone chip
+   (phone.css .ph-chip / .ph-chips): pin mode and the pinned state. */
+.hchips-wrap { display: flex; flex-direction: column; }
+.hchips { overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.hchip { -webkit-user-select: none; user-select: none; touch-action: pan-x; }
+.hchip.is-pinned { border-color: var(--p-focus); }
+.hchip.mark-clear { color: var(--p-text-2); }
+.hchip.is-edit { color: var(--p-text-2); border-style: dashed; }
+.hchip.is-done { border-color: var(--p-focus); background: var(--p-surface-2); }
+.hchips.is-pinning .hchip[aria-pressed="false"] { color: var(--p-text-2); }
+.hchips.is-pinning .hchip[aria-pressed="true"] { background: var(--p-surface-2); }
+.hchip:disabled { opacity: 0.5; }
+.hchips-hint { margin: 0; padding: var(--p-s1) var(--p-gutter) 0; color: var(--p-text-2); font: var(--p-fs-caption) / var(--p-lh-caption) var(--p-font); }

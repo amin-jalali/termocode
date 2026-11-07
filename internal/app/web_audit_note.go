@@ -176,6 +176,14 @@ func webAuditSummary(args any) string {
 		s = strconv.Itoa(len(a.Text)) + " bytes"
 	case *webproto.GitCommitArgs:
 		s = "message of " + strconv.Itoa(len(a.Message)) + " bytes"
+	case *webproto.ViewSaveArgs:
+		s = a.Name + " (" + a.Spec.View + ")"
+	case *webproto.ViewRenameArgs:
+		s = a.ID + " → " + a.Name
+	case *webproto.ViewRefArgs:
+		s = a.ID
+	case *webproto.ViewPinArgs:
+		s = a.ID + map[bool]string{true: " pin", false: " unpin"}[a.On]
 	}
 	s = webName(ai.Redact(s))
 	if r := []rune(s); len(r) > webAuditMax {

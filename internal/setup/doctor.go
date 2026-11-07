@@ -85,6 +85,7 @@ func Doctor() []Check {
 		}
 		out = append(out, c)
 	}
+	out = append(out, ContainerSSHChecks()...) // container_check.go
 
 	term := Check{Group: "terminal", Name: "truecolor"}
 	switch ct := os.Getenv("COLORTERM"); ct {

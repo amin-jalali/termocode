@@ -317,14 +317,41 @@ input box is on screen, never into a question.
 | `Enter` | Review the lane's diff (read only) |
 | `m` | Merge this lane into your folder; a conflict stops first and asks (**Cancel** first) |
 | `d` | Discard one lane (**Cancel** first) |
+| `b` | Restack the lane: put its work on top of your current commit as clean commits (**Cancel** first) |
 | `v` | Run the verify command in every finished lane |
 | `s` | Ask your **Quick** model for a 3-line summary of the differences (capped, secrets hidden; the cost is shown) |
+| `p` | Ask your **Main** model to judge: it ranks the finished lanes with one reason each and picks one (★). Verify results count first; diffs are capped and secrets hidden; the cost is shown. A card then offers to merge the pick (**Cancel** first) |
 | `x` | Stop every lane |
 
-After a merge, a card asks about the other lanes: **Keep** is first. A
+Restack (`b`) cleans up a lane before you merge, push or open a pull
+request from its branch. **Squash into one commit** asks for the message
+(the task is filled in) and makes one commit on top of your current
+commit. **Keep commits** replays the lane's commits as they are. Only the
+lane's branch changes: your files, index and branch stay. If the lane
+clashes with your commit, nothing changes and the lane's note names the
+files. The old commits stay in the branch's reflog.
+
+The judge only advises: nothing merges until you press **Merge** on its
+card, and that runs the same merge as `m`. After a merge, a card asks about the other lanes: **Keep** is first. A
 lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
 first).
+
+### Each lane in its own sandbox
+
+Turn on `agent_os_sandbox` (Settings, Workflows group) to start every
+lane's agent inside an OS sandbox: **bwrap** on Linux, **sandbox-exec**
+on macOS. Inside it the whole disk is read-only. The agent can write only
+its own worktree, the temp folder and its own config folder (for example
+`~/.claude` or `~/.codex`, where its login lives). It can still commit in
+its lane, but it cannot change git hooks or the repo config. The network
+stays on, so the agent can reach its service.
+
+The same setting covers workflow `agent` steps and AI run steps that use
+Claude Code or Codex. If no sandbox tool is installed, the lane does not
+start and says why; it never runs without the sandbox. The sandbox stops
+writes, not reads: the agent can still read your files. Only you can
+change this setting; the AI chat cannot.
 
 ## Split one task between agents
 
@@ -356,6 +383,18 @@ With `agent_transcripts` on:
 - **Agent: Chat View** (or `v` on an agent tab) shows the session as a
   chat. Tool calls are one line each. What you type goes to the tab. Press
   `v` again for the terminal.
+- When the agent asks something, the chat shows it as a panel above the
+  status line, with the numbered answers from the agent's own menu:
+  - **QUESTION**: the question and its options. A number key picks that
+    answer at once.
+  - **PLAN**: the plan to approve. `o` opens the whole plan in a read-only
+    editor tab.
+  - **NEEDS YOUR OK**: a permission prompt, with the tool call.
+
+  For a plan or a permission, a number opens a card first (Cancel is the
+  default). Send checks the screen again and sends nothing if the question
+  changed. termocode presses the agent's own keys (arrows, then Enter), so
+  the answer is the same as in the terminal. The AI never answers.
 - **Agent: Sessions…** lists this project's past sessions. `Enter` resumes
   one in a new tab with the CLI's own resume command; `→` reads it.
 - `/` in the list, or **Agent: Search Sessions…**, searches the text of
@@ -381,6 +420,21 @@ Auto-Continue** on the tab, termocode types `continue` (then `Enter`) one
 minute after the reset, **once** per limit, and a toast says so. It never
 types while the agent works, while a y/n or permission question is on the
 screen, or into a closed tab.
+
+### Switch to another account
+
+You do not have to wait for the reset. Run **Agent: Switch Account…** on
+the tab. When another account is free, the limit toast already names it.
+
+- The card offers every other account of that agent (see
+  [Accounts](#accounts)) whose own limit is not on. **Cancel** is first.
+- The pick starts the same agent as that account, in the same folder, in
+  a new tab. When the agent is ready, termocode types one short task: read
+  `git status`, the diff and the recent commits, then go on.
+- The old tab stays as it is. termocode never moves or reads sign-in
+  files: each account keeps its own folder.
+- Only Claude Code and Codex have accounts. The AI cannot run this
+  command.
 
 ## Usage and plan limits
 

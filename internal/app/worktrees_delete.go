@@ -63,6 +63,7 @@ type wtDeletePrepMsg struct {
 // wtDeletedMsg is the end of a delete.
 type wtDeletedMsg struct {
 	title, path, branch string
+	scriptFailed        string // the archive script's failure (CMP-15)
 	err                 error
 }
 
@@ -152,6 +153,9 @@ func (m *Model) onWTDeletePrep(msg wtDeletePrepMsg) tea.Cmd {
 	}
 	if p.dirty > 0 {
 		b.WriteString("\n\nIt has " + wtPlural(p.dirty, "changed file") + "; the next card asks about " + map[bool]string{true: "it", false: "them"}[p.dirty == 1] + ".")
+	}
+	if p.folder {
+		b.WriteString(wtArchiveScriptNote(m.wtArchiveScriptLoad()))
 	}
 	if p.needsName() {
 		b.WriteString("\n\nYou type the branch name to delete it.")
@@ -277,12 +281,14 @@ func (m *Model) handleWTDeleteMsg(msg tea.Msg) (tea.Cmd, bool) {
 // the metadata.
 func (m *Model) wtDeleteRun(p *wtDeletePending) tea.Cmd {
 	root, common, off := m.wtRootDir(), m.wt.common, m.wt.off
+	script := m.wtArchiveScriptLoad()
 	return func() tea.Msg {
 		msg := wtDeletedMsg{title: p.title, path: p.path, branch: p.branch}
 		if off {
 			return msg
 		}
 		if p.folder {
+			msg.scriptFailed = wtRunArchiveScript(script, common, p.path)
 			if err := wtRemoveRun(root, p.path, p.discard); err != nil {
 				msg.err = err
 				return msg
@@ -306,6 +312,9 @@ func (m *Model) onWTDeleted(msg wtDeletedMsg) tea.Cmd {
 			detail = "It has changed files now; D asks again."
 		}
 		return tea.Batch(m.pushToastDetail(toast.Warn, "The worktree could not be deleted", detail), m.worktreesReload())
+	}
+	if msg.scriptFailed != "" {
+		return tea.Batch(m.pushToastDetail(toast.Warn, "Deleted "+msg.title+"; its archive script failed", wtArchiveScriptToast([]string{msg.scriptFailed})), m.worktreesReload())
 	}
 	return tea.Batch(m.pushToastDetail(toast.Info, "Deleted "+msg.title, "Its folder and the branch "+msg.branch+" are gone."), m.worktreesReload())
 }

@@ -36,6 +36,11 @@ type Settings struct {
 	// diff to accept or reject) or "auto" (they are written after the
 	// confirm dialog, or at once when fileWrite is auto-approved).
 	EditReview string `json:"ai_edit_review,omitempty"`
+	// ReviewOrder is "explain" (default: the review card puts the files
+	// that explain a change first: docs, then definitions, then the code
+	// that uses them, tests last) or "proposed" (the order the agent
+	// proposed them in). CMP-58.
+	ReviewOrder string `json:"ai_review_order,omitempty"`
 	// Prices override or add model prices ($ per million tokens, by
 	// model id prefix) over the built-in table (pricing.go).
 	// ContextWindows do the same for context windows (tokens). Both are
@@ -57,6 +62,10 @@ type Settings struct {
 	// StepEscalate is ai_step_escalate (OMX-16; nil: on): a step not on
 	// the deep slot may answer ESCALATE to run once more on deep.
 	StepEscalate *bool `json:"ai_step_escalate,omitempty"`
+	// Team is ai_team_mode (OMX-40; nil: off): agent steps that run at
+	// the same time get the team tools (notes between steps, shared
+	// claims). Edited by hand.
+	Team *bool `json:"ai_team_mode,omitempty"`
 	// PlanReviewRounds is ai_plan_review_rounds (OMX-14; 0: off, at most
 	// 5) and PlanFile ai_plan_file (nil: off): .termocode/plans/<slug>.md.
 	PlanReviewRounds int   `json:"ai_plan_review_rounds,omitempty"`
@@ -101,6 +110,9 @@ type Settings struct {
 	// or when the provider says the context is too long. Edited by hand.
 	Compact string `json:"ai_compact,omitempty"`
 }
+
+// TeamMode reports ai_team_mode (off unless true).
+func (s Settings) TeamMode() bool { return s.Team != nil && *s.Team }
 
 // DefaultStepStall is the stall limit when ai_step_stall_minutes is
 // not set.
@@ -190,6 +202,16 @@ const (
 	EditReviewOn   = "review"
 	EditReviewAuto = "auto"
 )
+
+// Values of ai_review_order.
+const (
+	ReviewOrderExplain  = "explain"
+	ReviewOrderProposed = "proposed"
+)
+
+// ExplainFirst reports whether the review card orders its files
+// explain-first (ai_review_order, default explain).
+func (s Settings) ExplainFirst() bool { return s.ReviewOrder != ReviewOrderProposed }
 
 // InlineEnabled reports the ai_inline setting (default on).
 func (s Settings) InlineEnabled() bool { return s.Inline == nil || *s.Inline }
@@ -370,6 +392,7 @@ func SaveSettings(path string, s Settings) error {
 		set("ai_base_url", s.BaseURL)
 		set("ai_inline_model", s.InlineModel)
 		set("ai_edit_review", s.EditReview)
+		set("ai_review_order", s.ReviewOrder)
 		set("ai_worktrees", s.Worktrees)
 		set("ai_critic", s.Critic)
 		set("ai_plan_approval", s.PlanApproval)

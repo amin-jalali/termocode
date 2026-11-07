@@ -25,10 +25,12 @@ type ChatPinArgs struct {
 	On bool `json:"on"`
 }
 
-// ChatSendArgs sends a chat message.
+// ChatSendArgs sends a chat message. Attach are items the user sends
+// back with it, by reference (MOB-5): the laptop resolves them.
 type ChatSendArgs struct {
-	Text   string `json:"text"`
-	ChatID string `json:"chat_id,omitempty"`
+	Text   string   `json:"text"`
+	ChatID string   `json:"chat_id,omitempty"`
+	Attach []Attach `json:"attach,omitempty"`
 }
 
 // CardsAnswerArgs answers a card with one of its choices.

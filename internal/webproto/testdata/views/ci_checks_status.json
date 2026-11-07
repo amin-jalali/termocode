@@ -1,0 +1,9 @@
+{
+  "note": "failing CI: the status is the worst run, shown with a shape",
+  "spec": {"view": "ci.checks"},
+  "src": {"branch": "main", "state": "fail", "runs": [
+    {"workflow": "ci", "title": "push", "status": "completed", "conclusion": "success", "state": "pass"},
+    {"workflow": "lint", "title": "push", "status": "completed", "conclusion": "failure", "state": "fail"}
+  ]},
+  "want": {"kind": "status", "state": "bad", "total": 2, "items": [{"title": "ci", "sub": "pass", "tone": "ok"}, {"title": "lint", "sub": "fail", "tone": "bad"}]}
+}

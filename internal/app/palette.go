@@ -447,19 +447,22 @@ func paletteItems() []picker.Item {
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
 	items = append(items, secretsPaletteItems()...)   // secret store (secrets_ui.go)
 	items = append(items, mcpImportOtherPaletteItems()...)
-	items = append(items, mcpServePaletteItems()...)  // termocode as an MCP server (mcp_serve_status.go)
-	items = append(items, webPaletteItems()...)       // the web panel (web_tui.go)
-	items = append(items, webAccessPaletteItems()...) // pairing and devices (web_access.go)
-	items = append(items, itermocPaletteItems()...)   // the Itermoc view (itermoc_actions.go)
-	items = append(items, workflowsPaletteItems()...) // WFX-7 (workflows_keys.go)
-	items = append(items, bugspecPaletteItems()...)   // CMP-79 (bugspec_ui.go)
-	items = append(items, ciPaletteItems()...)        // G-CI (ci_card.go)
-	items = append(items, acpPaletteItems()...)       // CMP-83 (acp_thread.go)
-	items = append(items, layoutPaletteItems()...)    // G-LAY (layout_palette.go)
-	items = append(items, updatePaletteItems()...)    // G-UPD (update_palette.go)
-	items = append(items, prPaletteItems()...)        // G-PR (pr_list.go)
-	items = append(items, termPanePaletteItems()...)  // terminal splits (terminal_split.go)
-	items = append(items, gitxPaletteItems()...)      // GITX features (gitx_hub.go)
+	items = append(items, mcpServePaletteItems()...)   // termocode as an MCP server (mcp_serve_status.go)
+	items = append(items, webPaletteItems()...)        // the web panel (web_tui.go)
+	items = append(items, webAccessPaletteItems()...)  // pairing and devices (web_access.go)
+	items = append(items, webForwardPaletteItems()...) // port preview (web_forward.go)
+	items = append(items, itermocPaletteItems()...)    // the Itermoc view (itermoc_actions.go)
+	items = append(items, workflowsPaletteItems()...)  // WFX-7 (workflows_keys.go)
+	items = append(items, bugspecPaletteItems()...)    // CMP-79 (bugspec_ui.go)
+	items = append(items, ciPaletteItems()...)         // G-CI (ci_card.go)
+	items = append(items, acpPaletteItems()...)        // CMP-83 (acp_thread.go)
+	items = append(items, layoutPaletteItems()...)     // G-LAY (layout_palette.go)
+	items = append(items, updatePaletteItems()...)     // G-UPD (update_palette.go)
+	items = append(items, prPaletteItems()...)         // G-PR (pr_list.go)
+	items = append(items, termPanePaletteItems()...)   // terminal splits (terminal_split.go)
+	items = append(items, gitxPaletteItems()...)       // GITX features (gitx_hub.go)
+	// RC-6: where a container workspace's language servers run (container_lsp.go).
+	items = append(items, containerLSPPaletteItems()...)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -949,6 +952,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.openSnippetManager()
 	default:
 		if cmd, ok := m.dispatchGitxPalette(id); ok { // gitx_hub.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchContainerLSPPalette(id); ok { // container_lsp.go
 			return cmd
 		}
 		if cmd, ok := m.dispatchImportPalette(id); ok { // import_editor.go

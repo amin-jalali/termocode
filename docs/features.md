@@ -56,7 +56,7 @@ its name and key.
 - Agent steps that run at the same time work in their own git worktree; review, merge or discard each one. → [Own worktrees](guides/ai-profiles.md#own-worktrees-for-parallel-steps)
 - Anthropic, OpenAI, OpenRouter, Ollama, LM Studio or any OpenAI-compatible server. → [Set up AI](guides/ai-setup.md)
 - Outside agents (Claude Code, Codex, …) in terminal tabs: usage-limit readout, opt-in auto-continue, named accounts in their own folders, and hibernation of idle agents. → [Agents](guides/agents.md#usage-limits-and-auto-continue)
-- Race one task across 2 to 4 outside agents, each in its own worktree; compare their diffs, verify them and merge the winner. → [Agents](guides/agents.md#race-agents-on-one-task)
+- Race one task across 2 to 4 outside agents, each in its own worktree; compare their diffs, verify them, let an AI judge rank them and pick one, and merge the winner. → [Agents](guides/agents.md#race-agents-on-one-task)
 - A shared plan per workspace that you and the AI both keep: the AI proposes and updates cards, you approve, reorder and remove them. → [Shared plan](guides/ai-use.md#shared-plan-canvas)
 
 ![AI chat with a Markdown answer and a code card](assets/screenshots/ai-chat-answer.png)
@@ -71,6 +71,7 @@ its name and key.
 - Schedules keep going after a restart; `termocode service install` starts the session at login. Results come as a desktop note, on the phone, to a webhook or to Slack. → [Schedules](guides/workflows.md#schedules) · [Notifications](guides/workflows.md#notifications-and-history)
 - Undo a write from the run page, day / run / item AI budgets, an audit file per run and an admin policy file. → [Undo and budgets](guides/workflows.md#undo-budgets-and-the-audit-file)
 - Follow a run and answer its cards from the phone. → [On your phone](guides/workflows.md#on-your-phone)
+- Let one machine serve agent tasks: `termocode runner serve` takes queued tasks (`termocode runner add`, also over SSH) and runs a few at once, each in its own worktree. → [Serve tasks from this machine](guides/runner.md)
 
 ## Run, test and debug
 

@@ -26,6 +26,11 @@ sleeps:
   toast after the reconnect tells you so.
 - When the server answers again you see the **same** editor, fully
   redrawn, and a toast like **Reconnected after 12 s**.
+- Work on the server goes on while you are offline: a container log tab
+  keeps the lines written meanwhile, and a running SQL query shows its
+  result when you are back. A download through the terminal (kitty or
+  iTerm2) can not go on: it stops, and a toast says
+  **Download stopped: the connection dropped**. Run it again.
 
 A dead link is found fast: termocode checks the link every 5 s and gives it
 up after 15 s of silence. After the laptop wakes up it checks at once and
@@ -109,6 +114,7 @@ terminal panel): the session would show inside itself.
 | `termocode ssh [--dir dir] [--web] [ssh options] host` | Open termocode on `host` (in `dir`) over `ssh`; reconnects by itself when the link drops. `--web` also opens its [web panel](web.md) here |
 | `termocode mcp [--dir dir]` | Run as a stdio MCP server for an agent CLI; it relays to the termocode open in `dir` (default: the current folder or the nearest parent). Without a running termocode the tool list answers and calls fail with a clear message |
 | `termocode --no-session` | Run without a session (the old way) |
+| `termocode runner serve\|add\|list` | Let this machine serve agent tasks that you queue over SSH. See [Serve tasks from this machine](runner.md) |
 
 ## Two terminals, one session
 
@@ -192,7 +198,8 @@ the terminal that attached last decides.
 
 The file goes through the terminal. A folder comes as one `.tar.gz`.
 A download runs in the background, with a progress toast. Stop it with
-**File: Cancel Download**. A file over 50 MB asks first.
+**File: Cancel Download**. A file over 50 MB asks first. If the link
+drops, the download stops; run it again after the reconnect.
 
 | Terminal | Download | Upload |
 | --- | --- | --- |

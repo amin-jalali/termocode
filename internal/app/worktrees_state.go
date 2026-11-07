@@ -79,11 +79,16 @@ type wtState struct {
 	move       *wtMovePending    // the open move, unpack or pull card (worktrees_move.go)
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
+	preview    *wtPreviewState   // the open agent preview (worktrees_preview.go)
 
 	bgAsk    *wtBgPending      // a background task between prompt and card (worktrees_bgtask.go)
 	bgAct    *wtBgActPending   // the open card of one background task
 	bgTasks  []bgtask.Task     // the last listed background tasks
 	bgEngine containers.Engine // the engine they were listed on
+	handoff  *wtHandoffForm    // the open handoff card (worktrees_handoff.go)
+
+	autoAt   time.Time // the last auto clean-up check (worktrees_autoclean.go)
+	autoBusy bool      // an auto clean-up runs
 
 	seq    uint64
 	render struct {
@@ -212,6 +217,7 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 			cmds = append(cmds, m.pushToastDetail(toast.Warn, "Worktree notes could not be read", "termocode/worktrees.json in the git folder is kept as it is; pins and names are off until it is fixed."))
 		}
 		cmds = append(cmds, st.refreshStatus(), st.wtLinksRefresh(clock.Now()))
+		cmds = append(cmds, m.wtAutoClean()) // CMP-16: when it is on and due
 	}
 	st.touch()
 	switch {
@@ -259,6 +265,9 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	if c, ok := m.handleWTDiffMsg(msg); ok { // the diff vs base (worktrees_diff.go)
 		return c, true
 	}
+	if c, ok := m.handleWTHandoffMsg(msg); ok { // the handoff card (worktrees_handoff.go)
+		return c, true
+	}
 	if c, ok := m.handleWTDeleteMsg(msg); ok { // the type-the-name card (worktrees_delete.go)
 		return c, true
 	}
@@ -283,6 +292,8 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTCleanupPrep(msg), true
 	case wtCleanedMsg:
 		return m.onWTCleaned(msg), true
+	case wtAutoCleanedMsg:
+		return m.onWTAutoCleaned(msg), true
 	case wtDeletePrepMsg:
 		return m.onWTDeletePrep(msg), true
 	case wtDeletedMsg:

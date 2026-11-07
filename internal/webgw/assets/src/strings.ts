@@ -7,6 +7,7 @@
 import { signal } from "@preact/signals";
 import { dict, has } from "./state/dict";
 import type { SD } from "./strings.desk";
+import type { SP } from "./strings.phone";
 
 export const S = {
   // Shell and connect
@@ -395,6 +396,8 @@ export const S = {
   "runs.none": "No AI runs yet.",
   "runs.resume": "Resume",
   "runs.step": "step {n} of {m}",
+  "runs.subrun": "{n} sub-run",
+  "runs.subruns": "{n} sub-runs",
   "runs.state.running": "working now",
   "runs.state.stalled": "no output",
   "runs.state.pausing": "pausing",
@@ -586,6 +589,8 @@ export const S = {
   "mcpv.running": "Running",
   "chat.insert": "Insert into the Editor",
   "chat.agent": "The agent profile and model of this chat",
+  "chat.ctx": "ctx {pct}%",
+  "chat.ctx_title": "Context: {tokens} of {window} tokens ({pct}%) on the newest turn",
   "chat.default_profile": "default",
   // Run, Test and Debug (WEBP-4)
   "act.testing": "Testing",
@@ -802,16 +807,79 @@ export const S = {
   "cmd.failed": "The command did not run.",
   "cmd.ask_text": "Run “{name}” on the laptop?",
   "cmd.ran_laptop": "Done on the laptop: {name}",
+  // Phone app (MOBUX-1): status words and base components
+  "ph.st.needs": "Waits for you",
+  "ph.st.working": "Working now",
+  "ph.st.review": "Ready for review",
+  "ph.st.idle": "Idle",
+  "ph.st.asleep": "Sleeping",
+  "ph.customize": "Customize",
+  "ph.ask": "What do you want?",
+  "ph.checks": "Checks: {state}",
+  "ph.ci": "CI",
+  // Phone app shell (MOBUX-2)
+  "ph.switch": "Project: {name}. Change project",
+  "ph.switch_title": "Projects",
+  "ph.current": "Current project",
+  "ph.menu": "All tools",
+  "ph.live": "Live",
+  "ph.offline": "Offline",
+  "ph.asleep": "Laptop asleep",
+  "ph.mic": "Speak",
+  "ph.mic_hint": "Tap the 🎤 on your keyboard to speak.",
+  "ph.attach": "Attach",
+  "ph.stream": "Chat",
+  // Lane, run and log actions of the phone's Home (MOB-17)
+  "item.sheet_lane": "Lane {name}",
+  "item.sheet_run": "Run: {name}",
+  "item.sheet_log": "Output: {name}",
+  "item.add_ref": "Add to message",
+  "item.ask_btn_lane": "Ask about this lane",
+  "item.ask_btn_run": "Ask about this run",
+  "item.ask_btn_log": "Explain this output",
+  "item.ask_lane": "What changed in lane {name}, and is it ready?",
+  "item.ask_run": "Summarise the run {name}: what it did and what is left.",
+  "item.ask_run_wait": "Why does the run {name} wait, and what does it need?",
+  "item.ask_log": "Summarise the output of {name}.",
+  "item.ask_log_failed": "Explain why {name} failed and how to fix it.",
+  "item.open_runs": "Open in Runs",
+  "item.open_tasks": "Open in Tasks",
+  "item.pin": "Pin lane",
+  "item.unpin": "Unpin lane",
+  "item.sleep": "Put lane to sleep",
+  "item.sleep_q": "Put lane {name} to sleep? Its agent tabs end, files stay.",
+  "item.wake": "Wake lane",
+  "item.archive": "Archive on the laptop",
+  "item.card_sent": "The laptop asks first. Answer on the laptop.",
+  "item.note": "Leave a note",
+  "item.note_ph": "One line for this lane",
+  "item.note_save": "Save note",
+  "item.noted": "Note saved on the laptop.",
+  "item.link": "Link an issue or PR",
+  "item.link_issue": "Issue",
+  "item.link_pr": "Pull request",
+  "item.link_ph": "Number, like 412",
+  "item.link_bad": "Type a number from 1 up.",
+  "item.link_save": "Link it",
+  "item.linked": "Linked on the laptop.",
+  "item.unlink": "Unlink",
+  "item.run_again": "Run again",
 } as const;
 
-/** StringKey is a key of the page's strings or of the workbench's
- * (strings.desk.ts, in workbench.js). */
-export type StringKey = keyof typeof S | keyof typeof SD;
+/** StringKey is a key of the page's strings, of the workbench's
+ * (strings.desk.ts, in workbench.js) or of the phone app's lazy views
+ * (strings.phone.ts, English only). */
+export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP;
+
+/** TranslatedKey is a key strings.fa.ts translates: the phone app's
+ * strings are English only (owner 2026-11-07). */
+export type TranslatedKey = keyof typeof S | keyof typeof SD;
 
 const desk = dict<string>();
 
 /** addStrings adds the workbench's strings (strings.desk.ts) once
- * workbench.js loads. */
+ * workbench.js loads, and the phone app's (strings.phone.ts) once a
+ * lazy phone view loads. */
 export function addStrings(d: Readonly<Record<string, string>>): void {
   for (const k of Object.keys(d)) desk[k] = d[k];
 }

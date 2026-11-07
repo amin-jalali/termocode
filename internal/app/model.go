@@ -436,6 +436,9 @@ type Model struct {
 
 	// xfer is the running download (transfer.go), nil when none.
 	xfer *xferRun
+	// ctrXfer is the transfer stage of a container workspace
+	// (transfer_container.go).
+	ctrXfer ctrXferState
 
 	// Markdown live preview: when on, a scratch buffer named
 	// "<basename> PREVIEW" carries the glamour-rendered output and lives
@@ -710,10 +713,17 @@ type Model struct {
 	pendingContainerOpen containerRef
 	containerOffline     bool
 	containerStarting    bool
+	// RC-6 (container_lsp.go): where the language servers of a
+	// container workspace run, and the local mirror.
+	containerLSP *containerLSPState
 	// RC-7 (devcontainer_open.go): the setup the trust card asks about,
 	// and the one running.
 	devcontainerPending *devcontainerRun
 	devcontainer        *devcontainerRun
+	// devcontainerOffered: the open-project offer showed this session;
+	// dcOfferRoot is the folder its card is about.
+	devcontainerOffered bool
+	dcOfferRoot         string
 	hotExitWaiting      []hotBackup
 	saveAfter           saveContinuation
 	confirmTargetID     int
@@ -785,6 +795,11 @@ type Model struct {
 	// boundary. dragKind == dragNone means nothing is being dragged.
 	dragKind   dragKind
 	dragStartX int
+
+	// expDrag is a drag and drop in the Files tree (explorer_drag.go);
+	// expMoves are the moves its card asks about.
+	expDrag  explorerDrag
+	expMoves []git.Move
 
 	// dapSessionActive flips true when a Debug Adapter Protocol session is
 	// running (driven by Debug: Start / Debug: Stop palette commands). It
@@ -1001,6 +1016,7 @@ func New() Model {
 		toast:            toast.New(),
 		status:           statusbar.New(),
 		lspMgr:           newLSPInstallState(),
+		containerLSP:     &containerLSPState{},
 		themeID:          named.ID,
 		keys:             keys,
 		keymapProblems:   keymapProblems,
@@ -1074,6 +1090,9 @@ func (m Model) Init() tea.Cmd {
 	if cmd := m.aiProfileErrorsCmd(); cmd != nil { // broken ai/profiles.json
 		cmds = append(cmds, cmd)
 	}
+	if cmd := configBrokenCmd(); cmd != nil { // SCN-30: broken config.json (settings_corrupt.go)
+		cmds = append(cmds, cmd)
+	}
 	cmds = append(cmds, aiRunsStartupCmd())           // prune old agent run snapshots
 	cmds = append(cmds, m.secretsMigrateStartCmd())   // plain credentials.json → safer store (SS-4)
 	cmds = append(cmds, m.updateInitCmd())            // G-UPD: a newer release? (update_check.go)
@@ -1083,7 +1102,11 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, agentCtlInitCmd())            // OMX-33: the agent control socket (agent_ctl.go)
 	cmds = append(cmds, m.explorer.ScheduleLoads())   // FIX-2: a container root's first listing
 	cmds = append(cmds, wfxBootCmd())                 // WFX-15: the workflow scheduler (workflows_sched.go)
+	cmds = append(cmds, m.devcontainerOfferCmd())     // RC-7: "reopen in a dev container?" (devcontainer_offer.go)
 	if cmd := m.containerWatchInitCmd(); cmd != nil { // RC-4: is the container still running? (container_workspace.go)
+		cmds = append(cmds, cmd)
+	}
+	if cmd := m.containerLSPInitCmd(); cmd != nil { // RC-6: language servers in the image? (container_lsp.go)
 		cmds = append(cmds, cmd)
 	}
 	// The card about a crash of the last run; with nvim it comes once
@@ -1254,6 +1277,9 @@ func (m Model) attachCmd() tea.Cmd {
 		// theme, so opening files later triggers Tree-sitter + LSP under the
 		// final palette.
 		_ = m.nvim.ExecLua(lspSetupLua)
+		// RC-6: a container workspace's servers wait for their plan
+		// (container_lsp.go), never a local server on container paths.
+		m.containerLSPPending(m.nvim.ExecLuaArgs)
 		// Snippets: must come AFTER lspSetupLua so its <Tab>/<S-Tab> remaps
 		// override the popup-completion handlers defined there. (Trying to
 		// load both via the same chunk would force a single keymap, losing

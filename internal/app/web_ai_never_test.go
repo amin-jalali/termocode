@@ -85,6 +85,10 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"dispatchWebAccessPalette": {"palette.go"},
 		"openWebTotpSetup":         {"web_access.go"},
 		"webTotpNew":               {"webtotp_setup.go"},
+		// Port preview (web_forward.go): the owner's prompt and card only.
+		"dispatchWebForwardPalette": {"web_access.go"},
+		"onWebForwardPort":          {"ai_config_ui.go"},
+		"answerWebForward":          {"web_access.go"},
 	}
 	fset := token.NewFileSet()
 	files, _ := filepath.Glob("*.go")

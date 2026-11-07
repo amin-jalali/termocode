@@ -697,6 +697,7 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 	gh := newWFXGitHub(st.ws)
 	cfg.PR, cfg.GitHubComment, cfg.Find = gh.PR, gh.Comment, gh.Find
 	cfg.ParallelMax, cfg.AgentSandbox = wfxRunSettings()
+	cfg.AgentOSSandbox = agentOSSandboxOn()
 	h, err := wire.Start(context.Background(), cfg)
 	if err != nil {
 		return "", nil, nil, err

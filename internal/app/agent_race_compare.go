@@ -22,7 +22,8 @@ import (
 // (G-WT review), m merges the lane with the G-WT merge (a conflict stops
 // before any file is written and asks, Cancel first), then a card asks
 // about the other lanes with Keep first; d discards one lane (Cancel
-// first). A lane whose agent still works is never merged or discarded.
+// first); b restacks it onto your current commit (agent_race_restack.go).
+// A lane whose agent still works is never merged or discarded.
 
 const (
 	confirmKindRaceConflict confirmKindEnum = 3721
@@ -78,10 +79,17 @@ func (m *Model) raceAct(a raceview.ActionMsg) tea.Cmd {
 			return nil
 		}
 		return m.askRaceDiscard(r, l)
+	case raceview.ActRestack:
+		if l == nil || !l.Finished() {
+			return nil
+		}
+		return m.askRaceRestack(r, l) // agent_race_restack.go
 	case raceview.ActVerify:
 		return m.raceVerify(r)
 	case raceview.ActSummary:
 		return m.raceSummary(r)
+	case raceview.ActJudge:
+		return m.raceJudge(r)
 	}
 	return nil
 }
@@ -344,6 +352,10 @@ func (m *Model) answerRaceCard(kind confirmKindEnum, id string) tea.Cmd {
 		if l := r.Lane(t[1]); l != nil && l.Finished() {
 			return raceDiscardCmd(root, r.ID, []string{l.ID}, false)
 		}
+	case kind == confirmKindRaceJudgePick && id == "merge":
+		if l := r.Lane(t[1]); l != nil && l.Finished() && r.Judge != nil && r.Judge.Pick == l.ID {
+			return raceMergeCmd(root, r.ID, l.ID, false)
+		}
 	case kind == confirmKindRaceOthers && id == "discard":
 		var ids []string
 		for _, l := range r.Finished() {
@@ -516,8 +528,12 @@ func (m *Model) handleRaceCompareMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onRaceMerged(msg), true
 	case raceDiscardedMsg:
 		return m.onRaceDiscarded(msg), true
+	case raceRestackedMsg:
+		return m.onRaceRestacked(msg), true
 	case raceSummaryMsg:
 		return m.onRaceSummary(msg), true
+	case raceJudgeMsg:
+		return m.onRaceJudge(msg), true
 	}
 	return nil, false
 }

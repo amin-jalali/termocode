@@ -62,6 +62,10 @@ type Command struct {
 	// (pytest junitxml, jest/vitest JSON); "" when results stream on
 	// stdout only.
 	Report string
+	// ReportOnStdout: no report file was given (a container the user
+	// already runs is never written to), so jest/vitest print their JSON
+	// report into the output; ExtractJSONReport finds it there.
+	ReportOnStdout bool
 }
 
 // Label is the command line as shown in the UI.
@@ -121,7 +125,10 @@ func BuildCommand(t *Tree, scope Scope, report string) (Command, error) {
 		}
 	case FrameworkPytest:
 		cmd.Report = report
-		cmd.Args = []string{"pytest", "-v", "-o", "junit_family=xunit1", "--junitxml=" + report}
+		cmd.Args = []string{"pytest", "-v", "-o", "junit_family=xunit1"}
+		if report != "" {
+			cmd.Args = append(cmd.Args, "--junitxml="+report)
+		} // else: the -v lines are the results (PytestParser)
 		switch scope.Kind {
 		case ScopePackage:
 			cmd.Args = append(cmd.Args, rel(scope.Package.Dir))
@@ -153,9 +160,14 @@ func BuildCommand(t *Tree, scope Scope, report string) (Command, error) {
 	case FrameworkJest, FrameworkVitest:
 		cmd.Report = report
 		if t.FW == FrameworkJest {
-			cmd.Args = []string{"npx", "--no-install", "jest", "--json", "--testLocationInResults", "--outputFile=" + report}
+			cmd.Args = []string{"npx", "--no-install", "jest", "--json", "--testLocationInResults"}
 		} else {
-			cmd.Args = []string{"npx", "--no-install", "vitest", "run", "--reporter=default", "--reporter=json", "--outputFile=" + report}
+			cmd.Args = []string{"npx", "--no-install", "vitest", "run", "--reporter=default", "--reporter=json"}
+		}
+		if report != "" {
+			cmd.Args = append(cmd.Args, "--outputFile="+report)
+		} else {
+			cmd.ReportOnStdout = true
 		}
 		switch scope.Kind {
 		case ScopePackage:

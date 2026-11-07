@@ -891,6 +891,25 @@ also ones from other chats. Nothing is deleted without a card that asks.
 **Turn it off.** **AI: Toggle Agent Worktrees**, or `"ai_worktrees": "off"`
 in `config.json`. Then every step works in your tree.
 
+### Team mode (experimental)
+
+Steps that run at the same time do not know about each other. With
+`"ai_team_mode": true` in `config.json`, each agent step of a run with
+more than one step at a time gets four extra tools:
+
+- `team_claim` claims a file path or a short name of a piece of work.
+  When another step holds it, the step is told who, and picks other work.
+- `team_release` gives a claim back. All claims of a step end with it.
+- `team_claims` lists the claims and the steps that run now.
+- `team_send` leaves a short note for one running step (its id or title)
+  or for all of them. The step reads it after its current tool call, as
+  with `m` in AGENTS.
+
+These tools touch no files, so they ask no card. A note that looks like
+a secret is refused. Claims and notes show as tool calls in each step's
+transcript in AGENTS. Subscription steps (Claude Code, Codex) do not get
+the tools.
+
 ### Critic review
 
 When a step's worktree ends with changed files, a second model (the
@@ -1313,6 +1332,7 @@ you change an answer.
 | `ai_fallback` | `[]` | [Backup models](#backup-models-fallback) of the `main` slot. |
 | `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. A planned run uses 3 when this is not set. |
 | `ai_worktrees` | `auto` | `auto`: writing steps that run at the same time get [their own worktree](#own-worktrees-for-parallel-steps). `off`: every step works in your tree. |
+| `ai_team_mode` | `false` | [Team mode](#team-mode-experimental): steps that run at the same time get notes between them and a shared claim list. |
 | `ai_plan_approval` | `ask` | [Approve the plan](#approve-the-plan): `ask` before steps that change files or run commands, `always` for every plan, `auto` never. |
 | `ai_prices` | `{}` | Price overrides, $ per million tokens. |
 | `ai_context_windows` | `{}` | Context window overrides, in tokens. |

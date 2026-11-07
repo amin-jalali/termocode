@@ -227,6 +227,7 @@ func (s *SQLiteSession) exchangeLocked(ctx context.Context, sql string, maxRows 
 	}
 	type response struct {
 		lines []string
+		rows  int // rows printed before a read error
 		err   error
 	}
 	ch := make(chan response, 1)
@@ -265,9 +266,9 @@ func (s *SQLiteSession) exchangeLocked(ctx context.Context, sql string, maxRows 
 					return
 				}
 				trim := strings.TrimSpace(line)
-				if limit > 0 && strings.HasPrefix(strings.TrimLeft(trim, "["), "{") {
+				if strings.HasPrefix(strings.TrimLeft(trim, "["), "{") {
 					rowsSeen++
-					if rowsSeen > limit {
+					if limit > 0 && rowsSeen > limit {
 						truncated = true
 						continue
 					}
@@ -277,7 +278,7 @@ func (s *SQLiteSession) exchangeLocked(ctx context.Context, sql string, maxRows 
 				}
 			}
 			if e != nil {
-				ch <- response{err: e}
+				ch <- response{rows: rowsSeen, err: e}
 				return
 			}
 		}
@@ -286,8 +287,10 @@ func (s *SQLiteSession) exchangeLocked(ctx context.Context, sql string, maxRows 
 	case r := <-ch:
 		if r.err != nil {
 			stopErr := r.err
-			s.restartProcess(p, false)
-			return nil, 0, fmt.Errorf("sqlite3 stopped: %w", stopErr)
+			if restartErr := s.restartProcess(p, false); restartErr != nil {
+				return nil, 0, fmt.Errorf("sqlite3 stopped mid-query after %s; the result is not complete and the session restart failed (%v): %w", rowCount(r.rows), restartErr, stopErr)
+			}
+			return nil, 0, fmt.Errorf("sqlite3 stopped mid-query after %s; the result is not complete and the session was restarted: %w", rowCount(r.rows), stopErr)
 		}
 		for _, line := range r.lines {
 			if isSQLiteError(line) {

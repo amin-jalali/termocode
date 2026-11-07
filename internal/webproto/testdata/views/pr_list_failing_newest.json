@@ -1,0 +1,12 @@
+{
+  "note": "PRs with failing checks, newest first (MOB-9 done-means)",
+  "spec": {"view": "pr.list", "fields": ["number", "title", "checks"], "filter": [{"field": "checks", "op": "eq", "value": "fail"}], "sort": [{"field": "number", "desc": true}]},
+  "src": {"items": [
+    {"number": 10, "title": "Docs", "author": "a", "branch": "docs", "base": "main", "url": "https://x/10", "checks": "pass"},
+    {"number": 11, "title": "Add cache", "author": "b", "branch": "cache", "base": "main", "url": "https://x/11", "checks": "fail"},
+    {"number": 12, "title": "Fix login", "author": "c", "branch": "login", "base": "main", "url": "https://x/12", "checks": "fail"}
+  ]},
+  "want": {"kind": "table", "source": "pr.list", "total": 2,
+    "columns": [{"id": "number", "label": "#", "kind": "num"}, {"id": "title", "label": "Title", "kind": "text"}, {"id": "checks", "label": "Checks", "kind": "text"}],
+    "rows": [["12", "Fix login", "fail"], ["11", "Add cache", "fail"]]}
+}

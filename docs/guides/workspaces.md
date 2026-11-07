@@ -222,3 +222,15 @@ name. This also holds for one file or folder renamed with **Rename...**.
 Click **Renamed N files · Undo** to reverse the rename, or run
 **Explorer: Undo Rename**. Undo works while the renamed files are unchanged and
 the old names are free. It covers the last bulk rename in this session.
+
+## Move files by drag and drop
+
+Drag a file or folder in the Files explorer and let go on a folder. Let go on a
+file to move into that file's folder. The folder under the pointer is lit.
+If the row you drag is part of a selection, the whole selection moves.
+A card asks first. Cancel has focus; press Tab to reach Move, or click Move.
+A move never replaces a file: a name that is taken stops it. A folder can not
+move into itself, and a workspace root stays where it is. Let go outside the
+explorer to drop nothing. Open tabs follow the move and keep unsaved text. In a
+git repo, git follows too, as for a rename. Container workspaces move inside
+the container.
