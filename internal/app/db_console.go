@@ -299,6 +299,11 @@ func (m *Model) databaseNewConsoleAt(id, path string) tea.Cmd {
 		return nil
 	}
 	header, filetype := "-- @conn "+id+"\n\n", "sql"
+	if c.Driver == "mongodb" {
+		// Shell lines in the SQL console file (DBX-68): one command per
+		// statement, ";" between them.
+		header = "-- @conn " + id + "\n-- One shell command per statement, for example: db.users.find({age: {$gt: 30}}).limit(20);\n\n"
+	}
 	if c.Driver == "redis" {
 		path = strings.TrimSuffix(path, ".sql") + ".redis"
 		header, filetype = "# @conn "+id+"\n# One command per line; the send key runs the line at the cursor.\n\n", "redis"

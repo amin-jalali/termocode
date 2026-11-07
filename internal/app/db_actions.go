@@ -858,7 +858,7 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 		req.Database = ""
 	}
 	if n.kind == dbNodeDatabase {
-		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse") {
+		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse" || c.Driver == "mongodb") {
 			req.Database, req.Schema = n.name, n.name
 		} else if ok && c.Driver == "sqlite" {
 			// One file, one session: main and attached databases share it.
@@ -997,6 +997,7 @@ func dbTypePickerItems(remote bool) []picker.Item {
 	if remote {
 		items = []picker.Item{items[0], items[1], items[3]}
 	}
+	items = append(items, picker.Item{ID: "mongodb", Title: "MongoDB", Hint: "default port 27017"})
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
 	}
@@ -1059,6 +1060,11 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	case "redis":
 		s.pendingConn.Driver, s.pendingConn.Port = "redis", 6379
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
+	case "mongodb":
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.Database = "mongodb", 27017, "test"
+		cmd := m.databaseAddPrompt(promptKindDBHost, "MongoDB: server address", "Host name or address:", "localhost", false)
+		m.prompt.SetNote("A replica set or a mongodb+srv:// address: use From a URL.")
+		return cmd
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)
 	}
@@ -1624,6 +1630,11 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			return m.pushToastDetail(toast.Warn, "That port is not valid", "Enter a number from 1 to 65535.")
 		}
 		s.pendingConn.Port = port
+		if s.pendingConn.Driver == "mongodb" {
+			cmd := m.databaseAddPrompt(promptKindDBUser, "Database user", "User name (empty: no sign-in):", s.pendingConn.User, false)
+			m.prompt.SetAllowEmpty(true)
+			return cmd
+		}
 		if s.pendingConn.Driver == "redis" {
 			cmd := m.databaseAddPrompt(promptKindDBUser, "ACL user", "User name (empty: the default user):", s.pendingConn.User, false)
 			m.prompt.SetAllowEmpty(true)
