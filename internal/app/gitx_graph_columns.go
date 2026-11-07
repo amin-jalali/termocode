@@ -56,8 +56,10 @@ func gitGraphColToggle(c gitGraphCol) bool {
 }
 
 // gitGraphColsInit reads git_graph_columns from config.json; a missing
-// or bad value keeps the default.
+// or bad value means the default. The bits are a process global, so it
+// resets them first: a choice made by an earlier model never leaks in.
 func gitGraphColsInit() {
+	gitGraphCols.Store(0)
 	path, err := settingsConfigPath()
 	if err != nil {
 		return
