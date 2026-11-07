@@ -120,6 +120,8 @@ type Race struct {
 	Summary     []string `json:"summary,omitempty"`
 	SummaryCost string   `json:"summary_cost,omitempty"`
 	Winner      string   `json:"winner,omitempty"` // the merged lane
+	// Judge is the AI judge's ranking of the lanes and its pick (CMP-9).
+	Judge *Judgment `json:"judge,omitempty"`
 }
 
 // LaneSpec is a lane asked for in the race card.
