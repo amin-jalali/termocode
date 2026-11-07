@@ -646,6 +646,8 @@ func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, 
 		sess, err = dbclient.NewSQLiteSession(ctx, c)
 	case "redis":
 		sess, err = dbRedisSessionFactory(ctx, c, password)
+	case "clickhouse":
+		sess, err = dbclient.NewClickHouseSession(ctx, c, password)
 	default:
 		err = os.ErrInvalid
 	}

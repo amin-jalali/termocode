@@ -124,6 +124,8 @@ func defaultPort(d string) int {
 		return 3306
 	case "redis":
 		return 6379
+	case "clickhouse":
+		return 8123
 	}
 	return 0
 }

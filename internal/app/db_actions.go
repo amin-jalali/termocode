@@ -622,7 +622,7 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 		req.Database = ""
 	}
 	if n.kind == dbNodeDatabase {
-		if c, ok := s.connection(n.conn); ok && c.Driver == "mysql" {
+		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse") {
 			req.Database, req.Schema = n.name, n.name
 		} else if ok && c.Driver == "sqlite" {
 			// One file, one session: main and attached databases share it.

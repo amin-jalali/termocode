@@ -22,6 +22,8 @@ func DialectFor(driver string) Dialect {
 		return MySQLDialect{}
 	case "sqlite":
 		return SQLiteDialect{}
+	case "clickhouse":
+		return ClickHouseDialect{}
 	}
 	return nil
 }
