@@ -348,7 +348,7 @@ func (m *Model) openExplorerMenu(anchorX, anchorY, explorerY int) {
 		items = explorerDirMenuItems()
 		m.menuKind = menuKindExplorerDir
 	} else {
-		items = explorerFileMenuItems()
+		items = explorerFileMenuItemsFor(node.Path)
 		m.menuKind = menuKindExplorerFile
 	}
 	m.menu = menu.New(items, anchorX, anchorY)
@@ -426,6 +426,8 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 			_ = m.nvim.OpenFile("vsplit", path)
 		}
 		m.focus = FocusEditor
+	case "build-image": // CTX-7: only on Dockerfiles (explorerFileMenuItemsFor)
+		return m.askImageBuild(path)
 	case "download":
 		return m.downloadPath(path)
 	case "upload":

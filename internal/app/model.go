@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/debounce"
 	"github.com/amin-jalali/termocode/internal/editor"
 	"github.com/amin-jalali/termocode/internal/explorer"
@@ -157,6 +158,7 @@ type Model struct {
 	pendingRunName          string
 	pendingRunPorts         []string
 	pendingRunEnv           []string
+	pendingBuild            containers.BuildOptions // CTX-7: Build image answers so far
 	preview                 preview.Model
 	prompt                  prompt.Model
 	recents                 recents.Model

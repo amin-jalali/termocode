@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/prompt"
@@ -110,6 +111,11 @@ func (m *Model) handleClonePromptClose() tea.Cmd {
 		return cmd
 	case promptKindRegistryHost, promptKindRegistryUser, promptKindRegistryToken: // containers_registries.go
 		return m.registryPromptClosed()
+	case promptKindContainerBuildTag, promptKindContainerBuildArgs, promptKindContainerBuildTarget, promptKindContainerBuildPlatform:
+		m.pendingBuild = containers.BuildOptions{}
+		var cmd tea.Cmd
+		m.toast, cmd = m.toast.Push(toast.Info, "Build cancelled")
+		return cmd
 	case promptKindContainerRunName, promptKindContainerRunPorts, promptKindContainerRunEnv:
 		m.pendingRunName, m.pendingRunPorts, m.pendingRunEnv = "", nil, nil
 		var cmd tea.Cmd

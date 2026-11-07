@@ -298,6 +298,7 @@ func (m *Model) onImagePage(msg imagePageMsg) tea.Cmd {
 func (m *Model) runHostAction(id string) tea.Cmd {
 	if id == "cancel" {
 		m.pendingHostArgs, m.pendingHostOperation, m.pendingHostTarget = nil, "", ""
+		m.pendingBuild = containers.BuildOptions{}
 		return nil
 	}
 	args := append([]string(nil), m.pendingHostArgs...)
@@ -305,6 +306,9 @@ func (m *Model) runHostAction(id string) tea.Cmd {
 	m.pendingHostArgs, m.pendingHostOperation, m.pendingHostTarget = nil, "", ""
 	if operation == "default-context" {
 		return m.runContextDefault()
+	}
+	if operation == "build-image" {
+		return m.runImageBuild()
 	}
 	if operation == "run-image" {
 		cmd := services.Command{Label: "run: " + m.pendingImageRef, Argv: args}
