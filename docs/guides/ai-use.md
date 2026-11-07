@@ -293,6 +293,22 @@ Add files to your next message in three ways:
 - **`@path`.** Write `@src/main.go` (or `@file src/main.go`) in your
   message. The file is attached when you send.
 
+You can also name other context with an `@` word. termocode reads it when
+you send, shows each read as a tool line, and gives the text to the model
+as data (secrets hidden, up to 60 KB each, at most 8 per message):
+
+| Word | What the model gets |
+|---|---|
+| `@chat:<id>` or `@chat:<words>` | an old chat by its id, or the chats that match the words |
+| `@symbol:<name>` | the workspace symbols with that name (language server) |
+| `@diagnostics` or `@diagnostics:<path>` | the errors and warnings of the open files, or of one file |
+| `@changes` or `@changes:<path>` | your uncommitted changes |
+| `@diff` or `@diff:<base>` | this branch's change since it left its base (`main`, or the base you name) |
+| `@url:<url>` or `@https://…` | the text of one web page (private and local addresses are refused) |
+
+Each word uses the chat's own read-only tool, so a word whose tool is off
+(for example web reading) only adds a short note.
+
 Text files are sent as text (up to 60 KB). Images (PNG, JPEG, GIF, WebP)
 are sent as images to Anthropic, OpenAI and OpenRouter. Other providers
 get a short note instead. Other binary files are refused.

@@ -312,6 +312,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 	// "@server:uri" words: MCP resources read on the goroutine (MCPX-12).
 	mentions := m.aiMCPMentions(gen, ch, text, ai.SupportsImages(slot.p))
+	// "@chat:", "@symbol:", "@diagnostics", "@diff", "@changes", "@url:"
+	// words: read with the turn's own read-only tools (CMP-77).
+	mentions = aiJoinMentions(mentions, aiContextMentions(text, root, tools))
 	mcpLines := ""
 	if mcpTools != nil {
 		mcpLines = m.mcpPromptLines() // "GitHub is connected as … (read only)."
