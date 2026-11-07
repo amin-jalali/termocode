@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // maxOutput caps the kept setup output.
@@ -41,9 +43,9 @@ func RunSetup(ctx context.Context, dir string, env, cmds []string, timeout time.
 	for i, c := range cmds {
 		var cmd *exec.Cmd
 		if runtime.GOOS == "windows" {
-			cmd = exec.CommandContext(ctx, "cmd", "/C", c)
+			cmd = spawn.CommandContext(ctx, "cmd", "/C", c)
 		} else {
-			cmd = exec.CommandContext(ctx, "sh", "-c", c)
+			cmd = spawn.CommandContext(ctx, "sh", "-c", c)
 		}
 		cmd.Dir, cmd.Env = dir, env
 		cmd.Stdout, cmd.Stderr = &out, &out

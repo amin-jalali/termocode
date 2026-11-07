@@ -104,7 +104,7 @@ type failWriter struct{}
 func (failWriter) Write([]byte) (int, error) { return 0, errors.New("no space left on device") }
 
 func TestExportWritersEdgeCases(t *testing.T) {
-	if _, err := NewRowWriter("xlsx", failWriter{}, ExportOptions{}); err == nil || !strings.Contains(err.Error(), `unknown export format "xlsx"`) {
+	if _, err := NewRowWriter("docx", failWriter{}, ExportOptions{}); err == nil || !strings.Contains(err.Error(), `unknown export format "docx"`) {
 		t.Errorf("unknown format = %v", err)
 	}
 	md, _ := NewRowWriter(FormatMarkdown, failWriter{}, ExportOptions{})
@@ -142,7 +142,7 @@ func TestExportToFileLateProblems(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.csv")
 	rowsSrc := func(ctx context.Context, s RowSink) error { return WriteRows(s, exportResult()) }
-	if _, err := ExportToFile(context.Background(), path, "xlsx", ExportOptions{}, false, rowsSrc, nil); err == nil {
+	if _, err := ExportToFile(context.Background(), path, "docx", ExportOptions{}, false, rowsSrc, nil); err == nil {
 		t.Error("unknown format")
 	}
 	ctx, cancel := context.WithCancel(context.Background())

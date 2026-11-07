@@ -12,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clistep"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/git"
 )
 
@@ -230,7 +231,7 @@ func (s *Server) Tick(ctx context.Context) {
 		s.running[task.ID] = stop
 		s.mu.Unlock()
 		s.wg.Add(1)
-		go s.work(ctx, tctx, stop, task)
+		crash.Go("runner.Tick", func() { s.work(ctx, tctx, stop, task) })
 	}
 }
 

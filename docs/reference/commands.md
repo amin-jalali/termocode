@@ -13,12 +13,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Add Model Slot… | `ai-model-slot-add` |   |   |
 | AI: Agent Auto-Approve… | `ai-auto-approve` |   |   |
 | AI: Agent Board… | `ai-board` |   |   |
-| AI: Autopilot Level… (off / low / medium risk) | `ai-autopilot` |   |   |
 | AI: Agent Environment… (setup, secrets, network rule for workflow agents) | `ai-agent-env` |   |   |
 | AI: Agent Worktrees… | `ai-worktrees` |   |   |
 | AI: Agents & Connections | `itermoc-open-ai` |   |   |
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
+| AI: Autopilot Level… (off / low / medium risk) | `ai-autopilot` |   |   |
 | AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
 | AI: Chat Comments… | `ai-chat-comments` |   | `comments from people you shared the chat with` |
 | AI: Chat Doc Revisions… | `ai-chat-doc-revisions` |   |   |
@@ -55,8 +55,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: MCP: Reconnect All Servers | `ai-mcp-reconnect-all` |   |   |
 | AI: MCP: Reset Tool Lists | `ai-mcp-reset-cache` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
-| AI: MCP: Switch Profile… (servers and tools for this chat) | `ai-mcp-profile` |   |   |
 | AI: MCP: Signed-in Services… (one list, sign out) | `ai-mcp-accounts` |   |   |
+| AI: MCP: Switch Profile… (servers and tools for this chat) | `ai-mcp-profile` |   |   |
 | AI: Memory: Learn New Lessons On/Off (use only) | `ai-memory-learn` |   |   |
 | AI: Memory: Turn On/Off | `ai-memory-toggle` |   |   |
 | AI: Memory… | `ai-memory` |   |   |
@@ -66,8 +66,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
 | AI: New Workflow… | `workflow-new` |   |   |
-| AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` / `Alt+N` | `Alt+Shift+P / Alt+N` |
 | AI: Next Effort Mode | `ai-dial-next` |   |   |
+| AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` / `Alt+N` | `Alt+Shift+P / Alt+N` |
 | AI: Next Reasoning Level | `ai-reasoning-next` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
@@ -83,9 +83,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Run Next Plan in a Worktree, Then Ship… / Off | `ai-plan-worktree` |   |   |
 | AI: Run Task List in Waves… | `ai-run-task-list` |   |   |
 | AI: Runs | `ai-runs` |   |   |
-| AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
 | AI: Save Code Checkpoint | `ai-checkpoint-save` |   |   |
 | AI: Schedule This Chat… | `ai-chat-schedule` |   |   |
+| AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
 | AI: Share Chat by Link… | `ai-share-chat` |   | `a viewer link; they watch and comment` |
@@ -100,8 +100,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Stop Generating | `ai-cancel` |   |   |
 | AI: Switch Profile… | `ai-profile-switch` |   |   |
 | AI: Toggle Agent Worktrees | `ai-worktrees-toggle` |   |   |
-| AI: Toggle Auto Model Pick (quick / main per turn) | `ai-auto-model` |   |   |
 | AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` / `Alt+G` | `Alt+Shift+A / Alt+G` |
+| AI: Toggle Auto Model Pick (quick / main per turn) | `ai-auto-model` |   |   |
 | AI: Toggle Critic Review | `ai-critic-toggle` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
 | AI: Toggle Follow Agent | `ai-follow-agent` |   |   |
@@ -127,24 +127,25 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
 | Agent: Chat with an ACP Agent… / End | `acp-thread` |   |   |
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
+| Agent: Import Session into AI Chat | `agent-import-session` |   | `the open session view, as a chat` |
 | Agent: Loop Until Check Passes… | `agent-goal-loop` |   | `run a check after each turn, retry` |
 | Agent: Profiles… | `agent-profiles` |   | `model, plan mode, permissions, env` |
-| Agent: Import Session into AI Chat | `agent-import-session` |   | `the open session view, as a chat` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
 | Agent: Search All Sessions… | `agent-sessions-search-all` |   | `words in every project's agent sessions` |
 | Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
 | Agent: Send Diff Comments… | `agent-diff-comments` |   | `c on a change, S sends them all` |
 | Agent: Sessions… | `agent-sessions` |   | `resume or read a past session` |
+| Agent: Split Task… | `agent-split` |   | `the AI splits a goal into parts for agents` |
 | Agent: Start Claude Code | `agent-start-claude` |   |   |
 | Agent: Start Codex | `agent-start-codex` |   |   |
 | Agent: Start Gemini CLI | `agent-start-gemini` |   |   |
 | Agent: Start OpenCode | `agent-start-opencode` |   |   |
 | Agent: Start… | `agent-start` |   |   |
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
-| Agent: Toggle Auto-Accept | `agent-auto-accept-toggle` |   | `answer its permission prompts: yes, once` |
-| Agent: Switch Account… | `agent-account-switch` |   | `go on as another account after a limit` |
 | Agent: Stop Check Loop | `agent-goal-stop` |   | `end the running check loop` |
+| Agent: Switch Account… | `agent-account-switch` |   | `go on as another account after a limit` |
+| Agent: Toggle Auto-Accept | `agent-auto-accept-toggle` |   | `answer its permission prompts: yes, once` |
 | Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
 | Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
 
@@ -168,27 +169,51 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Containers: Add Compose Service… | `containers-compose-snippet` |   |   |
+| Containers: Add Docker Files… | `containers-scaffold` |   |   |
 | Containers: Attach | `containers-attach` |   |   |
+| Containers: Back Up Selected Volume… | `containers-volume-backup` |   |   |
 | Containers: Browse Files | `containers-files` |   |   |
+| Containers: Browse Registry Catalog… | `containers-registry-catalog` |   |   |
 | Containers: Browse Remote Tags… | `containers-browse-tags` |   |   |
+| Containers: Browse Selected Volume Files… | `containers-volume-browse` |   |   |
 | Containers: Build Image from Dockerfile… | `containers-image-build` |   |   |
+| Containers: Check Dockerfile (Build Checks) | `containers-build-check` |   |   |
+| Containers: Check Running Images for Updates | `containers-check-updates` |   |   |
 | Containers: Choose Compose Env File… | `services-env-file` |   |   |
+| Containers: Clone Selected Volume… | `containers-volume-clone` |   |   |
+| Containers: Commit Selected Container to Image… | `containers-commit` |   |   |
 | Containers: Configure Services (services.json) | `services-configure` |   |   |
 | Containers: Connect Registry… | `containers-registry-connect` |   |   |
+| Containers: Connect Selected to Network… | `containers-network-connect` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
+| Containers: Create Context… | `containers-context-create` |   |   |
+| Containers: Create Network with Options… | `containers-network-create-options` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
+| Containers: Create Volume with Options… | `containers-volume-create-options` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
+| Containers: Debug Selected with Toolbox… | `containers-debug-toolbox` |   |   |
+| Containers: Deploy Stack from Git… | `services-deploy-git` |   |   |
+| Containers: Disconnect Selected from Network… | `containers-network-disconnect` |   |   |
+| Containers: Edit Custom Commands | `containers-custom-commands-edit` |   |   |
 | Containers: Exec with Options… | `containers-exec-options` |   |   |
+| Containers: Export Selected Container to File… | `containers-export` |   |   |
 | Containers: Filter Rows… | `containers-filter` |   |   |
 | Containers: Focus | `containers-focus` |   |   |
 | Containers: Focus Project Services | `services-focus` |   |   |
 | Containers: Follow Logs | `containers-logs` |   |   |
 | Containers: Follow Stats | `containers-stats` |   |   |
+| Containers: Import Image from File System Tar… | `containers-image-import` |   |   |
 | Containers: Inspect | `containers-inspect` |   |   |
+| Containers: Inspect Context… | `containers-context-inspect` |   |   |
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
+| Containers: Kill Selected… | `containers-kill` |   |   |
+| Containers: Load Images from File… | `containers-image-load` |   |   |
 | Containers: Logs with Options… | `containers-logs-options` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
+| Containers: Make SBOM of Selected Image | `containers-image-sbom` |   |   |
 | Containers: Open Compose File | `services-open-compose` |   |   |
+| Containers: Open Docker Templates Folder | `containers-templates-folder` |   |   |
 | Containers: Open Engine Config | `containers-engine-config` |   |   |
 | Containers: Open Guide | `containers-help` |   |   |
 | Containers: Open Published Port | `containers-open-port` |   |   |
@@ -196,6 +221,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Open in Databases | `containers-open-databases` |   |   |
 | Containers: Pair Sync with Workspace… | `containers-pair-sync` |   |   |
 | Containers: Pause or Unpause Selected | `containers-pause` |   |   |
+| Containers: Prune Build Cache… | `containers-build-cache-prune` |   |   |
 | Containers: Prune Dangling Images… | `containers-image-prune` |   |   |
 | Containers: Prune Networks… | `containers-network-prune` |   |   |
 | Containers: Prune Stopped Containers… | `containers-prune` |   |   |
@@ -206,22 +232,40 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Read Volume Disk Usage | `containers-volume-disk-usage` |   |   |
 | Containers: Refresh | `containers-refresh` |   |   |
 | Containers: Refresh Project Services | `services-refresh` |   |   |
+| Containers: Remove Context… | `containers-context-remove` |   |   |
 | Containers: Remove Project Containers… | `containers-compose-down` |   |   |
 | Containers: Remove Selected Image… | `containers-image-remove` |   |   |
 | Containers: Remove Selected Network… | `containers-network-remove` |   |   |
 | Containers: Remove Selected Volume… | `containers-volume-remove` |   |   |
 | Containers: Remove Selected… | `containers-remove` |   |   |
+| Containers: Rename Selected… | `containers-rename` |   |   |
 | Containers: Restart Project | `containers-compose-restart` |   |   |
 | Containers: Restart Selected | `containers-restart` |   |   |
 | Containers: Restart Service… | `services-restart` |   |   |
+| Containers: Restore Selected Volume from Backup… | `containers-volume-restore` |   |   |
+| Containers: Run Custom Command on Row… | `containers-custom-command` |   |   |
+| Containers: Run Dockerfile Stage or Compose Service at Cursor | `containers-run-at-cursor` |   |   |
 | Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
+| Containers: Save Selected Image to File… | `containers-image-save` |   |   |
+| Containers: Scan Selected Image for Vulnerabilities | `containers-image-scan` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |
+| Containers: Set CPU and Memory Limits… | `containers-resources` |   |   |
+| Containers: Set Restart Policy… | `containers-restart-policy` |   |   |
+| Containers: Show All Contexts Together | `containers-all-contexts` |   |   |
+| Containers: Show Build Detail… | `containers-build-detail` |   |   |
+| Containers: Show Builds (History, Builders, Cache) | `containers-builds` |   |   |
+| Containers: Show Containers Using Selected Image | `containers-image-used-by` |   |   |
 | Containers: Show Details | `containers-detail` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Show Resolved Compose Config | `services-compose-config` |   |   |
+| Containers: Show Selected Container Changes (Diff) | `containers-diff` |   |   |
+| Containers: Show Selected Image Layer Sizes | `containers-image-layers` |   |   |
 | Containers: Show Service Logs… | `services-logs` |   |   |
+| Containers: Show System Page | `containers-system` |   |   |
+| Containers: Show or Hide the Size Column | `containers-toggle-size` |   |   |
 | Containers: Sign Out of Registry… | `containers-registry-signout` |   |   |
+| Containers: Sort Containers… | `containers-sort` |   |   |
 | Containers: Start All Services | `services-start-all` |   |   |
 | Containers: Start Project | `containers-compose-up` |   |   |
 | Containers: Start Selected | `containers-start` |   |   |
@@ -255,27 +299,44 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: AI Generate SQL from Schema… | `db-ai-generate-sql` |   |   |
 | Databases: Add Connection… | `db-add` |   |   |
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
+| Databases: Alter Role… | `db-role-alter` |   |   |
+| Databases: Alter Table… | `db-alter-table` |   |   |
+| Databases: Another Console | `db-another-console` |   |   |
+| Databases: Apply SQL Quick Fix | `db-quick-fix` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
+| Databases: Chart Result… | `db-chart` |   |   |
 | Databases: Choose Execution Mode… | `db-exec-mode` |   |   |
 | Databases: Clear Inline Results | `db-inline-clear` |   |   |
 | Databases: Commit | `db-commit` |   |   |
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
-| Databases: Copy Table Data to Another Connection… | `db-copy-table-data` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
-| Databases: Copy Result Columns as CREATE TABLE | `db-result-create-table` |   |   |
 | Databases: Console Session… | `db-console-session` |   |   |
+| Databases: Copy Redis Key… | `redis-copy-key` |   |   |
+| Databases: Copy Result As… | `db-copy-as` |   |   |
+| Databases: Copy Result Columns as CREATE TABLE | `db-result-create-table` |   |   |
+| Databases: Copy Table Data to Another Connection… | `db-copy-table-data` |   | `the rows go through the import card` |
 | Databases: Count Rows | `db-count-rows` |   |   |
+| Databases: Create Role… | `db-role-create` |   |   |
+| Databases: Create Table… | `db-create-table` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
+| Databases: Diagram Path Between Tables… | `db-er-path` |   |   |
 | Databases: Disconnect Selected… | `db-disconnect` |   |   |
+| Databases: Discover Cloud Databases… | `db-cloud-discover` |   | `through the installed aws, gcloud or az CLI` |
+| Databases: Dump Database… | `db-dump` |   |   |
+| Databases: Edit Object Source | `db-edit-source` |   |   |
+| Databases: Edit Virtual Objects… | `db-virtual-objects` |   |   |
 | Databases: End Session… | `db-end-session` |   |   |
 | Databases: Explain Analyze Statement… | `db-explain-analyze` |   |   |
 | Databases: Explain Statement | `db-explain` |   |   |
 | Databases: Export ER Diagram… | `db-er-diagram` |   |   |
+| Databases: Export Redis Keys… | `redis-export-keys` |   | `keys matching a pattern to a JSON file` |
 | Databases: Export Result… | `db-export` |   |   |
+| Databases: Export Tables to Folder… | `db-export-tables` |   |   |
 | Databases: Filter… | `db-filter` |   |   |
+| Databases: Find Object… | `db-find-object` |   |   |
 | Databases: Find Usages | `db-find-usages` |   |   |
 | Databases: Focus | `db-focus` |   |   |
 | Databases: Format File | `db-format-file` |   |   |
@@ -284,41 +345,91 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Go to Definition | `db-goto-definition` |   |   |
 | Databases: Go to Result Row… | `db-result-goto-row` |   |   |
 | Databases: Go to SQL in Strings… | `db-embedded-sql` |   |   |
+| Databases: Go to Statement… | `db-sql-outline` |   |   |
+| Databases: Grant Privileges… | `db-grant` |   |   |
 | Databases: Highlight Usages in File | `db-highlight-usages` |   |   |
+| Databases: History of This Connection… | `db-history-connection` |   |   |
 | Databases: History… | `db-history` |   |   |
+| Databases: Import CSV as New Table… | `db-import-new-table` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
+| Databases: Import Connections… | `db-import-connections` |   |   |
+| Databases: Listen to Redis Channels… | `redis-listen` |   | `collects messages for 10 seconds` |
 | Databases: Load All Result Rows | `db-result-load-all` |   |   |
+| Databases: Manage Connection… | `db-manage-connection` |   | `edit, comment, rename, duplicate, copy, delete` |
+| Databases: New Connection from Template… | `db-new-from-template` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
+| Databases: New Redis Key… | `redis-new-key` |   | `string, hash, list, set, sorted set, stream or JSON` |
+| Databases: Object Actions… | `db-object-actions` |   |   |
+| Databases: Open CSV/TSV as Table… | `db-open-csv` |   |   |
 | Databases: Open Guide | `db-guide` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |
+| Databases: Paste Connection from Clipboard | `db-paste-connection` |   | `connection JSON copied with Copy as JSON` |
+| Databases: Pending Source Changes… | `db-pending-sources` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
+| Databases: Quick Documentation | `db-quick-doc` |   |   |
+| Databases: Read RedisJSON Path… | `redis-json-path` |   | `JSON.GET on the open or selected key` |
 | Databases: Refresh | `db-refresh` |   |   |
 | Databases: Refresh Selected Object | `db-refresh-object` |   |   |
+| Databases: Rename Redis Key… | `redis-rename-key` |   |   |
+| Databases: Rename in SQL… | `db-rename` |   |   |
+| Databases: Restore Database… | `db-restore` |   |   |
 | Databases: Result Cell Menu… | `db-result-cell-menu` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
+| Databases: Revoke Privileges… | `db-revoke` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
+| Databases: Roll Back to Savepoint… | `db-rollback-savepoint` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
-| Databases: Saved SQL Runs… | `db-saved-runs` |   |   |
 | Databases: Run From Caret to End of File | `db-run-from-caret` |   |   |
+| Databases: Run New Database Container… | `db-run-container` |   | `PostgreSQL, MySQL, MariaDB or Redis in Docker` |
+| Databases: Run Query to File… | `db-run-to-file` |   | `every row of the SELECT at the cursor, straight into a file` |
+| Databases: Run SQL Dump File… | `db-run-dump` |   |   |
 | Databases: Run Smallest Statement (Subquery) at Caret | `db-run-smallest` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
+| Databases: Run pgTAP Tests… | `db-pgtap-run` |   |   |
 | Databases: Run… (Choose Statement or Subquery) | `db-run-ask` |   |   |
 | Databases: SQL Intentions… | `db-sql-intentions` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
+| Databases: Save Query… | `db-save-query` |   |   |
+| Databases: Saved Queries… | `db-saved-queries` |   |   |
+| Databases: Saved SQL Runs… | `db-saved-runs` |   |   |
+| Databases: Search Data in Schema… | `db-search-data` |   |   |
+| Databases: Search Redis Keys by Pattern… | `redis-search-keys` |   | `SCAN MATCH on the server, never KEYS` |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |
 | Databases: Set Folder SQL Dialect… | `db-sql-folder-dialect` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Set Result Page Size… | `db-result-page-size` |   |   |
+| Databases: Set Savepoint… | `db-savepoint` |   |   |
+| Databases: Show Console Version History | `db-console-history` |   | `a version of the console on every run` |
 | Databases: Show DDL | `db-ddl` |   |   |
+| Databases: Show Dependencies | `db-dependencies` |   |   |
+| Databases: Show ER Diagram (Text) | `db-er-text` |   |   |
+| Databases: Show Grants of a Role… | `db-role-grants` |   |   |
+| Databases: Show INSERT Column Hints | `db-insert-hints` |   |   |
+| Databases: Show JOIN Cardinality Hints | `db-join-hints` |   |   |
+| Databases: Show Parameter Info | `db-param-info` |   |   |
+| Databases: Show Query Log | `db-query-log` |   | `every statement sent this run, internal ones too` |
+| Databases: Show RediSearch Indexes | `redis-search-indexes` |   | `FT._LIST` |
+| Databases: Show Redis Cluster Nodes | `redis-cluster-nodes` |   | `CLUSTER NODES` |
+| Databases: Show Redis Key Module Info | `redis-key-module-info` |   | `TS.INFO, BF.INFO, CF.INFO, … for the key's type` |
+| Databases: Show Redis Memory Stats | `redis-memory` |   | `MEMORY STATS` |
+| Databases: Show Redis Modules | `redis-modules` |   | `MODULE LIST` |
+| Databases: Show Redis Pub/Sub Channels | `redis-pubsub-channels` |   | `PUBSUB CHANNELS` |
+| Databases: Show Redis Slow Log | `redis-slowlog` |   |   |
+| Databases: Show Redis Stream Groups | `redis-stream-groups` |   | `XINFO GROUPS on the stream` |
 | Databases: Show Schema Cache Info | `db-schema-cache-info` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
+| Databases: Show Users and Roles | `db-roles` |   |   |
+| Databases: Submit Object Source… | `db-submit-source` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
+| Databases: Switch File Connection… | `db-switch-connection` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
 | Databases: Toggle Result Column Types | `db-result-column-types` |   |   |
+| Databases: Toggle Result Heatmap | `db-heatmap` |   |   |
 | Databases: Toggle Result Row Numbers | `db-result-row-numbers` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |
+| Databases: Use Cloud IAM Token Login… | `db-iam-auth` |   | `a fresh token from the cloud CLI at each connect` |
 
 ## Debug
 
@@ -618,11 +729,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | HTTP: Cancel Request | `http-cancel` |   |   |
 | HTTP: Clear Script Variables | `http-clear-script-vars` |   |   |
+| HTTP: Complete GraphQL Field… | `http-gql-complete` |   |   |
 | HTTP: Cookies… | `http-cookies` |   |   |
 | HTTP: Copy as Code… | `http-copy-snippet` |   |   |
 | HTTP: Copy as curl | `http-copy-curl` |   |   |
+| HTTP: Describe gRPC Services | `http-grpc-describe` |   |   |
 | HTTP: Edit Params and Headers… | `http-fields` |   |   |
 | HTTP: Export as HAR… | `http-export-har` |   |   |
+| HTTP: Fetch GraphQL Schema | `http-gql-schema` |   |   |
+| HTTP: GraphQL Schema Docs… | `http-gql-docs` |   |   |
 | HTTP: History… | `http-history` |   |   |
 | HTTP: Import Collection (JSON, HAR, Insomnia)… | `http-import-collection` |   |   |
 | HTTP: Import OpenAPI… | `http-import-openapi` |   |   |
@@ -639,7 +754,11 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | HTTP: Select Environment… | `http-env-select` |   |   |
 | HTTP: Send Request at Cursor | `http-send` | `Ctrl+Alt+R` / `Ctrl+Enter` | `Ctrl+Alt+R / Ctrl+Enter` |
 | HTTP: Send Request… | `http-send-pick` |   |   |
+| HTTP: Set Request Proxy… | `http-proxy-set` |   |   |
 | HTTP: Show Last Response | `http-last-response` |   |   |
+| HTTP: Start Mock Server | `http-mock-start` |   |   |
+| HTTP: Stop Mock Server | `http-mock-stop` |   |   |
+| HTTP: Validate GraphQL Query | `http-gql-validate` |   |   |
 | HTTP: WebSocket Disconnect | `http-ws-close` |   |   |
 | HTTP: WebSocket Send Message… | `http-ws-send` |   |   |
 
@@ -670,8 +789,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Kubernetes: Add Helm Repo… | `kubernetes-helm-repo-add` |   |   |
+| Kubernetes: Apply Current File… | `kubernetes-apply-file` |   |   |
+| Kubernetes: Autoscalers (HPA) | `kubernetes-hpa` |   |   |
+| Kubernetes: Cluster Report | `kubernetes-report` |   |   |
 | Kubernetes: Helm Releases… | `kubernetes-helm` |   |   |
+| Kubernetes: Install Helm Chart… | `kubernetes-helm-install` |   |   |
+| Kubernetes: Kustomize Preview | `kubernetes-kustomize` |   |   |
 | Kubernetes: New Manifest from Snippet… | `kubernetes-snippet` |   |   |
+| Kubernetes: Nodes… | `kubernetes-nodes` |   |   |
+| Kubernetes: Permissions (RBAC) | `kubernetes-rbac` |   |   |
 | Kubernetes: Refresh | `kubernetes-refresh` |   |   |
 | Kubernetes: Show | `kubernetes-show` |   |   |
 | Kubernetes: Show Kind… | `kubernetes-kind` |   |   |
@@ -759,10 +886,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
-| Prompt Actions: Edit File | `prompt-actions-edit` |   |    |
-| Prompt Actions: Export… | `prompt-actions-export` |   |    |
-| Prompt Actions: Import… | `prompt-actions-import` |   |    |
-| Prompt Actions: New… | `prompt-actions-new` |   |    |
+| Prompt Actions: Edit File | `prompt-actions-edit` |   |   |
+| Prompt Actions: Export… | `prompt-actions-export` |   |   |
+| Prompt Actions: Import… | `prompt-actions-import` |   |   |
+| Prompt Actions: New… | `prompt-actions-new` |   |   |
 | Prompt Actions: Run… | `prompt-actions` |   | `saved prompts` |
 
 ## Run
@@ -956,9 +1083,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Hand Off Selected… | `worktree-handoff` |   |   |
 | Worktree: Jump… | `worktree-jump` | `Ctrl+Shift+J` | `Ctrl+Shift+J` |
 | Worktree: Link Issue or PR… | `worktree-link` |   |   |
-| Worktree: Move Selected to Another Machine… | `worktree-move` |   |   |
 | Worktree: Move Selected Down | `worktree-move-down` |   |   |
 | Worktree: Move Selected Up | `worktree-move-up` |   |   |
+| Worktree: Move Selected to Another Machine… | `worktree-move` |   |   |
 | Worktree: New Agent Session in Selected… | `worktree-new-session` |   |   |
 | Worktree: New Child of Selected… | `worktree-new-child` |   |   |
 | Worktree: New in Each Repository… | `worktree-new-multi` |   |   |
@@ -967,16 +1094,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Open Dev Server of Selected | `worktree-run-open` |   |   |
 | Worktree: Open Selected | `worktree-open` |   |   |
 | Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
-| Worktree: Run Agent Task in Background… | `worktree-bg-task` |   |   |
-| Worktree: Run Dev Server of Selected | `worktree-run` |   |   |
-| Worktree: Pull a Lane from a Host… | `worktree-pull` |   |   |
-| Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
-| Worktree: Reset Order | `worktree-reset-order` |   |   |
-| Worktree: Send PR Feedback to Agent… | `worktree-feedback` |   |   |
-| Worktree: Ship Selected (commit, push, PR, merge, archive)… | `worktree-ship` |   |   |
 | Worktree: Preview Agent Grid | `worktree-preview-grid` |   |   |
 | Worktree: Preview Agent Screen | `worktree-preview` |   |   |
+| Worktree: Pull a Lane from a Host… | `worktree-pull` |   |   |
+| Worktree: Reset Order | `worktree-reset-order` |   |   |
 | Worktree: Restack Selected onto Parent… | `worktree-restack` |   |   |
+| Worktree: Review Changes vs Base of Selected | `worktree-diff` |   |   |
+| Worktree: Run Agent Task in Background… | `worktree-bg-task` |   |   |
+| Worktree: Run Dev Server of Selected | `worktree-run` |   |   |
+| Worktree: Send PR Feedback to Agent… | `worktree-feedback` |   |   |
+| Worktree: Ship Selected (commit, push, PR, merge, archive)… | `worktree-ship` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |

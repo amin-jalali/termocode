@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -250,10 +251,10 @@ func Run(ctx context.Context, m Map, argv []string, in io.Reader, out, errw io.W
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	go func() {
+	crash.Go("lspproxy.Run", func() {
 		_ = Pump(sin, in, m.ToServer())
 		_ = sin.Close()
-	}()
+	})
 	perr := Pump(out, sout, m.ToClient())
 	werr := cmd.Wait()
 	// The editor side ends with the server; do not wait on a stdin

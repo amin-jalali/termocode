@@ -59,9 +59,9 @@ func TestOracleDialectCatalogBindsEveryName(t *testing.T) {
 	}
 }
 
-func TestOracleIsNotWiredYet(t *testing.T) {
-	// The dialect is ready; the driver comes with its own change.
-	if DialectFor("oracle") != nil {
-		t.Fatal("oracle has a dialect before it has a driver")
+func TestOracleIsWired(t *testing.T) {
+	// DBX-63 brought the go-ora driver, so "oracle" now has its dialect.
+	if _, ok := DialectFor("oracle").(OracleDialect); !ok {
+		t.Fatalf("oracle dialect = %T", DialectFor("oracle"))
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -26,15 +28,16 @@ func TestAgentsChipAnyWidth(t *testing.T) {
 		}{{2, false, "⇄ 2", "⇄ 2 agents"}, {0, true, "⇄", "⇄ ready"}} {
 			s := base
 			s.Agents, s.AgentsReady = tc.agents, tc.ready
-			plain := []rune(stripCSI(m.View(s)))
-			if len(plain) != w {
-				t.Fatalf("width %d: row is %d cells: %q", w, len(plain), string(plain))
+			// Cells, not runes: ☷ (U+2637) is wide since Unicode 16.
+			plain := stripCSI(m.View(s))
+			if cells := ansi.StringWidth(plain); cells != w {
+				t.Fatalf("width %d: row is %d cells: %q", w, cells, plain)
 			}
 			x0, x1, ok := m.AgentsChipSpan(s)
 			if !ok {
-				t.Fatalf("width %d: no agents span: %q", w, string(plain))
+				t.Fatalf("width %d: no agents span: %q", w, plain)
 			}
-			got := string(plain[x0:x1])
+			got := ansi.Cut(plain, x0, x1)
 			if got != tc.short && got != tc.full {
 				t.Fatalf("width %d: span covers %q", w, got)
 			}

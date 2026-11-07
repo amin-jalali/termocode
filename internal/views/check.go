@@ -95,7 +95,12 @@ func paramIDs(d *Def) string {
 // CheckSpec checks a spec against its view: the shape (blocks), then
 // every arg, field, filter, sort key, group, layout and refresh against
 // what the def allows. An unknown id is refused with the allowed ids.
-func CheckSpec(d *Def, s *blocks.ViewSpec) error {
+func CheckSpec(d *Def, s *blocks.ViewSpec) error { return checkSpec(d, s, true) }
+
+// checkSpec is CheckSpec; needArgs false skips the required-param rule,
+// for a def's own default spec: a required param (a connection, a pod)
+// is the user's pick, so no default can hold it.
+func checkSpec(d *Def, s *blocks.ViewSpec, needArgs bool) error {
 	if err := s.Validate(); err != nil {
 		return err
 	}
@@ -112,7 +117,7 @@ func CheckSpec(d *Def, s *blocks.ViewSpec) error {
 		}
 	}
 	for _, p := range d.Params {
-		if p.Required && s.Args[p.ID] == "" && d.Default.Args[p.ID] == "" && p.Default == "" {
+		if needArgs && p.Required && s.Args[p.ID] == "" && d.Default.Args[p.ID] == "" && p.Default == "" {
 			return invalid("view %s needs param %q", d.ID, p.ID)
 		}
 	}

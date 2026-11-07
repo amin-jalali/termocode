@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // DuckDBSession runs the duckdb command line client, like SQLite uses
@@ -89,7 +91,7 @@ func (s *DuckDBSession) run(ctx context.Context, query string, opts RunOptions) 
 	s.mu.Unlock()
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, s.bin, duckdbArgs(s.path, s.readonly)...)
+	cmd := spawn.CommandContext(ctx, s.bin, duckdbArgs(s.path, s.readonly)...)
 	cmd.Stdin = strings.NewReader(sql)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr

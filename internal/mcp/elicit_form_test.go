@@ -81,10 +81,10 @@ func TestFormValues(t *testing.T) {
 		t.Errorf("optional left out: %v %v", got, err)
 	}
 	bad := []map[string]string{
-		{},                                // required missing
-		{"repo": "x", "count": "three"},   // not a number
-		{"repo": "x", "color": "green"},   // not a choice
-		{"repo": "x", "other": "1"},       // unknown field
+		{},                                  // required missing
+		{"repo": "x", "count": "three"},     // not a number
+		{"repo": "x", "color": "green"},     // not a choice
+		{"repo": "x", "other": "1"},         // unknown field
 		{"repo": strings.Repeat("x", 2000)}, // too long
 	}
 	for _, in := range bad {

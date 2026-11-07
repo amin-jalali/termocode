@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -55,7 +56,7 @@ type dbDumpState struct {
 
 // dbRunToolProcess runs the tool and returns the end of its error output.
 func dbRunToolProcess(ctx context.Context, path string, c dbclient.CLICmd) (string, error) {
-	cmd := exec.CommandContext(ctx, path, c.Args...)
+	cmd := spawn.CommandContext(ctx, path, c.Args...)
 	cmd.Env = append(os.Environ(), c.Env...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr

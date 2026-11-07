@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Check is what one probe of a target saw.
@@ -162,10 +164,11 @@ func ProbeAll(ctx context.Context, targets []Target) []Check {
 	var wg sync.WaitGroup
 	for i, t := range targets {
 		wg.Add(1)
-		go func(i int, u string) {
+		u := t.URL
+		crash.Go("devpreview.ProbeAll", func() {
 			defer wg.Done()
 			out[i] = Probe(ctx, u)
-		}(i, t.URL)
+		})
 	}
 	wg.Wait()
 	return out

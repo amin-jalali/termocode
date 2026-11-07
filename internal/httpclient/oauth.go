@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // OAuth2Directive is the `# @oauth2 …` directive.
@@ -372,7 +374,7 @@ func NewOAuth2Loopback() (*OAuth2Loopback, error) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = io.WriteString(w, "<!doctype html><title>Signed in</title><p>Signed in. You can close this tab and go back to termocode.</p>")
 	})}
-	go func() { _ = lb.srv.Serve(ln) }()
+	crash.Go("httpclient.NewOAuth2Loopback", func() { _ = lb.srv.Serve(ln) })
 	return lb, nil
 }
 

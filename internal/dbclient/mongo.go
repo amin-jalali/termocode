@@ -43,7 +43,7 @@ type MongoExecutor interface {
 // MongoSession implements Session for MongoDB.
 type MongoSession struct {
 	cfg      Conn
-	exec     MongoExecutor
+	mexec    MongoExecutor
 	readonly bool
 	shared   bool // a read-only view: Close leaves exec open
 
@@ -59,7 +59,7 @@ func NewMongoSessionWith(c Conn, exec MongoExecutor) *MongoSession {
 	if db == "" {
 		db = "test"
 	}
-	return &MongoSession{cfg: c, exec: exec, readonly: c.ReadOnly, db: db}
+	return &MongoSession{cfg: c, mexec: exec, readonly: c.ReadOnly, db: db}
 }
 
 // NewMongoSession connects to c. c.Dial (the SSH tunnel) is used when set;
@@ -951,7 +951,7 @@ func (s *MongoSession) command(ctx context.Context, db string, cmd MongoDoc) (Mo
 		return nil, err
 	}
 	defer done()
-	return s.exec.Command(ctx, db, cmd)
+	return s.mexec.Command(ctx, db, cmd)
 }
 
 func (s *MongoSession) Ping(ctx context.Context) error {
@@ -995,7 +995,7 @@ func (s *MongoSession) Run(ctx context.Context, stmt string, opts RunOptions) Re
 		return Result{Err: err}
 	}
 	defer done()
-	resp, err := s.exec.Command(ctx, db, doc)
+	resp, err := s.mexec.Command(ctx, db, doc)
 	if err != nil {
 		return Result{Err: err, Elapsed: time.Since(start), Why: mongoGridWhy}
 	}
@@ -1068,7 +1068,7 @@ func (s *MongoSession) result(ctx context.Context, db string, cmd MongoCommand, 
 			if coll == "" {
 				_, coll, _ = strings.Cut(ns, ".")
 			}
-			if _, err := s.exec.Command(ctx, db, MongoDoc{{Key: "killCursors", Value: coll}, {Key: "cursors", Value: []any{id}}}); err != nil {
+			if _, err := s.mexec.Command(ctx, db, MongoDoc{{Key: "killCursors", Value: coll}, {Key: "cursors", Value: []any{id}}}); err != nil {
 				res.Notices = append(res.Notices, "the open cursor was not closed: "+err.Error())
 			}
 		}
@@ -1135,7 +1135,7 @@ func (s *MongoSession) Rollback(context.Context) error { return ErrMongoNoTransa
 
 // ReadOnlySession shares the client and sends reads only.
 func (s *MongoSession) ReadOnlySession() (Session, error) {
-	return &MongoSession{cfg: s.cfg, exec: s.exec, readonly: true, shared: true, db: s.database()}, nil
+	return &MongoSession{cfg: s.cfg, mexec: s.mexec, readonly: true, shared: true, db: s.database()}, nil
 }
 
 func (s *MongoSession) Cancel() {
@@ -1157,7 +1157,7 @@ func (s *MongoSession) Close() error {
 		s.cancel()
 	}
 	if !s.shared {
-		s.exec.Close()
+		s.mexec.Close()
 	}
 	return nil
 }
@@ -1173,7 +1173,7 @@ func (s *MongoSession) Introspect(ctx context.Context, req IntrospectionRequest)
 			return out, err
 		}
 		defer done()
-		names, err := s.exec.ListDatabases(ctx)
+		names, err := s.mexec.ListDatabases(ctx)
 		sort.Strings(names)
 		out.Databases = names
 		return out, err

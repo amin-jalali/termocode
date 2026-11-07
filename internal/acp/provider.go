@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Provider runs chat turns on an ACP agent's session, so the agent is a
@@ -30,7 +31,7 @@ func (p *Provider) SupportsTools() bool { return true }
 func (p *Provider) Stream(ctx context.Context, req ai.Request) <-chan ai.Chunk {
 	ch := make(chan ai.Chunk, 64)
 	text := lastUser(req.Messages)
-	go func() {
+	crash.Go("acp.Stream", func() {
 		defer close(ch)
 		if text == "" {
 			ch <- ai.Chunk{Done: true, Err: fmt.Errorf("%s: nothing to send", p.Title)}
@@ -51,7 +52,7 @@ func (p *Provider) Stream(ctx context.Context, req ai.Request) <-chan ai.Chunk {
 			send(StopNote(stop))
 		}
 		ch <- ai.Chunk{Done: true, Err: err}
-	}()
+	})
 	return ch
 }
 

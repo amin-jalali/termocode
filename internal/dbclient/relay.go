@@ -5,6 +5,8 @@ import (
 	"io"
 	"net"
 	"sync"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // localRelay listens on 127.0.0.1 and pipes every accepted connection to
@@ -33,13 +35,13 @@ func localRelay(dial DialFunc, target string) (addr string, stop func(), err err
 		delete(open, c)
 		mu.Unlock()
 	}
-	go func() {
+	crash.Go("dbclient.localRelay", func() {
 		for {
 			local, err := ln.Accept()
 			if err != nil {
 				return
 			}
-			go func() {
+			crash.Go("dbclient.localRelay", func() {
 				if !track(local) {
 					_ = local.Close()
 					return
@@ -64,13 +66,13 @@ func localRelay(dial DialFunc, target string) (addr string, stop func(), err err
 					}
 					done <- struct{}{}
 				}
-				go pipe(remote, local)
-				go pipe(local, remote)
+				crash.Go("dbclient.localRelay", func() { pipe(remote, local) })
+				crash.Go("dbclient.localRelay", func() { pipe(local, remote) })
 				<-done
 				<-done
-			}()
+			})
 		}
-	}()
+	})
 	var once sync.Once
 	stop = func() {
 		once.Do(func() {
