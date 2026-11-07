@@ -257,6 +257,14 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	if !r.HasHeader("User-Agent") && c.opts.UserAgent != "" {
 		req.Header.Set("User-Agent", c.opts.UserAgent)
 	}
+	if v, ok := r.Directives[SigV4Directive]; ok {
+		creds, err := ParseSigV4(v)
+		if err != nil {
+			resp.fail(ErrKindOther, err.Error(), start)
+			return resp
+		}
+		SignSigV4(req, []byte(bodyText), creds, start)
+	}
 	resp.ReqHeaders = headerList(req.Header)
 	if r.Body != nil {
 		resp.ReqHeaders = append(resp.ReqHeaders, Header{Name: "content-length", Value: fmt.Sprint(len(bodyText))})

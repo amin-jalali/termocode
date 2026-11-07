@@ -91,6 +91,15 @@ func (rv *Resolver) Resolve(req Request) (Resolved, []Unresolved) {
 		out.Body = &b
 		un = appendUnresolved(un, b, "body")
 	}
+	if v, ok := req.Directives[SigV4Directive]; ok {
+		d := make(map[string]string, len(req.Directives))
+		for k, dv := range req.Directives {
+			d[k] = dv
+		}
+		d[SigV4Directive] = sc.expand(v)
+		un = appendUnresolved(un, d[SigV4Directive], "directive:"+SigV4Directive)
+		out.Directives = d
+	}
 	out.Secrets = sc.secrets
 	return out, un
 }
