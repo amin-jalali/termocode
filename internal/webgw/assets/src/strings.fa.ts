@@ -1616,4 +1616,13 @@ export const FA: Record<Exclude<StringKey, PhoneKey>, string> = {
   "extv.none": "هیچ افزونهٔ لپ‌تاپ پنلی ندارد.",
   "extv.empty": "این پنل اکنون چیزی نشان نمی‌دهد.",
   "extv.run": "اجرای فرمان {id} روی لپ‌تاپ",
+  "ph.st.needs": "منتظر شما",
+  "ph.st.working": "در حال کار",
+  "ph.st.review": "آمادهٔ بازبینی",
+  "ph.st.idle": "بیکار",
+  "ph.st.asleep": "در خواب",
+  "ph.customize": "سفارشی‌سازی",
+  "ph.ask": "چه می‌خواهید؟",
+  "ph.checks": "بررسی‌ها: {state}",
+  "ph.ci": "سی‌آی",
 };

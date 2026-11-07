@@ -1,0 +1,437 @@
+/* Phone design tokens and base components (MOBUX-1). The phone app is the
+   web panel's family: every colour is a web token (tokens.css), so dark,
+   light, system light and more contrast follow it, and its AA checks hold
+   (tokens_test.go). Phone layout only; status is always a colour and a
+   shape (● ◐ ◆ ✓ ✗ ○ ◌). Checked by phone_test.go. Loaded by the phone's
+   lazy chunk and the kit, never by app.js. */
+
+/* phone:tokens (also on the theme boxes, so a scoped theme recomputes them) */
+:root,
+.theme-dark,
+.theme-light {
+  /* colour roles */
+  --p-bg: var(--bg-panel);
+  --p-surface: var(--bg);
+  --p-surface-2: var(--bg-2);
+  --p-raised: var(--bg-float);
+  --p-text: var(--text);
+  --p-text-2: var(--text-2);
+  --p-muted: var(--muted);
+  --p-line: var(--border);
+  --p-focus: var(--focus);
+  --p-accent: var(--strip);
+  --p-on-accent: var(--on-strip);
+  --p-ai: var(--ai);
+  --p-scrim: var(--scrim);
+  /* status colours (always drawn with their shape) */
+  --p-st-needs: var(--amber);
+  --p-st-working: var(--blue);
+  --p-st-review: var(--ai);
+  --p-st-done: var(--green);
+  --p-st-failed: var(--red);
+  --p-st-idle: var(--muted);
+  --p-st-asleep: var(--muted);
+  /* type: sans for reading, mono for facts; rem so 200 % works */
+  --p-font: var(--font-sans);
+  --p-mono: var(--font-mono);
+  --p-fs-caption: 0.75rem;   /* 12/16 kind labels, counts */
+  --p-lh-caption: 1rem;
+  --p-fs-meta: 0.8125rem;    /* 13/18 row facts */
+  --p-lh-meta: 1.125rem;
+  --p-fs-body: var(--fs-body);   /* 15/22 */
+  --p-lh-body: var(--lh-body);
+  --p-fs-title: var(--fs-title); /* 17/24 */
+  --p-lh-title: var(--lh-title);
+  --p-fs-head: var(--fs-view);   /* 20/26 */
+  --p-lh-head: var(--lh-view);
+  /* space (the web 4 px steps) */
+  --p-s1: var(--s1);
+  --p-s2: var(--s2);
+  --p-s3: var(--s3);
+  --p-s4: var(--s4);
+  --p-s6: var(--s6);
+  --p-gutter: 1rem;
+  --p-gap: var(--s3);
+  /* radius */
+  --p-r-chip: var(--r-pill);
+  --p-r-row: 8px;
+  --p-r-card: var(--r-card);
+  --p-r-block: 12px;
+  --p-r-sheet: var(--r-sheet);
+  /* elevation: 0 flat, 1 block, 2 raised card, 3 sheet */
+  --p-e0: none;
+  --p-e1: 0 1px 2px rgba(0, 0, 0, 0.16);
+  --p-e2: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --p-e3: var(--shadow-float);
+  /* motion */
+  --p-t-tap: 90ms;
+  --p-t-fast: var(--t-fast);
+  --p-t-sheet: var(--t-sheet);
+  --p-t-arm: var(--t-arm);
+  --p-ease: cubic-bezier(0.2, 0, 0, 1);
+  --p-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  /* targets and bars */
+  --p-tap: var(--tap);
+  --p-bar-h: 3.5rem;
+  --p-composer-h: 3.5rem;
+}
+
+/* phone:reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --p-t-tap: 0ms;
+    --p-t-fast: 0ms;
+    --p-t-sheet: 0ms;
+  }
+}
+
+/* Status mark: the shape carries the meaning, the colour helps. */
+.ph-st {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1em;
+  font-family: var(--p-font);
+  line-height: 1;
+}
+.ph-st-needs { color: var(--p-st-needs); }
+.ph-st-working { color: var(--p-st-working); }
+.ph-st-review { color: var(--p-st-review); }
+.ph-st-done { color: var(--p-st-done); }
+.ph-st-failed { color: var(--p-st-failed); }
+.ph-st-idle { color: var(--p-st-idle); }
+.ph-st-asleep { color: var(--p-st-asleep); }
+.ph-st.is-live { animation: ph-pulse var(--t-pulse) var(--p-ease) infinite; }
+
+@keyframes ph-pulse {
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-st.is-live { animation: none; }
+}
+
+/* Focus ring for every phone control. */
+.ph-chip:focus-visible,
+.ph-row:focus-visible,
+.ph-tile:focus-visible,
+.ph-card:focus-visible,
+.ph-block-tool:focus-visible,
+.ph-sheet-act:focus-visible,
+.ph-composer-send:focus-visible,
+.ph-attach:focus-visible {
+  outline: 2px solid var(--p-focus);
+  outline-offset: 2px;
+}
+
+/* Block: one answer in the stream (table, list, card, diff …). */
+.ph-block {
+  background: var(--p-surface);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-block);
+  box-shadow: var(--p-e1);
+  overflow: hidden;
+}
+.ph-block-head {
+  display: flex;
+  align-items: center;
+  gap: var(--p-s2);
+  padding: var(--p-s1) var(--p-s1) var(--p-s1) var(--p-s3);
+  border-bottom: 1px solid var(--p-line);
+}
+.ph-block-kind {
+  font: var(--p-fs-caption) / var(--p-lh-caption) var(--p-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--p-muted);
+}
+.ph-block-title {
+  flex: 1;
+  min-width: 0;
+  font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+  color: var(--p-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ph-block-tool {
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  border: 0;
+  border-radius: var(--p-r-row);
+  background: transparent;
+  color: var(--p-muted);
+  font-size: var(--p-fs-title);
+}
+.ph-block-tool:active { background: var(--bg-hover); }
+.ph-block-body { padding: var(--p-s1) 0; }
+.ph-block-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-s2);
+  padding: var(--p-s2) var(--p-s3) var(--p-s3);
+}
+
+/* Row: one item, the whole row is the target. */
+.ph-row {
+  display: flex;
+  align-items: center;
+  gap: var(--p-s3);
+  width: 100%;
+  min-height: var(--p-tap);
+  padding: var(--p-s2) var(--p-s3);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--p-text);
+  text-align: start;
+  font: var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+  transition: background var(--p-t-tap) var(--p-ease);
+}
+button.ph-row:active { background: var(--bg-hover); }
+.ph-row-main { flex: 1; min-width: 0; }
+.ph-row-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ph-row-meta {
+  display: block;
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-mono);
+  color: var(--p-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ph-row-end {
+  flex: none;
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-mono);
+  color: var(--p-muted);
+}
+.ph-rows > .ph-row + .ph-row { border-top: 1px solid var(--p-line); }
+
+/* Chip: a context chip above the composer; pinned ones show a pin. */
+.ph-chips {
+  display: flex;
+  gap: var(--p-s2);
+  padding: var(--p-s1) var(--p-gutter);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.ph-chips::-webkit-scrollbar { display: none; }
+.ph-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-s1);
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s4);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-chip);
+  background: var(--p-surface);
+  color: var(--p-text);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+  white-space: nowrap;
+  scroll-snap-align: start;
+  transition: background var(--p-t-tap) var(--p-ease), border-color var(--p-t-tap) var(--p-ease);
+}
+.ph-chip:active { background: var(--bg-hover); }
+.ph-chip.is-on { border-color: var(--p-focus); background: var(--p-surface-2); }
+.ph-chip.is-needs { border-color: var(--p-st-needs); }
+.ph-chip-count {
+  min-width: 1.25rem;
+  padding: 0 var(--p-s1);
+  border-radius: var(--p-r-chip);
+  background: var(--p-surface-2);
+  font: 600 var(--p-fs-caption) / var(--p-lh-caption) var(--p-mono);
+  text-align: center;
+}
+.ph-chip-pin { color: var(--p-muted); }
+
+/* Card: a summary card of the Home (needs you / working / done today). */
+.ph-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--p-s1);
+  min-height: var(--p-tap);
+  padding: var(--p-s3);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-card);
+  background: var(--p-raised);
+  box-shadow: var(--p-e2);
+  color: var(--p-text);
+  text-align: start;
+  font: var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+}
+button.ph-card:active { background: var(--bg-hover); }
+.ph-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--p-s2);
+  color: var(--p-text-2);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+}
+.ph-card-value { font: 600 var(--p-fs-head) / var(--p-lh-head) var(--p-font); }
+.ph-card-detail {
+  color: var(--p-muted);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+}
+.ph-card.tone-needs { border-color: var(--p-st-needs); }
+.ph-card.tone-failed { border-color: var(--p-st-failed); }
+
+/* Board tile: one piece of work on the live board. */
+.ph-tile {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: var(--p-s2);
+  row-gap: var(--p-s1);
+  width: 100%;
+  min-height: var(--p-tap);
+  padding: var(--p-s3);
+  border: 1px solid var(--p-line);
+  border-inline-start: 3px solid var(--p-line);
+  border-radius: var(--p-r-card);
+  background: var(--p-surface);
+  box-shadow: var(--p-e1);
+  color: var(--p-text);
+  text-align: start;
+  font: var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+}
+button.ph-tile:active { background: var(--bg-hover); }
+.ph-tile.tone-needs { border-inline-start-color: var(--p-st-needs); }
+.ph-tile.tone-working { border-inline-start-color: var(--p-st-working); }
+.ph-tile.tone-review { border-inline-start-color: var(--p-st-review); }
+.ph-tile.tone-done { border-inline-start-color: var(--p-st-done); }
+.ph-tile.tone-failed { border-inline-start-color: var(--p-st-failed); }
+.ph-tile-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.ph-tile-project,
+.ph-tile-cost {
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-mono);
+  color: var(--p-muted);
+}
+.ph-tile-facts {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-s1) var(--p-s3);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-mono);
+  color: var(--p-text-2);
+}
+
+/* Sheet: the web sheet with a title and a row of actions, safe first. */
+.ph-sheet-title {
+  margin: 0 0 var(--p-s3);
+  font: 600 var(--p-fs-title) / var(--p-lh-title) var(--p-font);
+  color: var(--p-text);
+}
+.ph-sheet-acts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-s2);
+  margin-top: var(--p-s4);
+}
+.ph-sheet-act {
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s4);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-row);
+  background: var(--p-surface);
+  color: var(--p-text);
+  font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+}
+.ph-sheet-act.is-safe { border-color: var(--p-focus); }
+.ph-sheet-act.is-risky { color: var(--p-st-failed); }
+.ph-sheet-act.is-primary { border-color: var(--p-accent); background: var(--p-accent); color: var(--p-on-accent); }
+.ph-sheet-act[aria-disabled="true"] { opacity: 0.55; }
+
+/* Composer: attach chips, the box and Send, in the thumb zone. */
+.ph-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-s1);
+  padding: var(--p-s2) var(--p-gutter) calc(var(--p-s2) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--p-line);
+  background: var(--p-bg);
+}
+.ph-composer-attached { display: flex; flex-wrap: wrap; gap: var(--p-s1); }
+.ph-attach {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-s1);
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s1) 0 var(--p-s3);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-chip);
+  background: var(--p-surface-2);
+  color: var(--p-text-2);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-mono);
+}
+.ph-attach-x {
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  border: 0;
+  background: transparent;
+  color: var(--p-muted);
+}
+.ph-composer-row { display: flex; align-items: flex-end; gap: var(--p-s2); }
+.ph-composer-box {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--p-tap);
+  max-height: 8rem;
+  padding: var(--p-s2) var(--p-s3);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-block);
+  background: var(--p-surface);
+  color: var(--p-text);
+  font: var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+  resize: none;
+}
+.ph-composer-box:focus { outline: 2px solid var(--p-focus); outline-offset: 0; }
+.ph-composer-send {
+  flex: none;
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  padding: 0 var(--p-s4);
+  border: 0;
+  border-radius: var(--p-r-block);
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+  font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+}
+.ph-composer-send[aria-disabled="true"] { background: var(--p-surface-2); color: var(--p-muted); }
+
+/* Project tasks (MOB-52): rows with an optional link button beside them;
+   nested checklist items step in. */
+.ph-tasks { display: flex; flex-direction: column; gap: var(--p-gap); }
+.ph-task { display: flex; align-items: center; gap: var(--p-s1); }
+.ph-task > .ph-row { flex: 1; min-width: 0; }
+.ph-row-link,
+.ph-retry {
+  flex: none;
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  border: 0;
+  border-radius: var(--p-r-row);
+  background: transparent;
+  color: var(--p-accent);
+  font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+}
+.ph-row-link:focus-visible,
+.ph-retry:focus-visible { outline: 2px solid var(--p-focus); outline-offset: 2px; }
+.ph-note {
+  margin: 0;
+  padding: var(--p-s2) var(--p-gutter);
+  color: var(--p-text-2);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+}
+.ph-err { color: var(--p-st-failed); }

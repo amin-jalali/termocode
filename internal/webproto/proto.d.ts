@@ -897,6 +897,11 @@ export interface PaletteArgs {
   id: string;
 }
 
+export interface ProjectTasksArgs {
+  only?: "checklist" | "issues" | "prs" | "mrs";
+  done?: boolean;
+}
+
 export interface PRNumberArgs {
   number: number;
 }
@@ -2963,6 +2968,36 @@ export interface CIRun {
   url?: string;
 }
 
+export interface ProjectTasks {
+  sections: ProjectTaskSection[];
+}
+
+export interface ProjectTaskSection {
+  kind: "checklist" | "issues" | "prs" | "mrs";
+  title: string;
+  items: ProjectTask[];
+  total: number;
+  open: number;
+  note?: string;
+}
+
+export interface ProjectTask {
+  id: string;
+  kind: "ptask" | "issue" | "pr" | "mr";
+  title: string;
+  state: "open" | "done" | "draft";
+  number?: number;
+  path?: string;
+  line?: number;
+  group?: string;
+  depth?: number;
+  author?: string;
+  labels?: string[];
+  checks?: "none" | "pending" | "pass" | "fail";
+  branch?: string;
+  url?: string;
+}
+
 export interface MCPItems {
   items: MCPItem[];
 }
@@ -3265,6 +3300,7 @@ export interface OpArgs {
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
   "ai.set_auto_approve": AutoApproveArgs;
+  "project.tasks": ProjectTasksArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -3531,4 +3567,5 @@ export interface OpResult {
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;
   "ai.set_auto_approve": AskRef;
+  "project.tasks": ProjectTasks;
 }
