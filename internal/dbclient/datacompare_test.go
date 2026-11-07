@@ -6,12 +6,12 @@ import (
 	"testing"
 )
 
-func txt(s string) Cell { return Cell{Text: s} }
-func num(s string) Cell { return Cell{Text: s, Kind: "number"} }
+func dcTxt(s string) Cell { return Cell{Text: s} }
+func dcNum(s string) Cell { return Cell{Text: s, Kind: "number"} }
 
-var nullCell = Cell{Null: true}
+var dcNull = Cell{Null: true}
 
-func cols(names ...string) []Column {
+func dcCols(names ...string) []Column {
 	out := make([]Column, len(names))
 	for i, n := range names {
 		out[i] = Column{Name: n}
@@ -20,17 +20,17 @@ func cols(names ...string) []Column {
 }
 
 func TestCompareDataFindsAddedRemovedChanged(t *testing.T) {
-	src := Result{Columns: cols("id", "name", "email", "src_only"), Rows: [][]Cell{
-		{num("1"), txt("Ada"), txt("ada@x"), txt("s")},
-		{num("2"), txt("Bob"), txt("bob@new"), txt("s")},
-		{num("4"), txt("Dan"), nullCell, txt("s")},
-		{num("5"), txt("Eve"), nullCell, txt("s")},
+	src := Result{Columns: dcCols("id", "name", "email", "src_only"), Rows: [][]Cell{
+		{dcNum("1"), dcTxt("Ada"), dcTxt("ada@x"), dcTxt("s")},
+		{dcNum("2"), dcTxt("Bob"), dcTxt("bob@new"), dcTxt("s")},
+		{dcNum("4"), dcTxt("Dan"), dcNull, dcTxt("s")},
+		{dcNum("5"), dcTxt("Eve"), dcNull, dcTxt("s")},
 	}}
-	tgt := Result{Columns: cols("ID", "email", "name", "tgt_only"), Rows: [][]Cell{
-		{num("1"), txt("ada@x"), txt("Ada"), txt("t")},
-		{num("2"), txt("bob@old"), txt("Bob"), txt("t")},
-		{num("3"), txt("cy@x"), txt("Cy"), txt("t")},
-		{num("5"), txt(""), txt("Eve"), txt("t")},
+	tgt := Result{Columns: dcCols("ID", "email", "name", "tgt_only"), Rows: [][]Cell{
+		{dcNum("1"), dcTxt("ada@x"), dcTxt("Ada"), dcTxt("t")},
+		{dcNum("2"), dcTxt("bob@old"), dcTxt("Bob"), dcTxt("t")},
+		{dcNum("3"), dcTxt("cy@x"), dcTxt("Cy"), dcTxt("t")},
+		{dcNum("5"), dcTxt(""), dcTxt("Eve"), dcTxt("t")},
 	}}
 	c, err := CompareData(src, tgt, []string{"id"})
 	if err != nil {
@@ -60,28 +60,28 @@ func TestCompareDataFindsAddedRemovedChanged(t *testing.T) {
 }
 
 func TestCompareDataKeyFromResultAndErrors(t *testing.T) {
-	src := Result{Columns: []Column{{Name: "k", PK: true}, {Name: "v"}}, Rows: [][]Cell{{txt("a"), txt("1")}}}
-	tgt := Result{Columns: cols("k", "v"), Rows: [][]Cell{{txt("a"), txt("1")}}}
+	src := Result{Columns: []Column{{Name: "k", PK: true}, {Name: "v"}}, Rows: [][]Cell{{dcTxt("a"), dcTxt("1")}}}
+	tgt := Result{Columns: dcCols("k", "v"), Rows: [][]Cell{{dcTxt("a"), dcTxt("1")}}}
 	c, err := CompareData(src, tgt, nil)
 	if err != nil || !reflect.DeepEqual(c.Key, []string{"k"}) || c.Same != 1 || len(c.Diffs) != 0 {
 		t.Fatalf("pk key: %+v %v", c, err)
 	}
-	if _, err := CompareData(Result{Columns: cols("k", "v")}, tgt, nil); err == nil || !strings.Contains(err.Error(), "key") {
+	if _, err := CompareData(Result{Columns: dcCols("k", "v")}, tgt, nil); err == nil || !strings.Contains(err.Error(), "key") {
 		t.Errorf("no key: %v", err)
 	}
 	if _, err := CompareData(src, tgt, []string{"nope"}); err == nil || !strings.Contains(err.Error(), "nope") {
 		t.Errorf("unknown key: %v", err)
 	}
-	if _, err := CompareData(src, Result{Columns: cols("v")}, []string{"k"}); err == nil {
+	if _, err := CompareData(src, Result{Columns: dcCols("v")}, []string{"k"}); err == nil {
 		t.Error("key missing in target: no error")
 	}
-	dup := Result{Columns: cols("k", "v"), Rows: [][]Cell{{txt("a"), txt("1")}, {txt("a"), txt("2")}}}
+	dup := Result{Columns: dcCols("k", "v"), Rows: [][]Cell{{dcTxt("a"), dcTxt("1")}, {dcTxt("a"), dcTxt("2")}}}
 	c, err = CompareData(dup, tgt, []string{"k"})
 	if err != nil || c.DupKeys != 1 {
 		t.Errorf("dup keys %d %v", c.DupKeys, err)
 	}
 	// NULL keys never match each other (like SQL).
-	nk := Result{Columns: cols("k", "v"), Rows: [][]Cell{{nullCell, txt("1")}}}
+	nk := Result{Columns: dcCols("k", "v"), Rows: [][]Cell{{dcNull, dcTxt("1")}}}
 	c, _ = CompareData(nk, nk, []string{"k"})
 	if c.NullKeys != 2 || len(c.Diffs) != 0 {
 		t.Errorf("null keys %d diffs %d", c.NullKeys, len(c.Diffs))
@@ -89,13 +89,13 @@ func TestCompareDataKeyFromResultAndErrors(t *testing.T) {
 }
 
 func TestDataSyncScriptMakesTargetMatchSource(t *testing.T) {
-	src := Result{Columns: cols("id", "name", "note"), Rows: [][]Cell{
-		{num("1"), txt("O'Hara"), nullCell},
-		{num("2"), txt("Bob"), txt("new")},
+	src := Result{Columns: dcCols("id", "name", "note"), Rows: [][]Cell{
+		{dcNum("1"), dcTxt("O'Hara"), dcNull},
+		{dcNum("2"), dcTxt("Bob"), dcTxt("new")},
 	}}
-	tgt := Result{Columns: cols("id", "name", "note"), Rows: [][]Cell{
-		{num("2"), txt("Bob"), txt("old")},
-		{num("3"), txt("Cy"), nullCell},
+	tgt := Result{Columns: dcCols("id", "name", "note"), Rows: [][]Cell{
+		{dcNum("2"), dcTxt("Bob"), dcTxt("old")},
+		{dcNum("3"), dcTxt("Cy"), dcNull},
 	}}
 	c, err := CompareData(src, tgt, []string{"id"})
 	if err != nil {
@@ -126,8 +126,8 @@ COMMIT;
 }
 
 func TestDataSyncScriptCompositeKey(t *testing.T) {
-	src := Result{Columns: cols("a", "b", "v"), Rows: [][]Cell{{txt("x"), txt("y"), txt("2")}}}
-	tgt := Result{Columns: cols("a", "b", "v"), Rows: [][]Cell{{txt("x"), txt("y"), txt("1")}}}
+	src := Result{Columns: dcCols("a", "b", "v"), Rows: [][]Cell{{dcTxt("x"), dcTxt("y"), dcTxt("2")}}}
+	tgt := Result{Columns: dcCols("a", "b", "v"), Rows: [][]Cell{{dcTxt("x"), dcTxt("y"), dcTxt("1")}}}
 	c, _ := CompareData(src, tgt, []string{"a", "b"})
 	s := c.SyncScript(SQLiteDialect{}, "", "t")
 	if !strings.Contains(s, `UPDATE "t" SET "v" = '2' WHERE "a" = 'x' AND "b" = 'y';`) {
