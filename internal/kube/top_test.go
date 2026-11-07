@@ -90,10 +90,12 @@ func TestTopWithoutMetricsServerIsOneClearLine(t *testing.T) {
 
 func TestMetricsHistoryKeepsNewestSamplesPerName(t *testing.T) {
 	h := kube.NewMetricsHistory(3)
-	for i := int64(1); i <= 5; i++ {
+	for i := int64(1); i <= 4; i++ {
 		h.AddPods([]kube.PodMetrics{{Name: "api", Namespace: "shop", CPUMilli: i * 10, MemBytes: i}})
 	}
-	h.AddPods([]kube.PodMetrics{{Name: "web", Namespace: "shop", CPUMilli: 7, MemBytes: 8}})
+	// the fifth sample holds both pods
+	h.AddPods([]kube.PodMetrics{{Name: "api", Namespace: "shop", CPUMilli: 50, MemBytes: 5},
+		{Name: "web", Namespace: "shop", CPUMilli: 7, MemBytes: 8}})
 	cpu, mem := h.Pod("shop", "api")
 	if len(cpu) != 3 || cpu[0] != 30 || cpu[2] != 50 || mem[2] != 5 {
 		t.Fatalf("api cpu=%v mem=%v", cpu, mem)
