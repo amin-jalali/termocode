@@ -62,6 +62,8 @@ code, kbd, samp, pre, .mono { font-family: var(--font-mono); font-variant-numeri
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0s !important; scroll-behavior: auto !important; }
 }
+/* The same, when the user turns motion off on This phone (MOBUX-22). */
+:root[data-motion="reduce"] *, :root[data-motion="reduce"] *::before, :root[data-motion="reduce"] *::after { animation-duration: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0s !important; scroll-behavior: auto !important; }
 
 @media (forced-colors: active) {
   .strip, .tabbar, .rail, .bar, .toast, .attention, .btn { border: 1px solid CanvasText; }

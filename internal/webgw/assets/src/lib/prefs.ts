@@ -13,6 +13,8 @@ export type Language = "auto" | "en" | "fa";
 /** PhoneHome is what a phone opens on (MOB-4): the tab bar, or the
  * chat-first Home (#/home). MOB-7 makes "chat" the default. */
 export type PhoneHome = "tabs" | "chat";
+/** Motion: "system" follows prefers-reduced-motion; "reduce" stops motion on this device (MOBUX-22). */
+export type Motion = "system" | "reduce";
 
 export interface Prefs {
   theme: Theme;
@@ -36,6 +38,10 @@ export interface Prefs {
   /** quiet: the phone's quiet hours "HH:MM-HH:MM" (MOBUX-20), "" for none;
    * no notification shows inside them. The laptop keeps a copy. */
   quiet: string;
+  /** motion: reduce motion on this device even when the system does not ask for it. */
+  motion: Motion;
+  /** haptics: short buzzes on the phone (on by default; off means never). */
+  haptics: boolean;
 }
 
 /** QUIET is the shape of Prefs.quiet. */
@@ -45,7 +51,7 @@ export const QUIET = /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/;
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false, phoneHome: "tabs", quiet: "" };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false, phoneHome: "tabs", quiet: "", motion: "system", haptics: true };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -73,6 +79,8 @@ function load(): Prefs {
       vim: v.vim === true,
       phoneHome: pick(v.phoneHome, ["tabs", "chat"], defaults.phoneHome),
       quiet: typeof v.quiet === "string" && QUIET.test(v.quiet) ? v.quiet : "",
+      motion: pick(v.motion, ["system", "reduce"], defaults.motion),
+      haptics: v.haptics !== false,
     };
   } catch {
     return defaults;

@@ -71,6 +71,10 @@ type Card struct {
 	// Form: an MCP server's question the phone may answer (MOB-12):
 	// plain fields only, never a secret one; sent back with ChoiceSend.
 	Form []blocks.BlockFormField `json:"form,omitempty"`
+	// Destructive marks a tool card whose call cannot be undone (no
+	// "Always allow" class, or a database write): the phone's approval
+	// sheet offers only "Approve on laptop" for it (MOBUX-12).
+	Destructive bool `json:"destructive,omitempty"`
 }
 
 // CardChoice is one answer of a card.

@@ -3,7 +3,7 @@
   "name": "termocode",
   "short_name": "termocode",
   "description": "Your laptop's termocode, on this device.",
-  "start_url": "/",
+  "start_url": "/#/home",
   "scope": "/",
   "display": "standalone",
   "background_color": "#1c1c1c",

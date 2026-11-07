@@ -657,7 +657,7 @@
         "n": 5,
         "per_ms": 1000
       },
-      "max_bytes": 1024,
+      "max_bytes": 24576,
       "laptop_card": false,
       "audit": "yes",
       "phase": "v1"
@@ -1783,45 +1783,6 @@
       "phase": "v2"
     },
     {
-      "op": "push.subscribe",
-      "args": "PushSubscribeArgs",
-      "role": "viewer",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 2048,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "push.unsubscribe",
-      "args": "PushUnsubscribeArgs",
-      "role": "viewer",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 1024,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "web.push_watch",
-      "args": "PushWatchArgs",
-      "role": "ctl",
-      "rate": {
-        "n": 2,
-        "per_ms": 1000
-      },
-      "max_bytes": 1024,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
       "op": "search.replace",
       "args": "SearchReplaceArgs",
       "result": "AskRef",
@@ -2135,48 +2096,6 @@
       },
       "max_bytes": 1024,
       "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "workflows.dry_run",
-      "args": "WorkflowNameArgs",
-      "result": "WorkflowRunArgs",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 1024,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "workflows.run",
-      "args": "WorkflowNameArgs",
-      "result": "AskRef",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 1024,
-      "laptop_card": true,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "workflows.save",
-      "args": "WorkflowSaveArgs",
-      "result": "AskRef",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 132096,
-      "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
     },
@@ -2707,36 +2626,6 @@
       "phase": "v2"
     },
     {
-      "op": "worktrees.task_form",
-      "args": "EmptyArgs",
-      "result": "WorktreeTaskForm",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 1000
-      },
-      "max_bytes": 1024,
-      "live": 1,
-      "laptop_card": false,
-      "audit": "no",
-      "phase": "v2"
-    },
-    {
-      "op": "worktrees.new_task",
-      "args": "WorktreeTaskArgs",
-      "result": "WorktreeTaskDone",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 8192,
-      "live": 1,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
       "op": "ai.worktrees",
       "args": "EmptyArgs",
       "result": "AIWorktrees",
@@ -2795,58 +2684,15 @@
       "phase": "v2"
     },
     {
-      "op": "ai.race_start",
-      "args": "AIRaceStartArgs",
-      "result": "AskRef",
+      "op": "ai.worktree_notes",
+      "args": "AIWorktreeNotesArgs",
+      "result": "ChatRef",
       "role": "controller",
       "rate": {
         "n": 1,
-        "per_ms": 5000
+        "per_ms": 2000
       },
-      "max_bytes": 4096,
-      "laptop_card": true,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "ai.race_summary",
-      "args": "AIRaceArgs",
-      "result": "AIRaceSummary",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 1024,
-      "live": 1,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "ai.race_verify",
-      "args": "AIRaceArgs",
-      "result": "AIRaceDone",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 1024,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "ai.race_stop",
-      "args": "AIRaceArgs",
-      "result": "AIRaceDone",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 1024,
+      "max_bytes": 24576,
       "laptop_card": false,
       "audit": "yes",
       "phase": "v2"
@@ -4588,6 +4434,190 @@
       "phase": "v2"
     },
     {
+      "op": "ai.catalog",
+      "args": "AICatalogArgs",
+      "result": "AICatalog",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.tracker_pins",
+      "args": "EmptyArgs",
+      "result": "TrackerPins",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.tracker_run",
+      "args": "TrackerIDArgs",
+      "result": "TrackerBlock",
+      "role": "controller",
+      "rate": {
+        "n": 12,
+        "per_ms": 60000
+      },
+      "max_bytes": 1024,
+      "live": 2,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.tracker_unpin",
+      "args": "TrackerIDArgs",
+      "result": "TrackerPins",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "board.get",
+      "args": "EmptyArgs",
+      "result": "Board",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "push.subscribe",
+      "args": "PushSubscribeArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 2048,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "push.unsubscribe",
+      "args": "PushUnsubscribeArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "web.push_watch",
+      "args": "PushWatchArgs",
+      "role": "ctl",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workflows.dry_run",
+      "args": "WorkflowNameArgs",
+      "result": "WorkflowRunArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workflows.run",
+      "args": "WorkflowNameArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workflows.save",
+      "args": "WorkflowSaveArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 132096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.task_form",
+      "args": "EmptyArgs",
+      "result": "WorktreeTaskForm",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "worktrees.new_task",
+      "args": "WorktreeTaskArgs",
+      "result": "WorktreeTaskDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 8192,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "project.tasks",
       "args": "ProjectTasksArgs",
       "result": "ProjectTasks",
@@ -4642,6 +4672,76 @@
       "max_bytes": 1024,
       "laptop_card": false,
       "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "cards.answer",
+      "args": "CardsAnswerArgs",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v1"
+    },
+    {
+      "op": "ai.race_start",
+      "args": "AIRaceStartArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_summary",
+      "args": "AIRaceArgs",
+      "result": "AIRaceSummary",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_verify",
+      "args": "AIRaceArgs",
+      "result": "AIRaceDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.race_stop",
+      "args": "AIRaceArgs",
+      "result": "AIRaceDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
       "phase": "v2"
     },
     {
@@ -4725,106 +4825,6 @@
       "max_bytes": 4096,
       "laptop_card": true,
       "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "cards.answer",
-      "args": "CardsAnswerArgs",
-      "role": "controller",
-      "rate": {
-        "n": 5,
-        "per_ms": 1000
-      },
-      "max_bytes": 24576,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v1"
-    },
-    {
-      "op": "ai.worktree_notes",
-      "args": "AIWorktreeNotesArgs",
-      "result": "ChatRef",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 2000
-      },
-      "max_bytes": 24576,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "ai.catalog",
-      "args": "AICatalogArgs",
-      "result": "AICatalog",
-      "role": "viewer",
-      "rate": {
-        "n": 1,
-        "per_ms": 2000
-      },
-      "max_bytes": 1024,
-      "live": 1,
-      "laptop_card": false,
-      "audit": "no",
-      "phase": "v2"
-    },
-    {
-      "op": "ai.tracker_pins",
-      "args": "EmptyArgs",
-      "result": "TrackerPins",
-      "role": "viewer",
-      "rate": {
-        "n": 2,
-        "per_ms": 1000
-      },
-      "max_bytes": 1024,
-      "laptop_card": false,
-      "audit": "no",
-      "phase": "v2"
-    },
-    {
-      "op": "ai.tracker_run",
-      "args": "TrackerIDArgs",
-      "result": "TrackerBlock",
-      "role": "controller",
-      "rate": {
-        "n": 12,
-        "per_ms": 60000
-      },
-      "max_bytes": 1024,
-      "live": 2,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "ai.tracker_unpin",
-      "args": "TrackerIDArgs",
-      "result": "TrackerPins",
-      "role": "controller",
-      "rate": {
-        "n": 1,
-        "per_ms": 5000
-      },
-      "max_bytes": 1024,
-      "laptop_card": false,
-      "audit": "yes",
-      "phase": "v2"
-    },
-    {
-      "op": "board.get",
-      "args": "EmptyArgs",
-      "result": "Board",
-      "role": "viewer",
-      "rate": {
-        "n": 2,
-        "per_ms": 1000
-      },
-      "max_bytes": 1024,
-      "live": 1,
-      "laptop_card": false,
-      "audit": "no",
       "phase": "v2"
     }
   ],
@@ -5154,82 +5154,6 @@
       ],
       "additionalProperties": true
     },
-    "AIRaceArgs": {
-      "type": "object",
-      "properties": {
-        "race": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "race"
-      ],
-      "additionalProperties": false
-    },
-    "AIRaceDone": {
-      "type": "object",
-      "properties": {
-        "lanes": {
-          "type": "integer"
-        },
-        "message": {
-          "type": "string"
-        },
-        "race": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "race",
-        "lanes",
-        "message"
-      ],
-      "additionalProperties": true
-    },
-    "AIRaceStartArgs": {
-      "type": "object",
-      "properties": {
-        "agents": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "task": {
-          "type": "string"
-        },
-        "verify": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "task",
-        "agents"
-      ],
-      "additionalProperties": false
-    },
-    "AIRaceSummary": {
-      "type": "object",
-      "properties": {
-        "cost": {
-          "type": "string"
-        },
-        "lines": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "race": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "race",
-        "lines"
-      ],
-      "additionalProperties": true
-    },
     "AISnap": {
       "type": "object",
       "properties": {
@@ -5271,6 +5195,12 @@
         },
         "worktrees": {
           "type": "boolean"
+        },
+        "raceAgents": {
+          "items": {
+            "$ref": "#/defs/AIRaceAgent"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -5406,6 +5336,28 @@
       "required": [
         "id",
         "path"
+      ],
+      "additionalProperties": false
+    },
+    "AIWorktreeNotesArgs": {
+      "type": "object",
+      "properties": {
+        "chat_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "notes": {
+          "items": {
+            "$ref": "#/defs/ReviewNote"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "notes"
       ],
       "additionalProperties": false
     },
@@ -6547,11 +6499,20 @@
           },
           "type": "array"
         },
+        "destructive": {
+          "type": "boolean"
+        },
         "diff": {
           "$ref": "#/defs/CardDiff"
         },
         "file": {
           "type": "string"
+        },
+        "form": {
+          "items": {
+            "$ref": "#/defs/BlockFormField"
+          },
+          "type": "array"
         },
         "id": {
           "type": "string"
@@ -6575,12 +6536,6 @@
         },
         "title": {
           "type": "string"
-        },
-        "form": {
-          "items": {
-            "$ref": "#/defs/BlockFormField"
-          },
-          "type": "array"
         }
       },
       "required": [
@@ -6668,6 +6623,12 @@
         "choice": {
           "type": "string"
         },
+        "form": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "hunks": {
           "items": {
             "type": "integer"
@@ -6676,12 +6637,6 @@
         },
         "id": {
           "type": "string"
-        },
-        "form": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
         }
       },
       "required": [
@@ -13367,30 +13322,6 @@
       ],
       "additionalProperties": false
     },
-    "ProjectArgs": {
-      "type": "object",
-      "properties": {
-        "ws": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "ws"
-      ],
-      "additionalProperties": false
-    },
-    "ProjectClosed": {
-      "type": "object",
-      "properties": {
-        "ws": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "ws"
-      ],
-      "additionalProperties": true
-    },
     "ProjectItem": {
       "type": "object",
       "properties": {
@@ -13416,8 +13347,8 @@
           "enum": [
             "here",
             "running",
-            "opening",
-            "asleep"
+            "asleep",
+            "opening"
           ]
         },
         "waiting": {
@@ -13440,149 +13371,6 @@
         "state"
       ],
       "additionalProperties": true
-    },
-    "ProjectTask": {
-      "type": "object",
-      "properties": {
-        "author": {
-          "type": "string"
-        },
-        "branch": {
-          "type": "string"
-        },
-        "checks": {
-          "enum": [
-            "none",
-            "pending",
-            "pass",
-            "fail"
-          ]
-        },
-        "depth": {
-          "type": "integer"
-        },
-        "group": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "kind": {
-          "enum": [
-            "ptask",
-            "issue",
-            "pr",
-            "mr"
-          ]
-        },
-        "labels": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "line": {
-          "type": "integer"
-        },
-        "number": {
-          "type": "integer"
-        },
-        "path": {
-          "type": "string"
-        },
-        "state": {
-          "enum": [
-            "open",
-            "done",
-            "draft"
-          ]
-        },
-        "title": {
-          "type": "string"
-        },
-        "url": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "kind",
-        "title",
-        "state"
-      ],
-      "additionalProperties": true
-    },
-    "ProjectTaskSection": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "items": {
-            "$ref": "#/defs/ProjectTask"
-          },
-          "type": "array"
-        },
-        "kind": {
-          "enum": [
-            "checklist",
-            "issues",
-            "prs",
-            "mrs"
-          ]
-        },
-        "note": {
-          "type": "string"
-        },
-        "open": {
-          "type": "integer"
-        },
-        "title": {
-          "type": "string"
-        },
-        "total": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "kind",
-        "title",
-        "items",
-        "total",
-        "open"
-      ],
-      "additionalProperties": true
-    },
-    "ProjectTasks": {
-      "type": "object",
-      "properties": {
-        "sections": {
-          "items": {
-            "$ref": "#/defs/ProjectTaskSection"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "sections"
-      ],
-      "additionalProperties": true
-    },
-    "ProjectTasksArgs": {
-      "type": "object",
-      "properties": {
-        "done": {
-          "type": "boolean"
-        },
-        "only": {
-          "enum": [
-            "checklist",
-            "issues",
-            "prs",
-            "mrs"
-          ]
-        }
-      },
-      "required": [],
-      "additionalProperties": false
     },
     "ProjectsSnap": {
       "type": "object",
@@ -13631,50 +13419,6 @@
       },
       "required": [
         "kind"
-      ],
-      "additionalProperties": false
-    },
-    "PushSubscribeArgs": {
-      "type": "object",
-      "properties": {
-        "endpoint": {
-          "type": "string"
-        },
-        "kind": {
-          "enum": [
-            "unifiedpush"
-          ]
-        }
-      },
-      "required": [
-        "kind",
-        "endpoint"
-      ],
-      "additionalProperties": false
-    },
-    "PushUnsubscribeArgs": {
-      "type": "object",
-      "properties": {
-        "kind": {
-          "enum": [
-            "unifiedpush"
-          ]
-        }
-      },
-      "required": [
-        "kind"
-      ],
-      "additionalProperties": false
-    },
-    "PushWatchArgs": {
-      "type": "object",
-      "properties": {
-        "on": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "on"
       ],
       "additionalProperties": false
     },
@@ -13968,6 +13712,33 @@
         "topic"
       ],
       "additionalProperties": true
+    },
+    "ReviewNote": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "new",
+            "old"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "line",
+        "side",
+        "text"
+      ],
+      "additionalProperties": false
     },
     "RunItem": {
       "type": "object",
@@ -16449,25 +16220,6 @@
       ],
       "additionalProperties": true
     },
-    "WSGone": {
-      "type": "object",
-      "properties": {
-        "why": {
-          "enum": [
-            "closed",
-            "not_running",
-            "busy",
-            "limit",
-            "off",
-            "bad"
-          ]
-        }
-      },
-      "required": [
-        "why"
-      ],
-      "additionalProperties": true
-    },
     "WebOpenArgs": {
       "type": "object",
       "properties": {
@@ -16514,18 +16266,6 @@
         "state"
       ],
       "additionalProperties": true
-    },
-    "WorkflowNameArgs": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "additionalProperties": false
     },
     "WorkflowRun": {
       "type": "object",
@@ -16590,22 +16330,6 @@
       },
       "required": [
         "run"
-      ],
-      "additionalProperties": false
-    },
-    "WorkflowSaveArgs": {
-      "type": "object",
-      "properties": {
-        "content": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "name",
-        "content"
       ],
       "additionalProperties": false
     },
@@ -16873,108 +16597,6 @@
       ],
       "additionalProperties": false
     },
-    "WorktreeTaskAgent": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "title"
-      ],
-      "additionalProperties": true
-    },
-    "WorktreeTaskArgs": {
-      "type": "object",
-      "properties": {
-        "agent": {
-          "type": "string"
-        },
-        "from": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "task": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "agent",
-        "task"
-      ],
-      "additionalProperties": false
-    },
-    "WorktreeTaskDone": {
-      "type": "object",
-      "properties": {
-        "branch": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "note": {
-          "type": "string"
-        },
-        "where": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "branch",
-        "where"
-      ],
-      "additionalProperties": true
-    },
-    "WorktreeTaskForm": {
-      "type": "object",
-      "properties": {
-        "agents": {
-          "items": {
-            "$ref": "#/defs/WorktreeTaskAgent"
-          },
-          "type": "array"
-        },
-        "base": {
-          "type": "string"
-        },
-        "from": {
-          "type": "string"
-        },
-        "refs": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "setup": {
-          "enum": [
-            "trusted",
-            "asks"
-          ]
-        },
-        "state": {
-          "enum": [
-            "none",
-            "ready"
-          ]
-        }
-      },
-      "required": [
-        "state",
-        "refs",
-        "agents"
-      ],
-      "additionalProperties": true
-    },
     "WorktreesSnap": {
       "type": "object",
       "properties": {
@@ -17000,521 +16622,6 @@
         "worktrees"
       ],
       "additionalProperties": true
-    },
-    "BoardAgent": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "state": {
-          "enum": [
-            "working",
-            "waiting"
-          ]
-        }
-      },
-      "required": [
-        "name",
-        "state"
-      ],
-      "additionalProperties": true
-    },
-    "BoardProject": {
-      "type": "object",
-      "properties": {
-        "agents": {
-          "items": {
-            "$ref": "#/defs/BoardAgent"
-          },
-          "type": "array"
-        },
-        "home": {
-          "type": "boolean"
-        },
-        "more": {
-          "type": "integer"
-        },
-        "name": {
-          "type": "string"
-        },
-        "seen": {
-          "type": "integer"
-        },
-        "state": {
-          "enum": [
-            "needs",
-            "working",
-            "idle"
-          ]
-        },
-        "waiting": {
-          "type": "integer"
-        },
-        "where": {
-          "type": "string"
-        },
-        "working": {
-          "type": "integer"
-        },
-        "ws": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "ws",
-        "name",
-        "where",
-        "state"
-      ],
-      "additionalProperties": true
-    },
-    "BoardProjects": {
-      "type": "object",
-      "properties": {
-        "home": {
-          "type": "string"
-        },
-        "more": {
-          "type": "integer"
-        },
-        "projects": {
-          "items": {
-            "$ref": "#/defs/BoardProject"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "home",
-        "projects"
-      ],
-      "additionalProperties": true
-    },
-    "RaceFile": {
-      "type": "object",
-      "properties": {
-        "add": {
-          "type": "integer"
-        },
-        "binary": {
-          "type": "boolean"
-        },
-        "del": {
-          "type": "integer"
-        },
-        "path": {
-          "type": "string"
-        },
-        "status": {
-          "enum": [
-            "A",
-            "M",
-            "D"
-          ]
-        }
-      },
-      "required": [
-        "status",
-        "path"
-      ],
-      "additionalProperties": true
-    },
-    "RaceItem": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "lanes": {
-          "items": {
-            "$ref": "#/defs/RaceLane"
-          },
-          "type": "array"
-        },
-        "name": {
-          "type": "string"
-        },
-        "number": {
-          "type": "integer"
-        },
-        "prompt": {
-          "type": "string"
-        },
-        "started": {
-          "type": "integer"
-        },
-        "state": {
-          "enum": [
-            "working",
-            "done",
-            "closed"
-          ]
-        },
-        "summary": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "summary_cost": {
-          "type": "string"
-        },
-        "verify": {
-          "type": "boolean"
-        },
-        "winner": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "number",
-        "name",
-        "prompt",
-        "started",
-        "state",
-        "lanes"
-      ],
-      "additionalProperties": true
-    },
-    "RaceLane": {
-      "type": "object",
-      "properties": {
-        "add": {
-          "type": "integer"
-        },
-        "agent": {
-          "type": "string"
-        },
-        "branch": {
-          "type": "string"
-        },
-        "changed": {
-          "items": {
-            "$ref": "#/defs/RaceFile"
-          },
-          "type": "array"
-        },
-        "cost": {
-          "type": "string"
-        },
-        "del": {
-          "type": "integer"
-        },
-        "exit": {
-          "type": "integer"
-        },
-        "files": {
-          "type": "integer"
-        },
-        "id": {
-          "type": "string"
-        },
-        "note": {
-          "type": "string"
-        },
-        "state": {
-          "enum": [
-            "starting",
-            "working",
-            "waiting",
-            "done",
-            "stopped",
-            "failed",
-            "merged",
-            "discarded"
-          ]
-        },
-        "stats": {
-          "type": "boolean"
-        },
-        "title": {
-          "type": "string"
-        },
-        "verify": {
-          "enum": [
-            "running",
-            "pass",
-            "fail"
-          ]
-        }
-      },
-      "required": [
-        "id",
-        "agent",
-        "title",
-        "state"
-      ],
-      "additionalProperties": true
-    },
-    "RacesSnap": {
-      "type": "object",
-      "properties": {
-        "races": {
-          "items": {
-            "$ref": "#/defs/RaceItem"
-          },
-          "type": "array"
-        },
-        "state": {
-          "enum": [
-            "none",
-            "loading",
-            "error",
-            "ready"
-          ]
-        }
-      },
-      "required": [
-        "state",
-        "races"
-      ],
-      "additionalProperties": true
-    },
-    "AIRaceModelAgent": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "installed": {
-          "type": "boolean"
-        },
-        "models": {
-          "items": {
-            "$ref": "#/defs/AIRaceModelEntry"
-          },
-          "type": "array"
-        },
-        "title": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "models"
-      ],
-      "additionalProperties": true
-    },
-    "AIRaceModelEntry": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "additionalProperties": true
-    },
-    "AIRaceModelList": {
-      "type": "object",
-      "properties": {
-        "agents": {
-          "items": {
-            "$ref": "#/defs/AIRaceModelAgent"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "agents"
-      ],
-      "additionalProperties": true
-    },
-    "AIRaceModelsArgs": {
-      "type": "object",
-      "properties": {
-        "agent": {
-          "type": "string"
-        },
-        "models": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "task": {
-          "type": "string"
-        },
-        "verify": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "task",
-        "agent",
-        "models"
-      ],
-      "additionalProperties": false
-    },
-    "AIRunStartArgs": {
-      "type": "object",
-      "properties": {
-        "profile": {
-          "type": "string"
-        },
-        "ref": {
-          "type": "string"
-        },
-        "task": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "task"
-      ],
-      "additionalProperties": false
-    },
-    "RunStepRef": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "additionalProperties": true
-    },
-    "RunsSendArgs": {
-      "type": "object",
-      "properties": {
-        "key": {
-          "type": "string"
-        },
-        "step": {
-          "type": "string"
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "key",
-        "text"
-      ],
-      "additionalProperties": false
-    },
-    "AILaneAgent": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "state": {
-          "enum": [
-            "ready",
-            "signin",
-            "unknown"
-          ]
-        },
-        "title": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "state"
-      ],
-      "additionalProperties": true
-    },
-    "AILaneAgents": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "items": {
-            "$ref": "#/defs/AILaneAgent"
-          },
-          "type": "array"
-        },
-        "noRepo": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "items"
-      ],
-      "additionalProperties": true
-    },
-    "AILaneStartArgs": {
-      "type": "object",
-      "properties": {
-        "agent": {
-          "type": "string"
-        },
-        "from": {
-          "type": "string"
-        },
-        "task": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "agent",
-        "task"
-      ],
-      "additionalProperties": false
-    },
-    "AIWorktreeNotesArgs": {
-      "type": "object",
-      "properties": {
-        "chat_id": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "notes": {
-          "items": {
-            "$ref": "#/defs/ReviewNote"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "id",
-        "notes"
-      ],
-      "additionalProperties": false
-    },
-    "ReviewNote": {
-      "type": "object",
-      "properties": {
-        "line": {
-          "type": "integer"
-        },
-        "path": {
-          "type": "string"
-        },
-        "side": {
-          "enum": [
-            "new",
-            "old"
-          ]
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "path",
-        "line",
-        "side",
-        "text"
-      ],
-      "additionalProperties": false
     },
     "AICatalog": {
       "type": "object",
@@ -17908,6 +17015,924 @@
         "ref"
       ],
       "additionalProperties": true
+    },
+    "ProjectArgs": {
+      "type": "object",
+      "properties": {
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ws"
+      ],
+      "additionalProperties": false
+    },
+    "ProjectClosed": {
+      "type": "object",
+      "properties": {
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ws"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectTask": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "checks": {
+          "enum": [
+            "none",
+            "pending",
+            "pass",
+            "fail"
+          ]
+        },
+        "depth": {
+          "type": "integer"
+        },
+        "group": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "ptask",
+            "issue",
+            "pr",
+            "mr"
+          ]
+        },
+        "labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "open",
+            "done",
+            "draft"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectTaskSection": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/ProjectTask"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "checklist",
+            "issues",
+            "prs",
+            "mrs"
+          ]
+        },
+        "note": {
+          "type": "string"
+        },
+        "open": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "title",
+        "items",
+        "total",
+        "open"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectTasks": {
+      "type": "object",
+      "properties": {
+        "sections": {
+          "items": {
+            "$ref": "#/defs/ProjectTaskSection"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "sections"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectTasksArgs": {
+      "type": "object",
+      "properties": {
+        "done": {
+          "type": "boolean"
+        },
+        "only": {
+          "enum": [
+            "checklist",
+            "issues",
+            "prs",
+            "mrs"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "PushSubscribeArgs": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "unifiedpush"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "endpoint"
+      ],
+      "additionalProperties": false
+    },
+    "PushUnsubscribeArgs": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "unifiedpush"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "PushWatchArgs": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "on"
+      ],
+      "additionalProperties": false
+    },
+    "WSGone": {
+      "type": "object",
+      "properties": {
+        "why": {
+          "enum": [
+            "closed",
+            "not_running",
+            "busy",
+            "limit",
+            "off",
+            "bad"
+          ]
+        }
+      },
+      "required": [
+        "why"
+      ],
+      "additionalProperties": true
+    },
+    "WorkflowNameArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "WorkflowSaveArgs": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "WorktreeTaskAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "WorktreeTaskArgs": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent",
+        "task"
+      ],
+      "additionalProperties": false
+    },
+    "WorktreeTaskDone": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "where": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "branch",
+        "where"
+      ],
+      "additionalProperties": true
+    },
+    "WorktreeTaskForm": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/WorktreeTaskAgent"
+          },
+          "type": "array"
+        },
+        "base": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "refs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "setup": {
+          "enum": [
+            "trusted",
+            "asks"
+          ]
+        },
+        "state": {
+          "enum": [
+            "none",
+            "ready"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "refs",
+        "agents"
+      ],
+      "additionalProperties": true
+    },
+    "BoardAgent": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "working",
+            "waiting"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "BoardProject": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/BoardAgent"
+          },
+          "type": "array"
+        },
+        "home": {
+          "type": "boolean"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "seen": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "needs",
+            "working",
+            "idle"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "where": {
+          "type": "string"
+        },
+        "working": {
+          "type": "integer"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ws",
+        "name",
+        "where",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "BoardProjects": {
+      "type": "object",
+      "properties": {
+        "home": {
+          "type": "string"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "projects": {
+          "items": {
+            "$ref": "#/defs/BoardProject"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "home",
+        "projects"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceArgs": {
+      "type": "object",
+      "properties": {
+        "race": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "race"
+      ],
+      "additionalProperties": false
+    },
+    "AIRaceDone": {
+      "type": "object",
+      "properties": {
+        "lanes": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "race": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "race",
+        "lanes",
+        "message"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceStartArgs": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "task": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "agents"
+      ],
+      "additionalProperties": false
+    },
+    "AIRaceSummary": {
+      "type": "object",
+      "properties": {
+        "cost": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "race": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "race",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "RaceFile": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "integer"
+        },
+        "binary": {
+          "type": "boolean"
+        },
+        "del": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "A",
+            "M",
+            "D"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "path"
+      ],
+      "additionalProperties": true
+    },
+    "RaceItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lanes": {
+          "items": {
+            "$ref": "#/defs/RaceLane"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "started": {
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "working",
+            "done",
+            "closed"
+          ]
+        },
+        "summary": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary_cost": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "boolean"
+        },
+        "winner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "number",
+        "name",
+        "prompt",
+        "started",
+        "state",
+        "lanes"
+      ],
+      "additionalProperties": true
+    },
+    "RaceLane": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "integer"
+        },
+        "agent": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "changed": {
+          "items": {
+            "$ref": "#/defs/RaceFile"
+          },
+          "type": "array"
+        },
+        "cost": {
+          "type": "string"
+        },
+        "del": {
+          "type": "integer"
+        },
+        "exit": {
+          "type": "integer"
+        },
+        "files": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "starting",
+            "working",
+            "waiting",
+            "done",
+            "stopped",
+            "failed",
+            "merged",
+            "discarded"
+          ]
+        },
+        "stats": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "verify": {
+          "enum": [
+            "running",
+            "pass",
+            "fail"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "agent",
+        "title",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "RacesSnap": {
+      "type": "object",
+      "properties": {
+        "races": {
+          "items": {
+            "$ref": "#/defs/RaceItem"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "none",
+            "loading",
+            "error",
+            "ready"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "races"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "models": {
+          "items": {
+            "$ref": "#/defs/AIRaceModelEntry"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "models"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelList": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/AIRaceModelAgent"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "agents"
+      ],
+      "additionalProperties": true
+    },
+    "AIRaceModelsArgs": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "models": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "task": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "agent",
+        "models"
+      ],
+      "additionalProperties": false
+    },
+    "AIRunStartArgs": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task"
+      ],
+      "additionalProperties": false
+    },
+    "RunStepRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "RunsSendArgs": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "AILaneAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "ready",
+            "signin",
+            "unknown"
+          ]
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "AILaneAgents": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/AILaneAgent"
+          },
+          "type": "array"
+        },
+        "noRepo": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "AILaneStartArgs": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent",
+        "task"
+      ],
+      "additionalProperties": false
     }
   }
 }

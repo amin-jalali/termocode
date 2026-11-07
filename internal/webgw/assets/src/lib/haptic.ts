@@ -3,8 +3,15 @@
 // plugin), else the browser's vibrate where there is one (Android
 // Chrome); nothing on a desktop or an iPhone browser. It never throws and
 // never waits: a missing or failing bridge is no haptic, not an error.
+// The Haptics switch on This phone turns every buzz off (MOBUX-22); this
+// is the one module that may call vibrate (phone_a11y_test.go).
+import { prefs } from "./prefs";
 
 type Impact = "light" | "medium";
+
+/** Buzz is MOBUX-12's name for the two answers: safe = light, risky =
+ * medium (one haptic for MOB-6 and MOBUX-12). */
+export type Buzz = "safe" | "risky";
 
 interface HapticsBridge {
   impact?: (o: { style: string }) => unknown;
@@ -16,7 +23,9 @@ function bridge(): HapticsBridge | undefined {
 }
 
 /** haptic gives one short tap: light for a safe answer, medium for a risky one. */
-export function haptic(kind: Impact = "light"): void {
+export function haptic(k: Impact | Buzz = "light"): void {
+  const kind: Impact = k === "risky" || k === "medium" ? "medium" : "light";
+  if (!prefs.peek().haptics) return; // MOBUX-22: Haptics off
   try {
     const b = bridge();
     if (b?.impact) {

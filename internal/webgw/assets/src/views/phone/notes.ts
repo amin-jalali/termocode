@@ -40,3 +40,25 @@ export function removeNote(wt: string, i: number): void {
 export function clearNotes(wt: string): void {
   put(wt, []);
 }
+
+/** At names one line of one file. */
+export interface At {
+  path: string;
+  line: number;
+  side: ReviewNote["side"];
+}
+
+function same(n: ReviewNote, at: At): boolean {
+  return n.path === at.path && n.line === at.line && n.side === at.side;
+}
+
+/** noteAt is the note on that line, if there is one (MOBUX-11). */
+export function noteAt(wt: string, at: At): ReviewNote | undefined {
+  return notesOf(wt).find((n) => same(n, at));
+}
+
+/** dropNote removes the note on that line (MOBUX-11). */
+export function dropNote(wt: string, at: At): void {
+  const old = notes.peek().get(wt) ?? [];
+  put(wt, old.filter((n) => !same(n, at)));
+}

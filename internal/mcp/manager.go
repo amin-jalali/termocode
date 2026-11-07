@@ -173,6 +173,9 @@ type serverState struct {
 	stepUp    bool      // a 403 insufficient_scope asked for more scopes
 	expires   time.Time // the tool list's ttlMs end (zero: none)
 
+	learned     map[string]Learned // view fields learned from results (views_learn.go)
+	learnedRead bool               // learned was read from disk
+
 	retryN     int         // reconnect tries since the last success
 	retryAt    time.Time   // when the waiting reconnect runs
 	retryTimer *time.Timer // the waiting reconnect (nil none)

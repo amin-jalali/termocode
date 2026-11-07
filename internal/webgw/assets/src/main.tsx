@@ -14,6 +14,7 @@ import "./styles/git.css";
 import "./styles/more.css";
 import "./styles/moreviews.css";
 import "./styles/review.css"; // the phone review (phone.js may not import a style sheet)
+import "./styles/project.css";
 import "./styles/files.css";
 import "./styles/board.css";
 import "./styles/fonts.css";
@@ -84,6 +85,13 @@ effect(() => {
   const theme = prefs.value.theme;
   if (theme === "system") delete html.dataset.theme;
   else html.dataset.theme = theme;
+});
+
+// Reduce motion on this device (MOBUX-22): the CSS stops animations under
+// :root[data-motion="reduce"], as it does for the system setting.
+effect(() => {
+  if (prefs.value.motion === "reduce") html.dataset.motion = "reduce";
+  else delete html.dataset.motion;
 });
 
 const lightMQ = matchMedia("(prefers-color-scheme: light)");

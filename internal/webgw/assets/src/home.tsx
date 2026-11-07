@@ -12,3 +12,5 @@ import "./strings.phone";
 export { ReviewView } from "./views/phone/Review";
 // The live board (MOB-18, once its own board.js).
 export { BoardView } from "./views/board/main";
+// The phone's projects list and project page (MOBUX-6/7, once phone.js).
+export { ProjectPage, ProjectsPage } from "./views/phone/ProjectPage";

@@ -62,10 +62,18 @@ func parseStrings(t *testing.T, file, name string) []entry {
 	return nil
 }
 
-// englishStrings are all English strings: the page's (strings.ts) and
-// the ones only the desktop workbench shows (strings.desk.ts, bundled
-// into workbench.js so the phone never loads them).
+// englishStrings are all English strings: the page's (strings.ts), the
+// ones only the desktop workbench shows (strings.desk.ts, bundled into
+// workbench.js so the phone never loads them) and the phone views'
+// (strings.phone.ts, bundled into phone.js).
 func englishStrings(t *testing.T) []entry {
+	t.Helper()
+	return append(translatedStrings(t), parseStrings(t, "src/strings.phone.ts", "SP")...)
+}
+
+// translatedStrings are the English strings that have a Persian text:
+// all but the phone views' (the phone app is English only).
+func translatedStrings(t *testing.T) []entry {
 	t.Helper()
 	return append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
 }
@@ -257,7 +265,7 @@ func englishOnly(key string) bool {
 // The Persian file (WEB-UX-5 fills it) has exactly the English keys, so
 // a new string cannot be forgotten there.
 func TestPersianStringsHaveTheSameKeys(t *testing.T) {
-	en := englishStrings(t)
+	en := translatedStrings(t)
 	fa := parseStrings(t, "src/strings.fa.ts", "FA")
 	enKeys := map[string]bool{}
 	for _, e := range en {

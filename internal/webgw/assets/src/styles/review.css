@@ -38,7 +38,16 @@
 .rv-note-at { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2); overflow-wrap: anywhere; }
 .rv-note-text { grid-column: 1; overflow-wrap: anywhere; }
 .rv-note-x { grid-column: 2; grid-row: 1 / span 2; min-width: 44px; min-height: 44px; }
-.rv-send { position: sticky; bottom: 0; padding: var(--s2) var(--s3); background: var(--bg); border-top: 1px solid var(--border); }
+.rv-send { position: sticky; bottom: 0; padding: var(--s2) var(--s3) calc(var(--s2) + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--border); }
 .rv-send-btn { width: 100%; min-height: 44px; }
 .rv-acts { padding: var(--s3); }
 .rv-acts > .btn { min-height: 44px; }
+/* MOBUX-11: the swipe area scrolls up and down and leaves sideways moves
+   to the swipe; a held line selects no text (the long press adds a
+   note); a note shows under its line and opens again on a tap. */
+.rv-body { touch-action: pan-y; }
+.rv-line { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.rv-inline-note { display: flex; gap: var(--s2); align-items: flex-start; width: 100%; min-height: 44px; padding: var(--s2) var(--s3); border: 0; border-block: 1px solid var(--border); background: var(--bg-float); color: var(--text); font-family: var(--font-sans); text-align: start; overflow-wrap: anywhere; white-space: pre-wrap; }
+.rv-inline-note > span { color: var(--ai); }
+.rv-note-drop { align-self: flex-start; min-height: 44px; }
+.rv-hint { text-align: center; }

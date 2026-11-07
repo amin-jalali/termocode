@@ -15,7 +15,8 @@ import { gitFailed as failed } from "../git/errors";
 import { CoordStart, RunSend } from "./RunsCoord";
 import { SubView } from "./SubView";
 
-function RunCard({ run, since, now, canAct }: { run: RunView; since: number; now: number; canAct: boolean }) {
+/** RunCard is one run with its actions (the phone's project page shows it too). */
+export function RunCard({ run, since, now, canAct }: { run: RunView; since: number; now: number; canAct: boolean }) {
   const [asking, setAsking] = useState(false);
   const [writing, setWriting] = useState(false);
   const safe = useRef<HTMLButtonElement | null>(null);

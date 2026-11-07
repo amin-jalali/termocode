@@ -3,7 +3,7 @@
 // WEB-23); until then each shows its loading and empty states.
 import { h } from "preact";
 import { useEffect } from "preact/hooks";
-import { prefs, setPref, type Direction, type Language, type Theme } from "../lib/prefs";
+import { prefs, setPref, type Direction, type Language, type Motion, type Theme } from "../lib/prefs";
 import { go, route } from "../lib/router";
 import { layout } from "../lib/layout";
 import { t } from "../strings";
@@ -11,6 +11,8 @@ import { NotifyField } from "../ui/NotifyField";
 import { BookmarkField } from "../ui/BookmarkField";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
+import { SkeletonRows } from "../ui/Skeleton";
+import { Button } from "../ui/Button";
 import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
 import { RacesView } from "./more/RacesView";
@@ -69,6 +71,28 @@ function ToolsView() {
   );
 }
 
+/** PhoneProject is the phone's projects list or one project's page
+ * (MOBUX-6, MOBUX-7), from home.js (the one phone chunk): a skeleton while it loads, Try
+ * again when the load failed. */
+function PhoneProject({ id }: { id: string }) {
+  const m = phone.value;
+  useEffect(() => {
+    if (!phone.peek()) loadHome().catch(() => undefined);
+  }, []);
+  if (m) return id ? <m.ProjectPage id={id} /> : <m.ProjectsPage />;
+  return (
+    <View tab="more" title={t("loading")} name="project-loading">
+      {phoneFailed.value ? (
+        <Button small onClick={() => loadHome().catch(() => undefined)}>
+          {t("retry")}
+        </Button>
+      ) : (
+        <SkeletonRows rows={6} mono={false} />
+      )}
+    </View>
+  );
+}
+
 /** ReviewLazy is #/more/review (MOB-14): the phone views' review, loaded
  * from home.js on first use. */
 function ReviewLazy() {
@@ -90,9 +114,13 @@ function ReviewLazy() {
   );
 }
 
+/** OnOff is a switch drawn as a two-choice row (haptics). */
+type OnOff = "on" | "off";
+
 export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
   if (sub === "tools") return <ToolsView />;
+  if (sub === "projects" || sub.startsWith("projects/")) return <PhoneProject id={sub.slice("projects/".length)} />;
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
   if (sub === "new-task") return <NewTaskView />;
@@ -128,6 +156,14 @@ export function MoreView() {
     { value: "auto", label: t("more.dir.auto") },
     { value: "en", label: t("more.lang.en") },
     { value: "fa", label: t("more.lang.fa") },
+  ] as const;
+  const motions = [
+    { value: "system", label: t("ph.motion.system") },
+    { value: "reduce", label: t("ph.motion.reduce") },
+  ] as const;
+  const buzz = [
+    { value: "on", label: t("ph.on") },
+    { value: "off", label: t("ph.off") },
   ] as const;
   return (
     <View tab="more" title={t("tab.more")}>
@@ -201,6 +237,9 @@ export function MoreView() {
               {t("pill.review")}
             </button>
           )}
+          <button type="button" class="more-link" data-sub="projects" onClick={() => go({ tab: "more", rest: "projects", query: {} })}>
+            {t("ph.proj.title")}
+          </button>
         </nav>
         <section class="group" aria-labelledby="g-phone">
           <h2 class="group-title" id="g-phone">
@@ -222,6 +261,14 @@ export function MoreView() {
           <div class="field">
             <span class="field-label">{t("more.dir")}</span>
             <Segmented<Direction> label={t("more.dir")} value={p.dir} choices={dirs} onChange={(v) => setPref("dir", v)} />
+          </div>
+          <div class="field">
+            <span class="field-label">{t("ph.motion")}</span>
+            <Segmented<Motion> label={t("ph.motion")} value={p.motion} choices={motions} onChange={(v) => setPref("motion", v)} />
+          </div>
+          <div class="field">
+            <span class="field-label">{t("more.haptics")}</span>
+            <Segmented<OnOff> label={t("more.haptics")} value={p.haptics ? "on" : "off"} choices={buzz} onChange={(v) => setPref("haptics", v === "on")} />
           </div>
           <NotifyField />
           <BookmarkField />

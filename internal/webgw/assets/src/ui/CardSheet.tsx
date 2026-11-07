@@ -3,7 +3,8 @@
 // Reject) is first and focused, the risky answer arms for 600 ms, Esc /
 // swipe down / the dim area mean Later and send nothing. The answer is
 // one cards.answer; the first answer wins, so a card the laptop or
-// another browser answered first says so instead of answering.
+// another browser answered first says so instead of answering. On the
+// phone (MOBUX-12) a destructive card is approved on the laptop only.
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Card as CardData } from "../../../../webproto/proto";
@@ -165,6 +166,7 @@ export function CardSheet({ id }: { id: string }) {
         subject={shown.title}
         where={shown.file}
         by={by}
+        destructive={layout.value === "phone" && shown.destructive === true}
         onAnswer={answer}
         onLater={closeCard}
         onCancel={() => {

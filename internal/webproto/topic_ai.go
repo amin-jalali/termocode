@@ -29,6 +29,8 @@ const (
 	MaxAIProfiles = 64
 	MaxAIModels   = 32
 	MaxAIName     = 128
+	// MaxAIRaceAgents caps the agents a race may use (MOBUX-8).
+	MaxAIRaceAgents = 16
 )
 
 // AISnap is the ai topic.
@@ -47,6 +49,16 @@ type AISnap struct {
 	// ("" = off), never its key.
 	WebFetch  bool   `json:"webFetch,omitempty"`  // ai_web_fetch
 	WebSearch string `json:"webSearch,omitempty"` // ai_web_search's provider
+	// RaceAgents are the outside agents a race may use (MOBUX-8): the
+	// ones installed on the laptop whose screen termocode reads.
+	RaceAgents []AIRaceAgent `json:"raceAgents,omitempty"`
+}
+
+// AIRaceAgent is one agent a race may use: its id for ai.race_start and
+// its title. Nothing else about it (its path, its login) is sent.
+type AIRaceAgent struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
 }
 
 // AIProfile is one agent profile: where it comes from and, for a

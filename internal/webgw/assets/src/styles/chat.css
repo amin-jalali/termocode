@@ -142,3 +142,14 @@
 .home-row-wrap .home-row { flex: 1; min-width: 0; }
 .home-row-more { flex: none; min-width: 44px; min-height: 44px; border: 0; background: none; color: var(--muted); font-size: 18px; cursor: pointer; }
 .home-row-more:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+/* ↩ to chat (MOBUX-19): the button on rows and blocks, and the refs that wait above the composer. */
+.tochat { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; border-radius: var(--r-chip); background: none; color: var(--blue); font: inherit; font-size: 1.125rem; cursor: pointer; }
+.tochat.is-on { color: var(--green); }
+.tochat:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.ref-chips { display: flex; gap: var(--s1); margin: 0 0 var(--s2); padding: 0; list-style: none; overflow-x: auto; scrollbar-width: none; }
+.ref-chips > li { flex: none; }
+.ref-chip { display: inline-flex; align-items: center; gap: var(--s1); min-height: var(--tap); max-width: 16rem; padding: 0 var(--s2); border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--bg-panel); color: var(--text); font: inherit; font-size: var(--fs-hint); cursor: pointer; }
+.ref-chip-kind { color: var(--blue); }
+.ref-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); }
+.ref-chip-x { color: var(--muted); }
+.ref-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: -1px; }

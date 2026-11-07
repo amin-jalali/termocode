@@ -37,12 +37,28 @@ import { Progress, SkeletonBubbles, SkeletonRows } from "../ui/Skeleton";
 import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
-import { Block as PhoneBlock, BoardTile, Composer, ConnLine, ErrorLine, PhoneCard, PhoneSkeleton, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, Row, Rows, StatusMark, STATUS, StreamMsg, type Status } from "../phone/index";
+import { Block as PhoneBlock, BoardTile, Composer, ConnLine, ErrorLine, PhoneCard, PhoneSkeleton, PhoneChip, PhoneChips, PhoneShell, PhoneSheet, LiveBoard, RaceCompare, readRaces, Row, Rows, StatusMark, STATUS, StreamMsg, type Board, type Status } from "../phone/index";
 import { ChipRow } from "../home/ChipRow";
 import type { ChipState } from "../home/chips";
 import { KitCustomize } from "./customize";
 import { AllTools } from "../home/AllTools";
 import { readCatalog, viewHash, type Target } from "../home/alltools";
+
+// A sample live board (MOBUX-9) for the kit.
+const KIT_BOARD: Board = {
+  built: 0,
+  today_usd: 4.2,
+  counts: { needs_you: 2, working: 2, review: 1, done: 2 },
+  items: [
+    { id: "card:c1", kind: "card", column: "needs_you", state: "wait", title: "run go test", sub: "lane fix-login", ref: "c1" },
+    { id: "workflow:w1", kind: "workflow", column: "needs_you", state: "wait", title: "nightly", why: "waits: write", ref: "w1" },
+    { id: "run:r1", kind: "run", column: "working", state: "run", title: "rate limit", sub: "sonnet", step: 3, steps: 5, cost_usd: 0.8, ref: "r1" },
+    { id: "lane:l2", kind: "lane", column: "working", state: "run", title: "fix-cache", sub: "opus", ci: "run", ref: "l2" },
+    { id: "lane:l1", kind: "lane", column: "review", state: "ok", title: "fix-login +41 −9", sub: "sonnet", ci: "fail", ref: "l1" },
+    { id: "run:r0", kind: "run", column: "done", state: "ok", title: "docs: pairing", cost_usd: 0.31, ref: "r0" },
+    { id: "run:r9", kind: "run", column: "done", state: "fail", title: "bump deps", cost_usd: 0.12, ref: "r9" },
+  ],
+};
 import "./replay";
 import type { Block as ProtoBlock } from "../../../../webproto/proto";
 
@@ -270,10 +286,14 @@ const answerToast: Record<CardKind, { safe: StringKey; risky: StringKey }> = {
 
 const sheetKinds: CardKind[] = ["tool", "review", "plan", "mcp", "trust"];
 
+/** SheetOpen is what the sheet demo shows: a kind, a destructive tool
+ * card (MOBUX-12: Approve on laptop only), or Waiting for the laptop. */
+type SheetOpen = "" | CardKind | "destructive" | "wait";
+
 /** SheetDemo opens a real card dialog of each kind in a sheet: a fresh
  * card each time, so its arming starts over (the e2e card pack drives it). */
 function SheetDemo() {
-  const [open, setOpen] = useState<"" | CardKind | "wait">("");
+  const [open, setOpen] = useState<SheetOpen>("");
   const close = (msg: StringKey) => {
     setOpen("");
     toast("info", t(msg));
@@ -285,20 +305,22 @@ function SheetDemo() {
           {`Open a ${k} card`}
         </Button>
       ))}
+      <Button onClick={() => setOpen("destructive")}>Open a destructive card</Button>
       <Button onClick={() => setOpen("wait")}>Open Waiting for the laptop</Button>
       {open !== "" && open !== "wait" && (
         <Sheet onLater={() => close("card.later")}>
           <Card
             id={`sheet-${open}`}
-            kind={open}
-            subject={subjects[open]}
-            where={open === "tool" ? "terminal 2 · ~/termocode" : undefined}
-            onAnswer={(c) => close(answerToast[open][c])}
+            kind={open === "destructive" ? "tool" : open}
+            destructive={open === "destructive"}
+            subject={open === "destructive" ? "git clean -fd" : subjects[open]}
+            where={open === "tool" || open === "destructive" ? "terminal 2 · ~/termocode" : undefined}
+            onAnswer={(c) => close(answerToast[open === "destructive" ? "tool" : open][c])}
             onLater={() => close("card.later")}
             onCancel={() => close("card.cancelled")}
             onLaptop={() => close("laptop.shown")}
           >
-            {cardBody(open)}
+            {cardBody(open === "destructive" ? "tool" : open)}
           </Card>
         </Sheet>
       )}
@@ -359,6 +381,8 @@ function PhoneKit() {
         <BoardTile status="review" title="race #3" project="api" agent="3 lanes" step="2 done" cost="$1.10" />
         <BoardTile status="done" title="lane fix-login +41 −9" project="shop" ci="done" />
       </div>
+      <LiveBoard board={KIT_BOARD} online project="shop" onOpen={(r) => toast("info", "Open " + r.tab + "/" + r.rest)} />
+      <LiveBoard board={KIT_BOARD} online={false} stale project="shop" onOpen={() => undefined} />
       <Composer
         value={text}
         onInput={setText}
@@ -367,6 +391,14 @@ function PhoneKit() {
         onRemove={(id) => setAttached(attached.filter((a) => a.id !== id))}
       />
       <Composer value="" onInput={() => undefined} onSend={() => undefined} offline />
+      <RaceCompare
+        race={kitRace}
+        canAct
+        onMerge={(l) => toast("info", "Asked the laptop to merge " + l.title)}
+        onReview={(l) => toast("info", "Review " + l.title)}
+        onSummarise={() => toast("info", "Summarise")}
+        onVerify={() => toast("info", "Verify")}
+      />
       <ConnLine conn="offline" text={t("ph.conn_offline")} />
       <ConnLine conn="asleep" text={t("ph.conn_asleep", { time: "10:42" })} onTry={() => toast("info", "Try now")} />
       <ConnLine conn="final" text={t("e.ended")} />
@@ -447,6 +479,25 @@ function ShellDemo() {
     </div>
   );
 }
+
+// A sample race for the phone race compare (MOBUX-10).
+const kitRace = readRaces({
+  races: [
+    {
+      id: "race-3",
+      number: 3,
+      name: "race/fix-the-login-redirect",
+      prompt: "Fix the login redirect",
+      verify: "go test ./internal/auth/...",
+      summary: ["opus changes the handler and adds a test.", "codex is the most complete: it also fixes the cookie path.", "gemini only edits the template."],
+      lanes: [
+        { id: "race-3-1-claude", agent: "claude", title: "opus", branch: "race/fix-the-login-redirect-1", state: "done", stats: true, files: [{ status: "M", path: "internal/auth/login.go", add: 18, del: 4 }, { status: "A", path: "internal/auth/login_test.go", add: 40, del: 0 }], verify: { state: "pass" }, cost: 0.62 },
+        { id: "race-3-2-codex", agent: "codex", title: "codex", branch: "race/fix-the-login-redirect-2", state: "done", stats: true, files: [{ status: "M", path: "internal/auth/login.go", add: 22, del: 6 }, { status: "M", path: "internal/auth/cookie.go", add: 5, del: 2 }, { status: "A", path: "internal/auth/login_test.go", add: 51, del: 0 }], verify: { state: "pass" }, cost: 0.48 },
+        { id: "race-3-3-gemini", agent: "gemini", title: "gemini", state: "working", files: [], verify: {} },
+      ],
+    },
+  ],
+})[0];
 
 function PhoneSheetDemo() {
   const [open, setOpen] = useState(false);
