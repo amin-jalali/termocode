@@ -120,6 +120,11 @@ func CLICommand(c Conn, o CLIOptions) (CLICmd, error) {
 			out.Args = append(out.Args, "-readonly")
 		}
 		out.Args = append(out.Args, p)
+		if IsSQLCipher(c) {
+			// The key is never put on the command line (the process list
+			// shows it): type PRAGMA key = '…'; in the tab first.
+			out.Tool = "sqlcipher"
+		}
 	case "redis-cli":
 		arg("-h", c.Host)
 		arg("-p", port)

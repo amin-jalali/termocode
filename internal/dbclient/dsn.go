@@ -46,6 +46,13 @@ func ParseURL(raw string) (Conn, error) {
 		c.Driver = "redis"
 	case "sqlite", "file":
 		c.Driver = "sqlite"
+	case "sqlcipher":
+		// An encrypted SQLite file (DBX-64): the key is the connection
+		// password, asked for and kept as a secret, never in the URL.
+		c.Driver, c.Preset = "sqlite", SQLCipherPreset
+		u.Scheme = "sqlite"
+		raw = "sqlite" + strings.TrimPrefix(raw, "sqlcipher")
+		c.URL = ""
 	case "libsql":
 		// A remote libSQL server; the token moves from ?authToken= into
 		// the password (kept as a secret, never in the saved URL).

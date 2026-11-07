@@ -47,6 +47,7 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `driver` | `postgres`, `mysql` (also `mariadb`), `sqlite` or `redis`. |
 | `host`, `port`, `user`, `database` | Network connections. The port defaults to 5432, 3306 or 6379. |
 | `path` | SQLite file. In a project file it must stay inside the workspace. |
+| `preset` | Server family, for example `tidb`. On `sqlite`, `"preset": "sqlcipher"` opens an encrypted file (see [Encrypted SQLite](#encrypted-sqlite-sqlcipher)). |
 | `db` | Redis database index. |
 | `url` | A connection URL instead of the single fields. |
 | `params` | Extra driver parameters. |
@@ -131,9 +132,19 @@ For Oracle (port 1521; `ora` works too) the database is the service name. `"para
 - **Cassandra / ScyllaDB** asks for a contact point (port 9042), an optional user and an optional keyspace. Its console is a `.cql` file; the send key runs the CQL statement at the cursor and results come a page at a time.
 - **ClickHouse** uses its HTTP interface (port 8123, user and database `default`). The password goes in a header, read-only runs use `readonly=2`, and there are no transactions.
 - **libSQL / Turso** asks for a `libsql://` server URL (for Turso: `libsql://<db>-<org>.turso.io`), then a masked auth token kept in the secret store. A token in the URL (`?authToken=`) is taken out the same way. Add `?tls=0` for a local server without TLS.
-- **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
+- **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite`, `sqlcipher` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
 
 Termocode tests the connection first. If the test works, choose **Save to project** (no password in the file) or **Save for me only**. If it fails, a list offers **Set password…**, **Use an SSH tunnel…**, **SSL settings…**, **Test again** or **Cancel**.
+
+### Encrypted SQLite (SQLCipher)
+
+An encrypted SQLite file opens with the `sqlcipher` command line tool, which must be on your PATH. Paste `sqlcipher:///path/to/file.db` in **From a URL**, or save a connection like this:
+
+```json
+{"id": "vault", "driver": "sqlite", "preset": "sqlcipher", "path": "vault.db", "password": "${secret:vault-key}"}
+```
+
+The password is the key. Termocode asks for it masked and keeps it in the secret store. It goes to `sqlcipher` on its input only, never on the command line. A raw hex key `x'…'` is passed to SQLCipher as a raw key. A wrong key shows `wrong key, or not a SQLCipher file`. The AI uses the key for its own read-only session and never sees it. Press `$` to open `sqlcipher` in a terminal tab; there, type `PRAGMA key = '…';` first, because the key is never put on that command line.
 
 Run **Databases: Test Connection** or press `T` on a row to test a saved connection again. The test goes through its tunnel and SSL settings and does not touch an open session.
 
@@ -622,6 +633,8 @@ The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_que
 ## Troubleshooting
 
 **`sqlite3` is not installed.** The view shows an install command for your system, for example `sudo apt install sqlite3` or `brew install sqlite`. Press `y` on that row to copy it. Then press `R`.
+
+**`sqlcipher` is not installed.** The message shows an install command, for example `sudo apt install sqlcipher` or `brew install sqlcipher`.
 
 **`sqlite3` is too old.** The message says `version 3.33 or newer is needed`. The AI tools need 3.37 or newer. Update `sqlite3` and press `R`.
 

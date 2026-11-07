@@ -79,7 +79,11 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		normFolderColor(c)
 		if c.Preset != "" {
 			c.Preset = strings.ToLower(c.Preset)
-			if mp, ok := PresetByID(c.Preset); ok { // MySQL family (DBX-61)
+			if c.Preset == SQLCipherPreset { // encrypted SQLite (DBX-64)
+				if c.Driver != "sqlite" {
+					c.Problem = "preset needs the sqlite driver"
+				}
+			} else if mp, ok := PresetByID(c.Preset); ok { // MySQL family (DBX-61)
 				if c.Driver != mp.Driver {
 					c.Problem = "preset needs the " + mp.Driver + " driver"
 				} else if c.Port == 0 {

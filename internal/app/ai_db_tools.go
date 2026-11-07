@@ -195,7 +195,7 @@ func dbAIDescribe(r *dbAICall, verb string) string {
 // dbAIPassword resolves a connection's password without any UI (the
 // same rules as connecting from the view). It is registered as a secret.
 func dbAIPassword(root string, c dbclient.Conn) (string, error) {
-	if c.Driver == "sqlite" {
+	if c.Driver == "sqlite" && !dbclient.IsSQLCipher(c) {
 		return "", nil
 	}
 	if dbProjectCmdRef(c) {
@@ -296,6 +296,18 @@ func dbAIOpen(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnaps
 		}
 		if readOnly {
 			c.ReadOnly = true // a sqlite3 -readonly sidecar
+		}
+		if dbclient.IsSQLCipher(c) {
+			// The key is resolved here and used on stdin only; the AI
+			// never sees it.
+			if !snap.hasPW {
+				pw, err := dbAIPassword(root, c)
+				if err != nil {
+					return nil, err
+				}
+				snap.password, snap.hasPW = pw, true
+			}
+			return dbclient.NewSQLCipherSession(ctx, c, snap.password)
 		}
 		return dbclient.NewSQLiteSession(ctx, c)
 	}
