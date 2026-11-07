@@ -320,6 +320,9 @@ func (p *Pairing) wait(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// A held request: the server's write deadline must not cut the answer
+	// off (over TLS the phone sees a broken record, "Pairing did not work").
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(pairWaitWrite(p.cfg.WaitPoll)))
 	t := time.NewTimer(p.cfg.WaitPoll)
 	defer t.Stop()
 	for {
@@ -476,3 +479,8 @@ func newDeviceID() (string, error) {
 	}
 	return "dev-" + hex.EncodeToString(b), nil
 }
+
+// pairWaitWrite is the write deadline /pair/wait gives itself for a hold
+// of d: the server's WriteTimeout (10 s) is shorter than the hold (25 s),
+// so the held answer gets the hold plus room to write it.
+func pairWaitWrite(d time.Duration) time.Duration { return d + 10*time.Second }
