@@ -40,6 +40,8 @@ type HTTPEngine struct {
 	// Schemes are the URL schemes ParseURL maps to the engine; a scheme
 	// that ends in "s" (or "+s") turns TLS on.
 	Schemes []string
+	// LineBased engines run one command per console line (no ';').
+	LineBased bool
 	// FixURL adjusts a connection parsed from one of Schemes (nil: none).
 	FixURL func(*Conn)
 }

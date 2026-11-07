@@ -44,8 +44,11 @@ type RedisSession struct {
 	dial     RedisDialFunc
 	target   redisTarget
 	selected int // the database the connection is on
-	readonly bool
-	closed   bool
+	// sentinels are the Sentinel addresses of a "sentinel" connection
+	// (nil: a direct one).
+	sentinels []string
+	readonly  bool
+	closed    bool
 
 	cmu    sync.Mutex
 	cancel context.CancelFunc
@@ -148,6 +151,18 @@ func (s *RedisSession) connect(ctx context.Context) error {
 	if cfg != nil {
 		opts = append(opts, redis.DialUseTLS(true), redis.DialTLSConfig(cfg))
 	}
+	if name := s.cfg.Params["sentinel"]; name != "" {
+		// Sentinel (DBX-69): ask the sentinels for the master's address
+		// on every connect, so a failover is followed.
+		if s.sentinels == nil {
+			s.sentinels = redisSentinelAddrs(s.target.addr, s.cfg.Params["sentinels"])
+		}
+		addr, err := redisSentinelMaster(ctx, dial, s.sentinels, name)
+		if err != nil {
+			return redisError(err, s.password)
+		}
+		s.target.addr = addr
+	}
 	conn, err := redis.DialContext(ctx, "tcp", s.target.addr, opts...)
 	if err != nil {
 		return redisError(err, s.password)
@@ -167,8 +182,10 @@ func redisError(err error, password string) error {
 		text = strings.ReplaceAll(text, password, "[redacted]")
 	}
 	text = Redact(text)
-	if strings.Contains(text, "MOVED ") || strings.Contains(text, "CLUSTERDOWN") {
-		text = "this is a cluster node; connect to each node (cluster browsing is not supported yet): " + text
+	if strings.Contains(text, "MOVED ") || strings.Contains(text, "ASK ") || strings.Contains(text, "CLUSTERDOWN") {
+		// The session follows one redirect (op); a second one, or a
+		// cluster that is down, ends here with the reason.
+		text = "this is a cluster node: " + text
 	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return fmt.Errorf("%s: %w", text, err)
@@ -208,7 +225,81 @@ func (s *RedisSession) op(ctx context.Context, db int, f func(ctx context.Contex
 		}
 		s.selected = db
 	}
-	return f(ctx, s.conn)
+	err := f(ctx, s.conn)
+	if addr, ok := redisMovedAddr(err); ok {
+		// Redis Cluster (DBX-69): the key lives on another node. Move
+		// the session there (cluster nodes have only database 0) and
+		// send the command once more.
+		s.target.addr = addr
+		if cerr := s.connect(ctx); cerr != nil {
+			return cerr
+		}
+		err = f(ctx, s.conn)
+	}
+	return err
+}
+
+// redisMovedAddr is the node address of a MOVED or ASK redirect.
+func redisMovedAddr(err error) (string, bool) {
+	if err == nil {
+		return "", false
+	}
+	text := err.Error()
+	for _, w := range []string{"MOVED ", "ASK "} {
+		i := strings.Index(text, w)
+		if i < 0 {
+			continue
+		}
+		f := strings.Fields(text[i:])
+		if len(f) < 3 {
+			continue
+		}
+		if _, _, e := net.SplitHostPort(f[2]); e == nil {
+			return f[2], true
+		}
+	}
+	return "", false
+}
+
+// redisSentinelAddrs is the first sentinel and the extra ones of the
+// "sentinels" parameter ("h1:26379,h2:26379").
+func redisSentinelAddrs(first, extra string) []string {
+	out := []string{first}
+	for _, a := range strings.Split(extra, ",") {
+		if a = strings.TrimSpace(a); a != "" && a != first {
+			if _, _, err := net.SplitHostPort(a); err != nil {
+				a = net.JoinHostPort(a, "26379")
+			}
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// redisSentinelMaster asks each sentinel in turn for the address of the
+// master named name.
+func redisSentinelMaster(ctx context.Context, dial RedisDialFunc, sentinels []string, name string) (string, error) {
+	var last error
+	for _, a := range sentinels {
+		c, err := redis.DialContext(ctx, "tcp", a, redis.DialContextFunc(dial))
+		if err != nil {
+			last = err
+			continue
+		}
+		reply, err := redis.Strings(redis.DoContext(c, ctx, "SENTINEL", "get-master-addr-by-name", name))
+		_ = c.Close()
+		if err == nil && len(reply) == 2 {
+			return net.JoinHostPort(reply[0], reply[1]), nil
+		}
+		if err == nil || errors.Is(err, redis.ErrNil) {
+			err = fmt.Errorf("sentinel %s does not know the master %q", a, name)
+		}
+		last = err
+	}
+	if last == nil {
+		last = errors.New("no sentinel address")
+	}
+	return "", last
 }
 
 func (s *RedisSession) do(ctx context.Context, c redis.Conn, args []string) (any, error) {
