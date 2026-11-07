@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/toast"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -52,6 +53,22 @@ func engineStartRow(kind, section string) svcRow {
 		return svcRow{kind: svcRowCode, section: section, text: cmd}
 	}
 	return svcRow{kind: svcRowHint, section: section, text: hint}
+}
+
+// engineStartCopy is the start command y copies while the engine is not
+// running ("" = none to copy).
+func (st *servicesState) engineStartCopy() string {
+	kind := ""
+	switch {
+	case st.problem.Kind == services.ProblemDaemonDown:
+		kind = st.composeProblem().Engine
+	case !st.containerEngine.Reachable && st.containerEngine.Problem.Kind == services.ProblemDaemonDown:
+		kind = st.containerEngine.Kind
+	default:
+		return ""
+	}
+	cmd, _ := engineStartCommand(kind, engineGOOS)
+	return cmd
 }
 
 // openEngineConfig opens the engine's config file (a new buffer when it

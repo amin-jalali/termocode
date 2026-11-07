@@ -801,6 +801,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.copyToClipboard(svcPermissionFix)
 			return m, m.servicesToast(toast.Info, "Copied", svcPermissionFix)
 		}
+		if cmd := st.engineStartCopy(); cmd != "" {
+			m.copyToClipboard(cmd)
+			return m, m.servicesToast(toast.Info, "Copied", cmd)
+		}
 		if isSvc {
 			return m, m.servicesCopyAddress(r.section, r.name)
 		}
