@@ -79,7 +79,7 @@ func TestDependenciesOfViewAndRoutine(t *testing.T) {
 }
 
 func TestERDiagramBoxesAndEdges(t *testing.T) {
-	got := ERDiagram(depSchema(), "", 0)
+	got := ERDiagramText(depSchema(), "", 0)
 	for _, want := range []string{
 		"┌─ customers ", "│ PK id integer", "│ FK customer_id integer → customers.id",
 		"orders.customer_id ──▶ customers.id",
@@ -91,7 +91,7 @@ func TestERDiagramBoxesAndEdges(t *testing.T) {
 	if !strings.Contains(got, "notes") {
 		t.Fatal("whole-schema diagram shows every table")
 	}
-	focus := ERDiagram(depSchema(), "customers", 1)
+	focus := ERDiagramText(depSchema(), "customers", 1)
 	if strings.Contains(focus, "notes") || !strings.Contains(focus, "orders") {
 		t.Fatalf("focus diagram shows only neighbours:\n%s", focus)
 	}
