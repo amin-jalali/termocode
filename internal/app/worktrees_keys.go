@@ -33,7 +33,8 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"i", "link an issue or pull request (its state and CI show on the card)"},
 		[]string{"N", "the notes agents left on it, with their times"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
-		[]string{"c", "new child worktree: from this one's branch, listed under it"},
+		[]string{"c", "new child worktree: from this one's branch, listed under it; its PR targets that branch"},
+		[]string{"r", "restack a child: replay its commits onto its parent's branch (asks first)"},
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
 		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
 		[]string{"F", "forget a worktree whose folder is gone"},
@@ -62,6 +63,7 @@ func worktreePaletteItems() []picker.Item {
 		{ID: "worktree-filter", Title: "Worktree: Next Filter"},
 		{ID: wtNewPaletteID, Title: "Worktree: New…"},
 		{ID: wtChildPaletteID, Title: "Worktree: New Child of Selected…"},
+		{ID: wtRestackPaletteID, Title: "Worktree: Restack Selected onto Parent…"},
 		{ID: wtSetupLogPaletteID, Title: "Worktree: Show Setup Log"},
 		{ID: wtLinkPaletteID, Title: "Worktree: Link Issue or PR…"},
 		{ID: wtNotesPaletteID, Title: "Worktree: Show Notes of Selected"},
@@ -94,6 +96,8 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.openWorktreeNew(), true
 	case wtChildPaletteID:
 		return m.openWorktreeNewChild(), true
+	case wtRestackPaletteID:
+		return m.worktreeRestack(), true
 	case wtSetupLogPaletteID:
 		return m.worktreeSetupLog(), true
 	case wtLinkPaletteID:
@@ -169,6 +173,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.openWorktreeNew()
 	case "c":
 		return m, m.openWorktreeNewChild()
+	case "r":
+		return m, m.worktreeRestack()
 	case "L":
 		return m, m.worktreeSetupLog()
 	case "i":

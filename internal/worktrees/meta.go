@@ -36,6 +36,7 @@ type Meta struct {
 	Name     string    `json:"name,omitempty"`
 	Pinned   bool      `json:"pinned,omitempty"`
 	Parent   string    `json:"parent,omitempty"` // the worktree it was made from (path)
+	Base     string    `json:"base,omitempty"`   // a stacked child: the parent's branch when it was made (CMP-17)
 	Agent    string    `json:"agent,omitempty"`  // the agent preset started in it
 	Issue    int       `json:"issue,omitempty"`
 	PR       int       `json:"pr,omitempty"`

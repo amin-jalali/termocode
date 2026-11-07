@@ -67,8 +67,9 @@ type wtForm struct {
 	issueNum   int
 	issueTitle string
 	// parent / parentTitle: a child worktree (c, WTX-11) starts from the
-	// parent's branch and is stored under it.
-	parent, parentTitle string
+	// parent's branch and is stored under it; parentBranch is that branch
+	// ("" detached), kept as the base its pull request targets (CMP-17).
+	parent, parentTitle, parentBranch string
 }
 
 // wtFormVals are the typed values of the card.
@@ -133,7 +134,7 @@ func worktreeDirSetting() string {
 
 // openWorktreeNew reads the repository off the UI thread, then opens
 // the dialog (Worktree: New…, n in the view).
-func (m *Model) openWorktreeNew() tea.Cmd { return m.openWorktreeNewFrom("", "", "") }
+func (m *Model) openWorktreeNew() tea.Cmd { return m.openWorktreeNewFrom("", "", "", "") }
 
 // openWorktreeNewChild is c: a child of the cursor's worktree, from its
 // branch (or its commit when detached).
@@ -149,10 +150,10 @@ func (m *Model) openWorktreeNewChild() tea.Cmd {
 	if from == "" {
 		from = it.e.Head
 	}
-	return m.openWorktreeNewFrom(it.e.Path, wtTitle(it), from)
+	return m.openWorktreeNewFrom(it.e.Path, wtTitle(it), from, it.e.Branch)
 }
 
-func (m *Model) openWorktreeNewFrom(parent, parentTitle, from string) tea.Cmd {
+func (m *Model) openWorktreeNewFrom(parent, parentTitle, from, parentBranch string) tea.Cmd {
 	if m.wt == nil {
 		return nil
 	}
@@ -164,7 +165,7 @@ func (m *Model) openWorktreeNewFrom(parent, parentTitle, from string) tea.Cmd {
 	return func() tea.Msg {
 		msg := wtNewPrep(root, setting)
 		if msg.f != nil && parent != "" {
-			msg.f.parent, msg.f.parentTitle = parent, parentTitle
+			msg.f.parent, msg.f.parentTitle, msg.f.parentBranch = parent, parentTitle, parentBranch
 			if from != "" {
 				msg.f.from = from
 			}
@@ -262,7 +263,11 @@ func wtFormCardFor(f *wtForm, v wtFormVals, short bool) connectcard.Card {
 	}
 	var rows []connectcard.Row
 	if f.parent != "" {
-		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Child of " + f.parentTitle + " (starts from its branch)"})
+		text := "Child of " + f.parentTitle + " (starts from its branch)"
+		if f.parentBranch != "" {
+			text = "Child of " + f.parentTitle + " (stacked: starts from and its PR targets " + f.parentBranch + ")"
+		}
+		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: text})
 	}
 	rows = append(rows, []connectcard.Row{
 		{Kind: connectcard.Input, ID: "name", Text: "Name", Inline: true, Placeholder: "feat/my-change", Value: v.name},
@@ -486,6 +491,7 @@ type wtCreatedMsg struct {
 	start          bool
 	agent          agents.Agent
 	task           string
+	from           string        // the start point it was made from
 	link           *ghci.Link    // the linked issue / PR as gh read it
 	linkRef        *ghci.LinkRef // linked without a read (no gh)
 }
@@ -533,7 +539,7 @@ func (m *Model) wtCreate(start bool) tea.Cmd {
 	task := v.task
 	run := wtGHRun()
 	return func() tea.Msg {
-		msg := wtCreatedMsg{gen: gen, start: start, agent: ag, task: task}
+		msg := wtCreatedMsg{gen: gen, start: start, agent: ag, task: task, from: from}
 		if hasRef {
 			l, err := ghci.ViewLink(context.Background(), run, f.root, ref)
 			switch {
@@ -583,6 +589,9 @@ func (m *Model) onWTCreated(msg wtCreatedMsg) tea.Cmd {
 			mm[msg.folder] = md
 			_ = worktrees.SetParent(mm, msg.folder, f.parent)
 			md = mm[msg.folder]
+			if f.parentBranch != "" && msg.from == f.parentBranch {
+				md.Base = f.parentBranch // CMP-17: the PR targets the parent
+			}
 		}
 		if msg.start {
 			md.Agent = msg.agent.ID
