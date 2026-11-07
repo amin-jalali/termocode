@@ -72,6 +72,10 @@ func TestParseDeployments(t *testing.T) {
 	if ds[1].Updated != 2 || ds[1].Available != 1 {
 		t.Errorf("worker = %+v", ds[1])
 	}
+	// The pod template's container ports (port-forward picks one).
+	if !reflect.DeepEqual(ds[0].Ports, []int{8080}) || len(ds[1].Ports) != 0 {
+		t.Errorf("ports = %v %v", ds[0].Ports, ds[1].Ports)
+	}
 }
 
 func TestParseServices(t *testing.T) {

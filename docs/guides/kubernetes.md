@@ -29,6 +29,7 @@ context and that context's namespace (`default` when it names none).
 | **DEPLOYMENTS** | ready pods (`1/2`) and age. A wide view also shows updated and available pods. |
 | **SERVICES** | the type (`ClusterIP`, `NodePort`, …). A wide view also shows the ports. |
 | **JOBS** | finished runs (`2/5`) and age. |
+| **FORWARDS** | only while a port-forward runs: each forward (`svc/web`), its local port and the remote port (`:43123 → 80`). |
 
 The mark at the start of a row is green when all is well, yellow while
 it is on its way, red when it is broken and grey when it is done.
@@ -61,8 +62,8 @@ kubeconfig, so other terminals keep their context.
 | `v` | Show the row as YAML (a read-only page; Secret values are masked). |
 | `E` | Events of the row, newest first (a read-only page). On a section header: all events of the namespace. |
 | `e` | Pod: open a shell in it. |
-| `f` | Pod: start or stop a port-forward. |
-| `y` | Copy the name. |
+| `f` | Pod, service or deployment: start or stop a port-forward. On a **FORWARDS** row: stop it. |
+| `y` | Copy the name. On a **FORWARDS** row: copy the local address. |
 | `r` | Deployment: restart it (asks first). |
 | `s` | Deployment: scale it (asks the number, then asks first). |
 | `d` | Delete the row's object (asks first). |
@@ -80,11 +81,18 @@ first.
 
 ## Port-forward
 
-`f` on a pod forwards one of its container ports to your machine.
-`kubectl` picks a free local port; the row and the footer show it
-(`127.0.0.1:43123 → 8080`). A pod with more than one port asks which one
-first. `f` again stops the forward. Every forward stops when you quit
-termocode.
+`f` on a pod, a service or a deployment forwards one of its ports to
+your machine: a pod's container ports, a service's ports, or the
+container ports of a deployment's pod template. For a service or a
+deployment, `kubectl` picks one of its pods. `kubectl` picks a free local
+port; the row and the footer show it (`127.0.0.1:43123 → 8080`). When
+there is more than one port, termocode asks which one first. `f` again
+stops the forward.
+
+While a forward runs, the **FORWARDS** section at the end lists every
+active forward, also the ones of another context or namespace. `f` on a
+row there stops it; `y` copies its local address (`127.0.0.1:43123`).
+Every forward stops when you quit termocode.
 
 ## Restart a deployment
 

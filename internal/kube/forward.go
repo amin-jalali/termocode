@@ -15,9 +15,10 @@ import (
 // Forward is one running `kubectl port-forward`. It lives until Stop (or
 // until kubectl ends on its own: Done closes).
 type Forward struct {
-	Pod    string
-	Remote int // the pod's port
-	Local  int // the port on 127.0.0.1
+	Kind   string // "pod", "svc" or "deployment"
+	Pod    string // the object's name (a pod, service or deployment)
+	Remote int    // the object's port
+	Local  int    // the port on 127.0.0.1
 
 	once   sync.Once
 	cancel context.CancelFunc
@@ -27,15 +28,29 @@ type Forward struct {
 
 var forwardingRe = lazyre.New(`Forwarding from 127\.0\.0\.1:(\d+) ->`)
 
+// Target is kubectl's name of the forwarded object: "svc/web".
+func (f *Forward) Target() string { return f.Kind + "/" + f.Pod }
+
 // PortForward starts `kubectl port-forward pod/<pod> :<remote>`: kubectl
 // picks a free local port, read from its first line. It waits up to the
 // call timeout for that line.
 func (c Client) PortForward(parent context.Context, pod string, remote int) (*Forward, error) {
+	return c.PortForwardTo(parent, "pod", pod, remote)
+}
+
+// PortForwardTo is PortForward to a pod ("pod"), a service ("svc") or a
+// deployment ("deployment"): kubectl picks one of its pods.
+func (c Client) PortForwardTo(parent context.Context, kind, name string, remote int) (*Forward, error) {
 	if c.Binary == "" {
 		return nil, &Error{Kind: ErrNoKubectl}
 	}
+	switch kind {
+	case "pod", "svc", "deployment":
+	default:
+		return nil, ErrorLine("cannot port-forward a "+kind, nil)
+	}
 	args := append([]string{"port-forward"}, c.scope(true)...)
-	args = append(args, "pod/"+pod, ":"+strconv.Itoa(remote))
+	args = append(args, kind+"/"+name, ":"+strconv.Itoa(remote))
 	// sh joins stderr to stdout, so a failure can be read and shown;
 	// "$0" "$@" pass the argv through without any quoting.
 	argv := append([]string{"sh", "-c", `exec "$0" "$@" 2>&1`, c.Binary}, args...)
@@ -45,7 +60,7 @@ func (c Client) PortForward(parent context.Context, pod string, remote int) (*Fo
 		cancel()
 		return nil, ErrorLine("", err)
 	}
-	fw := &Forward{Pod: pod, Remote: remote, cancel: cancel, stop: stop, done: make(chan struct{})}
+	fw := &Forward{Kind: kind, Pod: name, Remote: remote, cancel: cancel, stop: stop, done: make(chan struct{})}
 	port := make(chan int, 1)
 	var mu sync.Mutex
 	var said strings.Builder
