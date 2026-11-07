@@ -159,6 +159,9 @@ func TestUIKeyHintPopup(t *testing.T) {
 		t.Fatalf("key_hints off, popup shown:\n%s", tm.Screen())
 	}
 	tm.Send(KeyEsc)
+	// Esc and Ctrl+Q in one read are one key, Alt+Ctrl+Q (legacy
+	// encoding): let the Esc arrive alone first.
+	tm.settle()
 	tm.quitDiscard()
 }
 
