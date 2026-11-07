@@ -125,6 +125,7 @@ type dbState struct {
 	txCardConn          string                                // the uncommitted-changes card
 	txCardAfter         func(*Model) tea.Cmd
 	tunnels             map[string]*dbclient.Tunnel // connection -> its SSH tunnel (db_ssh.go)
+	offline             map[string]time.Time        // connection -> cache time of the offline tree (DBX-29)
 	pendingSSH          dbSSHSecrets                // the SSH secrets of the connection being added
 	hostAsk             *dbHostAsk                  // the unknown-host card
 	secretAsk           *dbSecretAsk                // the SSH password / passphrase prompt
