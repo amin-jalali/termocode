@@ -55,6 +55,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
 		{ID: "db-compare-schemas", Title: "Databases: Compare Schemas…"},
+		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -100,6 +101,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseExportStart(), true
 	case "db-compare-schemas":
 		return m.databaseCompareStart(), true
+	case "db-er-diagram":
+		return m.databaseERStart(), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	}

@@ -2058,6 +2058,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
+| `db-er-diagram` | Databases: Export ER Diagram… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
 | `db-explain-analyze` | Databases: Explain Analyze Statement… | never | executes the statement; use db_explain |
 | `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
