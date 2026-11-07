@@ -31,7 +31,7 @@ import (
 
 const (
 	confirmKindWTShipCommit confirmKindEnum = 4731
-	confirmKindAIShipMerge  confirmKindEnum = 4732
+	confirmKindWTShipMerge  confirmKindEnum = 4732
 	promptKindWTShipMessage promptKindEnum  = 4733
 	wtShipPaletteID                         = "worktree-ship"
 
@@ -341,7 +341,7 @@ func (m *Model) askAIShipMerge(p aiShipProbe) tea.Cmd {
 		confirm.Button{ID: "rebase", Title: "Rebase and merge"}).WithWideText()
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
-	m.confirmKind = confirmKindAIShipMerge
+	m.confirmKind = confirmKindWTShipMerge
 	return nil
 }
 
@@ -362,11 +362,15 @@ func (m *Model) answerAIShipMerge(id string) tea.Cmd {
 	if method == "" || pr == nil {
 		return m.aiShipStop("Merge-ready: " + aiShipPRName(pr) + " is green. Merge it yourself when you want.")
 	}
+	sha := sh.last.snap.HeadSHA // only the green commit is merged
+	if sha == "" {
+		sha = sh.last.head
+	}
 	gen, ops, number := sh.gen, sh.ops, pr.Number
 	return tea.Batch(m.aiInfo("Merging "+aiShipPRName(pr)+"…"), func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), gitAITimeout)
 		defer cancel()
-		return aiShipMergedMsg{gen: gen, number: number, err: ops.Merge(ctx, number, method)}
+		return aiShipMergedMsg{gen: gen, number: number, err: ops.Merge(ctx, number, method, sha)}
 	})
 }
 

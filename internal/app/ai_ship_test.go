@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -19,6 +20,7 @@ type aiShipFake struct {
 	probes []aiShipProbe
 	calls  []string
 	prs    []ghci.NewPR
+	merges []string // "N method sha"
 }
 
 func (f *aiShipFake) Probe(context.Context, string) (aiShipProbe, error) {
@@ -45,6 +47,14 @@ func (f *aiShipFake) CreatePR(_ context.Context, p ghci.NewPR) (string, error) {
 	f.calls = append(f.calls, "pr")
 	f.prs = append(f.prs, p)
 	return "https://github.com/o/r/pull/7", nil
+}
+
+func (f *aiShipFake) Merge(_ context.Context, n int, method ghci.MergeMethod, sha string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, "merge")
+	f.merges = append(f.merges, strconv.Itoa(n)+" "+string(method)+" "+sha)
+	return nil
 }
 
 func (f *aiShipFake) FailedLog(context.Context, ghci.Run) (ghci.FailedLog, error) {

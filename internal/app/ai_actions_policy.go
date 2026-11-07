@@ -729,6 +729,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-web-tools": aiNever(aiNoPicker),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
+	"ai-ship-merge":    aiNever("it pushes, opens and merges a pull request: the user starts it and answers the merge card"),
 	"ai-plan-worktree": aiNever("it leads to a push and a pull request: the user starts it"),
 	// It edits other apps' config files: only the user, after the preview.
 	"ai-agent-hooks": aiNever("it changes other apps' config files: the user decides after the preview"),

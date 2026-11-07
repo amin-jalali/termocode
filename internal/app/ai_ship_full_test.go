@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -101,9 +100,9 @@ func (f *aiShipFake) mergeCalls() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var out []string
-	for _, c := range f.calls {
-		if strings.HasPrefix(c, "merge") {
-			out = append(out, c)
+	for _, c := range f.merges { // "N method sha"
+		if fs := strings.Fields(c); len(fs) >= 2 {
+			out = append(out, "merge "+fs[0]+" "+fs[1])
 		}
 	}
 	return out
@@ -159,7 +158,7 @@ func TestWorktreeShipFullFlow(t *testing.T) {
 	if len(rec.reqs) != 2 || !strings.Contains(aiReqText(rec.reqs[1]), "feat: ship it") {
 		t.Fatalf("no AI request for the PR text: %d reqs", len(rec.reqs))
 	}
-	wtShipDrive(t, m, m.answerAIRulesForTest("create"), card(confirmKindAIShipMerge))
+	wtShipDrive(t, m, m.answerAIRulesForTest("create"), card(confirmKindWTShipMerge))
 	if len(f.prs) != 1 || f.prs[0].Title != "Ship the x feature" || !strings.Contains(f.prs[0].Body, "Test: go test") {
 		t.Fatalf("pr %+v", f.prs)
 	}
@@ -186,7 +185,7 @@ func TestWorktreeShipFullFlow(t *testing.T) {
 	if g.removed[0] != wt {
 		t.Fatalf("removed %v", g.removed)
 	}
-	want := "probe push probe pr probe merge 7 merge"
+	want := "probe push probe pr probe merge"
 	if got := strings.Join(f.calls, " "); got != want {
 		t.Errorf("calls\n got %s\nwant %s", got, want)
 	}
@@ -246,7 +245,7 @@ func TestWorktreeShipMergeCancelAndRefusals(t *testing.T) {
 	m, _, wt := wtShipModel(t, f)
 	wtShipSwap(t, 0)
 	it, _ := m.wtItemByPath(wt)
-	wtShipDrive(t, m, m.wtShipItem(it), func() bool { return m.confirmOpen && m.confirmKind == confirmKindAIShipMerge })
+	wtShipDrive(t, m, m.wtShipItem(it), func() bool { return m.confirmOpen && m.confirmKind == confirmKindWTShipMerge })
 	m.answerAIRulesForTest("cancel")
 	if m.aiS().ship != nil || len(f.mergeCalls()) != 0 {
 		t.Fatalf("Cancel merged or kept the ship: calls %v", f.calls)
@@ -263,11 +262,4 @@ func TestWorktreeShipMergeCancelAndRefusals(t *testing.T) {
 			t.Errorf("%s: not refused", name)
 		}
 	}
-}
-
-func (f *aiShipFake) Merge(_ context.Context, number int, method ghci.MergeMethod) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.calls = append(f.calls, "merge "+strconv.Itoa(number)+" "+string(method))
-	return nil
 }

@@ -1975,6 +1975,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
 | `ai-ship` | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | never | it pushes and opens a pull request: the user starts it |
+| `ai-ship-merge` | AI: Ship and Merge When Green (CI fixes, conflicts, merge card) / Stop | never | it pushes, opens and merges a pull request: the user starts it and answers the merge card |
 | `ai-side` | AI: Side Question… | never | the side chat is the user's own question beside the AI's turn |
 | `ai-sign-in-claude` | AI: Sign in with Claude (OAuth, opt-in)… | never | AI provider, credentials and approvals stay with the user |
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |
