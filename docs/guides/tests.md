@@ -66,6 +66,10 @@ Click the **Testing** icon in the activity bar, or run
 **Testing: Focus Test Explorer**. Press `u` (or run **Testing: Refresh Tests**)
 after you add new tests.
 
+## Database tests (pgTAP)
+
+PostgreSQL test functions written with pgTAP run from the Databases view: press `U` on a PostgreSQL connection, or run **Databases: Run pgTAP Tests…**. Their results show here under a **pgTAP** node, one row per connection. See [pgTAP tests](databases.md#pgtap-tests).
+
 ## Keys at a glance
 
 | Key | Action |

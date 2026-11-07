@@ -67,6 +67,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-end-session", Title: "Databases: End Session…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
+		{ID: "db-pgtap-run", Title: "Databases: Run pgTAP Tests…"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
 		{ID: "redis-rename-key", Title: "Databases: Rename Redis Key…"},
@@ -128,6 +129,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCompareStart(), true
 	case "db-er-diagram":
 		return m.databaseERStart(), true
+	case "db-pgtap-run":
+		return m.databasePgTAPStart(""), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":
@@ -291,6 +294,10 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && row.kind == dbNodeConnection {
 			return m, m.databaseSetPasswordPrompt(row.conn)
 		}
+	case "U":
+		if have && row.kind == dbNodeConnection {
+			return m, m.databasePgTAPStart(row.conn)
+		}
 	case "R":
 		return m, m.databaseRefresh()
 	case "T":
@@ -368,6 +375,9 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseRedisConfirm(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databasePgTAPConfirm(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseConsoleConfirm(id); ok {
@@ -957,6 +967,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"e", "edit the connection files"},
 		[]string{"T", "test the connection"},
 		[]string{"S", "start a stopped service"},
+		[]string{"U", "run pgTAP tests (PostgreSQL)"},
 		[]string{"t", "transaction mode"},
 		[]string{"p", "set the password"},
 		[]string{"n", "new SQL console"},

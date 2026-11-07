@@ -401,6 +401,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-generate-data":             aiNever("it writes a script of rows the user reviews and runs"),
 	"db-compare-schemas":           aiNever(aiNoPicker),
 	"db-er-diagram":                aiNever(aiNoPicker),
+	"db-pgtap-run":                 aiNever("it runs the user's test functions after a card only the user answers (db_query)"),
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
 	"redis-rename-key":             aiNever(aiNoPicker + " (redis_command)"),

@@ -300,6 +300,12 @@ A statement with parameters asks for each value before it runs: `?`, `:name`, `$
 
 **Databases: Cancel Session Query…** stops the running query of one session. **Databases: End Session…** ends the whole session; its open transaction rolls back. Both ask for the session id (`pid` / `id` column), then show the usual run card first (Cancel is the default). SQLite and Redis have no sessions.
 
+## pgTAP tests
+
+Press `U` on a PostgreSQL connection, or choose **Databases: Run pgTAP Tests…**, to run the database's [pgTAP](https://pgtap.org) test functions. Type a regular expression to run only some test functions, or leave it empty to run all of them. A card shows the exact `SELECT * FROM runtests(…);` statement first; **Cancel** has the focus. The tests run on the connection's session, so connect first, and commit or roll back an open transaction. pgTAP must be installed in the database (`CREATE EXTENSION pgtap;`).
+
+The results open in the **Testing** view under a **pgTAP** node, with one row per connection and one row per test function (✓, ✗ or skipped). A failed test shows the failing assertion and its `have` / `want` lines. Enter on a test shows its TAP output; Run on the pgTAP node, a connection or a test runs it again (one test runs as `runtests('schema'::name, '^name$'::text)`). The results stay when the Testing view refreshes its file tests. **Rerun Failed** runs only file tests.
+
 ## SQL history
 
 Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count.

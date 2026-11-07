@@ -200,3 +200,82 @@ func (p *PgTAPParser) Flush() []Event {
 	evs := p.closeSub(StatusFailed, true)
 	return append(evs, p.flushLast()...)
 }
+
+// pgTAPScheme marks the tree file of one connection's pgTAP results (it
+// is not a file on disk).
+const pgTAPScheme = "pgtap://"
+
+// PgTAPConn returns the connection of a pgTAP tree file path.
+func PgTAPConn(path string) (string, bool) {
+	return strings.CutPrefix(path, pgTAPScheme)
+}
+
+// PgTAP returns the pgTAP package of the tree (nil before any run).
+func (t *Tree) PgTAP() *Package {
+	if t == nil {
+		return nil
+	}
+	for _, p := range t.Packages {
+		if p.Name == PgTAPPackage && p.Dir == "" {
+			return p
+		}
+	}
+	return nil
+}
+
+func (t *Tree) pgTAPFile(conn string) *File {
+	p := t.PgTAP()
+	if p == nil {
+		p = &Package{Name: PgTAPPackage}
+		t.Packages = append(t.Packages, p)
+	}
+	for _, f := range p.Files {
+		if f.Path == pgTAPScheme+conn {
+			return f
+		}
+	}
+	f := &File{Path: pgTAPScheme + conn, Rel: conn}
+	p.Files = append(p.Files, f)
+	return f
+}
+
+// ResetPgTAP empties conn's pgTAP results before a new full run.
+func (t *Tree) ResetPgTAP(conn string) {
+	if t == nil {
+		return
+	}
+	t.pgTAPFile(conn).Cases = nil
+}
+
+// ApplyPgTAP folds one pgTAP result of conn into the tree.
+func (t *Tree) ApplyPgTAP(conn string, ev Event) *Case {
+	if t == nil || ev.Kind != EventResult || ev.Test == "" {
+		return nil
+	}
+	f := t.pgTAPFile(conn)
+	var c *Case
+	for _, x := range f.Cases {
+		if x.Name == ev.Test {
+			c = x
+			break
+		}
+	}
+	if c == nil {
+		c = &Case{Name: ev.Test, File: f.Path}
+		f.Cases = append(f.Cases, c)
+	}
+	c.Status = ev.Status
+	c.Message, c.Output = ev.Message, ev.Output
+	return c
+}
+
+// KeepPgTAP moves the pgTAP package of old into fresh (discovery only
+// walks files, so it never finds database tests).
+func KeepPgTAP(old, fresh *Tree) {
+	if fresh == nil || fresh.PgTAP() != nil {
+		return
+	}
+	if p := old.PgTAP(); p != nil {
+		fresh.Packages = append(fresh.Packages, p)
+	}
+}
