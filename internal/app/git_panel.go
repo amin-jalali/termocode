@@ -455,6 +455,7 @@ type gitCommitRowKey struct {
 	mark, age       string
 	active, focused bool
 	w               int
+	cols            uint32 // GITX-39: the shown GRAPH columns
 	rk              theme.RenderKey
 }
 
@@ -467,7 +468,7 @@ func (c *gitCommitRowMemo) commitRow(cs []git.GraphCommit, ci int, mark string, 
 	if c == nil {
 		return renderGitGraphCommitMark(commit, mark, active, focused, w)
 	}
-	k := gitCommitRowKey{ci: ci, mark: mark, age: git.CompactAge(commit.Committed), active: active, focused: focused, w: w, rk: theme.CurrentRenderKey()}
+	k := gitCommitRowKey{ci: ci, mark: mark, age: git.CompactAge(commit.Committed), active: active, focused: focused, w: w, cols: gitGraphCols.Load(), rk: theme.CurrentRenderKey()}
 	c.mu.Lock()
 	out, ok := c.rows[k]
 	c.mu.Unlock()

@@ -1039,6 +1039,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, m.secretsMigrateStartCmd()) // plain credentials.json → safer store (SS-4)
 	cmds = append(cmds, m.updateInitCmd())          // G-UPD: a newer release? (update_check.go)
 	gitxAutoFetchInit()                             // GITX-12: git_auto_fetch (gitx_autofetch_setting.go)
+	gitGraphColsInit()                              // GITX-39: git_graph_columns (gitx_graph_columns.go)
 	cmds = append(cmds, m.crash.waitCmd())          // recovered panics (crash_ui.go)
 	cmds = append(cmds, agentCtlInitCmd())          // OMX-33: the agent control socket (agent_ctl.go)
 	cmds = append(cmds, m.explorer.ScheduleLoads()) // FIX-2: a container root's first listing

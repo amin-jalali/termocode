@@ -487,11 +487,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle All Branches in GRAPH | `git-graph-all` |   |   |
+| Git: Toggle Author Column in GRAPH | `git-graph-col-author` |   |   |
 | Git: Toggle Auto Fetch | `git-auto-fetch` |   |   |
 | Git: Toggle Blame Annotations | `git-blame-annotate` |   |   |
 | Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
 | Git: Toggle Commit Signing (This Repository) | `git-signing-toggle` |   |   |
+| Git: Toggle Date Column in GRAPH | `git-graph-col-date` |   |   |
 | Git: Toggle Inline Blame | `git-inline-blame` |   |   |
+| Git: Toggle SHA Column in GRAPH | `git-graph-col-sha` |   |   |
 | Git: Toggle Skip Hooks on Commit (--no-verify) | `git-skip-hooks` |   | `this session only` |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |

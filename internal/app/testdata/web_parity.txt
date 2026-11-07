@@ -474,6 +474,9 @@ missing	git-fetch-all	Git|S
 missing	git-gist	Git|S
 missing	git-goto-commit	Git|S
 missing	git-graph-all	Git|S
+missing	git-graph-col-author	Git|S
+missing	git-graph-col-date	Git|S
+missing	git-graph-col-sha	Git|S
 missing	git-graph-head	Git|S
 missing	git-hook-output	Git|S
 missing	git-identity	Git|S

@@ -2180,6 +2180,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-gist` | Git: Create Gist from File… | never | publishes a file of the user on GitHub; only the user does that |
 | `git-goto-commit` | Git: Go to Commit… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
+| `git-graph-col-author` | Git: Toggle Author Column in GRAPH | auto |   |
+| `git-graph-col-date` | Git: Toggle Date Column in GRAPH | auto |   |
+| `git-graph-col-sha` | Git: Toggle SHA Column in GRAPH | auto |   |
 | `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-hook-output` | Git: Show Last Hook Output | auto |   |
