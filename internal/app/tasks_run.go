@@ -855,6 +855,7 @@ func tasksPaletteItems() []picker.Item {
 		{ID: agentAccountsPaletteID, Title: "Agent: Accounts…", Hint: "Claude Code / Codex accounts, own folders"},          // AGX-13
 		{ID: agentUsagePlansPaletteID, Title: "Agent: Usage Plans", Hint: "plan share, reset, last limit"},                  // AGX-12
 		{ID: agentAutoContinuePaletteID, Title: "Agent: Toggle Auto-Continue", Hint: "type continue when the limit resets"}, // AGX-11
+		{ID: diffCommentsPaletteID, Title: "Agent: Send Diff Comments…", Hint: "c on a change, S sends them all"},           // CMP-51
 	}, agentPaletteItems()...)
 }
 

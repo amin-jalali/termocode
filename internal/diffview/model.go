@@ -79,6 +79,8 @@ type fileState struct {
 	focus     int // focused hunk
 	// syntax runs per line of Old / New (nil: plain); SetFileSyntax
 	synOld, synNew [][]Tok
+	// notes are the user's comments by change (comments.go, CMP-51)
+	notes map[int]string
 }
 
 // Model is the diff card.
@@ -148,6 +150,9 @@ func (m *Model) AddFile(f File) int {
 
 // SetSize sets the screen size.
 func (m *Model) SetSize(w, h int) { m.w, m.h = w, h }
+
+// Title is the card's title.
+func (m Model) Title() string { return m.title }
 
 // Files is the number of files.
 func (m Model) Files() int { return len(m.files) }
@@ -512,6 +517,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.Action("apply")
 	case "e":
 		return m, m.Action("edit")
+	case "c":
+		return m, m.askComment()
+	case "S":
+		return m, m.sendComments()
 	}
 	return m, nil
 }
@@ -574,6 +583,9 @@ func (m *Model) click(id string) tea.Cmd {
 	case scanID(id, "hunk:", &n):
 		m.focusHunk(n)
 		return nil
+	case scanID(id, "note:", &n): // a comment row: edit it (CMP-51)
+		m.focusHunk(n)
+		return m.askComment()
 	}
 	return m.Action(id)
 }
@@ -617,6 +629,7 @@ func (m *Model) toggleIgnoreSpace() {
 		}
 		nf := newFileStateOpt(f.File, m.ignoreSpace)
 		nf.synOld, nf.synNew = f.synOld, f.synNew
+		remapNotes(f, nf)
 		m.files[i] = nf
 	}
 	m.cache.reset()
