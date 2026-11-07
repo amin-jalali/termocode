@@ -5,13 +5,14 @@
 // it, I and A type on every line of it, p puts a yanked box) modes; counts; the motions h j k l w b e W B E 0 ^ $ gg G
 // f F t T ; , { }; the operators d c y (with a motion, doubled for whole
 // lines, or the text objects iw aw); x X D C s S Y p P J r ~ i a I A o O;
-// u and Ctrl+R; the . repeat; macros (q, @, @@); the registers a-z (A-Z
+// u and Ctrl+R; the jump list (Ctrl+O, Ctrl+I); the . repeat; macros (q, @, @@); the registers a-z (A-Z
 // appends), the unnamed one, 0 (the last yank), 1-9 (deletes of lines),
 // - (small deletes), _ (the black hole) and . (the last insert; Ctrl+R
 // in insert mode puts a register); search (/ ? n N * #); ex commands
 // (:N, :s, :d, :y, :j, :> :<, :normal, :w, :q, the :map family); marks;
 // text objects (words, quotes, brackets, paragraphs); the user's own
-// mappings (the laptop editor's, and :map made here). Every change goes through the host
+// mappings (the laptop editor's global ones and this file's own, by
+// file or language, and :map made here). Every change goes through the host
 // as one edit, so the page's undo and the laptop's buffer see it like
 // typing.
 import type { Text } from "@codemirror/state";
@@ -43,6 +44,11 @@ export interface VimHost {
    * a macro is being recorded into ("": none) and a message ("": none;
    * else its code, a NUL and its argument: "notfound\x00foo"). */
   show(mode: VimMode, pending: string, rec: string, msg: string): void;
+  /** jump: a jump leaves off (the page keeps the jump list, across
+   * files); jumpGo walks it n places back (-1, Ctrl+O) or forward (1,
+   * Ctrl+I) from the caret at off. */
+  jump(off: number): void;
+  jumpGo(dir: 1 | -1, n: number, off: number): void;
   /** save writes the file (:w); close closes its tab (:q). */
   save(): void;
   close(): void;
@@ -318,6 +324,9 @@ export class Vim {
   /** maps are the user's mappings by mode (n x o i): the page's (the
    * laptop editor's) and the ones :map made here. */
   private maps = new Map<string, VimMapping[]>();
+  /** bufMaps are this file's own (<buffer>): the laptop editor's for
+   * the file and its language, and :map <buffer> made here; they win. */
+  private bufMaps = new Map<string, VimMapping[]>();
   private mapBuf: string[] = [];
   private mapTimer: ReturnType<typeof setTimeout> | null = null;
   private timeout = 1000;
@@ -349,21 +358,32 @@ export class Vim {
     if (timeout >= 0) this.timeout = timeout;
   }
 
-  private addMap(mode: string, lhs: string, rhs: string, noremap: boolean): void {
-    const l = parseKeys(lhs, this.leader), r = parseKeys(rhs, this.leader);
-    if (!l || !r || l.length === 0 || !"nxoi".includes(mode) || mode.length !== 1) return;
-    const list = (this.maps.get(mode) ?? []).filter((m) => !same(m.lhs, l));
-    list.push({ lhs: l, rhs: r, noremap });
-    this.maps.set(mode, list);
+  /** setBufMaps takes this file's own mappings (the laptop editor's). */
+  setBufMaps(defs: readonly VimMapDef[]): void {
+    this.bufMaps.clear();
+    for (const d of defs) this.addMap(d.mode, d.lhs, d.rhs, d.noremap === true, this.bufMaps);
   }
 
-  private unmap(mode: string, lhs: string): boolean {
+  private addMap(mode: string, lhs: string, rhs: string, noremap: boolean, to = this.maps): void {
+    const l = parseKeys(lhs, this.leader), r = parseKeys(rhs, this.leader);
+    if (!l || !r || l.length === 0 || !"nxoi".includes(mode) || mode.length !== 1) return;
+    const list = (to.get(mode) ?? []).filter((m) => !same(m.lhs, l));
+    list.push({ lhs: l, rhs: r, noremap });
+    to.set(mode, list);
+  }
+
+  private unmap(mode: string, lhs: string, from = this.maps): boolean {
     const l = parseKeys(lhs, this.leader);
-    const list = this.maps.get(mode);
+    const list = from.get(mode);
     if (!l || !list) return false;
     const left = list.filter((m) => !same(m.lhs, l));
-    this.maps.set(mode, left);
+    from.set(mode, left);
     return left.length < list.length;
+  }
+
+  /** mapsOf are the mappings of a mode, this file's first. */
+  private mapsOf(mode: string | null): VimMapping[] {
+    return mode ? [...(this.bufMaps.get(mode) ?? []), ...(this.maps.get(mode) ?? [])] : [];
   }
 
   /** mapMode is the mode mappings are looked up in now (null: none; a
@@ -380,13 +400,10 @@ export class Vim {
    * starts a longer mapping waits for the next (or the timeout). */
   private typed(tok: string, live: boolean): boolean {
     const mode = this.mapMode();
-    const list = mode ? this.maps.get(mode) : undefined;
-    if (!list || list.length === 0) {
-      if (this.mapBuf.length === 0) return this.exec(tok, live);
-    }
+    const maps = this.mapsOf(mode);
+    if (maps.length === 0 && this.mapBuf.length === 0) return this.exec(tok, live);
     this.stopTimer();
     const buf = [...this.mapBuf, tok];
-    const maps = list ?? [];
     const exact = maps.find((m) => same(m.lhs, buf));
     if (maps.some((m) => m.lhs.length > buf.length && same(m.lhs.slice(0, buf.length), buf))) {
       this.mapBuf = buf;
@@ -421,7 +438,7 @@ export class Vim {
     if (buf.length === 0) return;
     this.steps = 0;
     const mode = this.mapMode();
-    const exact = mode ? this.maps.get(mode)?.find((m) => same(m.lhs, buf)) : undefined;
+    const exact = this.mapsOf(mode).find((m) => same(m.lhs, buf));
     if (exact) this.runMap(exact);
     else {
       this.exec(buf[0], false);
@@ -646,6 +663,13 @@ export class Vim {
         this.after();
         return true;
       }
+      case "<C-o>":
+      case "<C-i>":
+        if (visual) return false;
+        this.pending = "";
+        this.h.jumpGo(tok === "<C-o>" ? -1 : 1, Math.max(1, n), this.pos());
+        this.after();
+        return true;
       case "<C-a>":
       case "<C-x>":
         if (visual) return false;
@@ -724,6 +748,7 @@ export class Vim {
   private setMark(c: string, at: number): void {
     const { n, col } = this.lineCol(Math.min(at, this.d.length));
     this.marks.set(c, { line: n, col });
+    if (c === "'") this.h.jump(Math.min(at, this.d.length));
   }
 
   /** markAt is where mark c is now (null: not set, or its line is gone). */
@@ -1778,7 +1803,8 @@ export class Vim {
   }
 
   /** mapCommand runs :map, :nnoremap, :iunmap … (made here, for this
-   * editor while the page is open); false: name is none of them. */
+   * editor while the page is open; with <buffer>, this file's own);
+   * false: name is none of them. */
   private mapCommand(name: string, arg: string): boolean {
     const known: Record<string, [string, boolean, boolean]> = {
       map: ["nxo", false, false], noremap: ["nxo", true, false], no: ["nxo", true, false], unmap: ["nxo", false, true], unm: ["nxo", false, true],
@@ -1791,10 +1817,13 @@ export class Vim {
     if (!k) return false;
     const [modes, noremap, un] = k;
     let rest = arg.trim();
+    let store = this.maps;
     for (;;) {
       const opt = /^<(silent|buffer|nowait|unique|special|script|expr)>\s*/i.exec(rest);
       if (!opt) break;
-      if (opt[1].toLowerCase() === "expr" || opt[1].toLowerCase() === "script") return true; // the web cannot run it
+      const o = opt[1].toLowerCase();
+      if (o === "expr" || o === "script") return true; // the web cannot run it
+      if (o === "buffer") store = this.bufMaps;
       rest = rest.slice(opt[0].length);
     }
     const sp = rest.search(/\s/);
@@ -1802,8 +1831,8 @@ export class Vim {
     const rhs = sp < 0 ? "" : rest.slice(sp).trim();
     if (lhs === "") return true;
     for (const mode of modes) {
-      if (un) this.unmap(mode, lhs);
-      else if (rhs !== "") this.addMap(mode, lhs, rhs, noremap);
+      if (un) this.unmap(mode, lhs, store);
+      else if (rhs !== "") this.addMap(mode, lhs, rhs, noremap, store);
     }
     return true;
   }
