@@ -28,6 +28,10 @@ export interface FrameOpts {
   ai?: { inline: boolean; nes: boolean; hint?: string };
   /** vim: Vim mode (WEBP-1; the page's per-browser choice). */
   vim?: boolean;
+  /** vimMaps are the user's own mappings for Vim mode (the laptop
+   * editor's, editor.vim_maps); vimTimeout its timeoutlen in ms. */
+  vimMaps?: { mode: string; lhs: string; rhs: string; noremap?: boolean }[];
+  vimTimeout?: number;
   /** comment is the file type's line comment ("//", "#"); none: the
    * file has no line comment and Toggle Line Comment does nothing. */
   comment?: string;
@@ -241,9 +245,12 @@ export type FromFrame =
   | { t: "glyph"; line: number; menu: boolean; x: number; y: number }
   /** gitMark: a click on a git change mark in the gutter (1-based row). */
   | { t: "gitMark"; line: number }
-  /** vim: Vim mode's mode now ("": off) and the keys of a command not
-   * finished yet. */
-  | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline"; pending: string }
+  /** vim: Vim mode's mode now ("": off), the keys of a command not
+   * finished yet, the register a macro is being recorded into and a
+   * message (its code, a NUL, its argument: "notfound\x00foo"). */
+  | { t: "vim"; mode: "" | "normal" | "insert" | "visual" | "vline"; pending: string; rec?: string; msg?: string }
+  /** vimQuit: Vim's :q (the page closes the editor's tab). */
+  | { t: "vimQuit" }
   /** copied: the user copied or cut text in the editor (the clipboard
    * history of the tab keeps it). */
   | { t: "copied"; text: string }

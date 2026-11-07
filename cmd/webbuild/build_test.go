@@ -369,3 +369,27 @@ func TestBuildServesVendoredFilesAndTheFrame(t *testing.T) {
 		t.Error("licenses.txt has no third-party notices of the desktop editor")
 	}
 }
+
+// Vim mode of the desktop editor (WEBP-1) is its own file,
+// monaco-vim.js: the editor's frame loads it with a dynamic import only
+// when Vim mode is on, so a browser without Vim mode never loads it.
+// It is the keymap alone (no Preact, no editor).
+func TestBuildWritesTheVimChunk(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vim, frame := string(out["monaco-vim.js"]), string(out["monaco-frame.js"])
+	if vim == "" {
+		t.Fatal("build wrote no monaco-vim.js")
+	}
+	if !strings.Contains(vim, "parseMotion") || strings.Contains(vim, "__H") {
+		t.Error("monaco-vim.js is not the Vim keymap alone")
+	}
+	if strings.Contains(frame, "parseMotion") {
+		t.Error("monaco-frame.js holds the Vim keymap itself")
+	}
+	if !strings.Contains(frame, `import("/assets/monaco-vim.js")`) {
+		t.Error("the frame does not load /assets/monaco-vim.js")
+	}
+}

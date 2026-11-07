@@ -395,6 +395,19 @@ func TestChatListOpensAndFollows(t *testing.T) {
 			if Eval[bool](p, composer+`?.querySelector("textarea") != null`) {
 				t.Error("a chat not open on the laptop can be written to")
 			}
+			// WEBP-10: the Follow button shows its whole name beside the
+			// pin mark, and the page never gets wider than the screen (a
+			// focus near the edge slid the desktop's activity bar away).
+			if bad := Eval[string](p, `(() => {
+				const f = document.querySelector(".chat-follow"), pin = document.querySelector(".chat-pinned"), sh = document.querySelector(".shell");
+				if (f.scrollWidth > f.clientWidth + 1) return "the Follow button cuts its text: " + f.scrollWidth + " > " + f.clientWidth;
+				const a = f.getBoundingClientRect(), b = pin.getBoundingClientRect();
+				if (a.left < b.right && b.left < a.right) return "the Follow button covers the pin mark";
+				if (sh.scrollWidth > sh.clientWidth) return "the page is " + sh.scrollWidth + " px wide in " + sh.clientWidth;
+				return "";
+			})()`); bad != "" {
+				t.Error(bad)
+			}
 
 			c.Send(t, Delta("chat", 2, map[string]any{"op": "switched", "chat": chatWith(false, userMsg(0, "laptop moved on"))}))
 			p.Holds(view+`.innerText.includes("old question")`, 300*time.Millisecond)
