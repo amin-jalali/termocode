@@ -225,9 +225,24 @@ says `stopped` and a card offers **Wait** (keep the open files),
 
 In a container workspace, Source Control runs git inside the container:
 stage, unstage, discard, commit, push, pull, fetch, checkout, and new
-branches all work there (git must be in the image). Staging one hunk is
-not there yet; use the terminal for it. **Replace in Workspace** reads
-and writes the files through the container too.
+branches all work there (git must be in the image). Staging, unstaging
+or discarding one hunk or a few lines works too: the patch goes to
+`git apply` on its input, so no file is written in the container.
+**Replace in Workspace** reads and writes the files through the
+container too.
+
+The **Testing** view finds the tests in the container's files and runs
+them there (`go test`, `pytest`, `cargo test`, jest or vitest must be
+in the image, and the image needs `sh`). termocode writes no report
+file in the container: pytest results come from its `-v` lines, jest
+and vitest print their JSON report into the output. Stop ends the run
+in the container too.
+
+The AI agent works on the container's files as well. `read_file`,
+`write_file`, `edit_file`, `search`, `glob`, the git tools and
+`run_command` all run in the container, with the same approval cards as
+for a local folder. A file with unsaved edits in the editor is never
+overwritten. MCP clients served by this window get the same tools.
 
 ### Reopen in a dev container
 
