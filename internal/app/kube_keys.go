@@ -71,6 +71,8 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.kubeEvents(st.rowTarget(r))
 		}
 		return m, m.kubeEvents("", "")
+	case "L":
+		return m, m.kubeAskLogOptions()
 	case "e":
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubePodTerminal("shell", p, "")
@@ -143,6 +145,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"/", "filter by name · Esc clears"},
 		[]string{"Pods"},
 		[]string{"Enter l", "follow logs"},
+		[]string{"L", "logs: previous, since, time stamps, save"},
 		[]string{"e", "open a shell"},
 		[]string{"f", "start or stop a port-forward"},
 		[]string{"Every row"},
@@ -154,6 +157,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"y", "copy the name"},
 		[]string{"r", "deployment: restart (asks first)"},
 		[]string{"s", "deployment: scale (asks first)"},
+		[]string{"L", "deployment: logs of all its pods"},
 		[]string{"d", "delete (asks first)"},
 		[]string{"Cluster"},
 		[]string{"c n", "pick the context, the namespace"},

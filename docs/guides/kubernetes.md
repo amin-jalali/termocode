@@ -75,6 +75,7 @@ kubeconfig, so other terminals keep their context.
 | `i` | Describe the row (a read-only page). |
 | `v` | Show the row as YAML (a read-only page; Secret values are masked). |
 | `E` | Events of the row, newest first (a read-only page). On a section header: all events of the namespace. |
+| `L` | Pod: pick how to show the logs (previous container, last 5 minutes or hour, time stamps, save to a file). Deployment: the logs of all its pods. |
 | `e` | Pod: open a shell in it. |
 | `f` | Pod, service or deployment: start or stop a port-forward. On a **FORWARDS** row: stop it. |
 | `y` | Copy the name. On a **FORWARDS** row: copy the local address. |
@@ -94,6 +95,19 @@ kubeconfig, so other terminals keep their context.
 last 200 lines. `e` opens a shell in the pod (`bash`, or `sh` when there
 is no bash). A pod with more than one container asks which container
 first.
+
+`L` on a pod picks how to show its logs:
+
+- **Follow logs**: as `Enter`.
+- **Previous container**: the logs of the container before its last
+  restart (useful for a crashing pod). They do not follow.
+- **Last 5 minutes** / **Last hour**: only the newer lines, then new ones.
+- **With time stamps**: a time before each line.
+- **Save to a file…**: every line, once. termocode asks the file name
+  (in the workspace) and never overwrites a file.
+
+`L` on a deployment follows the logs of all its pods and containers in
+one tab; each line starts with its pod and container.
 
 ## Port-forward
 
