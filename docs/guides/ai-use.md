@@ -435,6 +435,8 @@ it with the fix if you like.
     - **Fix with AI** — only on a line with an error or warning.
     - **Edit with AI…** — type an instruction, e.g. *add error handling*.
     - **Generate Doc Comment with AI**
+    - **Generate Property-Based Tests with AI** — see
+      [Property-based tests](#property-based-tests).
 3. For Fix, Edit and Doc, the [review card](#review-ai-changes) opens
    with the proposal.
 4. Accept or reject each change, or the whole file.
@@ -444,6 +446,26 @@ typed it). Press `u` once to undo it. If the file changed while the AI was
 working, termocode does not apply the edit.
 
 Shortcut: `Alt+I` runs **Edit with AI** on the selection or the current line.
+
+### Property-based tests
+
+A property-based test checks a rule for many random inputs, for example
+"decoding what you encoded gives back the input" or "sorting twice is the
+same as sorting once". When a rule breaks, the library shrinks the input
+to the smallest one that fails.
+
+1. Open a file, or select the functions you want tested.
+2. Run **AI: Generate Property-Based Tests for File / Selection** from the
+   palette, or pick **Generate Property-Based Tests with AI** in `Ctrl+.`.
+3. The chat names the rules, writes them to a new test file and runs it.
+   You review the new file like every AI change.
+
+termocode picks the library your project already uses: `testing/quick` or
+`rapid` (Go), Hypothesis (Python), fast-check (JavaScript, TypeScript),
+proptest or quickcheck (Rust), jqwik or Kotest (Java, Kotlin), StreamData
+(Elixir), QuickCheck (Haskell). When the library is missing, the AI tells
+you the command to add it; it never adds a dependency by itself. It does
+not change the code under test.
 
 ### Fix from the Problems panel
 
