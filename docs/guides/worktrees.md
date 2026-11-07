@@ -31,6 +31,7 @@ repository's git folder, never in your project.
 | `a` | Add the worktree as a folder of this window |
 | `p` | Pin or unpin |
 | `i` | Link an issue or pull request (see below) |
+| `P` | The linked pull request: checks and their logs, review threads, merge |
 | `N` | The notes agents left on it, with their times |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
@@ -112,6 +113,23 @@ URL must be `https` on the repository's own GitHub host. termocode asks
 20 seconds while checks run, else every 5 minutes. Without `gh`, or when
 it is not signed in, the number is kept without its title. **Unlink**
 on the same card takes it off. The AI can read links but never set one.
+
+### The pull request pane
+
+`P` (**Worktree: Show Pull Request of Selected**) opens the linked pull
+request on one card: title, state, checks, changed files, description,
+reviews and review threads. Without a linked pull request a short note
+says to press `i` first.
+
+- **Checks…** lists every check. A failed GitHub Actions check has two
+  rows: **Show Log** opens the failed part of its log in a read-only tab,
+  and **Fix with AI** puts that log in the chat. Nothing is sent until
+  you press Enter. Any other check with a link opens its page.
+- **Threads…** lists the review threads, open ones first. A thread's
+  card shows the code and every comment, with **Reply…** and
+  **Resolve** or **Reopen**.
+- **Actions…** reviews, checks out or merges the pull request. Merge
+  asks first on a card where **Cancel** is ready.
 
 ## Notes and status from agents
 
