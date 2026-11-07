@@ -329,7 +329,8 @@ func (m *Model) openHTTPSendPicker() tea.Cmd {
 	return m.openHTTPPicker(pickerKindHTTPSend, " Send Request ", items, nil)
 }
 
-// openHTTPHistory lists history.jsonl, newest first.
+// openHTTPHistory lists history.jsonl, newest first: pinned rows in a
+// Pinned group on top, then one group per day.
 func (m *Model) openHTTPHistory() tea.Cmd {
 	list, err := httpHistoryStore().List()
 	if err != nil {
@@ -339,17 +340,37 @@ func (m *Model) openHTTPHistory() tea.Cmd {
 		return m.pushToastDetail(toast.Info, "No HTTP history yet", "")
 	}
 	now := time.Now()
-	items := make([]picker.Item, 0, len(list)+1)
-	for _, e := range list {
+	items := make([]picker.Item, 0, len(list)+8)
+	row := func(e httpclient.Entry, group string) picker.Item {
 		hint := e.Env
 		if e.By == "ai" {
 			hint = strings.TrimSpace(hint + " by AI")
 		}
-		items = append(items, picker.Item{ID: e.ID, Title: e.Line(now), Hint: hint})
+		return picker.Item{ID: e.ID, Title: e.Line(now), Hint: hint, Group: group}
+	}
+	for _, e := range list {
+		if e.Pinned {
+			if len(items) == 0 {
+				items = append(items, picker.Item{Title: "Pinned", Header: true, Group: "Pinned"})
+			}
+			items = append(items, row(e, "Pinned"))
+		}
+	}
+	last := ""
+	for _, e := range list {
+		if e.Pinned {
+			continue
+		}
+		day := httpclient.DayLabel(e.Time, now)
+		if day != last {
+			items = append(items, picker.Item{Title: day, Header: true, Group: day})
+			last = day
+		}
+		items = append(items, row(e, day))
 	}
 	items = append(items, picker.Item{ID: "__clear", Title: "Clear history…"})
 	return m.openHTTPPicker(pickerKindHTTPHistory, " HTTP History ", items,
-		[]string{"Enter sends again · Ctrl+O opens the stored response · Ctrl+D deletes"})
+		[]string{"Enter sends again · Ctrl+O opens the stored response · Ctrl+T pins · Ctrl+S saves · Ctrl+D deletes"})
 }
 
 // openHTTPEnvPicker lists the environments of the env files found.
@@ -487,7 +508,7 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 	return nil, false
 }
 
-// httpPickerKey handles Ctrl+O / Ctrl+D in the history picker and
+// httpPickerKey handles Ctrl+O / Ctrl+T / Ctrl+S / Ctrl+D in the history picker and
 // Ctrl+E in the saved picker. ok=false: not ours.
 func (m *Model) httpPickerKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	switch m.pickerKind {
@@ -504,6 +525,32 @@ func (m *Model) httpPickerKey(k tea.KeyMsg) (tea.Cmd, bool) {
 			}
 			m.pickerOpen = false
 			return m.httpShowEntry(e), true
+		case "ctrl+t":
+			e, ok := httpHistoryStore().Get(it.ID)
+			if !ok {
+				return nil, true
+			}
+			if err := httpHistoryStore().SetPinned(e.ID, !e.Pinned); err != nil {
+				return m.pushToastDetail(toast.Errr, "Pin failed", err.Error()), true
+			}
+			m.pickerOpen = false
+			cmd := m.openHTTPHistory()
+			m.picker.SetCursorID(e.ID)
+			return cmd, true
+		case "ctrl+s":
+			e, ok := httpHistoryStore().Get(it.ID)
+			if !ok {
+				return nil, true
+			}
+			m.pickerOpen = false
+			tmpl := e.Request()
+			run := &httpRun{rr: httpclient.Resolved{Request: tmpl, Template: tmpl, Env: e.Env}, file: httpEntryFile(e), label: tmpl.Label(), env: e.Env, by: e.By, at: e.Time}
+			m.httpS().copyRun = run
+			name := e.Name
+			if name == "" {
+				name = httpclient.DeriveName(e.Method, e.URL)
+			}
+			return m.openHTTPPrompt(promptKindHTTPSaveName, "HTTP: Save Request", "Name:", name), true
 		case "ctrl+d":
 			if err := httpHistoryStore().Delete(it.ID); err != nil {
 				return m.pushToastDetail(toast.Errr, "Delete failed", err.Error()), true
