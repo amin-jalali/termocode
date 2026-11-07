@@ -328,6 +328,8 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseSelectInConsole()
 	case "c":
 		return m, m.databaseCodeGenStart()
+	case "F": // db_schema_files.go: dump to / compare with a folder
+		return m, m.databaseSchemaFilesStart()
 	case "#":
 		return m, m.databaseCountFromTree()
 	case "i":
@@ -964,7 +966,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"Esc", "back to the editor"},
 		[]string{"Connections"},
 		[]string{"a", "add a connection"},
-		[]string{"e", "edit the connection files"},
+		[]string{"e / F", "edit connection files / schema as files: dump, compare"},
 		[]string{"T", "test the connection"},
 		[]string{"S", "start a stopped service"},
 		[]string{"t", "transaction mode"},

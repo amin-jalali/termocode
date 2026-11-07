@@ -294,6 +294,15 @@ termocode reads both schemas in read-only sessions and writes each one as clean 
 
 Very large schemas are compared up to 2,000 tables; the card and the script say so when a schema is bigger.
 
+## Schema as files
+
+Press `F` on a schema (or a database, or any row under it) and choose:
+
+- **Dump to a folder…** writes the schema as clean SQL, one file per object: `tables/<name>.sql` (with its keys and indexes), `views/<name>.sql` and `routines/<name>.sql` (not SQLite). The folder is relative to the workspace (`schema/<connection>-<schema>` is offered). A file that is already up to date is not touched, so the folder diffs well in git. When the folder holds files with other text, a card asks first (**Cancel** has the focus). Files of dropped objects stay; Compare shows them.
+- **Compare with a folder…** lists every object under **Changed**, **Only in the database**, **Only in the folder** and **Identical**. `Space` selects rows; `Enter` takes the selected rows (or the row under the cursor) to a card: **Cancel**, **Update the folder** (write the database's version and remove the files of objects the database no longer has) or **Open the folder's SQL** (the folder's text of those objects in a read-only buffer, to review and run by hand; a changed table needs ALTER statements, not CREATE).
+
+The schema is read on a read-only session; nothing here changes the database. When the project uses a migration tool (Flyway, Liquibase, Alembic, Prisma, Rails, golang-migrate or dbmate), the menu says so: the folder is a snapshot next to the migrations, not a migration.
+
 ## Query parameters
 
 A statement with parameters asks for each value before it runs: `?`, `:name`, `$1` (PostgreSQL, SQLite) and `@name` (not MySQL, where `@name` is a server variable). The values are bound, never pasted into the SQL. Type `NULL` for a null; a whole number is sent as a number. The console remembers the last values for this session and offers them next time. `Esc` runs nothing. Text in quotes and comments, `::` casts and the PostgreSQL `?` operator are not parameters.
