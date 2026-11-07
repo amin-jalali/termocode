@@ -244,6 +244,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Sessions… | `db-open-sessions` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
+| Databases: Show Dependencies | `db-dependencies` |   |   |
+| Databases: Show ER Diagram (Text) | `db-er-text` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |

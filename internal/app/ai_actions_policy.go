@@ -403,6 +403,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-er-diagram":                aiNever(aiNoPicker),
 	"db-create-table":              aiNever("changes the schema; the user reviews the DDL card (db_query for DDL)"),
 	"db-alter-table":               aiNever("changes the schema; the user reviews the DDL card (db_query for DDL)"),
+	"db-dependencies":              aiAuto(), // read only: a text buffer (db_depends.go)
+	"db-er-text":                   aiAuto(), // read only: a text buffer (db_depends.go)
 	"db-find-object":               aiNever(aiNoPicker + " (db_schema)"),
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
