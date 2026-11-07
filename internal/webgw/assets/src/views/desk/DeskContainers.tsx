@@ -15,6 +15,7 @@ import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { ContainersHost, ImageItem } from "../../../../../webproto/proto";
 import { panelTab } from "../../lib/lsp";
+import { copyText } from "../../lib/clip";
 import { toast } from "../../lib/toasts";
 import { ctrTab, type CtrWhat } from "../../lib/vtabs";
 import { setPanes, showFile } from "../../lib/workbench";
@@ -23,6 +24,7 @@ import { readContainers, type ContainersView, type CtrView } from "../../state/m
 import { t, type StringKey } from "../../strings";
 import { AskLaptop } from "../../ui/AskLaptop";
 import { errText } from "../../ui/CardSheet";
+import { onMenu, type MenuEntry } from "../../ui/ContextMenu";
 import { Cod } from "../../ui/icons";
 import { Act, Ask, PaneSection, PaneView, Row, Tree } from "../../ui/pane";
 import { Portal } from "../../ui/Portal";
@@ -208,6 +210,27 @@ const shown = (s: string) => {
   return !f || s.toLowerCase().includes(f);
 };
 
+/** Item is one action of a row: a hover button and a context menu entry
+ * (menuOnly: the menu alone has it). */
+type Item = { icon: string; act?: string; label: string; run: () => void; menuOnly?: boolean } | null;
+
+/** buttons draws a row's hover buttons from its items. */
+const buttons = (items: readonly Item[]) => items.map((it) => it && !it.menuOnly && <Act key={it.label} icon={it.icon} act={it.act} label={it.label} onClick={it.run} />);
+
+/** menuOf is a row's right-click handler over its items (none: no menu). */
+function menuOf(label: string, items: () => readonly Item[]): ((e: MouseEvent) => void) | undefined {
+  return onMenu(label, () => {
+    const out: (MenuEntry | null)[] = [];
+    for (const it of items()) {
+      if (!it) {
+        if (out.length && out[out.length - 1]) out.push(null);
+      } else out.push({ label: it.label, run: it.run });
+    }
+    if (out.length && !out[out.length - 1]) out.pop();
+    return out;
+  });
+}
+
 function CtrRows({ cs, level, x }: { cs: CtrView[]; level: number; x: Ctx }) {
   const ask = (c: CtrView, op: "start" | "restart" | "pause") => {
     const paused = c.state === "paused";
@@ -226,13 +249,38 @@ function CtrRows({ cs, level, x }: { cs: CtrView[]; level: number; x: Ctx }) {
     });
   };
   const laptop = (c: CtrView, label: StringKey, q: StringKey, op: string, args: unknown) => x.setLaptop({ label: t(label), text: t(q, { name: c.name }), op, args });
+  // items are the laptop's keys for a container: what only reads runs at
+  // once; Start, Restart and Pause ask in the view; the rest asks the laptop.
+  const items = (c: CtrView): Item[] => {
+    const running = RUNNING.has(c.state) || c.state === "paused";
+    const can = x.canAct && !c.busy;
+    const url = portURL(c);
+    return [
+      { icon: "output", label: t("ctr.logs"), run: () => showLogs(c) },
+      { icon: "json", act: "inspect", label: t("ctr.inspect"), run: () => openTab("inspect-container", c.id, c.name) },
+      RUNNING.has(c.state) ? { icon: "pulse", act: "stats", label: t("ctr.stats"), run: () => openTab("stats", c.id, c.name) } : null,
+      url ? { icon: "link-external", label: t("ctr.open_port"), run: () => void window.open(url, "_blank", "noopener,noreferrer"), menuOnly: true } : null,
+      null,
+      { icon: "copy", label: t("ctr.copy_id"), run: () => copyText(c.id), menuOnly: true },
+      { icon: "copy", label: t("ctr.copy_name"), run: () => copyText(c.name), menuOnly: true },
+      null,
+      can && c.state === "running" ? { icon: "terminal", act: "shell", label: t("ctr.shell"), run: () => laptop(c, "ctr.shell", "ctr.shell_q", "containers.exec", { id: c.id, kind: "shell" }) } : null,
+      can && c.state === "running" ? { icon: "plug", act: "attach", label: t("ctr.attach"), run: () => laptop(c, "ctr.attach", "ctr.attach_q", "containers.exec", { id: c.id, kind: "attach" }) } : null,
+      can && DB_IMAGE.test(c.image) ? { icon: "database", act: "open-db", label: t("ctr.open_db"), run: () => laptop(c, "ctr.open_db", "ctr.open_db_q", "containers.open_db", { id: c.id }) } : null,
+      null,
+      can && running ? { icon: c.state === "paused" ? "debug-continue" : "debug-pause", act: "pause", label: t(c.state === "paused" ? "ctr.unpause" : "runs.pause"), run: () => ask(c, "pause") } : null,
+      can && !running ? { icon: "play", label: t("ctr.start"), run: () => ask(c, "start") } : null,
+      can && running ? { icon: "debug-restart", label: t("ctr.restart"), run: () => ask(c, "restart") } : null,
+      can && running ? { icon: "debug-stop", label: t("ctr.stop"), run: () => laptop(c, "ctr.stop", "ctr.stop_q", "containers.stop", { id: c.id }) } : null,
+      can && !running ? { icon: "trash", label: t("ctr.remove"), run: () => laptop(c, "ctr.remove", "ctr.remove_q", "containers.remove", { id: c.id }) } : null,
+    ];
+  };
   return (
     <>
       {cs
         .filter((c) => shown(c.name + " " + c.image))
         .map((c) => {
-          const running = RUNNING.has(c.state) || c.state === "paused";
-          const can = x.canAct && !c.busy;
+          const its = items(c);
           return (
             <Fragment key={c.id}>
               <Row
@@ -244,21 +292,13 @@ function CtrRows({ cs, level, x }: { cs: CtrView[]; level: number; x: Ctx }) {
                 title={[c.name, c.image, c.status, c.ports].filter(Boolean).join(" — ")}
                 data={{ id: c.id, state: c.state }}
                 onClick={() => ((ctrSel.value = c), showLogs(c))}
+                onContextMenu={menuOf(c.name, () => items(c))}
                 end={<span class="tr-age">{c.status}</span>}
                 actions={
                   <>
-                    <Act icon="output" label={t("ctr.logs")} onClick={() => showLogs(c)} />
-                    <Act icon="json" act="inspect" label={t("ctr.inspect")} onClick={() => openTab("inspect-container", c.id, c.name)} />
-                    {RUNNING.has(c.state) && <Act icon="pulse" act="stats" label={t("ctr.stats")} onClick={() => openTab("stats", c.id, c.name)} />}
+                    {buttons(its.slice(0, 3))}
                     <PortLink c={c} />
-                    {can && c.state === "running" && <Act icon="terminal" act="shell" label={t("ctr.shell")} onClick={() => laptop(c, "ctr.shell", "ctr.shell_q", "containers.exec", { id: c.id, kind: "shell" })} />}
-                    {can && c.state === "running" && <Act icon="plug" act="attach" label={t("ctr.attach")} onClick={() => laptop(c, "ctr.attach", "ctr.attach_q", "containers.exec", { id: c.id, kind: "attach" })} />}
-                    {can && DB_IMAGE.test(c.image) && <Act icon="database" act="open-db" label={t("ctr.open_db")} onClick={() => laptop(c, "ctr.open_db", "ctr.open_db_q", "containers.open_db", { id: c.id })} />}
-                    {can && running && <Act icon={c.state === "paused" ? "debug-continue" : "debug-pause"} act="pause" label={t(c.state === "paused" ? "ctr.unpause" : "runs.pause")} onClick={() => ask(c, "pause")} />}
-                    {can && !running && <Act icon="play" label={t("ctr.start")} onClick={() => ask(c, "start")} />}
-                    {can && running && <Act icon="debug-restart" label={t("ctr.restart")} onClick={() => ask(c, "restart")} />}
-                    {can && running && <Act icon="debug-stop" label={t("ctr.stop")} onClick={() => laptop(c, "ctr.stop", "ctr.stop_q", "containers.stop", { id: c.id })} />}
-                    {can && !running && <Act icon="trash" label={t("ctr.remove")} onClick={() => laptop(c, "ctr.remove", "ctr.remove_q", "containers.remove", { id: c.id })} />}
+                    {buttons(its.slice(3))}
                   </>
                 }
               />
@@ -275,6 +315,12 @@ function ProjectRow({ p, cs, x }: { p: string; cs: CtrView[]; x: Ctx }) {
     x.setPending({ key: "p:" + p, text: t(verb === "up" ? "ctr.compose_up_q" : "ctr.compose_restart_q", { name: p }), verb: t(verb === "up" ? "ctr.start" : "ctr.restart"), run: () => act("containers.compose", { project: p, verb }, t("ctr.compose_done", { name: p })) });
   const ask = (verb: "stop" | "down") =>
     x.setLaptop({ label: t(verb === "stop" ? "ctr.stop" : "ctr.compose_down"), text: t(verb === "stop" ? "ctr.compose_stop_q" : "ctr.compose_down_q", { name: p }), op: "containers.compose_ask", args: { project: p, verb } });
+  const items: Item[] = [
+    { icon: "play", act: "compose-up", label: t("ctr.compose_up"), run: () => up("up") },
+    { icon: "debug-restart", act: "compose-restart", label: t("ctr.compose_restart"), run: () => up("restart") },
+    { icon: "debug-stop", act: "compose-stop", label: t("ctr.compose_stop"), run: () => ask("stop") },
+    { icon: "trash", act: "compose-down", label: t("ctr.compose_down"), run: () => ask("down") },
+  ];
   return (
     <>
       <Row
@@ -285,16 +331,8 @@ function ProjectRow({ p, cs, x }: { p: string; cs: CtrView[]; x: Ctx }) {
         label={p}
         data={{ project: p }}
         end={<span class="count">{cs.length}</span>}
-        actions={
-          x.canAct && (
-            <>
-              <Act icon="play" act="compose-up" label={t("ctr.compose_up")} onClick={() => up("up")} />
-              <Act icon="debug-restart" act="compose-restart" label={t("ctr.compose_restart")} onClick={() => up("restart")} />
-              <Act icon="debug-stop" act="compose-stop" label={t("ctr.compose_stop")} onClick={() => ask("stop")} />
-              <Act icon="trash" act="compose-down" label={t("ctr.compose_down")} onClick={() => ask("down")} />
-            </>
-          )
-        }
+        onContextMenu={x.canAct ? menuOf(p, () => items) : undefined}
+        actions={x.canAct && <>{buttons(items)}</>}
       />
       <Under k={"p:" + p} x={x} />
     </>

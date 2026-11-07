@@ -171,6 +171,47 @@ func TestGitCheckoutNeedsListAndCard(t *testing.T) {
 	}
 }
 
+// Spec (WEBP-10): git.branches also lists the remote branches that have
+// no local branch yet; git.checkout with "remote" takes only a listed one,
+// waits for the laptop and makes a local branch that tracks it.
+func TestGitCheckoutRemoteTracks(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	webTestHub(t, &m)
+	_, run := webTestRepo(t, &m)
+	bare := filepath.Join(t.TempDir(), "origin.git")
+	run("init", "-q", "--bare", bare)
+	run("remote", "add", "origin", bare)
+	run("push", "-q", "-u", "origin", "main")
+	run("push", "-q", "origin", "main:feat/remote")
+	run("fetch", "-q", "origin")
+	webTestGitLoad(&m)
+	c := webTestSub(t, &m)
+	if f := webTestCallBg(t, &m, c, webproto.OpGitCheckout, `{"remote":"origin/feat/remote"}`); webTestErr(f) != "not_found" {
+		t.Fatalf("remote checkout before the list: %v", f)
+	}
+	var br webproto.GitBranches
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitBranches, `{}`), &br)
+	if strings.Join(br.Branches, ",") != "main" || strings.Join(br.Remotes, ",") != "origin/feat/remote" {
+		t.Fatalf("branches %+v (origin/main has a local main, so it is not offered)", br)
+	}
+	if f := webTestCallBg(t, &m, c, webproto.OpGitCheckout, `{"remote":"origin/main"}`); webTestErr(f) != "not_found" {
+		t.Fatalf("an unlisted remote branch: %v", f)
+	}
+	var ref webproto.AskRef
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitCheckout, `{"remote":"origin/feat/remote"}`), &ref)
+	if v := m.confirm.View(); !strings.Contains(v, "Switch to feat/remote?") || !strings.Contains(v, "tracks origin/feat/remote") {
+		t.Errorf("card:\n%s", v)
+	}
+	webTestLaptopConfirmRemote(t, &m)
+	if got := strings.TrimSpace(run("rev-parse", "--abbrev-ref", "HEAD")); got != "feat/remote" {
+		t.Fatalf("on %q after the laptop's yes", got)
+	}
+	if got := strings.TrimSpace(run("rev-parse", "--abbrev-ref", "@{upstream}")); got != "origin/feat/remote" {
+		t.Fatalf("upstream %q", got)
+	}
+}
+
 // Spec (WEB-42): git.stash waits for the laptop and refuses a clean tree;
 // git.stash_pop brings the changes back.
 func TestGitStashAndPop(t *testing.T) {

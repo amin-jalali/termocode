@@ -172,7 +172,7 @@ func (m *Model) openAgentChatFor(t terminalTab) tea.Cmd {
 		m.showAgentChatPanel()
 		return m.agentChatPollCmd(c.gen)
 	}
-	cwd := t.Cwd
+	cwd := terminalDir(t.Cwd) // not nvim's term:// name (view.go)
 	if cwd == "" {
 		cwd = aiWorkspaceRoot()
 	}

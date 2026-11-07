@@ -64,7 +64,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`git_unstage`](#git_unstage) | confirm (git) | no | Unstage files (keep their changes in the working tree). |
 | [`git_fetch`](#git_fetch) | confirm (git) | no | Fetch from the remotes (updates remote branches; the working tree is not touched). |
 | [`git_hunk`](#git_hunk) | stage: confirm (git)<br>unstage: confirm (git)<br>discard: confirm (always asks) | no | Stage, unstage or discard the one diff hunk that contains line (1-based; for unstage, the line in the staged version). |
-| [`git_stash`](#git_stash) | list: auto<br>push: confirm (git)<br>pop: confirm (git)<br>apply: confirm (git)<br>drop: confirm (always asks) | no | Stash: list; push (save tracked changes, optional message, and clean the working tree); apply / pop / drop the entry at index (default 0). |
+| [`git_stash`](#git_stash) | list: auto<br>save: confirm (git)<br>apply: confirm (git)<br>pop: confirm (always asks)<br>drop: confirm (always asks) | some ask | Stash: list; save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0). |
 | [`tasks_list`](#tasks_list) | auto | yes | List the workspace tasks (.termocode/tasks.json, user commands, auto-detected build/test tasks): label, group (build/test, default), command and the state of the last run. |
 | [`tasks_run`](#tasks_run) | confirm (run) | asks | Run a task in its own VISIBLE terminal tab (like Tasks: Run Task). |
 | [`tasks_status`](#tasks_status) | auto | yes | State of a task run: running or the exit code, and the last output lines. |
@@ -729,17 +729,18 @@ Stage, unstage or discard the one diff hunk that contains line (1-based; for uns
 
 ### git_stash
 
-Stash: list; push (save tracked changes, optional message, and clean the working tree); apply / pop / drop the entry at index (default 0). push/apply/pop are refused while a file has unsaved edits in the editor; drop can not be undone.
+Stash: list; save (tracked changes, optional message, untracked=true adds new files; cleans the working tree); apply / pop / drop the entry at index (default 0). save/apply/pop are refused while a file has unsaved edits in the editor; drop can not be undone.
 
-**Gate:** list: auto · push: confirm (git) · pop: confirm (git) · apply: confirm (git) · drop: confirm (always asks)
+**Gate:** list: auto · save: confirm (git) · apply: confirm (git) · pop: confirm (always asks) · drop: confirm (always asks)
 
-**MCP server:** no
+**MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `op` | string | yes | what to do. One of: `list`, `push`, `pop`, `apply`, `drop` |
+| `op` | string | yes | what to do. One of: `list`, `save`, `apply`, `pop`, `drop` |
 | `index` | integer |   | apply/pop/drop: stash index (stash@{index}) |
-| `message` | string |   | push: stash message |
+| `message` | string |   | save: stash message |
+| `untracked` | boolean |   | save: stash new (untracked) files too |
 
 ### tasks_list
 
@@ -2118,7 +2119,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `focus-explorer` | View: Focus Explorer | auto |   |
 | `fold-all` | View: Fold All | auto |   |
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
+| `git-ai-changelog` | Git: Write Changelog with AI… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-commit-msg` | Git: Generate Commit Message with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `git-ai-compose` | Git: Plan Commits for My Changes with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-explain-changes` | Git: Explain Changes with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-explain-line` | Git: Explain Line's Commit with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-pr-text` | Git: Write Pull Request Description with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
@@ -2133,6 +2136,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-blame-before` | Git: Blame Before This Change | auto |   |
 | `git-blame-commit` | Git: Open Commit of Line | auto |   |
 | `git-blame-options` | Git: Blame Options… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-block-history` | Git: Show History of Block | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
 | `git-branch-delete` | Git: Delete Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-branch-from` | Git: Create Branch From… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch) |
@@ -2142,12 +2146,16 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-clean-untracked` | Git: Delete Untracked Files… | confirm (always asks) |   |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
+| `git-clone-shallow` | Git: Clone Repository (Shallow)… | never | clones into a folder outside the workspace and opens it |
 | `git-cmd-log` | Git: Show Git Command Log | auto |   |
 | `git-co-author` | Git: Add Co-Author… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
+| `git-commit-author` | Git: Commit Staged as Another Author… | never | makes a commit under another person's name; only the user does that |
 | `git-commit-checks` | Git: Run Before-Commit Checks | never | runs the user's before-commit task, a shell command |
 | `git-commit-edit` | Git: Edit Commit Message in Editor | never | opens the commit message for the user to write; use git_commit |
+| `git-commit-empty` | Git: Commit Empty (No Changes)… | never | makes a commit in the user's name; only the user does that |
 | `git-commit-history` | Git: Pick Recent Commit Message… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-commit-marked` | Git: Commit Marked Files Only… | never | makes a commit in the user's name; only the user does that |
 | `git-commit-push` | Git: Commit and Push | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-commit-sync` | Git: Commit and Sync | never | commits the message the user typed in the box, then pushes; use git_commit, then git_push |
 | `git-compare-branches` | Git: Compare Branches… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2157,6 +2165,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-conflict-ours` | Git: Accept Current Change (Conflict at Cursor) | confirm (fileWrite) |   |
 | `git-conflict-prev` | Git: Go to Previous Merge Conflict | auto |   |
 | `git-conflict-theirs` | Git: Accept Incoming Change (Conflict at Cursor) | confirm (fileWrite) |   |
+| `git-contributors` | Git: Show Contributors | auto |   |
 | `git-copy-commit-link` | Git: Copy Remote Link to Commit | confirm (ide) |   |
 | `git-copy-line-link` | Git: Copy Remote Link to Line | confirm (ide) |   |
 | `git-diff` | Git: Show Diff for Current File | auto |   |
@@ -2170,8 +2179,15 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-fetch-all` | Git: Fetch All Remotes (Prune) | confirm (git) |   |
 | `git-fixup` | Git: Fixup Staged Changes Into… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-focus` | Git: Focus Source Control | auto |   |
+| `git-gist` | Git: Create Gist from File… | never | publishes a file of the user on GitHub; only the user does that |
+| `git-gitlab-mr-create` | Git: Create GitLab Merge Request… | never | publishes a merge request in the user's name; only the user creates one |
+| `git-gitlab-mrs` | Git: GitLab Merge Requests… | auto |   |
+| `git-gitlab-token` | Git: Set GitLab Token… | never | a token is typed by the user only |
 | `git-goto-commit` | Git: Go to Commit… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-graph-all` | Git: Toggle All Branches in GRAPH | auto |   |
+| `git-graph-col-author` | Git: Toggle Author Column in GRAPH | auto |   |
+| `git-graph-col-date` | Git: Toggle Date Column in GRAPH | auto |   |
+| `git-graph-col-sha` | Git: Toggle SHA Column in GRAPH | auto |   |
 | `git-graph-head` | Git: Go to HEAD in GRAPH | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-hook-output` | Git: Show Last Hook Output | auto |   |
@@ -2181,7 +2197,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-init` | Git: Initialize Repository | never | makes a new git repository in the user's folder; user only |
 | `git-inline-blame` | Git: Toggle Inline Blame | auto |   |
 | `git-issues` | Git: Issues… (Start Work on One) | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-lfs-files` | Git: Show LFS Files | auto |   |
 | `git-line-history` | Git: Show Line History | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
+| `git-line-lens` | Git: Toggle Line History Lens | auto |   |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-folder` | Git: Show Folder History… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-search` | Git: Search Log… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
@@ -2204,6 +2222,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-merge-take-ours` | Git: Merge View: Take Ours | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-theirs` | Git: Merge View: Take Theirs | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-undo` | Git: Merge View: Undo Last Change | never | resolves the user's merge conflict in the merge view; user only |
+| `git-move-commit` | Git: Move Last Commit to Another Branch… | never | moves the user's commits between branches; only the user does that |
 | `git-outgoing` | Git: Show Outgoing Commits… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-patch-apply-clip` | Git: Apply Patch from Clipboard… | never | applies text from the user's clipboard to the files; user only |
 | `git-patch-apply-file` | Git: Apply Patch from File… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2228,10 +2247,12 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-refresh` | Git: Refresh Status | auto |   |
 | `git-remotes` | Git: Manage Remotes… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-repo-pick` | Git: Switch Repository… | auto |   |
 | `git-rev-next` | Git: Open Next Revision of File | auto |   |
 | `git-rev-prev` | Git: Open Previous Revision of File | auto |   |
 | `git-signing-toggle` | Git: Toggle Commit Signing (This Repository) | never | changes how the user's commits are signed; only the user does that |
 | `git-skip-hooks` | Git: Toggle Skip Hooks on Commit (--no-verify) | never | turns off the checks the repository runs on each commit; only the user does that |
+| `git-split-guide` | Git: How to Split a Commit | auto |   |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |
@@ -2242,6 +2263,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-stash-options` | Git: Stash… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_stash) |
 | `git-stash-pop` | Git: Pop Latest Stash | confirm (git) |   |
 | `git-status-blame` | Git: Toggle Blame in Status Bar | auto |   |
+| `git-submodule-update` | Git: Update Submodules… | confirm (git) |   |
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
 | `git-tag-create` | Git: Create Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-tag-delete` | Git: Delete Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -2251,6 +2273,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-uncommit` | Git: Uncommit Last Commit (Keep Changes) | confirm (git) |   |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
+| `git-unshallow` | Git: Fetch Full History (Unshallow) | confirm (git) |   |
 | `git-unstage-all` | Git: Unstage All Changes | confirm (git) |   |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |
 | `git-unstage-lines` | Git: Unstage Line (or Selected Lines) | confirm (git) |   |
@@ -2526,6 +2549,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git_commit_task` | never | sets a shell command that runs before each commit; only the user does that |
 | `git_inline_blame` | confirm (settings) |   |
 | `git_issue_link` | never | sets the page a click on an issue key opens; only the user does that |
+| `git_line_lens` | confirm (settings) |   |
 | `git_status_blame` | confirm (settings) |   |
 | `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
 | `http_cookie_jar` | confirm (settings) |   |

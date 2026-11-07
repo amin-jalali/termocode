@@ -12,8 +12,9 @@ import (
 
 // The chat requests (WEB-13). They act on the chat open on the laptop:
 // the page follows it (chat.pin only changes what the page shows; the
-// hub keeps nothing for it). chat.send to a chat the laptop does not show
-// is refused rather than switching the laptop's chat under the user.
+// hub keeps nothing for it). chat.send to an old chat the page reads
+// opens it on the laptop first (WEBP-10: the user goes on with it), but
+// never while the AI answers in the open one.
 // chat.new and chat.send never move the laptop's focus.
 
 func init() {
@@ -36,14 +37,13 @@ func (m *Model) webChatSend(call *webCall) tea.Cmd {
 	}
 	s := m.aiS()
 	switch {
-	case a.ChatID != "" && a.ChatID != s.conv.ID:
-		call.fail(webproto.CodeConflict, "This chat is not open on the laptop. Open it there first.")
-		return nil
 	case s.streaming:
 		call.fail(webproto.CodeBusy, "The AI is still answering. Stop it or wait.")
 		return nil
 	case !m.aiConfigured():
 		call.fail(webproto.CodeConflict, "AI is not set up on the laptop.")
+		return nil
+	case a.ChatID != "" && a.ChatID != s.conv.ID && !m.webOpenStoredChat(call, a.ChatID):
 		return nil
 	}
 	if cmd, ok := m.aiMCPPromptSubmit(strings.TrimSpace(a.Text)); ok { // "/server.prompt" (MCPX-13), as Enter on the laptop
@@ -53,6 +53,24 @@ func (m *Model) webChatSend(call *webCall) tea.Cmd {
 	cmd := m.sendAIChat(a.Text)
 	call.reply(webproto.ChatRef{ID: s.conv.ID})
 	return cmd
+}
+
+// webOpenStoredChat opens the stored chat id on the laptop so a send can
+// go on with it; false (and the call failed) when it cannot. The chat
+// file is small and read here, as the laptop's history list does.
+func (m *Model) webOpenStoredChat(call *webCall, id string) bool {
+	s := m.aiS()
+	c, err := s.store.Load(id)
+	if err != nil || c.ID != id {
+		call.fail(webproto.CodeNotFound, "That chat is gone.")
+		return false
+	}
+	if !s.holdChat(id) {
+		call.fail(webproto.CodeConflict, "This chat is open in another termocode window.")
+		return false
+	}
+	m.aiShowStoredChat(c)
+	return true
 }
 
 // webChatStop stops the AI (the turn, a one-shot action, queued runs),

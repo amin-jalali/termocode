@@ -18,7 +18,8 @@ import (
 // Code, Codex, …) may call through the session socket. The list is ONE
 // table; tools/list and tools/call both read it, and
 // TestMCPServeAllowListGolden pins it. What is left out on purpose:
-// file writes, run_command, terminal_send, git writes, settings,
+// file writes, run_command, terminal_send, git writes (the stash aside:
+// git_stash asks, drop and pop on a Cancel-first card), settings,
 // credentials, LSP rename / code actions, service starts, .http file
 // writes, database writes, containers and every tool of the user's own
 // MCP servers (mcp__*: never re-exported, MC-11). The agent has its own
@@ -74,6 +75,7 @@ var mcpServeAllowList = []mcpServeToolRow{
 	{name: "git_log"},
 	{name: "git_blame"},
 	{name: "git_branch"},
+	{name: "git_stash"}, // list at once; save / apply ask; drop / pop ask, Cancel first, never Always allow
 	// Worktrees (WTX-12): read, and short notes (text only, redacted)
 	{name: "worktrees_list"},
 	{name: "worktree_note"},
