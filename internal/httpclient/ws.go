@@ -179,3 +179,30 @@ func (w *WSConn) Close() error {
 	w.close()
 	return err
 }
+
+// WSExchange opens a session, sends msgs in order, then collects what
+// arrives until wait passes with no new message or maxMsgs came in,
+// and closes. It is the AI tool's one-shot WebSocket call (API-17).
+func (c *Client) WSExchange(ctx context.Context, rr Resolved, h Hooks, msgs []string, wait time.Duration, maxMsgs int) ([]WSMessage, error) {
+	conn, err := c.DialWS(ctx, rr, h)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	for _, m := range msgs {
+		if err := conn.Send(ctx, m); err != nil {
+			return conn.Log(), fmt.Errorf("websocket send: %w", err)
+		}
+	}
+	in := 0
+	for in < maxMsgs {
+		rctx, cancel := context.WithTimeout(ctx, wait)
+		_, err := conn.Read(rctx)
+		cancel()
+		if err != nil {
+			break // the wait passed, or the server closed
+		}
+		in++
+	}
+	return conn.Log(), nil
+}

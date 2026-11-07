@@ -232,6 +232,12 @@ type httpState struct {
 	webRun    *httpRun
 	webCancel context.CancelFunc
 	webHosts  map[string]bool
+
+	// The WebSocket session (http_ws.go, API-17); wsShown: the page
+	// shows it rather than an HTTP answer.
+	ws      *httpWSState
+	wsGen   int
+	wsShown bool
 }
 
 type httpLens struct {
@@ -481,6 +487,9 @@ func httpUserTLS(run *httpRun, hooks *httpclient.Hooks) {
 // startHTTPRun sends run as the user's request: the lens and the status
 // chip say "sending", the page opens on the answer.
 func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
+	if httpclient.IsWebSocket(run.rr.Request) {
+		return m.httpStartWS(run, hooks) // API-17
+	}
 	s := m.httpS()
 	set := loadHTTPSettings()
 	client := s.httpClient(set)
@@ -558,6 +567,10 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.httpFinish(msg.run), true
 	case httpAppendMsg:
 		return m.httpPageAppend(msg), true
+	case httpWSEventMsg:
+		return m.httpWSHandle(msg), true
+	case httpWSSentMsg:
+		return m.httpWSSent(msg), true
 	case httpOpenAPIFetchedMsg:
 		return m.httpOpenAPIFetched(msg), true
 	case httpPrivateEnvCheckMsg:

@@ -94,6 +94,8 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
 		{ID: "http-api-docs", Title: "HTTP: Open API Docs"},
 		{ID: "http-clear-script-vars", Title: "HTTP: Clear Script Variables"},
+		{ID: "http-ws-send", Title: "HTTP: WebSocket Send Message…"},
+		{ID: "http-ws-close", Title: "HTTP: WebSocket Disconnect"},
 	}
 }
 
@@ -146,6 +148,10 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.httpSaveBodyPrompt(), true
 	case "http-fields":
 		return m.openHTTPFields(0, 0), true
+	case "http-ws-send":
+		return m.httpWSPaletteSend(), true
+	case "http-ws-close":
+		return m.httpWSPaletteClose(), true
 	case "http-clear-script-vars":
 		return m.httpClearScriptVars(), true
 	case "http-api-docs":
@@ -536,6 +542,8 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 		return m.pushToastDetail(toast.Info, "HTTP environment: "+env, ""), true
 	case pickerKindHTTPSnippet:
 		return m.httpCopySnippet(s.copyRun, id), true
+	case pickerKindHTTPWS:
+		return m.httpWSPick(id), true
 	case pickerKindHTTPSaved:
 		if id == "__edit" {
 			return m.httpOpenInEditor(httpSavedPath()), true
@@ -694,6 +702,8 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.databaseShowPage(), true
 	}
 	switch m.promptKind {
+	case promptKindHTTPWSType:
+		return m.httpWSSend(value), true
 	case promptKindHTTPQuick:
 		req, err := httpclient.ParseQuick(value)
 		if err != nil {

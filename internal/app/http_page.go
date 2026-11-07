@@ -386,6 +386,7 @@ if _G._termocode_http_head then _G._termocode_http_head(h) end`, page.head)
 	if !sending {
 		s.shown = run
 	}
+	s.wsShown = false
 	page := buildHTTPPage(run, s.view, s.reveal, sending)
 	return m.httpOpenPage(page)
 }
@@ -519,6 +520,9 @@ func (m *Model) httpRedrawPage() tea.Cmd {
 // httpPageKey runs a key pressed on the page (buffer-local maps in
 // httpPageLua notify termocode_http_key).
 func (m *Model) httpPageKey(key string) tea.Cmd {
+	if cmd, ok := m.httpWSKey(key); ok {
+		return cmd
+	}
 	s := m.httpS()
 	switch {
 	case key == "r":

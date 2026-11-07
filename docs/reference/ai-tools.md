@@ -2328,6 +2328,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `http-saved` | HTTP: Saved Requests… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests on http/saved.http) |
 | `http-send` | HTTP: Send Request at Cursor | never | sends a network request; use http_send (gated by host and method) |
 | `http-send-pick` | HTTP: Send Request… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests, http_send) |
+| `http-ws-close` | HTTP: WebSocket Disconnect | confirm (ide) |   |
+| `http-ws-send` | HTTP: WebSocket Send Message… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_websocket) |
 | `itermoc-agents` | Itermoc: Outside Agents | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-models` | Itermoc: AI Providers | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-open` | Itermoc: Open | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |

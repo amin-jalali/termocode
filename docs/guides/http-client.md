@@ -91,6 +91,37 @@ row 2 adds `sse · N events`; **Raw** shows the text as it came.
 Secret header values (`Authorization`, cookies, `X-Api-Key`, names with
 token / secret / password) show as `[REDACTED]`.
 
+### WebSocket
+
+A request with the method `WEBSOCKET` (or a `ws://` / `wss://` URL) opens
+a session on the response page instead of one send. Its body holds
+saved messages, split by `===` lines:
+
+```http
+### chat
+WEBSOCKET wss://echo.example.com/ws
+Authorization: Bearer {{token}}
+
+{"op":"hello"}
+===
+{"op":"ping"}
+```
+
+| Key | Action |
+|---|---|
+| `m` | pick a saved message and send it |
+| `i` | type a message and send it |
+| `Esc` | disconnect |
+| `r` | after a disconnect: connect again |
+| `q` | close the page (the session stays open) |
+
+Row 2 says `● connected · 2 sent · 3 received`; `→` rows are yours,
+`←` rows came from the server. One session at a time; a new one closes
+the old one. Palette: **HTTP: WebSocket Send Message…** and
+**HTTP: WebSocket Disconnect**. The AI's `http_websocket` tool connects,
+sends, reads the answers for a few seconds and closes (it asks first,
+like `http_send`).
+
 ## Environments and variables
 
 `{{name}}` is looked up in this order, first hit wins:

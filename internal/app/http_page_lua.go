@@ -284,7 +284,7 @@ vim.api.nvim_create_autocmd('FileType', {
     local function map(lhs, key)
       vim.keymap.set('n', lhs, function() notify(key) end, { buffer = buf, silent = true, nowait = true })
     end
-    for _, k in ipairs({ 'r', 'c', 'C', 's', 'S', 'h', 'e', 'k', 'x', 'o', 'q', '1', '2', '3', '4', '5', '6', '7', '8', '9' }) do map(k, k) end
+    for _, k in ipairs({ 'r', 'c', 'C', 's', 'S', 'h', 'e', 'k', 'x', 'o', 'q', 'm', 'i', '1', '2', '3', '4', '5', '6', '7', '8', '9' }) do map(k, k) end
     map('<Tab>', 'tab')
     map('<Esc>', 'esc')
     -- Mouse: the chips on row 2, the request name on row 1, a redirect
