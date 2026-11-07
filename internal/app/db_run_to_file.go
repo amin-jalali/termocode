@@ -113,7 +113,7 @@ func (m *Model) databaseRunToFileCard() tea.Cmd {
 	buttons := []confirm.Button{{ID: "cancel", Title: "Cancel"}}
 	if st, err := os.Stat(e.path); err == nil && !st.IsDir() {
 		msg += "\n\n" + where + " already exists. It is replaced only when the file is complete."
-		buttons = append(buttons, confirm.Button{ID: "replace", Title: "Run and Replace", Style: confirm.StyleDestructive})
+		buttons = append(buttons, confirm.Button{ID: "replace", Title: "Run and replace", Style: confirm.StyleDestructive})
 	} else {
 		buttons = append(buttons, confirm.Button{ID: "run", Title: "Run", Style: confirm.StylePrimary})
 	}

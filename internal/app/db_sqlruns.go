@@ -76,7 +76,7 @@ func (m *Model) databaseSQLRunPicked(id string) (tea.Cmd, bool) {
 		names = append(names, sanitizeDBText(dbConnName(c)))
 	}
 	s.sqlRunPending = r.Name
-	m.confirm = confirm.New("Run "+sanitizeDBText(r.Name)+"?", sanitizeDBText(dbclient.SQLRunSummary(r, names)), []confirm.Button{
+	m.confirm = confirm.New("Run "+sanitizeDBText(r.Name)+"?", sanitizeDBLines(dbclient.SQLRunSummary(r, names)), []confirm.Button{
 		{ID: "cancel", Title: "Cancel"},
 		{ID: "run", Title: "Run", Style: confirm.StylePrimary},
 	})

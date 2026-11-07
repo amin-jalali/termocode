@@ -1447,6 +1447,16 @@ func sanitizeDBText(s string) string {
 	return strings.TrimSpace(sanitizeOutputLine(line))
 }
 
+// sanitizeDBLines is sanitizeDBText for each line of a card body: the
+// lines stay, their control characters go.
+func sanitizeDBLines(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		lines[i] = strings.TrimRight(sanitizeOutputLine(l), " ")
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (m *Model) databaseEdit(id string) tea.Cmd {
 	root := m.databaseWorkspaceRoot()
 	path := filepath.Join(root, ".termocode", "databases.json")
