@@ -25,7 +25,7 @@ func TestMCPServeAllowListGolden(t *testing.T) {
 		"tasks_list", "tasks_run", "tasks_status", "tests_run", "tests_results",
 		"debug_state", "debug_breakpoint", "debug_start", "debug_control", "debug_evaluate",
 		"terminal_tabs", "terminal_read",
-		"git_status", "git_diff", "git_log", "git_blame", "git_branch",
+		"git_status", "git_diff", "git_log", "git_blame", "git_branch", "git_stash",
 		"worktrees_list", "worktree_note",
 		"services_list", "services_status", "services_logs", "http_list_requests", "http_environments", "http_history", "http_send",
 		"db_connections", "db_schema", "db_ddl", "db_query", "redis_keys", "redis_get", "redis_command",
@@ -56,8 +56,8 @@ func TestMCPServeAllowListGolden(t *testing.T) {
 	}
 }
 
-// Spec (MS-1): no write, settings, git-write, credential or review tool
-// is exposed, and nothing of the user's own MCP servers (MC-11).
+// Spec (MS-1): no write, settings, git-write (the stash aside),
+// credential or review tool is exposed, and nothing of the user's own MCP servers (MC-11).
 func TestMCPServeDenySet(t *testing.T) {
 	aiTestModel(t)
 	m := &Model{nvim: &nvim.Client{}}
@@ -68,7 +68,7 @@ func TestMCPServeDenySet(t *testing.T) {
 	got := mcpServeTools(all, ".", mcpServeNoCall)
 	deny := []string{"write_file", "edit_file", "look_at", "ast_grep", "create_file", "create_dir", "delete", "rename", "format", "run_command",
 		"terminal_send", "settings_set", "settings_list", "layout_set", "git_stage", "git_unstage", "git_commit",
-		"git_push", "git_pull", "git_fetch", "git_checkout", "git_stash", "git_hunk", "lsp_rename", "lsp_code_actions",
+		"git_push", "git_pull", "git_fetch", "git_checkout", "git_hunk", "lsp_rename", "lsp_code_actions",
 		"services_start", "services_stop", "services_restart", "http_set_environment", "http_save_request",
 		"extensions", "help_read", "db_explain", "db_history", "containers_control", "compose_up", "images_pull"}
 	for _, tool := range got {
