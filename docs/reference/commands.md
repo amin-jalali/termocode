@@ -46,6 +46,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: MCP: Reset Tool Lists | `ai-mcp-reset-cache` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: MCP: Switch Profile… (servers and tools for this chat) | `ai-mcp-profile` |   |   |
+| AI: MCP: Signed-in Services… (one list, sign out) | `ai-mcp-accounts` |   |   |
 | AI: Memory: Turn On/Off | `ai-memory-toggle` |   |   |
 | AI: Memory… | `ai-memory` |   |   |
 | AI: Move MCP Call to Background (Ctrl+B in the chat) | `ai-mcp-background` |   |   |
