@@ -132,6 +132,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Copy ID | `containers-copy-id` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
+| Containers: Edit Custom Commands | `containers-custom-commands-edit` |   |   |
 | Containers: Filter Rows… | `containers-filter` |   |   |
 | Containers: Focus | `containers-focus` |   |   |
 | Containers: Focus Project Services | `services-focus` |   |   |
@@ -166,6 +167,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Restart Project | `containers-compose-restart` |   |   |
 | Containers: Restart Selected | `containers-restart` |   |   |
 | Containers: Restart Service… | `services-restart` |   |   |
+| Containers: Run Custom Command on Row… | `containers-custom-command` |   |   |
 | Containers: Run Dockerfile Stage or Compose Service at Cursor | `containers-run-at-cursor` |   |   |
 | Containers: Run One-Off Command in Service… | `services-compose-run` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |

@@ -83,6 +83,7 @@ when something changed. When you hide the view (another activity item,
 | `D` | remove, sign out or make default (asks first) |
 | `R` | refresh all |
 | `m` | choose the sections (the **⋯** menu) |
+| `!` | your custom commands for the row (see [Custom commands](#custom-commands)) |
 | `Esc` | clear the filter; without a filter, focus the editor |
 
 Mouse: click moves the cursor; a click on a header or `▸` / `▾` folds it;
@@ -212,6 +213,29 @@ service first; a name that is already there is refused.
 `tasks.json` also takes `"type": "docker-build"`, `"docker-run"` and
 `"docker-compose"` tasks, and **Run Task…** offers docker build and
 compose up / down when the folder has a Dockerfile or compose file.
+
+## Custom commands
+
+Add your own row commands in `container-commands.json` in the config
+folder (**Containers: Edit Custom Commands** opens it, with an example the
+first time). Each entry has a `name`, a `view` (`containers`, `images`,
+`volumes`, `networks`, `compose`, `pods`, `deployments`, `services`,
+`jobs`), an `argv` list and an optional `key`:
+
+```json
+{ "commands": [
+  { "name": "Top processes", "view": "containers", "key": "w",
+    "argv": ["docker", "top", "{{id}}"] }
+] }
+```
+
+Placeholders: `{{id}}`, `{{name}}`, `{{image}}`, `{{context}}`,
+`{{namespace}}`. `!` on a row (or **Custom Commands…** in the row menu, or
+**Containers: Run Custom Command on Row…**) lists the commands of that
+view; the `key` runs one straight from the view. A key the view already
+uses is refused. Every command shows a card with the command as it will
+run (**Cancel** first). There is no shell: each `argv` entry is one
+argument, and a row value that would start with `-` is refused.
 
 ## Pruning
 

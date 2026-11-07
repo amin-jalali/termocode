@@ -388,6 +388,7 @@ excluded	buffer-info	laptop only: TUI status overlay
 excluded	cheat-sheet	laptop only: TUI shortcut sheet (the web has its own keys sheet)
 excluded	clipboard-history	laptop only: the laptop clipboard is never shared with the web
 excluded	containers-copy-id	laptop only: copies to the laptop clipboard
+excluded	containers-custom-commands-edit	laptop only: the commands file lives in the laptop's config dir
 excluded	containers-engine-config	laptop only: opens the engine config file of the laptop
 excluded	containers-help	laptop only: opens the TUI guide
 excluded	containers-templates-folder	laptop only: the template folder lives in the laptop's config dir
@@ -456,6 +457,7 @@ excluded	workflow-edit-file	laptop only: workflow files are edited and trusted o
 excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
 excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
 missing	containers-compose-snippet	Containers|S
+missing	containers-custom-command	Containers|S
 missing	containers-image-build	Containers|M
 missing	containers-run-at-cursor	Containers|S
 missing	containers-scaffold	Containers|S

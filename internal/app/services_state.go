@@ -51,10 +51,11 @@ func svcLocalTab(name string) string { return "local:" + name }
 func svcLogsTab(name string) string { return "logs:" + name }
 
 type servicesState struct {
-	devrun devrunPending // CTX-37: the job or files a Containers card waits for (containers_devrun.go)
-	opened bool          // the view was shown once (detection ran)
-	loaded bool          // a snapshot arrived
-	root   string
+	customRow customRow     // CTX-38: the row a custom-command picker is for (containers_custom.go)
+	devrun    devrunPending // CTX-37: the job or files a Containers card waits for (containers_devrun.go)
+	opened    bool          // the view was shown once (detection ran)
+	loaded    bool          // a snapshot arrived
+	root      string
 
 	det      services.Detection
 	project  string

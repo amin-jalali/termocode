@@ -21,6 +21,18 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 	r, have := st.currentRow()
+	// CTX-38: `!` lists the row's custom commands; a free key may run one.
+	if k.String() == "!" {
+		row, ok := m.kubeCustomRow()
+		return m, m.openCustomCommands(row, ok)
+	}
+	if !customKeyTaken("kube", k.String()) {
+		if row, ok := m.kubeCustomRow(); ok {
+			if cmd, hit := m.customCommandKey(k.String(), row, ok); hit {
+				return m, cmd
+			}
+		}
+	}
 	switch k.String() {
 	case "up", "k":
 		st.move(-1)
@@ -145,6 +157,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"v", "YAML (read only, secrets masked)"},
 		[]string{"E", "events · on a header: the namespace's"},
 		[]string{"y", "copy the name"},
+		[]string{"!", "your custom commands for the row (asks first)"},
 		[]string{"r", "deployment: restart (asks first)"},
 		[]string{"s", "deployment: scale (asks first)"},
 		[]string{"d", "delete (asks first)"},

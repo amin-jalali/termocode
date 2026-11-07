@@ -649,6 +649,18 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	if cmd, ok := m.containerBulkKey(k.String()); ok {
 		return m, cmd
 	}
+	// CTX-38: `!` lists the row's custom commands; a free key may run one.
+	if k.String() == "!" {
+		row, ok := m.containersCustomRow()
+		return m, m.openCustomCommands(row, ok)
+	}
+	if !customKeyTaken("docker", k.String()) {
+		if row, ok := m.containersCustomRow(); ok {
+			if cmd, hit := m.customCommandKey(k.String(), row, ok); hit {
+				return m, cmd
+			}
+		}
+	}
 	switch k.String() {
 	case "up", "k":
 		m.servicesMoveIn(moveRows(), -1)
@@ -928,6 +940,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 		{"Space", "fold or open"},
 		{"m", "choose the sections"},
 		{"R", "refresh"},
+		{"!", "your custom commands for the row (asks first)"},
 	}
 	with := func(title string, own ...[]string) (string, []confirm.KeyRow) {
 		return title, keyRows(append(own, nav...)...)
@@ -1425,7 +1438,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "services-configure", Title: "Containers: Configure Services (services.json)"},
 		{ID: "services-open-compose", Title: "Containers: Open Compose File"},
 		{ID: "services-trust", Title: "AI: Services Trust…"},
-	}, append(composeExtrasPaletteItems(), devrunPaletteItems()...)...)
+	}, append(append(composeExtrasPaletteItems(), devrunPaletteItems()...), customPaletteItems()...)...)
 }
 
 func containerAITargetRequired(id string) bool {
@@ -1604,6 +1617,10 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 		return m.askComposeSnippet(), true
 	case "containers-templates-folder":
 		return m.openTemplatesFolder(), true
+	case "containers-custom-command": // CTX-38 (containers_custom.go)
+		return m.runCustomFromPalette(), true
+	case "containers-custom-commands-edit":
+		return m.editConfigFile(customCommandsFile, customCommandsTemplate), true
 	}
 	if id == "containers-focus" {
 		return m.revealServicesView(true), true

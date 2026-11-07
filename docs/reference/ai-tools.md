@@ -2009,6 +2009,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-context-default` | Containers: Make Context Default… | never | changes the machine-wide Docker default |
 | `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
+| `containers-custom-command` | Containers: Run Custom Command on Row… | never | custom commands are the user's own programs; nothing is offered to the model |
+| `containers-custom-commands-edit` | Containers: Edit Custom Commands | auto |   |
 | `containers-engine-config` | Containers: Open Engine Config | auto |   |
 | `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
 | `containers-focus` | Containers: Focus | auto |   |

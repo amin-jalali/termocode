@@ -429,6 +429,8 @@ func (m *Model) handleContainersPickerSelect(id string) tea.Cmd {
 		return m.askScaffoldTemplate(rest)
 	case "snippet":
 		return m.askComposeSnippetAdd(rest)
+	case "custom": // CTX-38 (containers_custom.go)
+		return m.pickCustomCommand(rest)
 	}
 	return nil
 }
