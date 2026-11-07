@@ -128,7 +128,7 @@ func TestExportSQLNeedsAKnownDialect(t *testing.T) {
 }
 
 func TestExportFormatTable(t *testing.T) {
-	want := map[ExportFormat]string{FormatCSV: ".csv", FormatTSV: ".tsv", FormatJSON: ".json", FormatSQL: ".sql", FormatMarkdown: ".md", FormatHTML: ".html"}
+	want := map[ExportFormat]string{FormatCSV: ".csv", FormatTSV: ".tsv", FormatJSON: ".json", FormatSQL: ".sql", FormatMarkdown: ".md", FormatHTML: ".html", FormatParquet: ".parquet"}
 	if len(ExportFormats) != len(want) {
 		t.Fatalf("%d formats", len(ExportFormats))
 	}
