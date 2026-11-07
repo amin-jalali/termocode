@@ -11,6 +11,7 @@ import { h } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { getDraft, pendingDraft, setDraft, takePending } from "../lib/drafts";
 import { layout } from "../lib/layout";
+import { ctxTone } from "../state/chat";
 import { OfflineError, ReqError } from "../net/link";
 import { link, live } from "../session";
 import { t, type StringKey } from "../strings";
@@ -20,7 +21,7 @@ import { errText } from "../ui/CardSheet";
 
 const MAX_ROWS_PX = 160;
 
-export function Composer({ chat, busy, profile = "", model = "", onSent }: { chat: string; busy: boolean; profile?: string; model?: string; onSent?: () => void }) {
+export function Composer({ chat, busy, profile = "", model = "", ctx, onSent }: { chat: string; busy: boolean; profile?: string; model?: string; ctx?: { pct: number; tokens: number; window: number }; onSent?: () => void }) {
   const desk = layout.value === "desktop";
   useEffect(() => takePending(chat), [chat, pendingDraft.value]);
   const text = getDraft(chat);
@@ -118,6 +119,14 @@ export function Composer({ chat, busy, profile = "", model = "", onSent }: { cha
           ) : (
             <span class="chat-chip" title={t("chat.agent")}>
               <Cod name="sparkle" /> {[profile || t("chat.default_profile"), model].filter(Boolean).join(" · ")}
+            </span>
+          )}
+          {ctx && ctx.pct > 0 && (
+            <span class={"chat-chip ctx-chip ctx-" + ctxTone(ctx.pct)} title={t("chat.ctx_title", { tokens: ctx.tokens, window: ctx.window, pct: ctx.pct })}>
+              <span class="ctx-bar" aria-hidden="true">
+                <span style={{ width: Math.min(ctx.pct, 100) + "%" }} />
+              </span>
+              {t("chat.ctx", { pct: ctx.pct })}
             </span>
           )}
           <span class={busy ? "stop" : "send"}>

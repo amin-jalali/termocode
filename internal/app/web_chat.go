@@ -47,6 +47,7 @@ type webChatPub struct {
 	id     string
 	title  string
 	busy   bool
+	ctx    [3]int // pct, tokens, window (CMP-7)
 	msgs   []webChatSent
 }
 
@@ -68,6 +69,10 @@ func (m *Model) webChatBuild(p *webChatPub) webproto.ChatSnap {
 	snap.ID, snap.Title, snap.Busy = s.conv.ID, webChatTitle(s.conv), s.streaming
 	snap.Profile, snap.Model = s.profile, s.cfg.Model
 	p.id, p.title, p.busy = snap.ID, snap.Title, snap.Busy
+	if tokens, window, pct, ok := s.contextUse(); ok {
+		snap.CtxPct, snap.CtxTokens, snap.CtxWindow = pct, tokens, window
+	}
+	p.ctx = [3]int{snap.CtxPct, snap.CtxTokens, snap.CtxWindow}
 	n := len(s.conv.Messages)
 	full := webChatFullFrom(s.conv.Messages)
 	for i := range s.conv.Messages {
@@ -174,7 +179,11 @@ func (m *Model) webPublishChat(tea.Msg) tea.Cmd {
 		h.publish("chat", webChatDelta{Op: webproto.ChatMessage, Msg: &cm})
 	}
 	title := webChatTitle(s.conv)
-	if s.streaming != p.busy || title != p.title {
+	var ctx [3]int
+	if tokens, window, pct, ok := s.contextUse(); ok {
+		ctx = [3]int{pct, tokens, window}
+	}
+	if s.streaming != p.busy || title != p.title || ctx != p.ctx {
 		d := webChatDelta{Op: webproto.ChatState}
 		if s.streaming != p.busy {
 			busy := s.streaming
@@ -183,7 +192,11 @@ func (m *Model) webPublishChat(tea.Msg) tea.Cmd {
 		if title != p.title {
 			d.Title = title
 		}
-		p.busy, p.title = s.streaming, title
+		if ctx != p.ctx {
+			pct, tokens, window := ctx[0], ctx[1], ctx[2]
+			d.CtxPct, d.CtxTokens, d.CtxWindow = &pct, &tokens, &window
+		}
+		p.busy, p.title, p.ctx = s.streaming, title, ctx
 		h.publish("chat", d)
 	}
 	return nil
@@ -344,6 +357,9 @@ func (d webChatDelta) coalesce(next any) (any, bool) {
 		if n.Title != "" {
 			m.Title = n.Title
 		}
+		if n.CtxPct != nil {
+			m.CtxPct, m.CtxTokens, m.CtxWindow = n.CtxPct, n.CtxTokens, n.CtxWindow
+		}
 		return m, true
 	}
 	return nil, false
@@ -386,6 +402,16 @@ func webApplyChat(snap, delta json.RawMessage) (json.RawMessage, error) {
 		}
 		if d.Title != "" {
 			s.Title = d.Title
+		}
+		if d.CtxPct != nil {
+			s.CtxPct = *d.CtxPct
+			s.CtxTokens, s.CtxWindow = 0, 0
+			if d.CtxTokens != nil {
+				s.CtxTokens = *d.CtxTokens
+			}
+			if d.CtxWindow != nil {
+				s.CtxWindow = *d.CtxWindow
+			}
 		}
 	case webproto.ChatSwitched:
 		if d.Chat == nil {

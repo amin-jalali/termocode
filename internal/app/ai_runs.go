@@ -868,6 +868,7 @@ func (m *Model) aiStepFinished(st *ai.StoredStep, ev agentrun.Event) {
 			if pct, ok := ai.ContextPercent(c, w); ok {
 				st.ContextPct = &pct
 			}
+			s.noteContext(c, w) // CMP-7: the newest step is the chat's context chip
 		}
 		m.output.Append(aiAuditChannel, clock.Now().Format("15:04:05")+"  usage  step "+st.ID+" · "+
 			aiUsageText(kind, c, ai.NewPricing(s.settings.Prices), ai.NewContextWindows(s.settings.ContextWindows)))
