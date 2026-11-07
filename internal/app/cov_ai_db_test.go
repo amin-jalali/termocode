@@ -71,7 +71,7 @@ const covDBConns = `{"connections":[` +
 	`{"id":"my","driver":"mysql","host":"localhost","port":3306,"database":"shop","name":"My Shop"},` +
 	`{"id":"ro","driver":"postgres","host":"ro.example","database":"app","readOnly":true},` +
 	`{"id":"cache","driver":"redis","host":"localhost","port":6379},` +
-	`{"id":"bad","driver":"oracle","host":"x"},` +
+	`{"id":"bad","driver":"db2","host":"x"},` +
 	`{"id":"envpw","driver":"postgres","host":"localhost","database":"app","password":"${env:COV_DB_PW}"},` +
 	`{"id":"tunnel","driver":"postgres","host":"10.0.0.5","database":"app","ssh":{"host":"bastion.example","user":"me"}}]}`
 
