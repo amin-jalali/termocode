@@ -12,6 +12,7 @@ import "../styles/base.css";
 import "../styles/shell.css";
 import "../styles/ui.css";
 import "../styles/components.css";
+import "../styles/phone.css";
 import "./kit.css";
 import { toast } from "../lib/toasts";
 import type { StatusView } from "../state/status";
@@ -30,6 +31,7 @@ import { Progress, SkeletonBubbles, SkeletonRows } from "../ui/Skeleton";
 import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
+import { Block, BoardTile, Composer, PhoneCard, PhoneChip, PhoneChips, PhoneSheet, Row, Rows, StatusMark, STATUS, type Status } from "../phone/index";
 import "./replay";
 
 installSafety();
@@ -238,6 +240,80 @@ function Connect({ state }: { state: ConnectState }) {
   );
 }
 
+const phoneStatuses = Object.keys(STATUS) as Status[];
+
+/** PhoneKit shows the phone app's base components (MOBUX-1). */
+function PhoneKit() {
+  const [text, setText] = useState("");
+  const [attached, setAttached] = useState([{ id: "task:412", label: "#412 login rate limit" }]);
+  return (
+    <div class="ph-kit">
+      <div class="ph-kit-marks">
+        {phoneStatuses.map((s) => (
+          <span key={s} class="ph-kit-mark">
+            <StatusMark s={s} hidden /> {s}
+          </span>
+        ))}
+      </div>
+      <div class="ph-kit-cards">
+        <PhoneCard status="needs" value={2} detail="run go test · shop" onClick={() => toast("info", "Needs you")} />
+        <PhoneCard status="working" value={3} detail="2 lanes · 1 workflow" onClick={() => toast("info", "Working")} />
+        <PhoneCard status="done" title="Done today" value={7} detail="$4.20" />
+      </div>
+      <PhoneChips label="Chips">
+        <PhoneChip label="Needs you" status="needs" count={2} onClick={() => undefined} />
+        <PhoneChip label="Board" pinned on onClick={() => undefined} />
+        <PhoneChip label="Projects" pinned onClick={() => undefined} />
+        <PhoneChip label="Review" onClick={() => undefined} />
+        <PhoneChip label="Git" onClick={() => undefined} />
+      </PhoneChips>
+      <Block kind="table" title="Pull requests" status="working" live onCustomize={() => toast("info", "Customize")} actions={<Button small>Refresh</Button>}>
+        <Rows label="Pull requests">
+          <Row status="failed" title="#418 fix toast" meta="CI ✗ · 2 h" end="2 h" onClick={() => undefined} />
+          <Row status="working" live title="#412 login rate limit" meta="CI ◐ · 1 d" end="1 d" onClick={() => undefined} onLongPress={() => toast("info", "Row menu")} />
+          <Row status="done" title="#409 docs: pairing" meta="CI ✓ · 3 d" end="3 d" />
+        </Rows>
+      </Block>
+      <div class="ph-kit-tiles">
+        <BoardTile status="needs" title="card: run go test" project="shop" agent="lane fix-login" ci="failed" onClick={() => undefined} />
+        <BoardTile status="working" live title="rate limit" project="shop" agent="sonnet" step="3/5" cost="$0.80" ci="working" onClick={() => undefined} />
+        <BoardTile status="review" title="race #3" project="api" agent="3 lanes" step="2 done" cost="$1.10" />
+        <BoardTile status="done" title="lane fix-login +41 −9" project="shop" ci="done" />
+      </div>
+      <Composer
+        value={text}
+        onInput={setText}
+        onSend={() => toast("ok", "Sent: " + text)}
+        attached={attached}
+        onRemove={(id) => setAttached(attached.filter((a) => a.id !== id))}
+      />
+      <Composer value="" onInput={() => undefined} onSend={() => undefined} offline />
+    </div>
+  );
+}
+
+function PhoneSheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open phone sheet</Button>
+      {open && (
+        <PhoneSheet
+          title="shop · #412 open"
+          onLater={() => setOpen(false)}
+          actions={[
+            { label: "Just start", risky: true, onClick: () => setOpen(false) },
+            { label: "Talk about it", primary: true, onClick: () => setOpen(false) },
+            { label: "Cancel", safe: true, onClick: () => setOpen(false) },
+          ]}
+        >
+          <p class="kit-note">Cancel comes first and has focus; Just start wakes after 600 ms.</p>
+        </PhoneSheet>
+      )}
+    </>
+  );
+}
+
 function Kit() {
   const cardKinds: CardKind[] = ["tool", "review", "plan", "mcp", "trust"];
   const cardStates: CardState[] = ["answered", "offline", "gone", "viewonly", "long"];
@@ -271,7 +347,7 @@ function Kit() {
         </div>
       </header>
       <nav class="kit-nav" aria-label="Sections">
-        {["tokens", "strip", "nav", "pill", "bars", "buttons", "cards", "sheets", "toasts", "chips", "term", "code", "diff", "tree", "loading", "empty", "waiting", "connect", "misc"].map((s) => (
+        {["tokens", "strip", "nav", "pill", "bars", "buttons", "cards", "sheets", "toasts", "chips", "term", "code", "diff", "tree", "loading", "empty", "waiting", "connect", "misc", "phone"].map((s) => (
           <a key={s} class="chip" href={`#${s}`}>
             {s}
           </a>
@@ -566,6 +642,10 @@ function Kit() {
               />
             )}
           </Pair>
+        </Section>
+        <Section id="phone" title="Phone app" note="Phone tokens are web tokens (both themes, AA); status is a colour and a shape; 44 px targets; the safe choice first. Phone layout only (MOBUX-1).">
+          <Pair tall>{() => <PhoneKit />}</Pair>
+          <Pair>{() => <PhoneSheetDemo />}</Pair>
         </Section>
       </main>
       <Toasts />
