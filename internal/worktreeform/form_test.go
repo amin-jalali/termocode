@@ -241,3 +241,30 @@ func TestBranchFromIssue(t *testing.T) {
 		}
 	}
 }
+
+// CMP-5: the run line, the port range and the URL come from the same
+// file; the URL fills in $PORT and falls back to localhost when it is
+// not a web address.
+func TestLoadConfigRun(t *testing.T) {
+	top := t.TempDir()
+	write(t, top, ConfigFile, `{
+		"run": "pnpm dev --port $PORT",
+		"ports": "3000-3010",
+		"url": "http://localhost:$PORT/app"
+	}`)
+	c, _, err := LoadConfig(top)
+	if err != nil || c.Run != "pnpm dev --port $PORT" || c.Ports != "3000-3010" {
+		t.Fatalf("config %+v %v", c, err)
+	}
+	if got := c.RunURL(3004); got != "http://localhost:3004/app" {
+		t.Errorf("url %q", got)
+	}
+	for _, u := range []string{"", "javascript:alert(1)", "file:///etc/passwd", "localhost:$PORT"} {
+		if got := (Config{URL: u}).RunURL(3001); got != "http://localhost:3001" {
+			t.Errorf("%q: url %q", u, got)
+		}
+	}
+	if got := (Config{URL: "https://app.test:$PORT"}).RunURL(3002); got != "https://app.test:3002" {
+		t.Errorf("https url %q", got)
+	}
+}
