@@ -145,6 +145,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return tea.Batch(m.aiInfo("Side question sent (one request to the quick model)"), m.onAISideQuestion(value)), true
 	case promptKindAgentsSend: // agents_node_ctl.go
 		return m.onAgentsSend(value), true
+	case promptKindDiffComment: // diff_comments.go (CMP-51)
+		return m.onDiffCommentEntered(value), true
 	}
 	return m.handleMCPPromptSubmit(value)
 }
@@ -286,6 +288,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIWorktreeCard(m.confirmKind, id), true
 	case confirmKindAIWorktreeLeft: // ai_worktree_list.go
 		return m.answerAIWorktreeLeft(id), true
+	case confirmKindDiffComments: // diff_comments.go (CMP-51)
+		return m.answerDiffComments(id), true
 	case confirmKindWebStart: // web_tui.go
 		return m.answerWebStart(id), true
 	case confirmKindWebAsk: // web_ask.go

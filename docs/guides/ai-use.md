@@ -356,6 +356,27 @@ over the editor, like in mobocode.
 - `Esc` hides the card. The chat shows "**N files to review**" with a
   **Review** button; **AI: Review Pending Changes** opens it again.
 
+### Comment on changes and send them to an agent
+
+This works in the review card and in every read-only changes card (an
+agent worktree's changes, a file diff, a compare).
+
+- Press `c` on a change to write a comment. It shows under the change
+  header. Press `c` again (or click the comment) to change it. Save an
+  empty comment to remove it.
+- The hint bar counts your comments: **S send 3 comments to an agent**.
+- `S` opens a card with the whole message: each comment with its file,
+  lines and the changed code. **Cancel** is first. Then:
+  - **AI chat** sends it to the built-in chat as one message. While the
+    AI still answers, it waits in the chat input.
+  - an **agent tab** button (Claude Code, Codex, … in a terminal tab)
+    pastes it into that agent's input. You press Enter there to send it.
+  - **Copy** puts it on the clipboard.
+- Sent comments leave the card. `Esc` on a read-only card keeps them:
+  **Agent: Send Diff Comments…** sends them later.
+- Known secrets are masked in the message. The AI cannot send your
+  comments on its own.
+
 ### The agent waits for you
 
 With the default setting, the agent's file changes are not written at
