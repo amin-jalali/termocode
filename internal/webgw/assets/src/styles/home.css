@@ -1,0 +1,50 @@
+/* The Home's context chips (MOBUX-3): one line above the composer that
+   scrolls sideways; 44 px targets; color always with a shape. */
+.hchips-wrap { display: flex; flex-direction: column; gap: var(--s2); }
+.hchips {
+  display: flex;
+  gap: var(--s2);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  padding: var(--s2) var(--s3);
+  -webkit-overflow-scrolling: touch;
+}
+.hchips::-webkit-scrollbar { display: none; }
+.hchip {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg-panel);
+  color: var(--text);
+  font-size: var(--fs-hint);
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: pan-x;
+}
+.hchip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.hchip.mark-waits { border-color: var(--amber); }
+.hchip.mark-waits .hchip-mark { color: var(--amber); }
+.hchip.mark-busy .hchip-mark { color: var(--blue); }
+.hchip.mark-bad .hchip-mark { color: var(--red); }
+.hchip.mark-clear { color: var(--text-2); }
+.hchip.mark-clear .hchip-mark { color: var(--green); }
+.hchip-n { min-width: 1.25rem; padding: 0 0.3rem; border-radius: var(--r-pill); background: var(--bg-2); color: var(--text-2); font-variant-numeric: tabular-nums; text-align: center; }
+.hchip.is-pinned { border-color: var(--focus); }
+.hchip-pin { font-size: 0.75em; }
+.hchip.is-edit { color: var(--text-2); border-style: dashed; }
+.hchip.is-done { border-color: var(--focus); background: var(--sel); }
+.hchips.is-pinning .hchip[aria-pressed="false"] { color: var(--text-2); }
+.hchips.is-pinning .hchip[aria-pressed="true"] { background: var(--sel); }
+.hchip:disabled { opacity: 0.5; }
+.hchips-hint { margin: 0; padding: 0 var(--s3); color: var(--text-2); font-size: var(--fs-hint); }

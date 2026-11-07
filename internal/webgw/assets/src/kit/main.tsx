@@ -13,6 +13,7 @@ import "../styles/shell.css";
 import "../styles/ui.css";
 import "../styles/components.css";
 import "../styles/phone.css";
+import "../styles/home.css";
 import "./kit.css";
 import { toast } from "../lib/toasts";
 import type { StatusView } from "../state/status";
@@ -32,6 +33,8 @@ import { StripView } from "../ui/Strip";
 import { Toasts, ToastView } from "../ui/Toasts";
 import { WaitingLaptop } from "../ui/Waiting";
 import { Block, BoardTile, Composer, PhoneCard, PhoneChip, PhoneChips, PhoneSheet, Row, Rows, StatusMark, STATUS, type Status } from "../phone/index";
+import { ChipRow } from "../home/ChipRow";
+import type { ChipState } from "../home/chips";
 import "./replay";
 
 installSafety();
@@ -68,6 +71,29 @@ function Pair({ children, tall }: { children: () => ComponentChildren; tall?: bo
         </div>
       ))}
     </div>
+  );
+}
+
+// The Home's chip row (MOBUX-3) in two states of the laptop.
+const chipStates: Record<"calm" | "waits", ChipState> = {
+  calm: { needsYou: 0, working: 0, review: 0, ciRed: 0 },
+  waits: { needsYou: 2, working: 1, review: 3, ciRed: 1 },
+};
+const chipState = signal<"calm" | "waits">("calm");
+
+function KitChips() {
+  return (
+    <>
+      <div class="kit-row">
+        <button type="button" class="btn" onClick={() => (chipState.value = "calm")}>
+          Calm laptop
+        </button>
+        <button type="button" class="btn" onClick={() => (chipState.value = "waits")}>
+          Something waits
+        </button>
+      </div>
+      <Pair>{() => <ChipRow state={chipStates[chipState.value]} onPick={(id) => toast("info", "Chip " + id)} />}</Pair>
+    </>
   );
 }
 
@@ -631,6 +657,10 @@ function Kit() {
               </div>
             )}
           </Pair>
+        </Section>
+
+        <Section id="chips" title="Home chips" note="Needs you first while something waits; up to 3 pins next; the row scrolls sideways.">
+          <KitChips />
         </Section>
 
         <Section id="misc" title="Choices">

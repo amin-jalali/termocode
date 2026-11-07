@@ -816,6 +816,19 @@ export const S = {
   "ph.ask": "What do you want?",
   "ph.checks": "Checks: {state}",
   "ph.ci": "CI",
+  // Home context chips (MOBUX-3)
+  "chips.label": "Shortcuts",
+  "chips.needs": "Needs you · {n}",
+  "chips.clear": "Nothing waits",
+  "chips.board": "Board",
+  "chips.projects": "Projects",
+  "chips.research": "Research",
+  "chips.mcp": "MCP",
+  "chips.whatcan": "What can I do?",
+  "chips.edit": "Pin chips",
+  "chips.body_hint": "Tap up to 3 chips to keep them first. Tap again to unpin.",
+  "chips.full": "Up to 3 chips stay pinned. Unpin one first.",
+  "chips.pinned_name": "{name}, pinned",
 } as const;
 
 /** StringKey is a key of the page's strings or of the workbench's
