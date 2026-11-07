@@ -252,7 +252,75 @@ they are connected now. Pick one to see it, make it a viewer, or
 **Remove device**. A removed device is disconnected at once and its
 passkey works nowhere; it must pair again to come back.
 
-### Wake an Android phone (UnifiedPush)
+### Notifications on the phone
+
+A paired phone can hear that something waits for you (a card to
+answer, a plan to approve), even with its screen off. There is no
+cloud of termocode in the way. The laptop sends the push itself, and a
+push carries **no content**: at most a number.
+
+There are three ways. Pick the one that fits your phone:
+
+| Way | Phone | Who carries it | What it carries |
+|---|---|---|---|
+| **Web Push** | iPhone (the page on the Home Screen), Android | the push service of the phone's browser (Apple, Google, Mozilla, Microsoft) | encrypted; inside, a number at most |
+| **UnifiedPush** | Android, with a distributor app or server of your own | your own distributor | the word `wake`, nothing else |
+| **Keep it running** (`web_phone`) | any | nobody | nothing: the open page just stays connected |
+
+- **Web Push.** The laptop signs each push with its own **VAPID** key
+  and encrypts it for that one phone's browser. The push service sees
+  only ciphertext and the time. A push that waits longer than an hour
+  for a phone that is off is dropped: by then, the laptop is the better
+  place to look.
+- **UnifiedPush.** The phone gives the panel the address of its own
+  distributor. When a new card waits and the phone is not connected,
+  the panel posts `wake` to that address, at most once every 30
+  seconds. The phone wakes, connects as usual and reads the card over
+  its own link. The address is kept only while the panel runs; the
+  phone gives it again each time it connects.
+- **Keep it running.** With `"web_phone": "on"` in `config.json`, a
+  paired phone with the panel open keeps the panel from stopping when
+  idle. Guests and the one-time link do not. `web_max_hours` still ends
+  it.
+
+What a Web Push says is set by `web_push_detail` in `config.json`:
+
+| Value | The phone shows |
+|---|---|
+| `none` | "Something needs you" |
+| `count` (default) | how many things wait, such as "2 things need you" |
+| `title` | the number and the kind of the newest one, such as "A plan needs you" |
+
+The kind comes from a short fixed list (tool, MCP, plan, review, trust,
+workflow). The phone shows its own fixed text for it. A push never
+holds a file name, a command, a path or words the AI wrote.
+
+#### What a push can tell
+
+- **On the lock screen:** only the fixed text above. Nothing private.
+- **To the push service or your distributor:** that this phone got a
+  push, and when. With Web Push, how big it was (a few bytes). Not who
+  sent it from where, and not what waits.
+- **To someone who steals the phone:** only the fixed text. To see a
+  card, they still need the phone's passkey or its remembered browser,
+  and a removed device gets no pushes and cannot sign in.
+- **The answer is never in the push.** You answer a card only on the
+  page, after it connects, with the same safe-first rules as always. A
+  push has no buttons that allow or deny anything.
+- **Keys stay on the laptop.** The VAPID private key and each phone's
+  subscription keys live in your
+  [secret store](../reference/config-files.md). They are never sent to a phone,
+  written in a log or shown in an error.
+- **The laptop posts only to push services.** A Web Push address must
+  be an `https` address of a known browser push service. A UnifiedPush
+  address may be your own server, but never this computer, a local
+  link address or a cloud metadata address, and redirects are not
+  followed. The audit log keeps the address's host, never the rest.
+- **Stop it any time:** turn notifications off on the phone, or remove
+  the device in **Web: Devices…**. A push address the service says is
+  gone is dropped at once.
+
+#### UnifiedPush in detail
 
 An Android phone with a UnifiedPush distributor (your own server, or a
 distributor app on the phone) can be woken when a card waits for you.
@@ -339,6 +407,10 @@ In simple words:
   and giving control each need a card on the laptop, with **Not now**
   first. The phone and the card show the same code, so you know which
   phone you let in.
+- **A push says almost nothing.** A notification to a phone holds at
+  most a number (or, if you choose, the kind of card). It comes from the
+  laptop, with no cloud of termocode, and you answer only on the page.
+  See [Notifications on the phone](#notifications-on-the-phone).
 - **Never public.** In tailnet mode the panel refuses to run under
   Tailscale Funnel.
 - **Passwords stay on the laptop.** Git signs in on the laptop. The
