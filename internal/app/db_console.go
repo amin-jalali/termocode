@@ -30,6 +30,7 @@ const (
 	pickerKindDBAttach pickerKindEnum = 1250 + iota
 	pickerKindDBHistory
 	pickerKindDBSort
+	pickerKindDBHistoryDelete
 )
 const (
 	confirmKindDBRun confirmKindEnum = 1250 + iota
@@ -931,6 +932,8 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	}
 	switch m.pickerKind {
 	case pickerKindDBAttach, pickerKindDBHistory, pickerKindDBSort:
+	case pickerKindDBHistoryDelete:
+		return m.databaseHistoryDelete(id), true
 	case pickerKindDBTxMode:
 		return m.databaseTxPicker(id)
 	default:
@@ -949,6 +952,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		m.databaseRefreshLens(r.file, "", "")
 		return m.databasePrepareRun(r), true
 	case pickerKindDBHistory:
+		if id == "delete-one" {
+			return m.databaseHistoryDeletePicker(), true
+		}
 		if id == "clear" {
 			m.confirm = confirm.New("Clear SQL history?", fmt.Sprintf("Delete %d history entries?", len(s.history)), []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "clear", Title: "Delete", Style: confirm.StyleDestructive}})
 			m.confirm.SetSize(m.w, m.h)
@@ -1000,6 +1006,7 @@ func (m *Model) databaseHistory() tea.Cmd {
 		items = append(items, picker.Item{ID: e.ID, Title: dbOneLine(e.SQL), Hint: hint})
 	}
 	if len(entries) > 0 {
+		items = append(items, picker.Item{ID: "delete-one", Title: "Delete an entry…"})
 		items = append(items, picker.Item{ID: "clear", Title: "Clear history…"})
 	}
 	if len(items) == 0 {
@@ -1010,4 +1017,43 @@ func (m *Model) databaseHistory() tea.Cmd {
 	m.pickerKind = pickerKindDBHistory
 	m.pickerOpen = true
 	return nil
+}
+
+// databaseHistoryDeletePicker lists the history again; the entry picked
+// is deleted (DBX-48).
+func (m *Model) databaseHistoryDeletePicker() tea.Cmd {
+	s := m.dbConsole()
+	items := make([]picker.Item, 0, len(s.history))
+	for i := len(s.history) - 1; i >= 0; i-- {
+		e := s.history[i]
+		hint := sanitizeDBText(e.Conn) + " · " + e.Time.Format("01-02 15:04")
+		items = append(items, picker.Item{ID: e.ID, Title: dbOneLine(e.SQL), Hint: hint})
+	}
+	if len(items) == 0 {
+		return m.pushToast(toast.Info, "No SQL history yet")
+	}
+	m.picker = picker.NewItems("Delete a history entry · Enter deletes it", items)
+	m.picker.SetSize(m.w, m.h)
+	m.pickerKind = pickerKindDBHistoryDelete
+	m.pickerOpen = true
+	return nil
+}
+
+// databaseHistoryDelete removes one history entry.
+func (m *Model) databaseHistoryDelete(id string) tea.Cmd {
+	s := m.dbConsole()
+	if id == "" {
+		return nil
+	}
+	if err := s.historyStore().Delete(id); err != nil {
+		return m.dbConsoleError(err)
+	}
+	kept := s.history[:0]
+	for _, e := range s.history {
+		if e.ID != id {
+			kept = append(kept, e)
+		}
+	}
+	s.history = kept
+	return m.pushToast(toast.Info, "History entry deleted")
 }
