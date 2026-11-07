@@ -15,7 +15,7 @@ import { editorMenu } from "./editormenu";
 import { aiSnap } from "./ai";
 import { toast } from "./toasts";
 import { t } from "../strings";
-import { vimMaps } from "./vimmaps";
+import { vimBufMaps, vimMaps } from "./vimmaps";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -62,6 +62,8 @@ export interface DeskHost extends EditorHost {
   insertSpaces: boolean;
   /** path is the file's workspace path. */
   path?: string;
+  /** buf is the laptop's buffer of the file (its own Vim mappings). */
+  buf?: number;
   /** lsp: the editor asks for hover, completion, definitions (onLsp)
    * and references (onRefs); a definition elsewhere opens there (onOpen).
    * Positions are 0-based, columns in UTF-16 units. */
@@ -303,6 +305,11 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     void vimMaps().then((l) => {
       if (l && Array.isArray(l.items)) send({ t: "opts", vimMaps: l.items, vimTimeout: typeof l.timeout === "number" && l.timeout > 0 ? l.timeout : 1000 });
     });
+    if (host.buf !== undefined) {
+      void vimBufMaps(host.buf).then((l) => {
+        if (l && Array.isArray(l.items)) send({ t: "opts", vimBufMaps: l.items });
+      });
+    }
   }
 
   return {

@@ -12,10 +12,12 @@ import (
 
 // The user's own mappings for the web editor's Vim mode (WEBP-1): the
 // laptop editor's global mappings of normal, visual, operator-pending
-// and insert mode, kept only when the web can run them.
+// and insert mode, and those of one open file's buffer (per file, per
+// language), kept only when the web can run them.
 
 func init() {
 	webOps[webproto.OpEditorVimMaps] = webOpEditorVimMaps
+	webOps[webproto.OpEditorVimBufMaps] = webOpEditorVimBufMaps
 }
 
 // nvimVimMap is one row of nvim_get_keymap, as webVimMapsLua writes it.
@@ -41,6 +43,43 @@ for _, mode in ipairs({ 'n', 'x', 'o', 'i' }) do
 end
 if #out == 0 then out = vim.NIL end
 return vim.json.encode({ maps = out, timeout = vim.o.timeout and vim.o.timeoutlen or 0 })`
+
+// webVimBufMapsLua is webVimMapsLua for one buffer (nvim_buf_get_keymap).
+const webVimBufMapsLua = `
+local b = ...
+if not vim.api.nvim_buf_is_valid(b) or not vim.api.nvim_buf_is_loaded(b) then return '{"gone":true}' end
+local out = {}
+for _, mode in ipairs({ 'n', 'x', 'o', 'i' }) do
+  for _, k in ipairs(vim.api.nvim_buf_get_keymap(b, mode)) do
+    if type(k.rhs) == 'string' then
+      out[#out + 1] = { mode = mode, lhs = k.lhs, rhs = k.rhs, desc = k.desc or '', expr = k.expr or 0, script = k.script or 0, sid = k.sid or 0, noremap = k.noremap or 0 }
+    end
+  end
+end
+if #out == 0 then out = vim.NIL end
+return vim.json.encode({ maps = out })`
+
+func webOpEditorVimBufMaps(m *Model, call *webCall) tea.Cmd {
+	b, ok := m.webEditBuf(call, call.args.(*webproto.BufArgs).Buf)
+	if !ok {
+		return nil
+	}
+	s, err := m.nvim.EvalLuaStringArgs(webVimBufMapsLua, b.buf)
+	var in struct {
+		Gone bool         `json:"gone"`
+		Maps []nvimVimMap `json:"maps"`
+	}
+	if err != nil || json.Unmarshal([]byte(s), &in) != nil {
+		call.fail(webproto.CodeInternal, "The file's mappings could not be read.")
+		return nil
+	}
+	if in.Gone {
+		call.fail(webproto.CodeGone, "This file was closed on the laptop.")
+		return nil
+	}
+	call.reply(webproto.VimMapList{Items: webVimMaps(in.Maps)})
+	return nil
+}
 
 func webOpEditorVimMaps(m *Model, call *webCall) tea.Cmd {
 	out := webproto.VimMapList{Items: []webproto.VimMap{}}

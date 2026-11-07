@@ -144,6 +144,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               // The laptop's language servers: hover, completion, go to
               // definition (another file opens in its tab), references.
               path,
+              buf,
               comment: lineComment(path),
               lsp: true,
               refsLabel: t("menu.refs"),
