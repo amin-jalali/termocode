@@ -304,8 +304,12 @@ selected worktree, and the agent shows on that worktree's card.
 
 ## Race agents on one task
 
-**Agent: Race…** gives one task to 2 to 4 agents at once. Tick the lanes,
+**Agent: Race…** gives one task to 2 to 8 lanes at once. Tick the lanes,
 type the task and, if you like, a verify command such as `go test ./...`.
+On a lane, `+` (or `→`) runs that agent once more and `-` (or `←`) once
+less, so three Claude Code lanes and two Codex lanes are `[3]` and `[2]`.
+An agent that runs more than once gets a number in each lane title
+(`Claude Code #2`).
 Each lane gets its own worktree from `HEAD` (hidden in the git folder) and
 its own terminal tab. termocode types the task once, only when the agent's
 input box is on screen, never into a question.
@@ -335,7 +339,8 @@ The judge only advises: nothing merges until you press **Merge** on its
 card, and that runs the same merge as `m`. After a merge, a card asks about the other lanes: **Keep** is first. A
 lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
-first).
+first); it takes a list of agents or a fan-out count such as
+`claude:3,codex:2`.
 
 ### Each lane in its own sandbox
 

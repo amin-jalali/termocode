@@ -116,7 +116,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`service_connect`](#service_connect) | confirm (always asks): Deny (first) · Open wizard (you sign in yourself) | no | Open the Connect wizard for an MCP service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack, or one in mcp.json) so the user can sign in. |
 | [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
 | [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi, kiro, auggie, grok, cline, continue, vibe) in a new terminal tab, with termocode's tools when the agent supports it. |
-| [`agent_race_start`](#agent_race_start) | confirm (always asks): Deny (first) · Start race | no | Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
+| [`agent_race_start`](#agent_race_start) | confirm (always asks): Deny (first) · Start race | no | Race one task across 2-8 lanes of outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
 | [`agent_split_start`](#agent_split_start) | confirm (always asks): Deny (first) · Start split | no | Coordinate outside coding agents (claude, codex, gemini, opencode, aider): split one goal into 2-4 independent parts, each done by its own agent in its own git worktree and terminal tab, at the same time. |
 | [`agent_split_status`](#agent_split_status) | auto | no | The newest split started with agent_split_start (or the one named): the goal, each lane's id, agent, state (starting, working, waiting, done, stopped, failed, merged, discarded), part, changed files and branch. |
 | [`mcp_server_add`](#mcp_server_add) | confirm (always asks) | no | Propose adding one MCP server to the user's mcp.json, from an mcpServers block the user gave (config) or a remote MCP server URL (url). |
@@ -1390,7 +1390,7 @@ Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, a
 
 ### agent_race_start
 
-Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). The user confirms first.
+Race one task across 2-8 lanes of outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). The user confirms first.
 
 **Gate:** confirm (always asks): Deny (first) · Start race
 
@@ -1398,7 +1398,8 @@ Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode,
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `agents` | array | yes | 2 to 4 agents, one lane each (an agent may run twice) |
+| `agents` | array |   | 2 to 8 agents, one lane each (an agent may repeat); or use fanout |
+| `fanout` | string |   | instead of agents: lanes per agent, e.g. claude:3,codex:2 (2 to 8 lanes in all) |
 | `task` | string | yes | what every agent should do (one paragraph) |
 | `verify` | string |   | optional command run in each finished lane when the user asks, e.g. go test ./... |
 
