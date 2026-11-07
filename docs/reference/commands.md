@@ -764,6 +764,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Testing: Run Tests in Current File | `testing-run-file` |   |   |
 | Testing: Stop Test Run | `testing-stop` |   |   |
 
+## Tracker
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Tracker: Add Task… | `tracker-add` |   |   |
+| Tracker: Show Tasks… | `tracker-show` |   | `shared with agents` |
+
 ## View
 
 | Title | ID | Key | Hint |
