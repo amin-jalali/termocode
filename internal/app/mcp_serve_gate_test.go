@@ -139,7 +139,9 @@ func TestMCPServeEveryToolGate(t *testing.T) {
 			continue
 		}
 		if tool.Validate != nil {
-			if err := tool.Validate(tc.args); err != nil {
+			// A Validate that reads the editor (aiPrecheck) can not run on
+			// the catalog; TestMCPServeEveryAskingToolDenied checks it live.
+			if err := tool.Validate(tc.args); err != nil && !errors.Is(err, errMCPServeListOnly) {
 				t.Errorf("%s %v: invalid (%v); the case must be a valid call", tc.tool, tc.args, err)
 				continue
 			}
@@ -165,7 +167,7 @@ func TestMCPServeEveryToolGate(t *testing.T) {
 
 // Spec (MS-1): through the bridge, every asking case of the table opens
 // the confirm step and a deny never runs the tool (no UI step past the
-// tool lookup).
+// tool lookup and a Validate precheck).
 func TestMCPServeEveryAskingToolDenied(t *testing.T) {
 	m := aiTestModel(t)
 	root := mcpServeGateWorkspace(t)
@@ -175,16 +177,24 @@ func TestMCPServeEveryAskingToolDenied(t *testing.T) {
 		return &mcp.CallError{Code: mcp.CodeDeclined, Message: "declined by the user"}
 	})
 	defer hub.stop()
+	catalog := mcpServeCatalog()
 	for _, tc := range mcpServeGateCases {
 		if !tc.ask {
 			continue
+		}
+		// The tool lookup is one UI step; a Validate that reads the editor
+		// before the card (aiPrecheck, e.g. git_stash save) is one more.
+		wantUI := 1
+		if tool, ok := ai.FindTool(catalog, tc.tool); ok && tool.Validate != nil &&
+			errors.Is(tool.Validate(tc.args), errMCPServeListOnly) {
+			wantUI = 2
 		}
 		asked = nil
 		_, err, ui := mcpServeDrive(t, &m, hub, func() (mcp.CallResult, error) {
 			return src.Call(mcpServeCtx("agent"), tc.tool, tc.args)
 		})
 		var ce *mcp.CallError
-		if len(asked) != 1 || !errors.As(err, &ce) || ce.Code != mcp.CodeDeclined || ui != 1 {
+		if len(asked) != 1 || !errors.As(err, &ce) || ce.Code != mcp.CodeDeclined || ui != wantUI {
 			t.Errorf("%s %v: asked=%v err=%v ui=%d", tc.tool, tc.args, asked, err, ui)
 		}
 	}
