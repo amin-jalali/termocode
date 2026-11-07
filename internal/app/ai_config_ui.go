@@ -294,6 +294,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWorkflowCard(id), true
 	case confirmKindAgentTranscripts: // agent_chat.go
 		return m.answerAgentTranscripts(id), true
+	case confirmKindAgentChatAnswer: // agent_chat_panel.go
+		return m.answerAgentChatAnswer(id), true
 	case confirmKindAgentHibernate: // agent_hibernate.go
 		return m.answerAgentHibernate(id), true
 	case confirmKindAgentAccountSignIn: // agent_accounts.go
