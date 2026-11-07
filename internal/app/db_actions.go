@@ -370,6 +370,10 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "H":
 		return m, m.databaseHistory()
+	case "$": // db_cli.go: the connection's CLI in a terminal tab
+		if have && row.conn != "" && row.kind != dbNodeSuggestion {
+			return m, m.databaseOpenCLI(row.conn)
+		}
 	case "a":
 		if have && row.kind == dbNodeSuggestion {
 			return m, m.databaseAddSuggestion(row.path)
@@ -434,6 +438,8 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseSelectInConsole()
 	case "c":
 		return m, m.databaseCodeGenStart()
+	case "F": // db_schema_files.go: dump to / compare with a folder
+		return m, m.databaseSchemaFilesStart()
 	case "#":
 		return m, m.databaseCountFromTree()
 	case "K":
@@ -639,47 +645,9 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 	if databaseNeedsUnlock(databaseSecretStore(), c) {
 		return m.withSecretsUnlocked(func(m *Model) tea.Cmd { return m.databaseOpen(id, test) })
 	}
-	password := ""
-	if ref, err := secrets.ParseRef(c.Password); err == nil && ref.Kind == secrets.RefDotenv {
-		// The same resolver as every other reference: the workspace .env
-		// only, never the process environment or a parent folder.
-		raw, err := newRefResolver(s.root).Resolve(ref)
-		if err != nil {
-			return m.pushToastDetail(toast.Errr, "Could not resolve database password", sanitizeDBText(err.Error()))
-		}
-		ai.RegisterSecret(raw)
-		password = dbPasswordFromValue(raw)
-		ai.RegisterSecret(password)
-	}
-	if store := databaseSecretStore(); store != nil && !strings.HasPrefix(c.Password, "${dotenv:") {
-		if c.Password != "" {
-			if strings.HasPrefix(c.Password, "${secret:") {
-				name := strings.TrimSuffix(strings.TrimPrefix(c.Password, "${secret:"), "}")
-				if name != "" {
-					password, _, _ = store.Get(name)
-				}
-			} else if ref, err := secrets.ParseRef(c.Password); err == nil {
-				password, err = newRefResolver(s.root).Resolve(ref)
-				if err != nil {
-					return m.pushToastDetail(toast.Errr, "Could not resolve database password", sanitizeDBText(err.Error()))
-				}
-				ai.RegisterSecret(password)
-			} else if c.Source == dbclient.SourceUser {
-				password = c.Password
-				_ = store.Set("db."+id, password)
-			}
-		}
-		if password == "" && !store.Locked() {
-			if value, ok, err := store.Get("db." + id); err != nil {
-				n := s.nodes[id]
-				n.problem = sanitizeDBText(err.Error())
-				s.nodes[id] = n
-				s.touch()
-				return m.pushToastDetail(toast.Errr, "Could not read database password", sanitizeDBText(err.Error()))
-			} else if ok {
-				password = value
-			}
-		}
+	password, errCmd := m.databaseResolvePassword(id, c)
+	if errCmd != nil {
+		return errCmd
 	}
 	sec := m.databaseSSHSecrets(c, false)
 	if test {
@@ -699,6 +667,56 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 	s.nodes[id] = n
 	s.touch()
 	return s.connectionCommand(id, dbConnectCommand(c, s.root, password, generation, sec))
+}
+
+// databaseResolvePassword reads the password of connection id: a
+// ${dotenv:} or other reference, the secret store, or a literal in the
+// user file (moved into the store). A non-nil cmd is the error toast.
+func (m *Model) databaseResolvePassword(id string, c dbclient.Conn) (string, tea.Cmd) {
+	s := m.databases
+	password := ""
+	if ref, err := secrets.ParseRef(c.Password); err == nil && ref.Kind == secrets.RefDotenv {
+		// The same resolver as every other reference: the workspace .env
+		// only, never the process environment or a parent folder.
+		raw, err := newRefResolver(s.root).Resolve(ref)
+		if err != nil {
+			return "", m.pushToastDetail(toast.Errr, "Could not resolve database password", sanitizeDBText(err.Error()))
+		}
+		ai.RegisterSecret(raw)
+		password = dbPasswordFromValue(raw)
+		ai.RegisterSecret(password)
+	}
+	if store := databaseSecretStore(); store != nil && !strings.HasPrefix(c.Password, "${dotenv:") {
+		if c.Password != "" {
+			if strings.HasPrefix(c.Password, "${secret:") {
+				name := strings.TrimSuffix(strings.TrimPrefix(c.Password, "${secret:"), "}")
+				if name != "" {
+					password, _, _ = store.Get(name)
+				}
+			} else if ref, err := secrets.ParseRef(c.Password); err == nil {
+				password, err = newRefResolver(s.root).Resolve(ref)
+				if err != nil {
+					return "", m.pushToastDetail(toast.Errr, "Could not resolve database password", sanitizeDBText(err.Error()))
+				}
+				ai.RegisterSecret(password)
+			} else if c.Source == dbclient.SourceUser {
+				password = c.Password
+				_ = store.Set("db."+id, password)
+			}
+		}
+		if password == "" && !store.Locked() {
+			if value, ok, err := store.Get("db." + id); err != nil {
+				n := s.nodes[id]
+				n.problem = sanitizeDBText(err.Error())
+				s.nodes[id] = n
+				s.touch()
+				return "", m.pushToastDetail(toast.Errr, "Could not read database password", sanitizeDBText(err.Error()))
+			} else if ok {
+				password = value
+			}
+		}
+	}
+	return password, nil
 }
 
 // databaseSecretNames are the store names a connection may read: its
@@ -1065,19 +1083,19 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"Esc", "back to the editor"},
 		[]string{"Connections"},
 		[]string{"a", "add a connection"},
-		[]string{"e", "edit the connection files"},
+		[]string{"e / F", "edit connection files / schema as files: dump, compare"},
 		[]string{"T", "test the connection"},
 		[]string{"S", "start a stopped service"},
 		[]string{"t", "transaction mode"},
 		[]string{"p", "set the password"},
-		[]string{"n", "new SQL console"},
+		[]string{"n / $", "new SQL console / psql, mysql… in a terminal"},
 		[]string{"H", "SQL history"},
 		[]string{"x", "disconnect"},
 		[]string{"On a table or view"},
 		[]string{"o", "open the data"},
 		[]string{"d / D", "describe / show the DDL"},
 		[]string{"s", "select 100 rows in the console"},
-		[]string{"c", "generate code: SQL templates, column lists, Go/TS/Python types"},
+		[]string{"c", "generate code: SQL, types; routines: call with args; → inserts"},
 		[]string{"#", "count the rows"},
 		[]string{"i", "import a CSV file"},
 		[]string{"y", "copy the name"},

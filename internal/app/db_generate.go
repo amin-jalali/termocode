@@ -265,12 +265,17 @@ func dbGenPython(t dbTable, cols []dbColInfo) string {
 // databaseCodeGenStart is c in the tree: the Generate code picker for the
 // table under the cursor.
 func (m *Model) databaseCodeGenStart() tea.Cmd {
+	if cmd, ok := m.databaseRoutineGenStart(); ok { // db_generate_routine.go
+		return cmd
+	}
 	t, cmd, ok := m.databaseTableTarget()
 	if !ok {
 		return cmd
 	}
 	m.databases.genTable = t
-	m.picker = picker.NewItems("Generate code for "+t.label()+" (copied)", dbGenerateItems(t.view))
+	m.databases.genRoutine = dbRoutineTarget{}
+	m.picker = picker.NewItems("Generate code for "+t.label()+" (Enter copies · → inserts)", dbGenerateItems(t.view))
+	m.picker.SetRowAction("→", "insert at the cursor")
 	m.picker.SetSize(m.w, m.h)
 	m.pickerKind = pickerKindDBGenerate
 	m.pickerOpen = true
@@ -283,11 +288,23 @@ func (m *Model) databaseGeneratePicker(id string) (tea.Cmd, bool) {
 	if m.pickerKind != pickerKindDBGenerate {
 		return nil, false
 	}
+	return m.databaseGeneratePick(id, false), true
+}
+
+// databaseGeneratePick runs the picked row: insert puts the text at the
+// editor cursor (→) instead of copying it (Enter).
+func (m *Model) databaseGeneratePick(id string, insert bool) tea.Cmd {
+	if m.databases == nil {
+		return nil
+	}
+	if r := m.databases.genRoutine; r.name != "" {
+		return m.databaseRoutineLoad(r, id, insert)
+	}
 	t := m.databases.genTable
 	if t.name == "" {
-		return nil, true
+		return nil
 	}
-	return m.databaseLoadMetaMsg(t, dbMetaMsg{code: id}), true
+	return m.databaseLoadMetaMsg(t, dbMetaMsg{code: id, insert: insert})
 }
 
 // onDBGenerated copies the generated text.
@@ -302,5 +319,5 @@ func (m *Model) onDBGenerated(msg dbMetaMsg) tea.Cmd {
 			title = it.Title
 		}
 	}
-	return m.copyWithToast(text, "Copied "+title+" for "+msg.tbl.label())
+	return m.databaseDeliverCode(text, title+" for "+msg.tbl.label(), msg.insert)
 }

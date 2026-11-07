@@ -161,6 +161,10 @@ A PostgreSQL, MySQL, MariaDB, Redis or Valkey container or compose service has *
 
 When the container or service behind a saved connection is stopped, the footer says so (`postgres stopped · S start`). Press `S` on the connection, or choose **Start service** in its menu, to start it the same way the Containers view does.
 
+## Command line client
+
+Press `$` on a connection to open its own client in a terminal tab: `psql`, `mysql`, `sqlite3` or `redis-cli` (it must be on your PATH). The host, port, user and database come from the connection, and a read-only connection opens the client read-only too. The password and SSL settings go in the tab's environment only, never on the command line, so they do not show in the process list. A connection through an SSH tunnel cannot use this: the tunnel lives inside termocode.
+
 ## Disconnect
 
 Press `x` on a connection and choose **Disconnect** to close all its sessions. Sessions also close when you leave the Databases view, so a hidden view keeps no database process. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` then asks **Cancel**, **Commit** or **Roll back** (**Cancel** has the focus).
@@ -233,7 +237,7 @@ Move to a table or view in the tree and press:
 | `d` | describe: columns, types, null, defaults, keys, indexes, foreign keys, triggers |
 | `D` | the DDL in a read-only SQL buffer (`q` goes back) |
 | `s` | write `SELECT * FROM <table> LIMIT 100;` at the end of the connection's console and run it there |
-| `c` | generate code from the table's columns and copy it: SELECT, INSERT, UPDATE, DELETE, CREATE or DROP (names quoted, placeholders for values; nothing runs), the column names, qualified column names, a Go struct, a TypeScript interface or a Python dataclass |
+| `c` | generate code from the table's columns and copy it: SELECT, INSERT, UPDATE, DELETE, CREATE or DROP (names quoted, placeholders for values; nothing runs), the column names, qualified column names, a Go struct, a TypeScript interface or a Python dataclass. In the list Enter copies and `→` inserts the text at the editor cursor. On a routine (PostgreSQL, MySQL), `c` offers **Call with arguments…**: it asks for each argument (blank for NULL) and makes `SELECT * FROM f(…)` or `CALL p(…)`, and DROP with the argument types |
 | `#` | count the rows |
 | `i` | import a CSV file into the table (not for views) |
 | `y` | copy the quoted table name |
@@ -361,6 +365,15 @@ The AI has the same search as `db_search_data` (read-only, runs at once).
 ## Compare data
 Compare two results, two tables, or one table on two connections. On the first result page press `gc`: it is marked as the **source** (the rows you want). Show the other result or open the other table (another tab, table or connection) and press `gc` again: that is the **target**. `gc` twice on the same result removes the mark.
 A table's data page counts as the whole table with its filter (up to 10,000 rows, read again on a read-only session); a console result counts as the rows it loaded. Rows match on the source table's key. When there is no key, termocode asks for the key columns. The card lists the rows that differ, one line per row (`−` the target's, `+` the source's), and counts the added, changed, removed and same rows; columns that only one side has are listed and not compared. When the target is table data, **Copy sync script** (`y`) and **Open script** (`o`) give the `DELETE`, `UPDATE` and `INSERT` statements, in one transaction, that make the target hold the source's rows. termocode never runs the script: review it, then run it yourself in a console.
+
+## Schema as files
+
+Press `F` on a schema (or a database, or any row under it) and choose:
+
+- **Dump to a folder…** writes the schema as clean SQL, one file per object: `tables/<name>.sql` (with its keys and indexes), `views/<name>.sql` and `routines/<name>.sql` (not SQLite). The folder is relative to the workspace (`schema/<connection>-<schema>` is offered). A file that is already up to date is not touched, so the folder diffs well in git. When the folder holds files with other text, a card asks first (**Cancel** has the focus). Files of dropped objects stay; Compare shows them.
+- **Compare with a folder…** lists every object under **Changed**, **Only in the database**, **Only in the folder** and **Identical**. `Space` selects rows; `Enter` takes the selected rows (or the row under the cursor) to a card: **Cancel**, **Update the folder** (write the database's version and remove the files of objects the database no longer has) or **Open the folder's SQL** (the folder's text of those objects in a read-only buffer, to review and run by hand; a changed table needs ALTER statements, not CREATE).
+
+The schema is read on a read-only session; nothing here changes the database. When the project uses a migration tool (Flyway, Liquibase, Alembic, Prisma, Rails, golang-migrate or dbmate), the menu says so: the folder is a snapshot next to the migrations, not a migration.
 
 ## Query parameters
 

@@ -318,6 +318,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBTxDone(msg)
 	case dbMetaMsg:
 		return m, m.onDBMeta(msg)
+	case dbSchemaFilesMsg: // db_schema_files.go
+		return m, m.onDBSchemaFiles(msg)
+	case dbRoutineMsg: // db_generate_routine.go
+		return m, m.onDBRoutine(msg)
 	case dbGenMsg:
 		return m, m.onDBGen(msg)
 	case dbSearchDoneMsg:
@@ -367,6 +371,13 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case lspUninstallDoneMsg:
 		return m, m.onToolUninstalled(msg)
 	case picker.ActionMsg:
+		if m.pickerKind == pickerKindDBSchemaCompare { // db_schema_files.go: Space selects
+			return m, m.databaseSchemaCompareToggle(msg.ID)
+		}
+		if m.pickerKind == pickerKindDBGenerate { // db_generate.go: → inserts at the cursor
+			m.pickerOpen = false
+			return m, m.databaseGeneratePick(msg.ID, true)
+		}
 		if m.pickerKind == pickerKindLayoutOpen { // layout_palette.go: → previews the row
 			cmd := m.onLayoutPickerAction(msg.ID)
 			if m.confirmOpen {
