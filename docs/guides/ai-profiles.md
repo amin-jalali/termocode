@@ -909,6 +909,7 @@ These tools touch no files, so they ask no card. A note that looks like
 a secret is refused. Claims and notes show as tool calls in each step's
 transcript in AGENTS. Subscription steps (Claude Code, Codex) do not get
 the tools.
+
 ### Critic review
 
 When a step's worktree ends with changed files, a second model (the
