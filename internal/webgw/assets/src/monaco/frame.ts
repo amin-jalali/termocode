@@ -829,6 +829,8 @@ let vimShown = "";
 let vimWant = false;
 /** vimMaps are the user's mappings (the page's; [] until it has them). */
 let vimMaps: { maps: VimMapDef[]; timeout: number } = { maps: [], timeout: -1 };
+/** vimBufMaps are this file's own mappings (the page's; [] until then). */
+let vimBufMaps: VimMapDef[] = [];
 let vimLoading: Promise<typeof VimModule> | null = null;
 
 function loadVim(): Promise<typeof VimModule> {
@@ -923,6 +925,7 @@ function vimStart(mod: typeof VimModule): void {
     copied: (text) => post({ t: "copied", text }),
   });
   vim.setMaps(vimMaps.maps, vimMaps.timeout);
+  vim.setBufMaps(vimBufMaps);
 }
 
 /** VIM_TYPE are the editor's commands for the special keys Vim types in
@@ -1097,6 +1100,10 @@ function setOpts(o: FrameOpts): void {
   if (o.vimMaps) {
     vimMaps = { maps: o.vimMaps, timeout: o.vimTimeout ?? -1 };
     vim?.setMaps(vimMaps.maps, vimMaps.timeout);
+  }
+  if (o.vimBufMaps) {
+    vimBufMaps = o.vimBufMaps;
+    vim?.setBufMaps(vimBufMaps);
   }
   if (o.vim !== undefined) vimOn(o.vim);
 }

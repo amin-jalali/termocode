@@ -32,6 +32,9 @@ export interface FrameOpts {
    * editor's, editor.vim_maps); vimTimeout its timeoutlen in ms. */
   vimMaps?: { mode: string; lhs: string; rhs: string; noremap?: boolean }[];
   vimTimeout?: number;
+  /** vimBufMaps are this file's own mappings in the laptop editor
+   * (editor.vim_buf_maps: made for the file or by its language). */
+  vimBufMaps?: { mode: string; lhs: string; rhs: string; noremap?: boolean }[];
   /** comment is the file type's line comment ("//", "#"); none: the
    * file has no line comment and Toggle Line Comment does nothing. */
   comment?: string;
