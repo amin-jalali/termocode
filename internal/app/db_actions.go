@@ -323,7 +323,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case "s":
 		return m, m.databaseSelectInConsole()
 	case "c":
-		return m, m.databaseGenerateStart()
+		return m, m.databaseCodeGenStart()
 	case "#":
 		return m, m.databaseCountFromTree()
 	case "i":
