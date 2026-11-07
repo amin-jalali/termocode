@@ -255,3 +255,19 @@ func webSetFirstLineTimeout(d time.Duration) func() {
 	old := webFirstLineWait.Swap(int64(d))
 	return func() { webFirstLineWait.Store(old) }
 }
+
+// The hub's push-store load reaches Update on the hub channel as a web
+// message, so Update listens to the hub again after it (a bare applyMsg
+// went to Update's generic case and the laptop stopped hearing phones).
+func TestWebHubPushLoadKeepsListening(t *testing.T) {
+	r := newWebRig(t, nil)
+	select {
+	case msg := <-r.hub.ch:
+		cmd, ok := r.m.handleWebMsg(msg)
+		if !ok || cmd == nil {
+			t.Fatalf("hub message %T: ok %v, listens again %v", msg, ok, cmd != nil)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("no push load message")
+	}
+}
