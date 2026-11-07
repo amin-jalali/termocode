@@ -464,6 +464,9 @@ missing	db-er-diagram	Databases|S
 missing	db-er-path	Databases|S
 missing	db-query-log	Databases|S
 missing	db-console-history	Databases|S
+missing	db-run-container	Databases|S
+missing	db-cloud-discover	Databases|S
+missing	db-iam-auth	Databases|S
 missing	db-find-usages	Databases|S
 missing	db-format	Databases|S
 missing	db-format-file	Databases|S

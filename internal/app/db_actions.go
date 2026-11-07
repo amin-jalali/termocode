@@ -69,6 +69,9 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-er-path", Title: "Databases: Diagram Path Between Tables…"},
 		{ID: "db-query-log", Title: "Databases: Show Query Log", Hint: "every statement sent this run, internal ones too"},
 		{ID: "db-console-history", Title: "Databases: Show Console Version History", Hint: "a version of the console on every run"},
+		{ID: "db-run-container", Title: "Databases: Run New Database Container…", Hint: "PostgreSQL, MySQL, MariaDB or Redis in Docker"},
+		{ID: "db-cloud-discover", Title: "Databases: Discover Cloud Databases…", Hint: "through the installed aws, gcloud or az CLI"},
+		{ID: "db-iam-auth", Title: "Databases: Use Cloud IAM Token Login…", Hint: "a fresh token from the cloud CLI at each connect"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -131,6 +134,12 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseQueryLog(), true
 	case "db-console-history":
 		return m.databaseConsoleHistory(), true
+	case "db-run-container":
+		return m.databaseRunContainerStart(), true
+	case "db-cloud-discover":
+		return m.databaseCloudStart(), true
+	case "db-iam-auth":
+		return m.databaseIAMStart(), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":
@@ -374,6 +383,9 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseConsoleConfirm(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseCloudConfirm(id); ok { // db_cloud.go
 		return cmd, true
 	}
 	if m.confirmKind == confirmKindDBMovePassword {

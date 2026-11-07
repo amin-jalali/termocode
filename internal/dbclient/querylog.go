@@ -90,10 +90,37 @@ func LogSession(s Session, l *QueryLog, conn string) Session {
 // UnwrapSession is the driver session under a logged one (s itself when
 // it is not logged), for type checks on the driver.
 func UnwrapSession(s Session) Session {
-	if w, ok := s.(*loggedSession); ok {
-		return w.Session
+	for {
+		switch w := s.(type) {
+		case *loggedSession:
+			s = w.Session
+		case *closeSession:
+			s = w.Session
+		default:
+			return s
+		}
 	}
-	return s
+}
+
+// closeSession runs stop after the session closes (a port-forward that
+// lives as long as the session).
+type closeSession struct {
+	Session
+	stop func()
+}
+
+// OnClose wraps s so stop runs once s is closed.
+func OnClose(s Session, stop func()) Session {
+	if s == nil || stop == nil {
+		return s
+	}
+	return &closeSession{Session: s, stop: stop}
+}
+
+func (c *closeSession) Close() error {
+	err := c.Session.Close()
+	c.stop()
+	return err
 }
 
 func (w *loggedSession) add(sql string, start time.Time, err error, internal bool) {

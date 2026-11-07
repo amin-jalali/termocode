@@ -213,6 +213,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Diagram Path Between Tables… | `db-er-path` |   |   |
+| Databases: Discover Cloud Databases… | `db-cloud-discover` |   | `through the installed aws, gcloud or az CLI` |
 | Databases: Disconnect Selected… | `db-disconnect` |   |   |
 | Databases: End Session… | `db-end-session` |   |   |
 | Databases: Explain Analyze Statement… | `db-explain-analyze` |   |   |
@@ -235,6 +236,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Refresh | `db-refresh` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
+| Databases: Run New Database Container… | `db-run-container` |   | `PostgreSQL, MySQL, MariaDB or Redis in Docker` |
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
@@ -249,6 +251,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |
+| Databases: Use Cloud IAM Token Login… | `db-iam-auth` |   | `a fresh token from the cloud CLI at each connect` |
 
 ## Debug
 

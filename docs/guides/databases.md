@@ -296,6 +296,16 @@ Very large schemas are compared up to 2,000 tables; the card and the script say 
 
 **Databases: Diagram Path Between Tables…** starts at the table under the cursor. Pick the other table; tables with no foreign-key path say "no path". termocode finds the shortest path along foreign keys (in either direction) and opens a Mermaid diagram of only those tables, with both ends highlighted. The first line names the path. The schema is read in a read-only session.
 
+## Containers, Kubernetes and the cloud
+
+**Databases: Run New Database Container…** runs PostgreSQL 17, MySQL 8.4, MariaDB 11 or Redis 7 in Docker (or Podman). A card shows the whole `docker run` command first; **Cancel** is the default. The port is open on `127.0.0.1` only. termocode makes a random password, passes it in the environment (never on the command line) and keeps it in the secret store. The new connection is added to your list; press `Enter` on it when the container is ready.
+
+A server inside Kubernetes is reached through `kubectl port-forward`. Add a `kube` block to the connection: `"kube": { "context": "dev", "namespace": "shop", "pod": "pg-0", "port": 5432 }`. termocode starts the forward when you connect and ends it when the session closes.
+
+**Databases: Discover Cloud Databases…** asks the installed `aws`, `gcloud` or `az` CLI for its PostgreSQL and MySQL instances. Pick one; termocode asks for the password, tests the connection and saves it like any new connection (with SSL `require`).
+
+**Databases: Use Cloud IAM Token Login…** makes one of your own connections log in with a fresh token at each connect, from `aws rds generate-db-auth-token`, `gcloud sql generate-login-token` or `az account get-access-token`. A card shows the command first. The CLI must be signed in. Project files cannot use this, because they cannot run commands.
+
 ## Query log and console versions
 
 **Databases: Show Query Log** opens every statement termocode sent to your SQL databases in this run (the newest 1,000) in a new buffer. Each statement has a `--` line above it: the time, the connection, how long it took and the result (rows, affected rows or the error). Statements termocode sends for itself (catalog reads, read-only sessions for compare and diagrams) end with `· internal`. The log stays in memory and is gone when termocode quits, because statements can hold real values.

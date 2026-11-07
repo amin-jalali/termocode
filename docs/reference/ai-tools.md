@@ -2055,6 +2055,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-ai-generate-sql` | Databases: AI Generate SQL from Schema… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `db-cancel` | Databases: Cancel Query | auto |   |
 | `db-cancel-session` | Databases: Cancel Session Query… | never | stops another session's work; only the user can choose it |
+| `db-cloud-discover` | Databases: Discover Cloud Databases… | never | runs the user's cloud CLI with their account; only the user starts it |
 | `db-commit` | Databases: Commit | never | the user's transaction |
 | `db-compare-schemas` | Databases: Compare Schemas… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
@@ -2080,6 +2081,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-goto-definition` | Databases: Go to Definition | auto |   |
 | `db-guide` | Databases: Open Guide | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-iam-auth` | Databases: Use Cloud IAM Token Login… | never | makes a connection run a command at each connect; only the user chooses it |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
@@ -2089,6 +2091,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
 | `db-rollback` | Databases: Roll Back | never | the user's transaction |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
+| `db-run-container` | Databases: Run New Database Container… | never | starts a container after a card only the user answers |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
 | `db-server-info` | Databases: Show Server Info | never | SQL runs require the database query tool and its guard |

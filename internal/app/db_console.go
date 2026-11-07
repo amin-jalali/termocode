@@ -947,6 +947,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseERPathPicker(id); ok { // db_er_path.go
 		return cmd, true
 	}
+	if cmd, ok := m.databaseCloudPicker(id); ok { // db_cloud.go
+		return cmd, true
+	}
 	switch m.pickerKind {
 	case pickerKindDBAttach, pickerKindDBHistory, pickerKindDBSort:
 	case pickerKindDBHistoryDelete:

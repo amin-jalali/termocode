@@ -118,6 +118,7 @@ type dbState struct {
 	compare             *dbCompareState             // Compare Schemas (db_compare.go)
 	er                  dbERTarget                  // Export ER Diagram (db_er.go)
 	queryLog            *dbclient.QueryLog          // every statement sent this run (db_query_log.go)
+	cloud               *dbCloudState               // containers, cloud discovery, IAM login (db_cloud.go)
 	erPath              *dbERPathState              // Diagram Path Between Tables (db_er_path.go)
 	lastClickAt         time.Time                   // double-click detection (db_view.go)
 	lastClickPath       string
@@ -652,6 +653,20 @@ func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, 
 		}
 		c.Dial = tun.DialContext
 	}
+	sess, err := dbKubeOpen(ctx, c, func(c dbclient.Conn) (dbclient.Session, error) { // db_cloud.go
+		return dbOpenDriverSession(ctx, c, root, password)
+	})
+	if err != nil {
+		if tun != nil {
+			_ = tun.Close()
+		}
+		return nil, nil, err
+	}
+	return sess, tun, nil
+}
+
+// dbOpenDriverSession opens and pings a session of c with its driver.
+func dbOpenDriverSession(ctx context.Context, c dbclient.Conn, root, password string) (dbclient.Session, error) {
 	var sess dbclient.Session
 	var err error
 	switch c.Driver {
@@ -680,19 +695,16 @@ func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, 
 		}
 	}
 	if err != nil {
-		if tun != nil {
-			_ = tun.Close()
-		}
-		return nil, nil, err
+		return nil, err
 	}
-	return sess, tun, nil
+	return sess, nil
 }
 
 func dbDatabaseConnectCommand(path string, c dbclient.Conn, password string, generation uint64) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		sess, err := dbSQLSessionFactory(ctx, c, password)
+		sess, err := dbKubeOpen(ctx, c, func(c dbclient.Conn) (dbclient.Session, error) { return dbSQLSessionFactory(ctx, c, password) })
 		if err != nil {
 			sess = nil
 		}
