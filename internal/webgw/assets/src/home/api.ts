@@ -9,7 +9,7 @@
 import type { ComponentChildren, ComponentType, Fragment as PFragment, h as PH } from "preact";
 import type * as Hooks from "preact/hooks";
 import type { ReadonlySignal, computed as PComputed, effect as PEffect, signal as PSignal } from "@preact/signals";
-import type { Card, ChatMsg, ChatSnap } from "../../../../webproto/proto";
+import type { Attach, Card, ChatMsg, ChatSnap } from "../../../../webproto/proto";
 import type { Layout } from "../lib/layout";
 import type { PhoneHome } from "../lib/prefs";
 import type { Link } from "../net/link";
@@ -44,6 +44,9 @@ export interface HomeHost {
 
   readChat(data: unknown): ChatSnap | null;
   setDraft(chat: string, text: string): void;
+  /** addAttach adds an item to the composer's chips (MOB-5, lib/attach.ts);
+   * false when the message has its 8 already. */
+  addAttach(chat: string, a: Attach): boolean;
   /** errText is the page's one calm line for a failed request. */
   errText(e: unknown): string;
   /** isOffline: the request failed because the link is down. */

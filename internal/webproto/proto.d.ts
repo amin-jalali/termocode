@@ -185,6 +185,17 @@ export interface HlArgs {
 export interface ChatSendArgs {
   text: string;
   chat_id?: string;
+  attach?: Attach[];
+}
+
+export interface Attach {
+  kind: "task" | "ptask" | "issue" | "pr" | "file" | "lines" | "diff" | "worktree" | "run" | "race" | "workflow" | "card" | "resource" | "block" | "project" | "view";
+  id?: string;
+  path?: string;
+  from?: number;
+  to?: number;
+  label?: string;
+  spec?: string;
 }
 
 export interface CardsAnswerArgs {
@@ -1024,10 +1035,16 @@ export interface ChatMsg {
   truncated?: boolean;
   model?: string;
   images?: string[];
+  attached?: AttachChip[];
   rules?: string;
   run?: ChatRun;
   steps?: ChatStep[];
   blocks?: Block[];
+}
+
+export interface AttachChip {
+  kind: string;
+  label: string;
 }
 
 export interface MdNode {

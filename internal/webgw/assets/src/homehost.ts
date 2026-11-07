@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/ho
 import { computed, effect, signal } from "@preact/signals";
 import type { HomeHost } from "./home/api";
 import { setDraft } from "./lib/drafts";
+import { addAttach } from "./lib/attach";
 import { layout } from "./lib/layout";
 import { prefs, setPref } from "./lib/prefs";
 import { go, goTab, route } from "./lib/router";
@@ -43,6 +44,7 @@ export function homeHost(): HomeHost {
     setPhoneHome: (v) => setPref("phoneHome", v),
     readChat,
     setDraft,
+    addAttach,
     errText,
     isOffline: (e) => e instanceof OfflineError,
     code: (e) => (e instanceof ReqError ? e.code : ""),

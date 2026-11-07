@@ -8,6 +8,7 @@ import { h, H } from "./jsx";
 import { hs, type HomeKey } from "./strings";
 import { CHIPS, chipOrder, viewChips, type Built, type ChipDef } from "./chips";
 import { QuickBlock } from "./QuickBlock";
+import { ActionSheetHost } from "./ActionSheet";
 import { Panels } from "./Panels";
 import { addQuick, boardBlock, dropQuick, gitBlock, lastIndex, mergeStream, needsYouBlock, patchQuick, projectsBlock, readBlock, readInbox, readProjects, runsBlock, tasksBlock, type HomeBlock, type Labels, type Quick } from "../state/home";
 import { readGit } from "../state/git";
@@ -254,6 +255,7 @@ export function Home() {
         )}
       </footer>
       {panels.value && <Panels views={viewChips(CHIPS)} onView={(c) => run(c)} onClose={() => (panels.value = false)} />}
+      <ActionSheetHost chat={chatId} />
     </section>
   );
 }

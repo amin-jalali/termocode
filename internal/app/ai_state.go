@@ -329,6 +329,9 @@ type aiAttachment struct {
 	// text); MediaType its type ("image/png").
 	Image     string
 	MediaType string
+	// Kind is the attach kind of an item the web page sent back (MOB-5,
+	// web_chat_attach.go); "" for what the laptop attached.
+	Kind string
 }
 
 // newAIState loads settings + credentials and builds the provider.
