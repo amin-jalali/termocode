@@ -1,0 +1,117 @@
+package app
+
+import (
+	"strings"
+
+	"github.com/amin-jalali/termocode/internal/dbclient"
+)
+
+// Live SQL inspections (DBX-4): on each buffer notify (150 ms debounce,
+// the same one the lens uses) Go inspects the console text against the
+// loaded tree and sets nvim diagnostics in their own namespace. Nothing
+// is asked of the server.
+
+// Diagnostic severities as vim.diagnostic.severity numbers.
+const (
+	dbDiagError = 1
+	dbDiagWarn  = 2
+)
+
+// inspectSchema is what the tree of conn knows: the table and view names
+// per schema whose Tables/Views lists are loaded, and the loaded columns.
+func (s *dbState) inspectSchema(conn string) dbclient.InspectSchema {
+	sc := dbclient.InspectSchema{Tables: map[string]map[string]bool{}, Columns: map[string][]string{}}
+	parent := map[string]string{}
+	for path, n := range s.nodes {
+		if n.conn != conn {
+			continue
+		}
+		for _, c := range n.children {
+			parent[c] = path
+		}
+	}
+	// owner is the schema (or database) name above a node.
+	owner := func(path string) string {
+		for p := parent[path]; p != ""; p = parent[p] {
+			if n := s.nodes[p]; n.kind == dbNodeSchema || n.kind == dbNodeDatabase {
+				return strings.ToLower(n.name)
+			}
+		}
+		return ""
+	}
+	groups, loaded := 0, 0
+	for path, n := range s.nodes {
+		if n.conn != conn || n.kind != dbNodeGroup || (n.name != "Tables" && n.name != "Views") {
+			continue
+		}
+		groups++
+		if !n.loaded {
+			continue
+		}
+		loaded++
+		sch := owner(path)
+		if sc.Tables[sch] == nil {
+			sc.Tables[sch] = map[string]bool{}
+		}
+		for _, c := range n.children {
+			if t := s.nodes[c]; t.kind == dbNodeTable || t.kind == dbNodeView {
+				sc.Tables[sch][strings.ToLower(t.name)] = true
+			}
+		}
+	}
+	sc.Complete = groups > 0 && loaded == groups
+	for table, cols := range s.cols[conn] {
+		sc.Columns[table] = cols
+	}
+	return sc
+}
+
+// dbInspectDiagnostics inspects each statement of text and returns the
+// diagnostics (0-based lines, byte columns) for vim.diagnostic.set; an
+// empty list (never nil) clears the buffer.
+func dbInspectDiagnostics(text, driver string, sc dbclient.InspectSchema) []map[string]any {
+	out := []map[string]any{}
+	var pieces [][2]int
+	if spans := dbStatementSpans(text, driver); len(spans) > 0 {
+		for _, sp := range spans {
+			pieces = append(pieces, [2]int{sp.start, sp.end})
+		}
+	} else if strings.TrimSpace(text) != "" {
+		pieces = [][2]int{{0, len(text)}} // Split failed (an unclosed quote): inspect it all
+	}
+	for _, p := range pieces {
+		for _, is := range dbclient.Inspect(text[p[0]:p[1]], sc) {
+			start, end := p[0]+is.Start, p[0]+is.End
+			lnum, col := dbLineCol(text, start)
+			elnum, ecol := dbLineCol(text, end)
+			sev := dbDiagWarn
+			if is.Kind == dbclient.IssueSyntax {
+				sev = dbDiagError
+			}
+			d := map[string]any{"lnum": lnum, "col": col, "end_lnum": elnum, "end_col": ecol,
+				"severity": sev, "message": sanitizeDBText(is.Msg), "source": "termocode"}
+			if is.Fix != "" {
+				d["user_data"] = map[string]any{"fix": is.Fix}
+			}
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// dbLineCol is the 0-based line and byte column of offset in text.
+func dbLineCol(text string, offset int) (int, int) {
+	head := text[:offset]
+	line := strings.Count(head, "\n")
+	return line, offset - (strings.LastIndexByte(head, '\n') + 1)
+}
+
+// databaseInspectBuffer sets the inspection diagnostics of a SQL buffer
+// (none when the buffer has no connection).
+func (m *Model) databaseInspectBuffer(buf int, lines []string, c *dbclient.Conn) {
+	diags := []map[string]any{}
+	if c != nil {
+		diags = dbInspectDiagnostics(strings.Join(lines, "\n"), c.Driver, m.databases.inspectSchema(c.ID))
+	}
+	_ = m.nvim.ExecLuaArgs(`local b,d=...;if vim.api.nvim_buf_is_valid(b) then vim.diagnostic.set(vim.api.nvim_create_namespace('termocode_sql_inspect'),b,d) end`, buf, diags)
+}
