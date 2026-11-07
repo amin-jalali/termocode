@@ -18,6 +18,7 @@ import "./styles/fonts.css";
 import "./styles/hl.css";
 import "./styles/media.css";
 import "./styles/saved.css";
+import "./styles/home-catalog.css"; // MOB-13: the Home's catalog and pinned tracker blocks (home.js has no style sheet)
 import { App } from "./app";
 import { loadPersian } from "./lib/lazy";
 import { prefs } from "./lib/prefs";

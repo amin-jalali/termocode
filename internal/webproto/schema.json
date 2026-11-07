@@ -4408,6 +4408,64 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "ai.catalog",
+      "args": "AICatalogArgs",
+      "result": "AICatalog",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.tracker_pins",
+      "args": "EmptyArgs",
+      "result": "TrackerPins",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.tracker_run",
+      "args": "TrackerIDArgs",
+      "result": "TrackerBlock",
+      "role": "controller",
+      "rate": {
+        "n": 12,
+        "per_ms": 60000
+      },
+      "max_bytes": 1024,
+      "live": 2,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.tracker_unpin",
+      "args": "TrackerIDArgs",
+      "result": "TrackerPins",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -16101,6 +16159,274 @@
       "required": [
         "state",
         "worktrees"
+      ],
+      "additionalProperties": true
+    },
+    "AICatalog": {
+      "type": "object",
+      "properties": {
+        "features": {
+          "items": {
+            "$ref": "#/defs/CatalogFeature"
+          },
+          "type": "array"
+        },
+        "note": {
+          "type": "string"
+        },
+        "servers": {
+          "items": {
+            "$ref": "#/defs/CatalogServer"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "features",
+        "servers"
+      ],
+      "additionalProperties": true
+    },
+    "AICatalogArgs": {
+      "type": "object",
+      "properties": {
+        "feature": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "CatalogFeature": {
+      "type": "object",
+      "properties": {
+        "asks": {
+          "type": "integer"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "tools": {
+          "type": "integer"
+        },
+        "try": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "view": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "asks",
+        "hint",
+        "id",
+        "title",
+        "tools",
+        "try"
+      ],
+      "additionalProperties": true
+    },
+    "CatalogServer": {
+      "type": "object",
+      "properties": {
+        "cached": {
+          "type": "boolean"
+        },
+        "known": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "prompts": {
+          "type": "boolean"
+        },
+        "resources": {
+          "type": "boolean"
+        },
+        "state": {
+          "type": "string"
+        },
+        "tools": {
+          "items": {
+            "$ref": "#/defs/CatalogTool"
+          },
+          "type": "array"
+        },
+        "trusted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "known",
+        "name",
+        "state",
+        "tools",
+        "trusted"
+      ],
+      "additionalProperties": true
+    },
+    "CatalogTool": {
+      "type": "object",
+      "properties": {
+        "gate": {
+          "enum": [
+            "runs",
+            "asks",
+            "off"
+          ]
+        },
+        "hint": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "gate",
+        "name",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "TrackerBlock": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "integer"
+        },
+        "error": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/defs/TrackerRow"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "at",
+        "id",
+        "rows",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "TrackerIDArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "TrackerPin": {
+      "type": "object",
+      "properties": {
+        "args": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "refresh": {
+          "type": "integer"
+        },
+        "runs": {
+          "type": "boolean"
+        },
+        "server": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "why": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "refresh",
+        "runs",
+        "server",
+        "title",
+        "tool"
+      ],
+      "additionalProperties": true
+    },
+    "TrackerPins": {
+      "type": "object",
+      "properties": {
+        "pins": {
+          "items": {
+            "$ref": "#/defs/TrackerPin"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pins"
+      ],
+      "additionalProperties": true
+    },
+    "TrackerRow": {
+      "type": "object",
+      "properties": {
+        "hint": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
       ],
       "additionalProperties": true
     }
