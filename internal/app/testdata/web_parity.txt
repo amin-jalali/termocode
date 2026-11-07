@@ -710,7 +710,9 @@ missing	worktree-adopt	Worktrees|M
 missing	worktree-archive	Worktrees|M
 missing	worktree-cleanup	Worktrees|M
 missing	worktree-delete	Worktrees|M
+missing	worktree-feedback	Worktrees|M
 missing	worktree-filter	Worktrees|M
+missing	worktree-follow	Worktrees|M
 missing	worktree-forget	Worktrees|M
 missing	worktree-jump	Worktrees|M
 missing	worktree-link	Worktrees|M
