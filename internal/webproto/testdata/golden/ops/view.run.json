@@ -1,0 +1,1 @@
+{"t":"req","id":976,"op":"view.run","args":{"spec":{"view":"tests","filter":[{"field":"state","op":"eq","value":"failed"}],"layout":"table"},"live":true}}
