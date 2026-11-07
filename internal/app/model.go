@@ -116,9 +116,13 @@ type Model struct {
 	// index and the resume check of each CLI.
 	agentSessions       []agentlog.Summary
 	agentSessIndex      *agentlog.Index
+	agentSessIndexAll   *agentlog.Index // Agent: Search All Sessions… (CMP-30)
+	agentSearchAll      bool            // the open search is over every project
 	agentSessionsResume map[agentlog.CLI]bool
 	agentHits           []agentlog.Hit // the search inside sessions (agent_sessions_search.go)
 	agentHitsCapped     bool
+	aiChatHits          []aiChatHit // AI: Search Chat History… (ai_chat_search.go, CMP-30)
+	aiChatHitsCapped    bool
 	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
 	// AGX-15 (agent_hibernate.go): the tab the hibernate card is about,
 	// "Always for this session", and commands queued by a tab switch.

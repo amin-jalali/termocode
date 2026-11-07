@@ -1906,6 +1906,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-race-compare` | Agent: Race Compare | auto |   |
 | `agent-sessions` | Agent: Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; it reads the outside agents' own session files (owner decision D1) |
 | `agent-sessions-search` | Agent: Search Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
+| `agent-sessions-search-all` | Agent: Search All Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
 | `agent-start` | Agent: Start… | never | opens a picker or prompt that only the user can answer; use a typed tool (outside_agent_start) |
 | `agent-start-claude` | Agent: Start Claude Code | confirm (run) |   |
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
@@ -1937,6 +1938,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-history-clear` | AI: Clear Chat History | never | deletes saved chats; only the user may |
 | `ai-history-delete` | AI: Delete Chat… | never | deletes saved chats; only the user may |
 | `ai-history-rename` | AI: Rename Chat… | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `ai-history-search` | AI: Search Chat History… | never | opens a picker or prompt that only the user can answer; use a typed tool; the AI has chats_search over the same chats |
 | `ai-hooks` | AI: Hooks… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-keep-going` | AI: Toggle Keep Going While Todos Are Open | never | AI provider, credentials and approvals stay with the user; extra paid turns are the user's choice |
 | `ai-mcp-background` | AI: Move MCP Call to Background (Ctrl+B in the chat) | never | moves the model's own running call; the user decides |
