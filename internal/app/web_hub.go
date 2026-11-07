@@ -69,6 +69,7 @@ type webHub struct {
 	wfx    webWorkflowsPub            // Update only: what the workflows topic sent (web_workflows.go)
 	run    webRunPub                  // Update only: the Test, Debug and Services topics (web_tests.go)
 	wt     webWTPub                   // Update only: what the worktrees topic sent (web_worktrees.go)
+	races  webRacesPub                // Update only: what the races topic sent (web_races.go)
 	more   webMorePub                 // Update only: the v2 More views (web_more.go)
 	ai     webAICalls                 // Update only: the page's AI calls (web_ai.go)
 	ups    webUploads                 // staged uploads (web_transfer.go; own lock)

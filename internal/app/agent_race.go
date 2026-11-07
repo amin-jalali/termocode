@@ -517,19 +517,25 @@ func (m *Model) onRaceLoaded(msg raceLoadedMsg) tea.Cmd {
 	if msg.err != nil {
 		return m.toastErr("Could not read the races", msg.err)
 	}
+	m.raceAdopt(msg.races, msg.dir)
+	return m.openRaceCompare()
+}
+
+// raceAdopt keeps the records read from dir when the UI had none yet.
+func (m *Model) raceAdopt(races []agentrace.Race, dir string) {
 	s := m.raceS()
-	if s.dir == "" {
-		s.races, s.dir = msg.races, msg.dir
-		// Read from disk: no lane has a live tab in this session.
-		for i := range s.races {
-			for j := range s.races[i].Lanes {
-				if l := &s.races[i].Lanes[j]; raceActive(l) {
-					l.State = agentrace.Stopped
-				}
+	if s.dir != "" {
+		return
+	}
+	s.races, s.dir = races, dir
+	// Read from disk: no lane has a live tab in this session.
+	for i := range s.races {
+		for j := range s.races[i].Lanes {
+			if l := &s.races[i].Lanes[j]; raceActive(l) {
+				l.State = agentrace.Stopped
 			}
 		}
 	}
-	return m.openRaceCompare()
 }
 
 func (m *Model) openRacePage(id string) {

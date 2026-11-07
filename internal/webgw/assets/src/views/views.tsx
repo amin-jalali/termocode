@@ -11,6 +11,7 @@ import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
 import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
+import { RacesView } from "./more/RacesView";
 import { SettingsView } from "./more/SettingsView";
 import { AgentsView } from "./AgentsView";
 import { ItermocView } from "./ItermocView";
@@ -44,6 +45,7 @@ export function MoreView() {
   if (sub === "tasks") return <TasksView />;
   if (sub === "runs") return <RunsView />;
   if (sub === "workflows") return <WorkflowsView />;
+  if (sub === "races") return <RacesView />;
   if (sub === "settings") return <SettingsView />;
   if (sub === "mcp") return <MCPView />;
   if (sub === "agents") return <AgentsView />;
@@ -86,6 +88,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" data-sub="workflows" onClick={() => go({ tab: "more", rest: "workflows", query: {} })}>
             {t("more.workflows")}
+          </button>
+          <button type="button" class="more-link" data-sub="races" onClick={() => go({ tab: "more", rest: "races", query: {} })}>
+            {t("more.races")}
           </button>
           <button type="button" class="more-link" data-sub="settings" onClick={() => go({ tab: "more", rest: "settings", query: {} })}>
             {t("more.settings")}
