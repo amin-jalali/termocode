@@ -37,6 +37,8 @@
 //	diff.err             `diff` fails with this stderr (exit 2)
 //	apply.txt            answer of `apply -f …` (default: "applied")
 //	apply.err            `apply` fails with this stderr (exit 1)
+//	can-i.txt            answer of `auth can-i --list` (the table)
+//	can-i.err            `auth can-i` fails with this stderr
 //
 // Written by the script: argv.log (one call per line), env.log
 // (KUBECONFIG of each call, "|", then its argv), pf.pid (the pid of a
@@ -122,6 +124,9 @@ apply)
   if [ -f "$D/apply.err" ]; then cat "$D/apply.err" >&2; exit 1; fi
   if [ -f "$D/apply.txt" ]; then cat "$D/apply.txt"; else echo applied; fi
   exit 0 ;;
+auth)
+  if [ -f "$D/can-i.err" ]; then cat "$D/can-i.err" >&2; exit 1; fi
+  cat "$D/can-i.txt" 2>/dev/null; exit 0 ;;
 port-forward)
   if [ -f "$D/pf.err" ]; then cat "$D/pf.err" >&2; exit 1; fi
   echo $$ > "$D/pf.pid"

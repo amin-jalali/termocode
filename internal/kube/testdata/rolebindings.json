@@ -1,0 +1,8 @@
+{"items":[
+ {"metadata":{"name":"shop-readers","namespace":"shop","creationTimestamp":"2026-10-01T10:00:00Z"},
+  "roleRef":{"kind":"ClusterRole","name":"view"},
+  "subjects":[{"kind":"Group","name":"dev-team"},{"kind":"ServiceAccount","name":"ci","namespace":"build"}]},
+ {"metadata":{"name":"shop-admin","namespace":"shop"},
+  "roleRef":{"kind":"Role","name":"admin"},
+  "subjects":[{"kind":"User","name":"amy@example.com"}]}
+]}
