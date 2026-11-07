@@ -254,6 +254,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Run Smallest Statement (Subquery) at Caret | `db-run-smallest` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: Run… (Choose Statement or Subquery) | `db-run-ask` |   |   |
+| Databases: SQL Intentions… | `db-sql-intentions` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |

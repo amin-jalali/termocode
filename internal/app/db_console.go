@@ -70,6 +70,7 @@ type dbConsoleState struct {
 	lens       map[string]string // file + "\x00" + SQL → the lens status
 	attached   map[string]string // project .sql file → connection (saved ones from .termocode/sql-connections.json)
 	switchFile string            // the file Switch File Connection… is for (db_sqllang.go)
+	intent     *dbIntentTarget   // the statement SQL Intentions… was opened on (db_sqlintent.go)
 	pending    *dbRun            // waits for the attach picker or the guard card
 	waiting    *dbRun            // waits for its connection
 	running    *dbRun

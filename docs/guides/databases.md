@@ -386,6 +386,19 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 
 **Syntax errors off.** `db_sql_syntax_off` in `config.json` lists dialects whose syntax errors the live inspections do not show, for example `["mysql"]`. Unknown tables and columns are still marked.
 
+**SQL intentions.** **Databases: SQL Intentions…** lists the rewrites that fit the statement at the cursor; Enter rewrites it in one undo step (`u` undoes it). Everything else in the statement, comments too, stays as you wrote it.
+
+- **Introduce alias** for the table at the cursor (`orders` gets `o`, and `orders.id` becomes `o.id`).
+- **Qualify column names**: a column that only one table of the `FROM` has gets that table's alias.
+- **Expand `*`** (or `o.*`) into the column list.
+- **Wrap a table in a subquery**: `orders o` becomes `(SELECT * FROM orders) o`.
+- **Extract subquery as CTE**: a subquery in `FROM` moves to a `WITH` entry named after its alias.
+- **Inline CTE**: a CTE used once goes back into the `FROM` as a subquery (not for `WITH RECURSIVE`).
+- **Replace a literal with a parameter**: `status = 'open'` becomes `status = :status` (the same string everywhere in the statement); the run asks for the value.
+- **DISTINCT ↔ GROUP BY**, when the select list has no aggregate and no `*`.
+
+Qualify and Expand `*` use the columns the editor already knows for completion; connect the file's connection first. A rewrite is only offered when the statement is read clearly; nothing is sent to the server.
+
 ## EXPLAIN and ANALYZE
 
 **Explain.** In a SQL console press `\x` (leader, then `x`) on a statement, or use **Databases: Explain Statement**. On a result page `x` explains the statement that made the result. The plan opens on the result page as the **Plan** view: one line per step, indented, with the cost and row estimates. The step that takes most of the cost (at least 40 % of the whole plan, without its children) is marked with `!` and `<- costly` and coloured. Details such as `Filter:` and `Hash Cond:` sit under their step. Folds follow the indent: `za` folds a step, `zR` opens all. `y` copies the plan, `C` copies the server's own answer (the native JSON on PostgreSQL and MySQL), `Tab` shows that raw answer, `r` plans again. `b` switches to the bar view: one bar per step for its own share of the whole cost (or of the real time after an analyze), so the slow step stands out; `b` again goes back to the tree.

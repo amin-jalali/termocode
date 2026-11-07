@@ -573,6 +573,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-copy-as":                        aiNever(aiNoPicker),
 	"db-export-tables":                  aiNever(aiNoPicker + " (db_query + write_file)"),
 	"db-run-to-file":                    aiNever(aiNoPicker + " (db_query + write_file)"),
+	"db-sql-intentions":                 aiNever(aiNoPicker + " (read_file + write_file)"),
 	"db-sql-outline":                    aiNever("moves the user's cursor; the AI reads files with its own tools"),
 	"db-switch-connection":              aiNever(aiNoAIConfig),
 	"db-sql-folder-dialect":             aiNever(aiNoPicker),

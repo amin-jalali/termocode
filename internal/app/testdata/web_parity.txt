@@ -561,6 +561,7 @@ missing	db-switch-connection	Databases|S
 missing	db-sql-folder-dialect	Databases|S
 missing	db-highlight-usages	Databases|S
 missing	db-embedded-sql	Databases|S
+missing	db-sql-intentions	Databases|S
 missing	db-rollback-savepoint	Databases|S
 missing	db-open-csv	Databases|S
 missing	db-pgtap-run	Databases|S

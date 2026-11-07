@@ -121,6 +121,8 @@ func (m *Model) databaseSQLPicked(id string) (tea.Cmd, bool) {
 			m.focus = FocusEditor
 		}
 		return nil, true
+	case pickerKindDBSQLIntent:
+		return m.databaseSQLIntentPicked(id), true
 	case pickerKindDBSQLSwitch:
 		s := m.dbConsole()
 		file := s.switchFile

@@ -2122,6 +2122,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-server-info` | Databases: Show Server Info | never | SQL runs require the database query tool and its guard |
 | `db-sessions` | Databases: Show Sessions and Locks | never | SQL runs require the database query tool and its guard |
 | `db-sql-folder-dialect` | Databases: Set Folder SQL Dialect… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-sql-intentions` | Databases: SQL Intentions… | never | opens a picker or prompt that only the user can answer; use a typed tool (read_file + write_file) |
 | `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
 | `db-submit-source` | Databases: Submit Object Source… | never | changes a database object; only the user can confirm the card |
