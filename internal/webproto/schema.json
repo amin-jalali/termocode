@@ -2562,6 +2562,20 @@
       "phase": "v2"
     },
     {
+      "op": "worktrees.link",
+      "args": "WorktreeLinkArgs",
+      "result": "WorktreeDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.worktrees",
       "args": "EmptyArgs",
       "result": "AIWorktrees",
@@ -15797,6 +15811,30 @@
         "state"
       ],
       "additionalProperties": true
+    },
+    "WorktreeLinkArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "issue",
+            "pr",
+            "none"
+          ]
+        },
+        "number": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "number"
+      ],
+      "additionalProperties": false
     },
     "WorktreeNoteArgs": {
       "type": "object",
