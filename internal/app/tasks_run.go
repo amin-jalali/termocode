@@ -848,19 +848,20 @@ func tasksPaletteItems() []picker.Item {
 		// U9b (term_fix.go) and U8 (agent_tabs.go).
 		{ID: "terminal-fix-ai", Title: "Terminal: Fix Last Command with AI", Hint: "Alt+\\ in the terminal"},
 		{ID: agentSessionsSearchAllID, Title: "Agent: Search All Sessions…", Hint: "words in every project's agent sessions"},
-		{ID: agentPickerPaletteID, Title: "Agent: Start…"},                                                                  // AGX-1 (agent_picker.go)
-		{ID: agentRacePaletteID, Title: "Agent: Race…"},                                                                     // AGX-4 (agent_race.go)
-		{ID: agentRaceComparePaletteID, Title: "Agent: Race Compare"},                                                       // AGX-5
-		{ID: agentSplitPaletteID, Title: "Agent: Split Task…", Hint: "the AI splits a goal into parts for agents"},          // CMP-4
-		{ID: agentChatPaletteID, Title: "Agent: Chat View", Hint: "chat / terminal of an agent tab"},                        // AGX-8 (agent_chat.go)
-		{ID: agentSessionsPaletteID, Title: "Agent: Sessions…", Hint: "resume or read a past session"},                      // AGX-9 (agent_sessions.go)
-		{ID: agentSessionsSearchID, Title: "Agent: Search Sessions…", Hint: "words in this project's agent sessions"},       // AGX-10
-		{ID: agentNamesPaletteID, Title: "Worktree: Suggest a Name…", Hint: "quick model drafts branch names"},              // AGX-16
-		{ID: agentHibernatePaletteID, Title: "Agent: Hibernate or Wake", Hint: "stop an idle agent tab, keep its session"},  // AGX-15
-		{ID: agentAccountsPaletteID, Title: "Agent: Accounts…", Hint: "Claude Code / Codex accounts, own folders"},          // AGX-13
-		{ID: agentUsagePlansPaletteID, Title: "Agent: Usage Plans", Hint: "plan share, reset, last limit"},                  // AGX-12
-		{ID: agentAutoContinuePaletteID, Title: "Agent: Toggle Auto-Continue", Hint: "type continue when the limit resets"}, // AGX-11
-		{ID: diffCommentsPaletteID, Title: "Agent: Send Diff Comments…", Hint: "c on a change, S sends them all"},           // CMP-51
+		{ID: agentPickerPaletteID, Title: "Agent: Start…"},                                                                   // AGX-1 (agent_picker.go)
+		{ID: agentRacePaletteID, Title: "Agent: Race…"},                                                                      // AGX-4 (agent_race.go)
+		{ID: agentRaceComparePaletteID, Title: "Agent: Race Compare"},                                                        // AGX-5
+		{ID: agentSplitPaletteID, Title: "Agent: Split Task…", Hint: "the AI splits a goal into parts for agents"},           // CMP-4
+		{ID: agentChatPaletteID, Title: "Agent: Chat View", Hint: "chat / terminal of an agent tab"},                         // AGX-8 (agent_chat.go)
+		{ID: agentSessionsPaletteID, Title: "Agent: Sessions…", Hint: "resume or read a past session"},                       // AGX-9 (agent_sessions.go)
+		{ID: agentSessionsSearchID, Title: "Agent: Search Sessions…", Hint: "words in this project's agent sessions"},        // AGX-10
+		{ID: agentNamesPaletteID, Title: "Worktree: Suggest a Name…", Hint: "quick model drafts branch names"},               // AGX-16
+		{ID: agentHibernatePaletteID, Title: "Agent: Hibernate or Wake", Hint: "stop an idle agent tab, keep its session"},   // AGX-15
+		{ID: agentAccountsPaletteID, Title: "Agent: Accounts…", Hint: "Claude Code / Codex accounts, own folders"},           // AGX-13
+		{ID: agentUsagePlansPaletteID, Title: "Agent: Usage Plans", Hint: "plan share, reset, last limit"},                   // AGX-12
+		{ID: agentAutoContinuePaletteID, Title: "Agent: Toggle Auto-Continue", Hint: "type continue when the limit resets"},  // AGX-11
+		{ID: diffCommentsPaletteID, Title: "Agent: Send Diff Comments…", Hint: "c on a change, S sends them all"},            // CMP-51
+		{ID: agentAutoAcceptPaletteID, Title: "Agent: Toggle Auto-Accept", Hint: "answer its permission prompts: yes, once"}, // CMP-64
 	}, agentPaletteItems()...)
 }
 

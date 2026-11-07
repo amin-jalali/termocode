@@ -1995,6 +1995,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `acp-agents-edit` | Open Config: ACP Agents | never | the list names programs termocode starts: only the user edits it |
 | `acp-thread` | Agent: Chat with an ACP Agent… / End | never | it starts an outside agent program: the user starts and ends it |
 | `agent-account-use` | Agent: Accounts… | never | AI provider, credentials and approvals stay with the user; opens a picker or prompt that only the user can answer; use a typed tool |
+| `agent-auto-accept-toggle` | Agent: Toggle Auto-Accept | never | AI provider, credentials and approvals stay with the user; it lets termocode answer an outside agent's permission prompts |
 | `agent-auto-continue-toggle` | Agent: Toggle Auto-Continue | never | AI provider, credentials and approvals stay with the user; it lets termocode type into an outside agent's tab |
 | `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
 | `agent-diff-comments` | Agent: Send Diff Comments… | never | it sends the user's own review comments to an agent: only the user sends them, after the preview |
