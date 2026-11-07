@@ -1,7 +1,8 @@
 // Vim mode of the desktop editor (WEBP-1): a keymap of our own over the
 // frame's text (no library), in its own file (monaco-vim.js) that the
-// frame loads only when Vim mode is on. Normal, insert, visual and
-// visual-line modes; counts; the motions h j k l w b e W B E 0 ^ $ gg G
+// frame loads only when Vim mode is on. Normal, insert, visual,
+// visual-line and visual-block (Ctrl+V: a box of columns; d y c r ~ on
+// it, I and A type on every line of it, p puts a yanked box) modes; counts; the motions h j k l w b e W B E 0 ^ $ gg G
 // f F t T ; , { }; the operators d c y (with a motion, doubled for whole
 // lines, or the text objects iw aw); x X D C s S Y p P J r ~ i a I A o O;
 // u and Ctrl+R; the . repeat; macros (q, @, @@); the registers a-z (A-Z
@@ -15,7 +16,7 @@
 // typing.
 import type { Text } from "@codemirror/state";
 
-export type VimMode = "normal" | "insert" | "visual" | "vline";
+export type VimMode = "normal" | "insert" | "visual" | "vline" | "vblock";
 
 /** VimHost is what the keymap needs of the editor; offsets index the
  * text (UTF-16), as the frame's own Text does. */
@@ -26,6 +27,9 @@ export interface VimHost {
   place(off: number): void;
   /** select shows a selection from anchor to head (head is the caret). */
   select(anchor: number, head: number): void;
+  /** selectBlock shows one selection per line of a visual block (from,
+   * to on each line) and keeps the line of head on screen. */
+  selectBlock(sels: readonly { from: number; to: number }[], head: number): void;
   /** edit replaces [from, to) with insert as one user change and puts
    * the caret at caret (an offset in the new text). */
   edit(from: number, to: number, insert: string, caret: number): void;
@@ -64,6 +68,8 @@ export interface VimKey {
 interface Reg {
   text: string;
   line: boolean;
+  /** block: a visual block's yank, one line of text per line of it. */
+  block?: boolean;
 }
 
 interface Range {
@@ -300,6 +306,13 @@ export class Vim {
   private marks = new Map<string, { line: number; col: number }>();
   /** lastVisual is the last visual selection (gv). */
   private lastVisual: { anchor: number; head: number; mode: VimMode } | null = null;
+  /** vdollar: the visual block runs to each line's end ($). */
+  private vdollar = false;
+  /** blockIns: an I, A or c of a visual block types on line lo at col;
+   * at Escape the same text goes on lines lo+1..hi (end: at each line's
+   * end; pad: short lines are padded up to col). len0 is line lo's
+   * length before the typing. */
+  private blockIns: { lo: number; hi: number; col: number; end: boolean; pad: boolean; len0: number; lines: number } | null = null;
   private msg = "";
   private lastSub: { rep: string } | null = null;
   /** maps are the user's mappings by mode (n x o i): the page's (the
@@ -359,7 +372,7 @@ export class Vim {
     if (this.cl || this.insReg) return null;
     if (this.mode === "insert") return "i";
     if (this.awaitingChar()) return null;
-    if (this.mode === "visual" || this.mode === "vline") return "x";
+    if (this.inVisual()) return "x";
     return this.pendingOp() ? "o" : "n";
   }
 
@@ -476,7 +489,7 @@ export class Vim {
       }
       if (!this.dotReplay) this.dotRec?.push(tok);
       let text = "";
-      if (tok === ":" && (this.mode === "visual" || this.mode === "vline")) {
+      if (tok === ":" && this.inVisual()) {
         this.leaveVisual();
         text = "'<,'>";
       } else if (tok === ":" && /^[1-9]\d*$/.test(this.pending)) {
@@ -529,6 +542,7 @@ export class Vim {
   }
 
   private leaveInsert(): void {
+    this.blockInsert();
     const keys = this.insKeys;
     for (let i = 0; i < this.insRepeat; i++) for (const t of keys) this.h.typeKey(t);
     this.insRepeat = 0;
@@ -548,7 +562,7 @@ export class Vim {
 
   private escape(): boolean {
     this.pending = "";
-    if (this.mode === "visual" || this.mode === "vline") this.leaveVisual();
+    if (this.inVisual()) this.leaveVisual();
     this.normal();
     return true;
   }
@@ -585,7 +599,7 @@ export class Vim {
     p = p.replace(/^[1-9]\d*/, "");
     const op = /^(?:[dcy<>]|g[~uU])/.exec(p);
     if (op) p = p.slice(op[0].length).replace(/^[1-9]\d*/, "");
-    if (op || this.mode === "visual" || this.mode === "vline") {
+    if (op || this.inVisual()) {
       if (p === "i" || p === "a") return true;
     }
     return ["f", "F", "t", "T", "r", "m", "'", "`", "q", "@", "gr"].includes(p) && !(p === "q" && this.rec !== "" && !op);
@@ -599,9 +613,21 @@ export class Vim {
   }
 
   private ctrlKey(tok: string): boolean {
-    const visual = this.mode === "visual" || this.mode === "vline";
+    const visual = this.inVisual();
     const n = /^[1-9]\d*$/.test(this.pending) ? parseInt(this.pending, 10) : 0;
     switch (tok) {
+      case "<C-v>":
+        this.pending = "";
+        if (this.mode === "vblock") this.leaveVisual();
+        else {
+          const head = this.pos();
+          if (!visual) this.anchor = head;
+          this.mode = "vblock";
+          this.vdollar = false;
+          this.paintVisual(head);
+        }
+        this.after();
+        return true;
       case "<C-r>":
         if (visual) return false;
         this.pending = "";
@@ -688,6 +714,7 @@ export class Vim {
   private leaveVisual(): void {
     const lo = Math.min(this.anchor, this.vhead), hi = Math.max(this.anchor, this.vhead);
     this.lastVisual = { anchor: this.anchor, head: this.vhead, mode: this.mode };
+    this.vdollar = false;
     this.setMark("<", lo);
     this.setMark(">", hi);
     this.mode = "normal";
@@ -709,8 +736,12 @@ export class Vim {
 
   /** pos is where the commands work from: the caret, or in visual mode
    * the char the selection's head is on. */
+  private inVisual(): boolean {
+    return this.mode === "visual" || this.mode === "vline" || this.mode === "vblock";
+  }
+
   private pos(): number {
-    return this.mode === "visual" || this.mode === "vline" ? this.vhead : this.h.caret();
+    return this.inVisual() ? this.vhead : this.h.caret();
   }
 
   // ---- text helpers ----
@@ -792,7 +823,7 @@ export class Vim {
 
   /** command runs rest (after register and count); "more": wait for keys. */
   private command(reg: string, n1: number, rest: string): "more" | "done" {
-    const visual = this.mode === "visual" || this.mode === "vline";
+    const visual = this.inVisual();
     const count = Math.max(1, n1);
     const c0 = rest[0];
     // Motions alone.
@@ -1194,13 +1225,18 @@ export class Vim {
 
   private moveTo(m: Motion, name: string): void {
     if (!/^[jk]|^\x00Arrow(Up|Down)|^\n/.test(name) && !name.startsWith("$")) this.want = null;
-    if (this.mode === "visual" || this.mode === "vline") return this.paintVisual(m.to);
+    if (this.mode === "vblock" && !/^[jk]|^\x00Arrow(Up|Down)/.test(name)) this.vdollar = name.startsWith("$");
+    if (this.inVisual()) return this.paintVisual(m.to);
     this.h.place(this.clamp(m.to));
   }
 
   private paintVisual(head: number): void {
     this.vhead = head;
     const a = this.anchor;
+    if (this.mode === "vblock") {
+      this.h.selectBlock(this.blockRanges(), head);
+      return;
+    }
     if (this.mode === "vline") {
       const [lo, hi] = a <= head ? [a, head] : [head, a];
       const from = this.lineStart(lo), to = this.lineEnd(hi);
@@ -1216,7 +1252,7 @@ export class Vim {
   /** visualRange is what visual mode covers now. */
   private visualRange(): Range {
     const lo = Math.min(this.anchor, this.vhead), hi = Math.max(this.anchor, this.vhead);
-    if (this.mode === "vline") return this.lineRange(this.d.lineAt(lo).number, this.d.lineAt(hi).number);
+    if (this.mode === "vline" || this.mode === "vblock") return this.lineRange(this.d.lineAt(lo).number, this.d.lineAt(hi).number);
     return { from: lo, to: Math.min(this.d.length, hi + 1), line: false };
   }
 
@@ -1240,6 +1276,14 @@ export class Vim {
       this.paintVisual(a);
       return "done";
     }
+    if (c === "O" && this.mode === "vblock") {
+      const d = this.d;
+      const la = d.lineAt(this.anchor), lh = d.lineAt(this.vhead);
+      const ca = this.anchor - la.from, ch = this.vhead - lh.from;
+      this.anchor = la.from + Math.min(ch, la.length);
+      this.paintVisual(lh.from + Math.min(ca, lh.length));
+      return "done";
+    }
     if (c === "i" || c === "a") {
       if (rest.length < 2) return "more";
       const r = this.textObject(c === "a", rest[1]);
@@ -1255,6 +1299,7 @@ export class Vim {
       if (rest[1] === "u" || rest[1] === "U" || rest[1] === "~") return this.visualCommand(reg, rest[1] === "~" ? "~" : rest[1]);
       return "done";
     }
+    if (this.mode === "vblock" && "dxDyYcsCIAr~uU\x7f".includes(c)) return this.blockCommand(reg, rest);
     const r = this.visualRange();
     if ("dxc~s\x7f".includes(c)) this.visualDot(c === "x" || c === "\x7f" ? "d" : c === "s" ? "c" : c, r);
     if ("<>uUdxcsy~J\x7f".includes(c)) {
@@ -1323,6 +1368,145 @@ export class Vim {
    * after it when the selection runs forward). */
   private headChar(): number {
     return this.vhead;
+  }
+
+  // ---- visual block ----
+
+  /** blockBox is the visual block: its lines lo..hi and its columns
+   * left..right (inclusive; columns count UTF-16 units, a tab is one). */
+  private blockBox(): { lo: number; hi: number; left: number; right: number } {
+    const d = this.d;
+    const la = d.lineAt(Math.min(this.anchor, d.length)), lh = d.lineAt(Math.min(this.vhead, d.length));
+    const ca = this.anchor - la.from, ch = this.vhead - lh.from;
+    return { lo: Math.min(la.number, lh.number), hi: Math.max(la.number, lh.number), left: Math.min(ca, ch), right: Math.max(ca, ch) };
+  }
+
+  /** blockRanges are the block's part of each of its lines (empty on a
+   * line too short to reach it). */
+  private blockRanges(): { from: number; to: number }[] {
+    const b = this.blockBox();
+    const out: { from: number; to: number }[] = [];
+    for (let n = b.lo; n <= b.hi; n++) {
+      const l = this.d.line(n);
+      const from = l.from + Math.min(b.left, l.length);
+      out.push({ from, to: this.vdollar ? l.to : Math.max(from, l.from + Math.min(b.right + 1, l.length)) });
+    }
+    return out;
+  }
+
+  /** editLines replaces lines lo..hi with the lines out as one edit. */
+  private editLines(lo: number, hi: number, out: readonly string[], caret: number): void {
+    const d = this.d;
+    this.edit(d.line(lo).from, d.line(hi).to, out.join("\n"), caret);
+  }
+
+  /** blockCommand runs d y c r ~ u U I A (and D Y C: to the lines' ends)
+   * on the visual block, each line on its own, as one edit. */
+  private blockCommand(reg: string, rest: string): "more" | "done" {
+    const c = rest[0];
+    if (c === "r" && rest.length < 2) return "more";
+    if ("DYC".includes(c)) this.vdollar = true;
+    const b = this.blockBox();
+    const rs = this.blockRanges();
+    const d = this.d;
+    const end = this.vdollar;
+    this.leaveVisual();
+    this.dotRec = null;
+    const top = d.line(b.lo);
+    const at = top.from + Math.min(b.left, top.length);
+    const pieces = rs.map((r) => d.sliceString(r.from, r.to));
+    const lines: string[] = [];
+    for (let n = b.lo; n <= b.hi; n++) lines.push(d.line(n).text);
+    const cut = (fn: (s: string) => string): string[] => lines.map((t, i) => {
+      const l = d.line(b.lo + i);
+      const f = rs[i].from - l.from, e = rs[i].to - l.from;
+      return t.slice(0, f) + fn(t.slice(f, e)) + t.slice(e);
+    });
+    if ("dxDyYcsC\x7f".includes(c)) {
+      const text = pieces.join("\n");
+      this.setReg(reg, { text, line: false, block: true }, c === "y" || c === "Y");
+      if (reg === "+" || reg === "*") this.h.copied(text);
+    }
+    if (c === "y" || c === "Y") {
+      this.h.place(at);
+      return "done";
+    }
+    if (this.h.readOnly()) return "done";
+    switch (c) {
+      case "I":
+      case "A":
+      case "c":
+      case "s":
+      case "C": {
+        const app = c === "A";
+        let col = app ? b.right + 1 : b.left;
+        if (c !== "I" && c !== "A") this.editLines(b.lo, b.hi, cut(() => ""), at);
+        const l = this.d.line(b.lo);
+        if (app && !end && l.length < col) {
+          this.edit(l.to, l.to, " ".repeat(col - l.length), l.from + col);
+        }
+        const first = this.d.line(b.lo);
+        if (app && end) col = first.length;
+        this.blockIns = { lo: b.lo, hi: b.hi, col, end: app && end, pad: app, len0: first.length, lines: this.d.lines };
+        this.insertAt(first.from + Math.min(col, first.length));
+        return "done";
+      }
+      case "r":
+        this.editLines(b.lo, b.hi, cut((s) => s.replace(/[^\n]/g, rest[1])), at);
+        return "done";
+      case "~":
+      case "u":
+      case "U":
+        this.editLines(b.lo, b.hi, cut((s) => (c === "u" ? s.toLowerCase() : c === "U" ? s.toUpperCase() : swapCase(s))), at);
+        return "done";
+    }
+    // d x D: the block goes.
+    this.editLines(b.lo, b.hi, cut(() => ""), at);
+    this.h.place(this.clamp(at));
+    return "done";
+  }
+
+  /** blockInsert puts the text an I, A or c typed on the block's first
+   * line on its other lines too (not when it ran over lines). */
+  private blockInsert(): void {
+    const bi = this.blockIns;
+    this.blockIns = null;
+    if (!bi || bi.hi <= bi.lo || this.h.readOnly()) return;
+    const d = this.d;
+    if (bi.hi > d.lines) return;
+    const first = d.line(bi.lo);
+    const n = first.length - bi.len0;
+    if (n <= 0 || d.lines !== bi.lines) return;
+    const text = first.text.slice(bi.col, bi.col + n);
+    const out: string[] = [];
+    for (let ln = bi.lo + 1; ln <= bi.hi; ln++) {
+      const t = d.line(ln).text;
+      if (bi.end) out.push(t + text);
+      else if (t.length >= bi.col) out.push(t.slice(0, bi.col) + text + t.slice(bi.col));
+      else out.push(bi.pad ? t + " ".repeat(bi.col - t.length) + text : t);
+    }
+    const caret = this.h.caret();
+    this.edit(d.line(bi.lo + 1).from, d.line(bi.hi).to, out.join("\n"), caret);
+  }
+
+  /** putBlock puts a yanked block at col of line n and the lines after
+   * it (count times side by side), padding short lines with spaces and
+   * adding lines at the end of the text. */
+  private putBlock(text: string, col: number, n: number, count: number): void {
+    const d = this.d;
+    const rows = text.split("\n");
+    const w = Math.max(...rows.map((r) => r.length));
+    const last = Math.min(d.lines, n + rows.length - 1);
+    const out: string[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const t = n + i <= last ? d.line(n + i).text : "";
+      let piece = rows[i].padEnd(w).repeat(count);
+      if (col >= t.length) piece = piece.replace(/ +$/, "");
+      out.push(t.length >= col ? t.slice(0, col) + piece + t.slice(col) : t + " ".repeat(col - t.length) + piece);
+    }
+    const from = d.line(n).from;
+    const to = d.line(last).to;
+    this.edit(from, to, out.join("\n"), from + Math.min(col, out[0].length));
   }
 
   // ---- operators ----
@@ -1805,6 +1989,7 @@ export class Vim {
     const at = this.pos();
     const d = this.d;
     const l = d.lineAt(at);
+    if (r.block) return this.putBlock(r.text, before || l.length === 0 ? at - l.from : at - l.from + 1, l.number, count);
     if (r.line) {
       const body = r.text.repeat(count);
       if (before) {

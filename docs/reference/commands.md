@@ -381,6 +381,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Copy Remote Link to Line | `git-copy-line-link` |   |   |
 | Git: Create Branch From… | `git-branch-from` |   |   |
 | Git: Create Gist from File… | `git-gist` |   | `share the active file as a GitHub gist (gh)` |
+| Git: Create GitLab Merge Request… | `git-gitlab-mr-create` |   | `from the current branch into the default branch` |
 | Git: Create Pull Request… | `git-pr-create` |   |   |
 | Git: Create Tag… | `git-tag-create` |   |   |
 | Git: Delete Branch… | `git-branch-delete` |   |   |
@@ -403,6 +404,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Focus Source Control | `git-focus` |   |   |
 | Git: Force Push (with Lease)… | `git-push-force` |   |   |
 | Git: Generate Commit Message with AI | `git-ai-commit-msg` |   |   |
+| Git: GitLab Merge Requests… | `git-gitlab-mrs` |   | `the open merge requests of the GitLab remote; Enter opens one` |
 | Git: Go to Commit… | `git-goto-commit` |   |   |
 | Git: Go to HEAD in GRAPH | `git-graph-head` |   | `@` |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
@@ -432,6 +434,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Merge View: Take Theirs for the Whole File | `git-merge-take-all-theirs` |   | `T` |
 | Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
 | Git: Merge in Progress (Continue / Abort)… | `git-merge-status` |   |   |
+| Git: Move Last Commit to Another Branch… | `git-move-commit` |   | `a commit made on the wrong branch; a pushed one is copied` |
 | Git: My Pull Requests… | `git-pr-mine` |   |   |
 | Git: Open Commit of Line | `git-blame-commit` |   |   |
 | Git: Open Merge View | `git-merge-open` |   |   |
@@ -460,6 +463,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Run Before-Commit Checks | `git-commit-checks` |   | `the checks of Settings → Git on what is staged; no commit` |
 | Git: Save Changes as Patch… | `git-patch-save` |   |   |
 | Git: Search Log… | `git-log-search` |   |   |
+| Git: Set GitLab Token… | `git-gitlab-token` |   | `saved in the secret store for this GitLab host` |
 | Git: Set Identity (Name and E-mail)… | `git-identity` |   |   |
 | Git: Set Upstream Branch… | `git-upstream-set` |   |   |
 | Git: Show Contributors | `git-contributors` |   | `the authors of this branch and their commit counts` |
@@ -467,6 +471,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Folder History… | `git-log-folder` |   |   |
 | Git: Show Git Command Log | `git-cmd-log` |   |   |
+| Git: Show History of Block | `git-block-history` |   |   |
 | Git: Show Incoming Commits… | `git-incoming` |   |   |
 | Git: Show LFS Files | `git-lfs-files` |   | `the files Git LFS tracks; which ones are only pointers` |
 | Git: Show Last Hook Output | `git-hook-output` |   |   |
@@ -488,11 +493,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Switch Repository… | `git-repo-pick` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle All Branches in GRAPH | `git-graph-all` |   |   |
+| Git: Toggle Author Column in GRAPH | `git-graph-col-author` |   |   |
 | Git: Toggle Auto Fetch | `git-auto-fetch` |   |   |
 | Git: Toggle Blame Annotations | `git-blame-annotate` |   |   |
 | Git: Toggle Blame in Status Bar | `git-status-blame` |   |   |
 | Git: Toggle Commit Signing (This Repository) | `git-signing-toggle` |   |   |
+| Git: Toggle Date Column in GRAPH | `git-graph-col-date` |   |   |
 | Git: Toggle Inline Blame | `git-inline-blame` |   |   |
+| Git: Toggle Line History Lens | `git-line-lens` |   |   |
+| Git: Toggle SHA Column in GRAPH | `git-graph-col-sha` |   |   |
 | Git: Toggle Skip Hooks on Commit (--no-verify) | `git-skip-hooks` |   | `this session only` |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Uncommit Last Commit (Keep Changes) | `git-uncommit` |   |   |

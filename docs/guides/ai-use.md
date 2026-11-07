@@ -535,11 +535,14 @@ Language server tools have rules too:
 Git tools have rules too:
 
 - `git_log`, `git_blame` and `git_stash` list run at once (read only).
-- `git_unstage`, `git_fetch`, hunk stage / unstage and stash push / apply /
-  pop ask first. *git* auto-approve covers them.
-- Hunk **discard** and stash **drop** can not be undone, so they always ask,
-  with no "Always allow".
-- Hunk discard and stash push / apply / pop are refused while a file has
+- `git_unstage`, `git_fetch`, hunk stage / unstage and stash save / apply
+  ask first. *git* auto-approve covers them.
+- Hunk **discard** and stash **drop** can not be undone, and stash **pop**
+  removes the entry, so they always ask, with no "Always allow". The stash
+  card has **Cancel** first.
+- Stash runs where the workspace lives: in a container workspace, git runs
+  in the container.
+- Hunk discard and stash save / apply / pop are refused while a file has
   unsaved edits in the editor; the agent asks you to save first.
 
 Tasks and tests use the same places as the palette, so you see them run.

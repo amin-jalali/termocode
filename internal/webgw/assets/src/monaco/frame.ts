@@ -110,6 +110,7 @@ interface Editor {
   revealPositionInCenter(p: Pos): void;
   setPosition(p: Pos): void;
   setSelection(s: { selectionStartLineNumber: number; selectionStartColumn: number; positionLineNumber: number; positionColumn: number }): void;
+  setSelections(s: { selectionStartLineNumber: number; selectionStartColumn: number; positionLineNumber: number; positionColumn: number }[]): void;
   revealPosition(p: Pos): void;
   getPosition(): Pos | null;
   addAction(a: { id: string; label: string; keybindings?: number[]; contextMenuGroupId?: string; contextMenuOrder?: number; run: () => void }): unknown;
@@ -878,6 +879,14 @@ function vimStart(mod: typeof VimModule): void {
       const pa = at(a), ph = at(h);
       e.setSelection({ selectionStartLineNumber: pa.lineNumber, selectionStartColumn: pa.column, positionLineNumber: ph.lineNumber, positionColumn: ph.column });
       e.revealPosition(ph);
+    },
+    selectBlock: (sels, head) => {
+      const list = sels.map((r) => {
+        const a = at(r.from), b = at(r.to);
+        return { selectionStartLineNumber: a.lineNumber, selectionStartColumn: a.column, positionLineNumber: b.lineNumber, positionColumn: b.column };
+      });
+      if (list.length) e.setSelections(list);
+      e.revealPosition(at(head));
     },
     edit: (from, to, insert, caret) => {
       if (!model) return;
