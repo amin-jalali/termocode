@@ -75,6 +75,8 @@ type kubeState struct {
 	pendingImage   kubeImageTarget   // the set image prompt's and card's change
 	imageOf        kube.Deployment   // the deployment the image prompt asks about
 	lastRollout    kubeRolloutMsg    // the rollout picker's status and history
+	pendingHelm    kubeHelmTarget    // the helm rollback / uninstall card (kube_helm.go)
+	helmCurrent    int               // the release's revision now (rollback card)
 
 	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
@@ -387,6 +389,14 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeDelete(msg), true
 	case kubeTopMsg:
 		return m.onKubeTop(msg), true
+	case kubeHelmListMsg:
+		return m.onKubeHelmList(msg), true
+	case kubeHelmPageMsg:
+		return m.onKubeHelmPage(msg), true
+	case kubeHelmHistoryMsg:
+		return m.onKubeHelmHistory(msg), true
+	case kubeHelmWriteMsg:
+		return m.onKubeHelmWrite(msg), true
 	case kubeRolloutMsg:
 		return m.onKubeRollout(msg), true
 	case kubeUndoMsg:

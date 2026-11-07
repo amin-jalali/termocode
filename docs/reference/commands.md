@@ -586,6 +586,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Kubernetes: Helm Releases… | `kubernetes-helm` |   |   |
 | Kubernetes: New Manifest from Snippet… | `kubernetes-snippet` |   |   |
 | Kubernetes: Refresh | `kubernetes-refresh` |   |   |
 | Kubernetes: Show | `kubernetes-show` |   |   |

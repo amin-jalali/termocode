@@ -2333,6 +2333,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
 | `kubernetes-context` | Kubernetes: Switch Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the context is the user's choice |
+| `kubernetes-helm` | Kubernetes: Helm Releases… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
 | `kubernetes-show` | Kubernetes: Show | auto |   |

@@ -72,6 +72,7 @@ kubeconfig, so other terminals keep their context.
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
 | `t` | Metrics: CPU and memory of the nodes and the pods (a read-only page). |
+| `H` | Helm releases of the namespace: status, values, history, roll back, uninstall. |
 | `R` | Load the lists now. |
 | `w` | Save the screen as a text file (asks for the name; never overwrites a file). |
 | `?` | Show these keys. |
@@ -161,6 +162,26 @@ alone never deletes anything. **Delete** does not wait: the list shows
 the object as it goes. A pod that belongs to a deployment or a job is
 made again; deleting a deployment or a job deletes its pods too.
 
+## Helm releases
+
+`H` (or **Kubernetes: Helm Releases…** in the palette) lists the helm
+releases of the view's context and namespace: the name, the chart, the
+status and the revision. You need `helm` on your `PATH`; without it the
+view says so and does nothing else.
+
+A release opens a short list:
+
+- **Status**, **Values** and **History** open read-only pages. Values
+  that look secret (passwords, tokens, keys) are masked.
+- **Roll Back…** lists the older revisions. A card shows the release,
+  the revision, the context, the namespace and the command (`helm
+  rollback --wait`).
+- **Uninstall…** asks first. The card shows the release and the command
+  (`helm uninstall`); it deletes every object of the chart.
+
+On both cards **Cancel** is the first button and has the focus, so
+`Enter` or `Esc` alone never changes anything.
+
 ## New manifest from a snippet
 
 **Kubernetes: New Manifest from Snippet…** opens a new YAML buffer with a
@@ -175,8 +196,8 @@ The AI can open the view, load it again and open the metrics page. It can also r
 cluster, in the context the view shows: `kube_list` (the four lists),
 `kube_describe` (one object) and `kube_logs` (the last lines of a pod).
 Secrets in their answers are hidden. The AI can never restart,
-scale, roll back or change the image of a deployment, delete an object, start a port-forward or switch
-the context.
+scale, roll back or change the image of a deployment, delete an
+object, start a port-forward, use helm or switch the context.
 
 ## When something is wrong
 

@@ -97,6 +97,9 @@ func (m *Model) handleKubePickerSelect(id string) tea.Cmd {
 	case "pf-svc", "pf-deployment":
 		return m.handleKubeForwardPick(kind, value)
 	}
+	if cmd, ok := m.handleKubeHelmPick(kind, value); ok { // kube_helm.go
+		return cmd
+	}
 	if cmd, ok := m.handleKubeRolloutPick(kind, value); ok { // kube_rollout.go
 		return cmd
 	}
