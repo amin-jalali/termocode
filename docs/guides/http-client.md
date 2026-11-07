@@ -48,6 +48,13 @@ The format (same as mobocode, so one file works in both apps):
 | `Name: value` | headers, until the first blank line |
 | the rest of the block | the body (JSON gets `Content-Type: application/json` when you set none) |
 | `# @no-redirect`, `# @no-cookie-jar`, `# @timeout 10s` | per-request options |
+| `# @insecure` | skip TLS certificate checks for this request |
+| `# @ca-cert ca.pem` | also trust the CAs in this PEM file |
+| `# @client-cert me.crt`, `# @client-key me.key` | send a client certificate (mTLS); one PEM file with both works too |
+
+TLS file paths are read from the `.http` file's folder (`~/` is your home folder).
+Only your own sends read the TLS lines; the AI's sends never skip checks or use your keys.
+An encrypted private key is not supported.
 
 ## The response page
 
