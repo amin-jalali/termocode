@@ -615,6 +615,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"http-import-curl":      aiNever(aiNoPicker + " (http_save_request)"),
 	"http-new-file":         aiNever(aiNoPicker + " (create_file)"),
 	"http-save-body":        aiNever(aiNoPicker + " (http_get_last_response, write_file)"),
+	"http-fields":           aiNever(aiNoPicker + " (read_file, write_file)"),
 }
 
 // aiActionPolicyFor returns the policy of a palette id, including the

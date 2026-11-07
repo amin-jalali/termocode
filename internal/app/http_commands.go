@@ -76,6 +76,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-import-curl", Title: "HTTP: Import from curl…"},
 		{ID: "http-new-file", Title: "HTTP: New .http File…"},
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
+		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
 	}
 }
 
@@ -116,6 +117,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		return m.openHTTPPrompt(promptKindHTTPNewFile, "HTTP: New .http File", "File:", "requests.http"), true
 	case "http-save-body":
 		return m.httpSaveBodyPrompt(), true
+	case "http-fields":
+		return m.openHTTPFields(0, 0), true
 	}
 	return nil, false
 }
@@ -428,6 +431,8 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 			return nil, true
 		}
 		return nil, true
+	case pickerKindHTTPFields: // http_fields.go
+		return m.httpFieldsPick(id), true
 	case pickerKindHTTPSend:
 		var i int
 		if _, err := fmt.Sscan(id, &i); err != nil || i < 0 || i >= len(s.pickReqs) {
@@ -602,6 +607,8 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.httpSaveBody(strings.TrimSpace(value)), true
 	case promptKindHTTPNewFile:
 		return m.httpNewFile(strings.TrimSpace(value)), true
+	case promptKindHTTPField: // http_fields.go
+		return m.httpFieldsApply(value), true
 	case promptKindDBAdd, promptKindDBHost, promptKindDBPort, promptKindDBUser, promptKindDBName, promptKindDBSQLitePath:
 		return m.onDBPrompt(m.promptKind, value), true
 	case promptKindDBPassword:
