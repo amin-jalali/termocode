@@ -122,6 +122,10 @@ type terminalTab struct {
 	// Account is the agent account label the tab runs as ("" = the
 	// CLI's own default folder; agent_accounts.go, AGX-13).
 	Account string
+	// SessionNo numbers a second (or later) session of the same agent
+	// in the same folder: the tab bar shows "Claude Code 2" (CMP-28;
+	// 0 = the only one).
+	SessionNo int
 
 	// Splits are the panes after the first (terminal_pane.go); BufID is
 	// pane 0. PaneFocus is the focused pane (0 = BufID).

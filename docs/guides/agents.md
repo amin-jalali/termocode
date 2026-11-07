@@ -360,6 +360,8 @@ With `agent_transcripts` on:
   one in a new tab with the CLI's own resume command; `→` reads it.
 - `/` in the list, or **Agent: Search Sessions…**, searches the text of
   this project's sessions, on this computer only.
+- **Agent: Search All Sessions…** searches the sessions of every project
+  on this computer. Each row names its project folder.
 
 While the setting is off, termocode asks first and opens no file there.
 

@@ -64,6 +64,23 @@ window goes away, the session keeps running.
 There is one session per folder. `termocode ~/proj` and `termocode ~/other`
 are two sessions.
 
+## What happened while you were away
+
+When you come back to a running session, termocode tells you what
+happened while you were gone.
+
+- termocode keeps a short list of events: an agent or AI run that ended
+  or waits for you, and workflows that finished.
+- You count as away from your last key press or click.
+- When a terminal attaches again after at least 30 s away, and something
+  happened, a toast says **3 updates while you were away**.
+- Click the toast, or run **Session: Show Recap (While You Were Away)**
+  from the palette, to see the list with the time of each event.
+
+The card is read only. It has one button: **Close**. The list lives in
+memory only. It keeps up to 100 events and is never written to disk,
+sent to the AI or shown in the web panel.
+
 ## End a session
 
 - **Quit** (`Ctrl+Q`, or **Quit** in the palette) ends the session for

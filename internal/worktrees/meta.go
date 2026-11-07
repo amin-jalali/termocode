@@ -1,6 +1,6 @@
 // Package worktrees is the worktree model of the WORKTREES view (WTX-1):
 // the worktrees git lists, joined with what termocode keeps about them
-// (name, pin, parent, agent, links, notes, sleep state, port) in
+// (name, pin, order, parent, agent, links, notes, sleep state, port) in
 // <git-common-dir>/termocode/worktrees.json, and a cache of their status
 // (dirty files, ahead / behind) that worker goroutines fill off the UI
 // thread.
@@ -35,6 +35,7 @@ var ErrBadMeta = errors.New("worktrees.json could not be read")
 type Meta struct {
 	Name     string    `json:"name,omitempty"`
 	Pinned   bool      `json:"pinned,omitempty"`
+	Order    int       `json:"order,omitempty"`  // the user's place in its group, 1 first; 0 = the automatic sort (CMP-27)
 	Parent   string    `json:"parent,omitempty"` // the worktree it was made from (path)
 	Agent    string    `json:"agent,omitempty"`  // the agent preset started in it
 	Issue    int       `json:"issue,omitempty"`

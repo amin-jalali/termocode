@@ -131,6 +131,10 @@ type Config struct {
 	Run   string `json:"run,omitempty"`
 	Ports string `json:"ports,omitempty"`
 	URL   string `json:"url,omitempty"`
+
+	// BranchPrefix starts a branch drafted from the agent task (CMP-26),
+	// e.g. "amin/"; "" = the kind of the task (fix/, feat/, …).
+	BranchPrefix string `json:"branch_prefix,omitempty"`
 }
 
 // RunURL is the dev server address on port: URL with $PORT filled in,

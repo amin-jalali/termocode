@@ -1936,6 +1936,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-sessions` | Agent: Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; it reads the outside agents' own session files (owner decision D1) |
 | `agent-sessions-search` | Agent: Search Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
 | `agent-split` | Agent: Split Task… | never | opens a picker or prompt that only the user can answer; use a typed tool (agent_split_start) |
+| `agent-sessions-search-all` | Agent: Search All Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; owner decision D1b: the AI gets no search over the agents' session files |
 | `agent-start` | Agent: Start… | never | opens a picker or prompt that only the user can answer; use a typed tool (outside_agent_start) |
 | `agent-start-claude` | Agent: Start Claude Code | confirm (run) |   |
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
@@ -1968,6 +1969,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-history-clear` | AI: Clear Chat History | never | deletes saved chats; only the user may |
 | `ai-history-delete` | AI: Delete Chat… | never | deletes saved chats; only the user may |
 | `ai-history-rename` | AI: Rename Chat… | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `ai-history-search` | AI: Search Chat History… | never | opens a picker or prompt that only the user can answer; use a typed tool; the AI has chats_search over the same chats |
 | `ai-hooks` | AI: Hooks… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-keep-going` | AI: Toggle Keep Going While Todos Are Open | never | AI provider, credentials and approvals stay with the user; extra paid turns are the user's choice |
 | `ai-mcp-background` | AI: Move MCP Call to Background (Ctrl+B in the chat) | never | moves the model's own running call; the user decides |
@@ -2473,6 +2475,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `services-stop` | Containers: Stop Service… | never | opens a picker or prompt that only the user can answer; use a typed tool (services_stop) |
 | `services-stop-all` | Containers: Stop All Services | confirm (services) |   |
 | `services-trust` | AI: Services Trust… | never | AI provider, credentials and approvals stay with the user |
+| `session-recap` | Session: Show Recap (While You Were Away) | auto |   |
 | `settings-export` | Preferences: Export termocode Settings File… | never | settings import / export stays with the user |
 | `settings-import` | Preferences: Import termocode Settings File… | never | settings import / export stays with the user |
 | `setup-show-card` | Setup: Show Setup Card | auto |   |
@@ -2569,13 +2572,18 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-link` | Worktree: Link Issue or PR… | never | links are the user's choice; the AI reads them with worktrees_list |
+| `worktree-move-down` | Worktree: Move Selected Down | auto |   |
+| `worktree-move-up` | Worktree: Move Selected Up | auto |   |
 | `worktree-new` | Worktree: New… | never | opens a picker or prompt that only the user can answer; use a typed tool (worktree_create comes later) |
 | `worktree-new-child` | Worktree: New Child of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `worktree-new-session` | Worktree: New Agent Session in Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the agent |
 | `worktree-notes` | Worktree: Show Notes of Selected | auto |   |
 | `worktree-open` | Worktree: Open Selected | never | ends or resets the user's session |
 | `worktree-pin` | Worktree: Pin or Unpin Selected | auto |   |
 | `worktree-run` | Worktree: Run Dev Server of Selected | never | runs the repository's dev server in the worktree the user selected; the user starts it |
 | `worktree-run-open` | Worktree: Open Dev Server of Selected | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-reset-order` | Worktree: Reset Order | auto |   |
+| `worktree-sessions` | Worktree: Agent Sessions of Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
 | `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |
 | `worktree-suggest-name` | Worktree: Suggest a Name… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks the name |
