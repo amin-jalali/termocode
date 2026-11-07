@@ -70,6 +70,7 @@ kubeconfig, so other terminals keep their context.
 | `o` | Edit the row's YAML in a file (not Secrets). Save it, then press `a`. |
 | `a` | Apply the editor's saved file: shows the diff, then asks first. |
 | `x` | Cluster report of the namespace (a read-only page). |
+| `A` | Permissions of the namespace (a read-only page). |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
 | `R` | Load the lists now. |
@@ -138,6 +139,21 @@ about the namespace:
   tag, services that select no pod, failed jobs.
 
 It only reads the cluster. The AI may open it.
+
+## Permissions (RBAC)
+
+**Kubernetes: Permissions (RBAC)** (or `A` in the view) opens a read-only
+page about the namespace:
+
+- **What you may do**: each resource and its verbs, from
+  `kubectl auth can-i --list`. It asks the cluster about you; nothing
+  changes.
+- **Role bindings**: each binding, its role and its subjects (users,
+  groups, service accounts).
+- **Service accounts** of the namespace.
+
+When you may not read one part, that part says why and the others still
+show. The AI may open the page.
 
 ## Edit and apply YAML
 

@@ -2335,6 +2335,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `kubernetes-apply-file` | Kubernetes: Apply Current File… | never | writes to the cluster; only the user applies a file, after the diff |
 | `kubernetes-context` | Kubernetes: Switch Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the context is the user's choice |
 | `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `kubernetes-rbac` | Kubernetes: Permissions (RBAC) | auto |   |
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
 | `kubernetes-report` | Kubernetes: Cluster Report | auto |   |
 | `kubernetes-show` | Kubernetes: Show | auto |   |

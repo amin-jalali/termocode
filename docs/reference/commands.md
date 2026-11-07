@@ -589,6 +589,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Kubernetes: Apply Current File… | `kubernetes-apply-file` |   |   |
 | Kubernetes: Cluster Report | `kubernetes-report` |   |   |
 | Kubernetes: New Manifest from Snippet… | `kubernetes-snippet` |   |   |
+| Kubernetes: Permissions (RBAC) | `kubernetes-rbac` |   |   |
 | Kubernetes: Refresh | `kubernetes-refresh` |   |   |
 | Kubernetes: Show | `kubernetes-show` |   |   |
 | Kubernetes: Switch Context… | `kubernetes-context` |   |   |
