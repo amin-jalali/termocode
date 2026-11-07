@@ -832,6 +832,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Add Selected as Folder | `worktree-add-folder` |   |   |
 | Worktree: Adopt Selected | `worktree-adopt` |   |   |
 | Worktree: Archive or Restore Selected… | `worktree-archive` |   |   |
+| Worktree: Background Tasks… | `worktree-bg-tasks` |   |   |
 | Worktree: Clean Up… | `worktree-cleanup` |   |   |
 | Worktree: Delete Selected… | `worktree-delete` |   |   |
 | Worktree: Forget Gone Selected | `worktree-forget` |   |   |
@@ -842,6 +843,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Next Filter | `worktree-filter` |   |   |
 | Worktree: Open Selected | `worktree-open` |   |   |
 | Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
+| Worktree: Run Agent Task in Background… | `worktree-bg-task` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |

@@ -41,6 +41,8 @@ repository's git folder, never in your project.
 | `x` | Archive: remove the folder, keep the branch; on an archived row: restore |
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
+| `b` | Background task: an agent works on it alone in a sandbox container (asks first) |
+| `B` | Background tasks: state, follow output, stop, remove |
 | `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
@@ -199,6 +201,40 @@ opens one card that lists every worktree that will be archived
 (**Cancel** first). A ticked worktree with changed files then asks on
 its own card: **Keep it** comes first. Clean up archives, so the
 branches stay and `x` restores any of them.
+
+## Background tasks
+
+`b` (**Worktree: Run Agent Task in Background…**) gives the selected
+worktree to an agent that works on its own. You type the task; a card
+shows everything before anything starts (**Cancel** first):
+
+- the agent runs in its headless mode (Claude Code, Codex, Gemini CLI,
+  Qwen Code, OpenCode or Aider): the worktree's own agent when it has
+  one, else the first one you have installed;
+- it runs in a throwaway docker or podman container (`node:22-bookworm`;
+  npm agents start through `npx`, so the image needs no install);
+- the container sees only the worktree and the repository's git folder,
+  at their own paths. Its edits land in the worktree. It runs as your
+  user, with every capability dropped;
+- the agent's own approval prompts are off, because nobody is there to
+  answer them: the container is the sandbox. The network stays on, for
+  the agent's API;
+- API key variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+  `GEMINI_API_KEY` and a few more) are passed by name only; the value
+  never is part of a command line or the card.
+
+**Start in background** starts the container detached. It keeps working
+when termocode or the session ends. When termocode runs on your own
+server (over SSH, with the persistent session), the laptop can be off.
+A container engine on another machine (a remote context) is refused:
+its folders are not this host's.
+
+`B` (**Worktree: Background Tasks…**) lists every task with its state
+(working, done, failed with its exit code), agent and worktree. Enter on
+one opens its card: **Follow output** opens a terminal tab with its log,
+**Stop the task** ends a running one, **Remove container** clears an
+ended one. The worktree and its changes always stay; review them as
+usual (diff, commit, pull request).
 
 ## From the web page
 

@@ -705,6 +705,8 @@ missing	workspace-reopen-devcontainer	Workspace|M
 missing	worktree-add-folder	Worktrees|M
 missing	worktree-adopt	Worktrees|M
 missing	worktree-archive	Worktrees|M
+missing	worktree-bg-task	Worktrees|M
+missing	worktree-bg-tasks	Worktrees|M
 missing	worktree-cleanup	Worktrees|M
 missing	worktree-delete	Worktrees|M
 missing	worktree-filter	Worktrees|M

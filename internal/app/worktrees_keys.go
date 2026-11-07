@@ -41,6 +41,8 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"D", "delete the worktree and its branch (asks, step by step)"},
 		[]string{"C", "clean up: tick merged and old worktrees, archive them together"},
 		[]string{"s", "sleep: end its agent tabs, move it under ASLEEP · again: wake it"},
+		[]string{"b", "background task: an agent works on it alone in a sandbox container (asks first)"},
+		[]string{"B", "background tasks: state, follow output, stop, remove"},
 		[]string{"List"},
 		[]string{"f", "filter: All, Mine, Agents, Dirty, Asleep, External"},
 		[]string{"/", "filter by name · Esc clears"},
@@ -71,6 +73,8 @@ func worktreePaletteItems() []picker.Item {
 		{ID: wtArchivePaletteID, Title: "Worktree: Archive or Restore Selected…"},
 		{ID: wtDeletePaletteID, Title: "Worktree: Delete Selected…"},
 		{ID: wtCleanupPaletteID, Title: "Worktree: Clean Up…"},
+		{ID: wtBgTaskPaletteID, Title: "Worktree: Run Agent Task in Background…"},
+		{ID: wtBgTasksPaletteID, Title: "Worktree: Background Tasks…"},
 	}
 }
 
@@ -112,6 +116,10 @@ func (m *Model) dispatchWorktreePalette(id string) (tea.Cmd, bool) {
 		return m.worktreeDelete(), true
 	case wtCleanupPaletteID:
 		return m.worktreeCleanup(), true
+	case wtBgTaskPaletteID:
+		return m.worktreeBgTask(), true
+	case wtBgTasksPaletteID:
+		return m.worktreeBgTasks(), true
 	}
 	return nil, false
 }
@@ -187,6 +195,10 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.worktreeDelete()
 	case "C":
 		return m, m.worktreeCleanup()
+	case "b":
+		return m, m.worktreeBgTask()
+	case "B":
+		return m, m.worktreeBgTasks()
 	case "f":
 		m.worktreeNextFilter()
 	case "R":
