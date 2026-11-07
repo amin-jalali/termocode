@@ -19,7 +19,7 @@ func wantHeaders(site Site) map[string]string {
 		"X-Frame-Options":              "DENY",
 		"Cross-Origin-Opener-Policy":   "same-origin",
 		"Cross-Origin-Resource-Policy": "same-origin",
-		"Permissions-Policy":           "camera=(), microphone=(), geolocation=(), usb=(), clipboard-read=()",
+		"Permissions-Policy":           "camera=(), microphone=(self), geolocation=(), usb=(), clipboard-read=()", // CMP-48: the chat box dictates
 	}
 }
 

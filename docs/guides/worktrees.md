@@ -708,3 +708,29 @@ list by group, with a filter of its own.
   folder path.
 - A worktree's card data carries its dev server port, and the address
   while it runs. Starting it stays on the laptop (`r`).
+
+### Start a new task from the phone or the page
+
+**New task** (the **+** at the top of the page's Worktrees list, or
+**More → New task** on a phone) starts a background task on the laptop
+while you are away from it:
+
+1. Type the **Task** (one line). The agent gets it typed in once it is
+   ready.
+2. Pick the **Agent**. Only agents installed on the laptop are listed.
+3. **Name** is optional. With no name the branch comes from the task's
+   first words, under `task/` (for example `task/fix-the-login-bug`).
+4. **From** is the start point; it is the laptop's current branch until
+   you pick another one.
+5. **Start task** asks on the page first, with **Cancel** first.
+
+The laptop then does what **Create + Start** does in **Worktree: New…**:
+it makes the worktree and its branch, copies and links the files of
+`.termocode/worktrees.json`, and starts the agent there. A note on the
+new worktree says which device asked and the task. The task only adds a
+new branch and folder, so no card waits on the laptop. The repository's
+setup commands run only when the laptop trusts them already; if not,
+the laptop asks first, and the page says so.
+
+Follow the agent in the Worktrees list and in its terminal tab. When it
+is done, open a pull request from the branch as usual.

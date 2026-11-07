@@ -80,7 +80,7 @@ func setSecurityHeaders(h http.Header, csp string, site Site) {
 	h.Set("X-Frame-Options", "DENY")
 	h.Set("Cross-Origin-Opener-Policy", "same-origin")
 	h.Set("Cross-Origin-Resource-Policy", "same-origin")
-	h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), usb=(), clipboard-read=()")
+	h.Set("Permissions-Policy", "camera=(), microphone=(self), geolocation=(), usb=(), clipboard-read=()") // the page itself may listen: chat dictation (CMP-48)
 	if site.Scheme == "https" {
 		h.Set("Strict-Transport-Security", "max-age=31536000")
 	}

@@ -28,6 +28,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Configure Provider… | `ai-configure` |   |   |
 | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | `ai-mcp-connect` |   |   |
 | AI: Delete Chat… | `ai-history-delete` |   |   |
+| AI: Dictate into Chat… (voice input) | `ai-dictate` |   |   |
 | AI: Discard Proposed Edit | `ai-discard-proposal` |   |   |
 | AI: Doctor | `ai-doctor` |   |   |
 | AI: Edit Model Slots | `ai-models-edit` |   |   |

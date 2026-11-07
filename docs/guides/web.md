@@ -76,7 +76,7 @@ termocode.
 | **Files** | Browse the workspace, read files, change lines and send them. Each row's **⋯** makes a new file or folder, renames, deletes, downloads a file or uploads into a folder. |
 | **Term** | Watch the terminals and type into them, with a key bar for Esc, Ctrl, Alt and arrows. |
 | **Git** | See changes and diffs, stage and unstage, commit. The **⇅** button pushes, pulls, stashes and switches branch. |
-| **More** | Search, tasks, runs, databases, containers, the MCP server, settings (read only), the theme, text direction and language. |
+| **More** | Search, **New task** (start an agent on the laptop in a new worktree; see [Worktrees](worktrees.md#start-a-new-task-from-the-phone-or-the-page)), tasks, runs, databases, containers, the MCP server, settings (read only), the theme, text direction and language. |
 
 On a phone the tabs are at the bottom. On a wider screen the files and
 the chat sit side by side.

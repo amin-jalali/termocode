@@ -104,3 +104,45 @@ func TestWorktreesSnapGolden(t *testing.T) {
 		t.Errorf("worktrees topic changed\n got %s\nwant %s", got, want)
 	}
 }
+
+// Spec (CMP-49): a new task from the page. The form is a controller's
+// read; new_task needs a controller, is audited and runs one at a time.
+// It needs no laptop card: it only adds a worktree and starts an agent
+// (the page asks first, Cancel first). An agent id, one task line and a
+// start point that is never an option are checked here.
+func TestWorktreesNewTaskRows(t *testing.T) {
+	for op, audit := range map[string]Audit{OpWorktreesTaskForm: AuditNo, OpWorktreesNewTask: AuditYes} {
+		p, ok := Lookup(op)
+		if !ok || p.Role != RoleController || p.LaptopCard || p.Audit != audit || p.Live != 1 || p.Phase != PhaseV2 {
+			t.Errorf("%s row %+v", op, p)
+		}
+	}
+	good := []string{
+		`{"agent":"claude","task":"fix the login bug"}`,
+		`{"name":"feat/login","from":"origin/main","agent":"codex","task":"fix it\tnow"}`,
+	}
+	for _, a := range good {
+		if _, err := DecodeArgs(OpWorktreesNewTask, json.RawMessage(a)); err != nil {
+			t.Errorf("%s: %v", a, err)
+		}
+	}
+	bad := []string{
+		`{"agent":"claude","task":""}`,
+		`{"agent":"claude","task":"   "}`,
+		`{"agent":"claude","task":"a\nb"}`,
+		`{"agent":"","task":"x"}`,
+		`{"agent":"../bin/sh","task":"x"}`,
+		`{"agent":"-x","task":"x"}`,
+		`{"agent":"claude","task":"x","from":"--upload-pack=x"}`,
+		`{"agent":"claude","task":"x","from":"main extra"}`,
+		`{"agent":"claude","task":"x","name":"a\nb"}`,
+		`{"agent":"claude","task":"x","path":"/etc"}`,
+		`{"agent":"claude","task":"` + strings.Repeat("x", MaxTaskText+1) + `"}`,
+		`{"agent":"claude","task":"x","name":"` + strings.Repeat("n", MaxTaskName+1) + `"}`,
+	}
+	for _, a := range bad {
+		if _, err := DecodeArgs(OpWorktreesNewTask, json.RawMessage(a)); err == nil {
+			t.Errorf("%s: accepted", a)
+		}
+	}
+}

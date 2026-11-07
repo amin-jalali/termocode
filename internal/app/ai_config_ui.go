@@ -238,6 +238,12 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIAutopilot(id), true
 	case confirmKindAISide: // OMX-30 (ai_side.go)
 		return m.answerAISide(id), true
+	case confirmKindAIDictate: // CMP-48 (ai_dictate.go)
+		return m.answerAIDictate(id), true
+	case confirmKindAIDictateSetup:
+		return m.answerAIDictateSetup(id), true
+	case confirmKindAIDictateRec:
+		return m.answerAIDictateRec(id), true
 	case confirmKindRunsStop: // runs_state.go
 		return m.answerRunsStop(id), true
 	case confirmKindAgentBoardResume: // agent_board.go (CMP-2)
@@ -466,6 +472,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAICriticCard(m.confirmKind, "") // Esc: Cancel
 	case confirmKindMCPTrust:
 		return m.answerMCPTrust("deny")
+	case confirmKindAIDictateRec: // CMP-48: Esc discards the words
+		return m.answerAIDictateRec("")
 	case confirmKindMCPImportOther:
 		return m.answerMCPImportOther("cancel")
 	case confirmKindMCPElicit, confirmKindMCPElicitURL, confirmKindMCPElicitSend:
