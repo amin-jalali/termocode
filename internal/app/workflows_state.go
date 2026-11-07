@@ -717,7 +717,7 @@ func (m *Model) wfxStartRunWith(e wire.Entry, dry, show bool, resume *run.RunFil
 		},
 	}
 	gh := newWFXGitHub(ws)
-	cfg.PR, cfg.GitHubComment, cfg.Find = gh.PR, gh.Comment, gh.Find
+	cfg.PR, cfg.GitHubComment, cfg.Find, cfg.Wait = gh.PR, gh.Comment, gh.Find, gh.Wait
 	cfg.ParallelMax, cfg.AgentSandbox = wfxRunSettings()
 	cfg.AgentOSSandbox = agentOSSandboxOn()
 	if !dry && wfxHasAgentStep(e.File) {

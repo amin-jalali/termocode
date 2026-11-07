@@ -41,10 +41,40 @@ const (
 	TypeTests    = "tests"
 	TypeShell    = "shell"
 	TypeWrite    = "write"
+	TypeLoop     = "loop"   // repeat steps until they pass, with a round cap
+	TypeBranch   = "branch" // run step lists side by side, then join
+	TypeWait     = "wait"   // wait for a pull request: CI, merge or review
 )
 
 // StepTypes lists every step type, in the order of the plan.
-var StepTypes = []string{TypeSource, TypePlan, TypeFilter, TypeEach, TypeAI, TypeAgent, TypePipeline, TypeTests, TypeShell, TypeWrite}
+var StepTypes = []string{TypeSource, TypePlan, TypeFilter, TypeEach, TypeAI, TypeAgent, TypePipeline, TypeTests, TypeShell, TypeWrite, TypeLoop, TypeBranch, TypeWait}
+
+// Agent graph limits (CMP-42).
+const (
+	MaxLoopRounds    = 20               // the highest loop max
+	MinBranches      = 2                // a branch step runs at least two lists
+	MaxBranches      = 8                // and at most eight
+	DefaultWaitEvery = time.Minute      // how often a wait step looks
+	MinWaitEvery     = 10 * time.Second // the shortest every
+	DefaultWaitMax   = 6 * time.Hour    // a wait step's time without timeout or limits.wait
+	MaxHandoffBytes  = 8 << 10          // the handoff text added to a prompt
+)
+
+// Branch joins (BranchSpec.Join).
+const (
+	JoinAll = "all" // the step fails when any branch fails (default)
+	JoinAny = "any" // the step fails only when every branch fails
+)
+
+// Wait targets (WaitSpec.For).
+const (
+	WaitCI       = "ci"       // every check of the PR passed
+	WaitMerged   = "merged"   // the PR was merged
+	WaitApproved = "approved" // the PR's review is approved
+)
+
+// WaitFors are the allowed WaitSpec.For values.
+var WaitFors = []string{WaitCI, WaitMerged, WaitApproved}
 
 // Source kinds (SourceSpec.From).
 var SourceKinds = []string{"mcp", "github", "shell", "files", "http", "db"}
@@ -177,6 +207,9 @@ type Step struct {
 	Timeout time.Duration
 	OnError string // "" = the file's OnError
 	Line    int    // 1-based line of the step's "{" in the file
+	// Handoff names an earlier step (ai, agent, pipeline steps only): its
+	// output is added to the prompt, marked as data, not instructions.
+	Handoff string
 
 	Source   *SourceSpec
 	Plan     *PlanSpec
@@ -188,6 +221,56 @@ type Step struct {
 	Tests    *TestsSpec
 	Shell    *ShellSpec
 	Write    *WriteSpec
+	Loop     *LoopSpec
+	Branch   *BranchSpec
+	Wait     *WaitSpec
+}
+
+// LoopSpec repeats Steps: a round passes when all its steps pass and
+// Until (when set) is true. The loop fails after Max rounds, or when its
+// steps spent BudgetUSD.
+type LoopSpec struct {
+	Max       int    // 1 … MaxLoopRounds
+	Until     string // an expression, after each round ("" = the round passed)
+	BudgetUSD float64
+	Steps     []Step
+}
+
+// BranchSpec runs each branch's steps at the same time and joins them.
+type BranchSpec struct {
+	Join     string // JoinAll (default) or JoinAny
+	Branches []Branch
+}
+
+// Branch is one named list of a branch step.
+type Branch struct {
+	Name  string // [a-z][a-z0-9_-]{0,39}; unique in the step
+	Steps []Step
+}
+
+// WaitSpec waits for a pull request (read only; no card).
+type WaitSpec struct {
+	For   string        // one of WaitFors
+	PR    string        // the PR: a number, #7 or its link (template)
+	Every time.Duration // between two looks (DefaultWaitEvery when not set)
+}
+
+// Lists are the nested step lists of a step (each, loop, branches), not
+// its else.
+func (s *Step) Lists() [][]Step {
+	var out [][]Step
+	if s.Each != nil {
+		out = append(out, s.Each.Steps)
+	}
+	if s.Loop != nil {
+		out = append(out, s.Loop.Steps)
+	}
+	if s.Branch != nil {
+		for _, b := range s.Branch.Branches {
+			out = append(out, b.Steps)
+		}
+	}
+	return out
 }
 
 // SourceSpec reads items. From picks the kind; only its fields are set.
@@ -332,15 +415,17 @@ type WriteSpec struct {
 }
 
 // Walk calls fn for every step in steps, depth first: each step, then
-// its Each steps, then its Else steps. fn returns false to stop.
+// its nested lists (Lists), then its Else steps. fn returns false to stop.
 func Walk(steps []Step, fn func(*Step) bool) bool {
 	for i := range steps {
 		s := &steps[i]
 		if !fn(s) {
 			return false
 		}
-		if s.Each != nil && !Walk(s.Each.Steps, fn) {
-			return false
+		for _, l := range s.Lists() {
+			if !Walk(l, fn) {
+				return false
+			}
 		}
 		if !Walk(s.Else, fn) {
 			return false

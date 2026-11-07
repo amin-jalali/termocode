@@ -233,8 +233,8 @@ func wfShow(e wire.Entry, asJSON bool, out, errw io.Writer) int {
 		for i := range list {
 			s := &list[i]
 			steps = append(steps, step{s.ID, s.Type, wfWhat(s), d})
-			if s.Each != nil {
-				add(s.Each.Steps, d+1)
+			for _, l := range s.Lists() {
+				add(l, d+1)
 			}
 		}
 	}
@@ -267,6 +267,16 @@ func wfWhat(s *workflow.Step) string {
 		return s.Each.Items
 	case s.Filter != nil:
 		return s.When
+	case s.Loop != nil:
+		return fmt.Sprintf("max %d %s", s.Loop.Max, s.Loop.Until)
+	case s.Branch != nil:
+		names := make([]string, len(s.Branch.Branches))
+		for i, b := range s.Branch.Branches {
+			names[i] = b.Name
+		}
+		return "join " + s.Branch.Join + ": " + strings.Join(names, ", ")
+	case s.Wait != nil:
+		return s.Wait.For + " " + s.Wait.PR
 	}
 	return ""
 }
