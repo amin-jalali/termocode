@@ -1663,7 +1663,7 @@ export interface ProjectItem {
   id: string;
   name: string;
   where: string;
-  state: "here" | "running" | "asleep";
+  state: "here" | "running" | "opening" | "asleep";
   attached?: boolean;
   service?: boolean;
   recent?: boolean;
@@ -2988,6 +2988,14 @@ export interface AutoApproveRow {
   header?: boolean;
 }
 
+export interface ProjectArgs {
+  ws: string;
+}
+
+export interface ProjectClosed {
+  ws: string;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -3265,6 +3273,8 @@ export interface OpArgs {
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
   "ai.set_auto_approve": AutoApproveArgs;
+  "project.open": ProjectArgs;
+  "project.close": ProjectArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -3531,4 +3541,6 @@ export interface OpResult {
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;
   "ai.set_auto_approve": AskRef;
+  "project.open": AskRef;
+  "project.close": ProjectClosed;
 }

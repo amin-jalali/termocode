@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/spawn"
+	"github.com/amin-jalali/termocode/internal/svcinstall"
 	"github.com/amin-jalali/termocode/internal/termimg"
 )
 
@@ -289,4 +292,53 @@ func watchRepaint(p *tea.Program) {
 			p.Send(tea.ClearScreen())
 		}
 	})
+}
+
+// The door's hooks for other projects' sessions (MOB-51): the home UI
+// starts a project the phone asked for headless, after the laptop's yes.
+func init() {
+	app.SetProjectSessions(app.ProjectSessions{
+		Running: projectRunning,
+		Start:   projectStartHeadless,
+		Service: projectService,
+	})
+}
+
+func projectRunning(dir string) bool {
+	p, err := session.PathsFor(dir)
+	return err == nil && session.UIRunning(p)
+}
+
+// projectStartHeadless starts dir's session with its UI and no terminal
+// (the same server `termocode service` runs) and waits for its web hub.
+func projectStartHeadless(dir string, idle int) error {
+	p, err := session.PathsFor(dir)
+	if err != nil {
+		return err
+	}
+	since := time.Now()
+	started, err := session.StartHeadless(p, idle, func() error { return spawnServer(p) })
+	if err != nil {
+		return err
+	}
+	if !started {
+		since = time.Time{}
+	}
+	return session.WaitWebHub(p, since, projectHubWait)
+}
+
+// projectHubWait bounds the wait for a started project's web hub.
+const projectHubWait = 45 * time.Second
+
+func projectService(dir string) bool {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+	for _, ws := range svcinstall.Installed(runtime.GOOS, home) {
+		if filepath.Clean(ws) == filepath.Clean(dir) {
+			return true
+		}
+	}
+	return false
 }

@@ -16,6 +16,10 @@ const (
 	frameResize byte = 'R' // new client size (4 bytes)
 	frameKill   byte = 'K' // first frame of `termocode kill`
 	frameStatus byte = 'S' // first frame of `termocode sessions`; also the JSON reply
+	// frameStart is the first frame of a headless start (MOB-51): start
+	// the UI with no terminal attached; payload: the door's idle minutes
+	// (4 bytes, 0 = none). The reply is frameStatus or frameDetached.
+	frameStart byte = 'U'
 
 	// Server → client.
 	frameOutput   byte = 'O' // bytes the UI wrote to its terminal
