@@ -12,9 +12,10 @@ import (
 )
 
 type Conn struct {
-	ID     string `json:"id"`
-	Name   string `json:"name,omitempty"`
-	Driver string `json:"driver"`
+	ID      string `json:"id"`
+	Name    string `json:"name,omitempty"`
+	Comment string `json:"comment,omitempty"`
+	Driver  string `json:"driver"`
 	// Preset names a server of the driver's family: a PostgreSQL family
 	// database on the postgres driver ("cockroachdb", "redshift"; DBX-60,
 	// PGPresets) or a MySQL family server (MySQLPresets; DBX-61): its
