@@ -8,7 +8,7 @@ runs inside Termux: see [Android (Termux)](#android-termux).
 
 | Tool | Why | Needed? |
 |---|---|---|
-| `nvim` 0.10 or newer | the editor engine | yes |
+| `nvim` 0.10 or newer | the editor engine | for the editor — without it termocode runs in [Lite mode](#lite-mode-no-editor) |
 | `git` | Source Control panel, and the first-run plugin download | yes |
 | `rg` (ripgrep) | fast workspace search | no — a slower built-in search is used without it |
 | A truecolor terminal | colors | yes — kitty, WezTerm, Ghostty, Alacritty, iTerm2, Windows Terminal, GNOME Terminal… |
@@ -202,6 +202,23 @@ The first launch downloads three small Neovim plugins with `git clone`
 the background: you can work at once, and each feature turns on when its
 plugin arrives. If you are offline, a message says the download failed.
 Those features stay off until the next online start.
+
+## Lite mode (no editor)
+
+Only want terminals and agents? termocode also runs **without Neovim**.
+
+```sh
+termocode --lite           # the current folder, no editor
+TERMOCODE_LITE=1 termocode # the same, as a setting for your shell
+```
+
+In Lite mode you get the terminal tabs, the agent tabs and their states,
+git, worktrees, runs, workflows and the AI chat. The editor area stays
+empty, so you edit files with your own tools in a terminal tab.
+
+When `nvim` is not on your `PATH`, termocode starts in Lite mode by itself
+and says so in a short message. Install Neovim 0.10+ (`termocode setup`
+tells you how), then start termocode again to get the editor.
 
 ## Update termocode
 
