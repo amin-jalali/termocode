@@ -68,3 +68,39 @@ func TestLogsTail(t *testing.T) {
 		t.Errorf("calls = %v", got)
 	}
 }
+
+func TestScale(t *testing.T) {
+	f, c := fakeClient(t)
+	if err := c.Scale(context.Background(), "deployment", "api", 5); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Scale(context.Background(), "statefulset", "db", 0); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"scale deployment/api --replicas=5 --context dev --namespace shop",
+		"scale statefulset/db --replicas=0 --context dev --namespace shop",
+	}
+	if got := f.Calls(); !reflect.DeepEqual(got, want) {
+		t.Errorf("calls = %v", got)
+	}
+	f.Set(t, "scale.err", "Error from server (Forbidden): deployments.apps \"api\" is forbidden: User \"dev\" cannot patch resource \"deployments/scale\"\n")
+	if err := c.Scale(context.Background(), "deployment", "api", 1); kube.KindOf(err) != kube.ErrForbidden {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestScaleRefusesBadInput(t *testing.T) {
+	f, c := fakeClient(t)
+	for _, tc := range []struct {
+		kind string
+		n    int
+	}{{"pod", 1}, {"deployment", -1}, {"daemonset", 2}, {"deployment", kube.ScaleMax + 1}} {
+		if err := c.Scale(context.Background(), tc.kind, "api", tc.n); err == nil {
+			t.Errorf("Scale(%q, %d) ran", tc.kind, tc.n)
+		}
+	}
+	if got := f.Calls(); len(got) != 0 {
+		t.Errorf("calls = %v", got)
+	}
+}
