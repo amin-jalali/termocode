@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/bindiff"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -97,7 +98,15 @@ func (m *Model) webGitDiff(call *webCall) tea.Cmd {
 			webGitFail(call, err)
 			return nil
 		}
-		d := webGitPage(webGitRows(out, false), a.From)
+		parsed := webGitRows(out, false)
+		if parsed.binary && bindiff.Supported(a.Path) {
+			// An image or a PDF: compare what is in it (CMP-54).
+			o, n := webGitBinarySides(root, a.Path, a.Staged, untracked)
+			if p, ok := webGitBinaryRows(a.Path, o, n); ok {
+				parsed = p
+			}
+		}
+		d := webGitPage(parsed, a.From)
 		d.Path, d.Staged, d.Truncated = a.Path, a.Staged, cut
 		call.reply(d)
 		return nil

@@ -71,7 +71,7 @@ func wtFbModel(t *testing.T) (*Model, *wtFbGH, *[]string) {
 // is marked seen.
 func TestWorktreeFeedbackSend(t *testing.T) {
 	m, _, typed := wtFbModel(t)
-	wtLinkDrive(t, m, wtKey(t, m, "r"))
+	wtLinkDrive(t, m, wtKey(t, m, "W"))
 	if !m.confirmOpen || m.confirmKind != confirmKindWTFeedback || m.confirm.SafeID() != "cancel" {
 		t.Fatalf("no Cancel-first card: open %v kind %d safe %q", m.confirmOpen, m.confirmKind, m.confirm.SafeID())
 	}
@@ -115,7 +115,7 @@ func TestWorktreeFeedbackSend(t *testing.T) {
 // card offers the AI chat instead.
 func TestWorktreeFeedbackCancelAndNoAgent(t *testing.T) {
 	m, _, typed := wtFbModel(t)
-	wtLinkDrive(t, m, wtKey(t, m, "r"))
+	wtLinkDrive(t, m, wtKey(t, m, "W"))
 	m.confirmOpen = false
 	m.answerWTFeedback("")
 	if len(*typed) != 0 {
@@ -125,7 +125,7 @@ func TestWorktreeFeedbackCancelAndNoAgent(t *testing.T) {
 		t.Errorf("Esc marked seen: %+v", md[wtSide])
 	}
 	m.terminalTabs = m.terminalTabs[1:] // the Claude Code tab ends
-	wtLinkDrive(t, m, wtKey(t, m, "r"))
+	wtLinkDrive(t, m, wtKey(t, m, "W"))
 	if b := m.confirm.Buttons(); !m.confirmOpen || len(b) != 2 || b[1].ID != "chat" {
 		t.Fatalf("no AI chat button: %+v", b)
 	}

@@ -30,6 +30,8 @@ func CheckModelSlot(name string, sl ModelSlot) error {
 		return fmt.Errorf("unknown provider %q (%s)", sl.Provider, strings.Join(Kinds, ", "))
 	case kind == KindCompatible && strings.TrimSpace(sl.BaseURL) == "":
 		return errors.New("openai-compatible needs base_url")
+	case kind == KindVertex && strings.TrimSpace(sl.BaseURL) == "":
+		return errors.New("vertex needs base_url (https://<region>-aiplatform.googleapis.com/v1/projects/<project>/locations/<region>)")
 	}
 	if err := CheckReasoning(sl.Reasoning); err != nil {
 		return err

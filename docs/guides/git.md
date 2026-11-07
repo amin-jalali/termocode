@@ -307,6 +307,13 @@ Open a commit from GRAPH. Its diff opens in a card:
   `R` renamed),
 - the diff, side by side or in one column, with syntax colours.
 
+Images (PNG, JPEG, GIF, WebP) and PDFs are not shown as "binary". The
+card compares what is in them as text: for an image, the format, the size
+in pixels and the file size, and how many pixels changed and where (when
+the size stayed the same); for a PDF, the text of its pages (best effort:
+scans have no text). The same works in **Compare Two Files** on two images
+or two PDFs, and in the git diff sheet of the web.
+
 When the editor area is 80 cells or wider, the card sits over the editor.
 The sidebar stays visible. Click another commit, or press `j` / `k` in
 GRAPH, and the card follows. On a narrow screen the card floats over

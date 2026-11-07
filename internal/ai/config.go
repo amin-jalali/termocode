@@ -73,6 +73,12 @@ type Settings struct {
 	// Worktrees is "off" to keep parallel agents in the user's tree
 	// (default: each gets its own git worktree; worktree.go).
 	Worktrees string `json:"ai_worktrees,omitempty"`
+	// Critic is ai_critic (CMP-53): "" (auto, the default) has a second
+	// model review each finished lane before Merge; "off" never does.
+	// CriticSlot is ai_critic_slot: the critic's model slot (empty: the
+	// other built-in model than the step's; critic.go). File only.
+	Critic     string `json:"ai_critic,omitempty"`
+	CriticSlot string `json:"ai_critic_slot,omitempty"`
 	// PlanApproval is ai_plan_approval (G-PLAN): "ask" (default), "auto"
 	// or "always" (planapproval.go).
 	PlanApproval string `json:"ai_plan_approval,omitempty"`
@@ -365,6 +371,7 @@ func SaveSettings(path string, s Settings) error {
 		set("ai_inline_model", s.InlineModel)
 		set("ai_edit_review", s.EditReview)
 		set("ai_worktrees", s.Worktrees)
+		set("ai_critic", s.Critic)
 		set("ai_plan_approval", s.PlanApproval)
 		if s.Inline != nil {
 			merged["ai_inline"] = *s.Inline
@@ -676,6 +683,8 @@ func envKeyFor(kind string) string {
 		return "OPENAI_API_KEY"
 	case KindOpenRouter:
 		return "OPENROUTER_API_KEY"
+	case KindBedrock:
+		return "AWS_BEARER_TOKEN_BEDROCK"
 	}
 	return ""
 }
@@ -684,7 +693,8 @@ func envKeyFor(kind string) string {
 // provider Config. Environment variables win over files:
 //
 //	TERMOCODE_AI_PROVIDER / _MODEL / _BASE_URL / _API_KEY
-//	ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, OLLAMA_HOST
+//	ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, OLLAMA_HOST,
+//	AWS_BEARER_TOKEN_BEDROCK, AWS_REGION (bedrock)
 //
 // With no provider set anywhere, an Anthropic or OpenAI key (env first)
 // selects that provider. getenv is os.Getenv in production.
@@ -735,6 +745,8 @@ func Resolve(s Settings, c Credentials, getenv func(string) string) Config {
 		cfg.BaseURL = v
 	} else if kind == KindOllama && getenv("OLLAMA_HOST") != "" {
 		cfg.BaseURL = ollamaHostURL(getenv("OLLAMA_HOST"))
+	} else if kind == KindBedrock && cfg.BaseURL == "" && getenv("AWS_REGION") != "" {
+		cfg.BaseURL = bedrockBaseURL(getenv("AWS_REGION"))
 	}
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL(kind)

@@ -89,6 +89,8 @@ type Lane struct {
 	// Cost in dollars when known (nil: an outside CLI does not say).
 	Cost *float64 `json:"cost,omitempty"`
 	Note string   `json:"note,omitempty"` // why it failed, or a short word
+	// Prompt is a split lane's own part (CMP-4); "" in a race.
+	Prompt string `json:"prompt,omitempty"`
 }
 
 // Totals are the lane's changed files and lines.
@@ -110,7 +112,8 @@ func (l Lane) Finished() bool { return l.State == Done || l.State == Stopped }
 type Race struct {
 	ID        string `json:"id"` // race-<n>
 	Number    int    `json:"number"`
-	Name      string `json:"name"` // race/<slug>
+	Kind      string `json:"kind,omitempty"` // "" a race; KindSplit a coordinator's split (split.go)
+	Name      string `json:"name"`           // race/<slug>
 	Prompt    string `json:"prompt"`
 	Verify    string `json:"verify,omitempty"`
 	StartedMs int64  `json:"started_ms"`
@@ -122,8 +125,9 @@ type Race struct {
 	Winner      string   `json:"winner,omitempty"` // the merged lane
 }
 
-// LaneSpec is a lane asked for in the race card.
-type LaneSpec struct{ Agent, Title string }
+// LaneSpec is a lane asked for in the race card; Prompt is a split
+// part's own task (CMP-4).
+type LaneSpec struct{ Agent, Title, Prompt string }
 
 // New makes race number n. The task becomes one line; 2–4 lanes.
 func New(n int, prompt, verify string, lanes []LaneSpec, nowMs int64) (Race, error) {

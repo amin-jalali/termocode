@@ -49,7 +49,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | --- | --- | --- | --- |
 | `ai_inline` | bool | `true` | Show AI ghost-text completions while typing (needs a configured provider). |
 | `ai_next_edit` | bool | `true` | After an edit, show where the AI thinks the next related edit goes (Tab: go there, Tab: apply, Esc: dismiss). Not set: same as ai_inline. |
-| `ai_provider` | string | `(auto)` | AI provider: anthropic, openai, openrouter, ollama, lmstudio, openai-compatible, claude-oauth or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it. |
+| `ai_provider` | string | `(auto)` | AI provider: anthropic, openai, openrouter, ollama, lmstudio, openai-compatible, claude-oauth, vertex, bedrock or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it. |
 | `ai_model` | string | `(default)` | Chat model ID. Empty uses the provider's default model. |
 | `ai_base_url` | string | `(default)` | API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default. |
 | `ai_until_done_rounds` | int | `3` | Work until done (the until-done profile, /done, AI: Work Until Done): how many times verify runs at most (1 to 10). A profile's loop.max_rounds wins over it. |
@@ -181,6 +181,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_plan_file` | bool | `false` | true: a planned run writes its plan to .termocode/plans/<slug>.md in the workspace: the steps with their tasks, the review rounds, the verify step's evidence and how the run ended (secrets hidden). The file shows as untracked in git unless you ignore it. false (the default): no file. |
 | `ai_step_stall_minutes` | int | `10` | An agent step whose model sends nothing for this many minutes is stopped and started once more; a second stall fails the step. A running tool call (a build, a card that waits for you) is no stall. 0 turns it off; at most 120. |
 | `ai_worktrees` | enum | `auto` | auto: in a git repository, each agent step that runs at the same time as another writing step works in its own git worktree (branch termocode/agent-<id>), so they never change the same files. When it ends, its card shows the changed files with Review, Merge and Discard. off: every step works in your tree. Toggle with AI: Toggle Agent Worktrees. |
+| `ai_critic` | enum | `auto` | auto: when an agent step's own git worktree (a lane) ends with changed files, a second model (the critic) reads its diff before you merge it. It gets the diff as text only (no tools; known secrets hidden). The card shows critic ok or critic: problems; Critic shows the notes, asks again or puts them in the chat box. Merge while the critic lists problems asks first (Cancel first). off: no critic review. Toggle with AI: Toggle Critic Review. |
+| `ai_critic_slot` | string | `""` | The model slot the critic runs on. Empty: the other built-in model than the step's (quick for a step on main, main for every other step; main when quick is not set up). |
 | `ai_plan_approval` | enum | `ask` | ask: before an agent run starts a step that changes files or runs commands, the chat shows the plan (steps, models, budget) with Deny, Approve and Edit; a read-only plan runs at once. auto: plans run without asking. always: every plan asks, read-only ones too. AI: Toggle Plan Approval turns it on or off for one chat. |
 | `ai_compact` | enum | `auto` | auto: when a chat fills about 80% of the model's context window, or the provider says the context is too long, the older turns are summarised by the quick model (one extra request) and the chat shows "Earlier chat summarised". The model then gets the summary instead of those turns; rules, memory and todos are kept. off: never summarise (a long chat can fail with "context too long"). |
 | `ai_memory_recall` | enum | `on` | While memory is on: after each AI tool call of a chat, a saved lesson about the call's file or words that this chat has not seen yet is added to the tool result and the chat shows recalled: <title> (local matching, no extra request). check: the quick model is asked first if the lesson applies (one small request per new match). off: no recall. |
@@ -239,6 +241,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Variable | Description |
 | --- | --- |
 | `ANTHROPIC_API_KEY` | Anthropic API key. Also selects Anthropic when no provider is set. |
+| `AWS_BEARER_TOKEN_BEDROCK` | Bedrock API key for the bedrock provider; wins over the saved key. |
+| `AWS_REGION` | AWS region of the bedrock provider when `ai_base_url` is empty (default us-east-1). |
 | `OLLAMA_HOST` | Ollama host, used for the base URL of the ollama provider. |
 | `OPENAI_API_KEY` | OpenAI API key. Also selects OpenAI when no provider is set. |
 | `OPENROUTER_API_KEY` | OpenRouter API key. |

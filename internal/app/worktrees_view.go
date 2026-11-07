@@ -97,6 +97,9 @@ func (m Model) wtList() ([]wtItem, []wtRow) {
 		if r := st.setups[items[i].e.Path]; r != nil {
 			items[i].setup = r.state
 		}
+		if r := st.runs[items[i].e.Path]; r != nil {
+			items[i].runURL = r.url
+		}
 	}
 	return items, wtRows(items, st.kind, st.filter, st.dirty)
 }
@@ -435,6 +438,9 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 	if c := it.e.Meta.Checkpoint; c != "" {
 		links = append(links, c)
 	}
+	if it.waits != "" { // CMP-80: what blocks it
+		links = append(links, aiCleanText(it.waits))
+	}
 	if l := wtLinkLine(it.e.Meta); l != "" {
 		links = append(links, l)
 	}
@@ -445,6 +451,9 @@ func wtCardLines(it wtItem, s wtStatus, active, focused bool, w int, now time.Ti
 		links = append(links, "locked")
 	}
 	if s := wtSetupLine(it.setup); s != "" {
+		links = append(links, theme.ASCIIText(s))
+	}
+	if s := wtRunLine(it.e.Meta.Port, it.runURL); s != "" {
 		links = append(links, theme.ASCIIText(s))
 	}
 	if !it.e.Meta.LastSeen.IsZero() {

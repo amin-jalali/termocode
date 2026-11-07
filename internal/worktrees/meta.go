@@ -1,6 +1,6 @@
 // Package worktrees is the worktree model of the WORKTREES view (WTX-1):
 // the worktrees git lists, joined with what termocode keeps about them
-// (name, pin, order, parent, agent, links, notes, sleep state) in
+// (name, pin, order, parent, agent, links, notes, sleep state, port) in
 // <git-common-dir>/termocode/worktrees.json, and a cache of their status
 // (dirty files, ahead / behind) that worker goroutines fill off the UI
 // thread.
@@ -52,6 +52,9 @@ type Meta struct {
 	Link LinkInfo `json:"link,omitzero"` // what gh last said about Issue / PR (WTX-9)
 
 	Adopted bool `json:"adopted,omitempty"` // an external worktree the user adopted (WTX-10)
+
+	Port      int      `json:"port,omitempty"`       // the dev server port of the worktree (CMP-5, ports.go)
+	BlockedBy []string `json:"blocked_by,omitempty"` // the worktrees (paths) whose work this one waits for (CMP-80, deps.go)
 
 	// The PR follow-up loop (CMP-31): Follow asks to send new PR
 	// feedback to the worktree's agent; FollowSeen are the comment ids

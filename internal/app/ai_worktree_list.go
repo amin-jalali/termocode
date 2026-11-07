@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -150,11 +151,15 @@ func (m *Model) onAIWorktreePicked(key string) tea.Cmd {
 	if r.st == nil {
 		owner = "No card of this chat owns it: it is left over from a stopped run or another chat."
 	}
-	body := fmt.Sprintf("Branch %s · %d file%s changed\n%s\n%s\n\nReview shows the changes. Merge writes them into your tree. Discard removes the worktree and the branch (it asks first).",
+	body := fmt.Sprintf("Branch %s · %d file%s changed\n%s\n%s\n\nReview shows the changes. Critic: a second model reviews them (or shows its notes). Merge writes them into your tree. Discard removes the worktree and the branch (it asks first).",
 		r.wt.Branch, r.wt.Files, plural(r.wt.Files), r.wt.Path, owner)
+	if w := aiCriticWord(r.wt); w != "" {
+		body += "\nCritic:" + strings.TrimPrefix(strings.TrimPrefix(w, " · critic"), ":")
+	}
 	m.confirm = confirm.New("Agent worktree", body, []confirm.Button{
 		{ID: "cancel", Title: "Cancel"},
 		{ID: "review", Title: "Review"},
+		{ID: "critic", Title: "Critic"},
 		{ID: "merge", Title: "Merge", Style: confirm.StylePrimary},
 		{ID: "discard", Title: "Discard"},
 	}).WithWideText()
@@ -169,7 +174,7 @@ func (m *Model) answerAIWorktreeLeft(id string) tea.Cmd {
 	key := s.wtTarget
 	s.wtTarget = ""
 	switch id {
-	case "review", "merge", "discard":
+	case "review", "critic", "merge", "discard":
 		return m.onAIWorktreeButton("wt-" + id + ":" + key)
 	}
 	return nil
@@ -188,4 +193,6 @@ func aiSettleWorktrees(steps []ai.StoredStep) {
 // aiWorktreeHelp is the "?" help text of agent worktrees.
 const aiWorktreeHelp = "Parallel steps: steps that run at the same time get their own git worktree (⑂ on the card). " +
 	"When a step ends: Review · Merge · Discard on its card. AI: Agent Worktrees… lists all of them (also left-over ones). " +
-	"AI: Toggle Agent Worktrees turns it off."
+	"AI: Toggle Agent Worktrees turns it off. " +
+	"A second model (the critic) reviews each finished worktree first: critic ok or critic: problems on the card; " +
+	"Critic shows its notes, and Merge with problems asks first. AI: Toggle Critic Review turns it off."

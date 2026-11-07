@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/bindiff"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/diffview"
@@ -258,7 +259,10 @@ func compareHeader(info git.CommitInfo, r commitRange) diffview.Header {
 func commitFiles(info git.CommitInfo) []diffview.File {
 	out := make([]diffview.File, 0, len(info.Files))
 	for _, f := range info.Files {
-		df := diffview.File{Name: f.Path, Status: f.Status, Add: f.Add, Del: f.Del, Binary: f.Binary, Pending: !f.Binary}
+		// Images and PDFs load too: their sides are shown as readable
+		// text (CMP-54, binDiffSides).
+		readable := f.Binary && bindiff.Supported(f.Path)
+		df := diffview.File{Name: f.Path, Status: f.Status, Add: f.Add, Del: f.Del, Binary: f.Binary && !readable, Pending: !f.Binary || readable}
 		if f.Status == 'R' && f.OldPath != "" {
 			df.Tag = "from " + f.OldPath
 		}
@@ -444,6 +448,9 @@ func (m *Model) commitLoadFile(i int) tea.Cmd {
 		}
 		if cf.Status != 'D' {
 			out.new, _ = git.ShowFileAtRevision(cwd, newRev, cf.Path)
+		}
+		if cf.Binary && bindiff.Supported(cf.Path) {
+			out.old, out.new, _ = binDiffSides(cf.Path, out.old, out.new)
 		}
 		if tooBigToDiff(out.old) || tooBigToDiff(out.new) {
 			out.old, out.new, out.note = "", "", commitTooBig

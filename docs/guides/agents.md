@@ -286,6 +286,19 @@ of Claude Code and Codex), **BUILT-IN** (termocode's own AI profiles) and
 into termocode's tools folder, after a card (**Not now** first). Then a
 second card runs the CLI's own sign-in command in a terminal tab.
 
+An agent that installs only with its own installer (Cursor CLI, Goose,
+Droid, Kiro CLI) gets a card with its install page instead (**Not now**
+first). **Open install page** opens it in your browser; over SSH the link
+is copied. termocode never runs an install script.
+
+The list has Claude Code, Codex, Gemini CLI, OpenCode, Aider, Cursor CLI,
+Amp, Goose, Qwen Code, Crush, Copilot CLI, Kimi CLI, Droid, Pi, Kiro CLI,
+Auggie, Grok CLI, Cline CLI, Continue CLI and Mistral Vibe. Claude Code,
+Codex and Kimi CLI get termocode's tools on their command line; OpenCode
+asks before it writes `opencode.json`; for the others, add termocode's
+server by hand (**MCP: Copy termocode Server Config**). Any other CLI
+works in a plain terminal tab.
+
 From the **WORKTREES** view, **Agent: Start…** starts the agent in the
 selected worktree, and the agent shows on that worktree's card.
 
@@ -312,6 +325,29 @@ After a merge, a card asks about the other lanes: **Keep** is first. A
 lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
 first).
+
+## Split one task between agents
+
+A race gives the same task to every lane. A **split** gives each lane its
+own part of one goal, so several agents build one feature side by side.
+
+1. **Agent: Split Task…** opens the AI chat with a short draft. Finish it
+   with your goal and send it.
+2. The AI (the coordinator) cuts the goal into 2 to 4 parts and picks an
+   agent for each. A card shows every part: **Deny** is first. Nothing
+   starts before you press **Start split**.
+3. Each part gets its own worktree from `HEAD` and its own terminal tab.
+   termocode types the goal and that lane's part, once, when the agent's
+   input box is on screen.
+4. Ask the AI how the parts are going. It reads them with
+   `agent_split_status` (state, files and the diff of a finished part) and
+   can tell you what is left.
+5. **Agent: Race Compare** shows the split (the title says **SPLIT** and
+   each lane shows its part). Press `m` on each part to merge it. There is
+   no winner, so no card asks about the other lanes.
+
+Workers cannot start more workers: the split tools are only for termocode's
+own AI chat, never for outside agents.
 
 ## Chat view and sessions
 
@@ -427,6 +463,34 @@ installed pack shows in **Agent Packs…** with its version; Enter on it
 opens the **Undo** card, which puts your old files back and removes the
 added ones. A file you changed after the install is kept. To install
 another version of the same pack, undo the first one.
+
+## Chat with an ACP agent
+
+Some coding agents speak the Agent Client Protocol (ACP). termocode can
+run such an agent as the AI chat's thread.
+
+1. Run **Open Config: ACP Agents**. The first time, it writes a small
+   example. List each agent with a `name`, its `command` and `args`
+   (and `env` if it needs some). Save the file.
+2. Run **Agent: Chat with an ACP Agent…** and pick one. termocode starts
+   the program in the workspace folder and opens a new chat for it.
+3. Type as usual. Your message goes to the agent, not to your AI
+   provider. Its answer, its tool calls (one `⚙` line each), its plan
+   and a short `±` line per edit stream into the chat.
+
+The agent runs its own tools, but it asks you first:
+
+- **Permission card.** When the agent asks before a step, the card shows
+  the step. The agent's reject choice (or **Cancel**) is first. Esc is
+  no.
+- **Write card.** Before the agent writes a file, the card shows the
+  diff. **Cancel** is first; **Write** writes it.
+- The agent reads and writes files only inside the workspace. Paths
+  outside it, also through links, are refused.
+
+Run **Agent: Chat with an ACP Agent…** again to end the thread. The
+program stops; the chat stays in Chat History. The AI can never start an
+agent thread. On the web, this is not there yet.
 
 ## If something does not work
 

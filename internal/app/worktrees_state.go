@@ -10,7 +10,9 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/agentroll"
+	"github.com/amin-jalali/termocode/internal/bgtask"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/worktrees"
@@ -65,18 +67,26 @@ type wtState struct {
 	setupAsk *wtSetupPending        // the open setup trust card (worktrees_setup.go)
 	setups   map[string]*wtSetupRun // setups run in this window, by worktree path
 
+	runAsk *wtRunPending     // the open dev server trust card (worktrees_run.go)
+	runs   map[string]*wtRun // dev servers run in this window, by worktree path
+
 	link        *wtLinkForm   // the open link card (worktrees_link.go)
 	linkReading bool          // due links are being read again
 	ctlLink     *wtCtlPending // the open card of a CLI link (worktrees_notes.go)
 
 	sleepAsk   *wtSleepPending   // the open sleep card (worktrees_sleep.go)
 	archiveAsk *wtArchivePending // the open archive card (worktrees_archive.go)
+	move       *wtMovePending    // the open move, unpack or pull card (worktrees_move.go)
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
 
 	feedbackAsk     *wtFeedbackPending   // the open PR feedback card (worktrees_followup.go)
 	feedbackReading map[string]bool      // PR feedback reads in flight, by path
 	followAt        map[string]time.Time // the follow loop's last read, by path
+	bgAsk           *wtBgPending         // a background task between prompt and card (worktrees_bgtask.go)
+	bgAct           *wtBgActPending      // the open card of one background task
+	bgTasks         []bgtask.Task        // the last listed background tasks
+	bgEngine        containers.Engine    // the engine they were listed on
 
 	seq    uint64
 	render struct {
@@ -144,6 +154,7 @@ type wtLoadMsg struct {
 	gen     uint64
 	jump    bool // Worktree: Jump… asked: apply it and open the picker
 	web     bool // the page asked (web_worktrees.go): apply it, no poll tick
+	board   bool // AI: Agent Board… asked (agent_board.go): apply it and open the board
 	root    string
 	common  string
 	list    []git.Worktree
@@ -179,7 +190,7 @@ func (m *Model) worktreesLoadFor(jump bool) tea.Cmd {
 
 func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 	st := m.wt
-	if st == nil || (!msg.jump && !msg.web && (msg.gen != st.gen || !st.polling)) {
+	if st == nil || (!msg.jump && !msg.web && !msg.board && (msg.gen != st.gen || !st.polling)) {
 		return nil
 	}
 	if msg.web && m.web != nil {
@@ -209,6 +220,8 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 	switch {
 	case msg.jump:
 		cmds = append(cmds, m.openWorktreeJump()) // the poll chain (if any) keeps its own tick
+	case msg.board:
+		cmds = append(cmds, m.openAgentBoard()) // the poll chain (if any) keeps its own tick
 	case msg.web: // the page's read: the poll chain (if any) keeps its own tick
 	default:
 		cmds = append(cmds, wtTick(st.gen))
@@ -244,6 +257,9 @@ func wtTick(gen uint64) tea.Cmd {
 func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 	st := m.wt
 	if c, ok := m.handleWTCtlMsg(msg); ok { // the control socket (worktrees_notes.go)
+		return c, true
+	}
+	if c, ok := m.handleWTDiffMsg(msg); ok { // the diff vs base (worktrees_diff.go)
 		return c, true
 	}
 	if c, ok := m.handleWTDeleteMsg(msg); ok { // the type-the-name card (worktrees_delete.go)

@@ -50,6 +50,7 @@ var aiGateNotes = map[string]string{
 	"execute_action":     "per action: see Palette actions below",
 	"ast_grep":           "search: auto; with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed",
 	"look_at":            "auto; an image is sent to the main model in one extra request (a PDF is read locally)",
+	"proof_screenshot":   "a localhost page or an HTML file in the workspace: auto; any other address: confirm (run); the shot is sent to the main model when it takes images",
 	"containers_control": "confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first",
 	"images_pull":        "confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)",
 	"compose_up":         "confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)",
@@ -65,6 +66,7 @@ var aiGateNotes = map[string]string{
 	"service_set_access":  "confirm (always asks): Deny (first) · Change",
 	"outside_agent_start": "confirm (always asks): Deny (first) · Start",
 	"agent_race_start":    "confirm (always asks): Deny (first) · Start race",
+	"agent_split_start":   "confirm (always asks): Deny (first) · Start split",
 	"agent_run_start":     "confirm (always asks): Deny (first) · Start run",
 	// WFX-9: workflows by chat.
 	"workflow_draft":   "confirm (always asks): Cancel (first) · Create (writes the file atomically and trusts that version)",
@@ -158,12 +160,13 @@ func AIToolCatalog() []AIToolDoc {
 	kept := tools[:0]
 	for _, t := range tools {
 		switch t.Name {
-		case "skill_load", "web_fetch", "web_search":
+		case "skill_load", "rule_load", "web_fetch", "web_search":
 		default:
 			kept = append(kept, t)
 		}
 	}
 	tools = append(kept, aiSkillLoadTool("."))                                                                     // listed only where a skill is offered
+	tools = append(tools, aiRuleLoadTool(ai.Rules{}, nil))                                                         // CMP-82: only with a trusted auto rule
 	tools = append(tools, aiRedactResults([]ai.Tool{aiWebFetchTool(), aiWebSearchTool(webtools.Providers[0])})...) // only when turned on (OMX-13)
 	out := make([]AIToolDoc, 0, len(tools))
 	for _, t := range tools {

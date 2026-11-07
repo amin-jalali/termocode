@@ -580,6 +580,34 @@ the run in the AGENTS panel.
   (a command and its result, or a file:line) before its verdict; the
   list goes into the plan file.
 
+## Run a task list in waves
+
+**AI: Run Task List in Waves…** runs the open file as a task list: one
+agent step per open task, in waves. Write the list as a markdown
+checklist:
+
+```markdown
+- [ ] 1. Add the parser
+  Read docs/grammar.md first.          (indented lines: more about the task)
+- [ ] 2. Add the flag (after: 1)
+- [ ] Write the docs (id: docs) (after: 1, 2)
+- [x] Ticked tasks are skipped, and so is waiting for them
+```
+
+- A task's id is its `(id: …)`, else its number (`2.`), else `task-N`.
+  `(after: …)` names the tasks it waits for. Checkboxes in code blocks
+  are not tasks.
+- A card shows the waves first (**Cancel** comes first; Esc cancels):
+  the tasks of a wave run at the same time, up to `ai_parallel_max`. With
+  `ai_parallel_max` 1 they run one after the other, and the card says so.
+- Each task may change files. Steps that write at the same time work in
+  their own git worktree (see below), so you review and merge each one.
+- A last **Check the tasks** step reads what they did, edits nothing,
+  and answers you with one line per task.
+- One list runs at most 11 open tasks in at most 5 waves. A list that
+  names an unknown task, or whose `after:` tags make a cycle, does not
+  run: a toast says which line is wrong.
+
 ## Approve the plan
 
 Before a run starts a step that **changes files** or **runs commands**,
@@ -862,6 +890,36 @@ also ones from other chats. Nothing is deleted without a card that asks.
 
 **Turn it off.** **AI: Toggle Agent Worktrees**, or `"ai_worktrees": "off"`
 in `config.json`. Then every step works in your tree.
+
+### Critic review
+
+When a step's worktree ends with changed files, a second model (the
+**critic**) reads its diff before you merge it. It gets the diff as text
+only: no tools, no files, known secrets hidden. It answers with a
+verdict, and the card shows it:
+
+```text
+ ▸ 3 · Speed up lexer · gpt-5-mini · 14 s · 2 tools
+     ⑂ termocode/agent-r1-lexer · 3 files changed · critic: problems
+      Review   Merge   Discard   Critic
+```
+
+- **critic reviewing…** while it reads, then **critic ok** or
+  **critic: problems**. **critic: no verdict** means it could not answer
+  (no model, an error); Critic on the card asks again.
+- **Critic** shows its notes on a card: **Cancel**, **Ask Again** or
+  **Send to Chat** (the problems go to the chat box; nothing is sent
+  until you press Enter).
+- **Merge** while the critic lists problems asks first. **Cancel** is
+  first; **Merge Anyway** merges as usual; **Send to Chat** puts the
+  problems in the chat box. Nothing is written before you answer. Merge
+  does not wait while the critic still reads.
+- **Which model.** The other built-in model than the step's: quick for a
+  step on main, main for every other step. Set `"ai_critic_slot"` in
+  `config.json` to a model slot of your own. Its tokens show in
+  **AI: Usage** as `critic`.
+- **Turn it off.** **AI: Toggle Critic Review**, or `"ai_critic": "off"`
+  in `config.json`.
 
 ## Budget pause
 

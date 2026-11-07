@@ -21,7 +21,7 @@ import (
 
 // ── PR feedback to the lane's agent (CMP-31) ─────────────────────────────
 //
-// r in WORKTREES (Worktree: Send PR Feedback to Agent…) reads the
+// W in WORKTREES (Worktree: Send PR Feedback to Agent…) reads the
 // worktree's pull request with gh: open review threads, conversation
 // comments that call the agent (@termocode or @agent) and a failed CI
 // run with its failing log. A Cancel-first card shows a short preview;
@@ -35,7 +35,7 @@ import (
 // a linked PR: while the view shows, termocode reads the PR again every
 // wtFollowEvery and asks with the same card when something is new.
 // Nothing is typed without a click; Skip (and Esc) marks what the card
-// showed as seen so it does not ask again; r sends everything open at
+// showed as seen so it does not ask again; W sends everything open at
 // any time. The AI can never start either one.
 
 const (
@@ -48,7 +48,7 @@ const (
 )
 
 func init() {
-	aiActionPolicies[wtFeedbackPaletteID] = aiNever("types into the user's agent tab; the user sends PR feedback with r in WORKTREES")
+	aiActionPolicies[wtFeedbackPaletteID] = aiNever("types into the user's agent tab; the user sends PR feedback with W in WORKTREES")
 	aiActionPolicies[wtFollowPaletteID] = aiNever("the follow loop is the user's choice per worktree")
 }
 
@@ -75,7 +75,7 @@ type wtFeedbackMsg struct {
 	err         error
 }
 
-// worktreeFeedback is r: read the cursor's PR feedback, then ask.
+// worktreeFeedback is W: read the cursor's PR feedback, then ask.
 func (m *Model) worktreeFeedback() tea.Cmd {
 	it, ok := m.wtSelected()
 	if !ok {
@@ -149,7 +149,7 @@ func (m *Model) onWTFeedback(msg wtFeedbackMsg) tea.Cmd {
 		recordError("[worktrees] follow " + msg.path + ": " + msg.err.Error())
 		return nil
 	case errors.Is(msg.err, errWTNoPR):
-		return m.pushToastDetail(toast.Info, "No pull request for "+msg.title, "Open one first; then r sends its review comments and failing CI to the agent.")
+		return m.pushToastDetail(toast.Info, "No pull request for "+msg.title, "Open one first; then W sends its review comments and failing CI to the agent.")
 	case msg.err != nil && ghci.Quiet(msg.err):
 		return m.pushToastDetail(toast.Info, "Could not read the PR feedback", wtGHWhy(msg.err)+".")
 	case msg.err != nil:
@@ -163,7 +163,7 @@ func (m *Model) onWTFeedback(msg wtFeedbackMsg) tea.Cmd {
 			delete(st.followAt, msg.path) // ask on the next load
 			return nil
 		}
-		return m.pushToastDetail(toast.Info, "Another card is open", "Close it, then press r again.")
+		return m.pushToastDetail(toast.Info, "Another card is open", "Close it, then press W again.")
 	}
 	return m.askWTFeedback(msg)
 }
@@ -245,7 +245,7 @@ func (m *Model) askWTFeedback(msg wtFeedbackMsg) tea.Cmd {
 	first := confirm.Button{ID: "cancel", Title: "Cancel"}
 	if msg.auto {
 		first = confirm.Button{ID: "skip", Title: "Skip"}
-		b.WriteString("\n\nSkip marks these as seen; new feedback asks again. r sends everything open at any time.")
+		b.WriteString("\n\nSkip marks these as seen; new feedback asks again. W sends everything open at any time.")
 	}
 	send := confirm.Button{ID: "send", Title: "Send to " + agent, Style: confirm.StylePrimary}
 	if buf < 0 {
@@ -304,11 +304,11 @@ func (m *Model) wtFeedbackSend(p *wtFeedbackPending) tea.Cmd {
 		}
 	}
 	if tab == nil {
-		return m.pushToastDetail(toast.Warn, "The agent tab closed", "Nothing was sent; r reads the feedback again.")
+		return m.pushToastDetail(toast.Warn, "The agent tab closed", "Nothing was sent; W reads the feedback again.")
 	}
 	if tab.Hibernated { // AGX-15: the shell is bare; resume first
 		m.agentWake(tab)
-		return m.pushToastDetail(toast.Info, p.agent+" is starting again", "Nothing was sent yet; press r again in a few seconds.")
+		return m.pushToastDetail(toast.Info, p.agent+" is starting again", "Nothing was sent yet; press W again in a few seconds.")
 	}
 	file := m.wt.wtFeedbackFile(p.path, p.fb.PR)
 	if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
@@ -326,7 +326,7 @@ func (m *Model) wtFeedbackSend(p *wtFeedbackPending) tea.Cmd {
 func (m *Model) wtFeedbackChat(p *wtFeedbackPending) tea.Cmd {
 	s := m.aiS()
 	if s.streaming || s.chatCancel != nil {
-		return m.aiInfo("The AI is still answering: press r again when it is done")
+		return m.aiInfo("The AI is still answering: press W again when it is done")
 	}
 	var open tea.Cmd
 	if len(s.conv.Messages) > 0 {

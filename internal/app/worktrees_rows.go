@@ -60,7 +60,9 @@ type wtItem struct {
 	state  string
 	group  string
 	setup  string // the setup state of a new worktree (worktrees_setup.go)
+	runURL string // the address of its running dev server (worktrees_run.go)
 	depth  int    // drawn under its parent (WTX-11); set when drawn
+	waits  string // what it waits for (CMP-80): "waits for a" | "ready: …" | ""
 }
 
 // wtRow is a line of the list model: a group header or a card.
@@ -145,7 +147,7 @@ func wtItems(entries []worktrees.Entry, tabs []wtTabAgent, others []agentroll.Ro
 			out = append(out, wtItem{e: e, state: wtStateArchived, group: "ARCHIVED"})
 			continue
 		}
-		it := wtItem{e: e, here: e.Path == here, state: wtStateIdle}
+		it := wtItem{e: e, here: e.Path == here, state: wtStateIdle, waits: worktrees.WaitsLine(entries, e)}
 		as := byPath[e.Path]
 		sort.SliceStable(as, func(i, j int) bool { return wtStateRank(as[i].state) < wtStateRank(as[j].state) })
 		if len(as) > 0 {

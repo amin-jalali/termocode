@@ -36,14 +36,17 @@ repository's git folder, never in your project.
 | `p` | Pin or unpin |
 | `K` `J` | Move the worktree up or down in its group (`Shift+↑` `Shift+↓` too) |
 | `i` | Link an issue or pull request (see below) |
-| `r` | Send PR feedback to its agent: review comments, `@termocode` mentions, failing CI (asks first) |
+| `W` | Send PR feedback to its agent: review comments, `@termocode` mentions, failing CI (asks first) |
 | `w` | Follow its PR: new feedback asks to go to the agent; again: stop |
 | `P` | The linked pull request: checks and their logs, review threads, merge |
 | `N` | The notes agents left on it, with their times |
+| `d` | Diff vs base: what it changed since it left its base; keep or revert each change |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
 | `I` | Start from an issue: pick an open issue, the New worktree form fills in |
 | `L` | Show the setup of a new worktree (its terminal tab) |
+| `r` | Run the dev server on the worktree's own port (`$PORT`); again: show its tab |
+| `o` | Open the running dev server's address in the browser |
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
 | `s` | Sleep: end its agent tabs and move it under ASLEEP; again: wake it |
@@ -53,6 +56,10 @@ repository's git folder, never in your project.
 | `D` | Delete the worktree and its branch (asks step by step) |
 | `C` | Clean up: tick merged and old worktrees, archive them together |
 | `S` | Ship: commit (AI message), push, pull request (AI text), CI fixes, merge, archive; each step asks (see below) |
+| `b` | Background task: an agent works on it alone in a sandbox container (asks first) |
+| `B` | Background tasks: state, follow output, stop, remove |
+| `M` | Move to another machine: pack it into one file (see below) |
+| `U` | Unpack a moved lane as a new worktree, or pull one from a host |
 | `f` | Filter: All, Mine, Agents, Dirty, Asleep, External |
 | `/` | Filter by name (`Esc` clears) |
 | `R` | Read every worktree again |
@@ -114,6 +121,36 @@ A repository can list files for each new worktree in
   watch them, with your environment minus termocode's secrets. The card
   shows `setup ● running`, `✓` or `✗`; `L` shows the tab.
 
+## A dev server per worktree
+
+Parallel worktrees of a web app fight for the same port. Give the
+repository one run line in `.termocode/worktrees.json`, and each
+worktree gets a port of its own:
+
+```jsonc
+{
+  "run": "pnpm dev --port $PORT",   // the dev server; reads $PORT
+  "ports": "3000-3099",             // where ports come from (default 3001-3099)
+  "url": "http://localhost:$PORT"   // what o opens (this is the default)
+}
+```
+
+- `r` (**Worktree: Run Dev Server of Selected**) picks the lowest port of
+  the range that no other worktree holds and nothing listens on. The
+  worktree keeps it (in `worktrees.json` in the git folder), so it gets
+  the same port next time.
+- The line runs in a terminal tab inside the worktree, with `PORT` set
+  and your environment minus termocode's secrets. It comes from the
+  repository, so it needs the same trust as **setup**: a card shows the
+  line and the port, **Not now** comes first, and a changed file asks
+  again.
+- The card shows `▶ localhost:3004 (o opens)` while it runs, and
+  `port 3004 · r runs` when it does not. `o` (**Worktree: Open Dev Server
+  of Selected**) opens the address; `r` again shows the tab. Close the
+  tab to stop the server.
+- When every port of the range is held or in use, nothing starts and a
+  message says to stop a server or widen `ports`.
+
 ## Child worktrees
 
 `c` (**Worktree: New Child of Selected…**) opens the New worktree form
@@ -172,7 +209,7 @@ says to press `i` first.
 
 ## Send PR feedback to the agent
 
-`r` (**Worktree: Send PR Feedback to Agent…**) reads the worktree's pull
+`W` (**Worktree: Send PR Feedback to Agent…**) reads the worktree's pull
 request with `gh`: the open review threads, comments in the PR
 conversation that call the agent (`@termocode` or `@agent`), and a
 failed CI run with its failing log. A card shows a short preview;
@@ -188,7 +225,7 @@ input instead, and you press Enter to send it.
 view shows, termocode reads the PR every 2 minutes. When there are new
 review comments, new mentions or a new failing run, the same card asks
 before anything is sent. **Skip** (or `Esc`) marks them as seen, so it
-does not ask about them again; `r` still sends everything open at any
+does not ask about them again; `W` still sends everything open at any
 time. `w` again stops following. The AI can never send feedback or turn
 following on.
 
@@ -210,6 +247,53 @@ secrets hidden; the 50 newest are kept. The card shows the last note and
 the status; `N` lists all notes with their times. A link from the command
 line shows a card first (**Deny** comes first).
 
+## Review changes vs base
+
+`d` on a card (or **Worktree: Review Changes vs Base of Selected**)
+shows everything the worktree changed since it left its base: its
+commits, edits not committed yet and new files. It does not matter who
+made them: the AI chat, an agent in a terminal tab, or you. The base is
+the parent's branch for a child worktree, else the main branch
+(`origin`'s default, `main` or `master`). Changes made on main after the
+worktree left it are not shown.
+
+The files open in the same review card as AI edits, one hunk at a time:
+
+- **Accept** keeps the change as it is.
+- **Reject** writes the base text back for that hunk only. On a new
+  file, rejecting every hunk removes the file.
+
+Nothing is written until you finish a file. When the agent changed the
+file again while you looked, or the file has unsaved edits in the
+editor, nothing is written and a note says why; press `d` again to read
+it anew. Binary files, files over 1 MB and links are left out (the count
+is shown). At most 200 files are listed.
+
+## What waits for what
+
+When several agents split one job, one worktree's work often needs
+another's first. An agent (or you) records it from the worktree that
+waits:
+
+```sh
+termocode worktree block feat/api     # this worktree waits for feat/api
+termocode worktree unblock feat/api   # it no longer does
+```
+
+The other worktree is a path, a branch or a name. The AI chat and outside
+agents use the `worktree_block` tool; programs use the control op
+`worktree-block`. A loop (A waits for B, B waits for A) is refused.
+
+A blocker is settled when its status is `done`, its pull request is
+merged, its issue is closed, or the worktree is gone or archived. The
+card's last line says **waits for feat/api** while it is not, and
+**ready: its blockers are done** after. `termocode worktree list` has a
+WAITS FOR column.
+
+**Worktree: Show Dependency Graph** (`F1`) draws the graph in waves:
+wave 1 can start now, wave 2 starts when wave 1 is done, and so on. Each
+row says **done**, **ready** or **waits**, and what it waits for.
+
 ## Several agent sessions
 
 One worktree can have more than one agent at work: separate sessions on
@@ -225,6 +309,35 @@ the same files, each in its own terminal tab.
   the worktree: the ones waiting for you first, then the working ones.
   `Enter` shows the tab; the last row starts one more session.
 - The card counts every session. Close a session like any terminal tab.
+
+## A task list shared with agents
+
+The repository has one task list that you and every agent share. Each
+task is a plain Markdown file in `.termocode/tasks/` of the main
+checkout (like `0007-fix-the-login.md`), so all worktrees see the same
+tasks and you can edit them in any editor or commit them.
+
+**Tracker: Show Tasks…** lists them: doing first, then blocked, todo and
+done, with the owner. Pick one to open its file, set another status, or
+copy `termocode task claim 7` for an agent. **Tracker: Add Task…** adds a
+todo.
+
+An agent (or a script) uses the same files from its terminal; no running
+termocode is needed:
+
+```sh
+termocode task list                  # open tasks (--all: done too, --json)
+termocode task add Fix the login     # prints the new id
+termocode task claim 7               # doing, owned by you, in this worktree
+termocode task note 7 "found it in auth.go"
+termocode task status 7 done         # todo, doing, blocked or done
+termocode task show 7
+```
+
+A task someone else is doing can not be claimed. Two agents that add at
+the same time never get the same id. The owner is `--as <name>`, else
+`$TERMOCODE_TASK_OWNER`, else the termocode tab (`agent t3`), else your
+user name. Task text is shown as plain text and never runs.
 
 ## Sleep and wake
 
@@ -325,6 +438,89 @@ opens one card that lists every worktree that will be archived
 its own card: **Keep it** comes first. Clean up archives, so the
 branches stay and `x` restores any of them.
 
+## Background tasks
+
+`b` (**Worktree: Run Agent Task in Background…**) gives the selected
+worktree to an agent that works on its own. You type the task; a card
+shows everything before anything starts (**Cancel** first):
+
+- the agent runs in its headless mode (Claude Code, Codex, Gemini CLI,
+  Qwen Code, OpenCode or Aider): the worktree's own agent when it has
+  one, else the first one you have installed;
+- it runs in a throwaway docker or podman container (`node:22-bookworm`;
+  npm agents start through `npx`, so the image needs no install);
+- the container sees only the worktree and the repository's git folder,
+  at their own paths. Its edits land in the worktree. It runs as your
+  user, with every capability dropped;
+- the agent's own approval prompts are off, because nobody is there to
+  answer them: the container is the sandbox. The network stays on, for
+  the agent's API;
+- API key variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+  `GEMINI_API_KEY` and a few more) are passed by name only; the value
+  never is part of a command line or the card.
+
+**Start in background** starts the container detached. It keeps working
+when termocode or the session ends. When termocode runs on your own
+server (over SSH, with the persistent session), the laptop can be off.
+A container engine on another machine (a remote context) is refused:
+its folders are not this host's.
+
+`B` (**Worktree: Background Tasks…**) lists every task with its state
+(working, done, failed with its exit code), agent and worktree. Enter on
+one opens its card: **Follow output** opens a terminal tab with its log,
+**Stop the task** ends a running one, **Remove container** clears an
+ended one. The worktree and its changes always stay; review them as
+usual (diff, commit, pull request).
+## Move a lane to another machine
+
+Start a lane on your laptop and let it go on on a server, or bring a
+server's lane to your laptop to test it. The repository must be on both
+machines; termocode too.
+
+`M` (**Worktree: Move Selected to Another Machine…**) packs the worktree
+into one `.tlane` file in `~/.local/share/termocode/lanes/`:
+
+- the commits the remotes do not have yet (a git bundle),
+- the changes not committed (staged and not staged),
+- the new files git does not track yet (ignored files stay; files over
+  10 MB are left out and listed),
+- its notes, its name and its agent,
+- its Claude Code chats, while **agent transcripts** is allowed in
+  Settings, so `claude --resume` goes on there.
+
+A card asks first; **Cancel** comes first. **Pack and download** also
+sends the file to your own computer (over ssh: through the terminal).
+Nothing in the worktree changes. Once the lane runs on the other
+machine, archive it here (`x`). If an agent still runs in it, `s` puts
+it to sleep first.
+
+`U` (**Worktree: Unpack a Moved Lane…**) lists the packs in the lanes
+folder and in `~/Downloads`. Its card shows where the lane comes from,
+the new folder and branch, and what comes with it. Unpack always makes
+a **new** worktree next to the others: a free branch name (`-moved` is
+added when the name is taken), a new folder, and it never writes over a
+file. When the changes do not apply, the worktree stays on its commit
+and the changes are kept next to it as `<folder>.lane.patch`. When the
+repository here lacks the commits the lane is built on, `git fetch`
+first.
+
+**Pull a lane from a host…** (the first row of `U`, or **Worktree: Pull
+a Lane from a Host…**) asks for `host:folder`, then a card, then packs
+the lane there over your own ssh (keys, agent, `~/.ssh/config`; no
+password is asked) and opens the unpack card.
+
+The same from a shell:
+
+```sh
+termocode lane pack [--out FILE|-] [--chats] [DIR]   # pack the worktree DIR is in
+termocode lane info FILE                             # what a pack holds
+termocode lane unpack [--repo DIR] [--name BRANCH] FILE|-
+termocode lane pull [--chats] host:~/src/app.worktrees/fix-login
+termocode lane push [--chats] [DIR] host:~/src/app   # pack here, unpack there
+```
+
+The AI never moves, unpacks or pulls a lane.
+
 ## From the web page
 
 The web panel's desktop page has a **Worktrees** item in its activity bar
@@ -339,3 +535,5 @@ list by group, with a filter of its own.
   name).
 - The page names a worktree by an id the laptop made; it never sends a
   folder path.
+- A worktree's card data carries its dev server port, and the address
+  while it runs. Starting it stays on the laptop (`r`).
