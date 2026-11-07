@@ -158,6 +158,7 @@ type dbPage struct {
 	hls     []map[string]any
 	first   int   // 1-based line of the first data row (0: no grid)
 	bounds  []int // display cell where each grid column starts
+	widths  []int // the width of each grid column (DBX-8)
 	lastNew int   // 1-based line of the last new row (0: none)
 	fold    bool  // fold by indent (the Plan view)
 }
@@ -429,8 +430,21 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		edits = t.edits
 	}
 	more := dbGlyphMore.String()
-	cell := func(c dbclient.Cell) string {
-		return ansi.Truncate(dbOneLine(c.String()), dbMaxCellWidth, more)
+	// cols is the result columns to draw, in display order (db_columns.go);
+	// fixed[j] is the width the layout sets for cols[j] (0: fit the cells).
+	cols := s.drawnCols(page.Columns)
+	fixed := make([]int, len(cols))
+	for j, i := range cols {
+		fixed[j] = s.colWidth(page.Columns[i].Name)
+	}
+	limit := func(j int) int {
+		if fixed[j] > 0 {
+			return fixed[j]
+		}
+		return dbMaxCellWidth
+	}
+	cell := func(c dbclient.Cell, j int) string {
+		return ansi.Truncate(dbOneLine(c.String()), limit(j), more)
 	}
 	// rows to draw: the page (pending values in place), then new rows.
 	type gridRow struct {
@@ -480,16 +494,21 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 			grid = append(grid, g)
 		}
 	}
-	widths := make([]int, len(page.Columns))
-	for i, c := range page.Columns {
-		widths[i] = ansi.StringWidth(ansi.Truncate(dbOneLine(c.Name), dbMaxCellWidth, more))
+	widths := make([]int, len(cols))
+	for j, i := range cols {
+		if fixed[j] > 0 {
+			widths[j] = fixed[j]
+			continue
+		}
+		widths[j] = ansi.StringWidth(ansi.Truncate(dbOneLine(page.Columns[i].Name), dbMaxCellWidth, more))
 		for _, row := range grid {
 			if i < len(row.cells) {
-				widths[i] = max(widths[i], ansi.StringWidth(cell(row.cells[i])))
+				widths[j] = max(widths[j], ansi.StringWidth(cell(row.cells[i], j)))
 			}
 		}
-		widths[i] = max(widths[i], 1)
+		widths[j] = max(widths[j], 1)
 	}
+	p.widths = widths
 	bar := " " + dbGlyphVBar.String() + " "
 	pos := 1
 	for _, w := range widths {
@@ -505,11 +524,11 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 	}
 	var b strings.Builder
 	b.WriteString(" ")
-	for i, c := range page.Columns {
-		if i > 0 {
+	for j, i := range cols {
+		if j > 0 {
 			b.WriteString(bar)
 		}
-		b.WriteString(pad(ansi.Truncate(dbOneLine(c.Name), dbMaxCellWidth, more), widths[i], false))
+		b.WriteString(pad(ansi.Truncate(dbOneLine(page.Columns[i].Name), limit(j), more), widths[j], false))
 	}
 	n := p.add(strings.TrimRight(b.String(), " "))
 	p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpSection")
@@ -534,8 +553,8 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		b.WriteString(g.mark)
 		markEnd := b.Len()
 		var dim, changed [][2]int
-		for i := range page.Columns {
-			if i > 0 {
+		for j, i := range cols {
+			if j > 0 {
 				b.WriteString(bar)
 			}
 			c := dbclient.Cell{Null: true}
@@ -543,7 +562,7 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 				c = g.cells[i]
 			}
 			start := b.Len()
-			b.WriteString(pad(cell(c), widths[i], c.Kind == "number"))
+			b.WriteString(pad(cell(c, j), widths[j], c.Kind == "number"))
 			switch {
 			case g.unset[i] || c.Null && !g.changed[i]:
 				dim = append(dim, [2]int{start, b.Len()})
@@ -874,6 +893,12 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		if cmd, ok := m.databaseRedisPageKey(key, row, col); ok {
 			return cmd
 		}
+	}
+	if cmd, ok := m.databaseColumnsKey(key, col); ok {
+		return cmd
+	}
+	if s.shown.redis == nil && s.shown.plan == nil && s.view == dbViewGrid && !s.trans {
+		col = s.gridColumn(col) // the grid shows the columns in the layout's order
 	}
 	tv := s.shown.tv
 	canGrid := s.shown.result.Err == nil && len(s.shown.result.Columns) > 0 && s.shown.plan == nil

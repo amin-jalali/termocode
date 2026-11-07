@@ -104,6 +104,8 @@ type dbConsoleState struct {
 	// Redis value page writes (db_redis.go)
 	redisEdit  *dbRedisEdit
 	redisWrite *dbRedisWrite
+	// the grid's column layouts (db_columns.go)
+	colStore *dbColStore
 }
 
 func (m *Model) dbConsole() *dbConsoleState {
@@ -895,6 +897,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseComparePicker(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseColumnsPicker(id); ok {
 		return cmd, true
 	}
 	switch m.pickerKind {

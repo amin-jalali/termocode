@@ -172,6 +172,20 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `Esc` | cancel a running query |
 | `q` | close the page |
 
+### Columns
+
+| Key | Action |
+| --- | --- |
+| `H` | hide the column under the cursor |
+| `O` | pick columns to show or hide |
+| `<` / `>` | move the column left / right |
+| `F` | freeze the columns up to this one on the left (again: unfreeze) |
+| `{` / `}` | scroll the columns after the frozen ones |
+| `(` / `)` | make the column narrower / wider |
+| `=` | reset the column layout |
+
+The layout of a table is saved per connection and table, so it comes back the next time you open the table. A column the table gains shows at the end. A query result keeps its layout until you quit.
+
 A result loads at most `db_max_rows` rows (default 10,000); the page says when the limit was reached, so add a `LIMIT` or a `WHERE`. Only one page (`db_page_rows`, default 100) is written to the page at a time. A statement stops after `db_timeout` seconds (default 30). Set these in your user `config.json`.
 
 ## Result tabs
