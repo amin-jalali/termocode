@@ -123,6 +123,7 @@ type Config struct {
 	Include []string `json:"include,omitempty"` // files copied into each new worktree
 	Shared  []string `json:"shared,omitempty"`  // files or folders linked to the main checkout's
 	Setup   []string `json:"setup,omitempty"`   // shell lines run in the new worktree (after trust)
+	Archive []string `json:"archive,omitempty"` // shell lines run in a worktree before its folder goes (after trust)
 }
 
 // LoadConfig reads the config of the main checkout top (comments

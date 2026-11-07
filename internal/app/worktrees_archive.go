@@ -10,6 +10,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/worktreeform"
 	"github.com/amin-jalali/termocode/internal/worktrees"
 )
 
@@ -44,6 +45,7 @@ type wtArchivePending struct {
 	title    string
 	main     wtArchiveTarget
 	children []wtArchiveTarget
+	script   wtArchiveScript // the repository's archive script (CMP-15)
 }
 
 // wtArchivePrepMsg: the dirty counts are read; the card can open.
@@ -57,10 +59,11 @@ type wtArchivePrepMsg struct {
 
 // wtArchivedMsg is the end of an archive or a restore.
 type wtArchivedMsg struct {
-	restore bool
-	title   string
-	paths   []string
-	err     error
+	restore      bool
+	title        string
+	paths        []string
+	scriptFailed []string // the archive script lines that failed (CMP-15)
+	err          error
 }
 
 // Tests swap these: the git calls of archive and restore.
@@ -158,7 +161,7 @@ func (m *Model) onWTArchivePrep(msg wtArchivePrepMsg) tea.Cmd {
 	if m.confirmOpen {
 		return nil
 	}
-	p := &wtArchivePending{title: msg.title, main: msg.main}
+	p := &wtArchivePending{title: msg.title, main: msg.main, script: m.wtArchiveScriptLoad()}
 	var b strings.Builder
 	branch := msg.main.branch
 	if branch == "" {
@@ -189,6 +192,14 @@ func (m *Model) onWTArchivePrep(msg wtArchivePrepMsg) tea.Cmd {
 		b.WriteString("\n\nChanged files in " + strings.Join(dirty, ", ") + ": archive " + map[bool]string{true: "it", false: "them"}[len(dirty) == 1] + " on " +
 			map[bool]string{true: "its", false: "their"}[len(dirty) == 1] + " own.")
 	}
+	if len(p.script.lines) > 0 {
+		if p.script.trusted {
+			b.WriteString("\n\nThe archive script of " + worktreeform.ConfigFile + " runs first in the folder:" + wtArchiveScriptLines(p.script))
+		} else {
+			b.WriteString("\n\nThe archive script of " + worktreeform.ConfigFile + " is not trusted:" + wtArchiveScriptLines(p.script) +
+				"\n\nArchive skips it. Trust script and archive runs it first, with your environment minus termocode's secrets; a changed file asks again.")
+		}
+	}
 	var buttons []confirm.Button
 	title := "Archive " + msg.title + "?"
 	switch {
@@ -199,6 +210,13 @@ func (m *Model) onWTArchivePrep(msg wtArchivePrepMsg) tea.Cmd {
 			confirm.Button{ID: "all", Title: "Archive with its " + wtChildWord(len(p.children)), Style: confirm.StylePrimary})
 	default:
 		buttons = append(buttons, confirm.Button{ID: "archive", Title: "Archive", Style: confirm.StylePrimary})
+	}
+	if len(p.script.lines) > 0 && !p.script.trusted {
+		tb := confirm.Button{ID: "trust", Title: "Trust script and archive"}
+		if n := msg.main.dirty; n > 0 {
+			tb = confirm.Button{ID: "trust", Title: "Trust script and archive anyway (loses " + wtPlural(n, "changed file") + ")", Style: confirm.StyleDestructive}
+		}
+		buttons = append(buttons, tb)
 	}
 	m.wt.archiveAsk = p
 	m.confirm = confirm.Risky(title, b.String(), confirm.Button{ID: "cancel", Title: "Cancel"}, buttons...)
@@ -212,8 +230,13 @@ func (m *Model) onWTArchivePrep(msg wtArchivePrepMsg) tea.Cmd {
 func (m *Model) answerWTArchive(id string) tea.Cmd {
 	p := m.wt.archiveAsk
 	m.wt.archiveAsk = nil
-	if p == nil || (id != "archive" && id != "all") {
+	if p == nil || (id != "archive" && id != "all" && id != "trust") {
 		return nil
+	}
+	if id == "trust" && p.script.hash != "" {
+		sess := loadSession()
+		sess.WorktreeSetupTrusted = p.script.hash
+		saveSession(sess)
 	}
 	targets := []wtArchiveTarget{p.main}
 	if id == "all" {
@@ -225,10 +248,14 @@ func (m *Model) answerWTArchive(id string) tea.Cmd {
 // wtArchiveRun removes the folders and marks them archived.
 func (m *Model) wtArchiveRun(title string, targets []wtArchiveTarget) tea.Cmd {
 	root, common, off := m.wtRootDir(), m.wt.common, m.wt.off
+	script := m.wtArchiveScriptLoad()
 	return func() tea.Msg {
 		msg := wtArchivedMsg{title: title}
 		for _, t := range targets {
 			if !off {
+				if f := wtRunArchiveScript(script, common, t.path); f != "" {
+					msg.scriptFailed = append(msg.scriptFailed, f)
+				}
 				if err := wtRemoveRun(root, t.path, t.dirty > 0); err != nil {
 					msg.err = err
 					return msg
@@ -293,6 +320,9 @@ func (m *Model) onWTArchived(msg wtArchivedMsg) tea.Cmd {
 	}
 	if len(msg.paths) > 0 {
 		m.wt.cursorPath = msg.paths[0]
+	}
+	if d := wtArchiveScriptToast(msg.scriptFailed); d != "" {
+		return tea.Batch(m.pushToastDetail(toast.Warn, "Archived "+msg.title+"; its archive script failed", d), m.worktreesReload())
 	}
 	detail := "x on its row brings the folder back from its branch."
 	if msg.restore {

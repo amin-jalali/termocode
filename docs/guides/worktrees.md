@@ -75,7 +75,8 @@ A repository can list files for each new worktree in
 {
   "include": [".env", ".env.local"], // copied
   "shared": ["node_modules"],        // linked to the main checkout's folder
-  "setup": ["pnpm install"]          // run in the new worktree
+  "setup": ["pnpm install"],         // run in the new worktree
+  "archive": ["docker compose down"] // run before a worktree's folder goes
 }
 ```
 
@@ -90,6 +91,14 @@ A repository can list files for each new worktree in
   run in a terminal tab of their own inside the new worktree, so you can
   watch them, with your environment minus termocode's secrets. The card
   shows `setup ● running`, `✓` or `✗`; `L` shows the tab.
+- **archive** commands run in a worktree's folder just before Archive,
+  Delete or Clean up removes it, for example to stop its services and
+  free its ports. They share the trust of this file with **setup**. The
+  archive card shows them; while the file is not trusted, **Archive**
+  skips them and **Trust script and archive** runs them first. The delete
+  and clean up cards say whether they run. Each command may take two
+  minutes at most. A failing command never keeps the folder: the removal
+  goes on and a warning names the command and its log file.
 
 ## Child worktrees
 
