@@ -64,6 +64,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Review Waiting Plan | `ai-plan-review` |   |   |
 | AI: Run Next Plan in a Worktree, Then Ship… / Off | `ai-plan-worktree` |   |   |
 | AI: Runs | `ai-runs` |   |   |
+| AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
 | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | `ai-ship` |   |   |
@@ -98,6 +99,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
+| Agent: Search All Sessions… | `agent-sessions-search-all` |   | `words in every project's agent sessions` |
 | Agent: Search Sessions… | `agent-sessions-search` |   | `words in this project's agent sessions` |
 | Agent: Sessions… | `agent-sessions` |   | `resume or read a past session` |
 | Agent: Start Claude Code | `agent-start-claude` |   |   |
