@@ -19,15 +19,20 @@ type webConfig struct {
 	MaxHours    int
 	OpenBrowser bool
 	MaxViewers  int
-	Tailnet     bool     // web_listen: "tailnet" (WEB-31)
-	RequireTOTP bool     // web_require_totp (WEB-48)
-	Problems    []string // one line per bad value, for a warning toast
+	Tailnet     bool // web_listen: "tailnet" (WEB-31)
+	RequireTOTP bool // web_require_totp (WEB-48)
+	// The door (MOB-56, plan §3.7): how many projects the paired gateway
+	// keeps open at once, and when a project the phone opened headless
+	// stops again.
+	ProjectsMax        int      // web_projects_max
+	ProjectIdleMinutes int      // web_project_idle_minutes
+	Problems           []string // one line per bad value, for a warning toast
 }
 
 // webSettings reads and checks the web settings from config.json.
 func webSettings() webConfig {
 	s := loadSettings()
-	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4}
+	c := webConfig{On: true, IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4, ProjectsMax: 4, ProjectIdleMinutes: 60}
 	switch strings.ToLower(strings.TrimSpace(s.WebPanel)) {
 	case "", "auto":
 	case "off":
@@ -60,6 +65,8 @@ func webSettings() webConfig {
 	intIn("web_idle_minutes", s.WebIdleMinutes, 1, 120, &c.IdleMinutes)
 	intIn("web_max_hours", s.WebMaxHours, 1, 24, &c.MaxHours)
 	intIn("web_max_viewers", s.WebMaxViewers, 1, 8, &c.MaxViewers)
+	intIn("web_projects_max", s.WebProjectsMax, 1, 8, &c.ProjectsMax)
+	intIn("web_project_idle_minutes", s.WebProjectIdleMinutes, 5, 240, &c.ProjectIdleMinutes)
 	if s.WebRequireTOTP != nil {
 		c.RequireTOTP = *s.WebRequireTOTP
 	}
