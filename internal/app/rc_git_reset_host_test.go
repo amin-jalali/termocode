@@ -9,8 +9,14 @@ import (
 )
 
 // rcResetAnswer is the fake container repo for the reset commands: HEAD
-// and HEAD~1 exist, two commits leave on a reset, one file changed.
-func rcResetAnswer(argv []string) (string, int) {
+// and HEAD~1 exist, two commits leave on a reset, one file changed. The
+// stash commands share one stash list.
+func rcResetAnswer() func([]string) (string, int) {
+	stashes := &rcStashRepo{}
+	return func(argv []string) (string, int) { return rcResetLine(stashes, argv) }
+}
+
+func rcResetLine(stashes *rcStashRepo, argv []string) (string, int) {
 	line := strings.Join(argv, " ")
 	switch {
 	case line == "git rev-parse --verify -q HEAD":
@@ -26,14 +32,14 @@ func rcResetAnswer(argv []string) (string, int) {
 	case strings.HasPrefix(line, "git reset"), strings.HasPrefix(line, "git update-ref"):
 		return "", 0
 	}
-	return (&rcStashRepo{}).answer(argv)
+	return stashes.answer(argv)
 }
 
 // rcResetWorkspace is a container workspace that answers the resets.
 func rcResetWorkspace(t *testing.T) (*Model, *rcHost) {
 	t.Helper()
 	ws, h := newRCWorkspace(t, fstest.MapFS{"remote.go": {Data: []byte("package main\n")}})
-	h.exec.answer = rcResetAnswer
+	h.exec.answer = rcResetAnswer()
 	setProcWorkspace(t, ws)
 	m := &Model{ws: ws}
 	if !m.gitEnsureLoaded() {
