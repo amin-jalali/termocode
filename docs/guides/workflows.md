@@ -106,6 +106,37 @@ The AI never saves a file by itself:
   to undo it.
 - `p` pauses a running workflow before its next step; `p` again goes on.
 
+## Agent environment: setup, secrets, network
+
+`.termocode/agent-env.json` sets what the `agent` steps get. Create a
+starter file with **AI: Agent Environment…** (a Cancel-first card).
+
+```jsonc
+{
+  "setup": ["npm ci"],          // once per worktree, before the agent
+  "setup_timeout": "10m",
+  "env": {"NODE_ENV": "test"},  // plain values: setup and agent
+  "secrets": {"NPM_TOKEN": "npm.token"}, // from the secret store: setup only
+  "network": {"mode": "allow", "allow": ["example.com", "*.github.com"], "package_managers": true}
+}
+```
+
+- **Setup** runs in the item's worktree, once per run, before the
+  agent. A failed setup stops that item. Read-only agent steps skip the
+  setup (they run in your own folder).
+- **Secrets** come only from termocode's secret store. Only the setup
+  commands see them; the agent never does. A missing secret stops the
+  item. Values are hidden as `***` in setup output.
+- **Network**: `open` (no rule, the default), `off` (only the agent's
+  own service), `package-managers` (the package registries), or `allow`
+  (your list; `*.example.com` means any sub-domain). A local proxy keeps
+  the rule for the agent and its tools through `HTTP(S)_PROXY`. Blocked
+  hosts show in the run log and in the step's output. A tool that
+  ignores the proxy settings is not held: this is not an OS sandbox.
+- The file is code from the repo. Workflows with agent steps start only
+  after you trust its exact content (**AI: Agent Environment…**, *Not in
+  this project* is first). A changed file asks again.
+
 ## Schedules
 
 Add a `schedule` to the file and press `o` to turn it on. The card says

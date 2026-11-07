@@ -1913,6 +1913,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
 | `agent-usage-plans` | Agent: Usage Plans | never | a read-only screen for the user; the AI reads the numbers through usage_summary |
 | `ai-add` | AI: Add AI… | never | a card for the user; keys and connected AIs stay with the user (the AI shows them with ai_view_open) |
+| `ai-agent-env` | AI: Agent Environment… (setup, secrets, network rule for workflow agents) | never | opens a trust card that only the user can answer; setup commands run on the user's computer |
 | `ai-agent-hooks` | Agent: State Hooks… (exact working / waiting / done) | never | it changes other apps' config files: the user decides after the preview |
 | `ai-agent-packs` | Agent: Agent Packs… (install agents, skills and rules for Claude Code / Codex) | never | it writes many files into other apps' config folders: the user decides after the preview |
 | `ai-agents` | AI: Toggle Agents Panel | auto |   |

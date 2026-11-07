@@ -229,6 +229,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAISkillsTrust(id), true
 	case confirmKindAIHooksTrust: // ai_hooks.go
 		return m.answerAIHooksTrust(id), true
+	case confirmKindAgentEnvCreate: // ai_agent_env.go
+		return m.answerAgentEnvCreate(id), true
+	case confirmKindAgentEnvTrust: // ai_agent_env.go
+		return m.answerAgentEnvTrust(id), true
 	case confirmKindAIWebAdd: // ai_web_presets.go
 		return m.answerAIWebPreset(id), true
 	case confirmKindAIShipPush, confirmKindAIShipPR: // ai_ship.go
@@ -356,6 +360,10 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAISkillsTrust("") // Esc: no answer, the message goes back
 	case confirmKindAIHooksTrust:
 		return m.answerAIHooksTrust("") // Esc: no answer, the message goes back
+	case confirmKindAgentEnvCreate:
+		return m.answerAgentEnvCreate("") // Esc: Cancel
+	case confirmKindAgentEnvTrust:
+		return m.answerAgentEnvTrust("") // Esc: the old answer stays
 	case confirmKindAIShipPush, confirmKindAIShipPR:
 		return m.answerAIShipCard(m.confirmKind, "") // Esc: the ship stops
 	case confirmKindAIPlanShip:

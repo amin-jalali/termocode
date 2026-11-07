@@ -697,6 +697,22 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 	gh := newWFXGitHub(st.ws)
 	cfg.PR, cfg.GitHubComment, cfg.Find = gh.PR, gh.Comment, gh.Find
 	cfg.ParallelMax, cfg.AgentSandbox = wfxRunSettings()
+	if !dry && wfxHasAgentStep(e.File) {
+		ae, why := agentEnvForRun(st.ws)
+		if why != "" {
+			return "", nil, nil, errors.New(why)
+		}
+		if ae != nil {
+			cfg.AgentEnvFile = ae
+			if src.Secrets != nil {
+				cfg.AgentSecrets = src.Secrets
+			}
+			cfg.OnNetwork = func(step, item string, blocked []string) {
+				l.addLine(step + " " + item + ": " + "network rule blocked " + strings.Join(blocked, ", "))
+				send(wfxLineMsg{id: id})
+			}
+		}
+	}
 	h, err := wire.Start(context.Background(), cfg)
 	if err != nil {
 		return "", nil, nil, err

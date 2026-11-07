@@ -109,12 +109,13 @@ type aiState struct {
 	// (OMX-28), so a missing ast-grep does not open it again.
 	astGrepAsked bool
 	// skillsTrust is the open project-skills card (ai_skills.go).
-	skillsTrust *aiSkillsTrustPending
-	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
-	webPreset   string               // the server the open add card is for (ai_web_presets.go)
-	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
-	ship        *aiShip              // the running ship loop (ai_ship.go)
-	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
+	skillsTrust  *aiSkillsTrustPending
+	hooksTrust   *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
+	agentEnvHash string               // the agent environment the open trust card shows (ai_agent_env.go)
+	webPreset    string               // the server the open add card is for (ai_web_presets.go)
+	recall       *aiRecallState       // lesson recall per chat (ai_recall.go)
+	ship         *aiShip              // the running ship loop (ai_ship.go)
+	ctl          *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).
@@ -575,6 +576,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-doctor", "AI: Doctor", ""},
 		{"ai-skills", "AI: Skills…", ""},
 		{"ai-hooks", "AI: Hooks…", ""},
+		{"ai-agent-env", "AI: Agent Environment… (setup, secrets, network rule for workflow agents)", ""},
 		{"ai-web-tools", "AI: Web Tools… (fetch, search, docs, browser)", ""},
 		{"ai-ship", "AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop", ""},
 		{"ai-plan-worktree", "AI: Run Next Plan in a Worktree, Then Ship… / Off", ""},
@@ -759,6 +761,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAISkills(), true
 	case "ai-hooks":
 		return m.openAIHooks(), true
+	case "ai-agent-env":
+		return m.openAgentEnv(), true
 	case "ai-web-tools":
 		return m.openAIWebTools(), true
 	case "ai-ship":

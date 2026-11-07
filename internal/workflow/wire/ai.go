@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
+	"github.com/amin-jalali/termocode/internal/agentenv"
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clistep"
@@ -54,6 +56,17 @@ type Steps struct {
 	AllowFlagged func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error)
 	// OnAgent gets the agents' events (live output); may be nil.
 	OnAgent func(step, item string, e ai.Event)
+	// AgentEnvFile is the project's trusted .termocode/agent-env.json
+	// (nil: none): setup once per worktree, plain values, setup secrets
+	// from AgentSecrets, the network rule (CMP-63, agentenv.go).
+	AgentEnvFile *agentenv.Env
+	AgentSecrets agentenv.Getter
+	// OnNetwork hears the hosts the network rule blocked in one agent
+	// run; may be nil.
+	OnNetwork func(step, item string, blocked []string)
+
+	setupMu   sync.Mutex
+	setupRuns map[string]*setupRun
 }
 
 // Plan runs a plan step over every item.
