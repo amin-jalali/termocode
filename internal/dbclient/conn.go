@@ -165,6 +165,8 @@ func defaultPort(d string) int {
 		return 8123
 	case "cassandra":
 		return 9042
+	case "trino", "presto":
+		return 8080
 	}
 	return 0
 }

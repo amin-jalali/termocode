@@ -365,8 +365,8 @@ func dbConnName(c dbclient.Conn) string {
 	return c.ID
 }
 func dbConnDetail(c dbclient.Conn) string {
-	if c.Driver == "sqlite" {
-		return "sqlite"
+	if c.Driver == "sqlite" || c.Driver == "duckdb" {
+		return c.Driver
 	}
 	d := c.Driver
 	if _, ok := dbclient.PresetByID(c.Preset); ok {
@@ -668,7 +668,7 @@ func dbConnectCommand(c dbclient.Conn, root, password string, generation uint64,
 func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, sec dbSSHSecrets) (dbclient.Session, *dbclient.Tunnel, error) {
 	c = dbResolveConnPaths(c, root, dbSSHHome())
 	var tun *dbclient.Tunnel
-	if c.SSH != nil && c.Driver != "sqlite" {
+	if c.SSH != nil && c.Driver != "sqlite" && c.Driver != "duckdb" {
 		var err error
 		tun, err = dbOpenTunnel(ctx, c, sec)
 		if err != nil {
@@ -709,6 +709,15 @@ func dbOpenDriverSession(ctx context.Context, c dbclient.Conn, root, password st
 	case "libsql":
 		// A remote libSQL server (DBX-64): the password is its token.
 		sess, err = dbclient.NewLibSQLSession(c, password)
+	case "duckdb":
+		// The duckdb client on a local file (DBX-65), like sqlite3.
+		if !filepath.IsAbs(c.Path) {
+			c.Path = filepath.Join(root, c.Path)
+		}
+		sess, err = dbclient.NewDuckDBSession(ctx, c)
+	case "trino", "presto":
+		// The coordinator's REST protocol (DBX-65); Database is the catalog.
+		sess, err = dbclient.NewTrinoSession(ctx, c, password)
 	default:
 		err = os.ErrInvalid
 	}
@@ -756,7 +765,7 @@ func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64,
 		defer cancel()
 		start := time.Now()
 		var err error
-		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "cassandra" && c.Driver != "libsql" {
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" && c.Driver != "clickhouse" && c.Driver != "cassandra" && c.Driver != "libsql" && c.Driver != "duckdb" && c.Driver != "trino" && c.Driver != "presto" {
 			err = fmt.Errorf("this connection type is not available yet")
 		}
 		var sess dbclient.Session

@@ -858,7 +858,7 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 		req.Database = ""
 	}
 	if n.kind == dbNodeDatabase {
-		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse") {
+		if c, ok := s.connection(n.conn); ok && (c.Driver == "mysql" || c.Driver == "clickhouse" || c.Driver == "duckdb" || c.Driver == "trino" || c.Driver == "presto") {
 			req.Database, req.Schema = n.name, n.name
 		} else if ok && c.Driver == "sqlite" {
 			// One file, one session: main and attached databases share it.
@@ -992,10 +992,13 @@ func dbTypePickerItems(remote bool) []picker.Item {
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
+		{ID: "duckdb", Title: "DuckDB", Hint: "a file on this computer, needs the duckdb client"},
+		{ID: "trino", Title: "Trino", Hint: "REST protocol, default port 8080"},
+		{ID: "presto", Title: "Presto", Hint: "REST protocol, default port 8080"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
 	if remote {
-		items = []picker.Item{items[0], items[1], items[3]}
+		items = []picker.Item{items[0], items[1], items[3], items[5], items[6]}
 	}
 	for _, p := range dbclient.MySQLPresets() {
 		items = append(items, picker.Item{ID: "preset:" + p.ID, Title: p.Title, Hint: p.Hint})
@@ -1035,7 +1038,7 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
 	s.addFromURL = kind == "url"
-	s.remoteAdd, s.remoteNext = s.remoteNext && kind != "sqlite" && kind != "url", false
+	s.remoteAdd, s.remoteNext = s.remoteNext && kind != "sqlite" && kind != "duckdb" && kind != "url", false
 	switch kind {
 	case "postgres":
 		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "postgres", 5432, "postgres", "postgres"
@@ -1059,6 +1062,18 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	case "redis":
 		s.pendingConn.Driver, s.pendingConn.Port = "redis", 6379
 		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
+	case "duckdb":
+		s.pendingConn.Driver = "duckdb"
+		cmd := m.databaseAddPrompt(promptKindDBSQLitePath, "DuckDB file", "Database file:", "data.duckdb", false)
+		m.prompt.SetNote("Runs the duckdb command line client; each run stands alone (no transactions).")
+		return cmd
+	case "trino", "presto":
+		title := "Trino coordinator"
+		if kind == "presto" {
+			title = "Presto coordinator"
+		}
+		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User = kind, 8080, "termocode"
+		return m.databaseAddPrompt(promptKindDBHost, title, "Host name or address:", "localhost", false)
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)
 	}
@@ -1092,9 +1107,17 @@ func (m *Model) databaseRetestPending() tea.Cmd {
 	return dbTestCommandSSH(m.databases.pendingConn, m.databases.pendingPassword, m.databases.root, m.databases.generation, m.databases.pendingSSH, false)
 }
 
+// dbFileEngineName is the display name of a file database driver.
+func dbFileEngineName(driver string) string {
+	if driver == "duckdb" {
+		return "DuckDB"
+	}
+	return "SQLite"
+}
+
 func dbConnectionID(c dbclient.Conn) string {
 	base := c.Database
-	if c.Driver == "sqlite" {
+	if c.Driver == "sqlite" || c.Driver == "duckdb" {
 		base = strings.TrimSuffix(filepath.Base(c.Path), filepath.Ext(c.Path))
 	}
 	if base == "" {
@@ -1635,6 +1658,9 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		if s.pendingConn.Driver == "redis" {
 			return m.databaseAddPrompt(promptKindDBName, "Database index", "Database index (0-15 on most servers):", strconv.Itoa(s.pendingConn.DB), false)
 		}
+		if d := s.pendingConn.Driver; d == "trino" || d == "presto" {
+			return m.databaseAddPrompt(promptKindDBName, "Catalog", "Catalog (for example hive or iceberg):", s.pendingConn.Database, false)
+		}
 		return m.databaseAddPrompt(promptKindDBName, "Database name", "Database:", s.pendingConn.Database, false)
 	case promptKindDBName:
 		if s.pendingConn.Driver == "redis" {
@@ -1657,7 +1683,7 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 	case promptKindDBSQLitePath:
 		path := strings.TrimSpace(value)
 		if path == "" {
-			return m.pushToastDetail(toast.Warn, "Database file is needed", "Enter a path to a SQLite file.")
+			return m.pushToastDetail(toast.Warn, "Database file is needed", "Enter a path to a "+dbFileEngineName(s.pendingConn.Driver)+" file.")
 		}
 		if !filepath.IsAbs(path) {
 			path = filepath.Clean(filepath.Join(s.root, path))

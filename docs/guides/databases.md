@@ -99,11 +99,13 @@ With no connections yet, the view lists the suggestions and offers **a add** and
 
 ## Add a connection
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, or **From a URL**.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, DuckDB, Trino, Presto, or **From a URL**.
 
 The MySQL family has presets on the MySQL driver: MariaDB, TiDB (port 4000), PlanetScale / Vitess and Amazon Aurora (MySQL) (both with TLS), and SingleStore. A preset fills the port, user and SSL mode, shows a short note on what differs from MySQL, and is saved as `"preset"` in the connection; the tree shows its name next to the host.
 
 - **A server type** asks for the host, port, user and database. Then it asks for a masked password.
+- **DuckDB** asks for a database file, like SQLite. It runs the `duckdb` command line client (install it and put it on `PATH`); each run stands alone, so there are no transactions and `:memory:` keeps nothing between runs. Read-only runs use `-readonly`. The tree shows the schemas of the file.
+- **Trino** and **Presto** use the coordinator's REST protocol (port 8080). The database step asks for the **catalog** (for example `hive`); the tree shows its schemas. A password is sent only over TLS. `USE` changes the catalog and schema for the next runs, transactions use `START TRANSACTION`, and read-only runs use `START TRANSACTION READ ONLY`.
 - **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
 
 Termocode tests the connection first. If the test works, choose **Save to project** (no password in the file) or **Save for me only**. If it fails, a list offers **Set password…**, **Use an SSH tunnel…**, **SSL settings…**, **Test again** or **Cancel**.

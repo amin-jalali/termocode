@@ -24,6 +24,10 @@ func DialectFor(driver string) Dialect {
 		return SQLiteDialect{}
 	case "clickhouse":
 		return ClickHouseDialect{}
+	case "duckdb":
+		return DuckDBDialect{}
+	case "trino", "presto":
+		return TrinoDialect{}
 	}
 	return nil
 }
