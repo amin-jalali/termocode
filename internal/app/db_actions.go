@@ -90,6 +90,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-chart", Title: "Databases: Chart Result…"},
 		{ID: "db-copy-as", Title: "Databases: Copy Result As…"},
 		{ID: "db-export-tables", Title: "Databases: Export Tables to Folder…"},
+		{ID: "db-run-to-file", Title: "Databases: Run Query to File…", Hint: "every row of the SELECT at the cursor, straight into a file"},
 		{ID: "db-sessions", Title: "Databases: Show Sessions and Locks"},
 		{ID: "db-server-info", Title: "Databases: Show Server Info"},
 		{ID: "db-cancel-session", Title: "Databases: Cancel Session Query…"},
@@ -298,6 +299,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseSearchStart()), true
 	case "db-export-tables":
 		return tea.Batch(open, m.databaseExportTablesStart()), true
+	case "db-run-to-file":
+		return m.databaseRunToFileStart(), true
 	case "db-import-new-table":
 		return tea.Batch(open, m.databaseNewTableStart()), true
 	case "db-run-dump":
