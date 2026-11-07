@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/amin-jalali/termocode/internal/kube/kubetest"
 )
 
@@ -208,7 +210,16 @@ func TestTerminalsBackAfterRestart(t *testing.T) {
 	if tm.Has("first-21") {
 		t.Errorf("the old output came back; only the folder should:\n%s", tm.Screen())
 	}
-	tm.ClickText("sub-rst$") // the editor has the focus at start: into the terminal
+	// The editor has the focus at start: click the prompt, into the
+	// terminal. Not by the folder name: macOS bash 3.2's prompt is
+	// "bash-3.2$", without it (the echo below checks the folder).
+	ls := tm.Lines()
+	for y := len(ls) - 1; y >= 0; y-- {
+		if l := strings.TrimRight(ls[y], " "); strings.HasSuffix(l, "$") {
+			tm.Click(ansi.StringWidth(l)-1, y)
+			break
+		}
+	}
 	tm.settle()
 	tm.Type("echo in-$(basename \"$PWD\")\r")
 	tm.WaitText("in-sub-rst", uiTimeout)
