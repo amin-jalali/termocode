@@ -2165,6 +2165,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-ai-pr-text` | Git: Write Pull Request Description with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-review-branch` | Git: AI Review Branch (Pull Request) | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-review-changes` | Git: AI Review My Changes | never | fills the user's chat box; the user reads it and sends it |
+| `git-ai-security-branch` | Git: AI Security Review Branch (Threat Model) | never | fills the user's chat box; the user reads it and sends it |
+| `git-ai-security-changes` | Git: AI Security Review My Changes (Threat Model) | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-stash` | Git: Stash with AI Message | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-auto-fetch` | Git: Toggle Auto Fetch | never | starts a timer that talks to the remote; only the user turns it on |
 | `git-autosquash` | Git: Autosquash fixup! Commits… | never | rewrites the branch history; only the user starts a rebase |
@@ -2309,6 +2311,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-tag-details` | Git: Show Tag Details… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-tag-push` | Git: Push Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-threat-model` | Git: Edit Threat Model… | never | opens the threat model for the user; a card asks before it writes the file |
 | `git-uncommit` | Git: Uncommit Last Commit (Keep Changes) | confirm (git) |   |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-unshallow` | Git: Fetch Full History (Unshallow) | confirm (git) |   |
