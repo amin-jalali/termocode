@@ -798,7 +798,7 @@ func TestHTTPImportOpenAPI(t *testing.T) {
 	files["api/spec.yaml"] = "openapi: 3.0.0\ninfo:\n  title: Pet Store\nservers:\n  - url: https://pets.example.com\npaths:\n  /pets/{id}:\n    get:\n      operationId: getPet\n"
 	d := New(t, Options{W: 120, H: 34, Nvim: true, Files: files})
 	d.Palette("http-import-openapi")
-	if !d.WaitForText("OpenAPI file:", 3*time.Second) {
+	if !d.WaitForText("OpenAPI file or URL:", 3*time.Second) {
 		t.Fatalf("no prompt:\n%s", screen(d))
 	}
 	d.Type("api/spec.yaml")
@@ -816,7 +816,7 @@ func TestHTTPImportOpenAPI(t *testing.T) {
 	}
 	// A second import never overwrites the first file or the env file.
 	d.Palette("http-import-openapi")
-	if !d.WaitForText("OpenAPI file:", 3*time.Second) {
+	if !d.WaitForText("OpenAPI file or URL:", 3*time.Second) {
 		t.Fatalf("no prompt:\n%s", screen(d))
 	}
 	d.Type("api/spec.yaml")
