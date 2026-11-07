@@ -332,6 +332,8 @@ func paletteItems() []picker.Item {
 		{ID: "git-blame-commit", Title: "Git: Open Commit of Line"},                  // git_blame_view.go
 		{ID: "git-blame-before", Title: "Git: Blame Before This Change"},             // git_blame_view.go
 		{ID: "git-line-history", Title: "Git: Show Line History"},                    // git_blame_view.go
+		{ID: "git-line-lens", Title: "Git: Toggle Line History Lens"},                // git_line_lens.go
+		{ID: "git-block-history", Title: "Git: Show History of Block"},               // git_line_lens.go
 		{ID: "git-rev-prev", Title: "Git: Open Previous Revision of File"},           // git_blame_view.go
 		{ID: "git-rev-next", Title: "Git: Open Next Revision of File"},               // git_blame_view.go
 		{ID: "git-history", Title: "Git: Show File History..."},
@@ -850,6 +852,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.gitOpenLineCommit()
 	case "git-blame-before":
 		return m.gitBlameBefore()
+	case "git-line-lens":
+		return m.toggleLineLens()
+	case "git-block-history":
+		return m.gitBlockHistoryPicker()
 	case "git-line-history":
 		return m.gitLineHistoryPicker()
 	case "git-rev-prev":

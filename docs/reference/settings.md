@@ -120,6 +120,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | --- | --- | --- | --- |
 | `git_status_blame` | bool | `false` | The status bar shows who last changed the cursor line, and when. Click it to open the commit. Toggle with Git: Toggle Blame in Status Bar. |
 | `git_inline_blame` | bool | `false` | Author, age and subject of the cursor line's commit at the end of the line. Toggle with Git: Toggle Inline Blame. |
+| `git_line_lens` | bool | `false` | A dim line above the cursor's block (the run of non-blank lines) names who changed it last, when, the commit, and how many authors and commits made it. Toggle with Git: Toggle Line History Lens; Git: Show History of Block lists the block's commits. |
 | `git_blame_ignore_whitespace` | bool | `false` | Blame ignores whitespace-only changes (git blame -w). Set with Git: Blame Options…. |
 | `git_blame_detect_moves` | bool | `false` | Blame keeps the first commit of lines that were moved or copied (git blame -M -C). Set with Git: Blame Options…. |
 | `worktree_dir` | string | `""` | The folder Worktree: New… puts new worktrees in, one folder per branch. Empty: `<repo>.worktrees` next to the repository. `~` is your home folder; a relative path is relative to the repository. Read when the form opens. |
