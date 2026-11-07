@@ -39,6 +39,9 @@ If no browser opens (for example, on a computer with no desktop),
 termocode copies the link for you and shows it in a toast. Paste it into
 a browser. Click the toast to copy it again.
 
+If the panel runs already, `termocode web` opens a new link, like
+**Web: Open in Browser**. From a script it only says that the panel runs.
+
 When a script runs `termocode web` (not you, typing in a terminal),
 termocode shows a card on the laptop first. **Not now** is first and is
 what `Enter` and `Esc` do. `termocode web --yes` skips the card only when

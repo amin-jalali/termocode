@@ -358,9 +358,21 @@ web	trim-whitespace	cmd:trimWhitespace
 web	unfold-all	cmd:unfoldAll
 web	uppercase	cmd:upperCase
 web	view-output	cmd:tasks
+web	view/Databases	view:db
+web	view/Files	view:files
+web	view/Git	view:git
+web	view/Itermoc	view:itermoc
+web	view/Kubernetes	view:kube
+web	view/Run	view:run
+web	view/Runs	cmd:runs
+web	view/Services	view:services
+web	view/Settings	view:settings
+web	view/Tests	view:testing
 web	web-pair	op:web.pair_ask
 web	web-share	op:web.grant_ask
 web	web-totp	op:web.totp_check
+web	workflow-stop	op:workflows.stop
+web	workflows	view:workflows
 web	workspace-add-folder	cmd:addFolder
 web	workspace-remove-folder	cmd:removeFolder
 web	zen-mode	cmd:zen
@@ -432,12 +444,18 @@ excluded	transfer-cancel	covered by the page: cancel is a button on the web tran
 excluded	transfer-reveal	laptop only: shows a folder on the laptop disk
 excluded	update-check	laptop only: updates the termocode binary, never from a remote page
 excluded	update-rollback	laptop only: updates the termocode binary, never from a remote page
+excluded	view/Search	removed from the laptop activity bar (the enum value is kept for back-compat only)
 excluded	web-copy-link	laptop only: copies to the laptop clipboard
 excluded	web-devices	laptop only: the paired devices (list, rename, revoke) are managed on the laptop; a web page never sees or changes who may come in
 excluded	web-start	laptop only: starts the web panel itself
 excluded	web-start-panel	laptop only: starts the web panel itself
 excluded	web-stop	laptop only: stops the web panel itself
+excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
+excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
+excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
+missing	git-ai-changelog	Git|S
 missing	git-ai-commit-msg	Git|S
+missing	git-ai-compose	Git|S
 missing	git-ai-explain-changes	Git|S
 missing	git-ai-explain-line	Git|S
 missing	git-ai-pr-text	Git|S
@@ -451,21 +469,30 @@ missing	git-blame-annotate	Git|S
 missing	git-blame-before	Git|S
 missing	git-blame-commit	Git|S
 missing	git-blame-options	Git|S
+missing	git-branch-delete	Git|S
+missing	git-branch-from	Git|S
+missing	git-branch-rename	Git|S
 missing	git-cherry-pick-branch	Git|S
 missing	git-clean-untracked	Git|S
+missing	git-clone-shallow	Git|S
 missing	git-cmd-log	Git|S
 missing	git-co-author	Git|S
+missing	git-commit-author	Git|S
 missing	git-commit-checks	Git|S
 missing	git-commit-edit	Git|S
+missing	git-commit-empty	Git|S
 missing	git-commit-history	Git|S
+missing	git-commit-marked	Git|S
 missing	git-commit-push	Git|S
 missing	git-commit-sync	Git|S
 missing	git-compare-branches	Git|S
+missing	git-contributors	Git|S
 missing	git-copy-commit-link	Git|S
 missing	git-copy-line-link	Git|S
 missing	git-diff-clipboard	Git|S
 missing	git-diff-merge-parent	Git|S
 missing	git-fetch-all	Git|S
+missing	git-gist	Git|S
 missing	git-goto-commit	Git|S
 missing	git-graph-all	Git|S
 missing	git-graph-head	Git|S
@@ -476,6 +503,7 @@ missing	git-incoming	Git|S
 missing	git-init	Git|S
 missing	git-inline-blame	Git|S
 missing	git-issues	Git|S
+missing	git-lfs-files	Git|S
 missing	git-line-history	Git|S
 missing	git-log-folder	Git|S
 missing	git-log-search	Git|S
@@ -504,6 +532,7 @@ missing	git-rev-next	Git|S
 missing	git-rev-prev	Git|S
 missing	git-signing-toggle	Git|S
 missing	git-skip-hooks	Git|S
+missing	git-split-guide	Git|S
 missing	git-stash-options	Git|S
 missing	git-status-blame	Git|S
 missing	git-submodule-update	Git|S
@@ -513,20 +542,7 @@ missing	git-tag-delete-remote	Git|S
 missing	git-tag-details	Git|S
 missing	git-tag-push	Git|S
 missing	git-uncommit	Git|S
-web	view/Databases	view:db
-web	view/Files	view:files
-web	view/Git	view:git
-web	view/Itermoc	view:itermoc
-web	view/Kubernetes	view:kube
-web	view/Run	view:run
-web	view/Runs	cmd:runs
-web	view/Services	view:services
-web	view/Settings	view:settings
-web	view/Tests	view:testing
-excluded	view/Search	removed from the laptop activity bar (the enum value is kept for back-compat only)
-missing	git-branch-delete	Git|S
-missing	git-branch-from	Git|S
-missing	git-branch-rename	Git|S
+missing	git-unshallow	Git|S
 missing	git-upstream-set	Git|S
 missing	git-upstream-unset	Git|S
 missing	http-copy-snippet	HTTP|S
@@ -534,14 +550,9 @@ missing	local-history	Git|S
 missing	local-history-deleted	Git|S
 missing	local-history-label	Git|S
 missing	workflow-dry-run	Workflows|S
-excluded	workflow-edit-file	laptop only: workflow files are edited and trusted on the laptop (plan §5.7)
-excluded	workflow-enable	laptop only: turning a schedule on changes what runs unattended (plan §5.7)
-excluded	workflow-undo-write	laptop only: an undo writes to outside systems again, behind the laptop's card (plan §5.7)
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
 missing	workflow-run	Workflows|S
-web	workflow-stop	op:workflows.stop
-web	workflows	view:workflows
 missing	worktree-add-folder	Worktrees|M
 missing	worktree-adopt	Worktrees|M
 missing	worktree-archive	Worktrees|M
