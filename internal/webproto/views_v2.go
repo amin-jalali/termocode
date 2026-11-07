@@ -318,7 +318,9 @@ func init() {
 	})
 
 	// containers (stop and remove wait for a laptop card: their ops say so)
-	idParam := func(label string) ViewParam { return ViewParam{ID: "id", Label: label, Kind: ParamString, Required: true} }
+	idParam := func(label string) ViewParam {
+		return ViewParam{ID: "id", Label: label, Kind: ParamString, Required: true}
+	}
 	registerViews(
 		ViewDef{ID: "containers", Feature: "containers", Title: "Containers", Source: ViewSource{Op: OpContainersList},
 			Fields: []ViewField{vf("name", "Container", FieldText, "sfd"), vf("state", "State", FieldState, "sfd"),
@@ -470,8 +472,8 @@ func init() {
 	// gathers them (SearchHits) before the rows are made.
 	registerViews(
 		ViewDef{ID: "search", Feature: "search", Title: "Search", Source: ViewSource{Op: OpSearchRun},
-			Params: []ViewParam{{ID: "query", Label: "Find", Kind: ParamString, Required: true}, {ID: "path", Label: "In files", Kind: ParamPath}},
-			Fields: []ViewField{vf("text", "Line", FieldText, "fd"), vf("path", "File", FieldPath, "sfd"), vf("line", "Line no.", FieldNum, "s")},
+			Params:  []ViewParam{{ID: "query", Label: "Find", Kind: ParamString, Required: true}, {ID: "path", Label: "In files", Kind: ParamPath}},
+			Fields:  []ViewField{vf("text", "Line", FieldText, "fd"), vf("path", "File", FieldPath, "sfd"), vf("line", "Line no.", FieldNum, "s")},
 			Layouts: []string{list, table}, Default: ViewSpec{Group: "path", Limit: 100}},
 	)
 	viewSourceArgs[OpSearchRun] = func(a map[string]string) any {

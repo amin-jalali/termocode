@@ -24,7 +24,10 @@ func TestSCMNvimBlameViews(t *testing.T) {
 		t.Fatalf("no blame in the status bar:%s", dump(d))
 	}
 	d.Palette("git-inline-blame")
-	if !d.WaitFor(func() bool { d.render(); return strings.Contains(lineWith(text(d), "package main"), "Test, 3 days ago · init") }, 5*time.Second) {
+	if !d.WaitFor(func() bool {
+		d.render()
+		return strings.Contains(lineWith(text(d), "package main"), "Test, 3 days ago · init")
+	}, 5*time.Second) {
 		t.Errorf("no inline blame on the cursor line:%s", dump(d))
 	}
 	d.Palette("git-blame-annotate")

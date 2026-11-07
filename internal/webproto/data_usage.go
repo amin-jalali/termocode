@@ -29,7 +29,7 @@ type AIUsageLine struct {
 	Input   int     `json:"input"`  // input tokens
 	Output  int     `json:"output"` // output tokens
 	CostUSD float64 `json:"cost_usd,omitempty"`
-	Priced  bool    `json:"priced,omitempty"`                                              // CostUSD counts a known price
+	Priced  bool    `json:"priced,omitempty"`  // CostUSD counts a known price
 	Billing string  `json:"billing,omitempty"` // per token, subscription, mixed or price unknown
 }
 
