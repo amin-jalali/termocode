@@ -58,7 +58,7 @@ func testCA(t *testing.T, leafCN string, client bool) (pool *x509.CertPool, caPE
 		pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: kDER})
 }
 
-func writeFile(t *testing.T, dir, name string, b []byte) string {
+func writePEM(t *testing.T, dir, name string, b []byte) string {
 	t.Helper()
 	p := filepath.Join(dir, name)
 	if err := os.WriteFile(p, b, 0o600); err != nil {
@@ -100,7 +100,7 @@ func TestSendCustomCA(t *testing.T) {
 	if r := send(t, c, "GET", srv.URL, "", Hooks{}); r.ErrKind != ErrKindTLS {
 		t.Fatalf("an unknown CA must fail: %v %q", r.ErrKind, r.Err)
 	}
-	ca := writeFile(t, t.TempDir(), "ca.pem", caPEM)
+	ca := writePEM(t, t.TempDir(), "ca.pem", caPEM)
 	r := send(t, c, "GET", srv.URL, "", Hooks{CACert: ca})
 	if r.Status != 200 || string(r.Body) != "ok" {
 		t.Fatalf("custom CA: %d %q %s", r.Status, r.Body, r.Err)
@@ -120,8 +120,8 @@ func TestSendClientCert(t *testing.T) {
 	srv.StartTLS()
 	defer srv.Close()
 	dir := t.TempDir()
-	cert := writeFile(t, dir, "me.crt", certPEM)
-	key := writeFile(t, dir, "me.key", keyPEM)
+	cert := writePEM(t, dir, "me.crt", certPEM)
+	key := writePEM(t, dir, "me.key", keyPEM)
 	c := New(Options{})
 	if r := send(t, c, "GET", srv.URL, "", Hooks{Insecure: true}); r.Err == "" {
 		t.Fatalf("no client cert must fail, got %d", r.Status)
@@ -131,7 +131,7 @@ func TestSendClientCert(t *testing.T) {
 		t.Fatalf("client cert: %d %q %s", r.Status, r.Body, r.Err)
 	}
 	// One PEM file with both the cert and the key.
-	both := writeFile(t, dir, "me.pem", append(append([]byte{}, certPEM...), keyPEM...))
+	both := writePEM(t, dir, "me.pem", append(append([]byte{}, certPEM...), keyPEM...))
 	r = send(t, c, "GET", srv.URL, "", Hooks{Insecure: true, ClientCert: both})
 	if r.Status != 200 {
 		t.Fatalf("combined PEM: %d %s", r.Status, r.Err)
@@ -142,7 +142,7 @@ func TestSendTLSFileErrors(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer srv.Close()
 	dir := t.TempDir()
-	bad := writeFile(t, dir, "bad.pem", []byte("not a pem "+"sk-"+"test-secret"))
+	bad := writePEM(t, dir, "bad.pem", []byte("not a pem "+"sk-"+"test-secret"))
 	c := New(Options{})
 	for name, h := range map[string]Hooks{
 		"missing CA":     {CACert: filepath.Join(dir, "nope.pem")},
