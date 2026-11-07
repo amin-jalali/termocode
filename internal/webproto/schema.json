@@ -4607,6 +4607,22 @@
       ],
       "additionalProperties": true
     },
+    "AIRaceAgent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": true
+    },
     "AISnap": {
       "type": "object",
       "properties": {
@@ -4639,6 +4655,12 @@
         },
         "provider": {
           "type": "string"
+        },
+        "raceAgents": {
+          "items": {
+            "$ref": "#/defs/AIRaceAgent"
+          },
+          "type": "array"
         },
         "worktrees": {
           "type": "boolean"

@@ -28,6 +28,8 @@ const (
 	MaxAIProfiles = 64
 	MaxAIModels   = 32
 	MaxAIName     = 128
+	// MaxAIRaceAgents caps the agents a race may use (MOBUX-8).
+	MaxAIRaceAgents = 16
 )
 
 // AISnap is the ai topic.
@@ -41,6 +43,16 @@ type AISnap struct {
 	Inline     bool        `json:"inline"`    // ai_inline: ghost text while typing
 	NextEdit   bool        `json:"nextEdit"`  // ai_next_edit
 	Worktrees  bool        `json:"worktrees"` // ai_worktrees: parallel steps in their own worktree
+	// RaceAgents are the outside agents a race may use (MOBUX-8): the
+	// ones installed on the laptop whose screen termocode reads.
+	RaceAgents []AIRaceAgent `json:"raceAgents,omitempty"`
+}
+
+// AIRaceAgent is one agent a race may use: its id for ai.race_start and
+// its title. Nothing else about it (its path, its login) is sent.
+type AIRaceAgent struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
 }
 
 // AIProfile is one agent profile: where it comes from and, for a

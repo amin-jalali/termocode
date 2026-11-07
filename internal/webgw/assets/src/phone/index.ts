@@ -8,5 +8,6 @@ export { PhoneChip, PhoneChips } from "./Chip";
 export { Composer, type Attached } from "./Composer";
 export { Row, Rows } from "./Row";
 export { PhoneSheet, safeFirst, type SheetAction } from "./Sheet";
+export { TaskSheet } from "./TaskSheet";
 export { StatusMark } from "./Mark";
 export { BOARD_ORDER, STATUS, type Status, type StatusLook } from "./status";

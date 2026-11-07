@@ -1579,6 +1579,12 @@ export interface AISnap {
   inline: boolean;
   nextEdit: boolean;
   worktrees: boolean;
+  raceAgents?: AIRaceAgent[];
+}
+
+export interface AIRaceAgent {
+  id: string;
+  title: string;
 }
 
 export interface AIProfile {
