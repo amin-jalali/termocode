@@ -55,6 +55,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: MCP: Switch Profile… (servers and tools for this chat) | `ai-mcp-profile` |   |   |
 | AI: MCP: Signed-in Services… (one list, sign out) | `ai-mcp-accounts` |   |   |
+| AI: Memory: Learn New Lessons On/Off (use only) | `ai-memory-learn` |   |   |
 | AI: Memory: Turn On/Off | `ai-memory-toggle` |   |   |
 | AI: Memory… | `ai-memory` |   |   |
 | AI: Move MCP Call to Background (Ctrl+B in the chat) | `ai-mcp-background` |   |   |
@@ -122,6 +123,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: Chat View | `agent-chat-view` |   | `chat / terminal of an agent tab` |
 | Agent: Chat with an ACP Agent… / End | `acp-thread` |   |   |
 | Agent: Hibernate or Wake | `agent-hibernate-toggle` |   | `stop an idle agent tab, keep its session` |
+| Agent: Loop Until Check Passes… | `agent-goal-loop` |   | `run a check after each turn, retry` |
+| Agent: Profiles… | `agent-profiles` |   | `model, plan mode, permissions, env` |
 | Agent: Import Session into AI Chat | `agent-import-session` |   | `the open session view, as a chat` |
 | Agent: Race Compare | `agent-race-compare` |   |   |
 | Agent: Race… | `agent-race` |   |   |
@@ -137,6 +140,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Agent: State Hooks… (exact working / waiting / done) | `ai-agent-hooks` |   |   |
 | Agent: Toggle Auto-Accept | `agent-auto-accept-toggle` |   | `answer its permission prompts: yes, once` |
 | Agent: Switch Account… | `agent-account-switch` |   | `go on as another account after a limit` |
+| Agent: Stop Check Loop | `agent-goal-stop` |   | `end the running check loop` |
 | Agent: Toggle Auto-Continue | `agent-auto-continue-toggle` |   | `type continue when the limit resets` |
 | Agent: Usage Plans | `agent-usage-plans` |   | `plan share, reset, last limit` |
 
@@ -735,6 +739,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preview: Dev Server URLs… | `preview-dev-servers` |   |   |
 | Preview: Open Newest Dev Server | `preview-open-newest` |   |   |
 
+## Prompt Actions
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Prompt Actions: Edit File | `prompt-actions-edit` |   |    |
+| Prompt Actions: Export… | `prompt-actions-export` |   |    |
+| Prompt Actions: Import… | `prompt-actions-import` |   |    |
+| Prompt Actions: New… | `prompt-actions-new` |   |    |
+| Prompt Actions: Run… | `prompt-actions` |   | `saved prompts` |
+
 ## Run
 
 | Title | ID | Key | Hint |
@@ -771,6 +785,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Snippets: Browse... | `snippet-picker` |   |   |
 | Snippets: Manage... | `snippets-manage` |   |   |
+
+## Spec
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Spec: New Bugfix… | `spec-new-bugfix` |   |   |
+| Spec: New… | `spec-new` |   |   |
+| Spec: Open… | `spec-open` |   |   |
 
 ## Tab
 
@@ -937,6 +959,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Ship Selected (commit, push, PR, merge, archive)… | `worktree-ship` |   |   |
 | Worktree: Preview Agent Grid | `worktree-preview-grid` |   |   |
 | Worktree: Preview Agent Screen | `worktree-preview` |   |   |
+| Worktree: Restack Selected onto Parent… | `worktree-restack` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Dependency Graph | `worktree-deps` |   |   |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |

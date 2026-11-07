@@ -75,3 +75,7 @@ body { background: var(--bg-panel); }
 .ph-kit > .ph-block { margin: 0 var(--p-gutter); }
 .ph-kit-shell { width: 360px; max-width: 100%; }
 .ph-kit-shell .ph-shell { height: 640px; }
+/* The Customize sheet's sample view block (MOBUX-16). */
+.kit-custblock { max-width: 24rem; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--bg-panel); }
+.kit-custhead { display: flex; align-items: center; justify-content: space-between; padding: 0 0 0 var(--s3); border-bottom: 1px solid var(--border); }
+.kit-custasked { margin: 0; padding: var(--s2); font-family: var(--font-mono); font-size: var(--fs-hint); overflow-wrap: anywhere; }

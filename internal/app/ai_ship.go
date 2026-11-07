@@ -82,7 +82,7 @@ type aiShipReal struct {
 
 func (o aiShipReal) Probe(ctx context.Context, branch string) (aiShipProbe, error) {
 	p := aiShipProbe{branch: branch}
-	base, err := ghci.DefaultBranch(ctx, o.run, o.dir)
+	base, _, err := prBaseFor(o.dir, func() (string, error) { return ghci.DefaultBranch(ctx, o.run, o.dir) })
 	if err != nil {
 		return p, err
 	}

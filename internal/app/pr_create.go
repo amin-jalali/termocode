@@ -16,7 +16,8 @@ import (
 
 // Git: Create Pull Request…: from the current branch. The title is the
 // first commit subject and the body lists all subjects; the base is the
-// default branch. The user edits the title, then a card shows the whole
+// default branch, or the parent's branch in a stacked child worktree
+// (CMP-17). The user edits the title, then a card shows the whole
 // request with Cancel first and a Create / Create as Draft choice. A
 // branch that is not pushed is refused with an offer to push it (a plain
 // push, never forced).
@@ -36,6 +37,7 @@ func prCreatePaletteItems() []picker.Item {
 // prCreatePrepMsg is what the branch looks like.
 type prCreatePrepMsg struct {
 	branch, base string
+	stacked      bool // base is the parent's branch of a stacked child worktree (CMP-17)
 	subjects     []string
 	unpushed     int
 	pushed       bool   // the branch has an upstream
@@ -52,14 +54,14 @@ func (m *Model) prCreateCmd() tea.Cmd {
 	}
 	branch := m.gitBranch.Name
 	return m.prRun(func(ctx context.Context, run ghci.Runner, dir string) tea.Msg {
-		base, err := ghci.DefaultBranch(ctx, run, dir)
+		base, stacked, err := prBaseFor(dir, func() (string, error) { return ghci.DefaultBranch(ctx, run, dir) })
 		if err != nil {
 			return prCreatePrepMsg{branch: branch, err: err}
 		}
 		n, pushed := git.Unpushed(dir)
 		subjects, err := git.BranchSubjects(dir, base)
 		tpl, tplName, _ := ghci.PRTemplate(dir)
-		return prCreatePrepMsg{branch: branch, base: base, subjects: subjects, unpushed: n, pushed: pushed, err: err,
+		return prCreatePrepMsg{branch: branch, base: base, stacked: stacked, subjects: subjects, unpushed: n, pushed: pushed, err: err,
 			template: tpl, templateName: tplName}
 	})
 }
@@ -70,6 +72,8 @@ func (m *Model) onPRCreatePrep(msg prCreatePrepMsg) tea.Cmd {
 		return m.prFailToast("Could not prepare the pull request", msg.err)
 	}
 	switch {
+	case msg.branch == msg.base && msg.stacked:
+		return m.aiInfo("You are on " + msg.base + ", the branch of the parent worktree: switch to the child's branch first")
 	case msg.branch == msg.base:
 		return m.aiInfo("You are on " + msg.base + ", the default branch: switch to a feature branch first")
 	case !msg.pushed || msg.unpushed > 0:
@@ -80,6 +84,7 @@ func (m *Model) onPRCreatePrep(msg prCreatePrepMsg) tea.Cmd {
 	title, body := ghci.Compose(msg.subjects)
 	m.prS().create = &ghci.NewPR{Title: title, Body: ghci.WithTemplate(msg.template, body), Base: msg.base, Branch: msg.branch}
 	m.prS().createTemplate = msg.templateName
+	m.prS().createStacked = msg.stacked
 	m.prompt = prompt.New("Create Pull Request", "Title:", title)
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
@@ -126,7 +131,11 @@ func (m *Model) showPRCreateCard() {
 	if p == nil {
 		return
 	}
-	text := "Title: " + p.Title + "\n" + p.Branch + " → " + p.Base + "\n"
+	text := "Title: " + p.Title + "\n" + p.Branch + " → " + p.Base
+	if m.prS().createStacked {
+		text += " (stacked: the branch of the parent worktree)"
+	}
+	text += "\n"
 	text += "Reviewers: " + orNone(strings.Join(p.Reviewers, ", ")) + "\n"
 	text += "Labels: " + orNone(strings.Join(p.Labels, ", ")) + "\n"
 	if t := m.prS().createTemplate; t != "" {

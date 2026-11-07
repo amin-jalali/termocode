@@ -60,7 +60,11 @@ func TestAIAgentRaceStartTool(t *testing.T) {
 	}
 	for name, bad := range map[string]map[string]any{
 		"one lane":      {"task": "x", "agents": []any{"claude"}},
-		"five lanes":    {"task": "x", "agents": []any{"claude", "codex", "claude", "codex", "claude"}},
+		"nine lanes":    {"task": "x", "agents": []any{"claude", "codex", "claude", "codex", "claude", "codex", "claude", "codex", "claude"}},
+		"fanout nine":   {"task": "x", "fanout": "claude:5,codex:4"},
+		"fanout bad":    {"task": "x", "fanout": "claude:x"},
+		"both lists":    {"task": "x", "agents": []any{"claude", "codex"}, "fanout": "claude:2"},
+		"no lanes":      {"task": "x"},
 		"not installed": {"task": "x", "agents": []any{"claude", "gemini"}},
 		"no rules":      {"task": "x", "agents": []any{"claude", "amp"}},
 		"no task":       {"task": "  ", "agents": []any{"claude", "codex"}},
@@ -73,5 +77,35 @@ func TestAIAgentRaceStartTool(t *testing.T) {
 		if strings.Contains(res, "abcdefghijklmnop") {
 			t.Errorf("%s: the refusal repeats the secret", name)
 		}
+	}
+}
+
+// Spec (CMP-18): agent_race_start takes a fan-out count ("claude:3,codex:2")
+// instead of the agents list; the card names each agent with its count and
+// the race starts the agent once per lane.
+func TestAIAgentRaceStartFanout(t *testing.T) {
+	m := aiWriteModel(t)
+	defer func(f func(string) (string, error)) { agentLookPath = f }(agentLookPath)
+	agentLookPath = func(bin string) (string, error) {
+		switch bin {
+		case "claude", "codex":
+			return "/usr/bin/" + bin, nil
+		}
+		return "", errors.New("not found")
+	}
+	var started [][]string
+	defer func() { aiRaceStartHook = nil }()
+	aiRaceStartHook = func(_ *Model, task, verify string, lanes []string) {
+		started = append(started, append([]string{task}, lanes...))
+	}
+	args := map[string]any{"task": "make the toast queue thread-safe", "fanout": "claude:3, codex:2"}
+	res, card := aiWriteTurn(t, m, "agent_race_start", args, "allow")
+	for _, want := range []string{"5 lanes", "Claude Code ×3, Codex ×2"} {
+		if !strings.Contains(card.body, want) {
+			t.Errorf("card has no %q: %q", want, card.body)
+		}
+	}
+	if len(started) != 1 || strings.Join(started[0], "|") != "make the toast queue thread-safe|claude|claude|claude|codex|codex" {
+		t.Fatalf("started %v; result %q", started, res)
 	}
 }

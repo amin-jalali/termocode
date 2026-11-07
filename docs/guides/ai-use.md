@@ -438,6 +438,30 @@ To get files out:
 - **AI: Export Chat as Markdown** writes the chat to
   `ai-chat-<date>.md` in the workspace and opens it.
 
+### Prompt actions (saved prompts)
+
+Save a prompt you send often and run it again with one pick.
+
+- **Prompt Actions: Run…** lists your saved prompts by group. Enter
+  runs the one you pick.
+- An action runs in the **AI chat**, or it is typed into the **active
+  terminal tab** and Enter is pressed. Use the terminal for a coding
+  agent that waits in that tab.
+- **Prompt Actions: New…** asks a name (`Group/Name`; the group is
+  optional), the prompt and where it runs. The prompt starts with what
+  is in the chat input. Write `\n` for a new line. The same name
+  changes that action.
+- **Prompt Actions: Export…** writes them to a JSON file. It asks before
+  it replaces a file.
+- **Prompt Actions: Import…** reads such a file. A card shows what is
+  new and what replaces an action with the same name. **Cancel** is
+  first; nothing is written until you pick **Import**. Nothing runs
+  when you import.
+- **Prompt Actions: Edit File** opens `prompt-actions.json` in the
+  termocode config folder. Edit or delete actions there.
+
+The AI never runs a prompt action by itself.
+
 ## Bugfix specs
 
 A bugfix spec says what a fix must do and what it must not break.
@@ -1117,6 +1141,26 @@ to the quick model, and the lessons again before they are saved and before
 they go into a prompt. A lesson that still holds a secret is dropped.
 Lesson text never goes to the logs or the AI audit channel; the audit line
 only says `memory · 2 lessons saved`.
+
+**Kinds.** Each lesson has a kind: a plain **lesson**, a **decision** (a
+choice you made for the project, like a library or a style) or a
+**correction** (you told the AI it was wrong and what to do instead).
+Corrections are saved by themselves after the turn, like other lessons.
+The kind shows in **AI: Memory…** and in the prompt, and it is one
+`kind:` line in `lessons.md` (you can add or change it by hand).
+
+**Levels.** Memory has three levels per workspace: **use and learn** (on),
+**use only** and **off**. **Use only** keeps sending the saved lessons and
+recalls them, but writes no new ones and makes no quick model request.
+**AI: Memory: Learn New Lessons On/Off (use only)** switches between use
+and learn and use only; from off it turns memory on in use only. **AI:
+Memory: Turn On/Off** turns it off from either level.
+
+**Shared with outside agents.** termocode's MCP server offers the lessons
+as a read-only resource, `termocode://memory/lessons` (Markdown), so Claude
+Code, Codex or another agent connected to termocode reads the same notes
+(see [Agents](agents.md)). It is redacted like the prompt, and while memory
+is off it holds only a note. Outside agents can not write lessons.
 
 The AI has no memory tool: it can not turn memory on or off or forget a
 lesson. It can change `lessons.md` only like any file, through the review

@@ -37,6 +37,7 @@ type Meta struct {
 	Pinned   bool      `json:"pinned,omitempty"`
 	Order    int       `json:"order,omitempty"`  // the user's place in its group, 1 first; 0 = the automatic sort (CMP-27)
 	Parent   string    `json:"parent,omitempty"` // the worktree it was made from (path)
+	Base     string    `json:"base,omitempty"`   // a stacked child: the parent's branch when it was made (CMP-17)
 	Agent    string    `json:"agent,omitempty"`  // the agent preset started in it
 	Issue    int       `json:"issue,omitempty"`
 	PR       int       `json:"pr,omitempty"`

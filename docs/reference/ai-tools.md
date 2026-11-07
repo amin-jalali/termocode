@@ -119,7 +119,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`service_connect`](#service_connect) | confirm (always asks): Deny (first) · Open wizard (you sign in yourself) | no | Open the Connect wizard for an MCP service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack, or one in mcp.json) so the user can sign in. |
 | [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
 | [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, amp, goose, qwen, crush, copilot, kimi, droid, pi, kiro, auggie, grok, cline, continue, vibe) in a new terminal tab, with termocode's tools when the agent supports it. |
-| [`agent_race_start`](#agent_race_start) | confirm (always asks): Deny (first) · Start race | no | Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
+| [`agent_race_start`](#agent_race_start) | confirm (always asks): Deny (first) · Start race | no | Race one task across 2-8 lanes of outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). |
 | [`agent_split_start`](#agent_split_start) | confirm (always asks): Deny (first) · Start split | no | Coordinate outside coding agents (claude, codex, gemini, opencode, aider): split one goal into 2-4 independent parts, each done by its own agent in its own git worktree and terminal tab, at the same time. |
 | [`agent_split_status`](#agent_split_status) | auto | no | The newest split started with agent_split_start (or the one named): the goal, each lane's id, agent, state (starting, working, waiting, done, stopped, failed, merged, discarded), part, changed files and branch. |
 | [`mcp_server_add`](#mcp_server_add) | confirm (always asks) | no | Propose adding one MCP server to the user's mcp.json, from an mcpServers block the user gave (config) or a remote MCP server URL (url). |
@@ -1441,7 +1441,7 @@ Start an outside coding agent (claude, codex, gemini, opencode, aider, cursor, a
 
 ### agent_race_start
 
-Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). The user confirms first.
+Race one task across 2-8 lanes of outside coding agents (claude, codex, gemini, opencode, aider): each works in its own git worktree and terminal tab; the user compares the lanes and merges the winner (Agent: Race Compare). The user confirms first.
 
 **Gate:** confirm (always asks): Deny (first) · Start race
 
@@ -1449,7 +1449,8 @@ Race one task across 2-4 outside coding agents (claude, codex, gemini, opencode,
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `agents` | array | yes | 2 to 4 agents, one lane each (an agent may run twice) |
+| `agents` | array |   | 2 to 8 agents, one lane each (an agent may repeat); or use fanout |
+| `fanout` | string |   | instead of agents: lanes per agent, e.g. claude:3,codex:2 (2 to 8 lanes in all) |
 | `task` | string | yes | what every agent should do (one paragraph) |
 | `verify` | string |   | optional command run in each finished lane when the user asks, e.g. go test ./... |
 
@@ -2204,7 +2205,10 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `agent-auto-continue-toggle` | Agent: Toggle Auto-Continue | never | AI provider, credentials and approvals stay with the user; it lets termocode type into an outside agent's tab |
 | `agent-chat-view` | Agent: Chat View | never | shows an outside agent's own session file; only the user opens it (owner decision D1) |
 | `agent-diff-comments` | Agent: Send Diff Comments… | never | it sends the user's own review comments to an agent: only the user sends them, after the preview |
+| `agent-goal-loop` | Agent: Loop Until Check Passes… | never | AI provider, credentials and approvals stay with the user; it lets termocode run a command and type into an outside agent's tab |
+| `agent-goal-stop` | Agent: Stop Check Loop | never | AI provider, credentials and approvals stay with the user; the check loop is the user's own |
 | `agent-hibernate-toggle` | Agent: Hibernate or Wake | never | AI provider, credentials and approvals stay with the user; it stops or starts an outside agent's process |
+| `agent-profiles` | Agent: Profiles… | never | AI provider, credentials and approvals stay with the user; opens a picker or prompt that only the user can answer; use a typed tool |
 | `agent-race` | Agent: Race… | never | opens a picker or prompt that only the user can answer; use a typed tool (agent_race_start) |
 | `agent-race-compare` | Agent: Race Compare | auto |   |
 | `agent-sessions` | Agent: Sessions… | never | opens a picker or prompt that only the user can answer; use a typed tool; it reads the outside agents' own session files (owner decision D1) |
@@ -2272,6 +2276,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-mcp-updates` | AI: MCP: Check for Updates (catalog servers) | never | AI provider, credentials and approvals stay with the user |
 | `ai-memory` | AI: Memory… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `ai-memory-learn` | AI: Memory: Learn New Lessons On/Off (use only) | never | AI provider, credentials and approvals stay with the user |
 | `ai-memory-toggle` | AI: Memory: Turn On/Off | never | AI provider, credentials and approvals stay with the user |
 | `ai-model-slot-add` | AI: Add Model Slot… | never | a form for the user; keys and config.json stay with the user (the AI shows the AI PROVIDERS section with ai_view_open) |
 | `ai-models-edit` | AI: Edit Model Slots | never | AI provider, credentials and approvals stay with the user |
@@ -2747,6 +2752,11 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `preview-open-newest` | Preview: Open Newest Dev Server | never | acts outside the IDE (OS shell, file manager or browser) |
 | `problems` | Go to Problem... | never | opens a picker or prompt that only the user can answer; use a typed tool (diagnostics) |
 | `problems-panel` | View: Problems | auto |   |
+| `prompt-actions` | Prompt Actions: Run… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-edit` | Prompt Actions: Edit File | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-export` | Prompt Actions: Export… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-import` | Prompt Actions: Import… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
+| `prompt-actions-new` | Prompt Actions: New… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user picks which saved prompt runs |
 | `quick-open` | Go to File... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file) |
 | `quit` | File: Quit | never | quits termocode |
 | `redis-delete-key` | Databases: Delete Redis Key… | never | opens a picker or prompt that only the user can answer; use a typed tool (redis_command) |
@@ -2798,6 +2808,9 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `sort-asc` | Edit: Sort Lines Ascending | confirm (fileWrite) |   |
 | `sort-desc` | Edit: Sort Lines Descending | confirm (fileWrite) |   |
 | `spaces-to-tabs` | Edit: Convert Spaces to Tabs | confirm (fileWrite) |   |
+| `spec-new` | Spec: New… | never | opens a picker or prompt that only the user can answer; use a typed tool; write the spec files with the file tools |
+| `spec-new-bugfix` | Spec: New Bugfix… | never | opens a picker or prompt that only the user can answer; use a typed tool; write the spec files with the file tools |
+| `spec-open` | Spec: Open… | never | opens a picker or prompt that only the user can answer; use a typed tool; only the user approves a spec phase |
 | `split-horizontal` | Editor: Split Down | auto |   |
 | `split-vertical` | Editor: Split Right | auto |   |
 | `tabs-to-spaces` | Edit: Convert Tabs to Spaces | confirm (fileWrite) |   |
@@ -2917,6 +2930,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `worktree-pr` | Worktree: Show Pull Request of Selected | auto |   |
 | `worktree-preview` | Worktree: Preview Agent Screen | auto |   |
 | `worktree-preview-grid` | Worktree: Preview Agent Grid | auto |   |
+| `worktree-restack` | Worktree: Restack Selected onto Parent… | confirm (always asks) |   |
 | `worktree-setup-log` | Worktree: Show Setup Log | auto |   |
 | `worktree-ship` | Worktree: Ship Selected (commit, push, PR, merge, archive)… | never | it commits, pushes, opens and merges a pull request: the user starts it |
 | `worktree-sleep` | Worktree: Sleep or Wake Selected | confirm (always asks) |   |
@@ -2932,8 +2946,10 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | --- | --- | --- |
 | `agent_accounts` | never | AI provider, credentials and approvals stay with the user; the labels of the outside agents' account folders |
 | `agent_auto_continue` | never | AI provider, credentials and approvals stay with the user; it lets termocode type continue into an outside agent's tab after its usage limit resets |
+| `agent_goal_max_tokens` | never | AI provider, credentials and approvals stay with the user; it caps the user's own check loop |
 | `agent_hibernate_minutes` | never | AI provider, credentials and approvals stay with the user; it lets termocode stop idle outside agents |
 | `agent_os_sandbox` | never | the OS sandbox around outside agents; only the user changes it |
+| `agent_profiles` | never | AI provider, credentials and approvals stay with the user; how the outside agents start: model, permission mode and env |
 | `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
 | `ai_approval_rules` | never | AI provider, credentials and approvals stay with the user; the AI never writes its own approval rules |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |

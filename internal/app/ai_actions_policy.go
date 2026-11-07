@@ -748,6 +748,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// forgetting lessons is the user's.
 	"ai-memory":        aiNever(aiNoPicker),
 	"ai-memory-toggle": aiNever(aiNoAIConfig),
+	"ai-memory-learn":  aiNever(aiNoAIConfig),
 	// Skills (OM-4): the AI loads them with skill_load; the picker, new
 	// files and trusting a project's skills are the user's.
 	"ai-skills":       aiNever(aiNoPicker),

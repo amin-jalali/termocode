@@ -78,6 +78,7 @@ type wtState struct {
 	sleepAsk   *wtSleepPending   // the open sleep card (worktrees_sleep.go)
 	archiveAsk *wtArchivePending // the open archive card (worktrees_archive.go)
 	move       *wtMovePending    // the open move, unpack or pull card (worktrees_move.go)
+	restackAsk *wtRestackPending // the open restack card (worktrees_stack.go)
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
 	preview    *wtPreviewState   // the open agent preview (worktrees_preview.go)
@@ -294,6 +295,8 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTArchivePrep(msg), true
 	case wtArchivedMsg:
 		return m.onWTArchived(msg), true
+	case wtRestackedMsg:
+		return m.onWTRestacked(msg), true
 	case wtCleanupPrepMsg:
 		return m.onWTCleanupPrep(msg), true
 	case wtCleanedMsg:

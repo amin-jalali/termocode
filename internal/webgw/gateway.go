@@ -204,7 +204,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	last.Store(time.Now().UnixNano())
 	var control *Control
 	if pairing != nil {
-		control = &Control{Passkeys: pairing.cfg.Passkeys, Tokens: tokens, Store: devices, Audit: audit, Now: now,
+		control = &Control{Passkeys: pairing.cfg.Passkeys, Tokens: tokens, Store: devices, Audit: audit, Now: now, Laptop: laptopName(),
 			Ask: func(ctx context.Context, a webproto.GrantAskArgs) error {
 				c := ctlRef.Load()
 				if c == nil {

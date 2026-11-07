@@ -129,6 +129,11 @@ type Model struct {
 	aiChatHits          []aiChatHit // AI: Search Chat History… (ai_chat_search.go, CMP-30)
 	aiChatHitsCapped    bool
 	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
+	// CMP-19 (agent_goal.go): the tab the start card is about, the last
+	// check command, and check task buffer → agent tab buffer.
+	agentGoalPending int
+	agentGoalLast    string
+	agentGoalVerify  map[int]int
 	// CMP-88 (ai_chat_comments.go): the chat AI: Chat Comments… lists and
 	// the comment its card is about.
 	aiChatCommentsFor string
@@ -642,6 +647,8 @@ type Model struct {
 	pendingKubeHelm kubeHelmTarget
 	// wt is the WORKTREES view (worktrees_state.go).
 	wt *wtState
+	// specOpen is the spec whose card is open (specs_ui.go).
+	specOpen string
 	// databases is lazy and holds idle sessions only while the view is open.
 	databases *dbState
 	// itermoc is the Itermoc view (profiles, models, services, outside

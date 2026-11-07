@@ -2,6 +2,7 @@
 // tasks (chat WEB-14, tree WEB-16, files WEB-18, terminal WEB-20, git
 // WEB-23); until then each shows its loading and empty states.
 import { h } from "preact";
+import { useEffect } from "preact/hooks";
 import { prefs, setPref, type Direction, type Language, type Theme } from "../lib/prefs";
 import { go, route } from "../lib/router";
 import { layout } from "../lib/layout";
@@ -26,7 +27,11 @@ import { ServicesView } from "./run/ServicesView";
 import { KubeView } from "./run/KubeView";
 import { View } from "./View";
 import { FileView } from "./FileView";
+import { home as phone, homeFailed as phoneFailed, loadHome } from "../lib/lazy";
+import { Button } from "../ui/Button";
 import { TreeView } from "./Files";
+import { PhoneHost } from "./PhoneHost";
+import { layout } from "../lib/layout";
 
 export { ChatView } from "./Chat";
 
@@ -39,8 +44,30 @@ export { TermView } from "./Term";
 
 export { GitView } from "./git/GitView";
 
+/** ToolsView is the "All tools" menu (MOBUX-5), from the phone chunk
+ * (home.js since the merge), loaded on first open. */
+function ToolsView() {
+  const m = phone.value;
+  useEffect(() => {
+    if (!phone.peek()) loadHome().catch(() => undefined);
+  }, []);
+  if (m) return <m.AllToolsView />;
+  return (
+    <View tab="more" name="tools" title={t("tools.title")}>
+      {phoneFailed.value ? (
+        <Button kind="neutral" onClick={() => loadHome().catch(() => undefined)}>
+          {t("retry")}
+        </Button>
+      ) : (
+        <p class="empty">{t("loading")}</p>
+      )}
+    </View>
+  );
+}
+
 export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
+  if (sub === "tools") return <ToolsView />;
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
   if (sub === "runs") return <RunsView />;
@@ -55,6 +82,7 @@ export function MoreView() {
   if (sub === "debug") return <DebugView />;
   if (sub === "services") return <ServicesView />;
   if (sub === "kube") return <KubeView />;
+  if (sub === "phone" && layout.value !== "desktop") return <PhoneHost />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -122,11 +150,22 @@ export function MoreView() {
           <button type="button" class="more-link" data-sub="testing" onClick={() => go({ tab: "more", rest: "testing", query: {} })}>
             {t("act.testing")}
           </button>
+          <button type="button" class="more-link more-tools" data-sub="tools" onClick={() => go({ tab: "more", rest: "tools", query: {} })}>
+            <span>
+              <span aria-hidden="true">☰ </span>
+              {t("tools.title")}
+            </span>
+          </button>
         </nav>
         <section class="group" aria-labelledby="g-phone">
           <h2 class="group-title" id="g-phone">
             {t("more.this_phone")}
           </h2>
+          {layout.value !== "desktop" && (
+            <button type="button" class="more-link" data-sub="phone" onClick={() => go({ tab: "more", rest: "phone", query: {} })}>
+              {t("more.this_phone")} ›
+            </button>
+          )}
           <div class="field">
             <span class="field-label">{t("theme")}</span>
             <Segmented<Theme> label={t("theme")} value={p.theme} choices={themes} onChange={(v) => setPref("theme", v)} />

@@ -25,9 +25,9 @@ const (
 	// worktrees, the data grid, settings, the git commands). Only screens
 	// 1200 px and wider load it, after the page; about 58 KiB today.
 	budgetWorkbench = 80 << 10
-	// budgetHome is the phone's Home (home.js, MOB-4): the chat-first
-	// stream, chips, quick blocks and the Panels drawer. Only a phone
-	// loads it, after the page; app.js and app-chunk.js stay as they were.
+	// budgetHome is the phone's own views (home.js, mobile plan Q4): This
+	// phone (MOBUX-20) and the Home (MOB-4). Only a phone loads it, when
+	// one opens; the desktop never does.
 	budgetHome = 48 << 10
 )
 
@@ -49,12 +49,12 @@ func gzSize(t *testing.T, name string) int {
 // JS budget counts both script files.
 func TestPerfGuardBundleSize(t *testing.T) {
 	js, css, html := gzSize(t, "app.js")+gzSize(t, "app-chunk.js"), gzSize(t, "app.css"), gzSize(t, "index.html")
-	wb := gzSize(t, "workbench.js")
+	wb, hm := gzSize(t, "workbench.js"), gzSize(t, "home.js")
 	t.Logf("gzipped: app.js + app-chunk.js %d B, app.css %d B, index.html %d B, total %d B; workbench.js %d B (desktop only)", js, css, html, js+css+html, wb)
 	for _, c := range []struct {
 		name      string
 		got, want int
-	}{{"desk.css", gzSize(t, "desk.css"), budgetDesk}, {"workbench.js", wb, budgetWorkbench}, {"app.js + app-chunk.js", js, budgetJS}, {"app.css", css, budgetCSS}, {"index.html", html, budgetHTML}, {"page total", js + css + html, budgetTotal}} {
+	}{{"desk.css", gzSize(t, "desk.css"), budgetDesk}, {"workbench.js", wb, budgetWorkbench}, {"home.js", hm, budgetHome}, {"app.js + app-chunk.js", js, budgetJS}, {"app.css", css, budgetCSS}, {"index.html", html, budgetHTML}, {"page total", js + css + html, budgetTotal}} {
 		if c.got > c.want {
 			t.Errorf("%s is %d B gzipped, budget %d B", c.name, c.got, c.want)
 		}
