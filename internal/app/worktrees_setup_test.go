@@ -17,7 +17,7 @@ func wtSetupSeam(t *testing.T) *[]string {
 	t.Helper()
 	var runs []string
 	old := wtSetupExec
-	wtSetupExec = func(dir, _ string, lines []string) (string, error) {
+	wtSetupExec = func(dir, _ string, lines []string, _ map[string]string) (string, error) {
 		runs = append(runs, dir+": "+strings.Join(lines, " && "))
 		return "", nil
 	}
@@ -89,7 +89,7 @@ func TestWTSetupExec(t *testing.T) {
 	logPath := filepath.Join(t.TempDir(), "termocode", "setup", "x.log")
 	t.Setenv("ANTHROPIC_API_KEY", "sk-"+"test-not-real")
 	t.Setenv("TERMOCODE_AI_API_KEY", "k-"+"test")
-	failed, err := wtSetupExec(dir, logPath, []string{`pwd > where.txt`, `env > env.txt`, `false`, `touch never.txt`})
+	failed, err := wtSetupExec(dir, logPath, []string{`pwd > where.txt`, `env > env.txt`, `false`, `touch never.txt`}, map[string]string{"PORT": "3001"})
 	if err == nil || failed != "false" {
 		t.Fatalf("failed %q err %v", failed, err)
 	}
@@ -100,6 +100,9 @@ func TestWTSetupExec(t *testing.T) {
 	env, _ := os.ReadFile(filepath.Join(dir, "env.txt"))
 	if strings.Contains(string(env), "ANTHROPIC_API_KEY") || strings.Contains(string(env), "TERMOCODE_AI_API_KEY") {
 		t.Error("a secret reached the setup")
+	}
+	if !strings.Contains(string(env), "PORT=3001") {
+		t.Error("the repo's env did not reach the setup")
 	}
 	if _, err := os.Stat(filepath.Join(dir, "never.txt")); err == nil {
 		t.Error("a line after the failure ran")
