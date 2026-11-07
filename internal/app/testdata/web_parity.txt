@@ -17,6 +17,7 @@ web	ai-cancel	op:chat.stop
 web	ai-checkpoint-save	palette
 web	ai-configure	op:ai.info
 web	ai-critic-toggle	palette
+web	ai-dial-next	palette
 web	ai-discard-proposal	op:cards.answer
 web	ai-doc	cmd:aiDoc
 web	ai-edit	cmd:aiEdit
@@ -491,6 +492,7 @@ missing	canvas-copy	AI|S
 missing	canvas-open	AI|M
 missing	ai-follow-agent	AI|M
 missing	codebase-search	Search|M
+missing	ai-dial	AI|S
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S

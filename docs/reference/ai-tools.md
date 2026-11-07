@@ -2204,6 +2204,8 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai-configure` | AI: Configure Provider… | never | AI provider, credentials and approvals stay with the user |
 | `ai-critic-toggle` | AI: Toggle Critic Review | never | AI provider, credentials and approvals stay with the user |
 | `ai-credentials` | Open Config: AI Credentials | never | AI provider, credentials and approvals stay with the user |
+| `ai-dial` | AI: Effort Dial… (low / medium / high / ultra, plan, fast) | never | AI provider, credentials and approvals stay with the user; more effort costs the user more |
+| `ai-dial-next` | AI: Next Effort Mode | never | AI provider, credentials and approvals stay with the user; more effort costs the user more |
 | `ai-discard-proposal` | AI: Discard Proposed Edit | never | the user reviews proposed edits |
 | `ai-doc` | AI: Generate Doc Comment | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-doctor` | AI: Doctor | never | a local diagnostic page for the user |
@@ -2920,6 +2922,7 @@ Generate one PNG image from a text prompt (an icon, a placeholder, an illustrati
 | `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
 | `ai_critic` | never | AI provider, credentials and approvals stay with the user |
 | `ai_critic_slot` | never | AI provider, credentials and approvals stay with the user |
+| `ai_dial` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_fallback` | never | AI provider, credentials and approvals stay with the user |
 | `ai_guardian` | never | AI provider, credentials and approvals stay with the user; the AI never picks its own reviewer |

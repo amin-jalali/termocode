@@ -34,6 +34,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Edit Profiles | `ai-profile-edit` |   |   |
 | AI: Edit Profile… | `ai-profile-form` |   |   |
 | AI: Edit Selection… | `ai-edit` | `Alt+I` | `Alt+I` |
+| AI: Effort Dial… (low / medium / high / ultra, plan, fast) | `ai-dial` |   |   |
 | AI: Explain Selection / Line | `ai-explain` |   |   |
 | AI: Export Chat as Markdown | `ai-export-chat` |   |   |
 | AI: Fix Bug from Spec… | `bugfix-spec-fix` |   | `test-first fix prompt in the chat` |
@@ -65,6 +66,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
 | AI: New Workflow… | `workflow-new` |   |   |
 | AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` / `Alt+N` | `Alt+Shift+P / Alt+N` |
+| AI: Next Effort Mode | `ai-dial-next` |   |   |
 | AI: Next Reasoning Level | `ai-reasoning-next` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |

@@ -721,13 +721,17 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Plan approval (G-PLAN): the AI can never approve its own plan or
 	// turn the question off.
 	"ai-reasoning-next": aiNever(aiNoAIConfig + "; more thinking costs the user more"),
-	"ai-plan-approval":  aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
-	"ai-autopilot":      aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
-	"ai-plan-review":    aiNever("the plan card is the user's answer; the AI never approves its own plan"),
-	"ai-profile-edit":   aiNever(aiNoAIConfig),
-	"ai-profile-new":    aiNever(aiNoAIConfig),
-	"ai-profile-form":   aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
-	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),
+	// The effort dial (CMP-24) sets a profile and a reasoning level at
+	// once: the user's own setup, and more effort costs the user more.
+	"ai-dial":          aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-dial-next":     aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-plan-approval": aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai-autopilot":     aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
+	"ai-plan-review":   aiNever("the plan card is the user's answer; the AI never approves its own plan"),
+	"ai-profile-edit":  aiNever(aiNoAIConfig),
+	"ai-profile-new":   aiNever(aiNoAIConfig),
+	"ai-profile-form":  aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
+	"ai-profile-trust": aiNever("trusting a project's prompts is the user's decision"),
 	// Keep going (OMX-7) sends model turns that cost money: only the
 	// user turns it on.
 	"ai-keep-going": aiNever(aiNoAIConfig + "; extra paid turns are the user's choice"),
@@ -754,7 +758,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-web-tools": aiNever(aiNoPicker),
 	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
 	// list and deleting the shots are the user's.
-	"ai-proofs": aiNever(aiNoPicker),
+	"ai-proofs":    aiNever(aiNoPicker),
 	"ai-image-gen": aiNever("image generation is paid; only the user turns it on"),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
@@ -884,6 +888,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_approval_rules":     aiNever(aiNoAIConfig + "; the AI never writes its own approval rules"),
 	"ai_guardian":           aiNever(aiNoAIConfig + "; the AI never picks its own reviewer"),
 	"ai_categories":         aiNever(aiNoAIConfig),
+	"ai_dial":               aiNever(aiNoAIConfig),
 	"ai_step_escalate":      aiNever(aiNoAIConfig),
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
 	"ai_plan_file":          aiNever(aiNoAIConfig),

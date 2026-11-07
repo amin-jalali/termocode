@@ -184,6 +184,27 @@ How the level is sent:
 
 Ghost text and the `quick` slot never use a level.
 
+### Effort dial
+
+One knob for how hard the AI works. **AI: Effort Dial…** lists four modes;
+**AI: Next Effort Mode** steps through them (the web palette has it too,
+after a card on the laptop).
+
+| Mode | Profile | Reasoning |
+|---|---|---|
+| `low` | `fast` | `low` |
+| `medium` | `default` | `medium` |
+| `high` | `default` | `high` |
+| `ultra` | `default` | `max` |
+
+A mode sets the agent profile of this workspace and the reasoning level
+of this chat. Nothing is hidden: the header still shows the profile chip
+and the `think <level>` chip. Higher modes cost more tokens. The dial
+also has two toggles: **Plan first** (profile `plan`: a plan to approve
+before any change) and **Fast** (profile `fast`); pick a toggle again to
+go back to `default`. Change a mode in `config.json`:
+`"ai_dial": {"ultra": {"profile": "until-done"}}`.
+
 ### Fork a chat
 
 A fork is a new chat that starts with the history of the old one, up to
