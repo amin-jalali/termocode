@@ -41,6 +41,9 @@ type Resolver struct {
 	OnSecret func(string)
 	// Now is the clock for $timestamp / $datetime; nil = time.Now.
 	Now func() time.Time
+	// BaseDir is the .http file's folder: `< ./file` bodies are read
+	// there ("" = unsaved request, no file bodies).
+	BaseDir string
 }
 
 // Unresolved is one placeholder that is still raw after resolving.
@@ -60,6 +63,8 @@ type Resolved struct {
 	// Secrets lists the private / $secret values that were substituted,
 	// so callers can hide them again.
 	Secrets []string
+	// Dir is the folder `< ./file` bodies are read from ("" = none).
+	Dir string
 }
 
 // sendScope keeps the values of the dynamic functions for one send, so
@@ -74,7 +79,7 @@ type sendScope struct {
 // as-is (mobocode behaviour) and are listed in the result.
 func (rv *Resolver) Resolve(req Request) (Resolved, []Unresolved) {
 	sc := &sendScope{rv: rv, dynamic: map[string]string{}}
-	out := Resolved{Template: req, Env: rv.Env}
+	out := Resolved{Template: req, Env: rv.Env, Dir: rv.BaseDir}
 	out.Request = req
 	var un []Unresolved
 	out.URL = sc.expand(req.URL)
