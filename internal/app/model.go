@@ -112,6 +112,8 @@ type Model struct {
 	// agentChatPendingBuf the tab the transcripts card asks for.
 	agentChat           *agentChatState
 	agentChatPendingBuf int
+	// agentAcceptAsk is the tab the auto-accept card asks for (CMP-64).
+	agentAcceptAsk int
 	// Agent: Sessions… (agent_sessions.go, AGX-9): the rows, the cached
 	// index and the resume check of each CLI.
 	agentSessions       []agentlog.Summary

@@ -111,6 +111,11 @@ type terminalTab struct {
 	LimitAt      time.Time
 	limitTyped   bool
 	AutoContinue autoContinueMode
+	// CMP-64 (agent_autoaccept.go): the tab's opt-in auto-accept, what it
+	// did with the prompt on screen, and how many it answered.
+	AutoAccept  bool
+	accept      acceptState
+	acceptCount int
 	// AGX-15 (agent_hibernate.go): the idle clock (the last output, one
 	// check in flight, asked for this idle time) and the hibernated
 	// state with the kept session id ("" = not known).

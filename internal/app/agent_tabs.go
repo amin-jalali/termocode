@@ -91,6 +91,10 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		t.FirstTask = "" // at most once
 		m.agentType(t.BufID, task)
 	}
+	acc, answered := m.agentAutoAcceptSee(t, st, lines) // CMP-64 (agent_autoaccept.go)
+	if limit = tea.Batch(limit, acc); answered {
+		return limit
+	}
 	if st == agents.Unknown || st == t.AgentState {
 		return limit
 	}
@@ -129,7 +133,8 @@ func (t terminalTab) agentTitle() string {
 }
 
 // agentTabName is the tab bar name of an agent tab: "limit ↻14:30"
-// while its usage limit is on (AGX-11), else its title.
+// while its usage limit is on (AGX-11), else its title (with
+// " · auto-yes" while auto-accept is on, CMP-64).
 func (t terminalTab) agentTabName() string {
 	if l := t.agentHibernatedLabel(); l != "" { // AGX-15
 		return l
@@ -137,10 +142,14 @@ func (t terminalTab) agentTabName() string {
 	if l := t.agentLimitLabel(); l != "" {
 		return l
 	}
+	name := t.agentTitle()
 	if t.Account != "" { // AGX-13
-		return t.agentTitle() + " " + t.Account
+		name += " " + t.Account
 	}
-	return t.agentTitle()
+	if t.AutoAccept { // CMP-64 (agent_autoaccept.go)
+		name += " · auto-yes"
+	}
+	return name
 }
 
 // agentMark is the 1-cell state mark of an agent tab and its colour.
@@ -226,6 +235,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == agentAutoContinuePaletteID { // Agent: Toggle Auto-Continue (agent_limit.go)
 		return m.toggleAgentAutoContinue(), true
+	}
+	if id == agentAutoAcceptPaletteID { // Agent: Toggle Auto-Accept (agent_autoaccept.go)
+		return m.toggleAgentAutoAccept(), true
 	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
