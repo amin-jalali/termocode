@@ -802,15 +802,19 @@ export const S = {
 } as const;
 
 /** StringKey is a key of the page's strings, of the workbench's
- * (strings.desk.ts, in workbench.js) or of the phone views' (English
- * only, strings.phone.ts, in phone.js). */
+ * (strings.desk.ts, in workbench.js) or of the phone app's lazy views
+ * (strings.phone.ts, English only). */
 export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP;
+
+/** TranslatedKey is a key strings.fa.ts translates: the phone app's
+ * strings are English only (owner 2026-11-07). */
+export type TranslatedKey = keyof typeof S | keyof typeof SD;
 
 const desk = dict<string>();
 
 /** addStrings adds the workbench's strings (strings.desk.ts) once
- * workbench.js loads, and the phone views' (strings.phone.ts) once
- * phone.js loads. */
+ * workbench.js loads, and the phone app's (strings.phone.ts) once a
+ * lazy phone view loads. */
 export function addStrings(d: Readonly<Record<string, string>>): void {
   for (const k of Object.keys(d)) desk[k] = d[k];
 }

@@ -4894,6 +4894,523 @@
       ],
       "additionalProperties": true
     },
+    "Block": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/defs/BlockAction"
+          },
+          "type": "array"
+        },
+        "bars": {
+          "items": {
+            "$ref": "#/defs/BlockBar"
+          },
+          "type": "array"
+        },
+        "board": {
+          "$ref": "#/defs/BlockBoard"
+        },
+        "columns": {
+          "items": {
+            "$ref": "#/defs/BlockColumn"
+          },
+          "type": "array"
+        },
+        "diff": {
+          "$ref": "#/defs/BlockDiff"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/defs/BlockField"
+          },
+          "type": "array"
+        },
+        "for_you": {
+          "type": "string"
+        },
+        "form": {
+          "items": {
+            "$ref": "#/defs/BlockFormField"
+          },
+          "type": "array"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/defs/BlockGroup"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/BlockItem"
+          },
+          "type": "array"
+        },
+        "json": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "list",
+            "table",
+            "diff",
+            "card",
+            "detail",
+            "chart",
+            "status",
+            "form",
+            "json",
+            "text",
+            "board"
+          ]
+        },
+        "live": {
+          "type": "boolean"
+        },
+        "md": {
+          "$ref": "#/defs/MdNode"
+        },
+        "ref": {
+          "$ref": "#/defs/BlockRef"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "source": {
+          "type": "string"
+        },
+        "spec": {
+          "$ref": "#/defs/ViewSpec"
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "BlockAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "op",
+            "attach",
+            "view",
+            "laptop"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "op": {
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/defs/BlockRef"
+        },
+        "risky": {
+          "type": "boolean"
+        },
+        "spec": {
+          "$ref": "#/defs/ViewSpec"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "kind"
+      ],
+      "additionalProperties": true
+    },
+    "BlockBar": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "additionalProperties": true
+    },
+    "BlockBoard": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "items": {
+            "$ref": "#/defs/BlockBoardColumn"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "columns"
+      ],
+      "additionalProperties": true
+    },
+    "BlockBoardColumn": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/BlockItem"
+          },
+          "type": "array"
+        },
+        "label": {
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "additionalProperties": true
+    },
+    "BlockColumn": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "text",
+            "num",
+            "time",
+            "cost",
+            "tone",
+            "mono"
+          ]
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "additionalProperties": true
+    },
+    "BlockDiff": {
+      "type": "object",
+      "properties": {
+        "adds": {
+          "type": "integer"
+        },
+        "dels": {
+          "type": "integer"
+        },
+        "hunks": {
+          "items": {
+            "$ref": "#/defs/BlockHunk"
+          },
+          "type": "array"
+        },
+        "old": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "hunks"
+      ],
+      "additionalProperties": true
+    },
+    "BlockDiffLine": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "integer"
+        },
+        "b": {
+          "type": "integer"
+        },
+        "k": {
+          "enum": [
+            "add",
+            "del",
+            "ctx"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "k",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "BlockField": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "text",
+            "num",
+            "time",
+            "cost",
+            "tone",
+            "mono"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "additionalProperties": true
+    },
+    "BlockFormField": {
+      "type": "object",
+      "properties": {
+        "choices": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "text",
+            "num",
+            "bool",
+            "choice",
+            "long"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "kind"
+      ],
+      "additionalProperties": true
+    },
+    "BlockGroup": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/BlockItem"
+          },
+          "type": "array"
+        },
+        "label": {
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "count"
+      ],
+      "additionalProperties": true
+    },
+    "BlockHunk": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/defs/BlockDiffLine"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "header",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "BlockItem": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/defs/BlockAction"
+          },
+          "type": "array"
+        },
+        "badge": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/defs/BlockRef"
+        },
+        "sub": {
+          "type": "string"
+        },
+        "time": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "ok",
+            "warn",
+            "bad",
+            "busy",
+            "idle",
+            "info"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "BlockRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": true
+    },
     "Bookmark": {
       "type": "object",
       "properties": {
@@ -5627,6 +6144,12 @@
     "ChatMsg": {
       "type": "object",
       "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/defs/Block"
+          },
+          "type": "array"
+        },
         "i": {
           "type": "integer"
         },
@@ -5828,6 +6351,12 @@
     "ChatStep": {
       "type": "object",
       "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/defs/Block"
+          },
+          "type": "array"
+        },
         "error": {
           "type": "string"
         },
@@ -14331,6 +14860,118 @@
       },
       "required": [
         "items"
+      ],
+      "additionalProperties": true
+    },
+    "ViewCond": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "in": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "ne",
+            "gt",
+            "lt",
+            "ge",
+            "le",
+            "contains",
+            "starts",
+            "in",
+            "empty",
+            "not_empty"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "op"
+      ],
+      "additionalProperties": true
+    },
+    "ViewSort": {
+      "type": "object",
+      "properties": {
+        "desc": {
+          "type": "boolean"
+        },
+        "field": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "additionalProperties": true
+    },
+    "ViewSpec": {
+      "type": "object",
+      "properties": {
+        "args": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "density": {
+          "enum": [
+            "compact",
+            "detailed"
+          ]
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "filter": {
+          "items": {
+            "$ref": "#/defs/ViewCond"
+          },
+          "type": "array"
+        },
+        "group": {
+          "type": "string"
+        },
+        "layout": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "refresh": {
+          "type": "integer"
+        },
+        "sort": {
+          "items": {
+            "$ref": "#/defs/ViewSort"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        },
+        "view": {
+          "type": "string"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "view"
       ],
       "additionalProperties": true
     },

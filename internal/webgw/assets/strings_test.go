@@ -67,16 +67,16 @@ func parseStrings(t *testing.T, file, name string) []entry {
 // into workbench.js so the phone never loads them).
 func englishStrings(t *testing.T) []entry {
 	t.Helper()
-	out := append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
-	return append(out, phoneStrings(t)...)
+	return append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
 }
 
-// phoneStrings are the strings only the phone views show
-// (src/strings.phone.ts, in phone.js, MOB-14). The phone app is English
-// only (owner 2026-11-07), so they have no Persian texts.
-func phoneStrings(t *testing.T) []entry {
+// allEnglishStrings adds the phone app's lazy views' strings
+// (strings.phone.ts). They follow the same voice and key rules but are
+// English only (owner 2026-11-07), so the Persian tests use
+// englishStrings.
+func allEnglishStrings(t *testing.T) []entry {
 	t.Helper()
-	return parseStrings(t, "src/strings.phone.ts", "SP")
+	return append(englishStrings(t), parseStrings(t, "src/strings.phone.ts", "SP")...)
 }
 
 // bodyKeys may run to 40 words; every other string stays at 12 (P6).
@@ -178,7 +178,7 @@ func TestStringsLintCatchesEachRule(t *testing.T) {
 }
 
 func TestStringsFollowTheVoice(t *testing.T) {
-	entries := englishStrings(t)
+	entries := allEnglishStrings(t)
 	if len(entries) < 150 {
 		t.Fatalf("only %d strings; web UX 7.4 lists more", len(entries))
 	}
@@ -192,7 +192,7 @@ var keyLiteral = regexp.MustCompile(`"([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)"`)
 var tCall = regexp.MustCompile(`\btn?\(\s*"([^"]+)"`)
 
 func TestEveryUsedStringKeyExists(t *testing.T) {
-	entries := englishStrings(t)
+	entries := allEnglishStrings(t)
 	keys, spaces := map[string]bool{}, map[string]bool{}
 	for _, e := range entries {
 		keys[e.key] = true
@@ -236,19 +236,13 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 }
 
 // The Persian file (WEB-UX-5 fills it) has exactly the English keys, so
-// a new string cannot be forgotten there; the phone views' strings
-// (strings.phone.ts) are English only and have none.
+// a new string cannot be forgotten there.
 func TestPersianStringsHaveTheSameKeys(t *testing.T) {
 	en := englishStrings(t)
 	fa := parseStrings(t, "src/strings.fa.ts", "FA")
-	enKeys, phoneOnly := map[string]bool{}, map[string]bool{}
-	for _, e := range phoneStrings(t) {
-		phoneOnly[e.key] = true
-	}
+	enKeys := map[string]bool{}
 	for _, e := range en {
-		if !phoneOnly[e.key] {
-			enKeys[e.key] = true
-		}
+		enKeys[e.key] = true
 	}
 	faKeys := map[string]bool{}
 	for _, e := range fa {
@@ -378,13 +372,37 @@ func TestStringsNameRealWebCommands(t *testing.T) {
 		t.Fatal("no Web: palette commands found in web_tui.go")
 	}
 	named := regexp.MustCompile(`Web: [A-Z]\w*(?: (?:in|on|to|[A-Z]\w*))*`)
-	for _, f := range []struct{ file, name string }{{"src/strings.ts", "S"}, {"src/strings.desk.ts", "SD"}, {"src/strings.fa.ts", "FA"}} {
+	for _, f := range []struct{ file, name string }{{"src/strings.ts", "S"}, {"src/strings.desk.ts", "SD"}, {"src/strings.phone.ts", "SP"}, {"src/strings.fa.ts", "FA"}} {
 		for _, e := range parseStrings(t, f.file, f.name) {
 			for _, cmd := range named.FindAllString(e.text, -1) {
 				if !real[cmd] {
 					t.Errorf("%s:%d: %s names %q, not a palette command (have %v)", f.file, e.line, e.key, cmd, real)
 				}
 			}
+		}
+	}
+}
+
+// The phone app's strings are English only: strings.fa.ts has none of
+// them, and none is also a page or workbench key.
+func TestPhoneStringsAreEnglishOnly(t *testing.T) {
+	phone := parseStrings(t, "src/strings.phone.ts", "SP")
+	if len(phone) == 0 {
+		t.Fatal("strings.phone.ts has no strings")
+	}
+	other := map[string]bool{}
+	for _, e := range englishStrings(t) {
+		other[e.key] = true
+	}
+	for _, e := range parseStrings(t, "src/strings.fa.ts", "FA") {
+		other["fa:"+e.key] = true
+	}
+	for _, e := range phone {
+		if other[e.key] {
+			t.Errorf("strings.phone.ts:%d: %s is also in strings.ts or strings.desk.ts", e.line, e.key)
+		}
+		if other["fa:"+e.key] {
+			t.Errorf("strings.fa.ts translates the phone string %s; the phone app is English only", e.key)
 		}
 	}
 }
