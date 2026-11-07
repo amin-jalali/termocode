@@ -200,6 +200,30 @@ opens one card that lists every worktree that will be archived
 its own card: **Keep it** comes first. Clean up archives, so the
 branches stay and `x` restores any of them.
 
+### Auto clean-up
+
+Two settings (Settings, **Git** group) archive worktrees by themselves.
+Both are off (`0`) until you set them:
+
+- `worktree_auto_archive_days`: a worktree with no activity for this
+  many days is archived.
+- `worktree_max`: when more worktrees than this are live (the main
+  checkout does not count), the oldest ones are archived until it fits.
+
+termocode checks when the worktree list is read (the WORKTREES view,
+Jump, the web page), at most once an hour. It archives like `x`: the
+folder goes and its disk is freed (git-ignored files such as build
+output go too), the branch stays. One toast names each worktree, why it
+went and how much disk was freed. `x` on its row under **ARCHIVED**
+brings it back in one step.
+
+It only takes clean worktrees termocode made or you adopted. It never
+takes the main checkout, the worktree this window is in, an agent lane,
+a locked or pinned worktree, one an agent works in, one with changed
+files, or one used in the last day. A file that changes just before the
+archive stops it: termocode never forces it. The AI can not change these
+settings.
+
 ## From the web page
 
 The web panel's desktop page has a **Worktrees** item in its activity bar

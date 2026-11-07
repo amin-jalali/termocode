@@ -71,6 +71,9 @@ type wtState struct {
 	del        *wtDeletePending  // a delete in its steps (worktrees_delete.go)
 	cleanup    *wtCleanup        // the open cleanup list (worktrees_cleanup.go)
 
+	autoAt   time.Time // the last auto clean-up check (worktrees_autoclean.go)
+	autoBusy bool      // an auto clean-up runs
+
 	seq    uint64
 	render struct {
 		sync.Mutex
@@ -197,6 +200,7 @@ func (m *Model) onWTLoad(msg wtLoadMsg) tea.Cmd {
 			cmds = append(cmds, m.pushToastDetail(toast.Warn, "Worktree notes could not be read", "termocode/worktrees.json in the git folder is kept as it is; pins and names are off until it is fixed."))
 		}
 		cmds = append(cmds, st.refreshStatus(), st.wtLinksRefresh(clock.Now()))
+		cmds = append(cmds, m.wtAutoClean()) // CMP-16: when it is on and due
 	}
 	st.touch()
 	switch {
@@ -263,6 +267,8 @@ func (m *Model) handleWTMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onWTCleanupPrep(msg), true
 	case wtCleanedMsg:
 		return m.onWTCleaned(msg), true
+	case wtAutoCleanedMsg:
+		return m.onWTAutoCleaned(msg), true
 	case wtDeletePrepMsg:
 		return m.onWTDeletePrep(msg), true
 	case wtDeletedMsg:
