@@ -459,6 +459,7 @@ excluded	workflow-undo-write	laptop only: an undo writes to outside systems agai
 missing	containers-all-contexts	Containers|M
 missing	containers-compose-snippet	Containers|S
 missing	containers-custom-command	Containers|S
+missing	containers-debug-toolbox	Containers|S
 missing	containers-image-build	Containers|M
 missing	containers-run-at-cursor	Containers|S
 missing	containers-scaffold	Containers|S

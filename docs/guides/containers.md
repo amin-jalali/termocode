@@ -70,6 +70,7 @@ when something changed. When you hide the view (another activity item,
 | `e` | shell in the selected container (terminal tab) |
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
+| `T` | debug a running container with a separate toolbox container (see [Debug toolbox](#debug-toolbox)) |
 | `i` | inspect: a read-only JSON page in the editor |
 | `o` | open the first published port in the browser |
 | `y` | copy the ID, name, host or endpoint of the row |
@@ -247,6 +248,18 @@ still show. The rows only show: `Enter` uses that context in this
 session (your default stays as it is), then the usual keys work on its
 rows in CONTAINERS. `y` copies the id, `r` loads the section again. It
 never loads on a timer. Run the command again to hide the section.
+
+## Debug toolbox
+
+Some images have no shell or tools (distroless). `T` on a running
+container (or **Debug with Toolbox…** in its menu, or **Containers: Debug
+Selected with Toolbox…**) asks for a toolbox image (`busybox:stable` by
+default), then shows the command on a card (**Cancel** first). The
+toolbox is a separate, throw-away container that shares the target's
+processes and network (`--pid container:…`, `--network container:…`), so
+`ps`, `netstat` and `wget` see the target. The target is never changed:
+nothing is copied into it and nothing runs inside it. The toolbox is
+removed when its shell ends.
 
 ## Pruning
 

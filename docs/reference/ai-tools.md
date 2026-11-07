@@ -2012,6 +2012,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-copy-id` | Containers: Copy ID | auto |   |
 | `containers-custom-command` | Containers: Run Custom Command on Row… | never | custom commands are the user's own programs; nothing is offered to the model |
 | `containers-custom-commands-edit` | Containers: Edit Custom Commands | auto |   |
+| `containers-debug-toolbox` | Containers: Debug Selected with Toolbox… | never | starting a toolbox container is the user's; nothing is offered to the model |
 | `containers-engine-config` | Containers: Open Engine Config | auto |   |
 | `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
 | `containers-focus` | Containers: Focus | auto |   |

@@ -305,6 +305,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.onContainerImagePrompt(m.promptKind, value)
 	case promptKindContainerBuildTag, promptKindContainerBuildArgs, promptKindContainerBuildTarget, promptKindContainerBuildPlatform: // containers_build.go
 		return m.onContainerBuildPrompt(m.promptKind, value)
+	case promptKindContainerDebugImage: // CTX-43 (containers_debug.go)
+		return m.onDebugImagePrompt(value)
 	case promptKindComposeRun: // services_compose_extras.go
 		return m.onComposeRunPrompt(value)
 	case promptKindRegistryHost, promptKindRegistryUser, promptKindRegistryToken: // containers_registries.go

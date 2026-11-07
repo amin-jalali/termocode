@@ -51,6 +51,7 @@ func svcLocalTab(name string) string { return "local:" + name }
 func svcLogsTab(name string) string { return "logs:" + name }
 
 type servicesState struct {
+	debugTarget containers.Container // CTX-43: the container the toolbox prompt is for (containers_debug.go)
 	// CTX-41: ALL CONTEXTS (containers_multi.go)
 	allContexts bool
 	multi       containers.MultiResult

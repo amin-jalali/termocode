@@ -846,6 +846,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.openContainerTerminal(c, "stats")
 		}
+	case "T": // CTX-43 (containers_debug.go)
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.askDebugToolbox(c)
+		}
 	case "i":
 		if _, ref, ok := m.selectedImage(); ok {
 			return m, m.imageInspect(ref)
@@ -957,6 +961,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"t", "attach"},
 			[]string{"Enter", "logs"},
 			[]string{"S", "live stats"},
+			[]string{"T", "debug with a separate toolbox container (asks first)"},
 			[]string{"i", "inspect"},
 			[]string{"o", "open a port in the browser"},
 			[]string{"y", "copy the id"},
@@ -1441,7 +1446,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "services-configure", Title: "Containers: Configure Services (services.json)"},
 		{ID: "services-open-compose", Title: "Containers: Open Compose File"},
 		{ID: "services-trust", Title: "AI: Services Trust…"},
-	}, append(append(composeExtrasPaletteItems(), devrunPaletteItems()...), append(customPaletteItems(), multiPaletteItems()...)...)...)
+	}, append(append(composeExtrasPaletteItems(), devrunPaletteItems()...), append(append(customPaletteItems(), multiPaletteItems()...), debugPaletteItems()...)...)...)
 }
 
 func containerAITargetRequired(id string) bool {
@@ -1776,6 +1781,8 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return m.openContainerTerminal(c, "attach")
 			case "containers-stats":
 				return m.openContainerTerminal(c, "stats")
+			case "containers-debug-toolbox": // CTX-43
+				return m.askDebugToolbox(c)
 			case "containers-inspect":
 				return m.inspectContainer(c)
 			case "containers-copy-id":

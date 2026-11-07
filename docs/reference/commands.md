@@ -132,6 +132,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Copy ID | `containers-copy-id` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
+| Containers: Debug Selected with Toolbox… | `containers-debug-toolbox` |   |   |
 | Containers: Edit Custom Commands | `containers-custom-commands-edit` |   |   |
 | Containers: Filter Rows… | `containers-filter` |   |   |
 | Containers: Focus | `containers-focus` |   |   |
