@@ -4237,6 +4237,21 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "project.tasks",
+      "args": "ProjectTasksArgs",
+      "result": "ProjectTasks",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -11820,6 +11835,149 @@
         "row",
         "col"
       ],
+      "additionalProperties": false
+    },
+    "ProjectTask": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "checks": {
+          "enum": [
+            "none",
+            "pending",
+            "pass",
+            "fail"
+          ]
+        },
+        "depth": {
+          "type": "integer"
+        },
+        "group": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "ptask",
+            "issue",
+            "pr",
+            "mr"
+          ]
+        },
+        "labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "open",
+            "done",
+            "draft"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectTaskSection": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/ProjectTask"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "checklist",
+            "issues",
+            "prs",
+            "mrs"
+          ]
+        },
+        "note": {
+          "type": "string"
+        },
+        "open": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "title",
+        "items",
+        "total",
+        "open"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectTasks": {
+      "type": "object",
+      "properties": {
+        "sections": {
+          "items": {
+            "$ref": "#/defs/ProjectTaskSection"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "sections"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectTasksArgs": {
+      "type": "object",
+      "properties": {
+        "done": {
+          "type": "boolean"
+        },
+        "only": {
+          "enum": [
+            "checklist",
+            "issues",
+            "prs",
+            "mrs"
+          ]
+        }
+      },
+      "required": [],
       "additionalProperties": false
     },
     "PruneArgs": {
