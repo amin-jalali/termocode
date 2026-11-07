@@ -12,6 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/views"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -33,11 +34,21 @@ func init() {
 	webOps[webproto.OpViewPin] = webOpViewPin
 }
 
+// savedViewsRegistry is the hub's view registry (internal/views) once
+// the feature views register there (MOB-9, MOBUX-13); nil: only the
+// spec's shape is checked (as when the args decoded).
+var savedViewsRegistry *views.Registry
+
 // savedViewSpecCheck checks a spec against the view registry before it
-// is saved (unknown view, field, param or layout is refused). The shape
-// was checked when the args decoded; the registry's full check
-// (MOBUX-15, internal/views) plugs in here.
-var savedViewSpecCheck = func(s *webproto.ViewSpec) error { return s.Validate() }
+// is saved: an unknown view, field, param or layout is refused with the
+// allowed ids, so the phone never keeps a view that cannot run.
+var savedViewSpecCheck = func(s *webproto.ViewSpec) error {
+	if savedViewsRegistry == nil {
+		return s.Validate()
+	}
+	_, _, err := savedViewsRegistry.Resolve(*s)
+	return err
+}
 
 type savedViewsDoc struct {
 	Version int                  `json:"version"`
