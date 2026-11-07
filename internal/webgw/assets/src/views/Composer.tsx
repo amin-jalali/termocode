@@ -10,7 +10,7 @@ import { AIPicker } from "./AIPicker";
 import { h } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { getDraft, pendingDraft, setDraft, takePending } from "../lib/drafts";
-import { attachLabel, clearAttaches, getAttaches, removeAttach } from "../lib/attach";
+import { attachLabel, clearAttaches, getAttaches, inProject, removeAttach } from "../lib/attach";
 import { layout } from "../lib/layout";
 import { ctxTone } from "../state/chat";
 import { OfflineError, ReqError } from "../net/link";
@@ -30,6 +30,7 @@ export function Composer({
   ctx,
   onSent,
   placeholder,
+  ws = "",
 }: {
   chat: string;
   busy: boolean;
@@ -39,6 +40,8 @@ export function Composer({
   onSent?: () => void;
   /** placeholder replaces the box's hint (the phone's Home asks "What do you want?"). */
   placeholder?: string;
+  /** ws sends in another project through the door (MOB-55); "" is the home one. */
+  ws?: string;
 }) {
   const desk = layout.value === "desktop";
   useEffect(() => takePending(chat), [chat, pendingDraft.value]);
@@ -60,7 +63,9 @@ export function Composer({
     if (!live.peek() || sending || !body.trim()) return;
     setSending(true);
     const attach = getAttaches(chat); // MOB-5: references only, the laptop reads them
-    link.request("chat.send", { text: body, ...(chat ? { chat_id: chat } : {}), ...(attach.length ? { attach } : {}) }).then(
+    const sent = inProject(attach, ws); // MOB-55: one project per send (the laptop checks)
+    const args = { text: body, ...(chat ? { chat_id: chat } : {}), ...(sent.length ? { attach: sent } : {}) };
+    link.requestWithID("chat.send", args, ws || undefined).result.then(
       () => {
         setSending(false);
         setNote(null);

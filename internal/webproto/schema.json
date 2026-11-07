@@ -5103,6 +5103,9 @@
         },
         "to": {
           "type": "integer"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [

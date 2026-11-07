@@ -12,7 +12,15 @@ export const attaches = signal<Readonly<Record<string, readonly Attach[]>>>({});
 
 /** sameAttach: two chips point at the same item. */
 export function sameAttach(a: Attach, b: Attach): boolean {
-  return a.kind === b.kind && (a.id ?? "") === (b.id ?? "") && (a.path ?? "") === (b.path ?? "") && (a.from ?? 0) === (b.from ?? 0) && (a.to ?? 0) === (b.to ?? 0) && (a.spec ?? "") === (b.spec ?? "");
+  return a.kind === b.kind && (a.id ?? "") === (b.id ?? "") && (a.path ?? "") === (b.path ?? "") && (a.from ?? 0) === (b.from ?? 0) && (a.to ?? 0) === (b.to ?? 0) && (a.spec ?? "") === (b.spec ?? "") && (a.ws ?? "") === (b.ws ?? "");
+}
+
+/** inProject readies attaches for a send in project ws ("" = the home
+ * one, MOB-55): an attach without a project was picked here and gets ws.
+ * One of another project keeps its ws, and the laptop refuses the whole
+ * send with one calm line ("… is in another project"). */
+export function inProject(list: readonly Attach[], ws: string): readonly Attach[] {
+  return ws ? list.map((a) => (a.ws ? a : { ...a, ws })) : list;
 }
 
 export function getAttaches(chat: string): readonly Attach[] {

@@ -206,6 +206,7 @@ export interface Attach {
   to?: number;
   label?: string;
   spec?: string;
+  ws?: string;
 }
 
 export interface CardsAnswerArgs {

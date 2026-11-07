@@ -44,8 +44,9 @@ type webAttachJob struct {
 	rel         string
 	root        string
 	untracked   bool
-	tree        []git.FileStatus // diff of the whole tree: the changed files
-	tailBuf     int              // task: its terminal (0: none)
+	tree        []git.FileStatus       // diff of the whole tree: the changed files
+	tailBuf     int                    // task: its terminal (0: none)
+	read        func() (string, error) // issue, pr: read off the UI thread (MOB-55)
 }
 
 // webChatAttachedMsg carries the resolved attaches back to Update.
@@ -65,6 +66,10 @@ func webAttachSecret(label string) error {
 // are read. Any attach that cannot be resolved fails the whole send:
 // nothing is sent half.
 func (m *Model) webChatSendAttached(call *webCall, a *webproto.ChatSendArgs) tea.Cmd {
+	if err := webAttachWSCheck(a.Attach, webOwnWS()); err != nil { // MOB-55: only this project's items
+		webFailErr(call, err, "That item cannot be sent.")
+		return nil
+	}
 	jobs := make([]webAttachJob, 0, len(a.Attach))
 	for i := range a.Attach {
 		j, err := m.webAttachPlan(&a.Attach[i])
@@ -221,10 +226,8 @@ func (m *Model) webAttachPlan(a *webproto.Attach) (webAttachJob, error) {
 		return j, gone("That card")
 	case webproto.AttachView:
 		j.text = "The view the user looks at, as its spec:\n" + ai.RedactSecrets(a.Spec)
-	case webproto.AttachIssue:
-		j.text = "Issue " + a.ID + " of this repository. Read it with your tools when you need more than its number."
-	case webproto.AttachPR:
-		j.text = "Pull request " + a.ID + " of this repository. Read it with your tools when you need more than its number."
+	case webproto.AttachIssue, webproto.AttachPR, webproto.AttachProject: // MOB-55 (web_chat_attach_ws.go)
+		return m.webAttachProjectPlan(a, j)
 	case webproto.AttachResource:
 		j.text = "The MCP resource " + ai.RedactSecrets(a.ID) + ". Read it with your MCP tools when you need it."
 	case webproto.AttachBlock: // MOB-10: a tool's block in the open chat
@@ -233,7 +236,7 @@ func (m *Model) webAttachPlan(a *webproto.Attach) (webAttachJob, error) {
 			return j, gone("That block")
 		}
 		j.text = text
-	case webproto.AttachRace, webproto.AttachProject:
+	case webproto.AttachRace: // AttachProject: MOB-55 above; AttachBlock: MOB-10
 		j.text = "The user points at " + a.Kind + " " + a.ID + " (" + j.label + ")."
 	default:
 		return j, webErr(webproto.CodeBadRequest, "That item cannot be sent.")
@@ -313,6 +316,8 @@ func webAttachRead(jobs []webAttachJob, c *nvim.Client) ([]aiAttachment, error) 
 		switch {
 		case j.diff:
 			text, err = webAttachDiff(j)
+		case j.read != nil:
+			text, err = j.read()
 		case j.abs != "":
 			text, err = webAttachFileText(j)
 		case j.tailBuf > 0:
