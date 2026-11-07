@@ -21,6 +21,8 @@
 //	logs.txt             answer of `logs …`
 //	pf-port.txt          the local port `port-forward` reports (43123)
 //	pf.err               `port-forward` fails with this stderr
+//	can-i.txt            answer of `auth can-i --list` (the table)
+//	can-i.err            `auth can-i` fails with this stderr
 //
 // Written by the script: argv.log (one call per line), env.log
 // (KUBECONFIG of each call, "|", then its argv), pf.pid (the pid of a
@@ -73,6 +75,9 @@ rollout)
   if [ -f "$D/restart.err" ]; then cat "$D/restart.err" >&2; exit 1; fi
   echo "deployment.apps/$3 restarted"; exit 0 ;;
 logs) cat "$D/logs.txt" 2>/dev/null; exit 0 ;;
+auth)
+  if [ -f "$D/can-i.err" ]; then cat "$D/can-i.err" >&2; exit 1; fi
+  cat "$D/can-i.txt" 2>/dev/null; exit 0 ;;
 port-forward)
   if [ -f "$D/pf.err" ]; then cat "$D/pf.err" >&2; exit 1; fi
   echo $$ > "$D/pf.pid"
