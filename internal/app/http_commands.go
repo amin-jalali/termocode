@@ -1,8 +1,10 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path"
@@ -54,6 +56,7 @@ const (
 	promptKindDBUser
 	promptKindDBName
 	promptKindDBSQLitePath
+	promptKindHTTPImportOpenAPI
 )
 
 const (
@@ -81,6 +84,7 @@ func httpPaletteItems() []picker.Item {
 		{ID: "http-copy-curl", Title: "HTTP: Copy as curl"},
 		{ID: "http-copy-snippet", Title: "HTTP: Copy as Code…"},
 		{ID: "http-import-curl", Title: "HTTP: Import from curl…"},
+		{ID: "http-import-openapi", Title: "HTTP: Import OpenAPI…"},
 		{ID: "http-new-file", Title: "HTTP: New .http File…"},
 		{ID: "http-save-body", Title: "HTTP: Save Response Body…"},
 		{ID: "http-fields", Title: "HTTP: Edit Params and Headers…"},
@@ -124,6 +128,8 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 	case "http-import-curl":
 		m.httpS().importInto = m.httpCurrentFile()
 		return m.openHTTPPrompt(promptKindHTTPImport, "HTTP: Import from curl", "curl:", ""), true
+	case "http-import-openapi":
+		return m.openHTTPPrompt(promptKindHTTPImportOpenAPI, "HTTP: Import OpenAPI", "OpenAPI file:", ""), true
 	case "http-new-file":
 		return m.openHTTPPrompt(promptKindHTTPNewFile, "HTTP: New .http File", "File:", "requests.http"), true
 	case "http-save-body":
@@ -677,6 +683,8 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 			return m.pushToastDetail(toast.Warn, "Import from curl: "+err.Error(), ""), true
 		}
 		return m.httpInsertRequest(m.httpS().importInto, req), true
+	case promptKindHTTPImportOpenAPI:
+		return m.httpImportOpenAPI(strings.TrimSpace(value)), true
 	case promptKindHTTPSaveName:
 		return m.httpSaveRequest(strings.TrimSpace(value)), true
 	case promptKindHTTPSaveBody:
@@ -900,6 +908,87 @@ func (m *Model) httpNewFile(name string) tea.Cmd {
 		m.explorer.Reload()
 	}
 	return m.httpOpenInEditor(p)
+}
+
+// httpImportOpenAPI reads an OpenAPI / Swagger file and writes
+// <title>.http next to it (never over an existing file). baseUrl goes
+// into http-client.env.json in that folder when the folder has none.
+func (m *Model) httpImportOpenAPI(name string) tea.Cmd {
+	if name == "" {
+		return nil
+	}
+	p := name
+	if !filepath.IsAbs(p) {
+		p = filepath.Join(aiWorkspaceRoot(), p)
+	}
+	data, err := readFileLimit(p, httpclient.MaxOpenAPIBytes)
+	if err != nil {
+		return m.pushToastDetail(toast.Warn, "Import OpenAPI: could not read "+name, err.Error())
+	}
+	im, err := httpclient.ImportOpenAPI(data)
+	if err != nil {
+		return m.pushToastDetail(toast.Warn, "Import OpenAPI: "+err.Error(), "OpenAPI 3.x or Swagger 2.0, YAML or JSON")
+	}
+	dir := filepath.Dir(p)
+	base := strings.TrimSuffix(httpclient.OpenAPIFileName(im.Title), ".http")
+	out := ""
+	for i := 1; i < 1000; i++ {
+		n := base + ".http"
+		if i > 1 {
+			n = fmt.Sprintf("%s-%d.http", base, i)
+		}
+		f, err := os.OpenFile(filepath.Join(dir, n), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return m.pushToastDetail(toast.Errr, "Import OpenAPI: could not write "+n, err.Error())
+		}
+		_, werr := f.WriteString(im.HTTP)
+		if cerr := f.Close(); werr == nil {
+			werr = cerr
+		}
+		if werr != nil {
+			return m.pushToastDetail(toast.Errr, "Import OpenAPI: could not write "+n, werr.Error())
+		}
+		out = filepath.Join(dir, n)
+		break
+	}
+	if out == "" {
+		return m.pushToastDetail(toast.Errr, "Import OpenAPI: too many files named "+base, "")
+	}
+	envNote := ""
+	envPath := filepath.Join(dir, httpclient.EnvFile)
+	if _, err := os.Stat(envPath); errors.Is(err, os.ErrNotExist) {
+		if bs, err := json.MarshalIndent(map[string]map[string]string{httpclient.SharedEnv: im.Env}, "", "  "); err == nil {
+			if err := os.WriteFile(envPath, append(bs, '\n'), 0o644); err == nil {
+				envNote = "; baseUrl in " + httpclient.EnvFile
+			}
+		}
+	} else {
+		envNote = "; set baseUrl = " + im.Env["baseUrl"] + " in " + httpclient.EnvFile
+	}
+	m.explorer.Reload()
+	cmd := m.httpOpenInEditor(out)
+	t := m.pushToastDetail(toast.Info, fmt.Sprintf("Imported %d requests into %s", im.Count, filepath.Base(out)), strings.TrimPrefix(envNote, "; "))
+	return tea.Batch(cmd, t)
+}
+
+// readFileLimit reads at most limit bytes; a larger file is an error.
+func readFileLimit(p string, limit int64) ([]byte, error) {
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("the file is larger than %d MiB", limit>>20)
+	}
+	return data, nil
 }
 
 func (m *Model) httpOpenInEditor(p string) tea.Cmd {
