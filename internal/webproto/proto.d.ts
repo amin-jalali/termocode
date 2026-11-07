@@ -475,6 +475,15 @@ export interface WorkflowRunArgs {
   run: string;
 }
 
+export interface WorkflowNameArgs {
+  name: string;
+}
+
+export interface WorkflowSaveArgs {
+  name: string;
+  content: string;
+}
+
 export interface WorkspacePathArgs {
   folder: string;
 }
@@ -3488,6 +3497,9 @@ export interface OpArgs {
   "view.delete": ViewRefArgs;
   "view.pin": ViewPinArgs;
   "workflows.stop": WorkflowRunArgs;
+  "workflows.dry_run": WorkflowNameArgs;
+  "workflows.run": WorkflowNameArgs;
+  "workflows.save": WorkflowSaveArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
   "workspace.remove_folder": IDArgs;
@@ -3776,6 +3788,9 @@ export interface OpResult {
   "view.rename": SavedViewList;
   "view.delete": SavedViewList;
   "view.pin": SavedViewList;
+  "workflows.dry_run": WorkflowRunArgs;
+  "workflows.run": AskRef;
+  "workflows.save": AskRef;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;

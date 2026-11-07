@@ -2130,6 +2130,48 @@
       "phase": "v2"
     },
     {
+      "op": "workflows.dry_run",
+      "args": "WorkflowNameArgs",
+      "result": "WorkflowRunArgs",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workflows.run",
+      "args": "WorkflowNameArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "workflows.save",
+      "args": "WorkflowSaveArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 132096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "workspace.list",
       "args": "EmptyArgs",
       "result": "WorkspaceList",
@@ -16100,6 +16142,18 @@
       ],
       "additionalProperties": true
     },
+    "WorkflowNameArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
     "WorkflowRun": {
       "type": "object",
       "properties": {
@@ -16163,6 +16217,22 @@
       },
       "required": [
         "run"
+      ],
+      "additionalProperties": false
+    },
+    "WorkflowSaveArgs": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "content"
       ],
       "additionalProperties": false
     },
