@@ -94,9 +94,11 @@ func TestRemoteDiscardCleansUntrackedAndRestoresTracked(t *testing.T) {
 	r.has(t, "/app: git restore -- a.go")
 }
 
-func TestRemoteHunkStagingSaysNotYet(t *testing.T) {
-	remoteAt(t, "/app")
-	if err := StageHunk("/app", "a.go", 3); !errors.Is(err, ErrRemoteUnsupported) {
+// A Runner that cannot feed stdin still cannot stage one hunk.
+func TestRemoteHunkStagingNeedsAnInputRunner(t *testing.T) {
+	r := remoteAt(t, "/app")
+	r.out["git diff --no-color -- a.go"] = remoteHunkDiff
+	if err := StageHunk("/app", "a.go", 2); !errors.Is(err, ErrRemoteUnsupported) {
 		t.Fatalf("err = %v", err)
 	}
 }
