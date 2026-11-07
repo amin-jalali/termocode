@@ -349,5 +349,8 @@ func (m *Model) httpSendBufferLine(buf, line int) tea.Cmd {
 	if isMQTTRequest(*req) {
 		return m.httpMQTTSend(file, f.Vars, *req)
 	}
+	if isSocketIORequest(*req) {
+		return m.httpSocketIOSend(file, f.Vars, *req)
+	}
 	return m.httpSendRequest(file, f.Vars, *req, "")
 }

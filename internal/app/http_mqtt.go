@@ -27,7 +27,8 @@ import (
 //	===
 //	second message
 //
-// connects (TLS for mqtts://), subscribes to the @subscribe filters,
+// connects (TLS for mqtts://; `MQTT ws://host/mqtt#topic` and wss://
+// run MQTT over a WebSocket), subscribes to the @subscribe filters,
 // publishes each `===`-separated body message to the URL's topic, keeps
 // listening for @listen (default 3 s, at most 60 s) and shows the
 // session as a read-only page. With no body and no @subscribe it
@@ -39,7 +40,8 @@ const (
 	httpMQTTPayloadMax    = 2000 // bytes of one payload on the page
 )
 
-// isMQTTRequest: method MQTT, or an mqtt:// / mqtts:// URL.
+// isMQTTRequest: method MQTT (any broker URL, also ws:// and wss://
+// for MQTT over WebSocket), or an mqtt:// / mqtts:// URL.
 func isMQTTRequest(r httpclient.Request) bool {
 	if strings.EqualFold(r.Method, "MQTT") {
 		return true
@@ -69,22 +71,18 @@ func httpMQTTPlanFor(rr httpclient.Resolved) (httpMQTTPlan, error) {
 		p.subs = append(p.subs, f)
 	}
 	if v := strings.TrimSpace(rr.Directives["listen"]); v != "" {
-		d, err := time.ParseDuration(v)
+		d, err := httpListenFor("mqtt", v, httpMQTTListenMax)
 		if err != nil {
-			secs, aerr := strconv.Atoi(v)
-			if aerr != nil {
-				return httpMQTTPlan{}, fmt.Errorf("mqtt: @listen %q is not a duration (5s, 1m)", v)
-			}
-			d = time.Duration(secs) * time.Second
+			return httpMQTTPlan{}, err
 		}
-		if d < 0 {
-			d = 0
-		}
-		p.listen = min(d, httpMQTTListenMax)
+		p.listen = d
 	}
 	_, p.retain = rr.Directives["retain"]
 	p.clientID = strings.TrimSpace(rr.Directives["client-id"])
 	if len(p.publish) > 0 && t.Topic == "" {
+		if t.WS {
+			return httpMQTTPlan{}, fmt.Errorf("mqtt: put the topic to publish to after # in the URL (ws://host/mqtt#topic)")
+		}
 		return httpMQTTPlan{}, fmt.Errorf("mqtt: put the topic to publish to in the URL path (mqtt://host/topic)")
 	}
 	if len(p.publish) == 0 && len(p.subs) == 0 {
@@ -94,6 +92,20 @@ func httpMQTTPlanFor(rr httpclient.Resolved) (httpMQTTPlan, error) {
 		p.subs = []string{t.Topic}
 	}
 	return p, nil
+}
+
+// httpListenFor reads a @listen value (5s, 1m or plain seconds), capped
+// at limit; kind names the protocol in the error.
+func httpListenFor(kind, v string, limit time.Duration) (time.Duration, error) {
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		secs, aerr := strconv.Atoi(v)
+		if aerr != nil {
+			return 0, fmt.Errorf("%s: @listen %q is not a duration (5s, 1m)", kind, v)
+		}
+		d = time.Duration(secs) * time.Second
+	}
+	return min(max(d, 0), limit), nil
 }
 
 // httpMQTTDoneMsg is a finished MQTT session.

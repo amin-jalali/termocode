@@ -193,8 +193,40 @@ second message
 | `# @subscribe a/#, b` | topic filters to listen to; with no body and no `@subscribe`, the URL's topic |
 | `# @listen 5s` | how long to listen (default 3 s, at most 60 s) |
 | `# @retain`, `# @client-id x` | publish as retained; a fixed client ID |
+| `MQTT ws://host[:port]/path#topic` | MQTT over WebSocket (port 80, path `/mqtt`); `wss://` is TLS on 443. The topic comes after `#`; the query stays on the WebSocket URL and is not shown |
 
-Messages use QoS 0 and MQTT 3.1.1.
+Messages use QoS 0 and MQTT 3.1.1. A plain `ws://` URL without the
+`MQTT` method is still a WebSocket request.
+
+## Socket.IO
+
+The send key on a `SOCKETIO` request joins a Socket.IO namespace, emits
+the body events and listens, then shows the session as a read-only page.
+
+```http
+### chat
+# @auth {"token": "{{chatToken}}"}
+# @listen 5s
+SOCKETIO http://localhost:3000/chat
+
+chat {"text": "hi"}
+===
+["typing", true, 2]
+```
+
+| Part | Meaning |
+|---|---|
+| `http(s)://host[:port]/namespace` | the server; the path is the namespace (none = `/`). `ws://` and `wss://` work too. The query is sent with the handshake |
+| body | events to emit, split by `===` lines: `event` plus one JSON argument (other text is sent as a string), or a JSON array `["event", arg1, arg2]` |
+| `# @auth {…}` | the namespace CONNECT payload (a JSON object) |
+| `# @ack` | wait up to 5 s for each emit's ack and show it |
+| `# @path /io/` | the server's Socket.IO path (default `/socket.io/`) |
+| `# @listen 5s` | how long to listen (default 3 s, at most 60 s) |
+| headers | sent with the WebSocket handshake |
+
+termocode speaks Socket.IO v3/v4 (Engine.IO v4) over the WebSocket
+transport only. It answers the server's pings and acks; binary
+attachments are not shown. Secret variables are hidden on the page.
 
 ## More commands
 

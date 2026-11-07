@@ -635,6 +635,8 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.httpOpenAPIFetched(msg), true
 	case httpMQTTDoneMsg:
 		return m.onHTTPMQTTDone(msg), true
+	case httpSIODoneMsg:
+		return m.onHTTPSIODone(msg), true
 	case httpGQLSchemaMsg:
 		return m.onHTTPGQLSchema(msg), true
 	case httpPrivateEnvCheckMsg:
