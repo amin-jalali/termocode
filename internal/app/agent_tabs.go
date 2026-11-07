@@ -101,13 +101,13 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 		return tea.Batch(limit, m.raceOnAgentState(buf, st))
 	}
 	if st == agents.Done {
-		return tea.Batch(limit, m.notifyOS("Agent run ended"))
+		return tea.Batch(limit, m.notifyOSFor("Agent run ended", t.agentTitle()))
 	}
 	if st != agents.Waiting {
 		return limit
 	}
 	if m.inTerminal && m.termTabVisible(shown) {
-		return tea.Batch(limit, m.notifyOS("Agent needs your input"))
+		return tea.Batch(limit, m.notifyOSFor("Agent needs your input", t.agentTitle()))
 	}
 	title := t.Agent
 	if a, ok := agents.ByID(t.Agent); ok {
@@ -115,7 +115,7 @@ func (m *Model) onAgentOutput(buf int) tea.Cmd {
 	}
 	var c tea.Cmd
 	m.toast, c = m.toast.Push(toast.Info, title+" is waiting for you")
-	return tea.Batch(limit, c, m.notifyOS("Agent needs your input"))
+	return tea.Batch(limit, c, m.notifyOSFor("Agent needs your input", t.agentTitle()))
 }
 
 // agentTitle is the tab name of an agent tab ("" for none).

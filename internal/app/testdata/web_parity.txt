@@ -696,6 +696,7 @@ missing	services-compose-run	Containers|S
 missing	services-compose-watch	Containers|S
 missing	services-deploy-git	Containers|S
 missing	services-env-file	Containers|S
+missing	session-recap	Session|S
 missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
