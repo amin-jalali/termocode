@@ -64,6 +64,15 @@ func quietBrowser(c *websocket.Conn) {
 	}()
 }
 
+// helloUses waits for the use each hello marks (hello() marks it after
+// the hub lines connectWith reads, so it can land a moment later) and
+// returns the count then: the base a quiet link must not move.
+func helloUses(t *testing.T, uses *atomic.Int64, conns int64) int64 {
+	t.Helper()
+	waitFor(t, "hello uses counted", func() bool { return uses.Load() >= conns })
+	return uses.Load()
+}
+
 // usesAfter waits a few ping rounds and returns the uses counted then.
 func usesAfter(uses *atomic.Int64) int64 {
 	time.Sleep(300 * time.Millisecond) // ~10 ping rounds
@@ -106,7 +115,7 @@ func TestPhoneWatchOffQuietIsIdle(t *testing.T) {
 	r, store, uses := phoneWatchRig(t, false)
 	c, _ := r.connectWith(pairedToken(t, r, store, "dev-phone3", false))
 	quietBrowser(c)
-	start := uses.Load()
+	start := helloUses(t, uses, 1)
 	if n := usesAfter(uses); n != start {
 		t.Fatalf("web_phone off: %d uses from a quiet link", n-start)
 	}
@@ -121,7 +130,7 @@ func TestPhoneWatchNotGuestNotLaunchLink(t *testing.T) {
 	quietBrowser(g)
 	l, _ := r.connect() // a launch-link session
 	quietBrowser(l)
-	start := uses.Load()
+	start := helloUses(t, uses, 2)
 	if n := usesAfter(uses); n != start {
 		t.Fatalf("%d uses from a guest or the launch link", n-start)
 	}
