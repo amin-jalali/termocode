@@ -215,7 +215,9 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 			Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) {
 				return askPair(ctx, ctlRef.Load(), a)
 			}})
-		login = NewLogin(LoginConfig{Tokens: tokens, Passkeys: pk, Audit: audit, Now: now, RequireTOTP: cfg.RequireTOTP, AppKeys: cfg.AppKeyLogin,
+		// The device list itself, not only through the passkeys: LAN mode has
+		// none, and its remembered browsers sign in with their key alone.
+		login = NewLogin(LoginConfig{Tokens: tokens, Store: devices, Passkeys: pk, Audit: audit, Now: now, RequireTOTP: cfg.RequireTOTP, AppKeys: cfg.AppKeyLogin,
 			CheckTOTP: func(ctx context.Context, device, code string) error {
 				c := ctlRef.Load()
 				if c == nil {
