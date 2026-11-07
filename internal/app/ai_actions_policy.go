@@ -624,6 +624,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-discard-proposal": aiNever("the user reviews proposed edits"),
 	"ai-review":           aiNever("the user reviews proposed edits"),
 	"ai-edit-review":      aiNever(aiNoAIConfig),
+	"ai-review-order":     aiNever(aiNoAIConfig),
 	"ai-undo-turn":        aiNever("the user undoes the AI's changes"),
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
@@ -844,6 +845,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_auto_approve":       aiNever(aiNoAIConfig),
 	"ai_max_steps":          aiNever(aiNoAIConfig),
 	"ai_edit_review":        aiNever(aiNoAIConfig),
+	"ai_review_order":       aiNever(aiNoAIConfig),
 	"ai_prices":             aiNever(aiNoAIConfig),
 	"ai_context_windows":    aiNever(aiNoAIConfig),
 	"ai_models":             aiNever(aiNoAIConfig),
@@ -952,6 +954,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"workflows_history_days":     aiConfirm(ai.ClassSettings),
 	"workflows_wait_hours":       aiConfirm(ai.ClassSettings),
 	"workflows_agent_sandbox":    aiNever("where outside agents may write; only the user changes it"),
+	"agent_os_sandbox":           aiNever("the OS sandbox around outside agents; only the user changes it"),
 
 	// Git blame (GITX-3..5)
 	"git_status_blame":            aiConfirm(ai.ClassSettings),

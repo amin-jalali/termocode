@@ -57,6 +57,7 @@ const (
 	GateConfirm = "confirm" // mutating: the user allows it (or its class is auto-approved)
 	GateReview  = "review"  // a file change the user reviews as a diff
 	GateInvalid = "invalid" // refused before any gate (bad arguments)
+	GateHook    = "hook"    // refused by a pre_tool hook before any gate (CMP-59)
 )
 
 type callIDKey struct{}
@@ -118,6 +119,18 @@ type Agent struct {
 	// Compact (optional) summarises older messages when the provider
 	// says the context is too long; once per turn (compact.go, OMX-3).
 	Compact func(ctx context.Context, older []Message) (string, error)
+	// PreTool (optional) sees each valid call before its gate (CMP-59:
+	// the user's pre_tool hooks): it can block the call, change its
+	// arguments or allow it without the approval card. Run's goroutine.
+	PreTool func(ctx context.Context, t Tool, args map[string]any) PreToolVerdict
+}
+
+// PreToolVerdict is PreTool's answer for one call.
+type PreToolVerdict struct {
+	Block string         // not "": the call does not run; the reason goes to the model
+	Allow bool           // a mutating call runs without the approval card (a review still shows)
+	Args  map[string]any // not nil: the call runs with these arguments
+	By    string         // who decided, for the audit ("hook")
 }
 
 // DefaultRetries is how often a request is tried again when the server
@@ -438,11 +451,26 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	case t.Validate != nil:
 		invalid = t.Validate(args)
 	}
+	var verdict PreToolVerdict
+	if invalid == nil && a.PreTool != nil {
+		verdict = a.PreTool(ctx, t, args)
+		if verdict.Block == "" && verdict.Args != nil {
+			args = verdict.Args // the hook's change; it must still be valid
+			if t.Validate != nil {
+				invalid = t.Validate(args)
+			}
+		}
+	}
 	human := t.Human(args)
 	if invalid != nil {
 		human = Redact(human)
 	}
 	emit(Event{Kind: EventToolStart, Tool: t.Name, Label: t.Label(), Detail: human, Args: args})
+	if verdict.Block != "" {
+		result = t.Name + ": blocked by a hook: " + Redact(verdict.Block) + " Do not retry the same call; continue without it or ask the user."
+		emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: GateHook, Decision: "hook denied"})
+		return result
+	}
 	if invalid != nil {
 		result = "error: " + Redact(invalid.Error())
 		emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: GateInvalid, Decision: "refused"})
@@ -458,6 +486,8 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 		gate, decision = GateReview, "user (review)"
 	case t.Mutating && t.Class != "" && a.AutoApprove[t.Class]:
 		gate, decision = GateConfirm, "auto-approved ("+t.Class+")"
+	case t.Mutating && verdict.Allow:
+		gate, decision = GateConfirm, "allowed by hook"
 	case t.Mutating:
 		gate = GateConfirm
 		if a.Confirm == nil || !a.Confirm(ctx, t, human) {

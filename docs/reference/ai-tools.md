@@ -2075,6 +2075,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai-proofs` | AI: Proof of Work… (screenshots the AI took) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-reasoning-next` | AI: Next Reasoning Level | never | AI provider, credentials and approvals stay with the user; more thinking costs the user more |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
+| `ai-review-order` | AI: Toggle Review Order (explain first / as proposed) | never | AI provider, credentials and approvals stay with the user |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
 | `ai-ship` | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | never | it pushes and opens a pull request: the user starts it |
@@ -2272,6 +2273,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-ai-pr-text` | Git: Write Pull Request Description with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-ai-review-branch` | Git: AI Review Branch (Pull Request) | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-review-changes` | Git: AI Review My Changes | never | fills the user's chat box; the user reads it and sends it |
+| `git-ai-security-branch` | Git: AI Security Review Branch (Threat Model) | never | fills the user's chat box; the user reads it and sends it |
+| `git-ai-security-changes` | Git: AI Security Review My Changes (Threat Model) | never | fills the user's chat box; the user reads it and sends it |
 | `git-ai-stash` | Git: Stash with AI Message | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-auto-fetch` | Git: Toggle Auto Fetch | never | starts a timer that talks to the remote; only the user turns it on |
 | `git-autosquash` | Git: Autosquash fixup! Commits… | never | rewrites the branch history; only the user starts a rebase |
@@ -2416,6 +2419,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-tag-details` | Git: Show Tag Details… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-tag-push` | Git: Push Tag… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-threat-model` | Git: Edit Threat Model… | never | opens the threat model for the user; a card asks before it writes the file |
 | `git-uncommit` | Git: Uncommit Last Commit (Keep Changes) | confirm (git) |   |
 | `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-unshallow` | Git: Fetch Full History (Unshallow) | confirm (git) |   |
@@ -2686,6 +2690,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent_accounts` | never | AI provider, credentials and approvals stay with the user; the labels of the outside agents' account folders |
 | `agent_auto_continue` | never | AI provider, credentials and approvals stay with the user; it lets termocode type continue into an outside agent's tab after its usage limit resets |
 | `agent_hibernate_minutes` | never | AI provider, credentials and approvals stay with the user; it lets termocode stop idle outside agents |
+| `agent_os_sandbox` | never | the OS sandbox around outside agents; only the user changes it |
 | `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
@@ -2712,6 +2717,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `ai_prompt_cache` | never | AI provider, credentials and approvals stay with the user |
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `ai_reasoning` | never | AI provider, credentials and approvals stay with the user |
+| `ai_review_order` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_escalate` | never | AI provider, credentials and approvals stay with the user |
 | `ai_step_stall_minutes` | never | AI provider, credentials and approvals stay with the user |
 | `ai_team_mode` | never | AI provider, credentials and approvals stay with the user |

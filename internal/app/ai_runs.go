@@ -403,7 +403,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				return "", nil, err
 			}
 			prompt := aiCLIPrompt(ctx, dir, sys, input+wts.othersNote(n.ID), handoff)
-			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir}, prompt, emit)
+			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir, OSSandbox: agentOSSandboxOn()}, prompt, emit)
 			return res.Text, res.Usage, err
 		},
 		Build: func(ctx context.Context, n agentdag.Node, input string) (*ai.Agent, []ai.Message, error) {
@@ -451,7 +451,9 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 			k := aiBgStepKey(run.ID, n.ID) // OMX-6: background runs this step starts hand their answers in
 			mail.openKey(k)
-			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHooks(dir, ts, out), Native: native, AutoApprove: own, MaxSteps: maxSteps,
+			hooks := aiActiveHooks(dir)
+			return &ai.Agent{Provider: aiWithTemp(sl.p, aiCategoryTemp(n, cats)), Tools: aiWithHookList(dir, hooks, ts, out), Native: native, AutoApprove: own, MaxSteps: maxSteps,
+				PreTool:     aiPreToolHooks(dir, hooks, out), // CMP-59
 				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title),
 				Reasoning: aiCategoryReasoning(n, cats, reasoning(n.Slot, sl.cfg), think), Name: aiSlotLabel(n.Slot, sl.cfg), Fallbacks: aiFallbacksWithTemp(fallbacks[n.Slot], aiCategoryTemp(n, cats)),
 				ContextWindow: windowOf(sl.cfg.Model), Inbox: mail.inbox(k)}, msgs, nil

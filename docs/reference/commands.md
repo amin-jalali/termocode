@@ -90,6 +90,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Toggle Keep Going While Todos Are Open | `ai-keep-going` |   |   |
 | AI: Toggle Next Edit Suggestions | `ai-toggle-next-edit` |   |   |
 | AI: Toggle Plan Approval | `ai-plan-approval` |   |   |
+| AI: Toggle Review Order (explain first / as proposed) | `ai-review-order` |   |   |
 | AI: Trigger Inline Completion | `ai-trigger-inline` | <code>Alt+&#92;</code> | <code>Alt+&#92;</code> |
 | AI: Undo Last Turn | `ai-undo-turn` |   |   |
 | AI: Unlock Secrets | `secrets-unlock` |   |   |
@@ -397,6 +398,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Git: AI Review Branch (Pull Request) | `git-ai-review-branch` |   |   |
 | Git: AI Review My Changes | `git-ai-review-changes` |   |   |
+| Git: AI Security Review Branch (Threat Model) | `git-ai-security-branch` |   |   |
+| Git: AI Security Review My Changes (Threat Model) | `git-ai-security-changes` |   |   |
 | Git: Accept Both Changes (Conflict at Cursor) | `git-conflict-both` |   |   |
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
@@ -439,6 +442,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Discard Line (or Selected Lines) | `git-discard-lines` |   |   |
 | Git: Edit Commit Message in Editor | `git-commit-edit` |   |   |
+| Git: Edit Threat Model… | `git-threat-model` |   |   |
 | Git: Explain Changes with AI | `git-ai-explain-changes` |   |   |
 | Git: Explain Line's Commit with AI | `git-ai-explain-line` |   |   |
 | Git: Fetch | `git-fetch` |   |   |

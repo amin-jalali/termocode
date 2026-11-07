@@ -94,7 +94,9 @@ The AI never saves a file by itself:
 - An `agent` step runs **Codex** or **Claude Code** with your own login,
   in the item's worktree only. With `"sandbox": "worktree"` it may change
   files there; with `"read-only"` it only reads. It never gets push or
-  pull request tools. The item goes to it as marked data, never as
+  pull request tools. With the `agent_os_sandbox` setting on, the agent
+  program itself also runs inside an OS sandbox (bwrap / sandbox-exec):
+  the rest of the disk is read-only. The item goes to it as marked data, never as
   orders. An item that looks like an injection asks you first.
 - A `pipeline` step runs a named AI profile. A `tests` step runs the
   project's test task (or its `argv`) in the item's worktree; when the

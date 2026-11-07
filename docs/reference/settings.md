@@ -114,6 +114,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `workflows_history_days` | int | `30` | Days a finished workflow run (its file and logs) is kept before it is deleted at start. |
 | `workflows_wait_hours` | int | `12` | Hours a run waits for an answer on a card (a write to allow, a budget pause) before the step is marked waiting too long. |
 | `workflows_agent_sandbox` | enum | `worktree` | Where an outside agent step works: worktree (it may change files in its own git worktree) or read-only (it may only read). |
+| `agent_os_sandbox` | bool | `false` | Outside agents (workflow agent steps, AI run CLI steps, race lanes) run inside an OS sandbox: bwrap on Linux, sandbox-exec on macOS. The disk is read-only; only the lane's worktree, the temp folder and the agent's own config folders can be written. The network stays on. No sandbox tool: the agent does not start. |
 
 ## Git (file only)
 
@@ -167,6 +168,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_inline_model` | string | `(provider default)` | Model for inline ghost-text completions. Empty uses a fast model of the provider (for example Claude Haiku or gpt-4.1-mini). |
 | `ai_auto_approve` | string[] | `[]` | Agent tool classes that run without asking: fileWrite, git, run, ide, settings, services. Set with AI: Agent Auto-Approve…. |
 | `ai_edit_review` | enum | `review` | review: the agent's file changes (write_file, create_file, LSP rename, code actions, format) open as a diff where you accept or reject each change; the agent waits and is told what was written. auto: the old way (a confirm dialog, or no question when fileWrite is auto-approved). Auto-approving fileWrite also skips the review. Toggle with AI: Toggle Edit Review. |
+| `ai_review_order` | enum | `explain` | Order of the files in the AI review card (and the web's review cards). explain: the files that explain the change come first: notes and docs, then schemas and the files that define new names, then the code that uses them, tests last; each moved file says why. proposed: the order the agent proposed them in. Toggle with AI: Toggle Review Order. |
 | `ai_max_steps` | int | `25` | Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send "continue". |
 | `ai_prices` | object | `{}` | Model prices in US dollars per million tokens, by model id prefix, over the built-in table (checked 2026-10-18): for example `{"my-model": {"in": 3, "out": 15, "cache_read": 0.3, "cache_write": 3.75}}`. A missing cache price is the input price. Your entry wins over a built-in one. Ollama and LM Studio cost $0; a model with no price shows tokens only. |
 | `ai_context_windows` | object | `{}` | Context window in tokens, by model id prefix, over the built-in table: for example `{"qwen2.5-coder": 32768}`. Used for the context % of a turn; a model with no window shows none. |

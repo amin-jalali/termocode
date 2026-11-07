@@ -162,6 +162,25 @@ func TestAgentStepReadOnly(t *testing.T) {
 	}
 }
 
+// CMP-60: agent_os_sandbox puts the agent CLI itself inside the OS
+// sandbox (bwrap / sandbox-exec); off by default.
+func TestAgentStepOSSandbox(t *testing.T) {
+	for _, on := range []bool{false, true} {
+		var got clistep.Spec
+		s := &Steps{RunID: "r1", Workspace: t.TempDir(), AgentSandbox: workflow.SandboxReadOnly, AgentOSSandbox: on,
+			Agent: func(_ context.Context, sp clistep.Spec, _ string, _ func(ai.Event)) (clistep.Result, error) {
+				got = sp
+				return clistep.Result{Text: "ok"}, nil
+			}}
+		if _, err := s.Run(context.Background(), run.RunCall{Step: agentStep("claude-code", "")}); err != nil {
+			t.Fatal(err)
+		}
+		if got.OSSandbox != on {
+			t.Errorf("on=%v: spec %+v", on, got)
+		}
+	}
+}
+
 func TestAgentStepUsageLimitPauses(t *testing.T) {
 	s := &Steps{RunID: "r1", Workspace: t.TempDir(), Agent: func(context.Context, clistep.Spec, string, func(ai.Event)) (clistep.Result, error) {
 		return clistep.Result{}, &ai.LimitError{CLI: ai.CLICodex, Msg: "limit", ResetAt: time.Now().Add(time.Hour)}

@@ -112,12 +112,15 @@ type aiState struct {
 	// skillsTrust is the open project-skills card (ai_skills.go).
 	skillsTrust *aiSkillsTrustPending
 	hooksTrust  *aiHooksTrustPending // the open project-hooks card (ai_hooks.go)
-	webPreset   string               // the server the open add card is for (ai_web_presets.go)
-	recall      *aiRecallState       // lesson recall per chat (ai_recall.go)
-	ship        *aiShip              // the running ship loop (ai_ship.go)
-	acp         *acpThread           // CMP-83: the chat's ACP agent thread (acp_thread.go)
-	ctl         *agentCtlState       // the agent control socket's UI side (agent_ctl.go)
-	diffNotes   *diffNotesState      // diff comments → agent (diff_comments.go, CMP-51)
+	// stopHookPushes counts the turns in a row a stop hook sent the
+	// agent on (CMP-59, ai_hooks.go).
+	stopHookPushes int
+	webPreset      string          // the server the open add card is for (ai_web_presets.go)
+	recall         *aiRecallState  // lesson recall per chat (ai_recall.go)
+	ship           *aiShip         // the running ship loop (ai_ship.go)
+	acp            *acpThread      // CMP-83: the chat's ACP agent thread (acp_thread.go)
+	ctl            *agentCtlState  // the agent control socket's UI side (agent_ctl.go)
+	diffNotes      *diffNotesState // diff comments → agent (diff_comments.go, CMP-51)
 	// agentHooksPlan is the change the open state-hooks card shows (agent_hooks_ui.go).
 	agentHooksPlan *agenthooks.Plan
 	// packs is the open agent-pack flow (agent_packs_ui.go).
@@ -562,6 +565,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-review", "AI: Review Pending Changes", ""},
 		{"ai-undo-turn", "AI: Undo Last Turn", ""},
 		{"ai-edit-review", "AI: Toggle Edit Review (diff / auto)", ""},
+		{"ai-review-order", "AI: Toggle Review Order (explain first / as proposed)", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
 		{"ai-toggle-inline", "AI: Toggle Inline Completions", "Alt+|"},
 		{"ai-toggle-next-edit", "AI: Toggle Next Edit Suggestions", ""},
@@ -637,7 +641,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	// the configure / sign-in / credentials entries are the way out.
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
-		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
+		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-review-order", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID,
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
 		"ai-agent-hooks", "ai-agent-packs": // agent CLI files need no provider
@@ -692,6 +696,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiUndoTurn(-1), true
 	case "ai-edit-review":
 		return m.toggleAIEditReview(), true
+	case "ai-review-order": // ai_review_order.go
+		return m.toggleAIReviewOrder(), true
 	case "ai-apply-proposal":
 		return m.reviewDecideCurrent(true), true
 	case "ai-discard-proposal":

@@ -226,12 +226,8 @@ func (m *Model) webAIInfoHooks() webproto.AIInfo {
 		}
 	}
 	var user, project []webHookRow
-	for _, h := range s.PostTool {
-		tools := strings.Join(h.Tools, ", ")
-		if tools == "" {
-			tools = "*"
-		}
-		row := webHookRow{run: agentdag.Clean(h.Run), tools: "after " + tools}
+	for _, h := range s.All() {
+		row := webHookRow{run: agentdag.Clean(h.Run), tools: aiHookWhen(h)}
 		if h.Source == aihooks.SourceProject {
 			project = append(project, row)
 		} else {
