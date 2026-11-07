@@ -142,7 +142,7 @@ func (m *Model) gitxRowAction(id string, c git.GraphCommit) tea.Cmd {
 	case gitxMenuRestoreFile:
 		return m.gitxRestoreFileFrom(c.FullHash)
 	case gitxMenuCopyPatch:
-		cwd, err := m.rootDir()
+		cwd, err := m.gitRootDir()
 		if err != nil {
 			return nil
 		}
@@ -161,7 +161,7 @@ func (m *Model) openBranchPickerFor(title string, then func(branch string) tea.C
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -227,7 +227,7 @@ func (m *Model) gitxPickDone(verb string, conflicts []string, err error, ok stri
 // ── GITX-16 ─────────────────────────────────────────────────────────────
 
 func (m *Model) openCherryPickBranchCard(branch string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -258,7 +258,7 @@ func (m *Model) openRevertMergePicker(c git.GraphCommit) tea.Cmd {
 	if !c.IsMerge {
 		return m.gitxInfo(c.Hash + " is not a merge: use Revert in the commit view")
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -294,7 +294,7 @@ func (m *Model) openRevertMergePicker(c git.GraphCommit) tea.Cmd {
 
 // gitxCommitFilePicker picks one file the commit changed.
 func (m *Model) gitxCommitFilePicker(full, title string, then func(m *Model, path string) tea.Cmd) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -330,7 +330,7 @@ func (m *Model) gitxPickFileFrom(full string) tea.Cmd {
 				if id != "apply" {
 					return nil
 				}
-				cwd, _ := m.rootDir()
+				cwd, _ := m.gitRootDir()
 				return m.gitxPickDone("Cherry-pick", nil, git.ApplyFileFromCommit(cwd, full, path), "Applied "+path+" from "+short)
 			}, confirm.Button{ID: "apply", Title: "Apply"})
 		return nil
@@ -347,7 +347,7 @@ func (m *Model) gitxRestoreFileFrom(full string) tea.Cmd {
 				if id != "restore" {
 					return nil
 				}
-				cwd, _ := m.rootDir()
+				cwd, _ := m.gitRootDir()
 				backup, err := git.RestoreFileFrom(cwd, full, path)
 				if err != nil {
 					return m.gitxFail("Restore failed", err)
@@ -384,7 +384,7 @@ func gitxRebaseNotes(cwd, base string) (string, bool) {
 }
 
 func (m *Model) gitxRebaseCmd(summary string, run func(cwd string, opt git.RebaseOptions) (git.RebaseOutcome, error), stash bool) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -398,7 +398,7 @@ func (m *Model) openRebaseOntoCard(onto string) tea.Cmd {
 	if m.gitRebase.InProgress {
 		return m.rebaseBusyToast()
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -431,7 +431,7 @@ func (m *Model) openRowRebaseCard(c git.GraphCommit, what, title, text, button s
 	if m.gitRebase.InProgress {
 		return m.rebaseBusyToast()
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -458,7 +458,7 @@ func (m *Model) openRewordPrompts(c git.GraphCommit) tea.Cmd {
 	if m.gitRebase.InProgress {
 		return m.rebaseBusyToast()
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -502,7 +502,7 @@ func (m *Model) openAutosquashCard() tea.Cmd {
 	if m.gitRebase.InProgress {
 		return m.rebaseBusyToast()
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -542,7 +542,7 @@ func (m *Model) gitxPatchPath(v string) (string, error) {
 	if filepath.IsAbs(v) {
 		return v, nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return "", err
 	}
@@ -553,7 +553,7 @@ func (m *Model) openSavePatchPrompt() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -613,7 +613,7 @@ func (m *Model) gitxCheckPatch(from, patch string) tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

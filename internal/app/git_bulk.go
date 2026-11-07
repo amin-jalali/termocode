@@ -56,7 +56,7 @@ func (m *Model) gitUnstageAll() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}
@@ -121,7 +121,7 @@ func (m *Model) openGitCleanUntrackedCard() tea.Cmd {
 // onGitBulkConfirm runs the answer of a Discard All or Delete Untracked
 // card; Cancel (and any other answer) does nothing.
 func (m *Model) onGitBulkConfirm(kind confirmKindEnum, id string) tea.Cmd {
-	cwd, err := m.rootDir()
+	cwd, err := m.gitRootDir()
 	if err != nil {
 		return nil
 	}

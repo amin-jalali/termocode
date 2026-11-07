@@ -428,6 +428,9 @@ func (m *Model) webCtlOpen(call *webCall) tea.Cmd {
 			return nil
 		}
 		if st.up {
+			if sshPort == 0 {
+				return m.webCtlRunning(call, args != nil && args.Yes)
+			}
 			m.webCtlReply(call)
 			return nil
 		}
@@ -484,11 +487,28 @@ func (m *Model) webCtlReply(call *webCall) {
 	call.reply(webSSHOpen{Port: st.port, Sock: sock, Secret: plain})
 }
 
+// webCtlRunning answers a local web.open of a running panel. yes (the
+// user typed it, or --yes with "web_panel": "on") opens a new one-time
+// link, as Web: Open in Browser does; a script gets the port and
+// Already, and nothing opens without the laptop.
+func (m *Model) webCtlRunning(call *webCall, yes bool) tea.Cmd {
+	st := m.webPanel
+	if !yes {
+		call.reply(webOpenReply{Port: st.port, URL: st.url, Already: true})
+		return nil
+	}
+	cmd := m.webNewLink(true, false)
+	call.reply(webOpenReply{Port: st.port, URL: st.url})
+	return cmd
+}
+
 // webOpenReply is the answer to web.open: the port, and in tailnet mode
-// the https address browsers use.
+// the https address browsers use. Already: the panel ran and no new link
+// opened (a script's call; the laptop opens one).
 type webOpenReply struct {
-	Port int    `json:"port"`
-	URL  string `json:"url,omitempty"`
+	Port    int    `json:"port"`
+	URL     string `json:"url,omitempty"`
+	Already bool   `json:"already,omitempty"`
 }
 
 // webSSHOpen is the answer to web.open in SSH mode.
