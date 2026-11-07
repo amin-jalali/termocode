@@ -1,6 +1,10 @@
 package dbclient
 
-import "strings"
+import (
+	"sort"
+	"strconv"
+	"strings"
+)
 
 // cypherTok is one Cypher token: a word (afterDot when it follows '.', ':'
 // or '$', so it is a name, not a keyword) or a single symbol byte.
@@ -135,4 +139,88 @@ func cypherTokens(q string) (toks []cypherTok, ok bool) {
 		}
 	}
 	return toks, true
+}
+
+// GraphNode is one Neo4j node of a result, with its properties as text.
+type GraphNode struct {
+	ID     string
+	Labels []string
+	Props  map[string]string
+}
+
+// GraphRel is one Neo4j relationship of a result.
+type GraphRel struct {
+	From, To, Type string
+	Props          map[string]string
+}
+
+// GraphText draws a graph result as plain text: one line per node, a blank
+// line, then one line per relationship, all in a stable order. Control
+// characters in names and values are escaped so they cannot paint the
+// terminal.
+func GraphText(nodes []GraphNode, rels []GraphRel) string {
+	if len(nodes) == 0 && len(rels) == 0 {
+		return "(no nodes)\n"
+	}
+	ns := append([]GraphNode(nil), nodes...)
+	sort.SliceStable(ns, func(i, j int) bool { return idLess(ns[i].ID, ns[j].ID) })
+	rs := append([]GraphRel(nil), rels...)
+	sort.SliceStable(rs, func(i, j int) bool {
+		a, b := rs[i], rs[j]
+		if a.From != b.From {
+			return idLess(a.From, b.From)
+		}
+		if a.To != b.To {
+			return idLess(a.To, b.To)
+		}
+		return a.Type < b.Type
+	})
+	var sb strings.Builder
+	for _, n := range ns {
+		sb.WriteString("(" + graphEsc(n.ID))
+		for _, l := range n.Labels {
+			sb.WriteString(":" + graphEsc(l))
+		}
+		sb.WriteString(graphProps(n.Props) + ")\n")
+	}
+	if len(ns) > 0 && len(rs) > 0 {
+		sb.WriteString("\n")
+	}
+	for _, r := range rs {
+		sb.WriteString("(" + graphEsc(r.From) + ")-[:" + graphEsc(r.Type) + graphProps(r.Props) + "]->(" + graphEsc(r.To) + ")\n")
+	}
+	return sb.String()
+}
+
+// idLess orders numeric ids by value ("9" before "10") and others as text.
+func idLess(a, b string) bool {
+	if len(a) != len(b) {
+		if _, e1 := strconv.ParseUint(a, 10, 64); e1 == nil {
+			if _, e2 := strconv.ParseUint(b, 10, 64); e2 == nil {
+				return len(a) < len(b)
+			}
+		}
+	}
+	return a < b
+}
+
+func graphProps(p map[string]string) string {
+	if len(p) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(p))
+	for k := range p {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, len(keys))
+	for i, k := range keys {
+		parts[i] = graphEsc(k) + ": " + graphEsc(p[k])
+	}
+	return " {" + strings.Join(parts, ", ") + "}"
+}
+
+func graphEsc(s string) string {
+	q := strconv.Quote(s)
+	return q[1 : len(q)-1]
 }
