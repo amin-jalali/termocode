@@ -194,6 +194,12 @@ func (m *Model) askContainerUpload() {
 
 // handleContainerFilesConfirm answers the two file cards.
 func (m *Model) handleContainerFilesConfirm(id string) (tea.Cmd, bool) {
+	if m.confirmKind != confirmKindContainerFile && m.confirmKind != confirmKindContainerFileUpload {
+		return nil, false
+	}
+	if m.services == nil { // the Services view never opened: nothing to answer
+		return nil, true
+	}
 	st := &m.services.files
 	switch m.confirmKind {
 	case confirmKindContainerFile:
