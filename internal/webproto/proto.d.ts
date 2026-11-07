@@ -554,6 +554,19 @@ export interface AIWorktreeArgs {
   id: string;
 }
 
+export interface AIWorktreeNotesArgs {
+  id: string;
+  chat_id?: string;
+  notes: ReviewNote[];
+}
+
+export interface ReviewNote {
+  path: string;
+  line: number;
+  side: "new" | "old";
+  text: string;
+}
+
 export interface AIMCPProfileArgs {
   name?: string;
   all?: boolean;
@@ -1027,6 +1040,7 @@ export interface ChatMsg {
   rules?: string;
   run?: ChatRun;
   steps?: ChatStep[];
+  blocks?: Block[];
 }
 
 export interface MdNode {
@@ -1058,6 +1072,158 @@ export interface ChatStep {
   text?: string;
   md?: MdNode;
   error?: string;
+  blocks?: Block[];
+}
+
+export interface Block {
+  id: string;
+  kind: "list" | "table" | "diff" | "card" | "detail" | "chart" | "status" | "form" | "json" | "text" | "board";
+  title: string;
+  source?: string;
+  ws?: string;
+  spec?: ViewSpec;
+  live?: boolean;
+  items?: BlockItem[];
+  columns?: BlockColumn[];
+  rows?: string[][];
+  groups?: BlockGroup[];
+  diff?: BlockDiff;
+  fields?: BlockField[];
+  bars?: BlockBar[];
+  state?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  form?: BlockFormField[];
+  json?: string;
+  md?: MdNode;
+  board?: BlockBoard;
+  for_you?: string;
+  ref?: BlockRef;
+  actions?: BlockAction[];
+  total?: number;
+  truncated?: boolean;
+  stale?: boolean;
+}
+
+export interface ViewSpec {
+  view: string;
+  ws?: string;
+  args?: Record<string, string>;
+  fields?: string[];
+  filter?: ViewCond[];
+  sort?: ViewSort[];
+  group?: string;
+  limit?: number;
+  layout?: string;
+  density?: "compact" | "detailed";
+  title?: string;
+  refresh?: number;
+}
+
+export interface ViewCond {
+  field: string;
+  op: "eq" | "ne" | "gt" | "lt" | "ge" | "le" | "contains" | "starts" | "in" | "empty" | "not_empty";
+  value?: string;
+  in?: string[];
+}
+
+export interface ViewSort {
+  field: string;
+  desc?: boolean;
+}
+
+export interface BlockItem {
+  id: string;
+  title: string;
+  sub?: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  badge?: string;
+  time?: number;
+  ref?: BlockRef;
+  actions?: BlockAction[];
+}
+
+export interface BlockRef {
+  kind: string;
+  id?: string;
+  path?: string;
+  line?: number;
+}
+
+export interface BlockAction {
+  id: string;
+  label: string;
+  kind: "op" | "attach" | "view" | "laptop";
+  op?: string;
+  ref?: BlockRef;
+  spec?: ViewSpec;
+  risky?: boolean;
+}
+
+export interface BlockColumn {
+  id: string;
+  label: string;
+  kind?: "text" | "num" | "time" | "cost" | "tone" | "mono";
+}
+
+export interface BlockGroup {
+  label: string;
+  count: number;
+  items?: BlockItem[];
+  rows?: string[][];
+}
+
+export interface BlockDiff {
+  path: string;
+  old?: string;
+  adds?: number;
+  dels?: number;
+  hunks: BlockHunk[];
+}
+
+export interface BlockHunk {
+  header: string;
+  lines: BlockDiffLine[];
+}
+
+export interface BlockDiffLine {
+  k: "add" | "del" | "ctx";
+  a?: number;
+  b?: number;
+  text: string;
+}
+
+export interface BlockField {
+  label: string;
+  value: string;
+  kind?: "text" | "num" | "time" | "cost" | "tone" | "mono";
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+}
+
+export interface BlockBar {
+  label: string;
+  value: number;
+  text?: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+}
+
+export interface BlockFormField {
+  id: string;
+  label: string;
+  kind: "text" | "num" | "bool" | "choice" | "long";
+  value?: string;
+  choices?: string[];
+  required?: boolean;
+  hint?: string;
+}
+
+export interface BlockBoard {
+  columns: BlockBoardColumn[];
+}
+
+export interface BlockBoardColumn {
+  id: string;
+  label: string;
+  tone?: "ok" | "warn" | "bad" | "busy" | "idle" | "info";
+  items?: BlockItem[];
 }
 
 export interface ChatDelta {
@@ -3109,6 +3275,7 @@ export interface OpArgs {
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
   "ai.worktree_discard": AIWorktreeArgs;
+  "ai.worktree_notes": AIWorktreeNotesArgs;
   "ai.mcp_profiles": EmptyArgs;
   "ai.use_mcp_profile": AIMCPProfileArgs;
   "chat.rename": ChatRenameArgs;
@@ -3378,6 +3545,7 @@ export interface OpResult {
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
   "ai.worktree_discard": AskRef;
+  "ai.worktree_notes": ChatRef;
   "ai.mcp_profiles": MCPProfiles;
   "ai.use_mcp_profile": AskRef;
   "chat.fork": ChatRef;

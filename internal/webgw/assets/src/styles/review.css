@@ -1,0 +1,44 @@
+/* Review in chat on the phone (MOB-14, views/phone/Review.tsx, in
+   phone.js). A chunk may not import a style sheet, so these rules live
+   in app.css. Every tap target is 44px tall; a change is a colour and a
+   mark (− / +), never colour alone. */
+.rv-list { list-style: none; margin: 0; padding: 0; }
+.rv-wt { display: grid; grid-template-columns: auto 1fr auto auto; gap: 0 var(--s2); align-items: center; width: 100%; min-height: 44px; padding: var(--s2) var(--s3); border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--text); text-align: start; }
+.rv-wt:disabled { opacity: 0.7; }
+.rv-wt-name { grid-column: 2; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-wt-sub { grid-column: 2; color: var(--muted); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-wt > .rv-state { grid-row: 1 / span 2; }
+.rv-state.is-done { color: var(--green); }
+.rv-state.is-running { color: var(--amber); }
+.rv-count { grid-row: 1 / span 2; min-width: 1.5rem; padding: 0 var(--s1); border-radius: var(--r-chip); background: var(--bg-2); color: var(--text-2); text-align: center; font-size: 0.85rem; }
+.rv-count-notes { color: var(--ai); }
+.rv-head { position: sticky; top: 0; z-index: 1; display: flex; flex-direction: column; gap: var(--s1); padding: var(--s2) var(--s3); background: var(--bg); border-bottom: 1px solid var(--border); }
+.rv-nav { display: flex; align-items: center; gap: var(--s2); }
+.rv-nav-btn { min-width: 44px; min-height: 44px; font-size: 1.25rem; }
+.rv-pos { flex: 1; text-align: center; color: var(--text-2); }
+.rv-path { font-family: var(--font-mono); font-size: 0.85rem; overflow-wrap: anywhere; }
+.rv-diff { font-family: var(--font-mono); font-size: 0.8rem; }
+.rv-hunk { border-bottom: 1px dashed var(--border); }
+.rv-line { display: grid; grid-template-columns: 2.5rem 2.5rem 1rem 1fr auto; align-items: start; width: 100%; min-height: 44px; padding: var(--s1) var(--s2); border: 0; background: none; color: var(--text); font: inherit; text-align: start; }
+.rv-line:active { background: var(--bg-hover); }
+.rv-add { background: var(--diff-add-bg); }
+.rv-del { background: var(--diff-del-bg); }
+.rv-add .rv-mark { color: var(--git-add); font-weight: 700; }
+.rv-del .rv-mark { color: var(--git-del); font-weight: 700; }
+.rv-no { color: var(--muted); text-align: end; padding-inline-end: var(--s1); }
+.rv-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.rv-line.has-note { box-shadow: inset 3px 0 0 var(--ai); }
+.rv-noted { color: var(--ai); padding-inline-start: var(--s1); }
+.rv-quote { margin: 0; padding: var(--s2); border-radius: var(--r-chip); background: var(--bg-2); font-family: var(--font-mono); font-size: 0.8rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rv-note-input { width: 100%; min-height: 5rem; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); color: var(--text); font: inherit; }
+.rv-note-sheet { display: flex; flex-direction: column; gap: var(--s2); }
+.rv-notes { padding: var(--s3); }
+.rv-notes ul { list-style: none; margin: 0; padding: 0; }
+.rv-note { display: grid; grid-template-columns: 1fr auto; gap: 0 var(--s2); align-items: center; min-height: 44px; border-bottom: 1px solid var(--border); }
+.rv-note-at { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2); overflow-wrap: anywhere; }
+.rv-note-text { grid-column: 1; overflow-wrap: anywhere; }
+.rv-note-x { grid-column: 2; grid-row: 1 / span 2; min-width: 44px; min-height: 44px; }
+.rv-send { position: sticky; bottom: 0; padding: var(--s2) var(--s3); background: var(--bg); border-top: 1px solid var(--border); }
+.rv-send-btn { width: 100%; min-height: 44px; }
+.rv-acts { padding: var(--s3); }
+.rv-acts > .btn { min-height: 44px; }

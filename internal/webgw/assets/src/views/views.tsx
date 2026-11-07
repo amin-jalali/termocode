@@ -2,6 +2,9 @@
 // tasks (chat WEB-14, tree WEB-16, files WEB-18, terminal WEB-20, git
 // WEB-23); until then each shows its loading and empty states.
 import { h } from "preact";
+import { useEffect } from "preact/hooks";
+import { layout } from "../lib/layout";
+import { loadPhone, phone, phoneFailed } from "../lib/lazy";
 import { prefs, setPref, type Direction, type Language, type Theme } from "../lib/prefs";
 import { go, route } from "../lib/router";
 import { t } from "../strings";
@@ -24,6 +27,7 @@ import { DebugView } from "./run/DebugView";
 import { ServicesView } from "./run/ServicesView";
 import { KubeView } from "./run/KubeView";
 import { View } from "./View";
+import { SubView } from "./more/SubView";
 import { FileView } from "./FileView";
 import { TreeView } from "./Files";
 
@@ -37,6 +41,27 @@ export function FilesView() {
 export { TermView } from "./Term";
 
 export { GitView } from "./git/GitView";
+
+/** ReviewLazy is #/more/review (MOB-14): the phone views' review, loaded
+ * from phone.js on first use. */
+function ReviewLazy() {
+  const m = phone.value;
+  useEffect(() => {
+    if (!m) loadPhone().catch(() => undefined);
+  }, [m]);
+  if (m) return <m.ReviewView />;
+  return (
+    <SubView title={t("pill.review")} name="review">
+      {phoneFailed.value ? (
+        <button type="button" class="btn btn-neutral" onClick={() => loadPhone().catch(() => undefined)}>
+          {t("retry")}
+        </button>
+      ) : (
+        <p class="empty">{t("loading")}</p>
+      )}
+    </SubView>
+  );
+}
 
 export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
@@ -54,6 +79,7 @@ export function MoreView() {
   if (sub === "debug") return <DebugView />;
   if (sub === "services") return <ServicesView />;
   if (sub === "kube") return <KubeView />;
+  if (sub === "review") return <ReviewLazy />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -114,6 +140,11 @@ export function MoreView() {
           <button type="button" class="more-link" data-sub="testing" onClick={() => go({ tab: "more", rest: "testing", query: {} })}>
             {t("act.testing")}
           </button>
+          {layout.value !== "desktop" && (
+            <button type="button" class="more-link" data-sub="review" onClick={() => go({ tab: "more", rest: "review", query: {} })}>
+              {t("pill.review")}
+            </button>
+          )}
         </nav>
         <section class="group" aria-labelledby="g-phone">
           <h2 class="group-title" id="g-phone">
