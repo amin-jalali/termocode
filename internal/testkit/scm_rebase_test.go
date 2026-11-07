@@ -130,7 +130,7 @@ func TestSCMRebaseConfirmAndRun(t *testing.T) {
 	d.Key("enter")
 	startRebase(t, d)
 	clickTarget(d, "confirm:rebase-start")
-	if !until(d, func() bool { return strings.Contains(text(d), "Rebase done: 3 commits → 2 commits") }) {
+	if !untilGit(d, func() bool { return strings.Contains(text(d), "Rebase done: 3 commits → 2 commits") }) {
 		t.Fatalf("no done toast:%s", dump(d))
 	}
 	if s := text(d); !strings.Contains(s, "Undo: u / Git: Undo Last Git Action") || strings.Contains(s, "--hard") {
@@ -188,7 +188,7 @@ func TestSCMRebaseStashAndContinue(t *testing.T) {
 		t.Fatalf("confirm does not offer the stash:%s", dump(d))
 	}
 	clickTarget(d, "confirm:rebase-stash")
-	if !until(d, func() bool { return strings.Contains(text(d), "Rebase done") }) {
+	if !untilGit(d, func() bool { return strings.Contains(text(d), "Rebase done") }) {
 		t.Fatalf("no done toast:%s", dump(d))
 	}
 	if got := r.git("log", "--format=%s"); got != "c4\nc2\nc1\ninit" {
@@ -285,7 +285,7 @@ func TestSCMRebaseContinueAndSkip(t *testing.T) {
 	}
 	openBanner(t, d)
 	clickTarget(d, "confirm:rebase-skip")
-	if !until(d, func() bool { return strings.Contains(text(d), "Rebase done") && rowWith(d, "Rebasing") < 0 }) {
+	if !untilGit(d, func() bool { return strings.Contains(text(d), "Rebase done") && rowWith(d, "Rebasing") < 0 }) {
 		t.Fatalf("skip did not finish:%s", dump(d))
 	}
 	if got := r.git("log", "--format=%s"); got != "c3\nc1\ninit" {
@@ -327,7 +327,7 @@ func TestSCMFixupInto(t *testing.T) {
 		t.Fatalf("no fixup confirm:%s", dump(d))
 	}
 	clickTarget(d, "confirm:fixup-stash")
-	if !until(d, func() bool { return strings.Contains(text(d), "staged changes folded into") }) {
+	if !untilGit(d, func() bool { return strings.Contains(text(d), "staged changes folded into") }) {
 		t.Fatalf("no done toast:%s", dump(d))
 	}
 	if got := r.git("log", "--format=%s"); got != "c4\nc3\nc2\nc1\ninit" {
@@ -390,7 +390,7 @@ func TestSCMFixupFromPalette(t *testing.T) {
 		t.Fatalf("no confirm:%s", dump(d))
 	}
 	clickTarget(d, "confirm:fixup")
-	if !until(d, func() bool { return strings.Contains(text(d), "staged changes folded into") }) {
+	if !untilGit(d, func() bool { return strings.Contains(text(d), "staged changes folded into") }) {
 		t.Fatalf("no done toast:%s", dump(d))
 	}
 	if got := r.git("show", "HEAD~1:f3.txt"); got != "fixed 3" {
