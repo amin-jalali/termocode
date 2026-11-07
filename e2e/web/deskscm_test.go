@@ -81,7 +81,7 @@ func TestDeskSCMCommit(t *testing.T) {
 	p.Tap(box)
 	p.Do(chromedp.SendKeys(box, "fix the toast"))
 	p.Do(chromedp.KeyEvent(kb.Enter, modKey()))
-	p.WaitJS(scm + `.querySelector(".pv-ask")?.textContent.includes("Commit 1 staged files to main?") && document.activeElement?.textContent === "Cancel"`)
+	p.WaitJS(scm + `.querySelector(".pv-ask")?.textContent.includes("Commit 1 staged file to main?") && document.activeElement?.textContent === "Cancel"`)
 	p.Key(kb.Enter) // Cancel
 	p.WaitJS(`!` + scm + `.querySelector(".pv-ask")`)
 	c.Quiet(t, 200*time.Millisecond)
