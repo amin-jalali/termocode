@@ -47,8 +47,7 @@ func (m Model) handleKubeSidebarMouse(x, y int, t tea.MouseEventType) (Model, te
 	st.cursor, st.lastClick = idx, time.Now()
 	st.touch()
 	if r.kind == kubeRowSection {
-		st.toggleFold(r.section)
-		return m, nil
+		return m, m.kubeFold(r.section)
 	}
 	if again {
 		return m.handleKubeSidebarKey(tea.KeyMsg{Type: tea.KeyEnter})

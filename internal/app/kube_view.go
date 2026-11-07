@@ -267,6 +267,17 @@ func (st *kubeState) itemParts(r kubeRow, w int, now time.Time) (theme.Icon, the
 		g, c := kubeJobGlyph(j)
 		return g, c, j.Completions() + " " + kube.Age(j.Created, now)
 	}
+	if o, ok := st.extraObj(r); ok {
+		g, c := o.Mark.glyph()
+		right := o.Right
+		if wide {
+			right += o.Wide
+		}
+		if age := kube.Age(o.Created, now); age != "" {
+			right += " " + age
+		}
+		return g, c, right
+	}
 	return theme.Icon{}, theme.TextDim, ""
 }
 
@@ -347,6 +358,9 @@ func (st *kubeState) footer(now time.Time) []string {
 	case "jobs":
 		j := st.jobs[r.idx]
 		return []string{fmt.Sprintf("%s · %s done · %d failed", j.Status(), j.Completions(), j.Failed), "i describe · y copy name · ? keys"}
+	}
+	if o, ok := st.extraObj(r); ok {
+		return []string{o.Detail, "i describe · v YAML · E events · ? keys"}
 	}
 	return []string{"", keys}
 }

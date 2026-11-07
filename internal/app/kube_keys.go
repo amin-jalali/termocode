@@ -43,12 +43,11 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		st.jumpSection(-1)
 	case " ":
 		if have && r.kind == kubeRowSection {
-			st.toggleFold(r.section)
+			return m, m.kubeFold(r.section)
 		}
 	case "enter", "l":
 		if have && r.kind == kubeRowSection {
-			st.toggleFold(r.section)
-			return m, nil
+			return m, m.kubeFold(r.section)
 		}
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubePodTerminal("logs", p, "")
@@ -87,6 +86,9 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil
 		}
 	case "d":
+		if have && r.kind == kubeRowItem && r.section == "nodes" {
+			return m, m.servicesToast(toast.Info, "Nodes are not deleted here", "Use kubectl for that")
+		}
 		if have && r.kind == kubeRowItem {
 			m.askKubeDelete(kubeKindOf(r.section), r.name)
 			return m, nil
@@ -134,7 +136,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"Move"},
 		[]string{"↑ ↓ j k", "move · g G top, end"},
 		[]string{"Tab", "next section"},
-		[]string{"Space", "fold or open a section"},
+		[]string{"Space", "fold or open a section (folded ones load when opened)"},
 		[]string{"/", "filter by name · Esc clears"},
 		[]string{"Pods"},
 		[]string{"Enter l", "follow logs"},

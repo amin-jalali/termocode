@@ -50,10 +50,14 @@ type kubeState struct {
 	deploys  []kube.Deployment
 	services []kube.Service
 	jobs     []kube.Job
-	loaded   bool              // one load came back
-	err      string            // why the whole load failed ("" = it worked)
-	errs     map[string]string // per section (forbidden, …)
-	loadedAt time.Time
+	// the folded sections (kube_kinds.go): rows by section, and which
+	// came back at least once in this scope
+	extra       map[string][]kubeObj
+	extraLoaded map[string]bool
+	loaded      bool              // one load came back
+	err         string            // why the whole load failed ("" = it worked)
+	errs        map[string]string // per section (forbidden, …)
+	loadedAt    time.Time
 
 	gen     uint64 // a load or tick of an older gen is dropped
 	polling bool   // a load or a tick of the current gen is outstanding
@@ -82,7 +86,12 @@ type kubeState struct {
 }
 
 func newKubeState() *kubeState {
-	return &kubeState{collapsed: map[string]bool{}, errs: map[string]string{}, forwards: map[string]*kube.Forward{}}
+	st := &kubeState{collapsed: map[string]bool{}, errs: map[string]string{}, forwards: map[string]*kube.Forward{},
+		extra: map[string][]kubeObj{}, extraLoaded: map[string]bool{}}
+	for _, sec := range kubeExtraSections {
+		st.collapsed[sec] = true // they load only once opened
+	}
+	return st
 }
 
 func (st *kubeState) touch() { st.seq++ }
@@ -157,8 +166,9 @@ type kubeLoadMsg struct {
 	deploys   []kube.Deployment
 	services  []kube.Service
 	jobs      []kube.Job
-	err       error            // the whole load failed
-	errs      map[string]error // one section failed
+	extra     map[string][]kubeObj // the open folded sections that loaded
+	err       error                // the whole load failed
+	errs      map[string]error     // one section failed
 }
 
 type kubeTickMsg struct{ gen uint64 }
@@ -177,9 +187,10 @@ func (m *Model) kubeLoad() tea.Cmd {
 	gen := st.gen
 	c := st.client()
 	detected := st.detected
+	open := st.openExtras()
 	return func() tea.Msg {
 		defer cancel()
-		msg := kubeLoadMsg{gen: gen, errs: map[string]error{}}
+		msg := kubeLoadMsg{gen: gen, errs: map[string]error{}, extra: map[string][]kubeObj{}}
 		if !detected {
 			c.Binary = kube.Find(nil)
 		}
@@ -214,14 +225,27 @@ func (m *Model) kubeLoad() tea.Cmd {
 				mu.Unlock()
 			}
 		}
-		wg.Add(4)
+		wg.Add(4 + len(open))
+		now := time.Now()
+		for _, sec := range open {
+			crash.Go("kubernetes "+sec, func() {
+				defer wg.Done()
+				xs, err := kubeLoadExtra(ctx, c, sec, now)
+				set(sec, err)
+				if err == nil {
+					mu.Lock()
+					msg.extra[sec] = xs
+					mu.Unlock()
+				}
+			})
+		}
 		crash.Go("kubernetes pods", func() { defer wg.Done(); var err error; msg.pods, err = c.Pods(ctx); set("pods", err) })
 		crash.Go("kubernetes deployments", func() { defer wg.Done(); var err error; msg.deploys, err = c.Deployments(ctx); set("deployments", err) })
 		crash.Go("kubernetes services", func() { defer wg.Done(); var err error; msg.services, err = c.Services(ctx); set("services", err) })
 		crash.Go("kubernetes jobs", func() { defer wg.Done(); var err error; msg.jobs, err = c.Jobs(ctx); set("jobs", err) })
 		wg.Wait()
 		// The cluster itself does not answer: one line, not four.
-		if len(msg.errs) == len(kubeSections) {
+		if len(msg.errs) == len(kubeSections)+len(open) {
 			for _, err := range msg.errs {
 				if k := kube.KindOf(err); k == kube.ErrNoCluster || k == kube.ErrTimeout || k == kube.ErrNoConfig {
 					msg.err = err
@@ -265,6 +289,9 @@ func (m *Model) onKubeLoad(msg kubeLoadMsg) tea.Cmd {
 	}
 	st.err = ""
 	st.pods, st.deploys, st.services, st.jobs = msg.pods, msg.deploys, msg.services, msg.jobs
+	for sec, xs := range msg.extra {
+		st.extra[sec], st.extraLoaded[sec] = xs, true
+	}
 	st.errs = map[string]string{}
 	for sec, err := range msg.errs {
 		st.errs[sec] = err.Error()
@@ -334,6 +361,7 @@ func (m *Model) kubeGo(context, namespace string) tea.Cmd {
 	st := m.kube
 	st.context, st.namespace = context, namespace
 	st.pods, st.deploys, st.services, st.jobs = nil, nil, nil, nil
+	st.extra, st.extraLoaded = map[string][]kubeObj{}, map[string]bool{}
 	st.errs = map[string]string{}
 	st.err, st.loaded = "", false
 	st.cursor = 0
