@@ -73,7 +73,8 @@ func waitAIChat(ch chan tea.Msg) tea.Cmd {
 const aiChatSystemPrompt = "You are termocode's coding assistant, running inside a terminal IDE built on Neovim. Be concise and concrete.\n" +
 	"When the user asks you to change the OPEN FILE, reply with the COMPLETE updated file in ONE fenced code block " +
 	"(real code, not json) — the user reviews it in a side-by-side diff and applies it with one click. " +
-	"For questions, answer in prose (short code snippets are fine)."
+	"For questions, answer in prose (short code snippets are fine). " +
+	"To show data (lists, tables, status), prefer view_show with a spec from view_catalog over writing it out."
 
 // aiWorkspaceRoot is the root the agent tools operate on.
 func aiWorkspaceRoot() string {
@@ -174,13 +175,14 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
-	tools = append(tools, aiTodoTools(call)...)               // OMX-7: the chat's todo list (not in run steps)
-	tools = append(tools, m.aiChatSchedTools(call)...)        // CMP-43: the chat schedules itself (always asks)
-	tools = append(tools, m.aiSessionTools()...)              // OMX-21: old chats, read only
+	tools = append(tools, aiTodoTools(call)...)                  // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, m.aiChatSchedTools(call)...)           // CMP-43: the chat schedules itself (always asks)
+	tools = append(tools, m.aiSessionTools()...)                 // OMX-21: old chats, read only
 	tools = append(tools, aiTrackerTools(m.aiS().mcpProfile)...) // MOB-13: pin a read-only MCP call to the phone's Home
-	tools = append(tools, aiViewShowTools(m.viewRun)...) // MOBUX-17: views built from a chat command (ai_view_show_tool.go)
-	tools = append(tools, aiLibrarianTools()...)              // CMP-91: outside repositories, read only
-	return append(tools, aiChatDocTools(m.chatDocStore())...) // CMP-94: the chat's docs
+	tools = append(tools, aiViewShowTools(m.viewRun)...)         // MOBUX-17: views built from a chat command (ai_view_show_tool.go)
+	tools = append(tools, aiViewTools(call)...)                  // MOB-70: view_catalog and view_save (ai_view_tools.go); view_show is MOBUX-17's
+	tools = append(tools, aiLibrarianTools()...)                 // CMP-91: outside repositories, read only
+	return append(tools, aiChatDocTools(m.chatDocStore())...)    // CMP-94: the chat's docs
 }
 
 // aiChatToolsBy is aiChatTools for the steps of a run (c says which:

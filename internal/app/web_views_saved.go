@@ -240,19 +240,25 @@ func savedViewsChanged(call *webCall, vs []webproto.SavedView, what string) bool
 		call.fail(webproto.CodeInternal, "The view was not "+what+".")
 		return false
 	}
-	h := call.conn.hub
+	call.conn.hub.sendViewsSaved(vs)
+	return true
+}
+
+// sendViewsSaved sends the list to every browser as ev views_saved
+// (Update only; a nil hub or no browser: nothing). The AI's view_save
+// (MOB-70) uses it too.
+func (h *webHub) sendViewsSaved(vs []webproto.SavedView) {
 	if h == nil || len(h.live) == 0 {
-		return true
+		return
 	}
 	data, err := webData(savedViewList(vs))
 	if err != nil {
 		recordError("[web] views_saved: " + err.Error())
-		return true
+		return
 	}
 	for c := range h.live {
 		c.send(&webproto.Event{T: webproto.KindEv, Kind: webproto.EventViewsSaved, Data: data})
 	}
-	return true
 }
 
 func loadSavedViewsFor(call *webCall) ([]webproto.SavedView, bool) {
