@@ -206,7 +206,7 @@ func (s *dbConsoleState) visPos(i int) int {
 // display column under the cursor.
 func (m *Model) databaseColumnsKey(key string, col int) (tea.Cmd, bool) {
 	switch key {
-	case "H", "O", "<", ">", "F", "(", ")", "{", "}", "=":
+	case "H", "O", "<", ">", "F", "(", ")", "{", "}", "R":
 	default:
 		return nil, false
 	}
@@ -219,7 +219,7 @@ func (m *Model) databaseColumnsKey(key string, col int) (tea.Cmd, bool) {
 	if key == "O" {
 		return m.databaseColumnsPickerOpen(), true
 	}
-	if key == "=" {
+	if key == "R" {
 		k, table := dbColKey(r)
 		if l := s.colLayout(false); l == nil || l.empty() && l.off == 0 {
 			return nil, true

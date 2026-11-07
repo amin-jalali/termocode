@@ -163,7 +163,8 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `o` | sort by a column (choose it again to reverse) |
 | `f` | show only rows that contain a text |
 | `v` or `Enter` | open the cell under the cursor; `q` goes back. JSON and XML are pretty-printed, long text wraps, a binary value is a hex dump (the first 16 KB), and a PNG, JPEG, GIF or WebP image says its kind and size |
-| `=` | count, sum, avg, min and max of the column under the cursor on this page; select rows with `V` first to sum up only those. Text columns show count, min and max |
+| `=` | on table data: show only the rows with the value of the cell under the cursor (added with AND to the filter already set). On a query result: count, sum, avg, min and max of the column under the cursor on this page |
+| `V` then `=` | count, sum, avg, min and max of the selected rows in the column under the cursor. Text columns show count, min and max |
 | `y` | copy the cell |
 | `Y` | copy the column, one value per line |
 | `c` / `C` | copy the loaded rows as CSV / JSON |
@@ -186,7 +187,7 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `F` | freeze the columns up to this one on the left (again: unfreeze) |
 | `{` / `}` | scroll the columns after the frozen ones |
 | `(` / `)` | make the column narrower / wider |
-| `=` | reset the column layout |
+| `R` | reset the column layout |
 
 The layout of a table is saved per connection and table, so it comes back the next time you open the table. A column the table gains shows at the end. A query result keeps its layout until you quit.
 
