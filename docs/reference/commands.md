@@ -18,6 +18,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
 | AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
+| AI: Chat Comments… | `ai-chat-comments` |   | `comments from people you shared the chat with` |
 | AI: Chat History… | `ai-history` |   |   |
 | AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |
@@ -73,6 +74,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
+| AI: Share Chat by Link… | `ai-share-chat` |   | `a viewer link; they watch and comment` |
 | AI: Ship Branch to Merge-Ready (push, PR, CI, fixes) / Stop | `ai-ship` |   |   |
 | AI: Show Profile | `ai-profile-show` |   |   |
 | AI: Side Question… | `ai-side` |   |   |

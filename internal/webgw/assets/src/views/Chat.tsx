@@ -22,6 +22,7 @@ import { errText } from "../ui/CardSheet";
 import { ChatList } from "./ChatList";
 import { ChatMoreFlows, openMore } from "./ChatMore";
 import { Composer } from "./Composer";
+import { CommentBox } from "./ChatComment";
 import { Run } from "./Run";
 import { View } from "./View";
 
@@ -272,7 +273,10 @@ export function ChatView() {
     );
   }
   let foot;
-  if (pin) {
+  if (link.meta.value?.role === "viewer") {
+    // A person the chat was shared with comments instead (CMP-88).
+    foot = <CommentBox chat={pin ? pin.id : laptop?.id ?? ""} />;
+  } else if (pin) {
     // An old chat goes on here: the send opens it on the laptop, then the
     // page follows the laptop again (WEBP-10).
     foot = (

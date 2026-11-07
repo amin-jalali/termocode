@@ -232,6 +232,21 @@ To let someone else watch, run **Web: Share as Viewer…**:
 4. They save a passkey and can watch. They can never get control. Remove
    them in **Web: Devices…** when you are done.
 
+### Share one AI chat
+
+Run **AI: Share Chat by Link…** to share the chat you have open. A card
+says what they will see. **Cancel** is first. **Make link** opens the
+same viewer link as above, with the chat open.
+
+- They watch the chat live. They see the rest of the panel too, read
+  only.
+- They cannot type into the chat. Under it they get a **Comment** box.
+- A comment comes to you as a toast. Read all of them in
+  **AI: Chat Comments…**.
+- The AI never reads a comment. To use one, pick it in
+  **AI: Chat Comments…** and choose **Add to message**. It goes into the
+  chat input; nothing is sent until you press `Enter`.
+
 ### Without Tailscale
 
 The panel can also be reached through an SSH app on the phone that

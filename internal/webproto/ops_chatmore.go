@@ -11,7 +11,8 @@ import (
 // Rename and fork change nothing that cannot be undone; delete and clear
 // can not be undone, so they wait for a laptop card (Cancel first).
 // Export answers with the chat as markdown for the browser to save: the
-// laptop writes no file.
+// laptop writes no file. Comment (CMP-88) is a viewer's note on a shared
+// chat; the laptop keeps it beside the chat, never in its messages.
 
 // Chat history op names.
 const (
@@ -20,7 +21,13 @@ const (
 	OpChatDelete = "chat.delete"
 	OpChatClear  = "chat.clear"
 	OpChatExport = "chat.export"
+	// OpChatComment is a comment on a chat from a person it was shared
+	// with (CMP-88): a viewer op, kept on the laptop beside the chat.
+	OpChatComment = "chat.comment"
 )
+
+// MaxChatComment caps a comment's text.
+const MaxChatComment = 2000
 
 // MaxChatTitle caps a chat title.
 const MaxChatTitle = 200
@@ -53,6 +60,22 @@ func (a *ChatForkArgs) validate(int) error {
 	return nil
 }
 
+// ChatCommentArgs is a comment (Text) on chat ID.
+type ChatCommentArgs struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
+func (a *ChatCommentArgs) validate(int) error {
+	if !validName(a.ID, MaxID) {
+		return invalid("bad chat id")
+	}
+	if strings.TrimSpace(a.Text) == "" || len(a.Text) > MaxChatComment || hasControl(strings.NewReplacer("\n", " ", "\t", " ").Replace(a.Text)) {
+		return invalid("bad comment")
+	}
+	return nil
+}
+
 // ChatExport is the result of chat.export: the chat as markdown and a
 // file name for it ("ai-chat-2026-11-06.md").
 type ChatExport struct {
@@ -66,6 +89,7 @@ var opChatMoreRows = []Policy{
 	{Op: OpChatDelete, New: newOf[ChatOpenArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpChatClear, New: newOf[EmptyArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpChatExport, New: newOf[ChatOpenArgs](), Role: RoleViewer, Rate: perSec(1), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpChatComment, New: newOf[ChatCommentArgs](), Role: RoleViewer, Rate: Rate{N: 1, Per: 2 * time.Second}, MaxBytes: 4 * kib, Audit: AuditYes, Phase: PhaseV2},
 }
 
 var _ = func() bool { opTable = append(opTable, opChatMoreRows...); return true }()

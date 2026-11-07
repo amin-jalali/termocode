@@ -126,6 +126,10 @@ type Model struct {
 	aiChatHits          []aiChatHit // AI: Search Chat History… (ai_chat_search.go, CMP-30)
 	aiChatHitsCapped    bool
 	agentUsage          *agentusage.Book // plan windows of the outside agents (agent_usage.go)
+	// CMP-88 (ai_chat_comments.go): the chat AI: Chat Comments… lists and
+	// the comment its card is about.
+	aiChatCommentsFor string
+	aiChatCommentPick aiChatComment
 	// AGX-15 (agent_hibernate.go): the tab the hibernate card is about,
 	// "Always for this session", and commands queued by a tab switch.
 	agentHibernatePending int
