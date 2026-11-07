@@ -111,6 +111,8 @@ type dbConsoleState struct {
 	// query parameters (db_params.go)
 	paramAsk *dbParamAsk
 	params   map[string]map[string]string // console file → name → last value
+	// the grid's column layouts (db_columns.go)
+	colStore *dbColStore
 }
 
 func (m *Model) dbConsole() *dbConsoleState {
@@ -910,6 +912,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseUsagesPicker(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseColumnsPicker(id); ok {
 		return cmd, true
 	}
 	switch m.pickerKind {
