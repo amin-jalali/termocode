@@ -39,3 +39,57 @@ export function splitCards(cards: readonly Card[]): Waiting {
   for (const c of cards) (answerable(c) ? out.answer : out.laptop).push(c);
   return out;
 }
+
+/** The kit's card states (ui/Card.tsx), repeated here so the pure rules
+ * below need no UI import. peek: an inline card with a diff; it offers
+ * the safe answer and opens the sheet to see the change. */
+export type CardViewState = "open" | "answered" | "offline" | "gone" | "viewonly" | "long" | "peek";
+export type CardViewKind = "tool" | "review" | "plan" | "mcp" | "trust" | "workflow";
+
+export interface CardFacts {
+  /** present: the card is still in the topic. */
+  present: boolean;
+  sending: boolean;
+  /** gone: the answer came back "gone" (the card left first). */
+  gone: boolean;
+  live: boolean;
+  /** by: who answered it ("" = nobody named: it is gone), undefined = not answered. */
+  by?: string;
+  /** inline: drawn in the Home stream, not in the sheet. */
+  inline?: boolean;
+}
+
+/** cardState is the one rule set the sheet and the Home share (MOB-6):
+ * which state and which kind the kit's Card shows for c. */
+export function cardState(c: Card, f: CardFacts): { state: CardViewState; kind: CardViewKind } {
+  const web = answerable(c) && riskyChoice(c) !== undefined;
+  let state: CardViewState;
+  if (f.gone) state = "gone";
+  else if (!f.present && !f.sending) state = f.by === "" ? "gone" : "answered";
+  else if (!f.live) state = "offline";
+  else if (web && c.diff?.truncated) state = "long";
+  else if (web && f.inline && c.diff) state = "peek";
+  else state = "open";
+  return { state, kind: web ? (c.kind as CardViewKind) : "trust" };
+}
+
+/** answerArgs are the cards.answer arguments for an answer to c; drop
+ * holds the review changes the user unticked. "keep_none" means every
+ * change was dropped (the user should Reject); undefined means there is
+ * no such choice. */
+export function answerArgs(c: Card, which: "safe" | "risky", drop: ReadonlySet<number> = new Set()): { id: string; choice: string; hunks?: number[] } | "keep_none" | undefined {
+  const choice = which === "safe" ? safeChoice(c) : riskyChoice(c);
+  if (!choice) return undefined;
+  const all = which === "risky" && c.kind === "review" ? (c.diff?.hunks ?? []) : [];
+  if (all.length > 0 && drop.size >= all.length) return "keep_none";
+  const hunks = drop.size > 0 ? all.map((_, k) => k).filter((k) => !drop.has(k)) : [];
+  return hunks.length > 0 ? { id: c.id, choice: choice.id, hunks } : { id: c.id, choice: choice.id };
+}
+
+/** homeCards are the cards the Home stream shows inline: the ones the
+ * web may answer first, then the ones that wait for the laptop, oldest
+ * first in each; at most max. */
+export function homeCards(cards: readonly Card[], max = 5): Card[] {
+  const w = splitCards(cards);
+  return [...w.answer, ...w.laptop].slice(0, max);
+}

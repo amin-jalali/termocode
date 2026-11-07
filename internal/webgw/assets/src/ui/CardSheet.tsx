@@ -8,13 +8,14 @@ import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Card as CardData } from "../../../../webproto/proto";
 import { diffTab } from "../lib/difftab";
+import { haptic } from "../lib/haptic";
 import { layout } from "../lib/layout";
 import { go, route } from "../lib/router";
 import { showFile } from "../lib/workbench";
 import { toast } from "../lib/toasts";
 import { OfflineError, ReqError } from "../net/link";
 import { answeredBy, cards, link, live, store, waiting } from "../session";
-import { answerable, riskyChoice, safeChoice } from "../state/cards";
+import { answerArgs, cardState } from "../state/cards";
 import { t, type StringKey } from "../strings";
 import { Card, type CardKind, type CardState } from "./Card";
 import { DiffRow } from "./rows";
@@ -33,6 +34,13 @@ export function openCards(): void {
   if (!first) return;
   pushed = true;
   go({ ...route.value, card: first.id });
+}
+
+/** openCard opens the sheet on one card over the current view (the
+ * Home's inline cards, MOB-6: #/home?card=<id>), with a step back. */
+export function openCard(id: string): void {
+  pushed = true;
+  go({ ...route.value, card: id });
 }
 
 /** closeCard closes the sheet: a step back when the sheet added one, so
@@ -108,29 +116,22 @@ export function CardSheet({ id }: { id: string }) {
   }, [loaded, shown]);
   if (!shown) return null;
 
-  const web = answerable(shown) && riskyChoice(shown) !== undefined;
-  let state: CardState;
-  if (gone) state = "gone";
-  else if (!card && !sending) state = by === "" ? "gone" : "answered";
-  else if (!live.value) state = "offline";
-  else if (web && shown.diff?.truncated) state = "long";
-  else state = "open";
-  const kind: CardKind = web ? (shown.kind as CardKind) : "trust";
+  const { state, kind } = cardState(shown, { present: card !== undefined, sending, gone, live: live.value, by }) as { state: CardState; kind: CardKind };
 
   const answer = (which: "safe" | "risky") => {
-    const choice = which === "safe" ? safeChoice(shown) : riskyChoice(shown);
-    if (!choice || sending) return;
-    const review = shown.kind === "review";
-    const all = which === "risky" && review ? (shown.diff?.hunks ?? []) : [];
-    const hunks = drop.size > 0 ? all.map((_, k) => k).filter((k) => !drop.has(k)) : [];
-    if (all.length > 0 && drop.size >= all.length) {
+    if (sending) return;
+    const args = answerArgs(shown, which, drop);
+    if (!args) return;
+    if (args === "keep_none") {
       toast("info", t("card.keep_none"));
       return;
     }
+    const review = shown.kind === "review";
     setSending(true);
-    link.request("cards.answer", hunks.length > 0 ? { id, choice: choice.id, hunks } : { id, choice: choice.id }).then(
+    link.request("cards.answer", args).then(
       () => {
         setSending(false);
+        haptic(which === "safe" ? "light" : "medium");
         if (which === "safe") toast("info", t(review ? "toast.rejected" : "toast.denied"));
         else toast("ok", t(review ? "toast.accepted" : "toast.allowed"));
         closeCard();
