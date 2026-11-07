@@ -263,6 +263,9 @@ func (m *Model) gitxAIReview(branch bool) tea.Cmd {
 	if strings.TrimSpace(diff) == "" {
 		return m.gitxInfo("No changes to review")
 	}
+	if rules := gitxReviewRules(cwd, diff); rules != "" {
+		ask += "\n\n" + rules // CMP-37: the review-only section of AGENTS.md
+	}
 	if cut {
 		diff += "\n[cut here: the rest is longer]"
 	}
