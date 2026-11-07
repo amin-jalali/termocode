@@ -54,6 +54,26 @@ If both files use the same `id`, the project entry wins. Press `e` on a connecti
 | `environment` | `development` (default), or `production` for the stricter cards. |
 | `readOnly` | `true` makes the AI refuse writes. Your own writes ask with a warning. |
 | `ssh`, `ssl`, `tls` | See [SSH tunnels](#ssh-tunnels) and [SSL and TLS](#ssl-and-tls). |
+| `options` | Session options, see below. |
+
+**Connection options** (`"options": {…}`), checked when the file loads:
+
+| Key | Meaning |
+| --- | --- |
+| `schema` | Default schema: the PostgreSQL `search_path` (a comma list) or the MySQL database to `USE`. |
+| `timeZone` | Session time zone, like `UTC` or `Europe/Berlin`. |
+| `isolation` | `read uncommitted`, `read committed`, `repeatable read` or `serializable`. |
+| `initSQL` | Statements every new session runs after the options above. |
+| `txMode` | `manual` starts the connection in manual commit (the transaction mode picker still switches it). |
+| `idleMinutes` | Closes connections that were idle this long; a new one opens on the next query. |
+| `socket` | Unix socket path (PostgreSQL: the socket directory). |
+| `databases`, `schemas` | Globs: the tree shows only these. |
+| `objects` | Globs that show tables, views and routines; `!glob` hides them. |
+| `readOnlyTables` | `schema.table` or `table` globs that the grid refuses to edit. |
+
+Every pooled connection runs the schema, time zone, isolation and `initSQL` statements first; a failing one fails the connection with its reason.
+
+**Schema loading.** `db_introspect_level` sets how much a table row loads (`auto` loads less in big schemas). `r` in the tree reloads only the object under the cursor; `R` reloads everything. Each load is kept in `db/schema-cache.json` (names and types, never data); when a load differs from the cached one the row says `changed since …`. **Databases: Show Schema Cache Info** tells when a connection was last loaded. `db_complete_catalogs` adds the system catalogs to SQL completion.
 
 A row with a problem shows the reason, for example `literal password in project config`, `duplicate connection id` or `sqlite path is outside the workspace`. Fix the file and press `R`.
 
@@ -149,7 +169,11 @@ Press `x` on a connection and choose **Disconnect** to close all its sessions. S
 
 Press `n` on a connection to open its console. Consoles live in your user configuration under `db/consoles/<workspace>/<connection>.sql` (mode 0600) and start with a `-- @conn <id>` line. A project `.sql` file can use the same line; without it, the first run asks which connection to use and remembers the answer until you quit.
 
-Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statement under the cursor. In visual mode the selection runs as typed. **Databases: Run File** runs every statement in order. It stops at the first error and asks: **Continue** runs the remaining statements, **Stop** ends the run. A small note at the end of each statement shows the key, the connection and the last result. `Esc` cancels a running query.
+Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statement under the cursor. In visual mode the selection runs as typed. **Databases: Run File** runs every statement in order. It stops at the first error and asks: **Continue** runs the remaining statements, **Stop** ends the run. A small note at the end of each statement shows the key, the connection and the last result. `Esc` cancels a running query; while it runs the note says `running… · Esc cancels`.
+
+**Execution modes.** `db_exec_mode` sets what the run key sends: `largest` (the whole statement, the default), `smallest` (the innermost subquery around the caret), `from-caret` (the statement and every one after it) or `ask` (a list to choose from, innermost first). **Databases: Choose Execution Mode…** saves it. **Databases: Run From Caret to End of File**, **Run Smallest Statement (Subquery) at Caret** and **Run… (Choose Statement or Subquery)** do one run in that mode. `db_selection_split` set to `false` sends a selection to the server as one text instead of splitting it.
+
+**Result page.** `N` goes to row N (it opens that page and puts the cursor on the row). `L` loads all rows when the result was cut at `db_max_rows` (it runs the statement again, up to 100000 rows). **Databases: Set Result Page Size…** changes the rows per page of the shown result at once. `db_result_new_tab` keeps every result in its own tab; `db_auto_transpose` opens a one-row result flipped (one line per column).
 
 A read runs at once. Any other statement asks first, and the card shows the exact SQL (use Up/Down to read a long one). The title says what is special: `DELETE` or `UPDATE` without `WHERE`, `DROP`, `TRUNCATE`, `ALTER`, a production connection, or a read-only connection. There is no "always allow". In a file run, each write gets its own card.
 

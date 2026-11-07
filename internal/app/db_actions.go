@@ -27,6 +27,13 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-focus", Title: "Databases: Focus"},
 		{ID: "db-new-console", Title: "Databases: New Console"},
 		{ID: "db-run", Title: "Databases: Run Statement or Selection"},
+		{ID: "db-run-from-caret", Title: "Databases: Run From Caret to End of File"},
+		{ID: "db-run-smallest", Title: "Databases: Run Smallest Statement (Subquery) at Caret"},
+		{ID: "db-run-ask", Title: "Databases: Run… (Choose Statement or Subquery)"},
+		{ID: "db-exec-mode", Title: "Databases: Choose Execution Mode…"},
+		{ID: "db-result-page-size", Title: "Databases: Set Result Page Size…"},
+		{ID: "db-result-goto-row", Title: "Databases: Go to Result Row…"},
+		{ID: "db-result-load-all", Title: "Databases: Load All Result Rows"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
 		{ID: "db-format", Title: "Databases: Format Statement or Selection"},
@@ -38,6 +45,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-connect", Title: "Databases: Connect Selected"},
 		{ID: "db-disconnect", Title: "Databases: Disconnect Selected…"},
 		{ID: "db-refresh", Title: "Databases: Refresh"},
+		{ID: "db-refresh-object", Title: "Databases: Refresh Selected Object"},
+		{ID: "db-schema-cache-info", Title: "Databases: Show Schema Cache Info"},
 		{ID: "db-filter", Title: "Databases: Filter…"},
 		{ID: "db-configure", Title: "Databases: Configure"},
 		{ID: "db-test-connection", Title: "Databases: Test Connection"},
@@ -87,6 +96,20 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseSend(false), true
 	case "db-run-file":
 		return m.databaseSend(true), true
+	case "db-run-from-caret":
+		return m.databaseSendExec(false, nil, dbclient.ExecFromCaret.String()), true
+	case "db-run-smallest":
+		return m.databaseSendExec(false, nil, dbclient.ExecSmallest.String()), true
+	case "db-run-ask":
+		return m.databaseSendExec(false, nil, dbclient.ExecAsk.String()), true
+	case "db-result-page-size":
+		return m.databasePageSizePicker(), true
+	case "db-result-goto-row":
+		return m.databaseGotoRowPrompt(), true
+	case "db-result-load-all":
+		return m.databaseLoadAll(), true
+	case "db-exec-mode":
+		return m.databaseExecModePicker(), true
 	case "db-explain":
 		return m.databaseExplainKey(false), true
 	case "db-format":
@@ -166,6 +189,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseConfigure(false)), true
 	case "db-refresh":
 		return tea.Batch(open, m.databaseRefresh()), true
+	case "db-refresh-object":
+		return tea.Batch(open, m.databaseRefreshObjectKey()), true
+	case "db-schema-cache-info":
+		return m.databaseSchemaCacheInfo(), true
 	case "db-filter":
 		open = m.revealDatabasesView(true) // the filter takes the keys: the view needs the focus
 		updated, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
@@ -287,6 +314,8 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "R":
 		return m, m.databaseRefresh()
+	case "r":
+		return m, m.databaseRefreshObjectKey()
 	case "T":
 		if have && row.kind == dbNodeConnection {
 			return m, m.databaseTestConnection(row.conn)
@@ -945,6 +974,7 @@ func dbTreeKeyRows() []confirm.KeyRow {
 		[]string{"Enter", "connect, expand or fold"},
 		[]string{"/", "filter by name (Esc clears)"},
 		[]string{"R", "refresh"},
+		[]string{"r", "reload only this object"},
 		[]string{"Esc", "back to the editor"},
 		[]string{"Connections"},
 		[]string{"a", "add a connection"},
@@ -973,6 +1003,8 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"Read"},
 		[]string{"Tab", "switch Grid, JSON and Messages"},
 		[]string{"] / [", "next / previous page"},
+		[]string{"N", "go to row N"},
+		[]string{"L", "load all rows (past db_max_rows)"},
 		[]string{"o", "sort by a column"},
 		[]string{"f", "show only some rows"},
 		[]string{"=", "show only rows with this cell's value"},
@@ -1275,6 +1307,7 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		s.setTunnel(msg.id, msg.tunnel)
 	}
 	s.activeID = msg.id
+	s.applyConnTxMode(msg.id) // DBX-28: txMode saved with the connection
 	s.touch()
 	if s.console != nil && s.console.waiting != nil && s.console.waiting.conn == msg.id {
 		return tea.Batch(m.databaseExpand(msg.id), m.databaseStartRun(s.console.waiting))
@@ -1304,7 +1337,7 @@ func (m *Model) onDBIntrospect(msg dbIntrospectMsg) tea.Cmd {
 	msg.result = sanitizeDBIntrospection(msg.result)
 	s.addIntrospection(msg.path, msg.result)
 	m.databaseSchemaChanged()
-	return nil
+	return m.databaseCacheSchema(msg.path, msg.result) // DBX-29
 }
 
 func sanitizeDBIntrospection(in dbclient.IntrospectionResult) dbclient.IntrospectionResult {

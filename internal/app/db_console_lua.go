@@ -14,6 +14,7 @@ local a=vim.api
 local mode=vim.fn.mode()
 local selection=''
 local first=a.nvim_win_get_cursor(0)[1]
+local col=a.nvim_win_get_cursor(0)[2]
 if mode=='v' or mode=='V' or mode=='\22' then
  local p=vim.fn.getpos('v');local q=a.nvim_win_get_cursor(0)
  local lo,hi=p[2],q[1];local lc,hc=p[3]-1,q[2]
@@ -26,7 +27,7 @@ if mode=='v' or mode=='V' or mode=='\22' then
  selection=table.concat(lines,'\n');first=lo
  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>',true,false,true),'n',false)
 end
-return vim.json.encode({line=first,selection=selection})
+return vim.json.encode({line=first,col=col,selection=selection})
 `
 
 // dbConsoleLua wires up SQL buffers: a decoration provider draws the lens

@@ -64,6 +64,14 @@ func (s *dbState) schemaPayload(conn dbclient.Conn) map[string]any {
 		seen[key] = true
 		tables = append(tables, dbSchemaTable{N: n.name, K: kind})
 	}
+	if loadDBConsoleSettings().completeCatalogs() { // DBX-29
+		for _, o := range dbclient.SystemCatalogObjects(conn.Driver) {
+			if key := "table\x00" + o.Name; !seen[key] {
+				seen[key] = true
+				tables = append(tables, dbSchemaTable{N: o.Name, K: "table"})
+			}
+		}
+	}
 	sort.Slice(tables, func(i, j int) bool {
 		if tables[i].N != tables[j].N {
 			return tables[i].N < tables[j].N

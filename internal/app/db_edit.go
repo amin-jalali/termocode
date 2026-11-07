@@ -154,9 +154,9 @@ func dbUniqueSets(ir dbclient.IntrospectionResult) [][]string {
 	return out
 }
 
-// databaseEditTarget is the target of tab t; a console result looks its
+// databaseEditTargetOf is the target of tab t; a console result looks its
 // table's key up first (cmd, target.loading).
-func (m *Model) databaseEditTarget(t *dbTab) (*dbEditTarget, tea.Cmd) {
+func (m *Model) databaseEditTargetOf(t *dbTab) (*dbEditTarget, tea.Cmd) {
 	if t.target != nil {
 		return t.target, nil
 	}

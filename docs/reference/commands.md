@@ -209,6 +209,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
+| Databases: Choose Execution Mode… | `db-exec-mode` |   |   |
 | Databases: Commit | `db-commit` |   |   |
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
@@ -229,22 +230,30 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Format Statement or Selection | `db-format` |   |   |
 | Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
+| Databases: Go to Result Row… | `db-result-goto-row` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
+| Databases: Load All Result Rows | `db-result-load-all` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
 | Databases: Open Guide | `db-guide` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
+| Databases: Refresh Selected Object | `db-refresh-object` |   |   |
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
+| Databases: Run From Caret to End of File | `db-run-from-caret` |   |   |
+| Databases: Run Smallest Statement (Subquery) at Caret | `db-run-smallest` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
+| Databases: Run… (Choose Statement or Subquery) | `db-run-ask` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
+| Databases: Set Result Page Size… | `db-result-page-size` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
+| Databases: Show Schema Cache Info | `db-schema-cache-info` |   |   |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |

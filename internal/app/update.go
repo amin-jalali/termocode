@@ -306,6 +306,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBDiscover(msg)
 	case dbConnectMsg:
 		return m, m.onDBConnect(msg)
+	case dbSchemaCacheMsg:
+		return m, m.onDBSchemaCache(msg)
 	case dbRedisTreeMsg:
 		return m, m.onDBRedisTree(msg)
 	case dbRedisNSScanMsg:

@@ -106,6 +106,7 @@ type dbState struct {
 	schemaVer           uint64                         // bumps when the tree or the column cache changes
 	cols                map[string]map[string][]string // connection -> lower-case table -> columns (completion)
 	manual              map[string]bool                // connection -> manual transaction mode
+	txModeApplied       map[string]bool                // connections whose saved txMode was applied (DBX-28)
 	txs                 map[string]*dbTxState          // session key -> its transaction
 	txModeConn          string                         // the connection the mode picker is for
 	txCardConn          string                         // the uncommitted-changes card
@@ -805,8 +806,12 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 	n.children = nil
 	n.problem = ""
 	s.nodes[path] = n
+	opts := s.connOptions(n.conn)
 	if n.kind == dbNodeConnection {
 		for _, name := range result.Databases {
+			if !opts.ShowDatabase(name) {
+				continue // DBX-28: show only these databases
+			}
 			child := path + "/db/" + name
 			s.nodes[child] = dbNode{kind: dbNodeDatabase, name: name, path: child, conn: n.conn}
 			n.children = append(n.children, child)
@@ -817,6 +822,9 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 		}
 	} else if n.kind == dbNodeDatabase || n.kind == dbNodeSchema {
 		for _, name := range result.Schemas {
+			if !opts.ShowSchema(name) {
+				continue
+			}
 			child := path + "/schema/" + name
 			s.nodes[child] = dbNode{kind: dbNodeSchema, name: name, path: child, conn: n.conn}
 			n.children = append(n.children, child)
@@ -832,6 +840,7 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 		s.addObjects(path, n.conn, result)
 		n = s.nodes[path]
 	} else if n.kind == dbNodeTable || n.kind == dbNodeView {
+		result = s.tableLevel(path).Trim(result) // db_introspect_level (DBX-29)
 		names := make([]string, 0, len(result.Columns))
 		for _, col := range result.Columns {
 			names = append(names, col.Name)
@@ -887,7 +896,11 @@ func (s *dbState) addGroups(path, conn string, r dbclient.IntrospectionResult) {
 	s.addObjects(path, conn, r)
 }
 func (s *dbState) addObjects(path, conn string, r dbclient.IntrospectionResult) {
+	opts := s.connOptions(conn)
 	for _, o := range r.Objects {
+		if !opts.ShowObject(o.Name) {
+			continue // DBX-28: object filter patterns
+		}
 		kind := dbNodeTable
 		if strings.Contains(strings.ToLower(o.Kind), "view") {
 			kind = dbNodeView
@@ -906,12 +919,18 @@ func (s *dbState) addObjects(path, conn string, r dbclient.IntrospectionResult) 
 		appendDBChild(s.nodes, gpath, child)
 	}
 	for _, name := range r.Routines {
+		if !opts.ShowObject(name) {
+			continue
+		}
 		gpath := path + "/Routines"
 		child := gpath + "/" + name
 		s.nodes[child] = dbNode{kind: dbNodeRoutine, name: name, path: child, conn: conn}
 		appendDBChild(s.nodes, gpath, child)
 	}
 	for _, name := range r.Sequences {
+		if !opts.ShowObject(name) {
+			continue
+		}
 		gpath := path + "/Sequences"
 		child := gpath + "/" + name
 		s.nodes[child] = dbNode{kind: dbNodeSequence, name: name, path: child, conn: conn}
