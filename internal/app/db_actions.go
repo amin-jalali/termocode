@@ -67,6 +67,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-end-session", Title: "Databases: End Session…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-find-object", Title: "Databases: Find Object…"},
+		{ID: "db-create-table", Title: "Databases: Create Table…"},
+		{ID: "db-alter-table", Title: "Databases: Alter Table…"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -125,6 +127,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseERStart(), true
 	case "db-find-object":
 		return m.databaseFindObjectStart(), true
+	case "db-create-table":
+		return m.databaseDesignStart(true), true
+	case "db-alter-table":
+		return m.databaseDesignStart(false), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":

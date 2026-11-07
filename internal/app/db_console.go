@@ -59,6 +59,7 @@ type dbRun struct {
 	bound               bool         // its query parameters are filled (db_params.go)
 	boundSQL            string       // sql with the driver's placeholders
 	args                []any        // the values bound to them
+	reviewed            bool         // its exact SQL was shown on a card already (the table designer)
 }
 
 type dbConsoleState struct {
@@ -545,7 +546,7 @@ func (m *Model) databaseReviewRun(r *dbRun) tea.Cmd {
 		return m.databaseAskParams(r, refs)
 	}
 	kind, stmts := dbclient.Classify(r.sql, c.Driver)
-	if kind == dbclient.KindRead {
+	if kind == dbclient.KindRead || r.reviewed {
 		return m.databaseStartRun(r)
 	}
 	s.pending = r
@@ -897,6 +898,8 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	switch m.confirmKind {
+	case confirmKindDBDesign:
+		return m.databaseDesignConfirm(id), true
 	case confirmKindDBExplain:
 		return m.databaseExplainConfirm(id), true
 	case confirmKindDBRun:

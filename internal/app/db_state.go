@@ -118,6 +118,7 @@ type dbState struct {
 	sshEdit             *dbSSHEdit                  // Add SSH Tunnel / SSL Settings prompts
 	compare             *dbCompareState             // Compare Schemas (db_compare.go)
 	er                  dbERTarget                  // Export ER Diagram (db_er.go)
+	design              *dbDesignState              // the table designer (db_designer.go)
 	lastClickAt         time.Time                   // double-click detection (db_view.go)
 	lastClickPath       string
 	remoteNext          bool // "Add remote…" picked: the type picker is open

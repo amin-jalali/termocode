@@ -203,6 +203,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: AI Generate SQL from Schema… | `db-ai-generate-sql` |   |   |
 | Databases: Add Connection… | `db-add` |   |   |
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
+| Databases: Alter Table… | `db-alter-table` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Cancel Session Query… | `db-cancel-session` |   |   |
 | Databases: Commit | `db-commit` |   |   |
@@ -210,6 +211,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |
+| Databases: Create Table… | `db-create-table` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected… | `db-disconnect` |   |   |

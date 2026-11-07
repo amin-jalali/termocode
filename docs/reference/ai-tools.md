@@ -2053,6 +2053,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-ai-explain-query` | Databases: AI Explain Query | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `db-ai-fix-error` | Databases: AI Fix Query Error | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `db-ai-generate-sql` | Databases: AI Generate SQL from Schema… | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `db-alter-table` | Databases: Alter Table… | never | changes the schema; the user reviews the DDL card (db_query for DDL) |
 | `db-cancel` | Databases: Cancel Query | auto |   |
 | `db-cancel-session` | Databases: Cancel Session Query… | never | stops another session's work; only the user can choose it |
 | `db-commit` | Databases: Commit | never | the user's transaction |
@@ -2060,6 +2061,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
 | `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-count-rows` | Databases: Count Rows | never | Table rows are read with the database tools |
+| `db-create-table` | Databases: Create Table… | never | changes the schema; the user reviews the DDL card (db_query for DDL) |
 | `db-data` | Databases: Open Table Data | never | Table rows are read with the database tools |
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |

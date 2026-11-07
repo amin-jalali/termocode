@@ -401,6 +401,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-generate-data":             aiNever("it writes a script of rows the user reviews and runs"),
 	"db-compare-schemas":           aiNever(aiNoPicker),
 	"db-er-diagram":                aiNever(aiNoPicker),
+	"db-create-table":              aiNever("changes the schema; the user reviews the DDL card (db_query for DDL)"),
+	"db-alter-table":               aiNever("changes the schema; the user reviews the DDL card (db_query for DDL)"),
 	"db-find-object":               aiNever(aiNoPicker + " (db_schema)"),
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
