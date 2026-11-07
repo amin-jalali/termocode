@@ -360,7 +360,11 @@ func (m *Model) aiWriteFile(abs, rel, content string) (string, tea.Cmd, error) {
 	// R3: keep the old text for "AI: Undo Last Turn" (only now: a refused
 	// write changed nothing, so the turn has nothing to undo)
 	m.aiRestoreNote(abs)
-	before, _ := os.ReadFile(abs) // for Follow Agent: where the change starts
+	var before []byte
+	follow := m.aiFollowWanted()
+	if follow {
+		before, _ = os.ReadFile(abs) // for Follow Agent: where the change starts
+	}
 	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
 		return "", nil, err
 	}
@@ -374,7 +378,9 @@ func (m *Model) aiWriteFile(abs, rel, content string) (string, tea.Cmd, error) {
 			out += "; the open editor tab shows the new content (the user can undo it)"
 		}
 	}
-	out += m.aiFollowJump(abs, rel, aiFirstChangedLine(string(before), content))
+	if follow {
+		out += m.aiFollowJump(abs, rel, aiFirstChangedLine(string(before), content))
+	}
 	reveal := ""
 	if statErr != nil { // a new file
 		reveal = abs

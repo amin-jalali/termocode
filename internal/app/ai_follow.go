@@ -59,11 +59,18 @@ func (m *Model) aiFollowPaused() bool {
 	return m.focus == FocusEditor && !m.aiS().focused && !m.panelFocused
 }
 
+// aiFollowWanted says whether a write now would jump the editor, so a
+// write reads the file's old text (for the changed line) only then: an
+// undo of a 300-file turn must not read every file once more.
+func (m *Model) aiFollowWanted() bool {
+	return m.aiS().follow && m.nvim != nil && !m.aiFollowPaused()
+}
+
 // aiFollowJump moves the editor to abs:line when Follow Agent is on and
 // returns a note for the model ("" when it did not jump).
 func (m *Model) aiFollowJump(abs, rel string, line int) string {
 	s := m.aiS()
-	if !s.follow || m.nvim == nil || line <= 0 || m.aiFollowPaused() {
+	if !m.aiFollowWanted() || line <= 0 {
 		return ""
 	}
 	m.ensureEditorWindowCurrent()
