@@ -53,6 +53,9 @@ func (m *Model) webCardsAnswer(call *webCall) tea.Cmd {
 		call.reply(nil)
 		return tea.Batch(cmd, t)
 	}
+	if q, ok := ref.obj.(*aiMCPElicitPending); ok { // the answers of a form (MOB-12)
+		return m.webAnswerElicit(call, ref, q, a, device)
+	}
 	cmd := m.webAnswerCard(ref, a.Choice, a.Hunks)
 	if p.by == nil {
 		p.by = map[string]string{}

@@ -140,7 +140,7 @@ var opTable = []Policy{
 	{Op: OpChatSend, New: newOf[ChatSendArgs](), Role: RoleController, Rate: Rate{N: 1, Per: 2 * time.Second}, MaxBytes: 72 * kib, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpChatStop, New: newOf[EmptyArgs](), Role: RoleController, Rate: Rate{N: 1, Per: 2 * time.Second}, MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpChatNew, New: newOf[EmptyArgs](), Role: RoleController, Rate: Rate{N: 1, Per: 2 * time.Second}, MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
-	{Op: OpCardsAnswer, New: newOf[CardsAnswerArgs](), Role: RoleController, Rate: perSec(5), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
+	{Op: OpCardsAnswer, New: newOf[CardsAnswerArgs](), Role: RoleController, Rate: perSec(5), MaxBytes: 24 * kib, Audit: AuditYes, Phase: PhaseV1},
 
 	// Files.
 	{Op: OpTreeRevealLaptop, New: newOf[PathArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV1},

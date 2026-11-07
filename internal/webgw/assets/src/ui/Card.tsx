@@ -53,11 +53,13 @@ export interface CardProps {
   onLaptop?: () => void;
   /** by names who answered an answered card: "laptop" (the default) or another browser. */
   by?: string;
+  /** riskyLabel replaces the kind's risky answer ("Send" on a form card, MOB-12). */
+  riskyLabel?: StringKey;
 }
 
 const CHECK_MS = 300;
 
-export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onCancel, onClose, onLaptop, by }: CardProps) {
+export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onCancel, onClose, onLaptop, by, riskyLabel }: CardProps) {
   const root = useRef<HTMLElement | null>(null);
   const safeBtn = useRef<HTMLButtonElement | null>(null);
   const arm = useArming(root);
@@ -147,7 +149,7 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
             onClick={risky}
           >
             <span class="arm-fill" aria-hidden="true" />
-            <span class="arm-label">{done ? "✓" : t(c.risky)}</span>
+            <span class="arm-label">{done ? "✓" : t(riskyLabel ?? c.risky)}</span>
             {!arm.armed && (
               <span class="arm-ticks" aria-hidden="true">
                 {["1", "2", "✓"].slice(0, Math.max(arm.tick, 1)).join(" · ")}

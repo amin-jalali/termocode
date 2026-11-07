@@ -1,0 +1,10 @@
+{
+  "id": "mcp",
+  "kind": "detail",
+  "title": "fake · structured",
+  "source": "mcp.fake.structured",
+  "fields": [
+    {"label": "n", "value": "42", "kind": "num"}
+  ],
+  "total": 1
+}

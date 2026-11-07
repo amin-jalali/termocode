@@ -647,7 +647,7 @@
         "n": 5,
         "per_ms": 1000
       },
-      "max_bytes": 1024,
+      "max_bytes": 24576,
       "laptop_card": false,
       "audit": "yes",
       "phase": "v1"
@@ -6056,6 +6056,12 @@
         "file": {
           "type": "string"
         },
+        "form": {
+          "items": {
+            "$ref": "#/defs/BlockFormField"
+          },
+          "type": "array"
+        },
         "id": {
           "type": "string"
         },
@@ -6164,6 +6170,12 @@
       "properties": {
         "choice": {
           "type": "string"
+        },
+        "form": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "hunks": {
           "items": {
