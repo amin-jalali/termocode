@@ -177,6 +177,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleSetupConfirm(id); ok { // setup card: GNOME profile
 		return cmd
 	}
+	if cmd, ok := m.handlePairSyncConfirm(id); ok { // container_pairsync.go
+		return cmd
+	}
 	if cmd, ok := m.handleContainerFilesConfirm(id); ok { // containers_files.go
 		return cmd
 	}

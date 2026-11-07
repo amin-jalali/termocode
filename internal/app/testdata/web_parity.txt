@@ -507,6 +507,7 @@ missing	containers-logs-options	Containers|S
 missing	containers-network-connect	Containers|S
 missing	containers-network-create-options	Containers|S
 missing	containers-network-disconnect	Containers|S
+missing	containers-pair-sync	Containers|M
 missing	containers-registry-catalog	Containers|S
 missing	containers-rename	Containers|S
 missing	containers-resources	Containers|S

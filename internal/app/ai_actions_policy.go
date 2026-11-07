@@ -505,6 +505,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-logs-options":           aiNever(aiNoPicker + " (container logs options; containers-logs follows logs)"),
 	"containers-detail":                 aiAuto(),
 	"containers-files":                  aiNever(aiNoPicker + " (container files)"),
+	"containers-pair-sync":              aiNever("copies and deletes files between the user's container and workspace; the user reads the card"),
 	"containers-copy-id":                aiAuto(),
 	"containers-open-port":              aiAuto(),
 	"containers-open-databases":         aiNever(aiNoPicker + " (db_connections)"),

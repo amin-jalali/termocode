@@ -2148,6 +2148,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-network-remove` | Containers: Remove Selected Network… | never | removing is the user's; nothing is offered to the model |
 | `containers-open-databases` | Containers: Open in Databases | never | opens a picker or prompt that only the user can answer; use a typed tool (db_connections) |
 | `containers-open-port` | Containers: Open Published Port | auto |   |
+| `containers-pair-sync` | Containers: Pair Sync with Workspace… | never | copies and deletes files between the user's container and workspace; the user reads the card |
 | `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
 | `containers-prune` | Containers: Prune Stopped Containers… | never | pruning containers is the user's; nothing is offered to the model |
 | `containers-refresh` | Containers: Refresh | auto |   |
