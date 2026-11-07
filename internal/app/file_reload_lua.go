@@ -8,7 +8,8 @@ package app
 //     W12 "[O]K, (L)oad File" prompt; with cmdheight=0 nvim then waits for
 //     a key, answers no RPC call and the whole app freezes (seen on
 //     Git: Stash Changes after an edit). Unmodified buffers reload;
-//     modified ones keep the user's edits and get a warning toast.
+//     modified ones keep the user's edits and get a warning toast. A file
+//     that grew past 64 MB is not reloaded either (it froze nvim).
 //   - FileChangedShellPost records the reloaded path so the Go side can
 //     toast "Reloaded <file>".
 //   - _G._termocode_checktime_all checks every loaded file buffer one by
@@ -21,9 +22,17 @@ package app
 //     terminal; the user's next key then edited the old text, which a
 //     save wrote over the new one.
 const fileReloadLua = `
+-- A file that grew past this on disk (a log, a dump) is not read in:
+-- reading 300 MB kept nvim busy for 20 s and the app hung.
+_G._termocode_reload_max = 64 * 1024 * 1024
 _G._termocode_checktime_all = function()
 	for _, b in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == '' and vim.api.nvim_buf_get_name(b) ~= '' then
+		local name = vim.api.nvim_buf_get_name(b)
+		if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == '' and name ~= '' then
+			-- 'autoread' reloads without asking FileChangedShell (below),
+			-- so a big file gets it off and the handler keeps the text.
+			local st = (vim.uv or vim.loop).fs_stat(name)
+			if st and st.size > _G._termocode_reload_max then vim.bo[b].autoread = false end
 			pcall(vim.cmd, 'silent! checktime ' .. b)
 		end
 	end
@@ -43,15 +52,19 @@ vim.api.nvim_create_autocmd('FileChangedShell', {
 	callback = function(args)
 		local buf = args.buf or 0
 		local reason = vim.v.fcs_reason
-		if reason == 'deleted' or vim.bo[buf].modified then
+		local st = reason ~= 'deleted' and (vim.uv or vim.loop).fs_stat(vim.api.nvim_buf_get_name(buf)) or nil
+		local big = st ~= nil and st.size > _G._termocode_reload_max
+		if reason == 'deleted' or big or vim.bo[buf].modified then
 			vim.v.fcs_choice = ''
 			-- Warn once: a deleted file is reported on every check (the
 			-- timer above runs one every 2 s).
-			if vim.b[buf].termocode_disk_warned == reason then return end
-			vim.b[buf].termocode_disk_warned = reason
+			local why = big and 'big' or reason
+			if vim.b[buf].termocode_disk_warned == why then return end
+			vim.b[buf].termocode_disk_warned = why
 			local name = vim.fn.fnamemodify(args.file or '', ':t')
 			local msg = reason == 'deleted'
 				and (name .. ' was deleted on disk; the editor keeps its text')
+				or big and (name .. ' changed on disk and is too big to reload (' .. math.floor(st.size / 1048576) .. ' MB); the editor keeps its text')
 				or (name .. ' changed on disk; your unsaved edits are kept')
 			vim.schedule(function()
 				vim.notify('termocode: ' .. msg, vim.log.levels.WARN)
