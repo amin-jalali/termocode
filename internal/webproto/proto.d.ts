@@ -2941,6 +2941,10 @@ export interface ChatSide {
   answer: string;
 }
 
+export interface ChatHomeArgs {
+  text?: string;
+}
+
 export interface AutoApprove {
   rows: AutoApproveRow[];
 }
@@ -3225,6 +3229,7 @@ export interface OpArgs {
   "pr.checkout": PRNumberArgs;
   "ai.mcp_items": EmptyArgs;
   "chat.side": ChatSendArgs;
+  "chat.home": ChatHomeArgs;
   "ai.use_profile": AIUseArgs;
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
@@ -3489,6 +3494,7 @@ export interface OpResult {
   "pr.checkout": AskRef;
   "ai.mcp_items": MCPItems;
   "chat.side": ChatSide;
+  "chat.home": ChatSnap;
   "ai.use_profile": AskRef;
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;

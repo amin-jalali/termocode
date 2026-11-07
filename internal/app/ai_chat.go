@@ -224,6 +224,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if s.streaming {
 		return m.aiInfo("AI is still answering — Ctrl+C to stop")
 	}
+	if s.home.busy { // MOB-16: one AI turn at a time, the phone chat's too
+		return m.aiInfo("The phone chat is answering — wait a moment or Ctrl+C to stop")
+	}
 	if !s.keep.pushing { // OMX-7: a message of the user starts a new keep-going chain
 		s.keep = aiKeepGoingRun{}
 	}
