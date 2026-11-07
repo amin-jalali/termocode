@@ -313,6 +313,29 @@ lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
 first).
 
+## Split one task between agents
+
+A race gives the same task to every lane. A **split** gives each lane its
+own part of one goal, so several agents build one feature side by side.
+
+1. **Agent: Split Task…** opens the AI chat with a short draft. Finish it
+   with your goal and send it.
+2. The AI (the coordinator) cuts the goal into 2 to 4 parts and picks an
+   agent for each. A card shows every part: **Deny** is first. Nothing
+   starts before you press **Start split**.
+3. Each part gets its own worktree from `HEAD` and its own terminal tab.
+   termocode types the goal and that lane's part, once, when the agent's
+   input box is on screen.
+4. Ask the AI how the parts are going. It reads them with
+   `agent_split_status` (state, files and the diff of a finished part) and
+   can tell you what is left.
+5. **Agent: Race Compare** shows the split (the title says **SPLIT** and
+   each lane shows its part). Press `m` on each part to merge it. There is
+   no winner, so no card asks about the other lanes.
+
+Workers cannot start more workers: the split tools are only for termocode's
+own AI chat, never for outside agents.
+
 ## Chat view and sessions
 
 With `agent_transcripts` on:
