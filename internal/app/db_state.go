@@ -119,6 +119,7 @@ type dbState struct {
 	cols                map[string]map[string][]string        // connection -> lower-case table -> columns (completion)
 	full                map[string]*dbclient.CompletionSchema // connection -> whole schema loaded in the background (DBX-3)
 	fullLoad            map[string]bool                       // connection -> a background schema load is running or done
+	ddl                 map[string]*dbclient.CompletionSchema // connection -> schema read from a DDL folder (DBX-46); kept on reconnect
 	manual              map[string]bool                       // connection -> manual transaction mode
 	txModeApplied       map[string]bool                       // connections whose saved txMode was applied (DBX-28)
 	txs                 map[string]*dbTxState                 // session key -> its transaction
