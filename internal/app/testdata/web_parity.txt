@@ -372,6 +372,7 @@ web	web-pair	op:web.pair_ask
 web	web-share	op:web.grant_ask
 web	web-totp	op:web.totp_check
 web	workflow-dry-run	op:workflows.dry_run
+web	workflow-new	op:workflows.save
 web	workflow-run	op:workflows.run
 web	workflow-stop	op:workflows.stop
 web	workflows	view:workflows
@@ -699,7 +700,6 @@ missing	services-compose-watch	Containers|S
 missing	services-deploy-git	Containers|S
 missing	services-env-file	Containers|S
 missing	workflow-history	Workflows|S
-missing	workflow-new	Workflows|S
 missing	workspace-open-container	Workspace|M
 missing	workspace-reopen-devcontainer	Workspace|M
 missing	worktree-add-folder	Worktrees|M

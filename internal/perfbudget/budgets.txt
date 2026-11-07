@@ -109,6 +109,9 @@ web_gateway_conn_kib       350   KiB  # heap per browser after hello, 4 open, bo
 # Workflows (WFX-21; internal/app/workflows_perf_guard_test.go)
 workflows_topic_100        25   ms   # the web topic of 100 workflows, median of 9; local 0.02 ms (floor)
 
+# Phone, Phase 4 (MOB-66; internal/app/mob_phase4_test.go)
+web_races_topic_20         10   ms   # the races topic of 20 races x 4 lanes x 200 files, built + JSON-encoded, median of 9; not measured yet (plan §6: topic builds <= 5 ms)
+
 # Worktrees (WTX-1/2): internal/worktrees, internal/app. Median of 9.
 worktrees_list_200         25   ms   # parse 200 worktree list blocks + build the model with metadata; local 0.3 ms (floor)
 worktrees_status_200       50   ms   # UI-thread share of a status refresh of 200 worktrees (git runs in 4 workers); local 0.4 ms (floor)
