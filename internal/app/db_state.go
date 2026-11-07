@@ -103,12 +103,14 @@ type dbState struct {
 	rowsHint            int // the length of the last rows() list (a size hint only)
 	render              dbRenderCache
 	visible             bool
-	schemaVer           uint64                         // bumps when the tree or the column cache changes
-	cols                map[string]map[string][]string // connection -> lower-case table -> columns (completion)
-	manual              map[string]bool                // connection -> manual transaction mode
-	txs                 map[string]*dbTxState          // session key -> its transaction
-	txModeConn          string                         // the connection the mode picker is for
-	txCardConn          string                         // the uncommitted-changes card
+	schemaVer           uint64                                // bumps when the tree or the column cache changes
+	cols                map[string]map[string][]string        // connection -> lower-case table -> columns (completion)
+	full                map[string]*dbclient.CompletionSchema // connection -> whole schema loaded in the background (DBX-3)
+	fullLoad            map[string]bool                       // connection -> a background schema load is running or done
+	manual              map[string]bool                       // connection -> manual transaction mode
+	txs                 map[string]*dbTxState                 // session key -> its transaction
+	txModeConn          string                                // the connection the mode picker is for
+	txCardConn          string                                // the uncommitted-changes card
 	txCardAfter         func(*Model) tea.Cmd
 	tunnels             map[string]*dbclient.Tunnel // connection -> its SSH tunnel (db_ssh.go)
 	pendingSSH          dbSSHSecrets                // the SSH secrets of the connection being added
@@ -787,6 +789,8 @@ func (m *Model) databasesClose(keepTx bool) {
 
 func (s *dbState) resetConnectionTree(id string) {
 	delete(s.cols, id)
+	delete(s.full, id)
+	delete(s.fullLoad, id)
 	s.schemaVer++
 	for path, n := range s.nodes {
 		if n.conn == id && path != id {

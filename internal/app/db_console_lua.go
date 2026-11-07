@@ -179,9 +179,26 @@ function _G._termocode_sql_omni(findstart,base)
   end
   local cols=S1.cols and S1.cols[tbl]
   if cols then
-   for _,c in ipairs(cols) do
-    if c:lower():sub(1,#lb)==lb then add(quoted(S1,c),'column') end
+   -- Type-aware (DBX-3): after "x.col = tbl." the columns of the same
+   -- type family come first; the menu shows each column's type.
+   local types=(S1.types and S1.types[tbl]) or {}
+   local want=nil
+   local lq,lc=before:sub(1,col-#word-#qual-1):match('([%w_$\34\96]+)%.([%w_$\34\96]+)%s*[=<>!]+%s*$')
+   if lq then
+    local al=aliases(text)
+    local lt=al[unq(lq):lower()] or unq(lq):lower()
+    want=S1.types and S1.types[lt] and S1.types[lt][unq(lc)]
    end
+   local first,rest={},{}
+   for _,c in ipairs(cols) do
+    if c:lower():sub(1,#lb)==lb then
+     local ty=types[c]
+     local it={word=quoted(S1,c),menu=ty and ('column '..ty) or 'column'}
+     if want and ty==want then first[#first+1]=it else rest[#rest+1]=it end
+    end
+   end
+   for _,it in ipairs(first) do out[#out+1]=it end
+   for _,it in ipairs(rest) do out[#out+1]=it end
    return out
   end
   for _,t in ipairs(S1.tables or {}) do
@@ -202,6 +219,33 @@ function _G._termocode_sql_omni(findstart,base)
    end
   end
   return out
+ end
+ -- JOIN … ON (DBX-3): whole conditions from the foreign keys between
+ -- the table just joined and the tables already in the statement.
+ do
+  local pre=before:sub(1,col-#word):lower()
+  local jt,ja=pre:match('join%s+([%w_.\34\96]+)%s+as%s+([%w_]+)%s+on%s+$')
+  if not jt then jt,ja=pre:match('join%s+([%w_.\34\96]+)%s+([%w_]+)%s+on%s+$') end
+  if not jt then jt=pre:match('join%s+([%w_.\34\96]+)%s+on%s+$') end
+  if jt and S1.fks then
+   jt=unq(jt:match('([^.]+)$') or jt)
+   ja=ja or jt
+   local others={}
+   for a,tn in pairs(aliases(statement_text())) do
+    if a~=ja and not (tn==jt and a==jt) then
+     if not others[tn] or others[tn]==tn then others[tn]=a end
+    end
+   end
+   local conds={}
+   for _,f in ipairs(S1.fks) do
+    if f.t==jt and others[f.rt] then conds[#conds+1]=ja..'.'..f.c..' = '..others[f.rt]..'.'..f.rc end
+    if f.rt==jt and others[f.t] then conds[#conds+1]=ja..'.'..f.rc..' = '..others[f.t]..'.'..f.c end
+   end
+   table.sort(conds)
+   for _,c in ipairs(conds) do
+    if c:lower():sub(1,#lb)==lb then add(c,'join') end
+   end
+  end
  end
  local upper=base:match('%u') and not base:match('%l')
  for _,k in ipairs(KW) do
@@ -385,6 +429,10 @@ func lastExt(p string) string {
 }
 
 func init() {
-	registerNotifyHandler("termocode_db_buf", func(m *Model, args []any) tea.Cmd { m.databaseBufferLens(notifyArgInt(args, 0)); return nil })
+	registerNotifyHandler("termocode_db_buf", func(m *Model, args []any) tea.Cmd {
+		buf := notifyArgInt(args, 0)
+		m.databaseBufferLens(buf)
+		return m.databaseBackgroundSchema(buf)
+	})
 	registerNotifyHandler("termocode_db_cancel", func(m *Model, _ []any) tea.Cmd { return m.databaseCancelRun() })
 }
