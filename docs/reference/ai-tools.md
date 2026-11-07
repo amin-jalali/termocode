@@ -2222,6 +2222,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-merge-take-ours` | Git: Merge View: Take Ours | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-take-theirs` | Git: Merge View: Take Theirs | never | resolves the user's merge conflict in the merge view; user only |
 | `git-merge-undo` | Git: Merge View: Undo Last Change | never | resolves the user's merge conflict in the merge view; user only |
+| `git-move-commit` | Git: Move Last Commit to Another Branch… | never | moves the user's commits between branches; only the user does that |
 | `git-outgoing` | Git: Show Outgoing Commits… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-patch-apply-clip` | Git: Apply Patch from Clipboard… | never | applies text from the user's clipboard to the files; user only |
 | `git-patch-apply-file` | Git: Apply Patch from File… | never | opens a picker or prompt that only the user can answer; use a typed tool |
