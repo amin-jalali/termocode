@@ -636,6 +636,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"http-new-file":         aiNever(aiNoPicker + " (create_file)"),
 	"http-save-body":        aiNever(aiNoPicker + " (http_get_last_response, write_file)"),
 	"http-fields":           aiNever(aiNoPicker + " (read_file, write_file)"),
+	"http-api-docs":         aiAuto(), // read-only page
 }
 
 // aiActionPolicyFor returns the policy of a palette id, including the

@@ -2299,6 +2299,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `help-context` | Help: Explain This… | auto |   |
 | `help-guide` | Help: Open Guide… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `hover` | LSP: Show Hover Documentation | auto |   |
+| `http-api-docs` | HTTP: Open API Docs | auto |   |
 | `http-cancel` | HTTP: Cancel Request | confirm (ide) |   |
 | `http-cookies` | HTTP: Cookies… | never | opens a picker or prompt that only the user can answer; use a typed tool (cookies stay with the user) |
 | `http-copy-curl` | HTTP: Copy as curl | confirm (ide) |   |
