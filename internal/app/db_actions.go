@@ -907,6 +907,7 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"] / [", "next / previous page"},
 		[]string{"o", "sort by a column"},
 		[]string{"f", "show only some rows"},
+		[]string{"=", "show only rows with this cell's value"},
 		[]string{"t", "flip rows and columns (table data)"},
 		[]string{"v", "open the cell"},
 		[]string{"y", "copy the cell"},

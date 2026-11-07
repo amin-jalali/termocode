@@ -307,3 +307,37 @@ func (tv *dbTableView) finish(res *dbclient.Result, size int) {
 func dbIsWordByte(c byte) bool {
 	return c == '_' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
 }
+
+// dbPlainNumber is a number literal that may stand in SQL without quotes.
+var dbPlainNumber = lazyre.New(`^-?[0-9]+(\.[0-9]+)?$`)
+
+// dbQuickWhere is the filter that keeps the rows whose col holds the value
+// of cell (IS NULL for a null), added with AND to the filter old. The
+// value is a quoted literal for the dialect; a number cell stays plain
+// only when its text is a plain number.
+func dbQuickWhere(driver, col string, cell dbclient.Cell, old string) (string, error) {
+	d := dbclient.DialectFor(driver)
+	if d == nil {
+		return "", fmt.Errorf("%s has no SQL filter", driver)
+	}
+	if err := dbWhereCheck(driver, old); err != nil {
+		return "", err
+	}
+	var cond string
+	switch {
+	case cell.Null:
+		cond = d.QuoteIdent(col) + " IS NULL"
+	case cell.Kind == "number" && dbPlainNumber.MatchString(cell.Text):
+		cond = d.QuoteIdent(col) + " = " + cell.Text
+	default:
+		v := cell.Text
+		if _, ok := d.(dbclient.MySQLDialect); ok {
+			v = strings.ReplaceAll(v, `\`, `\\`)
+		}
+		cond = d.QuoteIdent(col) + " = '" + strings.ReplaceAll(v, "'", "''") + "'"
+	}
+	if old = strings.TrimSpace(old); old != "" {
+		cond = "(" + old + ") AND " + cond
+	}
+	return cond, nil
+}

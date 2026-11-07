@@ -437,3 +437,28 @@ func dbRunReadOnly(ctx context.Context, sess dbclient.Session, sql string, opt d
 	defer ro.Close()
 	return ro.Run(ctx, sql, opt)
 }
+
+// databaseQuickFilter is = on a cell of table data: show only the rows
+// whose column holds the same value, added to the filter already set.
+func (m *Model) databaseQuickFilter(tv *dbTableView, row, col int) tea.Cmd {
+	s := m.dbConsole()
+	if tv == nil {
+		return m.pushToast(toast.Info, "= filters table data: open a table with o")
+	}
+	page := s.pageResult()
+	if s.trans && s.view == dbViewGrid && s.trow < len(page.Rows) {
+		row, col = s.trow, row // the cursor line is the column
+	}
+	if s.view != dbViewGrid || row < 0 || row >= len(page.Rows) || col < 0 || col >= len(page.Rows[row]) || col >= len(page.Columns) {
+		return nil
+	}
+	name := page.Columns[col].Name
+	if name == dbRowidAlias {
+		return nil
+	}
+	where, err := dbQuickWhere(tv.driver, name, page.Rows[row][col], tv.where)
+	if err != nil {
+		return m.pushToastDetail(toast.Warn, "Filter refused", sanitizeDBText(err.Error()))
+	}
+	return m.databaseUnlessDirty(func() tea.Cmd { return m.databaseTableWhere(tv, where) })
+}
