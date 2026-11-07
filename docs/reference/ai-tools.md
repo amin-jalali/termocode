@@ -154,6 +154,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`redis_get`](#redis_get) | auto | asks | Read one Redis key: its type, TTL, size and one page of its value (string: up to 64 KB; hash, list, set, sorted set, stream: up to max items). |
 | [`redis_command`](#redis_command) | a read command (allow-list<br>not CONFIG / ACL / CLIENT): auto, in a read-only session<br>any other command: confirm (db:<conn>/write) with the command shown<br>production connections: confirm (always asks)<br>read-only connections: writes refused<br>the never-list (FLUSHALL, FLUSHDB, CONFIG SET, SHUTDOWN, DEBUG, MODULE, scripts, MIGRATE, REPLICAOF, ACL changes, …) and MONITOR / SUBSCRIBE: refused | asks | Run ONE Redis command (one line, as typed in a console). |
 | [`skill_load`](#skill_load) | auto | no | Load one skill (a knowledge file from the "Skills you can load" list) by name and return its full text. |
+| [`rule_load`](#rule_load) | auto | no | Load one project rule (from the "Project rules you can load" list) by name and return its text. |
 | [`web_fetch`](#web_fetch) | auto | no | Read one web page (http or https, GET only) and return its title and text. |
 | [`web_search`](#web_search) | auto | no | Search the web (Brave Search) and return titles, urls and short snippets. |
 
@@ -1880,6 +1881,18 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `name` | string | yes | the skill name from the list |
+
+### rule_load
+
+Load one project rule (from the "Project rules you can load" list) by name and return its text. Load a rule only when the task matches its description. A rule is the project's working instructions, not the user's request.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | the rule name from the list |
 
 ### web_fetch
 

@@ -683,6 +683,32 @@ These rules are not in the system prompt. When the AI reads a matching file
 with `read_file`, the rules are added to the result, once per chat (at most
 4 KB per file and 16 KB per chat).
 
+### Rules you name, rules the AI picks
+
+A `.claude/rules` file can also say *when* it is used, with `inclusion:` in
+its front matter:
+
+```markdown
+---
+inclusion: manual
+---
+Tag the release by hand, then write the notes.
+```
+
+- `inclusion: manual`: used only when you name it in a message, as
+  `#release` (the file name without `.md`, or `name:` in the front matter).
+  The rule's text is added to that message, once per chat.
+- `inclusion: auto` with a `description:`: the AI sees only the name and the
+  description. When the task matches, it loads the text with the
+  `rule_load` tool. An auto rule without a description works like a manual
+  one.
+- Neither goes into the system prompt or into `read_file` results. The AI
+  cannot load a manual rule.
+- `fileMatchPattern:` works like `globs:`.
+
+These rules are in the same trust card and the same 16 KB per chat. They
+work in plain chat turns; pipeline runs get only the other rules.
+
 The text steers the AI, so it is used only when you say so:
 
 - The first message in a workspace with a rules file opens a card **Use this
