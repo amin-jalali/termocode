@@ -40,6 +40,9 @@ func (m *Model) webChatSend(call *webCall) tea.Cmd {
 	case s.streaming:
 		call.fail(webproto.CodeBusy, "The AI is still answering. Stop it or wait.")
 		return nil
+	case s.home.busy: // MOB-16: one AI turn at a time per workspace
+		call.fail(webproto.CodeBusy, "The phone chat is answering. Stop it or wait.")
+		return nil
 	case !m.aiConfigured():
 		call.fail(webproto.CodeConflict, "AI is not set up on the laptop.")
 		return nil

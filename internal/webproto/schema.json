@@ -4272,6 +4272,21 @@
       "phase": "v2"
     },
     {
+      "op": "chat.home",
+      "args": "ChatHomeArgs",
+      "result": "ChatSnap",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 2000
+      },
+      "max_bytes": 73728,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "ai.use_profile",
       "args": "AIUseArgs",
       "result": "AskRef",
@@ -6215,6 +6230,16 @@
       "required": [
         "i"
       ],
+      "additionalProperties": false
+    },
+    "ChatHomeArgs": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [],
       "additionalProperties": false
     },
     "ChatImageArgs": {

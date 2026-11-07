@@ -72,6 +72,7 @@ type aiState struct {
 	kwOff     bool
 	kwProfile string
 	side      aiSideChat // OMX-30: the side chat (ai_side.go)
+	home      aiHomeChat // MOB-16: the phone's background chat (web_chat_home.go)
 	cfg       ai.Config
 	provider  ai.Provider
 	loadErr   string
@@ -799,6 +800,9 @@ func (m *Model) aiCancelAll() tea.Cmd {
 		s.actionGen++
 	}
 	m.cancelAIInline()
+	if m.aiHomeStop() { // MOB-16: and the phone chat's turn
+		stopped = true
+	}
 	if !stopped {
 		return nil
 	}

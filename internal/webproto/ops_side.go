@@ -45,6 +45,7 @@ type ChatSide struct {
 var opSideRows = []Policy{
 	{Op: OpAIMCPItems, New: newOf[EmptyArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpChatSide, New: newOf[ChatSendArgs](), Role: RoleController, Rate: Rate{N: 1, Per: 2 * time.Second}, MaxBytes: 72 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpChatHome, New: newOf[ChatHomeArgs](), Role: RoleController, Rate: Rate{N: 1, Per: 2 * time.Second}, MaxBytes: 72 * kib, Live: 1, Audit: AuditYes, Phase: PhaseV2}, // MOB-16 (ops_chathome.go)
 }
 
 var _ = func() bool { opTable = append(opTable, opSideRows...); return true }()

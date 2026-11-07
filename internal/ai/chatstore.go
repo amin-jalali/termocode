@@ -210,6 +210,15 @@ type Conversation struct {
 	// "keep going" message by itself (AI: Toggle Keep Going).
 	Todos     []Todo `json:"todos,omitempty"`
 	KeepGoing bool   `json:"keep_going,omitempty"`
+	// Home marks the background chat of a paired phone (MOB-16: the web's
+	// chat.home): the device id and the workspace root it belongs to.
+	Home *HomeChat `json:"home,omitempty"`
+}
+
+// HomeChat is whose phone chat a conversation is.
+type HomeChat struct {
+	Device string `json:"device"`
+	Root   string `json:"root"`
 }
 
 const (
