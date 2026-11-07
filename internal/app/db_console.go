@@ -68,6 +68,7 @@ type dbConsoleState struct {
 	gen      uint64         // bumps on each run; stale results are dropped
 	pageGen  uint64         // bumps on each page write; stale batches are dropped
 	tableGen uint64         // bumps on each table command; stale answers are dropped
+	genTable *dbTable       // Generate Test Data: the table while the row count is asked
 	pushed   map[int]string // SQL buffer -> the schema stamp last pushed to it
 	view     int
 	page     int

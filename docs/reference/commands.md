@@ -208,6 +208,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Export Result… | `db-export` |   |   |
 | Databases: Filter… | `db-filter` |   |   |
 | Databases: Focus | `db-focus` |   |   |
+| Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: New Console | `db-new-console` |   |   |

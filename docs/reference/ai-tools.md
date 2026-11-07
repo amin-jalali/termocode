@@ -2063,6 +2063,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
 | `db-filter` | Databases: Filter… | never | the filter is typed by the user; the AI uses db_schema |
 | `db-focus` | Databases: Focus | auto |   |
+| `db-generate-data` | Databases: Generate Test Data… | never | it writes a script of rows the user reviews and runs |
 | `db-guide` | Databases: Open Guide | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |

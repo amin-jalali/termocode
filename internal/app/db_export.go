@@ -486,6 +486,8 @@ func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.C
 		return m.databaseExportPathTyped(value), true
 	case promptKindDBImportPath:
 		return m.databaseImportLoad(value), true
+	case promptKindDBGenRows:
+		return m.databaseGenerateRows(value), true
 	}
 	return nil, false
 }
