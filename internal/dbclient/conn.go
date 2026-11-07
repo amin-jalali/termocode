@@ -12,9 +12,12 @@ import (
 )
 
 type Conn struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name,omitempty"`
-	Driver      string            `json:"driver"`
+	ID     string `json:"id"`
+	Name   string `json:"name,omitempty"`
+	Driver string `json:"driver"`
+	// Preset names a server of the driver's family (MySQLPresets): its
+	// defaults and notes. "" = plain driver.
+	Preset      string            `json:"preset,omitempty"`
 	Host        string            `json:"host,omitempty"`
 	Port        int               `json:"port,omitempty"`
 	User        string            `json:"user,omitempty"`

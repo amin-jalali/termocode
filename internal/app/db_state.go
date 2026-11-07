@@ -338,8 +338,8 @@ func dbConnDetail(c dbclient.Conn) string {
 		return "sqlite"
 	}
 	d := c.Driver
-	if d == "mysql" {
-		d = "mysql"
+	if _, ok := dbclient.PresetByID(c.Preset); ok {
+		d = c.Preset
 	}
 	// The tunnel and SSL tags come right after the driver so a narrow
 	// sidebar still shows them.
