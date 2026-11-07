@@ -310,12 +310,22 @@
       "deltas": [
         "WorktreesSnap"
       ]
+    },
+    {
+      "name": "projects",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "ProjectsSnap",
+      "deltas": [
+        "ProjectsSnap"
+      ]
     }
   ],
   "events": {
     "answered": "Answered",
     "attention": "Attention",
-    "search.batch": "SearchBatch"
+    "search.batch": "SearchBatch",
+    "ws.gone": "WSGone"
   },
   "messages": {
     "client": {
@@ -7427,6 +7437,9 @@
         },
         "topic": {
           "type": "string"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -7649,6 +7662,9 @@
         },
         "t": {
           "const": "err"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -7667,6 +7683,9 @@
         },
         "t": {
           "const": "ev"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -11348,6 +11367,9 @@
         },
         "viewers": {
           "type": "integer"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -11822,6 +11844,86 @@
       ],
       "additionalProperties": false
     },
+    "ProjectItem": {
+      "type": "object",
+      "properties": {
+        "attached": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "opened_at": {
+          "type": "integer"
+        },
+        "recent": {
+          "type": "boolean"
+        },
+        "service": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "here",
+            "running",
+            "asleep"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "where": {
+          "type": "string"
+        },
+        "working": {
+          "type": "integer"
+        },
+        "ws": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "where",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "ProjectsSnap": {
+      "type": "object",
+      "properties": {
+        "more": {
+          "type": "integer"
+        },
+        "projects": {
+          "items": {
+            "$ref": "#/defs/ProjectItem"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "loading",
+            "ready"
+          ]
+        },
+        "waiting": {
+          "type": "integer"
+        },
+        "working": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "state",
+        "projects"
+      ],
+      "additionalProperties": true
+    },
     "PruneArgs": {
       "type": "object",
       "properties": {
@@ -12033,6 +12135,9 @@
         },
         "t": {
           "const": "req"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -12052,6 +12157,9 @@
         },
         "t": {
           "const": "res"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -12114,6 +12222,9 @@
           "const": "resync"
         },
         "topic": {
+          "type": "string"
+        },
+        "ws": {
           "type": "string"
         }
       },
@@ -12744,6 +12855,9 @@
         },
         "topic": {
           "type": "string"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -13075,6 +13189,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -14093,6 +14210,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "ws": {
+          "type": "string"
         }
       },
       "required": [
@@ -14327,6 +14447,25 @@
       },
       "required": [
         "name"
+      ],
+      "additionalProperties": true
+    },
+    "WSGone": {
+      "type": "object",
+      "properties": {
+        "why": {
+          "enum": [
+            "closed",
+            "not_running",
+            "busy",
+            "limit",
+            "off",
+            "bad"
+          ]
+        }
+      },
+      "required": [
+        "why"
       ],
       "additionalProperties": true
     },
