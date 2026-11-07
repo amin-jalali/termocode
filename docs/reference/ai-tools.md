@@ -2533,6 +2533,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `view-output` | View: Output | auto |   |
 | `web-copy-link` | Web: Copy Link | never | the web panel gives shell access from a browser; only the user changes it, in config.json (the link logs a browser in) |
 | `web-devices` | Web: Devices… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (who may come in) |
+| `web-forward-port` | Web: Forward Port… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (opens a port of this computer to the browser) |
+| `web-forwarded-ports` | Web: Forwarded Ports… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (the open port forwards) |
 | `web-pair` | Web: Pair a Device… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (pairing lets another device in) |
 | `web-share` | Web: Share as Viewer… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (lets another person watch) |
 | `web-start` | Web: Open in Browser | never | the web panel gives shell access from a browser; only the user changes it, in config.json |

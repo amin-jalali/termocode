@@ -118,6 +118,33 @@ your computer to that socket. The link then opens in your browser here.
   again by itself.
 - When you leave `termocode ssh`, the forward ends.
 
+## See a dev server in the browser (port preview)
+
+Run **Web: Forward Port…** on the laptop and type the port of a dev
+server on this computer, for example `3000`. A card asks first; **Not
+now** is the first button.
+
+- In `termocode ssh --web` mode, `termocode ssh` on your computer adds
+  one more SSH forward and opens `http://127.0.0.1:<free port>/` in your
+  browser there.
+- In tailnet mode, `tailscale serve` gives the port its own https
+  address on your tailnet (port 8443 and up). Never Funnel, never the
+  internet.
+- When the panel runs on this computer, there is nothing to forward: the
+  browser opens `http://127.0.0.1:<port>/`.
+
+**Web: Forwarded Ports…** lists the open forwards. Press Enter on one to
+stop it.
+
+- You type only a port. The target is always `127.0.0.1` on this
+  computer. There is no host field.
+- The app gets its own address (its own port), never a path under the
+  panel. Its pages cannot open the panel's connection or read its data.
+- Every forward ends when the panel stops, and goes into the panel's
+  audit log (`fwd_open`, `fwd_close`).
+- Only you can start one. AI agents, MCP and project files cannot.
+- The app on that port sees what you type into it.
+
 ## Use it on a phone
 
 The page is made for a phone: big buttons, a tab bar for your thumb, and

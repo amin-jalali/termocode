@@ -51,6 +51,8 @@ type webAccessState struct {
 	pairArgs  webproto.PairAskArgs
 	grantCall *webCall
 	device    string
+	fwds      []*webFwd // open port previews (web_forward.go)
+	fwdPort   int       // the port the forward card asks about
 }
 
 func (m *Model) webAccess() *webAccessState {
@@ -81,7 +83,7 @@ func (m *Model) dispatchWebAccessPalette(id string) (tea.Cmd, bool) {
 	case "web-totp":
 		return m.openWebTotpSetup(), true
 	}
-	return nil, false
+	return m.dispatchWebForwardPalette(id) // web_forward.go
 }
 
 // openWebPair opens a pairing link and shows its QR code. guest is a
@@ -342,6 +344,9 @@ func webAgo(d time.Duration) string {
 
 // handleWebAccessPicker routes the device list. ok=false: not ours.
 func (m *Model) handleWebAccessPicker(id string) (tea.Cmd, bool) {
+	if m.pickerKind == pickerKindWebForwards { // web_forward.go
+		return m.stopWebForward(id), true
+	}
 	if m.pickerKind != pickerKindWebDevices {
 		return nil, false
 	}
@@ -528,6 +533,8 @@ func (m *Model) handleWebAccessConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWebDeviceRemove(id), true
 	case confirmKindWebGrant:
 		return m.answerWebGrant(id), true
+	case confirmKindWebForward: // web_forward.go
+		return m.answerWebForward(id), true
 	}
 	return m.handleWebTotpConfirm(id)
 }
