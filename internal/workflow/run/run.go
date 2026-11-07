@@ -55,6 +55,10 @@ type Options struct {
 	// Ask asks the user before an mcp source calls a tool that is not
 	// read-only; true runs it (nil: no).
 	Ask func(ctx context.Context, c AskCall) (bool, error)
+	// Approve asks the user before the order of a plan step with
+	// "approve": true is used; true goes on, false denies the step (nil:
+	// such a step fails; it never goes on unapproved).
+	Approve func(ctx context.Context, c ApproveCall) (bool, error)
 
 	// OnEvent gets every event, one at a time and in order per item (the
 	// items of a parallel each run on their own goroutines). It must not

@@ -679,6 +679,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"workflow-edit-file":  aiAuto(),
 	"workflow-history":    aiAuto(),
 	"workflow-undo-write": aiConfirm(""), // writes to outside systems again; the undo card asks
+	"workflow-pause":      aiConfirm(ai.ClassRun),
+	"workflow-retry":      aiConfirm(ai.ClassRun), // runs again; its writes still ask on the gate card
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),

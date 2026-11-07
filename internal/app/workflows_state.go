@@ -50,6 +50,8 @@ const (
 	confirmKindWorkflowBudget confirmKindEnum = 3506
 	// the schedule went off while a run works: stop it too?
 	confirmKindWorkflowOffStop confirmKindEnum = 3507
+	// workflows_again.go: run a failed run again from its failed part
+	confirmKindWorkflowRetry confirmKindEnum = 3508
 )
 
 // wfxNarrowW: a window narrower than this shows the view as one page.
@@ -75,6 +77,9 @@ type wfxState struct {
 	pageOn     bool
 	detail     string
 	pageScroll int
+	// stepTab is the step tab of a run page (workflows_again.go): 0 =
+	// all steps, i+1 = the file's step i.
+	stepTab    int
 	live       map[string]*wfxLive // by run id
 	pending    string              // the workflow a card is about
 	pendingDry bool
@@ -141,6 +146,7 @@ type (
 		id    string
 		ask   wire.GateAsk
 		tool  bool // a source tool that is not read-only (no allow-list)
+		plan  bool // a plan step that waits for approval (CMP-45)
 		reply chan wire.GateDecision
 	}
 	wfxDoneMsg struct{ id string }
@@ -436,6 +442,9 @@ func (m *Model) answerWorkflowCard(id string) tea.Cmd {
 	if cmd, ok := m.answerWorkflowTrustCard(kind, id); ok {
 		return cmd
 	}
+	if cmd, ok := m.answerWorkflowRetryCard(kind, id); ok {
+		return cmd
+	}
 	name, dry := st.pending, st.pendingDry
 	st.pending = ""
 	e, ok := wire.Find(st.list, name)
@@ -628,9 +637,9 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 			return ctx.Err()
 		}
 	}
-	ask := func(ctx context.Context, a wire.GateAsk, tool bool) (wire.GateDecision, error) {
+	askAs := func(ctx context.Context, a wire.GateAsk, tool, plan bool) (wire.GateDecision, error) {
 		reply := make(chan wire.GateDecision, 1)
-		if err := block(ctx, wfxGateMsg{id: id, ask: a, tool: tool, reply: reply}); err != nil {
+		if err := block(ctx, wfxGateMsg{id: id, ask: a, tool: tool, plan: plan, reply: reply}); err != nil {
 			return wire.GateDeny, err
 		}
 		select {
@@ -639,6 +648,9 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 		case <-ctx.Done():
 			return wire.GateDeny, ctx.Err()
 		}
+	}
+	ask := func(ctx context.Context, a wire.GateAsk, tool bool) (wire.GateDecision, error) {
+		return askAs(ctx, a, tool, false)
 	}
 	mc := newWFMCP(m.aiMCP(), m.aiMCPTrustAnnotations())
 	var tools source.ToolCaller
@@ -656,6 +668,10 @@ func (m *Model) wfxStartRunFrom(e wire.Entry, dry, show bool, resume *run.RunFil
 		Workspace: st.ws, Root: st.root, Entry: e, RunID: id, Dry: dry, Resume: resume,
 		Src: src, Tools: check, AI: m.wfxAIEnv(), Exec: wfxExec,
 		Gate: func(ctx context.Context, a wire.GateAsk) (wire.GateDecision, error) { return ask(ctx, a, false) },
+		ApprovePlan: func(ctx context.Context, c run.ApproveCall) (bool, error) {
+			d, err := askAs(ctx, wfxPlanAsk(c), false, true)
+			return d != wire.GateDeny, err
+		},
 		AskTool: func(ctx context.Context, c run.AskCall) (bool, error) {
 			d, err := ask(ctx, wire.GateAsk{Step: c.Step.ID, Target: c.Server + " · " + c.Tool,
 				Preview: "This source step calls a tool that is not marked read-only. It may change things there."}, true)
@@ -774,8 +790,8 @@ func (m *Model) handleWfxMsg(msg tea.Msg) (tea.Cmd, bool) {
 		st := m.wfxS()
 		e, _ := wire.Find(st.list, l.name)
 		a := WorkflowWriteAsk{Workflow: l.name, Step: msg.ask.Step, Item: msg.ask.Item, Target: msg.ask.Target,
-			Preview: msg.ask.Preview, Undo: msg.ask.Undo, StateRoot: st.root}
-		if !msg.tool {
+			Preview: msg.ask.Preview, Undo: msg.ask.Undo, StateRoot: st.root, Plan: msg.plan}
+		if !msg.tool && !msg.plan {
 			a.FileHash = e.Hash
 		}
 		reply := msg.reply
