@@ -59,6 +59,8 @@ var doctorTools = []tool{
 	{"lsp", "lua-language-server", "lua_ls (Lua)", "https://github.com/LuaLS/lua-language-server", false},
 	{"dap", "dlv", "delve (Go debugger)", "go install github.com/go-delve/delve/cmd/dlv@latest", false},
 	{"dap", "node", "node (JS debugger)", "https://nodejs.org/", false},
+	{"services", "docker", "docker (Containers)", "https://docs.docker.com/get-docker/ (podman also works)", false},
+	{"services", "kubectl", "kubectl (Kubernetes)", "https://kubernetes.io/docs/tasks/tools/", false},
 }
 
 // Doctor runs every read-only check. It never installs anything, so it is
