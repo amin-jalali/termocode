@@ -7,7 +7,8 @@ import (
 )
 
 // Every kind the provider picker offers has its own name, label and
-// default endpoint (only the custom-URL kind has none).
+// default endpoint (only the custom-URL kind and Vertex, whose URL
+// holds the user's own project and region, have none).
 func TestEveryKindHasNames(t *testing.T) {
 	seen := map[string]string{}
 	for _, k := range Kinds {
@@ -22,7 +23,7 @@ func TestEveryKindHasNames(t *testing.T) {
 		if ProviderName(k) == k {
 			t.Errorf("%s: no short name", k)
 		}
-		if (DefaultBaseURL(k) == "") != (k == KindCompatible) {
+		if (DefaultBaseURL(k) == "") != (k == KindCompatible || k == KindVertex) {
 			t.Errorf("%s: base url %q", k, DefaultBaseURL(k))
 		}
 	}

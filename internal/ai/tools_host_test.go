@@ -119,6 +119,7 @@ func hostWorkspace(t *testing.T) (Workspace, *hostFS, *hostExec) {
 		"pkg/a_test.go":     {Data: []byte("package pkg\n")},
 		"node_modules/x.go": {Data: []byte("package x\n")},
 		".env":              {Data: []byte("TOKEN=s3cret\n")},
+		".git-credentials":  {Data: []byte("https://u:s3cret@example.com\n")},
 	}}
 	x := &hostExec{}
 	return Workspace{Root: "/app", FS: f, Exec: x, HostLabel: "api-1"}, f, x
@@ -159,7 +160,9 @@ func TestHostFileToolsUseTheHostFS(t *testing.T) {
 	if out, err := runHostTool(t, w, "read_file", map[string]any{"path": "main.go"}); err != nil || !strings.Contains(out, "needle") {
 		t.Fatalf("read_file = %q %v", out, err)
 	}
-	if _, err := runHostTool(t, w, "read_file", map[string]any{"path": ".env"}); err == nil {
+	// .env stays readable (values redacted later, as on the local
+	// workspace); a credentials-only file is never read.
+	if _, err := runHostTool(t, w, "read_file", map[string]any{"path": ".git-credentials"}); err == nil {
 		t.Fatal("a secret file was read")
 	}
 	if _, err := runHostTool(t, w, "read_file", map[string]any{"path": "../etc/passwd"}); !errors.Is(err, ErrOutsideWorkspace) {
