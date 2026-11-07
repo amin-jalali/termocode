@@ -34,6 +34,7 @@ type Conn struct {
 	Environment string            `json:"environment,omitempty"`
 	SSH         *SSHConfig        `json:"ssh,omitempty"`
 	SSL         *SSLConfig        `json:"ssl,omitempty"`
+	Kube        *KubeConfig       `json:"kube,omitempty"`
 	TLS         bool              `json:"tls,omitempty"`
 	Options     *ConnOptions      `json:"options,omitempty"`
 	// Folder groups the connection in the tree ("team/prod"); Color is
@@ -59,6 +60,21 @@ type SSHConfig struct {
 	// ("user@host:port" or a ~/.ssh/config alias). It wins over the
 	// ProxyJump of ~/.ssh/config.
 	Jump []string `json:"jump,omitempty"`
+}
+
+// KubeConfig reaches the server through `kubectl port-forward` to a pod.
+// Port is the pod's port (the driver's default when 0).
+type KubeConfig struct {
+	Context   string `json:"context,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	Pod       string `json:"pod"`
+	Port      int    `json:"port,omitempty"`
+}
+
+// Forwarded is c pointed at the local end of a port-forward.
+func (c Conn) Forwarded(local int) Conn {
+	c.Host, c.Port = "127.0.0.1", local
+	return c
 }
 
 type SSLConfig struct {

@@ -20,6 +20,38 @@ const (
 
 var idPattern = lazyre.New(`^[a-z0-9_-]+$`)
 
+// podPattern is a Kubernetes object name (DNS subdomain); kubeName is a
+// context or namespace: never a flag, no spaces or control characters.
+var (
+	podPattern = lazyre.New(`^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$`)
+	kubeName   = lazyre.New(`^[A-Za-z0-9_.:@/][-A-Za-z0-9_.:@/]*$`)
+)
+
+// kubeProblem is what is wrong with c's kube block ("" when fine or none).
+func kubeProblem(c Conn) string {
+	k := c.Kube
+	if k == nil {
+		return ""
+	}
+	switch {
+	case normDriver(c.Driver) == "sqlite":
+		return "kube port-forward needs a server database"
+	case c.SSH != nil:
+		return "use ssh or kube, not both"
+	case k.Pod == "":
+		return "kube.pod is required"
+	case len(k.Pod) > 253 || !podPattern.MatchString(k.Pod):
+		return "kube.pod is not a valid pod name"
+	case k.Namespace != "" && !kubeName.MatchString(k.Namespace):
+		return "kube.namespace is not valid"
+	case k.Context != "" && !kubeName.MatchString(k.Context):
+		return "kube.context is not valid"
+	case k.Port < 0 || k.Port > 65535:
+		return "kube.port is not a valid port"
+	}
+	return ""
+}
+
 func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 	var f struct {
 		Connections []Conn `json:"connections"`
@@ -87,6 +119,14 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 				c.Problem = "invalid options: " + e.Error()
 			}
 		}
+		if c.Kube != nil {
+			if c.Kube.Port == 0 {
+				c.Kube.Port = defaultPort(c.Driver)
+			}
+			if p := kubeProblem(*c); p != "" {
+				c.Problem = p
+			}
+		}
 		if c.Driver == "sqlite" && c.Path != "" {
 			p := c.Path
 			if !filepath.IsAbs(p) {
@@ -132,6 +172,10 @@ func ConfigTemplate() string {
   // passphrase and the SSH password stay in the secret store.
   // ssl.mode: "disable" | "require" | "verify-ca" | "verify-full" (the
   // default); "cert" and "key" add a client certificate.
+  //
+  // A server in Kubernetes is reached through kubectl port-forward:
+  //   "kube": { "context": "dev", "namespace": "shop", "pod": "pg-0", "port": 5432 }
+  // (port is the pod's port; the driver's default when left out).
   "connections": []
 }
 `
@@ -163,8 +207,11 @@ func Validate(c Conn) error {
 			return fmt.Errorf("invalid options: %v", e)
 		}
 	}
+	if p := kubeProblem(c); p != "" {
+		return fmt.Errorf("%s", p)
+	}
 	socket := c.Options != nil && c.Options.Socket != ""
-	if c.Driver != "sqlite" && !socket && (c.Host == "" || c.Port < 1 || c.Port > 65535) {
+	if c.Driver != "sqlite" && !socket && c.Kube == nil && (c.Host == "" || c.Port < 1 || c.Port > 65535) {
 		return fmt.Errorf("host and valid port are required")
 	}
 	if c.Source == SourceProject && (literalPassword(c.Password) || urlHasPassword(c.URL)) {
