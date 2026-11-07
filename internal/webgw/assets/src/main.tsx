@@ -81,6 +81,13 @@ effect(() => {
   else html.dataset.theme = theme;
 });
 
+// Reduce motion on this device (MOBUX-22): the CSS stops animations under
+// :root[data-motion="reduce"], as it does for the system setting.
+effect(() => {
+  if (prefs.value.motion === "reduce") html.dataset.motion = "reduce";
+  else delete html.dataset.motion;
+});
+
 const lightMQ = matchMedia("(prefers-color-scheme: light)");
 const systemLight = signal(lightMQ.matches);
 lightMQ.addEventListener("change", () => (systemLight.value = lightMQ.matches));

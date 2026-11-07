@@ -10,6 +10,8 @@ const KEY = "termocode.prefs.v1";
 export type Theme = "system" | "dark" | "light";
 export type Direction = "auto" | "ltr" | "rtl";
 export type Language = "auto" | "en" | "fa";
+/** Motion: "system" follows prefers-reduced-motion; "reduce" stops motion on this device (MOBUX-22). */
+export type Motion = "system" | "reduce";
 
 export interface Prefs {
   theme: Theme;
@@ -28,13 +30,17 @@ export interface Prefs {
   keys: KeyId[];
   /** vim: the desktop editor's Vim mode (WEBP-1), off by default. */
   vim: boolean;
+  /** motion: reduce motion on this device even when the system does not ask for it. */
+  motion: Motion;
+  /** haptics: short buzzes on the phone (on by default; off means never). */
+  haptics: boolean;
 }
 
 /** ROW_MIN and ROW_MAX bound rowPx (WEB-36). */
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, keysHintDone: false, rowPx: 0, wakeLock: false, notify: false, keys: [], vim: false, motion: "system", haptics: true };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -60,6 +66,8 @@ function load(): Prefs {
       notify: v.notify === true,
       keys: readKeys(v.keys),
       vim: v.vim === true,
+      motion: pick(v.motion, ["system", "reduce"], defaults.motion),
+      haptics: v.haptics !== false,
     };
   } catch {
     return defaults;

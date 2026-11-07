@@ -816,6 +816,13 @@ export const S = {
   "ph.ask": "What do you want?",
   "ph.checks": "Checks: {state}",
   "ph.ci": "CI",
+  // Phone accessibility (MOBUX-22): This phone switches, screen reader names
+  "ph.motion": "Motion",
+  "ph.motion.system": "Like the system",
+  "ph.motion.reduce": "Reduce",
+  "ph.on": "On",
+  "ph.off": "Off",
+  "ph.pinned": "pinned",
   // Home context chips (MOBUX-3)
   "chips.label": "Shortcuts",
   "chips.needs": "Needs you · {n}",

@@ -37,6 +37,8 @@ export function PhoneCard({
       {inner}
     </button>
   ) : (
-    <div class={cls}>{inner}</div>
+    <div class={cls} role="group" aria-label={head}>
+      {inner}
+    </div>
   );
 }

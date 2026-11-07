@@ -209,3 +209,4 @@
 @media (prefers-reduced-motion: reduce) {
   :root { --t-fast: 0ms; --t-sheet: 0ms; --t-flash: 0ms; }
 }
+:root[data-motion="reduce"] { --t-fast: 0ms; --t-sheet: 0ms; --t-flash: 0ms; }

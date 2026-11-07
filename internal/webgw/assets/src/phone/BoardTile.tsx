@@ -52,6 +52,8 @@ export function BoardTile({
       {inner}
     </button>
   ) : (
-    <div class={cls}>{inner}</div>
+    <div class={cls} role="group" aria-label={title}>
+      {inner}
+    </div>
   );
 }

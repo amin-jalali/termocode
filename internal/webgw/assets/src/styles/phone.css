@@ -84,6 +84,12 @@
     --p-t-sheet: 0ms;
   }
 }
+/* The same, when the user turns motion off on This phone (MOBUX-22). */
+:root[data-motion="reduce"] {
+  --p-t-tap: 0ms;
+  --p-t-fast: 0ms;
+  --p-t-sheet: 0ms;
+}
 
 /* Status mark: the shape carries the meaning, the colour helps. */
 .ph-st {
@@ -109,6 +115,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ph-st.is-live { animation: none; }
 }
+:root[data-motion="reduce"] .ph-st.is-live { animation: none; }
 
 /* Focus ring for every phone control. */
 .ph-chip:focus-visible,
