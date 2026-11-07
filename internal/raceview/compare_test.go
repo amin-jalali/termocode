@@ -60,7 +60,7 @@ func TestCompareTableAndKeys(t *testing.T) {
 	if a := act("d"); a != (ActionMsg{Action: ActDiscard, Lane: "race-3-2-codex"}) {
 		t.Errorf("d %+v", a)
 	}
-	for k, want := range map[string]Action{"v": ActVerify, "s": ActSummary, "x": ActStop, "r": ActRefresh, "esc": ActClose} {
+	for k, want := range map[string]Action{"v": ActVerify, "b": ActBroadcast, "c": ActRunAll, "s": ActSummary, "x": ActStop, "r": ActRefresh, "esc": ActClose} {
 		if a := act(k); a.Action != want {
 			t.Errorf("%s %+v", k, a)
 		}
