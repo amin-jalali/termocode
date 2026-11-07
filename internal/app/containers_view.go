@@ -294,7 +294,11 @@ func shortRemoteError(s string) string {
 // containerRowsOf groups the host's containers by compose project (the
 // workspace's project first, unlabeled ones last as "other").
 func (st *servicesState) containerRowsOf(key string) []svcRow {
-	out := []svcRow{{kind: svcRowHint, section: key, text: st.engineLine()}}
+	line := st.engineLine()
+	if st.containerSort != "" {
+		line += " · by " + st.containerSort
+	}
+	out := []svcRow{{kind: svcRowHint, section: key, text: line}}
 	if st.stats.lastFail != "" {
 		out = append(out, svcRow{kind: svcRowHint, section: key, text: st.stats.lastFail})
 	}
@@ -320,7 +324,7 @@ func (st *servicesState) containerRowsOf(key string) []svcRow {
 		if g.IsOther {
 			group = ""
 		}
-		for _, i := range g.Idx {
+		for _, i := range st.sortGroupIdx(g.Idx) {
 			c := st.containerRows[i]
 			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContainer, idx: i,
 				hostID: c.ID, name: containerDisplayName(c, group), depth: 1})
@@ -870,12 +874,18 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 			cols = append(cols, *sc)
 		} else if w >= 44 {
 			free := w - 1 - 2*r.depth - 2 - 7 - 7 - 18 - 1
+			if st.containerSizes {
+				free -= 8
+			}
 			if free >= 6 {
 				cols = append(cols, hostCol{text: c.Image, width: free, col: theme.TextDim})
 			}
 		}
 		if p := firstPublishedPort(c.PortsText); p != "" && w >= 22 {
 			cols = append(cols, hostCol{text: p, width: 6, col: theme.TextSecondary})
+		}
+		if st.containerSizes && w >= 34 { // CTX-22
+			cols = append(cols, hostCol{text: containers.ShortSize(c.Size), width: 7, right: true, col: theme.TextMuted})
 		}
 		if w >= 28 {
 			up, ucol := containerUptime(c)

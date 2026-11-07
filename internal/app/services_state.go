@@ -122,6 +122,8 @@ type servicesState struct {
 	containerGen        uint64
 	containerRows       []containers.Container
 	containerMarks      map[string]bool // CTX-23: container id → marked for a bulk action
+	containerSort       string          // CTX-22: "" (project order), name, image, state, created, size
+	containerSizes      bool            // CTX-22: list with ps --size and show the SIZE column
 	imageScanBusy       map[string]bool // CTX-18: "scan:ref" / "sbom:ref" while a scanner runs
 	imageRows           []containers.Image
 	networkRows         []containers.Network

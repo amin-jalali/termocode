@@ -463,6 +463,8 @@ missing	containers-network-disconnect	Containers|S
 missing	containers-rename	Containers|S
 missing	containers-resources	Containers|S
 missing	containers-restart-policy	Containers|S
+missing	containers-sort	Containers|S
+missing	containers-toggle-size	Containers|S
 missing	db-ai-explain-query	Databases|S
 missing	db-ai-fix-error	Databases|S
 missing	db-ai-generate-sql	Databases|S

@@ -424,6 +424,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-browse-tags":        aiNever(aiNoPicker + "; it asks a registry over the network on the user's behalf"),
 	"containers-filter":             aiNever("the filter is typed by the user; the AI uses containers_list / images_list"),
 	"containers-refresh":            aiAuto(),
+	"containers-sort":               aiNever(aiNoPicker + "; the sort is the user's view setting"),
+	"containers-toggle-size":        aiNever("the size column is the user's view setting; the AI uses containers_list"),
 	"containers-help":               aiAuto(),
 	"containers-start":              aiDestructive(),
 	"containers-stop":               aiDestructive(),

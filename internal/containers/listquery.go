@@ -139,6 +139,15 @@ func SizeBytes(s string) int64 {
 	return int64(n*mul + 0.5)
 }
 
+// ShortSize is the first word of a CLI size: "12.3kB (virtual 1GB)"
+// becomes "12.3kB".
+func ShortSize(s string) string {
+	if f := strings.Fields(s); len(f) > 0 {
+		return f[0]
+	}
+	return ""
+}
+
 var stateRank = map[string]int{"running": 0, "restarting": 1, "paused": 2, "created": 3, "exited": 4, "dead": 5}
 
 func containerName(c Container) string {

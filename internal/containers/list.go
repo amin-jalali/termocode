@@ -3,7 +3,21 @@ package containers
 import "context"
 
 func (e *Engine) ListContainers(ctx context.Context) ([]Container, error) {
-	return parseList(ctx, e, []string{"ps", "--all", "--no-trunc", "--format", "{{json .}}"}, ParseContainers)
+	return parseList(ctx, e, ListContainersArgs(false), ParseContainers)
+}
+
+// ListContainersSized is ListContainers with each container's disk size
+// (`ps --size`, slower: the engine measures every writable layer).
+func (e *Engine) ListContainersSized(ctx context.Context, sized bool) ([]Container, error) {
+	return parseList(ctx, e, ListContainersArgs(sized), ParseContainers)
+}
+
+// ListContainersArgs is the engine argv of the container list.
+func ListContainersArgs(sized bool) []string {
+	if sized {
+		return []string{"ps", "--all", "--no-trunc", "--size", "--format", "{{json .}}"}
+	}
+	return []string{"ps", "--all", "--no-trunc", "--format", "{{json .}}"}
 }
 func (e *Engine) ListImages(ctx context.Context) ([]Image, error) {
 	return parseList(ctx, e, []string{"images", "--no-trunc", "--format", "{{json .}}"}, ParseImages)

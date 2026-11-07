@@ -2045,10 +2045,12 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers-restart-policy` | Containers: Set Restart Policy… | never | the restart policy is the user's; it asks on a card |
 | `containers-search` | Containers: Search Docker Hub… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks Docker Hub on the user's behalf |
 | `containers-shell` | Containers: Open Shell | never | opens a picker or prompt that only the user can answer; use a typed tool (container shell) |
+| `containers-sort` | Containers: Sort Containers… | never | opens a picker or prompt that only the user can answer; use a typed tool; the sort is the user's view setting |
 | `containers-start` | Containers: Start Selected | confirm (always asks) |   |
 | `containers-stats` | Containers: Follow Stats | auto |   |
 | `containers-stop` | Containers: Stop Selected | confirm (always asks) |   |
 | `containers-system-prune` | Containers: Prune System… | never | pruning the system is the user's; nothing is offered to the model |
+| `containers-toggle-size` | Containers: Show or Hide the Size Column | never | the size column is the user's view setting; the AI uses containers_list |
 | `containers-volume-create` | Containers: Create Volume… | confirm (always asks) |   |
 | `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | never | disk usage is the user's; nothing is offered to the model |
 | `containers-volume-prune` | Containers: Prune Volumes… | never | pruning volumes is the user's; nothing is offered to the model |

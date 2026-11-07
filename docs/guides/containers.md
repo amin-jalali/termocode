@@ -70,6 +70,7 @@ when something changed. When you hide the view (another activity item,
 | `K` | kill the selected container (asks first: Cancel, Stop gently with TERM, or Kill) |
 | `N` | rename the selected container |
 | `w` | change the selected container: restart policy, CPU and memory limits, connect to or disconnect from a network (each asks first) |
+| `O` | sort the containers (name, image, state, created, size) inside each project; turn the SIZE column on or off |
 | `e` | shell in the selected container (terminal tab) |
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
@@ -100,6 +101,16 @@ memory limits…, Connect to network… and Disconnect from network…. Limits a
 typed as `CPUs memory swap`, like `1.5 512m 1g`; `-` keeps a value. Every
 change but the rename shows the exact command on a card with Cancel first.
 Closing a logs tab stops only `logs -f`, never the container.
+
+## Sort and size
+
+`O` (or **Containers: Sort Containers…**) picks how containers are ordered:
+project order (the default), name, image, state (running first), created
+(newest first) or size (largest first). Containers stay in their compose
+project; the order applies inside each group, and the CONTAINERS line
+shows `by <key>`. The last line of the list shows or hides the SIZE
+column. Sizes come from `ps --size`, which is slower on big hosts, so the
+column is off until you ask; sorting by size turns it on.
 
 ## Filter
 

@@ -846,6 +846,11 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.openContainerWriteList(c)
 			return m, nil
 		}
+	case "O":
+		if st.containerDetected {
+			m.openContainerSort()
+			return m, nil
+		}
 	case "i":
 		if _, ref, ok := m.selectedImage(); ok {
 			return m, m.imageInspect(ref)
@@ -971,6 +976,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"K", "kill (asks first)"},
 			[]string{"N", "rename"},
 			[]string{"w", "change: restart policy, limits, networks (asks first)"},
+			[]string{"O", "sort the containers; show the SIZE column"},
 			[]string{"v / V", "mark for a bulk action / clear marks (s x r D then ask once for all)"})
 	case r.kind == svcRowGroup && r.hostSectionID() == "containers":
 		return with("Project keys",
@@ -1408,6 +1414,8 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-search", Title: "Containers: Search Docker Hub…"},
 		{ID: "containers-browse-tags", Title: "Containers: Browse Remote Tags…"},
 		{ID: "containers-filter", Title: "Containers: Filter Rows…"},
+		{ID: "containers-sort", Title: "Containers: Sort Containers…"},
+		{ID: "containers-toggle-size", Title: "Containers: Show or Hide the Size Column"},
 		{ID: "containers-start", Title: "Containers: Start Selected"},
 		{ID: "containers-stop", Title: "Containers: Stop Selected"},
 		{ID: "containers-restart", Title: "Containers: Restart Selected"},
@@ -1676,6 +1684,11 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return nil
 			case "containers-browse-tags":
 				return m.browseFromPalette()
+			case "containers-sort":
+				m.openContainerSort()
+				return nil
+			case "containers-toggle-size":
+				return m.onContainerSortPicked("list-size", "toggle")
 			case "containers-filter":
 				m.focus = FocusExplorer
 				m.services.filterTyping = true
@@ -1864,6 +1877,9 @@ func (m *Model) handleServicesPickerSelect(id string) tea.Cmd {
 	verb, key, _ := strings.Cut(rest, ":")
 	if verb == "envfile" {
 		return m.onComposeEnvFile(key)
+	}
+	if verb == "list-sort" || verb == "list-size" { // containers_sort.go
+		return m.onContainerSortPicked(verb, key)
 	}
 	if strings.HasPrefix(verb, "ctr-") { // containers_write.go
 		return m.onContainerWritePicked(verb, key)

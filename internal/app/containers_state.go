@@ -344,6 +344,7 @@ func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 	preferred := preferredContainerEngine()
 	st.containerPreference = preferred
 	sessionContext := st.sessionContext
+	sized := st.containerSizes
 	return func() tea.Msg {
 		e := containers.Locate(containers.DetectOptions{Preferred: preferred, Context: sessionContext, Exec: servicesExec, Dir: dir, Android: runtime.GOOS == "android"})
 		msg := containerHostMsg{gen: gen, engine: e, section: "detect", errs: map[string]string{}}
@@ -376,7 +377,7 @@ func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 				defer wg.Done()
 				switch s {
 				case "containers":
-					msg.containers, errs[i] = le.ListContainers(listCtx)
+					msg.containers, errs[i] = le.ListContainersSized(listCtx, sized)
 				case "images":
 					msg.images, errs[i] = le.ListImages(listCtx)
 				case "networks":
@@ -450,13 +451,14 @@ func (m *Model) containersList(section string) tea.Cmd {
 	st.containerCancels[section] = cancel
 	gen := st.containerGen
 	e := st.containerEngine
+	sized := st.containerSizes
 	return func() tea.Msg {
 		defer cancel()
 		msg := containerHostMsg{gen: gen, engine: e, section: section}
 		var err error
 		switch section {
 		case "containers":
-			msg.containers, err = e.ListContainers(ctx)
+			msg.containers, err = e.ListContainersSized(ctx, sized)
 		case "images":
 			msg.images, err = e.ListImages(ctx)
 		case "networks":

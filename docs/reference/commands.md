@@ -177,7 +177,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Show Resolved Compose Config | `services-compose-config` |   |   |
 | Containers: Show Service Logs… | `services-logs` |   |   |
+| Containers: Show or Hide the Size Column | `containers-toggle-size` |   |   |
 | Containers: Sign Out of Registry… | `containers-registry-signout` |   |   |
+| Containers: Sort Containers… | `containers-sort` |   |   |
 | Containers: Start All Services | `services-start-all` |   |   |
 | Containers: Start Project | `containers-compose-up` |   |   |
 | Containers: Start Selected | `containers-start` |   |   |
