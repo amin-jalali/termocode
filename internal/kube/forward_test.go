@@ -63,3 +63,51 @@ func TestPortForwardNeedsKubectl(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestPortForwardToServiceAndDeployment(t *testing.T) {
+	for _, tc := range []struct {
+		kind, name string
+		remote     int
+		call       string
+	}{
+		{"svc", "web", 443, "port-forward --context dev --namespace shop svc/web :443"},
+		{"deployment", "api", 8080, "port-forward --context dev --namespace shop deployment/api :8080"},
+	} {
+		t.Run(tc.kind, func(t *testing.T) {
+			f, c := fakeClient(t)
+			f.Set(t, "pf-port.txt", "41777")
+			fw, err := c.PortForwardTo(context.Background(), tc.kind, tc.name, tc.remote)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(fw.Stop)
+			if fw.Kind != tc.kind || fw.Pod != tc.name || fw.Local != 41777 || fw.Remote != tc.remote {
+				t.Errorf("forward = %+v", fw)
+			}
+			if fw.Target() != tc.kind+"/"+tc.name {
+				t.Errorf("target = %q", fw.Target())
+			}
+			if got := f.Calls(); len(got) != 1 || got[0] != tc.call {
+				t.Errorf("calls = %v", got)
+			}
+		})
+	}
+}
+
+func TestPortForwardPodTargetAndUnknownKind(t *testing.T) {
+	f, c := fakeClient(t)
+	fw, err := c.PortForward(context.Background(), "api-1", 8080)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(fw.Stop)
+	if fw.Kind != "pod" || fw.Target() != "pod/api-1" {
+		t.Errorf("forward = %+v", fw)
+	}
+	if _, err := c.PortForwardTo(context.Background(), "secret", "x", 80); err == nil {
+		t.Error("a forward to a kind kubectl can not forward")
+	}
+	if f.Count("port-forward") != 1 {
+		t.Errorf("calls = %v", f.Calls())
+	}
+}
