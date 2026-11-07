@@ -124,6 +124,66 @@ func TestDeskContainersContextsAndFilter(t *testing.T) {
 	p.WaitJS(deskCtr + `.querySelectorAll(".tr[data-id]").length === 1 && !!` + deskCtr + `.querySelector('.tr[data-id="aabbccdd1122"]')`)
 }
 
+// A right click on a container opens the actions its buttons and the
+// laptop's keys have: the reads run at once, Copy ID puts the ID on the
+// clipboard, Restart asks in the view (Cancel first), Stop and Remove ask
+// the laptop. A compose project offers its own actions, and a viewer
+// gets only the reads.
+func TestDeskContainersContextMenu(t *testing.T) {
+	p, c := openDeskCtr(t, nil)
+	fakeClipboard(p, "")
+	row := func(sel string) string { return deskCtr + `.querySelector('.tr` + sel + `')` }
+	api, old := row(`[data-id="9f3c2e1a1234"]`), row(`[data-id="aabbccdd1122"]`)
+
+	rightClick(p, api)
+	if got, want := menuLabels(p), "Logs|Inspect|Stats|Open Published Port|Copy ID|Copy Name|Open Shell…|Attach…|Pause|Restart|Stop…"; got != want {
+		t.Errorf("running container menu %q, want %q", got, want)
+	}
+	menuPick(p, "Copy ID")
+	p.WaitJS(`window.__clip === "9f3c2e1a1234"`)
+
+	rightClick(p, api)
+	menuPick(p, "Restart")
+	p.WaitJS(deskCtr + `.querySelector(".pv-ask")?.textContent.includes("Restart api-1?") && document.activeElement?.textContent === "Cancel"`)
+	p.TapJS(`[...` + deskCtr + `.querySelectorAll(".pv-ask button")].find((b) => b.textContent === "Cancel")`)
+	p.WaitJS(`!` + deskCtr + `.querySelector(".pv-ask")`)
+
+	rightClick(p, old)
+	if got, want := menuLabels(p), "Logs|Inspect|Copy ID|Copy Name|Start|Remove…"; got != want {
+		t.Errorf("stopped container menu %q, want %q", got, want)
+	}
+	menuPick(p, "Remove…")
+	askLaptop(t, p, "Remove the stopped container old? This cannot be undone.")
+	reply(t, c, expectOp(t, c, webproto.OpContainersRemove, `{"id":"aabbccdd1122"}`), webproto.AskRef{Card: "card-1"})
+	c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "card-1", By: "laptop", Choice: "cancel"})})
+	reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+	reply(t, c, expectOp(t, c, webproto.OpContainersHost, `{}`), ctrHost())
+
+	rightClick(p, row(`[data-project="shop"]`))
+	if got, want := menuLabels(p), "Start Project|Restart Project|Stop Project…|Remove Project Containers…"; got != want {
+		t.Errorf("project menu %q, want %q", got, want)
+	}
+	menuPick(p, "Remove Project Containers…")
+	askLaptop(t, p, "Stop and remove the containers of shop? Volumes stay.")
+	reply(t, c, expectOp(t, c, webproto.OpContainersComposeAsk, `{"project":"shop","verb":"down"}`), webproto.AskRef{Card: "card-2"})
+	c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "card-2", By: "laptop", Choice: "cancel"})})
+	reply(t, c, expectOp(t, c, webproto.OpContainersList, `{}`), ctrList())
+	reply(t, c, expectOp(t, c, webproto.OpContainersHost, `{}`), ctrHost())
+
+	rightClick(p, api)
+	menuPick(p, "Stop…")
+	askLaptop(t, p, "Stop api-1? What runs in it ends.")
+	reply(t, c, expectOp(t, c, webproto.OpContainersStop, `{"id":"9f3c2e1a1234"}`), webproto.AskRef{Card: "card-3"})
+
+	meta := Meta("c-view-menu")
+	meta.Role = webproto.RoleViewer
+	v, _ := openDeskCtr(t, meta)
+	rightClick(v, api)
+	if got, want := menuLabels(v), "Logs|Inspect|Stats|Open Published Port|Copy ID|Copy Name"; got != want {
+		t.Errorf("viewer menu %q, want %q", got, want)
+	}
+}
+
 // A viewer sees the lists but no action that changes the host.
 func TestDeskContainersViewer(t *testing.T) {
 	meta := Meta("c-view")
