@@ -119,6 +119,9 @@ func (m *Model) agentSeeLimit(t *terminalTab, lines []string) tea.Cmd {
 	if !reset.IsZero() {
 		text += " · resets " + reset.In(now.Location()).Format("15:04")
 	}
+	if hint := m.agentSwitchHint(t); hint != "" { // CMP-13 (agent_switch.go)
+		text += " · " + hint
+	}
 	var cmds []tea.Cmd
 	var c tea.Cmd
 	m.toast, c = m.toast.Push(toast.Warn, text)

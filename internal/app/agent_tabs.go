@@ -221,6 +221,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	if id == agentAccountsPaletteID { // Agent: Accounts… (agent_accounts.go)
 		return m.openAgentAccounts(), true
 	}
+	if id == agentSwitchPaletteID { // Agent: Switch Account… (agent_switch.go, CMP-13)
+		return m.openAgentSwitch(), true
+	}
 	if id == agentUsagePlansPaletteID { // Agent: Usage Plans (agent_usage.go)
 		return m.showAIUsage(""), true
 	}

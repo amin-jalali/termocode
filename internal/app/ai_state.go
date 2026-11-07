@@ -123,7 +123,9 @@ type aiState struct {
 	agentPickPending string
 	// agentAccountPending is the sign-in line of the open account card (agent_accounts.go).
 	agentAccountPending string
-	shipGen             int
+	// agentSwitchBuf is the agent tab of the open Switch Account card (agent_switch.go).
+	agentSwitchBuf int
+	shipGen        int
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// skillsFake replaces the skill files in AI: Skills… for the

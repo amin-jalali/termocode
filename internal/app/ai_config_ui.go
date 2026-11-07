@@ -256,6 +256,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentHibernate(id), true
 	case confirmKindAgentAccountSignIn: // agent_accounts.go
 		return m.answerAgentAccountCard(id), true
+	case confirmKindAgentAccountSwitch: // agent_switch.go (CMP-13)
+		return m.answerAgentSwitch(id), true
 	case confirmKindAgentInstall, confirmKindAgentSignIn: // agent_install.go
 		return m.answerAgentPickCard(m.confirmKind, id), true
 	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go
@@ -320,6 +322,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerMCPElicit(m.confirmKind, "") // Esc: cancel
 	case confirmKindMCPRemove:
 		return m.answerMCPRemove("keep")
+	case confirmKindAgentAccountSwitch: // Esc: Cancel (agent_switch.go)
+		return m.answerAgentSwitch("cancel")
 	case confirmKindMCPUntrust:
 		return m.answerMCPUntrust("cancel")
 	case confirmKindMCPDisable:
