@@ -2136,6 +2136,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-blame-before` | Git: Blame Before This Change | auto |   |
 | `git-blame-commit` | Git: Open Commit of Line | auto |   |
 | `git-blame-options` | Git: Blame Options… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-block-history` | Git: Show History of Block | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
 | `git-branch-delete` | Git: Delete Branch… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-branch-from` | Git: Create Branch From… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch) |
@@ -2195,6 +2196,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git-issues` | Git: Issues… (Start Work on One) | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-lfs-files` | Git: Show LFS Files | auto |   |
 | `git-line-history` | Git: Show Line History | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
+| `git-line-lens` | Git: Toggle Line History Lens | auto |   |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-folder` | Git: Show Folder History… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
 | `git-log-search` | Git: Search Log… | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
@@ -2543,6 +2545,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `git_commit_task` | never | sets a shell command that runs before each commit; only the user does that |
 | `git_inline_blame` | confirm (settings) |   |
 | `git_issue_link` | never | sets the page a click on an issue key opens; only the user does that |
+| `git_line_lens` | confirm (settings) |   |
 | `git_status_blame` | confirm (settings) |   |
 | `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
 | `http_cookie_jar` | confirm (settings) |   |

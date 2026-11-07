@@ -467,6 +467,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Show File History... | `git-history` |   |   |
 | Git: Show Folder History… | `git-log-folder` |   |   |
 | Git: Show Git Command Log | `git-cmd-log` |   |   |
+| Git: Show History of Block | `git-block-history` |   |   |
 | Git: Show Incoming Commits… | `git-incoming` |   |   |
 | Git: Show LFS Files | `git-lfs-files` |   | `the files Git LFS tracks; which ones are only pointers` |
 | Git: Show Last Hook Output | `git-hook-output` |   |   |
@@ -495,6 +496,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Toggle Commit Signing (This Repository) | `git-signing-toggle` |   |   |
 | Git: Toggle Date Column in GRAPH | `git-graph-col-date` |   |   |
 | Git: Toggle Inline Blame | `git-inline-blame` |   |   |
+| Git: Toggle Line History Lens | `git-line-lens` |   |   |
 | Git: Toggle SHA Column in GRAPH | `git-graph-col-sha` |   |   |
 | Git: Toggle Skip Hooks on Commit (--no-verify) | `git-skip-hooks` |   | `this session only` |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
