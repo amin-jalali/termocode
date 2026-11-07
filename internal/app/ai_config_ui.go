@@ -98,6 +98,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onRunsMorePicked(id), true
 	case pickerKindAIWorktrees: // ai_worktree_list.go
 		return m.onAIWorktreePicked(id), true
+	case pickerKindWTBgTasks: // worktrees_bgtask.go
+		return m.onWTBgTaskPicked(id), true
 	}
 	if cmd, ok := m.handleWebAccessPicker(id); ok { // web_access.go
 		return cmd, true
@@ -120,6 +122,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIKeyEntered(value), true
 	case promptKindAgentNames: // agent_names.go
 		return m.onAgentNamesTask(value), true
+	case promptKindWTBgTask: // worktrees_bgtask.go
+		return m.onWTBgTask(value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
@@ -221,6 +225,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerWTSleep(id), true
 	case confirmKindWTArchive: // worktrees_archive.go
 		return m.answerWTArchive(id), true
+	case confirmKindWTBgTask: // worktrees_bgtask.go
+		return m.answerWTBgTask(id), true
+	case confirmKindWTBgTaskAct:
+		return m.answerWTBgTaskAct(id), true
 	case confirmKindWTDelete, confirmKindWTDeleteDirty: // worktrees_delete.go
 		return m.answerWTDelete(m.confirmKind, id), true
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty: // worktrees_cleanup.go
@@ -348,6 +356,10 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWTSleep("") // Esc: Keep running
 	case confirmKindWTArchive:
 		return m.answerWTArchive("") // Esc: Cancel
+	case confirmKindWTBgTask:
+		return m.answerWTBgTask("") // Esc: Cancel, nothing starts
+	case confirmKindWTBgTaskAct:
+		return m.answerWTBgTaskAct("") // Esc: Close
 	case confirmKindWTDelete, confirmKindWTDeleteDirty:
 		return m.answerWTDelete(m.confirmKind, "") // Esc: Cancel
 	case confirmKindWTCleanup, confirmKindWTCleanupDirty:

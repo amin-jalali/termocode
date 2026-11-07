@@ -2530,6 +2530,8 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-add-folder` | Worktree: Add Selected as Folder | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-adopt` | Worktree: Adopt Selected | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-archive` | Worktree: Archive or Restore Selected… | confirm (always asks) |   |
+| `worktree-bg-task` | Worktree: Run Agent Task in Background… | never | opens a picker or prompt that only the user can answer; use a typed tool; the user writes the task and starts it on the card |
+| `worktree-bg-tasks` | Worktree: Background Tasks… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-cleanup` | Worktree: Clean Up… | confirm (always asks) |   |
 | `worktree-delete` | Worktree: Delete Selected… | confirm (always asks) |   |
 | `worktree-filter` | Worktree: Next Filter | auto |   |
