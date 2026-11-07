@@ -3073,6 +3073,23 @@ export interface PaletteList {
   items: PaletteItem[];
 }
 
+export interface AIUsage {
+  scope: string;
+  by_model: AIUsageLine[];
+  by_agent: AIUsageLine[];
+  total: AIUsageLine;
+}
+
+export interface AIUsageLine {
+  name: string;
+  calls: number;
+  input: number;
+  output: number;
+  cost_usd?: number;
+  priced?: boolean;
+  billing?: string;
+}
+
 export interface PaletteItem {
   id: string;
   title: string;
@@ -3293,6 +3310,7 @@ export interface OpArgs {
   "theme.set": ThemeArgs;
   "theme.colors": EmptyArgs;
   "theme.color_set": ThemeColorArgs;
+  "ai.usage": EmptyArgs;
   "usercmds.list": EmptyArgs;
   "usercmds.save": UserCmdSaveArgs;
   "editor.vim_maps": EmptyArgs;
@@ -3571,6 +3589,7 @@ export interface OpResult {
   "theme.set": ThemeList;
   "theme.colors": ThemeColors;
   "theme.color_set": ThemeColors;
+  "ai.usage": AIUsage;
   "usercmds.list": UserCmdList;
   "usercmds.save": UserCmdList;
   "editor.vim_maps": VimMapList;
