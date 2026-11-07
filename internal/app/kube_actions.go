@@ -17,12 +17,15 @@ func kubePaletteItems() []picker.Item {
 		{ID: "kubernetes-namespace", Title: "Kubernetes: Switch Namespace…"},
 		{ID: "kubernetes-snippet", Title: "Kubernetes: New Manifest from Snippet…"},
 		{ID: "kubernetes-apply-file", Title: "Kubernetes: Apply Current File…"},
+		{ID: "kubernetes-report", Title: "Kubernetes: Cluster Report"},
 	}
 }
 
 // dispatchKubePalette runs the "Kubernetes: …" palette commands.
 func (m *Model) dispatchKubePalette(id string) (tea.Cmd, bool) {
 	switch id {
+	case "kubernetes-report":
+		return m.kubeReport(), true
 	case "kubernetes-apply-file":
 		return m.kubeApplyCurrentFile(), true
 	case "kubernetes-snippet":

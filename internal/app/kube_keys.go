@@ -95,6 +95,8 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && r.kind == kubeRowItem && r.section != kubeForwardsSection {
 			return m, m.kubeEditYAML(kubeKindOf(r.section), r.name)
 		}
+	case "x":
+		return m, m.kubeReport()
 	case "a":
 		return m, m.kubeApplyCurrentFile()
 	case "f":
@@ -157,6 +159,7 @@ func kubeKeyRows() []confirm.KeyRow {
 		[]string{"o", "edit the YAML in a file"},
 		[]string{"a", "apply the editor's file (diff, then asks)"},
 		[]string{"Cluster"},
+		[]string{"x", "cluster report: pulse, owner tree, problems"},
 		[]string{"c n", "pick the context, the namespace"},
 		[]string{"[ ]", "back, forward (context / namespace)"},
 		[]string{"R", "load now"},

@@ -2336,6 +2336,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `kubernetes-context` | Kubernetes: Switch Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the context is the user's choice |
 | `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
+| `kubernetes-report` | Kubernetes: Cluster Report | auto |   |
 | `kubernetes-show` | Kubernetes: Show | auto |   |
 | `kubernetes-snippet` | Kubernetes: New Manifest from Snippet… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `layout-delete` | Layout: Delete… | never | the AI changes the layout with the layout_set tool |

@@ -69,6 +69,7 @@ kubeconfig, so other terminals keep their context.
 | `d` | Delete the row's object (asks first). |
 | `o` | Edit the row's YAML in a file (not Secrets). Save it, then press `a`. |
 | `a` | Apply the editor's saved file: shows the diff, then asks first. |
+| `x` | Cluster report of the namespace (a read-only page). |
 | `c` / `n` | Pick the context / the namespace. |
 | `[` / `]` | Back / forward to the context and namespace you had before. |
 | `R` | Load the lists now. |
@@ -122,6 +123,21 @@ object, the context, the namespace and the command (`kubectl delete`).
 alone never deletes anything. **Delete** does not wait: the list shows
 the object as it goes. A pod that belongs to a deployment or a job is
 made again; deleting a deployment or a job deletes its pods too.
+
+## Cluster report
+
+**Kubernetes: Cluster Report** (or `x` in the view) opens a read-only page
+about the namespace:
+
+- **Pulse**: for pods, deployments, services and jobs, how many are ok,
+  how many warn and how many fail.
+- **Xray**: the owner tree. Each deployment, service and job with the pods
+  it owns or selects, and their status.
+- **Report**: the problems found, for example crashing or restarting
+  pods, pods with no limits or no readiness probe, images with no fixed
+  tag, services that select no pod, failed jobs.
+
+It only reads the cluster. The AI may open it.
 
 ## Edit and apply YAML
 

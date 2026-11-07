@@ -368,6 +368,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeDiff(msg), true
 	case kubeApplyMsg:
 		return m.onKubeApply(msg), true
+	case kubePageMsg:
+		return m.onKubePage(msg), true
 	case kubeEditMsg:
 		return m.onKubeEdit(msg), true
 	}
