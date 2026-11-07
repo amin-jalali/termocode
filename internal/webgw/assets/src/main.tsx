@@ -42,7 +42,7 @@ import { TABS } from "./state/route";
 import { openCards } from "./ui/CardSheet";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
 import { PairScreen } from "./ui/PairScreen";
-import { SignInScreen, signInWithBookmark } from "./ui/SignInScreen";
+import { SignInScreen, bookmarkRemoved, signInWithBookmark } from "./ui/SignInScreen";
 import { passkeysHere } from "./net/passkey";
 import { isRemembered } from "./net/devicekey";
 import { lang, persian, type Lang } from "./strings";
@@ -190,7 +190,7 @@ else if (!secret && !pairSecret && isRemembered()) {
   // A bookmark: sign in with the kept key; when it is refused here and
   // no passkey can be used, the page says to use the laptop's link.
   void signInWithBookmark(startShell).then((going) => {
-    if (!going && !passkeysHere()) phase.value = "connect";
+    if (!going && !passkeysHere() && !bookmarkRemoved()) phase.value = "connect";
   });
 }
 

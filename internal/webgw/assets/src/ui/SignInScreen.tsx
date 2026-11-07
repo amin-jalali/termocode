@@ -60,8 +60,14 @@ export async function signInWithBookmark(onDone: Done): Promise<boolean> {
     return false;
   }
   if (done(r, onDone) || askCode(r)) return true;
-  state.value = r.status === 401 || r.status === 400 ? "bookmark_gone" : "ready";
+  // A removed device says so: the way back is pairing again, not a link.
+  state.value = r.status === 401 && r.data.error === "removed" ? "removed" : r.status === 401 || r.status === 400 ? "bookmark_gone" : "ready";
   return false;
+}
+
+/** bookmarkRemoved: the laptop said this device was removed. */
+export function bookmarkRemoved(): boolean {
+  return state.value === "removed";
 }
 
 /** after handles a refused or good sign-in reply (passkey or app key). */
