@@ -216,6 +216,37 @@ func TestHostRestartsAfterCrashThenGivesUp(t *testing.T) {
 	}
 }
 
+// SCN-29: a hanging extension command times out with ErrTimeout, the
+// process is not killed for it, and its other commands still work.
+func TestHostHangingCommandTimesOutAndStaysUsable(t *testing.T) {
+	h := extproc.NewHost(extproc.Config{
+		Root:        t.TempDir(),
+		Version:     "test",
+		MaxRestarts: 2,
+		CallTimeout: 300 * time.Millisecond,
+		Backoff:     func(int) time.Duration { return 0 },
+	})
+	t.Cleanup(h.Close)
+	h.Set([]ext.Extension{fakeExt(t, nil)})
+	h.StartAtStartup()
+	first := all(t, h, "start", isStarted, isCommand("hello"))[0]
+
+	err := h.Execute(ctx(t), "fake", "fake.hang", nil)
+	if !errors.Is(err, extproc.ErrTimeout) {
+		t.Fatalf("hanging command: err = %v, want ErrTimeout", err)
+	}
+	if st := h.Status(); len(st) != 1 || st[0].State != extproc.StateRunning {
+		t.Fatalf("status after a hanging command = %+v, want running", st)
+	}
+	if err := h.Execute(ctx(t), "fake", "fake.hello", nil); err != nil {
+		t.Fatalf("command after the hang: %v", err)
+	}
+	ev := next(t, h, "hello toast", isToast("Hello from fake"))
+	if ev.Gen != first.Gen {
+		t.Errorf("toast from gen %d, want the same process (gen %d)", ev.Gen, first.Gen)
+	}
+}
+
 func TestHostPromptRoundTrip(t *testing.T) {
 	h := newHost(t, "")
 	h.Set([]ext.Extension{fakeExt(t, nil)})
