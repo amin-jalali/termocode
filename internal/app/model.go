@@ -2,6 +2,7 @@ package app
 
 import (
 	"os"
+	"os/exec"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -142,6 +143,9 @@ type Model struct {
 	agentNamesGen    int
 
 	crash *crashUI // recovered panics → toasts (crash_ui.go)
+	// lite is why this start runs without the editor (lite.go, CMP-99;
+	// "" = the full editor).
+	lite string
 	// ws is the open workspace (ADR 0018), set by New from the process
 	// workspace. Read it through m.workspace() / m.rootDir().
 	ws                      workspace.Workspace
@@ -963,7 +967,13 @@ func New() Model {
 	var client *nvim.Client
 	var err error
 	noNvim := os.Getenv("TERMOCODE_NO_NVIM") == "1"
+	// Lite mode (CMP-99): asked for, or no nvim on PATH; no editor and
+	// no "nvim:" error, a start tip instead.
+	lite := ""
 	if !noNvim {
+		lite = liteReason(os.Getenv, exec.LookPath)
+	}
+	if !noNvim && lite == "" {
 		client, err = nvim.New()
 	}
 	// Terminal panel height: prefer the value persisted from the previous
@@ -1053,8 +1063,9 @@ func New() Model {
 		setup:            newSetupState(),  // setup card (setup_card_ui.go)
 		debug:            loadDebugState(), // Group D (shared by Model copies)
 		crash:            newCrashUI(),
+		lite:             lite,
 	}
-	if noNvim {
+	if noNvim || lite != "" {
 		m.editor = editor.New(nil)
 	} else if err != nil {
 		m.editor = editor.New(nil)
@@ -1079,6 +1090,9 @@ func (m Model) Init() tea.Cmd {
 		cmds = append(cmds, cmd)
 	}
 	if cmd := fontTipCmd(); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+	if cmd := liteTipCmd(m.lite); cmd != nil { // CMP-99: Lite mode (lite.go)
 		cmds = append(cmds, cmd)
 	}
 	if cmd := m.setupInitCmd(); cmd != nil {

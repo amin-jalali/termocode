@@ -268,6 +268,7 @@ func run(argv []string) int {
 	if noSession {
 		_ = os.Setenv(envNoSession, "1")
 	}
+	args = applyLiteFlag(args, os.Setenv)
 	if exe, err := spawn.Executable(); err == nil {
 		app.SetMCPShareExe(exe)
 	}
@@ -440,6 +441,8 @@ func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  termocode [dir]            open dir (default: the current folder)")
 	fmt.Println("  termocode --no-session     run without a persistent session")
+	fmt.Println("  termocode --lite [dir]     run without the editor (no Neovim needed):")
+	fmt.Println("                             terminals, agents, git and worktrees")
 	fmt.Println("  termocode sessions         list the running sessions")
 	fmt.Println("  termocode --container name [--context c] /folder")
 	fmt.Println("                             open /folder inside a running container")
@@ -676,4 +679,15 @@ func inputOption() tea.ProgramOption {
 	in := transfer.NewInput(os.Stdin)
 	transfer.Use(in)
 	return tea.WithInput(in)
+}
+
+// applyLiteFlag takes --lite out of args (CMP-99) and sets
+// TERMOCODE_LITE=1, so the UI (and a session server started from here)
+// runs Lite mode: no embedded editor, no Neovim needed.
+func applyLiteFlag(args []string, setenv func(k, v string) error) []string {
+	args, lite := extractFlag(args, "--lite")
+	if lite {
+		_ = setenv(app.EnvLite, "1")
+	}
+	return args
 }
