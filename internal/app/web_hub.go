@@ -73,6 +73,7 @@ type webHub struct {
 	projects webProjectsPub             // Update only: what the projects topic sent (web_projects.go)
 	more     webMorePub                 // Update only: the v2 More views (web_more.go)
 	ai       webAICalls                 // Update only: the page's AI calls (web_ai.go)
+	views    webViewsState              // Update only: the live views (web_views.go)
 	ups      webUploads                 // staged uploads (web_transfer.go; own lock)
 	// settled: Update only; the publishers ran once since the hub went
 	// idle (web_after.go).
