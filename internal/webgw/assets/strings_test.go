@@ -67,7 +67,16 @@ func parseStrings(t *testing.T, file, name string) []entry {
 // into workbench.js so the phone never loads them).
 func englishStrings(t *testing.T) []entry {
 	t.Helper()
-	return append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
+	out := append(parseStrings(t, "src/strings.ts", "S"), parseStrings(t, "src/strings.desk.ts", "SD")...)
+	return append(out, phoneStrings(t)...)
+}
+
+// phoneStrings are the strings only the phone views show
+// (src/strings.phone.ts, in phone.js, MOB-14). The phone app is English
+// only (owner 2026-11-07), so they have no Persian texts.
+func phoneStrings(t *testing.T) []entry {
+	t.Helper()
+	return parseStrings(t, "src/strings.phone.ts", "SP")
 }
 
 // bodyKeys may run to 40 words; every other string stays at 12 (P6).
@@ -192,7 +201,7 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 	exists := func(k string) bool { return keys[k] || (keys[k+".one"] && keys[k+".other"]) }
 	n := 0
 	err := filepath.WalkDir("src", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || filepath.Base(path) == "strings.ts" || filepath.Base(path) == "strings.desk.ts" || !strings.HasSuffix(path, "x") && !strings.HasSuffix(path, ".ts") {
+		if err != nil || d.IsDir() || filepath.Base(path) == "strings.ts" || filepath.Base(path) == "strings.desk.ts" || filepath.Base(path) == "strings.phone.ts" || !strings.HasSuffix(path, "x") && !strings.HasSuffix(path, ".ts") {
 			return err
 		}
 		b, err := os.ReadFile(path)
@@ -227,13 +236,19 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 }
 
 // The Persian file (WEB-UX-5 fills it) has exactly the English keys, so
-// a new string cannot be forgotten there.
+// a new string cannot be forgotten there; the phone views' strings
+// (strings.phone.ts) are English only and have none.
 func TestPersianStringsHaveTheSameKeys(t *testing.T) {
 	en := englishStrings(t)
 	fa := parseStrings(t, "src/strings.fa.ts", "FA")
-	enKeys := map[string]bool{}
+	enKeys, phoneOnly := map[string]bool{}, map[string]bool{}
+	for _, e := range phoneStrings(t) {
+		phoneOnly[e.key] = true
+	}
 	for _, e := range en {
-		enKeys[e.key] = true
+		if !phoneOnly[e.key] {
+			enKeys[e.key] = true
+		}
 	}
 	faKeys := map[string]bool{}
 	for _, e := range fa {

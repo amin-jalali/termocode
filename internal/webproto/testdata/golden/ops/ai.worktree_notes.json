@@ -1,0 +1,1 @@
+{"t":"req","id":86,"op":"ai.worktree_notes","args":{"id":"r1-left","notes":[{"path":"src/a.go","line":12,"side":"new","text":"Check the error here."}]}}
