@@ -120,6 +120,29 @@ function _G._termocode_http_head(h)
   put(b, 0, 2, { h.req or '', h.summary or '' })
 end
 
+-- _termocode_http_live(h, lines): a stream's newest text while it runs
+-- (API-16). Only a page that is open; a window whose cursor was on the
+-- last row (or row 1) follows the end, others stay where they are.
+function _G._termocode_http_live(h, lines)
+  local b = the_buf(); if not b then return end
+  local wins = vim.fn.win_findbuf(b)
+  if #wins == 0 then return end
+  local follow = {}
+  local n = api.nvim_buf_line_count(b)
+  for _, w in ipairs(wins) do
+    local row = api.nvim_win_get_cursor(w)[1]
+    follow[w] = row >= n or row == 1
+  end
+  H.head = h
+  H.rows = {}
+  put(b, 0, -1, lines)
+  apply_syntax(b)
+  local last = api.nvim_buf_line_count(b)
+  for _, w in ipairs(wins) do
+    if follow[w] then pcall(api.nvim_win_set_cursor, w, { last, 0 }) end
+  end
+end
+
 -- _termocode_http_append(lines, rows, last): one more batch of a big
 -- body.
 -- last: the final batch; the indent folds come back on.

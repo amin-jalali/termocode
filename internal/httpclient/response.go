@@ -63,8 +63,14 @@ type Response struct {
 	Charset     string // lower-cased; "" = utf-8
 	IsJSON      bool
 	IsBinary    bool
-	Err         string
-	ErrKind     ErrKind
+	// Streamed: an event stream, NDJSON or a body without a length; it
+	// was shown live while it came (API-16).
+	Streamed bool
+	// Events are the parsed Server-Sent Events of a text/event-stream
+	// answer (nil for any other type).
+	Events  []SSEEvent
+	Err     string
+	ErrKind ErrKind
 }
 
 // Header returns the value of the response header name (any case).
@@ -120,6 +126,13 @@ func (r *Response) Summary() string {
 	if kind := r.Kind(); kind != "" {
 		parts = append(parts, kind)
 	}
+	if r.Events != nil {
+		if n := len(r.Events); n == 1 {
+			parts = append(parts, "1 event")
+		} else {
+			parts = append(parts, fmt.Sprintf("%d events", n))
+		}
+	}
 	if n := len(r.Hops); n == 1 {
 		parts = append(parts, "1 redirect")
 	} else if n > 1 {
@@ -137,6 +150,8 @@ func (r *Response) Kind() string {
 	switch {
 	case r.IsBinary:
 		return "binary"
+	case r.ContentType == "text/event-stream":
+		return "sse"
 	case r.IsJSON:
 		return "json"
 	case strings.Contains(r.ContentType, "html"):

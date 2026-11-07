@@ -77,6 +77,17 @@ response headers, redirect hops, timing) and **Raw**. All Vim motions,
 | `o` | open an image body in the image preview |
 | `q` / `Esc` | close (Esc cancels while sending) |
 
+### Streamed answers
+
+A streamed answer (Server-Sent Events `text/event-stream`, NDJSON, or
+a chunked body without a length) shows live: row 2 says `streaming…`
+and the body shows the newest text as it comes (the last 64 KB). The
+cursor follows the end while it is on the last row. **Esc** stops the
+stream and keeps what came. An event stream waits for its headers up
+to the timeout, then runs until the server ends it or the body limit.
+When it ends, **Body** lists the events (`name · id`, data below) and
+row 2 adds `sse · N events`; **Raw** shows the text as it came.
+
 Secret header values (`Authorization`, cookies, `X-Api-Key`, names with
 token / secret / password) show as `[REDACTED]`.
 
