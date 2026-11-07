@@ -40,7 +40,14 @@ type page struct {
 // through app-chunk.js, which index.html preloads with its SRI.
 var workbenchChunk = page{Name: "workbench", Entry: "workbench.tsx"}
 
-var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html", With: []page{workbenchChunk}}
+// phoneChunk is the phone's own views (phone.js; the mobile app's
+// project page, MOBUX-7): app.js loads it with a dynamic import
+// (lib/lazy.ts) the first time one opens, so the page's first files and
+// the desktop never carry it. It shares app.js's modules through
+// app-chunk.js and imports no style sheet.
+var phoneChunk = page{Name: "phone", Entry: "phone.tsx"}
+
+var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html", With: []page{workbenchChunk, phoneChunk}}
 
 // editorChunk is the in-page editor (WEB-39): CodeMirror and its glue,
 // built alone (no Preact) into editor.js. app.js loads it with its one
@@ -72,7 +79,7 @@ var monacoVim = page{Name: "monaco-vim", Entry: "monaco/vim.ts"}
 var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true, "/assets/" + persianChunk.Name + ".js": true, "/assets/" + phoneChunk.Name + ".js": true, "/assets/" + monacoVim.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.

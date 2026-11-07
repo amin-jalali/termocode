@@ -22,7 +22,6 @@ export const SD = {
   "wfv.wrote": "wrote {n}",
   "wfv.resumed": "resumed after a restart",
   "wfv.started": "started {time}",
-  "wfv.needs": "Needs you",
   "wfv.last_lines": "Last lines",
   "wfv.body_laptop": "Run, turn on or off, edit and allow a workflow on the laptop.",
   "wfv.gone": "This run is no longer in the list.",

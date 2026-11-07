@@ -2,6 +2,8 @@
 // tasks (chat WEB-14, tree WEB-16, files WEB-18, terminal WEB-20, git
 // WEB-23); until then each shows its loading and empty states.
 import { h } from "preact";
+import { useEffect } from "preact/hooks";
+import { loadPhone, phone, phoneFailed } from "../lib/lazy";
 import { prefs, setPref, type Direction, type Language, type Theme } from "../lib/prefs";
 import { go, route } from "../lib/router";
 import { t } from "../strings";
@@ -9,6 +11,8 @@ import { NotifyField } from "../ui/NotifyField";
 import { BookmarkField } from "../ui/BookmarkField";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
+import { SkeletonRows } from "../ui/Skeleton";
+import { Button } from "../ui/Button";
 import { RunsView } from "./more/RunsView";
 import { WorkflowsView } from "./more/WorkflowsView";
 import { SettingsView } from "./more/SettingsView";
@@ -38,8 +42,30 @@ export { TermView } from "./Term";
 
 export { GitView } from "./git/GitView";
 
+/** PhoneProject is the phone's project page (MOBUX-7), from phone.js:
+ * a skeleton while it loads, Try again when the load failed. */
+function PhoneProject({ id }: { id: string }) {
+  const m = phone.value;
+  useEffect(() => {
+    if (!phone.peek()) loadPhone().catch(() => undefined);
+  }, []);
+  if (m) return <m.ProjectPage id={id} />;
+  return (
+    <View tab="more" title={t("loading")} name="project-loading">
+      {phoneFailed.value ? (
+        <Button small onClick={() => loadPhone().catch(() => undefined)}>
+          {t("retry")}
+        </Button>
+      ) : (
+        <SkeletonRows rows={6} mono={false} />
+      )}
+    </View>
+  );
+}
+
 export function MoreView() {
   const sub = route.value.tab === "more" ? route.value.rest : "";
+  if (sub.startsWith("projects/")) return <PhoneProject id={sub.slice("projects/".length)} />;
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
   if (sub === "runs") return <RunsView />;

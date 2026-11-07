@@ -7,6 +7,7 @@
 import { signal } from "@preact/signals";
 import { dict, has } from "./state/dict";
 import type { SD } from "./strings.desk";
+import type { SP } from "./strings.phone";
 
 export const S = {
   // Shell and connect
@@ -413,6 +414,7 @@ export const S = {
   "more.search": "Search",
   "more.tasks": "Tasks",
   "more.runs": "Runs",
+  "wfv.needs": "Needs you",
   "more.workflows": "Workflows",
   "wf.none": "No workflows in this folder.",
   "wf.stop_confirm": "Stop this workflow run? Finished items keep their results.",
@@ -800,14 +802,20 @@ export const S = {
   "cmd.ran_laptop": "Done on the laptop: {name}",
 } as const;
 
-/** StringKey is a key of the page's strings or of the workbench's
- * (strings.desk.ts, in workbench.js). */
-export type StringKey = keyof typeof S | keyof typeof SD;
+/** StringKey is a key of the page's strings, of the workbench's
+ * (strings.desk.ts, in workbench.js) or of the phone views'
+ * (strings.phone.ts, in phone.js). */
+export type StringKey = keyof typeof S | keyof typeof SD | keyof typeof SP;
+
+/** PhoneKey is a key of the phone views' strings: English only, so the
+ * Persian file has none of them. */
+export type PhoneKey = keyof typeof SP;
 
 const desk = dict<string>();
 
 /** addStrings adds the workbench's strings (strings.desk.ts) once
- * workbench.js loads. */
+ * workbench.js loads, and the phone views' (strings.phone.ts) once
+ * phone.js loads. */
 export function addStrings(d: Readonly<Record<string, string>>): void {
   for (const k of Object.keys(d)) desk[k] = d[k];
 }

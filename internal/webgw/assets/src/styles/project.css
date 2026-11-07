@@ -1,0 +1,38 @@
+/* The phone's project page (MOBUX-7): tabs, task sections, git and the
+   board. Phone layout only; 44 px targets; status = shape + colour. */
+.ppage { display: flex; flex-direction: column; gap: var(--s3); padding: 0 var(--s3) var(--s4); }
+.psub { color: var(--muted); }
+.ptabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: var(--r-card); background: var(--bg-panel); position: sticky; top: 0; z-index: 1; }
+.ptab { min-height: var(--tap); border: 0; border-radius: calc(var(--r-card) - 2px); background: none; color: var(--text-2); font: inherit; font-weight: 600; }
+.ptab.is-on { background: var(--bg); color: var(--text); box-shadow: inset 0 -2px 0 var(--strip); }
+.ptab:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.ppanel { display: flex; flex-direction: column; gap: var(--s4); }
+.ptasks, .psec { display: flex; flex-direction: column; gap: var(--s2); }
+.psec-title, .pboard-head { font-size: var(--fs-row); font-weight: 600; color: var(--text-2); margin: 0; }
+.ptask-list, .pgit-log, .pboard-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.ptask { border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); }
+.ptask.pdepth-1 { margin-inline-start: var(--s4); }
+.ptask.pdepth-2, .ptask.pdepth-3, .ptask.pdepth-4 { margin-inline-start: var(--s6); }
+.ptask-open { display: flex; gap: var(--s2); align-items: flex-start; width: 100%; min-height: var(--tap); padding: var(--s2) var(--s3); border: 0; background: none; color: inherit; font: inherit; text-align: start; }
+.ptask-name { display: flex; flex-direction: column; min-width: 0; }
+.ptask-title, .pgit-subject { overflow-wrap: anywhere; }
+.ptask.st-done .ptask-title { color: var(--muted); text-decoration: line-through; }
+.ptask-meta { color: var(--muted); font-size: var(--fs-row); overflow-wrap: anywhere; }
+.ptask-acts { padding: 0 var(--s3) var(--s2); }
+.ptask-acts .btn, .pgit .btn, .err-line .btn { min-height: var(--tap); }
+.pmark { flex: none; width: 1.25em; text-align: center; font-weight: 700; color: var(--muted); }
+.pmark.st-open { color: var(--blue); }
+.pmark.st-draft, .pmark.col-review { color: var(--ai); }
+.pmark.st-done, .pmark.col-done { color: var(--green); }
+.pmark.col-needs { color: var(--amber); }
+.pmark.col-working { color: var(--blue); }
+.err-line { display: flex; flex-direction: column; gap: var(--s2); align-items: flex-start; padding: var(--s3); }
+.pgit { display: flex; flex-direction: column; gap: var(--s2); align-items: flex-start; }
+.pgit-branch { font-family: var(--font-mono); font-weight: 600; margin: 0; }
+.pgit-commit { display: flex; flex-direction: column; padding: var(--s2) 0; border-bottom: 1px solid var(--border); }
+.pboard { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.pboard-col { border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); padding: var(--s2); min-width: 0; }
+.pboard-head { display: flex; gap: var(--s1); align-items: center; }
+.pboard-label { flex: 1; min-width: 0; }
+.pboard-n { font-family: var(--font-mono); }
+.pboard-tile { width: 100%; min-height: var(--tap); border: 0; background: none; color: inherit; font: inherit; text-align: start; overflow-wrap: anywhere; }

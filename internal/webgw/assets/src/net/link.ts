@@ -161,7 +161,7 @@ export class Link {
 
   /** requestWithID is request that also says the request's id (0 when
    * offline), for ops whose events carry it (search.batch). */
-  requestWithID(op: string, args: unknown = {}): { id: number; result: Promise<unknown> } {
+  requestWithID(op: string, args: unknown = {}, ws = ""): { id: number; result: Promise<unknown> } {
     if (this.state.peek() !== "online" || !this.ws) return { id: 0, result: Promise.reject(new OfflineError()) };
     const id = ++this.reqID;
     const result = new Promise((resolve, reject) => {
@@ -170,9 +170,16 @@ export class Link {
         reject(new ReqError("busy", "no answer"));
       }, REQUEST_TIMEOUT_MS);
       this.pending.set(id, { resolve, reject, timer });
-      this.send({ t: "req", id, op, args });
+      this.send(ws ? { t: "req", id, op, args, ws } : { t: "req", id, op, args });
     });
     return { id, result };
+  }
+
+  /** requestIn is request for another project's hub through the door
+   * (MOB-50): the frame names the project by its key in ws; "" is the
+   * laptop window this page talks to. */
+  requestIn(ws: string, op: string, args: unknown = {}): Promise<unknown> {
+    return this.requestWithID(op, args, ws).result;
   }
 
   /** stop says bye and closes for good (the page is closing). */
