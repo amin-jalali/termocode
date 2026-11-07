@@ -317,6 +317,9 @@ func (s *dbState) load(root string) {
 		}
 		s.nodes[c.ID] = n
 	}
+	if s.console != nil {
+		s.console.mergeSQLAttach(root)
+	}
 	s.findSuggestions()
 	s.loaded = true
 	s.fixCursor()

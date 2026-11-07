@@ -468,6 +468,8 @@ missing	db-generate-data	Databases|M
 missing	db-goto-definition	Databases|S
 missing	db-open-sessions	Databases|S
 missing	db-savepoint	Databases|S
+missing	db-sql-outline	Databases|S
+missing	db-switch-connection	Databases|S
 missing	db-rollback-savepoint	Databases|S
 missing	db-open-csv	Databases|S
 missing	db-server-info	Databases|S

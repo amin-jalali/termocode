@@ -62,34 +62,35 @@ type dbRun struct {
 }
 
 type dbConsoleState struct {
-	lens     map[string]string // file + "\x00" + SQL → the lens status
-	attached map[string]string // project .sql file → connection (session only)
-	pending  *dbRun            // waits for the attach picker or the guard card
-	waiting  *dbRun            // waits for its connection
-	running  *dbRun
-	shown    *dbRun // the result on the page
-	stopConn string // the connection Cancel / End Session asks an id for
-	stopEnd  bool   // End Session (else Cancel Session Query)
-	aiConn   string // the connection AI Generate SQL asks about (db_ai.go)
-	cancel   context.CancelFunc
-	gen      uint64         // bumps on each run; stale results are dropped
-	pageGen  uint64         // bumps on each page write; stale batches are dropped
-	tableGen uint64         // bumps on each table command; stale answers are dropped
-	genTable *dbTable       // Generate Test Data: the table while the row count is asked
-	pushed   map[int]string // SQL buffer -> the schema stamp last pushed to it
-	view     int
-	page     int
-	size     int // rows per page (db_page_rows, read at run time)
-	filter   string
-	sortCol  int
-	desc     bool
-	trans    bool // the Transposed view (one row as column | value)
-	trow     int  // the row it shows, on the page
-	cache    *dbclient.Result
-	cacheIdx []int // the loaded row of each displayed row
-	cacheKey dbViewKey
-	history  []dbclient.HistoryEntry
-	hist     *dbclient.History
+	lens       map[string]string // file + "\x00" + SQL → the lens status
+	attached   map[string]string // project .sql file → connection (saved ones from .termocode/sql-connections.json)
+	switchFile string            // the file Switch File Connection… is for (db_sqllang.go)
+	pending    *dbRun            // waits for the attach picker or the guard card
+	waiting    *dbRun            // waits for its connection
+	running    *dbRun
+	shown      *dbRun // the result on the page
+	stopConn   string // the connection Cancel / End Session asks an id for
+	stopEnd    bool   // End Session (else Cancel Session Query)
+	aiConn     string // the connection AI Generate SQL asks about (db_ai.go)
+	cancel     context.CancelFunc
+	gen        uint64         // bumps on each run; stale results are dropped
+	pageGen    uint64         // bumps on each page write; stale batches are dropped
+	tableGen   uint64         // bumps on each table command; stale answers are dropped
+	genTable   *dbTable       // Generate Test Data: the table while the row count is asked
+	pushed     map[int]string // SQL buffer -> the schema stamp last pushed to it
+	view       int
+	page       int
+	size       int // rows per page (db_page_rows, read at run time)
+	filter     string
+	sortCol    int
+	desc       bool
+	trans      bool // the Transposed view (one row as column | value)
+	trow       int  // the row it shows, on the page
+	cache      *dbclient.Result
+	cacheIdx   []int // the loaded row of each displayed row
+	cacheKey   dbViewKey
+	history    []dbclient.HistoryEntry
+	hist       *dbclient.History
 
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
@@ -126,6 +127,7 @@ func (m *Model) dbConsole() *dbConsoleState {
 	}
 	if m.databases.console == nil {
 		m.databases.console = &dbConsoleState{attached: map[string]string{}, lens: map[string]string{}, sortCol: -1}
+		m.databases.console.mergeSQLAttach(m.databases.root)
 	}
 	return m.databases.console
 }
@@ -935,6 +937,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseSavepointPicked(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseSQLPicked(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseTransferPicker(id); ok {

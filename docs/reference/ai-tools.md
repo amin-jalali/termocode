@@ -2093,8 +2093,10 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
 | `db-server-info` | Databases: Show Server Info | never | SQL runs require the database query tool and its guard |
 | `db-sessions` | Databases: Show Sessions and Locks | never | SQL runs require the database query tool and its guard |
+| `db-sql-outline` | Databases: Go to Statement… | never | moves the user's cursor; the AI reads files with its own tools |
 | `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
 | `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
+| `db-switch-connection` | Databases: Switch File Connection… | never | AI provider, credentials and approvals stay with the user |
 | `db-test-connection` | Databases: Test Connection | auto |   |
 | `db-transaction-mode` | Databases: Transaction Mode… | never | AI provider, credentials and approvals stay with the user |
 | `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |

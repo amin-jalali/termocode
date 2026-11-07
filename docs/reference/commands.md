@@ -225,6 +225,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Format Statement or Selection | `db-format` |   |   |
 | Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
+| Databases: Go to Statement… | `db-sql-outline` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
@@ -247,6 +248,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
+| Databases: Switch File Connection… | `db-switch-connection` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |
 

@@ -29,6 +29,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-run", Title: "Databases: Run Statement or Selection"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
 		{ID: "db-explain", Title: "Databases: Explain Statement"},
+		{ID: "db-sql-outline", Title: "Databases: Go to Statement…"},
+		{ID: "db-switch-connection", Title: "Databases: Switch File Connection…"},
 		{ID: "db-format", Title: "Databases: Format Statement or Selection"},
 		{ID: "db-format-file", Title: "Databases: Format File"},
 		{ID: "db-explain-analyze", Title: "Databases: Explain Analyze Statement…"},
@@ -110,6 +112,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCommitKey(false), true
 	case "db-open-sessions":
 		return m.databaseSessionsPicker(), true
+	case "db-sql-outline":
+		return m.databaseSQLOutline(), true
+	case "db-switch-connection":
+		return m.databaseSQLSwitchPicker(), true
 	case "db-savepoint":
 		return m.databaseSavepointStart(), true
 	case "db-rollback-savepoint":
