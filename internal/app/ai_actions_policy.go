@@ -613,6 +613,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"http-save":             aiNever(aiNoPicker + " (http_save_request)"),
 	"http-copy-curl":        aiConfirm(ai.ClassIDE), // overwrites the system clipboard
 	"http-import-curl":      aiNever(aiNoPicker + " (http_save_request)"),
+	"http-import-openapi":   aiNever(aiNoPicker + " (http_save_request)"),
 	"http-new-file":         aiNever(aiNoPicker + " (create_file)"),
 	"http-save-body":        aiNever(aiNoPicker + " (http_get_last_response, write_file)"),
 }

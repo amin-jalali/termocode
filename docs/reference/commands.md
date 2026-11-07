@@ -501,6 +501,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | HTTP: Cancel Request | `http-cancel` |   |   |
 | HTTP: Copy as curl | `http-copy-curl` |   |   |
 | HTTP: History… | `http-history` |   |   |
+| HTTP: Import OpenAPI… | `http-import-openapi` |   |   |
 | HTTP: Import from curl… | `http-import-curl` |   |   |
 | HTTP: New .http File… | `http-new-file` |   |   |
 | HTTP: Open Environment File | `http-env-open` |   |   |
