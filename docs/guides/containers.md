@@ -159,6 +159,12 @@ The status bar shows a `▣ api-1` pill. When the container stops, the pill
 says `stopped` and a card offers **Wait** (keep the open files),
 **Start**, or **Disconnect** (open your home folder instead).
 
+In a container workspace, Source Control runs git inside the container:
+stage, unstage, discard, commit, push, pull, fetch, checkout, and new
+branches all work there (git must be in the image). Staging one hunk is
+not there yet; use the terminal for it. **Replace in Workspace** reads
+and writes the files through the container too.
+
 ## Live CPU and memory
 
 While the Containers view is on screen and the CONTAINERS section is open,

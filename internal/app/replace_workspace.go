@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -58,7 +59,13 @@ func (m *Model) runReplaceInWorkspace(replacement string) tea.Cmd {
 	if find == "" {
 		return nil
 	}
-	counts, err := search.CountLiteral(workspaceRoots(), find)
+	var counts []search.FileCount
+	var err error
+	if fsys, ok := m.remoteFS(); ok { // RC-5 (4c): a container workspace, through its Host
+		counts, err = search.CountLiteralFS(context.Background(), fsys, m.workspace().Root, find)
+	} else {
+		counts, err = search.CountLiteral(workspaceRoots(), find)
+	}
 	var toastCmd tea.Cmd
 	if err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Replace failed", err.Error())
@@ -125,8 +132,15 @@ func (m *Model) applyReplaceInWorkspace() tea.Cmd {
 	}
 	files, matches := 0, 0
 	var failed []string
+	fsys, remote := m.remoteFS()
 	for _, t := range targets {
-		n, err := search.ReplaceLiteralInFile(t.Path, find, repl)
+		var n int
+		var err error
+		if remote {
+			n, err = search.ReplaceLiteralInFileFS(context.Background(), fsys, t.Path, find, repl)
+		} else {
+			n, err = search.ReplaceLiteralInFile(t.Path, find, repl)
+		}
 		if err != nil {
 			failed = append(failed, fmt.Sprintf("%s: %v", t.Path, err))
 			continue

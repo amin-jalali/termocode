@@ -224,6 +224,9 @@ func commitArgs(message string, o CommitOptions) ([]string, error) {
 }
 
 func commitRun(dir string, args []string) error {
+	if _, ok, err := remoteRun(dir, args...); ok {
+		return err
+	}
 	cmd := spawn.Command("git", args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
