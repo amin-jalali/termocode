@@ -2450,6 +2450,9 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `sort-asc` | Edit: Sort Lines Ascending | confirm (fileWrite) |   |
 | `sort-desc` | Edit: Sort Lines Descending | confirm (fileWrite) |   |
 | `spaces-to-tabs` | Edit: Convert Spaces to Tabs | confirm (fileWrite) |   |
+| `spec-new` | Spec: New… | never | opens a picker or prompt that only the user can answer; use a typed tool; write the spec files with the file tools |
+| `spec-new-bugfix` | Spec: New Bugfix… | never | opens a picker or prompt that only the user can answer; use a typed tool; write the spec files with the file tools |
+| `spec-open` | Spec: Open… | never | opens a picker or prompt that only the user can answer; use a typed tool; only the user approves a spec phase |
 | `split-horizontal` | Editor: Split Down | auto |   |
 | `split-vertical` | Editor: Split Right | auto |   |
 | `tabs-to-spaces` | Edit: Convert Tabs to Spaces | confirm (fileWrite) |   |

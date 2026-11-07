@@ -2487,6 +2487,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onWorktreeJumpPicked(msg.ID)
 	case pickerKindWTCleanup: // worktrees_cleanup.go: a row ticks, the first row goes on
 		return m.onWTCleanupPicked(msg.ID)
+	case pickerKindSpecOpen: // specs_ui.go
+		return m.openSpecCard(msg.ID)
 	case pickerKindWTRef: // worktrees_new.go: back to the dialog with the start point
 		m.reopenWTForm(msg.ID)
 		return nil

@@ -209,6 +209,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if cmd, ok := m.handleHTTPPromptSubmit(value); ok { // HTTP client
 		return cmd
 	}
+	if cmd, ok := m.handleSpecPromptSubmit(value); ok { // specs_ui.go
+		return cmd
+	}
 	switch m.promptKind {
 	case promptKindBulkRename:
 		return m.previewBulkRename(value)

@@ -710,6 +710,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Snippets: Browse... | `snippet-picker` |   |   |
 | Snippets: Manage... | `snippets-manage` |   |   |
 
+## Spec
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Spec: New Bugfix… | `spec-new-bugfix` |   |   |
+| Spec: New… | `spec-new` |   |   |
+| Spec: Open… | `spec-open` |   |   |
+
 ## Tab
 
 | Title | ID | Key | Hint |
