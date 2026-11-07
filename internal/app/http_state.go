@@ -558,6 +558,8 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.httpFinish(msg.run), true
 	case httpAppendMsg:
 		return m.httpPageAppend(msg), true
+	case httpOpenAPIFetchedMsg:
+		return m.httpOpenAPIFetched(msg), true
 	case httpPrivateEnvCheckMsg:
 		title := "Secrets file not git-ignored"
 		if msg.state == httpGitTracked {

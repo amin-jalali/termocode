@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/httpclient"
@@ -131,7 +133,7 @@ func (m *Model) dispatchHTTPPalette(id string) (tea.Cmd, bool) {
 		m.httpS().importInto = m.httpCurrentFile()
 		return m.openHTTPPrompt(promptKindHTTPImport, "HTTP: Import from curl", "curl:", ""), true
 	case "http-import-openapi":
-		return m.openHTTPPrompt(promptKindHTTPImportOpenAPI, "HTTP: Import OpenAPI", "OpenAPI file:", ""), true
+		return m.openHTTPPrompt(promptKindHTTPImportOpenAPI, "HTTP: Import OpenAPI", "OpenAPI file or URL:", ""), true
 	case "http-new-file":
 		return m.openHTTPPrompt(promptKindHTTPNewFile, "HTTP: New .http File", "File:", "requests.http"), true
 	case "http-save-body":
@@ -929,6 +931,9 @@ func (m *Model) httpImportOpenAPI(name string) tea.Cmd {
 	if name == "" {
 		return nil
 	}
+	if httpclient.IsOpenAPIURL(name) {
+		return m.httpFetchOpenAPI(name)
+	}
 	p := name
 	if !filepath.IsAbs(p) {
 		p = filepath.Join(aiWorkspaceRoot(), p)
@@ -941,7 +946,47 @@ func (m *Model) httpImportOpenAPI(name string) tea.Cmd {
 	if err != nil {
 		return m.pushToastDetail(toast.Warn, "Import OpenAPI: "+err.Error(), "OpenAPI 3.x or Swagger 2.0, YAML or JSON")
 	}
-	dir := filepath.Dir(p)
+	return m.httpWriteOpenAPI(im, filepath.Dir(p))
+}
+
+// httpOpenAPIFetchedMsg carries a downloaded spec back to the UI loop.
+type httpOpenAPIFetchedMsg struct {
+	url  string
+	data []byte
+	err  error
+}
+
+// httpFetchOpenAPI downloads a spec off the UI loop with the user's
+// HTTP client (settings, proxy, timeout); the file lands in the
+// workspace root (API-14).
+func (m *Model) httpFetchOpenAPI(specURL string) tea.Cmd {
+	client := m.httpS().httpClient(loadHTTPSettings())
+	toastCmd := m.pushToastDetail(toast.Info, "Import OpenAPI: downloading…", httpclient.RedactURL(specURL))
+	fetch := func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		data, err := httpclient.FetchOpenAPI(ctx, client, specURL, httpclient.MaxOpenAPIBytes)
+		return httpOpenAPIFetchedMsg{url: specURL, data: data, err: err}
+	}
+	return tea.Batch(toastCmd, fetch)
+}
+
+// httpOpenAPIFetched imports a downloaded spec.
+func (m *Model) httpOpenAPIFetched(msg httpOpenAPIFetchedMsg) tea.Cmd {
+	shown := httpclient.RedactURL(msg.url)
+	if msg.err != nil {
+		return m.pushToastDetail(toast.Warn, "Import OpenAPI: could not download the spec", ai.Redact(msg.err.Error())+" — "+shown)
+	}
+	im, err := httpclient.ImportOpenAPIFrom(msg.data, msg.url)
+	if err != nil {
+		return m.pushToastDetail(toast.Warn, "Import OpenAPI: "+err.Error(), "OpenAPI 3.x or Swagger 2.0, YAML or JSON — "+shown)
+	}
+	return m.httpWriteOpenAPI(im, aiWorkspaceRoot())
+}
+
+// httpWriteOpenAPI writes an import as a new <title>.http in dir (and
+// http-client.env.json when there is none) and opens it.
+func (m *Model) httpWriteOpenAPI(im httpclient.OpenAPIImport, dir string) tea.Cmd {
 	base := strings.TrimSuffix(httpclient.OpenAPIFileName(im.Title), ".http")
 	out := ""
 	for i := 1; i < 1000; i++ {

@@ -133,7 +133,7 @@ would commit it).
 | HTTP: Copy as curl | one line; secrets stay as `{{templates}}` unless you choose "Copy with secrets" |
 | HTTP: Open API Docs | the open .http file as a read-only Markdown page: a table of requests, then headers, bodies and variables; secrets are hidden |
 | HTTP: Import from curl… | `-X`, `-H`, `-d`, `--json`, `-u`, `-G` … become a new `###` block |
-| HTTP: Import OpenAPI… | an OpenAPI 3.x or Swagger 2.0 file (YAML or JSON) becomes `<title>.http` next to it: one `###` block per operation with example bodies; `{{baseUrl}}` goes into a new `http-client.env.json`; put `token` / `apiKey` / `basicAuth` in the private env file |
+| HTTP: Import OpenAPI… | an OpenAPI 3.x or Swagger 2.0 file (YAML or JSON), or its `https://…` URL, becomes `<title>.http` next to the file (a URL: in the workspace root; a relative server like `/v1` uses the URL's host): one `###` block per operation with example bodies; `{{baseUrl}}` goes into a new `http-client.env.json`; put `token` / `apiKey` / `basicAuth` in the private env file |
 | HTTP: New .http File… | a file with two example requests |
 | HTTP: Clear Script Variables | forget the values `# @pre set` / `# @post set` wrote |
 

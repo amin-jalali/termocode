@@ -38,6 +38,21 @@ var openAPIMethods = []string{"get", "post", "put", "patch", "delete", "head", "
 // YAML). The document is untrusted: every value it puts into the
 // output is kept on one line, so it cannot add requests or headers.
 func ImportOpenAPI(data []byte) (OpenAPIImport, error) {
+	return importOpenAPI(data, nil)
+}
+
+// ImportOpenAPIFrom is ImportOpenAPI for a spec read from specURL: a
+// relative server ("/v1") or a missing host uses the spec's own origin,
+// as the OpenAPI rules say.
+func ImportOpenAPIFrom(data []byte, specURL string) (OpenAPIImport, error) {
+	u, err := url.Parse(specURL)
+	if err != nil || u.Host == "" {
+		return OpenAPIImport{}, fmt.Errorf("bad spec URL %q", specURL)
+	}
+	return importOpenAPI(data, &url.URL{Scheme: u.Scheme, Host: u.Host})
+}
+
+func importOpenAPI(data []byte, origin *url.URL) (OpenAPIImport, error) {
 	var out OpenAPIImport
 	if len(data) > MaxOpenAPIBytes {
 		return out, fmt.Errorf("the file is larger than %d MiB", MaxOpenAPIBytes>>20)
@@ -54,7 +69,7 @@ func ImportOpenAPI(data []byte) (OpenAPIImport, error) {
 	default:
 		return out, errors.New("not an OpenAPI 3.x or Swagger 2.0 file (no openapi: 3.x or swagger: \"2.0\" key)")
 	}
-	im := &openAPIImporter{doc: doc, v2: v2, vars: map[string]string{}}
+	im := &openAPIImporter{doc: doc, v2: v2, vars: map[string]string{}, origin: origin}
 	out.Title = openapiOneLine(str(obj(doc["info"])["title"]))
 	out.Env = map[string]string{"baseUrl": im.baseURL()}
 
@@ -146,15 +161,19 @@ type openAPIImporter struct {
 	v2      bool
 	vars    map[string]string // path parameter file variables
 	secrets bool              // a secret placeholder was written
+	origin  *url.URL          // the spec URL's scheme://host (nil = a file)
 }
 
 func (im *openAPIImporter) baseURL() string {
 	if im.v2 {
 		host := openapiOneLine(str(im.doc["host"]))
+		scheme := "https"
+		if host == "" && im.origin != nil {
+			host, scheme = im.origin.Host, im.origin.Scheme
+		}
 		if host == "" {
 			host = "localhost"
 		}
-		scheme := "https"
 		if s, ok := im.doc["schemes"].([]any); ok && len(s) > 0 && str(s[0]) != "" {
 			scheme = openapiOneLine(str(s[0]))
 		}
@@ -166,9 +185,15 @@ func (im *openAPIImporter) baseURL() string {
 		for name, v := range obj(srv["variables"]) {
 			u = strings.ReplaceAll(u, "{"+name+"}", openapiOneLine(str(obj(v)["default"])))
 		}
+		if strings.HasPrefix(u, "/") && im.origin != nil {
+			return strings.TrimRight(im.origin.String()+u, "/")
+		}
 		if u != "" && u != "/" {
 			return strings.TrimRight(u, "/")
 		}
+	}
+	if im.origin != nil {
+		return im.origin.String()
 	}
 	return "http://localhost"
 }
