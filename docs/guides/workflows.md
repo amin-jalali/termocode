@@ -167,8 +167,12 @@ one again: `termocode workflow again <name> <key>`.
   `"slack"` with a `"channel"`). A webhook or a server is a write to an
   outside system: the summary goes there only after you chose **Allow
   for this workflow** on that step's card.
-- A message via an MCP server calls its send tool: for Slack
-  `slack_send_message` with the channel id, or the step's own `"tool"`.
+- A message via an MCP server calls the step's own `"tool"`, or else
+  the server's send tool, found in its tool list (a name with post or
+  send and message, such as `slack_post_message`; its arguments name
+  the channel and the text). When none is found it tries
+  `slack_post_message` with the channel id; if that fails, the error
+  lists the server's tools, so you can set `"tool"`.
   Connect the server with writes allowed. Text that goes to a webhook
   or a server has secrets and keys hidden first.
 - Runs are kept for `workflows_history_days` (30) days and deleted when
