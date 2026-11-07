@@ -386,3 +386,66 @@ func TestDeskVimBufferMappings(t *testing.T) {
 		t.Errorf("problems (CSP, console): %v", probs)
 	}
 }
+
+// Spec (WEBP-1): Vim's jump list, across files. A jump (G, :N, a search,
+// a mark …) keeps where the caret was; Ctrl+O goes back along the list,
+// Ctrl+I forward again, a count goes that many; at the list's end
+// nothing moves. Going to another file is a jump too: Ctrl+O there opens
+// the file it came from with the caret where it was, Ctrl+I goes back.
+func TestDeskVimJumpList(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openDesk(t, p, c, 2, "a.txt", "a1", "a2", "a3", "a4")
+	toggleVim(t, p, c, true)
+	v := &vimRig{t: t, p: p, c: c, tick: 3}
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	p.Do(deskTextEnd(false))
+	pos := func(want string) {
+		t.Helper()
+		p.WaitJS(`document.querySelector(".statusbar .sb-pos")?.textContent === ` + jsq(want))
+	}
+	ctrl := func(k string) {
+		t.Helper()
+		p.Do(chromedp.KeyEvent(k, chromedp.KeyModifiers(chromedp.ModifierCtrl)))
+	}
+
+	realKeys(p, "l")
+	pos("Ln 1, Col 2")
+	realKeys(p, "G")
+	pos("Ln 4, Col 1")
+	realKeys(p, ":2\r")
+	pos("Ln 2, Col 1")
+	ctrl("o")
+	pos("Ln 4, Col 1")
+	ctrl("o")
+	pos("Ln 1, Col 2")
+	// The list's start: nothing moves.
+	ctrl("o")
+	ctrl("i")
+	pos("Ln 4, Col 1")
+	ctrl("i")
+	pos("Ln 2, Col 1")
+	realKeys(p, "2")
+	ctrl("o")
+	pos("Ln 1, Col 2")
+	v.settle("a1", "a2", "a3", "a4")
+
+	// Another file: Ctrl+O comes back to a.txt where the caret was.
+	openDesk(t, p, c, 3, "b.txt", "b1", "b2")
+	v.mode("-- NORMAL --")
+	deskFocus(p)
+	realKeys(p, "j")
+	pos("Ln 2, Col 1")
+	ctrl("o")
+	p.WaitJS(`location.hash === "#/files/a.txt"`)
+	answerOpen(t, p, c, 2, "a.txt", "a1", "a2", "a3", "a4")
+	pos("Ln 1, Col 2")
+	v.mode("-- NORMAL --")
+	ctrl("i")
+	p.WaitJS(`location.hash === "#/files/b.txt"`)
+	answerOpen(t, p, c, 3, "b.txt", "b1", "b2")
+	pos("Ln 2, Col 1")
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems (CSP, console): %v", probs)
+	}
+}
