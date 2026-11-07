@@ -2374,6 +2374,26 @@ func (m Model) aiStreamSteps() int {
 	return m.ai.streamSteps
 }
 
+// terminalDir is a terminal tab's folder. Until the shell reports one
+// (a shell without integration, like sh or dash, never does) the tab's
+// Cwd is nvim's buffer name term://DIR//PID:CMD, read from b:term_title:
+// this keeps DIR, with a leading ~ made the home folder again.
+func terminalDir(cwd string) string {
+	rest, ok := strings.CutPrefix(cwd, "term://")
+	if !ok {
+		return cwd
+	}
+	if j := strings.Index(rest, "//"); j >= 0 {
+		rest = rest[:j]
+	}
+	if rest == "~" || strings.HasPrefix(rest, "~/") {
+		if home, err := os.UserHomeDir(); err == nil && home != "" {
+			rest = home + rest[1:]
+		}
+	}
+	return rest
+}
+
 // terminalStatusLabel is "zsh · ~/proj" for the active terminal tab.
 func (m Model) terminalStatusLabel() string {
 	if len(m.terminalTabs) == 0 {
@@ -2381,15 +2401,7 @@ func (m Model) terminalStatusLabel() string {
 	}
 	i := min(max(m.terminalActiveTab, 0), len(m.terminalTabs)-1)
 	tab := m.terminalTabs[i]
-	dir := tab.Cwd
-	// Before the shell reports its folder this is nvim's terminal name,
-	// term://DIR//PID:CMD; keep DIR.
-	if rest, ok := strings.CutPrefix(dir, "term://"); ok {
-		if j := strings.Index(rest, "//"); j >= 0 {
-			rest = rest[:j]
-		}
-		dir = rest
-	}
+	dir := terminalDir(tab.Cwd)
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
 		if dir == home {
 			dir = "~"
