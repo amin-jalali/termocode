@@ -163,7 +163,7 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `v` or `Enter` | open the cell under the cursor (JSON is pretty-printed); `q` goes back |
 | `y` | copy the cell |
 | `c` / `C` | copy the loaded rows as CSV / JSON |
-| `S` | export the rows to a file (CSV, TSV, JSON, SQL INSERTs or Markdown) |
+| `S` | export the rows to a file (CSV, TSV, JSON, SQL INSERTs, Markdown or HTML) |
 | `r` | run again (writes ask again) |
 | `1` … `9` | show result tab 1 … 9 |
 | `p` | pin the result tab (again: unpin) |
@@ -230,7 +230,7 @@ Each connection starts in auto-commit mode: every statement is saved at once. Pr
 
 ## Export and import
 
-**Export.** `S` (Shift+s) on a result page (or **Databases: Export Result…**) opens a picker: CSV, TSV, JSON, SQL INSERTs, Markdown table. Then type a file name; the default is `<table>-<date>.<ext>` in the workspace, and a full path works too. If the file exists, a card asks before it is replaced. The rows go into a temporary file in the same folder, and the file you chose appears only when every row is written, so a cancel or an error leaves no half file and keeps the old one.
+**Export.** `S` (Shift+s) on a result page (or **Databases: Export Result…**) opens a picker: CSV, TSV, JSON, SQL INSERTs, Markdown table, HTML table (one page you can open in a browser; every cell is escaped). Then type a file name; the default is `<table>-<date>.<ext>` in the workspace, and a full path works too. If the file exists, a card asks before it is replaced. The rows go into a temporary file in the same folder, and the file you chose appears only when every row is written, so a cancel or an error leaves no half file and keeps the old one.
 
 When the result is only part of the rows (the 10,000-row limit, or one page of a table), a card asks: **Export the loaded rows** or **Export all**. Export all runs the query again, without the row limit, in a read-only session and writes the rows as the server sends them (a page of 1,000 at a time, never all in memory). A progress card shows the count; `Esc` cancels and removes the temporary file. Only a plain `SELECT` can run again, so a write is never repeated; Export all reads committed data, not the changes of your open transaction.
 

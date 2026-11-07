@@ -23,6 +23,7 @@ const (
 	FormatJSON     ExportFormat = "json"
 	FormatSQL      ExportFormat = "sql"
 	FormatMarkdown ExportFormat = "md"
+	FormatHTML     ExportFormat = "html"
 )
 
 // ExportFormatInfo is one row of the export picker.
@@ -39,6 +40,7 @@ var ExportFormats = []ExportFormatInfo{
 	{FormatJSON, "JSON", ".json"},
 	{FormatSQL, "SQL INSERTs", ".sql"},
 	{FormatMarkdown, "Markdown table", ".md"},
+	{FormatHTML, "HTML table", ".html"},
 }
 
 // ExportOptions says where INSERT statements go: the dialect of Driver and
@@ -80,6 +82,12 @@ func NewRowWriter(f ExportFormat, w io.Writer, o ExportOptions) (RowWriter, erro
 		return &jsonWriter{w: w}, nil
 	case FormatMarkdown:
 		return &markdownWriter{w: w}, nil
+	case FormatHTML:
+		title := o.Table
+		if strings.TrimSpace(title) == "" {
+			title = "Export"
+		}
+		return &htmlWriter{w: w, title: title}, nil
 	case FormatSQL:
 		d := DialectFor(o.Driver)
 		if d == nil {
