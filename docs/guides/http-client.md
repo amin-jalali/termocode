@@ -117,6 +117,7 @@ would commit it).
 |---|---|
 | HTTP: Quick Request… | `https://host/path` or `POST https://host/path {"a":1}` with `-H 'Name: v'` |
 | HTTP: History… | newest first; Enter sends again with today's environment; rows grouped by day; type to filter; Ctrl+O opens the stored answer; Ctrl+T pins a row (pinned rows stay on top and are never trimmed); Ctrl+S saves it to Saved Requests; Ctrl+D deletes |
+| HTTP: Cookies… | the cookies of the active environment (each environment has its own jar); Enter edits the value; Ctrl+D deletes; Clear all cookies… asks first |
 | HTTP: Saved Requests… | requests saved with `S` (`~/.config/termocode/http/saved.http`) |
 | HTTP: Copy as curl | one line; secrets stay as `{{templates}}` unless you choose "Copy with secrets" |
 | HTTP: Import from curl… | `-X`, `-H`, `-d`, `--json`, `-u`, `-G` … become a new `###` block |

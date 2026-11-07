@@ -37,6 +37,7 @@ Every file termocode reads or writes. termocode never fails to start because of 
 | `db/consoles/` | SQL consoles per workspace and connection, mode 0600. | SQL with a -- @conn <id> header. | Yes. Press n on a database connection. |
 | `http/saved.http` | Requests saved with HTTP: Save Request to Saved… (S on the response page). | A normal `.http` file (the format mobocode reads too). File mode 0600. | Yes. HTTP: Saved Requests… → Open saved.http. |
 | `http/history.jsonl` | HTTP history: one JSON line per send (yours and the AI's). Holds the request as written (`{{templates}}`, secret headers `[REDACTED]`), never the resolved values; the first 256 KB of a text answer. File mode 0600, folder 0700. | JSON lines, written by termocode; `http_history_max` trims it. | No (state). HTTP: History… → Clear history…, or delete it. |
+| `http/cookies.json` | HTTP cookies, one jar per environment (servers set them; `http_cookie_jar` turns the jar off). File mode 0600, folder 0700. | JSON, written by termocode. | No (state). HTTP: Cookies… → Clear all cookies…, or delete it. |
 | `http/state.json` | The HTTP environment chosen per workspace (HTTP: Select Environment…). | JSON `{"envs": {workspace: env}}`. | Not needed. |
 
 ## Data folder

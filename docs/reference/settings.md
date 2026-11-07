@@ -75,7 +75,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `http_max_body_mb` | int | `20` | Largest HTTP response body read, in MB; a bigger one is cut and marked truncated. |
 | `http_ai_max_kb` | int | `32` | Most KB of a response body the AI sees per http_send / http_get_last_response call (it can page on with offset). |
 | `http_tls_insecure` | bool | `false` | Skip TLS certificate checks for your own HTTP requests (never for the AI's). Prefer the k retry on the response page, which is per host and per session. |
-| `http_cookie_jar` | bool | `true` | Keep cookies between HTTP requests (in memory only, per session); # @no-cookie-jar in a request turns it off for that request. |
+| `http_cookie_jar` | bool | `true` | Keep cookies between HTTP requests, one jar per environment, saved in http/cookies.json (0600); HTTP: Cookies… shows them; # @no-cookie-jar in a request turns it off for that request. |
 | `http_history_max` | int | `200` | Most entries kept in http/history.jsonl. |
 
 ## MCP
