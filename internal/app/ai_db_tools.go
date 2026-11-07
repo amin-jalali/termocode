@@ -701,6 +701,7 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 			"max_rows": num("rows to read (default 100, max 1000)")},
 		Required: []string{"conn", "sql"},
 		Describe: func(a map[string]any) string { return dbAIDescribe(dbAIGet(root, a), "db_query") },
+		View:     dbQueryView,
 		Validate: func(a map[string]any) error {
 			r := dbAIGet(root, a)
 			err := r.err

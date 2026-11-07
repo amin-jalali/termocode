@@ -174,6 +174,7 @@ func (m *Model) aiWorkflowDraftTool(ws string, call aiIDECaller) ai.Tool {
 			mu.Unlock()
 			return disk.describeDraft(dr)
 		},
+		View: workflowDraftView,
 		Run: func(ctx context.Context, a map[string]any) (string, error) {
 			dr, err := disk.checkDraft(a)
 			if err != nil {
