@@ -2083,6 +2083,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
 | `db-quick-fix` | Databases: Apply SQL Quick Fix | confirm (fileWrite) |   |
 | `db-refresh` | Databases: Refresh | auto |   |
+| `db-rename` | Databases: Rename in SQL… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
 | `db-rollback` | Databases: Roll Back | never | the user's transaction |

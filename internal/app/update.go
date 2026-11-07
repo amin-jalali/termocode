@@ -302,6 +302,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBCount(msg)
 	case dbColsMsg:
 		return m, m.onDBCols(msg)
+	case dbSourceMsg:
+		return m, m.onDBSource(msg)
 	case dbFullSchemaMsg:
 		return m, m.onDBFullSchema(msg)
 	case dbDiscoverMsg:

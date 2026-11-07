@@ -389,6 +389,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-goto-definition":           aiAuto(),
 	"db-find-usages":               aiAuto(),
 	"db-quick-fix":                 aiConfirm(ai.ClassFileWrite),
+	"db-rename":                    aiNever(aiNoPicker),
 	"db-count-rows":                aiNever("Table rows are read with the database tools"),
 	"db-transaction-mode":          aiNever(aiNoAIConfig),
 	"db-commit":                    aiNever("the user's transaction"),

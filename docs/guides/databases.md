@@ -217,7 +217,7 @@ The data page asks the server for one page at a time (`db_page_rows`, default 10
 
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
-**From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line.
+**From SQL.** In a console or a project `.sql` file, put the cursor on a table or view name (`users`, `public.users`, `"Order Items"`). **Databases: Go to Definition** opens its DDL; the name must be loaded in the tree, so expand its schema first. On `alias.column` (`u.email`) it opens the table's DDL with the cursor on the column; on a function or procedure name it opens its stored source. **Databases: Find Usages** lists every line of the project's `.sql` files that names it (whole word, any case); Enter opens the line. **Databases: Rename in SQL…** asks for a new name, then a card (Cancel first) says how many places change in this buffer and in the other project `.sql` files; Rename replaces the whole name (plain or quoted) and leaves strings and comments alone. Only the SQL text changes, never the database; files open with unsaved changes are left alone.
 
 ## Completion
 

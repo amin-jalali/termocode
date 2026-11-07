@@ -65,6 +65,7 @@ type dbConsoleState struct {
 	lens     map[string]string // file + "\x00" + SQL → the lens status
 	attached map[string]string // project .sql file → connection (session only)
 	pending  *dbRun            // waits for the attach picker or the guard card
+	rename   *dbRenameState    // the SQL rename being asked for (db_rename.go)
 	waiting  *dbRun            // waits for its connection
 	running  *dbRun
 	shown    *dbRun // the result on the page
@@ -897,6 +898,8 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	switch m.confirmKind {
+	case confirmKindDBRename:
+		return m.databaseRenameApply(id), true
 	case confirmKindDBExplain:
 		return m.databaseExplainConfirm(id), true
 	case confirmKindDBRun:
