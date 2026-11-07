@@ -227,7 +227,13 @@ func (m *Model) webAttachPlan(a *webproto.Attach) (webAttachJob, error) {
 		j.text = "Pull request " + a.ID + " of this repository. Read it with your tools when you need more than its number."
 	case webproto.AttachResource:
 		j.text = "The MCP resource " + ai.RedactSecrets(a.ID) + ". Read it with your MCP tools when you need it."
-	case webproto.AttachRace, webproto.AttachBlock, webproto.AttachProject:
+	case webproto.AttachBlock: // MOB-10: a tool's block in the open chat
+		text, ok := m.webChatBlockText(a.ID)
+		if !ok {
+			return j, gone("That block")
+		}
+		j.text = text
+	case webproto.AttachRace, webproto.AttachProject:
 		j.text = "The user points at " + a.Kind + " " + a.ID + " (" + j.label + ")."
 	default:
 		return j, webErr(webproto.CodeBadRequest, "That item cannot be sent.")

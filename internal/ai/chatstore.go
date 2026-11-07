@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/blocks"
 	"github.com/amin-jalali/termocode/internal/crash"
 )
 
@@ -72,6 +73,10 @@ type StoredMessage struct {
 	// KeepGoing is set on a user message the keep-going loop sent
 	// (OMX-7): the push number, from 1.
 	KeepGoing int `json:"keep_going,omitempty"`
+	// Block is the visual block of a tool line (MOB-10): what the tool's
+	// View hook built from the call. Only shown (the phone draws it);
+	// never sent to the model.
+	Block *blocks.Block `json:"block,omitempty"`
 }
 
 // Run states (StoredRun.State).

@@ -11,6 +11,8 @@
 .msg-model::before { content: "· "; }
 .msg-text { margin: 0; white-space: pre-wrap; }
 .msg-tool { display: flex; gap: var(--s2); font-family: var(--font-mono); font-size: var(--fs-row); line-height: var(--lh-row); color: var(--muted); unicode-bidi: isolate; }
+.msg-tool:has(> .blks) { flex-wrap: wrap; }
+.msg-tool > .blks { flex-basis: 100%; font-family: var(--font-sans); color: var(--text); }
 .msg-error { padding: var(--s2) var(--s3); border-inline-start: 2px solid var(--red); color: var(--text-2); }
 .cursor { color: var(--ai); animation: blink 1s steps(1) infinite; }
 .cursor.is-paused { animation: none; opacity: 0.5; }

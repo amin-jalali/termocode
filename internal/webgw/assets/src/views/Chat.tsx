@@ -17,6 +17,7 @@ import { BlobImg } from "../ui/BlobImg";
 import { Md } from "../ui/Markdown";
 import { Cod } from "../ui/icons";
 import { layout } from "../lib/layout";
+import { hasBlocks, toolBlocks } from "../lib/toolblocks";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
 import { errText } from "../ui/CardSheet";
 import { ChatList } from "./ChatList";
@@ -138,6 +139,7 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
         <div class="msg msg-tool" data-i={m.i} dir="ltr">
           <span class="tool-mark" aria-hidden="true">⚙</span>
           <span class="tool-text">{m.text ?? ""}</span>
+          {hasBlocks(m) && toolBlocks.value?.(m)}
         </div>
       );
     case "error":

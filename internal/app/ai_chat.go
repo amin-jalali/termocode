@@ -507,6 +507,9 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 			if s.toolArgs != nil && aiMCPTool(msg.ev) {
 				s.aiKeepToolDetail(len(s.conv.Messages)-1, l.Text, s.toolArgs, msg.ev.Detail)
 			}
+			if msg.ev.View != nil { // MOB-10: the phone draws it under the line
+				l.Block = msg.ev.View
+			}
 		}
 		s.toolArgs = nil
 		for _, n := range s.aiTakeToolNotes() { // MCPX-38: for the user, not the model
