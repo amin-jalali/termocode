@@ -378,6 +378,21 @@ minute after the reset, **once** per limit, and a toast says so. It never
 types while the agent works, while a y/n or permission question is on the
 screen, or into a closed tab.
 
+### Switch to another account
+
+You do not have to wait for the reset. Run **Agent: Switch Account…** on
+the tab. When another account is free, the limit toast already names it.
+
+- The card offers every other account of that agent (see
+  [Accounts](#accounts)) whose own limit is not on. **Cancel** is first.
+- The pick starts the same agent as that account, in the same folder, in
+  a new tab. When the agent is ready, termocode types one short task: read
+  `git status`, the diff and the recent commits, then go on.
+- The old tab stays as it is. termocode never moves or reads sign-in
+  files: each account keeps its own folder.
+- Only Claude Code and Codex have accounts. The AI cannot run this
+  command.
+
 ## Usage and plan limits
 
 The status bar shows a pill like `✦ Claude 62% ↻14:30`: the part of the
