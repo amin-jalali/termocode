@@ -88,6 +88,7 @@ func TestHTTPChainDepCancelAndNoAskWhenAnswered(t *testing.T) {
 	if c, _ := m.handleHTTPConfirm("cancel"); c != nil || len(m.httpS().chainNext) != 0 || m.httpS().chainWait != nil {
 		t.Fatal("cancel left work behind")
 	}
+	m.confirmOpen = false // the card closes on any answer (Update)
 	_, login := chainDepReq(t, m, file, "login")
 	covSvcHTTPRun(t, m, m.httpSendRequest(file, f.Vars, login, ""))
 	cmd := m.httpSendRequest(file, f.Vars, me, "")

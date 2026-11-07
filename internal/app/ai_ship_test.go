@@ -69,7 +69,14 @@ func (f *aiShipFake) FailedLog(context.Context, ghci.Run) (ghci.FailedLog, error
 // messages until done() holds.
 func aiShipDrive(t *testing.T, m *Model, cmd tea.Cmd, done func() bool) {
 	t.Helper()
-	msgs := make(chan tea.Msg, 64)
+	// One channel per model for all drives: a waiter one drive started
+	// (an ACP thread's acpWait) answers into the next drive, not into a
+	// channel nobody reads any more.
+	ch, loaded := aiShipChans.LoadOrStore(m, make(chan tea.Msg, 64))
+	if !loaded {
+		t.Cleanup(func() { aiShipChans.Delete(m) })
+	}
+	msgs := ch.(chan tea.Msg)
 	start := func(c tea.Cmd) {
 		if c != nil {
 			go func() { msgs <- c() }()
@@ -106,6 +113,9 @@ func aiShipDrive(t *testing.T, m *Model, cmd tea.Cmd, done func() bool) {
 		}
 	}
 }
+
+// aiShipChans holds each model's drive channel (aiShipDrive).
+var aiShipChans sync.Map
 
 func aiShipModel(t *testing.T, f *aiShipFake, replies ...ai.Chunk) (*Model, *recordingAIProvider) {
 	t.Helper()

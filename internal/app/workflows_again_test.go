@@ -132,6 +132,7 @@ func TestWorkflowsRetryRunsAgain(t *testing.T) {
 		t.Fatalf("no retry card: kind %v", m.confirmKind)
 	}
 	m.answerWorkflowCard("retry")
+	m.confirmOpen = false // the card closes on any answer (Update)
 	if st.live[id] == nil {
 		t.Fatalf("Retry did not continue run %s: live %v", id, st.live)
 	}
