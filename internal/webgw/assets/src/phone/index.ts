@@ -2,6 +2,8 @@
 // from here; they come with the phone's lazy chunk (MOB-4), never app.js.
 // Styles: styles/phone.css.
 export { BoardTile } from "./BoardTile";
+export { LiveBoard, useLiveBoard } from "./LiveBoard";
+export { BOARD_COLUMNS, BOARD_TOPICS, OP_BOARD_GET, type Board, type BoardItem } from "./board";
 export { Block } from "./Block";
 export { PhoneCard } from "./Card";
 export { PhoneChip, PhoneChips } from "./Chip";
