@@ -4,6 +4,7 @@
 import { h } from "preact";
 import { prefs, setPref, type Direction, type Language, type Theme } from "../lib/prefs";
 import { go, route } from "../lib/router";
+import { layout } from "../lib/layout";
 import { t } from "../strings";
 import { NotifyField } from "../ui/NotifyField";
 import { BookmarkField } from "../ui/BookmarkField";
@@ -75,6 +76,13 @@ export function MoreView() {
     <View tab="more" title={t("tab.more")}>
       <div class="more">
         <nav class="more-links" aria-label={t("tab.more")}>
+          {layout.value === "phone" && (
+            // The phone's chat-first Home (MOB-4); its drawer says whether the page starts there.
+            <button type="button" class="more-link" data-sub="home" onClick={() => go({ tab: "home", rest: "", query: {} })}>
+              <span aria-hidden="true">✦ </span>
+              {t("key.home")}
+            </button>
+          )}
           <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "search", query: {} })}>
             {t("more.search")}
           </button>
