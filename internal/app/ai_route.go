@@ -76,6 +76,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAISideDone(msg), true
 	case aiHomeDoneMsg: // MOB-16 (web_chat_home.go)
 		return m.onAIHomeDone(msg), true
+	case aiDictateDoneMsg: // CMP-48 (ai_dictate.go)
+		return m.onAIDictateDone(msg), true
 	case aiHandoffMsg: // OMX-21 (ai_session_tools.go)
 		return m.onAIHandoff(msg), true
 	case aiMemoryDoneMsg: // ai_memory_extract.go
@@ -106,6 +108,9 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIOAuthDone(msg), true
 	}
 	if cmd, ok := m.handleAIBgMsg(msg); ok { // ai_bg_runs.go
+		return cmd, true
+	}
+	if cmd, ok := m.handleAIChatSchedMsg(msg); ok { // ai_chat_sched.go
 		return cmd, true
 	}
 	if cmd, ok := m.handleWfxMsg(msg); ok { // workflows_state.go

@@ -108,7 +108,7 @@ export interface Reply {
  * passkey sign-in), the way /auth is posted: no cache, no redirect, no
  * referrer. Same-origin credentials, so the laptop can set and read the
  * httpOnly bookmark cookie (WEBP-12). A network failure is status 0. */
-export async function postJSON(path: "/pair/start" | "/pair/wait" | "/pair/finish" | "/login/start" | "/login/finish" | "/login/totp" | "/login/device" | "/login/forget", body: unknown): Promise<Reply> {
+export async function postJSON(path: "/pair/start" | "/pair/wait" | "/pair/finish" | "/login/start" | "/login/finish" | "/login/totp" | "/login/device" | "/login/forget" | "/login/app/start" | "/login/app/finish", body: unknown): Promise<Reply> {
   let res: Response;
   try {
     res = await fetch(path, {

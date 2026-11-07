@@ -1141,6 +1141,9 @@ func (m Model) routeToConnect(msg tea.Msg) (Model, tea.Cmd) {
 	if _, key := msg.(tea.KeyMsg); key && m.wtFormOpen() { // Worktree: New… (worktrees_new.go)
 		return m.routeToWTForm(msg)
 	}
+	if _, key := msg.(tea.KeyMsg); key && m.wtMultiOpen() { // a worktree in each repository (worktrees_multi.go)
+		return m.routeToWTMulti(msg)
+	}
 	if k, key := msg.(tea.KeyMsg); key && k.Type == tea.KeyEnter && m.wtLinkOpen() && m.connect.FocusedID() == "ref" {
 		return m, m.wtLinkStart() // Enter in the field links (worktrees_link.go)
 	}
@@ -1168,6 +1171,7 @@ func (m Model) routeToConnect(msg tea.Msg) (Model, tea.Cmd) {
 		m.connect, cmd = m.connect.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
 		m.refreshItermocSlotCard()
 		m.refreshWTForm()
+		m.refreshWTMulti()
 		return m, cmd
 	}
 	var cmd tea.Cmd

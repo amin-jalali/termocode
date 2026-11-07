@@ -4,13 +4,15 @@
 // the laptop (the chat is held elsewhere, the AI is busy) shows one calm
 // line and keeps the draft. onSent runs after a send was taken (an old
 // chat the page read is then the laptop's open one). Enter sends with a keyboard; on a phone Enter
-// is a new line and the Send button sends.
+// is a new line and the Send button sends. Where the browser has speech
+// input, a microphone button dictates into the draft (CMP-48, dictate.ts);
+// nothing is sent until Send.
 import { aiSnap } from "../lib/ai";
 import { AIPicker } from "./AIPicker";
 import { h } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { getDraft, pendingDraft, setDraft, takePending } from "../lib/drafts";
-import { attachLabel, clearAttaches, getAttaches, removeAttach } from "../lib/attach";
+import { attachLabel, clearAttaches, getAttaches, inProject, removeAttach } from "../lib/attach";
 import { layout } from "../lib/layout";
 import { ctxTone } from "../state/chat";
 import { OfflineError, ReqError } from "../net/link";
@@ -19,6 +21,7 @@ import { t, type StringKey } from "../strings";
 import { Button } from "../ui/Button";
 import { Cod } from "../ui/icons";
 import { errText } from "../ui/CardSheet";
+import { canDictate, dictateChat, listening, stopDictate, toggleDictate } from "../lib/dictate";
 
 const MAX_ROWS_PX = 160;
 
@@ -30,6 +33,7 @@ export function Composer({
   ctx,
   onSent,
   placeholder,
+  ws = "",
 }: {
   chat: string;
   busy: boolean;
@@ -39,6 +43,8 @@ export function Composer({
   onSent?: () => void;
   /** placeholder replaces the box's hint (the phone's Home asks "What do you want?"). */
   placeholder?: string;
+  /** ws sends in another project through the door (MOB-55); "" is the home one. */
+  ws?: string;
 }) {
   const desk = layout.value === "desktop";
   useEffect(() => takePending(chat), [chat, pendingDraft.value]);
@@ -46,6 +52,23 @@ export function Composer({
   const [note, setNote] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const box = useRef<HTMLTextAreaElement | null>(null);
+
+  // The microphone writes to the chat this composer shows.
+  useEffect(() => {
+    dictateChat.value = chat;
+    return () => {
+      if (listening.peek() === chat) stopDictate();
+      if (dictateChat.peek() === chat) dictateChat.value = null;
+    };
+  }, [chat]);
+  const hearing = listening.value === chat;
+  const mic = canDictate() && (
+    <span class="mic">
+      <Button kind="quiet" icon={<Cod name={hearing ? "mic-filled" : "mic"} />} iconOnly pressed={hearing} title={t(hearing ? "dictate.stop" : "dictate.start")} onClick={toggleDictate}>
+        {t(hearing ? "dictate.stop" : "dictate.start")}
+      </Button>
+    </span>
+  );
 
   // The box grows with its text up to about four lines, then scrolls.
   useLayoutEffect(() => {
@@ -60,7 +83,9 @@ export function Composer({
     if (!live.peek() || sending || !body.trim()) return;
     setSending(true);
     const attach = getAttaches(chat); // MOB-5: references only, the laptop reads them
-    link.request("chat.send", { text: body, ...(chat ? { chat_id: chat } : {}), ...(attach.length ? { attach } : {}) }).then(
+    const sent = inProject(attach, ws); // MOB-55: one project per send (the laptop checks)
+    const args = { text: body, ...(chat ? { chat_id: chat } : {}), ...(sent.length ? { attach: sent } : {}) };
+    link.requestWithID("chat.send", args, ws || undefined).result.then(
       () => {
         setSending(false);
         setNote(null);
@@ -128,6 +153,7 @@ export function Composer({
           onKeyDown={onKeyDown}
           onKeyPress={onKeyPress}
         />
+        {!desk && mic}
         {!desk && (
           <span class={busy ? "stop" : "send"}>
             {busy ? (
@@ -161,6 +187,7 @@ export function Composer({
               {t("chat.ctx", { pct: ctx.pct })}
             </span>
           )}
+          {mic}
           <span class={busy ? "stop" : "send"}>
             {busy ? (
               <Button kind="quiet" needsLink icon={<Cod name="debug-stop" />} iconOnly title={t("stop")} onClick={stop}>

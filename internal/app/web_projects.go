@@ -104,7 +104,9 @@ func (m *Model) webProjectsBuild() webproto.ProjectsSnap {
 	if m.web != nil {
 		in = m.web.projects.in
 	}
-	return projectsMerge(here, m.agentRollupItems(), in, home)
+	snap := projectsMerge(here, m.agentRollupItems(), in, home)
+	webDoorMarkOpening(&snap) // MOB-51
+	return snap
 }
 
 // webPublishProjects starts a read when the first browser listens or the
@@ -155,7 +157,7 @@ func projectsMerge(here string, own []agentroll.Item, in *projectsInput, home st
 		if it := by[p]; it != nil {
 			return it
 		}
-		it := &webproto.ProjectItem{ID: webProjectID(p), Name: webName(filepath.Base(p)), Where: webName(projectWhere(p, home)), State: "asleep"}
+		it := &webproto.ProjectItem{ID: webProjectID(p), WS: session.Key(p), Name: webName(filepath.Base(p)), Where: webName(projectWhere(p, home)), State: "asleep"}
 		by[p] = it
 		order = append(order, it)
 		return it

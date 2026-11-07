@@ -57,6 +57,10 @@ type Meta struct {
 	Port      int      `json:"port,omitempty"`       // the dev server port of the worktree (CMP-5, ports.go)
 	BlockedBy []string `json:"blocked_by,omitempty"` // the worktrees (paths) whose work this one waits for (CMP-80, deps.go)
 
+	// Group ties the worktrees of one task across the repositories of a
+	// multi-repo workspace (CMP-22): the branch they share.
+	Group string `json:"group,omitempty"`
+
 	// The PR follow-up loop (CMP-31): Follow asks to send new PR
 	// feedback to the worktree's agent; FollowSeen are the comment ids
 	// sent or skipped (newest last, capped), FollowRun the failed CI run

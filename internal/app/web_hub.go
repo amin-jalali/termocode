@@ -75,6 +75,8 @@ type webHub struct {
 	ai       webAICalls                 // Update only: the page's AI calls (web_ai.go)
 	views    webViewsState              // Update only: the live views (web_views.go)
 	ups      webUploads                 // staged uploads (web_transfer.go; own lock)
+	push     webPushState               // Update only: pushes to paired phones (web_push.go)
+	wake     webPushWakeState           // Update only: phones' UnifiedPush wakes (web_push_wake.go, MOB-32)
 	// settled: Update only; the publishers ran once since the hub went
 	// idle (web_after.go).
 	settled bool
@@ -113,6 +115,11 @@ func (h *webHub) serve(ln net.Listener, peer func(net.Conn) error, onErr func(er
 	h.mu.Unlock()
 	h.wg.Add(1)
 	crash.Go("web: the hub listener", func() { h.accept(ln) })
+	h.wg.Add(1)
+	crash.Go("web: push subscriptions", func() {
+		defer h.wg.Done()
+		_ = h.send(h.ctx, webPushLoad())
+	})
 }
 
 // stop closes the listener (a unix listener removes its socket file) and

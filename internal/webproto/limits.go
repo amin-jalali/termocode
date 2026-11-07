@@ -53,8 +53,19 @@ func (h *Hello) validate(size int) error {
 	return nil
 }
 
-func (s *Sub) validate(int) error   { return validTopicList(s.Topics) }
-func (u *Unsub) validate(int) error { return validTopicList(u.Topics) }
+func (s *Sub) validate(int) error {
+	if !validWSField(s.WS) {
+		return invalid("bad ws")
+	}
+	return validTopicList(s.Topics)
+}
+
+func (u *Unsub) validate(int) error {
+	if !validWSField(u.WS) {
+		return invalid("bad ws")
+	}
+	return validTopicList(u.Topics)
+}
 
 func validTopicList(topics []string) error {
 	if len(topics) == 0 || len(topics) > MaxTopicsPerMsg {
@@ -76,6 +87,9 @@ func (r *Req) validate(int) error {
 	}
 	if r.Op == "" || len(r.Op) > MaxOpName {
 		return invalid("bad op name")
+	}
+	if !validWSField(r.WS) {
+		return invalid("bad ws")
 	}
 	return nil
 }

@@ -38,6 +38,7 @@ import { undoRename } from "../views/files/FileActions";
 import { fileOfTab } from "./difftab";
 import { applyFix, formatBuf, goTo, inlayHints, quickFixes } from "./lsp";
 import { session } from "./live";
+import { canDictate, dictateChat, toggleDictate } from "./dictate";
 import { askHere, askLaptop } from "../ui/AskHere";
 import { gitFailed } from "../views/git/errors";
 import { mdBufs } from "../views/MDPreview";
@@ -138,6 +139,7 @@ export function commands(): Command[] {
     { id: "aiProfileNew", label: "cmd.ai_profile_new", run: () => askLaptopForm("ai-profile-new") },
     { id: "aiProfileForm", label: "cmd.ai_profile_form", run: () => askLaptopForm("ai-profile-form") },
     { id: "aiAttach", label: "ai.attach", when: hasFile, run: () => activeDesk.peek()?.aiAct("attach") },
+    { id: "aiDictate", label: "cmd.ai_dictate", when: () => canDictate() && dictateChat.peek() !== null, run: toggleDictate },
     { id: "agents", label: "cmd.agents", run: () => (setPanes({ side: true }), go({ tab: "more", rest: "agents", query: {} })) },
     { id: "worktrees", label: "cmd.worktrees", run: () => (setPanes({ side: true }), go({ tab: "more", rest: "worktrees", query: {} })) },
     { id: "showOnLaptop", label: "cmd.show_on_laptop", when: hasFile, run: () => { const f = activeFile.peek(); if (f) showOnLaptop(f); } },
@@ -154,6 +156,7 @@ export function commands(): Command[] {
     { id: "httpQuick", label: "cmd.http_quick", run: () => ((httpForm.value = "quick"), openSide("http")) },
     { id: "search", label: "cmd.search", run: () => go({ tab: "more", rest: "search", query: {} }) },
     { id: "tasks", label: "cmd.tasks", run: () => go({ tab: "more", rest: "tasks", query: {} }) },
+    { id: "newTask", label: "cmd.new_task", run: () => go({ tab: "more", rest: "new-task", query: {} }) },
     { id: "runs", label: "cmd.runs", run: () => go({ tab: "more", rest: "runs", query: {} }) },
     { id: "settings", label: "cmd.settings", run: () => go({ tab: "more", rest: "settings", query: {} }) },
     { id: "terminal", label: "cmd.terminal", keys: "Ctrl+`", run: () => go({ tab: "term", rest: "", query: {} }) },

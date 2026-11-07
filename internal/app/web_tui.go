@@ -78,6 +78,9 @@ func webStartBody(cfg webConfig, fromCLI bool) string {
 	}
 	b.WriteString("Shell output in the terminal panel is not masked.\n")
 	b.WriteString("It stops after " + strconv.Itoa(cfg.IdleMinutes) + " minutes without use, or with Web: Stop Panel.")
+	if cfg.PhoneWatch {
+		b.WriteString("\nA paired phone that has it open counts as use (web_phone).")
+	}
 	if fromCLI {
 		b.WriteString("\n\nAsked by termocode web from a script, not typed in a terminal.")
 	}

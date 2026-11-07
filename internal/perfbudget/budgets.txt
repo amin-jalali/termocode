@@ -107,6 +107,7 @@ web_term_key_bytes         180   B    # wire bytes per key typed into a real she
 web_gateway_conn_kib       350   KiB  # heap per browser after hello, 4 open, both ends in one process; local 174
 web_inbox_build_200          5   ms   # the inbox topic (MOB-2) of 200 items (cards, task runs, CI), median of 9; not measured yet (no local runs, owner order)
 web_view_run_table_200      25   ms   # view.run of a 200-row pr.list table: filter, sort, layout (MOB-9), median of 9; not measured yet (no local runs, owner order)
+web_board_build_4ws         25   ms   # board.projects rows of 4 projects with 8 agents each, worst of 200 (MOB-54, plan 6: design 5 ms); not measured yet (no local run), 25 ms floor
 
 # Workflows (WFX-21; internal/app/workflows_perf_guard_test.go)
 workflows_topic_100        25   ms   # the web topic of 100 workflows, median of 9; local 0.02 ms (floor)

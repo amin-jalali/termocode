@@ -34,18 +34,22 @@ type ProjectsSnap struct {
 
 // ProjectItem is one project. State: "here" is this window's workspace,
 // "running" another termocode runs there (a session or a window),
-// "asleep" nothing runs. Attached: a terminal shows its session; Service:
+// "opening" the door starts it for the phone (MOB-51), "asleep" nothing
+// runs. Attached: a terminal shows its session; Service:
 // a user service starts it; Recent: it is in the recent workspaces.
 // OpenedAt is Unix ms.
 type ProjectItem struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Where    string `json:"where"`
-	State    string `json:"state" enum:"here|running|asleep"`
+	State    string `json:"state" enum:"here|running|opening|asleep"`
 	Attached bool   `json:"attached,omitempty"`
 	Service  bool   `json:"service,omitempty"`
 	Recent   bool   `json:"recent,omitempty"`
 	Working  int    `json:"working,omitempty"`
 	Waiting  int    `json:"waiting,omitempty"`
 	OpenedAt int64  `json:"opened_at,omitempty"`
+	// WS is the project's workspace key (MOB-50): what the page puts in
+	// a frame's ws to reach this project through the door.
+	WS string `json:"ws,omitempty"`
 }

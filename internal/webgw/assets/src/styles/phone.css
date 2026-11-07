@@ -645,3 +645,28 @@ button.ph-tile:active { background: var(--bg-hover); }
   opacity: 0.55;
   pointer-events: none;
 }
+/* Project tasks (MOB-52): rows with an optional link button beside them;
+   nested checklist items step in. */
+.ph-tasks { display: flex; flex-direction: column; gap: var(--p-gap); }
+.ph-task { display: flex; align-items: center; gap: var(--p-s1); }
+.ph-task > .ph-row { flex: 1; min-width: 0; }
+.ph-row-link,
+.ph-retry {
+  flex: none;
+  min-width: var(--p-tap);
+  min-height: var(--p-tap);
+  border: 0;
+  border-radius: var(--p-r-row);
+  background: transparent;
+  color: var(--p-accent);
+  font: 600 var(--p-fs-body) / var(--p-lh-body) var(--p-font);
+}
+.ph-row-link:focus-visible,
+.ph-retry:focus-visible { outline: 2px solid var(--p-focus); outline-offset: 2px; }
+.ph-note {
+  margin: 0;
+  padding: var(--p-s2) var(--p-gutter);
+  color: var(--p-text-2);
+  font: var(--p-fs-meta) / var(--p-lh-meta) var(--p-font);
+}
+.ph-err { color: var(--p-st-failed); }

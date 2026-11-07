@@ -13,10 +13,15 @@ web	ai-apply-proposal	op:cards.answer
 web	ai-attach	cmd:aiAttach
 web	ai-auto-approve	op:ai.set_auto_approve
 web	ai-autopilot	palette
+web	ai-auto-model	palette
 web	ai-cancel	op:chat.stop
 web	ai-checkpoint-save	palette
+web	ai-chat-schedule	palette
+web	ai-chat-unschedule	palette
 web	ai-configure	op:ai.info
 web	ai-critic-toggle	palette
+web	ai-dial-next	palette
+web	ai-dictate	cmd:aiDictate
 web	ai-discard-proposal	op:cards.answer
 web	ai-doc	cmd:aiDoc
 web	ai-edit	cmd:aiEdit
@@ -377,10 +382,13 @@ web	view/Tests	view:testing
 web	web-pair	op:web.pair_ask
 web	web-share	op:web.grant_ask
 web	web-totp	op:web.totp_check
+web	workflow-dry-run	op:workflows.dry_run
+web	workflow-run	op:workflows.run
 web	workflow-stop	op:workflows.stop
 web	workflows	view:workflows
 web	workspace-add-folder	cmd:addFolder
 web	workspace-remove-folder	cmd:removeFolder
+web	worktree-new	op:worktrees.new_task
 web	zen-mode	cmd:zen
 excluded	acp-agents-edit	laptop only: the list names programs the laptop starts
 excluded	ai-agent-env	security: trust decisions are made on the laptop
@@ -491,6 +499,7 @@ missing	canvas-copy	AI|S
 missing	canvas-open	AI|M
 missing	ai-follow-agent	AI|M
 missing	codebase-search	Search|M
+missing	ai-dial	AI|S
 missing	containers-all-contexts	Containers|M
 missing	containers-build-cache-prune	Containers|S
 missing	containers-build-check	Containers|S
@@ -755,14 +764,12 @@ missing	tracker-show	Workspace|S
 missing	web-forward-port	Web|M
 missing	terminal-ai-hand-back	Terminal|S
 missing	terminal-ai-take-over	Terminal|S
+missing	tasks-suggest	Tasks|S
 missing	spec-new	Specs|M
 missing	spec-new-bugfix	Specs|M
 missing	spec-open	Specs|M
-missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
-missing	workflow-run	Workflows|S
-missing	workflow-triggers	Workflows|S
 missing	workspace-open-container	Workspace|M
 missing	workspace-reopen-devcontainer	Workspace|M
 missing	worktree-add-folder	Worktrees|M
@@ -785,9 +792,9 @@ missing	worktree-link	Worktrees|M
 missing	worktree-move	Worktrees|M
 missing	worktree-move-down	Worktrees|M
 missing	worktree-move-up	Worktrees|M
-missing	worktree-new	Worktrees|M
 missing	worktree-new-child	Worktrees|M
 missing	worktree-new-session	Worktrees|M
+missing	worktree-new-multi	Worktrees|M
 missing	worktree-notes	Worktrees|M
 missing	worktree-open	Worktrees|M
 missing	worktree-pin	Worktrees|M

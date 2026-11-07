@@ -174,10 +174,11 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools := m.aiChatToolsBy(root, call, aiRunCaller{})
-	tools = append(tools, aiTodoTools(call)...)                // OMX-7: the chat's todo list (not in run steps)
-	tools = append(tools, m.aiSessionTools()...)               // OMX-21: old chats, read only
+	tools = append(tools, aiTodoTools(call)...)               // OMX-7: the chat's todo list (not in run steps)
+	tools = append(tools, m.aiChatSchedTools(call)...)        // CMP-43: the chat schedules itself (always asks)
+	tools = append(tools, m.aiSessionTools()...)              // OMX-21: old chats, read only
 	tools = append(tools, aiTrackerTools(m.aiS().mcpProfile)...) // MOB-13: pin a read-only MCP call to the phone's Home
-	tools = append(tools, aiLibrarianTools()...)               // CMP-91: outside repositories, read only
+	tools = append(tools, aiLibrarianTools()...)              // CMP-91: outside repositories, read only
 	return append(tools, aiChatDocTools(m.chatDocStore())...) // CMP-94: the chat's docs
 }
 
@@ -299,10 +300,12 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		return m.startAIRun(text, prof, rules)
 	}
 	step := prof.Run("").Nodes[0]
+	slotName, routeNote := step.Slot, ""
 	slot, isACP := s.acpChatSlot() // CMP-83: the turn goes to the agent thread
 	if !isACP {
+		slotName, routeNote = s.aiRouteTurn(prof, step.Slot, text) // CMP-25: before the attachments are taken
 		var err error
-		if slot, err = s.resolveSlot(step.Slot); err != nil {
+		if slot, err = s.resolveSlot(slotName); err != nil {
 			return m.aiProfileProblem(prof.Name, err)
 		}
 	}
@@ -322,9 +325,11 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		model = "" // the chat's own model: stored chats stay as they were
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Attached: chips, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
-		ai.StoredMessage{Role: ai.StoredAssistant, Model: model},
-	)
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Attached: chips, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons})
+	if routeNote != "" { // CMP-25: for the user, not the model
+		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: routeNote})
+	}
+	s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredAssistant, Model: model})
 	s.scroll = 0
 
 	s.chatGen++
@@ -376,9 +381,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		MaxSteps:    s.settings.MaxSteps,  // 0: ai.DefaultMaxSteps
 		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
-		Reasoning:   s.reasoningFor(step.Slot, slot.cfg, s.turnThink),
-		Name:        aiSlotLabel(step.Slot, slot.cfg),
-		Fallbacks:   s.aiFallbacks(step.Slot),                                  // OMX-4
+		Reasoning:   s.reasoningFor(slotName, slot.cfg, s.turnThink),
+		Name:        aiSlotLabel(slotName, slot.cfg),
+		Fallbacks:   s.aiFallbacks(slotName),                                   // OMX-4
 		Compact:     aiWithCompactHooks(root, hooks, out, m.aiCompactor(slot)), // OMX-3, CMP-59
 		PreTool:     aiPreToolHooks(root, hooks, out),                          // CMP-59
 		// OMX-25: tool results are cut to what still fits the window.
@@ -663,6 +668,9 @@ func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	if title, ok := aiWorkflowAllow[t.Name]; ok { // WFX-9
 		allow.Title = title
 	}
+	if title, ok := aiChatSchedAllow[t.Name]; ok { // CMP-43: Cancel first
+		allow.Title, deny.Title = title, "Cancel"
+	}
 	if aiWorkflowCancelFirst[t.Name] || aiStashLosesData(t) {
 		deny.Title = "Cancel"
 	}
@@ -851,7 +859,11 @@ func (m *Model) openAIHistory() tea.Cmd {
 	}
 	items := make([]picker.Item, 0, len(list))
 	for _, c := range list {
-		items = append(items, picker.Item{ID: c.ID, Title: c.Title, Hint: aiAge(c.UpdatedAtMs)})
+		hint := aiAge(c.UpdatedAtMs)
+		if c.Schedule != nil { // CMP-43
+			hint += " · ⏰ " + c.Schedule.Label()
+		}
+		items = append(items, picker.Item{ID: c.ID, Title: c.Title, Hint: hint})
 	}
 	m.picker = picker.NewItems(" AI Chat History ", items)
 	m.picker.SetSize(m.w, m.h)

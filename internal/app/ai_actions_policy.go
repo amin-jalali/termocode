@@ -702,6 +702,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// CMP-38: the list of trigger events only reads; each event's card
 	// is the user's to answer.
 	"workflow-triggers": aiAuto(),
+	"workflow-pause":    aiConfirm(ai.ClassRun),
+	"workflow-retry":    aiConfirm(ai.ClassRun), // runs again; its writes still ask on the gate card
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),
@@ -721,18 +723,29 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Plan approval (G-PLAN): the AI can never approve its own plan or
 	// turn the question off.
 	"ai-reasoning-next": aiNever(aiNoAIConfig + "; more thinking costs the user more"),
-	"ai-plan-approval":  aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
-	"ai-autopilot":      aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
-	"ai-plan-review":    aiNever("the plan card is the user's answer; the AI never approves its own plan"),
-	"ai-profile-edit":   aiNever(aiNoAIConfig),
-	"ai-profile-new":    aiNever(aiNoAIConfig),
-	"ai-profile-form":   aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
-	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),
+	// The effort dial (CMP-24) sets a profile and a reasoning level at
+	// once: the user's own setup, and more effort costs the user more.
+	"ai-dial":          aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-dial-next":     aiNever(aiNoAIConfig + "; more effort costs the user more"),
+	"ai-plan-approval": aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai-auto-model":    aiNever(aiNoAIConfig + "; the AI never picks its own model"),
+	"ai-autopilot":     aiNever(aiNoAIConfig + "; the AI never lowers its own approval cards"),
+	"ai-plan-review":   aiNever("the plan card is the user's answer; the AI never approves its own plan"),
+	"ai-profile-edit":  aiNever(aiNoAIConfig),
+	"ai-profile-new":   aiNever(aiNoAIConfig),
+	"ai-profile-form":  aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
+	"ai-profile-trust": aiNever("trusting a project's prompts is the user's decision"),
 	// Keep going (OMX-7) sends model turns that cost money: only the
 	// user turns it on.
 	"ai-keep-going": aiNever(aiNoAIConfig + "; extra paid turns are the user's choice"),
+	// Chat schedules (CMP-43): the AI proposes its own with
+	// chat_schedule_set (always a card); the palette is the user's.
+	"ai-chat-schedule":   aiNever("paid turns at set times are the user's choice (chat_schedule_set asks the user)"),
+	"ai-chat-unschedule": aiNever("the user's own command (chat_schedule_clear)"),
 	// The side chat (OMX-30) is the user's own question.
 	"ai-side": aiNever("the side chat is the user's own question beside the AI's turn"),
+	// Voice input (CMP-48) listens on the user's microphone: only the user starts it.
+	"ai-dictate": aiNever("it listens on the user's microphone; only the user starts it"),
 	// Handoff (OMX-21) ends the AI's own chat; the user starts it.
 	"ai-handoff": aiNever("it ends the AI's own chat; the user starts a handoff"),
 	// Project rules (OM-1): the AI only gets the text in its prompt.
@@ -754,7 +767,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-web-tools": aiNever(aiNoPicker),
 	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
 	// list and deleting the shots are the user's.
-	"ai-proofs": aiNever(aiNoPicker),
+	"ai-proofs":    aiNever(aiNoPicker),
 	"ai-image-gen": aiNever("image generation is paid; only the user turns it on"),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
@@ -873,6 +886,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_prompt_cache":       aiNever(aiNoAIConfig),
 	"ai_reasoning":          aiNever(aiNoAIConfig),
 	"ai_fallback":           aiNever(aiNoAIConfig),
+	"ai_router":             aiNever(aiNoAIConfig),
 	"ai_concurrency":        aiNever(aiNoAIConfig),
 	"ai_parallel_max":       aiNever(aiNoAIConfig),
 	"ai_worktrees":          aiNever(aiNoAIConfig),
@@ -884,6 +898,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_approval_rules":     aiNever(aiNoAIConfig + "; the AI never writes its own approval rules"),
 	"ai_guardian":           aiNever(aiNoAIConfig + "; the AI never picks its own reviewer"),
 	"ai_categories":         aiNever(aiNoAIConfig),
+	"ai_dial":               aiNever(aiNoAIConfig),
 	"ai_step_escalate":      aiNever(aiNoAIConfig),
 	"ai_plan_review_rounds": aiNever(aiNoAIConfig),
 	"ai_plan_file":          aiNever(aiNoAIConfig),
@@ -963,14 +978,20 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	// What an outside agent may do without a card: the user's answer only.
 	"mcp_server_auto_approve": aiNever("what outside agents may do without asking; only the user's \"Always allow\" on their card sets it"),
 	// The web panel gives shell access from a browser (web_settings.go).
-	"web_panel":        aiNever(aiNoWeb),
-	"web_port":         aiNever(aiNoWeb),
-	"web_listen":       aiNever(aiNoWeb),
-	"web_require_totp": aiNever(aiNoWeb),
-	"web_idle_minutes": aiNever(aiNoWeb),
-	"web_max_hours":    aiNever(aiNoWeb),
-	"web_open_browser": aiNever(aiNoWeb),
-	"web_max_viewers":  aiNever(aiNoWeb),
+	"web_panel":         aiNever(aiNoWeb),
+	"web_port":          aiNever(aiNoWeb),
+	"web_listen":        aiNever(aiNoWeb),
+	"web_require_totp":  aiNever(aiNoWeb),
+	"web_app_key_login": aiNever(aiNoWeb),
+	"web_idle_minutes":  aiNever(aiNoWeb),
+	"web_max_hours":     aiNever(aiNoWeb),
+	"web_open_browser":  aiNever(aiNoWeb),
+	"web_max_viewers":   aiNever(aiNoWeb),
+	"web_push_detail":   aiNever(aiNoWeb),
+	"web_phone":         aiNever(aiNoWeb),
+	// The door (MOB-56): more open projects = more of the laptop on the phone.
+	"web_projects_max":         aiNever(aiNoWeb),
+	"web_project_idle_minutes": aiNever(aiNoWeb),
 	// Workflows (ADR 0021): the AI may change a limit after its card; it
 	// never turns workflows on or off and never widens the agent sandbox.
 	"workflows_enabled":          aiNever("workflows run unattended and write to outside systems; only the user turns them on or off"),

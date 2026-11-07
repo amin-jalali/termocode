@@ -28,12 +28,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Configure Provider… | `ai-configure` |   |   |
 | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | `ai-mcp-connect` |   |   |
 | AI: Delete Chat… | `ai-history-delete` |   |   |
+| AI: Dictate into Chat… (voice input) | `ai-dictate` |   |   |
 | AI: Discard Proposed Edit | `ai-discard-proposal` |   |   |
 | AI: Doctor | `ai-doctor` |   |   |
 | AI: Edit Model Slots | `ai-models-edit` |   |   |
 | AI: Edit Profiles | `ai-profile-edit` |   |   |
 | AI: Edit Profile… | `ai-profile-form` |   |   |
 | AI: Edit Selection… | `ai-edit` | `Alt+I` | `Alt+I` |
+| AI: Effort Dial… (low / medium / high / ultra, plan, fast) | `ai-dial` |   |   |
 | AI: Explain Selection / Line | `ai-explain` |   |   |
 | AI: Export Chat as Markdown | `ai-export-chat` |   |   |
 | AI: Fix Bug from Spec… | `bugfix-spec-fix` |   | `test-first fix prompt in the chat` |
@@ -65,6 +67,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
 | AI: New Workflow… | `workflow-new` |   |   |
 | AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` / `Alt+N` | `Alt+Shift+P / Alt+N` |
+| AI: Next Effort Mode | `ai-dial-next` |   |   |
 | AI: Next Reasoning Level | `ai-reasoning-next` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
@@ -82,6 +85,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Runs | `ai-runs` |   |   |
 | AI: Search Chat History… | `ai-history-search` |   | `words in your saved AI chats` |
 | AI: Save Code Checkpoint | `ai-checkpoint-save` |   |   |
+| AI: Schedule This Chat… | `ai-chat-schedule` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |
 | AI: Services Trust… | `services-trust` |   |   |
 | AI: Share Chat by Link… | `ai-share-chat` |   | `a viewer link; they watch and comment` |
@@ -92,9 +96,11 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
 | AI: Skills… | `ai-skills` |   |   |
+| AI: Stop Chat Schedule | `ai-chat-unschedule` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |
 | AI: Switch Profile… | `ai-profile-switch` |   |   |
 | AI: Toggle Agent Worktrees | `ai-worktrees-toggle` |   |   |
+| AI: Toggle Auto Model Pick (quick / main per turn) | `ai-auto-model` |   |   |
 | AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` / `Alt+G` | `Alt+Shift+A / Alt+G` |
 | AI: Toggle Critic Review | `ai-critic-toggle` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
@@ -808,6 +814,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Tasks: Run Build Task | `tasks-build` |   |   |
 | Tasks: Run Task... | `tasks-run` | `Alt+R` | `Alt+R` |
 | Tasks: Run Test Task | `tasks-test` |   |   |
+| Tasks: Suggested Tasks… | `tasks-suggest` |   | `TODO / FIXME comments and slow code` |
 | Tasks: Terminate Task | `tasks-terminate` |   |   |
 
 ## Terminal
@@ -904,6 +911,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workflows: Edit Selected File | `workflow-edit-file` |   |   |
 | Workflows: History of Selected | `workflow-history` |   |   |
 | Workflows: Open | `workflows` |   |   |
+| Workflows: Pause / Continue Selected Run | `workflow-pause` |   |   |
+| Workflows: Retry Failed Part of Selected Run… | `workflow-retry` |   |   |
 | Workflows: Run Selected… | `workflow-run` |   |   |
 | Workflows: Stop Selected Run… | `workflow-stop` |   |   |
 | Workflows: Trigger Events… | `workflow-triggers` |   |   |
@@ -940,6 +949,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Move Selected Up | `worktree-move-up` |   |   |
 | Worktree: New Agent Session in Selected… | `worktree-new-session` |   |   |
 | Worktree: New Child of Selected… | `worktree-new-child` |   |   |
+| Worktree: New in Each Repository… | `worktree-new-multi` |   |   |
 | Worktree: New… | `worktree-new` |   |   |
 | Worktree: Next Filter | `worktree-filter` |   |   |
 | Worktree: Open Dev Server of Selected | `worktree-run-open` |   |   |

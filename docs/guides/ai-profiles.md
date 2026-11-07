@@ -273,6 +273,47 @@ Now using gpt (gpt-5-mini).` The rest of that turn stays on the backup;
 the next message tries the slot's own model again. The line is for you:
 the model does not see it.
 
+### Auto model pick
+
+With the auto model pick on, each plain chat turn of the **Default**
+profile runs on the model that fits it. termocode guesses on your
+machine, with no extra request:
+
+- a short, simple message runs on the `quick` slot,
+- code, an attached file or image, a long message, `think`, or words
+  like refactor, design, debug or why run on `main`.
+
+When in doubt the turn runs on `main`. Turn it on with **AI: Toggle Auto
+Model Pick (quick / main per turn)**. A card shows the two models first;
+**Cancel** is the first button. The same command turns it off.
+
+The chat shows each pick and why, for example
+`⇢ Auto model: quick (gpt-5-mini) — a short, simple message`. The line
+is for you: the model does not see it. When the picked slot can not run
+(for example it has no key), the turn stays on `main` and the line says
+why.
+
+Your own slots and rules go in `ai_router`. Rules come first, in order:
+a message that holds one of the words (whole words, any case) runs on
+that slot.
+
+```json
+{
+  "ai_router": {
+    "mode": "auto",
+    "quick": "gpt",
+    "deep": "main",
+    "rules": [
+      { "words": ["docs", "readme", "changelog"], "slot": "writer" },
+      { "words": ["sql", "query"], "slot": "local" }
+    ]
+  }
+}
+```
+
+Other profiles, agent runs and steps that name a slot keep their own
+model. The AI can not turn the pick on or off.
+
 ### Keys
 
 No file in this guide holds a key. A step (or slot) uses the key of its
@@ -1330,6 +1371,7 @@ you change an answer.
 | `ai_models` | `{}` | Your model slots. |
 | `ai_concurrency` | `{}` | Most requests at once per provider or model, for example `{"anthropic": 2, "openai/gpt-5": 1}`. Extra requests wait before they are sent. Use it when parallel steps get rate limit (429) answers. |
 | `ai_fallback` | `[]` | [Backup models](#backup-models-fallback) of the `main` slot. |
+| `ai_router` | `{}` | [Auto model pick](#auto-model-pick) of plain chat turns: `mode` auto or off, `quick` and `deep` slots, word `rules`. |
 | `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. A planned run uses 3 when this is not set. |
 | `ai_worktrees` | `auto` | `auto`: writing steps that run at the same time get [their own worktree](#own-worktrees-for-parallel-steps). `off`: every step works in your tree. |
 | `ai_team_mode` | `false` | [Team mode](#team-mode-experimental): steps that run at the same time get notes between them and a shared claim list. |

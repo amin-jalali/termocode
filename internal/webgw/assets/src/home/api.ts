@@ -55,7 +55,7 @@ export interface HomeHost {
   code(e: unknown): string;
 
   Message: ComponentType<{ m: ChatMsg; chat?: string; canFetch?: boolean }>;
-  Composer: ComponentType<{ chat: string; busy: boolean; profile?: string; model?: string; onSent?: () => void; placeholder?: string }>;
+  Composer: ComponentType<{ chat: string; busy: boolean; profile?: string; model?: string; onSent?: () => void; placeholder?: string; ws?: string }>;
   Sheet: ComponentType<{ onLater: () => void; children: ComponentChildren; label?: string }>;
   /** Block draws a block the laptop built (MOB-3's renderer); null while
    * the page has none, and the Home then draws the kinds it knows. */

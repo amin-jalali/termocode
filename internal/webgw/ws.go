@@ -78,6 +78,27 @@ type WSConfig struct {
 	Devices *webdevices.Store
 	// Control answers control.challenge / control.ask (nil: not here).
 	Control *Control
+	// WatchTokens gives a paired device a watch token (app.watch_token,
+	// MOB-23); nil: the op is not available.
+	WatchTokens *WatchTokens
+	// PhoneWatch (web_phone "on", MOB-31): each ping a paired, non-guest
+	// device's link answers is use (its session and Activity), so a phone
+	// that only watches keeps the gateway up. Max still ends the session.
+	PhoneWatch bool
+	// Push keeps the phones' UnifiedPush endpoints (push.subscribe,
+	// MOB-32; nil: not here).
+	Push *UnifiedPush
+
+	// Home is the key of this gateway's own workspace (MOB-50): a frame
+	// with no ws or this ws goes to Dial's hub. "" for none.
+	Home string
+	// DialWS opens a connection to the hub of another running workspace
+	// of the same user, by key (nil: this gateway is not a door; frames
+	// for other workspaces are refused).
+	DialWS func(ctx context.Context, ws string) (net.Conn, error)
+	// MaxHubs caps the other workspaces one browser has open at once
+	// (web_projects_max; 0: webproto.MaxHubs).
+	MaxHubs int
 }
 
 // Defaults of WSConfig.
@@ -135,6 +156,9 @@ func NewWS(cfg WSConfig) *WS {
 	}
 	if cfg.ThrottleMax <= 0 {
 		cfg.ThrottleMax = DefaultThrottleMax
+	}
+	if cfg.MaxHubs <= 0 {
+		cfg.MaxHubs = webproto.MaxHubs
 	}
 	return &WS{cfg: cfg, conns: map[*wsConn]struct{}{}}
 }
@@ -314,6 +338,12 @@ type wsConn struct {
 
 	grantLogin string      // browser reader only: the open control challenge
 	asking     atomic.Bool // the laptop is being asked for control
+
+	watcher   bool                // set at hello: an answered ping is use (PhoneWatch)
+	name      string              // the device name from hello, for project hubs
+	sideHello []byte              // hello without token or resume, for project hubs
+	sideMu    sync.Mutex          // guards sides
+	sides     map[string]*sideHub // MOB-50: the other workspaces' hubs, by key
 }
 
 // serve runs one connection until it ends.
@@ -346,6 +376,9 @@ func (c *wsConn) keepalive() {
 		if err != nil {
 			c.end(webproto.CloseCode(websocket.StatusAbnormalClosure), false)
 			return
+		}
+		if c.watcher {
+			c.activity() // MOB-31: a phone that watches is use
 		}
 	}
 }
@@ -404,6 +437,7 @@ func (c *wsConn) hello() bool {
 		return false
 	}
 	c.sess, c.token = sess, h.Token
+	c.watcher = c.s.watcher(sess.Device)
 	if c.id, err = connID(); err != nil {
 		c.close(closeInternal)
 		return false
@@ -437,6 +471,17 @@ func (s *WS) deviceOK(device string) bool {
 	}
 	d, ok, err := s.cfg.Devices.Get(device)
 	return err == nil && ok && !d.NeedsRepair
+}
+
+// watcher: with PhoneWatch, a session of the owner's own paired device
+// (in the store, not a guest) watches. The launch link ("loc-…") and
+// guests never keep the gateway up by being open.
+func (s *WS) watcher(device string) bool {
+	if !s.cfg.PhoneWatch || !strings.HasPrefix(device, "dev-") || s.cfg.Devices == nil {
+		return false
+	}
+	d, ok, err := s.cfg.Devices.Get(device)
+	return err == nil && ok && !d.Guest && !d.NeedsRepair
 }
 
 // CloseDevice closes every live connection of device with code and
@@ -494,6 +539,14 @@ func (c *wsConn) openHub(h *webproto.Hello) bool {
 	hello := *h
 	hello.Token = ""
 	fwd, err2 := webproto.Encode(&hello)
+	// A project hub (MOB-50) gets the same hello without the resume:
+	// the seqs are the home hub's.
+	side := hello
+	side.Resume = nil
+	c.name = h.DeviceName
+	if b, err := webproto.Encode(&side); err == nil {
+		c.sideHello = b
+	}
 	if err1 != nil || err2 != nil || !c.toHub(open) || !c.toHub(fwd) {
 		c.close(webproto.CloseHubGone)
 		return false
@@ -542,6 +595,16 @@ func (c *wsConn) fromBrowser() {
 			c.protoError("bad_message", webproto.ClosePolicy)
 			return
 		}
+		// MOB-50: a frame that names a workspace loses the field before
+		// any hub sees it; one for another workspace goes to its hub.
+		ws := c.route(msg)
+		if frameWS(msg) != "" {
+			if b, err = stripWS(msg); err != nil {
+				c.close(closeInternal)
+				return
+			}
+		}
+		var reqID uint64
 		switch m := msg.(type) {
 		case *webproto.Hello:
 			c.protoError("hello_twice", webproto.ClosePolicy)
@@ -567,7 +630,7 @@ func (c *wsConn) fromBrowser() {
 			if !c.throttle(m.Op, len(m.Args)) {
 				return
 			}
-			if p, _ := webproto.Lookup(m.Op); p.Gateway { // never to the hub
+			if p, _ := webproto.Lookup(m.Op); p.Gateway || isUnifiedPushOp(m) { // never to the hub
 				c.activity()
 				c.gatewayOp(m)
 				continue
@@ -576,10 +639,17 @@ func (c *wsConn) fromBrowser() {
 				return
 			}
 			c.activity()
+			reqID = m.ID
 		default:
 			if !c.throttle("", 0) {
 				return
 			}
+		}
+		if ws != "" {
+			if !c.toSide(ws, b, reqID) {
+				return
+			}
+			continue
 		}
 		if !c.toHub(b) {
 			c.close(webproto.CloseHubGone)
@@ -626,10 +696,18 @@ func (c *wsConn) fromHub() {
 			T    string          `json:"t"`
 			ID   uint64          `json:"id"`
 			Code json.RawMessage `json:"code"` // a number in bye, a name in err
+			WS   string          `json:"ws"`
 		}
 		if json.Unmarshal(line, &head) != nil {
 			c.close(closeInternal)
 			return
+		}
+		// MOB-50: the home hub's meta names the home workspace, so the
+		// page knows which ws is "here".
+		if head.T == webproto.KindMeta && head.WS == "" && c.s.cfg.Home != "" {
+			if out, ok := withWS(line, c.s.cfg.Home); ok {
+				line = out
+			}
 		}
 		switch {
 		case head.T == webproto.KindErr && head.ID == 0:
@@ -712,6 +790,7 @@ func (c *wsConn) end(code webproto.CloseCode, handshake bool) {
 			_ = c.hub.Close()
 		}
 		c.hubSetMu.Unlock()
+		c.endSides()
 		c.s.mu.Lock()
 		_, live := c.s.conns[c]
 		delete(c.s.conns, c)
@@ -768,4 +847,11 @@ func readLine(br *bufio.Reader, max int) ([]byte, error) {
 			return nil, err
 		}
 	}
+}
+
+// isUnifiedPushOp: push.subscribe / push.unsubscribe of kind unifiedpush
+// are the gateway's (MOB-32); the webpush kind goes to the hub (MOB-30).
+func isUnifiedPushOp(m *webproto.Req) bool {
+	return (m.Op == webproto.OpPushSubscribe || m.Op == webproto.OpPushUnsubscribe) &&
+		webproto.PushKindOf(m.Args) == webproto.PushUnifiedPush
 }

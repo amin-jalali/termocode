@@ -755,6 +755,9 @@ func ResolveSlots(s Settings, main Config, c Credentials, getenv func(string) st
 	if err := CheckFallbacks(SlotMain, s.Fallback); err != nil {
 		errs = append(errs, "ai_fallback: "+err.Error()+"; no fallback is used")
 	}
+	if err := CheckRouter(s.Router); err != nil {
+		errs = append(errs, "ai_router: "+err.Error()+"; no auto model pick is used")
+	}
 	for _, name := range names {
 		sl := s.Models[name]
 		sl.Provider = strings.ToLower(strings.TrimSpace(sl.Provider))

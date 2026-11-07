@@ -72,12 +72,15 @@ type aiState struct {
 	batch    *aiBatch
 	settings ai.Settings
 	keep     aiKeepGoingRun // OMX-7: the keep-going chain of the open chat
+	// chatSched runs the scheduled chats (CMP-43, ai_chat_sched.go).
+	chatSched aiChatSchedState
 	// OMX-17: kwOff is set when the user removed the keyword chip of the
 	// draft; kwProfile is the profile the next sendAIChat runs.
 	kwOff     bool
 	kwProfile string
 	side      aiSideChat // OMX-30: the side chat (ai_side.go)
 	home      aiHomeChat // MOB-16: the phone's background chat (web_chat_home.go)
+	dictate   *aiDictate // CMP-48: the running voice input (ai_dictate.go)
 	cfg       ai.Config
 	provider  ai.Provider
 	loadErr   string
@@ -604,6 +607,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-follow-agent", "AI: Toggle Follow Agent", ""},
 		{"ai-configure", "AI: Configure Provider…", ""},
 		{"ai-pick-model", "AI: Pick Model…", ""},
+		{"ai-auto-model", "AI: Toggle Auto Model Pick (quick / main per turn)", ""},
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
 		{"ai-profile-switch", "AI: Switch Profile…", ""},
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
@@ -612,11 +616,16 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-plan-approval", "AI: Toggle Plan Approval", ""},
 		{"ai-autopilot", "AI: Autopilot Level… (off / low / medium risk)", ""},
 		{"ai-reasoning-next", "AI: Next Reasoning Level", ""},
+		{"ai-dial", "AI: Effort Dial… (low / medium / high / ultra, plan, fast)", ""},
+		{"ai-dial-next", "AI: Next Effort Mode", ""},
 		{"ai-keep-going", "AI: Toggle Keep Going While Todos Are Open", ""},
 		{"ai-handoff", "AI: Handoff to a New Chat", ""},
 		{chatDocsPaletteID, "AI: Chat Docs…", ""},
 		{chatDocRevsPaletteID, "AI: Chat Doc Revisions…", ""},
+		{"ai-chat-schedule", "AI: Schedule This Chat…", ""},
+		{"ai-chat-unschedule", "AI: Stop Chat Schedule", ""},
 		{"ai-side", "AI: Side Question…", ""},
+		{"ai-dictate", "AI: Dictate into Chat… (voice input)", ""},
 		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
@@ -684,6 +693,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-review-order", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat", aiHistorySearchID, aiShareChatID, aiChatCommentsID,
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect", "ai-mcp-reconnect-all", "ai-mcp-profile", "ai-mcp-accounts", "ai-mcp-catalog", "ai-mcp-bundle", "ai-mcp-updates", "ai-mcp-reset-cache",
+		"ai-chat-unschedule",               // CMP-43: stopping paid runs needs no provider
 		"ai-agent-hooks", "ai-agent-packs", // agent CLI files need no provider
 		"ai-rewind-turn", "ai-checkpoint-save", "ai-checkpoint-restore": // CMP-62: files and chats only
 	default:
@@ -767,6 +777,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIConfigure(), true
 	case "ai-pick-model":
 		return m.openAIModelPicker(), true
+	case "ai-auto-model": // CMP-25 (ai_router.go)
+		return m.toggleAIRouter(), true
 	case "ai-auto-approve":
 		return m.openAIAutoApprovePicker(), true
 	case "ai-sign-in-claude":
@@ -816,8 +828,18 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.toggleAIUntilDone(), true
 	case "ai-reasoning-next": // OMX-5 (ai_reasoning.go)
 		return m.cycleAIReasoning(), true
+	case "ai-dial": // CMP-24 (ai_dial.go)
+		return m.openAIDialPicker(), true
+	case "ai-dial-next":
+		return m.cycleAIDial(), true
 	case "ai-side": // OMX-30 (ai_side.go)
 		return m.openAISide(), true
+	case aiChatSchedPaletteID: // CMP-43 (ai_chat_sched.go)
+		return m.openAIChatSchedule(), true
+	case aiChatUnschedPaletteID:
+		return m.openAIChatUnschedule(), true
+	case "ai-dictate": // CMP-48 (ai_dictate.go)
+		return m.openAIDictate(), true
 	case "ai-handoff": // OMX-21 (ai_session_tools.go)
 		return m.aiHandoff(), true
 	case chatDocsPaletteID: // CMP-94 (ai_chat_docs.go)

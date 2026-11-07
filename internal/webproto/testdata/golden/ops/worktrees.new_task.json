@@ -1,0 +1,1 @@
+{"t":"req","id":1102,"op":"worktrees.new_task","args":{"name":"feat/login","from":"main","agent":"claude","task":"fix the login bug"}}

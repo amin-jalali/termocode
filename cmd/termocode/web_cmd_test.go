@@ -351,3 +351,33 @@ func TestWebGatewayDevicesDir(t *testing.T) {
 		t.Fatalf("ok %v devices %q: %s", ok, cfg.DevicesDir, errb.String())
 	}
 }
+
+// Spec (MOB-27): --app-key turns on app key sign-in; it is off without it.
+func TestWebGatewayAppKeyFlag(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	var errb bytes.Buffer
+	cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/cfg/web"}, &errb)
+	if !ok || cfg.AppKeyLogin {
+		t.Fatalf("ok %v app key %v: %s", ok, cfg.AppKeyLogin, errb.String())
+	}
+	cfg, ok = webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--devices", "/cfg/web", "--app-key"}, &errb)
+	if !ok || !cfg.AppKeyLogin {
+		t.Fatalf("ok %v app key %v: %s", ok, cfg.AppKeyLogin, errb.String())
+	}
+}
+
+// Spec (MOB-31): --phone-watch lets a paired phone that only watches keep
+// the gateway up; without it the gateway keeps today's idle rule.
+func TestWebGatewayPhoneWatchFlag(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	var errb bytes.Buffer
+	cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--phone-watch"}, &errb)
+	if !ok || !cfg.PhoneWatch {
+		t.Fatalf("ok %v phone watch %v: %s", ok, cfg.PhoneWatch, errb.String())
+	}
+	if cfg, _ := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl"}, &errb); cfg.PhoneWatch {
+		t.Error("phone watch on without the flag")
+	}
+}

@@ -36,16 +36,19 @@ export interface Req {
   id: number;
   op: string;
   args?: unknown;
+  ws?: string;
 }
 
 export interface Sub {
   t: "sub";
   topics: string[];
+  ws?: string;
 }
 
 export interface Unsub {
   t: "unsub";
   topics: string[];
+  ws?: string;
 }
 
 export interface ServerBye {
@@ -58,6 +61,7 @@ export interface Delta {
   topic: string;
   seq: number;
   data: unknown;
+  ws?: string;
 }
 
 export interface ErrMsg {
@@ -66,12 +70,14 @@ export interface ErrMsg {
   code: ErrCode;
   msg: string;
   data?: unknown;
+  ws?: string;
 }
 
 export interface Event {
   t: "ev";
   kind: string;
   data?: unknown;
+  ws?: string;
 }
 
 export interface Meta {
@@ -85,6 +91,7 @@ export interface Meta {
   viewers: number;
   ui: MetaUI;
   caps: string[];
+  ws?: string;
 }
 
 export interface MetaUI {
@@ -103,11 +110,13 @@ export interface Res {
   t: "res";
   id: number;
   data?: unknown;
+  ws?: string;
 }
 
 export interface Resync {
   t: "resync";
   topic: string;
+  ws?: string;
 }
 
 export interface Snap {
@@ -115,6 +124,7 @@ export interface Snap {
   topic: string;
   seq: number;
   data: unknown;
+  ws?: string;
 }
 
 export interface ChatOpenArgs {
@@ -196,6 +206,7 @@ export interface Attach {
   to?: number;
   label?: string;
   spec?: string;
+  ws?: string;
 }
 
 export interface CardsAnswerArgs {
@@ -403,6 +414,15 @@ export interface SymbolQueryArgs {
   query: string;
 }
 
+export interface PushSubscribeArgs {
+  kind: "unifiedpush";
+  endpoint: string;
+}
+
+export interface PushUnsubscribeArgs {
+  kind: "unifiedpush";
+}
+
 export interface SearchReplaceArgs {
   find: string;
   replace: string;
@@ -454,6 +474,15 @@ export interface UserCmd {
 
 export interface WorkflowRunArgs {
   run: string;
+}
+
+export interface WorkflowNameArgs {
+  name: string;
+}
+
+export interface WorkflowSaveArgs {
+  name: string;
+  content: string;
 }
 
 export interface WorkspacePathArgs {
@@ -569,6 +598,13 @@ export interface WorktreeLinkArgs {
 
 export interface WorktreeArgs {
   id: string;
+}
+
+export interface WorktreeTaskArgs {
+  name?: string;
+  from?: string;
+  agent: string;
+  task: string;
 }
 
 export interface AIWorktreeTextArgs {
@@ -938,6 +974,11 @@ export interface ContainerLogsArgs {
 
 export interface PaletteArgs {
   id: string;
+}
+
+export interface ProjectTasksArgs {
+  only?: "checklist" | "issues" | "prs" | "mrs";
+  done?: boolean;
 }
 
 export interface PRNumberArgs {
@@ -1907,13 +1948,14 @@ export interface ProjectItem {
   id: string;
   name: string;
   where: string;
-  state: "here" | "running" | "asleep";
+  state: "here" | "running" | "opening" | "asleep";
   attached?: boolean;
   service?: boolean;
   recent?: boolean;
   working?: number;
   waiting?: number;
   opened_at?: number;
+  ws?: string;
 }
 
 export interface Answered {
@@ -1940,6 +1982,10 @@ export interface SearchHit {
   marks?: SearchMark[];
   before?: string[];
   after?: string[];
+}
+
+export interface WSGone {
+  why: "closed" | "not_running" | "busy" | "limit" | "off" | "bad";
 }
 
 export interface SearchMark {
@@ -2152,6 +2198,30 @@ export interface BoardCounts {
   working: number;
   review: number;
   done: number;
+}
+
+export interface BoardProjects {
+  home: string;
+  projects: BoardProject[];
+  more?: number;
+}
+
+export interface BoardProject {
+  ws: string;
+  name: string;
+  where: string;
+  state: "needs" | "working" | "idle";
+  home?: boolean;
+  working?: number;
+  waiting?: number;
+  agents?: BoardAgent[];
+  more?: number;
+  seen?: number;
+}
+
+export interface BoardAgent {
+  name: string;
+  state: "working" | "waiting";
 }
 
 export interface DebugSources {
@@ -2704,6 +2774,27 @@ export interface ServiceDone {
 
 export interface WorktreeDone {
   asked?: boolean;
+  note?: string;
+}
+
+export interface WorktreeTaskForm {
+  state: "none" | "ready";
+  from?: string;
+  refs: string[];
+  agents: WorktreeTaskAgent[];
+  setup?: "trusted" | "asks";
+  base?: string;
+}
+
+export interface WorktreeTaskAgent {
+  id: string;
+  title: string;
+}
+
+export interface WorktreeTaskDone {
+  id: string;
+  branch: string;
+  where: string;
   note?: string;
 }
 
@@ -3362,6 +3453,36 @@ export interface CIRun {
   url?: string;
 }
 
+export interface ProjectTasks {
+  sections: ProjectTaskSection[];
+}
+
+export interface ProjectTaskSection {
+  kind: "checklist" | "issues" | "prs" | "mrs";
+  title: string;
+  items: ProjectTask[];
+  total: number;
+  open: number;
+  note?: string;
+}
+
+export interface ProjectTask {
+  id: string;
+  kind: "ptask" | "issue" | "pr" | "mr";
+  title: string;
+  state: "open" | "done" | "draft";
+  number?: number;
+  path?: string;
+  line?: number;
+  group?: string;
+  depth?: number;
+  author?: string;
+  labels?: string[];
+  checks?: "none" | "pending" | "pass" | "fail";
+  branch?: string;
+  url?: string;
+}
+
 export interface MCPItems {
   items: MCPItem[];
 }
@@ -3389,6 +3510,14 @@ export interface AutoApproveRow {
   title: string;
   on?: boolean;
   header?: boolean;
+}
+
+export interface ProjectArgs {
+  ws: string;
+}
+
+export interface ProjectClosed {
+  ws: string;
 }
 
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
@@ -3448,6 +3577,7 @@ export interface OpArgs {
   "lsp.code_action_apply": LspApplyArgs;
   "lsp.inlay_hints": LspRowsArgs;
   "board.get": EmptyArgs;
+  "board.projects": EmptyArgs;
   "debug.expand": DebugExpandArgs;
   "debug.sources": EmptyArgs;
   "debug.start": DebugConfigArgs;
@@ -3494,6 +3624,8 @@ export interface OpArgs {
   "files.recent": EmptyArgs;
   "lsp.workspace_symbols": SymbolQueryArgs;
   "snippets.list": BufArgs;
+  "push.subscribe": PushSubscribeArgs;
+  "push.unsubscribe": PushUnsubscribeArgs;
   "search.replace": SearchReplaceArgs;
   "snippets.user": EmptyArgs;
   "snippets.save": SnippetSaveArgs;
@@ -3517,6 +3649,9 @@ export interface OpArgs {
   "view.delete": ViewRefArgs;
   "view.pin": ViewPinArgs;
   "workflows.stop": WorkflowRunArgs;
+  "workflows.dry_run": WorkflowNameArgs;
+  "workflows.run": WorkflowNameArgs;
+  "workflows.save": WorkflowSaveArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
   "workspace.remove_folder": IDArgs;
@@ -3554,6 +3689,8 @@ export interface OpArgs {
   "worktrees.archive": WorktreeArgs;
   "worktrees.delete": WorktreeArgs;
   "worktrees.link": WorktreeLinkArgs;
+  "worktrees.task_form": EmptyArgs;
+  "worktrees.new_task": WorktreeTaskArgs;
   "ai.worktrees": EmptyArgs;
   "ai.worktree_text": AIWorktreeTextArgs;
   "ai.worktree_merge": AIWorktreeArgs;
@@ -3685,6 +3822,9 @@ export interface OpArgs {
   "ai.use_model": AIUseArgs;
   "ai.auto_approve": EmptyArgs;
   "ai.set_auto_approve": AutoApproveArgs;
+  "project.open": ProjectArgs;
+  "project.close": ProjectArgs;
+  "project.tasks": ProjectTasksArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -3723,6 +3863,7 @@ export interface EventData {
   "attention": Attention;
   "search.batch": SearchBatch;
   "views_saved": SavedViewList;
+  "ws.gone": WSGone;
 }
 
 // The data of a res message, by op (ops not listed answer without data).
@@ -3757,6 +3898,7 @@ export interface OpResult {
   "lsp.code_action_apply": EditRes;
   "lsp.inlay_hints": LspHints;
   "board.get": Board;
+  "board.projects": BoardProjects;
   "debug.sources": DebugSources;
   "debug.open_launch": DebugLaunch;
   "lsp.type_definition": LspLocations;
@@ -3806,6 +3948,9 @@ export interface OpResult {
   "view.rename": SavedViewList;
   "view.delete": SavedViewList;
   "view.pin": SavedViewList;
+  "workflows.dry_run": WorkflowRunArgs;
+  "workflows.run": AskRef;
+  "workflows.save": AskRef;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
@@ -3841,6 +3986,8 @@ export interface OpResult {
   "worktrees.archive": AskRef;
   "worktrees.delete": AskRef;
   "worktrees.link": WorktreeDone;
+  "worktrees.task_form": WorktreeTaskForm;
+  "worktrees.new_task": WorktreeTaskDone;
   "ai.worktrees": AIWorktrees;
   "ai.worktree_text": AIWorktreeText;
   "ai.worktree_merge": AskRef;
@@ -3966,4 +4113,7 @@ export interface OpResult {
   "ai.use_model": AskRef;
   "ai.auto_approve": AutoApprove;
   "ai.set_auto_approve": AskRef;
+  "project.open": AskRef;
+  "project.close": ProjectClosed;
+  "project.tasks": ProjectTasks;
 }
