@@ -2677,6 +2677,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `web_listen` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_max_hours` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_max_viewers` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
+| `web_push_detail` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_open_browser` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_panel` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_port` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |

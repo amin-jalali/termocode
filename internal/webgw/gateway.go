@@ -456,13 +456,14 @@ func ReadStatus(path string) (Status, error) {
 
 // siteMux routes the gateway's paths: /auth, /ws, the page (assets may
 // be nil: then only /auth and /ws exist) and, on an installable site,
-// the app manifest (WEB-35).
+// the app manifest (WEB-35) and the push-only service worker (MOB-30).
 func siteMux(site Site, auth, ws, assets http.Handler) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.Handle("/auth", auth)
 	mux.Handle("/ws", ws)
 	if site.Installable() {
 		mux.Handle(ManifestPath, Manifest())
+		mux.Handle(SWPath, ServiceWorker())
 	}
 	if assets != nil {
 		mux.Handle("/", assets)

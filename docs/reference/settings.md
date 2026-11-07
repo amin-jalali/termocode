@@ -217,6 +217,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `web_max_hours` | int | `12` | The web panel stops this many hours after it started, in use or not (1..24). |
 | `web_open_browser` | bool | `true` | Open the one-time link in the browser of this computer when the panel starts. false: only Web: Copy Link. |
 | `web_max_viewers` | int | `4` | How many browsers may be connected at once (1..8). One more is turned away. |
+| `web_push_detail` | enum | `count` | What a push to a paired phone says when something waits for you and the web page is closed (Notify me on the phone, over tailnet). none: only "Something needs you". count: how many things wait. title: the count and a fixed text for the kind (an approval, a plan, a review). Never a title, a path or a command. The push is encrypted for the phone and goes through its browser's own push service. |
 
 ## Appearance (file only)
 

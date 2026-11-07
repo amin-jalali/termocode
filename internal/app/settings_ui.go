@@ -106,6 +106,8 @@ type settingsConfig struct {
 	WebMaxHours    *int   `json:"web_max_hours,omitempty"`
 	WebOpenBrowser *bool  `json:"web_open_browser,omitempty"`
 	WebMaxViewers  *int   `json:"web_max_viewers,omitempty"`
+	// WebPushDetail: what a phone push says (MOB-30, web_push.go).
+	WebPushDetail string `json:"web_push_detail,omitempty"`
 	// Blame (git_blame_view.go). File only; the palette toggles write them.
 	GitInlineBlame      *bool `json:"git_inline_blame,omitempty"`
 	GitStatusBlame      *bool `json:"git_status_blame,omitempty"`

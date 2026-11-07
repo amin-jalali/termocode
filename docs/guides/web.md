@@ -336,6 +336,7 @@ issue.
 | `web_max_hours` | `12` | Stop this many hours after the start (1..24). |
 | `web_open_browser` | `true` | Open the link in this computer's browser on start. |
 | `web_max_viewers` | `4` | Browsers at once (1..8). |
+| `web_push_detail` | `count` | What a phone push says: `none`, `count` or `title` (a fixed text per kind). |
 | `web_listen` | `loopback` | `tailnet`: also reach it from your tailnet devices. |
 | `web_require_totp` | `false` | A paired device also types a code from an authenticator app. |
 

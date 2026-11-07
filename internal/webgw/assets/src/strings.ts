@@ -247,7 +247,7 @@ export const S = {
   "notify.title": "Notifications",
   "notify.on": "Notify me",
   "notify.off": "Stop notifications",
-  "notify.body": "A short fixed text when the AI waits for you or a run ends, while this page is in the background. Never code, paths or commands.",
+  "notify.body": "A short fixed text when the AI waits for you or a run ends, while this page is in the background or, on a paired phone, closed. Never code, paths or commands.",
   "notify.blocked": "This browser blocks notifications for this page.",
   "notify.card": "The AI waits for your approval.",
   "notify.run_done": "A run finished.",
