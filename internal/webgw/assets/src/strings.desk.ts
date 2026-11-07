@@ -460,6 +460,8 @@ export const SD = {
   "ctr.context_use": "Use Here",
   "ctr.context_use_q": "Use {name} in this session? The default stays.",
   "ctr.contexts": "Contexts",
+  "ctr.copy_id": "Copy ID",
+  "ctr.copy_name": "Copy Name",
   "ctr.cpu": "CPU",
   "ctr.created": "Created",
   "ctr.created_item": "Created {name}.",

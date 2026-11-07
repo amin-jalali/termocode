@@ -491,6 +491,8 @@ export const FA: Record<StringKey, string> = {
   "ctr.contexts": "کانتکست‌ها",
   "ctr.context_use": "استفاده در اینجا",
   "ctr.context_use_q": "{name} در این نشست به کار رود؟ پیش‌فرض عوض نمی‌شود.",
+  "ctr.copy_id": "کپی شناسه",
+  "ctr.copy_name": "کپی نام",
   "ctr.cpu": "پردازنده",
   "ctr.created": "ساخته شده",
   "ctr.created_item": "{name} ساخته شد.",
