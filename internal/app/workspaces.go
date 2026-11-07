@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // WorkspaceEntry is one row in the persisted recent-workspaces list.
@@ -121,6 +122,9 @@ func (m *Model) openWorkspacePicker() tea.Cmd {
 		return toastCmd
 	}
 	cwd, _ := m.rootDir()
+	if ws := m.workspace(); ws.Kind == workspace.KindContainer {
+		cwd = ws.ID // a container entry is stored by its ID
+	}
 	items := make([]picker.Item, 0, len(entries))
 	for _, e := range entries {
 		hint := formatRecentTime(e.OpenedAt, clock.Now())
@@ -129,7 +133,7 @@ func (m *Model) openWorkspacePicker() tea.Cmd {
 		}
 		items = append(items, picker.Item{
 			ID:    e.Path,
-			Title: e.Path,
+			Title: workspaceEntryTitle(e.Path),
 			Hint:  hint,
 		})
 	}
@@ -152,6 +156,9 @@ func (m *Model) openWorkspacePicker() tea.Cmd {
 func (m *Model) openWorkspace(path string) tea.Cmd {
 	if path == "" {
 		return nil
+	}
+	if r, ok := parseContainerRef(path); ok { // a container folder (container_workspace.go)
+		return m.openContainerWorkspace(r)
 	}
 	if _, err := os.Stat(path); err != nil {
 		if errors.Is(err, os.ErrNotExist) {

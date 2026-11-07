@@ -685,17 +685,26 @@ type Model struct {
 	// Hot exit (hot_exit.go): this workspace's backup dir, this run's
 	// live dir, the backups waiting for Restore / Discard, and the ones
 	// found while another dialog was open (asked once it closes).
-	hotExitRoot       string
-	hotExitLive       string
-	hotExitPending    []hotBackup
-	hotDiskChanged    []hotBackup // restored files that changed on disk (hot_exit_disk.go)
-	workspaceGone     string      // the recent workspace folder that is gone (workspaces.go)
-	hotExitWaiting    []hotBackup
-	saveAfter         saveContinuation
-	confirmTargetID   int
-	keyCardGuide      help.Loc             // the key card's guide page (keycard.go)
-	keyCardBack       func(*Model) tea.Cmd // runs after the key card closes
-	confirmTargetPath string
+	hotExitRoot    string
+	hotExitLive    string
+	hotExitPending []hotBackup
+	hotDiskChanged []hotBackup // restored files that changed on disk (hot_exit_disk.go)
+	workspaceGone  string      // the recent workspace folder that is gone (workspaces.go)
+	// Container workspaces (container_workspace.go): the container row `w`
+	// asks a folder for; whether the open container stopped; Start runs.
+	pendingContainerOpen containerRef
+	containerOffline     bool
+	containerStarting    bool
+	// RC-7 (devcontainer_open.go): the setup the trust card asks about,
+	// and the one running.
+	devcontainerPending *devcontainerRun
+	devcontainer        *devcontainerRun
+	hotExitWaiting      []hotBackup
+	saveAfter           saveContinuation
+	confirmTargetID     int
+	keyCardGuide        help.Loc             // the key card's guide page (keycard.go)
+	keyCardBack         func(*Model) tea.Cmd // runs after the key card closes
+	confirmTargetPath   string
 	// confirmTargetPaths is the absolute-path list for a bulk-delete
 	// confirm flow (confirmKindDeletePath with len > 1). When the user
 	// confirms, every entry is os.RemoveAll'd and any matching open
@@ -1049,15 +1058,18 @@ func (m Model) Init() tea.Cmd {
 	if cmd := m.aiProfileErrorsCmd(); cmd != nil { // broken ai/profiles.json
 		cmds = append(cmds, cmd)
 	}
-	cmds = append(cmds, aiRunsStartupCmd())         // prune old agent run snapshots
-	cmds = append(cmds, m.secretsMigrateStartCmd()) // plain credentials.json → safer store (SS-4)
-	cmds = append(cmds, m.updateInitCmd())          // G-UPD: a newer release? (update_check.go)
-	gitxAutoFetchInit()                             // GITX-12: git_auto_fetch (gitx_autofetch_setting.go)
-	gitGraphColsInit()                              // GITX-39: git_graph_columns (gitx_graph_columns.go)
-	cmds = append(cmds, m.crash.waitCmd())          // recovered panics (crash_ui.go)
-	cmds = append(cmds, agentCtlInitCmd())          // OMX-33: the agent control socket (agent_ctl.go)
-	cmds = append(cmds, m.explorer.ScheduleLoads()) // FIX-2: a container root's first listing
-	cmds = append(cmds, wfxBootCmd())               // WFX-15: the workflow scheduler (workflows_sched.go)
+	cmds = append(cmds, aiRunsStartupCmd())           // prune old agent run snapshots
+	cmds = append(cmds, m.secretsMigrateStartCmd())   // plain credentials.json → safer store (SS-4)
+	cmds = append(cmds, m.updateInitCmd())            // G-UPD: a newer release? (update_check.go)
+	gitxAutoFetchInit()                               // GITX-12: git_auto_fetch (gitx_autofetch_setting.go)
+	gitGraphColsInit()                                // GITX-39: git_graph_columns (gitx_graph_columns.go)
+	cmds = append(cmds, m.crash.waitCmd())            // recovered panics (crash_ui.go)
+	cmds = append(cmds, agentCtlInitCmd())            // OMX-33: the agent control socket (agent_ctl.go)
+	cmds = append(cmds, m.explorer.ScheduleLoads())   // FIX-2: a container root's first listing
+	cmds = append(cmds, wfxBootCmd())                 // WFX-15: the workflow scheduler (workflows_sched.go)
+	if cmd := m.containerWatchInitCmd(); cmd != nil { // RC-4: is the container still running? (container_workspace.go)
+		cmds = append(cmds, cmd)
+	}
 	// The card about a crash of the last run; with nvim it comes once
 	// the unsaved work is back (nvim ready).
 	if m.nvim == nil {

@@ -142,6 +142,9 @@ func applyHunkHeader(dir, path, header string, staged bool) error {
 // applyHunkHeaderTo applies the hunk to the index, or reversed to the
 // working file (work).
 func applyHunkHeaderTo(dir, path, header string, staged, work bool) error {
+	if _, ok := remoteFor(dir); ok {
+		return ErrRemoteUnsupported
+	}
 	const maxHunkDiff = 8 << 20
 	diff, cut, err := DiffFile(dir, path, staged, false, maxHunkDiff)
 	if err != nil {

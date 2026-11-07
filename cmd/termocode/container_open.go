@@ -26,6 +26,7 @@ type containerOpen struct {
 var (
 	containerEngine services.Exec = services.SpawnExec{}
 	setWorkspace                  = app.SetWorkspace
+	pushContainerWorkspace        = app.PushContainerWorkspace
 )
 
 // flagValue reads "--flag v" or "--flag=v" at args[i]. ok is false when
@@ -106,6 +107,7 @@ func runContainer(o containerOpen) int {
 		return 1
 	}
 	setWorkspace(h.Workspace())
+	pushContainerWorkspace(o.Context, o.Name, o.Root) // recents: ▣ api-1 /app
 	startTUI()
 	return 0
 }

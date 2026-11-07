@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync/atomic"
 
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/workspace"
 	"github.com/amin-jalali/termocode/internal/workspace/localhost"
 )
@@ -14,7 +15,15 @@ var processWS atomic.Pointer[workspace.Workspace]
 
 // SetWorkspace sets the workspace of this process. New copies it into
 // the Model; code with no Model at hand reads it through procWorkspace.
-func SetWorkspace(ws workspace.Workspace) { processWS.Store(&ws) }
+func SetWorkspace(ws workspace.Workspace) {
+	processWS.Store(&ws)
+	// RC-5 (4b): git writes under a container root run in the container.
+	if ws.Kind == workspace.KindContainer && ws.Host != nil {
+		if x := ws.Host.Exec(); x != nil {
+			git.SetRemoteRoot(ws.Root, x)
+		}
+	}
+}
 
 // procWorkspace is the process workspace. When none was set (tests and
 // tools that only call New) it is the process folder, as termocode read

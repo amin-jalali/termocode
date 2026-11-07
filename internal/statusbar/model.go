@@ -12,22 +12,27 @@ import (
 )
 
 type State struct {
-	Path     string // active buffer path; only used as a "has-a-buffer" probe now
-	Project  string // workspace / project basename rendered in the left zone
-	Lang     string
-	Line     int // 1-based
-	Col      int // 1-based
-	Dirty    bool
-	Err      string
-	Errors   int // LSP error count
-	Warnings int // LSP warning count
-	Branch   string
-	Ahead    int
-	Behind   int
-	Indent   string // e.g. "Spaces: 4" or "Tab Size: 4"
-	Encoding string // e.g. "UTF-8"
-	Term     bool   // integrated terminal panel is open
-	Debug    bool   // a Debug Adapter Protocol session is active
+	Path    string // active buffer path; only used as a "has-a-buffer" probe now
+	Project string // workspace / project basename rendered in the left zone
+	// Host is the container a container workspace lives in ("api-1");
+	// a "▣ api-1" pill sits before the project pill. HostOffline: the
+	// container stopped ("▣ api-1 · stopped", in the error colour).
+	Host        string
+	HostOffline bool
+	Lang        string
+	Line        int // 1-based
+	Col         int // 1-based
+	Dirty       bool
+	Err         string
+	Errors      int // LSP error count
+	Warnings    int // LSP warning count
+	Branch      string
+	Ahead       int
+	Behind      int
+	Indent      string // e.g. "Spaces: 4" or "Tab Size: 4"
+	Encoding    string // e.g. "UTF-8"
+	Term        bool   // integrated terminal panel is open
+	Debug       bool   // a Debug Adapter Protocol session is active
 	// TermFocused: the integrated terminal has the keyboard. The right
 	// side then shows TermLabel ("zsh · ~/proj") instead of editor facts.
 	TermFocused bool
@@ -432,7 +437,7 @@ func (m Model) renderLeft(s State) string {
 	if s.Dirty && s.Path != "" {
 		text += " " + theme.IconDirty.String()
 	}
-	out := pill(text, theme.TextWhite, projectPillBg(s), true)
+	out := hostPill(s) + pill(text, theme.TextWhite, projectPillBg(s), true)
 	if s.Busy {
 		out += barBg().Render(" ") + busyComet(s.BusyStep)
 	}
@@ -475,6 +480,22 @@ func projectPillTint(s State) theme.Color256 {
 		return theme.GitModified
 	}
 	return theme.BorderFocus
+}
+
+// hostPill is "▣ api-1 " for a container workspace ("" for a local
+// one): accent when it runs, the error colour with "· stopped" when not.
+func hostPill(s State) string {
+	if s.Host == "" {
+		return ""
+	}
+	text, tint := "▣ "+truncate(s.Host, 24), theme.BorderFocus
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		text = "[] " + truncate(s.Host, 24)
+	}
+	if s.HostOffline {
+		text, tint = text+" · stopped", theme.DiagError
+	}
+	return pill(text, theme.TextWhite, theme.Mix(barBgColor(), tint, 0.38), true) + barBg().Render(" ")
 }
 
 // projectPillBg is the pill fill: the bar tinted toward projectPillTint.

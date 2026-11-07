@@ -73,6 +73,7 @@ when something changed. When you hide the view (another activity item,
 | `O` | sort the containers (name, image, state, created, size) inside each project; turn the SIZE column on or off |
 | `e` | shell in the selected container (terminal tab) |
 | `E` | exec with options: shell or command, user, start folder |
+| `W` | open a folder of the running container as the workspace |
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
 | `i` | inspect: a read-only JSON page in the editor |
@@ -205,6 +206,43 @@ second **Replace** card. Nothing is written in the container without a card.
 
 Logs, shell, attach, stats and pulls run in terminal tabs, so you see
 progress and can type.
+
+### Open a folder in a container
+
+`W` on a running container asks which folder to open, filled with the
+container's working folder. Enter restarts termocode on that folder; the
+editor stays on your machine and nothing is installed in the container.
+The same works from the palette (**Workspace: Open Folder in
+Container…**) and from the command line:
+`termocode --container api-1 [--context prod-ssh] /app`.
+
+The folder then shows in the recent workspaces as `▣ api-1 · prod-ssh /app`.
+The status bar shows a `▣ api-1` pill. When the container stops, the pill
+says `stopped` and a card offers **Wait** (keep the open files),
+**Start**, or **Disconnect** (open your home folder instead).
+
+In a container workspace, Source Control runs git inside the container:
+stage, unstage, discard, commit, push, pull, fetch, checkout, and new
+branches all work there (git must be in the image). Staging one hunk is
+not there yet; use the terminal for it. **Replace in Workspace** reads
+and writes the files through the container too.
+
+### Reopen in a dev container
+
+**Workspace: Reopen in Dev Container…** reads the project's
+`.devcontainer/devcontainer.json` (or `.devcontainer.json`). A card says
+which container it makes and lists every command of the file and where
+it runs (`initializeCommand` on this computer, the others in the new
+container). **Cancel** is first; nothing runs before **Create and Open**.
+termocode builds the image (for `build`), starts the container with the
+project folder mounted, runs the commands, then opens the folder in it.
+`containerEnv` goes in a private env file, never on the command line;
+forwarded ports listen on 127.0.0.1 only.
+
+The container is named `termocode-dc-<id>` and found again next time: an
+existing one is only started, the commands do not run again. Files with
+`dockerComposeFile` or `features` need the devcontainer CLI; create the
+container with it, then open it with `W` in Containers.
 
 The right-click menu of a container also has **Duplicate…** and
 **Recreate (pull, same settings)…**. Both read the container's settings

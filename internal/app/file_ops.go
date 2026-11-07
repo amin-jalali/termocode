@@ -194,6 +194,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if cmd, ok := m.handleKubePromptSubmit(value); ok { // kube_scale.go
 		return cmd
 	}
+	if m.promptKind == promptKindContainerFolder { // container_workspace.go
+		return m.onContainerFolderPrompt(value)
+	}
 	if cmd, ok := m.handleAIPromptSubmit(value); ok { // Group A
 		return cmd
 	}

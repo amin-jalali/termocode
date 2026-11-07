@@ -143,6 +143,9 @@ func runOut(dir, name string, args ...string) (string, error) {
 // Stage adds path to the index (`git add -- path`). For untracked files this
 // stages the new file; for modified files it stages the working-tree diff.
 func Stage(dir, path string) error {
+	if _, ok, err := remoteRun(dir, "add", "--", path); ok {
+		return err
+	}
 	cmd := spawn.Command("git", "add", "--", path)
 	cmd.Dir = dir
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -154,6 +157,9 @@ func Stage(dir, path string) error {
 // Unstage removes path from the index without touching the working tree
 // (`git restore --staged -- path`).
 func Unstage(dir, path string) error {
+	if _, ok, err := remoteRun(dir, "restore", "--staged", "--", path); ok {
+		return err
+	}
 	cmd := spawn.Command("git", "restore", "--staged", "--", path)
 	cmd.Dir = dir
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -167,6 +173,16 @@ func Unstage(dir, path string) error {
 // `git restore -- path`. Either way the file ends up matching the last
 // committed state (or the index, if there are staged changes).
 func Discard(dir, path string) error {
+	if x, ok := remoteFor(dir); ok {
+		run := viaGit(x, dir)
+		st, _ := run("status", "--porcelain=v1", "--", path)
+		if strings.HasPrefix(strings.TrimLeft(st, " "), "??") {
+			_, err := run("clean", "-f", "-d", "--", path) // untracked: remove it, in the container
+			return err
+		}
+		_, err := run("restore", "--", path)
+		return err
+	}
 	abs := path
 	if !filepath.IsAbs(abs) {
 		abs = filepath.Join(dir, path)
@@ -590,6 +606,9 @@ func DiscardHunk(dir, file string, line int) error {
 // to `git apply`. diffCached reads the staged diff (index-vs-HEAD); applyCached
 // targets the index (vs worktree); applyReverse reverses the patch.
 func applyOneHunk(dir, file string, line int, diffCached, applyCached, applyReverse bool) error {
+	if _, ok := remoteFor(dir); ok {
+		return ErrRemoteUnsupported
+	}
 	diffArgs := []string{"diff", "--no-color"}
 	if diffCached {
 		diffArgs = append(diffArgs, "--cached")
@@ -857,6 +876,9 @@ func StashList(dir string) ([]StashEntry, error) {
 // failure so the caller can surface it (push errors usually contain
 // actionable messages — "no upstream", "non-fast-forward", auth failures).
 func Push(dir string) error {
+	if _, ok, err := remoteRun(dir, "push"); ok {
+		return err
+	}
 	cmd := remoteCmd(dir, "push")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -870,6 +892,9 @@ func Push(dir string) error {
 // remote is `origin`; if the user has a different default remote they can
 // run the command from the integrated terminal instead.
 func PushSetUpstream(dir, branch string) error {
+	if _, ok, err := remoteRun(dir, "push", "-u", "origin", branch); ok {
+		return err
+	}
 	cmd := remoteCmd(dir, "push", "-u", "origin", branch)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -880,6 +905,9 @@ func PushSetUpstream(dir, branch string) error {
 
 // Pull runs `git pull` in dir. Same error-formatting strategy as Push.
 func Pull(dir string) error {
+	if _, ok, err := remoteRun(dir, "pull"); ok {
+		return err
+	}
 	cmd := remoteCmd(dir, "pull")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -891,6 +919,9 @@ func Pull(dir string) error {
 // Fetch runs `git fetch --prune` in dir, updating remote-tracking refs without
 // touching the working tree. Same error-formatting strategy as Push/Pull.
 func Fetch(dir string) error {
+	if _, ok, err := remoteRun(dir, "fetch", "--prune"); ok {
+		return err
+	}
 	cmd := remoteCmd(dir, "fetch", "--prune")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -921,6 +952,9 @@ func Branches(dir string) ([]string, error) {
 // Checkout switches to the named branch. Fails if the working tree has
 // changes that would be overwritten — git's own safety net, surfaced as-is.
 func Checkout(dir, branch string) error {
+	if _, ok, err := remoteRun(dir, "checkout", branch); ok {
+		return err
+	}
 	cmd := spawn.Command("git", "checkout", branch)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
@@ -933,6 +967,9 @@ func Checkout(dir, branch string) error {
 // CreateBranch creates a new branch from HEAD and switches to it
 // (`git checkout -b <name>`).
 func CreateBranch(dir, name string) error {
+	if _, ok, err := remoteRun(dir, "checkout", "-b", name); ok {
+		return err
+	}
 	cmd := spawn.Command("git", "checkout", "-b", name)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
@@ -945,6 +982,9 @@ func CreateBranch(dir, name string) error {
 // HasUpstream reports whether the current branch has a tracked upstream.
 // Used to pick between Push and PushSetUpstream from the UI.
 func HasUpstream(dir string) bool {
+	if _, ok, err := remoteRun(dir, "rev-parse", "--abbrev-ref", "@{upstream}"); ok {
+		return err == nil
+	}
 	cmd := spawn.Command("git", "rev-parse", "--abbrev-ref", "@{upstream}")
 	cmd.Dir = dir
 	return cmd.Run() == nil
