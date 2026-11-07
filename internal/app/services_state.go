@@ -51,11 +51,16 @@ func svcLocalTab(name string) string { return "local:" + name }
 func svcLogsTab(name string) string { return "logs:" + name }
 
 type servicesState struct {
-	customRow customRow     // CTX-38: the row a custom-command picker is for (containers_custom.go)
-	devrun    devrunPending // CTX-37: the job or files a Containers card waits for (containers_devrun.go)
-	opened    bool          // the view was shown once (detection ran)
-	loaded    bool          // a snapshot arrived
-	root      string
+	// CTX-41: ALL CONTEXTS (containers_multi.go)
+	allContexts bool
+	multi       containers.MultiResult
+	multiLoaded bool
+	multiGen    uint64
+	customRow   customRow     // CTX-38: the row a custom-command picker is for (containers_custom.go)
+	devrun      devrunPending // CTX-37: the job or files a Containers card waits for (containers_devrun.go)
+	opened      bool          // the view was shown once (detection ran)
+	loaded      bool          // a snapshot arrived
+	root        string
 
 	det      services.Detection
 	project  string
@@ -590,6 +595,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onServicesSnapshot(msg), true
 	case containerHostMsg:
 		return m.onContainerHost(msg), true
+	case allContextsMsg: // CTX-41 (containers_multi.go)
+		return m.onAllContexts(msg), true
 	case containerActionDoneMsg:
 		return m.onContainerActionDone(msg), true
 	case containerBulkDoneMsg:

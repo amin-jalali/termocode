@@ -94,6 +94,9 @@ func (st *servicesState) hostRows() []svcRow {
 	var out []svcRow
 	absent := st.engineAbsent()
 	for _, sec := range hostSectionOrder {
+		if sec == "help" && !absent {
+			out = append(out, st.allContextsRows()...) // CTX-41 (containers_multi.go)
+		}
 		if !st.sectionShown(sec) || (sec == "contexts" && st.contextsHidden()) {
 			continue
 		}
@@ -546,6 +549,8 @@ func (st *servicesState) hostSectionCount(sec string) string {
 	switch sec {
 	case "help":
 		return ""
+	case allContextsSection: // CTX-41
+		return st.allContextsCount()
 	case "registries":
 		if !st.hostLoaded[sec] {
 			return loading
@@ -852,6 +857,8 @@ func hostClamp(row string, width, w int, bg lipgloss.Color) string {
 // renderHostItem draws one host object row (plan §2.4 width ladder).
 func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) string {
 	switch r.host {
+	case hostAllContainer: // CTX-41 (containers_multi.go)
+		return st.renderAllContainer(r, active, focused, w)
 	case hostContainer:
 		if r.idx < 0 || r.idx >= len(st.containerRows) {
 			break
@@ -993,6 +1000,9 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 		}
 	case svcRowGroup:
 		sec, _, _ := strings.Cut(strings.TrimPrefix(r.section, "grp/"), "/")
+		if sec == allContextsSection { // CTX-41
+			return "context " + r.name, "space fold · Enter on a row uses it"
+		}
 		if sec == "containers" {
 			if r.name == "other" {
 				return "containers without a compose project", "space fold"
@@ -1006,6 +1016,8 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 		return "image " + r.name, "space fold · b remote tags"
 	case svcRowHostItem:
 		switch r.host {
+		case hostAllContainer: // CTX-41
+			return st.allContextsFooter(r)
 		case hostContainer:
 			if r.idx < len(st.containerRows) {
 				c := st.containerRows[r.idx]

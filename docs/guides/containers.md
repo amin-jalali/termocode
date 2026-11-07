@@ -237,6 +237,17 @@ uses is refused. Every command shows a card with the command as it will
 run (**Cancel** first). There is no shell: each `argv` entry is one
 argument, and a row value that would start with `-` is refused.
 
+## Several contexts at once
+
+**Containers: Show All Contexts Together** adds an **ALL CONTEXTS**
+section above HELP. It asks every docker context (or podman connection)
+at the same time and lists their containers, grouped by context. A
+context that does not answer shows one line with its error; the others
+still show. The rows only show: `Enter` uses that context in this
+session (your default stays as it is), then the usual keys work on its
+rows in CONTAINERS. `y` copies the id, `r` loads the section again. It
+never loads on a timer. Run the command again to hide the section.
+
 ## Pruning
 
 Pruning always asks first. Every prune card names what goes (counts from the

@@ -1999,6 +1999,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `code-actions` | Edit: Quick Fix... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `config-commands` | Open Config: User Commands | confirm (ide) |   |
 | `config-theme` | Open Config: Theme | confirm (ide) |   |
+| `containers-all-contexts` | Containers: Show All Contexts Together | never | showing every context is the user's view; the AI uses containers_list |
 | `containers-attach` | Containers: Attach | never | opens a picker or prompt that only the user can answer; use a typed tool (container attach) |
 | `containers-browse-tags` | Containers: Browse Remote Tags… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks a registry over the network on the user's behalf |
 | `containers-compose-down` | Containers: Remove Project Containers… | never | project removal requires the user's confirm card |

@@ -649,6 +649,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	if cmd, ok := m.containerBulkKey(k.String()); ok {
 		return m, cmd
 	}
+	if cmd, ok := m.allContextsKey(k.String()); ok { // CTX-41 (containers_multi.go)
+		return m, cmd
+	}
 	// CTX-38: `!` lists the row's custom commands; a free key may run one.
 	if k.String() == "!" {
 		row, ok := m.containersCustomRow()
@@ -1438,7 +1441,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "services-configure", Title: "Containers: Configure Services (services.json)"},
 		{ID: "services-open-compose", Title: "Containers: Open Compose File"},
 		{ID: "services-trust", Title: "AI: Services Trust…"},
-	}, append(append(composeExtrasPaletteItems(), devrunPaletteItems()...), customPaletteItems()...)...)
+	}, append(append(composeExtrasPaletteItems(), devrunPaletteItems()...), append(customPaletteItems(), multiPaletteItems()...)...)...)
 }
 
 func containerAITargetRequired(id string) bool {
@@ -1617,6 +1620,8 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 		return m.askComposeSnippet(), true
 	case "containers-templates-folder":
 		return m.openTemplatesFolder(), true
+	case "containers-all-contexts": // CTX-41 (containers_multi.go)
+		return tea.Batch(m.revealServicesView(true), m.toggleAllContexts()), true
 	case "containers-custom-command": // CTX-38 (containers_custom.go)
 		return m.runCustomFromPalette(), true
 	case "containers-custom-commands-edit":

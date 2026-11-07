@@ -450,6 +450,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-templates-folder":     aiAuto(),
 	"containers-custom-command":       aiNever("custom commands are the user's own programs; nothing is offered to the model"),
 	"containers-custom-commands-edit": aiAuto(),
+	"containers-all-contexts":         aiNever("showing every context is the user's view; the AI uses containers_list"),
 	"containers-image-push":           aiNever("pushing an image is the user's; nothing is offered to the model"),
 	"containers-image-tag":            aiNever("tagging an image is the user's; nothing is offered to the model"),
 	"containers-image-run":            aiNever("running an image is the user's; nothing is offered to the model (containers_control starts existing containers)"),
