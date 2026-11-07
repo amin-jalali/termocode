@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentjail"
 	"github.com/amin-jalali/termocode/internal/agentrace"
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/clock"
@@ -271,7 +273,11 @@ func (m *Model) onRaceStarted(msg raceStartedMsg) tea.Cmd {
 		a, _ := agents.ByID(l.Agent)
 		buf, err := raceLaunchLane(m, *l, a)
 		if err != nil {
-			l.State, l.Note = agentrace.Failed, "no tab: "+aiOneLine(err.Error())
+			why := "no tab: "
+			if errors.Is(err, agentjail.ErrNoTool) {
+				why = "not started: "
+			}
+			l.State, l.Note = agentrace.Failed, why+aiOneLine(err.Error())
 			continue
 		}
 		s.bufs[l.ID] = buf
@@ -279,6 +285,9 @@ func (m *Model) onRaceStarted(msg raceStartedMsg) tea.Cmd {
 	}
 	m.openRacePage(r.ID)
 	text := fmt.Sprintf("Race started: %d lane%s. Each agent gets the task when its input box shows", started, plural(started))
+	if agentOSSandboxOn() {
+		text += ". Each lane runs in its OS sandbox (agent_os_sandbox): only its worktree can be written"
+	}
 	return tea.Batch(m.raceSave(), m.aiInfo(text))
 }
 
@@ -293,6 +302,10 @@ func (m *Model) raceLaunchTab(l agentrace.Lane, a agents.Agent) (int, error) {
 	if !m.termOpen {
 		m.openTerminalPanel()
 	}
+	line, _, err := raceAgentLine(a, l.Worktree)
+	if err != nil {
+		return 0, err
+	}
 	n := len(m.terminalTabs)
 	m.newTerminalTabIn(l.Worktree)
 	t := m.activeTerminalTab()
@@ -300,7 +313,7 @@ func (m *Model) raceLaunchTab(l agentrace.Lane, a agents.Agent) (int, error) {
 		return 0, fmt.Errorf("could not open a terminal tab")
 	}
 	t.Agent, t.AgentState = a.ID, agents.StartState(a.ID)
-	m.raceChansend(t.BufID, a.Bin+"\n")
+	m.raceChansend(t.BufID, line+"\n")
 	m.agentWatch(t.BufID, true)
 	m.applyLayout()
 	m.resizeTerminalSplit()

@@ -313,6 +313,22 @@ lane whose agent still works is never merged or discarded. The AI chat can
 start a race with `agent_race_start`, always behind a card (**Deny**
 first).
 
+### Each lane in its own sandbox
+
+Turn on `agent_os_sandbox` (Settings, Workflows group) to start every
+lane's agent inside an OS sandbox: **bwrap** on Linux, **sandbox-exec**
+on macOS. Inside it the whole disk is read-only. The agent can write only
+its own worktree, the temp folder and its own config folder (for example
+`~/.claude` or `~/.codex`, where its login lives). It can still commit in
+its lane, but it cannot change git hooks or the repo config. The network
+stays on, so the agent can reach its service.
+
+The same setting covers workflow `agent` steps and AI run steps that use
+Claude Code or Codex. If no sandbox tool is installed, the lane does not
+start and says why; it never runs without the sandbox. The sandbox stops
+writes, not reads: the agent can still read your files. Only you can
+change this setting; the AI chat cannot.
+
 ## Chat view and sessions
 
 With `agent_transcripts` on:

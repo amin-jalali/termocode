@@ -49,6 +49,9 @@ type Steps struct {
 	AgentEnv []string
 	// AgentSandbox is workflows_agent_sandbox ("": worktree).
 	AgentSandbox string
+	// AgentOSSandbox is agent_os_sandbox: the agent CLI runs inside the
+	// OS sandbox (CMP-60, internal/agentjail).
+	AgentOSSandbox bool
 	// AllowFlagged asks the user before an agent works on an item that
 	// looks like an injection (nil: the item is skipped).
 	AllowFlagged func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error)

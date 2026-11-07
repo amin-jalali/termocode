@@ -53,8 +53,10 @@ type Config struct {
 	// steps' events; AllowFlagged asks before an agent gets an item that
 	// looks like an injection (nil: skipped).
 	AgentSandbox string
-	OnAgent      func(step, item string, e ai.Event)
-	AllowFlagged func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error)
+	// AgentOSSandbox is agent_os_sandbox (CMP-60).
+	AgentOSSandbox bool
+	OnAgent        func(step, item string, e ai.Event)
+	AllowFlagged   func(ctx context.Context, step, item string, chip aistep.Chip) (bool, error)
 }
 
 // ErrUntrusted is returned for a repo file the user has not trusted.
@@ -104,7 +106,7 @@ func Start(ctx context.Context, cfg Config) (*run.Handle, error) {
 		tools = cfg.Src.Tools
 	}
 	steps := &Steps{Env: cfg.AI, RunID: id, Dir: filepath.Dir(e.Path), Workspace: cfg.Workspace, Exec: cfg.Exec, TestArgv: cfg.TestArgv, OnEvent: cfg.OnAI,
-		AgentSandbox: cfg.AgentSandbox, OnAgent: cfg.OnAgent, AllowFlagged: cfg.AllowFlagged}
+		AgentSandbox: cfg.AgentSandbox, AgentOSSandbox: cfg.AgentOSSandbox, OnAgent: cfg.OnAgent, AllowFlagged: cfg.AllowFlagged}
 	w := &Writer{Root: cfg.Root, Workflow: f.Name, Hash: f.Hash, Ledger: l, Workspace: cfg.Workspace, Tools: tools,
 		Ask: cfg.Gate, Audit: audit, Notify: cfg.Notify, GitHubComment: cfg.GitHubComment, Find: cfg.Find, PR: cfg.PR, Dir: filepath.Dir(e.Path)}
 	store := &seenStore{RunFiles: RunFiles{Root: cfg.Root}, seen: seen, file: f}

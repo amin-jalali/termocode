@@ -113,6 +113,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `workflows_history_days` | int | `30` | Days a finished workflow run (its file and logs) is kept before it is deleted at start. |
 | `workflows_wait_hours` | int | `12` | Hours a run waits for an answer on a card (a write to allow, a budget pause) before the step is marked waiting too long. |
 | `workflows_agent_sandbox` | enum | `worktree` | Where an outside agent step works: worktree (it may change files in its own git worktree) or read-only (it may only read). |
+| `agent_os_sandbox` | bool | `false` | Outside agents (workflow agent steps, AI run CLI steps, race lanes) run inside an OS sandbox: bwrap on Linux, sandbox-exec on macOS. The disk is read-only; only the lane's worktree, the temp folder and the agent's own config folders can be written. The network stays on. No sandbox tool: the agent does not start. |
 
 ## Git (file only)
 

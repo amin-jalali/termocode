@@ -2556,6 +2556,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `agent_accounts` | never | AI provider, credentials and approvals stay with the user; the labels of the outside agents' account folders |
 | `agent_auto_continue` | never | AI provider, credentials and approvals stay with the user; it lets termocode type continue into an outside agent's tab after its usage limit resets |
 | `agent_hibernate_minutes` | never | AI provider, credentials and approvals stay with the user; it lets termocode stop idle outside agents |
+| `agent_os_sandbox` | never | the OS sandbox around outside agents; only the user changes it |
 | `agent_transcripts` | never | lets termocode read the outside agents' own session files; the user turns it on in config.json (owner decision D1) |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
