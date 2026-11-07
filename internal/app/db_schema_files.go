@@ -20,7 +20,10 @@ import (
 // The compare lists changed, database-only, folder-only and identical
 // objects; Space selects rows and Enter asks (Cancel first) to update the
 // folder from the database, or opens the folder's SQL of the selected
-// rows in a read-only buffer to review and run by hand. The schema is
+// rows' migration script (ALTER/CREATE/DROP that makes the database match
+// the folder, dbclient.SchemaFolderMigration) in a read-only buffer to
+// review and run by hand. "Use a folder for completion" reads a DDL folder
+// (ours or hand-written) as one more completion source. The schema is
 // read on a read-only session; nothing here runs SQL on the server.
 
 const (
@@ -47,6 +50,9 @@ type dbSchemaFilesMsg struct {
 	schema string
 	files  []dbclient.CanonFile
 	folder map[string]string
+	ddl    *dbclient.CompletionSchema // action "complete": the folder as a completion source
+	warns  []string                   // statements of the folder the parser could not read
+	tables int                        // action "complete": tables read from the folder
 	err    error
 }
 
@@ -108,6 +114,7 @@ func (m *Model) databaseSchemaFilesStart() tea.Cmd {
 	m.picker = picker.NewItems(title, []picker.Item{
 		{ID: "dump", Title: "Dump to a folder…", Hint: "one .sql file per table, view and routine"},
 		{ID: "compare", Title: "Compare with a folder…", Hint: "changed, only on one side, identical"},
+		{ID: "complete", Title: "Use a folder for completion…", Hint: "SQL completion also offers the folder's tables and columns"},
 	})
 	if tool := dbclient.DetectMigrationTool(s.root); tool != "" {
 		m.picker.SetNote([]string{"This project uses " + tool + ": a schema folder is a snapshot, not a migration."})
@@ -132,8 +139,11 @@ func (m *Model) databaseSchemaFilesPicker(id string) (tea.Cmd, bool) {
 	}
 	st.action = id
 	title := "Dump the schema to a folder"
-	if id == "compare" {
+	switch id {
+	case "compare":
 		title = "Compare the schema with a folder"
+	case "complete":
+		title = "Read a DDL folder for completion"
 	}
 	return m.openHTTPPrompt(promptKindDBSchemaFolder, title, "Folder (relative to the workspace):", dbSchemaFolderDefault(st.side)), true
 }
@@ -146,6 +156,9 @@ func (m *Model) databaseSchemaFolderEntered(value string) tea.Cmd {
 		return nil
 	}
 	st := s.schemaFiles
+	if st.action == "complete" {
+		return m.databaseSchemaFolderForCompletion(value)
+	}
 	sess := s.sessions[st.side.sessKey]
 	if sess == nil {
 		return m.pushToastDetail(toast.Info, "Not connected", "Connect first: Enter on the connection.")
@@ -194,6 +207,32 @@ func (m *Model) databaseSchemaFolderEntered(value string) tea.Cmd {
 	})
 }
 
+// databaseSchemaFolderForCompletion reads and parses the folder off the
+// UI goroutine; no session is needed, the folder is plain files.
+func (m *Model) databaseSchemaFolderForCompletion(value string) tea.Cmd {
+	s := m.databases
+	st := s.schemaFiles
+	st.dir = dbSchemaFolderPath(s.root, value)
+	st.gen++
+	gen, side, dir := st.gen, st.side, st.dir
+	return func() tea.Msg {
+		msg := dbSchemaFilesMsg{gen: gen, schema: side.schema}
+		folder, err := dbclient.ReadSchemaFolder(dir)
+		if err != nil {
+			msg.err = err
+			return msg
+		}
+		if len(folder) == 0 {
+			msg.err = fmt.Errorf("no tables/, views/ or routines/ .sql files in %s", dir)
+			return msg
+		}
+		canon, warns := dbclient.ParseSchemaFolder(side.driver, side.schema, folder)
+		ddl := dbclient.CanonCompletion(canon)
+		msg.ddl, msg.warns, msg.tables = &ddl, warns, len(canon.Tables)
+		return msg
+	}
+}
+
 func (m *Model) onDBSchemaFiles(msg dbSchemaFilesMsg) tea.Cmd {
 	if m.databases == nil || m.databases.schemaFiles == nil || m.databases.schemaFiles.gen != msg.gen {
 		return nil
@@ -202,6 +241,15 @@ func (m *Model) onDBSchemaFiles(msg dbSchemaFilesMsg) tea.Cmd {
 	st := m.databases.schemaFiles
 	if msg.err != nil {
 		return m.dbConsoleError(msg.err)
+	}
+	if st.action == "complete" {
+		m.databases.setDDLSchema(st.side.conn, *msg.ddl)
+		m.databaseSchemaChanged()
+		detail := "SQL files of " + sanitizeDBText(st.side.name) + " now also complete these names. Live names win."
+		if len(msg.warns) > 0 {
+			detail = fmt.Sprintf("%s could not be read (first: %s). %s", dbPlural(len(msg.warns), "statement"), sanitizeDBText(msg.warns[0]), detail)
+		}
+		return m.pushToastDetail(toast.Info, fmt.Sprintf("Completion reads %s from %s", dbPlural(msg.tables, "table"), m.dbShortPath(st.dir)), detail)
 	}
 	st.side.schema = msg.schema
 	st.files = msg.files
@@ -335,23 +383,18 @@ func (m *Model) databaseSchemaCompareChosen(id string) tea.Cmd {
 	if len(st.apply) == 0 {
 		return m.pushToastDetail(toast.Info, "Nothing to change", "This object is the same in the database and the folder.")
 	}
-	write, remove, fromFolder := 0, 0, 0
+	write, remove := 0, 0
 	for _, d := range st.apply {
 		if d.State == dbclient.SchemaFileFolderOnly {
 			remove++
 		} else {
 			write++
 		}
-		if d.Folder != "" {
-			fromFolder++
-		}
 	}
-	msg := fmt.Sprintf("Update the folder from the database: write %s and remove %s in %s. Or open the folder's SQL of %s in a read-only buffer, to review and run by hand.",
-		dbPlural(write, "file"), dbPlural(remove, "file"), m.dbShortPath(st.dir), dbPlural(fromFolder, "object"))
-	buttons := []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "to-folder", Title: "Update the folder", Style: confirm.StylePrimary}}
-	if fromFolder > 0 {
-		buttons = append(buttons, confirm.Button{ID: "from-folder", Title: "Open the folder's SQL"})
-	}
+	msg := fmt.Sprintf("Update the folder from the database: write %s and remove %s in %s. Or open a migration script (ALTER, CREATE, DROP) that makes the database match the folder, in a read-only buffer, to review and run by hand.",
+		dbPlural(write, "file"), dbPlural(remove, "file"), m.dbShortPath(st.dir))
+	buttons := []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "to-folder", Title: "Update the folder", Style: confirm.StylePrimary},
+		{ID: "from-folder", Title: "Open the migration script"}}
 	m.confirm = confirm.New(dbPlural(len(st.apply), "object")+" selected", msg, buttons)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
@@ -380,23 +423,17 @@ func (m *Model) databaseSchemaFilesConfirm(id string) (tea.Cmd, bool) {
 			fmt.Sprintf("Wrote %s and removed %s.", dbPlural(wrote, "file"), dbPlural(removed, "file"))), true
 	case "from-folder":
 		var b strings.Builder
-		b.WriteString("-- From the schema folder " + m.dbShortPath(st.dir) + ". Review before you run it:\n")
-		b.WriteString("-- a changed table needs ALTER statements, not CREATE.\n")
-		for _, d := range st.apply {
-			if d.Folder == "" {
-				continue
-			}
-			b.WriteString("\n-- " + sanitizeDBText(d.Name) + "\n")
-			for _, line := range strings.Split(strings.TrimRight(d.Folder, "\n"), "\n") {
-				b.WriteString(sanitizeOutputLine(line) + "\n")
-			}
+		b.WriteString("-- Folder " + m.dbShortPath(st.dir) + " -> database " + sanitizeDBText(st.side.label()) + ". Review before you run it.\n")
+		script := dbclient.SchemaFolderMigration(st.side.driver, st.side.schema, m.dbShortPath(st.dir), st.apply)
+		for _, line := range strings.Split(strings.TrimRight(script, "\n"), "\n") {
+			b.WriteString(sanitizeOutputLine(line) + "\n")
 		}
 		if m.nvim == nil {
-			return m.copyWithToast(b.String(), "No editor: the folder's SQL is copied instead"), true
+			return m.copyWithToast(b.String(), "No editor: the migration script is copied instead"), true
 		}
 		m.ensureDBLua()
 		m.ensureEditorWindowCurrent()
-		_ = m.nvim.ExecLuaArgs(`_G._termocode_db_ddl(...)`, "schema-folder.sql", strings.Split(strings.TrimRight(b.String(), "\n"), "\n"))
+		_ = m.nvim.ExecLuaArgs(`_G._termocode_db_ddl(...)`, "schema-folder-migration.sql", strings.Split(strings.TrimRight(b.String(), "\n"), "\n"))
 		m.focus = FocusEditor
 		return m.fetchStateCmd(), true
 	}
