@@ -306,7 +306,8 @@ func (m *Model) onAgentCtl(call agentCtlCall) tea.Cmd {
 			return c
 		}
 		return nil
-	case agentctl.OpWorktreeList, agentctl.OpWorktreeNote, agentctl.OpWorktreeStatus, agentctl.OpWorktreeLink:
+	case agentctl.OpWorktreeList, agentctl.OpWorktreeNote, agentctl.OpWorktreeStatus, agentctl.OpWorktreeLink,
+		agentctl.OpWorktreeBlock, agentctl.OpWorktreeUnblock:
 		if m.wt == nil {
 			m.wt = newWTState()
 		}
