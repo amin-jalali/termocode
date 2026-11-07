@@ -90,6 +90,7 @@ func TestBoardLaneCard(t *testing.T) {
 }
 
 func TestAgentBoardRowsGroupByColumn(t *testing.T) {
+	agentsUnicode(t) // the expected text uses the Unicode glyphs
 	now := time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)
 	cards := []agentboard.Card{
 		{ID: "run:a", Col: agentboard.Review, Title: "done run", Why: "done", At: now.Add(-time.Hour)},

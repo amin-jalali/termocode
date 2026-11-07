@@ -134,7 +134,7 @@ func TestCovAIDBConnections(t *testing.T) {
 	}
 	covAIMustContain(t, "connections", out, "pg · postgres localhost:5432/app · environment development · connecting", "url · postgres db.example:6543/shop",
 		"my · name My Shop · mysql localhost:3306/shop · environment development · error: refused",
-		"ro · postgres ro.example:5432/app · environment development · read-only", "bad · oracle x · environment development · problem: ")
+		"ro · postgres ro.example:5432/app · environment development · read-only", "bad · db2 x · environment development · problem: ")
 	if got := dbAITarget(dbclient.Conn{Driver: "sqlite", Path: "/w/app.db"}); got != "sqlite /w/app.db" {
 		t.Errorf("sqlite target = %q", got)
 	}

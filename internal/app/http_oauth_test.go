@@ -19,7 +19,7 @@ import (
 // send uses the cache.
 func TestHTTPOAuth2ClientCredentialsSendsAndCaches(t *testing.T) {
 	m, root, _ := covSvcHTTP(t)
-	store := secrets.NewStore(secretstest.NewMemory(), secrets.Options{})
+	store := secrets.NewStore(secretstest.NewMemory(), secrets.Options{Dir: t.TempDir()}) // its index file stays out of the source tree
 	old := httpOAuthStore
 	httpOAuthStore = func() secrets.Store { return store }
 	t.Cleanup(func() { httpOAuthStore = old })
@@ -54,7 +54,9 @@ func TestHTTPOAuth2ClientCredentialsSendsAndCaches(t *testing.T) {
 	for _, n := range store.Names() {
 		if strings.HasPrefix(n, "http.oauth2.") {
 			v, _, _ := store.Get(n)
-			var tok struct{ AccessToken string `json:"access_token"` }
+			var tok struct {
+				AccessToken string `json:"access_token"`
+			}
 			cached = json.Unmarshal([]byte(v), &tok) == nil && tok.AccessToken == "tok-1"
 		}
 	}

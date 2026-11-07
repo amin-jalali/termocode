@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -128,7 +129,8 @@ func TestAIFileSaveHookFiles(t *testing.T) {
 	if got := runs(filepath.Join(root, "docs", "x.md")); got != "lint,all" {
 		t.Errorf("doc: %s", got)
 	}
-	if got := aiHookWhen(hs[0]); got != "on save *.go" {
+	i := slices.IndexFunc(hs, func(h aihooks.Hook) bool { return h.Event == aihooks.EventFileSave }) // hooks come in aihooks.Events order
+	if got := aiHookWhen(hs[i]); got != "on save *.go" {
 		t.Errorf("when %q", got)
 	}
 }

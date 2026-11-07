@@ -88,8 +88,8 @@ func TestAITaskListOneAtATime(t *testing.T) {
 	m, _ := aiRunModel(t, p, p)
 	m.ai.settings.ParallelMax = 1
 	m.aiTaskListAsk("/src/app/tasks.md", aiTaskListSample)
-	if box := ansi.Strip(m.confirm.Box()); !strings.Contains(box, "one after the other") {
-		t.Errorf("card:\n%s", box)
+	if box := flatCard(*m); !strings.Contains(box, "one after the other") {
+		t.Errorf("card: %s", box)
 	}
 	m.confirmOpen = false
 	cmd, _ := m.handleAIConfirm("run")

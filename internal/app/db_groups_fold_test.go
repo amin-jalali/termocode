@@ -119,8 +119,7 @@ func TestDBFolderHeadingClickToggles(t *testing.T) {
 
 func TestDBResultPageConnTint(t *testing.T) {
 	withConfigDir(t)
-	m := dbGridModel(dbDisplayResult())
-	m.databases = newDBState()
+	m := dbGridModel(dbDisplayResult()) // the console lives in m.databases
 	m.databases.conns = []dbclient.Conn{{ID: "local", Name: "local", Color: "blue"}}
 	p := m.databasePage()
 	if !strings.HasPrefix(p.lines[0], dbConnBar()) {

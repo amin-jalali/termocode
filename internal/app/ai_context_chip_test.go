@@ -82,6 +82,7 @@ func TestAIContextChipAfterTurn(t *testing.T) {
 // Spec (CMP-7): the chip belongs to its chat: another chat shows none
 // until it has a turn of its own; an unknown window shows none.
 func TestAIContextChipPerChat(t *testing.T) {
+	agentsUnicode(t) // the expected text uses the Unicode glyphs
 	m, _ := aiProfileTestModel(t)
 	m.ai.noteContext(ai.Usage{Model: "x", PeakContext: 420}, 1000)
 	if got := m.aiContextChipLabel(); got != "ctx ▰▰▱▱▱ 42%" {

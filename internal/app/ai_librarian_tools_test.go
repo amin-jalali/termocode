@@ -53,6 +53,7 @@ func TestAILibrarianTools(t *testing.T) {
 		"README.md":  "# Lib\nHow to use it.",
 		"pkg/lib.go": "package pkg\n\nfunc Answer() int { return 42 }\n",
 		".env":       "TOKEN=" + "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789",
+		".netrc":     "machine x login u password " + "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789",
 	})
 	ctx := context.Background()
 	fetch := libTool(t, "repo_fetch")
@@ -96,7 +97,12 @@ func TestAILibrarianTools(t *testing.T) {
 	if _, err := read.Run(ctx, map[string]any{"repo": "acme/lib", "path": "../../etc/passwd"}); err == nil {
 		t.Error("read outside the copy")
 	}
-	if out, err := read.Run(ctx, map[string]any{"repo": "acme/lib", "path": ".env"}); err == nil || strings.Contains(out, "ghp_") {
+	// A .env is read with its values redacted (ai.SecretFile); a file of
+	// nothing but secrets is not read at all.
+	if out, err := read.Run(ctx, map[string]any{"repo": "acme/lib", "path": ".env"}); strings.Contains(out, "ghp_") {
+		t.Errorf(".env value reached the model: %v %q", err, out)
+	}
+	if out, err := read.Run(ctx, map[string]any{"repo": "acme/lib", "path": ".netrc"}); err == nil || strings.Contains(out, "ghp_") {
 		t.Errorf("secret file read: %v %q", err, out)
 	}
 

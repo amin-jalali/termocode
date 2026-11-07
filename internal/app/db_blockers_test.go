@@ -101,6 +101,8 @@ func TestDatabaseExpandOtherDatabaseOpensOneSessionAndReuses(t *testing.T) {
 			cmd = m.onDBConnect(msg)
 		case dbIntrospectMsg:
 			cmd = m.onDBIntrospect(msg)
+		case dbSchemaCacheMsg: // the tree's offline schema copy is saved
+			cmd = m.onDBSchemaCache(msg)
 		default:
 			t.Fatalf("unexpected message %T", msg)
 		}
