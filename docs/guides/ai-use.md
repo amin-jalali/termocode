@@ -315,7 +315,8 @@ Each word uses the chat's own read-only tool, so a word whose tool is off
 
 Text files are sent as text (up to 60 KB). Images (PNG, JPEG, GIF, WebP)
 are sent as images to Anthropic, OpenAI and OpenRouter. Other providers
-get a short note instead. Other binary files are refused.
+get a short note instead. PDFs are sent as their text (best effort; a
+scan with no text is refused). Other binary files are refused.
 Click `×` on a chip to remove it, or press `Backspace` in the empty input.
 
 To get files out:
@@ -396,6 +397,27 @@ over the editor, like in mobocode.
   ✗ rejected.
 - `Esc` hides the card. The chat shows "**N files to review**" with a
   **Review** button; **AI: Review Pending Changes** opens it again.
+
+### Comment on changes and send them to an agent
+
+This works in the review card and in every read-only changes card (an
+agent worktree's changes, a file diff, a compare).
+
+- Press `c` on a change to write a comment. It shows under the change
+  header. Press `c` again (or click the comment) to change it. Save an
+  empty comment to remove it.
+- The hint bar counts your comments: **S send 3 comments to an agent**.
+- `S` opens a card with the whole message: each comment with its file,
+  lines and the changed code. **Cancel** is first. Then:
+  - **AI chat** sends it to the built-in chat as one message. While the
+    AI still answers, it waits in the chat input.
+  - an **agent tab** button (Claude Code, Codex, … in a terminal tab)
+    pastes it into that agent's input. You press Enter there to send it.
+  - **Copy** puts it on the clipboard.
+- Sent comments leave the card. `Esc` on a read-only card keeps them:
+  **Agent: Send Diff Comments…** sends them later.
+- Known secrets are masked in the message. The AI cannot send your
+  comments on its own.
 
 ### The agent waits for you
 
@@ -909,6 +931,32 @@ chat keeps its own history (the last 40 messages).
 
 This mode is chat only for now. The agent does not run tools, read or
 change files by itself, or ask for permissions.
+
+## Proof of work screenshots
+
+After a UI change the AI can show you that it works. Its tool
+`proof_screenshot` opens a page in a headless browser and saves a PNG:
+
+- It shoots the local dev server (`http://localhost:5173/…`) or an
+  `.html` / `.svg` file in the workspace at once. Any other address asks
+  you first (class `run`).
+- You choose the width and height (default 1280×800; 390 wide for a
+  phone). The AI is told to shoot desktop and phone widths.
+- Shots go to `.termocode/proof/` in the workspace, each with a small
+  `.json` file: the address, the size, the time and a note.
+- When the model takes images, it sees the shot and can fix what looks
+  wrong. Otherwise it can use `look_at` on the file.
+- The browser runs with a new empty profile each time (no cookies, none
+  of your sign-ins) and with its sandbox on. It stops after 60 seconds.
+
+It needs Chrome, Chromium, Edge or Brave on this machine. termocode finds
+it on `PATH` (and in `/Applications` on macOS); set `TERMOCODE_BROWSER`
+to the program path to pick another one. Nothing else is installed.
+
+Run **AI: Proof of Work…** to see the shots, newest first, with the
+address, size and note. Enter opens a shot in the picture preview.
+**Delete all proof screenshots…** asks first (Cancel is the default) and
+removes only the shots and their notes.
 
 ## Keys at a glance
 

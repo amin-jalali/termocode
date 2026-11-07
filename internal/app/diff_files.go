@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/bindiff"
 	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -57,7 +59,11 @@ func (m *Model) onDiffRightPicked(rightPath string) tea.Cmd {
 			if err != nil {
 				return ErrMsg{Err: fmt.Errorf("compare: %w", err)}
 			}
-			if fi.Size() > maxCompareBytes {
+			limit := int64(maxCompareBytes)
+			if bindiff.Supported(p) {
+				limit = bindiff.MaxBytes // read as an image / PDF, not as text
+			}
+			if fi.Size() > limit {
 				return ErrMsg{Err: fmt.Errorf("compare: %s is too big (over %d MB)", filepath.Base(p), maxCompareBytes>>20)}
 			}
 			b, err := os.ReadFile(p)
@@ -66,11 +72,21 @@ func (m *Model) onDiffRightPicked(rightPath string) tea.Cmd {
 			}
 			text[i] = string(b)
 		}
+		// Two images or PDFs: compare what is in them (CMP-54).
+		if bindiff.Supported(leftPath) && bindiff.Supported(rightPath) {
+			if isPDFPath(leftPath) != isPDFPath(rightPath) {
+				return ErrMsg{Err: fmt.Errorf("compare: an image and a PDF can't be compared")}
+			}
+			text[0], text[1], _ = binDiffSides(rightPath, text[0], text[1])
+		}
 		rel := aiRel(aiWorkspaceRoot())
 		return compareReadyMsg{title: "Compare files", file: diffview.File{
 			Name: rel(leftPath) + " ↔ " + rel(rightPath), Old: text[0], New: text[1]}}
 	}
 }
+
+// isPDFPath reports whether p ends in .pdf.
+func isPDFPath(p string) bool { return strings.EqualFold(filepath.Ext(p), ".pdf") }
 
 // maxCompareBytes caps each side of Compare Two Files.
 const maxCompareBytes = 4 << 20

@@ -177,13 +177,22 @@ func (m *Model) onRaceMerged(msg raceMergedMsg) tea.Cmd {
 	if len(msg.res.Conflicts) > 0 && !msg.force {
 		return m.askRaceConflict(r, l, msg.res.Conflicts)
 	}
-	l.State, r.Winner = agentrace.Merged, l.ID
+	l.State = agentrace.Merged
+	if !r.Split() { // a split has no winner: every part may be merged (CMP-4)
+		r.Winner = l.ID
+	}
 	_, sync := m.aiSyncIDE("", aiSyncDisk)
 	n := len(msg.res.Applied)
 	text := fmt.Sprintf("Merged %d file%s from %s", n, plural(n), l.Title)
 	if len(msg.res.Conflicts) > 0 {
 		l.Note = "conflict markers; " + l.Branch + " kept"
 		text += "; fix the conflict markers in " + strings.Join(msg.res.Conflicts, ", ")
+	}
+	if r.Split() {
+		if left := splitPartsLeft(r); left > 0 {
+			text += fmt.Sprintf("; %d more part%s to merge (m)", left, plural(left))
+		}
+		return tea.Batch(sync, m.raceSave(), m.aiInfo(text))
 	}
 	return tea.Batch(sync, m.raceSave(), m.aiInfo(text), m.askRaceOthers(r, l))
 }

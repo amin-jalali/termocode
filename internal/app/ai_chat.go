@@ -197,6 +197,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, aiItermocTools(call)...)          // AH-7: profiles, models, MCP services, outside agents (ai_itermoc_tools.go)
 	tools = append(tools, m.aiItermocWriteTools(call)...)   // AH-8: switch, drafts, connect, access, start (ai_itermoc_write_tools.go)
 	tools = append(tools, m.aiRaceTools(call)...)           // AGX-4: agent_race_start (agent_race_tool.go)
+	tools = append(tools, m.aiSplitTools(call)...)          // CMP-4: the coordinator splits a goal between agents (agent_split.go)
 	tools = append(tools, aiMCPAddTools()...)               // MCPX-37: propose an MCP server (ai_mcp_add_tool.go)
 	tools = append(tools, m.aiAgentRunTools(call, c)...)    // G-API: agents start agent runs (ai_agent_run_tools.go)
 	tools = append(tools, m.aiWorkflowTools(root, call)...) // WFX-9: workflows by chat (ai_workflow_tools.go)
@@ -208,6 +209,7 @@ func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai
 	tools = append(tools, m.aiAstGrepTool(root, call))         // OMX-28: structural search / rewrite
 	tools = append(tools, aiSkillTools(root)...)               // OM-4: only when a skill is offered
 	tools = append(tools, m.aiLookTool(root))                  // OMX-32: images (one extra request) and PDFs
+	tools = append(tools, aiProofTool(root))                   // CMP-52: headless-browser screenshots as proof of work
 	tools = append(tools, aiWebTools()...)                     // OMX-13: only when turned on
 	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
 }

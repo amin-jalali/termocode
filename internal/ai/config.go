@@ -73,6 +73,12 @@ type Settings struct {
 	// Worktrees is "off" to keep parallel agents in the user's tree
 	// (default: each gets its own git worktree; worktree.go).
 	Worktrees string `json:"ai_worktrees,omitempty"`
+	// Critic is ai_critic (CMP-53): "" (auto, the default) has a second
+	// model review each finished lane before Merge; "off" never does.
+	// CriticSlot is ai_critic_slot: the critic's model slot (empty: the
+	// other built-in model than the step's; critic.go). File only.
+	Critic     string `json:"ai_critic,omitempty"`
+	CriticSlot string `json:"ai_critic_slot,omitempty"`
 	// PlanApproval is ai_plan_approval (G-PLAN): "ask" (default), "auto"
 	// or "always" (planapproval.go).
 	PlanApproval string `json:"ai_plan_approval,omitempty"`
@@ -365,6 +371,7 @@ func SaveSettings(path string, s Settings) error {
 		set("ai_inline_model", s.InlineModel)
 		set("ai_edit_review", s.EditReview)
 		set("ai_worktrees", s.Worktrees)
+		set("ai_critic", s.Critic)
 		set("ai_plan_approval", s.PlanApproval)
 		if s.Inline != nil {
 			merged["ai_inline"] = *s.Inline

@@ -27,6 +27,9 @@ import (
 const (
 	confirmKindAgentInstall confirmKindEnum = 3701
 	confirmKindAgentSignIn  confirmKindEnum = 3702
+	// confirmKindAgentInstallPage (CMP-3): a preset with no package-manager
+	// install offers to open its own install page.
+	confirmKindAgentInstallPage confirmKindEnum = 3703
 )
 
 // agentLookPathDefault finds an agent's program on PATH, then in
@@ -75,6 +78,10 @@ func (m *Model) onAgentPickedRow(a agents.Agent) tea.Cmd {
 	}
 	t, ok := lspinstall.Lookup(a.Tool)
 	if a.Tool == "" || !ok {
+		if a.InstallURL != "" {
+			m.openAgentInstallPage(a)
+			return nil
+		}
 		var c tea.Cmd
 		m.toast, c = m.toast.PushDetail(toast.Info, a.Title+" has no one-click install",
 			"Install it with its own installer, then F1 → Agent: Start…")
@@ -107,6 +114,26 @@ func (m *Model) onAgentPickedRow(a agents.Agent) tea.Cmd {
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAgentInstall
 	return nil
+}
+
+// openAgentInstallPage shows the card of a preset that installs only with
+// its own script or app (CMP-3): termocode runs no install script and no
+// shell pipe, so it offers the CLI's install page (over SSH the link is
+// copied). Not now is first.
+func (m *Model) openAgentInstallPage(a agents.Agent) {
+	body := a.Title + " has no one-click install: it installs with its own installer, not npm or pip." +
+		"\n\nInstall page:\n    " + a.InstallURL +
+		"\n\nThen F1 → Agent: Start… finds `" + a.Bin + "` on your PATH."
+	if a.Login != "" {
+		body += "\nSign in with `" + a.Login + "` in a terminal tab."
+	}
+	m.aiS().agentPickPending = a.ID
+	m.confirm = confirm.Risky("Install "+a.Title+"?", body,
+		confirm.Button{ID: "cancel", Title: "Not now"},
+		confirm.Button{ID: "open", Title: "Open install page", Style: confirm.StylePrimary}).WithWideText()
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindAgentInstallPage
 }
 
 // openAgentSignIn shows the sign-in card of a (or the Start card of a CLI
@@ -152,6 +179,8 @@ func (m *Model) answerAgentPickCard(kind confirmKindEnum, id string) tea.Cmd {
 		return agentPickRunLine(m, a.Login)
 	case kind == confirmKindAgentSignIn && id == "start":
 		return agentPickStart(m, a)
+	case kind == confirmKindAgentInstallPage && id == "open" && a.InstallURL != "":
+		return m.openLink(a.InstallURL) // over SSH: copies the link
 	}
 	return nil
 }

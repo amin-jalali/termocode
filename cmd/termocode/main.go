@@ -314,6 +314,8 @@ func run(argv []string) int {
 			return runWorktree(args[1:])
 		case "task", "tasks":
 			return runTask(args[1:])
+		case "lane":
+			return runLane(args[1:])
 		case "workflow", "workflows":
 			return runWorkflow(args[1:])
 		case "http":
@@ -450,6 +452,8 @@ func printUsage() {
 	fmt.Println("                             notes and status for the worktree you are in")
 	fmt.Println("  termocode task list|add|show|claim|status|note")
 	fmt.Println("                             the task list agents and people share (task --help)")
+	fmt.Println("  termocode lane pack|info|unpack|pull|push")
+	fmt.Println("                             move a lane (worktree and its work) to another machine")
 	fmt.Println("  termocode http run [options] <file|folder>…")
 	fmt.Println("                             run .http files for CI (http run --help)")
 	fmt.Println("  termocode db list|show|add|remove")

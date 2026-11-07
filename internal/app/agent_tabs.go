@@ -212,6 +212,8 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 		return m.openRaceForm("", ""), true
 	case agentRaceComparePaletteID:
 		return m.openRaceCompare(), true
+	case agentSplitPaletteID: // Agent: Split Task… (agent_split.go)
+		return m.openSplitDraft(), true
 	}
 	if id == agentChatPaletteID { // Agent: Chat View (agent_chat.go)
 		return m.toggleAgentChatView(), true
@@ -239,6 +241,9 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	}
 	if id == agentAutoContinuePaletteID { // Agent: Toggle Auto-Continue (agent_limit.go)
 		return m.toggleAgentAutoContinue(), true
+	}
+	if id == diffCommentsPaletteID { // Agent: Send Diff Comments… (diff_comments.go)
+		return m.openDiffCommentsSend(m.reviewOpen), true
 	}
 	aid, ok := strings.CutPrefix(id, agentPaletteIDPfx)
 	if !ok {
