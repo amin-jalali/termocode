@@ -840,8 +840,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: New Child of Selected… | `worktree-new-child` |   |   |
 | Worktree: New… | `worktree-new` |   |   |
 | Worktree: Next Filter | `worktree-filter` |   |   |
+| Worktree: Open Dev Server of Selected | `worktree-run-open` |   |   |
 | Worktree: Open Selected | `worktree-open` |   |   |
 | Worktree: Pin or Unpin Selected | `worktree-pin` |   |   |
+| Worktree: Run Dev Server of Selected | `worktree-run` |   |   |
 | Worktree: Show | `worktree-view` | `Alt+Shift+W` | `Alt+Shift+W` |
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |

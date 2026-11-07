@@ -62,6 +62,9 @@ type wtState struct {
 	setupAsk *wtSetupPending        // the open setup trust card (worktrees_setup.go)
 	setups   map[string]*wtSetupRun // setups run in this window, by worktree path
 
+	runAsk *wtRunPending     // the open dev server trust card (worktrees_run.go)
+	runs   map[string]*wtRun // dev servers run in this window, by worktree path
+
 	link        *wtLinkForm   // the open link card (worktrees_link.go)
 	linkReading bool          // due links are being read again
 	ctlLink     *wtCtlPending // the open card of a CLI link (worktrees_notes.go)
