@@ -115,10 +115,13 @@ func (m *Model) databaseRedisAdminPrompt(kind promptKindEnum, value string) (tea
 // taken; on success the tree reloads and a renamed open key reopens.
 func (m *Model) onDBRedisAdminDone(w *dbRedisWrite, reply any, hist tea.Cmd) tea.Cmd {
 	dst := dbOneLine(dbclient.RedisDisplay(w.dst))
-	if n, ok := reply.(int64); ok && n == 0 {
+	if n, ok := reply.(int64); (ok && n == 0) || (reply == nil && w.admin == "new") {
 		return tea.Batch(hist, m.pushToastDetail(toast.Warn, "A key named "+dst+" already exists", "Nothing changed. Pick another name."))
 	}
 	title := "Copied to " + dst
+	if w.admin == "new" {
+		title = "Made key " + dst
+	}
 	var reopen tea.Cmd
 	if w.admin == "rename" {
 		title = "Renamed to " + dst

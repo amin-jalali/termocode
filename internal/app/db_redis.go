@@ -507,7 +507,7 @@ type dbRedisWrite struct {
 	deleted bool // DEL: the key leaves the tree and the page
 	reload  *dbRedisEdit
 	ns      *dbRedisNSDelete // delete namespace: every key under a prefix
-	admin   string           // "rename" | "copy" (DBX-51)
+	admin   string           // "rename" | "copy" | "new" (DBX-51)
 	dst     string           // the new key of a rename / copy
 }
 
@@ -777,6 +777,9 @@ func (m *Model) databaseRedisPrompt(kind promptKindEnum, value string) (tea.Cmd,
 	if cmd, ok := m.databaseRedisAdminPrompt(kind, value); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseRedisMorePrompt(kind, value); ok {
+		return cmd, true
+	}
 	switch kind {
 	case promptKindDBRedisValue, promptKindDBRedisAdd, promptKindDBRedisAddValue, promptKindDBRedisTTL:
 	default:
@@ -926,6 +929,9 @@ func redisConnDB(c dbclient.Conn) int {
 }
 
 func (m *Model) databaseRedisConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseRedisExportConfirm(id); ok {
+		return cmd, true
+	}
 	if m.confirmKind != confirmKindDBRedisWrite {
 		return nil, false
 	}

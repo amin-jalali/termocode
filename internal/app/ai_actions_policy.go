@@ -572,6 +572,18 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"redis-rename-key":                  aiNever(aiNoPicker + " (redis_command)"),
 	"redis-copy-key":                    aiNever(aiNoPicker + " (redis_command)"),
 	"redis-slowlog":                     aiNever("it runs in the user's console; use redis_command (SLOWLOG GET)"),
+	"redis-search-keys":                 aiNever(aiNoPicker + " (redis_keys with a pattern)"),
+	"redis-new-key":                     aiNever(aiNoPicker + " (redis_command; a write asks)"),
+	"redis-json-path":                   aiNever(aiNoPicker + " (redis_command JSON.GET)"),
+	"redis-key-module-info":             aiNever("it shows on the user's result page; use redis_command (TS.INFO, BF.INFO, …)"),
+	"redis-modules":                     aiNever("it runs in the user's console; use redis_command (MODULE LIST)"),
+	"redis-search-indexes":              aiNever("it runs in the user's console; use redis_command (FT._LIST)"),
+	"redis-memory":                      aiNever("it runs in the user's console; use redis_command (MEMORY STATS)"),
+	"redis-pubsub-channels":             aiNever("it runs in the user's console; use redis_command (PUBSUB CHANNELS)"),
+	"redis-listen":                      aiNever("it reads live messages of the user's channels; only the user starts it"),
+	"redis-stream-groups":               aiNever("it shows on the user's result page; use redis_command (XINFO GROUPS)"),
+	"redis-cluster-nodes":               aiNever("it runs in the user's console; use redis_command (CLUSTER NODES)"),
+	"redis-export-keys":                 aiNever("it writes key values to a file after a card only the user answers"),
 
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),
