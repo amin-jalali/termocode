@@ -5,7 +5,8 @@ package webproto
 // provider's name (never a key or an endpoint), the model and the models
 // the laptop offers for that provider, the active agent profile and the
 // profiles (a project profile says whether the laptop trusts it), and
-// the laptop's ghost text, next edit and agent worktree settings. The
+// the laptop's ghost text, next edit and agent worktree settings, and
+// whether its web tools are on (the phone's Research chip, MOB-15). The
 // page may ask to use another profile or model; that runs only after a
 // laptop card (ai.use_profile, ai.use_model), and a project profile the
 // laptop has not trusted is never used from the web. The delta is the
@@ -41,6 +42,11 @@ type AISnap struct {
 	Inline     bool        `json:"inline"`    // ai_inline: ghost text while typing
 	NextEdit   bool        `json:"nextEdit"`  // ai_next_edit
 	Worktrees  bool        `json:"worktrees"` // ai_worktrees: parallel steps in their own worktree
+	// The laptop's web tools (MOB-15): the phone's Research chip is off
+	// while both are off. WebSearch is the search provider's title
+	// ("" = off), never its key.
+	WebFetch  bool   `json:"webFetch,omitempty"`  // ai_web_fetch
+	WebSearch string `json:"webSearch,omitempty"` // ai_web_search's provider
 }
 
 // AIProfile is one agent profile: where it comes from and, for a
