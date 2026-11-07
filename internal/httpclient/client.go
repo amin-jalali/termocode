@@ -113,19 +113,24 @@ func (c *Client) Close() {
 	}
 }
 
-func (c *Client) transport(h Hooks) (*http.Transport, bool, error) {
-	if h.AllowIP == nil && !h.Insecure && !h.hasTLSFiles() {
-		c.once.Do(func() { c.plain, _ = c.newTransport(h) })
+// transport picks the shared transport, or a one-off one when the send
+// needs other hooks, TLS files or its own proxy (override).
+func (c *Client) transport(h Hooks, proxy func(*http.Request) (*url.URL, error), override bool) (*http.Transport, bool, error) {
+	if !override {
+		proxy = c.opts.Proxy
+	}
+	if !override && h.AllowIP == nil && !h.Insecure && !h.hasTLSFiles() {
+		c.once.Do(func() { c.plain, _ = c.newTransport(h, proxy) })
 		return c.plain, false, nil
 	}
-	t, err := c.newTransport(h)
+	t, err := c.newTransport(h, proxy)
 	return t, true, err
 }
 
-func (c *Client) newTransport(h Hooks) (*http.Transport, error) {
+func (c *Client) newTransport(h Hooks, proxy func(*http.Request) (*url.URL, error)) (*http.Transport, error) {
 	d := &net.Dialer{Timeout: connectTimeout, KeepAlive: 30 * time.Second}
 	t := &http.Transport{
-		Proxy:                 c.opts.Proxy,
+		Proxy:                 proxy,
 		DialContext:           d.DialContext,
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          32,
@@ -140,7 +145,6 @@ func (c *Client) newTransport(h Hooks) (*http.Transport, error) {
 	t.TLSClientConfig = cfg
 	if h.AllowIP != nil {
 		allow := h.AllowIP
-		proxy := c.opts.Proxy
 		t.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 			host, port, err := net.SplitHostPort(addr)
 			if err != nil {
@@ -233,8 +237,34 @@ func (e *hopError) Error() string { return e.err.Error() }
 var errTooManyRedirects = errors.New("too many redirects")
 
 // Send runs one request. It never panics and always returns a
-// Response; failures set Err and ErrKind.
+// Response; failures set Err and ErrKind. `# @retry N` sends again
+// after network errors, timeouts, 429 and 5xx, waiting `# @retry-delay`
+// (default 500 ms) and twice as long each time.
 func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
+	limit := retryLimit(rr.Directives["retry"])
+	base := defaultRetryDelay
+	if v, ok := rr.Directives["retry-delay"]; ok {
+		if d, err := parseTimeout(v); err == nil && d > 0 {
+			base = d
+		}
+	}
+	for try := 0; ; try++ {
+		resp := c.sendOnce(ctx, rr, h)
+		resp.Attempts = try + 1
+		if try >= limit || !retryable(resp) {
+			return resp
+		}
+		t := time.NewTimer(retryDelay(base, try))
+		select {
+		case <-ctx.Done():
+			t.Stop()
+			return resp
+		case <-t.C:
+		}
+	}
+}
+
+func (c *Client) sendOnce(ctx context.Context, rr Resolved, h Hooks) *Response {
 	r := rr.Request
 	resp := &Response{Method: r.Method, URL: r.URL, MaxBody: c.opts.MaxBody}
 	start := time.Now()
@@ -254,6 +284,11 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	u, err := url.Parse(r.URL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		resp.fail(ErrKindOther, fmt.Sprintf("not an http(s) URL: %s", RedactURL(r.URL)), start)
+		return resp
+	}
+	proxy, override, perr := requestProxy(r.Directives, h)
+	if perr != nil {
+		resp.fail(ErrKindOther, perr.Error(), start)
 		return resp
 	}
 	wb, err := BuildBody(r, rr.Dir)
@@ -304,7 +339,7 @@ func (c *Client) Send(ctx context.Context, rr Resolved, h Hooks) *Response {
 	var tm timingTrace
 	req = req.WithContext(httptrace.WithClientTrace(ctx, tm.trace()))
 
-	tr, oneOff, err := c.transport(h)
+	tr, oneOff, err := c.transport(h, proxy, override)
 	if err != nil {
 		resp.fail(ErrKindTLS, "TLS: "+err.Error(), start)
 		return resp

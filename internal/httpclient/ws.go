@@ -107,7 +107,14 @@ func (c *Client) DialWS(ctx context.Context, rr Resolved, h Hooks) (*WSConn, err
 		!strings.HasPrefix(low, "http://") && !strings.HasPrefix(low, "https://") {
 		return nil, fmt.Errorf("websocket: the URL must start with ws:// or wss://")
 	}
-	base, _ := c.transport(h)
+	proxy, override, perr := requestProxy(rr.Directives, h)
+	if perr != nil {
+		return nil, perr
+	}
+	base, _, err := c.transport(h, proxy, override)
+	if err != nil {
+		return nil, fmt.Errorf("websocket: TLS: %w", err)
+	}
 	// WebSocket needs HTTP/1.1: a clone without HTTP/2.
 	t := base.Clone()
 	t.ForceAttemptHTTP2 = false

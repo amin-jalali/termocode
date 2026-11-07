@@ -55,7 +55,7 @@ func ImportOpenAPI(data []byte) (OpenAPIImport, error) {
 		return out, errors.New("not an OpenAPI 3.x or Swagger 2.0 file (no openapi: 3.x or swagger: \"2.0\" key)")
 	}
 	im := &openAPIImporter{doc: doc, v2: v2, vars: map[string]string{}}
-	out.Title = oneLine(str(obj(doc["info"])["title"]))
+	out.Title = openapiOneLine(str(obj(doc["info"])["title"]))
 	out.Env = map[string]string{"baseUrl": im.baseURL()}
 
 	paths := obj(doc["paths"])
@@ -150,21 +150,21 @@ type openAPIImporter struct {
 
 func (im *openAPIImporter) baseURL() string {
 	if im.v2 {
-		host := oneLine(str(im.doc["host"]))
+		host := openapiOneLine(str(im.doc["host"]))
 		if host == "" {
 			host = "localhost"
 		}
 		scheme := "https"
 		if s, ok := im.doc["schemes"].([]any); ok && len(s) > 0 && str(s[0]) != "" {
-			scheme = oneLine(str(s[0]))
+			scheme = openapiOneLine(str(s[0]))
 		}
-		return strings.TrimRight(scheme+"://"+host+oneLine(str(im.doc["basePath"])), "/")
+		return strings.TrimRight(scheme+"://"+host+openapiOneLine(str(im.doc["basePath"])), "/")
 	}
 	if s, ok := im.doc["servers"].([]any); ok && len(s) > 0 {
 		srv := obj(s[0])
-		u := oneLine(str(srv["url"]))
+		u := openapiOneLine(str(srv["url"]))
 		for name, v := range obj(srv["variables"]) {
-			u = strings.ReplaceAll(u, "{"+name+"}", oneLine(str(obj(v)["default"])))
+			u = strings.ReplaceAll(u, "{"+name+"}", openapiOneLine(str(obj(v)["default"])))
 		}
 		if u != "" && u != "/" {
 			return strings.TrimRight(u, "/")
@@ -236,14 +236,14 @@ var pathParamRe = regexp.MustCompile(`\{([^{}]+)\}`)
 
 func (im *openAPIImporter) request(path, meth string, item, op map[string]any) string {
 	params := im.params(item, op)
-	name := oneLine(str(op["operationId"]))
+	name := openapiOneLine(str(op["operationId"]))
 	if name == "" {
-		name = strings.ToUpper(meth) + " " + oneLine(path)
+		name = strings.ToUpper(meth) + " " + openapiOneLine(path)
 	}
 	var b strings.Builder
 	b.WriteString("### " + name + "\n")
 	for _, k := range []string{"summary", "description"} {
-		if s := oneLine(str(op[k])); s != "" {
+		if s := openapiOneLine(str(op[k])); s != "" {
 			b.WriteString("# " + s + "\n")
 			break
 		}
@@ -255,9 +255,9 @@ func (im *openAPIImporter) request(path, meth string, item, op map[string]any) s
 			byPath[p.name] = p
 		}
 	}
-	u := pathParamRe.ReplaceAllStringFunc(oneLine(path), func(s string) string {
+	u := pathParamRe.ReplaceAllStringFunc(openapiOneLine(path), func(s string) string {
 		raw := s[1 : len(s)-1]
-		v := varName(raw)
+		v := openapiVarName(raw)
 		if _, ok := im.vars[v]; !ok {
 			ex := ""
 			if p, ok := byPath[raw]; ok {
@@ -274,7 +274,7 @@ func (im *openAPIImporter) request(path, meth string, item, op map[string]any) s
 	var q []string
 	for _, p := range params {
 		if p.in == "query" && p.required {
-			q = append(q, url.QueryEscape(oneLine(p.name))+"="+url.QueryEscape(im.paramExample(p)))
+			q = append(q, url.QueryEscape(openapiOneLine(p.name))+"="+url.QueryEscape(im.paramExample(p)))
 		}
 	}
 	if len(q) > 0 {
@@ -296,7 +296,7 @@ func (im *openAPIImporter) request(path, meth string, item, op map[string]any) s
 		headers = append(headers, Header{"Content-Type", ctype})
 	}
 	for _, h := range headers {
-		b.WriteString(h.Name + ": " + oneLine(h.Value) + "\n")
+		b.WriteString(h.Name + ": " + openapiOneLine(h.Value) + "\n")
 	}
 	if body != "" {
 		b.WriteString("\n" + body + "\n")
@@ -306,13 +306,13 @@ func (im *openAPIImporter) request(path, meth string, item, op map[string]any) s
 
 func (im *openAPIImporter) paramExample(p openAPIParam) string {
 	if v, ok := p.p["example"]; ok {
-		return oneLine(scalar(v))
+		return openapiOneLine(openapiScalar(v))
 	}
 	sch := im.deref(obj(p.p["schema"]))
 	if len(sch) == 0 { // Swagger 2.0 puts type on the parameter
 		sch = p.p
 	}
-	return oneLine(scalar(im.example(sch, 0, map[string]bool{})))
+	return openapiOneLine(openapiScalar(im.example(sch, 0, map[string]bool{})))
 }
 
 func (im *openAPIImporter) authHeaders(op map[string]any) []Header {
@@ -356,9 +356,9 @@ func (im *openAPIImporter) body(op map[string]any, params []openAPIParam) (strin
 			if p.in == "body" {
 				ctype := "application/json"
 				if c, ok := op["consumes"].([]any); ok && len(c) > 0 {
-					ctype = oneLine(str(c[0]))
+					ctype = openapiOneLine(str(c[0]))
 				} else if c, ok := im.doc["consumes"].([]any); ok && len(c) > 0 {
-					ctype = oneLine(str(c[0]))
+					ctype = openapiOneLine(str(c[0]))
 				}
 				return ctype, im.render(ctype, im.example(im.deref(obj(p.p["schema"])), 0, map[string]bool{}))
 			}
@@ -389,7 +389,7 @@ func (im *openAPIImporter) body(op map[string]any, params []openAPIParam) (strin
 	} else {
 		ex = im.example(im.deref(obj(mt["schema"])), 0, map[string]bool{})
 	}
-	return oneLine(ctype), im.render(ctype, ex)
+	return openapiOneLine(ctype), im.render(ctype, ex)
 }
 
 // render writes an example body. JSON is indented; anything else is one
@@ -407,7 +407,7 @@ func (im *openAPIImporter) render(ctype string, v any) string {
 		}
 		s = string(bs)
 	} else {
-		s = oneLine(scalar(v))
+		s = openapiOneLine(openapiScalar(v))
 	}
 	lines := strings.Split(s, "\n")
 	for i, l := range lines {
@@ -525,8 +525,8 @@ func OpenAPIFileName(title string) string {
 	return s + ".http"
 }
 
-// varName makes a file-variable name ([\w.-]+) from a path parameter.
-func varName(s string) string {
+// openapiVarName makes a file-variable name ([\w.-]+) from a path parameter.
+func openapiVarName(s string) string {
 	var b strings.Builder
 	for _, r := range s {
 		if r == '_' || r == '.' || r == '-' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
@@ -552,9 +552,9 @@ func headerName(s string) string {
 	return b.String()
 }
 
-// oneLine folds every line break (and other control characters) into a
+// openapiOneLine folds every line break (and other control characters) into a
 // space.
-func oneLine(s string) string {
+func openapiOneLine(s string) string {
 	if !strings.ContainsFunc(s, func(r rune) bool { return r < ' ' || r == 0x7f || r == 0x85 || r == 0x2028 || r == 0x2029 }) {
 		return strings.TrimSpace(s)
 	}
@@ -566,7 +566,7 @@ func oneLine(s string) string {
 	}, s))
 }
 
-func scalar(v any) string {
+func openapiScalar(v any) string {
 	switch x := v.(type) {
 	case nil:
 		return ""
@@ -593,7 +593,7 @@ func str(v any) string {
 	if v == nil {
 		return ""
 	}
-	return scalar(v)
+	return openapiScalar(v)
 }
 
 func obj(v any) map[string]any {

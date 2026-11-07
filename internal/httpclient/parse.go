@@ -14,7 +14,8 @@ import (
 //   - `@name = value` file variables above a request line,
 //   - a bare `https://…` or `{{host}}/…` request line means GET,
 //   - `# @no-redirect`, `# @no-cookie-jar`, `# @timeout 10s`, `# @insecure`,
-//     `# @ca-cert f`, `# @client-cert f`, `# @client-key f` directives,
+//     `# @ca-cert f`, `# @client-cert f`, `# @client-key f`, `# @proxy URL|none`,
+//     `# @retry 3`, `# @retry-delay 500ms` directives,
 //   - blank lines between the comment lines above a request.
 
 // The space before "=" is any space strings.TrimSpace drops (\s alone
