@@ -808,6 +808,28 @@ export const S = {
   "ph.ask": "What do you want?",
   "ph.checks": "Checks: {state}",
   "ph.ci": "CI",
+  // Phone race compare (MOBUX-10)
+  "ph.race.kind": "race",
+  "ph.race.title": "Race #{n} · {task}",
+  "ph.race.sub": "{done} of {count} lanes finished",
+  "ph.race.table": "Lanes side by side",
+  "ph.race.lanes": "Lanes",
+  "ph.race.lane": "Lane",
+  "ph.race.lane_of": "Lane {n} of {count}: {name}",
+  "ph.race.files": "Files",
+  "ph.race.tests": "Tests",
+  "ph.race.cost": "Cost",
+  "ph.race.judge": "The judge's pick",
+  "ph.race.exit": "exit {code}",
+  "ph.race.summary": "What the AI says",
+  "ph.race.more_files": "{n} more files",
+  "ph.race.no_changes": "No changes.",
+  "ph.race.review": "Review",
+  "ph.race.summarise": "Summarise",
+  "ph.race.verify": "Verify",
+  "ph.race.merge": "Merge",
+  "ph.race.merge_ask": "Merge “{name}”?",
+  "ph.race.merge_note": "The laptop asks once more before it merges. The other {others} lanes stay until you discard them.",
 } as const;
 
 /** StringKey is a key of the page's strings or of the workbench's

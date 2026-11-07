@@ -8,5 +8,7 @@ export { PhoneChip, PhoneChips } from "./Chip";
 export { Composer, type Attached } from "./Composer";
 export { Row, Rows } from "./Row";
 export { PhoneSheet, safeFirst, type SheetAction } from "./Sheet";
+export { RaceCompare } from "./RaceCompare";
+export { readRaces, type Race, type RaceLane } from "./race";
 export { StatusMark } from "./Mark";
 export { BOARD_ORDER, STATUS, type Status, type StatusLook } from "./status";
