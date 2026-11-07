@@ -9,6 +9,7 @@ import "./styles/shell.css";
 import "./styles/ui.css";
 import "./styles/components.css";
 import "./styles/chat.css";
+import "./styles/home.css";
 import "./styles/git.css";
 import "./styles/more.css";
 import "./styles/moreviews.css";

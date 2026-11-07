@@ -1,0 +1,82 @@
+// The phone Home's own strings (MOB-4), English only (owner 2026-11-07:
+// the phone app is English only). They live in home.js, so the phone's
+// first files do not carry them; same voice as strings.ts: calm, short,
+// present tense, no exclamation marks, no other product named. {name}
+// marks a value.
+import { has } from "../state/dict";
+
+export const HS = {
+  "title": "termocode",
+  "live": "live",
+  "offline": "offline",
+  "ask": "What do you want?",
+  "hello": "Ask in your own words, or tap a chip. Chips cost no tokens.",
+  "chips": "Quick views",
+  "panels": "Panels",
+  "panels.open": "Open panels",
+  "panels.views": "Views",
+  "panels.files": "Files",
+  "panels.term": "Terminal",
+  "panels.git": "Git",
+  "panels.more": "More",
+  "panels.phone": "This phone",
+  "panels.tabs": "Use the tab bar",
+  "panels.start": "Open the Home when the page starts",
+  "panels.close": "Close",
+  "chip.needs": "Needs you",
+  "chip.needs_n": "Needs you {n}",
+  "chip.board": "Board",
+  "chip.projects": "Projects",
+  "chip.views": "Views",
+  "chip.tasks": "Tasks",
+  "chip.runs": "Runs",
+  "chip.review": "Review",
+  "chip.research": "Research",
+  "chip.git": "Git",
+  "chip.mcp": "MCP",
+  "chip.what": "What can I do?",
+  "fill.review": "Review my changes on this branch.",
+  "fill.research": "Research: ",
+  "fill.mcp": "What can my MCP servers do here?",
+  "fill.what": "What can I do from this phone?",
+  "block.loading": "Asking the laptop…",
+  "block.failed": "The laptop did not answer: {why}",
+  "block.retry": "Try again",
+  "block.close": "Close this block",
+  "block.more": "{n} more on the laptop",
+  "block.laptop": "Open on laptop",
+  "block.no_tokens": "no tokens",
+  "needs.title": "Needs you",
+  "needs.none": "Nothing needs you right now.",
+  "board.title": "Board",
+  "board.empty": "Nothing is running and nothing waits.",
+  "state.needs_you": "Needs you",
+  "state.working": "Working",
+  "state.failed": "Failed",
+  "state.done": "Done",
+  "taskv.title": "Tasks",
+  "taskv.none": "This workspace has no tasks.",
+  "gitv.title": "Git",
+  "gitv.clean": "No changes on this branch.",
+  "gitv.norepo": "This workspace is not a git repository.",
+  "runv.title": "AI runs",
+  "runv.none": "No AI runs yet.",
+  "projv.title": "Projects",
+  "projv.none": "The laptop knows no projects yet.",
+  "tone.ok": "done",
+  "tone.warn": "needs you",
+  "tone.bad": "failed",
+  "tone.busy": "working",
+  "tone.idle": "idle",
+  "tone.info": "note",
+  "loading": "Loading the Home…",
+} as const;
+
+export type HomeKey = keyof typeof HS;
+
+/** hs returns the text of key with each {name} replaced by vars[name]. */
+export function hs(key: HomeKey, vars?: Readonly<Record<string, string | number>>): string {
+  const text: string = HS[key];
+  if (!vars) return text;
+  return text.replace(/\{([a-z_]+)\}/g, (m, name: string) => (has(vars, name) ? String(vars[name]) : m));
+}
