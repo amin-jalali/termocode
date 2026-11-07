@@ -143,6 +143,13 @@ type dbState struct {
 	discoverDone        bool
 	discovered          []containers.Container // the container list it read
 	discoveredPorts     []int                  // local ports that answered
+
+	// Several sessions per connection (db_sessions_multi.go, DBX-40).
+	consoleSess  map[string]string // .sql file -> the extra session it runs on
+	sessionSeq   map[string]int    // connection -> the last extra session number given
+	sessPickFile string            // the console the session picker is for
+	sessPickConn string
+	tempHinted   map[string]bool // session key -> the temp-table hint was shown
 }
 
 type dbRenderCache struct {

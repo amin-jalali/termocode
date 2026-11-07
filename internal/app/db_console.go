@@ -529,6 +529,7 @@ func (m *Model) databaseSendExec(all bool, plan *dbPlanRun, mode string) tea.Cmd
 	if _, ok := m.databases.connection(r.conn); !ok {
 		r.conn = ""
 	}
+	r.sessKey = m.databases.consoleSessionKey(file, r.conn) // its own session (DBX-40)
 	if r.conn == "" {
 		var items []picker.Item
 		for _, c := range m.databases.conns {
@@ -742,6 +743,10 @@ func (m *Model) databaseStartRunRevealed(r *dbRun) tea.Cmd {
 	if r.sessKey != "" {
 		sess = m.databases.sessions[r.sessKey]
 	}
+	if sess == nil && dbIsExtraSession(r.sessKey) && m.databases.sessions[r.conn] != nil {
+		s.waiting = r // the console's own session opens first (DBX-40)
+		return m.databaseOpenExtraSession(r.sessKey)
+	}
 	if sess == nil {
 		s.waiting = r
 		cmd := m.databaseConnect(r.conn)
@@ -877,7 +882,7 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 		status += m.dbTxStatus(msg.run.conn)
 	}
 	m.databaseRefreshLens(msg.run.file, msg.run.sql, status)
-	cmds := []tea.Cmd{m.databaseShowPage(), txCmd}
+	cmds := []tea.Cmd{m.databaseShowPage(), txCmd, m.databaseTempTableHint(msg)}
 	if msg.run.tv == nil && msg.run.redis == nil { // a data view or a value page is not something the user typed
 		cmds = append(cmds, m.databaseAppendHistory(msg.run))
 	}
@@ -1049,6 +1054,9 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseSessionsPick(id); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseConsoleSessionPick(id); ok {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseOpenCSVPicked(id); ok {

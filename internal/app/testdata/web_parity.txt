@@ -531,6 +531,7 @@ missing	db-goto-definition	Databases|S
 missing	db-insert-hints	Databases|S
 missing	db-object-actions	Databases|S
 missing	db-open-sessions	Databases|S
+missing	db-console-session	Databases|S
 missing	db-pending-sources	Databases|S
 missing	db-quick-doc	Databases|S
 missing	db-refresh-object	Databases|S

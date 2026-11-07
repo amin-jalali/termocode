@@ -73,6 +73,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-commit", Title: "Databases: Commit"},
 		{ID: "db-rollback", Title: "Databases: Roll Back"},
 		{ID: "db-open-sessions", Title: "Databases: Sessions…"},
+		{ID: "db-console-session", Title: "Databases: Console Session…"},
 		{ID: "db-savepoint", Title: "Databases: Set Savepoint…"},
 		{ID: "db-rollback-savepoint", Title: "Databases: Roll Back to Savepoint…"},
 		{ID: "db-submit-changes", Title: "Databases: Submit Pending Changes…"},
@@ -184,6 +185,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseCommitKey(false), true
 	case "db-open-sessions":
 		return m.databaseSessionsPicker(), true
+	case "db-console-session":
+		return m.databaseConsoleSessionPicker(), true
 	case "db-sql-outline":
 		return m.databaseSQLOutline(), true
 	case "db-switch-connection":
@@ -625,7 +628,7 @@ func (m *Model) databaseDisconnectNow(connID string) tea.Cmd {
 	m.databases.console.stop(connID)
 	m.databases.connectionEpochs[connID]++
 	for key, sess := range m.databases.sessions {
-		if key == connID || strings.HasPrefix(key, connID+"/db/") {
+		if key == connID || strings.HasPrefix(key, connID+"/db/") || strings.HasPrefix(key, connID+dbExtraSessionTag) {
 			_ = sess.Close()
 			delete(m.databases.sessions, key)
 		}
@@ -718,7 +721,7 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 		return dbTestCommandSSH(c, password, s.root, s.generation, sec, true)
 	}
 	for key, old := range s.sessions {
-		if key == id || strings.HasPrefix(key, id+"/db/") {
+		if key == id || strings.HasPrefix(key, id+"/db/") || strings.HasPrefix(key, id+dbExtraSessionTag) {
 			_ = old.Close()
 			delete(s.sessions, key)
 		}
@@ -1447,6 +1450,9 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 			_ = msg.tunnel.Close()
 		}
 		return nil
+	}
+	if dbIsExtraSession(msg.id) {
+		return m.onDBExtraSessionConnect(msg) // a console's own session: no tree node (DBX-40)
 	}
 	n := s.nodes[msg.id]
 	n.loading = false

@@ -427,6 +427,9 @@ func (m *Model) databaseBufferLens(buf int) {
 			label += " " + k
 		}
 		label += " · " + id
+		if key := m.databases.consoleSessionKey(file, id); key != "" {
+			label += " " + dbConsoleSessionName(key) // its own session (DBX-40)
+		}
 		for _, sp := range dbStatementSpans(strings.Join(lines, "\n"), c.Driver) {
 			text := label
 			if status := s.lens[file+"\x00"+sp.sql]; status != "" {

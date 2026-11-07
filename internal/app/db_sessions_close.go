@@ -33,6 +33,9 @@ func (s *dbState) dbSessionTitle(key string) string {
 	if db, ok := strings.CutPrefix(rest, "db/"); ok && db != "" {
 		name += " › " + db
 	}
+	if n := dbExtraSessionNumber(key); n > 0 {
+		name += fmt.Sprintf(" · session %d", n)
+	}
 	return sanitizeDBText(name)
 }
 

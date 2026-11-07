@@ -214,6 +214,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
+| Databases: Console Session… | `db-console-session` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
