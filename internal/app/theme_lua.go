@@ -414,5 +414,6 @@ hi('TermocodeHttpFolded',      { fg = c.fg, bg = c.bg })
 hi('TermocodeDbChanged',       { fg = c.git_mod })
 hi('TermocodeDbAdded',         { fg = c.git_add })
 hi('TermocodeDbDeleted',       { fg = c.git_del, strikethrough = true })
+hi('TermocodeDbAltRow',        { bg = c.bg_panel })
 if _G.termocode_bracket_hl then _G.termocode_bracket_hl() end
 `

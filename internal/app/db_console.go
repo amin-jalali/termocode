@@ -142,6 +142,15 @@ type dbConsoleSettings struct {
 	// Redis (db_redis.go)
 	RedisSep     *string `json:"db_redis_separator"`
 	RedisMaxKeys *int    `json:"db_redis_max_keys"`
+	// Display formats (db_display.go, DBX-27)
+	NumberFormat *string `json:"db_number_format"`
+	DateFormat   *string `json:"db_date_format"`
+	TimeFormat   *string `json:"db_time_format"`
+	TimeZone     *string `json:"db_time_zone"`
+	BoolStyle    *string `json:"db_bool_style"`
+	AltRows      *bool   `json:"db_alternate_rows"`
+	LOBBytes     *int    `json:"db_lob_bytes"`
+	GeometryFmt  *string `json:"db_geometry_format"`
 }
 
 func loadDBConsoleSettings() dbConsoleSettings {

@@ -2533,11 +2533,19 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `containers_sections` | confirm (settings) |   |
 | `dashboard_logo` | confirm (settings) |   |
 | `db_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
+| `db_alternate_rows` | confirm (settings) |   |
+| `db_bool_style` | confirm (settings) |   |
+| `db_date_format` | confirm (settings) |   |
+| `db_geometry_format` | confirm (settings) |   |
 | `db_history_max` | never | AI provider, credentials and approvals stay with the user |
+| `db_lob_bytes` | confirm (settings) |   |
 | `db_max_rows` | never | AI provider, credentials and approvals stay with the user |
+| `db_number_format` | confirm (settings) |   |
 | `db_page_rows` | never | AI provider, credentials and approvals stay with the user |
 | `db_redis_max_keys` | never | AI provider, credentials and approvals stay with the user |
 | `db_redis_separator` | confirm (settings) |   |
+| `db_time_format` | confirm (settings) |   |
+| `db_time_zone` | confirm (settings) |   |
 | `db_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `font_delta` | confirm (settings) |   |
 | `git_auto_fetch` | never | starts a timer that talks to the remote; only the user turns it on |

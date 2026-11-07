@@ -722,6 +722,14 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"db_ai_max_kb":         aiNever(aiNoAIConfig), // the AI never raises its own budget
 	"db_redis_separator":   aiConfirm(ai.ClassSettings),
 	"db_redis_max_keys":    aiNever(aiNoAIConfig),
+	"db_number_format":     aiConfirm(ai.ClassSettings), // DBX-27: display only
+	"db_date_format":       aiConfirm(ai.ClassSettings),
+	"db_time_format":       aiConfirm(ai.ClassSettings),
+	"db_time_zone":         aiConfirm(ai.ClassSettings),
+	"db_bool_style":        aiConfirm(ai.ClassSettings),
+	"db_alternate_rows":    aiConfirm(ai.ClassSettings),
+	"db_lob_bytes":         aiConfirm(ai.ClassSettings),
+	"db_geometry_format":   aiConfirm(ai.ClassSettings),
 	"http_timeout":         aiConfirm(ai.ClassSettings),
 	"http_max_redirects":   aiConfirm(ai.ClassSettings),
 	"http_cookie_jar":      aiConfirm(ai.ClassSettings),
