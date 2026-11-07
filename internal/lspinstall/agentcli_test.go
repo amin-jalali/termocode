@@ -52,7 +52,7 @@ func TestAgentCLITools(t *testing.T) {
 			}
 		}
 	}
-	if got := ByCategory(CategoryAgentCLI); len(got) != 11 { // claude-code, codex + the AGX-3 presets (agents.Registry)
+	if got := ByCategory(CategoryAgentCLI); len(got) != 16 { // claude-code, codex + the AGX-3 and CMP-3 presets (agents.Registry)
 		t.Fatalf("agent CLIs = %v", got)
 	}
 }
@@ -112,5 +112,29 @@ func TestInstallAgentCLIWithoutNpm(t *testing.T) {
 	var mt *MissingToolchainError
 	if !errors.As(err, &mt) || mt.Bin != "npm" {
 		t.Fatalf("got %v", err)
+	}
+}
+
+// Spec (CMP-3): the new agent presets install with a package manager
+// into tools/<name>: npm for the node CLIs, pip for Mistral Vibe.
+func TestMoreAgentCLITools(t *testing.T) {
+	for _, c := range []struct {
+		name, spec, bin string
+		kind            InstallKind
+	}{
+		{"auggie", "@augmentcode/auggie", "auggie", KindNpm},
+		{"grok-cli", "@vibe-kit/grok-cli", "grok", KindNpm},
+		{"cline", "cline", "cline", KindNpm},
+		{"continue-cli", "@continuedev/cli", "cn", KindNpm},
+		{"mistral-vibe", "mistral-vibe", "vibe", KindPip},
+	} {
+		tl, ok := Lookup(c.name)
+		if !ok {
+			t.Errorf("%s missing", c.name)
+			continue
+		}
+		if tl.Category != CategoryAgentCLI || tl.InstallKind != c.kind || tl.Spec != c.spec || tl.Bin != c.bin {
+			t.Errorf("%s = %+v", c.name, tl)
+		}
 	}
 }
