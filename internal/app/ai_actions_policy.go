@@ -726,6 +726,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-hooks":        aiNever(aiNoPicker),
 	// Web tools reach the internet and add servers: the user turns them on.
 	"ai-web-tools": aiNever(aiNoPicker),
+	// Proof of work (CMP-52): the AI shoots with proof_screenshot; the
+	// list and deleting the shots are the user's.
+	"ai-proofs": aiNever(aiNoPicker),
 	// Ship pushes and opens pull requests: only the user starts it.
 	"ai-ship":          aiNever("it pushes and opens a pull request: the user starts it"),
 	"ai-plan-worktree": aiNever("it leads to a push and a pull request: the user starts it"),

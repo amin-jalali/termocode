@@ -50,6 +50,7 @@ var aiGateNotes = map[string]string{
 	"execute_action":     "per action: see Palette actions below",
 	"ast_grep":           "search: auto; with rewrite: confirm (review), or confirm (fileWrite) when AI file changes are not reviewed",
 	"look_at":            "auto; an image is sent to the main model in one extra request (a PDF is read locally)",
+	"proof_screenshot":   "a localhost page or an HTML file in the workspace: auto; any other address: confirm (run); the shot is sent to the main model when it takes images",
 	"containers_control": "confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first",
 	"images_pull":        "confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)",
 	"compose_up":         "confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)",

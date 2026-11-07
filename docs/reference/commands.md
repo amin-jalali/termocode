@@ -59,6 +59,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Pick Model… | `ai-pick-model` |   |   |
 | AI: Project Profiles Trust… | `ai-profile-trust` |   |   |
 | AI: Project Rules… | `ai-rules` |   |   |
+| AI: Proof of Work… (screenshots the AI took) | `ai-proofs` |   |   |
 | AI: Rename Chat… | `ai-history-rename` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Review Waiting Plan | `ai-plan-review` |   |   |

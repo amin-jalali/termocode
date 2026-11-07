@@ -847,6 +847,32 @@ The same screen can add servers (MCP) for this work. Each shows the exact
 The `visual-qa` skill tells the AI how to check a page in the browser:
 phone and desktop widths, console errors, the main buttons.
 
+## Proof of work screenshots
+
+After a UI change the AI can show you that it works. Its tool
+`proof_screenshot` opens a page in a headless browser and saves a PNG:
+
+- It shoots the local dev server (`http://localhost:5173/…`) or an
+  `.html` / `.svg` file in the workspace at once. Any other address asks
+  you first (class `run`).
+- You choose the width and height (default 1280×800; 390 wide for a
+  phone). The AI is told to shoot desktop and phone widths.
+- Shots go to `.termocode/proof/` in the workspace, each with a small
+  `.json` file: the address, the size, the time and a note.
+- When the model takes images, it sees the shot and can fix what looks
+  wrong. Otherwise it can use `look_at` on the file.
+- The browser runs with a new empty profile each time (no cookies, none
+  of your sign-ins) and with its sandbox on. It stops after 60 seconds.
+
+It needs Chrome, Chromium, Edge or Brave on this machine. termocode finds
+it on `PATH` (and in `/Applications` on macOS); set `TERMOCODE_BROWSER`
+to the program path to pick another one. Nothing else is installed.
+
+Run **AI: Proof of Work…** to see the shots, newest first, with the
+address, size and note. Enter opens a shot in the picture preview.
+**Delete all proof screenshots…** asks first (Cancel is the default) and
+removes only the shots and their notes.
+
 ## Keys at a glance
 
 | Key | Action |
