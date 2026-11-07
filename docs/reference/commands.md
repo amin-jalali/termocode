@@ -799,6 +799,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Workspace: Add Folder... | `workspace-add-folder` |   |   |
+| Workspace: Open Folder in Container... | `workspace-open-container` |   |   |
 | Workspace: Remove Folder... | `workspace-remove-folder` |   |   |
 
 ## Worktree

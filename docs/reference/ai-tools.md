@@ -2490,6 +2490,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `workflow-undo-write` | Workflows: Undo a Write of Selected Run… | confirm (always asks) |   |
 | `workflows` | Workflows: Open | auto |   |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
+| `workspace-open-container` | Workspace: Open Folder in Container... | never | opening a container workspace restarts termocode; it is the user's choice |
 | `workspace-remove-folder` | Workspace: Remove Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
 | `worktree-add-folder` | Worktree: Add Selected as Folder | never | acts on the worktree the user selected in the WORKTREES view |
 | `worktree-adopt` | Worktree: Adopt Selected | never | acts on the worktree the user selected in the WORKTREES view |

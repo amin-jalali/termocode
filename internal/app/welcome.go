@@ -534,12 +534,17 @@ func welcomeWorkspaceRows(entries []WorkspaceEntry, n int, all bool, W int) []we
 		if name == "" || name == "/" || name == "." {
 			name = e.Path
 		}
+		status := homeShort(e.Path, home)
 		g, c := theme.FileIconFor(e.Path, true, false)
+		if cr, ok := parseContainerRef(e.Path); ok { // ▣ api-1 · prod-ssh /app
+			name, g = cr.Name, "▣"
+			status = strings.TrimSpace(cr.Context + " " + cr.Root)
+		}
 		r := welcomeRow{id: "workspace:" + e.Path, glyph: g, glyphTok: c, title: name,
 			right: formatTimeShort(e.OpenedAt, now), rightDim: true, interactive: true}
 		if !narrow {
 			r.titleW = 20
-			r.status, r.statusLeft = homeShort(e.Path, home), true
+			r.status, r.statusLeft = status, true
 		}
 		out = append(out, r)
 	}

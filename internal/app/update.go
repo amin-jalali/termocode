@@ -123,6 +123,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleWTMsg(msg); ok { // worktrees_state.go
 		return m, c
 	}
+	if c, ok := m.handleContainerWSMsg(msg); ok { // container_workspace.go
+		return m, c
+	}
 	if c, ok := m.handleCIMsg(msg); ok { // ci_watch.go
 		return m, c
 	}
@@ -909,7 +912,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)
-		m.startLocalHistory() // GITX-35 (gitx_local_history.go)
+		m.startLocalHistory()  // GITX-35 (gitx_local_history.go)
 		m.refreshOpenPalette() // opened before ready: rows may be stale
 		return m, tea.Batch(cmds...), true
 	case hotExitFoundMsg:

@@ -587,6 +587,7 @@ missing	workflow-dry-run	Workflows|S
 missing	workflow-history	Workflows|S
 missing	workflow-new	Workflows|S
 missing	workflow-run	Workflows|S
+missing	workspace-open-container	Workspace|M
 missing	worktree-add-folder	Worktrees|M
 missing	worktree-adopt	Worktrees|M
 missing	worktree-archive	Worktrees|M

@@ -2339,7 +2339,10 @@ func (m Model) statusState() statusbar.State {
 		AIState: aiState,
 		Path:    m.editor.Path(),
 		Project: proj,
-		Lang:    lang,
+		// RC-4: the container pill (container_workspace.go).
+		Host:        m.workspaceHostLabel(),
+		HostOffline: m.containerOffline,
+		Lang:        lang,
 		// nvim's cursor in the file (StateMsg), not the grid cursor: that
 		// is the screen row / column (scrolled view, gutter, wrapped lines).
 		Line:     max(m.cursorLine, 1),

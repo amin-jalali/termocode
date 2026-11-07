@@ -764,6 +764,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case "m":
 		m.openContainersSectionsMenu("")
 		return m, nil
+	case "w":
+		if c, ok := m.selectedContainer(); ok { // container_workspace.go
+			return m, m.askOpenFolderInContainer(c)
+		}
 	case "e":
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.openContainerTerminal(c, "shell")
@@ -938,6 +942,7 @@ func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
 			[]string{"s / x / r", "start / stop / restart"},
 			[]string{"p", "pause or unpause"},
 			[]string{"e", "shell in the container"},
+			[]string{"w", "open a folder of it as the workspace"},
 			[]string{"t", "attach"},
 			[]string{"Enter", "logs"},
 			[]string{"S", "live stats"},

@@ -68,6 +68,7 @@ when something changed. When you hide the view (another activity item,
 | `a` / `A` | start all / stop all of the project's services (the **Start all** and **Stop all** buttons); off while the engine is down |
 | `p` | pause or unpause the selected container |
 | `e` | shell in the selected container (terminal tab) |
+| `w` | open a folder of the running container as the workspace |
 | `t` | attach to a container; on an image, tag it |
 | `S` | follow live stats |
 | `i` | inspect: a read-only JSON page in the editor |
@@ -143,6 +144,20 @@ to detach without stopping the container.
 
 Logs, shell, attach, stats and pulls run in terminal tabs, so you see
 progress and can type.
+
+### Open a folder in a container
+
+`w` on a running container asks which folder to open, filled with the
+container's working folder. Enter restarts termocode on that folder; the
+editor stays on your machine and nothing is installed in the container.
+The same works from the palette (**Workspace: Open Folder in
+Container…**) and from the command line:
+`termocode --container api-1 [--context prod-ssh] /app`.
+
+The folder then shows in the recent workspaces as `▣ api-1 · prod-ssh /app`.
+The status bar shows a `▣ api-1` pill. When the container stops, the pill
+says `stopped` and a card offers **Wait** (keep the open files),
+**Start**, or **Disconnect** (open your home folder instead).
 
 ## Live CPU and memory
 

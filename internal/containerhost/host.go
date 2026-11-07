@@ -157,6 +157,35 @@ func (h *Host) ID() string {
 // Label is the container's name, for the status bar.
 func (h *Host) Label() string { return h.cfg.Container }
 
+// Container is the container's name.
+func (h *Host) Container() string { return h.cfg.Container }
+
+// Context is the engine context ("" = the default one).
+func (h *Host) Context() string { return h.cfg.Context }
+
+// Root is the workspace folder inside the container.
+func (h *Host) Root() string { return h.cfg.Root }
+
+// Start runs `docker start` on the stopped container (the offline
+// card's Start). It changes only whether it runs, nothing inside it.
+func (h *Host) Start(ctx context.Context) error {
+	_, stderr, code, err := h.call(ctx, nil, "start", h.cfg.Container)
+	if err != nil {
+		return err
+	}
+	if code != 0 {
+		e := h.engineErr("start", h.cfg.Container, stderr, code)
+		if errors.Is(e, ErrNotRunning) {
+			return ErrNotRunning
+		}
+		return e
+	}
+	if !h.CheckOnline(ctx) {
+		return ErrNotRunning
+	}
+	return nil
+}
+
 // Online reports whether the container ran at the last check.
 func (h *Host) Online() bool {
 	h.mu.Lock()
