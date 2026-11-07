@@ -2442,6 +2442,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `services-stop` | Containers: Stop Service… | never | opens a picker or prompt that only the user can answer; use a typed tool (services_stop) |
 | `services-stop-all` | Containers: Stop All Services | confirm (services) |   |
 | `services-trust` | AI: Services Trust… | never | AI provider, credentials and approvals stay with the user |
+| `session-recap` | Session: Show Recap (While You Were Away) | auto |   |
 | `settings-export` | Preferences: Export termocode Settings File… | never | settings import / export stays with the user |
 | `settings-import` | Preferences: Import termocode Settings File… | never | settings import / export stays with the user |
 | `setup-show-card` | Setup: Show Setup Card | auto |   |

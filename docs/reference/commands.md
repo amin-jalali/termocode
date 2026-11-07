@@ -696,6 +696,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Session: Detach | `detach-session` |   |   |
+| Session: Show Recap (While You Were Away) | `session-recap` |   |   |
 
 ## Setup
 

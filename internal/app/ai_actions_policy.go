@@ -290,6 +290,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"open-url":                      aiNever(aiNoOutside),
 	"reload-window":                 aiNever(aiNoSession),
 	"detach-session":                aiNever(aiNoSession),
+	"session-recap":                 aiAuto(),
 	"reset-session":                 aiNever(aiNoSession),
 	"pick-theme":                    aiNever(aiNoPicker),
 	"open-settings-ui":              aiNever(aiNoPicker),

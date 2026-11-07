@@ -86,6 +86,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil // only draws (see frameGate)
 	}
 	m.noteGitActivity(msg)
+	m.noteRecapInput(msg) // session_recap.go
 	m.liveSettingsOnMsg(msg, time.Now())
 	switch msg.(type) {
 	case tea.FocusMsg, tea.BlurMsg:
@@ -106,7 +107,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.afterUpdateAnim(prevKind)
 	}
 	if tc, ok := msg.(TerminalChangedMsg); ok {
-		return m, m.applyTerminalChange(tc)
+		return m, tea.Batch(m.applyTerminalChange(tc), m.recapOnAttach()) // session_recap.go
 	}
 	if c, ok := m.handleXferMsg(msg); ok {
 		return m, c
@@ -310,6 +311,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBKeepAlive(msg)
 	case dbPingDoneMsg:
 		return m, m.onDBPingDone(msg)
+	case sessionRecapClickMsg: // session_recap.go
+		return m, m.openSessionRecap()
 	case dbReconnectMsg:
 		return m, m.onDBReconnect(msg)
 	case dbToolDoneMsg:

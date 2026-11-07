@@ -327,6 +327,8 @@ type Model struct {
 	// draw for (TerminalChangedMsg); View marks every frame with it so
 	// the session server knows where output for that terminal starts.
 	termGen int
+	// recap is what happened while the user was away (session_recap.go).
+	recap *sessionRecap
 
 	// Source Control commit hover card: the SHA the pointer is over and a
 	// cache of fetched commit metadata (author/date/body/stat) keyed by SHA.
@@ -1039,6 +1041,7 @@ func New() Model {
 	}
 	m.clipRing = clipring.New()
 	m.gitGate = &gitPollGate{}
+	m.recap = &sessionRecap{} // shared by every copy of the model (session_recap.go)
 	m.primeLiveSettings()
 	return m
 }
