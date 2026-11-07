@@ -500,6 +500,9 @@ missing	db-edit-source	Databases|S
 missing	db-end-session	Databases|S
 missing	db-er-diagram	Databases|S
 missing	db-exec-mode	Databases|S
+missing	db-chart	Databases|S
+missing	db-copy-as	Databases|S
+missing	db-export-tables	Databases|M
 missing	db-find-usages	Databases|S
 missing	db-format	Databases|S
 missing	db-format-file	Databases|S
@@ -518,6 +521,10 @@ missing	db-run-ask	Databases|S
 missing	db-run-from-caret	Databases|S
 missing	db-run-smallest	Databases|S
 missing	db-schema-cache-info	Databases|S
+missing	db-heatmap	Databases|S
+missing	db-import-new-table	Databases|M
+missing	db-run-dump	Databases|M
+missing	db-search-data	Databases|M
 missing	db-server-info	Databases|S
 missing	db-sessions	Databases|S
 missing	db-submit-source	Databases|S

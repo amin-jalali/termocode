@@ -70,8 +70,15 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
+		{ID: "db-import-new-table", Title: "Databases: Import CSV as New Table…"},
+		{ID: "db-run-dump", Title: "Databases: Run SQL Dump File…"},
 		{ID: "db-generate-data", Title: "Databases: Generate Test Data…"},
 		{ID: "db-compare-schemas", Title: "Databases: Compare Schemas…"},
+		{ID: "db-search-data", Title: "Databases: Search Data in Schema…"},
+		{ID: "db-heatmap", Title: "Databases: Toggle Result Heatmap"},
+		{ID: "db-chart", Title: "Databases: Chart Result…"},
+		{ID: "db-copy-as", Title: "Databases: Copy Result As…"},
+		{ID: "db-export-tables", Title: "Databases: Export Tables to Folder…"},
 		{ID: "db-sessions", Title: "Databases: Show Sessions and Locks"},
 		{ID: "db-server-info", Title: "Databases: Show Server Info"},
 		{ID: "db-cancel-session", Title: "Databases: Cancel Session Query…"},
@@ -150,6 +157,12 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseExportStart(), true
 	case "db-compare-schemas":
 		return m.databaseCompareStart(), true
+	case "db-heatmap":
+		return m.databaseToggleHeat(), true
+	case "db-chart":
+		return m.databaseChartStart(), true
+	case "db-copy-as":
+		return m.databaseCopyAsStart(), true
 	case "db-er-diagram":
 		return m.databaseERStart(), true
 	case "db-edit-source":
@@ -197,6 +210,14 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseImportStart()), true
 	case "db-generate-data":
 		return tea.Batch(open, m.databaseGenerateStart()), true
+	case "db-search-data":
+		return tea.Batch(open, m.databaseSearchStart()), true
+	case "db-export-tables":
+		return tea.Batch(open, m.databaseExportTablesStart()), true
+	case "db-import-new-table":
+		return tea.Batch(open, m.databaseNewTableStart()), true
+	case "db-run-dump":
+		return tea.Batch(open, m.databaseDumpStart()), true
 	case "db-new-console":
 		if r, ok := m.databaseCurrentRow(); ok {
 			return m.databaseNewConsole(r.conn), true
@@ -1048,12 +1069,15 @@ func dbPageKeyRows() []confirm.KeyRow {
 		[]string{"f", "show only some rows"},
 		[]string{"=", "show only rows with this cell's value"},
 		[]string{"t", "flip rows and columns (table data)"},
-		[]string{"v", "open the cell (hex for binary, XML and JSON pretty)"},
+		[]string{"v", "open the cell (hex for binary, XML and JSON pretty, geometry as WKT and GeoJSON)"},
 		[]string{"=", "count, sum, avg, min, max of the column (visual: the selected rows)"},
 		[]string{"y", "copy the cell"},
 		[]string{"Y", "copy the column, one value per line"},
 		[]string{"c / C", "copy the rows as CSV / JSON"},
+		[]string{"A", "copy the rows as… (YAML, XML, JSON lines, SQL UPDATEs, …)"},
 		[]string{"S", "export the rows to a file"},
+		[]string{"M", "heatmap: colour numbers by value (on / off)"},
+		[]string{"B", "draw a bar or line chart of a number column"},
 		[]string{"Columns"},
 		[]string{"H", "hide the column"},
 		[]string{"O", "show or hide columns"},

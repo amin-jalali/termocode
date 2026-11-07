@@ -70,6 +70,7 @@ type dbJob struct {
 	conn   string
 	total  int64 // 0: unknown
 	done   atomic.Int64
+	of     atomic.Int64 // a search: the tables to search (set while it runs)
 	cancel context.CancelFunc
 	// blocks: the session is in use, so no statement may start on it
 	blocks bool
@@ -92,6 +93,15 @@ func (m *Model) databaseJobCard(j *dbJob) {
 	}
 	if j.total > 0 {
 		text = fmt.Sprintf("%s / %s rows", dbThousands(int(j.done.Load())), dbThousands(int(j.total)))
+	}
+	if j.kind == "dump" {
+		text = fmt.Sprintf("%d / %d statements run", j.done.Load(), j.total)
+	}
+	if j.kind == "tables" {
+		text = fmt.Sprintf("%d / %d tables written", j.done.Load(), j.of.Load())
+	}
+	if j.kind == "search" {
+		text = fmt.Sprintf("%d / %d tables searched", j.done.Load(), j.of.Load())
 	}
 	text += " · Esc cancels"
 	if j.kind == "import" {
@@ -203,7 +213,7 @@ func (m *Model) databaseExportStart() tea.Cmd {
 	}
 	s.exp = e
 	var items []picker.Item
-	for _, f := range dbclient.ExportFormats {
+	for _, f := range dbExportFormatList() {
 		items = append(items, picker.Item{ID: string(f.Format), Title: f.Title, Hint: f.Ext})
 	}
 	m.picker = picker.NewItems("Export rows as…", items)
@@ -242,18 +252,18 @@ func (m *Model) databaseExportFormatPicked(id string) tea.Cmd {
 	if e == nil {
 		return nil
 	}
-	var info *dbclient.ExportFormatInfo
-	for i := range dbclient.ExportFormats {
-		if string(dbclient.ExportFormats[i].Format) == id {
-			info = &dbclient.ExportFormats[i]
-		}
-	}
-	if info == nil {
+	info, ok := dbExportFormatInfo(id)
+	if !ok {
 		s.exp = nil
 		return nil
 	}
 	e.format = info.Format
-	if e.format == dbclient.FormatSQL && e.opts.Table == "" {
+	e.opts = m.dbExportPrepare(e.opts) // CSV settings, keys, shown columns (DBX-36)
+	if e.format == dbclient.FormatSQLUpdate && len(e.opts.KeyColumns) == 0 {
+		s.exp = nil
+		return m.pushToastDetail(toast.Warn, "Cannot export SQL UPDATEs", errDBUpdateNoKey.Error())
+	}
+	if (e.format == dbclient.FormatSQL || e.format == dbclient.FormatSQLUpdate) && e.opts.Table == "" {
 		e.opts.Table = "result"
 	}
 	base := dbFileSafe.ReplaceAllString(e.opts.Table, "_")
@@ -400,8 +410,9 @@ func (m *Model) databaseExportGo() tea.Cmd {
 	job := &dbJob{kind: "export", title: "Exporting to " + sanitizeDBText(e.display), conn: e.conn, cancel: cancel}
 	s.job = job
 	opts := e.opts
+	mask := loadDBConsoleSettings().exportMask() // db_export_mask (DBX-36)
 	src := func(ctx context.Context, sink dbclient.RowSink) error {
-		return dbclient.WriteRows(sink, e.res)
+		return dbclient.WriteRows(dbMasked(sink, mask), e.res)
 	}
 	var tick tea.Cmd
 	if e.all {
@@ -419,7 +430,7 @@ func (m *Model) databaseExportGo() tea.Cmd {
 				return err
 			}
 			defer ro.Close()
-			return dbclient.StreamRows(ctx, ro, driver, query, sink)
+			return dbclient.StreamRows(ctx, ro, driver, query, dbMasked(sink, mask))
 		}
 		m.databaseJobCard(job)
 		tick = dbJobTickCmd(job)
@@ -461,6 +472,12 @@ func (m *Model) databaseTransferPicker(id string) (tea.Cmd, bool) {
 		return m.databaseExportFormatPicked(id), true
 	case pickerKindDBImportFile, pickerKindDBImportMapCol, pickerKindDBImportMapSrc:
 		return m.databaseImportPicker(id), true
+	case pickerKindDBSearchHits:
+		return m.databaseSearchOpenHit(id), true
+	case pickerKindDBChart:
+		return m.databaseChartPicked(id), true
+	case pickerKindDBCopyAs:
+		return m.databaseCopyAsPicked(id), true
 	}
 	return nil, false
 }
@@ -476,6 +493,12 @@ func (m *Model) databaseTransferConfirm(id string) (tea.Cmd, bool) {
 		return nil, true
 	case confirmKindDBInfo:
 		return nil, true
+	case confirmKindDBExportFolder:
+		return m.databaseExportFolderConfirm(id), true
+	case confirmKindDBDump:
+		return m.databaseDumpConfirm(id), true
+	case confirmKindDBNewTable:
+		return m.databaseNewTableConfirm(id), true
 	}
 	return nil, false
 }
@@ -491,6 +514,14 @@ func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.C
 		return m.databaseImportLoad(value), true
 	case promptKindDBGenRows:
 		return m.databaseGenerateRows(value), true
+	case promptKindDBSearchValue:
+		return m.databaseSearchRun(value), true
+	case promptKindDBExportFolder:
+		return m.databaseExportFolderTyped(value), true
+	case promptKindDBDumpPath:
+		return m.databaseDumpLoad(value), true
+	case promptKindDBNewTablePath:
+		return m.databaseNewTableLoad(value), true
 	}
 	return nil, false
 }
@@ -509,6 +540,12 @@ func (m *Model) databaseTransferClosed() {
 		s.exp = nil
 	case confirmKindDBImport:
 		s.imp = nil
+	case confirmKindDBExportFolder:
+		s.folder = nil
+	case confirmKindDBDump:
+		s.dump = nil
+	case confirmKindDBNewTable:
+		s.newTable = nil
 	}
 }
 

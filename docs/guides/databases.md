@@ -186,12 +186,14 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `]` / `[` | next / previous page |
 | `o` | sort by a column (choose it again to reverse) |
 | `f` | show only rows that contain a text |
-| `v` or `Enter` | open the cell under the cursor; `q` goes back. JSON and XML are pretty-printed, long text wraps, a binary value is a hex dump (the first 16 KB), and a PNG, JPEG, GIF or WebP image says its kind and size |
+| `v` or `Enter` | open the cell under the cursor; `q` goes back. JSON and XML are pretty-printed, long text wraps, a binary value is a hex dump (the first 16 KB), a PNG, JPEG, GIF or WebP image says its kind and size, and a geometry value (WKB or EWKB hex, as PostGIS prints it) is shown as WKT and GeoJSON text |
 | `=` | count, sum, avg, min and max of the column under the cursor on this page; select rows with `V` first to sum up only those. Text columns show count, min and max |
 | `y` | copy the cell |
 | `Y` | copy the column, one value per line |
 | `c` / `C` | copy the loaded rows as CSV / JSON |
 | `S` | export the rows to a file (CSV, TSV, JSON, SQL INSERTs, Markdown or HTML) |
+| `M` | heatmap on / off: every column with only numbers gets a colour per cell, from cool (lowest) to hot (highest) on the page. Also **Databases: Toggle Result Heatmap** |
+| `B` | chart: pick a number column, then a bar chart (one bar per row, labelled by the first text column) or a line chart (braille dots, the rows in order) opens in a read-only buffer; `q` goes back. Up to 500 loaded rows. Also **Databases: Chart Result…** |
 | `r` | run again (writes ask again) |
 | `1` … `9` | show result tab 1 … 9 |
 | `p` | pin the result tab (again: unpin) |
@@ -299,6 +301,20 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 
 **Bad rows: skip.** The card's **Bad rows** button switches from **stop** (the default above) to **skip**: a row that cannot be read, has the wrong number of fields or fails its INSERT is left out (it is rolled back alone), and the other rows are saved. The done toast says how many rows were skipped and names an error log (row, line and the server's error for each) in the termocode config folder.
 
+**Import as a new table.** **Databases: Import CSV as New Table…** on a schema, a database or a table in the tree asks for a CSV file and shows the `CREATE TABLE` it would run (Cancel first): the table is named after the file (lower case, `_` for other characters) and every column is `TEXT`, named like the header (a repeated name gets `_2`). **Create and import** makes the table, then the usual import card opens for it. Change the column types later with `ALTER TABLE`.
+
+**Run a SQL dump.** **Databases: Run SQL Dump File…** on a connection asks for a `.sql` file (up to 64 MB), splits it into statements and shows one card (Cancel first): the file, the statement count, how many delete objects or rows (`DROP`, `TRUNCATE`, `DELETE`) and a PRODUCTION line on a production connection. **Run** sends the statements one by one in the connection's session, with no card for each. A progress card shows `N / total statements`; `Esc` or **Cancel** stops it. The first failing statement stops the run and is named with its error; what ran before it stays, unless the file has its own `BEGIN` / `COMMIT`. A read-only connection never runs a dump. Press `R` in the tree afterwards to see new or dropped objects.
+
+**Formats.** The export picker (`S`) has CSV, TSV, JSON, SQL INSERTs, Markdown, HTML, JSON lines, YAML, XML and SQL UPDATEs. SQL UPDATEs need a key: the table's primary key in a data view, or the key of the result; without one the export says so and writes nothing. Columns you hid in the grid are left out of the file.
+
+**CSV settings** (in `settings.json`): `db_csv_separator` (one character, `\t` for a tab; default `,`), `db_csv_header` (`false`: no row of column names) and `db_csv_null` (the text of a NULL cell; default empty).
+
+**Masking.** `db_export_mask` is a list of column names (any case; `*` and `?` match), for example `["*password*", "email"]`. Exports, **Copy Result As…** and **Export Tables to Folder…** write `••••` for their values; NULL stays NULL. The grid still shows the real values.
+
+**Copy as.** `A` on a result page (or **Databases: Copy Result As…**) copies the loaded rows in any of the export formats.
+
+**Export tables to a folder.** **Databases: Export Tables to Folder…** on a schema, a database or a table in the tree asks for a folder (made when missing), then shows a card (**Cancel** first). Every table is written as `<table>.csv` and the tables' DDL as `schema.sql`, in a read-only session. A file that is already there is kept and named in the final message. A card shows the progress; `Esc` or **Cancel** stops it.
+
 ## EXPLAIN and ANALYZE
 
 **Explain.** In a SQL console press `\x` (leader, then `x`) on a statement, or use **Databases: Explain Statement**. On a result page `x` explains the statement that made the result. The plan opens on the result page as the **Plan** view: one line per step, indented, with the cost and row estimates. The step that takes most of the cost (at least 40 % of the whole plan, without its children) is marked with `!` and `<- costly` and coloured. Details such as `Filter:` and `Hash Cond:` sit under their step. Folds follow the indent: `za` folds a step, `zR` opens all. `y` copies the plan, `Tab` shows the server's raw answer, `r` plans again.
@@ -321,6 +337,14 @@ termocode reads both schemas in read-only sessions and writes each one as clean 
 **Copy migration script** (`y`) copies a script that makes the target match the source. **Open script** (`o`) opens it in a read-only SQL buffer. termocode never runs this script: you read it, change it if needed, and run it yourself. The script does the basic steps: create and drop tables, add and drop columns, drop and create indexes and views. Other differences (a changed column type, a changed key, a routine) are lines that start with `-- REVIEW:`, for you to do by hand. The top of the script says which schema it changes and lists every destructive statement (`DROP TABLE`, `DROP COLUMN`, `DROP INDEX`, `DROP VIEW`); each one also has a `-- DESTRUCTIVE` line above it, because it deletes objects or data.
 
 Very large schemas are compared up to 2,000 tables; the card and the script say so when a schema is bigger.
+
+## Search data
+
+**Databases: Search Data in Schema…** finds a value in every column of every table of a schema (on MySQL / MariaDB: a database). Move to a schema, a database or a table in the tree (a connection row searches `public`, the connection's database, or `main` on SQLite), run the command and type the value. Plain text matches any cell that contains it, in any case; `=value` matches only a whole cell.
+
+The search runs in a read-only session. Each table gets one `SELECT` with a row limit (50 per table, 200 tables at most, 2,000 matching rows in all), and the value is a bound parameter, never part of the SQL. Views are skipped. A card shows how many tables are done; `Esc` or **Cancel** stops it. At the end a list shows the tables with matching rows; `Enter` opens the table's data view with a filter that shows those rows. A table that cannot be read is counted and skipped.
+
+The AI has the same search as `db_search_data` (read-only, runs at once).
 
 ## Query parameters
 
@@ -352,7 +376,7 @@ Press `n` on a Redis connection to open its console, a `.redis` file that starts
 
 ## AI tools and their rules
 
-The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_query`, `db_explain` and `db_history`. The system prompt mentions them only when the workspace has connections.
+The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_query`, `db_explain`, `db_history` and `db_search_data`. The system prompt mentions them only when the workspace has connections.
 
 - **Reads run at once.** Schema, DDL, plans and a read (`SELECT`, `SHOW`, `EXPLAIN` without `ANALYZE` …) run in a separate read-only session: `BEGIN READ ONLY` with a statement timeout on PostgreSQL, `START TRANSACTION READ ONLY` on MySQL / MariaDB, and `sqlite3 -readonly` for SQLite. The server or the file enforces it, not a text check. SQLite needs `sqlite3` 3.37 or newer for this.
 - **Every other statement asks.** The card shows the connection and the exact SQL (Up/Down scrolls a long one). **Deny** comes first and has the focus, so a stray `Enter` writes nothing; **Allow** is the red button. **Always allow** for `db:<conn>/write` lets later writes on that connection run without asking; you can turn it off again in **AI: Agent Auto-Approve…**.

@@ -561,11 +561,16 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		return
 	}
 	p.first = len(p.lines) + 1
+	var heat [][]int // DBX-35: the heatmap level of each page cell
+	if s.heat {
+		heat = dbHeatGrid(page)
+	}
 	for gi, g := range grid {
 		b.Reset()
 		b.WriteString(g.mark)
 		markEnd := b.Len()
 		var dim, changed [][2]int
+		var hot [][3]int // start, end, level
 		for j, i := range cols {
 			if j > 0 {
 				b.WriteString(bar)
@@ -581,6 +586,8 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 				dim = append(dim, [2]int{start, b.Len()})
 			case g.changed[i]:
 				changed = append(changed, [2]int{start, b.Len()})
+			case i < len(heat) && heat[i] != nil && gi < len(heat[i]) && heat[i][gi] >= 0:
+				hot = append(hot, [3]int{start, b.Len(), heat[i][gi]})
 			}
 		}
 		n = p.add(strings.TrimRight(b.String(), " "))
@@ -601,6 +608,9 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		}
 		for _, sp := range dim {
 			p.hl(n, sp[0], min(sp[1], end), "TermocodeHttpSep")
+		}
+		for _, sp := range hot {
+			p.hl(n, sp[0], min(sp[1], end), dbHeatLevels[sp[2]])
 		}
 		for _, sp := range changed {
 			group := "TermocodeDbChanged"
@@ -936,6 +946,12 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.databaseEditKey(key, row, col)
 	case "?":
 		return m.databasePageKeysHelp()
+	case "M":
+		return m.databaseToggleHeat()
+	case "B":
+		return m.databaseChartStart()
+	case "A":
+		return m.databaseCopyAsStart()
 	case "K":
 		return m.databaseEndTx(s.shown.conn, true, nil)
 	case "Z":

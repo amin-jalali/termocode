@@ -512,6 +512,13 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-submit-source":                  aiNever("changes a database object; only the user can confirm the card"),
 	"db-pending-sources":                aiNever(aiNoPicker),
 	"db-virtual-objects":                aiNever("opens the user's virtual objects file for the user to edit"),
+	"db-import-new-table":          aiNever("creating a table and importing rows is a write the user confirms (db_query)"),
+	"db-run-dump":                  aiNever("a whole SQL file of writes runs only after the user's card (db_query, one statement each)"),
+	"db-search-data":               aiNever(aiNoPicker + " (db_search_data)"),
+	"db-heatmap":                   aiAuto(),
+	"db-chart":                     aiNever(aiNoPicker),
+	"db-copy-as":                   aiNever(aiNoPicker),
+	"db-export-tables":             aiNever(aiNoPicker + " (db_query + write_file)"),
 
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),
@@ -825,6 +832,10 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"db_auto_transpose":    aiConfirm(ai.ClassSettings),
 	"db_introspect_level":  aiConfirm(ai.ClassSettings), // DBX-29
 	"db_complete_catalogs": aiConfirm(ai.ClassSettings),
+	"db_csv_separator":     aiConfirm(ai.ClassSettings), // DBX-36: export shape only
+	"db_csv_header":        aiConfirm(ai.ClassSettings),
+	"db_csv_null":          aiConfirm(ai.ClassSettings),
+	"db_export_mask":       aiNever(aiNoAIConfig), // the AI never unmasks data
 	"http_timeout":         aiConfirm(ai.ClassSettings),
 	"http_max_redirects":   aiConfirm(ai.ClassSettings),
 	"http_cookie_jar":      aiConfirm(ai.ClassSettings),

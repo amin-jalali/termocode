@@ -104,6 +104,10 @@ func dbCellView(c dbclient.Cell) string {
 		}
 	}
 	text := c.Text
+	if wkt, ok := dbclient.GeoWKT(text); ok { // DBX-35: a geometry value as text
+		js, _ := dbclient.GeoJSON(text)
+		return "Geometry\n\nWKT:\n" + wkt + "\n\nGeoJSON:\n" + js
+	}
 	var pretty bytes.Buffer
 	if json.Indent(&pretty, []byte(text), "", "  ") == nil {
 		return pretty.String()

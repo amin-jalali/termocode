@@ -95,6 +95,18 @@ type dbConsoleState struct {
 	hist     *dbclient.History
 	askCands []dbclient.StmtSpan // the Run… choices (db_execmode.go)
 
+	// Search Data (db_datasearch.go): the schema while the value is asked,
+	// then the last search's hits (the hit picker opens them).
+	search *dbSearchTarget
+	hits   *dbSearchResult
+	heat   bool            // M: the grid colours numeric cells by value (db_visualize.go)
+	folder *dbFolderExport // Export Tables to Folder while the folder is asked (db_export_more.go)
+
+	// DBX-37 (db_dump.go): a SQL dump and an Import as New Table while
+	// their file and card are open.
+	dump     *dbDump
+	newTable *dbNewTable
+
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
 	batchSeq     uint64
@@ -179,6 +191,22 @@ type dbConsoleSettings struct {
 	// Introspection (db_introspect.go, DBX-29)
 	IntrospectLevel  *string `json:"db_introspect_level"`
 	CompleteCatalogs *bool   `json:"db_complete_catalogs"`
+	// Export settings (db_export_more.go, DBX-36)
+	CSVSeparator *string  `json:"db_csv_separator"`
+	CSVHeader    *bool    `json:"db_csv_header"`
+	CSVNull      *string  `json:"db_csv_null"`
+	ExportMask   []string `json:"db_export_mask"`
+}
+
+// exportMask is the column name patterns whose values exports and copies hide.
+func (s dbConsoleSettings) exportMask() []string {
+	var out []string
+	for _, p := range s.ExportMask {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func loadDBConsoleSettings() dbConsoleSettings {

@@ -308,6 +308,14 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBMeta(msg)
 	case dbGenMsg:
 		return m, m.onDBGen(msg)
+	case dbSearchDoneMsg:
+		return m, m.onDBSearchDone(msg)
+	case dbFolderDoneMsg:
+		return m, m.onDBFolderDone(msg)
+	case dbDumpDoneMsg:
+		return m, m.onDBDumpDone(msg)
+	case dbNewTableDoneMsg:
+		return m, m.onDBNewTableDone(msg)
 	case dbCountMsg:
 		return m, m.onDBCount(msg)
 	case dbColsMsg:
@@ -921,7 +929,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)
-		m.startLocalHistory() // GITX-35 (gitx_local_history.go)
+		m.startLocalHistory()  // GITX-35 (gitx_local_history.go)
 		m.refreshOpenPalette() // opened before ready: rows may be stale
 		return m, tea.Batch(cmds...), true
 	case hotExitFoundMsg:
