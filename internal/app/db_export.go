@@ -70,6 +70,7 @@ type dbJob struct {
 	conn   string
 	total  int64 // 0: unknown
 	done   atomic.Int64
+	of     atomic.Int64 // a search: the tables to search (set while it runs)
 	cancel context.CancelFunc
 	// blocks: the session is in use, so no statement may start on it
 	blocks bool
@@ -92,6 +93,9 @@ func (m *Model) databaseJobCard(j *dbJob) {
 	}
 	if j.total > 0 {
 		text = fmt.Sprintf("%s / %s rows", dbThousands(int(j.done.Load())), dbThousands(int(j.total)))
+	}
+	if j.kind == "search" {
+		text = fmt.Sprintf("%d / %d tables searched", j.done.Load(), j.of.Load())
 	}
 	text += " · Esc cancels"
 	if j.kind == "import" {
@@ -461,6 +465,8 @@ func (m *Model) databaseTransferPicker(id string) (tea.Cmd, bool) {
 		return m.databaseExportFormatPicked(id), true
 	case pickerKindDBImportFile, pickerKindDBImportMapCol, pickerKindDBImportMapSrc:
 		return m.databaseImportPicker(id), true
+	case pickerKindDBSearchHits:
+		return m.databaseSearchOpenHit(id), true
 	}
 	return nil, false
 }
@@ -488,6 +494,8 @@ func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.C
 		return m.databaseImportLoad(value), true
 	case promptKindDBGenRows:
 		return m.databaseGenerateRows(value), true
+	case promptKindDBSearchValue:
+		return m.databaseSearchRun(value), true
 	}
 	return nil, false
 }

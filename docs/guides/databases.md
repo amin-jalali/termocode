@@ -290,6 +290,14 @@ termocode reads both schemas in read-only sessions and writes each one as clean 
 
 Very large schemas are compared up to 2,000 tables; the card and the script say so when a schema is bigger.
 
+## Search data
+
+**Databases: Search Data in Schema…** finds a value in every column of every table of a schema (on MySQL / MariaDB: a database). Move to a schema, a database or a table in the tree (a connection row searches `public`, the connection's database, or `main` on SQLite), run the command and type the value. Plain text matches any cell that contains it, in any case; `=value` matches only a whole cell.
+
+The search runs in a read-only session. Each table gets one `SELECT` with a row limit (50 per table, 200 tables at most, 2,000 matching rows in all), and the value is a bound parameter, never part of the SQL. Views are skipped. A card shows how many tables are done; `Esc` or **Cancel** stops it. At the end a list shows the tables with matching rows; `Enter` opens the table's data view with a filter that shows those rows. A table that cannot be read is counted and skipped.
+
+The AI has the same search as `db_search_data` (read-only, runs at once).
+
 ## Query parameters
 
 A statement with parameters asks for each value before it runs: `?`, `:name`, `$1` (PostgreSQL, SQLite) and `@name` (not MySQL, where `@name` is a server variable). The values are bound, never pasted into the SQL. Type `NULL` for a null; a whole number is sent as a number. The console remembers the last values for this session and offers them next time. `Esc` runs nothing. Text in quotes and comments, `::` casts and the PostgreSQL `?` operator are not parameters.
@@ -320,7 +328,7 @@ Press `n` on a Redis connection to open its console, a `.redis` file that starts
 
 ## AI tools and their rules
 
-The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_query`, `db_explain` and `db_history`. The system prompt mentions them only when the workspace has connections.
+The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_query`, `db_explain`, `db_history` and `db_search_data`. The system prompt mentions them only when the workspace has connections.
 
 - **Reads run at once.** Schema, DDL, plans and a read (`SELECT`, `SHOW`, `EXPLAIN` without `ANALYZE` …) run in a separate read-only session: `BEGIN READ ONLY` with a statement timeout on PostgreSQL, `START TRANSACTION READ ONLY` on MySQL / MariaDB, and `sqlite3 -readonly` for SQLite. The server or the file enforces it, not a text check. SQLite needs `sqlite3` 3.37 or newer for this.
 - **Every other statement asks.** The card shows the connection and the exact SQL (Up/Down scrolls a long one). **Deny** comes first and has the focus, so a stray `Enter` writes nothing; **Allow** is the red button. **Always allow** for `db:<conn>/write` lets later writes on that connection run without asking; you can turn it off again in **AI: Agent Auto-Approve…**.

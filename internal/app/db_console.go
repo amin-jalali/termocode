@@ -91,6 +91,11 @@ type dbConsoleState struct {
 	history  []dbclient.HistoryEntry
 	hist     *dbclient.History
 
+	// Search Data (db_datasearch.go): the schema while the value is asked,
+	// then the last search's hits (the hit picker opens them).
+	search *dbSearchTarget
+	hits   *dbSearchResult
+
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
 	batchSeq     uint64
