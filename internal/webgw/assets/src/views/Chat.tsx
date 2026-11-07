@@ -273,12 +273,15 @@ export function ChatView() {
   }
   let foot;
   if (pin) {
+    // An old chat goes on here: the send opens it on the laptop, then the
+    // page follows the laptop again (WEBP-10).
     foot = (
-      <div class="composer">
-        <p class="composer-note" dir="auto">
-          {t("chat.conflict")}
+      <>
+        <p class="composer-note chat-continue" dir="auto">
+          {t("chat.continue")}
         </p>
-      </div>
+        <Composer chat={pin.id} busy={laptop?.busy ?? false} onSent={follow} />
+      </>
     );
   } else if (st) {
     foot = <Composer chat={laptop?.id ?? ""} busy={laptop?.busy ?? false} profile={laptop?.profile ?? ""} model={laptop?.model ?? ""} />;

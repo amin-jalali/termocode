@@ -1,8 +1,9 @@
 // The chat composer (web UX 5.2): a growing text box with Send; while the
 // AI answers Send becomes Stop (stopping is never harmful). Offline both
 // read "Offline" and do nothing, and the draft stays (P5). A refusal from
-// the laptop (another chat is open there, the AI is busy) shows one calm
-// line and keeps the draft. Enter sends with a keyboard; on a phone Enter
+// the laptop (the chat is held elsewhere, the AI is busy) shows one calm
+// line and keeps the draft. onSent runs after a send was taken (an old
+// chat the page read is then the laptop's open one). Enter sends with a keyboard; on a phone Enter
 // is a new line and the Send button sends.
 import { aiSnap } from "../lib/ai";
 import { AIPicker } from "./AIPicker";
@@ -19,7 +20,7 @@ import { errText } from "../ui/CardSheet";
 
 const MAX_ROWS_PX = 160;
 
-export function Composer({ chat, busy, profile = "", model = "" }: { chat: string; busy: boolean; profile?: string; model?: string }) {
+export function Composer({ chat, busy, profile = "", model = "", onSent }: { chat: string; busy: boolean; profile?: string; model?: string; onSent?: () => void }) {
   const desk = layout.value === "desktop";
   useEffect(() => takePending(chat), [chat, pendingDraft.value]);
   const text = getDraft(chat);
@@ -44,11 +45,12 @@ export function Composer({ chat, busy, profile = "", model = "" }: { chat: strin
         setSending(false);
         setNote(null);
         if (getDraft(chat) === body) setDraft(chat, "");
+        onSent?.();
       },
       (e: unknown) => {
         setSending(false);
         if (e instanceof OfflineError) return; // the box shows Offline; the draft stays
-        const key: StringKey | null = e instanceof ReqError ? (e.code === "conflict" ? "chat.conflict" : e.code === "busy" ? "chat.busy" : null) : null;
+        const key: StringKey | null = e instanceof ReqError ? (e.code === "conflict" ? "chat.conflict" : e.code === "busy" ? "chat.busy" : e.code === "not_found" ? "chat.gone" : null) : null;
         setNote(key ? t(key) : errText(e));
       },
     );
