@@ -472,6 +472,7 @@ func (m *Model) databaseSendMode(all bool, plan *dbPlanRun) tea.Cmd {
 // the statement under the cursor (line > 0), the selection (line < 0) or
 // all of them (line 0).
 func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
+	m.databaseConsoleVersion(r.file) // db_query_log.go
 	c, ok := m.databases.connection(r.conn)
 	if !ok {
 		return m.pushToastDetail(toast.Warn, "Connection not found", sanitizeDBText(r.conn))

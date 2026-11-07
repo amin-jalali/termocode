@@ -195,7 +195,7 @@ func (m *Model) databaseExplainConfirm(id string) tea.Cmd {
 // that always happens, and a failed rollback is an error, not a footnote.
 func dbExplainExec(ctx context.Context, sess dbclient.Session, driver string, pl *dbPlanRun, inTx bool, limit int) dbclient.Result {
 	maria := false
-	if x, ok := sess.(interface{ MariaDB() bool }); ok {
+	if x, ok := dbclient.UnwrapSession(sess).(interface{ MariaDB() bool }); ok {
 		maria = x.MariaDB()
 	}
 	forms := dbclient.ExplainForms(driver, pl.target, pl.analyze, maria)

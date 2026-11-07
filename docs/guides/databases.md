@@ -296,6 +296,12 @@ Very large schemas are compared up to 2,000 tables; the card and the script say 
 
 **Databases: Diagram Path Between Tables…** starts at the table under the cursor. Pick the other table; tables with no foreign-key path say "no path". termocode finds the shortest path along foreign keys (in either direction) and opens a Mermaid diagram of only those tables, with both ends highlighted. The first line names the path. The schema is read in a read-only session.
 
+## Query log and console versions
+
+**Databases: Show Query Log** opens every statement termocode sent to your SQL databases in this run (the newest 1,000) in a new buffer. Each statement has a `--` line above it: the time, the connection, how long it took and the result (rows, affected rows or the error). Statements termocode sends for itself (catalog reads, read-only sessions for compare and diagrams) end with `· internal`. The log stays in memory and is gone when termocode quits, because statements can hold real values.
+
+Every run from a console saves the console first, so the local history keeps a version of it. **Databases: Show Console Version History** lists those versions for the active console, or for the console of the connection under the cursor. Pick one to compare it with the console now or to restore it. To delete one entry of the SQL history, open **Databases: History…** and pick **Delete an entry…**.
+
 ## Query parameters
 
 A statement with parameters asks for each value before it runs: `?`, `:name`, `$1` (PostgreSQL, SQLite) and `@name` (not MySQL, where `@name` is a server variable). The values are bound, never pasted into the SQL. Type `NULL` for a null; a whole number is sent as a number. The console remembers the last values for this session and offers them next time. `Esc` runs nothing. Text in quotes and comments, `::` casts and the PostgreSQL `?` operator are not parameters.

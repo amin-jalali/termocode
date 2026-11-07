@@ -67,6 +67,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-end-session", Title: "Databases: End Session…"},
 		{ID: "db-er-diagram", Title: "Databases: Export ER Diagram…"},
 		{ID: "db-er-path", Title: "Databases: Diagram Path Between Tables…"},
+		{ID: "db-query-log", Title: "Databases: Show Query Log", Hint: "every statement sent this run, internal ones too"},
+		{ID: "db-console-history", Title: "Databases: Show Console Version History", Hint: "a version of the console on every run"},
 		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
@@ -125,6 +127,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseERStart(), true
 	case "db-er-path":
 		return m.databaseERPathStart(), true
+	case "db-query-log":
+		return m.databaseQueryLog(), true
+	case "db-console-history":
+		return m.databaseConsoleHistory(), true
 	case "db-guide":
 		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	case "db-goto-definition":
@@ -1260,10 +1266,10 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		s.touch()
 		return m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
 	}
-	if old := s.sessions[msg.id]; old != nil && old != msg.session {
+	if old := s.sessions[msg.id]; old != nil && dbclient.UnwrapSession(old) != dbclient.UnwrapSession(msg.session) {
 		_ = old.Close()
 	}
-	s.sessions[msg.id] = msg.session
+	s.sessions[msg.id] = s.loggedSession(msg.session, msg.id) // db_query_log.go
 	n.problem = ""
 	n.loaded = false
 	s.nodes[msg.id] = n

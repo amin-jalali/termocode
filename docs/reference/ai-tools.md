@@ -2059,6 +2059,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-compare-schemas` | Databases: Compare Schemas… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
 | `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-console-history` | Databases: Show Console Version History | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-count-rows` | Databases: Count Rows | never | Table rows are read with the database tools |
 | `db-data` | Databases: Open Table Data | never | Table rows are read with the database tools |
 | `db-ddl` | Databases: Show DDL | auto |   |
@@ -2082,6 +2083,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
+| `db-query-log` | Databases: Show Query Log | never | the log holds the literal values of every statement; only the user opens it |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |

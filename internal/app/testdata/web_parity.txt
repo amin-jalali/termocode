@@ -462,6 +462,8 @@ missing	db-cancel-session	Databases|S
 missing	db-end-session	Databases|S
 missing	db-er-diagram	Databases|S
 missing	db-er-path	Databases|S
+missing	db-query-log	Databases|S
+missing	db-console-history	Databases|S
 missing	db-find-usages	Databases|S
 missing	db-format	Databases|S
 missing	db-format-file	Databases|S

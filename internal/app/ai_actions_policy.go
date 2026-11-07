@@ -402,6 +402,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-compare-schemas":           aiNever(aiNoPicker),
 	"db-er-diagram":                aiNever(aiNoPicker),
 	"db-er-path":                   aiNever(aiNoPicker),
+	"db-query-log":                 aiNever("the log holds the literal values of every statement; only the user opens it"),
+	"db-console-history":           aiNever(aiNoPicker),
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
 	"containers-focus":             aiAuto(),

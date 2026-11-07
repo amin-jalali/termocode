@@ -241,7 +241,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Sessions… | `db-open-sessions` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
+| Databases: Show Console Version History | `db-console-history` |   | `a version of the console on every run` |
 | Databases: Show DDL | `db-ddl` |   |   |
+| Databases: Show Query Log | `db-query-log` |   | `every statement sent this run, internal ones too` |
 | Databases: Show Server Info | `db-server-info` |   |   |
 | Databases: Show Sessions and Locks | `db-sessions` |   |   |
 | Databases: Submit Pending Changes… | `db-submit-changes` |   |   |

@@ -197,6 +197,11 @@ func (m *Model) openLocalHistory() tea.Cmd {
 	if !ok {
 		return m.gitxInfo("Open a file first")
 	}
+	return m.openLocalHistoryOf(abs)
+}
+
+// openLocalHistoryOf lists the versions of the file at abs.
+func (m *Model) openLocalHistoryOf(abs string) tea.Cmd {
 	s := localHistStore()
 	if s == nil {
 		return nil
