@@ -467,6 +467,10 @@ func (s *SQLSession) runOne(ctx context.Context, query string, kind Kind, maxRow
 			_ = rows.Close()
 		}
 		if err := rows.Err(); err != nil {
+			if ctx.Err() == nil && connLost(err) {
+				out.Err = lostMidQuery(err, len(out.Rows))
+				return
+			}
 			out.Err = queryError(ctx, err)
 			return
 		}
