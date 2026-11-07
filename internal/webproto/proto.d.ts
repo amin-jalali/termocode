@@ -3046,6 +3046,7 @@ export interface OpArgs {
   "usercmds.list": EmptyArgs;
   "usercmds.save": UserCmdSaveArgs;
   "editor.vim_maps": EmptyArgs;
+  "editor.vim_buf_maps": BufArgs;
   "workflows.stop": WorkflowRunArgs;
   "workspace.list": EmptyArgs;
   "workspace.add_folder": WorkspacePathArgs;
@@ -3315,6 +3316,7 @@ export interface OpResult {
   "usercmds.list": UserCmdList;
   "usercmds.save": UserCmdList;
   "editor.vim_maps": VimMapList;
+  "editor.vim_buf_maps": VimMapList;
   "workspace.list": WorkspaceList;
   "workspace.add_folder": AskRef;
   "workspace.remove_folder": AskRef;
