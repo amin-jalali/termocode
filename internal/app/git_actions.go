@@ -1234,12 +1234,12 @@ func (m *Model) gitStash() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
-	if err != nil {
-		return nil
+	repo, err := m.gitStashRepo()
+	if err == nil {
+		err = repo.Push(git.StashOptions{})
 	}
 	var toastCmd tea.Cmd
-	if err := git.Stash(cwd, ""); err != nil {
+	if err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Warn, "Stash failed", err.Error())
 	} else {
 		m.toast, toastCmd = m.toast.Push(toast.Info, "Stashed changes")
@@ -1255,12 +1255,12 @@ func (m *Model) gitStashPop() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
-	if err != nil {
-		return nil
+	repo, err := m.gitStashRepo()
+	if err == nil {
+		err = repo.Pop("")
 	}
 	var toastCmd tea.Cmd
-	if err := git.StashPop(cwd); err != nil {
+	if err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Stash pop failed", err.Error())
 	} else {
 		m.toast, toastCmd = m.toast.Push(toast.Info, "Popped latest stash")
@@ -1278,11 +1278,11 @@ func (m *Model) openStashPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := m.rootDir()
-	if err != nil {
-		return nil
+	repo, err := m.gitStashRepo()
+	var entries []git.StashEntry
+	if err == nil {
+		entries, err = repo.List()
 	}
-	entries, err := git.StashList(cwd)
 	if err != nil {
 		var toastCmd tea.Cmd
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Stash list failed", err.Error())
@@ -1310,12 +1310,12 @@ func (m *Model) openStashPicker() tea.Cmd {
 
 // applyStashSelected runs `git stash apply <ref>` for the picked stash.
 func (m *Model) applyStashSelected(ref string) tea.Cmd {
-	cwd, err := m.rootDir()
-	if err != nil {
-		return nil
+	repo, err := m.gitStashRepo()
+	if err == nil {
+		err = repo.Apply(ref)
 	}
 	var toastCmd tea.Cmd
-	if err := git.StashApply(cwd, ref); err != nil {
+	if err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Stash apply failed", err.Error())
 	} else {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Applied", ref)
