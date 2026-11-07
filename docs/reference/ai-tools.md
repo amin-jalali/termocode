@@ -2539,6 +2539,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `worktree-filter` | Worktree: Next Filter | auto |   |
 | `worktree-follow` | Worktree: Follow PR Feedback (On or Off) | never | the follow loop is the user's choice per worktree |
 | `worktree-forget` | Worktree: Forget Gone Selected | never | acts on the worktree the user selected in the WORKTREES view |
+| `worktree-from-issue` | Worktree: Start from Issue… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-jump` | Worktree: Jump… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `worktree-link` | Worktree: Link Issue or PR… | never | links are the user's choice; the AI reads them with worktrees_list |
 | `worktree-move-down` | Worktree: Move Selected Down | auto |   |

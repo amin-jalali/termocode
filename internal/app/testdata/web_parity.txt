@@ -714,6 +714,7 @@ missing	worktree-feedback	Worktrees|M
 missing	worktree-filter	Worktrees|M
 missing	worktree-follow	Worktrees|M
 missing	worktree-forget	Worktrees|M
+missing	worktree-from-issue	Worktrees|M
 missing	worktree-jump	Worktrees|M
 missing	worktree-link	Worktrees|M
 missing	worktree-move-down	Worktrees|M

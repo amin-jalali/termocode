@@ -41,6 +41,7 @@ repository's git folder, never in your project.
 | `N` | The notes agents left on it, with their times |
 | `n` | New worktree (see below) |
 | `c` | New child worktree: it starts from the selected one's branch |
+| `I` | Start from an issue: pick an open issue, the New worktree form fills in |
 | `L` | Show the setup of a new worktree (its terminal tab) |
 | `A` | Adopt a worktree made outside termocode |
 | `F` | Forget a worktree whose folder is gone |
@@ -121,6 +122,23 @@ show as `└ …`). A child whose parent is gone moves up to the top level.
 **Worktree: Jump…** (**Ctrl+Shift+J**) lists the worktrees and the
 agents in them, from every termocode window, with the ones that wait for
 you first.
+
+## Start from an issue
+
+`I` (**Worktree: Start from Issue…**) lists the open GitHub issues of the
+repository (read by `gh` with your own sign-in). Pick one, and the New
+worktree form opens filled in:
+
+- **Issue** is `#12`, so the worktree is linked to it;
+- **Branch** comes from the title, like `12-login-crashes-on-empty-password`;
+- **Agent** is the first installed agent;
+- **Task** is `Work on issue #12: <title>. Read it first with gh issue view 12, …`.
+
+Change any field first. Nothing is made until **Create** or
+**Create + Start** (**Cancel** is the first button). The title is shown
+as plain text: control bytes are dropped and it is cut at 200 letters.
+**Git: Issues…** has the same row (**Start Work: New Worktree + Agent…**)
+for one issue. The AI can not start it; it is your choice.
 
 ## Link an issue or pull request
 

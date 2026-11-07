@@ -37,6 +37,7 @@ func worktreeKeyRows() []confirm.KeyRow {
 		[]string{"N", "the notes agents left on it, with their times"},
 		[]string{"n", "new worktree: name, start point, agent and first task"},
 		[]string{"c", "new child worktree: from this one's branch, listed under it"},
+		[]string{"I", "start from an issue: pick an open issue, the form fills in branch, agent and task"},
 		[]string{"L", "show the setup of a new worktree (its terminal tab)"},
 		[]string{"A", "adopt a worktree made outside termocode (keeps its notes)"},
 		[]string{"F", "forget a worktree whose folder is gone"},
@@ -200,6 +201,8 @@ func (m Model) handleWTSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.openWorktreeNew()
 	case "c":
 		return m, m.openWorktreeNewChild()
+	case "I":
+		return m, m.openWorktreeIssues()
 	case "L":
 		return m, m.worktreeSetupLog()
 	case "i":

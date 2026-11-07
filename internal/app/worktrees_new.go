@@ -228,10 +228,14 @@ func (m *Model) onWTNewPrep(msg wtNewPrepMsg) tea.Cmd {
 		ags = ags[:wtFormAgentsMax]
 	}
 	f.agents = ags
+	if f.pick > len(f.agents) { // a prefill (CMP-32) when no agent is installed
+		f.pick = 0
+	}
 	m.wt.form = f
 	m.connect = connectcard.New(m.wtFormCard())
 	m.connect.SetSize(m.w, m.h)
 	m.connectOpen = true
+	f.vals, f.pick = nil, 0 // a prefill is on the card now
 	return nil
 }
 

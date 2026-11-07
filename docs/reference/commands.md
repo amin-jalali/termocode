@@ -856,6 +856,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Worktree: Show Notes of Selected | `worktree-notes` |   |   |
 | Worktree: Show Setup Log | `worktree-setup-log` |   |   |
 | Worktree: Sleep or Wake Selected | `worktree-sleep` |   |   |
+| Worktree: Start from Issue… | `worktree-from-issue` |   |   |
 | Worktree: Suggest a Name… | `worktree-suggest-name` |   | `quick model drafts branch names` |
 
 ## termocode
