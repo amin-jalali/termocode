@@ -113,3 +113,16 @@ func TestAttachBlockResolves(t *testing.T) {
 		t.Error("empty id resolved")
 	}
 }
+
+// chat.send with a block attach gives the model the block's text; a
+// block the open chat does not have is gone.
+func TestAttachPlanBlock(t *testing.T) {
+	m := webTestChatModel(t, ai.StoredMessage{Role: ai.StoredTool, Text: "⚙ a", Block: webTestBlock("b7")})
+	j, err := m.webAttachPlan(&webproto.Attach{Kind: webproto.AttachBlock, ID: "b7", Label: "Matches"})
+	if err != nil || !strings.Contains(j.text, "Matches (list, from search)") {
+		t.Errorf("job %+v err %v", j, err)
+	}
+	if _, err := m.webAttachPlan(&webproto.Attach{Kind: webproto.AttachBlock, ID: "gone", Label: "x"}); err == nil {
+		t.Error("an unknown block resolved")
+	}
+}
