@@ -398,6 +398,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-result-pin":                aiAuto(),
 	"db-export":                    aiNever(aiNoPicker + " (db_query + write_file)"),
 	"db-import-csv":                aiNever("importing rows is a write the user confirms (db_query)"),
+	"db-import-new-table":          aiNever("creating a table and importing rows is a write the user confirms (db_query)"),
+	"db-run-dump":                  aiNever("a whole SQL file of writes runs only after the user's card (db_query, one statement each)"),
 	"db-generate-data":             aiNever("it writes a script of rows the user reviews and runs"),
 	"db-compare-schemas":           aiNever(aiNoPicker),
 	"db-search-data":               aiNever(aiNoPicker + " (db_search_data)"),

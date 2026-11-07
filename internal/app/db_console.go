@@ -98,6 +98,11 @@ type dbConsoleState struct {
 	heat   bool            // M: the grid colours numeric cells by value (db_visualize.go)
 	folder *dbFolderExport // Export Tables to Folder while the folder is asked (db_export_more.go)
 
+	// DBX-37 (db_dump.go): a SQL dump and an Import as New Table while
+	// their file and card are open.
+	dump     *dbDump
+	newTable *dbNewTable
+
 	tabs         []*dbTab // result tabs (db_tabs.go)
 	tab          int      // the tab on the page
 	batchSeq     uint64

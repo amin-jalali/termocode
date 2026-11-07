@@ -302,6 +302,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBSearchDone(msg)
 	case dbFolderDoneMsg:
 		return m, m.onDBFolderDone(msg)
+	case dbDumpDoneMsg:
+		return m, m.onDBDumpDone(msg)
+	case dbNewTableDoneMsg:
+		return m, m.onDBNewTableDone(msg)
 	case dbCountMsg:
 		return m, m.onDBCount(msg)
 	case dbColsMsg:

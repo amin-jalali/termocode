@@ -229,6 +229,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Generate Test Data… | `db-generate-data` |   |   |
 | Databases: Go to Definition | `db-goto-definition` |   |   |
 | Databases: History… | `db-history` |   |   |
+| Databases: Import CSV as New Table… | `db-import-new-table` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
 | Databases: Open Guide | `db-guide` |   |   |
@@ -238,6 +239,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
+| Databases: Run SQL Dump File… | `db-run-dump` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |
 | Databases: Search Data in Schema… | `db-search-data` |   |   |

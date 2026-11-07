@@ -94,6 +94,9 @@ func (m *Model) databaseJobCard(j *dbJob) {
 	if j.total > 0 {
 		text = fmt.Sprintf("%s / %s rows", dbThousands(int(j.done.Load())), dbThousands(int(j.total)))
 	}
+	if j.kind == "dump" {
+		text = fmt.Sprintf("%d / %d statements run", j.done.Load(), j.total)
+	}
 	if j.kind == "tables" {
 		text = fmt.Sprintf("%d / %d tables written", j.done.Load(), j.of.Load())
 	}
@@ -492,6 +495,10 @@ func (m *Model) databaseTransferConfirm(id string) (tea.Cmd, bool) {
 		return nil, true
 	case confirmKindDBExportFolder:
 		return m.databaseExportFolderConfirm(id), true
+	case confirmKindDBDump:
+		return m.databaseDumpConfirm(id), true
+	case confirmKindDBNewTable:
+		return m.databaseNewTableConfirm(id), true
 	}
 	return nil, false
 }
@@ -508,6 +515,10 @@ func (m *Model) databaseTransferPrompt(kind promptKindEnum, value string) (tea.C
 		return m.databaseSearchRun(value), true
 	case promptKindDBExportFolder:
 		return m.databaseExportFolderTyped(value), true
+	case promptKindDBDumpPath:
+		return m.databaseDumpLoad(value), true
+	case promptKindDBNewTablePath:
+		return m.databaseNewTableLoad(value), true
 	}
 	return nil, false
 }
@@ -528,6 +539,10 @@ func (m *Model) databaseTransferClosed() {
 		s.imp = nil
 	case confirmKindDBExportFolder:
 		s.folder = nil
+	case confirmKindDBDump:
+		s.dump = nil
+	case confirmKindDBNewTable:
+		s.newTable = nil
 	}
 }
 

@@ -2099,6 +2099,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-heatmap` | Databases: Toggle Result Heatmap | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
+| `db-import-new-table` | Databases: Import CSV as New Table… | never | creating a table and importing rows is a write the user confirms (db_query) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-open-sessions` | Databases: Sessions… | never | the user's sessions and transactions |
 | `db-refresh` | Databases: Refresh | auto |   |
@@ -2106,6 +2107,7 @@ Search the web (Brave Search) and return titles, urls and short snippets. Read a
 | `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
 | `db-rollback` | Databases: Roll Back | never | the user's transaction |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
+| `db-run-dump` | Databases: Run SQL Dump File… | never | a whole SQL file of writes runs only after the user's card (db_query, one statement each) |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
 | `db-search-data` | Databases: Search Data in Schema… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_search_data) |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
