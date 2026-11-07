@@ -78,6 +78,9 @@ type WSConfig struct {
 	Devices *webdevices.Store
 	// Control answers control.challenge / control.ask (nil: not here).
 	Control *Control
+	// WatchTokens gives a paired device a watch token (app.watch_token,
+	// MOB-23); nil: the op is not available.
+	WatchTokens *WatchTokens
 }
 
 // Defaults of WSConfig.

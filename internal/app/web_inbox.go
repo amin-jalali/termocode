@@ -44,6 +44,7 @@ type webInboxPub struct {
 	last    *webproto.InboxSnap
 	checked time.Time
 	tick    bool
+	watch   bool // a phone watches: the gateway gets the inbox (web_watch.go)
 }
 
 // webInboxTickMsg: the wait is over; build the list again.
@@ -52,7 +53,7 @@ type webInboxTickMsg struct{}
 func webInboxSnapshot(m *Model, _ string) (any, error) {
 	snap := m.webInboxBuild()
 	if m.web != nil {
-		m.web.inbox = webInboxPub{last: &snap, checked: webNow()}
+		m.web.inbox.last, m.web.inbox.checked = &snap, webNow()
 	}
 	return snap, nil
 }
@@ -65,7 +66,8 @@ func (m *Model) webPublishInbox(msg tea.Msg) tea.Cmd {
 	if _, ok := msg.(webInboxTickMsg); ok {
 		p.tick = false
 	}
-	if !h.webListens("inbox") {
+	listens := h.webListens("inbox")
+	if !listens && !p.watch {
 		p.last = nil
 		return nil
 	}
@@ -83,7 +85,12 @@ func (m *Model) webPublishInbox(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 	p.last = &cur
-	h.publish("inbox", webInboxDelta(cur))
+	if listens {
+		h.publish("inbox", webInboxDelta(cur))
+	}
+	if p.watch {
+		h.sendInboxWatch(cur)
+	}
 	return nil
 }
 
