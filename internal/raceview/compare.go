@@ -16,17 +16,19 @@ import (
 type Action int
 
 const (
-	ActNone    Action = iota
-	ActReview         // Enter: the lane's diff (read only)
-	ActMerge          // m: merge the lane into your files
-	ActDiscard        // d: discard the lane (a card asks)
-	ActVerify         // v: run the verify command in every finished lane
-	ActSummary        // s: ask the quick model for a summary
-	ActJudge          // p: ask the AI judge to rank the lanes and pick one
-	ActStop           // x: stop every lane that still works
-	ActRefresh        // r: read the lanes' files again
-	ActClose          // Esc
-	ActRestack        // b: put the lane's work on your current commit as clean commits (a card asks)
+	ActNone      Action = iota
+	ActReview           // Enter: the lane's diff (read only)
+	ActMerge            // m: merge the lane into your files
+	ActDiscard          // d: discard the lane (a card asks)
+	ActVerify           // v: run the verify command in every finished lane
+	ActSummary          // s: ask the quick model for a summary
+	ActJudge            // p: ask the AI judge to rank the lanes and pick one
+	ActStop             // x: stop every lane that still works
+	ActRefresh          // r: read the lanes' files again
+	ActClose            // Esc
+	ActRestack          // b: put the lane's work on your current commit as clean commits (a card asks)
+	ActBroadcast        // a: type one message into every lane's agent (a card asks)
+	ActRunAll           // c: run a command in every open lane (a card asks)
 )
 
 // ActionMsg is a key's action; Lane is the selected lane's id.
@@ -123,6 +125,10 @@ func (c *Compare) Key(k tea.KeyMsg) tea.Cmd {
 		}
 	case "v":
 		return act(ActVerify, sel)
+	case "a":
+		return act(ActBroadcast, sel)
+	case "c":
+		return act(ActRunAll, sel)
 	case "s":
 		return act(ActSummary, sel)
 	case "p":
@@ -375,9 +381,9 @@ func (c Compare) Box() string {
 	bottom = append(bottom, paint([]seg{{" " + status, bg.Foreground(p.muted)}}, iw, bg), hairline(p, iw))
 	if wide {
 		bottom = append(bottom, hint(p, iw, "enter", "review diff", "m", "merge this lane", "d", "discard lane", "b", "restack", "v", "verify all",
-			"s", spark+" summarize", "p", spark+" judge", "x", "stop all", "r", "refresh", "esc", "close"))
+			"a", "message all", "c", "run in all", "s", spark+" summarize", "p", spark+" judge", "x", "stop all", "r", "refresh", "esc", "close"))
 	} else {
-		bottom = append(bottom, hint(p, iw, "enter", "diff", "m", "merge", "d", "discard", "v", "verify", "s", "summary", "p", "judge", "esc", "close", "x", "stop"))
+		bottom = append(bottom, hint(p, iw, "enter", "diff", "m", "merge", "d", "discard", "v", "verify", "s", "summary", "p", "judge", "esc", "close", "x", "stop", "a", "message", "c", "run"))
 	}
 
 	// Middle: the selected lane's files, as many as fit.

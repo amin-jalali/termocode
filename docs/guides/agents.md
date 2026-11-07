@@ -323,6 +323,8 @@ input box is on screen, never into a question.
 | `d` | Discard one lane (**Cancel** first) |
 | `b` | Restack the lane: put its work on top of your current commit as clean commits (**Cancel** first) |
 | `v` | Run the verify command in every finished lane |
+| `a` | Type one message into every agent that sits at its input box (finished lanes); a card shows who gets it and who is skipped (**Cancel** first) |
+| `c` | Run a command in every open lane's worktree, one task tab each (**Cancel** first) |
 | `s` | Ask your **Quick** model for a 3-line summary of the differences (capped, secrets hidden; the cost is shown) |
 | `p` | Ask your **Main** model to judge: it ranks the finished lanes with one reason each and picks one (★). Verify results count first; diffs are capped and secrets hidden; the cost is shown. A card then offers to merge the pick (**Cancel** first) |
 | `x` | Stop every lane |

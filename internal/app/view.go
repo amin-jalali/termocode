@@ -144,6 +144,7 @@ func (m Model) viewFrame() string {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
 		base = m.reviewLayer(base) // a diff comment prompt sits on its card (CMP-51)
+		base = m.raceLayer(base)   // a prompt can sit on the race page
 		return modalOverlay(base, m.prompt.Box(), m.w, m.h, m.modalOpts())
 	}
 	if m.confirmOpen {

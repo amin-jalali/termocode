@@ -136,6 +136,10 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onWTBgTask(value), true
 	case promptKindBugspecTitle: // bugspec_ui.go
 		return m.onBugspecTitle(value), true
+	case promptKindRaceBroadcast: // agent_race_broadcast.go
+		return m.onRaceBroadcastText(value), true
+	case promptKindRaceRun:
+		return m.onRaceRunText(value), true
 	case promptKindAgentAccountNew: // agent_accounts.go
 		return m.onAgentAccountLabel(value), true
 	case promptKindAgentSessionsSearch: // agent_sessions_search.go
@@ -301,6 +305,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerRaceCard(m.confirmKind, id), true
 	case confirmKindRaceRestack: // agent_race_restack.go
 		return m.answerRaceRestack(id), true
+	case confirmKindRaceBroadcast, confirmKindRaceRun: // agent_race_broadcast.go
+		return m.answerRaceBroadcastCard(m.confirmKind, id), true
 	case confirmKindWorkflowGate: // workflow_gate.go
 		return m.answerWorkflowGate(id), true
 	case confirmKindWorkflowRun, confirmKindWorkflowDry, confirmKindWorkflowTrust, confirmKindWorkflowOnOff, confirmKindWorkflowStop,
