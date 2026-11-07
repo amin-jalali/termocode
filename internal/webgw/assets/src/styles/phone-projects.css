@@ -1,0 +1,107 @@
+/* Projects list (MOBUX-6): one card per project, phone layout only. Built
+   on the phone tokens (phone.css, MOBUX-1): the whole card is one 44 px
+   target, the state is a colour and a shape, dark and light follow the
+   web tokens. Loaded with ProjectsList.tsx in the phone's lazy chunk,
+   never by app.js. Checked by phone_projects_test.go. */
+
+.ph-projs {
+  padding: var(--p-s2) var(--p-gutter);
+}
+
+.ph-proj-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ph-proj {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--p-s3);
+  width: 100%;
+  min-height: var(--p-tap);
+  padding: var(--p-s3);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-card);
+  background: var(--p-surface);
+  color: var(--p-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ph-proj:active { background: var(--bg-hover); }
+
+.ph-proj:focus-visible {
+  outline: 2px solid var(--p-focus);
+  outline-offset: 2px;
+}
+
+/* What needs the user carries its colour on the edge too (with the ● shape). */
+.ph-proj.st-needs { border-inline-start: 4px solid var(--p-st-needs); }
+.ph-proj.st-asleep { color: var(--p-text-2); }
+.ph-proj.is-here { border-color: var(--p-accent); }
+
+.ph-proj-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--p-s1);
+  min-width: 0;
+}
+
+.ph-proj-name {
+  overflow: hidden;
+  font-size: var(--p-fs-title);
+  line-height: var(--p-lh-title);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ph-proj-here {
+  margin-inline-start: var(--p-s2);
+  padding: 0 var(--p-s2);
+  border-radius: var(--p-r-chip);
+  background: var(--p-surface-2);
+  color: var(--p-text-2);
+  font-size: var(--p-fs-caption);
+  line-height: var(--p-lh-caption);
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.ph-proj-where {
+  overflow: hidden;
+  color: var(--p-text-2);
+  font-family: var(--p-mono);
+  font-size: var(--p-fs-meta);
+  line-height: var(--p-lh-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ph-proj-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-s1) var(--p-s3);
+  color: var(--p-text-2);
+  font-family: var(--p-mono);
+  font-size: var(--p-fs-meta);
+  line-height: var(--p-lh-meta);
+}
+
+.ph-proj-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-s1);
+}
+
+.ph-proj-go {
+  align-self: center;
+  color: var(--p-muted);
+  font-size: var(--p-fs-title);
+}
